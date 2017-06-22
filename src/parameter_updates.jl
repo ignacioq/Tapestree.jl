@@ -1,4 +1,4 @@
-#=
+"""
 Updates for MCMC
 
 Ignacio Quintero
@@ -6,7 +6,7 @@ Ignacio Quintero
 t(-_-t)
 
 June 20 2017
-=#
+"""
 
 
 

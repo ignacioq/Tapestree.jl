@@ -1,4 +1,4 @@
-#=
+"""
 Proposal Functions for joint
 Biogeographic competition model
 
@@ -8,7 +8,7 @@ Ignacio Quintero
 t(-_-t)
 
 May 16 2017
-=#
+"""
 
 
 

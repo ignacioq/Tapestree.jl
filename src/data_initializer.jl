@@ -1,4 +1,4 @@
-#=
+"""
 Data initializer for Competition model
 
 Ignacio Quintero
@@ -6,7 +6,7 @@ Ignacio Quintero
 t(-_-t)
 
 June 14 2017
-=#
+"""
 
 #=
 *******

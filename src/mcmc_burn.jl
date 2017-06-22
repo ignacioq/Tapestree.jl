@@ -1,4 +1,4 @@
-#=
+"""
 Burning phase of the
 Biogeographic competition model
 
@@ -7,7 +7,7 @@ Ignacio Quintero
 t(-_-t)
 
 April 27 2017
-=#
+"""
 
 
 

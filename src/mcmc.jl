@@ -1,4 +1,4 @@
-#=
+"""
 Biogeographic competition model
 
 Ignacio Quintero
@@ -6,7 +6,7 @@ Ignacio Quintero
 t(-_-t)
 
 April 27 2017
-=#
+"""
 
 #= 
 TO DO:
