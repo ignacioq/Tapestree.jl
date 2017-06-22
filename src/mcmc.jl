@@ -73,7 +73,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const wcol = create_wcol(Xc)
 
   # initialize result arrays
-  nlogs = fld(niter,nthin)               # number of logged iterations
+  const nlogs = fld(niter,nthin)         # number of logged iterations
   iter  = zeros(nlogs)                   # iterations
   ωx    = zeros(nlogs)                   # trait competition parameter
   ωλ    = zeros(nlogs)                   # colonization competition parameter
@@ -84,7 +84,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   o     = zeros(nlogs)                   # prior
 
    # initial values for MCMC
-  λi = fill(λi,narea,2)
+  λi = fill(λi, narea, 2)
 
   # add long stem branch
   edges = cat(1, edges, [2*ntip ntip + 1])
@@ -168,8 +168,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # make likelihood and prior functions
   total_llf      = makellf(δt, Yc, ntip, wcol, narea)
-  λupd_llf       = makellf_biogeo_upd(Yc, δt, narea)
-  ωλμupd_llf     = makellf_ωλμ_upd(Y, δt, narea)
+  λupd_llf       = makellf_λ_upd(Yc, δt, narea)
+  ωλμupd_llf     = makellf_ωλμ_upd(Yc, δt, narea)
   Xupd_llf       = makellf_Xupd(δt, narea)
   Rupd_llf       = makellf_Rupd(δt, narea)
   σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)
@@ -221,9 +221,12 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # create parameter update functions
 
-  mhr_upd_λ! = make_mhr_upd_λ(nedge, λprior, ptn)
-  mhr_upd_Y! = make_mhr_upd_Y(narea, nedge, m, bridx_a, brδt, brl, wcol)
-  mhr_upd_X! = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, λlessthan)
+  mhr_upd_λ! = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llf)
+  mhr_upd_Y! = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
+                              brδt, brl, wcol, Ync1, Ync2, 
+                              total_llf, biogeo_upd_iid)
+  mhr_upd_X! = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
+                              λlessthan, narea, Xupd_llf, Rupd_llf)
 
   #start MCMC
   for it = Base.OneTo(niter)
@@ -240,9 +243,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       #randomly select λ to update and branch histories
       elseif up > 4 && up <= λlessthan
-        upλ = up - 4
-        mhr_upd_λ!(upλ, λc, ptn, llc, prc, Yc, ωλc, ωμc, 
-                   lindiff, stemevc, brs, nedge, λprior)
+
+        mhr_upd_λ!(up, Yc, λc, llc, prc, ωλc, ωμc, 
+                   lindiff, stemevc, brs[nedge,1,:])
 
         # which internal node to update
         if rand() < 0.5
@@ -250,7 +253,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
           # update a random internal node, including the mrca
           if bup < nin
             mhr_upd_Y!(trios[bup], Xc, Yc, λc, ωxc, ωλc, ωμc, σ²c,
-                       llc, prc, areavg, linavg, lindiff, brs)
+                       llc, prc, areavg, linavg, lindiff, brs, stemevc)
           else
             # update stem
             llr = 0.0
@@ -270,19 +273,23 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       # if σ² is updated
       elseif up == 1
-        mhr_upd_σ²!(σ²c, ωxc, llc, prc, ptn[1], linavg, σ²prior)
+        mhr_upd_σ²!(σ²c, Xc, ωxc, llc, prc, ptn[1], 
+                    linavg, σ²prior, σ²ωxupd_llf)
       
       # update ωx
       elseif up == 2
-        mhr_upd_ωx!(ωxc, σ²c, llc, prc, ptn[2], linavg, ωxprior)
+        mhr_upd_ωx!(ωxc, Xc, σ²c, llc, prc, ptn[2], 
+                    linavg, ωxprior, σ²ωxupd_llf)
 
       #update ωλ
       elseif up == 3
-        mhr_upd_ωλ!(ωλc, λc, ωμc, Yc, llc, prc, ptn[3], linavg, lindiff, ωλprior)
+        mhr_upd_ωλ!(ωλc, λc, ωμc, Yc, llc, prc, ptn[3], 
+                    linavg, lindiff, ωλprior, ωλμupd_llf)
 
       # update ωμ      
       else
-        mhr_upd_ωμ!(ωμc, λc, ωλc, Yc, llc, prc, ptn[4], linavg, lindiff, ωμprior)
+        mhr_upd_ωμ!(ωμc, λc, ωλc, Yc, llc, prc, ptn[4],
+                    linavg, lindiff, ωμprior, ωλμupd_llf)
       end
 
     end
@@ -291,15 +298,15 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     if lthin == nthin
       @inbounds begin
         lit      += 1
-        iter[lit] = it
-        h[lit]    = llc
-        o[lit]    = prc
-        ωx[lit]   = ωxc
-        ωλ[lit]   = ωλc
-        ωμ[lit]   = ωμc
-        σ²[lit]   = σ²c
+        setindex!(iter, it,  lit)
+        setindex!(h,    llc, lit)
+        setindex!(o,    prc, lit)
+        setindex!(ωx,   ωxc, lit)
+        setindex!(ωλ,   ωλc, lit)
+        setindex!(ωμ,   ωμc, lit)
+        setindex!(σ²,   σ²c, lit)
         for j = eachindex(λc)
-          λs[lit, j] = λc[j]
+          setindex!(λs, λc[j], lit, j)
         end
       end
       lthin = 0

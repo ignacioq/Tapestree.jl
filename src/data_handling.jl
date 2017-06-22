@@ -20,7 +20,7 @@ May 15 2017
 function create_wcol(X::Array{Float64,2})
 
   X_fornan  = deepcopy(X)
-  wNaN_x    = !isnan(X_fornan[Base.OneTo(end),:])
+  wNaN_x    = .!isnan.(X_fornan[Base.OneTo(end),:])
 
   # make ragged array for non-NaN columns
   wcol = Array{Int64,1}[]
