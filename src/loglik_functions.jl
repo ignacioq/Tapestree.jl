@@ -256,8 +256,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
 
     @inbounds begin
 
-      for j=Base.OneTo(narea), for i=coloop
-        
+      for j=Base.OneTo(narea), i=coloop
         wh = w23[i]
         @views ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
                           lindiff[wh,i,j], dδt[wh]) 
