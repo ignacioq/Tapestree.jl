@@ -59,7 +59,7 @@ function makellf(δt   ::Vector{Float64},
 
     ll::Float64 = normC
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # trait likelihood
       for j=Base.OneTo(ntip), i=w23[j][Base.OneTo(end-1)]
@@ -74,7 +74,7 @@ function makellf(δt   ::Vector{Float64},
         ll += brll(stemevc[j], λ[j,1], λ[j,2], stemss[j])
         for i = coloop
           wh = w23[i]
-          @views ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
+          ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
                             lindiff[wh,i,j], dδt[wh]) 
         end
       end
@@ -212,7 +212,7 @@ function makellf_λ_upd(Y   ::Array{Int64,3},
 
         for i=coloop
           wh = w23[i]
-          @views ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
+          ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
                             lindiff[wh,i,j], dδt[wh]) 
         end
       end
@@ -260,7 +260,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
 
       for j=Base.OneTo(narea), i=coloop
         wh = w23[i]
-        @views ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
+        ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
                           lindiff[wh,i,j], dδt[wh]) 
       end
 
@@ -400,7 +400,7 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
 
     ll::Float64 = normC
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # trait likelihood
       for j=Base.OneTo(ntip), i=w23[j]
@@ -443,7 +443,7 @@ function makellf_Xupd(δt   ::Vector{Float64},
     # normal likelihoods
     ll::Float64 = 0.0
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # loop for parent nodes
       if k != 1               # if not the root
@@ -505,7 +505,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
     # normal likelihoods
     ll::Float64 = 0.0
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # loop for daughter nodes
       for i=eachindex(wck)

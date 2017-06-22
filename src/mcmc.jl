@@ -211,22 +211,22 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   p  = Progress(niter, 5, "running MCMC...", 20)
 
   if fix_ωλ_ωμ
-    pv  = append!(collect(1:np),fill(1, floor(Int64,np*.15)))
+    const pv  = append!(collect(1:np),fill(1, floor(Int64,np*.10)))
     const parvec = setdiff(pv,(3:4))
     const lparvec = length(parvec)
   else
-    const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*.15)))
+    const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*.10)))
     const lparvec = length(parvec)
   end
 
   # create parameter update functions
 
-  mhr_upd_λ! = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llf)
-  mhr_upd_Y! = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
-                              brδt, brl, wcol, Ync1, Ync2, 
-                              total_llf, biogeo_upd_iid)
-  mhr_upd_X! = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
-                              λlessthan, narea, Xupd_llf, Rupd_llf)
+  mhr_upd_λ = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llf)
+  mhr_upd_Y = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
+                             brδt, brl, wcol, Ync1, Ync2, 
+                             total_llf, biogeo_upd_iid)
+  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
+                             λlessthan, narea, Xupd_llf, Rupd_llf)
 
   #start MCMC
   for it = Base.OneTo(niter)
@@ -238,22 +238,24 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       # update X[i]
       if up > λlessthan
-        mhr_upd_X!(up, Xc, Yc, λc, ωxc, ωλc, ωμc, σ²c, llc, 
-                    areavg, linavg, lindiff)
+        Xc, llc, areavg, linavg, lindiff = mhr_upd_X(up, Xc, Yc, λc, 
+                                            ωxc, ωλc, ωμc, σ²c, llc, 
+                                            areavg, linavg, lindiff)
 
       #randomly select λ to update and branch histories
       elseif up > 4 && up <= λlessthan
 
-        mhr_upd_λ!(up, Yc, λc, llc, prc, ωλc, ωμc, 
-                   lindiff, stemevc, brs[nedge,1,:])
+        llc, prc, λc = mhr_upd_λ(up, Yc, λc, llc, prc, ωλc, ωμc, 
+                                 lindiff, stemevc, brs[nedge,1,:])
 
         # which internal node to update
         if rand() < 0.5
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            mhr_upd_Y!(trios[bup], Xc, Yc, λc, ωxc, ωλc, ωμc, σ²c,
-                       llc, prc, areavg, linavg, lindiff, brs, stemevc)
+            llc, Yc, areavg, linavg, lindiff = mhr_upd_Y(trios[bup], Xc, Yc, 
+                       λc, ωxc, ωλc, ωμc, σ²c, llc, prc, 
+                       areavg, linavg, lindiff, brs, stemevc)
           else
             # update stem
             llr = 0.0
@@ -273,23 +275,23 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       # if σ² is updated
       elseif up == 1
-        mhr_upd_σ²!(σ²c, Xc, ωxc, llc, prc, ptn[1], 
-                    linavg, σ²prior, σ²ωxupd_llf)
-      
+        llc, prc, σ²c = mhr_upd_σ²(σ²c, Xc, ωxc, llc, prc, ptn[1], 
+                                   linavg, σ²prior, σ²ωxupd_llf)
+
       # update ωx
       elseif up == 2
-        mhr_upd_ωx!(ωxc, Xc, σ²c, llc, prc, ptn[2], 
-                    linavg, ωxprior, σ²ωxupd_llf)
+        llc, prc, ωxc = mhr_upd_ωx(ωxc, Xc, σ²c, llc, prc, ptn[2], 
+                                   linavg, ωxprior, σ²ωxupd_llf)
 
       #update ωλ
       elseif up == 3
-        mhr_upd_ωλ!(ωλc, λc, ωμc, Yc, llc, prc, ptn[3], 
-                    linavg, lindiff, ωλprior, ωλμupd_llf)
+        llc, prc, ωλc = mhr_upd_ωλ(ωλc, λc, ωμc, Yc, llc, prc, ptn[3], 
+                                   linavg, lindiff, ωλprior, ωλμupd_llf)
 
       # update ωμ      
       else
-        mhr_upd_ωμ!(ωμc, λc, ωλc, Yc, llc, prc, ptn[4],
-                    linavg, lindiff, ωμprior, ωλμupd_llf)
+        llc, prc, ωμc = mhr_upd_ωμ(ωμc, λc, ωλc, Yc, llc, prc, ptn[4],
+                                    linavg, lindiff, ωμprior, ωλμupd_llf)
       end
 
     end
@@ -297,8 +299,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     lthin += 1
     if lthin == nthin
       @inbounds begin
-        lit      += 1
-        setindex!(iter, it,  lit)
+        lit += 1
+        setindex!(iter,  it, lit)
         setindex!(h,    llc, lit)
         setindex!(o,    prc, lit)
         setindex!(ωx,   ωxc, lit)

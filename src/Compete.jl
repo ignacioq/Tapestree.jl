@@ -26,4 +26,4 @@ module Compete
   include("proposal_functions.jl")
   include("compete_wrapper.jl")
 
-end   # module
+end # module

@@ -49,6 +49,8 @@ function make_mhr_upd_λ(nedge ::Int64,
       prc += prr
       λc   = λp
     end
+  
+    return llc, prc, λc
   end
 
 end
@@ -98,12 +100,10 @@ function make_mhr_upd_Y(narea  ::Int64,
     area_lineage_means!(aa, la, Xc, Yp, wcol, m)
     linarea_diff!(ld, Xc, aa, narea, ntip, m)
 
-    @views begin
-      llr = total_llf(Xc, Yp, la, ld, ωxc, ωλc, ωμc, λc, 
-                      stemevc, brs[nedge,1,:], σ²c) - 
-            total_llf(Xc, Yc, linavg, lindiff, ωxc, ωλc, ωμc, λc, 
-                      stemevc, brs[nedge,1,:], σ²c)
-    end
+    llr = total_llf(Xc, Yp, la, ld, ωxc, ωλc, ωμc, λc, 
+                    stemevc, brs[nedge,1,:], σ²c) - 
+          total_llf(Xc, Yc, linavg, lindiff, ωxc, ωλc, ωμc, λc, 
+                    stemevc, brs[nedge,1,:], σ²c)
 
     propr_iid = biogeo_upd_iid(Yc, λc, triad) - 
                 biogeo_upd_iid(Yp, λc, triad)
@@ -116,6 +116,7 @@ function make_mhr_upd_Y(narea  ::Int64,
       lindiff = ld
     end
 
+    return llc, Yc, areavg, linavg, lindiff
   end
 
 end
@@ -164,24 +165,18 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
     aak, lak, ldk = Xupd_linavg(k, wck, Xp, Yc, narea)
 
     if upx == 1  # if root
-
-      @views begin
-        llr = Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ωλc, ωμc, λc, σ²c) - 
-              Rupd_llf(k, wck, Xc, Yc, linavg[k,wck], lindiff[k,wck,:], 
-                       ωxc, ωλc, ωμc, λc, σ²c)
-      end
-
+      llr = Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ωλc, ωμc, λc, σ²c) - 
+            Rupd_llf(k, wck, Xc, Yc, linavg[k,wck], lindiff[k,wck,:], 
+                     ωxc, ωλc, ωμc, λc, σ²c)
     else
 
       wckm1 = wcol[k-1]
       lakm1 = linavg[(k-1),wckm1]
 
-      @views begin
-        llr = Xupd_llf(k, wck, wckm1, Xp, Yc, lak, lakm1, 
-                       ldk, ωxc, ωλc, ωμc, λc, σ²c) - 
-              Xupd_llf(k, wck, wckm1, Xc, Yc, linavg[k,wck], lakm1,
-                       lindiff[k,wck,:], ωxc, ωλc, ωμc, λc, σ²c)
-      end
+      llr = Xupd_llf(k, wck, wckm1, Xp, Yc, lak, lakm1, 
+                     ldk, ωxc, ωλc, ωμc, λc, σ²c) - 
+            Xupd_llf(k, wck, wckm1, Xc, Yc, linavg[k,wck], lakm1,
+                     lindiff[k,wck,:], ωxc, ωλc, ωμc, λc, σ²c)
 
     end
 
@@ -195,6 +190,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       end
     end
 
+    return Xc, llc, areavg, linavg, lindiff
   end
 
 end
@@ -204,7 +200,7 @@ end
 
 
 # update σ²
-function mhr_upd_σ²!(σ²c    ::Float64,
+function mhr_upd_σ²(σ²c    ::Float64,
                      Xc     ::Array{Float64,2},
                      ωxc    ::Float64,
                      llc    ::Float64,
@@ -231,6 +227,7 @@ function mhr_upd_σ²!(σ²c    ::Float64,
     σ²c  = σ²p
   end
 
+  return llc, prc, σ²c
 end
 
 
@@ -238,7 +235,7 @@ end
 
 
 # update ωx
-function mhr_upd_ωx!(ωxc    ::Float64,
+function mhr_upd_ωx(ωxc    ::Float64,
                      Xc     ::Array{Float64,2},
                      σ²c    ::Float64,
                      llc    ::Float64,
@@ -264,6 +261,7 @@ function mhr_upd_ωx!(ωxc    ::Float64,
     ωxc  = ωxp
   end
 
+  return llc, prc, ωxc
 end
 
 
@@ -271,7 +269,7 @@ end
 
 
 #update ωλ
-function mhr_upd_ωλ!(ωλc    ::Float64,
+function mhr_upd_ωλ(ωλc    ::Float64,
                      λc     ::Array{Float64,2},
                      ωμc    ::Float64,
                      Yc     ::Array{Int64,3},
@@ -299,6 +297,7 @@ function mhr_upd_ωλ!(ωλc    ::Float64,
     ωλc  = ωλp
   end
 
+  return llc, prc, ωλc
 end
 
 
@@ -306,7 +305,7 @@ end
 
 
 # update ωμ
-function mhr_upd_ωμ!(ωμc    ::Float64,
+function mhr_upd_ωμ(ωμc    ::Float64,
                      λc     ::Array{Float64,2},
                      ωλc    ::Float64,
                      Yc     ::Array{Int64,3},
@@ -334,6 +333,7 @@ function mhr_upd_ωμ!(ωμc    ::Float64,
     ωμc  = ωμp
   end
 
+  return llc, prc, ωμc
 end
 
 

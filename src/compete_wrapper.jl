@@ -34,7 +34,6 @@ function compete(tree_file::String,
                  eol      ::Char                   = '\r')
 
 
-
   tip_values, tip_areas, tree, bts = 
     read_data(tree_file, data_file, delim = delim, eol = eol)
 
