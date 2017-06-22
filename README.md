@@ -6,6 +6,14 @@
 
 [![codecov.io](http://codecov.io/github/ignacioq/Compete.jl/coverage.svg?branch=master)](http://codecov.io/github/ignacioq/Compete.jl?branch=master)
 
-julia 0.6.x
-RCall
-Optim
+## Introduction
+
+Package that implements a joint model of Competition in trait evolution along biogeographic history described in XXX.
+
+It is under development.
+
+## Usage
+
+
+## Reference
+
