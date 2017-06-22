@@ -1,4 +1,6 @@
+
 """
+
 Proposal Functions for joint
 Biogeographic competition model
 
@@ -8,6 +10,7 @@ Ignacio Quintero
 t(-_-t)
 
 May 16 2017
+
 """
 
 
@@ -48,12 +51,6 @@ function upnode!(λ      ::Array{Float64,2},
 end
 
 
-
-#=
-
-Remove multiple events per unit time
-
-=#
 
 
 # returns true if at some point the species

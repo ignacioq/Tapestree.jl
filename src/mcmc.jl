@@ -1,4 +1,6 @@
+
 """
+
 Biogeographic competition model
 
 Ignacio Quintero
@@ -6,20 +8,8 @@ Ignacio Quintero
 t(-_-t)
 
 April 27 2017
+
 """
-
-#= 
-TO DO:
-- when updating biogeographic histories try to avoid recomputing full likelihood
-=#
-
-include((homedir()*"/repos/turnover/code/jl/utils/utils.jl"))
-include((homedir()*"/repos/turnover/code/jl/utils/data_initializer.jl"))
-include((homedir()*"/repos/turnover/code/jl/combined/compete_utils.jl"))
-include((homedir()*"/repos/turnover/code/jl/combined/loglik_functions.jl"))
-include((homedir()*"/repos/turnover/code/jl/combined/data_handling.jl"))
-include((homedir()*"/repos/turnover/code/jl/combined/proposal_functions.jl"))
-include((homedir()*"/repos/turnover/code/jl/combined/mcmc_burn.jl"))
 
 
 

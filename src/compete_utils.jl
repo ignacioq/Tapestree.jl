@@ -1,4 +1,6 @@
+
 """
+
 Utilities for Data Augmented Competition model
 
 Ignacio Quintero
@@ -6,6 +8,7 @@ Ignacio Quintero
 t(-_-t)
 
 May 01 2017
+
 """
 
 

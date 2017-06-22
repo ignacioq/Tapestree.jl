@@ -1,4 +1,6 @@
+
 """
+
 Module for Compete.jl package
 
 Ignacio Quintero 
@@ -6,6 +8,7 @@ Ignacio Quintero
 t(-_-t)
 
 22 June 2017
+
 """
 
 module Compete

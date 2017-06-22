@@ -1,4 +1,6 @@
+
 """
+
 Wrapper for running competition model
 
 Ignacio Quintero
@@ -6,6 +8,7 @@ Ignacio Quintero
 t(-_-t)
 
 June 20 2017
+
 """
 
 function compete(tree_file::String,

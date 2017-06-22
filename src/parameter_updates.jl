@@ -1,4 +1,6 @@
+
 """
+
 Updates for MCMC
 
 Ignacio Quintero
@@ -6,13 +8,14 @@ Ignacio Quintero
 t(-_-t)
 
 June 20 2017
+
 """
 
 
 
 
 # update λ
-make_mhr_upd_λ(nedge ::Int64, 
+function make_mhr_upd_λ(nedge ::Int64, 
                λprior::Float64,
                ptn   ::Array{Float64})
 

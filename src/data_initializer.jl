@@ -1,4 +1,8 @@
+using RCall
+using Optim
+
 """
+
 Data initializer for Competition model
 
 Ignacio Quintero
@@ -6,16 +10,8 @@ Ignacio Quintero
 t(-_-t)
 
 June 14 2017
+
 """
-
-#=
-*******
-Requires R and R ape package installed
-*******
-=#
-
-using RCall
-using Optim
 
 
 
