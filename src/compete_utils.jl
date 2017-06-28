@@ -94,9 +94,10 @@ logdhcau1(x::Float64) = log(2/(π * (x * x + 1)))
 
 
 
-
-# rejection sampling for each branch
-# condition on start and end point
+"""
+  rejection sampling for each branch
+  condition on start and end point
+"""
 function rejsam_cumsum(si::Int64, 
                        sf::Int64, 
                        λ1::Float64, 
@@ -115,10 +116,14 @@ end
 
 
 
-# propose events for a branch
-# with equal rates for gain and loss
-# return the cumsum of times
-# *Ugly code but slightly faster*
+
+
+"""
+  propose events for a branch
+  with equal rates for gain and loss
+  return the cumsum of times
+  *Ugly code but slightly faster*
+"""
 function brprop_cumsum(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
 
   cur_s::Int64            = si
@@ -169,14 +174,159 @@ end
 
 
 
+"""
+function for proposing bit histories 
+according to δtimes
+"""
+function prop_bit_hist(bitv::Array{Int64,1},
+                       λ1  ::Float64, 
+                       λ0  ::Float64, 
+                       δts ::Array{Float64,1})
+
+  @inbounds @fastmath begin
+
+    cur_s = bitv[1]
+    cur_λ = cur_s == 0 ? λ1 : λ0
+
+    for i in eachindex(δts) 
+
+      if rexp(cur_λ) < δts[i]
+        cur_s = 1 - cur_s
+        cur_λ = cur_s == 0 ? λ1 : λ0
+      end
+
+      bitv[i+1] = cur_s
+    end
+  
+  end
+end
+
+
+
+
+function prop_bit_hist2(bitv ::Array{Int64,1},
+                        λ1   ::Float64, 
+                        λ0   ::Float64, 
+                        δtvec::Array{Float64,1})
+
+  @inbounds @fastmath begin
+
+    cur_s = bitv[1]
+    cur_λ = cur_s == 0 ? λ1 : λ0
+
+    for i in eachindex(δts) 
+
+      if rexp(cur_λ) < δts[i]
+        cur_s = 1 - cur_s
+        cur_λ = cur_s == 0 ? λ1 : λ0
+      end
+
+      bitv[i+1] = cur_s
+    end
+  
+
+
+
+
+  cur_s = bitv[1]
+  cur_t = 0.0
+  tf    = δtvec[end]
+  s = 1
+
+  if cur_s == 0
+    cur_t += rexp(λ1)
+
+    while cur_t < tf
+
+      f = idxlessthan(δtvec, cur_t)
+      bitv[s:f] = cur_s
+
+    setindex!(Y, cur_s, bridx[s:f]) 
+    cur_s = 1 - cur_s
+    s     = f == lbr ? f : (f + 1)
+
+      push!(cum_t, cur_t)
+      cur_s  = 1 - cur_s
+      cur_t += rexp(λ0)
+    
+      if cur_t > t
+        break
+      end
+
+      push!(cum_t, cur_t)
+      cur_s  = 1 - cur_s
+      cur_t += rexp(λ1)
+    end
+  end
+
+
+    f = indmindif_sorted(δtvec, contsam[i])
+    setindex!(Y, cur_s, bridx[s:f]) 
+    cur_s = 1 - cur_s
+    s     = f == lbr ? f : (f + 1)
+    end
+
+
+  end
+end
+
+
+
+
+δts = fill(0.1,49)
+bitv = fill(1,50)
+
+
+@benchmark prop_bit_hist(bitv, 0.1, 0.1, δts)
+
+bitv
+
+@benchmark brprop_cumsum(0, 0.1, 0.1, 4.9)
+
+
+function assigndisceve!(si     ::Int64, 
+                        Y      ::Array{Int64,3}, 
+                        contsam::Array{Float64,1}, 
+                        bridx  ::Array{Int64,1}, 
+                        δtvec  ::Array{Float64,1})
+  s    ::Int64 = 1
+  cur_s::Int64 = si
+ 
+  @inbounds begin
+
+    lbr = endof(bridx)
+    
+    for i=eachindex(contsam)
+      f = indmindif_sorted(δtvec, contsam[i])
+      setindex!(Y, cur_s, bridx[s:f]) 
+      cur_s = 1 - cur_s
+      s     = f == lbr ? f : (f + 1)
+    end
+
+  end
+end
+
+
+Yc = zeros(Int64, 60, 20,4)
+
+contsam = brprop_cumsum(0, .1, .1, 4.9)[1]
+bridx = collect(2:30)
+δtvec = cumsum(fill(contsam[end]/ length(bridx), length(bridx)))
+
+@benchmark assigndisceve!(0, Yc, contsam, bridx, δtvec)
+
+
+
+
+
 # make ragged array with index for each edge in Yc
 function make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2})
-  
+
   bridx = Array{Int64,1}[]
   for b in childs
     push!(bridx, find(b .== B))
   end
-  
+
   bridx
 end
 
@@ -200,6 +350,34 @@ function make_edgeδt(bridx::Array{Array{Int64,1},1},
   
   brδt
 end
+
+
+
+
+
+"""
+  return index in vector "x" corresponding to a value 
+  that is closest but smaller than "val" in sorted arrays 
+  using a sort of uniroot algorithm
+"""
+function idxlessthan(x::Array{Float64,1}, val::Float64) 
+  
+  @inbounds begin
+    a  ::Int64 = 1
+    b  ::Int64 = endof(x)
+    mid::Int64 = div(b,2)  
+
+    while b-a > 1
+      val < x[mid] ? b = mid : a = mid
+      mid = div(b + a, 2)
+    end
+
+  end
+
+  return a
+end 
+
+
 
 
 
@@ -245,7 +423,7 @@ end
 
 
 # random exponential generator
-rexp(λ::Float64) = log(rand()) * -(1/λ)
+rexp(λ::Float64) = @fastmath log(rand()) * -(1/λ)
 
 
 
