@@ -176,108 +176,92 @@ end
 
 """
 function for proposing bit histories 
-according to δtimes
+according to δtimes and assigning
+to bitv
 """
 function prop_bit_hist(bitv::Array{Int64,1},
                        λ1  ::Float64, 
                        λ0  ::Float64, 
-                       δts ::Array{Float64,1})
+                       δtv ::Array{Float64,1})
 
   @inbounds @fastmath begin
-
-    cur_s = bitv[1]
-    cur_λ = cur_s == 0 ? λ1 : λ0
-
-    for i in eachindex(δts) 
-
-      if rexp(cur_λ) < δts[i]
-        cur_s = 1 - cur_s
-        cur_λ = cur_s == 0 ? λ1 : λ0
-      end
-
-      bitv[i+1] = cur_s
-    end
-  
-  end
-end
-
-
-
-
-function prop_bit_hist2(bitv ::Array{Int64,1},
-                        λ1   ::Float64, 
-                        λ0   ::Float64, 
-                        δtvec::Array{Float64,1})
-
-  @inbounds @fastmath begin
-
-    cur_s = bitv[1]
-    cur_λ = cur_s == 0 ? λ1 : λ0
-
-    for i in eachindex(δts) 
-
-      if rexp(cur_λ) < δts[i]
-        cur_s = 1 - cur_s
-        cur_λ = cur_s == 0 ? λ1 : λ0
-      end
-
-      bitv[i+1] = cur_s
-    end
-  
-
-
-
-
-  cur_s = bitv[1]
-  cur_t = 0.0
-  tf    = δtvec[end]
-  s = 1
-
-  if cur_s == 0
-    cur_t += rexp(λ1)
-
-    while cur_t < tf
-
-      f = idxlessthan(δtvec, cur_t)
-      bitv[s:f] = cur_s
-
-    setindex!(Y, cur_s, bridx[s:f]) 
-    cur_s = 1 - cur_s
-    s     = f == lbr ? f : (f + 1)
-
-      push!(cum_t, cur_t)
-      cur_s  = 1 - cur_s
-      cur_t += rexp(λ0)
     
-      if cur_t > t
-        break
+    lbitv = endof(bitv)
+    cur_s = bitv[1]
+    cur_t = 0.0
+    s     = 2
+
+    if cur_s == 0
+
+      while true
+
+        cur_t += rexp(λ1)
+        f = idxlessthan(δtv, cur_t)
+
+        bitv[s:f] = cur_s
+        
+        if f == lbitv
+          break
+        end
+
+        cur_s     = 1 - cur_s
+        s         = f + 1
+
+        # same but with loss rate
+        cur_t += rexp(λ0)
+        f      = idxlessthan(δtv, cur_t)
+
+        bitv[s:f] = cur_s
+
+        if f == lbitv
+          break
+        end
+
+        cur_s     = 1 - cur_s
+        s         = f + 1
+
       end
 
-      push!(cum_t, cur_t)
-      cur_s  = 1 - cur_s
-      cur_t += rexp(λ1)
+    else
+      while true
+
+        cur_t += rexp(λ0)
+        f = idxlessthan(δtv, cur_t)
+
+        bitv[s:f] = cur_s
+        
+        if f == lbitv
+          break
+        end
+
+        cur_s     = 1 - cur_s
+        s         = f + 1
+
+        # same but with loss rate
+        cur_t += rexp(λ1)
+        f      = idxlessthan(δtv, cur_t)
+
+        bitv[s:f] = cur_s
+
+        if f == lbitv
+          break
+        end
+
+        cur_s     = 1 - cur_s
+        s         = f + 1
+
+      end
     end
-  end
-
-
-    f = indmindif_sorted(δtvec, contsam[i])
-    setindex!(Y, cur_s, bridx[s:f]) 
-    cur_s = 1 - cur_s
-    s     = f == lbr ? f : (f + 1)
-    end
-
 
   end
 end
 
 
+δts = diff(δtv)
+bitv  = fill(0, length(δtvec))
 
-
-δts = fill(0.1,49)
-bitv = fill(1,50)
-
-
-@benchmark prop_bit_hist(bitv, 0.1, 0.1, δts)
+@benchmark prop_bit_hist(bitv, 1., 1., δts)
+@benchmark prop_bit_hist2(bitv, .1, .1, δtvec)
 
 bitv
 
@@ -332,8 +316,9 @@ end
 
 
 
-
-# make ragged array of the cumulative delta times for each branch
+"""
+  make ragged array of the cumulative delta times for each branch
+"""
 function make_edgeδt(bridx::Array{Array{Int64,1},1}, 
                      δt::Array{Float64,1}, 
                      m::Int64)
@@ -363,8 +348,14 @@ end
 function idxlessthan(x::Array{Float64,1}, val::Float64) 
   
   @inbounds begin
+
     a  ::Int64 = 1
     b  ::Int64 = endof(x)
+  
+    if x[b] < val
+      return b
+    end
+
     mid::Int64 = div(b,2)  
 
     while b-a > 1
@@ -382,9 +373,11 @@ end
 
 
 
-# return index for closest value in sorted arrays 
-# using a sort of uniroot algorithm
-# FLOATS
+"""
+  return index for closest value in sorted arrays 
+  using a sort of uniroot algorithm
+  FLOATS
+"""
 function indmindif_sorted(x::Array{Float64,1}, val::Float64) 
   a::Int64   = 1
   b::Int64   = endof(x)
@@ -402,9 +395,11 @@ end
 
 
 
-# return index for closest value in sorted arrays 
-# using a sort of uniroot algorithm
-# INTEGERS
+"""
+return index for closest value in sorted arrays 
+using a sort of uniroot algorithm
+INTEGERS
+"""
 function indmindif_sorted(x::Array{Int64,1}, val::Int64) 
   a::Int64   = 1
   b::Int64   = endof(x)
@@ -421,15 +416,19 @@ end
 
 
 
-
-# random exponential generator
+"""
+  random exponential generator
+"""
 rexp(λ::Float64) = @fastmath log(rand()) * -(1/λ)
 
 
 
 
-# first number is the parent branch
-# second and third numbers the daughters
+"""
+  make branch triads:
+  first number is the parent branch
+  second and third numbers the daughters
+"""
 function maketriads(edges::Array{Int64,2})
 
   # internal nodes
@@ -451,22 +450,28 @@ end
 
 
 
-# function for sampling a coin flip 
-# with non equal probilities
+"""
+  function for sampling a coin flip 
+  with non equal probilities
+"""
 coinsamp(p0::Float64) = rand() < p0 ? 0 : 1
 
 
 
 
-#normalize probabilities to 1
+"""
+  normalize probabilities to 1
+"""
 normlize(pt1::Float64, pt2::Float64) = pt1/(pt1 + pt2)
 
 
 
 
 
-# branch sampling for multiple areas,
-# resampling if extinction is present
+"""
+  branch sampling for multiple areas,
+  resampling if extinction is present
+"""
 function br_samp(ssii ::Array{Int64,1}, 
                  ssff ::Array{Int64,1},
                  λc   ::Array{Float64,2},
@@ -484,8 +489,9 @@ end
 
 
 
-
-# check if extinct
+"""
+  check if extinct
+"""
 function ifext(t_hist::Array{Array{Float64,1},1},
                ssii  ::Array{Int64,1}, 
                narea ::Int64)
@@ -529,7 +535,9 @@ end
 
 
 
-# multistate branch sampling
+"""
+  multistate branch sampling
+"""
 function mult_rejsam(ssii ::Array{Int64,1}, 
                      ssff ::Array{Int64,1},
                      λc   ::Array{Float64,2},
