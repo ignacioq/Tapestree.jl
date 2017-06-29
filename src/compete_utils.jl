@@ -3,7 +3,7 @@
 
 Utilities for Data Augmented Competition model
 
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 t(-_-t)
 
@@ -14,83 +14,111 @@ May 01 2017
 
 
 
-# Markov chain probabilities 
-# through fast analytical solution
+"""
+  Markov chain probabilities 
+  through fast analytical solution
+"""
 function Ptrfast(λ1::Float64, λ0::Float64, t::Float64)
-  sumλ ::Float64 = λ1 + λ0
-  ex   ::Float64 = exp(-sumλ*t)
-  sd1  ::Float64 = 1/sumλ
-  λ1ex ::Float64 = λ1*ex
-  λ0ex ::Float64 = λ0*ex
+  
+  @fastmath begin
 
-  ((sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex)), 
-   (sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)))
+    sumλ ::Float64 = λ1 + λ0
+    ex   ::Float64 = exp(-sumλ*t)
+    sd1  ::Float64 = 1/sumλ
+    λ1ex ::Float64 = λ1*ex
+    λ0ex ::Float64 = λ0*ex
+
+    ((sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex)), 
+     (sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)))
+  end
 end
 
 
 
 
-# Markov chain probabilities 
-# through fast analytical solution
-# conditional on starting value
+"""
+  Markov chain probabilities 
+  through fast analytical solution
+  conditional on starting value
+"""
 function Ptrfast_start(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
-  sumλ ::Float64 = λ1 + λ0
-  ex   ::Float64 = exp(-sumλ*t)
-  sd1  ::Float64 = 1/sumλ
-  λ1ex ::Float64 = λ1*ex
-  λ0ex ::Float64 = λ0*ex
+  
+  @fastmath begin
 
-  if state == 0
-    sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex) 
-  else
-    sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)
+    sumλ ::Float64 = λ1 + λ0
+    ex   ::Float64 = exp(-sumλ*t)
+    sd1  ::Float64 = 1/sumλ
+    λ1ex ::Float64 = λ1*ex
+    λ0ex ::Float64 = λ0*ex
+
+    if state == 0
+      sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex) 
+    else
+      sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)
+    end
   end
 end
 
 
 
-
-# Markov chain probabilities 
-# through fast analytical solution
-# conditional on starting value
+"""
+  Markov chain probabilities 
+  through fast analytical solution
+  conditional on starting value
+"""
 function Ptrfast_end(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
-  sumλ ::Float64 = λ1 + λ0
-  ex   ::Float64 = exp(-sumλ*t)
-  sd1  ::Float64 = 1/sumλ
-  λ1ex ::Float64 = λ1*ex
-  λ0ex ::Float64 = λ0*ex
+  
+  @fastmath begin
 
-  if state == 0
-    (sd1*(λ0 + λ1ex), sd1*(λ0 - λ0ex))
-  else
-    (sd1*(λ1 - λ1ex), sd1*(λ1 + λ0ex))
+    sumλ ::Float64 = λ1 + λ0
+    ex   ::Float64 = exp(-sumλ*t)
+    sd1  ::Float64 = 1/sumλ
+    λ1ex ::Float64 = λ1*ex
+    λ0ex ::Float64 = λ0*ex
+
+    if state == 0
+      (sd1*(λ0 + λ1ex), sd1*(λ0 - λ0ex))
+    else
+      (sd1*(λ1 - λ1ex), sd1*(λ1 + λ0ex))
+    end
   end
 end
 
 
 
 
-# log-density of exponential 
-logdexp(x::Float64, λ::Float64) = log(λ) - λ * x
+"""
+  log-density of exponential 
+"""
+logdexp(x::Float64, λ::Float64) = @fastmath log(λ) - λ * x
 
 
 
 
-# log-density of normal
+"""
+  log-density of normal
+"""
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  -0.5*log(2.0π) - 0.5*log(σ²) - abs2(x - μ)/(2.0 * σ²)
+ @fastmath -(0.5*log(2.0π) + 0.5*log(σ²) + abs2(x - μ)/(2.0 * σ²))
 
 
 
 
-# log-density of half-cauchy
-logdhcau(x::Float64, scl::Float64) = log(2 * scl/(π *(x * x + scl * scl)))
+"""
+  log-density of half-cauchy
+"""
+logdhcau(x::Float64, scl::Float64) = 
+  @fastmath log(2 * scl/(π *(x * x + scl * scl)))
 
 
 
 
-# log-density of half-cauchy with scale 1
-logdhcau1(x::Float64) = log(2/(π * (x * x + 1)))
+"""
+  log-density of half-cauchy with scale 1
+"""
+logdhcau1(x::Float64) = 
+  @fastmath log(2/(π * (x * x + 1)))
+
 
 
 
@@ -117,12 +145,34 @@ end
 
 
 
+"""
+  rejection sampling for each branch
+  condition on start and end point
+  for bit sampling
+"""
+function bit_rejsam!(bitv ::Array{Int64,1},
+                     sf   ::Int64,
+                     λ1   ::Float64, 
+                     λ0   ::Float64, 
+                     cumts::Array{Float64,1})
+  
+  bit_prop_hist!(bitv, λ1, λ0, cumts)
+
+  while bitv[end] != sf 
+    bit_prop_hist!(bitv, λ1, λ0, cumts)
+  end
+
+end
+
+
+
+
 
 """
   propose events for a branch
   with equal rates for gain and loss
   return the cumsum of times
-  *Ugly code but slightly faster*
+  * Ugly code but slightly faster *
 """
 function brprop_cumsum(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
 
@@ -175,19 +225,20 @@ end
 
 
 """
-function for proposing bit histories 
-according to δtimes and assigning
-to bitv
+  function for proposing bit histories 
+  according to cumulative δtimes and assigning
+  to bitv
+  *Ugly code but slightly faster*
 """
-function prop_bit_hist(bitv::Array{Int64,1},
-                       λ1  ::Float64, 
-                       λ0  ::Float64, 
-                       δtv ::Array{Float64,1})
+function bit_prop_hist!(bitv ::Array{Int64,1},
+                        λ1   ::Float64, 
+                        λ0   ::Float64, 
+                        cumts::Array{Float64,1})
 
-  @inbounds @fastmath begin
-    
-    lbitv = endof(bitv)
-    cur_s = bitv[1]
+  @fastmath begin
+
+    lbitv = endof(bitv)::Int64
+    cur_s = bitv[1]::Int64
     cur_t = 0.0
     s     = 2
 
@@ -195,8 +246,8 @@ function prop_bit_hist(bitv::Array{Int64,1},
 
       while true
 
-        cur_t += rexp(λ1)
-        f = idxlessthan(δtv, cur_t)
+        cur_t += rexp(λ1)::Float64
+        f      = idxlessthan(cumts, cur_t)::Int64
 
         bitv[s:f] = cur_s
         
@@ -204,12 +255,12 @@ function prop_bit_hist(bitv::Array{Int64,1},
           break
         end
 
-        cur_s     = 1 - cur_s
-        s         = f + 1
+        cur_s = 1 - cur_s
+        s     = f + 1
 
         # same but with loss rate
-        cur_t += rexp(λ0)
-        f      = idxlessthan(δtv, cur_t)
+        cur_t += rexp(λ0)::Float64
+        f      = idxlessthan(cumts, cur_t)::Int64
 
         bitv[s:f] = cur_s
 
@@ -217,16 +268,17 @@ function prop_bit_hist(bitv::Array{Int64,1},
           break
         end
 
-        cur_s     = 1 - cur_s
-        s         = f + 1
+        cur_s = 1 - cur_s
+        s     = f + 1
 
       end
 
     else
+
       while true
 
-        cur_t += rexp(λ0)
-        f = idxlessthan(δtv, cur_t)
+        cur_t += rexp(λ0)::Float64
+        f      = idxlessthan(cumts, cur_t)::Int64
 
         bitv[s:f] = cur_s
         
@@ -234,12 +286,12 @@ function prop_bit_hist(bitv::Array{Int64,1},
           break
         end
 
-        cur_s     = 1 - cur_s
-        s         = f + 1
+        cur_s = 1 - cur_s
+        s     = f + 1
 
         # same but with loss rate
-        cur_t += rexp(λ1)
-        f      = idxlessthan(δtv, cur_t)
+        cur_t += rexp(λ1)::Float64
+        f      = idxlessthan(cumts, cur_t)::Int64
 
         bitv[s:f] = cur_s
 
@@ -247,8 +299,8 @@ function prop_bit_hist(bitv::Array{Int64,1},
           break
         end
 
-        cur_s     = 1 - cur_s
-        s         = f + 1
+        cur_s = 1 - cur_s
+        s     = f + 1
 
       end
     end
@@ -257,53 +309,12 @@ function prop_bit_hist(bitv::Array{Int64,1},
 end
 
 
-δts = diff(δtv)
-bitv  = fill(0, length(δtvec))
-
-@benchmark prop_bit_hist(bitv, 1., 1., δts)
-@benchmark prop_bit_hist2(bitv, .1, .1, δtvec)
-
-bitv
-
-@benchmark brprop_cumsum(0, 0.1, 0.1, 4.9)
-
-
-function assigndisceve!(si     ::Int64, 
-                        Y      ::Array{Int64,3}, 
-                        contsam::Array{Float64,1}, 
-                        bridx  ::Array{Int64,1}, 
-                        δtvec  ::Array{Float64,1})
-  s    ::Int64 = 1
-  cur_s::Int64 = si
- 
-  @inbounds begin
-
-    lbr = endof(bridx)
-    
-    for i=eachindex(contsam)
-      f = indmindif_sorted(δtvec, contsam[i])
-      setindex!(Y, cur_s, bridx[s:f]) 
-      cur_s = 1 - cur_s
-      s     = f == lbr ? f : (f + 1)
-    end
-
-  end
-end
-
-
-Yc = zeros(Int64, 60, 20,4)
-
-contsam = brprop_cumsum(0, .1, .1, 4.9)[1]
-bridx = collect(2:30)
-δtvec = cumsum(fill(contsam[end]/ length(bridx), length(bridx)))
-
-@benchmark assigndisceve!(0, Yc, contsam, bridx, δtvec)
 
 
 
-
-
-# make ragged array with index for each edge in Yc
+"""
+  make ragged array with index for each edge in Yc
+"""
 function make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2})
 
   bridx = Array{Int64,1}[]
@@ -320,8 +331,8 @@ end
   make ragged array of the cumulative delta times for each branch
 """
 function make_edgeδt(bridx::Array{Array{Int64,1},1}, 
-                     δt::Array{Float64,1}, 
-                     m::Int64)
+                     δt   ::Array{Float64,1}, 
+                     m    ::Int64)
   
   brδt = Array{Float64,1}[]
   
@@ -424,6 +435,7 @@ rexp(λ::Float64) = @fastmath log(rand()) * -(1/λ)
 
 
 
+
 """
   make branch triads:
   first number is the parent branch
@@ -465,6 +477,18 @@ coinsamp(p0::Float64) = rand() < p0 ? 0 : 1
 normlize(pt1::Float64, pt2::Float64) = pt1/(pt1 + pt2)
 
 
+@benchmark normlize(0.2,0.3)
+
+
+
+
+
+"""
+ =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ For stem branch (continuous data augmentation)
+ =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+"""
+
 
 
 
@@ -486,6 +510,8 @@ function br_samp(ssii ::Array{Int64,1},
 
   t_hist
 end
+
+
 
 
 
@@ -556,8 +582,10 @@ end
 
 
 
-# rejection sampling for each branch
-# condition on start and end point
+"""
+  rejection sampling for each branch
+  condition on start and end point
+"""
 function rejsam(si::Int64, sf::Int64, λ1::Float64, λ0::Float64, t::Float64)
   
   sam::Tuple{Array{Float64,1},Int64} = brprop(si, λ1, λ0, t)
@@ -572,8 +600,9 @@ end
 
 
 
-# propose events for a branch
-# with unequal rates for gain and loss
+"""
+  propose events for a branch
+"""
 function brprop(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
 
   c_st   ::Int64            = si
