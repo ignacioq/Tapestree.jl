@@ -17,6 +17,7 @@ module Compete
 
   include("utils.jl")
   include("compete_utils.jl")
+  include("cont_DA_prop.jl")
   include("data_initializer.jl")
   include("data_handling.jl")
   include("loglik_functions.jl")
