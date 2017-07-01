@@ -1,5 +1,5 @@
 
-"""
+#=
 
 Utilities for Data Augmented Competition model
 
@@ -9,13 +9,15 @@ t(-_-t)
 
 May 01 2017
 
-"""
+=#
 
 
 
 
 """
-  log-density of exponential 
+  logdexp(x::Float64, λ::Float64)
+
+  log-density of exponential
 """
 logdexp(x::Float64, λ::Float64) = @fastmath log(λ) - λ * x
 
@@ -23,6 +25,8 @@ logdexp(x::Float64, λ::Float64) = @fastmath log(λ) - λ * x
 
 
 """
+  logdnorm(x::Float64, μ::Float64, σ²::Float64)
+  
   log-density of normal
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
@@ -32,6 +36,8 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
 
 
 """
+  logdhcau(x::Float64, scl::Float64)
+
   log-density of half-cauchy
 """
 logdhcau(x::Float64, scl::Float64) = 
@@ -41,6 +47,8 @@ logdhcau(x::Float64, scl::Float64) =
 
 
 """
+  logdhcau1(x::Float64)
+  
   log-density of half-cauchy with scale 1
 """
 logdhcau1(x::Float64) = 
@@ -50,6 +58,8 @@ logdhcau1(x::Float64) =
 
 
 """
+  rexp(λ::Float64)
+
   random exponential generator
 """
 rexp(λ::Float64) = @fastmath log(rand()) * -(1/λ)
@@ -59,6 +69,8 @@ rexp(λ::Float64) = @fastmath log(rand()) * -(1/λ)
 
 
 """
+  coinsamp(p0::Float64) 
+  
   function for sampling a coin flip 
   with non equal probilities
 """
@@ -69,6 +81,8 @@ coinsamp(p0::Float64) = rand() < p0 ? 0 : 1
 
 
 """
+  normlize(pt1::Float64, pt2::Float64)
+
   normalize probabilities to 1
 """
 normlize(pt1::Float64, pt2::Float64) = pt1/(pt1 + pt2)
@@ -78,6 +92,8 @@ normlize(pt1::Float64, pt2::Float64) = pt1/(pt1 + pt2)
 
 
 """
+  Ptrfast(λ1::Float64, λ0::Float64, t::Float64)
+
   Markov chain probabilities 
   through fast analytical solution
 """
@@ -102,6 +118,8 @@ end
 
 
 """
+  Ptrfast_start(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
+
   Markov chain probabilities 
   through fast analytical solution
   conditional on starting value
@@ -130,6 +148,8 @@ end
 
 
 """
+  Ptrfast_end(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
+
   Markov chain probabilities 
   through fast analytical solution
   conditional on starting value
@@ -159,13 +179,19 @@ end
 
 
 """
+  make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2})
+  
   make ragged array with index for each edge in Yc
 """
-function make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2})
+function make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2}, ntip::Int64)
 
   bridx = Array{Int64,1}[]
   for b in childs
-    push!(bridx, find(b .== B))
+    bidinces = find(b .== B)
+    if b != (ntip+1)
+      unshift!(bidinces, bidinces[1] - 1)
+    end
+    push!(bridx, bidinces)
   end
 
   bridx
@@ -187,11 +213,11 @@ function make_edgeδt(bridx::Array{Array{Int64,1},1},
   brδt = Array{Float64,1}[]
   
   for j in 1:(length(bridx)-1)
-    bi = copy(bridx[j] .- 1)
+    bi = copy(bridx[j][1:(end-1)])
     for i in eachindex(bi)
       bi[i] = rowind(bi[i], m)
     end
-    push!(brδt, cumsum(δt[bi]))
+    push!(brδt, unshift!(cumsum(δt[bi]),0))
   end
   
   brδt
@@ -311,5 +337,23 @@ end
 
 
 
+
+
+"""
+  indices for columns along m timesteps
+"""
+function create_wcol(X::Array{Float64,2})
+
+  X_fornan  = deepcopy(X)
+  wNaN_x    = .!isnan.(X_fornan[Base.OneTo(end),:])
+
+  # make ragged array for non-NaN columns
+  wcol = Array{Int64,1}[]
+  for i = Base.OneTo(size(X,1))
+    push!(wcol,find(wNaN_x[i,:]))
+  end
+
+  wcol
+end
 
 

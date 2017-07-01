@@ -1,42 +1,25 @@
 
-"""
+#=
 
-Data creation and updates for joint
-Biogeographic competition model
+Functions to estimate area and lineage trait averages 
+and lineage specific differences
 
-
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 t(-_-t)
 
 May 15 2017
 
+=#
+
+
+
+
 """
-
-
-
-
-# indices for columns along m timesteps
-function create_wcol(X::Array{Float64,2})
-
-  X_fornan  = deepcopy(X)
-  wNaN_x    = .!isnan.(X_fornan[Base.OneTo(end),:])
-
-  # make ragged array for non-NaN columns
-  wcol = Array{Int64,1}[]
-  for i = Base.OneTo(size(X,1))
-    push!(wcol,find(wNaN_x[i,:]))
-  end
-
-  wcol
-end
-
-
-
-
-# estimate area means according to presence
-# absence of species and linage means according
-# to area averages
+  estimate area means according to presence
+  absence of species and linage means according
+  to area averages
+"""
 function area_lineage_means!(AA::Array{Float64,2}, 
                              LA::Array{Float64,2},
                              X     ::Array{Float64,2}, 
@@ -92,8 +75,10 @@ end
 
 
 
-# create multi-dimensional array with 
-# lineage and area averages differences in X
+"""
+  create multi-dimensional array with 
+  lineage and area averages differences in X
+"""
 function linarea_diff!(LD   ::Array{Float64,3},
                        X    ::Array{Float64,2},
                        AA   ::Array{Float64,2},
@@ -116,8 +101,10 @@ end
 
 
 
-# re-estimate lineage specific means 
-# for a branch update
+"""
+  re-estimate lineage specific means 
+  for a branch update
+"""
 function Xupd_linavg(k    ::Int64, 
                      wck  ::Array{Int64,1},
                      X    ::Array{Float64,2},
@@ -141,7 +128,9 @@ end
 
 
 
-# returns the trait per occupied area per lineage
+"""
+  returns the trait per occupied area per lineage
+"""
 function symp_traits(X  ::Array{Float64,2}, 
                      Y  ::Array{Int64,3}, 
                      wck::Array{Int64,1}, 
@@ -167,8 +156,10 @@ end
 
 
 
-# estimate area averages based on per area per
-# lineage values
+"""
+  estimate area averages based on per area per
+  lineage values
+"""
 function area_averages(Sx   ::Array{Float64,2}, 
                        Sk   ::Array{Int64,2}, 
                        narea::Int64)
@@ -197,8 +188,10 @@ end
 
 
 
-# estimate lineage specific competition averages 
-# based on sympatry and area averages
+"""
+  estimate lineage specific competition averages 
+  based on sympatry and area averages
+"""
 function lineage_averages(Sk::Array{Int64,2}, 
                           AA::Vector{Float64})
   @inbounds begin
@@ -224,8 +217,10 @@ end
 
 
 
-# create multi-dimensional array with 
-# lineage and area averages differences in X
+"""
+  create multi-dimensional array with 
+  lineage and area averages differences in X
+"""
 function linarea_difference(k    ::Int64,
                             X    ::Array{Float64,2},
                             AA   ::Vector{Float64},

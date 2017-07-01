@@ -1,16 +1,16 @@
-"""
+
+#=
 
 Likelihood Functions for joint
 Biogeographic competition model
 
-
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 t(-_-t)
 
 May 15 2017
 
-"""
+=#
 
 
 

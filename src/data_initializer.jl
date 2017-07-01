@@ -1,17 +1,17 @@
 using RCall
 using Optim
 
-"""
+#=
 
 Data initializer for Competition model
 
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 t(-_-t)
 
 June 14 2017
 
-"""
+=#
 
 
 

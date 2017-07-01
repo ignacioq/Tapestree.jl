@@ -1,5 +1,5 @@
-"""
 
+#=
 Utilities for Discrete Data Augmentation in 
 Biogeographic Histories.
 
@@ -9,63 +9,49 @@ t(-_-t)
 
 May 01 2017
 
-"""
-
-
+=#
 
 
 
 """
-  rejection sampling for each branch
-  condition on start and end point
-  for bit sampling
+  bit_rejsam!(Y::Array{Int64,3},
+              idx::Array{Int64,1},
+              sf::Int64,
+              λ1::Float64, 
+              λ0::Float64, 
+              cumts::Array{Float64,1})
+
+  rejection bit sampling for a single branch
+  condition on start and end point and given a
+  vector of cumulative δtimes
 """
-function bit_rejsam!(bitv ::Array{Int64,1},
+# reprehensible code... but faster 
+function bit_rejsam!(Y    ::Array{Int64,3},
+                     idx  ::Array{Int64,1},
                      sf   ::Int64,
                      λ1   ::Float64, 
                      λ0   ::Float64, 
                      cumts::Array{Float64,1})
-  
-  bit_prop_hist!(bitv, λ1, λ0, cumts)
 
-  while bitv[end] != sf 
-    bit_prop_hist!(bitv, λ1, λ0, cumts)
-  end
+  idx_end = idx[end]::Int64
 
-end
+  @inbounds @fastmath begin
 
-
-
-
-
-"""
-  function for proposing bit histories 
-  according to cumulative δtimes and assigning
-  to bitv
-  * Ugly code but slightly faster *
-"""
-function bit_prop_hist!(bitv ::Array{Int64,1},
-                        λ1   ::Float64, 
-                        λ0   ::Float64, 
-                        cumts::Array{Float64,1})
-
-  @fastmath begin
-
-    lbitv = endof(bitv)::Int64
-    cur_s = bitv[1]::Int64
+    cur_s = Y[idx[1]]::Int64
     cur_t = 0.0
-    s     = 2
+    s     = idx[2]::Int64
+    idx_1 = idx[1] - 1
 
     if cur_s == 0
 
       while true
 
         cur_t += rexp(λ1)::Float64
-        f      = idxlessthan(cumts, cur_t)::Int64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-        bitv[s:f] = cur_s
+        Y[s:f] = cur_s
         
-        if f == lbitv
+        if f == idx_end
           break
         end
 
@@ -74,11 +60,11 @@ function bit_prop_hist!(bitv ::Array{Int64,1},
 
         # same but with loss rate
         cur_t += rexp(λ0)::Float64
-        f      = idxlessthan(cumts, cur_t)::Int64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-        bitv[s:f] = cur_s
+        Y[s:f] = cur_s
 
-        if f == lbitv
+        if f == idx_end
           break
         end
 
@@ -92,11 +78,11 @@ function bit_prop_hist!(bitv ::Array{Int64,1},
       while true
 
         cur_t += rexp(λ0)::Float64
-        f      = idxlessthan(cumts, cur_t)::Int64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-        bitv[s:f] = cur_s
+        Y[s:f] = cur_s
         
-        if f == lbitv
+        if f == idx_end
           break
         end
 
@@ -105,11 +91,11 @@ function bit_prop_hist!(bitv ::Array{Int64,1},
 
         # same but with loss rate
         cur_t += rexp(λ1)::Float64
-        f      = idxlessthan(cumts, cur_t)::Int64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-        bitv[s:f] = cur_s
+        Y[s:f] = cur_s
 
-        if f == lbitv
+        if f == idx_end
           break
         end
 
@@ -120,17 +106,128 @@ function bit_prop_hist!(bitv ::Array{Int64,1},
     end
 
   end
+
+  # rejection sampling if end simulation state do not match observed state
+  while Y[idx_end] != sf 
+
+    @fastmath begin
+
+      cur_s = Y[idx[1]]::Int64
+      cur_t = 0.0
+      s     = idx[2]
+
+      if cur_s == 0
+
+        while true
+
+          cur_t += rexp(λ1)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+          
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+          # same but with loss rate
+          cur_t += rexp(λ0)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+        end
+
+      else
+
+        while true
+
+          cur_t += rexp(λ0)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+          
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+          # same but with loss rate
+          cur_t += rexp(λ1)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+        end
+      end
+    end
+
+  end
+
 end
 
 
 
 
 
-"""
+
+
+
+
+#=
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   Deprecated functions for discrete biogeographic sampling
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+=#
+
+
+
 """
+  assigns discrete values according to 
+  the continuous sampling to Yc
+"""
+function assigndisceve!(si     ::Int64, 
+                        Y      ::Array{Int64,3}, 
+                        contsam::Array{Float64,1}, 
+                        bridx  ::Array{Int64,1}, 
+                        δtvec  ::Array{Float64,1})
+  s    ::Int64 = 1
+  cur_s::Int64 = si
+ 
+  @inbounds begin
+
+    lbr = endof(bridx)
+    
+    for i=eachindex(contsam)
+      f = indmindif_sorted(δtvec, contsam[i])
+      setindex!(Y, cur_s, bridx[s:f]) 
+      cur_s = 1 - cur_s
+      s     = f == lbr ? f : (f + 1)
+    end
+
+  end
+end
+
+
+
 
 
 

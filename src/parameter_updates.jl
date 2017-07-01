@@ -1,16 +1,15 @@
 
-"""
+#=
 
 Updates for MCMC
 
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 t(-_-t)
 
 June 20 2017
 
-"""
-
+=#
 
 
 

@@ -1,13 +1,16 @@
 using ProgressMeter
 
-"""
-
+#=
 Utility functions for turnover
+
 Ignacio Quintero
+
 February 6 2017
+
 t(-_-t)
 
-"""
+=#
+
 
 
 function makescalef(obj_ar::Float64)

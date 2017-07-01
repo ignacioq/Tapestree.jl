@@ -1,15 +1,16 @@
 
-"""
+
+#=
 
 Biogeographic competition model
 
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 t(-_-t)
 
 April 27 2017
 
-"""
+=#
 
 
 
@@ -96,7 +97,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const trios = maketriads(edges)
 
   # make ragged array with index for each edge in Yc
-  const bridx = make_edgeind(edges[:,2], B)
+  const bridx = make_edgeind(edges[:,2], B, ntip)
 
   # expand bridx for each area
   const bridx_a = Vector{Vector{Int64}}[]
@@ -124,14 +125,12 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # Sample all internal node values according to Pr transitions
   for triad in trios
+
     pr, d1, d2 = triad
 
     for j in Base.OneTo(narea) 
 
-      prvals = Yc[bridx_a[j][pr]]
-      d1vals = Yc[bridx_a[j][d1]]
-      d2vals = Yc[bridx_a[j][d2]]
-
+      # conditional probabilities
       p1 = Ptrfast_end(λi[j,1], λi[j,2], brl[d1], brs[d1,2,j])
       p2 = Ptrfast_end(λi[j,1], λi[j,2], brl[d2], brs[d2,2,j])
 
@@ -145,6 +144,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     end 
 
     upnode!(λi, triad, Yc, bridx_a, brδt, brl, brs, narea, nedge)
+
   end
 
   # assign same value as mrca
@@ -211,11 +211,11 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   p  = Progress(niter, 5, "running MCMC...", 20)
 
   if fix_ωλ_ωμ
-    const pv  = append!(collect(1:np),fill(1, floor(Int64,np*.10)))
-    const parvec = setdiff(pv,(3:4))
+    const pv      = append!(collect(1:np),fill(1, floor(Int64,np*0.1)))
+    const parvec  = setdiff(pv,(3:4))
     const lparvec = length(parvec)
   else
-    const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*.10)))
+    const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*0.1)))
     const lparvec = length(parvec)
   end
 
