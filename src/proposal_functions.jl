@@ -1,4 +1,3 @@
-
 #=
 
 Proposal functions for joint
@@ -16,20 +15,13 @@ May 16 2017
 
 
 """
-  upnode!(λ::Array{Float64,2},
-          triad::Vector{Int64},
-          Y::Array{Int64,3},
-          bridx_a::Vector{Vector{Vector{Int64}}},
-          brδt::Vector{Vector{Float64}},
-          brl::Vector{Float64},
-          brs::Array{Int64,3},
-          narea::Int64,
-          nedge::Int64)
+    upnode!(λ::Array{Float64,2}, triad::Vector{Int64}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
 
-  update node and incident branches
+Update node and incident branches using discrete 
+Data Augmentation for all areas.
 """
 function upnode!(λ      ::Array{Float64,2},
-                 triad  ::Vector{Int64},
+                 triad  ::Array{Int64,1},
                  Y      ::Array{Int64,3},
                  bridx_a::Vector{Vector{Vector{Int64}}},
                  brδt   ::Vector{Vector{Float64}},
@@ -154,17 +146,10 @@ end
 
 
 """
-  samplenode!(λ::Array{Float64,2},
-              pr::Int64,
-              d1::Int64,
-              d2::Int64,
-              brs::Array{Int64,3},
-              brl::Array{Float64,1},
-              narea::Int64)
+    samplenode!(λ::Array{Float64,2}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brl::Array{Float64,1}, narea::Int64)
 
-  sample one internal node according to 
-  mutual-independence model
-  transition probabilities
+Sample one internal node according to 
+mutual-independence model transition probabilities.
 """
 function samplenode!(λ    ::Array{Float64,2},
                      pr   ::Int64,
@@ -205,12 +190,11 @@ end
 
 
 """
-  update stem branch
+    upstem(λ    ::Array{Float64,2}, idx  ::Int64,brs  ::Array{Int64,3}, brl  ::Vector{Float64},narea::Int64)
 
-  *********
-  move indexing outside
-  *********
+Update stem branch using continuous Data Augmentation.
 """
+# Move indexing outside
 function upstem(λ    ::Array{Float64,2}, 
                 idx  ::Int64,
                 brs  ::Array{Int64,3}, 

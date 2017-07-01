@@ -1,7 +1,7 @@
 
 #=
-Utilities for Discrete Data Augmentation in 
-Biogeographic Histories.
+Bit rejection-sampling using discrete 
+Data Augmentation for Biogeographic Histories.
 
 Ignacio Quintero Mächler
 
@@ -14,16 +14,11 @@ May 01 2017
 
 
 """
-  bit_rejsam!(Y::Array{Int64,3},
-              idx::Array{Int64,1},
-              sf::Int64,
-              λ1::Float64, 
-              λ0::Float64, 
-              cumts::Array{Float64,1})
+    bit_rejsam!(Y::Array{Int64,3}, idx::Array{Int64,1}, sf::Int64, λ1::Float64,  λ0::Float64,  cumts::Array{Float64,1})
 
-  rejection bit sampling for a single branch
-  condition on start and end point and given a
-  vector of cumulative δtimes
+Bit rejection-sample a single branch
+given the start and end states and a
+vector of cumulative δtimes.
 """
 # reprehensible code... but faster 
 function bit_rejsam!(Y    ::Array{Int64,3},
@@ -199,111 +194,110 @@ end
 =#
 
 
-
-"""
-  assigns discrete values according to 
-  the continuous sampling to Yc
-"""
-function assigndisceve!(si     ::Int64, 
-                        Y      ::Array{Int64,3}, 
-                        contsam::Array{Float64,1}, 
-                        bridx  ::Array{Int64,1}, 
-                        δtvec  ::Array{Float64,1})
-  s    ::Int64 = 1
-  cur_s::Int64 = si
+# """
+#   assigns discrete values according to 
+#   the continuous sampling to Yc
+# """
+# function assigndisceve!(si     ::Int64, 
+#                         Y      ::Array{Int64,3}, 
+#                         contsam::Array{Float64,1}, 
+#                         bridx  ::Array{Int64,1}, 
+#                         δtvec  ::Array{Float64,1})
+#   s    ::Int64 = 1
+#   cur_s::Int64 = si
  
-  @inbounds begin
+#   @inbounds begin
 
-    lbr = endof(bridx)
+#     lbr = endof(bridx)
     
-    for i=eachindex(contsam)
-      f = indmindif_sorted(δtvec, contsam[i])
-      setindex!(Y, cur_s, bridx[s:f]) 
-      cur_s = 1 - cur_s
-      s     = f == lbr ? f : (f + 1)
-    end
+#     for i=eachindex(contsam)
+#       f = indmindif_sorted(δtvec, contsam[i])
+#       setindex!(Y, cur_s, bridx[s:f]) 
+#       cur_s = 1 - cur_s
+#       s     = f == lbr ? f : (f + 1)
+#     end
 
-  end
-end
-
-
+#   end
+# end
 
 
 
 
-"""
-  rejection sampling for each branch
-  condition on start and end point
-"""
-function rejsam_cumsum(si::Int64, 
-                       sf::Int64, 
-                       λ1::Float64, 
-                       λ0::Float64, 
-                       t::Float64)
+
+
+# """
+#   rejection sampling for each branch
+#   condition on start and end point
+# """
+# function rejsam_cumsum(si::Int64, 
+#                        sf::Int64, 
+#                        λ1::Float64, 
+#                        λ0::Float64, 
+#                        t::Float64)
   
-  evs, ssf = brprop_cumsum(si, λ1, λ0, t)
+#   evs, ssf = brprop_cumsum(si, λ1, λ0, t)
 
-  while ssf != sf 
-    evs, ssf = brprop_cumsum(si, λ1, λ0, t)
-  end
+#   while ssf != sf 
+#     evs, ssf = brprop_cumsum(si, λ1, λ0, t)
+#   end
 
-  return evs
-end
-
-
+#   return evs
+# end
 
 
 
-"""
-  propose events for a branch
-  with equal rates for gain and loss
-  return the cumsum of times
-  * Ugly code but slightly faster *
-"""
-function brprop_cumsum(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
 
-  cur_s::Int64            = si
-  cur_t::Float64          = 0.
-  cum_t::Array{Float64,1} = Float64[]
 
-  if cur_s == 0
-    cur_t += rexp(λ1)
+# """
+#   propose events for a branch
+#   with equal rates for gain and loss
+#   return the cumsum of times
+#   * Ugly code but slightly faster *
+# """
+# function brprop_cumsum(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
 
-    while cur_t < t
-      push!(cum_t, cur_t)
-      cur_s  = 1 - cur_s
-      cur_t += rexp(λ0)
+#   cur_s::Int64            = si
+#   cur_t::Float64          = 0.
+#   cum_t::Array{Float64,1} = Float64[]
+
+#   if cur_s == 0
+#     cur_t += rexp(λ1)
+
+#     while cur_t < t
+#       push!(cum_t, cur_t)
+#       cur_s  = 1 - cur_s
+#       cur_t += rexp(λ0)
     
-      if cur_t > t
-        break
-      end
+#       if cur_t > t
+#         break
+#       end
 
-      push!(cum_t, cur_t)
-      cur_s  = 1 - cur_s
-      cur_t += rexp(λ1)
-    end
+#       push!(cum_t, cur_t)
+#       cur_s  = 1 - cur_s
+#       cur_t += rexp(λ1)
+#     end
 
-  else
-    cur_t += rexp(λ0)
+#   else
+#     cur_t += rexp(λ0)
 
-    while cur_t < t
-      push!(cum_t, cur_t)
-      cur_s  = 1 - cur_s
-      cur_t += rexp(λ1)
+#     while cur_t < t
+#       push!(cum_t, cur_t)
+#       cur_s  = 1 - cur_s
+#       cur_t += rexp(λ1)
     
-      if cur_t > t
-        break
-      end
+#       if cur_t > t
+#         break
+#       end
 
-      push!(cum_t, cur_t)
-      cur_s  = 1 - cur_s
-      cur_t += rexp(λ0)
-    end
+#       push!(cum_t, cur_t)
+#       cur_s  = 1 - cur_s
+#       cur_t += rexp(λ0)
+#     end
 
-  end
+#   end
 
-  push!(cum_t, t)
+#   push!(cum_t, t)
 
-  return cum_t, cur_s
-end
+#   return cum_t, cur_s
+# end
 
