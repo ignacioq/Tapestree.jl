@@ -18,7 +18,8 @@ May 01 2017
 
 Bit rejection-sample a single branch
 given the start and end states and a
-vector of cumulative δtimes.
+vector of cumulative δtimes. It assigns to `Y`
+in place, avoiding extra memory allocation.
 """
 # reprehensible code... but faster 
 function bit_rejsam!(Y    ::Array{Int64,3},
@@ -178,9 +179,6 @@ function bit_rejsam!(Y    ::Array{Int64,3},
   end
 
 end
-
-
-
 
 
 
