@@ -14,7 +14,12 @@ June 14 2017
 =#
 
 
+"""
+    read_data(tree_file::String, data_file::String; delim::Char = '\t', eol::Char = '\r')
 
+Read a phylogenetic tree using **ape** in R through 
+`RCall` and the data file with the trait and biogeographic information.
+"""
 function read_data(tree_file::String,
                    data_file::String;
                    delim    ::Char = '\t',
@@ -43,7 +48,9 @@ end
 
 
 
-# a kind of R tree type
+"""
+Immutable type of an R tree `phylo` object type.
+"""
 immutable rtree
   ed  ::Array{Int64,2}
   el  ::Array{Float64,1}
@@ -54,8 +61,12 @@ end
 
 
 
-# function to read a tree using R
-# reading tree capabilities 
+"""
+    read_tree(tree_file::String)
+
+Function to read a tree using `RCall`
+to call **ape** tree reading capabilities. 
+"""
 function read_tree(tree_file::String)
 
   tree = reval("""
@@ -86,9 +97,12 @@ end
 
 
 
-# function to initialize X and Y matrix
-# tip_values, x(t), and tip_areas, y(t),
-# must be Dictionaries 
+"""
+    initialize_data(tip_values::Dict{Int64,Float64}, tip_areas ::Dict{Int64,Array{Int64,1}}, m::Int64, tree::rtree, bts::Array{Float64,1})
+
+Function to initialize `X` and `Y` matrix given
+the tip_values and tip_areas. Must be Dictionaries.
+"""
 function initialize_data(tip_values::Dict{Int64,Float64},
                          tip_areas ::Dict{Int64,Array{Int64,1}},
                          m         ::Int64,
@@ -180,8 +194,11 @@ end
 
 
 
-# create initial trait matrix  
-# using Brownian bridges
+"""
+    initialize_X!(tip_values::Dict{Int64,Float64}, X::Array{Float64,2}, B::Array{Float64,2}, ncoup::Array{Int64,2}, δt::Array{Float64,1}, tree::rtree)
+
+Create an initial trait matrix, `X`, using Brownian bridges.
+"""
 function initialize_X!(tip_values::Dict{Int64,Float64},
                        X         ::Array{Float64,2},
                        B         ::Array{Float64,2},
@@ -238,7 +255,12 @@ end
 
 
 
-# simple function to initialize Y
+"""
+    initialize_Y!(tip_areas::Dict{Int64,Array{Int64,1}}, Y::Array{Int64,3}, B::Array{Float64,2})
+
+Simple function to initialize Y with all 1s (the
+real biogeographic sampling is done during the MCMC).
+"""
 function initialize_Y!(tip_areas::Dict{Int64,Array{Int64,1}},
                        Y        ::Array{Int64,3},
                        B        ::Array{Float64,2})
@@ -264,7 +286,9 @@ end
 
 
 
-# Maximum likelihood Brownian Motion
+"""
+Maximum likelihood Brownian Motion.
+"""
 function make_bm_ll(tip_values::Dict{Int64,Float64},
                     tree      ::rtree)
 
@@ -333,10 +357,13 @@ end
 
 
 
+"""
+    branching_times(tree::rtree)
 
-# function to estimate absolute
-# branching times, with time 0 at the
-# present, time going backward
+Function to estimate absolute
+branching times, with time 0 at the
+present, time going backward.
+"""
 function branching_times(tree::rtree)
 
   @inbounds begin
@@ -377,9 +404,12 @@ end
 
 
 
+"""
+    bb(xs::Float64, xf::Float64, δt::Array{Float64,1}, σ::Float64)
 
-# Brownian bridge simulation function for
-# a vector of times δt 
+Brownian bridge simulation function for
+a vector of times δt.
+"""
 function bb(xs::Float64, xf::Float64, δt::Array{Float64,1}, σ::Float64)
 
   t  = unshift!(cumsum(δt),0.0)

@@ -1,8 +1,6 @@
-
-
 #=
 
-Biogeographic competition model
+MCMC for biogeographic competition model
 
 Ignacio Quintero Mächler
 
@@ -15,8 +13,12 @@ April 27 2017
 
 
 
-#  mcmc for competition in join inference of trait
-# and biogeograhic evolution
+"""
+    compete_mcmc(...)
+
+Run MCMC for join inference of trait
+and biogeograhic evolution and competition.
+"""
 function compete_mcmc(Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
                       ncoup    ::Array{Int64,2},
@@ -173,6 +175,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   Xupd_llf       = makellf_Xupd(δt, narea)
   Rupd_llf       = makellf_Rupd(δt, narea)
   σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)
+  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
   
   # number of free parameters

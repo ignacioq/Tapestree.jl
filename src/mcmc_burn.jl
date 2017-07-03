@@ -184,7 +184,7 @@ function burn_compete(total_llf,
           ld = copy(lindiff)
 
           upnode!(λc, trios[bup], Yp, bridx_a, brδt, brl, brs, narea, nedge)
-          
+
           Yp[Ync2] = Yp[Ync1]
 
           area_lineage_means!(aa, la, Xc, Yp, wcol, m)

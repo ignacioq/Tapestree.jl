@@ -1,14 +1,22 @@
+#=
+
+Biogeographic competition model
+
+Ignacio Quintero Mächler
+
+t(-_-t)
+
+April 27 2017
+
+=#
+
+
 
 """
+    compete(tree_file::String, data_file::String)
 
-Wrapper for running competition model
-
+Run Compete. Wrapper around all functions.
 """
-
-
-
-
-
 function compete(tree_file::String,
                  data_file::String;
                  m        ::Int64                  = 100,
@@ -20,7 +28,7 @@ function compete(tree_file::String,
                  ωμprior  ::Tuple{Float64,Float64} = (0.,10.),
                  σ²prior  ::Float64                = 1e-1,
                  λprior   ::Float64                = 1e-1,
-                 dir_out   ::String                 = "/data/turnover/model/",
+                 dir_out  ::String                 = "/data/turnover/model/",
                  out_file ::String                 = "compete",
                  λi       ::Float64                = 1.,
                  ωxi      ::Float64                = 0.,
@@ -31,14 +39,11 @@ function compete(tree_file::String,
                  delim    ::Char                   = '\t',
                  eol      ::Char                   = '\r')
 
-
   tip_values, tip_areas, tree, bts = 
     read_data(tree_file, data_file, delim = delim, eol = eol)
 
-
   X, Y, B, ncoup, δt, tree, si = 
     initialize_data(tip_values, tip_areas, m, tree, bts)
-
 
   R = compete_mcmc(X, Y, ncoup, δt, tree.ed, tree.el, B,
                    niter     = niter,

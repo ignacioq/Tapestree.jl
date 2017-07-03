@@ -86,7 +86,6 @@ function ifextY(Y      ::Array{Int64,3},
         return true
       end
     end
-    
 
   end
 

@@ -13,23 +13,6 @@ t(-_-t)
 
 
 
-function makescalef(obj_ar::Float64)
-  nar = 1.0 - obj_ar
-
-  function f(window::Float64, rate::Float64)
-    if (rate > obj_ar)
-      window *= (1. + (rate - obj_ar) / nar)
-    else
-      window /= (2. - rate / obj_ar)
-    end
-    window
-  end
-
-  return f
-end
-
-
-
 # uniform update
 uniupt(p::Float64, tn::Float64) = abs(p + (rand()-0.5) * tn)
 
@@ -70,6 +53,27 @@ colind(x::Int64, nrow::Int64) = cld(x, nrow)
 
 # get vector indexing from column and row
 vecind(row::Int64, col::Int64, nrow::Int64) = row + nrow*(col - 1)
+
+
+
+
+
+function makescalef(obj_ar::Float64)
+  nar = 1.0 - obj_ar
+
+  function f(window::Float64, rate::Float64)
+    if (rate > obj_ar)
+      window *= (1. + (rate - obj_ar) / nar)
+    else
+      window /= (2. - rate / obj_ar)
+    end
+    window
+  end
+
+  return f
+end
+
+
 
 
 

@@ -16,16 +16,18 @@ May 15 2017
 
 
 """
-  estimate area means according to presence
-  absence of species and linage means according
-  to area averages
+    area_lineage_means!(AA::Array{Float64,2}, LA::Array{Float64,2}, X::Array{Float64,2}, Y::Array{Int64,3}, wcol::Array{Array{Int64,1},1}, m::Int64)
+
+Estimate area means according to presence
+absence of species and linage means according
+to area averages.
 """
-function area_lineage_means!(AA::Array{Float64,2}, 
-                             LA::Array{Float64,2},
-                             X     ::Array{Float64,2}, 
-                             Y     ::Array{Int64,3}, 
-                             wcol  ::Array{Array{Int64,1},1},
-                             m     ::Int64)
+function area_lineage_means!(AA  ::Array{Float64,2}, 
+                             LA  ::Array{Float64,2},
+                             X   ::Array{Float64,2}, 
+                             Y   ::Array{Int64,3}, 
+                             wcol::Array{Array{Int64,1},1},
+                             m   ::Int64)
 
   @inbounds begin
 
@@ -76,8 +78,10 @@ end
 
 
 """
-  create multi-dimensional array with 
-  lineage and area averages differences in X
+    linarea_diff!(LD   ::Array{Float64,3}, X::Array{Float64,2}, AA::Array{Float64,2}, narea::Int64, ntip::Int64, m::Int64)
+
+Create multi-dimensional array with 
+lineage and area averages differences in X.
 """
 function linarea_diff!(LD   ::Array{Float64,3},
                        X    ::Array{Float64,2},
@@ -102,8 +106,10 @@ end
 
 
 """
-  re-estimate lineage specific means 
-  for a branch update
+    Xupd_linavg(k::Int64, wck::Array{Int64,1}, X::Array{Float64,2}, Y::Array{Int64,3}, narea::Int64)
+
+Re-estimate lineage specific means 
+for a branch update.
 """
 function Xupd_linavg(k    ::Int64, 
                      wck  ::Array{Int64,1},
@@ -129,7 +135,9 @@ end
 
 
 """
-  returns the trait per occupied area per lineage
+    symp_traits(X::Array{Float64,2}, Y::Array{Int64,3}, wck::Array{Int64,1}, k::Int64)
+
+Return the trait per occupied area per lineage.
 """
 function symp_traits(X  ::Array{Float64,2}, 
                      Y  ::Array{Int64,3}, 
@@ -156,9 +164,12 @@ end
 
 
 
+
 """
-  estimate area averages based on per area per
-  lineage values
+    area_averages(Sx::Array{Float64,2}, Sk::Array{Int64,2}, narea::Int64)
+
+Estimate area averages based on per area per
+lineage values.
 """
 function area_averages(Sx   ::Array{Float64,2}, 
                        Sk   ::Array{Int64,2}, 
@@ -188,9 +199,12 @@ end
 
 
 
+
 """
-  estimate lineage specific competition averages 
-  based on sympatry and area averages
+    lineage_averages(Sk::Array{Int64,2}, AA::Vector{Float64})
+
+Estimate lineage specific competition averages 
+based on sympatry and area averages.
 """
 function lineage_averages(Sk::Array{Int64,2}, 
                           AA::Vector{Float64})
@@ -218,8 +232,10 @@ end
 
 
 """
-  create multi-dimensional array with 
-  lineage and area averages differences in X
+    linarea_difference(k::Int64, X::Array{Float64,2}, AA::Vector{Float64}, wck ::Array{Int64,1}, narea::Int64)
+
+Create a multi-dimensional array with 
+lineage and area averages differences in X.
 """
 function linarea_difference(k    ::Int64,
                             X    ::Array{Float64,2},
