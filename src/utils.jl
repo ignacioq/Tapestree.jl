@@ -13,51 +13,92 @@ t(-_-t)
 
 
 
-# uniform update
+"""
+    uniupt(p::Float64, tn::Float64)
+
+Uniform parameter window move.
+"""
 uniupt(p::Float64, tn::Float64) = abs(p + (rand()-0.5) * tn)
 
 
 
-# additive update
+
+"""
+    addupt(p::Float64, tn::Float64)
+
+Gaussian parameter window move.
+"""
 addupt(p::Float64, tn::Float64) = p + randn() * tn
 
 
 
-# additive update
+
+
+"""
+    absaddupt(p::Float64, tn::Float64)
+
+Non-negative Gaussian parameter window move.
+"""
 absaddupt(p::Float64, tn::Float64) = abs(p + randn() * tn)
 
 
 
-# multiplicative update
+
+"""
+    mulupt(p::Float64, tn::Float64)
+
+Multiplicative parameter window move.
+"""
 mulupt(p::Float64, tn::Float64) = p * exp((rand() - 0.5) * tn)
 
 
 
 
-# logarithmic update
+"""
+    logupt(p::Float64, tn::Float64)
+
+Logarithmic parameter window move.
+"""
 logupt(p::Float64, tn::Float64) = exp(log(p) + (rand() - 0.5) * tn)
 
 
 
 
-# get row indexing from matrix indexing
+"""
+    rowind(x::Int64, nrow::Int64)
+
+Get row indexing from matrix indexing.
+"""
 rowind(x::Int64, nrow::Int64) = mod1(x,nrow)
 
 
 
 
-# get column indexing from matrix indexing
+"""
+    colind(x::Int64, nrow::Int64)
+
+Get column indexing from matrix indexing
+"""
 colind(x::Int64, nrow::Int64) = cld(x, nrow)
 
 
 
-# get vector indexing from column and row
+"""
+    vecind(row::Int64, col::Int64, nrow::Int64)
+
+Get vector indexing from column and row.
+"""
 vecind(row::Int64, col::Int64, nrow::Int64) = row + nrow*(col - 1)
 
 
 
 
 
+"""
+    makescalef(obj_ar::Float64)
+
+Make scaling function given the objective acceptance rates.
+"""
 function makescalef(obj_ar::Float64)
   nar = 1.0 - obj_ar
 
@@ -77,8 +118,11 @@ end
 
 
 
+"""
+    makeglobalscalef(obj_ar::Float64)
 
-# global scaling factor
+Make global scaling factor.
+"""
 function makeglobalscalef(obj_ar::Float64)
 
   function f(λ::Float64, globalrate::Float64, stepsize::Float64)
@@ -92,7 +136,12 @@ end
 
 
 
-# paramete mean and Σ adaptive update
+"""
+    adaptiveupd(Σ::Array{Float64,2}, psample::Array{Float64,1}, pmean::Array{Float64,1}, stepsize::Float64)
+
+
+Update parameter mean and Σ adaptive.
+"""
 function adaptiveupd(Σ       ::Array{Float64,2},
                      psample ::Array{Float64,1},
                      pmean   ::Array{Float64,1},
@@ -109,7 +158,11 @@ end
 
 
 
-# make function for the stepsize for the adaptive update
+"""
+    makestepsize(C::Float64, η::Float64)
+
+Make function for the stepsize for the adaptive update.
+"""
 function makestepsize(C::Float64, η::Float64)
   
   β::Float64 = rand(linspace((1./(1. + η)),1))
@@ -124,7 +177,11 @@ end
 
 
 
-# multivariate update
+"""
+    makemvnproposal(Σ::Array{Float64,2})
+
+Make the multivariate update given the covariance matrix.
+"""
 function makemvnproposal(Σ::Array{Float64,2})
 
   evc  = eigvecs(Σ)
@@ -141,9 +198,12 @@ end
 
 
 
+"""
+    indmindif(x::Array{Float64,1}, val::Float64)
 
-# return index for closest value 
-# in non-sorted arrays 
+Return index for closest value 
+in non-sorted arrays.
+"""
 function indmindif(x::Array{Float64,1}, val::Float64) 
   ibest  = start(eachindex(x)) 
   dxbest = abs(x[ibest]-val) 

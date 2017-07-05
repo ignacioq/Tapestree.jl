@@ -174,10 +174,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   ωλμupd_llf     = makellf_ωλμ_upd(Yc, δt, narea)
   Xupd_llf       = makellf_Xupd(δt, narea)
   Rupd_llf       = makellf_Rupd(δt, narea)
-  σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)
-  
+  σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
-  
+
   # number of free parameters
   # number of xnodes + λ + σ² + ωx + ωλ + ωμ
   const np = length(wXp) + 4 + 2*narea
@@ -194,7 +193,6 @@ function compete_mcmc(Xc       ::Array{Float64,2},
       λi, ωxi, ωλi, ωμi, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
       λprior, ωxprior, ωλprior, ωμprior, σ²prior, fix_ωλ_ωμ, np, nburn)
-
 
   # log likelihood and prior
   h[1]  = llc

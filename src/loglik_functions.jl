@@ -15,8 +15,11 @@ May 15 2017
 
 
 
-# make likelihood function
-# for all trait matrix and biogeography history
+"""
+
+Make likelihood function
+for all trait matrix and biogeography history.
+"""
 function makellf(δt   ::Vector{Float64}, 
                  Y    ::Array{Int64, 3}, 
                  ntip ::Int64, 
@@ -285,17 +288,10 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
                                 nedge  ::Int64,
                                 m      ::Int64)
 
-  # modify bridx_a to include index before
-  const bridx_iid = deepcopy(bridx_a)
-
-  for j=eachindex(bridx_iid), i=eachindex(bridx_iid[j])
-    unshift!(bridx_iid[j][i], bridx_iid[j][i][1] - 1)
-  end
-
   # prepare δts
   const δtA = Array{Float64,1}[]
 
-  for j=bridx_iid[1][1:(nedge-1)]
+  for j=bridx_a[1][1:(nedge-1)]
     inds = zeros(Int64,length(j) - 1)
     for i = eachindex(inds)
       inds[i] = rowind(j[i], m)
@@ -316,14 +312,14 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
 
       if pr < nedge 
         for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_iid[j][pr]], λ[j,1], λ[j,2], δtA[pr]) +
-                bitvectorll_iid(Y[bridx_iid[j][d1]], λ[j,1], λ[j,2], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_iid[j][d2]], λ[j,1], λ[j,2], δtA[d2])
+          ll += bitvectorll_iid(Y[bridx_a[j][pr]], λ[j,1], λ[j,2], δtA[pr]) +
+                bitvectorll_iid(Y[bridx_a[j][d1]], λ[j,1], λ[j,2], δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[j][d2]], λ[j,1], λ[j,2], δtA[d2])
         end
       else 
         for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_iid[j][d1]], λ[j,1], λ[j,2], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_iid[j][d2]], λ[j,1], λ[j,2], δtA[d2])
+          ll += bitvectorll_iid(Y[bridx_a[j][d1]], λ[j,1], λ[j,2], δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[j][d2]], λ[j,1], λ[j,2], δtA[d2])
         end
       end
 

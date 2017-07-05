@@ -13,7 +13,11 @@ June 20 2017
 
 
 
-# update λ
+"""
+    make_mhr_upd_λ(nedge::Int64, λprior::Float64, ptn::Array{Float64}, λupd_llf)
+
+Make function to update λ.
+"""
 function make_mhr_upd_λ(nedge ::Int64, 
                         λprior::Float64,
                         ptn   ::Array{Float64},
@@ -56,8 +60,11 @@ end
 
 
 
+"""
+    make_mhr_upd_Y(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
 
-# update trio in Y
+Make function to update trio in Y.
+"""
 function make_mhr_upd_Y(narea  ::Int64,
                         nedge  ::Int64,
                         m      ::Int64,
@@ -123,7 +130,11 @@ end
 
 
 
-# Update X
+"""
+    make_mhr_upd_X(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llf, Rupd_llf)
+
+Make DA update X.
+"""
 function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xnc2     ::Array{Int64,1},
                         wcol     ::Array{Array{Int64,1},1},
@@ -198,16 +209,21 @@ end
 
 
 
-# update σ²
+"""
+    mhr_upd_σ²(σ²c::Float64, Xc::Array{Float64,2}, ωxc::Float64, llc::Float64, prc::Float64, σ²tn::Float64, linavg::Array{Float64,2}, σ²prior::Float64, σ²ωxupd_llf)
+
+
+MHR update for σ².
+"""
 function mhr_upd_σ²(σ²c    ::Float64,
-                     Xc     ::Array{Float64,2},
-                     ωxc    ::Float64,
-                     llc    ::Float64,
-                     prc    ::Float64,
-                     σ²tn   ::Float64,
-                     linavg ::Array{Float64,2},
-                     σ²prior::Float64,
-                     σ²ωxupd_llf)
+                    Xc     ::Array{Float64,2},
+                    ωxc    ::Float64,
+                    llc    ::Float64,
+                    prc    ::Float64,
+                    σ²tn   ::Float64,
+                    linavg ::Array{Float64,2},
+                    σ²prior::Float64,
+                    σ²ωxupd_llf)
 
   σ²p = logupt(σ²c, rand() < 0.5 ? σ²tn : 10*σ²tn)
 
@@ -233,7 +249,11 @@ end
 
 
 
-# update ωx
+"""
+    mhr_upd_ωx(ωxc::Float64, Xc::Array{Float64,2}, σ²c::Float64, llc::Float64, prc::Float64, ωxtn::Float64, linavg::Array{Float64,2}, ωxprior::Tuple{Float64,Float64}, σ²ωxupd_llf)
+
+MHR update for ωx.
+"""
 function mhr_upd_ωx(ωxc    ::Float64,
                      Xc     ::Array{Float64,2},
                      σ²c    ::Float64,
@@ -267,18 +287,22 @@ end
 
 
 
-#update ωλ
+"""
+    mhr_upd_ωλ(ωλc::Float64, λc::Array{Float64,2}, ωμc::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ωλtn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ωλprior::Tuple{Float64,Float64}, ωλμupd_llf)
+
+MHR update for ωλ.
+"""
 function mhr_upd_ωλ(ωλc    ::Float64,
-                     λc     ::Array{Float64,2},
-                     ωμc    ::Float64,
-                     Yc     ::Array{Int64,3},
-                     llc    ::Float64,
-                     prc    ::Float64,
-                     ωλtn   ::Float64,
-                     linavg ::Array{Float64,2},
-                     lindiff::Array{Float64,3},
-                     ωλprior::Tuple{Float64,Float64},
-                     ωλμupd_llf)
+                    λc     ::Array{Float64,2},
+                    ωμc    ::Float64,
+                    Yc     ::Array{Int64,3},
+                    llc    ::Float64,
+                    prc    ::Float64,
+                    ωλtn   ::Float64,
+                    linavg ::Array{Float64,2},
+                    lindiff::Array{Float64,3},
+                    ωλprior::Tuple{Float64,Float64},
+                    ωλμupd_llf)
 
   ωλp = addupt(ωλc, rand() < 0.5 ? ωλtn : 10*ωλtn)
 
@@ -303,7 +327,11 @@ end
 
 
 
-# update ωμ
+"""
+    mhr_upd_ωμ(ωμc::Float64, λc::Array{Float64,2}, ωλc::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ωμtn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ωμprior::Tuple{Float64,Float64}, ωλμupd_llf)
+
+MHR update for ωμ.
+"""
 function mhr_upd_ωμ(ωμc    ::Float64,
                      λc     ::Array{Float64,2},
                      ωλc    ::Float64,

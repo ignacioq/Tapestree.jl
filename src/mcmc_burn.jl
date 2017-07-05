@@ -1,4 +1,3 @@
-
 #=
 
 Burning phase of the
@@ -15,7 +14,11 @@ April 27 2017
 
 
 
-# burning & adaptive phase
+"""
+    burn_compete(...)
+
+Burning & adaptive phase for MCMC.
+"""
 function burn_compete(total_llf,
                       λupd_llf,
                       ωλμupd_llf,
@@ -90,8 +93,8 @@ function burn_compete(total_llf,
   p = Progress(nburn + 1, 5, "burning...", 20)
 
   if fix_ωλ_ωμ
-    const pv  = append!(collect(1:np),fill(1, floor(Int64,np*.1)))
-    const parvec = setdiff(pv,(3:4))
+    const pv      = append!(collect(1:np),fill(1, floor(Int64,np*.1)))
+    const parvec  = setdiff(pv,(3:4))
     const lparvec = length(parvec)
   else
     const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*.1)))
