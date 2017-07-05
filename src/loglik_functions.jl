@@ -16,9 +16,10 @@ May 15 2017
 
 
 """
+    makellf(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64, wcol::Vector{Vector{Int64}}, narea::Int64)
 
-Make likelihood function
-for all trait matrix and biogeography history.
+Make likelihood function for all trait matrix 
+and biogeography history.
 """
 function makellf(δt   ::Vector{Float64}, 
                  Y    ::Array{Int64, 3}, 
@@ -93,15 +94,19 @@ end
 
 
 
-# branch handling for likelihood estimation
-# y is a vector of 0s and 1s
-function bitvectorll(y,
+"""
+    bitvectorll(y ::Array{Int64,1}, λ1::Float64, λ0::Float64, ωλ::Float64, ωμ::Float64, Δx::Array{Float64,1}, δt::Array{Float64,1})
+
+Return the likelihood for a
+bit vector (composed of 0s and 1s).
+"""
+function bitvectorll(y ::Array{Int64,1},
                      λ1::Float64,
                      λ0::Float64,
                      ωλ::Float64,
                      ωμ::Float64,
-                     Δx,
-                     δt)
+                     Δx::Array{Float64,1},
+                     δt::Array{Float64,1})
 
   ll::Float64 = 0.0
 
@@ -138,9 +143,12 @@ end
 
 
 
+"""
+    bitbitll(y1::Int64, y2::Int64, λ1::Float64, λ0::Float64, ωλ::Float64, ωμ::Float64, Δx::Float64, δt::Float64)
 
-# branch handling for likelihood estimation
-# y is a vector of size 2
+Return the likelihood for a
+bit vector of length 2 (composed of 0s and 1s).
+"""
 function bitbitll(y1::Int64,
                   y2::Int64,
                   λ1::Float64,
@@ -168,9 +176,12 @@ end
 
 
 
+"""
+    ratest(λ::Float64, ω::Float64, absdiff::Float64)
 
-# estimate lambda colonization/extirpation rate
-# based on the absolute difference on X
+Estimate λ colonization/extirpation rate
+based on the absolute difference on X.
+"""
 ratest(λ::Float64, ω::Float64, absdiff::Float64) = 
   λ * exp(ω * absdiff)
 
@@ -178,11 +189,14 @@ ratest(λ::Float64, ω::Float64, absdiff::Float64) =
 
 
 
-# make likelihood function for when updating
-# λ
-function makellf_λ_upd(Y   ::Array{Int64,3},
-                            δt   ::Vector{Float64},
-                            narea::Int64)
+"""
+    makellf_λ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
+
+Make likelihood function for when updating λ.
+"""
+function makellf_λ_upd(Y    ::Array{Int64,3},
+                       δt   ::Vector{Float64},
+                       narea::Int64)
 
   const coloop = Base.OneTo(size(Y,2))
 
@@ -231,9 +245,11 @@ end
 
 
 
+"""
+    makellf_ωλμ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
 
-# make likelihood function for when updating
-# ωλ & ωμ
+Make likelihood function for when updating ωλ & ωμ.
+"""
 function makellf_ωλμ_upd(Y   ::Array{Int64,3},
                          δt   ::Vector{Float64},
                          narea::Int64)
@@ -278,10 +294,13 @@ end
 
 
 
+"""
+    makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1}, δt::Array{Float64,1}, narea::Int64, nedge::Int64, m::Int64)
 
-# make triad likelihood function
-# for iid model, the proposal density for 
-# data augmented biogeographic histories
+Make triad likelihood function for the mutual 
+independence model (iid), the proposal density 
+for data augmented biogeographic histories.
+"""
 function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
                                 δt     ::Array{Float64,1},
                                 narea  ::Int64,
@@ -333,10 +352,12 @@ end
 
 
 
+"""
+    bitvectorll_iid(y::Array{Int64,1}, λ1::Float64, λ0::Float64, δt::Array{Float64,1})
 
-# branch handling for likelihood estimation
-# under the independence model
-# x is a vector of 0s and 1s
+Return likelihood under the independence model 
+for a bit vector.
+"""
 function bitvectorll_iid(y ::Array{Int64,1},
                          λ1::Float64,
                          λ0::Float64,
@@ -368,8 +389,11 @@ end
 
 
 
-# make likelihood function
-# for all trait matrix 
+"""
+    makellf_σ²ωxupd(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64)
+
+Make likelihood function for all trait matrix, `X`.
+"""
 function makellf_σ²ωxupd(δt  ::Vector{Float64}, 
                          Y   ::Array{Int64, 3}, 
                          ntip::Int64)
@@ -416,9 +440,11 @@ end
 
 
 
+"""
+    makellf_Xupd(δt::Vector{Float64}, narea::Int64)
 
-# make likelihood function
-# for a internal node update in X
+Make likelihood function for an internal node update in `X`.
+"""
 function makellf_Xupd(δt   ::Vector{Float64}, 
                       narea::Int64)
 
@@ -481,8 +507,12 @@ end
 
 
 
-# make likelihood function
-# for root update in X
+"""
+    makellf_Rupd(δt::Vector{Float64}, narea::Int64)
+
+Make likelihood function
+for the root update in `X`.
+"""
 function makellf_Rupd(δt   ::Vector{Float64}, 
                       narea::Int64)
 
@@ -531,7 +561,11 @@ end
 
 
 
-# log likelihood for a branch in continuous time
+"""
+    brll(brevs::Array{Float64,1}, λ1::Float64, λ0::Float64, si::Int64)
+
+Return likelihood for a branch in continuous time.
+"""
 function brll(brevs::Array{Float64,1}, λ1::Float64, λ0::Float64, si::Int64)
 
   cst::Int64   = si 
@@ -553,19 +587,31 @@ end
 
 
 
-# log-likelihood for events 
-evll(t::Float64, λ::Float64) = log(λ) - (λ * t)
+"""
+    evll(t::Float64, λ::Float64)
+
+Return log-likelihood for events.
+"""
+evll(t::Float64, λ::Float64) = @fastmath log(λ) - (λ * t)
 
 
 
 
-# log-likelihood for nonevents
-nell(t::Float64, λ::Float64) = -(λ * t)
+"""
+    nell(t::Float64, λ::Float64)
+
+Return log-likelihood for nonevents.
+"""
+nell(t::Float64, λ::Float64) = -1 * λ * t
 
 
 
 
-# log prior for all areas 
+"""
+    allλpr(λc::Array{Float64,2}, λprior::Float64)
+
+Return log-prior for all areas 
+"""
 function allλpr(λc    ::Array{Float64,2},
                 λprior::Float64)
 
