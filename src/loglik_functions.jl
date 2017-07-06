@@ -612,12 +612,12 @@ nell(t::Float64, λ::Float64) = -1 * λ * t
 
 Return log-prior for all areas 
 """
-function allλpr(λc    ::Array{Float64,2},
+function allλpr(λc    ::Array{Float64,1},
                 λprior::Float64)
 
   pr::Float64 = 0.0
   
-  for j=λc
+  for j = λc
     pr += logdexp(j, λprior)
   end
 
