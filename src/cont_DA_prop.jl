@@ -20,7 +20,7 @@ May 01 2017
 """
 function br_samp(ssii ::Array{Int64,1}, 
                  ssff ::Array{Int64,1},
-                 λc   ::Array{Float64,2},
+                 λc   ::Array{Float64,1},
                  t    ::Float64,
                  narea::Int64)
   #time history
@@ -88,14 +88,14 @@ end
 """
 function mult_rejsam(ssii ::Array{Int64,1}, 
                      ssff ::Array{Int64,1},
-                     λc   ::Array{Float64,2},
+                     λc   ::Array{Float64,1},
                      t    ::Float64,
                      narea::Int64)
 
   all_times = Array{Float64,1}[]
 
   for i in Base.OneTo(narea)
-    push!(all_times, rejsam(ssii[i], ssff[i], λc[i,1], λc[i,2], t))
+    push!(all_times, rejsam(ssii[i], ssff[i], λc[1], λc[2], t))
   end
 
   return all_times
