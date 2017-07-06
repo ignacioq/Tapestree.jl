@@ -66,10 +66,10 @@ Return `true` if at some point the species
 goes extinct and/or more than one change is 
 observed after some **δt**, otherwise returns `false`.
 """
-function ifextY0(Y      ::Array{Int64,3},
-                 triad  ::Array{Int64,1},
-                 narea  ::Int64,
-                 bridx_a::Array{Array{Array{Int64,1},1},1})
+function ifextY(Y      ::Array{Int64,3},
+                triad  ::Array{Int64,1},
+                narea  ::Int64,
+                bridx_a::Array{Array{Array{Int64,1},1},1})::Bool
 
   @inbounds begin
 
@@ -90,14 +90,14 @@ function ifextY0(Y      ::Array{Int64,3},
         s_c = 0::Int64            # count area changes
         for i = Base.OneTo(narea)
           s_e += bg[i,j]::Int64
-          if bg[i,j] != bg[i,j+1]
+          if bg[i,j] != bg[i,j+1]::Int64
             s_c += 1
           end 
         end          
-        if s_e == 0
+        if s_e == 0               #if extinct
           return true
         end
-        if s_c > 1
+        if s_c > 1                #if more than one change  
           return true
         end
       end
