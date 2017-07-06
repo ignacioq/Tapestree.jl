@@ -56,11 +56,7 @@ function upnode!(λ      ::Array{Float64,2},
 end
 
 
-#=
-  *************************************
-  allow only one change at a time for δt
-  *************************************
-=#
+
 
 
 """
@@ -70,23 +66,44 @@ Return `true` if at some point the species
 goes extinct and/or more than one change is 
 observed after some **δt**, otherwise returns `false`.
 """
-function ifextY(Y      ::Array{Int64,3},
-                triad  ::Array{Int64,1},
-                narea  ::Int64,
-                bridx_a::Array{Array{Array{Int64,1},1},1})
+function ifextY0(Y      ::Array{Int64,3},
+                 triad  ::Array{Int64,1},
+                 narea  ::Int64,
+                 bridx_a::Array{Array{Array{Int64,1},1},1})
 
   @inbounds begin
 
-    for k=triad, i=2:(length(Y[bridx_a[1][k]])-1),
-      s::Int64 = 0
-      for j=Base.OneTo(narea)
-        s += Y[bridx_a[j][k]][i]::Int64
-      end
-      if s == 0
-        return true
-      end
-    end
+    for k ∈ triad
 
+      lv = length(bridx_a[1][k])::Int64
+
+      bg = Array{Int64,2}(narea, lv)
+
+      # time is horizontal
+      for j = Base.OneTo(narea)
+        bg[j,:] = Y[bridx_a[j][k]]::Array{Int64,1}
+      end
+        
+      # if gone extinct during δt
+      for j = Base.OneTo(lv-1)
+        s_e = 0::Int64            # count current areas
+        s_c = 0::Int64            # count area changes
+        for i = Base.OneTo(narea)
+          s_e += bg[i,j]::Int64
+          if bg[i,j] != bg[i,j+1]
+            s_c += 1
+          end 
+        end          
+        if s_e == 0
+          return true
+        end
+        if s_c > 1
+          return true
+        end
+      end
+
+    end
+  
   end
 
   return false
@@ -163,7 +180,7 @@ function samplenode!(λ    ::Array{Float64,2},
     brl_d1 = brl[d1]::Float64 
     brl_d2 = brl[d2]::Float64 
 
-    for j=Base.OneTo(narea)
+    for j = Base.OneTo(narea)
 
       # transition probabilities for the trio
       ppr_1, ppr_2 = 
@@ -189,7 +206,7 @@ end
 
 
 """
-    upstem(λ    ::Array{Float64,2}, idx  ::Int64,brs  ::Array{Int64,3}, brl  ::Vector{Float64},narea::Int64)
+    upstem(λ::Array{Float64,2}, idx::Int64, brs::Array{Int64,3}, brl::Vector{Float64}, narea::Int64)
 
 Update stem branch using continuous Data Augmentation.
 """
@@ -202,7 +219,7 @@ function upstem(λ    ::Array{Float64,2},
 
   @inbounds begin
     
-    for j in Base.OneTo(narea)
+    for j = Base.OneTo(narea)
       # transition probabilities
       p1::Tuple{Float64,Float64} = 
         Ptrfast_end(λ[j,1], λ[j,2], brl[idx], brs[idx,2,j])
@@ -212,7 +229,7 @@ function upstem(λ    ::Array{Float64,2},
     end
 
     while sum(brs[idx,1,:]) < 1
-      for j in Base.OneTo(narea)
+      for j = Base.OneTo(narea)
         # transition probabilities
         p1::Tuple{Float64,Float64} = 
           Ptrfast_end(λ[j,1], λ[j,2], brl[idx], brs[idx,2,j])
