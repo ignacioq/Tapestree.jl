@@ -56,7 +56,7 @@ function makellf(δt   ::Vector{Float64},
              ωx     ::Float64,
              ωλ     ::Float64,
              ωμ     ::Float64,
-             λ      ::Array{Float64,2},
+             λ::Array{Float64,1},
              stemevc::Vector{Vector{Float64}},
              stemss,
              σ²     ::Float64)
@@ -75,10 +75,10 @@ function makellf(δt   ::Vector{Float64},
 
       # biogeograhic likelihood
       for j in Base.OneTo(narea)
-        ll += brll(stemevc[j], λ[j,1], λ[j,2], stemss[j])
+        ll += brll(stemevc[j], λ[1], λ[2], stemss[j])
         for i = coloop
           wh = w23[i]
-          ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
+          ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ωλ, ωμ, 
                             lindiff[wh,i,j], dδt[wh]) 
         end
       end
@@ -212,7 +212,7 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
   push!(dδt,0.)
 
   function f(Y      ::Array{Int64,3}, 
-             λ      ::Array{Float64,2},
+             λ::Array{Float64,1},
              ωλ     ::Float64,
              ωμ     ::Float64,
              lindiff::Array{Float64,3},
@@ -225,11 +225,11 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
 
       for j=Base.OneTo(narea)
 
-        ll += brll(stemevc[j], λ[j,1], λ[j,2], stemss[j])
+        ll += brll(stemevc[j], λ[1], λ[2], stemss[j])
 
         for i=coloop
           wh = w23[i]
-          ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
+          ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ωλ, ωμ, 
                             lindiff[wh,i,j], dδt[wh]) 
         end
       end
@@ -268,7 +268,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
   push!(dδt,0.)
 
   function f(Y      ::Array{Int64,3}, 
-             λ      ::Array{Float64,2},
+             λ::Array{Float64,1},
              ωλ     ::Float64,
              ωμ     ::Float64,
              lindiff::Array{Float64,3})
@@ -279,7 +279,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
 
       for j=Base.OneTo(narea), i=coloop
         wh = w23[i]
-        ll += bitvectorll(Y[wh,i,j], λ[j,1], λ[j,2], ωλ, ωμ, 
+        ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ωλ, ωμ, 
                           lindiff[wh,i,j], dδt[wh]) 
       end
 
@@ -320,7 +320,7 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
 
 
   function f(Y    ::Array{Int64,3}, 
-             λ    ::Array{Float64,2},
+             λ::Array{Float64,1},
              triad::Array{Int64,1})
 
     ll::Float64 = 0.0
@@ -331,14 +331,14 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
 
       if pr < nedge 
         for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[j][pr]], λ[j,1], λ[j,2], δtA[pr]) +
-                bitvectorll_iid(Y[bridx_a[j][d1]], λ[j,1], λ[j,2], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[j][d2]], λ[j,1], λ[j,2], δtA[d2])
+          ll += bitvectorll_iid(Y[bridx_a[j][pr]], λ[1], λ[2], δtA[pr]) +
+                bitvectorll_iid(Y[bridx_a[j][d1]], λ[1], λ[2], δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[j][d2]], λ[1], λ[2], δtA[d2])
         end
       else 
         for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[j][d1]], λ[j,1], λ[j,2], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[j][d2]], λ[j,1], λ[j,2], δtA[d2])
+          ll += bitvectorll_iid(Y[bridx_a[j][d1]], λ[1], λ[2], δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[j][d2]], λ[1], λ[2], δtA[d2])
         end
       end
 
@@ -459,7 +459,7 @@ function makellf_Xupd(δt   ::Vector{Float64},
              ωx   ::Float64,
              ωλ   ::Float64,
              ωμ   ::Float64,
-             λ    ::Array{Float64,2},
+             λ::Array{Float64,1},
              σ²   ::Float64)
 
     # normal likelihoods
@@ -492,7 +492,7 @@ function makellf_Xupd(δt   ::Vector{Float64},
         # biogeograhic likelihoods
         for j=Base.OneTo(narea)
           ll += bitbitll(Y[k,wci,j], Y[k+1,wci,j], 
-                          λ[j,1], λ[j,2], ωλ, ωμ, ldk[i,j], δt[k])
+                          λ[1], λ[2], ωλ, ωμ, ldk[i,j], δt[k])
         end
       end
 
@@ -525,7 +525,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
              ωx   ::Float64,
              ωλ   ::Float64,
              ωμ   ::Float64,
-             λ    ::Array{Float64,2},
+             λ::Array{Float64,1},
              σ²   ::Float64)
 
     # normal likelihoods
@@ -546,7 +546,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
         # biogeograhic likelihoods
         for j = Base.OneTo(narea)
           ll += bitbitll(Y[k,wci,j], Y[k+1,wci,j], 
-                         λ[j,1], λ[j,2], ωλ, ωμ,ldk[i,j], δt[k])
+                         λ[1], λ[2], ωλ, ωμ,ldk[i,j], δt[k])
         end
       end
 

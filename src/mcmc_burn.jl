@@ -87,7 +87,7 @@ function burn_compete(total_llf,
   const nin = length(trios) + 1
 
   # parameter location for λ
-  const λlessthan = 2*narea + 4
+  const λlessthan = 6
 
   # progress bar
   p = Progress(nburn + 1, 5, "burning...", 20)

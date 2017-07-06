@@ -82,12 +82,12 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   ωλ    = zeros(nlogs)                   # colonization competition parameter
   ωμ    = zeros(nlogs)                   # extinction competition parameter
   σ²    = zeros(nlogs)                   # drift parameter
-  λs    = zeros(nlogs, 2*narea)          # rate parameters
+  λs    = zeros(nlogs, 2)                # rate parameters
   h     = zeros(nlogs)                   # likelihood
   o     = zeros(nlogs)                   # prior
 
    # initial values for MCMC
-  λi = fill(λi, narea, 2)
+  λi = fill(λi, 2)
 
   # add long stem branch
   edges = cat(1, edges, [2*ntip ntip + 1])
@@ -133,8 +133,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     for j in Base.OneTo(narea) 
 
       # conditional probabilities
-      p1 = Ptrfast_end(λi[j,1], λi[j,2], brl[d1], brs[d1,2,j])
-      p2 = Ptrfast_end(λi[j,1], λi[j,2], brl[d2], brs[d2,2,j])
+      p1 = Ptrfast_end(λi[1], λi[2], brl[d1], brs[d1,2,j])
+      p2 = Ptrfast_end(λi[1], λi[2], brl[d2], brs[d2,2,j])
 
       # normalize probability
       tp = normlize(*(p1[1],p2[1]), *(p1[2],p2[2]))
@@ -179,7 +179,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # number of free parameters
   # number of xnodes + λ + σ² + ωx + ωλ + ωμ
-  const np = length(wXp) + 4 + 2*narea
+  const np = length(wXp) + 6
 
   # remove B
   B = nothing
@@ -206,7 +206,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const nin = length(trios) + 1
 
   # parameter location for λ
-  const λlessthan = 2*narea + 4
+  const λlessthan = 6
 
   # progess bar
   p  = Progress(niter, 5, "running MCMC...", 20)
@@ -261,13 +261,13 @@ function compete_mcmc(Xc       ::Array{Float64,2},
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[j,1], λc[j,2], brs[nedge,1,j])
+              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
             end
 
             stemevc = upstem(λc, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[j,1], λc[j,2], brs[nedge,1,j])
+              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
             end
 
             llc += llr
@@ -323,8 +323,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # add column names
   col_nam = ["Iteration", "Likelihood", "Prior", "Trait_competition", 
              "Colonization_competition", "Extinction_competition", "Sigma2"]
-  for n = Base.OneTo(narea), i = 1:-1:0
-    xn = *("Lambda_", string(i), "_area_", string(n))
+  for i = 1:-1:0
+    xn = *("Lambda_", string(i))
     push!(col_nam,xn)
   end
 

@@ -15,12 +15,12 @@ May 16 2017
 
 
 """
-    upnode!(λ::Array{Float64,2}, triad::Vector{Int64}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
+    upnode!(λ::Array{Float64,1}, triad::Vector{Int64}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
 
 Update node and incident branches using discrete 
 Data Augmentation for all areas.
 """
-function upnode!(λ      ::Array{Float64,2},
+function upnode!(λ::Array{Float64,1},
                  triad  ::Array{Int64,1},
                  Y      ::Array{Int64,3},
                  bridx_a::Vector{Vector{Vector{Int64}}},
@@ -114,11 +114,11 @@ end
 
 
 """
-    createhists!(λ::Array{Float64,2}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
+    createhists!(λ::Array{Float64,1}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
 
 Create bit histories for all areas for the branch trio.
 """
-function createhists!(λ      ::Array{Float64,2}, 
+function createhists!(λ::Array{Float64,1}, 
                       Y      ::Array{Int64,3},
                       pr     ::Int64,
                       d1     ::Int64,
@@ -138,8 +138,8 @@ function createhists!(λ      ::Array{Float64,2},
       setindex!(Y, brs[pr,2,j], bridx_a[j][d1][1])
       setindex!(Y, brs[pr,2,j], bridx_a[j][d2][1])
 
-      λj1 = λ[j,1]::Float64
-      λj2 = λ[j,2]::Float64
+      λj1 = λ[1]::Float64
+      λj2 = λ[2]::Float64
 
       if pr < nedge
         # for parent branch
@@ -162,12 +162,12 @@ end
 
 
 """
-    samplenode!(λ::Array{Float64,2}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brl::Array{Float64,1}, narea::Int64)
+    samplenode!(λ::Array{Float64,1}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brl::Array{Float64,1}, narea::Int64)
 
 Sample one internal node according to 
 mutual-independence model transition probabilities.
 """
-function samplenode!(λ    ::Array{Float64,2},
+function samplenode!(λ::Array{Float64,1},
                      pr   ::Int64,
                      d1   ::Int64,
                      d2   ::Int64,
@@ -184,11 +184,11 @@ function samplenode!(λ    ::Array{Float64,2},
 
       # transition probabilities for the trio
       ppr_1, ppr_2 = 
-        Ptrfast_start(λ[j,1], λ[j,2], brl_pr, brs[pr,1,j])
+        Ptrfast_start(λ[1], λ[2], brl_pr, brs[pr,1,j])
       pd1_1, pd1_2 = 
-        Ptrfast_end(  λ[j,1], λ[j,2], brl_d1, brs[d1,2,j])
+        Ptrfast_end(  λ[1], λ[2], brl_d1, brs[d1,2,j])
       pd2_1, pd2_2 = 
-        Ptrfast_end(  λ[j,1], λ[j,2], brl_d2, brs[d2,2,j])
+        Ptrfast_end(  λ[1], λ[2], brl_d2, brs[d2,2,j])
 
       # normalize probability
       tp = normlize(*(ppr_1, pd1_1, pd2_1),
@@ -206,12 +206,12 @@ end
 
 
 """
-    upstem(λ::Array{Float64,2}, idx::Int64, brs::Array{Int64,3}, brl::Vector{Float64}, narea::Int64)
+    upstem(λ::Array{Float64,1}, idx::Int64, brs::Array{Int64,3}, brl::Vector{Float64}, narea::Int64)
 
 Update stem branch using continuous Data Augmentation.
 """
 # Move indexing outside
-function upstem(λ    ::Array{Float64,2}, 
+function upstem(λ::Array{Float64,1}, 
                 idx  ::Int64,
                 brs  ::Array{Int64,3}, 
                 brl  ::Vector{Float64},
@@ -222,7 +222,7 @@ function upstem(λ    ::Array{Float64,2},
     for j = Base.OneTo(narea)
       # transition probabilities
       p1::Tuple{Float64,Float64} = 
-        Ptrfast_end(λ[j,1], λ[j,2], brl[idx], brs[idx,2,j])
+        Ptrfast_end(λ[1], λ[2], brl[idx], brs[idx,2,j])
 
       # sample the stem node character
       brs[idx,1,j] = coinsamp(normlize(p1[1],p1[2]))
@@ -232,7 +232,7 @@ function upstem(λ    ::Array{Float64,2},
       for j = Base.OneTo(narea)
         # transition probabilities
         p1::Tuple{Float64,Float64} = 
-          Ptrfast_end(λ[j,1], λ[j,2], brl[idx], brs[idx,2,j])
+          Ptrfast_end(λ[1], λ[2], brl[idx], brs[idx,2,j])
 
         # sample the stem node character
         brs[idx,1,j] = coinsamp(normlize(p1[1],p1[2]))
