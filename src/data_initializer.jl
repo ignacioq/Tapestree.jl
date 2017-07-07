@@ -37,7 +37,9 @@ function read_data(tree_file::String,
     data = readdlm(data_file, '\t', '\n')
   end
 
-  @assert size(data,1) == (tree.nnod + 1) "Data file cannot be made of the right dimensions"
+  if size(data,1) != (tree.nnod + 1) 
+    error("Data file cannot be made of the right dimensions")
+  end
 
   data_tlab   = convert(Array{String,1}, data[:,1])
   data_values = convert(Array{Float64,1},data[:,2])
