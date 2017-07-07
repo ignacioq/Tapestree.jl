@@ -55,7 +55,7 @@ function upnode!(λ::Array{Float64,1},
       
       ntries += 1
       if ntries > 1000 
-        error("Probably there is too coarse sampling in one or more of the following edges of the tree: ", pr," ", d1," " ,d2, " ; try increasing m."))
+        error("Sampling is too coarse in one or more of the following tree edges: ", pr," ", d1," " ,d2, " ; try increasing m.")
       end
     end
 

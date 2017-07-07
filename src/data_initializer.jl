@@ -343,7 +343,7 @@ function make_bm_ll(tip_values::Dict{Int64,Float64},
         return Inf
       end
 
-      for i=eachindex(trios)
+      for i = eachindex(trios)
         pr, d1, d2 = trios[i]
         if pr == 0
           ntr[d1,1] = ntr[d2,1] = p[i+1]
