@@ -248,7 +248,7 @@ function burn_compete(total_llf,
 
       #update ωx
       elseif up == 2
-        ωxp = -abs(addupt(ωxc, ptn[2]))
+        ωxp = addupt(ωxc, ptn[2])
 
         #likelihood ratio
         llr = σ²ωxupd_llf(Xc, linavg, ωxp, σ²c) - 
