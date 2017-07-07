@@ -214,13 +214,13 @@ function burn_compete(total_llf,
           # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[j,1], λc[j,2], brs[nedge,1,j])
+              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
             end
 
             stemevc = upstem(λc, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[j,1], λc[j,2], brs[nedge,1,j])
+              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
             end
 
             llc += llr
@@ -248,7 +248,7 @@ function burn_compete(total_llf,
 
       #update ωx
       elseif up == 2
-        ωxp = -abs(addupt(ωxc, ptn[2]))
+        ωxp = addupt(ωxc, ptn[2])
 
         #likelihood ratio
         llr = σ²ωxupd_llf(Xc, linavg, ωxp, σ²c) - 

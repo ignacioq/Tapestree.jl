@@ -48,8 +48,15 @@ function upnode!(λ::Array{Float64,1},
     createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
   
     # save extinct
+    ntries = 1
+
     while ifextY(Y,  triad, narea, bridx_a)
       createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+      
+      ntries += 1
+      if ntries > 1000 
+        error("Probably there is too coarse sampling in one or more of the following edges of the tree: ", pr," ", d1," " ,d2, " ; try increasing m."))
+      end
     end
 
   end

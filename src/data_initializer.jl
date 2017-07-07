@@ -21,19 +21,27 @@ Read a phylogenetic tree using **ape** in R through
 `RCall` and the data file with the trait and biogeographic information.
 """
 function read_data(tree_file::String,
-                   data_file::String;
-                   delim    ::Char = '\t',
-                   eol      ::Char = '\r')
+                   data_file::String)
 
   tree, bts = read_tree(tree_file)
 
   tip_labels = Dict(i => val for (val,i) = enumerate(tree.tlab))
 
-  data = readdlm(data_file, '\t', '\r')
+  data = readdlm(data_file)
 
-  data_tlab   = convert(Array{String,1},data[:,1])
+  if size(data,1) != (tree.nnod + 1)
+    data = readdlm(data_file, '\t', '\r')
+  end
+
+  if size(data,1) != (tree.nnod + 1)
+    data = readdlm(data_file, '\t', '\n')
+  end
+
+  @assert size(data,1) == (tree.nnod + 1) "Data file cannot be made of the right dimensions"
+
+  data_tlab   = convert(Array{String,1}, data[:,1])
   data_values = convert(Array{Float64,1},data[:,2])
-  data_areas  = convert(Array{Int64,2},data[:,3:end])
+  data_areas  = convert(Array{Int64,2},  data[:,3:end])
 
   # create dictionaries
   tip_areas = Dict(tip_labels[val] => data_areas[i,:] 
