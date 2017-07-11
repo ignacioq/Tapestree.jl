@@ -111,11 +111,11 @@ end
     initialize_data(tip_values::Dict{Int64,Float64}, tip_areas ::Dict{Int64,Array{Int64,1}}, m::Int64, tree::rtree, bts::Array{Float64,1})
 
 Function to initialize `X` and `Y` matrix given
-the tip_values and tip_areas. Must be Dictionaries.
+the tip_values and tip_areas (as Dictionaries).
 """
 function initialize_data(tip_values::Dict{Int64,Float64},
                          tip_areas ::Dict{Int64,Array{Int64,1}},
-                         m         ::Int64,
+                         min_δt    ::Float64,
                          tree      ::rtree,
                          bts       ::Array{Float64,1})
 
@@ -123,18 +123,72 @@ function initialize_data(tip_values::Dict{Int64,Float64},
   n      = tree.nnod + 1
   nareas = length(tip_areas[1])
 
+  #*
   # make times and δt vector
+  #*
+
+  # make sure each branch has nareas + 1 sampling points
+  ets = unique(br[:,4])
+  for i = sortperm(br[:,3])
+    # number of times that cross the branch
+    nover = length(find(@. br[i,4] .> ets .> br[i,5]))
+
+    if nover < nareas
+      nets = convert(Array{Float64,1},linspace(br[i,4],br[i,5],nareas-nover+2))
+      if length(nets) > 2
+        append!(ets,nets[2:(end-1)])
+      end
+    end
+  end
+
+  # epoch times
+  sort!(ets, rev = true)
+
+  tr_height = ets[1]
+
+  # δt
+  δt = abs.(diff(ets))
+
+  for i in eachindex(ets)
+    if (ets[i] - ets[i+1])/tr_height > min_δt
+      push!()
+
+    end
+
+
+  end
+
+
+
+
+
+  rel_δt = δt/tr_height
+
+  for i in eachindex(rel_δt)
+
+    if rel_δt[i] > min_δt
+      
+      (ets[i] + ets[i+1])/2
+
+    end
+
+
+  end
+
+
+
+
+
+
+
   bts = unique(br[:,4])
   sort!(bts, rev = true)
   ets = convert(Array{Float64,1},linspace(0,bts[1],m+1))
   append!(ets,bts[2:end])
   ets = unique(ets)
 
-  # epoch times
-  sort!(ets, rev = true)
 
-  # δt
-  δt = abs.(diff(ets))
+
 
   # initialize data augmentation matrices
   X = fill(NaN, length(ets), n)
