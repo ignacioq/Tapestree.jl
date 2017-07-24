@@ -232,6 +232,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   #start MCMC
   for it = Base.OneTo(niter)
 
+    println(Yc[bridx_a[1][10]])
+
     # Update vector
     upvector = rand(parvec,lparvec)
 

@@ -83,12 +83,34 @@ colind(x::Int64, nrow::Int64) = cld(x, nrow)
 
 
 
+
+
 """
     vecind(row::Int64, col::Int64, nrow::Int64)
 
 Get vector indexing from column and row.
 """
 vecind(row::Int64, col::Int64, nrow::Int64) = row + nrow*(col - 1)
+
+
+
+
+
+"""
+    Pc(λi::Float64, λj::Float64, δt::Float64)
+
+Estimate probability of collision.
+"""
+function Pc(λi::Float64, λj::Float64, δt::Float64)
+  if λi == λj
+    er = exp(-λi*δt)
+    return 1 - er * λi * δt / (1 - er)
+  else
+    er = exp(-λi*δt)
+    return 1 + λi*(er - exp(-λj*δt)) / ((1 - er)*(λi - λj))
+  end
+end
+
 
 
 
