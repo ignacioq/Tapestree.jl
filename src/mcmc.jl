@@ -324,15 +324,18 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     next!(p)
   end
 
-  R = hcat(iter, h, o, ωx, ωλ, ωμ, σ², λs)
+  R = hcat(iter, h, o, ωx, ωλ, ωμ, σ², λs, pc)
 
   # add column names
   col_nam = ["Iteration", "Likelihood", "Prior", "Trait_competition", 
-             "Colonization_competition", "Extinction_competition", "Sigma2"]
+             "Colonization_competition", "Extinction_competition", 
+             "Sigma2"]
   for i = 1:-1:0
     xn = *("Lambda_", string(i))
-    push!(col_nam,xn)
+    push!(col_nam, xn)
   end
+  
+  push!(col_nam, "Collision_probability")
 
   R = vcat(reshape(col_nam, 1, endof(col_nam)), R)
 
