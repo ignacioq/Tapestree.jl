@@ -19,7 +19,7 @@ Run Compete. Wrapper around all functions.
 """
 function compete(tree_file::String,
                  data_file::String;
-                 min_δt   ::Int64                  = 100,
+                 min_δt   ::Float64                = 0.01,
                  niter    ::Int64                  = 500_000,
                  nthin    ::Int64                  = 1_000,
                  nburn    ::Int64                  = 500_000,
