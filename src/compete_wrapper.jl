@@ -19,7 +19,7 @@ Run Compete. Wrapper around all functions.
 """
 function compete(tree_file::String,
                  data_file::String;
-                 m        ::Int64                  = 100,
+                 min_δt   ::Int64                  = 100,
                  niter    ::Int64                  = 500_000,
                  nthin    ::Int64                  = 1_000,
                  nburn    ::Int64                  = 500_000,
@@ -43,7 +43,7 @@ function compete(tree_file::String,
     read_data(tree_file, data_file)
 
   X, Y, B, ncoup, δt, tree, si = 
-    initialize_data(tip_values, tip_areas, m, tree, bts)
+    initialize_data(tip_values, tip_areas, min_δt, tree, bts)
 
   R = compete_mcmc(X, Y, ncoup, δt, tree.ed, tree.el, B,
                    niter     = niter,

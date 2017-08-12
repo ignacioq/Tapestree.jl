@@ -115,7 +115,6 @@ end
 
 
 
-
 """
     makescalef(obj_ar::Float64)
 

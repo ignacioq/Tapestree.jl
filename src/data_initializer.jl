@@ -17,7 +17,7 @@ June 14 2017
 """
     read_data(tree_file::String, data_file::String; delim::Char = '\t', eol::Char = '\r')
 
-Read a phylogenetic tree using **ape** in R through 
+Read a phylogenetic tree using **ape** package in R through 
 `RCall` and the data file with the trait and biogeographic information.
 """
 function read_data(tree_file::String,
@@ -128,7 +128,7 @@ function initialize_data(tip_values::Dict{Int64,Float64},
   #*
 
   # make sure each branch has nareas + 1 sampling points
-  ets = unique(br[:,4])
+  const ets = unique(br[:,4])
   for i = sortperm(br[:,3])
     # number of times that cross the branch
     nover = length(find(@. br[i,4] .> ets .> br[i,5]))
@@ -145,50 +145,34 @@ function initialize_data(tip_values::Dict{Int64,Float64},
   sort!(ets, rev = true)
 
   tr_height = ets[1]
+  mδt = min_δt*tr_height
 
-  # δt
-  δt = abs.(diff(ets))
-
+  # incorporate more 'ets' according to min_δt
+  new_ets = Float64[]
   for i in eachindex(ets)
-    if (ets[i] - ets[i+1])/tr_height > min_δt
-      push!()
 
+    if i == endof(ets)
+      if ets[i]/tr_height > min_δt    
+        append!(new_ets, collect(0:mδt:ets[i])[2:end])
+      end
+    else
+      if (ets[i] - ets[i+1])/tr_height > min_δt    
+        append!(new_ets, collect(ets[i+1]:mδt:ets[i])[2:end])
+      end
     end
-
-
   end
 
+  # add new_ets
+  append!(ets, new_ets)
 
+  # sort epoch times from start to end
+  sort!(ets, rev = true)
 
+  # push present
+  push!(ets, 0.0)
 
-
-  rel_δt = δt/tr_height
-
-  for i in eachindex(rel_δt)
-
-    if rel_δt[i] > min_δt
-      
-      (ets[i] + ets[i+1])/2
-
-    end
-
-
-  end
-
-
-
-
-
-
-
-  bts = unique(br[:,4])
-  sort!(bts, rev = true)
-  ets = convert(Array{Float64,1},linspace(0,bts[1],m+1))
-  append!(ets,bts[2:end])
-  ets = unique(ets)
-
-
-
+  #create δt vector
+  const δt = abs.(diff(ets))
 
   # initialize data augmentation matrices
   X = fill(NaN, length(ets), n)

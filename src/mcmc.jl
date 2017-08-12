@@ -85,6 +85,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   λs    = zeros(nlogs, 2)                # rate parameters
   h     = zeros(nlogs)                   # likelihood
   o     = zeros(nlogs)                   # prior
+  pc    = zeros(nlogs)                   # collision probability
 
    # initial values for MCMC
   λi = fill(λi, 2)
@@ -198,6 +199,10 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   h[1]  = llc
   o[1]  = prc
 
+  # log probability of collision
+  const max_δt = maximum(δt)
+  pc[1] = Pc(λc[1], λc[2], max_δt)
+
   # log for nthin
   lit   = 0
   lthin = 0
@@ -231,8 +236,6 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   #start MCMC
   for it = Base.OneTo(niter)
-
-    println(Yc[bridx_a[1][10]])
 
     # Update vector
     upvector = rand(parvec,lparvec)
@@ -310,6 +313,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         setindex!(ωλ,   ωλc, lit)
         setindex!(ωμ,   ωμc, lit)
         setindex!(σ²,   σ²c, lit)
+        setindex!(pc, Pc(λc[1], λc[2], max_δt), lit)
         for j = eachindex(λc)
           setindex!(λs, λc[j], lit, j)
         end

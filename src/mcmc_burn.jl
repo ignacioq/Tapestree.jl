@@ -107,8 +107,6 @@ function burn_compete(total_llf,
     # Update vector
     upvector = rand(parvec,lparvec)
 
-    println(Yc[bridx_a[1][10]])
-
     for up = upvector
 
       # update X
