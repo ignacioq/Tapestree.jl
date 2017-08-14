@@ -617,7 +617,7 @@ function allλpr(λc    ::Array{Float64,1},
 
   pr::Float64 = 0.0
   
-  for j = λc
+  for j in λc
     pr += logdexp(j, λprior)
   end
 

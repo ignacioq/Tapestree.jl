@@ -8,7 +8,6 @@ t(-_-t)
 August 17 2017
 =#
 
-using Compete
 using ArgParse
 
 
@@ -88,7 +87,7 @@ function parse_commandline()
       action = :store_true
       dest_name = "fix_ωλ_ωμ"
 
-  # required arguments 
+    # required arguments 
     "tree_file"
       help = "full path to phylogenetic tree file"
       required = true
@@ -113,6 +112,8 @@ end
 
 # parse commands
 comp_args = parse_commandline()
+
+using Compete
 
 # run compete
 compete(comp_args[:tree_file], 
