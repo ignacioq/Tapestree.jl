@@ -54,8 +54,8 @@ function upnode!(λ::Array{Float64,1},
       createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
       
       ntries += 1
-      if ntries > 1000 
-        error("Sampling is too coarse in one or more of the following tree edges: ", pr," ", d1," " ,d2, " ; try increasing m.")
+      if ntries > 100_000 
+        warn("Sampling is too coarse in one or more of the following tree edges: ", pr," ", d1," " ,d2, " ; try increasing m.")
       end
     end
 
