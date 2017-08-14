@@ -34,8 +34,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       ωμprior  ::Tuple{Float64,Float64} = (0.,10.),
                       σ²prior  ::Float64                = 1e-1,
                       λprior   ::Float64                = 1e-1,
-                      dir_out  ::String                 = "/data/turnover/model/",
-                      out_file ::String                 = "compete",
+                      out_file  ::String                 = "/data/turnover/model/compete",
                       λi       ::Float64                = 1.,
                       ωxi      ::Float64                = 0.,
                       ωλi      ::Float64                = 0.,
@@ -339,7 +338,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   R = vcat(reshape(col_nam, 1, endof(col_nam)), R)
 
-  writedlm(homedir()*dir_out*out_file*".log", R)
+  writedlm(out_file*".log", R)
 
   return R
 end

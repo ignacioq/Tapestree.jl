@@ -18,18 +18,17 @@ April 27 2017
 Run Compete. Wrapper around all functions.
 """
 function compete(tree_file::String,
-                 data_file::String;
-                 min_δt   ::Float64                = 0.01,
+                 data_file::String,
+                 out_file ::String;
+                 min_dt   ::Float64                = 0.01,
                  niter    ::Int64                  = 500_000,
-                 nthin    ::Int64                  = 1_000,
                  nburn    ::Int64                  = 500_000,
+                 nthin    ::Int64                  = 1_000,
                  ωxprior  ::Tuple{Float64,Float64} = (0.,10.),
                  ωλprior  ::Tuple{Float64,Float64} = (0.,10.),
                  ωμprior  ::Tuple{Float64,Float64} = (0.,10.),
                  σ²prior  ::Float64                = 1e-1,
                  λprior   ::Float64                = 1e-1,
-                 dir_out  ::String                 = "/data/turnover/model/",
-                 out_file ::String                 = "compete",
                  λi       ::Float64                = 1.,
                  ωxi      ::Float64                = 0.,
                  ωλi      ::Float64                = 0.,
@@ -43,7 +42,7 @@ function compete(tree_file::String,
     read_data(tree_file, data_file)
 
   X, Y, B, ncoup, δt, tree, si = 
-    initialize_data(tip_values, tip_areas, min_δt, tree, bts)
+    initialize_data(tip_values, tip_areas, min_dt, tree, bts)
 
   R = compete_mcmc(X, Y, ncoup, δt, tree.ed, tree.el, B,
                    niter     = niter,
@@ -54,7 +53,6 @@ function compete(tree_file::String,
                    ωμprior   = ωμprior,
                    σ²prior   = σ²prior,
                    λprior    = λprior,
-                   dir_out   = dir_out,
                    out_file  = out_file,
                    λi        = λi,
                    ωxi       = ωxi,

@@ -115,7 +115,7 @@ the tip_values and tip_areas (as Dictionaries).
 """
 function initialize_data(tip_values::Dict{Int64,Float64},
                          tip_areas ::Dict{Int64,Array{Int64,1}},
-                         min_δt    ::Float64,
+                         min_dt    ::Float64,
                          tree      ::rtree,
                          bts       ::Array{Float64,1})
 
@@ -145,18 +145,18 @@ function initialize_data(tip_values::Dict{Int64,Float64},
   sort!(ets, rev = true)
 
   tr_height = ets[1]
-  mδt = min_δt*tr_height
+  mδt = min_dt*tr_height
 
-  # incorporate more 'ets' according to min_δt
+  # incorporate more 'ets' according to min_dt
   new_ets = Float64[]
   for i in eachindex(ets)
 
     if i == endof(ets)
-      if ets[i]/tr_height > min_δt    
+      if ets[i]/tr_height > min_dt    
         append!(new_ets, collect(0:mδt:ets[i])[2:end])
       end
     else
-      if (ets[i] - ets[i+1])/tr_height > min_δt    
+      if (ets[i] - ets[i+1])/tr_height > min_dt    
         append!(new_ets, collect(ets[i+1]:mδt:ets[i])[2:end])
       end
     end
