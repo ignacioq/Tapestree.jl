@@ -12,6 +12,11 @@ using Compete
 using ArgParse
 
 
+"""
+    parse_commandline()
+
+Parses command line arguments to be used in compete
+"""
 function parse_commandline()
 
   s = ArgParseSettings(prog        = "Compete",
@@ -106,6 +111,7 @@ function parse_commandline()
   return parsed_args
 end
 
+# parse commands
 comp_args = parse_commandline()
 
 # run compete
