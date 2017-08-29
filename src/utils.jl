@@ -1,7 +1,7 @@
 using ProgressMeter
 
 #=
-Utility functions for turnover
+Utility functions for Compete.jl
 
 Ignacio Quintero
 
@@ -101,13 +101,13 @@ vecind(row::Int64, col::Int64, nrow::Int64) = row + nrow*(col - 1)
 
 Estimate probability of collision.
 """
-function Pc(λi::Float64, λj::Float64, δt::Float64)
-  λ2 = λi + λj
-  er = exp(-λ2*δt)
-
-  return 1 - er * λ2 * δt / (1 - er)
+function Pc(λ1::Float64, λ0::Float64, δt::Float64)
+  @fastmath begin
+    λt = (λ1 + λ0)*δt
+    er = exp(-λt)
+    return 1.0 - er - λt*er
+  end
 end
-
 
 
 
