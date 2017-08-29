@@ -366,3 +366,40 @@ end
 
 
 
+
+"""
+    collision(λ1::Float64, λ0::Float64, nδts  ::Array{Float64,1})
+
+Estimates the probability of at least one collision
+along the whole tree.
+"""
+function collision(λ1   ::Float64, 
+                   λ0   ::Float64, 
+                   nδts  ::Array{Float64,1})
+
+  @fastmath begin
+
+    p = 1.0
+    for t in nδts
+      p *= 1.0 - Pc(λ1, λ0, t)
+    end
+
+    return 1.0 - p
+  end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
