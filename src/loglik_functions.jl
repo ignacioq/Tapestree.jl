@@ -56,7 +56,7 @@ function makellf(δt   ::Vector{Float64},
              ωx     ::Float64,
              ωλ     ::Float64,
              ωμ     ::Float64,
-             λ::Array{Float64,1},
+             λ      ::Array{Float64,1},
              stemevc::Vector{Vector{Float64}},
              stemss,
              σ²     ::Float64)
