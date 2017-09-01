@@ -31,9 +31,117 @@ Xt = rand(4)
 
 
 
-transpose(Yt) * Xt ./ reducedim(+, Yt, 1)
 
 
+# number of species and areas
+n, k = size(Yt)
+
+
+arav  = zeros(k)   # area averages
+liav  = zeros(n)   # lineage averages
+aldif = zeros(n,k) # area specific lineage differences
+
+
+
+
+### start
+
+arav, liav = ar_lin_avg(Xt, Yt, arav, liav, n, k)
+
+ar_lin_dif(Xt, arav, aldif, n, k)
+
+### step
+
+# biogeographic step
+
+# trait step
+
+
+# repeat
+
+
+
+
+
+"""
+    f_λ(λ::Float64, ω::Float64, Δx::Float64)
+
+Estimate rates for area colonization/loss based on the difference between lineage traits and area averages.
+"""
+f_λ(λ::Float64, ω::Float64, Δx::Float64) = @fastmath λ * exp(ω*Δx)
+
+
+
+
+
+"""
+    ar_lin_dif(Xt::Array{Float64,1}, arav::Array{Float64,1}, aldif::Array{Float64,2})
+
+Estimate differences between each each lineages trait and area averages.
+"""
+function ar_lin_dif(Xt::Array{Float64,1}, 
+                    arav::Array{Float64,1}, 
+                    aldif::Array{Float64,2},
+                    n   ::Int64,
+                    k   ::Int64)
+  @inbounds begin
+
+    for j in Base.OneTo(k), i in Base.OneTo(n)
+      aldif[i,j] = abs(Xt[i] - arav[j])
+    end
+
+    return aldif
+  end
+end
+
+
+
+
+
+"""
+    ar_lin_avg(Xt::Array{Float64,1}, Yt::Array{Int64,2}, arav::Array{Float64,1}, 
+              liav::Array{Float64,1}, n::Int64, k::Int64)
+
+Estimate area and lineage specific averages given sympatry configuration.
+"""
+function ar_lin_avg(Xt  ::Array{Float64,1}, 
+                    Yt  ::Array{Int64,2}, 
+                    arav::Array{Float64,1},
+                    liav::Array{Float64,1},
+                    n   ::Int64,
+                    k   ::Int64)
+
+  @inbounds begin
+    # estimate area averages
+    for j in Base.OneTo(k)
+
+      aa = 0.0
+      na = 0
+      for i in Base.OneTo(n)
+        aa += Yt[i,j]*Xt[i]
+        na += Yt[i,j]
+      end
+
+      arav[j] = aa/na
+    end
+
+    # estimate lineage averages
+    for i in Base.OneTo(n)
+
+      la = 0.0
+      na = 0 
+      for j in Base.OneTo(k)
+        la += arav[j]*Yt[i,j]
+        na += Yt[i,j]
+      end
+      
+      liav[i] = la/na
+    end
+
+  end
+
+  return arav, liav
+end
 
 
 
