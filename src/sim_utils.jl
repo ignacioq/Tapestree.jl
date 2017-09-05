@@ -18,8 +18,9 @@ bt = bf - bs # branch time
 bδt = bt/1000
 λ1 = 0.3
 λ0 = 0.1
-
-vi = [0,1,1,1,0]
+ω1 = -0.1
+ω0 = 0.1
+δt = 0.01
 
 
 
@@ -37,9 +38,10 @@ Xt = rand(4)
 n, k = size(Yt)
 
 
-arav  = zeros(k)   # area averages
-liav  = zeros(n)   # lineage averages
-aldif = zeros(n,k) # area specific lineage differences
+arav = zeros(k)   # area averages
+liav = zeros(n)   # lineage averages
+alλ1 = zeros(n,k)  # area specific lineage rates
+alλ0 = zeros(n,k)  # area specific lineage rates
 
 
 
@@ -48,11 +50,35 @@ aldif = zeros(n,k) # area specific lineage differences
 
 arav, liav = ar_lin_avg(Xt, Yt, arav, liav, n, k)
 
-ar_lin_dif(Xt, arav, aldif, n, k)
+alλ1, alλ0 = lin_rates(Xt, arav, alλ1, alλ0, λ1, λ0, ω1, ω0, n, k)
+
+
 
 ### step
 
 # biogeographic step
+
+
+
+Ytn = copy(Yt)
+biogeosam_1step(alλ1, alλ0, δt, Yt, n, k)
+
+
+
+
+
+  for i in eachindex(λ1v)
+
+    vp = copy(vi)
+    vr = biogeosam_1step(λ1v[i], λ0v[i], bδt[i], vp)
+
+    while check_sam(vr)
+      vr = biogeosam_1step(λ1v[i], λ0v[i], bδt[i], vp)
+    end
+
+    vi = vr[1]
+  end
+
 
 # trait step
 
@@ -60,6 +86,8 @@ ar_lin_dif(Xt, arav, aldif, n, k)
 # repeat
 
 
+
+check_sam(Ytc::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, k::Int64)
 
 
 
@@ -75,22 +103,29 @@ f_λ(λ::Float64, ω::Float64, Δx::Float64) = @fastmath λ * exp(ω*Δx)
 
 
 """
-    ar_lin_dif(Xt::Array{Float64,1}, arav::Array{Float64,1}, aldif::Array{Float64,2})
+    lin_rates(Xt  ::Array{Float64,1}, arav::Array{Float64,1}, alλ1::Array{Float64,2}, alλ0::Array{Float64,2}, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, n::Int64, k::Int64)
 
-Estimate differences between each each lineages trait and area averages.
+Estimate lineage specific area colonization/loss rates based on differences between each each lineages trait and area averages.
 """
-function ar_lin_dif(Xt::Array{Float64,1}, 
-                    arav::Array{Float64,1}, 
-                    aldif::Array{Float64,2},
-                    n   ::Int64,
-                    k   ::Int64)
+function lin_rates(Xt  ::Array{Float64,1}, 
+                   arav::Array{Float64,1}, 
+                   alλ1::Array{Float64,2},
+                   alλ0::Array{Float64,2},
+                   λ1  ::Float64,
+                   λ0  ::Float64,
+                   ω1  ::Float64,
+                   ω0  ::Float64,
+                   n   ::Int64,
+                   k   ::Int64)
   @inbounds begin
 
     for j in Base.OneTo(k), i in Base.OneTo(n)
-      aldif[i,j] = abs(Xt[i] - arav[j])
+      Δx = abs(Xt[i] - arav[j])
+      alλ1[i,j] = f_λ(λ1, ω1, Δx)
+      alλ0[i,j] = f_λ(λ0, ω0, Δx)
     end
 
-    return aldif
+    return alλ1, alλ0
   end
 end
 
@@ -122,7 +157,7 @@ function ar_lin_avg(Xt  ::Array{Float64,1},
         na += Yt[i,j]
       end
 
-      arav[j] = aa/na
+      arav[j] = aa/(na == 0 ? 1 : na) 
     end
 
     # estimate lineage averages
@@ -147,6 +182,7 @@ end
 
 
 
+
 """
     traitsam_1step(xi::Float64, μ::Float64, δt::Float64, ωx::Float64, σ::Float64)
 
@@ -164,24 +200,33 @@ traitsam_1step(xi::Float64, μ::Float64, δt::Float64, ωx::Float64, σ::Float64
 
 Sample one step for biogeographic history Y(t + δt).
 """
-function biogeosam_1step(λ1::Float64, λ0::Float64, δt::Float64, v1::Array{Int64,1})
+function biogeosam_1step(alλ1 ::Array{Float64,2}, 
+                         alλ0 ::Array{Float64,2}, 
+                         δt   ::Float64, 
+                         Ytn  ::Array{Int64,2},
+                         n    ::Int64,
+                         k    ::Int64)
 
-  nch = 0
-  for i in eachindex(v1)
-    if v1[i] == 0
-      if rand() < λ1*δt
-        setindex!(v1,1,i)
-        nch += 1
-      end
-    else 
-      if rand() < λ0*δt
-        setindex!(v1,0,i)
-        nch += 1 
+  @inbounds begin
+
+    nch = zeros(Int64, n)
+    for j in Base.OneTo(k), i in Base.OneTo(n)
+      if Ytn[i,j] == 0
+        if rand() < alλ1[i,j]*δt
+          setindex!(Ytn,1,i,j)
+          nch[i] += 1
+        end
+      else 
+        if rand() < alλ0[i,j]*δt
+          setindex!(Ytn,0,i,j)
+          nch[i] += 1 
+        end
       end
     end
+
   end
 
-  return v1, nch
+  return Ytn, nch
 end
 
 
@@ -189,26 +234,36 @@ end
 
 
 """
-    check_sam(obj::Tuple{Array{Int64,1},Int64})
+    check_sam(Ytc::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, k::Int64)
 
 Returns false if biogeographic step consists of *only one* change or if the species 
 does *not* go globally extinct. 
 """
-function check_sam(obj::Tuple{Array{Int64,1},Int64})
+function check_sam(Ytc::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, k::Int64)
 
-  @fastmath  begin
+  @fastmath @inbounds begin
 
-    s = 0
-    for a in obj[1]
-      s += a
+    # check lineage did not go extinct
+    for i in Base.OneTo(n)
+      s = 0
+      for j in Base.OneTo(k)
+        s += Ytc[i,j]
+      end
+      if s == 0
+        return true
+      end
     end
 
-    if obj[2] > 1 || s == 0
-      return true
-    else
-      return false
+
+    # check that, at most, only one event happened per lineage
+    for i in nch
+      if i > 1
+        return true
+      end
     end
-  
+
+    return false
+
   end
 end
 
@@ -217,33 +272,6 @@ end
 
 
 
-
-
-
-
-# """
-#     biogeosam_branch
-
-# """
-# function biogeosam_branch(λ1v::Array{Float64,1}, 
-#                           λ0v::Array{Float64,1}, 
-#                           bδt::Array{Float64,1}, 
-#                           vi ::Array{Int64,1})
-
-#   for i in eachindex(λ1v)
-
-#     vp = copy(vi)
-#     vr = biogeosam_1step(λ1v[i], λ0v[i], bδt[i], vp)
-
-#     while check_sam(vr)
-#       vr = biogeosam_1step(λ1v[i], λ0v[i], bδt[i], vp)
-#     end
-
-#     vi = vr[1]
-#   end
-
-
-# end
 
 
 
