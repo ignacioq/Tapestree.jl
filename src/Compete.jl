@@ -1,9 +1,11 @@
 #=
+
 Ignacio Quintero Mächler
 
 t(-_-t)
 
 22 June 2017
+
 =#
 
 __precompile__()
@@ -17,6 +19,7 @@ Compete package
 module Compete
 
   export compete
+  export simulate_compete
 
   include("utils.jl")
   include("compete_utils.jl")
@@ -30,5 +33,6 @@ module Compete
   include("mcmc_burn.jl")
   include("proposal_functions.jl")
   include("compete_wrapper.jl")
+  include("sim_utils.jl")
 
 end # module Compete

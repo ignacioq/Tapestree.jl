@@ -1,4 +1,3 @@
-
 #=
 
 Functions to estimate area and lineage trait averages 

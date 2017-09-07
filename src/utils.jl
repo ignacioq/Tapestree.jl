@@ -1,5 +1,3 @@
-using ProgressMeter
-
 #=
 Utility functions for Compete.jl
 
@@ -10,6 +8,8 @@ February 6 2017
 t(-_-t)
 
 =#
+
+using ProgressMeter
 
 
 

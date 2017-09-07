@@ -11,39 +11,28 @@ t(-_-t)
 
 
 
-
-tree_file = homedir()*"/data/turnover/example_tree.tre"
-
-
-
-
-
-
-
 """
-    simulate_compete(X_initial::Float64,  Y_initial::Array{Int64,1}, tree_file::String, ωx::Float64, σ::Float64, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64; const_δt = 1e-4)
+    simulate_compete(X_initial::Float64, Y_initial::Array{Int64,1}, tree_file::String;  ωx = 0.0, σ = 0.5, λ1 = 0.5, λ0 = 0.2, ω1 = 0.0, ω0 = 0.0, const_δt = 1e-4)
 
 Simulate biogeographic and trait evolution according to Compete model.
 """
 function simulate_compete(X_initial::Float64,
                           Y_initial::Array{Int64,1},
-                          tree_file::String,
-                          ωx       ::Float64,
-                          σ        ::Float64,
-                          λ1       ::Float64,
-                          λ0       ::Float64,
-                          ω1       ::Float64,
-                          ω0       ::Float64;
+                          tree_file::String;
+                          ωx       = 0.0,
+                          σ        = 0.5,
+                          λ1       = 0.5,
+                          λ0       = 0.2,
+                          ω1       = 0.0,
+                          ω0       = 0.0,
                           const_δt = 1e-4)
-
-
 
   tree, bts = read_tree(tree_file)
 
   br = branching_times(tree)
 
   # sort according to branching times
-  brs = sortrows(br, by = x->(x[5]), rev = true)
+  const brs = sortrows(br, by = x->(x[5]), rev = true)
 
   # sort branching times
   sort!(bts, rev = true)
@@ -55,7 +44,7 @@ function simulate_compete(X_initial::Float64,
   nbt = endof(bts)-1
 
   # calculate speciation waiting times
-  swt = Array{Float64,1}(nbt)
+  const swt = Array{Float64,1}(nbt)
   for i in Base.OneTo(nbt)
     swt[i] = bts[i] - bts[i+1]
   end
@@ -76,7 +65,7 @@ function simulate_compete(X_initial::Float64,
     nreps = reps_per_period(swt[j], const_δt)
 
     # simulate durin the waiting time
-    Xt, Yt = branch_sim(Xt, Yt, nreps, δt, ωx, σ, λ1, λ0, ω1, ω0)
+    Xt, Yt = branch_sim(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
 
     if j == nbt
       break
@@ -271,8 +260,26 @@ function ar_lin_avg(Xt  ::Array{Float64,1},
 end
 
 
+n = 10000
+
+ndiv = 40
+δt = 1/ndiv
+
+sig = 10
+
+xx1 = zeros(n)
+xx2 = zeros(n)
+
+for i in 1:n
+
+  xx1[i] = cumsum(randn(ndiv).*sig*sqrt(δt))[ndiv]
+  xx2[i] = randn(1)[1]*sig
+
+end
 
 
+var(xx1)
+var(xx2)
 
 
 """
