@@ -1,7 +1,8 @@
 #=
+
 Running compete model from the command line
 
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 t(-_-t)
 

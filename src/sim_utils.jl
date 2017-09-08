@@ -1,7 +1,8 @@
 #=
+
 Utility functions for simulations in Compete
 
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 August 29 2017
 

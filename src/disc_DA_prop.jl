@@ -1,5 +1,5 @@
-
 #=
+
 Bit rejection-sampling using discrete 
 Data Augmentation for Biogeographic Histories.
 

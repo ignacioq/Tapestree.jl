@@ -1,4 +1,3 @@
-
 #=
 
 Likelihood Functions for joint

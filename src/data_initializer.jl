@@ -1,6 +1,3 @@
-using RCall
-using Optim
-
 #=
 
 Data initializer for Competition model
@@ -12,6 +9,9 @@ t(-_-t)
 June 14 2017
 
 =#
+
+using RCall
+using Optim
 
 
 """

@@ -1,7 +1,8 @@
 #=
+
 Utility functions for Compete.jl
 
-Ignacio Quintero
+Ignacio Quintero Mächler
 
 February 6 2017
 
