@@ -95,9 +95,11 @@ function simulate_compete(X_initial::Float64,
   end
 
   tip_traits = Dict(convert(Int64, alive[i]) => Xt[i] for i = 1:nalive)
-  tip_ranges = Dict(convert(Int64, alive[i]) => Yt[i,:] for i = 1:nalive)
+  tip_areas = Dict(convert(Int64, alive[i]) => Yt[i,:] for i = 1:nalive)
 
-  return tip_traits, tip_ranges
+  pop!(bts)
+
+  return tip_traits, tip_areas, tree, bts
 
 end
 
@@ -260,26 +262,7 @@ function ar_lin_avg(Xt  ::Array{Float64,1},
 end
 
 
-n = 10000
 
-ndiv = 40
-δt = 1/ndiv
-
-sig = 10
-
-xx1 = zeros(n)
-xx2 = zeros(n)
-
-for i in 1:n
-
-  xx1[i] = cumsum(randn(ndiv).*sig*sqrt(δt))[ndiv]
-  xx2[i] = randn(1)[1]*sig
-
-end
-
-
-var(xx1)
-var(xx2)
 
 
 """

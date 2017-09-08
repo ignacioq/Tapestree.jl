@@ -20,6 +20,7 @@ module Compete
 
   export compete
   export simulate_compete
+  export compete_for_sims
 
   include("utils.jl")
   include("compete_utils.jl")
