@@ -68,7 +68,7 @@ function makellf(δt   ::Vector{Float64},
       for j=Base.OneTo(ntip), i=w23[j][Base.OneTo(end-1)]
         ll += -0.5*log(δt[i]*σ²) -
               abs2(X[(i+1),j] -
-                  (X[i,j] + ωx*(linavg[i,j] - X[i,j])*δt[i]))/
+                  (X[i,j] + ωx/(linavg[i,j] - X[i,j])*δt[i]))/
               (2.0*δt[i]*σ²)
       end
 
@@ -425,7 +425,7 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
       for j=Base.OneTo(ntip), i=w23[j]
         ll += -0.5*log(δt[i]*σ²) -
               abs2(X[(i+1),j] -
-                  (X[i,j] + ωx*(la[i,j] - X[i,j])*δt[i]))/
+                  (X[i,j] + ωx/(la[i,j] - X[i,j])*δt[i]))/
               (2.0*δt[i]*σ²)
       end
     
@@ -473,7 +473,7 @@ function makellf_Xupd(δt   ::Vector{Float64},
 
           ll += -0.5*log(δt[k-1]*σ²) -
                 abs2(X[k,wci] -
-                    (X[k-1,wci] + ωx*(lakm1[i] - X[k-1,wci])*δt[k-1])
+                    (X[k-1,wci] + ωx/(lakm1[i] - X[k-1,wci])*δt[k-1])
                 )/(2.0*δt[k-1]*σ²)
         end
       end
@@ -485,7 +485,7 @@ function makellf_Xupd(δt   ::Vector{Float64},
         # trait likelihood
         ll += -0.5*log(δt[k]*σ²) -
               abs2(X[(k+1),wci] -
-                  (X[k,wci] + ωx*(lak[i] - X[k,wci])*δt[k])
+                  (X[k,wci] + ωx/(lak[i] - X[k,wci])*δt[k])
               )/(2.0*δt[k]*σ²)
 
         # biogeograhic likelihoods
@@ -539,7 +539,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
         # trait likelihood
         ll += -0.5*log(δt[k]*σ²) -
               abs2(X[(k+1),wci] -
-                  (X[k,wci] + ωx*(lak[i] - X[k,wci])*δt[k])
+                  (X[k,wci] + ωx/(lak[i] - X[k,wci])*δt[k])
               )/(2.0*δt[k]*σ²)
 
         # biogeograhic likelihoods
