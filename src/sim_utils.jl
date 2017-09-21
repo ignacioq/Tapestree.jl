@@ -281,7 +281,12 @@ function traitsam_1step(Xt::Array{Float64,1},
   @inbounds @fastmath begin
     
     for i in Base.OneTo(n)
-      Xt[i] += ωx/(μ[i] - Xt[i])*δt + randn()*σ*sqrt(δt)
+      Δx = μ[i] - Xt[i]
+      if Δx == 0.0 
+        Xt[i] += randn()*σ*sqrt(δt)
+      else
+        Xt[i] += ωx/(μ[i] - Xt[i])*δt + randn()*σ*sqrt(δt)
+      end
     end
   end
 
