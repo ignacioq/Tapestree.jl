@@ -35,13 +35,15 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       σ²prior  ::Float64                = 1e-1,
                       λprior   ::Float64                = 1e-1,
                       out_file ::String                 = "compete_results",
-                      λi       ::Float64                = 1.,
+                      λi       ::Float64                = 10.,
                       ωxi      ::Float64                = 0.,
                       ωλi      ::Float64                = 0.,
                       ωμi      ::Float64                = 0.,
                       σ²i      ::Float64                = 1.,
                       stbrl    ::Float64                = 1.,
                       fix_ωλ_ωμ::Bool                   = true)
+  
+  println("Data succesfully processed")
 
   # dims
   const m, ntip, narea  = size(Yc)
@@ -76,15 +78,15 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # initialize result arrays
   const nlogs = fld(niter,nthin)         # number of logged iterations
-  iter  = zeros(nlogs)                   # iterations
-  ωx    = zeros(nlogs)                   # trait competition parameter
-  ωλ    = zeros(nlogs)                   # colonization competition parameter
-  ωμ    = zeros(nlogs)                   # extinction competition parameter
-  σ²    = zeros(nlogs)                   # drift parameter
-  λs    = zeros(nlogs, 2)                # rate parameters
-  h     = zeros(nlogs)                   # likelihood
-  o     = zeros(nlogs)                   # prior
-  pc    = zeros(nlogs)                   # collision probability
+  const iter  = zeros(Float64, nlogs)             # iterations
+  const ωx    = zeros(Float64, nlogs)             # trait competition parameter
+  const ωλ    = zeros(Float64, nlogs)             # colonization competition parameter
+  const ωμ    = zeros(Float64, nlogs)             # extinction competition parameter
+  const σ²    = zeros(Float64, nlogs)             # drift parameter
+  const λs    = zeros(Float64, nlogs, 2)          # rate parameters
+  const h     = zeros(Float64, nlogs)             # likelihood
+  const o     = zeros(Float64, nlogs)             # prior
+  const pc    = zeros(Float64, nlogs)             # collision probability
 
    # initial values for MCMC
   λi = fill(λi, 2)
@@ -232,6 +234,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                              total_llf, biogeo_upd_iid)
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
                              λlessthan, narea, Xupd_llf, Rupd_llf)
+
+  println("starting log-likelihood = ", llc)
 
   #start MCMC
   for it = Base.OneTo(niter)
