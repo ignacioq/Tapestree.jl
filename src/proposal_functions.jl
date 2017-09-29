@@ -55,7 +55,9 @@ function upnode!(λ::Array{Float64,1},
       
       ntries += 1
       if ntries > 100_000 
-        warn("Sampling is too coarse in one or more of the following tree edges: ", pr," ", d1," " ,d2, " ; try increasing m.")
+        warn("Sampling is very inefficient for these triads: \n λ = ", λ, "\n edge lengths parent = ", brδt[pr], 
+             "\n edge lengths daughter 1 = ", brδt[d1], 
+             "\n edge lengths daughter 2 = ", brδt[d2])
       end
     end
 

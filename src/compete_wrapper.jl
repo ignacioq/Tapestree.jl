@@ -33,7 +33,6 @@ function compete(tree_file::String,
                  ωxi      ::Float64                = 0.,
                  ωλi      ::Float64                = 0.,
                  ωμi      ::Float64                = 0.,
-                 stbrl    ::Float64                = 1.,
                  fix_ωλ_ωμ::Bool                   = true,
                  delim    ::Char                   = '\t',
                  eol      ::Char                   = '\r')
@@ -59,7 +58,7 @@ function compete(tree_file::String,
                    ωλi       = ωλi,
                    ωμi       = ωμi,
                    σ²i       = si,
-                   stbrl     = stbrl,
+                   stbrl     = 2.0*maximum(bts),
                    fix_ωλ_ωμ = fix_ωλ_ωμ)
 
   return R
