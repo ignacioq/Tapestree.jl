@@ -13,6 +13,40 @@ May 15 2017
 
 
 
+"""
+    E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+
+Return the expected value according to reworked competition model.
+"""
+function E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+  if ωx < 0.0
+    Δx::Float64 = μ - xi
+    if Δx < 0.0
+      return (-1 * ωx * exp(Δx) * δt)::Float64
+    else
+      return (ωx * exp(-Δx) * δt)::Float64
+    end
+  else
+     return (ωx * (μ - xi) * δt)::Float64
+  end
+end
+
+
+
+
+
+"""
+    E_sde_old(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+
+Return the expected value according to reworked competition model.
+"""
+function E_sde_old(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+  return (ωx * (μ - xi) * δt)::Float64
+end
+
+
+
+
 
 """
     makellf(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64, wcol::Vector{Vector{Int64}}, narea::Int64)
@@ -67,12 +101,9 @@ function makellf(δt   ::Vector{Float64},
       # trait likelihood
       for j=Base.OneTo(ntip), i=w23[j][Base.OneTo(end-1)]
 
-        δx   = linavg[i,j] - X[i,j]
-        comp = δx == 0.0 ? δt[i]*ωx/δx : 0.0
-
         ll += -0.5*log(δt[i]*σ²) -
               abs2(X[(i+1),j] -
-                  (X[i,j] + comp))/
+                  (X[i,j] + E_sde(X[i,j], linavg[i,j], ωx, δt[i])))/
               (2.0*δt[i]*σ²)
       end
 
@@ -428,12 +459,9 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
       # trait likelihood
       for j=Base.OneTo(ntip), i=w23[j]
 
-        δx   = la[i,j] - X[i,j]
-        comp = δx == 0.0 ? δt[i]*ωx/δx : 0.0
-
         ll += -0.5*log(δt[i]*σ²) -
               abs2(X[(i+1),j] -
-                  (X[i,j] + comp))/
+                  (X[i,j] + E_sde(X[i,j], la[i,j], ωx, δt[i])))/
               (2.0*δt[i]*σ²)
 
       end
@@ -480,12 +508,9 @@ function makellf_Xupd(δt   ::Vector{Float64},
         for i in eachindex(wckm1)
           wci = wckm1[i]
 
-          δx   = lakm1[i] - X[k-1,wci]
-          comp = δx == 0.0 ? δt[k-1]*ωx/δx : 0.0
-
           ll += -0.5*log(δt[k-1]*σ²) -
                 abs2(X[k,wci] -
-                    (X[k-1,wci] + comp)
+                    (X[k-1,wci] + E_sde(X[k-1,wci], lakm1[i], ωx, δt[k-1]))
                 )/(2.0*δt[k-1]*σ²)
         end
       end
@@ -494,13 +519,10 @@ function makellf_Xupd(δt   ::Vector{Float64},
       for i=eachindex(wck)
         wci = wck[i]
 
-        δx   = lak[i] - X[k,wci]
-        comp = δx == 0.0 ? δt[k]*ωx/δx : 0.0
-
         # trait likelihood
         ll += -0.5*log(δt[k]*σ²) -
               abs2(X[(k+1),wci] -
-                  (X[k,wci] + comp)
+                  (X[k,wci] + E_sde(X[k,wci], lak[i], ωx, δt[k]))
               )/(2.0*δt[k]*σ²)
 
         # biogeograhic likelihoods
@@ -551,13 +573,10 @@ function makellf_Rupd(δt   ::Vector{Float64},
       for i=eachindex(wck)
         wci = wck[i]
 
-        δx   = lak[i] - X[k,wci]
-        comp = δx == 0.0 ? δt[k]*ωx/δx : 0.0
-
         # trait likelihood
         ll += -0.5*log(δt[k]*σ²) -
               abs2(X[(k+1),wci] -
-                  (X[k,wci] + comp)
+                  (X[k,wci] + E_sde(X[k,wci], lak[i], ωx, δt[k]))
               )/(2.0*δt[k]*σ²)
 
         # biogeograhic likelihoods
