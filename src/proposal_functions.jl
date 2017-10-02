@@ -166,6 +166,9 @@ end
 
 
 
+# try to make this faster by sampling all areas simultaneously
+
+
 
 
 """
