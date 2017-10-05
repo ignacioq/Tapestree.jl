@@ -218,11 +218,11 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   p  = Progress(niter, 5, "running MCMC...", 20)
 
   if fix_ωλ_ωμ
-    const pv      = append!(collect(1:np),fill(1, floor(Int64,np*0.1)))
+    const pv      = append!(collect(1:np),fill(1, floor(Int64,np*0.3)))
     const parvec  = setdiff(pv,(3:4))
     const lparvec = length(parvec)
   else
-    const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*0.1)))
+    const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*0.3)))
     const lparvec = length(parvec)
   end
 
@@ -234,8 +234,6 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                              total_llf, biogeo_upd_iid)
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
                              λlessthan, narea, Xupd_llf, Rupd_llf)
-
-  println("starting log-likelihood = ", llc)
 
   #start MCMC
   for it = Base.OneTo(niter)

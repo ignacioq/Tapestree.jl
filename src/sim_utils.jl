@@ -289,6 +289,26 @@ end
 
 
 
+"""
+    E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+
+Return the expected value according to reworked competition model.
+"""
+function E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+  if ωx < 0.0
+    Δx::Float64 = μ - xi
+    if Δx < 0.0
+      return (-1 * ωx * exp(Δx) * δt)::Float64
+    else
+      return (ωx * exp(-Δx) * δt)::Float64
+    end
+  else
+     return (ωx * (μ - xi) * δt)::Float64
+  end
+end
+
+
+
 
 
 
