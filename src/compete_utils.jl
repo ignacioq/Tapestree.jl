@@ -66,7 +66,7 @@ logdhcau1(x::Float64) =
 Generate one sample from a random **Exponential** variable
 with mean `λ`. 
 """
-rexp(λ::Float64) = @fastmath log(rand()) * -(1/λ)
+rexp(λ::Float64) = @fastmath (log(rand()) * -(1.0/λ))::Float64
 
 
 
