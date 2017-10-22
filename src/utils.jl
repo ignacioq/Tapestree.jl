@@ -237,3 +237,39 @@ function indmindif(x::Array{Float64,1}, val::Float64)
   ibest 
 end 
 
+
+
+
+
+"""
+    uniroot(f, approx = 1e-8, a = 0.0, m = 0.5, b = 1.0)
+
+Fast uniroot function between `0.0` and `1.0`.
+"""
+function uniroot(f; approx = 1e-8, a = 0.0, m = 0.5, b = 1.0) 
+  while abs(f(m)::Float64)::Float64 > approx
+    if sign(f(a)::Float64)::Float64 == sign(f(m)::Float64)::Float64
+      a = m::Float64
+    else 
+      b = m::Float64
+    end
+    m = (a + b)/2.0::Float64
+  end
+  return m::Float64
+end 
+
+
+
+
+uniroot(f)
+
+
+
+
+
+
+
+
+
+
+
