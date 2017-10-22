@@ -22,6 +22,7 @@ module Compete
   export simulate_compete
   export compete_for_sims
   export read_tree
+  export initialize_data
 
   include("utils.jl")
   include("compete_utils.jl")
