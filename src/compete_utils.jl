@@ -123,6 +123,41 @@ end
 
 
 """
+    Ptrfast(λ1::Float64, ω1::Float64, λ0::Float64, ω0::Float64, avg_Δx::Float64, t::Float64)
+
+Return Markov chain probabilities for 
+two states through fast analytical solution
+after time `t` for rates of gain `λ1(t) = λ1*exp(ω1*avg_Δx)` and 
+loss `λ0(t) = λ0*exp(ω0*avg_Δx)`, conditional on a start value.
+"""
+function Ptrfast(λ1    ::Float64, 
+                 ω1    ::Float64,
+                 λ0    ::Float64,
+                 ω0    ::Float64,
+                 avg_Δx::Float64,
+                 t     ::Float64)
+  
+  @fastmath begin
+
+    λt1  ::Float64 = λ1*exp(ω1*avg_Δx)
+    λt0  ::Float64 = λ0*exp(ω0*avg_Δx)
+    sumλ ::Float64 = λt1 + λt0
+    ex   ::Float64 = exp(-sumλ*t)
+    sd1  ::Float64 = 1/sumλ
+    λt1ex::Float64 = λt1*ex
+    λt0ex::Float64 = λt0*ex
+
+    ((sd1*(λt0 + λt1ex), sd1*(λt1 - λt1ex)), 
+     (sd1*(λt0 - λt0ex), sd1*(λt1 + λt0ex)))
+
+  end
+end
+
+
+
+
+
+"""
     Ptrfast_start(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
 
 Return Markov chain probabilities for 
@@ -148,6 +183,43 @@ function Ptrfast_start(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
   end
 end
 
+
+
+
+"""
+    Ptrfast_start(λ1::Float64, ω1::Float64, λ0::Float64, ω0::Float64, avg_Δx::Float64, t::Float64, state::Int64)
+
+Return Markov chain probabilities for 
+two states through fast analytical solution
+after time `t` for rates of gain `λ1(t) = λ1*exp(ω1*avg_Δx)` and 
+loss `λ0(t) = λ0*exp(ω0*avg_Δx)`, conditional on a start value.
+"""
+function Ptrfast_start(λ1    ::Float64, 
+                       ω1    ::Float64,
+                       λ0    ::Float64,
+                       ω0    ::Float64,
+                       avg_Δx::Float64,
+                       t     ::Float64, 
+                       state ::Int64)
+  
+  @fastmath begin
+
+    λt1  ::Float64 = λ1*exp(ω1*avg_Δx)
+    λt0  ::Float64 = λ0*exp(ω0*avg_Δx)
+    sumλ ::Float64 = λt1 + λt0
+    ex   ::Float64 = exp(-sumλ*t)
+    sd1  ::Float64 = 1/sumλ
+    λt1ex::Float64 = λt1*ex
+    λt0ex::Float64 = λt0*ex
+    
+    if state == 0
+      sd1*(λt0 + λt1ex), sd1*(λt1 - λt1ex) 
+    else
+      sd1*(λt0 - λt0ex), sd1*(λt1 + λt0ex)
+    end
+
+  end
+end
 
 
 
@@ -178,6 +250,45 @@ function Ptrfast_end(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
     end
   end
 end
+
+
+
+
+
+"""
+    Ptrfast_end(λ1::Float64, ω1::Float64, λ0::Float64, ω0::Float64, avg_Δx::Float64, t::Float64, state::Int64)
+
+Return Markov chain probabilities for 
+two states through fast analytical solution
+after time `t` for rates of gain `λ1(t) = λ1*exp(ω1*avg_Δx)` and 
+loss `λ0(t) = λ0*exp(ω0*avg_Δx)`, conditional on a end value.
+"""
+function Ptrfast_end(λ1    ::Float64, 
+                     ω1    ::Float64,
+                     λ0    ::Float64,
+                     ω0    ::Float64,
+                     avg_Δx::Float64,
+                     t     ::Float64, 
+                     state ::Int64)
+  
+  @fastmath begin
+
+    λt1  ::Float64 = λ1*exp(ω1*avg_Δx)
+    λt0  ::Float64 = λ0*exp(ω0*avg_Δx)
+    sumλ ::Float64 = λt1 + λt0
+    ex   ::Float64 = exp(-sumλ*t)
+    sd1  ::Float64 = 1/sumλ
+    λt1ex::Float64 = λt1*ex
+    λt0ex::Float64 = λt0*ex
+
+    if state == 0
+      sd1*(λt0 + λt1ex), sd1*(λt0 - λt0ex)
+    else
+      sd1*(λt1 - λt1ex), sd1*(λt1 + λt0ex)
+    end
+  end
+end
+
 
 
 
