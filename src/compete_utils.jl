@@ -245,7 +245,9 @@ end
 """
     indmindif_sorted(x::Array{Int64,1}, val::Int64)
 
-For `Int64`.
+Get index in sorted vector `x` corresponding to the value 
+that is closest to `val` in sorted arrays 
+using a sort of uniroot algorithm. For `Int64`.
 """
 function indmindif_sorted(x::Array{Int64,1}, val::Int64) 
   a::Int64   = 1

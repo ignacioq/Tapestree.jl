@@ -242,11 +242,17 @@ end
 
 
 """
-    uniroot(f, approx = 1e-8, a = 0.0, m = 0.5, b = 1.0)
+    uniroot(f, approx = 1e-8, a = 0.0, b = 0.1)
 
-Fast uniroot function between `0.0` and `1.0`.
+Find the root of function between `0.0` and `b`.
 """
-function uniroot(f; approx = 1e-8, a = 0.0, m = 0.5, b = 1.0) 
+function uniroot(f; approx = 1e-8, a = 0.0, b = 0.1) 
+  # choose b
+  while sign(f(a)::Float64)::Float64 == sign(f(b)::Float64)::Float64
+    b += 0.1
+  end
+  m::Float64 = (a + b)/2.0::Float64
+
   while abs(f(m)::Float64)::Float64 > approx
     if sign(f(a)::Float64)::Float64 == sign(f(m)::Float64)::Float64
       a = m::Float64
@@ -261,11 +267,30 @@ end
 
 
 
-uniroot(f)
+"""
+  int_λt(t::Float64, x::Array{Float64,1}, y::Array{Float64,1})
 
+Cumulative pdf of λ(t) from `0` to `t`.
+"""
+function int_λt(t     ::Float64, 
+                cumδts::Array{Float64,1}, 
+                Δx    ::Array{Float64,1},
+                λ     ::Float64,
+                ω     ::Float64)
 
+  d::Int64 = idxlessthan(cumδts, t)
 
+  # riemman sums
+  s::Float64 = 0.0
+  for i in Base.OneTo(d-1)
+    s += λ*exp(ω*Δx[i])*exp(-λ*exp(ω*Δx[i])*(cumδts[i]))*(cumδts[i+1] - cumδts[i])
+  end
 
+  # last piece to sum
+  s += λ*exp(ω*Δx[d])*exp(-λ*exp(ω*Δx[d])*(cumδts[d]))*(t - cumδts[d])
+
+  return s
+end
 
 
 
