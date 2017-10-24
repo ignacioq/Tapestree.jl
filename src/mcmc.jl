@@ -161,14 +161,18 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   Yc[Ync2] = Yc[Ync1]
 
   # estimate current area & lineage means
-  areavg = zeros(m,narea)
-  linavg = zeros(m, ntip)
+  const areavg = zeros(m,narea)
+  const linavg = zeros(m, ntip)
 
   area_lineage_means!(areavg, linavg, Xc, Yc, wcol, m)
 
   # estimate current lineage specific means
-  lindiff = zeros(m, ntip, narea)
+  const lindiff = zeros(m, ntip, narea)
   linarea_diff!(lindiff, Xc, areavg, narea, ntip, m)
+
+  # estimate average branch lineage specific means
+  const avg_Δx = zeros(nedge, narea)
+  linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
 
   # make likelihood and prior functions
   total_llf      = makellf(δt, Yc, ntip, wcol, narea)
@@ -179,7 +183,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
 
-  #HEREEE
+
+
+
 
   # number of free parameters
   # number of xnodes + λ + σ² + ωx + ωλ + ωμ
@@ -220,11 +226,13 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   p  = Progress(niter, 5, "running MCMC...", 20)
 
   if fix_ωλ_ωμ
-    const pv      = append!(collect(1:np),fill(1, floor(Int64,np*0.3)))
+    const pv      = append!(collect(1:np),
+                            repeat(1:2, inner = floor(Int64,np*0.1)))
     const parvec  = setdiff(pv,(3:4))
     const lparvec = length(parvec)
   else
-    const parvec  = append!(collect(1:np),fill(1, floor(Int64,np*0.3)))
+    const parvec  = append!(collect(1:np),
+                            repeat(1:4, inner = floor(Int64,np*0.1)))
     const lparvec = length(parvec)
   end
 

@@ -105,6 +105,29 @@ end
 
 
 """
+    linarea_branch_avg(avg_Δx ::Array{Float64,1}, LD::Array{Float64,3}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64, nedge::Int64)
+
+Estimate the branch average of lineage differences in each specific area.
+"""
+function linarea_branch_avg!(avg_Δx ::Array{Float64,2},
+                             LD     ::Array{Float64,3},
+                             bridx_a::Array{Array{Array{Int64,1},1},1},
+                             narea  ::Int64,
+                             nedge  ::Int64)
+  @inbounds begin
+
+    for j = Base.OneTo(narea), i = Base.OneTo(nedge)
+      setindex!(avg_Δx, mean(LD[bridx_a[j][i]]), i, j)
+    end
+
+  end
+end
+
+
+
+
+
+"""
     Xupd_linavg(k::Int64, wck::Array{Int64,1}, X::Array{Float64,2}, Y::Array{Int64,3}, narea::Int64)
 
 Re-estimate lineage specific means 

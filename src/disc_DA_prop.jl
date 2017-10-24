@@ -22,6 +22,176 @@ vector of cumulative δtimes. It assigns to `Y`
 in place, avoiding extra memory allocation.
 """
 # reprehensible code... but faster 
+function bit_rejsam!(Y    ::Array{Int64,3},
+                     idx  ::Array{Int64,1},
+                     sf   ::Int64,
+                     λ1   ::Float64, 
+                     λ0   ::Float64, 
+                     cumts::Array{Float64,1})
+
+  idx_end = idx[end]::Int64
+
+  @inbounds @fastmath begin
+
+    cur_s = Y[idx[1]]::Int64
+    cur_t = 0.0
+    s     = idx[2]::Int64
+    idx_1 = idx[1] - 1
+
+    if cur_s == 0
+
+      while true
+
+        cur_t += rexp(λ1)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+        Y[s:f] = cur_s
+        
+        if f == idx_end
+          break
+        end
+
+        cur_s = 1 - cur_s
+        s     = f + 1
+
+        # same but with loss rate
+        cur_t += rexp(λ0)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+        Y[s:f] = cur_s
+
+        if f == idx_end
+          break
+        end
+
+        cur_s = 1 - cur_s
+        s     = f + 1
+
+      end
+
+    else
+
+      while true
+
+        cur_t += rexp(λ0)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+        Y[s:f] = cur_s
+        
+        if f == idx_end
+          break
+        end
+
+        cur_s = 1 - cur_s
+        s     = f + 1
+
+        # same but with loss rate
+        cur_t += rexp(λ1)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+        Y[s:f] = cur_s
+
+        if f == idx_end
+          break
+        end
+
+        cur_s = 1 - cur_s
+        s     = f + 1
+
+      end
+    end
+
+  end
+
+  # rejection sampling if end simulation state do not match observed state
+  while Y[idx_end] != sf 
+
+    @fastmath begin
+
+      cur_s = Y[idx[1]]::Int64
+      cur_t = 0.0
+      s     = idx[2]
+
+      if cur_s == 0
+
+        while true
+
+          cur_t += rexp(λ1)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+          
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+          # same but with loss rate
+          cur_t += rexp(λ0)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+        end
+
+      else
+
+        while true
+
+          cur_t += rexp(λ0)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+          
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+          # same but with loss rate
+          cur_t += rexp(λ1)::Float64
+          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+          Y[s:f] = cur_s
+
+          if f == idx_end
+            break
+          end
+
+          cur_s = 1 - cur_s
+          s     = f + 1
+
+        end
+      end
+    end
+
+  end
+
+end
+
+
+
+
+"""
+    bit_rejsam!(Y::Array{Int64,3}, idx::Array{Int64,1}, sf::Int64, λ1::Float64,  λ0::Float64,  cumts::Array{Float64,1})
+
+Bit rejection-sample a single branch
+given the start and end states and a
+vector of cumulative δtimes. It assigns to `Y`
+in place, avoiding extra memory allocation.
+"""
+# reprehensible code... but faster 
 function bit_rejsam!(Y     ::Array{Int64,3},
                      idx   ::Array{Int64,1},
                      sf    ::Int64,
