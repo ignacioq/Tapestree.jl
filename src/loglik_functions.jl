@@ -357,7 +357,7 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
              λ     ::Array{Float64,1},
              ω1    ::Float64,
              ω0    ::Float64,
-             avg_Δx::Float64,
+             avg_Δx::Array{Float64,2},
              triad ::Array{Int64,1})
 
     ll::Float64 = 0.0
@@ -369,18 +369,18 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
       if pr < nedge 
         for j=Base.OneTo(narea)
           ll += bitvectorll_iid(Y[bridx_a[j][pr]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[pr]) +
+                                λ[1], ω1, λ[2], ω0, avg_Δx[pr,j], δtA[pr]) +
                 bitvectorll_iid(Y[bridx_a[j][d1]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d1]) +
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,j], δtA[d1]) +
                 bitvectorll_iid(Y[bridx_a[j][d2]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d2])
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,j], δtA[d2])
         end
       else 
         for j=Base.OneTo(narea)
           ll += bitvectorll_iid(Y[bridx_a[j][d1]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d1]) +
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,j], δtA[d1]) +
                 bitvectorll_iid(Y[bridx_a[j][d2]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d2])
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,j], δtA[d2])
         end
       end
 
@@ -391,6 +391,7 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
 
   return f
 end
+
 
 
 
@@ -409,13 +410,13 @@ function bitvectorll_iid(y     ::Array{Int64,1},
                          δt    ::Array{Float64,1})
 
   ll::Float64 = 0.0
-  λt1::Float64 = λ1*(ω1*avg_Δx)
-  λt0::Float64 = λ0*(ω0*avg_Δx)
+  λt1::Float64 = λ1*exp(ω1*avg_Δx)
+  λt0::Float64 = λ0*exp(ω0*avg_Δx)
 
   @inbounds begin
 
     cur_s::Int64   = y[1]
-    cur_λ::Float64 = cur_s == 0 ? λt1 : λ0
+    cur_λ::Float64 = cur_s == 0 ? λt1 : λt0
 
     for i=Base.OneTo(endof(y)-1)
       if y[i] == y[i+1]
@@ -423,7 +424,7 @@ function bitvectorll_iid(y     ::Array{Int64,1},
       else
         ll += evll(δt[i], cur_λ)
         cur_s = 1 - cur_s
-        cur_λ = cur_s == 0 ? λt1 : λ0
+        cur_λ = cur_s == 0 ? λt1 : λt0
       end
     end
 

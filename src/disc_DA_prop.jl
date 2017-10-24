@@ -203,8 +203,8 @@ function bit_rejsam!(Y     ::Array{Int64,3},
                      cumts ::Array{Float64,1})
 
   idx_end = idx[end]::Int64
-  λt1::Float64 = λ1*(ω1*avg_Δx)
-  λt0::Float64 = λ0*(ω0*avg_Δx)
+  λt1::Float64 = λ1*exp(ω1*avg_Δx)
+  λt0::Float64 = λ0*exp(ω0*avg_Δx)
 
   @inbounds @fastmath begin
 

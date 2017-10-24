@@ -31,10 +31,11 @@ function burn_compete(total_llf,
                       areavg   ::Array{Float64,2},
                       linavg   ::Array{Float64,2},
                       lindiff  ::Array{Float64,3},
+                      avg_Δx   ::Array{Float64,2},
                       λc       ::Array{Float64,1},
                       ωxc      ::Float64,
-                      ωλc      ::Float64,
-                      ωμc      ::Float64,
+                      ω1c      ::Float64,
+                      ω0c      ::Float64,
                       σ²c      ::Float64,
                       Ync1     ::Array{Int64,1},
                       Ync2     ::Array{Int64,1},
@@ -50,8 +51,8 @@ function burn_compete(total_llf,
                       wXp      ::Array{Int64,1},
                       λprior   ::Float64,
                       ωxprior  ::Tuple{Float64,Float64},
-                      ωλprior  ::Tuple{Float64,Float64},
-                      ωμprior  ::Tuple{Float64,Float64},
+                      ω1prior  ::Tuple{Float64,Float64},
+                      ω0prior  ::Tuple{Float64,Float64},
                       σ²prior  ::Float64,
                       fix_ωλ_ωμ::Bool,
                       np       ::Int64,
@@ -64,24 +65,24 @@ function burn_compete(total_llf,
   const nedge = size(brs,1) 
 
   # likelihood and prior
-  llc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ωλc, ωμc, λc, 
+  llc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
                   stemevc, brs[nedge,1,:], σ²c)
   prc = allλpr(λc, λprior)    + 
         logdexp(σ²c, σ²prior) + 
         logdnorm(ωxc, ωxprior[1], ωxprior[2]) +
-        logdnorm(ωλc, ωλprior[1], ωλprior[2]) +
-        logdnorm(ωμc, ωμprior[1], ωμprior[2])
+        logdnorm(ω1c, ω1prior[1], ω1prior[2]) +
+        logdnorm(ω0c, ω0prior[1], ω0prior[2])
 
   # make scaling function
   scalef = makescalef(obj_ar)
 
   # rest of tuning parameters
-  ptn = fill(.1,np) 
+  const ptn = fill(.1,np) 
 
   # initialize acceptance log
-  ltn = zeros(Int64, np)
-  lup = zeros(Int64, np)
-  lac = zeros(Int64, np)
+  const ltn = zeros(Int64, np)
+  const lup = zeros(Int64, np)
+  const lac = zeros(Int64, np)
 
   # number of internal nodes
   const nin = length(trios) + 1
@@ -114,13 +115,13 @@ function burn_compete(total_llf,
       # update X
       if up > λlessthan
 
-        Xp = copy(Xc)
+        Xp = copy(Xc)::Array{Float64,2}
 
-        upx     = wXp[up - λlessthan]           # X indexing
-        Xp[upx] = addupt(Xc[upx], ptn[up])      # update X
+        upx     = wXp[up - λlessthan]::Int64             # X indexing
+        Xp[upx] = addupt(Xc[upx], ptn[up])::Float64      # update X
 
-        k     = rowind(upx, m)
-        wck   = wcol[k]
+        k     = rowind(upx, m)::Int64
+        wck   = wcol[k]::Array{Int64,1}
 
         if in(upx, Xnc1)        # if an internal node
           Xp[Xnc2] = Xp[Xnc1]
@@ -130,17 +131,17 @@ function burn_compete(total_llf,
         aak, lak, ldk = Xupd_linavg(k, wck, Xp, Yc, narea)
 
         if upx == 1  # if root
-          llr = Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ωλc, ωμc, λc, σ²c) - 
+          llr = Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
                 Rupd_llf(k, wck, Xc, Yc, linavg[k,wck], lindiff[k,wck,:], 
-                          ωxc, ωλc, ωμc, λc, σ²c)
+                          ωxc, ω1c, ω0c, λc, σ²c)
         else
-          wckm1 = wcol[k-1]
-          lakm1 = linavg[(k-1),wckm1]
+          wckm1 = wcol[k-1]::Array{Int64,1}
+          lakm1 = linavg[(k-1),wckm1]::Array{Float64,1}
 
           llr = Xupd_llf(k, wck, wckm1, Xp, Yc, lak, lakm1, 
-                         ldk, ωxc, ωλc, ωμc, λc, σ²c) - 
+                         ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
                 Xupd_llf(k, wck, wckm1, Xc, Yc, linavg[k,wck], lakm1,
-                         lindiff[k,wck,:], ωxc, ωλc, ωμc, λc, σ²c)
+                         lindiff[k,wck,:], ωxc, ω1c, ω0c, λc, σ²c)
         end
         
         if log(rand()) < llr
@@ -152,6 +153,7 @@ function burn_compete(total_llf,
             lindiff[k,wck,:] = ldk
             lac[up] += 1   # log acceptance
           end
+          linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
         end
 
       #randomly select λ to update and branch histories
@@ -165,8 +167,8 @@ function burn_compete(total_llf,
         λp[upλ] = logupt(λc[upλ], ptn[up])
 
         # proposal likelihood and prior
-        llr = λupd_llf(Yc, λp, ωλc, ωμc, lindiff, stemevc, brs[nedge,1,:]) -
-              λupd_llf(Yc, λc, ωλc, ωμc, lindiff, stemevc, brs[nedge,1,:])
+        llr = λupd_llf(Yc, λp, ω1c, ω0c, lindiff, stemevc, brs[nedge,1,:]) -
+              λupd_llf(Yc, λc, ω1c, ω0c, lindiff, stemevc, brs[nedge,1,:])
 
         prr = logdexp(λp[upλ], λprior) - logdexp(λc[upλ], λprior)
 
@@ -182,26 +184,27 @@ function burn_compete(total_llf,
         bup = rand(Base.OneTo(nin))
         if bup < nin
 
-          Yp = copy(Yc)
+          Yp = copy(Yc)::Array{Int64,3}
 
-          aa = copy(areavg)
-          la = copy(linavg)
-          ld = copy(lindiff)
+          aa = copy(areavg)::Array{Float64,2}
+          la = copy(linavg)::Array{Float64,2}
+          ld = copy(lindiff)::Array{Float64,3}
 
-          upnode!(λc, trios[bup], Yp, bridx_a, brδt, brl, brs, narea, nedge)
+          upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
+                  Yp, bridx_a, brδt, brl, brs, narea, nedge)
 
           Yp[Ync2] = Yp[Ync1]
 
           area_lineage_means!(aa, la, Xc, Yp, wcol, m)
           linarea_diff!(ld, Xc, aa, narea, ntip, m)
 
-          llr = total_llf(Xc, Yp, la, ld, ωxc, ωλc, ωμc, λc, 
+          llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
                           stemevc, brs[nedge,1,:], σ²c) - 
-                total_llf(Xc, Yc, linavg, lindiff, ωxc, ωλc, ωμc, λc, 
+                total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
                                 stemevc, brs[nedge,1,:], σ²c)
 
-          propr_iid = biogeo_upd_iid(Yc, λc, trios[bup]) - 
-                      biogeo_upd_iid(Yp, λc, trios[bup])
+          propr_iid = biogeo_upd_iid(Yc, λc, ω1c, ω0c, avg_Δx, trios[bup]) - 
+                      biogeo_upd_iid(Yp, λc, ω1c, ω0c, avg_Δx, trios[bup])
 
           if log(rand()) < (llr + propr_iid)
             llc    += llr
@@ -209,6 +212,7 @@ function burn_compete(total_llf,
             areavg  = aa
             linavg  = la
             lindiff = ld
+            linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
           end
 
         else
@@ -270,38 +274,38 @@ function burn_compete(total_llf,
       #update ωλ
       elseif up == 3
 
-        ωλp = addupt(ωλc, ptn[3])
+        ωλp = addupt(ω1c, ptn[3])
 
             # proposal likelihood and prior
-        llr = ωλμupd_llf(Yc, λc, ωλp, ωμc, lindiff) - 
-              ωλμupd_llf(Yc, λc, ωλc, ωμc, lindiff)
+        llr = ωλμupd_llf(Yc, λc, ωλp, ω0c, lindiff) - 
+              ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff)
 
         # prior ratio
-        prr = logdnorm(ωλp, ωλprior[1], ωλprior[2]) -
-              logdnorm(ωλc, ωλprior[1], ωλprior[2])
+        prr = logdnorm(ωλp, ω1prior[1], ω1prior[2]) -
+              logdnorm(ω1c, ω1prior[1], ω1prior[2])
 
         if log(rand()) < (llr + prr)
           llc += llr
           prc += prr
-          ωλc  = ωλp
+          ω1c  = ωλp
           lac[3] += 1
         end
 
       # update ωμ
       else
-        ωμp = addupt(ωμc, ptn[4])
+        ωμp = addupt(ω0c, ptn[4])
 
-        llr = ωλμupd_llf(Yc, λc, ωλc, ωμp, lindiff) - 
-              ωλμupd_llf(Yc, λc, ωλc, ωμc, lindiff)
+        llr = ωλμupd_llf(Yc, λc, ω1c, ωμp, lindiff) - 
+              ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff)
 
         # prior ratio
-        prr = logdnorm(ωμp, ωμprior[1], ωμprior[2]) -
-              logdnorm(ωμc, ωμprior[1], ωμprior[2])
+        prr = logdnorm(ωμp, ω0prior[1], ω0prior[2]) -
+              logdnorm(ω0c, ω0prior[1], ω0prior[2])
 
         if log(rand()) < (llr + prr)
           llc += llr
           prc += prr
-          ωμc  = ωμp
+          ω0c  = ωμp
           lac[4] += 1
         end
       end
@@ -324,7 +328,7 @@ function burn_compete(total_llf,
     next!(p)
   end
 
-  return llc, prc, Xc, Yc, areavg, linavg, lindiff, stemevc, brs, λc, ωxc, ωλc, ωμc, σ²c, ptn
+  return llc, prc, Xc, Yc, areavg, linavg, lindiff, avg_Δx, stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn
 
 end
 

@@ -183,23 +183,18 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
 
-
-
-
-
   # number of free parameters
-  # number of xnodes + λ + σ² + ωx + ωλ + ωμ
+  # number of xnodes + λ1 + λ0 + σ² + ωx + ωλ + ωμ
   const np = length(wXp) + 6
 
   # remove B
   B = nothing
 
   # burning phase
-  llc, prc, Xc, Yc, areavg, linavg, lindiff, 
-  stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = 
-    burn_compete(total_llf, 
+  llc, prc, Xc, Yc, areavg, linavg, lindiff, avg_Δx,
+  stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
       λupd_llf, ωλμupd_llf, Xupd_llf, Rupd_llf, σ²ωxupd_llf, biogeo_upd_iid, 
-      Xc, Yc, areavg, linavg, lindiff,
+      Xc, Yc, areavg, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
       λprior, ωxprior, ωλprior, ωμprior, σ²prior, fix_ωλ_ωμ, np, nburn)
@@ -255,9 +250,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       # update X[i]
       if up > λlessthan
-        Xc, llc, areavg, linavg, lindiff = mhr_upd_X(up, Xc, Yc, λc, 
+        Xc, llc, areavg, linavg, lindiff, avg_Δx = mhr_upd_X(up, Xc, Yc, λc, 
                                             ωxc, ω1c, ω0c, σ²c, llc, 
-                                            areavg, linavg, lindiff)
+                                            areavg, linavg, lindiff, avg_Δx)
 
       #randomly select λ to update and branch histories
       elseif up > 4 && up <= λlessthan
@@ -270,9 +265,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, linavg, lindiff = mhr_upd_Y(trios[bup], Xc, Yc, 
-                       λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, linavg, lindiff, brs, stemevc)
+            llc, Yc, areavg, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
+                       Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                       areavg, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
