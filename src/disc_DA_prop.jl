@@ -22,14 +22,19 @@ vector of cumulative δtimes. It assigns to `Y`
 in place, avoiding extra memory allocation.
 """
 # reprehensible code... but faster 
-function bit_rejsam!(Y    ::Array{Int64,3},
-                     idx  ::Array{Int64,1},
-                     sf   ::Int64,
-                     λ1   ::Float64, 
-                     λ0   ::Float64, 
-                     cumts::Array{Float64,1})
+function bit_rejsam!(Y     ::Array{Int64,3},
+                     idx   ::Array{Int64,1},
+                     sf    ::Int64,
+                     λ1    ::Float64,
+                     ω1    ::Float64,
+                     λ0    ::Float64,
+                     ω0    ::Float64,
+                     avg_Δx::Float64, 
+                     cumts ::Array{Float64,1})
 
   idx_end = idx[end]::Int64
+  λt1::Float64 = λ1*(ω1*avg_Δx)
+  λt0::Float64 = λ0*(ω0*avg_Δx)
 
   @inbounds @fastmath begin
 
@@ -42,7 +47,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
 
       while true
 
-        cur_t += rexp(λ1)::Float64
+        cur_t += rexp(λt1)::Float64
         f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
         Y[s:f] = cur_s
@@ -55,7 +60,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
         s     = f + 1
 
         # same but with loss rate
-        cur_t += rexp(λ0)::Float64
+        cur_t += rexp(λt0)::Float64
         f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
         Y[s:f] = cur_s
@@ -73,7 +78,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
 
       while true
 
-        cur_t += rexp(λ0)::Float64
+        cur_t += rexp(λt0)::Float64
         f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
         Y[s:f] = cur_s
@@ -86,7 +91,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
         s     = f + 1
 
         # same but with loss rate
-        cur_t += rexp(λ1)::Float64
+        cur_t += rexp(λt1)::Float64
         f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
         Y[s:f] = cur_s
@@ -116,7 +121,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
 
         while true
 
-          cur_t += rexp(λ1)::Float64
+          cur_t += rexp(λt1)::Float64
           f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
           Y[s:f] = cur_s
@@ -129,7 +134,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
           s     = f + 1
 
           # same but with loss rate
-          cur_t += rexp(λ0)::Float64
+          cur_t += rexp(λt0)::Float64
           f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
           Y[s:f] = cur_s
@@ -147,7 +152,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
 
         while true
 
-          cur_t += rexp(λ0)::Float64
+          cur_t += rexp(λt0)::Float64
           f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
           Y[s:f] = cur_s
@@ -160,7 +165,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
           s     = f + 1
 
           # same but with loss rate
-          cur_t += rexp(λ1)::Float64
+          cur_t += rexp(λt1)::Float64
           f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
           Y[s:f] = cur_s

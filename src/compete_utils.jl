@@ -121,7 +121,6 @@ end
 
 
 
-
 """
     Ptrfast(λ1::Float64, ω1::Float64, λ0::Float64, ω0::Float64, avg_Δx::Float64, t::Float64)
 
@@ -476,6 +475,7 @@ function create_wcol(X::Array{Float64,2})
 
   wcol
 end
+
 
 
 

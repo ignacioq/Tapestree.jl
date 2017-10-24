@@ -21,6 +21,9 @@ Update node and incident branches using discrete
 Data Augmentation for all areas.
 """
 function upnode!(λ::Array{Float64,1},
+                 ω1     ::Float64,
+                 ω0     ::Float64,
+                 avg_Δx ::Array{Float64,1},
                  triad  ::Array{Int64,1},
                  Y      ::Array{Int64,3},
                  bridx_a::Vector{Vector{Vector{Int64}}},
@@ -36,26 +39,31 @@ function upnode!(λ::Array{Float64,1},
     pr, d1, d2 = triad
 
     # sample
-    samplenode!(λ, pr, d1, d2, brs, brl, narea)
+    samplenode!(λ, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
 
     # save extinct
     while sum(brs[pr,2,:]) == 0
-       samplenode!(λ, pr, d1, d2, brs, brl, narea)
+       samplenode!(λ, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
     end
 
 
     # sample a consistent history
-    createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+    createhists!(λ, ω1, ω0, avg_Δx, 
+                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
   
+
     # save extinct
     ntries = 1
 
     while ifextY(Y,  triad, narea, bridx_a)
-      createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-      
+      createhists!(λ, ω1, ω0, avg_Δx, 
+                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+
       ntries += 1
       if ntries > 100_000 
-        warn("Sampling is very inefficient for these triads: \n λ = ", λ, "\n edge lengths parent = ", brδt[pr], 
+        warn("Sampling is very inefficient for these data: \n 
+              λ = ", λ, "ω1 = ", ω1, "ω0 = ", ω0,
+             "\n edge lengths parent = ",     brδt[pr], 
              "\n edge lengths daughter 1 = ", brδt[d1], 
              "\n edge lengths daughter 2 = ", brδt[d2])
 
@@ -128,7 +136,10 @@ end
 
 Create bit histories for all areas for the branch trio.
 """
-function createhists!(λ::Array{Float64,1}, 
+function createhists!(λ      ::Array{Float64,1},
+                      ω1     ::Float64,  
+                      ω0     ::Float64, 
+                      avg_Δx ::Array{Float64,1},
                       Y      ::Array{Int64,3},
                       pr     ::Int64,
                       d1     ::Int64,
@@ -153,14 +164,17 @@ function createhists!(λ::Array{Float64,1},
 
       if pr < nedge
         # for parent branch
-        bit_rejsam!(Y, bridx_a[j][pr], brs[pr,2,j], λj1, λj2, brδt[pr])
+        bit_rejsam!(Y, bridx_a[j][pr], brs[pr,2,j], 
+                    λj1, ω1, λj2, ω0, avg_Δx[pr], brδt[pr])
       end
 
       # for daughter branch 1
-      bit_rejsam!(Y, bridx_a[j][d1], brs[d1,2,j], λj1, λj2, brδt[d1])
+      bit_rejsam!(Y, bridx_a[j][d1], brs[d1,2,j], 
+                  λj1, ω1, λj2, ω0, avg_Δx[d1], brδt[d1])
 
       # for daughter branch 2
-      bit_rejsam!(Y, bridx_a[j][d2], brs[d2,2,j], λj1, λj2, brδt[d2])
+      bit_rejsam!(Y, bridx_a[j][d2], brs[d2,2,j], 
+                  λj1, ω1, λj2, ω0, avg_Δx[d2], brδt[d2])
 
     end
 
@@ -180,13 +194,16 @@ end
 Sample one internal node according to 
 mutual-independence model transition probabilities.
 """
-function samplenode!(λ::Array{Float64,1},
-                     pr   ::Int64,
-                     d1   ::Int64,
-                     d2   ::Int64,
-                     brs  ::Array{Int64,3},
-                     brl  ::Array{Float64,1},
-                     narea::Int64)
+function samplenode!(λ     ::Array{Float64,1},
+                     ω1    ::Float64,
+                     ω0    ::Float64,
+                     avg_Δx::Array{Float64,1},
+                     pr    ::Int64,
+                     d1    ::Int64,
+                     d2    ::Int64,
+                     brs   ::Array{Int64,3},
+                     brl   ::Array{Float64,1},
+                     narea ::Int64)
   @inbounds begin
     
     brl_pr = brl[pr]::Float64
@@ -197,11 +214,11 @@ function samplenode!(λ::Array{Float64,1},
 
       # transition probabilities for the trio
       ppr_1, ppr_2 = 
-        Ptrfast_start(λ[1], λ[2], brl_pr, brs[pr,1,j])
+        Ptrfast_start(λ[1], ω1, λ[2], ω0, avg_Δx[pr], brl_pr, brs[pr,1,j])
       pd1_1, pd1_2 = 
-        Ptrfast_end(  λ[1], λ[2], brl_d1, brs[d1,2,j])
+        Ptrfast_end(  λ[1], ω1, λ[2], ω0, avg_Δx[d1], brl_d1, brs[d1,2,j])
       pd2_1, pd2_2 = 
-        Ptrfast_end(  λ[1], λ[2], brl_d2, brs[d2,2,j])
+        Ptrfast_end(  λ[1], ω1, λ[2], ω0, avg_Δx[d2], brl_d2, brs[d2,2,j])
 
       # normalize probability
       tp = normlize(*(ppr_1, pd1_1, pd2_1),

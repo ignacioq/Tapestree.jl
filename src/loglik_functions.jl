@@ -87,8 +87,8 @@ function makellf(δt   ::Vector{Float64},
              linavg ::Array{Float64,2},
              lindiff::Array{Float64,3},
              ωx     ::Float64,
-             ωλ     ::Float64,
-             ωμ     ::Float64,
+             ω1     ::Float64,
+             ω0     ::Float64,
              λ      ::Array{Float64,1},
              stemevc::Vector{Vector{Float64}},
              stemss,
@@ -112,7 +112,7 @@ function makellf(δt   ::Vector{Float64},
         ll += brll(stemevc[j], λ[1], λ[2], stemss[j])
         for i = coloop
           wh = w23[i]
-          ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ωλ, ωμ, 
+          ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                             lindiff[wh,i,j], dδt[wh]) 
         end
       end
@@ -129,7 +129,7 @@ end
 
 
 """
-    bitvectorll(y ::Array{Int64,1}, λ1::Float64, λ0::Float64, ωλ::Float64, ωμ::Float64, Δx::Array{Float64,1}, δt::Array{Float64,1})
+    bitvectorll(y ::Array{Int64,1}, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, Δx::Array{Float64,1}, δt::Array{Float64,1})
 
 Return the likelihood for a
 bit vector (composed of 0s and 1s).
@@ -137,8 +137,8 @@ bit vector (composed of 0s and 1s).
 function bitvectorll(y ::Array{Int64,1},
                      λ1::Float64,
                      λ0::Float64,
-                     ωλ::Float64,
-                     ωμ::Float64,
+                     ω1::Float64,
+                     ω0::Float64,
                      Δx::Array{Float64,1},
                      δt::Array{Float64,1})
 
@@ -149,9 +149,9 @@ function bitvectorll(y ::Array{Int64,1},
     cur_s::Int64 = y[1]
 
     if cur_s == 0 
-      cur_λ, cur_ω = λ1, ωλ
+      cur_λ, cur_ω = λ1, ω1
     else
-      cur_λ, cur_ω = λ0, ωμ
+      cur_λ, cur_ω = λ0, ω0
     end
 
     for i=Base.OneTo(endof(y)-1)
@@ -163,9 +163,9 @@ function bitvectorll(y ::Array{Int64,1},
         cur_s = 1 - cur_s
 
         if cur_s == 0 
-          cur_λ, cur_ω = λ1, ωλ
+          cur_λ, cur_ω = λ1, ω1
         else
-          cur_λ, cur_ω = λ0, ωμ
+          cur_λ, cur_ω = λ0, ω0
         end
       end
     end
@@ -178,7 +178,7 @@ end
 
 
 """
-    bitbitll(y1::Int64, y2::Int64, λ1::Float64, λ0::Float64, ωλ::Float64, ωμ::Float64, Δx::Float64, δt::Float64)
+    bitbitll(y1::Int64, y2::Int64, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, Δx::Float64, δt::Float64)
 
 Return the likelihood for a
 bit vector of length 2 (composed of 0s and 1s).
@@ -187,23 +187,23 @@ function bitbitll(y1::Int64,
                   y2::Int64,
                   λ1::Float64,
                   λ0::Float64,
-                  ωλ::Float64,
-                  ωμ::Float64,
+                  ω1::Float64,
+                  ω0::Float64,
                   Δx::Float64,
                   δt::Float64)
 
   # event or non-event
   if y1 == y2 
     if y1 == 0 
-      return nell(δt, ratest(λ1, ωλ, Δx))
+      return nell(δt, ratest(λ1, ω1, Δx))::Float64
     else
-      return nell(δt, ratest(λ0, ωμ, Δx))
+      return nell(δt, ratest(λ0, ω0, Δx))::Float64
     end
   else
     if y1 == 0 
-      return evll(δt, ratest(λ1, ωλ, Δx))
+      return evll(δt, ratest(λ1, ω1, Δx))::Float64
     else
-      return evll(δt, ratest(λ0, ωμ, Δx))
+      return evll(δt, ratest(λ0, ω0, Δx))::Float64
     end
   end
 end
@@ -217,7 +217,7 @@ Estimate λ colonization/extirpation rate
 based on the absolute difference on X.
 """
 ratest(λ::Float64, ω::Float64, absdiff::Float64) = 
-  λ * exp(ω * absdiff)
+  (λ * exp(ω * absdiff))::Float64
 
 
 
@@ -247,8 +247,8 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
 
   function f(Y      ::Array{Int64,3}, 
              λ::Array{Float64,1},
-             ωλ     ::Float64,
-             ωμ     ::Float64,
+             ω1     ::Float64,
+             ω0     ::Float64,
              lindiff::Array{Float64,3},
              stemevc::Vector{Vector{Float64}},
              stemss ::Vector{Int64})
@@ -263,7 +263,7 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
 
         for i=coloop
           wh = w23[i]
-          ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ωλ, ωμ, 
+          ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                             lindiff[wh,i,j], dδt[wh]) 
         end
       end
@@ -280,11 +280,11 @@ end
 
 
 """
-    makellf_ωλμ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
+    makellf_ω1μ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
 
-Make likelihood function for when updating ωλ & ωμ.
+Make likelihood function for when updating ω1 & ω0.
 """
-function makellf_ωλμ_upd(Y   ::Array{Int64,3},
+function makellf_ω1μ_upd(Y   ::Array{Int64,3},
                          δt   ::Vector{Float64},
                          narea::Int64)
 
@@ -303,8 +303,8 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
 
   function f(Y      ::Array{Int64,3}, 
              λ::Array{Float64,1},
-             ωλ     ::Float64,
-             ωμ     ::Float64,
+             ω1     ::Float64,
+             ω0     ::Float64,
              lindiff::Array{Float64,3})
 
     ll::Float64 = 0.0
@@ -313,7 +313,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
 
       for j=Base.OneTo(narea), i=coloop
         wh = w23[i]
-        ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ωλ, ωμ, 
+        ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                           lindiff[wh,i,j], dδt[wh]) 
       end
 
@@ -353,9 +353,12 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
   end
 
 
-  function f(Y    ::Array{Int64,3}, 
-             λ::Array{Float64,1},
-             triad::Array{Int64,1})
+  function f(Y     ::Array{Int64,3}, 
+             λ     ::Array{Float64,1},
+             ω1    ::Float64,
+             ω0    ::Float64,
+             avg_Δx::Float64,
+             triad ::Array{Int64,1})
 
     ll::Float64 = 0.0
 
@@ -365,14 +368,19 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
 
       if pr < nedge 
         for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[j][pr]], λ[1], λ[2], δtA[pr]) +
-                bitvectorll_iid(Y[bridx_a[j][d1]], λ[1], λ[2], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[j][d2]], λ[1], λ[2], δtA[d2])
+          ll += bitvectorll_iid(Y[bridx_a[j][pr]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[pr]) +
+                bitvectorll_iid(Y[bridx_a[j][d1]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[j][d2]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d2])
         end
       else 
         for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[j][d1]], λ[1], λ[2], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[j][d2]], λ[1], λ[2], δtA[d2])
+          ll += bitvectorll_iid(Y[bridx_a[j][d1]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[j][d2]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx, δtA[d2])
         end
       end
 
@@ -392,17 +400,22 @@ end
 Return likelihood under the independence model 
 for a bit vector.
 """
-function bitvectorll_iid(y ::Array{Int64,1},
-                         λ1::Float64,
-                         λ0::Float64,
-                         δt::Array{Float64,1})
+function bitvectorll_iid(y     ::Array{Int64,1},
+                         λ1    ::Float64,
+                         ω1    ::Float64,
+                         λ0    ::Float64,
+                         ω0    ::Float64,
+                         avg_Δx::Float64,
+                         δt    ::Array{Float64,1})
 
   ll::Float64 = 0.0
+  λt1::Float64 = λ1*(ω1*avg_Δx)
+  λt0::Float64 = λ0*(ω0*avg_Δx)
 
   @inbounds begin
 
     cur_s::Int64   = y[1]
-    cur_λ::Float64 = cur_s == 0 ? λ1 : λ0
+    cur_λ::Float64 = cur_s == 0 ? λt1 : λ0
 
     for i=Base.OneTo(endof(y)-1)
       if y[i] == y[i+1]
@@ -410,7 +423,7 @@ function bitvectorll_iid(y ::Array{Int64,1},
       else
         ll += evll(δt[i], cur_λ)
         cur_s = 1 - cur_s
-        cur_λ = cur_s == 0 ? λ1 : λ0
+        cur_λ = cur_s == 0 ? λt1 : λ0
       end
     end
 
@@ -493,8 +506,8 @@ function makellf_Xupd(δt   ::Vector{Float64},
              lakm1::Array{Float64,1},
              ldk,
              ωx   ::Float64,
-             ωλ   ::Float64,
-             ωμ   ::Float64,
+             ω1   ::Float64,
+             ω0   ::Float64,
              λ::Array{Float64,1},
              σ²   ::Float64)
 
@@ -528,7 +541,7 @@ function makellf_Xupd(δt   ::Vector{Float64},
         # biogeograhic likelihoods
         for j=Base.OneTo(narea)
           ll += bitbitll(Y[k,wci,j], Y[k+1,wci,j], 
-                          λ[1], λ[2], ωλ, ωμ, ldk[i,j], δt[k])
+                          λ[1], λ[2], ω1, ω0, ldk[i,j], δt[k])
         end
       end
 
@@ -559,9 +572,9 @@ function makellf_Rupd(δt   ::Vector{Float64},
              lak,
              ldk,
              ωx   ::Float64,
-             ωλ   ::Float64,
-             ωμ   ::Float64,
-             λ::Array{Float64,1},
+             ω1   ::Float64,
+             ω0   ::Float64,
+             λ    ::Array{Float64,1},
              σ²   ::Float64)
 
     # normal likelihoods
@@ -582,7 +595,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
         # biogeograhic likelihoods
         for j = Base.OneTo(narea)
           ll += bitbitll(Y[k,wci,j], Y[k+1,wci,j], 
-                         λ[1], λ[2], ωλ, ωμ,ldk[i,j], δt[k])
+                         λ[1], λ[2], ω1, ω0,ldk[i,j], δt[k])
         end
       end
 

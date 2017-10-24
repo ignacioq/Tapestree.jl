@@ -37,8 +37,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       out_file ::String                 = "compete_results",
                       λi       ::Float64                = 10.,
                       ωxi      ::Float64                = 0.,
-                      ωλi      ::Float64                = 0.,
-                      ωμi      ::Float64                = 0.,
+                      ω1i      ::Float64                = 0.,
+                      ω0i      ::Float64                = 0.,
                       σ²i      ::Float64                = 1.,
                       stbrl    ::Float64                = 1.,
                       fix_ωλ_ωμ::Bool                   = true)
@@ -179,6 +179,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
 
+  #HEREEE
+
   # number of free parameters
   # number of xnodes + λ + σ² + ωx + ωλ + ωμ
   const np = length(wXp) + 6
@@ -188,11 +190,11 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # burning phase
   llc, prc, Xc, Yc, areavg, linavg, lindiff, 
-  stemevc, brs, λc, ωxc, ωλc, ωμc, σ²c, ptn = 
+  stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = 
     burn_compete(total_llf, 
       λupd_llf, ωλμupd_llf, Xupd_llf, Rupd_llf, σ²ωxupd_llf, biogeo_upd_iid, 
       Xc, Yc, areavg, linavg, lindiff,
-      λi, ωxi, ωλi, ωμi, σ²i, 
+      λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
       λprior, ωxprior, ωλprior, ωμprior, σ²prior, fix_ωλ_ωμ, np, nburn)
 
@@ -246,13 +248,13 @@ function compete_mcmc(Xc       ::Array{Float64,2},
       # update X[i]
       if up > λlessthan
         Xc, llc, areavg, linavg, lindiff = mhr_upd_X(up, Xc, Yc, λc, 
-                                            ωxc, ωλc, ωμc, σ²c, llc, 
+                                            ωxc, ω1c, ω0c, σ²c, llc, 
                                             areavg, linavg, lindiff)
 
       #randomly select λ to update and branch histories
       elseif up > 4 && up <= λlessthan
 
-        llc, prc, λc = mhr_upd_λ(up, Yc, λc, llc, prc, ωλc, ωμc, 
+        llc, prc, λc = mhr_upd_λ(up, Yc, λc, llc, prc, ω1c, ω0c, 
                                  lindiff, stemevc, brs[nedge,1,:])
 
         # which internal node to update
@@ -261,7 +263,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
           # update a random internal node, including the mrca
           if bup < nin
             llc, Yc, areavg, linavg, lindiff = mhr_upd_Y(trios[bup], Xc, Yc, 
-                       λc, ωxc, ωλc, ωμc, σ²c, llc, prc, 
+                       λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                        areavg, linavg, lindiff, brs, stemevc)
           else
             # update stem
@@ -292,12 +294,12 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       #update ωλ
       elseif up == 3
-        llc, prc, ωλc = mhr_upd_ωλ(ωλc, λc, ωμc, Yc, llc, prc, ptn[3], 
+        llc, prc, ω1c = mhr_upd_ωλ(ω1c, λc, ω0c, Yc, llc, prc, ptn[3], 
                                    linavg, lindiff, ωλprior, ωλμupd_llf)
 
       # update ωμ      
       else
-        llc, prc, ωμc = mhr_upd_ωμ(ωμc, λc, ωλc, Yc, llc, prc, ptn[4],
+        llc, prc, ω0c = mhr_upd_ωμ(ω0c, λc, ω1c, Yc, llc, prc, ptn[4],
                                     linavg, lindiff, ωμprior, ωλμupd_llf)
       end
 
@@ -311,8 +313,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         setindex!(h,    llc, lit)
         setindex!(o,    prc, lit)
         setindex!(ωx,   ωxc, lit)
-        setindex!(ωλ,   ωλc, lit)
-        setindex!(ωμ,   ωμc, lit)
+        setindex!(ωλ,   ω1c, lit)
+        setindex!(ωμ,   ω0c, lit)
         setindex!(σ²,   σ²c, lit)
         setindex!(pc, Pc(λc[1], λc[2], max_δt), lit)
         for j = eachindex(λc)
