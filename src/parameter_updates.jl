@@ -94,10 +94,13 @@ function make_mhr_upd_Y(narea  ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
+
     Yp = copy(Yc)::Array{Int64,3}
     aa = copy(areavg)::Array{Float64,2}
     la = copy(linavg)::Array{Float64,2}
     ld = copy(lindiff)::Array{Float64,3}
+
+    linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
 
     upnode!(λc, ω1c, ω0c, avg_Δx, triad, 
             Yp, bridx_a, brδt, brl, brs, narea, nedge)
@@ -121,7 +124,6 @@ function make_mhr_upd_Y(narea  ::Int64,
       areavg  = aa
       linavg  = la
       lindiff = ld
-      linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
     end
 
     return llc, Yc, areavg, linavg, lindiff, avg_Δx
@@ -201,7 +203,6 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
         linavg[k,wck]    = lak
         lindiff[k,wck,:] = ldk
       end
-      linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
     end
 
     return Xc, llc, areavg, linavg, lindiff, avg_Δx
@@ -321,7 +322,7 @@ function mhr_upd_ωλ(ω1c    ::Float64,
   if log(rand()) < (llr + prr)
     llc += llr
     prc += prr
-    ω1c  = ωλp
+    ω1c  = ω1p
   end
 
   return llc, prc, ω1c

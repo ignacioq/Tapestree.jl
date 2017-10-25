@@ -185,7 +185,7 @@ function symp_traits(X  ::Array{Float64,2},
   
   end
   
-  return tSk, Sx
+  return Sk, Sx
 end
 
 
@@ -252,7 +252,7 @@ function lineage_averages(Sk::Array{Int64,2},
 
   end
 
-  return rla
+  return la
 end
 
 

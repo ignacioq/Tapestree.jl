@@ -153,7 +153,6 @@ function burn_compete(total_llf,
             lindiff[k,wck,:] = ldk
             lac[up] += 1   # log acceptance
           end
-          linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
         end
 
       #randomly select λ to update and branch histories
@@ -190,6 +189,8 @@ function burn_compete(total_llf,
           la = copy(linavg)::Array{Float64,2}
           ld = copy(lindiff)::Array{Float64,3}
 
+          linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
+
           upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
                   Yp, bridx_a, brδt, brl, brs, narea, nedge)
 
@@ -203,6 +204,7 @@ function burn_compete(total_llf,
                 total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
                                 stemevc, brs[nedge,1,:], σ²c)
 
+
           propr_iid = biogeo_upd_iid(Yc, λc, ω1c, ω0c, avg_Δx, trios[bup]) - 
                       biogeo_upd_iid(Yp, λc, ω1c, ω0c, avg_Δx, trios[bup])
 
@@ -212,7 +214,6 @@ function burn_compete(total_llf,
             areavg  = aa
             linavg  = la
             lindiff = ld
-            linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
           end
 
         else
