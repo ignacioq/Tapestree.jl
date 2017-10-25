@@ -161,8 +161,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
              llc    ::Float64,
              areavg ::Array{Float64,2},
              linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
-             avg_Δx ::Array{Float64,2})
+             lindiff::Array{Float64,3})
 
     upx = wXp[up - λlessthan] 
 
@@ -205,7 +204,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       end
     end
 
-    return Xc, llc, areavg, linavg, lindiff, avg_Δx
+    return Xc, llc, areavg, linavg, lindiff
   end
 
 end

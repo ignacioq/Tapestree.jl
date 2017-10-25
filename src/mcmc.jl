@@ -222,12 +222,12 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   if fix_ωλ_ωμ
     const pv      = append!(collect(1:np),
-                            repeat(1:2, inner = floor(Int64,np*0.1)))
+                            repeat(1:6, inner = floor(Int64,np*0.1)))
     const parvec  = setdiff(pv,(3:4))
     const lparvec = length(parvec)
   else
     const parvec  = append!(collect(1:np),
-                            repeat(1:4, inner = floor(Int64,np*0.1)))
+                            repeat(1:6, inner = floor(Int64,np*0.1)))
     const lparvec = length(parvec)
   end
 
@@ -250,9 +250,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       # update X[i]
       if up > λlessthan
-        Xc, llc, areavg, linavg, lindiff, avg_Δx = mhr_upd_X(up, Xc, Yc, λc, 
+        Xc, llc, areavg, linavg, lindiff = mhr_upd_X(up, Xc, Yc, λc, 
                                             ωxc, ω1c, ω0c, σ²c, llc, 
-                                            areavg, linavg, lindiff, avg_Δx)
+                                            areavg, linavg, lindiff)
 
       #randomly select λ to update and branch histories
       elseif up > 4 && up <= λlessthan
