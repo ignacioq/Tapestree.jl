@@ -102,7 +102,7 @@ function make_mhr_upd_Y(narea  ::Int64,
     upnode!(λc, ω1c, ω0c, avg_Δx, triad, 
             Yp, bridx_a, brδt, brl, brs, narea, nedge)
 
-    Yp[Ync2] = Yp[Ync1]
+    Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
 
     area_lineage_means!(aa, la, Xc, Yp, wcol, m)
     linarea_diff!(ld, Xc, aa, narea, ntip, m)
@@ -170,7 +170,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
     k     = rowind(upx, m)
     wck   = wcol[k]
 
-    if ∈(upx, Xnc1)        # if an internal node
+    if ∈(upx, Xnc1)                         # if an internal node
       Xp[Xnc2] = Xp[Xnc1]
     end
 
@@ -308,14 +308,14 @@ function mhr_upd_ωλ(ω1c    ::Float64,
                     ωλprior::Tuple{Float64,Float64},
                     ωλμupd_llf)
 
-  ωλp = addupt(ω1c, rand() < 0.5 ? ωλtn : 4*ωλtn)
+  ω1p = addupt(ω1c, rand() < 0.5 ? ωλtn : 4*ωλtn)
 
   # likelihood ratio
-  llr = ωλμupd_llf(Yc, λc, ωλp, ω0c, lindiff) - 
+  llr = ωλμupd_llf(Yc, λc, ω1p, ω0c, lindiff) - 
         ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff)
 
   # prior ratio
-  prr = logdnorm(ωλp, ωλprior[1], ωλprior[2]) -
+  prr = logdnorm(ω1p, ωλprior[1], ωλprior[2]) -
         logdnorm(ω1c, ωλprior[1], ωλprior[2])
 
   if log(rand()) < (llr + prr)
@@ -337,31 +337,31 @@ end
 MHR update for ωμ.
 """
 function mhr_upd_ωμ(ω0c    ::Float64,
-                     λc     ::Array{Float64,1},
-                     ω1c    ::Float64,
-                     Yc     ::Array{Int64,3},
-                     llc    ::Float64,
-                     prc    ::Float64,
-                     ωμtn   ::Float64,
-                     linavg ::Array{Float64,2},
-                     lindiff::Array{Float64,3},
-                     ωμprior::Tuple{Float64,Float64},
-                     ωλμupd_llf)
+                    λc     ::Array{Float64,1},
+                    ω1c    ::Float64,
+                    Yc     ::Array{Int64,3},
+                    llc    ::Float64,
+                    prc    ::Float64,
+                    ωμtn   ::Float64,
+                    linavg ::Array{Float64,2},
+                    lindiff::Array{Float64,3},
+                    ωμprior::Tuple{Float64,Float64},
+                    ωλμupd_llf)
 
-  ωμp = addupt(ω0c, rand() < 0.5 ? ωμtn : 4*ωμtn)
+  ω0p = addupt(ω0c, rand() < 0.5 ? ωμtn : 4*ωμtn)
 
   # likelihood ratio
-  llr = ωλμupd_llf(Yc, λc, ω1c, ωμp, lindiff) - 
+  llr = ωλμupd_llf(Yc, λc, ω1c, ω0p, lindiff) - 
         ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff)
 
   # prior ratio
-  prr = logdnorm(ωμp, ωμprior[1], ωμprior[2]) -
+  prr = logdnorm(ω0p, ωμprior[1], ωμprior[2]) -
         logdnorm(ω0c, ωμprior[1], ωμprior[2])
 
   if log(rand()) < (llr + prr)
     llc += llr
     prc += prr
-    ω0c  = ωμp
+    ω0c  = ω0p
   end
 
   return llc, prc, ω0c

@@ -13,68 +13,6 @@ May 16 2017
 
 
 
-"""
-    upnode!(λ::Array{Float64,1}, ω1::Float64, ω0::Float64, avg_Δx::Array{Array{Float64,1},1}, triad::Array{Int64,1}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
-
-Update node and incident branches using discrete 
-Data Augmentation for all areas with independent 
-proposals incorporating lineage specific differences.
-"""
-function upnode!(λ      ::Array{Float64,1},
-                 ω1     ::Float64,
-                 ω0     ::Float64,
-                 avg_Δx ::Array{Float64,2},
-                 triad  ::Array{Int64,1},
-                 Y      ::Array{Int64,3},
-                 bridx_a::Vector{Vector{Vector{Int64}}},
-                 brδt   ::Vector{Vector{Float64}},
-                 brl    ::Vector{Float64},
-                 brs    ::Array{Int64,3},
-                 narea  ::Int64,
-                 nedge  ::Int64)
-
-  @inbounds begin
-   
-    # define branch triad
-    pr, d1, d2 = triad
-
-    # sample
-    samplenode!(λ, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
-
-    # save extinct
-    while sum(brs[pr,2,:]) == 0
-       samplenode!(λ, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
-    end
-
-
-    # sample a consistent history
-    createhists!(λ, ω1, ω0, avg_Δx, 
-                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-  
-
-    # save extinct
-    ntries = 1
-
-    while ifextY(Y,  triad, narea, bridx_a)
-      createhists!(λ, ω1, ω0, avg_Δx, 
-                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-
-      ntries += 1
-      if ntries > 100_000 
-        warn("Sampling is very inefficient for these data: \n 
-              λ = ", λ, "ω1 = ", ω1, "ω0 = ", ω0,
-             "\n edge lengths parent = ",     brδt[pr], 
-             "\n edge lengths daughter 1 = ", brδt[d1], 
-             "\n edge lengths daughter 2 = ", brδt[d2])
-
-      end
-    end
-
-  end
-end
-
-
-
 
 """
     upnode!(λ::Array{Float64,1}, triad::Vector{Int64}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
@@ -124,9 +62,75 @@ function upnode!(λ      ::Array{Float64,1},
       end
     end
 
+    nothing
   end
 end
 
+
+
+
+
+
+"""
+    upnode!(λ::Array{Float64,1}, ω1::Float64, ω0::Float64, avg_Δx::Array{Array{Float64,1},1}, triad::Array{Int64,1}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
+
+Update node and incident branches using discrete 
+Data Augmentation for all areas with independent 
+proposals taking into account `Δx` and `ω1` & `ω0`.
+"""
+function upnode!(λ      ::Array{Float64,1},
+                 ω1     ::Float64,
+                 ω0     ::Float64,
+                 avg_Δx ::Array{Float64,2},
+                 triad  ::Array{Int64,1},
+                 Y      ::Array{Int64,3},
+                 bridx_a::Vector{Vector{Vector{Int64}}},
+                 brδt   ::Vector{Vector{Float64}},
+                 brl    ::Vector{Float64},
+                 brs    ::Array{Int64,3},
+                 narea  ::Int64,
+                 nedge  ::Int64)
+
+  @inbounds begin
+   
+    # define branch triad
+    pr, d1, d2 = triad
+
+    # sample
+    samplenode!(λ, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
+
+    # save extinct
+    while sum(brs[pr,2,:]) == 0
+       samplenode!(λ, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
+    end
+
+
+    # sample a consistent history
+    createhists!(λ, ω1, ω0, avg_Δx, 
+                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+  
+
+    # save extinct
+    ntries = 1
+
+    while ifextY(Y,  triad, narea, bridx_a)
+      createhists!(λ, ω1, ω0, avg_Δx, 
+                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+
+      ntries += 1
+      if ntries > 500_000 
+        warn("Sampling is very inefficient for these branch trio: \n 
+              λ = ", λ, "ω1 = ", ω1, "ω0 = ", ω0,
+             "\n edge lengths parent = ",     brδt[pr], 
+             "\n edge lengths daughter 1 = ", brδt[d1], 
+             "\n edge lengths daughter 2 = ", brδt[d2])
+
+      end
+    end
+
+  nothing
+  end
+end
 
 
 
@@ -227,6 +231,7 @@ function createhists!(λ::Array{Float64,1},
 
     end
 
+    nothing
   end
 end
 
@@ -235,7 +240,8 @@ end
 """
     createhists!(λ::Array{Float64,1}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
 
-Create bit histories for all areas for the branch trio.
+Create bit histories for all areas for the branch 
+trio taking into account `Δx` and `ω1` & `ω0`.
 """
 function createhists!(λ      ::Array{Float64,1},
                       ω1     ::Float64,  
@@ -279,6 +285,7 @@ function createhists!(λ      ::Array{Float64,1},
 
     end
 
+    nothing
   end
 end
 
@@ -323,6 +330,7 @@ function samplenode!(λ::Array{Float64,1},
       brs[pr,2,j] = brs[d1,1,j] = brs[d2,1,j] = coinsamp(tp)::Int64
     end
   
+  nothing
   end
 end
 
@@ -334,7 +342,8 @@ end
     samplenode!(λ::Array{Float64,1}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brl::Array{Float64,1}, narea::Int64)
 
 Sample one internal node according to 
-mutual-independence model transition probabilities.
+mutual-independence model transition probabilities
+taking into account `Δx` and `ω1` & `ω0`.
 """
 function samplenode!(λ     ::Array{Float64,1},
                      ω1    ::Float64,
@@ -370,6 +379,7 @@ function samplenode!(λ     ::Array{Float64,1},
       brs[pr,2,j] = brs[d1,1,j] = brs[d2,1,j] = coinsamp(tp)::Int64
     end
   
+  nothing
   end
 end
 

@@ -443,7 +443,7 @@ end
 Make likelihood function for all trait matrix, `X`.
 """
 function makellf_σ²ωxupd(δt  ::Vector{Float64}, 
-                         Y   ::Array{Int64, 3}, 
+                         Y   ::Array{Int64,3}, 
                          ntip::Int64)
 
   # which is 23 (i.e., NaN) in each column
@@ -503,13 +503,13 @@ function makellf_Xupd(δt   ::Vector{Float64},
              wckm1::Array{Int64,1},
              X    ::Array{Float64,2},
              Y    ::Array{Int64,3},
-             lak  ,
+             lak  ::Array{Float64,1},
              lakm1::Array{Float64,1},
-             ldk,
+             ldk  ::Array{Float64,2},
              ωx   ::Float64,
              ω1   ::Float64,
              ω0   ::Float64,
-             λ::Array{Float64,1},
+             λ    ::Array{Float64,1},
              σ²   ::Float64)
 
     # normal likelihoods
@@ -566,17 +566,17 @@ for the root update in `X`.
 function makellf_Rupd(δt   ::Vector{Float64}, 
                       narea::Int64)
 
-  function f(k    ::Int64,
-             wck  ::Array{Int64,1},
-             X    ::Array{Float64,2},
-             Y    ::Array{Int64,3},
-             lak,
-             ldk,
-             ωx   ::Float64,
-             ω1   ::Float64,
-             ω0   ::Float64,
-             λ    ::Array{Float64,1},
-             σ²   ::Float64)
+  function f(k  ::Int64,
+             wck::Array{Int64,1},
+             X  ::Array{Float64,2},
+             Y  ::Array{Int64,3},
+             lak::Array{Float64,1},
+             ldk::Array{Float64,2},
+             ωx ::Float64,
+             ω1 ::Float64,
+             ω0 ::Float64,
+             λ  ::Array{Float64,1},
+             σ² ::Float64)
 
     # normal likelihoods
     ll::Float64 = 0.0
@@ -585,7 +585,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
 
       # loop for daughter nodes
       for i=eachindex(wck)
-        wci = wck[i]
+        wci = wck[i]::Int64
 
         # trait likelihood
         ll += -0.5*log(δt[k]*σ²) -
@@ -596,7 +596,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
         # biogeograhic likelihoods
         for j = Base.OneTo(narea)
           ll += bitbitll(Y[k,wci,j], Y[k+1,wci,j], 
-                         λ[1], λ[2], ω1, ω0,ldk[i,j], δt[k])
+                         λ[1], λ[2], ω1, ω0, ldk[i,j], δt[k])
         end
       end
 
@@ -668,7 +668,7 @@ function allλpr(λc    ::Array{Float64,1},
   pr::Float64 = 0.0
   
   for j in λc
-    pr += logdexp(j, λprior)
+    pr += logdexp(j, λprior)::Float64
   end
 
   return pr

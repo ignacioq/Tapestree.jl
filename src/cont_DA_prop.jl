@@ -30,7 +30,7 @@ function br_samp(ssii ::Array{Int64,1},
       t_hist = mult_rejsam(ssii, ssff, λc, t, narea)
   end
 
-  t_hist
+  return t_hist
 end
 
 

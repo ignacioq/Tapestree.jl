@@ -184,11 +184,12 @@ end
 
 
 """
-    bit_rejsam!(Y::Array{Int64,3}, idx::Array{Int64,1}, sf::Int64, λ1::Float64,  λ0::Float64,  cumts::Array{Float64,1})
+    bit_rejsam!(Y::Array{Int64,3}, idx::Array{Int64,1}, sf::Int64, λ1::Float64, ω1::Float64, λ0::Float64, ω0::Float64, avg_Δx::Float64,  cumts::Array{Float64,1})
 
 Bit rejection-sample a single branch
 given the start and end states and a
-vector of cumulative δtimes. It assigns to `Y`
+vector of cumulative δtimes incorporating information in 
+`Δx` and `ω1` & `ω0`. It assigns to `Y`
 in place, avoiding extra memory allocation.
 """
 # reprehensible code... but faster 

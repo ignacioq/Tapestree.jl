@@ -71,6 +71,8 @@ function area_lineage_means!(AA  ::Array{Float64,2},
     end
 
   end
+
+  nothing
 end
 
 
@@ -99,6 +101,7 @@ function linarea_diff!(LD   ::Array{Float64,3},
 
   end
 
+  nothing
 end
 
 
@@ -121,6 +124,8 @@ function linarea_branch_avg!(avg_Δx ::Array{Float64,2},
     end
 
   end
+
+  nothing
 end
 
 
@@ -180,7 +185,7 @@ function symp_traits(X  ::Array{Float64,2},
   
   end
   
-  Sk, Sx
+  return tSk, Sx
 end
 
 
@@ -215,7 +220,7 @@ function area_averages(Sx   ::Array{Float64,2},
 
   end
 
-  aa
+  return aa
 end
 
 
@@ -247,7 +252,7 @@ function lineage_averages(Sk::Array{Int64,2},
 
   end
 
-  la
+  return rla
 end
 
 
@@ -280,7 +285,7 @@ function linarea_difference(k    ::Int64,
 
   end
 
-  ld
+  return ld
 end
 
 
