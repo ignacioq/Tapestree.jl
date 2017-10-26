@@ -26,22 +26,23 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       edges    ::Array{Int64,2},
                       brl      ::Array{Float64,1},
                       B        ::Array{Float64,2};
-                      niter    ::Int64                  = 500_000,
-                      nthin    ::Int64                  = 1_000,
-                      nburn    ::Int64                  = 500_000,
-                      ωxprior  ::Tuple{Float64,Float64} = (0.,10.),
-                      ωλprior  ::Tuple{Float64,Float64} = (0.,10.),
-                      ωμprior  ::Tuple{Float64,Float64} = (0.,10.),
-                      σ²prior  ::Float64                = 1e-1,
-                      λprior   ::Float64                = 1e-1,
-                      out_file ::String                 = "compete_results",
-                      λi       ::Float64                = 10.,
-                      ωxi      ::Float64                = 0.,
-                      ω1i      ::Float64                = 0.,
-                      ω0i      ::Float64                = 0.,
-                      σ²i      ::Float64                = 1.,
-                      stbrl    ::Float64                = 1.,
-                      fix_ωλ_ωμ::Bool                   = true)
+                      niter    ::Int64             = 500_000,
+                      nthin    ::Int64             = 1_000,
+                      nburn    ::Int64             = 500_000,
+                      ωxprior  ::NTuple{2,Float64} = (0.,10.),
+                      ωλprior  ::NTuple{2,Float64} = (0.,10.),
+                      ωμprior  ::NTuple{2,Float64} = (0.,10.),
+                      σ²prior  ::Float64           = 1e-1,
+                      λprior   ::Float64           = 1e-1,
+                      out_file ::String            = "compete_results",
+                      weight   ::NTuple{3,Float64} = (0.1,0.2,0.2),
+                      λi       ::Float64           = 10.,
+                      ωxi      ::Float64           = 0.,
+                      ω1i      ::Float64           = 0.,
+                      ω0i      ::Float64           = 0.,
+                      σ²i      ::Float64           = 1.,
+                      stbrl    ::Float64           = 1.,
+                      fix_ωλ_ωμ::Bool              = true)
   
   println("Data succesfully processed")
 
@@ -197,7 +198,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
       Xc, Yc, areavg, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
-      λprior, ωxprior, ωλprior, ωμprior, σ²prior, fix_ωλ_ωμ, np, nburn)
+      weight, λprior, ωxprior, ωλprior, ωμprior, σ²prior, fix_ωλ_ωμ, np, nburn)
 
   # log likelihood and prior
   h[1]  = llc
@@ -222,12 +223,15 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   if fix_ωλ_ωμ
     const pv      = append!(collect(1:np),
-                            repeat(1:6, inner = floor(Int64,np*0.1)))
+                            repeat(1:2, inner = ceil(Int64,np*weight[1])))
+    append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const parvec  = setdiff(pv,(3:4))
     const lparvec = length(parvec)
   else
     const parvec  = append!(collect(1:np),
-                            repeat(1:6, inner = floor(Int64,np*0.1)))
+                            repeat(1:6, inner = ceil(Int64,np*weight[1])))
+    append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
+    append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const lparvec = length(parvec)
   end
 
@@ -300,10 +304,60 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         llc, prc, ω1c = mhr_upd_ωλ(ω1c, λc, ω0c, Yc, llc, prc, ptn[3], 
                                    linavg, lindiff, ωλprior, ωλμupd_llf)
 
+        # which internal node to update
+        if rand() < 0.5
+          bup = rand(Base.OneTo(nin))
+          # update a random internal node, including the mrca
+          if bup < nin
+            llc, Yc, areavg, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
+                       Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                       areavg, linavg, lindiff, avg_Δx, brs, stemevc)
+          else
+            # update stem
+            llr = 0.0
+            for j=Base.OneTo(narea)
+              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+            end
+
+            stemevc = upstem(λc, nedge, brs, brl, narea)
+
+            for j=Base.OneTo(narea)
+              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+            end
+
+            llc += llr
+          end
+        end
+
       # update ωμ      
       else
         llc, prc, ω0c = mhr_upd_ωμ(ω0c, λc, ω1c, Yc, llc, prc, ptn[4],
                                     linavg, lindiff, ωμprior, ωλμupd_llf)
+     
+        # which internal node to update
+        if rand() < 0.5
+          bup = rand(Base.OneTo(nin))
+          # update a random internal node, including the mrca
+          if bup < nin
+            llc, Yc, areavg, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
+                       Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                       areavg, linavg, lindiff, avg_Δx, brs, stemevc)
+          else
+            # update stem
+            llr = 0.0
+            for j=Base.OneTo(narea)
+              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+            end
+
+            stemevc = upstem(λc, nedge, brs, brl, narea)
+
+            for j=Base.OneTo(narea)
+              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+            end
+
+            llc += llr
+          end
+        end
       end
 
     end
