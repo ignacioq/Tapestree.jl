@@ -53,13 +53,13 @@ function upnode!(λ      ::Array{Float64,1},
     while ifextY(Y,  triad, narea, bridx_a)
       createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
       
-      ntries += 1
-      if ntries > 100_000 
-        warn("Sampling is very inefficient for these triads: \n λ = ", λ, "\n edge lengths parent = ", brδt[pr], 
-             "\n edge lengths daughter 1 = ", brδt[d1], 
-             "\n edge lengths daughter 2 = ", brδt[d2])
+      # ntries += 1
+      # if ntries > 100_000 
+      #   warn("Sampling is very inefficient for these triads: \n λ = ", λ, "\n edge lengths parent = ", brδt[pr], 
+      #        "\n edge lengths daughter 1 = ", brδt[d1], 
+      #        "\n edge lengths daughter 2 = ", brδt[d2])
 
-      end
+      # end
     end
 
     nothing
@@ -113,19 +113,19 @@ function upnode!(λ      ::Array{Float64,1},
     # save extinct
     ntries = 1
 
-    while ifextY(Y,  triad, narea, bridx_a)
+    while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
-      ntries += 1
-      if ntries > 500_000 
-        warn("Sampling is very inefficient for these branch trio: \n 
-              λ = ", λ, "ω1 = ", ω1, "ω0 = ", ω0,
-             "\n edge lengths parent = ",     brδt[pr], 
-             "\n edge lengths daughter 1 = ", brδt[d1], 
-             "\n edge lengths daughter 2 = ", brδt[d2])
+      # ntries += 1
+      # if ntries > 500_000 
+      #   warn("Sampling is very inefficient for these branch trio: \n 
+      #         λ = ", λ, "ω1 = ", ω1, "ω0 = ", ω0,
+      #        "\n edge lengths parent = ",     brδt[pr], 
+      #        "\n edge lengths daughter 1 = ", brδt[d1], 
+      #        "\n edge lengths daughter 2 = ", brδt[d2])
 
-      end
+      # end
     end
 
   nothing

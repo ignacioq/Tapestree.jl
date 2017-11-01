@@ -209,8 +209,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   pc[1] = Pc(λc[1], λc[2], max_δt)
 
   # log for nthin
-  lit   = 0
-  lthin = 0
+  const lit   = 0
+  const lthin = 0
 
   # number of internal nodes (to perform updates on)
   const nin = length(trios) + 1
@@ -265,7 +265,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                                  lindiff, stemevc, brs[nedge,1,:])
 
         # which internal node to update
-        if rand() < 0.5
+        if rand() < 0.2
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
@@ -305,7 +305,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                                    linavg, lindiff, ωλprior, ωλμupd_llf)
 
         # which internal node to update
-        if rand() < 0.5
+        if rand() < 0.2
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
@@ -335,7 +335,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                                     linavg, lindiff, ωμprior, ωλμupd_llf)
      
         # which internal node to update
-        if rand() < 0.5
+        if rand() < 0.2
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
