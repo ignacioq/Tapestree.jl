@@ -43,8 +43,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       σ²i      ::Float64           = 1.,
                       stbrl    ::Float64           = 1.,
                       fix_ωλ_ωμ::Bool              = true)
-  
-  println("Data succesfully processed")
+
+  print_with_color(:green, "Data successfully processed", bold = true)
 
   # dims
   const m, ntip, narea  = size(Yc)
@@ -188,9 +188,6 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # number of xnodes + λ1 + λ0 + σ² + ωx + ωλ + ωμ
   const np = length(wXp) + 6
 
-  # remove B
-  B = nothing
-
   # burning phase
   llc, prc, Xc, Yc, areavg, linavg, lindiff, avg_Δx,
   stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
@@ -229,7 +226,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     const lparvec = length(parvec)
   else
     const parvec  = append!(collect(1:np),
-                            repeat(1:6, inner = ceil(Int64,np*weight[1])))
+                            repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
     append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const lparvec = length(parvec)

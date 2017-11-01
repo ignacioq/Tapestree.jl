@@ -102,7 +102,7 @@ function burn_compete(total_llf,
     const lparvec = length(parvec)
   else
     const parvec  = append!(collect(1:np),
-                            repeat(1:6, inner = ceil(Int64,np*weight[1])))
+                            repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
     append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const lparvec = length(parvec)
