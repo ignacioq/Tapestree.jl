@@ -43,7 +43,6 @@ function upnode!(λ      ::Array{Float64,1},
        samplenode!(λ, pr, d1, d2, brs, brl, narea)
     end
 
-
     # sample a consistent history
     createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
   
@@ -53,13 +52,23 @@ function upnode!(λ      ::Array{Float64,1},
     while ifextY(Y,  triad, narea, bridx_a)
       createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
       
-      # ntries += 1
-      # if ntries > 100_000 
-      #   warn("Sampling is very inefficient for these triads: \n λ = ", λ, "\n edge lengths parent = ", brδt[pr], 
-      #        "\n edge lengths daughter 1 = ", brδt[d1], 
-      #        "\n edge lengths daughter 2 = ", brδt[d2])
+      ntries += 1
+      if ntries > 1_000_000 
+        warn("iid model sampling is very inefficient")
+        
+        @show Y[bridx_a[1][pr]]
+        @show Y[bridx_a[2][pr]]
+        @show Y[bridx_a[3][pr]]
 
-      # end
+        @show Y[bridx_a[1][d1]]
+        @show Y[bridx_a[2][d1]]
+        @show Y[bridx_a[3][d1]]
+      
+        @show Y[bridx_a[1][d2]]
+        @show Y[bridx_a[2][d2]]
+        @show Y[bridx_a[3][d2]]
+
+      end
     end
 
     nothing
@@ -117,15 +126,28 @@ function upnode!(λ      ::Array{Float64,1},
       createhists!(λ, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
-      # ntries += 1
-      # if ntries > 500_000 
-      #   warn("Sampling is very inefficient for these branch trio: \n 
-      #         λ = ", λ, "ω1 = ", ω1, "ω0 = ", ω0,
-      #        "\n edge lengths parent = ",     brδt[pr], 
-      #        "\n edge lengths daughter 1 = ", brδt[d1], 
-      #        "\n edge lengths daughter 2 = ", brδt[d2])
+      ntries += 1
+      if ntries > 500_000 
+        @show λ[1]*exp(ω1*avg_Δx[pr])
+        @show λ[1]*exp(ω1*avg_Δx[d1])
+        @show λ[1]*exp(ω1*avg_Δx[d2])
+        @show λ[2]*exp(ω0*avg_Δx[pr])
+        @show λ[2]*exp(ω0*avg_Δx[d1])
+        @show λ[2]*exp(ω0*avg_Δx[d2])
 
-      # end
+        @show Y[bridx_a[1][pr]]
+        @show Y[bridx_a[2][pr]]
+        @show Y[bridx_a[3][pr]]
+
+        @show Y[bridx_a[1][d1]]
+        @show Y[bridx_a[2][d1]]
+        @show Y[bridx_a[3][d1]]
+      
+        @show Y[bridx_a[1][d2]]
+        @show Y[bridx_a[2][d2]]
+        @show Y[bridx_a[3][d2]]
+
+      end
     end
 
   nothing

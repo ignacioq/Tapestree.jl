@@ -36,7 +36,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       λprior   ::Float64           = 1e-1,
                       out_file ::String            = "compete_results",
                       weight   ::NTuple{3,Float64} = (0.1,0.02,0.02),
-                      λi       ::Float64           = 10.,
+                      λi       ::Array{Float64,2}  = [1.0, 0.01],
                       ωxi      ::Float64           = 0.,
                       ω1i      ::Float64           = 0.,
                       ω0i      ::Float64           = 0.,
@@ -89,9 +89,6 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const o     = zeros(Float64, nlogs)             # prior
   const pc    = zeros(Float64, nlogs)             # collision probability
 
-   # initial values for MCMC
-  λi = fill(λi, 2)
-
   # add long stem branch
   edges = cat(1, edges, [2*ntip ntip + 1])
   push!(brl, stbrl)
@@ -130,26 +127,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # Sample all internal node values according to Pr transitions
   for triad in trios
-
-    pr, d1, d2 = triad
-
-    for j in Base.OneTo(narea) 
-
-      # conditional probabilities
-      p1 = Ptrfast_end(λi[1], λi[2], brl[d1], brs[d1,2,j])
-      p2 = Ptrfast_end(λi[1], λi[2], brl[d2], brs[d2,2,j])
-
-      # normalize probability
-      tp = normlize(*(p1[1],p2[1]), *(p1[2],p2[2]))
-
-      # sample internal node
-      prs = coinsamp(tp)
-      setindex!(Yc, prs, bridx_a[j][pr][end])
-      brs[pr,2,j] = brs[d1,1,j] = brs[d2,1,j] = prs
-    end 
-
     upnode!(λi, triad, Yc, bridx_a, brδt, brl, brs, narea, nedge)
-
   end
 
   # assign same value as mrca
