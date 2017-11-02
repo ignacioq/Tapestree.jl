@@ -26,8 +26,16 @@ function br_samp(ssii ::Array{Int64,1},
   #time history
   t_hist = mult_rejsam(ssii, ssff, λc, t, narea)
   
+  ntries = 1
   while ifext(t_hist, ssii, narea)
-      t_hist = mult_rejsam(ssii, ssff, λc, t, narea)
+    t_hist = mult_rejsam(ssii, ssff, λc, t, narea)
+    
+    ntries += 1
+    if ntries > 1_000_000 
+      warn("iid model sampling is very inefficient in stem branch")
+      @show λc
+    end
+
   end
 
   return t_hist
@@ -57,7 +65,7 @@ function ifext(t_hist::Array{Array{Float64,1},1},
   lhs = length(sp) + narea + 1
 
   # reconstruct state history
-  s_hist = zeros(Int64, lhs,narea)
+  s_hist = zeros(Int64, lhs, narea)
   for i in eachindex(ssii)
     s_hist[:,i] = ssii[i]
   end
@@ -105,8 +113,10 @@ end
 
 
 """
-  rejection sampling for each branch
-  condition on start and end point
+    rejsam(si::Int64, sf::Int64, λ1::Float64, λ0::Float64, t::Float64)
+
+rejection sampling for each branch
+condition on start and end point
 """
 function rejsam(si::Int64, sf::Int64, λ1::Float64, λ0::Float64, t::Float64)
   
@@ -123,7 +133,9 @@ end
 
 
 """
-  propose events for a branch
+    brprop(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
+
+propose events for a branch
 """
 function brprop(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
 

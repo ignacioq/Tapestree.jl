@@ -35,7 +35,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       σ²prior  ::Float64           = 1e-1,
                       λprior   ::Float64           = 1e-1,
                       out_file ::String            = "compete_results",
-                      weight   ::NTuple{3,Float64} = (0.1,0.02,0.02),
+                      weight   ::NTuple{3,Float64} = (0.2,0.02,0.02),
                       λi       ::Array{Float64,1}  = [1.0, 0.01],
                       ωxi      ::Float64           = 0.,
                       ω1i      ::Float64           = 0.,
@@ -240,7 +240,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                                  lindiff, stemevc, brs[nedge,1,:])
 
         # which internal node to update
-        if rand() < 0.2
+        if rand() < 0.4
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
@@ -310,7 +310,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                                     linavg, lindiff, ωμprior, ωλμupd_llf)
      
         # which internal node to update
-        if rand() < 0.2
+        if rand() < 0.4
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin

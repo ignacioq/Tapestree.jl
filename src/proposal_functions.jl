@@ -128,12 +128,12 @@ function upnode!(λ      ::Array{Float64,1},
 
       ntries += 1
       if ntries > 500_000 
-        @show λ[1]*exp(ω1*avg_Δx[pr])
-        @show λ[1]*exp(ω1*avg_Δx[d1])
-        @show λ[1]*exp(ω1*avg_Δx[d2])
-        @show λ[2]*exp(ω0*avg_Δx[pr])
-        @show λ[2]*exp(ω0*avg_Δx[d1])
-        @show λ[2]*exp(ω0*avg_Δx[d2])
+        @show λ[1]*exp(ω1*avg_Δx[pr,1]), λ[1]*exp(ω1*avg_Δx[pr,2]), λ[1]*exp(ω1*avg_Δx[pr,3])
+        @show λ[1]*exp(ω1*avg_Δx[d1,1]), λ[1]*exp(ω1*avg_Δx[d1,2]), λ[1]*exp(ω1*avg_Δx[d1,3])
+        @show λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,3])
+        @show λ[2]*exp(ω0*avg_Δx[pr,1]), λ[2]*exp(ω0*avg_Δx[pr,2]), λ[2]*exp(ω0*avg_Δx[pr,3])
+        @show λ[2]*exp(ω0*avg_Δx[d1,1]), λ[2]*exp(ω0*avg_Δx[d1,2]), λ[2]*exp(ω0*avg_Δx[d1,3])
+        @show λ[2]*exp(ω0*avg_Δx[d2,1]), λ[2]*exp(ω0*avg_Δx[d2,2]), λ[2]*exp(ω0*avg_Δx[d2,3])
 
         @show Y[bridx_a[1][pr]]
         @show Y[bridx_a[2][pr]]
