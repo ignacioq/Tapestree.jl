@@ -18,7 +18,7 @@ t(-_-t)
 Simulate biogeographic and trait evolution according to Compete model.
 """
 function simulate_compete(X_initial::Float64,
-                          Y_initial::Array{Int64,1},
+                          nareas   ::Int64,
                           tree_file::String;
                           ωx       = 0.0,
                           σ        = 0.5,
@@ -28,9 +28,17 @@ function simulate_compete(X_initial::Float64,
                           ω0       = 0.0,
                           const_δt = 1e-4)
 
+  Y_initial::Array{Int64,1} = 
+    [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]
+
+  while sum(Y_initial) == 0
+    Y_initial = 
+      [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]
+  end
+
   tree, bts = read_tree(tree_file)
 
-  br = branching_times(tree)
+  const br = branching_times(tree)
 
   # sort according to branching times
   const brs = sortrows(br, by = x->(x[5]), rev = true)
@@ -66,13 +74,13 @@ function simulate_compete(X_initial::Float64,
     nreps = reps_per_period(swt[j], const_δt)
 
     # simulate durin the waiting time
-    Xt, Yt = branch_sim(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
+    Yt = branch_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
 
     if j == nbt
       break
     end
 
-    # which speciates
+    # which lineage speciates
     wsp = brs[j,2]
 
     # where to insert
@@ -95,8 +103,10 @@ function simulate_compete(X_initial::Float64,
 
   end
 
-  tip_traits = Dict(convert(Int64, alive[i]) => Xt[i] for i = 1:nalive)
-  tip_areas = Dict(convert(Int64, alive[i]) => Yt[i,:] for i = 1:nalive)
+  tip_traits = 
+    Dict(convert(Int64, alive[i]) => Xt[i]   for i = Base.OneTo(nalive))
+  tip_areas  = 
+    Dict(convert(Int64, alive[i]) => Yt[i,:] for i = Base.OneTo(nalive))
 
   pop!(bts)
 
@@ -121,20 +131,20 @@ reps_per_period(br_length::Float64, const_δt::Float64) =
 
 
 """
-    branch_sim(Xt::Array{Float64,1}, Yt::Array{Int64,2}, br_δts::Array{Float64,1})
+    branch_sim!(Xt::Array{Float64,1}, Yt::Array{Int64,2}, br_δts::Array{Float64,1})
 
 Simulate biogeographic and trait evolution in a branch.
 """
-function branch_sim(Xt    ::Array{Float64,1}, 
-                    Yt    ::Array{Int64,2},
-                    nreps ::Int64,
-                    δt    ::Float64,
-                    ωx    ::Float64, 
-                    σ     ::Float64, 
-                    λ1    ::Float64, 
-                    λ0    ::Float64, 
-                    ω1    ::Float64, 
-                    ω0    ::Float64)
+function branch_sim!(Xt    ::Array{Float64,1}, 
+                     Yt    ::Array{Int64,2},
+                     nreps ::Int64,
+                     δt    ::Float64,
+                     ωx    ::Float64, 
+                     σ     ::Float64, 
+                     λ1    ::Float64, 
+                     λ0    ::Float64, 
+                     ω1    ::Float64, 
+                     ω0    ::Float64)
 
   # n species and k areas
   const n, k = size(Yt)
@@ -166,9 +176,10 @@ function branch_sim(Xt    ::Array{Float64,1},
     end
 
     Yt = Ytn
+  
   end
 
-  return Xt, Yt
+  return Yt
 end
 
 
@@ -273,11 +284,11 @@ end
 Sample one step for trait evolution history: X(t + δt).
 """
 function traitsam_1step!(Xt::Array{Float64,1}, 
-                        μ ::Array{Float64,1}, 
-                        δt::Float64, 
-                        ωx::Float64, 
-                        σ ::Float64,
-                        n ::Int64)
+                         μ ::Array{Float64,1}, 
+                         δt::Float64, 
+                         ωx::Float64, 
+                         σ ::Float64,
+                         n ::Int64)
 
   @inbounds @fastmath begin
     
@@ -287,27 +298,6 @@ function traitsam_1step!(Xt::Array{Float64,1},
   
   end
 end
-
-
-
-"""
-    E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
-
-Return the expected value according to reworked competition model.
-"""
-function E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
-  if ωx < 0.0
-    Δx::Float64 = μ - xi
-    if Δx < 0.0
-      return (-1 * ωx * exp(Δx) * δt)::Float64
-    else
-      return (ωx * exp(-Δx) * δt)::Float64
-    end
-  else
-     return (ωx * (μ - xi) * δt)::Float64
-  end
-end
-
 
 
 

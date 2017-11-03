@@ -13,6 +13,7 @@ May 15 2017
 
 
 
+
 """
     E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
 
@@ -22,15 +23,16 @@ function E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
   if ωx < 0.0
     Δx::Float64 = μ - xi
     if Δx < 0.0
-      return (-1 * ωx * exp(Δx) * δt)::Float64
-    else
-      return (ωx * exp(-Δx) * δt)::Float64
+      return (-1 * ωx * exp(Δx)  * δt)::Float64
+    elseif Δx > 0.0
+      return (     ωx * exp(-Δx) * δt)::Float64
+    else Δx == 0.0
+      return 0.0
     end
   else
      return (ωx * (μ - xi) * δt)::Float64
   end
 end
-
 
 
 
