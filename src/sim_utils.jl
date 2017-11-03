@@ -154,7 +154,7 @@ function branch_sim(Xt    ::Array{Float64,1},
     alλ1, alλ0 = lin_rates(Xt, arav, alλ1, alλ0, λ1, λ0, ω1, ω0, n, k)
 
     # trait step
-    traitsam_1step(Xt, liav, δt, ωx, σ, n)
+    traitsam_1step!(Xt, liav, δt, ωx, σ, n)
 
     # biogeographic step
     Ytn = copy(Yt)
@@ -178,7 +178,8 @@ end
 """
     f_λ(λ::Float64, ω::Float64, Δx::Float64)
 
-Estimate rates for area colonization/loss based on the difference between lineage traits and area averages.
+Estimate rates for area colonization/loss based 
+on the difference between lineage traits and area averages.
 """
 f_λ(λ::Float64, ω::Float64, Δx::Float64) = @fastmath λ * exp(ω*Δx)
 
@@ -271,7 +272,7 @@ end
 
 Sample one step for trait evolution history: X(t + δt).
 """
-function traitsam_1step(Xt::Array{Float64,1}, 
+function traitsam_1step!(Xt::Array{Float64,1}, 
                         μ ::Array{Float64,1}, 
                         δt::Float64, 
                         ωx::Float64, 
