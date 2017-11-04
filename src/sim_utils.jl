@@ -150,18 +150,19 @@ function branch_sim!(Xt    ::Array{Float64,1},
   const n, k = size(Yt)
 
   # allocate memory for area and lineage averages 
-  arav = zeros(k)    # area averages
-  liav = zeros(n)    # lineage averages
-  alλ1 = zeros(n,k)  # area specific lineage rates
-  alλ0 = zeros(n,k)  # area specific lineage rates
+  arav = zeros(k)        # area averages
+  liav = zeros(n)        # lineage averages
+  aroc = zeros(Int64,k)  # area occupancy
+  alλ1 = zeros(n,k)      # area specific lineage rates
+  alλ0 = zeros(n,k)      # area specific lineage rates
 
   for i in Base.OneTo(nreps)
 
-    # estimate area and lineage averages
-    arav, liav = ar_lin_avg(Xt, Yt, arav, liav, n, k)
+    # estimate area and lineage averages and area occupancy
+    arav, liav, aroc = ar_lin_avg(Xt, Yt, arav, liav, aroc, n, k)
 
     # estimate area colonization/loss rates
-    alλ1, alλ0 = lin_rates(Xt, arav, alλ1, alλ0, λ1, λ0, ω1, ω0, n, k)
+    alλ1, alλ0 = lin_rates(Xt, arav, aroc, alλ1, alλ0, λ1, λ0, ω1, ω0, n, k)
 
     # trait step
     traitsam_1step!(Xt, liav, δt, ωx, σ, n)
@@ -205,6 +206,7 @@ Estimate lineage specific area colonization/loss rates based on differences betw
 """
 function lin_rates(Xt  ::Array{Float64,1}, 
                    arav::Array{Float64,1}, 
+                   aroc::Array{Int64,1},
                    alλ1::Array{Float64,2},
                    alλ0::Array{Float64,2},
                    λ1  ::Float64,
@@ -215,10 +217,24 @@ function lin_rates(Xt  ::Array{Float64,1},
                    k   ::Int64)
   @inbounds begin
 
-    for j in Base.OneTo(k), i in Base.OneTo(n)
-      Δx = abs(Xt[i] - arav[j])
-      alλ1[i,j] = f_λ(λ1, ω1, Δx)
-      alλ0[i,j] = f_λ(λ0, ω0, Δx)
+    for j in Base.OneTo(k)
+      
+      if aroc[j] < 1 
+
+        for i in Base.OneTo(n)
+          alλ1[i,j] = λ1
+          alλ0[i,j] = λ0
+        end
+
+      else
+
+        for i in Base.OneTo(n)
+          Δx = abs(Xt[i] - arav[j])
+          alλ1[i,j] = f_λ(λ1, ω1, Δx)
+          alλ0[i,j] = f_λ(λ0, ω0, Δx)
+        end
+
+      end
     end
 
     return alλ1, alλ0
@@ -239,39 +255,44 @@ function ar_lin_avg(Xt  ::Array{Float64,1},
                     Yt  ::Array{Int64,2}, 
                     arav::Array{Float64,1},
                     liav::Array{Float64,1},
+                    aroc::Array{Int64,1},
                     n   ::Int64,
                     k   ::Int64)
 
   @inbounds begin
     # estimate area averages
     for j in Base.OneTo(k)
-
-      aa = 0.0
-      na = 0
+      arav[j] = 0.0
+      na      = 0.0
+      aroc[j] = 0
       for i in Base.OneTo(n)
-        aa += Yt[i,j]*Xt[i]
-        na += Yt[i,j]
+        if Yt[i,j] == 1
+          arav[j] += Xt[i]
+          na      += 1.0
+          aroc[j]  = 1
+        end
       end
 
-      arav[j] = aa/(na == 0 ? 1 : na) 
+      arav[j] /= (na == 0.0 ? 1.0 : na) 
     end
 
     # estimate lineage averages
     for i in Base.OneTo(n)
-
-      la = 0.0
-      na = 0 
+      liav[i] = 0.0
+      na      = 0.0 
       for j in Base.OneTo(k)
-        la += arav[j]*Yt[i,j]
-        na += Yt[i,j]
+        if Yt[i,j] == 1
+          liav[i] += arav[j]
+          na      += 1.0
+        end
       end
       
-      liav[i] = la/na
+      liav[i] /= na
     end
 
   end
 
-  return arav, liav
+  return arav, liav, aroc
 end
 
 
@@ -334,7 +355,7 @@ function biogeosam_1step(alλ1 ::Array{Float64,2},
 
   end
 
-  return nch
+  return nch::Array{Int64,1}
 end
 
 
@@ -344,8 +365,8 @@ end
 """
     check_sam(Ytc::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, k::Int64)
 
-Returns false if biogeographic step consists of *only one* change or if the species 
-does *not* go globally extinct. 
+Returns false if biogeographic step consists of *only one* change 
+or if the species does *not* go globally extinct. 
 """
 function check_sam(Ytc::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, k::Int64)
 
