@@ -23,7 +23,7 @@ to area averages.
 """
 function area_lineage_means!(AA  ::Array{Float64,2}, 
                              LA  ::Array{Float64,2},
-                             AO  ::Array{Int64,1}
+                             AO  ::Array{Int64,2},
                              X   ::Array{Float64,2}, 
                              Y   ::Array{Int64,3}, 
                              wcol::Array{Array{Int64,1},1},
@@ -43,7 +43,7 @@ function area_lineage_means!(AA  ::Array{Float64,2},
       for j in Base.OneTo(ncol)
         AA[k,j] = 0.0::Float64
         sumY    = 0.0::Float64
-        AO[k,j] = 0::Int6464
+        AO[k,j] = 0::Int64
         for i in Base.OneTo(nrow)
           if Sk[i,j] == 1
             AA[k,j] += xx[i]::Float64
@@ -87,7 +87,7 @@ lineage and area averages differences in X.
 function linarea_diff!(LD   ::Array{Float64,3},
                        X    ::Array{Float64,2},
                        AA   ::Array{Float64,2},
-                       AO   ::Array{Int64,2}
+                       AO   ::Array{Int64,2},
                        narea::Int64,
                        ntip ::Int64,
                        m    ::Int64)
@@ -123,7 +123,7 @@ function linarea_branch_avg!(avg_Δx ::Array{Float64,2},
                              nedge  ::Int64)
   @inbounds begin
 
-    for j = Base.OneTo(narea), i = Base.OneTo(nedge)
+    for j = Base.OneTo(narea), i = Base.OneTo(nedge - 1)
       setindex!(avg_Δx, mean(LD[bridx_a[j][i]]), i, j)
     end
 
@@ -151,13 +151,13 @@ function Xupd_linavg(k    ::Int64,
   Sk, Sx = symp_traits(X, Y, wck, k)
 
   # new area averages
-  aa = area_averages(Sx, Sk, narea)
+  aa, ao = area_averages(Sx, Sk, narea)
 
   # new lineage averages
   la = lineage_averages(Sk, aa)
 
   # new lineage differences
-  ld = linarea_difference(k, X, aa, wck, narea)
+  ld = linarea_difference(k, X, aa, ao, wck, narea)
 
   return aa, la, ld
 end
@@ -229,7 +229,7 @@ function area_averages(Sx   ::Array{Float64,2},
 
   end
 
-  return (aa, ao)::Tuple(Array{Float64,1},Array{Int64,1})
+  return (aa, ao)::Tuple{Array{Float64,1},Array{Int64,1}}
 end
 
 
@@ -246,7 +246,7 @@ function lineage_averages(Sk::Array{Int64,2},
                           AA::Vector{Float64})
   @inbounds begin
 
-    const nrow, ncol = size(Sk)
+    const nrow, ncol = size(Sk)::Tuple{Int64,Int64}
     const la = zeros(Float64,nrow)
         
     for i = Base.OneTo(nrow)
@@ -278,12 +278,12 @@ lineage and area averages differences in X.
 function linarea_difference(k    ::Int64,
                             X    ::Array{Float64,2},
                             aa   ::Array{Float64,1},
-                            ao   ::Array{Int64,1}
+                            ao   ::Array{Int64,1},
                             wck  ::Array{Int64,1},
                             narea::Int64)
   @inbounds begin
 
-    const nsp::Int64 = endof(wck)
+    const nsp = endof(wck)::Int64
     const ld = Array{Float64}(nsp, narea)
 
     for j = Base.OneTo(narea), i = Base.OneTo(nsp)
@@ -296,7 +296,7 @@ function linarea_difference(k    ::Int64,
 
   end
 
-  return ld
+  return ld::Array{Float64,2}
 end
 
 

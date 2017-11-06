@@ -117,7 +117,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const brδt = make_edgeδt(bridx, δt, m)
 
   # array for states at start and end of branches
-  brs = zeros(Int64, nedge, 2, narea)
+  const brs = zeros(Int64, nedge, 2, narea)
 
   # assign states to brs according Yc
   for i = Base.OneTo(nedge), j in Base.OneTo(narea)
@@ -139,18 +139,19 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # make values at nodes equal
   Yc[Ync2] = Yc[Ync1]
 
-  # estimate current area & lineage means
-  const areavg = zeros(m,narea)
+  # estimate current area & lineage means and area occupancy
+  const areavg = zeros(m, narea)
+  const areaoc = zeros(Int64, m, narea)
   const linavg = zeros(m, ntip)
 
-  area_lineage_means!(areavg, linavg, Xc, Yc, wcol, m)
+  area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m)
 
   # estimate current lineage specific means
   const lindiff = zeros(m, ntip, narea)
-  linarea_diff!(lindiff, Xc, areavg, narea, ntip, m)
+  linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
 
   # estimate average branch lineage specific means
-  const avg_Δx = zeros(nedge, narea)
+  const avg_Δx = zeros((nedge-1), narea)
   linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
 
   # make likelihood and prior functions
@@ -167,21 +168,21 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const np = length(wXp) + 6
 
   # burning phase
-  llc, prc, Xc, Yc, areavg, linavg, lindiff, avg_Δx,
+  llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
       λupd_llf, ωλμupd_llf, Xupd_llf, Rupd_llf, σ²ωxupd_llf, biogeo_upd_iid, 
-      Xc, Yc, areavg, linavg, lindiff, avg_Δx,
+      Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
       weight, λprior, ωxprior, ωλprior, ωμprior, σ²prior, fix_ωλ_ωμ, np, nburn)
 
   # log likelihood and prior
-  h[1]  = llc
-  o[1]  = prc
+  h[1]  = llc::Float64
+  o[1]  = prc::Float64
 
   # log probability of collision
-  const max_δt = maximum(δt)
-  pc[1] = Pc(λc[1], λc[2], max_δt)
+  const max_δt = maximum(δt)::Float64
+  pc[1] = Pc(λc[1], λc[2], max_δt)::Float64
 
   # log for nthin
   const lit   = 0
@@ -223,12 +224,13 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   for it = Base.OneTo(niter)
 
     # Update vector
-    upvector = rand(parvec,lparvec)
+    upvector = rand(parvec,lparvec)::Array{Int64,1}
 
     for up = upvector
 
       # update X[i]
       if up > λlessthan
+
         Xc, llc, areavg, linavg, lindiff = mhr_upd_X(up, Xc, Yc, λc, 
                                             ωxc, ω1c, ω0c, σ²c, llc, 
                                             areavg, linavg, lindiff)
@@ -244,9 +246,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
                        Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, linavg, lindiff, avg_Δx, brs, stemevc)
+                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
@@ -280,13 +282,13 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                                    linavg, lindiff, ωλprior, ωλμupd_llf)
 
         # which internal node to update
-        if rand() < 0.2
+        if rand() < 0.4
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
                        Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, linavg, lindiff, avg_Δx, brs, stemevc)
+                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
@@ -306,17 +308,18 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
       # update ωμ      
       else
+
         llc, prc, ω0c = mhr_upd_ωμ(ω0c, λc, ω1c, Yc, llc, prc, ptn[4],
                                     linavg, lindiff, ωμprior, ωλμupd_llf)
-     
+
         # which internal node to update
         if rand() < 0.4
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
                        Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, linavg, lindiff, avg_Δx, brs, stemevc)
+                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0

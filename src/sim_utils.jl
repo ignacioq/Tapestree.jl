@@ -197,17 +197,6 @@ end
 
 
 
-"""
-    f_λ(λ::Float64, ω::Float64, Δx::Float64)
-
-Estimate rates for area colonization/loss based 
-on the difference between lineage traits and area averages.
-"""
-f_λ(λ::Float64, ω::Float64, Δx::Float64) = @fastmath λ * exp(ω*Δx)
-
-
-
-
 
 """
     lin_rates(Xt  ::Array{Float64,1}, arav::Array{Float64,1}, alλ1::Array{Float64,2}, alλ0::Array{Float64,2}, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, n::Int64, k::Int64)
