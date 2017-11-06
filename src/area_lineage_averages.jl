@@ -23,6 +23,7 @@ to area averages.
 """
 function area_lineage_means!(AA  ::Array{Float64,2}, 
                              LA  ::Array{Float64,2},
+                             AO  ::Array{Int64,1}
                              X   ::Array{Float64,2}, 
                              Y   ::Array{Int64,3}, 
                              wcol::Array{Array{Int64,1},1},
@@ -32,41 +33,40 @@ function area_lineage_means!(AA  ::Array{Float64,2},
 
     for k in Base.OneTo(m) 
       
-      wck = wcol[k]
-      Sk  = Y[k,wck,:]
-      xx  = X[k,wck]
+      wck = wcol[k]::Array{Int64,1}
+      Sk  = Y[k,wck,:]::Array{Int64,2}
+      xx  = X[k,wck]::Array{Float64,1}
     
-      nrow, ncol = size(Sk)
-  
-      Sx = Array{Float64}(nrow,ncol)
-      for j = Base.OneTo(ncol), i = Base.OneTo(nrow)
-        Sx[i,j] = Sk[i,j] * xx[i]
-      end
-      
+      nrow, ncol = size(Sk)::Tuple{Int64,Int64}
+
       # area averages
       for j in Base.OneTo(ncol)
-        sumX = 0.0
-        sumY = 0
-
+        AA[k,j] = 0.0::Float64
+        sumY    = 0.0::Float64
+        AO[k,j] = 0::Int6464
         for i in Base.OneTo(nrow)
-          sumX += Sx[i,j]
-          sumY += Sk[i,j]
+          if Sk[i,j] == 1
+            AA[k,j] += xx[i]::Float64
+            sumY    += 1.0::Float64
+            AO[k,j]  = 1::Int64
+          end
         end
 
-        AA[k,j] = sumX/(sumY == 0 ? 1 : sumY) 
+        AA[k,j] /= (sumY == 0.0 ? 1.0 : sumY)::Float64
       end
 
       # lineage average
       for i = Base.OneTo(nrow)
-        snum = 0.0
-        sden = 0
-
+        LA[k,wck[i]] = 0.0::Float64
+        sden         = 0.0::Float64
         for j = Base.OneTo(ncol) 
-          snum += Sk[i,j] * AA[k,j]
-          sden += Sk[i,j]
+          if Sk[i,j] == 1
+            LA[k,wck[i]] += AA[k,j]::Float64
+            sden         += 1.0::Float64
+          end
         end
         
-        LA[k,wck[i]] = snum/sden
+        LA[k,wck[i]] /= sden::Float64
       end
     end
 
@@ -79,7 +79,7 @@ end
 
 
 """
-    linarea_diff!(LD   ::Array{Float64,3}, X::Array{Float64,2}, AA::Array{Float64,2}, narea::Int64, ntip::Int64, m::Int64)
+    linarea_diff!(LD::Array{Float64,3}, X::Array{Float64,2}, AA::Array{Float64,2}, narea::Int64, ntip::Int64, m::Int64)
 
 Create multi-dimensional array with 
 lineage and area averages differences in X.
@@ -87,16 +87,19 @@ lineage and area averages differences in X.
 function linarea_diff!(LD   ::Array{Float64,3},
                        X    ::Array{Float64,2},
                        AA   ::Array{Float64,2},
+                       AO   ::Array{Int64,2}
                        narea::Int64,
                        ntip ::Int64,
                        m    ::Int64)
   @inbounds begin
 
     for j = Base.OneTo(narea), n = Base.OneTo(ntip), i = Base.OneTo(m)
-      if AA[i,j] == 0.0
-        continue
+
+      if AO[i,j] == 0
+        setindex!(LD, 0.0, i, n, j)
+      else
+        setindex!(LD, abs(X[i,n] - AA[i,j]), i, n, j)
       end
-      setindex!(LD, abs(X[i,n] - AA[i,j]), i, n, j)
     end
 
   end
@@ -107,8 +110,9 @@ end
 
 
 
+
 """
-    linarea_branch_avg(avg_Δx ::Array{Float64,1}, LD::Array{Float64,3}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64, nedge::Int64)
+    linarea_branch_avg!(avg_Δx ::Array{Float64,1}, LD::Array{Float64,3}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64, nedge::Int64)
 
 Estimate the branch average of lineage differences in each specific area.
 """
@@ -173,19 +177,21 @@ function symp_traits(X  ::Array{Float64,2},
 
   @inbounds begin
     
-    Sk  = Y[k,wck,:]
-    xx  = X[k,wck]
+    const Sk  = Y[k,wck,:]::Array{Int64,2}
+    const xx  = X[k,wck]::Array{Float64,1}
     
-    nrow, ncol = size(Sk)
-    Sx = Array{Float64}(nrow,ncol)
+    const nrow, ncol = size(Sk)
+    const Sx = zeros(Float64,nrow,ncol)
 
     for j = Base.OneTo(ncol), i = Base.OneTo(nrow)
-      Sx[i,j] = Sk[i,j] * xx[i]
+      if Sk[i,j] == 1
+        Sx[i,j] = xx[i]::Float64
+      end
     end
   
   end
   
-  return Sk, Sx
+  return (Sk, Sx)::Tuple{Array{Int64,2}, Array{Float64,2}}
 end
 
 
@@ -203,24 +209,27 @@ function area_averages(Sx   ::Array{Float64,2},
                        narea::Int64)
   @inbounds begin
 
-    Sxind = indices(Sx,1)
-    aa    = zeros(narea)
+    const Sxind = indices(Sx,1)
+    const aa    = zeros(Float64,narea)
+    const ao    = zeros(Int64,narea)
 
     for j in Base.OneTo(narea)
-      sumX::Float64 = 0.0
-      sumY::Int64   = 0
-
+      aa[j] = 0.0::Float64
+      sumY  = 0.0::Float64
       for i in Sxind
-        sumX += Sx[i,j]
-        sumY += Sk[i,j]
+        if Sk[i,j] == 1
+          aa[j] += Sx[i,j]::Float64
+          sumY  += 1.0::Float64
+          ao[j]  = 1::Int64
+        end
       end
 
-      aa[j] = sumX/(sumY == 0 ? 1 : sumY)
+      aa[j] /= (sumY == 0.0 ? 1.0 : sumY)::Float64
     end
 
   end
 
-  return aa
+  return (aa, ao)::Tuple(Array{Float64,1},Array{Int64,1})
 end
 
 
@@ -237,22 +246,24 @@ function lineage_averages(Sk::Array{Int64,2},
                           AA::Vector{Float64})
   @inbounds begin
 
-    nrow, ncol = size(Sk)
-    la = Vector{Float64}(nrow)
+    const nrow, ncol = size(Sk)
+    const la = zeros(Float64,nrow)
         
     for i = Base.OneTo(nrow)
-      snum = 0.0
-      sden = 0
-      for j = Base.OneTo(ncol) 
-        snum += Sk[i,j] * AA[j]
-        sden += Sk[i,j]
+      la[i] = 0.0
+      sden  = 0.0
+      for j = Base.OneTo(ncol)
+        if Sk[i,j] == 1
+          la[i] += AA[j]
+          sden  += 1.0
+        end
       end
-      la[i] = snum/sden
+      la[i] /= sden::Float64
     end
 
   end
 
-  return la
+  return la::Array{Float64,1}
 end
 
 
@@ -266,20 +277,20 @@ lineage and area averages differences in X.
 """
 function linarea_difference(k    ::Int64,
                             X    ::Array{Float64,2},
-                            AA   ::Vector{Float64},
+                            aa   ::Array{Float64,1},
+                            ao   ::Array{Int64,1}
                             wck  ::Array{Int64,1},
                             narea::Int64)
   @inbounds begin
 
-    nsp::Int64 = endof(wck)
-
-    ld = Array{Float64}(nsp, narea)
+    const nsp::Int64 = endof(wck)
+    const ld = Array{Float64}(nsp, narea)
 
     for j = Base.OneTo(narea), i = Base.OneTo(nsp)
-      if AA[j] == 0.0
+      if ao[j] == 0
         setindex!(ld, 0.0, i, j)
       else
-        setindex!(ld, abs(X[k,wck[i]] - AA[j]), i, j)
+        setindex!(ld, abs(X[k,wck[i]] - aa[j]), i, j)
       end
     end
 
