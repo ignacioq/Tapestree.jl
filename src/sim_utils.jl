@@ -28,12 +28,12 @@ function simulate_compete(X_initial::Float64,
                           ω0       = 0.0,
                           const_δt = 1e-4)
 
-  Y_initial::Array{Int64,1} = 
-    [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]
+  Y_initial = 
+    [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]::Array{Int64,1}
 
   while sum(Y_initial) == 0
     Y_initial = 
-      [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]
+      [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]::Array{Int64,1}
   end
 
   tree, bts = read_tree(tree_file)
@@ -61,7 +61,7 @@ function simulate_compete(X_initial::Float64,
   # initial values
   Xt = fill(X_initial, 2)
 
-  Y_initial = reshape(Y_initial, 1, :)
+  Y_initial = reshape(vec(Y_initial), 1, :)
   Yt = vcat(Y_initial, Y_initial)
 
   # start of alive

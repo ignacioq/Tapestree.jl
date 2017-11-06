@@ -172,7 +172,7 @@ function ifextY(Y      ::Array{Int64,3},
 
   @inbounds begin
 
-    for k ∈ triad
+    for k in triad
 
       lv = length(bridx_a[1][k])::Int64
 
