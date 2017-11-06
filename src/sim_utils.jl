@@ -74,7 +74,7 @@ function simulate_compete(X_initial::Float64,
     nreps = reps_per_period(swt[j], const_δt)
 
     # simulate durin the waiting time
-    Yt = branch_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
+    Yt = nconst_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
 
     if j == nbt
       break
@@ -131,20 +131,30 @@ reps_per_period(br_length::Float64, const_δt::Float64) =
 
 
 """
-    branch_sim!(Xt::Array{Float64,1}, Yt::Array{Int64,2}, br_δts::Array{Float64,1})
+    nconst_sim!(Xt   ::Array{Float64,1}, 
+                Yt   ::Array{Int64,2},
+                nreps::Int64,
+                δt   ::Float64,
+                ωx   ::Float64, 
+                σ    ::Float64, 
+                λ1   ::Float64, 
+                λ0   ::Float64, 
+                ω1   ::Float64, 
+                ω0   ::Float64)
 
-Simulate biogeographic and trait evolution in a branch.
+Simulate biogeographic and trait evolution along a 
+speciation waiting time.
 """
-function branch_sim!(Xt    ::Array{Float64,1}, 
-                     Yt    ::Array{Int64,2},
-                     nreps ::Int64,
-                     δt    ::Float64,
-                     ωx    ::Float64, 
-                     σ     ::Float64, 
-                     λ1    ::Float64, 
-                     λ0    ::Float64, 
-                     ω1    ::Float64, 
-                     ω0    ::Float64)
+function nconst_sim!(Xt   ::Array{Float64,1}, 
+                     Yt   ::Array{Int64,2},
+                     nreps::Int64,
+                     δt   ::Float64,
+                     ωx   ::Float64, 
+                     σ    ::Float64, 
+                     λ1   ::Float64, 
+                     λ0   ::Float64, 
+                     ω1   ::Float64, 
+                     ω0   ::Float64)
 
   # n species and k areas
   const n, k = size(Yt)
@@ -302,7 +312,7 @@ end
 """
     traitsam_1step((Xt::Array{Float64,1}, μ ::Array{Float64,1}, δt::Float64, ωx::Float64, σ::Float64, n::Int64)
 
-Sample one step for trait evolution history: X(t + δt).
+Sample one step for trait evolution history: `X(t + δt)`.
 """
 function traitsam_1step!(Xt::Array{Float64,1}, 
                          μ ::Array{Float64,1}, 
@@ -327,7 +337,7 @@ end
 """
     biogeosam_1step(λ1::Float64, λ0::Float64, δt::Float64, v1::Array{Int64,1})
 
-Sample one step for biogeographic history Y(t + δt).
+Sample one step for biogeographic history: `Y(t + δt)`.
 """
 function biogeosam_1step(alλ1 ::Array{Float64,2}, 
                          alλ0 ::Array{Float64,2}, 
