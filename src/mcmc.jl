@@ -17,7 +17,7 @@ April 27 2017
     compete_mcmc(...)
 
 Run MCMC for join inference of trait
-and biogeograhic evolution and competition.
+and biogeographic evolution and competition.
 """
 function compete_mcmc(Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
