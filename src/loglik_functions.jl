@@ -113,7 +113,7 @@ function makellf(δt   ::Vector{Float64},
       for j in Base.OneTo(narea)
         ll += brll(stemevc[j], λ[1], λ[2], stemss[j])::Float64
         for i = coloop
-          wh = w23[i]::Int64
+          wh = w23[i]::Array{Int64,1}
           ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                             lindiff[wh,i,j], dδt[wh])::Float64
         end
@@ -266,7 +266,7 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
         ll += brll(stemevc[j], λ[1], λ[2], stemss[j])::Float64
 
         for i = coloop
-          wh = w23[i]::Int64
+          wh = w23[i]::Array{Int64,1}
           ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                             lindiff[wh,i,j], dδt[wh])::Float64
         end
@@ -316,7 +316,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
     @inbounds begin
 
       for j=Base.OneTo(narea), i=coloop
-        wh = w23[i]::Int64
+        wh = w23[i]::Array{Int64,1}
         ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                           lindiff[wh,i,j], dδt[wh])::Float64
       end
@@ -368,7 +368,7 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
 
     @inbounds begin
 
-      pr, d1, d2 = triad::Tuple{Int64,Int64,Int64}
+      pr, d1, d2 = triad::Array{Int64,1}
 
       if pr < nedge 
         for j=Base.OneTo(narea)

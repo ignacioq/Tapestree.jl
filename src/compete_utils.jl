@@ -450,7 +450,7 @@ function maketriads(edges::Array{Int64,2})
     push!(trios, daus)
   end
 
-  trios
+  return trios
 end
 
 
