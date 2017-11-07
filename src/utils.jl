@@ -119,15 +119,16 @@ end
 Make scaling function given the objective acceptance rates.
 """
 function makescalef(obj_ar::Float64)
-  nar = 1.0 - obj_ar
+  const nar::Float64 = 1.0 - obj_ar
 
   function f(window::Float64, rate::Float64)
     if (rate > obj_ar)
-      window *= (1. + (rate - obj_ar) / nar)
+      window *= (1. + (rate - obj_ar) / nar)::Float64
     else
-      window /= (2. - rate / obj_ar)
+      window /= (2. - rate / obj_ar)::Float64
     end
-    window
+    
+    return window::Float64
   end
 
   return f
@@ -136,28 +137,24 @@ end
 
 
 
-
 """
-    makeglobalscalef(obj_ar::Float64)
+    globalscalef(λ::Float64, grate::Float64, stepsize::Float64, obj_ar::Float64)
 
-Make global scaling factor.
+Estimate global scaling factor.
 """
-function makeglobalscalef(obj_ar::Float64)
-
-  function f(λ::Float64, globalrate::Float64, stepsize::Float64)
-    newλ::Float64 = log(λ) + stepsize * (globalrate - obj_ar)
-    exp(newλ)
-  end
-
-  return f
+function globalscalef(λ       ::Float64, 
+                      grate   ::Float64, 
+                      stepsize::Float64, 
+                      obj_ar  ::Float64)
+  return @fastmath (exp(log(λ) + stepsize * (grate - obj_ar)))::Float64
 end
+
 
 
 
 
 """
     adaptiveupd(Σ::Array{Float64,2}, psample::Array{Float64,1}, pmean::Array{Float64,1}, stepsize::Float64)
-
 
 Update parameter mean and Σ adaptive.
 """
@@ -166,13 +163,16 @@ function adaptiveupd(Σ       ::Array{Float64,2},
                      pmean   ::Array{Float64,1},
                      stepsize::Float64)
 
-  pdif  ::Array{Float64,1} = psample - pmean
-  pmeanN::Array{Float64,1} = pmean + stepsize * pdif
+  pdif  ::Array{Float64,1} = psample .- pmean
+  pmeanN::Array{Float64,1} = pmean .+ stepsize .* pdif
   ΣN    ::Array{Float64,2} = Σ + stepsize *
                              (BLAS.ger!(1., pdif, pdif, zeros(2,2)) - Σ)
 
-  pmeanN, ΣN
+  return (pmeanN, ΣN)::Tuple{Array{Float64,1}, Array{Float64,2}}
 end
+
+
+@benchmark adaptiveupd(Σ,psample,pmean,stepsize)
 
 
 
@@ -205,10 +205,13 @@ function makemvnproposal(Σ::Array{Float64,2})
 
   evc  = eigvecs(Σ)
   evl  = diagm(eigvals(Σ))
-  spde = evc * sqrt(evl)
+  const spde = evc * sqrt.(evl)
+  const ln = size(spde,1)
 
-  function f(pvec::Vector{Float64})
-    pvec + spde * randn(2)
+  function f(pvec::Array{Float64,1})
+    @fastmath (pvec .+ 
+               Base.LinAlg.BLAS.gemv('N', spde, randn(ln))::Array{Float64,1}
+               )::Array{Float64,1}
   end
 
   return f
