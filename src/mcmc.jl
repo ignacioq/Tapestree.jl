@@ -29,6 +29,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       niter    ::Int64             = 500_000,
                       nthin    ::Int64             = 1_000,
                       nburn    ::Int64             = 500_000,
+                      saveXY   ::Tuple{Bool,Int64} = (false, 1_000),
                       ωxprior  ::NTuple{2,Float64} = (0.,10.),
                       ωλprior  ::NTuple{2,Float64} = (0.,10.),
                       ωμprior  ::NTuple{2,Float64} = (0.,10.),
@@ -188,6 +189,15 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const lit   = 0
   const lthin = 0
 
+  # variables to save X and Y 
+  const XYsav = 0
+  const XYlit = 0
+  if saveXY[1]
+    xylogs = fld(niter,saveXY[2])
+    Xlog   = zeros(Float64, m, ntip, xylogs)
+    Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
+  end
+
   # number of internal nodes (to perform updates on)
   const nin = length(trios) + 1
 
@@ -340,6 +350,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
     end
 
+    # log parameters
     lthin += 1
     if lthin == nthin
       @inbounds begin
@@ -359,8 +370,29 @@ function compete_mcmc(Xc       ::Array{Float64,2},
       lthin = 0
     end
 
+    # log X & Y
+    if saveXY[1]
+      XYsav += 1
+      if XYsav == saveXY[2]
+        @inbounds begin
+          XYlit += 1
+          Xlog[:,:,  XYlit] = Xc
+          Ylog[:,:,:,XYlit] = Yc
+        end
+        XYsav = 0
+      end
+    end
+
     next!(p)
   end
+
+  # save X and Y as R objects
+  @rput Xlog
+  @rput Ylog
+  reval("""
+    save(Xlog, Ylog, file = '$out_file.rda')
+  """)
+
 
   R = hcat(iter, h, o, ωx, ωλ, ωμ, σ², λs, pc)
 
