@@ -154,25 +154,27 @@ end
 
 
 """
-    adaptiveupd(Σ::Array{Float64,2}, psample::Array{Float64,1}, pmean::Array{Float64,1}, stepsize::Float64)
+    adaptiveupd!(Σ::Array{Float64,2}, psam::Array{Float64,1}, pmean::Array{Float64,1}, stepsize::Float64)
 
-Update parameter mean and Σ adaptive.
+Adaptive update for parameter mean and Σ in place.
 """
-function adaptiveupd(Σ       ::Array{Float64,2},
-                     psample ::Array{Float64,1},
-                     pmean   ::Array{Float64,1},
-                     stepsize::Float64)
+function adaptiveupd!(Σ       ::Array{Float64,2},
+                      psam    ::Array{Float64,1},
+                      pmean   ::Array{Float64,1},
+                      stepsize::Float64)
 
-  pdif  ::Array{Float64,1} = psample .- pmean
-  pmeanN::Array{Float64,1} = pmean .+ stepsize .* pdif
-  ΣN    ::Array{Float64,2} = Σ + stepsize *
-                             (BLAS.ger!(1., pdif, pdif, zeros(2,2)) - Σ)
+  @inbounds begin
+    for i in Base.OneTo(length(pmean))
+      psam[i]  -= pmean[i]::Float64
+      pmean[i] += (stepsize * psam[i])::Float64
+    end
 
-  return (pmeanN, ΣN)::Tuple{Array{Float64,1}, Array{Float64,2}}
+    BLAS.axpy!(stepsize,
+               BLAS.gemm!('N', 'T', 1.0, psam, psam, -1.0, copy(Σ)),
+               Σ)
+  end
 end
 
-
-@benchmark adaptiveupd(Σ,psample,pmean,stepsize)
 
 
 
@@ -182,12 +184,12 @@ end
 
 Make function for the stepsize for the adaptive update.
 """
-function makestepsize(C::Float64, η::Float64)
+function makestepsize(η::Float64)
   
   β::Float64 = rand(linspace((1./(1. + η)),1))
 
-  function f(t::Int64)
-    C/(t^β)
+  function f(t::Float64, C::Float64)
+    return (C/(t^β))::Float64
   end
 
   return f
@@ -203,19 +205,18 @@ Make the multivariate update given the covariance matrix.
 """
 function makemvnproposal(Σ::Array{Float64,2})
 
-  evc  = eigvecs(Σ)
-  evl  = diagm(eigvals(Σ))
-  const spde = evc * sqrt.(evl)
-  const ln = size(spde,1)
+  const spde = *(eigvecs(Σ),sqrt.(diagm(eigvals(Σ))))
+  const ln   = size(spde,1)
 
   function f(pvec::Array{Float64,1})
     @fastmath (pvec .+ 
-               Base.LinAlg.BLAS.gemv('N', spde, randn(ln))::Array{Float64,1}
+               BLAS.gemv('N', spde, randn(ln))::Array{Float64,1}
                )::Array{Float64,1}
   end
 
   return f
 end
+
 
 
 
