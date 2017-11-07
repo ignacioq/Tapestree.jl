@@ -172,8 +172,6 @@ function adaptiveupd(Σ       ::Array{Float64,2},
 end
 
 
-@benchmark adaptiveupd(Σ,psample,pmean,stepsize)
-
 
 
 
