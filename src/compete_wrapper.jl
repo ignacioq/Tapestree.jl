@@ -62,7 +62,7 @@ function compete(tree_file::String,
                    ω1i       = ω1i,
                    ω0i       = ω0i,
                    σ²i       = si,
-                   stbrl     = 2.0*maximum(bts),
+                   stbrl     = maximum(bts),
                    fix_ωλ_ωμ = fix_ωλ_ωμ)
 
   return R
@@ -86,6 +86,7 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                           niter     ::Int64             = 500_000,
                           nburn     ::Int64             = 500_000,
                           nthin     ::Int64             = 1_000,
+                          saveXY    ::Tuple{Bool,Int64} = (false, 1_000),
                           ωxprior   ::NTuple{2,Float64} = (0.,10.),
                           ωλprior   ::NTuple{2,Float64} = (0.,10.),
                           ωμprior   ::NTuple{2,Float64} = (0.,10.),
@@ -96,7 +97,6 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                           ωxi       ::Float64           = 0.,
                           ω1i       ::Float64           = 0.,
                           ω0i       ::Float64           = 0.,
-                          stbrl     ::Float64           = 1.,
                           fix_ωλ_ωμ ::Bool              = true,
                           delim     ::Char              = '\t',
                           eol       ::Char              = '\r')
@@ -121,7 +121,7 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                    ω1i       = ω1i,
                    ω0i       = ω0i,
                    σ²i       = si,
-                   stbrl     = stbrl,
+                   stbrl     = maximum(bts),
                    fix_ωλ_ωμ = fix_ωλ_ωμ)
 
   return R
