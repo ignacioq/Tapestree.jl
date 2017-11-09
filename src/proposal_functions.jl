@@ -40,7 +40,7 @@ function upnode!(λ      ::Array{Float64,1},
 
     # save extinct
     while sum(brs[pr,2,:]) == 0
-       samplenode!(λ, pr, d1, d2, brs, brl, narea)
+      samplenode!(λ, pr, d1, d2, brs, brl, narea)
     end
 
     # sample a consistent history
@@ -53,20 +53,20 @@ function upnode!(λ      ::Array{Float64,1},
       createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
       
       ntries += 1
-      if ntries > 1_000_000 
+      if ntries > 100_000_000 
         warn("iid model sampling is very inefficient")
         
-        @show Y[bridx_a[1][pr]]
-        @show Y[bridx_a[2][pr]]
-        @show Y[bridx_a[3][pr]]
+        # @show Y[bridx_a[1][pr]]
+        # @show Y[bridx_a[2][pr]]
+        # @show Y[bridx_a[3][pr]]
 
-        @show Y[bridx_a[1][d1]]
-        @show Y[bridx_a[2][d1]]
-        @show Y[bridx_a[3][d1]]
+        # @show Y[bridx_a[1][d1]]
+        # @show Y[bridx_a[2][d1]]
+        # @show Y[bridx_a[3][d1]]
       
-        @show Y[bridx_a[1][d2]]
-        @show Y[bridx_a[2][d2]]
-        @show Y[bridx_a[3][d2]]
+        # @show Y[bridx_a[1][d2]]
+        # @show Y[bridx_a[2][d2]]
+        # @show Y[bridx_a[3][d2]]
 
       end
     end
@@ -117,7 +117,6 @@ function upnode!(λ      ::Array{Float64,1},
     # sample a consistent history
     createhists!(λ, ω1, ω0, avg_Δx, 
                  Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-  
 
     # save extinct
     ntries = 1
@@ -127,25 +126,26 @@ function upnode!(λ      ::Array{Float64,1},
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
       ntries += 1
-      if ntries > 500_000 
-        @show λ[1]*exp(ω1*avg_Δx[pr,1]), λ[1]*exp(ω1*avg_Δx[pr,2]), λ[1]*exp(ω1*avg_Δx[pr,3])
-        @show λ[1]*exp(ω1*avg_Δx[d1,1]), λ[1]*exp(ω1*avg_Δx[d1,2]), λ[1]*exp(ω1*avg_Δx[d1,3])
-        @show λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,3])
-        @show λ[2]*exp(ω0*avg_Δx[pr,1]), λ[2]*exp(ω0*avg_Δx[pr,2]), λ[2]*exp(ω0*avg_Δx[pr,3])
-        @show λ[2]*exp(ω0*avg_Δx[d1,1]), λ[2]*exp(ω0*avg_Δx[d1,2]), λ[2]*exp(ω0*avg_Δx[d1,3])
-        @show λ[2]*exp(ω0*avg_Δx[d2,1]), λ[2]*exp(ω0*avg_Δx[d2,2]), λ[2]*exp(ω0*avg_Δx[d2,3])
+      if ntries > 100_000_000
+        warn("branch average iid sampling is very inefficient") 
+        # @show λ[1]*exp(ω1*avg_Δx[pr,1]), λ[1]*exp(ω1*avg_Δx[pr,2]), λ[1]*exp(ω1*avg_Δx[pr,3])
+        # @show λ[1]*exp(ω1*avg_Δx[d1,1]), λ[1]*exp(ω1*avg_Δx[d1,2]), λ[1]*exp(ω1*avg_Δx[d1,3])
+        # @show λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,3])
+        # @show λ[2]*exp(ω0*avg_Δx[pr,1]), λ[2]*exp(ω0*avg_Δx[pr,2]), λ[2]*exp(ω0*avg_Δx[pr,3])
+        # @show λ[2]*exp(ω0*avg_Δx[d1,1]), λ[2]*exp(ω0*avg_Δx[d1,2]), λ[2]*exp(ω0*avg_Δx[d1,3])
+        # @show λ[2]*exp(ω0*avg_Δx[d2,1]), λ[2]*exp(ω0*avg_Δx[d2,2]), λ[2]*exp(ω0*avg_Δx[d2,3])
 
-        @show Y[bridx_a[1][pr]]
-        @show Y[bridx_a[2][pr]]
-        @show Y[bridx_a[3][pr]]
+        # @show Y[bridx_a[1][pr]]
+        # @show Y[bridx_a[2][pr]]
+        # @show Y[bridx_a[3][pr]]
 
-        @show Y[bridx_a[1][d1]]
-        @show Y[bridx_a[2][d1]]
-        @show Y[bridx_a[3][d1]]
+        # @show Y[bridx_a[1][d1]]
+        # @show Y[bridx_a[2][d1]]
+        # @show Y[bridx_a[3][d1]]
       
-        @show Y[bridx_a[1][d2]]
-        @show Y[bridx_a[2][d2]]
-        @show Y[bridx_a[3][d2]]
+        # @show Y[bridx_a[1][d2]]
+        # @show Y[bridx_a[2][d2]]
+        # @show Y[bridx_a[3][d2]]
 
       end
     end
@@ -168,7 +168,7 @@ observed after some **δt**, otherwise returns `false`.
 function ifextY(Y      ::Array{Int64,3},
                 triad  ::Array{Int64,1},
                 narea  ::Int64,
-                bridx_a::Array{Array{Array{Int64,1},1},1})::Bool
+                bridx_a::Array{Array{Array{Int64,1},1},1})
 
   @inbounds begin
 
@@ -194,10 +194,10 @@ function ifextY(Y      ::Array{Int64,3},
           end 
         end          
         if s_e == 0               #if extinct
-          return true
+          return true::Bool
         end
         if s_c > 1                #if more than one change  
-          return true
+          return true::Bool
         end
       end
 
@@ -205,7 +205,7 @@ function ifextY(Y      ::Array{Int64,3},
   
   end
 
-  return false
+  return false::Bool
 end
 
 
@@ -346,7 +346,7 @@ function samplenode!(λ::Array{Float64,1},
 
       # normalize probability
       tp = normlize(*(ppr_1, pd1_1, pd2_1),
-                             *(ppr_2, pd1_2, pd2_2))::Float64
+                    *(ppr_2, pd1_2, pd2_2))::Float64
 
       # sample the node's character
       brs[pr,2,j] = brs[d1,1,j] = brs[d2,1,j] = coinsamp(tp)::Int64
@@ -393,7 +393,7 @@ function samplenode!(λ     ::Array{Float64,1},
       pd2_1, pd2_2 = 
         Ptrfast_end(  λ[1], ω1, λ[2], ω0, avg_Δx[d2,j], brl_d2, brs[d2,2,j])
 
-      # normalize probability
+      # normalize probabilitye
       tp = normlize(*(ppr_1, pd1_1, pd2_1),
                     *(ppr_2, pd1_2, pd2_2))::Float64
 

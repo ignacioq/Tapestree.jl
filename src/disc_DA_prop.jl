@@ -203,11 +203,12 @@ function bit_rejsam!(Y     ::Array{Int64,3},
                      avg_Δx::Float64, 
                      cumts ::Array{Float64,1})
 
-  idx_end = idx[end]::Int64
-  λt1::Float64 = λ1*exp(ω1*avg_Δx)
-  λt0::Float64 = λ0*exp(ω0*avg_Δx)
 
   @inbounds @fastmath begin
+
+    idx_end = idx[end]::Int64
+    λt1::Float64 = f_λ(λ1,ω1,avg_Δx)
+    λt0::Float64 = f_λ(λ0,ω0,avg_Δx)
 
     cur_s = Y[idx[1]]::Int64
     cur_t = 0.0
@@ -279,78 +280,86 @@ function bit_rejsam!(Y     ::Array{Int64,3},
 
   end
 
+  ntries = 0
   # rejection sampling if end simulation state do not match observed state
   while Y[idx_end] != sf 
 
-    @fastmath begin
+    # ntries += 1
+    # if ntries > 100_000_000
+    #   warn("bitrejsam inefficient, sampling uniformly")
+    #   Y[rand(idx):end] = Y[idx[1]] ==  0 ? 1 : 0
+    #   @show λt1, λt0
+    #   @show Y[idx]
+    #   @show Y[idx_end], sf
+    # end
 
-      cur_s = Y[idx[1]]::Int64
-      cur_t = 0.0
-      s     = idx[2]
+    cur_s = Y[idx[1]]::Int64
+    cur_t = 0.0
+    s     = idx[2]
 
-      if cur_s == 0
+    if cur_s == 0
 
-        while true
+      while true
 
-          cur_t += rexp(λt1)::Float64
-          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        cur_t += rexp(λt1)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-          Y[s:f] = cur_s
-          
-          if f == idx_end
-            break
-          end
-
-          cur_s = 1 - cur_s
-          s     = f + 1
-
-          # same but with loss rate
-          cur_t += rexp(λt0)::Float64
-          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
-
-          Y[s:f] = cur_s
-
-          if f == idx_end
-            break
-          end
-
-          cur_s = 1 - cur_s
-          s     = f + 1
-
+        Y[s:f] = cur_s
+        
+        if f == idx_end
+          break
         end
 
-      else
+        cur_s = 1 - cur_s
+        s     = f + 1
 
-        while true
+        # same but with loss rate
+        cur_t += rexp(λt0)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-          cur_t += rexp(λt0)::Float64
-          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        Y[s:f] = cur_s
 
-          Y[s:f] = cur_s
-          
-          if f == idx_end
-            break
-          end
-
-          cur_s = 1 - cur_s
-          s     = f + 1
-
-          # same but with loss rate
-          cur_t += rexp(λt1)::Float64
-          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
-
-          Y[s:f] = cur_s
-
-          if f == idx_end
-            break
-          end
-
-          cur_s = 1 - cur_s
-          s     = f + 1
-
+        if f == idx_end
+          break
         end
+
+        cur_s = 1 - cur_s
+        s     = f + 1
+
+      end
+
+    else
+
+      while true
+
+        cur_t += rexp(λt0)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+        Y[s:f] = cur_s
+        
+        if f == idx_end
+          break
+        end
+
+        cur_s = 1 - cur_s
+        s     = f + 1
+
+        # same but with loss rate
+        cur_t += rexp(λt1)::Float64
+        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+
+        Y[s:f] = cur_s
+
+        if f == idx_end
+          break
+        end
+
+        cur_s = 1 - cur_s
+        s     = f + 1
+
       end
     end
+  
 
   end
 

@@ -104,7 +104,12 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
   X, Y, B, ncoup, δt, tree, si = 
     initialize_data(tip_values, tip_areas, min_dt, tree, bts)
 
-  R = compete_mcmc(X, Y, ncoup, δt, tree.ed, tree.el, B,
+
+
+  R = compete_mcmc(X, Y, ncoup, δt, 
+                   deepcopy(tree.ed), 
+                   deepcopy(tree.el), 
+                   B,
                    niter     = niter,
                    nthin     = nthin,
                    nburn     = nburn,

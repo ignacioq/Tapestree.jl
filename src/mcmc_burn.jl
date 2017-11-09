@@ -101,18 +101,23 @@ function burn_compete(total_llf,
     append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const parvec  = setdiff(pv,(3:4))
     const lparvec = length(parvec)
+
+    print_with_color(:green,
+      "\n ωx & σ² updates per iter = ", ceil(Int64,np*weight[1]) + 1,
+      "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1, "\n")
   else
     const parvec  = append!(collect(1:np),
                             repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
     append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const lparvec = length(parvec)
-  end
 
-  print_with_color(:green,
+    print_with_color(:green,
       "\n ωx & σ² updates per iter = ", ceil(Int64,np*weight[1]) + 1,
       "\n ω1 & ω0 updates per iter = ", ceil(Int64,np*weight[2]) + 1,
       "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1, "\n")
+  end
+
 
   #start brunin
   for it = Base.OneTo(nburn)

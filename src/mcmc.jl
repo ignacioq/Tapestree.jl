@@ -362,7 +362,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         setindex!(ωλ,   ω1c, lit)
         setindex!(ωμ,   ω0c, lit)
         setindex!(σ²,   σ²c, lit)
-        setindex!(pc, Pc(λc[1], λc[2], max_δt), lit)
+        setindex!(pc, Pc(f_λ(λc[1],ω1c,1.0), f_λ(λc[2],ω0c,1.0), max_δt), lit)
         for j = eachindex(λc)
           setindex!(λs, λc[j], lit, j)
         end
