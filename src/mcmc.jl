@@ -386,15 +386,17 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     next!(p)
   end
 
-  # save X and Y as R objects
-  @rput Xlog
-  @rput Ylog
-  @rput δt
-  @rput B
-  reval("""
-    delta.t <- δt
-    save(Xlog, Ylog, B, delta.t, file = '$out_file.rda')
-  """)
+  if saveXY[1]
+    # save X and Y as R objects
+    @rput Xlog
+    @rput Ylog
+    @rput δt
+    @rput B
+    reval("""
+      delta.t <- δt
+      save(Xlog, Ylog, B, delta.t, file = '$out_file.rda')
+    """)
+  end
 
   R = hcat(iter, h, o, ωx, ωλ, ωμ, σ², λs, pc)
 
