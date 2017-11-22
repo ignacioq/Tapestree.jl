@@ -65,9 +65,10 @@ function makellf(δt   ::Vector{Float64},
   const coloop = Base.OneTo(size(Y,2))
   
   # which is 23 (23 = NaN) in each column
-  const w23 = Array{Int64,1}[]
-  for i = coloop
-    push!(w23,find(Y[:,i,1] .!= 23))
+  const w23 = UnitRange{Int64}[]
+  for i=Base.OneTo(size(Y,2))
+    non23 = find(Y[:,i,1] .!= 23)
+    push!(w23,colon(non23[1],non23[end-1]))
   end
 
   # to avoid re-subsetting add 
@@ -113,7 +114,7 @@ function makellf(δt   ::Vector{Float64},
       for j in Base.OneTo(narea)
         ll += brll(stemevc[j], λ[1], λ[2], stemss[j])::Float64
         for i = coloop
-          wh = w23[i]::Array{Int64,1}
+          wh = w23[i]::UnitRange{Int64}
           ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                             lindiff[wh,i,j], dδt[wh])::Float64
         end
@@ -216,6 +217,7 @@ end
 
 
 
+
 """
     f_λ(λ::Float64, ω::Float64, Δx::Float64)
 
@@ -223,6 +225,7 @@ Estimate rates for area colonization/loss based
 on the difference between lineage traits and area averages.
 """
 f_λ(λ::Float64, ω::Float64, Δx::Float64) = @fastmath (λ * exp(ω*Δx))::Float64
+
 
 
 
@@ -239,9 +242,10 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
   const coloop = Base.OneTo(size(Y,2))
 
   # which is 23 (23 = NaN) in each column
-  const w23 = Array{Int64,1}[]
-  for i=coloop
-    push!(w23,find(Y[:,i,1] .!= 23))
+  const w23 = UnitRange{Int64}[]
+  for i=Base.OneTo(size(Y,2))
+    non23 = find(Y[:,i,1] .!= 23)
+    push!(w23,colon(non23[1],non23[end-1]))
   end
 
   # to avoid re-subsetting add 
@@ -266,7 +270,7 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
         ll += brll(stemevc[j], λ[1], λ[2], stemss[j])::Float64
 
         for i = coloop
-          wh = w23[i]::Array{Int64,1}
+          wh = w23[i]::UnitRange{Int64}
           ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                             lindiff[wh,i,j], dδt[wh])::Float64
         end
@@ -295,9 +299,10 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
   const coloop = Base.OneTo(size(Y,2))
 
   # which is 23 (23 = NaN) in each column
-  const w23 = Array{Int64,1}[]
-  for i=coloop
-    push!(w23,find(Y[:,i,1] .!= 23))
+  const w23 = UnitRange{Int64}[]
+  for i=Base.OneTo(size(Y,2))
+    non23 = find(Y[:,i,1] .!= 23)
+    push!(w23,colon(non23[1],non23[end-1]))
   end
 
   # to avoid re-subsetting add 
@@ -306,7 +311,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
   push!(dδt,0.)
 
   function f(Y      ::Array{Int64,3}, 
-             λ::Array{Float64,1},
+             λ      ::Array{Float64,1},
              ω1     ::Float64,
              ω0     ::Float64,
              lindiff::Array{Float64,3})
@@ -316,7 +321,7 @@ function makellf_ωλμ_upd(Y   ::Array{Int64,3},
     @inbounds begin
 
       for j=Base.OneTo(narea), i=coloop
-        wh = w23[i]::Array{Int64,1}
+        wh = w23[i]::UnitRange{Int64}
         ll += bitvectorll(Y[wh,i,j], λ[1], λ[2], ω1, ω0, 
                           lindiff[wh,i,j], dδt[wh])::Float64
       end
@@ -332,6 +337,7 @@ end
 
 
 
+
 """
     makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1}, δt::Array{Float64,1}, narea::Int64, nedge::Int64, m::Int64)
 
@@ -339,7 +345,7 @@ Make triad likelihood function for the mutual
 independence model (iid), the proposal density 
 for data augmented biogeographic histories.
 """
-function makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1},
+function makellf_biogeo_upd_iid(bridx_a::Array{Array{UnitRange{Int64},1},1},
                                 δt     ::Array{Float64,1},
                                 narea  ::Int64,
                                 nedge  ::Int64,
@@ -451,9 +457,10 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
                          ntip::Int64)
 
   # which is 23 (i.e., NaN) in each column
-  const w23 = Array{Int64}[]
+  const w23 = UnitRange{Int64}[]
   for i=Base.OneTo(size(Y,2))
-    push!(w23,find(Y[:,i,1] .!= 23)[Base.OneTo(end-1)])
+    non23 = find(Y[:,i,1] .!= 23)
+    push!(w23,colon(non23[1],non23[end-1]))
   end
 
   # number of normal evaluations
@@ -489,6 +496,8 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
 
   return f
 end
+
+
 
 
 
@@ -639,6 +648,7 @@ end
 
 
 
+
 """
     evll(t::Float64, λ::Float64)
 
@@ -649,12 +659,14 @@ evll(t::Float64, λ::Float64) = @fastmath (log(λ) - (λ * t))::Float64
 
 
 
+
 """
     nell(t::Float64, λ::Float64)
 
 Return log-likelihood for nonevents.
 """
 nell(t::Float64, λ::Float64) = (-1 * λ * t)::Float64
+
 
 
 

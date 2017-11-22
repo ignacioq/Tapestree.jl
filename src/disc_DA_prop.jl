@@ -23,7 +23,7 @@ in place, avoiding extra memory allocation.
 """
 # reprehensible code... but faster 
 function bit_rejsam!(Y    ::Array{Int64,3},
-                     idx  ::Array{Int64,1},
+                     idx  ::UnitRange{Int64},
                      sf   ::Int64,
                      λ1   ::Float64, 
                      λ0   ::Float64, 
@@ -36,36 +36,36 @@ function bit_rejsam!(Y    ::Array{Int64,3},
     cur_s = Y[idx[1]]::Int64
     cur_t = 0.0
     s     = idx[2]::Int64
-    idx_1 = idx[1] - 1
+    idx_1 = (idx[1] - 1)::Int64
 
     if cur_s == 0
 
       while true
 
         cur_t += rexp(λ1)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
         
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
         # same but with loss rate
         cur_t += rexp(λ0)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
 
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
       end
 
@@ -74,29 +74,29 @@ function bit_rejsam!(Y    ::Array{Int64,3},
       while true
 
         cur_t += rexp(λ0)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
         
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
         # same but with loss rate
         cur_t += rexp(λ1)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
 
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
       end
     end
@@ -110,36 +110,36 @@ function bit_rejsam!(Y    ::Array{Int64,3},
 
       cur_s = Y[idx[1]]::Int64
       cur_t = 0.0
-      s     = idx[2]
+      s     = idx[2]::Int64
 
       if cur_s == 0
 
         while true
 
           cur_t += rexp(λ1)::Float64
-          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+          f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-          Y[s:f] = cur_s
+          Y[s:f] = cur_s::Int64
           
           if f == idx_end
             break
           end
 
-          cur_s = 1 - cur_s
-          s     = f + 1
+          cur_s = (1 - cur_s)::Int64
+          s     = (f + 1)::Int64
 
           # same but with loss rate
           cur_t += rexp(λ0)::Float64
-          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+          f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-          Y[s:f] = cur_s
+          Y[s:f] = cur_s::Int64
 
           if f == idx_end
             break
           end
 
-          cur_s = 1 - cur_s
-          s     = f + 1
+          cur_s = (1 - cur_s)::Int64
+          s     = (f + 1)::Int64
 
         end
 
@@ -148,29 +148,29 @@ function bit_rejsam!(Y    ::Array{Int64,3},
         while true
 
           cur_t += rexp(λ0)::Float64
-          f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+          f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-          Y[s:f] = cur_s
+          Y[s:f] = cur_s::Int64
           
           if f == idx_end
             break
           end
 
-          cur_s = 1 - cur_s
-          s     = f + 1
+          cur_s = (1 - cur_s)::Int64
+          s     = (f + 1)::Int64
 
           # same but with loss rate
           cur_t += rexp(λ1)::Float64
           f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-          Y[s:f] = cur_s
+          Y[s:f] = cur_s::Int64
 
           if f == idx_end
             break
           end
 
-          cur_s = 1 - cur_s
-          s     = f + 1
+          cur_s = (1 - cur_s)::Int64
+          s     = (f + 1)::Int64
 
         end
       end
@@ -194,7 +194,7 @@ in place, avoiding extra memory allocation.
 """
 # reprehensible code... but faster 
 function bit_rejsam!(Y     ::Array{Int64,3},
-                     idx   ::Array{Int64,1},
+                     idx   ::UnitRange{Int64},
                      sf    ::Int64,
                      λ1    ::Float64,
                      ω1    ::Float64,
@@ -213,36 +213,36 @@ function bit_rejsam!(Y     ::Array{Int64,3},
     cur_s = Y[idx[1]]::Int64
     cur_t = 0.0
     s     = idx[2]::Int64
-    idx_1 = idx[1] - 1
+    idx_1 = (idx[1] - 1)::Int64
 
     if cur_s == 0
 
       while true
 
         cur_t += rexp(λt1)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
         
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
         # same but with loss rate
         cur_t += rexp(λt0)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
 
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
       end
 
@@ -251,80 +251,77 @@ function bit_rejsam!(Y     ::Array{Int64,3},
       while true
 
         cur_t += rexp(λt0)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
         
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
         # same but with loss rate
         cur_t += rexp(λt1)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
 
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
       end
     end
 
   end
 
-  ntries = 0
+  const ntries = 0
   # rejection sampling if end simulation state do not match observed state
   while Y[idx_end] != sf 
 
-    # ntries += 1
-    # if ntries > 100_000_000
-    #   warn("bitrejsam inefficient, sampling uniformly")
-    #   Y[rand(idx):end] = Y[idx[1]] ==  0 ? 1 : 0
-    #   @show λt1, λt0
-    #   @show Y[idx]
-    #   @show Y[idx_end], sf
-    # end
+    ntries += 1
+    if ntries > 10_000_000
+      # warn("bitrejsam inefficient, sampling uniformly")
+      Y[rand(idx):idx[end]] = Y[idx[1]] ==  0 ? 1 : 0
+    end
 
     cur_s = Y[idx[1]]::Int64
     cur_t = 0.0
-    s     = idx[2]
+    s     = idx[2]::Int64
 
     if cur_s == 0
 
       while true
 
         cur_t += rexp(λt1)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
         
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
+        cur_s = (1 - cur_s)::Int64
         s     = f + 1
 
         # same but with loss rate
         cur_t += rexp(λt0)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
 
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
       end
 
@@ -333,33 +330,32 @@ function bit_rejsam!(Y     ::Array{Int64,3},
       while true
 
         cur_t += rexp(λt0)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
-        
+        Y[s:f] = cur_s::Int64
+
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
         # same but with loss rate
         cur_t += rexp(λt1)::Float64
-        f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
+        f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s
+        Y[s:f] = cur_s::Int64
 
         if f == idx_end
           break
         end
 
-        cur_s = 1 - cur_s
-        s     = f + 1
+        cur_s = (1 - cur_s)::Int64
+        s     = (f + 1)::Int64
 
       end
     end
-  
 
   end
 

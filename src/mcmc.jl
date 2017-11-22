@@ -103,7 +103,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const bridx = make_edgeind(edges[:,2], B, ntip)
 
   # expand bridx for each area
-  const bridx_a = Vector{Vector{Int64}}[]
+  const bridx_a = Array{UnitRange{Int64},1}[]
   push!(bridx_a, bridx)
 
   for j = 2:narea

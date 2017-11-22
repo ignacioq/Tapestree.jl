@@ -138,8 +138,8 @@ function Ptrfast(λ1    ::Float64,
   
   @fastmath begin
 
-    λt1  ::Float64 = λ1*exp(ω1*avg_Δx)
-    λt0  ::Float64 = λ0*exp(ω0*avg_Δx)
+    λt1  ::Float64 = f_λ(λ1,ω1,avg_Δx)
+    λt0  ::Float64 = f_λ(λ0,ω0,avg_Δx)
     sumλ ::Float64 = λt1 + λt0
     ex   ::Float64 = exp(-sumλ*t)
     sd1  ::Float64 = 1/sumλ
@@ -151,7 +151,6 @@ function Ptrfast(λ1    ::Float64,
 
   end
 end
-
 
 
 
@@ -203,8 +202,8 @@ function Ptrfast_start(λ1    ::Float64,
   
   @fastmath begin
 
-    λt1  ::Float64 = λ1*exp(ω1*avg_Δx)
-    λt0  ::Float64 = λ0*exp(ω0*avg_Δx)
+    λt1  ::Float64 = f_λ(λ1,ω1,avg_Δx)
+    λt0  ::Float64 = f_λ(λ0,ω0,avg_Δx)
     sumλ ::Float64 = λt1 + λt0
     ex   ::Float64 = exp(-sumλ*t)
     sd1  ::Float64 = 1/sumλ
@@ -272,8 +271,8 @@ function Ptrfast_end(λ1    ::Float64,
   
   @fastmath begin
 
-    λt1  ::Float64 = λ1*exp(ω1*avg_Δx)
-    λt0  ::Float64 = λ0*exp(ω0*avg_Δx)
+    λt1  ::Float64 = f_λ(λ1,ω1,avg_Δx)
+    λt0  ::Float64 = f_λ(λ0,ω0,avg_Δx)
     sumλ ::Float64 = λt1 + λt0
     ex   ::Float64 = exp(-sumλ*t)
     sd1  ::Float64 = 1/sumλ
@@ -383,13 +382,14 @@ Make ragged array with indexes for each edge in `Y`.
 """
 function make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2}, ntip::Int64)
 
-  bridx = Array{Int64,1}[]
+  bridx = UnitRange{Int64}[]
   for b in childs
-    bidinces = find(b .== B)
+    bindices = find(b .== B)
     if b != (ntip+1)
-      unshift!(bidinces, bidinces[1] - 1)
+      unshift!(bindices, bindices[1] - 1)
     end
-    push!(bridx, bidinces)
+    bidx = colon(bindices[1],bindices[end])
+    push!(bridx, bidx)
   end
 
   bridx
@@ -404,14 +404,14 @@ end
 
 Make ragged array of the cumulative δtimes for each branch.
 """
-function make_edgeδt(bridx::Array{Array{Int64,1},1}, 
+function make_edgeδt(bridx::Array{UnitRange{Int64},1}, 
                      δt   ::Array{Float64,1}, 
                      m    ::Int64)
   
   brδt = Array{Float64,1}[]
   
   for j in 1:(length(bridx)-1)
-    bi = copy(bridx[j][1:(end-1)])
+    bi = collect(bridx[j][1:(end-1)])
     for i in eachindex(bi)
       bi[i] = rowind(bi[i], m)
     end

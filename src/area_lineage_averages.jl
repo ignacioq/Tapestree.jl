@@ -118,7 +118,7 @@ Estimate the branch average of lineage differences in each specific area.
 """
 function linarea_branch_avg!(avg_Δx ::Array{Float64,2},
                              LD     ::Array{Float64,3},
-                             bridx_a::Array{Array{Array{Int64,1},1},1},
+                             bridx_a::Array{Array{UnitRange{Int64},1},1},
                              narea  ::Int64,
                              nedge  ::Int64)
   @inbounds begin

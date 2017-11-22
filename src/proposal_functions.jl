@@ -23,7 +23,7 @@ Data Augmentation for all areas.
 function upnode!(λ      ::Array{Float64,1},
                  triad  ::Array{Int64,1},
                  Y      ::Array{Int64,3},
-                 bridx_a::Vector{Vector{Vector{Int64}}},
+                 bridx_a::Array{Array{UnitRange{Int64},1},1},
                  brδt   ::Vector{Vector{Float64}},
                  brl    ::Vector{Float64},
                  brs    ::Array{Int64,3},
@@ -52,23 +52,23 @@ function upnode!(λ      ::Array{Float64,1},
     while ifextY(Y,  triad, narea, bridx_a)
       createhists!(λ, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
       
-      ntries += 1
-      if ntries > 100_000_000 
-        warn("iid model sampling is very inefficient")
+      # ntries += 1
+      # if ntries > 100_000_000 
+      #   warn("iid model sampling is very inefficient")
         
-        # @show Y[bridx_a[1][pr]]
-        # @show Y[bridx_a[2][pr]]
-        # @show Y[bridx_a[3][pr]]
+      #   # @show Y[bridx_a[1][pr]]
+      #   # @show Y[bridx_a[2][pr]]
+      #   # @show Y[bridx_a[3][pr]]
 
-        # @show Y[bridx_a[1][d1]]
-        # @show Y[bridx_a[2][d1]]
-        # @show Y[bridx_a[3][d1]]
+      #   # @show Y[bridx_a[1][d1]]
+      #   # @show Y[bridx_a[2][d1]]
+      #   # @show Y[bridx_a[3][d1]]
       
-        # @show Y[bridx_a[1][d2]]
-        # @show Y[bridx_a[2][d2]]
-        # @show Y[bridx_a[3][d2]]
+      #   # @show Y[bridx_a[1][d2]]
+      #   # @show Y[bridx_a[2][d2]]
+      #   # @show Y[bridx_a[3][d2]]
 
-      end
+      # end
     end
 
     nothing
@@ -93,7 +93,7 @@ function upnode!(λ      ::Array{Float64,1},
                  avg_Δx ::Array{Float64,2},
                  triad  ::Array{Int64,1},
                  Y      ::Array{Int64,3},
-                 bridx_a::Vector{Vector{Vector{Int64}}},
+                 bridx_a::Array{Array{UnitRange{Int64},1},1},
                  brδt   ::Vector{Vector{Float64}},
                  brl    ::Vector{Float64},
                  brs    ::Array{Int64,3},
@@ -125,29 +125,29 @@ function upnode!(λ      ::Array{Float64,1},
       createhists!(λ, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
-      ntries += 1
-      if ntries > 100_000_000
-        warn("branch average iid sampling is very inefficient") 
-        # @show λ[1]*exp(ω1*avg_Δx[pr,1]), λ[1]*exp(ω1*avg_Δx[pr,2]), λ[1]*exp(ω1*avg_Δx[pr,3])
-        # @show λ[1]*exp(ω1*avg_Δx[d1,1]), λ[1]*exp(ω1*avg_Δx[d1,2]), λ[1]*exp(ω1*avg_Δx[d1,3])
-        # @show λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,3])
-        # @show λ[2]*exp(ω0*avg_Δx[pr,1]), λ[2]*exp(ω0*avg_Δx[pr,2]), λ[2]*exp(ω0*avg_Δx[pr,3])
-        # @show λ[2]*exp(ω0*avg_Δx[d1,1]), λ[2]*exp(ω0*avg_Δx[d1,2]), λ[2]*exp(ω0*avg_Δx[d1,3])
-        # @show λ[2]*exp(ω0*avg_Δx[d2,1]), λ[2]*exp(ω0*avg_Δx[d2,2]), λ[2]*exp(ω0*avg_Δx[d2,3])
+      # ntries += 1
+      # if ntries > 100_000_000
+      #   #warn("branch average iid sampling is very inefficient") 
+      #   # @show λ[1]*exp(ω1*avg_Δx[pr,1]), λ[1]*exp(ω1*avg_Δx[pr,2]), λ[1]*exp(ω1*avg_Δx[pr,3])
+      #   # @show λ[1]*exp(ω1*avg_Δx[d1,1]), λ[1]*exp(ω1*avg_Δx[d1,2]), λ[1]*exp(ω1*avg_Δx[d1,3])
+      #   # @show λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,3])
+      #   # @show λ[2]*exp(ω0*avg_Δx[pr,1]), λ[2]*exp(ω0*avg_Δx[pr,2]), λ[2]*exp(ω0*avg_Δx[pr,3])
+      #   # @show λ[2]*exp(ω0*avg_Δx[d1,1]), λ[2]*exp(ω0*avg_Δx[d1,2]), λ[2]*exp(ω0*avg_Δx[d1,3])
+      #   # @show λ[2]*exp(ω0*avg_Δx[d2,1]), λ[2]*exp(ω0*avg_Δx[d2,2]), λ[2]*exp(ω0*avg_Δx[d2,3])
 
-        # @show Y[bridx_a[1][pr]]
-        # @show Y[bridx_a[2][pr]]
-        # @show Y[bridx_a[3][pr]]
+      #   # @show Y[bridx_a[1][pr]]
+      #   # @show Y[bridx_a[2][pr]]
+      #   # @show Y[bridx_a[3][pr]]
 
-        # @show Y[bridx_a[1][d1]]
-        # @show Y[bridx_a[2][d1]]
-        # @show Y[bridx_a[3][d1]]
+      #   # @show Y[bridx_a[1][d1]]
+      #   # @show Y[bridx_a[2][d1]]
+      #   # @show Y[bridx_a[3][d1]]
       
-        # @show Y[bridx_a[1][d2]]
-        # @show Y[bridx_a[2][d2]]
-        # @show Y[bridx_a[3][d2]]
+      #   # @show Y[bridx_a[1][d2]]
+      #   # @show Y[bridx_a[2][d2]]
+      #   # @show Y[bridx_a[3][d2]]
 
-      end
+      # end
     end
 
   nothing
@@ -168,7 +168,7 @@ observed after some **δt**, otherwise returns `false`.
 function ifextY(Y      ::Array{Int64,3},
                 triad  ::Array{Int64,1},
                 narea  ::Int64,
-                bridx_a::Array{Array{Array{Int64,1},1},1})
+                bridx_a::Array{Array{UnitRange{Int64},1},1})
 
   @inbounds begin
 
@@ -224,7 +224,7 @@ function createhists!(λ::Array{Float64,1},
                       d2     ::Int64,
                       brs    ::Array{Int64,3},
                       brδt   ::Array{Array{Float64,1},1},
-                      bridx_a::Array{Array{Array{Int64,1},1},1},
+                      bridx_a::Array{Array{UnitRange{Int64},1},1},
                       narea  ::Int64,
                       nedge  ::Int64)
 
@@ -259,6 +259,8 @@ end
 
 
 
+
+
 """
     createhists!(λ::Array{Float64,1}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
 
@@ -275,7 +277,7 @@ function createhists!(λ      ::Array{Float64,1},
                       d2     ::Int64,
                       brs    ::Array{Int64,3},
                       brδt   ::Array{Array{Float64,1},1},
-                      bridx_a::Array{Array{Array{Int64,1},1},1},
+                      bridx_a::Array{Array{UnitRange{Int64},1},1},
                       narea  ::Int64,
                       nedge  ::Int64)
 
