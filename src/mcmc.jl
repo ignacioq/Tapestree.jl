@@ -190,9 +190,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const lthin = 0
 
   # variables to save X and Y 
-  const XYsav = 0
-  const XYlit = 0
   if saveXY[1]
+    const XYsav = 0
+    const XYlit = 0
     xylogs = fld(niter,saveXY[2])
     Xlog   = zeros(Float64, m, ntip, xylogs)
     Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
@@ -404,6 +404,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   col_nam = ["Iteration", "Likelihood", "Prior", "Trait_competition", 
              "Colonization_competition", "Extinction_competition", 
              "Sigma2"]
+  
   for i = 1:-1:0
     xn = *("Lambda_", string(i))
     push!(col_nam, xn)
