@@ -21,7 +21,7 @@ Burning & adaptive phase for MCMC.
 """
 function burn_compete(total_llf,
                       λupd_llf,
-                      ωλμupd_llf,
+                      ω10upd_llf,
                       Xupd_llf,
                       Rupd_llf,
                       σ²ωxupd_llf,
@@ -56,7 +56,7 @@ function burn_compete(total_llf,
                       ω1prior  ::NTuple{2,Float64},
                       ω0prior  ::NTuple{2,Float64},
                       σ²prior  ::Float64,
-                      fix_ωλ_ωμ::Bool,
+                      fix_ω1_ω0::Bool,
                       np       ::Int64,
                       nburn    ::Int64,
                       obj_ar   ::Float64 = 0.234,
@@ -95,7 +95,7 @@ function burn_compete(total_llf,
   # progress bar
   p = Progress(nburn + 1, 5, "burning...", 20)
 
-  if fix_ωλ_ωμ
+  if fix_ω1_ω0
     const pv      = append!(collect(1:np),
                             repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
@@ -290,23 +290,23 @@ function burn_compete(total_llf,
           lac[2] += 1
         end
 
-      #update ωλ
+      #update ω1
       elseif up == 3
 
-        ωλp = addupt(ω1c, ptn[3])::Float64
+        ω1p = addupt(ω1c, ptn[3])::Float64
 
             # proposal likelihood and prior
-        llr = ωλμupd_llf(Yc, λc, ωλp, ω0c, lindiff) - 
-              ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff)::Float64
+        llr = ω10upd_llf(Yc, λc, ω1p, ω0c, lindiff) - 
+              ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff)::Float64
 
         # prior ratio
-        prr = logdnorm(ωλp, ω1prior[1], ω1prior[2]) -
+        prr = logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
               logdnorm(ω1c, ω1prior[1], ω1prior[2])::Float64
 
         if log(rand()) < (llr + prr)
           llc += llr::Float64
           prc += prr::Float64
-          ω1c  = ωλp::Float64
+          ω1c  = ω1p::Float64
           lac[3] += 1
         end
 
@@ -368,21 +368,21 @@ function burn_compete(total_llf,
           end
         end
 
-      # update ωμ
+      # update ω0
       else
-        ωμp = addupt(ω0c, ptn[4])
+        ω0p = addupt(ω0c, ptn[4])
 
-        llr = ωλμupd_llf(Yc, λc, ω1c, ωμp, lindiff) - 
-              ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff)
+        llr = ω10upd_llf(Yc, λc, ω1c, ω0p, lindiff) - 
+              ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff)
 
         # prior ratio
-        prr = logdnorm(ωμp, ω0prior[1], ω0prior[2]) -
+        prr = logdnorm(ω0p, ω0prior[1], ω0prior[2]) -
               logdnorm(ω0c, ω0prior[1], ω0prior[2])
 
         if log(rand()) < (llr + prr)
           llc += llr
           prc += prr
-          ω0c  = ωμp
+          ω0c  = ω0p
           lac[4] += 1
         end
 

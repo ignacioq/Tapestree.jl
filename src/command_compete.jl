@@ -58,13 +58,13 @@ function parse_commandline()
       help = "gaussian prior for effect of competition on area gain"
       arg_type = Tuple{Float64,Float64}
       default = 0.0, 10.0
-      dest_name = "ωλprior"
+      dest_name = "ω1prior"
 
     "--comp_loss_prior"
       help = "gaussian prior for effect of competition on area loss"
       arg_type = Tuple{Float64,Float64}
       default = 0.0, 10.0
-      dest_name = "ωμprior"
+      dest_name = "ω0prior"
 
     "--sigma_prior"
       help = "exponential prior for rate of evolution"
@@ -87,7 +87,7 @@ function parse_commandline()
     "--fix_biocomp", "-f"
       help = "fix to 0 competition effect on gain and losses"
       action = :store_true
-      dest_name = "fix_ωλ_ωμ"
+      dest_name = "fix_ω1_ω0"
 
     # required arguments 
     "tree_file"

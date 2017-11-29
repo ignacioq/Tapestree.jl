@@ -298,31 +298,31 @@ end
 
 
 """
-    mhr_upd_ωλ(ω1c::Float64, λc::Array{Float64,2}, ω0c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ωλtn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ωλprior::Tuple{Float64,Float64}, ωλμupd_llf)
+    mhr_upd_ω1(ω1c::Float64, λc::Array{Float64,2}, ω0c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω1tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω1prior::Tuple{Float64,Float64}, ω10upd_llf)
 
-MHR update for ωλ.
+MHR update for ω1.
 """
-function mhr_upd_ωλ(ω1c       ::Float64,
+function mhr_upd_ω1(ω1c       ::Float64,
                     λc        ::Array{Float64,1},
                     ω0c       ::Float64,
                     Yc        ::Array{Int64,3},
                     llc       ::Float64,
                     prc       ::Float64,
-                    ωλtn      ::Float64,
+                    ω1tn      ::Float64,
                     linavg    ::Array{Float64,2},
                     lindiff   ::Array{Float64,3},
-                    ωλprior   ::Tuple{Float64,Float64},
-                    ωλμupd_llf::Function)
+                    ω1prior   ::Tuple{Float64,Float64},
+                    ω10upd_llf::Function)
 
-  ω1p = addupt(ω1c, rand() < 0.5 ? ωλtn : 4*ωλtn)::Float64
+  ω1p = addupt(ω1c, rand() < 0.5 ? ω1tn : 4*ω1tn)::Float64
 
   # likelihood ratio
-  llr = (ωλμupd_llf(Yc, λc, ω1p, ω0c, lindiff) - 
-         ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff))::Float64
+  llr = (ω10upd_llf(Yc, λc, ω1p, ω0c, lindiff) - 
+         ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff))::Float64
 
   # prior ratio
-  prr = (logdnorm(ω1p, ωλprior[1], ωλprior[2]) -
-         logdnorm(ω1c, ωλprior[1], ωλprior[2]))::Float64
+  prr = (logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
+         logdnorm(ω1c, ω1prior[1], ω1prior[2]))::Float64
 
   if log(rand()) < (llr + prr)
     llc += llr::Float64
@@ -338,31 +338,31 @@ end
 
 
 """
-    mhr_upd_ωμ(ω0c::Float64, λc::Array{Float64,2}, ω1c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ωμtn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ωμprior::Tuple{Float64,Float64}, ωλμupd_llf)
+    mhr_upd_ω0(ω0c::Float64, λc::Array{Float64,2}, ω1c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω0tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω0prior::Tuple{Float64,Float64}, ω10upd_llf)
 
-MHR update for ωμ.
+MHR update for ω0.
 """
-function mhr_upd_ωμ(ω0c       ::Float64,
+function mhr_upd_ω0(ω0c       ::Float64,
                     λc        ::Array{Float64,1},
                     ω1c       ::Float64,
                     Yc        ::Array{Int64,3},
                     llc       ::Float64,
                     prc       ::Float64,
-                    ωμtn      ::Float64,
+                    ω0tn      ::Float64,
                     linavg    ::Array{Float64,2},
                     lindiff   ::Array{Float64,3},
-                    ωμprior   ::Tuple{Float64,Float64},
-                    ωλμupd_llf::Function)
+                    ω0prior   ::Tuple{Float64,Float64},
+                    ω10upd_llf::Function)
 
-  ω0p = addupt(ω0c, rand() < 0.5 ? ωμtn : 4*ωμtn)::Float64
+  ω0p = addupt(ω0c, rand() < 0.5 ? ω0tn : 4*ω0tn)::Float64
 
   # likelihood ratio
-  llr = (ωλμupd_llf(Yc, λc, ω1c, ω0p, lindiff) - 
-         ωλμupd_llf(Yc, λc, ω1c, ω0c, lindiff))::Float64
+  llr = (ω10upd_llf(Yc, λc, ω1c, ω0p, lindiff) - 
+         ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff))::Float64
 
   # prior ratio
-  prr = (logdnorm(ω0p, ωμprior[1], ωμprior[2]) -
-         logdnorm(ω0c, ωμprior[1], ωμprior[2]))::Float64
+  prr = (logdnorm(ω0p, ω0prior[1], ω0prior[2]) -
+         logdnorm(ω0c, ω0prior[1], ω0prior[2]))::Float64
 
   if log(rand()) < (llr + prr)
     llc += llr::Float64

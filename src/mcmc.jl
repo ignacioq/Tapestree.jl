@@ -31,8 +31,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       nburn    ::Int64             = 500_000,
                       saveXY   ::Tuple{Bool,Int64} = (false, 1_000),
                       ωxprior  ::NTuple{2,Float64} = (0.,10.),
-                      ωλprior  ::NTuple{2,Float64} = (0.,10.),
-                      ωμprior  ::NTuple{2,Float64} = (0.,10.),
+                      ω1prior  ::NTuple{2,Float64} = (0.,10.),
+                      ω0prior  ::NTuple{2,Float64} = (0.,10.),
                       σ²prior  ::Float64           = 1e-1,
                       λprior   ::Float64           = 1e-1,
                       out_file ::String            = "compete_results",
@@ -43,7 +43,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                       ω0i      ::Float64           = 0.,
                       σ²i      ::Float64           = 1.,
                       stbrl    ::Float64           = 1.,
-                      fix_ωλ_ωμ::Bool              = true)
+                      fix_ω1_ω0::Bool              = true)
 
   print_with_color(:green, "Data successfully processed", bold = true)
 
@@ -82,8 +82,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const nlogs = fld(niter,nthin)         # number of logged iterations
   const iter  = zeros(Float64, nlogs)             # iterations
   const ωx    = zeros(Float64, nlogs)             # trait competition parameter
-  const ωλ    = zeros(Float64, nlogs)             # colonization competition parameter
-  const ωμ    = zeros(Float64, nlogs)             # extinction competition parameter
+  const ω1    = zeros(Float64, nlogs)             # colonization competition parameter
+  const ω0    = zeros(Float64, nlogs)             # extinction competition parameter
   const σ²    = zeros(Float64, nlogs)             # drift parameter
   const λs    = zeros(Float64, nlogs, 2)          # rate parameters
   const h     = zeros(Float64, nlogs)             # likelihood
@@ -158,24 +158,24 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # make likelihood and prior functions
   total_llf      = makellf(δt, Yc, ntip, wcol, narea)
   λupd_llf       = makellf_λ_upd(Yc, δt, narea)
-  ωλμupd_llf     = makellf_ωλμ_upd(Yc, δt, narea)
+  ω10upd_llf     = makellf_ω10_upd(Yc, δt, narea)
   Xupd_llf       = makellf_Xupd(δt, narea)
   Rupd_llf       = makellf_Rupd(δt, narea)
   σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
 
   # number of free parameters
-  # number of xnodes + λ1 + λ0 + σ² + ωx + ωλ + ωμ
+  # number of xnodes + λ1 + λ0 + σ² + ωx + ω1 + ω0
   const np = length(wXp) + 6
 
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
-      λupd_llf, ωλμupd_llf, Xupd_llf, Rupd_llf, σ²ωxupd_llf, biogeo_upd_iid, 
+      λupd_llf, ω10upd_llf, Xupd_llf, Rupd_llf, σ²ωxupd_llf, biogeo_upd_iid, 
       Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
-      weight, λprior, ωxprior, ωλprior, ωμprior, σ²prior, fix_ωλ_ωμ, np, nburn)
+      weight, λprior, ωxprior, ω1prior, ω0prior, σ²prior, fix_ω1_ω0, np, nburn)
 
   # log likelihood and prior
   h[1]  = llc::Float64
@@ -207,7 +207,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # progess bar
   p  = Progress(niter, 5, "running MCMC...", 20)
 
-  if fix_ωλ_ωμ
+  if fix_ω1_ω0
     const pv      = append!(collect(1:np),
                             repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
@@ -286,10 +286,10 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         llc, prc, ωxc = mhr_upd_ωx(ωxc, Xc, σ²c, llc, prc, ptn[2], 
                                    linavg, ωxprior, σ²ωxupd_llf)
 
-      #update ωλ
+      #update ω1
       elseif up == 3
-        llc, prc, ω1c = mhr_upd_ωλ(ω1c, λc, ω0c, Yc, llc, prc, ptn[3], 
-                                   linavg, lindiff, ωλprior, ωλμupd_llf)
+        llc, prc, ω1c = mhr_upd_ω1(ω1c, λc, ω0c, Yc, llc, prc, ptn[3], 
+                                   linavg, lindiff, ω1prior, ω10upd_llf)
 
         # which internal node to update
         if rand() < 0.4
@@ -316,11 +316,11 @@ function compete_mcmc(Xc       ::Array{Float64,2},
           end
         end
 
-      # update ωμ      
+      # update ω0      
       else
 
-        llc, prc, ω0c = mhr_upd_ωμ(ω0c, λc, ω1c, Yc, llc, prc, ptn[4],
-                                    linavg, lindiff, ωμprior, ωλμupd_llf)
+        llc, prc, ω0c = mhr_upd_ω0(ω0c, λc, ω1c, Yc, llc, prc, ptn[4],
+                                    linavg, lindiff, ω0prior, ω10upd_llf)
 
         # which internal node to update
         if rand() < 0.4
@@ -359,8 +359,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         setindex!(h,    llc, lit)
         setindex!(o,    prc, lit)
         setindex!(ωx,   ωxc, lit)
-        setindex!(ωλ,   ω1c, lit)
-        setindex!(ωμ,   ω0c, lit)
+        setindex!(ω1,   ω1c, lit)
+        setindex!(ω0,   ω0c, lit)
         setindex!(σ²,   σ²c, lit)
         setindex!(pc, Pc(f_λ(λc[1],ω1c,1.0), f_λ(λc[2],ω0c,1.0), max_δt), lit)
         for j = eachindex(λc)
@@ -398,7 +398,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     """)
   end
 
-  R = hcat(iter, h, o, ωx, ωλ, ωμ, σ², λs, pc)
+  R = hcat(iter, h, o, ωx, ω1, ω0, σ², λs, pc)
 
   # add column names
   col_nam = ["Iteration", "Likelihood", "Prior", "Trait_competition", 

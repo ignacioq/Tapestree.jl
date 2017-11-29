@@ -292,7 +292,7 @@ end
 
 Make likelihood function for when updating ω1 & ω0.
 """
-function makellf_ωλμ_upd(Y   ::Array{Int64,3},
+function makellf_ω10_upd(Y   ::Array{Int64,3},
                          δt   ::Vector{Float64},
                          narea::Int64)
 
