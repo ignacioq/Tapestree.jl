@@ -79,18 +79,24 @@ to call **ape** tree reading capabilities.
 """
 function read_tree(tree_file::String)
 
-  tree = reval("""
-                library(\"ape\")
-                tree    <- read.tree('$tree_file') 
-                tree    <- reorder(tree)
-                """)
+  str = reval("""
+              library(\"ape\")
+              tree     <- read.tree('$tree_file') 
+              tree     <- reorder(tree)
+              edge     <- .subset2(tree,'edge')
+              Nnode    <- .subset2(tree,'Nnode')
+              tiplabel <- .subset2(tree,'tip.label')
+              edlength <- .subset2(tree,'edge.length')
+              list(edge,Nnode,tiplabel,edlength)
+              """)
 
-  edge     = rcopy(tree[1])
+  edge     = rcopy(str[1])
   edge     = convert(Array{Int64},edge)
-  Nnode    = rcopy(tree[2])
+  Nnode    = rcopy(str[2])
   Nnode    = convert(Int64,Nnode)
-  tiplabel = rcopy(tree[3])
-  edlength = rcopy(tree[4])
+  tiplabel = rcopy(str[3])
+  edlength = rcopy(str[4])
+  edlength = convert(Array{Float64},edlength)
 
   tree = rtree(edge, edlength, tiplabel, Nnode)
 
