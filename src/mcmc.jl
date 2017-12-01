@@ -145,7 +145,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const areaoc = zeros(Int64, m, narea)
   const linavg = zeros(m, ntip)
 
-  area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m)
+  area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
 
   # estimate current lineage specific means
   const lindiff = zeros(m, ntip, narea)

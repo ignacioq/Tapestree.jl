@@ -14,6 +14,7 @@ May 15 2017
 
 
 
+
 """
     area_lineage_means!(AA::Array{Float64,2}, LA::Array{Float64,2}, X::Array{Float64,2}, Y::Array{Int64,3}, wcol::Array{Array{Int64,1},1}, m::Int64)
 
@@ -22,31 +23,26 @@ absence of species and linage means according
 to area averages.
 """
 function area_lineage_means!(AA  ::Array{Float64,2}, 
-                             LA  ::Array{Float64,2},
-                             AO  ::Array{Int64,2},
-                             X   ::Array{Float64,2}, 
-                             Y   ::Array{Int64,3}, 
-                             wcol::Array{Array{Int64,1},1},
-                             m   ::Int64)
+                             LA   ::Array{Float64,2},
+                             AO   ::Array{Int64,2},
+                             X    ::Array{Float64,2}, 
+                             Y    ::Array{Int64,3}, 
+                             wcol ::Array{Array{Int64,1},1},
+                             m    ::Int64,
+                             narea::Int64)
 
   @inbounds begin
 
-    for k in Base.OneTo(m) 
-      
-      wck = wcol[k]::Array{Int64,1}
-      Sk  = Y[k,wck,:]::Array{Int64,2}
-      xx  = X[k,wck]::Array{Float64,1}
-    
-      nrow, ncol = size(Sk)::Tuple{Int64,Int64}
+    for k in Base.OneTo(m)
 
       # area averages
-      for j in Base.OneTo(ncol)
+      for j in Base.OneTo(narea)
         AA[k,j] = 0.0::Float64
         sumY    = 0.0::Float64
         AO[k,j] = 0::Int64
-        for i in Base.OneTo(nrow)
-          if Sk[i,j] == 1
-            AA[k,j] += xx[i]::Float64
+        for i in wcol[k]
+          if Y[k,i,j] == 1
+            AA[k,j] += X[k,i]::Float64
             sumY    += 1.0::Float64
             AO[k,j]  = 1::Int64
           end
@@ -56,17 +52,17 @@ function area_lineage_means!(AA  ::Array{Float64,2},
       end
 
       # lineage average
-      for i = Base.OneTo(nrow)
-        LA[k,wck[i]] = 0.0::Float64
-        sden         = 0.0::Float64
-        for j = Base.OneTo(ncol) 
-          if Sk[i,j] == 1
-            LA[k,wck[i]] += AA[k,j]::Float64
-            sden         += 1.0::Float64
+      for i = wcol[k]
+        LA[k,i] = 0.0::Float64
+        sden    = 0.0::Float64
+        for j = Base.OneTo(narea) 
+          if Y[k,i,j] == 1
+            LA[k,i] += AA[k,j]::Float64
+            sden    += 1.0::Float64
           end
         end
         
-        LA[k,wck[i]] /= sden::Float64
+        LA[k,i] /= sden::Float64
       end
     end
 
@@ -74,6 +70,7 @@ function area_lineage_means!(AA  ::Array{Float64,2},
 
   nothing
 end
+
 
 
 

@@ -214,7 +214,7 @@ function burn_compete(total_llf,
 
             Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
 
-            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m)
+            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
             linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
             llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
@@ -330,7 +330,7 @@ function burn_compete(total_llf,
 
             Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
 
-            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m)
+            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
             linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
             llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
@@ -406,7 +406,7 @@ function burn_compete(total_llf,
 
             Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
 
-            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m)
+            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
             linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
             llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
