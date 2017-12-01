@@ -13,6 +13,8 @@ May 01 2017
 
 
 
+
+
 """
     bit_rejsam!(Y::Array{Int64,3}, idx::Array{Int64,1}, sf::Int64, λ1::Float64,  λ0::Float64,  cumts::Array{Float64,1})
 
@@ -285,7 +287,7 @@ function bit_rejsam!(Y     ::Array{Int64,3},
   while Y[idx_end] != sf 
 
     ntries += 1
-    if ntries > 10_000_000
+    if ntries > 3_000_000
       # warn("bitrejsam inefficient, sampling uniformly")
       Y[rand(idx):idx[end]] = Y[idx[1]] ==  0 ? 1 : 0
     end

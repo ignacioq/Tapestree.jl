@@ -174,35 +174,23 @@ function ifextY(Y      ::Array{Int64,3},
 
     for k in triad
 
-      lv = length(bridx_a[1][k])::Int64
-
-      bg = Array{Int64,2}(narea, lv)
-
-      # time is horizontal
-      for j = Base.OneTo(narea)
-        bg[j,:] = Y[bridx_a[j][k]]::Array{Int64,1}
-      end
-        
-      # if gone extinct during δt
-      for j = Base.OneTo(lv-1)
+      for i = Base.OneTo((length(bridx_a[1][k]::UnitRange{Int64})-1)::Int64)
         s_e = 0::Int64            # count current areas
         s_c = 0::Int64            # count area changes
-        for i = Base.OneTo(narea)
-          s_e += bg[i,j]::Int64
-          if bg[i,j] != bg[i,j+1]::Int64
-            s_c += 1
-          end 
-        end          
-        if s_e == 0               #if extinct
-          return true::Bool
+
+        for j = Base.OneTo(narea)
+          s_e += Y[bridx_a[j][k][i]]::Int64
+          if Y[bridx_a[j][k][i]]::Int64 != Y[bridx_a[j][k][i+1]]::Int64
+            s_c += 1::Int64
+          end
         end
-        if s_c > 1                #if more than one change  
+
+        if s_e::Int64 == 0::Int64 || s_c::Int64 > 1::Int64
           return true::Bool
         end
       end
-
     end
-  
+
   end
 
   return false::Bool
