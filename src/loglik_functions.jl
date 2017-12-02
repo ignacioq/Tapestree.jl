@@ -530,29 +530,25 @@ function makellf_Xupd(δt   ::Vector{Float64},
 
       # loop for parent nodes
       if k != 1               # if not the root
-        for i in eachindex(wckm1)
-          wci = wckm1[i]::Int64
-
+        for i = eachindex(wckm1)
           ll += -0.5*log(δt[k-1]*σ²) -
-                abs2(X[k,wci] -
-                    (X[k-1,wci] + E_sde(X[k-1,wci], lakm1[i], ωx, δt[k-1]))
+                abs2(X[k,wckm1[i]] -
+                    (X[k-1,wckm1[i]] + E_sde(X[k-1,wckm1[i]], lakm1[i], ωx, δt[k-1]))
                 )/(2.0*δt[k-1]*σ²)::Float64
         end
       end
 
       # loop for daughter nodes
-      for i=eachindex(wck)
-        wci = wck[i]::Int64
-
+      for i = eachindex(wck)
         # trait likelihood
         ll += -0.5*log(δt[k]*σ²) -
-              abs2(X[(k+1),wci] -
-                  (X[k,wci] + E_sde(X[k,wci], lak[i], ωx, δt[k]))
+              abs2(X[(k+1),wck[i]] -
+                  (X[k,wck[i]] + E_sde(X[k,wck[i]], lak[i], ωx, δt[k]))
               )/(2.0*δt[k]*σ²)::Float64
 
         # biogeograhic likelihoods
-        for j=Base.OneTo(narea)
-          ll += bitbitll(Y[k,wci,j], Y[k+1,wci,j], 
+        for j = Base.OneTo(narea)
+          ll += bitbitll(Y[k,wck[i],j], Y[k+1,wck[i],j], 
                           λ[1], λ[2], ω1, ω0, ldk[i,j], δt[k])::Float64
         end
       end
@@ -596,17 +592,16 @@ function makellf_Rupd(δt   ::Vector{Float64},
 
       # loop for daughter nodes
       for i=eachindex(wck)
-        wci = wck[i]::Int64
 
         # trait likelihood
         ll += -0.5*log(δt[k]*σ²) -
-              abs2(X[(k+1),wci] -
-                  (X[k,wci] + E_sde(X[k,wci], lak[i], ωx, δt[k]))
+              abs2(X[(k+1),wck[i]] -
+                  (X[k,wck[i]] + E_sde(X[k,wck[i]], lak[i], ωx, δt[k]))
               )/(2.0*δt[k]*σ²)::Float64
 
         # biogeograhic likelihoods
         for j = Base.OneTo(narea)
-          ll += bitbitll(Y[k,wci,j], Y[k+1,wci,j], 
+          ll += bitbitll(Y[k,wck[i],j], Y[k+1,wck[i],j], 
                          λ[1], λ[2], ω1, ω0, ldk[i,j], δt[k])::Float64
         end
       end
