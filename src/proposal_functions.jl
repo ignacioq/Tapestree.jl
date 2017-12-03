@@ -278,22 +278,19 @@ function createhists!(λ      ::Array{Float64,1},
       setindex!(Y, brs[pr,2,j], bridx_a[j][d1][1])
       setindex!(Y, brs[pr,2,j], bridx_a[j][d2][1])
 
-      λj1 = λ[1]::Float64
-      λj2 = λ[2]::Float64
-
       if pr < nedge
         # for parent branch
         bit_rejsam!(Y, bridx_a[j][pr], brs[pr,2,j], 
-                    λj1, ω1, λj2, ω0, avg_Δx[pr,j], brδt[pr])
+                    λ[1], ω1, λ[2], ω0, avg_Δx[pr,j], brδt[pr])
       end
 
       # for daughter branch 1
       bit_rejsam!(Y, bridx_a[j][d1], brs[d1,2,j], 
-                  λj1, ω1, λj2, ω0, avg_Δx[d1,j], brδt[d1])
+                  λ[1], ω1, λ[2], ω0, avg_Δx[d1,j], brδt[d1])
 
       # for daughter branch 2
       bit_rejsam!(Y, bridx_a[j][d2], brs[d2,2,j], 
-                  λj1, ω1, λj2, ω0, avg_Δx[d2,j], brδt[d2])
+                  λ[1], ω1, λ[2], ω0, avg_Δx[d2,j], brδt[d2])
 
     end
 
@@ -320,9 +317,9 @@ function samplenode!(λ::Array{Float64,1},
                      narea::Int64)
   @inbounds begin
     
-    brl_pr = brl[pr]::Float64
-    brl_d1 = brl[d1]::Float64 
-    brl_d2 = brl[d2]::Float64 
+    const brl_pr = brl[pr]::Float64
+    const brl_d1 = brl[d1]::Float64 
+    const brl_d2 = brl[d2]::Float64 
 
     for j = Base.OneTo(narea)
 

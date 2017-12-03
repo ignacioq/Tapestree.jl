@@ -228,7 +228,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                              brδt, brl, wcol, Ync1, Ync2, 
                              total_llf, biogeo_upd_iid)
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
-                             λlessthan, narea, Xupd_llf, Rupd_llf)
+                             λlessthan, narea, ntip, Xupd_llf, Rupd_llf)
 
   #start MCMC
   for it = Base.OneTo(niter)
@@ -243,7 +243,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
         Xc, llc, areavg, linavg, lindiff = mhr_upd_X(up, Xc, Yc, λc, 
                                             ωxc, ω1c, ω0c, σ²c, llc, 
-                                            areavg, linavg, lindiff)
+                                            areavg, linavg, lindiff, areaoc)
 
       #randomly select λ to update and branch histories
       elseif up > 4 && up <= λlessthan

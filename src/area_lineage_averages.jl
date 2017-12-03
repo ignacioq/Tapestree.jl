@@ -127,17 +127,6 @@ end
 
 
 
-aak = 
-
-
-
-aak, lak, ldk    = Xupd_linavg(43,wcol[43], X, Y, narea)
-aak2, lak2, ldk2 = Xupd_linavg2(43,wcol[43], X, Y, narea)
-
-
-@benchmark Xupd_linavg( 10,wcol[10], X, Y, narea)
-@benchmark Xupd_linavg2(10,wcol[10], X, Y, narea)
-
 
 """
     Xupd_linavg(k::Int64, wck::Array{Int64,1}, X::Array{Float64,2}, Y::Array{Int64,3}, narea::Int64)
@@ -145,35 +134,34 @@ aak2, lak2, ldk2 = Xupd_linavg2(43,wcol[43], X, Y, narea)
 Re-estimate lineage specific means 
 for a branch update.
 """
-function Xupd_linavg(k    ::Int64, 
-                     wck  ::Array{Int64,1},
-                     X    ::Array{Float64,2},
-                     Y    ::Array{Int64,3},
-                     narea::Int64)
+function Xupd_linavg!(aa   ::Array{Float64,1},
+                      la   ::Array{Float64,1},
+                      ld   ::Array{Float64,2},
+                      ao   ::Array{Int64,2},
+                      k    ::Int64, 
+                      wck  ::Array{Int64,1},
+                      X    ::Array{Float64,2},
+                      Y    ::Array{Int64,3},
+                      narea::Int64)
   @inbounds begin
-
-    const nsp = endof(wck)::Int64
-    const aa  = zeros(Float64, narea)
-    const ao  = zeros(Int64,   narea)
-    const la  = zeros(Float64, nsp)
-    const ld  = Array{Float64}(nsp, narea)
 
     for j = Base.OneTo(narea)
       sumY  = 0.0::Float64
+      aa[j] = 0.0::Float64
       for i = wck
         if Y[k,i,j] == 1
           aa[j] += X[k,i]::Float64
           sumY  += 1.0::Float64
-          ao[j]  = 1::Int64
         end
       end
       aa[j] /= (sumY == 0.0 ? 1.0 : sumY)::Float64
     end
 
-    for i = Base.OneTo(nsp)
+    fill!(la, 0.0) # not sure if can prescind of this
+    for i = wck
       sden  = 0.0::Float64
       for j = Base.OneTo(narea)
-        if Y[k,wck[i],j] == 1
+        if Y[k,i,j] == 1
           la[i] += aa[j]
           sden  += 1.0
         end
@@ -181,22 +169,13 @@ function Xupd_linavg(k    ::Int64,
       la[i] /= sden::Float64
     end
 
-    for j = Base.OneTo(narea), i = Base.OneTo(nsp)
-      setindex!(ld, (ao[j] == 0 ? 0.0 : abs(X[k,wck[i]] - aa[j])), i, j)
+    fill!(ld, NaN) # not sure if can prescind of this
+    for j = Base.OneTo(narea), i = wck
+      setindex!(ld, (ao[k,j] == 0 ? 0.0 : abs(X[k,i] - aa[j])), i, j)
     end
 
   end
 
-
-  return aa, la, ld
+  nothing
 end
-
-
-
-
-
-
-
-
-
 

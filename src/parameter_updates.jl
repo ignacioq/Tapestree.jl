@@ -153,8 +153,13 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         wXp      ::Array{Int64,1},
                         λlessthan::Int64,
                         narea    ::Int64,
+                        ntip     ::Int64,
                         Xupd_llf ::Function,
                         Rupd_llf ::Function)
+
+  const aak = zeros(Float64, narea)
+  const lak = zeros(Float64, ntip)
+  const ldk = zeros(Float64, ntip, narea)
 
   function f(up     ::Int64,
              Xc     ::Array{Float64,2},
@@ -167,22 +172,24 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
              llc    ::Float64,
              areavg ::Array{Float64,2},
              linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3})
+             lindiff::Array{Float64,3},
+             areaoc ::Array{Int64,2})
 
-    upx = wXp[up - λlessthan]::Int64
+    const upx = wXp[up - λlessthan]::Int64
 
-    Xp      = copy(Xc)::Array{Float64,2}
-    Xp[upx] = addupt(Xc[upx], ptn[up])::Float64      # update X
+    const Xp      = copy(Xc)::Array{Float64,2}
+    const Xp[upx] = addupt(Xc[upx], ptn[up])::Float64      # update X
 
-    k     = rowind(upx, m)::Int64
-    wck   = wcol[k]::Array{Int64,1}
+    const k     = rowind(upx, m)::Int64
+    const wck   = wcol[k]::Array{Int64,1}
 
     if ∈(upx, Xnc1)                         # if an internal node
       Xp[Xnc2] = Xp[Xnc1]::Array{Float64,1} 
     end
 
     # calculate new averages
-    aak, lak, ldk = Xupd_linavg(k, wck, Xp, Yc, narea)
+    Xupd_linavg!(aak, lak, ldk, areaoc, k, wck, Xp, Yc, narea)
+
 
     if upx == 1  # if root
       llr = (Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
@@ -204,9 +211,9 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       Xc   = Xp
       llc += llr
       @inbounds begin
-        areavg[k,:]      = aak
-        linavg[k,wck]    = lak
-        lindiff[k,wck,:] = ldk
+        areavg[k,:]    = aak
+        linavg[k,:]    = lak
+        lindiff[k,:,:] = ldk
        end
     end
 

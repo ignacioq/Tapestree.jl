@@ -92,6 +92,10 @@ function burn_compete(total_llf,
   # parameter location for λ
   const λlessthan = 6
 
+  const aak = zeros(Float64, narea)
+  const lak = zeros(Float64, ntip)
+  const ldk = zeros(Float64, ntip, narea)
+
   # progress bar
   p = Progress(nburn + 1, 5, "burning...", 20)
 
@@ -143,7 +147,7 @@ function burn_compete(total_llf,
         end
 
         # calculate new averages
-        aak, lak, ldk = Xupd_linavg(k, wck, Xp, Yc, narea)
+        Xupd_linavg!(aak, lak, ldk, areaoc, k, wck, Xp, Yc, narea)
 
         if upx == 1  # if root
           llr = Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
@@ -163,9 +167,9 @@ function burn_compete(total_llf,
           Xc   = Xp::Array{Float64,2}
           llc += llr::Float64
           @inbounds begin
-            areavg[k,:]      = aak
-            linavg[k,wck]    = lak
-            lindiff[k,wck,:] = ldk
+            areavg[k,:]    = aak
+            linavg[k,:]    = lak
+            lindiff[k,:,:] = ldk
             lac[up] += 1   # log acceptance
           end
         end
