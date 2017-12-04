@@ -221,6 +221,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
     const lparvec = length(parvec)
   end
 
+  const upvector = rand(parvec,lparvec)
+
   # create parameter update functions
 
   mhr_upd_λ = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llf)
@@ -233,8 +235,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   #start MCMC
   for it = Base.OneTo(niter)
 
-    # Update vector
-    upvector = rand(parvec,lparvec)::Array{Int64,1}
+    # Update update vector
+    shuffle!(upvector)
 
     for up = upvector
 

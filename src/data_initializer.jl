@@ -182,7 +182,7 @@ function initialize_data(tip_values::Dict{Int64,Float64},
 
   # initialize data augmentation matrices
   X = fill(NaN, length(ets), n)
-  B = deepcopy(X)
+  B = copy(X)
   Y = fill(23, length(ets), n, nareas)
 
   # which rows are branching points

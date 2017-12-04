@@ -122,12 +122,13 @@ function burn_compete(total_llf,
       "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1, "\n")
   end
 
+  const upvector = rand(parvec,lparvec)
 
   #start brunin
   for it = Base.OneTo(nburn)
 
     # Update vector
-    upvector = rand(parvec,lparvec)
+    shuffle!(upvector)
 
     for up = upvector
 

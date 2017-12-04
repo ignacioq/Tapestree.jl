@@ -464,7 +464,7 @@ Returns indices for columns along `m` timesteps.
 """
 function create_wcol(X::Array{Float64,2})
 
-  X_fornan  = deepcopy(X)
+  X_fornan  = copy(X)
   wNaN_x    = .!isnan.(X_fornan[Base.OneTo(end),:])
 
   # make ragged array for non-NaN columns
