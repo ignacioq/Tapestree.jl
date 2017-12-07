@@ -37,6 +37,22 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
 
 
 """
+    logdnorm_tc(x::Float64, normean::Float64, sig::Float64)
+
+Compute the logarithmic transformation of the 
+**Normal** density with mean `μ` and variance `σ²` for `x`, up to a constant
+"""
+function logdnorm_tc(x::Float64, normean::Float64, sig::Float64)
+  @inbounds @fastmath begin
+    return -0.5*log(sig) - abs2(x - normean)/(2.0*sig)::Float64
+  end
+end
+
+
+
+
+
+"""
     logdhcau(x::Float64, scl::Float64)
 
 Compute the logarithmic transformation of the 
@@ -66,8 +82,7 @@ logdhcau1(x::Float64) =
 Generate one sample from a random **Exponential** variable
 with mean `λ`. 
 """
-rexp(λ::Float64) = @fastmath (log(rand()) * -(1.0/λ))::Float64
-
+rexp(λ::Float64) = (randexp()/λ)::Float64
 
 
 

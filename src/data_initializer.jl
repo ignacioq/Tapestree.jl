@@ -181,9 +181,9 @@ function initialize_data(tip_values::Dict{Int64,Float64},
   const δt = abs.(diff(ets))
 
   # initialize data augmentation matrices
-  X = fill(NaN, length(ets), n)
-  B = copy(X)
-  Y = fill(23, length(ets), n, nareas)
+  const X = fill(NaN, length(ets), n)
+  const B = copy(X)
+  const Y = fill(23, length(ets), n, nareas)
 
   # which rows are branching points
   wch = indexin(bts, ets)
@@ -225,7 +225,7 @@ function initialize_data(tip_values::Dict{Int64,Float64},
 
   coup[tree.nnod,1:2] = find(alive .> 0)
  
-  ncoup = zeros(Int64,tree.nnod,2)
+  const ncoup = zeros(Int64,tree.nnod,2)
 
   for j=Base.OneTo(tree.nnod), i=1:2
     ncoup[j,i] = vecind(coup[j,3],coup[j,i],length(ets))

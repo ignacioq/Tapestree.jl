@@ -483,10 +483,11 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
 
       # trait likelihood
       for j=Base.OneTo(ntip), i=w23[j]
-        ll += -0.5*log(δt[i]*σ²) -
-              abs2(X[(i+1),j] -
-                  (X[i,j] + E_sde(X[i,j], la[i,j], ωx, δt[i])))/
-              (2.0*δt[i]*σ²)::Float64
+
+        ll += ldnorm_tc(X[(i+1),j], 
+                        X[i,j] + 
+                        E_sde(X[i,j], la[i,j], ωx, δt[i]), 
+                        δt[i]*σ²)
       end
     
     end
@@ -531,20 +532,20 @@ function makellf_Xupd(δt   ::Vector{Float64},
       # loop for parent nodes
       if k != 1               # if not the root
         for i = eachindex(wckm1)
-          ll += -0.5*log(δt[k-1]*σ²) -
-                abs2(X[k,wckm1[i]] -
-                    (X[k-1,wckm1[i]] + E_sde(X[k-1,wckm1[i]], lakm1[i], ωx, δt[k-1]))
-                )/(2.0*δt[k-1]*σ²)::Float64
+          ll += ldnorm_tc(X[k,wckm1[i]], 
+                          X[k-1,wckm1[i]] + 
+                          E_sde(X[k-1,wckm1[i]], lakm1[i], ωx, δt[k-1]), 
+                          δt[k-1]*σ²)
         end
       end
 
       # loop for daughter nodes
       for i = eachindex(wck)
         # trait likelihood
-        ll += -0.5*log(δt[k]*σ²) -
-              abs2(X[(k+1),wck[i]] -
-                  (X[k,wck[i]] + E_sde(X[k,wck[i]], lak[i], ωx, δt[k]))
-              )/(2.0*δt[k]*σ²)::Float64
+        ll += ldnorm_tc(X[(k+1),wck[i]], 
+                        X[k,wck[i]] + 
+                        E_sde(X[k,wck[i]], lak[i], ωx, δt[k]), 
+                        sδt[k]*σ²)
 
         # biogeograhic likelihoods
         for j = Base.OneTo(narea)
@@ -560,6 +561,11 @@ function makellf_Xupd(δt   ::Vector{Float64},
 
   return f
 end
+
+
+
+
+
 
 
 
@@ -643,7 +649,6 @@ end
 
 
 
-
 """
     evll(t::Float64, λ::Float64)
 
@@ -661,7 +666,6 @@ evll(t::Float64, λ::Float64) = @fastmath (log(λ) - (λ * t))::Float64
 Return log-likelihood for nonevents.
 """
 nell(t::Float64, λ::Float64) = (-1 * λ * t)::Float64
-
 
 
 

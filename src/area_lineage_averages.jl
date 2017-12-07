@@ -12,6 +12,75 @@ May 15 2017
 =#
 
 
+AA = copy(areavg)
+LA = copy(linavg)
+AO = copy(areaoc)
+
+const Ycc = copy(Yc)
+const Xcc = copy(Xc)
+
+
+@benchmark area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
+@benchmark area_lineage_means2!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
+
+@benchmark area_lineage_means2!(areavg, linavg, areaoc, Xcc, Ycc, wcol, m, narea)
+
+
+function area_lineage_means2!(AA   ::Array{Float64,2}, 
+                             LA   ::Array{Float64,2},
+                             AO   ::Array{Int64,2},
+                             X    ::Array{Float64,2}, 
+                             Y    ::Array{Int64,3}, 
+                             wcol ::Array{Array{Int64,1},1},
+                             m    ::Int64,
+                             narea::Int64)
+
+  @inbounds begin
+
+    for k in Base.OneTo(m)
+
+      # area averages
+      for j in Base.OneTo(narea)
+        AA[k,j] = 0.0::Float64
+        sumY    = 0.0::Float64
+        AO[k,j] = 0::Int64
+
+
+        for i in wcol[k]::Array{Int64,1}
+
+
+          if Y[k,i,j]::Int64 == 1
+            AA[k,j] += X[k,i]::Float64
+            sumY    += 1.0::Float64
+            AO[k,j]  = 1::Int64
+          end
+
+        end
+
+        if sumY != zero(Float64)
+          AA[k,j] /= sumY::Float64
+        end
+
+      end
+
+      # lineage average
+      for i = wcol[k]::Array{Int64,1}
+        LA[k,i] = 0.0::Float64
+        sumY    = 0.0::Float64
+        for j = Base.OneTo(narea) 
+          if Y[k,i,j]::Int64 == 1
+            LA[k,i] += AA[k,j]::Float64
+            sumY    += 1.0::Float64
+          end
+        end
+        
+        LA[k,i] /= sumY::Float64
+      end
+    end
+  end
+
+  nothing
+end
 
 
 
@@ -22,7 +91,7 @@ Estimate area means according to presence
 absence of species and linage means according
 to area averages.
 """
-function area_lineage_means!(AA  ::Array{Float64,2}, 
+function area_lineage_means!(AA   ::Array{Float64,2}, 
                              LA   ::Array{Float64,2},
                              AO   ::Array{Int64,2},
                              X    ::Array{Float64,2}, 
