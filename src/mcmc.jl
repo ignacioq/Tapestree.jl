@@ -156,7 +156,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
 
   # make likelihood and prior functions
-  total_llf      = makellf(δt, Yc, ntip, wcol, narea)
+  total_llf      = makellf(δt, Yc, ntip, narea)
   λupd_llf       = makellf_λ_upd(Yc, δt, narea)
   ω10upd_llf     = makellf_ω10_upd(Yc, δt, narea)
   Xupd_llf       = makellf_Xupd(δt, narea)

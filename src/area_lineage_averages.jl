@@ -12,77 +12,6 @@ May 15 2017
 =#
 
 
-AA = copy(areavg)
-LA = copy(linavg)
-AO = copy(areaoc)
-
-const Ycc = copy(Yc)
-const Xcc = copy(Xc)
-
-
-@benchmark area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
-@benchmark area_lineage_means2!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
-
-@benchmark area_lineage_means2!(areavg, linavg, areaoc, Xcc, Ycc, wcol, m, narea)
-
-
-function area_lineage_means2!(AA   ::Array{Float64,2}, 
-                             LA   ::Array{Float64,2},
-                             AO   ::Array{Int64,2},
-                             X    ::Array{Float64,2}, 
-                             Y    ::Array{Int64,3}, 
-                             wcol ::Array{Array{Int64,1},1},
-                             m    ::Int64,
-                             narea::Int64)
-
-  @inbounds begin
-
-    for k in Base.OneTo(m)
-
-      # area averages
-      for j in Base.OneTo(narea)
-        AA[k,j] = 0.0::Float64
-        sumY    = 0.0::Float64
-        AO[k,j] = 0::Int64
-
-
-        for i in wcol[k]::Array{Int64,1}
-
-
-          if Y[k,i,j]::Int64 == 1
-            AA[k,j] += X[k,i]::Float64
-            sumY    += 1.0::Float64
-            AO[k,j]  = 1::Int64
-          end
-
-        end
-
-        if sumY != zero(Float64)
-          AA[k,j] /= sumY::Float64
-        end
-
-      end
-
-      # lineage average
-      for i = wcol[k]::Array{Int64,1}
-        LA[k,i] = 0.0::Float64
-        sumY    = 0.0::Float64
-        for j = Base.OneTo(narea) 
-          if Y[k,i,j]::Int64 == 1
-            LA[k,i] += AA[k,j]::Float64
-            sumY    += 1.0::Float64
-          end
-        end
-        
-        LA[k,i] /= sumY::Float64
-      end
-    end
-  end
-
-  nothing
-end
-
-
 
 """
     area_lineage_means!(AA::Array{Float64,2}, LA::Array{Float64,2}, X::Array{Float64,2}, Y::Array{Int64,3}, wcol::Array{Array{Int64,1},1}, m::Int64)
@@ -102,38 +31,38 @@ function area_lineage_means!(AA   ::Array{Float64,2},
 
   @inbounds begin
 
-    for k in Base.OneTo(m)
+    for k = Base.OneTo(m)
 
       # area averages
-      for j in Base.OneTo(narea)
+      for j = Base.OneTo(narea)
         AA[k,j] = 0.0::Float64
         sumY    = 0.0::Float64
         AO[k,j] = 0::Int64
-        for i in wcol[k]::Array{Int64,1}
-          if Y[k,i,j] == 1
+        @simd for i = wcol[k]::Array{Int64,1}
+          if Y[k,i,j]::Int64 == 1
             AA[k,j] += X[k,i]::Float64
             sumY    += 1.0::Float64
             AO[k,j]  = 1::Int64
           end
         end
-        AA[k,j] /= (sumY == 0.0 ? 1.0 : sumY)::Float64
+        if sumY != 0.0
+          AA[k,j] /= sumY::Float64
+        end
       end
 
       # lineage average
       for i = wcol[k]::Array{Int64,1}
         LA[k,i] = 0.0::Float64
-        sden    = 0.0::Float64
-        for j = Base.OneTo(narea) 
-          if Y[k,i,j] == 1
+        sumY    = 0.0::Float64
+        @simd for j = Base.OneTo(narea) 
+          if Y[k,i,j]::Int64 == 1
             LA[k,i] += AA[k,j]::Float64
-            sden    += 1.0::Float64
+            sumY    += 1.0::Float64
           end
         end
-        
-        LA[k,i] /= sden::Float64
+        LA[k,i] /= sumY::Float64
       end
     end
-
   end
 
   nothing
@@ -217,25 +146,27 @@ function Xupd_linavg!(aa   ::Array{Float64,1},
     for j = Base.OneTo(narea)
       sumY  = 0.0::Float64
       aa[j] = 0.0::Float64
-      for i = wck
+      @simd for i = wck
         if Y[k,i,j] == 1
           aa[j] += X[k,i]::Float64
           sumY  += 1.0::Float64
         end
       end
-      aa[j] /= (sumY == 0.0 ? 1.0 : sumY)::Float64
+      if sumY != 0.0
+        aa[j] /= sumY::Float64
+      end
     end
 
     fill!(la, 0.0) # not sure if can prescind of this
     for i = wck
-      sden  = 0.0::Float64
-      for j = Base.OneTo(narea)
+      sumY  = 0.0::Float64
+      @simd for j = Base.OneTo(narea)
         if Y[k,i,j] == 1
           la[i] += aa[j]
-          sden  += 1.0
+          sumY  += 1.0
         end
       end
-      la[i] /= sden::Float64
+      la[i] /= sumY::Float64
     end
 
     fill!(ld, NaN) # not sure if can prescind of this

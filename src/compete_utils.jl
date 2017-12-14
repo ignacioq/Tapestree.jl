@@ -35,20 +35,14 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
 
 
 
-
 """
-    logdnorm_tc(x::Float64, normean::Float64, sig::Float64)
+    logdnorm_tc(x::Float64, μ::Float64, σ²::Float64)
 
 Compute the logarithmic transformation of the 
 **Normal** density with mean `μ` and variance `σ²` for `x`, up to a constant
 """
-function logdnorm_tc(x::Float64, normean::Float64, sig::Float64)
-  @inbounds @fastmath begin
-    return -0.5*log(sig) - abs2(x - normean)/(2.0*sig)::Float64
-  end
-end
-
-
+logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
+  @fastmath -0.5log(σ²) - abs2(x - μ)/(2.0σ²)::Float64
 
 
 
@@ -491,6 +485,34 @@ function create_wcol(X::Array{Float64,2})
   wcol
 end
 
+
+
+
+
+"""
+    make_trios_rows(Y::Array{Int64,3},
+                  bridx_a::Array{Array{UnitRange{Int64},1},1},
+                  trios::Array{Array{Int64,1},1})
+Create a vector of rows that correspond to each of the trios.
+"""
+function make_trios_rows(Y      ::Array{Int64,3},
+                         bridx_a::Array{Array{UnitRange{Int64},1},1},
+                         trios  ::Array{Array{Int64,1},1})
+
+  const tr_row = UnitRange[]
+
+  for (pr, d1, d2) = trios
+
+    push!(tr_row, colon(minimum(map(minimum, (ind2sub(Y,bridx_a[1][pr])[1],
+                                              ind2sub(Y,bridx_a[1][d1])[1],
+                                              ind2sub(Y,bridx_a[1][d2])[1]))),
+                        maximum(map(maximum, (ind2sub(Y,bridx_a[1][pr])[1],
+                                              ind2sub(Y,bridx_a[1][d1])[1],
+                                              ind2sub(Y,bridx_a[1][d2])[1])))))
+  end
+  
+  return tr_row
+end
 
 
 
