@@ -310,11 +310,11 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
 
       for k = Base.OneTo(narea), j = Base.OneTo(ntip)
         ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                            λc[1], λc[2], ω1p, ω0p, 
+                            λ[1], λ[2], ω1p, ω0p, 
                             lindiff[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64 -
               bitvectorll(Y[wf23[j]:m,j,k], 
-                            λc[1], λc[2], ω1c, ω0c, 
+                            λ[1], λ[2], ω1c, ω0c, 
                             lindiff[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64
       end
