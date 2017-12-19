@@ -280,50 +280,6 @@ end
 
 
 """
-    makellf_ω1μ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
-
-Make likelihood function for when updating ω1 & ω0.
-"""
-function makellf_ω10_upd(Y   ::Array{Int64,3},
-                         δt   ::Vector{Float64},
-                         narea::Int64)
-
-  # which initial non 23
-  const wf23 = Int64[]
-  for j = Base.OneTo(ntip)
-    push!(wf23, findfirst(Y[:,j,1] .!= 23))
-  end
-
-  function f(Y      ::Array{Int64,3}, 
-             λ      ::Array{Float64,1},
-             ω1     ::Float64,
-             ω0     ::Float64,
-             lindiff::Array{Float64,3})
-
-    ll::Float64 = 0.0
-
-    @inbounds begin
-
-      for k = Base.OneTo(narea), j = coloop
-          ll += bitvectorll(Y[w23[j][1]:(w23[j][end]+1),j,k], 
-                            λ[1], λ[2], ω1, ω0, 
-                            lindiff[w23[j],j,k], δt[w23[j]])::Float64
-      end
-
-    end
-
-    return ll
-  end
-
-  return f
-end
-
-
-
-
-
-
-"""
     makellr_ω1μ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
 
 Make likelihood function for when updating ω1 & ω0.
@@ -331,7 +287,8 @@ Make likelihood function for when updating ω1 & ω0.
 function makellr_ω10_upd(Y    ::Array{Int64,3},
                          δt   ::Vector{Float64},
                          narea::Int64,
-                         ntip ::Int64)
+                         ntip ::Int64,
+                         m    ::Int64)
 
   # which is 23 (23 = NaN) in each column
   const wf23 = Int64[]
@@ -369,8 +326,6 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
 
   return f
 end
-
-
 
 
 

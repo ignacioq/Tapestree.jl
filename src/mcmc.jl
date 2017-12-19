@@ -156,9 +156,9 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
 
   # make likelihood and prior functions
-  total_llf      = makellf(δt, Yc, ntip, narea,m)
-  λupd_llr       = makellr_λ_upd(Yc, δt, narea, m)
-  ω10upd_llr     = makellr_ω10_upd(Yc, δt, narea ntip)
+  total_llf      = makellf(δt, Yc, ntip, narea, m)
+  λupd_llr       = makellr_λ_upd(Yc, δt, narea, ntip, m)
+  ω10upd_llr     = makellr_ω10_upd(Yc, δt, narea, ntip, m)
   Xupd_llr       = makellr_Xupd(δt, narea)
   Rupd_llr       = makellr_Rupd(δt[1], narea)
   σ²ωxupd_llr    = makellr_σ²ωxupd(δt, Yc, ntip)  
@@ -212,20 +212,15 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                             repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const parvec  = setdiff(pv,(3:4))
-    const lparvec = length(parvec)
   else
     const parvec  = append!(collect(1:np),
                             repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
     append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
-    const lparvec = length(parvec)
   end
 
-  const upvector = rand(parvec,lparvec)
-
   # create parameter update functions
-
-  mhr_upd_λ = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llf)
+  mhr_upd_λ = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llr)
   mhr_upd_Y = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
                              brδt, brl, wcol, Ync1, Ync2, 
                              total_llf, biogeo_upd_iid)
@@ -236,16 +231,16 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   for it = Base.OneTo(niter)
 
     # Update update vector
-    shuffle!(upvector)
+    shuffle!(parvec)
 
-    for up = upvector
+    for up = parvec
 
       # update X[i]
       if up > λlessthan
 
-        Xc, llc, areavg, linavg, lindiff = mhr_upd_X(up, Xc, Yc, λc, 
-                                            ωxc, ω1c, ω0c, σ²c, llc, 
-                                            areavg, linavg, lindiff, areaoc)
+        llc = mhr_upd_X(up, Xc, Yc, λc, 
+                        ωxc, ω1c, ω0c, σ²c, llc, 
+                        areavg, linavg, lindiff, areaoc)
 
       #randomly select λ to update and branch histories
       elseif up > 4 && up <= λlessthan
@@ -281,17 +276,17 @@ function compete_mcmc(Xc       ::Array{Float64,2},
       # if σ² is updated
       elseif up == 1
         llc, prc, σ²c = mhr_upd_σ²(σ²c, Xc, ωxc, llc, prc, ptn[1], 
-                                   linavg, σ²prior, σ²ωxupd_llf)
+                                   linavg, σ²prior, σ²ωxupd_llr)
 
       # update ωx
       elseif up == 2
         llc, prc, ωxc = mhr_upd_ωx(ωxc, Xc, σ²c, llc, prc, ptn[2], 
-                                   linavg, ωxprior, σ²ωxupd_llf)
+                                   linavg, ωxprior, σ²ωxupd_llr)
 
       #update ω1
       elseif up == 3
         llc, prc, ω1c = mhr_upd_ω1(ω1c, λc, ω0c, Yc, llc, prc, ptn[3], 
-                                   linavg, lindiff, ω1prior, ω10upd_llf)
+                                   linavg, lindiff, ω1prior, ω10upd_llr)
 
         # which internal node to update
         if rand() < 0.4
@@ -322,7 +317,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
       else
 
         llc, prc, ω0c = mhr_upd_ω0(ω0c, λc, ω1c, Yc, llc, prc, ptn[4],
-                                    linavg, lindiff, ω0prior, ω10upd_llf)
+                                    linavg, lindiff, ω0prior, ω10upd_llr)
 
         # which internal node to update
         if rand() < 0.4
@@ -385,7 +380,6 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         XYsav = 0
       end
     end
-    @show Xc[:,1]  
 
     next!(p)
   end

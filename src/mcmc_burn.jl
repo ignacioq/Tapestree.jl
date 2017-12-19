@@ -106,33 +106,31 @@ function burn_compete(total_llf,
                             repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
     const parvec  = setdiff(pv,(3:4))
-    const lparvec = length(parvec)
 
     print_with_color(:green,
       "\n ωx & σ² updates per iter = ", ceil(Int64,np*weight[1]) + 1,
-      "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1, "\n")
+      "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1,
+      "\n total parameter updates per iter = ", length(parvec), "\n")
   else
     const parvec  = append!(collect(1:np),
                             repeat(1:2, inner = ceil(Int64,np*weight[1])))
     append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
     append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
-    const lparvec = length(parvec)
 
     print_with_color(:green,
       "\n ωx & σ² updates per iter = ", ceil(Int64,np*weight[1]) + 1,
       "\n ω1 & ω0 updates per iter = ", ceil(Int64,np*weight[2]) + 1,
-      "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1, "\n")
+      "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1,
+      "\n Parameter updates per iter = ", length(parvec), "\n")
   end
-
-  const upvector = rand(parvec,lparvec)
 
   #start brunin
   for it = Base.OneTo(nburn)
 
     # Update vector
-    shuffle!(upvector)
+    shuffle!(parvec)
 
-    for up = upvector
+    for up = parvec
 
       # update X
       if up > λlessthan
@@ -153,11 +151,11 @@ function burn_compete(total_llf,
         Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
 
         if upx == 1  # if root
-          @inbounds llr = Rupd_llr(wcol[xi], 
-                                   xpi[wcol[xi]], 
-                                   Xc[1,wcol[xi]], Xc[2,wcol[xi]], 
-                                   lai[wcol[xi]], ldi[wcol[xi],:], 
-                                   linavg[1,wcol[xi]], lindiff[1,wcol[xi],:],
+          @inbounds llr = Rupd_llr(wcol[1], 
+                                   xpi[wcol[1]], 
+                                   Xc[1,wcol[1]], Xc[2,wcol[1]], 
+                                   lai[wcol[1]], ldi[wcol[1],:], 
+                                   linavg[1,wcol[1]], lindiff[1,wcol[1],:],
                                    Yc, 
                                    ωxc, ω1c, ω0c, λc, σ²c)::Float64
         else
@@ -270,7 +268,7 @@ function burn_compete(total_llf,
         σ²p = logupt(σ²c, ptn[1])::Float64
 
         #likelihood ratio
-        llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c,σ²p)
+        llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c, σ²p)::Float64
 
         # prior ratio
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
@@ -469,10 +467,6 @@ function burn_compete(total_llf,
       end
 
     end
-    
-      @show Xc[:,1]  
-      @show Yc[:,1,1]
-
 
     next!(p)
   end

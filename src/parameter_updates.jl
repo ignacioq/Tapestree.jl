@@ -20,7 +20,7 @@ Make function to update λ.
 function make_mhr_upd_λ(nedge   ::Int64, 
                         λprior  ::Float64,
                         ptn     ::Array{Float64},
-                        λupd_llf::Function)
+                        λupd_llr::Function)
 
   function f(up     ::Int64,
              Yc     ::Array{Int64,3},
@@ -41,8 +41,8 @@ function make_mhr_upd_λ(nedge   ::Int64,
     λp[upλ] = logupt(λc[upλ], rand() < 0.5 ? ptn[up] : 4*ptn[up])::Float64
 
     # proposal likelihood and prior
-    llr = λupd_llf(Yc, λp, ω1c, ω0c, lindiff, stemevc, stemss) -
-          λupd_llf(Yc, λc, ω1c, ω0c, lindiff, stemevc, stemss)::Float64
+    llr = λupd_llr(Yc, λc, λp, ω1c, ω0c, 
+                   lindiff, stemevc, stemss)::Float64
 
     prr = logdexp(λp[upλ], λprior) - logdexp(λc[upλ], λprior)::Float64
 
@@ -99,11 +99,11 @@ function make_mhr_upd_Y(narea          ::Int64,
              stemevc::Array{Array{Float64,1},1})
 
 
-    Yp = copy(Yc)::Array{Int64,3}
-    aa = copy(areavg)::Array{Float64,2}
-    ao = copy(areaoc)::Array{Int64,2}
-    la = copy(linavg)::Array{Float64,2}
-    ld = copy(lindiff)::Array{Float64,3}
+    const Yp = copy(Yc)::Array{Int64,3}
+    const aa = copy(areavg)::Array{Float64,2}
+    const ao = copy(areaoc)::Array{Int64,2}
+    const la = copy(linavg)::Array{Float64,2}
+    const ld = copy(lindiff)::Array{Float64,3}
 
     linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
 
@@ -158,9 +158,9 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xupd_llr ::Function,
                         Rupd_llr ::Function)
 
-  const aak = zeros(Float64, narea)
-  const lak = zeros(Float64, ntip)
-  const ldk = zeros(Float64, ntip, narea)
+  const aai = zeros(Float64, narea)
+  const lai = zeros(Float64, ntip)
+  const ldi = zeros(Float64, ntip, narea)
 
   function f(up     ::Int64,
              Xc     ::Array{Float64,2},
@@ -176,49 +176,51 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
              lindiff::Array{Float64,3},
              areaoc ::Array{Int64,2})
 
-    const upx = wXp[up - λlessthan]::Int64
+    @inbounds begin
+      upx = wXp[up - λlessthan]::Int64                 # X indexing
 
-    const Xp      = copy(Xc)::Array{Float64,2}
-    const Xp[upx] = addupt(Xc[upx], ptn[up])::Float64      # update X
+      xi, xj = ind2sub(Xc, upx)
 
-    const k     = rowind(upx, m)::Int64
-    const wck   = wcol[k]::Array{Int64,1}
+      xpi = Xc[xi,:]::Array{Float64,1}
 
-    if ∈(upx, Xnc1)                         # if an internal node
-      Xp[Xnc2] = Xp[Xnc1]::Array{Float64,1} 
+      xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
+
+      if in(upx, Xnc1)        # if an internal node
+        xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
+      end
+
+      # calculate new averages
+      Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
+
+      if upx == 1  # if root
+        llr = Rupd_llr(wcol[1], 
+                       xpi[wcol[1]], 
+                       Xc[1,wcol[1]], Xc[2,wcol[1]], 
+                       lai[wcol[1]], ldi[wcol[1],:], 
+                       linavg[1,wcol[1]], lindiff[1,wcol[1],:],
+                       Yc, 
+                       ωxc, ω1c, ω0c, λc, σ²c)::Float64
+      else
+        llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
+                       xpi, 
+                       Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
+                       lai, ldi, 
+                       linavg[xi,:], linavg[xi-1,:], 
+                       lindiff[xi,:,:],
+                       Yc, 
+                       ωxc, ω1c, ω0c, λc, σ²c)::Float64
+      end
+
+      if log(rand()) < llr
+        Xc[xi,:]        = xpi::Array{Float64,1}
+        llc            += llr::Float64
+        areavg[xi,:]    = aai::Array{Float64,1}
+        linavg[xi,:]    = lai::Array{Float64,1}
+        lindiff[xi,:,:] = ldi::Array{Float64,2}
+      end
     end
 
-    # calculate new averages
-    Xupd_linavg!(aak, lak, ldk, areaoc, k, wck, Xp, Yc, narea)
-
-
-    if upx == 1  # if root
-      llr = (Rupd_llr(k, wck, Xp, Yc, lak, ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
-             Rupd_llr(k, wck, Xc, Yc, linavg[k,wck], lindiff[k,wck,:], 
-                      ωxc, ω1c, ω0c, λc, σ²c))::Float64 
-    else
-
-      wckm1 = wcol[k-1]::Array{Int64,1}
-      lakm1 = linavg[(k-1),wckm1]::Array{Float64,1}
-
-      llr = (Xupd_llr(k, wck, wckm1, Xp, Yc, lak, lakm1, 
-                      ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
-             Xupd_llr(k, wck, wckm1, Xc, Yc, linavg[k,wck], lakm1,
-                      lindiff[k,wck,:], ωxc, ω1c, ω0c, λc, σ²c))::Float64 
-
-    end
-
-    if log(rand()) < llr
-      Xc   = Xp
-      llc += llr
-      @inbounds begin
-        areavg[k,:]    = aak
-        linavg[k,:]    = lak
-        lindiff[k,:,:] = ldk
-       end
-    end
-
-    return Xc, llc, areavg, linavg, lindiff
+    return llc
   end
 
 end
@@ -228,7 +230,7 @@ end
 
 
 """
-    mhr_upd_σ²(σ²c::Float64, Xc::Array{Float64,2}, ωxc::Float64, llc::Float64, prc::Float64, σ²tn::Float64, linavg::Array{Float64,2}, σ²prior::Float64, σ²ωxupd_llf)
+    mhr_upd_σ²(σ²c::Float64, Xc::Array{Float64,2}, ωxc::Float64, llc::Float64, prc::Float64, σ²tn::Float64, linavg::Array{Float64,2}, σ²prior::Float64, σ²ωxupd_llr)
 
 
 MHR update for σ².
@@ -241,13 +243,12 @@ function mhr_upd_σ²(σ²c        ::Float64,
                     σ²tn       ::Float64,
                     linavg     ::Array{Float64,2},
                     σ²prior    ::Float64,
-                    σ²ωxupd_llf::Function)
+                    σ²ωxupd_llr::Function)
 
   σ²p = logupt(σ²c, rand() < 0.5 ? σ²tn : 4*σ²tn)::Float64
 
   #likelihood ratio
-  llr = (σ²ωxupd_llf(Xc, linavg, ωxc, σ²p) - 
-         σ²ωxupd_llf(Xc, linavg, ωxc, σ²c))::Float64
+  llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c, σ²p)::Float64
 
   # prior ratio
   prr = (logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior))::Float64
@@ -268,7 +269,7 @@ end
 
 
 """
-    mhr_upd_ωx(ωxc::Float64, Xc::Array{Float64,2}, σ²c::Float64, llc::Float64, prc::Float64, ωxtn::Float64, linavg::Array{Float64,2}, ωxprior::Tuple{Float64,Float64}, σ²ωxupd_llf)
+    mhr_upd_ωx(ωxc::Float64, Xc::Array{Float64,2}, σ²c::Float64, llc::Float64, prc::Float64, ωxtn::Float64, linavg::Array{Float64,2}, ωxprior::Tuple{Float64,Float64}, σ²ωxupd_llr)
 
 MHR update for ωx.
 """
@@ -280,13 +281,12 @@ function mhr_upd_ωx(ωxc         ::Float64,
                     ωxtn       ::Float64,
                     linavg     ::Array{Float64,2},
                     ωxprior    ::Tuple{Float64,Float64},
-                    σ²ωxupd_llf::Function)
+                    σ²ωxupd_llr::Function)
 
   ωxp = addupt(ωxc, rand() < 0.5 ? ωxtn : 4*ωxtn)::Float64
 
   #likelihood ratio
-  llr = (σ²ωxupd_llf(Xc, linavg, ωxp, σ²c) - 
-         σ²ωxupd_llf(Xc, linavg, ωxc, σ²c))::Float64
+  llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxp, σ²c, σ²c)::Float64
 
   # prior ratio
   prr = (logdnorm(ωxp, ωxprior[1], ωxprior[2]) -
@@ -305,8 +305,9 @@ end
 
 
 
+
 """
-    mhr_upd_ω1(ω1c::Float64, λc::Array{Float64,2}, ω0c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω1tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω1prior::Tuple{Float64,Float64}, ω10upd_llf)
+    mhr_upd_ω1(ω1c::Float64, λc::Array{Float64,2}, ω0c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω1tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω1prior::Tuple{Float64,Float64}, ω10upd_llr)
 
 MHR update for ω1.
 """
@@ -320,13 +321,12 @@ function mhr_upd_ω1(ω1c       ::Float64,
                     linavg    ::Array{Float64,2},
                     lindiff   ::Array{Float64,3},
                     ω1prior   ::Tuple{Float64,Float64},
-                    ω10upd_llf::Function)
+                    ω10upd_llr::Function)
 
   ω1p = addupt(ω1c, rand() < 0.5 ? ω1tn : 4*ω1tn)::Float64
 
   # likelihood ratio
-  llr = (ω10upd_llf(Yc, λc, ω1p, ω0c, lindiff) - 
-         ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff))::Float64
+  llr = ω10upd_llr(Yc, λc, ω1c, ω1p, ω0c, ω0c, lindiff)::Float64
 
   # prior ratio
   prr = (logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
@@ -346,7 +346,7 @@ end
 
 
 """
-    mhr_upd_ω0(ω0c::Float64, λc::Array{Float64,2}, ω1c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω0tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω0prior::Tuple{Float64,Float64}, ω10upd_llf)
+    mhr_upd_ω0(ω0c::Float64, λc::Array{Float64,2}, ω1c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω0tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω0prior::Tuple{Float64,Float64}, ω10upd_llr)
 
 MHR update for ω0.
 """
@@ -360,13 +360,12 @@ function mhr_upd_ω0(ω0c       ::Float64,
                     linavg    ::Array{Float64,2},
                     lindiff   ::Array{Float64,3},
                     ω0prior   ::Tuple{Float64,Float64},
-                    ω10upd_llf::Function)
+                    ω10upd_llr::Function)
 
   ω0p = addupt(ω0c, rand() < 0.5 ? ω0tn : 4*ω0tn)::Float64
 
   # likelihood ratio
-  llr = (ω10upd_llf(Yc, λc, ω1c, ω0p, lindiff) - 
-         ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff))::Float64
+  llr = ω10upd_llr(Yc, λc, ω1c, ω1c, ω0c, ω0p, lindiff)::Float64
 
   # prior ratio
   prr = (logdnorm(ω0p, ω0prior[1], ω0prior[2]) -
