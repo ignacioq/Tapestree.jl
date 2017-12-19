@@ -180,7 +180,6 @@ end
 
 
 
-
 """
     bitbitll(y1::Int64, y2::Int64, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, Δx::Float64, δt::Float64)
 
@@ -220,27 +219,27 @@ f_λ(λ::Float64, ω::Float64, Δx::Float64) = @fastmath (λ * exp(ω*Δx))::Flo
 
 
 
-"""
-    makellf_λ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
 
-Make likelihood function for when updating λ.
 """
-function makellf_λ_upd(Y    ::Array{Int64,3},
+    makellr_λ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
+
+Make likelihood ratio function for when updating λ.
+"""
+function makellr_λ_upd(Y    ::Array{Int64,3},
                        δt   ::Vector{Float64},
-                       narea::Int64)
+                       narea::Int64,
+                       ntip ::Int64,
+                       m    ::Int64)
 
-  const coloop = Base.OneTo(size(Y,2))
-
-  # which is 23 (23 = NaN) in each column
-  const w23 = UnitRange{Int64}[]
-  for i=Base.OneTo(size(Y,2))
-    non23 = find(Y[:,i,1] .!= 23)
-    push!(w23,colon(non23[1],non23[end-1]))
+  # get initial range
+  const wf23 = Int64[]
+  for j = Base.OneTo(ntip)
+    push!(wf23, findfirst(Y[:,j,1] .!= 23))
   end
 
-
   function f(Y      ::Array{Int64,3}, 
-             λ::Array{Float64,1},
+             λc     ::Array{Float64,1},
+             λp     ::Array{Float64,1},
              ω1     ::Float64,
              ω0     ::Float64,
              lindiff::Array{Float64,3},
@@ -252,11 +251,18 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
     @inbounds begin
 
       for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λ[1], λ[2], stemss[k])::Float64
-        for j = coloop
-          ll += bitvectorll(Y[w23[j][1]:(w23[j][end]+1),j,k], 
-                            λ[1], λ[2], ω1, ω0, 
-                            lindiff[w23[j],j,k], δt[w23[j]])::Float64
+        ll += brll(stemevc[k], λp[1], λp[2], stemss[k])::Float64 -
+              brll(stemevc[k], λc[1], λc[2], stemss[k])::Float64
+
+        for j = Base.OneTo(ntip)
+          ll += bitvectorll(Y[wf23[j]:m,j,k], 
+                            λp[1], λp[2], ω1, ω0, 
+                            lindiff[wf23[j]:m,j,k], 
+                            δt[wf23[j]:(m-1)])::Float64 -
+                bitvectorll(Y[wf23[j]:m,j,k], 
+                            λc[1], λc[2], ω1, ω0, 
+                            lindiff[wf23[j]:m,j,k], 
+                            δt[wf23[j]:(m-1)])::Float64
         end
       end
     
@@ -267,6 +273,7 @@ function makellf_λ_upd(Y    ::Array{Int64,3},
 
   return f
 end
+
 
 
 
@@ -631,21 +638,21 @@ Return likelihood for a branch in continuous time.
 """
 function brll(brevs::Array{Float64,1}, λ1::Float64, λ0::Float64, si::Int64)
 
-  cst::Int64   = si 
-  lb ::Int64   = endof(brevs)
   ll ::Float64 = 0.0
 
-  if lb > 1 
-    for i = Base.OneTo(lb-1)
-      ll += evll(brevs[i], cst == 0 ? λ1 : λ0)::Float64
-      cst = 1 - cst
+  if endof(brevs) > 1 
+    for i = Base.OneTo(endof(brevs)-1)
+      ll += evll(brevs[i], si == 0 ? λ1 : λ0)::Float64
+      si = 1 - si
     end
   end
 
-  ll += nell(brevs[lb], cst == 0 ? λ1 : λ0)::Float64
+  ll += nell(brevs[end], si == 0 ? λ1 : λ0)::Float64
   
   return ll::Float64
 end
+
+
 
 
 

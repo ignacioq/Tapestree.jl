@@ -20,7 +20,7 @@ April 27 2017
 Burning & adaptive phase for MCMC.
 """
 function burn_compete(total_llf,
-                      λupd_llf,
+                      λupd_llr,
                       ω10upd_llf,
                       Xupd_llr,
                       Rupd_llr,
@@ -193,12 +193,13 @@ function burn_compete(total_llf,
         λp[upλ] = logupt(λc[upλ], ptn[up])::Float64
 
         # proposal likelihood and prior
-        llr = λupd_llf(Yc, λp, ω1c, ω0c, lindiff, stemevc, brs[nedge,1,:]) -
-              λupd_llf(Yc, λc, ω1c, ω0c, lindiff, stemevc, brs[nedge,1,:])::Float64
+        llr = λupd_llr(Yc, λc, λp, ω1c, ω0c, 
+                        lindiff, stemevc, brs[nedge,1,:])::Float64
 
         prr = logdexp(λp[upλ], λprior) - logdexp(λc[upλ], λprior)::Float64
 
-        if log(rand()) < (llr + prr + 
+        if log(rand()) < (llr + 
+                          prr + 
                           log(λp[upλ])  - log(λc[upλ]))
           llc += llr::Float64
           prc += prr::Float64
