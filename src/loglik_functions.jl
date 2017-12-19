@@ -61,19 +61,19 @@ and biogeography history.
 function makellf(δt   ::Vector{Float64}, 
                  Y    ::Array{Int64, 3}, 
                  ntip ::Int64, 
-                 narea::Int64)
+                 narea::Int64,
+                 m    ::Int64)
 
-  # which is 23 (23 = NaN) in each column
-  const w23 = UnitRange{Int64}[]
-  for i = Base.OneTo(ntip)
-    non23 = find(Y[:,i,1] .!= 23)
-    push!(w23,colon(non23[1],non23[end-1]))
+  # get initial range
+  const wf23 = Int64[]
+  for j = Base.OneTo(ntip)
+    push!(wf23, findfirst(Y[:,j,1] .!= 23))
   end
 
   # number of normal evaluations
   n = 0
-  for i in w23
-    n += length(i)
+  for i in wf23
+    n += length(i:(m-1))
   end
 
   # normal constant
@@ -97,7 +97,7 @@ function makellf(δt   ::Vector{Float64},
 
       # trait likelihood
       for j = Base.OneTo(ntip)
-        @simd for i = w23[j]
+        @simd for i = wf23[j]:(m-1)
           ll += logdnorm_tc(X[(i+1),j], 
                             X[i,j] + 
                             E_sde(X[i,j], linavg[i,j], ωx, δt[i]), 
@@ -109,9 +109,9 @@ function makellf(δt   ::Vector{Float64},
       for k = Base.OneTo(narea)
         ll += brll(stemevc[k], λ[1], λ[2], stemss[k])::Float64
         for j = Base.OneTo(ntip)
-          ll += bitvectorll(Y[w23[j][1]:(w23[j][end]+1),j,k], 
+          ll += bitvectorll(Y[wf23[j]:m,j,k], 
                             λ[1], λ[2], ω1, ω0, 
-                            lindiff[w23[j],j,k], δt[w23[j]])::Float64
+                            lindiff[wf23[j]:m,j,k], δt[wf23[j]:(m-1)])::Float64
         end
       end
 
@@ -288,13 +288,10 @@ function makellf_ω10_upd(Y   ::Array{Int64,3},
                          δt   ::Vector{Float64},
                          narea::Int64)
 
-  const coloop = Base.OneTo(size(Y,2))
-
-  # which is 23 (23 = NaN) in each column
-  const w23 = UnitRange{Int64}[]
-  for i = Base.OneTo(size(Y,2))
-    non23 = find(Y[:,i,1] .!= 23)
-    push!(w23,colon(non23[1],non23[end-1]))
+  # which initial non 23
+  const wf23 = Int64[]
+  for j = Base.OneTo(ntip)
+    push!(wf23, findfirst(Y[:,j,1] .!= 23))
   end
 
   function f(Y      ::Array{Int64,3}, 
@@ -320,6 +317,61 @@ function makellf_ω10_upd(Y   ::Array{Int64,3},
 
   return f
 end
+
+
+
+
+
+
+"""
+    makellr_ω1μ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
+
+Make likelihood function for when updating ω1 & ω0.
+"""
+function makellr_ω10_upd(Y    ::Array{Int64,3},
+                         δt   ::Vector{Float64},
+                         narea::Int64,
+                         ntip ::Int64)
+
+  # which is 23 (23 = NaN) in each column
+  const wf23 = Int64[]
+  for j = Base.OneTo(ntip)
+    push!(wf23, findfirst(Y[:,j,1] .!= 23))
+  end
+
+  function f(Y      ::Array{Int64,3}, 
+             λ      ::Array{Float64,1},
+             ω1c    ::Float64,
+             ω1p    ::Float64,
+             ω0c    ::Float64,
+             ω0p    ::Float64,
+             lindiff::Array{Float64,3})
+
+    ll::Float64 = 0.0
+
+    @inbounds begin
+
+      for k = Base.OneTo(narea), j = Base.OneTo(ntip)
+        ll += bitvectorll(Y[wf23[j]:m,j,k], 
+                            λc[1], λc[2], ω1p, ω0p, 
+                            lindiff[wf23[j]:m,j,k], 
+                            δt[wf23[j]:(m-1)])::Float64 -
+              bitvectorll(Y[wf23[j]:m,j,k], 
+                            λc[1], λc[2], ω1c, ω0c, 
+                            lindiff[wf23[j]:m,j,k], 
+                            δt[wf23[j]:(m-1)])::Float64
+      end
+
+    end
+
+    return ll
+  end
+
+  return f
+end
+
+
+
 
 
 
@@ -364,20 +416,20 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{UnitRange{Int64},1},1},
       pr, d1, d2 = triad::Array{Int64,1}
 
       if pr < nedge 
-        for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[j][pr]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[pr,j], δtA[pr]) +
-                bitvectorll_iid(Y[bridx_a[j][d1]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,j], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[j][d2]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,j], δtA[d2])::Float64
+        for k = Base.OneTo(narea)
+          ll += bitvectorll_iid(Y[bridx_a[k][pr]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx[pr,k], δtA[pr]) +
+                bitvectorll_iid(Y[bridx_a[k][d1]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,k], δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[k][d2]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,k], δtA[d2])::Float64
         end
       else 
-        for j=Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[j][d1]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,j], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[j][d2]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,j], δtA[d2])::Float64
+        for k = Base.OneTo(narea)
+          ll += bitvectorll_iid(Y[bridx_a[k][d1]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,k], δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[k][d2]], 
+                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,k], δtA[d2])::Float64
         end
       end
 
@@ -434,14 +486,12 @@ end
 
 
 
-
-
 """
-    makellf_σ²ωxupd(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64)
+    makellr_σ²ωxupd(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64)
 
 Make likelihood function for all trait matrix, `X`.
 """
-function makellf_σ²ωxupd(δt  ::Vector{Float64}, 
+function makellr_σ²ωxupd(δt  ::Vector{Float64}, 
                          Y   ::Array{Int64,3}, 
                          ntip::Int64)
 
@@ -452,21 +502,14 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
     push!(w23,colon(non23[1],non23[end-1]))
   end
 
-  # number of normal evaluations
-  n = 0
-  for i = w23
-    n += length(i)
-  end
+  function f(X  ::Array{Float64,2},
+             la ::Array{Float64,2},
+             ωxc::Float64,
+             ωxp::Float64,
+             σ²c::Float64,
+             σ²p::Float64)
 
-  # normal constant
-  const normC = -0.5*log(2.0π)*n
-
-  function f(X ::Array{Float64,2},
-             la::Array{Float64,2},
-             ωx::Float64,
-             σ²::Float64)
-
-    ll::Float64 = normC
+    ll::Float64 = 0.0
 
     @inbounds @fastmath begin
 
@@ -474,9 +517,13 @@ function makellf_σ²ωxupd(δt  ::Vector{Float64},
       for j = Base.OneTo(ntip)
         @simd for i = w23[j]
           ll += logdnorm_tc(X[(i+1),j], 
-                          X[i,j] + 
-                          E_sde(X[i,j], la[i,j], ωx, δt[i]), 
-                          δt[i]*σ²)
+                            X[i,j] + 
+                            E_sde(X[i,j], la[i,j], ωxp, δt[i]), 
+                            δt[i]*σ²p)::Float64 -
+                logdnorm_tc(X[(i+1),j], 
+                            X[i,j] + 
+                            E_sde(X[i,j], la[i,j], ωxc, δt[i]), 
+                            δt[i]*σ²c)::Float64
         end
       end
     
@@ -491,8 +538,11 @@ end
 
 
 
+
+
+
 """
-    makellf_Xupd(δt::Vector{Float64}, narea::Int64)
+    makellr_Xupd(δt::Vector{Float64}, narea::Int64)
 
 Make likelihood function for an internal node update in `X`.
 """

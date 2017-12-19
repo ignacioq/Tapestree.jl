@@ -21,10 +21,10 @@ Burning & adaptive phase for MCMC.
 """
 function burn_compete(total_llf,
                       λupd_llr,
-                      ω10upd_llf,
+                      ω10upd_llr,
                       Xupd_llr,
                       Rupd_llr,
-                      σ²ωxupd_llf,
+                      σ²ωxupd_llr,
                       biogeo_upd_iid,
                       Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
@@ -201,9 +201,9 @@ function burn_compete(total_llf,
         if log(rand()) < (llr + 
                           prr + 
                           log(λp[upλ])  - log(λc[upλ]))
-          llc += llr::Float64
-          prc += prr::Float64
-          λc   = λp ::Array{Float64,1}
+          llc     += llr::Float64
+          prc     += prr::Float64
+          λc       = λp ::Array{Float64,1}
           lac[up] += 1
         end
 
@@ -270,8 +270,7 @@ function burn_compete(total_llf,
         σ²p = logupt(σ²c, ptn[1])::Float64
 
         #likelihood ratio
-        llr = σ²ωxupd_llf(Xc, linavg, ωxc, σ²p) - 
-              σ²ωxupd_llf(Xc, linavg, ωxc, σ²c)::Float64
+        llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c,σ²p)
 
         # prior ratio
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
@@ -289,8 +288,7 @@ function burn_compete(total_llf,
         ωxp = addupt(ωxc, ptn[2])::Float64
 
         #likelihood ratio
-        llr = σ²ωxupd_llf(Xc, linavg, ωxp, σ²c) - 
-              σ²ωxupd_llf(Xc, linavg, ωxc, σ²c)::Float64
+        llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxp, σ²c, σ²c)
 
         # prior ratio
         prr = logdnorm(ωxp, ωxprior[1], ωxprior[2]) -
@@ -308,9 +306,8 @@ function burn_compete(total_llf,
 
         ω1p = addupt(ω1c, ptn[3])::Float64
 
-            # proposal likelihood and prior
-        llr = ω10upd_llf(Yc, λc, ω1p, ω0c, lindiff) - 
-              ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff)::Float64
+        # proposal likelihood and prior
+        llr = ω10upd_llr(Yc, λc, ω1c, ω1p, ω0c, ω0c, lindiff)::Float64
 
         # prior ratio
         prr = logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
@@ -385,12 +382,12 @@ function burn_compete(total_llf,
       else
         ω0p = addupt(ω0c, ptn[4])
 
-        llr = ω10upd_llf(Yc, λc, ω1c, ω0p, lindiff) - 
-              ω10upd_llf(Yc, λc, ω1c, ω0c, lindiff)
+        # proposal likelihood ratio
+        llr = ω10upd_llr(Yc, λc, ω1c, ω1c, ω0c, ω0p, lindiff)::Float64
 
         # prior ratio
-        prr = logdnorm(ω0p, ω0prior[1], ω0prior[2]) -
-              logdnorm(ω0c, ω0prior[1], ω0prior[2])
+        prr = logdnorm(ω0p, ω0prior[1], ω0prior[2])::Float64 -
+              logdnorm(ω0c, ω0prior[1], ω0prior[2])::Float64
 
         if log(rand()) < (llr + prr)
           llc += llr

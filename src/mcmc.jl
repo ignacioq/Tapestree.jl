@@ -156,12 +156,12 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
 
   # make likelihood and prior functions
-  total_llf      = makellf(δt, Yc, ntip, narea)
+  total_llf      = makellf(δt, Yc, ntip, narea,m)
   λupd_llr       = makellr_λ_upd(Yc, δt, narea, m)
-  ω10upd_llf     = makellf_ω10_upd(Yc, δt, narea)
+  ω10upd_llr     = makellr_ω10_upd(Yc, δt, narea ntip)
   Xupd_llr       = makellr_Xupd(δt, narea)
   Rupd_llr       = makellr_Rupd(δt[1], narea)
-  σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)  
+  σ²ωxupd_llr    = makellr_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
 
   # number of free parameters
@@ -171,7 +171,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
-      λupd_llr, ω10upd_llf, Xupd_llr, Rupd_llr, σ²ωxupd_llf, biogeo_upd_iid, 
+      λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, biogeo_upd_iid, 
       Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
