@@ -489,33 +489,6 @@ end
 
 
 
-"""
-    make_trios_rows(Y::Array{Int64,3},
-                  bridx_a::Array{Array{UnitRange{Int64},1},1},
-                  trios::Array{Array{Int64,1},1})
-Create a vector of rows that correspond to each of the trios.
-"""
-function make_trios_rows(Y      ::Array{Int64,3},
-                         bridx_a::Array{Array{UnitRange{Int64},1},1},
-                         trios  ::Array{Array{Int64,1},1})
-
-  const tr_row = UnitRange[]
-
-  for (pr, d1, d2) = trios
-
-    push!(tr_row, colon(minimum(map(minimum, (ind2sub(Y,bridx_a[1][pr])[1],
-                                              ind2sub(Y,bridx_a[1][d1])[1],
-                                              ind2sub(Y,bridx_a[1][d2])[1]))),
-                        maximum(map(maximum, (ind2sub(Y,bridx_a[1][pr])[1],
-                                              ind2sub(Y,bridx_a[1][d1])[1],
-                                              ind2sub(Y,bridx_a[1][d2])[1])))))
-  end
-  
-  return tr_row
-end
-
-
-
 
 """
     collision(λ1::Float64, λ0::Float64, nδts  ::Array{Float64,1})

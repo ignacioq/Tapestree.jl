@@ -142,7 +142,7 @@ end
 
 
 """
-    make_mhr_upd_X(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llf, Rupd_llf)
+    make_mhr_upd_X(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
 
 Make DA update X.
 """
@@ -155,8 +155,8 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         λlessthan::Int64,
                         narea    ::Int64,
                         ntip     ::Int64,
-                        Xupd_llf ::Function,
-                        Rupd_llf ::Function)
+                        Xupd_llr ::Function,
+                        Rupd_llr ::Function)
 
   const aak = zeros(Float64, narea)
   const lak = zeros(Float64, ntip)
@@ -193,17 +193,17 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
 
 
     if upx == 1  # if root
-      llr = (Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
-             Rupd_llf(k, wck, Xc, Yc, linavg[k,wck], lindiff[k,wck,:], 
+      llr = (Rupd_llr(k, wck, Xp, Yc, lak, ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
+             Rupd_llr(k, wck, Xc, Yc, linavg[k,wck], lindiff[k,wck,:], 
                       ωxc, ω1c, ω0c, λc, σ²c))::Float64 
     else
 
       wckm1 = wcol[k-1]::Array{Int64,1}
       lakm1 = linavg[(k-1),wckm1]::Array{Float64,1}
 
-      llr = (Xupd_llf(k, wck, wckm1, Xp, Yc, lak, lakm1, 
+      llr = (Xupd_llr(k, wck, wckm1, Xp, Yc, lak, lakm1, 
                       ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
-             Xupd_llf(k, wck, wckm1, Xc, Yc, linavg[k,wck], lakm1,
+             Xupd_llr(k, wck, wckm1, Xc, Yc, linavg[k,wck], lakm1,
                       lindiff[k,wck,:], ωxc, ω1c, ω0c, λc, σ²c))::Float64 
 
     end

@@ -497,51 +497,79 @@ end
 
 Make likelihood function for an internal node update in `X`.
 """
-function makellf_Xupd(δt   ::Vector{Float64}, 
+function makellr_Xupd(δt   ::Vector{Float64}, 
                       narea::Int64)
 
-  function f(k    ::Int64,
-             wck  ::Array{Int64,1},
-             wckm1::Array{Int64,1},
-             X    ::Array{Float64,2},
-             Y    ::Array{Int64,3},
-             lak  ::Array{Float64,1},
-             lakm1::Array{Float64,1},
-             ldk  ::Array{Float64,2},
-             ωx   ::Float64,
-             ω1   ::Float64,
-             ω0   ::Float64,
-             λ    ::Array{Float64,1},
-             σ²   ::Float64)
+  function f(i     ::Int64,
+             wci   ::Array{Int64,1},
+             wcim1 ::Array{Int64,1},
+             xpi   ::Array{Float64,1},
+             xci   ::Array{Float64,1},
+             xcm1  ::Array{Float64,1},
+             xcp1  ::Array{Float64,1},
+             lapi  ::Array{Float64,1},
+             ldpi  ::Array{Float64,2},
+             laci  ::Array{Float64,1},
+             lacim1::Array{Float64,1},
+             ldci  ::Array{Float64,2},
+             Y     ::Array{Int64,3},
+             ωx    ::Float64,
+             ω1    ::Float64,
+             ω0    ::Float64,
+             λ     ::Array{Float64,1},
+             σ²    ::Float64)
 
     # normal likelihoods
     ll::Float64 = 0.0
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # loop for parent nodes
-      if k != 1               # if not the root
-        for i = eachindex(wckm1)
-          ll += logdnorm_tc(X[k,wckm1[i]], 
-                          X[k-1,wckm1[i]] + 
-                          E_sde(X[k-1,wckm1[i]], lakm1[i], ωx, δt[k-1]), 
-                          δt[k-1]*σ²)
-        end
+      for j = wcim1
+
+        ## proposal
+        ll += logdnorm_tc(xpi[j], 
+                          xcm1[j] + 
+                          E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
+                          δt[i-1]*σ²)
+
+        ## current
+        ll -= logdnorm_tc(xci[j],
+                          xcm1[j] + 
+                          E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
+                          δt[i-1]*σ²)
+      
       end
 
       # loop for daughter nodes
-      for i = eachindex(wck)
+      for j = wci
+
+        ## proposal
         # trait likelihood
-        ll += logdnorm_tc(X[(k+1),wck[i]], 
-                        X[k,wck[i]] + 
-                        E_sde(X[k,wck[i]], lak[i], ωx, δt[k]), 
-                        δt[k]*σ²)
+        ll += logdnorm_tc(xcp1[j], 
+                          xpi[j] + 
+                          E_sde(xpi[j], lapi[j], ωx, δt[i]), 
+                          δt[i]*σ²)
 
         # biogeograhic likelihoods
-        for j = Base.OneTo(narea)
-          ll += bitbitll(Y[k,wck[i],j], Y[k+1,wck[i],j], 
-                          λ[1], λ[2], ω1, ω0, ldk[i,j], δt[k])::Float64
+        for k = Base.OneTo(narea)
+          ll += bitbitll(Y[i,j,k], Y[i+1,j,k], 
+                          λ[1], λ[2], ω1, ω0, ldpi[j,k], δt[i])::Float64
         end
+
+        ## current
+        # trait likelihood
+        ll -= logdnorm_tc(xcp1[j], 
+                          xci[j] + 
+                          E_sde(xci[j], laci[j], ωx, δt[i]), 
+                          δt[i]*σ²)
+
+        # biogeograhic likelihoods
+        for k = Base.OneTo(narea)
+          ll -= bitbitll(Y[i,j,k], Y[i+1,j,k], 
+                          λ[1], λ[2], ω1, ω0, ldci[j,k], δt[i])::Float64
+        end
+
       end
 
     end
@@ -551,6 +579,7 @@ function makellf_Xupd(δt   ::Vector{Float64},
 
   return f
 end
+
 
 
 
@@ -562,40 +591,57 @@ end
 Make likelihood function
 for the root update in `X`.
 """
-function makellf_Rupd(δt   ::Vector{Float64}, 
+function makellr_Rupd(δt1  ::Float64, 
                       narea::Int64)
 
-  function f(k  ::Int64,
-             wck::Array{Int64,1},
-             X  ::Array{Float64,2},
-             Y  ::Array{Int64,3},
-             lak::Array{Float64,1},
-             ldk::Array{Float64,2},
-             ωx ::Float64,
-             ω1 ::Float64,
-             ω0 ::Float64,
-             λ  ::Array{Float64,1},
-             σ² ::Float64)
+  function f(wci   ::Array{Int64,1},
+             xpi   ::Array{Float64,1},
+             xci   ::Array{Float64,1},
+             xcp1  ::Array{Float64,1},
+             lapi  ::Array{Float64,1},
+             ldpi  ::Array{Float64,2},
+             laci  ::Array{Float64,1},
+             ldci  ::Array{Float64,2},
+             Y     ::Array{Int64,3},
+             ωx    ::Float64,
+             ω1    ::Float64,
+             ω0    ::Float64,
+             λ     ::Array{Float64,1},
+             σ²    ::Float64)
 
-    # normal likelihoods
     ll::Float64 = 0.0
 
     @inbounds @fastmath begin
 
       # loop for daughter nodes
-      for i = eachindex(wck)
+      for j = eachindex(wci)
 
+        ## proposal
         # trait likelihood
-        ll += logdnorm_tc(X[(k+1),wck[i]], 
-                        X[k,wck[i]] + 
-                        E_sde(X[k,wck[i]], lak[i], ωx, δt[k]), 
-                        δt[k]*σ²)
+        ll += logdnorm_tc(xcp1[j], 
+                          xpi[j] + 
+                          E_sde(xpi[j], lapi[j], ωx, δt1), 
+                          δt1*σ²)
 
         # biogeograhic likelihoods
-        for j = Base.OneTo(narea)
-          ll += bitbitll(Y[k,wck[i],j], Y[k+1,wck[i],j], 
-                         λ[1], λ[2], ω1, ω0, ldk[i,j], δt[k])::Float64
+        for k = Base.OneTo(narea)
+          ll += bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
+                          λ[1], λ[2], ω1, ω0, ldpi[j,k], δt1)::Float64
         end
+
+        ## current
+        # trait likelihood
+        ll -= logdnorm_tc(xcp1[j], 
+                          xci[j] + 
+                          E_sde(xci[j], laci[j], ωx, δt1), 
+                          δt1*σ²)
+
+        # biogeograhic likelihoods
+        for k = Base.OneTo(narea)
+          ll -= bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
+                          λ[1], λ[2], ω1, ω0, ldci[j,k], δt1)::Float64
+        end
+
       end
 
     end
@@ -605,6 +651,7 @@ function makellf_Rupd(δt   ::Vector{Float64},
 
   return f
 end
+
 
 
 

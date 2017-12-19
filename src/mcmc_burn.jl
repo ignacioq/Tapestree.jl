@@ -22,8 +22,8 @@ Burning & adaptive phase for MCMC.
 function burn_compete(total_llf,
                       λupd_llf,
                       ω10upd_llf,
-                      Xupd_llf,
-                      Rupd_llf,
+                      Xupd_llr,
+                      Rupd_llr,
                       σ²ωxupd_llf,
                       biogeo_upd_iid,
                       Xc       ::Array{Float64,2},
@@ -92,9 +92,11 @@ function burn_compete(total_llf,
   # parameter location for λ
   const λlessthan = 6
 
-  const aak = zeros(Float64, narea)
-  const lak = zeros(Float64, ntip)
-  const ldk = zeros(Float64, ntip, narea)
+  # row i proposals for X
+  const xpi = zeros(Float64, ntip)        # X[i,:] 
+  const aai = zeros(Float64, narea)       # area average
+  const lai = zeros(Float64, ntip)        # lineage average
+  const ldi = zeros(Float64, ntip, narea) # lineage difference
 
   # progress bar
   p = Progress(nburn + 1, 5, "burning...", 20)
@@ -135,35 +137,64 @@ function burn_compete(total_llf,
       # update X
       if up > λlessthan
 
-        Xp = copy(Xc)::Array{Float64,2}
+        upx = wXp[up - λlessthan]::Int64                 # X indexing
 
-        upx     = wXp[up - λlessthan]::Int64             # X indexing
-        Xp[upx] = addupt(Xc[upx], ptn[up])::Float64      # update X
+        xi, xj = ind2sub(Xc, upx)
 
-        k     = rowind(upx, m)::Int64
-        wck   = wcol[k]::Array{Int64,1}
+        xpi = Xc[xi,:]::Array{Float64,1}
+
+        xpi[xj] = addupt(Xc[upx], ptn[up])::Float64      # update X
 
         if in(upx, Xnc1)        # if an internal node
-          Xp[Xnc2] = Xp[Xnc1]::Array{Float64,1}
+          xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
         end
 
         # calculate new averages
-        Xupd_linavg!(aak, lak, ldk, areaoc, k, wck, Xp, Yc, narea)
+        Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
+
+
+
+Xp = copy(Xc)
+Xp[xi,:] = xpi
+
+area_lineage_means!(areavg, linavg, areaoc, Xp, Yc, wcol, m, narea)
+linarea_diff!(lindiff, Xp, areavg, areaoc, narea, ntip, m)
+
+tp = total_llf(Xp, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc,
+                         stemevc, brs[nedge,1,:], σ²c)
+area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
+linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
+
+tc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc,
+                         stemevc, brs[nedge,1,:], σ²c)
+
+
 
         if upx == 1  # if root
-          llr = Rupd_llf(k, wck, Xp, Yc, lak, ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
-                Rupd_llf(k, wck, Xc, Yc, linavg[k,wck], lindiff[k,wck,:], 
-                          ωxc, ω1c, ω0c, λc, σ²c)::Float64
+          @inbounds llr = Rupd_llr(wcol[xi], 
+                         xpi[wcol[xi]], 
+                         Xc[1,wcol[xi]], Xc[2,wcol[xi]], 
+                         lai[wcol[xi]], ldi[wcol[xi],:], 
+                         linavg[1,wcol[xi]], lindiff[1,wcol[xi],:],
+                         Yc, 
+                         ωxc, ω1c, ω0c, λc, σ²c)::Float64
         else
-          wckm1 = wcol[k-1]::Array{Int64,1}
-          lakm1 = linavg[(k-1),wckm1]::Array{Float64,1}
-
-          llr = Xupd_llf(k, wck, wckm1, Xp, Yc, lak, lakm1, 
-                         ldk, ωxc, ω1c, ω0c, λc, σ²c) - 
-                Xupd_llf(k, wck, wckm1, Xc, Yc, linavg[k,wck], lakm1,
-                         lindiff[k,wck,:], ωxc, ω1c, ω0c, λc, σ²c)::Float64
+          @inbounds llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
+                 xpi, 
+                 Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
+                 lai, ldi, 
+                 linavg[xi,:], linavg[xi-1,:], 
+                 lindiff[xi,:,:],
+                 Yc, 
+                 ωxc, ω1c, ω0c, λc, σ²c)::Float64
         end
-        
+tp - tc
+llr
+
+
+
+
+
         if log(rand()) < llr
           Xc   = Xp::Array{Float64,2}
           llc += llr::Float64
@@ -465,6 +496,10 @@ function burn_compete(total_llf,
 
     end
     
+      @show Xc[:,1]  
+      @show Yc[:,1,1]
+
+
     next!(p)
   end
 

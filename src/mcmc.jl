@@ -159,8 +159,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   total_llf      = makellf(δt, Yc, ntip, narea)
   λupd_llf       = makellf_λ_upd(Yc, δt, narea)
   ω10upd_llf     = makellf_ω10_upd(Yc, δt, narea)
-  Xupd_llf       = makellf_Xupd(δt, narea)
-  Rupd_llf       = makellf_Rupd(δt, narea)
+  Xupd_llr       = makellr_Xupd(δt, narea)
+  Rupd_llr       = makellr_Rupd(δt[1], narea)
   σ²ωxupd_llf    = makellf_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
 
@@ -171,7 +171,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
-      λupd_llf, ω10upd_llf, Xupd_llf, Rupd_llf, σ²ωxupd_llf, biogeo_upd_iid, 
+      λupd_llf, ω10upd_llf, Xupd_llr, Rupd_llr, σ²ωxupd_llf, biogeo_upd_iid, 
       Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
@@ -230,7 +230,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
                              brδt, brl, wcol, Ync1, Ync2, 
                              total_llf, biogeo_upd_iid)
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
-                             λlessthan, narea, ntip, Xupd_llf, Rupd_llf)
+                             λlessthan, narea, ntip, Xupd_llr, Rupd_llr)
 
   #start MCMC
   for it = Base.OneTo(niter)
@@ -352,6 +352,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
     end
 
+
     # log parameters
     lthin += 1
     if lthin == nthin
@@ -384,6 +385,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
         XYsav = 0
       end
     end
+    @show Xc[:,1]  
 
     next!(p)
   end
