@@ -152,24 +152,6 @@ function burn_compete(total_llf,
         # calculate new averages
         Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
 
-
-
-Xp = copy(Xc)
-Xp[xi,:] = xpi
-
-area_lineage_means!(areavg, linavg, areaoc, Xp, Yc, wcol, m, narea)
-linarea_diff!(lindiff, Xp, areavg, areaoc, narea, ntip, m)
-
-tp = total_llf(Xp, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc,
-                         stemevc, brs[nedge,1,:], σ²c)
-area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
-linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
-
-tc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc,
-                         stemevc, brs[nedge,1,:], σ²c)
-
-
-
         if upx == 1  # if root
           @inbounds llr = Rupd_llr(wcol[xi], 
                          xpi[wcol[xi]], 
@@ -188,11 +170,6 @@ tc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc,
                  Yc, 
                  ωxc, ω1c, ω0c, λc, σ²c)::Float64
         end
-tp - tc
-llr
-
-
-
 
 
         if log(rand()) < llr

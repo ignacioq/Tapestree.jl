@@ -197,18 +197,10 @@ function bitbitll(y1::Int64,
                   δt::Float64)
 
   # event or non-event
-  if y1 == y2 
-    if y1 == 0 
-      return nell(δt, f_λ(λ1, ω1, Δx))::Float64
-    else
-      return nell(δt, f_λ(λ0, ω0, Δx))::Float64
-    end
+  if y1::Int64 == y2::Int64 
+    return nell(δt, y1::Int64 == 0 ? f_λ(λ1, ω1, Δx) : f_λ(λ0, ω0, Δx))::Float64
   else
-    if y1 == 0 
-      return evll(δt, f_λ(λ1, ω1, Δx))::Float64
-    else
-      return evll(δt, f_λ(λ0, ω0, Δx))::Float64
-    end
+    return evll(δt, y1::Int64 == 0 ? f_λ(λ1, ω1, Δx) : f_λ(λ0, ω0, Δx))::Float64
   end
 end
 
@@ -526,55 +518,40 @@ function makellr_Xupd(δt   ::Vector{Float64},
 
       # loop for parent nodes
       for j = wcim1
-
-        ## proposal
         ll += logdnorm_tc(xpi[j], 
                           xcm1[j] + 
                           E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
-                          δt[i-1]*σ²)
-
-        ## current
-        ll -= logdnorm_tc(xci[j],
+                          δt[i-1]*σ²)::Float64 -
+              logdnorm_tc(xci[j],
                           xcm1[j] + 
                           E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
-                          δt[i-1]*σ²)
-      
+                          δt[i-1]*σ²)::Float64
       end
 
       # loop for daughter nodes
       for j = wci
-
-        ## proposal
         # trait likelihood
         ll += logdnorm_tc(xcp1[j], 
                           xpi[j] + 
                           E_sde(xpi[j], lapi[j], ωx, δt[i]), 
-                          δt[i]*σ²)
-
-        # biogeograhic likelihoods
-        for k = Base.OneTo(narea)
-          ll += bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                          λ[1], λ[2], ω1, ω0, ldpi[j,k], δt[i])::Float64
-        end
-
-        ## current
-        # trait likelihood
-        ll -= logdnorm_tc(xcp1[j], 
+                          δt[i]*σ²)::Float64 -
+              logdnorm_tc(xcp1[j], 
                           xci[j] + 
                           E_sde(xci[j], laci[j], ωx, δt[i]), 
-                          δt[i]*σ²)
-
-        # biogeograhic likelihoods
-        for k = Base.OneTo(narea)
-          ll -= bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                          λ[1], λ[2], ω1, ω0, ldci[j,k], δt[i])::Float64
-        end
-
+                          δt[i]*σ²)::Float64
       end
 
+        # biogeograhic likelihoods
+      for k = Base.OneTo(narea), j = wci
+        ll += bitbitll(Y[i,j,k], Y[i+1,j,k], 
+                       λ[1], λ[2], ω1, ω0, ldpi[j,k], δt[i])::Float64 -
+              bitbitll(Y[i,j,k], Y[i+1,j,k], 
+                       λ[1], λ[2], ω1, ω0, ldci[j,k], δt[i])::Float64
+      end
+      
     end
 
-    ll::Float64
+    return ll::Float64
   end
 
   return f
@@ -615,31 +592,22 @@ function makellr_Rupd(δt1  ::Float64,
 
       # loop for daughter nodes
       for j = eachindex(wci)
-
-        ## proposal
         # trait likelihood
         ll += logdnorm_tc(xcp1[j], 
                           xpi[j] + 
                           E_sde(xpi[j], lapi[j], ωx, δt1), 
-                          δt1*σ²)
+                          δt1*σ²)::Float64 -
+              logdnorm_tc(xcp1[j], 
+                          xci[j] + 
+                          E_sde(xci[j], laci[j], ωx, δt1), 
+                          δt1*σ²)::Float64
 
         # biogeograhic likelihoods
         for k = Base.OneTo(narea)
           ll += bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                          λ[1], λ[2], ω1, ω0, ldpi[j,k], δt1)::Float64
-        end
-
-        ## current
-        # trait likelihood
-        ll -= logdnorm_tc(xcp1[j], 
-                          xci[j] + 
-                          E_sde(xci[j], laci[j], ωx, δt1), 
-                          δt1*σ²)
-
-        # biogeograhic likelihoods
-        for k = Base.OneTo(narea)
-          ll -= bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                          λ[1], λ[2], ω1, ω0, ldci[j,k], δt1)::Float64
+                         λ[1], λ[2], ω1, ω0, ldpi[j,k], δt1)::Float64 -
+                bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
+                         λ[1], λ[2], ω1, ω0, ldci[j,k], δt1)::Float64
         end
 
       end
