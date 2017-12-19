@@ -143,7 +143,7 @@ function burn_compete(total_llf,
 
         xpi = Xc[xi,:]::Array{Float64,1}
 
-        xpi[xj] = addupt(Xc[upx], ptn[up])::Float64      # update X
+        xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
 
         if in(upx, Xnc1)        # if an internal node
           xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
@@ -154,32 +154,31 @@ function burn_compete(total_llf,
 
         if upx == 1  # if root
           @inbounds llr = Rupd_llr(wcol[xi], 
-                         xpi[wcol[xi]], 
-                         Xc[1,wcol[xi]], Xc[2,wcol[xi]], 
-                         lai[wcol[xi]], ldi[wcol[xi],:], 
-                         linavg[1,wcol[xi]], lindiff[1,wcol[xi],:],
-                         Yc, 
-                         ωxc, ω1c, ω0c, λc, σ²c)::Float64
+                                   xpi[wcol[xi]], 
+                                   Xc[1,wcol[xi]], Xc[2,wcol[xi]], 
+                                   lai[wcol[xi]], ldi[wcol[xi],:], 
+                                   linavg[1,wcol[xi]], lindiff[1,wcol[xi],:],
+                                   Yc, 
+                                   ωxc, ω1c, ω0c, λc, σ²c)::Float64
         else
           @inbounds llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
-                 xpi, 
-                 Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
-                 lai, ldi, 
-                 linavg[xi,:], linavg[xi-1,:], 
-                 lindiff[xi,:,:],
-                 Yc, 
-                 ωxc, ω1c, ω0c, λc, σ²c)::Float64
+                                   xpi, 
+                                   Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
+                                   lai, ldi, 
+                                   linavg[xi,:], linavg[xi-1,:], 
+                                   lindiff[xi,:,:],
+                                   Yc, 
+                                   ωxc, ω1c, ω0c, λc, σ²c)::Float64
         end
 
-
         if log(rand()) < llr
-          Xc   = Xp::Array{Float64,2}
-          llc += llr::Float64
           @inbounds begin
-            areavg[k,:]    = aak
-            linavg[k,:]    = lak
-            lindiff[k,:,:] = ldk
-            lac[up] += 1   # log acceptance
+            Xc[xi,:]        = xpi::Array{Float64,1}
+            llc            += llr::Float64
+            areavg[xi,:]    = aai::Array{Float64,1}
+            linavg[xi,:]    = lai::Array{Float64,1}
+            lindiff[xi,:,:] = ldi::Array{Float64,2}
+            lac[up]        += 1   # log acceptance
           end
         end
 
