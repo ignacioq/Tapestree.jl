@@ -95,6 +95,7 @@ function makellf(δt   ::Vector{Float64},
 
     @inbounds @fastmath begin
 
+
       # trait likelihood
       for j = Base.OneTo(ntip)
         @simd for i = wf23[j]:(m-1)
@@ -117,11 +118,16 @@ function makellf(δt   ::Vector{Float64},
 
     end
 
+
     ll::Float64
   end
 
   return f
 end
+
+
+
+
 
 
 

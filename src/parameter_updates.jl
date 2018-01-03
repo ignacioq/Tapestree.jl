@@ -67,18 +67,19 @@ end
 
 Make function to update trio in Y.
 """
-function make_mhr_upd_Y(narea          ::Int64,
-                        nedge          ::Int64,
-                        m              ::Int64,
-                        ntip           ::Int64,
-                        bridx_a        ::Array{Array{UnitRange{Int64},1},1},
-                        brδt           ::Array{Array{Float64,1},1},
-                        brl            ::Array{Float64,1},
-                        wcol           ::Array{Array{Int64,1},1},
-                        Ync1           ::Array{Int64,1},
-                        Ync2           ::Array{Int64,1},
-                        total_llf      ::Function,
-                        biogeo_upd_iid ::Function)
+function make_mhr_upd_Y(narea              ::Int64,
+                        nedge              ::Int64,
+                        m                  ::Int64,
+                        ntip               ::Int64,
+                        bridx_a            ::Array{Array{UnitRange{Int64},1},1},
+                        brδt               ::Array{Array{Float64,1},1},
+                        brl                ::Array{Float64,1},
+                        wcol               ::Array{Array{Int64,1},1},
+                        Ync1               ::Array{Int64,1},
+                        Ync2               ::Array{Int64,1},
+                        total_llf          ::Function,
+                        biogeo_upd_iid     ::Function,
+                        linarea_branch_avg!::Function)
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -105,7 +106,7 @@ function make_mhr_upd_Y(narea          ::Int64,
     const la = copy(linavg)::Array{Float64,2}
     const ld = copy(lindiff)::Array{Float64,3}
 
-    linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
+    linarea_branch_avg!(avg_Δx, lindiff)
 
     upnode!(λc, ω1c, ω0c, avg_Δx, triad, 
             Yp, bridx_a, brδt, brl, brs, narea, nedge)

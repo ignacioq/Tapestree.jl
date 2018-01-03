@@ -137,7 +137,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # create stem events
   stemevc = br_samp(brs[nedge,1, :], brs[nedge,2,:], λi, brl[nedge], narea)
 
-  # make values at nodes equal
+  # tie biogeographic nodes equal
   Yc[Ync2] = Yc[Ync1]
 
   # estimate current area & lineage means and area occupancy
@@ -153,7 +153,10 @@ function compete_mcmc(Xc       ::Array{Float64,2},
 
   # estimate average branch lineage specific means
   const avg_Δx = zeros((nedge-1), narea)
-  linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
+
+  linarea_branch_avg! = make_la_branch_avg(bridx_a, length(Yc), m, narea, nedge)
+
+  linarea_branch_avg!(avg_Δx, lindiff)
 
   # make likelihood and prior functions
   total_llf      = makellf(δt, Yc, ntip, narea, m)
@@ -171,7 +174,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
-      λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, biogeo_upd_iid, 
+      λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
+      biogeo_upd_iid, linarea_branch_avg!, 
       Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
@@ -223,7 +227,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   mhr_upd_λ = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llr)
   mhr_upd_Y = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
                              brδt, brl, wcol, Ync1, Ync2, 
-                             total_llf, biogeo_upd_iid)
+                             total_llf, biogeo_upd_iid, linarea_branch_avg!)
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
                              λlessthan, narea, ntip, Xupd_llr, Rupd_llr)
 

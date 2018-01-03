@@ -71,7 +71,6 @@ end
 
 
 
-
 """
     linarea_diff!(LD::Array{Float64,3}, X::Array{Float64,2}, AA::Array{Float64,2}, narea::Int64, ntip::Int64, m::Int64)
 
@@ -102,26 +101,39 @@ end
 
 
 """
-    linarea_branch_avg!(avg_Δx ::Array{Float64,1}, LD::Array{Float64,3}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64, nedge::Int64)
+    make_la_branch_avg(bridx_a, lY::Int64, narea::Int64, nedge::Int64)
 
-Estimate the branch average of lineage differences in each specific area.
+Make function to estimate the branch average of lineage differences in each specific area.
 """
-function linarea_branch_avg!(avg_Δx ::Array{Float64,2},
-                             LD     ::Array{Float64,3},
-                             bridx_a::Array{Array{UnitRange{Int64},1},1},
-                             narea  ::Int64,
-                             nedge  ::Int64)
-  @inbounds begin
+function make_la_branch_avg(bridx_a::Array{Array{UnitRange{Int64},1},1},
+                            lY     ::Int64,
+                            m      ::Int64,
+                            narea  ::Int64,
+                            nedge  ::Int64)
 
-    for k = Base.OneTo(narea), i = Base.OneTo(nedge - 1)
-      setindex!(avg_Δx, mean(LD[bridx_a[k][i]]), i, k)
-    end
-
+  # create branch indexes removing tips
+  const bridx_a_nt = deepcopy(bridx_a)
+  for k=Base.OneTo(narea), j=Base.OneTo(nedge)
+    sdi = setdiff(bridx_a[k][j], m:m:lY)
+    bridx_a_nt[k][j] = sdi[1]:sdi[end]
   end
 
-  nothing
-end
+  function f(avg_Δx::Array{Float64,2},
+             LD    ::Array{Float64,3})
 
+    @inbounds begin
+    
+      for k = Base.OneTo(narea), i = Base.OneTo(nedge - 1)
+        setindex!(avg_Δx, mean(LD[bridx_a_nt[k][i]]), i, k)
+      end
+
+    end
+
+    nothing
+  end
+
+  return f
+end
 
 
 

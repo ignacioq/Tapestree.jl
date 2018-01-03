@@ -26,6 +26,7 @@ function burn_compete(total_llf,
                       Rupd_llr,
                       σ²ωxupd_llr,
                       biogeo_upd_iid,
+                      linarea_branch_avg!,
                       Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
                       areavg   ::Array{Float64,2},
@@ -93,7 +94,6 @@ function burn_compete(total_llf,
   const λlessthan = 6
 
   # row i proposals for X
-  const xpi = zeros(Float64, ntip)        # X[i,:] 
   const aai = zeros(Float64, narea)       # area average
   const lai = zeros(Float64, ntip)        # lineage average
   const ldi = zeros(Float64, ntip, narea) # lineage difference
@@ -124,7 +124,7 @@ function burn_compete(total_llf,
       "\n Parameter updates per iter = ", length(parvec), "\n")
   end
 
-  #start brunin
+  #start burnin
   for it = Base.OneTo(nburn)
 
     # Update vector
@@ -218,7 +218,7 @@ function burn_compete(total_llf,
             la = copy(linavg)::Array{Float64,2}
             ld = copy(lindiff)::Array{Float64,3}
 
-            linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
+            linarea_branch_avg!(avg_Δx, lindiff)
 
             upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
                     Yp, bridx_a, brδt, brl, brs, narea, nedge)
@@ -331,7 +331,7 @@ function burn_compete(total_llf,
             la = copy(linavg)::Array{Float64,2}
             ld = copy(lindiff)::Array{Float64,3}
 
-            linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
+            linarea_branch_avg!(avg_Δx, lindiff)
 
             upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
                     Yp, bridx_a, brδt, brl, brs, narea, nedge)
@@ -407,7 +407,7 @@ function burn_compete(total_llf,
             la = copy(linavg)::Array{Float64,2}
             ld = copy(lindiff)::Array{Float64,3}
 
-            linarea_branch_avg!(avg_Δx, lindiff, bridx_a, narea, nedge)
+            linarea_branch_avg!(avg_Δx, lindiff)
 
             upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
                     Yp, bridx_a, brδt, brl, brs, narea, nedge)
