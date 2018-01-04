@@ -19,31 +19,33 @@ April 27 2017
 Run MCMC for join inference of trait
 and biogeographic evolution and competition.
 """
-function compete_mcmc(Xc       ::Array{Float64,2},
-                      Yc       ::Array{Int64,3},
-                      ncoup    ::Array{Int64,2},
-                      δt       ::Array{Float64,1},
-                      edges    ::Array{Int64,2},
-                      brl      ::Array{Float64,1},
-                      B        ::Array{Float64,2};
-                      niter    ::Int64             = 500_000,
-                      nthin    ::Int64             = 1_000,
-                      nburn    ::Int64             = 500_000,
-                      saveXY   ::Tuple{Bool,Int64} = (false, 1_000),
-                      ωxprior  ::NTuple{2,Float64} = (0.,10.),
-                      ω1prior  ::NTuple{2,Float64} = (0.,10.),
-                      ω0prior  ::NTuple{2,Float64} = (0.,10.),
-                      σ²prior  ::Float64           = 1e-1,
-                      λprior   ::Float64           = 1e-1,
-                      out_file ::String            = "compete_results",
-                      weight   ::NTuple{3,Float64} = (0.2,0.02,0.02),
-                      λi       ::Array{Float64,1}  = [1.0, 0.01],
-                      ωxi      ::Float64           = 0.,
-                      ω1i      ::Float64           = 0.,
-                      ω0i      ::Float64           = 0.,
-                      σ²i      ::Float64           = 1.,
-                      stbrl    ::Float64           = 1.,
-                      fix_ω1_ω0::Bool              = true)
+function compete_mcmc(Xc      ::Array{Float64,2},
+                      Yc      ::Array{Int64,3},
+                      ncoup   ::Array{Int64,2},
+                      δt      ::Array{Float64,1},
+                      edges   ::Array{Int64,2},
+                      brl     ::Array{Float64,1},
+                      B       ::Array{Float64,2};
+                      niter   ::Int64             = 500_000,
+                      nthin   ::Int64             = 1_000,
+                      nburn   ::Int64             = 500_000,
+                      saveXY  ::Tuple{Bool,Int64} = (false, 1_000),
+                      ωxprior ::NTuple{2,Float64} = (0.,10.),
+                      ω1prior ::NTuple{2,Float64} = (0.,10.),
+                      ω0prior ::NTuple{2,Float64} = (0.,10.),
+                      σ²prior ::Float64           = 1e-1,
+                      λprior  ::Float64           = 1e-1,
+                      out_file::String            = "compete_results",
+                      weight  ::NTuple{4,Float64} = (0.2,0.05,0.02,0.02),
+                      σ²i     ::Float64           = 1.,
+                      ωxi     ::Float64           = 0.,
+                      ω1i     ::Float64           = 0.,
+                      ω0i     ::Float64           = 0.,
+                      λ1i     ::Float64           = 1.0,
+                      λ0i     ::Float64           = 0.2,
+                      stbrl   ::Float64           = 1.,
+                      fix_ω1  ::Bool              = false,
+                      fix_ω0  ::Bool              = true)
 
   print_with_color(:green, "Data successfully processed", bold = true)
 
@@ -85,7 +87,8 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   const ω1    = zeros(Float64, nlogs)             # colonization competition parameter
   const ω0    = zeros(Float64, nlogs)             # extinction competition parameter
   const σ²    = zeros(Float64, nlogs)             # drift parameter
-  const λs    = zeros(Float64, nlogs, 2)          # rate parameters
+  const λ1    = zeros(Float64, nlogs)             # colonization parameters
+  const λ0    = zeros(Float64, nlogs)             # extirpation parameters
   const h     = zeros(Float64, nlogs)             # likelihood
   const o     = zeros(Float64, nlogs)             # prior
   const pc    = zeros(Float64, nlogs)             # collision probability
@@ -179,7 +182,7 @@ function compete_mcmc(Xc       ::Array{Float64,2},
       Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
       λi, ωxi, ω1i, ω0i, σ²i, 
       Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
-      weight, λprior, ωxprior, ω1prior, ω0prior, σ²prior, fix_ω1_ω0, np, nburn)
+      weight, λprior, ωxprior, ω1prior, ω0prior, σ²prior, fix_ω0, fix_ω1, np, nburn)
 
   # log likelihood and prior
   h[1]  = llc::Float64
@@ -211,17 +214,16 @@ function compete_mcmc(Xc       ::Array{Float64,2},
   # progess bar
   p  = Progress(niter, 5, "running MCMC...", 20)
 
-  if fix_ω1_ω0
-    const pv      = append!(collect(1:np),
-                            repeat(1:2, inner = ceil(Int64,np*weight[1])))
-    append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
-    const parvec  = setdiff(pv,(3:4))
-  else
-    const parvec  = append!(collect(1:np),
-                            repeat(1:2, inner = ceil(Int64,np*weight[1])))
-    append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
-    append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
-  end
+  # parameter vector updates
+  const parvec  = collect(1:np)
+  append!(parvec, fill(1,ceil(Int64,np*weight[1])))
+  append!(parvec, fill(2,ceil(Int64,np*weight[2])))
+  append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[3])))
+  append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[4])))
+
+  # if fixed ω1 or ω0
+  fix_ω1 && filter!(x -> x ≠ 3, parvec)
+  fix_ω0 && filter!(x -> x ≠ 4, parvec)
 
   # create parameter update functions
   mhr_upd_λ = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llr)
