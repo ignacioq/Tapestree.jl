@@ -119,7 +119,7 @@ function burn_compete(total_llf,
       # update X
       if up > 6
 
-        upx = wXp[up - λlessthan]::Int64                 # X indexing
+        upx = wXp[up - 6]::Int64                 # X indexing
 
         xi, xj = ind2sub(Xc, upx)
 
@@ -179,7 +179,7 @@ function burn_compete(total_llf,
         if log(rand()) < (llr + prr + log(λ1p)  - log(λ1c))
           llc     += llr::Float64
           prc     += prr::Float64
-          λ1c      = λ1p ::Array{Float64,1}
+          λ1c      = λ1p::Float64
           lac[5] += 1
         end
 
@@ -257,7 +257,7 @@ function burn_compete(total_llf,
         if log(rand()) < (llr + prr + log(λ0p)  - log(λ0c))
           llc     += llr::Float64
           prc     += prr::Float64
-          λ0c      = λ0p ::Array{Float64,1}
+          λ0c      = λ0p::Float64
           lac[6] += 1
         end
 

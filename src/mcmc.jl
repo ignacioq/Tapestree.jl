@@ -36,7 +36,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       σ²prior ::Float64           = 1e-1,
                       λprior  ::Float64           = 1e-1,
                       out_file::String            = "compete_results",
-                      weight  ::NTuple{5,Float64} = (0.1,0.05,0.02,0.02,0.01),
+                      weight  ::NTuple{5,Float64} = (0.15,0.05,0.02,0.02,5e-3),
                       σ²i     ::Float64           = 1.,
                       ωxi     ::Float64           = 0.,
                       ω1i     ::Float64           = 0.,
@@ -97,6 +97,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   edges = cat(1, edges, [2*ntip ntip + 1])
   push!(brl, stbrl)
 
+  # number of edges
   const nedge = size(edges,1) 
 
   # make edge triads
@@ -229,7 +230,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                              brδt, brl, wcol, Ync1, Ync2, 
                              total_llf, biogeo_upd_iid, linarea_branch_avg!)
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
-                             6, narea, ntip, Xupd_llr, Rupd_llr)
+                             narea, ntip, Xupd_llr, Rupd_llr)
 
   #=
   start MCMC
@@ -324,7 +325,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
       #update ω1
       elseif up == 3
-
         llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, λ0c, ω0c, Yc, llc, prc, ptn[3], 
                                    linavg, lindiff, ω1prior, ω10upd_llr)
 
@@ -356,7 +356,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
       # update ω0      
       else
-
         llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
                                     linavg, lindiff, ω0prior, ω10upd_llr)
 

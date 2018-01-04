@@ -24,7 +24,6 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         m        ::Int64,
                         ptn      ::Array{Float64,1},
                         wXp      ::Array{Int64,1},
-                        λlessthan::Int64,
                         narea    ::Int64,
                         ntip     ::Int64,
                         Xupd_llr ::Function,
@@ -50,7 +49,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
              areaoc ::Array{Int64,2})
 
     @inbounds begin
-      upx = wXp[up - λlessthan]::Int64                 # X indexing
+      upx = wXp[up - 6]::Int64                 # X indexing
 
       xi, xj = ind2sub(Xc, upx)
 
