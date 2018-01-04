@@ -36,7 +36,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       σ²prior ::Float64           = 1e-1,
                       λprior  ::Float64           = 1e-1,
                       out_file::String            = "compete_results",
-                      weight  ::NTuple{4,Float64} = (0.2,0.05,0.02,0.02),
+                      weight  ::NTuple{5,Float64} = (0.1,0.05,0.02,0.02,0.01),
                       σ²i     ::Float64           = 1.,
                       ωxi     ::Float64           = 0.,
                       ω1i     ::Float64           = 0.,
@@ -131,14 +131,14 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # Sample all internal node values according to Pr transitions
   for triad in trios
-    upnode!(λi, triad, Yc, bridx_a, brδt, brl, brs, narea, nedge)
+    upnode!(λ1i, λ0i, triad, Yc, bridx_a, brδt, brl, brs, narea, nedge)
   end
 
   # assign same value as mrca
   brs[nedge,1,:] = brs[nedge,2,:]
 
   # create stem events
-  stemevc = br_samp(brs[nedge,1, :], brs[nedge,2,:], λi, brl[nedge], narea)
+  stemevc = br_samp(brs[nedge,1,:], brs[nedge,2,:], λ1i, λ0i, brl[nedge], narea)
 
   # tie biogeographic nodes equal
   Yc[Ync2] = Yc[Ync1]
@@ -174,15 +174,28 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   # number of xnodes + λ1 + λ0 + σ² + ωx + ω1 + ω0
   const np = length(wXp) + 6
 
+  # parameter vector updates
+  const parvec  = collect(1:np)
+  append!(parvec, fill(1,ceil(Int64,np*weight[1])))
+  append!(parvec, fill(2,ceil(Int64,np*weight[2])))
+  append!(parvec, repeat(3:4,  inner = ceil(Int64,np*weight[3])))
+  append!(parvec, repeat(5:6,  inner = ceil(Int64,np*weight[4])))
+  append!(parvec, repeat(7:np, inner = ceil(Int64,np*weight[5])))
+
+  # if fixed ω1 or ω0
+  fix_ω1 && filter!(x -> x ≠ 3, parvec)
+  fix_ω0 && filter!(x -> x ≠ 4, parvec)
+
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
-  stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn = burn_compete(total_llf, 
+  stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_compete(total_llf, 
       λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
       biogeo_upd_iid, linarea_branch_avg!, 
       Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
-      λi, ωxi, ω1i, ω0i, σ²i, 
-      Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, trios, wXp, 
-      weight, λprior, ωxprior, ω1prior, ω0prior, σ²prior, fix_ω0, fix_ω1, np, nburn)
+      σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
+      Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
+      trios, wXp,
+      λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
   # log likelihood and prior
   h[1]  = llc::Float64
@@ -190,7 +203,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # log probability of collision
   const max_δt = maximum(δt)::Float64
-  pc[1] = Pc(λc[1], λc[2], max_δt)::Float64
+  pc[1] = Pc(λ1c, λ0c, max_δt)::Float64
 
   # log for nthin
   const lit   = 0
@@ -208,32 +221,19 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   # number of internal nodes (to perform updates on)
   const nin = length(trios) + 1
 
-  # parameter location for λ
-  const λlessthan = 6
-
   # progess bar
   p  = Progress(niter, 5, "running MCMC...", 20)
 
-  # parameter vector updates
-  const parvec  = collect(1:np)
-  append!(parvec, fill(1,ceil(Int64,np*weight[1])))
-  append!(parvec, fill(2,ceil(Int64,np*weight[2])))
-  append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[3])))
-  append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[4])))
-
-  # if fixed ω1 or ω0
-  fix_ω1 && filter!(x -> x ≠ 3, parvec)
-  fix_ω0 && filter!(x -> x ≠ 4, parvec)
-
   # create parameter update functions
-  mhr_upd_λ = make_mhr_upd_λ(nedge, λprior, ptn, λupd_llr)
   mhr_upd_Y = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
                              brδt, brl, wcol, Ync1, Ync2, 
                              total_llf, biogeo_upd_iid, linarea_branch_avg!)
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
-                             λlessthan, narea, ntip, Xupd_llr, Rupd_llr)
+                             6, narea, ntip, Xupd_llr, Rupd_llr)
 
-  #start MCMC
+  #=
+  start MCMC
+  =#
   for it = Base.OneTo(niter)
 
     # Update update vector
@@ -242,17 +242,18 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     for up = parvec
 
       # update X[i]
-      if up > λlessthan
+      if up > 6
 
-        llc = mhr_upd_X(up, Xc, Yc, λc, 
+        llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, 
                         ωxc, ω1c, ω0c, σ²c, llc, 
                         areavg, linavg, lindiff, areaoc)
 
-      #randomly select λ to update and branch histories
-      elseif up > 4 && up <= λlessthan
+      # update λ1 
+      elseif up == 5
 
-        llc, prc, λc = mhr_upd_λ(up, Yc, λc, llc, prc, ω1c, ω0c, 
-                                 lindiff, stemevc, brs[nedge,1,:])
+        llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, ω0c, 
+                                   lindiff, stemevc, brs[nedge,1,:], λprior,
+                                   ptn[5], λupd_llr)
 
         # which internal node to update
         if rand() < 0.4
@@ -260,19 +261,51 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # update a random internal node, including the mrca
           if bup < nin
             llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
-                       Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                       Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
-            stemevc = upstem(λc, nedge, brs, brl, narea)
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+            end
+
+            llc += llr
+          end
+        end
+
+      # if λ0 is updated
+      elseif up == 6
+
+        llc, prc, λ0c = mhr_upd_λ0(λ0c, Yc, λ1c, llc, prc, ω1c, ω0c, 
+                                   lindiff, stemevc, brs[nedge,1,:], λprior,
+                                   ptn[6], λupd_llr)
+
+        # which internal node to update
+        if rand() < 0.4
+          bup = rand(Base.OneTo(nin))
+          # update a random internal node, including the mrca
+          if bup < nin
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
+                       Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+          else
+            # update stem
+            llr = 0.0
+            for j=Base.OneTo(narea)
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+            end
+
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
+
+            for j=Base.OneTo(narea)
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
             llc += llr
@@ -291,7 +324,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
       #update ω1
       elseif up == 3
-        llc, prc, ω1c = mhr_upd_ω1(ω1c, λc, ω0c, Yc, llc, prc, ptn[3], 
+
+        llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, λ0c, ω0c, Yc, llc, prc, ptn[3], 
                                    linavg, lindiff, ω1prior, ω10upd_llr)
 
         # which internal node to update
@@ -299,20 +333,21 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
-                       Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
-            stemevc = upstem(λc, nedge, brs, brl, narea)
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
             llc += llr
@@ -322,7 +357,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
       # update ω0      
       else
 
-        llc, prc, ω0c = mhr_upd_ω0(ω0c, λc, ω1c, Yc, llc, prc, ptn[4],
+        llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
                                     linavg, lindiff, ω0prior, ω10upd_llr)
 
         # which internal node to update
@@ -330,20 +365,21 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
-                       Xc, Yc, λc, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
-            stemevc = upstem(λc, nedge, brs, brl, narea)
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
             llc += llr
@@ -359,17 +395,16 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     if lthin == nthin
       @inbounds begin
         lit += 1
-        setindex!(iter,  it, lit)
-        setindex!(h,    llc, lit)
-        setindex!(o,    prc, lit)
-        setindex!(ωx,   ωxc, lit)
-        setindex!(ω1,   ω1c, lit)
-        setindex!(ω0,   ω0c, lit)
-        setindex!(σ²,   σ²c, lit)
-        setindex!(pc, Pc(f_λ(λc[1],ω1c,1.0), f_λ(λc[2],ω0c,1.0), max_δt), lit)
-        for j = eachindex(λc)
-          setindex!(λs, λc[j], lit, j)
-        end
+        setindex!(iter, it, lit)
+        setindex!(h,   llc, lit)
+        setindex!(o,   prc, lit)
+        setindex!(σ²,  σ²c, lit)
+        setindex!(ωx,  ωxc, lit)
+        setindex!(ω1,  ω1c, lit)
+        setindex!(ω0,  ω0c, lit)
+        setindex!(λ1,  λ1c, lit)
+        setindex!(λ0,  λ0c, lit)
+        setindex!(pc, Pc(f_λ(λ1c,ω1c,1.0), f_λ(λ0c,ω0c,1.0), max_δt), lit)
       end
       lthin = 0
     end
@@ -402,19 +437,12 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     """)
   end
 
-  R = hcat(iter, h, o, ωx, ω1, ω0, σ², λs, pc)
+  R = hcat(iter, h, o, ωx, ω1, ω0, σ², λ1, λ0, pc)
 
   # add column names
   col_nam = ["Iteration", "Likelihood", "Prior", "Trait_competition", 
              "Colonization_competition", "Extinction_competition", 
-             "Sigma2"]
-  
-  for i = 1:-1:0
-    xn = *("Lambda_", string(i))
-    push!(col_nam, xn)
-  end
-  
-  push!(col_nam, "Collision_probability")
+             "Sigma2", "Lambda_1", "Lambda_0", "Collision_probability"]
 
   R = vcat(reshape(col_nam, 1, endof(col_nam)), R)
 

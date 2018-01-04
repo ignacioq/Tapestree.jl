@@ -12,135 +12,6 @@ June 20 2017
 
 
 
-"""
-    make_mhr_upd_λ(nedge::Int64, λprior::Float64, ptn::Array{Float64}, λupd_llf)
-
-Make function to update λ.
-"""
-function make_mhr_upd_λ(nedge   ::Int64, 
-                        λprior  ::Float64,
-                        ptn     ::Array{Float64},
-                        λupd_llr::Function)
-
-  function f(up     ::Int64,
-             Yc     ::Array{Int64,3},
-             λc     ::Array{Float64,1},
-             llc    ::Float64,
-             prc    ::Float64,
-             ω1c    ::Float64,
-             ω0c    ::Float64,
-             lindiff::Array{Float64,3},
-             stemevc::Array{Array{Float64,1},1},
-             stemss ::Array{Int64,1})
-    
-    upλ = (up - 4)::Int64
-
-    λp = copy(λc)::Array{Float64,1}
-
-    # update λ
-    λp[upλ] = logupt(λc[upλ], rand() < 0.5 ? ptn[up] : 4*ptn[up])::Float64
-
-    # proposal likelihood and prior
-    llr = λupd_llr(Yc, λc, λp, ω1c, ω0c, 
-                   lindiff, stemevc, stemss)::Float64
-
-    prr = logdexp(λp[upλ], λprior) - logdexp(λc[upλ], λprior)::Float64
-
-    if log(rand()) < (llr + prr + 
-                      log(λp[upλ])  - log(λc[upλ]))
-      llc += llr::Float64
-      prc += prr::Float64
-      λc   = λp ::Array{Float64,1}
-    end
-  
-    return (llc, prc, λc)::Tuple{Float64,Float64,Array{Float64,1}}
-  end
-
-end
-
-
-
-
-
-"""
-    make_mhr_upd_Y(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
-
-Make function to update trio in Y.
-"""
-function make_mhr_upd_Y(narea              ::Int64,
-                        nedge              ::Int64,
-                        m                  ::Int64,
-                        ntip               ::Int64,
-                        bridx_a            ::Array{Array{UnitRange{Int64},1},1},
-                        brδt               ::Array{Array{Float64,1},1},
-                        brl                ::Array{Float64,1},
-                        wcol               ::Array{Array{Int64,1},1},
-                        Ync1               ::Array{Int64,1},
-                        Ync2               ::Array{Int64,1},
-                        total_llf          ::Function,
-                        biogeo_upd_iid     ::Function,
-                        linarea_branch_avg!::Function)
-
-  function f(triad  ::Array{Int64,1},
-             Xc     ::Array{Float64,2},
-             Yc     ::Array{Int64,3},
-             λc     ::Array{Float64,1},
-             ωxc    ::Float64, 
-             ω1c    ::Float64, 
-             ω0c    ::Float64,
-             σ²c    ::Float64,
-             llc    ::Float64,
-             prc    ::Float64,
-             areavg ::Array{Float64,2},
-             areaoc ::Array{Int64,2},
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
-             avg_Δx ::Array{Float64,2},
-             brs    ::Array{Int64,3},
-             stemevc::Array{Array{Float64,1},1})
-
-
-    const Yp = copy(Yc)::Array{Int64,3}
-    const aa = copy(areavg)::Array{Float64,2}
-    const ao = copy(areaoc)::Array{Int64,2}
-    const la = copy(linavg)::Array{Float64,2}
-    const ld = copy(lindiff)::Array{Float64,3}
-
-    linarea_branch_avg!(avg_Δx, lindiff)
-
-    upnode!(λc, ω1c, ω0c, avg_Δx, triad, 
-            Yp, bridx_a, brδt, brl, brs, narea, nedge)
-
-    Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
-
-    area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-    linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
-
-    llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
-                     stemevc, brs[nedge,1,:], σ²c) - 
-           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
-                     stemevc, brs[nedge,1,:], σ²c))::Float64
-
-    propr_iid = (biogeo_upd_iid(Yc, λc, ω1c, ω0c, avg_Δx, triad) - 
-                 biogeo_upd_iid(Yp, λc, ω1c, ω0c, avg_Δx, triad))::Float64
-
-    if log(rand()) < (llr + propr_iid)::Float64
-      llc    += llr::Float64
-      Yc      = Yp ::Array{Int64,3}
-      areavg  = aa ::Array{Float64,2}
-      areaoc  = ao ::Array{Int64,2}
-      linavg  = la ::Array{Float64,2}
-      lindiff = ld ::Array{Float64,3}
-    end
-
-    return llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
-  end
-
-end
-
-
-
-
 
 """
     make_mhr_upd_X(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
@@ -166,7 +37,8 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
   function f(up     ::Int64,
              Xc     ::Array{Float64,2},
              Yc     ::Array{Int64,3},
-             λc     ::Array{Float64,1},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
              ωxc    ::Float64, 
              ω1c    ::Float64, 
              ω0c    ::Float64,
@@ -200,7 +72,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                        lai[wcol[1]], ldi[wcol[1],:], 
                        linavg[1,wcol[1]], lindiff[1,wcol[1],:],
                        Yc, 
-                       ωxc, ω1c, ω0c, λc, σ²c)::Float64
+                       ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
       else
         llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
                        xpi, 
@@ -209,7 +81,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                        linavg[xi,:], linavg[xi-1,:], 
                        lindiff[xi,:,:],
                        Yc, 
-                       ωxc, ω1c, ω0c, λc, σ²c)::Float64
+                       ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
       end
 
       if log(rand()) < llr
@@ -222,6 +94,87 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
     end
 
     return llc
+  end
+
+end
+
+
+
+
+
+"""
+    make_mhr_upd_Y(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
+
+Make function to update trio in Y.
+"""
+function make_mhr_upd_Y(narea              ::Int64,
+                        nedge              ::Int64,
+                        m                  ::Int64,
+                        ntip               ::Int64,
+                        bridx_a            ::Array{Array{UnitRange{Int64},1},1},
+                        brδt               ::Array{Array{Float64,1},1},
+                        brl                ::Array{Float64,1},
+                        wcol               ::Array{Array{Int64,1},1},
+                        Ync1               ::Array{Int64,1},
+                        Ync2               ::Array{Int64,1},
+                        total_llf          ::Function,
+                        biogeo_upd_iid     ::Function,
+                        linarea_branch_avg!::Function)
+
+  function f(triad  ::Array{Int64,1},
+             Xc     ::Array{Float64,2},
+             Yc     ::Array{Int64,3},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             ωxc    ::Float64, 
+             ω1c    ::Float64, 
+             ω0c    ::Float64,
+             σ²c    ::Float64,
+             llc    ::Float64,
+             prc    ::Float64,
+             areavg ::Array{Float64,2},
+             areaoc ::Array{Int64,2},
+             linavg ::Array{Float64,2},
+             lindiff::Array{Float64,3},
+             avg_Δx ::Array{Float64,2},
+             brs    ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1})
+
+
+    const Yp = copy(Yc)::Array{Int64,3}
+    const aa = copy(areavg)::Array{Float64,2}
+    const ao = copy(areaoc)::Array{Int64,2}
+    const la = copy(linavg)::Array{Float64,2}
+    const ld = copy(lindiff)::Array{Float64,3}
+
+    linarea_branch_avg!(avg_Δx, lindiff)
+
+    upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, 
+            Yp, bridx_a, brδt, brl, brs, narea, nedge)
+
+    Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
+
+    area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
+    linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
+
+    llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c) - 
+           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c))::Float64
+
+    propr_iid = (biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, triad) - 
+                 biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, triad))::Float64
+
+    if log(rand()) < (llr + propr_iid)::Float64
+      llc    += llr::Float64
+      Yc      = Yp ::Array{Int64,3}
+      areavg  = aa ::Array{Float64,2}
+      areaoc  = ao ::Array{Int64,2}
+      linavg  = la ::Array{Float64,2}
+      lindiff = ld ::Array{Float64,3}
+    end
+
+    return llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
   end
 
 end
@@ -306,14 +259,14 @@ end
 
 
 
-
 """
     mhr_upd_ω1(ω1c::Float64, λc::Array{Float64,2}, ω0c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω1tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω1prior::Tuple{Float64,Float64}, ω10upd_llr)
 
 MHR update for ω1.
 """
 function mhr_upd_ω1(ω1c       ::Float64,
-                    λc        ::Array{Float64,1},
+                    λ1c        ::Float64,
+                    λ0c        ::Float64,
                     ω0c       ::Float64,
                     Yc        ::Array{Int64,3},
                     llc       ::Float64,
@@ -327,7 +280,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
   ω1p = addupt(ω1c, rand() < 0.5 ? ω1tn : 4*ω1tn)::Float64
 
   # likelihood ratio
-  llr = ω10upd_llr(Yc, λc, ω1c, ω1p, ω0c, ω0c, lindiff)::Float64
+  llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, lindiff)::Float64
 
   # prior ratio
   prr = (logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
@@ -345,14 +298,14 @@ end
 
 
 
-
 """
     mhr_upd_ω0(ω0c::Float64, λc::Array{Float64,2}, ω1c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω0tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω0prior::Tuple{Float64,Float64}, ω10upd_llr)
 
 MHR update for ω0.
 """
 function mhr_upd_ω0(ω0c       ::Float64,
-                    λc        ::Array{Float64,1},
+                    λ1c       ::Float64,
+                    λ0c       ::Float64,
                     ω1c       ::Float64,
                     Yc        ::Array{Int64,3},
                     llc       ::Float64,
@@ -366,7 +319,7 @@ function mhr_upd_ω0(ω0c       ::Float64,
   ω0p = addupt(ω0c, rand() < 0.5 ? ω0tn : 4*ω0tn)::Float64
 
   # likelihood ratio
-  llr = ω10upd_llr(Yc, λc, ω1c, ω1c, ω0c, ω0p, lindiff)::Float64
+  llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, lindiff)::Float64
 
   # prior ratio
   prr = (logdnorm(ω0p, ω0prior[1], ω0prior[2]) -
@@ -380,5 +333,87 @@ function mhr_upd_ω0(ω0c       ::Float64,
 
   return (llc, prc, ω0c)::Tuple{Float64,Float64,Float64}
 end
+
+
+
+
+
+"""
+    mhr_upd_λ1(...)
+
+Update λ1.
+"""
+function mhr_upd_λ1(λ1c     ::Float64,
+                    Yc      ::Array{Int64,3},
+                    λ0c     ::Float64,
+                    llc     ::Float64,
+                    prc     ::Float64,
+                    ω1c     ::Float64,
+                    ω0c     ::Float64,
+                    lindiff ::Array{Float64,3},
+                    stemevc ::Array{Array{Float64,1},1},
+                    stemss  ::Array{Int64,1},
+                    λprior  ::Float64,
+                    λ1tn    ::Float64,
+                    λupd_llr::Function)
+
+  # update λ
+  λ1p = logupt(λ1c, rand() < 0.5 ? λ1tn : 4*λ1tn)::Float64
+
+  # proposal likelihood and prior
+  llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
+                 lindiff, stemevc, stemss)::Float64
+
+  prr = logdexp(λ1p, λprior) - logdexp(λ1c, λprior)::Float64
+
+  if log(rand()) < (llr + prr + log(λ1p)  - log(λ1c))
+    llc += llr::Float64
+    prc += prr::Float64
+    λ1c  = λ1p::Float64
+  end
+
+  return (llc, prc, λ1c)::Tuple{Float64,Float64,Float64}
+end
+
+
+
+
+"""
+    mhr_upd_λ0(...)
+
+Update λ0.
+"""
+function mhr_upd_λ0(λ0c     ::Float64,
+                    Yc      ::Array{Int64,3},
+                    λ1c     ::Float64,
+                    llc     ::Float64,
+                    prc     ::Float64,
+                    ω1c     ::Float64,
+                    ω0c     ::Float64,
+                    lindiff ::Array{Float64,3},
+                    stemevc ::Array{Array{Float64,1},1},
+                    stemss  ::Array{Int64,1},
+                    λprior  ::Float64,
+                    λ0tn    ::Float64,
+                    λupd_llr::Function)
+
+  # update λ
+  λ0p = logupt(λ0c, rand() < 0.5 ? λ0tn : 4*λ0tn)::Float64
+
+  # proposal likelihood and prior
+  llr = λupd_llr(Yc, λ1c, λ0p, λ1c, λ0c, ω1c, ω0c, 
+                 lindiff, stemevc, stemss)::Float64
+
+  prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64
+
+  if log(rand()) < (llr + prr + log(λ0p)  - log(λ0c))
+    llc += llr::Float64
+    prc += prr::Float64
+    λ0c  = λ0p::Float64
+  end
+
+  return (llc, prc, λ0c)::Tuple{Float64,Float64,Float64}
+end
+
 
 

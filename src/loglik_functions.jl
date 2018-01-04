@@ -86,7 +86,8 @@ function makellf(δt   ::Vector{Float64},
              ωx     ::Float64,
              ω1     ::Float64,
              ω0     ::Float64,
-             λ      ::Array{Float64,1},
+             λ1     ::Float64,
+             λ0     ::Float64,
              stemevc::Vector{Vector{Float64}},
              stemss ::Vector{Int64},
              σ²     ::Float64)
@@ -94,7 +95,6 @@ function makellf(δt   ::Vector{Float64},
     ll::Float64 = normC
 
     @inbounds @fastmath begin
-
 
       # trait likelihood
       for j = Base.OneTo(ntip)
@@ -108,26 +108,21 @@ function makellf(δt   ::Vector{Float64},
 
       # biogeograhic likelihood
       for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λ[1], λ[2], stemss[k])::Float64
+        ll += brll(stemevc[k], λ1, λ0, stemss[k])::Float64
         for j = Base.OneTo(ntip)
           ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ[1], λ[2], ω1, ω0, 
+                            λ1, λ0, ω1, ω0, 
                             lindiff[wf23[j]:m,j,k], δt[wf23[j]:(m-1)])::Float64
         end
       end
 
     end
 
-
     ll::Float64
   end
 
   return f
 end
-
-
-
-
 
 
 
@@ -244,8 +239,10 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
   end
 
   function f(Y      ::Array{Int64,3}, 
-             λc     ::Array{Float64,1},
-             λp     ::Array{Float64,1},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             λ1p    ::Float64,
+             λ0p    ::Float64,
              ω1     ::Float64,
              ω0     ::Float64,
              lindiff::Array{Float64,3},
@@ -257,16 +254,16 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
     @inbounds begin
 
       for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λp[1], λp[2], stemss[k])::Float64 -
-              brll(stemevc[k], λc[1], λc[2], stemss[k])::Float64
+        ll += brll(stemevc[k], λ1p, λ0p, stemss[k])::Float64 -
+              brll(stemevc[k], λ1c, λ0c, stemss[k])::Float64
 
         for j = Base.OneTo(ntip)
           ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                            λp[1], λp[2], ω1, ω0, 
+                            λ1p, λ0p, ω1, ω0, 
                             lindiff[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64 -
                 bitvectorll(Y[wf23[j]:m,j,k], 
-                            λc[1], λc[2], ω1, ω0, 
+                            λ1c, λ0c, ω1, ω0, 
                             lindiff[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64
         end
@@ -279,7 +276,6 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
 
   return f
 end
-
 
 
 
@@ -303,10 +299,11 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
   end
 
   function f(Y      ::Array{Int64,3}, 
-             λ      ::Array{Float64,1},
+             λ1     ::Float64,
+             λ0     ::Float64,
              ω1c    ::Float64,
-             ω1p    ::Float64,
              ω0c    ::Float64,
+             ω1p    ::Float64,
              ω0p    ::Float64,
              lindiff::Array{Float64,3})
 
@@ -316,11 +313,11 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
 
       for k = Base.OneTo(narea), j = Base.OneTo(ntip)
         ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ[1], λ[2], ω1p, ω0p, 
+                            λ1, λ0, ω1p, ω0p, 
                             lindiff[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64 -
               bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ[1], λ[2], ω1c, ω0c, 
+                            λ1, λ0, ω1c, ω0c, 
                             lindiff[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64
       end
@@ -332,7 +329,6 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
 
   return f
 end
-
 
 
 
@@ -364,7 +360,8 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
 
   function f(Y     ::Array{Int64,3}, 
-             λ     ::Array{Float64,1},
+             λ1    ::Float64,
+             λ0    ::Float64,
              ω1    ::Float64,
              ω0    ::Float64,
              avg_Δx::Array{Float64,2},
@@ -379,18 +376,18 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{UnitRange{Int64},1},1},
       if pr < nedge 
         for k = Base.OneTo(narea)
           ll += bitvectorll_iid(Y[bridx_a[k][pr]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[pr,k], δtA[pr]) +
+                                λ1, λ0, ω1, ω0, avg_Δx[pr,k], δtA[pr]) +
                 bitvectorll_iid(Y[bridx_a[k][d1]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,k], δtA[d1]) +
+                                λ1, λ0, ω1, ω0, avg_Δx[d1,k], δtA[d1]) +
                 bitvectorll_iid(Y[bridx_a[k][d2]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,k], δtA[d2])::Float64
+                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2])::Float64
         end
       else 
         for k = Base.OneTo(narea)
           ll += bitvectorll_iid(Y[bridx_a[k][d1]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d1,k], δtA[d1]) +
+                                λ1, λ0, ω1, ω0, avg_Δx[d1,k], δtA[d1]) +
                 bitvectorll_iid(Y[bridx_a[k][d2]], 
-                                λ[1], ω1, λ[2], ω0, avg_Δx[d2,k], δtA[d2])::Float64
+                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2])::Float64
         end
       end
 
@@ -413,8 +410,8 @@ for a bit vector.
 """
 function bitvectorll_iid(y     ::Array{Int64,1},
                          λ1    ::Float64,
-                         ω1    ::Float64,
                          λ0    ::Float64,
+                         ω1    ::Float64,
                          ω0    ::Float64,
                          avg_Δx::Float64,
                          δt    ::Array{Float64,1})
@@ -501,7 +498,6 @@ end
 
 
 
-
 """
     makellr_Xupd(δt::Vector{Float64}, narea::Int64)
 
@@ -526,7 +522,8 @@ function makellr_Xupd(δt   ::Vector{Float64},
              ωx    ::Float64,
              ω1    ::Float64,
              ω0    ::Float64,
-             λ     ::Array{Float64,1},
+             λ1    ::Float64,
+             λ0    ::Float64,
              σ²    ::Float64)
 
     # normal likelihoods
@@ -562,9 +559,9 @@ function makellr_Xupd(δt   ::Vector{Float64},
         # biogeograhic likelihoods
       for k = Base.OneTo(narea), j = wci
         ll += bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                       λ[1], λ[2], ω1, ω0, ldpi[j,k], δt[i])::Float64 -
+                       λ1, λ0, ω1, ω0, ldpi[j,k], δt[i])::Float64 -
               bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                       λ[1], λ[2], ω1, ω0, ldci[j,k], δt[i])::Float64
+                       λ1, λ0, ω1, ω0, ldci[j,k], δt[i])::Float64
       end
       
     end
@@ -601,7 +598,8 @@ function makellr_Rupd(δt1  ::Float64,
              ωx    ::Float64,
              ω1    ::Float64,
              ω0    ::Float64,
-             λ     ::Array{Float64,1},
+             λ1    ::Float64,
+             λ0    ::Float64,
              σ²    ::Float64)
 
     ll::Float64 = 0.0
@@ -623,9 +621,9 @@ function makellr_Rupd(δt1  ::Float64,
         # biogeograhic likelihoods
         for k = Base.OneTo(narea)
           ll += bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                         λ[1], λ[2], ω1, ω0, ldpi[j,k], δt1)::Float64 -
+                         λ1, λ0, ω1, ω0, ldpi[j,k], δt1)::Float64 -
                 bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                         λ[1], λ[2], ω1, ω0, ldci[j,k], δt1)::Float64
+                         λ1, λ0, ω1, ω0, ldci[j,k], δt1)::Float64
         end
 
       end
@@ -695,15 +693,9 @@ nell(t::Float64, λ::Float64) = (-1 * λ * t)::Float64
 
 Return log-prior for all areas 
 """
-function allλpr(λc    ::Array{Float64,1},
+function allλpr(λ1    ::Float64,
+                λ0    ::Float64,
                 λprior::Float64)
-
-  pr::Float64 = 0.0
-  
-  for j in λc
-    pr += logdexp(j, λprior)::Float64
-  end
-
-  return pr::Float64
+  return (logdexp(λ1, λprior) + logdexp(λ0, λprior))::Float64
 end
 

@@ -34,11 +34,12 @@ function burn_compete(total_llf,
                       linavg   ::Array{Float64,2},
                       lindiff  ::Array{Float64,3},
                       avg_Δx   ::Array{Float64,2},
-                      λc       ::Array{Float64,1},
+                      σ²c      ::Float64,
                       ωxc      ::Float64,
                       ω1c      ::Float64,
                       ω0c      ::Float64,
-                      σ²c      ::Float64,
+                      λ1c      ::Float64,
+                      λ0c      ::Float64,
                       Ync1     ::Array{Int64,1},
                       Ync2     ::Array{Int64,1},
                       Xnc1     ::Array{Int64,1},
@@ -51,14 +52,13 @@ function burn_compete(total_llf,
                       stemevc  ::Array{Array{Float64,1},1},
                       trios    ::Array{Array{Int64,1},1},
                       wXp      ::Array{Int64,1},
-                      weight   ::NTuple{3,Float64},
                       λprior   ::Float64,
                       ωxprior  ::NTuple{2,Float64},
                       ω1prior  ::NTuple{2,Float64},
                       ω0prior  ::NTuple{2,Float64},
                       σ²prior  ::Float64,
-                      fix_ω1_ω0::Bool,
                       np       ::Int64,
+                      parvec   ::Array{Int64,1},
                       nburn    ::Int64,
                       obj_ar   ::Float64 = 0.234,
                       tune_int ::Int64   = 100)
@@ -68,10 +68,10 @@ function burn_compete(total_llf,
   const nedge = size(brs,1) 
 
   # likelihood and prior
-  llc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
+  llc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                   stemevc, brs[nedge,1,:], σ²c)
-  prc = allλpr(λc, λprior)    + 
-        logdexp(σ²c, σ²prior) + 
+  prc = allλpr(λ1c, λ0c, λprior)              +
+        logdexp(σ²c, σ²prior)                 +
         logdnorm(ωxc, ωxprior[1], ωxprior[2]) +
         logdnorm(ω1c, ω1prior[1], ω1prior[2]) +
         logdnorm(ω0c, ω0prior[1], ω0prior[2])
@@ -90,9 +90,6 @@ function burn_compete(total_llf,
   # number of internal nodes
   const nin = length(trios) + 1
 
-  # parameter location for λ
-  const λlessthan = 6
-
   # row i proposals for X
   const aai = zeros(Float64, narea)       # area average
   const lai = zeros(Float64, ntip)        # lineage average
@@ -101,28 +98,15 @@ function burn_compete(total_llf,
   # progress bar
   p = Progress(nburn + 1, 5, "burning...", 20)
 
-  if fix_ω1_ω0
-    const pv      = append!(collect(1:np),
-                            repeat(1:2, inner = ceil(Int64,np*weight[1])))
-    append!(pv, repeat(5:6, inner = ceil(Int64,np*weight[3])))
-    const parvec  = setdiff(pv,(3:4))
-
-    print_with_color(:green,
-      "\n ωx & σ² updates per iter = ", ceil(Int64,np*weight[1]) + 1,
-      "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1,
-      "\n total parameter updates per iter = ", length(parvec), "\n")
-  else
-    const parvec  = append!(collect(1:np),
-                            repeat(1:2, inner = ceil(Int64,np*weight[1])))
-    append!(parvec, repeat(3:4, inner = ceil(Int64,np*weight[2])))
-    append!(parvec, repeat(5:6, inner = ceil(Int64,np*weight[3])))
-
-    print_with_color(:green,
-      "\n ωx & σ² updates per iter = ", ceil(Int64,np*weight[1]) + 1,
-      "\n ω1 & ω0 updates per iter = ", ceil(Int64,np*weight[2]) + 1,
-      "\n λ1 & λ0 updates per iter = ", ceil(Int64,np*weight[3]) + 1,
-      "\n Parameter updates per iter = ", length(parvec), "\n")
-  end
+  # print number of parameters
+  print_with_color(:green,
+    "\n σ² updates per iter = ", endof(filter(x -> x == 1,parvec)),
+    "\n ωx updates per iter = ", endof(filter(x -> x == 2,parvec)),
+    "\n ω1 updates per iter = ", endof(filter(x -> x == 3,parvec)),
+    "\n ω0 updates per iter = ", endof(filter(x -> x == 4,parvec)),
+    "\n λ1 updates per iter = ", endof(filter(x -> x == 5,parvec)),
+    "\n λ0 updates per iter = ", endof(filter(x -> x == 6,parvec)),    
+    "\n Parameter updates per iter = ", length(parvec), "\n")
 
   #start burnin
   for it = Base.OneTo(nburn)
@@ -133,7 +117,7 @@ function burn_compete(total_llf,
     for up = parvec
 
       # update X
-      if up > λlessthan
+      if up > 6
 
         upx = wXp[up - λlessthan]::Int64                 # X indexing
 
@@ -157,7 +141,7 @@ function burn_compete(total_llf,
                                    lai[wcol[1]], ldi[wcol[1],:], 
                                    linavg[1,wcol[1]], lindiff[1,wcol[1],:],
                                    Yc, 
-                                   ωxc, ω1c, ω0c, λc, σ²c)::Float64
+                                   ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
         else
           @inbounds llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
                                    xpi, 
@@ -166,7 +150,7 @@ function burn_compete(total_llf,
                                    linavg[xi,:], linavg[xi-1,:], 
                                    lindiff[xi,:,:],
                                    Yc, 
-                                   ωxc, ω1c, ω0c, λc, σ²c)::Float64
+                                   ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
         end
 
         if log(rand()) < llr
@@ -180,29 +164,23 @@ function burn_compete(total_llf,
           end
         end
 
-      #randomly select λ to update and branch histories
-      elseif up > 4 && up <= λlessthan
-
-        upλ = (up - 4)::Int64
-
-        λp = copy(λc)::Array{Float64,1}
+     
+      # update λ1
+      elseif up == 5
 
         # update λ
-        λp[upλ] = logupt(λc[upλ], ptn[up])::Float64
+        λ1p = logupt(λ1c, ptn[5])::Float64
 
-        # proposal likelihood and prior
-        llr = λupd_llr(Yc, λc, λp, ω1c, ω0c, 
-                        lindiff, stemevc, brs[nedge,1,:])::Float64
+        llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
+                       lindiff, stemevc, brs[nedge,1,:])::Float64
 
-        prr = logdexp(λp[upλ], λprior) - logdexp(λc[upλ], λprior)::Float64
+        prr = logdexp(λ1p, λprior) - logdexp(λ1c, λprior)::Float64
 
-        if log(rand()) < (llr + 
-                          prr + 
-                          log(λp[upλ])  - log(λc[upλ]))
+        if log(rand()) < (llr + prr + log(λ1p)  - log(λ1c))
           llc     += llr::Float64
           prc     += prr::Float64
-          λc       = λp ::Array{Float64,1}
-          lac[up] += 1
+          λ1c      = λ1p ::Array{Float64,1}
+          lac[5] += 1
         end
 
         # which internal node to update
@@ -220,7 +198,7 @@ function burn_compete(total_llf,
 
             linarea_branch_avg!(avg_Δx, lindiff)
 
-            upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
+            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
                     Yp, bridx_a, brδt, brl, brs, narea, nedge)
 
             Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
@@ -228,13 +206,15 @@ function burn_compete(total_llf,
             area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
             linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
-            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
+            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c) - 
-                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
+                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c)::Float64
 
-            propr_iid = biogeo_upd_iid(Yc, λc, ω1c, ω0c, avg_Δx, trios[bup]) - 
-                        biogeo_upd_iid(Yp, λc, ω1c, ω0c, avg_Δx, trios[bup])::Float64
+            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup]) - 
+                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup])::Float64
 
             if log(rand()) < (llr + propr_iid)
               llc    += llr::Float64
@@ -250,20 +230,99 @@ function burn_compete(total_llf,
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])::Float64
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
             end
 
-            stemevc = upstem(λc, nedge, brs, brl, narea)
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])::Float64
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
             end
 
             llc += llr::Float64
           end
         end
 
-      elseif up == 1         # if σ² is updated
+      # update λ0
+      elseif up == 6
+
+        # update λ
+        λ0p = logupt(λ0c, ptn[6])::Float64
+
+        llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
+                       lindiff, stemevc, brs[nedge,1,:])::Float64
+
+        prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64
+
+        if log(rand()) < (llr + prr + log(λ0p)  - log(λ0c))
+          llc     += llr::Float64
+          prc     += prr::Float64
+          λ0c      = λ0p ::Array{Float64,1}
+          lac[6] += 1
+        end
+
+        # which internal node to update
+        if rand() < 0.4
+
+          bup = rand(Base.OneTo(nin))::Int64
+          if bup < nin
+
+            Yp = copy(Yc)::Array{Int64,3}
+
+            aa = copy(areavg)::Array{Float64,2}
+            ao = copy(areaoc)::Array{Int64,2}
+            la = copy(linavg)::Array{Float64,2}
+            ld = copy(lindiff)::Array{Float64,3}
+
+            linarea_branch_avg!(avg_Δx, lindiff)
+
+            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
+                    Yp, bridx_a, brδt, brl, brs, narea, nedge)
+
+            Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
+
+            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
+            linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
+
+            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
+                            stemevc, brs[nedge,1,:], σ²c) - 
+                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
+                            stemevc, brs[nedge,1,:], σ²c)::Float64
+
+            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup]) - 
+                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup])::Float64
+
+            if log(rand()) < (llr + propr_iid)
+              llc    += llr::Float64
+              Yc      = Yp::Array{Int64,3}
+              areavg  = aa::Array{Float64,2}
+              areaoc  = ao::Array{Int64,2}
+              linavg  = la::Array{Float64,2}
+              lindiff = ld::Array{Float64,3}
+            end
+
+          else
+
+            # update stem
+            llr = 0.0
+            for j=Base.OneTo(narea)
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+            end
+
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
+
+            for j=Base.OneTo(narea)
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+            end
+
+            llc += llr::Float64
+          end
+        end
+
+      # if σ² is updated
+      elseif up == 1         
 
         σ²p = logupt(σ²c, ptn[1])::Float64
 
@@ -305,7 +364,7 @@ function burn_compete(total_llf,
         ω1p = addupt(ω1c, ptn[3])::Float64
 
         # proposal likelihood and prior
-        llr = ω10upd_llr(Yc, λc, ω1c, ω1p, ω0c, ω0c, lindiff)::Float64
+        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, lindiff)::Float64
 
         # prior ratio
         prr = logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
@@ -321,7 +380,7 @@ function burn_compete(total_llf,
         # which internal node to update
         if rand() < 0.4
 
-          bup = rand(Base.OneTo(nin))
+          bup = rand(Base.OneTo(nin))::Int64
           if bup < nin
 
             Yp = copy(Yc)::Array{Int64,3}
@@ -333,7 +392,7 @@ function burn_compete(total_llf,
 
             linarea_branch_avg!(avg_Δx, lindiff)
 
-            upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
+            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
                     Yp, bridx_a, brδt, brl, brs, narea, nedge)
 
             Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
@@ -341,13 +400,15 @@ function burn_compete(total_llf,
             area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
             linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
-            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
+            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c) - 
-                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
+                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c)::Float64
 
-            propr_iid = biogeo_upd_iid(Yc, λc, ω1c, ω0c, avg_Δx, trios[bup]) - 
-                        biogeo_upd_iid(Yp, λc, ω1c, ω0c, avg_Δx, trios[bup])::Float64
+            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup]) - 
+                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup])::Float64
 
             if log(rand()) < (llr + propr_iid)
               llc    += llr::Float64
@@ -363,13 +424,13 @@ function burn_compete(total_llf,
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])::Float64
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
             end
 
-            stemevc = upstem(λc, nedge, brs, brl, narea)
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])::Float64
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
             end
 
             llc += llr::Float64
@@ -381,7 +442,7 @@ function burn_compete(total_llf,
         ω0p = addupt(ω0c, ptn[4])
 
         # proposal likelihood ratio
-        llr = ω10upd_llr(Yc, λc, ω1c, ω1c, ω0c, ω0p, lindiff)::Float64
+        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, lindiff)::Float64
 
         # prior ratio
         prr = logdnorm(ω0p, ω0prior[1], ω0prior[2])::Float64 -
@@ -394,10 +455,10 @@ function burn_compete(total_llf,
           lac[4] += 1
         end
 
-                # which internal node to update
+        # which internal node to update
         if rand() < 0.4
 
-          bup = rand(Base.OneTo(nin))
+          bup = rand(Base.OneTo(nin))::Int64
           if bup < nin
 
             Yp = copy(Yc)::Array{Int64,3}
@@ -409,7 +470,7 @@ function burn_compete(total_llf,
 
             linarea_branch_avg!(avg_Δx, lindiff)
 
-            upnode!(λc, ω1c, ω0c, avg_Δx, trios[bup], 
+            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
                     Yp, bridx_a, brδt, brl, brs, narea, nedge)
 
             Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
@@ -417,13 +478,15 @@ function burn_compete(total_llf,
             area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
             linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
-            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λc, 
+            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c) - 
-                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λc, 
+                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c)::Float64
 
-            propr_iid = biogeo_upd_iid(Yc, λc, ω1c, ω0c, avg_Δx, trios[bup]) - 
-                        biogeo_upd_iid(Yp, λc, ω1c, ω0c, avg_Δx, trios[bup])::Float64
+            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup]) - 
+                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                                       avg_Δx, trios[bup])::Float64
 
             if log(rand()) < (llr + propr_iid)
               llc    += llr::Float64
@@ -435,22 +498,23 @@ function burn_compete(total_llf,
             end
 
           else
-            
+
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])::Float64
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
             end
 
-            stemevc = upstem(λc, nedge, brs, brl, narea)
+            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λc[1], λc[2], brs[nedge,1,j])::Float64
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
             end
 
             llc += llr::Float64
           end
         end
+
       end
 
       # log number of updates
@@ -471,7 +535,8 @@ function burn_compete(total_llf,
     next!(p)
   end
 
-  return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx, stemevc, brs, λc, ωxc, ω1c, ω0c, σ²c, ptn
+  return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx, stemevc, 
+         brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn
 
 end
 

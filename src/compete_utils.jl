@@ -111,7 +111,9 @@ Return Markov chain probabilities for
 two states through fast analytical solution
 after time `t` for rates of gain `λ1` and loss `λ0`.
 """
-function Ptrfast(λ1::Float64, λ0::Float64, t::Float64)
+function Ptrfast(λ1::Float64, 
+                 λ0::Float64, 
+                 t::Float64)
   
   @fastmath begin
 
@@ -139,8 +141,8 @@ after time `t` for rates of gain `λ1(t) = λ1*exp(ω1*avg_Δx)` and
 loss `λ0(t) = λ0*exp(ω0*avg_Δx)`, conditional on a start value.
 """
 function Ptrfast(λ1    ::Float64, 
-                 ω1    ::Float64,
                  λ0    ::Float64,
+                 ω1    ::Float64,
                  ω0    ::Float64,
                  avg_Δx::Float64,
                  t     ::Float64)
@@ -172,7 +174,10 @@ two states through fast analytical solution
 after time `t` for rates of gain `λ1` and loss `λ0`,
 conditional on a start value.
 """
-function Ptrfast_start(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
+function Ptrfast_start(λ1::Float64, 
+                       λ0::Float64, 
+                       t::Float64, 
+                       state::Int64)
   
   @fastmath begin
 
@@ -202,8 +207,8 @@ after time `t` for rates of gain `λ1(t) = λ1*exp(ω1*avg_Δx)` and
 loss `λ0(t) = λ0*exp(ω0*avg_Δx)`, conditional on a start value.
 """
 function Ptrfast_start(λ1    ::Float64, 
-                       ω1    ::Float64,
                        λ0    ::Float64,
+                       ω1    ::Float64,
                        ω0    ::Float64,
                        avg_Δx::Float64,
                        t     ::Float64, 
@@ -240,7 +245,10 @@ two states through fast analytical solution
 after time `t` for rates of gain `λ1` and loss `λ0`,
 conditional on a end value.
 """
-function Ptrfast_end(λ1::Float64, λ0::Float64, t::Float64, state::Int64)
+function Ptrfast_end(λ1::Float64, 
+                     λ0::Float64, 
+                     t::Float64, 
+                     state::Int64)
   
   @fastmath begin
 
@@ -271,8 +279,8 @@ after time `t` for rates of gain `λ1(t) = λ1*exp(ω1*avg_Δx)` and
 loss `λ0(t) = λ0*exp(ω0*avg_Δx)`, conditional on a end value.
 """
 function Ptrfast_end(λ1    ::Float64, 
-                     ω1    ::Float64,
                      λ0    ::Float64,
+                     ω1    ::Float64,
                      ω0    ::Float64,
                      avg_Δx::Float64,
                      t     ::Float64, 

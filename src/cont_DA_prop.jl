@@ -20,15 +20,16 @@ May 01 2017
 """
 function br_samp(ssii ::Array{Int64,1}, 
                  ssff ::Array{Int64,1},
-                 λc   ::Array{Float64,1},
+                 λ1   ::Float64,
+                 λ0   ::Float64,
                  t    ::Float64,
                  narea::Int64)
   #time history
-  t_hist = mult_rejsam(ssii, ssff, λc, t, narea)
+  t_hist = mult_rejsam(ssii, ssff, λ1, λ0, t, narea)
   
   ntries = 1
   while ifext(t_hist, ssii, narea)
-    t_hist = mult_rejsam(ssii, ssff, λc, t, narea)
+    t_hist = mult_rejsam(ssii, ssff, λ1, λ0, t, narea)
     
     ntries += 1
     if ntries > 1_000_000 
@@ -96,14 +97,15 @@ end
 """
 function mult_rejsam(ssii ::Array{Int64,1}, 
                      ssff ::Array{Int64,1},
-                     λc   ::Array{Float64,1},
+                     λ1   ::Float64,
+                     λ0   ::Float64,
                      t    ::Float64,
                      narea::Int64)
 
   all_times = Array{Float64,1}[]
 
   for i in Base.OneTo(narea)
-    push!(all_times, rejsam(ssii[i], ssff[i], λc[1], λc[2], t))
+    push!(all_times, rejsam(ssii[i], ssff[i], λ1, λ0, t))
   end
 
   return all_times
