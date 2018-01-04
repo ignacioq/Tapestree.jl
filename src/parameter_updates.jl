@@ -139,7 +139,6 @@ function make_mhr_upd_Y(narea              ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-
     const Yp = copy(Yc)::Array{Int64,3}
     const aa = copy(areavg)::Array{Float64,2}
     const ao = copy(areaoc)::Array{Int64,2}
@@ -297,6 +296,8 @@ end
 
 
 
+
+
 """
     mhr_upd_ω0(ω0c::Float64, λc::Array{Float64,2}, ω1c::Float64, Yc::Array{Int64,3}, llc::Float64, prc::Float64, ω0tn::Float64, linavg::Array{Float64,2}, lindiff::Array{Float64,3}, ω0prior::Tuple{Float64,Float64}, ω10upd_llr)
 
@@ -400,7 +401,7 @@ function mhr_upd_λ0(λ0c     ::Float64,
   λ0p = logupt(λ0c, rand() < 0.5 ? λ0tn : 4*λ0tn)::Float64
 
   # proposal likelihood and prior
-  llr = λupd_llr(Yc, λ1c, λ0p, λ1c, λ0c, ω1c, ω0c, 
+  llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
                  lindiff, stemevc, stemss)::Float64
 
   prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64

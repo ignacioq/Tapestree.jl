@@ -45,7 +45,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       λ0i     ::Float64           = 0.2,
                       stbrl   ::Float64           = 1.,
                       fix_ω1  ::Bool              = false,
-                      fix_ω0  ::Bool              = true)
+                      fix_ω0  ::Bool              = false)
 
   print_with_color(:green, "Data successfully processed", bold = true)
 
@@ -145,18 +145,18 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   Yc[Ync2] = Yc[Ync1]
 
   # estimate current area & lineage means and area occupancy
-  const areavg = zeros(m, narea)
-  const areaoc = zeros(Int64, m, narea)
-  const linavg = zeros(m, ntip)
+  areavg = zeros(m, narea)
+  areaoc = zeros(Int64, m, narea)
+  linavg = zeros(m, ntip)
 
   area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
 
   # estimate current lineage specific means
-  const lindiff = zeros(m, ntip, narea)
+  lindiff = zeros(m, ntip, narea)
   linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
 
   # estimate average branch lineage specific means
-  const avg_Δx = zeros((nedge-1), narea)
+  avg_Δx = zeros((nedge-1), narea)
 
   linarea_branch_avg! = make_la_branch_avg(bridx_a, length(Yc), m, narea, nedge)
 
@@ -293,10 +293,12 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
-                       Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
+
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
@@ -357,7 +359,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
       # update ω0      
       else
         llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
-                                    linavg, lindiff, ω0prior, ω10upd_llr)
+                                   linavg, lindiff, ω0prior, ω10upd_llr)
 
         # which internal node to update
         if rand() < 0.4
@@ -387,7 +389,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
       end
 
     end
-
 
     # log parameters
     lthin += 1
