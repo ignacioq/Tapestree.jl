@@ -92,11 +92,11 @@ function burn_compete(total_llf,
 
   # row i proposals for X
   const aai = zeros(Float64, narea)       # area average
-  const lai = zeros(Float64, ntip)        # lineage average
-  const ldi = zeros(Float64, ntip, narea) # lineage difference
+  const lai = fill(NaN, ntip)        # lineage average
+  const ldi = fill(NaN, ntip, narea)       # lineage difference
 
   # progress bar
-  p = Progress(nburn + 1, 5, "burning...", 20)
+  p = Progress(nburn, dt=5, desc="burning...", barlen=20, color=:red)
 
   # print number of parameters
   print_with_color(:green,
@@ -164,7 +164,6 @@ function burn_compete(total_llf,
           end
         end
 
-     
       # update λ1
       elseif up == 5
 
@@ -522,7 +521,7 @@ function burn_compete(total_llf,
       lup[up] += 1
 
       if (in(tune_int,ltn))
-        wts = find(ltn .== tune_int)      # which to scale
+        wts = find(map(x -> x == tune_int,ltn))      # which to scale
         for j = wts
           ar     = lac[j]/lup[j]
           ptn[j] = scalef(ptn[j],ar)

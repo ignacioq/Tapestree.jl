@@ -84,9 +84,12 @@ function linarea_diff!(LD   ::Array{Float64,3},
                        narea::Int64,
                        ntip ::Int64,
                        m    ::Int64)
-  @inbounds @fastmath begin
+  @inbounds begin
 
     for k = Base.OneTo(narea), j = Base.OneTo(ntip), i = Base.OneTo(m)
+      if isnan(X[i,j])
+        continue
+      end
       setindex!(LD, 
                 (AO[i,k] == 0 ? 0.0 : abs(X[i,j] - AA[i,k]))::Float64, 
                 i, j, k)
@@ -169,7 +172,7 @@ function Xupd_linavg!(aa   ::Array{Float64,1},
       end
     end
 
-    #fill!(la, 0.0)
+    fill!(la, NaN)
     for j = wci
       la[j] = 0.0
       sumY  = 0.0::Float64
@@ -182,7 +185,7 @@ function Xupd_linavg!(aa   ::Array{Float64,1},
       la[j] /= sumY::Float64
     end
 
-    #fill!(ld, NaN)
+    fill!(ld, NaN)
     for k = Base.OneTo(narea), j = wci
       setindex!(ld, (ao[i,k] == 0 ? 0.0 : abs(xi[j] - aa[k])), j, k)
     end

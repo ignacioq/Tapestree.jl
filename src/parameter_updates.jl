@@ -29,9 +29,9 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xupd_llr ::Function,
                         Rupd_llr ::Function)
 
-  const aai = zeros(Float64, narea)
-  const lai = zeros(Float64, ntip)
-  const ldi = zeros(Float64, ntip, narea)
+  const aai = fill(NaN, narea)
+  const lai = fill(NaN, ntip)
+  const ldi = fill(NaN, ntip, narea)
 
   function f(up     ::Int64,
              Xc     ::Array{Float64,2},

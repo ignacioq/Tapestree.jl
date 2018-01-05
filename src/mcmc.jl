@@ -70,9 +70,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   const Xnc2 = ncoup[:,2]
 
   # which nodes are not NaN in Xc
-  const wNaN   = find(.!isnan.(Xc))
-  const wspp   = m:m:length(Xc)
-  const wXp    = setdiff(wNaN,wspp)
+  const wXp = setdiff(find(map(x -> !isnan(x), Xc)), m:m:length(Xc))
 
   # tie trait coupled nodes
   Xc[Xnc2] = Xc[Xnc1]
@@ -147,19 +145,17 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   # estimate current area & lineage means and area occupancy
   areavg = zeros(m, narea)
   areaoc = zeros(Int64, m, narea)
-  linavg = zeros(m, ntip)
+  linavg = fill(NaN, m, ntip)
 
   area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
 
   # estimate current lineage specific means
-  lindiff = zeros(m, ntip, narea)
+  lindiff = fill(NaN, m, ntip, narea)
   linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
 
   # estimate average branch lineage specific means
   avg_Δx = zeros((nedge-1), narea)
-
   linarea_branch_avg! = make_la_branch_avg(bridx_a, length(Yc), m, narea, nedge)
-
   linarea_branch_avg!(avg_Δx, lindiff)
 
   # make likelihood and prior functions
@@ -207,8 +203,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   pc[1] = Pc(λ1c, λ0c, max_δt)::Float64
 
   # log for nthin
-  const lit   = 0
-  const lthin = 0
+  lit   = 0
+  lthin = 0
 
   # variables to save X and Y 
   if saveXY[1]
@@ -223,7 +219,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   const nin = length(trios) + 1
 
   # progess bar
-  p  = Progress(niter, 5, "running MCMC...", 20)
+  p = Progress(niter, dt=5, desc="running MCMC...", barlen=20, color=:green)
 
   # create parameter update functions
   mhr_upd_Y = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
@@ -261,9 +257,10 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = mhr_upd_Y(trios[bup], 
-                       Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                       areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
@@ -298,7 +295,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                         areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
-
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
