@@ -80,16 +80,16 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # initialize result arrays
   const nlogs = fld(niter,nthin)         # number of logged iterations
-  const iter  = zeros(Float64, nlogs)             # iterations
-  const ωx    = zeros(Float64, nlogs)             # trait competition parameter
-  const ω1    = zeros(Float64, nlogs)             # colonization competition parameter
-  const ω0    = zeros(Float64, nlogs)             # extinction competition parameter
-  const σ²    = zeros(Float64, nlogs)             # drift parameter
-  const λ1    = zeros(Float64, nlogs)             # colonization parameters
-  const λ0    = zeros(Float64, nlogs)             # extirpation parameters
-  const h     = zeros(Float64, nlogs)             # likelihood
-  const o     = zeros(Float64, nlogs)             # prior
-  const pc    = zeros(Float64, nlogs)             # collision probability
+  const iter  = zeros(Float64, nlogs)    # iterations
+  const ωx    = zeros(Float64, nlogs)    # trait competition parameter
+  const ω1    = zeros(Float64, nlogs)    # colonization competition parameter
+  const ω0    = zeros(Float64, nlogs)    # extinction competition parameter
+  const σ²    = zeros(Float64, nlogs)    # drift parameter
+  const λ1    = zeros(Float64, nlogs)    # colonization parameters
+  const λ0    = zeros(Float64, nlogs)    # extirpation parameters
+  const h     = zeros(Float64, nlogs)    # likelihood
+  const o     = zeros(Float64, nlogs)    # prior
+  const pc    = zeros(Float64, nlogs)    # collision probability
 
   # add long stem branch
   edges = cat(1, edges, [2*ntip ntip + 1])
@@ -120,7 +120,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   const brδt = make_edgeδt(bridx, δt, m)
 
   # array for states at start and end of branches
-  const brs = zeros(Int64, nedge, 2, narea)
+  brs = zeros(Int64, nedge, 2, narea)
 
   # assign states to brs according Yc
   for i = Base.OneTo(nedge), j in Base.OneTo(narea)
@@ -133,14 +133,14 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     upnode!(λ1i, λ0i, triad, Yc, bridx_a, brδt, brl, brs, narea, nedge)
   end
 
+  # tie biogeographic nodes equal
+  Yc[Ync2] = Yc[Ync1]
+
   # assign same value as mrca
   brs[nedge,1,:] = brs[nedge,2,:]
 
   # create stem events
   stemevc = br_samp(brs[nedge,1,:], brs[nedge,2,:], λ1i, λ0i, brl[nedge], narea)
-
-  # tie biogeographic nodes equal
-  Yc[Ync2] = Yc[Ync1]
 
   # estimate current area & lineage means and area occupancy
   areavg = zeros(m, narea)
@@ -185,18 +185,18 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
-  stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_compete(total_llf, 
-      λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
-      biogeo_upd_iid, linarea_branch_avg!, 
-      Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
-      σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
-      Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
-      trios, wXp,
-      λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
+  stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_compete(
+    total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
+    biogeo_upd_iid, linarea_branch_avg!, 
+    Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
+    σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
+    Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
+    trios, wXp,
+    λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
   # log likelihood and prior
-  h[1]  = llc::Float64
-  o[1]  = prc::Float64
+  h[1] = llc::Float64
+  o[1] = prc::Float64
 
   # log probability of collision
   const max_δt = maximum(δt)::Float64
@@ -233,7 +233,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   =#
   for it = Base.OneTo(niter)
 
-    # Update update vector
+    # update vector order
     shuffle!(parvec)
 
     for up = parvec

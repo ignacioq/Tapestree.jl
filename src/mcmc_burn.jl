@@ -96,7 +96,7 @@ function burn_compete(total_llf,
   const ldi = fill(NaN, ntip, narea)       # lineage difference
 
   # progress bar
-  p = Progress(nburn, dt=5, desc="burning...", barlen=20, color=:red)
+  p = Progress(nburn, dt=5, desc="burning...", barlen=20, color=:blue)
 
   # print number of parameters
   print_with_color(:green,
