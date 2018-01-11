@@ -80,7 +80,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # initialize result arrays
   const nlogs = fld(niter,nthin)         # number of logged iterations
-  const iter  = zeros(Float64, nlogs)    # iterations
+  const iter  = zeros(Int64, nlogs)      # iterations
   const ωx    = zeros(Float64, nlogs)    # trait competition parameter
   const ω1    = zeros(Float64, nlogs)    # colonization competition parameter
   const ω0    = zeros(Float64, nlogs)    # extinction competition parameter
