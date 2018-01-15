@@ -34,7 +34,6 @@ function br_samp(ssii ::Array{Int64,1},
     ntries += 1
     if ntries > 1_000_000 
       warn("iid model sampling is very inefficient in stem branch")
-      @show λc
     end
 
   end
