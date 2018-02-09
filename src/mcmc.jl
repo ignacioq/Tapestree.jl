@@ -397,7 +397,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
       lthin += 1
       if lthin == nthin
         pci = Pc(f_λ(λ1c,ω1c,1.0), f_λ(λ0c,ω0c,1.0), max_δt)
-        print(f, "$it\t$llc\t$prc\t$σ²c\t$ωxc\t$ω1c\t$ω0c\t$λ1c\t$λ1c\t$pci\n")
+        print(f, "$it\t$llc\t$prc\t$ωxc\t$ω1c\t$ω0c\t$σ²c\t$λ1c\t$λ0c\t$pci\n")
         lthin = 0
       end
 
