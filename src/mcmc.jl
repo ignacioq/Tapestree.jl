@@ -203,7 +203,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   pc[1] = Pc(λ1c, λ0c, max_δt)::Float64
 
   # log for nthin
-  lit   = 0
   lthin = 0
 
   # variables to save X and Y 
@@ -231,195 +230,193 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   #=
   start MCMC
   =#
-  for it = Base.OneTo(niter)
 
-    # update vector order
-    shuffle!(parvec)
 
-    for up = parvec
+  open(out_file*".log", "w")
 
-      # update X[i]
-      if up > 6
+  open(out_file*".log","a") do f
 
-        llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, 
-                        ωxc, ω1c, ω0c, σ²c, llc, 
-                        areavg, linavg, lindiff, areaoc)
+    print(f, "iteration\tlikelihood\tprior\tomega_x\tomega_1\tomega_0\tsigma2\tlambda_1\tlambda_0\tcollision_probability\n")
 
-      # update λ1 
-      elseif up == 5
+    for it = Base.OneTo(niter)
 
-        llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, ω0c, 
-                                   lindiff, stemevc, brs[nedge,1,:], λprior,
-                                   ptn[5], λupd_llr)
+      # update vector order
+      shuffle!(parvec)
 
-        # which internal node to update
-        if rand() < 0.4
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
-              mhr_upd_Y(trios[bup], 
-                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+      for up = parvec
+
+        # update X[i]
+        if up > 6
+
+          llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, 
+                          ωxc, ω1c, ω0c, σ²c, llc, 
+                          areavg, linavg, lindiff, areaoc)
+
+        # update λ1 
+        elseif up == 5
+
+          llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, ω0c, 
+                                     lindiff, stemevc, brs[nedge,1,:], λprior,
+                                     ptn[5], λupd_llr)
+
+          # which internal node to update
+          if rand() < 0.4
+            bup = rand(Base.OneTo(nin))
+            # update a random internal node, including the mrca
+            if bup < nin
+              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+                mhr_upd_Y(trios[bup], 
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            else
+              # update stem
+              llr = 0.0
+              for j=Base.OneTo(narea)
+                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
+
+              for j=Base.OneTo(narea)
+                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              llc += llr
             end
+          end
 
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
+        # if λ0 is updated
+        elseif up == 6
 
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+          llc, prc, λ0c = mhr_upd_λ0(λ0c, Yc, λ1c, llc, prc, ω1c, ω0c, 
+                                     lindiff, stemevc, brs[nedge,1,:], λprior,
+                                     ptn[6], λupd_llr)
+
+          # which internal node to update
+          if rand() < 0.4
+            bup = rand(Base.OneTo(nin))
+            # update a random internal node, including the mrca
+            if bup < nin
+              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+                mhr_upd_Y(trios[bup], 
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            else
+              # update stem
+              llr = 0.0
+              for j=Base.OneTo(narea)
+                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
+
+              for j=Base.OneTo(narea)
+                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              llc += llr
             end
+          end
 
-            llc += llr
+        # if σ² is updated
+        elseif up == 1
+          llc, prc, σ²c = mhr_upd_σ²(σ²c, Xc, ωxc, llc, prc, ptn[1], 
+                                     linavg, σ²prior, σ²ωxupd_llr)
+
+        # update ωx
+        elseif up == 2
+          llc, prc, ωxc = mhr_upd_ωx(ωxc, Xc, σ²c, llc, prc, ptn[2], 
+                                     linavg, ωxprior, σ²ωxupd_llr)
+
+        #update ω1
+        elseif up == 3
+          llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, λ0c, ω0c, Yc, llc, prc, ptn[3], 
+                                     linavg, lindiff, ω1prior, ω10upd_llr)
+
+          # which internal node to update
+          if rand() < 0.4
+            bup = rand(Base.OneTo(nin))
+            # update a random internal node, including the mrca
+            if bup < nin
+              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+                mhr_upd_Y(trios[bup], 
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            else
+              # update stem
+              llr = 0.0
+              for j=Base.OneTo(narea)
+                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
+
+              for j=Base.OneTo(narea)
+                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              llc += llr
+            end
+          end
+
+        # update ω0      
+        else
+          llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
+                                     linavg, lindiff, ω0prior, ω10upd_llr)
+
+          # which internal node to update
+          if rand() < 0.4
+            bup = rand(Base.OneTo(nin))
+            # update a random internal node, including the mrca
+            if bup < nin
+              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+                mhr_upd_Y(trios[bup], 
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            else
+              # update stem
+              llr = 0.0
+              for j=Base.OneTo(narea)
+                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
+
+              for j=Base.OneTo(narea)
+                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
+              end
+
+              llc += llr
+            end
           end
         end
 
-      # if λ0 is updated
-      elseif up == 6
+      end
 
-        llc, prc, λ0c = mhr_upd_λ0(λ0c, Yc, λ1c, llc, prc, ω1c, ω0c, 
-                                   lindiff, stemevc, brs[nedge,1,:], λprior,
-                                   ptn[6], λupd_llr)
+      # log parameters
+      lthin += 1
+      if lthin == nthin
+        pci = Pc(f_λ(λ1c,ω1c,1.0), f_λ(λ0c,ω0c,1.0), max_δt)
+        print(f, "$it\t$llc\t$prc\t$σ²c\t$ωxc\t$ω1c\t$ω0c\t$λ1c\t$λ1c\t$pci\n")
+        lthin = 0
+      end
 
-        # which internal node to update
-        if rand() < 0.4
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
-              mhr_upd_Y(trios[bup], 
-                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            llc += llr
+      # log X & Y
+      if saveXY[1]
+        XYsav += 1
+        if XYsav == saveXY[2]
+          @inbounds begin
+            XYlit += 1
+            Xlog[:,:,  XYlit] = Xc
+            Ylog[:,:,:,XYlit] = Yc
           end
-        end
-
-      # if σ² is updated
-      elseif up == 1
-        llc, prc, σ²c = mhr_upd_σ²(σ²c, Xc, ωxc, llc, prc, ptn[1], 
-                                   linavg, σ²prior, σ²ωxupd_llr)
-
-      # update ωx
-      elseif up == 2
-        llc, prc, ωxc = mhr_upd_ωx(ωxc, Xc, σ²c, llc, prc, ptn[2], 
-                                   linavg, ωxprior, σ²ωxupd_llr)
-
-      #update ω1
-      elseif up == 3
-        llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, λ0c, ω0c, Yc, llc, prc, ptn[3], 
-                                   linavg, lindiff, ω1prior, ω10upd_llr)
-
-        # which internal node to update
-        if rand() < 0.4
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
-              mhr_upd_Y(trios[bup], 
-                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            llc += llr
-          end
-        end
-
-      # update ω0      
-      else
-        llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
-                                   linavg, lindiff, ω0prior, ω10upd_llr)
-
-        # which internal node to update
-        if rand() < 0.4
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
-              mhr_upd_Y(trios[bup], 
-                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            llc += llr
-          end
+          XYsav = 0
         end
       end
 
-    end
-
-    # log parameters
-    lthin += 1
-    if lthin == nthin
-      @inbounds begin
-        lit += 1
-        setindex!(iter, it, lit)
-        setindex!(h,   llc, lit)
-        setindex!(o,   prc, lit)
-        setindex!(σ²,  σ²c, lit)
-        setindex!(ωx,  ωxc, lit)
-        setindex!(ω1,  ω1c, lit)
-        setindex!(ω0,  ω0c, lit)
-        setindex!(λ1,  λ1c, lit)
-        setindex!(λ0,  λ0c, lit)
-        setindex!(pc, Pc(f_λ(λ1c,ω1c,1.0), f_λ(λ0c,ω0c,1.0), max_δt), lit)
-      end
-      lthin = 0
-    end
-
-    # log X & Y
-    if saveXY[1]
-      XYsav += 1
-      if XYsav == saveXY[2]
-        @inbounds begin
-          XYlit += 1
-          Xlog[:,:,  XYlit] = Xc
-          Ylog[:,:,:,XYlit] = Yc
-        end
-        XYsav = 0
-      end
-    end
-
-    next!(p)
-  end
+      next!(p)
+    end #end MCMC
+  end # end print loop
 
   if saveXY[1]
     # save X and Y as R objects
@@ -433,16 +430,4 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     """)
   end
 
-  R = hcat(iter, h, o, ωx, ω1, ω0, σ², λ1, λ0, pc)
-
-  # add column names
-  col_nam = ["iteration", "likelihood", "prior", "omega_x", 
-             "omega_1", "omega_0", 
-             "sigma2", "lambda_1", "lambda_0", "collision_probability"]
-
-  R = vcat(reshape(col_nam, 1, endof(col_nam)), R)
-
-  writedlm(out_file*".log", R)
-
-  return R
 end
