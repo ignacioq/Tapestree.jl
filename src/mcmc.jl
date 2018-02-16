@@ -183,6 +183,15 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   fix_ω1 && filter!(x -> x ≠ 3, parvec)
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
 
+
+
+# add fix ωx
+#  fix_ωx && filter!(x -> x ≠ 2, parvec)
+
+
+
+
+
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_compete(
@@ -430,4 +439,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     """)
   end
 
+  return llc, prc, ωxc, ω1c, ω0c, σ²c, λ1c, λ0c, Xc, Yc
+
 end
+
+
+
