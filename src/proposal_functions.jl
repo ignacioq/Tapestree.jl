@@ -444,27 +444,24 @@ end
 
 
 """
-  bbX(...)
+    bbX!(x::Array{Float64,1}, t::::Array{Float64,1}, σ::Float64)
 
-Brownian bridge simulation function for updating a branch in X.
+Brownian bridge simulation function for updating a branch in X in place.
 """
-function bbX(x, t, σ)
+function bbX!(x::Array{Float64,1}, t::Array{Float64,1}, σ::Float64)
 
-  xf = x[end]
+  xf::Float64 = x[end]
 
-  for i=Base.OneTo(endof(t)-1)
-    x[i+1] = x[i] + randn()*sqrt(t[i+1] - t[i])*σ
+  for i = Base.OneTo(endof(t)-1)
+    x[i+1] = (x[i] + randn()*sqrt(t[i+1] - t[i])*σ)::Float64
   end
 
-  for i=Base.OneTo(endof(t))
-    x[i] = x[1] + x[i] - t[i]/t[end] * (x[end] - xf + x[1])
+  for i = Base.OneTo(endof(t))
+    x[i] = (x[1] + x[i] - t[i]/t[end] * (x[end] - xf + x[1]))::Float64
   end
 
   return x
 end
-
-
-
 
 
 
