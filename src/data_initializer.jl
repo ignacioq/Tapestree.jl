@@ -38,7 +38,7 @@ function read_data(tree_file::String,
   end
 
   if size(data,1) != (tree.nnod + 1) 
-    error("Data file cannot be made of the right dimensions")
+    error("Data file cannot be made of the right dimensions.\n Make sure the data file has the same number of rows as tips in the tree")
   end
 
   data_tlab   = convert(Array{String,1}, data[:,1])

@@ -44,6 +44,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       λ1i     ::Float64           = 1.0,
                       λ0i     ::Float64           = 0.2,
                       stbrl   ::Float64           = 1.,
+                      fix_ωx  ::Bool              = false,
                       fix_ω1  ::Bool              = false,
                       fix_ω0  ::Bool              = false)
 
@@ -78,19 +79,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   #create object with column indices
   const wcol = create_wcol(Xc)
 
-  # initialize result arrays
-  const nlogs = fld(niter,nthin)         # number of logged iterations
-  const iter  = zeros(Int64, nlogs)      # iterations
-  const ωx    = zeros(Float64, nlogs)    # trait competition parameter
-  const ω1    = zeros(Float64, nlogs)    # colonization competition parameter
-  const ω0    = zeros(Float64, nlogs)    # extinction competition parameter
-  const σ²    = zeros(Float64, nlogs)    # drift parameter
-  const λ1    = zeros(Float64, nlogs)    # colonization parameters
-  const λ0    = zeros(Float64, nlogs)    # extirpation parameters
-  const h     = zeros(Float64, nlogs)    # likelihood
-  const o     = zeros(Float64, nlogs)    # prior
-  const pc    = zeros(Float64, nlogs)    # collision probability
-
   # add long stem branch
   edges = cat(1, edges, [2*ntip ntip + 1])
   push!(brl, stbrl)
@@ -120,12 +108,14 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   const brδt = make_edgeδt(bridx, δt, m)
 
   # array for states at start and end of branches
-  brs = zeros(Int64, nedge, 2, narea)
+  brs = ones(Int64, nedge, 2, narea)
 
-  # assign states to brs according Yc
-  for i = Base.OneTo(nedge), j in Base.OneTo(narea)
-    wh1 = find(edges[:,1] .== edges[i,2])
-    brs[i,2,j] = brs[wh1,1,j] = Yc[bridx_a[j][i]][end]
+  # filter tips in edges
+  wtips = map(x -> x <= ntip, edges[:,2])
+
+  ## assign tip area states to brs according Yc
+  for j in Base.OneTo(narea)
+    brs[wtips,2,j] = Yc[end,:,j]
   end
 
   # Sample all internal node values according to Pr transitions
@@ -167,30 +157,23 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   σ²ωxupd_llr    = makellr_σ²ωxupd(δt, Yc, ntip)  
   biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
 
-  # number of free parameters
-  # number of xnodes + λ1 + λ0 + σ² + ωx + ω1 + ω0
-  const np = length(wXp) + 6
+  # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² 
+  np = length(wXp) + 6
 
-  # parameter vector updates
-  const parvec  = collect(1:np)
+  # parameter update vector
+  const parvec = collect(1:np)
+
+  # add to parameter update vector according to weights
   append!(parvec, fill(1,ceil(Int64,np*weight[1])))
   append!(parvec, fill(2,ceil(Int64,np*weight[2])))
   append!(parvec, repeat(3:4,  inner = ceil(Int64,np*weight[3])))
   append!(parvec, repeat(5:6,  inner = ceil(Int64,np*weight[4])))
   append!(parvec, repeat(7:np, inner = ceil(Int64,np*weight[5])))
 
-  # if fixed ω1 or ω0
+  # if fixed ωx, ω1 or ω0 remove
+  fix_ωx && filter!(x -> x ≠ 2, parvec)
   fix_ω1 && filter!(x -> x ≠ 3, parvec)
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
-
-
-
-# add fix ωx
-#  fix_ωx && filter!(x -> x ≠ 2, parvec)
-
-
-
-
 
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
