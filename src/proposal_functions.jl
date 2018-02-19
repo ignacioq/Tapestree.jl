@@ -160,6 +160,11 @@ end
 
 
 
+
+
+
+
+
 """
     ifextY(Y::Array{Int64,3}, triad::Array{Int64,1}, narea::Int64, bridx_a::Array{Array{Array{Int64,1},1},1})
 
@@ -435,11 +440,157 @@ end
 
 
 
+
+
+
+
+
+
+
+
+"""
+    upbranch!(λ::Array{Float64,1}, ω1::Float64, ω0::Float64, avg_Δx::Array{Array{Float64,1},1}, triad::Array{Int64,1}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
+
+Update one branch using discrete Data Augmentation 
+for all areas with independent 
+proposals taking into account `Δx` and `ω1` & `ω0`.
+"""
+function upbranch!(λ1     ::Float64,
+                   λ0     ::Float64,
+                   ω1     ::Float64,
+                   ω0     ::Float64,
+                   avg_Δx ::Array{Float64,2},
+                   Y      ::Array{Int64,3},
+                   bridx_a::Array{Array{UnitRange{Int64},1},1},
+                   brδt   ::Vector{Vector{Float64}},
+                   brl    ::Vector{Float64},
+                   brs    ::Array{Int64,3},
+                   narea  ::Int64,
+                   nedge  ::Int64)
+
+  @inbounds begin
+
+    # sample a consistent history
+    createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
+                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+
+    # save extinct
+    ntries = 1
+
+    while ifextY(Y, triad, narea, bridx_a)
+      createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
+                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+    end
+
+  nothing
+  end
+end
+
+
+
+
+
+"""
+    createhists!(λ::Array{Float64,1}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
+
+Create bit histories for all areas for the branch 
+trio taking into account `Δx` and `ω1` & `ω0`.
+"""
+function createhists!(λ1     ::Float64,
+                      λ0     ::Float64,
+                      ω1     ::Float64,  
+                      ω0     ::Float64, 
+                      br     ::Int64,
+                      avg_Δx ::Array{Float64,2},
+                      Y      ::Array{Int64,3},
+                      brs    ::Array{Int64,3},
+                      brδt   ::Array{Array{Float64,1},1},
+                      bridx_a::Array{Array{UnitRange{Int64},1},1},
+                      narea  ::Int64,
+                      nedge  ::Int64)
+
+  @inbounds begin
+    for j = Base.OneTo(narea)
+      bit_rejsam!(Y, bridx_a[j][br], brs[br,2,j], 
+                  λ1, λ0, ω1, ω0, avg_Δx[br,j], brδt[br])
+    end
+  end
+
+  return nothing
+end
+
+
+
+"""
+    ifextY(Y::Array{Int64,3}, triad::Array{Int64,1}, narea::Int64, bridx_a::Array{Array{Array{Int64,1},1},1})
+
+Return `true` if at some point the species
+goes extinct and/or more than one change is 
+observed after some **δt**, otherwise returns `false`.
+"""
+function ifextY(Y      ::Array{Int64,3},
+                triad  ::Array{Int64,1},
+                narea  ::Int64,
+                bridx_a::Array{Array{UnitRange{Int64},1},1})
+
+  @inbounds begin
+
+    for k in triad
+
+      for i = Base.OneTo((length(bridx_a[1][k]::UnitRange{Int64})-1)::Int64)
+        s_e = 0::Int64            # count current areas
+        s_c = 0::Int64            # count area changes
+
+        for j = Base.OneTo(narea)
+          s_e += Y[bridx_a[j][k][i]]::Int64
+          if Y[bridx_a[j][k][i]]::Int64 != Y[bridx_a[j][k][i+1]]::Int64
+            s_c += 1::Int64
+          end
+        end
+
+        if s_e::Int64 == 0::Int64 || s_c::Int64 > 1::Int64
+          return true::Bool
+        end
+      end
+    end
+
+  end
+
+  return false::Bool
+end
+
+
+
+
+
+
+
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # X proposal functions
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+"""
+    upbranchX!(j    ::Int64, 
+               X    ::Array{Float64,2}, 
+               bridx::Array{UnitRange{Int64},1},
+               brδt ::Array{Array{Float64,1},1}, 
+               σ    ::Float64)
+
+Update a branch j in X using a Brownian bridge.
+"""
+function upbranchX!(j    ::Int64, 
+                    X    ::Array{Float64,2}, 
+                    bridx::Array{UnitRange{Int64},1},
+                    brδt ::Array{Array{Float64,1},1}, 
+                    σ    ::Float64)
+
+  @inbounds bbX!(X, bridx[j], brδt[j], σ)
+end
+
+
 
 
 
@@ -448,20 +599,27 @@ end
 
 Brownian bridge simulation function for updating a branch in X in place.
 """
-function bbX!(x::Array{Float64,1}, t::Array{Float64,1}, σ::Float64)
+function bbX!(X  ::Array{Float64,2}, 
+              idx::UnitRange,
+              t  ::Array{Float64,1},  
+              σ  ::Float64)
 
-  xf::Float64 = x[end]
+  @inbounds begin
 
-  for i = Base.OneTo(endof(t)-1)
-    x[i+1] = (x[i] + randn()*sqrt(t[i+1] - t[i])*σ)::Float64
+    xf::Float64 = X[idx[end]]
+
+    for i = Base.OneTo(endof(t)-1)
+      X[idx[i+1]] = (X[idx[i]] + randn()*sqrt(t[i+1] - t[i])*σ)::Float64
+    end
+
+    for i = Base.OneTo(endof(t))
+      X[idx[i]] = (X[idx[i]] - t[i]/t[end] * (X[idx[end]] - xf))::Float64
+    end
   end
 
-  for i = Base.OneTo(endof(t))
-    x[i] = (x[1] + x[i] - t[i]/t[end] * (x[end] - xf + x[1]))::Float64
-  end
-
-  return x
+  return nothing
 end
+
 
 
 
