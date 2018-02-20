@@ -441,28 +441,20 @@ end
 
 
 
-
-
-
-
-
-
-
-Y = deepcopy(Yc)
-br = 5
-λ1 = 1.0
-λ0 = 0.5
-ω1 = 0.1
-ω0 = -0.1
-
-upbranch!(λ1, λ0, ω1, ω0, avg_Δx, br, Y, bridx_a, brδt, brl, brs, narea, nedge)
-
-Y[bridx_a[3][br]]
-Yc[bridx_a[3][br]]
-
-
 """
-    upbranch!(λ::Array{Float64,1}, ω1::Float64, ω0::Float64, avg_Δx::Array{Array{Float64,1},1}, triad::Array{Int64,1}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
+    upbranch!(λ1     ::Float64,
+              λ0     ::Float64,
+              ω1     ::Float64,
+              ω0     ::Float64,
+              avg_Δx ::Array{Float64,2},
+              br     ::Int64,
+              Y      ::Array{Int64,3},
+              bridx_a::Array{Array{UnitRange{Int64},1},1},
+              brδt   ::Vector{Vector{Float64}},
+              brl    ::Vector{Float64},
+              brs    ::Array{Int64,3},
+              narea  ::Int64,
+              nedge  ::Int64)
 
 Update one branch using discrete Data Augmentation 
 for all areas with independent 
@@ -503,10 +495,21 @@ end
 
 
 """
-    createhists!(λ::Array{Float64,1}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
+    createhists!(λ1     ::Float64,
+                 λ0     ::Float64,
+                 ω1     ::Float64,  
+                 ω0     ::Float64, 
+                 avg_Δx ::Array{Float64,2},
+                 Y      ::Array{Int64,3},
+                 br     ::Int64,
+                 brs    ::Array{Int64,3},
+                 brδt   ::Array{Array{Float64,1},1},
+                 bridx_a::Array{Array{UnitRange{Int64},1},1},
+                 narea  ::Int64)
 
 Create bit histories for all areas for one single branch 
-taking into account `Δx` and `ω1` & `ω0`.
+taking into account `Δx` and `ω1` & `ω0`, with random number of
+areas updated.
 """
 function createhists!(λ1     ::Float64,
                       λ0     ::Float64,
@@ -521,7 +524,7 @@ function createhists!(λ1     ::Float64,
                       narea  ::Int64)
 
   @inbounds begin
-    for j = Base.OneTo(narea)
+    for j = randsubseq(Base.OneTo(narea),0.5)
       bit_rejsam!(Y, bridx_a[j][br], brs[br,2,j], 
                   λ1, λ0, ω1, ω0, avg_Δx[br,j], brδt[br])
     end
