@@ -19,14 +19,15 @@ April 27 2017
 
 Burning & adaptive phase for MCMC.
 """
-function burn_compete(total_llf,
-                      λupd_llr,
-                      ω10upd_llr,
-                      Xupd_llr,
-                      Rupd_llr,
-                      σ²ωxupd_llr,
-                      biogeo_upd_iid,
-                      linarea_branch_avg!,
+function burn_compete(total_llf          ::Function,
+                      λupd_llr           ::Function,
+                      ω10upd_llr         ::Function,
+                      Xupd_llr           ::Function,
+                      Rupd_llr           ::Function,
+                      σ²ωxupd_llr        ::Function,
+                      bgiid              ::Function,
+                      bgiid_br           ::Function,
+                      linarea_branch_avg!::Function,
                       Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
                       areavg   ::Array{Float64,2},
@@ -210,9 +211,9 @@ function burn_compete(total_llf,
                   total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c)::Float64
 
-            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup]) - 
-                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup])::Float64
 
             if log(rand()) < (llr + propr_iid)
@@ -288,9 +289,9 @@ function burn_compete(total_llf,
                   total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c)::Float64
 
-            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup]) - 
-                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup])::Float64
 
             if log(rand()) < (llr + propr_iid)
@@ -404,9 +405,9 @@ function burn_compete(total_llf,
                   total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c)::Float64
 
-            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup]) - 
-                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup])::Float64
 
             if log(rand()) < (llr + propr_iid)
@@ -482,9 +483,9 @@ function burn_compete(total_llf,
                   total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
                             stemevc, brs[nedge,1,:], σ²c)::Float64
 
-            propr_iid = biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, 
+            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup]) - 
-                        biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, 
+                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
                                        avg_Δx, trios[bup])::Float64
 
             if log(rand()) < (llr + propr_iid)

@@ -321,7 +321,6 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
                             lindiff[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64
       end
-
     end
 
     return ll
@@ -341,7 +340,7 @@ Make triad likelihood function for the mutual
 independence model (iid), the proposal density 
 for data augmented biogeographic histories.
 """
-function makellf_biogeo_upd_iid(bridx_a::Array{Array{UnitRange{Int64},1},1},
+function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
                                 δt     ::Array{Float64,1},
                                 narea  ::Int64,
                                 nedge  ::Int64,
@@ -398,6 +397,71 @@ function makellf_biogeo_upd_iid(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
   return f
 end
+
+
+
+
+
+
+
+
+
+
+"""
+    makellf_biogeo_upd_iid_br(bridx_a::Array{Array{Array{Int64,1},1},1}, δt::Array{Float64,1}, narea::Int64, nedge::Int64, m::Int64)
+
+Make single branch likelihood function for the mutual 
+independence model (iid), the proposal density 
+for data augmented biogeographic histories.
+"""
+function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
+                                   δt     ::Array{Float64,1},
+                                   narea  ::Int64,
+                                   nedge  ::Int64,
+                                   m      ::Int64)
+
+  # prepare δts
+  const δtA = Array{Float64,1}[]
+
+  for j=bridx_a[1][1:(nedge-1)]
+    inds = zeros(Int64,length(j) - 1)
+    for i = eachindex(inds)
+      inds[i] = rowind(j[i], m)
+    end
+    push!(δtA, δt[inds])
+  end
+
+  function f(Y     ::Array{Int64,3}, 
+             λ1    ::Float64,
+             λ0    ::Float64,
+             ω1    ::Float64,
+             ω0    ::Float64,
+             avg_Δx::Array{Float64,2},
+             br    ::Int64)
+
+    ll::Float64 = 0.0
+
+    @inbounds begin
+      for k = Base.OneTo(narea)
+        ll += bitvectorll_iid(Y[bridx_a[k][br]], 
+                              λ1, λ0, ω1, ω0, avg_Δx[br,k], δtA[br]) +
+      end
+    end
+
+    return ll::Float64
+  end
+
+  return f
+end
+
+
+
+
+
+
+
+
+
 
 
 

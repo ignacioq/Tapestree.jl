@@ -148,14 +148,16 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   linarea_branch_avg! = make_la_branch_avg(bridx_a, length(Yc), m, narea, nedge)
   linarea_branch_avg!(avg_Δx, lindiff)
 
+
   # make likelihood and prior functions
-  total_llf      = makellf(δt, Yc, ntip, narea, m)
-  λupd_llr       = makellr_λ_upd(Yc, δt, narea, ntip, m)
-  ω10upd_llr     = makellr_ω10_upd(Yc, δt, narea, ntip, m)
-  Xupd_llr       = makellr_Xupd(δt, narea)
-  Rupd_llr       = makellr_Rupd(δt[1], narea)
-  σ²ωxupd_llr    = makellr_σ²ωxupd(δt, Yc, ntip)  
-  biogeo_upd_iid = makellf_biogeo_upd_iid(bridx_a, δt, narea, nedge, m)
+  total_llf   = makellf(δt, Yc, ntip, narea, m)
+  λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m)
+  ω10upd_llr  = makellr_ω10_upd(Yc, δt, narea, ntip, m)
+  Xupd_llr    = makellr_Xupd(δt, narea)
+  Rupd_llr    = makellr_Rupd(δt[1], narea)
+  σ²ωxupd_llr = makellr_σ²ωxupd(δt, Yc, ntip)  
+  bgiid       = makellf_bgiid(bridx_a, δt, narea, nedge, m)
+  bgiid_br    = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
 
   # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² 
   np = length(wXp) + 6
@@ -179,7 +181,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_compete(
     total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
-    biogeo_upd_iid, linarea_branch_avg!, 
+    bgiid, bgiid_br, linarea_branch_avg!, 
     Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
     σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
     Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
@@ -213,11 +215,16 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   p = Progress(niter, dt=5, desc="running MCMC...", barlen=20, color=:green)
 
   # create parameter update functions
-  mhr_upd_Y = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
-                             brδt, brl, wcol, Ync1, Ync2, 
-                             total_llf, biogeo_upd_iid, linarea_branch_avg!)
-  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
-                             narea, ntip, Xupd_llr, Rupd_llr)
+  mhr_upd_X    = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
+                                narea, ntip, Xupd_llr, Rupd_llr)
+
+  mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
+                                brδt, brl, wcol, Ync1, Ync2, 
+                                total_llf, bgiid, linarea_branch_avg!)
+  mhr_upd_Y_br = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
+                                  brδt, brl, wcol, Ync1, Ync2, 
+                                  total_llf, bgiid_br, linarea_branch_avg!)
+
 
   #=
   start MCMC
@@ -226,7 +233,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   open(out_file*".log", "w")
 
-  open(out_file*".log","a") do f
+  open(out_file*".log", "a") do f
 
     print(f, "iteration\tlikelihood\tprior\tomega_x\tomega_1\tomega_0\tsigma2\tlambda_1\tlambda_0\tcollision_probability\n")
 

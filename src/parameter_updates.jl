@@ -120,6 +120,12 @@ function make_mhr_upd_Y(narea              ::Int64,
                         biogeo_upd_iid     ::Function,
                         linarea_branch_avg!::Function)
 
+  Yp = zeros(Int64, m, ntip, narea)
+  aa = zeros(m, narea)
+  ao = zeros(Int64,m, narea)
+  la = zeros(m, ntip)
+  ld = zeros(m, ntip, narea)
+
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
              Yc     ::Array{Int64,3},
@@ -139,11 +145,11 @@ function make_mhr_upd_Y(narea              ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    const Yp = copy(Yc)::Array{Int64,3}
-    const aa = copy(areavg)::Array{Float64,2}
-    const ao = copy(areaoc)::Array{Int64,2}
-    const la = copy(linavg)::Array{Float64,2}
-    const ld = copy(lindiff)::Array{Float64,3}
+    copy!(Yp, Yc)
+    copy!(aa, areavg)
+    copy!(ao, areaoc)
+    copy!(la, linavg)
+    copy!(ld, lindiff)
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
@@ -162,6 +168,90 @@ function make_mhr_upd_Y(narea              ::Int64,
 
     propr_iid = (biogeo_upd_iid(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, triad) - 
                  biogeo_upd_iid(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, triad))::Float64
+
+    if log(rand()) < (llr + propr_iid)::Float64
+      llc    += llr::Float64
+      Yc      = Yp ::Array{Int64,3}
+      areavg  = aa ::Array{Float64,2}
+      areaoc  = ao ::Array{Int64,2}
+      linavg  = la ::Array{Float64,2}
+      lindiff = ld ::Array{Float64,3}
+    end
+
+    return llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
+  end
+
+end
+
+
+
+
+
+"""
+    make_mhr_upd_Ybr(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
+
+Make function to update a single branch in Y.
+"""
+function make_mhr_upd_Ybr(narea              ::Int64,
+                          nedge              ::Int64,
+                          m                  ::Int64,
+                          ntip               ::Int64,
+                          bridx_a            ::Array{Array{UnitRange{Int64},1},1},
+                          brδt               ::Array{Array{Float64,1},1},
+                          brl                ::Array{Float64,1},
+                          wcol               ::Array{Array{Int64,1},1},
+                          Ync1               ::Array{Int64,1},
+                          Ync2               ::Array{Int64,1},
+                          total_llf          ::Function,
+                          bgiid_br           ::Function,
+                          linarea_branch_avg!::Function)
+
+  Yp = zeros(Int64, m, ntip, narea)
+  aa = zeros(m, narea)
+  ao = zeros(Int64,m, narea)
+  la = zeros(m, ntip)
+  ld = zeros(m, ntip, narea)
+
+  function f(br     ::Int64,
+             Xc     ::Array{Float64,2},
+             Yc     ::Array{Int64,3},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             ωxc    ::Float64, 
+             ω1c    ::Float64, 
+             ω0c    ::Float64,
+             σ²c    ::Float64,
+             llc    ::Float64,
+             prc    ::Float64,
+             areavg ::Array{Float64,2},
+             areaoc ::Array{Int64,2},
+             linavg ::Array{Float64,2},
+             lindiff::Array{Float64,3},
+             avg_Δx ::Array{Float64,2},
+             brs    ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1})
+
+    copy!(Yp, Yc)
+    copy!(aa, areavg)
+    copy!(ao, areaoc)
+    copy!(la, linavg)
+    copy!(ld, lindiff)
+
+    linarea_branch_avg!(avg_Δx, lindiff)
+
+    upbranch!(λ1, λ0, ω1, ω0, avg_Δx, br, Y, bridx_a, brδt, brl, 
+              brs, narea, nedge)
+
+    area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
+    linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
+
+    llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c) - 
+           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c))::Float64
+
+    propr_iid = (bgiid_br(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, br) - 
+                 bgiid_br(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, br))::Float64
 
     if log(rand()) < (llr + propr_iid)::Float64
       llc    += llr::Float64

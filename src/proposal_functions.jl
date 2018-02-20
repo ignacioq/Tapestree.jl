@@ -160,11 +160,6 @@ end
 
 
 
-
-
-
-
-
 """
     ifextY(Y::Array{Int64,3}, triad::Array{Int64,1}, narea::Int64, bridx_a::Array{Array{Array{Int64,1},1},1})
 
@@ -538,11 +533,15 @@ end
 
 
 """
-    ifextY(Y::Array{Int64,3}, triad::Array{Int64,1}, narea::Int64, bridx_a::Array{Array{Array{Int64,1},1},1})
+    ifextY(Y      ::Array{Int64,3},
+           br     ::Int64,
+           narea  ::Int64,
+           bridx_a::Array{Array{UnitRange{Int64},1},1})
 
 Return `true` if at some point the species
 goes extinct and/or more than one change is 
-observed after some **δt**, otherwise returns `false`.
+observed after some **δt**, otherwise returns `false`. 
+This specific method is for single branch updates.
 """
 function ifextY(Y      ::Array{Int64,3},
                 br     ::Int64,
