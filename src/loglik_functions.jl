@@ -458,14 +458,6 @@ end
 
 
 
-
-
-
-
-
-
-
-
 """
     bitvectorll_iid(y::Array{Int64,1}, λ1::Float64, λ0::Float64, δt::Array{Float64,1})
 

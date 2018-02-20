@@ -101,6 +101,113 @@ end
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+"""
+    make_mhr_upd_X_br(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
+
+Make X DA update for a single branch.
+"""
+function make_mhr_upd_X_br(Xnc1    ::Array{Int64,1},
+                           Xnc2    ::Array{Int64,1},
+                           wcol    ::Array{Array{Int64,1},1},
+                           m       ::Int64,
+                           ptn     ::Array{Float64,1},
+                           wXp     ::Array{Int64,1},
+                           narea   ::Int64,
+                           ntip    ::Int64,
+                           nedge   ::Int64,
+                           Xupd_llr::Function,
+                           Rupd_llr::Function)
+
+  Xp = zeros(m, ntip)
+  aa = zeros(m, narea)
+  ao = zeros(Int64,m, narea)
+  la = zeros(m, ntip)
+  ld = zeros(m, ntip, narea)
+
+  function f(br     ::Int64,
+             Xc     ::Array{Float64,2},
+             Yc     ::Array{Int64,3},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             ωxc    ::Float64, 
+             ω1c    ::Float64, 
+             ω0c    ::Float64,
+             σ²c    ::Float64,
+             llc    ::Float64,
+             areavg ::Array{Float64,2},
+             linavg ::Array{Float64,2},
+             lindiff::Array{Float64,3},
+             areaoc ::Array{Int64,2})
+
+    copy!(Xp, Xc)
+    copy!(aa, areavg)
+    copy!(ao, areaoc)
+    copy!(la, linavg)
+    copy!(ld, lindiff)
+
+    upbranchX!(rand(1:(nedge-1)), Xp, bridx, brδt, σ²c)
+
+    area_lineage_means!(aa, la, ao, Xp, Yc, wcol, m, narea)
+    linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
+
+    llr = (total_llf(Xp, Yc, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c) - 
+           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c))::Float64
+
+    if log(rand()) < llr::Float64
+      llc    += llr::Float64
+      Xc      = Xp ::Array{Int64,3}
+      areavg  = aa ::Array{Float64,2}
+      areaoc  = ao ::Array{Int64,2}
+      linavg  = la ::Array{Float64,2}
+      lindiff = ld ::Array{Float64,3}
+    end
+
+    return llc, Xc, areavg, areaoc, linavg, lindiff
+  end
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
     make_mhr_upd_Y(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
 

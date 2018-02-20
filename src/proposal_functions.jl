@@ -589,7 +589,7 @@ end
                X    ::Array{Float64,2}, 
                bridx::Array{UnitRange{Int64},1},
                brδt ::Array{Array{Float64,1},1}, 
-               σ    ::Float64)
+               σ²c  ::Float64)
 
 Update a branch j in X using a Brownian bridge.
 """
@@ -597,9 +597,9 @@ function upbranchX!(j    ::Int64,
                     X    ::Array{Float64,2}, 
                     bridx::Array{UnitRange{Int64},1},
                     brδt ::Array{Array{Float64,1},1}, 
-                    σ    ::Float64)
+                    σ²   ::Float64)
 
-  @inbounds bbX!(X, bridx[j], brδt[j], σ)
+  @inbounds bbX!(X, bridx[j], brδt[j], σ²)
 end
 
 
@@ -614,14 +614,14 @@ Brownian bridge simulation function for updating a branch in X in place.
 function bbX!(X  ::Array{Float64,2}, 
               idx::UnitRange,
               t  ::Array{Float64,1},  
-              σ  ::Float64)
+              σ² ::Float64)
 
   @inbounds begin
 
     xf::Float64 = X[idx[end]]
 
     for i = Base.OneTo(endof(t)-1)
-      X[idx[i+1]] = (X[idx[i]] + randn()*sqrt(t[i+1] - t[i])*σ)::Float64
+      X[idx[i+1]] = (X[idx[i]] + randn()*sqrt((t[i+1] - t[i])*σ²))::Float64
     end
 
     for i = Base.OneTo(endof(t))
