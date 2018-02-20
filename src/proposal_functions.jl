@@ -48,7 +48,7 @@ function upnode!(λ1     ::Float64,
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
   
     # save extinct
-    ntries = 1
+    # ntries = 1
 
     while ifextY(Y,  triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
@@ -71,9 +71,9 @@ function upnode!(λ1     ::Float64,
 
       # end
     end
-
-    nothing
   end
+
+  return nothing
 end
 
 
@@ -120,9 +120,9 @@ function upnode!(λ1     ::Float64,
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
-    # save extinct
-    ntries = 1
+    # ntries = 1
 
+    # save extinct
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
@@ -151,9 +151,9 @@ function upnode!(λ1     ::Float64,
 
       # end
     end
-
-  nothing
   end
+
+  return nothing
 end
 
 
@@ -245,9 +245,9 @@ function createhists!(λ1     ::Float64,
       bit_rejsam!(Y, bridx_a[j][d2], brs[d2,2,j], λ1, λ0, brδt[d2])
 
     end
-
-    nothing
   end
+
+  return nothing
 end
 
 
@@ -300,8 +300,9 @@ function createhists!(λ1     ::Float64,
 
     end
 
-    nothing
   end
+  
+  return nothing
 end
 
 
@@ -341,9 +342,9 @@ function samplenode!(λ1   ::Float64,
       # sample the node's character
       brs[pr,2,j] = brs[d1,1,j] = brs[d2,1,j] = coinsamp(tp)::Int64
     end
-  
-  nothing
   end
+
+  return nothing
 end
 
 
@@ -387,9 +388,9 @@ function samplenode!(λ1    ::Float64,
       # sample the node's character
       brs[pr,2,j] = brs[d1,1,j] = brs[d2,1,j] = coinsamp(tp)::Int64
     end
-  
-  nothing
   end
+
+  return nothing
 end
 
 
@@ -447,6 +448,18 @@ end
 
 
 
+Y = deepcopy(Yc)
+br = 5
+λ1 = 1.0
+λ0 = 0.5
+ω1 = 0.1
+ω0 = -0.1
+
+upbranch!(λ1, λ0, ω1, ω0, avg_Δx, br, Y, bridx_a, brδt, brl, brs, narea, nedge)
+
+Y[bridx_a[3][br]]
+Yc[bridx_a[3][br]]
+
 
 """
     upbranch!(λ::Array{Float64,1}, ω1::Float64, ω0::Float64, avg_Δx::Array{Array{Float64,1},1}, triad::Array{Int64,1}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
@@ -460,6 +473,7 @@ function upbranch!(λ1     ::Float64,
                    ω1     ::Float64,
                    ω0     ::Float64,
                    avg_Δx ::Array{Float64,2},
+                   br     ::Int64,
                    Y      ::Array{Int64,3},
                    bridx_a::Array{Array{UnitRange{Int64},1},1},
                    brδt   ::Vector{Vector{Float64}},
@@ -472,18 +486,16 @@ function upbranch!(λ1     ::Float64,
 
     # sample a consistent history
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+                 Y, br, brs, brδt, bridx_a, narea)
 
-    # save extinct
-    ntries = 1
-
+    # check if extinct
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+                   Y, br, brs, brδt, bridx_a, narea)
     end
-
-  nothing
   end
+
+  return nothing
 end
 
 
@@ -493,21 +505,20 @@ end
 """
     createhists!(λ::Array{Float64,1}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
 
-Create bit histories for all areas for the branch 
-trio taking into account `Δx` and `ω1` & `ω0`.
+Create bit histories for all areas for one single branch 
+taking into account `Δx` and `ω1` & `ω0`.
 """
 function createhists!(λ1     ::Float64,
                       λ0     ::Float64,
                       ω1     ::Float64,  
                       ω0     ::Float64, 
-                      br     ::Int64,
                       avg_Δx ::Array{Float64,2},
                       Y      ::Array{Int64,3},
+                      br     ::Int64,
                       brs    ::Array{Int64,3},
                       brδt   ::Array{Array{Float64,1},1},
                       bridx_a::Array{Array{UnitRange{Int64},1},1},
-                      narea  ::Int64,
-                      nedge  ::Int64)
+                      narea  ::Int64)
 
   @inbounds begin
     for j = Base.OneTo(narea)
@@ -521,6 +532,8 @@ end
 
 
 
+
+
 """
     ifextY(Y::Array{Int64,3}, triad::Array{Int64,1}, narea::Int64, bridx_a::Array{Array{Array{Int64,1},1},1})
 
@@ -529,28 +542,25 @@ goes extinct and/or more than one change is
 observed after some **δt**, otherwise returns `false`.
 """
 function ifextY(Y      ::Array{Int64,3},
-                triad  ::Array{Int64,1},
+                br     ::Int64,
                 narea  ::Int64,
                 bridx_a::Array{Array{UnitRange{Int64},1},1})
 
   @inbounds begin
 
-    for k in triad
+    for i = Base.OneTo((length(bridx_a[1][br]::UnitRange{Int64})-1)::Int64)
+      s_e = 0::Int64            # count current areas
+      s_c = 0::Int64            # count area changes
 
-      for i = Base.OneTo((length(bridx_a[1][k]::UnitRange{Int64})-1)::Int64)
-        s_e = 0::Int64            # count current areas
-        s_c = 0::Int64            # count area changes
-
-        for j = Base.OneTo(narea)
-          s_e += Y[bridx_a[j][k][i]]::Int64
-          if Y[bridx_a[j][k][i]]::Int64 != Y[bridx_a[j][k][i+1]]::Int64
-            s_c += 1::Int64
-          end
+      for j = Base.OneTo(narea)
+        s_e += Y[bridx_a[j][br][i]]::Int64
+        if Y[bridx_a[j][br][i]]::Int64 != Y[bridx_a[j][br][i+1]]::Int64
+          s_c += 1::Int64
         end
+      end
 
-        if s_e::Int64 == 0::Int64 || s_c::Int64 > 1::Int64
-          return true::Bool
-        end
+      if s_e::Int64 == 0::Int64 || s_c::Int64 > 1::Int64
+        return true::Bool
       end
     end
 
