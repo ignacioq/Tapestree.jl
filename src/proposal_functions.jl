@@ -437,7 +437,7 @@ end
 
 
 """
-    upbranch!(λ1     ::Float64,
+    upbranchY!(λ1     ::Float64,
               λ0     ::Float64,
               ω1     ::Float64,
               ω0     ::Float64,
@@ -455,19 +455,19 @@ Update one branch using discrete Data Augmentation
 for all areas with independent 
 proposals taking into account `Δx` and `ω1` & `ω0`.
 """
-function upbranch!(λ1     ::Float64,
-                   λ0     ::Float64,
-                   ω1     ::Float64,
-                   ω0     ::Float64,
-                   avg_Δx ::Array{Float64,2},
-                   br     ::Int64,
-                   Y      ::Array{Int64,3},
-                   bridx_a::Array{Array{UnitRange{Int64},1},1},
-                   brδt   ::Vector{Vector{Float64}},
-                   brl    ::Vector{Float64},
-                   brs    ::Array{Int64,3},
-                   narea  ::Int64,
-                   nedge  ::Int64)
+function upbranchY!(λ1     ::Float64,
+                    λ0     ::Float64,
+                    ω1     ::Float64,
+                    ω0     ::Float64,
+                    avg_Δx ::Array{Float64,2},
+                    br     ::Int64,
+                    Y      ::Array{Int64,3},
+                    bridx_a::Array{Array{UnitRange{Int64},1},1},
+                    brδt   ::Vector{Vector{Float64}},
+                    brl    ::Vector{Float64},
+                    brs    ::Array{Int64,3},
+                    narea  ::Int64,
+                    nedge  ::Int64)
 
   @inbounds begin
 
@@ -476,7 +476,7 @@ function upbranch!(λ1     ::Float64,
                  Y, br, brs, brδt, bridx_a, narea)
 
     # check if extinct
-    while ifextY(Y, triad, narea, bridx_a)
+    while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, br, brs, brδt, bridx_a, narea)
     end
