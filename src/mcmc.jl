@@ -177,11 +177,24 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   fix_ω1 && filter!(x -> x ≠ 3, parvec)
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
 
+  # create update functions for Xbr, Y, Ybr and XYbr
+  mhr_upd_Xbr  = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, total_llf)
+  mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
+                                brδt, brl, wcol, Ync1, Ync2, 
+                                total_llf, bgiid, linarea_branch_avg!)
+  mhr_upd_Ybr  = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
+                                  brδt, brl, wcol, Ync1, Ync2, 
+                                  total_llf, bgiid_br, linarea_branch_avg!)
+  mhr_upd_XYbr = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
+                                   bridx_a, brδt, brl, wcol, 
+                                   total_llf, bgiid_br, linarea_branch_avg!)
+
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
   stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_compete(
     total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
     bgiid, bgiid_br, linarea_branch_avg!, 
+    mhr_upd_Xbr, mhr_upd_Y, mhr_upd_Ybr, mhr_upd_XYbr,
     Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
     σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
     Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
@@ -217,14 +230,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   # create parameter update functions
   mhr_upd_X    = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
                                 narea, ntip, Xupd_llr, Rupd_llr)
-
-  mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
-                                brδt, brl, wcol, Ync1, Ync2, 
-                                total_llf, bgiid, linarea_branch_avg!)
-  mhr_upd_Y_br = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
-                                  brδt, brl, wcol, Ync1, Ync2, 
-                                  total_llf, bgiid_br, linarea_branch_avg!)
-
 
   #=
   start MCMC
@@ -390,6 +395,29 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           end
         end
 
+        ## make a branch updates with Pr = 0.01
+        # make X branch update
+        if 0.01 < rand()
+          llc, Xc, areavg, areaoc, linavg, lindiff = 
+            mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                        areavg, linavg, lindiff, areaoc)
+        end
+
+        # make Y branch update
+        if 0.01 < rand()
+          llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+            mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                        llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                        brs, stemevc)
+        end
+
+        # make joint X & Y branch update
+        if 0.01 < rand()
+          llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx =
+            mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                         llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                         brs, stemevc)
+        end
       end
 
       # log parameters

@@ -28,6 +28,10 @@ function burn_compete(total_llf          ::Function,
                       bgiid              ::Function,
                       bgiid_br           ::Function,
                       linarea_branch_avg!::Function,
+                      mhr_upd_Xbr        ::Function,
+                      mhr_upd_Y          ::Function,
+                      mhr_upd_Ybr        ::Function,
+                      mhr_upd_XYbr       ::Function,
                       Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
                       areavg   ::Array{Float64,2},
@@ -185,61 +189,27 @@ function burn_compete(total_llf          ::Function,
 
         # which internal node to update
         if rand() < 0.4
-
-          bup = rand(Base.OneTo(nin))::Int64
+          bup = rand(Base.OneTo(nin))
+          # update a random internal node, including the mrca
           if bup < nin
-
-            Yp = copy(Yc)::Array{Int64,3}
-
-            aa = copy(areavg)::Array{Float64,2}
-            ao = copy(areaoc)::Array{Int64,2}
-            la = copy(linavg)::Array{Float64,2}
-            ld = copy(lindiff)::Array{Float64,3}
-
-            linarea_branch_avg!(avg_Δx, lindiff)
-
-            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
-                    Yp, bridx_a, brδt, brl, brs, narea, nedge)
-
-            Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
-
-            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-            linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
-
-            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c) - 
-                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c)::Float64
-
-            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup]) - 
-                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup])::Float64
-
-            if log(rand()) < (llr + propr_iid)
-              llc    += llr::Float64
-              Yc      = Yp::Array{Int64,3}
-              areavg  = aa::Array{Float64,2}
-              areaoc  = ao::Array{Int64,2}
-              linavg  = la::Array{Float64,2}
-              lindiff = ld::Array{Float64,3}
-            end
-
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
-
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
             stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
-            llc += llr::Float64
+            llc += llr
           end
         end
 
@@ -263,61 +233,27 @@ function burn_compete(total_llf          ::Function,
 
         # which internal node to update
         if rand() < 0.4
-
-          bup = rand(Base.OneTo(nin))::Int64
+          bup = rand(Base.OneTo(nin))
+          # update a random internal node, including the mrca
           if bup < nin
-
-            Yp = copy(Yc)::Array{Int64,3}
-
-            aa = copy(areavg)::Array{Float64,2}
-            ao = copy(areaoc)::Array{Int64,2}
-            la = copy(linavg)::Array{Float64,2}
-            ld = copy(lindiff)::Array{Float64,3}
-
-            linarea_branch_avg!(avg_Δx, lindiff)
-
-            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
-                    Yp, bridx_a, brδt, brl, brs, narea, nedge)
-
-            Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
-
-            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-            linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
-
-            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c) - 
-                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c)::Float64
-
-            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup]) - 
-                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup])::Float64
-
-            if log(rand()) < (llr + propr_iid)
-              llc    += llr::Float64
-              Yc      = Yp::Array{Int64,3}
-              areavg  = aa::Array{Float64,2}
-              areaoc  = ao::Array{Int64,2}
-              linavg  = la::Array{Float64,2}
-              lindiff = ld::Array{Float64,3}
-            end
-
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
-
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
             stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
-            llc += llr::Float64
+            llc += llr
           end
         end
 
@@ -380,60 +316,27 @@ function burn_compete(total_llf          ::Function,
         # which internal node to update
         if rand() < 0.4
 
-          bup = rand(Base.OneTo(nin))::Int64
+          bup = rand(Base.OneTo(nin))
+          # update a random internal node, including the mrca
           if bup < nin
-
-            Yp = copy(Yc)::Array{Int64,3}
-
-            aa = copy(areavg)::Array{Float64,2}
-            ao = copy(areaoc)::Array{Int64,2}
-            la = copy(linavg)::Array{Float64,2}
-            ld = copy(lindiff)::Array{Float64,3}
-
-            linarea_branch_avg!(avg_Δx, lindiff)
-
-            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
-                    Yp, bridx_a, brδt, brl, brs, narea, nedge)
-
-            Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
-
-            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-            linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
-
-            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c) - 
-                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c)::Float64
-
-            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup]) - 
-                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup])::Float64
-
-            if log(rand()) < (llr + propr_iid)
-              llc    += llr::Float64
-              Yc      = Yp::Array{Int64,3}
-              areavg  = aa::Array{Float64,2}
-              areaoc  = ao::Array{Int64,2}
-              linavg  = la::Array{Float64,2}
-              lindiff = ld::Array{Float64,3}
-            end
-
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
-
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
             stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
-            llc += llr::Float64
+            llc += llr
           end
         end
 
@@ -457,62 +360,52 @@ function burn_compete(total_llf          ::Function,
 
         # which internal node to update
         if rand() < 0.4
-
-          bup = rand(Base.OneTo(nin))::Int64
+          bup = rand(Base.OneTo(nin))
+          # update a random internal node, including the mrca
           if bup < nin
-
-            Yp = copy(Yc)::Array{Int64,3}
-
-            aa = copy(areavg)::Array{Float64,2}
-            ao = copy(areaoc)::Array{Int64,2}
-            la = copy(linavg)::Array{Float64,2}
-            ld = copy(lindiff)::Array{Float64,3}
-
-            linarea_branch_avg!(avg_Δx, lindiff)
-
-            upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, trios[bup], 
-                    Yp, bridx_a, brδt, brl, brs, narea, nedge)
-
-            Yp[Ync2] = Yp[Ync1]::Array{Int64,1}
-
-            area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-            linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
-
-            llr = total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c) - 
-                  total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c, 
-                            stemevc, brs[nedge,1,:], σ²c)::Float64
-
-            propr_iid = bgiid(Yc, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup]) - 
-                        bgiid(Yp, λ1c, λ0c, ω1c, ω0c, 
-                                       avg_Δx, trios[bup])::Float64
-
-            if log(rand()) < (llr + propr_iid)
-              llc    += llr::Float64
-              Yc      = Yp::Array{Int64,3}
-              areavg  = aa::Array{Float64,2}
-              areaoc  = ao::Array{Int64,2}
-              linavg  = la::Array{Float64,2}
-              lindiff = ld::Array{Float64,3}
-            end
-
+            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              mhr_upd_Y(trios[bup], 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
-
             # update stem
             llr = 0.0
             for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
             stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
 
             for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])::Float64
+              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
             end
 
-            llc += llr::Float64
+            llc += llr
           end
+        end
+
+        ## make a branch updates with Pr = 0.01
+        # make X branch update
+        if 0.01 < rand()
+          llc, Xc, areavg, areaoc, linavg, lindiff = 
+            mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                        areavg, linavg, lindiff, areaoc)
+        end
+
+        # make Y branch update
+        if 0.01 < rand()
+          llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+            mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                        llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                        brs, stemevc)
+        end
+
+        # make joint X & Y branch update
+        if 0.01 < rand()
+          llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx =
+            mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                         llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                         brs, stemevc)
         end
 
       end

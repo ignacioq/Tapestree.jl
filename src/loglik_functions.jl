@@ -357,7 +357,6 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
     push!(δtA, δt[inds])
   end
 
-
   function f(Y     ::Array{Int64,3}, 
              λ1    ::Float64,
              λ0    ::Float64,
@@ -402,11 +401,6 @@ end
 
 
 
-
-
-
-
-
 """
     makellf_biogeo_upd_iid_br(bridx_a::Array{Array{Array{Int64,1},1},1}, δt::Array{Float64,1}, narea::Int64, nedge::Int64, m::Int64)
 
@@ -444,7 +438,7 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
     @inbounds begin
       for k = Base.OneTo(narea)
         ll += bitvectorll_iid(Y[bridx_a[k][br]], 
-                              λ1, λ0, ω1, ω0, avg_Δx[br,k], δtA[br]) +
+                              λ1, λ0, ω1, ω0, avg_Δx[br,k], δtA[br])
       end
     end
 

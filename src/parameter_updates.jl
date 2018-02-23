@@ -112,17 +112,16 @@ end
 
 
 """
-    make_mhr_upd_X_br(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
+    make_mhr_upd_Xbr(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
 
 Make X DA update for a single branch.
 """
-function make_mhr_upd_X_br(wcol               ::Array{Array{Int64,1},1},
-                           m                  ::Int64,
-                           narea              ::Int64,
-                           ntip               ::Int64,
-                           nedge              ::Int64,
-                           total_llf          ::Function,
-                           linarea_branch_avg!::Function)
+function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
+                          m                  ::Int64,
+                          narea              ::Int64,
+                          ntip               ::Int64,
+                          nedge              ::Int64,
+                          total_llf          ::Function)
 
   Xp = zeros(m, ntip)
   aa = zeros(m, narea)
@@ -150,7 +149,7 @@ function make_mhr_upd_X_br(wcol               ::Array{Array{Int64,1},1},
     copy!(la, linavg)
     copy!(ld, lindiff)
 
-    upbranchX!(rand(1:(nedge-1)), Xp, bridx, brδt, σ²c)
+    upbranchX!(rand(1:nedge-1), Xp, bridx, brδt, σ²c)
 
     area_lineage_means!(aa, la, ao, Xp, Yc, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
@@ -341,9 +340,6 @@ function make_mhr_upd_Ybr(narea              ::Int64,
   end
 
 end
-
-
-
 
 
 
