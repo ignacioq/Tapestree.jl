@@ -178,15 +178,16 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
 
   # create update functions for Xbr, Y, Ybr and XYbr
-  mhr_upd_Xbr  = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, total_llf)
+  mhr_upd_Xbr  = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
+                                  bridx, brδt, total_llf)
   mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
                                 brδt, brl, wcol, Ync1, Ync2, 
                                 total_llf, bgiid, linarea_branch_avg!)
   mhr_upd_Ybr  = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
-                                  brδt, brl, wcol, Ync1, Ync2, 
-                                  total_llf, bgiid_br, linarea_branch_avg!)
+                                  brδt, brl, wcol,total_llf, bgiid_br, 
+                                  linarea_branch_avg!)
   mhr_upd_XYbr = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
-                                   bridx_a, brδt, brl, wcol, 
+                                   bridx, bridx_a, brδt, brl, wcol, 
                                    total_llf, bgiid_br, linarea_branch_avg!)
 
   # burning phase
@@ -201,13 +202,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     trios, wXp,
     λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
-  # log likelihood and prior
-  h[1] = llc::Float64
-  o[1] = prc::Float64
-
   # log probability of collision
   const max_δt = maximum(δt)::Float64
-  pc[1] = Pc(λ1c, λ0c, max_δt)::Float64
 
   # log for nthin
   lthin = 0
@@ -400,7 +396,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         if 0.01 < rand()
           llc, Xc, areavg, areaoc, linavg, lindiff = 
             mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                        areavg, linavg, lindiff, areaoc)
+                        areavg, linavg, lindiff, areaoc, brs, stemevc)
         end
 
         # make Y branch update

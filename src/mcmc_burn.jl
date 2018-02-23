@@ -389,7 +389,7 @@ function burn_compete(total_llf          ::Function,
         if 0.01 < rand()
           llc, Xc, areavg, areaoc, linavg, lindiff = 
             mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                        areavg, linavg, lindiff, areaoc)
+                        areavg, linavg, lindiff, areaoc, brs, stemevc)
         end
 
         # make Y branch update
@@ -430,7 +430,6 @@ function burn_compete(total_llf          ::Function,
 
   return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx, stemevc, 
          brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn
-
 end
 
 

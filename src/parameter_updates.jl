@@ -10,19 +10,9 @@ June 20 2017
 
 =#
 
-
-
-
-
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # Data Augmented updates
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-
-
-
 
 """
     make_mhr_upd_X(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
@@ -121,6 +111,8 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           narea              ::Int64,
                           ntip               ::Int64,
                           nedge              ::Int64,
+                          bridx              ::Array{UnitRange{Int64},1},
+                          brδt               ::Array{Array{Float64,1},1},
                           total_llf          ::Function)
 
   Xp = zeros(m, ntip)
@@ -141,7 +133,9 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
              areavg ::Array{Float64,2},
              linavg ::Array{Float64,2},
              lindiff::Array{Float64,3},
-             areaoc ::Array{Int64,2})
+             areaoc ::Array{Int64,2},
+             brs    ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1})
 
     copy!(Xp, Xc)
     copy!(aa, areavg)
@@ -161,7 +155,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
 
     if log(rand()) < llr::Float64
       llc    += llr::Float64
-      Xc      = Xp ::Array{Int64,3}
+      Xc      = Xp ::Array{Float64,2}
       areavg  = aa ::Array{Float64,2}
       areaoc  = ao ::Array{Int64,2}
       linavg  = la ::Array{Float64,2}
@@ -354,6 +348,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
                            nedge              ::Int64,
                            m                  ::Int64,
                            ntip               ::Int64,
+                           bridx              ::Array{UnitRange{Int64},1},
                            bridx_a            ::Array{Array{UnitRange{Int64},1},1},
                            brδt               ::Array{Array{Float64,1},1},
                            brl                ::Array{Float64,1},
