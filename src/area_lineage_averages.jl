@@ -192,6 +192,6 @@ function Xupd_linavg!(aa   ::Array{Float64,1},
 
   end
 
-  nothing
+  return aa, la, ld 
 end
 

@@ -224,8 +224,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   p = Progress(niter, dt=5, desc="running MCMC...", barlen=20, color=:green)
 
   # create parameter update functions
-  mhr_upd_X    = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
-                                narea, ntip, Xupd_llr, Rupd_llr)
+  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
+                             narea, ntip, Xupd_llr, Rupd_llr)
 
   #=
   start MCMC
@@ -248,9 +248,10 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         # update X[i]
         if up > 6
 
-          llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, 
-                          ωxc, ω1c, ω0c, σ²c, llc, 
-                          areavg, linavg, lindiff, areaoc)
+          llc, Xc, areavg, linavg, lindiff = 
+            mhr_upd_X(up, Xc, Yc, λ1c, λ0c, 
+                      ωxc, ω1c, ω0c, σ²c, llc, 
+                      areavg, linavg, lindiff, areaoc)
 
         # update λ1 
         elseif up == 5
@@ -393,27 +394,30 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
         ## make a branch updates with Pr = 0.01
         # make X branch update
-        if 0.01 < rand()
+        if rand() < 5e-3 
           llc, Xc, areavg, areaoc, linavg, lindiff = 
             mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
                         areavg, linavg, lindiff, areaoc, brs, stemevc)
         end
 
         # make Y branch update
-        if 0.01 < rand()
+        if rand() < 5e-3
           llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
-            mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+            mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), 
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
                         llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
                         brs, stemevc)
         end
 
         # make joint X & Y branch update
-        if 0.01 < rand()
+        if rand() < 5e-3 
           llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx =
-            mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+            mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
                          llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
                          brs, stemevc)
         end
+      
       end
 
       # log parameters

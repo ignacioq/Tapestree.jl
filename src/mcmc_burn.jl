@@ -96,9 +96,9 @@ function burn_compete(total_llf          ::Function,
   const nin = length(trios) + 1
 
   # row i proposals for X
-  const aai = zeros(Float64, narea)       # area average
-  const lai = fill(NaN, ntip)        # lineage average
-  const ldi = fill(NaN, ntip, narea)       # lineage difference
+  aai = zeros(Float64, narea)       # area average
+  lai = fill(NaN, ntip)        # lineage average
+  ldi = fill(NaN, ntip, narea)       # lineage difference
 
   # progress bar
   p = Progress(nburn, dt=5, desc="burning...", barlen=20, color=:green)
@@ -137,7 +137,8 @@ function burn_compete(total_llf          ::Function,
         end
 
         # calculate new averages
-        Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
+        aai, lai, ldi = 
+          Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
 
         if upx == 1  # if root
           @inbounds llr = Rupd_llr(wcol[1], 
@@ -384,30 +385,32 @@ function burn_compete(total_llf          ::Function,
           end
         end
 
-        ## make a branch updates with Pr = 0.01
-        # make X branch update
-        if 0.01 < rand()
-          llc, Xc, areavg, areaoc, linavg, lindiff = 
-            mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                        areavg, linavg, lindiff, areaoc, brs, stemevc)
-        end
+      end
 
-        # make Y branch update
-        if 0.01 < rand()
-          llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
-            mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                        llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
-                        brs, stemevc)
-        end
+      ## make a branch updates with Pr = 0.01
+      # make X branch update
+      if rand() < 5e-3
+        llc, Xc, areavg, areaoc, linavg, lindiff = 
+          mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                      areavg, linavg, lindiff, areaoc, brs, stemevc)
+      end
 
-        # make joint X & Y branch update
-        if 0.01 < rand()
-          llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx =
-            mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                         llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
-                         brs, stemevc)
-        end
+      # make Y branch update
+      if rand() < 5e-3
+        llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+          mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), 
+                      Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                      llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                      brs, stemevc)
+      end
 
+      # make joint X & Y branch update
+      if rand() < 5e-3
+        llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx =
+          mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                      Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                       llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                       brs, stemevc)
       end
 
       # log number of updates
@@ -422,8 +425,9 @@ function burn_compete(total_llf          ::Function,
           ltn[j] = 0
         end
       end
-
     end
+
+    #println(Yc[1:30])
 
     next!(p)
   end

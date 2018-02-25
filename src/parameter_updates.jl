@@ -63,7 +63,8 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       end
 
       # calculate new averages
-      Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
+      aa, la, ld = 
+        Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
 
       if upx == 1  # if root
         llr = Rupd_llr(wcol[1], 
@@ -93,7 +94,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       end
     end
 
-    return llc
+    return llc, Xc, areavg, linavg, lindiff
   end
 end
 
@@ -143,7 +144,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
     copy!(la, linavg)
     copy!(ld, lindiff)
 
-    upbranchX!(rand(1:nedge-1), Xp, bridx, brδt, σ²c)
+    upbranchX!(rand(Base.OneTo(nedge-1)), Xp, bridx, brδt, σ²c)
 
     area_lineage_means!(aa, la, ao, Xp, Yc, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
@@ -155,11 +156,11 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
 
     if log(rand()) < llr::Float64
       llc    += llr::Float64
-      Xc      = Xp ::Array{Float64,2}
-      areavg  = aa ::Array{Float64,2}
-      areaoc  = ao ::Array{Int64,2}
-      linavg  = la ::Array{Float64,2}
-      lindiff = ld ::Array{Float64,3}
+      copy!(Xc, Xp)
+      copy!(areavg, aa)
+      copy!(areaoc, ao)
+      copy!(linavg, la)
+      copy!(lindiff, ld)
     end
 
     return llc, Xc, areavg, areaoc, linavg, lindiff
@@ -241,11 +242,11 @@ function make_mhr_upd_Y(narea              ::Int64,
 
     if log(rand()) < (llr + propr_iid)::Float64
       llc    += llr::Float64
-      Yc      = Yp ::Array{Int64,3}
-      areavg  = aa ::Array{Float64,2}
-      areaoc  = ao ::Array{Int64,2}
-      linavg  = la ::Array{Float64,2}
-      lindiff = ld ::Array{Float64,3}
+      copy!(Yc,Yp)
+      copy!(areavg, aa)
+      copy!(areaoc, ao)
+      copy!(linavg, la)
+      copy!(lindiff, ld)
     end
 
     return llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
@@ -323,11 +324,11 @@ function make_mhr_upd_Ybr(narea              ::Int64,
 
     if log(rand()) < (llr + propr_iid)::Float64
       llc    += llr::Float64
-      Yc      = Yp ::Array{Int64,3}
-      areavg  = aa ::Array{Float64,2}
-      areaoc  = ao ::Array{Int64,2}
-      linavg  = la ::Array{Float64,2}
-      lindiff = ld ::Array{Float64,3}
+      copy!(Yc,Yp)
+      copy!(areavg, aa)
+      copy!(areaoc, ao)
+      copy!(linavg, la)
+      copy!(lindiff, ld)
     end
 
     return llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
@@ -410,12 +411,12 @@ function make_mhr_upd_XYbr(narea              ::Int64,
 
     if log(rand()) < (llr + propr_iid)::Float64
       llc    += llr::Float64
-      Xc      = Xp ::Array{Float64,2}
-      Yc      = Yp ::Array{Int64,3}
-      areavg  = aa ::Array{Float64,2}
-      areaoc  = ao ::Array{Int64,2}
-      linavg  = la ::Array{Float64,2}
-      lindiff = ld ::Array{Float64,3}
+      copy!(Xc, Xp)
+      copy!(Yc, Yp)
+      copy!(areavg, aa)
+      copy!(areaoc, ao)
+      copy!(linavg, la)
+      copy!(lindiff, ld)
     end
 
     return llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
