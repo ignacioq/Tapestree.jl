@@ -180,7 +180,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     mhr_upd_Xbr, mhr_upd_Y, mhr_upd_Ybr, mhr_upd_XYbr,
     Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
     σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
-    Ync1, Ync2, Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
+    Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
     trios, wXp,
     λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
@@ -231,7 +231,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         if up > 6
 
           llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                      areavg, linavg, lindiff, areaoc)
+                          areavg, linavg, lindiff, areaoc)
 
         # update λ1 
         elseif up == 5
@@ -282,18 +282,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                 mhr_upd_Y(trios[bup], Xc, Yc, 
                           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-
-              for br in 1:(nedge-1)
-                if ifextY(Yc, br, narea, bridx_a)
-                  @show brs[br,:,:]
-                  @show br 
-                  @show Yc[bridx_a[1][br]]
-                  @show Yc[bridx_a[2][br]]
-                  @show Yc[bridx_a[3][br]]
-                  @show Yc[bridx_a[4][br]]
-                  error("going extinct after update")
-                end
-              end
             else
               # update stem
               llr = 0.0
