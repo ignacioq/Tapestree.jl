@@ -194,8 +194,8 @@ function burn_compete(total_llf          ::Function,
           if bup < nin
             llc = 
               mhr_upd_Y(trios[bup], Xc, Yc, 
-                            λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                            areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                        λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           else
             # update stem
             llr = 0.0
@@ -429,6 +429,7 @@ function burn_compete(total_llf          ::Function,
   return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx, stemevc, 
          brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn
 end
+
 
 
 

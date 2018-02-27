@@ -230,8 +230,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         # update X[i]
         if up > 6
 
-          llc, Xc, areavg, linavg, lindiff = 
-            mhr_upd_X(up, Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+          llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
                       areavg, linavg, lindiff, areaoc)
 
         # update λ1 
@@ -246,9 +245,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
-                mhr_upd_Y(trios[bup], 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+              llc =  
+                mhr_upd_Y(trios[bup], Xc, Yc, 
+                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
             else
               # update stem
@@ -279,11 +278,11 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
-                mhr_upd_Y(trios[bup], 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+              llc =  
+                mhr_upd_Y(trios[bup], Xc, Yc, 
+                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-            
+
               for br in 1:(nedge-1)
                 if ifextY(Yc, br, narea, bridx_a)
                   @show brs[br,:,:]
@@ -332,9 +331,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
-                mhr_upd_Y(trios[bup], 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+              llc =  
+                mhr_upd_Y(trios[bup], Xc, Yc, 
+                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
             else
               # update stem
@@ -363,9 +362,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
-                mhr_upd_Y(trios[bup], 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
+              llc =  
+                mhr_upd_Y(trios[bup], Xc, Yc, 
+                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
             else
               # update stem
@@ -387,30 +386,27 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
         ## make a branch updates with Pr = 0.005
         # make X branch update
-        if rand() < 1e-2 
-          llc, Xc, areavg, areaoc, linavg, lindiff = 
-            mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                        areavg, linavg, lindiff, areaoc, brs, stemevc)
+        if rand() < 1e-2
+          llc = mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                            areavg, linavg, lindiff, areaoc, brs, stemevc)
         end
 
         # make Y branch update
         if rand() < 1e-2
-          llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
-            mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), 
-                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                        llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
-                        brs, stemevc)
+          llc = mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), 
+                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                            llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                            brs, stemevc)
         end
 
         # make joint X & Y branch update
-        if rand() < 1e-2 
-          llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx =
-            mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                         llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
-                         brs, stemevc)
+        if rand() < 1e-2
+          llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                             llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                             brs, stemevc)
         end
-      
+        
       end
 
       # log parameters

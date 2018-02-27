@@ -85,8 +85,8 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       end
 
       if log(rand()) < llr
-        Xc[xi,:]        = xpi::Array{Float64,1}
         llc            += llr::Float64
+        Xc[xi,:]        = xpi::Array{Float64,1}
         areavg[xi,:]    = aai::Array{Float64,1}
         linavg[xi,:]    = lai::Array{Float64,1}
         lindiff[xi,:,:] = ldi::Array{Float64,2}
@@ -223,7 +223,6 @@ function make_mhr_upd_Y(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-
     upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, 
             Yp, bridx_a, brδt, brl, brsp, narea, nedge)
 
@@ -241,12 +240,12 @@ function make_mhr_upd_Y(narea              ::Int64,
 
     if log(rand()) < (llr + propr_iid)::Float64
       llc += llr::Float64
-      copy!(Yc,     Yp)
-      copy!(areavg, aa)
-      copy!(areaoc, ao)
-      copy!(linavg, la)
-      copy!(lindiff,ld)
-      copy!(brs, brsp)
+      copy!(Yc,      Yp)
+      copy!(areavg,  aa)
+      copy!(areaoc,  ao)
+      copy!(linavg,  la)
+      copy!(lindiff, ld)
+      copy!(brs,     brsp)
     end
 
     return llc::Float64
