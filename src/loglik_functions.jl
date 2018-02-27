@@ -334,17 +334,21 @@ end
 
 
 """
-    makellf_biogeo_upd_iid(bridx_a::Array{Array{Array{Int64,1},1},1}, δt::Array{Float64,1}, narea::Int64, nedge::Int64, m::Int64)
+    makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
+                  δt     ::Array{Float64,1},
+                  narea  ::Int64,
+                  nedge  ::Int64,
+                  m      ::Int64)
 
 Make triad likelihood function for the mutual 
 independence model (iid), the proposal density 
 for data augmented biogeographic histories.
 """
 function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
-                                δt     ::Array{Float64,1},
-                                narea  ::Int64,
-                                nedge  ::Int64,
-                                m      ::Int64)
+                       δt     ::Array{Float64,1},
+                       narea  ::Int64,
+                       nedge  ::Int64,
+                       m      ::Int64)
 
   # prepare δts
   const δtA = Array{Float64,1}[]
@@ -488,7 +492,7 @@ function bitvectorll_iid(y     ::Array{Int64,1},
 
   end
 
-  ll::Float64
+  return ll::Float64
 end
 
 

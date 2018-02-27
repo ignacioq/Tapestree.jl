@@ -10,9 +10,9 @@ June 20 2017
 
 =#
 
-# Data Augmented updates
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+
 
 """
     make_mhr_upd_X(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
@@ -63,8 +63,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       end
 
       # calculate new averages
-      aa, la, ld = 
-        Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
+      Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
 
       if upx == 1  # if root
         llr = Rupd_llr(wcol[1], 
@@ -94,7 +93,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
       end
     end
 
-    return llc, Xc, areavg, linavg, lindiff
+    return llc::Float64
   end
 end
 
@@ -144,7 +143,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
     copy!(la, linavg)
     copy!(ld, lindiff)
 
-    Xp = upbranchX!(rand(Base.OneTo(nedge-1)), Xp, bridx, brδt, σ²c)
+    upbranchX!(rand(Base.OneTo(nedge-1)), Xp, bridx, brδt, σ²c)
 
     area_lineage_means!(aa, la, ao, Xp, Yc, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
@@ -155,15 +154,15 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
     if log(rand()) < llr::Float64
-      llc    += llr::Float64
-      copy!(Xc, Xp)
-      copy!(areavg, aa)
-      copy!(areaoc, ao)
-      copy!(linavg, la)
+      llc += llr::Float64
+      copy!(Xc,      Xp)
+      copy!(areavg,  aa)
+      copy!(areaoc,  ao)
+      copy!(linavg,  la)
       copy!(lindiff, ld)
     end
 
-    return llc, Xc, areavg, areaoc, linavg, lindiff
+    return llc::Float64
   end
 
 end
@@ -189,11 +188,12 @@ function make_mhr_upd_Y(narea              ::Int64,
                         bgiid              ::Function,
                         linarea_branch_avg!::Function)
 
-  Yp = zeros(Int64, m, ntip, narea)
-  aa = zeros(m, narea)
-  ao = zeros(Int64,m, narea)
-  la = zeros(m, ntip)
-  ld = zeros(m, ntip, narea)
+  Yp   = zeros(Int64, m, ntip, narea)
+  aa   = zeros(m, narea)
+  ao   = zeros(Int64,m, narea)
+  la   = zeros(m, ntip)
+  ld   = zeros(m, ntip, narea)
+  brsp = zeros(Int64, nedge, 2,narea)
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -219,11 +219,13 @@ function make_mhr_upd_Y(narea              ::Int64,
     copy!(ao, areaoc)
     copy!(la, linavg)
     copy!(ld, lindiff)
+    copy!(brsp, brs)
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    Yc, brs = upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, 
-                      Yp, bridx_a, brδt, brl, brs, narea, nedge)
+
+    upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, 
+            Yp, bridx_a, brδt, brl, brsp, narea, nedge)
 
     area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
     linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
@@ -236,16 +238,18 @@ function make_mhr_upd_Y(narea              ::Int64,
     propr_iid = (bgiid(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, triad) - 
                  bgiid(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, triad))::Float64
 
+
     if log(rand()) < (llr + propr_iid)::Float64
-      llc    += llr::Float64
-      copy!(Yc, Yp)
+      llc += llr::Float64
+      copy!(Yc,     Yp)
       copy!(areavg, aa)
       copy!(areaoc, ao)
       copy!(linavg, la)
-      copy!(lindiff, ld)
+      copy!(lindiff,ld)
+      copy!(brs, brsp)
     end
 
-    return llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx
+    return llc::Float64
   end
 
 end
@@ -304,10 +308,10 @@ function make_mhr_upd_Ybr(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    wareas = randsubseq(Base.OneTo(narea),0.5)
+    wareas = randsubseq(Base.OneTo(narea), .5)::Array{Int64,1}
 
-    Yp = upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas, 
-                    bridx_a, brδt, brl, brs, narea, nedge)
+    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas, 
+               bridx_a, brδt, brl, brs, narea, nedge)
 
     area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
     linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
@@ -322,17 +326,18 @@ function make_mhr_upd_Ybr(narea              ::Int64,
 
     if log(rand()) < (llr + propr_iid)::Float64
       llc  += llr::Float64
-      copy!(Yc, Yp)
-      copy!(areavg, aa)
-      copy!(areaoc, ao)
-      copy!(linavg, la)
+      copy!(Yc,      Yp)
+      copy!(areavg,  aa)
+      copy!(areaoc,  ao)
+      copy!(linavg,  la)
       copy!(lindiff, ld)
     end
 
-    return llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
+    return llc::Float64
   end
 
 end
+
 
 
 
@@ -391,12 +396,12 @@ function make_mhr_upd_XYbr(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    wareas = randsubseq(Base.OneTo(narea),0.5)
+    wareas = randsubseq(Base.OneTo(narea),0.5)::Array{Int64,1}
 
-    Yp = upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas,
-                    bridx_a, brδt, brl, brs, narea, nedge)
+    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas,
+               bridx_a, brδt, brl, brs, narea, nedge)
 
-    Xp = upbranchX!(br, Xp, bridx, brδt, σ²c)
+    upbranchX!(br, Xp, bridx, brδt, σ²c)
 
     area_lineage_means!(aa, la, ao, Xp, Yp, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
@@ -411,15 +416,15 @@ function make_mhr_upd_XYbr(narea              ::Int64,
 
     if log(rand()) < (llr + propr_iid)::Float64
       llc += llr::Float64
-      copy!(Xc, Xp)
-      copy!(Yc, Yp)
-      copy!(areavg, aa)
-      copy!(areaoc, ao)
-      copy!(linavg, la)
+      copy!(Xc,      Xp)
+      copy!(Yc,      Yp)
+      copy!(areavg,  aa)
+      copy!(areaoc,  ao)
+      copy!(linavg,  la)
       copy!(lindiff, ld)
     end
 
-    return llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx
+    return llc::Float64
   end
 
 end
@@ -454,17 +459,16 @@ function mhr_upd_σ²(σ²c        ::Float64,
                     σ²prior    ::Float64,
                     σ²ωxupd_llr::Function)
 
-  σ²p = logupt(σ²c, rand() < 0.5 ? σ²tn : 4*σ²tn)::Float64
+  σ²p = logupt(σ²c, rand() < .3 ? σ²tn : 4.*σ²tn)::Float64
 
   #likelihood ratio
   llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c, σ²p)::Float64
 
   # prior ratio
-  prr = (logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior))::Float64
+  prr = (logdexp(σ²p, σ²prior) - 
+         logdexp(σ²c, σ²prior))::Float64
 
-  if log(rand()) < (llr + 
-                    prr + 
-                    log(σ²p) - log(σ²c))
+  if log(rand()) < (llr + prr + log(σ²p) - log(σ²c))
     llc += llr::Float64
     prc += prr::Float64
     σ²c  = σ²p::Float64
@@ -492,7 +496,7 @@ function mhr_upd_ωx(ωxc         ::Float64,
                     ωxprior    ::Tuple{Float64,Float64},
                     σ²ωxupd_llr::Function)
 
-  ωxp = addupt(ωxc, rand() < 0.5 ? ωxtn : 4*ωxtn)::Float64
+  ωxp = addupt(ωxc, rand() < .3 ? ωxtn : 4.*ωxtn)::Float64
 
   #likelihood ratio
   llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxp, σ²c, σ²c)::Float64
@@ -520,8 +524,8 @@ end
 MHR update for ω1.
 """
 function mhr_upd_ω1(ω1c       ::Float64,
-                    λ1c        ::Float64,
-                    λ0c        ::Float64,
+                    λ1c       ::Float64,
+                    λ0c       ::Float64,
                     ω0c       ::Float64,
                     Yc        ::Array{Int64,3},
                     llc       ::Float64,
@@ -532,7 +536,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
                     ω1prior   ::Tuple{Float64,Float64},
                     ω10upd_llr::Function)
 
-  ω1p = addupt(ω1c, rand() < 0.5 ? ω1tn : 4*ω1tn)::Float64
+  ω1p = addupt(ω1c, rand() < .3 ? ω1tn : 4.*ω1tn)::Float64
 
   # likelihood ratio
   llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, lindiff)::Float64
@@ -573,7 +577,7 @@ function mhr_upd_ω0(ω0c       ::Float64,
                     ω0prior   ::Tuple{Float64,Float64},
                     ω10upd_llr::Function)
 
-  ω0p = addupt(ω0c, rand() < 0.5 ? ω0tn : 4*ω0tn)::Float64
+  ω0p = addupt(ω0c, rand() < .3 ? ω0tn : 4.*ω0tn)::Float64
 
   # likelihood ratio
   llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, lindiff)::Float64
@@ -615,15 +619,16 @@ function mhr_upd_λ1(λ1c     ::Float64,
                     λupd_llr::Function)
 
   # update λ
-  λ1p = logupt(λ1c, rand() < 0.5 ? λ1tn : 4*λ1tn)::Float64
+  λ1p = logupt(λ1c, rand() < .3 ? λ1tn : 4.*λ1tn)::Float64
 
   # proposal likelihood and prior
   llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
                  lindiff, stemevc, stemss)::Float64
 
-  prr = logdexp(λ1p, λprior) - logdexp(λ1c, λprior)::Float64
+  prr = (logdexp(λ1p, λprior) - 
+         logdexp(λ1c, λprior))::Float64
 
-  if log(rand()) < (llr + prr + log(λ1p)  - log(λ1c))
+  if log(rand()) < (llr + prr + log(λ1p) - log(λ1c))
     llc += llr::Float64
     prc += prr::Float64
     λ1c  = λ1p::Float64
@@ -655,15 +660,16 @@ function mhr_upd_λ0(λ0c     ::Float64,
                     λupd_llr::Function)
 
   # update λ
-  λ0p = logupt(λ0c, rand() < 0.5 ? λ0tn : 4*λ0tn)::Float64
+  λ0p = logupt(λ0c, rand() < .3 ? λ0tn : 4.*λ0tn)::Float64
 
   # proposal likelihood and prior
   llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
                  lindiff, stemevc, stemss)::Float64
 
-  prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64
+  prr = (logdexp(λ0p, λprior) - 
+         logdexp(λ0c, λprior))::Float64
 
-  if log(rand()) < (llr + prr + log(λ0p)  - log(λ0c))
+  if log(rand()) < (llr + prr + log(λ0p) - log(λ0c))
     llc += llr::Float64
     prc += prr::Float64
     λ0c  = λ0p::Float64

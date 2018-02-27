@@ -53,19 +53,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   # dims
   const m, ntip, narea  = size(Yc)
 
-  # coupled nodes for Y
-  const Ync1 = ncoup[:,1]
-  const Ync2 = ncoup[:,2]
-
-  # expand Y coupled nodes to multidimensional matrix 
-  for i = 2:narea
-    append!(Ync1, ncoup[:,1] + (i-1)*(m*ntip))
-    append!(Ync2, ncoup[:,2] + (i-1)*(m*ntip))
-  end
-
-  # tie biogeographic coupled nodes
-  Yc[Ync2] = Yc[Ync1]
-
   # coupled nodes for X
   const Xnc1 = ncoup[:,1]
   const Xnc2 = ncoup[:,2]
@@ -122,9 +109,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   for triad in trios
     upnode!(λ1i, λ0i, triad, Yc, bridx_a, brδt, brl, brs, narea, nedge)
   end
-
-  # tie biogeographic nodes equal
-  Yc[Ync2] = Yc[Ync1]
 
   # assign same value as mrca
   brs[nedge,1,:] = brs[nedge,2,:]
@@ -403,14 +387,14 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
         ## make a branch updates with Pr = 0.005
         # make X branch update
-        if rand() < 5e-3 
+        if rand() < 1e-2 
           llc, Xc, areavg, areaoc, linavg, lindiff = 
             mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
                         areavg, linavg, lindiff, areaoc, brs, stemevc)
         end
 
         # make Y branch update
-        if rand() < 5e-3
+        if rand() < 1e-2
           llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
             mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), 
                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
@@ -419,7 +403,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         end
 
         # make joint X & Y branch update
-        if rand() < 5e-3 
+        if rand() < 1e-2 
           llc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx =
             mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 

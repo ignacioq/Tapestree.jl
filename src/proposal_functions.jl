@@ -14,6 +14,7 @@ May 16 2017
 
 
 
+
 """
     upnode!(λ::Array{Float64,1}, triad::Vector{Int64}, Y::Array{Int64,3}, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Vector{Vector{Float64}}, brl::Vector{Float64}, brs::Array{Int64,3}, narea::Int64, nedge::Int64)
 
@@ -53,17 +54,9 @@ function upnode!(λ1     ::Float64,
 
     # sample a consistent history
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-  
-    # save extinct
-    # ntries = 1
 
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-      
-      # ntries += 1
-      # if ntries > 100_000_000 
-      #   warn("iid model sampling is very inefficient")
-      # end
     end
   end
 
@@ -120,21 +113,14 @@ function upnode!(λ1     ::Float64,
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
-    # ntries = 1
-
     # save extinct
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-
-      # ntries += 1
-      # if ntries > 100_000_000
-      #   #warn("branch average iid sampling is very inefficient") 
-      # end
     end
   end
 
-  return Y, brs
+  return
 end
 
 
@@ -218,7 +204,7 @@ function createhists!(λ1     ::Float64,
     end
   end
 
-  return nothing
+  return Y
 end
 
 
@@ -280,7 +266,7 @@ function createhists!(λ1     ::Float64,
 
   end
   
-  return nothing
+  return Y
 end
 
 
@@ -322,7 +308,7 @@ function samplenode!(λ1   ::Float64,
     end
   end
 
-  return nothing
+  return brs
 end
 
 
@@ -368,7 +354,7 @@ function samplenode!(λ1    ::Float64,
     end
   end
 
-  return nothing
+  return brs
 end
 
 
@@ -464,13 +450,12 @@ function upbranchY!(λ1     ::Float64,
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                   Y, wareas, br, brs, brδt, bridx_a, narea)
+                  Y, wareas, br, brs, brδt, bridx_a, narea)
     end
   end
 
-  return Y
+  return nothing
 end
-
 
 
 
@@ -520,7 +505,6 @@ end
 
 
 
-
 """
     ifextY(Y      ::Array{Int64,3},
            br     ::Int64,
@@ -565,11 +549,13 @@ end
 
 
 
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# X proposal functions
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#=
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+X proposal functions
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+=#
 
 
 """
