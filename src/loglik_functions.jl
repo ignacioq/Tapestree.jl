@@ -409,10 +409,10 @@ independence model (iid), the proposal density
 for data augmented biogeographic histories.
 """
 function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
-                                   δt     ::Array{Float64,1},
-                                   narea  ::Int64,
-                                   nedge  ::Int64,
-                                   m      ::Int64)
+                          δt     ::Array{Float64,1},
+                          narea  ::Int64,
+                          nedge  ::Int64,
+                          m      ::Int64)
 
   # prepare δts
   const δtA = Array{Float64,1}[]
@@ -431,12 +431,13 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
              ω1    ::Float64,
              ω0    ::Float64,
              avg_Δx::Array{Float64,2},
-             br    ::Int64)
+             br    ::Int64,
+             wareas::Array{Int64,1})
 
     ll::Float64 = 0.0
 
     @inbounds begin
-      for k = Base.OneTo(narea)
+      for k = wareas
         ll += bitvectorll_iid(Y[bridx_a[k][br]], 
                               λ1, λ0, ω1, ω0, avg_Δx[br,k], δtA[br])
       end

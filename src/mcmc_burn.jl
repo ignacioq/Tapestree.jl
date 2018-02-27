@@ -85,7 +85,7 @@ function burn_compete(total_llf          ::Function,
   scalef = makescalef(obj_ar)
 
   # rest of tuning parameters
-  const ptn = fill(.1,np) 
+  ptn = fill(.1,np) 
 
   # initialize acceptance log
   const ltn = zeros(Int64, np)
@@ -110,7 +110,7 @@ function burn_compete(total_llf          ::Function,
     "\n ω1 updates per iter = ", endof(filter(x -> x == 3,parvec)),
     "\n ω0 updates per iter = ", endof(filter(x -> x == 4,parvec)),
     "\n λ1 updates per iter = ", endof(filter(x -> x == 5,parvec)),
-    "\n λ0 updates per iter = ", endof(filter(x -> x == 6,parvec)),    
+    "\n λ0 updates per iter = ", endof(filter(x -> x == 6,parvec)),
     "\n Parameter updates per iter = ", length(parvec), "\n")
 
   #start burnin
@@ -193,10 +193,11 @@ function burn_compete(total_llf          ::Function,
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+            llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
               mhr_upd_Y(trios[bup], 
                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                         areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+
           else
             # update stem
             llr = 0.0
@@ -237,10 +238,23 @@ function burn_compete(total_llf          ::Function,
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+            llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
               mhr_upd_Y(trios[bup], 
                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                         areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+
+              for br in 1:(nedge-1)
+                if ifextY(Yc, br, narea, bridx_a)
+                  @show brs[br,:,:]
+                  @show br 
+                  @show Yc[bridx_a[1][br]]
+                  @show Yc[bridx_a[2][br]]
+                  @show Yc[bridx_a[3][br]]
+                  @show Yc[bridx_a[4][br]]
+                  error("going extinct after update")
+                end
+              end
+
           else
             # update stem
             llr = 0.0
@@ -320,10 +334,24 @@ function burn_compete(total_llf          ::Function,
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+            llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
               mhr_upd_Y(trios[bup], 
                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                         areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+
+              for br in 1:(nedge-1)
+                if ifextY(Yc, br, narea, bridx_a)
+                  @show brs[br,:,:]
+
+                  @show br 
+                  @show Yc[bridx_a[1][br]]
+                  @show Yc[bridx_a[2][br]]
+                  @show Yc[bridx_a[3][br]]
+                  @show Yc[bridx_a[4][br]]
+                  error("going extinct after update")
+                end
+              end
+
           else
             # update stem
             llr = 0.0
@@ -364,10 +392,24 @@ function burn_compete(total_llf          ::Function,
           bup = rand(Base.OneTo(nin))
           # update a random internal node, including the mrca
           if bup < nin
-            llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+            llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
               mhr_upd_Y(trios[bup], 
                         Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                         areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+          
+
+
+              for br in 1:(nedge-1)
+                if ifextY(Yc, br, narea, bridx_a)
+                  @show br 
+                  @show Yc[bridx_a[1][br]]
+                  @show Yc[bridx_a[2][br]]
+                  @show Yc[bridx_a[3][br]]
+                  @show Yc[bridx_a[4][br]]
+                  error("going extinct after update")
+                end
+              end
+
           else
             # update stem
             llr = 0.0
@@ -387,7 +429,7 @@ function burn_compete(total_llf          ::Function,
 
       end
 
-      ## make a branch updates with Pr = 0.01
+      ## make a branch updates with Pr = 0.005
       # make X branch update
       if rand() < 5e-3
         llc, Xc, areavg, areaoc, linavg, lindiff = 
@@ -426,8 +468,6 @@ function burn_compete(total_llf          ::Function,
         end
       end
     end
-
-    #println(Yc[1:30])
 
     next!(p)
   end

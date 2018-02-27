@@ -44,31 +44,25 @@ function upnode!(λ1     ::Float64,
       samplenode!(λ1, λ0, pr, d1, d2, brs, brl, narea)
     end
 
+    # set new node in Y
+    for k in Base.OneTo(narea)
+      setindex!(Y, brs[pr,2,k], bridx_a[k][pr][end])
+      setindex!(Y, brs[pr,2,k], bridx_a[k][d1][1])
+      setindex!(Y, brs[pr,2,k], bridx_a[k][d2][1])
+    end
+
     # sample a consistent history
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
   
     # save extinct
     # ntries = 1
 
-    while ifextY(Y,  triad, narea, bridx_a)
+    while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
       
       # ntries += 1
       # if ntries > 100_000_000 
       #   warn("iid model sampling is very inefficient")
-        
-      #   # @show Y[bridx_a[1][pr]]
-      #   # @show Y[bridx_a[2][pr]]
-      #   # @show Y[bridx_a[3][pr]]
-
-      #   # @show Y[bridx_a[1][d1]]
-      #   # @show Y[bridx_a[2][d1]]
-      #   # @show Y[bridx_a[3][d1]]
-      
-      #   # @show Y[bridx_a[1][d2]]
-      #   # @show Y[bridx_a[2][d2]]
-      #   # @show Y[bridx_a[3][d2]]
-
       # end
     end
   end
@@ -115,6 +109,12 @@ function upnode!(λ1     ::Float64,
        samplenode!(λ1, λ0, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
     end
 
+    # set new node in Y
+    for k in Base.OneTo(narea)
+      setindex!(Y, brs[pr,2,k], bridx_a[k][pr][end])
+      setindex!(Y, brs[pr,2,k], bridx_a[k][d1][1])
+      setindex!(Y, brs[pr,2,k], bridx_a[k][d2][1])
+    end
 
     # sample a consistent history
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
@@ -130,30 +130,11 @@ function upnode!(λ1     ::Float64,
       # ntries += 1
       # if ntries > 100_000_000
       #   #warn("branch average iid sampling is very inefficient") 
-      #   # @show λ[1]*exp(ω1*avg_Δx[pr,1]), λ[1]*exp(ω1*avg_Δx[pr,2]), λ[1]*exp(ω1*avg_Δx[pr,3])
-      #   # @show λ[1]*exp(ω1*avg_Δx[d1,1]), λ[1]*exp(ω1*avg_Δx[d1,2]), λ[1]*exp(ω1*avg_Δx[d1,3])
-      #   # @show λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,2]), λ[1]*exp(ω1*avg_Δx[d2,3])
-      #   # @show λ[2]*exp(ω0*avg_Δx[pr,1]), λ[2]*exp(ω0*avg_Δx[pr,2]), λ[2]*exp(ω0*avg_Δx[pr,3])
-      #   # @show λ[2]*exp(ω0*avg_Δx[d1,1]), λ[2]*exp(ω0*avg_Δx[d1,2]), λ[2]*exp(ω0*avg_Δx[d1,3])
-      #   # @show λ[2]*exp(ω0*avg_Δx[d2,1]), λ[2]*exp(ω0*avg_Δx[d2,2]), λ[2]*exp(ω0*avg_Δx[d2,3])
-
-      #   # @show Y[bridx_a[1][pr]]
-      #   # @show Y[bridx_a[2][pr]]
-      #   # @show Y[bridx_a[3][pr]]
-
-      #   # @show Y[bridx_a[1][d1]]
-      #   # @show Y[bridx_a[2][d1]]
-      #   # @show Y[bridx_a[3][d1]]
-      
-      #   # @show Y[bridx_a[1][d2]]
-      #   # @show Y[bridx_a[2][d2]]
-      #   # @show Y[bridx_a[3][d2]]
-
       # end
     end
   end
 
-  return nothing
+  return Y, brs
 end
 
 
@@ -223,11 +204,6 @@ function createhists!(λ1     ::Float64,
 
     for j = Base.OneTo(narea)
 
-      # set new node in Y
-      setindex!(Y, brs[pr,2,j], bridx_a[j][pr][end])
-      setindex!(Y, brs[pr,2,j], bridx_a[j][d1][1])
-      setindex!(Y, brs[pr,2,j], bridx_a[j][d2][1])
-
       if pr < nedge
         # for parent branch
         bit_rejsam!(Y, bridx_a[j][pr], brs[pr,2,j], λ1, λ0, brδt[pr])
@@ -250,8 +226,20 @@ end
 
 
 """
-    createhists!(λ::Array{Float64,1}, Y::Array{Int64,3}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brδt::Array{Array{Float64,1},1}, bridx_a::Array{Array{Array{Int64,1},1},1}, narea::Int64)
-
+    createhists!(λ1     ::Float64,
+                 λ0     ::Float64,
+                 ω1     ::Float64,  
+                 ω0     ::Float64, 
+                 avg_Δx ::Array{Float64,2},
+                 Y      ::Array{Int64,3},
+                 pr     ::Int64,
+                 d1     ::Int64,
+                 d2     ::Int64,
+                 brs    ::Array{Int64,3},
+                 brδt   ::Array{Array{Float64,1},1},
+                 bridx_a::Array{Array{UnitRange{Int64},1},1},
+                 narea  ::Int64,
+                 nedge  ::Int64)
 Create bit histories for all areas for the branch 
 trio taking into account `Δx` and `ω1` & `ω0`.
 """
@@ -273,11 +261,6 @@ function createhists!(λ1     ::Float64,
   @inbounds begin
 
     for j = Base.OneTo(narea)
-
-      # set new node in Y
-      setindex!(Y, brs[pr,2,j], bridx_a[j][pr][end])
-      setindex!(Y, brs[pr,2,j], bridx_a[j][d1][1])
-      setindex!(Y, brs[pr,2,j], bridx_a[j][d2][1])
 
       if pr < nedge
         # for parent branch
@@ -438,18 +421,18 @@ end
 
 """
     upbranchY!(λ1     ::Float64,
-              λ0     ::Float64,
-              ω1     ::Float64,
-              ω0     ::Float64,
-              avg_Δx ::Array{Float64,2},
-              br     ::Int64,
-              Y      ::Array{Int64,3},
-              bridx_a::Array{Array{UnitRange{Int64},1},1},
-              brδt   ::Vector{Vector{Float64}},
-              brl    ::Vector{Float64},
-              brs    ::Array{Int64,3},
-              narea  ::Int64,
-              nedge  ::Int64)
+               λ0     ::Float64,
+               ω1     ::Float64,
+               ω0     ::Float64,
+               avg_Δx ::Array{Float64,2},
+               br     ::Int64,
+               Y      ::Array{Int64,3},
+               bridx_a::Array{Array{UnitRange{Int64},1},1},
+               brδt   ::Vector{Vector{Float64}},
+               brl    ::Vector{Float64},
+               brs    ::Array{Int64,3},
+               narea  ::Int64,
+               nedge  ::Int64)
 
 Update one branch using discrete Data Augmentation 
 for all areas with independent 
@@ -462,6 +445,7 @@ function upbranchY!(λ1     ::Float64,
                     avg_Δx ::Array{Float64,2},
                     br     ::Int64,
                     Y      ::Array{Int64,3},
+                    wareas ::Array{Int64,1},
                     bridx_a::Array{Array{UnitRange{Int64},1},1},
                     brδt   ::Vector{Vector{Float64}},
                     brl    ::Vector{Float64},
@@ -469,21 +453,24 @@ function upbranchY!(λ1     ::Float64,
                     narea  ::Int64,
                     nedge  ::Int64)
 
+
   @inbounds begin
 
     # sample a consistent history
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                 Y, br, brs, brδt, bridx_a, narea)
+                 Y, wareas, br, brs, brδt, bridx_a, narea)
+
 
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                   Y, br, brs, brδt, bridx_a, narea)
+                   Y, wareas, br, brs, brδt, bridx_a, narea)
     end
   end
 
-  return nothing
+  return Y
 end
+
 
 
 
@@ -496,6 +483,7 @@ end
                  ω0     ::Float64, 
                  avg_Δx ::Array{Float64,2},
                  Y      ::Array{Int64,3},
+                 wareas ::Array{Int64,1},
                  br     ::Int64,
                  brs    ::Array{Int64,3},
                  brδt   ::Array{Array{Float64,1},1},
@@ -512,6 +500,7 @@ function createhists!(λ1     ::Float64,
                       ω0     ::Float64, 
                       avg_Δx ::Array{Float64,2},
                       Y      ::Array{Int64,3},
+                      wareas ::Array{Int64,1},
                       br     ::Int64,
                       brs    ::Array{Int64,3},
                       brδt   ::Array{Array{Float64,1},1},
@@ -519,7 +508,7 @@ function createhists!(λ1     ::Float64,
                       narea  ::Int64)
 
   @inbounds begin
-    for j = randsubseq(Base.OneTo(narea),0.5)
+    for j = wareas
       bit_rejsam!(Y, bridx_a[j][br], brs[br,2,j], 
                   λ1, λ0, ω1, ω0, avg_Δx[br,j], brδt[br])
     end
@@ -576,7 +565,6 @@ end
 
 
 
-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # X proposal functions
@@ -600,6 +588,8 @@ function upbranchX!(j    ::Int64,
                     σ²   ::Float64)
 
   @inbounds bbX!(X, bridx[j], brδt[j], σ²)
+
+  return X
 end
 
 

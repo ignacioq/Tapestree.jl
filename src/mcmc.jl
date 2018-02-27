@@ -148,7 +148,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   linarea_branch_avg! = make_la_branch_avg(bridx_a, length(Yc), m, narea, nedge)
   linarea_branch_avg!(avg_Δx, lindiff)
 
-
   # make likelihood and prior functions
   total_llf   = makellf(δt, Yc, ntip, narea, m)
   λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m)
@@ -180,9 +179,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   # create update functions for Xbr, Y, Ybr and XYbr
   mhr_upd_Xbr  = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
                                   bridx, brδt, total_llf)
-  mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a, 
-                                brδt, brl, wcol, Ync1, Ync2, 
-                                total_llf, bgiid, linarea_branch_avg!)
+  mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
+                                wcol, total_llf, bgiid, linarea_branch_avg!)
   mhr_upd_Ybr  = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
                                   brδt, brl, wcol,total_llf, bgiid_br, 
                                   linarea_branch_avg!)
@@ -249,8 +247,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         if up > 6
 
           llc, Xc, areavg, linavg, lindiff = 
-            mhr_upd_X(up, Xc, Yc, λ1c, λ0c, 
-                      ωxc, ω1c, ω0c, σ²c, llc, 
+            mhr_upd_X(up, Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
                       areavg, linavg, lindiff, areaoc)
 
         # update λ1 
@@ -265,7 +262,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
                 mhr_upd_Y(trios[bup], 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
@@ -298,10 +295,22 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
                 mhr_upd_Y(trios[bup], 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+            
+              for br in 1:(nedge-1)
+                if ifextY(Yc, br, narea, bridx_a)
+                  @show brs[br,:,:]
+                  @show br 
+                  @show Yc[bridx_a[1][br]]
+                  @show Yc[bridx_a[2][br]]
+                  @show Yc[bridx_a[3][br]]
+                  @show Yc[bridx_a[4][br]]
+                  error("going extinct after update")
+                end
+              end
             else
               # update stem
               llr = 0.0
@@ -339,7 +348,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
                 mhr_upd_Y(trios[bup], 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
@@ -370,7 +379,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
             bup = rand(Base.OneTo(nin))
             # update a random internal node, including the mrca
             if bup < nin
-              llc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx = 
+              llc, Yc, brs, areavg, areaoc, linavg, lindiff, avg_Δx = 
                 mhr_upd_Y(trios[bup], 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
                           areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
@@ -392,7 +401,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           end
         end
 
-        ## make a branch updates with Pr = 0.01
+        ## make a branch updates with Pr = 0.005
         # make X branch update
         if rand() < 5e-3 
           llc, Xc, areavg, areaoc, linavg, lindiff = 
