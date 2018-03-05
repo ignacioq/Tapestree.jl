@@ -573,7 +573,7 @@ function upbranchX!(j    ::Int64,
                     brδt ::Array{Array{Float64,1},1}, 
                     σ²   ::Float64)
 
-  @inbounds bbX!(X, bridx[j], brδt[j], σ²)
+  @inbounds bbX!(X, bridx[j], brδt[j], rand() < .3 ? σ² : 4.*σ²)
 
   return X
 end
