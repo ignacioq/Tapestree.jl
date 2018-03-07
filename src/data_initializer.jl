@@ -297,7 +297,7 @@ function initialize_X!(tip_values::Dict{Int64,Float64},
     wbranch = find(B.==i)
     l_i = wbranch[1]-1
     l_f = wbranch[end]
-    X[l_i:l_f] = bb(X[l_i], X[l_f], δtM[wbranch], si)
+    X[l_i:l_f] = bb(X[l_i], X[l_f], δtM[wbranch])
   end
 
   X[co2] = NaN
@@ -464,14 +464,14 @@ end
 Brownian bridge simulation function for
 a vector of times δt.
 """
-function bb(xs::Float64, xf::Float64, δt::Array{Float64,1}, σ::Float64)
+function bb(xs::Float64, xf::Float64, δt::Array{Float64,1})
 
   t  = unshift!(cumsum(δt),0.0)
   tl = endof(t)
   w  = zeros(tl)
 
   for i=Base.OneTo(tl-1)
-    w[i+1] = randn()*sqrt(δt[i])*σ
+    w[i+1] = randn()*sqrt(δt[i])
   end
 
   cumsum!(w, w)

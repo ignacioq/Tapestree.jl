@@ -143,7 +143,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
     copy!(la, linavg)
     copy!(ld, lindiff)
 
-    upbranchX!(rand(Base.OneTo(nedge-1)), Xp, bridx, brδt, σ²c)
+    upbranchX!(rand(Base.OneTo(nedge-1)), Xp, bridx, brδt)
 
     area_lineage_means!(aa, la, ao, Xp, Yc, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
@@ -400,7 +400,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
     upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas,
                bridx_a, brδt, brl, brs, narea, nedge)
 
-    upbranchX!(br, Xp, bridx, brδt, σ²c)
+    upbranchX!(br, Xp, bridx, brδt)
 
     area_lineage_means!(aa, la, ao, Xp, Yp, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
