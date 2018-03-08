@@ -193,7 +193,7 @@ function make_mhr_upd_Y(narea              ::Int64,
   ao   = zeros(Int64,m, narea)
   la   = zeros(m, ntip)
   ld   = zeros(m, ntip, narea)
-  brsp = zeros(Int64, nedge, 2,narea)
+  brsp = zeros(Int64, nedge, 2, narea)
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},

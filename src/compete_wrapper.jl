@@ -103,6 +103,7 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                           λ0i       ::Float64           = 0.4,                          ωxi       ::Float64           = 0.,
                           ω1i       ::Float64           = 0.,
                           ω0i       ::Float64           = 0.,
+                          fix_ωx    ::Bool              = false,
                           fix_ω1    ::Bool              = false,
                           fix_ω0    ::Bool              = false,
                           delim     ::Char              = '\t',
@@ -134,7 +135,8 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                    σ²i      = si,
                    stbrl    = maximum(bts),
                    fix_ω1   = fix_ω1,
-                   fix_ω0   = fix_ω0)
+                   fix_ω0   = fix_ω0,
+                   fix_ωx   = fix_ωx)
 
   return R
 

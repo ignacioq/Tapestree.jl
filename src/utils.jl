@@ -122,7 +122,7 @@ function makescalef(obj_ar::Float64)
   const nar::Float64 = 1.0 - obj_ar
 
   function f(window::Float64, rate::Float64)
-    if (rate > obj_ar)
+    if rate > obj_ar
       window *= (1. + (rate - obj_ar) / nar)::Float64
     else
       window /= (2. - rate / obj_ar)::Float64
@@ -235,10 +235,10 @@ function indmindif(x::Array{Float64,1}, val::Float64)
     dx = abs(x[j]-val) 
     if dx < dxbest 
         dxbest = dx 
-        ibest  = j 
+        ibest  = j
     end 
   end 
-  ibest 
+  return ibest::Int64
 end 
 
 
