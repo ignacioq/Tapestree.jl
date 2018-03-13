@@ -446,7 +446,6 @@ function upbranchY!(λ1     ::Float64,
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, wareas, br, brs, brδt, bridx_a, narea)
 
-
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
@@ -570,9 +569,10 @@ Update a branch j in X using a Brownian bridge.
 function upbranchX!(j    ::Int64, 
                     X    ::Array{Float64,2}, 
                     bridx::Array{UnitRange{Int64},1},
-                    brδt ::Array{Array{Float64,1},1})
+                    brδt ::Array{Array{Float64,1},1},
+                    s2   ::Float64)
 
-  @inbounds bbX!(X, bridx[j], brδt[j])
+  @inbounds bbX!(X, bridx[j], brδt[j], s2)
 
   return X
 end
@@ -588,14 +588,15 @@ Brownian bridge simulation function for updating a branch in X in place.
 """
 function bbX!(X  ::Array{Float64,2}, 
               idx::UnitRange,
-              t  ::Array{Float64,1})
+              t  ::Array{Float64,1},
+              s2 ::Float64)
 
   @inbounds begin
 
     xf::Float64 = X[idx[end]]
 
     for i = Base.OneTo(endof(t)-1)
-      X[idx[i+1]] = (X[idx[i]] + randn()*sqrt((t[i+1] - t[i])))::Float64
+      X[idx[i+1]] = (X[idx[i]] + randn()*sqrt((t[i+1] - t[i])*s2))::Float64
     end
 
     for i = Base.OneTo(endof(t))

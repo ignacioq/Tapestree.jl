@@ -46,7 +46,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       stbrl   ::Float64           = 1.,
                       fix_ωx  ::Bool              = false,
                       fix_ω1  ::Bool              = false,
-                      fix_ω0  ::Bool              = false)
+                      fix_ω0  ::Bool              = false,
+                      bbprop  ::Bool              = true)
 
   print_with_color(:green, "Data successfully processed", bold = true)
 
@@ -65,6 +66,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   #create object with column indices
   const wcol = create_wcol(Xc)
+
+  # add a branch as long as the tree
+  stbrl = stbrl == 1. ? sum(δt) : stbrl
 
   # add long stem branch
   edges = cat(1, edges, [2*ntip ntip + 1])
@@ -162,7 +166,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # create update functions for Xbr, Y, Ybr and XYbr
   mhr_upd_Xbr  = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
-                                  bridx, brδt, total_llf)
+                                  bridx, brδt, total_llf,
+                                  σ²prior)
   mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
                                 wcol, total_llf, bgiid, linarea_branch_avg!)
   mhr_upd_Ybr  = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
@@ -170,7 +175,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                                   linarea_branch_avg!)
   mhr_upd_XYbr = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
                                    bridx, bridx_a, brδt, brl, wcol, 
-                                   total_llf, bgiid_br, linarea_branch_avg!)
+                                   total_llf, bgiid_br, linarea_branch_avg!,
+                                   σ²prior)
 
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
@@ -182,7 +188,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
     Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
     trios, wXp,
-    λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
+    λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn, bbprop)
 
   # log probability of collision
   const max_δt = maximum(δt)::Float64
@@ -372,12 +378,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           end
         end
 
-        ## make a branch updates with Pr = 0.005
-        # make X branch update
-        # if rand() < 1e-2
-        #   llc = mhr_upd_Xbr(Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-        #                     areavg, linavg, lindiff, areaoc, brs, stemevc)
-        # end
+        ## make a branch updates with some Pr
 
         # make Y branch update
         if rand() < 2e-3
@@ -387,14 +388,22 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                             brs, stemevc)
         end
 
-        # make joint X & Y branch update
-        # if rand() < 1e-2
-        #   llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-        #                      Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-        #                      llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
-        #                      brs, stemevc)
-        # end
-        
+        if bbprop
+          if rand() < 2e-3
+            llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
+                              Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                              areavg, linavg, lindiff, areaoc, brs, stemevc)
+          end
+
+          # make joint X & Y branch update
+          if rand() < 2e-3
+            llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                               Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                               llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                               brs, stemevc)
+          end
+        end
+
       end
 
       # log parameters

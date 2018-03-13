@@ -58,8 +58,8 @@ end
 Make likelihood function for all trait matrix 
 and biogeography history.
 """
-function makellf(δt   ::Vector{Float64}, 
-                 Y    ::Array{Int64, 3}, 
+function makellf(δt   ::Array{Float64,1}, 
+                 Y    ::Array{Int64,3}, 
                  ntip ::Int64, 
                  narea::Int64,
                  m    ::Int64)
@@ -126,6 +126,32 @@ end
 
 
 
+
+
+"""
+    llr_bm(Xc ::Array{Float64,2},
+           Xp ::Array{Float64,2},
+           δt ::Array{Float64,1},
+           σ² ::Float64, 
+           idx::UnitRange)
+
+Estimate the likelihood of a given path according to Brownian Motion.
+"""
+function llr_bm(Xc ::Array{Float64,2},
+                Xp ::Array{Float64,2},
+                idx::UnitRange,
+                δt ::Array{Float64,1},
+                σ² ::Float64)
+
+  llr::Float64 = 0.
+
+  for i in Base.OneTo(length(idx)-1)
+    llr += logdnorm_tc(Xc[idx[i+1]], Xc[idx[i]], (δt[i+1] - δt[i])*σ²) -
+           logdnorm_tc(Xp[idx[i+1]], Xp[idx[i]], (δt[i+1] - δt[i])*σ²)
+  end
+
+  return llr::Float64
+end
 
 
 

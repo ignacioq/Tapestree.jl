@@ -113,7 +113,8 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           nedge              ::Int64,
                           bridx              ::Array{UnitRange{Int64},1},
                           brδt               ::Array{Array{Float64,1},1},
-                          total_llf          ::Function)
+                          total_llf          ::Function,
+                          σ²prior            ::Float64)
 
   Xp = zeros(m, ntip)
   aa = zeros(m, narea)
@@ -121,7 +122,8 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
   la = zeros(m, ntip)
   ld = zeros(m, ntip, narea)
 
-  function f(Xc     ::Array{Float64,2},
+  function f(br     ::Int64,
+             Xc     ::Array{Float64,2},
              Yc     ::Array{Int64,3},
              λ1c    ::Float64,
              λ0c    ::Float64,
@@ -143,7 +145,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
     copy!(la, linavg)
     copy!(ld, lindiff)
 
-    upbranchX!(rand(Base.OneTo(nedge-1)), Xp, bridx, brδt)
+    upbranchX!(br, Xp, bridx, brδt, σ²c)
 
     area_lineage_means!(aa, la, ao, Xp, Yc, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
@@ -153,13 +155,14 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    if log(rand()) < llr::Float64
+    if log(rand()) < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
       llc += llr::Float64
       copy!(Xc,      Xp)
       copy!(areavg,  aa)
       copy!(areaoc,  ao)
       copy!(linavg,  la)
       copy!(lindiff, ld)
+      println("Xbr update!")
     end
 
     return llc::Float64
@@ -358,7 +361,8 @@ function make_mhr_upd_XYbr(narea              ::Int64,
                            wcol               ::Array{Array{Int64,1},1},
                            total_llf          ::Function,
                            bgiid_br           ::Function,
-                           linarea_branch_avg!::Function)
+                           linarea_branch_avg!::Function,
+                           σ²prior            ::Float64)
 
   Xp = zeros(m, ntip)
   Yp = zeros(Int64, m, ntip, narea)
@@ -366,6 +370,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
   ao = zeros(Int64,m, narea)
   la = zeros(m, ntip)
   ld = zeros(m, ntip, narea)
+
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -400,7 +405,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
     upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas,
                bridx_a, brδt, brl, brs, narea, nedge)
 
-    upbranchX!(br, Xp, bridx, brδt)
+    upbranchX!(br, Xp, bridx, brδt, σ²c)
 
     area_lineage_means!(aa, la, ao, Xp, Yp, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
@@ -413,7 +418,8 @@ function make_mhr_upd_XYbr(narea              ::Int64,
     propr_iid = (bgiid_br(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, wareas) - 
                  bgiid_br(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, wareas))::Float64
 
-    if log(rand()) < (llr + propr_iid)::Float64
+    if log(rand()) < (llr + propr_iid + 
+                      llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
       llc += llr::Float64
       copy!(Xc,      Xp)
       copy!(Yc,      Yp)
@@ -421,6 +427,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
       copy!(areaoc,  ao)
       copy!(linavg,  la)
       copy!(lindiff, ld)
+      println("Xbr & Ybr update!")
     end
 
     return llc::Float64
