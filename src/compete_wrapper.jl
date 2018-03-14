@@ -138,7 +138,8 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                    stbrl    = maximum(bts),
                    fix_ω1   = fix_ω1,
                    fix_ω0   = fix_ω0,
-                   fix_ωx   = fix_ωx)
+                   fix_ωx   = fix_ωx,
+                   bbprop   = bbprop)
 
   return R
 

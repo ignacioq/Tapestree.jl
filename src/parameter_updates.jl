@@ -162,7 +162,6 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
       copy!(areaoc,  ao)
       copy!(linavg,  la)
       copy!(lindiff, ld)
-      println("Xbr update!")
     end
 
     return llc::Float64
@@ -248,7 +247,7 @@ function make_mhr_upd_Y(narea              ::Int64,
       copy!(areaoc,  ao)
       copy!(linavg,  la)
       copy!(lindiff, ld)
-      copy!(brs,     brsp)
+      copy!(brs,   brsp)
     end
 
     return llc::Float64
@@ -427,7 +426,6 @@ function make_mhr_upd_XYbr(narea              ::Int64,
       copy!(areaoc,  ao)
       copy!(linavg,  la)
       copy!(lindiff, ld)
-      println("Xbr & Ybr update!")
     end
 
     return llc::Float64
