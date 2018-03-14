@@ -63,7 +63,6 @@ function burn_compete(total_llf          ::Function,
                       np       ::Int64,
                       parvec   ::Array{Int64,1},
                       nburn    ::Int64,
-                      bbprop   ::Bool,
                       obj_ar   ::Float64 = 0.234,
                       tune_int ::Int64   = 100)
 
@@ -395,20 +394,18 @@ function burn_compete(total_llf          ::Function,
       end
 
       # make X branch update
-      if bbprop
-        if rand() < 2e-3
-          llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
-                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                            areavg, linavg, lindiff, areaoc, brs, stemevc)
-        end
+      if rand() < 2e-3
+        llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                          areavg, linavg, lindiff, areaoc, brs, stemevc)
+      end
 
-        # make joint X & Y branch update
-        if rand() < 2e-3
-          llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                             llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
-                             brs, stemevc)
-        end
+      # make joint X & Y branch update
+      if rand() < 2e-3
+        llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                           llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                           brs, stemevc)
       end
 
       # log number of updates

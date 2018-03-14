@@ -39,7 +39,6 @@ function compete(tree_file::String,
                  fix_ωx   ::Bool              = false,
                  fix_ω1   ::Bool              = false,
                  fix_ω0   ::Bool              = false,
-                 bbprop   ::Bool              = true,
                  delim    ::Char              = '\t',
                  eol      ::Char              = '\r')
 
@@ -107,7 +106,6 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                           fix_ωx    ::Bool              = false,
                           fix_ω1    ::Bool              = false,
                           fix_ω0    ::Bool              = false,
-                          bbprop    ::Bool              = true,
                           delim     ::Char              = '\t',
                           eol       ::Char              = '\r')
 
@@ -138,8 +136,7 @@ function compete_for_sims(tip_values::Dict{Int64,Float64},
                    stbrl    = maximum(bts),
                    fix_ω1   = fix_ω1,
                    fix_ω0   = fix_ω0,
-                   fix_ωx   = fix_ωx,
-                   bbprop   = bbprop)
+                   fix_ωx   = fix_ωx)
 
   return R
 

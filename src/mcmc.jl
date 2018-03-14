@@ -46,8 +46,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       stbrl   ::Float64           = 1.,
                       fix_ωx  ::Bool              = false,
                       fix_ω1  ::Bool              = false,
-                      fix_ω0  ::Bool              = false,
-                      bbprop  ::Bool              = true)
+                      fix_ω0  ::Bool              = false)
 
   print_with_color(:green, "Data successfully processed", bold = true)
 
@@ -188,7 +187,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
     Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
     trios, wXp,
-    λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn, bbprop)
+    λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
   # log probability of collision
   const max_δt = maximum(δt)::Float64
@@ -388,20 +387,18 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                             brs, stemevc)
         end
 
-        if bbprop
-          if rand() < 2e-3
-            llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
-                              Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                              areavg, linavg, lindiff, areaoc, brs, stemevc)
-          end
+        if rand() < 2e-3
+          llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
+                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                            areavg, linavg, lindiff, areaoc, brs, stemevc)
+        end
 
-          # make joint X & Y branch update
-          if rand() < 2e-3
-            llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                               Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                               llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
-                               brs, stemevc)
-          end
+        # make joint X & Y branch update
+        if rand() < 2e-3
+          llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                             llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                             brs, stemevc)
         end
 
       end

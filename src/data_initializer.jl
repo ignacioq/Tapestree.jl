@@ -15,6 +15,18 @@ using Optim
 
 
 """
+Immutable type of an R tree `phylo` object type.
+"""
+immutable rtree
+  ed  ::Array{Int64,2}
+  el  ::Array{Float64,1}
+  tlab::Array{String,1}
+  nnod::Int64
+end
+
+
+
+"""
     read_data(tree_file::String, data_file::String; delim::Char = '\t', eol::Char = '\r')
 
 Read a phylogenetic tree using **ape** package in R through 
@@ -55,18 +67,6 @@ function read_data(tree_file::String,
   return tip_values, tip_areas, tree, bts
 end
 
-
-
-
-"""
-Immutable type of an R tree `phylo` object type.
-"""
-immutable rtree
-  ed  ::Array{Int64,2}
-  el  ::Array{Float64,1}
-  tlab::Array{String,1}
-  nnod::Int64
-end
 
 
 
