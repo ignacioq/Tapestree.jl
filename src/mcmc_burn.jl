@@ -126,7 +126,7 @@ function burn_compete(total_llf          ::Function,
 
         xi, xj = ind2sub(Xc, upx)
 
-        xpi = Xc[xi,:]::Array{Float64,1}
+        const xpi = Xc[xi,:]::Array{Float64,1}
 
         xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
 
