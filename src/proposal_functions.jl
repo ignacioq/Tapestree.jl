@@ -47,16 +47,22 @@ function upnode!(λ1     ::Float64,
 
     # set new node in Y
     for k in Base.OneTo(narea)
-      setindex!(Y, brs[pr,2,k], bridx_a[k][pr][end])
-      setindex!(Y, brs[pr,2,k], bridx_a[k][d1][1])
-      setindex!(Y, brs[pr,2,k], bridx_a[k][d2][1])
+      Y[bridx_a[k][pr][end]] = Y[bridx_a[k][d1][1]] = Y[bridx_a[k][d2][1]] = 
+        brs[pr,2,k]
     end
 
     # sample a consistent history
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
+    ntries = 1
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+    
+      ntries += 1
+      if ntries > 100_000_000
+        warn("inefficient sampling at iid node update")
+        @show λ1, λ0
+      end
     end
   end
 
@@ -104,19 +110,28 @@ function upnode!(λ1     ::Float64,
 
     # set new node in Y
     for k in Base.OneTo(narea)
-      setindex!(Y, brs[pr,2,k], bridx_a[k][pr][end])
-      setindex!(Y, brs[pr,2,k], bridx_a[k][d1][1])
-      setindex!(Y, brs[pr,2,k], bridx_a[k][d2][1])
+      Y[bridx_a[k][pr][end]] = Y[bridx_a[k][d1][1]] = Y[bridx_a[k][d2][1]] = 
+        brs[pr,2,k]
     end
 
     # sample a consistent history
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
+    ntries = 1
     # save extinct
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+    
+      ntries += 1
+      if ntries > 100_000_000
+        warn("inefficient sampling avg_Δx node update")
+        @show λ1, ω1, λ0, ω0
+        @show avg_Δx[triad[1]]
+        @show avg_Δx[triad[2]]
+        @show avg_Δx[triad[3]]
+      end
     end
   end
 
@@ -308,7 +323,7 @@ function samplenode!(λ1   ::Float64,
     end
   end
 
-  return brs
+  return nothing
 end
 
 
@@ -354,7 +369,7 @@ function samplenode!(λ1    ::Float64,
     end
   end
 
-  return brs
+  return nothing
 end
 
 
@@ -446,10 +461,19 @@ function upbranchY!(λ1     ::Float64,
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, wareas, br, brs, brδt, bridx_a, narea)
 
+    ntries = 1
+
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                   Y, wareas, br, brs, brδt, bridx_a, narea)
+    
+      ntries += 1
+      if ntries > 100_000_000
+        warn("inefficient sampling branch update")
+        @show λ1, ω1, λ0, ω0
+        @show avg_Δx[br]
+      end
     end
   end
 
@@ -574,7 +598,7 @@ function upbranchX!(j    ::Int64,
 
   @inbounds bbX!(X, bridx[j], brδt[j], s2)
 
-  return X
+  return nothing
 end
 
 

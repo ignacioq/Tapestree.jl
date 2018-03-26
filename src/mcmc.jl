@@ -87,18 +87,18 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   push!(bridx_a, bridx)
 
   for j = 2:narea
-    bridxj = deepcopy(bridx)
+    bridxj = copy(bridx)
     for i in Base.OneTo(nedge)
       bridxj[i] += (j-1)*(m*ntip)
     end
-    push!(bridx_a, bridxj)    
+    push!(bridx_a, bridxj)
   end
 
   # make ragged array of cumulative delta times for each branch
   const brδt = make_edgeδt(bridx, δt, m)
 
   # array for states at start and end of branches
-  brs = ones(Int64, nedge, 2, narea)
+  const brs = ones(Int64, nedge, 2, narea)
 
   # filter tips in edges
   wtips = map(x -> x <= ntip, edges[:,2])
@@ -120,9 +120,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   stemevc = br_samp(brs[nedge,1,:], brs[nedge,2,:], λ1i, λ0i, brl[nedge], narea)
 
   # estimate current area & lineage means and area occupancy
-  areavg = zeros(m, narea)
-  areaoc = zeros(Int64, m, narea)
-  linavg = fill(NaN, m, ntip)
+  const areavg = zeros(m, narea)
+  const areaoc = zeros(Int64, m, narea)
+  const linavg = fill(NaN, m, ntip)
 
   area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
 
@@ -131,7 +131,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
 
   # estimate average branch lineage specific means
-  avg_Δx = zeros((nedge-1), narea)
+  const avg_Δx = zeros((nedge-1), narea)
   linarea_branch_avg! = make_la_branch_avg(bridx_a, length(Yc), m, narea, nedge)
   linarea_branch_avg!(avg_Δx, lindiff)
 
@@ -146,7 +146,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   bgiid_br    = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
 
   # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² 
-  np = length(wXp) + 6
+  const np = length(wXp) + 6
 
   # parameter update vector
   const parvec = collect(1:np)
@@ -407,7 +407,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
       lthin += 1
       if lthin == nthin
         pci = Pc(f_λ(λ1c,ω1c,1.0), f_λ(λ0c,ω0c,1.0), max_δt)
-        print(f, "$it\t$llc\t$prc\t$ωxc\t$ω1c\t$ω0c\t$σ²c\t$λ1c\t$λ0c\t$pci\n")
+        print(f, it,"\t", llc, "\t", prc,"\t",ωxc,"\t",ω1c,"\t",ω0c,"\t",
+              σ²c,"\t",λ1c,"\t",λ0c,"\t",pci,"\n")
         lthin = 0
       end
 

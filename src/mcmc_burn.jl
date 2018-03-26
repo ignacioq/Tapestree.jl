@@ -83,7 +83,7 @@ function burn_compete(total_llf          ::Function,
   scalef = makescalef(obj_ar)
 
   # rest of tuning parameters
-  ptn = fill(.1,np) 
+  const ptn = fill(.1,np) 
 
   # initialize acceptance log
   const ltn = zeros(Int64, np)
@@ -94,9 +94,9 @@ function burn_compete(total_llf          ::Function,
   const nin = length(trios) + 1
 
   # row i proposals for X
-  aai = zeros(Float64, narea)       # area average
-  lai = fill(NaN, ntip)        # lineage average
-  ldi = fill(NaN, ntip, narea)       # lineage difference
+  const aai = zeros(Float64, narea)       # area average
+  const lai = fill(NaN, ntip)        # lineage average
+  const ldi = fill(NaN, ntip, narea)       # lineage difference
 
   # progress bar
   p = Progress(nburn, dt=5, desc="burning...", barlen=20, color=:green)
