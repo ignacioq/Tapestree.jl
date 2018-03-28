@@ -54,15 +54,8 @@ function upnode!(λ1     ::Float64,
     # sample a consistent history
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
-    ntries = 1
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-    
-      ntries += 1
-      if ntries > 100_000_000
-        warn("inefficient sampling at iid node update")
-        @show λ1, λ0
-      end
     end
   end
 
@@ -118,20 +111,10 @@ function upnode!(λ1     ::Float64,
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
-    ntries = 1
     # save extinct
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
-    
-      ntries += 1
-      if ntries > 100_000_000
-        warn("inefficient sampling avg_Δx node update")
-        @show λ1, ω1, λ0, ω0
-        @show avg_Δx[triad[1]]
-        @show avg_Δx[triad[2]]
-        @show avg_Δx[triad[3]]
-      end
     end
   end
 
@@ -172,6 +155,149 @@ function ifextY(Y      ::Array{Int64,3},
         if s_e::Int64 == 0::Int64 || s_c::Int64 > 1::Int64
           return true::Bool
         end
+      end
+    end
+
+  end
+
+  return false::Bool
+end
+
+
+
+
+
+"""
+    upbranchY!(λ1     ::Float64,
+               λ0     ::Float64,
+               ω1     ::Float64,
+               ω0     ::Float64,
+               avg_Δx ::Array{Float64,2},
+               br     ::Int64,
+               Y      ::Array{Int64,3},
+               bridx_a::Array{Array{UnitRange{Int64},1},1},
+               brδt   ::Vector{Vector{Float64}},
+               brl    ::Vector{Float64},
+               brs    ::Array{Int64,3},
+               narea  ::Int64,
+               nedge  ::Int64)
+
+Update one branch using discrete Data Augmentation 
+for all areas with independent 
+proposals taking into account `Δx` and `ω1` & `ω0`.
+"""
+function upbranchY!(λ1     ::Float64,
+                    λ0     ::Float64,
+                    ω1     ::Float64,
+                    ω0     ::Float64,
+                    avg_Δx ::Array{Float64,2},
+                    br     ::Int64,
+                    Y      ::Array{Int64,3},
+                    wareas ::Array{Int64,1},
+                    bridx_a::Array{Array{UnitRange{Int64},1},1},
+                    brδt   ::Vector{Vector{Float64}},
+                    brl    ::Vector{Float64},
+                    brs    ::Array{Int64,3},
+                    narea  ::Int64,
+                    nedge  ::Int64)
+
+
+  @inbounds begin
+
+    # sample a consistent history
+    createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
+                 Y, wareas, br, brs, brδt, bridx_a, narea)
+
+    # check if extinct
+    while ifextY(Y, br, narea, bridx_a)
+      createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
+                  Y, wareas, br, brs, brδt, bridx_a, narea)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
+    createhists!(λ1     ::Float64,
+                 λ0     ::Float64,
+                 ω1     ::Float64,  
+                 ω0     ::Float64, 
+                 avg_Δx ::Array{Float64,2},
+                 Y      ::Array{Int64,3},
+                 wareas ::Array{Int64,1},
+                 br     ::Int64,
+                 brs    ::Array{Int64,3},
+                 brδt   ::Array{Array{Float64,1},1},
+                 bridx_a::Array{Array{UnitRange{Int64},1},1},
+                 narea  ::Int64)
+
+Create bit histories for all areas for one single branch 
+taking into account `Δx` and `ω1` & `ω0`, with random number of
+areas updated.
+"""
+function createhists!(λ1     ::Float64,
+                      λ0     ::Float64,
+                      ω1     ::Float64,  
+                      ω0     ::Float64, 
+                      avg_Δx ::Array{Float64,2},
+                      Y      ::Array{Int64,3},
+                      wareas ::Array{Int64,1},
+                      br     ::Int64,
+                      brs    ::Array{Int64,3},
+                      brδt   ::Array{Array{Float64,1},1},
+                      bridx_a::Array{Array{UnitRange{Int64},1},1},
+                      narea  ::Int64)
+
+  @inbounds begin
+    for j = wareas
+      bit_rejsam!(Y, bridx_a[j][br], brs[br,2,j], 
+                  λ1, λ0, ω1, ω0, avg_Δx[br,j], brδt[br])
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
+    ifextY(Y      ::Array{Int64,3},
+           br     ::Int64,
+           narea  ::Int64,
+           bridx_a::Array{Array{UnitRange{Int64},1},1})
+
+Return `true` if at some point the species
+goes extinct and/or more than one change is 
+observed after some **δt**, otherwise returns `false`. 
+This specific method is for single branch updates.
+"""
+function ifextY(Y      ::Array{Int64,3},
+                br     ::Int64,
+                narea  ::Int64,
+                bridx_a::Array{Array{UnitRange{Int64},1},1})
+
+  @inbounds begin
+
+    for i = Base.OneTo((length(bridx_a[1][br]::UnitRange{Int64})-1)::Int64)
+      s_e = 0::Int64            # count current areas
+      s_c = 0::Int64            # count area changes
+
+      for j = Base.OneTo(narea)
+        s_e += Y[bridx_a[j][br][i]]::Int64
+        if Y[bridx_a[j][br][i]]::Int64 != Y[bridx_a[j][br][i+1]]::Int64
+          s_c += 1::Int64
+        end
+      end
+
+      if s_e::Int64 == 0::Int64 || s_c::Int64 > 1::Int64
+        return true::Bool
       end
     end
 
@@ -415,159 +541,6 @@ function upstem(λ1   ::Float64,
 
   end
 end
-
-
-
-
-
-"""
-    upbranchY!(λ1     ::Float64,
-               λ0     ::Float64,
-               ω1     ::Float64,
-               ω0     ::Float64,
-               avg_Δx ::Array{Float64,2},
-               br     ::Int64,
-               Y      ::Array{Int64,3},
-               bridx_a::Array{Array{UnitRange{Int64},1},1},
-               brδt   ::Vector{Vector{Float64}},
-               brl    ::Vector{Float64},
-               brs    ::Array{Int64,3},
-               narea  ::Int64,
-               nedge  ::Int64)
-
-Update one branch using discrete Data Augmentation 
-for all areas with independent 
-proposals taking into account `Δx` and `ω1` & `ω0`.
-"""
-function upbranchY!(λ1     ::Float64,
-                    λ0     ::Float64,
-                    ω1     ::Float64,
-                    ω0     ::Float64,
-                    avg_Δx ::Array{Float64,2},
-                    br     ::Int64,
-                    Y      ::Array{Int64,3},
-                    wareas ::Array{Int64,1},
-                    bridx_a::Array{Array{UnitRange{Int64},1},1},
-                    brδt   ::Vector{Vector{Float64}},
-                    brl    ::Vector{Float64},
-                    brs    ::Array{Int64,3},
-                    narea  ::Int64,
-                    nedge  ::Int64)
-
-
-  @inbounds begin
-
-    # sample a consistent history
-    createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                 Y, wareas, br, brs, brδt, bridx_a, narea)
-
-    ntries = 1
-
-    # check if extinct
-    while ifextY(Y, br, narea, bridx_a)
-      createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                  Y, wareas, br, brs, brδt, bridx_a, narea)
-    
-      ntries += 1
-      if ntries > 100_000_000
-        warn("inefficient sampling branch update")
-        @show λ1, ω1, λ0, ω0
-        @show avg_Δx[br]
-      end
-    end
-  end
-
-  return nothing
-end
-
-
-
-
-
-"""
-    createhists!(λ1     ::Float64,
-                 λ0     ::Float64,
-                 ω1     ::Float64,  
-                 ω0     ::Float64, 
-                 avg_Δx ::Array{Float64,2},
-                 Y      ::Array{Int64,3},
-                 wareas ::Array{Int64,1},
-                 br     ::Int64,
-                 brs    ::Array{Int64,3},
-                 brδt   ::Array{Array{Float64,1},1},
-                 bridx_a::Array{Array{UnitRange{Int64},1},1},
-                 narea  ::Int64)
-
-Create bit histories for all areas for one single branch 
-taking into account `Δx` and `ω1` & `ω0`, with random number of
-areas updated.
-"""
-function createhists!(λ1     ::Float64,
-                      λ0     ::Float64,
-                      ω1     ::Float64,  
-                      ω0     ::Float64, 
-                      avg_Δx ::Array{Float64,2},
-                      Y      ::Array{Int64,3},
-                      wareas ::Array{Int64,1},
-                      br     ::Int64,
-                      brs    ::Array{Int64,3},
-                      brδt   ::Array{Array{Float64,1},1},
-                      bridx_a::Array{Array{UnitRange{Int64},1},1},
-                      narea  ::Int64)
-
-  @inbounds begin
-    for j = wareas
-      bit_rejsam!(Y, bridx_a[j][br], brs[br,2,j], 
-                  λ1, λ0, ω1, ω0, avg_Δx[br,j], brδt[br])
-    end
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    ifextY(Y      ::Array{Int64,3},
-           br     ::Int64,
-           narea  ::Int64,
-           bridx_a::Array{Array{UnitRange{Int64},1},1})
-
-Return `true` if at some point the species
-goes extinct and/or more than one change is 
-observed after some **δt**, otherwise returns `false`. 
-This specific method is for single branch updates.
-"""
-function ifextY(Y      ::Array{Int64,3},
-                br     ::Int64,
-                narea  ::Int64,
-                bridx_a::Array{Array{UnitRange{Int64},1},1})
-
-  @inbounds begin
-
-    for i = Base.OneTo((length(bridx_a[1][br]::UnitRange{Int64})-1)::Int64)
-      s_e = 0::Int64            # count current areas
-      s_c = 0::Int64            # count area changes
-
-      for j = Base.OneTo(narea)
-        s_e += Y[bridx_a[j][br][i]]::Int64
-        if Y[bridx_a[j][br][i]]::Int64 != Y[bridx_a[j][br][i+1]]::Int64
-          s_c += 1::Int64
-        end
-      end
-
-      if s_e::Int64 == 0::Int64 || s_c::Int64 > 1::Int64
-        return true::Bool
-      end
-    end
-
-  end
-
-  return false::Bool
-end
-
-
 
 
 
