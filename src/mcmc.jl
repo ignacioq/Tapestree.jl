@@ -197,11 +197,11 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # variables to save X and Y 
   if saveXY[1]
-    const XYsav = 0
-    const XYlit = 0
-    xylogs = fld(niter,saveXY[2])
-    Xlog   = zeros(Float64, m, ntip, xylogs)
-    Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
+    const XYsav  = 0
+    const XYlit  = 0
+    const xylogs = fld(niter,saveXY[2])
+    const Xlog   = zeros(Float64, m, ntip, xylogs)
+    const Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
   end
 
   # number of internal nodes (to perform updates on)
@@ -217,7 +217,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   #=
   start MCMC
   =#
-
 
   open(out_file*".log", "w")
 

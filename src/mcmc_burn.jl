@@ -156,7 +156,7 @@ function burn_compete(total_llf          ::Function,
                                    ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
         end
 
-        if log(rand()) < llr
+        if -randexp() < llr
           @inbounds begin
             Xc[xi,:]        = xpi::Array{Float64,1}
             llc            += llr::Float64
@@ -178,7 +178,7 @@ function burn_compete(total_llf          ::Function,
 
         prr = logdexp(λ1p, λprior) - logdexp(λ1c, λprior)::Float64
 
-        if log(rand()) < (llr + prr + log(λ1p)  - log(λ1c))
+        if -randexp() < (llr + prr + log(λ1p)  - log(λ1c))
           llc     += llr::Float64
           prc     += prr::Float64
           λ1c      = λ1p::Float64
@@ -222,7 +222,7 @@ function burn_compete(total_llf          ::Function,
 
         prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64
 
-        if log(rand()) < (llr + prr + log(λ0p)  - log(λ0c))
+        if -randexp() < (llr + prr + log(λ0p)  - log(λ0c))
           llc     += llr::Float64
           prc     += prr::Float64
           λ0c      = λ0p::Float64
@@ -266,7 +266,7 @@ function burn_compete(total_llf          ::Function,
         # prior ratio
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
 
-        if log(rand()) < (llr + prr + 
+        if -randexp() < (llr + prr + 
                           log(σ²p) - log(σ²c))
           llc += llr::Float64
           prc += prr::Float64
@@ -285,7 +285,7 @@ function burn_compete(total_llf          ::Function,
         prr = logdnorm(ωxp, ωxprior[1], ωxprior[2]) -
               logdnorm(ωxc, ωxprior[1], ωxprior[2])::Float64
 
-        if log(rand()) < (llr + prr)
+        if -randexp() < (llr + prr)
           llc += llr::Float64
           prc += prr::Float64
           ωxc  = ωxp::Float64
@@ -304,7 +304,7 @@ function burn_compete(total_llf          ::Function,
         prr = logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
               logdnorm(ω1c, ω1prior[1], ω1prior[2])::Float64
 
-        if log(rand()) < (llr + prr)
+        if -randexp() < (llr + prr)
           llc += llr::Float64
           prc += prr::Float64
           ω1c  = ω1p::Float64
@@ -349,7 +349,7 @@ function burn_compete(total_llf          ::Function,
         prr = logdnorm(ω0p, ω0prior[1], ω0prior[2])::Float64 -
               logdnorm(ω0c, ω0prior[1], ω0prior[2])::Float64
 
-        if log(rand()) < (llr + prr)
+        if -randexp() < (llr + prr)
           llc += llr
           prc += prr
           ω0c  = ω0p

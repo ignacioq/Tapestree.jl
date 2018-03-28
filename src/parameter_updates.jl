@@ -84,7 +84,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                        ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
       end
 
-      if log(rand()) < llr
+      if -randexp() < llr
         llc            += llr::Float64
         Xc[xi,:]        = xpi::Array{Float64,1}
         areavg[xi,:]    = aai::Array{Float64,1}
@@ -104,7 +104,7 @@ end
 """
     make_mhr_upd_Xbr(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
 
-Make X DA update for a single branch.
+Make X branch DA update for a single branch using BB proposals.
 """
 function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           m                  ::Int64,
@@ -118,7 +118,6 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
 
   const Xp = zeros(m, ntip)
   const aa = zeros(m, narea)
-  const ao = zeros(Int64, m, narea)
   const la = zeros(m, ntip)
   const ld = zeros(m, ntip, narea)
 
@@ -141,25 +140,23 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
 
     copy!(Xp, Xc)
     copy!(aa, areavg)
-    copy!(ao, areaoc)
     copy!(la, linavg)
     copy!(ld, lindiff)
 
     upbranchX!(br, Xp, bridx, brδt, σ²c)
 
-    area_lineage_means!(aa, la, ao, Xp, Yc, wcol, m, narea)
-    linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
+    area_lineage_means!(aa, la, areaoc, Xp, Yc, wcol, m, narea)
+    linarea_diff!(ld, Xp, aa, areaoc, narea, ntip, m)
 
     llr = (total_llf(Xp, Yc, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c) - 
            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    if log(rand()) < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
       llc += llr::Float64
       copy!(Xc,      Xp)
       copy!(areavg,  aa)
-      copy!(areaoc,  ao)
       copy!(linavg,  la)
       copy!(lindiff, ld)
     end
@@ -192,7 +189,7 @@ function make_mhr_upd_Y(narea              ::Int64,
 
   const Yp   = zeros(Int64, m, ntip, narea)
   const aa   = zeros(m, narea)
-  const ao   = zeros(Int64,m, narea)
+  const ao   = zeros(Int64, m, narea)
   const la   = zeros(m, ntip)
   const ld   = zeros(m, ntip, narea)
   const brsp = zeros(Int64, nedge, 2, narea)
@@ -240,7 +237,7 @@ function make_mhr_upd_Y(narea              ::Int64,
                  bgiid(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, triad))::Float64
 
 
-    if log(rand()) < (llr + propr_iid)::Float64
+    if -randexp() < (llr + propr_iid)::Float64
       llc += llr::Float64
       copy!(Yc,      Yp)
       copy!(areavg,  aa)
@@ -282,6 +279,8 @@ function make_mhr_upd_Ybr(narea              ::Int64,
   const la = zeros(m, ntip)
   const ld = zeros(m, ntip, narea)
 
+  const war = Array{Int64,1}()
+
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
              Yc     ::Array{Int64,3},
@@ -309,9 +308,9 @@ function make_mhr_upd_Ybr(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    wareas = randsubseq(Base.OneTo(narea), .5)::Array{Int64,1}
+    randsubseq!(war, Base.OneTo(narea), .5)
 
-    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas, 
+    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, war, 
                bridx_a, brδt, brl, brs, narea, nedge)
 
     area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
@@ -322,10 +321,10 @@ function make_mhr_upd_Ybr(narea              ::Int64,
            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    propr_iid = (bgiid_br(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, wareas) - 
-                 bgiid_br(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, wareas))::Float64
+    propr_iid = (bgiid_br(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, war) - 
+                 bgiid_br(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, war))::Float64
 
-    if log(rand()) < (llr + propr_iid)::Float64
+    if -randexp() < (llr + propr_iid)::Float64
       llc  += llr::Float64
       copy!(Yc,      Yp)
       copy!(areavg,  aa)
@@ -370,6 +369,8 @@ function make_mhr_upd_XYbr(narea              ::Int64,
   const la = zeros(m, ntip)
   const ld = zeros(m, ntip, narea)
 
+  const war = Array{Int64,1}()
+
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
              Yc     ::Array{Int64,3},
@@ -398,9 +399,9 @@ function make_mhr_upd_XYbr(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    const wareas = randsubseq(Base.OneTo(narea),0.5)::Array{Int64,1}
+    randsubseq!(war, Base.OneTo(narea), .5)
 
-    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, wareas,
+    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, war,
                bridx_a, brδt, brl, brs, narea, nedge)
 
     upbranchX!(br, Xp, bridx, brδt, σ²c)
@@ -413,11 +414,11 @@ function make_mhr_upd_XYbr(narea              ::Int64,
            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    propr_iid = (bgiid_br(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, wareas) - 
-                 bgiid_br(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, wareas))::Float64
+    propr_iid = (bgiid_br(Yc, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, war) - 
+                 bgiid_br(Yp, λ1c, λ0c, ω1c, ω0c, avg_Δx, br, war))::Float64
 
-    if log(rand()) < (llr + propr_iid + 
-                      llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+    if -randexp() < (llr + propr_iid + 
+                     llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
       llc += llr::Float64
       copy!(Xc,      Xp)
       copy!(Yc,      Yp)
@@ -469,9 +470,9 @@ function mhr_upd_σ²(σ²c        ::Float64,
 
   # prior ratio
   const prr = (logdexp(σ²p, σ²prior) - 
-         logdexp(σ²c, σ²prior))::Float64
+               logdexp(σ²c, σ²prior))::Float64
 
-  if log(rand()) < (llr + prr + log(σ²p) - log(σ²c))
+  if -randexp() < (llr + prr + log(σ²p) - log(σ²c))
     llc += llr::Float64
     prc += prr::Float64
     σ²c  = σ²p::Float64
@@ -508,7 +509,7 @@ function mhr_upd_ωx(ωxc         ::Float64,
   const prr = (logdnorm(ωxp, ωxprior[1], ωxprior[2]) -
          logdnorm(ωxc, ωxprior[1], ωxprior[2]))::Float64
 
-  if log(rand()) < (llr + prr)
+  if -randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ωxc  = ωxp::Float64
@@ -548,7 +549,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
   const prr = (logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
                logdnorm(ω1c, ω1prior[1], ω1prior[2]))::Float64
 
-  if log(rand()) < (llr + prr)
+  if -randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ω1c  = ω1p::Float64
@@ -556,7 +557,6 @@ function mhr_upd_ω1(ω1c       ::Float64,
 
   return (llc, prc, ω1c)::Tuple{Float64,Float64,Float64}
 end
-
 
 
 
@@ -589,7 +589,7 @@ function mhr_upd_ω0(ω0c       ::Float64,
   const prr = (logdnorm(ω0p, ω0prior[1], ω0prior[2]) -
                logdnorm(ω0c, ω0prior[1], ω0prior[2]))::Float64
 
-  if log(rand()) < (llr + prr)
+  if -randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ω0c  = ω0p::Float64
@@ -631,7 +631,7 @@ function mhr_upd_λ1(λ1c     ::Float64,
   const prr = (logdexp(λ1p, λprior) - 
                 logdexp(λ1c, λprior))::Float64
 
-  if log(rand()) < (llr + prr + log(λ1p) - log(λ1c))
+  if -randexp() < (llr + prr + log(λ1p) - log(λ1c))
     llc += llr::Float64
     prc += prr::Float64
     λ1c  = λ1p::Float64
@@ -639,6 +639,7 @@ function mhr_upd_λ1(λ1c     ::Float64,
 
   return (llc, prc, λ1c)::Tuple{Float64,Float64,Float64}
 end
+
 
 
 
@@ -672,7 +673,7 @@ function mhr_upd_λ0(λ0c     ::Float64,
   const prr = (logdexp(λ0p, λprior) - 
                logdexp(λ0c, λprior))::Float64
 
-  if log(rand()) < (llr + prr + log(λ0p) - log(λ0c))
+  if -randexp() < (llr + prr + log(λ0p) - log(λ0c))
     llc += llr::Float64
     prc += prr::Float64
     λ0c  = λ0p::Float64
@@ -680,18 +681,4 @@ function mhr_upd_λ0(λ0c     ::Float64,
 
   return (llc, prc, λ0c)::Tuple{Float64,Float64,Float64}
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
