@@ -54,8 +54,15 @@ function upnode!(λ1     ::Float64,
     # sample a consistent history
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
 
+    ntries = 1
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+    
+      ntries += 1
+      if ntries > 100_000_000
+        @show triad
+        @show λ1, λ0
+      end
     end
   end
 
@@ -81,6 +88,7 @@ function upnode!(λ1     ::Float64,
                  avg_Δx ::Array{Float64,2},
                  triad  ::Array{Int64,1},
                  Y      ::Array{Int64,3},
+                 wareas ::Array{Int64,1},
                  bridx_a::Array{Array{UnitRange{Int64},1},1},
                  brδt   ::Vector{Vector{Float64}},
                  brl    ::Vector{Float64},
@@ -94,27 +102,34 @@ function upnode!(λ1     ::Float64,
     pr, d1, d2 = triad
 
     # sample
-    samplenode!(λ1, λ0, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
+    samplenode!(λ1, λ0, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea, wareas)
 
     # save extinct
     while sum(brs[pr,2,:]) == 0
-       samplenode!(λ1, λ0, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
+       samplenode!(λ1, λ0, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea, wareas)
     end
 
     # set new node in Y
-    for k in Base.OneTo(narea)
+    for k = wareas
       Y[bridx_a[k][pr][end]] = Y[bridx_a[k][d1][1]] = Y[bridx_a[k][d2][1]] = 
         brs[pr,2,k]
     end
 
     # sample a consistent history
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge, wareas,)
 
+    ntries = 1 
     # save extinct
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge)
+                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge, wareas)
+
+      ntries += 1
+      if ntries > 100_000_000
+        @show triad
+        @show λ1, ω1, λ0, ω0
+      end
     end
   end
 
@@ -208,10 +223,18 @@ function upbranchY!(λ1     ::Float64,
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, wareas, br, brs, brδt, bridx_a, narea)
 
+    ntries = 1
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                   Y, wareas, br, brs, brδt, bridx_a, narea)
+
+      ntries += 1
+      if ntries > 100_000_000
+        @show br
+        @show λ1, ω1, λ0, ω0
+      end
+
     end
   end
 
@@ -345,7 +368,7 @@ function createhists!(λ1     ::Float64,
     end
   end
 
-  return Y
+  return nothing
 end
 
 
@@ -383,13 +406,18 @@ function createhists!(λ1     ::Float64,
                       brδt   ::Array{Array{Float64,1},1},
                       bridx_a::Array{Array{UnitRange{Int64},1},1},
                       narea  ::Int64,
-                      nedge  ::Int64)
+                      nedge  ::Int64, 
+                      wareas ::Array{Int64,1})
 
   @inbounds begin
 
-    for j = Base.OneTo(narea)
+    for j = wareas
 
-      if pr < nedge
+      # continuous sampling for stem branch
+      if pr == nedge
+        # if stem branch do continuous DA
+        br_samp(brs[pr,1,:], brs[pr,2,:], λ1, λ0, brl[pr], narea)
+      else
         # for parent branch
         bit_rejsam!(Y, bridx_a[j][pr], brs[pr,2,j], 
                     λ1, λ0, ω1, ω0, avg_Δx[pr,j], brδt[pr])
@@ -407,7 +435,7 @@ function createhists!(λ1     ::Float64,
 
   end
   
-  return Y
+  return nothing
 end
 
 
@@ -473,10 +501,11 @@ function samplenode!(λ1    ::Float64,
                      d2    ::Int64,
                      brs   ::Array{Int64,3},
                      brl   ::Array{Float64,1},
-                     narea ::Int64)
+                     narea ::Int64,
+                     wareas::Array{Int64,1})
   @inbounds begin
 
-    for j = Base.OneTo(narea)
+    for j = wareas
 
       # transition probabilities for the trio
       ppr_1, ppr_2 = 
@@ -507,12 +536,13 @@ end
 
 Update stem branch using continuous Data Augmentation.
 """
-function upstem(λ1   ::Float64, 
-                λ0   ::Float64,
-                idx  ::Int64,
-                brs  ::Array{Int64,3}, 
-                brl  ::Vector{Float64},
-                narea::Int64)
+function upstem(λ1    ::Float64, 
+                λ0    ::Float64,
+                idx   ::Int64,
+                brs   ::Array{Int64,3}, 
+                brl   ::Vector{Float64},
+                narea ::Int64,
+                wareas::Array{Int64,1})
 
   @inbounds begin
     

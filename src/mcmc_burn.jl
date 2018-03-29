@@ -83,7 +83,7 @@ function burn_compete(total_llf          ::Function,
   scalef = makescalef(obj_ar)
 
   # rest of tuning parameters
-  const ptn = fill(.1,np) 
+  const ptn = fill(.1, np) 
 
   # initialize acceptance log
   const ltn = zeros(Int64, np)
@@ -184,6 +184,13 @@ function burn_compete(total_llf          ::Function,
           λ1c      = λ1p::Float64
           lac[5] += 1
         end
+
+
+
+
+        ######
+        # Check that root update is consistent with continuous sampling
+        ######
 
         # which internal node to update
         if rand() < 0.4

@@ -15,30 +15,32 @@ May 01 2017
 
 
 """
-  branch sampling for multiple areas,
-  resampling if extinction is present
-"""
-function br_samp(ssii ::Array{Int64,1}, 
-                 ssff ::Array{Int64,1},
-                 λ1   ::Float64,
-                 λ0   ::Float64,
-                 t    ::Float64,
-                 narea::Int64)
-  #time history
-  t_hist = mult_rejsam(ssii, ssff, λ1, λ0, t, narea)
-  
-  ntries = 1
-  while ifext(t_hist, ssii, narea)
-    t_hist = mult_rejsam(ssii, ssff, λ1, λ0, t, narea)
-    
-    ntries += 1
-    if ntries > 1_000_000 
-      warn("iid model sampling is very inefficient in stem branch")
-    end
+br_samp!(evs  ::Array{Array{Float64,1},1},
+         ssii ::Array{Int64,1}, 
+         ssff ::Array{Int64,1},
+         λ1   ::Float64,
+         λ0   ::Float64,
+         t    ::Float64,
+         narea::Int64)
 
+Sample branch biogeographic histories according to an independent
+model that does not allow extinction.
+"""
+function br_samp!(evs  ::Array{Array{Float64,1},1},
+                  ssii ::Array{Int64,1}, 
+                  ssff ::Array{Int64,1},
+                  λ1   ::Float64,
+                  λ0   ::Float64,
+                  t    ::Float64,
+                  narea::Int64)
+  #time history
+  mult_rejsam!(evs, ssii, ssff, λ1, λ0, t, narea)
+
+  while ifext(t_hist, ssii, narea, t)
+    mult_rejsam!(evs, ssii, ssff, λ1, λ0, t, narea)
   end
 
-  return t_hist
+  return nothing
 end
 
 
@@ -46,43 +48,52 @@ end
 
 
 """
-  check if extinct
+    ifext(t_hist::Array{Array{Float64,1},1},
+          ssii  ::Array{Int64,1}, 
+          narea ::Int64,
+          t     ::Float64)
+
+Return true if lineage goes extinct.
 """
 function ifext(t_hist::Array{Array{Float64,1},1},
                ssii  ::Array{Int64,1}, 
-               narea ::Int64)
+               narea ::Int64,
+               t     ::Float64)
 
-  cs_hist = Float64[]
-  hist_l  = Int64[]
+  # initial occupancy time
+  ioc  = findfirst(ssii)::Int64
+  ioct = t_hist[ioc][1]::Float64
 
-  for i in eachindex(t_hist)
-    append!(cs_hist, cumsum(t_hist[i]))
-    append!(hist_l, fill(i,length(t_hist[i])))
-  end
+  ntries = 0
 
-  # organize order of events
-  sp  = sortperm(cs_hist)[1:(end - narea)]
-  lhs = length(sp) + narea + 1
+  while ioct < t
 
-  # reconstruct state history
-  s_hist = zeros(Int64, lhs, narea)
-  for i in eachindex(ssii)
-    s_hist[:,i] = ssii[i]
-  end
-
-  for i = eachindex(sp)
-    setindex!(s_hist, 1 - s_hist[i,hist_l[sp[i]]], (i+1):lhs, hist_l[sp[i]])
-  end
-
-  # check if extinct
-  for j = eachindex(sp)
-    ss = 0
-    for i = 1:narea
-      ss += s_hist[j,i]
+    if ioc == narea
+      ioc = 1
+    else 
+      ioc += 1
     end
-    if ss == 0 
-      return true
+
+    tc = 0.0
+    cs = ssii[ioc]
+    for ts in t_hist[ioc]::Array{Float64,1}
+      tc += ts
+      if ioct < tc 
+        if cs == 1
+          ioct   = tc 
+          ntries = 0
+          break
+        else
+          ntries += 1
+          if ntries > narea
+            return true
+          end
+          break
+        end
+      end
+      cs = 1 - cs
     end
+
   end
 
   return false
@@ -91,58 +102,83 @@ end
 
 
 
-"""
-  multistate branch sampling
-"""
-function mult_rejsam(ssii ::Array{Int64,1}, 
-                     ssff ::Array{Int64,1},
-                     λ1   ::Float64,
-                     λ0   ::Float64,
-                     t    ::Float64,
-                     narea::Int64)
 
-  all_times = Array{Float64,1}[]
+"""
+  mult_rejsam!(evs  ::Array{Array{Float64,1},1},
+               ssii ::Array{Int64,1}, 
+               ssff ::Array{Int64,1},
+               λ1   ::Float64,
+               λ0   ::Float64,
+               t    ::Float64,
+               narea::Int64)
 
-  for i in Base.OneTo(narea)
-    push!(all_times, rejsam(ssii[i], ssff[i], λ1, λ0, t))
+  Multi-area branch rejection independent model sampling.
+"""
+function mult_rejsam!(evs  ::Array{Array{Float64,1},1},
+                      ssii ::Array{Int64,1}, 
+                      ssff ::Array{Int64,1},
+                      λ1   ::Float64,
+                      λ0   ::Float64,
+                      t    ::Float64,
+                      narea::Int64)
+
+  for i in Base.OneTo(narea)    
+    rejsam!(evs[i],ssii[i], ssff[i], λ1, λ0, t)
   end
 
-  return all_times
+  return nothing
 end
 
 
 
 
 """
-    rejsam(si::Int64, sf::Int64, λ1::Float64, λ0::Float64, t::Float64)
+    rejsam!(times::Array{Float64,1}, 
+            si   ::Int64, 
+            sf   ::Int64, 
+            λ1   ::Float64, 
+            λ0   ::Float64, 
+            t    ::Float64)
 
-rejection sampling for each branch
-condition on start and end point
+Rejection sampling for an area conditioned on start and end point.
 """
-function rejsam(si::Int64, sf::Int64, λ1::Float64, λ0::Float64, t::Float64)
+function rejsam!(times::Array{Float64,1}, 
+                 si   ::Int64, 
+                 sf   ::Int64, 
+                 λ1   ::Float64, 
+                 λ0   ::Float64, 
+                 t    ::Float64)
   
-  sam::Tuple{Array{Float64,1},Int64} = brprop(si, λ1, λ0, t)
+  samf = brprop!(times, si, λ1, λ0, t)
   
-  while sam[2] != sf 
-    sam = brprop(si, λ1, λ0, t)
+  while samf != sf 
+    samf = brprop!(times, si, λ1, λ0, t)
   end
 
-  return sam[1]
+  return nothing
 end
 
 
 
 
 """
-    brprop(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
+    brprop!(times::Array{Float64,1}, 
+            si   ::Int64, 
+            λ1   ::Float64, 
+            λ0   ::Float64, 
+            t    ::Float64)
 
-propose events for a branch
+Two state DA proposal for one area.
 """
-function brprop(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
+function brprop!(times::Array{Float64,1}, 
+                 si   ::Int64, 
+                 λ1   ::Float64, 
+                 λ0   ::Float64, 
+                 t    ::Float64)
+  empty!(times)
 
   c_st   ::Int64            = si
   c_time ::Float64          = 0.0
-  times  ::Array{Float64,1} = zeros(0)
   endtime::Float64          = t
 
   re::Float64 = c_st == 0 ? rexp(λ1) : rexp(λ0)
@@ -159,5 +195,10 @@ function brprop(si::Int64, λ1::Float64, λ0::Float64, t::Float64)
 
   push!(times, endtime)
 
-  return times, c_st
+  return c_st
 end
+
+
+
+
+
