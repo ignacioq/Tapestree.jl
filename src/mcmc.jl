@@ -202,7 +202,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   end
 
   # progess bar
-  p = Progress(niter, dt=5, desc="running MCMC...", barlen=20, color=:green)
+  p = Progress(niter, dt=5, desc="mcmc...", barlen=20, color=:green)
 
   # create parameter update functions
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
