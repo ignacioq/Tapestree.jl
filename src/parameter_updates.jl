@@ -193,7 +193,7 @@ function make_mhr_upd_Y(narea              ::Int64,
   const la      = zeros(m, ntip)
   const ld      = zeros(m, ntip, narea)
   const brsp    = zeros(Int64, nedge, 2, narea)
-  const stemevp = fill([0.0], narea)
+  const stemevp = [[rand()] for i in 1:narea]
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -231,7 +231,7 @@ function make_mhr_upd_Y(narea              ::Int64,
     linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
     llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevc, brsp[nedge,1,:], σ²c) - 
+                     stemevp, brsp[nedge,1,:], σ²c) - 
            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
@@ -281,7 +281,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
   const ao      = zeros(Int64,m, narea)
   const la      = zeros(m, ntip)
   const ld      = zeros(m, ntip, narea)
-  const stemevp = fill([0.0], narea)
+  const stemevp = [[rand()] for i in 1:narea]
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -318,7 +318,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
     linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
     llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevc, brs[nedge,1,:], σ²c) - 
+                     stemevp, brs[nedge,1,:], σ²c) - 
            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
