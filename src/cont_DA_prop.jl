@@ -13,31 +13,38 @@ May 01 2017
 
 
 
-
 """
 br_samp!(evs  ::Array{Array{Float64,1},1},
-         ssii ::Array{Int64,1}, 
-         ssff ::Array{Int64,1},
-         λ1   ::Float64,
-         λ0   ::Float64,
-         t    ::Float64,
-         narea::Int64)
+         ssii  ::Array{Int64,1}, 
+         ssff  ::Array{Int64,1},
+         λ1    ::Float64,
+         λ0    ::Float64,
+         t     ::Float64,
+         narea ::Int64)
 
 Sample branch biogeographic histories according to an independent
 model that does not allow extinction.
 """
-function br_samp!(evs  ::Array{Array{Float64,1},1},
-                  ssii ::Array{Int64,1}, 
-                  ssff ::Array{Int64,1},
-                  λ1   ::Float64,
-                  λ0   ::Float64,
-                  t    ::Float64,
-                  narea::Int64)
+function br_samp!(evs   ::Array{Array{Float64,1},1},
+                  ssii  ::Array{Int64,1}, 
+                  ssff  ::Array{Int64,1},
+                  λ1    ::Float64,
+                  λ0    ::Float64,
+                  t     ::Float64,
+                  narea ::Int64)
   #time history
   mult_rejsam!(evs, ssii, ssff, λ1, λ0, t, narea)
 
-  while ifext(t_hist, ssii, narea, t)
+  ntries = 1
+  while ifext(evs, ssii, narea, t)
     mult_rejsam!(evs, ssii, ssff, λ1, λ0, t, narea)
+    
+    ntries += 1
+    if ntries > 10_000_000
+      warn("stem branch proposal inefficient")
+      @show evs
+      @show λ1, λ0
+    end
   end
 
   return nothing
@@ -66,6 +73,7 @@ function ifext(t_hist::Array{Array{Float64,1},1},
 
   ntries = 0
 
+  ntries2 = 0
   while ioct < t
 
     if ioc == narea
@@ -94,6 +102,12 @@ function ifext(t_hist::Array{Array{Float64,1},1},
       cs = 1 - cs
     end
 
+    ntries2 += 1
+    if ntries2 > 10_000_000
+      warn("stuck on continuous extinction")
+      ntries2 = 0
+    end
+
   end
 
   return false
@@ -104,13 +118,13 @@ end
 
 
 """
-  mult_rejsam!(evs  ::Array{Array{Float64,1},1},
-               ssii ::Array{Int64,1}, 
-               ssff ::Array{Int64,1},
-               λ1   ::Float64,
-               λ0   ::Float64,
-               t    ::Float64,
-               narea::Int64)
+  mult_rejsam!(evs   ::Array{Array{Float64,1},1},
+               ssii  ::Array{Int64,1}, 
+               ssff  ::Array{Int64,1},
+               λ1    ::Float64,
+               λ0    ::Float64,
+               t     ::Float64,
+               narea ::Int64)
 
   Multi-area branch rejection independent model sampling.
 """
@@ -122,8 +136,8 @@ function mult_rejsam!(evs  ::Array{Array{Float64,1},1},
                       t    ::Float64,
                       narea::Int64)
 
-  for i in Base.OneTo(narea)    
-    rejsam!(evs[i],ssii[i], ssff[i], λ1, λ0, t)
+  for i = Base.OneTo(narea)
+    rejsam!(evs[i], ssii[i], ssff[i], λ1, λ0, t)
   end
 
   return nothing

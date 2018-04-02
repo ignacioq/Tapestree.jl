@@ -91,7 +91,7 @@ function burn_compete(total_llf          ::Function,
   const lac = zeros(Int64, np)
 
   # number of internal nodes
-  const nin = length(trios) + 1
+  const nin = length(trios)
 
   # row i proposals for X
   const aai = zeros(Float64, narea)       # area average
@@ -185,37 +185,11 @@ function burn_compete(total_llf          ::Function,
           lac[5] += 1
         end
 
-
-
-
-        ######
-        # Check that root update is consistent with continuous sampling
-        ######
-
         # which internal node to update
         if rand() < 0.4
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc = 
-              mhr_upd_Y(trios[bup], Xc, Yc, 
-                        λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            llc += llr
-          end
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
         end
 
       # update λ0
@@ -238,28 +212,9 @@ function burn_compete(total_llf          ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc = 
-              mhr_upd_Y(trios[bup], Xc, Yc, 
-                        λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            llc += llr
-          end
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
         end
 
       # if σ² is updated
@@ -320,29 +275,9 @@ function burn_compete(total_llf          ::Function,
 
         # which internal node to update
         if rand() < 0.4
-
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc = 
-              mhr_upd_Y(trios[bup], Xc, Yc, 
-                        λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            llc += llr
-          end
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
         end
 
       # update ω0
@@ -365,28 +300,9 @@ function burn_compete(total_llf          ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          bup = rand(Base.OneTo(nin))
-          # update a random internal node, including the mrca
-          if bup < nin
-            llc = 
-              mhr_upd_Y(trios[bup], Xc, Yc, 
-                        λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                        areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-          else
-            # update stem
-            llr = 0.0
-            for j=Base.OneTo(narea)
-              @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-            for j=Base.OneTo(narea)
-              @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-            end
-
-            llc += llr
-          end
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
         end
 
       end
@@ -394,7 +310,7 @@ function burn_compete(total_llf          ::Function,
       ## make a branch updates with some Pr
       # make Y branch update
       if rand() < 2e-3
-        llc = mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), 
+        llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
                           llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
                           brs, stemevc)
@@ -435,7 +351,5 @@ function burn_compete(total_llf          ::Function,
   return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx, stemevc, 
          brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn
 end
-
-
 
 

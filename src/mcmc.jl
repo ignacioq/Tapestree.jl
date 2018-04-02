@@ -108,16 +108,13 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     brs[wtips,2,j] = Yc[end,:,j]
   end
 
+  # create stem events
+  const stemevc = [[rand()] for i in 1:narea]
+
   # Sample all internal node values according to Pr transitions
   for triad in trios
-    upnode!(λ1i, λ0i, triad, Yc, bridx_a, brδt, brl, brs, narea, nedge)
+    upnode!(λ1i, λ0i, triad, Yc, stemevc, bridx_a, brδt, brl, brs, narea, nedge)
   end
-
-  # assign same value as mrca
-  brs[nedge,1,:] = brs[nedge,2,:]
-
-  # create stem events
-  stemevc = br_samp(brs[nedge,1,:], brs[nedge,2,:], λ1i, λ0i, brl[nedge], narea)
 
   # estimate current area & lineage means and area occupancy
   const areavg = zeros(m, narea)
@@ -204,9 +201,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     const Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
   end
 
-  # number of internal nodes (to perform updates on)
-  const nin = length(trios) + 1
-
   # progess bar
   p = Progress(niter, dt=5, desc="running MCMC...", barlen=20, color=:green)
 
@@ -246,28 +240,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            bup = rand(Base.OneTo(nin))
-            # update a random internal node, including the mrca
-            if bup < nin
-              llc =  
-                mhr_upd_Y(trios[bup], Xc, Yc, 
-                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-            else
-              # update stem
-              llr = 0.0
-              for j=Base.OneTo(narea)
-                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-              for j=Base.OneTo(narea)
-                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              llc += llr
-            end
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           end
 
         # if λ0 is updated
@@ -279,28 +254,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            bup = rand(Base.OneTo(nin))
-            # update a random internal node, including the mrca
-            if bup < nin
-              llc =  
-                mhr_upd_Y(trios[bup], Xc, Yc, 
-                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-            else
-              # update stem
-              llr = 0.0
-              for j=Base.OneTo(narea)
-                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-              for j=Base.OneTo(narea)
-                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              llc += llr
-            end
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           end
 
         # if σ² is updated
@@ -320,28 +276,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            bup = rand(Base.OneTo(nin))
-            # update a random internal node, including the mrca
-            if bup < nin
-              llc =  
-                mhr_upd_Y(trios[bup], Xc, Yc, 
-                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-            else
-              # update stem
-              llr = 0.0
-              for j=Base.OneTo(narea)
-                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-              for j=Base.OneTo(narea)
-                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              llc += llr
-            end
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           end
 
         # update ω0      
@@ -351,36 +288,16 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            bup = rand(Base.OneTo(nin))
-            # update a random internal node, including the mrca
-            if bup < nin
-              llc =  
-                mhr_upd_Y(trios[bup], Xc, Yc, 
-                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc, 
-                          areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
-            else
-              # update stem
-              llr = 0.0
-              for j=Base.OneTo(narea)
-                @inbounds llr -= brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              stemevc = upstem(λ1c, λ0c, nedge, brs, brl, narea)
-
-              for j=Base.OneTo(narea)
-                @inbounds llr += brll(stemevc[j], λ1c, λ0c, brs[nedge,1,j])
-              end
-
-              llc += llr
-            end
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
           end
         end
 
         ## make a branch updates with some Pr
-
         # make Y branch update
         if rand() < 2e-3
-          llc = mhr_upd_Ybr(rand(Base.OneTo(nedge-1)), 
+          llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
                             llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
                             brs, stemevc)

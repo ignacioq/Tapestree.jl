@@ -387,13 +387,15 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
     push!(δtA, δt[inds])
   end
 
-  function f(Y     ::Array{Int64,3}, 
-             λ1    ::Float64,
-             λ0    ::Float64,
-             ω1    ::Float64,
-             ω0    ::Float64,
-             avg_Δx::Array{Float64,2},
-             triad ::Array{Int64,1})
+  function f(Y      ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1},
+             stemss ::Array{Int64,1},
+             λ1     ::Float64,
+             λ0     ::Float64,
+             ω1     ::Float64,
+             ω0     ::Float64,
+             avg_Δx ::Array{Float64,2},
+             triad  ::Array{Int64,1})
 
     ll::Float64 = 0.0
 
@@ -408,14 +410,15 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
                 bitvectorll_iid(Y[bridx_a[k][d1]], 
                                 λ1, λ0, ω1, ω0, avg_Δx[d1,k], δtA[d1]) +
                 bitvectorll_iid(Y[bridx_a[k][d2]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2])::Float64
+                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2])
         end
       else 
         for k = Base.OneTo(narea)
           ll += bitvectorll_iid(Y[bridx_a[k][d1]], 
                                 λ1, λ0, ω1, ω0, avg_Δx[d1,k], δtA[d1]) +
                 bitvectorll_iid(Y[bridx_a[k][d2]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2])::Float64
+                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2]) +
+                brll(stemevc[k], λ1, λ0, stemss[k])
         end
       end
 
@@ -455,24 +458,31 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
     push!(δtA, δt[inds])
   end
 
-  function f(Y     ::Array{Int64,3}, 
-             λ1    ::Float64,
-             λ0    ::Float64,
-             ω1    ::Float64,
-             ω0    ::Float64,
-             avg_Δx::Array{Float64,2},
-             br    ::Int64,
-             wareas::Array{Int64,1})
+  function f(Y      ::Array{Int64,3}, 
+             stemevc::Array{Array{Float64,1},1},
+             stemss ::Array{Int64,1},
+             λ1     ::Float64,
+             λ0     ::Float64,
+             ω1     ::Float64,
+             ω0     ::Float64,
+             avg_Δx ::Array{Float64,2},
+             br     ::Int64)
 
     ll::Float64 = 0.0
 
     @inbounds begin
-      for k = wareas
-        ll += bitvectorll_iid(Y[bridx_a[k][br]], 
-                              λ1, λ0, ω1, ω0, avg_Δx[br,k], δtA[br])
+      if br == nedge
+        for k = Base.OneTo(narea)
+          ll += brll(stemevc[k], λ1, λ0, stemss[k])
+        end
+      else
+        for k = Base.OneTo(narea)
+          ll += bitvectorll_iid(Y[bridx_a[k][br]], 
+                                λ1, λ0, ω1, ω0, avg_Δx[br,k], δtA[br])
+        end
       end
     end
-
+    
     return ll::Float64
   end
 
