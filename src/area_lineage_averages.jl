@@ -65,7 +65,7 @@ function area_lineage_means!(AA   ::Array{Float64,2},
     end
   end
 
-  nothing
+  return nothing
 end
 
 
@@ -94,9 +94,9 @@ function linarea_diff!(LD   ::Array{Float64,3},
                 (AO[i,k] == 0 ? 0.0 : abs(X[i,j] - AA[i,k]))::Float64, 
                 i, j, k)
     end
-
   end
-  nothing
+
+  return nothing
 end
 
 
@@ -132,7 +132,7 @@ function make_la_branch_avg(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
     end
 
-    nothing
+    return nothing
   end
 
   return f

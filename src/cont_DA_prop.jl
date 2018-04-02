@@ -38,13 +38,6 @@ function br_samp!(evs   ::Array{Array{Float64,1},1},
   ntries = 1
   while ifext(evs, ssii, narea, t)
     mult_rejsam!(evs, ssii, ssff, λ1, λ0, t, narea)
-    
-    ntries += 1
-    if ntries > 10_000_000
-      warn("stem branch proposal inefficient")
-      @show evs
-      @show λ1, λ0
-    end
   end
 
   return nothing
@@ -72,8 +65,6 @@ function ifext(t_hist::Array{Array{Float64,1},1},
   ioct = t_hist[ioc][1]::Float64
 
   ntries = 0
-
-  ntries2 = 0
   while ioct < t
 
     if ioc == narea
@@ -100,12 +91,6 @@ function ifext(t_hist::Array{Array{Float64,1},1},
         end
       end
       cs = 1 - cs
-    end
-
-    ntries2 += 1
-    if ntries2 > 10_000_000
-      warn("stuck on continuous extinction")
-      ntries2 = 0
     end
 
   end
