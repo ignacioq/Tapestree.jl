@@ -250,15 +250,24 @@ function upnode!(λ1     ::Float64,
                  Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                  stemevc, brl[nedge])
 
+    ntries = 1
+
     # save extinct
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                    stemevc, brl[nedge])
+
+      ntries += 1
+      if ntries == 50_000_000
+        warn("\n Dismissed inefficient proposal \n")
+        return true
+      end
+
     end
   end
 
-  return
+  return nothing
 end
 
 
@@ -470,10 +479,16 @@ function upbranchY!(λ1     ::Float64,
     createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                  Y, br, brs, brδt, bridx_a, narea)
 
+    ntries = 1
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, br, brs, brδt, bridx_a, narea)
+      ntries += 1
+      if ntries == 150_000_000
+        warn("\n Dismissed inefficient proposal \n")
+        return true
+      end
     end
   end
 

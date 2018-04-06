@@ -224,33 +224,37 @@ function make_mhr_upd_Y(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, Yp, stemevc,  
-            bridx_a, brδt, brl, brsp, narea, nedge)
+    # if an efficient sample
+    if upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, Yp, stemevc,
+               bridx_a, brδt, brl, brsp, narea, nedge) === nothing
 
-    area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-    linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
+      area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
+      linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
-    llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevp, brsp[nedge,1,:], σ²c) - 
-           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevc, brs[nedge,1,:], σ²c))::Float64
+      llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevp, brsp[nedge,1,:], σ²c) - 
+             total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    if -randexp() < (llr + 
-                     bgiid(Yc, stemevc, brs[nedge,1,:], 
-                           λ1c, λ0c, ω1c, ω0c, avg_Δx, triad) - 
-                     bgiid(Yp, stemevp, brsp[nedge,1,:], 
-                           λ1c, λ0c, ω1c, ω0c, avg_Δx, triad))
-      llc += llr::Float64
-      copy!(Yc,           Yp)
-      copy!(areavg,       aa)
-      copy!(areaoc,       ao)
-      copy!(linavg,       la)
-      copy!(lindiff,      ld)
-      copy!(brs,        brsp)
-      copy!(stemevc, stemevp)
+      if -randexp() < (llr + 
+                       bgiid(Yc, stemevc, brs[nedge,1,:], 
+                             λ1c, λ0c, ω1c, ω0c, avg_Δx, triad) - 
+                       bgiid(Yp, stemevp, brsp[nedge,1,:], 
+                             λ1c, λ0c, ω1c, ω0c, avg_Δx, triad))
+        llc += llr::Float64
+        copy!(Yc,           Yp)
+        copy!(areavg,       aa)
+        copy!(areaoc,       ao)
+        copy!(linavg,       la)
+        copy!(lindiff,      ld)
+        copy!(brs,        brsp)
+        copy!(stemevc, stemevp)
+      end
+
+      return llc::Float64
+    else
+      return llc::Float64
     end
-
-    return llc::Float64
   end
 
 end
@@ -311,31 +315,35 @@ function make_mhr_upd_Ybr(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, stemevc, 
-               bridx_a, brδt, brl, brs, narea, nedge)
+    # if an efficient sample
+    if upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, stemevc, 
+               bridx_a, brδt, brl, brs, narea, nedge) === nothing
 
-    area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-    linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
+      area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
+      linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
 
-    llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevp, brs[nedge,1,:], σ²c) - 
-           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevc, brs[nedge,1,:], σ²c))::Float64
+      llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevp, brs[nedge,1,:], σ²c) - 
+             total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    if -randexp() < (llr + 
-                     bgiid_br(Yc, stemevc, brs[nedge,1,:], 
-                              λ1c, λ0c, ω1c, ω0c, avg_Δx, br) - 
-                     bgiid_br(Yp, stemevp, brs[nedge,1,:], 
-                              λ1c, λ0c, ω1c, ω0c, avg_Δx, br))
-      llc  += llr::Float64
-      copy!(Yc,      Yp)
-      copy!(areavg,  aa)
-      copy!(areaoc,  ao)
-      copy!(linavg,  la)
-      copy!(lindiff, ld)
-      copy!(stemevc, stemevp)
+      if -randexp() < (llr + 
+                       bgiid_br(Yc, stemevc, brs[nedge,1,:], 
+                                λ1c, λ0c, ω1c, ω0c, avg_Δx, br) - 
+                       bgiid_br(Yp, stemevp, brs[nedge,1,:], 
+                                λ1c, λ0c, ω1c, ω0c, avg_Δx, br))
+        llc  += llr::Float64
+        copy!(Yc,      Yp)
+        copy!(areavg,  aa)
+        copy!(areaoc,  ao)
+        copy!(linavg,  la)
+        copy!(lindiff, ld)
+        copy!(stemevc, stemevp)
+      end
+      return llc::Float64
+    else
+      return llc::Float64
     end
-    return llc::Float64
   end
 
 end
@@ -398,35 +406,39 @@ function make_mhr_upd_XYbr(narea              ::Int64,
 
     linarea_branch_avg!(avg_Δx, lindiff)
 
-    upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, stemevc, 
-               bridx_a, brδt, brl, brs, narea, nedge)
+  # if an efficient sample
+    if upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, stemevc, 
+               bridx_a, brδt, brl, brs, narea, nedge) === nothing
 
-    upbranchX!(br, Xp, bridx, brδt, σ²c)
+      upbranchX!(br, Xp, bridx, brδt, σ²c)
 
-    area_lineage_means!(aa, la, ao, Xp, Yp, wcol, m, narea)
-    linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
+      area_lineage_means!(aa, la, ao, Xp, Yp, wcol, m, narea)
+      linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
 
-    llr = (total_llf(Xp, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevc, brs[nedge,1,:], σ²c) - 
-           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
-                     stemevc, brs[nedge,1,:], σ²c))::Float64
+      llr = (total_llf(Xp, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevc, brs[nedge,1,:], σ²c) - 
+             total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    if -randexp() < (llr + 
-                     bgiid_br(Yc, stemevc, brs[nedge,1,:], 
-                              λ1c, λ0c, ω1c, ω0c, avg_Δx, br) - 
-                     bgiid_br(Yp, stemevc, brs[nedge,1,:], 
-                              λ1c, λ0c, ω1c, ω0c, avg_Δx, br) +
-                     llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
-      llc += llr::Float64
-      copy!(Xc,      Xp)
-      copy!(Yc,      Yp)
-      copy!(areavg,  aa)
-      copy!(areaoc,  ao)
-      copy!(linavg,  la)
-      copy!(lindiff, ld)
+      if -randexp() < (llr + 
+                       bgiid_br(Yc, stemevc, brs[nedge,1,:], 
+                                λ1c, λ0c, ω1c, ω0c, avg_Δx, br) - 
+                       bgiid_br(Yp, stemevc, brs[nedge,1,:], 
+                                λ1c, λ0c, ω1c, ω0c, avg_Δx, br) +
+                       llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+        llc += llr::Float64
+        copy!(Xc,      Xp)
+        copy!(Yc,      Yp)
+        copy!(areavg,  aa)
+        copy!(areaoc,  ao)
+        copy!(linavg,  la)
+        copy!(lindiff, ld)
+      end
+
+      return llc::Float64
+    else
+      return llc::Float64
     end
-
-    return llc::Float64
   end
 
 end
