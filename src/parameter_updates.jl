@@ -225,7 +225,7 @@ function make_mhr_upd_Y(narea              ::Int64,
     linarea_branch_avg!(avg_Δx, lindiff)
 
     # if an efficient sample
-    if upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, Yp, stemevc,
+    if upnode!(λ1c, λ0c, ω1c, ω0c, avg_Δx, triad, Yp, stemevp,
                bridx_a, brδt, brl, brsp, narea, nedge) === nothing
 
       area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
@@ -316,7 +316,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
     linarea_branch_avg!(avg_Δx, lindiff)
 
     # if an efficient sample
-    if upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, stemevc, 
+    if upbranchY!(λ1c, λ0c, ω1c, ω0c, avg_Δx, br, Yp, stemevp, 
                bridx_a, brδt, brl, brs, narea, nedge) === nothing
 
       area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
