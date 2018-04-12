@@ -483,7 +483,7 @@ function upbranchY!(λ1     ::Float64,
       createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
                    Y, br, brs, brδt, bridx_a, narea)
       ntries += 1
-      if ntries == 50_000_
+      if ntries == 50_000
         return true
       end
     end
