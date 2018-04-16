@@ -19,32 +19,33 @@ April 27 2017
 
 Burning & adaptive phase for MCMC.
 """
-function burn_compete(total_llf          ::Function,
-                      λupd_llr           ::Function,
-                      ω10upd_llr         ::Function,
-                      Xupd_llr           ::Function,
-                      Rupd_llr           ::Function,
-                      σ²ωxupd_llr        ::Function,
-                      bgiid              ::Function,
-                      bgiid_br           ::Function,
-                      linarea_branch_avg!::Function,
-                      mhr_upd_Xbr        ::Function,
-                      mhr_upd_Y          ::Function,
-                      mhr_upd_Ybr        ::Function,
-                      mhr_upd_XYbr       ::Function,
+function burn_compete(total_llf   ::Function,
+                      λupd_llr    ::Function,
+                      λϕupd_llr   ::Function,
+                      ω10upd_llr  ::Function,
+                      Xupd_llr    ::Function,
+                      Rupd_llr    ::Function,
+                      σ²ωxupd_llr ::Function,
+                      bgiid       ::Function,
+                      bgiid_br    ::Function,
+                      mhr_upd_Xbr ::Function,
+                      mhr_upd_Y   ::Function,
+                      mhr_upd_Ybr ::Function,
+                      mhr_upd_XYbr::Function,
                       Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
                       areavg   ::Array{Float64,2},
                       areaoc   ::Array{Int64,2},
                       linavg   ::Array{Float64,2},
                       lindiff  ::Array{Float64,3},
-                      avg_Δx   ::Array{Float64,2},
                       σ²c      ::Float64,
                       ωxc      ::Float64,
                       ω1c      ::Float64,
                       ω0c      ::Float64,
                       λ1c      ::Float64,
                       λ0c      ::Float64,
+                      λϕ1c     ::Float64, 
+                      λϕ0c     ::Float64,
                       Xnc1     ::Array{Int64,1},
                       Xnc2     ::Array{Int64,1},
                       brl      ::Array{Float64,1},
@@ -56,6 +57,7 @@ function burn_compete(total_llf          ::Function,
                       trios    ::Array{Array{Int64,1},1},
                       wXp      ::Array{Int64,1},
                       λprior   ::Float64,
+                      λϕprior  ::Float64,
                       ωxprior  ::NTuple{2,Float64},
                       ω1prior  ::NTuple{2,Float64},
                       ω0prior  ::NTuple{2,Float64},
@@ -103,12 +105,14 @@ function burn_compete(total_llf          ::Function,
 
   # print number of parameters
   print_with_color(:green,
-    "\n σ² updates per iter = ", endof(filter(x -> x == 1,parvec)),
-    "\n ωx updates per iter = ", endof(filter(x -> x == 2,parvec)),
-    "\n ω1 updates per iter = ", endof(filter(x -> x == 3,parvec)),
-    "\n ω0 updates per iter = ", endof(filter(x -> x == 4,parvec)),
-    "\n λ1 updates per iter = ", endof(filter(x -> x == 5,parvec)),
-    "\n λ0 updates per iter = ", endof(filter(x -> x == 6,parvec)),
+    "\n σ²  updates per iter = ", endof(filter(x -> x == 1,parvec)),
+    "\n ωx  updates per iter = ", endof(filter(x -> x == 2,parvec)),
+    "\n ω1  updates per iter = ", endof(filter(x -> x == 3,parvec)),
+    "\n ω0  updates per iter = ", endof(filter(x -> x == 4,parvec)),
+    "\n λ1  updates per iter = ", endof(filter(x -> x == 5,parvec)),
+    "\n λ0  updates per iter = ", endof(filter(x -> x == 6,parvec)),
+    "\n λϕ1 updates per iter = ", endof(filter(x -> x == 7,parvec)),
+    "\n λϕ0 updates per iter = ", endof(filter(x -> x == 8,parvec)),
     "\n Parameter updates per iter = ", length(parvec), "\n")
 
   #start burnin
@@ -120,9 +124,9 @@ function burn_compete(total_llf          ::Function,
     for up = parvec
 
       # update X
-      if up > 6
+      if up > 8
 
-        upx = wXp[up - 6]::Int64                 # X indexing
+        upx = wXp[up - 8]::Int64                 # X indexing
 
         xi, xj = ind2sub(Xc, upx)
 
@@ -188,8 +192,8 @@ function burn_compete(total_llf          ::Function,
         # which internal node to update
         if rand() < 0.4
           llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
 
       # update λ0
@@ -213,8 +217,51 @@ function burn_compete(total_llf          ::Function,
         # which internal node to update
         if rand() < 0.4
           llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+        end
+
+
+      elseif up == 7
+
+        # update λϕ1
+        λϕ1p = logupt(λϕ1c, ptn[7])::Float64
+
+        # proposal likelihood and prior
+        if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1p, λϕ0c, 
+                                   stemevc, brs[nedge,1,:])              + 
+                         logdexp(λϕ1p, λϕprior) - logdexp(λϕ1c, λϕprior) + 
+                         log(λϕ1p) - log(λϕ1c))
+          λϕ1c    = λϕ1p::Float64
+          lac[7] += 1
+        end
+
+        # which internal node to update
+        if rand() < 0.2
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+        end
+
+      elseif up == 8
+
+        # update λϕ0
+        λϕ0p = logupt(λϕ0c, ptn[8])::Float64
+
+        # proposal likelihood and prior
+        if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1c, λϕ0p, 
+                                   stemevc, brs[nedge,1,:])              + 
+                         logdexp(λϕ0p, λϕprior) - logdexp(λϕ0c, λϕprior) + 
+                         log(λϕ0p) - log(λϕ0c))
+          λϕ0c = λϕ0p::Float64
+          lac[8] += 1
+        end
+
+        # which internal node to update
+        if rand() < 0.2
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
 
       # if σ² is updated
@@ -229,7 +276,7 @@ function burn_compete(total_llf          ::Function,
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
 
         if -randexp() < (llr + prr + 
-                          log(σ²p) - log(σ²c))
+                         log(σ²p) - log(σ²c))
           llc += llr::Float64
           prc += prr::Float64
           σ²c  = σ²p::Float64
@@ -276,8 +323,8 @@ function burn_compete(total_llf          ::Function,
         # which internal node to update
         if rand() < 0.4
           llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
 
       # update ω0
@@ -301,8 +348,8 @@ function burn_compete(total_llf          ::Function,
         # which internal node to update
         if rand() < 0.4
           llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                  λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                  areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
 
       end
@@ -311,12 +358,11 @@ function burn_compete(total_llf          ::Function,
       # make Y branch update
       if rand() < 2e-3
         llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                          llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
+                          llc, prc, areavg, areaoc, linavg, lindiff, 
                           brs, stemevc)
       end
 
-      # make X branch update
       if rand() < 2e-3
         llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
@@ -326,8 +372,8 @@ function burn_compete(total_llf          ::Function,
       # make joint X & Y branch update
       if rand() < 2e-3
         llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                           llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
+                           llc, prc, areavg, areaoc, linavg, lindiff, 
                            brs, stemevc)
       end
 
@@ -348,8 +394,8 @@ function burn_compete(total_llf          ::Function,
     next!(p)
   end
 
-  return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx, stemevc, 
-         brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn
+  return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, stemevc, 
+         brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, λϕ1c, λϕ0c, ptn
 end
 
 

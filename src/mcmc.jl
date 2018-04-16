@@ -35,14 +35,17 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       ω0prior ::NTuple{2,Float64} = (0.,10.),
                       σ²prior ::Float64           = 1e-1,
                       λprior  ::Float64           = 1e-1,
+                      λϕprior ::Float64          = 1e-1,
                       out_file::String            = "compete_results",
-                      weight  ::NTuple{5,Float64} = (0.15,0.05,0.02,0.02,5e-3),
+                      weight  ::NTuple{6,Float64} = (0.15,0.05,0.02,0.02,0.02,5e-3),
                       σ²i     ::Float64           = 1.,
                       ωxi     ::Float64           = 0.,
                       ω1i     ::Float64           = 0.,
                       ω0i     ::Float64           = 0.,
                       λ1i     ::Float64           = 1.0,
                       λ0i     ::Float64           = 0.2,
+                      λϕ1i    ::Float64           = 1.0,
+                      λϕ0i    ::Float64           = 0.2,
                       stbrl   ::Float64           = 1.,
                       fix_ωx  ::Bool              = false,
                       fix_ω1  ::Bool              = false,
@@ -113,28 +116,25 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   # Sample all internal node values according to Pr transitions
   for triad in trios
-    upnode!(λ1i, λ0i, triad, Yc, stemevc, bridx_a, brδt, brl, brs, narea, nedge)
+    upnode!(λϕ1i, λϕ0i, triad, Yc, stemevc, bridx_a, brδt, brl, brs, narea, nedge)
   end
 
+  # allocate current area & lineage means, area occupancy & lineage specific means
+  const areavg  = zeros(m, narea)
+  const areaoc  = zeros(Int64, m, narea)
+  const linavg  = fill(NaN, m, ntip)
+  const lindiff = fill(NaN, m, ntip, narea)
+
   # estimate current area & lineage means and area occupancy
-  const areavg = zeros(m, narea)
-  const areaoc = zeros(Int64, m, narea)
-  const linavg = fill(NaN, m, ntip)
-
   area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
-
+  
   # estimate current lineage specific means
-  lindiff = fill(NaN, m, ntip, narea)
   linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
-
-  # estimate average branch lineage specific means
-  const avg_Δx = zeros((nedge-1), narea)
-  linarea_branch_avg! = make_la_branch_avg(bridx_a, length(Yc), m, narea, nedge)
-  linarea_branch_avg!(avg_Δx, lindiff)
 
   # make likelihood and prior functions
   total_llf   = makellf(δt, Yc, ntip, narea, m)
   λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m)
+  λϕupd_llr   = makellr_λϕ_upd(Yc, δt, narea, ntip, m)
   ω10upd_llr  = makellr_ω10_upd(Yc, δt, narea, ntip, m)
   Xupd_llr    = makellr_Xupd(δt, narea)
   Rupd_llr    = makellr_Rupd(δt[1], narea)
@@ -142,8 +142,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   bgiid       = makellf_bgiid(bridx_a, δt, narea, nedge, m)
   bgiid_br    = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
 
-  # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² 
-  const np = length(wXp) + 6
+  # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² + λϕ1 + λϕ0 
+  const np = length(wXp) + 8
 
   # parameter update vector
   const parvec = collect(1:np)
@@ -153,9 +153,10 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   append!(parvec, fill(2,ceil(Int64,np*weight[2])))
   append!(parvec, repeat(3:4,  inner = ceil(Int64,np*weight[3])))
   append!(parvec, repeat(5:6,  inner = ceil(Int64,np*weight[4])))
-  append!(parvec, repeat(7:np, inner = ceil(Int64,np*weight[5])))
+  append!(parvec, repeat(7:8,  inner = ceil(Int64,np*weight[5])))
+  append!(parvec, repeat(9:np, inner = ceil(Int64,np*weight[6])))
 
-  # if fixed ωx, ω1 or ω0 remove
+  # if fixed ωx, ω1 or ω0, then remove
   fix_ωx && filter!(x -> x ≠ 2, parvec)
   fix_ω1 && filter!(x -> x ≠ 3, parvec)
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
@@ -165,26 +166,23 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                                   bridx, brδt, total_llf,
                                   σ²prior)
   mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
-                                wcol, total_llf, bgiid, linarea_branch_avg!)
+                                wcol, total_llf, bgiid)
   mhr_upd_Ybr  = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
-                                  brδt, brl, wcol,total_llf, bgiid_br, 
-                                  linarea_branch_avg!)
+                                  brδt, brl, wcol,total_llf, bgiid_br)
   mhr_upd_XYbr = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
                                    bridx, bridx_a, brδt, brl, wcol, 
-                                   total_llf, bgiid_br, linarea_branch_avg!,
-                                   σ²prior)
+                                   total_llf, bgiid_br, σ²prior)
 
   # burning phase
-  llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
-  stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_compete(
-    total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
-    bgiid, bgiid_br, linarea_branch_avg!, 
-    mhr_upd_Xbr, mhr_upd_Y, mhr_upd_Ybr, mhr_upd_XYbr,
-    Xc, Yc, areavg, areaoc, linavg, lindiff, avg_Δx,
-    σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
+  llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff,
+  stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, λϕ1c, λϕ0c, ptn = burn_compete(
+    total_llf, λupd_llr, λϕupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
+    bgiid, bgiid_br, mhr_upd_Xbr, mhr_upd_Y, mhr_upd_Ybr, mhr_upd_XYbr,
+    Xc, Yc, areavg, areaoc, linavg, lindiff,
+    σ²i, ωxi, ω1i, ω0i, λ1i, λ0i, λϕ1i, λϕ0i,
     Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
     trios, wXp,
-    λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
+    λprior, λϕprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
   # log probability of collision
   const max_δt = maximum(δt)::Float64
@@ -216,7 +214,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
   open(out_file*".log", "a") do f
 
-    print(f, "iteration\tlikelihood\tprior\tomega_x\tomega_1\tomega_0\tsigma2\tlambda_1\tlambda_0\tcollision_probability\n")
+    print(f, "iteration\tlikelihood\tprior\tomega_x\tomega_1\tomega_0\tsigma2\tlambda_1\tlambda_0\tcollision_probability\tlambda_1*\tlambda_0*\n")
 
     for it = Base.OneTo(niter)
 
@@ -226,7 +224,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
       for up = parvec
 
         # update X[i]
-        if up > 6
+        if up > 8
 
           llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
                           areavg, linavg, lindiff, areaoc)
@@ -241,8 +239,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
 
         # if λ0 is updated
@@ -255,8 +253,34 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+          end
+
+        # update λϕ1 
+        elseif up == 7
+
+          λϕ1c = mhr_upd_λϕ1(λϕ1c, Yc, λϕ0c, stemevc, brs[nedge,1,:], 
+                             λϕprior, ptn[7], λϕupd_llr)
+
+          # which internal node to update
+          if rand() < 0.2
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+          end
+
+        # update λϕ0 
+        elseif up == 8
+
+          λϕ0c = mhr_upd_λϕ0(λϕ0c, Yc, λϕ1c, stemevc, brs[nedge,1,:], 
+                             λϕprior, ptn[8], λϕupd_llr)
+
+          # which internal node to update
+          if rand() < 0.2
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
 
         # if σ² is updated
@@ -277,8 +301,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
 
         # update ω0      
@@ -289,8 +313,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, avg_Δx, brs, stemevc)
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
+                    areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
         end
 
@@ -298,8 +322,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         # make Y branch update
         if rand() < 2e-3
           llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
-                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                            llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
+                            llc, prc, areavg, areaoc, linavg, lindiff, 
                             brs, stemevc)
         end
 
@@ -312,8 +336,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         # make joint X & Y branch update
         if rand() < 2e-3
           llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                             llc, prc, areavg, areaoc, linavg, lindiff, avg_Δx, 
+                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
+                             llc, prc, areavg, areaoc, linavg, lindiff, 
                              brs, stemevc)
         end
 
@@ -324,7 +348,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
       if lthin == nthin
         pci = Pc(f_λ(λ1c,ω1c,1.0), f_λ(λ0c,ω0c,1.0), max_δt)
         print(f, it,"\t", llc, "\t", prc,"\t",ωxc,"\t",ω1c,"\t",ω0c,"\t",
-              σ²c,"\t",λ1c,"\t",λ0c,"\t",pci,"\n")
+              σ²c,"\t",λ1c,"\t",λ0c,"\t",pci,"\t",λϕ1c,"\t",λϕ0c,"\n")
         lthin = 0
       end
 

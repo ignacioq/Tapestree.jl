@@ -72,17 +72,22 @@ function upnode!(λ1     ::Float64,
     # set new node in Y
     for k in Base.OneTo(narea)
       Y[bridx_a[k][pr][end]] = 
-      Y[bridx_a[k][d1][1]] = 
-      Y[bridx_a[k][d2][1]] = brs[pr,2,k]
+      Y[bridx_a[k][d1][1]]   = 
+      Y[bridx_a[k][d2][1]]   = brs[pr,2,k]
     end
 
     # sample a consistent history
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                  stemevc, brl[nedge])
 
+    ntries = 1
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                    stemevc, brl[nedge])
+      ntries += 1
+      if ntries == 50_000
+        return true
+      end
     end
   end
 
@@ -455,9 +460,6 @@ proposals taking into account `Δx` and `ω1` & `ω0`.
 """
 function upbranchY!(λ1     ::Float64,
                     λ0     ::Float64,
-                    ω1     ::Float64,
-                    ω0     ::Float64,
-                    avg_Δx ::Array{Float64,2},
                     br     ::Int64,
                     Y      ::Array{Int64,3},
                     stemevc::Array{Array{Float64,1},1},
@@ -474,14 +476,12 @@ function upbranchY!(λ1     ::Float64,
              brl[nedge], narea)
   else 
     # sample a consistent history
-    createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                 Y, br, brs, brδt, bridx_a, narea)
+    createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
 
     ntries = 1
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
-      createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                   Y, br, brs, brδt, bridx_a, narea)
+      createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
       ntries += 1
       if ntries == 50_000
         return true
@@ -514,9 +514,6 @@ taking into account `Δx` and `ω1` & `ω0` for all areas.
 """
 function createhists!(λ1     ::Float64,
                       λ0     ::Float64,
-                      ω1     ::Float64,  
-                      ω0     ::Float64, 
-                      avg_Δx ::Array{Float64,2},
                       Y      ::Array{Int64,3},
                       br     ::Int64,
                       brs    ::Array{Int64,3},
@@ -526,8 +523,7 @@ function createhists!(λ1     ::Float64,
 
   @inbounds begin
     for j = Base.OneTo(narea)
-      bit_rejsam!(Y, bridx_a[j][br], brs[br,2,j], 
-                  λ1, λ0, ω1, ω0, avg_Δx[br,j], brδt[br])
+      bit_rejsam!(Y, bridx_a[j][br], brs[br,2,j], λ1, λ0, brδt[br])
     end
   end
 

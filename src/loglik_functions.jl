@@ -308,6 +308,60 @@ end
 
 
 """
+    makellr_λ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
+
+Make likelihood ratio function for when updating λϕ1 & λϕ0.
+"""
+function makellr_λϕ_upd(Y    ::Array{Int64,3},
+                        δt   ::Vector{Float64},
+                        narea::Int64,
+                        ntip ::Int64,
+                        m    ::Int64)
+
+  # get initial range
+  const wf23 = Int64[]
+  for j = Base.OneTo(ntip)
+    push!(wf23, findfirst(Y[:,j,1] .!= 23))
+  end
+
+  function f(Y      ::Array{Int64,3}, 
+             λϕ1c   ::Float64,
+             λϕ0c   ::Float64,
+             λϕ1p   ::Float64,
+             λϕ0p   ::Float64,
+             stemevc::Vector{Vector{Float64}},
+             stemss ::Vector{Int64})
+
+    ll::Float64 = 0.0
+
+    @inbounds begin
+
+      for k = Base.OneTo(narea)
+        ll += brll(stemevc[k], λϕ1p, λϕ0p, stemss[k])::Float64 -
+              brll(stemevc[k], λϕ1c, λϕ0c, stemss[k])::Float64
+
+        for j = Base.OneTo(ntip)
+          ll += bitvectorll_iid(Y[wf23[j]:m,j,k], 
+                                λϕ1p, λϕ0p, δt[wf23[j]:(m-1)])::Float64 -
+                bitvectorll_iid(Y[wf23[j]:m,j,k], 
+                                λϕ1c, λϕ0c, δt[wf23[j]:(m-1)])
+        end
+      end
+    
+    end
+
+    return ll::Float64
+  end
+
+  return f
+end
+
+
+
+
+
+
+"""
     makellr_ω1μ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
 
 Make likelihood function for when updating ω1 & ω0.
@@ -390,12 +444,9 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
   function f(Y      ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1},
              stemss ::Array{Int64,1},
-             λ1     ::Float64,
-             λ0     ::Float64,
-             ω1     ::Float64,
-             ω0     ::Float64,
-             avg_Δx ::Array{Float64,2},
-             triad  ::Array{Int64,1})
+             triad  ::Array{Int64,1},
+             λϕ1    ::Float64,
+             λϕ0    ::Float64)
 
     ll::Float64 = 0.0
 
@@ -405,20 +456,15 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
       if pr < nedge 
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[k][pr]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[pr,k], δtA[pr]) +
-                bitvectorll_iid(Y[bridx_a[k][d1]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[d1,k], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[k][d2]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2])
+          ll += bitvectorll_iid(Y[bridx_a[k][pr]], λϕ1, λϕ0, δtA[pr]) +
+                bitvectorll_iid(Y[bridx_a[k][d1]], λϕ1, λϕ0, δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[k][d2]], λϕ1, λϕ0, δtA[d2])
         end
       else 
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[k][d1]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[d1,k], δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[k][d2]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[d2,k], δtA[d2]) +
-                brll(stemevc[k], λ1, λ0, stemss[k])
+          ll += bitvectorll_iid(Y[bridx_a[k][d1]], λϕ1, λϕ0, δtA[d1]) +
+                bitvectorll_iid(Y[bridx_a[k][d2]], λϕ1, λϕ0, δtA[d2]) +
+                brll(stemevc[k], λϕ1, λϕ0, stemss[k])
         end
       end
 
@@ -461,24 +507,20 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
   function f(Y      ::Array{Int64,3}, 
              stemevc::Array{Array{Float64,1},1},
              stemss ::Array{Int64,1},
-             λ1     ::Float64,
-             λ0     ::Float64,
-             ω1     ::Float64,
-             ω0     ::Float64,
-             avg_Δx ::Array{Float64,2},
-             br     ::Int64)
+             br     ::Int64,
+             λϕ1    ::Float64,
+             λϕ0    ::Float64)
 
     ll::Float64 = 0.0
 
     @inbounds begin
       if br == nedge
         for k = Base.OneTo(narea)
-          ll += brll(stemevc[k], λ1, λ0, stemss[k])
+          ll += brll(stemevc[k], λϕ1, λϕ0, stemss[k])
         end
       else
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[k][br]], 
-                                λ1, λ0, ω1, ω0, avg_Δx[br,k], δtA[br])
+          ll += bitvectorll_iid(Y[bridx_a[k][br]], λϕ1, λϕ0,  δtA[br])
         end
       end
     end
@@ -502,19 +544,14 @@ for a bit vector.
 function bitvectorll_iid(y     ::Array{Int64,1},
                          λ1    ::Float64,
                          λ0    ::Float64,
-                         ω1    ::Float64,
-                         ω0    ::Float64,
-                         avg_Δx::Float64,
                          δt    ::Array{Float64,1})
 
   @inbounds begin
 
     ll::Float64  = 0.0
-    λt1::Float64 = f_λ(λ1, ω1, avg_Δx)
-    λt0::Float64 = f_λ(λ0, ω0, avg_Δx)
 
     cur_s::Int64   = y[1]
-    cur_λ::Float64 = cur_s == 0 ? λt1 : λt0
+    cur_λ::Float64 = cur_s == 0 ? λ1 : λ0
 
     for i=Base.OneTo(endof(y)-1)
       if y[i] == y[i+1]
@@ -522,7 +559,7 @@ function bitvectorll_iid(y     ::Array{Int64,1},
       else
         ll += evll(δt[i], cur_λ)::Float64
         cur_s = 1 - cur_s
-        cur_λ = cur_s == 0 ? λt1 : λt0
+        cur_λ = cur_s == 0 ? λ1 : λ0
       end
     end
 
