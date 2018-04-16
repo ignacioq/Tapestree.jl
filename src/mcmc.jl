@@ -263,25 +263,11 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           λϕ1c = mhr_upd_λϕ1(λϕ1c, Yc, λϕ0c, stemevc, brs[nedge,1,:], 
                              λϕprior, ptn[7], λϕupd_llr)
 
-          # which internal node to update
-          if rand() < 0.2
-            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
-          end
-
         # update λϕ0 
         elseif up == 8
 
           λϕ0c = mhr_upd_λϕ0(λϕ0c, Yc, λϕ1c, stemevc, brs[nedge,1,:], 
                              λϕprior, ptn[8], λϕupd_llr)
-
-          # which internal node to update
-          if rand() < 0.2
-            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
-          end
 
         # if σ² is updated
         elseif up == 1

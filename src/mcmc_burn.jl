@@ -236,13 +236,6 @@ function burn_compete(total_llf   ::Function,
           lac[7] += 1
         end
 
-        # which internal node to update
-        if rand() < 0.2
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
-        end
-
       elseif up == 8
 
         # update λϕ0
@@ -255,13 +248,6 @@ function burn_compete(total_llf   ::Function,
                          log(λϕ0p) - log(λϕ0c))
           λϕ0c = λϕ0p::Float64
           lac[8] += 1
-        end
-
-        # which internal node to update
-        if rand() < 0.2
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
 
       # if σ² is updated
