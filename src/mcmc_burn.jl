@@ -92,9 +92,6 @@ function burn_compete(total_llf   ::Function,
   const lup = zeros(Int64, np)
   const lac = zeros(Int64, np)
 
-  # number of internal nodes
-  const nin = length(trios)
-
   # row i proposals for X
   const aai = zeros(Float64, narea)       # area average
   const lai = fill(NaN, ntip)        # lineage average
@@ -191,7 +188,7 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
@@ -216,11 +213,10 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
-
 
       elseif up == 7
 
@@ -308,7 +304,7 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
@@ -333,7 +329,7 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
@@ -343,7 +339,7 @@ function burn_compete(total_llf   ::Function,
       ## make a branch updates with some Pr
       # make Y branch update
       if rand() < 2e-3
-        llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
+        llc, stemevc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
                           llc, prc, areavg, areaoc, linavg, lindiff, 
                           brs, stemevc)

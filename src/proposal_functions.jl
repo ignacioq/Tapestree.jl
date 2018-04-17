@@ -32,7 +32,7 @@ May 16 2017
             λ0     ::Float64,
             triad  ::Array{Int64,1},
             Y      ::Array{Int64,3},
-            stemevc::Array{Array{Float64,1},1},
+            stemevs::Array{Array{Float64,1},1},
             bridx_a::Array{Array{UnitRange{Int64},1},1},
             brδt   ::Vector{Vector{Float64}},
             brl    ::Vector{Float64},
@@ -48,7 +48,7 @@ function upnode!(λ1     ::Float64,
                  λ0     ::Float64,
                  triad  ::Array{Int64,1},
                  Y      ::Array{Int64,3},
-                 stemevc::Array{Array{Float64,1},1},
+                 stemevs::Array{Array{Float64,1},1},
                  bridx_a::Array{Array{UnitRange{Int64},1},1},
                  brδt   ::Vector{Vector{Float64}},
                  brl    ::Vector{Float64},
@@ -78,12 +78,12 @@ function upnode!(λ1     ::Float64,
 
     # sample a consistent history
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
-                 stemevc, brl[nedge])
+                 stemevs, brl[nedge])
 
     ntries = 1
     while ifextY(Y, triad, narea, bridx_a)
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
-                   stemevc, brl[nedge])
+                   stemevs, brl[nedge])
       ntries += 1
       if ntries == 50_000
         return true
@@ -113,14 +113,14 @@ function createhists!(λ1     ::Float64,
                       bridx_a::Array{Array{UnitRange{Int64},1},1},
                       narea  ::Int64,
                       nedge  ::Int64,
-                      stemevc::Array{Array{Float64,1},1},
+                      stemevs::Array{Array{Float64,1},1},
                       stbrl  ::Float64)
 
   @inbounds begin
 
     # if stem branch do continuous DA
     if pr == nedge
-      br_samp!(stemevc, brs[pr,1,:], brs[pr,2,:], λ1, λ0, stbrl, narea)
+      br_samp!(stemevs, brs[pr,1,:], brs[pr,2,:], λ1, λ0, stbrl, narea)
 
       for j = Base.OneTo(narea), idx = (d1,d2)
         bit_rejsam!(Y, bridx_a[j][idx], brs[idx,2,j], 
@@ -184,98 +184,6 @@ end
 
 
 
-#=
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-`Y` with `ΔX` proposal functions
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-=#
-
-
-
-
-
-"""
-    upnode!(λ1     ::Float64,
-            λ0     ::Float64,
-            ω1     ::Float64,
-            ω0     ::Float64,
-            avg_Δx ::Array{Float64,2},
-            triad  ::Array{Int64,1},
-            Y      ::Array{Int64,3},
-            bridx_a::Array{Array{UnitRange{Int64},1},1},
-            brδt   ::Vector{Vector{Float64}},
-            brl    ::Vector{Float64},
-            brs    ::Array{Int64,3},
-            narea  ::Int64,
-            nedge  ::Int64)
-
-Update node and incident branches using discrete 
-Data Augmentation for all areas with mutual-independence 
-proposals taking into account `Δx` and `ω1` & `ω0`.
-"""
-function upnode!(λ1     ::Float64,
-                 λ0     ::Float64,
-                 ω1     ::Float64,
-                 ω0     ::Float64,
-                 avg_Δx ::Array{Float64,2},
-                 triad  ::Array{Int64,1},
-                 Y      ::Array{Int64,3},
-                 stemevc::Array{Array{Float64,1},1},
-                 bridx_a::Array{Array{UnitRange{Int64},1},1},
-                 brδt   ::Vector{Vector{Float64}},
-                 brl    ::Vector{Float64},
-                 brs    ::Array{Int64,3},
-                 narea  ::Int64,
-                 nedge  ::Int64)
-
-  @inbounds begin
-   
-    # define branch triad
-    pr, d1, d2 = triad
-
-    # sample
-    samplenode!(λ1, λ0, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
-
-    # save extinct
-    while sum(brs[pr,2,:]) < 1
-       samplenode!(λ1, λ0, ω1, ω0, avg_Δx, pr, d1, d2, brs, brl, narea)
-    end
-
-    # set new node in Y
-    for k = Base.OneTo(narea)
-      Y[bridx_a[k][pr][end]] = 
-      Y[bridx_a[k][d1][1]]   = 
-      Y[bridx_a[k][d2][1]]   = brs[pr,2,k]
-    end
-
-    # sample a consistent history
-    createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                 Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
-                 stemevc, brl[nedge])
-
-    ntries = 1
-    # save extinct
-    while ifextY(Y, triad, narea, bridx_a)
-      createhists!(λ1, λ0, ω1, ω0, avg_Δx, 
-                   Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
-                   stemevc, brl[nedge])
-
-      ntries += 1
-      if ntries == 50_000
-        return true
-      end
-
-    end
-  end
-
-  return nothing
-end
-
-
-
-
 
 """
     ifextY(Y::Array{Int64,3}, triad::Array{Int64,1}, narea::Int64, bridx_a::Array{Array{Array{Int64,1},1},1})
@@ -319,112 +227,6 @@ end
 
 
 
-"""
-    createhists!(λ1     ::Float64,
-                 λ0     ::Float64,
-                 ω1     ::Float64,  
-                 ω0     ::Float64, 
-                 avg_Δx ::Array{Float64,2},
-                 Y      ::Array{Int64,3},
-                 pr     ::Int64,
-                 d1     ::Int64,
-                 d2     ::Int64,
-                 brs    ::Array{Int64,3},
-                 brδt   ::Array{Array{Float64,1},1},
-                 bridx_a::Array{Array{UnitRange{Int64},1},1},
-                 narea  ::Int64,
-                 nedge  ::Int64)
-
-Create bit histories for all areas for the branch 
-trio taking into account `Δx` and `ω1` & `ω0`.
-"""
-function createhists!(λ1     ::Float64,
-                      λ0     ::Float64,
-                      ω1     ::Float64,  
-                      ω0     ::Float64, 
-                      avg_Δx ::Array{Float64,2},
-                      Y      ::Array{Int64,3},
-                      pr     ::Int64,
-                      d1     ::Int64,
-                      d2     ::Int64,
-                      brs    ::Array{Int64,3},
-                      brδt   ::Array{Array{Float64,1},1},
-                      bridx_a::Array{Array{UnitRange{Int64},1},1},
-                      narea  ::Int64,
-                      nedge  ::Int64, 
-                      stemevc::Array{Array{Float64,1},1},
-                      stbrl  ::Float64)
-
-  @inbounds begin
-    if pr == nedge
-      # if stem branch do continuous DA
-      br_samp!(stemevc, brs[pr,1,:], brs[pr,2,:], λ1, λ0, stbrl, narea)
-
-      for j = Base.OneTo(narea), idx = (d1,d2)
-        bit_rejsam!(Y, bridx_a[j][idx], brs[idx,2,j], 
-                    λ1, λ0, ω1, ω0, avg_Δx[idx,j], brδt[idx])
-      end
-    else
-
-      for j = Base.OneTo(narea), idx = (pr,d1,d2)
-        bit_rejsam!(Y, bridx_a[j][idx], brs[idx,2,j], 
-                    λ1, λ0, ω1, ω0, avg_Δx[idx,j], brδt[idx])
-      end
-    end
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    samplenode!(λ::Array{Float64,1}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brl::Array{Float64,1}, narea::Int64)
-
-Sample one internal node according to 
-mutual-independence model transition probabilities
-taking into account `Δx` and `ω1` & `ω0`.
-"""
-function samplenode!(λ1    ::Float64, 
-                     λ0    ::Float64,
-                     ω1    ::Float64,
-                     ω0    ::Float64,
-                     avg_Δx::Array{Float64,2},
-                     pr    ::Int64,
-                     d1    ::Int64,
-                     d2    ::Int64,
-                     brs   ::Array{Int64,3},
-                     brl   ::Array{Float64,1},
-                     narea ::Int64)
-  @inbounds begin
-
-    for j = Base.OneTo(narea)
-
-      # transition probabilities for the trio
-      ppr_1, ppr_2 = 
-        Ptrfast_start(λ1, λ0, ω1, ω0, avg_Δx[pr,j], brl[pr], brs[pr,1,j])
-      pd1_1, pd1_2 = 
-        Ptrfast_end(  λ1, λ0, ω1, ω0, avg_Δx[d1,j], brl[d1], brs[d1,2,j])
-      pd2_1, pd2_2 = 
-        Ptrfast_end(  λ1, λ0, ω1, ω0, avg_Δx[d2,j], brl[d2], brs[d2,2,j])
-
-      # normalize probabilitye
-      tp = normlize(*(ppr_1, pd1_1, pd2_1),
-                    *(ppr_2, pd1_2, pd2_2))::Float64
-
-      # sample the node's character
-      brs[pr,2,j] = brs[d1,1,j] = brs[d2,1,j] = coinsamp(tp)::Int64
-    end
-  end
-
-  return nothing
-end
-
-
-
-
-
 #=
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -462,7 +264,7 @@ function upbranchY!(λ1     ::Float64,
                     λ0     ::Float64,
                     br     ::Int64,
                     Y      ::Array{Int64,3},
-                    stemevc::Array{Array{Float64,1},1},
+                    stemevs::Array{Array{Float64,1},1},
                     bridx_a::Array{Array{UnitRange{Int64},1},1},
                     brδt   ::Vector{Vector{Float64}},
                     brl    ::Vector{Float64},
@@ -472,7 +274,7 @@ function upbranchY!(λ1     ::Float64,
 
   # if stem branch
   if br == nedge
-    br_samp!(stemevc, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
+    br_samp!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
              brl[nedge], narea)
   else 
     # sample a consistent history

@@ -758,7 +758,7 @@ function makellr_Rupd(δt1  ::Float64,
 
     end
 
-    ll::Float64
+    return ll::Float64
   end
 
   return f

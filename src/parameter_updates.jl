@@ -192,7 +192,6 @@ function make_mhr_upd_Y(narea              ::Int64,
   const la      = zeros(m, ntip)
   const ld      = zeros(m, ntip, narea)
   const brsp    = zeros(Int64, nedge, 2, narea)
-  const stemevp = [[rand()] for i in 1:narea]
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -220,7 +219,7 @@ function make_mhr_upd_Y(narea              ::Int64,
     copy!(la,      linavg)
     copy!(ld,      lindiff)
     copy!(brsp,    brs)
-    copy!(stemevp, stemevc)
+    stemevp = deepcopy(stemevc)
 
     # if an efficient sample
     if upnode!(λϕ1c, λϕ0c, triad, Yp, stemevp,
@@ -245,12 +244,12 @@ function make_mhr_upd_Y(narea              ::Int64,
         copy!(linavg,       la)
         copy!(lindiff,      ld)
         copy!(brs,        brsp)
-        copy!(stemevc, stemevp)
+        stemevc = stemevp
       end
 
-      return llc::Float64
+      return llc, stemevc
     else
-      return llc::Float64
+      return llc, stemevc
     end
   end
 
@@ -281,7 +280,6 @@ function make_mhr_upd_Ybr(narea              ::Int64,
   const ao      = zeros(Int64,m, narea)
   const la      = zeros(m, ntip)
   const ld      = zeros(m, ntip, narea)
-  const stemevp = [[rand()] for i in 1:narea]
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -308,7 +306,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
     copy!(ao,       areaoc)
     copy!(la,       linavg)
     copy!(ld,      lindiff)
-    copy!(stemevp, stemevc)
+    stemevp = deepcopy(stemevc)
 
     # if an efficient sample
     if upbranchY!(λϕ1c, λϕ0c, br, Yp, stemevp, 
@@ -331,11 +329,11 @@ function make_mhr_upd_Ybr(narea              ::Int64,
         copy!(areaoc,  ao)
         copy!(linavg,  la)
         copy!(lindiff, ld)
-        copy!(stemevc, stemevp)
+        stemevc = deepcopy(stemevp)
       end
-      return llc::Float64
+      return llc, stemevc
     else
-      return llc::Float64
+      return llc, stemevc
     end
   end
 
@@ -406,10 +404,10 @@ function make_mhr_upd_XYbr(narea              ::Int64,
       area_lineage_means!(aa, la, ao, Xp, Yp, wcol, m, narea)
       linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
 
-      llr = (total_llf(Xp, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevc, brs[nedge,1,:], σ²c) - 
-             total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevc, brs[nedge,1,:], σ²c))::Float64
+      llr = total_llf(Xp, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                      stemevc, brs[nedge,1,:], σ²c) - 
+            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                      stemevc, brs[nedge,1,:], σ²c)
 
       if -randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs[nedge,1,:], br, λϕ1c, λϕ0c) - 
@@ -438,7 +436,7 @@ end
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# Single parameter updates
+# Single governing parameter updates
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
