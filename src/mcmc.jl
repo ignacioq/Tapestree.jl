@@ -238,7 +238,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
@@ -252,7 +252,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
@@ -286,7 +286,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
@@ -298,7 +298,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
 
           # which internal node to update
           if rand() < 0.4
-            llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
@@ -307,7 +307,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         ## make a branch updates with some Pr
         # make Y branch update
         if rand() < 2e-3
-          llc, stemevc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
+          llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
                             llc, prc, areavg, areaoc, linavg, lindiff, 
                             brs, stemevc)

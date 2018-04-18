@@ -192,6 +192,7 @@ function make_mhr_upd_Y(narea              ::Int64,
   const la      = zeros(m, ntip)
   const ld      = zeros(m, ntip, narea)
   const brsp    = zeros(Int64, nedge, 2, narea)
+  const stemevp = [[rand()] for i in 1:narea]
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -219,7 +220,11 @@ function make_mhr_upd_Y(narea              ::Int64,
     copy!(la,      linavg)
     copy!(ld,      lindiff)
     copy!(brsp,    brs)
-    stemevp = deepcopy(stemevc)
+
+    # allocate stemevp
+    for k in Base.OneTo(narea) 
+      stemevp[k] = copy(stemevc[k])
+    end
 
     # if an efficient sample
     if upnode!(λϕ1c, λϕ0c, triad, Yp, stemevp,
@@ -244,12 +249,15 @@ function make_mhr_upd_Y(narea              ::Int64,
         copy!(linavg,       la)
         copy!(lindiff,      ld)
         copy!(brs,        brsp)
-        stemevc = stemevp
+        # allocate stemevc
+        for k in Base.OneTo(narea) 
+          stemevc[k] = copy(stemevp[k])
+        end
       end
 
-      return llc, stemevc
+      return llc
     else
-      return llc, stemevc
+      return llc
     end
   end
 
@@ -280,6 +288,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
   const ao      = zeros(Int64,m, narea)
   const la      = zeros(m, ntip)
   const ld      = zeros(m, ntip, narea)
+  const stemevp = [[rand()] for i in 1:narea]
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -306,7 +315,10 @@ function make_mhr_upd_Ybr(narea              ::Int64,
     copy!(ao,       areaoc)
     copy!(la,       linavg)
     copy!(ld,      lindiff)
-    stemevp = deepcopy(stemevc)
+    # allocate stemevc
+    for k in Base.OneTo(narea) 
+      stemevp[k] = copy(stemevc[k])
+    end
 
     # if an efficient sample
     if upbranchY!(λϕ1c, λϕ0c, br, Yp, stemevp, 
@@ -329,11 +341,14 @@ function make_mhr_upd_Ybr(narea              ::Int64,
         copy!(areaoc,  ao)
         copy!(linavg,  la)
         copy!(lindiff, ld)
-        stemevc = deepcopy(stemevp)
+        # allocate stemevc
+        for k in Base.OneTo(narea) 
+          stemevc[k] = copy(stemevp[k])
+        end      
       end
-      return llc, stemevc
+      return llc
     else
-      return llc, stemevc
+      return llc
     end
   end
 
@@ -460,7 +475,7 @@ function mhr_upd_σ²(σ²c        ::Float64,
                     σ²prior    ::Float64,
                     σ²ωxupd_llr::Function)
 
-  const σ²p = logupt(σ²c, rand() < .3 ? σ²tn : 4.*σ²tn)::Float64
+  const σ²p = mulupt(σ²c, rand() < .3 ? σ²tn : 4.*σ²tn)::Float64
 
   #likelihood ratio
   const llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c, σ²p)::Float64
@@ -503,8 +518,8 @@ function mhr_upd_ωx(ωxc         ::Float64,
   const llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxp, σ²c, σ²c)::Float64
 
   # prior ratio
-  const prr = (logdnorm(ωxp, ωxprior[1], ωxprior[2]) -
-               logdnorm(ωxc, ωxprior[1], ωxprior[2]))::Float64
+  const prr = (logdnorm_tc(ωxp, ωxprior[1], ωxprior[2]) -
+               logdnorm_tc(ωxc, ωxprior[1], ωxprior[2]))::Float64
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -543,8 +558,8 @@ function mhr_upd_ω1(ω1c       ::Float64,
   const llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, lindiff)::Float64
 
   # prior ratio
-  const prr = (logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
-               logdnorm(ω1c, ω1prior[1], ω1prior[2]))::Float64
+  const prr = (logdnorm_tc(ω1p, ω1prior[1], ω1prior[2]) -
+               logdnorm_tc(ω1c, ω1prior[1], ω1prior[2]))::Float64
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -583,8 +598,8 @@ function mhr_upd_ω0(ω0c       ::Float64,
   const llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, lindiff)::Float64
 
   # prior ratio
-  const prr = (logdnorm(ω0p, ω0prior[1], ω0prior[2]) -
-               logdnorm(ω0c, ω0prior[1], ω0prior[2]))::Float64
+  const prr = (logdnorm_tc(ω0p, ω0prior[1], ω0prior[2]) -
+               logdnorm_tc(ω0c, ω0prior[1], ω0prior[2]))::Float64
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -619,14 +634,14 @@ function mhr_upd_λ1(λ1c     ::Float64,
                     λupd_llr::Function)
 
   # update λ
-  const λ1p = logupt(λ1c, rand() < .3 ? λ1tn : 4.*λ1tn)::Float64
+  const λ1p = mulupt(λ1c, rand() < .3 ? λ1tn : 4.*λ1tn)::Float64
 
   # proposal likelihood and prior
   const llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
                        lindiff, stemevc, stemss)::Float64
 
   const prr = (logdexp(λ1p, λprior) - 
-                logdexp(λ1c, λprior))::Float64
+               logdexp(λ1c, λprior))::Float64
 
   if -randexp() < (llr + prr + log(λ1p) - log(λ1c))
     llc += llr::Float64
@@ -661,7 +676,7 @@ function mhr_upd_λ0(λ0c     ::Float64,
                     λupd_llr::Function)
 
   # update λ
-  const λ0p = logupt(λ0c, rand() < .3 ? λ0tn : 4.*λ0tn)::Float64
+  const λ0p = mulupt(λ0c, rand() < .3 ? λ0tn : 4.*λ0tn)::Float64
 
   # proposal likelihood and prior
   const llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
@@ -699,7 +714,7 @@ function mhr_upd_λϕ1(λϕ1c     ::Float64,
                      λϕupd_llr::Function)
 
   # update λ
-  λϕ1p = logupt(λϕ1c, λϕ1tn)::Float64
+  λϕ1p = mulupt(λϕ1c, λϕ1tn)::Float64
 
   if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1p, λϕ0c, stemevc, stemss) + 
                    logdexp(λϕ1p, λϕprior) - logdexp(λϕ1c, λϕprior)        + 
@@ -729,7 +744,7 @@ function mhr_upd_λϕ0(λϕ0c     ::Float64,
                      λϕupd_llr::Function)
 
   # update λ
-  λϕ0p = logupt(λϕ0c, λϕ0tn)::Float64
+  λϕ0p = mulupt(λϕ0c, λϕ0tn)::Float64
 
   # proposal likelihood and prior
   if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1c, λϕ0p, stemevc, stemss) + 

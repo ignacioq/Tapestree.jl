@@ -56,16 +56,6 @@ mulupt(p::Float64, tn::Float64) = p * exp((rand() - 0.5) * tn)
 
 
 """
-    logupt(p::Float64, tn::Float64)
-
-Logarithmic parameter window move.
-"""
-logupt(p::Float64, tn::Float64) = exp(log(p) + (rand() - 0.5) * tn)
-
-
-
-
-"""
     rowind(x::Int64, nrow::Int64)
 
 Get row indexing from matrix indexing.

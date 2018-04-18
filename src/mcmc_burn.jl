@@ -172,7 +172,7 @@ function burn_compete(total_llf   ::Function,
       elseif up == 5
 
         # update λ
-        λ1p = logupt(λ1c, ptn[5])::Float64
+        λ1p = mulupt(λ1c, ptn[5])::Float64
 
         llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
                        lindiff, stemevc, brs[nedge,1,:])::Float64
@@ -188,7 +188,7 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
@@ -197,7 +197,7 @@ function burn_compete(total_llf   ::Function,
       elseif up == 6
 
         # update λ
-        λ0p = logupt(λ0c, ptn[6])::Float64
+        λ0p = mulupt(λ0c, ptn[6])::Float64
 
         llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
                        lindiff, stemevc, brs[nedge,1,:])::Float64
@@ -213,7 +213,7 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
@@ -221,7 +221,7 @@ function burn_compete(total_llf   ::Function,
       elseif up == 7
 
         # update λϕ1
-        λϕ1p = logupt(λϕ1c, ptn[7])::Float64
+        λϕ1p = mulupt(λϕ1c, ptn[7])::Float64
 
         # proposal likelihood and prior
         if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1p, λϕ0c, 
@@ -235,7 +235,7 @@ function burn_compete(total_llf   ::Function,
       elseif up == 8
 
         # update λϕ0
-        λϕ0p = logupt(λϕ0c, ptn[8])::Float64
+        λϕ0p = mulupt(λϕ0c, ptn[8])::Float64
 
         # proposal likelihood and prior
         if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1c, λϕ0p, 
@@ -249,7 +249,7 @@ function burn_compete(total_llf   ::Function,
       # if σ² is updated
       elseif up == 1         
 
-        σ²p = logupt(σ²c, ptn[1])::Float64
+        σ²p = mulupt(σ²c, ptn[1])::Float64
 
         #likelihood ratio
         llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c, σ²p)::Float64
@@ -304,7 +304,7 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
@@ -329,7 +329,7 @@ function burn_compete(total_llf   ::Function,
 
         # which internal node to update
         if rand() < 0.4
-          llc, stemevc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
         end
@@ -339,7 +339,7 @@ function burn_compete(total_llf   ::Function,
       ## make a branch updates with some Pr
       # make Y branch update
       if rand() < 2e-3
-        llc, stemevc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
+        llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
                           llc, prc, areavg, areaoc, linavg, lindiff, 
                           brs, stemevc)
