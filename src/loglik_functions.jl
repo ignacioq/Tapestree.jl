@@ -538,7 +538,9 @@ end
 
 
 """
-    stem_llr(stemc  ::Array{Int64,1},
+    stem_llr(λ1     ::Float64,
+             λ0     ::Float64,
+             stemc  ::Array{Int64,1},
              stemp  ::Array{Int64,1},
              stemevc::Array{Array{Float64,1},1},
              stemevp::Array{Array{Float64,1},1},
@@ -556,14 +558,14 @@ function stem_llr(λ1     ::Float64,
 
   @inbounds begin
 
-    llr = 0.0
+    ll::Float64 = 0.0
     for k in Base.OneTo(narea)
-      llr += brll(stemevp[k], λ1, λ0, stemp[k]) - 
-             brll(stemevc[k], λ1, λ0, stemc[k])
+      ll += brll(stemevp[k], λ1, λ0, stemp[k]) - 
+            brll(stemevc[k], λ1, λ0, stemc[k])
     end
   end
 
-  return llr::Float64
+  return ll::Float64
 end
 
 
@@ -573,8 +575,8 @@ end
 """
     stemiid_propr(λϕ1    ::Float64,
                   λϕ0    ::Float64,
-                  stemp  ::Array{Int64,1},
                   stemc  ::Array{Int64,1},
+                  stemp  ::Array{Int64,1},
                   stemevc::Array{Array{Float64,1},1},
                   stemevp::Array{Array{Float64,1},1},
                   narea  ::Int64) 
@@ -591,15 +593,16 @@ function stemiid_propr(λϕ1    ::Float64,
 
   @inbounds begin
 
-    llr = 0.0
+    ll::Float64 = 0.0
     for k in Base.OneTo(narea)
-      llr += brll(stemevc[k], λϕ1, λϕ0, stemc[k]) - 
-             brll(stemevp[k], λϕ1, λϕ0, stemp[k])
+      ll += brll(stemevc[k], λϕ1, λϕ0, stemc[k]) - 
+            brll(stemevp[k], λϕ1, λϕ0, stemp[k])
     end
   end
 
-  return llr::Float64
+  return ll::Float64
 end
+
 
 
 

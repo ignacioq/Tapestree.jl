@@ -478,7 +478,7 @@ function make_mhr_upd_Ystem(stbrl::Float64,
     end
 
     # update stem node and branch
-    upstemnode!(λϕ1c, λϕ1c, nedge, stemevp, brsp, stbrl, narea)
+    upstemnode!(λϕ1c, λϕ0c, nedge, stemevp, brsp, stbrl, narea)
 
     llr = stem_llr(λ1c, λ0c, 
                    brs[nedge,1,:], brsp[nedge,1,:], 
