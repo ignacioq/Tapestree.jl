@@ -450,18 +450,11 @@ end
 
 
 """
-  mhr_upd_Ystem(λ1c    ::Float64,
-                λ0c    ::Float64,
-                λϕ1c   ::Float64, 
-                λϕ0c   ::Float64,
-                llc    ::Float64,
-                stemevc::Array{Array{Float64,1},1},
-                brs    ::Array{Int64,3},
-                brl    ::Array{Float64,1},
-                narea  ::Int64,
-                nedge  ::Int64)
+    make_mhr_upd_Ystem(stbrl::Float64,
+                       narea::Int64,
+                       nedge::Int64)
 
-
+Perform MH update for stem node and branch.
 """
 function make_mhr_upd_Ystem(stbrl::Float64,
                             narea::Int64,
@@ -487,17 +480,15 @@ function make_mhr_upd_Ystem(stbrl::Float64,
     # update stem node and branch
     upstemnode!(λϕ1c, λϕ1c, nedge, stemevp, brsp, stbrl, narea)
 
-
-    llr = stem_llf() - stem_llf()
-
-bgiid_stem() - bgiid_stem()
+    llr = stem_llr(λ1c, λ0c, 
+                   brs[nedge,1,:], brsp[nedge,1,:], 
+                   stemevc, stemevp, narea)
 
     # likelihood ratio
     if -randexp() < (llr + 
-                     
-
-                     bgiid_br(Yc, stemevc, brs[nedge,1,:], nedge, λϕ1c, λϕ0c) - 
-                     bgiid_br(Yp, stemevc, brs[nedge,1,:], nedge, λϕ1c, λϕ0c))::Float64
+                     stemiid_propr(λϕ1c, λϕ0c, brs[nedge,1,:], brsp[nedge,1,:], 
+                                   stemevc, stemevp, narea))
+      
       llc += llr::Float64
       copy!(brs, brsp)
       for k in Base.OneTo(narea) 

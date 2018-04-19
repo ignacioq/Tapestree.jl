@@ -19,19 +19,20 @@ April 27 2017
 
 Burning & adaptive phase for MCMC.
 """
-function burn_compete(total_llf   ::Function,
-                      λupd_llr    ::Function,
-                      λϕupd_llr   ::Function,
-                      ω10upd_llr  ::Function,
-                      Xupd_llr    ::Function,
-                      Rupd_llr    ::Function,
-                      σ²ωxupd_llr ::Function,
-                      bgiid       ::Function,
-                      bgiid_br    ::Function,
-                      mhr_upd_Xbr ::Function,
-                      mhr_upd_Y   ::Function,
-                      mhr_upd_Ybr ::Function,
-                      mhr_upd_XYbr::Function,
+function burn_compete(total_llf    ::Function,
+                      λupd_llr     ::Function,
+                      λϕupd_llr    ::Function,
+                      ω10upd_llr   ::Function,
+                      Xupd_llr     ::Function,
+                      Rupd_llr     ::Function,
+                      σ²ωxupd_llr  ::Function,
+                      bgiid        ::Function,
+                      bgiid_br     ::Function,
+                      mhr_upd_Xbr  ::Function,
+                      mhr_upd_Y    ::Function,
+                      mhr_upd_Ybr  ::Function,
+                      mhr_upd_Ystem::Function,
+                      mhr_upd_XYbr ::Function,
                       Xc       ::Array{Float64,2},
                       Yc       ::Array{Int64,3},
                       areavg   ::Array{Float64,2},
@@ -357,6 +358,11 @@ function burn_compete(total_llf   ::Function,
                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
                            llc, prc, areavg, areaoc, linavg, lindiff, 
                            brs, stemevc)
+      end
+
+      # update stem node
+      if rand() < 2e-3
+        llc = mhr_upd_Ystem(λ1c, λ0c, λϕ1c, λϕ0c, llc, stemevc, brs)
       end
 
       # log number of updates

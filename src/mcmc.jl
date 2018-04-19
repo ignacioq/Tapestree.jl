@@ -162,22 +162,25 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
 
   # create update functions for Xbr, Y, Ybr and XYbr
-  mhr_upd_Xbr  = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
+  mhr_upd_Xbr   = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
                                   bridx, brδt, total_llf,
                                   σ²prior)
-  mhr_upd_Y    = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
+  mhr_upd_Y     = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
                                 wcol, total_llf, bgiid)
-  mhr_upd_Ybr  = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
+  mhr_upd_Ybr   = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
                                   brδt, brl, wcol,total_llf, bgiid_br)
-  mhr_upd_XYbr = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
+  mhr_upd_Ystem = make_mhr_upd_Ystem(stbrl, narea, nedge)
+  mhr_upd_XYbr  = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
                                    bridx, bridx_a, brδt, brl, wcol, 
                                    total_llf, bgiid_br, σ²prior)
+
 
   # burning phase
   llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff,
   stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, λϕ1c, λϕ0c, ptn = burn_compete(
     total_llf, λupd_llr, λϕupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
-    bgiid, bgiid_br, mhr_upd_Xbr, mhr_upd_Y, mhr_upd_Ybr, mhr_upd_XYbr,
+    bgiid, bgiid_br, 
+    mhr_upd_Xbr, mhr_upd_Y, mhr_upd_Ybr, mhr_upd_Ystem, mhr_upd_XYbr,
     Xc, Yc, areavg, areaoc, linavg, lindiff,
     σ²i, ωxi, ω1i, ω0i, λ1i, λ0i, λϕ1i, λϕ0i,
     Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
@@ -325,6 +328,11 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                              Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1c, λϕ0c,
                              llc, prc, areavg, areaoc, linavg, lindiff, 
                              brs, stemevc)
+        end
+
+        # update stem branch
+        if rand() < 2e-3
+          llc = mhr_upd_Ystem(λ1c, λ0c, λϕ1c, λϕ0c, llc, stemevc, brs)
         end
 
       end

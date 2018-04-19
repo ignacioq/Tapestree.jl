@@ -480,6 +480,8 @@ end
 
 
 
+
+
 """
     makellf_biogeo_upd_iid_br(bridx_a::Array{Array{Array{Int64,1},1},1}, δt::Array{Float64,1}, narea::Int64, nedge::Int64, m::Int64)
 
@@ -531,6 +533,73 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
   return f
 end
 
+
+
+
+
+"""
+    stem_llr(stemc  ::Array{Int64,1},
+             stemp  ::Array{Int64,1},
+             stemevc::Array{Array{Float64,1},1},
+             stemevp::Array{Array{Float64,1},1},
+             narea  ::Int64)
+
+Estimate likelihood ratio for stem branch.
+"""
+function stem_llr(λ1     ::Float64,
+                  λ0     ::Float64,
+                  stemc  ::Array{Int64,1},
+                  stemp  ::Array{Int64,1},
+                  stemevc::Array{Array{Float64,1},1},
+                  stemevp::Array{Array{Float64,1},1},
+                  narea  ::Int64)
+
+  @inbounds begin
+
+    llr = 0.0
+    for k in Base.OneTo(narea)
+      llr += brll(stemevp[k], λ1, λ0, stemp[k]) - 
+             brll(stemevc[k], λ1, λ0, stemc[k])
+    end
+  end
+
+  return llr::Float64
+end
+
+
+
+
+
+"""
+    stemiid_propr(λϕ1    ::Float64,
+                  λϕ0    ::Float64,
+                  stemp  ::Array{Int64,1},
+                  stemc  ::Array{Int64,1},
+                  stemevc::Array{Array{Float64,1},1},
+                  stemevp::Array{Array{Float64,1},1},
+                  narea  ::Int64) 
+
+Proposal ratio for stem.
+"""
+function stemiid_propr(λϕ1    ::Float64,
+                       λϕ0    ::Float64,
+                       stemc  ::Array{Int64,1},
+                       stemp  ::Array{Int64,1},
+                       stemevc::Array{Array{Float64,1},1},
+                       stemevp::Array{Array{Float64,1},1},
+                       narea  ::Int64)
+
+  @inbounds begin
+
+    llr = 0.0
+    for k in Base.OneTo(narea)
+      llr += brll(stemevc[k], λϕ1, λϕ0, stemc[k]) - 
+             brll(stemevp[k], λϕ1, λϕ0, stemp[k])
+    end
+  end
+
+  return llr::Float64
+end
 
 
 
