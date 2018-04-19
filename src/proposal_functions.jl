@@ -230,6 +230,90 @@ end
 #=
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Y stem node proposal function
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+=#
+
+"""
+    upstemnode!(λ1   ::Float64, 
+                λ0   ::Float64,
+                nedge::Int64,
+                stemevs::Array{Array{Float64,1},1},
+                brs  ::Array{Int64,3},
+                brl  ::Array{Float64,1},
+                narea::Int64)
+
+
+"""
+function upstemnode!(λ1     ::Float64, 
+                     λ0     ::Float64,
+                     nedge  ::Int64,
+                     stemevs::Array{Array{Float64,1},1},
+                     brs    ::Array{Int64,3},
+                     stbrl  ::Float64,
+                     narea  ::Int64)
+
+  @inbounds begin
+
+    # sample
+    samplestem!(λ1, λ0, nedge, brs, stbrl, narea)
+
+    # save extinct
+    while sum(brs[nedge,1,:]) < 1
+      samplestem!(λ1, λ0, nedge, brs, stbrl, narea)
+    end
+
+    # sample a congruent history
+    br_samp!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, stbrl, narea)
+
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    samplestem!(λ1   ::Float64, 
+                λ0   ::Float64,
+                nedge::Int64,
+                brs  ::Array{Int64,3},
+                brl  ::Array{Float64,1},
+                narea::Int64)
+
+
+"""
+function samplestem!(λ1   ::Float64, 
+                     λ0   ::Float64,
+                     nedge::Int64,
+                     brs  ::Array{Int64,3},
+                     stbrl::Float64,
+                     narea::Int64)
+
+ @inbounds begin
+
+    for j = Base.OneTo(narea)
+
+      # estimate transition probabilities
+      p1, p2 = Ptrfast_end(λ1, λ0, stbrl, brs[nedge,2,j])
+
+      # sample the node's character
+      brs[nedge,1,j] = coinsamp(normlize(p1,p2))::Int64
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
+#=
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 Y branch proposal functions
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

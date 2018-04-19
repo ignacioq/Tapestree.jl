@@ -35,7 +35,6 @@ function br_samp!(evs   ::Array{Array{Float64,1},1},
   #time history
   mult_rejsam!(evs, ssii, ssff, λ1, λ0, t, narea)
 
-  ntries = 1
   while ifext(evs, ssii, narea, t)
     mult_rejsam!(evs, ssii, ssff, λ1, λ0, t, narea)
   end
