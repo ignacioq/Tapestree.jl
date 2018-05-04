@@ -35,6 +35,7 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
 
 
 
+
 """
     logdnorm_tc(x::Float64, μ::Float64, σ²::Float64)
 
@@ -73,10 +74,28 @@ logdhcau1(x::Float64) =
 """
     rexp(λ::Float64)
 
-Generate one sample from a random **Exponential** variable
+Generate one random sample from a **Exponential** distribution
 with mean `λ`. 
 """
 rexp(λ::Float64) = (randexp()/λ)::Float64
+
+
+
+
+
+"""
+    λϕprop()
+
+Generate proportional proposals for λ 
+using random samples from **LogNormal** distributions. 
+"""
+function λϕprop() 
+
+  lg = exp(randn())
+
+  return lg*exp(randn()*0.1 - 0.0049751654265839124),
+         lg*exp(randn()*0.1 - 0.0049751654265839124) 
+end
 
 
 

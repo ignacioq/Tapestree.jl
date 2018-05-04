@@ -175,9 +175,9 @@ function brprop!(times::Array{Float64,1},
                  t    ::Float64)
   empty!(times)
 
-  c_st   ::Int64            = si
-  c_time ::Float64          = 0.0
-  endtime::Float64          = t
+  c_st   ::Int64   = si
+  c_time ::Float64 = 0.0
+  endtime::Float64 = t
 
   re::Float64 = c_st == 0 ? rexp(λ1) : rexp(λ0)
 

@@ -50,7 +50,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
              areaoc ::Array{Int64,2})
 
     @inbounds begin
-      upx = wXp[up - 8]::Int64                 # X indexing
+      upx = wXp[up - 6]::Int64                 # X indexing
 
       xi, xj = ind2sub(Xc, upx)
 
@@ -203,8 +203,8 @@ function make_mhr_upd_Y(narea              ::Int64,
              ω1c    ::Float64, 
              ω0c    ::Float64,
              σ²c    ::Float64,
-             λϕ1c   ::Float64,
-             λϕ0c   ::Float64,
+             λϕ1   ::Float64,
+             λϕ0   ::Float64,
              llc    ::Float64,
              prc    ::Float64,
              areavg ::Array{Float64,2},
@@ -227,7 +227,7 @@ function make_mhr_upd_Y(narea              ::Int64,
     end
 
     # if an efficient sample
-    if upnode!(λϕ1c, λϕ0c, triad, Yp, stemevp,
+    if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
                bridx_a, brδt, brl, brsp, narea, nedge) === nothing
 
       area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
@@ -239,8 +239,8 @@ function make_mhr_upd_Y(narea              ::Int64,
                        stemevc, brs[nedge,1,:], σ²c))::Float64
 
       if -randexp() < (llr + 
-                       bgiid(Yc, stemevc, brs[nedge,1,:],  triad, λϕ1c, λϕ0c) - 
-                       bgiid(Yp, stemevp, brsp[nedge,1,:], triad, λϕ1c, λϕ0c))
+                       bgiid(Yc, stemevc, brs[nedge,1,:],  triad, λϕ1, λϕ0) - 
+                       bgiid(Yp, stemevp, brsp[nedge,1,:], triad, λϕ1, λϕ0))
 
         llc += llr
         copy!(Yc,           Yp)
@@ -299,8 +299,8 @@ function make_mhr_upd_Ybr(narea              ::Int64,
              ω1c    ::Float64, 
              ω0c    ::Float64,
              σ²c    ::Float64,
-             λϕ1c   ::Float64,
-             λϕ0c   ::Float64,
+             λϕ1   ::Float64,
+             λϕ0   ::Float64,
              llc    ::Float64,
              prc    ::Float64,
              areavg ::Array{Float64,2},
@@ -321,8 +321,8 @@ function make_mhr_upd_Ybr(narea              ::Int64,
     end
 
     # if an efficient sample
-    if upbranchY!(λϕ1c, λϕ0c, br, Yp, stemevp, 
-                  bridx_a, brδt, brl, brs, narea, nedge) === nothing
+    if upbranchY!(λϕ1, λϕ0, br, Yp, stemevp, 
+                  bridx_a, brδt, brl[nedge], brs, narea, nedge) === nothing
 
       area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
       linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
@@ -333,8 +333,8 @@ function make_mhr_upd_Ybr(narea              ::Int64,
                        stemevc, brs[nedge,1,:], σ²c))::Float64
 
       if -randexp() < (llr + 
-                       bgiid_br(Yc, stemevc, brs[nedge,1,:], br, λϕ1c, λϕ0c) - 
-                       bgiid_br(Yp, stemevp, brs[nedge,1,:], br, λϕ1c, λϕ0c))
+                       bgiid_br(Yc, stemevc, brs[nedge,1,:], br, λϕ1, λϕ0) - 
+                       bgiid_br(Yp, stemevp, brs[nedge,1,:], br, λϕ1, λϕ0))
         llc  += llr::Float64
         copy!(Yc,      Yp)
         copy!(areavg,  aa)
@@ -392,8 +392,8 @@ function make_mhr_upd_XYbr(narea              ::Int64,
              ω1c    ::Float64,
              ω0c    ::Float64,
              σ²c    ::Float64,
-             λϕ1c   ::Float64, 
-             λϕ0c   ::Float64,
+             λϕ1   ::Float64, 
+             λϕ0   ::Float64,
              llc    ::Float64,
              prc    ::Float64,
              areavg ::Array{Float64,2},
@@ -411,8 +411,8 @@ function make_mhr_upd_XYbr(narea              ::Int64,
     copy!(ld, lindiff)
 
   # if an efficient sample
-    if upbranchY!(λϕ1c, λϕ0c, br, Yp, stemevc, 
-                  bridx_a, brδt, brl, brs, narea, nedge) === nothing
+    if upbranchY!(λϕ1, λϕ0, br, Yp, stemevc, 
+                  bridx_a, brδt, brl[nedge], brs, narea, nedge) === nothing
 
       upbranchX!(br, Xp, bridx, brδt, σ²c)
 
@@ -425,8 +425,8 @@ function make_mhr_upd_XYbr(narea              ::Int64,
                       stemevc, brs[nedge,1,:], σ²c)
 
       if -randexp() < (llr + 
-                       bgiid_br(Yc, stemevc, brs[nedge,1,:], br, λϕ1c, λϕ0c) - 
-                       bgiid_br(Yp, stemevc, brs[nedge,1,:], br, λϕ1c, λϕ0c) +
+                       bgiid_br(Yc, stemevc, brs[nedge,1,:], br, λϕ1, λϕ0) - 
+                       bgiid_br(Yp, stemevc, brs[nedge,1,:], br, λϕ1, λϕ0) +
                        llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
         llc += llr::Float64
         copy!(Xc,      Xp)
@@ -465,8 +465,8 @@ function make_mhr_upd_Ystem(stbrl::Float64,
 
   function f(λ1c    ::Float64,
              λ0c    ::Float64,
-             λϕ1c   ::Float64, 
-             λϕ0c   ::Float64,
+             λϕ1   ::Float64, 
+             λϕ0   ::Float64,
              llc    ::Float64,
              stemevc::Array{Array{Float64,1},1},
              brs    ::Array{Int64,3})
@@ -478,25 +478,28 @@ function make_mhr_upd_Ystem(stbrl::Float64,
     end
 
     # update stem node and branch
-    upstemnode!(λϕ1c, λϕ0c, nedge, stemevp, brsp, stbrl, narea)
+    if upstemnode!(λϕ1, λϕ0, nedge, stemevp, brsp, stbrl, narea) === nothing
 
-    llr = stem_llr(λ1c, λ0c, 
-                   brs[nedge,1,:], brsp[nedge,1,:], 
-                   stemevc, stemevp, narea)
+      llr = stem_llr(λ1c, λ0c, 
+                     brs[nedge,1,:], brsp[nedge,1,:], 
+                     stemevc, stemevp, narea)
 
-    # likelihood ratio
-    if -randexp() < (llr + 
-                     stemiid_propr(λϕ1c, λϕ0c, brs[nedge,1,:], brsp[nedge,1,:], 
-                                   stemevc, stemevp, narea))
-      
-      llc += llr::Float64
-      copy!(brs, brsp)
-      for k in Base.OneTo(narea) 
-        stemevc[k] = copy(stemevp[k])
+      # likelihood ratio
+      if -randexp() < (llr + 
+                       stemiid_propr(λϕ1, λϕ0, brs[nedge,1,:], brsp[nedge,1,:], 
+                                     stemevc, stemevp, narea))
+        
+        llc += llr::Float64
+        copy!(brs, brsp)
+        for k in Base.OneTo(narea) 
+          stemevc[k] = copy(stemevp[k])
+        end
       end
-    end
 
-    return llc::Float64
+      return llc::Float64
+    else
+      return llc::Float64
+    end
   end
   
   return f::Function
@@ -749,68 +752,6 @@ function mhr_upd_λ0(λ0c     ::Float64,
   end
 
   return (llc, prc, λ0c)::Tuple{Float64,Float64,Float64}
-end
-
-
-
-
-
-
-"""
-    mhr_upd_λϕ1(...)
-
-Update λϕ1.
-"""
-function mhr_upd_λϕ1(λϕ1c     ::Float64,
-                     Yc       ::Array{Int64,3},
-                     λϕ0c     ::Float64,
-                     stemevc  ::Array{Array{Float64,1},1},
-                     stemss   ::Array{Int64,1},
-                     λϕprior  ::Float64,
-                     λϕ1tn    ::Float64,
-                     λϕupd_llr::Function)
-
-  # update λ
-  λϕ1p = mulupt(λϕ1c, λϕ1tn)::Float64
-
-  if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1p, λϕ0c, stemevc, stemss) + 
-                   logdexp(λϕ1p, λϕprior) - logdexp(λϕ1c, λϕprior)        + 
-                   log(λϕ1p) - log(λϕ1c))
-    λϕ1c = λϕ1p::Float64
-  end
-
-  return λϕ1c::Float64
-end
-
-
-
-
-
-"""
-    mhr_upd_λϕ0(...)
-
-Update λϕ0.
-"""
-function mhr_upd_λϕ0(λϕ0c     ::Float64,
-                     Yc       ::Array{Int64,3},
-                     λϕ1c     ::Float64,
-                     stemevc  ::Array{Array{Float64,1},1},
-                     stemss   ::Array{Int64,1},
-                     λϕprior  ::Float64,
-                     λϕ0tn    ::Float64,
-                     λϕupd_llr::Function)
-
-  # update λ
-  λϕ0p = mulupt(λϕ0c, λϕ0tn)::Float64
-
-  # proposal likelihood and prior
-  if -randexp() < (λϕupd_llr(Yc, λϕ1c, λϕ0c, λϕ1c, λϕ0p, stemevc, stemss) + 
-                   logdexp(λϕ0p, λϕprior) - logdexp(λϕ0c, λϕprior)        + 
-                   log(λϕ0p) - log(λϕ0c))
-    λϕ0c = λϕ0p::Float64
-  end
-
-  return λϕ0c::Float64
 end
 
 

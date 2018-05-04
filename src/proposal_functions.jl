@@ -85,7 +85,7 @@ function upnode!(λ1     ::Float64,
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                    stemevs, brl[nedge])
       ntries += 1
-      if ntries == 50_000
+      if ntries == 1_000
         return true
       end
     end
@@ -265,12 +265,24 @@ function upstemnode!(λ1     ::Float64,
     end
 
     # sample a congruent history
-    br_samp!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, stbrl, narea)
+    mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
+                 stbrl, narea)
 
+    ntries = 1
+    # check if extinct
+    while ifext(stemevs, brs[nedge,1,:], narea, stbrl)
+      mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
+                   stbrl, narea)
+      ntries += 1
+      if ntries == 1_000
+        return true
+      end
+    end
   end
 
   return nothing
 end
+
 
 
 
@@ -351,25 +363,37 @@ function upbranchY!(λ1     ::Float64,
                     stemevs::Array{Array{Float64,1},1},
                     bridx_a::Array{Array{UnitRange{Int64},1},1},
                     brδt   ::Vector{Vector{Float64}},
-                    brl    ::Vector{Float64},
+                    stbrl  ::Float64,
                     brs    ::Array{Int64,3},
                     narea  ::Int64,
                     nedge  ::Int64)
 
+  ntries = 1
+
   # if stem branch
   if br == nedge
-    br_samp!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
-             brl[nedge], narea)
+    mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
+                 stbrl, narea)
+
+    # check if extinct
+    while ifext(stemevs, brs[nedge,1,:], narea, stbrl)
+      mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
+                 stbrl, narea)
+      ntries += 1
+      if ntries == 1_000
+        return true
+      end
+    end
+
   else 
     # sample a consistent history
     createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
 
-    ntries = 1
     # check if extinct
     while ifextY(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
       ntries += 1
-      if ntries == 50_000
+      if ntries == 1_000
         return true
       end
     end
