@@ -228,7 +228,7 @@ function make_mhr_upd_Y(narea              ::Int64,
 
     # if an efficient sample
     if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
-               bridx_a, brδt, brl, brsp, narea, nedge) === nothing
+               bridx_a, brδt, brl, brsp, narea, nedge)
 
       area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
       linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
@@ -322,7 +322,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
 
     # if an efficient sample
     if upbranchY!(λϕ1, λϕ0, br, Yp, stemevp, 
-                  bridx_a, brδt, brl[nedge], brs, narea, nedge) === nothing
+                  bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
       area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
       linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
@@ -478,7 +478,7 @@ function make_mhr_upd_Ystem(stbrl::Float64,
     end
 
     # update stem node and branch
-    if upstemnode!(λϕ1, λϕ0, nedge, stemevp, brsp, stbrl, narea) === nothing
+    if upstemnode!(λϕ1, λϕ0, nedge, stemevp, brsp, stbrl, narea)
 
       llr = stem_llr(λ1c, λ0c, 
                      brs[nedge,1,:], brsp[nedge,1,:], 
