@@ -412,7 +412,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
 
   # if an efficient sample
     if upbranchY!(λϕ1, λϕ0, br, Yp, stemevc, 
-                  bridx_a, brδt, brl[nedge], brs, narea, nedge) === nothing
+                  bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
       upbranchX!(br, Xp, bridx, brδt, σ²c)
 
@@ -444,6 +444,9 @@ function make_mhr_upd_XYbr(narea              ::Int64,
   end
 
 end
+
+
+
 
 
 

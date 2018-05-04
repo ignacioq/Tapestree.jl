@@ -228,7 +228,7 @@ function ifextY(Y      ::Array{Int64,3},
                 stemevs::Array{Array{Float64,1},1},
                 triad  ::Array{Int64,1},
                 sstem  ::Array{Int64,1},
-                strbl  ::Float64,
+                stbrl  ::Float64,
                 narea  ::Int64,
                 bridx_a::Array{Array{UnitRange{Int64},1},1},
                 nedge  ::Int64)
@@ -237,16 +237,14 @@ function ifextY(Y      ::Array{Int64,3},
 
     if triad[1] == nedge
       ifext_cont(stemevs, sstem, narea, stbrl) && return true::Bool
-
       for k in triad[2:3]
         ifext_disc(Y, k, narea, bridx_a) && return true::Bool
       end
     else 
-
-    for k in triad
-      ifext_disc(Y, k, narea, bridx_a) && return true::Bool
+      for k in triad
+        ifext_disc(Y, k, narea, bridx_a) && return true::Bool
+      end
     end
-
   end
 
   return false::Bool
@@ -290,7 +288,7 @@ function ifext_cont(t_hist::Array{Array{Float64,1},1},
         tc += ts
         if ioct < tc 
           if cs == 1
-            ioct  ::Float64 = tc 
+            ioct            = tc 
             ntries::Int64   = 0
             break
           else
@@ -499,7 +497,7 @@ function upbranchY!(λ1     ::Float64,
                     narea  ::Int64,
                     nedge  ::Int64)
 
-  ntries::Int = 1
+  ntries::Int64 = 1
 
   # if stem branch
   if br == nedge
@@ -525,7 +523,7 @@ function upbranchY!(λ1     ::Float64,
       createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
       ntries += 1
       if ntries == 1_000
-        return false:Bool
+        return false::Bool
       end
     end
   end
