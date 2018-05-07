@@ -93,8 +93,8 @@ function λϕprop()
 
   lg = exp(randn())
 
-  return lg*exp(randn()*0.1 - 0.0049751654265839124),
-         lg*exp(randn()*0.1 - 0.0049751654265839124) 
+  return lg*exp(randn()*0.3 - 0.044),
+         lg*exp(randn()*0.3 - 0.044) 
 end
 
 
