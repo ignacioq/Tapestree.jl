@@ -37,7 +37,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
                       λprior  ::Float64           = 1e-1,
                       λϕprior ::Float64          = 1e-1,
                       out_file::String            = "compete_results",
-                      weight  ::NTuple{6,Float64} = (0.15,0.05,0.02,0.02,0.02,5e-3),
+                      weight  ::NTuple{5,Float64} = (0.15,0.05,0.02,0.02,5e-3),
                       σ²i     ::Float64           = 1.,
                       ωxi     ::Float64           = 0.,
                       ω1i     ::Float64           = 0.,
@@ -117,7 +117,9 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   # Sample all internal node values according to Pr transitions
   for triad in trios
     λϕ1, λϕ0 = λϕprop()
-    upnode!(λϕ1, λϕ0, triad, Yc, stemevc, bridx_a, brδt, brl, brs, narea, nedge)
+    while !upnode!(λϕ1, λϕ0, triad, Yc, stemevc, bridx_a, brδt, brl, brs, narea, nedge)
+      λϕ1, λϕ0 = λϕprop()
+    end
   end
 
   # allocate current area & lineage means, area occupancy & lineage specific means
@@ -153,7 +155,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
   append!(parvec, fill(2,ceil(Int64,np*weight[2])))
   append!(parvec, repeat(3:4,  inner = ceil(Int64,np*weight[3])))
   append!(parvec, repeat(5:6,  inner = ceil(Int64,np*weight[4])))
-  append!(parvec, repeat(7:np, inner = ceil(Int64,np*weight[6])))
+  append!(parvec, repeat(7:np, inner = ceil(Int64,np*weight[5])))
 
   # if fixed ωx, ω1 or ω0, then remove
   fix_ωx && filter!(x -> x ≠ 2, parvec)
@@ -201,22 +203,24 @@ function compete_mcmc(Xc      ::Array{Float64,2},
     const Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
   end
 
-  # progess bar
+  # progress bar
   p = Progress(niter, dt=5, desc="mcmc...", barlen=20, color=:green)
 
-  # create parameter update functions
+  # create X parameter update function
   mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
                              narea, ntip, Xupd_llr, Rupd_llr)
 
-  #=
-  start MCMC
-  =#
-
+  # write to file
   open(out_file*".log", "w")
 
   open(out_file*".log", "a") do f
 
     print(f, "iteration\tlikelihood\tprior\tomega_x\tomega_1\tomega_0\tsigma2\tlambda_1\tlambda_0\tcollision_probability\n")
+
+
+  #=
+  start MCMC
+  =#
 
     for it = Base.OneTo(niter)
 
@@ -239,7 +243,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
@@ -254,7 +257,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
@@ -278,7 +280,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
@@ -292,7 +293,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-
             llc = mhr_upd_Y(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
@@ -302,9 +302,7 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         ## make a branch updates with some Pr
         # make Y branch update
         if rand() < 2e-3
-
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
                             llc, prc, areavg, areaoc, linavg, lindiff, 
@@ -320,10 +318,8 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         # make joint X & Y branch update
         if rand() < 2e-3
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                             λϕ1, λϕ0,
+                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
                              llc, prc, areavg, areaoc, linavg, lindiff, 
                              brs, stemevc)
         end
@@ -331,7 +327,6 @@ function compete_mcmc(Xc      ::Array{Float64,2},
         # update stem branch
         if rand() < 2e-3
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ystem(λ1c, λ0c, λϕ1, λϕ0, llc, stemevc, brs)
         end
 

@@ -68,7 +68,7 @@ function burn_compete(total_llf    ::Function,
 
   const m, ntip, narea  = size(Yc)
 
-  const nedge = size(brs,1) 
+  const nedge = size(brs, 1) 
 
   # likelihood and prior
   llc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
@@ -100,10 +100,10 @@ function burn_compete(total_llf    ::Function,
 
   # print number of parameters
   print_with_color(:green,
-    "\nσ² updates per iter = ", endof(filter(x -> x == 1,parvec)),
     "\nωx updates per iter = ", endof(filter(x -> x == 2,parvec)),
     "\nω1 updates per iter = ", endof(filter(x -> x == 3,parvec)),
     "\nω0 updates per iter = ", endof(filter(x -> x == 4,parvec)),
+    "\nσ² updates per iter = ", endof(filter(x -> x == 1,parvec)),
     "\nλ1 updates per iter = ", endof(filter(x -> x == 5,parvec)),
     "\nλ0 updates per iter = ", endof(filter(x -> x == 6,parvec)),
     "\nθ  updates per iter = ", length(parvec), "\n")

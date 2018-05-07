@@ -483,15 +483,13 @@ function make_mhr_upd_Ystem(stbrl::Float64,
     # update stem node and branch
     if upstemnode!(λϕ1, λϕ0, nedge, stemevp, brsp, stbrl, narea)
 
-      llr = stem_llr(λ1c, λ0c, 
-                     brs[nedge,1,:], brsp[nedge,1,:], 
+      llr = stem_llr(λ1c, λ0c, brs[nedge,1,:], brsp[nedge,1,:], 
                      stemevc, stemevp, narea)
 
       # likelihood ratio
       if -randexp() < (llr + 
                        stemiid_propr(λϕ1, λϕ0, brs[nedge,1,:], brsp[nedge,1,:], 
                                      stemevc, stemevp, narea))
-        
         llc += llr::Float64
         copy!(brs, brsp)
         for k in Base.OneTo(narea) 
@@ -507,8 +505,6 @@ function make_mhr_upd_Ystem(stbrl::Float64,
   
   return f::Function
 end
-
-
 
 
 
