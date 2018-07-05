@@ -20,7 +20,7 @@ Parses command line arguments to be used in compete
 """
 function parse_commandline()
 
-  s = ArgParseSettings(prog        = "Compete",
+  s = ArgParseSettings(prog        = "Tapestree",
                        description = "Inference of competition on trait evolution along biogeographic history",
                        version     = "0.1",
                        add_version = true)
@@ -115,7 +115,7 @@ end
 # parse commands
 comp_args = parse_commandline()
 
-using Compete
+using Tapestree
 
 # run compete
 compete(comp_args[:tree_file], 

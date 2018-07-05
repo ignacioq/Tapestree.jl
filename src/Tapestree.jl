@@ -12,11 +12,11 @@ __precompile__()
 
 """
 
-Compete package
+Tapestree package
 
 """
 
-module Compete
+module Tapestree
 
   export compete
   export simulate_compete
@@ -36,4 +36,4 @@ module Compete
   include("compete_wrapper.jl")
   include("sim_utils.jl")
 
-end # module Compete
+end # module Tapestree

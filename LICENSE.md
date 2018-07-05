@@ -1,4 +1,4 @@
-The Compete.jl package is licensed under the GNU Public License, Version 2.0+:
+The Tapestree.jl package is licensed under the GNU Public License, Version 2.0+:
 
 > Copyright (c) 2017: Ignacio Quintero.
 > This program is free software; you can redistribute it and/or modify
