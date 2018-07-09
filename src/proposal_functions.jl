@@ -586,6 +586,44 @@ X proposal functions
 
 
 
+"""
+    uptrioX!(j    ::Int64, 
+               X    ::Array{Float64,2}, 
+               bridx::Array{UnitRange{Int64},1},
+               brδt ::Array{Array{Float64,1},1}, 
+               σ²c  ::Float64)
+
+Update a branch j in X using a Brownian bridge.
+"""
+function uptrioX!(trio    ::Array{Int64,1}, 
+                  X    ::Array{Float64,2}, 
+                  bridx::Array{UnitRange{Int64},1},
+                  brδt ::Array{Array{Float64,1},1},
+                  s2   ::Float64)
+  @inbounds 
+
+    pr, d1, d2 = trio
+
+    # update node
+    X[bridx[pr][end]] = 
+    X[bridx[d1][1]]   = 
+    X[bridx[d2][1]]   = addupt(X[bridx[trio[3]]][1], rand())
+
+    bbX!(X, bridx[pr], brδt[pr], s2)
+    bbX!(X, bridx[d1], brδt[d1], s2)
+    bbX!(X, bridx[d2], brδt[d2], s2)
+
+  end
+
+  return nothing
+end
+
+
+
+
+
+
+
 
 """
     upbranchX!(j    ::Int64, 

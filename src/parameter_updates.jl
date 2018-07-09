@@ -170,6 +170,79 @@ end
 
 
 
+
+
+
+
+"""
+    make_mhr_upd_Xtrio(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
+
+Make X trio DA update for a node and adjacent branches using BB proposals.
+"""
+function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
+                            m                  ::Int64,
+                            narea              ::Int64,
+                            ntip               ::Int64,
+                            nedge              ::Int64,
+                            bridx              ::Array{UnitRange{Int64},1},
+                            brδt               ::Array{Array{Float64,1},1},
+                            total_llf          ::Function,
+                            σ²prior            ::Float64)
+
+  const Xp = zeros(m, ntip)
+  const aa = zeros(m, narea)
+  const la = zeros(m, ntip)
+  const ld = zeros(m, ntip, narea)
+
+  function f(trio   ::Array{Int64,1},
+             Xc     ::Array{Float64,2},
+             Yc     ::Array{Int64,3},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             ωxc    ::Float64, 
+             ω1c    ::Float64, 
+             ω0c    ::Float64,
+             σ²c    ::Float64,
+             llc    ::Float64,
+             areavg ::Array{Float64,2},
+             linavg ::Array{Float64,2},
+             lindiff::Array{Float64,3},
+             areaoc ::Array{Int64,2},
+             brs    ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1})
+
+    copy!(Xp, Xc)
+    copy!(aa, areavg)
+    copy!(la, linavg)
+    copy!(ld, lindiff)
+
+    uptrioX!(trio, Xp, bridx, brδt, σ²c)
+
+    area_lineage_means!(aa, la, areaoc, Xp, Yc, wcol, m, narea)
+    linarea_diff!(ld, Xp, aa, areaoc, narea, ntip, m)
+
+    llr = (total_llf(Xp, Yc, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c) - 
+           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+                     stemevc, brs[nedge,1,:], σ²c))::Float64
+
+    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+      llc += llr::Float64
+      copy!(Xc,      Xp)
+      copy!(areavg,  aa)
+      copy!(linavg,  la)
+      copy!(lindiff, ld)
+    end
+
+    return llc::Float64
+  end
+
+end
+
+
+
+
+
 """
     make_mhr_upd_Y(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
 
