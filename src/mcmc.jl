@@ -219,9 +219,9 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
     print(f, "iteration\tlikelihood\tprior\tomega_x\tomega_1\tomega_0\tsigma2\tlambda_1\tlambda_0\tcollision_probability\n")
 
 
-  #=
-  start MCMC
-  =#
+    #=
+    start MCMC
+    =#
 
     for it = Base.OneTo(niter)
 
@@ -310,6 +310,14 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                             brs, stemevc)
         end
 
+        # make X trio update
+        if rand() < 2e-3
+          llc = mhr_upd_Xtrio(rand(trios),
+                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                            areavg, linavg, lindiff, areaoc, brs, stemevc)
+        end
+
+        # make X branch update
         if rand() < 2e-3
           llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 

@@ -584,7 +584,9 @@ X proposal functions
 
 
 """
-    uptrioX!(trio ::Array{Int64,1}, 
+    uptrioX!(pr   ::Int64, 
+             d1   ::Int64,
+             d2   ::Int64, 
              X    ::Array{Float64,2}, 
              bridx::Array{UnitRange{Int64},1},
              brδt ::Array{Array{Float64,1},1}, 
@@ -598,15 +600,16 @@ function uptrioX!(pr   ::Int64,
                   X    ::Array{Float64,2}, 
                   bridx::Array{UnitRange{Int64},1},
                   brδt ::Array{Array{Float64,1},1},
-                  s2   ::Float64)
+                  s2   ::Float64, 
+                  nedge::Int64)
   @inbounds begin
 
     # update node
     X[bridx[pr][end]] = 
     X[bridx[d1][1]]   = 
-    X[bridx[d2][1]]   = addupt(X[bridx[trio[3]]][1], rand())
+    X[bridx[d2][1]]   = addupt(X[bridx[d1][1]], rand())
 
-    bbX!(X, bridx[pr], brδt[pr], s2)
+    pr != nedge && bbX!(X, bridx[pr], brδt[pr], s2)
     bbX!(X, bridx[d1], brδt[d1], s2)
     bbX!(X, bridx[d2], brδt[d2], s2)
 

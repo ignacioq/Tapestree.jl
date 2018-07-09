@@ -216,7 +216,7 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
 
     pr, d1, d2 = trio
 
-    uptrioX!(p2, d1, d2, Xp, bridx, brδt, σ²c)
+    uptrioX!(pr, d1, d2, Xp, bridx, brδt, σ²c, nedge)
 
     area_lineage_means!(aa, la, areaoc, Xp, Yc, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, areaoc, narea, ntip, m)
@@ -227,7 +227,8 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
     if -randexp() < (llr + 
-                     llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²c) +
+                     (pr != nedge ? 
+                        llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²c):0.0) +
                      llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²c) +
                      llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²c))::Float64
       llc += llr::Float64

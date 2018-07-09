@@ -316,14 +316,20 @@ function burn_tribe(total_llf    ::Function,
       # make Y branch update
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
-
         llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                          λϕ1, λϕ0,
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
                           llc, prc, areavg, areaoc, linavg, lindiff, 
                           brs, stemevc)
       end
 
+      # make X trio update
+      if rand() < 2e-3
+        llc = mhr_upd_Xtrio(rand(trios),
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                          areavg, linavg, lindiff, areaoc, brs, stemevc)
+      end
+
+      # make X branch update
       if rand() < 2e-3
         llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
@@ -333,7 +339,6 @@ function burn_tribe(total_llf    ::Function,
       # make joint X & Y branch update
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
-
         llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
                            λϕ1, λϕ0,
@@ -344,7 +349,6 @@ function burn_tribe(total_llf    ::Function,
       # update stem node
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
-
         llc = mhr_upd_Ystem(λ1c, λ0c, λϕ1, λϕ0, llc, stemevc, brs)
       end
 
