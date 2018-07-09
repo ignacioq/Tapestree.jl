@@ -156,6 +156,7 @@ end
 
 
 
+
 """
     bitvectorll(y ::Array{Int64,1}, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, Δx::Array{Float64,1}, δt::Array{Float64,1})
 
@@ -171,30 +172,53 @@ function bitvectorll(y ::Array{Int64,1},
                      δt::Array{Float64,1})
 
   ll::Float64 = 0.0
+  i ::Int64   = 1
+  ly::Int64   = endof(y)
 
   @inbounds begin
 
-    cur_s::Int64 = y[1]
+    if iszero(y[1])
 
-    if cur_s == 0 
-      cur_λ, cur_ω = λ1, ω1
-    else
-      cur_λ, cur_ω = λ0, ω0
-    end
-
-    for i = Base.OneTo(endof(y)-1)
-
-      if y[i] == y[i+1]
-        ll += nell(δt[i], f_λ(cur_λ, cur_ω, Δx[i]))::Float64
-      else
-        ll += evll(δt[i], f_λ(cur_λ, cur_ω, Δx[i]))::Float64
-        cur_s = 1 - cur_s
-
-        if cur_s == 0 
-          cur_λ, cur_ω = λ1, ω1
-        else
-          cur_λ, cur_ω = λ0, ω0
+      while i < ly
+        while i < ly && y[i] == y[i+1]
+          ll += nell(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+          i += 1
         end
+        i >= ly && break
+
+        ll += evll(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+        i += 1
+
+        while i < ly && y[i] == y[i+1]
+          ll += nell(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+          i += 1
+        end
+        i >= ly && break
+
+        ll += evll(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+        i += 1
+      end
+
+    else
+
+      while i < ly
+        while i < ly && y[i] == y[i+1]
+          ll += nell(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+          i += 1
+        end
+        i >= ly && break
+
+        ll += evll(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+        i += 1
+
+        while i < ly && y[i] == y[i+1]
+          ll += nell(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+          i += 1
+        end
+        i >= ly && break
+
+        ll += evll(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+        i += 1
       end
     end
 
@@ -223,10 +247,10 @@ function bitbitll(y1::Int64,
                   δt::Float64)
 
   # event or non-event
-  if y1::Int64 == y2::Int64 
-    return nell(δt, y1::Int64 == 0 ? f_λ(λ1, ω1, Δx) : f_λ(λ0, ω0, Δx))::Float64
+  if y1 == y2 
+    return nell(δt, y1 == 0 ? f_λ1(λ1, ω1, Δx) : f_λ0(λ0, ω0, Δx))::Float64
   else
-    return evll(δt, y1::Int64 == 0 ? f_λ(λ1, ω1, Δx) : f_λ(λ0, ω0, Δx))::Float64
+    return evll(δt, y1 == 0 ? f_λ1(λ1, ω1, Δx) : f_λ0(λ0, ω0, Δx))::Float64
   end
 end
 
@@ -240,8 +264,47 @@ end
 Estimate rates for area colonization/loss based 
 on the difference between lineage traits and area averages.
 """
-f_λ(λ::Float64, ω::Float64, Δx::Float64) = @fastmath (λ * exp(ω*Δx))::Float64
+f_λ_old(λ::Float64, ω::Float64, Δx::Float64) = @fastmath (λ * exp(ω*Δx))::Float64
 
+
+
+
+
+"""
+    f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
+
+Estimate rates for area colonization based 
+on the difference between lineage traits and area averages.
+"""
+function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
+  if iszero(δx) 
+    return λ1
+  elseif ω1 > 0.0
+    return λ1 * exp(-(ω1/δx)^2)
+  else
+    return λ1 * exp(-(ω1*δx)^2)
+  end
+end
+
+
+
+
+
+"""
+    f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
+
+Estimate rates for area colonization/loss based 
+on the difference between lineage traits and area averages.
+"""
+function f_λ0(λ0::Float64, ω0::Float64, δx::Float64) 
+  if iszero(δx) 
+    return λ0
+  elseif ω0 > 0.0
+    return λ0 + (ω0/δx)^2
+  else
+    return λ0 + (ω0*δx)^2
+  end
+end
 
 
 

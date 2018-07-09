@@ -47,6 +47,7 @@ logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
 
 
 
+
 """
     logdhcau(x::Float64, scl::Float64)
 
@@ -168,8 +169,8 @@ function Ptrfast(λ1    ::Float64,
   
   @fastmath begin
 
-    λt1  ::Float64 = f_λ(λ1,ω1,avg_Δx)
-    λt0  ::Float64 = f_λ(λ0,ω0,avg_Δx)
+    λt1  ::Float64 = f_λ1(λ1,ω1,avg_Δx)
+    λt0  ::Float64 = f_λ0(λ0,ω0,avg_Δx)
     sumλ ::Float64 = λt1 + λt0
     ex   ::Float64 = exp(-sumλ*t)
     sd1  ::Float64 = 1/sumλ
@@ -235,8 +236,8 @@ function Ptrfast_start(λ1    ::Float64,
   
   @fastmath begin
 
-    λt1  ::Float64 = f_λ(λ1,ω1,avg_Δx)
-    λt0  ::Float64 = f_λ(λ0,ω0,avg_Δx)
+    λt1  ::Float64 = f_λ1(λ1,ω1,avg_Δx)
+    λt0  ::Float64 = f_λ0(λ0,ω0,avg_Δx)
     sumλ ::Float64 = λt1 + λt0
     ex   ::Float64 = exp(-sumλ*t)
     sd1  ::Float64 = 1/sumλ
@@ -307,8 +308,8 @@ function Ptrfast_end(λ1    ::Float64,
   
   @fastmath begin
 
-    λt1  ::Float64 = f_λ(λ1,ω1,avg_Δx)
-    λt0  ::Float64 = f_λ(λ0,ω0,avg_Δx)
+    λt1  ::Float64 = f_λ1(λ1,ω1,avg_Δx)
+    λt0  ::Float64 = f_λ0(λ0,ω0,avg_Δx)
     sumλ ::Float64 = λt1 + λt0
     ex   ::Float64 = exp(-sumλ*t)
     sd1  ::Float64 = 1/sumλ

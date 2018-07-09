@@ -229,8 +229,8 @@ function lin_rates(Xt  ::Array{Float64,1},
 
         for i in Base.OneTo(n)
           Δx = abs(Xt[i] - arav[j])
-          alλ1[i,j] = f_λ(λ1, ω1, Δx)
-          alλ0[i,j] = f_λ(λ0, ω0, Δx)
+          alλ1[i,j] = f_λ1(λ1, ω1, Δx)
+          alλ0[i,j] = f_λ0(λ0, ω0, Δx)
         end
 
       end
