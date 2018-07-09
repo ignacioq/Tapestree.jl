@@ -1,6 +1,6 @@
 #=
 
-Utility functions for simulations in Compete
+Utility functions for simulations for tribe
 
 Ignacio Quintero Mächler
 
@@ -17,16 +17,16 @@ t(-_-t)
 
 Simulate biogeographic and trait evolution according to Compete model.
 """
-function simulate_compete(X_initial::Float64,
-                          nareas   ::Int64,
-                          tree_file::String;
-                          ωx       = 0.0,
-                          σ        = 0.5,
-                          λ1       = 0.5,
-                          λ0       = 0.2,
-                          ω1       = 0.0,
-                          ω0       = 0.0,
-                          const_δt = 1e-4)
+function simulate_tribe(X_initial::Float64,
+                        nareas   ::Int64,
+                        tree_file::String;
+                        ωx       = 0.0,
+                        σ        = 0.5,
+                        λ1       = 0.5,
+                        λ0       = 0.2,
+                        ω1       = 0.0,
+                        ω0       = 0.0,
+                        const_δt = 1e-4)
 
   Y_initial = 
     [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]::Array{Int64,1}

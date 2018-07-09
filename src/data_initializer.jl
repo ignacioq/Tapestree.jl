@@ -1,6 +1,6 @@
 #=
 
-Data initializer for Competition model
+data initializer for tribe model
 
 Ignacio Quintero Mächler
 

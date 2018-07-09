@@ -1,6 +1,6 @@
 #=
 
-Utilities for Data Augmented Competition model
+utilities for tribe
 
 Ignacio Quintero Mächler
 

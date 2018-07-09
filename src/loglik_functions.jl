@@ -1,7 +1,6 @@
 #=
 
-Likelihood Functions for joint
-Biogeographic competition model
+likelihood functions tribe model
 
 Ignacio Quintero Mächler
 

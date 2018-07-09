@@ -1,6 +1,6 @@
 #=
 
-Functions to estimate area and lineage trait averages 
+functions to estimate area and lineage trait averages 
 and lineage specific differences
 
 Ignacio Quintero Mächler

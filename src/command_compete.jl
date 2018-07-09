@@ -1,6 +1,6 @@
 #=
 
-Running compete model from the command line
+running tribe model from the command line
 
 Ignacio Quintero Mächler
 
@@ -118,11 +118,11 @@ comp_args = parse_commandline()
 using Tapestree
 
 # run compete
-compete(comp_args[:tree_file], 
-        comp_args[:data_file], 
-        comp_args[:out_file];
-        filter((u,v) -> u != :tree_file && 
-                        u != :data_file && 
-                        u != :out_file, comp_args)...)
+tribe(comp_args[:tree_file], 
+      comp_args[:data_file], 
+      comp_args[:out_file];
+      filter((u,v) -> u != :tree_file && 
+                      u != :data_file && 
+                      u != :out_file, comp_args)...)
 
 

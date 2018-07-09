@@ -1,6 +1,6 @@
 #=
 
-Utility functions for Compete.jl
+Utility functions for Tapestree
 
 Ignacio Quintero Mächler
 

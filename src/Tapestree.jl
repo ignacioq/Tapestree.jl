@@ -18,9 +18,8 @@ Tapestree package
 
 module Tapestree
 
-  export compete
-  export simulate_compete
-  export compete_for_sims
+  export tribe
+  export simulate_tribe
 
   include("utils.jl")
   include("compete_utils.jl")
