@@ -22,7 +22,7 @@ module Tapestree
   export simulate_tribe
 
   include("utils.jl")
-  include("compete_utils.jl")
+  include("tribe_utils.jl")
   include("cont_DA_prop.jl")
   include("disc_DA_prop.jl")
   include("data_initializer.jl")
@@ -32,7 +32,7 @@ module Tapestree
   include("parameter_updates.jl")
   include("mcmc_burn.jl")
   include("proposal_functions.jl")
-  include("compete_wrapper.jl")
+  include("tribe_wrapper.jl")
   include("sim_utils.jl")
 
 end # module Tapestree
