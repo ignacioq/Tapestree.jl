@@ -323,11 +323,11 @@ function burn_tribe(total_llf    ::Function,
       end
 
       # make X trio update
-      if rand() < 2e-3
-        llc = mhr_upd_Xtrio(rand(trios),
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                          areavg, linavg, lindiff, areaoc, brs, stemevc)
-      end
+      # if rand() < 2e-3
+      #   llc = mhr_upd_Xtrio(rand(trios),
+      #                     Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+      #                     areavg, linavg, lindiff, areaoc, brs, stemevc)
+      # end
 
       # make X branch update
       if rand() < 2e-3

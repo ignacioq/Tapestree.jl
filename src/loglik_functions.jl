@@ -142,7 +142,7 @@ function llr_bm(Xc ::Array{Float64,2},
                 δt ::Array{Float64,1},
                 σ² ::Float64)
 
-  llr::Float64 = 0.
+  llr::Float64 = 0.0
 
   for i in Base.OneTo(length(idx)-1)
     llr += logdnorm_tc(Xc[idx[i+1]], Xc[idx[i]], (δt[i+1] - δt[i])*σ²) -
@@ -279,9 +279,9 @@ function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
   if iszero(δx) 
     return λ1
   elseif ω1 > 0.0
-    return λ1 * exp(-(ω1/δx)^2)
+    return λ1 * exp(-ω1^2/δx)
   else
-    return λ1 * exp(-(ω1*δx)^2)
+    return λ1 * exp(-ω1^2*δx)
   end
 end
 
@@ -299,9 +299,9 @@ function f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
   if iszero(δx) 
     return λ0
   elseif ω0 > 0.0
-    return λ0 + (ω0/δx)^2
+    return λ0 + ω0^2/δx
   else
-    return λ0 + (ω0*δx)^2
+    return λ0 + ω0^2*δx
   end
 end
 

@@ -622,7 +622,6 @@ end
 
 
 
-
 """
     upbranchX!(j    ::Int64, 
                X    ::Array{Float64,2}, 

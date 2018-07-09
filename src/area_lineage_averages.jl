@@ -91,7 +91,7 @@ function linarea_diff!(LD   ::Array{Float64,3},
         continue
       end
       setindex!(LD, 
-                (AO[i,k] == 0 ? 0.0 : abs(X[i,j] - AA[i,k]))::Float64, 
+                (iszero(AO[i,k]) ? 0.0 : abs(X[i,j] - AA[i,k]))::Float64, 
                 i, j, k)
     end
   end
@@ -187,7 +187,7 @@ function Xupd_linavg!(aa   ::Array{Float64,1},
 
     fill!(ld, NaN)
     for k = Base.OneTo(narea), j = wci
-      setindex!(ld, (ao[i,k] == 0 ? 0.0 : abs(xi[j] - aa[k])), j, k)
+      setindex!(ld, (iszero(ao[i,k]) ? 0.0 : abs(xi[j] - aa[k])), j, k)
     end
 
   end
