@@ -163,8 +163,9 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   # create update functions for Xbr, Y, Ybr and XYbr
   mhr_upd_Xbr   = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
-                                   bridx, brδt, total_llf,
-                                   σ²prior)
+                                   bridx, brδt, total_llf)
+  mhr_upd_Xtrio = make_mhr_upd_Xtrio(wcol, m, narea, ntip, nedge,
+                                     bridx, brδt, total_llf)
   mhr_upd_Y     = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
                                  wcol, total_llf, bgiid)
   mhr_upd_Ybr   = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
@@ -172,7 +173,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   mhr_upd_Ystem = make_mhr_upd_Ystem(stbrl, narea, nedge)
   mhr_upd_XYbr  = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
                                     bridx, bridx_a, brδt, brl, wcol, 
-                                    total_llf, bgiid_br, σ²prior)
+                                    total_llf, bgiid_br)
 
 
   # burning phase
@@ -180,7 +181,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_tribe(
     total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
     bgiid, bgiid_br, 
-    mhr_upd_Xbr, mhr_upd_Y, mhr_upd_Ybr, mhr_upd_Ystem, mhr_upd_XYbr,
+    mhr_upd_Xbr, mhr_upd_Xtrio, 
+    mhr_upd_Y, mhr_upd_Ybr, mhr_upd_Ystem, mhr_upd_XYbr,
     Xc, Yc, areavg, areaoc, linavg, lindiff,
     σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
     Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 

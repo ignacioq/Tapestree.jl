@@ -572,9 +572,6 @@ end
 
 
 
-
-
-
 #=
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -587,22 +584,22 @@ X proposal functions
 
 
 """
-    uptrioX!(j    ::Int64, 
-               X    ::Array{Float64,2}, 
-               bridx::Array{UnitRange{Int64},1},
-               brδt ::Array{Array{Float64,1},1}, 
-               σ²c  ::Float64)
+    uptrioX!(trio ::Array{Int64,1}, 
+             X    ::Array{Float64,2}, 
+             bridx::Array{UnitRange{Int64},1},
+             brδt ::Array{Array{Float64,1},1}, 
+             σ²c  ::Float64)
 
-Update a branch j in X using a Brownian bridge.
+Update the node and adjoining branhces of `trio` using Brownian bridges.
 """
-function uptrioX!(trio    ::Array{Int64,1}, 
+function uptrioX!(pr   ::Int64, 
+                  d1   ::Int64,
+                  d2   ::Int64, 
                   X    ::Array{Float64,2}, 
                   bridx::Array{UnitRange{Int64},1},
                   brδt ::Array{Array{Float64,1},1},
                   s2   ::Float64)
-  @inbounds 
-
-    pr, d1, d2 = trio
+  @inbounds begin
 
     # update node
     X[bridx[pr][end]] = 
@@ -617,8 +614,6 @@ function uptrioX!(trio    ::Array{Int64,1},
 
   return nothing
 end
-
-
 
 
 

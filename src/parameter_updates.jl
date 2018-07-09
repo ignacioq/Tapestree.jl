@@ -113,8 +113,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           nedge              ::Int64,
                           bridx              ::Array{UnitRange{Int64},1},
                           brδt               ::Array{Array{Float64,1},1},
-                          total_llf          ::Function,
-                          σ²prior            ::Float64)
+                          total_llf          ::Function)
 
   const Xp = zeros(m, ntip)
   const aa = zeros(m, narea)
@@ -186,8 +185,7 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
                             nedge              ::Int64,
                             bridx              ::Array{UnitRange{Int64},1},
                             brδt               ::Array{Array{Float64,1},1},
-                            total_llf          ::Function,
-                            σ²prior            ::Float64)
+                            total_llf          ::Function)
 
   const Xp = zeros(m, ntip)
   const aa = zeros(m, narea)
@@ -216,7 +214,9 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
     copy!(la, linavg)
     copy!(ld, lindiff)
 
-    uptrioX!(trio, Xp, bridx, brδt, σ²c)
+    pr, d1, d2 = trio
+
+    uptrioX!(p2, d1, d2, Xp, bridx, brδt, σ²c)
 
     area_lineage_means!(aa, la, areaoc, Xp, Yc, wcol, m, narea)
     linarea_diff!(ld, Xp, aa, areaoc, narea, ntip, m)
@@ -226,7 +226,10 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
-    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+    if -randexp() < (llr + 
+                     llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²c) +
+                     llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²c) +
+                     llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²c))::Float64
       llc += llr::Float64
       copy!(Xc,      Xp)
       copy!(areavg,  aa)
@@ -446,8 +449,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
                            brl                ::Array{Float64,1},
                            wcol               ::Array{Array{Int64,1},1},
                            total_llf          ::Function,
-                           bgiid_br           ::Function,
-                           σ²prior            ::Float64)
+                           bgiid_br           ::Function)
 
   const Xp = zeros(m, ntip)
   const Yp = zeros(Int64, m, ntip, narea)
