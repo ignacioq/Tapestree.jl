@@ -39,19 +39,6 @@ end
 
 
 """
-    E_sde_old(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
-
-Return the expected value according to reworked competition model.
-"""
-function E_sde_old(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
-  return (ωx * (μ - xi) * δt)::Float64
-end
-
-
-
-
-
-"""
     makellf(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64, narea::Int64)
 
 Make likelihood function for all trait matrix 
@@ -157,7 +144,13 @@ end
 
 
 """
-    bitvectorll(y ::Array{Int64,1}, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, Δx::Array{Float64,1}, δt::Array{Float64,1})
+    bitvectorll(y ::Array{Int64,1},
+                λ1::Float64,
+                λ0::Float64,
+                ω1::Float64,
+                ω0::Float64,
+                Δx::Array{Float64,1},
+                δt::Array{Float64,1})
 
 Return the likelihood for a
 bit vector (composed of 0s and 1s).
@@ -258,18 +251,6 @@ end
 
 
 """
-    f_λ(λ::Float64, ω::Float64, Δx::Float64)
-
-Estimate rates for area colonization/loss based 
-on the difference between lineage traits and area averages.
-"""
-f_λ_old(λ::Float64, ω::Float64, Δx::Float64) = @fastmath (λ * exp(ω*Δx))::Float64
-
-
-
-
-
-"""
     f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
 
 Estimate rates for area colonization based 
@@ -279,9 +260,9 @@ function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
   if iszero(δx) 
     return λ1
   elseif ω1 > 0.0
-    return λ1 * exp(-ω1^2/δx)
+    return λ1 * exp(-ω1^2/δx*0.1)
   else
-    return λ1 * exp(-ω1^2*δx)
+    return λ1 * exp(-ω1^2*δx*0.1)
   end
 end
 
@@ -299,9 +280,9 @@ function f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
   if iszero(δx) 
     return λ0
   elseif ω0 > 0.0
-    return λ0 * exp(-ω0^2/δx)
+    return λ0 + ω0/δx*0.1
   else
-    return λ0 * exp(-ω0^2*δx)
+    return λ0 - ω0*δx*0.1
   end
 end
 
@@ -364,60 +345,6 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
 
   return f
 end
-
-
-
-
-
-"""
-    makellr_λ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
-
-Make likelihood ratio function for when updating λϕ1 & λϕ0.
-"""
-function makellr_λϕ_upd(Y    ::Array{Int64,3},
-                        δt   ::Vector{Float64},
-                        narea::Int64,
-                        ntip ::Int64,
-                        m    ::Int64)
-
-  # get initial range
-  const wf23 = Int64[]
-  for j = Base.OneTo(ntip)
-    push!(wf23, findfirst(Y[:,j,1] .!= 23))
-  end
-
-  function f(Y      ::Array{Int64,3}, 
-             λϕ1c   ::Float64,
-             λϕ0c   ::Float64,
-             λϕ1p   ::Float64,
-             λϕ0p   ::Float64,
-             stemevc::Vector{Vector{Float64}},
-             stemss ::Vector{Int64})
-
-    ll::Float64 = 0.0
-
-    @inbounds begin
-
-      for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λϕ1p, λϕ0p, stemss[k])::Float64 -
-              brll(stemevc[k], λϕ1c, λϕ0c, stemss[k])::Float64
-
-        for j = Base.OneTo(ntip)
-          ll += bitvectorll_iid(Y[wf23[j]:m,j,k], 
-                                λϕ1p, λϕ0p, δt[wf23[j]:(m-1)])::Float64 -
-                bitvectorll_iid(Y[wf23[j]:m,j,k], 
-                                λϕ1c, λϕ0c, δt[wf23[j]:(m-1)])
-        end
-      end
-    
-    end
-
-    return ll::Float64
-  end
-
-  return f
-end
-
 
 
 
@@ -737,12 +664,10 @@ function makellr_σ²ωxupd(δt  ::Vector{Float64},
       for j = Base.OneTo(ntip)
         @simd for i = w23[j]
           ll += logdnorm_tc(X[(i+1),j], 
-                            X[i,j] + 
-                            E_sde(X[i,j], la[i,j], ωxp, δt[i]), 
+                            X[i,j] + E_sde(X[i,j], la[i,j], ωxp, δt[i]), 
                             δt[i]*σ²p)::Float64 -
                 logdnorm_tc(X[(i+1),j], 
-                            X[i,j] + 
-                            E_sde(X[i,j], la[i,j], ωxc, δt[i]), 
+                            X[i,j] + E_sde(X[i,j], la[i,j], ωxc, δt[i]), 
                             δt[i]*σ²c)::Float64
         end
       end
@@ -796,12 +721,10 @@ function makellr_Xupd(δt   ::Vector{Float64},
       # loop for parent nodes
       for j = wcim1
         ll += logdnorm_tc(xpi[j], 
-                          xcm1[j] + 
-                          E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
+                          xcm1[j] + E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
                           δt[i-1]*σ²)::Float64 -
               logdnorm_tc(xci[j],
-                          xcm1[j] + 
-                          E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
+                          xcm1[j] + E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
                           δt[i-1]*σ²)::Float64
       end
 
@@ -809,12 +732,10 @@ function makellr_Xupd(δt   ::Vector{Float64},
       for j = wci
         # trait likelihood
         ll += logdnorm_tc(xcp1[j], 
-                          xpi[j] + 
-                          E_sde(xpi[j], lapi[j], ωx, δt[i]), 
+                          xpi[j] + E_sde(xpi[j], lapi[j], ωx, δt[i]), 
                           δt[i]*σ²)::Float64 -
               logdnorm_tc(xcp1[j], 
-                          xci[j] + 
-                          E_sde(xci[j], laci[j], ωx, δt[i]), 
+                          xci[j] + E_sde(xci[j], laci[j], ωx, δt[i]), 
                           δt[i]*σ²)::Float64
       end
 
@@ -872,12 +793,10 @@ function makellr_Rupd(δt1  ::Float64,
       for j = eachindex(wci)
         # trait likelihood
         ll += logdnorm_tc(xcp1[j], 
-                          xpi[j] + 
-                          E_sde(xpi[j], lapi[j], ωx, δt1), 
+                          xpi[j] + E_sde(xpi[j], lapi[j], ωx, δt1), 
                           δt1*σ²)::Float64 -
               logdnorm_tc(xcp1[j], 
-                          xci[j] + 
-                          E_sde(xci[j], laci[j], ωx, δt1), 
+                          xci[j] + E_sde(xci[j], laci[j], ωx, δt1), 
                           δt1*σ²)::Float64
 
         # biogeograhic likelihoods
@@ -913,12 +832,12 @@ function brll(brevs::Array{Float64,1}, λ1::Float64, λ0::Float64, si::Int64)
 
   if endof(brevs) > 1 
     for i = Base.OneTo(endof(brevs)-1)
-      ll += evll(brevs[i], si == 0 ? λ1 : λ0)::Float64
+      ll += evll(brevs[i], iszero(si) ? λ1 : λ0)::Float64
       si = 1 - si
     end
   end
 
-  ll += nell(brevs[end], si == 0 ? λ1 : λ0)::Float64
+  ll += nell(brevs[end], iszero(si) ? λ1 : λ0)::Float64
   
   return ll::Float64
 end
