@@ -121,6 +121,37 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
     end
   end
 
+  ## allocate averages for X and Y
+
+  # X distance matrix
+  const ΔX = fill(NaN, m, ntip, ntip)
+
+
+
+
+
+
+
+
+
+
+
+
+
+  # area averages
+  const AA  = zeros(m, narea)
+
+  # colonization/extinction area averages for each lineage
+  const AAce  = zeros(m, ntip, narea)
+
+
+
+
+
+
+
+
+
   # allocate current area & lineage means, area occupancy & lineage specific means
   const areavg  = zeros(m, narea)
   const areaoc  = zeros(Int64, m, narea)

@@ -13,6 +13,72 @@ May 15 2017
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+    deltaXY!(ΔX::Array{Float64,3}, 
+             ΔY::Array{Float64,3},
+              X ::Array{Float64,2},
+              Y ::Array{Int64,3})
+
+Estimate pairwise trait and range distances between all lineages.
+"""
+function deltaXY!(ΔX::Array{Float64,3}, 
+                  ΔY::Array{Float64,3},
+                  X ::Array{Float64,2},
+                  Y ::Array{Int64,3})
+  @inbounds begin
+
+    for k = Base.OneTo(ntip), j = Base.OneTo(ntip), i = Base.OneTo(m)
+
+      if isnan(X[i,j]) || isnan(X[i,k])
+        continue
+      end
+
+      # X differences
+      ΔX[i,j,k] = X[i,j] - X[i,k]
+
+      # Y area overlap
+      sk        = 0.0
+      ΔY[i,j,k] = 0.0
+      @simd for a = Base.OneTo(narea)
+        if Y[i,k,a] == 1
+          sk += 1.0
+          ΔY[i,j,k] += Float64(Y[i,j,a])
+        end
+      end
+      ΔY[i,j,k] /= sk
+
+    end
+  end
+
+  return nothing
+end
+
+
+fill!(ΔX,NaN)
+fill!(ΔY,NaN)
+
+deltaXY!(ΔX, ΔY, X, Y)
+
+@benchmark deltaXY!(ΔX, ΔY, X, Y)
+
+
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 """
     area_lineage_means!(AA::Array{Float64,2}, LA::Array{Float64,2}, X::Array{Float64,2}, Y::Array{Int64,3}, wcol::Array{Array{Int64,1},1}, m::Int64)
 
