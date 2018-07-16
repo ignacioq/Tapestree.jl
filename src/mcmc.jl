@@ -122,53 +122,20 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   end
 
   ## allocate averages for X and Y
-
   # X and Y distance matrix
   const ΔX = fill(NaN, ntip, ntip, m)
   const ΔY = fill(NaN, ntip, ntip, m)
-
   deltaXY!(ΔX, ΔY, Xc, Yc, m, ntip, narea)
 
   # lineage averages
   const LA = fill(NaN, m, ntip)
-
   sde!(LA, ΔX, ΔY, m, ntip)
-
 
   # area lineage distances
   const LD = fill(NaN, m, ntip, narea)
-
   lindiff!(LD, ΔX, Yc, m, ntip, narea)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  # allocate current area & lineage means, area occupancy & lineage specific means
-  const areavg  = zeros(m, narea)
-  const areaoc  = zeros(Int64, m, narea)
-  const linavg  = fill(NaN, m, ntip)
-  const lindiff = fill(NaN, m, ntip, narea)
-
-  # estimate current area & lineage means and area occupancy
-  area_lineage_means!(areavg, linavg, areaoc, Xc, Yc, wcol, m, narea)
-  
-  # estimate current lineage specific means
-  linarea_diff!(lindiff, Xc, areavg, areaoc, narea, ntip, m)
-
-  # make likelihood and prior functions
+  ## make likelihood and prior functions
   total_llf   = makellf(δt, Yc, ntip, narea, m)
   λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m)
   ω10upd_llr  = makellr_ω10_upd(Yc, δt, narea, ntip, m)
@@ -195,6 +162,12 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   fix_ωx && filter!(x -> x ≠ 2, parvec)
   fix_ω1 && filter!(x -> x ≠ 3, parvec)
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
+
+
+
+
+
+
 
   # create update functions for Xbr, Y, Ybr and XYbr
   mhr_upd_Xbr   = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 

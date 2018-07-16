@@ -14,23 +14,49 @@ May 15 2017
 
 
 """
-    E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+    Eδx(μ::Float64, ωx::Float64, δt::Float64)
 
-Return the expected value according to reworked competition model.
+Return the expected value given the weighted average with sympatric species.
 """
-function E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
-  @fastmath begin
-    if ωx < 0.0
-      if μ - xi < 0.0
-        return (-ωx * exp(μ - xi) * δt)::Float64
-      elseif μ - xi > 0.0
-        return ( ωx * exp(xi - μ) * δt)::Float64
-      else
-        return 0.0
-      end
-    else
-       return (ωx * (μ - xi) * δt)::Float64
-    end
+Eδx(μ::Float64, ωx::Float64, δt::Float64) = ωx * μ * δt
+
+
+
+
+
+"""
+    f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
+
+Estimate rates for area colonization based 
+on the difference between lineage traits and area averages.
+"""
+function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
+  if iszero(δx) 
+    return λ1
+  elseif ω1 > 0.0
+    return λ1 * exp(-ω1^2/δx)
+  else
+    return λ1 * exp(-ω1^2*δx)
+  end
+end
+
+
+
+
+
+"""
+    f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
+
+Estimate rates for area colonization/loss based 
+on the difference between lineage traits and area averages.
+"""
+function f_λ0(λ0::Float64, ω0::Float64, δx::Float64) 
+  if iszero(δx) 
+    return λ0
+  elseif ω0 > 0.0
+    return λ0 + ω0/δx
+  else
+    return λ0 - ω0*δx
   end
 end
 
@@ -87,7 +113,7 @@ function makellf(δt   ::Array{Float64,1},
         @simd for i = wf23[j]:(m-1)
           ll += logdnorm_tc(X[(i+1),j], 
                             X[i,j] + 
-                            E_sde(X[i,j], linavg[i,j], ωx, δt[i]), 
+                            Eδx(linavg[i,j], ωx, δt[i]), 
                             δt[i]*σ²)::Float64
         end
       end
@@ -104,7 +130,7 @@ function makellf(δt   ::Array{Float64,1},
 
     end
 
-    ll::Float64
+    return ll::Float64
   end
 
   return f
@@ -129,11 +155,13 @@ function llr_bm(Xc ::Array{Float64,2},
                 δt ::Array{Float64,1},
                 σ² ::Float64)
 
-  llr::Float64 = 0.0
+  @inbounds begin
+    llr::Float64 = 0.0
 
-  for i in Base.OneTo(length(idx)-1)
-    llr += logdnorm_tc(Xc[idx[i+1]], Xc[idx[i]], (δt[i+1] - δt[i])*σ²) -
-           logdnorm_tc(Xp[idx[i+1]], Xp[idx[i]], (δt[i+1] - δt[i])*σ²)
+    for i in Base.OneTo(length(idx)-1)
+      llr += logdnorm_tc(Xc[idx[i+1]], Xc[idx[i]], (δt[i+1] - δt[i])*σ²) -
+             logdnorm_tc(Xp[idx[i+1]], Xp[idx[i]], (δt[i+1] - δt[i])*σ²)
+    end
   end
 
   return llr::Float64
@@ -249,42 +277,6 @@ end
 
 
 
-
-"""
-    f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
-
-Estimate rates for area colonization based 
-on the difference between lineage traits and area averages.
-"""
-function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
-  if iszero(δx) 
-    return λ1
-  elseif ω1 > 0.0
-    return λ1 * exp(-ω1^2/δx*0.1)
-  else
-    return λ1 * exp(-ω1^2*δx*0.1)
-  end
-end
-
-
-
-
-
-"""
-    f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
-
-Estimate rates for area colonization/loss based 
-on the difference between lineage traits and area averages.
-"""
-function f_λ0(λ0::Float64, ω0::Float64, δx::Float64) 
-  if iszero(δx) 
-    return λ0
-  elseif ω0 > 0.0
-    return λ0 + ω0/δx*0.1
-  else
-    return λ0 - ω0*δx*0.1
-  end
-end
 
 
 
@@ -656,25 +648,25 @@ function makellr_σ²ωxupd(δt  ::Vector{Float64},
              σ²c::Float64,
              σ²p::Float64)
 
-    ll::Float64 = 0.0
+    llr::Float64 = 0.0
 
     @inbounds @fastmath begin
 
       # trait likelihood
       for j = Base.OneTo(ntip)
         @simd for i = w23[j]
-          ll += logdnorm_tc(X[(i+1),j], 
-                            X[i,j] + E_sde(X[i,j], la[i,j], ωxp, δt[i]), 
-                            δt[i]*σ²p)::Float64 -
-                logdnorm_tc(X[(i+1),j], 
-                            X[i,j] + E_sde(X[i,j], la[i,j], ωxc, δt[i]), 
-                            δt[i]*σ²c)::Float64
+          llr += logdnorm_tc(X[(i+1),j], 
+                             X[i,j] + Eδx(la[i,j], ωxp, δt[i]), 
+                             δt[i]*σ²p)::Float64 -
+                 logdnorm_tc(X[(i+1),j], 
+                             X[i,j] + Eδx(la[i,j], ωxc, δt[i]), 
+                             δt[i]*σ²c)::Float64
         end
       end
     
     end
 
-    return ll::Float64
+    return llr::Float64
   end
 
   return f
@@ -714,42 +706,42 @@ function makellr_Xupd(δt   ::Vector{Float64},
              σ²    ::Float64)
 
     # normal likelihoods
-    ll::Float64 = 0.0
+    llr::Float64 = 0.0
 
     @inbounds begin
 
       # loop for parent nodes
       for j = wcim1
-        ll += logdnorm_tc(xpi[j], 
-                          xcm1[j] + E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
-                          δt[i-1]*σ²)::Float64 -
-              logdnorm_tc(xci[j],
-                          xcm1[j] + E_sde(xcm1[j], lacim1[j], ωx, δt[i-1]), 
-                          δt[i-1]*σ²)::Float64
+        llr += logdnorm_tc(xpi[j], 
+                           xcm1[j] + Eδx(lacim1[j], ωx, δt[i-1]), 
+                           δt[i-1]*σ²)::Float64 -
+               logdnorm_tc(xci[j],
+                           xcm1[j] + Eδx(lacim1[j], ωx, δt[i-1]), 
+                           δt[i-1]*σ²)::Float64
       end
 
       # loop for daughter nodes
       for j = wci
         # trait likelihood
-        ll += logdnorm_tc(xcp1[j], 
-                          xpi[j] + E_sde(xpi[j], lapi[j], ωx, δt[i]), 
-                          δt[i]*σ²)::Float64 -
-              logdnorm_tc(xcp1[j], 
-                          xci[j] + E_sde(xci[j], laci[j], ωx, δt[i]), 
-                          δt[i]*σ²)::Float64
+        llr += logdnorm_tc(xcp1[j], 
+                           xpi[j] + Eδx(lapi[j], ωx, δt[i]), 
+                           δt[i]*σ²)::Float64 -
+               logdnorm_tc(xcp1[j], 
+                           xci[j] + Eδx(laci[j], ωx, δt[i]), 
+                           δt[i]*σ²)::Float64
       end
 
         # biogeograhic likelihoods
       for k = Base.OneTo(narea), j = wci
-        ll += bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                       λ1, λ0, ω1, ω0, ldpi[j,k], δt[i])::Float64 -
-              bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                       λ1, λ0, ω1, ω0, ldci[j,k], δt[i])::Float64
+        llr += bitbitll(Y[i,j,k], Y[i+1,j,k], 
+                        λ1, λ0, ω1, ω0, ldpi[j,k], δt[i])::Float64 -
+               bitbitll(Y[i,j,k], Y[i+1,j,k], 
+                        λ1, λ0, ω1, ω0, ldci[j,k], δt[i])::Float64
       end
       
     end
 
-    return ll::Float64
+    return llr::Float64
   end
 
   return f
@@ -785,33 +777,32 @@ function makellr_Rupd(δt1  ::Float64,
              λ0    ::Float64,
              σ²    ::Float64)
 
-    ll::Float64 = 0.0
+    llr::Float64 = 0.0
 
     @inbounds @fastmath begin
 
       # loop for daughter nodes
       for j = eachindex(wci)
         # trait likelihood
-        ll += logdnorm_tc(xcp1[j], 
-                          xpi[j] + E_sde(xpi[j], lapi[j], ωx, δt1), 
-                          δt1*σ²)::Float64 -
-              logdnorm_tc(xcp1[j], 
-                          xci[j] + E_sde(xci[j], laci[j], ωx, δt1), 
-                          δt1*σ²)::Float64
+        llr += logdnorm_tc(xcp1[j], 
+                           xpi[j] + Eδx(lapi[j], ωx, δt1), 
+                           δt1*σ²)::Float64 -
+               logdnorm_tc(xcp1[j], 
+                           xci[j] + Eδx(laci[j], ωx, δt1), 
+                           δt1*σ²)::Float64
 
         # biogeograhic likelihoods
         for k = Base.OneTo(narea)
-          ll += bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                         λ1, λ0, ω1, ω0, ldpi[j,k], δt1)::Float64 -
-                bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                         λ1, λ0, ω1, ω0, ldci[j,k], δt1)::Float64
+          llr += bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
+                          λ1, λ0, ω1, ω0, ldpi[j,k], δt1)::Float64 -
+                 bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
+                          λ1, λ0, ω1, ω0, ldci[j,k], δt1)::Float64
         end
 
       end
-
     end
 
-    return ll::Float64
+    return llr::Float64
   end
 
   return f
