@@ -123,8 +123,22 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   ## allocate averages for X and Y
 
-  # X distance matrix
-  const ΔX = fill(NaN, m, ntip, ntip)
+  # X and Y distance matrix
+  const ΔX = fill(NaN, ntip, ntip, m)
+  const ΔY = fill(NaN, ntip, ntip, m)
+
+  deltaXY!(ΔX, ΔY, Xc, Yc, m, ntip, narea)
+
+  # lineage averages
+  const LA = fill(NaN, m, ntip)
+
+  sde!(LA, ΔX, ΔY, m, ntip)
+
+
+  # area lineage distances
+  const LD = fill(NaN, m, ntip, narea)
+
+  lindiff!(LD, ΔX, Yc, m, ntip, narea)
 
 
 
@@ -133,16 +147,6 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
 
 
-
-
-
-
-
-  # area averages
-  const AA  = zeros(m, narea)
-
-  # colonization/extinction area averages for each lineage
-  const AAce  = zeros(m, ntip, narea)
 
 
 
