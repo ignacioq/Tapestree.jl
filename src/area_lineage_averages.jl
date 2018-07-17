@@ -157,29 +157,6 @@ end
 
 
 
-
-
-
-
-δx
-δy
-
-la
-ld
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
     Xupd_linavg(k::Int64, 
                 wci::Array{Int64,1},
@@ -190,53 +167,48 @@ ld
 Re-estimate lineage specific means 
 for a node update.
 """
-# function Xupd_linavg!(aa   ::Array{Float64,1},
-#                       la   ::Array{Float64,1},
-#                       ld   ::Array{Float64,2},
-#                       ao   ::Array{Int64,2},
-#                       i    ::Int64, 
-#                       wci  ::Array{Int64,1},
-#                       xi   ::Array{Float64,1},
-#                       Y    ::Array{Int64,3},
-#                       narea::Int64)
-#   @inbounds begin
+function Xupd_linavg!(δxi  ::Array{Float64,2},
+                      lai  ::Array{Float64,1},
+                      ldi  ::Array{Float64,2},
+                      wci  ::Array{Int64,1},
+                      xpi  ::Array{Float64,1},
+                      xi   ::Int64,
+                      xj   ::Int64,
+                      Y    ::Array{Int64,3},
+                      δyi  ::Array{Float64,2},
+                      narea::Int64)
 
-#     for k = Base.OneTo(narea)
-#       sumY  = 0.0::Float64
-#       aa[k] = 0.0::Float64
-#       @simd for j = wci
-#         if Y[i,j,k] == 1
-#           aa[k] += xi[j]::Float64
-#           sumY  += 1.0
-#         end
-#       end
-#       if sumY != 0.0
-#         aa[k] /= sumY::Float64
-#       end
-#     end
+  @inbounds begin
 
-#     fill!(la, NaN)
-#     for j = wci
-#       la[j] = 0.0
-#       sumY  = 0.0::Float64
-#       @simd for k = Base.OneTo(narea)
-#         if Y[i,j,k]::Int64 == 1
-#           la[j] += aa[k]::Float64
-#           sumY  += 1.0
-#         end
-#       end
-#       la[j] /= sumY::Float64
-#     end
+    @simd for l = wci
+      δxi[xj,l] = xpi[xj] - xpi[l]
+      δxi[l,xj] = xpi[l]  - xpi[xj]
+    end
 
-#     fill!(ld, NaN)
-#     for k = Base.OneTo(narea), j = wci
-#       setindex!(ld, (iszero(ao[i,k]) ? 0.0 : abs(xi[j] - aa[k])), j, k)
-#     end
+    for l = wci
+      lai[l] = 0.0
+      for j = wci
+        j == l && continue
+        lai[l] += sign(δxi[j,l]) * δyi[j,l] * exp(-abs(δxi[j,l]))
+      end
+    end
 
-#   end
+    for k = Base.OneTo(narea), l = wci
+      ldi[l,k] = 0.0
+      sk       = 0.0
+      for j = wci
+        j == l && continue
+        y         = Float64(Y[xi,j,k])
+        ldi[l,k] += abs(δxi[j,l])*y
+        sk       += y
+      end
+      ldi[l,k] /= (iszero(sk) ? 1.0 : sk)
+    end
+  end
 
-#   return nothing 
-# end
+  return nothing
+end
+
 
 
 

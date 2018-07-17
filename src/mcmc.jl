@@ -216,7 +216,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   p = Progress(niter, dt=5, desc="mcmc...", barlen=20, color=:green)
 
   # create X parameter update function
-  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, m, ptn, wXp, 
+  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, ptn, wXp, 
                              narea, ntip, Xupd_llr, Rupd_llr)
 
   # write to file
@@ -240,8 +240,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
         # update X[i]
         if up > 6
-          llc = mhr_upd_X(up, Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                          areavg, linavg, lindiff, areaoc)
+          llc = mhr_upd_X(up, Xc, Yc, ΔX, ΔY, 
+                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, LA, LD)
 
         # update λ1 
         elseif up == 5

@@ -22,7 +22,6 @@ Make DA update X.
 function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xnc2     ::Array{Int64,1},
                         wcol     ::Array{Array{Int64,1},1},
-                        m        ::Int64,
                         ptn      ::Array{Float64,1},
                         wXp      ::Array{Int64,1},
                         narea    ::Int64,
@@ -30,24 +29,23 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xupd_llr ::Function,
                         Rupd_llr ::Function)
 
-  const aai = fill(NaN, narea)
   const lai = fill(NaN, ntip)
   const ldi = fill(NaN, ntip, narea)
 
-  function f(up     ::Int64,
-             Xc     ::Array{Float64,2},
-             Yc     ::Array{Int64,3},
-             λ1c    ::Float64,
-             λ0c    ::Float64,
-             ωxc    ::Float64, 
-             ω1c    ::Float64, 
-             ω0c    ::Float64,
-             σ²c    ::Float64,
-             llc    ::Float64,
-             areavg ::Array{Float64,2},
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
-             areaoc ::Array{Int64,2})
+  function f(up ::Int64,
+             Xc ::Array{Float64,2},
+             Yc ::Array{Int64,3},
+             ΔX ::Array{Float64,3},
+             ΔY ::Array{Float64,3},
+             λ1c::Float64,
+             λ0c::Float64,
+             ωxc::Float64, 
+             ω1c::Float64, 
+             ω0c::Float64,
+             σ²c::Float64,
+             llc::Float64,
+             LA ::Array{Float64,2},
+             LD ::Array{Float64,3})
 
     @inbounds begin
       upx = wXp[up - 6]::Int64                 # X indexing
@@ -62,15 +60,17 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
         xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
       end
 
+      δxi = ΔX[:,:,xi]::Array{Float64,2}
+
       # calculate new averages
-      Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
+      Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, xi, xj, Yc, ΔY[:,:,xi], narea)
 
       if upx == 1  # if root
         llr = Rupd_llr(wcol[1], 
                        xpi[wcol[1]], 
                        Xc[1,wcol[1]], Xc[2,wcol[1]], 
                        lai[wcol[1]], ldi[wcol[1],:], 
-                       linavg[1,wcol[1]], lindiff[1,wcol[1],:],
+                       LA[1,wcol[1]], LD[1,wcol[1],:],
                        Yc, 
                        ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
       else
@@ -78,18 +78,17 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                        xpi, 
                        Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
                        lai, ldi, 
-                       linavg[xi,:], linavg[xi-1,:], 
-                       lindiff[xi,:,:],
+                       LA[xi,:], LA[xi-1,:], 
+                       LD[xi,:,:],
                        Yc, 
                        ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
       end
 
       if -randexp() < llr
-        llc            += llr::Float64
-        Xc[xi,:]        = xpi::Array{Float64,1}
-        areavg[xi,:]    = aai::Array{Float64,1}
-        linavg[xi,:]    = lai::Array{Float64,1}
-        lindiff[xi,:,:] = ldi::Array{Float64,2}
+        llc       += llr::Float64
+        Xc[xi,:]   = xpi::Array{Float64,1}
+        LA[xi,:]   = lai::Array{Float64,1}
+        LD[xi,:,:] = ldi::Array{Float64,2}
       end
     end
 

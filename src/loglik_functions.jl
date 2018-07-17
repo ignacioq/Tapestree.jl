@@ -112,8 +112,7 @@ function makellf(δt   ::Array{Float64,1},
       for j = Base.OneTo(ntip)
         @simd for i = wf23[j]:(m-1)
           ll += logdnorm_tc(X[(i+1),j], 
-                            X[i,j] + 
-                            Eδx(linavg[i,j], ωx, δt[i]), 
+                            X[i,j] + Eδx(linavg[i,j], ωx, δt[i]), 
                             δt[i]*σ²)::Float64
         end
       end
@@ -731,14 +730,13 @@ function makellr_Xupd(δt   ::Vector{Float64},
                            δt[i]*σ²)::Float64
       end
 
-        # biogeograhic likelihoods
+      # biogeograhic likelihoods
       for k = Base.OneTo(narea), j = wci
         llr += bitbitll(Y[i,j,k], Y[i+1,j,k], 
                         λ1, λ0, ω1, ω0, ldpi[j,k], δt[i])::Float64 -
                bitbitll(Y[i,j,k], Y[i+1,j,k], 
                         λ1, λ0, ω1, ω0, ldci[j,k], δt[i])::Float64
       end
-      
     end
 
     return llr::Float64
@@ -746,7 +744,6 @@ function makellr_Xupd(δt   ::Vector{Float64},
 
   return f
 end
-
 
 
 
