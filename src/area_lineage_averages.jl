@@ -16,8 +16,96 @@ May 15 2017
 
 
 """
-    deltaXY!(ΔX   ::Array{Float64,3}, 
-             ΔY   ::Array{Float64,3},
+    deltaX!(δX   ::Array{Float64,3}, 
+            X    ::Array{Float64,2},
+            m    ::Int64,
+            ntip ::Int64,
+            narea::Int64)
+
+Estimate pairwise trait and range distances between all lineages
+conditional on a given `δY`.
+"""
+function deltaX!(δX   ::Array{Float64,3}, 
+                 X    ::Array{Float64,2},
+                 m    ::Int64,
+                 ntip ::Int64,
+                 narea::Int64)
+
+  @inbounds begin
+
+    for i = Base.OneTo(m), l = Base.OneTo(ntip)
+
+      isnan(X[i,l]) && continue
+
+      for j = Base.OneTo(ntip)
+        isnan(X[i,j]) && continue
+        if j == l 
+          δX[j,l,i] = 0.0
+        else
+          # X differences
+          δX[j,l,i] = X[i,j] - X[i,l]
+        end
+      end
+    end
+
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
+    deltaY!(δY   ::Array{Float64,3}, 
+            Y    ::Array{Int64,3},
+            m    ::Int64,
+            ntip ::Int64,
+            narea::Int64)
+
+Estimate pairwise trait and range distances between all lineages
+conditional on a given `δY`.
+"""
+function deltaY!(δY   ::Array{Float64,3}, 
+                 Y    ::Array{Int64,3},
+                 m    ::Int64,
+                 ntip ::Int64,
+                 narea::Int64)
+
+  @inbounds begin
+
+    for i = Base.OneTo(m), l = Base.OneTo(ntip), j = Base.OneTo(ntip)
+
+      if Y[i,j,1] == 23 || Y[i,l,1] == 23
+        continue
+      elseif j == l 
+        δY[j,l,i] = 1.0
+      else
+        sl        = 0.0
+        δY[l,j,i] = 0.0
+        @simd for k = Base.OneTo(narea)
+          if Y[i,j,k] == 1
+            sl += 1.0
+            δY[l,j,i] += Float64(Y[i,l,k])
+          end
+        end
+        δY[l,j,i] /= sl
+      end
+    end
+
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
+    deltaXY!(δX   ::Array{Float64,3}, 
+             δY   ::Array{Float64,3},
              X    ::Array{Float64,2},
              Y    ::Array{Int64,3},
              m    ::Int64,
@@ -26,8 +114,8 @@ May 15 2017
 
 Estimate pairwise trait and range distances between all lineages.
 """
-function deltaXY!(ΔX   ::Array{Float64,3}, 
-                  ΔY   ::Array{Float64,3},
+function deltaXY!(δX   ::Array{Float64,3}, 
+                  δY   ::Array{Float64,3},
                   X    ::Array{Float64,2},
                   Y    ::Array{Int64,3},
                   m    ::Int64,
@@ -45,22 +133,22 @@ function deltaXY!(ΔX   ::Array{Float64,3},
         isnan(X[i,j]) && continue
 
         if j == l 
-          ΔX[j,l,i] = 0.0
-          ΔY[j,l,i] = 1.0
+          δX[j,l,i] = 0.0
+          δY[j,l,i] = 1.0
         else
           # X differences
-          ΔX[j,l,i] = X[i,j] - X[i,l]
+          δX[j,l,i] = X[i,j] - X[i,l]
 
           # Y area overlap
           sl        = 0.0
-          ΔY[l,j,i] = 0.0
+          δY[l,j,i] = 0.0
           @simd for k = Base.OneTo(narea)
             if Y[i,j,k] == 1
               sl += 1.0
-              ΔY[l,j,i] += Float64(Y[i,l,k])
+              δY[l,j,i] += Float64(Y[i,l,k])
             end
           end
-          ΔY[l,j,i] /= sl
+          δY[l,j,i] /= sl
         end
       end
     end
@@ -76,16 +164,16 @@ end
 
 """
     sde!(LA   ::Array{Float64,2},
-         ΔX   ::Array{Float64,3}, 
-         ΔY   ::Array{Float64,3},
+         δX   ::Array{Float64,3}, 
+         δY   ::Array{Float64,3},
          m    ::Int64,
          ntip ::Int64)
 
 Estimate the lineage averages for the SDE of trait evolution
 """
 function sde!(LA   ::Array{Float64,2},
-              ΔX   ::Array{Float64,3}, 
-              ΔY   ::Array{Float64,3},
+              δX   ::Array{Float64,3}, 
+              δY   ::Array{Float64,3},
               m    ::Int64,
               ntip ::Int64)
 
@@ -97,9 +185,9 @@ function sde!(LA   ::Array{Float64,2},
 
       for l = Base.OneTo(ntip)
         l == j && continue
-        x = ΔX[l,j,i]
+        x = δX[l,j,i]
         isnan(x) && continue
-        y = ΔY[l,j,i]
+        y = δY[l,j,i]
         iszero(y) && continue
         @fastmath LA[i,j] += sign(x) * y * exp(-abs(x))
       end
@@ -115,7 +203,7 @@ end
 
 """
     lindiff!(LD   ::Array{Float64,3},
-             ΔX   ::Array{Float64,3},
+             δX   ::Array{Float64,3},
              Y    ::Array{Int64,3},
              m    ::Int64,
              ntip ::Int64,
@@ -125,7 +213,7 @@ Estimate area-specific distance averages
 for colonization and extinction rates.
 """
 function lindiff!(LD   ::Array{Float64,3},
-                  ΔX   ::Array{Float64,3},
+                  δX   ::Array{Float64,3},
                   Y    ::Array{Int64,3},
                   m    ::Int64,
                   ntip ::Int64,
@@ -139,7 +227,7 @@ function lindiff!(LD   ::Array{Float64,3},
 
       for j = Base.OneTo(ntip)
         j == l && continue
-        x = ΔX[j,l,i]
+        x = δX[j,l,i]
         isnan(x) && continue
         y          = Float64(Y[i,j,k])
         LD[i,l,k] += abs(x)*y
@@ -180,22 +268,23 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
 
   @inbounds begin
 
+    δxi[:] = NaN
     @simd for l = wci
       δxi[xj,l] = xpi[xj] - xpi[l]
       δxi[l,xj] = xpi[l]  - xpi[xj]
     end
 
+    lai[:] = 0.0
     for l = wci
-      lai[l] = 0.0
       for j = wci
         j == l && continue
         lai[l] += sign(δxi[j,l]) * δyi[j,l] * exp(-abs(δxi[j,l]))
       end
     end
 
+    ldi[:] = 0.0
     for k = Base.OneTo(narea), l = wci
-      ldi[l,k] = 0.0
-      sk       = 0.0
+      sk = 0.0
       for j = wci
         j == l && continue
         y         = Float64(Y[xi,j,k])

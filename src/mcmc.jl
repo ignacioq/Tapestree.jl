@@ -123,17 +123,17 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   ## allocate averages for X and Y
   # X and Y distance matrix
-  const ΔX = fill(NaN, ntip, ntip, m)
-  const ΔY = fill(NaN, ntip, ntip, m)
-  deltaXY!(ΔX, ΔY, Xc, Yc, m, ntip, narea)
+  const δXc = fill(NaN, ntip, ntip, m)
+  const δYc = fill(NaN, ntip, ntip, m)
+  deltaXY!(δXc, δYc, Xc, Yc, m, ntip, narea)
 
   # lineage averages
-  const LA = fill(NaN, m, ntip)
-  sde!(LA, ΔX, ΔY, m, ntip)
+  const LAc = fill(NaN, m, ntip)
+  sde!(LAc, δXc, δYc, m, ntip)
 
   # area lineage distances
-  const LD = fill(NaN, m, ntip, narea)
-  lindiff!(LD, ΔX, Yc, m, ntip, narea)
+  const LDc = fill(NaN, m, ntip, narea)
+  lindiff!(LDc, δXc, Yc, m, ntip, narea)
 
   ## make likelihood and prior functions
   total_llf   = makellf(δt, Yc, ntip, narea, m)
@@ -163,39 +163,31 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   fix_ω1 && filter!(x -> x ≠ 3, parvec)
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
 
-
-
-
-
-
-
   # create update functions for Xbr, Y, Ybr and XYbr
   mhr_upd_Xbr   = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
                                    bridx, brδt, total_llf)
   mhr_upd_Xtrio = make_mhr_upd_Xtrio(wcol, m, narea, ntip, nedge,
                                      bridx, brδt, total_llf)
-  mhr_upd_Y     = make_mhr_upd_Y(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
-                                 wcol, total_llf, bgiid)
   mhr_upd_Ybr   = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
                                    brδt, brl, wcol,total_llf, bgiid_br)
+  mhr_upd_Ytrio = make_mhr_upd_Ytrio(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
+                                      wcol, total_llf, bgiid)
   mhr_upd_Ystem = make_mhr_upd_Ystem(stbrl, narea, nedge)
   mhr_upd_XYbr  = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
                                     bridx, bridx_a, brδt, brl, wcol, 
                                     total_llf, bgiid_br)
 
-
   # burning phase
-  llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff,
-  stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = burn_tribe(
-    total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
-    bgiid, bgiid_br, 
-    mhr_upd_Xbr, mhr_upd_Xtrio, 
-    mhr_upd_Y, mhr_upd_Ybr, mhr_upd_Ystem, mhr_upd_XYbr,
-    Xc, Yc, areavg, areaoc, linavg, lindiff,
-    σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
-    Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
-    trios, wXp,
-    λprior, λϕprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
+  llc, prc, Xc, Yc, LAc, LDc, δXc, δYc,
+  stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = 
+    burn_tribe(total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, σ²ωxupd_llr, 
+      bgiid, bgiid_br, 
+      mhr_upd_Xbr, mhr_upd_Xtrio, 
+      mhr_upd_Ybr, mhr_upd_Ytrio, mhr_upd_Ystem, mhr_upd_XYbr,
+      Xc, Yc, δXc, δYc, LAc, LDc, σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
+      Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
+      trios, wXp,
+      λprior, λϕprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
   # log probability of collision
   const max_δt = maximum(δt)::Float64
@@ -252,7 +244,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
@@ -266,7 +258,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
@@ -289,7 +281,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end
@@ -302,7 +294,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
           # which internal node to update
           if rand() < 0.4
             λϕ1, λϕ0 = λϕprop()
-            llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     areavg, areaoc, linavg, lindiff, brs, stemevc)
           end

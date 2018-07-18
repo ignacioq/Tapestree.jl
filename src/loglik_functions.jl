@@ -14,6 +14,30 @@ May 15 2017
 
 
 """
+    E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+Return the expected value according to reworked competition model.
+"""
+function E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
+  @fastmath begin
+    if ωx < 0.0
+      if μ - xi < 0.0
+        return (-ωx * exp(μ - xi) * δt)::Float64
+      elseif μ - xi > 0.0
+        return ( ωx * exp(xi - μ) * δt)::Float64
+      else
+        return 0.0
+      end
+    else
+       return (ωx * (μ - xi) * δt)::Float64
+    end
+  end
+end
+
+
+
+
+
+"""
     Eδx(μ::Float64, ωx::Float64, δt::Float64)
 
 Return the expected value given the weighted average with sympatric species.
@@ -93,8 +117,8 @@ function makellf(δt   ::Array{Float64,1},
 
   function f(X      ::Array{Float64,2},
              Y      ::Array{Int64,3}, 
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
+             LA     ::Array{Float64,2},
+             LD     ::Array{Float64,3},
              ωx     ::Float64,
              ω1     ::Float64,
              ω0     ::Float64,
@@ -112,7 +136,7 @@ function makellf(δt   ::Array{Float64,1},
       for j = Base.OneTo(ntip)
         @simd for i = wf23[j]:(m-1)
           ll += logdnorm_tc(X[(i+1),j], 
-                            X[i,j] + Eδx(linavg[i,j], ωx, δt[i]), 
+                            X[i,j] + Eδx(LA[i,j], ωx, δt[i]), 
                             δt[i]*σ²)::Float64
         end
       end
@@ -123,7 +147,7 @@ function makellf(δt   ::Array{Float64,1},
         for j = Base.OneTo(ntip)
           ll += bitvectorll(Y[wf23[j]:m,j,k], 
                             λ1, λ0, ω1, ω0, 
-                            lindiff[wf23[j]:m,j,k], δt[wf23[j]:(m-1)])::Float64
+                            LD[wf23[j]:m,j,k], δt[wf23[j]:(m-1)])::Float64
         end
       end
 
@@ -305,7 +329,7 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
              λ0p    ::Float64,
              ω1     ::Float64,
              ω0     ::Float64,
-             lindiff::Array{Float64,3},
+             LD     ::Array{Float64,3},
              stemevc::Vector{Vector{Float64}},
              stemss ::Vector{Int64})
 
@@ -320,11 +344,11 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
         for j = Base.OneTo(ntip)
           ll += bitvectorll(Y[wf23[j]:m,j,k], 
                             λ1p, λ0p, ω1, ω0, 
-                            lindiff[wf23[j]:m,j,k], 
+                            LD[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64 -
                 bitvectorll(Y[wf23[j]:m,j,k], 
                             λ1c, λ0c, ω1, ω0, 
-                            lindiff[wf23[j]:m,j,k], 
+                            LD[wf23[j]:m,j,k], 
                             δt[wf23[j]:(m-1)])::Float64
         end
       end
@@ -358,14 +382,14 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
     push!(wf23, findfirst(Y[:,j,1] .!= 23))
   end
 
-  function f(Y      ::Array{Int64,3}, 
-             λ1     ::Float64,
-             λ0     ::Float64,
-             ω1c    ::Float64,
-             ω0c    ::Float64,
-             ω1p    ::Float64,
-             ω0p    ::Float64,
-             lindiff::Array{Float64,3})
+  function f(Y  ::Array{Int64,3}, 
+             λ1 ::Float64,
+             λ0 ::Float64,
+             ω1c::Float64,
+             ω0c::Float64,
+             ω1p::Float64,
+             ω0p::Float64,
+             LD ::Array{Float64,3})
 
     ll::Float64 = 0.0
 
@@ -373,13 +397,13 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
 
       for k = Base.OneTo(narea), j = Base.OneTo(ntip)
         ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ1, λ0, ω1p, ω0p, 
-                            lindiff[wf23[j]:m,j,k], 
-                            δt[wf23[j]:(m-1)])::Float64 -
+                          λ1, λ0, ω1p, ω0p, 
+                          LD[wf23[j]:m,j,k], 
+                          δt[wf23[j]:(m-1)])::Float64 -
               bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ1, λ0, ω1c, ω0c, 
-                            lindiff[wf23[j]:m,j,k], 
-                            δt[wf23[j]:(m-1)])::Float64
+                          λ1, λ0, ω1c, ω0c, 
+                          LD[wf23[j]:m,j,k], 
+                          δt[wf23[j]:(m-1)])::Float64
       end
     end
 
@@ -641,7 +665,7 @@ function makellr_σ²ωxupd(δt  ::Vector{Float64},
   end
 
   function f(X  ::Array{Float64,2},
-             la ::Array{Float64,2},
+             LA ::Array{Float64,2},
              ωxc::Float64,
              ωxp::Float64,
              σ²c::Float64,
@@ -655,10 +679,10 @@ function makellr_σ²ωxupd(δt  ::Vector{Float64},
       for j = Base.OneTo(ntip)
         @simd for i = w23[j]
           llr += logdnorm_tc(X[(i+1),j], 
-                             X[i,j] + Eδx(la[i,j], ωxp, δt[i]), 
+                             X[i,j] + Eδx(LA[i,j], ωxp, δt[i]), 
                              δt[i]*σ²p)::Float64 -
                  logdnorm_tc(X[(i+1),j], 
-                             X[i,j] + Eδx(la[i,j], ωxc, δt[i]), 
+                             X[i,j] + Eδx(LA[i,j], ωxc, δt[i]), 
                              δt[i]*σ²c)::Float64
         end
       end

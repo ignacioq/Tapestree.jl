@@ -35,8 +35,8 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
   function f(up ::Int64,
              Xc ::Array{Float64,2},
              Yc ::Array{Int64,3},
-             ΔX ::Array{Float64,3},
-             ΔY ::Array{Float64,3},
+             δXc::Array{Float64,3},
+             δYc::Array{Float64,3},
              λ1c::Float64,
              λ0c::Float64,
              ωxc::Float64, 
@@ -48,11 +48,12 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
              LD ::Array{Float64,3})
 
     @inbounds begin
+
       upx = wXp[up - 6]::Int64                 # X indexing
 
       xi, xj = ind2sub(Xc, upx)
 
-      xpi = Xc[xi,:]::Array{Float64,1}
+      const xpi = Xc[xi,:]::Array{Float64,1}
 
       xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
 
@@ -60,17 +61,17 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
         xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
       end
 
-      δxi = ΔX[:,:,xi]::Array{Float64,2}
+      δxi = δXc[:,:,xi]::Array{Float64,2}
 
       # calculate new averages
-      Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, xi, xj, Yc, ΔY[:,:,xi], narea)
+      Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, xi, xj, Yc, δYc[:,:,xi], narea)
 
       if upx == 1  # if root
         llr = Rupd_llr(wcol[1], 
                        xpi[wcol[1]], 
                        Xc[1,wcol[1]], Xc[2,wcol[1]], 
                        lai[wcol[1]], ldi[wcol[1],:], 
-                       LA[1,wcol[1]], LD[1,wcol[1],:],
+                       LAc[1,wcol[1]], LDc[1,wcol[1],:],
                        Yc, 
                        ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
       else
@@ -78,17 +79,18 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                        xpi, 
                        Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
                        lai, ldi, 
-                       LA[xi,:], LA[xi-1,:], 
-                       LD[xi,:,:],
+                       LAc[xi,:], LAc[xi-1,:], 
+                       LDc[xi,:,:],
                        Yc, 
                        ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
       end
 
       if -randexp() < llr
-        llc       += llr::Float64
-        Xc[xi,:]   = xpi::Array{Float64,1}
-        LA[xi,:]   = lai::Array{Float64,1}
-        LD[xi,:,:] = ldi::Array{Float64,2}
+        llc        += llr::Float64
+        Xc[xi,:]    = xpi::Array{Float64,1}
+        δXc[:,:,xi] = δxi::Array{Float64,2}
+        LAc[xi,:]   = lai::Array{Float64,1}
+        LDc[xi,:,:] = ldi::Array{Float64,2}
       end
     end
 
@@ -114,10 +116,10 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           brδt               ::Array{Array{Float64,1},1},
                           total_llf          ::Function)
 
-  const Xp = zeros(m, ntip)
-  const aa = zeros(m, narea)
-  const la = zeros(m, ntip)
-  const ld = zeros(m, ntip, narea)
+  const Xp  = zeros(m, ntip)
+  const δXp = fill( NaN, ntip, ntip, m)
+  const LAp = zeros(m, ntip)
+  const LDp = zeros(m, ntip, narea)
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -129,44 +131,38 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
              ω0c    ::Float64,
              σ²c    ::Float64,
              llc    ::Float64,
-             areavg ::Array{Float64,2},
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
-             areaoc ::Array{Int64,2},
+             LAc    ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             δXc    ::Array{Float64,3},
+             δYc    ::Array{Float64,3},
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
     copy!(Xp, Xc)
-    copy!(aa, areavg)
-    copy!(la, linavg)
-    copy!(ld, lindiff)
 
     upbranchX!(br, Xp, bridx, brδt, σ²c)
 
-    area_lineage_means!(aa, la, areaoc, Xp, Yc, wcol, m, narea)
-    linarea_diff!(ld, Xp, aa, areaoc, narea, ntip, m)
+    deltaX!(δXp, Xp, m, ntip, narea)
+    sde!(LAp, δXp, δYc, m, ntip)
+    lindiff!(LDp, δXp, Yc, m, ntip, narea)
 
-    llr = (total_llf(Xp, Yc, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+    llr = (total_llf(Xp, Yc, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c) - 
-           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+           total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
     if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
       llc += llr::Float64
-      copy!(Xc,      Xp)
-      copy!(areavg,  aa)
-      copy!(linavg,  la)
-      copy!(lindiff, ld)
+      copy!(Xc,   Xp)
+      copy!(δXc, δXp)
+      copy!(LAc, LAp)
+      copy!(LDc, LDp)
     end
 
     return llc::Float64
   end
 
 end
-
-
-
-
 
 
 
@@ -186,10 +182,10 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
                             brδt               ::Array{Array{Float64,1},1},
                             total_llf          ::Function)
 
-  const Xp = zeros(m, ntip)
-  const aa = zeros(m, narea)
-  const la = zeros(m, ntip)
-  const ld = zeros(m, ntip, narea)
+  const Xp  = zeros(m, ntip)
+  const δXp = fill( NaN, ntip, ntip, m)
+  const LAp = zeros(m, ntip)
+  const LDp = zeros(m, ntip, narea)
 
   function f(trio   ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -201,140 +197,41 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
              ω0c    ::Float64,
              σ²c    ::Float64,
              llc    ::Float64,
-             areavg ::Array{Float64,2},
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
-             areaoc ::Array{Int64,2},
+             LAc    ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             δXc    ::Array{Float64,3},
+             δYc    ::Array{Float64,3},
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
     copy!(Xp, Xc)
-    copy!(aa, areavg)
-    copy!(la, linavg)
-    copy!(ld, lindiff)
 
     pr, d1, d2 = trio
 
     uptrioX!(pr, d1, d2, Xp, bridx, brδt, σ²c, nedge)
 
-    area_lineage_means!(aa, la, areaoc, Xp, Yc, wcol, m, narea)
-    linarea_diff!(ld, Xp, aa, areaoc, narea, ntip, m)
+    deltaX!(δXp, Xp, m, ntip, narea)
+    sde!(LAp, δXp, δYc, m, ntip)
+    lindiff!(LDp, δXp, Yc, m, ntip, narea)
 
-    llr = (total_llf(Xp, Yc, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+    llr = (total_llf(Xp, Yc, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c) - 
-           total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+           total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c))::Float64
 
     if -randexp() < (llr + 
                      (pr != nedge ? 
                       llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²c):0.0) +
-                     llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²c) +
-                     llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²c))::Float64
+                      llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²c) +
+                      llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²c))::Float64
       llc += llr::Float64
-      copy!(Xc,      Xp)
-      copy!(areavg,  aa)
-      copy!(linavg,  la)
-      copy!(lindiff, ld)
+      copy!(Xc,   Xp)
+      copy!(δXc, δXp)
+      copy!(LAc, LAp)
+      copy!(LDc, LDp)
     end
 
     return llc::Float64
-  end
-
-end
-
-
-
-
-
-"""
-    make_mhr_upd_Y(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
-
-Make function to update trio in Y.
-"""
-function make_mhr_upd_Y(narea              ::Int64,
-                        nedge              ::Int64,
-                        m                  ::Int64,
-                        ntip               ::Int64,
-                        bridx_a            ::Array{Array{UnitRange{Int64},1},1},
-                        brδt               ::Array{Array{Float64,1},1},
-                        brl                ::Array{Float64,1},
-                        wcol               ::Array{Array{Int64,1},1},
-                        total_llf          ::Function,
-                        bgiid              ::Function)
-
-  const Yp      = zeros(Int64, m, ntip, narea)
-  const aa      = zeros(m, narea)
-  const ao      = zeros(Int64, m, narea)
-  const la      = zeros(m, ntip)
-  const ld      = zeros(m, ntip, narea)
-  const brsp    = zeros(Int64, nedge, 2, narea)
-  const stemevp = [[rand()] for i in 1:narea]
-
-  function f(triad  ::Array{Int64,1},
-             Xc     ::Array{Float64,2},
-             Yc     ::Array{Int64,3},
-             λ1c    ::Float64,
-             λ0c    ::Float64,
-             ωxc    ::Float64, 
-             ω1c    ::Float64, 
-             ω0c    ::Float64,
-             σ²c    ::Float64,
-             λϕ1   ::Float64,
-             λϕ0   ::Float64,
-             llc    ::Float64,
-             prc    ::Float64,
-             areavg ::Array{Float64,2},
-             areaoc ::Array{Int64,2},
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
-             brs    ::Array{Int64,3},
-             stemevc::Array{Array{Float64,1},1})
-
-    copy!(Yp,      Yc)
-    copy!(aa,      areavg)
-    copy!(ao,      areaoc)
-    copy!(la,      linavg)
-    copy!(ld,      lindiff)
-    copy!(brsp,    brs)
-
-    # allocate stemevp
-    for k in Base.OneTo(narea) 
-      stemevp[k] = copy(stemevc[k])
-    end
-
-    # if an efficient sample
-    if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
-               bridx_a, brδt, brl, brsp, narea, nedge)
-
-      area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-      linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
-
-      llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevp, brsp[nedge,1,:], σ²c) - 
-             total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevc, brs[nedge,1,:], σ²c))::Float64
-
-      if -randexp() < (llr + 
-                       bgiid(Yc, stemevc, brs[nedge,1,:],  triad, λϕ1, λϕ0) - 
-                       bgiid(Yp, stemevp, brsp[nedge,1,:], triad, λϕ1, λϕ0))
-
-        llc += llr
-        copy!(Yc,           Yp)
-        copy!(areavg,       aa)
-        copy!(areaoc,       ao)
-        copy!(linavg,       la)
-        copy!(lindiff,      ld)
-        copy!(brs,        brsp)
-        # allocate stemevc
-        for k in Base.OneTo(narea) 
-          stemevc[k] = copy(stemevp[k])
-        end
-      end
-
-      return llc
-    else
-      return llc
-    end
   end
 
 end
@@ -360,10 +257,9 @@ function make_mhr_upd_Ybr(narea              ::Int64,
                           bgiid_br           ::Function)
 
   const Yp      = zeros(Int64, m, ntip, narea)
-  const aa      = zeros(m, narea)
-  const ao      = zeros(Int64,m, narea)
-  const la      = zeros(m, ntip)
-  const ld      = zeros(m, ntip, narea)
+  const δYp     = fill( NaN, ntip, ntip, m)
+  const LAp     = zeros(m, ntip)
+  const LDp     = zeros(m, ntip, narea)
   const stemevp = [[rand()] for i in 1:narea]
 
   function f(br     ::Int64,
@@ -379,44 +275,36 @@ function make_mhr_upd_Ybr(narea              ::Int64,
              λϕ0   ::Float64,
              llc    ::Float64,
              prc    ::Float64,
-             areavg ::Array{Float64,2},
-             areaoc ::Array{Int64,2},
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
+             LAc    ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             δXc    ::Array{Float64,3},
+             δYc    ::Array{Float64,3},
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Yp,           Yc)
-    copy!(aa,       areavg)
-    copy!(ao,       areaoc)
-    copy!(la,       linavg)
-    copy!(ld,      lindiff)
-    # allocate stemevc
-    for k in Base.OneTo(narea) 
-      stemevp[k] = copy(stemevc[k])
-    end
+    copy!(Yp, Yc)
 
-    # if an efficient sample
+    # if a successful sample
     if upbranchY!(λϕ1, λϕ0, br, Yp, stemevp, 
                   bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
-      area_lineage_means!(aa, la, ao, Xc, Yp, wcol, m, narea)
-      linarea_diff!(ld, Xc, aa, ao, narea, ntip, m)
+      deltaY!(δYp, Yp, m, ntip, narea)
+      sde!(LAp, δXc, δYp, m, ntip)
+      lindiff!(LDp, δXc, Yp, m, ntip, narea)
 
-      llr = (total_llf(Xc, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
+      llr = (total_llf(Xc, Yp, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                        stemevp, brs[nedge,1,:], σ²c) - 
-             total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+             total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
                        stemevc, brs[nedge,1,:], σ²c))::Float64
 
       if -randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs[nedge,1,:], br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevp, brs[nedge,1,:], br, λϕ1, λϕ0))
         llc  += llr::Float64
-        copy!(Yc,      Yp)
-        copy!(areavg,  aa)
-        copy!(areaoc,  ao)
-        copy!(linavg,  la)
-        copy!(lindiff, ld)
+        copy!(Yc,  Yp)
+        copy!(δYc, δYp)
+        copy!(LAc, LAp)
+        copy!(LDc, LDp)
         # allocate stemevc
         for k in Base.OneTo(narea) 
           stemevc[k] = copy(stemevp[k])
@@ -429,6 +317,102 @@ function make_mhr_upd_Ybr(narea              ::Int64,
   end
 
 end
+
+
+
+
+
+"""
+    make_mhr_upd_Ytrio(narea    ::Int64,
+                       nedge    ::Int64,
+                       m        ::Int64,
+                       ntip     ::Int64,
+                       bridx_a  ::Array{Array{UnitRange{Int64},1},1},
+                       brδt     ::Array{Array{Float64,1},1},
+                       brl      ::Array{Float64,1},
+                       wcol     ::Array{Array{Int64,1},1},
+                       total_llf::Function,
+                       bgiid    ::Function)
+
+Make function to update trio in Y.
+"""
+function make_mhr_upd_Ytrio(narea    ::Int64,
+                            nedge    ::Int64,
+                            m        ::Int64,
+                            ntip     ::Int64,
+                            bridx_a  ::Array{Array{UnitRange{Int64},1},1},
+                            brδt     ::Array{Array{Float64,1},1},
+                            brl      ::Array{Float64,1},
+                            wcol     ::Array{Array{Int64,1},1},
+                            total_llf::Function,
+                            bgiid    ::Function)
+
+  const Yp      = zeros(Int64, m, ntip, narea)
+  const δYp     = fill( NaN, ntip, ntip, m)
+  const LAp     = zeros(m, ntip)
+  const LDp     = zeros(m, ntip, narea)
+  const brsp    = zeros(Int64, nedge, 2, narea)
+  const stemevp = [[rand()] for i in 1:narea]
+
+  function f(triad  ::Array{Int64,1},
+             Xc     ::Array{Float64,2},
+             Yc     ::Array{Int64,3},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             ωxc    ::Float64, 
+             ω1c    ::Float64, 
+             ω0c    ::Float64,
+             σ²c    ::Float64,
+             λϕ1   ::Float64,
+             λϕ0   ::Float64,
+             llc    ::Float64,
+             prc    ::Float64,
+             LAc    ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             δXc    ::Array{Float64,3},
+             δYc    ::Array{Float64,3},
+             brs    ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1})
+
+    copy!(Yp,   Yc)
+    copy!(brsp, brs)
+
+    # if an efficient sample
+    if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
+               bridx_a, brδt, brl, brsp, narea, nedge)
+
+      deltaY!(δYp, Yp, m, ntip, narea)
+      sde!(LAp, δXc, δYp, m, ntip)
+      lindiff!(LDp, δXc, Yp, m, ntip, narea)
+
+      llr = (total_llf(Xc, Yp, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevp, brsp[nedge,1,:], σ²c) - 
+             total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevc, brs[nedge,1,:], σ²c))::Float64
+
+      if -randexp() < (llr + 
+                       bgiid(Yc, stemevc, brs[nedge,1,:],  triad, λϕ1, λϕ0) - 
+                       bgiid(Yp, stemevp, brsp[nedge,1,:], triad, λϕ1, λϕ0))
+        llc += llr
+        copy!(Yc,  Yp)
+        copy!(δYc, δYp)
+        copy!(LAc, LAp)
+        copy!(LDc, LDp)
+        copy!(brs, brsp)
+        # allocate stemevc
+        for k in Base.OneTo(narea) 
+          stemevc[k] = copy(stemevp[k])
+        end
+      end
+
+      return llc::Float64
+    else
+      return llc::Float64
+    end
+  end
+
+end
+
 
 
 
@@ -451,12 +435,12 @@ function make_mhr_upd_XYbr(narea              ::Int64,
                            total_llf          ::Function,
                            bgiid_br           ::Function)
 
-  const Xp = zeros(m, ntip)
-  const Yp = zeros(Int64, m, ntip, narea)
-  const aa = zeros(m, narea)
-  const ao = zeros(Int64, m, narea)
-  const la = zeros(m, ntip)
-  const ld = zeros(m, ntip, narea)
+  const Xp      = zeros(m, ntip)
+  const Yp      = zeros(Int64, m, ntip, narea)
+  const δXp     = fill( NaN, ntip, ntip, m)
+  const δYp     = fill( NaN, ntip, ntip, m)
+  const LAp     = zeros(m, ntip)
+  const LDp     = zeros(m, ntip, narea)
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -471,45 +455,42 @@ function make_mhr_upd_XYbr(narea              ::Int64,
              λϕ0   ::Float64,
              llc    ::Float64,
              prc    ::Float64,
-             areavg ::Array{Float64,2},
-             areaoc ::Array{Int64,2},
-             linavg ::Array{Float64,2},
-             lindiff::Array{Float64,3},
+             LAc    ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             δXc    ::Array{Float64,3},
+             δYc    ::Array{Float64,3},
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
     copy!(Xp, Xc)
     copy!(Yp, Yc)
-    copy!(aa, areavg)
-    copy!(ao, areaoc)
-    copy!(la, linavg)
-    copy!(ld, lindiff)
 
-  # if an efficient sample
+  # if an successful sample
     if upbranchY!(λϕ1, λϕ0, br, Yp, stemevc, 
                   bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
       upbranchX!(br, Xp, bridx, brδt, σ²c)
 
-      area_lineage_means!(aa, la, ao, Xp, Yp, wcol, m, narea)
-      linarea_diff!(ld, Xp, aa, ao, narea, ntip, m)
+      deltaXY!(δXp, δYp, Xp, Yp, m, ntip, narea)
+      sde!(LAp, δXp, δYp, m, ntip)
+      lindiff!(LDp, δXp, Yp, m, ntip, narea)
 
-      llr = total_llf(Xp, Yp, la, ld, ωxc, ω1c, ω0c, λ1c, λ0c,
-                      stemevc, brs[nedge,1,:], σ²c) - 
-            total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
-                      stemevc, brs[nedge,1,:], σ²c)
+      llr = (total_llf(Xp, Yp, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevc, brs[nedge,1,:], σ²c) - 
+             total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
+                       stemevc, brs[nedge,1,:], σ²c))::Float64
 
       if -randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs[nedge,1,:], br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevc, brs[nedge,1,:], br, λϕ1, λϕ0) +
                        llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
         llc += llr::Float64
-        copy!(Xc,      Xp)
-        copy!(Yc,      Yp)
-        copy!(areavg,  aa)
-        copy!(areaoc,  ao)
-        copy!(linavg,  la)
-        copy!(lindiff, ld)
+        copy!(Xc,  Xp)
+        copy!(Yc,  Yp)
+        copy!(δXc, δXp)
+        copy!(δYc, δYp)
+        copy!(LAc, LAp)
+        copy!(LDc, LDp)
       end
 
       return llc::Float64
@@ -519,8 +500,6 @@ function make_mhr_upd_XYbr(narea              ::Int64,
   end
 
 end
-
-
 
 
 
@@ -550,10 +529,6 @@ function make_mhr_upd_Ystem(stbrl::Float64,
              brs    ::Array{Int64,3})
 
     copy!(brsp, brs)
-    # allocate stemevc
-    for k in Base.OneTo(narea) 
-      stemevp[k] = copy(stemevc[k])
-    end
 
     # update stem node and branch
     if upstemnode!(λϕ1, λϕ0, nedge, stemevp, brsp, stbrl, narea)

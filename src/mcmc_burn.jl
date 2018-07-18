@@ -28,50 +28,50 @@ function burn_tribe(total_llf    ::Function,
                     bgiid_br     ::Function,
                     mhr_upd_Xbr  ::Function,
                     mhr_upd_Xtrio::Function,
-                    mhr_upd_Y    ::Function,
                     mhr_upd_Ybr  ::Function,
+                    mhr_upd_Ytrio::Function,
                     mhr_upd_Ystem::Function,
                     mhr_upd_XYbr ::Function,
-                    Xc       ::Array{Float64,2},
-                    Yc       ::Array{Int64,3},
-                    areavg   ::Array{Float64,2},
-                    areaoc   ::Array{Int64,2},
-                    linavg   ::Array{Float64,2},
-                    lindiff  ::Array{Float64,3},
-                    σ²c      ::Float64,
-                    ωxc      ::Float64,
-                    ω1c      ::Float64,
-                    ω0c      ::Float64,
-                    λ1c      ::Float64,
-                    λ0c      ::Float64,
-                    Xnc1     ::Array{Int64,1},
-                    Xnc2     ::Array{Int64,1},
-                    brl      ::Array{Float64,1},
-                    wcol     ::Array{Array{Int64,1},1},
-                    bridx_a  ::Array{Array{UnitRange{Int64},1},1},
-                    brδt     ::Array{Array{Float64,1},1},
-                    brs      ::Array{Int64,3},
-                    stemevc  ::Array{Array{Float64,1},1},
-                    trios    ::Array{Array{Int64,1},1},
-                    wXp      ::Array{Int64,1},
-                    λprior   ::Float64,
-                    λϕprior  ::Float64,
-                    ωxprior  ::NTuple{2,Float64},
-                    ω1prior  ::NTuple{2,Float64},
-                    ω0prior  ::NTuple{2,Float64},
-                    σ²prior  ::Float64,
-                    np       ::Int64,
-                    parvec   ::Array{Int64,1},
-                    nburn    ::Int64,
-                    obj_ar   ::Float64 = 0.234,
-                    tune_int ::Int64   = 100)
+                    Xc      ::Array{Float64,2},
+                    Yc      ::Array{Int64,3},
+                    δXc     ::Array{Float64,3},
+                    δYc     ::Array{Float64,3},
+                    LAc     ::Array{Float64,2},
+                    LDc     ::Array{Float64,3},
+                    σ²c     ::Float64,
+                    ωxc     ::Float64,
+                    ω1c     ::Float64,
+                    ω0c     ::Float64,
+                    λ1c     ::Float64,
+                    λ0c     ::Float64,
+                    Xnc1    ::Array{Int64,1},
+                    Xnc2    ::Array{Int64,1},
+                    brl     ::Array{Float64,1},
+                    wcol    ::Array{Array{Int64,1},1},
+                    bridx_a ::Array{Array{UnitRange{Int64},1},1},
+                    brδt    ::Array{Array{Float64,1},1},
+                    brs     ::Array{Int64,3},
+                    stemevc ::Array{Array{Float64,1},1},
+                    trios   ::Array{Array{Int64,1},1},
+                    wXp     ::Array{Int64,1},
+                    λprior  ::Float64,
+                    λϕprior ::Float64,
+                    ωxprior ::NTuple{2,Float64},
+                    ω1prior ::NTuple{2,Float64},
+                    ω0prior ::NTuple{2,Float64},
+                    σ²prior ::Float64,
+                    np      ::Int64,
+                    parvec  ::Array{Int64,1},
+                    nburn   ::Int64,
+                    obj_ar  ::Float64 = 0.234,
+                    tune_int::Int64   = 100)
 
   const m, ntip, narea  = size(Yc)
 
   const nedge = size(brs, 1) 
 
   # likelihood and prior
-  llc = total_llf(Xc, Yc, linavg, lindiff, ωxc, ω1c, ω0c, λ1c, λ0c,
+  llc = total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
                   stemevc, brs[nedge,1,:], σ²c)
   prc = allλpr(λ1c, λ0c, λprior)              +
         logdexp(σ²c, σ²prior)                 +
@@ -91,7 +91,6 @@ function burn_tribe(total_llf    ::Function,
   const lac = zeros(Int64, np)
 
   # row i proposals for X
-  const aai = zeros(Float64, narea)       # area average
   const lai = fill(NaN, ntip)             # lineage average
   const ldi = fill(NaN, ntip, narea)      # lineage difference
 
@@ -119,48 +118,52 @@ function burn_tribe(total_llf    ::Function,
       # update X
       if up > 6
 
-        upx = wXp[up - 6]::Int64                 # X indexing
+        @inbounds begin
 
-        xi, xj = ind2sub(Xc, upx)
+          upx = wXp[up - 6]::Int64                 # X indexing
 
-        const xpi = Xc[xi,:]::Array{Float64,1}
+          xi, xj = ind2sub(Xc, upx)
 
-        xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
+          xpi = Xc[xi,:]::Array{Float64,1}
 
-        if in(upx, Xnc1)        # if an internal node
-          xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
-        end
+          xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
 
-        # calculate new averages
-        Xupd_linavg!(aai, lai, ldi, areaoc, xi, wcol[xi], xpi, Yc, narea)
+          if in(upx, Xnc1)        # if an internal node
+            xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
+          end
 
-        if upx == 1  # if root
-          @inbounds llr = Rupd_llr(wcol[1], 
-                                   xpi[wcol[1]], 
-                                   Xc[1,wcol[1]], Xc[2,wcol[1]], 
-                                   lai[wcol[1]], ldi[wcol[1],:], 
-                                   linavg[1,wcol[1]], lindiff[1,wcol[1],:],
-                                   Yc, 
-                                   ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
-        else
-          @inbounds llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
-                                   xpi, 
-                                   Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
-                                   lai, ldi, 
-                                   linavg[xi,:], linavg[xi-1,:], 
-                                   lindiff[xi,:,:],
-                                   Yc, 
-                                   ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
-        end
+          δxi = δXc[:,:,xi]::Array{Float64,2}
 
-        if -randexp() < llr
-          @inbounds begin
-            Xc[xi,:]        = xpi::Array{Float64,1}
-            llc            += llr::Float64
-            areavg[xi,:]    = aai::Array{Float64,1}
-            linavg[xi,:]    = lai::Array{Float64,1}
-            lindiff[xi,:,:] = ldi::Array{Float64,2}
-            lac[up]        += 1   # log acceptance
+          # calculate new averages
+          Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, 
+                       xi, xj, Yc, δYc[:,:,xi], narea)
+
+          if upx == 1  # if root
+            llr = Rupd_llr(wcol[1], 
+                           xpi[wcol[1]], 
+                           Xc[1,wcol[1]], Xc[2,wcol[1]], 
+                           lai[wcol[1]], ldi[wcol[1],:], 
+                           LAc[1,wcol[1]], LDc[1,wcol[1],:],
+                           Yc, 
+                           ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
+          else
+            llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
+                           xpi, 
+                           Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
+                           lai, ldi, 
+                           LAc[xi,:], LAc[xi-1,:], 
+                           LDc[xi,:,:],
+                           Yc, 
+                           ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
+          end
+
+          if -randexp() < llr
+            llc        += llr::Float64
+            Xc[xi,:]    = xpi::Array{Float64,1}
+            δXc[:,:,xi] = δxi::Array{Float64,2}
+            LAc[xi,:]   = lai::Array{Float64,1}
+            LDc[xi,:,:] = ldi::Array{Float64,2}
+            lac[up]    += 1   # log acceptance
           end
         end
 
@@ -171,7 +174,7 @@ function burn_tribe(total_llf    ::Function,
         λ1p = mulupt(λ1c, ptn[5])::Float64
 
         llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
-                       lindiff, stemevc, brs[nedge,1,:])::Float64
+                       LDc, stemevc, brs[nedge,1,:])::Float64
 
         prr = logdexp(λ1p, λprior) - logdexp(λ1c, λprior)::Float64
 
@@ -185,10 +188,9 @@ function burn_tribe(total_llf    ::Function,
         # which internal node to update
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
-
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+                    LAc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # update λ0
@@ -198,7 +200,7 @@ function burn_tribe(total_llf    ::Function,
         λ0p = mulupt(λ0c, ptn[6])::Float64
 
         llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
-                       lindiff, stemevc, brs[nedge,1,:])::Float64
+                       LDc, stemevc, brs[nedge,1,:])::Float64
 
         prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64
 
@@ -213,9 +215,9 @@ function burn_tribe(total_llf    ::Function,
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
 
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+                    LAc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # if σ² is updated
@@ -224,7 +226,7 @@ function burn_tribe(total_llf    ::Function,
         σ²p = mulupt(σ²c, ptn[1])::Float64
 
         #likelihood ratio
-        llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxc, σ²c, σ²p)::Float64
+        llr = σ²ωxupd_llr(Xc, LAc, ωxc, ωxc, σ²c, σ²p)::Float64
 
         # prior ratio
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
@@ -242,7 +244,7 @@ function burn_tribe(total_llf    ::Function,
         ωxp = addupt(ωxc, ptn[2])::Float64
 
         #likelihood ratio
-        llr = σ²ωxupd_llr(Xc, linavg, ωxc, ωxp, σ²c, σ²c)
+        llr = σ²ωxupd_llr(Xc, LAc, ωxc, ωxp, σ²c, σ²c)
 
         # prior ratio
         prr = logdnorm(ωxp, ωxprior[1], ωxprior[2]) -
@@ -261,7 +263,7 @@ function burn_tribe(total_llf    ::Function,
         ω1p = addupt(ω1c, ptn[3])::Float64
 
         # proposal likelihood and prior
-        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, lindiff)::Float64
+        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, LDc)::Float64
 
         # prior ratio
         prr = logdnorm(ω1p, ω1prior[1], ω1prior[2]) -
@@ -278,9 +280,9 @@ function burn_tribe(total_llf    ::Function,
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
 
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+                    LAc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # update ω0
@@ -288,7 +290,7 @@ function burn_tribe(total_llf    ::Function,
         ω0p = addupt(ω0c, ptn[4])
 
         # proposal likelihood ratio
-        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, lindiff)::Float64
+        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, LDc)::Float64
 
         # prior ratio
         prr = logdnorm(ω0p, ω0prior[1], ω0prior[2])::Float64 -
@@ -305,9 +307,9 @@ function burn_tribe(total_llf    ::Function,
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
 
-          llc = mhr_upd_Y(rand(trios), Xc, Yc, 
+          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    areavg, areaoc, linavg, lindiff, brs, stemevc)
+                    LAc, LDc, δXc, δYc, brs, stemevc)
         end
 
       end
@@ -318,8 +320,7 @@ function burn_tribe(total_llf    ::Function,
         λϕ1, λϕ0 = λϕprop()
         llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
-                          llc, prc, areavg, areaoc, linavg, lindiff, 
-                          brs, stemevc)
+                          llc, prc, LAc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make X trio update
@@ -333,17 +334,15 @@ function burn_tribe(total_llf    ::Function,
       if rand() < 2e-3
         llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-                          areavg, linavg, lindiff, areaoc, brs, stemevc)
+                          LAc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make joint X & Y branch update
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
         llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-                           λϕ1, λϕ0,
-                           llc, prc, areavg, areaoc, linavg, lindiff, 
-                           brs, stemevc)
+                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
+                           llc, prc, LAc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # update stem node
@@ -369,7 +368,7 @@ function burn_tribe(total_llf    ::Function,
     next!(p)
   end
 
-  return llc, prc, Xc, Yc, areavg, areaoc, linavg, lindiff, stemevc, 
+  return llc, prc, Xc, Yc, LAc, LDc, δXc, δYc, stemevc, 
          brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn
 end
 
