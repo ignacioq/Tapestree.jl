@@ -44,8 +44,8 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
              ω0c::Float64,
              σ²c::Float64,
              llc::Float64,
-             LA ::Array{Float64,2},
-             LD ::Array{Float64,3})
+             LAc::Array{Float64,2},
+             LDc::Array{Float64,3})
 
     @inbounds begin
 
