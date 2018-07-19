@@ -223,18 +223,13 @@ function lindiff!(LD   ::Array{Float64,3},
     for i = Base.OneTo(m), k = Base.OneTo(narea), l = Base.OneTo(ntip)
 
       LD[i,l,k] = 0.0
-      sk        = 0.0
 
       for j = Base.OneTo(ntip)
         j == l && continue
         x = δX[j,l,i]
         isnan(x) && continue
-        y          = Float64(Y[i,j,k])
-        LD[i,l,k] += abs(x)*y
-        sk        += y
+        LD[i,l,k] += abs(x)*Float64(Y[i,j,k])
       end
-
-      LD[i,l,k] /= (iszero(sk) ? 1.0 : sk)
     end
   end
 

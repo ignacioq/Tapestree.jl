@@ -58,9 +58,9 @@ function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
   if iszero(δx) 
     return λ1
   elseif ω1 > 0.0
-    return λ1 * exp(-ω1^2/δx)
+    return λ1 * exp(-abs2(ω1)/δx)
   else
-    return λ1 * exp(-ω1^2*δx)
+    return λ1 * exp(-abs2(ω1)*δx)
   end
 end
 
@@ -75,12 +75,12 @@ Estimate rates for area colonization/loss based
 on the difference between lineage traits and area averages.
 """
 function f_λ0(λ0::Float64, ω0::Float64, δx::Float64) 
-  if iszero(δx) 
+  if iszero(δx)
     return λ0
   elseif ω0 > 0.0
-    return λ0 + ω0/δx
+    return λ0 + log1p(abs2(w0)/δx)
   else
-    return λ0 - ω0*δx
+    return λ0 + log1p(abs2(w0)*δx)
   end
 end
 

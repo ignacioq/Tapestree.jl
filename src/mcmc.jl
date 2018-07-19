@@ -34,7 +34,6 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                     ω0prior ::NTuple{2,Float64} = (0.,10.),
                     σ²prior ::Float64           = 1e-1,
                     λprior  ::Float64           = 1e-1,
-                    λϕprior ::Float64          = 1e-1,
                     out_file::String            = "compete_results",
                     weight  ::NTuple{5,Float64} = (0.15,0.05,0.02,0.02,5e-3),
                     σ²i     ::Float64           = 1.,
@@ -187,8 +186,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
       Xc, Yc, δXc, δYc, LAc, LDc, σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
       Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
       trios, wXp,
-      λprior, λϕprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
-
+      
   # log probability of collision
   const max_δt = maximum(δt)::Float64
 
