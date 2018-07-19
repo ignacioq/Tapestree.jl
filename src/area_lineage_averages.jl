@@ -279,14 +279,10 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
 
     ldi[:] = 0.0
     for k = Base.OneTo(narea), l = wci
-      sk = 0.0
       for j = wci
         j == l && continue
-        y         = Float64(Y[xi,j,k])
-        ldi[l,k] += abs(δxi[j,l])*y
-        sk       += y
+        ldi[l,k] += abs(δxi[j,l])*Float64(Y[xi,j,k])
       end
-      ldi[l,k] /= (iszero(sk) ? 1.0 : sk)
     end
   end
 
