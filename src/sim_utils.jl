@@ -12,10 +12,32 @@ t(-_-t)
 
 
 
-"""
-    simulate_compete(X_initial::Float64, Y_initial::Array{Int64,1}, tree_file::String;  ωx = 0.0, σ = 0.5, λ1 = 0.5, λ0 = 0.2, ω1 = 0.0, ω0 = 0.0, const_δt = 1e-4)
+X_initial = 0.0
+nareas    = 3
+tree_file = homedir()*"/data/turnover/example_tree_5.tre"
+ωx        = 0.0
+σ         = 0.5
+λ1        = 2.0
+λ0        = 1.0
+ω1        = 0.0
+ω0        = 0.0
+const_δt  = 1e-4
 
-Simulate biogeographic and trait evolution according to Compete model.
+
+
+"""
+    simulate_tribe(X_initial::Float64,
+                   nareas   ::Int64,
+                   tree_file::String;
+                   ωx       = 0.0,
+                   σ        = 0.5,
+                   λ1       = 0.5,
+                   λ0       = 0.2,
+                   ω1       = 0.0,
+                   ω0       = 0.0,
+                   const_δt = 1e-4)
+
+Simulate tribe model.
 """
 function simulate_tribe(X_initial::Float64,
                         nareas   ::Int64,
@@ -31,7 +53,7 @@ function simulate_tribe(X_initial::Float64,
   Y_initial = 
     [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]::Array{Int64,1}
 
-  while sum(Y_initial) == 0
+  while iszero(sum(Y_initial))
     Y_initial = 
       [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]::Array{Int64,1}
   end
@@ -50,7 +72,7 @@ function simulate_tribe(X_initial::Float64,
   push!(bts, 0.0)
 
   # number of speciation events
-  nbt = endof(bts)-1
+  nbt = endof(bts) - 1
 
   # calculate speciation waiting times
   const swt = Array{Float64,1}(nbt)
@@ -65,7 +87,7 @@ function simulate_tribe(X_initial::Float64,
   Yt = vcat(Y_initial, Y_initial)
 
   # start of alive
-  alive  = sortrows(br, by = x->(x[1]))[1:2,2]
+  @inbounds alive  = sortrows(br, by = x->(x[1]))[1:2,2]
   nalive = length(alive)
 
   # loop through waiting times
@@ -73,8 +95,13 @@ function simulate_tribe(X_initial::Float64,
 
     nreps = reps_per_period(swt[j], const_δt)
 
-    # simulate durin the waiting time
-    Yt = nconst_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
+    # simulate during the speciation waiting time
+    nconst_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
+
+
+
+
+
 
     if j == nbt
       break
@@ -157,87 +184,38 @@ function nconst_sim!(Xt   ::Array{Float64,1},
                      ω0   ::Float64)
 
   # n species and k areas
-  const n, k = size(Yt)
+  const n, narea = size(Yt)
+  const Ytp      = similar(Yt)
+  const nch      = zeros(Int64, n)
 
-  # allocate memory for area and lineage averages 
-  arav = zeros(k)        # area averages
-  liav = zeros(n)        # lineage averages
-  aroc = zeros(Int64,k)  # area occupancy
-  alλ1 = zeros(n,k)      # area specific lineage rates
-  alλ0 = zeros(n,k)      # area specific lineage rates
+  # allocate memory for lineage averages and differences
+  δX = zeros(n, n)     # X pairwise differences
+  δY = zeros(n, n)     # Y pairwise differences
+  la = zeros(n)        # lineage averages
+  ld = zeros(n,k)      # area specific lineage rates
 
   for i in Base.OneTo(nreps)
 
     # estimate area and lineage averages and area occupancy
-    arav, liav, aroc = ar_lin_avg(Xt, Yt, arav, liav, aroc, n, k)
-
-    # estimate area colonization/loss rates
-    alλ1, alλ0 = lin_rates(Xt, arav, aroc, alλ1, alλ0, λ1, λ0, ω1, ω0, n, k)
+    δXY_la_ld!(δX, δY, la, ld, Xt, Yt, n, narea)
 
     # trait step
-    traitsam_1step!(Xt, liav, δt, ωx, σ, n)
+    traitsam_1step!(Xt, la, δt, ωx, σ, n)
+
 
     # biogeographic step
-    Ytn = copy(Yt)
-    nch = biogeosam_1step(alλ1, alλ0, δt, Ytn, n, k)
+    copy!(Ytp, Yt)
+    biogeosam_1step!(ω1, ω0, λ1, λ0, ld, Ytp, nch, δt, n, narea)
 
-    while check_sam(Ytn, nch, n, k)
-      Ytn = copy(Yt)
-      nch = biogeosam_1step(alλ1, alλ0, δt, Ytn, n, k)
+    while check_sam(Ytp, nch, n, narea)
+      copy!(Ytp, Yt)
+      biogeosam_1step!(ω1, ω0, λ1, λ0, ld, Ytp, nch, δt, n, narea)
     end
 
-    Yt = Ytn
-  
+    copy!(Yt,Ytp)
   end
 
-  return Yt
-end
-
-
-
-
-
-
-"""
-    lin_rates(Xt  ::Array{Float64,1}, arav::Array{Float64,1}, alλ1::Array{Float64,2}, alλ0::Array{Float64,2}, λ1::Float64, λ0::Float64, ω1::Float64, ω0::Float64, n::Int64, k::Int64)
-
-Estimate lineage specific area colonization/loss rates based on differences between each each lineages trait and area averages.
-"""
-function lin_rates(Xt  ::Array{Float64,1}, 
-                   arav::Array{Float64,1}, 
-                   aroc::Array{Int64,1},
-                   alλ1::Array{Float64,2},
-                   alλ0::Array{Float64,2},
-                   λ1  ::Float64,
-                   λ0  ::Float64,
-                   ω1  ::Float64,
-                   ω0  ::Float64,
-                   n   ::Int64,
-                   k   ::Int64)
-  @inbounds begin
-
-    for j in Base.OneTo(k)
-      
-      if aroc[j] < 1 
-
-        for i in Base.OneTo(n)
-          alλ1[i,j] = λ1
-          alλ0[i,j] = λ0
-        end
-
-      else
-
-        for i in Base.OneTo(n)
-          Δx = abs(Xt[i] - arav[j])
-          alλ1[i,j] = f_λ1(λ1, ω1, Δx)
-          alλ0[i,j] = f_λ0(λ0, ω0, Δx)
-        end
-
-      end
-    end
-
-    return alλ1, alλ0
-  end
+  return nothing
 end
 
 
@@ -245,53 +223,60 @@ end
 
 
 """
-    ar_lin_avg(Xt::Array{Float64,1}, Yt::Array{Int64,2}, arav::Array{Float64,1}, 
-              liav::Array{Float64,1}, n::Int64, k::Int64)
+    δXY_la_ld!(δX   ::Array{Float64,2},
+               δY   ::Array{Float64,2},
+               la   ::Array{Float64,1},
+               ld   ::Array{Float64,2},
+               Xt   ::Array{Float64,1}, 
+               Yt   ::Array{Int64,2}, 
+               n    ::Int64,
+               narea::Int64)
 
 Estimate area and lineage specific averages given sympatry configuration.
 """
-function ar_lin_avg(Xt  ::Array{Float64,1}, 
-                    Yt  ::Array{Int64,2}, 
-                    arav::Array{Float64,1},
-                    liav::Array{Float64,1},
-                    aroc::Array{Int64,1},
-                    n   ::Int64,
-                    k   ::Int64)
-
+function δXY_la_ld!(δX   ::Array{Float64,2},
+                    δY   ::Array{Float64,2},
+                    la   ::Array{Float64,1},
+                    ld   ::Array{Float64,2},
+                    Xt   ::Array{Float64,1}, 
+                    Yt   ::Array{Int64,2}, 
+                    n    ::Int64,
+                    narea::Int64)
   @inbounds begin
-    # estimate area averages
-    for j in Base.OneTo(k)
-      arav[j] = 0.0
-      na      = 0.0
-      aroc[j] = 0
-      for i in Base.OneTo(n)
-        if Yt[i,j] == 1
-          arav[j] += Xt[i]
-          na      += 1.0
-          aroc[j]  = 1
+
+    # estimate pairwise distances
+    for j = Base.OneTo(n), i = Base.OneTo(n)
+      i == j && continue
+      # δX differences
+      δX[i,j] = Xt[i] - Xt[j]
+      # δY differences
+      sk        = 0.0
+      δY[i,j] = 0.0
+      @simd for k = Base.OneTo(narea)
+        if Yt[j,k] == 1
+            sk += 1.0
+            δY[i,j] += Float64(Yt[i,k])
         end
       end
-
-      arav[j] /= (na == 0.0 ? 1.0 : na) 
+      δY[i,j] /= sk
     end
 
     # estimate lineage averages
-    for i in Base.OneTo(n)
-      liav[i] = 0.0
-      na      = 0.0 
-      for j in Base.OneTo(k)
-        if Yt[i,j] == 1
-          liav[i] += arav[j]
-          na      += 1.0
-        end
-      end
-      
-      liav[i] /= na
+    la[:] = 0.0
+    for j = Base.OneTo(n), i = Base.OneTo(n)
+        i == j && continue
+        la[i] += sign(δX[j,i]) * δY[j,i] * exp(-abs(δX[j,i]))
     end
 
+    # estimate lineage sum of distances
+    ld[:] = 0.0
+    for k = Base.OneTo(narea), i = Base.OneTo(n), j = Base.OneTo(n)
+      j == i && continue
+      ld[i,k] += abs(δX[j,i])*Float64(Yt[j,k])
+    end
   end
 
-  return arav, liav, aroc
+  return nothing
 end
 
 
@@ -304,7 +289,7 @@ end
 Sample one step for trait evolution history: `X(t + δt)`.
 """
 function traitsam_1step!(Xt::Array{Float64,1}, 
-                         μ ::Array{Float64,1}, 
+                         la::Array{Float64,1}, 
                          δt::Float64, 
                          ωx::Float64, 
                          σ ::Float64,
@@ -313,9 +298,9 @@ function traitsam_1step!(Xt::Array{Float64,1},
   @inbounds @fastmath begin
     
     for i in Base.OneTo(n)
-      Xt[i] += E_sde(Xt[i], μ[i], ωx, δt) + randn()*σ*sqrt(δt)
+      Xt[i] += Eδx(la[i], ωx, δt) + randn()*σ*sqrt(δt)
     end
-  
+
   end
 end
 
@@ -324,29 +309,42 @@ end
 
 
 """
-    biogeosam_1step(λ1::Float64, λ0::Float64, δt::Float64, v1::Array{Int64,1})
+    biogeosam_1step!(ω1   ::Float64,
+                     ω0   ::Float64,
+                     λ1   ::Float64,
+                     λ0   ::Float64,
+                     ld   ::Array{Float64,2},
+                     Ytp  ::Array{Int64,2},
+                     nch  ::Array{Int64,1},
+                     δt   ::Float64,
+                     n    ::Int64,
+                     narea::Int64)
 
 Sample one step for biogeographic history: `Y(t + δt)`.
 """
-function biogeosam_1step(alλ1 ::Array{Float64,2}, 
-                         alλ0 ::Array{Float64,2}, 
-                         δt   ::Float64, 
-                         Ytn  ::Array{Int64,2},
-                         n    ::Int64,
-                         k    ::Int64)
+function biogeosam_1step!(ω1   ::Float64,
+                          ω0   ::Float64,
+                          λ1   ::Float64,
+                          λ0   ::Float64,
+                          ld   ::Array{Float64,2},
+                          Ytp  ::Array{Int64,2},
+                          nch  ::Array{Int64,1},
+                          δt   ::Float64,
+                          n    ::Int64,
+                          narea::Int64)
 
   @inbounds begin
 
-    nch = zeros(Int64, n)
-    for j in Base.OneTo(k), i in Base.OneTo(n)
-      if Ytn[i,j] == 0
-        if rand() < alλ1[i,j]*δt
-          setindex!(Ytn,1,i,j)
+    nch[:] = 0
+    for k = Base.OneTo(narea), i = Base.OneTo(n)
+      if iszero(Ytp[i,k])
+        if rand() < f_λ1(λ1,ω1,ld[i,k])*δt
+          setindex!(Ytp,1,i,k)
           nch[i] += 1
         end
       else 
-        if rand() < alλ0[i,j]*δt
-          setindex!(Ytn,0,i,j)
+        if rand() < f_λ0(λ0,ω0,ld[i,k])*δt
+          setindex!(Ytp,0,i,k)
           nch[i] += 1 
         end
       end
@@ -354,7 +352,7 @@ function biogeosam_1step(alλ1 ::Array{Float64,2},
 
   end
 
-  return nch::Array{Int64,1}
+  return nothing
 end
 
 
@@ -367,17 +365,17 @@ end
 Returns false if biogeographic step consists of *only one* change 
 or if the species does *not* go globally extinct. 
 """
-function check_sam(Ytc::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, k::Int64)
+function check_sam(Ytp::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, nareas::Int64)
 
   @fastmath @inbounds begin
 
     # check lineage did not go extinct
     for i in Base.OneTo(n)
       s = 0
-      for j in Base.OneTo(k)
-        s += Ytc[i,j]
+      for j in Base.OneTo(nareas)
+        s += Ytp[i,j]
       end
-      if s == 0
+      if iszero(s)
         return true
       end
     end
@@ -391,7 +389,6 @@ function check_sam(Ytc::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, k::Int64)
     end
 
     return false
-
   end
 end
 

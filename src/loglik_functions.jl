@@ -13,29 +13,6 @@ May 15 2017
 
 
 
-"""
-    E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
-Return the expected value according to reworked competition model.
-"""
-function E_sde(xi::Float64, μ::Float64, ωx::Float64, δt::Float64)
-  @fastmath begin
-    if ωx < 0.0
-      if μ - xi < 0.0
-        return (-ωx * exp(μ - xi) * δt)::Float64
-      elseif μ - xi > 0.0
-        return ( ωx * exp(xi - μ) * δt)::Float64
-      else
-        return 0.0
-      end
-    else
-       return (ωx * (μ - xi) * δt)::Float64
-    end
-  end
-end
-
-
-
-
 
 """
     Eδx(μ::Float64, ωx::Float64, δt::Float64)
@@ -78,9 +55,9 @@ function f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
   if iszero(δx)
     return λ0
   elseif ω0 > 0.0
-    return λ0 + log1p(abs2(w0)/δx)
+    return λ0 + log1p(abs2(ω0)/δx)
   else
-    return λ0 + log1p(abs2(w0)*δx)
+    return λ0 + log1p(abs2(ω0)*δx)
   end
 end
 

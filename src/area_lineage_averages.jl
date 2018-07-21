@@ -263,12 +263,14 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
 
   @inbounds begin
 
+    # estimate pairwise distances
     δxi[:] = NaN
     @simd for l = wci
       δxi[xj,l] = xpi[xj] - xpi[l]
       δxi[l,xj] = xpi[l]  - xpi[xj]
     end
 
+    # estimate lineage averages
     lai[:] = 0.0
     for l = wci
       for j = wci
@@ -277,6 +279,7 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
       end
     end
 
+    # estimate lineage sum of distances
     ldi[:] = 0.0
     for k = Base.OneTo(narea), l = wci
       for j = wci

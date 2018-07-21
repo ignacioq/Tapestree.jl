@@ -186,7 +186,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
       Xc, Yc, δXc, δYc, LAc, LDc, σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
       Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
       trios, wXp,
-      
+      λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
+
   # log probability of collision
   const max_δt = maximum(δt)::Float64
 
