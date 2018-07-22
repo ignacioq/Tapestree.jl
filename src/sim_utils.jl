@@ -98,11 +98,6 @@ function simulate_tribe(X_initial::Float64,
     # simulate during the speciation waiting time
     nconst_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
 
-
-
-
-
-
     if j == nbt
       break
     end
@@ -111,7 +106,7 @@ function simulate_tribe(X_initial::Float64,
     wsp = brs[j,2]
 
     # where to insert
-    wti = find(wsp .== alive)[1]
+    wti = findfirst(alive, wsp)
 
     # index to insert
     idx = sort(push!(collect(1:nalive), wti))
@@ -121,7 +116,7 @@ function simulate_tribe(X_initial::Float64,
     Yt = Yt[idx,:]
 
     # update alive
-    chs = brs[find(wsp .== brs[:,1]),2]
+    chs = brs[wsp .== brs[:,1],2]
 
     alive[wti] = chs[1]
     insert!(alive, wti+1, chs[2])
@@ -183,16 +178,16 @@ function nconst_sim!(Xt   ::Array{Float64,1},
                      ω1   ::Float64, 
                      ω0   ::Float64)
 
-  # n species and k areas
+  # n species and narea areas
   const n, narea = size(Yt)
   const Ytp      = similar(Yt)
   const nch      = zeros(Int64, n)
 
   # allocate memory for lineage averages and differences
-  δX = zeros(n, n)     # X pairwise differences
-  δY = zeros(n, n)     # Y pairwise differences
-  la = zeros(n)        # lineage averages
-  ld = zeros(n,k)      # area specific lineage rates
+  δX = zeros(n, n)      # X pairwise differences
+  δY = zeros(n, n)      # Y pairwise differences
+  la = zeros(n)         # lineage averages
+  ld = zeros(n, narea)  # area specific lineage rates
 
   for i in Base.OneTo(nreps)
 
@@ -201,7 +196,6 @@ function nconst_sim!(Xt   ::Array{Float64,1},
 
     # trait step
     traitsam_1step!(Xt, la, δt, ωx, σ, n)
-
 
     # biogeographic step
     copy!(Ytp, Yt)
