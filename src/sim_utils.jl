@@ -12,17 +12,6 @@ t(-_-t)
 
 
 
-X_initial = 0.0
-nareas    = 3
-tree_file = homedir()*"/data/turnover/example_tree_5.tre"
-ωx        = 0.0
-σ         = 0.5
-λ1        = 2.0
-λ0        = 1.0
-ω1        = 0.0
-ω0        = 0.0
-const_δt  = 1e-4
-
 
 
 """
