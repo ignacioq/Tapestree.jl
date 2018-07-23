@@ -55,9 +55,9 @@ function f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
   if iszero(δx)
     return λ0
   elseif ω0 > 0.0
-    return λ0 + log1p(abs2(ω0)/δx)
+    return λ0 + Base.Math.JuliaLibm.log(1. + abs2(ω0)/δx)
   else
-    return λ0 + log1p(abs2(ω0)*δx)
+    return λ0 + Base.Math.JuliaLibm.log(1. + abs2(ω0)*δx)
   end
 end
 
