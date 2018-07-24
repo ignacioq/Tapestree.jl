@@ -124,15 +124,15 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   # X and Y distance matrix
   const δXc = fill(NaN, ntip, ntip, m)
   const δYc = fill(NaN, ntip, ntip, m)
-  deltaXY!(δXc, δYc, Xc, Yc, m, ntip, narea)
+  deltaXY!(δXc, δYc, Xc, Yc, wcol, m, ntip, narea)
 
   # lineage averages
   const LAc = fill(NaN, m, ntip)
-  sde!(LAc, δXc, δYc, m, ntip)
+  sde!(LAc, δXc, δYc, wcol, m, ntip)
 
   # area lineage distances
   const LDc = fill(NaN, m, ntip, narea)
-  lindiff!(LDc, δXc, Yc, m, ntip, narea)
+  lindiff!(LDc, δXc, Yc,wcol, m, ntip, narea)
 
   ## make likelihood and prior functions
   total_llf   = makellf(δt, Yc, ntip, narea, m)

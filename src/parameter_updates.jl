@@ -29,6 +29,8 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xupd_llr ::Function,
                         Rupd_llr ::Function)
 
+  const xpi = fill(NaN, ntip)
+  const δxi = fill(NaN, ntip, ntip)
   const lai = fill(NaN, ntip)
   const ldi = fill(NaN, ntip, narea)
 
@@ -53,7 +55,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
 
       xi, xj = ind2sub(Xc, upx)
 
-      const xpi = Xc[xi,:]::Array{Float64,1}
+      copy!(xpi, view(Xc,xi,:))
 
       xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
 
@@ -61,10 +63,11 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
         xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
       end
 
-      δxi = δXc[:,:,xi]::Array{Float64,2}
+      copy!(δxi, view(δXc,:,:,xi))
 
       # calculate new averages
-      Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, xi, xj, Yc, δYc[:,:,xi], narea)
+      Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, xi, xj, 
+                   view(Yc,xi,:,:), view(δYc,:,:,xi), narea)
 
       if upx == 1  # if root
         llr = Rupd_llr(wcol[1], 

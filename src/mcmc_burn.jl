@@ -90,6 +90,8 @@ function burn_tribe(total_llf    ::Function,
   const lac = zeros(Int64, np)
 
   # row i proposals for X
+  const xpi = fill(NaN, ntip)             # proposal x slice
+  const δxi = fill(NaN, ntip, ntip)       # lineage pairwise differences
   const lai = fill(NaN, ntip)             # lineage average
   const ldi = fill(NaN, ntip, narea)      # lineage difference
 
@@ -123,7 +125,7 @@ function burn_tribe(total_llf    ::Function,
 
           xi, xj = ind2sub(Xc, upx)
 
-          xpi = Xc[xi,:]::Array{Float64,1}
+          copy!(xpi, view(Xc,xi,:))
 
           xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
 
@@ -131,11 +133,12 @@ function burn_tribe(total_llf    ::Function,
             xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
           end
 
-          δxi = δXc[:,:,xi]::Array{Float64,2}
+          copy!(δxi, view(δXc,:,:,xi))
 
           # calculate new averages
-          Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, 
-                       xi, xj, Yc, δYc[:,:,xi], narea)
+          Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, xi, xj, 
+                       view(Yc,xi,:,:), view(δYc,:,:,xi), narea)
+
 
           if upx == 1  # if root
             llr = Rupd_llr(wcol[1], 

@@ -107,7 +107,7 @@ function makellf(δt   ::Array{Float64,1},
 
     ll::Float64 = normC
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # trait likelihood
       for j = Base.OneTo(ntip)
