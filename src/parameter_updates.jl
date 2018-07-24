@@ -145,9 +145,9 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
 
     upbranchX!(br, Xp, bridx, brδt, σ²c)
 
-    deltaX!(δXp, Xp, m, ntip, narea)
-    sde!(LAp, δXp, δYc, m, ntip)
-    lindiff!(LDp, δXp, Yc, m, ntip, narea)
+    deltaX!(δXp, Xp, wcol, m, ntip, narea)
+    sde!(LAp, δXp, δYc, wcol, m, ntip)
+    lindiff!(LDp, δXp, Yc, wcol, m, ntip, narea)
 
     llr = (total_llf(Xp, Yc, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c) - 
@@ -213,9 +213,9 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
 
     uptrioX!(pr, d1, d2, Xp, bridx, brδt, σ²c, nedge)
 
-    deltaX!(δXp, Xp, m, ntip, narea)
-    sde!(LAp, δXp, δYc, m, ntip)
-    lindiff!(LDp, δXp, Yc, m, ntip, narea)
+    deltaX!(δXp, Xp, wcol, m, ntip, narea)
+    sde!(LAp, δXp, δYc, wcol,  m, ntip)
+    lindiff!(LDp, δXp, Yc, wcol, m, ntip, narea)
 
     llr = (total_llf(Xp, Yc, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs[nedge,1,:], σ²c) - 
@@ -291,9 +291,9 @@ function make_mhr_upd_Ybr(narea              ::Int64,
     if upbranchY!(λϕ1, λϕ0, br, Yp, stemevp, 
                   bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
-      deltaY!(δYp, Yp, m, ntip, narea)
-      sde!(LAp, δXc, δYp, m, ntip)
-      lindiff!(LDp, δXc, Yp, m, ntip, narea)
+      deltaY!(δYp, Yp, wcol, m, ntip, narea)
+      sde!(LAp, δXc, δYp, wcol, m, ntip)
+      lindiff!(LDp, δXc, Yp, wcol, m, ntip, narea)
 
       llr = (total_llf(Xc, Yp, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                        stemevp, brs[nedge,1,:], σ²c) - 
@@ -384,9 +384,9 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
     if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
                bridx_a, brδt, brl, brsp, narea, nedge)
 
-      deltaY!(δYp, Yp, m, ntip, narea)
-      sde!(LAp, δXc, δYp, m, ntip)
-      lindiff!(LDp, δXc, Yp, m, ntip, narea)
+      deltaY!(δYp, Yp, wcol, m, ntip, narea)
+      sde!(LAp, δXc, δYp, wcol, m, ntip)
+      lindiff!(LDp, δXc, Yp, wcol, m, ntip, narea)
 
       llr = (total_llf(Xc, Yp, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                        stemevp, brsp[nedge,1,:], σ²c) - 
@@ -474,9 +474,9 @@ function make_mhr_upd_XYbr(narea              ::Int64,
 
       upbranchX!(br, Xp, bridx, brδt, σ²c)
 
-      deltaXY!(δXp, δYp, Xp, Yp, m, ntip, narea)
-      sde!(LAp, δXp, δYp, m, ntip)
-      lindiff!(LDp, δXp, Yp, m, ntip, narea)
+      deltaXY!(δXp, δYp, Xp, Yp, wcol, m, ntip, narea)
+      sde!(LAp, δXp, δYp, wcol, m, ntip)
+      lindiff!(LDp, δXp, Yp, wcol, m, ntip, narea)
 
       llr = (total_llf(Xp, Yp, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                        stemevc, brs[nedge,1,:], σ²c) - 

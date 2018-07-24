@@ -27,25 +27,16 @@ conditional on a given `δY`.
 """
 function deltaX!(δX   ::Array{Float64,3}, 
                  X    ::Array{Float64,2},
+                 wcol ::Array{Array{Int64,1},1},
                  m    ::Int64,
                  ntip ::Int64,
                  narea::Int64)
 
   @inbounds begin
 
-    for i = Base.OneTo(m), l = Base.OneTo(ntip)
-
-      isnan(X[i,l]) && continue
-
-      for j = Base.OneTo(ntip)
-        isnan(X[i,j]) && continue
-        if j == l 
-          δX[j,l,i] = 0.0
-        else
-          # X differences
-          δX[j,l,i] = X[i,j] - X[i,l]
-        end
-      end
+    for i = Base.OneTo(m), l = wcol[i], j = wcol[i]
+      l == j && continue
+      δX[j,l,i] = X[i,j] - X[i,l]
     end
 
   end
@@ -69,29 +60,26 @@ conditional on a given `δY`.
 """
 function deltaY!(δY   ::Array{Float64,3}, 
                  Y    ::Array{Int64,3},
+                 wcol ::Array{Array{Int64,1},1},
                  m    ::Int64,
                  ntip ::Int64,
                  narea::Int64)
 
   @inbounds begin
 
-    for i = Base.OneTo(m), l = Base.OneTo(ntip), j = Base.OneTo(ntip)
+    for i = Base.OneTo(m), l = wcol[i], j = wcol[i]
 
-      if Y[i,j,1] == 23 || Y[i,l,1] == 23
-        continue
-      elseif j == l 
-        δY[j,l,i] = 1.0
-      else
-        sl        = 0.0
-        δY[l,j,i] = 0.0
-        @simd for k = Base.OneTo(narea)
-          if Y[i,j,k] == 1
-            sl += 1.0
-            δY[l,j,i] += Float64(Y[i,l,k])
-          end
+      j == l && continue
+
+      sl        = 0.0
+      δY[l,j,i] = 0.0
+      @simd for k = Base.OneTo(narea)
+        if Y[i,j,k] == 1
+          sl += 1.0
+          δY[l,j,i] += Float64(Y[i,l,k])
         end
-        δY[l,j,i] /= sl
       end
+      δY[l,j,i] /= sl
     end
 
   end
@@ -125,9 +113,7 @@ function deltaXY!(δX   ::Array{Float64,3},
 
   @inbounds begin
 
-    for i = Base.OneTo(m), 
-      l = wcol[i]::Array{Int64,1}, 
-        j = wcol[i]::Array{Int64,1}
+    for i = Base.OneTo(m), l = wcol[i], j = wcol[i]
 
       j == l && continue
 
