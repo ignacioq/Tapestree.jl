@@ -650,7 +650,7 @@ function makellr_σ²ωxupd(δt  ::Vector{Float64},
 
     llr::Float64 = 0.0
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # trait likelihood
       for j = Base.OneTo(ntip)
@@ -777,7 +777,7 @@ function makellr_Rupd(δt1  ::Float64,
 
     llr::Float64 = 0.0
 
-    @inbounds @fastmath begin
+    @inbounds begin
 
       # loop for daughter nodes
       for j = eachindex(wci)
@@ -841,7 +841,8 @@ end
 
 Return log-likelihood for events.
 """
-evll(t::Float64, λ::Float64) = @fastmath (log(λ) - (λ * t))::Float64
+evll(t::Float64, λ::Float64) = (Base.Math.JuliaLibm.log(λ) - (λ * t))::Float64
+
 
 
 
