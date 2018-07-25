@@ -173,10 +173,10 @@ function nconst_sim!(Xt   ::Array{Float64,1},
   const nch      = zeros(Int64, n)
 
   # allocate memory for lineage averages and differences
-  δX = zeros(n, n)      # X pairwise differences
-  δY = zeros(n, n)      # Y pairwise differences
-  la = zeros(n)         # lineage averages
-  ld = zeros(n, narea)  # area specific lineage rates
+  const δX = zeros(n, n)      # X pairwise differences
+  const δY = zeros(n, n)      # Y pairwise differences
+  const la = zeros(n)         # lineage averages
+  const ld = zeros(n, narea)  # area specific lineage rates
 
   for i in Base.OneTo(nreps)
 
@@ -253,9 +253,15 @@ function δXY_la_ld!(δX   ::Array{Float64,2},
 
     # estimate lineage sum of distances
     ld[:] = 0.0
-    for k = Base.OneTo(narea), i = Base.OneTo(n), j = Base.OneTo(n)
-      j == i && continue
-      ld[i,k] += abs(δX[j,i])*Float64(Yt[j,k])
+    for k = Base.OneTo(narea), i = Base.OneTo(n), 
+      sj = 0.0
+      for j = Base.OneTo(n)
+        j == i && continue
+        y        = Float64(Yt[j,k])
+        sj      += y
+        ld[i,k] += abs(δX[j,i])*y
+      end
+      ld[i,k] /= (iszero(sj) ? 1.0 : sj)
     end
   end
 

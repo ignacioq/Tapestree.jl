@@ -210,7 +210,7 @@ function lindiff!(LD   ::Array{Float64,3},
         sj        += y
       end
       LD[i,l,k] /= (iszero(sj) ? 1.0 : sj)
-    
+
     end
   end
 
