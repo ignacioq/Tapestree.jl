@@ -200,17 +200,16 @@ function lindiff!(LD   ::Array{Float64,3},
 
     for i = Base.OneTo(m), k = Base.OneTo(narea), l = wcol[i]
 
-      LD[i,l,k] = 0.0
-      sj        = 0.0
-
+      xmin = 1.0e20
       for j = wcol[i]
         j == l && continue
-        y          = Float64(Y[i,j,k])
-        LD[i,l,k] += abs(δX[j,l,i])*y
-        sj        += y
+        if Y[i,j,k] == 1
+          x    = abs(δX[j,l,i])
+          iszero(x) && continue
+          xmin = x < xmin ? x : xmin
+        end
       end
-      LD[i,l,k] /= (iszero(sj) ? 1.0 : sj)
-
+      LD[i,l,k] = xmin == 1.0e20 ? 0.0 : xmin
     end
   end
 
@@ -263,16 +262,18 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
     end
 
     # estimate lineage sum of distances
-    ldi[:] = 0.0
+    ldi[:] = NaN
     for k = Base.OneTo(narea), l = wci
-      sj = 0.0
+      xmin = 1.0e20
       for j = wci
         j == l && continue
-        y         = Float64(Y[j,k])
-        ldi[l,k] += abs(δxi[j,l])*y
-        sj       += y
+        if Y[j,k] == 1
+          x    = abs(δxi[j,l])
+          iszero(x) && continue
+          xmin = x < xmin ? x : xmin
+        end
       end
-      ldi[l,k] /= (iszero(sj) ? 1.0 : sj)
+      ldi[l,k] = xmin == 1.0e20 ? 0.0 : xmin
     end
   end
 

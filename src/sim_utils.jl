@@ -252,16 +252,18 @@ function δXY_la_ld!(δX   ::Array{Float64,2},
     end
 
     # estimate lineage sum of distances
-    ld[:] = 0.0
+    ld[:] = NaN
     for k = Base.OneTo(narea), i = Base.OneTo(n), 
-      sj = 0.0
+      xmin = 1.0e20
       for j = Base.OneTo(n)
         j == i && continue
-        y        = Float64(Yt[j,k])
-        sj      += y
-        ld[i,k] += abs(δX[j,i])*y
+        if Yt[j,k] == 1
+          x = abs(δX[j,i])
+          iszero(x) && continue
+          xmin = x < xmin ? x : xmin
+        end
       end
-      ld[i,k] /= (iszero(sj) ? 1.0 : sj)
+      ld[i,k] = xmin == 1.0e20 ? 0.0 : xmin
     end
   end
 
