@@ -10,8 +10,8 @@ June 14 2017
 
 =#
 
-using RCall
-using Optim
+
+
 
 
 """

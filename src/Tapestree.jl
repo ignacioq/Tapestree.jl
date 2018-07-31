@@ -1,5 +1,7 @@
 #=
 
+Tapestree Package module
+
 Ignacio Quintero Mächler
 
 t(-_-t)
@@ -10,16 +12,17 @@ t(-_-t)
 
 __precompile__()
 
-"""
 
-Tapestree package
+using ArgParse
+using RCall
+using Optim
+using ProgressMeter
 
-"""
 
 module Tapestree
 
-  export tribe
-  export simulate_tribe
+  export tribe, 
+         simulate_tribe
 
   include("utils.jl")
   include("tribe_utils.jl")
