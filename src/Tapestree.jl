@@ -13,13 +13,12 @@ t(-_-t)
 __precompile__()
 
 
-using ArgParse
-using RCall
-using Optim
-using ProgressMeter
-
-
 module Tapestree
+
+  using ArgParse
+  using RCall
+  using Optim
+  using ProgressMeter
 
   export tribe, 
          simulate_tribe
