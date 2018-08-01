@@ -71,7 +71,7 @@ function burn_tribe(total_llf    ::Function,
 
   # likelihood and prior
   llc = total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                  stemevc, brs[nedge,1,:], σ²c)
+                  stemevc, brs, σ²c)
   prc = allλpr(λ1c, λ0c, λprior)              +
         logdexp(σ²c, σ²prior)                 +
         logdnorm(ωxc, ωxprior[1], ωxprior[2]) +
@@ -94,6 +94,8 @@ function burn_tribe(total_llf    ::Function,
   const δxi = fill(NaN, ntip, ntip)       # lineage pairwise differences
   const lai = fill(NaN, ntip)             # lineage average
   const ldi = fill(NaN, ntip, narea)      # lineage difference
+
+  const rj = wcol[1][2]
 
   # progress bar
   p = Progress(nburn, dt=5, desc="burn...", barlen=20, color=:green)
@@ -119,53 +121,69 @@ function burn_tribe(total_llf    ::Function,
       # update X
       if up > 6
 
+        # X updates
         @inbounds begin
 
-          upx = wXp[up - 6]::Int64                 # X indexing
+          upx = wXp[up - 6]
 
-          xi, xj = ind2sub(Xc, upx)
+          # if root
+          if upx == 1
 
-          copy!(xpi, view(Xc,xi,:))
+            # allocate
+            @simd for i = Base.OneTo(ntip)
+              xpi[i] =  Xc[1,i]
+            end
 
-          xpi[xj] = addupt(xpi[xj], ptn[up])::Float64      # update X
+            # update xi
+            addupt!(xpi, ptn, 1, up)
 
-          if in(upx, Xnc1)        # if an internal node
-            xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
-          end
+            xpi[rj] = xpi[1]::Float64
 
-          copy!(δxi, view(δXc,:,:,xi))
+            llr = Rupd_llr(xpi, Xc, σ²c)::Float64
 
-          # calculate new averages
-          Xupd_linavg!(δxi, lai, ldi, wcol[xi], xpi, xi, xj, 
-                       view(Yc,xi,:,:), view(δYc,:,:,xi), narea)
+            if -randexp() < llr
+              llc     += llr::Float64
+              Xc[1,:]  = xpi::Array{Float64,1}
+              lac[up] += 1   # log acceptance
+            end
 
-
-          if upx == 1  # if root
-            llr = Rupd_llr(wcol[1], 
-                           xpi[wcol[1]], 
-                           Xc[1,wcol[1]], Xc[2,wcol[1]], 
-                           lai[wcol[1]], ldi[wcol[1],:], 
-                           LAc[1,wcol[1]], LDc[1,wcol[1],:],
-                           Yc, 
-                           ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
           else
-            llr = Xupd_llr(xi, wcol[xi], wcol[xi-1], 
-                           xpi, 
-                           Xc[xi,:], Xc[xi-1,:], Xc[xi+1,:], 
-                           lai, ldi, 
-                           LAc[xi,:], LAc[xi-1,:], 
-                           LDc[xi,:,:],
-                           Yc, 
-                           ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
-          end
 
-          if -randexp() < llr
-            llc        += llr::Float64
-            Xc[xi,:]    = xpi::Array{Float64,1}
-            δXc[:,:,xi] = δxi::Array{Float64,2}
-            LAc[xi,:]   = lai::Array{Float64,1}
-            LDc[xi,:,:] = ldi::Array{Float64,2}
-            lac[up]    += 1   # log acceptance
+            xi, xj = ind2sub(Xc, upx)
+
+            # allocate
+            for j = Base.OneTo(ntip)
+              xpi[j] =  Xc[xi,j]
+              lai[j] = LAc[xi,j]
+              @simd for k = Base.OneTo(narea)
+                ldi[j,k] = LDc[xi,j,k]
+              end
+              @simd for i = Base.OneTo(ntip)
+                δxi[i,j] = δXc[i,j,xi]
+              end
+            end
+
+            # update xi
+            addupt!(xpi, ptn, xj, up)
+
+            if in(upx, Xnc1)        # if an internal node
+              xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
+            end
+
+            # calculate new averages
+            Xupd_linavg!(δxi, lai, ldi, wcol, xpi, xi, xj, Yc, δYc, narea)
+
+            llr = Xupd_llr(xi, xpi, Xc, lai, ldi, LAc, LDc, Yc, 
+                           ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
+
+            if -randexp() < llr
+              llc        += llr::Float64
+              Xc[xi,:]    = xpi::Array{Float64,1}
+              δXc[:,:,xi] = δxi::Array{Float64,2}
+              LAc[xi,:]   = lai::Array{Float64,1}
+              LDc[xi,:,:] = ldi::Array{Float64,2}
+              lac[up]    += 1   # log acceptance
+            end
           end
         end
 
@@ -176,14 +194,15 @@ function burn_tribe(total_llf    ::Function,
         λ1p = mulupt(λ1c, ptn[5])::Float64
 
         llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
-                       LDc, stemevc, brs[nedge,1,:])::Float64
+                       LDc, stemevc, brs)::Float64
 
         prr = logdexp(λ1p, λprior) - logdexp(λ1c, λprior)::Float64
 
-        if -randexp() < (llr + prr + log(λ1p)  - log(λ1c))
-          llc     += llr::Float64
-          prc     += prr::Float64
-          λ1c      = λ1p::Float64
+        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ1p) - 
+                                     Base.Math.JuliaLibm.log(λ1c))
+          llc    += llr::Float64
+          prc    += prr::Float64
+          λ1c     = λ1p::Float64
           lac[5] += 1
         end
 
@@ -202,11 +221,12 @@ function burn_tribe(total_llf    ::Function,
         λ0p = mulupt(λ0c, ptn[6])::Float64
 
         llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
-                       LDc, stemevc, brs[nedge,1,:])::Float64
+                       LDc, stemevc, brs)::Float64
 
         prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64
 
-        if -randexp() < (llr + prr + log(λ0p)  - log(λ0c))
+        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ0p) - 
+                                     Base.Math.JuliaLibm.log(λ0c))
           llc     += llr::Float64
           prc     += prr::Float64
           λ0c      = λ0p::Float64
@@ -216,14 +236,13 @@ function burn_tribe(total_llf    ::Function,
         # which internal node to update
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     LAc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # if σ² is updated
-      elseif up == 1         
+      elseif up == 1
 
         σ²p = mulupt(σ²c, ptn[1])::Float64
 
@@ -233,8 +252,8 @@ function burn_tribe(total_llf    ::Function,
         # prior ratio
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
 
-        if -randexp() < (llr + prr + 
-                         log(σ²p) - log(σ²c))
+        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(σ²p) - 
+                                     Base.Math.JuliaLibm.log(σ²c))
           llc += llr::Float64
           prc += prr::Float64
           σ²c  = σ²p::Float64
@@ -243,6 +262,7 @@ function burn_tribe(total_llf    ::Function,
 
       #update ωx
       elseif up == 2
+
         ωxp = addupt(ωxc, ptn[2])::Float64
 
         #likelihood ratio
@@ -281,7 +301,6 @@ function burn_tribe(total_llf    ::Function,
         # which internal node to update
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     LAc, LDc, δXc, δYc, brs, stemevc)
@@ -289,6 +308,7 @@ function burn_tribe(total_llf    ::Function,
 
       # update ω0
       else
+
         ω0p = addupt(ω0c, ptn[4])
 
         # proposal likelihood ratio
@@ -308,7 +328,6 @@ function burn_tribe(total_llf    ::Function,
         # which internal node to update
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     LAc, LDc, δXc, δYc, brs, stemevc)

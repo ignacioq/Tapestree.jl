@@ -13,8 +13,10 @@ April 27 2017
 
 
 
+
+
 """
-    compete_mcmc(...)
+    tribe_mcmc(...)
 
 Run MCMC for trait and range interspecitific biogeographic evolution (tribe).
 """
@@ -132,14 +134,14 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   # area lineage distances
   const LDc = fill(NaN, m, ntip, narea)
-  lindiff!(LDc, δXc, Yc,wcol, m, ntip, narea)
+  lindiff!(LDc, δXc, Yc, wcol, m, ntip, narea)
 
   ## make likelihood and prior functions
-  total_llf   = makellf(δt, Yc, ntip, narea, m)
-  λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m)
+  total_llf   = makellf(δt, Yc, ntip, narea, m, nedge)
+  λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m, nedge)
   ω10upd_llr  = makellr_ω10_upd(Yc, δt, narea, ntip, m)
-  Xupd_llr    = makellr_Xupd(δt, narea)
-  Rupd_llr    = makellr_Rupd(δt[1], narea)
+  Xupd_llr    = makellr_Xupd(δt, narea, wcol)
+  Rupd_llr    = makellr_Rupd(δt[1], wcol[1])
   σ²ωxupd_llr = makellr_σ²ωxupd(δt, Yc, ntip)  
   bgiid       = makellf_bgiid(bridx_a, δt, narea, nedge, m)
   bgiid_br    = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
@@ -207,7 +209,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   p = Progress(niter, dt=5, desc="mcmc...", barlen=20, color=:green)
 
   # create X parameter update function
-  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, ptn, wXp, 
+  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, ptn, wXp, m,
                              narea, ntip, Xupd_llr, Rupd_llr)
 
   # write to file
@@ -237,7 +239,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         # update λ1 
         elseif up == 5
           llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, ω0c, 
-                                     LDc, stemevc, brs[nedge,1,:], λprior,
+                                     LDc, stemevc, brs, λprior,
                                      ptn[5], λupd_llr)
 
           # which internal node to update
@@ -251,7 +253,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         # if λ0 is updated
         elseif up == 6
           llc, prc, λ0c = mhr_upd_λ0(λ0c, Yc, λ1c, llc, prc, ω1c, ω0c, 
-                                     LDc, stemevc, brs[nedge,1,:], λprior,
+                                     LDc, stemevc, brs, λprior,
                                      ptn[6], λupd_llr)
 
           # which internal node to update
@@ -275,7 +277,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         #update ω1
         elseif up == 3
           llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, λ0c, ω0c, Yc, llc, prc, ptn[3], 
-                                     LAc, LDc, ω1prior, ω10upd_llr)
+                                     LDc, ω1prior, ω10upd_llr)
 
           # which internal node to update
           if rand() < 0.4
@@ -288,7 +290,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         # update ω0
         else
           llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
-                                     LAc, LDc, ω0prior, ω10upd_llr)
+                                     LDc, ω0prior, ω10upd_llr)
 
           # which internal node to update
           if rand() < 0.4

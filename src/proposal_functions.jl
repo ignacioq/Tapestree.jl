@@ -65,7 +65,7 @@ function upnode!(λ1     ::Float64,
     samplenode!(λ1, λ0, pr, d1, d2, brs, brl, narea)
 
     # save extinct
-    while sum(brs[pr,2,:]) < 1
+    while iszero(sum(view(brs,pr,2,:)))
       samplenode!(λ1, λ0, pr, d1, d2, brs, brl, narea)
     end
 
@@ -81,8 +81,8 @@ function upnode!(λ1     ::Float64,
                  stemevs, brl[nedge])
 
     ntries::Int64 = 1
-    while ifextY(Y, stemevs, triad, brs[nedge,1,:], brl[nedge],
-                 narea, bridx_a, nedge)
+    while ifextY(Y, stemevs, triad, brs, brl[nedge], narea, bridx_a, nedge)
+
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                    stemevs, brl[nedge])
       ntries += 1
@@ -99,8 +99,16 @@ end
 
 
 
+
 """
-    samplenode!(λ::Array{Float64,1}, pr::Int64, d1::Int64, d2::Int64, brs::Array{Int64,3}, brl::Array{Float64,1}, narea::Int64)
+    samplenode!(λ1   ::Float64, 
+                λ0   ::Float64,
+                pr   ::Int64,
+                d1   ::Int64,
+                d2   ::Int64,
+                brs  ::Array{Int64,3},
+                brl  ::Array{Float64,1},
+                narea::Int64)
 
 Sample one internal node according to 
 mutual-independence model transition probabilities.
@@ -115,17 +123,34 @@ function samplenode!(λ1   ::Float64,
                      narea::Int64)
   @inbounds begin
 
+    # estimate transition probabilities
+    pr0_1, pr0_2 = Ptrfast_start(λ1, λ0, brl[pr], Val{0})
+    pr1_1, pr1_2 = Ptrfast_start(λ1, λ0, brl[pr], Val{1})
+    d10_1, d10_2 = Ptrfast_end(  λ1, λ0, brl[d1], Val{0})
+    d11_1, d11_2 = Ptrfast_end(  λ1, λ0, brl[d1], Val{1})
+    d20_1, d20_2 = Ptrfast_end(  λ1, λ0, brl[d2], Val{0})
+    d21_1, d21_2 = Ptrfast_end(  λ1, λ0, brl[d2], Val{1})
+
     for k = Base.OneTo(narea)
 
-      # transition probabilities for the trio
-      ppr_1, ppr_2 = 
-        Ptrfast_start(λ1, λ0, brl[pr], brs[pr,1,k])
-      pd1_1, pd1_2 = 
-        Ptrfast_end(  λ1, λ0, brl[d1], brs[d1,2,k])
-      pd2_1, pd2_2 = 
-        Ptrfast_end(  λ1, λ0, brl[d2], brs[d2,2,k])
+      if iszero(brs[pr,1,k])
+        ppr_1, ppr_2 = pr0_1, pr0_2
+      else 
+        ppr_1, ppr_2 = pr1_1, pr1_2
+      end
 
-      # normalize probability
+      if iszero(brs[d1,2,k])
+        pd1_1, pd1_2 = d10_1, d10_2
+      else 
+        pd1_1, pd1_2 = d11_1, d11_2
+      end
+
+      if iszero(brs[d2,2,k])
+        pd2_1, pd2_2 = d20_1, d20_2
+      else 
+        pd2_1, pd2_2 = d21_1, d21_2
+      end
+
       tp = normlize(*(ppr_1, pd1_1, pd2_1),
                     *(ppr_2, pd1_2, pd2_2))::Float64
 
@@ -164,8 +189,8 @@ function createhists!(λ1     ::Float64,
 
     # if stem branch do continuous DA
     if pr == nedge
-      mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
-                   stbrl, narea)
+      mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
+
       for j = Base.OneTo(narea), idx = (d1,d2)
         bit_rejsam!(Y, bridx_a[j][idx], brs[idx,2,j], 
                     λ1, λ0, brδt[idx])
@@ -186,26 +211,26 @@ end
 
 
 """
-  mult_rejsam!(evs   ::Array{Array{Float64,1},1},
-               ssii  ::Array{Int64,1}, 
-               ssff  ::Array{Int64,1},
-               λ1    ::Float64,
-               λ0    ::Float64,
-               t     ::Float64,
-               narea ::Int64)
+    mult_rejsam!(evs  ::Array{Array{Float64,1},1},
+                 brs  ::Array{Int64,3}, 
+                 λ1   ::Float64,
+                 λ0   ::Float64,
+                 t    ::Float64,
+                 narea::Int64,
+                 nedge::Int64)
 
   Multi-area branch rejection independent model sampling.
 """
 function mult_rejsam!(evs  ::Array{Array{Float64,1},1},
-                      ssii ::Array{Int64,1}, 
-                      ssff ::Array{Int64,1},
+                      brs  ::Array{Int64,3}, 
                       λ1   ::Float64,
                       λ0   ::Float64,
                       t    ::Float64,
-                      narea::Int64)
+                      narea::Int64,
+                      nedge::Int64)
 
-  for i = Base.OneTo(narea)
-    rejsam!(evs[i], ssii[i], ssff[i], λ1, λ0, t)
+  @simd for k = Base.OneTo(narea)
+    rejsam!(evs[k], brs[nedge,1,k], brs[nedge,2,k], λ1, λ0, t)
   end
 
   return nothing
@@ -228,7 +253,7 @@ observed after some **δt**, otherwise returns `false`.
 function ifextY(Y      ::Array{Int64,3},
                 stemevs::Array{Array{Float64,1},1},
                 triad  ::Array{Int64,1},
-                sstem  ::Array{Int64,1},
+                brs    ::Array{Int64,3},
                 stbrl  ::Float64,
                 narea  ::Int64,
                 bridx_a::Array{Array{UnitRange{Int64},1},1},
@@ -237,8 +262,8 @@ function ifextY(Y      ::Array{Int64,3},
   @inbounds begin
 
     if triad[1] == nedge
-      ifext_cont(stemevs, sstem, narea, stbrl) && return true::Bool
-      for k in triad[2:3]
+      ifext_cont(stemevs, brs, stbrl, narea, nedge) && return true::Bool
+      for k in (triad[2],triad[3])
         ifext_disc(Y, k, narea, bridx_a) && return true::Bool
       end
     else 
@@ -256,22 +281,31 @@ end
 
 
 """
-    ifext(t_hist::Array{Array{Float64,1},1},
-          ssii  ::Array{Int64,1}, 
-          narea ::Int64,
-          t     ::Float64)
+    ifext_cont(t_hist::Array{Array{Float64,1},1},
+               brs   ::Array{Int64,3}, 
+               t     ::Float64,
+               narea ::Int64,
+               nedge ::Int64)
 
 Return true if lineage goes extinct.
 """
 function ifext_cont(t_hist::Array{Array{Float64,1},1},
-                    ssii  ::Array{Int64,1}, 
+                    brs   ::Array{Int64,3}, 
+                    t     ::Float64,
                     narea ::Int64,
-                    t     ::Float64)
+                    nedge ::Int64)
 
   @inbounds begin
 
+    ioc = 0
     # initial occupancy time
-    ioc::Int64    = findfirst(ssii)
+    for k in Base.OneTo(narea)
+      if brs[nedge,1,k] == 1
+        ioc = k
+        break
+      end
+    end
+
     ioct::Float64 = t_hist[ioc][1]
 
     ntries = 0
@@ -284,7 +318,7 @@ function ifext_cont(t_hist::Array{Array{Float64,1},1},
       end
 
       tc::Float64 = 0.0
-      cs::Int64   = ssii[ioc]
+      cs::Int64   = brs[nedge,1,ioc]
       for ts in t_hist[ioc]::Array{Float64,1}
         tc += ts
         if ioct < tc 
@@ -336,9 +370,9 @@ function ifext_disc(Y      ::Array{Int64,3},
       s_e::Int64 = 0            # count current areas
       s_c::Int64 = 0            # count area changes
 
-      for j = Base.OneTo(narea)
-        s_e += Y[bridx_a[j][br][i]]::Int64
-        if Y[bridx_a[j][br][i]]::Int64 != Y[bridx_a[j][br][i+1]]::Int64
+      for k = Base.OneTo(narea)
+        s_e += Y[bridx_a[k][br][i]]::Int64
+        if Y[bridx_a[k][br][i]]::Int64 != Y[bridx_a[k][br][i+1]]::Int64
           s_c += 1
         end
       end
@@ -374,7 +408,7 @@ Y stem node proposal function (continuous DA)
                 brl  ::Array{Float64,1},
                 narea::Int64)
 
-
+Update stem node.
 """
 function upstemnode!(λ1     ::Float64, 
                      λ0     ::Float64,
@@ -390,19 +424,18 @@ function upstemnode!(λ1     ::Float64,
     samplestem!(λ1, λ0, nedge, brs, stbrl, narea)
 
     # save extinct
-    while sum(brs[nedge,1,:]) < 1
+    while sum(view(brs,nedge,1,:)) < 1
       samplestem!(λ1, λ0, nedge, brs, stbrl, narea)
     end
 
     # sample a congruent history
-    mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
-                 stbrl, narea)
+    mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
 
     ntries = 1
     # check if extinct
-    while ifext_cont(stemevs, brs[nedge,1,:], narea, stbrl)
-      mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
-                   stbrl, narea)
+    while ifext_cont(stemevs, brs, stbrl, narea, nedge)
+      mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
+
       ntries += 1
       if ntries == 1_000
         return false::Bool
@@ -425,7 +458,7 @@ end
                 brl  ::Array{Float64,1},
                 narea::Int64)
 
-
+Sample stem node.
 """
 function samplestem!(λ1   ::Float64, 
                      λ0   ::Float64,
@@ -436,19 +469,22 @@ function samplestem!(λ1   ::Float64,
 
  @inbounds begin
 
-    for j = Base.OneTo(narea)
+    # estimate transition probabilities
+    p0 = normlize(Ptrfast_end(λ1, λ0, stbrl, Val{0}))::Float64
+    p1 = normlize(Ptrfast_end(λ1, λ0, stbrl, Val{1}))::Float64
 
-      # estimate transition probabilities
-      p1, p2 = Ptrfast_end(λ1, λ0, stbrl, brs[nedge,2,j])
-
+    for k = Base.OneTo(narea)
       # sample the node's character
-      brs[nedge,1,j] = coinsamp(normlize(p1,p2))::Int64
+      if iszero(brs[nedge,2,k])
+        brs[nedge,1,k] = coinsamp(p0)::Int64
+      else 
+        brs[nedge,1,k] = coinsamp(p1)::Int64      
+      end
     end
   end
 
   return nothing
 end
-
 
 
 
@@ -502,16 +538,15 @@ function upbranchY!(λ1     ::Float64,
 
   # if stem branch
   if br == nedge
-    mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
-                 stbrl, narea)
+    mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
 
     # check if extinct
-    while ifext_cont(stemevs, brs[nedge,1,:], narea, stbrl)
-      mult_rejsam!(stemevs, brs[nedge,1,:], brs[nedge,2,:], λ1, λ0, 
-                 stbrl, narea)
+    while ifext_cont(stemevs, brs, stbrl, narea, nedge)
+      mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
+
       ntries += 1
       if ntries == 1_000
-        return false::Bool
+        return false
       end
     end
 
@@ -524,12 +559,12 @@ function upbranchY!(λ1     ::Float64,
       createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
       ntries += 1
       if ntries == 1_000
-        return false::Bool
+        return false
       end
     end
   end
 
-  return true::Bool
+  return true
 end
 
 
@@ -671,6 +706,7 @@ function bbX!(X  ::Array{Float64,2},
 
   return nothing
 end
+
 
 
 
