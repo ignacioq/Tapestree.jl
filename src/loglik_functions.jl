@@ -147,7 +147,7 @@ end
            σ² ::Float64, 
            idx::UnitRange)
 
-Estimate the likelihood of a given path according to Brownian Motion.
+Estimate the proposal probability of a given path according to Brownian Motion.
 """
 function llr_bm(Xc ::Array{Float64,2},
                 Xp ::Array{Float64,2},
@@ -436,14 +436,14 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
       if pr < nedge 
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y, bridx_a[k][pr], λϕ1, λϕ0,  δtA[pr]) +
-                bitvectorll_iid(Y, bridx_a[k][d1], λϕ1, λϕ0,  δtA[d1]) +
-                bitvectorll_iid(Y, bridx_a[k][d2], λϕ1, λϕ0,  δtA[d2])
+          ll += bitvectorll_iid(Y, bridx_a[k][pr], λϕ1, λϕ0, δtA[pr]) +
+                bitvectorll_iid(Y, bridx_a[k][d1], λϕ1, λϕ0, δtA[d1]) +
+                bitvectorll_iid(Y, bridx_a[k][d2], λϕ1, λϕ0, δtA[d2])
         end
       else 
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y, bridx_a[k][d1], λϕ1, λϕ0,  δtA[d1]) +
-                bitvectorll_iid(Y, bridx_a[k][d2], λϕ1, λϕ0,  δtA[d2]) +
+          ll += bitvectorll_iid(Y, bridx_a[k][d1], λϕ1, λϕ0, δtA[d1]) +
+                bitvectorll_iid(Y, bridx_a[k][d2], λϕ1, λϕ0, δtA[d2]) +
                 brll(stemevc[k], λϕ1, λϕ0, brs[nedge,1,k])
         end
       end
@@ -710,10 +710,10 @@ function makellr_Xupd(δt   ::Vector{Float64},
       δxim1 = δt[xi-1]
       for j = wcol[xi-1]
         llr += logdnorm_tc(xpi[j], 
-                           X[xi-1,j] + Eδx(LA[xi,j], ωx, δxim1), 
+                           X[xi-1,j] + Eδx(LA[xi-1,j], ωx, δxim1), 
                            δxim1*σ²)::Float64 -
                logdnorm_tc(X[xi,j],
-                           X[xi-1,j] + Eδx(LA[xi,j], ωx, δxim1), 
+                           X[xi-1,j] + Eδx(LA[xi-1,j], ωx, δxim1), 
                            δxim1*σ²)::Float64
       end
 

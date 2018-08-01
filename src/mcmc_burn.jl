@@ -142,9 +142,9 @@ function burn_tribe(total_llf    ::Function,
             llr = Rupd_llr(xpi, Xc, σ²c)::Float64
 
             if -randexp() < llr
-              llc    += llr::Float64
-              Xc[1,:] = xpi::Array{Float64,1}
-              lac[up]    += 1   # log acceptance
+              llc     += llr::Float64
+              Xc[1,:]  = xpi::Array{Float64,1}
+              lac[up] += 1   # log acceptance
             end
 
           else
@@ -198,9 +198,8 @@ function burn_tribe(total_llf    ::Function,
 
         prr = logdexp(λ1p, λprior) - logdexp(λ1c, λprior)::Float64
 
-        if -randexp() < (llr + prr +
-                         Base.Math.JuliaLibm.log(λ1p) - 
-                         Base.Math.JuliaLibm.log(λ1c))
+        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ1p) - 
+                                     Base.Math.JuliaLibm.log(λ1c))
           llc    += llr::Float64
           prc    += prr::Float64
           λ1c     = λ1p::Float64
@@ -226,9 +225,8 @@ function burn_tribe(total_llf    ::Function,
 
         prr = logdexp(λ0p, λprior) - logdexp(λ0c, λprior)::Float64
 
-        if -randexp() < (llr + prr + 
-                         Base.Math.JuliaLibm.log(λ0p) - 
-                         Base.Math.JuliaLibm.log(λ0c))
+        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ0p) - 
+                                     Base.Math.JuliaLibm.log(λ0c))
           llc     += llr::Float64
           prc     += prr::Float64
           λ0c      = λ0p::Float64
@@ -238,7 +236,6 @@ function burn_tribe(total_llf    ::Function,
         # which internal node to update
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     LAc, LDc, δXc, δYc, brs, stemevc)
@@ -255,9 +252,8 @@ function burn_tribe(total_llf    ::Function,
         # prior ratio
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
 
-        if -randexp() < (llr + prr + 
-                         Base.Math.JuliaLibm.log(σ²p) - 
-                         Base.Math.JuliaLibm.log(σ²c))
+        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(σ²p) - 
+                                     Base.Math.JuliaLibm.log(σ²c))
           llc += llr::Float64
           prc += prr::Float64
           σ²c  = σ²p::Float64
@@ -266,6 +262,7 @@ function burn_tribe(total_llf    ::Function,
 
       #update ωx
       elseif up == 2
+
         ωxp = addupt(ωxc, ptn[2])::Float64
 
         #likelihood ratio
@@ -304,7 +301,6 @@ function burn_tribe(total_llf    ::Function,
         # which internal node to update
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     LAc, LDc, δXc, δYc, brs, stemevc)
@@ -312,6 +308,7 @@ function burn_tribe(total_llf    ::Function,
 
       # update ω0
       else
+
         ω0p = addupt(ω0c, ptn[4])
 
         # proposal likelihood ratio
@@ -331,7 +328,6 @@ function burn_tribe(total_llf    ::Function,
         # which internal node to update
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
-
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
                     LAc, LDc, δXc, δYc, brs, stemevc)
