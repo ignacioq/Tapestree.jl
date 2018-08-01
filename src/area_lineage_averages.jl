@@ -198,7 +198,7 @@ function lindiff!(LD   ::Array{Float64,3},
                   narea::Int64)
   @inbounds begin
 
-    for i = Base.OneTo(m), k = Base.OneTo(narea), l = wcol[i]
+    for k = Base.OneTo(narea), i = Base.OneTo(m), l = wcol[i]
 
       xmin = 1.0e20
       for j = wcol[i]
@@ -215,6 +215,7 @@ function lindiff!(LD   ::Array{Float64,3},
 
   return nothing
 end
+
 
 
 
@@ -238,36 +239,38 @@ for a node update.
 function Xupd_linavg!(δxi  ::Array{Float64,2},
                       lai  ::Array{Float64,1},
                       ldi  ::Array{Float64,2},
-                      wci  ::Array{Int64,1},
+                      wcol ::Array{Array{Int64,1},1},
                       xpi  ::Array{Float64,1},
                       xi   ::Int64,
                       xj   ::Int64,
-                      Y    ::SubArray{Int64,2,Array{Int64,3},Tuple{Int64,Base.Slice{Base.OneTo{Int64}},Base.Slice{Base.OneTo{Int64}}},true},
-                      δyi  ::SubArray{Float64,2,Array{Float64,3},Tuple{Base.Slice{Base.OneTo{Int64}},Base.Slice{Base.OneTo{Int64}},Int64},true},
+                      Y    ::Array{Int64,3},
+                      δY   ::Array{Float64,3},
                       narea::Int64)
 
   @inbounds begin
 
     # estimate pairwise distances
+    wci = wcol[xi]
     for l = wci, j = wci
       l == j && continue
       δxi[j,l] = xpi[j] - xpi[l]
     end
 
     # estimate lineage averages
-    lai[:] = 0.0
-    for l = wci, j = wci
+    for l = wci 
+      lai[l] = 0.0
+      for j = wci
         j == l && continue
-        lai[l] += sign(δxi[j,l]) * δyi[j,l] * exp(-abs(δxi[j,l]))
+        lai[l] += sign(δxi[j,l]) * δY[j,l,xi] * exp(-abs(δxi[j,l]))
+      end
     end
 
     # estimate lineage sum of distances
-    ldi[:] = NaN
     for k = Base.OneTo(narea), l = wci
       xmin = 1.0e20
       for j = wci
         j == l && continue
-        if Y[j,k] == 1
+        if Y[xi,j,k] == 1
           x    = abs(δxi[j,l])
           iszero(x) && continue
           xmin = x < xmin ? x : xmin
@@ -279,7 +282,6 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
 
   return nothing
 end
-
 
 
 

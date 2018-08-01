@@ -12,7 +12,6 @@ t(-_-t)
 
 
 
-
 """
     uniupt(p::Float64, tn::Float64)
 
@@ -30,6 +29,22 @@ Gaussian parameter window move.
 """
 addupt(p::Float64, tn::Float64) = p + randn() * tn
 
+
+
+
+"""
+    addupt(p::Float64, tn::Float64)
+
+Gaussian parameter window move to vector.
+"""
+function addupt!(p::Vector{Float64}, tn::Vector{Float64}, j::Int64, i::Int64)
+
+  @inbounds begin
+    p[j] += randn() * tn[i]
+  end
+
+  return nothing
+end
 
 
 

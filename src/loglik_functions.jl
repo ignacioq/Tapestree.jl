@@ -75,7 +75,8 @@ function makellf(δt   ::Array{Float64,1},
                  Y    ::Array{Int64,3}, 
                  ntip ::Int64, 
                  narea::Int64,
-                 m    ::Int64)
+                 m    ::Int64,
+                 nedge::Int64)
 
   # get initial range
   const wf23 = Int64[]
@@ -102,7 +103,7 @@ function makellf(δt   ::Array{Float64,1},
              λ1     ::Float64,
              λ0     ::Float64,
              stemevc::Vector{Vector{Float64}},
-             stemss ::Vector{Int64},
+             brs    ::Array{Int64,3},
              σ²     ::Float64)
 
     ll::Float64 = normC
@@ -120,11 +121,10 @@ function makellf(δt   ::Array{Float64,1},
 
       # biogeograhic likelihood
       for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λ1, λ0, stemss[k])::Float64
+        ll += brll(stemevc[k], λ1, λ0, brs[nedge,1,k])::Float64
         for j = Base.OneTo(ntip)
-          ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ1, λ0, ω1, ω0, 
-                            LD[wf23[j]:m,j,k], δt[wf23[j]:(m-1)])::Float64
+          ll += bitvectorll(Y, λ1, λ0, ω1, ω0, LD, δt, 
+                            j, k, wf23[j], m)::Float64
         end
       end
 
@@ -158,7 +158,7 @@ function llr_bm(Xc ::Array{Float64,2},
   @inbounds begin
     llr::Float64 = 0.0
 
-    for i in Base.OneTo(length(idx)-1)
+    @simd for i in Base.OneTo(length(idx)-1)
       llr += logdnorm_tc(Xc[idx[i+1]], Xc[idx[i]], (δt[i+1] - δt[i])*σ²) -
              logdnorm_tc(Xp[idx[i+1]], Xp[idx[i]], (δt[i+1] - δt[i])*σ²)
     end
@@ -166,6 +166,7 @@ function llr_bm(Xc ::Array{Float64,2},
 
   return llr::Float64
 end
+
 
 
 
@@ -183,61 +184,64 @@ end
 Return the likelihood for a
 bit vector (composed of 0s and 1s).
 """
-function bitvectorll(y ::Array{Int64,1},
+function bitvectorll(Y ::Array{Int64,3},
                      λ1::Float64,
                      λ0::Float64,
                      ω1::Float64,
                      ω0::Float64,
-                     Δx::Array{Float64,1},
-                     δt::Array{Float64,1})
+                     LD::Array{Float64,3},
+                     δt::Array{Float64,1},
+                     j ::Int64,
+                     k ::Int64,
+                     yi::Int64,
+                     m ::Int64)
 
   ll::Float64 = 0.0
-  i ::Int64   = 1
-  ly::Int64   = endof(y)
+  i ::Int64   = yi
 
   @inbounds begin
 
-    if iszero(y[1])
+    if iszero(Y[yi,j,k])
 
-      while i < ly
-        while i < ly && y[i] == y[i+1]
-          ll += nell(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+      while i < m
+        while i < m && Y[i,j,k] == Y[i+1,j,k]
+          ll += nell(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= ly && break
+        i >= m && break
 
-        ll += evll(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+        ll += evll(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
         i += 1
 
-        while i < ly && y[i] == y[i+1]
-          ll += nell(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+        while i < m && Y[i,j,k] == Y[i+1,j,k]
+          ll += nell(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= ly && break
+        i >= m && break
 
-        ll += evll(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+        ll += evll(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
         i += 1
       end
 
     else
 
-      while i < ly
-        while i < ly && y[i] == y[i+1]
-          ll += nell(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+      while i < m
+        while i < m && Y[i,j,k] == Y[i+1,j,k]
+          ll += nell(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= ly && break
+        i >= m && break
 
-        ll += evll(δt[i], f_λ0(λ0, ω0, Δx[i]))::Float64
+        ll += evll(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
         i += 1
 
-        while i < ly && y[i] == y[i+1]
-          ll += nell(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+        while i < m && Y[i,j,k] == Y[i+1,j,k]
+          ll += nell(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= ly && break
+        i >= m && break
 
-        ll += evll(δt[i], f_λ1(λ1, ω1, Δx[i]))::Float64
+        ll += evll(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
         i += 1
       end
     end
@@ -246,6 +250,8 @@ function bitvectorll(y ::Array{Int64,1},
 
   return ll::Float64
 end
+
+
 
 
 
@@ -291,7 +297,8 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
                        δt   ::Vector{Float64},
                        narea::Int64,
                        ntip ::Int64,
-                       m    ::Int64)
+                       m    ::Int64, 
+                       nedge::Int64)
 
   # get initial range
   const wf23 = Int64[]
@@ -308,25 +315,21 @@ function makellr_λ_upd(Y    ::Array{Int64,3},
              ω0     ::Float64,
              LD     ::Array{Float64,3},
              stemevc::Vector{Vector{Float64}},
-             stemss ::Vector{Int64})
+             brs    ::Array{Int64,3})
 
     ll::Float64 = 0.0
 
     @inbounds begin
 
       for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λ1p, λ0p, stemss[k])::Float64 -
-              brll(stemevc[k], λ1c, λ0c, stemss[k])::Float64
+        ll += brll(stemevc[k], λ1p, λ0p, brs[nedge,1,k])::Float64 -
+              brll(stemevc[k], λ1c, λ0c, brs[nedge,1,k])::Float64
 
         for j = Base.OneTo(ntip)
-          ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ1p, λ0p, ω1, ω0, 
-                            LD[wf23[j]:m,j,k], 
-                            δt[wf23[j]:(m-1)])::Float64 -
-                bitvectorll(Y[wf23[j]:m,j,k], 
-                            λ1c, λ0c, ω1, ω0, 
-                            LD[wf23[j]:m,j,k], 
-                            δt[wf23[j]:(m-1)])::Float64
+          ll += bitvectorll(Y, λ1p, λ0p, ω1, ω0, LD, δt, 
+                            j, k, wf23[j], m)::Float64 -
+                bitvectorll(Y, λ1c, λ0c, ω1, ω0, LD, δt, 
+                            j, k, wf23[j], m)::Float64
         end
       end
     
@@ -373,14 +376,10 @@ function makellr_ω10_upd(Y    ::Array{Int64,3},
     @inbounds begin
 
       for k = Base.OneTo(narea), j = Base.OneTo(ntip)
-        ll += bitvectorll(Y[wf23[j]:m,j,k], 
-                          λ1, λ0, ω1p, ω0p, 
-                          LD[wf23[j]:m,j,k], 
-                          δt[wf23[j]:(m-1)])::Float64 -
-              bitvectorll(Y[wf23[j]:m,j,k], 
-                          λ1, λ0, ω1c, ω0c, 
-                          LD[wf23[j]:m,j,k], 
-                          δt[wf23[j]:(m-1)])::Float64
+        ll +=  bitvectorll(Y, λ1, λ0, ω1p, ω0p, LD, δt, 
+                           j, k, wf23[j], m)::Float64 -
+               bitvectorll(Y, λ1, λ0, ω1c, ω0c, LD, δt, 
+                           j, k, wf23[j], m)::Float64
       end
     end
 
@@ -663,7 +662,7 @@ function makellr_σ²ωxupd(δt  ::Vector{Float64},
                              δt[i]*σ²c)::Float64
         end
       end
-    
+
     end
 
     return llr::Float64
@@ -683,20 +682,16 @@ end
 Make likelihood function for an internal node update in `X`.
 """
 function makellr_Xupd(δt   ::Vector{Float64}, 
-                      narea::Int64)
+                      narea::Int64,
+                      wcol ::Array{Array{Int64,1},1})
 
-  function f(i     ::Int64,
-             wci   ::Array{Int64,1},
-             wcim1 ::Array{Int64,1},
+  function f(xi    ::Int64,
              xpi   ::Array{Float64,1},
-             xci   ::Array{Float64,1},
-             xcm1  ::Array{Float64,1},
-             xcp1  ::Array{Float64,1},
+             X     ::Array{Float64,2},
              lapi  ::Array{Float64,1},
              ldpi  ::Array{Float64,2},
-             laci  ::Array{Float64,1},
-             lacim1::Array{Float64,1},
-             ldci  ::Array{Float64,2},
+             LA    ::Array{Float64,2},
+             LD    ::Array{Float64,3},
              Y     ::Array{Int64,3},
              ωx    ::Float64,
              ω1    ::Float64,
@@ -711,33 +706,34 @@ function makellr_Xupd(δt   ::Vector{Float64},
     @inbounds begin
 
       # loop for parent nodes
-      for j = wcim1
+      δxim1 = δt[xi-1]
+      for j = wcol[xi-1]
         llr += logdnorm_tc(xpi[j], 
-                           xcm1[j] + Eδx(lacim1[j], ωx, δt[i-1]), 
-                           δt[i-1]*σ²)::Float64 -
-               logdnorm_tc(xci[j],
-                           xcm1[j] + Eδx(lacim1[j], ωx, δt[i-1]), 
-                           δt[i-1]*σ²)::Float64
+                           X[xi-1,j] + Eδx(LA[xi,j], ωx, δxim1), 
+                           δxim1*σ²)::Float64 -
+               logdnorm_tc(X[xi,j],
+                           X[xi-1,j] + Eδx(LA[xi,j], ωx, δxim1), 
+                           δxim1*σ²)::Float64
       end
 
       # loop for daughter nodes
-      for j = wci
-        # trait likelihood
-        llr += logdnorm_tc(xcp1[j], 
-                           xpi[j] + Eδx(lapi[j], ωx, δt[i]), 
-                           δt[i]*σ²)::Float64 -
-               logdnorm_tc(xcp1[j], 
-                           xci[j] + Eδx(laci[j], ωx, δt[i]), 
-                           δt[i]*σ²)::Float64
+      δxi = δt[xi]
+      for j = wcol[xi]
+        llr += logdnorm_tc(X[xi+1, j], 
+                           xpi[j]  + Eδx(lapi[j], ωx, δxi), 
+                           δxi*σ²)::Float64 -
+               logdnorm_tc(X[xi+1, j], 
+                           X[xi,j] + Eδx(LA[xi,j], ωx, δxi), 
+                           δxi*σ²)::Float64
+
+        for k = Base.OneTo(narea)
+          llr += bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
+                          λ1, λ0, ω1, ω0, ldpi[j,k], δxi)::Float64 -
+                 bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
+                          λ1, λ0, ω1, ω0, LD[xi,j,k], δxi)::Float64
+        end
       end
 
-      # biogeograhic likelihoods
-      for k = Base.OneTo(narea), j = wci
-        llr += bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                        λ1, λ0, ω1, ω0, ldpi[j,k], δt[i])::Float64 -
-               bitbitll(Y[i,j,k], Y[i+1,j,k], 
-                        λ1, λ0, ω1, ω0, ldci[j,k], δt[i])::Float64
-      end
     end
 
     return llr::Float64
@@ -757,46 +753,21 @@ Make likelihood function
 for the root update in `X`.
 """
 function makellr_Rupd(δt1  ::Float64, 
-                      narea::Int64)
+                      wci  ::Array{Int64,1})
 
-  function f(wci   ::Array{Int64,1},
-             xpi   ::Array{Float64,1},
-             xci   ::Array{Float64,1},
-             xcp1  ::Array{Float64,1},
-             lapi  ::Array{Float64,1},
-             ldpi  ::Array{Float64,2},
-             laci  ::Array{Float64,1},
-             ldci  ::Array{Float64,2},
-             Y     ::Array{Int64,3},
-             ωx    ::Float64,
-             ω1    ::Float64,
-             ω0    ::Float64,
-             λ1    ::Float64,
-             λ0    ::Float64,
-             σ²    ::Float64)
+  function f(xpi ::Array{Float64,1},
+             X   ::Array{Float64,2},
+             σ²  ::Float64)
 
     llr::Float64 = 0.0
 
     @inbounds begin
 
       # loop for daughter nodes
-      for j = eachindex(wci)
+      for j = wci
         # trait likelihood
-        llr += logdnorm_tc(xcp1[j], 
-                           xpi[j] + Eδx(lapi[j], ωx, δt1), 
-                           δt1*σ²)::Float64 -
-               logdnorm_tc(xcp1[j], 
-                           xci[j] + Eδx(laci[j], ωx, δt1), 
-                           δt1*σ²)::Float64
-
-        # biogeograhic likelihoods
-        for k = Base.OneTo(narea)
-          llr += bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                          λ1, λ0, ω1, ω0, ldpi[j,k], δt1)::Float64 -
-                 bitbitll(Y[1,wci[j],k], Y[2,wci[j],k], 
-                          λ1, λ0, ω1, ω0, ldci[j,k], δt1)::Float64
-        end
-
+        llr += logdnorm_tc(X[2,j], xpi[j], δt1*σ²)::Float64 -
+               logdnorm_tc(X[2,j], X[1,j], δt1*σ²)::Float64
       end
     end
 

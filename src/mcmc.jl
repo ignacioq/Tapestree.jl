@@ -14,7 +14,7 @@ April 27 2017
 
 
 """
-    compete_mcmc(...)
+    tribe_mcmc(...)
 
 Run MCMC for trait and range interspecitific biogeographic evolution (tribe).
 """
@@ -132,14 +132,14 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   # area lineage distances
   const LDc = fill(NaN, m, ntip, narea)
-  lindiff!(LDc, δXc, Yc,wcol, m, ntip, narea)
+  lindiff!(LDc, δXc, Yc, wcol, m, ntip, narea)
 
   ## make likelihood and prior functions
-  total_llf   = makellf(δt, Yc, ntip, narea, m)
-  λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m)
+  total_llf   = makellf(δt, Yc, ntip, narea, m, nedge)
+  λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m, nedge)
   ω10upd_llr  = makellr_ω10_upd(Yc, δt, narea, ntip, m)
-  Xupd_llr    = makellr_Xupd(δt, narea)
-  Rupd_llr    = makellr_Rupd(δt[1], narea)
+  Xupd_llr    = makellr_Xupd(δt, narea, wcol)
+  Rupd_llr    = makellr_Rupd(δt[1], wcol[1])
   σ²ωxupd_llr = makellr_σ²ωxupd(δt, Yc, ntip)  
   bgiid       = makellf_bgiid(bridx_a, δt, narea, nedge, m)
   bgiid_br    = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
