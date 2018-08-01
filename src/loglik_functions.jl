@@ -423,7 +423,7 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
   function f(Y      ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1},
-             stemss ::Array{Int64,1},
+             brs    ::Array{Int64,3},
              triad  ::Array{Int64,1},
              λϕ1    ::Float64,
              λϕ0    ::Float64)
@@ -436,15 +436,15 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
       if pr < nedge 
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[k][pr]], λϕ1, λϕ0, δtA[pr]) +
-                bitvectorll_iid(Y[bridx_a[k][d1]], λϕ1, λϕ0, δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[k][d2]], λϕ1, λϕ0, δtA[d2])
+          ll += bitvectorll_iid(Y, bridx_a[k][pr], λϕ1, λϕ0,  δtA[pr]) +
+                bitvectorll_iid(Y, bridx_a[k][d1], λϕ1, λϕ0,  δtA[d1]) +
+                bitvectorll_iid(Y, bridx_a[k][d2], λϕ1, λϕ0,  δtA[d2])
         end
       else 
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[k][d1]], λϕ1, λϕ0, δtA[d1]) +
-                bitvectorll_iid(Y[bridx_a[k][d2]], λϕ1, λϕ0, δtA[d2]) +
-                brll(stemevc[k], λϕ1, λϕ0, stemss[k])
+          ll += bitvectorll_iid(Y, bridx_a[k][d1], λϕ1, λϕ0,  δtA[d1]) +
+                bitvectorll_iid(Y, bridx_a[k][d2], λϕ1, λϕ0,  δtA[d2]) +
+                brll(stemevc[k], λϕ1, λϕ0, brs[nedge,1,k])
         end
       end
 
@@ -455,8 +455,6 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
   return f
 end
-
-
 
 
 
@@ -488,7 +486,7 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
 
   function f(Y      ::Array{Int64,3}, 
              stemevc::Array{Array{Float64,1},1},
-             stemss ::Array{Int64,1},
+             brs    ::Array{Int64,3},
              br     ::Int64,
              λϕ1    ::Float64,
              λϕ0    ::Float64)
@@ -498,11 +496,11 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
     @inbounds begin
       if br == nedge
         for k = Base.OneTo(narea)
-          ll += brll(stemevc[k], λϕ1, λϕ0, stemss[k])
+          ll += brll(stemevc[k], λϕ1, λϕ0, brs[nedge,1,k])
         end
       else
         for k = Base.OneTo(narea)
-          ll += bitvectorll_iid(Y[bridx_a[k][br]], λϕ1, λϕ0,  δtA[br])
+          ll += bitvectorll_iid(Y, bridx_a[k][br], λϕ1, λϕ0,  δtA[br])
         end
       end
     end
@@ -530,18 +528,19 @@ Estimate likelihood ratio for stem branch.
 """
 function stem_llr(λ1     ::Float64,
                   λ0     ::Float64,
-                  stemc  ::Array{Int64,1},
-                  stemp  ::Array{Int64,1},
+                  brs    ::Array{Int64,3},
+                  brsp   ::Array{Int64,3},
                   stemevc::Array{Array{Float64,1},1},
                   stemevp::Array{Array{Float64,1},1},
-                  narea  ::Int64)
+                  narea  ::Int64,
+                  nedge  ::Int64)
 
   @inbounds begin
 
     ll::Float64 = 0.0
     for k in Base.OneTo(narea)
-      ll += brll(stemevp[k], λ1, λ0, stemp[k]) - 
-            brll(stemevc[k], λ1, λ0, stemc[k])
+      ll += brll(stemevp[k], λ1, λ0, brsp[nedge,1,k]) - 
+            brll(stemevc[k], λ1, λ0, brs[ nedge,1,k])
     end
   end
 
@@ -565,24 +564,24 @@ Proposal ratio for stem.
 """
 function stemiid_propr(λϕ1    ::Float64,
                        λϕ0    ::Float64,
-                       stemc  ::Array{Int64,1},
-                       stemp  ::Array{Int64,1},
+                       brs    ::Array{Int64,3,},
+                       brsp   ::Array{Int64,3},
                        stemevc::Array{Array{Float64,1},1},
                        stemevp::Array{Array{Float64,1},1},
-                       narea  ::Int64)
+                       narea  ::Int64,
+                       nedge  ::Int64)
 
   @inbounds begin
 
     ll::Float64 = 0.0
     for k in Base.OneTo(narea)
-      ll += brll(stemevc[k], λϕ1, λϕ0, stemc[k]) - 
-            brll(stemevp[k], λϕ1, λϕ0, stemp[k])
+      ll += brll(stemevc[k], λϕ1, λϕ0, brs[ nedge,1,k]) - 
+            brll(stemevp[k], λϕ1, λϕ0, brsp[nedge,1,k])
     end
   end
 
   return ll::Float64
 end
-
 
 
 
@@ -593,7 +592,8 @@ end
 Return likelihood under the independence model 
 for a bit vector.
 """
-function bitvectorll_iid(y     ::Array{Int64,1},
+function bitvectorll_iid(Y     ::Array{Int64,3},
+                         idx   ::UnitRange{Int64},
                          λ1    ::Float64,
                          λ0    ::Float64,
                          δt    ::Array{Float64,1})
@@ -602,11 +602,11 @@ function bitvectorll_iid(y     ::Array{Int64,1},
 
     ll::Float64  = 0.0
 
-    cur_s::Int64   = y[1]
+    cur_s::Int64   = Y[idx[1]]
     cur_λ::Float64 = cur_s == 0 ? λ1 : λ0
 
-    for i=Base.OneTo(endof(y)-1)
-      if y[i] == y[i+1]
+    for i = Base.OneTo(endof(δt))
+      if Y[idx[i]] == Y[idx[i+1]]
         ll += nell(δt[i], cur_λ)::Float64
       else
         ll += evll(δt[i], cur_λ)::Float64
@@ -619,6 +619,7 @@ function bitvectorll_iid(y     ::Array{Int64,1},
 
   return ll::Float64
 end
+
 
 
 

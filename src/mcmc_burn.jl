@@ -70,11 +70,8 @@ function burn_tribe(total_llf    ::Function,
   const nedge = size(brs, 1) 
 
   # likelihood and prior
-  @btime llc = total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
+  llc = total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
                   stemevc, brs, σ²c)
-
-
-
   prc = allλpr(λ1c, λ0c, λprior)              +
         logdexp(σ²c, σ²prior)                 +
         logdnorm(ωxc, ωxprior[1], ωxprior[2]) +
@@ -126,6 +123,8 @@ function burn_tribe(total_llf    ::Function,
 
         # X updates
         @inbounds begin
+
+          upx = wXp[up - 6]
 
           # if root
           if upx == 1
@@ -246,8 +245,7 @@ function burn_tribe(total_llf    ::Function,
         end
 
       # if σ² is updated
-      elseif up == 1         
-
+      elseif up == 1
 
         σ²p = mulupt(σ²c, ptn[1])::Float64
 
@@ -258,7 +256,8 @@ function burn_tribe(total_llf    ::Function,
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64
 
         if -randexp() < (llr + prr + 
-                         log(σ²p) - log(σ²c))
+                         Base.Math.JuliaLibm.log(σ²p) - 
+                         Base.Math.JuliaLibm.log(σ²c))
           llc += llr::Float64
           prc += prr::Float64
           σ²c  = σ²p::Float64

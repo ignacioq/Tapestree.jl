@@ -13,6 +13,8 @@ April 27 2017
 
 
 
+
+
 """
     tribe_mcmc(...)
 
@@ -207,7 +209,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   p = Progress(niter, dt=5, desc="mcmc...", barlen=20, color=:green)
 
   # create X parameter update function
-  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, ptn, wXp, 
+  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, ptn, wXp, m,
                              narea, ntip, Xupd_llr, Rupd_llr)
 
   # write to file
@@ -237,7 +239,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         # update λ1 
         elseif up == 5
           llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, ω0c, 
-                                     LDc, stemevc, brs[nedge,1,:], λprior,
+                                     LDc, stemevc, brs, λprior,
                                      ptn[5], λupd_llr)
 
           # which internal node to update
@@ -251,7 +253,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         # if λ0 is updated
         elseif up == 6
           llc, prc, λ0c = mhr_upd_λ0(λ0c, Yc, λ1c, llc, prc, ω1c, ω0c, 
-                                     LDc, stemevc, brs[nedge,1,:], λprior,
+                                     LDc, stemevc, brs, λprior,
                                      ptn[6], λupd_llr)
 
           # which internal node to update
@@ -275,7 +277,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         #update ω1
         elseif up == 3
           llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, λ0c, ω0c, Yc, llc, prc, ptn[3], 
-                                     LAc, LDc, ω1prior, ω10upd_llr)
+                                     LDc, ω1prior, ω10upd_llr)
 
           # which internal node to update
           if rand() < 0.4
@@ -288,7 +290,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         # update ω0
         else
           llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
-                                     LAc, LDc, ω0prior, ω10upd_llr)
+                                     LDc, ω0prior, ω10upd_llr)
 
           # which internal node to update
           if rand() < 0.4

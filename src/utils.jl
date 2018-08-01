@@ -39,9 +39,7 @@ Gaussian parameter window move to vector.
 """
 function addupt!(p::Vector{Float64}, tn::Vector{Float64}, j::Int64, i::Int64)
 
-  @inbounds begin
-    p[j] += randn() * tn[i]
-  end
+  @inbounds p[j] += randn() * tn[i]
 
   return nothing
 end
