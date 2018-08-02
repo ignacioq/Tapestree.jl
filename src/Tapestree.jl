@@ -15,7 +15,6 @@ __precompile__()
 
 module Tapestree
 
-  using ArgParse
   using RCall
   using Optim
   using ProgressMeter
