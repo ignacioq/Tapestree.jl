@@ -40,10 +40,11 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
 
   const rj = ind2sub((m,ntip), Xnc2[findfirst(Xnc1, 1)])[2]
 
-  const xpi = fill(NaN, ntip)
-  const δxi = fill(NaN, ntip, ntip)
-  const lai = fill(NaN, ntip)
-  const ldi = fill(NaN, ntip, narea)
+  const xpi  = fill(NaN, ntip)
+  const δxi  = fill(NaN, ntip, ntip)
+  const lapi = fill(NaN, ntip)
+  const lani = fill(NaN, ntip)
+  const ldi  = fill(NaN, ntip, narea)
 
   function f(up ::Int64,
              Xc ::Array{Float64,2},

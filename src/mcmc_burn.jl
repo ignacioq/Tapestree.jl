@@ -70,7 +70,7 @@ function burn_tribe(total_llf    ::Function,
   const nedge = size(brs, 1) 
 
   # likelihood and prior
-  llc = total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
+  llc = total_llf(Xc, Yc, LApc, LAnc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
                   stemevc, brs, σ²c)
   prc = allλpr(λ1c, λ0c, λprior)              +
         logdexp(σ²c, σ²prior)                 +
@@ -247,7 +247,7 @@ function burn_tribe(total_llf    ::Function,
         σ²p = mulupt(σ²c, ptn[1])::Float64
 
         #likelihood ratio
-        llr = σ²ωxupd_llr(Xc, LAc, ωxc, ωxc, σ²c, σ²p)::Float64
+        llr = σ²ωxupd_llr(Xc, LApc, LAnc, ωxc, ωxc, σ²c, σ²p)::Float64
 
         # prior ratio
         prr = logdexp(σ²p, σ²prior) - logdexp(σ²c, σ²prior)::Float64

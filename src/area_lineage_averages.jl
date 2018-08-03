@@ -141,6 +141,8 @@ end
 
 
 
+
+
 """
     sde!(LA   ::Array{Float64,2},
          δX   ::Array{Float64,3}, 
@@ -150,7 +152,8 @@ end
 
 Estimate the lineage averages for the SDE of trait evolution
 """
-function sde!(LA   ::Array{Float64,2},
+function sde!(LAp   ::Array{Float64,2},
+              LAn   ::Array{Float64,2},
               δX   ::Array{Float64,3}, 
               δY   ::Array{Float64,3},
               wcol ::Array{Array{Int64,1},1},
@@ -160,19 +163,25 @@ function sde!(LA   ::Array{Float64,2},
   @inbounds begin
 
     for i = Base.OneTo(m), j = wcol[i]
-      LA[i,j] = 0.0
+      LAp[i,j] = 0.0
+      LAn[i,j] = 0.0
       for l = wcol[i]
         l == j && continue
         y = δY[l,j,i]
         iszero(y) && continue
         x = δX[l,j,i]
-        LA[i,j] += sign(x) * y * exp(-abs(x))
+        LAp[i,j] += x*y
+        LAn[i,j] += sign(x) * y * exp(-abs(x))
       end
     end
   end
 
   return nothing
 end
+
+
+
+
 
 
 

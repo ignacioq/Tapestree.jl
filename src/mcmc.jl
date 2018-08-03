@@ -129,8 +129,9 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   deltaXY!(δXc, δYc, Xc, Yc, wcol, m, ntip, narea)
 
   # lineage averages
-  const LAc = fill(NaN, m, ntip)
-  sde!(LAc, δXc, δYc, wcol, m, ntip)
+  const LApc = fill(NaN, m, ntip)
+  const LAnc = fill(NaN, m, ntip)
+  sde!(LApc, LAnc, δXc, δYc, wcol, m, ntip)
 
   # area lineage distances
   const LDc = fill(NaN, m, ntip, narea)
