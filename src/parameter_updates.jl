@@ -42,24 +42,24 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
 
   const xpi  = fill(NaN, ntip)
   const δxi  = fill(NaN, ntip, ntip)
-  const lapi = fill(NaN, ntip)
-  const lani = fill(NaN, ntip)
+  const lai = fill(NaN, ntip)
   const ldi  = fill(NaN, ntip, narea)
 
-  function f(up ::Int64,
-             Xc ::Array{Float64,2},
-             Yc ::Array{Int64,3},
-             δXc::Array{Float64,3},
-             δYc::Array{Float64,3},
-             λ1c::Float64,
-             λ0c::Float64,
-             ωxc::Float64, 
-             ω1c::Float64, 
-             ω0c::Float64,
-             σ²c::Float64,
-             llc::Float64,
-             LAc::Array{Float64,2},
-             LDc::Array{Float64,3})
+  function f(up  ::Int64,
+             Xc  ::Array{Float64,2},
+             Yc  ::Array{Int64,3},
+             δXc ::Array{Float64,3},
+             δYc ::Array{Float64,3},
+             λ1c ::Float64,
+             λ0c ::Float64,
+             ωxc ::Float64, 
+             ω1c ::Float64, 
+             ω0c ::Float64,
+             σ²c ::Float64,
+             llc ::Float64,
+             LApc::Array{Float64,2},
+             LAnc::Array{Float64,2},
+             LDc ::Array{Float64,3})
 
     @inbounds begin
 
@@ -89,38 +89,78 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
 
         xi, xj = ind2sub(Xc, upx)
 
-        # allocate
-        for j = Base.OneTo(ntip)
-          xpi[j] =  Xc[xi,j]
-          lai[j] = LAc[xi,j]
-          @simd for k = Base.OneTo(narea)
-            ldi[j,k] = LDc[xi,j,k]
+        if ωx >= 0.0
+          # allocate
+          for j = Base.OneTo(ntip)
+            xpi[j] =   Xc[xi,j]
+            lai[j] = LApc[xi,j]
+            @simd for k = Base.OneTo(narea)
+              ldi[j,k] = LDc[xi,j,k]
+            end
+            @simd for i = Base.OneTo(ntip)
+              δxi[i,j] = δXc[i,j,xi]
+            end
           end
-          @simd for i = Base.OneTo(ntip)
-            δxi[i,j] = δXc[i,j,xi]
+
+          # update xi
+          addupt!(xpi, ptn, xj, up)
+
+          if in(upx, Xnc1)        # if an internal node
+            xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
           end
+
+          # calculate new averages
+          Xupd_linavg!(δxi, lai, ldi, wcol, xpi, xi, xj, Yc, δYc, narea, Val{0})
+
+          llr = Xupd_llr(xi, xpi, Xc, lai, ldi, LApc, LAnc, LDc, Yc, 
+                         ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
+
+          if -randexp() < llr
+            llc        += llr::Float64
+            Xc[xi,:]    = xpi::Array{Float64,1}
+            δXc[:,:,xi] = δxi::Array{Float64,2}
+            LApc[xi,:]  = lai::Array{Float64,1}
+            LDc[xi,:,:] = ldi::Array{Float64,2}
+          end
+
+        # if ωx <= 0.0
+        else
+          # allocate
+          for j = Base.OneTo(ntip)
+            xpi[j] =  Xc[xi,j]
+            lai[j] = LAnc[xi,j]
+            @simd for k = Base.OneTo(narea)
+              ldi[j,k] = LDc[xi,j,k]
+            end
+            @simd for i = Base.OneTo(ntip)
+              δxi[i,j] = δXc[i,j,xi]
+            end
+          end
+
+          # update xi
+          addupt!(xpi, ptn, xj, up)
+
+          if in(upx, Xnc1)        # if an internal node
+            xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
+          end
+
+          # calculate new averages
+          Xupd_linavg!(δxi, lai, ldi, wcol, xpi, xi, xj, Yc, δYc, narea, Val{1})
+
+          llr = Xupd_llr(xi, xpi, Xc, lai, ldi, LApc, LAnc, LDc, Yc, 
+                         ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
+
+          if -randexp() < llr
+            llc        += llr::Float64
+            Xc[xi,:]    = xpi::Array{Float64,1}
+            δXc[:,:,xi] = δxi::Array{Float64,2}
+            LAnc[xi,:]  = lai::Array{Float64,1}
+            LDc[xi,:,:] = ldi::Array{Float64,2}
+          end
+
         end
 
-        # update xi
-        addupt!(xpi, ptn, xj, up)
 
-        if in(upx, Xnc1)        # if an internal node
-          xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
-        end
-
-        # calculate new averages
-        Xupd_linavg!(δxi, lai, ldi, wcol, xpi, xi, xj, Yc, δYc, narea)
-
-        llr = Xupd_llr(xi, xpi, Xc, lai, ldi, LAc, LDc, Yc, 
-                       ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
-
-        if -randexp() < llr
-          llc        += llr::Float64
-          Xc[xi,:]    = xpi::Array{Float64,1}
-          δXc[:,:,xi] = δxi::Array{Float64,2}
-          LAc[xi,:]   = lai::Array{Float64,1}
-          LDc[xi,:,:] = ldi::Array{Float64,2}
-        end
       end
 
     end
@@ -147,10 +187,11 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           brδt               ::Array{Array{Float64,1},1},
                           total_llf          ::Function)
 
-  const Xp  = zeros(m, ntip)
-  const δXp = fill( NaN, ntip, ntip, m)
-  const LAp = zeros(m, ntip)
-  const LDp = zeros(m, ntip, narea)
+  const Xp   = zeros(m, ntip)
+  const δXp  = fill( NaN, ntip, ntip, m)
+  const LApp = zeros(m, ntip)
+  const LAnp = zeros(m, ntip)
+  const LDp  = zeros(m, ntip, narea)
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -174,12 +215,12 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
     upbranchX!(br, Xp, bridx, brδt, σ²c)
 
     deltaX!(δXp, Xp, wcol, m, ntip, narea)
-    sde!(LAp, δXp, δYc, wcol, m, ntip)
+    sde!(LApp, LAnp, δXp, δYc, wcol, m, ntip)
     lindiff!(LDp, δXp, Yc, wcol, m, ntip, narea)
 
-    llr = (total_llf(Xp, Yc, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
+    llr = (total_llf(Xp, Yc, LApp, LAnp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs, σ²c) - 
-           total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
+           total_llf(Xc, Yc, LApp, LAnp, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
                      stemevc, brs, σ²c))::Float64
 
     if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64

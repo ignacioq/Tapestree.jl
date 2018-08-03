@@ -44,6 +44,18 @@ coinsamp(p0::Float64) = rand() < p0 ? 0 : 1
 
 
 """
+    rexp(λ::Float64)
+
+Generate one random sample from a **Exponential** distribution
+with mean `λ`. 
+"""
+rexp(λ::Float64) = (randexp()/λ)::Float64
+
+
+
+
+
+"""
     normlize(pt1::Float64, pt2::Float64)
 
 Normalize probabilities to 1.

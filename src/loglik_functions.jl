@@ -19,7 +19,7 @@ May 15 2017
 
 Return the expected value given the weighted average with sympatric species.
 """
-Eδx(μ::Float64, ωx::Float64, δt::Float64) = ωx * μp * δt
+Eδx(μ::Float64, ωx::Float64, δt::Float64) = ωx * μ * δt
 
 
 
@@ -95,8 +95,7 @@ function makellf(δt   ::Array{Float64,1},
 
   function f(X      ::Array{Float64,2},
              Y      ::Array{Int64,3}, 
-             LAp    ::Array{Float64,2},
-             LAn    ::Array{Float64,2},
+             LA     ::Array{Float64,2},
              LD     ::Array{Float64,3},
              ωx     ::Float64,
              ω1     ::Float64,
@@ -112,21 +111,11 @@ function makellf(δt   ::Array{Float64,1},
     @inbounds begin
 
       # trait likelihood
-      if ωx >= 0.0
-        for j = Base.OneTo(ntip)
-          @simd for i = wf23[j]:(m-1)
-            ll += logdnorm_tc(X[(i+1),j], 
-                              X[i,j] + Eδx(LAp[i,j], ωx, δt[i]), 
-                              δt[i]*σ²)::Float64
-          end
-        end
-      else
-        for j = Base.OneTo(ntip)
-          @simd for i = wf23[j]:(m-1)
-            ll += logdnorm_tc(X[(i+1),j], 
-                              X[i,j] + Eδx(LAn[i,j], ωx, δt[i]), 
-                              δt[i]*σ²)::Float64
-          end
+      for j = Base.OneTo(ntip)
+        @simd for i = wf23[j]:(m-1)
+          ll += logdnorm_tc(X[(i+1),j], 
+                            X[i,j] + Eδx(LA[i,j], ωx, δt[i]), 
+                            δt[i]*σ²)::Float64
         end
       end
 
@@ -633,13 +622,13 @@ end
 
 
 """
-    makellr_σ²ωxupd(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64)
+    makellr_ωxupd(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64)
 
-Make likelihood function for all trait matrix, `X`.
+Make likelihood ratio function when updating `ωx`.
 """
-function makellr_σ²ωxupd(δt  ::Vector{Float64}, 
-                         Y   ::Array{Int64,3}, 
-                         ntip::Int64)
+function makellr_ωxupd(δt  ::Vector{Float64}, 
+                       Y   ::Array{Int64,3}, 
+                       ntip::Int64)
 
   # which is 23 (i.e., NaN) in each column
   const w23 = UnitRange{Int64}[]
@@ -653,37 +642,97 @@ function makellr_σ²ωxupd(δt  ::Vector{Float64},
              LAn::Array{Float64,2},
              ωxc::Float64,
              ωxp::Float64,
+             σ² ::Float64)
+
+    llr::Float64 = 0.0
+
+    @inbounds begin
+      # trait likelihood
+      if ωxp >= 0.0
+        if ωxc >= 0.0
+          for j = Base.OneTo(ntip)
+            @simd for i = w23[j]
+              llr += llrdnorm_ωx(X[(i+1),j], X[i,j],
+                                 Eδx(LAp[i,j], ωxp, δt[i]),
+                                 Eδx(LAp[i,j], ωxc, δt[i]), 
+                                 δt[i]*σ²)
+            end
+          end
+        else
+          for j = Base.OneTo(ntip)
+            @simd for i = w23[j]
+              llr += llrdnorm_ωx(X[(i+1),j], X[i,j],
+                                 Eδx(LAp[i,j], ωxp, δt[i]),
+                                 Eδx(LAn[i,j], ωxc, δt[i]), 
+                                 δt[i]*σ²)
+            end
+          end
+        end
+      else
+        if ωxc >= 0.0
+          for j = Base.OneTo(ntip)
+            @simd for i = w23[j]
+              llr += llrdnorm_ωx(X[(i+1),j], X[i,j],
+                                 Eδx(LAn[i,j], ωxp, δt[i]),
+                                 Eδx(LAp[i,j], ωxc, δt[i]), 
+                                 δt[i]*σ²)
+            end
+          end
+        else
+          for j = Base.OneTo(ntip)
+            @simd for i = w23[j]
+              llr += llrdnorm_ωx(X[(i+1),j], X[i,j], 
+                                 Eδx(LAn[i,j], ωxp, δt[i]),
+                                 Eδx(LAn[i,j], ωxc, δt[i]), 
+                                 δt[i]*σ²)
+            end
+          end
+        end
+      end
+    end
+
+    return llr::Float64
+  end
+
+  return f
+end
+
+
+
+
+
+"""
+    makellr_σ²upd(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64)
+
+Make likelihood ratio function when updating `σ²`.
+"""
+function makellr_σ²upd(δt  ::Vector{Float64}, 
+                       Y   ::Array{Int64,3}, 
+                       ntip::Int64)
+
+  # which is 23 (i.e., NaN) in each column
+  const w23 = UnitRange{Int64}[]
+  for i = Base.OneTo(ntip)
+    non23 = find(Y[:,i,1] .!= 23)
+    push!(w23,colon(non23[1],non23[end-1]))
+  end
+
+  function f(X  ::Array{Float64,2},
+             LA ::Array{Float64,2},
+             ωx ::Float64,
              σ²c::Float64,
              σ²p::Float64)
 
     llr::Float64 = 0.0
 
     @inbounds begin
-      # trait likelihood
-      if ωx >= 0.0
-        for j = Base.OneTo(ntip)
-          @simd for i = w23[j]
-            llr += logdnorm_tc(X[(i+1),j], 
-                               X[i,j] + Eδx(LAp[i,j], ωxp, δt[i]), 
-                               δt[i]*σ²p)::Float64 -
-                   logdnorm_tc(X[(i+1),j], 
-                               X[i,j] + Eδx(LAp[i,j], ωxc, δt[i]), 
-                               δt[i]*σ²c)::Float64
-          end
-        end
-      else
-        for j = Base.OneTo(ntip)
-          @simd for i = w23[j]
-            llr += logdnorm_tc(X[(i+1),j], 
-                               X[i,j] + Eδx(LAn[i,j], ωxp, δt[i]), 
-                               δt[i]*σ²p)::Float64 -
-                   logdnorm_tc(X[(i+1),j], 
-                               X[i,j] + Eδx(LAn[i,j], ωxc, δt[i]), 
-                               δt[i]*σ²c)::Float64
-          end
+      for j = Base.OneTo(ntip)
+        @simd for i = w23[j]
+          llr += llrdnorm_σ²(X[(i+1),j],  
+                             X[i,j] + Eδx(LA[i,j], ωx, δt[i]), 
+                             δt[i]*σ²p, δt[i]*σ²c)
         end
       end
-
     end
 
     return llr::Float64
@@ -706,84 +755,47 @@ function makellr_Xupd(δt   ::Vector{Float64},
                       narea::Int64,
                       wcol ::Array{Array{Int64,1},1})
 
-  function f(xi    ::Int64,
-             xpi   ::Array{Float64,1},
-             X     ::Array{Float64,2},
-             lapi  ::Array{Float64,1},
-             ldpi  ::Array{Float64,2},
-             LAp   ::Array{Float64,2},
-             LAn   ::Array{Float64,2},
-             LD    ::Array{Float64,3},
-             Y     ::Array{Int64,3},
-             ωx    ::Float64,
-             ω1    ::Float64,
-             ω0    ::Float64,
-             λ1    ::Float64,
-             λ0    ::Float64,
-             σ²    ::Float64)
+  function f(xi  ::Int64,
+             xpi ::Array{Float64,1},
+             X   ::Array{Float64,2},
+             lapi::Array{Float64,1},
+             ldpi::Array{Float64,2},
+             LA  ::Array{Float64,2},
+             LD  ::Array{Float64,3},
+             Y   ::Array{Int64,3},
+             ωx  ::Float64,
+             ω1  ::Float64,
+             ω0  ::Float64,
+             λ1  ::Float64,
+             λ0  ::Float64,
+             σ²  ::Float64)
 
     # normal likelihoods
     llr::Float64 = 0.0
 
     @inbounds begin
 
-      if ωx >= 0.0
-        # loop for parent nodes
-        δxim1 = δt[xi-1]
-        for j = wcol[xi-1]
-          llr += logdnorm_tc(xpi[j], 
-                             X[xi-1,j] + Eδx(LAp[xi-1,j], ωx, δxim1), 
-                             δxim1*σ²)::Float64 -
-                 logdnorm_tc(X[xi,j],
-                             X[xi-1,j] + Eδx(LAp[xi-1,j], ωx, δxim1), 
-                             δxim1*σ²)::Float64
-        end
+      # loop for parent nodes
+      δxim1 = δt[xi-1]
+      for j = wcol[xi-1]
+        llr += llrdnorm_x(xpi[j], X[xi,j], 
+                          X[xi-1,j] + Eδx(LA[xi-1,j], ωx, δxim1), 
+                          δxim1*σ²)
+      end
 
-        # loop for daughter nodes
-        δxi = δt[xi]
-        for j = wcol[xi]
-          llr += logdnorm_tc(X[xi+1, j], 
-                             xpi[j]  + Eδx(lapi[j], ωx, δxi), 
-                             δxi*σ²)::Float64 -
-                 logdnorm_tc(X[xi+1, j], 
-                             X[xi,j] + Eδx(LAp[xi,j], ωx, δxi), 
-                             δxi*σ²)::Float64
+      # loop for daughter nodes
+      δxi = δt[xi]
+      for j = wcol[xi]
+        llr += llrdnorm_μ(X[xi+1, j],
+                          xpi[j]  + Eδx(lapi[j],  ωx, δxi),
+                          X[xi,j] + Eδx(LA[xi,j], ωx, δxi),
+                          δxi*σ²)
 
-          for k = Base.OneTo(narea)
-            llr += bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
-                            λ1, λ0, ω1, ω0, ldpi[j,k], δxi)::Float64 -
-                   bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
-                            λ1, λ0, ω1, ω0, LD[xi,j,k], δxi)::Float64
-          end
-        end
-      else
-        # loop for parent nodes
-        δxim1 = δt[xi-1]
-        for j = wcol[xi-1]
-          llr += logdnorm_tc(xpi[j], 
-                             X[xi-1,j] + Eδx(LAn[xi-1,j], ωx, δxim1), 
-                             δxim1*σ²)::Float64 -
-                 logdnorm_tc(X[xi,j],
-                             X[xi-1,j] + Eδx(LAn[xi-1,j], ωx, δxim1), 
-                             δxim1*σ²)::Float64
-        end
-
-        # loop for daughter nodes
-        δxi = δt[xi]
-        for j = wcol[xi]
-          llr += logdnorm_tc(X[xi+1, j], 
-                             xpi[j]  + Eδx(lapi[j], ωx, δxi), 
-                             δxi*σ²)::Float64 -
-                 logdnorm_tc(X[xi+1, j], 
-                             X[xi,j] + Eδx(LAn[xi,j], ωx, δxi), 
-                             δxi*σ²)::Float64
-
-          for k = Base.OneTo(narea)
-            llr += bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
-                            λ1, λ0, ω1, ω0, ldpi[j,k], δxi)::Float64 -
-                   bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
-                            λ1, λ0, ω1, ω0, LD[xi,j,k], δxi)::Float64
-          end
+        for k = Base.OneTo(narea)
+          llr += bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
+                          λ1, λ0, ω1, ω0, ldpi[j,k], δxi)::Float64 -
+                 bitbitll(Y[xi,j,k], Y[xi+1,j,k], 
+                          λ1, λ0, ω1, ω0, LD[xi,j,k], δxi)::Float64
         end
       end
     end
@@ -935,6 +947,57 @@ logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
 
 
 
+
+"""
+    llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64)
+
+Compute the log-likelihood ratio for the **Normal** density 
+for `ωx` updates
+"""
+llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64) =
+  @fastmath (-abs2(x - xi - μp) + abs2(x - xi - μc))/(2.0σ²)
+
+
+
+
+"""
+    llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64)
+
+Compute the log-likelihood ratio for the **Normal** density 
+for `σ²` updates
+"""
+llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) = 
+  @fastmath -0.5*(Base.Math.JuliaLibm.log(σ²p/σ²c) +
+                  abs2(x - μ)*(1.0/σ²p - 1.0/σ²c))
+
+
+
+
+"""
+    llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64)
+
+Compute the log-likelihood ratio for the **Normal** density 
+for `μ` updates
+"""
+llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
+  @fastmath (-abs2(x - μp) + abs2(x - μc))/(2.0σ²)
+
+
+
+"""
+    llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64)
+
+Compute the log-likelihood ratio for the **Normal** density 
+for `x` updates
+"""
+llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
+  @fastmath (-abs2(xp - μ) + abs2(xc - μ))/(2.0σ²)
+
+
+
+
+
+
 """
     logdhcau(x::Float64, scl::Float64)
 
@@ -957,13 +1020,4 @@ logdhcau1(x::Float64) =
   @fastmath Base.Math.JuliaLibm.log(2/(π * (x * x + 1)))
 
 
-
-
-"""
-    rexp(λ::Float64)
-
-Generate one random sample from a **Exponential** distribution
-with mean `λ`. 
-"""
-rexp(λ::Float64) = (randexp()/λ)::Float64
 

@@ -138,14 +138,15 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   lindiff!(LDc, δXc, Yc, wcol, m, ntip, narea)
 
   ## make likelihood and prior functions
-  total_llf   = makellf(δt, Yc, ntip, narea, m, nedge)
-  λupd_llr    = makellr_λ_upd(Yc, δt, narea, ntip, m, nedge)
-  ω10upd_llr  = makellr_ω10_upd(Yc, δt, narea, ntip, m)
-  Xupd_llr    = makellr_Xupd(δt, narea, wcol)
-  Rupd_llr    = makellr_Rupd(δt[1], wcol[1])
-  σ²ωxupd_llr = makellr_σ²ωxupd(δt, Yc, ntip)  
-  bgiid       = makellf_bgiid(bridx_a, δt, narea, nedge, m)
-  bgiid_br    = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
+  total_llf  = makellf(δt, Yc, ntip, narea, m, nedge)
+  λupd_llr   = makellr_λ_upd(Yc, δt, narea, ntip, m, nedge)
+  ω10upd_llr = makellr_ω10_upd(Yc, δt, narea, ntip, m)
+  Xupd_llr   = makellr_Xupd(δt, narea, wcol)
+  Rupd_llr   = makellr_Rupd(δt[1], wcol[1])
+  ωxupd_llr  = makellr_ωxupd(δt, Yc, ntip)
+  σ²upd_llr  = makellr_σ²upd(δt, Yc, ntip)  
+  bgiid      = makellf_bgiid(bridx_a, δt, narea, nedge, m)
+  bgiid_br   = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
 
   # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² 
   const np = length(wXp) + 6
