@@ -159,8 +159,9 @@ function llr_bm(Xc ::Array{Float64,2},
     llr::Float64 = 0.0
 
     @simd for i in Base.OneTo(length(idx)-1)
-      llr += logdnorm_tc(Xc[idx[i+1]], Xc[idx[i]], (δt[i+1] - δt[i])*σ²) -
-             logdnorm_tc(Xp[idx[i+1]], Xp[idx[i]], (δt[i+1] - δt[i])*σ²)
+      llr += llrdnorm_xμ(Xc[idx[i+1]], Xp[idx[i+1]], 
+                         Xc[idx[i]],   Xp[idx[i]],
+                         (δt[i+1] - δt[i])*σ²)
     end
   end
 
@@ -650,6 +651,7 @@ function makellr_ωxupd(δt  ::Vector{Float64},
       # trait likelihood
       if ωxp >= 0.0
         if ωxc >= 0.0
+          # if ωxp >= 0.0 & ωxc >= 0.0
           for j = Base.OneTo(ntip)
             @simd for i = w23[j]
               llr += llrdnorm_ωx(X[(i+1),j], X[i,j],
@@ -659,6 +661,7 @@ function makellr_ωxupd(δt  ::Vector{Float64},
             end
           end
         else
+          # if ωxp >= 0.0 & ωxc < 0.0
           for j = Base.OneTo(ntip)
             @simd for i = w23[j]
               llr += llrdnorm_ωx(X[(i+1),j], X[i,j],
@@ -670,6 +673,7 @@ function makellr_ωxupd(δt  ::Vector{Float64},
         end
       else
         if ωxc >= 0.0
+          # if ωxp < 0.0 & ωxc >= 0.0
           for j = Base.OneTo(ntip)
             @simd for i = w23[j]
               llr += llrdnorm_ωx(X[(i+1),j], X[i,j],
@@ -679,6 +683,7 @@ function makellr_ωxupd(δt  ::Vector{Float64},
             end
           end
         else
+          # if ωxp < 0.0 & ωxc < 0.0
           for j = Base.OneTo(ntip)
             @simd for i = w23[j]
               llr += llrdnorm_ωx(X[(i+1),j], X[i,j], 
@@ -829,9 +834,7 @@ function makellr_Rupd(δt1  ::Float64,
 
       # loop for daughter nodes
       for j = wci
-        # trait likelihood
-        llr += logdnorm_tc(X[2,j], xpi[j], δt1*σ²)::Float64 -
-               logdnorm_tc(X[2,j], X[1,j], δt1*σ²)::Float64
+        llr += llrdnorm_μ(X[2,j], xpi[j], X[1,j], δt1*σ²)
       end
     end
 
@@ -870,14 +873,12 @@ end
 
 
 
-
 """
     evll(t::Float64, λ::Float64)
 
 Return log-likelihood for events.
 """
 evll(t::Float64, λ::Float64) = (Base.Math.JuliaLibm.log(λ) - (λ * t))::Float64
-
 
 
 
@@ -915,7 +916,20 @@ end
 Compute the logarithmic transformation of the 
 **Exponential** density with mean `λ` for `x`.
 """
-logdexp(x::Float64, λ::Float64) = @fastmath Base.Math.JuliaLibm.log(λ) - λ * x
+logdexp(x::Float64, λ::Float64) = 
+  @fastmath Base.Math.JuliaLibm.log(λ) - λ * x
+
+
+
+
+"""
+    logdexp(x::Float64, λ::Float64)
+
+Compute the logarithmic transformation of the 
+**Exponential** density with mean `λ` for `x`.
+"""
+llrdexp_x(xp::Float64, xc::Float64, λ::Float64) = 
+  @fastmath λ * (xc - xp)
 
 
 
@@ -930,6 +944,7 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
   @fastmath -(0.5*Base.Math.JuliaLibm.log(2.0π) +
               0.5*Base.Math.JuliaLibm.log(σ²)   +
               abs2(x - μ)/(2.0 * σ²))
+
 
 
 
@@ -960,6 +975,7 @@ llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64)
 
 
 
+
 """
     llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64)
 
@@ -973,6 +989,7 @@ llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) =
 
 
 
+
 """
     llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64)
 
@@ -981,6 +998,8 @@ for `μ` updates
 """
 llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
   @fastmath (-abs2(x - μp) + abs2(x - μc))/(2.0σ²)
+
+
 
 
 
@@ -997,6 +1016,18 @@ llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
 
 
 
+"""
+    llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64)
+
+Compute the log-likelihood ratio for the **Normal** density 
+for `x` updates
+"""
+llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64) =
+  @fastmath (-abs2(xp - μp) + abs2(xc - μc))/(2.0σ²)
+
+
+
+
 
 """
     logdhcau(x::Float64, scl::Float64)
@@ -1005,7 +1036,8 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale `scl` for `x`.
 """
 logdhcau(x::Float64, scl::Float64) = 
-  @fastmath Base.Math.JuliaLibm.log(2 * scl/(π *(x * x + scl * scl)))
+  @fastmath Base.Math.JuliaLibm.log(2. * scl/(π *(x * x + scl * scl)))
+
 
 
 
@@ -1017,7 +1049,7 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale of 1 for `x`.
 """
 logdhcau1(x::Float64) = 
-  @fastmath Base.Math.JuliaLibm.log(2/(π * (x * x + 1)))
+  @fastmath Base.Math.JuliaLibm.log(2./(π * (x * x + 1.)))
 
 
 

@@ -141,8 +141,6 @@ end
 
 
 
-
-
 """
     sde!(LA   ::Array{Float64,2},
          δX   ::Array{Float64,3}, 
@@ -178,10 +176,6 @@ function sde!(LAp   ::Array{Float64,2},
 
   return nothing
 end
-
-
-
-
 
 
 
@@ -232,7 +226,8 @@ end
 
 """
     Xupd_linavg!(δxi  ::Array{Float64,2},
-                 lai  ::Array{Float64,1},
+                 lapi ::Array{Float64,1},
+                 lani ::Array{Float64,1},
                  ldi  ::Array{Float64,2},
                  wci  ::Array{Int64,1},
                  xpi  ::Array{Float64,1},
@@ -240,14 +235,14 @@ end
                  xj   ::Int64,
                  Y    ::Array{Int64,3},
                  δyi  ::Array{Float64,2},
-                 narea::Int64,
-                 ::Type{Val{0}})
+                 narea::Int64)
 
 Re-estimate lineage specific means 
 for a node update when `ωx >= 0.0`
 """
 function Xupd_linavg!(δxi  ::Array{Float64,2},
-                      lai  ::Array{Float64,1},
+                      lapi ::Array{Float64,1},
+                      lani ::Array{Float64,1},
                       ldi  ::Array{Float64,2},
                       wcol ::Array{Array{Int64,1},1},
                       xpi  ::Array{Float64,1},
@@ -255,8 +250,7 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
                       xj   ::Int64,
                       Y    ::Array{Int64,3},
                       δY   ::Array{Float64,3},
-                      narea::Int64,
-                      ::Type{Val{0}})
+                      narea::Int64)
 
   @inbounds begin
 
@@ -269,80 +263,14 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
 
     # estimate lineage averages
     for l = wci 
-      lai[l] = 0.0
+      lapi[l] = lani[l] = 0.0
       for j = wci
         j == l && continue
-        lai[l] += δxi[j,l] * δY[j,l,xi]
-      end
-    end
-
-    # estimate lineage sum of distances
-    for k = Base.OneTo(narea), l = wci
-      xmin = 1.0e20
-      for j = wci
-        j == l && continue
-        if Y[xi,j,k] == 1
-          x    = abs(δxi[j,l])
-          iszero(x) && continue
-          xmin = x < xmin ? x : xmin
-        end
-      end
-      ldi[l,k] = xmin == 1.0e20 ? 0.0 : xmin
-    end
-  end
-
-  return nothing
-end
-
-
-
-
-
-
-
-"""
-    Xupd_linavg!(δxi  ::Array{Float64,2},
-                 lai  ::Array{Float64,1},
-                 ldi  ::Array{Float64,2},
-                 wci  ::Array{Int64,1},
-                 xpi  ::Array{Float64,1},
-                 xi   ::Int64,
-                 xj   ::Int64,
-                 Y    ::Array{Int64,3},
-                 δyi  ::Array{Float64,2},
-                 narea::Int64,
-                 ::Type{Val{1}})
-
-Re-estimate lineage specific means 
-for a node update when `ωx < 0`.
-"""
-function Xupd_linavg!(δxi  ::Array{Float64,2},
-                      lai  ::Array{Float64,1},
-                      ldi  ::Array{Float64,2},
-                      wcol ::Array{Array{Int64,1},1},
-                      xpi  ::Array{Float64,1},
-                      xi   ::Int64,
-                      xj   ::Int64,
-                      Y    ::Array{Int64,3},
-                      δY   ::Array{Float64,3},
-                      narea::Int64,
-                      ::Type{Val{1}})
-
-  @inbounds begin
-
-    # estimate pairwise distances
-    wci = wcol[xi]
-    for l = wci, j = wci
-      l == j && continue
-      δxi[j,l] = xpi[j] - xpi[l]
-    end
-
-    # estimate lineage averages
-    for l = wci 
-      lai[l] = 0.0
-      for j = wci
-        j == l && continue
-        lai[l] += sign(δxi[j,l]) * δY[j,l,xi] * exp(-abs(δxi[j,l]))
+        y = δY[j,l,xi]
+        iszero(y) && continue
+        x = δxi[j,l]
+        lapi[l] += x * y
+        lani[l] += sign(x) * y * exp(-abs(x))
       end
     end
 
