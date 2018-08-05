@@ -79,13 +79,16 @@ function simulate_tribe(X_initial::Float64,
   @inbounds alive  = sortrows(br, by = x->(x[1]))[1:2,2]
   nalive = length(alive)
 
+  # is ωx positive? (for lineage averages)
+  const isωxP = ωx >= 0.0
+
   # loop through waiting times
   for j in Base.OneTo(nbt)
 
     nreps = reps_per_period(swt[j], const_δt)
 
     # simulate during the speciation waiting time
-    nconst_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0)
+    nconst_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0, isωxP)
 
     if j == nbt
       break
@@ -165,7 +168,8 @@ function nconst_sim!(Xt   ::Array{Float64,1},
                      λ1   ::Float64, 
                      λ0   ::Float64, 
                      ω1   ::Float64, 
-                     ω0   ::Float64)
+                     ω0   ::Float64,
+                     isωxP::Bool)
 
   # n species and narea areas
   const n, narea = size(Yt)
@@ -181,14 +185,14 @@ function nconst_sim!(Xt   ::Array{Float64,1},
   for i in Base.OneTo(nreps)
 
     # estimate area and lineage averages and area occupancy
-    δXY_la_ld!(δX, δY, la, ld, Xt, Yt, n, narea)
+    δXY_la_ld!(δX, δY, la, ld, Xt, Yt, n, narea, isωxP)
 
     # trait step
     traitsam_1step!(Xt, la, δt, ωx, σ, n)
 
     # biogeographic step
     copy!(Ytp, Yt)
-    biogeosam_1step!(ω1, ω0, λ1, λ0, ld, Ytp, nch, δt, n, narea)
+    biogeosam_1step!(ω1, ω0, λ1, λ0, ld, Ytp, nch, δt, n, narea); Ytp
 
     while check_sam(Ytp, nch, n, narea)
       copy!(Ytp, Yt)
@@ -224,7 +228,8 @@ function δXY_la_ld!(δX   ::Array{Float64,2},
                     Xt   ::Array{Float64,1}, 
                     Yt   ::Array{Int64,2}, 
                     n    ::Int64,
-                    narea::Int64)
+                    narea::Int64,
+                    isωxP::Bool)
   @inbounds begin
 
     # estimate pairwise distances
@@ -246,14 +251,21 @@ function δXY_la_ld!(δX   ::Array{Float64,2},
 
     # estimate lineage averages
     la[:] = 0.0
-    for j = Base.OneTo(n), i = Base.OneTo(n)
-        i == j && continue
-        la[i] += sign(δX[j,i]) * δY[j,i] * exp(-abs(δX[j,i]))
+    if isωxP
+      for j = Base.OneTo(n), i = Base.OneTo(n)
+          i == j && continue
+          la[i] += δX[j,i] * δY[j,i]
+      end
+    else
+      for j = Base.OneTo(n), i = Base.OneTo(n)
+          i == j && continue
+          la[i] += sign(δX[j,i]) * δY[j,i] * exp(-abs(δX[j,i]))
+      end
     end
 
     # estimate lineage sum of distances
     ld[:] = NaN
-    for k = Base.OneTo(narea), i = Base.OneTo(n), 
+    for k = Base.OneTo(narea), i = Base.OneTo(n)
       xmin = 1.0e20
       for j = Base.OneTo(n)
         j == i && continue
@@ -287,7 +299,7 @@ function traitsam_1step!(Xt::Array{Float64,1},
                          n ::Int64)
 
   @inbounds @fastmath begin
-    
+
     for i in Base.OneTo(n)
       Xt[i] += Eδx(la[i], ωx, δt) + randn()*σ*sqrt(δt)
     end
@@ -356,21 +368,23 @@ end
 Returns false if biogeographic step consists of *only one* change 
 or if the species does *not* go globally extinct. 
 """
-function check_sam(Ytp::Array{Int64,2}, nch::Array{Int64,1}, n::Int64, nareas::Int64)
+function check_sam(Ytp   ::Array{Int64,2}, 
+                   nch   ::Array{Int64,1}, 
+                   n     ::Int64, 
+                   nareas::Int64)
 
-  @fastmath @inbounds begin
+  @inbounds begin
 
     # check lineage did not go extinct
     for i in Base.OneTo(n)
       s = 0
-      for j in Base.OneTo(nareas)
-        s += Ytp[i,j]
+      @simd for k in Base.OneTo(nareas)
+        s += Ytp[i,k]
       end
       if iszero(s)
         return true
       end
     end
-
 
     # check that, at most, only one event happened per lineage
     for i in nch
