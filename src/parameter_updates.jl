@@ -153,7 +153,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           nedge              ::Int64,
                           bridx              ::Array{UnitRange{Int64},1},
                           brδt               ::Array{Array{Float64,1},1},
-                          total_llf          ::Function)
+                          total_llr          ::Function)
 
   const Xp   = zeros(m, ntip)
   const δXp  = fill( NaN, ntip, ntip, m)
@@ -188,15 +188,13 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
     lindiff!(LDp, δXp, Yc, wcol, m, ntip, narea)
 
     if ωxc >= 0.0
-      llr = (total_llf(Xp, Yc, LApp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevc, brs, σ²c) - 
-             total_llf(Xc, Yc, LApc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevc, brs, σ²c))::Float64
+      llr = total_llr(Xc, Xp, Yc, Yc, LApc, LApp, LDc, LDp, 
+                      ωxc, ω1c, ω0c, λ1c, λ0c,
+                      stemevc, stemevc, brs, brs, σ²c)
     else
-      llr = (total_llf(Xp, Yc, LAnp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevc, brs, σ²c) - 
-             total_llf(Xc, Yc, LAnc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                       stemevc, brs, σ²c))::Float64
+      llr = total_llr(Xc, Xp, Yc, Yc, LAnc, LAnp, LDc, LDp, 
+                      ωxc, ω1c, ω0c, λ1c, λ0c,
+                      stemevc, stemevc, brs, brs, σ²c)
     end
 
     if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
@@ -301,7 +299,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
                           brδt               ::Array{Array{Float64,1},1},
                           brl                ::Array{Float64,1},
                           wcol               ::Array{Array{Int64,1},1},
-                          total_llf          ::Function,
+                          total_llr          ::Function,
                           bgiid_br           ::Function)
 
   const Yp      = zeros(Int64, m, ntip, narea)
@@ -343,15 +341,13 @@ function make_mhr_upd_Ybr(narea              ::Int64,
       lindiff!(LDp, δXc, Yp, wcol, m, ntip, narea)
 
       if ωxc >= 0.0
-        llr = (total_llf(Xc, Yp, LApp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevp, brs, σ²c) - 
-               total_llf(Xc, Yc, LApc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c))::Float64
+        llr = total_llr(Xc, Xc, Yc, Yp, LApc, LApp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevp, brs, brs, σ²c)
       else
-        llr = (total_llf(Xc, Yp, LAnp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevp, brs, σ²c) - 
-               total_llf(Xc, Yc, LAnc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c))::Float64
+        llr = total_llr(Xc, Xc, Yc, Yp, LAnc, LAnp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevp, brs, brs, σ²c)
       end
 
       if -randexp() < (llr + 
@@ -402,7 +398,7 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
                             brδt     ::Array{Array{Float64,1},1},
                             brl      ::Array{Float64,1},
                             wcol     ::Array{Array{Int64,1},1},
-                            total_llf::Function,
+                            total_llr::Function,
                             bgiid    ::Function)
 
   const Yp      = zeros(Int64, m, ntip, narea)
@@ -446,15 +442,13 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
       lindiff!(LDp, δXc, Yp, wcol, m, ntip, narea)
 
       if ωxc >= 0.0
-        llr = (total_llf(Xc, Yp, LApp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevp, brsp, σ²c) - 
-               total_llf(Xc, Yc, LApc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c))::Float64
+        llr = total_llr(Xc, Xc, Yc, Yp, LApc, LApp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevp, brs, brsp, σ²c)
       else
-        llr = (total_llf(Xc, Yp, LAnp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevp, brsp, σ²c) - 
-               total_llf(Xc, Yc, LAnc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c))::Float64
+        llr = total_llr(Xc, Xc, Yc, Yp, LAnc, LAnp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevp, brs, brsp, σ²c)
       end
 
       if -randexp() < (llr + 
@@ -500,7 +494,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
                            brδt               ::Array{Array{Float64,1},1},
                            brl                ::Array{Float64,1},
                            wcol               ::Array{Array{Int64,1},1},
-                           total_llf          ::Function,
+                           total_llr          ::Function,
                            bgiid_br           ::Function)
 
   const Xp   = zeros(m, ntip)
@@ -546,15 +540,13 @@ function make_mhr_upd_XYbr(narea              ::Int64,
       lindiff!(LDp, δXp, Yp, wcol, m, ntip, narea)
 
       if ωxc >= 0.0
-        llr = (total_llf(Xp, Yp, LApp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c) - 
-               total_llf(Xc, Yc, LApc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c))::Float64
+        llr = total_llr(Xc, Xp, Yc, Yp, LApc, LApp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevc, brs, brs, σ²c)
       else
-        llr = (total_llf(Xp, Yp, LAnp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c) - 
-               total_llf(Xc, Yc, LAnc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-                         stemevc, brs, σ²c))::Float64
+        llr = total_llr(Xc, Xp, Yc, Yp, LAnc, LAnp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevc, brs, brs, σ²c)
       end
 
       if -randexp() < (llr + 

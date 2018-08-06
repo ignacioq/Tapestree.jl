@@ -141,6 +141,81 @@ end
 
 
 """
+    makellr(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64, narea::Int64)
+
+Make likelihood ratio for all trait matrix 
+and biogeography history.
+"""
+function makellr(δt   ::Array{Float64,1}, 
+                 Y    ::Array{Int64,3}, 
+                 ntip ::Int64, 
+                 narea::Int64,
+                 m    ::Int64,
+                 nedge::Int64)
+
+  # get initial range
+  const wf23 = Int64[]
+  for j = Base.OneTo(ntip)
+    push!(wf23, findfirst(Y[:,j,1] .!= 23))
+  end
+
+  function f(Xc     ::Array{Float64,2},
+             Xp     ::Array{Float64,2},
+             Yc     ::Array{Int64,3}, 
+             Yp     ::Array{Int64,3}, 
+             LAc    ::Array{Float64,2},
+             LAp    ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             LDp    ::Array{Float64,3},
+             ωx     ::Float64,
+             ω1     ::Float64,
+             ω0     ::Float64,
+             λ1     ::Float64,
+             λ0     ::Float64,
+             stemevc::Vector{Vector{Float64}},
+             stemevp::Vector{Vector{Float64}},
+             brs    ::Array{Int64,3},
+             brsp   ::Array{Int64,3},
+             σ²     ::Float64)
+
+    llr::Float64 = 0.0
+
+    @inbounds begin
+
+      # trait likelihood
+      for j = Base.OneTo(ntip)
+        @simd for i = wf23[j]:(m-1)
+          llr += llrdnorm_xμ(Xp[(i+1),j], Xc[(i+1),j],
+                             Xp[i,j] + Eδx(LAp[i,j], ωx, δt[i]), 
+                             Xc[i,j] + Eδx(LAc[i,j], ωx, δt[i]),
+                             δt[i]*σ²)::Float64
+        end
+      end
+
+      # biogeograhic likelihood
+      for k = Base.OneTo(narea)
+        llr += brll(stemevp[k], λ1, λ0, brsp[nedge,1,k]) -
+               brll(stemevc[k], λ1, λ0,  brs[nedge,1,k])
+        for j = Base.OneTo(ntip)
+          llr += bitvectorll(Yp, λ1, λ0, ω1, ω0, LDp, δt, j, k, wf23[j], m) -
+                 bitvectorll(Yc, λ1, λ0, ω1, ω0, LDc, δt, j, k, wf23[j], m)
+        end
+      end
+
+    end
+
+    return llr::Float64
+  end
+
+  return f
+end
+
+
+
+
+
+
+"""
     llr_bm(Xc ::Array{Float64,2},
            Xp ::Array{Float64,2},
            δt ::Array{Float64,1},

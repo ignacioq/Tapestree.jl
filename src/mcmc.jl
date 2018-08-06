@@ -139,6 +139,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   ## make likelihood and prior functions
   total_llf  = makellf(δt, Yc, ntip, narea, m, nedge)
+  total_llr  = makellr(δt, Yc, ntip, narea, m, nedge)
   λupd_llr   = makellr_λ_upd(Yc, δt, narea, ntip, m, nedge)
   ω10upd_llr = makellr_ω10_upd(Yc, δt, narea, ntip, m)
   Xupd_llr   = makellr_Xupd(δt, narea, wcol)
@@ -168,17 +169,17 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   # create update functions for Xbr, Y, Ybr and XYbr
   mhr_upd_Xbr   = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
-                                   bridx, brδt, total_llf)
+                                   bridx, brδt, total_llr)
   # mhr_upd_Xtrio = make_mhr_upd_Xtrio(wcol, m, narea, ntip, nedge,
-  #                                    bridx, brδt, total_llf)
+  #                                    bridx, brδt, total_llr)
   mhr_upd_Ybr   = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
-                                   brδt, brl, wcol,total_llf, bgiid_br)
+                                   brδt, brl, wcol,total_llr, bgiid_br)
   mhr_upd_Ytrio = make_mhr_upd_Ytrio(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
-                                      wcol, total_llf, bgiid)
+                                      wcol, total_llr, bgiid)
   mhr_upd_Ystem = make_mhr_upd_Ystem(stbrl, narea, nedge)
   mhr_upd_XYbr  = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
                                     bridx, bridx_a, brδt, brl, wcol, 
-                                    total_llf, bgiid_br)
+                                    total_llr, bgiid_br)
 
   # burning phase
   llc, prc, Xc, Yc, LApc, LAnc, LDc, δXc, δYc, 
