@@ -635,18 +635,44 @@ function uptrioX!(pr   ::Int64,
                   X    ::Array{Float64,2}, 
                   bridx::Array{UnitRange{Int64},1},
                   brδt ::Array{Array{Float64,1},1},
-                  s2   ::Float64, 
+                  brl  ::Array{Float64,1},
+                  σ²ϕ  ::Float64, 
                   nedge::Int64)
   @inbounds begin
 
-    # update node
-    X[bridx[pr][end]] = 
-    X[bridx[d1][1]]   = 
-    X[bridx[d2][1]]   = addupt(X[bridx[d1][1]], rand())
+    # if not root
+    if pr != nedge
 
-    pr != nedge && bbX!(X, bridx[pr], brδt[pr], s2)
-    bbX!(X, bridx[d1], brδt[d1], s2)
-    bbX!(X, bridx[d2], brδt[d2], s2)
+      ipr = bridx[pr]
+      id1 = bridx[d1]
+      id2 = bridx[d2]
+
+      # update node
+      X[id1[1]] = 
+      X[id2[1]] = trioupd(X[ipr[1]], 
+                          X[id1[end]], 
+                          X[id2[end]],
+                          brl[pr], brl[d1], brl[d2], σ²ϕ)
+
+      #update branches
+      bbX!(X, ipr, brδt[pr], σ²ϕ)
+      bbX!(X, id1, brδt[d1], σ²ϕ)
+      bbX!(X, id2, brδt[d2], σ²ϕ)
+
+    else
+      id1 = bridx[d1]
+      id2 = bridx[d2]
+
+      # update node
+      X[id1[1]]   = 
+      X[id2[1]]   = duoupd(X[id1[end]],
+                           X[id2[end]], 
+                           brl[d1], brl[d2], σ²ϕ)
+
+      # update branches
+      bbX!(X, id1, brδt[d1], σ²ϕ)
+      bbX!(X, id2, brδt[d2], σ²ϕ)
+    end
 
   end
 

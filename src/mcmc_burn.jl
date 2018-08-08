@@ -28,6 +28,7 @@ function burn_tribe(total_llf    ::Function,
                     bgiid        ::Function,
                     bgiid_br     ::Function,
                     mhr_upd_Xbr  ::Function,
+                    mhr_upd_Xtrio::Function,
                     mhr_upd_Ybr  ::Function,
                     mhr_upd_Ytrio::Function,
                     mhr_upd_Ystem::Function,
@@ -359,11 +360,12 @@ function burn_tribe(total_llf    ::Function,
       end
 
       # make X trio update
-      # if rand() < 2e-3
-      #   llc = mhr_upd_Xtrio(rand(trios),
-      #                     Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
-      #                     areavg, linavg, lindiff, areaoc, brs, stemevc)
-      # end
+      if rand() < 2e-3
+        σ²ϕ = σ²ϕprop()
+        llc = mhr_upd_Xtrio(rand(trios),
+                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, llc, 
+                            LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+      end
 
       # make X branch update
       if rand() < 2e-3

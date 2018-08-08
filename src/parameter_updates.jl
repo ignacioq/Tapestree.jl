@@ -215,73 +215,83 @@ end
 
 
 
-# """
-#     make_mhr_upd_Xtrio(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
+"""
+    make_mhr_upd_Xtrio(Xnc1::Array{Int64,1}, Xnc2::Array{Int64,1}, wcol::Array{Array{Int64,1},1}, m::Int64, ptn::Array{Float64,1}, wXp::Array{Int64,1}, λlessthan::Int64, narea::Int64, Xupd_llr, Rupd_llr)
 
-# Make X trio DA update for a node and adjacent branches using BB proposals.
-# """
-# function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
-#                             m                  ::Int64,
-#                             narea              ::Int64,
-#                             ntip               ::Int64,
-#                             nedge              ::Int64,
-#                             bridx              ::Array{UnitRange{Int64},1},
-#                             brδt               ::Array{Array{Float64,1},1},
-#                             total_llf          ::Function)
+Make X trio DA update for a node and adjacent branches using BB proposals.
+"""
+function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
+                            m                  ::Int64,
+                            narea              ::Int64,
+                            ntip               ::Int64,
+                            nedge              ::Int64,
+                            brl                ::Array{Float64,1},
+                            bridx              ::Array{UnitRange{Int64},1},
+                            brδt               ::Array{Array{Float64,1},1},
+                            total_llr          ::Function)
 
-#   const Xp  = zeros(m, ntip)
-#   const δXp = fill( NaN, ntip, ntip, m)
-#   const LAp = zeros(m, ntip)
-#   const LDp = zeros(m, ntip, narea)
+  const Xp   = zeros(m, ntip)
+  const δXp  = fill( NaN, ntip, ntip, m)
+  const LApp = zeros(m, ntip)
+  const LAnp = zeros(m, ntip)
+  const LDp  = zeros(m, ntip, narea)
 
-#   function f(trio   ::Array{Int64,1},
-#              Xc     ::Array{Float64,2},
-#              Yc     ::Array{Int64,3},
-#              λ1c    ::Float64,
-#              λ0c    ::Float64,
-#              ωxc    ::Float64, 
-#              ω1c    ::Float64, 
-#              ω0c    ::Float64,
-#              σ²c    ::Float64,
-#              llc    ::Float64,
-#              LAc    ::Array{Float64,2},
-#              LDc    ::Array{Float64,3},
-#              δXc    ::Array{Float64,3},
-#              δYc    ::Array{Float64,3},
-#              brs    ::Array{Int64,3},
-#              stemevc::Array{Array{Float64,1},1})
+  function f(trio   ::Array{Int64,1},
+             Xc     ::Array{Float64,2},
+             Yc     ::Array{Int64,3},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             ωxc    ::Float64, 
+             ω1c    ::Float64, 
+             ω0c    ::Float64,
+             σ²c    ::Float64,
+             σ²ϕ    ::Float64,
+             llc    ::Float64,
+             LApc   ::Array{Float64,2},
+             LAnc   ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             δXc    ::Array{Float64,3},
+             δYc    ::Array{Float64,3},
+             brs    ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1})
 
-#     copy!(Xp, Xc)
+    copy!(Xp, Xc)
 
-#     pr, d1, d2 = trio
+    pr, d1, d2 = trio
 
-#     uptrioX!(pr, d1, d2, Xp, bridx, brδt, σ²c, nedge)
+    uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²ϕ, nedge)
 
-#     deltaX!(δXp, Xp, wcol, m, ntip, narea)
-#     sde!(LAp, δXp, δYc, wcol,  m, ntip)
-#     lindiff!(LDp, δXp, Yc, wcol, m, ntip, narea)
+    deltaX!(δXp, Xp, wcol, m, ntip, narea)
+    sde!(LApp, LAnp, δXp, δYc, wcol, m, ntip)
+    lindiff!(LDp, δXp, Yc, wcol, m, ntip, narea)
 
-#     llr = (total_llf(Xp, Yc, LAp, LDp, ωxc, ω1c, ω0c, λ1c, λ0c,
-#                      stemevc, brs, σ²c) - 
-#            total_llf(Xc, Yc, LAc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c,
-#                      stemevc, brs, σ²c))::Float64
+    if ωxc >= 0.0
+      llr = total_llr(Xc, Xp, Yc, Yc, LApc, LApp, LDc, LDp, 
+                      ωxc, ω1c, ω0c, λ1c, λ0c,
+                      stemevc, stemevc, brs, brs, σ²c)
+    else
+      llr = total_llr(Xc, Xp, Yc, Yc, LAnc, LAnp, LDc, LDp, 
+                      ωxc, ω1c, ω0c, λ1c, λ0c,
+                      stemevc, stemevc, brs, brs, σ²c)
+    end
 
-#     if -randexp() < (llr + 
-#                      (pr != nedge ? 
-#                       llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²c):0.0) +
-#                       llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²c) +
-#                       llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²c))::Float64
-#       llc += llr::Float64
-#       copy!(Xc,   Xp)
-#       copy!(δXc, δXp)
-#       copy!(LAc, LAp)
-#       copy!(LDc, LDp)
-#     end
+    if -randexp() < (llr + 
+                     (pr != nedge ? 
+                      llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ):0.0) +
+                      llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
+                      llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²ϕ))::Float64
+      llc += llr::Float64
+      copy!(Xc,     Xp)
+      copy!(δXc,   δXp)
+      copy!(LApc, LApp)
+      copy!(LAnc, LAnp)
+      copy!(LDc,   LDp)
+    end
 
-#     return llc::Float64
-#   end
+    return llc::Float64
+  end
 
-# end
+end
 
 
 
