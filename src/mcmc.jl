@@ -142,6 +142,11 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   total_llr  = makellr(δt, Yc, ntip, narea, m, nedge)
   λupd_llr   = makellr_λ_upd(Yc, δt, narea, ntip, m, nedge)
   ω10upd_llr = makellr_ω10_upd(Yc, δt, narea, ntip, m)
+
+
+
+
+
   Xupd_llr   = makellr_Xupd(δt, narea, wcol)
   Rupd_llr   = makellr_Rupd(δt[1], wcol[1])
   ωxupd_llr  = makellr_ωxupd(δt, Yc, ntip)

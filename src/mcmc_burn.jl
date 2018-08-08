@@ -209,8 +209,7 @@ function burn_tribe(total_llf    ::Function,
         # update λ
         λ1p = mulupt(λ1c, ptn[5])::Float64
 
-        llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, 
-                       LDc, stemevc, brs)::Float64
+        llr = λ1upd_llr(Yc, λ1c, λ1p, λ0c, ω1c, LDc, stemevc, brs)
 
         prr = llrdexp_x(λ1p, λ1c, λprior)
 
@@ -235,8 +234,7 @@ function burn_tribe(total_llf    ::Function,
         # update λ
         λ0p = mulupt(λ0c, ptn[6])::Float64
 
-        llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, 
-                       LDc, stemevc, brs)::Float64
+        llr = λ0upd_llr(Yc, λ1c, λ0c, λ0p, ω0c, LDc, stemevc, brs)::Float64
 
         prr = llrdexp_x(λ0p, λ0c, λprior)
 
@@ -302,7 +300,7 @@ function burn_tribe(total_llf    ::Function,
         ω1p = addupt(ω1c, ptn[3])::Float64
 
         # proposal likelihood and prior
-        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, LDc)::Float64
+        llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
 
         # prior ratio
         prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
@@ -328,7 +326,7 @@ function burn_tribe(total_llf    ::Function,
         ω0p = addupt(ω0c, ptn[4])
 
         # proposal likelihood ratio
-        llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, LDc)::Float64
+        llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)::Float64
 
         # prior ratio
         prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
