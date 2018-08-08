@@ -12,6 +12,17 @@ May 01 2017
 
 
 
+"""
+    σ²ϕprop()
+
+Generate proportional proposals for σ² 
+using random samples from **LogNormal** distributions. 
+"""
+σ²ϕprop() = exp(randn())
+
+
+
+
 
 
 """

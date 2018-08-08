@@ -170,6 +170,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
              ω1c    ::Float64, 
              ω0c    ::Float64,
              σ²c    ::Float64,
+             σ²ϕ    ::Float64,
              llc    ::Float64,
              LApc   ::Array{Float64,2},
              LAnc   ::Array{Float64,2},
@@ -181,7 +182,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
 
     copy!(Xp, Xc)
 
-    upbranchX!(br, Xp, bridx, brδt, σ²c)
+    upbranchX!(br, Xp, bridx, brδt, σ²ϕ)
 
     deltaX!(δXp, Xp, wcol, m, ntip, narea)
     sde!(LApp, LAnp, δXp, δYc, wcol, m, ntip)
@@ -197,7 +198,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                       stemevc, stemevc, brs, brs, σ²c)
     end
 
-    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
       llc += llr::Float64
       copy!(Xc,   Xp)
       copy!(δXc,  δXp)
@@ -514,6 +515,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
              ω1c    ::Float64,
              ω0c    ::Float64,
              σ²c    ::Float64,
+             σ²ϕ    ::Float64,
              λϕ1    ::Float64, 
              λϕ0    ::Float64,
              llc    ::Float64,
@@ -533,7 +535,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
   if upbranchY!(λϕ1, λϕ0, br, Yp, stemevc, 
                 bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
-      upbranchX!(br, Xp, bridx, brδt, σ²c)
+      upbranchX!(br, Xp, bridx, brδt, σ²ϕ)
 
       deltaXY!(δXp, δYp, Xp, Yp, wcol, m, ntip, narea)
       sde!(LApp, LAnp, δXp, δYp, wcol, m, ntip)
@@ -552,7 +554,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
       if -randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs, br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevc, brs, br, λϕ1, λϕ0) +
-                       llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+                       llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
         llc += llr::Float64
         copy!(Xc,   Xp)
         copy!(Yc,   Yp)
