@@ -140,13 +140,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   ## make likelihood and prior functions
   total_llf  = makellf(δt, Yc, ntip, narea, m, nedge)
   total_llr  = makellr(δt, Yc, ntip, narea, m, nedge)
-  λupd_llr   = makellr_λ_upd(Yc, δt, narea, ntip, m, nedge)
-  ω10upd_llr = makellr_ω10_upd(Yc, δt, narea, ntip, m)
-
-
-
-
-
+  ω1upd_llr, ω0upd_llr, λ1upd_llr, λ0upd_llr = 
+    makellr_biogeo(Yc, δt, narea, ntip, m, nedge)
   Xupd_llr   = makellr_Xupd(δt, narea, wcol)
   Rupd_llr   = makellr_Rupd(δt[1], wcol[1])
   ωxupd_llr  = makellr_ωxupd(δt, Yc, ntip)
@@ -185,12 +180,12 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   mhr_upd_XYbr  = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
                                     bridx, bridx_a, brδt, brl, wcol, 
                                     total_llr, bgiid_br)
-
+ 
   # burning phase
   llc, prc, Xc, Yc, LApc, LAnc, LDc, δXc, δYc, 
   stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = 
-    burn_tribe(total_llf, λupd_llr, ω10upd_llr, Xupd_llr, Rupd_llr, 
-      ωxupd_llr, σ²upd_llr, 
+    burn_tribe(total_llf, ω1upd_llr, ω0upd_llr, λ1upd_llr, λ0upd_llr, 
+      Xupd_llr, Rupd_llr, ωxupd_llr, σ²upd_llr, 
       bgiid, bgiid_br, mhr_upd_Xbr, mhr_upd_Xtrio, 
       mhr_upd_Ybr, mhr_upd_Ytrio, mhr_upd_Ystem, mhr_upd_XYbr,
       Xc, Yc, δXc, δYc, LApc, LAnc, LDc, σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
@@ -244,9 +239,9 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, LApc, LAnc, LDc)
         # update λ1 
         elseif up == 5
-          llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, ω0c, 
+          llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, 
                                      LDc, stemevc, brs, λprior,
-                                     ptn[5], λupd_llr)
+                                     ptn[5], λ1upd_llr)
 
           # update internal node
           if rand() < 0.4
@@ -258,9 +253,9 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
         # if λ0 is updated
         elseif up == 6
-          llc, prc, λ0c = mhr_upd_λ0(λ0c, Yc, λ1c, llc, prc, ω1c, ω0c, 
+          llc, prc, λ0c = mhr_upd_λ0(λ0c, Yc, λ1c, llc, prc, ω0c, 
                                      LDc, stemevc, brs, λprior,
-                                     ptn[6], λupd_llr)
+                                     ptn[6], λ0upd_llr)
 
           # update internal node
           if rand() < 0.4
@@ -287,8 +282,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
         #update ω1
         elseif up == 3
-          llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, λ0c, ω0c, Yc, llc, prc, ptn[3], 
-                                     LDc, ω1prior, ω10upd_llr)
+          llc, prc, ω1c = mhr_upd_ω1(ω1c, λ1c, Yc, llc, prc, ptn[3], 
+                                     LDc, ω1prior, ω1upd_llr)
 
           # update internal node
           if rand() < 0.4
@@ -300,8 +295,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
         # update ω0
         else
-          llc, prc, ω0c = mhr_upd_ω0(ω0c, λ1c, λ0c, ω1c, Yc, llc, prc, ptn[4],
-                                     LDc, ω0prior, ω10upd_llr)
+          llc, prc, ω0c = mhr_upd_ω0(ω0c, λ0c, Yc, llc, prc, ptn[4],
+                                     LDc, ω0prior, ω0upd_llr)
 
           # update internal node
           if rand() < 0.4

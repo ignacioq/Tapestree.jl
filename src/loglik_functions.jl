@@ -677,72 +677,20 @@ end
 
 
 """
-    makellr_λ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
-
-Make likelihood ratio function for when updating λ.
-"""
-function makellr_λ_upd(Y    ::Array{Int64,3},
-                       δt   ::Vector{Float64},
-                       narea::Int64,
-                       ntip ::Int64,
-                       m    ::Int64, 
-                       nedge::Int64)
-
-  # get initial range
-  const wf23 = Int64[]
-  for j = Base.OneTo(ntip)
-    push!(wf23, findfirst(Y[:,j,1] .!= 23))
-  end
-
-  function f(Y      ::Array{Int64,3}, 
-             λ1c    ::Float64,
-             λ0c    ::Float64,
-             λ1p    ::Float64,
-             λ0p    ::Float64,
-             ω1     ::Float64,
-             ω0     ::Float64,
-             LD     ::Array{Float64,3},
-             stemevc::Vector{Vector{Float64}},
-             brs    ::Array{Int64,3})
-
-    ll::Float64 = 0.0
-
-    @inbounds begin
-
-      for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λ1p, λ0p, brs[nedge,1,k])::Float64 -
-              brll(stemevc[k], λ1c, λ0c, brs[nedge,1,k])::Float64
-
-        for j = Base.OneTo(ntip)
-          ll += bitvectorll(Y, λ1p, λ0p, ω1, ω0, LD, δt, 
-                            j, k, wf23[j], m)::Float64 -
-                bitvectorll(Y, λ1c, λ0c, ω1, ω0, LD, δt, 
-                            j, k, wf23[j], m)::Float64
-        end
-      end
-    
-    end
-
-    return ll::Float64
-  end
-
-  return f
-end
-
-
-
-
-
-"""
-    makellr_ω1μ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
-
-Make likelihood function for when updating ω1 & ω0.
-"""
-function makellr_ω1_upd(Y    ::Array{Int64,3},
+    makellr_biogeo(Y    ::Array{Int64,3},
                         δt   ::Vector{Float64},
                         narea::Int64,
                         ntip ::Int64,
                         m    ::Int64)
+
+Make likelihood function for when updating ω1 & ω0.
+"""
+function makellr_biogeo(Y    ::Array{Int64,3},
+                        δt   ::Vector{Float64},
+                        narea::Int64,
+                        ntip ::Int64,
+                        m    ::Int64,
+                        nedge::Int64)
 
   # which is 23 (23 = NaN) in each column
   const wf23 = Int64[]
@@ -750,11 +698,11 @@ function makellr_ω1_upd(Y    ::Array{Int64,3},
     push!(wf23, findfirst(Y[:,j,1] .!= 23))
   end
 
-  function f(Y  ::Array{Int64,3}, 
-             λ1 ::Float64,
-             ω1c::Float64,
-             ω1p::Float64,
-             LD ::Array{Float64,3})
+  function fω1(Y  ::Array{Int64,3}, 
+               λ1 ::Float64,
+               ω1c::Float64,
+               ω1p::Float64,
+               LD ::Array{Float64,3})
 
     llr::Float64 = 0.0
 
@@ -769,35 +717,12 @@ function makellr_ω1_upd(Y    ::Array{Int64,3},
     return llr
   end
 
-  return f
-end
 
-
-
-
-
-"""
-    makellr_ω0μ_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
-
-Make likelihood function for when ω0.
-"""
-function makellr_ω0_upd(Y    ::Array{Int64,3},
-                        δt   ::Vector{Float64},
-                        narea::Int64,
-                        ntip ::Int64,
-                        m    ::Int64)
-
-  # which is 23 (23 = NaN) in each column
-  const wf23 = Int64[]
-  for j = Base.OneTo(ntip)
-    push!(wf23, findfirst(Y[:,j,1] .!= 23))
-  end
-
-  function f(Y  ::Array{Int64,3}, 
-             λ0 ::Float64,
-             ω0c::Float64,
-             ω0p::Float64,
-             LD ::Array{Float64,3})
+  function fω0(Y  ::Array{Int64,3}, 
+               λ0 ::Float64,
+               ω0c::Float64,
+               ω0p::Float64,
+               LD ::Array{Float64,3})
 
     llr::Float64 = 0.0
 
@@ -812,46 +737,23 @@ function makellr_ω0_upd(Y    ::Array{Int64,3},
     return llr
   end
 
-  return f
-end
 
-
-
-
-
-"""
-    makellr_λ1_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
-
-Make likelihood function for when λ1.
-"""
-function makellr_λ1_upd(Y    ::Array{Int64,3},
-                        δt   ::Vector{Float64},
-                        narea::Int64,
-                        ntip ::Int64,
-                        m    ::Int64)
-
-  # which is 23 (23 = NaN) in each column
-  const wf23 = Int64[]
-  for j = Base.OneTo(ntip)
-    push!(wf23, findfirst(Y[:,j,1] .!= 23))
-  end
-
-  function f(Y      ::Array{Int64,3}, 
-             λ1c    ::Float64,
-             λ1p    ::Float64,
-             λ0c    ::Float64,
-             ω1     ::Float64,
-             LD     ::Array{Float64,3},
-             stemevc::Vector{Vector{Float64}},
-             brs    ::Array{Int64,3})
+  function fλ1(Y      ::Array{Int64,3}, 
+               λ1c    ::Float64,
+               λ1p    ::Float64,
+               λ0     ::Float64,
+               ω1     ::Float64,
+               LD     ::Array{Float64,3},
+               stemevc::Vector{Vector{Float64}},
+               brs    ::Array{Int64,3})
 
     llr::Float64 = 0.0
 
     @inbounds begin
 
       for k = Base.OneTo(narea)
-        llr += brll(stemevc[k], λ1p, λ0c, brs[nedge,1,k])::Float64 -
-              brll(stemevc[k], λ1c, λ0c, brs[nedge,1,k])::Float64
+        llr += brll(stemevc[k], λ1p, λ0, brs[nedge,1,k])::Float64 -
+               brll(stemevc[k], λ1c, λ0, brs[nedge,1,k])::Float64
         for j = Base.OneTo(ntip)
           llr += bitvectorllr_λ1(Y, λ1c, λ1p, ω1, LD, δt, 
                                  j, k, wf23[j], m)
@@ -862,37 +764,15 @@ function makellr_λ1_upd(Y    ::Array{Int64,3},
     return llr
   end
 
-  return f
-end
 
-
-
-
-"""
-    makellr_λ0_upd(Y::Array{Int64,3}, δt::Vector{Float64}, narea::Int64)
-
-Make likelihood function for when λ0.
-"""
-function makellr_λ0_upd(Y    ::Array{Int64,3},
-                        δt   ::Vector{Float64},
-                        narea::Int64,
-                        ntip ::Int64,
-                        m    ::Int64)
-
-  # which is 23 (23 = NaN) in each column
-  const wf23 = Int64[]
-  for j = Base.OneTo(ntip)
-    push!(wf23, findfirst(Y[:,j,1] .!= 23))
-  end
-
-  function f(Y      ::Array{Int64,3}, 
-             λ1     ::Float64,
-             λ0c    ::Float64,
-             λ0p    ::Float64,
-             ω0     ::Float64,
-             LD     ::Array{Float64,3},
-             stemevc::Vector{Vector{Float64}},
-             brs    ::Array{Int64,3})
+  function fλ0(Y      ::Array{Int64,3}, 
+               λ1     ::Float64,
+               λ0c    ::Float64,
+               λ0p    ::Float64,
+               ω0     ::Float64,
+               LD     ::Array{Float64,3},
+               stemevc::Vector{Vector{Float64}},
+               brs    ::Array{Int64,3})
 
     llr::Float64 = 0.0
 
@@ -911,7 +791,8 @@ function makellr_λ0_upd(Y    ::Array{Int64,3},
     return llr
   end
 
-  return f
+
+  return fω1, fω0, fλ1, fλ0
 end
 
 
@@ -1522,17 +1403,6 @@ function evllr_λ0(t  ::Float64,
     end
   end
 end
-
-
-
-
-
-
-evllr_λ0(0.1, ω0c, λ0c, λ0p, 0.23)
-evll(0.1, f_λ0(λ0p, ω0c, 0.23)) - evll(0.1, f_λ0(λ0c, ω0c, 0.23))
-
-@btime evllr_λ0(0.1, ω0c, λ0c, λ0p, 0.23)
-@btime evll(0.1, f_λ0(λ0p, ω0c, 0.23)) - evll(0.1, f_λ0(λ0c, ω0c, 0.23))
 
 
 

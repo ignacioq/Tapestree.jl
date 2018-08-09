@@ -732,20 +732,18 @@ MHR update for ω1.
 """
 function mhr_upd_ω1(ω1c       ::Float64,
                     λ1c       ::Float64,
-                    λ0c       ::Float64,
-                    ω0c       ::Float64,
                     Yc        ::Array{Int64,3},
                     llc       ::Float64,
                     prc       ::Float64,
                     ω1tn      ::Float64,
                     LDc       ::Array{Float64,3},
                     ω1prior   ::Tuple{Float64,Float64},
-                    ω10upd_llr::Function)
+                    ω1upd_llr ::Function)
 
   const ω1p = addupt(ω1c, rand() < .3 ? ω1tn : 4.*ω1tn)::Float64
 
   # likelihood ratio
-  const llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1p, ω0c, LDc)::Float64
+  const llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
 
   # prior ratio
   const prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
@@ -769,21 +767,19 @@ end
 MHR update for ω0.
 """
 function mhr_upd_ω0(ω0c       ::Float64,
-                    λ1c       ::Float64,
                     λ0c       ::Float64,
-                    ω1c       ::Float64,
                     Yc        ::Array{Int64,3},
                     llc       ::Float64,
                     prc       ::Float64,
                     ω0tn      ::Float64,
                     LDc       ::Array{Float64,3},
                     ω0prior   ::Tuple{Float64,Float64},
-                    ω10upd_llr::Function)
+                    ω0upd_llr::Function)
 
   const ω0p = addupt(ω0c, rand() < .3 ? ω0tn : 4.*ω0tn)::Float64
 
   # likelihood ratio
-  const llr = ω10upd_llr(Yc, λ1c, λ0c, ω1c, ω0c, ω1c, ω0p, LDc)::Float64
+  const llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)
 
   # prior ratio
   const prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
@@ -806,25 +802,24 @@ end
 
 Update λ1.
 """
-function mhr_upd_λ1(λ1c     ::Float64,
-                    Yc      ::Array{Int64,3},
-                    λ0c     ::Float64,
-                    llc     ::Float64,
-                    prc     ::Float64,
-                    ω1c     ::Float64,
-                    ω0c     ::Float64,
-                    LDc     ::Array{Float64,3},
-                    stemevc ::Array{Array{Float64,1},1},
-                    brs     ::Array{Int64,3},
-                    λprior  ::Float64,
-                    λ1tn    ::Float64,
-                    λupd_llr::Function)
+function mhr_upd_λ1(λ1c      ::Float64,
+                    Yc       ::Array{Int64,3},
+                    λ0c      ::Float64,
+                    llc      ::Float64,
+                    prc      ::Float64,
+                    ω1c      ::Float64,
+                    LDc      ::Array{Float64,3},
+                    stemevc  ::Array{Array{Float64,1},1},
+                    brs      ::Array{Int64,3},
+                    λprior   ::Float64,
+                    λ1tn     ::Float64,
+                    λ1upd_llr::Function)
 
   # update λ
   const λ1p = mulupt(λ1c, rand() < .3 ? λ1tn : 4.*λ1tn)::Float64
 
   # proposal likelihood and prior
-  const llr = λupd_llr(Yc, λ1c, λ0c, λ1p, λ0c, ω1c, ω0c, LDc, stemevc, brs)
+  const llr = λ1upd_llr(Yc, λ1c, λ1p, λ0c, ω1c, LDc, stemevc, brs)
 
   const prr = llrdexp_x(λ1p, λ1c, λprior)
 
@@ -846,25 +841,24 @@ end
 
 Update λ0.
 """
-function mhr_upd_λ0(λ0c     ::Float64,
-                    Yc      ::Array{Int64,3},
-                    λ1c     ::Float64,
-                    llc     ::Float64,
-                    prc     ::Float64,
-                    ω1c     ::Float64,
-                    ω0c     ::Float64,
-                    LDc     ::Array{Float64,3},
-                    stemevc ::Array{Array{Float64,1},1},
-                    brs     ::Array{Int64,3},
-                    λprior  ::Float64,
-                    λ0tn    ::Float64,
-                    λupd_llr::Function)
+function mhr_upd_λ0(λ0c      ::Float64,
+                    Yc       ::Array{Int64,3},
+                    λ1c      ::Float64,
+                    llc      ::Float64,
+                    prc      ::Float64,
+                    ω0c      ::Float64,
+                    LDc      ::Array{Float64,3},
+                    stemevc  ::Array{Array{Float64,1},1},
+                    brs      ::Array{Int64,3},
+                    λprior   ::Float64,
+                    λ0tn     ::Float64,
+                    λ0upd_llr::Function)
 
   # update λ
   const λ0p = mulupt(λ0c, rand() < .3 ? λ0tn : 4.*λ0tn)::Float64
 
   # proposal likelihood and prior
-  const llr = λupd_llr(Yc, λ1c, λ0c, λ1c, λ0p, ω1c, ω0c, LDc, stemevc, brs)
+  const llr = λ0upd_llr(Yc, λ1c, λ0c, λ0p, ω0c, LDc, stemevc, brs)
 
   const prr = llrdexp_x(λ0p, λ0c, λprior)
 

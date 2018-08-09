@@ -19,8 +19,10 @@ April 27 2017
 Burning & adaptive phase for MCMC.
 """
 function burn_tribe(total_llf    ::Function,
-                    λupd_llr     ::Function,
-                    ω10upd_llr   ::Function,
+                    ω1upd_llr    ::Function,
+                    ω0upd_llr    ::Function,
+                    λ1upd_llr    ::Function,
+                    λ0upd_llr    ::Function,
                     Xupd_llr     ::Function,
                     Rupd_llr     ::Function,
                     ωxupd_llr    ::Function,
