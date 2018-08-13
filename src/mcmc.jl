@@ -168,18 +168,21 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   fix_ω0 && filter!(x -> x ≠ 4, parvec)
 
   # create update functions for Xbr, Y, Ybr and XYbr
-  mhr_upd_Xbr   = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
-                                   bridx, brδt, total_llr)
-  mhr_upd_Xtrio = make_mhr_upd_Xtrio(wcol, m, narea, ntip, nedge,
-                                     brl, bridx, brδt, total_llr)
-  mhr_upd_Ybr   = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
-                                   brδt, brl, wcol,total_llr, bgiid_br)
-  mhr_upd_Ytrio = make_mhr_upd_Ytrio(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
-                                      wcol, total_llr, bgiid)
-  mhr_upd_Ystem = make_mhr_upd_Ystem(stbrl, narea, nedge)
-  mhr_upd_XYbr  = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
-                                    bridx, bridx_a, brδt, brl, wcol, 
-                                    total_llr, bgiid_br)
+  mhr_upd_Xbr     = make_mhr_upd_Xbr(wcol, m, narea, ntip, nedge, 
+                                     bridx, brδt, total_llr)
+  mhr_upd_Xtrio   = make_mhr_upd_Xtrio(wcol, m, narea, ntip, nedge,
+                                       brl, bridx, brδt, total_llr)
+  mhr_upd_Ybr     = make_mhr_upd_Ybr(narea, nedge, m, ntip, bridx_a, 
+                                     brδt, brl, wcol,total_llr, bgiid_br)
+  mhr_upd_Ytrio   = make_mhr_upd_Ytrio(narea, nedge, m, ntip, bridx_a,  brδt, brl, 
+                                        wcol, total_llr, bgiid)
+  mhr_upd_Ystem   = make_mhr_upd_Ystem(stbrl, narea, nedge)
+  mhr_upd_XYbr    = make_mhr_upd_XYbr(narea, nedge, m, ntip, 
+                                      bridx, bridx_a, brδt, brl, wcol, 
+                                      total_llr, bgiid_br)
+  mhr_upd_XYtrio  = make_mhr_upd_XYtrio(narea, nedge, m, ntip, 
+                                        bridx, bridx_a, brδt, brl, 
+                                        wcol, total_llr, bgiid)
  
   # burning phase
   llc, prc, Xc, Yc, LApc, LAnc, LDc, δXc, δYc, 
@@ -187,7 +190,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
     burn_tribe(total_llf, ω1upd_llr, ω0upd_llr, λ1upd_llr, λ0upd_llr, 
       Xupd_llr, Rupd_llr, ωxupd_llr, σ²upd_llr, 
       bgiid, bgiid_br, mhr_upd_Xbr, mhr_upd_Xtrio, 
-      mhr_upd_Ybr, mhr_upd_Ytrio, mhr_upd_Ystem, mhr_upd_XYbr,
+      mhr_upd_Ybr, mhr_upd_Ytrio, mhr_upd_Ystem, mhr_upd_XYbr, mhr_upd_XYtrio,
       Xc, Yc, δXc, δYc, LApc, LAnc, LDc, σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
       Xnc1, Xnc2, brl, wcol, bridx_a, brδt, brs, stemevc, 
       trios, wXp,
@@ -244,12 +247,12 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                                      ptn[5], λ1upd_llr)
 
           # update internal node
-          # if rand() < 0.4
-          #   λϕ1, λϕ0 = λϕprop()
-          #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-          # end
+          if rand() < 0.4
+            λϕ1, λϕ0 = λϕprop()
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          end
 
         # if λ0 is updated
         elseif up == 6
@@ -258,12 +261,12 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                                      ptn[6], λ0upd_llr)
 
           # update internal node
-          # if rand() < 0.4
-          #   λϕ1, λϕ0 = λϕprop()
-          #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-          # end
+          if rand() < 0.4
+            λϕ1, λϕ0 = λϕprop()
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          end
 
         # if σ² is updated
         elseif up == 1
@@ -286,12 +289,12 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                                      LDc, ω1prior, ω1upd_llr)
 
           # update internal node
-          # if rand() < 0.4
-          #   λϕ1, λϕ0 = λϕprop()
-          #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-          # end
+          if rand() < 0.4
+            λϕ1, λϕ0 = λϕprop()
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          end
 
         # update ω0
         else
@@ -299,22 +302,22 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                                      LDc, ω0prior, ω0upd_llr)
 
           # update internal node
-          # if rand() < 0.4
-          #   λϕ1, λϕ0 = λϕprop()
-          #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-          # end
+          if rand() < 0.4
+            λϕ1, λϕ0 = λϕprop()
+            llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          end
         end
 
         ## make a branch updates with some Pr
         # make Y branch update
-        # if rand() < 2e-3
-        #   λϕ1, λϕ0 = λϕprop()
-        #   llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
-        #                   Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
-        #                   llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-        # end
+        if rand() < 2e-3
+          λϕ1, λϕ0 = λϕprop()
+          llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
+                          llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        end
 
         # make X trio update
         if rand() < 2e-3
@@ -333,14 +336,24 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         end
 
         # make joint X & Y branch update
-        # if rand() < 2e-3
-        #   λϕ1, λϕ0 = λϕprop()
-        #   σ²ϕ      = σ²ϕprop()
-        #   llc      = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-        #                      Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
-        #                      σ²ϕ, λϕ1, λϕ0,
-        #                      llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-        # end
+        if rand() < 2e-3
+          λϕ1, λϕ0 = λϕprop()
+          σ²ϕ      = σ²ϕprop()
+          llc      = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                             σ²ϕ, λϕ1, λϕ0,
+                             llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        end
+
+        # make joint X & Y trio update
+        if rand() < 2e-3
+          λϕ1, λϕ0 = λϕprop()
+          σ²ϕ      = σ²ϕprop()
+          llc      = mhr_upd_XYtrio(rand(trios), 
+                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, 
+                             σ²ϕ, λϕ1, λϕ0,
+                             llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        end
 
         # update stem branch
         if rand() < 2e-3

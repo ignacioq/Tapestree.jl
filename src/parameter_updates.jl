@@ -373,7 +373,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
         # allocate stemevc
         @simd for k in Base.OneTo(narea) 
           stemevc[k] = copy(stemevp[k])
-        end      
+        end
       end
       return llc
     else
@@ -582,6 +582,123 @@ function make_mhr_upd_XYbr(narea              ::Int64,
   end
 
 end
+
+
+
+
+
+
+
+"""
+    make_mhr_upd_Ytrio(narea    ::Int64,
+                       nedge    ::Int64,
+                       m        ::Int64,
+                       ntip     ::Int64,
+                       bridx_a  ::Array{Array{UnitRange{Int64},1},1},
+                       brδt     ::Array{Array{Float64,1},1},
+                       brl      ::Array{Float64,1},
+                       wcol     ::Array{Array{Int64,1},1},
+                       total_llf::Function,
+                       bgiid    ::Function)
+
+Make function to update trio in Y.
+"""
+function make_mhr_upd_XYtrio(narea    ::Int64,
+                             nedge    ::Int64,
+                             m        ::Int64,
+                             ntip     ::Int64,
+                             bridx    ::Array{UnitRange{Int64},1},
+                             bridx_a  ::Array{Array{UnitRange{Int64},1},1},
+                             brδt     ::Array{Array{Float64,1},1},
+                             brl      ::Array{Float64,1},
+                             wcol     ::Array{Array{Int64,1},1},
+                             total_llr::Function,
+                             bgiid    ::Function)
+
+  const Xp      = zeros(m, ntip)
+  const Yp      = zeros(Int64, m, ntip, narea)
+  const δXp     = fill( NaN, ntip, ntip, m)
+  const δYp     = fill( NaN, ntip, ntip, m)
+  const LApp    = zeros(m, ntip)
+  const LAnp    = zeros(m, ntip)
+  const LDp     = zeros(m, ntip, narea)
+  const brsp    = zeros(Int64, nedge, 2, narea)
+
+  function f(triad  ::Array{Int64,1},
+             Xc     ::Array{Float64,2},
+             Yc     ::Array{Int64,3},
+             λ1c    ::Float64,
+             λ0c    ::Float64,
+             ωxc    ::Float64, 
+             ω1c    ::Float64, 
+             ω0c    ::Float64,
+             σ²c    ::Float64,
+             σ²ϕ    ::Float64,
+             λϕ1    ::Float64,
+             λϕ0    ::Float64,
+             llc    ::Float64,
+             prc    ::Float64,
+             LApc   ::Array{Float64,2},
+             LAnc   ::Array{Float64,2},
+             LDc    ::Array{Float64,3},
+             δXc    ::Array{Float64,3},
+             δYc    ::Array{Float64,3},
+             brs    ::Array{Int64,3},
+             stemevc::Array{Array{Float64,1},1})
+
+    copy!(Xp,   Xc)
+    copy!(Yp,   Yc)
+    copy!(brsp, brs)
+
+    # if an efficient sample
+    if upnode!(λϕ1, λϕ0, triad, Yp, stemevc,
+               bridx_a, brδt, brl, brsp, narea, nedge)
+
+      pr, d1, d2 = triad
+
+      uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²ϕ, nedge)
+
+      deltaY!(δYp, Yp, wcol, m, ntip, narea)
+      sde!(LApp, LAnp, δXp, δYp, wcol, m, ntip)
+      lindiff!(LDp, δXp, Yp, wcol, m, ntip, narea)
+
+      if ωxc >= 0.0
+        llr = total_llr(Xc, Xp, Yc, Yp, LApc, LApp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevc, brs, brsp, σ²c)
+      else
+        llr = total_llr(Xc, Xp, Yc, Yp, LAnc, LAnp, LDc, LDp, 
+                        ωxc, ω1c, ω0c, λ1c, λ0c,
+                        stemevc, stemevc, brs, brsp, σ²c)
+      end
+
+      if -randexp() < (llr + 
+                       bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
+                       bgiid(Yp, stemevc, brsp, triad, λϕ1, λϕ0) +
+                       ((pr != nedge) ? 
+                       llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ) : 0.0) +
+                       llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
+                       llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²ϕ))::Float64
+        llc += llr
+        copy!(Xc,   Xp)
+        copy!(Yc,   Yp)
+        copy!(δXc,  δXp)
+        copy!(δYc,  δYp)
+        copy!(LApc, LApp)
+        copy!(LAnc, LAnp)
+        copy!(LDc,  LDp)
+        copy!(brs,  brsp)
+      end
+
+      return llc::Float64
+    else
+      return llc::Float64
+    end
+  end
+
+end
+
+
 
 
 

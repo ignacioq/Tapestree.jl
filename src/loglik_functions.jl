@@ -832,7 +832,7 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
   end
 
   function f(Y      ::Array{Int64,3},
-             stemevc::Array{Array{Float64,1},1},
+             stemev::Array{Array{Float64,1},1},
              brs    ::Array{Int64,3},
              triad  ::Array{Int64,1},
              λϕ1    ::Float64,
@@ -854,7 +854,7 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
         for k = Base.OneTo(narea)
           ll += bitvectorll_iid(Y, bridx_a[k][d1], λϕ1, λϕ0, δtA[d1]) +
                 bitvectorll_iid(Y, bridx_a[k][d2], λϕ1, λϕ0, δtA[d2]) +
-                brll(stemevc[k], λϕ1, λϕ0, brs[nedge,1,k])
+                brll(stemev[k], λϕ1, λϕ0, brs[nedge,1,k])
         end
       end
 
