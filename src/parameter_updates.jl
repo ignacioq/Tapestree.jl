@@ -276,8 +276,8 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
     end
 
     if -randexp() < (llr + 
-                     (pr != nedge ? 
-                      llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ):0.0) +
+                     ((pr != nedge) ? 
+                      llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ) : 0.0) +
                       llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
                       llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²ϕ))::Float64
       llc += llr::Float64

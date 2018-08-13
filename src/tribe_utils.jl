@@ -130,7 +130,7 @@ function Ptrfast_start(λ1   ::Float64,
   @fastmath begin
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1/(λ1 + λ0)
+    sd1  ::Float64 = 1.0/(λ1 + λ0)
     λ1ex ::Float64 = λ1*ex
     λ0ex ::Float64 = λ0*ex
 
@@ -158,7 +158,7 @@ function Ptrfast_start(λ1   ::Float64,
   @fastmath begin
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1/(λ1 + λ0)
+    sd1  ::Float64 = 1.0/(λ1 + λ0)
     λ1ex ::Float64 = λ1*ex
     λ0ex ::Float64 = λ0*ex
 
@@ -185,7 +185,7 @@ function Ptrfast_end(λ1   ::Float64,
   @fastmath begin
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1/(λ1 + λ0)
+    sd1  ::Float64 = 1.0/(λ1 + λ0)
     λ1ex ::Float64 = λ1*ex
     λ0ex ::Float64 = λ0*ex
 
@@ -211,7 +211,7 @@ function Ptrfast_end(λ1   ::Float64,
   @fastmath begin
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1/(λ1 + λ0)
+    sd1  ::Float64 = 1.0/(λ1 + λ0)
     λ1ex ::Float64 = λ1*ex
     λ0ex ::Float64 = λ0*ex
 

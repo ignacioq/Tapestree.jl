@@ -664,10 +664,10 @@ function uptrioX!(pr   ::Int64,
       id2 = bridx[d2]
 
       # update node
-      X[id1[1]]   = 
-      X[id2[1]]   = duoupd(X[id1[end]],
-                           X[id2[end]], 
-                           brl[d1], brl[d2], σ²ϕ)
+      X[id1[1]] = 
+      X[id2[1]] = duoupd(X[id1[end]],
+                         X[id2[end]], 
+                         brl[d1], brl[d2], σ²ϕ)
 
       # update branches
       bbX!(X, id1, brδt[d1], σ²ϕ)
@@ -696,9 +696,9 @@ function upbranchX!(j    ::Int64,
                     X    ::Array{Float64,2}, 
                     bridx::Array{UnitRange{Int64},1},
                     brδt ::Array{Array{Float64,1},1},
-                    s2   ::Float64)
+                    σ²ϕ  ::Float64)
 
-  @inbounds bbX!(X, bridx[j], brδt[j], s2)
+  @inbounds bbX!(X, bridx[j], brδt[j], σ²ϕ)
 
   return nothing
 end
@@ -708,32 +708,33 @@ end
 
 
 """
-    bbX!(x::Array{Float64,1}, t::::Array{Float64,1}, σ::Float64)
+    bbX!(X::Array{Float64,2}, idx::UnitRange, t::Array{Float64,1}, σ::Float64)
 
 Brownian bridge simulation function for updating a branch in X in place.
 """
 function bbX!(X  ::Array{Float64,2}, 
               idx::UnitRange,
               t  ::Array{Float64,1},
-              s2 ::Float64)
+              σ²ϕ::Float64)
 
-  @inbounds begin
+  @inbounds @fastmath begin
 
     xf::Float64 = X[idx[end]]
 
     for i = Base.OneTo(endof(t)-1)
-      X[idx[i+1]] = (X[idx[i]] + randn()*sqrt((t[i+1] - t[i])*s2))::Float64
+      X[idx[i+1]] = (X[idx[i]] + randn()*sqrt((t[i+1] - t[i])*σ²ϕ))::Float64
     end
 
-    for i = Base.OneTo(endof(t))
-      X[idx[i]] = (X[idx[i]] - t[i]/t[end] * (X[idx[end]] - xf))::Float64
+    invte::Float64 = 1.0/t[end]
+    xdif ::Float64 = (X[idx[end]] - xf)
+
+    @simd for i = Base.OneTo(endof(t))
+      X[idx[i]] = (X[idx[i]] - t[i] * invte * xdif)::Float64
     end
   end
 
   return nothing
 end
-
-
 
 
 

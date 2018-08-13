@@ -34,10 +34,12 @@ on the difference between lineage traits and area averages.
 function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
   if iszero(δx) 
     return λ1
+  elseif iszero(ω1)
+    return λ1
   elseif ω1 < 0.0
-    return λ1 * exp(-abs2(ω1)/δx)
+    return λ1 * exp(-(ω1^2)/δx)
   else
-    return λ1 * exp(-abs2(ω1)*δx)
+    return λ1 * exp(-(ω1^2)*δx)
   end
 end
 
@@ -54,10 +56,12 @@ on the difference between lineage traits and area averages.
 function f_λ0(λ0::Float64, ω0::Float64, δx::Float64) 
   if iszero(δx)
     return λ0
+  elseif iszero(ω0)
+    return λ0
   elseif ω0 < 0.0
-    return λ0 + Base.Math.JuliaLibm.log(1. + abs2(ω0)/δx)
+    return λ0 + Base.Math.JuliaLibm.log(1.0 + (ω0^2)/δx)
   else
-    return λ0 + Base.Math.JuliaLibm.log(1. + abs2(ω0)*δx)
+    return λ0 + Base.Math.JuliaLibm.log(1.0 + (ω0^2)*δx)
   end
 end
 
@@ -1011,7 +1015,7 @@ function bitvectorll_iid(Y     ::Array{Int64,3},
     cur_s::Int64   = Y[idx[1]]
     cur_λ::Float64 = cur_s == 0 ? λ1 : λ0
 
-    for i = Base.OneTo(endof(δt))
+    for i = Base.OneTo(length(δt))
       if Y[idx[i]] == Y[idx[i+1]]
         ll += nell(δt[i], cur_λ)::Float64
       else
@@ -1413,7 +1417,7 @@ end
 
 Return log-likelihood for nonevents.
 """
-nell(t::Float64, λ::Float64) = (-1 * λ * t)::Float64
+nell(t::Float64, λ::Float64) = (-1.0 * λ * t)::Float64
 
 
 
@@ -1657,7 +1661,7 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale `scl` for `x`.
 """
 logdhcau(x::Float64, scl::Float64) = 
-  @fastmath Base.Math.JuliaLibm.log(2. * scl/(π *(x * x + scl * scl)))
+  @fastmath Base.Math.JuliaLibm.log(2.0 * scl/(π *(x * x + scl * scl)))
 
 
 
@@ -1670,7 +1674,7 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale of 1 for `x`.
 """
 logdhcau1(x::Float64) = 
-  @fastmath Base.Math.JuliaLibm.log(2./(π * (x * x + 1.)))
+  @fastmath Base.Math.JuliaLibm.log(2.0/(π * (x * x + 1.)))
 
 
 

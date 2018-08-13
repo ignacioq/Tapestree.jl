@@ -224,10 +224,10 @@ function burn_tribe(total_llf    ::Function,
 
         # update internal node
         if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          # λϕ1, λϕ0 = λϕprop()
+          # llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # update λ0
@@ -249,10 +249,10 @@ function burn_tribe(total_llf    ::Function,
 
         # update internal node
         if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          # λϕ1, λϕ0 = λϕprop()
+          # llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # if σ² is updated
@@ -316,10 +316,10 @@ function burn_tribe(total_llf    ::Function,
 
         # update internal node
         if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          # λϕ1, λϕ0 = λϕprop()
+          # llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # update ω0
@@ -342,10 +342,10 @@ function burn_tribe(total_llf    ::Function,
 
         # update internal node
         if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+          # λϕ1, λϕ0 = λϕprop()
+          # llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+          #           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+          #           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
         end
 
       end

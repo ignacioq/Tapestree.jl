@@ -63,7 +63,7 @@ function duoupd(xd1::Float64,
                 σ²ϕ::Float64)
   @fastmath begin
     t = 1./(1.0/td1 + 1.0/td2)
-    randn()*sqrt(t)*σ²ϕ + (xd1/td1 + xd2/td2)*t
+    randn()*sqrt(t*σ²ϕ) + (xd1/td1 + xd2/td2)*t
   end
 end
 
@@ -93,7 +93,7 @@ function trioupd(xpr::Float64,
                  σ²ϕ::Float64)
   @fastmath begin
     t = 1./(1.0/tpr + 1.0/td1 + 1.0/td2)
-    randn()*sqrt(t)*σ²ϕ + (xpr/tpr + xd1/td1 + xd2/td2)*t
+    randn()*sqrt(t*σ²ϕ) + (xpr/tpr + xd1/td1 + xd2/td2)*t
   end
 end
 
