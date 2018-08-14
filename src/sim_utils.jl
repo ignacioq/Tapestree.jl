@@ -82,13 +82,15 @@ function simulate_tribe(X_initial::Float64,
   # is ωx positive? (for lineage averages)
   const isωxP = ωx >= 0.0
 
+  const sqrtδt = sqrt(const_δt) 
+
   # loop through waiting times
   for j in Base.OneTo(nbt)
 
     nreps = reps_per_period(swt[j], const_δt)
 
     # simulate during the speciation waiting time
-    nconst_sim!(Xt, Yt, nreps, const_δt, ωx, σ, λ1, λ0, ω1, ω0, isωxP)
+    nconst_sim!(Xt, Yt, nreps, const_δt, sqrtδt, ωx, σ, λ1, λ0, ω1, ω0, isωxP)
 
     if j == nbt
       break
@@ -149,6 +151,7 @@ reps_per_period(br_length::Float64, const_δt::Float64) =
                 Yt   ::Array{Int64,2},
                 nreps::Int64,
                 δt   ::Float64,
+                sqrtδt::Float64
                 ωx   ::Float64, 
                 σ    ::Float64, 
                 λ1   ::Float64, 
@@ -159,17 +162,18 @@ reps_per_period(br_length::Float64, const_δt::Float64) =
 Simulate biogeographic and trait evolution along a 
 speciation waiting time.
 """
-function nconst_sim!(Xt   ::Array{Float64,1}, 
-                     Yt   ::Array{Int64,2},
-                     nreps::Int64,
-                     δt   ::Float64,
-                     ωx   ::Float64, 
-                     σ    ::Float64, 
-                     λ1   ::Float64, 
-                     λ0   ::Float64, 
-                     ω1   ::Float64, 
-                     ω0   ::Float64,
-                     isωxP::Bool)
+function nconst_sim!(Xt    ::Array{Float64,1}, 
+                     Yt    ::Array{Int64,2},
+                     nreps ::Int64,
+                     δt    ::Float64,
+                     sqrtδt::Float64,
+                     ωx    ::Float64, 
+                     σ     ::Float64, 
+                     λ1    ::Float64, 
+                     λ0    ::Float64, 
+                     ω1    ::Float64, 
+                     ω0    ::Float64,
+                     isωxP ::Bool)
 
   # n species and narea areas
   const n, narea = size(Yt)
@@ -188,7 +192,7 @@ function nconst_sim!(Xt   ::Array{Float64,1},
     δXY_la_ld!(δX, δY, la, ld, Xt, Yt, n, narea, isωxP)
 
     # trait step
-    traitsam_1step!(Xt, la, δt, ωx, σ, n)
+    traitsam_1step!(Xt, la, δt, sqrtδt, ωx, σ, n)
 
     # biogeographic step
     copy!(Ytp, Yt)
@@ -291,17 +295,18 @@ end
 
 Sample one step for trait evolution history: `X(t + δt)`.
 """
-function traitsam_1step!(Xt::Array{Float64,1}, 
-                         la::Array{Float64,1}, 
-                         δt::Float64, 
-                         ωx::Float64, 
-                         σ ::Float64,
-                         n ::Int64)
+function traitsam_1step!(Xt    ::Array{Float64,1}, 
+                         la    ::Array{Float64,1}, 
+                         δt    ::Float64, 
+                         sqrtδt::Float64, 
+                         ωx    ::Float64, 
+                         σ     ::Float64,
+                         n     ::Int64)
 
   @inbounds @fastmath begin
 
     for i in Base.OneTo(n)
-      Xt[i] += Eδx(la[i], ωx, δt) + randn()*σ*sqrt(δt)
+      Xt[i] += Eδx(la[i], ωx, δt) + randn()*σ*sqrtδt
     end
 
   end

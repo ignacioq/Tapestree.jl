@@ -75,6 +75,8 @@ normlize(p1::Float64, p2::Float64) = p1/(p1 + p2)
 
 
 
+
+
 """
     normlize(p::Tuple{Float64,Float64})
 
@@ -101,7 +103,7 @@ function Ptrfast(λ1::Float64,
   @fastmath begin
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1/(λ1 + λ0)
+    sd1  ::Float64 = 1.0/(λ1 + λ0)
     λ1ex ::Float64 = λ1*ex
     λ0ex ::Float64 = λ0*ex
 
@@ -132,9 +134,8 @@ function Ptrfast_start(λ1   ::Float64,
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
     sd1  ::Float64 = 1.0/(λ1 + λ0)
     λ1ex ::Float64 = λ1*ex
-    λ0ex ::Float64 = λ0*ex
 
-    return sd1*(λ0 + λ1*ex), sd1*(λ1 - λ1*ex) 
+    return sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex) 
   end
 end
 
@@ -159,10 +160,9 @@ function Ptrfast_start(λ1   ::Float64,
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
     sd1  ::Float64 = 1.0/(λ1 + λ0)
-    λ1ex ::Float64 = λ1*ex
     λ0ex ::Float64 = λ0*ex
 
-    return sd1*(λ0 - λ0*ex), sd1*(λ1 + λ0*ex)
+    return sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)
   end
 end
 
@@ -186,10 +186,8 @@ function Ptrfast_end(λ1   ::Float64,
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
     sd1  ::Float64 = 1.0/(λ1 + λ0)
-    λ1ex ::Float64 = λ1*ex
-    λ0ex ::Float64 = λ0*ex
 
-    return sd1*(λ0 + λ1ex), sd1*(λ0 - λ0ex)
+    return sd1*(λ0 + λ1*ex), sd1*(λ0 - λ0*ex)
   end
 end
 
@@ -212,10 +210,8 @@ function Ptrfast_end(λ1   ::Float64,
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
     sd1  ::Float64 = 1.0/(λ1 + λ0)
-    λ1ex ::Float64 = λ1*ex
-    λ0ex ::Float64 = λ0*ex
 
-    return sd1*(λ1 - λ1ex), sd1*(λ1 + λ0ex)
+    return sd1*(λ1 - λ1*ex), sd1*(λ1 + λ0*ex)
   end
 end
 

@@ -184,7 +184,8 @@ function burn_tribe(total_llf     ::Function,
             end
 
             # calculate new averages
-            Xupd_linavg!(δxi, lapi, lani, ldi, wcol, xpi, xi, xj, Yc, δYc, narea)
+            Xupd_linavg!(δxi, lapi, lani, ldi, wcol, 
+                         xpi, xi, xj, Yc, δYc, narea)
 
             if ωxc >= 0.0
               llr = Xupd_llr(xi, xpi, Xc, lapi, ldi, LApc, LDc, Yc, 
@@ -214,6 +215,16 @@ function burn_tribe(total_llf     ::Function,
 
         llr = λ1upd_llr(Yc, λ1c, λ1p, λ0c, ω1c, LDc, stemevc, brs)
 
+  total_llf(Xc, Yc, LApc, LDc, ωxc, ω1c, ω0c, λ1p, λ0c, stemevc, brs, σ²c) -
+  total_llf(Xc, Yc, LApc, LDc, ωxc, ω1c, ω0c, λ1c, λ0c, stemevc, brs, σ²c)
+
+
+
+
+
+
+
+
         prr = llrdexp_x(λ1p, λ1c, λprior)
 
         if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ1p/λ1c))
@@ -224,12 +235,12 @@ function burn_tribe(total_llf     ::Function,
         end
 
         # update internal node
-        if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-        end
+        # if rand() < 0.4
+        #   λϕ1, λϕ0 = λϕprop()
+        #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+        #             λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+        #             LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        # end
 
       # update λ0
       elseif up == 6
@@ -249,12 +260,12 @@ function burn_tribe(total_llf     ::Function,
         end
 
         # update internal node
-        if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-        end
+        # if rand() < 0.4
+        #   λϕ1, λϕ0 = λϕprop()
+        #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+        #             λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+        #             LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        # end
 
       # if σ² is updated
       elseif up == 1
@@ -316,12 +327,12 @@ function burn_tribe(total_llf     ::Function,
         end
 
         # update internal node
-        if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-        end
+        # if rand() < 0.4
+        #   λϕ1, λϕ0 = λϕprop()
+        #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+        #             λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+        #             LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        # end
 
       # update ω0
       else
@@ -342,22 +353,30 @@ function burn_tribe(total_llf     ::Function,
         end
 
         # update internal node
-        if rand() < 0.4
-          λϕ1, λϕ0 = λϕprop()
-          llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-        end
+        # if rand() < 0.4
+        #   λϕ1, λϕ0 = λϕprop()
+        #   llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
+        #             λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+        #             LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        # end
 
       end
 
       ## make a branch updates with some Pr
       # make Y branch update
+      # if rand() < 2e-3
+      #   λϕ1, λϕ0 = λϕprop()
+      #   llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
+      #                     Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
+      #                     llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+      # end
+
+      # make X branch update
       if rand() < 2e-3
-        λϕ1, λϕ0 = λϕprop()
-        llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
-                          llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+        σ²ϕ = σ²ϕprop()
+        llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, llc, 
+                          LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make X trio update
@@ -366,14 +385,6 @@ function burn_tribe(total_llf     ::Function,
         llc = mhr_upd_Xtrio(rand(trios),
                             Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, llc, 
                             LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-      end
-
-      # make X branch update
-      if rand() < 2e-3
-        σ²ϕ = σ²ϕprop()
-        llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, llc, 
-                          LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make joint X & Y branch update
@@ -387,14 +398,14 @@ function burn_tribe(total_llf     ::Function,
       end
 
       # make joint X & Y trio update
-      if rand() < 2e-3
-        λϕ1, λϕ0 = λϕprop()
-        σ²ϕ      = σ²ϕprop()
-        llc      = mhr_upd_XYtrio(rand(trios),
-                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c,
-                           σ²ϕ, λϕ1, λϕ0,
-                           llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
-      end
+      # if rand() < 2e-3
+      #   λϕ1, λϕ0 = λϕprop()
+      #   σ²ϕ      = σ²ϕprop()
+      #   llc      = mhr_upd_XYtrio(rand(trios),
+      #                      Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c,
+      #                      σ²ϕ, λϕ1, λϕ0,
+      #                      llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+      # end
 
       # update stem node
       if rand() < 2e-3

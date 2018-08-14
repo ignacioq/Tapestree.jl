@@ -90,25 +90,25 @@ function makellf(δt   ::Array{Float64,1},
 
   # number of normal evaluations
   n = 0
-  for i in wf23
+  for i = wf23
     n += length(i:(m-1))
   end
 
   # normal constant
   const normC = -0.5*log(2.0π)*n
 
-  function f(X      ::Array{Float64,2},
-             Y      ::Array{Int64,3}, 
-             LA     ::Array{Float64,2},
-             LD     ::Array{Float64,3},
-             ωx     ::Float64,
-             ω1     ::Float64,
-             ω0     ::Float64,
-             λ1     ::Float64,
-             λ0     ::Float64,
-             stemevc::Vector{Vector{Float64}},
-             brs    ::Array{Int64,3},
-             σ²     ::Float64)
+  function f(X     ::Array{Float64,2},
+             Y     ::Array{Int64,3}, 
+             LA    ::Array{Float64,2},
+             LD    ::Array{Float64,3},
+             ωx    ::Float64,
+             ω1    ::Float64,
+             ω0    ::Float64,
+             λ1    ::Float64,
+             λ0    ::Float64,
+             stemev::Vector{Vector{Float64}},
+             brs   ::Array{Int64,3},
+             σ²    ::Float64)
 
     ll::Float64 = normC
 
@@ -125,7 +125,7 @@ function makellf(δt   ::Array{Float64,1},
 
       # biogeograhic likelihood
       for k = Base.OneTo(narea)
-        ll += brll(stemevc[k], λ1, λ0, brs[nedge,1,k])::Float64
+        ll += brll(stemev[k], λ1, λ0, brs[nedge,1,k])::Float64
         for j = Base.OneTo(ntip)
           ll += bitvectorll(Y, λ1, λ0, ω1, ω0, LD, δt, 
                             j, k, wf23[j], m)::Float64
@@ -522,8 +522,8 @@ function bitvectorllr_λ1(Y  ::Array{Int64,3},
                          yi ::Int64,
                          m  ::Int64)
 
-  llr::Float64 = 0.0
-  i ::Int64   = yi
+  llr = 0.0
+  i   = yi
 
   @inbounds begin
 
@@ -532,12 +532,12 @@ function bitvectorllr_λ1(Y  ::Array{Int64,3},
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
           llr += nellr_λ1(δt[i], ω1, λ1c, λ1p, LD[i,j,k])
-          i += 1
+          i   += 1
         end
         i >= m && break
 
         llr += evllr_λ1(δt[i], ω1, λ1c, λ1p, LD[i,j,k])::Float64
-        i += 1
+        i   += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
           i += 1
@@ -562,7 +562,7 @@ function bitvectorllr_λ1(Y  ::Array{Int64,3},
         i >= m && break
 
         llr += evllr_λ1(δt[i], ω1, λ1c, λ1p, LD[i,j,k])::Float64
-        i += 1
+        i   += 1
       end
     end
 
@@ -570,6 +570,7 @@ function bitvectorllr_λ1(Y  ::Array{Int64,3},
 
   return llr::Float64
 end
+
 
 
 
@@ -682,10 +683,10 @@ end
 
 """
     makellr_biogeo(Y    ::Array{Int64,3},
-                        δt   ::Vector{Float64},
-                        narea::Int64,
-                        ntip ::Int64,
-                        m    ::Int64)
+                   δt   ::Vector{Float64},
+                   narea::Int64,
+                   ntip ::Int64,
+                   m    ::Int64)
 
 Make likelihood function for when updating ω1 & ω0.
 """
@@ -1002,11 +1003,11 @@ end
 Return likelihood under the independence model 
 for a bit vector.
 """
-function bitvectorll_iid(Y     ::Array{Int64,3},
-                         idx   ::UnitRange{Int64},
-                         λ1    ::Float64,
-                         λ0    ::Float64,
-                         δt    ::Array{Float64,1})
+function bitvectorll_iid(Y  ::Array{Int64,3},
+                         idx::UnitRange{Int64},
+                         λ1 ::Float64,
+                         λ0 ::Float64,
+                         δt ::Array{Float64,1})
 
   @inbounds begin
 
@@ -1326,6 +1327,9 @@ end
 
 
 
+
+
+
 """
     evllr_ω0(t  ::Float64,
              ω0c::Float64,
@@ -1359,6 +1363,7 @@ end
 
 
 
+
 """
     evllr_λ1(t  ::Float64,
              ω1::Float64,
@@ -1375,7 +1380,8 @@ function evllr_λ1(t  ::Float64,
                   δx ::Float64)
   @fastmath begin
     if iszero(δx)
-      return 0.0
+      return Base.Math.JuliaLibm.log(λ1p/λ1c) +
+             t*(λ1c - λ1p)
     else
       return Base.Math.JuliaLibm.log(λ1p/λ1c) +
              exp(-abs2(ω1)*δx^sign(ω1))*t*(λ1c - λ1p)
@@ -1399,7 +1405,7 @@ function evllr_λ0(t  ::Float64,
                   δx ::Float64)
   @fastmath begin
     if iszero(δx)
-      return 0.0
+      return Base.Math.JuliaLibm.log(λ0p/λ0c) + t*(λ0c - λ0p)
     else
       ff = Base.Math.JuliaLibm.log(1.0 + abs2(ω0)*δx^(sign(ω0)))
       return Base.Math.JuliaLibm.log((λ0p + ff)/(λ0c + ff)) +
@@ -1407,6 +1413,7 @@ function evllr_λ0(t  ::Float64,
     end
   end
 end
+
 
 
 
@@ -1482,6 +1489,7 @@ end
 
 
 
+
 """
     nellr_λ1(t  ::Float64,
              ω1::Float64,
@@ -1498,7 +1506,7 @@ function nellr_λ1(t  ::Float64,
                   δx ::Float64)
   @fastmath begin
     if iszero(δx)
-      return 0.0
+      return t*(λ1c - λ1p)
     else
       return exp(-abs2(ω1)*δx^sign(ω1))*t*(λ1c - λ1p)
     end

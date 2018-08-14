@@ -75,7 +75,7 @@ function deltaY!(δY   ::Array{Float64,3},
       δY[l,j,i] = 0.0
       @simd for k = Base.OneTo(narea)
         if Y[i,j,k] == 1
-          sl += 1.0
+          sl        += 1.0
           δY[l,j,i] += Float64(Y[i,l,k])
         end
       end
@@ -263,7 +263,8 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
 
     # estimate lineage averages
     for l = wci 
-      lapi[l] = lani[l] = 0.0
+      lapi[l] = 0.0
+      lani[l] = 0.0
       for j = wci
         j == l && continue
         y = δY[j,l,xi]

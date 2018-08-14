@@ -342,6 +342,9 @@ function make_mhr_upd_Ybr(narea              ::Int64,
              stemevc::Array{Array{Float64,1},1})
 
     copy!(Yp, Yc)
+    @simd for k in Base.OneTo(narea) 
+      stemevp[k] = copy(stemevc[k])
+    end
 
     # if a successful sample
     if upbranchY!(λϕ1, λϕ0, br, Yp, stemevp, 
@@ -351,14 +354,14 @@ function make_mhr_upd_Ybr(narea              ::Int64,
       sde!(LApp, LAnp, δXc, δYp, wcol, m, ntip)
       lindiff!(LDp, δXc, Yp, wcol, m, ntip, narea)
 
-      if ωxc >= 0.0
-        llr = total_llr(Xc, Xc, Yc, Yp, LApc, LApp, LDc, LDp, 
-                        ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevp, brs, brs, σ²c)
+      llr = if ωxc >= 0.0
+        total_llr(Xc, Xc, Yc, Yp, LApc, LApp, LDc, LDp, 
+                  ωxc, ω1c, ω0c, λ1c, λ0c,
+                  stemevc, stemevp, brs, brs, σ²c)
       else
-        llr = total_llr(Xc, Xc, Yc, Yp, LAnc, LAnp, LDc, LDp, 
-                        ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevp, brs, brs, σ²c)
+        total_llr(Xc, Xc, Yc, Yp, LAnc, LAnp, LDc, LDp, 
+                  ωxc, ω1c, ω0c, λ1c, λ0c,
+                  stemevc, stemevp, brs, brs, σ²c)
       end
 
       if -randexp() < (llr + 
@@ -371,7 +374,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
         copy!(LAnc, LAnp)
         copy!(LDc,  LDp)
         # allocate stemevc
-        @simd for k in Base.OneTo(narea) 
+        @simd for k in Base.OneTo(narea)
           stemevc[k] = copy(stemevp[k])
         end
       end
@@ -382,6 +385,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
   end
 
 end
+
 
 
 
@@ -401,7 +405,8 @@ end
 
 Make function to update trio in Y.
 """
-function make_mhr_upd_Ytrio(narea    ::Int64,
+function make_mhr_upd_Ytrio(
+                            narea    ::Int64,
                             nedge    ::Int64,
                             m        ::Int64,
                             ntip     ::Int64,
@@ -441,8 +446,12 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Yp,   Yc)
+    copy!(Yp,    Yc)
     copy!(brsp, brs)
+
+    @simd for k in Base.OneTo(narea) 
+      stemevp[k] = copy(stemevc[k])
+    end
 
     # if an efficient sample
     if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
@@ -462,9 +471,11 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
                         stemevc, stemevp, brs, brsp, σ²c)
       end
 
+
       if -randexp() < (llr + 
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
                        bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0))
+
         llc += llr
         copy!(Yc,   Yp)
         copy!(δYc,  δYp)
@@ -538,27 +549,27 @@ function make_mhr_upd_XYbr(narea              ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Xp, Xc)
-    copy!(Yp, Yc)
+  copy!(Yp, Yc)
 
   # if an successful sample
   if upbranchY!(λϕ1, λϕ0, br, Yp, stemevc, 
                 bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
+      copy!(Xp, Xc)
       upbranchX!(br, Xp, bridx, brδt, σ²ϕ)
 
       deltaXY!(δXp, δYp, Xp, Yp, wcol, m, ntip, narea)
       sde!(LApp, LAnp, δXp, δYp, wcol, m, ntip)
       lindiff!(LDp, δXp, Yp, wcol, m, ntip, narea)
 
-      if ωxc >= 0.0
-        llr = total_llr(Xc, Xp, Yc, Yp, LApc, LApp, LDc, LDp, 
-                        ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevc, brs, brs, σ²c)
+      llr = if ωxc >= 0.0
+        total_llr(Xc, Xp, Yc, Yp, LApc, LApp, LDc, LDp, 
+                  ωxc, ω1c, ω0c, λ1c, λ0c,
+                  stemevc, stemevc, brs, brs, σ²c)
       else
-        llr = total_llr(Xc, Xp, Yc, Yp, LAnc, LAnp, LDc, LDp, 
-                        ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevc, brs, brs, σ²c)
+        total_llr(Xc, Xp, Yc, Yp, LAnc, LAnp, LDc, LDp, 
+                  ωxc, ω1c, ω0c, λ1c, λ0c,
+                  stemevc, stemevc, brs, brs, σ²c)
       end
 
       if -randexp() < (llr + 
@@ -590,18 +601,19 @@ end
 
 
 """
-    make_mhr_upd_Ytrio(narea    ::Int64,
-                       nedge    ::Int64,
-                       m        ::Int64,
-                       ntip     ::Int64,
-                       bridx_a  ::Array{Array{UnitRange{Int64},1},1},
-                       brδt     ::Array{Array{Float64,1},1},
-                       brl      ::Array{Float64,1},
-                       wcol     ::Array{Array{Int64,1},1},
-                       total_llf::Function,
-                       bgiid    ::Function)
+    make_mhr_upd_XYtrio(narea    ::Int64,
+                             nedge    ::Int64,
+                             m        ::Int64,
+                             ntip     ::Int64,
+                             bridx    ::Array{UnitRange{Int64},1},
+                             bridx_a  ::Array{Array{UnitRange{Int64},1},1},
+                             brδt     ::Array{Array{Float64,1},1},
+                             brl      ::Array{Float64,1},
+                             wcol     ::Array{Array{Int64,1},1},
+                             total_llr::Function,
+                             bgiid    ::Function)
 
-Make function to update trio in Y.
+Make function to update trio in `X` & `Y`.
 """
 function make_mhr_upd_XYtrio(narea    ::Int64,
                              nedge    ::Int64,
@@ -623,6 +635,7 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
   const LAnp    = zeros(m, ntip)
   const LDp     = zeros(m, ntip, narea)
   const brsp    = zeros(Int64, nedge, 2, narea)
+  const stemevp = [[rand()] for i in 1:narea]
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -646,35 +659,38 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Xp,   Xc)
-    copy!(Yp,   Yc)
+    copy!(Yp,    Yc)
     copy!(brsp, brs)
+    @simd for k in Base.OneTo(narea) 
+      stemevp[k] = copy(stemevc[k])
+    end
 
     # if an efficient sample
-    if upnode!(λϕ1, λϕ0, triad, Yp, stemevc,
+    if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
                bridx_a, brδt, brl, brsp, narea, nedge)
 
+      copy!(Xp, Xc)
       pr, d1, d2 = triad
 
       uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²ϕ, nedge)
 
-      deltaY!(δYp, Yp, wcol, m, ntip, narea)
+      deltaXY!(δXp, δYp, Xp, Yp, wcol, m, ntip, narea)
       sde!(LApp, LAnp, δXp, δYp, wcol, m, ntip)
       lindiff!(LDp, δXp, Yp, wcol, m, ntip, narea)
 
       if ωxc >= 0.0
         llr = total_llr(Xc, Xp, Yc, Yp, LApc, LApp, LDc, LDp, 
                         ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevc, brs, brsp, σ²c)
+                        stemevc, stemevp, brs, brsp, σ²c)
       else
         llr = total_llr(Xc, Xp, Yc, Yp, LAnc, LAnp, LDc, LDp, 
                         ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevc, brs, brsp, σ²c)
+                        stemevc, stemevp, brs, brsp, σ²c)
       end
 
       if -randexp() < (llr + 
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
-                       bgiid(Yp, stemevc, brsp, triad, λϕ1, λϕ0) +
+                       bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0) +
                        ((pr != nedge) ? 
                        llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ) : 0.0) +
                        llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
@@ -688,6 +704,9 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
         copy!(LAnc, LAnp)
         copy!(LDc,  LDp)
         copy!(brs,  brsp)
+        @simd for k in Base.OneTo(narea) 
+          stemevc[k] = copy(stemevp[k])
+        end
       end
 
       return llc::Float64
@@ -728,6 +747,9 @@ function make_mhr_upd_Ystem(stbrl::Float64,
              brs    ::Array{Int64,3})
 
     copy!(brsp, brs)
+    @simd for k in Base.OneTo(narea) 
+      stemevp[k] = copy(stemevc[k])
+    end
 
     # update stem node and branch
     if upstemnode!(λϕ1, λϕ0, nedge, stemevp, brsp, stbrl, narea)

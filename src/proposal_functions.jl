@@ -70,10 +70,9 @@ function upnode!(λ1     ::Float64,
     end
 
     # set new node in Y
-    for k in Base.OneTo(narea)
-      Y[bridx_a[k][pr][end]] = 
-      Y[bridx_a[k][d1][1]]   = 
-      Y[bridx_a[k][d2][1]]   = brs[pr,2,k]
+    @simd for k in Base.OneTo(narea)
+      Y[bridx_a[k][d1][1]] = 
+      Y[bridx_a[k][d2][1]] = brs[pr,2,k]
     end
 
     # sample a consistent history
@@ -86,7 +85,7 @@ function upnode!(λ1     ::Float64,
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                    stemevs, brl[nedge])
       ntries += 1
-      if ntries == 1_000
+      if ntries == 500
         return false::Bool
       end
     end
@@ -437,7 +436,7 @@ function upstemnode!(λ1     ::Float64,
       mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
 
       ntries += 1
-      if ntries == 1_000
+      if ntries == 500
         return false::Bool
       end
     end
@@ -478,7 +477,7 @@ function samplestem!(λ1   ::Float64,
       if iszero(brs[nedge,2,k])
         brs[nedge,1,k] = coinsamp(p0)::Int64
       else 
-        brs[nedge,1,k] = coinsamp(p1)::Int64      
+        brs[nedge,1,k] = coinsamp(p1)::Int64
       end
     end
   end
@@ -545,7 +544,7 @@ function upbranchY!(λ1     ::Float64,
       mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
 
       ntries += 1
-      if ntries == 1_000
+      if ntries == 500
         return false
       end
     end
@@ -558,7 +557,7 @@ function upbranchY!(λ1     ::Float64,
     while ifext_disc(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
       ntries += 1
-      if ntries == 1_000
+      if ntries == 500
         return false
       end
     end
