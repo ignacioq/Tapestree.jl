@@ -130,6 +130,7 @@ function burn_tribe(total_llf     ::Function,
 
     for up = parvec
 
+
       # update X
       if up > 6
 
@@ -228,8 +229,8 @@ function burn_tribe(total_llf     ::Function,
         if rand() < 0.4
           λϕ1, λϕ0 = λϕprop()
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
-                    λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
-                    LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+                      λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
+                      LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
         end
 
       # update λ0
@@ -251,6 +252,7 @@ function burn_tribe(total_llf     ::Function,
 
         # update internal node
         if rand() < 0.4
+
           λϕ1, λϕ0 = λϕprop()
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
@@ -318,6 +320,7 @@ function burn_tribe(total_llf     ::Function,
 
         # update internal node
         if rand() < 0.4
+
           λϕ1, λϕ0 = λϕprop()
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,
@@ -344,6 +347,7 @@ function burn_tribe(total_llf     ::Function,
 
         # update internal node
         if rand() < 0.4
+
           λϕ1, λϕ0 = λϕprop()
           llc = mhr_upd_Ytrio(rand(trios), Xc, Yc, 
                     λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0, llc, prc,

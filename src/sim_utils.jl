@@ -19,7 +19,7 @@ t(-_-t)
                    nareas   ::Int64,
                    tree_file::String;
                    ωx       = 0.0,
-                   σ        = 0.5,
+                   σ²       = 0.5,
                    λ1       = 0.5,
                    λ0       = 0.2,
                    ω1       = 0.0,
@@ -32,7 +32,7 @@ function simulate_tribe(X_initial::Float64,
                         nareas   ::Int64,
                         tree_file::String;
                         ωx       = 0.0,
-                        σ        = 0.5,
+                        σ²       = 0.5,
                         λ1       = 0.5,
                         λ0       = 0.2,
                         ω1       = 0.0,
@@ -76,13 +76,13 @@ function simulate_tribe(X_initial::Float64,
   Yt = vcat(Y_initial, Y_initial)
 
   # start of alive
-  @inbounds alive  = sortrows(br, by = x->(x[1]))[1:2,2]
+  @inbounds alive = sortrows(br, by = x->(x[1]))[1:2,2]
   nalive = length(alive)
 
   # is ωx positive? (for lineage averages)
   const isωxP = ωx >= 0.0
 
-  const sqrtδt = sqrt(const_δt) 
+  const rate = sqrt(const_δt*σ²)
 
   # loop through waiting times
   for j in Base.OneTo(nbt)
@@ -90,7 +90,7 @@ function simulate_tribe(X_initial::Float64,
     nreps = reps_per_period(swt[j], const_δt)
 
     # simulate during the speciation waiting time
-    nconst_sim!(Xt, Yt, nreps, const_δt, sqrtδt, ωx, σ, λ1, λ0, ω1, ω0, isωxP)
+    nconst_sim!(Xt, Yt, nreps, const_δt, ωx, ω1, ω0, rate, λ1, λ0, isωxP)
 
     if j == nbt
       break
@@ -151,29 +151,28 @@ reps_per_period(br_length::Float64, const_δt::Float64) =
                 Yt   ::Array{Int64,2},
                 nreps::Int64,
                 δt   ::Float64,
-                sqrtδt::Float64
+                rate ::Float64,
                 ωx   ::Float64, 
-                σ    ::Float64, 
                 λ1   ::Float64, 
                 λ0   ::Float64, 
                 ω1   ::Float64, 
-                ω0   ::Float64)
+                ω0   ::Float64,
+                isωxP::Bool)
 
 Simulate biogeographic and trait evolution along a 
 speciation waiting time.
 """
-function nconst_sim!(Xt    ::Array{Float64,1}, 
-                     Yt    ::Array{Int64,2},
-                     nreps ::Int64,
-                     δt    ::Float64,
-                     sqrtδt::Float64,
-                     ωx    ::Float64, 
-                     σ     ::Float64, 
-                     λ1    ::Float64, 
-                     λ0    ::Float64, 
-                     ω1    ::Float64, 
-                     ω0    ::Float64,
-                     isωxP ::Bool)
+function nconst_sim!(Xt   ::Array{Float64,1}, 
+                     Yt   ::Array{Int64,2},
+                     nreps::Int64,
+                     δt   ::Float64,
+                     ωx   ::Float64, 
+                     ω1   ::Float64, 
+                     ω0   ::Float64,
+                     rate ::Float64,
+                     λ1   ::Float64, 
+                     λ0   ::Float64, 
+                     isωxP::Bool)
 
   # n species and narea areas
   const n, narea = size(Yt)
@@ -192,11 +191,11 @@ function nconst_sim!(Xt    ::Array{Float64,1},
     δXY_la_ld!(δX, δY, la, ld, Xt, Yt, n, narea, isωxP)
 
     # trait step
-    traitsam_1step!(Xt, la, δt, sqrtδt, ωx, σ, n)
+    traitsam_1step!(Xt, la, δt, rate, ωx, n)
 
     # biogeographic step
     copy!(Ytp, Yt)
-    biogeosam_1step!(ω1, ω0, λ1, λ0, ld, Ytp, nch, δt, n, narea); Ytp
+    biogeosam_1step!(ω1, ω0, λ1, λ0, ld, Ytp, nch, δt, n, narea)
 
     while check_sam(Ytp, nch, n, narea)
       copy!(Ytp, Yt)
@@ -291,22 +290,26 @@ end
 
 
 """
-    traitsam_1step((Xt::Array{Float64,1}, μ ::Array{Float64,1}, δt::Float64, ωx::Float64, σ::Float64, n::Int64)
+    traitsam_1step!(Xt  ::Array{Float64,1}, 
+                    la  ::Array{Float64,1}, 
+                    δt  ::Float64, 
+                    rate::Float64, 
+                    ωx  ::Float64, 
+                    n   ::Int64)
 
 Sample one step for trait evolution history: `X(t + δt)`.
 """
-function traitsam_1step!(Xt    ::Array{Float64,1}, 
-                         la    ::Array{Float64,1}, 
-                         δt    ::Float64, 
-                         sqrtδt::Float64, 
-                         ωx    ::Float64, 
-                         σ     ::Float64,
-                         n     ::Int64)
+function traitsam_1step!(Xt  ::Array{Float64,1}, 
+                         la  ::Array{Float64,1}, 
+                         δt  ::Float64, 
+                         rate::Float64, 
+                         ωx  ::Float64, 
+                         n   ::Int64)
 
   @inbounds @fastmath begin
 
     for i in Base.OneTo(n)
-      Xt[i] += Eδx(la[i], ωx, δt) + randn()*σ*sqrtδt
+      Xt[i] += Eδx(la[i], ωx, δt) + randn()*rate
     end
 
   end

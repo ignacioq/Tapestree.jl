@@ -44,8 +44,6 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                     ω0i     ::Float64           = 0.,
                     λ1i     ::Float64           = 1.0,
                     λ0i     ::Float64           = 0.2,
-                    λϕ1i    ::Float64           = 1.0,
-                    λϕ0i    ::Float64           = 0.2,
                     stbrl   ::Float64           = 1.,
                     fix_ωx  ::Bool              = false,
                     fix_ω1  ::Bool              = false,
@@ -183,7 +181,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   mhr_upd_XYtrio  = make_mhr_upd_XYtrio(narea, nedge, m, ntip, 
                                         bridx, bridx_a, brδt, brl, 
                                         wcol, total_llr, bgiid)
- 
+
   # burning phase
   llc, prc, Xc, Yc, LApc, LAnc, LDc, δXc, δYc, 
   stemevc, brs, σ²c, ωxc, ω1c, ω0c, λ1c, λ0c, ptn = 
@@ -240,6 +238,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         if up > 6
           llc = mhr_upd_X(up, Xc, Yc, δXc, δYc, 
                           λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, LApc, LAnc, LDc)
+
         # update λ1 
         elseif up == 5
           llc, prc, λ1c = mhr_upd_λ1(λ1c, Yc, λ0c, llc, prc, ω1c, 
@@ -361,14 +360,14 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
           llc = mhr_upd_Ystem(λ1c, λ0c, λϕ1, λϕ0, llc, stemevc, brs)
         end
 
-      end
+      end # end parameter loop
 
       # log parameters
       lthin += 1
       if lthin == nthin
         pci = Pc(f_λ1(λ1c,ω1c,1.0), f_λ0(λ0c,ω0c,1.0), max_δt)
         print(f, it,"\t", llc, "\t", prc,"\t",ωxc,"\t",ω1c,"\t",ω0c,"\t",
-              σ²c,"\t",λ1c,"\t",λ0c,"\t",pci,"\n")
+             σ²c,"\t",λ1c,"\t",λ0c,"\t",pci,"\n")
         lthin = 0
       end
 
@@ -386,7 +385,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
       end
 
       next!(p)
-    end #end MCMC
+    end # end MCMC
   end # end print loop
 
   if saveXY[1]

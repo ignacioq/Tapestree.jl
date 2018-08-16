@@ -65,8 +65,14 @@ function upnode!(λ1     ::Float64,
     samplenode!(λ1, λ0, pr, d1, d2, brs, brl, narea)
 
     # save extinct
+    ntries = 1
     while iszero(sum(view(brs,pr,2,:)))
       samplenode!(λ1, λ0, pr, d1, d2, brs, brl, narea)
+
+      ntries += 1
+      if ntries == 500
+        return false
+      end
     end
 
     # set new node in Y
@@ -79,19 +85,20 @@ function upnode!(λ1     ::Float64,
     createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                  stemevs, brl[nedge])
 
-    ntries::Int64 = 1
+    ntries = 1
     while ifextY(Y, stemevs, triad, brs, brl[nedge], narea, bridx_a, nedge)
-
       createhists!(λ1, λ0, Y, pr, d1, d2, brs, brδt, bridx_a, narea, nedge,
                    stemevs, brl[nedge])
+
       ntries += 1
       if ntries == 500
-        return false::Bool
+        return false
       end
     end
+
   end
 
-  return true::Bool
+  return true
 end
 
 
@@ -186,10 +193,9 @@ function createhists!(λ1     ::Float64,
 
   @inbounds begin
 
-    # if stem branch do continuous DA
     if pr == nedge
+      # if stem branch do continuous DA
       mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
-
       for j = Base.OneTo(narea), idx = (d1,d2)
         bit_rejsam!(Y, bridx_a[j][idx], brs[idx,2,j], 
                     λ1, λ0, brδt[idx])
@@ -262,10 +268,12 @@ function ifextY(Y      ::Array{Int64,3},
 
     if triad[1] == nedge
       ifext_cont(stemevs, brs, stbrl, narea, nedge) && return true::Bool
+
       for k in (triad[2],triad[3])
         ifext_disc(Y, k, narea, bridx_a) && return true::Bool
       end
     else 
+
       for k in triad
         ifext_disc(Y, k, narea, bridx_a) && return true::Bool
       end
@@ -305,10 +313,10 @@ function ifext_cont(t_hist::Array{Array{Float64,1},1},
       end
     end
 
-    ioct::Float64 = t_hist[ioc][1]
+    ioct = t_hist[ioc][1]
 
     ntries = 0
-    while ioct < t
+    while !isapprox(ioct, t, atol = 1.0e-12)
 
       if ioc == narea
         ioc = 1
@@ -316,19 +324,19 @@ function ifext_cont(t_hist::Array{Array{Float64,1},1},
         ioc += 1
       end
 
-      tc::Float64 = 0.0
-      cs::Int64   = brs[nedge,1,ioc]
-      for ts in t_hist[ioc]::Array{Float64,1}
+      tc = 0.0
+      cs = brs[nedge,1,ioc]
+      for ts in t_hist[ioc]
         tc += ts
         if ioct < tc 
           if cs == 1
-            ioct            = tc 
-            ntries::Int64   = 0
+            ioct  = tc 
+            ntries = 0
             break
           else
             ntries += 1
             if ntries > narea
-              return true::Bool
+              return true
             end
             break
           end
@@ -423,8 +431,13 @@ function upstemnode!(λ1     ::Float64,
     samplestem!(λ1, λ0, nedge, brs, stbrl, narea)
 
     # save extinct
+    ntries = 1
     while sum(view(brs,nedge,1,:)) < 1
       samplestem!(λ1, λ0, nedge, brs, stbrl, narea)
+      ntries += 1
+      if ntries == 500
+        return false::Bool
+      end
     end
 
     # sample a congruent history
@@ -432,8 +445,13 @@ function upstemnode!(λ1     ::Float64,
 
     ntries = 1
     # check if extinct
+    # println("started ifext_cont")
+    # println(stemevs)
     while ifext_cont(stemevs, brs, stbrl, narea, nedge)
       mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
+
+      # println("in loop ifext_cont")
+      # println(stemevs)
 
       ntries += 1
       if ntries == 500
@@ -533,15 +551,21 @@ function upbranchY!(λ1     ::Float64,
                     narea  ::Int64,
                     nedge  ::Int64)
 
-  ntries::Int64 = 1
+  ntries = 1
 
   # if stem branch
   if br == nedge
     mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
 
     # check if extinct
+    # println("started ifext_cont")
+    # println(stemevs)
+
     while ifext_cont(stemevs, brs, stbrl, narea, nedge)
       mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
+
+      # println("in while ifext_cont")
+      # println(stemevs)
 
       ntries += 1
       if ntries == 500
@@ -549,13 +573,13 @@ function upbranchY!(λ1     ::Float64,
       end
     end
 
-  else 
-    # sample a consistent history
+  else
     createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
 
     # check if extinct
     while ifext_disc(Y, br, narea, bridx_a)
       createhists!(λ1, λ0, Y, br, brs, brδt, bridx_a, narea)
+
       ntries += 1
       if ntries == 500
         return false

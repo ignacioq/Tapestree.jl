@@ -113,6 +113,9 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
         # calculate new averages
         Xupd_linavg!(δxi, lapi, lani, ldi, wcol, xpi, xi, xj, Yc, δYc, narea)
 
+
+
+
         if ωxc >= 0.0
           llr = Xupd_llr(xi, xpi, Xc, lapi, ldi, LApc, LDc, Yc, 
                          ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
@@ -500,8 +503,6 @@ end
 
 
 
-
-
 """
     make_mhr_upd_Ybr(narea::Int64, nedge::Int64, m::Int64, ntip::Int64, bridx_a::Vector{Vector{Vector{Int64}}}, brδt::Array{Array{Float64,1},1}, brl::Array{Float64,1}, wcol::Array{Array{Int64,1},1}, Ync1::Array{Int64,1}, Ync2::Array{Int64,1}, total_llf, biogeo_upd_iid)
 
@@ -547,7 +548,8 @@ function make_mhr_upd_XYbr(narea              ::Int64,
              δXc    ::Array{Float64,3},
              δYc    ::Array{Float64,3},
              brs    ::Array{Int64,3},
-             stemevc::Array{Array{Float64,1},1})
+             stemevc::Array{Array{Float64,1},1};
+             )
 
   copy!(Yp, Yc)
 

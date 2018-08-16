@@ -54,7 +54,7 @@ end
            td2::Float64,
            σ²ϕ::Float64)
 
-Trio of Gaussians parameter update.
+Duo of Gaussians parameter update.
 """
 function duoupd(xd1::Float64,
                 xd2::Float64,
@@ -62,11 +62,11 @@ function duoupd(xd1::Float64,
                 td2::Float64,
                 σ²ϕ::Float64)
   @fastmath begin
-    t = 1./(1.0/td1 + 1.0/td2)
-    randn()*sqrt(t*σ²ϕ) + (xd1/td1 + xd2/td2)*t
+    invt = 1.0/(td1 + td2)
+    randn()*sqrt(td1 * td2 * invt * σ²ϕ) + 
+    (td2 * invt * xd1 + td1 * invt * xd2)
   end
 end
-
 
 
 
