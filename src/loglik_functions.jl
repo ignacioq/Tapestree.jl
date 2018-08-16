@@ -19,7 +19,7 @@ May 15 2017
 
 Return the expected value given the weighted average with sympatric species.
 """
-Eδx(μ::Float64, ωx::Float64, δt::Float64) = ωx * μ * δt
+Eδx(μ::Float64, ωx::Float64, δt::Float64) = @fastmath ωx * μ * δt
 
 
 
@@ -1316,14 +1316,12 @@ function evllr_ω1(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      ffc = -abs2(ω1c)*δx^(sign(ω1c))
-      ffp = -abs2(ω1p)*δx^(sign(ω1p))
+      ffc = -ω1c^2*δx^(sign(ω1c))
+      ffp = -ω1p^2*δx^(sign(ω1p))
       return ffp - ffc - λ1*t*(exp(ffp) - exp(ffc))
     end
   end
 end
-
-
 
 
 
@@ -1348,8 +1346,8 @@ function evllr_ω0(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      ffc = 1.0 + abs2(ω0c)*δx^(sign(ω0c))
-      ffp = 1.0 + abs2(ω0p)*δx^(sign(ω0p))
+      ffc = 1.0 + ω0c^2*δx^(sign(ω0c))
+      ffp = 1.0 + ω0p^2*δx^(sign(ω0p))
       return Base.Math.JuliaLibm.log(
                 (λ0 + Base.Math.JuliaLibm.log(ffp))/
                 (λ0 + Base.Math.JuliaLibm.log(ffc))
@@ -1384,7 +1382,7 @@ function evllr_λ1(t  ::Float64,
              t*(λ1c - λ1p)
     else
       return Base.Math.JuliaLibm.log(λ1p/λ1c) +
-             exp(-abs2(ω1)*δx^sign(ω1))*t*(λ1c - λ1p)
+             exp(-ω1^2*δx^sign(ω1))*t*(λ1c - λ1p)
     end
   end
 end
@@ -1407,7 +1405,7 @@ function evllr_λ0(t  ::Float64,
     if iszero(δx)
       return Base.Math.JuliaLibm.log(λ0p/λ0c) + t*(λ0c - λ0p)
     else
-      ff = Base.Math.JuliaLibm.log(1.0 + abs2(ω0)*δx^(sign(ω0)))
+      ff = Base.Math.JuliaLibm.log(1.0 + ω0^2 * δx^(sign(ω0)))
       return Base.Math.JuliaLibm.log((λ0p + ff)/(λ0c + ff)) +
              t*(λ0c - λ0p)
     end
@@ -1424,7 +1422,7 @@ end
 
 Return log-likelihood for nonevents.
 """
-nell(t::Float64, λ::Float64) = (-1.0 * λ * t)::Float64
+nell(t::Float64, λ::Float64) = -λ*t
 
 
 
@@ -1449,8 +1447,8 @@ function nellr_ω1(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      return - λ1*t*(exp(-abs2(ω1p)*δx^(sign(ω1p))) - 
-                     exp(-abs2(ω1c)*δx^(sign(ω1c))))
+      return - λ1*t*(exp(-ω1p^2 * δx^(sign(ω1p))) - 
+                     exp(-ω1c^2 * δx^(sign(ω1c))))
     end
   end
 end
@@ -1508,7 +1506,7 @@ function nellr_λ1(t  ::Float64,
     if iszero(δx)
       return t*(λ1c - λ1p)
     else
-      return exp(-abs2(ω1)*δx^sign(ω1))*t*(λ1c - λ1p)
+      return exp(-ω1^2 * δx^sign(ω1))*t*(λ1c - λ1p)
     end
   end
 end
@@ -1536,7 +1534,7 @@ Return log-prior for all areas
 function allλpr(λ1    ::Float64,
                 λ0    ::Float64,
                 λprior::Float64)
-  return (logdexp(λ1, λprior) + logdexp(λ0, λprior))::Float64
+  @fastmath 2.0*Base.Math.JuliaLibm.log(λprior) - λprior * (λ1 + λ0)
 end
 
 
@@ -1556,10 +1554,11 @@ logdexp(x::Float64, λ::Float64) =
 
 
 """
-    logdexp(x::Float64, λ::Float64)
+    llrdexp(xp::Float64, xc::Float64, λ::Float64)
 
-Compute the logarithmic transformation of the 
-**Exponential** density with mean `λ` for `x`.
+Compute the loglik ratio of the 
+**Exponential** density for proposal 
+`xp` given current `xc` both with mean `λ`.
 """
 llrdexp_x(xp::Float64, xc::Float64, λ::Float64) = 
   @fastmath λ * (xc - xp)
@@ -1576,7 +1575,7 @@ Compute the logarithmic transformation of the
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
   @fastmath -(0.5*Base.Math.JuliaLibm.log(2.0π) +
               0.5*Base.Math.JuliaLibm.log(σ²)   +
-              abs2(x - μ)/(2.0 * σ²))
+              (x - μ)^2/(2.0σ²))
 
 
 
@@ -1590,7 +1589,7 @@ Compute the logarithmic transformation of the
 """
 logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
   @fastmath -0.5*Base.Math.JuliaLibm.log(σ²) - 
-            abs2(x - μ)/(2.0σ²)::Float64
+            (x - μ)^2/(2.0σ²)::Float64
 
 
 
@@ -1603,7 +1602,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `ωx` updates
 """
 llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64) =
-  @fastmath (-abs2(x - xi - μp) + abs2(x - xi - μc))/(2.0σ²)
+  @fastmath (-(x - xi - μp)^2 + (x - xi - μc)^2)/(2.0σ²)
 
 
 
@@ -1617,7 +1616,7 @@ for `σ²` updates
 """
 llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) = 
   @fastmath -0.5*(Base.Math.JuliaLibm.log(σ²p/σ²c) +
-                  abs2(x - μ)*(1.0/σ²p - 1.0/σ²c))
+                  (x - μ)^2*(1.0/σ²p - 1.0/σ²c))
 
 
 
@@ -1630,7 +1629,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `μ` updates
 """
 llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
-  @fastmath (-abs2(x - μp) + abs2(x - μc))/(2.0σ²)
+  @fastmath ((x - μc)^2 - (x - μp)^2)/(2.0σ²)
 
 
 
@@ -1643,8 +1642,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `x` updates
 """
 llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
-  @fastmath (-abs2(xp - μ) + abs2(xc - μ))/(2.0σ²)
-
+  @fastmath ((xc - μ)^2 - (xp - μ)^2)/(2.0σ²)
 
 
 
@@ -1656,7 +1654,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `x` updates
 """
 llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64) =
-  @fastmath (-abs2(xp - μp) + abs2(xc - μc))/(2.0σ²)
+  @fastmath ((xc - μc)^2 - (xp - μp)^2)/(2.0σ²)
 
 
 
