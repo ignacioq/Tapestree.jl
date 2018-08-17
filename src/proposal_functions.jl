@@ -445,13 +445,9 @@ function upstemnode!(λ1     ::Float64,
 
     ntries = 1
     # check if extinct
-    # println("started ifext_cont")
-    # println(stemevs)
+
     while ifext_cont(stemevs, brs, stbrl, narea, nedge)
       mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
-
-      # println("in loop ifext_cont")
-      # println(stemevs)
 
       ntries += 1
       if ntries == 500
@@ -558,14 +554,8 @@ function upbranchY!(λ1     ::Float64,
     mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
 
     # check if extinct
-    # println("started ifext_cont")
-    # println(stemevs)
-
     while ifext_cont(stemevs, brs, stbrl, narea, nedge)
       mult_rejsam!(stemevs, brs, λ1, λ0, stbrl, narea, nedge)
-
-      # println("in while ifext_cont")
-      # println(stemevs)
 
       ntries += 1
       if ntries == 500
