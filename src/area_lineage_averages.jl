@@ -207,7 +207,7 @@ function lindiff!(LD   ::Array{Float64,3},
       for j = wcol[i]
         j == l && continue
         if Y[i,j,k] == 1
-          x    = abs(δX[j,l,i])
+          x = abs(δX[j,l,i])
           iszero(x) && continue
           xmin = x < xmin ? x : xmin
         end
@@ -281,7 +281,7 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
       for j = wci
         j == l && continue
         if Y[xi,j,k] == 1
-          x    = abs(δxi[j,l])
+          x = abs(δxi[j,l])
           iszero(x) && continue
           xmin = x < xmin ? x : xmin
         end

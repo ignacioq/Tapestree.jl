@@ -82,8 +82,8 @@ function burn_tribe(total_llf     ::Function,
                     stemevc, brs, σ²c)
   end
 
-  prc = allλpr(λ1c, λ0c, λprior)              +
-        logdexp(σ²c, σ²prior)                 +
+  prc = allλpr(  λ1c, λ0c, λprior)            +
+        logdexp( σ²c, σ²prior)                +
         logdnorm(ωxc, ωxprior[1], ωxprior[2]) +
         logdnorm(ω1c, ω1prior[1], ω1prior[2]) +
         logdnorm(ω0c, ω0prior[1], ω0prior[2])
@@ -128,7 +128,6 @@ function burn_tribe(total_llf     ::Function,
     shuffle!(parvec)
 
     for up = parvec
-
 
       # update X
       if up > 6

@@ -127,8 +127,6 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   const δYc = fill(NaN, ntip, ntip, m)
   deltaXY!(δXc, δYc, Xc, Yc, wcol, m, ntip, narea)
 
-
-
   # lineage averages
   const LApc = fill(NaN, m, ntip)
   const LAnc = fill(NaN, m, ntip)
@@ -139,16 +137,12 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   lindiff!(LDc, δXc, Yc, wcol, m, ntip, narea)
 
   ## make likelihood and prior functions
-  total_llf  = makellf(δt, Yc, ntip, narea, m, nedge)
-  total_llr  = makellr(δt, Yc, ntip, narea, m, nedge)
+  total_llf, total_llr = makellf(δt, Yc, ntip, narea, m, nedge)
   ω1upd_llr, ω0upd_llr, λ1upd_llr, λ0upd_llr = 
     makellr_biogeo(Yc, δt, narea, ntip, m, nedge)
-  Xupd_llr   = makellr_Xupd(δt, narea, wcol)
-  Rupd_llr   = makellr_Rupd(δt[1], wcol[1])
-  ωxupd_llr  = makellr_ωxupd(δt, Yc, ntip)
-  σ²upd_llr  = makellr_σ²upd(δt, Yc, ntip)  
-  bgiid      = makellf_bgiid(bridx_a, δt, narea, nedge, m)
-  bgiid_br   = makellf_bgiid_br(bridx_a, δt, narea, nedge, m)
+  Xupd_llr,  Rupd_llr  = makellr_XRupd(δt, narea, wcol)
+  ωxupd_llr, σ²upd_llr = makellr_ωxσupd(δt, Yc, ntip)
+  bgiid, bgiid_br      = makellf_bgiid(bridx_a, δt, narea, nedge, m)
 
   # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² 
   const np = length(wXp) + 6

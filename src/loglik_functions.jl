@@ -72,8 +72,8 @@ end
 """
     makellf(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64, narea::Int64)
 
-Make likelihood function for all trait matrix 
-and biogeography history.
+Make likelihood and likelihood ratio functions 
+for all trait matrix and biogeography history.
 """
 function makellf(δt   ::Array{Float64,1}, 
                  Y    ::Array{Int64,3}, 
@@ -97,18 +97,18 @@ function makellf(δt   ::Array{Float64,1},
   # normal constant
   const normC = -0.5*log(2.0π)*n
 
-  function f(X     ::Array{Float64,2},
-             Y     ::Array{Int64,3}, 
-             LA    ::Array{Float64,2},
-             LD    ::Array{Float64,3},
-             ωx    ::Float64,
-             ω1    ::Float64,
-             ω0    ::Float64,
-             λ1    ::Float64,
-             λ0    ::Float64,
-             stemev::Vector{Vector{Float64}},
-             brs   ::Array{Int64,3},
-             σ²    ::Float64)
+  function llf(X     ::Array{Float64,2},
+               Y     ::Array{Int64,3}, 
+               LA    ::Array{Float64,2},
+               LD    ::Array{Float64,3},
+               ωx    ::Float64,
+               ω1    ::Float64,
+               ω0    ::Float64,
+               λ1    ::Float64,
+               λ0    ::Float64,
+               stemev::Vector{Vector{Float64}},
+               brs   ::Array{Int64,3},
+               σ²    ::Float64)
 
     ll::Float64 = normC
 
@@ -137,50 +137,24 @@ function makellf(δt   ::Array{Float64,1},
     return ll::Float64
   end
 
-  return f
-end
-
-
-
-
-
-"""
-    makellr(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64, narea::Int64)
-
-Make likelihood ratio for all trait matrix 
-and biogeography history.
-"""
-function makellr(δt   ::Array{Float64,1}, 
-                 Y    ::Array{Int64,3}, 
-                 ntip ::Int64, 
-                 narea::Int64,
-                 m    ::Int64,
-                 nedge::Int64)
-
-  # get initial range
-  const wf23 = Int64[]
-  for j = Base.OneTo(ntip)
-    push!(wf23, findfirst(Y[:,j,1] .!= 23))
-  end
-
-  function f(Xc     ::Array{Float64,2},
-             Xp     ::Array{Float64,2},
-             Yc     ::Array{Int64,3}, 
-             Yp     ::Array{Int64,3}, 
-             LAc    ::Array{Float64,2},
-             LAp    ::Array{Float64,2},
-             LDc    ::Array{Float64,3},
-             LDp    ::Array{Float64,3},
-             ωx     ::Float64,
-             ω1     ::Float64,
-             ω0     ::Float64,
-             λ1     ::Float64,
-             λ0     ::Float64,
-             stemevc::Vector{Vector{Float64}},
-             stemevp::Vector{Vector{Float64}},
-             brs    ::Array{Int64,3},
-             brsp   ::Array{Int64,3},
-             σ²     ::Float64)
+  function llrf(Xc     ::Array{Float64,2},
+                Xp     ::Array{Float64,2},
+                Yc     ::Array{Int64,3}, 
+                Yp     ::Array{Int64,3}, 
+                LAc    ::Array{Float64,2},
+                LAp    ::Array{Float64,2},
+                LDc    ::Array{Float64,3},
+                LDp    ::Array{Float64,3},
+                ωx     ::Float64,
+                ω1     ::Float64,
+                ω0     ::Float64,
+                λ1     ::Float64,
+                λ0     ::Float64,
+                stemevc::Vector{Vector{Float64}},
+                stemevp::Vector{Vector{Float64}},
+                brs    ::Array{Int64,3},
+                brsp   ::Array{Int64,3},
+                σ²     ::Float64)
 
     llr::Float64 = 0.0
 
@@ -211,9 +185,9 @@ function makellr(δt   ::Array{Float64,1},
     return llr::Float64
   end
 
-  return f
-end
 
+  return llf, llrf
+end
 
 
 
@@ -832,12 +806,12 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
     push!(δtA, δt[inds])
   end
 
-  function f(Y      ::Array{Int64,3},
-             stemev::Array{Array{Float64,1},1},
-             brs    ::Array{Int64,3},
-             triad  ::Array{Int64,1},
-             λϕ1    ::Float64,
-             λϕ0    ::Float64)
+  function fiid(Y      ::Array{Int64,3},
+                stemev::Array{Array{Float64,1},1},
+                brs    ::Array{Int64,3},
+                triad  ::Array{Int64,1},
+                λϕ1    ::Float64,
+                λϕ0    ::Float64)
 
     ll::Float64 = 0.0
 
@@ -864,38 +838,8 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
     return ll::Float64
   end
 
-  return f
-end
 
-
-
-
-
-"""
-    makellf_biogeo_upd_iid_br(bridx_a::Array{Array{Array{Int64,1},1},1}, δt::Array{Float64,1}, narea::Int64, nedge::Int64, m::Int64)
-
-Make single branch likelihood function for the mutual 
-independence model (iid), the proposal density 
-for data augmented biogeographic histories.
-"""
-function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
-                          δt     ::Array{Float64,1},
-                          narea  ::Int64,
-                          nedge  ::Int64,
-                          m      ::Int64)
-
-  # prepare δts
-  const δtA = Array{Float64,1}[]
-
-  for j=bridx_a[1][1:(nedge-1)]
-    inds = zeros(Int64,length(j) - 1)
-    for i = eachindex(inds)
-      inds[i] = rowind(j[i], m)
-    end
-    push!(δtA, δt[inds])
-  end
-
-  function f(Y      ::Array{Int64,3}, 
+  function fiidbr(Y      ::Array{Int64,3}, 
              stemevc::Array{Array{Float64,1},1},
              brs    ::Array{Int64,3},
              br     ::Int64,
@@ -919,8 +863,10 @@ function makellf_bgiid_br(bridx_a::Array{Array{UnitRange{Int64},1},1},
     return ll::Float64
   end
 
-  return f
+
+  return fiid, fiidbr
 end
+
 
 
 
@@ -1041,9 +987,9 @@ end
 
 Make likelihood ratio function when updating `ωx`.
 """
-function makellr_ωxupd(δt  ::Vector{Float64}, 
-                       Y   ::Array{Int64,3}, 
-                       ntip::Int64)
+function makellr_ωxσupd(δt  ::Vector{Float64}, 
+                        Y   ::Array{Int64,3}, 
+                        ntip::Int64)
 
   # which is 23 (i.e., NaN) in each column
   const w23 = UnitRange{Int64}[]
@@ -1052,12 +998,12 @@ function makellr_ωxupd(δt  ::Vector{Float64},
     push!(w23,colon(non23[1],non23[end-1]))
   end
 
-  function f(X  ::Array{Float64,2},
-             LAp::Array{Float64,2},
-             LAn::Array{Float64,2},
-             ωxc::Float64,
-             ωxp::Float64,
-             σ² ::Float64)
+  function fωx(X  ::Array{Float64,2},
+               LAp::Array{Float64,2},
+               LAn::Array{Float64,2},
+               ωxc::Float64,
+               ωxp::Float64,
+               σ² ::Float64)
 
     llr::Float64 = 0.0
 
@@ -1113,34 +1059,12 @@ function makellr_ωxupd(δt  ::Vector{Float64},
     return llr::Float64
   end
 
-  return f
-end
 
-
-
-
-
-"""
-    makellr_σ²upd(δt::Vector{Float64}, Y::Array{Int64, 3}, ntip::Int64)
-
-Make likelihood ratio function when updating `σ²`.
-"""
-function makellr_σ²upd(δt  ::Vector{Float64}, 
-                       Y   ::Array{Int64,3}, 
-                       ntip::Int64)
-
-  # which is 23 (i.e., NaN) in each column
-  const w23 = UnitRange{Int64}[]
-  for i = Base.OneTo(ntip)
-    non23 = find(Y[:,i,1] .!= 23)
-    push!(w23,colon(non23[1],non23[end-1]))
-  end
-
-  function f(X  ::Array{Float64,2},
-             LA ::Array{Float64,2},
-             ωx ::Float64,
-             σ²c::Float64,
-             σ²p::Float64)
+  function fσ(X  ::Array{Float64,2},
+              LA ::Array{Float64,2},
+              ωx ::Float64,
+              σ²c::Float64,
+              σ²p::Float64)
 
     llr::Float64 = 0.0
 
@@ -1157,10 +1081,8 @@ function makellr_σ²upd(δt  ::Vector{Float64},
     return llr::Float64
   end
 
-  return f
+  return fωx, fσ
 end
-
-
 
 
 
@@ -1170,24 +1092,27 @@ end
 
 Make likelihood function for an internal node update in `X`.
 """
-function makellr_Xupd(δt   ::Vector{Float64}, 
-                      narea::Int64,
-                      wcol ::Array{Array{Int64,1},1})
+function makellr_XRupd(δt   ::Vector{Float64}, 
+                       narea::Int64,
+                       wcol ::Array{Array{Int64,1},1})
 
-  function f(xi  ::Int64,
-             xpi ::Array{Float64,1},
-             X   ::Array{Float64,2},
-             lapi::Array{Float64,1},
-             ldpi::Array{Float64,2},
-             LA  ::Array{Float64,2},
-             LD  ::Array{Float64,3},
-             Y   ::Array{Int64,3},
-             ωx  ::Float64,
-             ω1  ::Float64,
-             ω0  ::Float64,
-             λ1  ::Float64,
-             λ0  ::Float64,
-             σ²  ::Float64)
+  δt1 = δt[1]
+  wci = wcol[1]
+ 
+  function fx(xi  ::Int64,
+              xpi ::Array{Float64,1},
+              X   ::Array{Float64,2},
+              lapi::Array{Float64,1},
+              ldpi::Array{Float64,2},
+              LA  ::Array{Float64,2},
+              LD  ::Array{Float64,3},
+              Y   ::Array{Int64,3},
+              ωx  ::Float64,
+              ω1  ::Float64,
+              ω0  ::Float64,
+              λ1  ::Float64,
+              λ0  ::Float64,
+              σ²  ::Float64)
 
     # normal likelihoods
     llr::Float64 = 0.0
@@ -1222,23 +1147,7 @@ function makellr_Xupd(δt   ::Vector{Float64},
     return llr::Float64
   end
 
-  return f
-end
-
-
-
-
-
-"""
-    makellf_Rupd(δt::Vector{Float64}, narea::Int64)
-
-Make likelihood function
-for the root update in `X`.
-"""
-function makellr_Rupd(δt1  ::Float64, 
-                      wci  ::Array{Int64,1})
-
-  function f(xpi ::Array{Float64,1},
+  function fr(xpi ::Array{Float64,1},
              X   ::Array{Float64,2},
              σ²  ::Float64)
 
@@ -1255,7 +1164,7 @@ function makellr_Rupd(δt1  ::Float64,
     return llr::Float64
   end
 
-  return f
+  return fx, fr
 end
 
 
