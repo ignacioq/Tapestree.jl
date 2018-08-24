@@ -33,6 +33,24 @@ addupt(p::Float64, tn::Float64) = p + randn() * tn
 
 
 """
+    addupt_lims(p::Float64, tn::Float64, xmin::Float64, xmax::Float64)
+
+Gaussian parameter window move within a region of interest using rejection.
+"""
+function addupt_lims(p::Float64, tn::Float64, xmin::Float64, xmax::Float64)
+
+  s = p + randn() * tn
+  if !(xmin < s < xmax)
+    s = p
+  end
+
+  return s
+end
+
+
+
+
+"""
     addupt(p::Float64, tn::Float64)
 
 Gaussian parameter window move to vector.

@@ -24,7 +24,6 @@ using random samples from **LogNormal** distributions.
 
 
 
-
 """
     λϕprop()
 

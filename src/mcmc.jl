@@ -15,6 +15,7 @@ April 27 2017
 
 
 
+
 """
     tribe_mcmc(...)
 
@@ -32,16 +33,16 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                     nburn   ::Int64             = 500_000,
                     saveXY  ::Tuple{Bool,Int64} = (false, 1_000),
                     ωxprior ::NTuple{2,Float64} = (0.,10.),
-                    ω1prior ::NTuple{2,Float64} = (0.,10.),
-                    ω0prior ::NTuple{2,Float64} = (0.,10.),
+                    ω1prior ::NTuple{2,Float64} = (1.,3.),
+                    ω0prior ::Float64           = 1e-1,
                     σ²prior ::Float64           = 1e-1,
                     λprior  ::Float64           = 1e-1,
                     out_file::String            = "compete_results",
                     weight  ::NTuple{5,Float64} = (0.15,0.05,0.02,0.02,5e-3),
                     σ²i     ::Float64           = 1.,
                     ωxi     ::Float64           = 0.,
-                    ω1i     ::Float64           = 0.,
-                    ω0i     ::Float64           = 0.,
+                    ω1i     ::Float64           = 0.01,
+                    ω0i     ::Float64           = 0.01,
                     λ1i     ::Float64           = 1.0,
                     λ0i     ::Float64           = 0.2,
                     stbrl   ::Float64           = 1.,

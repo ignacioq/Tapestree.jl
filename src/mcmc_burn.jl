@@ -61,7 +61,7 @@ function burn_tribe(total_llf     ::Function,
                     λprior  ::Float64,
                     ωxprior ::NTuple{2,Float64},
                     ω1prior ::NTuple{2,Float64},
-                    ω0prior ::NTuple{2,Float64},
+                    ω0prior ::Float64,
                     σ²prior ::Float64,
                     np      ::Int64,
                     parvec  ::Array{Int64,1},
@@ -85,8 +85,8 @@ function burn_tribe(total_llf     ::Function,
   prc = allλpr(  λ1c, λ0c, λprior)            +
         logdexp( σ²c, σ²prior)                +
         logdnorm(ωxc, ωxprior[1], ωxprior[2]) +
-        logdnorm(ω1c, ω1prior[1], ω1prior[2]) +
-        logdnorm(ω0c, ω0prior[1], ω0prior[2])
+        logdbeta(ω1c, ω1prior[1], ω1prior[2]) +
+        logdexp( ω0c, ω0prior)
 
   # make scaling function
   scalef = makescalef(obj_ar)
@@ -300,13 +300,15 @@ function burn_tribe(total_llf     ::Function,
       #update ω1
       elseif up == 3
 
-        ω1p = addupt(ω1c, ptn[3])::Float64
+        ω1p = addupt_lims(ω1c, ptn[3], 0.0, 1.0)::Float64
+
+        ω1p == ω1c && continue
 
         # proposal likelihood and prior
         llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
 
         # prior ratio
-        prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
+        prr = llrdbeta_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
         if -randexp() < (llr + prr)
           llc += llr::Float64
@@ -326,15 +328,15 @@ function burn_tribe(total_llf     ::Function,
       # update ω0
       else
 
-        ω0p = addupt(ω0c, ptn[4])
+        ω0p = mulupt(ω0c, ptn[4])
 
         # proposal likelihood ratio
         llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)::Float64
 
         # prior ratio
-        prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
+        prr = llrdexp_x(ω0p, ω0c, ω0prior)
 
-        if -randexp() < (llr + prr)
+        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(ω0p/ω0c))
           llc += llr
           prc += prr
           ω0c  = ω0p
@@ -409,6 +411,8 @@ function burn_tribe(total_llf     ::Function,
         end
       end
     end
+
+    #println(ptn[1:6])
 
     next!(p)
   end

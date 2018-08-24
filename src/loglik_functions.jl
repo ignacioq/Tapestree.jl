@@ -34,12 +34,8 @@ on the difference between lineage traits and area averages.
 function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
   if iszero(δx) 
     return λ1
-  elseif iszero(ω1)
-    return λ1
-  elseif ω1 < 0.0
-    return λ1 * exp(-(ω1^2)/δx)
   else
-    return λ1 * exp(-(ω1^2)*δx)
+    return λ1 * (1.0 - ω1/(1.0 + δx))
   end
 end
 
@@ -56,12 +52,8 @@ on the difference between lineage traits and area averages.
 function f_λ0(λ0::Float64, ω0::Float64, δx::Float64) 
   if iszero(δx)
     return λ0
-  elseif iszero(ω0)
-    return λ0
-  elseif ω0 < 0.0
-    return λ0 + Base.Math.JuliaLibm.log(1.0 + (ω0^2)/δx)
   else
-    return λ0 + Base.Math.JuliaLibm.log(1.0 + (ω0^2)*δx)
+    return λ0 * (1.0 + ω0/(1.0 + δx))
   end
 end
 
@@ -336,7 +328,7 @@ function bitvectorllr_ω1(Y  ::Array{Int64,3},
                          m  ::Int64)
 
   llr::Float64 = 0.0
-  i ::Int64   = yi
+  i  ::Int64   = yi
 
   @inbounds begin
 
@@ -591,8 +583,7 @@ function bitvectorllr_λ0(Y  ::Array{Int64,3},
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_λ0(δt[i], λ0c, λ0p)
-
+          llr += nellr_λ0(δt[i], ω0, λ0c, λ0p, LD[i,j,k])
           i += 1
         end
         i >= m && break
@@ -604,7 +595,7 @@ function bitvectorllr_λ0(Y  ::Array{Int64,3},
 
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_λ0(δt[i], λ0c, λ0p)
+          llr += nellr_λ0(δt[i], ω0, λ0c, λ0p, LD[i,j,k])
           i += 1
         end
         i >= m && break
@@ -1222,16 +1213,10 @@ function evllr_ω1(t  ::Float64,
                   λ1 ::Float64,
                   δx ::Float64)
   @fastmath begin
-    if iszero(δx)
-      return 0.0
-    else
-      ffc = -ω1c^2*δx^(sign(ω1c))
-      ffp = -ω1p^2*δx^(sign(ω1p))
-      return ffp - ffc - λ1*t*(exp(ffp) - exp(ffc))
-    end
+    return Base.Math.JuliaLibm.log((1.0 + δx - ω1p)/(1.0 + δx - ω1c)) +
+           λ1*t*(ω1p - ω1c)/(1.0 + δx)
   end
 end
-
 
 
 
@@ -1252,20 +1237,10 @@ function evllr_ω0(t  ::Float64,
                   λ0 ::Float64,
                   δx ::Float64)
   @fastmath begin
-    if iszero(δx)
-      return 0.0
-    else
-      ffc = 1.0 + ω0c^2*δx^(sign(ω0c))
-      ffp = 1.0 + ω0p^2*δx^(sign(ω0p))
-      return Base.Math.JuliaLibm.log(
-                (λ0 + Base.Math.JuliaLibm.log(ffp))/
-                (λ0 + Base.Math.JuliaLibm.log(ffc))
-             ) +
-             t*(Base.Math.JuliaLibm.log(ffc/ffp))
-    end
+    return Base.Math.JuliaLibm.log((1.0 + δx + ω0p)/(1.0 + δx + ω0c)) +
+           λ0*t*(ω0c - ω0p)/(1 + δx)
   end
 end
-
 
 
 
@@ -1286,16 +1261,10 @@ function evllr_λ1(t  ::Float64,
                   λ1p::Float64,
                   δx ::Float64)
   @fastmath begin
-    if iszero(δx)
-      return Base.Math.JuliaLibm.log(λ1p/λ1c) +
-             t*(λ1c - λ1p)
-    else
-      return Base.Math.JuliaLibm.log(λ1p/λ1c) +
-             exp(-ω1^2*δx^sign(ω1))*t*(λ1c - λ1p)
-    end
+    return Base.Math.JuliaLibm.log(λ1p/λ1c) +
+           t*(1.0 - ω1/(1 + δx))*(λ1c - λ1p)
   end
 end
-
 
 
 
@@ -1311,16 +1280,10 @@ function evllr_λ0(t  ::Float64,
                   λ0p::Float64,
                   δx ::Float64)
   @fastmath begin
-    if iszero(δx)
-      return Base.Math.JuliaLibm.log(λ0p/λ0c) + t*(λ0c - λ0p)
-    else
-      ff = Base.Math.JuliaLibm.log(1.0 + ω0^2 * δx^(sign(ω0)))
-      return Base.Math.JuliaLibm.log((λ0p + ff)/(λ0c + ff)) +
-             t*(λ0c - λ0p)
-    end
+    return Base.Math.JuliaLibm.log(λ0p/λ0c) +
+           t*(1.0 + ω0/(1.0 + δx))*(λ0c - λ0p)
   end
 end
-
 
 
 
@@ -1353,14 +1316,11 @@ function nellr_ω1(t  ::Float64,
                   λ1 ::Float64,
                   δx ::Float64)
   @fastmath begin
-    if iszero(δx)
-      return 0.0
-    else
-      return - λ1*t*(exp(-ω1p^2 * δx^(sign(ω1p))) - 
-                     exp(-ω1c^2 * δx^(sign(ω1c))))
-    end
+    return λ1*t*(ω1p - ω1c)/(1.0 + δx)
   end
 end
+
+
 
 
 
@@ -1381,14 +1341,7 @@ function nellr_ω0(t  ::Float64,
                   λ0 ::Float64,
                   δx ::Float64)
   @fastmath begin
-    if iszero(δx)
-      return 0.0
-    else
-      return t*(Base.Math.JuliaLibm.log(
-                  (1.0 + ω0c^2*δx^(sign(ω0c)))/
-                  (1.0 + ω0p^2*δx^(sign(ω0p)))
-                ))
-    end
+    return λ0*t*(ω0c - ω0p)/(1 + δx)
   end
 end
 
@@ -1412,11 +1365,7 @@ function nellr_λ1(t  ::Float64,
                   λ1p::Float64,
                   δx ::Float64)
   @fastmath begin
-    if iszero(δx)
-      return t*(λ1c - λ1p)
-    else
-      return exp(-ω1^2 * δx^sign(ω1))*t*(λ1c - λ1p)
-    end
+    return t*(1.0 - ω1/(1 + δx))*(λ1c - λ1p)
   end
 end
 
@@ -1425,11 +1374,24 @@ end
 
 
 """
-    nellr_λ0(t::Float64, λ0c::Float64, λ0p::Float64)
+    nellr_λ0(t  ::Float64, 
+             ω0 ::Float64, 
+             λ0c::Float64, 
+             λ0p::Float64, 
+             δx ::Float64)
 
 Return log-likelihood ratio for non-events when updating `λ0`.
 """
-nellr_λ0(t::Float64, λ0c::Float64, λ0p::Float64) = t*(λ0c - λ0p)
+function nellr_λ0(t  ::Float64,
+                  ω0 ::Float64,
+                  λ0c::Float64,
+                  λ0p::Float64,
+                  δx ::Float64)
+  @fastmath begin
+    return t*(1.0 + ω0/(1.0 + δx))*(λ0c - λ0p)
+  end
+end
+
 
 
 
@@ -1463,7 +1425,7 @@ logdexp(x::Float64, λ::Float64) =
 
 
 """
-    llrdexp(xp::Float64, xc::Float64, λ::Float64)
+    llrdexp_x(xp::Float64, xc::Float64, λ::Float64)
 
 Compute the loglik ratio of the 
 **Exponential** density for proposal 
@@ -1471,6 +1433,36 @@ Compute the loglik ratio of the
 """
 llrdexp_x(xp::Float64, xc::Float64, λ::Float64) = 
   @fastmath λ * (xc - xp)
+
+
+
+
+
+"""
+    logdbeta(x::Float64, α::Float64, β::Float64)
+
+Compute the logarithmic transformation of the 
+**Beta** density with shape `α` and shape `β` for `x`.
+"""
+logdbeta(x::Float64, α::Float64, β::Float64) = 
+  @fastmath ((α-1.0) * Base.Math.JuliaLibm.log(x)                 +
+             (β-1.0) * Base.Math.JuliaLibm.log(1.0 - x)           +
+             Base.Math.JuliaLibm.log(gamma(α + β)/(gamma(α)*gamma(β))))
+
+
+
+
+
+"""
+    llrdbeta_x(xp::Float64, xc::Float64, α::Float64, β::Float64)
+
+Compute the logarithmic ratio for the **Beta** density 
+with shape `α` and shape `β` between `xp` and `xc`.
+"""
+llrdbeta_x(xp::Float64, xc::Float64, α::Float64, β::Float64) = 
+  @fastmath ((α-1.0) * Base.Math.JuliaLibm.log(xp/xc) +
+             (β-1.0) * Base.Math.JuliaLibm.log((1.0 - xp)/(1.0 - xc)))
+
 
 
 

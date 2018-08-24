@@ -874,13 +874,13 @@ function mhr_upd_ω1(ω1c       ::Float64,
                     ω1prior   ::Tuple{Float64,Float64},
                     ω1upd_llr ::Function)
 
-  const ω1p = addupt(ω1c, rand() < .3 ? ω1tn : 4.*ω1tn)::Float64
+  const ω1p = addupt_lims(ω1c, rand() < .2 ? ω1tn : 2.*ω1tn, 0.0, 1.0)::Float64
 
   # likelihood ratio
   const llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
 
   # prior ratio
-  const prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
+  const prr = llrdbeta_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -907,18 +907,18 @@ function mhr_upd_ω0(ω0c       ::Float64,
                     prc       ::Float64,
                     ω0tn      ::Float64,
                     LDc       ::Array{Float64,3},
-                    ω0prior   ::Tuple{Float64,Float64},
+                    ω0prior   ::Float64,
                     ω0upd_llr::Function)
 
-  const ω0p = addupt(ω0c, rand() < .3 ? ω0tn : 4.*ω0tn)::Float64
+  const ω0p = mulupt(ω0c, rand() < .3 ? ω0tn : 4.*ω0tn)::Float64
 
   # likelihood ratio
   const llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)
 
   # prior ratio
-  const prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
+  const prr = llrdexp_x(ω0p, ω0c, ω0prior)
 
-  if -randexp() < (llr + prr)
+  if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(ω0p/ω0c))
     llc += llr::Float64
     prc += prr::Float64
     ω0c  = ω0p::Float64
