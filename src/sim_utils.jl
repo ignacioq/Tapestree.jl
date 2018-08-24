@@ -39,6 +39,13 @@ function simulate_tribe(X_initial::Float64,
                         ω0       = 0.0,
                         const_δt = 1e-4)
 
+  # bounds checks for parameters
+  !(0.0 <= ω1 <= 1.0) && error("ω1 has to be between 0.0 and 1.0")
+  !(0.0 <= ω0 <= 1.0) && error("ω0 has to be >= 0.0")
+  !(0.0 <= σ² <= 1.0) && error("σ² has to be >= 0.0")
+  !(0.0 <= λ1 <= 1.0) && error("λ1 has to be >= 0.0")
+  !(0.0 <= λ0 <= 1.0) && error("λ0 has to be >= 0.0")
+
   Y_initial = 
     [rand() < λ1/(λ1 + λ0) ? 1 : 0 for i in Base.OneTo(nareas)]::Array{Int64,1}
 
