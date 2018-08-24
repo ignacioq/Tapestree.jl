@@ -32,6 +32,7 @@ module Tapestree
   include("mcmc.jl")
   include("parameter_updates.jl")
   include("mcmc_burn.jl")
+  include("under_prior.jl")
   include("proposal_functions.jl")
   include("tribe_wrapper.jl")
   include("sim_utils.jl")

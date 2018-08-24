@@ -409,8 +409,6 @@ function burn_tribe(total_llf     ::Function,
       end
     end
 
-    #println(ptn[1:6])
-
     next!(p)
   end
 

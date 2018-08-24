@@ -152,3 +152,63 @@ function tribe(tip_values::Dict{Int64,Float64},
 
 end
 
+
+
+
+
+
+"""
+    tribe(tip_values::Dict{Int64,Float64}, 
+            tip_areas ::Dict{Int64,Array{Int64,1}},
+            tree      ::rtree, 
+            bts       ::Array{Float64,1},
+            out_file::String)
+
+Run tribe **under the prior**. Wrapper for all functions.
+"""
+function tribe(out_file::String;
+               niter   ::Int64             = 500_000,
+               nburn   ::Int64             = 500_000,
+               nthin   ::Int64             = 1_000,
+               ωxprior ::NTuple{2,Float64} = (0.,10.),
+               ω1prior ::NTuple{2,Float64} = (1.,3.),
+               ω0prior ::Float64           = 1e-1,
+               σ²prior ::Float64           = 1e-1,
+               λprior  ::Float64           = 1e-1,
+               weight  ::NTuple{4,Float64} = (0.15,0.05,0.02,0.02),
+               σ²i     ::Float64           = 1.,
+               ωxi     ::Float64           = 0.,
+               ω1i     ::Float64           = 0.01,
+               ω0i     ::Float64           = 0.01,
+               λ1i     ::Float64           = 1.0,
+               λ0i     ::Float64           = 0.2,
+               fix_ωx  ::Bool              = false,
+               fix_ω1  ::Bool              = false,
+               fix_ω0  ::Bool              = false)
+
+  R = tribe_mcmc(out_file,
+                 niter    = niter,
+                 nthin    = nthin,
+                 nburn    = nburn,
+                 ωxprior  = ωxprior,
+                 ω1prior  = ω1prior,
+                 ω0prior  = ω0prior,
+                 σ²prior  = σ²prior,
+                 λprior   = λprior,
+                 weight   = weight,
+                 λ1i      = λ1i,
+                 λ0i      = λ0i,
+                 ωxi      = ωxi,
+                 ω1i      = ω1i,
+                 ω0i      = ω0i,
+                 σ²i      = σ²i,
+                 fix_ωx   = fix_ωx,
+                 fix_ω1   = fix_ω1,
+                 fix_ω0   = fix_ω0)
+
+  return R
+
+end
+
+
+
