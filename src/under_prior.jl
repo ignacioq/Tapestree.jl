@@ -25,7 +25,7 @@ function tribe_mcmc(out_file::String;
                     nthin   ::Int64             = 100,
                     nburn   ::Int64             = 50_000,
                     ωxprior ::NTuple{2,Float64} = (0.,10.),
-                    ω1prior ::NTuple{2,Float64} = (1.,3.),
+                    ω1prior ::NTuple{2,Float64} = (1.,1.),
                     ω0prior ::Float64           = 1e-1,
                     σ²prior ::Float64           = 1e-1,
                     λprior  ::Float64           = 1e-1,
