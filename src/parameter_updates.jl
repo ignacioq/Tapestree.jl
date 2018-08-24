@@ -874,7 +874,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
                     ω1prior   ::Tuple{Float64,Float64},
                     ω1upd_llr ::Function)
 
-  const ω1p = addupt_lims(ω1c, rand() < .2 ? ω1tn : 2.*ω1tn, 0.0, 1.0)::Float64
+  const ω1p = addupt(ω1c, rand() < .2 ? ω1tn : 2.*ω1tn)::Float64
 
   # likelihood ratio
   const llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)

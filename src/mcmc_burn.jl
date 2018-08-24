@@ -300,9 +300,7 @@ function burn_tribe(total_llf     ::Function,
       #update ω1
       elseif up == 3
 
-        ω1p = addupt_lims(ω1c, ptn[3], 0.0, 1.0)::Float64
-
-        ω1p == ω1c && continue
+        ω1p = addupt(ω1c, ptn[3])::Float64
 
         # proposal likelihood and prior
         llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
@@ -330,7 +328,6 @@ function burn_tribe(total_llf     ::Function,
 
         ω0p = mulupt(ω0c, ptn[4])
 
-        # proposal likelihood ratio
         llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)::Float64
 
         # prior ratio
