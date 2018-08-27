@@ -170,6 +170,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
              ω1c    ::Float64, 
              ω0c    ::Float64,
              σ²c    ::Float64,
+             σ²ϕ    ::Float64,
              llc    ::Float64,
              LApc   ::Array{Float64,2},
              LAnc   ::Array{Float64,2},
@@ -181,7 +182,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
 
     copy!(Xp, Xc)
 
-    upbranchX!(br, Xp, bridx, brδt, σ²c)
+    upbranchX!(br, Xp, bridx, brδt, σ²ϕ)
 
     deltaX!(δXp, Xp, wcol, m, ntip, narea)
     sde!(LApp, LAnp, δXp, δYc, wcol, m, ntip)
@@ -197,7 +198,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                       stemevc, stemevc, brs, brs, σ²c)
     end
 
-    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
       llc += llr::Float64
       copy!(Xc,   Xp)
       copy!(δXc,  δXp)
@@ -244,6 +245,7 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
              ω1c    ::Float64, 
              ω0c    ::Float64,
              σ²c    ::Float64,
+             σ²ϕ    ::Float64,
              llc    ::Float64,
              LApc   ::Array{Float64,2},
              LAnc   ::Array{Float64,2},
@@ -257,7 +259,7 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
 
     pr, d1, d2 = trio
 
-    uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²c, nedge)
+    uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²ϕ, nedge)
 
     deltaX!(δXp, Xp, wcol, m, ntip, narea)
     sde!(LApp, LAnp, δXp, δYc, wcol, m, ntip)
@@ -275,9 +277,9 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
 
     if -randexp() < (llr + 
                      ((pr != nedge) ? 
-                      llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²c) : 0.0) +
-                      llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²c) +
-                      llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²c))::Float64
+                      llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ) : 0.0) +
+                      llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
+                      llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²ϕ))::Float64
       llc += llr::Float64
       copy!(Xc,     Xp)
       copy!(δXc,   δXp)
@@ -403,8 +405,7 @@ end
 
 Make function to update trio in Y.
 """
-function make_mhr_upd_Ytrio(
-                            narea    ::Int64,
+function make_mhr_upd_Ytrio(narea    ::Int64,
                             nedge    ::Int64,
                             m        ::Int64,
                             ntip     ::Int64,
@@ -532,6 +533,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
              ω1c    ::Float64,
              ω0c    ::Float64,
              σ²c    ::Float64,
+             σ²ϕ    ::Float64,
              λϕ1    ::Float64, 
              λϕ0    ::Float64,
              llc    ::Float64,
@@ -552,7 +554,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
                 bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
       copy!(Xp, Xc)
-      upbranchX!(br, Xp, bridx, brδt, σ²c)
+      upbranchX!(br, Xp, bridx, brδt, σ²ϕ)
 
       deltaXY!(δXp, δYp, Xp, Yp, wcol, m, ntip, narea)
       sde!(LApp, LAnp, δXp, δYp, wcol, m, ntip)
@@ -571,7 +573,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
       if -randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs, br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevc, brs, br, λϕ1, λϕ0) +
-                       llr_bm(Xc, Xp, bridx[br], brδt[br], σ²c))::Float64
+                       llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
         llc += llr::Float64
         copy!(Xc,   Xp)
         copy!(Yc,   Yp)
@@ -642,6 +644,7 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
              ω1c    ::Float64, 
              ω0c    ::Float64,
              σ²c    ::Float64,
+             σ²ϕ    ::Float64,
              λϕ1    ::Float64,
              λϕ0    ::Float64,
              llc    ::Float64,
@@ -667,7 +670,7 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
       copy!(Xp, Xc)
       pr, d1, d2 = triad
 
-      uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²c, nedge)
+      uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²ϕ, nedge)
 
       deltaXY!(δXp, δYp, Xp, Yp, wcol, m, ntip, narea)
       sde!(LApp, LAnp, δXp, δYp, wcol, m, ntip)
@@ -687,9 +690,9 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
                        bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0) +
                        ((pr != nedge) ? 
-                       llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²c) : 0.0) +
-                       llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²c) +
-                       llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²c))::Float64
+                       llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ) : 0.0) +
+                       llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
+                       llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²ϕ))::Float64
         llc += llr
         copy!(Xc,   Xp)
         copy!(Yc,   Yp)

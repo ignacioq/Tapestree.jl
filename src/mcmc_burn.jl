@@ -350,46 +350,50 @@ function burn_tribe(total_llf     ::Function,
 
       end
 
-      ## make a branch updates with some Pr
+      ## make DA updates with some Pr
       # make Y branch update
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
         llc = mhr_upd_Ybr(rand(Base.OneTo(nedge)), 
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
-                          llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
+                        Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
+                        llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make X branch update
       if rand() < 2e-3
+        σ²ϕ = σ²ϕprop()
         llc = mhr_upd_Xbr(rand(Base.OneTo(nedge-1)),
-                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                          Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, llc, 
                           LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make X trio update
       if rand() < 2e-3
+        σ²ϕ = σ²ϕprop()
         llc = mhr_upd_Xtrio(rand(trios),
-                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, 
+                            Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, llc, 
                             LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make joint X & Y branch update
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
-        llc      = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
-                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
+        σ²ϕ = σ²ϕprop()
+        llc = mhr_upd_XYbr(rand(Base.OneTo(nedge-1)), 
+                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, λϕ1, λϕ0,
                            llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
       end
 
       # make joint X & Y trio update
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
-        llc      = mhr_upd_XYtrio(rand(trios),
-                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, λϕ1, λϕ0,
+        σ²ϕ = σ²ϕprop()
+        llc      = mhr_upd_XYtrio(rand(trios), 
+                           Xc, Yc, λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, σ²ϕ, λϕ1, λϕ0,
                            llc, prc, LApc, LAnc, LDc, δXc, δYc, brs, stemevc)
       end
 
-      # update stem node
+      # update stem branch
       if rand() < 2e-3
         λϕ1, λϕ0 = λϕprop()
         llc = mhr_upd_Ystem(λ1c, λ0c, λϕ1, λϕ0, llc, stemevc, brs)
