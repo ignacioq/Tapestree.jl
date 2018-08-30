@@ -35,7 +35,7 @@ function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
   if iszero(δx) 
     return λ1
   else
-    return λ1 * (1.0 - ω1/(1.0 + δx))
+    return 2.0 * λ1 * (0.5 - ω1 + ω1/(1.0 + exp(-δx)))
   end
 end
 
@@ -53,7 +53,7 @@ function f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
   if iszero(δx)
     return λ0
   else
-    return λ0 * (1.0 + ω0/(1.0 + δx))
+    return 2.0 * λ0 * (0.5 + ω0 - ω0/(1.0 + exp(-δx)))
   end
 end
 
@@ -1223,11 +1223,16 @@ function evllr_ω1(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      return Base.Math.JuliaLibm.log((1.0 + δx - ω1p)/(1.0 + δx - ω1c)) +
-             λ1*t*(ω1p - ω1c)/(1.0 + δx)
+      eϕ  = exp(-δx)
+      ieϕ = 1.0/(1.0+eϕ)
+      return Base.Math.JuliaLibm.log((0.5 + 0.5*eϕ - ω1p*eϕ)/
+                                     (0.5 + 0.5*eϕ - ω1c*eϕ)) +
+             2.0*λ1*t*(ω1c*ieϕ - ω1c + ω1p - ω1p*ieϕ)
     end
   end
 end
+
+
 
 
 
@@ -1251,11 +1256,16 @@ function evllr_ω0(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      return Base.Math.JuliaLibm.log((1.0 + δx + ω0p)/(1.0 + δx + ω0c)) +
-             λ0*t*(ω0c - ω0p)/(1.0 + δx)
+      eϕ  = exp(-δx)
+      ieϕ = 1.0/(1.0+eϕ)
+      return Base.Math.JuliaLibm.log((0.5 + 0.5*eϕ + ω0p*eϕ)/
+                                     (0.5 + 0.5*eϕ + ω0c*eϕ)) +
+             2.0*λ0*t*(ω0c - ω0c*ieϕ - ω0p + ω0p*ieϕ)
     end
   end
 end
+
+
 
 
 
@@ -1281,10 +1291,11 @@ function evllr_λ1(t  ::Float64,
              t*(λ1c - λ1p)
     else
       return Base.Math.JuliaLibm.log(λ1p/λ1c) +
-             t*(1.0 - ω1/(1.0 + δx))*(λ1c - λ1p)
+             2.0*t*(0.5 - ω1 + ω1/(1.0 + exp(-δx)))*(λ1c - λ1p)
     end
   end
 end
+
 
 
 
@@ -1310,10 +1321,11 @@ function evllr_λ0(t  ::Float64,
              t * (λ0c - λ0p)
     else
       return Base.Math.JuliaLibm.log(λ0p/λ0c) +
-             t * (1.0 + ω0/(1.0 + δx)) * (λ0c - λ0p)
+             2.0 * t * (0.5 + ω0 - ω0/(1.0 + exp(-δx))) * (λ0c - λ0p)
     end
   end
 end
+
 
 
 
@@ -1348,11 +1360,12 @@ function nellr_ω1(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      return λ1*t*(ω1p - ω1c)/(1.0 + δx)
+      eϕ  = exp(-δx)
+      ieϕ = 1.0/(1.0+eϕ)
+      return 2.0*λ1*t*(ω1c*ieϕ - ω1c + ω1p - ω1p*ieϕ)
     end
   end
 end
-
 
 
 
@@ -1377,10 +1390,13 @@ function nellr_ω0(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      return λ0*t*(ω0c - ω0p)/(1.0 + δx)
+      eϕ  = exp(-δx)
+      ieϕ = 1.0/(1.0+eϕ)
+      return 2.0*λ0*t*(ω0c - ω0c*ieϕ - ω0p + ω0p*ieϕ)
     end
   end
 end
+
 
 
 
@@ -1405,10 +1421,12 @@ function nellr_λ1(t  ::Float64,
     if iszero(δx)
       return t*(λ1c - λ1p)
     else
-      return t*(1.0 - ω1/(1.0 + δx))*(λ1c - λ1p)
+      return 2.0*t*(0.5 - ω1 + ω1/(1.0 + exp(-δx)))*(λ1c - λ1p)
     end
   end
 end
+
+
 
 
 
