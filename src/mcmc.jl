@@ -234,8 +234,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
         # update X[i]
         if up > 6
-          llc = mhr_upd_X(up, Xc, Yc, δXc, δYc, 
-                          λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, LApc, LAnc, LDc)
+          # llc = mhr_upd_X(up, Xc, Yc, δXc, δYc, 
+          #                 λ1c, λ0c, ωxc, ω1c, ω0c, σ²c, llc, LApc, LAnc, LDc)
 
         # update λ1 
         elseif up == 5
