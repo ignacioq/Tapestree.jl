@@ -195,7 +195,7 @@ function tribe_mcmc(out_file::String;
       # log parameters
       lthin += 1
       if lthin == nthin
-        pci = Pc(f_λ1(λ1c,ω1c,1.0), f_λ0(λ0c,ω0c,1.0), 0.01)
+        pci = Pc(f_λ(λ1c,ω1c,1.0), f_λ(λ0c,ω0c,1.0), 0.01)
         print(f, it,"\t", llc, "\t", prc,"\t",ωxc,"\t",ω1c,"\t",ω0c,"\t",
              σ²c,"\t",λ1c,"\t",λ0c,"\t",pci,"\n")
         lthin = 0

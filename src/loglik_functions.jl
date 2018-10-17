@@ -24,36 +24,17 @@ Eδx(μ::Float64, ωx::Float64, δt::Float64) = @fastmath ωx * μ * δt
 
 
 
-
 """
-    f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
+    f_λ(λ::Float64, ω::Float64, δx::Float64)
 
 Estimate rates for area colonization based 
 on the difference between lineage traits and area averages.
 """
-function f_λ1(λ1::Float64, ω1::Float64, δx::Float64)
+function f_λ(λ::Float64, ω::Float64, δx::Float64)
   if iszero(δx) 
-    return λ1
+    return λ
   else
-    return 2.0 * λ1 * (0.5 - ω1 + ω1/(1.0 + exp(-δx)))
-  end
-end
-
-
-
-
-
-"""
-    f_λ0(λ0::Float64, ω0::Float64, δx::Float64)
-
-Estimate rates for area colonization/loss based 
-on the difference between lineage traits and area averages.
-"""
-function f_λ0(λ0::Float64, ω0::Float64, δx::Float64) 
-  if iszero(δx)
-    return λ0
-  else
-    return 2.0 * λ0 * (0.5 + ω0 - ω0/(1.0 + exp(-δx)))
+    return @fastmath (2.0 * λ * (0.5 + ω - ω/(1.0 + exp(-δx))))
   end
 end
 
@@ -251,21 +232,21 @@ function bitvectorll(Y ::Array{Int64,3},
 
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          ll += nell(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
+          ll += nell(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
           i += 1
         end
         i >= m && break
 
-        ll += evll(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
+        ll += evll(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          ll += nell(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
+          ll += nell(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
           i += 1
         end
         i >= m && break
 
-        ll += evll(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
+        ll += evll(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
         i += 1
       end
 
@@ -273,21 +254,21 @@ function bitvectorll(Y ::Array{Int64,3},
 
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          ll += nell(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
+          ll += nell(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
           i += 1
         end
         i >= m && break
 
-        ll += evll(δt[i], f_λ0(λ0, ω0, LD[i,j,k]))::Float64
+        ll += evll(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          ll += nell(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
+          ll += nell(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
           i += 1
         end
         i >= m && break
 
-        ll += evll(δt[i], f_λ1(λ1, ω1, LD[i,j,k]))::Float64
+        ll += evll(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
         i += 1
       end
     end
@@ -336,12 +317,12 @@ function bitvectorllr_ω1(Y  ::Array{Int64,3},
 
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_ω1(δt[i], ω1c, ω1p, λ1, LD[i,j,k])
+          llr += nellr_ω(δt[i], ω1c, ω1p, λ1, LD[i,j,k])
           i += 1
         end
         i >= m && break
 
-        llr += evllr_ω1(δt[i], ω1c, ω1p, λ1, LD[i,j,k])::Float64
+        llr += evllr_ω(δt[i], ω1c, ω1p, λ1, LD[i,j,k])::Float64
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
@@ -361,12 +342,12 @@ function bitvectorllr_ω1(Y  ::Array{Int64,3},
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_ω1(δt[i], ω1c, ω1p, λ1, LD[i,j,k])::Float64
+          llr += nellr_ω(δt[i], ω1c, ω1p, λ1, LD[i,j,k])::Float64
           i += 1
         end
         i >= m && break
 
-        llr += evllr_ω1(δt[i], ω1c, ω1p, λ1, LD[i,j,k])::Float64
+        llr += evllr_ω(δt[i], ω1c, ω1p, λ1, LD[i,j,k])::Float64
         i += 1
       end
     end
@@ -422,12 +403,12 @@ function bitvectorllr_ω0(Y  ::Array{Int64,3},
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_ω0(δt[i], ω0c, ω0p, λ0, LD[i,j,k])
+          llr += nellr_ω(δt[i], ω0c, ω0p, λ0, LD[i,j,k])
           i += 1
         end
         i >= m && break
 
-        llr += evllr_ω0(δt[i], ω0c, ω0p, λ0, LD[i,j,k])::Float64
+        llr += evllr_ω(δt[i], ω0c, ω0p, λ0, LD[i,j,k])::Float64
         i += 1
       end
 
@@ -435,12 +416,12 @@ function bitvectorllr_ω0(Y  ::Array{Int64,3},
 
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_ω0(δt[i], ω0c, ω0p, λ0, LD[i,j,k])
+          llr += nellr_ω(δt[i], ω0c, ω0p, λ0, LD[i,j,k])
           i += 1
         end
         i >= m && break
 
-        llr += evllr_ω0(δt[i], ω0c, ω0p, λ0, LD[i,j,k])::Float64
+        llr += evllr_ω(δt[i], ω0c, ω0p, λ0, LD[i,j,k])::Float64
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
@@ -496,12 +477,12 @@ function bitvectorllr_λ1(Y  ::Array{Int64,3},
 
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_λ1(δt[i], ω1, λ1c, λ1p, LD[i,j,k])
+          llr += nellr_λ(δt[i], ω1, λ1c, λ1p, LD[i,j,k])
           i   += 1
         end
         i >= m && break
 
-        llr += evllr_λ1(δt[i], ω1, λ1c, λ1p, LD[i,j,k])::Float64
+        llr += evllr_λ(δt[i], ω1, λ1c, λ1p, LD[i,j,k])::Float64
         i   += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
@@ -521,12 +502,12 @@ function bitvectorllr_λ1(Y  ::Array{Int64,3},
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_λ1(δt[i], ω1, λ1c, λ1p, LD[i,j,k])
+          llr += nellr_λ(δt[i], ω1, λ1c, λ1p, LD[i,j,k])
           i += 1
         end
         i >= m && break
 
-        llr += evllr_λ1(δt[i], ω1, λ1c, λ1p, LD[i,j,k])::Float64
+        llr += evllr_λ(δt[i], ω1, λ1c, λ1p, LD[i,j,k])::Float64
         i   += 1
       end
     end
@@ -582,11 +563,11 @@ function bitvectorllr_λ0(Y  ::Array{Int64,3},
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_λ0(δt[i], ω0, λ0c, λ0p, LD[i,j,k])
+          llr += nellr_λ(δt[i], ω0, λ0c, λ0p, LD[i,j,k])
           i += 1
         end
         i >= m && break
-        llr += evllr_λ0(δt[i], ω0, λ0c, λ0p, LD[i,j,k])::Float64
+        llr += evllr_λ(δt[i], ω0, λ0c, λ0p, LD[i,j,k])::Float64
         i += 1
       end
 
@@ -594,11 +575,11 @@ function bitvectorllr_λ0(Y  ::Array{Int64,3},
 
       while i < m
         while i < m && Y[i,j,k] == Y[i+1,j,k]
-          llr += nellr_λ0(δt[i], ω0, λ0c, λ0p, LD[i,j,k])
+          llr += nellr_λ(δt[i], ω0, λ0c, λ0p, LD[i,j,k])
           i += 1
         end
         i >= m && break
-        llr += evllr_λ0(δt[i], ω0, λ0c, λ0p, LD[i,j,k])::Float64
+        llr += evllr_λ(δt[i], ω0, λ0c, λ0p, LD[i,j,k])::Float64
         i += 1
 
         while i < m && Y[i,j,k] == Y[i+1,j,k]
@@ -635,9 +616,9 @@ function bitbitll(y1::Int64,
 
   # event or non-event
   if y1 == y2 
-    return nell(δt, y1 == 0 ? f_λ1(λ1, ω1, Δx) : f_λ0(λ0, ω0, Δx))::Float64
+    return nell(δt, y1 == 0 ? f_λ(λ1, ω1, Δx) : f_λ(λ0, ω0, Δx))::Float64
   else
-    return evll(δt, y1 == 0 ? f_λ1(λ1, ω1, Δx) : f_λ0(λ0, ω0, Δx))::Float64
+    return evll(δt, y1 == 0 ? f_λ(λ1, ω1, Δx) : f_λ(λ0, ω0, Δx))::Float64
   end
 end
 
@@ -676,7 +657,7 @@ function makellr_biogeo(Y    ::Array{Int64,3},
                ω1p::Float64,
                LD ::Array{Float64,3})
 
-    if !(0.0 < ω1p < 1.0)
+    if -1.0 > ω1p
       return -Inf
     else
 
@@ -701,17 +682,23 @@ function makellr_biogeo(Y    ::Array{Int64,3},
                ω0p::Float64,
                LD ::Array{Float64,3})
 
-    llr::Float64 = 0.0
 
-    @inbounds begin
+    if -1.0 > ω0p
+      return -Inf
+    else
 
-      for k = Base.OneTo(narea), j = Base.OneTo(ntip)
-        llr += bitvectorllr_ω0(Y, λ0, ω0c, ω0p, LD, δt, 
-                               j, k, wf23[j], m)
+      llr::Float64 = 0.0
+
+      @inbounds begin
+
+        for k = Base.OneTo(narea), j = Base.OneTo(ntip)
+          llr += bitvectorllr_ω0(Y, λ0, ω0c, ω0p, LD, δt, 
+                                 j, k, wf23[j], m)
+        end
       end
-    end
 
-    return llr
+      return llr
+    end
   end
 
 
@@ -1208,92 +1195,28 @@ evll(t::Float64, λ::Float64) = (Base.Math.JuliaLibm.log(λ) - (λ * t))::Float6
 
 
 """
-    evllr_ω1(t  ::Float64,
+    evllr_ω(t  ::Float64,
              ω1c::Float64,
              ω1p::Float64,
              λ1 ::Float64,
              δx ::Float64)
 
-Return log-likelihood ratio for events when updating `ω1`.
+Return log-likelihood ratio for events when updating `ω`.
 """
-function evllr_ω1(t  ::Float64,
-                  ω1c::Float64,
-                  ω1p::Float64,
-                  λ1 ::Float64,
-                  δx ::Float64)
+function evllr_ω(t  ::Float64,
+                 ωc::Float64,
+                 ωp::Float64,
+                 λ ::Float64,
+                 δx ::Float64)
   @fastmath begin
     if iszero(δx)
       return 0.0
     else
       eϕ  = exp(-δx)
       ieϕ = 1.0/(1.0+eϕ)
-      return Base.Math.JuliaLibm.log((0.5 + 0.5*eϕ - ω1p*eϕ)/
-                                     (0.5 + 0.5*eϕ - ω1c*eϕ)) +
-             2.0*λ1*t*(ω1c*ieϕ - ω1c + ω1p - ω1p*ieϕ)
-    end
-  end
-end
-
-
-
-
-
-
-
-"""
-    evllr_ω0(t  ::Float64,
-             ω0c::Float64,
-             ω0p::Float64,
-             λ0 ::Float64,
-             δx ::Float64)
-
-Return log-likelihood ratio for events when updating `ω1`.
-"""
-function evllr_ω0(t  ::Float64,
-                  ω0c::Float64,
-                  ω0p::Float64,
-                  λ0 ::Float64,
-                  δx ::Float64)
-  @fastmath begin
-    if iszero(δx)
-      return 0.0
-    else
-      eϕ  = exp(-δx)
-      ieϕ = 1.0/(1.0+eϕ)
-      return Base.Math.JuliaLibm.log((0.5 + 0.5*eϕ + ω0p*eϕ)/
-                                     (0.5 + 0.5*eϕ + ω0c*eϕ)) +
-             2.0*λ0*t*(ω0c - ω0c*ieϕ - ω0p + ω0p*ieϕ)
-    end
-  end
-end
-
-
-
-
-
-
-
-"""
-    evllr_λ1(t  ::Float64,
-             ω1::Float64,
-             λ1c::Float64,
-             λ1p::Float64,
-             δx ::Float64)
-
-Return log-likelihood ratio for non-events when updating `λ1`.
-"""
-function evllr_λ1(t  ::Float64,
-                  ω1::Float64,
-                  λ1c::Float64,
-                  λ1p::Float64,
-                  δx ::Float64)
-  @fastmath begin
-    if iszero(δx)
-      return Base.Math.JuliaLibm.log(λ1p/λ1c) +
-             t*(λ1c - λ1p)
-    else
-      return Base.Math.JuliaLibm.log(λ1p/λ1c) +
-             2.0*t*(0.5 - ω1 + ω1/(1.0 + exp(-δx)))*(λ1c - λ1p)
+      return Base.Math.JuliaLibm.log((0.5 + 0.5*eϕ + ωp*eϕ)/
+                                     (0.5 + 0.5*eϕ + ωc*eϕ)) +
+             2.0*λ*t*(ωc - ωp + ωp*ieϕ - ωc*ieϕ)
     end
   end
 end
@@ -1304,26 +1227,26 @@ end
 
 
 """
-    evllr_λ0(t  ::Float64,
-             ω0::Float64,
-             λ0c::Float64,
-             λ0p::Float64,
-             δx ::Float64)
+    evllr_λ(t  ::Float64,
+            ω::Float64,
+            λc::Float64,
+            λp::Float64,
+            δx ::Float64)
 
-Return log-likelihood ratio for non-events when updating `λ0`.
+Return log-likelihood ratio for non-events when updating `λ`.
 """
-function evllr_λ0(t  ::Float64,
-                  ω0::Float64,
-                  λ0c::Float64,
-                  λ0p::Float64,
-                  δx ::Float64)
+function evllr_λ(t ::Float64,
+                 ω ::Float64,
+                 λc::Float64,
+                 λp::Float64,
+                 δx::Float64)
   @fastmath begin
     if iszero(δx)
-      return Base.Math.JuliaLibm.log(λ0p/λ0c) +
-             t * (λ0c - λ0p)
+      return Base.Math.JuliaLibm.log(λp/λc) +
+             t*(λc - λp)
     else
-      return Base.Math.JuliaLibm.log(λ0p/λ0c) +
-             2.0 * t * (0.5 + ω0 - ω0/(1.0 + exp(-δx))) * (λ0c - λ0p)
+      return Base.Math.JuliaLibm.log(λp/λc) +
+             2.0*t*(λc - λp)*(0.5 + ω - ω/(1.0 + exp(-δx)))
     end
   end
 end
@@ -1345,26 +1268,26 @@ nell(t::Float64, λ::Float64) = -λ*t
 
 
 """
-    nellr_ω1(t  ::Float64,
-             ω1c::Float64,
-             ω1p::Float64,
-             λ1 ::Float64,
-             δx ::Float64)
+    nellr_ω(t ::Float64,
+            ωc::Float64,
+            ωp::Float64,
+            λ ::Float64,
+            δx::Float64)
 
-Return log-likelihood ratio for non-events when updating `ω1`.
+Return log-likelihood ratio for non-events when updating `ω`.
 """
-function nellr_ω1(t  ::Float64,
-                  ω1c::Float64,
-                  ω1p::Float64,
-                  λ1 ::Float64,
-                  δx ::Float64)
+function nellr_ω(t ::Float64,
+                 ωc::Float64,
+                 ωp::Float64,
+                 λ ::Float64,
+                 δx::Float64)
   @fastmath begin
     if iszero(δx)
       return 0.0
     else
       eϕ  = exp(-δx)
       ieϕ = 1.0/(1.0+eϕ)
-      return 2.0*λ1*t*(ω1c*ieϕ - ω1c + ω1p - ω1p*ieϕ)
+      return 2.0*λ*t*(ωc - ωp + ωp*ieϕ - ωc*ieϕ)
     end
   end
 end
@@ -1373,89 +1296,30 @@ end
 
 
 
-
 """
-    nellr_ω0(t  ::Float64,
-             ω0c::Float64,
-             ω0p::Float64,
-             λ0 ::Float64,
+    nellr_λ(t  ::Float64,
+             ω::Float64,
+             λc::Float64,
+             λp::Float64,
              δx ::Float64)
 
-Return log-likelihood ratio for non-events when updating `ω0`.
+Return log-likelihood ratio for non-events when updating `λ`.
 """
-function nellr_ω0(t  ::Float64,
-                  ω0c::Float64,
-                  ω0p::Float64,
-                  λ0 ::Float64,
+function nellr_λ(t  ::Float64,
+                  ω::Float64,
+                  λc::Float64,
+                  λp::Float64,
                   δx ::Float64)
   @fastmath begin
     if iszero(δx)
-      return 0.0
+      return t*(λc - λp)
     else
-      eϕ  = exp(-δx)
-      ieϕ = 1.0/(1.0+eϕ)
-      return 2.0*λ0*t*(ω0c - ω0c*ieϕ - ω0p + ω0p*ieϕ)
+      return 2.0*t*(λc - λp)*(0.5 + ω - ω/(1.0 + exp(-δx)))
     end
   end
 end
 
 
-
-
-
-
-
-"""
-    nellr_λ1(t  ::Float64,
-             ω1::Float64,
-             λ1c::Float64,
-             λ1p::Float64,
-             δx ::Float64)
-
-Return log-likelihood ratio for non-events when updating `λ1`.
-"""
-function nellr_λ1(t  ::Float64,
-                  ω1::Float64,
-                  λ1c::Float64,
-                  λ1p::Float64,
-                  δx ::Float64)
-  @fastmath begin
-    if iszero(δx)
-      return t*(λ1c - λ1p)
-    else
-      return 2.0*t*(0.5 - ω1 + ω1/(1.0 + exp(-δx)))*(λ1c - λ1p)
-    end
-  end
-end
-
-
-
-
-
-
-"""
-    nellr_λ0(t  ::Float64, 
-             ω0 ::Float64, 
-             λ0c::Float64, 
-             λ0p::Float64, 
-             δx ::Float64)
-
-Return log-likelihood ratio for non-events when updating `λ0`.
-"""
-function nellr_λ0(t  ::Float64,
-                  ω0 ::Float64,
-                  λ0c::Float64,
-                  λ0p::Float64,
-                  δx ::Float64)
-  
-  @fastmath begin
-    if iszero(δx)
-      return t * (λ0c - λ0p)
-    else
-      return 2.0 * t * (0.5 + ω0 - ω0/(1.0 + exp(-δx))) * (λ0c - λ0p)
-    end
-  end
-end
 
 
 
@@ -1632,12 +1496,12 @@ llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64
 
 
 """
-    lldtnorm(x::Float64, σ²::Float64)
+    logdtnorm(x::Float64, σ²::Float64)
 
 Compute the log-likelihood density for the **Truncated Normal** density
 with `a = -1` and `b = Inf`
 """
-function lldtnorm(x::Float64, σ²::Float64)
+function logdtnorm(x::Float64, σ²::Float64)
   if x < -1.0 
     return -Inf
   else

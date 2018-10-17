@@ -60,7 +60,7 @@ function burn_tribe(total_llf     ::Function,
                     wXp     ::Array{Int64,1},
                     λprior  ::Float64,
                     ωxprior ::NTuple{2,Float64},
-                    ω1prior ::NTuple{2,Float64},
+                    ω1prior ::Float64,
                     ω0prior ::Float64,
                     σ²prior ::Float64,
                     np      ::Int64,
@@ -82,11 +82,11 @@ function burn_tribe(total_llf     ::Function,
                     stemevc, brs, σ²c)
   end
 
-  prc = allλpr(  λ1c, λ0c, λprior)            +
-        logdexp( σ²c, σ²prior)                +
-        logdnorm(ωxc, ωxprior[1], ωxprior[2]) +
-        logdbeta(ω1c, ω1prior[1], ω1prior[2]) +
-        logdexp( ω0c, ω0prior)
+  prc = allλpr(   λ1c, λ0c, λprior)            +
+        logdexp(  σ²c, σ²prior)                +
+        logdnorm( ωxc, ωxprior[1], ωxprior[2]) +
+        logdtnorm(ω1c, ω1prior)                +
+        logdtnorm(ω0c, ω0prior)
 
   # make scaling function
   scalef = makescalef(obj_ar)
@@ -306,7 +306,7 @@ function burn_tribe(total_llf     ::Function,
         llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
 
         # prior ratio
-        prr = llrdbeta_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
+        prr = llrdtnorm_x(ω1p, ω1c, ω1prior)
 
         if -randexp() < (llr + prr)
           llc += llr::Float64
@@ -326,14 +326,14 @@ function burn_tribe(total_llf     ::Function,
       # update ω0
       else
 
-        ω0p = mulupt(ω0c, ptn[4])
+        ω0p = addupt(ω0c, ptn[4])
 
         llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)::Float64
 
         # prior ratio
-        prr = llrdexp_x(ω0p, ω0c, ω0prior)
+        prr = llrdtnorm_x(ω0p, ω0c, ω0prior)
 
-        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(ω0p/ω0c))
+        if -randexp() < (llr + prr)
           llc += llr
           prc += prr
           ω0c  = ω0p

@@ -40,8 +40,8 @@ function simulate_tribe(X_initial::Float64,
                         const_δt = 1e-4)
 
   # bounds checks for parameters
-  !(0.0 <= ω1 <= 1.0) && error("ω1 has to be between 0.0 and 1.0")
-  0.0 > ω0  && error("ω0 has to be >= 0.0")
+  -1.0 > ω1 && error("ω1 has to be >= -1.0")
+  -1.0 > ω1 && error("ω0 has to be >= -1.0")
   0.0 >= σ² && error("σ² has to be > 0.0")
   0.0 >= λ1 && error("λ1 has to be > 0.0")
   0.0 >= λ0 && error("λ0 has to be > 0.0")
@@ -356,12 +356,12 @@ function biogeosam_1step!(ω1   ::Float64,
     nch[:] = 0
     for k = Base.OneTo(narea), i = Base.OneTo(n)
       if iszero(Ytp[i,k])
-        if rand() < f_λ1(λ1,ω1,ld[i,k])*δt
+        if rand() < f_λ(λ1,ω1,ld[i,k])*δt
           setindex!(Ytp,1,i,k)
           nch[i] += 1
         end
       else 
-        if rand() < f_λ0(λ0,ω0,ld[i,k])*δt
+        if rand() < f_λ(λ0,ω0,ld[i,k])*δt
           setindex!(Ytp,0,i,k)
           nch[i] += 1 
         end
