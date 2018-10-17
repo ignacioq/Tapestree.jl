@@ -769,6 +769,8 @@ function makellr_biogeo(Y    ::Array{Int64,3},
   end
 
 
+
+
   return fω1, fω0, fλ1, fλ0
 end
 
@@ -1450,7 +1452,7 @@ function nellr_λ0(t  ::Float64,
     if iszero(δx)
       return t * (λ0c - λ0p)
     else
-      return t * (1.0 + ω0/(1.0 + δx)) * (λ0c - λ0p)
+      return 2.0 * t * (0.5 + ω0 - ω0/(1.0 + exp(-δx))) * (λ0c - λ0p)
     end
   end
 end

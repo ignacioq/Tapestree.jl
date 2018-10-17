@@ -132,79 +132,79 @@ function burn_tribe(total_llf     ::Function,
       # update X
       if up > 6
 
-        # # X updates
-        # @inbounds begin
+        # X updates
+        @inbounds begin
 
-        #   upx = wXp[up - 6]
+          upx = wXp[up - 6]
 
-        #   # if root
-        #   if upx == 1
+          # if root
+          if upx == 1
 
-        #     # allocate
-        #     @simd for i = Base.OneTo(ntip)
-        #       xpi[i] =  Xc[1,i]
-        #     end
+            # allocate
+            @simd for i = Base.OneTo(ntip)
+              xpi[i] =  Xc[1,i]
+            end
 
-        #     # update xi
-        #     addupt!(xpi, ptn, 1, up)
+            # update xi
+            addupt!(xpi, ptn, 1, up)
 
-        #     xpi[rj] = xpi[1]::Float64
+            xpi[rj] = xpi[1]::Float64
 
-        #     llr = Rupd_llr(xpi, Xc, σ²c)::Float64
+            llr = Rupd_llr(xpi, Xc, σ²c)::Float64
 
-        #     if -randexp() < llr
-        #       llc     += llr::Float64
-        #       Xc[1,:]  = xpi::Array{Float64,1}
-        #       lac[up] += 1   # log acceptance
-        #     end
+            if -randexp() < llr
+              llc     += llr::Float64
+              Xc[1,:]  = xpi::Array{Float64,1}
+              lac[up] += 1   # log acceptance
+            end
 
-        #   else
+          else
 
-        #     xi, xj = ind2sub(Xc, upx)
+            xi, xj = ind2sub(Xc, upx)
 
-        #     # allocate
-        #     for j = Base.OneTo(ntip)
-        #       xpi[j]  = Xc[xi,j]
-        #       lapi[j] = LApc[xi,j]
-        #       lani[j] = LAnc[xi,j]
-        #       @simd for k = Base.OneTo(narea)
-        #         ldi[j,k] = LDc[xi,j,k]
-        #       end
-        #       @simd for i = Base.OneTo(ntip)
-        #         δxi[i,j] = δXc[i,j,xi]
-        #       end
-        #     end
+            # allocate
+            for j = Base.OneTo(ntip)
+              xpi[j]  = Xc[xi,j]
+              lapi[j] = LApc[xi,j]
+              lani[j] = LAnc[xi,j]
+              @simd for k = Base.OneTo(narea)
+                ldi[j,k] = LDc[xi,j,k]
+              end
+              @simd for i = Base.OneTo(ntip)
+                δxi[i,j] = δXc[i,j,xi]
+              end
+            end
 
-        #     # update xi
-        #     addupt!(xpi, ptn, xj, up)
+            # update xi
+            addupt!(xpi, ptn, xj, up)
 
-        #     if in(upx, Xnc1)        # if an internal node
-        #       xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
-        #     end
+            if in(upx, Xnc1)        # if an internal node
+              xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
+            end
 
-        #     # calculate new averages
-        #     Xupd_linavg!(δxi, lapi, lani, ldi, wcol, 
-        #                  xpi, xi, xj, Yc, δYc, narea)
+            # calculate new averages
+            Xupd_linavg!(δxi, lapi, lani, ldi, wcol, 
+                         xpi, xi, xj, Yc, δYc, narea)
 
-        #     if ωxc >= 0.0
-        #       llr = Xupd_llr(xi, xpi, Xc, lapi, ldi, LApc, LDc, Yc, 
-        #                      ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
-        #     else
-        #       llr = Xupd_llr(xi, xpi, Xc, lani, ldi, LAnc, LDc, Yc, 
-        #                      ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
-        #     end
+            if ωxc >= 0.0
+              llr = Xupd_llr(xi, xpi, Xc, lapi, ldi, LApc, LDc, Yc, 
+                             ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
+            else
+              llr = Xupd_llr(xi, xpi, Xc, lani, ldi, LAnc, LDc, Yc, 
+                             ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
+            end
 
-        #     if -randexp() < llr
-        #       llc        += llr::Float64
-        #       Xc[xi,:]    = xpi::Array{Float64,1}
-        #       δXc[:,:,xi] = δxi::Array{Float64,2}
-        #       LApc[xi,:]  = lapi::Array{Float64,1}
-        #       LAnc[xi,:]  = lani::Array{Float64,1}
-        #       LDc[xi,:,:] = ldi::Array{Float64,2}
-        #       lac[up]    += 1   # log acceptance
-        #     end
-        #   end
-        # end
+            if -randexp() < llr
+              llc        += llr::Float64
+              Xc[xi,:]    = xpi::Array{Float64,1}
+              δXc[:,:,xi] = δxi::Array{Float64,2}
+              LApc[xi,:]  = lapi::Array{Float64,1}
+              LAnc[xi,:]  = lani::Array{Float64,1}
+              LDc[xi,:,:] = ldi::Array{Float64,2}
+              lac[up]    += 1   # log acceptance
+            end
+          end
+        end
 
       # update λ1
       elseif up == 5
