@@ -1632,6 +1632,70 @@ llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64
 
 
 """
+    lldtnorm(x::Float64, σ²::Float64)
+
+Compute the log-likelihood density for the **Truncated Normal** density
+with `a = -1` and `b = Inf`
+"""
+function lldtnorm(x::Float64, σ²::Float64)
+  if x < -1.0 
+    return -Inf
+  else
+    return @fastmath (-x^2/(2.0*σ²) - 0.5*log(2.0π) - log(0.5*sqrt(σ²)) -
+                      log(1.0 - erf_custom(-1.0/(sqrt(2.0σ²)))))
+  end
+end
+
+
+
+
+
+"""
+    llrtnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64)
+
+Compute the log-likelihood ratio for the **Truncated Normal** density
+for `x` with `a = -1`, `b = Inf`
+"""
+function llrdtnorm_x(xp::Float64, xc::Float64, σ²::Float64)
+  if xp < -1.0 
+    return -Inf
+  else
+    return @fastmath (xc^2 - xp^2)/(2.0σ²)
+  end
+end
+
+
+
+
+
+
+"""
+    erf(x::Float64)
+
+Compute the error function
+"""
+function erf_custom(x::Float64)
+  z = abs(x)
+  t = 1.0/(1.0+0.5*z)
+  r = t*exp(-z*z-1.26551223 +
+        t*(1.00002368 +
+            t*(0.37409196 + 
+              t*(0.09678418 +
+                t*(-0.18628806 +
+                  t*(0.27886807 +
+                    t*(-1.13520398 +
+                      t*(1.48851587 +
+                        t*(-0.82215223 + 
+                          t*0.17087277)))))))))
+
+  return x >= 0.0 ? (1.0-r) : (r -1.0)
+end
+
+
+
+
+
+"""
     logdhcau(x::Float64, scl::Float64)
 
 Compute the logarithmic transformation of the 
