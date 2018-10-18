@@ -40,8 +40,6 @@ function simulate_tribe(X_initial::Float64,
                         const_δt = 1e-4)
 
   # bounds checks for parameters
-  -1.0 > ω1 && error("ω1 has to be >= -1.0")
-  -1.0 > ω1 && error("ω0 has to be >= -1.0")
   0.0 >= σ² && error("σ² has to be > 0.0")
   0.0 >= λ1 && error("λ1 has to be > 0.0")
   0.0 >= λ0 && error("λ0 has to be > 0.0")

@@ -504,17 +504,17 @@ end
 
 Make function to simultaneously update a single branch in `X` & `Y`.
 """
-function make_mhr_upd_XYbr(narea              ::Int64,
-                           nedge              ::Int64,
-                           m                  ::Int64,
-                           ntip               ::Int64,
-                           bridx              ::Array{UnitRange{Int64},1},
-                           bridx_a            ::Array{Array{UnitRange{Int64},1},1},
-                           brδt               ::Array{Array{Float64,1},1},
-                           brl                ::Array{Float64,1},
-                           wcol               ::Array{Array{Int64,1},1},
-                           total_llr          ::Function,
-                           bgiid_br           ::Function)
+function make_mhr_upd_XYbr(narea    ::Int64,
+                           nedge    ::Int64,
+                           m        ::Int64,
+                           ntip     ::Int64,
+                           bridx    ::Array{UnitRange{Int64},1},
+                           bridx_a  ::Array{Array{UnitRange{Int64},1},1},
+                           brδt     ::Array{Array{Float64,1},1},
+                           brl      ::Array{Float64,1},
+                           wcol     ::Array{Array{Int64,1},1},
+                           total_llr::Function,
+                           bgiid_br ::Function)
 
   const Xp   = zeros(m, ntip)
   const Yp   = zeros(Int64, m, ntip, narea)
@@ -544,8 +544,7 @@ function make_mhr_upd_XYbr(narea              ::Int64,
              δXc    ::Array{Float64,3},
              δYc    ::Array{Float64,3},
              brs    ::Array{Int64,3},
-             stemevc::Array{Array{Float64,1},1};
-             )
+             stemevc::Array{Array{Float64,1},1})
 
   copy!(Yp, Yc)
 
@@ -873,7 +872,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
                     prc       ::Float64,
                     ω1tn      ::Float64,
                     LDc       ::Array{Float64,3},
-                    ω1prior   ::Float64,
+                    ω1prior   ::NTuple{2,Float64},
                     ω1upd_llr ::Function)
 
   const ω1p = addupt(ω1c, rand() < .2 ? ω1tn : 2.*ω1tn)::Float64
@@ -882,7 +881,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
   const llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
 
   # prior ratio
-  const prr = llrdtnorm_x(ω1p, ω1c, ω1prior)
+  const prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -902,14 +901,14 @@ end
 
 MHR update for ω0.
 """
-function mhr_upd_ω0(ω0c       ::Float64,
-                    λ0c       ::Float64,
-                    Yc        ::Array{Int64,3},
-                    llc       ::Float64,
-                    prc       ::Float64,
-                    ω0tn      ::Float64,
-                    LDc       ::Array{Float64,3},
-                    ω0prior   ::Float64,
+function mhr_upd_ω0(ω0c      ::Float64,
+                    λ0c      ::Float64,
+                    Yc       ::Array{Int64,3},
+                    llc      ::Float64,
+                    prc      ::Float64,
+                    ω0tn     ::Float64,
+                    LDc      ::Array{Float64,3},
+                    ω0prior  ::NTuple{2,Float64},
                     ω0upd_llr::Function)
 
   const ω0p = addupt(ω0c, rand() < .2 ? ω0tn : 2.*ω0tn)::Float64
@@ -918,7 +917,7 @@ function mhr_upd_ω0(ω0c       ::Float64,
   const llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)
 
   # prior ratio
-  const prr = llrdtnorm_x(ω0p, ω0c, ω0prior)
+  const prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
 
   if -randexp() < (llr + prr)
     llc += llr::Float64

@@ -34,7 +34,7 @@ function f_λ(λ::Float64, ω::Float64, δx::Float64)
   if iszero(δx) 
     return λ
   else
-    return @fastmath (2.0 * λ * (0.5 + ω - ω/(1.0 + exp(-δx))))
+    return @fastmath λ * exp(ω / δx)
   end
 end
 
@@ -657,22 +657,17 @@ function makellr_biogeo(Y    ::Array{Int64,3},
                ω1p::Float64,
                LD ::Array{Float64,3})
 
-    if -1.0 > ω1p
-      return -Inf
-    else
+    llr::Float64 = 0.0
 
-      llr::Float64 = 0.0
+    @inbounds begin
 
-      @inbounds begin
-
-        for k = Base.OneTo(narea), j = Base.OneTo(ntip)
-          llr +=  bitvectorllr_ω1(Y, λ1, ω1c, ω1p, LD, δt, 
-                                  j, k, wf23[j], m)
-        end
+      for k = Base.OneTo(narea), j = Base.OneTo(ntip)
+        llr +=  bitvectorllr_ω1(Y, λ1, ω1c, ω1p, LD, δt, 
+                                j, k, wf23[j], m)
       end
-
-      return llr
     end
+
+    return llr
   end
 
 
@@ -682,23 +677,17 @@ function makellr_biogeo(Y    ::Array{Int64,3},
                ω0p::Float64,
                LD ::Array{Float64,3})
 
+    llr::Float64 = 0.0
 
-    if -1.0 > ω0p
-      return -Inf
-    else
+    @inbounds begin
 
-      llr::Float64 = 0.0
-
-      @inbounds begin
-
-        for k = Base.OneTo(narea), j = Base.OneTo(ntip)
-          llr += bitvectorllr_ω0(Y, λ0, ω0c, ω0p, LD, δt, 
-                                 j, k, wf23[j], m)
-        end
+      for k = Base.OneTo(narea), j = Base.OneTo(ntip)
+        llr += bitvectorllr_ω0(Y, λ0, ω0c, ω0p, LD, δt, 
+                               j, k, wf23[j], m)
       end
-
-      return llr
     end
+
+    return llr
   end
 
 
@@ -1212,15 +1201,11 @@ function evllr_ω(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      eϕ  = exp(-δx)
-      ieϕ = 1.0/(1.0+eϕ)
-      return Base.Math.JuliaLibm.log((0.5 + 0.5*eϕ + ωp*eϕ)/
-                                     (0.5 + 0.5*eϕ + ωc*eϕ)) +
-             2.0*λ*t*(ωc - ωp + ωp*ieϕ - ωc*ieϕ)
+      return (ωp - ωc) / δx + 
+              t * λ * (exp(ωc/δx) - exp(ωp/δx))
     end
   end
 end
-
 
 
 
@@ -1243,13 +1228,14 @@ function evllr_λ(t ::Float64,
   @fastmath begin
     if iszero(δx)
       return Base.Math.JuliaLibm.log(λp/λc) +
-             t*(λc - λp)
+             t * (λc - λp)
     else
       return Base.Math.JuliaLibm.log(λp/λc) +
-             2.0*t*(λc - λp)*(0.5 + ω - ω/(1.0 + exp(-δx)))
+             t * exp(ω/δx) * (λc - λp)
     end
   end
 end
+
 
 
 
@@ -1285,13 +1271,10 @@ function nellr_ω(t ::Float64,
     if iszero(δx)
       return 0.0
     else
-      eϕ  = exp(-δx)
-      ieϕ = 1.0/(1.0+eϕ)
-      return 2.0*λ*t*(ωc - ωp + ωp*ieϕ - ωc*ieϕ)
+      return t * λ * (exp(ωc/δx) - exp(ωp/δx))
     end
   end
 end
-
 
 
 
@@ -1314,12 +1297,10 @@ function nellr_λ(t  ::Float64,
     if iszero(δx)
       return t*(λc - λp)
     else
-      return 2.0*t*(λc - λp)*(0.5 + ω - ω/(1.0 + exp(-δx)))
+      return t * exp(ω/δx) * (λc - λp)
     end
   end
 end
-
-
 
 
 
