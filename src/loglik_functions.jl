@@ -34,7 +34,7 @@ function f_λ(λ::Float64, ω::Float64, δx::Float64)
   if iszero(δx) 
     return λ
   else
-    return @fastmath λ * exp(ω / δx)
+    return λ * (1.0 + exp(-δx))^ω
   end
 end
 
@@ -1201,8 +1201,9 @@ function evllr_ω(t  ::Float64,
     if iszero(δx)
       return 0.0
     else
-      return (ωp - ωc) / δx + 
-              t * λ * (exp(ωc/δx) - exp(ωp/δx))
+      eϕp1 = 1.0 + exp(-δx) 
+      return (ωp - ωc) * Base.Math.JuliaLibm.log(eϕp1) + 
+              t * λ * (eϕp1^ωc - eϕp1^ωp)
     end
   end
 end
@@ -1231,12 +1232,10 @@ function evllr_λ(t ::Float64,
              t * (λc - λp)
     else
       return Base.Math.JuliaLibm.log(λp/λc) +
-             t * exp(ω/δx) * (λc - λp)
+             t * (1.0 + exp(-δx))^ω * (λc - λp)
     end
   end
 end
-
-
 
 
 
@@ -1267,14 +1266,14 @@ function nellr_ω(t ::Float64,
                  ωp::Float64,
                  λ ::Float64,
                  δx::Float64)
-  @fastmath begin
-    if iszero(δx)
-      return 0.0
-    else
-      return t * λ * (exp(ωc/δx) - exp(ωp/δx))
-    end
+  if iszero(δx)
+    return 0.0
+  else
+    eϕp1 = 1.0 + exp(-δx) 
+    return t * λ * (eϕp1^ωc - eϕp1^ωp)
   end
 end
+
 
 
 
@@ -1293,14 +1292,13 @@ function nellr_λ(t  ::Float64,
                   λc::Float64,
                   λp::Float64,
                   δx ::Float64)
-  @fastmath begin
-    if iszero(δx)
-      return t*(λc - λp)
-    else
-      return t * exp(ω/δx) * (λc - λp)
-    end
+  if iszero(δx)
+    return t * (λc - λp)
+  else
+    return t * (1.0 + exp(-δx))^ω * (λc - λp)
   end
 end
+
 
 
 
