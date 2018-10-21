@@ -203,7 +203,7 @@ function lindiff!(LD   ::Array{Float64,3},
 
     for k = Base.OneTo(narea), i = Base.OneTo(m), l = wcol[i]
 
-      xmin = 1.0e20
+      xmin = Inf
       for j = wcol[i]
         j == l && continue
         if Y[i,j,k] == 1
@@ -212,7 +212,7 @@ function lindiff!(LD   ::Array{Float64,3},
           xmin = x < xmin ? x : xmin
         end
       end
-      LD[i,l,k] = xmin == 1.0e20 ? 0.0 : xmin
+      LD[i,l,k] = xmin == Inf ? 0.0 : xmin
     end
   end
 
@@ -277,7 +277,7 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
 
     # estimate lineage sum of distances
     for k = Base.OneTo(narea), l = wci
-      xmin = 1.0e20
+      xmin = Inf
       for j = wci
         j == l && continue
         if Y[xi,j,k] == 1
@@ -286,7 +286,7 @@ function Xupd_linavg!(δxi  ::Array{Float64,2},
           xmin = x < xmin ? x : xmin
         end
       end
-      ldi[l,k] = xmin == 1.0e20 ? 0.0 : xmin
+      ldi[l,k] = xmin == Inf ? 0.0 : xmin
     end
   end
 

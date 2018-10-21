@@ -267,7 +267,7 @@ function burn_tribe(total_llf     ::Function,
         else
           llr = σ²upd_llr(Xc, LAnc, ωxc, σ²c, σ²p)::Float64
         end
-        
+
         # prior ratio
         prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
@@ -328,6 +328,7 @@ function burn_tribe(total_llf     ::Function,
 
         ω0p = addupt(ω0c, ptn[4])
 
+        # proposal likelihood and prior
         llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)::Float64
 
         # prior ratio

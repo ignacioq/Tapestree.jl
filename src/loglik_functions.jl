@@ -235,7 +235,7 @@ function bitvectorll(Y ::Array{Int64,3},
           ll += nell(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= m && break
+        i == m && break
 
         ll += evll(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
         i += 1
@@ -244,7 +244,7 @@ function bitvectorll(Y ::Array{Int64,3},
           ll += nell(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= m && break
+        i == m && break
 
         ll += evll(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
         i += 1
@@ -257,7 +257,7 @@ function bitvectorll(Y ::Array{Int64,3},
           ll += nell(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= m && break
+        i == m && break
 
         ll += evll(δt[i], f_λ(λ0, ω0, LD[i,j,k]))::Float64
         i += 1
@@ -266,7 +266,7 @@ function bitvectorll(Y ::Array{Int64,3},
           ll += nell(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
           i += 1
         end
-        i >= m && break
+        i == m && break
 
         ll += evll(δt[i], f_λ(λ1, ω1, LD[i,j,k]))::Float64
         i += 1
@@ -277,7 +277,6 @@ function bitvectorll(Y ::Array{Int64,3},
 
   return ll::Float64
 end
-
 
 
 
@@ -744,9 +743,6 @@ function makellr_biogeo(Y    ::Array{Int64,3},
     return llr
   end
 
-
-
-
   return fω1, fω0, fλ1, fλ0
 end
 
@@ -1154,12 +1150,12 @@ Return likelihood for a branch in continuous time.
 """
 function brll(brevs::Array{Float64,1}, λ1::Float64, λ0::Float64, si::Int64)
 
-  ll ::Float64 = 0.0
+  ll::Float64 = 0.0
 
   if endof(brevs) > 1 
     for i = Base.OneTo(endof(brevs)-1)
       ll += evll(brevs[i], iszero(si) ? λ1 : λ0)::Float64
-      si = 1 - si
+      si  = 1 - si
     end
   end
 
@@ -1167,7 +1163,6 @@ function brll(brevs::Array{Float64,1}, λ1::Float64, λ0::Float64, si::Int64)
 
   return ll::Float64
 end
-
 
 
 
@@ -1462,10 +1457,10 @@ llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
 
 
 """
-    llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64)
+    llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64)
 
 Compute the log-likelihood ratio for the **Normal** density 
-for `x` updates
+for `x` and `μ` updates
 """
 llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64) =
   @fastmath ((xc - μc)^2 - (xp - μp)^2)/(2.0σ²)

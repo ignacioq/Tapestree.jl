@@ -470,7 +470,6 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
                         stemevc, stemevp, brs, brsp, σ²c)
       end
 
-
       if -randexp() < (llr + 
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
                        bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0))
@@ -675,14 +674,14 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
       sde!(LApp, LAnp, δXp, δYp, wcol, m, ntip)
       lindiff!(LDp, δXp, Yp, wcol, m, ntip, narea)
 
-      if ωxc >= 0.0
-        llr = total_llr(Xc, Xp, Yc, Yp, LApc, LApp, LDc, LDp, 
-                        ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevp, brs, brsp, σ²c)
+      llr = if ωxc >= 0.0
+        total_llr(Xc, Xp, Yc, Yp, LApc, LApp, LDc, LDp, 
+                  ωxc, ω1c, ω0c, λ1c, λ0c,
+                  stemevc, stemevp, brs, brsp, σ²c)
       else
-        llr = total_llr(Xc, Xp, Yc, Yp, LAnc, LAnp, LDc, LDp, 
-                        ωxc, ω1c, ω0c, λ1c, λ0c,
-                        stemevc, stemevp, brs, brsp, σ²c)
+        total_llr(Xc, Xp, Yc, Yp, LAnc, LAnp, LDc, LDp, 
+                  ωxc, ω1c, ω0c, λ1c, λ0c,
+                  stemevc, stemevp, brs, brsp, σ²c)
       end
 
       if -randexp() < (llr + 
@@ -713,9 +712,6 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
   end
 
 end
-
-
-
 
 
 
