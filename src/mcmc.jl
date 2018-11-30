@@ -32,6 +32,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                     nthin   ::Int64             = 1_000,
                     nburn   ::Int64             = 500_000,
                     saveXY  ::Tuple{Bool,Int64} = (false, 1_000),
+                    saveDM  ::Tuple{Bool,Int64} = (false, 1_000),
                     ωxprior ::NTuple{2,Float64} = (0.,10.),
                     ω1prior ::NTuple{2,Float64} = (0.,10.),
                     ω0prior ::NTuple{2,Float64} = (0.,10.),
@@ -205,6 +206,14 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
     const xylogs = fld(niter,saveXY[2])
     const Xlog   = zeros(Float64, m, ntip, xylogs)
     const Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
+
+    if saveDM[1]
+      const DMsav  = 0
+      const DMlit  = 0
+      const dmlogs = fld(niter,saveDM[2])
+      const LAlog = zeros(Float64, m, ntip, dmlogs)
+      const LDlog  = zeros(Float64, m, ntip, narea, dmlogs)
+    end
   end
 
   # progress bar
@@ -380,6 +389,19 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
         end
       end
 
+      # log deterministic matrices
+      if saveDM[1]
+        DMsav += 1
+        if DMsav == saveDM[2]
+          @inbounds begin
+            DMlit += 1
+            LAlog[:,:,  DMlit] = ωxc > 0 ? LApc * ωxc : LAnc * ωxc
+            LDlog[:,:,:,DMlit] = LDc 
+          end
+          DMsav = 0
+        end
+      end
+
       next!(p)
     end # end MCMC
   end # end print loop
@@ -390,10 +412,22 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
     @rput Ylog
     @rput δt
     @rput B
-    reval("""
-      delta.t <- δt
-      save(Xlog, Ylog, B, delta.t, file = '$out_file.rda')
-    """)
+
+    if saveDM[1]
+      @rput LAlog
+      @rput LDlog
+      reval("""
+        delta.t <- δt
+        save(Xlog, Ylog, B, delta.t, LAlog, LDlog, 
+            file = '$out_file.rda')
+      """)
+    else
+      reval("""
+        delta.t <- δt
+        save(Xlog, Ylog, B, delta.t, file = '$out_file.rda')
+      """)
+    end
+
   end
 
   return llc, prc, ωxc, ω1c, ω0c, σ²c, λ1c, λ0c, Xc, Yc
