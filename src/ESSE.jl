@@ -35,7 +35,7 @@ module ESSE
   include("musse_slice_sampler.jl")
   include("wrapper.jl")
   include("utils.jl")
-  include("/repos/esse/jl/simulate_esse.jl")
+  include("simulate_esse.jl")
 
 end # module ESSE
 
