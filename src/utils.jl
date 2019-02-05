@@ -17,7 +17,7 @@ October 30 2017
 
 Build dictionary for parameter names and indexes.
 """
-function build_par_names(k::Int64, T::Bool = true)
+function build_par_names(k::Int64, T::Bool)
 
   par_nams = String[]
   # build parameters name 
@@ -63,7 +63,6 @@ end
 
 """
     build_par_names(k::Int64)
-
 Build dictionary for parameter names and indexes.
 """
 function build_par_names(k::Int64)
@@ -91,7 +90,6 @@ function build_par_names(k::Int64)
 
   return pardic
 end
-
 
 
 

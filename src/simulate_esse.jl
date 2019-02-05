@@ -109,6 +109,8 @@ function simesse(λ       ::Array{Float64,1},
     ny = reverse(ny, dims = 1)
   end
 
+  tip_val = states_to_values(tip_val, lastindex(λ))
+
   return tip_val, ed, el, nx, ny
 end
 
@@ -144,7 +146,7 @@ function simedges(λ       ::Array{Float64,1},
   md = size(y, 2) > 1
 
   # check number of parameters and data
-  ws, we, wq = id_mod(esse_mod, k, md, size(y, 2))
+  ws, we, wq = id_mod(esse_mod, k, md, size(y, 2), λ, μ, β, Q)
 
   # total simulation time
   simt = 0.0
@@ -411,7 +413,14 @@ end
 Check if number of parameters and `z(t)` functions 
 is consistent with specified model.
 """
-function id_mod(esse_mod::String, k::Int64, md::Bool, nzt::Int64)
+function id_mod(esse_mod::String, 
+                k  ::Int64, 
+                md ::Bool, 
+                nzt::Int64,
+                λ  ::Array{Float64,1}, 
+                μ  ::Array{Float64,1}, 
+                β  ::Array{Float64}, 
+                Q  ::Array{Float64})
 
   allok = true
 
