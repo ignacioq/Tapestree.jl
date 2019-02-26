@@ -89,9 +89,11 @@ using Tapestree
 finches_tree_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_rescaled.tre")
 ```
 
-4. Perform simulation
+4. Perform simulation (here with the inital trait with value 0.0 and 6 areas on the finches tree)
 ```julia
- tip_values, tip_areas, tree, bts = simulate_tribe(0.0, 12, tree_file)
+x_init  = 0.0
+n_areas = 6
+tip_values, tip_areas, tree, bts = simulate_tribe(x_init, n_areas, finches_tree_file)
 ```
 
 
@@ -111,7 +113,7 @@ const_δt = 1e-4  # a float for the delta t used to approximate the simulation (
 out_file  = *(homedir(),"...")
 ```
 
-6. Run the `tribe()` as with inference:
+6. Run the `tribe()` as with inference (optional parameters are the same):
 ```julia
 tribe(tip_values, tip_areas, tree, bts, out_file)
 ```
