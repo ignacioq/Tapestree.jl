@@ -37,12 +37,12 @@ using Tapestree
 
 3. Specify the path to the phylogenetic tree (in a format that `ape` can read):
 ```julia
-finches_tree_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_rescaled.tre")
+finches_tree_file = "/directory_where_Tapestree_was_cloned/Tapestree/data/finches_rescaled.tre")
 ```
 
 4. Specify data. Data should be a `.txt` file where each row is a species, first the species name that matches the tree tip labels, second the phenotypic data and then the species presence in each area (`0` if absent and `1` if present) . Open `finches_pca1.txt` in the data folder to see an example.
 ```julia
-finches_data_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_pca1.txt")
+finches_data_file = "/directory_where_Tapestree_was_cloned/Tapestree/data/finches_pca1.txt"
 ```
 
 5. Specify output file (`homedir()` is an alias to your home folder)
@@ -93,7 +93,7 @@ using Tapestree
 
 3. Specify the path to the phylogenetic tree (in a format that `ape` can read):
 ```julia
-finches_tree_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_rescaled.tre")
+finches_tree_file = "/directory_where_Tapestree_was_cloned/Tapestree/data/finches_rescaled.tre")
 ```
 
 4. Perform simulation (here with 0.0 as the inital trait value and 6 areas on the finches tree)
