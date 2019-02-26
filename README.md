@@ -13,41 +13,42 @@ Quintero, I. and Landis, Micahel J. Interdependent Phenotypic and Biogeographic 
 
 ## Usage
 
-1. Requirements:
+### Requirements:
   * Julia v0.6.x (I'm working on updating the code for v1.x) 
   * R installed
   * R `ape` package installed.
 
-2. Open Julia v0.6.x
+### Inference
 
-3. Load Tapestree package: 
+
+1. Open Julia v0.6.x
+
+2. Load Tapestree package: 
 ```julia
 using Tapestree
 ```
 
-4. Specify the path to the phylogenetic tree (in a format that `ape` can read):
+3. Specify the path to the phylogenetic tree (in a format that `ape` can read):
 ```julia
 finches_tree_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_rescaled.tre")
 ```
 
-5. Specify data. Data should be a `.txt` file where each row is a species, first the species name that matches the tree tip labels, second the phenotypic data and then the species presence in each area (`0` if absent and `1` if present) . Open `finches_pca1.txt` in the data folder to see an example.
+4. Specify data. Data should be a `.txt` file where each row is a species, first the species name that matches the tree tip labels, second the phenotypic data and then the species presence in each area (`0` if absent and `1` if present) . Open `finches_pca1.txt` in the data folder to see an example.
 ```julia
 finches_data_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_pca1.txt")
 ```
 
-6. Specify output file (`homedir()` is an alias to your home folder)
+5. Specify output file (`homedir()` is an alias to your home folder)
 ```julia
 out_file  = *(homedir(),"...")
 ```
 
-7. Run the `tribe()` (TRIBE: Trait and Range Interspecific Biogeographic Evolution) model:
+6. Run the `tribe()` (TRIBE: Trait and Range Interspecific Biogeographic Evolution) model:
 ```julia
-tribe(finches_tree_file,
-      finches_data_file,
-      out_file)
+tribe(finches_tree_file, finches_data_file, out_file)
 ```
 
-8. Further options for `tribe()` are
+7. Further options for `tribe()` are
 ```julia
 min_dt  = 0.01                       # a float describing the percentage of tree height allowed for discretization (lower values are more precise but take longer).
 niter   = 10_000                     # an integer for the number of iterations.
@@ -71,11 +72,49 @@ fix_ω1  = false                      # a boolean to make inference without ω1.
 fix_ω0  = false                      # a boolean to make inference without ω0.
 ```
 
-9. The output is `.log` file with the results of the MCMC chain, and optionally (if `saveXY = (true, k)`), an R data file (`.Rdata`) with the augmented data histories. R code to manipulate and visualize this output are provided upon request.
+8. The output is `.log` file with the results of the MCMC chain, and optionally (if `saveXY = (true, k)`), an R data file (`.Rdata`) with the augmented data histories. R code to manipulate and visualize this output are provided upon request.
 
 
+### Simulation
+
+1. Open Julia v0.6.x
+
+2. Load Tapestree package: 
+```julia
+using Tapestree
+```
+
+3. Specify the path to the phylogenetic tree (in a format that `ape` can read):
+```julia
+finches_tree_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_rescaled.tre")
+```
+
+4. Perform simulation
+```julia
+ tip_values, tip_areas, tree, bts = simulate_tribe(0.0, 12, tree_file)
+```
 
 
+5. Further options for `simulate_tribe()` are
+```julia
+ωx       = 0.0   # a float for simulated value of ωx.
+σ²       = 0.5   # a float for simulated value of σ².
+ω1       = 0.0   # a float for simulated value of ω1.
+ω0       = 0.0   # a float for simulated value of ω0.
+λ1       = 0.5   # a float for simulated value of λ1.
+λ0       = 0.2   # a float for simulated value of λ0.
+const_δt = 1e-4  # a float for the delta t used to approximate the simulation (lower values are more accurate but at a slight computation cost).
+```
+
+6. Specify output file (`homedir()` is an alias to your home folder)
+```julia
+out_file  = *(homedir(),"...")
+```
+
+6. Run the `tribe()` as with inference:
+```julia
+tribe(tip_values, tip_areas, tree, bts, out_file)
+```
 
 
 
