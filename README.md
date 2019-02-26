@@ -9,7 +9,7 @@
 ## Reference
 
 Package that implements a joint model of trait evolution and biogeographic history described in: 
-Quintero, I. and Landis, Micahel J. Interdependent Phenotypic and Biogeographic Evolution Driven by Biotic Interactions. bioRxiv 560912 [link](https://doi.org/10.1101/560912).
+Quintero, I. and Landis, Michael J. Interdependent Phenotypic and Biogeographic Evolution Driven by Biotic Interactions. bioRxiv 560912 [link](https://doi.org/10.1101/560912).
 
 ## Usage
 
