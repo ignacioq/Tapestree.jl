@@ -96,7 +96,7 @@ using Tapestree
 finches_tree_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_rescaled.tre")
 ```
 
-4. Perform simulation (here with the inital trait with value 0.0 and 6 areas on the finches tree)
+4. Perform simulation (here with 0.0 as the inital trait value and 6 areas on the finches tree)
 ```julia
 x_init  = 0.0
 n_areas = 6
