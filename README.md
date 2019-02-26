@@ -79,7 +79,7 @@ fix_ω1  = false                      # a boolean to make inference without ω1.
 fix_ω0  = false                      # a boolean to make inference without ω0.
 ```
 
-8. The output is `.log` file with the results of the MCMC chain, and optionally (if `saveXY = (true, k)`), an R data file (`.Rdata`) with the augmented data histories. R code to manipulate and visualize this output are provided upon request.
+8. The output is a `.log` file with the results of the MCMC chain, and optionally (if `saveXY = (true, k)`), an R data file (`.Rdata`) with the augmented data histories. R code to manipulate and visualize this output are provided upon request.
 
 
 ### Simulation
