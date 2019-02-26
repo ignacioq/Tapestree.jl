@@ -20,7 +20,7 @@ Quintero, I. and Landis, Michael J. Interdependent Phenotypic and Biogeographic 
     push!(LOAD_PATH, expanduser("cloned_repo_dir"))
     using Tapestree
     ```
-    Change `cloned_repo_dir` with the directory pointing where Tapestree was cloned to.
+    Change `cloned_repo_dir` with the directory pointing where Tapestree was cloned to. Note that if you clone this repo into the `/.julia/lib/v0.6/` directory (usually in the home folder when installing Julia) you can load Tapestree by using only `using Tapestree`. 
   * Packages `RCall`, `Optim` and `ProgressMeter`. Use `Pkg.add("package_name")` for Julia v0.6.x.
   * R installed
   * R `ape` package installed.
