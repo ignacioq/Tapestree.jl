@@ -21,6 +21,7 @@ Quintero, I. and Landis, Micahel J. Interdependent Phenotypic and Biogeographic 
     using Tapestree
     ```
     Change `cloned_repo_dir` with the directory pointing where Tapestree was cloned to.
+  * Packages `RCall`, `Optim` and `ProgressMeter`. Use `Pkg.add("package_name")` for Julia v0.6.x.
   * R installed
   * R `ape` package installed.
 
