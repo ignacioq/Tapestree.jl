@@ -15,6 +15,12 @@ Quintero, I. and Landis, Micahel J. Interdependent Phenotypic and Biogeographic 
 
 ### Requirements:
   * Julia v0.6.x (I'm working on updating the code for v1.x) 
+  * Tapestree Package installed (Not available from Julia package repository yet. Please clone the repo and run: 
+    ```julia
+    push!(LOAD_PATH, expanduser("cloned_repo_dir"))
+    using Tapestree
+    ```
+    Change `cloned_repo_dir` with the directory pointing where Tapestree was cloned to.
   * R installed
   * R `ape` package installed.
 
@@ -113,7 +119,7 @@ const_δt = 1e-4  # a float for the delta t used to approximate the simulation (
 out_file  = *(homedir(),"...")
 ```
 
-6. Run the `tribe()` as with inference (optional parameters are the same):
+7. Run the `tribe()` (optional parameters are the same as with inference):
 ```julia
 tribe(tip_values, tip_areas, tree, bts, out_file)
 ```
