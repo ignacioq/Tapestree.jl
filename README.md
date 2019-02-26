@@ -13,41 +13,41 @@ Quintero, I. and Landis, Micahel J. Interdependent Phenotypic and Biogeographic 
 
 ## Usage
 
-i. Requirements:
-  1. Julia v0.6.x (I'm working on updating the code for v1.x) 
-  2. R installed
-  3. R `ape` package installed.
+1. Requirements:
+  * Julia v0.6.x (I'm working on updating the code for v1.x) 
+  * R installed
+  * R `ape` package installed.
 
-ii. Open Julia v0.6.x
+2. Open Julia v0.6.x
 
-iii. Load Tapestree package: 
+3. Load Tapestree package: 
 ```julia
 using Tapestree
 ```
 
-iv. Specify the path to the phylogenetic tree (in a format that `ape` can read):
+4. Specify the path to the phylogenetic tree (in a format that `ape` can read):
 ```julia
 finches_tree_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_rescaled.tre")`
 ```
 
-v. Specify data. Data should be a `.txt` file where each row is a species, first the species name that matches the tree tip labels, second the phenotypic data and then the species presence in each area (`0` if absent and `1` if present) . Open `finches_pca1.txt` in the data folder to see an example.
+5. Specify data. Data should be a `.txt` file where each row is a species, first the species name that matches the tree tip labels, second the phenotypic data and then the species presence in each area (`0` if absent and `1` if present) . Open `finches_pca1.txt` in the data folder to see an example.
 ```julia
 finches_data_file = joinpath(Pkg.dir("Tapestree"), "data", "finches_pca1.txt")`
 ```
 
-vi. Specify output file (`homedir()` is an alias to your home folder)
+6. Specify output file (`homedir()` is an alias to your home folder)
 ```julia
 out_file  = *(homedir(),"...")
 ```
 
-vii. Run the `tribe()` (TRIBE: Trait and Range Interspecific Biogeographic Evolution) model:
+7. Run the `tribe()` (TRIBE: Trait and Range Interspecific Biogeographic Evolution) model:
 ```julia
 tribe(finches_tree_file,
       finches_data_file,
       out_file)
 ```
 
-viii. Further options for `tribe()` are
+8. Further options for `tribe()` are
 ```julia
 min_dt  = 0.01                       # a float describing the percentage of tree height allowed for discretization (lower values are more precise but take longer).
 niter   = 10_000                     # an integer for the number of iterations.
@@ -71,7 +71,7 @@ fix_ω1  = false                      # a boolean to make inference without ω1.
 fix_ω0  = false                      # a boolean to make inference without ω0.
 ```
 
-ix. The output is `.log` file with the results of the MCMC chain, and optionally (if `saveXY = (true, k)`), an R data file (`.Rdata`) with the augmented data histories. R code to manipulate and visualize this output are provided upon request.
+9. The output is `.log` file with the results of the MCMC chain, and optionally (if `saveXY = (true, k)`), an R data file (`.Rdata`) with the augmented data histories. R code to manipulate and visualize this output are provided upon request.
 
 
 
