@@ -105,6 +105,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
   # make ode solver
   ode_solve = make_solver(ode_fun, p)
 
+  # make speciation events
   λevent! = make_λevent(af, k, ws, md)
 
   function f(p::Array{Float64})
@@ -152,6 +153,12 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       end
 
       # stem branch
+
+      #=
+      Think of how to combine likelihoods at the root
+      =#
+
+
       rll = ode_solve(led[ne], p, elrt[ne,2], elrt[ne,1])::Array{Float64,1}
 
       if check_negs(rll, k)
