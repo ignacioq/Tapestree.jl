@@ -141,31 +141,6 @@ function geohisse_2k(du::Array{Float64,1},
   return nothing
 end
 
-prob = ODEProblem(geohisse_2k, u, (0.0,0.1), p)
-@benchmark solve(prob,
-      Tsit5(), 
-      save_everystep = false, 
-      calck          = false,
-      force_dtmin    = true,
-      maxiters       = 100_000_000).u[2]
-
-
-prob = ODEProblem(geohisse_2k, u, (0.0,1.0), p)
-@benchmark solve(prob,
-      Tsit5(), 
-      save_everystep = false, 
-      calck          = false,
-      force_dtmin    = true,
-      maxiters       = 100_000_000).u[2]
-
-
-prob = ODEProblem(geohisse_2k, u, (0.0,10.0), p)
-@benchmark solve(prob,
-      Tsit5(), 
-      save_everystep = false, 
-      calck          = false,
-      force_dtmin    = true,
-      maxiters       = 100_000_000).u[2]
 
 
 
@@ -220,9 +195,9 @@ function make_egeohisse_2k_s(af::Function)
                 p[7]*u[3] + p[19]*u[8] + 2.0*sb1*u[2]*u[5]
       # area AB
       du[3] = -(sa1 + sb1 + p[3] + p[8] + p[9] + p[19])*u[3] + 
-                p[8]*u[1] + p[9]*u[2]+ p[19]*u[9]              +
-                sa1*(u[4]*u[3] + u[6]*u[1])                   + 
-                sb1*(u[5]*u[3] + u[6]*u[2])                   + 
+                p[8]*u[1] + p[9]*u[2]+ p[19]*u[9]            +
+                sa1*(u[4]*u[3] + u[6]*u[1])                  + 
+                sb1*(u[5]*u[3] + u[6]*u[2])                  + 
                 p[3]*(u[4]*u[2] + u[5]*u[1])
       ## extinction
       # area A
@@ -267,39 +242,6 @@ function make_egeohisse_2k_s(af::Function)
 
   return f
 end
-
-
-
-
-x = pushfirst!(cumsum(rand(50)), 0.0)
-y = cumsum(randn(51))
-
-af = make_approxf(x, y)
-
-egeohisse_2k_s = make_egeohisse_2k_s(af)
-
-p = rand(24)
-u = rand(12)
-
-
-prob = ODEProblem(egeohisse_2k_s, u, (0.0,1.0), p)
-
-
-solve(prob,
-      Tsit5(), 
-      save_everystep = false, 
-      calck          = false,
-      force_dtmin    = true,
-      maxiters       = 100_000_000).u[2]
-
-
-prob = ODEProblem(egeohisse_2k_s, u, (0.0,1.0), p)
-@benchmark solve(prob,
-      Tsit5(), 
-      save_everystep = false, 
-      calck          = false,
-      force_dtmin    = true,
-      maxiters       = 100_000_000).u[2]
 
 
 
@@ -402,7 +344,6 @@ function make_egeohisse_2k_e(af::Function)
 
   return f
 end
-
 
 
 

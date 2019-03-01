@@ -15,16 +15,16 @@ September 19 2017
 
 Make **ODE** solver for `odef`.
 """
-function make_solver(odef, p0::Array{Float64,1})
+function make_solver(odef, p0::Array{Float64,1}, u0::Array{Float64,1})
 
-  prob = ODEProblem(odef, Array{Float64}(undef, 2odef.k), (0.0,1.0), p0)
+  prob = ODEProblem(odef, u0, (0.0,1.0), p0)
 
-  function f(u0::Array{Float64,1}, 
+  function f(u ::Array{Float64,1}, 
              p ::Array{Float64,1},
              ti::Float64,
              tf::Float64)
 
-    prob = ODEProblem(prob.f, u0, (ti, tf), p)
+    prob = ODEProblem(prob.f, u, (ti, tf), p)
 
     solve(prob,
           Tsit5(), 
@@ -36,9 +36,3 @@ function make_solver(odef, p0::Array{Float64,1})
 
   return f
 end
-
-
-
-
-
-

@@ -13,9 +13,120 @@ October 30 2017
 
 
 """
+  subsets(x::Array{String,1})
+
+Create all subsets from each string (letters) in x.
+"""
+function subsets(x::Array{String,1})
+  ss = [""]
+  for elem in x, j in eachindex(ss)
+      push!(ss, ss[j]*elem)
+  end
+
+  return ss
+end
+
+
+
+
+
+"""
+    build_par_names(k::Int64, h::Int64, mod::NTuple{3,Bool})
+
+Build dictionary for parameter names and indexes for EGeoHiSSE for
+`k` areas and `h` hidden states.
+"""
+function build_par_names(k::Int64, h::Int64, model::NTuple{3,Bool})
+
+  # generate individual area names
+  ia = String[]
+  for i = 0:(k-1)
+    push!(ia, string('A' + i))
+  end
+
+  # generate area state space
+  sa = subsets(ia)
+
+  # remove empty areas
+  popfirst!(sa)
+
+  # total state space length
+  na = lastindex(sa)
+
+  # add hidden states
+  S = Array{String,1}(undef, na*h)
+  for j = 0:(h-1), i = Base.OneTo(na)
+    S[na*j + i] = sa[i]*"_$j"
+  end
+
+  ## build parameters name 
+  par_nams = String[]
+
+  # add λ names
+  for s = S
+    push!(par_nams, "lambda_$s")
+  end
+
+  # which endemics
+  wend = findall(x -> lastindex(x) == 3, S)
+  # add μ names for endemics
+  for i = Base.OneTo(k*h)
+    push!(par_nams, "mu_$(S[wend[i]])")
+  end
+
+  # add q between areas
+  # transitions can only through a widespread transition
+
+  #=
+  CHECK FOR DISTINC COLONIZATION RATES BETWEEN AREAS (separate 
+  rates or sum of rates of dispersal)
+  =#
+
+  for i = 0:(h-1), a = sa, b = sa
+    if a == b 
+      continue
+    elseif occursin(a, b) || occursin(b, a)
+      push!(par_nams, "q_$(a)_$(b)_$i")
+    end
+  end
+
+  # add q between hidden states
+  for j = 0:(h-1), i = 0:(h-1)
+    if j == i 
+      continue
+    end
+    push!(par_nams, "q_$(j)$(i)")
+  end
+
+  ## add betas
+  # if model is Q
+  if model[3]
+    for i = 0:(h-1), a = sa, b = sa
+      if a == b 
+        continue
+      elseif occursin(a, b) || occursin(b, a)
+        push!(par_nams, "beta_$(a)_$(b)_$i")
+      end
+    end
+  # if model is speciation or extinction
+  else
+    for we = wend
+      push!(par_nams, "beta_$(S[we])")
+    end
+  end
+
+  pardic = Dict(par_nams[i] => i for i = Base.OneTo(lastindex(par_nams)))
+
+  return pardic
+end
+
+
+
+
+"""
     build_par_names(k::Int64, T::Bool)
 
-Build dictionary for parameter names and indexes.
+Build dictionary for parameter names and indexes for ESSE.
 """
 function build_par_names(k::Int64, T::Bool)
 
@@ -61,9 +172,11 @@ end
 
 
 
+
 """
     build_par_names(k::Int64)
-Build dictionary for parameter names and indexes.
+
+Build dictionary for parameter names and indexes for MUSSE.
 """
 function build_par_names(k::Int64)
 
