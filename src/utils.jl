@@ -19,7 +19,7 @@ Create all subsets from each string (letters) in x.
 """
 function subsets(x::Array{String,1})
   ss = [""]
-  for elem in x, j in eachindex(ss)
+  for elem = x, j = eachindex(ss)
       push!(ss, ss[j]*elem)
   end
 
@@ -44,74 +44,52 @@ function build_par_names(k::Int64, h::Int64, model::NTuple{3,Bool})
     push!(ia, string('A' + i))
   end
 
-  # generate area state space
-  sa = subsets(ia)
-
-  # remove empty areas
-  popfirst!(sa)
-
-  # total state space length
-  na = lastindex(sa)
-
-  # add hidden states
-  S = Array{String,1}(undef, na*h)
-  for j = 0:(h-1), i = Base.OneTo(na)
-    S[na*j + i] = sa[i]*"_$j"
-  end
-
   ## build parameters name 
   par_nams = String[]
 
-  # add λ names
-  for s = S
-    push!(par_nams, "lambda_$s")
-  end
-
-  # which endemics
-  wend = findall(x -> lastindex(x) == 3, S)
-  # add μ names for endemics
-  for i = Base.OneTo(k*h)
-    push!(par_nams, "mu_$(S[wend[i]])")
-  end
-
-  # add q between areas
-  # transitions can only through a widespread transition
-
-  #=
-  CHECK FOR DISTINC COLONIZATION RATES BETWEEN AREAS (separate 
-  rates or sum of rates of dispersal)
-  =#
-
-  for i = 0:(h-1), a = sa, b = sa
-    if a == b 
-      continue
-    elseif occursin(a, b) || occursin(b, a)
-      push!(par_nams, "q_$(a)_$(b)_$i")
+  # add λ names but only one between-regions speciation rate
+  for j = 0:(h-1)
+    for a = ia
+      push!(par_nams, "lambda_$(a)_$j")
     end
+    lastindex(ia) > 1 && push!(par_nams, "lambda_W_$j")
+  end
+
+  # add μ names for endemics
+  for j = 0:(h-1), i = ia
+    push!(par_nams, "mu_$(i)_$j")
+  end
+
+  # add area gains `g`
+  # transitions can only through **one area** transition
+  for i = 0:(h-1), a = ia, b = ia
+    a == b && continue
+    push!(par_nams, "gain_$(a)$(b)_$i")
+  end
+
+  # add area looses `l`
+  # transitions can only through **one area** transition
+  for i = 0:(h-1), a = ia
+    push!(par_nams, "loss_$(a)_$i")
   end
 
   # add q between hidden states
   for j = 0:(h-1), i = 0:(h-1)
-    if j == i 
-      continue
-    end
+    j == i && continue 
     push!(par_nams, "q_$(j)$(i)")
   end
 
   ## add betas
-  # if model is Q
+  # if model is on Q
   if model[3]
-    for i = 0:(h-1), a = sa, b = sa
-      if a == b 
-        continue
-      elseif occursin(a, b) || occursin(b, a)
-        push!(par_nams, "beta_$(a)_$(b)_$i")
-      end
+    for i = 0:(h-1), a = ia, b = ia
+      a == b && continue
+      push!(par_nams, "beta_$(a)$(b)_$i")
     end
   # if model is speciation or extinction
   else
-    for we = wend
-      push!(par_nams, "beta_$(S[we])")
+    for i = 0:(h-1), a = ia
+      push!(par_nams, "beta_$(a)_$i")
     end
   end
 
@@ -119,6 +97,7 @@ function build_par_names(k::Int64, h::Int64, model::NTuple{3,Bool})
 
   return pardic
 end
+
 
 
 
