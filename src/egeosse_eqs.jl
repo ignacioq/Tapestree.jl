@@ -73,7 +73,7 @@ function make_geosse(k::Int64)
   # Metaprogram to generate GeoSSE equations
   eqs = quote end
 
-  for r in Base.OneTo(ns)
+  for r = Base.OneTo(ns)
 
     ri = S[r]
 
@@ -83,9 +83,10 @@ function make_geosse(k::Int64)
     # if single area
     if isone(lr)
 
+      ## likelihoods
       # no events
       nev = :(p[$r] + p[$(r+k+1)])
-      for j in Base.OneTo(k-1)
+      for j = Base.OneTo(k-1)
         push!(nev.args, :(p[$(2k + 1 + 2*(r-1) + j)]))
       end
       nev = :(-$nev * u[$r])
@@ -94,7 +95,7 @@ function make_geosse(k::Int64)
       ida  = findall(x -> occursin(S[r], x) &&
                lastindex(x) == (lastindex(S[r]) + 1), S) 
       dis = :(1+1)
-      for j in Base.OneTo(k-1)
+      for j = Base.OneTo(k-1)
         push!(dis.args, :(p[$(2k + 1 + 2*(r-1) + j)] * 
                           u[$(ida[j])]))
       end
@@ -106,18 +107,30 @@ function make_geosse(k::Int64)
       # wrap up in du
       push!(eqs.args, :(du[$r] = $nev + $dis + $wrs))
 
+      ## extinctions
+
+      #=
+        TO COMPLETE
+      =# 
+
+    # if 
     else
 
-
       # which single areas occur in r
-      ia = findall(x -> occursin(x, r), sa)
+      ia = findall(x -> occursin(x, ri), sa)
 
       # no event
-      nev = 
-        lr > 1 ? :($(2^(lr-1) - 1)*p[$(k+1)]) : :()
-      for i in Base.OneTo(lastindex(ia))
-        :(p[$i] + p[$])
+      nev = :(+ ($(2^(lr-1) - 1)*p[$(k+1)]))
+      for (ii, i) = enumerate(ia)
+        push!(nev.args, :(p[$i] + p[$(i + k + 1)]))
+        for j = Base.OneTo(k-1)
+          push!(nev.args[ii+2].args, :(p[$(2k + 1 + 2*(i-1) + j)]))
+        end
       end
+      nev = :(-$nev * u[$r])
+
+      # local extinction
+      
 
 
     end
