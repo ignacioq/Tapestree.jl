@@ -30,6 +30,51 @@ end
 
 
 
+
+"""
+  subsets(x::Array{SubString{String},1})
+
+Create all subsets from each string (letters) in x.
+"""
+function subsets(x::Array{SubString{String},1})
+  ss = [""]
+  for elem = x, j = eachindex(ss)
+      push!(ss, ss[j]*elem)
+  end
+
+  return ss
+end
+
+
+
+
+
+"""
+  vicsubsets(x::String)
+
+Create all vicariance subsets from a string with the areas.
+"""
+function vicsubsets(x::String)
+  lx  = lastindex(x)
+  sx  = split(x, "")
+  ss  = subsets(sx)
+  sort!(ss, by = length)
+  pop!(ss)
+  popfirst!(ss)
+  ls = lastindex(ss)
+
+  vss = Array{NTuple{2, String},1}()
+  for i = Base.OneTo(ls)
+    push!(vss, (ss[i], ss[ls-i+1]))
+  end
+
+  return vss
+end
+
+
+
+
+
 """
     build_par_names(k::Int64, h::Int64, mod::NTuple{3,Bool})
 
