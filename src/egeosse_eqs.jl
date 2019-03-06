@@ -82,134 +82,53 @@ function make_geosse(k::Int64)
     lr = lastindex(r)
 
     # which single areas occur in r
-    ia = findall(x -> occursin(x, ri), sa)
+    ia = findall(x -> occursin(x, r), sa)
     oa = setdiff(1:k, ia)
-
 
     #= 
     likelihoods
     =#
 
     # no events
-    nev  = noevents_expr(ri, lr, ia, oa, k)
+    nev = noevents_expr(ri, lr, ia, oa, k)
 
     # local extinction
-    !isone(lr) && lext = localext_expr(r, ia, sa, S, k)
+    # remove if !isone(lr)
+    lex = localext_expr(r, ia, sa, S, k)
 
     # dispersal
+    # remove if lr == k
+    dis = dispersal_expr(r, lr, ia, oa, S, k)
 
+    # within-region speciation
+    wrs = wrspec_expr(ri, ia, ns)
 
+    # between-region speciation
+    # remove if !isone(lr)
+    brs = brspec_expr(r, S, ns)
 
-
-
+    # if single area
+    if ri <= k
+      push!(eqs.args, 
+        quote du[$ri] = $nev + $dis + $wrs end)
+    # if widespread
+    elseif ri != ns
+      push!(eqs.args, 
+        quote du[$ri] = $nev + $lex + $dis + $wrs + $brs end)
+    else
+      push!(eqs.args, 
+        quote du[$ri] = $nev + $lex + $wrs + $brs end)
+    end
 
     #= 
     extinctions
     =#
 
 
-
-
-
-    # if single area
-    if isone(lr)
-
-      ## likelihoods `D(t)`
-      # no events
-      nev = :(p[$r] + p[$(r+k+1)])
-      for j = Base.OneTo(k-1)
-        push!(nev.args, :(p[$(2k + 1 + 2*(r-1) + j)]))
-      end
-      nev = :(-$nev * u[$r])
-
-      # dispersal
-      ida = findall(x -> occursin(ri, x) &&
-              lastindex(x) == (lastindex(S[r]) + 1), S) 
-      dis = :(1+1)
-      for j = Base.OneTo(k-1)
-        push!(dis.args, :(p[$(2k + 1 + 2*(r-1) + j)] * 
-                          u[$(ida[j])]))
-      end
-      deleteat!(dis.args, 2:3)
-
-      # within region speciation
-      wrs = :(2.0 * p[$r] * u[$(r + ns)] * u[$r])
-
-      # wrap up in du
-      push!(eqs.args, 
-        quote du[$r] = $nev + $dis + $wrs end)
-
-      ## extinctions `E(t)`
-
-      #=
-        TO COMPLETE
-      =# 
-
-    # if widespread
-    else
-
-      # which single areas occur in r
-      ia = findall(x -> occursin(x, ri), sa)
-      aa = setdiff(1:k, ia)
-
-      # no event
-      nev = :(+ ($(2^(lr-1) - 1.)*p[$(k+1)]))
-      for (ii, i) = enumerate(ia)
-        push!(nev.args, :(p[$i] + p[$(i + k + 1)]))
-        for j = aa
-          push!(nev.args[ii+2].args, :(p[$(2k + 1 + (k-1)*(i-1) + j)]))
-        end
-      end
-      nev = :(-$nev * u[$r])
-
-      # local extinction
-      lex = :(1+1)
-      for i = ia
-        push!(lex.args, :(p[$(2k + 1 + k*(k-1) + i)] * 
-                          u[$(findfirst(x -> x == replace(ri, sa[i] => ""), S))]))
-      end
-      deleteat!(lex.args, 2:3)
-
-      # dispersal
-      ida = findall(x -> occursin(ri, x) && lastindex(x) == (lr + 1), S)
-      dis = :(1+1)
-      for i = ia, (ii, j) = enumerate(ida)
-        push!(dis.args, :(p[$(2k + 1 + (k-1)*(i-1) + aa[ii])] * 
-                          u[$j]))
-      end
-      deleteat!(dis.args, 2:3)
-
-      # within-region speciation
-      wrs = :(1 + 1)
-      for i = ia
-        push!(wrs.args, :(p[$i] * (u[$(i + ns)] * u[$r] + u[$(r + ns)] * u[$i])))
-      end
-      deleteat!(wrs.args, 2:3)
-
-      # between region speciation
-      va  = vicsubsets(ri)
-      brs = :(1+1)
-      for (la, ra) = va
-        push!(brs.args,
-          :(u[$(findfirst(isequal(ra), S) + ns)] *
-            u[$(findfirst(isequal(la), S))]))
-      end
-      deleteat!(brs.args, 2:3)
-      brs = :($(2^lastindex(ri) - 3.0) * p[$(k+1)] * $brs)
-    
-      # wrap up in du
-      push!(eqs.args, 
-        quote du[$r] = $nev + $lex + $dis + $wrs + $brs end)
-
-      ## extinctions `E(t)`
-
-      #=
-        TO COMPLETE
-      =# 
-
-
-    end
   end
+  
+
+end
 
 
 
@@ -281,8 +200,15 @@ end
 
 
 
+
+
 """
-  
+    dispersal_expr(r ::String,
+                   lr::Int64,
+                   ia::Array{Int64,1},
+                   oa::Array{Int64,1},
+                   S ::Array{String,1},
+                   k ::Int64)
 
 Return expression for dispersal.
 """
@@ -293,12 +219,15 @@ function dispersal_expr(r ::String,
                         S ::Array{String,1},
                         k ::Int64)
 
-  ida = findall(x -> occursin(r, x) && lastindex(x) == (lr + 1), S)
+  ida = findall(x -> all(occursin.(split(r,""),x)) && 
+                     lastindex(x) == (lr + 1), 
+                S)
   ex = :(1+1)
-  for a = ia, (i, j) = enumerate(ida)
-    oa[i] -= a <= oa[i] ? 1 : 0
-    push!(ex.args, :(p[$(2k + 1 + (k-1)*(a-1) + oa[i])] * u[$j]))
+  for a = ia, (i, j) = enumerate(oa)
+    j -= a <= j ? 1 : 0
+    push!(ex.args, :(p[$(2k + 1 + (k-1)*(a-1) + j)] * u[$(ida[i])]))
   end
+
   deleteat!(ex.args, 2:3)
 
   return ex
@@ -306,22 +235,73 @@ end
 
 
 
-j -= a <= j ? 1 : 0
-push!(ex.args[i+2].args, :(p[$(2k + 1 + (k-1)*(a-1) + j)]))
-
-dispersal_expr("AB", 2, [1,2], [3], S, k)
-
-#
-## USE REGULAR EXPRESSIONS
-#
-
-dispersal_expr("AC", 2, [1,2], [3], S, k)
 
 
+"""
+    wrspec_expr(ri::Int64,
+                ia::Array{Int64,1},
+                ns::Int64)
 
-dispersal_expr("A", 1,  [1], [2,3], S, k)
-dispersal_expr("B", 1,  [2], [1,3], S, k)
-dispersal_expr("C", 1,  [3], [1,2], S, k)
+Return expression for within-region speciation.
+"""
+function wrspec_expr(ri::Int64,
+                     ia::Array{Int64,1},
+                     ns::Int64)
+
+  if isone(lastindex(ia)) 
+    wrs = :(2.0 * p[$ri] * u[$(ri + ns)] * u[$ri])
+  else
+    wrs = :(1 + 1)
+    for i = ia
+      push!(wrs.args, :(p[$i] * (u[$(i + ns)] * u[$ri] + u[$(ri + ns)] * u[$i])))
+    end
+    deleteat!(wrs.args, 2:3)
+  end
+
+  return wrs
+end
+
+
+
+
+"""
+    brspec_expr(r::String,
+                S ::Array{String,1},
+                ns::Int64)
+
+Return expression for within-region speciation.
+"""
+function brspec_expr(r ::String,
+                     S ::Array{String,1},
+                     ns::Int64)
+
+  va  = vicsubsets(r)
+  brs = :(1+1)
+  for (la, ra) = va
+    push!(brs.args,
+      :(u[$(findfirst(isequal(ra), S) + ns)] *
+        u[$(findfirst(isequal(la), S))]))
+  end
+  deleteat!(brs.args, 2:3)
+  brs = :($(2^lastindex(r) - 3.0) * p[$(k+1)] * $brs)
+
+  isone(brs.args[2]) && deleteat!(brs.args, 2)
+
+  return brs
+end
+
+
+
+
+brspec_expr("AB", S, 7)
+
+
+
+brspec_expr("AC", S, 7)
+brspec_expr("BC", S, 7)
+
+brspec_expr("ABC", S, 7)
+
 
 "lambda_A" => 1
 "lambda_B" => 2
@@ -344,7 +324,20 @@ dispersal_expr("C", 1,  [3], [1,2], S, k)
   "beta_C" => 19
 
 
-
+  D"A"   => 1
+  D"B"   => 2
+  D"C"   => 3
+  D"AB"  => 4
+  D"AC"  => 5
+  D"BC"  => 6
+  D"ABC" => 7
+  E"A"   => 8
+  E"B"   => 9
+  E"C"   => 10
+  E"AB"  => 11
+  E"AC"  => 12
+  E"BC"  => 13
+  E"ABC" => 14
 
 
 
