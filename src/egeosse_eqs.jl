@@ -10,46 +10,42 @@ Created 15 02 2019
 =#
 
 
+#=
+    "lambda_A" => 1
+    "lambda_B" => 2
+    "lambda_C" => 3
+    "lambda_W" => 4
+        "mu_A" => 5
+        "mu_B" => 6
+        "mu_C" => 7
+     "gain_AB" => 8
+     "gain_AC" => 9
+     "gain_BA" => 10
+     "gain_BC" => 11
+     "gain_CA" => 12
+     "gain_CB" => 13
+      "loss_A" => 14
+      "loss_B" => 15
+      "loss_C" => 16
+      "beta_A" => 17
+      "beta_B" => 18
+      "beta_C" => 19
 
-
-
-
-"""
- "lambda_A" => 1
- "lambda_B" => 2
- "lambda_C" => 3
- "lambda_W" => 4
-     "mu_A" => 5
-     "mu_B" => 6
-     "mu_C" => 7
-  "gain_AB" => 8
-  "gain_AC" => 9
-  "gain_BA" => 10
-  "gain_BC" => 11
-  "gain_CA" => 12
-  "gain_CB" => 13
-   "loss_A" => 14
-   "loss_B" => 15
-   "loss_C" => 16
-   "beta_A" => 17
-   "beta_B" => 18
-   "beta_C" => 19
-
-    D"A"   => 1
-    D"B"   => 2
-    D"C"   => 3
-    D"AB"  => 4
-    D"AC"  => 5
-    D"BC"  => 6
-    D"ABC" => 7
-    E"A"   => 8
-    E"B"   => 9
-    E"C"   => 10
-    E"AB"  => 11
-    E"AC"  => 12
-    E"BC"  => 13
-    E"ABC" => 14
-"""
+       D"A"   => 1
+       D"B"   => 2
+       D"C"   => 3
+       D"AB"  => 4
+       D"AC"  => 5
+       D"BC"  => 6
+       D"ABC" => 7
+       E"A"   => 8
+       E"B"   => 9
+       E"C"   => 10
+       E"AB"  => 11
+       E"AC"  => 12
+       E"BC"  => 13
+       E"ABC" => 14
+=#
 
 """
     make_geosse(k::Int64)
@@ -90,7 +86,7 @@ function make_geosse(k::Int64)
     =#
 
     # no events
-    nev = noevents_expr(ri, lr, ia, oa, k)
+    nev = noevents_expr(ri, lr, ia, oa, k, ns, false)
 
     # local extinction
     # remove if !isone(lr)
@@ -98,36 +94,66 @@ function make_geosse(k::Int64)
 
     # dispersal
     # remove if lr == k
-    dis = dispersal_expr(r, lr, ia, oa, S, k)
+    dis = dispersal_expr(r, lr, ia, oa, S, ns, k, false)
 
     # within-region speciation
     wrs = wrspec_expr(ri, ia, ns)
 
     # between-region speciation
     # remove if !isone(lr)
-    brs = brspec_expr(r, S, ns)
+    brs = brspec_expr(r, S, ns, k, false)
 
     # if single area
     if ri <= k
       push!(eqs.args, 
-        quote du[$ri] = $nev + $dis + $wrs end)
+        :(du[$ri] = $nev + $dis + $wrs))
     # if widespread
     elseif ri != ns
       push!(eqs.args, 
-        quote du[$ri] = $nev + $lex + $dis + $wrs + $brs end)
+        :(du[$ri] = $nev + $lex + $dis + $wrs + $brs))
     else
       push!(eqs.args, 
-        quote du[$ri] = $nev + $lex + $wrs + $brs end)
+        :(du[$ri] = $nev + $lex + $wrs + $brs))
     end
 
     #= 
     extinctions
     =#
 
+    # no events
+    nev = noevents_expr(ri, lr, ia, oa, k, ns, true)
+
+    # extinction
+    ext = ext_expr(r, ia, sa, S, ns, k) 
+
+    # dispersal and extinction
+    dis = dispersal_expr(r, lr, ia, oa, S, ns, k, true)
+
+    # within-region extinction
+    wrs = wrsext_expr(ri, ia, ns)
+
+    # between-region extinction
+    brs = brspec_expr(r, S, ns, k, true)
+
+    # if single area
+    if ri <= k
+      push!(eqs.args, 
+        :(du[$(ri + ns)] = $nev + $ext + $dis + $wrs))
+    # if widespread
+    elseif ri != ns
+      push!(eqs.args, 
+        :(du[$(ri + ns)] = $nev + $ext + $dis + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$(ri + ns)] = $nev + $ext + $wrs + $brs))
+    end
 
   end
   
+  # remove REPL comment
+  popfirst!(eqs.args)
 
+  return eqs
 end
 
 
@@ -143,11 +169,15 @@ end
 
 Return expression for no events.
 """
-function noevents_expr(ri::Int64,
-                       lr::Int64,
-                       ia::Array{Int64,1},
-                       oa::Array{Int64,1},
-                       k ::Int64)
+function noevents_expr(ri ::Int64,
+                       lr ::Int64,
+                       ia ::Array{Int64,1},
+                       oa ::Array{Int64,1},
+                       k  ::Int64,
+                       ns ::Int64,
+                       ext::Bool)
+
+  wu = ext ? ns : 0
 
   ts = isone(lr) ? 0 : (k*(k-1) + k)
 
@@ -159,7 +189,7 @@ function noevents_expr(ri::Int64,
       push!(ex.args[i+2].args, :(p[$(2k + 1 + (k-1)*(a-1) + j)]))
     end
   end
-  ex = :(-1.0 * $ex * u[$ri])
+  ex = :(-1.0 * $ex * u[$(ri + wu)])
 
   # remove 0 product if single area
   if isone(lr)
@@ -188,12 +218,11 @@ function localext_expr(r ::String,
                        S ::Array{String,1},
                        k ::Int64)
 
-  ex = :(1+1)
+  ex = Expr(:call, :+)
   for a = ia
     push!(ex.args, :(p[$(k^2 + k + 1 + a)] * 
                      u[$(findfirst(x -> x == replace(r, sa[a] => ""), S))]))
   end
-  deleteat!(ex.args, 2:3)
 
   return ex
 end
@@ -212,23 +241,26 @@ end
 
 Return expression for dispersal.
 """
-function dispersal_expr(r ::String,
-                        lr::Int64,
-                        ia::Array{Int64,1},
-                        oa::Array{Int64,1},
-                        S ::Array{String,1},
-                        k ::Int64)
+function dispersal_expr(r  ::String,
+                        lr ::Int64,
+                        ia ::Array{Int64,1},
+                        oa ::Array{Int64,1},
+                        S  ::Array{String,1},
+                        ns ::Int64,
+                        k  ::Int64,
+                        ext::Bool)
+
+  wu = ext ? ns : 0
 
   ida = findall(x -> all(occursin.(split(r,""),x)) && 
                      lastindex(x) == (lr + 1), 
                 S)
-  ex = :(1+1)
+
+  ex = Expr(:call, :+)
   for a = ia, (i, j) = enumerate(oa)
     j -= a <= j ? 1 : 0
-    push!(ex.args, :(p[$(2k + 1 + (k-1)*(a-1) + j)] * u[$(ida[i])]))
+    push!(ex.args, :(p[$(2k + 1 + (k-1)*(a-1) + j)] * u[$(ida[i] + ns)]))
   end
-
-  deleteat!(ex.args, 2:3)
 
   return ex
 end
@@ -244,22 +276,23 @@ end
 
 Return expression for within-region speciation.
 """
-function wrspec_expr(ri::Int64,
-                     ia::Array{Int64,1},
-                     ns::Int64)
+function wrspec_expr(ri ::Int64,
+                     ia ::Array{Int64,1},
+                     ns ::Int64)
 
   if isone(lastindex(ia)) 
-    wrs = :(2.0 * p[$ri] * u[$(ri + ns)] * u[$ri])
+    ex = :(2.0 * p[$ri] * u[$(ri + ns)] * u[$(ri)])
   else
-    wrs = :(1 + 1)
+
+    ex = Expr(:call, :+)
     for i = ia
-      push!(wrs.args, :(p[$i] * (u[$(i + ns)] * u[$ri] + u[$(ri + ns)] * u[$i])))
+      push!(ex.args, :(p[$i] * (u[$(i + ns)] * u[$(ri)] + u[$(ri + ns)] * u[$(i)])))
     end
-    deleteat!(wrs.args, 2:3)
   end
 
-  return wrs
+  return ex
 end
+
 
 
 
@@ -271,132 +304,86 @@ end
 
 Return expression for within-region speciation.
 """
-function brspec_expr(r ::String,
-                     S ::Array{String,1},
-                     ns::Int64)
+function brspec_expr(r  ::String,
+                     S  ::Array{String,1},
+                     ns ::Int64,
+                     k  ::Int64,
+                     ext::Bool)
+
+  wu = ext ? ns : 0
 
   va  = vicsubsets(r)
-  brs = :(1+1)
+  ex = Expr(:call, :+)
   for (la, ra) = va
-    push!(brs.args,
+    push!(ex.args,
       :(u[$(findfirst(isequal(ra), S) + ns)] *
-        u[$(findfirst(isequal(la), S))]))
+        u[$(findfirst(isequal(la), S) + wu)]))
   end
-  deleteat!(brs.args, 2:3)
-  brs = :($(2^lastindex(r) - 3.0) * p[$(k+1)] * $brs)
+  ex = :($(2^(lastindex(r)-1) - 1.0) * p[$(k+1)] * $ex)
 
-  isone(brs.args[2]) && deleteat!(brs.args, 2)
+  isone(ex.args[2]) && deleteat!(ex.args, 2)
 
-  return brs
+  return ex
 end
 
 
 
 
-brspec_expr("AB", S, 7)
 
+"""
+    ext_expr(r ::String,
+                  ia::Array{Int64,1},
+                  sa::Array{String,1},
+                  S ::Array{String,1},
+                  k ::Int64)
 
+Return expression for extinction.
+"""
+function ext_expr(r ::String,
+                  ia::Array{Int64,1},
+                  sa::Array{String,1},
+                  S ::Array{String,1},
+                  ns::Int64,
+                  k ::Int64)
 
-brspec_expr("AC", S, 7)
-brspec_expr("BC", S, 7)
-
-brspec_expr("ABC", S, 7)
-
-
-"lambda_A" => 1
-"lambda_B" => 2
-"lambda_C" => 3
-"lambda_W" => 4
-    "mu_A" => 5
-    "mu_B" => 6
-    "mu_C" => 7
- "gain_AB" => 8
- "gain_AC" => 9
- "gain_BA" => 10
- "gain_BC" => 11
- "gain_CA" => 12
- "gain_CB" => 13
-  "loss_A" => 14
-  "loss_B" => 15
-  "loss_C" => 16
-  "beta_A" => 17
-  "beta_B" => 18
-  "beta_C" => 19
-
-
-  D"A"   => 1
-  D"B"   => 2
-  D"C"   => 3
-  D"AB"  => 4
-  D"AC"  => 5
-  D"BC"  => 6
-  D"ABC" => 7
-  E"A"   => 8
-  E"B"   => 9
-  E"C"   => 10
-  E"AB"  => 11
-  E"AC"  => 12
-  E"BC"  => 13
-  E"ABC" => 14
-
-
-
-
-
-
-
-
-
-
-
-  function f(du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64)
-
-  for j = Base.OneTo(ns)
-
-    # no events
-    for j = Base.OneTo(ns)
-
-
-    du[j]    = 
-
-
-    du[j+ns] =
-  end
-
-
-
-
-
-  function f(du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64)
-
-    @inbounds begin
-      # probabilities
-      du[1] = -(p[1] + p[4] + p[6])*u[1] + p[6]*u[3] + 2.0*p[1]*u[1]*u[4]
-      du[2] = -(p[2] + p[5] + p[7])*u[2] + p[7]*u[3] + 2.0*p[2]*u[2]*u[5]
-      du[3] = -(p[1] + p[2] + p[3] + p[4] + p[5])*u[3] + 
-                p[4]*u[2] + p[5]*u[1]        +
-                p[1]*(u[4]*u[3] + u[6]*u[1]) + 
-                p[2]*(u[5]*u[3] + u[6]*u[2]) + 
-                p[3]*(u[4]*u[2] + u[5]*u[1])
-
-      # extinction
-      du[4] = -(p[1] + p[4] + p[6])*u[4] + p[4] + p[6]*u[6] + p[1]*u[4]^2
-      du[5] = -(p[2] + p[5] + p[7])*u[5] + p[5] + p[7]*u[6] + p[2]*u[5]^2
-      du[6] = -(p[1] + p[2] + p[3] + p[4] + p[5])*u[6] + 
-                p[4]*u[5] + p[5]*u[4] + p[1]*u[6]*u[4] + 
-                p[2]*u[6]*u[5] + p[3]*u[4]*u[5]
+  if isone(lastindex(ia))
+    ex = :(p[$(k+1 + ia[1])])
+  else
+    ex = Expr(:call, :+)
+    for a = ia
+      push!(ex.args, :(p[$(k^2 + k + 1 + a)] * 
+                       u[$(findfirst(x -> x == replace(r, sa[a] => ""), S) + ns)]))
     end
-
-    return nothing
   end
 
-  return f
+  return ex
+end
+
+
+
+
+
+"""
+    wrsext_expr(ri::Int64,
+                ia::Array{Int64,1},
+                ns::Int64)
+
+Return expression of extinction for within-region speciation.
+"""
+function wrsext_expr(ri ::Int64,
+                     ia ::Array{Int64,1},
+                     ns ::Int64)
+
+  if isone(lastindex(ia)) 
+    ex = :(p[$ri] * u[$(ri + ns)]^2)
+  else
+    ex = Expr(:call, :+)
+    for i = ia
+      push!(ex.args, :(p[$i] * u[$(i + ns)] * u[$(ri + ns)]))
+    end
+  end
+
+  return ex
 end
 
 
@@ -404,21 +391,6 @@ end
 
 
 
-#=
-  Model with separate endemic extinction rates.
-
-      1    2    3     4    5    6         7         8         9       
-  p = sa1, sb1, sab1, ma1, mb1, qa1->ab1, qb1->ab1, qab1->a1, qab1->b1,
-
-      10   11   12    13   14   15        16        17        18      
-      sa2, sb2, sab2, ma2, mb2, qa2->ab2, qb2->ab2, qab2->a2, qab2->b2,
-
-      19       20       21   22   23   24
-      wi1->i2, wi2->i1, βa1, βb1, βa2, βb2,
-
-      1    2    3     4    5    6     7    8    9     10   11   12
-  u = da1, db1, dab1, ea1, eb1, eab1, da2, db2, dab2, ea2, eb2, eab2 
-=#
 """
     egeohisse_2k_s(du::Array{Float64,1}, 
                    u::Array{Float64,1}, 
@@ -551,22 +523,6 @@ end
 
 
 
-
-#=
-  Model with separate endemic extinction rates.
-
-      1    2    3     4    5    6         7         8         9       
-  p = sa1, sb1, sab1, ma1, mb1, qa1->ab1, qb1->ab1, qab1->a1, qab1->b1,
-
-      10   11   12    13   14   15        16        17        18      
-      sa2, sb2, sab2, ma2, mb2, qa2->ab2, qb2->ab2, qab2->a2, qab2->b2,
-
-      19       20     
-      wi1->i2, wi2->i1
-
-      1    2    3     4    5    6     7    8    9     10   11   12
-  u = da1, db1, dab1, ea1, eb1, eab1, da2, db2, dab2, ea2, eb2, eab2 
-=#
 """
     geohisse_2k(du::Array{Float64,1}, 
                 u::Array{Float64,1}, 
@@ -641,21 +597,6 @@ end
 
 
 
-#=
-  Model with separate endemic extinction rates.
-
-      1    2    3     4    5    6         7         8         9       
-  p = sa1, sb1, sab1, ma1, mb1, qa1->ab1, qb1->ab1, qab1->a1, qab1->b1,
-
-      10   11   12    13   14   15        16        17        18      
-      sa2, sb2, sab2, ma2, mb2, qa2->ab2, qb2->ab2, qab2->a2, qab2->b2,
-
-      19       20       21   22   23   24
-      wi1->i2, wi2->i1, βa1, βb1, βa2, βb2,
-
-      1    2    3     4    5    6     7    8    9     10   11   12
-  u = da1, db1, dab1, ea1, eb1, eab1, da2, db2, dab2, ea2, eb2, eab2 
-=#
 """
     egeohisse_2k_s(du::Array{Float64,1}, 
                    u::Array{Float64,1}, 
@@ -743,21 +684,7 @@ end
 
 
 
-#=
-  Model with separate endemic extinction rates.
 
-      1    2    3     4    5    6         7         8         9       
-  p = sa1, sb1, sab1, ma1, mb1, qa1->ab1, qb1->ab1, qab1->a1, qab1->b1,
-
-      10   11   12    13   14   15        16        17        18      
-      sa2, sb2, sab2, ma2, mb2, qa2->ab2, qb2->ab2, qab2->a2, qab2->b2,
-
-      19       20       21   22   23   24
-      wi1->i2, wi2->i1, βa1, βb1, βa2, βb2,
-
-      1    2    3     4    5    6     7    8    9     10   11   12
-  u = da1, db1, dab1, ea1, eb1, eab1, da2, db2, dab2, ea2, eb2, eab2 
-=#
 """
     egeohisse_2k_e(du::Array{Float64,1}, 
                    u::Array{Float64,1}, 
