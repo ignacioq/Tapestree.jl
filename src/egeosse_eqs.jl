@@ -101,7 +101,7 @@ function make_geosse(k::Int64)
 
     # between-region speciation
     # remove if !isone(lr)
-    brs = brspec_expr(r, S, ns, k, false)
+    brs = brspec_expr(r, S, ns, k)
 
     # if single area
     if ri <= k
@@ -133,7 +133,7 @@ function make_geosse(k::Int64)
     wrs = wrsext_expr(ri, ia, ns)
 
     # between-region extinction
-    brs = brspec_expr(r, S, ns, k, true)
+    brs = brsext_expr(r, S, ns, k)
 
     # if single area
     if ri <= k
@@ -150,8 +150,11 @@ function make_geosse(k::Int64)
 
   end
   
+  ## aesthetic touches
   # remove REPL comment
   popfirst!(eqs.args)
+
+  eqs.args[:] = eqs.args[append!([1:2:end...],[2:2:end...])]
 
   return eqs
 end
@@ -259,7 +262,7 @@ function dispersal_expr(r  ::String,
   ex = Expr(:call, :+)
   for a = ia, (i, j) = enumerate(oa)
     j -= a <= j ? 1 : 0
-    push!(ex.args, :(p[$(2k + 1 + (k-1)*(a-1) + j)] * u[$(ida[i] + ns)]))
+    push!(ex.args, :(p[$(2k + 1 + (k-1)*(a-1) + j)] * u[$(ida[i] + wu)]))
   end
 
   return ex
@@ -302,22 +305,19 @@ end
                 S ::Array{String,1},
                 ns::Int64)
 
-Return expression for within-region speciation.
+Return expression for between-region speciation.
 """
 function brspec_expr(r  ::String,
                      S  ::Array{String,1},
                      ns ::Int64,
-                     k  ::Int64,
-                     ext::Bool)
-
-  wu = ext ? ns : 0
+                     k  ::Int64)
 
   va  = vicsubsets(r)
   ex = Expr(:call, :+)
   for (la, ra) = va
     push!(ex.args,
       :(u[$(findfirst(isequal(ra), S) + ns)] *
-        u[$(findfirst(isequal(la), S) + wu)]))
+        u[$(findfirst(isequal(la), S))]))
   end
   ex = :($(2^(lastindex(r)-1) - 1.0) * p[$(k+1)] * $ex)
 
@@ -362,7 +362,6 @@ end
 
 
 
-
 """
     wrsext_expr(ri::Int64,
                 ia::Array{Int64,1},
@@ -386,6 +385,81 @@ function wrsext_expr(ri ::Int64,
   return ex
 end
 
+
+
+
+
+
+"""
+    brsext_expr(r::String,
+                S ::Array{String,1},
+                ns::Int64)
+
+Return expression for extinction for between-region speciation.
+"""
+function brsext_expr(r  ::String,
+                     S  ::Array{String,1},
+                     ns ::Int64,
+                     k  ::Int64)
+
+  va  = vicsubsets(r)[1:div(end,2)]
+  ex = Expr(:call, :+)
+  for (la, ra) = va
+    push!(ex.args,
+      :(u[$(findfirst(isequal(ra), S) + ns)] *
+        u[$(findfirst(isequal(la), S) + ns)]))
+  end
+  ex = :($(2^(lastindex(r)-1) - 1.0) * p[$(k+1)] * $ex)
+
+  isone(ex.args[2]) && deleteat!(ex.args, 2)
+
+  return ex
+end
+
+
+
+
+
+
+#=
+    1   2   3    4   5   6   7
+p = sa, sb, sab, xa, xb, qa, qb
+
+    1   2   3    4   5   6
+u = da, db, dab, ea, eb, eab
+=#
+"""
+    geosse_2k(du::Array{Float64,1}, 
+              u::Array{Float64,1}, 
+              p::Array{Float64,1}, 
+              t::Float64)
+
+GeoSSE ODE equation for 2 areas.
+"""
+function geosse_2k(du::Array{Float64,1}, 
+                   u::Array{Float64,1}, 
+                   p::Array{Float64,1}, 
+                   t::Float64)
+
+  @inbounds begin
+    # probabilities
+    du[1] = -(p[1] + p[4] + p[6])*u[1] + p[6]*u[3] + 2.0*p[1]*u[1]*u[4]
+    du[2] = -(p[2] + p[5] + p[7])*u[2] + p[7]*u[3] + 2.0*p[2]*u[2]*u[5]
+    du[3] = -(p[1] + p[2] + p[3] + p[4] + p[5])*u[3] + 
+              p[4]*u[2] + p[5]*u[1]        +
+              p[1]*(u[4]*u[3] + u[6]*u[1]) + 
+              p[2]*(u[5]*u[3] + u[6]*u[2]) + 
+              p[3]*(u[4]*u[2] + u[5]*u[1])
+
+    # extinction
+    du[4] = -(p[1] + p[4] + p[6])*u[4] + p[4] + p[6]*u[6] + p[1]*u[4]^2
+    du[5] = -(p[2] + p[5] + p[7])*u[5] + p[5] + p[7]*u[6] + p[2]*u[5]^2
+    du[6] = -(p[1] + p[2] + p[3] + p[4] + p[5])*u[6] + 
+              p[4]*u[5] + p[5]*u[4] + p[1]*u[6]*u[4] + 
+              p[2]*u[6]*u[5] + p[3]*u[4]*u[5]
+  end
+  return nothing
+end
 
 
 
@@ -472,51 +546,6 @@ function make_egeohisse_2k_s(af::Function)
   end
 
   return f
-end
-
-
-
-
-
-
-#=
-    1   2   3    4   5   6   7
-p = sa, sb, sab, xa, xb, qa, qb
-
-    1   2   3    4   5   6
-u = da, db, dab, ea, eb, eab
-=#
-"""
-    geosse_2k(du::Array{Float64,1}, 
-              u::Array{Float64,1}, 
-              p::Array{Float64,1}, 
-              t::Float64)
-
-GeoSSE ODE equation for 2 areas.
-"""
-function geosse_2k(du::Array{Float64,1}, 
-                   u::Array{Float64,1}, 
-                   p::Array{Float64,1}, 
-                   t::Float64)
-
-  @inbounds begin
-    # probabilities
-    du[1] = -(p[1] + p[4] + p[6])*u[1] + p[6]*u[3] + 2.0*p[1]*u[1]*u[4]
-    du[2] = -(p[2] + p[5] + p[7])*u[2] + p[7]*u[3] + 2.0*p[2]*u[2]*u[5]
-    du[3] = -(p[1] + p[2] + p[3] + p[4] + p[5])*u[3] + 
-              p[4]*u[2] + p[5]*u[1]        +
-              p[1]*(u[4]*u[3] + u[6]*u[1]) + 
-              p[2]*(u[5]*u[3] + u[6]*u[2]) + 
-              p[3]*(u[4]*u[2] + u[5]*u[1])
-
-    # extinction
-    du[4] = -(p[1] + p[4] + p[6])*u[4] + p[4] + p[6]*u[6] + p[1]*u[4]^2
-    du[5] = -(p[2] + p[5] + p[7])*u[5] + p[5] + p[7]*u[6] + p[2]*u[5]^2
-    du[6] = -(p[1] + p[2] + p[3] + p[4] + p[5])*u[6] + 
-              p[4]*u[5] + p[5]*u[4] + p[1]*u[6]*u[4] + 
-              p[2]*u[6]*u[5] + p[3]*u[4]*u[5]
-  end
-  return nothing
 end
 
 
