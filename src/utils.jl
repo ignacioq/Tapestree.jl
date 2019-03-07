@@ -13,14 +13,14 @@ October 30 2017
 
 
 """
-  subsets(x::Array{String,1})
+  sets(x::Array{String,1})
 
-Create all subsets from each string (letters) in x.
+Create all sets from each string (letters) in x.
 """
-function subsets(x::Array{String,1})
+function sets(x::Array{String,1})
   ss = [""]
   for elem = x, j = eachindex(ss)
-      push!(ss, ss[j]*elem)
+    push!(ss, ss[j]*elem)
   end
 
   return ss
@@ -30,20 +30,44 @@ end
 
 
 
-
 """
-  subsets(x::Array{SubString{String},1})
+  sets(x::Array{SubString{String},1})
 
 Create all subsets from each string (letters) in x.
 """
-function subsets(x::Array{SubString{String},1})
+function sets(x::Array{SubString{String},1})
   ss = [""]
   for elem = x, j = eachindex(ss)
-      push!(ss, ss[j]*elem)
+    push!(ss, ss[j]*elem)
   end
 
   return ss
 end
+
+
+
+
+
+"""
+  sets(x::Vector{Set{Int64}})
+
+Create all sets from a vector of sets of length `1`.
+"""
+function sets(x::Vector{Set{Int64}})
+
+  ss = Vector{Set{Int64}}()
+  push!(ss, Set{Int64}())
+  for i = x, j = eachindex(ss)
+    push!(ss, union(ss[j], i))
+  end
+
+  return ss
+end
+
+
+
+
+
 
 
 
@@ -259,7 +283,6 @@ end
 
 
 
-
 """
     states_to_values(tipst::Dict{Int64,Int64}, k::Int64)
     
@@ -274,6 +297,7 @@ function states_to_values(tipst::Dict{Int64,Int64}, k::Int64)
 
   return tip_val
 end
+
 
 
 

@@ -6,7 +6,8 @@ Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 15 02 2019
+
+Created 07 03 2019
 =#
 
 
@@ -14,45 +15,104 @@ Created 15 02 2019
 
 
 """
-    make_geosse(k::Int64)
+    struct ghs
+      g::Set{Int64}
+      h::Int64
+    end
 
-GeoSSE ODE equation for k areas.
+Composite type for Geographical `g` & Hidden `h` states
 """
-function make_geosse(k::Int64)
+struct ghs
+  g::Set{Int64}
+  h::Int64
+end
+
+
+k = 2
+h = 2
+
+
+sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
+
+"lambda_A_0" => 1
+"lambda_B_0" => 2
+"lambda_W_0" => 3
+"lambda_A_1" => 4
+"lambda_B_1" => 5
+"lambda_W_1" => 6
+   "mu_A_0"  => 7
+   "mu_B_0"  => 8
+   "mu_A_1"  => 9
+   "mu_B_1"  => 10
+"gain_AB_0"  => 11
+"gain_BA_0"  => 12
+"gain_AB_1"  => 13
+"gain_BA_1"  => 14
+ "loss_A_0"  => 15
+ "loss_B_0"  => 16
+ "loss_A_1"  => 17
+ "loss_B_1"  => 18
+     "q_01"  => 19
+     "q_10"  => 20
+
+
+
+
+"""
+    make_geohisse(k::Int64, h::Int64)
+
+GeoSSE ODE equation for k areas and `h` hidden states.
+"""
+function make_geohisse(k::Int64, h::Int64)
 
   # n states
-  ns = 2^k - 1
+  ns = (2^k - 1)*h
 
-  #create subsets
-  sa = Array{String,1}(undef, k)
-  for i in Base.OneTo(k)
-    sa[i] = string('A' + (i-1))
+  # create individual areas subsets
+  gs = Array{Set{Int64}, 1}(undef, k)
+  for i = Base.OneTo(k)
+    gs[i] = Set([i])
   end
-  S = subsets(sa)
-  popfirst!(S)            # remove empty
-  sort!(S, by = length)   # arrange by range size
+  gS = sets(gs)
+  popfirst!(gS)            # remove empty
+  sort!(gS, by = length)   # arrange by range size
 
-  # Metaprogram to generate GeoSSE equations
+  # add hidden states and create ghs objects
+  S = Array{ghs, 1}()
+  for i = 0:(h-1), j = gS
+    push!(S, ghs(j, i))
+  end
+
+  # Metaprogram to generate equations
   eqs = quote end
 
-  for ri = Base.OneTo(ns)
+  for si = Base.OneTo(ns)
 
-    # range
-    r = S[ri]
+    # state range
+    s = S[si]
 
-    # length of r
-    lr = lastindex(r)
+    # length of geographic range
+    ls = length(s.g)
 
-    # which single areas occur in r
-    ia = findall(x -> occursin(x, r), sa)
-    oa = setdiff(1:k, ia)
+    # which single areas do not occur in r
+    oa = setdiff(1:k, s.g)
 
     #= 
     likelihoods
     =#
 
+
+
+
+
+
     # no events
     nev = noevents_expr(ri, lr, ia, oa, k, ns, false)
+
+
+
+
+
 
     # local extinction
     # remove if !isone(lr)
@@ -125,123 +185,6 @@ function make_geosse(k::Int64)
   return eqs
 end
 
-
-
-
-
-
-
-"""
-    make_geosse(k::Int64)
-
-GeoSSE ODE equation for k areas.
-"""
-function make_geosse(k::Int64)
-
-  # n states
-  ns = 2^k - 1
-
-  #create subsets
-  sa = Array{String,1}(undef, k)
-  for i in Base.OneTo(k)
-    sa[i] = string('A' + (i-1))
-  end
-  S = subsets(sa)
-  popfirst!(S)            # remove empty
-  sort!(S, by = length)   # arrange by range size
-
-  # Metaprogram to generate GeoSSE equations
-  eqs = quote end
-
-  for ri = Base.OneTo(ns)
-
-    # range
-    r = S[ri]
-
-    # length of r
-    lr = lastindex(r)
-
-    # which single areas occur in r
-    ia = findall(x -> occursin(x, r), sa)
-    oa = setdiff(1:k, ia)
-
-    #= 
-    likelihoods
-    =#
-
-    # no events
-    nev = noevents_expr(ri, lr, ia, oa, k, ns, false)
-
-    # local extinction
-    # remove if !isone(lr)
-    lex = localext_expr(r, ia, sa, S, k)
-
-    # dispersal
-    # remove if lr == k
-    dis = dispersal_expr(r, lr, ia, oa, S, ns, k, false)
-
-    # within-region speciation
-    wrs = wrspec_expr(ri, ia, ns)
-
-    # between-region speciation
-    # remove if !isone(lr)
-    brs = brspec_expr(r, S, ns, k)
-
-    # if single area
-    if ri <= k
-      push!(eqs.args, 
-        :(du[$ri] = $nev + $dis + $wrs))
-    # if widespread
-    elseif ri != ns
-      push!(eqs.args, 
-        :(du[$ri] = $nev + $lex + $dis + $wrs + $brs))
-    else
-      push!(eqs.args, 
-        :(du[$ri] = $nev + $lex + $wrs + $brs))
-    end
-
-    #= 
-    extinctions
-    =#
-
-    # no events
-    nev = noevents_expr(ri, lr, ia, oa, k, ns, true)
-
-    # extinction
-    ext = ext_expr(r, ia, sa, S, ns, k) 
-
-    # dispersal and extinction
-    dis = dispersal_expr(r, lr, ia, oa, S, ns, k, true)
-
-    # within-region extinction
-    wrs = wrsext_expr(ri, ia, ns)
-
-    # between-region extinction
-    brs = brsext_expr(r, S, ns, k)
-
-    # if single area
-    if ri <= k
-      push!(eqs.args, 
-        :(du[$(ri + ns)] = $nev + $ext + $dis + $wrs))
-    # if widespread
-    elseif ri != ns
-      push!(eqs.args, 
-        :(du[$(ri + ns)] = $nev + $ext + $dis + $wrs + $brs))
-    else
-      push!(eqs.args, 
-        :(du[$(ri + ns)] = $nev + $ext + $wrs + $brs))
-    end
-
-  end
-  
-  ## aesthetic touches
-  # remove REPL comment
-  popfirst!(eqs.args)
-
-  eqs.args[:] = eqs.args[append!([1:2:end...],[2:2:end...])]
-
-  return eqs
-end
 
 
 
@@ -257,34 +200,48 @@ end
 Return expression for no events.
 """
 function noevents_expr(ri ::Int64,
-                       lr ::Int64,
+                       ls ::Int64,
                        ia ::Array{Int64,1},
                        oa ::Array{Int64,1},
                        k  ::Int64,
+                       h  ::Int64,
                        ns ::Int64,
                        ext::Bool)
 
-  wu = ext ? ns : 0
+  # wu = ext ? ns : 0
 
-  ts = isone(lr) ? 0 : (k*(k-1) + k)
+  ts = isone(ls) ? 0 : k*h*k
 
-  ex = :(+ ($(2^(lr-1) - 1.) * p[$(k+1)]))
-  for (i, a) = enumerate(ia)
-    push!(ex.args, :(p[$a] + p[$(a + k + ts + 1)]))
+  ex = :(+ ($(2^(ls-1) - 1.) * p[$(k+1+s.h*(k+1))]))
+
+  for (i, v) = enumerate(s.g)
+    # speciation and extinction
+    push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
+    # dispersal
     for j = oa
-      j -= a <= j ? 1 : 0
-      push!(ex.args[i+2].args, :(p[$(2k + 1 + (k-1)*(a-1) + j)]))
+      j -= v <= j ? 1 : 0
+      push!(ex.args[i+2].args, :(p[$(2k*h + h + (k-1)*(v-1) + j + s.h*k)]))
     end
   end
+
+  # add hidden state shifts
+  push!(ex.args[3].args, :(p[$(s.h + 1 + h*(1+k)^2)]))
+
   ex = :(-1.0 * $ex * u[$(ri + wu)])
 
   # remove 0 product if single area
-  if isone(lr)
+  if isone(ls)
     ex.args[3] = ex.args[3].args[3]
   end
 
   return ex
+
+
 end
+
+
+
+
 
 
 

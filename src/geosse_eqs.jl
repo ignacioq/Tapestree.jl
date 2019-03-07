@@ -28,7 +28,7 @@ function make_geosse(k::Int64)
   for i in Base.OneTo(k)
     sa[i] = string('A' + (i-1))
   end
-  S = subsets(sa)
+  S = sets(sa)
   popfirst!(S)            # remove empty
   sort!(S, by = length)   # arrange by range size
 
@@ -120,7 +120,8 @@ function make_geosse(k::Int64)
   # remove REPL comment
   popfirst!(eqs.args)
 
-  eqs.args[:] = eqs.args[append!([1:2:end...],[2:2:end...])]
+  # reorder with likelihoods first
+  permute!(eqs.args, append!([1:2:2ns...],[2:2:2ns...]))
 
   return eqs
 end
