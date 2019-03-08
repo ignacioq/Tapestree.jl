@@ -28,33 +28,21 @@ struct ghs
 end
 
 
+"""
+    isequal(x::ghs, y::ghs)
+
+Compares equality between two `ghs` types.
+"""
+isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h 
+
+
+
+
 k = 2
 h = 2
 
 
 sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
-
-"lambda_A_0" => 1
-"lambda_B_0" => 2
-"lambda_W_0" => 3
-"lambda_A_1" => 4
-"lambda_B_1" => 5
-"lambda_W_1" => 6
-   "mu_A_0"  => 7
-   "mu_B_0"  => 8
-   "mu_A_1"  => 9
-   "mu_B_1"  => 10
-"gain_AB_0"  => 11
-"gain_BA_0"  => 12
-"gain_AB_1"  => 13
-"gain_BA_1"  => 14
- "loss_A_0"  => 15
- "loss_B_0"  => 16
- "loss_A_1"  => 17
- "loss_B_1"  => 18
-     "q_01"  => 19
-     "q_10"  => 20
-
 
 
 
@@ -101,33 +89,36 @@ function make_geohisse(k::Int64, h::Int64)
     likelihoods
     =#
 
-
-
-
-
-
     # no events
-    nev = noevents_expr(ri, lr, ia, oa, k, ns, false)
-
-
-
-
-
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, false)
 
     # local extinction
     # remove if !isone(lr)
-    lex = localext_expr(r, ia, sa, S, k)
+    lex = localext_expr(s, S, k, h)
 
     # dispersal
     # remove if lr == k
-    dis = dispersal_expr(r, lr, ia, oa, S, ns, k, false)
+    dispersal_expr(s, oa, S, ns, k, h, false)
 
     # within-region speciation
-    wrs = wrspec_expr(ri, ia, ns)
+    wrs = wrspec_expr(si, s, ns, k)
+
+
+
+
+
+
+
 
     # between-region speciation
     # remove if !isone(lr)
     brs = brspec_expr(r, S, ns, k)
+
+
+
+
+
+
 
     # if single area
     if ri <= k
@@ -199,19 +190,20 @@ end
 
 Return expression for no events.
 """
-function noevents_expr(ri ::Int64,
+function noevents_expr(si ::Int64,
+                       s  ::ghs, 
                        ls ::Int64,
-                       ia ::Array{Int64,1},
                        oa ::Array{Int64,1},
                        k  ::Int64,
                        h  ::Int64,
                        ns ::Int64,
                        ext::Bool)
-
-  # wu = ext ? ns : 0
+  # if extinction
+  wu = ext ? ns : 0
 
   ts = isone(ls) ? 0 : k*h*k
 
+  # between-region speciation
   ex = :(+ ($(2^(ls-1) - 1.) * p[$(k+1+s.h*(k+1))]))
 
   for (i, v) = enumerate(s.g)
@@ -227,7 +219,8 @@ function noevents_expr(ri ::Int64,
   # add hidden state shifts
   push!(ex.args[3].args, :(p[$(s.h + 1 + h*(1+k)^2)]))
 
-  ex = :(-1.0 * $ex * u[$(ri + wu)])
+  # multiply by u
+  ex = :(-1.0 * $ex * u[$(si + wu)])
 
   # remove 0 product if single area
   if isone(ls)
@@ -235,39 +228,30 @@ function noevents_expr(ri ::Int64,
   end
 
   return ex
-
-
 end
 
 
 
 
 
-
-
-
-
 """
-    localext_expr(r ::String,
-                  ia::Array{Int64,1},
-                  sa::Array{String,1},
-                  S ::Array{String,1},
-                  k ::Int64)
+    localext_expr(s ::ghs,
+                  S ::Array{ghs,1},
+                  k ::Int64,
+                  h ::Int64)
 
 Return expression for local extinction.
 """
-function localext_expr(r ::String,
-                       ia::Array{Int64,1},
-                       sa::Array{String,1},
-                       S ::Array{String,1},
-                       k ::Int64)
+function localext_expr(s ::ghs,
+                       S ::Array{ghs,1},
+                       k ::Int64,
+                       h ::Int64)
 
   ex = Expr(:call, :+)
-  for a = ia
-    push!(ex.args, :(p[$(k^2 + k + 1 + a)] * 
-                     u[$(findfirst(x -> x == replace(r, sa[a] => ""), S))]))
+  for i = s.g
+    push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
+                     u[$(findfirst(x -> isghsequal(x, ghs(setdiff(s.g, i),s.h)), S))]))
   end
-
   return ex
 end
 
@@ -285,25 +269,23 @@ end
 
 Return expression for dispersal.
 """
-function dispersal_expr(r  ::String,
-                        lr ::Int64,
-                        ia ::Array{Int64,1},
+function dispersal_expr(s  ::ghs,
                         oa ::Array{Int64,1},
-                        S  ::Array{String,1},
+                        S  ::Array{ghs,1},
                         ns ::Int64,
                         k  ::Int64,
+                        h  ::Int64,
                         ext::Bool)
 
   wu = ext ? ns : 0
 
-  ida = findall(x -> all(occursin.(split(r,""),x)) && 
-                     lastindex(x) == (lr + 1), 
-                S)
+  ida = findall(x -> length(union(s.g, x.g)) == 2 && 
+                     length(intersect(s.g, x.g)) == 1, S)
 
   ex = Expr(:call, :+)
-  for a = ia, (i, j) = enumerate(oa)
+  for a = s.g, (i, j) = enumerate(oa)
     j -= a <= j ? 1 : 0
-    push!(ex.args, :(p[$(2k + 1 + (k-1)*(a-1) + j)] * u[$(ida[i] + wu)]))
+    push!(ex.args, :(p[$(2k*h + h + (k-1)*(a-1) + j + s.h*k)] * u[$(ida[i] + wu)]))
   end
 
   return ex
@@ -320,17 +302,20 @@ end
 
 Return expression for within-region speciation.
 """
-function wrspec_expr(ri ::Int64,
-                     ia ::Array{Int64,1},
-                     ns ::Int64)
+function wrspec_expr(si ::Int64,
+                     s  ::ghs,
+                     ns ::Int64,
+                     k  ::Int64)
 
-  if isone(lastindex(ia)) 
-    ex = :(2.0 * p[$ri] * u[$(ri + ns)] * u[$(ri)])
+  if isone(length(s.g)) 
+    ex = :(2.0 * p[$si] * u[$(si + ns)] * u[$(si)])
   else
 
     ex = Expr(:call, :+)
-    for i = ia
-      push!(ex.args, :(p[$i] * (u[$(i + ns)] * u[$(ri)] + u[$(ri + ns)] * u[$(i)])))
+    for i = s.g
+      push!(ex.args, :(p[$(i + s.h*(k+1))] * 
+        (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
+         u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
     end
   end
 
@@ -342,30 +327,37 @@ end
 
 
 """
-    brspec_expr(r::String,
-                S ::Array{String,1},
-                ns::Int64)
+    brspec_expr(s ::ghs,
+                S ::Array{ghs,1},
+                ns::Int64,
+                k ::Int64)
 
 Return expression for between-region speciation.
 """
-function brspec_expr(r  ::String,
-                     S  ::Array{String,1},
-                     ns ::Int64,
-                     k  ::Int64)
+function brspec_expr(s ::ghs,
+                     S ::Array{ghs,1},
+                     ns::Int64,
+                     k ::Int64)
 
-  va  = vicsubsets(r)
+  va  = vicsubsets(s.g)
   ex = Expr(:call, :+)
   for (la, ra) = va
     push!(ex.args,
-      :(u[$(findfirst(isequal(ra), S) + ns)] *
-        u[$(findfirst(isequal(la), S))]))
+      :(u[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h + ns)] *
+        u[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)]))
   end
-  ex = :($(2^(lastindex(r)-1) - 1.0) * p[$(k+1)] * $ex)
+  ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1 + (2^k-1)*s.h)] * $ex)
 
   isone(ex.args[2]) && deleteat!(ex.args, 2)
 
   return ex
 end
+
+ brspec_expr(s, S, ns, k)
+
+#=
+check for different hidden states
+=#
 
 
 

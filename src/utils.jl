@@ -67,27 +67,51 @@ end
 
 
 
-
-
-
-
-
-
 """
-  vicsubsets(x::String)
+    vicsubsets(x::String)
 
-Create all vicariance subsets from a string with the areas.
+Create all vicariance subsets from a string of areas.
 """
 function vicsubsets(x::String)
   lx  = lastindex(x)
   sx  = split(x, "")
-  ss  = subsets(sx)
+  ss  = sets(sx)
   sort!(ss, by = length)
   pop!(ss)
   popfirst!(ss)
   ls = lastindex(ss)
 
   vss = Array{NTuple{2, String},1}()
+  for i = Base.OneTo(ls)
+    push!(vss, (ss[i], ss[ls-i+1]))
+  end
+
+  return vss
+end
+
+
+
+
+
+"""
+    vicsubsets(x::Set{Int64})
+
+Create all vicariance subsets from a Set of areas.
+"""
+function vicsubsets(x::Set{Int64})
+  lx  = length(x)
+
+  ss = Vector{Set{Int64}}()
+  push!(ss, Set{Int64}())
+  for i = x, j = eachindex(ss)
+    push!(ss, union(ss[j], i))
+  end
+  sort!(ss, by = length)
+  pop!(ss)
+  popfirst!(ss)
+
+  ls = lastindex(ss)
+  vss = Array{NTuple{2, Set{Int64}},1}()
   for i = Base.OneTo(ls)
     push!(vss, (ss[i], ss[ls-i+1]))
   end
