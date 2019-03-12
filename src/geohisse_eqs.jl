@@ -28,6 +28,9 @@ struct ghs
 end
 
 
+
+
+
 """
     isequal(x::ghs, y::ghs)
 
@@ -38,11 +41,7 @@ isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h
 
 
 
-k = 2
-h = 2
-
-
-sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
+#sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
 
 
 
@@ -100,6 +99,9 @@ function make_geohisse(k::Int64, h::Int64)
     # remove if lr == k
     dis = dispersal_expr(s, oa, S, ns, k, h, false)
 
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0
+
     # within-region speciation
     wrs = wrspec_expr(si, s, ns, k)
 
@@ -110,14 +112,14 @@ function make_geohisse(k::Int64, h::Int64)
     # if single area
     if isone(length(s.g))
       push!(eqs.args, 
-        :(du[$si] = $nev + $dis + $wrs))
-    # if widespread
-    elseif length(s.g) == k
+        :(du[$si] = $nev + $dis + $hid + $wrs))
+    elseif length(s.g) != k
       push!(eqs.args, 
-        :(du[$si] = $nev + $lex + $dis + $wrs + $brs))
+        :(du[$si] = $nev + $lex + $dis + $hid + $wrs + $brs))
+    # if widespread
     else
       push!(eqs.args, 
-        :(du[$si] = $nev + $lex + $wrs + $brs))
+        :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
     end
 
     #= 
@@ -133,8 +135,11 @@ function make_geohisse(k::Int64, h::Int64)
     # dispersal and extinction
     dis = dispersal_expr(s, oa, S, ns, k, h, true)
 
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0
+
     # within-region extinction
-    wrs = wrsext_expr(si, s, ns)
+    wrs = wrsext_expr(si, s, ns, k)
 
     # between-region extinction
     brs = brspec_expr(s, S, ns, k, true)
@@ -142,14 +147,14 @@ function make_geohisse(k::Int64, h::Int64)
     # if single area
     if isone(length(s.g))
       push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $wrs))
-    # if widespread
-    elseif length(s.g) == k
+        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
+    elseif length(s.g) != k
       push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $wrs + $brs))
+        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
+    # if widespread
     else
       push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $wrs + $brs))
+        :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
     end
 
   end
@@ -167,13 +172,15 @@ end
 
 
 
-
 """
-    noevents_expr(ri::Int64,
-                  lr::Int64,
-                  ia::Array{Int64,1},
-                  oa::Array{Int64,1},
-                  k ::Int64)
+    noevents_expr(si ::Int64,
+                  s  ::ghs, 
+                  ls ::Int64,
+                  oa ::Array{Int64,1},
+                  k  ::Int64,
+                  h  ::Int64,
+                  ns ::Int64,
+                  ext::Bool)
 
 Return expression for no events.
 """
@@ -191,7 +198,7 @@ function noevents_expr(si ::Int64,
   ts = isone(ls) ? 0 : k*h*k
 
   # between-region speciation
-  ex = :(+ ($(2.^(ls-1) - 1.) * p[$(k+1+s.h*(k+1))]))
+  ex = :(+ ($(2.0^(ls-1) - 1.) * p[$(k+1+s.h*(k+1))]))
 
   for (i, v) = enumerate(s.g)
     # speciation and extinction
@@ -204,7 +211,10 @@ function noevents_expr(si ::Int64,
   end
 
   # add hidden state shifts
-  push!(ex.args[3].args, :(p[$(s.h + 1 + h*(1+k)^2)]))
+  for hi in setdiff(0:(h-1), s.h)
+    hi -= s.h <= hi ? 1 : 0
+    push!(ex.args[3].args, :(p[$(s.h + 1 + hi + h*(k+1)^2)]))
+  end
 
   # multiply by u
   ex = :(-1.0 * $ex * u[$(si + wu)])
@@ -247,12 +257,13 @@ end
 
 
 """
-    dispersal_expr(r ::String,
-                   lr::Int64,
-                   ia::Array{Int64,1},
-                   oa::Array{Int64,1},
-                   S ::Array{String,1},
-                   k ::Int64)
+    dispersal_expr(s  ::ghs,
+                   oa ::Array{Int64,1},
+                   S  ::Array{ghs,1},
+                   ns ::Int64,
+                   k  ::Int64,
+                   h  ::Int64,
+                   ext::Bool)
 
 Return expression for dispersal.
 """
@@ -277,6 +288,42 @@ function dispersal_expr(s  ::ghs,
                      u[$(ida[i] + wu)]))
   end
 
+  return ex
+end
+
+
+
+
+
+"""
+    hidtran_expr(s  ::ghs,
+                 S  ::Array{ghs,1},
+                 ns ::Int64,
+                 k  ::Int64,
+                 h  ::Int64,
+                 ext::Bool)
+
+Return expression for hidden states transitions.
+"""
+function hidtran_expr(s  ::ghs,
+                      S  ::Array{ghs,1},
+                      ns ::Int64,
+                      k  ::Int64,
+                      h  ::Int64,
+                      ext::Bool)
+
+  wu = ext ? ns : 0
+
+  hs = findall(x -> isequal(s.g, x.g) && 
+                   !isequal(s.h, x.h), S)
+
+  ex = Expr(:call, :+)
+  for i in hs
+    hi = S[i].h
+    hi -= s.h <= hi ? 1 : 0
+    push!(ex.args, :(p[$(s.h + 1 + hi + h*(k+1)^2)] * 
+                     u[$(i + wu)]))
+  end
   return ex
 end
 
@@ -388,18 +435,18 @@ end
 
 
 
-
-
 """
-    wrsext_expr(ri::Int64,
+    wrsext_expr(si::Int64,
                 s ::ghs,
-                ns::Int64)
+                ns::Int64,
+                k ::Int64)
 
 Return expression of extinction for within-region speciation.
 """
-function wrsext_expr(si ::Int64,
-                     s  ::ghs,
-                     ns ::Int64)
+function wrsext_expr(si::Int64,
+                     s ::ghs,
+                     ns::Int64,
+                     k ::Int64)
 
   if isone(length(s.g)) 
     ex = :(p[$si] * u[$(si + ns)]^2)
@@ -418,13 +465,6 @@ end
 
 
 
-#=
-    1   2   3    4   5   6   7
-p = sa, sb, sab, xa, xb, qa, qb
-
-    1   2   3    4   5   6
-u = da, db, dab, ea, eb, eab
-=#
 """
     geohisse_2k(du::Array{Float64,1}, 
                 u::Array{Float64,1}, 
