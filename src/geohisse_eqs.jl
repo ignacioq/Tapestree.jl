@@ -39,9 +39,10 @@ Compares equality between two `ghs` types.
 isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h 
 
 
+k = 2
+h = 5
 
-
-sort(collect(build_par_names(4,1,(true,false,false))), by = x -> x[2])
+sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
 
 
 
@@ -140,7 +141,7 @@ function make_geohisse(k::Int64, h::Int64)
       :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
 
   end
-  
+
   ## aesthetic touches
   # remove REPL comment
   popfirst!(eqs.args)
@@ -188,14 +189,15 @@ function noevents_expr(si ::Int64,
     # dispersal
     for j = oa
       j -= v <= j ? 1 : 0
-      push!(ex.args[i+2].args, :(p[$(2k*h + h + (k-1)*(v-1) + j + s.h*k)]))
+      push!(ex.args[i+2].args, 
+        :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(v-1) + j)]))
     end
   end
 
   # add hidden state shifts
   for hi in setdiff(0:(h-1), s.h)
-    hi -= s.h <= hi ? 1 : 0
-    push!(ex.args[3].args, :(p[$(s.h + 1 + hi + h*(k+1)^2)]))
+    hi -= s.h <= hi ? 0 : -1
+    push!(ex.args[3].args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
   end
 
   # multiply by u
@@ -266,7 +268,7 @@ function dispersal_expr(s  ::ghs,
   ex = Expr(:call, :+)
   for a = s.g, (i, j) = enumerate(oa)
     j -= a <= j ? 1 : 0
-    push!(ex.args, :(p[$(2k*h + h + (k-1)*(a-1) + j + s.h*k)] * 
+    push!(ex.args, :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
                      u[$(ida[i] + wu)]))
   end
 
@@ -302,8 +304,8 @@ function hidtran_expr(s  ::ghs,
   ex = Expr(:call, :+)
   for i in hs
     hi = S[i].h
-    hi -= s.h <= hi ? 1 : 0
-    push!(ex.args, :(p[$(s.h + 1 + hi + h*(k+1)^2)] * 
+    hi -= s.h <= hi ? 0 : -1
+    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
                      u[$(i + wu)]))
   end
   return ex
@@ -373,7 +375,7 @@ function brspec_expr(s  ::ghs,
       :(u[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h + ns)] *
         u[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h + wu)]))
   end
-  ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1 + (2^k-1)*s.h)] * $ex)
+  ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1+s.h*(k+1))] * $ex)
 
   isone(ex.args[2]) && deleteat!(ex.args, 2)
 
