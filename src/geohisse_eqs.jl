@@ -41,7 +41,7 @@ isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h
 
 
 
-#sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
+sort(collect(build_par_names(4,1,(true,false,false))), by = x -> x[2])
 
 
 
@@ -70,7 +70,7 @@ function make_geohisse(k::Int64, h::Int64)
     push!(S, ghs(j, i))
   end
 
-  # Metaprogram to generate equations
+  # start Expression for ODE equations
   eqs = quote end
 
   for si = Base.OneTo(ns)
@@ -93,34 +93,25 @@ function make_geohisse(k::Int64, h::Int64)
 
     # local extinction
     # remove if !isone(lr)
-    lex = localext_expr(s, S, k, h)
+    lex = isone(length(s.g)) ? :0. : localext_expr(s, S, k, h)
 
     # dispersal
     # remove if lr == k
-    dis = dispersal_expr(s, oa, S, ns, k, h, false)
+    dis = length(s.g) == k ? :0. : dispersal_expr(s, oa, S, ns, k, h, false)
 
     # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.
 
     # within-region speciation
     wrs = wrspec_expr(si, s, ns, k)
 
     # between-region speciation
     # remove if !isone(lr)
-    brs = brspec_expr(s, S, ns, k, false)
+    brs = isone(length(s.g)) ? :0. : brspec_expr(s, S, ns, k, false)
 
-    # if single area
-    if isone(length(s.g))
-      push!(eqs.args, 
-        :(du[$si] = $nev + $dis + $hid + $wrs))
-    elseif length(s.g) != k
-      push!(eqs.args, 
-        :(du[$si] = $nev + $lex + $dis + $hid + $wrs + $brs))
-    # if widespread
-    else
-      push!(eqs.args, 
-        :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
-    end
+    # push `D` equation to to eqs
+    push!(eqs.args, 
+      :(du[$si] = $nev + $lex + $dis + $hid + $wrs + $brs))
 
     #= 
     extinctions
@@ -133,29 +124,20 @@ function make_geohisse(k::Int64, h::Int64)
     ext = ext_expr(s, S, ns, k, h) 
 
     # dispersal and extinction
-    dis = dispersal_expr(s, oa, S, ns, k, h, true)
+    dis = length(s.g) == k ? :0. : dispersal_expr(s, oa, S, ns, k, h, true)
 
     # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0.
 
     # within-region extinction
     wrs = wrsext_expr(si, s, ns, k)
 
     # between-region extinction
-    brs = brspec_expr(s, S, ns, k, true)
+    brs = isone(length(s.g)) ? :0. : brspec_expr(s, S, ns, k, true)
 
-    # if single area
-    if isone(length(s.g))
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
-    elseif length(s.g) != k
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
-    # if widespread
-    else
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
-    end
+    # push `E` equation to to eqs
+    push!(eqs.args, 
+      :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
 
   end
   
@@ -277,8 +259,8 @@ function dispersal_expr(s  ::ghs,
 
   wu = ext ? ns : 0
 
-  ida = findall(x -> length(union(s.g, x.g))     == 2 && 
-                     length(intersect(s.g, x.g)) == 1 &&
+  ida = findall(x -> length(union(s.g, x.g))     == length(s.g)+1 && 
+                     length(intersect(s.g, x.g)) == length(s.g)   &&
                      s.h == x.h, S)
 
   ex = Expr(:call, :+)

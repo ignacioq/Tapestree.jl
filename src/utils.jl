@@ -68,7 +68,7 @@ end
 
 
 """
-    vicsubsets(x::String)
+   vicsubsets(x::String)
 
 Create all vicariance subsets from a string of areas.
 """
