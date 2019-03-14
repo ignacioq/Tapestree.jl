@@ -11,47 +11,46 @@ Created 07 03 2019
 =#
 
 
-
-
-
-"""
-    struct ghs
-      g::Set{Int64}
-      h::Int64
-    end
-
-Composite type for Geographical `g` & Hidden `h` states
-"""
-struct ghs
-  g::Set{Int64}
-  h::Int64
-end
-
-
-
-
-
-"""
-    isequal(x::ghs, y::ghs)
-
-Compares equality between two `ghs` types.
-"""
-isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h 
-
-
 k = 2
-h = 5
+h = 1
 
 sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
 
 
+make_geohisse(k, h, :odef)
+
+Random.seed!(122)
+du = rand((2^k - 1)*h*2)
+u  = rand((2^k - 1)*h*2)
+p  = rand((k*4+1))
+t  = 0.1
+
+
+odef(du, u, p, t)
+
+ -0.5131873155204916
+ -0.015104689639062155
+ -0.05045769398187691
+ -0.3228517858489324
+  0.2084042186617769
+ -0.17309233019565054
+
+Random.seed!(122)
+du = rand((2^k - 1)*h*2)
+u  = rand((2^k - 1)*h*2)
+p  = rand((k*4+1))
+t  = 0.1
+
+geohisse_2k(du, u, p, t)
+
 
 """
-    make_geohisse(k::Int64, h::Int64)
+    make_geohisse(k::Int64, h::Int64, name::Symbol)
 
-GeoSSE ODE equation for k areas and `h` hidden states.
+makes GeoSSE ODE equation function for `k` areas 
+and `h` hidden states of name `:name`.
 """
-function make_geohisse(k::Int64, h::Int64)
+function make_geohisse(k::Int64, h::Int64, name::Symbol)
 
   # n states
   ns = (2^k - 1)*h
@@ -148,8 +147,46 @@ function make_geohisse(k::Int64, h::Int64)
 
   eqs.args[:] = eqs.args[append!([1:2:end...],[2:2:end...])]
 
-  return eqs
+  # make function
+  odef = 
+    quote 
+      function $name(du, u, p, t)
+        $eqs
+        return nothing
+      end
+    end
+
+  return eval(odef)
 end
+
+
+
+
+
+
+"""
+    struct ghs
+      g::Set{Int64}
+      h::Int64
+    end
+
+Composite type for Geographical `g` & Hidden `h` states
+"""
+struct ghs
+  g::Set{Int64}
+  h::Int64
+end
+
+
+
+
+
+"""
+    isequal(x::ghs, y::ghs)
+
+Compares equality between two `ghs` types.
+"""
+isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h 
 
 
 
