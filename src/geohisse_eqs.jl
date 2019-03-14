@@ -12,9 +12,11 @@ Created 07 03 2019
 
 
 k = 2
-h = 1
+h = 2
 
 sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
+
+create_states(k, h)
 
 
 make_geohisse(k, h, :odef)
@@ -22,26 +24,15 @@ make_geohisse(k, h, :odef)
 Random.seed!(122)
 du = rand((2^k - 1)*h*2)
 u  = rand((2^k - 1)*h*2)
-p  = rand((k*4+1))
+p  = rand((20))
 t  = 0.1
 
+@benchmark odef(du, u, p, t)
 
-odef(du, u, p, t)
+@benchmark geohisse_2k(du, u, p, t)
 
- -0.5131873155204916
- -0.015104689639062155
- -0.05045769398187691
- -0.3228517858489324
-  0.2084042186617769
- -0.17309233019565054
 
-Random.seed!(122)
-du = rand((2^k - 1)*h*2)
-u  = rand((2^k - 1)*h*2)
-p  = rand((k*4+1))
-t  = 0.1
 
-geohisse_2k(du, u, p, t)
 
 
 """
@@ -56,19 +47,7 @@ function make_geohisse(k::Int64, h::Int64, name::Symbol)
   ns = (2^k - 1)*h
 
   # create individual areas subsets
-  gs = Array{Set{Int64}, 1}(undef, k)
-  for i = Base.OneTo(k)
-    gs[i] = Set([i])
-  end
-  gS = sets(gs)
-  popfirst!(gS)            # remove empty
-  sort!(gS, by = length)   # arrange by range size
-
-  # add hidden states and create ghs objects
-  S = Array{ghs, 1}()
-  for i = 0:(h-1), j = gS
-    push!(S, ghs(j, i))
-  end
+  S = create_states(k, h)
 
   # start Expression for ODE equations
   eqs = quote end
@@ -148,15 +127,25 @@ function make_geohisse(k::Int64, h::Int64, name::Symbol)
   eqs.args[:] = eqs.args[append!([1:2:end...],[2:2:end...])]
 
   # make function
-  odef = 
+  ex = 
     quote 
-      function $name(du, u, p, t)
-        $eqs
+      function $name(du::Array{Float64,1}, u::Array{Float64,1}, p::Array{Float64,1}, t::Float64)
+        @inbounds begin
+          $eqs
+        end
         return nothing
       end
     end
 
-  return eval(odef)
+  
+  deleteat!(ex.args[2].args[2].args,[1,3])
+  deleteat!(ex.args[2].args[2].args[1].args, 2)
+
+ex.args[2].args[2].args[1].args[2].args[1] = eqs
+
+push!(ex, $ex)
+
+  return eval(ex)
 end
 
 
@@ -187,6 +176,33 @@ end
 Compares equality between two `ghs` types.
 """
 isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h 
+
+
+
+"""
+    create_states(k::Int64, h::Int64)
+
+Create GeoHiSSE states
+"""
+function create_states(k::Int64, h::Int64)
+
+  # create individual areas subsets
+  gs = Array{Set{Int64}, 1}(undef, k)
+  for i = Base.OneTo(k)
+    gs[i] = Set([i])
+  end
+  gS = sets(gs)
+  popfirst!(gS)            # remove empty
+  sort!(gS, by = length)   # arrange by range size
+
+  # add hidden states and create ghs objects
+  S = Array{ghs, 1}()
+  for i = 0:(h-1), j = gS
+    push!(S, ghs(j, i))
+  end
+
+  return S
+end
 
 
 
@@ -492,7 +508,7 @@ end
                 p::Array{Float64,1}, 
                 t::Float64)
 
-GeoHiSSE + extinction most general ODE equation for 2 areas & 2 hidden states.
+GeoHiSSE + extinction general ODE equation for 2 areas & 2 hidden states.
 """
 function geohisse_2k(du::Array{Float64,1}, 
                      u::Array{Float64,1}, 
@@ -501,60 +517,62 @@ function geohisse_2k(du::Array{Float64,1},
 
   @inbounds begin
 
-    ### Hidden State 1
-    ## probabilities 
+    ### likelihoods 
+    ## hidden state 1
     # area A
-    du[1] = -(p[1] + p[4] + p[6] + p[19])*u[1]            + 
-              p[6]*u[3] + p[19]*u[7] + 2.0*p[1]*u[1]*u[4]
+    du[1] = -(p[1] + p[7] + p[11] + p[19])*u[1]            + 
+              p[11]*u[3] + p[19]*u[4] + 2.0*p[1]*u[1]*u[7]
     # area B
-    du[2] = -(p[2] + p[5] + p[7] + p[19])*u[2]            + 
-              p[7]*u[3] + p[19]*u[8] + 2.0*p[2]*u[2]*u[5]
+    du[2] = -(p[2] + p[8] + p[12] + p[19])*u[2]            + 
+              p[12]*u[3] + p[19]*u[5] + 2.0*p[2]*u[2]*u[8]
     # area AB
-    du[3] = -(p[1] + p[2] + p[3] + p[8] + p[9] + p[19])*u[3] + 
-              p[8]*u[1] + p[9]*u[2]+ p[19]*u[9]              +
-              p[1]*(u[4]*u[3] + u[6]*u[1])                   + 
-              p[2]*(u[5]*u[3] + u[6]*u[2])                   + 
-              p[3]*(u[4]*u[2] + u[5]*u[1])
-    ## extinction
+    du[3] = -(p[1] + p[2] + p[3] + p[15] + p[16] + p[19])*u[3] + 
+              p[16]*u[1] + p[15]*u[2]+ p[19]*u[6]              + 
+              p[1]*(u[7]*u[3] + u[9]*u[1])                     + 
+              p[2]*(u[8]*u[3] + u[9]*u[2])                     + 
+              p[3]*(u[7]*u[2] + u[8]*u[1])
+    ## hidden state 2
     # area A
-    du[4] = -(p[1] + p[4] + p[6] + p[19])*u[4]             + 
-              p[4] + p[19]*u[10] + p[6]*u[6] + p[1]*u[4]^2
+    du[4] = -(p[4] + p[9] + p[13] + p[20])*u[4]            + 
+              p[13]*u[6] + p[20]*u[1] + 2.0*p[4]*u[4]*u[10]
     # area B
-    du[5] = -(p[2] + p[5] + p[7] + p[19])*u[5]             + 
-              p[5] + p[19]*u[11] + p[7]*u[6] + p[2]*u[5]^2
+    du[5] = -(p[5] + p[10] + p[14] + p[20])*u[5]            + 
+              p[14]*u[6] + p[20]*u[2] + 2.0*p[5]*u[5]*u[11]
     # area AB
-    du[6] = -(p[1] + p[2] + p[3] + p[8] + p[9] + p[19])*u[6]   +
-              p[8]*u[4] + p[9]*u[5] + p[19]*u[12]              + 
-              p[1]*u[6]*u[4] + p[2]*u[6]*u[5] + p[3]*u[4]*u[5]
-    ### Hidden State 2
-    ## probabilities 
+    du[6] = -(p[4] + p[5] + p[6] + p[17] + p[18] + p[20])*u[6] + 
+              p[17]*u[5] + p[18]*u[4]+ p[20]*u[3]              + 
+              p[4]*(u[10]*u[6] + u[12]*u[4])                   + 
+              p[5]*(u[11]*u[6] + u[12]*u[5])                   + 
+              p[6]*(u[10]*u[5] + u[11]*u[4])
+
+    ### extinction
+    ## hidden state 1
     # area A
-    du[7] = -(p[10] + p[13] + p[15] + p[20])*u[7]            + 
-              p[15]*u[9] + p[20]*u[1] + 2.0*p[10]*u[7]*u[10]
+    du[7] = -(p[1] + p[7] + p[11] + p[19])*u[7]             + 
+              p[7] + p[19]*u[10] + p[11]*u[9] + p[1]*u[7]^2
     # area B
-    du[8] = -(p[11] + p[14] + p[16] + p[20])*u[8]            + 
-              p[16]*u[9] + p[20]*u[2] + 2.0*p[11]*u[8]*u[11]
+    du[8] = -(p[2] + p[8] + p[12] + p[19])*u[8]             + 
+              p[8] + p[19]*u[11] + p[12]*u[9] + p[2]*u[8]^2
     # area AB
-    du[9] = -(p[10] + p[11] + p[12] + p[17] + p[18] + p[20])*u[9] + 
-              p[17]*u[7] + p[18]*u[8]+ p[20]*u[3]                 +
-              p[10]*(u[10]*u[9] + u[12]*u[7])                     + 
-              p[11]*(u[11]*u[9] + u[12]*u[8])                     + 
-              p[12]*(u[10]*u[8] + u[11]*u[7])
-    ## extinction
+    du[9] = -(p[1] + p[2] + p[3] + p[15] + p[16] + p[19])*u[9]   +
+              p[15]*u[8] + p[16]*u[7] + p[19]*u[12]              + 
+              p[1]*u[9]*u[7] + p[2]*u[9]*u[8] + p[3]*u[7]*u[8]
+    ## hidden state 2
     # area A
-    du[10] = -(p[10] + p[13] + p[15] + p[20])*u[10]            + 
-               p[13] + p[20]*u[4] + p[15]*u[12] + p[10]*u[10]^2
+    du[10] = -(p[4] + p[9] + p[13] + p[20])*u[10]            + 
+               p[9] + p[20]*u[7] + p[13]*u[12] + p[4]*u[10]^2
     # area B
-    du[11] = -(p[11] + p[14] + p[16] + p[20])*u[11]            + 
-               p[14] + p[20]*u[5] + p[16]*u[12] + p[11]*u[11]^2
+    du[11] = -(p[5] + p[10] + p[14] + p[20])*u[11]            + 
+               p[10] + p[20]*u[8] + p[14]*u[12] + p[5]*u[11]^2
     # area AB
-    du[12] = -(p[10] + p[11] + p[12] + p[17] + p[18] + p[20])*u[6]       +
-               p[17]*u[10] + p[18]*u[11] + p[20]*u[6]                    + 
-               p[10]*u[10]*u[12] + p[11]*u[11]*u[12] + p[12]*u[10]*u[11]
+    du[12] = -(p[4] + p[5] + p[6] + p[17] + p[18] + p[20])*u[12]       +
+               p[17]*u[10] + p[18]*u[11] + p[20]*u[9]                    + 
+               p[4]*u[10]*u[12] + p[5]*u[11]*u[12] + p[6]*u[10]*u[11]
   end
 
   return nothing
 end
+
 
 
 
