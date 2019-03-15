@@ -16,22 +16,8 @@ h = 2
 
 sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
 
-create_states(k, h)
-
 
 make_geohisse(k, h, :odef)
-
-Random.seed!(122)
-du = rand((2^k - 1)*h*2)
-u  = rand((2^k - 1)*h*2)
-p  = rand((20))
-t  = 0.1
-
-@benchmark odef(du, u, p, t)
-
-@benchmark geohisse_2k(du, u, p, t)
-
-
 
 
 
@@ -70,27 +56,37 @@ function make_geohisse(k::Int64, h::Int64, name::Symbol)
     # no events
     nev = noevents_expr(si, s, ls, oa, k, h, ns, false)
 
-    # local extinction
     # remove if !isone(lr)
-    lex = isone(length(s.g)) ? :0. : localext_expr(s, S, k, h)
+    if length(s.g) > 1
+      # local extinction
+      lex = localext_expr(s, S, k, h)
+      # between-region speciation
+      brs = brspec_expr(s, S, ns, k, false)
+    end
 
     # dispersal
     # remove if lr == k
-    dis = length(s.g) == k ? :0. : dispersal_expr(s, oa, S, ns, k, h, false)
+    if length(s.g) != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, false)
+    end
 
     # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.0
 
     # within-region speciation
     wrs = wrspec_expr(si, s, ns, k)
 
-    # between-region speciation
-    # remove if !isone(lr)
-    brs = isone(length(s.g)) ? :0. : brspec_expr(s, S, ns, k, false)
-
     # push `D` equation to to eqs
-    push!(eqs.args, 
-      :(du[$si] = $nev + $lex + $dis + $hid + $wrs + $brs))
+    if isone(length(s.g))
+      push!(eqs.args, 
+        :(du[$si] = $nev + $dis + $hid + $wrs))
+    elseif length(s.g) == k
+      push!(eqs.args, 
+        :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$si] = $nev + $lex + $dis + $hid + $wrs + $brs))
+    end
 
     #= 
     extinctions
@@ -103,20 +99,32 @@ function make_geohisse(k::Int64, h::Int64, name::Symbol)
     ext = ext_expr(s, S, ns, k, h) 
 
     # dispersal and extinction
-    dis = length(s.g) == k ? :0. : dispersal_expr(s, oa, S, ns, k, h, true)
+    if length(s.g) != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, true)
+    end
 
     # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0.
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0.0
 
     # within-region extinction
     wrs = wrsext_expr(si, s, ns, k)
 
     # between-region extinction
-    brs = isone(length(s.g)) ? :0. : brspec_expr(s, S, ns, k, true)
+    if length(s.g) > 1
+      brs = brspec_expr(s, S, ns, k, true)
+    end
 
     # push `E` equation to to eqs
-    push!(eqs.args, 
-      :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
+    if isone(length(s.g))
+      push!(eqs.args, 
+        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
+    elseif length(s.g) == k
+      push!(eqs.args, 
+        :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
+    end
 
   end
 
@@ -137,17 +145,8 @@ function make_geohisse(k::Int64, h::Int64, name::Symbol)
       end
     end
 
-  
-  deleteat!(ex.args[2].args[2].args,[1,3])
-  deleteat!(ex.args[2].args[2].args[1].args, 2)
-
-ex.args[2].args[2].args[1].args[2].args[1] = eqs
-
-push!(ex, $ex)
-
   return eval(ex)
 end
-
 
 
 
@@ -566,7 +565,7 @@ function geohisse_2k(du::Array{Float64,1},
                p[10] + p[20]*u[8] + p[14]*u[12] + p[5]*u[11]^2
     # area AB
     du[12] = -(p[4] + p[5] + p[6] + p[17] + p[18] + p[20])*u[12]       +
-               p[17]*u[10] + p[18]*u[11] + p[20]*u[9]                    + 
+               p[17]*u[11] + p[18]*u[10] + p[20]*u[9]                    + 
                p[4]*u[10]*u[12] + p[5]*u[11]*u[12] + p[6]*u[10]*u[11]
   end
 
