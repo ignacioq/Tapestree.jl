@@ -18,7 +18,8 @@ Updated 17 01 2019
 Returns the closure for making an approximation function given 
 `y` Array dimension.
 """
-function make_approxf(N::Int64)
+function make_approxf(x::Array{Float64,1}, 
+                      y::Array{Float64,N}) where {N}
 
   if N == 1
     nc = 1
@@ -84,7 +85,7 @@ function make_approxf(N::Int64)
       end
       return nothing
     end
-    af! = (val::Float64) -> f_full(val, r, x, y)
+    af! = (val::Float64) -> f_full(val, r, $x, $y)
   end
 
   return eval(ex)
