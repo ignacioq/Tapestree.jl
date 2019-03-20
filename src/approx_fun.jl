@@ -12,11 +12,11 @@ Updated 17 01 2019
 
 
 
-
 """
     make_approxf(N::Int64)
 
-Returns the closure for making an approximation function.
+Returns the closure for making an approximation function given 
+`y` Array dimension.
 """
 function make_approxf(N::Int64)
 
@@ -37,7 +37,7 @@ function make_approxf(N::Int64)
       push!(lex1.args, :(r[$i] = linpred(val, xa, xap1, y[a,$i], y[a+1, $i])::Float64))
     end
 
-    # add one assigment
+    # add one assignment
     pushfirst!(lex1.args, :(xap1 = x[a+1]::Float64))
     pushfirst!(lex1.args, :(xa   = x[a]::Float64))
   end
@@ -74,15 +74,17 @@ function make_approxf(N::Int64)
   lex.args[2].args[3] = lex.args[2].args[3].args[1]
 
   ex = quote
-    function make_af(x::Array{Float64,1}, y::Array{Float64,$N})
-      function f(val::Float64, r::Array{Float64,1})
-        @inbounds begin
-          $lex
-        end
-        return nothing
+    r = Array{Float64,1}(undef,$nc)
+    function f_full(val::Float64, 
+                    r::Array{Float64,1}, 
+                    x::Array{Float64,1}, 
+                    y::Array{Float64,$N})
+      @inbounds begin
+        $lex
       end
-    return f
+      return nothing
     end
+    af! = (val::Float64) -> f_full(val, r, x, y)
   end
 
   return eval(ex)
