@@ -10,6 +10,10 @@ September 19 2017
 
 =#
 
+
+
+
+
 """
     make_solver(odef, p0::Array{Float64,1})
 
@@ -28,11 +32,20 @@ function make_solver(odef, p0::Array{Float64,1}, u0::Array{Float64,1})
 
     solve(prob,
           Tsit5(), 
-          save_everystep = false, 
-          calck          = false,
-          force_dtmin    = true,
-          maxiters       = 100_000_000).u[2]::Array{Float64,1}
+          save_everystep  = false, 
+          calck           = false,
+          force_dtmin     = true,
+          save_start      = false,
+          initialize_save = false,
+          maxiters        = 100_000_000).u[1]
+
   end
 
   return f
 end
+
+
+
+
+
+
