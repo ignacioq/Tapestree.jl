@@ -14,63 +14,78 @@ Updated 17 01 2019
 
 
 """
-    make_approxf(x::Array{Float64,1}, y::Array{Float64,1})
+    make_approxf(N::Int64)
 
-Returns a linear approximation function given values of x and y.
+Returns the closure for making an approximation function.
 """
-function make_approxf(x::Array{Float64,1}, 
-                      y::Array{Float64,1})
+function make_approxf(N::Int64)
 
-  function f(val::Float64)
-    @inbounds begin
+  if N == 1
+    nc = 1
+  else
+    nc = size(y, 2)::Int64
+  end
 
-      a, lp = idxrange(x, val)
+  lex1 = quote end
+  pop!(lex1.args)
 
-      if lp == 1
-        return linpred(val, x[a], x[a+1], y[a], y[a+1])::Float64
-      else
-        return y[a]::Float64
-      end
+  if N == 1
+    push!(lex1.args, :(r[1] = linpred(val, x[a], x[a+1], y[a], y[a+1])::Float64))
+  else
+    # unroll loop
+    for i = Base.OneTo(nc)
+      push!(lex1.args, :(r[$i] = linpred(val, xa, xap1, y[a,$i], y[a+1, $i])::Float64))
+    end
 
+    # add one assigment
+    pushfirst!(lex1.args, :(xap1 = x[a+1]::Float64))
+    pushfirst!(lex1.args, :(xa   = x[a]::Float64))
+  end
+
+  lex2 = quote end
+  pop!(lex2.args)
+
+  if N == 1
+    push!(lex2.args, :(r[1] = y[a]::Float64))
+  else
+    # unroll loop
+    for i = Base.OneTo(nc)
+      push!(lex2.args, :(r[$i] = y[a,$i]::Float64))
     end
   end
 
-  return f::Function
-end
-
-
-
-
-
-"""
-    make_approxf(x::Array{Float64,1}, y::Array{Float64,2})
-
-Returns linear approximation functions, one for each y column.
-"""
-function make_approxf(x::Array{Float64,1}, 
-                      y::Array{Float64,2})
-
-  nc = size(y, 2)::Int64
-
-  function f(val::Float64, r::Array{Float64,1})
-
-    @inbounds begin
-
-      for i in Base.OneTo(nc)
-          a, lp = idxrange(x, val)
-
-          if lp
-            r[i] = linpred(val, x[a], x[a+1], y[a,i], y[a+1, i])::Float64
-          else
-            r[i] = y[a,i]::Float64
-          end
-      end
-
-      return nothing
+  lex = quote
+    a, lp = idxrange(x, val)::Tuple{Int64, Bool}
+    if lp 
+      $lex1 
+    else 
+      $lex2 
     end
   end
 
-  return f::Function
+  # aesthetic cleaning
+  deleteat!(lex.args,[1,3])
+
+  popfirst!(lex.args[2].args[2].args)
+  lex.args[2].args[2] = lex.args[2].args[2].args[1]
+
+
+  popfirst!(lex.args[2].args[3].args)
+  lex.args[2].args[3] = lex.args[2].args[3].args[1]
+
+  ex = quote
+    function make_af(x::Array{Float64,1}, y::Array{Float64,$N})
+      function f(val::Float64, r::Array{Float64,1})
+        @inbounds begin
+          $lex
+        end
+        return nothing
+      end
+    return f
+    end
+  end
+
+  return eval(ex)
 end
 
 
