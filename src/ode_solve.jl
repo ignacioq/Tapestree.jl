@@ -11,9 +11,6 @@ September 19 2017
 =#
 
 
-
-
-
 """
     make_solver(odef, p0::Array{Float64,1})
 
@@ -43,9 +40,3 @@ function make_solver(odef, p0::Array{Float64,1}, u0::Array{Float64,1})
 
   return f
 end
-
-
-
-
-
-
