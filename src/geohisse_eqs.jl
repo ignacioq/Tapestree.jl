@@ -11,13 +11,6 @@ Created 07 03 2019
 =#
 
 
-k = 2
-h = 2
-
-sort(collect(build_par_names(k,h,(true,false,false))), by = x -> x[2])
-
-
-make_geohisse(k, h, :odef)
 
 
 
