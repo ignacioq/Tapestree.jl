@@ -261,6 +261,7 @@ function exp_expr(k    ::Int64,
                   h    ::Int64,
                   ny   ::Int64,
                   model::NTuple{3,Bool})
+
   # if speciation or extinction
   if model[1] || model[2]
     ex = quote end
@@ -269,42 +270,27 @@ function exp_expr(k    ::Int64,
       coex = Expr(:call, :+)
       for yi in Base.OneTo(div(ny,k))
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2) + yi + div(ny,k)*(i-1) + div(ny,k)*k*(j-1))] * 
-            r[$(yi + div(ny,k)*(i-1))]))
+          :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k)*(i-1)+div(ny,k)*k*(j-1))] * 
+            r[$(yi+div(ny,k)*(i-1))]))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1))] = exp($coex)))
     end
+
     return ex
 
   # if dispersal
   elseif model[3]
-    ex = quote end
-    pop!(ex.args)
-
 
     ex = quote end
     pop!(ex.args)
-    for j = Base.OneTo(h), i = Base.OneTo(k)
+    for j = Base.OneTo(h), i = Base.OneTo(k*(k-1))
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(div(ny,k))
+      for yi in Base.OneTo(div(ny,k*(k-1)))
         push!(coex.args,
-
-          :(p[$(h*(3k+k*(k-1)+2) + yi + div(ny,k)*(i-1) + div(ny,k)*k*(j-1))] * 
-
-            r[$(yi + div(ny,k)*(i-1))]))
+          :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k*(k-1))*(i-1)+div(ny,k*(k-1))*k*(k-1)*(j-1))] * 
+            r[$(yi+div(ny,k*(k-1))*(i-1))]))
       end
-      push!(ex.args, :(eaft[$(i + k*(j-1))] = exp($coex)))
-    end
-
-
-
-
-
-
-    for j = Base.OneTo(h), i = Base.OneTo(div(ny,k)*k*(k-1))
-      push!(ex.args, 
-        :(eaft[$(i + div(ny,k)*k*(k-1)*(j-1))] = 
-          exp(p[$(h*(3k + k*(k-1) + 2) + i + div(ny,k)*k*(k-1)*(j-1))]*r[$(i)])))
+      push!(ex.args, :(eaft[$(i + k*(k-1)*(j-1))] = exp($coex)))
     end
 
     return ex
