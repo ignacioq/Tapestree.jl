@@ -6,21 +6,45 @@ Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 15 02 2019
+Created 18 03 2019
 =#
 
 
+k  = 3
+h  = 2
+ny = k*2
+x = cumsum(rand(100))
+x[1] = 0.0
+y = randn(100, ny)
+cumsum!(y, y, dims = 1)
+model = (true, false, false)
+
+sort(collect(build_par_names(k, h, ny, model)), by = x -> x[2])
+
+
+make_approxf(x, y)
+
+af!(0.7011); r
 
 
 
 """
-    make_geohisse(k::Int64, h::Int64, name::Symbol)
+    make_egeohisse(k    ::Int64,
+                   h    ::Int64,
+                   ny   ::Int64,
+                   af!  ::Function,
+                   model::NTuple{3, Bool},
+                   name ::Symbol)
 
-makes GeoSSE ODE equation function for `k` areas 
-and `h` hidden states of name `:name`.
+Creates Covariate GeoHiSSE ODE equation function for `k` areas, 
+`h` hidden states and `ny` covariates of name `:name`.
 """
-function make_geohisse(k::Int64, h::Int64, name::Symbol)
-
+function make_egeohisse(k    ::Int64,
+                        h    ::Int64,
+                        ny   ::Int64,
+                        af!  ::Function,
+                        model::NTuple{3, Bool},
+                        name ::Symbol)
   # n states
   ns = (2^k - 1)*h
 
@@ -29,6 +53,21 @@ function make_geohisse(k::Int64, h::Int64, name::Symbol)
 
   # start Expression for ODE equations
   eqs = quote end
+  popfirst!(eqs.args)
+
+  # add environmental function
+  push!(eqs.args, :(af!(t)))
+
+  # compute exponential for each β*covariable
+  expex = exp_expr(k, h, ny)
+
+  for ex in expex.args
+    push!(eqs.args, ex)
+  end
+
+  """
+  - Add closure for expex!!
+  """
 
   for si = Base.OneTo(ns)
 
@@ -45,8 +84,16 @@ function make_geohisse(k::Int64, h::Int64, name::Symbol)
     likelihoods
     =#
 
+
+
     # no events
     nev = noevents_expr(si, s, ls, oa, k, h, ns, false)
+
+
+
+
+
+
 
     # remove if !isone(lr)
     if length(s.g) > 1
@@ -170,6 +217,8 @@ isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h
 
 
 
+
+
 """
     create_states(k::Int64, h::Int64)
 
@@ -199,26 +248,97 @@ end
 
 
 
+
 """
-    noevents_expr(si ::Int64,
-                  s  ::ghs, 
-                  ls ::Int64,
-                  oa ::Array{Int64,1},
-                  k  ::Int64,
-                  h  ::Int64,
-                  ns ::Int64,
-                  ext::Bool)
+    exp_expr(k    ::Int64,
+             h    ::Int64,
+             ny   ::Int64,
+             model::NTuple{3,Bool})
+
+Return exponential expression for one time evaluation of covariates.
+"""
+function exp_expr(k    ::Int64,
+                  h    ::Int64,
+                  ny   ::Int64,
+                  model::NTuple{3,Bool})
+  # if speciation or extinction
+  if model[1] || model[2]
+    ex = quote end
+    pop!(ex.args)
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      coex = Expr(:call, :+)
+      for yi in Base.OneTo(div(ny,k))
+        push!(coex.args,
+          :(p[$(h*(3k+k*(k-1)+2) + yi + div(ny,k)*(i-1) + div(ny,k)*k*(j-1))] * 
+            r[$(yi + div(ny,k)*(i-1))]))
+      end
+      push!(ex.args, :(eaft[$(i + k*(j-1))] = exp($coex)))
+    end
+    return ex
+
+  # if dispersal
+  elseif model[3]
+    ex = quote end
+    pop!(ex.args)
+
+
+    ex = quote end
+    pop!(ex.args)
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      coex = Expr(:call, :+)
+      for yi in Base.OneTo(div(ny,k))
+        push!(coex.args,
+
+          :(p[$(h*(3k+k*(k-1)+2) + yi + div(ny,k)*(i-1) + div(ny,k)*k*(j-1))] * 
+
+            r[$(yi + div(ny,k)*(i-1))]))
+      end
+      push!(ex.args, :(eaft[$(i + k*(j-1))] = exp($coex)))
+    end
+
+
+
+
+
+
+    for j = Base.OneTo(h), i = Base.OneTo(div(ny,k)*k*(k-1))
+      push!(ex.args, 
+        :(eaft[$(i + div(ny,k)*k*(k-1)*(j-1))] = 
+          exp(p[$(h*(3k + k*(k-1) + 2) + i + div(ny,k)*k*(k-1)*(j-1))]*r[$(i)])))
+    end
+
+    return ex
+  end
+end
+
+
+
+
+
+"""
+    noevents_expr(si   ::Int64,
+                  s    ::ghs, 
+                  ls   ::Int64,
+                  oa   ::Array{Int64,1},
+                  k    ::Int64,
+                  h    ::Int64,
+                  ns   ::Int64,
+                  ext  ::Bool,
+                  model::NTuple{3,Bool})
 
 Return expression for no events.
 """
-function noevents_expr(si ::Int64,
-                       s  ::ghs, 
-                       ls ::Int64,
-                       oa ::Array{Int64,1},
-                       k  ::Int64,
-                       h  ::Int64,
-                       ns ::Int64,
-                       ext::Bool)
+function noevents_expr(si   ::Int64,
+                       s    ::ghs, 
+                       ls   ::Int64,
+                       oa   ::Array{Int64,1},
+                       k    ::Int64,
+                       h    ::Int64,
+                       ns   ::Int64,
+                       ny   ::Int64,
+                       ext  ::Bool,
+                       model::NTuple{3,Bool})
+
   # if extinction
   wu = ext ? ns : 0
 
@@ -227,9 +347,29 @@ function noevents_expr(si ::Int64,
   # between-region speciation
   ex = :(+ ($(2.0^(ls-1) - 1.) * p[$(k+1+s.h*(k+1))]))
 
+
+
+
+
   for (i, v) = enumerate(s.g)
     # speciation and extinction
+
+
+
+      push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
+
+    for yi = Base.OneTo(ny)
+
+    end
+
+
+
+
+
     push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
+    
+
+
     # dispersal
     for j = oa
       j -= v <= j ? 1 : 0
@@ -499,9 +639,9 @@ end
                 p::Array{Float64,1}, 
                 t::Float64)
 
-GeoHiSSE + extinction general ODE equation for 2 areas & 2 hidden states.
+EGeoHiSSE + extinction general ODE equation for 2 areas & 2 hidden states.
 """
-function geohisse_2k(du::Array{Float64,1}, 
+function egeohisse_2k(du::Array{Float64,1}, 
                      u::Array{Float64,1}, 
                      p::Array{Float64,1}, 
                      t::Float64)
