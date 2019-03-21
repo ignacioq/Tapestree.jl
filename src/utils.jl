@@ -124,12 +124,12 @@ end
 
 
 """
-    build_par_names(k::Int64, h::Int64, mod::NTuple{3,Bool})
+    build_par_names(k::Int64, h::Int64, ny::Int64, mod::NTuple{3,Bool})
 
 Build dictionary for parameter names and indexes for EGeoHiSSE for
-`k` areas and `h` hidden states.
+`k` areas, `h` hidden states and `ny` covariates.
 """
-function build_par_names(k::Int64, h::Int64, model::NTuple{3,Bool})
+function build_par_names(k::Int64, h::Int64, ny::Int64, model::NTuple{3,Bool})
 
   # generate individual area names
   ia = String[]
@@ -175,14 +175,14 @@ function build_par_names(k::Int64, h::Int64, model::NTuple{3,Bool})
   ## add betas
   # if model is on Q
   if model[3]
-    for i = 0:(h-1), a = ia, b = ia
+    for i = 0:(h-1), a = ia, b = ia, l = 1:div(ny,k)
       a == b && continue
-      push!(par_nams, "beta_$(a)$(b)_$i")
+      push!(par_nams, "beta$(l)_$(a)$(b)_$(i)")
     end
   # if model is speciation or extinction
-  else
-    for i = 0:(h-1), a = ia
-      push!(par_nams, "beta_$(a)_$i")
+  elseif model[1] || model[2]
+    for i = 0:(h-1), a = ia, l = 1:div(ny,k)
+      push!(par_nams, "beta$(l)_$(a)_$i")
     end
   end
 
@@ -198,7 +198,7 @@ end
 """
     build_par_names(k::Int64, T::Bool)
 
-Build dictionary for parameter names and indexes for ESSE.
+Build dictionary for parameter names and indexes for EHiSSE.
 """
 function build_par_names(k::Int64, T::Bool)
 
