@@ -32,6 +32,7 @@ Quintero, I. and Landis, Michael J. Interdependent Phenotypic and Biogeographic 
 
 2. Load Tapestree package: 
 ```julia
+push!(LOAD_PATH, expanduser("cloned_repo_dir"))
 using Tapestree
 ```
 
@@ -88,6 +89,7 @@ fix_ω0  = false                      # a boolean to make inference without ω0.
 
 2. Load Tapestree package: 
 ```julia
+push!(LOAD_PATH, expanduser("cloned_repo_dir"))
 using Tapestree
 ```
 
