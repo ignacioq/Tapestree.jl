@@ -77,9 +77,9 @@ function make_approxf(x::Array{Float64,1},
   ex = quote
     r = Array{Float64,1}(undef,$nc)
     function f_full(val::Float64, 
-                    r::Array{Float64,1}, 
-                    x::Array{Float64,1}, 
-                    y::Array{Float64,$N})
+                    r  ::Array{Float64,1}, 
+                    x  ::Array{Float64,1}, 
+                    y  ::Array{Float64,$N})
       @inbounds begin
         $lex
       end
