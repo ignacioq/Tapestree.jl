@@ -119,7 +119,7 @@ function find_nonneg_int(p::Array{Float64}, j::Int64, S::Float64, postf, w::Floa
   R::Float64 = L + w
 
   if L <= 0.0
-    L = 1e-30
+    L = 1e-100
   end
 
   # left extreme
@@ -127,7 +127,7 @@ function find_nonneg_int(p::Array{Float64}, j::Int64, S::Float64, postf, w::Floa
   while S < postf(pc)
     L -= w::Float64
     if L <= 0.0
-      L = 1e-30
+      L = 1e-100
       break
     end
     pc[j] = L::Float64
