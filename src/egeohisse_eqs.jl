@@ -59,14 +59,14 @@ function make_egeohisse(k    ::Int64,
   push!(eqs.args, :(af!(t)))
 
   # compute exponential for each β*covariable
-  expex = exp_expr(k, h, ny)
+  expex = exp_expr(k, h, ny, model)
 
   for ex in expex.args
     push!(eqs.args, ex)
   end
 
   """
-  - Add closure for expex!!
+  - Add closure for eaft vector!!
   """
 
   for si = Base.OneTo(ns)
@@ -262,8 +262,8 @@ function exp_expr(k    ::Int64,
                   ny   ::Int64,
                   model::NTuple{3,Bool})
 
-  # if speciation or extinction
-  if model[1] || model[2]
+  # if speciation
+  if model[1] 
     ex = quote end
     pop!(ex.args)
     for j = Base.OneTo(h), i = Base.OneTo(k)
@@ -273,7 +273,24 @@ function exp_expr(k    ::Int64,
           :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k)*(i-1)+div(ny,k)*k*(j-1))] * 
             r[$(yi+div(ny,k)*(i-1))]))
       end
-      push!(ex.args, :(eaft[$(i + k*(j-1))] = exp($coex)))
+      push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+    end
+
+    return ex
+
+  # if extinction
+  elseif  model[2]
+    ex = quote end
+    pop!(ex.args)
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      coex = Expr(:call, :+)
+      for yi in Base.OneTo(div(ny,k))
+        push!(coex.args,
+          :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k)*(i-1)+div(ny,k)*k*(j-1))] * 
+            r[$(yi+div(ny,k)*(i-1))]))
+      end
+      push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(h*(k+1) + i + k*(j-1))]*
+                       exp($coex)))
     end
 
     return ex
@@ -290,12 +307,14 @@ function exp_expr(k    ::Int64,
           :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k*(k-1))*(i-1)+div(ny,k*(k-1))*k*(k-1)*(j-1))] * 
             r[$(yi+div(ny,k*(k-1))*(i-1))]))
       end
-      push!(ex.args, :(eaft[$(i + k*(k-1)*(j-1))] = exp($coex)))
+      push!(ex.args, :(eaft[$(i + k*(k-1)*(j-1))] = p[$(h*(2k+1) + i + k*(k-1)*(j-1))]*
+                       exp($coex)))
     end
 
     return ex
   end
 end
+
 
 
 
@@ -338,15 +357,22 @@ function noevents_expr(si   ::Int64,
 
 
   for (i, v) = enumerate(s.g)
-    # speciation and extinction
 
-
-
+    ##Covariates
+    # if speciation model
+    if model[1]
       push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
 
-    for yi = Base.OneTo(ny)
 
+    elseif model[2]
+      push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
+    elseif !model[3]
+      push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
     end
+
+    # within-region speciation and extinction
+
+
 
 
 
