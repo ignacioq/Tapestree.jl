@@ -175,13 +175,13 @@ function build_par_names(k::Int64, h::Int64, ny::Int64, model::NTuple{3,Bool})
   ## add betas
   # if model is on Q
   if model[3]
-    for i = 0:(h-1), a = ia, b = ia, l = 1:div(ny,k)
+    for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(div(ny,k*(k-1)))
       a == b && continue
       push!(par_nams, "beta$(l)_$(a)$(b)_$(i)")
     end
   # if model is speciation or extinction
   elseif model[1] || model[2]
-    for i = 0:(h-1), a = ia, l = 1:div(ny,k)
+    for i = 0:(h-1), a = ia, l = Base.OneTo(div(ny,k))
       push!(par_nams, "beta$(l)_$(a)_$i")
     end
   end
