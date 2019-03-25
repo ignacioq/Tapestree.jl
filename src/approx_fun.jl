@@ -13,7 +13,8 @@ Updated 17 01 2019
 
 
 """
-    make_approxf(N::Int64)
+    make_approxf(x::Array{Float64,1}, 
+                 y::Array{Float64,N}) where {N}
 
 Returns the closure for making an approximation function given 
 `y` Array dimension.
@@ -75,25 +76,50 @@ function make_approxf(x::Array{Float64,1},
   lex.args[2].args[3] = lex.args[2].args[3].args[1]
 
   ex = quote
-    function af_gen(x::Array{Float64,1}, 
-                    y::Array{Float64,$N})
-      function af!(val::Float64, r::Array{Float64,1}) 
+    function f_gen(x::Array{Float64,1}, 
+                   y::Array{Float64,$N})
+      function f(val::Float64, r::Array{Float64,1}) 
         @inbounds begin
           $lex
         end
         return nothing
       end
-      return af!
+      return f
     end
-    af! = let x0 = $x, y0 = $y
-      af_gen(x0, y0)
-    end
+
+    af! = f_gen($x, $y)
   end
 
   return eval(ex)
 end
 
 
+# function aprox_fun_gen(x::Array{Float64,1}, y::Array{Float64,1})
+#   function f(a::Int64, val::Float64)
+#     (y[a] + (val - x[a])*(y[a+1] - y[a])/(x[a+1] - x[a]))
+#   end
+#   return f
+# end
+
+# const x = cumsum(rand(100))
+# const y = cumsum(randn(100))
+# af_clos = aprox_fun_gen(x, y)
+
+# function aprox_full(a::Int64, val::Float64, x::Array{Float64,1}, y::Array{Float64,1})
+#     (y[a] + (val - x[a])*(y[a+1] - y[a])/(x[a+1] - x[a]))
+# end
+
+# af_clos2 = (a::Int64, val::Float64) -> aprox_full(a, val, x, y)
+
+# function af_pas(a::Int64, val::Float64, x::Array{Float64,1}, y::Array{Float64,1})
+#   (y[a] + (val - x[a])*(y[a+1] - y[a])/(x[a+1] - x[a]))
+# end
+
+
+# using BenchmarkTools
+# @benchmark af_clos(2, 3.)
+# @benchmark af_clos2(2, 3.)
+# @benchmark af_pas(2, 3., $x, $y)
 
 
 
