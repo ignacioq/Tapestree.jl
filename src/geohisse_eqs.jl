@@ -453,7 +453,8 @@ function ext_expr(s ::ghs,
     ex = Expr(:call, :+)
     for i = s.g
       push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
-                       u[$(findfirst(x -> isghsequal(x, ghs(setdiff(s.g, i),s.h)), S) + ns)]))
+                       u[$(findfirst(x -> isghsequal(x, 
+                                          ghs(setdiff(s.g, i),s.h)), S) + ns)]))
     end
   end
 
