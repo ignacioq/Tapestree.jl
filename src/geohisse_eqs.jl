@@ -448,7 +448,7 @@ function ext_expr(s ::ghs,
 
   if isone(length(s.g))
     ex = Expr(:call, :+)
-    for i in s.g push!(ex.args, :(p[$((k+1)*h + h*(s.h) + i)])) end
+    for i in s.g push!(ex.args, :(p[$((k+1)*h + k*s.h + i)])) end
   else
     ex = Expr(:call, :+)
     for i = s.g
