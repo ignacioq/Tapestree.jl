@@ -84,19 +84,11 @@ function make_egeohisse(k    ::Int64,
     likelihoods
     =#
 
-
-
     # no events
-    nev = noevents_expr(si, s, ls, oa, k, h, ns, false)
-
-
-
-
-
-
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, false)
 
     # remove if !isone(lr)
-    if length(s.g) > 1
+    if ls > 1
       # local extinction
       lex = localext_expr(s, S, k, h)
       # between-region speciation
@@ -105,21 +97,21 @@ function make_egeohisse(k    ::Int64,
 
     # dispersal
     # remove if lr == k
-    if length(s.g) != k
-      dis = dispersal_expr(s, oa, S, ns, k, h, false)
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, model[3], false)
     end
 
     # hidden states transitions
     hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.0
 
     # within-region speciation
-    wrs = wrspec_expr(si, s, ns, k)
+    wrs = wrspec_expr(si, s, ns, k, model[1])
 
     # push `D` equation to to eqs
-    if isone(length(s.g))
+    if isone(ls)
       push!(eqs.args, 
         :(du[$si] = $nev + $dis + $hid + $wrs))
-    elseif length(s.g) == k
+    elseif ls == k
       push!(eqs.args, 
         :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
     else
@@ -132,32 +124,32 @@ function make_egeohisse(k    ::Int64,
     =#
 
     # no events
-    nev = noevents_expr(si, s, ls, oa, k, h, ns, true)
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, true)
 
     # extinction
-    ext = ext_expr(s, S, ns, k, h) 
+    ext = ext_expr(s, S, ns, k, h, model[2]) 
 
     # dispersal and extinction
-    if length(s.g) != k
-      dis = dispersal_expr(s, oa, S, ns, k, h, true)
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, model[3], true)
     end
 
     # hidden states transitions
     hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0.0
 
     # within-region extinction
-    wrs = wrsext_expr(si, s, ns, k)
+    wrs = wrsext_expr(si, s, ns, k, model[1])
 
     # between-region extinction
-    if length(s.g) > 1
+    if ls > 1
       brs = brspec_expr(s, S, ns, k, true)
     end
 
     # push `E` equation to to eqs
-    if isone(length(s.g))
+    if isone(ls)
       push!(eqs.args, 
         :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
-    elseif length(s.g) == k
+    elseif ls == k
       push!(eqs.args, 
         :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
     else
@@ -328,8 +320,8 @@ end
                   k    ::Int64,
                   h    ::Int64,
                   ns   ::Int64,
-                  ext  ::Bool,
-                  model::NTuple{3,Bool})
+                  model::NTuple{3,Bool},
+                  ext  ::Bool)
 
 Return expression for no events.
 """
@@ -340,9 +332,8 @@ function noevents_expr(si   ::Int64,
                        k    ::Int64,
                        h    ::Int64,
                        ns   ::Int64,
-                       ny   ::Int64,
-                       ext  ::Bool,
-                       model::NTuple{3,Bool})
+                       model::NTuple{3,Bool},
+                       ext  ::Bool)
 
   # if extinction
   wu = ext ? ns : 0
@@ -351,42 +342,33 @@ function noevents_expr(si   ::Int64,
 
   # between-region speciation
   ex = :(+ ($(2.0^(ls-1) - 1.) * p[$(k+1+s.h*(k+1))]))
-
-
-
-
-
   for (i, v) = enumerate(s.g)
 
     ##Covariates
     # if speciation model
     if model[1]
-      push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
-
-
-    elseif model[2]
-      push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
-    elseif !model[3]
+      push!(ex.args, :(eaft[$(v + s.h*k)] + p[$(v + (k+1)*h + s.h*k + ts)]))
+    # if extinction model and only for endemic extinction
+    elseif model[2] && isone(ls)
+      push!(ex.args, :(p[$(v + s.h*(k+1))] + eaft[$(v + s.h*k)]))
+    # if neither
+    else
       push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
     end
 
-    # within-region speciation and extinction
-
-
-
-
-
-
-
-    push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
-    
-
-
     # dispersal
-    for j = oa
-      j -= v <= j ? 1 : 0
-      push!(ex.args[i+2].args, 
-        :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(v-1) + j)]))
+    if model[3]
+      for j = oa
+        j -= v <= j ? 1 : 0
+        push!(ex.args[i+2].args, 
+          :(eaft[$(s.h*k*(k-1) + (k-1)*(v-1) + j)]))
+      end
+    else
+      for j = oa
+        j -= v <= j ? 1 : 0
+        push!(ex.args[i+2].args, 
+          :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(v-1) + j)]))
+      end
     end
   end
 
@@ -411,6 +393,8 @@ end
 
 
 
+
+
 """
     localext_expr(s ::ghs,
                   S ::Array{ghs,1},
@@ -427,7 +411,8 @@ function localext_expr(s ::ghs,
   ex = Expr(:call, :+)
   for i = s.g
     push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
-                     u[$(findfirst(x -> isghsequal(x, ghs(setdiff(s.g, i),s.h)), S))]))
+                     u[$(findfirst(x -> isghsequal(x, 
+                                        ghs(setdiff(s.g, i),s.h)), S))]))
   end
   return ex
 end
@@ -443,6 +428,7 @@ end
                    ns ::Int64,
                    k  ::Int64,
                    h  ::Int64,
+                   mdQ::Bool,
                    ext::Bool)
 
 Return expression for dispersal.
@@ -453,6 +439,7 @@ function dispersal_expr(s  ::ghs,
                         ns ::Int64,
                         k  ::Int64,
                         h  ::Int64,
+                        mdQ::Bool,
                         ext::Bool)
 
   wu = ext ? ns : 0
@@ -462,14 +449,25 @@ function dispersal_expr(s  ::ghs,
                      s.h == x.h, S)
 
   ex = Expr(:call, :+)
-  for a = s.g, (i, j) = enumerate(oa)
-    j -= a <= j ? 1 : 0
-    push!(ex.args, :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
-                     u[$(ida[i] + wu)]))
+
+  # if dispersal covariate
+  if mdQ
+    for a = s.g, (i, j) = enumerate(oa)
+      j -= a <= j ? 1 : 0
+      push!(ex.args, :(eaft[$(s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
+                       u[$(ida[i] + wu)]))
+    end
+  else
+    for a = s.g, (i, j) = enumerate(oa)
+      j -= a <= j ? 1 : 0
+      push!(ex.args, :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
+                       u[$(ida[i] + wu)]))
+    end
   end
 
   return ex
 end
+
 
 
 
@@ -521,22 +519,42 @@ Return expression for within-region speciation.
 function wrspec_expr(si ::Int64,
                      s  ::ghs,
                      ns ::Int64,
-                     k  ::Int64)
+                     k  ::Int64,
+                     mdS::Bool)
+  # if model speciation
+  if mdS
+    if isone(length(s.g))
+      ex = Expr(:call, :*, 2.0)
+      for i = s.g
+        push!(ex.args, :(eaft[$(i + s.h*k)] * 
+               u[$(i + s.h*(2^k-1) + ns)] * u[$(i + s.h*(2^k-1))]))
+      end
+    else
+      ex = Expr(:call, :+)
+      for i = s.g
+        push!(ex.args, :(eaft[$(i + s.h*k)] * 
+          (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
+           u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
+      end
+    end
 
-  if isone(length(s.g)) 
-    ex = :(2.0 * p[$si] * u[$(si + ns)] * u[$(si)])
+  # if model *NOT* speciation
   else
-
-    ex = Expr(:call, :+)
-    for i = s.g
-      push!(ex.args, :(p[$(i + s.h*(k+1))] * 
-        (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
-         u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
+    if isone(length(s.g)) 
+      ex = :(2.0 * p[$si] * u[$(si + ns)] * u[$(si)])
+    else
+      ex = Expr(:call, :+)
+      for i = s.g
+        push!(ex.args, :(p[$(i + s.h*(k+1))] * 
+          (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
+           u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
+      end
     end
   end
 
   return ex
 end
+
 
 
 
@@ -591,25 +609,33 @@ end
 
 Return expression for extinction.
 """
-function ext_expr(s ::ghs,
-                  S ::Array{ghs,1},
-                  ns::Int64,
-                  k ::Int64,
-                  h ::Int64)
+function ext_expr(s  ::ghs,
+                  S  ::Array{ghs,1},
+                  ns ::Int64,
+                  k  ::Int64,
+                  h  ::Int64,
+                  mdE::Bool)
 
   if isone(length(s.g))
-    ex = Expr(:call, :+)
-    for i in s.g push!(ex.args, :(p[$((k+1)*h + h*(s.h) + i)])) end
+    if mdE
+      ex = Expr(:call, :+)
+      for i in s.g push!(ex.args, :(eaft[$(k*s.h + i)])) end
+    else
+      ex = Expr(:call, :+)
+      for i in s.g push!(ex.args, :(p[$((k+1)*h + k*s.h + i)])) end
+    end
   else
     ex = Expr(:call, :+)
     for i = s.g
       push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
-                       u[$(findfirst(x -> isghsequal(x, ghs(setdiff(s.g, i),s.h)), S) + ns)]))
+                       u[$(findfirst(x -> isghsequal(x, 
+                                          ghs(setdiff(s.g, i),s.h)), S) + ns)]))
     end
   end
 
   return ex
 end
+
 
 
 
@@ -623,18 +649,36 @@ end
 
 Return expression of extinction for within-region speciation.
 """
-function wrsext_expr(si::Int64,
-                     s ::ghs,
-                     ns::Int64,
-                     k ::Int64)
+function wrsext_expr(si ::Int64,
+                     s  ::ghs,
+                     ns ::Int64,
+                     k  ::Int64,
+                     mdS::Bool)
 
-  if isone(length(s.g)) 
-    ex = :(p[$si] * u[$(si + ns)]^2)
+  # if speciation model
+  if mdS
+    if isone(length(s.g))
+      ex = Expr(:call, :*, 2.0)
+      for i = s.g
+        push!(ex.args, :(eaft[$(i + s.h*k)] * u[$(i + s.h*(2^k-1) + ns)]^2))
+      end
+    else
+      ex = Expr(:call, :+)
+      for i = s.g
+        push!(ex.args, :(eaft[$(i + s.h*k)] * 
+                         u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
+      end
+    end
+  # if *NOT* speciation model
   else
-    ex = Expr(:call, :+)
-    for i = s.g
-      push!(ex.args, :(p[$(i + s.h*(k+1))] * 
-                       u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
+    if isone(length(s.g)) 
+      ex = :(p[$si] * u[$(i + s.h*(2^k-1) + ns)]^2)
+    else
+      ex = Expr(:call, :+)
+      for i = s.g
+        push!(ex.args, :(p[$(i + s.h*(k+1))] * 
+                         u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
+      end
     end
   end
 
