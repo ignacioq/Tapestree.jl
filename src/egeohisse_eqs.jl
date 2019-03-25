@@ -10,21 +10,7 @@ Created 18 03 2019
 =#
 
 
-k  = 3
-h  = 2
-ny = k*2
-x = cumsum(rand(100))
-x[1] = 0.0
-y = randn(100, ny)
-cumsum!(y, y, dims = 1)
-model = (true, false, false)
 
-sort(collect(build_par_names(k, h, ny, model)), by = x -> x[2])
-
-
-make_approxf(x, y)
-
-af!(0.7011); r
 
 
 
@@ -56,7 +42,7 @@ function make_egeohisse(k    ::Int64,
   popfirst!(eqs.args)
 
   # add environmental function
-  push!(eqs.args, :(af!(t)))
+  push!(eqs.args, :(af!(t, r)))
 
   # compute exponential for each β*covariable
   expex = exp_expr(k, h, ny, model)
@@ -160,21 +146,38 @@ function make_egeohisse(k    ::Int64,
   end
 
   ## aesthetic touches
-  # remove REPL comment
-  popfirst!(eqs.args)
+  # sort `du`s
+  eqs.args[[(end-(ns*2)+1):end...]] = 
+    eqs.args[append!([(end-(ns*2)+1):2:end...],
+            [(end-(ns*2)+2):2:end...])]
 
-  eqs.args[:] = eqs.args[append!([1:2:end...],[2:2:end...])]
+  neaft = model[3] ? k*(k-1)*h : k*h
 
-  # make function
-  ex = 
-    quote 
-      function $name(du::Array{Float64,1}, u::Array{Float64,1}, p::Array{Float64,1}, t::Float64)
+  ex = quote 
+    function f_gen(k    ::Int64,
+                   h    ::Int64,
+                   ny   ::Int64,
+                   af!  ::Function,
+                   model::NTuple{3, Bool})
+      # preallocate
+      r    = Array{Float64,1}(undef,$ny)
+      eaft = Array{Float64,1}(undef,$neaft)
+
+      function f(du::Array{Float64,1}, 
+                 u::Array{Float64,1}, 
+                 p::Array{Float64,1}, 
+                 t::Float64)
+
         @inbounds begin
           $eqs
         end
         return nothing
       end
+
+      return f
     end
+    $name = f_gen($k, $h, $ny, $af!, $model)
+  end
 
   return eval(ex)
 end
@@ -690,74 +693,46 @@ end
 
 
 """
-    geohisse_2k(du::Array{Float64,1}, 
-                u::Array{Float64,1}, 
-                p::Array{Float64,1}, 
-                t::Float64)
+    egeohisse_2k_gen(k  ::Int64,
+                     h  ::Int64,
+                     ny ::Int64,
+                     af!::Function)
 
-EGeoHiSSE + extinction general ODE equation for 2 areas & 2 hidden states.
+EGeoHiSSE + extinction ODE equation for 2 area, hidden states and ny.
 """
-function egeohisse_2k(du::Array{Float64,1}, 
-                     u::Array{Float64,1}, 
-                     p::Array{Float64,1}, 
-                     t::Float64)
+function egeohisse_2k_gen(k  ::Int64,
+                          h  ::Int64,
+                          ny ::Int64,
+                          af!::Function)
 
-  @inbounds begin
+  r    = Array{Float64,1}(undef, 4)
+  eaft = Array{Float64,1}(undef, 4)
 
-    ### likelihoods 
-    ## hidden state 1
-    # area A
-    du[1] = -(p[1] + p[7] + p[11] + p[19])*u[1]            + 
-              p[11]*u[3] + p[19]*u[4] + 2.0*p[1]*u[1]*u[7]
-    # area B
-    du[2] = -(p[2] + p[8] + p[12] + p[19])*u[2]            + 
-              p[12]*u[3] + p[19]*u[5] + 2.0*p[2]*u[2]*u[8]
-    # area AB
-    du[3] = -(p[1] + p[2] + p[3] + p[15] + p[16] + p[19])*u[3] + 
-              p[16]*u[1] + p[15]*u[2]+ p[19]*u[6]              + 
-              p[1]*(u[7]*u[3] + u[9]*u[1])                     + 
-              p[2]*(u[8]*u[3] + u[9]*u[2])                     + 
-              p[3]*(u[7]*u[2] + u[8]*u[1])
-    ## hidden state 2
-    # area A
-    du[4] = -(p[4] + p[9] + p[13] + p[20])*u[4]            + 
-              p[13]*u[6] + p[20]*u[1] + 2.0*p[4]*u[4]*u[10]
-    # area B
-    du[5] = -(p[5] + p[10] + p[14] + p[20])*u[5]            + 
-              p[14]*u[6] + p[20]*u[2] + 2.0*p[5]*u[5]*u[11]
-    # area AB
-    du[6] = -(p[4] + p[5] + p[6] + p[17] + p[18] + p[20])*u[6] + 
-              p[17]*u[5] + p[18]*u[4]+ p[20]*u[3]              + 
-              p[4]*(u[10]*u[6] + u[12]*u[4])                   + 
-              p[5]*(u[11]*u[6] + u[12]*u[5])                   + 
-              p[6]*(u[10]*u[5] + u[11]*u[4])
-
-    ### extinction
-    ## hidden state 1
-    # area A
-    du[7] = -(p[1] + p[7] + p[11] + p[19])*u[7]             + 
-              p[7] + p[19]*u[10] + p[11]*u[9] + p[1]*u[7]^2
-    # area B
-    du[8] = -(p[2] + p[8] + p[12] + p[19])*u[8]             + 
-              p[8] + p[19]*u[11] + p[12]*u[9] + p[2]*u[8]^2
-    # area AB
-    du[9] = -(p[1] + p[2] + p[3] + p[15] + p[16] + p[19])*u[9]   +
-              p[15]*u[8] + p[16]*u[7] + p[19]*u[12]              + 
-              p[1]*u[9]*u[7] + p[2]*u[9]*u[8] + p[3]*u[7]*u[8]
-    ## hidden state 2
-    # area A
-    du[10] = -(p[4] + p[9] + p[13] + p[20])*u[10]            + 
-               p[9] + p[20]*u[7] + p[13]*u[12] + p[4]*u[10]^2
-    # area B
-    du[11] = -(p[5] + p[10] + p[14] + p[20])*u[11]            + 
-               p[10] + p[20]*u[8] + p[14]*u[12] + p[5]*u[11]^2
-    # area AB
-    du[12] = -(p[4] + p[5] + p[6] + p[17] + p[18] + p[20])*u[12]       +
-               p[17]*u[11] + p[18]*u[10] + p[20]*u[9]                    + 
-               p[4]*u[10]*u[12] + p[5]*u[11]*u[12] + p[6]*u[10]*u[11]
+  function f(du::Array{Float64,1}, 
+             u::Array{Float64,1}, 
+             p::Array{Float64,1}, 
+             t::Float64)
+    @inbounds begin
+      af!(t, r)
+      eaft[1] = p[1] * exp(p[21] * r[1] + p[22] * r[2])
+      eaft[2] = p[2] * exp(p[23] * r[3] + p[24] * r[4])
+      eaft[3] = p[4] * exp(p[25] * r[1] + p[26] * r[2])
+      eaft[4] = p[5] * exp(p[27] * r[3] + p[28] * r[4])
+      du[1] = -1.0 * (eaft[1] + p[7] + p[11] + p[19]) * u[1] + +(p[11] * u[3]) + +(p[19] * u[4]) + 2.0 * (eaft[1] * u[7] * u[1])
+      du[2] = -1.0 * (eaft[2] + p[8] + p[12] + p[19]) * u[2] + +(p[12] * u[3]) + +(p[19] * u[5]) + 2.0 * (eaft[2] * u[8] * u[2])
+      du[3] = -1.0 * (1.0 * p[3] + (eaft[2] + p[16] + p[19]) + (eaft[1] + p[15])) * u[3] + (p[16] * u[1] + p[15] * u[2]) + +(p[19] * u[6]) + (eaft[2] * (u[8] * u[3] + u[9] * u[2]) + eaft[1] * (u[7] * u[3] + u[9] * u[1])) + p[3] * (u[7] * u[2] + u[8] * u[1])
+      du[4] = -1.0 * (eaft[3] + p[9] + p[13] + p[20]) * u[4] + +(p[13] * u[6]) + +(p[20] * u[1]) + 2.0 * (eaft[3] * u[10] * u[4])
+      du[5] = -1.0 * (eaft[4] + p[10] + p[14] + p[20]) * u[5] + +(p[14] * u[6]) + +(p[20] * u[2]) + 2.0 * (eaft[4] * u[11] * u[5])
+      du[6] = -1.0 * (1.0 * p[6] + (eaft[4] + p[18] + p[20]) + (eaft[3] + p[17])) * u[6] + (p[18] * u[4] + p[17] * u[5]) + +(p[20] * u[3]) + (eaft[4] * (u[11] * u[6] + u[12] * u[5]) + eaft[3] * (u[10] * u[6] + u[12] * u[4])) + p[6] * (u[10] * u[5] + u[11] * u[4])
+      du[7] = -1.0 * (eaft[1] + p[7] + p[11] + p[19]) * u[7] + +(p[7]) + +(p[11] * u[9]) + +(p[19] * u[10]) + 2.0 * (eaft[1] * u[7] ^ 2)
+      du[8] = -1.0 * (eaft[2] + p[8] + p[12] + p[19]) * u[8] + +(p[8]) + +(p[12] * u[9]) + +(p[19] * u[11]) + 2.0 * (eaft[2] * u[8] ^ 2)
+      du[9] = -1.0 * (1.0 * p[3] + (eaft[2] + p[16] + p[19]) + (eaft[1] + p[15])) * u[9] + (p[16] * u[7] + p[15] * u[8]) + +(p[19] * u[12]) + (eaft[2] * u[8] * u[9] + eaft[1] * u[7] * u[9]) + p[3] * +(u[7] * u[8])
+      du[10] = -1.0 * (eaft[3] + p[9] + p[13] + p[20]) * u[10] + +(p[9]) + +(p[13] * u[12]) + +(p[20] * u[7]) + 2.0 * (eaft[3] * u[10] ^ 2)
+      du[11] = -1.0 * (eaft[4] + p[10] + p[14] + p[20]) * u[11] + +(p[10]) + +(p[14] * u[12]) + +(p[20] * u[8]) + 2.0 * (eaft[4] * u[11] ^ 2)
+      du[12] = -1.0 * (1.0 * p[6] + (eaft[4] + p[18] + p[20]) + (eaft[3] + p[17])) * u[12] + (p[18] * u[10] + p[17] * u[11]) + +(p[20] * u[9]) + (eaft[4] * u[11] * u[12] + eaft[3] * u[10] * u[12]) + p[6] * +(u[10] * u[11])
+    end
+    return nothing
   end
-
-  return nothing
 end
 
 
