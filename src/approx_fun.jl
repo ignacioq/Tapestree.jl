@@ -75,17 +75,19 @@ function make_approxf(x::Array{Float64,1},
   lex.args[2].args[3] = lex.args[2].args[3].args[1]
 
   ex = quote
-    r = Array{Float64,1}(undef,$nc)
-    function f_full(val::Float64, 
-                    r  ::Array{Float64,1}, 
-                    x  ::Array{Float64,1}, 
-                    y  ::Array{Float64,$N})
-      @inbounds begin
-        $lex
+    function af_gen(x::Array{Float64,1}, 
+                    y::Array{Float64,$N})
+      function af!(val::Float64, r::Array{Float64,1}) 
+        @inbounds begin
+          $lex
+        end
+        return nothing
       end
-      return nothing
+      return af!
     end
-    af! = (val::Float64) -> f_full(val, r, $x, $y)
+    af! = let x0 = $x, y0 = $y
+      af_gen(x0, y0)
+    end
   end
 
   return eval(ex)
