@@ -28,15 +28,16 @@ November 20 2017
                   μpriors    ::Float64          = .1,
                   qpriors    ::Float64          = .1)
 
-Run slice-sampling Markov Chain for MuSSE model.
+Run slice-sampling Markov Chain for EGeoSSE model.
 """
 function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        ed         ::Array{Int64,2},
                        el         ::Array{Float64,1},
                        x          ::Array{Float64,1},
                        y          ::Array{Float64},
-                       esse_mod   ::String,
+                       cov_mod    ::String,
                        out_file   ::String;
+                       h          ::Int64             = 2,
                        constraints::NTuple{N,String}  = (" ",),
                        niter      ::Int64             = 10_000,
                        nthin      ::Int64             = 10,
@@ -47,39 +48,56 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        optimal_w  ::Float64           = 0.8) where {N}
 
   # k areas
-  k = length(tip_val[1])::Int64
+  k  = length(tip_val[1])::Int64
 
-  # make z(t) approximation from discrete data
-  af = make_approxf(x, y)
+  # number of covariates
+  ny = size(y,2)
+
+  # make z(t) approximation from discrete data `af!()`
+  make_approxf(x, y)
 
   # make specific ode
-  mod_ode, npars, pardic, md, ws = define_mod(esse_mod, k, af, size(y,2) > 1)
+  mod_ode, npars, pardic, model = 
+    define_mod(cov_mod, k, h, ny, af!)
 
   # make initial p
   #= 
     TODO -> make smarter initial pars
   =#
 
-  p  = fill(0.2,npars)
-  βs = k + k*k + 1
+  p  = fill(0.1,npars)
+  βs = h*(k^2 + 2k + h) + 1
   δ  = log(Float64(length(tip_val)-1))/sum(el)
-  p[βs:end]   .= 0.0         # set βs
-  p[1:k]      .= δ + rand()  # set λs
-  p[(k+1):2k] .= p[1] - δ    # set μs
+  p[βs:end]             .= 0.0             # set βs
+  p[1:(k+1)*h]          .= δ + rand()*0.1  # set λs
+  p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ        # set μs
 
   # parameter update
-  pupd = Base.OneTo(npars)::Base.OneTo{Int64}
+  pupd = Base.OneTo(npars)
 
-  #constraints
-  conp = set_constraints(constraints, pardic)::Dict{Int64,Int64}
+  # parameters constraints and fixed to 0
+  conp, zerp = set_constraints(constraints, pardic)
 
-  # remove contraints for being updated
-  pupd = setdiff(pupd, keys(conp)) ::Array{Int64,1}
-  nnps = filter(x -> βs >  x, pupd)::Array{Int64,1}
-  nps  = filter(x -> βs <= x, pupd)::Array{Int64,1}
+  # force pars in zerp to 0
+  p[zerp] .= 0.0
+
+  # remove contraints from being updated
+  pupd = setdiff(pupd, keys(conp)) 
+  # remove fixed to zero parameters from being updated
+  pupd = setdiff(pupd, zerp)
+  nnps = filter(x -> βs >  x, pupd)
+  nps  = filter(x -> βs <= x, pupd)
+
+
+
+
+
 
   # create likelihood, prior and posterior functions
-  llf = make_llf(tip_val, ed, el, mod_ode, af, p, md, ws, sbrlen = sum(el)/10.)
+  llf = make_llf(tip_val, ed, el, mod_ode, af!, p, md, ws, sbrlen = sum(el)/10.)
+
+
+
   lpf = make_lpf(λpriors, μpriors, qpriors, βpriors, k, (npars != 2k*k))
   lhf = make_lhf(llf, lpf, conp)
 
@@ -182,48 +200,40 @@ end
     define_mod(egeohisse_mod::String,
                k            ::Int64,
                h            ::Int64,
-               af           ::Function,
-               md           ::Bool)
+               ny           ::Int64,
+               af!          ::Function)
 
-Defines EGeoHiSSE model for `k` areas and `h` hidden states.
+Defines EGeoHiSSE model for `k` areas, `h` hidden states and `ny` covariates.
 """
 function define_mod(egeohisse_mod::String,
                     k            ::Int64,
                     h            ::Int64,
-                    af           ::Function,
-                    md           ::Bool)
+                    ny           ::Int64,
+                    af!          ::Function)
 
-  if occursin(r"^[s|S][A-za-z]*", esse_mod)         # if speciation
-    mod_ode = md ? make_esse_s(k, af, md) : make_esse_s(k, af)
-    npars   = 2k + k*k
-    pardic  = build_par_names(k, h, (true, false, false))
-    ws      = true
-    printstyled("running speciation Geographical ESSE model with $k 
-                 single areas and $h hidden states \n", color=:green)
-
-  elseif occursin(r"^[e|E][A-za-z]*", esse_mod)     # if extinction
-    mod_ode = md ? make_esse_e(k, af, md) : make_esse_e(k, af)
-    npars   = (2k + k*k)::Int64
-    pardic  = build_par_names(k, h, (false, true, false))
-    ws      = false
-    printstyled("running extinction Geographical ESSE model with $k 
-                 single areas and $h hidden states \n", color=:green)
-
-  elseif occursin(r"^[t|T|r|R|q|Q][A-za-z]*", esse_mod) # if transition
-    mod_ode = md ? make_esse_q(k, af, md) : make_esse_q(k, af)
-    npars   = 2k*k::Int64
-    pardic  = build_par_names(k, h, (false, false, true))
-    ws      = false
-    printstyled("running transition Geographical ESSE model with $k 
-                 single areas and $h hidden states \n", color=:green)
-
+  if occursin(r"^[s|S][A-za-z]*", egeohisse_mod)         # if speciation
+    model   = (true,false,false)
+    printstyled("running speciation EGeoHiSSE model with $k single areas, $h hidden states and $ny covariates \n", 
+                 color=:green)
+  elseif occursin(r"^[e|E][A-za-z]*", egeohisse_mod)     # if extinction
+    model   = (false,true,false)
+    printstyled("running extinction EGeoHiSSE model with $k single areas, $h hidden states and $ny covariates \n", 
+                 color=:green)
+  elseif occursin(r"^[t|T|r|R|q|Q][A-za-z]*", egeohisse_mod) # if transition
+    model   = (false,false,true)
+    printstyled("running transition EGeoHiSSE model with $k single areas, $h hidden states and $ny covariates \n", 
+                 color=:green)
   else 
-    error("esse_mod does not match any of the alternatives: 
-          speciation, extinction or transition")
+    printstyled("running GeoHiSSE model with $k single areas and 
+                $h hidden states but no covariates \n", 
+                color=:green)
   end
 
-  return mod_ode, npars, pardic, md, ws
+  mod_ode = make_egeohisse(k, h, ny, af!, model, :mod_ode)
+  pardic  = build_par_names(k, h, ny, model)
+  npars   = length(pardic)
 
+  return mod_ode, npars, pardic, model
 end
 
 

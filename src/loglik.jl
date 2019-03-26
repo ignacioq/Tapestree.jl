@@ -6,7 +6,8 @@ Ignacio Quintero Mächler
 
 t(-_-t)
 
-September 20 2017
+Created 20 09 2017
+Updated 26 03 2019
 
 =#
 
@@ -60,6 +61,8 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
                   md     ::Bool, 
                   ws     ::Bool;
                   sbrlen ::Float64 = 5.0)
+
+
 
   k    = length(tip_val[1])::Int64 
   k2   = 2k::Int64

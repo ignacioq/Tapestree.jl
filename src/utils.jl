@@ -246,61 +246,36 @@ end
 
 
 """
-    build_par_names(k::Int64)
-
-Build dictionary for parameter names and indexes for MUSSE.
-"""
-function build_par_names(k::Int64)
-
-  par_nams = String[]
-  # build parameters name 
-  for i in 0:(k-1)
-    push!(par_nams, "lambda$i")
-  end
-
-  # add μ names
-  for i in 0:(k-1)
-    push!(par_nams, "mu$i")
-  end
-
-  # add q names
-  for j in 0:(k-1), i in 0:(k-1)
-    if i == j 
-      continue
-    end
-    push!(par_nams, "q$j$i")
-  end
-
-  pardic = Dict(par_nams[i] => i for i in Base.OneTo(length(par_nams)))
-
-  return pardic
-end
-
-
-
-
-
-"""
     set_constraints(constraints::NTuple{endof(constraints),String},
-                         pardic::Dict{String,Int64})
+                    pardic     ::Dict{String,Int64})
 
 Make a Dictionary linking parameter that are to be the same.
 """
-function set_constraints(constraints,
+function set_constraints(constraints::NTuple{length(constraints),String},
                          pardic     ::Dict{String,Int64})
 
-  @inbounds begin
-    conpar = Dict{Int64,Int64}()
+  conpar = Dict{Int64,Int64}()
+  zerov  = Int64[]
 
-    for c in constraints
-      spl = split(c, '=')
-      if length(spl) < 2
-        continue
+  for c in constraints
+    spl = split(c, '=')
+    if length(spl) < 2
+      continue
+    end
+    if isequal(strip(spl[end]), "0")
+      for i in Base.OneTo(length(spl)-1) 
+        push!(zerov, pardic[strip(spl[i])])
       end
-      conpar[pardic[strip(spl[1])]] = pardic[strip(spl[2])]
+    else
+      for i in Base.OneTo(length(spl)-1) 
+        sp1 = strip(spl[i])
+        sp2 = strip(spl[i+1])
+        conpar[pardic[strip(spl[i])]] = pardic[strip(spl[i+1])]
+      end
     end
   end
-  return conpar
+
+  return conpar, zerov
 end
 
 
