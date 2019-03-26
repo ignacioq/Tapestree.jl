@@ -675,7 +675,7 @@ function wrsext_expr(si ::Int64,
   # if *NOT* speciation model
   else
     if isone(length(s.g)) 
-      ex = :(p[$si] * u[$(i + s.h*(2^k-1) + ns)]^2)
+      ex = :(p[$si] * u[$(si + ns)]^2)
     else
       ex = Expr(:call, :+)
       for i = s.g
@@ -693,17 +693,18 @@ end
 
 
 """
-    egeohisse_2k_gen(k  ::Int64,
-                     h  ::Int64,
-                     ny ::Int64,
-                     af!::Function)
+    egeohisse_2k_gen_s(k  ::Int64,
+                       h  ::Int64,
+                       ny ::Int64,
+                       af!::Function)
 
-EGeoHiSSE + extinction ODE equation for 2 area, hidden states and ny.
+EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states 
+and `2` ny for `speciation` model.
 """
-function egeohisse_2k_gen(k  ::Int64,
-                          h  ::Int64,
-                          ny ::Int64,
-                          af!::Function)
+function egeohisse_2k_gen_s(k  ::Int64,
+                            h  ::Int64,
+                            ny ::Int64,
+                            af!::Function)
 
   r    = Array{Float64,1}(undef, 4)
   eaft = Array{Float64,1}(undef, 4)
@@ -736,6 +737,52 @@ function egeohisse_2k_gen(k  ::Int64,
 end
 
 
+
+
+
+"""
+    egeohisse_2k_gen_e(k  ::Int64,
+                       h  ::Int64,
+                       ny ::Int64,
+                       af!::Function)
+
+EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states and 
+`2` ny for `extinction` model.
+"""
+function egeohisse_2k_gen_e(k  ::Int64,
+                            h  ::Int64,
+                            ny ::Int64,
+                            af!::Function)
+
+  r    = Array{Float64,1}(undef, 4)
+  eaft = Array{Float64,1}(undef, 4)
+
+  function f(du::Array{Float64,1}, 
+             u::Array{Float64,1}, 
+             p::Array{Float64,1}, 
+             t::Float64)
+    @inbounds begin
+    af!(t, r)
+    eaft[1] = p[7] * exp(p[21] * r[1] + p[22] * r[2])
+    eaft[2] = p[8] * exp(p[23] * r[3] + p[24] * r[4])
+    eaft[3] = p[9] * exp(p[25] * r[1] + p[26] * r[2])
+    eaft[4] = p[10] * exp(p[27] * r[3] + p[28] * r[4])
+    du[1] = -1.0 * (p[1] + eaft[1] + p[11] + p[19]) * u[1] + +(p[11] * u[3]) + +(p[19] * u[4]) + 2.0 * p[1] * u[7] * u[1]
+    du[2] = -1.0 * (p[2] + eaft[2] + p[12] + p[19]) * u[2] + +(p[12] * u[3]) + +(p[19] * u[5]) + 2.0 * p[2] * u[8] * u[2]
+    du[3] = -1.0 * (1.0 * p[3] + (p[2] + p[16] + p[19]) + (p[1] + p[15])) * u[3] + (p[16] * u[1] + p[15] * u[2]) + +(p[19] * u[6]) + (p[2] * (u[8] * u[3] + u[9] * u[2]) + p[1] * (u[7] * u[3] + u[9] * u[1])) + p[3] * (u[7] * u[2] + u[8] * u[1])
+    du[4] = -1.0 * (p[4] + eaft[3] + p[13] + p[20]) * u[4] + +(p[13] * u[6]) + +(p[20] * u[1]) + 2.0 * p[4] * u[10] * u[4]
+    du[5] = -1.0 * (p[5] + eaft[4] + p[14] + p[20]) * u[5] + +(p[14] * u[6]) + +(p[20] * u[2]) + 2.0 * p[5] * u[11] * u[5]
+    du[6] = -1.0 * (1.0 * p[6] + (p[5] + p[18] + p[20]) + (p[4] + p[17])) * u[6] + (p[18] * u[4] + p[17] * u[5]) + +(p[20] * u[3]) + (p[5] * (u[11] * u[6] + u[12] * u[5]) + p[4] * (u[10] * u[6] + u[12] * u[4])) + p[6] * (u[10] * u[5] + u[11] * u[4])
+    du[7] = -1.0 * (p[1] + eaft[1] + p[11] + p[19]) * u[7] + +(eaft[1]) + +(p[11] * u[9]) + +(p[19] * u[10]) + p[1] * u[7] ^ 2
+    du[8] = -1.0 * (p[2] + eaft[2] + p[12] + p[19]) * u[8] + +(eaft[2]) + +(p[12] * u[9]) + +(p[19] * u[11]) + p[2] * u[8] ^ 2
+    du[9] = -1.0 * (1.0 * p[3] + (p[2] + p[16] + p[19]) + (p[1] + p[15])) * u[9] + (p[16] * u[7] + p[15] * u[8]) + +(p[19] * u[12]) + (p[2] * u[8] * u[9] + p[1] * u[7] * u[9]) + p[3] * +(u[7] * u[8])
+    du[10] = -1.0 * (p[4] + eaft[3] + p[13] + p[20]) * u[10] + +(eaft[3]) + +(p[13] * u[12]) + +(p[20] * u[7]) + p[4] * u[10] ^ 2
+    du[11] = -1.0 * (p[5] + eaft[4] + p[14] + p[20]) * u[11] + +(eaft[4]) + +(p[14] * u[12]) + +(p[20] * u[8]) + p[5] * u[11] ^ 2
+    du[12] = -1.0 * (1.0 * p[6] + (p[5] + p[18] + p[20]) + (p[4] + p[17])) * u[12] + (p[18] * u[10] + p[17] * u[11]) + +(p[20] * u[9]) + (p[5] * u[11] * u[12] + p[4] * u[10] * u[12]) + p[6] * +(u[10] * u[11])
+    end
+    return nothing
+  end
+end
 
 
 
