@@ -88,14 +88,13 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
-
-
-
-
-
   # create likelihood, prior and posterior functions
-  llf = make_llf(tip_val, ed, el, ode_fun, af!, p, md, ws, sbrlen = sum(el)/10.)
+  llf = make_llf(tip_val, ed, el, ode_fun, af!, p, h, model)
 
+
+  # define priors
+
+  
 
 
   lpf = make_lpf(λpriors, μpriors, qpriors, βpriors, k, (npars != 2k*k))

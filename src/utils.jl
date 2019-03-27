@@ -246,7 +246,7 @@ end
 
 
 """
-    set_constraints(constraints::NTuple{endof(constraints),String},
+    set_constraints(constraints::NTuple{length(constraints),String},
                     pardic     ::Dict{String,Int64})
 
 Make a Dictionary linking parameter that are to be the same.

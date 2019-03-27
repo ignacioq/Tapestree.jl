@@ -59,8 +59,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
                   af!    ::Function,
                   p      ::Array{Float64,1},
                   h      ::Int64,
-                  md     ::Bool)
-
+                  model  ::NTuple{3, Bool})
 
   k    = length(tip_val[1])
   ns   = h*(k^2-1)
