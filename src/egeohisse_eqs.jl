@@ -257,16 +257,19 @@ function exp_expr(k    ::Int64,
                   ny   ::Int64,
                   model::NTuple{3,Bool})
 
+
   # if speciation
   if model[1] 
+    pky = isone(ny) ? 1 : div(ny,k)
     ex = quote end
     pop!(ex.args)
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(div(ny,k))
+      for yi in Base.OneTo(pky)
+        rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k)*(i-1)+div(ny,k)*k*(j-1))] * 
-            r[$(yi+div(ny,k)*(i-1))]))
+          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+            $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
     end
@@ -275,14 +278,16 @@ function exp_expr(k    ::Int64,
 
   # if extinction
   elseif  model[2]
+    pky = isone(ny) ? 1 : div(ny,k)
     ex = quote end
     pop!(ex.args)
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(div(ny,k))
+      for yi in Base.OneTo(pky)
+        rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k)*(i-1)+div(ny,k)*k*(j-1))] * 
-            r[$(yi+div(ny,k)*(i-1))]))
+          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+            $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(h*(k+1) + i + k*(j-1))]*
                        exp($coex)))
@@ -292,15 +297,16 @@ function exp_expr(k    ::Int64,
 
   # if dispersal
   elseif model[3]
-
+    pky = isone(ny) ? 1 : div(ny,k*(k-1))
     ex = quote end
     pop!(ex.args)
     for j = Base.OneTo(h), i = Base.OneTo(k*(k-1))
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(div(ny,k*(k-1)))
+      for yi in Base.OneTo(pky)
+        rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+div(ny,k*(k-1))*(i-1)+div(ny,k*(k-1))*k*(k-1)*(j-1))] * 
-            r[$(yi+div(ny,k*(k-1))*(i-1))]))
+          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(k-1)*(j-1))] * 
+            $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(k-1)*(j-1))] = p[$(h*(2k+1) + i + k*(k-1)*(j-1))]*
                        exp($coex)))
