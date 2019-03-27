@@ -56,70 +56,85 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
                   ed     ::Array{Int64,2},
                   el     ::Array{Float64,1},
                   ode_fun,
-                  af     ::Function,
+                  af!    ::Function,
                   p      ::Array{Float64,1},
-                  md     ::Bool, 
-                  ws     ::Bool;
-                  sbrlen ::Float64 = 5.0)
+                  h      ::Int64,
+                  md     ::Bool)
 
 
-
-  k    = length(tip_val[1])::Int64 
-  k2   = 2k::Int64
-  ke   = (k+1:2k)::UnitRange{Int64}
-  ntip = length(tip_val)::Int64
-  bk   = k + (k*k)
-  r    = Array{Float64}(undef, k)
+  k    = length(tip_val[1])
+  ns   = h*(k^2-1)
+  ntip = length(tip_val)
+  bk   = h*(k^2 + 2k + h)
 
   # add long root branch
+  # ed = cat(ed, [2*ntip ntip + 1], dims = 1)
+  # push!(el, sbrlen)
+
+  # add root of length 0
   ed = cat(ed, [2*ntip ntip + 1], dims = 1)
-  push!(el, sbrlen)
+  push!(el, 0.0)
 
   # get absolute times of branches as related to z(t)
   elrt = abs_time_branches(el, ed, ntip)
 
-  ne    = size(ed,1)::Int64
-  child = ed[:,2]::Array{Int64,1}
-  wtp   = findall(child .<= ntip)::Array{Int64,1}
+  ne    = size(ed,1)
+  child = ed[:,2]
+  wtp   = findall(child .<= ntip)
 
   # make trios
-  trios = maketriads(ed)::Array{Array{Int64,1},1}
+  trios = maketriads(ed)
 
   # preallocate tip likelihoods
   led = Array{Float64,1}[]
   for i in Base.OneTo(ne)
-    push!(led, zeros(Float64, k2))
+    push!(led, zeros(Float64, 2*ns))
   end
+
+  # create states 
+  S = create_states(k, h)
 
   # assign states to terminal branches
   for wi in wtp 
-     led[wi][1:k] = tip_val[child[wi]]
+    wig = Set(findall(map(x -> isone(x), tip_val[child[wi]])))
+    led[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
   # partial log-likelihoods
-  llik = Array{Float64}(undef,k)
-
-  # root likelihood
-  rll = Array{Float64}(undef,k2)
+  llik = Array{Float64,1}(undef,ns)
 
   # log lambdas 
-  lλs = Array{Float64}(undef,k)
+  lλs = Array{Float64,1}(undef,h*(k+1))
+
+  # log lambdas covariates
+  lλts = Array{Float64,1}(undef,h*k)
+
+  # preallocate output of y covariates
+  r = Array{Float64,1}(undef,ny)
+
+  # preallocate weights
+  w = Array{Float64,1}(undef,ns)
+
+  # preallocate extinction probabilities at root
+  extp = Array{Float64,1}(undef, ns)
 
   # make ode solver
-  ode_solve = make_solver(ode_fun, p)
+  ode_solve = make_solver(ode_fun, p, zeros(2*ns))
 
   # make speciation events
-  λevent! = make_λevent(af, k, ws, md)
+  make_λevent(k, h, ny, S, model[1])
 
-  function f(p::Array{Float64})
+  # make root full likelihood estimation
+  make_rootll(k, h, ny, S, model[1])
+
+  function f(p::Array{Float64,1})
 
     @inbounds begin
 
-      ll     = 0.0::Float64
-      llxtra = 0.0::Float64
+      llxtra = 0.0
 
-      for i in Base.OneTo(k)
-        lλs[i] = log(p[i])::Float64
+      for i in Base.OneTo(h*(k+1))
+        lλs[i] = log(p[i])
       end
 
       # loop for integrating over internal branches
@@ -129,53 +144,51 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
 
         ud1 = ode_solve(led[d1], p, elrt[d1,2], elrt[d1,1])::Array{Float64,1}
 
-        if check_negs(ud1, k)
-          return -Inf
-        end
+        check_negs(ud1, ns) && return -Inf
 
         ud2 = ode_solve(led[d2], p, elrt[d2,2], elrt[d2,1])::Array{Float64,1}
 
-        if check_negs(ud2, k)
-          return -Inf
-        end
+        check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(elrt[pr,2], llik, ud1, ud2, lλs, p)
+        λevent!(elrt[pr,2], llik, ud1, ud2, lλs, lλts, p, r)
 
         # loglik to sum for integration
         tosum   = minimum(llik)
         llxtra -= tosum
 
         # assign the remaining likelihoods
-        for i in Base.OneTo(k)
+        for i in Base.OneTo(ns)
           led[pr][i] = exp(llik[i] - tosum)
         end
 
         # assign extinction probabilities
-        @views led[pr][ke] = ud1[ke]
+        for i in ns+1:2ns
+         led[pr][i] = ud1[i]
+        end
       end
 
-      # stem branch
-
-      #=
-      Think of how to combine likelihoods at the root
-      =#
-
-
-      rll = ode_solve(led[ne], p, elrt[ne,2], elrt[ne,1])::Array{Float64,1}
-
-      if check_negs(rll, k)
-          return -Inf
+      # assign root likelihood
+      for i in Base.OneTo(ns)
+        llik[i] = led[ne][i]
       end
 
-      for i in Base.OneTo(k)
-        ll += rll[i]::Float64
+      check_negs(llik, ns) && return -Inf
+
+      # assign root extinction probabilities
+      for i in Base.OneTo(ns)
+        extp[i] = led[ne][i+ns]
       end
+
+      # estimate likelihood weights
+      normbysum!(llik, w)
+
+      # combine root likelihoods
+      ll = rootll(elrt[ne,1], llik, extp, w, p, lλs, lλts, r)
 
       return (log(ll) - llxtra)::Float64
     end
   end
-
 end
 
 
@@ -183,77 +196,267 @@ end
 
 
 """
-    make_λevent(af, k::Int64, ws::Bool, md::Bool)
+    make_rootll(k  ::Int64, 
+                h  ::Int64, 
+                ny ::Int64, 
+                S  ::Array{ghs,1},
+                mdS::Bool)
+
+Estimate full likelihood at the root.
+"""
+function make_rootll(k  ::Int64, 
+                     h  ::Int64, 
+                     ny ::Int64, 
+                     S  ::Array{ghs,1},
+                     mdS::Bool)
+  eqs = quote end
+  popfirst!(eqs.args)
+
+  if mdS
+    # add environmental function
+    push!(eqs.args, :(af!(t, r)))
+
+    # estimate covariate lambdas
+    pky = isone(ny) ? 1 : div(ny,k)
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      coex = Expr(:call, :+)
+      for yi in Base.OneTo(pky)
+        rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
+        push!(coex.args,
+          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+            $rex))
+      end
+      push!(eqs.args, 
+        :(lλts[$(i+k*(j-1))] = lλs[$(i+(k+1)*(j-1))] + $coex))
+    end
+
+    eq = Expr(:call, :+)
+    for j in Base.OneTo(h)
+      # for single areas
+      for i in Base.OneTo(k)
+        push!(eq.args,
+          :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
+            (exp(lλts[$(i + k*(j-1))])*(1.0-extp[$(i + (j-1)*(k^2-1))]^2))))
+      end
+      # for widespread
+      for i in k+1:k^2-1
+        wl = :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
+          (l*(1.0-extp[$(i + (j-1)*(k^2-1))]^2)))
+
+        lams = Expr(:call, :+, 
+          :($(2.0^(length(S[i + (k^2-1)*(j-1)].g)-1) - 1)*
+            p[$(i + (k+1)*(j-1))]))
+        for a in S[i + (k^2-1)*(j-1)].g
+          push!(lams.args, :(exp(lλts[$(a + k*(j-1))])))
+        end
+
+        # change l in wl
+        wl.args[3].args[2] = lams
+
+        push!(eq.args, wl)
+      end
+    end
+
+  else
+
+    eq = Expr(:call, :+)
+    for j in Base.OneTo(h)
+      # for single areas
+      for i in Base.OneTo(k)
+        push!(eq.args,
+          :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
+            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(k^2-1))]^2))))
+      end
+      # for widespread
+      for i in k+1:k^2-1
+        wl = :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
+          (l*(1.0-extp[$(i + (j-1)*(k^2-1))]^2)))
+
+        lams = Expr(:call, :+, 
+          :($(2.0^(length(S[i + (k^2-1)*(j-1)].g)-1) - 1)*
+            p[$(i + (k+1)*(j-1))]))
+        for a in S[i + (k^2-1)*(j-1)].g
+          push!(lams.args, :(p[$(a + (k+1)*(j-1))]))
+        end
+
+        # change l in wl
+        wl.args[3].args[2] = lams
+
+        push!(eq.args, wl)
+      end
+    end
+
+  end
+
+  push!(eqs.args, :(ll = $eq))
+
+  ex = quote
+    function rootll(t   ::Float64,
+                    llik::Array{Float64,1},
+                    extp::Array{Float64,1},
+                    w   ::Array{Float64,1},
+                    p   ::Array{Float64,1},
+                    lλs ::Array{Float64,1},
+                    lλts::Array{Float64,1},
+                    r   ::Array{Float64,1})
+
+      @inbounds begin
+        $eqs
+      end
+      return ll
+    end
+  end
+
+  return eval(ex)
+end
+
+
+
+
+
+"""
+    normbysum!(v::Array{Float64,1}, r::Array{Float64,1})
+
+Return weights by the sum of all elements of the array to sum 1. 
+"""
+function normbysum!(v::Array{Float64,1}, r::Array{Float64,1})
+  s = sum(v)
+  @inbounds begin
+    @simd for i in Base.OneTo(lastindex(v))
+      r[i] = v[i]/s
+    end
+  end
+end
+
+
+
+
+
+"""
+    make_λevent(k    ::Int64, 
+                h    ::Int64, 
+                ny   ::Int64, 
+                S    ::Array{ghs,1},
+                model::NTuple{3, Bool})
 
 Make function for speciation event likelihoods
 """
-function make_λevent(af, k::Int64, ws::Bool, md::Bool)
+function make_λevent(k  ::Int64, 
+                     h  ::Int64, 
+                     ny ::Int64, 
+                     S  ::Array{ghs,1},
+                     mdS::Bool)
 
-  r  = Array{Float64}(undef, k)
-  bk = k + (k*k)
+  eqs = quote end
+  popfirst!(eqs.args)
 
-  # speciation ESSE model with MULTIvariate z(t)
-  function f1(t   ::Float64, 
-              llik::Array{Float64,1}, 
-              ud1 ::Array{Float64,1}, 
-              ud2 ::Array{Float64,1}, 
-              lλs ::Array{Float64,1}, 
-              p   ::Array{Float64,1}) 
+  # if speciation model
+  if mdS 
+    # add environmental function
+    push!(eqs.args, :(af!(t, r)))
 
-    af(t, r)
-
-    # estimate ll to sum,
-    for i in Base.OneTo(k)
-      llik[i] = log(ud1[i] * ud2[i]) + lλs[i] + p[bk+i] * r[i]
+    # estimate covariate lambdas
+    pky = isone(ny) ? 1 : div(ny,k)
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      coex = Expr(:call, :+)
+      for yi in Base.OneTo(pky)
+        rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
+        push!(coex.args,
+          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+            $rex))
+      end
+      push!(eqs.args, 
+        :(lλts[$(i+k*(j-1))] = lλs[$(i+(k+1)*(j-1))] + $coex))
     end
 
-    return nothing
-  end
-
-  # speciation ESSE model with UNIvariate z(t)
-  function f2(t   ::Float64, 
-              llik::Array{Float64,1}, 
-              ud1 ::Array{Float64,1}, 
-              ud2 ::Array{Float64,1}, 
-              lλs ::Array{Float64,1}, 
-              p   ::Array{Float64,1}) 
-
-    r = af(t)
-
-    # estimate ll to sum,
-    for i in Base.OneTo(k)
-      llik[i] = log(ud1[i] * ud2[i]) + lλs[i] + p[bk+i] * r
+    # likelihood for individual areas states
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      push!(eqs.args, 
+          :(llik[$(i+(k^2-1)*(j-1))] = 
+            log(ud1[$(i+(k^2-1)*(j-1))] * ud2[$(i+(k^2-1)*(j-1))]) + 
+            lλts[$(i+k*(j-1))]))
     end
 
-    return nothing
-  end
+    # likelihood for widespread states
+    for j = Base.OneTo(h), i = k+1:k^2-1
+      s = S[i + (k^2-1)*(j-1)]
 
-  # other ESSE model
-  function f3(t   ::Float64, 
-              llik::Array{Float64,1}, 
-              ud1 ::Array{Float64,1}, 
-              ud2 ::Array{Float64,1}, 
-              lλs ::Array{Float64,1}, 
-              p   ::Array{Float64,1}) 
+      # within region speciation
+      ex = Expr(:call, :+)
+      for a in s.g
+        push!(ex.args, :((ud1[$(a + s.h*(k+1))]    *  ud2[$(i + (k^2-1)*(j-1))] + 
+                          ud1[$(i + (k^2-1)*(j-1))] * ud2[$(a + s.h*(k+1))]) *
+                         exp(lλts[$(a + s.h*(k))])*0.5))
+      end
 
-    # estimate ll to sum,
-    for i in Base.OneTo(k)
-      llik[i] = log(ud1[i] * ud2[i]) + lλs[i]
+      # between region speciation
+      for (la, ra) = vicsubsets(s.g)[1:div(end,2)]
+        push!(ex.args, 
+         :((ud1[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
+            ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
+            p[$(i+(k+1)*s.h)] * 0.5))
+      end
+
+      push!(eqs.args, :(llik[$(i + (k^2-1)*(j-1))] = log($ex)))
     end
 
-    return nothing
-  end
-
-  if ws
-    if md 
-      return f1
-    else
-      return f2
-    end
+  # *not* speciation model
   else
-    return f3
-  end 
+
+    # likelihood for individual areas states
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      push!(eqs.args, 
+          :(llik[$(i+(k^2-1)*(j-1))] = 
+            log(ud1[$(i+(k^2-1)*(j-1))] * ud2[$(i+(k^2-1)*(j-1))]) + 
+            lλs[$(i+(k+1)*(j-1))]))
+    end
+
+    # likelihood for widespread states
+    for j = Base.OneTo(h), i = k+1:k^2-1
+      s = S[i + (k^2-1)*(j-1)]
+
+      # within region speciation
+      ex = Expr(:call, :+)
+      for a in s.g
+        push!(ex.args, :((ud1[$(a + s.h*(k+1))]*ud2[$(i + (k^2-1)*(j-1))] + 
+                          ud1[$(i + (k^2-1)*(j-1))]*ud2[$(a + s.h*(k+1))]) *
+                         p[$(a + s.h*(k+1))]*0.5))
+      end
+
+      # between region speciation
+      for (la, ra) = vicsubsets(s.g)[1:div(end,2)]
+        push!(ex.args, 
+         :((ud1[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
+            ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
+            p[$(i+(k+1)*s.h)] * 0.5))
+      end
+
+      push!(eqs.args, :(llik[$(i + (k^2-1)*(j-1))] = log($ex)))
+    end
+  end
+
+  ex = quote
+    function λevent!(t   ::Float64, 
+                     llik::Array{Float64,1}, 
+                     ud1 ::Array{Float64,1}, 
+                     ud2 ::Array{Float64,1},
+                     lλs ::Array{Float64,1},
+                     lλts::Array{Float64,1},
+                     p   ::Array{Float64,1},
+                     r   ::Array{Float64,1})
+      @inbounds begin
+        $eqs
+      end
+    end
+  end
+
+  return eval(ex)
 end
+
 
 
 
@@ -358,7 +561,7 @@ Return `true` if any in x is less or equal than 0.
 """
 function check_negs(x::Array{Float64,1}, k::Int64)
   @inbounds begin
-    for i in Base.OneTo(k)
+    @simd for i in Base.OneTo(k)
       if x[i] < 0.0 
         return true
       end
