@@ -57,7 +57,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   make_approxf(x, y)
 
   # make specific ode
-  mod_ode, npars, pardic, model = 
+  ode_fun, npars, pardic, model = 
     define_mod(cov_mod, k, h, ny, af!)
 
   # make initial p
@@ -94,7 +94,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
 
   # create likelihood, prior and posterior functions
-  llf = make_llf(tip_val, ed, el, mod_ode, af!, p, md, ws, sbrlen = sum(el)/10.)
+  llf = make_llf(tip_val, ed, el, ode_fun, af!, p, md, ws, sbrlen = sum(el)/10.)
 
 
 
