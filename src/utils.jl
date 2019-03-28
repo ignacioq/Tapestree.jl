@@ -246,13 +246,13 @@ end
 
 
 """
-    set_constraints(constraints::NTuple{length(constraints),String},
+    set_constraints(constraints::NTuple{N,String},
                     pardic     ::Dict{String,Int64})
 
 Make a Dictionary linking parameter that are to be the same.
 """
-function set_constraints(constraints::NTuple{length(constraints),String},
-                         pardic     ::Dict{String,Int64})
+function set_constraints(constraints::NTuple{N,String},
+                         pardic     ::Dict{String,Int64}) where {N}
 
   conpar = Dict{Int64,Int64}()
   zerov  = Int64[]
