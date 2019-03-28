@@ -15,10 +15,11 @@ Updated 26 03 2019
 """
     make_lhf(llf, prf)
 
-Make log posterior function with the likelihood, **llf**, and prior, **prf**, functions.
+Make log posterior function with the likelihood, **llf**, 
+and prior, **prf**, functions.
 """
 function make_lhf(llf::Function, 
-                  prf::Function, 
+                  lpf::Function, 
                   conp::Dict{Int64,Int64})
 
   # set linked parameters
@@ -31,7 +32,7 @@ function make_lhf(llf::Function,
       end
     end
     
-    return (llf(p) + prf(p))::Float64
+    return (llf(p) + lpf(p))::Float64
   end
 
   return f
@@ -516,8 +517,9 @@ function make_lpf(λpriors::Float64,
   ex = quote 
     function lpf(p::Array{Float64,1})
       @inbounds begin
-        $eq
+        lq = $eq
       end
+      return lq
     end
   end
 
