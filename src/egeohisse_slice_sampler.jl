@@ -43,8 +43,10 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        nthin      ::Int64             = 10,
                        λpriors    ::Float64           = .1,
                        μpriors    ::Float64           = .1,
+                       gpriors    ::Float64           = .1,
+                       lpriors    ::Float64           = .1,
                        qpriors    ::Float64           = .1,
-                       βpriors    ::NTuple{2,Float64} = (-1.0,1.0),
+                       βpriors    ::NTuple{2,Float64} = (0.0, 5.0),
                        optimal_w  ::Float64           = 0.8) where {N}
 
   # k areas
@@ -90,14 +92,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
   # create likelihood, prior and posterior functions
   llf = make_llf(tip_val, ed, el, ode_fun, af!, p, h, model)
-
-
-  # define priors
-
-  
-
-
-  lpf = make_lpf(λpriors, μpriors, qpriors, βpriors, k, (npars != 2k*k))
+  make_lpf(λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, k, h, model[3])  
   lhf = make_lhf(llf, lpf, conp)
 
   # set up slice-sampling
@@ -109,7 +104,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   lthin, lit = 0, 0
 
   # estimate w
-  p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w)::NTuple{2,Array{Float64,1}}
+  p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w)
 
   # start iterations
   prog = Progress(niter, 5, "running slice-sampler....", 20)
