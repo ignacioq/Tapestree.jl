@@ -94,33 +94,6 @@ function make_approxf(x::Array{Float64,1},
 end
 
 
-# function aprox_fun_gen(x::Array{Float64,1}, y::Array{Float64,1})
-#   function f(a::Int64, val::Float64)
-#     (y[a] + (val - x[a])*(y[a+1] - y[a])/(x[a+1] - x[a]))
-#   end
-#   return f
-# end
-
-# const x = cumsum(rand(100))
-# const y = cumsum(randn(100))
-# af_clos = aprox_fun_gen(x, y)
-
-# function aprox_full(a::Int64, val::Float64, x::Array{Float64,1}, y::Array{Float64,1})
-#     (y[a] + (val - x[a])*(y[a+1] - y[a])/(x[a+1] - x[a]))
-# end
-
-# af_clos2 = (a::Int64, val::Float64) -> aprox_full(a, val, x, y)
-
-# function af_pas(a::Int64, val::Float64, x::Array{Float64,1}, y::Array{Float64,1})
-#   (y[a] + (val - x[a])*(y[a+1] - y[a])/(x[a+1] - x[a]))
-# end
-
-
-# using BenchmarkTools
-# @benchmark af_clos(2, 3.)
-# @benchmark af_clos2(2, 3.)
-# @benchmark af_pas(2, 3., $x, $y)
-
 
 
 """
