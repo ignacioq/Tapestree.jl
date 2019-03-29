@@ -38,7 +38,6 @@ function make_solver(odef, p0::Array{Float64,1}, u0::Array{Float64,1})
           save_start      = false,
           initialize_save = false,
           maxiters        = 100_000_000).u[1]
-
   end
 
   return f
