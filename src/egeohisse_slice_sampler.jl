@@ -63,9 +63,17 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # make z(t) approximation from discrete data `af!()`
   make_approxf(x, y)
 
+  # define model
+  model = define_mod(cov_mod, k, h, ny)
+
   # make specific ode
-  ode_fun, npars, pardic, model = 
-    define_mod(cov_mod, k, h, ny, af!)
+  make_egeohisse(k, h, ny, af!, model, :ode_fun)
+
+  # make dictionary with relevant parameters
+  pardic = build_par_names(k, h, ny, model)
+
+  # get number of parameters
+  npars = length(pardic)
 
   # make initial p
   #= 
@@ -95,10 +103,20 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
+
   # create likelihood, prior and posterior functions
-  llf = make_llf(tip_val, ed, el, ode_fun, af!, p, h, model)
+  llf   = make_llf(tip_val, ed, el, ode_fun, af!, p, h, model)
   make_lpf(λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, k, h, model[3])  
-  lhf = make_lhf(llf, lpf, conp)
+  lhf   = make_lhf(llf, lpf, conp)
+
+  lpf(p)
+  println("could evaluate lpf")
+
+  llf(p)
+  println("could evaluate llf")
+
+  lhf(p)
+  println("could evaluate lhf")
 
   # estimate optimal w
   p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w)
@@ -177,16 +195,14 @@ end
     define_mod(egeohisse_mod::String,
                k            ::Int64,
                h            ::Int64,
-               ny           ::Int64,
-               af!          ::Function)
+               ny           ::Int64)
 
 Defines EGeoHiSSE model for `k` areas, `h` hidden states and `ny` covariates.
 """
 function define_mod(egeohisse_mod::String,
                     k            ::Int64,
                     h            ::Int64,
-                    ny           ::Int64,
-                    af!          ::Function)
+                    ny           ::Int64)
 
   if occursin(r"^[s|S][A-za-z]*", egeohisse_mod)         # if speciation
     model   = (true,false,false)
@@ -217,11 +233,7 @@ function define_mod(egeohisse_mod::String,
                 color=:green)
   end
 
-  make_egeohisse(k, h, ny, af!, model, :ode_fun)
-  pardic  = build_par_names(k, h, ny, model)
-  npars   = length(pardic)
-
-  return ode_fun, npars, pardic, model
+  return  model
 end
 
 
