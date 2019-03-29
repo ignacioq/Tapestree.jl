@@ -12,6 +12,9 @@ Updated 26 03 2019
 =#
 
 
+
+
+
 """
     make_lhf(llf, prf)
 
@@ -65,11 +68,6 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
   k    = length(tip_val[1])
   ns   = h*(k^2-1)
   ntip = length(tip_val)
-  bk   = h*(k^2 + 2k + h)
-
-  # add long root branch
-  # ed = cat(ed, [2*ntip ntip + 1], dims = 1)
-  # push!(el, sbrlen)
 
   # add root of length 0
   ed = cat(ed, [2*ntip ntip + 1], dims = 1)
@@ -236,12 +234,12 @@ function make_rootll(k  ::Int64,
       for i in Base.OneTo(k)
         push!(eq.args,
           :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-            (exp(lλts[$(i + k*(j-1))])*(1.0-extp[$(i + (j-1)*(k^2-1))]^2))))
+            (exp(lλts[$(i + k*(j-1))])*(1.0-extp[$(i + (j-1)*(k^2-1))])^2)))
       end
       # for widespread
       for i in k+1:k^2-1
         wl = :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-          (l*(1.0-extp[$(i + (j-1)*(k^2-1))]^2)))
+          (l*(1.0-extp[$(i + (j-1)*(k^2-1))])^2))
 
         lams = Expr(:call, :+, 
           :($(2.0^(length(S[i + (k^2-1)*(j-1)].g)-1) - 1)*
@@ -265,12 +263,12 @@ function make_rootll(k  ::Int64,
       for i in Base.OneTo(k)
         push!(eq.args,
           :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(k^2-1))]^2))))
+            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(k^2-1))])^2)))
       end
       # for widespread
       for i in k+1:k^2-1
         wl = :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-          (l*(1.0-extp[$(i + (j-1)*(k^2-1))]^2)))
+          (l*(1.0-extp[$(i + (j-1)*(k^2-1))])^2))
 
         lams = Expr(:call, :+, 
           :($(2.0^(length(S[i + (k^2-1)*(j-1)].g)-1) - 1)*

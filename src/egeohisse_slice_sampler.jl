@@ -19,14 +19,19 @@ November 20 2017
                   el         ::Array{Float64,1},
                   x          ::Array{Float64,1},
                   y          ::Array{Float64},
-                  esse_mod   ::String,
+                  cov_mod    ::String,
                   out_file   ::String;
-                  constraints::NTuple{N,String} = (" ",),
-                  niter      ::Int64            = 10_000,
-                  nthin      ::Int64            = 10,
-                  λpriors    ::Float64          = .1,
-                  μpriors    ::Float64          = .1,
-                  qpriors    ::Float64          = .1)
+                  h          ::Int64             = 2,
+                  constraints::NTuple{N,String}  = (" ",),
+                  niter      ::Int64             = 10_000,
+                  nthin      ::Int64             = 10,
+                  λpriors    ::Float64           = .1,
+                  μpriors    ::Float64           = .1,
+                  gpriors    ::Float64           = .1,
+                  lpriors    ::Float64           = .1,
+                  qpriors    ::Float64           = .1,
+                  βpriors    ::NTuple{2,Float64} = (0.0, 5.0),
+                  optimal_w  ::Float64           = 0.8) where {N}
 
 Run slice-sampling Markov Chain for EGeoSSE model.
 """
@@ -95,6 +100,11 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   make_lpf(λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, k, h, model[3])  
   lhf = make_lhf(llf, lpf, conp)
 
+  # estimate optimal w
+  p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w)
+
+  println(" did w sampling")
+
   # set up slice-sampling
   nlogs = fld(niter,nthin)
   its   = zeros(Float64,nlogs)
@@ -103,26 +113,27 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
   lthin, lit = 0, 0
 
-  # estimate w
-  p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w)
+  # preallocate pp
+  pp = copy(p)
 
   # start iterations
   prog = Progress(niter, 5, "running slice-sampler....", 20)
 
-  hc::Float64 = lhf(p)
+  # intiial posterior
+  hc = lhf(p)
 
   for it in Base.OneTo(niter) 
 
     for j in nnps
-      S     = (hc - randexp())::Float64
-      L, R  = find_nonneg_int(p, j, S, lhf, w[j])::NTuple{2,Float64}
-      p, hc = sample_int(p, j, L, R, S, lhf)::Tuple{Array{Float64,1},Float64}
+      S     = (hc - Random.randexp())
+      L, R  = find_nonneg_int(p, pp, j, S, lhf, w[j])
+      p, hc = sample_int(p, pp, j, L, R, S, lhf)
     end
 
     for j in nps
-      S     = (hc - randexp())::Float64
-      L, R  = find_real_int(p, j, S, lhf, w[j])::NTuple{2,Float64}
-      p, hc = sample_int(p, j, L, R, S, lhf)::Tuple{Array{Float64,1},Float64}
+      S     = (hc - Random.randexp())
+      L, R  = find_real_int(p, pp, j, S, lhf, w[j])
+      p, hc = sample_int(p, pp, j, L, R, S, lhf)
     end
 
     # log samples
@@ -146,36 +157,8 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # column names
   col_nam = ["Iteration", "Posterior"]
 
-  # add λ names
-  for i in 0:(k-1)
-    push!(col_nam, "lamdba$i")
-  end
-
-  # add μ names
-  for i in 0:(k-1)
-    push!(col_nam, "mu$i")
-  end
-
-  # add q names
-  for j in 0:(k-1), i in 0:(k-1)
-    if i == j 
-      continue
-    end
-    push!(col_nam, "q$i$j")
-  end
-
-  # add β names
-  if in("beta01", keys(pardic))
-    for j in 0:(k-1), i in 0:(k-1)
-      if i == j 
-        continue
-      end
-      push!(col_nam, "beta$i$j")
-    end
-  else
-    for i in 0:(k-1)
-      push!(col_nam, "beta$i")
-    end
+  for (k,v) in sort!(collect(pardic), by = x -> x[2])
+    push!(col_nam, k)
   end
 
   R = vcat(reshape(col_nam, 1, lastindex(col_nam)), R)
@@ -207,27 +190,38 @@ function define_mod(egeohisse_mod::String,
 
   if occursin(r"^[s|S][A-za-z]*", egeohisse_mod)         # if speciation
     model   = (true,false,false)
-    printstyled("running speciation EGeoHiSSE model with $k single areas, $h hidden states and $ny covariates \n", 
+    printstyled("running speciation EGeoHiSSE model with:
+  $k single areas 
+  $h hidden states 
+  $ny covariates \n", 
                  color=:green)
   elseif occursin(r"^[e|E][A-za-z]*", egeohisse_mod)     # if extinction
     model   = (false,true,false)
-    printstyled("running extinction EGeoHiSSE model with $k single areas, $h hidden states and $ny covariates \n", 
+    printstyled("running extinction EGeoHiSSE model with:
+  $k single areas 
+  $h hidden states 
+  $ny covariates \n",
                  color=:green)
   elseif occursin(r"^[t|T|r|R|q|Q][A-za-z]*", egeohisse_mod) # if transition
     model   = (false,false,true)
-    printstyled("running transition EGeoHiSSE model with $k single areas, $h hidden states and $ny covariates \n", 
+    printstyled("running transition EGeoHiSSE model with:
+  $k single areas
+  $h hidden states
+  $ny covariates \n",
                  color=:green)
   else 
-    printstyled("running GeoHiSSE model with $k single areas and 
-                $h hidden states but no covariates \n", 
+    printstyled("running GeoHiSSE model with:
+  $k single areas
+  $h hidden states 
+  0 covariates \n\n",
                 color=:green)
   end
 
-  mod_ode = make_egeohisse(k, h, ny, af!, model, :mod_ode)
+  make_egeohisse(k, h, ny, af!, model, :ode_fun)
   pardic  = build_par_names(k, h, ny, model)
   npars   = length(pardic)
 
-  return mod_ode, npars, pardic, model
+  return ode_fun, npars, pardic, model
 end
 
 

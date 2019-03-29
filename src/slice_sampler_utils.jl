@@ -38,9 +38,9 @@ function w_sampler(lhf      ::Function,
   for it in Base.OneTo(100)
 
     for j in nnps
-      S     = (hc - Random.randexp())
-      L, R  = find_nonneg_int(p, pp, j, S, lhf, w[j])
-      p, hc = sample_int(p, pp, j, L, R, S, lhf)
+     S     = (hc - Random.randexp())
+     L, R  = find_nonneg_int(p, pp, j, S, lhf, w[j])
+     p, hc = sample_int(p, pp, j, L, R, S, lhf)
     end
 
     for j in nps
