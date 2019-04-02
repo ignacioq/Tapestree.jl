@@ -109,6 +109,10 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   make_lpf(λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, k, h, model[3])  
   lhf   = make_lhf(llf, lpf, conp)
 
+
+
+
+
   lpf(p)
   println("could evaluate lpf")
 
