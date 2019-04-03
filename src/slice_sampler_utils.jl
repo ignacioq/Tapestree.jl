@@ -12,6 +12,81 @@ September 23 2017
 
 
 
+
+
+"""
+    loop_slice_sampler(lhf      ::Function, 
+                            p        ::Array{Float64,1},
+                            nnps     ::Array{Int64,1},
+                            nps      ::Array{Int64,1},
+                            w        ::Array{Float64,1},
+                            npars    ::Int64,
+                            niter    ::Int64,
+                            nthin    ::Int64)
+
+Run slice sampling.
+"""
+function loop_slice_sampler(lhf      ::Function, 
+                            p        ::Array{Float64,1},
+                            nnps     ::Array{Int64,1},
+                            nps      ::Array{Int64,1},
+                            w        ::Array{Float64,1},
+                            npars    ::Int64,
+                            niter    ::Int64,
+                            nthin    ::Int64)
+
+  nlogs = fld(niter,nthin)
+  its   = zeros(Float64,nlogs)
+  hlog  = zeros(Float64,nlogs)
+  ps    = zeros(Float64,nlogs,npars)
+
+  lthin, lit = 0, 0
+
+  # preallocate pp
+  pp = copy(p)
+
+  # start iterations
+  prog = Progress(niter, 5, "running slice-sampler....", 20)
+
+  hc = lhf(p)
+
+  for it in Base.OneTo(niter) 
+
+    for j in nnps
+      S     = (hc - Random.randexp())
+      L, R  = find_nonneg_int(p, pp, j, S, lhf, w[j])
+      p, hc = sample_int(p, pp, j, L, R, S, lhf)
+    end
+
+    for j in nps
+      S     = (hc - Random.randexp())
+      L, R  = find_real_int(p, pp, j, S, lhf, w[j])
+      p, hc = sample_int(p, pp, j, L, R, S, lhf)
+    end
+
+    # log samples
+    lthin += 1
+    if lthin == nthin
+      @inbounds begin
+        lit += 1
+        setindex!(its,  it, lit)
+        setindex!(hlog, hc, lit)
+        setindex!(ps,   p,  lit, :)
+      end
+      lthin = 0
+    end
+
+    next!(prog)
+  end
+
+  return its, hlog, ps
+end
+
+
+
+
+
+
 """
     w_sampler(lhf, p::Array{Float64,1}, pupd::Array{Int64,1})
 
@@ -180,12 +255,13 @@ function sample_int(p    ::Array{Float64,1},
   @inbounds begin
     copyto!(pp, p)
 
+
     while true
       pp[j] = (L + rand()*(R-L))::Float64
 
       postc = postf(pp)::Float64
       if S < postc
-        p[j] = pp[j]
+        copyto!(p, pp)
         return (p, postc)::Tuple{Array{Float64,1}, Float64}
       end
 

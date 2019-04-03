@@ -25,17 +25,12 @@ function make_lhf(llf::Function,
                   lpf::Function, 
                   conp::Dict{Int64,Int64})
 
-  # set linked parameters
-  kp = keys(conp)
-
   function f(p::Array{Float64,1})
-    @inbounds begin
-      @simd for i in kp
-        p[i] = p[conp[i]]
-      end
+    for (k,v) = conp
+      @inbounds p[k] = p[v]
     end
-    
-    return (llf(p) + lpf(p))::Float64
+
+    return llf(p) + lpf(p)
   end
 
   return f
