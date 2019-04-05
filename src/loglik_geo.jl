@@ -30,7 +30,7 @@ function make_lhf(llf::Function,
       @inbounds p[k] = p[v]
     end
 
-    return llf(p) + lpf(p)
+    return llf(p) + Base.invokelatest(lpf,p)
   end
 
   return f
@@ -144,7 +144,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(elrt[pr,2], llik, ud1, ud2, lλs, lλts, p, r)
+        Base.invokelatest(λevent!,elrt[pr,2], llik, ud1, ud2, lλs, lλts, p, r)
 
         # loglik to sum for integration
         tosum   = minimum(llik)
@@ -177,7 +177,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       normbysum!(llik, w)
 
       # combine root likelihoods
-      ll = rootll(elrt[ne,1], llik, extp, w, p, lλs, lλts, r)
+      ll = Base.invokelatest(rootll,elrt[ne,1], llik, extp, w, p, lλs, lλts, r)
 
       return (log(ll) - llxtra)::Float64
     end
@@ -207,7 +207,7 @@ function make_rootll(k  ::Int64,
 
   if mdS
     # add environmental function
-    push!(eqs.args, :(af!(t, r)))
+    push!(eqs.args, :(Base.invokelatest(af!,t, r)))
 
     # estimate covariate lambdas
     pky = isone(ny) ? 1 : div(ny,k)
@@ -328,7 +328,7 @@ function make_λevent(k  ::Int64,
   # if speciation model
   if mdS 
     # add environmental function
-    push!(eqs.args, :(af!(t, r)))
+    push!(eqs.args, :(Base.invokelatest(af!,t, r)))
 
     # estimate covariate lambdas
     pky = isone(ny) ? 1 : div(ny,k)

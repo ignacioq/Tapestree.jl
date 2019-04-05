@@ -29,8 +29,7 @@ function make_egeohisse(k    ::Int64,
                         h    ::Int64,
                         ny   ::Int64,
                         af!  ::Function,
-                        model::NTuple{3, Bool},
-                        name ::Symbol)
+                        model::NTuple{3, Bool})
   # n states
   ns = (2^k - 1)*h
 
@@ -42,7 +41,7 @@ function make_egeohisse(k    ::Int64,
   popfirst!(eqs.args)
 
   # add environmental function
-  push!(eqs.args, :(af!(t, r)))
+  push!(eqs.args, :(Base.invokelatest(af!,t, r)))
 
   # compute exponential for each β*covariable
   expex = exp_expr(k, h, ny, model)
@@ -151,32 +150,22 @@ function make_egeohisse(k    ::Int64,
     eqs.args[append!([(end-(ns*2)+1):2:end...],
             [(end-(ns*2)+2):2:end...])]
 
-  neaft = model[3] ? k*(k-1)*h : k*h
-
   ex = quote 
-    function f_gen(k    ::Int64,
-                   h    ::Int64,
-                   ny   ::Int64,
-                   af!  ::Function,
-                   model::NTuple{3, Bool})
-      # preallocate
-      r    = Array{Float64,1}(undef,$ny)
-      eaft = Array{Float64,1}(undef,$neaft)
-
-      function f(du::Array{Float64,1}, 
-                 u::Array{Float64,1}, 
-                 p::Array{Float64,1}, 
-                 t::Float64)
-
-        @inbounds begin
-          $eqs
-        end
-        return nothing
+    function ode_full(du   ::Array{Float64,1}, 
+                      u    ::Array{Float64,1}, 
+                      p    ::Array{Float64,1}, 
+                      t    ::Float64,
+                      r    ::Array{Float64,1},
+                      eaft ::Array{Float64,1},
+                      k    ::Int64,
+                      h    ::Int64,
+                      ny   ::Int64,
+                      af!  ::Function,
+                      model::NTuple{3, Bool})
+      @inbounds begin
+        $eqs
       end
-
-      return f
     end
-    $name = f_gen($k, $h, $ny, $af!, $model)
   end
 
   return eval(ex)

@@ -67,7 +67,19 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   model = define_mod(cov_mod, k, h, ny)
 
   # make specific ode
-  make_egeohisse(k, h, ny, af!, model, :ode_fun)
+
+  # preallocate vectors used by ode_fun
+  r    = Array{Float64,1}(undef, ny)
+  eaft = Array{Float64,1}(undef, model[3] ? k*(k-1)*h : k*h)
+
+  # make function
+  make_egeohisse(k, h, ny, af!, model)
+
+  ode_fun = (du::Array{Float64,1}, 
+             u::Array{Float64,1}, 
+             p::Array{Float64,1}, 
+             t::Float64) ->
+    Base.invokelatest(ode_full,du,u,p,t,r,eaft,k,h,ny,af!,model)
 
   # make dictionary with relevant parameters
   pardic = build_par_names(k, h, ny, model)
