@@ -16,13 +16,13 @@ September 23 2017
 
 """
     loop_slice_sampler(lhf      ::Function, 
-                            p        ::Array{Float64,1},
-                            nnps     ::Array{Int64,1},
-                            nps      ::Array{Int64,1},
-                            w        ::Array{Float64,1},
-                            npars    ::Int64,
-                            niter    ::Int64,
-                            nthin    ::Int64)
+                       p        ::Array{Float64,1},
+                       nnps     ::Array{Int64,1},
+                       nps      ::Array{Int64,1},
+                       w        ::Array{Float64,1},
+                       npars    ::Int64,
+                       niter    ::Int64,
+                       nthin    ::Int64)
 
 Run slice sampling.
 """

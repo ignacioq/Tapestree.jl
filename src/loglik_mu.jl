@@ -11,33 +11,6 @@ Created 20 09 2017
 =#
 
 
-"""
-    make_lhf(llf, prf)
-
-Make log posterior function with the likelihood, **llf**, and prior, **prf**, functions.
-"""
-function make_lhf(llf::Function, 
-                  prf::Function, 
-                  conp::Dict{Int64,Int64})
-
-  # set linked parameters
-  kp = keys(conp)
-
-  function f(p::Array{Float64,1})
-    @inbounds begin
-      for i in kp
-        p[i] = p[conp[i]]
-      end
-    end
-
-    return (llf(p) + prf(p))::Float64
-  end
-
-  return f
-end
-
-
-
 
 
 """

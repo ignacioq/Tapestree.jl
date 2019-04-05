@@ -19,7 +19,7 @@ Updated 26 03 2019
     make_lhf(llf, prf)
 
 Make log posterior function with the likelihood, **llf**, 
-and prior, **prf**, functions.
+and prior, **lpf**, functions.
 """
 function make_lhf(llf::Function, 
                   lpf::Function, 
@@ -30,7 +30,7 @@ function make_lhf(llf::Function,
       @inbounds p[k] = p[v]
     end
 
-    return llf(p) + Base.invokelatest(lpf,p)
+    return llf(p) + lpf(p)
   end
 
   return f
@@ -45,9 +45,11 @@ end
              ed     ::Array{Int64,2},
              el     ::Array{Float64,1},
              ode_fun,
-             af     ::Function,
-             p      ::Array{Float64,1};
-             sbrlen ::Float64 = 5.0)
+             af!    ::Function,
+             p      ::Array{Float64,1},
+             h      ::Int64,
+             ny     ::Int64,
+             model  ::Int64)
 
 Make likelihood function for a tree given an ODE function.
 """
@@ -58,7 +60,8 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
                   af!    ::Function,
                   p      ::Array{Float64,1},
                   h      ::Int64,
-                  model  ::NTuple{3, Bool})
+                  ny     ::Int64,
+                  model  ::Int64)
 
   k    = length(tip_val[1])
   ns   = h*(k^2-1)
@@ -114,11 +117,29 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
   # make ode solver
   ode_solve = make_solver(ode_fun, p, zeros(2*ns))
 
-  # make speciation events
-  make_λevent(k, h, ny, S, model[1])
+  # make speciation events and closure
+  λevent! = (t   ::Float64, 
+             llik::Array{Float64,1}, 
+             ud1 ::Array{Float64,1}, 
+             ud2 ::Array{Float64,1},
+             lλs ::Array{Float64,1},
+             lλts::Array{Float64,1},
+             p   ::Array{Float64,1},
+             r   ::Array{Float64,1}) ->
+    λevent_full(t, llik, ud1, ud2, lλs, lλts, p, r, af!,
+                Val(k), Val(h), Val(ny), Val(model))
 
-  # make root full likelihood estimation
-  make_rootll(k, h, ny, S, model[1])
+  # make root full likelihood estimation and closure
+  rootll = (t   ::Float64,
+            llik::Array{Float64,1},
+            extp::Array{Float64,1},
+            w   ::Array{Float64,1},
+            p   ::Array{Float64,1},
+            lλs ::Array{Float64,1},
+            lλts::Array{Float64,1},
+            r   ::Array{Float64,1}) -> 
+    rootll_full(t, llik, extp, w, p, lλs, lλts, r, af!,
+      Val(k), Val(h), Val(ny), Val(model))
 
   function f(p::Array{Float64,1})
 
@@ -144,7 +165,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        Base.invokelatest(λevent!,elrt[pr,2], llik, ud1, ud2, lλs, lλts, p, r)
+        λevent!(elrt[pr,2], llik, ud1, ud2, lλs, lλts, p, r)
 
         # loglik to sum for integration
         tosum   = minimum(llik)
@@ -177,37 +198,56 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       normbysum!(llik, w)
 
       # combine root likelihoods
-      ll = Base.invokelatest(rootll,elrt[ne,1], llik, extp, w, p, lλs, lλts, r)
+      ll = rootll(elrt[ne,1], llik, extp, w, p, lλs, lλts, r)
 
       return (log(ll) - llxtra)::Float64
     end
   end
+
+  return f
 end
 
 
 
 
 
-"""
-    make_rootll(k  ::Int64, 
-                h  ::Int64, 
-                ny ::Int64, 
-                S  ::Array{ghs,1},
-                mdS::Bool)
 
-Estimate full likelihood at the root.
 """
-function make_rootll(k  ::Int64, 
-                     h  ::Int64, 
-                     ny ::Int64, 
-                     S  ::Array{ghs,1},
-                     mdS::Bool)
+    make_rootll(t   ::Float64,
+                llik::Array{Float64,1},
+                extp::Array{Float64,1},
+                w   ::Array{Float64,1},
+                p   ::Array{Float64,1},
+                lλs ::Array{Float64,1},
+                lλts::Array{Float64,1},
+                r   ::Array{Float64,1},
+                ::Val{k}, 
+                ::Val{h}, 
+                ::Val{ny}, 
+                ::Val{mdS}) where {k,h,ny,mdS}
+Generated function for full tree likelihood at the root.
+"""
+@generated function rootll_full(t   ::Float64,
+                                llik::Array{Float64,1},
+                                extp::Array{Float64,1},
+                                w   ::Array{Float64,1},
+                                p   ::Array{Float64,1},
+                                lλs ::Array{Float64,1},
+                                lλts::Array{Float64,1},
+                                r   ::Array{Float64,1},
+                                af! ::Function,
+                                ::Val{k}, 
+                                ::Val{h}, 
+                                ::Val{ny}, 
+                                ::Val{model}) where {k,h,ny,model}
   eqs = quote end
   popfirst!(eqs.args)
 
-  if mdS
+  S = create_states(k, h)
+
+  if model == 1
     # add environmental function
-    push!(eqs.args, :(Base.invokelatest(af!,t, r)))
+    push!(eqs.args, :(af!(t, r)))
 
     # estimate covariate lambdas
     pky = isone(ny) ? 1 : div(ny,k)
@@ -283,52 +323,62 @@ function make_rootll(k  ::Int64,
 
   push!(eqs.args, :(ll = $eq))
 
-  ex = quote
-    function rootll(t   ::Float64,
-                    llik::Array{Float64,1},
-                    extp::Array{Float64,1},
-                    w   ::Array{Float64,1},
-                    p   ::Array{Float64,1},
-                    lλs ::Array{Float64,1},
-                    lλts::Array{Float64,1},
-                    r   ::Array{Float64,1})
-
-      @inbounds begin
+  return quote
+    @inbounds begin
         $eqs
-      end
-      return ll
     end
+    return ll
   end
-
-  return eval(ex)
 end
 
 
 
 
 
-"""
-    make_λevent(k    ::Int64, 
-                h    ::Int64, 
-                ny   ::Int64, 
-                S    ::Array{ghs,1},
-                model::NTuple{3, Bool})
 
-Make function for speciation event likelihoods
+
+
+
+
 """
-function make_λevent(k  ::Int64, 
-                     h  ::Int64, 
-                     ny ::Int64, 
-                     S  ::Array{ghs,1},
-                     mdS::Bool)
+    λevent_full(t   ::Float64, 
+                llik::Array{Float64,1}, 
+                ud1 ::Array{Float64,1}, 
+                ud2 ::Array{Float64,1},
+                lλs ::Array{Float64,1},
+                lλts::Array{Float64,1},
+                p   ::Array{Float64,1},
+                r   ::Array{Float64,1},
+                ::Val{k}, 
+                ::Val{h}, 
+                ::Val{ny}, 
+                ::Val{S},
+                ::Val{mdS})
+Generated function for speciation event likelihoods
+"""
+@generated function λevent_full(t   ::Float64, 
+                               llik::Array{Float64,1}, 
+                               ud1 ::Array{Float64,1}, 
+                               ud2 ::Array{Float64,1},
+                               lλs ::Array{Float64,1},
+                               lλts::Array{Float64,1},
+                               p   ::Array{Float64,1},
+                               r   ::Array{Float64,1},
+                               af! ::Function,
+                               ::Val{k}, 
+                               ::Val{h}, 
+                               ::Val{ny}, 
+                               ::Val{model}) where {k,h,ny,model}
 
   eqs = quote end
   popfirst!(eqs.args)
 
+  S = create_states(k, h)
+
   # if speciation model
-  if mdS 
+  if model == 1 
     # add environmental function
-    push!(eqs.args, :(Base.invokelatest(af!,t, r)))
+    push!(eqs.args, :(af!(t, r)))
 
     # estimate covariate lambdas
     pky = isone(ny) ? 1 : div(ny,k)
@@ -414,24 +464,13 @@ function make_λevent(k  ::Int64,
     end
   end
 
-  ex = quote
-    function λevent!(t   ::Float64, 
-                     llik::Array{Float64,1}, 
-                     ud1 ::Array{Float64,1}, 
-                     ud2 ::Array{Float64,1},
-                     lλs ::Array{Float64,1},
-                     lλts::Array{Float64,1},
-                     p   ::Array{Float64,1},
-                     r   ::Array{Float64,1})
-      @inbounds begin
-        $eqs
-      end
+  return quote 
+    @inbounds begin
+      $eqs
     end
+    return nothing
   end
-
-  return eval(ex)
 end
-
 
 
 
@@ -457,7 +496,8 @@ end
 
 
 """
-    make_lpf(λpriors::Float64,
+    lpf_full(p      ::Array{Float64,1},
+             λpriors::Float64,
              μpriors::Float64,
              lpriors::Float64,
              gpriors::Float64,
@@ -465,58 +505,56 @@ end
              βpriors::Tuple{Float64,Float64},
              k      ::Int64,
              h      ::Int64,
-             mdQ    ::Bool)
-
-Make log-prior function.
+             mdQ    ::Int)
+`@generated` log-prior function.
 """
-function make_lpf(λpriors::Float64,
-                  μpriors::Float64,
-                  lpriors::Float64,
-                  gpriors::Float64,
-                  qpriors::Float64,
-                  βpriors::Tuple{Float64,Float64},
-                  k      ::Int64,
-                  h      ::Int64,
-                  mdQ    ::Bool)
+@generated function lpf_full(p      ::Array{Float64,1},
+                             λpriors::Float64,
+                             μpriors::Float64,
+                             lpriors::Float64,
+                             gpriors::Float64,
+                             qpriors::Float64,
+                             βpriors::NTuple{2,Float64},
+                             ::Val{k},
+                             ::Val{h},
+                             ::Val{ny},
+                             ::Val{model}) where {k, h, ny, model}
 
   eq = Expr(:call, :+)
   # speciation priors
   for i in Base.OneTo(h*(k+1))
-    push!(eq.args, :(logdexp(p[$i], $λpriors)))
+    push!(eq.args, :(logdexp(p[$i], λpriors)))
   end
   # global extinction priors
   for i in (h*(k+1)+1):(h*(k+1)+k*h)
-    push!(eq.args, :(logdexp(p[$i], $μpriors)))
+    push!(eq.args, :(logdexp(p[$i], μpriors)))
   end
   # area colonization priors
   for i in (h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h)
-    push!(eq.args, :(logdexp(p[$i], $gpriors)))
+    push!(eq.args, :(logdexp(p[$i], gpriors)))
   end
   # area loss priors
   for i in (h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h)
-    push!(eq.args, :(logdexp(p[$i], $lpriors)))
+    push!(eq.args, :(logdexp(p[$i], lpriors)))
   end
   # hidden states transition
   for i in (h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
-    push!(eq.args, :(logdexp(p[$i], $lpriors)))
+    push!(eq.args, :(logdexp(p[$i], lpriors)))
   end
   # betas
-  nb = mdQ ? (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)*div(ny,k*(k-1))*h) :
-             (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h*div(ny,k))
+  nb = model == 3 ? 
+    (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)*div(ny,k*(k-1))*h) :
+    (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h*div(ny,k))
   for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
-    push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
+    push!(eq.args, :(logdnorm(p[$i], (βpriors[1]), (βpriors[2]))))
   end
 
-  ex = quote 
-    function lpf(p::Array{Float64,1})
-      @inbounds begin
-        lq = $eq
-      end
-      return lq
+  return quote 
+    @inbounds begin
+      lq = $eq
     end
+    return lq
   end
-
-  return eval(ex)
 end
 
 
@@ -538,9 +576,6 @@ function check_negs(x::Array{Float64,1}, k::Int64)
     return false
   end
 end
-
-
-
 
 
 

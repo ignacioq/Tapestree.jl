@@ -55,31 +55,17 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        optimal_w  ::Float64           = 0.8) where {N}
 
   # k areas
-  k  = length(tip_val[1])::Int64
+  k = length(tip_val[1])::Int64
 
   # number of covariates
   ny = size(y,2)
 
   # make z(t) approximation from discrete data `af!()`
-  make_approxf(x, y)
+  af! = (t::Float64, r::Array{Float64,1}) ->
+    approxf_full(t, r, x, y, Val(ny))
 
   # define model
   model = define_mod(cov_mod, k, h, ny)
-
-  # make specific ode
-
-  # preallocate vectors used by ode_fun
-  r    = Array{Float64,1}(undef, ny)
-  eaft = Array{Float64,1}(undef, model[3] ? k*(k-1)*h : k*h)
-
-  # make function
-  make_egeohisse(k, h, ny, af!, model)
-
-  ode_fun = (du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64) ->
-    Base.invokelatest(ode_full,du,u,p,t,r,eaft,k,h,ny,af!,model)
 
   # make dictionary with relevant parameters
   pardic = build_par_names(k, h, ny, model)
@@ -87,11 +73,10 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # get number of parameters
   npars = length(pardic)
 
-  # make initial p
+  # generate initial parameter values
   #= 
-    TODO -> make smarter initial pars
+    TO DO -> make smarter initial pars
   =#
-
   p  = fill(0.1,npars)
   βs = h*(k^2 + 2k + h) + 1
   δ  = log(Float64(length(tip_val)-1))/sum(el)
@@ -115,15 +100,34 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
-  # create likelihood, prior and posterior functions
-  llf   = make_llf(tip_val, ed, el, ode_fun, af!, p, h, model)
-  make_lpf(λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, k, h, model[3])  
-  lhf   = make_lhf(llf, lpf, conp)
+  # preallocate vectors used by ode_fun
+  r    = Array{Float64,1}(undef, ny)
+  eaft = Array{Float64,1}(undef, model == 3 ? k*(k-1)*h : k*h)
+
+  # make ode function with closure
+  ode_fun = (du::Array{Float64,1}, 
+             u::Array{Float64,1}, 
+             p::Array{Float64,1}, 
+             t::Float64) ->
+    geohisse_full(du,u,p,t,r,eaft,af!,Val(k),Val(h),Val(ny),Val(model))
+
+  # create likelihood function
+  llf = make_llf(tip_val, ed, el, ode_fun, af!, p, h, ny, model)
+
+  # create prior function
+  lpf = (p::Array{Float64,1}) ->
+    lpf_full(p, λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, 
+      Val(k), Val(h), Val(ny), Val(model))
+
+  # create posterior functions
+  lhf = make_lhf(llf, lpf, conp)
 
   # estimate optimal w
   p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w)
 
-  # run slice sampling
+  #=
+  run slice sampling
+  =#
   its, hlog, ps = 
     loop_slice_sampler(lhf, p, nnps, nps, w, npars, niter, nthin)
 
@@ -163,27 +167,28 @@ function define_mod(egeohisse_mod::String,
                     ny           ::Int64)
 
   if occursin(r"^[s|S][A-za-z]*", egeohisse_mod)         # if speciation
-    model   = (true,false,false)
+    model = 1
     printstyled("running speciation EGeoHiSSE model with:
   $k single areas 
   $h hidden states 
   $ny covariates \n", 
                  color=:green)
   elseif occursin(r"^[e|E][A-za-z]*", egeohisse_mod)     # if extinction
-    model   = (false,true,false)
+    model = 2
     printstyled("running extinction EGeoHiSSE model with:
   $k single areas 
   $h hidden states 
   $ny covariates \n",
                  color=:green)
   elseif occursin(r"^[t|T|r|R|q|Q][A-za-z]*", egeohisse_mod) # if transition
-    model   = (false,false,true)
+    model = 3
     printstyled("running transition EGeoHiSSE model with:
   $k single areas
   $h hidden states
   $ny covariates \n",
                  color=:green)
   else 
+    model = 0
     printstyled("running GeoHiSSE model with:
   $k single areas
   $h hidden states 

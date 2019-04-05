@@ -12,169 +12,6 @@ Created 18 03 2019
 
 
 
-
-
-"""
-    make_egeohisse(k    ::Int64,
-                   h    ::Int64,
-                   ny   ::Int64,
-                   af!  ::Function,
-                   model::NTuple{3, Bool},
-                   name ::Symbol)
-
-Creates Covariate GeoHiSSE ODE equation function for `k` areas, 
-`h` hidden states and `ny` covariates of name `:name`.
-"""
-function make_egeohisse(k    ::Int64,
-                        h    ::Int64,
-                        ny   ::Int64,
-                        af!  ::Function,
-                        model::NTuple{3, Bool})
-  # n states
-  ns = (2^k - 1)*h
-
-  # create individual areas subsets
-  S = create_states(k, h)
-
-  # start Expression for ODE equations
-  eqs = quote end
-  popfirst!(eqs.args)
-
-  # add environmental function
-  push!(eqs.args, :(Base.invokelatest(af!,t, r)))
-
-  # compute exponential for each β*covariable
-  expex = exp_expr(k, h, ny, model)
-
-  for ex in expex.args
-    push!(eqs.args, ex)
-  end
-
-  """
-  - Add closure for eaft vector!!
-  """
-
-  for si = Base.OneTo(ns)
-
-    # state range
-    s = S[si]
-
-    # length of geographic range
-    ls = length(s.g)
-
-    # which single areas do not occur in r
-    oa = setdiff(1:k, s.g)
-
-    #= 
-    likelihoods
-    =#
-
-    # no events
-    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, false)
-
-    # remove if !isone(lr)
-    if ls > 1
-      # local extinction
-      lex = localext_expr(s, S, k, h)
-      # between-region speciation
-      brs = brspec_expr(s, S, ns, k, false)
-    end
-
-    # dispersal
-    # remove if lr == k
-    if ls != k
-      dis = dispersal_expr(s, oa, S, ns, k, h, model[3], false)
-    end
-
-    # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.0
-
-    # within-region speciation
-    wrs = wrspec_expr(si, s, ns, k, model[1])
-
-    # push `D` equation to to eqs
-    if isone(ls)
-      push!(eqs.args, 
-        :(du[$si] = $nev + $dis + $hid + $wrs))
-    elseif ls == k
-      push!(eqs.args, 
-        :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
-    else
-      push!(eqs.args, 
-        :(du[$si] = $nev + $lex + $dis + $hid + $wrs + $brs))
-    end
-
-    #= 
-    extinctions
-    =#
-
-    # no events
-    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, true)
-
-    # extinction
-    ext = ext_expr(s, S, ns, k, h, model[2]) 
-
-    # dispersal and extinction
-    if ls != k
-      dis = dispersal_expr(s, oa, S, ns, k, h, model[3], true)
-    end
-
-    # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0.0
-
-    # within-region extinction
-    wrs = wrsext_expr(si, s, ns, k, model[1])
-
-    # between-region extinction
-    if ls > 1
-      brs = brspec_expr(s, S, ns, k, true)
-    end
-
-    # push `E` equation to to eqs
-    if isone(ls)
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
-    elseif ls == k
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
-    else
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
-    end
-
-  end
-
-  ## aesthetic touches
-  # sort `du`s
-  eqs.args[[(end-(ns*2)+1):end...]] = 
-    eqs.args[append!([(end-(ns*2)+1):2:end...],
-            [(end-(ns*2)+2):2:end...])]
-
-  ex = quote 
-    function ode_full(du   ::Array{Float64,1}, 
-                      u    ::Array{Float64,1}, 
-                      p    ::Array{Float64,1}, 
-                      t    ::Float64,
-                      r    ::Array{Float64,1},
-                      eaft ::Array{Float64,1},
-                      k    ::Int64,
-                      h    ::Int64,
-                      ny   ::Int64,
-                      af!  ::Function,
-                      model::NTuple{3, Bool})
-      @inbounds begin
-        $eqs
-      end
-    end
-  end
-
-  return eval(ex)
-end
-
-
-
-
-
 """
     struct ghs
       g::Set{Int64}
@@ -244,11 +81,10 @@ Return exponential expression for one time evaluation of covariates.
 function exp_expr(k    ::Int64,
                   h    ::Int64,
                   ny   ::Int64,
-                  model::NTuple{3,Bool})
-
+                  model::Int64)
 
   # if speciation
-  if model[1] 
+  if model == 1
     pky = isone(ny) ? 1 : div(ny,k)
     ex = quote end
     pop!(ex.args)
@@ -266,7 +102,7 @@ function exp_expr(k    ::Int64,
     return ex
 
   # if extinction
-  elseif  model[2]
+  elseif  model == 2
     pky = isone(ny) ? 1 : div(ny,k)
     ex = quote end
     pop!(ex.args)
@@ -285,7 +121,7 @@ function exp_expr(k    ::Int64,
     return ex
 
   # if dispersal
-  elseif model[3]
+  elseif model == 3
     pky = isone(ny) ? 1 : div(ny,k*(k-1))
     ex = quote end
     pop!(ex.args)
@@ -330,7 +166,7 @@ function noevents_expr(si   ::Int64,
                        k    ::Int64,
                        h    ::Int64,
                        ns   ::Int64,
-                       model::NTuple{3,Bool},
+                       model::Int64,
                        ext  ::Bool)
 
   # if extinction
@@ -344,10 +180,10 @@ function noevents_expr(si   ::Int64,
 
     ##Covariates
     # if speciation model
-    if model[1]
+    if model == 1
       push!(ex.args, :(eaft[$(v + s.h*k)] + p[$(v + (k+1)*h + s.h*k + ts)]))
     # if extinction model and only for endemic extinction
-    elseif model[2] && isone(ls)
+    elseif model == 2 && isone(ls)
       push!(ex.args, :(p[$(v + s.h*(k+1))] + eaft[$(v + s.h*k)]))
     # if neither
     else
@@ -355,7 +191,7 @@ function noevents_expr(si   ::Int64,
     end
 
     # dispersal
-    if model[3]
+    if model == 3
       for j = oa
         j -= v <= j ? 1 : 0
         push!(ex.args[i+2].args, 
@@ -431,14 +267,14 @@ end
 
 Return expression for dispersal.
 """
-function dispersal_expr(s  ::ghs,
-                        oa ::Array{Int64,1},
-                        S  ::Array{ghs,1},
-                        ns ::Int64,
-                        k  ::Int64,
-                        h  ::Int64,
-                        mdQ::Bool,
-                        ext::Bool)
+function dispersal_expr(s    ::ghs,
+                        oa   ::Array{Int64,1},
+                        S    ::Array{ghs,1},
+                        ns   ::Int64,
+                        k    ::Int64,
+                        h    ::Int64,
+                        model::Int64,
+                        ext  ::Bool)
 
   wu = ext ? ns : 0
 
@@ -449,7 +285,7 @@ function dispersal_expr(s  ::ghs,
   ex = Expr(:call, :+)
 
   # if dispersal covariate
-  if mdQ
+  if model == 3
     for a = s.g, (i, j) = enumerate(oa)
       j -= a <= j ? 1 : 0
       push!(ex.args, :(eaft[$(s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
@@ -518,9 +354,9 @@ function wrspec_expr(si ::Int64,
                      s  ::ghs,
                      ns ::Int64,
                      k  ::Int64,
-                     mdS::Bool)
+                     model::Int64)
   # if model speciation
-  if mdS
+  if model == 1
     if isone(length(s.g))
       ex = Expr(:call, :*, 2.0)
       for i = s.g
@@ -612,10 +448,10 @@ function ext_expr(s  ::ghs,
                   ns ::Int64,
                   k  ::Int64,
                   h  ::Int64,
-                  mdE::Bool)
+                  model::Int64)
 
   if isone(length(s.g))
-    if mdE
+    if model == 2
       ex = Expr(:call, :+)
       for i in s.g push!(ex.args, :(eaft[$(k*s.h + i)])) end
     else
@@ -651,10 +487,10 @@ function wrsext_expr(si ::Int64,
                      s  ::ghs,
                      ns ::Int64,
                      k  ::Int64,
-                     mdS::Bool)
+                     model::Int64)
 
   # if speciation model
-  if mdS
+  if model == 1
     if isone(length(s.g))
       ex = Expr(:call, :*, 2.0)
       for i = s.g
@@ -683,6 +519,162 @@ function wrsext_expr(si ::Int64,
   return ex
 end
 
+
+
+
+
+
+"""
+    make_egeohisse(k    ::Int64,
+                   h    ::Int64,
+                   ny   ::Int64,
+                   af!  ::Function,
+                   model::NTuple{3, Bool},
+                   name ::Symbol)
+
+Creates Covariate GeoHiSSE ODE equation function for `k` areas, 
+`h` hidden states and `ny` covariates of name `:name`.
+"""
+@generated function geohisse_full(du  ::Array{Float64,1}, 
+                                  u   ::Array{Float64,1}, 
+                                  p   ::Array{Float64,1}, 
+                                  t   ::Float64,
+                                  r   ::Array{Float64,1},
+                                  eaft::Array{Float64,1},
+                                  af! ::Function,
+                                  ::Val{k},
+                                  ::Val{h},
+                                  ::Val{ny},
+                                  ::Val{model}) where {k, h, ny, model}
+
+  # n states
+  ns = (2^k - 1)*h
+
+  # create individual areas subsets
+  S = create_states(k, h)
+
+  # start Expression for ODE equations
+  eqs = quote end
+  popfirst!(eqs.args)
+
+  # add environmental function
+  push!(eqs.args, :(af!(t, r)))
+
+  # compute exponential for each β*covariable
+  expex = exp_expr(k, h, ny, model)
+
+  for ex in expex.args
+    push!(eqs.args, ex)
+  end
+
+  """
+  - Add closure for eaft vector!!
+  """
+
+  for si = Base.OneTo(ns)
+
+    # state range
+    s = S[si]
+
+    # length of geographic range
+    ls = length(s.g)
+
+    # which single areas do not occur in r
+    oa = setdiff(1:k, s.g)
+
+    #= 
+    likelihoods
+    =#
+
+    # no events
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, false)
+
+    # remove if !isone(lr)
+    if ls > 1
+      # local extinction
+      lex = localext_expr(s, S, k, h)
+      # between-region speciation
+      brs = brspec_expr(s, S, ns, k, false)
+    end
+
+    # dispersal
+    # remove if lr == k
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, model, false)
+    end
+
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.0
+
+    # within-region speciation
+    wrs = wrspec_expr(si, s, ns, k, model)
+
+    # push `D` equation to to eqs
+    if isone(ls)
+      push!(eqs.args, 
+        :(du[$si] = $nev + $dis + $hid + $wrs))
+    elseif ls == k
+      push!(eqs.args, 
+        :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$si] = $nev + $lex + $dis + $hid + $wrs + $brs))
+    end
+
+    #= 
+    extinctions
+    =#
+
+    # no events
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, true)
+
+    # extinction
+    ext = ext_expr(s, S, ns, k, h, model) 
+
+    # dispersal and extinction
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, model, true)
+    end
+
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0.0
+
+    # within-region extinction
+    wrs = wrsext_expr(si, s, ns, k, model)
+
+    # between-region extinction
+    if ls > 1
+      brs = brspec_expr(s, S, ns, k, true)
+    end
+
+    # push `E` equation to to eqs
+    if isone(ls)
+      push!(eqs.args, 
+        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
+    elseif ls == k
+      push!(eqs.args, 
+        :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs + $brs))
+    end
+
+  end
+
+  ## aesthetic touches
+  # sort `du`s
+  eqs.args[[(end-(ns*2)+1):end...]] = 
+    eqs.args[append!([(end-(ns*2)+1):2:end...],
+            [(end-(ns*2)+2):2:end...])]
+
+  return quote 
+    @inbounds begin
+      $eqs
+    end
+    return nothing
+  end
+
+end
 
 
 
