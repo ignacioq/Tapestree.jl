@@ -42,24 +42,3 @@ function make_solver(odef, p0::Array{Float64,1}, u0::Array{Float64,1})
 
   return f
 end
-
-
-
-
-
-  # make ode function with closure
-  ode_fun = (du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64) -> 
-    begin
-      geohisse_full(du::Array{Float64,1},
-                    u ::Array{Float64,1},
-                    p ::Array{Float64,1},
-                    t ::Float64,
-                    r,eaft,af!,Val(k),Val(h),Val(ny),Val(model))
-      return nothing
-    end
-
-  # make ODE solver
-  ode_solve = make_solver(ode_fun, p, zeros(2*h*(k^2-1)))

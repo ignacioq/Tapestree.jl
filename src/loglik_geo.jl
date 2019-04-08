@@ -138,7 +138,6 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
     begin
       rootll_full(t, llik, extp, w, p, lλs, lλts, r, af!,
         Val(k), Val(h), Val(ny), Val(model))
-      return nothing
     end
 
   function f(p::Array{Float64,1})
@@ -548,8 +547,6 @@ end
   for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
     push!(eq.args, :(logdnorm(p[$i], (βpriors[1]), (βpriors[2]))))
   end
-
-  println(eq)
 
   return quote 
     @inbounds begin
