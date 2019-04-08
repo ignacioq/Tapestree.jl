@@ -679,6 +679,47 @@ end
 
 
 
+
+
+"""
+    make_egeohisse(::Val(k),
+                   ::Val(h),
+                   ::Val(ny),
+                   ::Val(model),
+                   af!::Function) where {k, h, ny, model}
+
+Make closure for EGeoHiSSE.
+"""
+function make_egeohisse(::Val{k},
+                        ::Val{h},
+                        ::Val{ny},
+                        ::Val{model},
+                        af!::Function) where {k, h, ny, model}
+  
+  r    = Array{Float64,1}(undef, ny)
+  eaft = Array{Float64,1}(undef, model == 3 ? k*(k-1)*h : k*h)
+
+  # make ode function with closure
+  ode_fun = (du::Array{Float64,1}, 
+             u::Array{Float64,1}, 
+             p::Array{Float64,1}, 
+             t::Float64) -> 
+    begin
+      geohisse_full(du::Array{Float64,1},
+                    u ::Array{Float64,1},
+                    p ::Array{Float64,1},
+                    t ::Float64,
+                    r,eaft,af!,Val(k),Val(h),Val(ny),Val(model))
+      return nothing
+    end
+
+  return ode_fun
+end
+
+
+
+
+
 """
     egeohisse_2k_gen_s(k  ::Int64,
                        h  ::Int64,

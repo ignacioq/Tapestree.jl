@@ -61,8 +61,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   ny = size(y,2)
 
   # make z(t) approximation from discrete data `af!()`
-  af! = (t::Float64, r::Array{Float64,1}) ->
-    approxf_full(t, r, x, y, Val(ny))
+  af! = make_af(x, y, Val(ny))
 
   # define model
   model = define_mod(cov_mod, k, h, ny)
@@ -100,24 +99,24 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
-  # preallocate vectors used by ode_fun
-  r    = Array{Float64,1}(undef, ny)
-  eaft = Array{Float64,1}(undef, model == 3 ? k*(k-1)*h : k*h)
+  # make ODE function
+  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
 
-  # make ode function with closure
-  ode_fun = (du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64) ->
-    geohisse_full(du,u,p,t,r,eaft,af!,Val(k),Val(h),Val(ny),Val(model))
+  # make ODE solver
+  ode_solve = make_solver(ode_fun, p, zeros(2*h*(k^2-1)))
 
   # create likelihood function
-  llf = make_llf(tip_val, ed, el, ode_fun, af!, p, h, ny, model)
+  llf = make_llf(tip_val, ed, el, ode_solve, af!, 
+    Val(k), Val(h), Val(ny), Val(model))
 
   # create prior function
-  lpf = (p::Array{Float64,1}) ->
-    lpf_full(p, λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, 
+  lpf = make_lpf(λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, 
       Val(k), Val(h), Val(ny), Val(model))
+
+lpf = make_lpf(0.1, 0.1, 0.1, 0.1, 0.1, (0.1,10.), 
+      Val(2), Val(2), Val(3), Val(1))
+
+lpf(rand(28))
 
   # create posterior functions
   lhf = make_lhf(llf, lpf, conp)

@@ -140,10 +140,19 @@ end
 
 
 
+"""
+  make_af(x, y, ::Val{ny})
 
+make approximate function closure
+"""
+function make_af(x, y, ::Val{ny}) where {ny}
 
+  af! = (t::Float64, r::Array{Float64,1}) -> 
+    begin
+      approxf_full(t::Float64, r::Array{Float64,1}, x, y, Val(ny))
+      return nothing
+    end
 
-
-
-
+  return af!
+end
 

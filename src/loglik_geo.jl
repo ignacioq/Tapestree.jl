@@ -56,14 +56,13 @@ Make likelihood function for a tree given an ODE function.
 function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
                   ed     ::Array{Int64,2},
                   el     ::Array{Float64,1},
-                  ode_fun,
+                  ode_solve,
                   af!    ::Function,
-                  p      ::Array{Float64,1},
-                  h      ::Int64,
-                  ny     ::Int64,
-                  model  ::Int64)
+                  ::Val{k},
+                  ::Val{h},
+                  ::Val{ny},
+                  ::Val{model}) where {k, h, ny, model}
 
-  k    = length(tip_val[1])
   ns   = h*(k^2-1)
   ntip = length(tip_val)
 
@@ -114,9 +113,6 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
   # preallocate extinction probabilities at root
   extp = Array{Float64,1}(undef, ns)
 
-  # make ode solver
-  ode_solve = make_solver(ode_fun, p, zeros(2*ns))
-
   # make speciation events and closure
   λevent! = (t   ::Float64, 
              llik::Array{Float64,1}, 
@@ -124,10 +120,12 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
              ud2 ::Array{Float64,1},
              lλs ::Array{Float64,1},
              lλts::Array{Float64,1},
-             p   ::Array{Float64,1},
-             r   ::Array{Float64,1}) ->
-    λevent_full(t, llik, ud1, ud2, lλs, lλts, p, r, af!,
-                Val(k), Val(h), Val(ny), Val(model))
+             p   ::Array{Float64,1}) ->
+    begin
+      λevent_full(t, llik, ud1, ud2, lλs, lλts, p, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
 
   # make root full likelihood estimation and closure
   rootll = (t   ::Float64,
@@ -136,10 +134,12 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
             w   ::Array{Float64,1},
             p   ::Array{Float64,1},
             lλs ::Array{Float64,1},
-            lλts::Array{Float64,1},
-            r   ::Array{Float64,1}) -> 
-    rootll_full(t, llik, extp, w, p, lλs, lλts, r, af!,
-      Val(k), Val(h), Val(ny), Val(model))
+            lλts::Array{Float64,1}) -> 
+    begin
+      rootll_full(t, llik, extp, w, p, lλs, lλts, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
 
   function f(p::Array{Float64,1})
 
@@ -165,7 +165,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(elrt[pr,2], llik, ud1, ud2, lλs, lλts, p, r)
+        λevent!(elrt[pr,2], llik, ud1, ud2, lλs, lλts, p)
 
         # loglik to sum for integration
         tosum   = minimum(llik)
@@ -198,7 +198,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       normbysum!(llik, w)
 
       # combine root likelihoods
-      ll = rootll(elrt[ne,1], llik, extp, w, p, lλs, lλts, r)
+      ll = rootll(elrt[ne,1], llik, extp, w, p, lλs, lλts)
 
       return (log(ll) - llxtra)::Float64
     end
@@ -236,14 +236,15 @@ Generated function for full tree likelihood at the root.
                                 lλts::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
-                                ::Val{k}, 
-                                ::Val{h}, 
-                                ::Val{ny}, 
-                                ::Val{model}) where {k,h,ny,model}
-  eqs = quote end
-  popfirst!(eqs.args)
+                                ::Val{k},
+                                ::Val{h},
+                                ::Val{ny},
+                                ::Val{model})::Float64 where {k, h, ny, model}
 
   S = create_states(k, h)
+
+  eqs = quote end
+  popfirst!(eqs.args)
 
   if model == 1
     # add environmental function
@@ -321,13 +322,12 @@ Generated function for full tree likelihood at the root.
 
   end
 
-  push!(eqs.args, :(ll = $eq))
+  push!(eqs.args, :($eq))
 
   return quote
     @inbounds begin
-        $eqs
+      $eqs
     end
-    return ll
   end
 end
 
@@ -357,18 +357,18 @@ end
 Generated function for speciation event likelihoods
 """
 @generated function λevent_full(t   ::Float64, 
-                               llik::Array{Float64,1}, 
-                               ud1 ::Array{Float64,1}, 
-                               ud2 ::Array{Float64,1},
-                               lλs ::Array{Float64,1},
-                               lλts::Array{Float64,1},
-                               p   ::Array{Float64,1},
-                               r   ::Array{Float64,1},
-                               af! ::Function,
-                               ::Val{k}, 
-                               ::Val{h}, 
-                               ::Val{ny}, 
-                               ::Val{model}) where {k,h,ny,model}
+                                llik::Array{Float64,1}, 
+                                ud1 ::Array{Float64,1}, 
+                                ud2 ::Array{Float64,1},
+                                lλs ::Array{Float64,1},
+                                lλts::Array{Float64,1},
+                                p   ::Array{Float64,1},
+                                r   ::Array{Float64,1},
+                                af! ::Function,
+                                ::Val{k}, 
+                                ::Val{h}, 
+                                ::Val{ny}, 
+                                ::Val{model}) where {k, h, ny, model}
 
   eqs = quote end
   popfirst!(eqs.args)
@@ -549,12 +549,51 @@ end
     push!(eq.args, :(logdnorm(p[$i], (βpriors[1]), (βpriors[2]))))
   end
 
+  println(eq)
+
   return quote 
     @inbounds begin
       lq = $eq
     end
     return lq
   end
+end
+
+
+
+
+
+""" 
+    make_lpf(λpriors::Float64, 
+             μpriors::Float64, 
+             lpriors::Float64, 
+             gpriors::Float64, 
+             qpriors::Float64, 
+             βpriors::Tuple{Float64,Float64}, 
+             ::Val{k}, 
+             ::Val{h}, 
+             ::Val{ny}, 
+             ::Val{model}) where {k, h, ny, model}
+
+Make log prior function
+"""
+function make_lpf(λpriors::Float64, 
+                  μpriors::Float64, 
+                  lpriors::Float64, 
+                  gpriors::Float64, 
+                  qpriors::Float64, 
+                  βpriors::Tuple{Float64,Float64}, 
+                  ::Val{k}, 
+                  ::Val{h}, 
+                  ::Val{ny}, 
+                  ::Val{model}) where {k, h, ny, model}
+
+  # create prior function
+  lpf = (p::Array{Float64,1}) ->
+    lpf_full(p, λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, 
+      Val(k), Val(h), Val(ny), Val(model))
+
+  return lpf
 end
 
 
@@ -576,6 +615,9 @@ function check_negs(x::Array{Float64,1}, k::Int64)
     return false
   end
 end
+
+
+
 
 
 
