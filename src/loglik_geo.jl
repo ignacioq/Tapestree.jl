@@ -63,7 +63,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
                   ::Val{ny},
                   ::Val{model}) where {k, h, ny, model}
 
-  ns   = h*(k^2-1)
+  ns   = h*(2^k-1)
   ntip = length(tip_val)
 
   # add root of length 0
@@ -265,21 +265,23 @@ Generated function for full tree likelihood at the root.
 
     eq = Expr(:call, :+)
     for j in Base.OneTo(h)
+
       # for single areas
       for i in Base.OneTo(k)
         push!(eq.args,
-          :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-            (exp(lλts[$(i + k*(j-1))])*(1.0-extp[$(i + (j-1)*(k^2-1))])^2)))
+          :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+            (exp(lλts[$(i + k*(j-1))])*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
       end
+
       # for widespread
-      for i in k+1:k^2-1
-        wl = :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-          (l*(1.0-extp[$(i + (j-1)*(k^2-1))])^2))
+      for i in k+1:2^k-1
+        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+          (l*(1.0-extp[$(i + (j-1)*(2^k-1))])^2))
 
         lams = Expr(:call, :+, 
-          :($(2.0^(length(S[i + (k^2-1)*(j-1)].g)-1) - 1)*
+          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g)-1) - 1)*
             p[$(i + (k+1)*(j-1))]))
-        for a in S[i + (k^2-1)*(j-1)].g
+        for a in S[i + (2^k-1)*(j-1)].g
           push!(lams.args, :(exp(lλts[$(a + k*(j-1))])))
         end
 
@@ -297,18 +299,18 @@ Generated function for full tree likelihood at the root.
       # for single areas
       for i in Base.OneTo(k)
         push!(eq.args,
-          :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(k^2-1))])^2)))
+          :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
       end
       # for widespread
-      for i in k+1:k^2-1
-        wl = :(llik[$(i + (k^2-1)*(j-1))]*w[$(i + (k^2-1)*(j-1))] / 
-          (l*(1.0-extp[$(i + (j-1)*(k^2-1))])^2))
+      for i in k+1:2^k-1
+        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+          (l*(1.0-extp[$(i + (j-1)*(2^k-1))])^2))
 
         lams = Expr(:call, :+, 
-          :($(2.0^(length(S[i + (k^2-1)*(j-1)].g)-1) - 1)*
+          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g)-1) - 1)*
             p[$(i + (k+1)*(j-1))]))
-        for a in S[i + (k^2-1)*(j-1)].g
+        for a in S[i + (2^k-1)*(j-1)].g
           push!(lams.args, :(p[$(a + (k+1)*(j-1))]))
         end
 
@@ -396,20 +398,20 @@ Generated function for speciation event likelihoods
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
-          :(llik[$(i+(k^2-1)*(j-1))] = 
-            log(ud1[$(i+(k^2-1)*(j-1))] * ud2[$(i+(k^2-1)*(j-1))]) + 
+          :(llik[$(i+(2^k-1)*(j-1))] = 
+            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))]) + 
             lλts[$(i+k*(j-1))]))
     end
 
     # likelihood for widespread states
-    for j = Base.OneTo(h), i = k+1:k^2-1
-      s = S[i + (k^2-1)*(j-1)]
+    for j = Base.OneTo(h), i = k+1:2^k-1
+      s = S[i + (2^k-1)*(j-1)]
 
       # within region speciation
       ex = Expr(:call, :+)
       for a in s.g
-        push!(ex.args, :((ud1[$(a + s.h*(k+1))]    *  ud2[$(i + (k^2-1)*(j-1))] + 
-                          ud1[$(i + (k^2-1)*(j-1))] * ud2[$(a + s.h*(k+1))]) *
+        push!(ex.args, :((ud1[$(a + s.h*(k+1))]    *  ud2[$(i + (2^k-1)*(j-1))] + 
+                          ud1[$(i + (2^k-1)*(j-1))] * ud2[$(a + s.h*(k+1))]) *
                          exp(lλts[$(a + s.h*(k))])*0.5))
       end
 
@@ -423,7 +425,7 @@ Generated function for speciation event likelihoods
             p[$(i+(k+1)*s.h)] * 0.5))
       end
 
-      push!(eqs.args, :(llik[$(i + (k^2-1)*(j-1))] = log($ex)))
+      push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
     end
 
   # *not* speciation model
@@ -432,20 +434,20 @@ Generated function for speciation event likelihoods
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
-          :(llik[$(i+(k^2-1)*(j-1))] = 
-            log(ud1[$(i+(k^2-1)*(j-1))] * ud2[$(i+(k^2-1)*(j-1))]) + 
+          :(llik[$(i+(2^k-1)*(j-1))] = 
+            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))]) + 
             lλs[$(i+(k+1)*(j-1))]))
     end
 
     # likelihood for widespread states
-    for j = Base.OneTo(h), i = k+1:k^2-1
-      s = S[i + (k^2-1)*(j-1)]
+    for j = Base.OneTo(h), i = k+1:2^k-1
+      s = S[i + (2^k-1)*(j-1)]
 
       # within region speciation
       ex = Expr(:call, :+)
       for a in s.g
-        push!(ex.args, :((ud1[$(a + s.h*(k+1))]*ud2[$(i + (k^2-1)*(j-1))] + 
-                          ud1[$(i + (k^2-1)*(j-1))]*ud2[$(a + s.h*(k+1))]) *
+        push!(ex.args, :((ud1[$(a + s.h*(k+1))]*ud2[$(i + (2^k-1)*(j-1))] + 
+                          ud1[$(i + (2^k-1)*(j-1))]*ud2[$(a + s.h*(k+1))]) *
                          p[$(a + s.h*(k+1))]*0.5))
       end
 
@@ -459,7 +461,7 @@ Generated function for speciation event likelihoods
             p[$(i+(k+1)*s.h)] * 0.5))
       end
 
-      push!(eqs.args, :(llik[$(i + (k^2-1)*(j-1))] = log($ex)))
+      push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
     end
   end
 
@@ -507,45 +509,51 @@ end
              mdQ    ::Int)
 `@generated` log-prior function.
 """
-@generated function lpf_full(p      ::Array{Float64,1},
-                             λpriors::Float64,
-                             μpriors::Float64,
-                             lpriors::Float64,
-                             gpriors::Float64,
-                             qpriors::Float64,
-                             βpriors::NTuple{2,Float64},
+@generated function lpf_full(p::Array{Float64,1},
+                             ::Val{λpriors},
+                             ::Val{μpriors},
+                             ::Val{lpriors},
+                             ::Val{gpriors},
+                             ::Val{qpriors},
+                             ::Val{βpriors},
                              ::Val{k},
                              ::Val{h},
                              ::Val{ny},
-                             ::Val{model}) where {k, h, ny, model}
+                             ::Val{model}) where {λpriors,
+                                                  μpriors,
+                                                  lpriors,
+                                                  gpriors,
+                                                  qpriors,
+                                                  βpriors,
+                                                  k, h, ny, model}
 
   eq = Expr(:call, :+)
   # speciation priors
   for i in Base.OneTo(h*(k+1))
-    push!(eq.args, :(logdexp(p[$i], λpriors)))
+    push!(eq.args, :(logdexp(p[$i], $λpriors)))
   end
   # global extinction priors
   for i in (h*(k+1)+1):(h*(k+1)+k*h)
-    push!(eq.args, :(logdexp(p[$i], μpriors)))
+    push!(eq.args, :(logdexp(p[$i], $μpriors)))
   end
   # area colonization priors
   for i in (h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h)
-    push!(eq.args, :(logdexp(p[$i], gpriors)))
+    push!(eq.args, :(logdexp(p[$i], $gpriors)))
   end
   # area loss priors
   for i in (h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h)
-    push!(eq.args, :(logdexp(p[$i], lpriors)))
+    push!(eq.args, :(logdexp(p[$i], $lpriors)))
   end
   # hidden states transition
   for i in (h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
-    push!(eq.args, :(logdexp(p[$i], lpriors)))
+    push!(eq.args, :(logdexp(p[$i], $qpriors)))
   end
   # betas
   nb = model == 3 ? 
     (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)*div(ny,k*(k-1))*h) :
     (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h*div(ny,k))
   for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
-    push!(eq.args, :(logdnorm(p[$i], (βpriors[1]), (βpriors[2]))))
+    push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
   end
 
   return quote 
@@ -561,33 +569,46 @@ end
 
 
 """ 
-    make_lpf(λpriors::Float64, 
-             μpriors::Float64, 
-             lpriors::Float64, 
-             gpriors::Float64, 
-             qpriors::Float64, 
-             βpriors::Tuple{Float64,Float64}, 
-             ::Val{k}, 
-             ::Val{h}, 
-             ::Val{ny}, 
-             ::Val{model}) where {k, h, ny, model}
-
-Make log prior function
-"""
-function make_lpf(λpriors::Float64, 
-                  μpriors::Float64, 
-                  lpriors::Float64, 
-                  gpriors::Float64, 
-                  qpriors::Float64, 
-                  βpriors::Tuple{Float64,Float64}, 
+    make_lpf(::Val{λpriors}, 
+                  ::Val{μpriors}, 
+                  ::Val{lpriors}, 
+                  ::Val{gpriors}, 
+                  ::Val{qpriors}, 
+                  ::Val{βpriors}, 
                   ::Val{k}, 
                   ::Val{h}, 
                   ::Val{ny}, 
-                  ::Val{model}) where {k, h, ny, model}
+                  ::Val{model}) where {λpriors,
+                                       μpriors,
+                                       lpriors,
+                                       gpriors,
+                                       qpriors,
+                                       βpriors,
+                                       k, h, ny, model}
+
+Make log prior function
+"""
+function make_lpf(::Val{λpriors}, 
+                  ::Val{μpriors}, 
+                  ::Val{lpriors}, 
+                  ::Val{gpriors}, 
+                  ::Val{qpriors}, 
+                  ::Val{βpriors}, 
+                  ::Val{k}, 
+                  ::Val{h}, 
+                  ::Val{ny}, 
+                  ::Val{model}) where {λpriors,
+                                       μpriors,
+                                       lpriors,
+                                       gpriors,
+                                       qpriors,
+                                       βpriors,
+                                       k, h, ny, model}
 
   # create prior function
   lpf = (p::Array{Float64,1}) ->
-    lpf_full(p, λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, 
+    lpf_full(p, Val(λpriors), Val(μpriors), Val(lpriors), 
+      Val(gpriors), Val(qpriors), Val(βpriors), 
       Val(k), Val(h), Val(ny), Val(model))
 
   return lpf

@@ -110,8 +110,9 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
     Val(k), Val(h), Val(ny), Val(model))
 
   # create prior function
-  lpf = make_lpf(λpriors, μpriors, lpriors, gpriors, qpriors, βpriors, 
-      Val(k), Val(h), Val(ny), Val(model))
+  lpf = make_lpf(Val(λpriors), Val(μpriors), Val(lpriors), 
+    Val(gpriors), Val(qpriors), Val(βpriors), 
+    Val(k), Val(h), Val(ny), Val(model))
 
   # create posterior functions
   lhf = make_lhf(llf, lpf, conp)
