@@ -46,7 +46,7 @@ function loop_slice_sampler(lhf      ::Function,
   pp = copy(p)
 
   # start iterations
-  prog = Progress(niter, 5, "running slice-sampler....", 20)
+  prog = Progress(niter, 5, "running slice-sampler...", 20)
 
   hc = lhf(p)
 
