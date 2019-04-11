@@ -127,14 +127,15 @@ k = 2
 l = rand(k*h) .* 0.1
 g = rand(k*(k-1)*h) .* 0.1
 q = rand(h*(h-1)) .* 0.1
-
+β = randn(k*h)
 
 
 x = cumsum(rand(100))
 x[1] = 0.0
-y = randn(100, k*h)
+y = randn(100, k)
 cumsum!(y, y, dims = 1)
 
+cov_mod = "spec"
 
 """
     simulate_edge(λ       ::Array{Float64,1}, 
@@ -165,7 +166,7 @@ function simulate_edge(λ       ::Array{Float64,1},
   md = N > 1
 
   # check number of parameters and data
-  ws, we, wq = id_mod(cov_mod, k, md, size(y, 2), λ, μ, β, Q)
+  model = id_mod(cov_mod, k, h, size(y,2), λ, μ, l, g, q, β)
 
   # total simulation time
   simt = 0.0
@@ -424,16 +425,19 @@ end
 
 
 
-λ = rand((k+1)*h) .* 0.1
-μ = rand(k*h) .* 0.1
-l = rand(k*h) .* 0.1
-g = rand(k*(k-1)*h) .* 0.1
-q = rand(h*(h-1)) .* 0.1
-
 
 
 """
-    id_mod(cov_mod::String, k::Int64,  md::Bool, nzt::Int64)
+    id_mod(cov_mod::String, 
+           k      ::Int64, 
+           h      ::Int64, 
+           nzt    ::Int64,
+           λ      ::Array{Float64,1}, 
+           μ      ::Array{Float64,1}, 
+           l      ::Array{Float64,1},
+           g      ::Array{Float64,1},
+           q      ::Array{Float64,1},
+           β      ::Array{Float64,1})
 
 Check if number of parameters and `z(t)` functions 
 is consistent with specified model.
@@ -446,87 +450,72 @@ function id_mod(cov_mod::String,
                 μ      ::Array{Float64,1}, 
                 l      ::Array{Float64,1},
                 g      ::Array{Float64,1},
+                q      ::Array{Float64,1},
                 β      ::Array{Float64,1})
 
   all_ok = true
 
+  # check consistent length of parameter vectors proposed
+   if (lastindex(λ) != (k+1)*h   || 
+       lastindex(μ) != k*h       ||
+       lastindex(l) != k*h       ||
+       lastindex(g) != k*(k-1)*h ||
+       lastindex(q) != h*(h-1))
+     printstyled("$k areas with $h hidden states should have the following parameter lengths:
+       λ = $((k+1)*h) parameters
+       μ = $(k*h) parameters
+       l = $(k*h) parameters
+       g = $(k*(k-1)*h) parameter matrix
+       q = $(h*(h-1)) parameters")
+    error("Parameter vector lengths not consistent with the number of states")
+  end
+
+
   # if speciation, extinction or transition model
   if occursin(r"^[s|S][A-za-z]*", cov_mod)
 
-    mdd = "speciation" 
-    model = 1
-
-    if lastindex(λ) == lastindex(μ) == lastindex(β) == size(Q,1) == size(Q,2)
+    if lastindex(β) == (nzt == 1 ? k*h : nzt*h)
       printstyled("Number of parameters are consistent with specified model \n", 
         color=:green)
     else
       all_ok = false
-      printstyled("Parameter number for speciation ESSE with $k states:
-                   λ = $(k) parameters
-                   μ = $(k) parameters
-                   Q = $k x $k parameter matrix
-                   β = $(k) parameters", 
-        color=:red)
+      printstyled("speciation covariate model with $k areas should have a β vector length of $(nzt == 1 ? k*h : nzt*h) \n")
     end
+
+    modelstring = "speciation" 
+    model = 1
 
   elseif occursin(r"^[e|E][A-za-z]*", cov_mod)
 
-    if lastindex(λ) == lastindex(μ) == lastindex(β) == size(Q,1) == size(Q,2)
+    if lastindex(β) == (nzt == 1 ? k*h : nzt*h)
       printstyled("Number of parameters are consistent with specified model \n", 
         color=:green)    
     else
       all_ok = false
-      printstyled("Parameter number for extinction ESSE with $k states:
-                   λ = $(k) parameters
-                   μ = $(k) parameters
-                   Q = $k x $k parameter matrix
-                   β = $(k) parameters", 
-        color=:red)
-      error("Parameter number not consistent with specified model")
+      printstyled("extinction covariate model with $k areas should have a β vector length of $(nzt == 1 ? k*h : nzt*h) \n")
     end
 
-    mdd = "extinction" 
+    modelstring = "extinction" 
     model = 2
 
   elseif occursin(r"^[t|T|r|R|q|Q][A-za-z]*", cov_mod)
 
-    if lastindex(λ) == lastindex(μ) == size(Q,1) == size(Q,2) && 
-       lastindex(β) == (k*k - k)
+    if lastindex(β) == (nzt == 1 ? k*(k-1)*h : h*nzt)
       printstyled("Number of parameters are consistent with specified model \n", 
         color=:green)    
     else
       all_ok = false
-      printstyled("Parameter number for extinction ESSE with $k states:
-                   λ = $(k) parameters
-                   μ = $(k) parameters
-                   Q = $k x $k parameter matrix
-                   β = $(k*k - k) parameters", 
-        color=:red)
+      printstyled("transition covariate model with $k areas should have a β vector length of $(nzt == 1 ? k*(k-1)*h : h*nzt) \n")
     end
-    mdd = "transition" 
+    modelstring = "transition" 
     model = 3
   else
     model = 0
     warning("cov_mod does not match any ESSE model, running MuSSE \n")
   end
 
-  if md 
-    if (ws || we) && nzt != k
-      all_ok = false
-      printstyled("For character-specific $mdd ESSE model for $k states:
-               z(t) = $(k) functions",
-        color=:red)
-    end
-    if wq && nzt != (k*k - k)
-      all_ok = false
-      printstyled("For character-specific $mdd ESSE model for $k states:
-               z(t) = $(k*k - k) functions",
-        color=:red)
-    end
-  end
-
   if all_ok 
-    printstyled("Simulating $mdd covariate SSE model with $k states, $h hidden states and $nzt covariates \n", 
+    printstyled("Simulating $modelstring covariate SSE model with $k states, $h hidden states and $nzt covariates \n", 
       color=:green)
   else
     error("Parameter and z(t) function number not consistent with specified model")
@@ -534,6 +523,7 @@ function id_mod(cov_mod::String,
 
   return model
 end
+
 
 
 
