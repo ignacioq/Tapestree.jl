@@ -43,8 +43,6 @@ end
 
 
 
-
-
 # """
 #     make_solver(odef, p0::Array{Float64,1})
 # Make **ODE** solver for `odef`.
