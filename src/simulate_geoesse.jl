@@ -172,27 +172,83 @@ function simulate_edge(λ       ::Array{Float64,1},
   simt = 0.0
 
   # make approximate time function
-  af = make_approxf(x, y)
+  af! = make_af(x, y, Val(size(y,2)))
 
-  if md 
-    if wq
-      r = Array{Float64,1}(undef, k*k - k)
-    else
-      r = Array{Float64,1}(undef, k)
-    end
-  end
+  # preallocate af! result vector 
+  r = Array{Float64,1}(undef, size(y,2))
 
   # get function estimates at `0.0`
-  if md
-    af(0.0, r)
-  else
-    r = af(0.0)
+  af!(0.0, r)
+
+  # preallocate vector of individual area probabilities 
+  # gpr = Array{Float64,1}(undef,k)
+  # qpr = Array{Float64,1}(undef,h)
+  # lpr = Array{Float64,1}(undef,k)
+  # μpr = Array{Float64,1}(undef,k)
+  # λpr = Array{Float64,1}(undef,k+1)
+
+  # create states
+  S = create_states(k, h)
+
+  # areas
+  as = 1:k
+
+  # paired order for area gain rates
+  pg1 = repeat(1:k,inner=k-1)
+
+
+"""
+here
+"""
+
+  pg2 = repeat(1:k,outer=k-1)
+
+  for i in 1:k*(k-1)
+    pg2[i] = pg2[i] >= pg1[i] ? pg2[i]+1 : pg2[i]
   end
 
-  # preallocate vector of transitions probabilities after a transition has
-  # been selected
-  qpr = Array{Float64,1}(undef,k)
-  spr = Array{Float64,1}(undef,k)
+
+  # paired order for hidden transition rates
+
+
+  # vector of initial state probabilities
+  inSpr = Array{Float64,1}(undef, length(S))
+
+  # estimate starting transition probabilities for initial states
+  if model != 3
+
+    for s in S
+
+      # loss rates
+      lr = sum(l[setdiff(as, s.g)])
+
+      # gain rates
+      if length(s.g) == 1
+        gr = 0.0
+      else
+        gr = 
+      end
+
+
+    end
+
+
+    g
+    l
+
+
+
+
+  else
+
+
+  end
+
+
+
+
+
+
 
   # estimate starting q probabilities for initial states
   if wq
