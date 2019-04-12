@@ -195,17 +195,11 @@ function simulate_edge(λ       ::Array{Float64,1},
 
   # paired order for area gain rates
   pg1 = repeat(1:k,inner=k-1)
+  pg2 = repeat(1:k,outer=k)
+  pg2 = pg2[setdiff(1:k*k, 1:k+1:k*k)]
 
+  
 
-"""
-here
-"""
-
-  pg2 = repeat(1:k,outer=k-1)
-
-  for i in 1:k*(k-1)
-    pg2[i] = pg2[i] >= pg1[i] ? pg2[i]+1 : pg2[i]
-  end
 
 
   # paired order for hidden transition rates
