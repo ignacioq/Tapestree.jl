@@ -119,7 +119,7 @@ end
 
 
 h = 2
-k = 2
+k = 3
 
 
 λ = rand((k+1)*h) .* 0.1
@@ -159,7 +159,7 @@ function simulate_edge(λ       ::Array{Float64,1},
                        δt      ::Float64,
                        cov_mod::String) where N
 
-  h = div(length(q), length(q)-1)
+  h = div(length(l), k)
   k = div(length(l), h)
 
   # if multidimensional
@@ -180,107 +180,28 @@ function simulate_edge(λ       ::Array{Float64,1},
   # get function estimates at `0.0`
   af!(0.0, r)
 
-  # preallocate vector of individual area probabilities 
-  # gpr = Array{Float64,1}(undef,k)
-  # qpr = Array{Float64,1}(undef,h)
-  # lpr = Array{Float64,1}(undef,k)
-  # μpr = Array{Float64,1}(undef,k)
-  # λpr = Array{Float64,1}(undef,k+1)
-
   # create states
   S = create_states(k, h)
+
+  ns = length(S)
+
+  # preallocate vector of individual area probabilities 
+  spr = Array{Float64,1}(undef,ns)
 
   # areas
   as = 1:k
 
-  # paired order for area gain rates
-  pg1 = repeat(1:k,inner=k-1)
-  pg2 = repeat(1:k,outer=k)
-  pg2 = pg2[setdiff(1:k*k, 1:k+1:k*k)]
-
-  
-
-
-
-  # paired order for hidden transition rates
-
+  # hidden states
+  hs = 0:(h-1)
 
   # vector of initial state probabilities
-  inSpr = Array{Float64,1}(undef, length(S))
+  isp = Array{Float64,1}(undef, length(S))
 
-  # estimate starting transition probabilities for initial states
-  if model != 3
-
-    for s in S
-
-      # loss rates
-      lr = sum(l[setdiff(as, s.g)])
-
-      # gain rates
-      if length(s.g) == 1
-        gr = 0.0
-      else
-        gr = 
-      end
-
-
-    end
-
-
-    g
-    l
-
-
-
-
-  else
-
-
-  end
-
-
-
-
-
-
-
-  # estimate starting q probabilities for initial states
-  if wq
-    # non-diagonal Q indices
-    Qndi = setdiff(1:(k*k), 1:(k+1):(k*k))
-
-    # Q column indices without diagonals
-    Qci = Array{Int64,1}[]
-    for i in Base.OneTo(k)
-      push!(Qci, setdiff(1+k*(i-1): k+k*(i-1), 1:(k+1):(k*k)))
-    end
-
-    # β indices to match the ones for Q
-    βi = UnitRange{Int64}[]
-    for j in Base.OneTo(k)
-      push!(βi, (j-1)k + (2-j):(j*k-j))
-    end
-
-    if md
-      qsum = sum(l -> expf(Q[Qndi[l]], β[l], r[l]), 1:lastindex(Qndi))
-      for j in Base.OneTo(k)
-        qpr[j] = 
-          sum(i -> expf(Q[Qci[j][i]], β[βi[j][i]], r[βi[j][i]]), 1:(k-1))/qsum
-      end
-    else 
-      qsum = sum(l -> expf(Q[Qndi[l]], β[l], r), 1:lastindex(Qndi))
-      for j in Base.OneTo(k)
-        qpr[j] = 
-          sum(i -> expf(Q[Qci[j][i]], β[βi[j][i]], r), 1:(k-1))/qsum
-      end
-    end
-  else
-    qsum = sum(Q)
-    sum!(qpr, transpose(Q))./qsum
-  end
+  # assign initial state probabilities
+  init_states_pr!(isp, l, g, q, μ, β, S, k, h, model, md)
 
   # sample initial state
-  si = prop_sample(spr, qpr, k)
+  si = prop_sample(spr, isp, ns)
 
   # n = 2 starting lineages (assume no stem branch)
   n = 2
@@ -299,13 +220,40 @@ function simulate_edge(λ       ::Array{Float64,1},
   # edge lengths
   el = zeros(2nspp)
 
+
+
+
+
+
+
+
+
+
+
   # make λ, μ & Q probability functions
-  λpr = make_λpr(λ, β, δt, md, ws)
+  """
+    check for how many widespread speciation events one has to account for
+  """
+  λpr = make_λpr(λ, β, δt, model, md)
+
+
+
+
+
+
+
+
+
   μpr = make_μpr(μ, β, δt, md, we)
   Qpr = make_Qpr(Q, β, δt, md, wq)
 
   # make function for estimating transition probabilites
   rqpr! = make_rqpr(Q, β, δt, md, wq)
+
+
+
+
+
 
   # start simulation
   while true
@@ -578,6 +526,137 @@ end
 
 
 
+
+"""
+    init_states_pr!(isp  ::Array{Float64,1},
+                    l    ::Array{Float64,1},
+                    g    ::Array{Float64,1},
+                    q    ::Array{Float64,1},
+                    μ    ::Array{Float64,1},
+                    β    ::Array{Float64,1},
+                    S    ::Array{ghs,1},
+                    k    ::Int64,
+                    h    ::Int64,
+                    model::Int64,
+                    md   ::Bool)
+
+ Estimate starting transition probabilities for initial states
+"""
+function init_states_pr!(isp  ::Array{Float64,1},
+                         l    ::Array{Float64,1},
+                         g    ::Array{Float64,1},
+                         q    ::Array{Float64,1},
+                         μ    ::Array{Float64,1},
+                         β    ::Array{Float64,1},
+                         S    ::Array{ghs,1},
+                         k    ::Int64,
+                         h    ::Int64,
+                         model::Int64,
+                         md   ::Bool)
+
+  if model == 1
+
+    for si in Base.OneTo(length(S))
+
+      s = S[si]
+
+      # loss rates
+      lr = 0.0
+      for i = setdiff(as, s.g)
+        lr += l[s.h*k+i]
+      end
+
+      # gain rates
+      gr = 0.0
+      if length(s.g) > 1
+        for ta = s.g, fa = setdiff(s.g, ta)
+          gr += g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)]
+        end
+      end
+
+      # hidden states
+      hr = 0.0
+      for fa = setdiff(hs, s.h)
+          hr += q[fa*(h-1) + (s.h > fa ? s.h : s.h+1)]
+      end
+
+      # add all and hidden rates
+      isp[si] = lr + gr + hr
+    end
+
+  # if extinction model
+  elseif model == 2 && isequal(l, μ)
+
+    for si in Base.OneTo(length(S))
+
+      s = S[si]
+
+      # loss rates
+      lr = 0.0
+      for i = setdiff(as, s.g)
+        lr += expf(l[s.h*k+i], β[s.h*k+i], md ? r[i] : r[1])
+      end
+
+      # gain rates
+      gr = 0.0
+      if length(s.g) > 1
+        for ta = s.g, fa = setdiff(s.g, ta)
+          gr += g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)]
+        end
+      end
+
+      # hidden states
+      hr = 0.0
+      for fa = setdiff(hs, s.h)
+          hr += q[fa*(h-1) + (s.h > fa ? s.h : s.h+1)]
+      end
+
+      # add all and hidden rates
+      isp[si] = lr + gr + hr
+    end
+
+  # if transition model
+  elseif model == 3
+
+    for si in Base.OneTo(length(S))
+
+      s = S[si]
+
+      # loss rates
+      lr = 0.0
+      for i = setdiff(as, s.g)
+        lr += l[s.h*k+i]
+      end
+
+      # gain rates
+      gr = 0.0
+      if length(s.g) > 1
+        for ta = s.g, fa = setdiff(s.g, ta)
+          gr += expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                     β[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                     md ? r[i] : r[1])
+        end
+      end
+
+      # hidden states
+      hr = 0.0
+      for fa = setdiff(hs, s.h)
+          hr += q[fa*(h-1) + (s.h > fa ? s.h : s.h+1)]
+      end
+
+      # add all and hidden rates
+      isp[si] = lr + gr + hr
+    end
+
+  end
+
+  return nothing
+end
+
+
+
+
+
 """
     make_λpr(λ ::Array{Float64,1},
              β ::Array{Float64}, 
@@ -587,48 +666,80 @@ end
 
 Make λ instantaneous probability function
 """
-function make_λpr(λ ::Array{Float64,1},
-                  β ::Array{Float64,1}, 
-                  δt::Float64,
-                  md::Bool,
-                  ws::Bool)
+function make_λpr(λ    ::Array{Float64,1},
+                  β    ::Array{Float64,1}, 
+                  δt   ::Float64,
+                  model::Int64,
+                  md   ::Bool)
 
   # if dependent on `z(t)` and multidimensional
-  function f1(st ::Int64,
+  function f1(s  ::ghs,
               aft::Array{Float64,1})
-    return expf(λ[st], β[st], aft[st])*δt
+
+    @inbounds begin
+      rt = 0.0
+      na = 0
+      # sum within-area speciation
+      for a in s.g
+        na += 1
+        rt += expf(λ[(k+1)*s.h + a], β[k*s.h + a], aft[1])*δt
+      end
+      # sum between-area speciation
+      if na > 1
+        rt += λ[k+1 + (k+1)*s.h]*δt
+      end
+    end
+
+    return rt
   end
 
   # if dependent on `z(t)` and unidimensional
-  function f2(st ::Int64,
-              aft::Float64)
-    return expf(λ[st], β[st], aft)*δt
-  end
-
-  # if **not** dependent on `z(t)` and multidimensional
-  function f3(st ::Int64,
+  function f2(s  ::ghs,
               aft::Array{Float64,1})
-    return λ[st]*δt
+    @inbounds begin
+      rt = 0.0
+      na = 0
+      # sum within-area speciation
+      for a in s.g
+        na += 1
+        rt += expf(λ[(k+1)*s.h + a], β[k*s.h + a], aft[1])*δt
+      end
+      # sum between-area speciation
+      if na > 1
+        rt += λ[k+1 + (k+1)*s.h]*δt
+      end
+    end
+
+    return rt
   end
 
-  # if **not** dependent on `z(t)` and unidimensional
-  function f4(st ::Int64,
-              aft::Float64)
-    return λ[st]*δt
+  # if **not** dependent on `z(t)` and uni or multidimensional
+  function f3(s  ::ghs,
+              aft::Array{Float64,1})
+
+    @inbounds begin
+      rt = 0.0
+      na = 0
+      # sum within-area speciation
+      for a in s.g
+        na += 1
+        rt += λ[(k+1)*s.h + a]*δt
+      end
+      # sum between-area speciation
+      if na > 1
+        rt += λ[k+1 + (k+1)*s.h]*δt
+      end
+    end
   end
 
-  if ws
+  if model == 1
     if md
       return f1
     else
       return f2
     end
   else
-    if md
-      return f3
-    else
-      return f4
-    end
+    return f3
   end
 end
 
@@ -996,19 +1107,15 @@ expf(α::Float64, β::Float64, x::Float64) = α*exp(β*x)
 Sample one state with the respective (relative) probabilities 
 given `prv`.
 """
-function prop_sample(s::Array{Float64,1}, prv::Array{Float64,1}, k::Int64)
+function prop_sample(s::Array{Float64,1}, prv::Array{Float64,1}, ns::Int64)
 
   cumsum!(s, prv)
-  for i in Base.OneTo(k)
-    s[i] /= s[k]  
+  for i in Base.OneTo(ns)
+    s[i] /= s[ns]  
   end
 
   return searchsortedfirst(s, rand())
 end
-
-
-
-
 
 
 
