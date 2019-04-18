@@ -220,39 +220,30 @@ function simulate_edge(λ       ::Array{Float64,1},
   # edge lengths
   el = zeros(2nspp)
 
+  # make probability vectors
+  λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
+   event_probs(λ, μ, l, g, q, β, S, k, h, model, md)
 
+  # make λ, μ, g & q probability functions
+  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md)
+  updμpr! = make_updμpr!(μ, β, μpr, Sμpr, δt, k, model, md)
+  updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, model, md, as, S)
+  updqpr! = make_updqpr!(Sqpr)
 
+  # preallocate states probabilities for specific lengths of each event
+  svλ = Array{Float64,1}[]
+  svμ = Array{Float64,1}[]
+  svg = Array{Float64,1}[]
+  svq = Array{Float64,1}[]
+  for i in Base.OneTo(ns)
+    push!(svλ, zeros(length(λpr[i])))
+    push!(svμ, zeros(length(μpr[i])))
+    push!(svg, zeros(length(gpr[i])))
+    push!(svq, zeros(length(qpr[i])))
+  end
 
-
-
-
-
-
-
-
-  # make λ, μ & Q probability functions
-  """
-    check for how many widespread speciation events one has to account for
-  """
-  λpr = make_λpr(λ, β, δt, model, md)
-
-
-
-
-
-
-
-
-
-  μpr = make_μpr(μ, β, δt, md, we)
-  Qpr = make_Qpr(Q, β, δt, md, wq)
-
-  # make function for estimating transition probabilites
-  rqpr! = make_rqpr(Q, β, δt, md, wq)
-
-
-
-
+  # make state change vectors
+  gtos, μtos, qtos, λtos = makecorresschg(gpr, μpr, qpr, λpr, S, as, hs, ns)
 
 
   # start simulation
@@ -261,108 +252,118 @@ function simulate_edge(λ       ::Array{Float64,1},
     # keep track of time
     simt += δt
 
-    # estimate `z(simt)` or `z_i(simt)`
-    if md
-      af(simt, r)
-    else
-      r = af(simt)
-    end
-
+    # estimate `z(simt)`
+    af!(simt, r)
+ 
     # one time step
     for i in Base.OneTo(n)
 
       # update edge length
       el[ea[i]] += δt
 
+      sti = st[i]
+
       #=
-          Q event?
+        gain event?
       =#
-      if rand() < Qpr(st[i], r)
-        # get `out` transition probabilities
-        rqpr!(st[i], qpr, r)
+      if rand() < updgpr!(sti, S[sti], r)
         # sample from the transition probabilities
-        st[i] = prop_sample(spr, qpr, k)
+        @inbounds st[i] = gtos[i][prop_sample(svg[sti], gpr[sti], length(svg[sti]))]
       end
 
       #=
-          μ event?
+        μ or loss event?
       =#
-      if rand() < μpr(st[i], r)
+      if rand() < updμpr!(sti, S[sti], r)
 
-        # node to remove
-        nod = ed[ea[i],1]
+        # if global extinction
+        if isone(length(S[sti].g))
 
-        # top or bottom edge of node?
-        top = ea[i] == findfirst(isequal(nod), ed[:,1])
+          # node to remove
+          nod = ed[ea[i],1]
 
-        # remove edge (only preserving persisting species)
-        ned = findfirst(isequal(0), ed)[1]
-        
-        if ned == 3
-          printstyled("What would you do if an endangenered animal is eating an endangered plant? Sometimes nature is too harsh... \n", 
-            color=:red)
-          error("tree went extinct... rerun simulation")
+          # top or bottom edge of node?
+          top = ea[i] == findfirst(isequal(nod), ed[:,1])
 
-        end
-
-        @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
-
-        # remove edge length
-        @views el[ea[i]:(ned-1)] = el[(ea[i]+1):ned]
-
-        # update alive lineages
-        deleteat!(ea,i)
-        ea[i:end] .-= 1
-
-        # remove node and extra edge
-        @views pr = findfirst(isequal(nod), ed[:,1])
-        @views da = findfirst(isequal(nod), ed[:,2])
-
-        if da == nothing
-          da = 0
-        end
-
-        if da != 0
-          ed[da,2] = ed[pr,2]
-          el[da]  += el[pr]
-        end
-
-        # remove intervening edge
-        @views ed[pr:(ned-2),:] = ed[(pr+1):(ned-1),:]
-
-        # remove edge lengths of intervening node
-        @views el[pr:(ned-2)] = el[(pr+1):(ned-1)]
-
-        ## update alive lineages
-        # is the remaining node terminal?
-        if da == 0 || in(ed[da,2], ed[:,1])
-          ea[i:end] .-= 1
-        else 
-          ea[findfirst(isequal(pr),ea)] = da
-          sort!(ea)
-          if top
-            ea[(i+1):end] .-= 1
-          else
-            ea[i:end]     .-= 1
+          # remove edge (only preserving persisting species)
+          ned = findfirst(isequal(0), ed)[1]
+          
+          if ned == 3
+            printstyled("What would you do if an endangered animal is eating an endangered plant? Sometimes nature is too cruel... \n", 
+              color=:red)
+            error("tree went extinct... rerun simulation")
           end
+
+          @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
+
+          # remove edge length
+          @views el[ea[i]:(ned-1)] = el[(ea[i]+1):ned]
+
+          # update alive lineages
+          deleteat!(ea,i)
+          ea[i:end] .-= 1
+
+          # remove node and extra edge
+          @views pr = findfirst(isequal(nod), ed[:,1])
+          @views da = findfirst(isequal(nod), ed[:,2])
+
+          if isnothing(da)
+            da = 0
+          end
+
+          if da != 0
+            ed[da,2] = ed[pr,2]
+            el[da]  += el[pr]
+          end
+
+          # remove intervening edge
+          @views ed[pr:(ned-2),:] = ed[(pr+1):(ned-1),:]
+
+          # remove edge lengths of intervening node
+          @views el[pr:(ned-2)] = el[(pr+1):(ned-1)]
+
+          ## update alive lineages
+          # is the remaining node terminal?
+          if da == 0 || in(ed[da,2], ed[:,1])
+            ea[i:end] .-= 1
+          else 
+            ea[findfirst(isequal(pr),ea)] = da
+            sort!(ea)
+            if top
+              ea[(i+1):end] .-= 1
+            else
+              ea[i:end]     .-= 1
+            end
+          end
+
+          # update living species states
+          deleteat!(st,i)
+
+          # update n species
+          n = lastindex(ea)
+          
+          # continue loop
+          el[ea[(i+1):n]] .+= δt
+
+          break
+
+        # if local extinction (state change)
+        else
+          @inbounds st[i] = μtos[i][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
         end
+      end
 
-        # update living species states
-        deleteat!(st,i)
-
-        # update n species
-        n = lastindex(ea)
-
-        # continue loop
-        el[ea[(i+1):n]] .+= δt
-
-        break
+      #=
+          q event?
+      =#
+      if rand() < updqpr!(sti) 
+        @inbounds st[i] = qtos[i][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
       end
 
       #=
           λ event?
       =#
-      if rand() < λpr(st[i], r)
+      if rand() < updμpr!(sti, S[sti], r)
 
         ### add new edges
         # start node
@@ -380,8 +381,10 @@ function simulate_edge(λ       ::Array{Float64,1},
         push!(ea, ea[end]+1, ea[end]+2)
         deleteat!(ea, i)
 
-        # update living states
-        push!(st,st[i],st[i])
+        # update living states according to speciation event
+        nst1, nst2 = 
+          λtos[sti][prop_sample(svλ[sti], λpr[sti], length(svλ[sti]))]
+        push!(st,nst1,nst2)
         deleteat!(st,i)
 
         # update number of species alive
@@ -394,7 +397,6 @@ function simulate_edge(λ       ::Array{Float64,1},
     end
 
     n == nspp + 1 && break
-
   end
 
   ## remove last species and organize
@@ -534,7 +536,7 @@ end
                     q    ::Array{Float64,1},
                     μ    ::Array{Float64,1},
                     β    ::Array{Float64,1},
-                    S    ::Array{ghs,1},
+                    S    ::Array{Sgh,1},
                     k    ::Int64,
                     h    ::Int64,
                     model::Int64,
@@ -548,7 +550,7 @@ function init_states_pr!(isp  ::Array{Float64,1},
                          q    ::Array{Float64,1},
                          μ    ::Array{Float64,1},
                          β    ::Array{Float64,1},
-                         S    ::Array{ghs,1},
+                         S    ::Array{Sgh,1},
                          k    ::Int64,
                          h    ::Int64,
                          model::Int64,
@@ -634,7 +636,7 @@ function init_states_pr!(isp  ::Array{Float64,1},
         for ta = s.g, fa = setdiff(s.g, ta)
           gr += expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                      β[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-                     md ? r[i] : r[1])
+                     md ? r[(fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])
         end
       end
 
@@ -658,88 +660,308 @@ end
 
 
 """
-    make_λpr(λ ::Array{Float64,1},
-             β ::Array{Float64}, 
-             δt::Float64,
-             md::Bool,
-             ws::Bool)
+    event_probs(λ    ::Array{Float64,1},
+                μ    ::Array{Float64,1},
+                l    ::Array{Float64,1},
+                g    ::Array{Float64,1},
+                q    ::Array{Float64,1},
+                β    ::Array{Float64,1},
+                S    ::Array{Sgh,1},
+                k    ::Int64,
+                h    ::Int64,
+                model::Int64,
+                md   ::Bool)
 
-Make λ instantaneous probability function
+Create event probabilities for each state given the input parameters.
 """
-function make_λpr(λ    ::Array{Float64,1},
-                  β    ::Array{Float64,1}, 
-                  δt   ::Float64,
-                  model::Int64,
-                  md   ::Bool)
 
-  # if dependent on `z(t)` and multidimensional
-  function f1(s  ::ghs,
-              aft::Array{Float64,1})
+function event_probs(λ    ::Array{Float64,1},
+                     μ    ::Array{Float64,1},
+                     l    ::Array{Float64,1},
+                     g    ::Array{Float64,1},
+                     q    ::Array{Float64,1},
+                     β    ::Array{Float64,1},
+                     S    ::Array{Sgh,1},
+                     k    ::Int64,
+                     h    ::Int64,
+                     model::Int64,
+                     md   ::Bool)
 
-    @inbounds begin
-      rt = 0.0
+  @inbounds begin
+    ### make fixed vectors of approximate probabilities for each state
+    ## λ
+    λpr = Array{Float64,1}[]
+    for s in S
+      push!(λpr, zeros(length(s.g) + div(length(vicsubsets(s.g)),2)))
+    end
+    # fill it up
+    for si in Base.OneTo(ns)
+      s = S[si]
       na = 0
-      # sum within-area speciation
-      for a in s.g
-        na += 1
-        rt += expf(λ[(k+1)*s.h + a], β[k*s.h + a], aft[1])*δt
+      # within-area speciation
+      if model == 1
+        for a in s.g
+          na += 1
+          λpr[si][na] = expf(λ[(k+1)*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+        end
+      else
+        for a in s.g
+          na += 1
+          λpr[si][na] = λ[(k+1)*s.h + a]*δt
+        end
       end
-      # sum between-area speciation
+      # between-area speciation
       if na > 1
-        rt += λ[k+1 + (k+1)*s.h]*δt
+        λpr[si][na+1:end] .= λ[k+1 + (k+1)*s.h]*δt
       end
     end
 
-    return rt
+    ## μ and loss
+    μpr = Array{Float64,1}[]
+    for s in S
+      push!(μpr, zeros(length(s.g)))
+    end
+    # fill it up
+    for si in Base.OneTo(ns)
+      s = S[si]
+      if isone(length(s.g))
+        if model == 2
+          for a in s.g
+            μpr[si][1] = expf(μ[k*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+          end
+        else
+          for a in s.g
+            μpr[si][1] = μ[k*s.h + a]*δt
+          end
+        end
+      else
+        na = 0
+        for a in s.g
+          na += 1
+          μpr[si][na] = l[k*s.h + a]*δt
+        end
+      end
+    end
+
+    ## gain
+    gpr = Array{Float64,1}[]
+    for s in S
+      push!(gpr, zeros(length(setdiff(as,s.g))))
+    end
+    # fill it up
+    for si in Base.OneTo(ns)
+      s = S[si]
+      if model == 3
+        for (i,ta) = enumerate(setdiff(as,s.g)), fa = s.g
+          gpr[si][i] += 
+            expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                 β[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                 md ? r[(fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+        end
+      else
+        for (i,ta) = enumerate(setdiff(as,s.g)), fa = s.g
+          gpr[si][i] += 
+            g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)]*δt
+        end
+      end
+    end
+
+    ## hidden states
+    qpr = Array{Float64,1}[]
+    for s in S
+      push!(qpr, zeros(h-1))
+    end
+    # fill it up
+    for si in Base.OneTo(ns)
+      s = S[si]
+       for (i, th) = enumerate(setdiff(hs, s.h))
+        qpr[si][i] = q[s.h*(h-1) + (s.h > th ? s.h : s.h+1)]*δt
+      end
+    end
+
+    # make λ, μ and g probability sums
+    Sλpr = zeros(ns)
+    Sμpr = zeros(ns)
+    Sgpr = zeros(ns)
+    Sqpr = zeros(ns)
+    for i in Base.OneTo(ns)
+      Sλpr[i] = sum(λpr[i])
+      Sμpr[i] = sum(μpr[i])
+      Sgpr[i] = sum(gpr[i])
+      Sqpr[i] = sum(qpr[i])
+    end
+  end
+
+  return λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr
+end
+
+
+
+
+
+"""
+    makecorresschg(gpr::Array{Array{Float64,1},1},
+                   μpr::Array{Array{Float64,1},1},
+                   qpr::Array{Array{Float64,1},1},
+                   λpr::Array{Array{Float64,1},1},
+                   S  ::Array{Sgh, 1},
+                   as::UnitRange{Int64},
+                   hs::UnitRange{Int64},
+                   ns::Int64)
+
+Make vector of vectors of corresponding states changes 
+for **gains** and **looses** and **hidden states**
+"""
+function makecorresschg(gpr::Array{Array{Float64,1},1},
+                        μpr::Array{Array{Float64,1},1},
+                        qpr::Array{Array{Float64,1},1},
+                        λpr::Array{Array{Float64,1},1},
+                        S  ::Array{Sgh, 1},
+                        as::UnitRange{Int64},
+                        hs::UnitRange{Int64},
+                        ns::Int64)
+  # for *gains*
+  gtos = Array{Int64,1}[]
+  for i in Base.OneTo(ns)
+    push!(gtos, zeros(Int64,length(gpr[i])))
+  end
+  for si in Base.OneTo(ns)
+    s = S[si]
+    for (i,ta) = enumerate(setdiff(as,s.g))
+      gtos[si][i] = findfirst(r -> isSghequal(r,Sgh(union(s.g, ta),s.h)), S)
+    end
+  end
+
+  # for *losses*
+  μtos = Array{Int64,1}[]
+  for i in Base.OneTo(ns)
+    push!(μtos, zeros(Int64,length(μpr[i])))
+  end
+  for si in Base.OneTo(ns)
+    s = S[si]
+    isone(length(s.g)) && continue
+    na = 0
+    for a in s.g
+      na += 1
+      μtos[si][na] = findfirst(r -> isSghequal(r,Sgh(setdiff(s.g, a),s.h)), S)
+    end
+  end
+
+  # for *hidden states*
+  qtos = Array{Int64,1}[]
+  for i in Base.OneTo(ns)
+    push!(qtos, zeros(Int64,length(qpr[i])))
+  end
+  for si in Base.OneTo(ns)
+    s = S[si]
+     for (i, th) = enumerate(setdiff(hs, s.h))
+      qtos[si][i] = th*(2^k-1) + si - s.h*(2^k-1)
+    end
+  end
+
+  # for *hidden states*
+  qtos = Array{Int64,1}[]
+  for i in Base.OneTo(ns)
+    push!(qtos, zeros(Int64,length(qpr[i])))
+  end
+  for si in Base.OneTo(ns)
+    s = S[si]
+     for (i, th) = enumerate(setdiff(hs, s.h))
+      qtos[si][i] = th*(2^k-1) + si - s.h*(2^k-1)
+    end
+  end
+
+  # for *speciation*
+  λtos = Array{Array{Int64,1},1}[]
+  for i in Base.OneTo(ns)
+    push!(λtos, fill([0,0],length(λpr[i])))
+  end
+  for si in Base.OneTo(ns)
+    s = S[si]
+    na = 0
+    if isone(length(s.g))
+      for a in s.g
+        na += 1
+        λtos[si][na] = [si,si]
+      end
+    else
+      # within-area speciation
+      for a in s.g
+        na += 1
+        λtos[si][na] = [a + (2^k-1)*s.h,si]
+      end
+      # between-area speciation
+      vs = vicsubsets(s.g)[1:div(end,2)]
+      for v in vs
+        na += 1
+        λtos[si][na] = 
+          [findfirst(r -> isSghequal(r,Sgh(v[1],s.h)), S),
+           findfirst(r -> isSghequal(r,Sgh(v[2],s.h)), S)]
+      end
+    end
+  end
+
+  return gtos, μtos, qtos, λtos
+end
+
+
+
+
+
+"""
+    make_updλpr!(λ    ::Array{Float64,1},
+                 β    ::Array{Float64,1},
+                 λpr  ::Array{Array{Float64,1},1},
+                 Sλpr ::Array{Float64,1},
+                 δt   ::Float64,
+                 k    ::Int64,
+                 model::Int64,
+                 md   ::Bool)
+
+Make λ instantaneous probability function for each state.
+"""
+function make_updλpr!(λ    ::Array{Float64,1},
+                      β    ::Array{Float64,1},
+                      λpr  ::Array{Array{Float64,1},1},
+                      Sλpr ::Array{Float64,1},
+                      δt   ::Float64,
+                      k    ::Int64,
+                      model::Int64,
+                      md   ::Bool)
+
+
+  # if dependent on `z(t)` and multidimensional
+  function f1(si ::Int64,
+              s  ::Sgh,
+              aft::Array{Float64,1})
+
+    @inbounds begin
+      na = 0
+      # within-area speciation
+      for a in s.g
+        na += 1
+        λpr[si][na] = expf(λ[(k+1)*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+      end
+      # between-area speciation
+      if na > 1
+        λpr[si][k+1:end] .= λ[k+1 + (k+1)*s.h]*δt
+      end
+
+      return Sλpr[si] = sum(λpr[si]) 
+    end
   end
 
   # if dependent on `z(t)` and unidimensional
-  function f2(s  ::ghs,
+  function f2(si ::Int64,
+              s  ::Sgh,
               aft::Array{Float64,1})
-    @inbounds begin
-      rt = 0.0
-      na = 0
-      # sum within-area speciation
-      for a in s.g
-        na += 1
-        rt += expf(λ[(k+1)*s.h + a], β[k*s.h + a], aft[1])*δt
-      end
-      # sum between-area speciation
-      if na > 1
-        rt += λ[k+1 + (k+1)*s.h]*δt
-      end
-    end
-
-    return rt
-  end
-
-  # if **not** dependent on `z(t)` and uni or multidimensional
-  function f3(s  ::ghs,
-              aft::Array{Float64,1})
-
-    @inbounds begin
-      rt = 0.0
-      na = 0
-      # sum within-area speciation
-      for a in s.g
-        na += 1
-        rt += λ[(k+1)*s.h + a]*δt
-      end
-      # sum between-area speciation
-      if na > 1
-        rt += λ[k+1 + (k+1)*s.h]*δt
-      end
-    end
+    return Sλpr[si]
   end
 
   if model == 1
-    if md
-      return f1
-    else
-      return f2
-    end
+    return f1
   else
-    return f3
+    return f2
   end
 end
 
@@ -748,253 +970,142 @@ end
 
 
 """
-    make_μpr(μ ::Array{Float64,1},
-             β ::Array{Float64}, 
-             δt::Float64,
-             md::Bool,
-             we::Bool)
+    make_updμpr!(λ    ::Array{Float64,1},
+                 β    ::Array{Float64,1},
+                 μpr  ::Array{Array{Float64,1},1},
+                 Sμpr ::Array{Float64,1},
+                 δt   ::Float64,
+                 k    ::Int64,
+                 model::Int64,
+                 md   ::Bool)
 
 Make `μ` instantaneous probability function
 """
-function make_μpr(μ ::Array{Float64,1},
-                  β ::Array{Float64,1}, 
-                  δt::Float64,
-                  md::Bool,
-                  we::Bool)
-
-  # if dependent on `z(t)` and multidimensional
-  function f1(st ::Int64,
+function make_updμpr!(μ    ::Array{Float64,1},
+                      β    ::Array{Float64,1},
+                      μpr  ::Array{Array{Float64,1},1},
+                      Sμpr ::Array{Float64,1},
+                      δt   ::Float64,
+                      k    ::Int64,
+                      model::Int64,
+                      md   ::Bool)
+  function f1(si ::Int64,
+              s  ::Sgh,
               aft::Array{Float64,1})
-    return expf(μ[st], β[st], aft[st])*δt
-  end
 
-  # if dependent on `z(t)` and unidimensional
-  function f2(st ::Int64,
-              aft::Float64)
-    return expf(μ[st], β[st], aft)*δt
-  end
-
-  # if **not** dependent on `z(t)` and multidimensional
-  function f3(st ::Int64,
-              aft::Array{Float64,1})
-    return μ[st]*δt
-  end
-
-  # if **not** dependent on `z(t)` and unidimensional
-  function f4(st ::Int64,
-              aft::Float64)
-    return μ[st]*δt
-  end
-
-  if we
-    if md
-      return f1
-    else
-      return f2
-    end
-  else
-    if md
-      return f3
-    else
-      return f4
-    end
-  end
-end
-
-
-
-
-
-"""
-    make_Qpr(Q ::Array{Float64,2},
-             β ::Array{Float64}, 
-             δt::Float64,
-             md::Bool,
-             wq::Bool)
-
-Make `Q` instantaneous probability function
-"""
-function make_Qpr(Q ::Array{Float64,2},
-                  β ::Array{Float64,1}, 
-                  δt::Float64,
-                  md::Bool,
-                  wq::Bool)
-  k = size(Q,1)
-
-  # Q row indices without diagonals
-  Qri = Array{Int64,1}[]
-  for i in Base.OneTo(k)
-    push!(Qri, setdiff(i:k:(k*k), 1:(k+1):(k*k)))
-  end
-
-  # β indices to match the ones for Q
-  βi = Array{Int64,1}[]
-  for j in Base.OneTo(k)
-    tv = Int64[]
-    for i in Base.OneTo(k-1)
-      push!(tv, Qri[j][i] - i)
-    end
-    push!(βi, tv)
-  end
-
-  ## Functions
-  # if dependent on `z(t)` and multidimensional
-  function f1(st ::Int64,
-              aft::Array{Float64,1})
-    rsum = 0.0
-    for i in Base.OneTo(k-1)
-      rsum += expf(Q[Qri[st][i]], β[βi[st][i]], aft[βi[st][i]])
-    end
-    return rsum*δt
-  end
-
-  # if dependent on `z(t)` and unidimensional
-  function f2(st ::Int64,
-              aft::Float64)
-    rsum = 0.0
-    for i in Base.OneTo(k-1)
-      rsum += expf(Q[Qri[st][i]], β[βi[st][i]], aft)
-    end
-    return rsum*δt
-  end
-
-  # if **not** dependent on `z(t)` and multidimensional
-  function f3(st ::Int64,
-              aft::Array{Float64,1})
-    return @views sum(Q[st,:])*δt
-  end
-
-  # if **not** dependent on `z(t)` and unidimensional
-  function f4(st ::Int64,
-              aft::Float64)
-    return @views sum(Q[st,:])*δt
-  end
-
-  if wq
-    if md
-      return f1
-    else
-      return f2
-    end
-  else
-    if md
-      return f3
-    else
-      return f4
-    end
-  end
-end
-
-
-
-
-
-"""
-    make_rqpr(Q ::Array{Float64,2},
-              β ::Array{Float64}, 
-              δt::Float64,
-              md::Bool,
-              wq::Bool)
-
-Make cumulative probability for instantaneous change in 
-a given row in `Q` function.
-"""
-function make_rqpr(Q ::Array{Float64,2},
-                   β ::Array{Float64}, 
-                   δt::Float64,
-                   md::Bool,
-                   wq::Bool)
-  k = size(Q,1)
-
-  # Q row indices without diagonals
-  Qri = Array{Int64,1}[]
-  for i in Base.OneTo(k)
-    push!(Qri, setdiff(i:k:(k*k), 1:(k+1):(k*k)))
-  end
-
-  # β indices to match the ones for Q
-  βi = Array{Int64,1}[]
-  for j in Base.OneTo(k)
-    tv = Int64[]
-    for i in Base.OneTo(k-1)
-      push!(tv, Qri[j][i] - i)
-    end
-    push!(βi, tv)
-  end
-
-  ## Functions
-  # if dependent on `z(t)` and multidimensional
-  function f1(sti ::Int64,
-              qpr::Array{Float64,1},
-              aft::Array{Float64,1})
-    l = 1
-    for i in Base.OneTo(k)
-      if i == sti
-        qpr[i] = 0.0
+    @inbounds begin
+      if isone(length(s.g))
+        for a in s.g
+          μpr[si][1] = expf(μ[k*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+        end
       else
-        qpr[i] = expf(Q[Qri[sti][l]], β[βi[sti][l]], aft[βi[sti][l]])
-        l += 1
+        na = 0
+        for a in s.g
+          na += 1
+          μpr[si][na] = l[k*s.h + a]*δt
+        end
       end
-    end
 
-    return nothing
+      return Sμpr[si] = sum(μpr[si]) 
+    end
   end
 
   # if dependent on `z(t)` and unidimensional
-  function f2(sti ::Int64,
-              qpr::Array{Float64,1},
-              aft::Float64)
-
-    l = 1
-    for i in Base.OneTo(k)
-      if i == sti
-        qpr[i] = 0.0
-      else
-        qpr[i] = expf(Q[Qri[sti][l]], β[βi[sti][l]], aft)
-        l += 1
-      end
-    end
-
-    return nothing
-  end
-
-  # if **not** dependent on `z(t)` and multidimensional
-  function f3(sti ::Int64,
-              qpr::Array{Float64,1},
+  function f2(si ::Int64,
+              s  ::Sgh,
               aft::Array{Float64,1})
-
-    for i in Base.OneTo(k)
-      qpr[i] = Q[sti,i]
-    end
-
-    return nothing
+    return Sμpr[si]
   end
 
-  # if **not** dependent on `z(t)` and unidimensional
-  function f4(sti ::Int64,
-              qpr::Array{Float64,1},
-              aft::Float64)
-    for i in Base.OneTo(k)
-      qpr[i] = Q[sti,i]
-    end
-
-    return nothing
-  end
-
-  if wq
-    if md
-      return f1
-    else
-      return f2
-    end
+  if model == 2
+    return f1
   else
-    if md
-      return f3
-    else
-      return f4
-    end
+    return f2
   end
 end
+
+
+
+
+
+"""
+    make_updgpr!(g    ::Array{Float64,1},
+                 β    ::Array{Float64,1},
+                 gpr  ::Array{Array{Float64,1},1},
+                 Sgpr ::Array{Float64,1},
+                 δt   ::Float64,
+                 k    ::Int64,
+                 model::Int64,
+                 md   ::Bool,
+                 as   ::UnitRange{Int64},
+                 S    ::Array{Sgh,1})
+
+Make gain instantaneous probability function
+"""
+function make_updgpr!(g    ::Array{Float64,1},
+                      β    ::Array{Float64,1},
+                      gpr  ::Array{Array{Float64,1},1},
+                      Sgpr ::Array{Float64,1},
+                      δt   ::Float64,
+                      k    ::Int64,
+                      model::Int64,
+                      md   ::Bool,
+                      as   ::UnitRange{Int64},
+                      S    ::Array{Sgh,1})
+
+  # do setdiff before
+  sdf = Array{Int64,1}[]
+  for s = S
+    push!(sdf, setdiff(as,s.g))
+  end
+
+  function f1(si ::Int64,
+              s  ::Sgh,
+              aft::Array{Float64,1})
+    @inbounds begin
+      gpr[si][i] = 0.0
+      for (i,ta) = enumerate(sdf[si]), fa = s.g
+        gpr[si][i] += 
+          expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+               β[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+               md ? r[(fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+      end
+
+      return Sgpr[si] = sum(gpr[si]) 
+    end
+  end
+
+  function f2(si ::Int64,
+              s  ::Sgh,
+              aft::Array{Float64,1})
+    return Sgpr[si]
+  end
+
+  if model == 3
+    return f1
+  else
+    return f2
+  end
+end
+
+
+
+
+
+"""
+    make_updqpr!(Sqpr ::Array{Float64,1})
+
+Make hidden states instantaneous probability function
+"""
+function make_updqpr!(Sqpr ::Array{Float64,1})
+
+  function f(si ::Int64)
+    return Sqpr[si]
+  end
+
+  return f
+end
+
 
 
 
@@ -1095,7 +1206,7 @@ end
 Exponential regression function for rates with base rate `α`, 
 coefficient `β` and covariate `x`.
 """
-expf(α::Float64, β::Float64, x::Float64) = α*exp(β*x)
+expf(α::Float64, β::Float64, x::Float64) = α * exp(β * x)
 
 
 

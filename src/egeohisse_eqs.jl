@@ -13,14 +13,14 @@ Created 18 03 2019
 
 
 """
-    struct ghs
+    struct Sgh
       g::Set{Int64}
       h::Int64
     end
 
-Composite type for Geographical `g` & Hidden `h` states
+Composite type for Geographical State with `g` areas & `h` hidden states
 """
-struct ghs
+struct Sgh
   g::Set{Int64}
   h::Int64
 end
@@ -30,11 +30,11 @@ end
 
 
 """
-    isequal(x::ghs, y::ghs)
+    isequal(x::Sgh, y::Sgh)
 
-Compares equality between two `ghs` types.
+Compares equality between two `Sgh` types.
 """
-isghsequal(x::ghs, y::ghs) = x.g == y.g && x.h == y.h 
+isSghequal(x::Sgh, y::Sgh) = x.g == y.g && x.h == y.h 
 
 
 
@@ -56,10 +56,10 @@ function create_states(k::Int64, h::Int64)
   popfirst!(gS)            # remove empty
   sort!(gS, by = length)   # arrange by range size
 
-  # add hidden states and create ghs objects
-  S = Array{ghs, 1}()
+  # add hidden states and create Sgh objects
+  S = Array{Sgh, 1}()
   for i = 0:(h-1), j = gS
-    push!(S, ghs(j, i))
+    push!(S, Sgh(j, i))
   end
 
   return S
@@ -148,7 +148,7 @@ end
 
 """
     noevents_expr(si   ::Int64,
-                  s    ::ghs, 
+                  s    ::Sgh, 
                   ls   ::Int64,
                   oa   ::Array{Int64,1},
                   k    ::Int64,
@@ -160,7 +160,7 @@ end
 Return expression for no events.
 """
 function noevents_expr(si   ::Int64,
-                       s    ::ghs, 
+                       s    ::Sgh, 
                        ls   ::Int64,
                        oa   ::Array{Int64,1},
                        k    ::Int64,
@@ -230,23 +230,23 @@ end
 
 
 """
-    localext_expr(s ::ghs,
-                  S ::Array{ghs,1},
+    localext_expr(s ::Sgh,
+                  S ::Array{Sgh,1},
                   k ::Int64,
                   h ::Int64)
 
 Return expression for local extinction.
 """
-function localext_expr(s ::ghs,
-                       S ::Array{ghs,1},
+function localext_expr(s ::Sgh,
+                       S ::Array{Sgh,1},
                        k ::Int64,
                        h ::Int64)
 
   ex = Expr(:call, :+)
   for i = s.g
     push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
-                     u[$(findfirst(x -> isghsequal(x, 
-                                        ghs(setdiff(s.g, i),s.h)), S))]))
+                     u[$(findfirst(x -> isSghequal(x, 
+                                        Sgh(setdiff(s.g, i),s.h)), S))]))
   end
   return ex
 end
@@ -256,9 +256,9 @@ end
 
 
 """
-    dispersal_expr(s  ::ghs,
+    dispersal_expr(s  ::Sgh,
                    oa ::Array{Int64,1},
-                   S  ::Array{ghs,1},
+                   S  ::Array{Sgh,1},
                    ns ::Int64,
                    k  ::Int64,
                    h  ::Int64,
@@ -267,9 +267,9 @@ end
 
 Return expression for dispersal.
 """
-function dispersal_expr(s    ::ghs,
+function dispersal_expr(s    ::Sgh,
                         oa   ::Array{Int64,1},
-                        S    ::Array{ghs,1},
+                        S    ::Array{Sgh,1},
                         ns   ::Int64,
                         k    ::Int64,
                         h    ::Int64,
@@ -308,8 +308,8 @@ end
 
 
 """
-    hidtran_expr(s  ::ghs,
-                 S  ::Array{ghs,1},
+    hidtran_expr(s  ::Sgh,
+                 S  ::Array{Sgh,1},
                  ns ::Int64,
                  k  ::Int64,
                  h  ::Int64,
@@ -317,8 +317,8 @@ end
 
 Return expression for hidden states transitions.
 """
-function hidtran_expr(s  ::ghs,
-                      S  ::Array{ghs,1},
+function hidtran_expr(s  ::Sgh,
+                      S  ::Array{Sgh,1},
                       ns ::Int64,
                       k  ::Int64,
                       h  ::Int64,
@@ -351,7 +351,7 @@ end
 Return expression for within-region speciation.
 """
 function wrspec_expr(si ::Int64,
-                     s  ::ghs,
+                     s  ::Sgh,
                      ns ::Int64,
                      k  ::Int64,
                      model::Int64)
@@ -395,16 +395,16 @@ end
 
 
 """
-    brspec_expr(s  ::ghs,
-                S  ::Array{ghs,1},
+    brspec_expr(s  ::Sgh,
+                S  ::Array{Sgh,1},
                 ns ::Int64,
                 k  ::Int64, 
                 ext::Bool)
 
 Return expression for between-region speciation.
 """
-function brspec_expr(s  ::ghs,
-                     S  ::Array{ghs,1},
+function brspec_expr(s  ::Sgh,
+                     S  ::Array{Sgh,1},
                      ns ::Int64,
                      k  ::Int64, 
                      ext::Bool)
@@ -435,16 +435,16 @@ end
 
 
 """
-    ext_expr(s ::ghs,
-             S ::Array{ghs,1},
+    ext_expr(s ::Sgh,
+             S ::Array{Sgh,1},
              ns::Int64,
              k ::Int64,
              h ::Int64)
 
 Return expression for extinction.
 """
-function ext_expr(s  ::ghs,
-                  S  ::Array{ghs,1},
+function ext_expr(s  ::Sgh,
+                  S  ::Array{Sgh,1},
                   ns ::Int64,
                   k  ::Int64,
                   h  ::Int64,
@@ -462,8 +462,8 @@ function ext_expr(s  ::ghs,
     ex = Expr(:call, :+)
     for i = s.g
       push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
-                       u[$(findfirst(x -> isghsequal(x, 
-                                          ghs(setdiff(s.g, i),s.h)), S) + ns)]))
+                       u[$(findfirst(x -> isSghequal(x, 
+                                          Sgh(setdiff(s.g, i),s.h)), S) + ns)]))
     end
   end
 
@@ -477,14 +477,14 @@ end
 
 """
     wrsext_expr(si::Int64,
-                s ::ghs,
+                s ::Sgh,
                 ns::Int64,
                 k ::Int64)
 
 Return expression of extinction for within-region speciation.
 """
 function wrsext_expr(si ::Int64,
-                     s  ::ghs,
+                     s  ::Sgh,
                      ns ::Int64,
                      k  ::Int64,
                      model::Int64)
