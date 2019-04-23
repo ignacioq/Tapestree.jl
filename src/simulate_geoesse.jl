@@ -25,18 +25,21 @@ January 12 2017
 
 Simulate tree according to ESSE.
 """
-function simulate_sse(λ       ::Array{Float64,1}, 
+function simulate_sse(λ       ::Array{Float64,1},
                       μ       ::Array{Float64,1},
-                      Q       ::Array{Float64,2},
-                      β       ::Array{Float64},
+                      l       ::Array{Float64,1},
+                      g       ::Array{Float64,1},
+                      q       ::Array{Float64,1},
+                      β       ::Array{Float64,1},
                       x       ::Array{Float64,1},
-                      y       ::Array{Float64};
+                      y       ::Array{Float64,N};
                       cov_mod ::String  = "speciation",
                       nspp    ::Int64   = 20,
-                      δt      ::Float64 = 1e-3)
+                      δt      ::Float64 = 1e-3) where N
 
   # make simulation
-  ed, el, st, simt, af, r = simedges(λ, μ, Q, β, x, y, nspp, δt, cov_mod)
+  ed, el, st, simt, af!, r, S, h = 
+    simulate_edges(λ, μ, l, g, q, β, x, y, nspp, δt, cov_mod)
 
   # organize in postorder
   ed     = numberedges(ed, nspp)
@@ -49,7 +52,7 @@ function simulate_sse(λ       ::Array{Float64,1},
   th = tree_height(el, ed, nspp)
 
   # is y multidimensional
-  md = size(y,2) > 1
+  md = N > 1
 
   # if simulation time is equal to simulated tree height
   if isapprox(th, simt, atol = 1e-9)
@@ -59,14 +62,15 @@ function simulate_sse(λ       ::Array{Float64,1},
     nx = x[1:idx]
 
     push!(nx, th)
+    
+    af!(th, r)
 
     if md
       ny = y[1:idx, :]
-      af(th, r)
       ny = vcat(ny, reshape(r,(1,:)))
     else
       ny = y[1:idx]
-      push!(ny, af(th))
+      push!(ny, reshape(r,(1,:)))
     end
 
     ny = reverse(ny, dims = 1)
@@ -91,26 +95,28 @@ function simulate_sse(λ       ::Array{Float64,1},
     # make x start at 0
     nx .-= nzero
 
+    af!(nzero, r)
+
     if md
       ny = y[idxz:idxs, :]
-      af(nzero, r)
       ny = vcat(ny, reshape(r,(1,:)))
     else
       ny = y[idxz:idxs]
-      push!(ny, af(nzero))
+      push!(ny, reshape(r,(1,:)))
     end
+    
+    af!(th, r)
 
     if md
-      af(th, r)
       ny = vcat(ny, reshape(r,(1,:)))
     else
-      push!(ny, af(th))
+      push!(ny, reshape(r,(1,:)))
     end
 
     ny = reverse(ny, dims = 1)
   end
 
-  tip_val = states_to_values(tip_val, lastindex(λ))
+  tip_val = states_to_values(tip_val, S, k)
 
   return tip_val, ed, el, nx, ny
 end
@@ -118,27 +124,9 @@ end
 
 
 
-h = 2
-k = 3
-
-
-λ = rand((k+1)*h) .* 0.1
-μ = rand(k*h) .* 0.1
-l = rand(k*h) .* 0.1
-g = rand(k*(k-1)*h) .* 0.1
-q = rand(h*(h-1)) .* 0.1
-β = randn(k*h)
-
-
-x = cumsum(rand(100))
-x[1] = 0.0
-y = randn(100, k)
-cumsum!(y, y, dims = 1)
-
-cov_mod = "spec"
 
 """
-    simulate_edge(λ       ::Array{Float64,1}, 
+    simulate_edges(λ       ::Array{Float64,1}, 
                   μ       ::Array{Float64,1},
                   Q       ::Array{Float64,2},
                   β       ::Array{Float64,1},
@@ -149,9 +137,11 @@ cov_mod = "spec"
 
 Simulate edges tree according to ESSE.
 """
-function simulate_edge(λ       ::Array{Float64,1}, 
+function simulate_edges(λ       ::Array{Float64,1},
                        μ       ::Array{Float64,1},
-                       Q       ::Array{Float64,2},
+                       l       ::Array{Float64,1},
+                       g       ::Array{Float64,1},
+                       q       ::Array{Float64,1},
                        β       ::Array{Float64,1},
                        x       ::Array{Float64,1},
                        y       ::Array{Float64, N},
@@ -159,8 +149,9 @@ function simulate_edge(λ       ::Array{Float64,1},
                        δt      ::Float64,
                        cov_mod::String) where N
 
-  h = div(length(l), k)
-  k = div(length(l), h)
+
+  h::Int64 = Int64((sqrt(length(q)*4 + 1) + 1)/2)
+  k::Int64 = div(length(l), h)
 
   # if multidimensional
   md = N > 1
@@ -185,9 +176,6 @@ function simulate_edge(λ       ::Array{Float64,1},
 
   ns = length(S)
 
-  # preallocate vector of individual area probabilities 
-  spr = Array{Float64,1}(undef,ns)
-
   # areas
   as = 1:k
 
@@ -198,7 +186,10 @@ function simulate_edge(λ       ::Array{Float64,1},
   isp = Array{Float64,1}(undef, length(S))
 
   # assign initial state probabilities
-  init_states_pr!(isp, l, g, q, μ, β, S, k, h, model, md)
+  init_states_pr!(isp, l, g, q, μ, β, S, k, h, model, md, as, hs)
+
+  # preallocate vector of individual area probabilities 
+  spr = Array{Float64,1}(undef, ns)
 
   # sample initial state
   si = prop_sample(spr, isp, ns)
@@ -222,7 +213,7 @@ function simulate_edge(λ       ::Array{Float64,1},
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
-   event_probs(λ, μ, l, g, q, β, S, k, h, model, md)
+   event_probs(λ, μ, l, g, q, β, r, S, k, h, model, md, δt, ns, as, hs)
 
   # make λ, μ, g & q probability functions
   updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md)
@@ -268,7 +259,9 @@ function simulate_edge(λ       ::Array{Float64,1},
       =#
       if rand() < updgpr!(sti, S[sti], r)
         # sample from the transition probabilities
-        @inbounds st[i] = gtos[i][prop_sample(svg[sti], gpr[sti], length(svg[sti]))]
+        @inbounds st[i] = gtos[sti][prop_sample(svg[sti], gpr[sti], length(svg[sti]))]
+
+        break
       end
 
       #=
@@ -349,7 +342,9 @@ function simulate_edge(λ       ::Array{Float64,1},
 
         # if local extinction (state change)
         else
-          @inbounds st[i] = μtos[i][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
+          @inbounds st[i] = μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
+
+          break
         end
       end
 
@@ -357,7 +352,9 @@ function simulate_edge(λ       ::Array{Float64,1},
           q event?
       =#
       if rand() < updqpr!(sti) 
-        @inbounds st[i] = qtos[i][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
+        @inbounds st[i] = qtos[sti][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
+
+        break
       end
 
       #=
@@ -420,7 +417,7 @@ function simulate_edge(λ       ::Array{Float64,1},
 
   insert!(st,findfirst(isequal(da), ea),stf)
 
-  return ed, el, st, simt, af, r
+  return ed, el, st, simt, af!, r, S, h
 end
 
 
@@ -554,7 +551,9 @@ function init_states_pr!(isp  ::Array{Float64,1},
                          k    ::Int64,
                          h    ::Int64,
                          model::Int64,
-                         md   ::Bool)
+                         md   ::Bool,
+                         as   ::UnitRange{Int64},
+                         hs   ::UnitRange{Int64})
 
   if model == 1
 
@@ -674,18 +673,22 @@ end
 
 Create event probabilities for each state given the input parameters.
 """
-
 function event_probs(λ    ::Array{Float64,1},
                      μ    ::Array{Float64,1},
                      l    ::Array{Float64,1},
                      g    ::Array{Float64,1},
                      q    ::Array{Float64,1},
                      β    ::Array{Float64,1},
+                     r    ::Array{Float64,1},
                      S    ::Array{Sgh,1},
                      k    ::Int64,
                      h    ::Int64,
                      model::Int64,
-                     md   ::Bool)
+                     md   ::Bool, 
+                     δt   ::Float64,
+                     ns   ::Int64,
+                     as   ::UnitRange{Int64},
+                     hs   ::UnitRange{Int64})
 
   @inbounds begin
     ### make fixed vectors of approximate probabilities for each state
