@@ -11,6 +11,61 @@ October 30 2017
 =#
 
 
+"""
+    struct Sgh
+      g::Set{Int64}
+      h::Int64
+    end
+
+Composite type for Geographical State with `g` areas & `h` hidden states
+"""
+struct Sgh
+  g::Set{Int64}
+  h::Int64
+end
+
+
+
+
+
+"""
+    isequal(x::Sgh, y::Sgh)
+
+Compares equality between two `Sgh` types.
+"""
+isSghequal(x::Sgh, y::Sgh) = x.g == y.g && x.h == y.h 
+
+
+
+
+
+"""
+    create_states(k::Int64, h::Int64)
+
+Create GeoHiSSE states
+"""
+function create_states(k::Int64, h::Int64)
+
+  # create individual areas subsets
+  gs = Array{Set{Int64}, 1}(undef, k)
+  for i = Base.OneTo(k)
+    gs[i] = Set([i])
+  end
+  gS = sets(gs)
+  popfirst!(gS)            # remove empty
+  sort!(gS, by = length)   # arrange by range size
+
+  # add hidden states and create Sgh objects
+  S = Array{Sgh, 1}()
+  for i = 0:(h-1), j = gS
+    push!(S, Sgh(j, i))
+  end
+
+  return S
+end
+
+
+
 
 """
   sets(x::Array{String,1})

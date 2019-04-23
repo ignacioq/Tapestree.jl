@@ -9,8 +9,45 @@ January 12 2017
 =#
 
 
+using Statistics
+include(*(homedir(),"/repos/ESSE.jl/src/approx_fun.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/tree_utils.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/ode_solve.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/slice_sampler_utils.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/wrapper.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/utils.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/egeohisse_slice_sampler.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/egeohisse_eqs.jl"))
+include(*(homedir(),"/repos/ESSE.jl/src/loglik_geo.jl"))
 
 
+h = 2
+k = 3
+
+
+λ = rand((k+1)*h) .* 0.1
+μ = rand(k*h) .* 0.1
+l = rand(k*h) .* 0.1
+g = rand(k*(k-1)*h) .* 0.1
+q = rand(h*(h-1)) .* 0.1
+β = randn(k*h)
+
+
+x = cumsum(rand(100))
+x[1] = 0.0
+y = randn(100, k)
+cumsum!(y, y, dims = 1)
+# standardize y
+me = Statistics.mean(y,dims=1)
+va = Statistics.var(y,dims=1)
+for j in axes(y,2), i in axes(y,1)
+  y[i,j] -= me[j]
+  y[i,j] /= va[j]
+end
+
+cov_mod = "speciation"
+nspp    = 20
+δt      = 1e-3
 
 
 """
@@ -138,17 +175,16 @@ end
 Simulate edges tree according to ESSE.
 """
 function simulate_edges(λ       ::Array{Float64,1},
-                       μ       ::Array{Float64,1},
-                       l       ::Array{Float64,1},
-                       g       ::Array{Float64,1},
-                       q       ::Array{Float64,1},
-                       β       ::Array{Float64,1},
-                       x       ::Array{Float64,1},
-                       y       ::Array{Float64, N},
-                       nspp    ::Int64,
-                       δt      ::Float64,
-                       cov_mod::String) where N
-
+                        μ       ::Array{Float64,1},
+                        l       ::Array{Float64,1},
+                        g       ::Array{Float64,1},
+                        q       ::Array{Float64,1},
+                        β       ::Array{Float64,1},
+                        x       ::Array{Float64,1},
+                        y       ::Array{Float64, N},
+                        nspp    ::Int64,
+                        δt      ::Float64,
+                        cov_mod::String) where N
 
   h::Int64 = Int64((sqrt(length(q)*4 + 1) + 1)/2)
   k::Int64 = div(length(l), h)
@@ -261,7 +297,8 @@ function simulate_edges(λ       ::Array{Float64,1},
         # sample from the transition probabilities
         @inbounds st[i] = gtos[sti][prop_sample(svg[sti], gpr[sti], length(svg[sti]))]
 
-        break
+        # no more events at this time
+        continue
       end
 
       #=
@@ -272,15 +309,17 @@ function simulate_edges(λ       ::Array{Float64,1},
         # if global extinction
         if isone(length(S[sti].g))
 
+          println("global ext")
+
           # node to remove
           nod = ed[ea[i],1]
 
           # top or bottom edge of node?
-          top = ea[i] == findfirst(isequal(nod), ed[:,1])
+          top = ed[ea[i]+1, 1] == nod
 
           # remove edge (only preserving persisting species)
           ned = findfirst(isequal(0), ed)[1]
-          
+
           if ned == 3
             printstyled("What would you do if an endangered animal is eating an endangered plant? Sometimes nature is too cruel... \n", 
               color=:red)
@@ -334,8 +373,9 @@ function simulate_edges(λ       ::Array{Float64,1},
 
           # update n species
           n = lastindex(ea)
-          
-          # continue loop
+
+          # no more events for any of the remaining lineages
+          # break loop
           el[ea[(i+1):n]] .+= δt
 
           break
@@ -344,8 +384,11 @@ function simulate_edges(λ       ::Array{Float64,1},
         else
           @inbounds st[i] = μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
 
-          break
+          continue
         end
+
+        # no more events at this time
+        
       end
 
       #=
@@ -354,7 +397,8 @@ function simulate_edges(λ       ::Array{Float64,1},
       if rand() < updqpr!(sti) 
         @inbounds st[i] = qtos[sti][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
 
-        break
+        # no more events at this time
+        continue
       end
 
       #=
@@ -371,8 +415,13 @@ function simulate_edges(λ       ::Array{Float64,1},
         ed[ea[end] + 1,2] = maximum(ed)+1
         ed[ea[end] + 2,2] = maximum(ed)+1
 
-        # update time in other extant lineages
-        el[ea[(i+1):n]] .+= δt
+"""
+here, check for extra dt
+"""
+
+
+        # # update time in other extant lineages
+        # el[ea[(i+1):n]] .+= δt
 
         # update living edges
         push!(ea, ea[end]+1, ea[end]+2)
@@ -387,8 +436,6 @@ function simulate_edges(λ       ::Array{Float64,1},
         # update number of species alive
         n = lastindex(ea)
 
-        # no more events at this time
-        break
       end
 
     end

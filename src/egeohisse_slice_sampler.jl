@@ -103,7 +103,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
 
   # make ODE solver
-  ode_solve = make_solver(ode_fun, p, zeros(2*h*(k^2-1)))
+  ode_solve = make_solver(ode_fun, p, zeros(2*h*(2^k-1)))
 
   # create likelihood function
   llf = make_llf(tip_val, ed, el, ode_solve, af!, 
