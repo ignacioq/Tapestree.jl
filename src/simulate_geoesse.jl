@@ -314,8 +314,8 @@ function simulate_edges(λ       ::Array{Float64,1},
           # node to remove
           nod = ed[ea[i],1]
 
-          # top or bottom edge of node?
-          top = ed[ea[i]+1, 1] == nod
+          # top or bottom edge of node
+          top = nod == ed[ea[i]+1, 1] 
 
           # remove edge (only preserving persisting species)
           ned = findfirst(isequal(0), ed)[1]
@@ -362,9 +362,11 @@ function simulate_edges(λ       ::Array{Float64,1},
             ea[findfirst(isequal(pr),ea)] = da
             sort!(ea)
             if top
-              ea[(i+1):end] .-= 1
+              ea[(i+1):end]     .-= 1
+              el[ea[(i+1):end]] .+= δt
             else
               ea[i:end]     .-= 1
+              el[ea[i:end]] .+= δt
             end
           end
 
@@ -376,8 +378,6 @@ function simulate_edges(λ       ::Array{Float64,1},
 
           # no more events for any of the remaining lineages
           # break loop
-          el[ea[(i+1):n]] .+= δt
-
           break
 
         # if local extinction (state change)
@@ -415,13 +415,8 @@ function simulate_edges(λ       ::Array{Float64,1},
         ed[ea[end] + 1,2] = maximum(ed)+1
         ed[ea[end] + 2,2] = maximum(ed)+1
 
-"""
-here, check for extra dt
-"""
-
-
-        # # update time in other extant lineages
-        # el[ea[(i+1):n]] .+= δt
+        # update time in other extant lineages
+        el[ea[(i+1):n]] .+= δt
 
         # update living edges
         push!(ea, ea[end]+1, ea[end]+2)
@@ -436,6 +431,8 @@ here, check for extra dt
         # update number of species alive
         n = lastindex(ea)
 
+        # no more events for any of the remaining lineages
+        break
       end
 
     end
