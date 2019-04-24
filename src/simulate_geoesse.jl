@@ -357,7 +357,8 @@ function simulate_edges(λ       ::Array{Float64,1},
           ## update alive lineages
           # is the remaining node terminal?
           if da == 0 || in(ed[da,2], ed[:,1])
-            ea[i:end] .-= 1
+            ea[i:end]     .-= 1
+            el[ea[i:end]] .+= δt
           else 
             ea[findfirst(isequal(pr),ea)] = da
             sort!(ea)
