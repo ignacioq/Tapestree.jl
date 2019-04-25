@@ -212,10 +212,8 @@ function simulate_edges(λ       ::Array{Float64,1},
 
   ns = length(S)
 
-  # areas
+  # areas & hidden states
   as = 1:k
-
-  # hidden states
   hs = 0:(h-1)
 
   # vector of initial state probabilities
@@ -311,6 +309,13 @@ function simulate_edges(λ       ::Array{Float64,1},
 
           println("global ext")
 
+          @show ed
+          @show simt
+          @show el
+
+          # update time in other extant lineages
+          el[ea[(i+1):n]] .+= δt
+
           # node to remove
           nod = ed[ea[i],1]
 
@@ -322,7 +327,7 @@ function simulate_edges(λ       ::Array{Float64,1},
 
           if ned == 3
             printstyled("What would you do if an endangered animal is eating an endangered plant? Sometimes nature is too cruel... \n", 
-              color=:red)
+              color=:light_red)
             error("tree went extinct... rerun simulation")
           end
 
@@ -357,17 +362,14 @@ function simulate_edges(λ       ::Array{Float64,1},
           ## update alive lineages
           # is the remaining node terminal?
           if da == 0 || in(ed[da,2], ed[:,1])
-            ea[i:end]     .-= 1
-            el[ea[i:end]] .+= δt
+            ea[i:end] .-= 1
           else 
             ea[findfirst(isequal(pr),ea)] = da
             sort!(ea)
             if top
-              ea[(i+1):end]     .-= 1
-              el[ea[(i+1):end]] .+= δt
+              ea[(i+1):end] .-= 1
             else
               ea[i:end]     .-= 1
-              el[ea[i:end]] .+= δt
             end
           end
 
@@ -377,7 +379,9 @@ function simulate_edges(λ       ::Array{Float64,1},
           # update n species
           n = lastindex(ea)
 
-          # no more events for any of the remaining lineages
+          @show ed
+          @show el
+
           # break loop
           break
 
@@ -388,8 +392,6 @@ function simulate_edges(λ       ::Array{Float64,1},
           continue
         end
 
-        # no more events at this time
-        
       end
 
       #=
@@ -407,6 +409,9 @@ function simulate_edges(λ       ::Array{Float64,1},
       =#
       if rand() < updμpr!(sti, S[sti], r)
 
+        # update time in other extant lineages
+        el[ea[(i+1):n]] .+= δt
+
         ### add new edges
         # start node
         ed[ea[end] + 1,1] = ed[ea[i],2]
@@ -416,8 +421,7 @@ function simulate_edges(λ       ::Array{Float64,1},
         ed[ea[end] + 1,2] = maximum(ed)+1
         ed[ea[end] + 2,2] = maximum(ed)+1
 
-        # update time in other extant lineages
-        el[ea[(i+1):n]] .+= δt
+
 
         # update living edges
         push!(ea, ea[end]+1, ea[end]+2)
