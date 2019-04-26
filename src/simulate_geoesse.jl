@@ -307,12 +307,6 @@ function simulate_edges(λ       ::Array{Float64,1},
         # if global extinction
         if isone(length(S[sti].g))
 
-          println("global ext")
-
-          @show ed
-          @show simt
-          @show el
-
           # update time in other extant lineages
           el[ea[(i+1):n]] .+= δt
 
@@ -379,9 +373,6 @@ function simulate_edges(λ       ::Array{Float64,1},
           # update n species
           n = lastindex(ea)
 
-          @show ed
-          @show el
-
           # break loop
           break
 
@@ -420,8 +411,6 @@ function simulate_edges(λ       ::Array{Float64,1},
         # end nodes
         ed[ea[end] + 1,2] = maximum(ed)+1
         ed[ea[end] + 2,2] = maximum(ed)+1
-
-
 
         # update living edges
         push!(ea, ea[end]+1, ea[end]+2)
