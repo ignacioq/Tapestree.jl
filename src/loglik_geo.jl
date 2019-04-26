@@ -280,7 +280,7 @@ Generated function for full tree likelihood at the root.
 
         lams = Expr(:call, :+, 
           :($(2.0^(length(S[i + (2^k-1)*(j-1)].g)-1) - 1)*
-            p[$(i + (k+1)*(j-1))]))
+            p[$((k+1)*(1+(j-1)))]))
         for a in S[i + (2^k-1)*(j-1)].g
           push!(lams.args, :(exp(lλts[$(a + k*(j-1))])))
         end
@@ -309,7 +309,7 @@ Generated function for full tree likelihood at the root.
 
         lams = Expr(:call, :+, 
           :($(2.0^(length(S[i + (2^k-1)*(j-1)].g)-1) - 1)*
-            p[$(i + (k+1)*(j-1))]))
+            p[$((k+1)*(1+(j-1)))]))
         for a in S[i + (2^k-1)*(j-1)].g
           push!(lams.args, :(p[$(a + (k+1)*(j-1))]))
         end
