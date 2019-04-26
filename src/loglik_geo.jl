@@ -422,7 +422,7 @@ Generated function for speciation event likelihoods
             ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
             ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
             ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
-            p[$(i+(k+1)*s.h)] * 0.5))
+            p[$((k+1)*(1+s.h))] * 0.5))
       end
 
       push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
@@ -458,12 +458,14 @@ Generated function for speciation event likelihoods
             ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
             ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
             ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
-            p[$(i+(k+1)*s.h)] * 0.5))
+            p[$((k+1)*(1+s.h))] * 0.5))
       end
 
       push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
     end
   end
+
+  println(eqs)
 
   return quote 
     @inbounds begin
