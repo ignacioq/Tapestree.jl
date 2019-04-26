@@ -271,6 +271,9 @@ function simedges(λ       ::Array{Float64,1},
       =#
       if rand() < μpr(st[i], r)
 
+        # update time in other extant lineages
+        el[ea[(i+1):n]] .+= δt
+
         # node to remove
         nod = ed[ea[i],1]
 
@@ -335,9 +338,7 @@ function simedges(λ       ::Array{Float64,1},
         # update n species
         n = lastindex(ea)
 
-        # continue loop
-        el[ea[(i+1):n]] .+= δt
-
+        # no more events at this time
         break
       end
 
