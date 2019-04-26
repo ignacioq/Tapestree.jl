@@ -325,6 +325,9 @@ Generated function for full tree likelihood at the root.
 
   push!(eqs.args, :($eq))
 
+  println("root_full", eqs)
+
+
   return quote
     @inbounds begin
       $eqs
@@ -465,7 +468,7 @@ Generated function for speciation event likelihoods
     end
   end
 
-  println(eqs)
+  println("λevent", eqs)
 
   return quote 
     @inbounds begin
@@ -558,6 +561,8 @@ end
     push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
   end
 
+  println("lpf", eq)
+
   return quote 
     @inbounds begin
       lq = $eq
@@ -565,6 +570,7 @@ end
     return lq
   end
 end
+
 
 
 

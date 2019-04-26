@@ -170,8 +170,6 @@ end
 
 
 
-
-
 """
     localext_expr(s ::Sgh,
                   S ::Array{Sgh,1},
@@ -193,6 +191,7 @@ function localext_expr(s ::Sgh,
   end
   return ex
 end
+
 
 
 
@@ -366,9 +365,10 @@ function brspec_expr(s  ::Sgh,
       :(u[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h + ns)] *
         u[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h + wu)]))
   end
-  ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1+s.h*(k+1))] * $ex)
+  # ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1+s.h*(k+1))] * $ex)
+  ex = :(p[$(k+1+s.h*(k+1))] * $ex)
 
-  isone(ex.args[2]) && deleteat!(ex.args, 2)
+  #isone(ex.args[2]) && deleteat!(ex.args, 2)
 
   return ex
 end
@@ -610,6 +610,8 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     eqs.args[append!([(end-(ns*2)+1):2:end...],
             [(end-(ns*2)+2):2:end...])]
 
+  println(eqs)
+
   return quote 
     @inbounds begin
       $eqs
@@ -664,18 +666,12 @@ end
 
 
 """
-    egeohisse_2k_gen_s(k  ::Int64,
-                       h  ::Int64,
-                       ny ::Int64,
-                       af!::Function)
+    egeohisse_2k_gen_s(af!::Function)
 
 EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states 
 and `2` ny for `speciation` model.
 """
-function egeohisse_2k_gen_s(k  ::Int64,
-                            h  ::Int64,
-                            ny ::Int64,
-                            af!::Function)
+function egeohisse_2k_gen_s(af!::Function)
 
   r    = Array{Float64,1}(undef, 4)
   eaft = Array{Float64,1}(undef, 4)
@@ -712,18 +708,12 @@ end
 
 
 """
-    egeohisse_2k_gen_e(k  ::Int64,
-                       h  ::Int64,
-                       ny ::Int64,
-                       af!::Function)
+    egeohisse_2k_gen_e(af!::Function)
 
 EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states and 
 `2` ny for `extinction` model.
 """
-function egeohisse_2k_gen_e(k  ::Int64,
-                            h  ::Int64,
-                            ny ::Int64,
-                            af!::Function)
+function egeohisse_2k_gen_e(af!::Function)
 
   r    = Array{Float64,1}(undef, 4)
   eaft = Array{Float64,1}(undef, 4)
@@ -760,18 +750,12 @@ end
 
 
 """
-    egeohisse_2k_gen_q(k  ::Int64,
-                       h  ::Int64,
-                       ny ::Int64,
-                       af!::Function)
+    egeohisse_2k_gen_q(af!::Function)
 
 EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states and 
 `2` ny for `transition` model.
 """
-function egeohisse_2k_gen_q(k  ::Int64,
-                            h  ::Int64,
-                            ny ::Int64,
-                            af!::Function)
+function egeohisse_2k_gen_q(af!::Function)
 
   r    = Array{Float64,1}(undef, 4)
   eaft = Array{Float64,1}(undef, 4)
