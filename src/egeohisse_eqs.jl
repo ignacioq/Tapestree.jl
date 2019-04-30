@@ -308,7 +308,7 @@ function wrspec_expr(si ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(eaft[$(i + s.h*k)] * 
+        push!(ex.args, :(2.0 * eaft[$(i + s.h*k)] * 
           (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
            u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
       end
@@ -321,7 +321,7 @@ function wrspec_expr(si ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(p[$(i + s.h*(k+1))] * 
+        push!(ex.args, :(2.0 * p[$(i + s.h*(k+1))] * 
           (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
            u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
       end
@@ -366,8 +366,12 @@ function brspec_expr(s  ::Sgh,
         u[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h + wu)]))
   end
   # ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1+s.h*(k+1))] * $ex)
-  ex = :(p[$(k+1+s.h*(k+1))] * $ex)
-
+  
+  if ext
+    ex = :(p[$(k+1+s.h*(k+1))] * $ex)
+  else
+    ex = :(2.0 * p[$(k+1+s.h*(k+1))] * $ex)
+  end
   #isone(ex.args[2]) && deleteat!(ex.args, 2)
 
   return ex
@@ -435,9 +439,8 @@ function wrsext_expr(si ::Int64,
   # if speciation model
   if model == 1
     if isone(length(s.g))
-      ex = Expr(:call, :*, 2.0)
       for i = s.g
-        push!(ex.args, :(eaft[$(i + s.h*k)] * u[$(i + s.h*(2^k-1) + ns)]^2))
+        ex = :(eaft[$(i + s.h*k)] * u[$(i + s.h*(2^k-1) + ns)]^2)
       end
     else
       ex = Expr(:call, :+)
