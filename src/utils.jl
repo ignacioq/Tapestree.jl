@@ -179,7 +179,7 @@ end
 
 
 """
-    build_par_names(k::Int64, h::Int64, ny::Int64, mod::NTuple{3,Bool})
+    build_par_names(k::Int64, h::Int64, ny::Int64, model::Int64)
 
 Build dictionary for parameter names and indexes for EGeoHiSSE for
 `k` areas, `h` hidden states and `ny` covariates.
@@ -187,44 +187,44 @@ Build dictionary for parameter names and indexes for EGeoHiSSE for
 function build_par_names(k::Int64, h::Int64, ny::Int64, model::Int64)
 
   # generate individual area names
-  ia = String[]
+  ia::Array{Char,1} = Array{Char,1}(undef,0)
   for i = 0:(k-1)
-    push!(ia, string('A' + i))
+    push!(ia, ('A' + i)::Char)
   end
 
   ## build parameters name 
-  par_nams = String[]
+  par_nams = Array{String,1}(undef,0)
 
   # add λ names but only one between-regions speciation rate
   for j = 0:(h-1)
-    for a = ia
-      push!(par_nams, "lambda_$(a)_$j")
+    for a::Char = ia
+      push!(par_nams, "lambda_"*string(a)*"_"*string(j))
     end
-    lastindex(ia) > 1 && push!(par_nams, "lambda_W_$j")
+    lastindex(ia) > 1 && push!(par_nams, "lambda_W_"*string(j))
   end
 
   # add μ names for endemics
   for j = 0:(h-1), i = ia
-    push!(par_nams, "mu_$(i)_$j")
+    push!(par_nams, "mu_"*string(i)*"_"*string(j))
   end
 
   # add area gains `g`
   # transitions can only through **one area** transition
   for i = 0:(h-1), a = ia, b = ia
     a == b && continue
-    push!(par_nams, "gain_$(a)$(b)_$i")
+    push!(par_nams, "gain_"*string(a)*string(b)*"_"*string(i))
   end
 
   # add area looses `l`
   # transitions can only through **one area** transition
   for i = 0:(h-1), a = ia
-    push!(par_nams, "loss_$(a)_$i")
+    push!(par_nams, "loss_"*string(a)*"_"*string(i))
   end
 
   # add q between hidden states
   for j = 0:(h-1), i = 0:(h-1)
     j == i && continue 
-    push!(par_nams, "q_$(j)$(i)")
+    push!(par_nams, "q_"*string(j)*string(i))
   end
 
   ## add betas
@@ -232,18 +232,21 @@ function build_par_names(k::Int64, h::Int64, ny::Int64, model::Int64)
   if model == 3
     for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(div(ny,k*(k-1)))
       a == b && continue
-      push!(par_nams, "beta$(l)_$(a)$(b)_$(i)")
+      push!(par_nams, 
+        "beta"*string(l)*"_"*string(a)*string(b)*"_"*string(i))
     end
   # if model is speciation or extinction
   elseif model == 1 || model == 2
     for i = 0:(h-1), a = ia, l = Base.OneTo(div(ny,k))
-      push!(par_nams, "beta$(l)_$(a)_$i")
+      push!(par_nams, 
+        "beta"*string(l)*"_"*string(a)*"_"*string(i))
     end
   end
 
-  pardic = Dict(par_nams[i] => i for i = Base.OneTo(lastindex(par_nams)))
+  pardic::Dict{String, Int64} = Dict(par_nams[i]::String => i::Int64
+    for i = Base.OneTo(lastindex(par_nams)))
 
-  return pardic
+  return pardic::Dict{String, Int64}
 end
 
 
