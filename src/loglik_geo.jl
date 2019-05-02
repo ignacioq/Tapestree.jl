@@ -194,7 +194,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       end
 
       # estimate likelihood weights
-      normbysum!(llik, w)
+      normbysum!(llik, w, ns)
 
       # combine root likelihoods
       ll = rootll(elrt[ne,1], llik, extp, w, p, lλs, lλts)
@@ -413,8 +413,8 @@ Generated function for speciation event likelihoods
       # within region speciation
       ex = Expr(:call, :+)
       for a in s.g
-        push!(ex.args, :((ud1[$(a + s.h*(k+1))]    *  ud2[$(i + (2^k-1)*(j-1))] + 
-                          ud1[$(i + (2^k-1)*(j-1))] * ud2[$(a + s.h*(k+1))]) *
+        push!(ex.args, :((ud1[$(a + s.h*(2^k-1))]    *  ud2[$(i + (2^k-1)*(j-1))] + 
+                          ud1[$(i + (2^k-1)*(j-1))] * ud2[$(a + s.h*(2^k-1))]) *
                          exp(lλts[$(a + s.h*(k))])*0.5))
       end
 
@@ -483,14 +483,14 @@ end
 
 
 """
-    normbysum!(v::Array{Float64,1}, r::Array{Float64,1})
+    normbysum!(v::Array{Float64,1}, r::Array{Float64,1}, ns::Int64)
 
 Return weights by the sum of all elements of the array to sum 1. 
 """
-function normbysum!(v::Array{Float64,1}, r::Array{Float64,1})
+function normbysum!(v::Array{Float64,1}, r::Array{Float64,1}, ns::Int64)
   s = sum(v)
   @inbounds begin
-    @simd for i in Base.OneTo(lastindex(v))
+    @simd for i in Base.OneTo(ns)
       r[i] = v[i]/s
     end
   end
