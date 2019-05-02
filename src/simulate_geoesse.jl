@@ -505,7 +505,6 @@ function id_mod(cov_mod::String,
     error("Parameter vector lengths not consistent with the number of states")
   end
 
-
   # if speciation, extinction or transition model
   if occursin(r"^[s|S][A-za-z]*", cov_mod)
 
