@@ -118,19 +118,28 @@ function noevents_expr(si   ::Int64,
   ts = isone(ls) ? 0 : k*h*k
 
   # between-region speciation
-  ex = :(+ ($(2.0^(ls-1) - 1.) * p[$(k+1+s.h*(k+1))]))
+  ex = :(+ ($(2.0^(ls) - 2.0) * p[$(k+1+s.h*(k+1))]))
   for (i, v) = enumerate(s.g)
 
     ##Covariates
     # if speciation model
     if model == 1
-      push!(ex.args, :(eaft[$(v + s.h*k)] + p[$(v + (k+1)*h + s.h*k + ts)]))
+      if isone(ls)
+        push!(ex.args, :(eaft[$(v + s.h*k)] + p[$(v + (k+1)*h + s.h*k + ts)]))
+      else
+        push!(ex.args, :(2.0 * eaft[$(v + s.h*k)] + p[$(v + (k+1)*h + s.h*k + ts)]))
+      end
+
     # if extinction model and only for endemic extinction
     elseif model == 2 && isone(ls)
       push!(ex.args, :(p[$(v + s.h*(k+1))] + eaft[$(v + s.h*k)]))
     # if neither
     else
-      push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
+      if isone(ls)
+        push!(ex.args, :(p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
+      else
+        push!(ex.args, :(2.0 * p[$(v + s.h*(k+1))] + p[$(v + (k+1)*h + s.h*k + ts)]))
+      end
     end
 
     # dispersal
@@ -191,7 +200,6 @@ function localext_expr(s ::Sgh,
   end
   return ex
 end
-
 
 
 
@@ -308,7 +316,7 @@ function wrspec_expr(si ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(eaft[$(i + s.h*k)] * 
+        push!(ex.args, :(2.0 * eaft[$(i + s.h*k)] * 
           (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
            u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
       end
@@ -321,7 +329,7 @@ function wrspec_expr(si ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(p[$(i + s.h*(k+1))] * 
+        push!(ex.args, :(2.0 * p[$(i + s.h*(k+1))] * 
           (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
            u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
       end
@@ -367,7 +375,7 @@ function brspec_expr(s  ::Sgh,
   end
   # ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1+s.h*(k+1))] * $ex)
 
-  ex = :(p[$(k+1+s.h*(k+1))] * $ex)
+  ex = :(2.0 * p[$(k+1+s.h*(k+1))] * $ex)
 
   # if ext
   #   ex = :(p[$(k+1+s.h*(k+1))] * $ex)
@@ -447,7 +455,7 @@ function wrsext_expr(si ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(eaft[$(i + s.h*k)] * 
+        push!(ex.args, :(2.0 * eaft[$(i + s.h*k)] * 
                          u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
       end
     end
@@ -458,7 +466,7 @@ function wrsext_expr(si ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(p[$(i + s.h*(k+1))] * 
+        push!(ex.args, :(2.0 * p[$(i + s.h*(k+1))] * 
                          u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
       end
     end
