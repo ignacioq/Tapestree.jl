@@ -36,7 +36,7 @@ function exp_expr(k    ::Int64,
       for yi in Base.OneTo(pky)
         rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+          :(p[$(h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) + yi + pky* ((i-1) + k*(j-1)))] * 
             $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
@@ -54,7 +54,7 @@ function exp_expr(k    ::Int64,
       for yi in Base.OneTo(pky)
         rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+          :(p[$(h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) + yi + pky* ((i-1) + k*(j-1)))] * 
             $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(h*(k+1) + i + k*(j-1))]*
@@ -73,7 +73,7 @@ function exp_expr(k    ::Int64,
       for yi in Base.OneTo(pky)
         rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(k-1)*(j-1))] * 
+          :(p[$(h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) + yi + pky* ((i-1) + k*(k-1)*(j-1)))] * 
             $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(k-1)*(j-1))] = p[$(h*(2k+1) + i + k*(k-1)*(j-1))]*
