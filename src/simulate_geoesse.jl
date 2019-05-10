@@ -419,7 +419,14 @@ function simulate_edges(λ       ::Array{Float64,1},
         # update living states according to speciation event
         nst1, nst2 = 
           λtos[sti][prop_sample(svλ[sti], λpr[sti], length(svλ[sti]))]
-        push!(st,nst1,nst2)
+
+        # random assignment to daughters
+        if rand() < 0.5
+          push!(st,nst1,nst2)
+        else
+          push!(st,nst2,nst1)
+        end
+
         deleteat!(st,i)
 
         # update number of species alive
