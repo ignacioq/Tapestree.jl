@@ -256,7 +256,7 @@ Generated function for full tree likelihood at the root.
       for yi in Base.OneTo(pky)
         rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+          :(p[$(h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) + yi + pky* ((i-1) + k*(j-1)))] * 
             $rex))
       end
       push!(eqs.args, 
@@ -391,7 +391,7 @@ Generated function for speciation event likelihoods
       for yi in Base.OneTo(pky)
         rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
         push!(coex.args,
-          :(p[$(h*(3k+k*(k-1)+2)+yi+pky*(i-1)+pky*k*(j-1))] * 
+          :(p[$(h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) + yi + pky* ((i-1) + k*(j-1)))] * 
             $rex))
       end
       push!(eqs.args, 
@@ -554,12 +554,22 @@ end
     push!(eq.args, :(logdexp(p[$i], $qpriors)))
   end
   # betas
-  nb = model == 3 ? 
-    (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)*div(ny,k*(k-1))*h) :
-    (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h*div(ny,k))
-  for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
-    push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
+  if isone(ny)
+    nb = model == 3 ? 
+      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)) :
+      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h)
+    for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
+      push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
+    end
+  else
+    nb = model == 3 ? 
+      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)*div(ny,k*(k-1))*h) :
+      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h*div(ny,k))
+    for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
+      push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
+    end
   end
+
 
   println("lpf \n", eq)
 
