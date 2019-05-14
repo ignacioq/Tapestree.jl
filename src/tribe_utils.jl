@@ -278,30 +278,6 @@ end
 
 
 """
-    indmindif_sorted(x::Array{Int64,1}, val::Int64)
-
-Get index in sorted vector `x` corresponding to the value 
-that is closest to `val` in sorted arrays 
-using a sort of uniroot algorithm. For `Int64`.
-"""
-function indmindif_sorted(x::Array{Int64,1}, val::Int64) 
-  a::Int64   = 1
-  b::Int64   = endof(x)
-  mid::Int64 = div(b,2)  
-
-  while b-a > 1
-    val < x[mid] ? b = mid : a = mid
-    mid = div(b + a, 2)
-  end
-
-  abs(x[a] - val) < abs(x[b] - val) ? a : b
-end 
-
-
-
-
-
-"""
     make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2})
   
 Make ragged array with indexes for each edge in `Y`.
