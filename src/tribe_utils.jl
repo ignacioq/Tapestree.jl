@@ -230,7 +230,7 @@ function idxlessthan(x::Array{Float64,1}, val::Float64)
   @inbounds begin
 
     a::Int64 = 1
-    b::Int64 = endof(x)
+    b::Int64 = lastindex(x)
   
     if x[b] < val
       return b
@@ -261,7 +261,7 @@ using a sort of uniroot algorithm.
 """
 function indmindif_sorted(x::Array{Float64,1}, val::Float64) 
   a::Int64   = 1
-  b::Int64   = endof(x)
+  b::Int64   = lastindex(x)
   mid::Int64 = div(b,2)  
 
   while b-a > 1
@@ -288,7 +288,7 @@ function make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2}, ntip::Int64)
   for b in childs
     bindices = find(b .== B)
     if b != (ntip+1)
-      unshift!(bindices, bindices[1] - 1)
+      pushfirst!(bindices, bindices[1] - 1)
     end
     bidx = colon(bindices[1],bindices[end])
     push!(bridx, bidx)
@@ -317,7 +317,7 @@ function make_edgeδt(bridx::Array{UnitRange{Int64},1},
     for i in eachindex(bi)
       bi[i] = rowind(bi[i], m)
     end
-    push!(brδt, unshift!(cumsum(δt[bi]),0))
+    push!(brδt, pushfirst!(cumsum(δt[bi]),0))
   end
   
   brδt
@@ -348,7 +348,7 @@ function maketriads(edges::Array{Int64,2})
   for i = Base.OneTo(lins)
     ndi  = ins[i]
     daus = find(edges[:,1] .== ndi)
-    unshift!(daus, find(edges[:,2] .== ndi)[1])
+    pushfirst!(daus, find(edges[:,2] .== ndi)[1])
     push!(trios, daus)
   end
 

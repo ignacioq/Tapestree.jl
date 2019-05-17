@@ -54,20 +54,20 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   print_with_color(:green, "Data successfully processed", bold = true)
 
   # dims
-  const m, ntip, narea  = size(Yc)
+  m, ntip, narea  = size(Yc)
 
   # coupled nodes for X
-  const Xnc1 = ncoup[:,1]
-  const Xnc2 = ncoup[:,2]
+  Xnc1 = ncoup[:,1]
+  Xnc2 = ncoup[:,2]
 
   # which nodes are not NaN in Xc
-  const wXp = setdiff(find(map(x -> !isnan(x), Xc)), m:m:length(Xc))
+  wXp = setdiff(find(map(x -> !isnan(x), Xc)), m:m:length(Xc))
 
   # tie trait coupled nodes
   Xc[Xnc2] = Xc[Xnc1]
 
   #create object with column indices
-  const wcol = create_wcol(Xc)
+  wcol = create_wcol(Xc)
 
   # add a branch as long as the tree
   stbrl = stbrl == 1. ? sum(δt) : stbrl
@@ -77,16 +77,16 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   push!(brl, stbrl)
 
   # number of edges
-  const nedge = size(edges,1) 
+  nedge = size(edges,1) 
 
   # make edge triads
-  const trios = maketriads(edges)
+  trios = maketriads(edges)
 
   # make ragged array with index for each edge in Yc
-  const bridx = make_edgeind(edges[:,2], B, ntip)
+  bridx = make_edgeind(edges[:,2], B, ntip)
 
   # expand bridx for each area
-  const bridx_a = Array{UnitRange{Int64},1}[]
+  bridx_a = Array{UnitRange{Int64},1}[]
   push!(bridx_a, bridx)
 
   for j = 2:narea
@@ -98,10 +98,10 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   end
 
   # make ragged array of cumulative delta times for each branch
-  const brct = make_edgeδt(bridx, δt, m)
+  brct = make_edgeδt(bridx, δt, m)
 
   # array for states at start and end of branches
-  const brs = ones(Int64, nedge, 2, narea)
+  brs = ones(Int64, nedge, 2, narea)
 
   # filter tips in edges
   wtips = map(x -> x <= ntip, edges[:,2])
@@ -112,7 +112,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   end
 
   # create stem events
-  const stemevc = [[rand()] for i in 1:narea]
+  stemevc = [[rand()] for i in 1:narea]
 
   # Sample all internal node values according to Pr transitions
   for triad in trios
@@ -125,17 +125,17 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
 
   ## allocate averages for X and Y
   # X and Y distance matrix
-  const δXc = fill(NaN, ntip, ntip, m)
-  const δYc = fill(NaN, ntip, ntip, m)
+  δXc = fill(NaN, ntip, ntip, m)
+  δYc = fill(NaN, ntip, ntip, m)
   deltaXY!(δXc, δYc, Xc, Yc, wcol, m, ntip, narea)
 
   # lineage averages
-  const LApc = fill(NaN, m, ntip)
-  const LAnc = fill(NaN, m, ntip)
+  LApc = fill(NaN, m, ntip)
+  LAnc = fill(NaN, m, ntip)
   sde!(LApc, LAnc, δXc, δYc, wcol, m, ntip)
 
   # area lineage distances
-  const LDc = fill(NaN, m, ntip, narea)
+  LDc = fill(NaN, m, ntip, narea)
   lindiff!(LDc, δXc, Yc, wcol, m, ntip, narea)
 
   ## make likelihood and prior functions
@@ -147,10 +147,10 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   bgiid, bgiid_br      = makellf_bgiid(bridx_a, δt, narea, nedge, m)
 
   # number of xnodes + ωx + ω1 + ω0 + λ1 + λ0 + σ² 
-  const np = length(wXp) + 6
+  np = length(wXp) + 6
 
   # parameter update vector
-  const parvec = collect(1:np)
+  parvec = collect(1:np)
 
   # add to parameter update vector according to weights
   append!(parvec, fill(1,ceil(Int64,np*weight[1])))
@@ -194,25 +194,25 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
       λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
 
   # log probability of collision
-  const max_δt = maximum(δt)::Float64
+  max_δt = maximum(δt)::Float64
 
   # log for nthin
   lthin = 0
 
   # variables to save X and Y 
   if saveXY[1]
-    const XYsav  = 0
-    const XYlit  = 0
-    const xylogs = fld(niter,saveXY[2])
-    const Xlog   = zeros(Float64, m, ntip, xylogs)
-    const Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
+    XYsav  = 0
+    XYlit  = 0
+    xylogs = fld(niter,saveXY[2])
+    Xlog   = zeros(Float64, m, ntip, xylogs)
+    Ylog   = zeros(Int64,   m, ntip, narea, xylogs)
 
     if saveDM[1]
-      const DMsav  = 0
-      const DMlit  = 0
-      const dmlogs = fld(niter,saveDM[2])
-      const LAlog = zeros(Float64, m, ntip, dmlogs)
-      const LDlog  = zeros(Float64, m, ntip, narea, dmlogs)
+      DMsav  = 0
+      DMlit  = 0
+      dmlogs = fld(niter,saveDM[2])
+      LAlog = zeros(Float64, m, ntip, dmlogs)
+      LDlog  = zeros(Float64, m, ntip, narea, dmlogs)
     end
   end
 

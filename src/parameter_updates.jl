@@ -38,13 +38,13 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xupd_llr ::Function,
                         Rupd_llr ::Function)
 
-  const rj = ind2sub((m,ntip), Xnc2[findfirst(Xnc1, 1)])[2]
+  rj = ind2sub((m,ntip), Xnc2[findfirst(Xnc1, 1)])[2]
 
-  const xpi  = fill(NaN, ntip)
-  const δxi  = fill(NaN, ntip, ntip)
-  const lapi = fill(NaN, ntip)
-  const lani = fill(NaN, ntip)
-  const ldi  = fill(NaN, ntip, narea)
+  xpi  = fill(NaN, ntip)
+  δxi  = fill(NaN, ntip, ntip)
+  lapi = fill(NaN, ntip)
+  lani = fill(NaN, ntip)
+  ldi  = fill(NaN, ntip, narea)
 
   function f(up  ::Int64,
              Xc  ::Array{Float64,2},
@@ -155,11 +155,11 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                           brδt               ::Array{Array{Float64,1},1},
                           total_llr          ::Function)
 
-  const Xp   = zeros(m, ntip)
-  const δXp  = fill( NaN, ntip, ntip, m)
-  const LApp = zeros(m, ntip)
-  const LAnp = zeros(m, ntip)
-  const LDp  = zeros(m, ntip, narea)
+  Xp   = zeros(m, ntip)
+  δXp  = fill( NaN, ntip, ntip, m)
+  LApp = zeros(m, ntip)
+  LAnp = zeros(m, ntip)
+  LDp  = zeros(m, ntip, narea)
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -230,11 +230,11 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
                             brδt               ::Array{Array{Float64,1},1},
                             total_llr          ::Function)
 
-  const Xp   = zeros(m, ntip)
-  const δXp  = fill( NaN, ntip, ntip, m)
-  const LApp = zeros(m, ntip)
-  const LAnp = zeros(m, ntip)
-  const LDp  = zeros(m, ntip, narea)
+  Xp   = zeros(m, ntip)
+  δXp  = fill( NaN, ntip, ntip, m)
+  LApp = zeros(m, ntip)
+  LAnp = zeros(m, ntip)
+  LDp  = zeros(m, ntip, narea)
 
   function f(trio   ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -313,12 +313,12 @@ function make_mhr_upd_Ybr(narea              ::Int64,
                           total_llr          ::Function,
                           bgiid_br           ::Function)
 
-  const Yp      = zeros(Int64, m, ntip, narea)
-  const δYp     = fill( NaN, ntip, ntip, m)
-  const LApp    = zeros(m, ntip)
-  const LAnp    = zeros(m, ntip)
-  const LDp     = zeros(m, ntip, narea)
-  const stemevp = [[rand()] for i in 1:narea]
+  Yp      = zeros(Int64, m, ntip, narea)
+  δYp     = fill( NaN, ntip, ntip, m)
+  LApp    = zeros(m, ntip)
+  LAnp    = zeros(m, ntip)
+  LDp     = zeros(m, ntip, narea)
+  stemevp = [[rand()] for i in 1:narea]
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -416,13 +416,13 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
                             total_llr::Function,
                             bgiid    ::Function)
 
-  const Yp      = zeros(Int64, m, ntip, narea)
-  const δYp     = fill( NaN, ntip, ntip, m)
-  const LApp    = zeros(m, ntip)
-  const LAnp    = zeros(m, ntip)
-  const LDp     = zeros(m, ntip, narea)
-  const brsp    = zeros(Int64, nedge, 2, narea)
-  const stemevp = [[rand()] for i in 1:narea]
+  Yp      = zeros(Int64, m, ntip, narea)
+  δYp     = fill( NaN, ntip, ntip, m)
+  LApp    = zeros(m, ntip)
+  LAnp    = zeros(m, ntip)
+  LDp     = zeros(m, ntip, narea)
+  brsp    = zeros(Int64, nedge, 2, narea)
+  stemevp = [[rand()] for i in 1:narea]
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -515,13 +515,13 @@ function make_mhr_upd_XYbr(narea    ::Int64,
                            total_llr::Function,
                            bgiid_br ::Function)
 
-  const Xp   = zeros(m, ntip)
-  const Yp   = zeros(Int64, m, ntip, narea)
-  const δXp  = fill( NaN, ntip, ntip, m)
-  const δYp  = fill( NaN, ntip, ntip, m)
-  const LApp = zeros(m, ntip)
-  const LAnp = zeros(m, ntip)
-  const LDp  = zeros(m, ntip, narea)
+  Xp   = zeros(m, ntip)
+  Yp   = zeros(Int64, m, ntip, narea)
+  δXp  = fill( NaN, ntip, ntip, m)
+  δYp  = fill( NaN, ntip, ntip, m)
+  LApp = zeros(m, ntip)
+  LAnp = zeros(m, ntip)
+  LDp  = zeros(m, ntip, narea)
 
   function f(br     ::Int64,
              Xc     ::Array{Float64,2},
@@ -623,15 +623,15 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
                              total_llr::Function,
                              bgiid    ::Function)
 
-  const Xp      = zeros(m, ntip)
-  const Yp      = zeros(Int64, m, ntip, narea)
-  const δXp     = fill( NaN, ntip, ntip, m)
-  const δYp     = fill( NaN, ntip, ntip, m)
-  const LApp    = zeros(m, ntip)
-  const LAnp    = zeros(m, ntip)
-  const LDp     = zeros(m, ntip, narea)
-  const brsp    = zeros(Int64, nedge, 2, narea)
-  const stemevp = [[rand()] for i in 1:narea]
+  Xp      = zeros(m, ntip)
+  Yp      = zeros(Int64, m, ntip, narea)
+  δXp     = fill( NaN, ntip, ntip, m)
+  δYp     = fill( NaN, ntip, ntip, m)
+  LApp    = zeros(m, ntip)
+  LAnp    = zeros(m, ntip)
+  LDp     = zeros(m, ntip, narea)
+  brsp    = zeros(Int64, nedge, 2, narea)
+  stemevp = [[rand()] for i in 1:narea]
 
   function f(triad  ::Array{Int64,1},
              Xc     ::Array{Float64,2},
@@ -728,8 +728,8 @@ function make_mhr_upd_Ystem(stbrl::Float64,
                             narea::Int64,
                             nedge::Int64)
 
-  const brsp    = zeros(Int64, nedge, 2, narea)
-  const stemevp = [[rand()] for i in 1:narea]
+  brsp    = zeros(Int64, nedge, 2, narea)
+  stemevp = [[rand()] for i in 1:narea]
 
   function f(λ1c    ::Float64,
              λ0c    ::Float64,
@@ -799,15 +799,15 @@ function mhr_upd_σ²(σ²c      ::Float64,
                     σ²prior  ::Float64,
                     σ²upd_llr::Function)
 
-  const σ²p = mulupt(σ²c, rand() < .3 ? σ²tn : 4.*σ²tn)::Float64
+  σ²p = mulupt(σ²c, rand() < 0.3 ? σ²tn : 4.0*σ²tn)::Float64
 
   #likelihood ratio
-  const llr = σ²upd_llr(Xc, LAc, ωxc, σ²c, σ²p)::Float64
+  llr = σ²upd_llr(Xc, LAc, ωxc, σ²c, σ²p)::Float64
 
   # prior ratio
-  const prr = llrdexp_x(σ²p, σ²c, σ²prior)
+  prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
-  if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(σ²p/σ²c))
+  if -randexp() < (llr + prr + log(σ²p/σ²c))
     llc += llr::Float64
     prc += prr::Float64
     σ²c  = σ²p::Float64
@@ -835,13 +835,13 @@ function mhr_upd_ωx(ωxc      ::Float64,
                     ωxprior  ::Tuple{Float64,Float64},
                     ωxupd_llr::Function)
 
-  const ωxp = addupt(ωxc, rand() < .3 ? ωxtn : 4.*ωxtn)::Float64
+  ωxp = addupt(ωxc, rand() < 0.3 ? ωxtn : 4.0*ωxtn)::Float64
 
   #likelihood ratio
-  const llr = ωxupd_llr(Xc, LApc, LAnc, ωxc, ωxp, σ²c)::Float64
+  llr = ωxupd_llr(Xc, LApc, LAnc, ωxc, ωxp, σ²c)::Float64
 
   # prior ratio
-  const prr = llrdnorm_x(ωxp, ωxc, ωxprior[1], ωxprior[2])
+  prr = llrdnorm_x(ωxp, ωxc, ωxprior[1], ωxprior[2])
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -871,13 +871,13 @@ function mhr_upd_ω1(ω1c       ::Float64,
                     ω1prior   ::NTuple{2,Float64},
                     ω1upd_llr ::Function)
 
-  const ω1p = addupt(ω1c, rand() < .2 ? ω1tn : 2.*ω1tn)::Float64
+  ω1p = addupt(ω1c, rand() < 0.2 ? ω1tn : 2.0*ω1tn)::Float64
 
   # likelihood ratio
-  const llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
+  llr = ω1upd_llr(Yc, λ1c, ω1c, ω1p, LDc)
 
   # prior ratio
-  const prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
+  prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -907,13 +907,13 @@ function mhr_upd_ω0(ω0c      ::Float64,
                     ω0prior  ::NTuple{2,Float64},
                     ω0upd_llr::Function)
 
-  const ω0p = addupt(ω0c, rand() < .2 ? ω0tn : 2.*ω0tn)::Float64
+  ω0p = addupt(ω0c, rand() < 0.2 ? ω0tn : 2.0*ω0tn)::Float64
 
   # likelihood ratio
-  const llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)
+  llr = ω0upd_llr(Yc, λ0c, ω0c, ω0p, LDc)
 
   # prior ratio
-  const prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
+  prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
 
   if -randexp() < (llr + prr)
     llc += llr::Float64
@@ -947,14 +947,14 @@ function mhr_upd_λ1(λ1c      ::Float64,
                     λ1upd_llr::Function)
 
   # update λ
-  const λ1p = mulupt(λ1c, rand() < .3 ? λ1tn : 4.*λ1tn)::Float64
+  λ1p = mulupt(λ1c, rand() < 0.3 ? λ1tn : 4.0*λ1tn)::Float64
 
   # proposal likelihood and prior
-  const llr = λ1upd_llr(Yc, λ1c, λ1p, λ0c, ω1c, LDc, stemevc, brs)
+  llr = λ1upd_llr(Yc, λ1c, λ1p, λ0c, ω1c, LDc, stemevc, brs)
 
-  const prr = llrdexp_x(λ1p, λ1c, λprior)
+  prr = llrdexp_x(λ1p, λ1c, λprior)
 
-  if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ1p/λ1c))
+  if -randexp() < (llr + prr + log(λ1p/λ1c))
     llc += llr::Float64
     prc += prr::Float64
     λ1c  = λ1p::Float64
@@ -986,14 +986,14 @@ function mhr_upd_λ0(λ0c      ::Float64,
                     λ0upd_llr::Function)
 
   # update λ
-  const λ0p = mulupt(λ0c, rand() < .3 ? λ0tn : 4.*λ0tn)::Float64
+  λ0p = mulupt(λ0c, rand() < 0.3 ? λ0tn : 4.0*λ0tn)::Float64
 
   # proposal likelihood and prior
-  const llr = λ0upd_llr(Yc, λ1c, λ0c, λ0p, ω0c, LDc, stemevc, brs)
+  llr = λ0upd_llr(Yc, λ1c, λ0c, λ0p, ω0c, LDc, stemevc, brs)
 
-  const prr = llrdexp_x(λ0p, λ0c, λprior)
+  prr = llrdexp_x(λ0p, λ0c, λprior)
 
-  if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ0p/λ0c))
+  if -randexp() < (llr + prr + log(λ0p/λ0c))
     llc += llr::Float64
     prc += prr::Float64
     λ0c  = λ0p::Float64

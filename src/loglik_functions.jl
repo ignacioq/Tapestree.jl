@@ -56,7 +56,7 @@ function makellf(δt   ::Array{Float64,1},
                  nedge::Int64)
 
   # get initial range
-  const wf23 = Int64[]
+  wf23 = Int64[]
   for j = Base.OneTo(ntip)
     push!(wf23, findfirst(Y[:,j,1] .!= 23))
   end
@@ -68,7 +68,7 @@ function makellf(δt   ::Array{Float64,1},
   end
 
   # normal constant
-  const normC = -0.5*log(2.0π)*n
+  normC = -0.5*log(2.0π)*n
 
   function llf(X     ::Array{Float64,2},
                Y     ::Array{Int64,3}, 
@@ -645,7 +645,7 @@ function makellr_biogeo(Y    ::Array{Int64,3},
                         nedge::Int64)
 
   # which is 23 (23 = NaN) in each column
-  const wf23 = Int64[]
+  wf23 = Int64[]
   for j = Base.OneTo(ntip)
     push!(wf23, findfirst(Y[:,j,1] .!= 23))
   end
@@ -768,7 +768,7 @@ function makellf_bgiid(bridx_a::Array{Array{UnitRange{Int64},1},1},
                        m      ::Int64)
 
   # prepare δts
-  const δtA = Array{Float64,1}[]
+  δtA = Array{Float64,1}[]
 
   for j=bridx_a[1][1:(nedge-1)]
     inds = zeros(Int64,length(j) - 1)
@@ -964,7 +964,7 @@ function makellr_ωxσupd(δt  ::Vector{Float64},
                         ntip::Int64)
 
   # which is 23 (i.e., NaN) in each column
-  const w23 = UnitRange{Int64}[]
+  w23 = UnitRange{Int64}[]
   for i = Base.OneTo(ntip)
     non23 = find(Y[:,i,1] .!= 23)
     push!(w23,colon(non23[1],non23[end-1]))
@@ -1152,8 +1152,8 @@ function brll(brevs::Array{Float64,1}, λ1::Float64, λ0::Float64, si::Int64)
 
   ll::Float64 = 0.0
 
-  if endof(brevs) > 1 
-    for i = Base.OneTo(endof(brevs)-1)
+  if lastindex(brevs) > 1 
+    for i = Base.OneTo(lastindex(brevs)-1)
       ll += evll(brevs[i], iszero(si) ? λ1 : λ0)::Float64
       si  = 1 - si
     end
@@ -1172,7 +1172,7 @@ end
 
 Return log-likelihood for events.
 """
-evll(t::Float64, λ::Float64) = (Base.Math.JuliaLibm.log(λ) - (λ * t))::Float64
+evll(t::Float64, λ::Float64) = (log(λ) - (λ * t))::Float64
 
 
 
@@ -1197,7 +1197,7 @@ function evllr_ω(t  ::Float64,
       return 0.0
     else
       eϕp1 = 1.0 + exp(-δx) 
-      return (ωp - ωc) * Base.Math.JuliaLibm.log(eϕp1) + 
+      return (ωp - ωc) * log(eϕp1) + 
               t * λ * (eϕp1^ωc - eϕp1^ωp)
     end
   end
@@ -1223,10 +1223,10 @@ function evllr_λ(t ::Float64,
                  δx::Float64)
   @fastmath begin
     if iszero(δx)
-      return Base.Math.JuliaLibm.log(λp/λc) +
+      return log(λp/λc) +
              t * (λc - λp)
     else
-      return Base.Math.JuliaLibm.log(λp/λc) +
+      return log(λp/λc) +
              t * (1.0 + exp(-δx))^ω * (λc - λp)
     end
   end
@@ -1307,7 +1307,7 @@ Return log-prior for all areas
 function allλpr(λ1    ::Float64,
                 λ0    ::Float64,
                 λprior::Float64)
-  @fastmath 2.0*Base.Math.JuliaLibm.log(λprior) - λprior * (λ1 + λ0)
+  @fastmath 2.0*log(λprior) - λprior * (λ1 + λ0)
 end
 
 
@@ -1321,7 +1321,7 @@ Compute the logarithmic transformation of the
 **Exponential** density with mean `λ` for `x`.
 """
 logdexp(x::Float64, λ::Float64) = 
-  @fastmath Base.Math.JuliaLibm.log(λ) - λ * x
+  @fastmath log(λ) - λ * x
 
 
 
@@ -1347,9 +1347,9 @@ Compute the logarithmic transformation of the
 **Beta** density with shape `α` and shape `β` for `x`.
 """
 logdbeta(x::Float64, α::Float64, β::Float64) = 
-  @fastmath ((α-1.0) * Base.Math.JuliaLibm.log(x)                 +
-             (β-1.0) * Base.Math.JuliaLibm.log(1.0 - x)           +
-             Base.Math.JuliaLibm.log(gamma(α + β)/(gamma(α)*gamma(β))))
+  @fastmath ((α-1.0) * log(x)                 +
+             (β-1.0) * log(1.0 - x)           +
+             log(gamma(α + β)/(gamma(α)*gamma(β))))
 
 
 
@@ -1366,8 +1366,8 @@ function llrdbeta_x(xp::Float64, xc::Float64, α::Float64, β::Float64)
     if !(0.0 < xp < 1.0)
       return -Inf
     else
-      return ((α-1.0) * Base.Math.JuliaLibm.log(xp/xc) +
-              (β-1.0) * Base.Math.JuliaLibm.log((1.0 - xp)/(1.0 - xc)))
+      return ((α-1.0) * log(xp/xc) +
+              (β-1.0) * log((1.0 - xp)/(1.0 - xc)))
     end
   end
 end
@@ -1382,9 +1382,7 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  @fastmath -(0.5*Base.Math.JuliaLibm.log(2.0π) +
-              0.5*Base.Math.JuliaLibm.log(σ²)   +
-              (x - μ)^2/(2.0σ²))
+  @fastmath -(0.5*log(2.0π) + 0.5*log(σ²) + (x - μ)^2/(2.0σ²))
 
 
 
@@ -1397,8 +1395,7 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`, up to a constant
 """
 logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
-  @fastmath -0.5*Base.Math.JuliaLibm.log(σ²) - 
-            (x - μ)^2/(2.0σ²)::Float64
+  @fastmath -0.5*log(σ²) - (x - μ)^2/(2.0σ²)::Float64
 
 
 
@@ -1424,7 +1421,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `σ²` updates
 """
 llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) = 
-  @fastmath -0.5*(Base.Math.JuliaLibm.log(σ²p/σ²c) +
+  @fastmath -0.5*(log(σ²p/σ²c) +
                   (x - μ)^2*(1.0/σ²p - 1.0/σ²c))
 
 
@@ -1540,7 +1537,7 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale `scl` for `x`.
 """
 logdhcau(x::Float64, scl::Float64) = 
-  @fastmath Base.Math.JuliaLibm.log(2.0 * scl/(π *(x * x + scl * scl)))
+  @fastmath log(2.0 * scl/(π *(x * x + scl * scl)))
 
 
 
@@ -1553,7 +1550,7 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale of 1 for `x`.
 """
 logdhcau1(x::Float64) = 
-  @fastmath Base.Math.JuliaLibm.log(2.0/(π * (x * x + 1.)))
+  @fastmath log(2.0/(π * (x * x + 1.)))
 
 
 

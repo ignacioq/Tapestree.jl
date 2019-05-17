@@ -110,7 +110,7 @@ function trioupd(xpr::Float64,
                  td2::Float64,
                  σ²ϕ::Float64)
   @fastmath begin
-    t = 1./(1.0/tpr + 1.0/td1 + 1.0/td2)
+    t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
     randn()*sqrt(t*σ²ϕ) + (xpr/tpr + xd1/td1 + xd2/td2)*t
   end
 end
@@ -194,7 +194,7 @@ end
 Make scaling function given the objective acceptance rates.
 """
 function makescalef(obj_ar::Float64)
-  const nar::Float64 = 1.0 - obj_ar
+  nar::Float64 = 1.0 - obj_ar
 
   function f(window::Float64, rate::Float64)
     if rate > obj_ar
@@ -261,7 +261,7 @@ Make function for the stepsize for the adaptive update.
 """
 function makestepsize(η::Float64)
   
-  β::Float64 = rand(linspace((1./(1. + η)),1))
+  β::Float64 = rand(linspace((1.0/(1.0 + η)),1))
 
   function f(t::Float64, C::Float64)
     return (C/(t^β))::Float64
@@ -280,8 +280,8 @@ Make the multivariate update given the covariance matrix.
 """
 function makemvnproposal(Σ::Array{Float64,2})
 
-  const spde = *(eigvecs(Σ),sqrt.(diagm(eigvals(Σ))))
-  const ln   = size(spde,1)
+  spde = *(eigvecs(Σ),sqrt.(diagm(eigvals(Σ))))
+  ln   = size(spde,1)
 
   function f(pvec::Array{Float64,1})
     @fastmath (pvec .+ 

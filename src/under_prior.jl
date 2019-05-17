@@ -40,8 +40,8 @@ function tribe_mcmc(out_file::String;
                     fix_ω1  ::Bool              = false,
                     fix_ω0  ::Bool              = false)
 
-  const parvec = [1:6...]
-  const np = length(parvec)
+  parvec = [1:6...]
+  np = length(parvec)
 
   # add to parameter update vector according to weights
   append!(parvec, fill(1,ceil(Int64,np*weight[1])))
@@ -95,7 +95,7 @@ function tribe_mcmc(out_file::String;
 
           prr = llrdexp_x(λ1p, λ1c, λprior)
 
-          if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ1p/λ1c))
+          if -randexp() < (llr + prr + log(λ1p/λ1c))
             llc    += llr::Float64
             prc    += prr::Float64
             λ1c     = λ1p::Float64
@@ -111,7 +111,7 @@ function tribe_mcmc(out_file::String;
 
           prr = llrdexp_x(λ0p, λ0c, λprior)
 
-          if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ0p/λ0c))
+          if -randexp() < (llr + prr + log(λ0p/λ0c))
             llc     += llr::Float64
             prc     += prr::Float64
             λ0c      = λ0p::Float64
@@ -132,7 +132,7 @@ function tribe_mcmc(out_file::String;
           # prior ratio
           prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
-          if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(σ²p/σ²c))
+          if -randexp() < (llr + prr + log(σ²p/σ²c))
             llc += llr::Float64
             prc += prr::Float64
             σ²c  = σ²p::Float64
@@ -183,7 +183,7 @@ function tribe_mcmc(out_file::String;
           # prior ratio
           prr = llrdexp_x(ω0p, ω0c, ω0prior)
 
-          if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(ω0p/ω0c))
+          if -randexp() < (llr + prr + log(ω0p/ω0c))
             llc += llr
             prc += prr
             ω0c  = ω0p
@@ -246,24 +246,24 @@ function burn_tribe(σ²c     ::Float64,
   scalef = makescalef(obj_ar)
 
   # rest of tuning parameters
-  const ptn = fill(.1, np) 
+  ptn = fill(.1, np) 
 
   # initialize acceptance log
-  const ltn = zeros(Int64, np)
-  const lup = zeros(Int64, np)
-  const lac = zeros(Int64, np)
+  ltn = zeros(Int64, np)
+  lup = zeros(Int64, np)
+  lac = zeros(Int64, np)
 
   # progress bar
   p = Progress(nburn, dt=5, desc="burn...", barlen=20, color=:green)
 
   # print number of parameters
   print_with_color(:green,
-    "\nωx updates per iter = ", endof(filter(x -> x == 2,parvec)),
-    "\nω1 updates per iter = ", endof(filter(x -> x == 3,parvec)),
-    "\nω0 updates per iter = ", endof(filter(x -> x == 4,parvec)),
-    "\nσ² updates per iter = ", endof(filter(x -> x == 1,parvec)),
-    "\nλ1 updates per iter = ", endof(filter(x -> x == 5,parvec)),
-    "\nλ0 updates per iter = ", endof(filter(x -> x == 6,parvec)),
+    "\nωx updates per iter = ", lastindex(filter(x -> x == 2,parvec)),
+    "\nω1 updates per iter = ", lastindex(filter(x -> x == 3,parvec)),
+    "\nω0 updates per iter = ", lastindex(filter(x -> x == 4,parvec)),
+    "\nσ² updates per iter = ", lastindex(filter(x -> x == 1,parvec)),
+    "\nλ1 updates per iter = ", lastindex(filter(x -> x == 5,parvec)),
+    "\nλ0 updates per iter = ", lastindex(filter(x -> x == 6,parvec)),
     "\nθ  updates per iter = ", length(parvec), "\n")
 
   #start burnin
@@ -284,7 +284,7 @@ function burn_tribe(σ²c     ::Float64,
 
         prr = llrdexp_x(λ1p, λ1c, λprior)
 
-        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ1p/λ1c))
+        if -randexp() < (llr + prr + log(λ1p/λ1c))
           llc    += llr::Float64
           prc    += prr::Float64
           λ1c     = λ1p::Float64
@@ -301,7 +301,7 @@ function burn_tribe(σ²c     ::Float64,
 
         prr = llrdexp_x(λ0p, λ0c, λprior)
 
-        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(λ0p/λ0c))
+        if -randexp() < (llr + prr + log(λ0p/λ0c))
           llc     += llr::Float64
           prc     += prr::Float64
           λ0c      = λ0p::Float64
@@ -323,7 +323,7 @@ function burn_tribe(σ²c     ::Float64,
         # prior ratio
         prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
-        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(σ²p/σ²c))
+        if -randexp() < (llr + prr + log(σ²p/σ²c))
           llc += llr::Float64
           prc += prr::Float64
           σ²c  = σ²p::Float64
@@ -377,7 +377,7 @@ function burn_tribe(σ²c     ::Float64,
         # prior ratio
         prr = llrdexp_x(ω0p, ω0c, ω0prior)
 
-        if -randexp() < (llr + prr + Base.Math.JuliaLibm.log(ω0p/ω0c))
+        if -randexp() < (llr + prr + log(ω0p/ω0c))
           llc += llr
           prc += prr
           ω0c  = ω0p

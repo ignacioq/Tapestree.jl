@@ -14,16 +14,20 @@ May 01 2017
 
 
 
-
+# reprehensible code... but faster 
 """
-    bit_rejsam!(Y::Array{Int64,3}, idx::Array{Int64,1}, sf::Int64, λ1::Float64,  λ0::Float64,  cumts::Array{Float64,1})
+    bit_rejsam!(Y    ::Array{Int64,3},
+                idx  ::UnitRange{Int64},
+                sf   ::Int64,
+                λ1   ::Float64, 
+                λ0   ::Float64, 
+                cumts::Array{Float64,1})
 
 Bit rejection-sample a single branch
 given the start and end states and a
 vector of cumulative δtimes. It assigns to `Y`
 in place, avoiding extra memory allocation.
 """
-# reprehensible code... but faster 
 function bit_rejsam!(Y    ::Array{Int64,3},
                      idx  ::UnitRange{Int64},
                      sf   ::Int64,

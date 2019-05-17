@@ -734,14 +734,14 @@ function bbX!(X  ::Array{Float64,2},
 
     xf::Float64 = X[idx[end]]
 
-    for i = Base.OneTo(endof(t)-1)
+    for i = Base.OneTo(lastindex(t)-1)
       X[idx[i+1]] = (X[idx[i]] + randn()*sqrt((t[i+1] - t[i])*σ²ϕ))::Float64
     end
 
     invte::Float64 = 1.0/t[end]
     xdif ::Float64 = (X[idx[end]] - xf)
 
-    @simd for i = Base.OneTo(endof(t))
+    @simd for i = Base.OneTo(lastindex(t))
       X[idx[i]] = (X[idx[i]] - t[i] * invte * xdif)::Float64
     end
   end
