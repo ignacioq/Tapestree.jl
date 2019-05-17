@@ -301,7 +301,7 @@ function initialize_X!(tip_values::Dict{Int64,Float64},
       bb(X[l_i], X[l_f], δtM[wbranch])
   end
 
-  X[co2] = NaN
+  X[co2] .= NaN
 
   return si
 end
@@ -324,21 +324,16 @@ function initialize_Y!(tip_areas::Dict{Int64,Array{Int64,1}},
   ind = findall(!isnan, B)
   lB  = length(ind)
 
-
-
-
-
-  for a = 1: 
-    push!(ind, CartesianIndex(ind[1],1)
-
-  for i in 1:(na-1)
-    append!(ind, (ind[1:lB] + CartesianIndex(size(Y))))
+  # #D indices
+  indY = CartesianIndex{3}[]
+  for a = 1:size(Y,3), i = ind
+    push!(indY, CartesianIndex(i,a))
   end
 
-  Y[ind] = 1
+  Y[indY] .= 1
 
-  for i in Base.OneTo(nc)
-    @views Y[nr,i,:] = tip_areas[i]
+  for i in Base.OneTo(size(Y,2))
+    Y[end,i,:] = tip_areas[i]
   end
 
 end
