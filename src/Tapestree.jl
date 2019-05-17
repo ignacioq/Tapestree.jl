@@ -18,6 +18,7 @@ module Tapestree
   using RCall
   using Optim
   using ProgressMeter
+  using Random
 
   export tribe, 
          simulate_tribe

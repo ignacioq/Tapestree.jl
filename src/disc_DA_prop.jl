@@ -51,7 +51,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
         cur_t += rexp(λ1)::Float64
         f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s::Int64
+        Y[s:f] .= cur_s::Int64
         
         if f == idx_end
           break
@@ -64,7 +64,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
         cur_t += rexp(λ0)::Float64
         f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s::Int64
+        Y[s:f] .= cur_s::Int64
 
         if f == idx_end
           break
@@ -82,7 +82,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
         cur_t += rexp(λ0)::Float64
         f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s::Int64
+        Y[s:f] .= cur_s::Int64
         
         if f == idx_end
           break
@@ -95,7 +95,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
         cur_t += rexp(λ1)::Float64
         f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-        Y[s:f] = cur_s::Int64
+        Y[s:f] .= cur_s::Int64
 
         if f == idx_end
           break
@@ -125,7 +125,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
           cur_t += rexp(λ1)::Float64
           f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-          Y[s:f] = cur_s::Int64
+          Y[s:f] .= cur_s::Int64
           
           if f == idx_end
             break
@@ -138,7 +138,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
           cur_t += rexp(λ0)::Float64
           f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-          Y[s:f] = cur_s::Int64
+          Y[s:f] .= cur_s::Int64
 
           if f == idx_end
             break
@@ -156,7 +156,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
           cur_t += rexp(λ0)::Float64
           f      = (idx_1 + idxlessthan(cumts, cur_t))::Int64
 
-          Y[s:f] = cur_s::Int64
+          Y[s:f] .= cur_s::Int64
           
           if f == idx_end
             break
@@ -169,7 +169,7 @@ function bit_rejsam!(Y    ::Array{Int64,3},
           cur_t += rexp(λ1)::Float64
           f      = idx_1 + idxlessthan(cumts, cur_t)::Int64
 
-          Y[s:f] = cur_s::Int64
+          Y[s:f] .= cur_s::Int64
 
           if f == idx_end
             break

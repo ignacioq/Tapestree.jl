@@ -284,13 +284,14 @@ Make ragged array with indexes for each edge in `Y`.
 """
 function make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2}, ntip::Int64)
 
+  Bli = LinearIndices(B)
   bridx = UnitRange{Int64}[]
   for b in childs
-    bindices = find(b .== B)
+    bindices = Bli[findall(isequal(b), B)]
     if b != (ntip+1)
       pushfirst!(bindices, bindices[1] - 1)
     end
-    bidx = colon(bindices[1],bindices[end])
+    bidx = bindices[1]:bindices[end]
     push!(bridx, bidx)
   end
 
@@ -328,7 +329,7 @@ end
 
 
 """
-    maketriads(edges::Array{Int64,2})
+    maketriads(ed::Array{Int64,2})
 
 Make branch triads:
 returns a separate vector with indexes for each 
@@ -336,23 +337,24 @@ branch connecting to a node.
 First number is the parent branch
 second and third numbers each the daughters.
 """
-function maketriads(edges::Array{Int64,2})
+function maketriads(ed::Array{Int64,2})
 
   # internal nodes
-  ins::Array{Int64,1} = unique(edges[:,1])[1:(end-1)]
-  lins = length(ins)
+  ins = unique(ed[:,1])[1:(end-1)]::Array{Int64,1}
+
+  ed1 = ed[:,1]
+  ed2 = ed[:,2]
 
   trios = Array{Int64,1}[]
 
   # for all internal nodes
-  for i = Base.OneTo(lins)
-    ndi  = ins[i]
-    daus = find(edges[:,1] .== ndi)
-    pushfirst!(daus, find(edges[:,2] .== ndi)[1])
+  for i in ins
+    daus = findall(isequal(i), ed1)
+    pushfirst!(daus, findfirst(isequal(i), ed2))
     push!(trios, daus)
   end
 
-  return trios
+  return trios::Array{Array{Int64,1},1}
 end
 
 
@@ -366,16 +368,15 @@ Returns indices for columns along `m` timesteps.
 """
 function create_wcol(X::Array{Float64,2})
 
-  X_fornan  = copy(X)
-  wNaN_x    = .!isnan.(X_fornan[Base.OneTo(end),:])
+  wNaN_x = map(!isnan, X)
 
   # make ragged array for non-NaN columns
   wcol = Array{Int64,1}[]
   for i = Base.OneTo(size(X,1))
-    push!(wcol,find(wNaN_x[i,:]))
+    push!(wcol,findall(wNaN_x[i,:]))
   end
 
-  wcol
+  return wcol
 end
 
 

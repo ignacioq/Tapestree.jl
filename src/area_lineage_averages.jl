@@ -212,7 +212,7 @@ function lindiff!(LD   ::Array{Float64,3},
           xmin = x < xmin ? x : xmin
         end
       end
-      LD[i,l,k] = xmin == Inf ? 0.0 : xmin
+      LD[i,l,k] = isinf(xmin) ? 0.0 : xmin
     end
   end
 

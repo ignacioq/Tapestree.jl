@@ -77,8 +77,7 @@ function upnode!(λ1     ::Float64,
 
     # set new node in Y
     @simd for k in Base.OneTo(narea)
-      Y[bridx_a[k][d1][1]] = 
-      Y[bridx_a[k][d2][1]] = brs[pr,2,k]
+      Y[bridx_a[k][d1][1]] = Y[bridx_a[k][d2][1]] = brs[pr,2,k]
     end
 
     # sample a consistent history

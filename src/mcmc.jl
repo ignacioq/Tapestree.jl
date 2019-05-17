@@ -51,7 +51,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
                     fix_ω1  ::Bool              = false,
                     fix_ω0  ::Bool              = false)
 
-  print_with_color(:green, "Data successfully processed", bold = true)
+  printstyled("Data successfully processed", bold = true,color=:green)
 
   # dims
   m, ntip, narea  = size(Yc)
@@ -61,7 +61,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   Xnc2 = ncoup[:,2]
 
   # which nodes are not NaN in Xc
-  wXp = setdiff(find(map(x -> !isnan(x), Xc)), m:m:length(Xc))
+  wXp = setdiff(LinearIndices(Xc)[findall(!isnan, Xc)], m:m:length(Xc))
 
   # tie trait coupled nodes
   Xc[Xnc2] = Xc[Xnc1]
@@ -70,10 +70,11 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   wcol = create_wcol(Xc)
 
   # add a branch as long as the tree
-  stbrl = stbrl == 1. ? sum(δt) : stbrl
+  stbrl = isone(stbrl) ? sum(δt) : stbrl
 
   # add long stem branch
-  edges = cat(1, edges, [2*ntip ntip + 1])
+  edges = cat(edges, [2*ntip ntip + 1], dims = 1)
+
   push!(brl, stbrl)
 
   # number of edges
@@ -92,7 +93,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   for j = 2:narea
     bridxj = copy(bridx)
     for i in Base.OneTo(nedge)
-      bridxj[i] += (j-1)*(m*ntip)
+      bridxj[i] = (bridxj[i]) .+ (j-1)*(m*ntip)
     end
     push!(bridx_a, bridxj)
   end
@@ -117,8 +118,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   # Sample all internal node values according to Pr transitions
   for triad in trios
     λϕ1, λϕ0 = λϕprop()
-    while !upnode!(λϕ1, λϕ0, triad, Yc, stemevc, bridx_a, 
-                   brct, brl, brs, narea, nedge)
+    while !(upnode!(λϕ1, λϕ0, triad, Yc, stemevc, bridx_a, 
+                   brct, brl, brs, narea, nedge))
       λϕ1, λϕ0 = λϕprop()
     end
   end
@@ -220,7 +221,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   p = Progress(niter, dt=5, desc="mcmc...", barlen=20, color=:green)
 
   # create X parameter update function
-  mhr_upd_X = make_mhr_upd_X(Xnc1, Xnc2, wcol, ptn, wXp, m,
+  mhr_upd_X = make_mhr_upd_X(Xc, Xnc1, Xnc2, wcol, ptn, wXp, m,
                              narea, ntip, Xupd_llr, Rupd_llr)
 
   # write to file

@@ -27,7 +27,8 @@ June 20 2017
 
 Make DA update X.
 """
-function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
+function make_mhr_upd_X(X        ::Array{Float64,2},
+                        Xnc1     ::Array{Int64,1},
                         Xnc2     ::Array{Int64,1},
                         wcol     ::Array{Array{Int64,1},1},
                         ptn      ::Array{Float64,1},
@@ -38,7 +39,10 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                         Xupd_llr ::Function,
                         Rupd_llr ::Function)
 
-  rj = ind2sub((m,ntip), Xnc2[findfirst(Xnc1, 1)])[2]
+  #Cartesian Indices
+  Xcidx = CartesianIndices(X)
+
+  rj = Xcidx[Xnc2[findfirst(isone, Xnc1)]][2]
 
   xpi  = fill(NaN, ntip)
   δxi  = fill(NaN, ntip, ntip)
@@ -81,14 +85,14 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
 
         llr = Rupd_llr(xpi, Xc, σ²c)::Float64
 
-        if -randexp() < llr
+        if -Random.randexp() < llr
           llc    += llr::Float64
           Xc[1,:] = xpi::Array{Float64,1}
         end
 
       else
 
-        xi, xj = ind2sub(Xc, upx)
+        xi, xj = Xcidx[upx].I
 
         # allocate
         for j = Base.OneTo(ntip)
@@ -107,7 +111,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
         addupt!(xpi, ptn, xj, up)
 
         if in(upx, Xnc1)        # if an internal node
-          xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
+          xpi[Xcidx[Xnc2[findfirst(isequal(upx),Xnc1)]][2]] = xpi[xj]
         end
 
         # calculate new averages
@@ -121,7 +125,7 @@ function make_mhr_upd_X(Xnc1     ::Array{Int64,1},
                          ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
         end
 
-        if -randexp() < llr
+        if -Random.randexp() < llr
           llc        += llr::Float64
           Xc[xi,:]    = xpi::Array{Float64,1}
           δXc[:,:,xi] = δxi::Array{Float64,2}
@@ -180,7 +184,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Xp, Xc)
+    copyto!(Xp, Xc)
 
     upbranchX!(br, Xp, bridx, brδt, σ²ϕ)
 
@@ -198,13 +202,13 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                       stemevc, stemevc, brs, brs, σ²c)
     end
 
-    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
+    if -Random.randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
       llc += llr::Float64
-      copy!(Xc,   Xp)
-      copy!(δXc,  δXp)
-      copy!(LApc, LApp)
-      copy!(LAnc, LAnp)
-      copy!(LDc,  LDp)
+      copyto!(Xc,   Xp)
+      copyto!(δXc,  δXp)
+      copyto!(LApc, LApp)
+      copyto!(LAnc, LAnp)
+      copyto!(LDc,  LDp)
     end
 
     return llc::Float64
@@ -255,7 +259,7 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Xp, Xc)
+    copyto!(Xp, Xc)
 
     pr, d1, d2 = trio
 
@@ -275,17 +279,17 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
                       stemevc, stemevc, brs, brs, σ²c)
     end
 
-    if -randexp() < (llr + 
+    if -Random.randexp() < (llr + 
                      ((pr != nedge) ? 
                       llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ) : 0.0) +
                       llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
                       llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²ϕ))::Float64
       llc += llr::Float64
-      copy!(Xc,     Xp)
-      copy!(δXc,   δXp)
-      copy!(LApc, LApp)
-      copy!(LAnc, LAnp)
-      copy!(LDc,   LDp)
+      copyto!(Xc,     Xp)
+      copyto!(δXc,   δXp)
+      copyto!(LApc, LApp)
+      copyto!(LAnc, LAnp)
+      copyto!(LDc,   LDp)
     end
 
     return llc::Float64
@@ -341,7 +345,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Yp, Yc)
+    copyto!(Yp, Yc)
     @simd for k in Base.OneTo(narea) 
       stemevp[k] = copy(stemevc[k])
     end
@@ -364,15 +368,15 @@ function make_mhr_upd_Ybr(narea              ::Int64,
                   stemevc, stemevp, brs, brs, σ²c)
       end
 
-      if -randexp() < (llr + 
+      if -Random.randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs, br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevp, brs, br, λϕ1, λϕ0))
         llc += llr::Float64
-        copy!(Yc,   Yp)
-        copy!(δYc,  δYp)
-        copy!(LApc, LApp)
-        copy!(LAnc, LAnp)
-        copy!(LDc,  LDp)
+        copyto!(Yc,   Yp)
+        copyto!(δYc,  δYp)
+        copyto!(LApc, LApp)
+        copyto!(LAnc, LAnp)
+        copyto!(LDc,  LDp)
         # allocate stemevc
         @simd for k in Base.OneTo(narea)
           stemevc[k] = copy(stemevp[k])
@@ -445,8 +449,8 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Yp,    Yc)
-    copy!(brsp, brs)
+    copyto!(Yp,    Yc)
+    copyto!(brsp, brs)
 
     @simd for k in Base.OneTo(narea) 
       stemevp[k] = copy(stemevc[k])
@@ -470,17 +474,17 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
                         stemevc, stemevp, brs, brsp, σ²c)
       end
 
-      if -randexp() < (llr + 
+      if -Random.randexp() < (llr + 
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
                        bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0))
 
         llc += llr
-        copy!(Yc,   Yp)
-        copy!(δYc,  δYp)
-        copy!(LApc, LApp)
-        copy!(LAnc, LAnp)
-        copy!(LDc,  LDp)
-        copy!(brs,  brsp)
+        copyto!(Yc,   Yp)
+        copyto!(δYc,  δYp)
+        copyto!(LApc, LApp)
+        copyto!(LAnc, LAnp)
+        copyto!(LDc,  LDp)
+        copyto!(brs,  brsp)
         # allocate stemevc
         @simd for k in Base.OneTo(narea) 
           stemevc[k] = copy(stemevp[k])
@@ -545,13 +549,13 @@ function make_mhr_upd_XYbr(narea    ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-  copy!(Yp, Yc)
+  copyto!(Yp, Yc)
 
   # if an successful sample
   if upbranchY!(λϕ1, λϕ0, br, Yp, stemevc, 
                 bridx_a, brδt, brl[nedge], brs, narea, nedge)
 
-      copy!(Xp, Xc)
+      copyto!(Xp, Xc)
       upbranchX!(br, Xp, bridx, brδt, σ²ϕ)
 
       deltaXY!(δXp, δYp, Xp, Yp, wcol, m, ntip, narea)
@@ -568,18 +572,18 @@ function make_mhr_upd_XYbr(narea    ::Int64,
                   stemevc, stemevc, brs, brs, σ²c)
       end
 
-      if -randexp() < (llr + 
+      if -Random.randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs, br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevc, brs, br, λϕ1, λϕ0) +
                        llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
         llc += llr::Float64
-        copy!(Xc,   Xp)
-        copy!(Yc,   Yp)
-        copy!(δXc,  δXp)
-        copy!(δYc,  δYp)
-        copy!(LApc, LApp)
-        copy!(LAnc, LAnp)
-        copy!(LDc,  LDp)
+        copyto!(Xc,   Xp)
+        copyto!(Yc,   Yp)
+        copyto!(δXc,  δXp)
+        copyto!(δYc,  δYp)
+        copyto!(LApc, LApp)
+        copyto!(LAnc, LAnp)
+        copyto!(LDc,  LDp)
       end
 
       return llc::Float64
@@ -655,8 +659,8 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
              brs    ::Array{Int64,3},
              stemevc::Array{Array{Float64,1},1})
 
-    copy!(Yp,    Yc)
-    copy!(brsp, brs)
+    copyto!(Yp,    Yc)
+    copyto!(brsp, brs)
     @simd for k in Base.OneTo(narea) 
       stemevp[k] = copy(stemevc[k])
     end
@@ -665,7 +669,7 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
     if upnode!(λϕ1, λϕ0, triad, Yp, stemevp,
                bridx_a, brδt, brl, brsp, narea, nedge)
 
-      copy!(Xp, Xc)
+      copyto!(Xp, Xc)
       pr, d1, d2 = triad
 
       uptrioX!(pr, d1, d2, Xp, bridx, brδt, brl, σ²ϕ, nedge)
@@ -684,7 +688,7 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
                   stemevc, stemevp, brs, brsp, σ²c)
       end
 
-      if -randexp() < (llr + 
+      if -Random.randexp() < (llr + 
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
                        bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0) +
                        ((pr != nedge) ? 
@@ -692,14 +696,14 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
                        llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
                        llr_bm(Xc, Xp, bridx[d2], brδt[d2], σ²ϕ))::Float64
         llc += llr
-        copy!(Xc,   Xp)
-        copy!(Yc,   Yp)
-        copy!(δXc,  δXp)
-        copy!(δYc,  δYp)
-        copy!(LApc, LApp)
-        copy!(LAnc, LAnp)
-        copy!(LDc,  LDp)
-        copy!(brs,  brsp)
+        copyto!(Xc,   Xp)
+        copyto!(Yc,   Yp)
+        copyto!(δXc,  δXp)
+        copyto!(δYc,  δYp)
+        copyto!(LApc, LApp)
+        copyto!(LAnc, LAnp)
+        copyto!(LDc,  LDp)
+        copyto!(brs,  brsp)
         @simd for k in Base.OneTo(narea) 
           stemevc[k] = copy(stemevp[k])
         end
@@ -739,7 +743,7 @@ function make_mhr_upd_Ystem(stbrl::Float64,
              stemevc::Array{Array{Float64,1},1},
              brs    ::Array{Int64,3})
 
-    copy!(brsp, brs)
+    copyto!(brsp, brs)
     @simd for k in Base.OneTo(narea) 
       stemevp[k] = copy(stemevc[k])
     end
@@ -750,10 +754,10 @@ function make_mhr_upd_Ystem(stbrl::Float64,
       llr = stem_llr(λ1c, λ0c, brs, brsp, stemevc, stemevp, narea, nedge)
 
       # likelihood ratio
-      if -randexp() < (llr + stemiid_propr(λϕ1, λϕ0, brs, brsp, 
+      if -Random.randexp() < (llr + stemiid_propr(λϕ1, λϕ0, brs, brsp, 
                                            stemevc, stemevp, narea, nedge))
         llc += llr::Float64
-        copy!(brs, brsp)
+        copyto!(brs, brsp)
         @simd for k in Base.OneTo(narea) 
           stemevc[k] = copy(stemevp[k])
         end
@@ -807,7 +811,7 @@ function mhr_upd_σ²(σ²c      ::Float64,
   # prior ratio
   prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
-  if -randexp() < (llr + prr + log(σ²p/σ²c))
+  if -Random.randexp() < (llr + prr + log(σ²p/σ²c))
     llc += llr::Float64
     prc += prr::Float64
     σ²c  = σ²p::Float64
@@ -843,7 +847,7 @@ function mhr_upd_ωx(ωxc      ::Float64,
   # prior ratio
   prr = llrdnorm_x(ωxp, ωxc, ωxprior[1], ωxprior[2])
 
-  if -randexp() < (llr + prr)
+  if -Random.randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ωxc  = ωxp::Float64
@@ -879,7 +883,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
   # prior ratio
   prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
-  if -randexp() < (llr + prr)
+  if -Random.randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ω1c  = ω1p::Float64
@@ -915,7 +919,7 @@ function mhr_upd_ω0(ω0c      ::Float64,
   # prior ratio
   prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
 
-  if -randexp() < (llr + prr)
+  if -Random.randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ω0c  = ω0p::Float64
@@ -954,7 +958,7 @@ function mhr_upd_λ1(λ1c      ::Float64,
 
   prr = llrdexp_x(λ1p, λ1c, λprior)
 
-  if -randexp() < (llr + prr + log(λ1p/λ1c))
+  if -Random.randexp() < (llr + prr + log(λ1p/λ1c))
     llc += llr::Float64
     prc += prr::Float64
     λ1c  = λ1p::Float64
@@ -993,7 +997,7 @@ function mhr_upd_λ0(λ0c      ::Float64,
 
   prr = llrdexp_x(λ0p, λ0c, λprior)
 
-  if -randexp() < (llr + prr + log(λ0p/λ0c))
+  if -Random.randexp() < (llr + prr + log(λ0p/λ0c))
     llc += llr::Float64
     prc += prr::Float64
     λ0c  = λ0p::Float64

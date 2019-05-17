@@ -69,7 +69,7 @@ function burn_tribe(total_llf     ::Function,
                     obj_ar  ::Float64 = 0.234,
                     tune_int::Int64   = 100)
 
-  m, ntip, narea  = size(Yc)
+  m, ntip, narea = size(Yc)
 
   nedge = size(brs, 1) 
 
@@ -92,7 +92,7 @@ function burn_tribe(total_llf     ::Function,
   scalef = makescalef(obj_ar)
 
   # rest of tuning parameters
-  ptn = fill(.1, np) 
+  ptn = fill(0.1, np) 
 
   # initialize acceptance log
   ltn = zeros(Int64, np)
@@ -112,14 +112,16 @@ function burn_tribe(total_llf     ::Function,
   p = Progress(nburn, dt=5, desc="burn...", barlen=20, color=:green)
 
   # print number of parameters
-  print_with_color(:green,
+  printstyled(
     "\nωx updates per iter = ", lastindex(filter(x -> x == 2,parvec)),
     "\nω1 updates per iter = ", lastindex(filter(x -> x == 3,parvec)),
     "\nω0 updates per iter = ", lastindex(filter(x -> x == 4,parvec)),
     "\nσ² updates per iter = ", lastindex(filter(x -> x == 1,parvec)),
     "\nλ1 updates per iter = ", lastindex(filter(x -> x == 5,parvec)),
     "\nλ0 updates per iter = ", lastindex(filter(x -> x == 6,parvec)),
-    "\nθ  updates per iter = ", length(parvec), "\n")
+    "\nθ  updates per iter = ", length(parvec), "\n", color = :green)
+
+  Xcidx = CartesianIndices(Xc)
 
   #start burnin
   for it = Base.OneTo(nburn)
@@ -152,7 +154,7 @@ function burn_tribe(total_llf     ::Function,
 
             llr = Rupd_llr(xpi, Xc, σ²c)::Float64
 
-            if -randexp() < llr
+            if -Random.randexp() < llr
               llc     += llr::Float64
               Xc[1,:]  = xpi::Array{Float64,1}
               lac[up] += 1   # log acceptance
@@ -160,7 +162,7 @@ function burn_tribe(total_llf     ::Function,
 
           else
 
-            xi, xj = ind2sub(Xc, upx)
+            xi, xj = Xcidx[upx].I
 
             # allocate
             for j = Base.OneTo(ntip)
@@ -179,7 +181,7 @@ function burn_tribe(total_llf     ::Function,
             addupt!(xpi, ptn, xj, up)
 
             if in(upx, Xnc1)        # if an internal node
-              xpi[ind2sub(Xc, Xnc2[findfirst(Xnc1, upx)])[2]] = xpi[xj]::Float64
+              xpi[Xcidx[Xnc2[findfirst(isequal(upx),Xnc1)]][2]] = xpi[xj]
             end
 
             # calculate new averages
@@ -194,7 +196,7 @@ function burn_tribe(total_llf     ::Function,
                              ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
             end
 
-            if -randexp() < llr
+            if -Random.randexp() < llr
               llc        += llr::Float64
               Xc[xi,:]    = xpi::Array{Float64,1}
               δXc[:,:,xi] = δxi::Array{Float64,2}
@@ -216,7 +218,7 @@ function burn_tribe(total_llf     ::Function,
 
         prr = llrdexp_x(λ1p, λ1c, λprior)
 
-        if -randexp() < (llr + prr + log(λ1p/λ1c))
+        if -Random.randexp() < (llr + prr + log(λ1p/λ1c))
           llc    += llr::Float64
           prc    += prr::Float64
           λ1c     = λ1p::Float64
@@ -241,7 +243,7 @@ function burn_tribe(total_llf     ::Function,
 
         prr = llrdexp_x(λ0p, λ0c, λprior)
 
-        if -randexp() < (llr + prr + log(λ0p/λ0c))
+        if -Random.randexp() < (llr + prr + log(λ0p/λ0c))
           llc     += llr::Float64
           prc     += prr::Float64
           λ0c      = λ0p::Float64
@@ -271,7 +273,7 @@ function burn_tribe(total_llf     ::Function,
         # prior ratio
         prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
-        if -randexp() < (llr + prr + log(σ²p/σ²c))
+        if -Random.randexp() < (llr + prr + log(σ²p/σ²c))
           llc += llr::Float64
           prc += prr::Float64
           σ²c  = σ²p::Float64
@@ -284,13 +286,12 @@ function burn_tribe(total_llf     ::Function,
         ωxp = addupt(ωxc, ptn[2])::Float64
 
         #likelihood ratio
-
         llr = ωxupd_llr(Xc, LApc, LAnc, ωxc, ωxp, σ²c)
 
         # prior ratio
         prr = llrdnorm_x(ωxp, ωxc, ωxprior[1], ωxprior[2])
 
-        if -randexp() < (llr + prr)
+        if -Random.randexp() < (llr + prr)
           llc += llr::Float64
           prc += prr::Float64
           ωxc  = ωxp::Float64
@@ -308,7 +309,7 @@ function burn_tribe(total_llf     ::Function,
         # prior ratio
         prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
-        if -randexp() < (llr + prr)
+        if -Random.randexp() < (llr + prr)
           llc += llr::Float64
           prc += prr::Float64
           ω1c  = ω1p::Float64
@@ -334,7 +335,7 @@ function burn_tribe(total_llf     ::Function,
         # prior ratio
         prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
 
-        if -randexp() < (llr + prr)
+        if -Random.randexp() < (llr + prr)
           llc += llr
           prc += prr
           ω0c  = ω0p
@@ -405,7 +406,7 @@ function burn_tribe(total_llf     ::Function,
       lup[up] += 1
 
       if (in(tune_int,ltn))
-        wts = find(map(x -> x == tune_int,ltn))      # which to scale
+        wts = findall(isequal(tune_int),ltn)      # which to scale
         for j = wts
           ar     = lac[j]/lup[j]
           ptn[j] = scalef(ptn[j],ar)

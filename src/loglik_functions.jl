@@ -963,12 +963,14 @@ function makellr_ωxσupd(δt  ::Vector{Float64},
                         Y   ::Array{Int64,3}, 
                         ntip::Int64)
 
-  # which is 23 (i.e., NaN) in each column
+
+  # which is not 23 (i.e., NaN) in each column
   w23 = UnitRange{Int64}[]
   for i = Base.OneTo(ntip)
-    non23 = find(Y[:,i,1] .!= 23)
-    push!(w23,colon(non23[1],non23[end-1]))
+    non23 = findall(!isequal(23), Y[:,i,1])
+    push!(w23, non23[1]:non23[end-1])
   end
+
 
   function fωx(X  ::Array{Float64,2},
                LAp::Array{Float64,2},
