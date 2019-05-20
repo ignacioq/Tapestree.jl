@@ -37,7 +37,7 @@ function simulate_sse(λ       ::Array{Float64,1},
                       δt      ::Float64 = 1e-3) where N
 
   # make simulation
-  ed, el, st, simt, af!, r, S, h = 
+  ed, el, st, simt, af!, r, S, k, h = 
     simulate_edges(λ, μ, l, g, q, β, x, y, nspp, δt, cov_mod)
 
   # organize in postorder
@@ -230,7 +230,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   end
 
   # make state change vectors
-  gtos, μtos, qtos, λtos = makecorresschg(gpr, μpr, qpr, λpr, S, as, hs, ns)
+  gtos, μtos, qtos, λtos = makecorresschg(gpr, μpr, qpr, λpr, S, as, hs, k, ns)
 
 
   # start simulation
@@ -424,7 +424,7 @@ function simulate_edges(λ       ::Array{Float64,1},
 
   insert!(st,findfirst(isequal(da), ea),stf)
 
-  return ed, el, st, simt, af!, r, S, h
+  return ed, el, st, simt, af!, r, S, k, h
 end
 
 
@@ -828,6 +828,7 @@ function makecorresschg(gpr::Array{Array{Float64,1},1},
                         S  ::Array{Sgh, 1},
                         as::UnitRange{Int64},
                         hs::UnitRange{Int64},
+                        k ::Int64,
                         ns::Int64)
   # for *gains*
   gtos = Array{Int64,1}[]
