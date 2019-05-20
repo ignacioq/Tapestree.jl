@@ -565,9 +565,6 @@ end
     end
   end
 
-
-  println("lpf \n", eq)
-
   return quote 
     @inbounds begin
       lq = $eq
