@@ -623,8 +623,6 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     eqs.args[append!([(end-(ns*2)+1):2:end...],
             [(end-(ns*2)+2):2:end...])]
 
-  println(eqs)
-
   return quote 
     @inbounds begin
       $eqs

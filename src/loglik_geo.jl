@@ -325,9 +325,6 @@ Generated function for full tree likelihood at the root.
 
   push!(eqs.args, :($eq))
 
-  println("root_full  \n", eqs)
-
-
   return quote
     @inbounds begin
       $eqs
@@ -467,8 +464,6 @@ Generated function for speciation event likelihoods
       push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
     end
   end
-
-  println("λevent  \n", eqs)
 
   return quote 
     @inbounds begin
