@@ -9,45 +9,7 @@ January 12 2017
 =#
 
 
-using Statistics
-include(*(homedir(),"/repos/ESSE.jl/src/approx_fun.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/tree_utils.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/ode_solve.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/slice_sampler_utils.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/wrapper.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/utils.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/egeohisse_slice_sampler.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/egeohisse_eqs.jl"))
-include(*(homedir(),"/repos/ESSE.jl/src/loglik_geo.jl"))
 
-
-h = 2
-k = 3
-
-
-λ = rand((k+1)*h) .* 0.1
-μ = rand(k*h) .* 0.1
-l = rand(k*h) .* 0.1
-g = rand(k*(k-1)*h) .* 0.1
-q = rand(h*(h-1)) .* 0.1
-β = randn(k*h)
-
-
-x = cumsum(rand(100))
-x[1] = 0.0
-y = randn(100, k)
-cumsum!(y, y, dims = 1)
-# standardize y
-me = Statistics.mean(y,dims=1)
-va = Statistics.var(y,dims=1)
-for j in axes(y,2), i in axes(y,1)
-  y[i,j] -= me[j]
-  y[i,j] /= va[j]
-end
-
-cov_mod = "speciation"
-nspp    = 20
-δt      = 1e-3
 
 
 """
