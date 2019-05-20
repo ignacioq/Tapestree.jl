@@ -18,8 +18,7 @@ using Optim
 using ProgressMeter
 using Random
 
-export tribe, 
-       simulate_tribe
+export tribe, simulate_tribe
 
 include("utils.jl")
 include("tribe_utils.jl")
