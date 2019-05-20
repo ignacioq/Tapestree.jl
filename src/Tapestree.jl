@@ -15,27 +15,27 @@ __precompile__()
 
 module Tapestree
 
-  using RCall
-  using Optim
-  using ProgressMeter
-  using Random
+using RCall
+using Optim
+using ProgressMeter
+using Random
 
-  export tribe, 
-         simulate_tribe
+export tribe, 
+       simulate_tribe
 
-  include("utils.jl")
-  include("tribe_utils.jl")
-  include("cont_DA_prop.jl")
-  include("disc_DA_prop.jl")
-  include("data_initializer.jl")
-  include("area_lineage_averages.jl")
-  include("loglik_functions.jl")
-  include("mcmc.jl")
-  include("parameter_updates.jl")
-  include("mcmc_burn.jl")
-  include("under_prior.jl")
-  include("proposal_functions.jl")
-  include("tribe_wrapper.jl")
-  include("sim_utils.jl")
+include("utils.jl")
+include("tribe_utils.jl")
+include("cont_DA_prop.jl")
+include("disc_DA_prop.jl")
+include("data_initializer.jl")
+include("area_lineage_averages.jl")
+include("loglik_functions.jl")
+include("mcmc.jl")
+include("parameter_updates.jl")
+include("mcmc_burn.jl")
+include("under_prior.jl")
+include("proposal_functions.jl")
+include("tribe_wrapper.jl")
+include("sim_utils.jl")
 
 end # module Tapestree
