@@ -14,21 +14,21 @@ Quintero, I. and Landis, Michael J. Interdependent Phenotypic and Biogeographic 
 ## Usage
 
 ### Requirements:
-  * Julia v0.6.x (I'm working on updating the code for v1.x) 
+  * Julia v1.1.x
   * Tapestree Package installed (Not available from Julia package repository yet. Please clone the repo and run: 
     ```julia
     push!(LOAD_PATH, expanduser("cloned_repo_dir"))
     using Tapestree
     ```
-    Change `cloned_repo_dir` with the directory pointing where Tapestree was cloned to. Note that if you clone this repo into the `/.julia/lib/v0.6/` directory (usually in the home folder when installing Julia) you can load Tapestree by using only `using Tapestree`. 
-  * Packages `RCall`, `Optim` and `ProgressMeter`. Use `Pkg.add("package_name")` for Julia v0.6.x.
+    Change `cloned_repo_dir` with the directory pointing where Tapestree was cloned to. 
+  * Packages `RCall`, `Optim` and `ProgressMeter`. Install packages by typing `]` in the julia prompt and typing `add package_name`.
   * R installed
   * R `ape` package installed.
 
 ### Inference
 
 
-1. Open Julia v0.6.x
+1. Open Julia v1.1
 
 2. Load Tapestree package: 
 ```julia
@@ -85,28 +85,19 @@ fix_ω0  = false                      # a boolean to make inference without ω0.
 
 ### Simulation
 
-1. Open Julia v0.6.x
-
-2. Load Tapestree package: 
-```julia
-push!(LOAD_PATH, expanduser("cloned_repo_dir"))
-using Tapestree
-```
-
-3. Specify the path to the phylogenetic tree (in a format that `ape` can read):
+1. Specify the path to the phylogenetic tree (in a format that `ape` can read):
 ```julia
 finches_tree_file = "/directory_where_Tapestree_was_cloned/Tapestree/data/finches_rescaled.tre"
 ```
 
-4. Perform simulation (here with 0.0 as the inital trait value and 6 areas on the finches tree)
+2. Perform simulation (here with 0.0 as the inital trait value and 6 areas on the finches tree)
 ```julia
 x_init  = 0.0
 n_areas = 6
 tip_values, tip_areas, tree, bts = simulate_tribe(x_init, n_areas, finches_tree_file)
 ```
 
-
-5. Further options for `simulate_tribe()` are
+3. Further options for `simulate_tribe()` are
 ```julia
 ωx       = 0.0   # a float for simulated value of ωx.
 σ²       = 0.5   # a float for simulated value of σ².
@@ -117,12 +108,12 @@ tip_values, tip_areas, tree, bts = simulate_tribe(x_init, n_areas, finches_tree_
 const_δt = 1e-4  # a float for the delta t used to approximate the simulation (lower values are more accurate but at a slight computation cost).
 ```
 
-6. Specify output file (`homedir()` is an alias to your home folder)
+4. Specify output file (`homedir()` is an alias to your home folder)
 ```julia
 out_file  = *(homedir(),"...")
 ```
 
-7. Run the `tribe()` (optional parameters are the same as with inference):
+5. Run the `tribe()` (optional parameters are the same as with inference):
 ```julia
 tribe(tip_values, tip_areas, tree, bts, out_file)
 ```
