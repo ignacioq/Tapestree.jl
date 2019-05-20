@@ -10,8 +10,6 @@ t(-_-t)
 
 =#
 
-__precompile__()
-
 
 module Tapestree
 
