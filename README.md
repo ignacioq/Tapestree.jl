@@ -28,7 +28,7 @@ Quintero, I. and Landis, Michael J. Interdependent Phenotypic and Biogeographic 
 ### Inference
 
 
-1. Open Julia v1.1
+1. Open Julia v1.1.x
 
 2. Load Tapestree package: 
 ```julia
