@@ -79,11 +79,9 @@ function duoupd(xd1::Float64,
                 td1::Float64, 
                 td2::Float64,
                 σ²ϕ::Float64)
-  @fastmath begin
-    invt = 1.0/(td1 + td2)
-    randn()*sqrt(td1 * td2 * invt * σ²ϕ) + 
-    (td2 * invt * xd1 + td1 * invt * xd2)
-  end
+  invt = 1.0/(td1 + td2)
+  randn()*sqrt(td1 * td2 * invt * σ²ϕ) + 
+  (td2 * invt * xd1 + td1 * invt * xd2)
 end
 
 
@@ -109,10 +107,9 @@ function trioupd(xpr::Float64,
                  td1::Float64, 
                  td2::Float64,
                  σ²ϕ::Float64)
-  @fastmath begin
+
     t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
     randn()*sqrt(t*σ²ϕ) + (xpr/tpr + xd1/td1 + xd2/td2)*t
-  end
 end
 
 
@@ -178,11 +175,9 @@ vecind(row::Int64, col::Int64, nrow::Int64) = row + nrow*(col - 1)
 Estimate probability of collision.
 """
 function Pc(λ1::Float64, λ0::Float64, δt::Float64)
-  @fastmath begin
     λt = (λ1 + λ0)*δt
     er = exp(-λt)
     return 1.0 - er - λt*er
-  end
 end
 
 
@@ -221,7 +216,7 @@ function globalscalef(λ       ::Float64,
                       grate   ::Float64, 
                       stepsize::Float64, 
                       obj_ar  ::Float64)
-  return @fastmath (exp(log(λ) + stepsize * (grate - obj_ar)))::Float64
+  return (exp(log(λ) + stepsize * (grate - obj_ar)))::Float64
 end
 
 
@@ -284,9 +279,9 @@ function makemvnproposal(Σ::Array{Float64,2})
   ln   = size(spde,1)
 
   function f(pvec::Array{Float64,1})
-    @fastmath (pvec .+ 
-               BLAS.gemv('N', spde, randn(ln))::Array{Float64,1}
-               )::Array{Float64,1}
+    (pvec .+ 
+     BLAS.gemv('N', spde, randn(ln))::Array{Float64,1}
+     )::Array{Float64,1}
   end
 
   return f

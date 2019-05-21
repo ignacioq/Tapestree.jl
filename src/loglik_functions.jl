@@ -19,7 +19,7 @@ May 15 2017
 
 Return the expected value given the weighted average with sympatric species.
 """
-Eδx(μ::Float64, ωx::Float64, δt::Float64) = @fastmath ωx * μ * δt
+Eδx(μ::Float64, ωx::Float64, δt::Float64) = ωx * μ * δt
 
 
 
@@ -1194,14 +1194,12 @@ function evllr_ω(t  ::Float64,
                  ωp::Float64,
                  λ ::Float64,
                  δx ::Float64)
-  @fastmath begin
-    if iszero(δx)
-      return 0.0
-    else
-      eϕp1 = 1.0 + exp(-δx) 
-      return (ωp - ωc) * log(eϕp1) + 
-              t * λ * (eϕp1^ωc - eϕp1^ωp)
-    end
+  if iszero(δx)
+    return 0.0
+  else
+    eϕp1 = 1.0 + exp(-δx) 
+    return (ωp - ωc) * log(eϕp1) + 
+            t * λ * (eϕp1^ωc - eϕp1^ωp)
   end
 end
 
@@ -1223,14 +1221,12 @@ function evllr_λ(t ::Float64,
                  λc::Float64,
                  λp::Float64,
                  δx::Float64)
-  @fastmath begin
-    if iszero(δx)
-      return log(λp/λc) +
-             t * (λc - λp)
-    else
-      return log(λp/λc) +
-             t * (1.0 + exp(-δx))^ω * (λc - λp)
-    end
+  if iszero(δx)
+    return log(λp/λc) +
+           t * (λc - λp)
+  else
+    return log(λp/λc) +
+           t * (1.0 + exp(-δx))^ω * (λc - λp)
   end
 end
 
@@ -1309,7 +1305,7 @@ Return log-prior for all areas
 function allλpr(λ1    ::Float64,
                 λ0    ::Float64,
                 λprior::Float64)
-  @fastmath 2.0*log(λprior) - λprior * (λ1 + λ0)
+  2.0*log(λprior) - λprior * (λ1 + λ0)
 end
 
 
@@ -1323,7 +1319,7 @@ Compute the logarithmic transformation of the
 **Exponential** density with mean `λ` for `x`.
 """
 logdexp(x::Float64, λ::Float64) = 
-  @fastmath log(λ) - λ * x
+  log(λ) - λ * x
 
 
 
@@ -1336,7 +1332,7 @@ Compute the loglik ratio of the
 `xp` given current `xc` both with mean `λ`.
 """
 llrdexp_x(xp::Float64, xc::Float64, λ::Float64) = 
-  @fastmath λ * (xc - xp)
+  λ * (xc - xp)
 
 
 
@@ -1349,9 +1345,9 @@ Compute the logarithmic transformation of the
 **Beta** density with shape `α` and shape `β` for `x`.
 """
 logdbeta(x::Float64, α::Float64, β::Float64) = 
-  @fastmath ((α-1.0) * log(x)                 +
-             (β-1.0) * log(1.0 - x)           +
-             log(gamma(α + β)/(gamma(α)*gamma(β))))
+  ((α-1.0) * log(x)                 +
+  (β-1.0) * log(1.0 - x)           +
+  log(gamma(α + β)/(gamma(α)*gamma(β))))
 
 
 
@@ -1364,13 +1360,11 @@ Compute the logarithmic ratio for the **Beta** density
 with shape `α` and shape `β` between `xp` and `xc`.
 """
 function llrdbeta_x(xp::Float64, xc::Float64, α::Float64, β::Float64) 
-  @fastmath begin
-    if !(0.0 < xp < 1.0)
-      return -Inf
-    else
-      return ((α-1.0) * log(xp/xc) +
-              (β-1.0) * log((1.0 - xp)/(1.0 - xc)))
-    end
+  if !(0.0 < xp < 1.0)
+    return -Inf
+  else
+    return ((α-1.0) * log(xp/xc) +
+            (β-1.0) * log((1.0 - xp)/(1.0 - xc)))
   end
 end
 
@@ -1384,7 +1378,7 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  @fastmath -(0.5*log(2.0π) + 0.5*log(σ²) + (x - μ)^2/(2.0σ²))
+  -(0.5*log(2.0π) + 0.5*log(σ²) + (x - μ)^2/(2.0σ²))
 
 
 
@@ -1397,7 +1391,7 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`, up to a constant
 """
 logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
-  @fastmath -0.5*log(σ²) - (x - μ)^2/(2.0σ²)::Float64
+  -0.5*log(σ²) - (x - μ)^2/(2.0σ²)::Float64
 
 
 
@@ -1410,7 +1404,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `ωx` updates
 """
 llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64) =
-  @fastmath (-(x - xi - μp)^2 + (x - xi - μc)^2)/(2.0σ²)
+  (-(x - xi - μp)^2 + (x - xi - μc)^2)/(2.0σ²)
 
 
 
@@ -1423,8 +1417,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `σ²` updates
 """
 llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) = 
-  @fastmath -0.5*(log(σ²p/σ²c) +
-                  (x - μ)^2*(1.0/σ²p - 1.0/σ²c))
+  -0.5*(log(σ²p/σ²c) + (x - μ)^2*(1.0/σ²p - 1.0/σ²c))
 
 
 
@@ -1437,7 +1430,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `μ` updates
 """
 llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
-  @fastmath ((x - μc)^2 - (x - μp)^2)/(2.0σ²)
+  ((x - μc)^2 - (x - μp)^2)/(2.0σ²)
 
 
 
@@ -1450,7 +1443,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `x` updates
 """
 llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
-  @fastmath ((xc - μ)^2 - (xp - μ)^2)/(2.0σ²)
+  ((xc - μ)^2 - (xp - μ)^2)/(2.0σ²)
 
 
 
@@ -1462,7 +1455,7 @@ Compute the log-likelihood ratio for the **Normal** density
 for `x` and `μ` updates
 """
 llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64) =
-  @fastmath ((xc - μc)^2 - (xp - μp)^2)/(2.0σ²)
+  ((xc - μc)^2 - (xp - μp)^2)/(2.0σ²)
 
 
 
@@ -1478,8 +1471,8 @@ function logdtnorm(x::Float64, σ²::Float64)
   if x < -1.0 
     return -Inf
   else
-    return @fastmath (-x^2/(2.0*σ²) - 0.5*log(2.0π) - log(0.5*sqrt(σ²)) -
-                      log(1.0 - erf_custom(-1.0/(sqrt(2.0σ²)))))
+    return (-x^2/(2.0*σ²) - 0.5*log(2.0π) - log(0.5*sqrt(σ²)) -
+            log(1.0 - erf_custom(-1.0/(sqrt(2.0σ²)))))
   end
 end
 
@@ -1497,7 +1490,7 @@ function llrdtnorm_x(xp::Float64, xc::Float64, σ²::Float64)
   if xp < -1.0 
     return -Inf
   else
-    return @fastmath (xc^2 - xp^2)/(2.0σ²)
+    return (xc^2 - xp^2)/(2.0σ²)
   end
 end
 
@@ -1539,7 +1532,7 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale `scl` for `x`.
 """
 logdhcau(x::Float64, scl::Float64) = 
-  @fastmath log(2.0 * scl/(π *(x * x + scl * scl)))
+  log(2.0 * scl/(π *(x * x + scl * scl)))
 
 
 
@@ -1552,7 +1545,7 @@ Compute the logarithmic transformation of the
 **Half-Cauchy** density with scale of 1 for `x`.
 """
 logdhcau1(x::Float64) = 
-  @fastmath log(2.0/(π * (x * x + 1.)))
+  log(2.0/(π * (x * x + 1.)))
 
 
 

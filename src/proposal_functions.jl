@@ -729,7 +729,7 @@ function bbX!(X  ::Array{Float64,2},
               t  ::Array{Float64,1},
               σ²ϕ::Float64)
 
-  @inbounds @fastmath begin
+  @inbounds begin
 
     xf::Float64 = X[idx[end]]
 

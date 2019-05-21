@@ -312,7 +312,7 @@ function traitsam_1step!(Xt  ::Array{Float64,1},
                          ωx  ::Float64, 
                          n   ::Int64)
 
-  @inbounds @fastmath begin
+  @inbounds begin
 
     for i in Base.OneTo(n)
       Xt[i] += Eδx(la[i], ωx, δt) + randn()*rate

@@ -98,8 +98,6 @@ after time `t` for rates of gain `λ1` and loss `λ0`.
 function Ptrfast(λ1::Float64, 
                  λ0::Float64, 
                  t::Float64)
-  
-  @fastmath begin
 
     ex   ::Float64 = exp(-(λ1 + λ0)*t)
     sd1  ::Float64 = 1.0/(λ1 + λ0)
@@ -108,7 +106,6 @@ function Ptrfast(λ1::Float64,
 
     ((sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex)), 
      (sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)))
-  end
 end
 
 
@@ -128,14 +125,11 @@ function Ptrfast_start(λ1   ::Float64,
                        t    ::Float64, 
                        ::Type{Val{0}})
 
-  @fastmath begin
+  ex   ::Float64 = exp(-(λ1 + λ0)*t)
+  sd1  ::Float64 = 1.0/(λ1 + λ0)
+  λ1ex ::Float64 = λ1*ex
 
-    ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1.0/(λ1 + λ0)
-    λ1ex ::Float64 = λ1*ex
-
-    return sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex) 
-  end
+  return sd1*(λ0 + λ1ex), sd1*(λ1 - λ1ex) 
 end
 
 
@@ -155,14 +149,11 @@ function Ptrfast_start(λ1   ::Float64,
                        t    ::Float64, 
                        ::Type{Val{1}})
 
-  @fastmath begin
+  ex   ::Float64 = exp(-(λ1 + λ0)*t)
+  sd1  ::Float64 = 1.0/(λ1 + λ0)
+  λ0ex ::Float64 = λ0*ex
 
-    ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1.0/(λ1 + λ0)
-    λ0ex ::Float64 = λ0*ex
-
-    return sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)
-  end
+  return sd1*(λ0 - λ0ex), sd1*(λ1 + λ0ex)
 end
 
 
@@ -180,14 +171,11 @@ function Ptrfast_end(λ1   ::Float64,
                      λ0   ::Float64, 
                      t    ::Float64, 
                      ::Type{Val{0}})
-  
-  @fastmath begin
 
-    ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1.0/(λ1 + λ0)
+  ex   ::Float64 = exp(-(λ1 + λ0)*t)
+  sd1  ::Float64 = 1.0/(λ1 + λ0)
 
-    return sd1*(λ0 + λ1*ex), sd1*(λ0 - λ0*ex)
-  end
+  return sd1*(λ0 + λ1*ex), sd1*(λ0 - λ0*ex)
 end
 
 
@@ -204,14 +192,11 @@ function Ptrfast_end(λ1   ::Float64,
                      λ0   ::Float64, 
                      t    ::Float64, 
                      ::Type{Val{1}})
-  
-  @fastmath begin
 
-    ex   ::Float64 = exp(-(λ1 + λ0)*t)
-    sd1  ::Float64 = 1.0/(λ1 + λ0)
+  ex   ::Float64 = exp(-(λ1 + λ0)*t)
+  sd1  ::Float64 = 1.0/(λ1 + λ0)
 
-    return sd1*(λ1 - λ1*ex), sd1*(λ1 + λ0*ex)
-  end
+  return sd1*(λ1 - λ1*ex), sd1*(λ1 + λ0*ex)
 end
 
 
@@ -394,15 +379,12 @@ function collision(λ1   ::Float64,
                    λ0   ::Float64, 
                    nδts  ::Array{Float64,1})
 
-  @fastmath begin
-
-    p = 1.0
-    for t in nδts
-      p *= 1.0 - Pc(λ1, λ0, t)
-    end
-
-    return 1.0 - p
+  p = 1.0
+  for t in nδts
+    p *= 1.0 - Pc(λ1, λ0, t)
   end
+
+  return 1.0 - p
 end
 
 
