@@ -40,6 +40,10 @@ function simulate_sse(λ       ::Array{Float64,1},
   ed, el, st, simt, af!, r, S, k, h = 
     simulate_edges(λ, μ, l, g, q, β, x, y, nspp, δt, cov_mod)
 
+  if ed == 0
+    return 0, 0, 0, 0, 0
+  end
+
   # organize in postorder
   ed     = numberedges(ed, nspp)
   ed, el = postorderedges(ed, el, nspp)
@@ -216,7 +220,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   updμpr! = make_updμpr!(μ, β, μpr, Sμpr, δt, k, model, md)
   updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, model, md, as, S)
   updqpr! = make_updqpr!(Sqpr)
-  
+
 
   # preallocate states probabilities for specific lengths of each event
   svλ = Array{Float64,1}[]
@@ -285,7 +289,9 @@ function simulate_edges(λ       ::Array{Float64,1},
           if ned == 3
             printstyled("What would you do if an endangered animal is eating an endangered plant? Sometimes nature is too cruel... \n", 
               color=:light_red)
-            error("tree went extinct... rerun simulation")
+            printstyled("tree went extinct... rerun simulation",
+              color=:light_red)
+            return 0, 0, 0, 0, 0, 0, 0, 0, 0
           end
 
           @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
