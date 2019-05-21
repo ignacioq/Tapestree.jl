@@ -19,7 +19,7 @@ Updated 17 01 2019
 Estimate val according to linear interpolation for a range.
 """
 linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) = 
-  @fastmath (y1 + (val - x1)*(y2 - y1)/(x2 - x1))::Float64
+  (y1 + (val - x1)*(y2 - y1)/(x2 - x1))::Float64
 
 
 

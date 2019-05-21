@@ -287,7 +287,7 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  @fastmath -(0.5*log(2.0π) + 0.5*log(σ²) + abs2(x - μ)/(2.0 * σ²))::Float64
+  -(0.5*log(2.0π) + 0.5*log(σ²) + abs2(x - μ)/(2.0 * σ²))::Float64
 
 
 
@@ -299,7 +299,7 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
 Compute the logarithmic transformation of the 
 **Exponential** density with mean `λ` for `x`.
 """
-logdexp(x::Float64, λ::Float64) = @fastmath (log(λ) - λ * x)::Float64
+logdexp(x::Float64, λ::Float64) = (log(λ) - λ * x)::Float64
 
 
 
@@ -312,14 +312,12 @@ Make function to compute the logarithmic transformation of the
 **Uniform** density with lower bound `a` and upper bound `b` for `x`.
 """
 function logdunif(x::Float64, a::Float64, b::Float64)
-  @fastmath begin
-    if x < a 
-      return -Inf
-    elseif x <= b 
-      return -log(b-a)::Float64
-    else 
-      return -Inf
-    end
+  if x < a 
+    return -Inf
+  elseif x <= b 
+    return -log(b-a)::Float64
+  else 
+    return -Inf
   end
 end
 

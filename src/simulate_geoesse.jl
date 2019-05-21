@@ -148,8 +148,8 @@ function simulate_edges(λ       ::Array{Float64,1},
                         δt      ::Float64,
                         cov_mod::String) where N
 
-  h::Int64 = Int64((sqrt(length(q)*4 + 1) + 1)/2)
-  k::Int64 = div(length(l), h)
+  h = Int64((sqrt(length(q)*4 + 1) + 1)/2)
+  k = div(length(l), h)
 
   # if multidimensional
   md = N > 1
@@ -216,6 +216,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   updμpr! = make_updμpr!(μ, β, μpr, Sμpr, δt, k, model, md)
   updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, model, md, as, S)
   updqpr! = make_updqpr!(Sqpr)
+  
 
   # preallocate states probabilities for specific lengths of each event
   svλ = Array{Float64,1}[]
