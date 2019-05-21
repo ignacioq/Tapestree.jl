@@ -21,14 +21,16 @@ November 20 2017
                   y          ::Array{Float64},
                   esse_mod   ::String,
                   out_file   ::String;
-                  constraints::NTuple{N,String} = (" ",),
-                  niter      ::Int64            = 10_000,
-                  nthin      ::Int64            = 10,
-                  λpriors    ::Float64          = .1,
-                  μpriors    ::Float64          = .1,
-                  qpriors    ::Float64          = .1)
+                  constraints::NTuple{N,String}  = (" ",),
+                  niter      ::Int64             = 10_000,
+                  nthin      ::Int64             = 10,
+                  λpriors    ::Float64           = .1,
+                  μpriors    ::Float64           = .1,
+                  qpriors    ::Float64           = .1,
+                  βpriors    ::NTuple{2,Float64} = (-1.0,1.0),
+                  optimal_w  ::Float64           = 0.8) where {N}
 
-Run slice-sampling Markov Chain for MuSSE model.
+Run slice-sampling Markov Chain for ESSE model.
 """
 function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        ed         ::Array{Int64,2},

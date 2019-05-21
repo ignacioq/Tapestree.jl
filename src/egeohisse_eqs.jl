@@ -17,7 +17,7 @@ Created 18 03 2019
     exp_expr(k    ::Int64,
              h    ::Int64,
              ny   ::Int64,
-             model::NTuple{3,Bool})
+             model::Int64)
 
 Return exponential expression for one time evaluation of covariates.
 """
