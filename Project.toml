@@ -1,7 +1,7 @@
 name = "Tapestree"
 uuid = "cd6db766-07eb-5897-84c0-92a6c9b887bd"
 authors = ["Ignacio Quintero Mächler <ignacioquinterom@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
