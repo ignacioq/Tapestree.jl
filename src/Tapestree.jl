@@ -17,6 +17,7 @@ using RCall
 using Optim
 using ProgressMeter
 using Random
+using DelimitedFiles
 
 export tribe, simulate_tribe
 

@@ -39,14 +39,14 @@ function read_data(tree_file::String,
 
   tip_labels = Dict(i => val for (val,i) = enumerate(tree.tlab))
 
-  data = readdlm(data_file)
+  data = DelimitedFiles.readdlm(data_file)
 
   if size(data,1) != (tree.nnod + 1)
-    data = readdlm(data_file, '\t', '\r')
+    data = DelimitedFiles.readdlm(data_file, '\t', '\r')
   end
 
   if size(data,1) != (tree.nnod + 1)
-    data = readdlm(data_file, '\t', '\n')
+    data = DelimitedFiles.readdlm(data_file, '\t', '\n')
   end
 
   if size(data,1) != (tree.nnod + 1) 

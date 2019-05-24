@@ -4,6 +4,7 @@ authors = ["Ignacio Quintero Mächler <ignacioquinterom@gmail.com>"]
 version = "0.1.1"
 
 [deps]
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 RCall = "6f49c342-dc21-5d91-9882-a32aef131414"
