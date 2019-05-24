@@ -1,11 +1,8 @@
 # Tapestree
 
 [![Travis](https://travis-ci.org/ignacioq/Tapestree.jl.svg?branch=master)](https://travis-ci.org/ignacioq/Tapestree.jl)
-
 [![AppVeyor](https://ci.appveyor.com/api/projects/status/ks4wkrv6d4qw5wn1?svg=true)](https://ci.appveyor.com/project/ignacioq/tapestree-jl)
-
 [![Coverage Status](https://coveralls.io/repos/ignacioq/Tapestree.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/ignacioq/Tapestry.jl?branch=master)
-
 [![codecov.io](http://codecov.io/github/ignacioq/Tapestree.jl/coverage.svg?branch=master)](http://codecov.io/github/ignacioq/Tapestry.jl?branch=master)
 
 ## Reference
