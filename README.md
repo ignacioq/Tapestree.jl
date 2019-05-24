@@ -15,13 +15,7 @@ Quintero, I. and Landis, Michael J. Interdependent Phenotypic and Biogeographic 
 
 ### Requirements:
   * Julia v1.1.x
-  * Tapestree Package installed (Not available from Julia package repository yet. Please clone the repo and run: 
-    ```julia
-    push!(LOAD_PATH, expanduser("cloned_repo_dir"))
-    using Tapestree
-    ```
-    Change `cloned_repo_dir` with the directory pointing where Tapestree was cloned to. 
-  * Packages `RCall`, `Optim` and `ProgressMeter`. Install packages by typing `]` in the julia prompt and typing `add package_name`.
+  * `Tapestree` Package installed along with `RCall`, `Optim` and `ProgressMeter`. Install packages by typing `]` in the julia prompt and typing `add <package_name>`. For example, for Tapestree: `add Tapestree`.
   * R installed
   * R `ape` package installed.
 
@@ -32,7 +26,6 @@ Quintero, I. and Landis, Michael J. Interdependent Phenotypic and Biogeographic 
 
 2. Load Tapestree package: 
 ```julia
-push!(LOAD_PATH, expanduser("cloned_repo_dir"))
 using Tapestree
 ```
 
