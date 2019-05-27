@@ -13,19 +13,6 @@ June 14 2017
 
 
 
-
-"""
-Immutable type of an R tree `phylo` object type.
-"""
-struct rtree
-  ed  ::Array{Int64,2}
-  el  ::Array{Float64,1}
-  tlab::Array{String,1}
-  nnod::Int64
-end
-
-
-
 """
     read_data(tree_file::String, data_file::String; delim::Char = '\t', eol::Char = '\r')
 
@@ -66,49 +53,6 @@ function read_data(tree_file::String,
 
   return tip_values, tip_areas, tree, bts
 end
-
-
-
-
-
-"""
-    read_tree(tree_file::String)
-
-Function to read a tree using `RCall`
-to call **ape** tree reading capabilities. 
-"""
-function read_tree(tree_file::String)
-
-  str = reval("""
-              library(\"ape\")
-              tree     <- read.tree('$tree_file') 
-              tree     <- reorder(tree)
-              edge     <- .subset2(tree,'edge')
-              Nnode    <- .subset2(tree,'Nnode')
-              tiplabel <- .subset2(tree,'tip.label')
-              edlength <- .subset2(tree,'edge.length')
-              list(edge,Nnode,tiplabel,edlength)
-              """)
-
-  edge     = rcopy(str[1])
-  edge     = convert(Array{Int64},edge)
-  Nnode    = rcopy(str[2])
-  Nnode    = convert(Int64,Nnode)
-  tiplabel = rcopy(str[3])
-  edlength = rcopy(str[4])
-  edlength = convert(Array{Float64},edlength)
-
-  tree = rtree(edge, edlength, tiplabel, Nnode)
-
-  brtimes = reval("""
-                  brtimes <- branching.times(tree)
-                  """)
-
-  brtimes = rcopy(brtimes)
-
-  return tree, brtimes
-end
-
 
 
 
