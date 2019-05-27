@@ -13,18 +13,6 @@ September 23 2017
 
 
 
-"""
-    logdnorm(x::Float64, μ::Float64, σ²::Float64)
-  
-Compute the logarithmic transformation of the 
-**Normal** density with mean `μ` and variance `σ²` for `x`.
-"""
-logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  -(0.5*log(2.0π) + 0.5*log(σ²) + (x - μ)^2/(2.0σ²))
-
-
-
-
 
 """
     logdexp(x::Float64, λ::Float64)
