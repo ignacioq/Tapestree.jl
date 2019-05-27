@@ -314,30 +314,6 @@ end
 
 
 
-"""
-    check_negs(x::Array{Float64,1}, k::Int64)
-
-Return `true` if any in x is less or equal than 0.  
-"""
-function check_negs(x::Array{Float64,1}, k::Int64)
-  @inbounds begin
-    for i in Base.OneTo(k)
-      if x[i] < 0.0 
-        return true
-      end
-    end
-    return false
-  end
-end
-
-
-
-
-
-
-
-
-
 
 
 

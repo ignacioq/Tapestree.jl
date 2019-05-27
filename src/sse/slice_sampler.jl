@@ -14,24 +14,25 @@ November 20 2017
 
 
 """
-    slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
-                  ed         ::Array{Int64,2},
-                  el         ::Array{Float64,1},
-                  x          ::Array{Float64,1},
-                  y          ::Array{Float64},
-                  cov_mod    ::String,
-                  out_file   ::String;
-                  h          ::Int64             = 2,
-                  constraints::NTuple{N,String}  = (" ",),
-                  niter      ::Int64             = 10_000,
-                  nthin      ::Int64             = 10,
-                  λpriors    ::Float64           = .1,
-                  μpriors    ::Float64           = .1,
-                  gpriors    ::Float64           = .1,
-                  lpriors    ::Float64           = .1,
-                  qpriors    ::Float64           = .1,
-                  βpriors    ::NTuple{2,Float64} = (0.0, 5.0),
-                  optimal_w  ::Float64           = 0.8) where {N}
+    slice_sampler(tip_val     ::Dict{Int64,Array{Float64,1}},
+                  ed          ::Array{Int64,2},
+                  el          ::Array{Float64,1},
+                  x           ::Array{Float64,1},
+                  y           ::Array{Float64},
+                  cov_mod     ::String,
+                  out_file    ::String,
+                  h           ::Int64;
+                  constraints ::NTuple{N,String}  = (" ",),
+                  niter       ::Int64             = 10_000,
+                  nthin       ::Int64             = 10,
+                  λpriors     ::Float64           = .1,
+                  μpriors     ::Float64           = .1,
+                  gpriors     ::Float64           = .1,
+                  lpriors     ::Float64           = .1,
+                  qpriors     ::Float64           = .1,
+                  βpriors     ::NTuple{2,Float64} = (0.0, 5.0),
+                  optimal_w   ::Float64           = 0.8,
+                  screen_print::Int64             = 5) where {N}
 
 Run slice-sampling Markov Chain for EGeoSSE model.
 """
@@ -41,8 +42,8 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        x          ::Array{Float64,1},
                        y          ::Array{Float64},
                        cov_mod    ::String,
-                       out_file   ::String;
-                       h          ::Int64             = 2,
+                       out_file   ::String,
+                       h          ::Int64;
                        constraints::NTuple{N,String}  = (" ",),
                        niter      ::Int64             = 10_000,
                        nthin      ::Int64             = 10,
@@ -52,7 +53,8 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        lpriors    ::Float64           = .1,
                        qpriors    ::Float64           = .1,
                        βpriors    ::NTuple{2,Float64} = (0.0, 5.0),
-                       optimal_w  ::Float64           = 0.8) where {N}
+                       optimal_w  ::Float64           = 0.8,
+                       screen_print::Int64            = 5) where {N}
 
   # k areas
   k = length(tip_val[1])::Int64
@@ -118,13 +120,13 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   lhf = make_lhf(llf, lpf, conp)
 
   # estimate optimal w
-  p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w)
+  p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w, screen_print)
 
   #=
   run slice sampling
   =#
   its, hlog, ps = 
-    loop_slice_sampler(lhf, p, nnps, nps, w, npars, niter, nthin)
+    loop_slice_sampler(lhf, p, nnps, nps, w, npars, niter, nthin, screen_print)
 
   # save samples
   R = hcat(its, hlog, ps)

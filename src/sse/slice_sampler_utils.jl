@@ -26,14 +26,15 @@ September 23 2017
 
 Run slice sampling.
 """
-function loop_slice_sampler(lhf      ::Function, 
-                            p        ::Array{Float64,1},
-                            nnps     ::Array{Int64,1},
-                            nps      ::Array{Int64,1},
-                            w        ::Array{Float64,1},
-                            npars    ::Int64,
-                            niter    ::Int64,
-                            nthin    ::Int64)
+function loop_slice_sampler(lhf         ::Function, 
+                            p           ::Array{Float64,1},
+                            nnps        ::Array{Int64,1},
+                            nps         ::Array{Int64,1},
+                            w           ::Array{Float64,1},
+                            npars       ::Int64,
+                            niter       ::Int64,
+                            nthin       ::Int64,
+                            screen_print::Int64)
 
   nlogs = fld(niter,nthin)
   its   = zeros(Float64,nlogs)
@@ -46,7 +47,7 @@ function loop_slice_sampler(lhf      ::Function,
   pp = copy(p)
 
   # start iterations
-  prog = Progress(niter, 5, "running slice-sampler...", 20)
+  prog = Progress(niter, screen_print, "running slice-sampler...", 20)
 
   hc = lhf(p)
 
@@ -88,16 +89,23 @@ end
 
 
 """
-    w_sampler(lhf, p::Array{Float64,1}, pupd::Array{Int64,1})
+    w_sampler(lhf         ::Function, 
+                   p           ::Array{Float64,1},
+                   nnps        ::Array{Int64,1},
+                   nps         ::Array{Int64,1},
+                   npars       ::Int64,
+                   optimal_w   ::Float64,
+                   screen_print::Int64)
 
 Run 100 iterations of the sampler to estimate appropriate w's.
 """
-function w_sampler(lhf      ::Function, 
-                   p        ::Array{Float64,1},
-                   nnps     ::Array{Int64,1},
-                   nps      ::Array{Int64,1},
-                   npars    ::Int64,
-                   optimal_w::Float64)
+function w_sampler(lhf         ::Function, 
+                   p           ::Array{Float64,1},
+                   nnps        ::Array{Int64,1},
+                   nps         ::Array{Int64,1},
+                   npars       ::Int64,
+                   optimal_w   ::Float64,
+                   screen_print::Int64)
 
   w  = ones(npars)
   ps = Array{Float64,2}(undef, 100, npars)
@@ -108,7 +116,7 @@ function w_sampler(lhf      ::Function,
   # preallocate pp
   pp = Array{Float64,1}(undef, npars)
 
-  prog = Progress(100, 5, "estimating optimal widths...", 20)
+  prog = Progress(100, screen_print, "estimating optimal widths...", 20)
 
   for it in Base.OneTo(100)
 
