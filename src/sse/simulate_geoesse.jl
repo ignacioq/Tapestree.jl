@@ -13,16 +13,18 @@ January 12 2017
 
 
 """
-    simulate_esse(λ       ::Array{Float64,1}, 
-            μ       ::Array{Float64,1},
-            Q       ::Array{Float64,2},
-            x       ::Array{Float64,1},
-            y       ::Array{Float64,1},
-            cov_mod::String;
-            nspp    ::Int64   = 20,
-            δt      ::Float64 = 1e-3)
+    simulate_sse(λ       ::Array{Float64,1},
+                 μ       ::Array{Float64,1},
+                 l       ::Array{Float64,1},
+                 g       ::Array{Float64,1},
+                 q       ::Array{Float64,1},
+                 β       ::Array{Float64,1},
+                 x       ::Array{Float64,1},
+                 y       ::Array{Float64,N};
+                 cov_mod ::String  = "speciation",
+                 δt      ::Float64 = 1e-4)
 
-Simulate tree according to ESSE.
+Simulate tree according to EGeoHiSSE.
 """
 function simulate_sse(λ       ::Array{Float64,1},
                       μ       ::Array{Float64,1},
@@ -33,95 +35,29 @@ function simulate_sse(λ       ::Array{Float64,1},
                       x       ::Array{Float64,1},
                       y       ::Array{Float64,N};
                       cov_mod ::String  = "speciation",
-                      nspp    ::Int64   = 20,
-                      δt      ::Float64 = 1e-3) where N
+                      δt      ::Float64 = 1e-4) where N
 
   # make simulation
-  ed, el, st, simt, af!, r, S, k, h = 
-    simulate_edges(λ, μ, l, g, q, β, x, y, nspp, δt, cov_mod)
+  ed, el, st, simt, n, af!, r, S, k, h = 
+    simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod)
 
   if ed == 0
-    return 0, 0, 0, 0, 0
+    return 0, 0, 0
   end
 
   # organize in postorder
-  ed     = numberedges(ed, nspp)
-  ed, el = postorderedges(ed, el, nspp)
+  ed     = numberedges(ed, n)
+  ed, el = postorderedges(ed, el, n)
 
-  tip_val = Dict(i => st[i] for i = 1:nspp)
+  tip_val = Dict(i => st[i] for i = 1:n)
 
   ##
   # organize new x and y for inference
-  th = tree_height(el, ed, nspp)
-
-  # is y multidimensional
-  md = N > 1
-
-  # if simulation time is equal to simulated tree height
-  if isapprox(th, simt, atol = 1e-9)
-
-    idx = searchsortedlast(x, simt)
-
-    nx = x[1:idx]
-
-    push!(nx, th)
-    
-    af!(th, r)
-
-    if md
-      ny = y[1:idx, :]
-      ny = vcat(ny, reshape(r,(1,:)))
-    else
-      ny = y[1:idx]
-      push!(ny, reshape(r,(1,:)))
-    end
-
-    ny = reverse(ny, dims = 1)
-
-  # if simulation time is not equal to simulated tree height
-  else
-    idxs = searchsortedlast(x, simt)
-    idxt = searchsortedlast(x, th)
-
-    # new start
-    nzero = simt - th
-
-    idxz = searchsortedfirst(x, nzero)
-
-    nx = x[idxz:idxs]
-    ny = y[idxz:idxs, :]
-
-    # push to time
-    pushfirst!(nx, nzero)
-    push!(nx, simt)
-
-    # make x start at 0
-    nx .-= nzero
-
-    af!(nzero, r)
-
-    if md
-      ny = y[idxz:idxs, :]
-      ny = vcat(ny, reshape(r,(1,:)))
-    else
-      ny = y[idxz:idxs]
-      push!(ny, reshape(r,(1,:)))
-    end
-    
-    af!(th, r)
-
-    if md
-      ny = vcat(ny, reshape(r,(1,:)))
-    else
-      push!(ny, reshape(r,(1,:)))
-    end
-
-    ny = reverse(ny, dims = 1)
-  end
+  th = tree_height(el, ed, n)
 
   tip_val = states_to_values(tip_val, S, k)
 
-  return tip_val, ed, el, nx, ny
+  return tip_val, ed, el
 end
 
 
@@ -148,7 +84,6 @@ function simulate_edges(λ       ::Array{Float64,1},
                         β       ::Array{Float64,1},
                         x       ::Array{Float64,1},
                         y       ::Array{Float64, N},
-                        nspp    ::Int64,
                         δt      ::Float64,
                         cov_mod::String) where N
 
@@ -162,7 +97,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   model = id_mod(cov_mod, k, h, size(y,2), λ, μ, l, g, q, β)
 
   # total simulation time
-  simt = 0.0
+  simt = x[end]
 
   # make approximate time function
   af! = make_af(x, y, Val(size(y,2)))
@@ -170,8 +105,8 @@ function simulate_edges(λ       ::Array{Float64,1},
   # preallocate af! result vector 
   r = Array{Float64,1}(undef, size(y,2))
 
-  # get function estimates at `0.0`
-  af!(0.0, r)
+  # get function estimates at `simt`
+  af!(simt, r)
 
   # create states
   S = create_states(k, h)
@@ -204,12 +139,12 @@ function simulate_edges(λ       ::Array{Float64,1},
   st = fill(si, 2)
 
   # edge array
-  ed = zeros(Int64, 2nspp, 2)
+  ed = zeros(Int64, 40_000, 2)
   ed[ea,:] = [1 2;
               1 3]
 
   # edge lengths
-  el = zeros(2nspp)
+  el = zeros(40_000)
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
@@ -242,7 +177,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   while true
 
     # keep track of time
-    simt += δt
+    simt -= δt
 
     # estimate `z(simt)`
     af!(simt, r)
@@ -271,7 +206,7 @@ function simulate_edges(λ       ::Array{Float64,1},
       =#
       if rand() < updμpr!(sti, S[sti], r)
 
-        # if global extinction
+        # if extinction
         if isone(length(S[sti].g))
 
           # update time in other extant lineages
@@ -291,7 +226,7 @@ function simulate_edges(λ       ::Array{Float64,1},
               color=:light_red)
             printstyled("tree went extinct... rerun simulation",
               color=:light_red)
-            return 0, 0, 0, 0, 0, 0, 0, 0, 0
+            return 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
           end
 
           @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
@@ -407,32 +342,23 @@ function simulate_edges(λ       ::Array{Float64,1},
 
     end
 
-    n == nspp + 1 && break
+    simt < 0.0 && break
+
+    if n == 20_000 
+      @warn "more than 20_000 species"
+      break
+    end
   end
 
-  ## remove last species and organize
-  # identify daughter node and delete last two edges
-  @views da = findfirst(isequal(ed[end,1]), ed[:,2])
-
-  ed = ed[1:(2nspp-2),:]
-  el = el[1:(2nspp-2)]
-
-  # organize extant species
-  pop!(ea)
-  pop!(ea)
-  push!(ea,da)
+  # remove 0s
+  ed = ed[1:(2n-2),:]
+  el = el[1:(2n-2)]
 
   sort!(ea)
 
-  # organize extant states
-  stf = st[end]
-  pop!(st)
-  pop!(st)
-
-  insert!(st,findfirst(isequal(da), ea),stf)
-
-  return ed, el, st, simt, af!, r, S, k, h
+  return ed, el, st, simt, n, af!, r, S, k, h
 end
+
 
 
 

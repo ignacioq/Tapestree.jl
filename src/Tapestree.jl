@@ -52,7 +52,7 @@ include("tribe/proposal_functions.jl")
 include("tribe/tribe_wrapper.jl")
 include("tribe/tribe_simulation_utils.jl")
 
-#ESSE
+#*SSE
 include("sse/musse_eqs.jl")
 include("sse/esse_eqs.jl")
 include("sse/states_handling.jl")
