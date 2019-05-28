@@ -73,6 +73,9 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
   # get absolute times of branches as related to z(t)
   elrt = abs_time_branches(el, ed, ntip)
 
+  elrt1 = elrt[:,1]
+  elrt2 = elrt[:,2]
+
   ne    = size(ed,1)
   child = ed[:,2]
   wtp   = findall(child .<= ntip)
@@ -155,16 +158,16 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
 
         pr, d1, d2 = triad::Array{Int64,1}
 
-        ud1 = ode_solve(led[d1], p, elrt[d1,2], elrt[d1,1])::Array{Float64,1}
+        ud1 = ode_solve(led[d1], p, elrt2[d1], elrt1[d1])::Array{Float64,1}
 
         check_negs(ud1, ns) && return -Inf
 
-        ud2 = ode_solve(led[d2], p, elrt[d2,2], elrt[d2,1])::Array{Float64,1}
+        ud2 = ode_solve(led[d2], p, elrt2[d2], elrt1[d2])::Array{Float64,1}
 
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(elrt[pr,2], llik, ud1, ud2, lλs, lλts, p)
+        λevent!(elrt2[pr], llik, ud1, ud2, lλs, lλts, p)
 
         # loglik to sum for integration
         tosum   = minimum(llik)
@@ -197,7 +200,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       normbysum!(llik, w, ns)
 
       # combine root likelihoods
-      ll = rootll(elrt[ne,1], llik, extp, w, p, lλs, lλts)
+      ll = rootll(elrt1[ne], llik, extp, w, p, lλs, lλts)
 
       return (log(ll) - llxtra)::Float64
     end
