@@ -22,7 +22,10 @@ January 12 2017
                  x       ::Array{Float64,1},
                  y       ::Array{Float64,N};
                  cov_mod ::String  = "speciation",
-                 δt      ::Float64 = 1e-4)
+                 δt      ::Float64 = 1e-4,
+                 nspp_min::Int64   = 1,
+                 nspp_max::Int64   = 200_000,
+                 retry_ext::Bool   = true)
 
 Simulate tree according to EGeoHiSSE.
 """
@@ -35,14 +38,27 @@ function simulate_sse(λ       ::Array{Float64,1},
                       x       ::Array{Float64,1},
                       y       ::Array{Float64,N};
                       cov_mod ::String  = "speciation",
-                      δt      ::Float64 = 1e-4) where N
+                      δt      ::Float64 = 1e-4,
+                      nspp_min::Int64   = 1,
+                      nspp_max::Int64   = 200_000,
+                      retry_ext::Bool   = true) where N
 
   # make simulation
   ed, el, st, simt, n, af!, r, S, k, h = 
-    simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod)
+    simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
 
-  if ed == 0
-    return 0, 0, 0
+  println("Tree with $n species successfully simulated")
+
+  if retry_ext
+    while ed == 0 || n < nspp_min || n > nspp_max
+      ed, el, st, simt, n, af!, r, S, k, h = 
+        simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
+      println("Tree with $n species successfully simulated")
+    end
+  else 
+    if ed == 0
+      return 0, 0, 0
+    end
   end
 
   # organize in postorder
@@ -65,14 +81,17 @@ end
 
 
 """
-    simulate_edges(λ       ::Array{Float64,1}, 
-                  μ       ::Array{Float64,1},
-                  Q       ::Array{Float64,2},
-                  β       ::Array{Float64,1},
-                  af      ::Function,
-                  nspp    ::Int64,
-                  δt      ::Float64,
-                  cov_mod::String)
+    simulate_edges(λ       ::Array{Float64,1},
+                   μ       ::Array{Float64,1},
+                   l       ::Array{Float64,1},
+                   g       ::Array{Float64,1},
+                   q       ::Array{Float64,1},
+                   β       ::Array{Float64,1},
+                   x       ::Array{Float64,1},
+                   y       ::Array{Float64, N},
+                   δt      ::Float64,
+                   cov_mod ::String,
+                   nssp_max::Int64)
 
 Simulate edges tree according to ESSE.
 """
@@ -85,7 +104,8 @@ function simulate_edges(λ       ::Array{Float64,1},
                         x       ::Array{Float64,1},
                         y       ::Array{Float64, N},
                         δt      ::Float64,
-                        cov_mod::String) where N
+                        cov_mod ::String,
+                        nssp_max::Int64) where N
 
   h = Int64((sqrt(length(q)*4 + 1) + 1)/2)
   k = div(length(l), h)
@@ -139,12 +159,12 @@ function simulate_edges(λ       ::Array{Float64,1},
   st = fill(si, 2)
 
   # edge array
-  ed = zeros(Int64, 40_000, 2)
+  ed = zeros(Int64, nssp_max*2, 2)
   ed[ea,:] = [1 2;
               1 3]
 
   # edge lengths
-  el = zeros(40_000)
+  el = zeros(nssp_max*2)
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
@@ -344,9 +364,9 @@ function simulate_edges(λ       ::Array{Float64,1},
 
     simt < 0.0 && break
 
-    if n == 20_000 
-      @warn "more than 20_000 species"
-      break
+    if n == nssp_max 
+      @warn "more than $nssp_max species"
+      return 0, 0, 0, 0, n, 0, 0, 0, 0, 0
     end
   end
 
