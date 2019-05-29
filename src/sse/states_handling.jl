@@ -328,7 +328,7 @@ function set_constraints(constraints::NTuple{N,String},
       for i in Base.OneTo(length(spl)-1) 
         sp1 = strip(spl[i])
         sp2 = strip(spl[i+1])
-        conpar[pardic[strip(spl[i])]] = pardic[strip(spl[i+1])]
+        conpar[pardic[sp2]] = pardic[sp1]
       end
     end
   end

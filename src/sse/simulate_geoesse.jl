@@ -244,7 +244,7 @@ function simulate_edges(λ       ::Array{Float64,1},
           if ned == 3
             printstyled("What would you do if an endangered animal is eating an endangered plant? Sometimes nature is too cruel... \n", 
               color=:light_red)
-            printstyled("tree went extinct... rerun simulation",
+            printstyled("tree went extinct... rerun simulation \n",
               color=:light_red)
             return 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
           end

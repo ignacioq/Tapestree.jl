@@ -49,7 +49,7 @@ function loop_slice_sampler(lhf         ::Function,
   # start iterations
   prog = Progress(niter, screen_print, "running slice-sampler...", 20)
 
-  hc = lhf(p)
+  hc = lhf(p, 1)
 
   for it in Base.OneTo(niter) 
 
@@ -111,7 +111,7 @@ function w_sampler(lhf         ::Function,
   ps = Array{Float64,2}(undef, 100, npars)
 
   # posterior
-  hc = lhf(p)
+  hc = lhf(p, 1)
 
   # preallocate pp
   pp = Array{Float64,1}(undef, npars)
@@ -174,21 +174,21 @@ function find_nonneg_int(p    ::Array{Float64},
   end
 
   # left extreme
-  pp[j] = L::Float64
-  while S < postf(pp)
-    L -= w::Float64
+  pp[j] = L
+  while S < postf(pp, j)
+    L -= w
     if L <= 0.0
       L = 1e-30
       break
     end
-    pp[j] = L::Float64
+    pp[j] = L
   end
 
   # right extreme
-  pp[j] = R::Float64
-  while S < postf(pp)
-    R    += w::Float64
-    pp[j] = R::Float64
+  pp[j] = R
+  while S < postf(pp, j)
+    R    += w
+    pp[j] = R
   end
 
   return (L, R)::NTuple{2,Float64}
@@ -222,14 +222,14 @@ function find_real_int(p    ::Array{Float64},
 
   # left extreme
   pp[j] = L::Float64
-  while S < postf(pp)
+  while S < postf(pp, j)
     L    -= w::Float64
     pp[j] = L::Float64
   end
 
   # right extreme
   pp[j] = R::Float64
-  while S < postf(pp)
+  while S < postf(pp, j)
     R    += w::Float64
     pp[j] = R::Float64
   end
@@ -263,14 +263,13 @@ function sample_int(p    ::Array{Float64,1},
   @inbounds begin
     copyto!(pp, p)
 
-
     while true
       pp[j] = (L + rand()*(R-L))::Float64
 
-      postc = postf(pp)::Float64
-      if S < postc
+      hc = postf(pp,j)::Float64
+      if S < hc
         copyto!(p, pp)
-        return (p, postc)::Tuple{Array{Float64,1}, Float64}
+        return (p, hc)::Tuple{Array{Float64,1}, Float64}
       end
 
       if pp[j] < p[j]

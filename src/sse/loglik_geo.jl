@@ -25,11 +25,12 @@ function make_lhf(llf::Function,
                   lpf::Function, 
                   conp::Dict{Int64,Int64})
 
-  function f(p::Array{Float64,1})
-    for (k,v) = conp
-      @inbounds p[k] = p[v]
+  function f(p::Array{Float64,1}, wp::Int64)
+    while haskey(conp, wp)
+      tp = conp[wp]
+      p[tp] = p[wp]
+      wp = tp
     end
-
     return llf(p) + lpf(p)
   end
 
@@ -178,18 +179,19 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
           led[pr][i] = exp(llik[i] - tosum)
         end
 
-        # assign extinction probabilities
+        # assign extinction probabilities and check for extinction of `1.0`
         for i in ns+1:2ns
+         isone(ud1[i]) && return -Inf
          led[pr][i] = ud1[i]
         end
       end
 
-      # assign root likelihood
+      # assign root likelihood in non log terms
       for i in Base.OneTo(ns)
-        llik[i] = led[ne][i]
+        lnei = led[ne][i]
+        lnei < 1.0 && return -Inf
+        llik[i] = log(lnei)
       end
-
-      check_negs(llik, ns) && return -Inf
 
       # assign root extinction probabilities
       for i in Base.OneTo(ns)

@@ -95,11 +95,20 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   p[zerp] .= 0.0
 
   # remove contraints from being updated
-  pupd = setdiff(pupd, keys(conp)) 
+  pupd = setdiff(pupd, values(conp)) 
   # remove fixed to zero parameters from being updated
   pupd = setdiff(pupd, zerp)
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
+
+  # force same parameter values for constraints
+  for wp in pupd
+    while haskey(conp, wp)
+      tp = conp[wp]
+      p[tp] = p[wp]
+      wp = tp
+    end
+  end
 
   # make ODE function
   ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
