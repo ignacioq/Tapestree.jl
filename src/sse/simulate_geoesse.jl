@@ -896,7 +896,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
   # if dependent on `z(t)` and multidimensional
   function f1(si ::Int64,
               s  ::Sgh,
-              aft::Array{Float64,1})
+              r::Array{Float64,1})
 
     @inbounds begin
       na = 0
@@ -917,7 +917,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
   # if dependent on `z(t)` and unidimensional
   function f2(si ::Int64,
               s  ::Sgh,
-              aft::Array{Float64,1})
+              r::Array{Float64,1})
     return Sλpr[si]
   end
 
@@ -954,7 +954,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
                       md   ::Bool)
   function f1(si ::Int64,
               s  ::Sgh,
-              aft::Array{Float64,1})
+              r::Array{Float64,1})
 
     @inbounds begin
       if isone(length(s.g))
@@ -976,7 +976,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
   # if dependent on `z(t)` and unidimensional
   function f2(si ::Int64,
               s  ::Sgh,
-              aft::Array{Float64,1})
+              r::Array{Float64,1})
     return Sμpr[si]
   end
 
@@ -1024,7 +1024,7 @@ function make_updgpr!(g    ::Array{Float64,1},
 
   function f1(si ::Int64,
               s  ::Sgh,
-              aft::Array{Float64,1})
+              r::Array{Float64,1})
     @inbounds begin
       gpr[si][i] = 0.0
       for (i,ta) = enumerate(sdf[si]), fa = s.g
@@ -1040,7 +1040,7 @@ function make_updgpr!(g    ::Array{Float64,1},
 
   function f2(si ::Int64,
               s  ::Sgh,
-              aft::Array{Float64,1})
+              r::Array{Float64,1})
     return Sgpr[si]
   end
 

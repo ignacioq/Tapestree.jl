@@ -171,7 +171,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         λevent!(elrt2[pr], llik, ud1, ud2, lλs, lλts, p)
 
         # loglik to sum for integration
-        tosum   = minimum(llik)/2.0
+        tosum   = minimum(llik)
         llxtra -= tosum
 
         # assign the remaining likelihoods &
