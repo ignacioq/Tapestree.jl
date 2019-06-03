@@ -171,30 +171,23 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         λevent!(elrt2[pr], llik, ud1, ud2, lλs, lλts, p)
 
         # loglik to sum for integration
-        tosum   = minimum(llik)
+        tosum   = minimum(llik)/2.0
         llxtra -= tosum
 
-        # assign the remaining likelihoods
+        # assign the remaining likelihoods &
+        # assign extinction probabilities and 
+        # check for extinction of `1.0`
         for i in Base.OneTo(ns)
+          isone(ud1[i+ns]) && return -Inf
+          led[pr][i+ns] = ud1[i+ns]
           led[pr][i] = exp(llik[i] - tosum)
         end
-
-        # assign extinction probabilities and check for extinction of `1.0`
-        for i in ns+1:2ns
-         isone(ud1[i]) && return -Inf
-         led[pr][i] = ud1[i]
-        end
       end
 
-      # assign root likelihood in non log terms
-      for i in Base.OneTo(ns)
-        lnei = led[ne][i]
-        lnei < 1.0 && return -Inf
-        llik[i] = log(lnei)
-      end
-
+      # assign root likelihood in non log terms &
       # assign root extinction probabilities
       for i in Base.OneTo(ns)
+        llik[i] = led[ne][i]
         extp[i] = led[ne][i+ns]
       end
 

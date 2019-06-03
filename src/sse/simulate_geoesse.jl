@@ -322,7 +322,7 @@ function simulate_edges(λ       ::Array{Float64,1},
       #=
           λ event?
       =#
-      if rand() < updμpr!(sti, S[sti], r)
+      if rand() < updλpr!(sti, S[sti], r)
 
         # update time in other extant lineages
         el[ea[(i+1):n]] .+= δt
