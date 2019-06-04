@@ -65,11 +65,8 @@ function simulate_sse(λ       ::Array{Float64,1},
   ed     = numberedges(ed, n)
   ed, el = postorderedges(ed, el, n)
 
+  # organize states
   tip_val = Dict(i => st[i] for i = 1:n)
-
-  ##
-  # organize new x and y for inference
-  th = tree_height(el, ed, n)
 
   tip_val = states_to_values(tip_val, S, k)
 
@@ -329,8 +326,7 @@ function simulate_edges(λ       ::Array{Float64,1},
 
         ### add new edges
         # start node
-        ed[ea[end] + 1,1] = ed[ea[i],2]
-        ed[ea[end] + 2,1] = ed[ea[i],2]
+        ed[ea[end] + 1,1] = ed[ea[end] + 2,1] = ed[ea[i],2]
 
         # end nodes
         ed[ea[end] + 1,2] = maximum(ed)+1

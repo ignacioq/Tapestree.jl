@@ -343,7 +343,6 @@ end
 
 
 
-
 """
     brspec_expr(s  ::Sgh,
                 S  ::Array{Sgh,1},
@@ -523,10 +522,6 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     push!(eqs.args, ex)
   end
 
-  """
-  - Add closure for eaft vector!!
-  """
-
   for si = Base.OneTo(ns)
 
     # state range
@@ -622,6 +617,8 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
   eqs.args[[(end-(ns*2)+1):end...]] = 
     eqs.args[append!([(end-(ns*2)+1):2:end...],
             [(end-(ns*2)+2):2:end...])]
+
+  println(eqs)
 
   return quote 
     @inbounds begin

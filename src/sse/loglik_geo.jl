@@ -277,10 +277,10 @@ Generated function for full tree likelihood at the root.
           (l*(1.0-extp[$(i + (j-1)*(2^k-1))])^2))
 
         lams = Expr(:call, :+, 
-          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g)) - 2)*
+          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g) - 1) - 1)*
             p[$((k+1)*(1+(j-1)))]))
         for a in S[i + (2^k-1)*(j-1)].g
-          push!(lams.args, :(2.0 * exp(lλts[$(a + k*(j-1))])))
+          push!(lams.args, :(exp(lλts[$(a + k*(j-1))])))
         end
 
         # change l in wl
@@ -306,10 +306,10 @@ Generated function for full tree likelihood at the root.
           (l*(1.0-extp[$(i + (j-1)*(2^k-1))])^2))
 
         lams = Expr(:call, :+, 
-          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g)) - 2)*
+          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g) - 1) - 1)*
             p[$((k+1)*(1+(j-1)))]))
         for a in S[i + (2^k-1)*(j-1)].g
-          push!(lams.args, :(2.0 * p[$(a + (k+1)*(j-1))]))
+          push!(lams.args, :(p[$(a + (k+1)*(j-1))]))
         end
 
         # change l in wl
@@ -322,6 +322,8 @@ Generated function for full tree likelihood at the root.
   end
 
   push!(eqs.args, :($eq))
+
+  println(eqs)
 
   return quote
     @inbounds begin
@@ -410,7 +412,7 @@ Generated function for speciation event likelihoods
       for a in s.g
         push!(ex.args, :((ud1[$(a + s.h*(2^k-1))]    *  ud2[$(i + (2^k-1)*(j-1))] + 
                           ud1[$(i + (2^k-1)*(j-1))] * ud2[$(a + s.h*(2^k-1))]) *
-                         exp(lλts[$(a + s.h*(k))])))
+                         0.5 * exp(lλts[$(a + s.h*(k))])))
       end
 
       # between region speciation
@@ -420,7 +422,7 @@ Generated function for speciation event likelihoods
             ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
             ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
             ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
-            p[$((k+1)*(1+s.h))]))
+            0.5 * p[$((k+1)*(1+s.h))]))
       end
 
       push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
@@ -446,7 +448,7 @@ Generated function for speciation event likelihoods
       for a in s.g
         push!(ex.args, :((ud1[$(a + s.h*(k+1))]*ud2[$(i + (2^k-1)*(j-1))] + 
                           ud1[$(i + (2^k-1)*(j-1))]*ud2[$(a + s.h*(k+1))]) *
-                         p[$(a + s.h*(k+1))]))
+                          0.5 * p[$(a + s.h*(k+1))]))
       end
 
       # between region speciation
@@ -456,12 +458,15 @@ Generated function for speciation event likelihoods
             ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
             ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
             ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
-            p[$((k+1)*(1+s.h))]))
+            0.5 * p[$((k+1)*(1+s.h))]))
       end
 
       push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
     end
   end
+
+  println(eqs)
+
 
   return quote 
     @inbounds begin
