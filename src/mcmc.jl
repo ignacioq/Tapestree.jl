@@ -21,35 +21,36 @@ April 27 2017
 
 Run MCMC for trait and range interspecitific biogeographic evolution (tribe).
 """
-function tribe_mcmc(Xc      ::Array{Float64,2},
-                    Yc      ::Array{Int64,3},
-                    ncoup   ::Array{Int64,2},
-                    δt      ::Array{Float64,1},
-                    edges   ::Array{Int64,2},
-                    brl     ::Array{Float64,1},
-                    B       ::Array{Float64,2};
-                    niter   ::Int64             = 500_000,
-                    nthin   ::Int64             = 1_000,
-                    nburn   ::Int64             = 500_000,
-                    saveXY  ::Tuple{Bool,Int64} = (false, 1_000),
-                    saveDM  ::Tuple{Bool,Int64} = (false, 1_000),
-                    ωxprior ::NTuple{2,Float64} = (0.,10.),
-                    ω1prior ::NTuple{2,Float64} = (0.,10.),
-                    ω0prior ::NTuple{2,Float64} = (0.,10.),
-                    σ²prior ::Float64           = 1e-1,
-                    λprior  ::Float64           = 1e-1,
-                    out_file::String            = "tribe_results",
-                    weight  ::NTuple{5,Float64} = (0.15,0.05,0.02,0.02,5e-3),
-                    σ²i     ::Float64           = 1.,
-                    ωxi     ::Float64           = 0.,
-                    ω1i     ::Float64           = 0.,
-                    ω0i     ::Float64           = 0.,
-                    λ1i     ::Float64           = 1.0,
-                    λ0i     ::Float64           = 0.2,
-                    stbrl   ::Float64           = 1.,
-                    fix_ωx  ::Bool              = false,
-                    fix_ω1  ::Bool              = false,
-                    fix_ω0  ::Bool              = false)
+function tribe_mcmc(Xc          ::Array{Float64,2},
+                    Yc          ::Array{Int64,3},
+                    ncoup       ::Array{Int64,2},
+                    δt          ::Array{Float64,1},
+                    edges       ::Array{Int64,2},
+                    brl         ::Array{Float64,1},
+                    B           ::Array{Float64,2};
+                    niter       ::Int64             = 500_000,
+                    nthin       ::Int64             = 1_000,
+                    nburn       ::Int64             = 500_000,
+                    saveXY      ::Tuple{Bool,Int64} = (false, 1_000),
+                    saveDM      ::Tuple{Bool,Int64} = (false, 1_000),
+                    ωxprior     ::NTuple{2,Float64} = (0.,10.),
+                    ω1prior     ::NTuple{2,Float64} = (0.,10.),
+                    ω0prior     ::NTuple{2,Float64} = (0.,10.),
+                    σ²prior     ::Float64           = 1e-1,
+                    λprior      ::Float64           = 1e-1,
+                    out_file    ::String            = "tribe_results",
+                    weight      ::NTuple{5,Float64} = (0.15,0.05,0.02,0.02,5e-3),
+                    σ²i         ::Float64           = 1.,
+                    ωxi         ::Float64           = 0.,
+                    ω1i         ::Float64           = 0.,
+                    ω0i         ::Float64           = 0.,
+                    λ1i         ::Float64           = 1.0,
+                    λ0i         ::Float64           = 0.2,
+                    stbrl       ::Float64           = 1.,
+                    fix_ωx      ::Bool              = false,
+                    fix_ω1      ::Bool              = false,
+                    fix_ω0      ::Bool              = false,
+                    screen_print::Int64             = 5)
 
   printstyled("Data successfully processed", bold = true,color=:green)
 
@@ -192,7 +193,8 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
       Xc, Yc, δXc, δYc, LApc, LAnc, LDc, σ²i, ωxi, ω1i, ω0i, λ1i, λ0i,
       Xnc1, Xnc2, brl, wcol, bridx_a, brs, stemevc, 
       trios, wXp,
-      λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, nburn)
+      λprior, ωxprior, ω1prior, ω0prior, σ²prior, np, parvec, 
+      nburn, screen_print)
 
   # log probability of collision
   max_δt = maximum(δt)::Float64
@@ -218,7 +220,7 @@ function tribe_mcmc(Xc      ::Array{Float64,2},
   end
 
   # progress bar
-  p = Progress(niter, dt=5, desc="mcmc...", barlen=20, color=:green)
+  p = Progress(niter, dt=screen_print, desc="mcmc...", barlen=20, color=:green)
 
   # create X parameter update function
   mhr_upd_X = make_mhr_upd_X(Xc, Xnc1, Xnc2, wcol, ptn, wXp, m,

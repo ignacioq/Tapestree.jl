@@ -66,8 +66,9 @@ function burn_tribe(total_llf     ::Function,
                     np      ::Int64,
                     parvec  ::Array{Int64,1},
                     nburn   ::Int64,
-                    obj_ar  ::Float64 = 0.234,
-                    tune_int::Int64   = 100)
+                    screen_print::Int64,
+                    obj_ar  ::Float64   = 0.234,
+                    tune_int::Int64     = 100)
 
   m, ntip, narea = size(Yc)
 
@@ -109,7 +110,7 @@ function burn_tribe(total_llf     ::Function,
   rj = wcol[1][2]
 
   # progress bar
-  p = Progress(nburn, dt=5, desc="burn...", barlen=20, color=:green)
+  p = Progress(nburn, dt=screen_print, desc="burn...", barlen=20, color=:green)
 
   # print number of parameters
   printstyled(
