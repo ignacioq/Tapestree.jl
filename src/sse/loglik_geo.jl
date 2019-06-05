@@ -106,7 +106,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
   lλs = Array{Float64,1}(undef,h*(k+1))
 
   # log lambdas covariates
-  lλts = Array{Float64,1}(undef,h*k)
+  λts = Array{Float64,1}(undef,h*k)
 
   # preallocate output of y covariates
   r = Array{Float64,1}(undef,ny)
@@ -123,10 +123,10 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
              ud1 ::Array{Float64,1}, 
              ud2 ::Array{Float64,1},
              lλs ::Array{Float64,1},
-             lλts::Array{Float64,1},
+             λts::Array{Float64,1},
              p   ::Array{Float64,1}) ->
     begin
-      λevent_full(t, llik, ud1, ud2, lλs, lλts, p, r, af!,
+      λevent_full(t, llik, ud1, ud2, lλs, λts, p, r, af!,
         Val(k), Val(h), Val(ny), Val(model))
       return nothing
     end
@@ -138,9 +138,9 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
             w   ::Array{Float64,1},
             p   ::Array{Float64,1},
             lλs ::Array{Float64,1},
-            lλts::Array{Float64,1}) -> 
+            λts::Array{Float64,1}) -> 
     begin
-      rootll_full(t, llik, extp, w, p, lλs, lλts, r, af!,
+      rootll_full(t, llik, extp, w, p, lλs, λts, r, af!,
         Val(k), Val(h), Val(ny), Val(model))
     end
 
@@ -168,7 +168,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(elrt2[pr], llik, ud1, ud2, lλs, lλts, p)
+        λevent!(elrt2[pr], llik, ud1, ud2, lλs, λts, p)
 
         # loglik to sum for integration
         tosum   = minimum(llik)
@@ -195,7 +195,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       normbysum!(llik, w, ns)
 
       # combine root likelihoods
-      ll = rootll(elrt1[ne], llik, extp, w, p, lλs, lλts)
+      ll = rootll(elrt1[ne], llik, extp, w, p, lλs, λts)
 
       return (log(ll) - llxtra)::Float64
     end
@@ -216,7 +216,7 @@ end
                 w   ::Array{Float64,1},
                 p   ::Array{Float64,1},
                 lλs ::Array{Float64,1},
-                lλts::Array{Float64,1},
+                λts::Array{Float64,1},
                 r   ::Array{Float64,1},
                 ::Val{k}, 
                 ::Val{h}, 
@@ -230,7 +230,7 @@ Generated function for full tree likelihood at the root.
                                 w   ::Array{Float64,1},
                                 p   ::Array{Float64,1},
                                 lλs ::Array{Float64,1},
-                                lλts::Array{Float64,1},
+                                λts::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
                                 ::Val{k},
@@ -258,39 +258,46 @@ Generated function for full tree likelihood at the root.
             $rex))
       end
       push!(eqs.args, 
-        :(lλts[$(i+k*(j-1))] = lλs[$(i+(k+1)*(j-1))] + $coex))
+        :(λts[$(i+k*(j-1))] = p[$(i+(k+1)*(j-1))] * exp($coex)))
     end
 
     eq = Expr(:call, :+)
     for j in Base.OneTo(h)
-
       # for single areas
       for i in Base.OneTo(k)
         push!(eq.args,
           :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
-            (exp(lλts[$(i + k*(j-1))])*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+            (λts[$(i + k*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
       end
-
       # for widespread
       for i in k+1:2^k-1
-        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
-          (l*(1.0-extp[$(i + (j-1)*(2^k-1))])^2))
+        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] /(le))
 
-        lams = Expr(:call, :+, 
-          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g) - 1) - 1)*
-            p[$((k+1)*(1+(j-1)))]))
+        lams = Expr(:call, :+)
+        # single area speciation
         for a in S[i + (2^k-1)*(j-1)].g
-          push!(lams.args, :(exp(lλts[$(a + k*(j-1))])))
+          push!(lams.args, :(
+            2.0 * λts[$(a + k*(j-1))] * 
+           (1.0-extp[$(a + (j-1)*(2^k-1))]) * (1.0-extp[$(i + (j-1)*(2^k-1))])))
+        end
+
+        # for allopatric speciation
+        for (la, ra) = vicsubsets(S[i + (2^k-1)*(j-1)].g)[1:(div(end,2))]
+          push!(lams.args, 
+            :(2.0 * p[$((k+1)*(1+(j-1)))] *
+             (1.0-extp[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*(j-1))]) * 
+             (1.0-extp[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*(j-1))])))
         end
 
         # change l in wl
-        wl.args[3].args[2] = lams
+        wl.args[3] = lams
 
         push!(eq.args, wl)
       end
     end
 
   else
+
 
     eq = Expr(:call, :+)
     for j in Base.OneTo(h)
@@ -302,23 +309,30 @@ Generated function for full tree likelihood at the root.
       end
       # for widespread
       for i in k+1:2^k-1
-        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
-          (l*(1.0-extp[$(i + (j-1)*(2^k-1))])^2))
+        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] /(le))
 
-        lams = Expr(:call, :+, 
-          :($(2.0^(length(S[i + (2^k-1)*(j-1)].g) - 1) - 1)*
-            p[$((k+1)*(1+(j-1)))]))
+        lams = Expr(:call, :+)
+        # single area speciation
         for a in S[i + (2^k-1)*(j-1)].g
-          push!(lams.args, :(p[$(a + (k+1)*(j-1))]))
+          push!(lams.args, :(
+            2.0 * p[$(a + (k+1)*(j-1))] * 
+           (1.0-extp[$(a + (j-1)*(2^k-1))]) * (1.0-extp[$(i + (j-1)*(2^k-1))])))
+        end
+
+        # for allopatric speciation
+        for (la, ra) = vicsubsets(S[i + (2^k-1)*(j-1)].g)[1:(div(end,2))]
+          push!(lams.args, 
+            :(2.0 * p[$((k+1)*(1+(j-1)))] *
+             (1.0-extp[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*(j-1))]) * 
+             (1.0-extp[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*(j-1))])))
         end
 
         # change l in wl
-        wl.args[3].args[2] = lams
+        wl.args[3] = lams
 
         push!(eq.args, wl)
       end
     end
-
   end
 
   push!(eqs.args, :($eq))
@@ -347,7 +361,7 @@ end
                 ud1 ::Array{Float64,1}, 
                 ud2 ::Array{Float64,1},
                 lλs ::Array{Float64,1},
-                lλts::Array{Float64,1},
+                λts::Array{Float64,1},
                 p   ::Array{Float64,1},
                 r   ::Array{Float64,1},
                 ::Val{k}, 
@@ -362,7 +376,7 @@ Generated function for speciation event likelihoods
                                 ud1 ::Array{Float64,1}, 
                                 ud2 ::Array{Float64,1},
                                 lλs ::Array{Float64,1},
-                                lλts::Array{Float64,1},
+                                λts::Array{Float64,1},
                                 p   ::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
@@ -392,15 +406,14 @@ Generated function for speciation event likelihoods
             $rex))
       end
       push!(eqs.args, 
-        :(lλts[$(i+k*(j-1))] = lλs[$(i+(k+1)*(j-1))] + $coex))
+        :(λts[$(i+k*(j-1))] = p[$(i+(k+1)*(j-1))] * exp($coex)))
     end
 
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
           :(llik[$(i+(2^k-1)*(j-1))] = 
-            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))]) + 
-            lλts[$(i+k*(j-1))]))
+            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * λts[$(i+k*(j-1))])))
     end
 
     # likelihood for widespread states
@@ -410,9 +423,9 @@ Generated function for speciation event likelihoods
       # within region speciation
       ex = Expr(:call, :+)
       for a in s.g
-        push!(ex.args, :((ud1[$(a + s.h*(2^k-1))]    *  ud2[$(i + (2^k-1)*(j-1))] + 
+        push!(ex.args, :((ud1[$(a + s.h*(2^k-1))]   * ud2[$(i + (2^k-1)*(j-1))] + 
                           ud1[$(i + (2^k-1)*(j-1))] * ud2[$(a + s.h*(2^k-1))]) *
-                         0.5 * exp(lλts[$(a + s.h*(k))])))
+                          0.5 * λts[$(a + s.h*(k))]))
       end
 
       # between region speciation
@@ -435,8 +448,7 @@ Generated function for speciation event likelihoods
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
           :(llik[$(i+(2^k-1)*(j-1))] = 
-            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))]) + 
-            lλs[$(i+(k+1)*(j-1))]))
+            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * lλs[$(i+(k+1)*(j-1))])))
     end
 
     # likelihood for widespread states
