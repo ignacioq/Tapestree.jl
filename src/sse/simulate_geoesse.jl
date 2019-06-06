@@ -49,8 +49,9 @@ function simulate_sse(λ       ::Array{Float64,1},
 
   println("Tree with $n species successfully simulated")
 
-  if retry_ext
-    while ed == 0 || n < nspp_min || n > nspp_max
+  if retry_ext 
+    in(0.0, el) && println("a lineage speciated at time 0.0...")
+    while ed == 0 || n < nspp_min || n > nspp_max || in(0.0, el)
       ed, el, st, simt, n, af!, r, S, k, h = 
         simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
       println("Tree with $n species successfully simulated")
@@ -152,8 +153,6 @@ function simulate_edges(λ       ::Array{Float64,1},
   # edges alive
   ea = [1, 2]
 
-  # state vector
-  st = fill(si, 2)
 
   # edge array
   ed = zeros(Int64, nssp_max*2, 2)
@@ -173,7 +172,6 @@ function simulate_edges(λ       ::Array{Float64,1},
   updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, model, md, as, S)
   updqpr! = make_updqpr!(Sqpr)
 
-
   # preallocate states probabilities for specific lengths of each event
   svλ = Array{Float64,1}[]
   svμ = Array{Float64,1}[]
@@ -189,6 +187,13 @@ function simulate_edges(λ       ::Array{Float64,1},
   # make state change vectors
   gtos, μtos, qtos, λtos = makecorresschg(gpr, μpr, qpr, λpr, S, as, hs, k, ns)
 
+  # model first speciation event for daughter inheritance
+  st = λtos[si][prop_sample(svλ[si], λpr[si], length(svλ[si]))]
+
+  # random assignment to daughters
+  if rand() < 0.5
+    reverse!(st)
+  end
 
   # start simulation
   while true

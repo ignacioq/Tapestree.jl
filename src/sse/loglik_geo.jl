@@ -122,11 +122,10 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
              llik::Array{Float64,1}, 
              ud1 ::Array{Float64,1}, 
              ud2 ::Array{Float64,1},
-             lλs ::Array{Float64,1},
              λts::Array{Float64,1},
              p   ::Array{Float64,1}) ->
     begin
-      λevent_full(t, llik, ud1, ud2, lλs, λts, p, r, af!,
+      λevent_full(t, llik, ud1, ud2, λts, p, r, af!,
         Val(k), Val(h), Val(ny), Val(model))
       return nothing
     end
@@ -137,10 +136,9 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
             extp::Array{Float64,1},
             w   ::Array{Float64,1},
             p   ::Array{Float64,1},
-            lλs ::Array{Float64,1},
             λts::Array{Float64,1}) -> 
     begin
-      rootll_full(t, llik, extp, w, p, lλs, λts, r, af!,
+      rootll_full(t, llik, extp, w, p, λts, r, af!,
         Val(k), Val(h), Val(ny), Val(model))
     end
 
@@ -149,10 +147,6 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
     @inbounds begin
 
       llxtra = 0.0
-
-      for i in Base.OneTo(h*(k+1))
-        lλs[i] = log(p[i])
-      end
 
       # loop for integrating over internal branches
       for triad in trios
@@ -168,7 +162,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(elrt2[pr], llik, ud1, ud2, lλs, λts, p)
+        λevent!(elrt2[pr], llik, ud1, ud2, λts, p)
 
         # loglik to sum for integration
         tosum   = minimum(llik)
@@ -195,7 +189,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       normbysum!(llik, w, ns)
 
       # combine root likelihoods
-      ll = rootll(elrt1[ne], llik, extp, w, p, lλs, λts)
+      ll = rootll(elrt1[ne], llik, extp, w, p, λts)
 
       return (log(ll) - llxtra)::Float64
     end
@@ -229,7 +223,6 @@ Generated function for full tree likelihood at the root.
                                 extp::Array{Float64,1},
                                 w   ::Array{Float64,1},
                                 p   ::Array{Float64,1},
-                                lλs ::Array{Float64,1},
                                 λts::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
@@ -375,7 +368,6 @@ Generated function for speciation event likelihoods
                                 llik::Array{Float64,1}, 
                                 ud1 ::Array{Float64,1}, 
                                 ud2 ::Array{Float64,1},
-                                lλs ::Array{Float64,1},
                                 λts::Array{Float64,1},
                                 p   ::Array{Float64,1},
                                 r   ::Array{Float64,1},
