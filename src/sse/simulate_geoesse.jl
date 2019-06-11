@@ -44,7 +44,7 @@ function simulate_sse(λ       ::Array{Float64,1},
                       retry_ext::Bool   = true) where N
 
   # make simulation
-  ed, el, st, simt, n, af!, r, S, k, h = 
+  ed, el, st, n, S, k = 
     simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
 
   println("Tree with $n species successfully simulated")
@@ -52,7 +52,7 @@ function simulate_sse(λ       ::Array{Float64,1},
   if retry_ext 
     in(0.0, el) && println("a lineage speciated at time 0.0...")
     while ed == 0 || n < nspp_min || n > nspp_max || in(0.0, el)
-      ed, el, st, simt, n, af!, r, S, k, h = 
+      ed, el, st, n, S, k = 
         simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
       println("Tree with $n species successfully simulated")
     end
@@ -248,7 +248,7 @@ function simulate_edges(λ       ::Array{Float64,1},
               color=:light_red)
             printstyled("tree went extinct... rerun simulation \n",
               color=:light_red)
-            return 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            return 0, 0, 0, 0, 0, 0
           end
 
           @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
@@ -367,7 +367,7 @@ function simulate_edges(λ       ::Array{Float64,1},
 
     if n == nssp_max 
       @warn "more than $nssp_max species"
-      return 0, 0, 0, 0, n, 0, 0, 0, 0, 0
+      return 0, 0, 0, n, 0, 0
     end
   end
 
@@ -377,7 +377,7 @@ function simulate_edges(λ       ::Array{Float64,1},
 
   sort!(ea)
 
-  return ed, el, st, simt, n, af!, r, S, k, h
+  return ed, el, st, n, S, k
 end
 
 
