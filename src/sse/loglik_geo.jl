@@ -172,7 +172,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         # assign extinction probabilities and 
         # check for extinction of `1.0`
         for i in Base.OneTo(ns)
-          isone(ud1[i+ns]) && return -Inf
+          ud1[i+ns] > 1.0 && return -Inf
           led[pr][i+ns] = ud1[i+ns]
           led[pr][i] = exp(llik[i] - tosum)
         end
