@@ -184,10 +184,10 @@ end
 Build dictionary for parameter names and indexes for EGeoHiSSE for
 `k` areas, `h` hidden states and `ny` covariates.
 """
-function build_par_names(k::Int64, h::Int64, ny::Int64, model::Int64)
+function build_par_names(k::Int64, h::Int64, ny::Int64, model::Array{Int64,1})
 
   # generate individual area names
-  ia::Array{Char,1} = Array{Char,1}(undef,0)
+  ia = Array{Char,1}(undef,0)
   for i = 0:(k-1)
     push!(ia, ('A' + i)::Char)
   end
@@ -226,6 +226,13 @@ function build_par_names(k::Int64, h::Int64, ny::Int64, model::Int64)
     j == i && continue 
     push!(par_nams, "q_"*string(j)*string(i))
   end
+
+
+"""
+here, add par names for all possible model combinations
+"""
+
+
 
   ## add betas
   # if model is on Q

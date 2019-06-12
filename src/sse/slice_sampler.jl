@@ -41,7 +41,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        el         ::Array{Float64,1},
                        x          ::Array{Float64,1},
                        y          ::Array{Float64},
-                       cov_mod    ::String,
+                       cov_mod    ::NTuple{M,String},
                        out_file   ::String,
                        h          ::Int64;
                        constraints::NTuple{N,String}  = (" ",),
@@ -54,7 +54,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        qpriors    ::Float64           = .1,
                        βpriors    ::NTuple{2,Float64} = (0.0, 5.0),
                        optimal_w  ::Float64           = 0.8,
-                       screen_print::Int64            = 5) where {N}
+                       screen_print::Int64            = 5) where {M,N}
 
   # k areas
   k = length(tip_val[1])::Int64
@@ -67,6 +67,9 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
   # define model
   model = define_mod(cov_mod, k, h, ny)
+
+
+
 
   # make dictionary with relevant parameters
   pardic = build_par_names(k, h, ny, model)

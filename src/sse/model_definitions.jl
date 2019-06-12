@@ -68,40 +68,30 @@ end
 
 Defines EGeoHiSSE model for `k` areas, `h` hidden states and `ny` covariates.
 """
-function define_mod(egeohisse_mod::String,
+function define_mod(egeohisse_mod::NTuple{N,String},
                     k            ::Int64,
                     h            ::Int64,
-                    ny           ::Int64)
+                    ny           ::Int64) where N
 
-  if occursin(r"^[s|S][A-za-z]*", egeohisse_mod)         # if speciation
-    model = 1
-    printstyled("running speciation EGeoHiSSE model with:
-  $k single areas 
-  $h hidden states 
-  $ny covariates \n", 
-                 color=:green)
-  elseif occursin(r"^[e|E][A-za-z]*", egeohisse_mod)     # if extinction
-    model = 2
-    printstyled("running extinction EGeoHiSSE model with:
-  $k single areas 
-  $h hidden states 
-  $ny covariates \n",
-                 color=:green)
-  elseif occursin(r"^[t|T|r|R|q|Q][A-za-z]*", egeohisse_mod) # if transition
-    model = 3
-    printstyled("running transition EGeoHiSSE model with:
-  $k single areas
-  $h hidden states
-  $ny covariates \n",
-                 color=:green)
-  else 
-    model = 0
-    printstyled("running GeoHiSSE model with:
-  $k single areas
-  $h hidden states 
-  0 covariates \n\n",
-                color=:green)
+  model = Int64[]
+  
+  for m in egeohisse_mod
+    # if speciation
+    occursin(r"^[s|S][A-za-z]*", m) && push!(model, 1)
+    # if extinction
+    occursin(r"^[e|E][A-za-z]*", m) && push!(model, 2)
+    # if dispersal
+    occursin(r"^[t|T|r|R|q|Q][A-za-z]*", m) && push!(model, 3)
   end
+
+  mexp = "$(in(1,model) ? "speciation," : "")$(in(2,model) ? "extinction," : "")$(in(3,model) ? "transition," : "")"
+  mexp = replace(mexp, "," => ", ")
+  mexp = mexp[1:(end-2)]
+
+  printstyled("running $mexp EGeoHiSSE model with:
+    $k single areas 
+    $h hidden states 
+    $ny covariates \n", color=:green)
 
   return  model
 end
