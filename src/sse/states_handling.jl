@@ -42,7 +42,7 @@ isSghequal(x::Sgh, y::Sgh) = x.g == y.g && x.h == y.h
 """
     create_states(k::Int64, h::Int64)
 
-Create GeoHiSSE states
+Create EGeoHiSSE states
 """
 function create_states(k::Int64, h::Int64)
 
@@ -179,12 +179,15 @@ end
 
 
 """
-    build_par_names(k::Int64, h::Int64, ny::Int64, model::Int64)
+    build_par_names(k::Int64, h::Int64, ny::Int64, model::Array{Int64,1})
 
 Build dictionary for parameter names and indexes for EGeoHiSSE for
 `k` areas, `h` hidden states and `ny` covariates.
 """
-function build_par_names(k::Int64, h::Int64, ny::Int64, model::Array{Int64,1})
+function build_par_names(k    ::Int64, 
+                         h    ::Int64, 
+                         ny   ::Int64, 
+                         model::NTuple{N,Int64}) where {N}
 
   # generate individual area names
   ia = Array{Char,1}(undef,0)
@@ -227,26 +230,24 @@ function build_par_names(k::Int64, h::Int64, ny::Int64, model::Array{Int64,1})
     push!(par_nams, "q_"*string(j)*string(i))
   end
 
-
-"""
-here, add par names for all possible model combinations
-"""
-
-
-
-  ## add betas
-  # if model is on Q
-  if model == 3
-    for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,k*(k-1)))
+  # add betas
+  if in(1, model)
+    for i = 0:(h-1), a = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,N*k))
+      push!(par_nams, 
+        "beta_lambda_"*string(l)*"_"*string(a)*"_"*string(i))
+    end
+  end
+  if in(2, model)
+    for i = 0:(h-1), a = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,N*k))
+      push!(par_nams, 
+        "beta_mu_"*string(l)*"_"*string(a)*"_"*string(i))
+    end
+  end
+  if in(3, model)
+    for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,N*k*(k-1)))
       a == b && continue
       push!(par_nams, 
-        "beta"*string(l)*"_"*string(a)*string(b)*"_"*string(i))
-    end
-  # if model is speciation or extinction
-  elseif model == 1 || model == 2
-    for i = 0:(h-1), a = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,k))
-      push!(par_nams, 
-        "beta"*string(l)*"_"*string(a)*"_"*string(i))
+        "beta_q_"*string(l)*"_"*string(a)*string(b)*"_"*string(i))
     end
   end
 

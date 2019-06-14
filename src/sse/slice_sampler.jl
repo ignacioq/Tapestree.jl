@@ -68,9 +68,6 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # define model
   model = define_mod(cov_mod, k, h, ny)
 
-
-
-
   # make dictionary with relevant parameters
   pardic = build_par_names(k, h, ny, model)
 
@@ -112,6 +109,10 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
       wp = tp
     end
   end
+
+
+
+
 
   # make ODE function
   ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)

@@ -93,7 +93,7 @@ function define_mod(egeohisse_mod::NTuple{N,String},
     $h hidden states 
     $ny covariates \n", color=:green)
 
-  return  model
+  return tuple(model...)
 end
 
 
