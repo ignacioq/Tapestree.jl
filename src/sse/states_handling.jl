@@ -230,21 +230,26 @@ function build_par_names(k    ::Int64,
     push!(par_nams, "q_"*string(j)*string(i))
   end
 
+  yppar = ny == 1 ? 1 : div(ny,
+    in(1, model)*k + 
+    in(2, model)*k + 
+    in(3, model)*k*(k-1))
+
   # add betas
   if in(1, model)
-    for i = 0:(h-1), a = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,N*k))
+    for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
       push!(par_nams, 
         "beta_lambda_"*string(l)*"_"*string(a)*"_"*string(i))
     end
   end
   if in(2, model)
-    for i = 0:(h-1), a = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,N*k))
+    for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
       push!(par_nams, 
         "beta_mu_"*string(l)*"_"*string(a)*"_"*string(i))
     end
   end
   if in(3, model)
-    for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(ny == 1 ? 1 : div(ny,N*k*(k-1)))
+    for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(yppar)
       a == b && continue
       push!(par_nams, 
         "beta_q_"*string(l)*"_"*string(a)*string(b)*"_"*string(i))

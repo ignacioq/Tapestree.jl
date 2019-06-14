@@ -28,33 +28,18 @@ function exp_expr(k    ::Int64,
   # last non β parameters
   bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
 
-  ncov = 0      # maximum number covariates given model
-  m2s = m3s = 0 # model start
-  y2s = y3s = 0 # covariates start 
+  # ncov
+  ncov = in(1, model)*k + in(2, model)*k + in(3, model)*k*(k-1)
 
-  if in(1, model)
-    ncov += k
-    m2s  += k*h
-    m3s  += k*h
-    y2s  += div(ny,N)
-    y3s  += div(ny,N)
-  end
-  if in(2, model)
-    ncov += k
-    m3s  += k*h
-    y3s  += div(ny,N)
-  end
-  if in(3, model)
-    ncov += k*(k-1)
-  end
+  # y per parameter
+  yppar = isone(ny) ? 1 : div(ny,ncov)
 
-  # per parameter `k` covariates
-  pky = 0
-  if isone(ny)
-    pky = 1
-  else
-    pky = div(ny,ncov)
-  end
+  # starting indices for models 2 and 3
+  m2s = in(1, model)*k*h
+  m3s = m2s + in(2, model)*k*h
+
+  y2s = in(1, model)*yppar*k
+  y3s = y2s + in(2, model)*yppar*k
 
   # start expression 
   ex = quote end
@@ -66,9 +51,9 @@ function exp_expr(k    ::Int64,
   if in(1, model)
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(pky)
-        rex = isone(ny) ? :(r1) : :(r[$(yi+pky*(i-1))])
-        push!(coex.args, :(p[$(bbase + yi + pky*((i-1) + k*(j-1)))] * $rex))
+      for yi in Base.OneTo(yppar)
+        rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
+        push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
     end
@@ -77,10 +62,10 @@ function exp_expr(k    ::Int64,
   if in(2, model)
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(pky)
-        rex = isone(ny) ? :(r1) : :(r[$(y2s + yi+pky*(i-1))])
+      for yi in Base.OneTo(yppar)
+        rex = isone(ny) ? :(r1) : :(r[$(y2s + yi+yppar*(i-1))])
         push!(coex.args, 
-          :(p[$(bbase + yi + m2s*pky + pky*((i-1) + k*(j-1)))] * $rex))
+          :(p[$(bbase + yi + m2s*yppar + yppar*((i-1) + k*(k-1)*(j-1)))] * $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1) + m2s)] = 
         p[$((k+1)*h + i + k*(j-1))]*exp($coex)))
@@ -88,12 +73,12 @@ function exp_expr(k    ::Int64,
   end
   # transition 
   if in(3, model)
-    for j = Base.OneTo(h), i = Base.OneTo(k)
+    for j = Base.OneTo(h), i = Base.OneTo(k*(k-1))
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(pky)
-        rex = isone(ny) ? :(r1) : :(r[$(y3s + yi+pky*(i-1))])
+      for yi in Base.OneTo(yppar)
+        rex = isone(ny) ? :(r1) : :(r[$(y3s + yi+yppar*(i-1))])
         push!(coex.args, 
-          :(p[$(bbase + yi + m3s*pky + pky*((i-1) + k*(k-1)*(j-1)))] * $rex))
+          :(p[$(bbase + yi + m3s*yppar + yppar*((i-1) + k*(k-1)*(j-1)))] * $rex))
       end
       push!(ex.args, :(eaft[$(i + k*(j-1) + m3s)] = 
         p[$(h*(2k+1) + i + k*(k-1)*(j-1))]*exp($coex)))
