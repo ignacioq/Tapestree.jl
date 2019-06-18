@@ -187,7 +187,7 @@ Build dictionary for parameter names and indexes for EGeoHiSSE for
 function build_par_names(k    ::Int64, 
                          h    ::Int64, 
                          ny   ::Int64, 
-                         model::NTuple{N,Int64}) where {N}
+                         model::NTuple{3,Bool})
 
   # generate individual area names
   ia = Array{Char,1}(undef,0)
@@ -231,24 +231,24 @@ function build_par_names(k    ::Int64,
   end
 
   yppar = ny == 1 ? 1 : div(ny,
-    in(1, model)*k + 
-    in(2, model)*k + 
-    in(3, model)*k*(k-1))
+    model[1]*k + 
+    model[2]*k + 
+    model[3]*k*(k-1))
 
   # add betas
-  if in(1, model)
+  if model[1]
     for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
       push!(par_nams, 
         "beta_lambda_"*string(l)*"_"*string(a)*"_"*string(i))
     end
   end
-  if in(2, model)
+  if model[2]
     for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
       push!(par_nams, 
         "beta_mu_"*string(l)*"_"*string(a)*"_"*string(i))
     end
   end
-  if in(3, model)
+  if model[3]
     for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(yppar)
       a == b && continue
       push!(par_nams, 

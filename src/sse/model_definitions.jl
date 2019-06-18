@@ -61,30 +61,36 @@ end
 
 
 """
-    define_mod(egeohisse_mod::String,
+    define_mod(cov_mod::String,
                k            ::Int64,
                h            ::Int64,
                ny           ::Int64)
 
 Defines EGeoHiSSE model for `k` areas, `h` hidden states and `ny` covariates.
 """
-function define_mod(egeohisse_mod::NTuple{N,String},
-                    k            ::Int64,
-                    h            ::Int64,
-                    ny           ::Int64) where N
+function define_mod(cov_mod::NTuple{N,String},
+                    k      ::Int64,
+                    h      ::Int64,
+                    ny     ::Int64) where {N}
 
-  model = Int64[]
-  
-  for m in egeohisse_mod
+  model = [false, false, false]
+
+  for m in cov_mod
     # if speciation
-    occursin(r"^[s|S][A-za-z]*", m) && push!(model, 1)
+    if occursin(r"^[s|S][A-za-z]*", m) 
+      model[1] = true
+    end
     # if extinction
-    occursin(r"^[e|E][A-za-z]*", m) && push!(model, 2)
+    if occursin(r"^[e|E][A-za-z]*", m) 
+      model[2] = true
+    end
     # if dispersal
-    occursin(r"^[t|T|r|R|q|Q][A-za-z]*", m) && push!(model, 3)
+    if occursin(r"^[t|T|r|R|q|Q][A-za-z]*", m)
+      model[3] = true
+    end
   end
 
-  mexp = "$(in(1,model) ? "speciation," : "")$(in(2,model) ? "extinction," : "")$(in(3,model) ? "transition," : "")"
+  mexp = "$(model[1] ? "speciation," : "")$(model[2] ? "extinction," : "")$(model[3] ? "transition," : "")"
   mexp = replace(mexp, "," => ", ")
   mexp = mexp[1:(end-2)]
 

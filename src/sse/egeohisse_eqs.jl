@@ -16,30 +16,30 @@ Created 18 03 2019
     exp_expr(k    ::Int64,
              h    ::Int64,
              ny   ::Int64,
-             model::NTuple{N,Int64}) where {N}
+             model::NTuple{3,Bool})
 
 Return exponential expression for one time evaluation of covariates.
 """
 function exp_expr(k    ::Int64,
                   h    ::Int64,
                   ny   ::Int64,
-                  model::NTuple{N,Int64}) where {N}
+                  model::NTuple{3,Bool})
 
   # last non β parameters
   bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
 
   # ncov
-  ncov = in(1, model)*k + in(2, model)*k + in(3, model)*k*(k-1)
+  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
   # y per parameter
   yppar = isone(ny) ? 1 : div(ny,ncov)
 
   # starting indices for models 2 and 3
-  m2s = in(1, model)*k*h
-  m3s = m2s + in(2, model)*k*h
+  m2s = model[1]*k*h
+  m3s = m2s + model[2]*k*h
 
-  y2s = in(1, model)*yppar*k
-  y3s = y2s + in(2, model)*yppar*k
+  y2s = model[1]*yppar*k
+  y3s = y2s + model[2]*yppar*k
 
   # start expression 
   ex = quote end
@@ -48,7 +48,7 @@ function exp_expr(k    ::Int64,
   isone(ny) && push!(ex.args, :(r1 = r[1]))
 
   # speciation 
-  if in(1, model)
+  if model[1]
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
       for yi in Base.OneTo(yppar)
@@ -59,7 +59,7 @@ function exp_expr(k    ::Int64,
     end
   end 
   # extinction 
-  if in(2, model)
+  if model[2]
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
       for yi in Base.OneTo(yppar)
@@ -72,7 +72,7 @@ function exp_expr(k    ::Int64,
     end
   end
   # transition 
-  if in(3, model)
+  if model[3]
     for j = Base.OneTo(h), i = Base.OneTo(k*(k-1))
       coex = Expr(:call, :+)
       for yi in Base.OneTo(yppar)
@@ -100,7 +100,7 @@ end
                   k    ::Int64,
                   h    ::Int64,
                   ns   ::Int64,
-                  model::NTuple{N,Int64},
+                  model::NTuple{3,Bool},
                   ext  ::Bool)
 
 Return expression for no events.
@@ -112,12 +112,12 @@ function noevents_expr(si   ::Int64,
                        k    ::Int64,
                        h    ::Int64,
                        ns   ::Int64,
-                       model::NTuple{N,Int64},
-                       ext  ::Bool) where {N}
+                       model::NTuple{3,Bool},
+                       ext  ::Bool)
 
   # starting indices for models 2 and 3
-  m2s = in(1, model)*k*h
-  m3s = m2s + in(2, model)*k*h
+  m2s = model[1]*k*h
+  m3s = m2s + model[2]*k*h
 
   # if extinction ODE
   wu = ext ? ns : 0
@@ -130,7 +130,7 @@ function noevents_expr(si   ::Int64,
 
   for (i, v) = enumerate(s.g)
     #speciation
-    if in(1, model)
+    if model[1]
       if isone(ls)
         push!(ex.args, :(eaft[$(v + s.h*k)]))
       else
@@ -145,14 +145,14 @@ function noevents_expr(si   ::Int64,
     end
 
     # if extinction model and only for endemic extinction
-    if in(2, model) && isone(ls)
+    if model[2] && isone(ls)
       push!(ex.args, :(eaft[$(m2s + v + s.h*k)]))
     else
       push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
     end
 
     # dispersal
-    if in(3, model)
+    if model[3]
       for j = oa
         j -= v <= j ? 1 : 0
         push!(ex.args, 
@@ -210,14 +210,14 @@ end
 
 
 """
-    dispersal_expr(s  ::Sgh,
-                   oa ::Array{Int64,1},
-                   S  ::Array{Sgh,1},
-                   ns ::Int64,
-                   k  ::Int64,
-                   h  ::Int64,
-                   mdQ::Bool,
-                   ext::Bool)
+    dispersal_expr(s    ::Sgh,
+                   oa   ::Array{Int64,1},
+                   S    ::Array{Sgh,1},
+                   ns   ::Int64,
+                   k    ::Int64,
+                   h    ::Int64,
+                   model::NTuple{3,Bool},
+                   ext  ::Bool)
 
 Return expression for dispersal.
 """
@@ -227,10 +227,10 @@ function dispersal_expr(s    ::Sgh,
                         ns   ::Int64,
                         k    ::Int64,
                         h    ::Int64,
-                        model::NTuple{N,Int64},
-                        ext  ::Bool) where {N}
+                        model::NTuple{3,Bool},
+                        ext  ::Bool)
 
-  m3s = in(1, model)*k*h + in(2, model)*k*h
+  m3s = model[1]*k*h + model[2]*k*h
 
   wu = ext ? ns : 0
 
@@ -241,7 +241,7 @@ function dispersal_expr(s    ::Sgh,
   ex = Expr(:call, :+)
 
   # if dispersal covariate
-  if in(3, model)
+  if model[3]
     for a = s.g, (i, j) = enumerate(oa)
       j -= a <= j ? 1 : 0
       push!(ex.args, :(eaft[$(m3s + s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
@@ -300,9 +300,11 @@ end
 
 
 """
-    wrspec_expr(ri::Int64,
-                ia::Array{Int64,1},
-                ns::Int64)
+    wrspec_expr(si   ::Int64,
+                s    ::Sgh,
+                ns   ::Int64,
+                k    ::Int64,
+                model::NTuple{3,Bool})
 
 Return expression for within-region speciation.
 """
@@ -310,10 +312,10 @@ function wrspec_expr(si   ::Int64,
                      s    ::Sgh,
                      ns   ::Int64,
                      k    ::Int64,
-                     model::NTuple{N,Int64}) where {N}
+                     model::NTuple{3,Bool})
 
   # if model speciation
-  if in(1, model)
+  if model[1]
     if isone(length(s.g))
       ex = Expr(:call, :*, 2.0)
       for i = s.g
@@ -403,7 +405,7 @@ end
              ns   ::Int64,
              k    ::Int64,
              h    ::Int64,
-             model::Ntuple{N,Int64})
+             model::NTuple{3,Bool})
 
 Return expression for extinction.
 """
@@ -412,12 +414,12 @@ function ext_expr(s    ::Sgh,
                   ns   ::Int64,
                   k    ::Int64,
                   h    ::Int64,
-                  model::NTuple{N,Int64}) where {N}
+                  model::NTuple{3,Bool})
 
-  m2s = in(1, model)*k*h
+  m2s = model[1]*k*h
 
   if isone(length(s.g))
-    if in(2,model)
+    if model[2]
       ex = Expr(:call, :+)
       for i in s.g push!(ex.args, :(eaft[$(m2s + k*s.h + i)])) end
     else
@@ -442,10 +444,11 @@ end
 
 
 """
-    wrsext_expr(si::Int64,
-                s ::Sgh,
-                ns::Int64,
-                k ::Int64)
+    wrsext_expr(si   ::Int64,
+                s    ::Sgh,
+                ns   ::Int64,
+                k    ::Int64,
+                model::NTuple{3,Bool})
 
 Return expression of extinction for within-region speciation.
 """
@@ -453,10 +456,10 @@ function wrsext_expr(si   ::Int64,
                      s    ::Sgh,
                      ns   ::Int64,
                      k    ::Int64,
-                     model::NTuple{N,Int64}) where {N}
+                     model::NTuple{3,Bool})
 
   # if speciation model
-  if in(1, model)
+  if model[1]
     if isone(length(s.g))
       for i = s.g
         ex = :(eaft[$(i + s.h*k)] * u[$(i + s.h*(2^k-1) + ns)]^2)
@@ -667,7 +670,7 @@ function make_egeohisse(::Val{k},
   r    = Array{Float64,1}(undef, ny)
 
   eaft = Array{Float64,1}(undef,
-    in(1, model)*k*h + in(2, model)*k*h + in(3, model)*k*(k-1)*h)
+    model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
 
   # make ode function with closure
   ode_fun = (du::Array{Float64,1}, 

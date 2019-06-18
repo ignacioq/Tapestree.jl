@@ -36,12 +36,12 @@ function simulate_sse(λ       ::Array{Float64,1},
                       q       ::Array{Float64,1},
                       β       ::Array{Float64,1},
                       x       ::Array{Float64,1},
-                      y       ::Array{Float64,N};
-                      cov_mod ::String  = "speciation",
+                      y       ::Array{Float64,N},
+                      cov_mod ::NTuple{M,String};
                       δt      ::Float64 = 1e-4,
                       nspp_min::Int64   = 1,
                       nspp_max::Int64   = 200_000,
-                      retry_ext::Bool   = true) where N
+                      retry_ext::Bool   = true) where {M,N}
 
   # make simulation
   ed, el, st, n, S, k = 
@@ -102,11 +102,12 @@ function simulate_edges(λ       ::Array{Float64,1},
                         x       ::Array{Float64,1},
                         y       ::Array{Float64, N},
                         δt      ::Float64,
-                        cov_mod ::String,
+                        cov_mod ::NTuple{N,String},
                         nssp_max::Int64) where N
 
   h = Int64((sqrt(length(q)*4 + 1) + 1)/2)
   k = div(length(l), h)
+  ny = size(y, 2)
 
   # if multidimensional
   md = N > 1
@@ -139,7 +140,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   isp = Array{Float64,1}(undef, length(S))
 
   # assign initial state probabilities
-  init_states_pr!(isp, l, g, q, μ, β, S, k, h, model, md, as, hs)
+  init_states_pr!(isp, λ, l, g, q, μ, β, S, k, h, ny, model, md, as, hs)
 
   # preallocate vector of individual area probabilities 
   spr = Array{Float64,1}(undef, ns)
@@ -153,7 +154,6 @@ function simulate_edges(λ       ::Array{Float64,1},
   # edges alive
   ea = [1, 2]
 
-
   # edge array
   ed = zeros(Int64, nssp_max*2, 2)
   ed[ea,:] = [1 2;
@@ -164,12 +164,12 @@ function simulate_edges(λ       ::Array{Float64,1},
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
-   event_probs(λ, μ, l, g, q, β, r, S, k, h, model, md, δt, ns, as, hs)
+   event_probs(λ, μ, l, g, q, β, r, S, k, h, ny, model, md, δt, ns, as, hs)
 
   # make λ, μ, g & q probability functions
-  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md)
-  updμpr! = make_updμpr!(μ, β, μpr, Sμpr, δt, k, model, md)
-  updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, model, md, as, S)
+  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md, ny)
+  updμpr! = make_updμpr!(μ, l, β, μpr, Sμpr, δt, k, h, model, md, ny)
+  updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, h, model, md, as, S, ny)
   updqpr! = make_updqpr!(Sqpr)
 
   # preallocate states probabilities for specific lengths of each event
@@ -305,7 +305,8 @@ function simulate_edges(λ       ::Array{Float64,1},
         # if local extinction (state change)
         else
           @inbounds st[i] = μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
-
+        
+          # no more events at this time
           continue
         end
 
@@ -400,7 +401,7 @@ end
 Check if number of parameters and `z(t)` functions 
 is consistent with specified model.
 """
-function id_mod(cov_mod::String, 
+function id_mod(cov_mod::NTuple{N,String}, 
                 k      ::Int64, 
                 h      ::Int64, 
                 nzt    ::Int64,
@@ -409,7 +410,7 @@ function id_mod(cov_mod::String,
                 l      ::Array{Float64,1},
                 g      ::Array{Float64,1},
                 q      ::Array{Float64,1},
-                β      ::Array{Float64,1})
+                β      ::Array{Float64,1}) where {N}
 
   all_ok = true
 
@@ -428,58 +429,48 @@ function id_mod(cov_mod::String,
     error("Parameter vector lengths not consistent with the number of states")
   end
 
-  # if speciation, extinction or transition model
-  if occursin(r"^[s|S][A-za-z]*", cov_mod)
+   model = [false, false, false]
 
-    if lastindex(β) == (nzt == 1 ? k*h : nzt*h)
-      printstyled("Number of parameters are consistent with specified model \n", 
-        color=:green)
-    else
-      all_ok = false
-      printstyled("speciation covariate model with $k areas should have a β vector length of $(nzt == 1 ? k*h : nzt*h) \n")
+  for m in cov_mod
+    # if speciation
+    if occursin(r"^[s|S][A-za-z]*", m) 
+      model[1] = true
     end
-
-    modelstring = "speciation" 
-    model = 1
-
-  elseif occursin(r"^[e|E][A-za-z]*", cov_mod)
-
-    if lastindex(β) == (nzt == 1 ? k*h : nzt*h)
-      printstyled("Number of parameters are consistent with specified model \n", 
-        color=:green)    
-    else
-      all_ok = false
-      printstyled("extinction covariate model with $k areas should have a β vector length of $(nzt == 1 ? k*h : nzt*h) \n")
+    # if extinction
+    if occursin(r"^[e|E][A-za-z]*", m) 
+      model[2] = true
     end
-
-    modelstring = "extinction" 
-    model = 2
-
-  elseif occursin(r"^[t|T|r|R|q|Q][A-za-z]*", cov_mod)
-
-    if lastindex(β) == (nzt == 1 ? k*(k-1)*h : h*nzt)
-      printstyled("Number of parameters are consistent with specified model \n", 
-        color=:green)    
-    else
-      all_ok = false
-      printstyled("transition covariate model with $k areas should have a β vector length of $(nzt == 1 ? k*(k-1)*h : h*nzt) \n")
+    # if dispersal
+    if occursin(r"^[t|T|r|R|q|Q][A-za-z]*", m)
+      model[3] = true
     end
-    modelstring = "transition" 
-    model = 3
-  else
-    model = 0
-    warning("cov_mod does not match any ESSE model, running MuSSE \n")
   end
 
+  # beta length should be
+  betaE = model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h
+
+  if lastindex(β) == betaE
+    printstyled("Number of parameters are consistent with specified model \n", 
+      color=:green)
+  else
+    all_ok = false
+    printstyled("this covariate model with $k areas and $h hidden states should have a β vector length of $betaE \n")
+  end
+
+  mexp = "$(model[1] ? "speciation," : "")$(model[2] ? "extinction," : "")$(model[3] ? "transition," : "")"
+  mexp = replace(mexp, "," => ", ")
+  mexp = mexp[1:(end-2)]
+
   if all_ok 
-    printstyled("Simulating $modelstring covariate SSE model with $k states, $h hidden states and $nzt covariates \n", 
+    printstyled("Simulating $mexp covariate SSE model with $k states, $h hidden states and $nzt covariates \n", 
       color=:green)
   else
     error("Parameter and z(t) function number not consistent with specified model")
   end
 
-  return model
+  return tuple(model...)
 end
+
 
 
 
@@ -502,6 +493,7 @@ end
  Estimate starting transition probabilities for initial states
 """
 function init_states_pr!(isp  ::Array{Float64,1},
+                         λ    ::Array{Float64,1},
                          l    ::Array{Float64,1},
                          g    ::Array{Float64,1},
                          q    ::Array{Float64,1},
@@ -510,105 +502,65 @@ function init_states_pr!(isp  ::Array{Float64,1},
                          S    ::Array{Sgh,1},
                          k    ::Int64,
                          h    ::Int64,
-                         model::Int64,
+                         ny   ::Int64,
+                         model::NTuple{3,Bool},
                          md   ::Bool,
                          as   ::UnitRange{Int64},
                          hs   ::UnitRange{Int64})
 
-  if model == 1
+    # ncov
+  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
-    for si in Base.OneTo(length(S))
+  # y per parameter
+  yppar = isone(ny) ? 1 : div(ny,ncov)
 
-      s = S[si]
 
-      # loss rates
-      lr = 0.0
-      for i = setdiff(as, s.g)
-        lr += l[s.h*k+i]
-      end
+  m3s = model[1]*k*h + model[2]*k*h
+  y3s = model[1]*yppar*k + model[2]*yppar*k
 
-      # gain rates
-      gr = 0.0
-      if length(s.g) > 1
-        for ta = s.g, fa = setdiff(s.g, ta)
-          gr += g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)]
-        end
-      end
+  for si in Base.OneTo(length(S))
 
-      # hidden states
-      hr = 0.0
-      for fa = setdiff(hs, s.h)
-          hr += q[fa*(h-1) + (s.h > fa ? s.h : s.h+1)]
-      end
+    s = S[si]
 
-      # add all and hidden rates
-      isp[si] = lr + gr + hr
+    # allopatric speciation rates
+    sr = 0.0
+    if length(s.g) != k
+      sr += λ[(s.h+1)*(k+1)]
     end
 
-  # if extinction model
-  elseif model == 2 && isequal(l, μ)
-
-    for si in Base.OneTo(length(S))
-
-      s = S[si]
-
-      # loss rates
-      lr = 0.0
-      for i = setdiff(as, s.g)
-        lr += expf(l[s.h*k+i], β[s.h*k+i], md ? r[i] : r[1])
-      end
-
-      # gain rates
-      gr = 0.0
-      if length(s.g) > 1
-        for ta = s.g, fa = setdiff(s.g, ta)
-          gr += g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)]
-        end
-      end
-
-      # hidden states
-      hr = 0.0
-      for fa = setdiff(hs, s.h)
-          hr += q[fa*(h-1) + (s.h > fa ? s.h : s.h+1)]
-      end
-
-      # add all and hidden rates
-      isp[si] = lr + gr + hr
+    # loss rates
+    lr = 0.0
+    for i = setdiff(as, s.g)
+      lr += l[s.h*k+i]
     end
 
-  # if transition model
-  elseif model == 3
-
-    for si in Base.OneTo(length(S))
-
-      s = S[si]
-
-      # loss rates
-      lr = 0.0
-      for i = setdiff(as, s.g)
-        lr += l[s.h*k+i]
-      end
-
-      # gain rates
+    # gain rates
+    if model[3]
       gr = 0.0
       if length(s.g) > 1
         for ta = s.g, fa = setdiff(s.g, ta)
           gr += expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-                     β[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-                     md ? r[(fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])
+                     β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                     md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])
         end
       end
-
-      # hidden states
-      hr = 0.0
-      for fa = setdiff(hs, s.h)
-          hr += q[fa*(h-1) + (s.h > fa ? s.h : s.h+1)]
+    else
+      gr = 0.0
+      if length(s.g) > 1
+        for ta = s.g, fa = setdiff(s.g, ta)
+          gr += g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)]
+        end
       end
-
-      # add all and hidden rates
-      isp[si] = lr + gr + hr
     end
 
+    # hidden states
+    hr = 0.0
+    for fa = setdiff(hs, s.h)
+        hr += q[fa*(h-1) + (s.h > fa ? s.h : s.h+1)]
+    end
+
+    # add all and hidden rates
+    isp[si] = sr + lr + gr + hr
   end
 
   return nothing
@@ -625,11 +577,16 @@ end
                 g    ::Array{Float64,1},
                 q    ::Array{Float64,1},
                 β    ::Array{Float64,1},
+                r    ::Array{Float64,1},
                 S    ::Array{Sgh,1},
                 k    ::Int64,
                 h    ::Int64,
-                model::Int64,
-                md   ::Bool)
+                model::NTuple{3,Bool},
+                md   ::Bool, 
+                δt   ::Float64,
+                ns   ::Int64,
+                as   ::UnitRange{Int64},
+                hs   ::UnitRange{Int64})
 
 Create event probabilities for each state given the input parameters.
 """
@@ -643,12 +600,25 @@ function event_probs(λ    ::Array{Float64,1},
                      S    ::Array{Sgh,1},
                      k    ::Int64,
                      h    ::Int64,
-                     model::Int64,
+                     ny   ::Int64,
+                     model::NTuple{3,Bool},
                      md   ::Bool, 
                      δt   ::Float64,
                      ns   ::Int64,
                      as   ::UnitRange{Int64},
                      hs   ::UnitRange{Int64})
+
+  # expected number of covariates
+  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
+
+  # y per parameter
+  yppar = isone(ny) ? 1 : div(ny,ncov)
+
+  # starting values for models
+  m2s = model[1]*k*h
+  m3s = m2s + model[2]*k*h
+  y2s = model[1]*yppar*k
+  y3s = y2s + model[2]*yppar*k
 
   @inbounds begin
     ### make fixed vectors of approximate probabilities for each state
@@ -662,7 +632,7 @@ function event_probs(λ    ::Array{Float64,1},
       s = S[si]
       na = 0
       # within-area speciation
-      if model == 1
+      if model[1]
         for a in s.g
           na += 1
           λpr[si][na] = expf(λ[(k+1)*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
@@ -688,9 +658,9 @@ function event_probs(λ    ::Array{Float64,1},
     for si in Base.OneTo(ns)
       s = S[si]
       if isone(length(s.g))
-        if model == 2
+        if model[2]
           for a in s.g
-            μpr[si][1] = expf(μ[k*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+            μpr[si][1] = expf(μ[k*s.h + a], β[m2s + k*s.h + a], md ? r[y2s + a] : r[1])*δt
           end
         else
           for a in s.g
@@ -714,12 +684,12 @@ function event_probs(λ    ::Array{Float64,1},
     # fill it up
     for si in Base.OneTo(ns)
       s = S[si]
-      if model == 3
+      if model[3]
         for (i,ta) = enumerate(setdiff(as,s.g)), fa = s.g
           gpr[si][i] += 
             expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-                 β[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-                 md ? r[(fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+                 β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                 md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
         end
       else
         for (i,ta) = enumerate(setdiff(as,s.g)), fa = s.g
@@ -890,8 +860,9 @@ function make_updλpr!(λ    ::Array{Float64,1},
                       Sλpr ::Array{Float64,1},
                       δt   ::Float64,
                       k    ::Int64,
-                      model::Int64,
-                      md   ::Bool)
+                      model::NTuple{3,Bool},
+                      md   ::Bool,
+                      ny   ::Int64)
 
 
   # if dependent on `z(t)` and multidimensional
@@ -922,7 +893,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
     return Sλpr[si]
   end
 
-  if model == 1
+  if model[1]
     return f1
   else
     return f2
@@ -946,13 +917,27 @@ end
 Make `μ` instantaneous probability function
 """
 function make_updμpr!(μ    ::Array{Float64,1},
+                      l    ::Array{Float64,1},
                       β    ::Array{Float64,1},
                       μpr  ::Array{Array{Float64,1},1},
                       Sμpr ::Array{Float64,1},
                       δt   ::Float64,
                       k    ::Int64,
-                      model::Int64,
-                      md   ::Bool)
+                      h    ::Int64,
+                      model::NTuple{3,Bool},
+                      md   ::Bool,
+                      ny   ::Int64)
+  
+  # expected number of covariates
+  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
+
+  # y per parameter
+  yppar = isone(ny) ? 1 : div(ny,ncov)
+
+  # starting values for models
+  m2s = model[1]*k*h
+  y2s = model[1]*yppar*k
+
   function f1(si ::Int64,
               s  ::Sgh,
               r::Array{Float64,1})
@@ -960,7 +945,8 @@ function make_updμpr!(μ    ::Array{Float64,1},
     @inbounds begin
       if isone(length(s.g))
         for a in s.g
-          μpr[si][1] = expf(μ[k*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+          μpr[si][1] = 
+            expf(μ[k*s.h + a], β[m2s + k*s.h + a], md ? r[y2s + a] : r[1])*δt
         end
       else
         na = 0
@@ -981,7 +967,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
     return Sμpr[si]
   end
 
-  if model == 2
+  if model[2]
     return f1
   else
     return f2
@@ -1012,10 +998,22 @@ function make_updgpr!(g    ::Array{Float64,1},
                       Sgpr ::Array{Float64,1},
                       δt   ::Float64,
                       k    ::Int64,
-                      model::Int64,
+                      h    ::Int64,
+                      model::NTuple{3,Bool},
                       md   ::Bool,
                       as   ::UnitRange{Int64},
-                      S    ::Array{Sgh,1})
+                      S    ::Array{Sgh,1},
+                      ny   ::Int64)
+
+  # expected number of covariates
+  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
+
+  # y per parameter
+  yppar = isone(ny) ? 1 : div(ny,ncov)
+
+  # starting values for models
+  m3s = model[1]*k*h + model[2]*k*h
+  y3s = model[1]*yppar*k + model[2]*yppar*k
 
   # do setdiff before
   sdf = Array{Int64,1}[]
@@ -1031,8 +1029,8 @@ function make_updgpr!(g    ::Array{Float64,1},
       for (i,ta) = enumerate(sdf[si]), fa = s.g
         gpr[si][i] += 
           expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-               β[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-               md ? r[(fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+               β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+               md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
       end
 
       return Sgpr[si] = sum(gpr[si]) 
@@ -1045,7 +1043,7 @@ function make_updgpr!(g    ::Array{Float64,1},
     return Sgpr[si]
   end
 
-  if model == 3
+  if model[3]
     return f1
   else
     return f2

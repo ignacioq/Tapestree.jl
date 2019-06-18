@@ -223,7 +223,7 @@ Generated function for full tree likelihood at the root.
                                 extp::Array{Float64,1},
                                 w   ::Array{Float64,1},
                                 p   ::Array{Float64,1},
-                                λts::Array{Float64,1},
+                                λts ::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
                                 ::Val{k},
@@ -236,12 +236,12 @@ Generated function for full tree likelihood at the root.
   eqs = quote end
   popfirst!(eqs.args)
 
-  if in(1, model)
+  if model[1]
    # last non β parameters
     bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
 
     # ncov
-    ncov = in(1, model)*k + in(2, model)*k + in(3, model)*k*(k-1)
+    ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
     # y per parameter
     yppar = isone(ny) ? 1 : div(ny,ncov)
@@ -389,13 +389,13 @@ Generated function for speciation event likelihoods
   S = create_states(k, h)
 
   # if speciation model
-  if in(1,model) 
+  if model[1] 
  
     # last non β parameters
     bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
 
     # ncov
-    ncov = in(1, model)*k + in(2, model)*k + in(3, model)*k*(k-1)
+    ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
     # y per parameter
     yppar = isone(ny) ? 1 : div(ny,ncov)
@@ -568,22 +568,16 @@ end
   for i in (h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
     push!(eq.args, :(logdexp(p[$i], $qpriors)))
   end
+  
+  bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
+  ncov  = model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h
+
   # betas
-  if isone(ny)
-    nb = model == 3 ? 
-      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)) :
-      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h)
-    for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
-      push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
-    end
-  else
-    nb = model == 3 ? 
-      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*(k-1)*div(ny,k*(k-1))*h) :
-      (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1) + k*h*div(ny,k))
-    for i in (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)+1):nb
-      push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
-    end
+  for i in (bbase+1):(bbase+ncov)
+    push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
   end
+
+  println(eq)
 
   return quote 
     @inbounds begin

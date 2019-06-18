@@ -71,6 +71,8 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # make dictionary with relevant parameters
   pardic = build_par_names(k, h, ny, model)
 
+  println(sort!(collect(pardic), by = x -> x[2]))
+
   # get number of parameters
   npars = length(pardic)
 
