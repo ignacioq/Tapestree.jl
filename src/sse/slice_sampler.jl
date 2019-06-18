@@ -110,10 +110,6 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
     end
   end
 
-
-
-
-
   # make ODE function
   ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
 

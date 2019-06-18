@@ -236,22 +236,28 @@ Generated function for full tree likelihood at the root.
   eqs = quote end
   popfirst!(eqs.args)
 
-  if model == 1
+  if in(1, model)
+   # last non β parameters
+    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+
+    # ncov
+    ncov = in(1, model)*k + in(2, model)*k + in(3, model)*k*(k-1)
+
+    # y per parameter
+    yppar = isone(ny) ? 1 : div(ny,ncov)
+
     # add environmental function
     push!(eqs.args, :(af!(t, r)))
 
-    # estimate covariate lambdas
-    pky = isone(ny) ? 1 : div(ny,k)
+    isone(ny) && push!(eqs.args, :(r1 = r[1]))
+
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(pky)
-        rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
-        push!(coex.args,
-          :(p[$(h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) + yi + pky* ((i-1) + k*(j-1)))] * 
-            $rex))
+      for yi in Base.OneTo(yppar)
+        rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
+        push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(eqs.args, 
-        :(λts[$(i+k*(j-1))] = p[$(i+(k+1)*(j-1))] * exp($coex)))
+      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
     end
 
     eq = Expr(:call, :+)
@@ -383,22 +389,29 @@ Generated function for speciation event likelihoods
   S = create_states(k, h)
 
   # if speciation model
-  if model == 1 
+  if in(1,model) 
+ 
+    # last non β parameters
+    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+
+    # ncov
+    ncov = in(1, model)*k + in(2, model)*k + in(3, model)*k*(k-1)
+
+    # y per parameter
+    yppar = isone(ny) ? 1 : div(ny,ncov)
+
     # add environmental function
     push!(eqs.args, :(af!(t, r)))
 
-    # estimate covariate lambdas
-    pky = isone(ny) ? 1 : div(ny,k)
+    isone(ny) && push!(eqs.args, :(r1 = r[1]))
+
     for j = Base.OneTo(h), i = Base.OneTo(k)
       coex = Expr(:call, :+)
-      for yi in Base.OneTo(pky)
-        rex = isone(ny) ? :(r[1]) : :(r[$(yi+pky*(i-1))])
-        push!(coex.args,
-          :(p[$(h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) + yi + pky* ((i-1) + k*(j-1)))] * 
-            $rex))
+      for yi in Base.OneTo(yppar)
+        rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
+        push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(eqs.args, 
-        :(λts[$(i+k*(j-1))] = p[$(i+(k+1)*(j-1))] * exp($coex)))
+      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
     end
 
     # likelihood for individual areas states
