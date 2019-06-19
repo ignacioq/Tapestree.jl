@@ -102,8 +102,8 @@ function simulate_edges(λ       ::Array{Float64,1},
                         x       ::Array{Float64,1},
                         y       ::Array{Float64, N},
                         δt      ::Float64,
-                        cov_mod ::NTuple{N,String},
-                        nssp_max::Int64) where {N}
+                        cov_mod ::NTuple{M,String},
+                        nssp_max::Int64) where {M,N}
 
   h =  Int64((sqrt(length(q)*4 + 1) + 1)/2)
   k  = div(length(l), h)
