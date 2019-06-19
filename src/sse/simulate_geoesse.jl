@@ -103,17 +103,17 @@ function simulate_edges(λ       ::Array{Float64,1},
                         y       ::Array{Float64, N},
                         δt      ::Float64,
                         cov_mod ::NTuple{N,String},
-                        nssp_max::Int64) where N
+                        nssp_max::Int64) where {N}
 
-  h = Int64((sqrt(length(q)*4 + 1) + 1)/2)
-  k = div(length(l), h)
+  h =  Int64((sqrt(length(q)*4 + 1) + 1)/2)
+  k  = div(length(l), h)
   ny = size(y, 2)
 
   # if multidimensional
-  md = N > 1
+  md = ny > 1
 
   # check number of parameters and data
-  model = id_mod(cov_mod, k, h, size(y,2), λ, μ, l, g, q, β)
+  model = id_mod(cov_mod, k, h, ny, λ, μ, l, g, q, β)
 
   # total simulation time
   simt = x[end]
@@ -508,15 +508,18 @@ function init_states_pr!(isp  ::Array{Float64,1},
                          as   ::UnitRange{Int64},
                          hs   ::UnitRange{Int64})
 
-    # ncov
+  # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
   # y per parameter
   yppar = isone(ny) ? 1 : div(ny,ncov)
 
+  # starting values for models
+  m2s = model[1]*k*h
+  m3s = m2s + model[2]*k*h
+  y2s = model[1]*yppar*k
+  y3s = y2s + model[2]*yppar*k
 
-  m3s = model[1]*k*h + model[2]*k*h
-  y3s = model[1]*yppar*k + model[2]*yppar*k
 
   for si in Base.OneTo(length(S))
 
@@ -615,8 +618,8 @@ function event_probs(λ    ::Array{Float64,1},
   yppar = isone(ny) ? 1 : div(ny,ncov)
 
   # starting values for models
-  m2s = model[1]*k*h
-  m3s = m2s + model[2]*k*h
+  m2s = model[1]*k
+  m3s = m2s + model[2]*k
   y2s = model[1]*yppar*k
   y3s = y2s + model[2]*yppar*k
 
@@ -635,7 +638,7 @@ function event_probs(λ    ::Array{Float64,1},
       if model[1]
         for a in s.g
           na += 1
-          λpr[si][na] = expf(λ[(k+1)*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+          λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
         end
       else
         for a in s.g
@@ -660,7 +663,7 @@ function event_probs(λ    ::Array{Float64,1},
       if isone(length(s.g))
         if model[2]
           for a in s.g
-            μpr[si][1] = expf(μ[k*s.h + a], β[m2s + k*s.h + a], md ? r[y2s + a] : r[1])*δt
+            μpr[si][1] = expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
           end
         else
           for a in s.g
@@ -864,6 +867,17 @@ function make_updλpr!(λ    ::Array{Float64,1},
                       md   ::Bool,
                       ny   ::Int64)
 
+  # expected number of covariates
+  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
+
+  # y per parameter
+  yppar = isone(ny) ? 1 : div(ny,ncov)
+
+  # starting values for models
+  m2s = model[1]*k
+  m3s = m2s + model[2]*k
+  y2s = model[1]*yppar*k
+  y3s = y2s + model[2]*yppar*k
 
   # if dependent on `z(t)` and multidimensional
   function f1(si ::Int64,
@@ -875,7 +889,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
       # within-area speciation
       for a in s.g
         na += 1
-        λpr[si][na] = expf(λ[(k+1)*s.h + a], β[k*s.h + a], md ? r[a] : r[1])*δt
+        λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
       end
       # between-area speciation
       if na > 1
@@ -935,8 +949,11 @@ function make_updμpr!(μ    ::Array{Float64,1},
   yppar = isone(ny) ? 1 : div(ny,ncov)
 
   # starting values for models
-  m2s = model[1]*k*h
+  m2s = model[1]*k
+  m3s = m2s + model[2]*k
   y2s = model[1]*yppar*k
+  y3s = y2s + model[2]*yppar*k
+
 
   function f1(si ::Int64,
               s  ::Sgh,
@@ -946,7 +963,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
       if isone(length(s.g))
         for a in s.g
           μpr[si][1] = 
-            expf(μ[k*s.h + a], β[m2s + k*s.h + a], md ? r[y2s + a] : r[1])*δt
+            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       else
         na = 0
@@ -1012,7 +1029,7 @@ function make_updgpr!(g    ::Array{Float64,1},
   yppar = isone(ny) ? 1 : div(ny,ncov)
 
   # starting values for models
-  m3s = model[1]*k*h + model[2]*k*h
+  m3s = model[1]*k + model[2]*k
   y3s = model[1]*yppar*k + model[2]*yppar*k
 
   # do setdiff before
