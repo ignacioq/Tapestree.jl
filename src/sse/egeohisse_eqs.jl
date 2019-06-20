@@ -126,7 +126,7 @@ function noevents_expr(si   ::Int64,
 
   # between-region speciation
   ex = Expr(:call, :+)
-  ls > 1 && push!(ex.args, :($(2.0^(ls) - 2.0) * p[$(k+1+s.h*(k+1))]))
+  ls > 1 && push!(ex.args, :($(2.0^(ls-1) - 1.0) * p[$(k+1+s.h*(k+1))]))
 
   for (i, v) = enumerate(s.g)
     #speciation
@@ -134,13 +134,13 @@ function noevents_expr(si   ::Int64,
       if isone(ls)
         push!(ex.args, :(eaft[$(v + s.h*k)]))
       else
-        push!(ex.args, :(2.0 * eaft[$(v + s.h*k)]))
+        push!(ex.args, :(eaft[$(v + s.h*k)]))
       end
     else
       if isone(ls)
         push!(ex.args, :(p[$(v + s.h*(k+1))]))
       else
-        push!(ex.args, :(2.0 * p[$(v + s.h*(k+1))]))
+        push!(ex.args, :(p[$(v + s.h*(k+1))]))
       end
     end
 
@@ -325,7 +325,7 @@ function wrspec_expr(si   ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(2.0 * eaft[$(i + s.h*k)] * 
+        push!(ex.args, :(eaft[$(i + s.h*k)] * 
           (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
            u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
       end
@@ -338,7 +338,7 @@ function wrspec_expr(si   ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(2.0 * p[$(i + s.h*(k+1))] * 
+        push!(ex.args, :(p[$(i + s.h*(k+1))] * 
           (u[$(i + s.h*(2^k-1) + ns)] * u[$(si)] + 
            u[$(si + ns)] * u[$(i + s.h*(2^k-1))])))
       end
@@ -383,7 +383,7 @@ function brspec_expr(s  ::Sgh,
   end
   # ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1+s.h*(k+1))] * $ex)
 
-  ex = :(2.0 * p[$(k+1+s.h*(k+1))] * $ex)
+  ex = :(p[$(k+1+s.h*(k+1))] * $ex)
 
   # if ext
   #   ex = :(p[$(k+1+s.h*(k+1))] * $ex)
@@ -467,7 +467,7 @@ function wrsext_expr(si   ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(2.0 * eaft[$(i + s.h*k)] * 
+        push!(ex.args, :(eaft[$(i + s.h*k)] * 
                          u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
       end
     end
@@ -478,7 +478,7 @@ function wrsext_expr(si   ::Int64,
     else
       ex = Expr(:call, :+)
       for i = s.g
-        push!(ex.args, :(2.0 * p[$(i + s.h*(k+1))] * 
+        push!(ex.args, :(p[$(i + s.h*(k+1))] * 
                          u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
       end
     end
