@@ -174,7 +174,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         for i in Base.OneTo(ns)
           ud1[i+ns] > 1.0 && return -Inf
           led[pr][i+ns] = ud1[i+ns]
-          led[pr][i] = exp(llik[i] - tosum)
+          led[pr][i]    = exp(llik[i] - tosum)
         end
       end
 
