@@ -276,14 +276,14 @@ Generated function for full tree likelihood at the root.
         # single area speciation
         for a in S[i + (2^k-1)*(j-1)].g
           push!(lams.args, :(
-            2.0 * λts[$(a + k*(j-1))] * 
+            λts[$(a + k*(j-1))] * 
            (1.0-extp[$(a + (j-1)*(2^k-1))]) * (1.0-extp[$(i + (j-1)*(2^k-1))])))
         end
 
         # for allopatric speciation
         for (la, ra) = vicsubsets(S[i + (2^k-1)*(j-1)].g)[1:(div(end,2))]
           push!(lams.args, 
-            :(2.0 * p[$((k+1)*(1+(j-1)))] *
+            :(p[$((k+1)*(1+(j-1)))] *
              (1.0-extp[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*(j-1))]) * 
              (1.0-extp[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*(j-1))])))
         end
@@ -314,14 +314,14 @@ Generated function for full tree likelihood at the root.
         # single area speciation
         for a in S[i + (2^k-1)*(j-1)].g
           push!(lams.args, :(
-            2.0 * p[$(a + (k+1)*(j-1))] * 
+            p[$(a + (k+1)*(j-1))] * 
            (1.0-extp[$(a + (j-1)*(2^k-1))]) * (1.0-extp[$(i + (j-1)*(2^k-1))])))
         end
 
         # for allopatric speciation
         for (la, ra) = vicsubsets(S[i + (2^k-1)*(j-1)].g)[1:(div(end,2))]
           push!(lams.args, 
-            :(2.0 * p[$((k+1)*(1+(j-1)))] *
+            :(p[$((k+1)*(1+(j-1)))] *
              (1.0-extp[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*(j-1))]) * 
              (1.0-extp[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*(j-1))])))
         end
