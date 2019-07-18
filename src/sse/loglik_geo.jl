@@ -453,7 +453,7 @@ Generated function for speciation event likelihoods
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
           :(llik[$(i+(2^k-1)*(j-1))] = 
-            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * lλs[$(i+(k+1)*(j-1))])))
+            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))])))
     end
 
     # likelihood for widespread states
