@@ -129,23 +129,16 @@ function noevents_expr(si   ::Int64,
   ls > 1 && push!(ex.args, :($(2.0^(ls-1) - 1.0) * p[$(k+1+s.h*(k+1))]))
 
   for (i, v) = enumerate(s.g)
+
     #speciation
     if model[1]
-      if isone(ls)
-        push!(ex.args, :(eaft[$(v + s.h*k)]))
-      else
-        push!(ex.args, :(eaft[$(v + s.h*k)]))
-      end
+      push!(ex.args, :(eaft[$(v + s.h*k)]))
     else
-      if isone(ls)
-        push!(ex.args, :(p[$(v + s.h*(k+1))]))
-      else
-        push!(ex.args, :(p[$(v + s.h*(k+1))]))
-      end
+      push!(ex.args, :(p[$(v + s.h*(k+1))]))
     end
 
-    # if extinction model and only for endemic extinction
-    if model[2] && isone(ls)
+    # extinction 
+    if model[2] 
       push!(ex.args, :(eaft[$(m2s + v + s.h*k)]))
     else
       push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
@@ -194,14 +187,28 @@ Return expression for local extinction.
 function localext_expr(s ::Sgh,
                        S ::Array{Sgh,1},
                        k ::Int64,
-                       h ::Int64)
+                       h ::Int64,
+                       model::NTuple{3,Bool})
 
   ex = Expr(:call, :+)
-  for i = s.g
-    push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
-                     u[$(findfirst(x -> isSghequal(x, 
-                                        Sgh(setdiff(s.g, i),s.h)), S))]))
+
+  if model[2]
+    # starting indices for models 2 and 3
+    m2s = model[1]*k*h
+
+    for i = s.g
+      push!(ex.args, :(eaft[$(m2s + i + s.h*k)] * 
+                       u[$(findfirst(x -> isSghequal(x, 
+                                          Sgh(setdiff(s.g, i),s.h)), S))]))
+    end
+  else
+    for i = s.g
+      push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
+                       u[$(findfirst(x -> isSghequal(x, 
+                                          Sgh(setdiff(s.g, i),s.h)), S))]))
+    end
   end
+
   return ex
 end
 
@@ -427,11 +434,20 @@ function ext_expr(s    ::Sgh,
       for i in s.g push!(ex.args, :(p[$((k+1)*h + k*s.h + i)])) end
     end
   else
-    ex = Expr(:call, :+)
-    for i = s.g
-      push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
-                       u[$(findfirst(x -> isSghequal(x, 
-                                          Sgh(setdiff(s.g, i),s.h)), S) + ns)]))
+    if model[2]
+      ex = Expr(:call, :+)
+      for i = s.g
+        push!(ex.args, :(eaft[$(m2s + k*s.h + i)] * 
+                         u[$(findfirst(x -> isSghequal(x, 
+                                            Sgh(setdiff(s.g, i),s.h)), S) + ns)]))
+      end
+    else
+      ex = Expr(:call, :+)
+      for i = s.g
+        push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
+                         u[$(findfirst(x -> isSghequal(x, 
+                                            Sgh(setdiff(s.g, i),s.h)), S) + ns)]))
+      end
     end
   end
 
@@ -561,7 +577,7 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     # remove if !isone(lr)
     if ls > 1
       # local extinction
-      lex = localext_expr(s, S, k, h)
+      lex = localext_expr(s, S, k, h, model)
       # between-region speciation
       brs = brspec_expr(s, S, ns, k, false)
     end
