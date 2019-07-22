@@ -955,9 +955,9 @@ function make_updμpr!(μ    ::Array{Float64,1},
   y3s = y2s + model[2]*yppar*k
 
 
-  function f1(si ::Int64,
-              s  ::Sgh,
-              r::Array{Float64,1})
+  function f1(si::Int64,
+              s ::Sgh,
+              r ::Array{Float64,1})
 
     @inbounds begin
       if isone(length(s.g))
@@ -969,7 +969,8 @@ function make_updμpr!(μ    ::Array{Float64,1},
         na = 0
         for a in s.g
           na += 1
-          μpr[si][na] = l[k*s.h + a]*δt
+          μpr[si][na] =
+            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       end
 
