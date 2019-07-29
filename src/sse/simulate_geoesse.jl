@@ -954,7 +954,6 @@ function make_updμpr!(μ    ::Array{Float64,1},
   y2s = model[1]*yppar*k
   y3s = y2s + model[2]*yppar*k
 
-
   function f1(si::Int64,
               s ::Sgh,
               r ::Array{Float64,1})

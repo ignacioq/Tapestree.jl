@@ -77,14 +77,11 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   npars = length(pardic)
 
   # generate initial parameter values
-  #= 
-    TO DO -> make smarter initial pars
-  =#
   p  = fill(0.1,npars)
   βs = h*(k^2 + 2k + h) + 1
   δ  = log(Float64(length(tip_val)-1))/sum(el)
   p[βs:end]             .= 0.0             # set βs
-  p[1:(k+1)*h]          .= δ + rand()*0.1  # set λs
+  p[1:(k+1)*h]          .= δ + rand()*δ  # set λs
   p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ        # set μs
 
   # parameter update
