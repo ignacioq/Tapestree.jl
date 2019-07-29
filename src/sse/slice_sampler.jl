@@ -76,6 +76,16 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # get number of parameters
   npars = length(pardic)
 
+  # find hidden states for hidden states 
+  # (Warning: identifies hidden state 10)
+  phid = Int64[] 
+  for (k,v) in pardic 
+    !occursin("0", k) && push!(phid, v)
+  end
+
+  # create factor parameter vector
+  fp = zeros(npars)
+
   # generate initial parameter values
   p  = fill(0.1,npars)
   βs = h*(k^2 + 2k + h) + 1

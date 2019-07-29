@@ -14,6 +14,113 @@ Updated 26 03 2019
 
 
 
+# convert factor function
+
+
+
+# meta program hidden states factors
+
+
+@generated function hidden_factors(p::Array{Float64,1},
+                                   fp::Array{Float64,1},
+                                   ::Val{k},
+                                   ::Val{h},
+                                   ::Val{ny},
+                                   ::Val{model}) where {k, h, ny, model}
+
+
+function hidden_factors(p::Array{Float64,1},
+                                   fp::Array{Float64,1},
+                                   k,
+                                   h,
+                                   ny,
+                                   model)
+
+  # number of covariates
+  yppar = ny == 1 ? 1 : div(ny,
+    model[1]*k + 
+    model[2]*k + 
+    model[3]*k*(k-1))
+
+  # starting indices for models 2 and 3
+  m2s = model[1]*k*h
+  m3s = m2s + model[2]*k*h
+
+  ex = quote end
+  pop!(ex.args)
+
+  for j in 1:(h-1)
+    for i in 1:k
+      
+      # speciation
+      push!(ex.args, :(p[$((k+1)*j + i)] = 
+        p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
+      
+      # extinction
+      s = (k+1)*h 
+      push!(ex.args, 
+        :(p[$(s + k*j + i)] = p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+
+      # gain
+      s = (2k+1)*h
+      for a in 1:k
+        a == i && continue
+        push!(ex.args, 
+          :(p[$(s + k*(k-1)*j + i + (a-1)*(i-1))] = 
+              p[$(s + k*(k-1)*(j-1) + i + (a-1)*(i-1))] + 
+              fp[$(s + k*(k-1)*j + i + (a-1)*(i-1))]))
+      end
+
+      # loss 
+      s = (2k+1 + k*(k-1))*h
+      push!(ex.args, 
+        :(p[$(s + k*j + i)] = p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+      
+      # betas
+      s = (3k+1+k*(k-1))*h + h*(h-1)
+      if model[1]
+        for l = Base.OneTo(yppar)
+          push!(ex.args, 
+            :(p[$(s + k*j + i + (l-1)*(i-1))] = 
+              p[$(s + k*(j-1) + i + (l-1)*(i-1))] + 
+              fp[$(s + k*j + i + (l-1)*(i-1))]))
+        end
+      end
+      if model[2]
+        for l = Base.OneTo(yppar)
+          push!(ex.args, 
+            :(p[$(s + k*j + m2s + i + (l-1)*(i-1))] = 
+              p[$(s + k*(j-1) + m2s + i + (l-1)*(i-1))] + 
+              fp[$(s + k*j + m2s + i + (l-1)*(i-1))]))
+        end
+      end
+      if model[3]
+        for a = 1:k, l = Base.OneTo(yppar)
+          a == b && continue
+          push!(ex.args, 
+            :(p[$(s + k*(k-1)*j + m3s + i + (a-1)*(l-1)*(i-1) + (l-1)*(a-1))] = 
+              p[$(s + k*(k-1)*(j-1) + m3s + i + a*(l-1)*(i-1) + (l-1)*(a-1))] + 
+              fp[$(s + k*(k-1)*j + m3s + i + a*(l-1)*(i-1) + (l-1)*(a-1))]))
+        end
+      end
+    end
+    # between-region speciation
+    push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
+      p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))]))
+  end
+
+  return quote
+    @inbounds begin
+      $ex
+    end
+  end
+end
+
+
+
+
+
+
 
 """
     make_lhf(llf, prf)
@@ -26,11 +133,17 @@ function make_lhf(llf::Function,
                   conp::Dict{Int64,Int64})
 
   function f(p::Array{Float64,1}, wp::Int64)
+    
+    # factors
+
+
+    # constraints
     while haskey(conp, wp)
       tp = conp[wp]
       p[tp] = p[wp]
       wp = tp
     end
+    
     return llf(p) + lpf(p)
   end
 
