@@ -105,10 +105,18 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
   # remove contraints from being updated
   pupd = setdiff(pupd, values(conp)) 
+  phid = setdiff(phid, values(conp)) 
   # remove fixed to zero parameters from being updated
   pupd = setdiff(pupd, zerp)
+  phid = setdiff(phid, zerp) 
+  # remove hidden factors fro being updated from `p`
+  pupd = setdiff(pupd, phid)
+
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
+
+
+
 
   # force same parameter values for constraints
   for wp in pupd
@@ -135,7 +143,11 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
     Val(k), Val(h), Val(ny), Val(model))
 
   # create posterior functions
-  lhf = make_lhf(llf, lpf, conp)
+  lhf = make_lhf(llf, lpf, conp, Val(k), Val(h), Val(ny), Val(model))
+
+
+
+
 
   # estimate optimal w
   p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w, screen_print)
