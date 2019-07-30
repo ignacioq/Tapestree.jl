@@ -39,6 +39,12 @@ function make_lhf(llf::Function,
              fp::Array{Float64,1}, 
              wp::Int64)
 
+""" 
+this is wrong: assigns the parameters everytime they are updated
+
+perhaps metaprogramming is not the best... update one at a time
+"""
+
     # factors
     assign_hidfacs!(p, fp)
 
@@ -49,7 +55,7 @@ function make_lhf(llf::Function,
       wp = tp
     end
     
-    return llf(p) + lpf(p)
+    return llf(p) + lpf(p, fp)
   end
 
   return f
@@ -367,11 +373,6 @@ end
 
 
 
-
-
-
-
-
 """
     λevent_full(t   ::Float64, 
                 llik::Array{Float64,1}, 
@@ -534,126 +535,85 @@ end
 
 
 
+
+
 """
-    lpf_full(p      ::Array{Float64,1},
+    make_lpf(pupd   ::Array{Int64,1},
+             phid   ::Array{Int64,1},
              λpriors::Float64,
              μpriors::Float64,
-             lpriors::Float64,
              gpriors::Float64,
+             lpriors::Float64,
              qpriors::Float64,
              βpriors::Tuple{Float64,Float64},
+             hpriors::Float64,
              k      ::Int64,
              h      ::Int64,
-             mdQ    ::Int)
-`@generated` log-prior function.
-"""
-@generated function lpf_full(p::Array{Float64,1},
-                             ::Val{λpriors},
-                             ::Val{μpriors},
-                             ::Val{lpriors},
-                             ::Val{gpriors},
-                             ::Val{qpriors},
-                             ::Val{βpriors},
-                             ::Val{k},
-                             ::Val{h},
-                             ::Val{ny},
-                             ::Val{model}) where {λpriors,
-                                                  μpriors,
-                                                  lpriors,
-                                                  gpriors,
-                                                  qpriors,
-                                                  βpriors,
-                                                  k, h, ny, model}
+             model  ::Tuple{Bool,Bool,Bool})
 
-  eq = Expr(:call, :+)
-  # speciation priors
-  for i in Base.OneTo(h*(k+1))
-    push!(eq.args, :(logdexp(p[$i], $λpriors)))
-  end
-  # global extinction priors
-  for i in (h*(k+1)+1):(h*(k+1)+k*h)
-    push!(eq.args, :(logdexp(p[$i], $μpriors)))
-  end
-  # area colonization priors
-  for i in (h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h)
-    push!(eq.args, :(logdexp(p[$i], $gpriors)))
-  end
-  # area loss priors
-  for i in (h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h)
-    push!(eq.args, :(logdexp(p[$i], $lpriors)))
-  end
-  # hidden states transition
-  for i in (h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
-    push!(eq.args, :(logdexp(p[$i], $qpriors)))
-  end
-  
+Make log-prior function.
+"""
+function make_lpf(pupd   ::Array{Int64,1},
+                  phid   ::Array{Int64,1},
+                  λpriors::Float64,
+                  μpriors::Float64,
+                  gpriors::Float64,
+                  lpriors::Float64,
+                  qpriors::Float64,
+                  βpriors::Tuple{Float64,Float64},
+                  hpriors::Float64,
+                  k      ::Int64,
+                  h      ::Int64,
+                  model  ::Tuple{Bool,Bool,Bool})
+
+  λupds = intersect(1:(h*(k+1)), pupd)
+  μupds = intersect((h*(k+1)+1):(h*(k+1)+k*h), pupd)
+  gupds = intersect((h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h), pupd)
+  lupds = intersect((h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h), pupd)
+  qupds = intersect((h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)), 
+            pupd)
   bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
   ncov  = model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h
+  βupds = intersect((bbase+1):(bbase+ncov), pupd)
 
-  # betas
-  for i in (bbase+1):(bbase+ncov)
-    push!(eq.args, :(logdnorm(p[$i], $(βpriors[1]), $(βpriors[2]))))
-  end
+  function f(p ::Array{Float64,1}, 
+             fp::Array{Float64,1})
+    lq = 0.0
 
-  println(eq)
-
-  return quote 
-    @inbounds begin
-      lq = $eq
+    # speciation priors
+    for i in λupds
+      lq += logdexp(p[i], λpriors)
     end
+
+    # global extinction priors
+    for i in μupds
+      lq += logdexp(p[i], μpriors)
+    end
+
+    # area colonization priors
+    for i in gupds
+      lq += logdexp(p[i], gpriors)
+    end
+
+    # area loss priors
+    for i in lupds
+      lq += logdexp(p[i], lpriors)
+    end
+
+    # hidden states transition
+    for i in qupds
+      lq += logdexp(fp[i], hpriors)
+    end
+
+    # betas
+    for i in qupds
+      lq += logdnorm(p[i], βpriors[1], βpriors[2])
+    end
+    
     return lq
   end
-end
 
-
-
-
-
-
-""" 
-    make_lpf(::Val{λpriors}, 
-                  ::Val{μpriors}, 
-                  ::Val{lpriors}, 
-                  ::Val{gpriors}, 
-                  ::Val{qpriors}, 
-                  ::Val{βpriors}, 
-                  ::Val{k}, 
-                  ::Val{h}, 
-                  ::Val{ny}, 
-                  ::Val{model}) where {λpriors,
-                                       μpriors,
-                                       lpriors,
-                                       gpriors,
-                                       qpriors,
-                                       βpriors,
-                                       k, h, ny, model}
-
-Make log prior function
-"""
-function make_lpf(::Val{λpriors}, 
-                  ::Val{μpriors}, 
-                  ::Val{lpriors}, 
-                  ::Val{gpriors}, 
-                  ::Val{qpriors}, 
-                  ::Val{βpriors}, 
-                  ::Val{k}, 
-                  ::Val{h}, 
-                  ::Val{ny}, 
-                  ::Val{model}) where {λpriors,
-                                       μpriors,
-                                       lpriors,
-                                       gpriors,
-                                       qpriors,
-                                       βpriors,
-                                       k, h, ny, model}
-
-  # create prior function
-  lpf = (p::Array{Float64,1}) ->
-    lpf_full(p, Val(λpriors), Val(μpriors), Val(lpriors), 
-      Val(gpriors), Val(qpriors), Val(βpriors), 
-      Val(k), Val(h), Val(ny), Val(model))
-
-  return lpf
+  return f
 end
 
 

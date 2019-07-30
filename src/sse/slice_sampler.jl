@@ -53,6 +53,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        lpriors    ::Float64           = .1,
                        qpriors    ::Float64           = .1,
                        βpriors    ::NTuple{2,Float64} = (0.0, 5.0),
+                       hpriors    ::Float64           = .1,
                        optimal_w  ::Float64           = 0.8,
                        screen_print::Int64            = 5) where {M,N}
 
@@ -70,8 +71,6 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
   # make dictionary with relevant parameters
   pardic = build_par_names(k, h, ny, model)
-
-  println(sort!(collect(pardic), by = x -> x[2]))
 
   # get number of parameters
   npars = length(pardic)
@@ -115,9 +114,6 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
-
-
-
   # force same parameter values for constraints
   for wp in pupd
     while haskey(conp, wp)
@@ -138,25 +134,20 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
     Val(k), Val(h), Val(ny), Val(model))
 
   # create prior function
-  lpf = make_lpf(Val(λpriors), Val(μpriors), Val(lpriors), 
-    Val(gpriors), Val(qpriors), Val(βpriors), 
-    Val(k), Val(h), Val(ny), Val(model))
+  lpf = make_lpf(pupd, phid, 
+    λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, k, h, model)
 
   # create posterior functions
   lhf = make_lhf(llf, lpf, conp, Val(k), Val(h), Val(ny), Val(model))
 
-
-
-
-
   # estimate optimal w
-  p, w = w_sampler(lhf, p, nnps, nps, npars, optimal_w, screen_print)
+  p, fp, w = w_sampler(lhf, p, fp, nnps, nps, phid, npars, optimal_w, screen_print)
 
   #=
   run slice sampling
   =#
   its, hlog, ps = 
-    loop_slice_sampler(lhf, p, nnps, nps, w, npars, niter, nthin, screen_print)
+    loop_slice_sampler(lhf, p, fp, nnps, nps, phid, w, npars, niter, nthin, screen_print)
 
   # save samples
   R = hcat(its, hlog, ps)
