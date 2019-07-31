@@ -685,53 +685,53 @@ factor+parameter `fp` vector.
       
       # speciation
       push!(ex.args, :(p[$((k+1)*j + i)] = 
-        p[$((k+1)*(j-1) + i)] * (1.0 + fp[$((k+1)*j + i)])))
-      
+        p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
+
       # extinction
       s = (k+1)*h 
       push!(ex.args, 
         :(p[$(s + k*j + i)] = 
-            p[$(s + k*(j-1) + i)] * (1.0 + fp[$(s + k*j + i)])))
+            p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
 
       # gain
       s = (2k+1)*h
       for a in 1:(k-1)
         push!(ex.args, 
           :(p[$(s + k*(k-1)*j + a + (k-1)*(i-1))] = 
-              p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] * 
-              (1.0 + fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))])))
+              p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] + 
+              fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))]))
       end
 
       # loss 
       s = (2k+1 + k*(k-1))*h
       push!(ex.args, 
         :(p[$(s + k*j + i)] = 
-            p[$(s + k*(j-1) + i)] * (1.0 + fp[$(s + k*j + i)])))
-      
+            p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+
       # betas
       s = (3k+1+k*(k-1))*h + h*(h-1)
       if model[1]
         for l = Base.OneTo(yppar)
           push!(ex.args, 
             :(p[$(s + k*j + i + (l-1)*(i-1))] = 
-              p[$(s + k*(j-1) + i + (l-1)*(i-1))] * 
-              (1.0 + fp[$(s + k*j + i + (l-1)*(i-1))])))
+              p[$(s + k*(j-1) + i + (l-1)*(i-1))] + 
+              fp[$(s + k*j + i + (l-1)*(i-1))]))
         end
       end
       if model[2]
         for l = Base.OneTo(yppar)
           push!(ex.args, 
             :(p[$(s + k*j + m2s + i + (l-1)*(i-1))] = 
-              p[$(s + k*(j-1) + m2s + i + (l-1)*(i-1))] * 
-              (1.0 + fp[$(s + k*j + m2s + i + (l-1)*(i-1))])))
+              p[$(s + k*(j-1) + m2s + i + (l-1)*(i-1))] + 
+              fp[$(s + k*j + m2s + i + (l-1)*(i-1))]))
         end
       end
       if model[3]
         for a = 1:(k-1), l = Base.OneTo(yppar)
           push!(ex.args, 
             :(p[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))] = 
-              p[$(s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1))] * 
-              (1.0 + fp[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))])))
+              p[$(s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1))] + 
+              fp[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))]))
         end
       end
     end

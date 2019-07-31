@@ -72,8 +72,8 @@ function loop_slice_sampler(lhf         ::Function,
 
     for j in phid
      S     = (hc - Random.randexp())
-     L, R  = find_nonneg_int_fp(p, pp, fp, fpp, j, S, lhf, w[j])
-     p, fp, hc = sample_int_fp(p, pp, fp, fpp, j, L, R, S, lhf)
+     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j])
+     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf)
     end
 
     # log samples
@@ -220,12 +220,14 @@ end
 
 
 """
-    find_nonneg_int_fp(p    ::Array{Float64}, 
-                       pp   ::Array{Float64},
-                       j    ::Int64, 
-                       S    ::Float64, 
-                       postf::Function, 
-                       w    ::Float64)
+    find_nonneg_int(p    ::Array{Float64,1}, 
+                    pp   ::Array{Float64,1},
+                    fp   ::Array{Float64,1},
+                    fpp  ::Array{Float64,1},
+                    j    ::Int64, 
+                    S    ::Float64, 
+                    postf::Function, 
+                    w    ::Float64)
 
 Estimate a non_negative slice interval for hidden factors.
 """
@@ -366,14 +368,15 @@ end
 
 
 """
-    sample_int_fp(p    ::Array{Float64,1}, 
-                  fp   ::Array{Float64,1},
-                  fpp  ::Array{Float64,1},
-                  j    ::Int64, 
-                  L    ::Float64, 
-                  R    ::Float64, 
-                  S    ::Float64, 
-                  postf::Function)
+    sample_int(p    ::Array{Float64,1}, 
+               pp   ::Array{Float64,1},
+               fp   ::Array{Float64,1},
+               fpp  ::Array{Float64,1},
+               j    ::Int64, 
+               L    ::Float64, 
+               R    ::Float64, 
+               S    ::Float64, 
+               postf::Function)
 
 Take one sample within the interval of the slice.
 """

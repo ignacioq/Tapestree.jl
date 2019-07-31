@@ -81,6 +81,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   for (k,v) in pardic 
     !occursin("0", k) && push!(phid, v)
   end
+  sort!(phid)
 
   # create factor parameter vector
   fp = zeros(npars)
