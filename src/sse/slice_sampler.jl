@@ -94,9 +94,9 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ        # set μs
 
   # parameter update
-  pupd = Base.OneTo(npars)
+  pupd = 1:npars
 
-  # parameters constraints and fixed to 0
+  # parameters constraint and fixed to 0
   conp, zerp = set_constraints(constraints, pardic)
 
   # force pars in zerp to 0
@@ -115,7 +115,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   nps  = filter(x -> βs <= x, pupd)
 
   # force same parameter values for constraints
-  for wp in pupd
+  for wp in keys(conp)
     while haskey(conp, wp)
       tp = conp[wp]
       p[tp] = p[wp]
@@ -140,12 +140,14 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # create posterior functions
   lhf = make_lhf(llf, lpf, conp, Val(k), Val(h), Val(ny), Val(model))
 
-  # estimate optimal w
-  p, fp, w = w_sampler(lhf, p, fp, nnps, nps, phid, npars, optimal_w, screen_print)
-
   #=
   run slice sampling
   =#
+
+  # estimate optimal w
+  p, fp, w = w_sampler(lhf, p, fp, nnps, nps, phid, npars, optimal_w, screen_print)
+
+  # slice-sampler
   its, hlog, ps = 
     loop_slice_sampler(lhf, p, fp, nnps, nps, phid, w, npars, niter, nthin, screen_print)
 

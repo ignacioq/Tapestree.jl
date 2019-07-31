@@ -54,7 +54,7 @@ function loop_slice_sampler(lhf         ::Function,
   # start iterations
   prog = Progress(niter, screen_print, "running slice-sampler...", 20)
 
-  hc = lhf(p, 1)
+  hc = lhf(p, fp)
 
   for it in Base.OneTo(niter) 
 
@@ -124,10 +124,10 @@ function w_sampler(lhf         ::Function,
   ps = Array{Float64,2}(undef, 100, npars)
 
   # posterior
-  hc = lhf(p, fp, 1)
+  hc = lhf(p, fp)
 
   # preallocate pp and fpp
-  pp = copy(p)
+  pp  = copy(p)
   fpp = copy(fp)
 
   prog = Progress(100, screen_print, "estimating optimal widths...", 20)
@@ -196,7 +196,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # left extreme
   pp[j] = L
-  while S < postf(pp, fp, j)
+  while S < postf(pp, fp)
     L -= w
     if L <= 0.0
       L = 1e-30
@@ -207,7 +207,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # right extreme
   pp[j] = R
-  while S < postf(pp, fp, j)
+  while S < postf(pp, fp)
     R    += w
     pp[j] = R
   end
@@ -250,7 +250,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # left extreme
   fpp[j] = L
-  while S < postf(pp, fpp, j)
+  while S < postf(pp, fpp)
     L -= w
     if L <= 0.0
       L = 1e-30
@@ -261,7 +261,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # right extreme
   fpp[j] = R
-  while S < postf(pp, fpp, j)
+  while S < postf(pp, fpp)
     R    += w
     fpp[j] = R
   end
@@ -299,14 +299,14 @@ function find_real_int(p    ::Array{Float64,1},
 
   # left extreme
   pp[j] = L::Float64
-  while S < postf(pp, fp, j)
+  while S < postf(pp, fp)
     L    -= w::Float64
     pp[j] = L::Float64
   end
 
   # right extreme
   pp[j] = R::Float64
-  while S < postf(pp, fp, j)
+  while S < postf(pp, fp)
     R    += w::Float64
     pp[j] = R::Float64
   end
@@ -345,7 +345,7 @@ function sample_int(p    ::Array{Float64,1},
     while true
       pp[j] = (L + rand()*(R-L))::Float64
 
-      hc = postf(pp, fp, j)::Float64
+      hc = postf(pp, fp)::Float64
       if S < hc
         copyto!(p, pp)
         return (p, hc)::Tuple{Array{Float64,1}, Float64}
@@ -394,7 +394,7 @@ function sample_int(p    ::Array{Float64,1},
     while true
       fpp[j] = (L + rand()*(R-L))::Float64
 
-      hc = postf(pp, fpp, j)::Float64
+      hc = postf(pp, fpp)::Float64
       if S < hc
         copyto!(p, pp)
         copyto!(fp, fpp)

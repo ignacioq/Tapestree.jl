@@ -35,26 +35,23 @@ function make_lhf(llf::Function,
   assign_hidfacs! = 
     make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
 
+  ks = keys(conp)
+
   function f(p ::Array{Float64,1}, 
-             fp::Array{Float64,1}, 
-             wp::Int64)
-
-""" 
-this is wrong: assigns the parameters everytime they are updated
-
-perhaps metaprogramming is not the best... update one at a time
-"""
+             fp::Array{Float64,1})
 
     # factors
     assign_hidfacs!(p, fp)
 
     # constraints
-    while haskey(conp, wp)
-      tp = conp[wp]
-      p[tp] = p[wp]
-      wp = tp
+    for wp in ks
+      while haskey(conp, wp)
+        tp = conp[wp]
+        p[tp] = p[wp]
+        wp = tp
+      end
     end
-    
+
     return llf(p) + lpf(p, fp)
   end
 
@@ -576,6 +573,8 @@ function make_lpf(pupd   ::Array{Int64,1},
   ncov  = model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h
   βupds = intersect((bbase+1):(bbase+ncov), pupd)
 
+  βp_m, βp_v = βpriors
+
   function f(p ::Array{Float64,1}, 
              fp::Array{Float64,1})
     lq = 0.0
@@ -602,14 +601,20 @@ function make_lpf(pupd   ::Array{Int64,1},
 
     # hidden states transition
     for i in qupds
-      lq += logdexp(fp[i], hpriors)
+      lq += logdexp(p[i], qpriors)
     end
 
     # betas
-    for i in qupds
-      lq += logdnorm(p[i], βpriors[1], βpriors[2])
+    for i in βupds
+      lq += logdnorm(p[i], βp_m, βp_v)
     end
-    
+  
+    # hidden states factors
+    for i in phid
+      lq += logdexp(fp[i], hpriors)
+    end
+
+
     return lq
   end
 
@@ -680,26 +685,28 @@ factor+parameter `fp` vector.
       
       # speciation
       push!(ex.args, :(p[$((k+1)*j + i)] = 
-        p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
+        p[$((k+1)*(j-1) + i)] * (1.0 + fp[$((k+1)*j + i)])))
       
       # extinction
       s = (k+1)*h 
       push!(ex.args, 
-        :(p[$(s + k*j + i)] = p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+        :(p[$(s + k*j + i)] = 
+            p[$(s + k*(j-1) + i)] * (1.0 + fp[$(s + k*j + i)])))
 
       # gain
       s = (2k+1)*h
       for a in 1:(k-1)
         push!(ex.args, 
           :(p[$(s + k*(k-1)*j + a + (k-1)*(i-1))] = 
-              p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] + 
-              fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))]))
+              p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] * 
+              (1.0 + fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))])))
       end
 
       # loss 
       s = (2k+1 + k*(k-1))*h
       push!(ex.args, 
-        :(p[$(s + k*j + i)] = p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+        :(p[$(s + k*j + i)] = 
+            p[$(s + k*(j-1) + i)] * (1.0 + fp[$(s + k*j + i)])))
       
       # betas
       s = (3k+1+k*(k-1))*h + h*(h-1)
@@ -707,30 +714,30 @@ factor+parameter `fp` vector.
         for l = Base.OneTo(yppar)
           push!(ex.args, 
             :(p[$(s + k*j + i + (l-1)*(i-1))] = 
-              p[$(s + k*(j-1) + i + (l-1)*(i-1))] + 
-              fp[$(s + k*j + i + (l-1)*(i-1))]))
+              p[$(s + k*(j-1) + i + (l-1)*(i-1))] * 
+              (1.0 + fp[$(s + k*j + i + (l-1)*(i-1))])))
         end
       end
       if model[2]
         for l = Base.OneTo(yppar)
           push!(ex.args, 
             :(p[$(s + k*j + m2s + i + (l-1)*(i-1))] = 
-              p[$(s + k*(j-1) + m2s + i + (l-1)*(i-1))] + 
-              fp[$(s + k*j + m2s + i + (l-1)*(i-1))]))
+              p[$(s + k*(j-1) + m2s + i + (l-1)*(i-1))] * 
+              (1.0 + fp[$(s + k*j + m2s + i + (l-1)*(i-1))])))
         end
       end
       if model[3]
         for a = 1:(k-1), l = Base.OneTo(yppar)
           push!(ex.args, 
             :(p[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))] = 
-              p[$(s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1))] + 
-              fp[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))]))
+              p[$(s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1))] * 
+              (1.0 + fp[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))])))
         end
       end
     end
     # between-region speciation
     push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
-      p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))]))
+      (p[$((k+1)*(j-1) + (k+1))] * (1.0 + fp[$((k+1)*j + (k+1))]))))
   end
 
   return quote
