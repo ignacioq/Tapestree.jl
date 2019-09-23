@@ -75,11 +75,11 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   # get number of parameters
   npars = length(pardic)
 
-  # find hidden states for hidden states 
-  # (Warning: identifies hidden state 10)
+  # find hidden factors for hidden states 
   phid = Int64[] 
+  re   = Regex(".*_[1-"*string(h-1)*"]\$")
   for (k,v) in pardic 
-    !occursin("0", k) && push!(phid, v)
+    occursin(re, k) && push!(phid, v)
   end
   sort!(phid)
 
@@ -98,28 +98,41 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   pupd = 1:npars
 
   # parameters constraint and fixed to 0
-  conp, zerp = set_constraints(constraints, pardic)
+  dcp, dcfp, zp, zfp, chs = 
+    set_constraints(constraints, pardic, k, h, ny, model)
 
-  # force pars in zerp to 0
-  p[zerp] .= 0.0
-
-  # remove contraints from being updated
-  pupd = setdiff(pupd, values(conp)) 
-  phid = setdiff(phid, values(conp)) 
-  # remove fixed to zero parameters from being updated
-  pupd = setdiff(pupd, zerp)
-  phid = setdiff(phid, zerp) 
-  # remove hidden factors fro being updated from `p`
+  # remove hidden factors from being updated from `p`
   pupd = setdiff(pupd, phid)
 
+  # force pars in zerp to 0
+  p[zp] .= 0.0
+
+  # remove contraints from being updated
+  pupd = setdiff(pupd, values(dcp)) 
+  phid = setdiff(phid, values(dcfp)) 
+  phid = setdiff(phid, chs)
+
+  # remove fixed to zero parameters from being updated
+  pupd = setdiff(pupd, zp)
+  phid = setdiff(phid, zfp)
+
+  # divide between non-negative and negative values
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
   # force same parameter values for constraints
-  for wp in keys(conp)
-    while haskey(conp, wp)
-      tp = conp[wp]
+  for wp in keys(dcp)
+    while haskey(dcp, wp)
+      tp = dcp[wp]
       p[tp] = p[wp]
+      wp = tp
+    end
+  end
+
+  for wp in keys(dcfp)
+    while haskey(dcfp, wp)
+      tp = dcfp[wp]
+      fp[tp] = fp[wp]
       wp = tp
     end
   end
@@ -139,14 +152,15 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
     λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, k, h, model)
 
   # create posterior functions
-  lhf = make_lhf(llf, lpf, conp, Val(k), Val(h), Val(ny), Val(model))
+  lhf = make_lhf(llf, lpf, dcp, dcfp, Val(k), Val(h), Val(ny), Val(model))
 
   #=
   run slice sampling
   =#
 
   # estimate optimal w
-  p, fp, w = w_sampler(lhf, p, fp, nnps, nps, phid, npars, optimal_w, screen_print)
+  p, fp, w = 
+    w_sampler(lhf, p, fp, nnps, nps, phid, npars, optimal_w, screen_print)
 
   # slice-sampler
   its, hlog, ps = 

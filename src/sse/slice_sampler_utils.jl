@@ -135,9 +135,9 @@ function w_sampler(lhf         ::Function,
   for it in Base.OneTo(100)
 
     for j in nnps
-     S     = (hc - Random.randexp())
-     L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j])
-     p, hc = sample_int(p, pp, fp, j, L, R, S, lhf)
+      S     = (hc - Random.randexp())
+      L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j])
+      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf)
     end
 
     for j in nps
@@ -243,8 +243,8 @@ function find_nonneg_int(p    ::Array{Float64,1},
   copyto!(pp, p)
   copyto!(fpp, fp)
 
-  L::Float64 = fpp[j] - w*rand()
-  R::Float64 = L + w
+  L = fpp[j] - w*rand()
+  R = L + w
 
   if L <= 0.0
     L = 1e-30
@@ -296,8 +296,8 @@ function find_real_int(p    ::Array{Float64,1},
 
   copyto!(pp, p)
 
-  L::Float64 = pp[j] - w*rand()
-  R::Float64 = L + w
+  L = pp[j] - w*rand()
+  R = L + w
 
   # left extreme
   pp[j] = L::Float64

@@ -318,35 +318,163 @@ end
 
 """
     set_constraints(constraints::NTuple{N,String},
-                    pardic     ::Dict{String,Int64})
+                    pardic     ::Dict{String,Int64},
+                    h          ::Int64)
 
 Make a Dictionary linking parameter that are to be the same.
 """
 function set_constraints(constraints::NTuple{N,String},
-                         pardic     ::Dict{String,Int64}) where {N}
+                         pardic     ::Dict{String,Int64},
+                         k          ::Int64,
+                         h          ::Int64,
+                         ny         ::Int64,
+                         model      ::NTuple{3,Bool}) where {N}
 
-  conpar = Dict{Int64,Int64}()
-  zerov  = Int64[]
+  # Dict of hidden state correspondence
+  hsc = dict_hscor(k, h, ny, model)
+
+  dcp  = Dict{Int64,Int64}()  # constrains dictionary for base hidden state 0
+  dcfp = Dict{Int64,Int64}()  # constrains dictionary for other hidden states
+  zp   = Int64[]              # zeros for base hidden state 0
+  zfp  = Int64[]              # zeros for other hidden states
+  chs  = Int64[]              # no hidden states left
 
   for c in constraints
-    spl = split(c, '=')
+    spl = map(x -> strip(x), split(c, '='))
+
+    # if no equality
     if length(spl) < 2
+      @warn "No equality found in $c"
       continue
     end
+
+    # for parameters fixed to `0`
     if isequal(strip(spl[end]), "0")
-      for i in Base.OneTo(length(spl)-1) 
-        push!(zerov, pardic[strip(spl[i])])
+      for i in Base.OneTo(length(spl)-1)
+        spli = strip(spl[i])
+        hsi  = split(spli, "_")[end]
+        if hsi == 0 
+          push!(zp, pardic[spli])
+        else
+          push!(zfp, pardic[spli])
+          push!(zfp, pardic[spli])
+        end
       end
+
+    # for parameter equalities
     else
       for i in Base.OneTo(length(spl)-1) 
-        sp1 = strip(spl[i])
-        sp2 = strip(spl[i+1])
-        conpar[pardic[sp2]] = pardic[sp1]
+        # strip possible white spaces
+        sp1 = spl[i]
+        sp2 = spl[i+1]
+
+        if haskey(hsc, pardic[sp1])
+          # both have hidden states
+          if haskey(hsc, pardic[sp2])
+            dcp[hsc[pardic[sp2]]] = hsc[pardic[sp1]]
+            dcfp[pardic[sp2]]     = pardic[sp1]
+          # only 1 has hidden state
+          else
+            dcp[pardic[sp2]] = hsc[pardic[sp1]]
+            push!(zfp, pardic[sp1])            
+          end
+        # only 2 has hidden state
+        elseif haskey(hsc, pardic[sp2])
+          dcp[pardic[sp1]] = hsc[pardic[sp2]]
+          push!(zfp, pardic[sp2]) 
+        # both are basal hidden state
+        else
+          dcp[pardic[sp2]] = pardic[sp1]
+        end
+      end
+    end
+
+    # no hidden states remaining for constraints?
+    nhs = 0
+    for i in 0:(h-1)
+      re = Regex(".*_"*string(i)*"\$|.*_"*string(i)*" ")
+      nhs += occursin(re, c) ? 1 : 0
+    end
+    if nhs == h
+      for s in spl 
+        push!(chs, pardic[s])
       end
     end
   end
 
-  return conpar, zerov
+  return dcp, dcfp, zp, zfp, chs
+end
+
+
+
+
+
+"""
+    dict_hscor(k::Int64, h::Int64, ny::Int64)
+
+Create dictionary of hidden states correspondence.
+"""
+function dict_hscor(k::Int64, h::Int64, ny::Int64, model::NTuple{3, Bool})
+
+ # number of covariates
+  yppar = ny == 1 ? 1 : div(ny,
+    model[1]*k + 
+    model[2]*k + 
+    model[3]*k*(k-1))
+
+  # starting indices for models 2 and 3
+  m2s = model[1]*k*h
+  m3s = m2s + model[2]*k*h
+
+  hsc = Dict{Int64,Int64}()
+
+  for j in 1:(h-1)
+    for i in 1:k
+
+      # speciation
+      hsc[(k+1)*j + i] = (k+1)*(j-1) + i
+
+      # extinction
+      s = (k+1)*h 
+      hsc[s + k*j + i] = s + k*(j-1) + i
+
+      # gain
+      s = (2k+1)*h
+      for a in 1:(k-1)
+        hsc[s + k*(k-1)*j + a + (k-1)*(i-1)] = s + k*(k-1)*(j-1) + a + (k-1)*(i-1)
+      end
+
+      # loss 
+      s = (2k+1 + k*(k-1))*h
+      hsc[s + k*j + i] = s + k*(j-1) + i
+
+      # betas
+      s = (3k+1+k*(k-1))*h + h*(h-1)
+
+      if model[1]
+        for l = Base.OneTo(yppar)
+          hsc[s + k*j + i + (l-1)*(i-1)] = s + k*(j-1) + i + (l-1)*(i-1)
+        end
+      end
+      if model[2]
+        for l = Base.OneTo(yppar)
+          hsc[s + k*j + m2s + i + (l-1)*(i-1)] = s + k*(j-1) + m2s + i + (l-1)*(i-1)
+        end
+      end
+
+      if model[3]
+        for a = 1:(k-1), l = Base.OneTo(yppar)
+          hsc[s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1)] = 
+            s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1)
+        end
+      end
+    end
+
+    # between-region speciation
+    hsc[(k+1)*j + (k+1)] = (k+1)*(j-1) + (k+1)
+  end
+
+  return hsc
 end
 
 

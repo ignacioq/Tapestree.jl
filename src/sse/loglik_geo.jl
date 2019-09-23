@@ -13,20 +13,16 @@ Updated 26 03 2019
 
 
 
-
-
-
-
-
 """
     make_lhf(llf, prf)
 
 Make log posterior function with the likelihood, **llf**, 
 and prior, **lpf**, functions.
 """
-function make_lhf(llf::Function, 
-                  lpf::Function, 
-                  conp::Dict{Int64,Int64},
+function make_lhf(llf ::Function, 
+                  lpf ::Function, 
+                  dcp ::Dict{Int64,Int64},
+                  dcfp::Dict{Int64,Int64},
                   ::Val{k},
                   ::Val{h},
                   ::Val{ny},
@@ -35,22 +31,31 @@ function make_lhf(llf::Function,
   assign_hidfacs! = 
     make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
 
-  ks = keys(conp)
+  ks  = keys(dcp)
+  ksf = keys(dcfp)
 
   function f(p ::Array{Float64,1}, 
              fp::Array{Float64,1})
 
-    # factors
-    assign_hidfacs!(p, fp)
-
     # constraints
     for wp in ks
-      while haskey(conp, wp)
-        tp = conp[wp]
+      while haskey(dcp, wp)
+        tp = dcp[wp]
         p[tp] = p[wp]
         wp = tp
       end
     end
+
+    for wp in ksf
+      while haskey(dcfp, wp)
+        tp = dcfp[wp]
+        fp[tp] = fp[wp]
+        wp = tp
+      end
+    end
+
+   # factors
+    assign_hidfacs!(p, fp)
 
     return llf(p) + lpf(p, fp)
   end
@@ -531,9 +536,6 @@ end
 
 
 
-
-
-
 """
     make_lpf(pupd   ::Array{Int64,1},
              phid   ::Array{Int64,1},
@@ -650,7 +652,7 @@ end
 
 
 """
-    assign_hidfacs(p::Array{Float64,1},
+    assign_hidfacs(p ::Array{Float64,1},
                    fp::Array{Float64,1},
                    ::Val{k},
                    ::Val{h},
@@ -660,7 +662,7 @@ end
 Generated function to assign factors to parameters given 
 factor+parameter `fp` vector.
 """
-@generated function assign_hidfacs_full(p::Array{Float64,1},
+@generated function assign_hidfacs_full(p ::Array{Float64,1},
                                         fp::Array{Float64,1},
                                         ::Val{k},
                                         ::Val{h},
@@ -737,8 +739,10 @@ factor+parameter `fp` vector.
     end
     # between-region speciation
     push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
-      (p[$((k+1)*(j-1) + (k+1))] * (1.0 + fp[$((k+1)*j + (k+1))]))))
+      (p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))])))
   end
+
+  println(ex)
 
   return quote
     @inbounds begin
