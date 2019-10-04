@@ -616,7 +616,6 @@ function make_lpf(pupd   ::Array{Int64,1},
       lq += logdexp(fp[i], hpriors)
     end
 
-
     return lq
   end
 

@@ -98,19 +98,20 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   pupd = 1:npars
 
   # parameters constraint and fixed to 0
-  dcp, dcfp, zfp = 
+  dcp, dcfp, zp, zfp = 
     set_constraints(constraints, pardic, k, h, ny, model)
 
   # remove hidden factors from being updated from `p`
   pupd = setdiff(pupd, phid)
 
   # force pars in zerp to 0
-  p[zp] .= 0.0
+  for i in zp
+    p[i] = 0.0
+  end
 
   # remove contraints from being updated
   pupd = setdiff(pupd, values(dcp)) 
   phid = setdiff(phid, values(dcfp)) 
-  phid = setdiff(phid, chs)
 
   # remove fixed to zero parameters from being updated
   pupd = setdiff(pupd, zp)
