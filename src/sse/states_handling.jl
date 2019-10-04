@@ -335,12 +335,16 @@ function set_constraints(constraints::NTuple{N,String},
 
   dcp  = Dict{Int64,Int64}()  # constrains dictionary for base hidden state 0
   dcfp = Dict{Int64,Int64}()  # constrains dictionary for other hidden states
-  zp   = Int64[]              # zeros for base hidden state 0
-  zfp  = Int64[]              # zeros for other hidden states
-  chs  = Int64[]              # no hidden states left
+  zfp  = Set(Int64[])         # zeros for other hidden states
 
   for c in constraints
+
     spl = map(x -> strip(x), split(c, '='))
+
+    if occursin("q", spl[1])
+      dcp[pardic[spl[2]]] = pardic[spl[1]]
+      continue
+    end
 
     # if no equality
     if length(spl) < 2
@@ -348,61 +352,55 @@ function set_constraints(constraints::NTuple{N,String},
       continue
     end
 
-    # for parameters fixed to `0`
-    if isequal(strip(spl[end]), "0")
-      for i in Base.OneTo(length(spl)-1)
-        spli = strip(spl[i])
-        hsi  = split(spli, "_")[end]
-        if hsi == 0 
-          push!(zp, pardic[spli])
-        else
-          push!(zfp, pardic[spli])
-          push!(zfp, pardic[spli])
-        end
+    for i in Base.OneTo(length(spl)-1) 
+
+      sp1 = spl[i]
+      sp2 = spl[i+1]
+
+      # divide
+      spl1 = split(sp1, "_")
+      spl2 = split(sp2, "_")
+
+      # concatenate without hidden state
+      spc1 = spc2 = ""
+      for s in Base.OneTo(lastindex(spl1)-1)
+        spc1 *= spl1[s]*"_"
+      end
+      for s in Base.OneTo(lastindex(spl2)-1)
+        spc2 *= spl2[s]*"_"
       end
 
-    # for parameter equalities
-    else
-      for i in Base.OneTo(length(spl)-1) 
-        # strip possible white spaces
-        sp1 = spl[i]
-        sp2 = spl[i+1]
+      # convert to hidden states
+      hs1 = parse(Int64, spl1[end])
+      hs2 = parse(Int64, spl2[end])
 
-        if haskey(hsc, pardic[sp1])
-          # both have hidden states
-          if haskey(hsc, pardic[sp2])
-            dcp[hsc[pardic[sp2]]] = hsc[pardic[sp1]]
-            dcfp[pardic[sp2]]     = pardic[sp1]
-          # only 1 has hidden state
+      # minmax for hidden states
+      mnh, mxh = minmax(hs1, hs2)
+      
+      # which the maximum
+      spmn, spmx = hs1 < hs2 ? (sp1, sp2) : (sp2, sp1)
+
+      # set non-shared hidden states to 0
+      wp = pardic[spmx]
+      for j in (mnh+1):mxh
+        push!(zfp, wp)
+        wp = hsc[wp]
+      end
+
+      if spc1 != spc2
+        # set shared hidden states equal
+        for j in 0:mnh
+          if iszero(j)
+            dcp[pardic[spc2*"0"]] = pardic[spc1*"0"]
           else
-            dcp[pardic[sp2]] = hsc[pardic[sp1]]
-            push!(zfp, pardic[sp1])            
+            dcfp[pardic[spc2*"$j"]] = pardic[spc1*"$j"]
           end
-        # only 2 has hidden state
-        elseif haskey(hsc, pardic[sp2])
-          dcp[pardic[sp1]] = hsc[pardic[sp2]]
-          push!(zfp, pardic[sp2]) 
-        # both are basal hidden state
-        else
-          dcp[pardic[sp2]] = pardic[sp1]
         end
-      end
-    end
-
-    # no hidden states remaining for constraints?
-    nhs = 0
-    for i in 0:(h-1)
-      re = Regex(".*_"*string(i)*"\$|.*_"*string(i)*" ")
-      nhs += occursin(re, c) ? 1 : 0
-    end
-    if nhs == h
-      for s in spl 
-        push!(chs, pardic[s])
       end
     end
   end
 
-  return dcp, dcfp, zp, zfp, chs
+  return dcp, dcfp, zfp
 end
 
 
