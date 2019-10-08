@@ -20,12 +20,12 @@ January 12 2017
                  q       ::Array{Float64,1},
                  β       ::Array{Float64,1},
                  x       ::Array{Float64,1},
-                 y       ::Array{Float64,N};
-                 cov_mod ::String  = "speciation",
+                 y       ::Array{Float64,N},
+                 cov_mod ::NTuple{M,String};
                  δt      ::Float64 = 1e-4,
                  nspp_min::Int64   = 1,
                  nspp_max::Int64   = 200_000,
-                 retry_ext::Bool   = true)
+                 retry_ext::Bool   = true))
 
 Simulate tree according to EGeoHiSSE.
 """
@@ -88,10 +88,10 @@ end
                    x       ::Array{Float64,1},
                    y       ::Array{Float64, N},
                    δt      ::Float64,
-                   cov_mod ::String,
+                   cov_mod ::NTuple{M,String},
                    nssp_max::Int64)
 
-Simulate edges tree according to ESSE.
+Simulate edges tree according to EGeoHiSSE.
 """
 function simulate_edges(λ       ::Array{Float64,1},
                         μ       ::Array{Float64,1},
@@ -376,8 +376,6 @@ function simulate_edges(λ       ::Array{Float64,1},
   ed = ed[1:(2n-2),:]
   el = el[1:(2n-2)]
 
-  sort!(ea)
-
   return ed, el, st, n, S, k
 end
 
@@ -387,7 +385,7 @@ end
 
 
 """
-    id_mod(cov_mod::String, 
+    id_mod(cov_mod::NTuple{N,String}, 
            k      ::Int64, 
            h      ::Int64, 
            nzt    ::Int64,
@@ -479,6 +477,7 @@ end
 
 """
     init_states_pr!(isp  ::Array{Float64,1},
+                    λ    ::Array{Float64,1},
                     l    ::Array{Float64,1},
                     g    ::Array{Float64,1},
                     q    ::Array{Float64,1},
@@ -487,8 +486,11 @@ end
                     S    ::Array{Sgh,1},
                     k    ::Int64,
                     h    ::Int64,
-                    model::Int64,
-                    md   ::Bool)
+                    ny   ::Int64,
+                    model::NTuple{3,Bool},
+                    md   ::Bool,
+                    as   ::UnitRange{Int64},
+                    hs   ::UnitRange{Int64})
 
  Estimate starting transition probabilities for initial states
 """
@@ -584,6 +586,7 @@ end
                 S    ::Array{Sgh,1},
                 k    ::Int64,
                 h    ::Int64,
+                ny   ::Int64,
                 model::NTuple{3,Bool},
                 md   ::Bool, 
                 δt   ::Float64,
@@ -743,6 +746,7 @@ end
                    S  ::Array{Sgh, 1},
                    as::UnitRange{Int64},
                    hs::UnitRange{Int64},
+                   k ::Int64,
                    ns::Int64)
 
 Make vector of vectors of corresponding states changes 
@@ -852,8 +856,9 @@ end
                  Sλpr ::Array{Float64,1},
                  δt   ::Float64,
                  k    ::Int64,
-                 model::Int64,
-                 md   ::Bool)
+                 model::NTuple{3,Bool},
+                 md   ::Bool,
+                 ny   ::Int64)
 
 Make λ instantaneous probability function for each state.
 """
@@ -919,14 +924,17 @@ end
 
 
 """
-    make_updμpr!(λ    ::Array{Float64,1},
+    make_updμpr!(μ    ::Array{Float64,1},
+                 l    ::Array{Float64,1},
                  β    ::Array{Float64,1},
                  μpr  ::Array{Array{Float64,1},1},
                  Sμpr ::Array{Float64,1},
                  δt   ::Float64,
                  k    ::Int64,
-                 model::Int64,
-                 md   ::Bool)
+                 h    ::Int64,
+                 model::NTuple{3,Bool},
+                 md   ::Bool,
+                 ny   ::Int64)
 
 Make `μ` instantaneous probability function
 """
@@ -965,9 +973,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
             expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       else
-        na = 0
         for a in s.g
-          na += 1
           μpr[si][na] =
             expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
@@ -1002,10 +1008,12 @@ end
                  Sgpr ::Array{Float64,1},
                  δt   ::Float64,
                  k    ::Int64,
-                 model::Int64,
+                 h    ::Int64,
+                 model::NTuple{3,Bool},
                  md   ::Bool,
                  as   ::UnitRange{Int64},
-                 S    ::Array{Sgh,1})
+                 S    ::Array{Sgh,1},
+                 ny   ::Int64)
 
 Make gain instantaneous probability function
 """
@@ -1072,11 +1080,11 @@ end
 
 
 """
-    make_updqpr!(Sqpr ::Array{Float64,1})
+    make_updqpr!(Sqpr::Array{Float64,1})
 
 Make hidden states instantaneous probability function
 """
-function make_updqpr!(Sqpr ::Array{Float64,1})
+function make_updqpr!(Sqpr::Array{Float64,1})
 
   function f(si ::Int64)
     return Sqpr[si]
@@ -1180,7 +1188,7 @@ end
 
 
 """
-    expf()
+    expf(α::Float64, β::Float64, x::Float64)
 
 Exponential regression function for rates with base rate `α`, 
 coefficient `β` and covariate `x`.
@@ -1192,7 +1200,7 @@ expf(α::Float64, β::Float64, x::Float64) = α * exp(β * x)
 
 
 """
-    prop_sample(s::Array{Float64,1}, prv::Array{Float64,1}, k::Int64)
+    prop_sample(s::Array{Float64,1}, prv::Array{Float64,1}, ns::Int64)
 
 Sample one state with the respective (relative) probabilities 
 given `prv`.
