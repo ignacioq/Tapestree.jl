@@ -333,17 +333,17 @@ function set_constraints(constraints::NTuple{N,String},
   # Dict of hidden state correspondence
   hsc = dict_hscor(k, h, ny, model)
 
-  dcp  = Dict{Int64,Int64}()  # constrains dictionary for base hidden state 0
-  dcfp = Dict{Int64,Int64}()  # constrains dictionary for other hidden states
-  zp   = Set(Int64[])         # zeros for base hidden state 0
-  zfp  = Set(Int64[])         # zeros for other hidden states
+  dcp0  = Dict{Int64,Int64}()  # constrains dictionary for base hidden state 0
+  dcfp0 = Dict{Int64,Int64}()  # constrains dictionary for other hidden states
+  zp    = Set(Int64[])         # zeros for base hidden state 0
+  zfp   = Set(Int64[])         # zeros for other hidden states
 
   for c in constraints
 
     spl = map(x -> strip(x), split(c, '='))
 
     if occursin("q", spl[1])
-      dcp[pardic[spl[2]]] = pardic[spl[1]]
+      dcp0[pardic[spl[2]]] = pardic[spl[1]]
       continue
     end
 
@@ -405,14 +405,33 @@ function set_constraints(constraints::NTuple{N,String},
           # set shared hidden states equal
           for j in 0:mnh
             if iszero(j)
-              dcp[pardic[spc2*"0"]] = pardic[spc1*"0"]
+              dcp0[pardic[spc2*"0"]] = pardic[spc1*"0"]
             else
-              dcfp[pardic[spc2*"$j"]] = pardic[spc1*"$j"]
+              dcfp0[pardic[spc2*"$j"]] = pardic[spc1*"$j"]
             end
           end
         end
       end
     end
+  end
+
+  # check double feedback loops
+  dcp = Dict{Int64,Int64}()
+  for (key, value) in dcp0
+    if in(value, keys(dcp)) && key == dcp[value]
+      println(key,value)
+      continue
+    end
+    dcp[key] = value
+  end
+
+  dcfp = Dict{Int64,Int64}()
+  for (key, value) in dcfp0
+    if in(value, keys(dcfp)) && key == dcfp[value]
+      println(key,value)
+      continue
+    end
+    dcfp[key] = value
   end
 
   return dcp, dcfp, zp, zfp
