@@ -117,6 +117,14 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   pupd = setdiff(pupd, zp)
   phid = setdiff(phid, zfp)
 
+  # check if there are hidden factors hold to 0 that also have a forced equality
+  for (k,v) in dcfp
+    if in(k, zfp) || in(v, zfp) 
+      filter!(x -> x ≠ k, phid)
+      filter!(x -> x ≠ v, phid)
+    end
+  end
+
   # divide between non-negative and negative values
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)

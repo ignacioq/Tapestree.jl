@@ -368,6 +368,11 @@ function set_constraints(constraints::NTuple{N,String},
     else
       for i in Base.OneTo(length(spl)-1) 
 
+
+        """
+        STILL doesn't work well with 24, should be in zfp as well
+        """
+
         sp1 = spl[i]
         sp2 = spl[i+1]
 
@@ -419,7 +424,6 @@ function set_constraints(constraints::NTuple{N,String},
   dcp = Dict{Int64,Int64}()
   for (key, value) in dcp0
     if in(value, keys(dcp)) && key == dcp[value]
-      println(key,value)
       continue
     end
     dcp[key] = value
@@ -428,7 +432,6 @@ function set_constraints(constraints::NTuple{N,String},
   dcfp = Dict{Int64,Int64}()
   for (key, value) in dcfp0
     if in(value, keys(dcfp)) && key == dcfp[value]
-      println(key,value)
       continue
     end
     dcfp[key] = value
