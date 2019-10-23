@@ -52,7 +52,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
                        gpriors    ::Float64           = .1,
                        lpriors    ::Float64           = .1,
                        qpriors    ::Float64           = .1,
-                       βpriors    ::NTuple{2,Float64} = (0.0, 5.0),
+                       βpriors    ::NTuple{2,Float64} = (0.0, 10.0),
                        hpriors    ::Float64           = .1,
                        optimal_w  ::Float64           = 0.8,
                        screen_print::Int64            = 5) where {M,N}
@@ -77,11 +77,13 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
   # find hidden factors for hidden states 
   phid = Int64[] 
-  re   = Regex(".*_[1-"*string(h-1)*"]\$")
-  for (k,v) in pardic 
-    occursin(re, k) && push!(phid, v)
+  if h > 1
+    re   = Regex(".*_[1-"*string(h-1)*"]\$")
+    for (k,v) in pardic 
+      occursin(re, k) && push!(phid, v)
+    end
+    sort!(phid)
   end
-  sort!(phid)
 
   # create factor parameter vector
   fp = zeros(npars)
@@ -158,7 +160,7 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
 
   # create prior function
   lpf = make_lpf(pupd, phid, 
-    λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, k, h, model)
+    λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, k, h, ny, model)
 
   # create posterior functions
   lhf = make_lhf(llf, lpf, dcp, dcfp, Val(k), Val(h), Val(ny), Val(model))

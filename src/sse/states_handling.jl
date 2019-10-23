@@ -368,11 +368,6 @@ function set_constraints(constraints::NTuple{N,String},
     else
       for i in Base.OneTo(length(spl)-1) 
 
-
-        """
-        STILL doesn't work well with 24, should be in zfp as well
-        """
-
         sp1 = spl[i]
         sp2 = spl[i+1]
 
@@ -458,8 +453,8 @@ function dict_hscor(k::Int64, h::Int64, ny::Int64, model::NTuple{3, Bool})
     model[3]*k*(k-1))
 
   # starting indices for models 2 and 3
-  m2s = model[1]*k*h
-  m3s = m2s + model[2]*k*h
+  m2s = model[1]*k*h*yppar
+  m3s = m2s + model[2]*k*h*yppar
 
   hsc = Dict{Int64,Int64}()
 

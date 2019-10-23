@@ -563,6 +563,7 @@ function make_lpf(pupd   ::Array{Int64,1},
                   hpriors::Float64,
                   k      ::Int64,
                   h      ::Int64,
+                  ny     ::Int64,
                   model  ::Tuple{Bool,Bool,Bool})
 
   λupds = intersect(1:(h*(k+1)), pupd)
@@ -572,7 +573,12 @@ function make_lpf(pupd   ::Array{Int64,1},
   qupds = intersect((h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)), 
             pupd)
   bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
-  ncov  = model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h
+  yppar = ny == 1 ? 1 : div(ny,
+    model[1]*k + 
+    model[2]*k + 
+    model[3]*k*(k-1))
+
+  ncov  = model[1]*k*yppar + model[2]*k*yppar + model[3]*k*(k-1)*yppar
   βupds = intersect((bbase+1):(bbase+ncov), pupd)
 
   βp_m, βp_v = βpriors
@@ -675,15 +681,15 @@ factor+parameter `fp` vector.
     model[3]*k*(k-1))
 
   # starting indices for models 2 and 3
-  m2s = model[1]*k*h
-  m3s = m2s + model[2]*k*h
+  m2s = model[1]*k*h*yppar
+  m3s = m2s + model[2]*k*h*yppar
 
   ex = quote end
   pop!(ex.args)
 
   for j in 1:(h-1)
     for i in 1:k
-      
+
       # speciation
       push!(ex.args, :(p[$((k+1)*j + i)] = 
         p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
@@ -714,25 +720,25 @@ factor+parameter `fp` vector.
       if model[1]
         for l = Base.OneTo(yppar)
           push!(ex.args, 
-            :(p[$(s + k*j + i + (l-1)*(i-1))] = 
-              p[$(s + k*(j-1) + i + (l-1)*(i-1))] + 
-              fp[$(s + k*j + i + (l-1)*(i-1))]))
+            :(p[$(s + l + yppar*(i-1) + k*j*yppar)] = 
+              p[$(s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
+              fp[$(s + l + yppar*(i-1) + k*j*yppar)]))
         end
       end
       if model[2]
         for l = Base.OneTo(yppar)
-          push!(ex.args, 
-            :(p[$(s + k*j + m2s + i + (l-1)*(i-1))] = 
-              p[$(s + k*(j-1) + m2s + i + (l-1)*(i-1))] + 
-              fp[$(s + k*j + m2s + i + (l-1)*(i-1))]))
+          push!(ex.args,
+            :(p[$(s + m2s + l + yppar*(i-1) + k*j*yppar)] = 
+              p[$(s + m2s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
+              fp[$(s + m2s + l + yppar*(i-1) + k*j*yppar)]))
         end
       end
       if model[3]
         for a = 1:(k-1), l = Base.OneTo(yppar)
           push!(ex.args, 
-            :(p[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))] = 
-              p[$(s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1))] + 
-              fp[$(s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1))]))
+            :(p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)] = 
+              p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*(j-1)*yppar)] + 
+              fp[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)]))
         end
       end
     end

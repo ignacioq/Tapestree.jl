@@ -105,8 +105,8 @@ function simulate_edges(λ       ::Array{Float64,1},
                         cov_mod ::NTuple{M,String},
                         nssp_max::Int64) where {M,N}
 
-  h =  Int64((sqrt(length(q)*4 + 1) + 1)/2)
-  k  = div(length(l), h)
+  h = Int64((sqrt(length(q)*4 + 1) + 1)/2)
+  k = div(length(l), h)
   ny = size(y, 2)
 
   # if multidimensional
@@ -402,7 +402,7 @@ is consistent with specified model.
 function id_mod(cov_mod::NTuple{N,String}, 
                 k      ::Int64, 
                 h      ::Int64, 
-                nzt    ::Int64,
+                ny    ::Int64,
                 λ      ::Array{Float64,1}, 
                 μ      ::Array{Float64,1}, 
                 l      ::Array{Float64,1},
@@ -445,14 +445,19 @@ function id_mod(cov_mod::NTuple{N,String},
   end
 
   # beta length should be
-  betaE = model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h
+  yppar = ny == 1 ? 1 : div(ny,
+         model[1]*k +
+         model[2]*k +
+         model[3]*k*(k-1))
+
+  betaE = model[1]*k*h*yppar + model[2]*k*h*yppar + model[3]*k*(k-1)*h*yppar
 
   if lastindex(β) == betaE
     printstyled("Number of parameters are consistent with specified model \n", 
       color=:green)
   else
     all_ok = false
-    printstyled("this covariate model with $k areas and $h hidden states should have a β vector length of $betaE \n")
+    printstyled("this covariate model with $k areas, $ny covariates and $h hidden states should have a β vector length of $betaE \n")
   end
 
   mexp = "$(model[1] ? "speciation," : "")$(model[2] ? "extinction," : "")$(model[3] ? "transition," : "")"
@@ -460,7 +465,7 @@ function id_mod(cov_mod::NTuple{N,String},
   mexp = mexp[1:(end-2)]
 
   if all_ok 
-    printstyled("Simulating $mexp covariate SSE model with $k states, $h hidden states and $nzt covariates \n", 
+    printstyled("Simulating $mexp covariate SSE model with $k states, $h hidden states and $ny covariates \n", 
       color=:green)
   else
     error("Parameter and z(t) function number not consistent with specified model")
@@ -468,8 +473,6 @@ function id_mod(cov_mod::NTuple{N,String},
 
   return tuple(model...)
 end
-
-
 
 
 
