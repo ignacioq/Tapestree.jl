@@ -75,6 +75,60 @@ end
 
 
 
+
+"""
+    make_ape_tree(n::Int64, 
+                  λ::Float64, 
+                  μ::Float64; 
+                  order::String = "cladewise", 
+                  branching_times::Bool = true)
+
+Make a phylogenetic tree using `phytools` in R. 
+"""
+function make_ape_tree(n::Int64, 
+                       λ::Float64, 
+                       μ::Float64; 
+                       order::String = "cladewise", 
+                       branching_times::Bool = true)
+
+  str = reval("""
+                library(ape)
+                library(phytools)
+                tree     <- pbtree(n = $n, b = $λ, d = $μ)
+                tree     <- reorder(tree, order = '$order')
+                edge     <- .subset2(tree,'edge')
+                Nnode    <- .subset2(tree,'Nnode')
+                tiplabel <- .subset2(tree,'tip.label')
+                edlength <- .subset2(tree,'edge.length')
+                list(edge,Nnode,tiplabel,edlength)
+              """)
+
+  edge     = rcopy(str[1])
+  edge     = convert(Array{Int64},edge)
+  Nnode    = rcopy(str[2])
+  Nnode    = convert(Int64,Nnode)
+  tiplabel = rcopy(str[3])
+  edlength = rcopy(str[4])
+  edlength = convert(Array{Float64},edlength)
+
+  tree = rtree(edge, edlength, tiplabel, Nnode)
+
+  if branching_times
+    brtimes = reval("""
+                      brtimes <- branching.times(tree)
+                    """)
+    brtimes = rcopy(brtimes)
+    return tree, brtimes
+  else
+    return tree
+  end
+end
+
+
+
+
+
+
 """
     maketriads(ed::Array{Int64,2})
 
