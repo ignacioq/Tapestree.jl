@@ -977,7 +977,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
         end
       else
         for a in s.g
-          μpr[si][na] =
+          μpr[si][a] =
             expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       end

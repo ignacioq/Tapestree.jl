@@ -21,15 +21,13 @@ and prior, **lpf**, functions.
 """
 function make_lhf(llf ::Function, 
                   lpf ::Function, 
+                  assign_hidfacs!::Function,
                   dcp ::Dict{Int64,Int64},
                   dcfp::Dict{Int64,Int64},
                   ::Val{k},
                   ::Val{h},
                   ::Val{ny},
                   ::Val{model}) where {k, h, ny, model}
-
-  assign_hidfacs! = 
-    make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
 
   ks  = keys(dcp)
   ksf = keys(dcfp)

@@ -131,6 +131,10 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
+  # make hidden factors assigning 
+  assign_hidfacs! = 
+    make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
+
   # force same parameter values for constraints
   for wp in keys(dcp)
     while haskey(dcp, wp)
@@ -148,6 +152,9 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
     end
   end
 
+  # assign hidden factors
+  assign_hidfacs!(p, fp)
+
   # make ODE function
   ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
 
@@ -163,7 +170,8 @@ function slice_sampler(tip_val    ::Dict{Int64,Array{Float64,1}},
     λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, k, h, ny, model)
 
   # create posterior functions
-  lhf = make_lhf(llf, lpf, dcp, dcfp, Val(k), Val(h), Val(ny), Val(model))
+  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp, 
+    Val(k), Val(h), Val(ny), Val(model))
 
   #=
   run slice sampling
