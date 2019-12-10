@@ -140,7 +140,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   isp = Array{Float64,1}(undef, length(S))
 
   # assign initial state probabilities
-  init_states_pr!(isp, λ, l, g, q, μ, β, S, k, h, ny, model, md, as, hs)
+  init_states_pr!(isp, λ, l, g, q, μ, β, S, r, k, h, ny, model, md, as, hs)
 
   # preallocate vector of individual area probabilities 
   spr = Array{Float64,1}(undef, ns)
@@ -505,6 +505,7 @@ function init_states_pr!(isp  ::Array{Float64,1},
                          μ    ::Array{Float64,1},
                          β    ::Array{Float64,1},
                          S    ::Array{Sgh,1},
+                         r    ::Array{Float64,1},
                          k    ::Int64,
                          h    ::Int64,
                          ny   ::Int64,
@@ -524,7 +525,6 @@ function init_states_pr!(isp  ::Array{Float64,1},
   m3s = m2s + model[2]*k*h
   y2s = model[1]*yppar*k
   y3s = y2s + model[2]*yppar*k
-
 
   for si in Base.OneTo(length(S))
 
@@ -547,7 +547,7 @@ function init_states_pr!(isp  ::Array{Float64,1},
       gr = 0.0
       if length(s.g) > 1
         for ta = s.g, fa = setdiff(s.g, ta)
-          gr += expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+          gr += expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                      β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                      md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])
         end
@@ -1053,14 +1053,15 @@ function make_updgpr!(g    ::Array{Float64,1},
               s  ::Sgh,
               r::Array{Float64,1})
     @inbounds begin
-      gpr[si][i] = 0.0
-      for (i,ta) = enumerate(sdf[si]), fa = s.g
-        gpr[si][i] += 
-          expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-               β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-               md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+      for (i,ta) = enumerate(sdf[si])
+        gpr[si][i] = 0.0
+        for fa = s.g
+          gpr[si][i] += 
+            expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                 β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                 md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+        end
       end
-
       return Sgpr[si] = sum(gpr[si]) 
     end
   end
