@@ -19,8 +19,8 @@ June 14 2017
 Read a phylogenetic tree using **ape** package in R through 
 `RCall` and the data file with the trait and biogeographic information.
 """
-function read_data(tree_file::String,
-                   data_file::String)
+function read_data_tribe(tree_file::String,
+                         data_file::String)
 
   tree, bts = read_tree(tree_file)
 
