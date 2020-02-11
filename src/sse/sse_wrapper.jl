@@ -120,7 +120,7 @@ function read_data_esse(states_file ::String,
   end
 
   data_tlab    = convert(Array{String,1}, data[:,1])
-  data_states  = convert(Array{Int64,2},  data[:,2:end])
+  data_states  = convert(Array{Float64,2},  data[:,2:end])
 
   # create dictionary
   tip_states = Dict(tip_labels[val] => data_states[i,:] 

@@ -189,8 +189,15 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         λevent!(elrt2[pr], llik, ud1, ud2, λts, p)
 
         # loglik to sum for integration
-        tosum   = minimum(llik)
-        llxtra -= tosum
+        tosum = 0.0
+        for i in Base.OneTo(ns)
+          tosum += llik[i]
+        end
+        for i in Base.OneTo(ns)
+          llik[i] /= tosum
+        end
+
+        llxtra += log(tosum)
 
         # assign the remaining likelihoods &
         # assign extinction probabilities and 
@@ -198,7 +205,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
         for i in Base.OneTo(ns)
           ud1[i+ns] > 1.0 && return -Inf
           led[pr][i+ns] = ud1[i+ns]
-          led[pr][i]    = exp(llik[i] - tosum)
+          led[pr][i]    = llik[i]
         end
       end
 
@@ -215,7 +222,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       # combine root likelihoods
       ll = rootll(elrt1[ne], llik, extp, w, p, λts)
 
-      return (log(ll) - llxtra)::Float64
+      return (log(ll) + llxtra)::Float64
     end
   end
 
@@ -437,7 +444,7 @@ Generated function for speciation event likelihoods
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
           :(llik[$(i+(2^k-1)*(j-1))] = 
-            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * λts[$(i+k*(j-1))])))
+            ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * λts[$(i+k*(j-1))]))
     end
 
     # likelihood for widespread states
@@ -462,7 +469,7 @@ Generated function for speciation event likelihoods
             0.5 * p[$((k+1)*(1+s.h))]))
       end
 
-      push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
+      push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = $ex))
     end
 
   # *not* speciation model
@@ -472,7 +479,7 @@ Generated function for speciation event likelihoods
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
           :(llik[$(i+(2^k-1)*(j-1))] = 
-            log(ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))])))
+            ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
     end
 
     # likelihood for widespread states
@@ -497,7 +504,7 @@ Generated function for speciation event likelihoods
             0.5 * p[$((k+1)*(1+s.h))]))
       end
 
-      push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = log($ex)))
+      push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = $ex))
     end
   end
 

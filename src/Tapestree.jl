@@ -27,8 +27,7 @@ using DifferentialEquations
 
 export tribe, 
        simulate_tribe, 
-       slice_sampler, 
-       simesse,
+       ESSE, 
        simulate_sse
 
 # General utilities
