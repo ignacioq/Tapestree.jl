@@ -42,6 +42,7 @@ function ESSE(states_file ::String,
               constraints ::NTuple{N,String}  = (" ",),
               niter       ::Int64             = 10_000,
               nthin       ::Int64             = 10,
+              scale_y     ::NTuple{2,Bool}    = (true, false),
               λpriors     ::Float64           = .1,
               μpriors     ::Float64           = .1,
               gpriors     ::Float64           = .1,
@@ -54,6 +55,24 @@ function ESSE(states_file ::String,
 
   tip_val, ed, el, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
+
+  # if scale y
+  if scale_y[1]
+    # if scale each function separately or together
+    if scale_y[2]
+      ymin = minimum(y)
+      ymax = maximum(y)
+      for j in axes(y,2), i in axes(y,1)
+        y[i,j] = (y[i,j] - ymin)/(ymax - ymin)
+      end
+    else
+      ymin = minimum(y, dims = 1)
+      ymax = maximum(y, dims = 1)
+      for j in axes(y,2), i in axes(y,1)
+        y[i,j] = (y[i,j] - ymin[j])/(ymax[j] - ymin[j])
+      end
+    end
+  end
 
   R = slice_sampler(tip_val, ed, el, x, y, cov_mod, out_file, h,
         constraints  = constraints,
