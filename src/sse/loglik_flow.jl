@@ -184,7 +184,7 @@ I should just put this out ----->>>>
 
   # estimate first Extinction probabilities at times `ts`
   Ets  = Et(p0)
-  nets = length(Ets)
+  nets = length(Ets) + 1
 
   # Make extinction approximated function
   # ** this make order is crucial
@@ -203,8 +203,6 @@ I should just put this out ----->>>>
 """
 <<<<----- until here (or so)
 """
-
-
 
 
 
@@ -253,8 +251,8 @@ I should just put this out ----->>>>
   # preallocate arrays
   Xp1 = Array{Float64,1}(undef,ns)
   Xp2 = Array{Float64,1}(undef,ns)
-  X0  = Array{Float64,1}(undef,ns)
   wg  = Array{Float64,1}(undef,ns)
+ 
 
 
   # start ll function for parameters
@@ -262,7 +260,7 @@ I should just put this out ----->>>>
 
     @inbounds begin
 
-      Ets  = Et(p)
+      Ets = Et(p)
 
       # push parameters as the last vector in Ets
       push!(Ets, p)
@@ -354,14 +352,16 @@ E0 = [0.0,0.0]
 k = 2
 h = 1
 
-llf = make_loglik(make_fbisseM, make_Et,
-            tv, ed, el, bts, p0, E0, k, h,
+llf = make_loglik(make_fbisseM, fbisseE,
+            tv, ed, el, copy(bts), p0, E0, k, h,
             ntip)
 
 
 
 
 
+p = rand(6) 
+llf(p)
 
 
 

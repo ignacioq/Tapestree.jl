@@ -94,7 +94,7 @@ function make_ape_tree(n::Int64,
   str = reval("""
                 library(ape)
                 library(phytools)
-                tree     <- pbtree(n = $n, b = $λ, d = $μ)
+                tree     <- pbtree(n = $n, b = $λ, d = $μ, extant.only = TRUE)
                 tree     <- reorder(tree, order = '$order')
                 edge     <- .subset2(tree,'edge')
                 Nnode    <- .subset2(tree,'Nnode')
