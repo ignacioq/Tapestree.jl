@@ -11,62 +11,20 @@ Created 23 10 2019
 
 =#
 
-# λ0, λ1, μ0, μ1, q01, q10
-
-using DifferentialEquations
-using LinearAlgebra
-
-function fbisse(du::Array{Float64,1}, 
-                u::Array{Float64,1}, 
-                p::Array{Float64,1}, 
-                t::Float64)
-  @inbounds begin
-    du[1]= -1.0 * (p[1] + p[3] + p[5]) * u[1] + p[5] * u[2] + 2.0 * p[1] * u[3] * u[1]
-    du[2]= -1.0 * (p[2] + p[4] + p[6]) * u[2] + p[6] * u[1] + 2.0 * p[2] * u[4] * u[2]
-    du[3]= -1.0 * (p[1] + p[3] + p[5]) * u[3] + p[3] + p[5] * u[4] + p[1] * u[3]^2
-    du[4]= -1.0 * (p[2] + p[4] + p[6]) * u[4] + p[4] + p[6] * u[3] + p[2] * u[4]^2
-  end
-  
-  return nothing
-end
-
-function fbisseE(du::Array{Float64,1}, 
-                 u::Array{Float64,1}, 
-                 p::Array{Float64,1}, 
-                 t::Float64)
-  @inbounds begin
-    du[1] = -1.0 * (p[1] + p[3] + p[5]) * u[1] + p[3] + p[5] * u[2] + p[1] * u[1]^2
-    du[2] = -1.0 * (p[2] + p[4] + p[6]) * u[2] + p[4] + p[6] * u[1] + p[2] * u[2]^2
-  end
-  
-  return nothing
-end
 
 
-function make_fbisseM(afE!, idxl::Int64)
-
-  rE  = Array{Float64,1}(undef,2)
-
-  function f(du::Array{Float64,2}, 
-             u::Array{Float64,2}, 
-             p::Array{Array{Float64,1},1}, 
-             t::Float64)
-    @inbounds begin
-      par = p[idxl]
-      afE!(t, rE, p)
-      du[1,1] = -1.0 * (par[1] + par[3] + par[5]) * u[1,1] + par[5] * u[2,1] + 2.0 * par[1] * rE[1] * u[1,1]
-      du[2,1] = -1.0 * (par[2] + par[4] + par[6]) * u[2,1] + par[6] * u[1,1] + 2.0 * par[2] * rE[2] * u[2,1]
-      du[1,2] = -1.0 * (par[1] + par[3] + par[5]) * u[1,2] + par[5] * u[2,2] + 2.0 * par[1] * rE[1] * u[1,2]
-      du[2,2] = -1.0 * (par[2] + par[4] + par[6]) * u[2,2] + par[6] * u[1,2] + 2.0 * par[2] * rE[2] * u[2,2]
-    end
-
-    return nothing
-  end
-end
 
 
-# make E function
-function make_Et(Et,
+"""
+    make_Et(Et::Function,
+            p0::Array{Float64,1}, 
+            u0::Array{Float64,1},
+            ts::Array{Float64,1},
+            ti::Float64,
+
+Make Extinction through time, `E(t)`.
+"""
+function make_Et(Et::Function,
                  p0::Array{Float64,1}, 
                  u0::Array{Float64,1},
                  ts::Array{Float64,1},
@@ -96,8 +54,20 @@ function make_Et(Et,
 end
 
 
-# make E or G functions
-function make_Gt(At, 
+
+
+
+"""
+    make_Gt(At::Function, 
+            p0::Array{Array{Float64,1},1}, 
+            u0::Array{Float64,2},
+            ts::Array{Float64,1},
+            ti::Float64,
+            tf::Float64)
+
+Make flow equation for likelihoods through time, `G(t)`.
+"""
+function make_Gt(At::Function, 
                  p0::Array{Array{Float64,1},1}, 
                  u0::Array{Float64,2},
                  ts::Array{Float64,1},
@@ -130,47 +100,37 @@ end
 
 
 
-"""
-make_loglik(ode_make_ext,
-            ode_make_lik,
-            tv  ::Dict{Int64,Array{Float64,1}},
-            ed  ::Array{Int64,2},
-            el  ::Array{Float64,1},
-            bts ::Array{Float64,1},
-            p0  ::Array{Float64,1},
-            E0  ::Array{Float64,1},
-            k   ::Int64,
-            h   ::Int64,
-            ntip::Int64;
-            Eδt::Float64 = 0.01,
-            ti ::Float64 = 0.0)
-
-Make log-likelihood function using the flow algorithm.
-"""
-function make_loglik(ode_make_lik,
-                     ode_ext,
-                     tv  ::Dict{Int64,Array{Float64,1}},
-                     ed  ::Array{Int64,2},
-                     el  ::Array{Float64,1},
-                     bts ::Array{Float64,1},
-                     p0  ::Array{Float64,1},
-                     E0  ::Array{Float64,1},
-                     k   ::Int64,
-                     h   ::Int64,
-                     ntip::Int64;
-                     Eδt::Float64 = 0.01,
-                     ti ::Float64 = 0.0)
-
-
-
-
 
 """
-*** all the MAKE functions and just pass the MADE functions ***
+    prepare_ll(ode_make_lik,
+               ode_ext,
+               tv  ::Dict{Int64,Array{Float64,1}},
+               ed  ::Array{Int64,2},
+               el  ::Array{Float64,1},
+               bts ::Array{Float64,1},
+               p0  ::Array{Float64,1},
+               E0  ::Array{Float64,1},
+               k   ::Int64,
+               h   ::Int64,
+               ntip::Int64;
+               Eδt::Float64 = 0.01,
+               ti ::Float64 = 0.0)
 
-I should just put this out ----->>>>
+Prepare SSE likelihoods for flow algorithm given input model
 """
-
+function prepare_ll(ode_make_lik,
+                    ode_ext,
+                    tv  ::Dict{Int64,Array{Float64,1}},
+                    ed  ::Array{Int64,2},
+                    el  ::Array{Float64,1},
+                    bts ::Array{Float64,1},
+                    p0  ::Array{Float64,1},
+                    E0  ::Array{Float64,1},
+                    k   ::Int64,
+                    h   ::Int64,
+                    ntip::Int64;
+                    Eδt::Float64 = 0.01,
+                    ti ::Float64 = 0.0)
 
   # number of states
   ns = k*h
@@ -187,7 +147,7 @@ I should just put this out ----->>>>
   nets = length(Ets) + 1
 
   # Make extinction approximated function
-  # ** this make order is crucial
+  # ** this make order is crucial **
   afE! = make_af(ts,  Ets, Val(ns))
 
   # make likelihood integral
@@ -199,17 +159,6 @@ I should just put this out ----->>>>
   # make Gt function
   Gt = make_Gt(ode_intf, Ets, Matrix{Float64}(I, ns, ns), bts, ti, tf)
 
-
-"""
-<<<<----- until here (or so)
-"""
-
-
-
-
-  # estimate `Gts` according to `Ets` and `p0`
-  Gts = Gt(Ets)
-
   # sort branching times
   sort!(bts)
 
@@ -217,6 +166,9 @@ I should just put this out ----->>>>
   pushfirst!(bts, 0.0)
 
   nbts = lastindex(bts)
+
+  # estimate `Gts` according to `Ets` and `p0`
+  Gts = Gt(Ets)
 
   ## link edges with initial and end branching times 
   abts = abs_time_branches(el, ed, ntip)
@@ -238,9 +190,6 @@ I should just put this out ----->>>>
   # initialize likelihood vectors
   X = [Array{Float64,1}(undef,ns) for i in Base.OneTo(ned)]
 
-  # intialize root likelihood
-  Xr = Array{Float64,1}(undef,ns)
-
   # initialize X for tips 
   for i in Base.OneTo(ned)
     edi = ed[i,2]
@@ -248,12 +197,39 @@ I should just put this out ----->>>>
     X[i] = tv[edi]
   end
 
+  return Gt, Et, X, triads, lbts, ns, ned, nets
+end
+
+
+
+
+
+"""
+    make_loglik(Gt    ::Function, 
+                Et    ::Function, 
+                triads::Array{Array{Int64,1},1}, 
+                ns    ::Int64, 
+                ned   ::Int64, 
+                nets  ::Int64)
+
+
+Make log-likelihood function using the flow algorithm.
+"""
+function make_loglik(Gt    ::Function, 
+                     Et    ::Function,
+                     X     ::Array{Array{Float64,1},1}, 
+                     triads::Array{Array{Int64,1},1},
+                     lbts  ::Array{Int64,2},
+                     ns    ::Int64, 
+                     ned   ::Int64, 
+                     nets  ::Int64)
+
   # preallocate arrays
   Xp1 = Array{Float64,1}(undef,ns)
   Xp2 = Array{Float64,1}(undef,ns)
+  Xr  = Array{Float64,1}(undef,ns)
   wg  = Array{Float64,1}(undef,ns)
- 
-
+  XR  = Array{Float64,1}(undef,ns)
 
   # start ll function for parameters
   function f(p::Array{Float64,1})
@@ -287,9 +263,9 @@ I should just put this out ----->>>>
           X[pr][k] = Xp1[k] * Xp2[k] * p[k]
         end
 
-        mdlus = sum(X[pr])
+        mdlus  = sum(X[pr])
         X[pr] /= mdlus
-        ll += log(mdlus)
+        ll    += log(mdlus)
       end
 
       # Root conditioning
@@ -309,9 +285,11 @@ I should just put this out ----->>>>
         α += wg[k] * p[k] * (1.0 - Ets[nets-1][k])^2
       end
 
-      Xr /= α
+      rmul!(Xr, 1.0/α)
 
-      ll += log(sum(Xr .* pr))
+      XR .= Xr .* wg
+
+      ll += log(sum(XR))
     end
 
     return ll
@@ -324,16 +302,12 @@ end
 
 
 
-
-
-
-
 # make tree in R
 using RCall
 
-ntip = 5
+ntip = 50
 
-tr, bts = make_ape_tree(ntip, 0.5, 0.1, order= "postorder")
+tr, bts = make_ape_tree(ntip, 0.5, 0.0, order= "postorder")
 
 ed  = copy(tr.ed)
 el  = copy(tr.el)
@@ -352,23 +326,19 @@ E0 = [0.0,0.0]
 k = 2
 h = 1
 
-llf = make_loglik(make_fbisseM, fbisseE,
-            tv, ed, el, copy(bts), p0, E0, k, h,
-            ntip)
+
+Gt, Et, X, triads, lbts, ns, ned, nets = 
+  prepare_ll(make_fbisseM, fbisseE, tv, ed, el, copy(bts), p0, E0, k, h, ntip)
 
 
-
+llf = make_loglik(Gt, Et, X, triads, lbts, ns, ned, nets)
 
 
 p = rand(6) 
+
 llf(p)
 
-
-
-
-
-
-
+@benchmark llf(p)
 
 
 
