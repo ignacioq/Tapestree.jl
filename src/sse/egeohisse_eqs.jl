@@ -96,7 +96,7 @@ Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas,
 
     # between-region extinction
     if ls > 1
-      brs = brspec_expr(s, S, ns, k, false, true)
+      brs = brspec_expr(s, S, ns, k, true, true)
     end
 
     # push `E` equation to to eqs
@@ -920,8 +920,8 @@ function brspec_expr(s   ::Sgh,
 
   if ext
     va = vicsubsets(s.g)[1:div(end,2)]
-    wu1 = ns
-    wu2 = ns
+    wu1 = flow ? 0 : ns
+    wu2 = flow ? 0 : ns
   else
     va = vicsubsets(s.g)
     wu1 = flow ? 0 : ns
