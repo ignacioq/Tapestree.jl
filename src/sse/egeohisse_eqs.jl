@@ -18,9 +18,144 @@ Create flow version of EGeoHiSSE
 
 
 
+"""
+    geohisse_E(du  ::Array{Float64,1}, 
+               u   ::Array{Float64,1}, 
+               p   ::Array{Float64,1}, 
+               t   ::Float64,
+               r   ::Array{Float64,1},
+               eaft::Array{Float64,1},
+               af! ::Function,
+               ::Val{k},
+               ::Val{h},
+               ::Val{ny},
+               ::Val{model}) where {k, h, ny, model}
+
+Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas, 
+`h` hidden states and `ny` covariates for the specific `model`.
+"""
+@generated function geohisse_E(du  ::Array{Float64,1}, 
+                               u   ::Array{Float64,1}, 
+                               p   ::Array{Float64,1}, 
+                               t   ::Float64,
+                               r   ::Array{Float64,1},
+                               eaft::Array{Float64,1},
+                               af! ::Function,
+                               ::Val{k},
+                               ::Val{h},
+                               ::Val{ny},
+                               ::Val{model}) where {k, h, ny, model}
+
+  # n states
+  ns = (2^k - 1)*h
+
+  # create individual areas subsets
+  S = create_states(k, h)
+
+  # start Expression for ODE equations
+  eqs = quote end
+  popfirst!(eqs.args)
+
+  # add environmental function
+  push!(eqs.args, :(af!(t, r)))
+
+  # compute exponential for each β*covariable
+  expex = exp_expr(k, h, ny, model)
+
+  for ex in expex.args
+    push!(eqs.args, ex)
+  end
+
+  for si = Base.OneTo(ns)
+
+    # state range
+    s = S[si]
+
+    # length of geographic range
+    ls = length(s.g)
+
+    # which single areas do not occur in r
+    oa = setdiff(1:k, s.g)
+
+    # no events
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, false)
+
+    # extinction
+    ext = ext_expr(s, S, ns, k, h, model, true) 
+
+    # dispersal and extinction
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, model, false)
+    end
+
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns, k, h, false) : :0.0
+
+    # within-region extinction
+    wrs = wrsext_expr(si, s, ns, k, model, true)
+
+    # between-region extinction
+    if ls > 1
+      brs = brspec_expr(s, S, ns, k, false, true)
+    end
+
+    # push `E` equation to to eqs
+    if isone(ls)
+      push!(eqs.args, 
+        :(du[$(si)] = $nev + $ext + $dis + $hid + $wrs))
+    elseif ls == k
+      push!(eqs.args, 
+        :(du[$(si)] = $nev + $ext + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$(si)] = $nev + $ext + $dis + $hid + $wrs + $brs))
+    end
+
+  end
+
+  # print for checking
+  println(eqs)
+
+  return quote 
+    @inbounds begin
+      $eqs
+    end
+    return nothing
+  end
+
+end
 
 
-# create matrix differential equation
+
+
+
+
+"""
+    make_fbisseM(afE!, idxl::Int64)
+
+Make function for BiSSE Matrix form of differential equations for flow 
+algorithm and given an Extinction approximation function.
+"""
+function make_fbisseM(afE!, idxl::Int64)
+
+  rE  = Array{Float64,1}(undef,2)
+
+  function f(du::Array{Float64,2}, 
+             u ::Array{Float64,2}, 
+             p ::Array{Array{Float64,1},1}, 
+             t ::Float64)
+    @inbounds begin
+      par = p[idxl]
+      afE!(t, rE, p)
+      du[1,1] = -1.0 * (par[1] + par[3] + par[5]) * u[1,1] + par[5] * u[2,1] + 2.0 * par[1] * rE[1] * u[1,1]
+      du[2,1] = -1.0 * (par[2] + par[4] + par[6]) * u[2,1] + par[6] * u[1,1] + 2.0 * par[2] * rE[2] * u[2,1]
+      du[1,2] = -1.0 * (par[1] + par[3] + par[5]) * u[1,2] + par[5] * u[2,2] + 2.0 * par[1] * rE[1] * u[1,2]
+      du[2,2] = -1.0 * (par[2] + par[4] + par[6]) * u[2,2] + par[6] * u[1,2] + 2.0 * par[2] * rE[2] * u[2,2]
+    end
+
+    return nothing
+  end
+end
 
 
 
@@ -28,17 +163,125 @@ Create flow version of EGeoHiSSE
 
 
 
+"""
+    geohisse_M(du  ::Array{Float64,1}, 
+               u   ::Array{Float64,1}, 
+               p   ::Array{Float64,1}, 
+               t   ::Float64,
+               r   ::Array{Float64,1},
+               eaft::Array{Float64,1},
+               af! ::Function,
+               ::Val{k},
+               ::Val{h},
+               ::Val{ny},
+               ::Val{model}) where {k, h, ny, model}
 
+Creates Covariate GeoHiSSE Likelihood ODE equation function for `k` areas, 
+`h` hidden states and `ny` covariates in Matrix form.
+"""
+@generated function geohisse_M(du  ::Array{Float64,2}, 
+                               u   ::Array{Float64,2}, 
+                               pp  ::Array{Array{Float64,1},1}, 
+                               t   ::Float64,
+                               r   ::Array{Float64,1},
+                               eaft::Array{Float64,1},
+                               rE  ::Array{Float64,1},
+                               af! ::Function,
+                               afE!::Function,
+                               idxl::Int64,
+                               ::Val{k},
+                               ::Val{h},
+                               ::Val{ny},
+                               ::Val{model}) where {k, h, ny, model}
 
+  # n states
+  ns = (2^k - 1)*h
 
+  # create individual areas subsets
+  S = create_states(k, h)
 
+  # start Expression for ODE equations
+  eqs = quote end
+  popfirst!(eqs.args)
 
+  # add parameter subset
+  push!(eqs.args, :(p = pp[idxl]))
 
+  # add extinction function
+  push!(eqs.args, :(afE!(t, rE, pp)))
 
+  # add environmental function
+  push!(eqs.args, :(af!(t, r)))
 
+  # compute exponential for each β*covariable
+  expex = exp_expr(k, h, ny, model)
 
+  for ex in expex.args
+    push!(eqs.args, ex)
+  end
 
+  for i in Base.OneTo(ns), si = Base.OneTo(ns)
 
+    # state range
+    s = S[si]
+
+    # length of geographic range
+    ls = length(s.g)
+
+    # which single areas do not occur in r
+    oa = setdiff(1:k, s.g)
+
+    # no events
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, i, model)
+
+    # remove if !isone(lr)
+    if ls > 1
+      # local extinction
+      lex = localext_expr(s, S, k, h, i, model)
+
+      # between-region speciation
+      brs = brspec_expr(s, S, ns, k, i)
+    end
+
+    # dispersal
+    # remove if lr == k
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, i, model)
+    end
+
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, i) : :0.0
+
+    # within-region speciation
+    wrs = wrspec_expr(si, s, ns, k, i, model)
+
+    # push `D` equation to to eqs
+    if isone(ls)
+      push!(eqs.args, 
+        :(du[$si, $i] = $nev + $dis + $hid + $wrs))
+    elseif ls == k
+      push!(eqs.args, 
+        :(du[$si, $i] = $nev + $lex + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$si, $i] = $nev + $lex + $dis + $hid + $wrs + $brs))
+    end
+
+  end
+
+  ## aesthetic touches
+  # sort `du`s
+
+  println(eqs)
+
+  return quote 
+    @inbounds begin
+      $eqs
+    end
+    return nothing
+  end
+
+end
 
 
 
@@ -135,7 +378,7 @@ end
                   model::NTuple{3,Bool},
                   ext  ::Bool)
 
-Return expression for no events.
+Return expression for no events in Vector form.
 """
 function noevents_expr(si   ::Int64,
                        s    ::Sgh, 
@@ -160,7 +403,7 @@ function noevents_expr(si   ::Int64,
   ex = Expr(:call, :+)
   ls > 1 && push!(ex.args, :($(2.0^(ls-1) - 1.0) * p[$(k+1+s.h*(k+1))]))
 
-  for (i, v) = enumerate(s.g)
+  for v in s.g
 
     #speciation
     if model[1]
@@ -209,13 +452,96 @@ end
 
 
 """
+    noevents_expr(si     ::Int64,
+                  s      ::Sgh, 
+                  ls     ::Int64,
+                  oa     ::Array{Int64,1},
+                  k      ::Int64,
+                  h      ::Int64,
+                  ns     ::Int64,
+                  i      ::Int64,
+                  model  ::NTuple{3,Bool},
+                  ext    ::Bool)
+
+Return expression for no events in Matrix form.
+"""
+function noevents_expr(si     ::Int64,
+                       s      ::Sgh, 
+                       ls     ::Int64,
+                       oa     ::Array{Int64,1},
+                       k      ::Int64,
+                       h      ::Int64,
+                       ns     ::Int64,
+                       i      ::Int64,
+                       model  ::NTuple{3,Bool})
+
+  # starting indices for models 2 and 3
+  m2s = model[1]*k*h
+  m3s = m2s + model[2]*k*h
+
+
+  ts = isone(ls) ? 0 : k*h*k
+
+  # between-region speciation
+  ex = Expr(:call, :+)
+  ls > 1 && push!(ex.args, :($(2.0^(ls-1) - 1.0) * p[$(k+1+s.h*(k+1))]))
+
+  for v in s.g
+
+    #speciation
+    if model[1]
+      push!(ex.args, :(eaft[$(v + s.h*k)]))
+    else
+      push!(ex.args, :(p[$(v + s.h*(k+1))]))
+    end
+
+    # extinction 
+    if model[2] 
+      push!(ex.args, :(eaft[$(m2s + v + s.h*k)]))
+    else
+      push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+    end
+
+    # dispersal
+    if model[3]
+      for j = oa
+        j -= v <= j ? 1 : 0
+        push!(ex.args, 
+          :(eaft[$(m3s + s.h*k*(k-1) + (k-1)*(v-1) + j)]))
+      end
+    else
+      for j = oa
+        j -= v <= j ? 1 : 0
+        push!(ex.args, 
+          :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(v-1) + j)]))
+      end
+    end
+  end
+
+  # add hidden state shifts
+  for hi in setdiff(0:(h-1), s.h)
+    hi -= s.h <= hi ? 0 : -1
+    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+  end
+
+  # multiply by u
+  ex = :(-1.0 * $ex * u[$si, $i])
+
+  return ex
+end
+
+
+
+
+
+"""
     localext_expr(s ::Sgh,
                   S ::Array{Sgh,1},
                   k ::Int64,
                   h ::Int64,
                   model::NTuple{3,Bool})
 
-Return expression for local extinction.
+Return expression for local extinction in Vector form.
 """
 function localext_expr(s ::Sgh,
                        S ::Array{Sgh,1},
@@ -250,6 +576,49 @@ end
 
 
 """
+    localext_expr(s     ::Sgh,
+                  S     ::Array{Sgh,1},
+                  k     ::Int64,
+                  h     ::Int64,
+                  i     ::Int64
+                  model ::NTuple{3,Bool})
+
+Return expression for local extinction in Matrix form.
+"""
+function localext_expr(s     ::Sgh,
+                       S     ::Array{Sgh,1},
+                       k     ::Int64,
+                       h     ::Int64,
+                       i     ::Int64,
+                       model ::NTuple{3,Bool})
+
+  ex = Expr(:call, :+)
+
+  if model[2]
+    # starting indices for models 2 and 3
+    m2s = model[1]*k*h
+
+    for j = s.g
+      push!(ex.args, :(eaft[$(m2s + j + s.h*k)] * 
+                       u[$(findfirst(x -> isSghequal(x, 
+                                          Sgh(setdiff(s.g, j),s.h)), S)),$i]))
+    end
+  else
+    for j = s.g
+      push!(ex.args, :(p[$(j + (k+1)*h + s.h*k + k*h*k)] * 
+                       u[$(findfirst(x -> isSghequal(x, 
+                                          Sgh(setdiff(s.g, j),s.h)), S)),$i]))
+    end
+  end
+
+  return ex
+end
+
+
+
+
+
+"""
     dispersal_expr(s    ::Sgh,
                    oa   ::Array{Int64,1},
                    S    ::Array{Sgh,1},
@@ -259,7 +628,7 @@ end
                    model::NTuple{3,Bool},
                    ext  ::Bool)
 
-Return expression for dispersal.
+Return expression for dispersal in Vector form.
 """
 function dispersal_expr(s    ::Sgh,
                         oa   ::Array{Int64,1},
@@ -302,6 +671,90 @@ end
 
 
 
+"""
+    dispersal_expr(s    ::Sgh,
+                   oa   ::Array{Int64,1},
+                   S    ::Array{Sgh,1},
+                   ns   ::Int64,
+                   k    ::Int64,
+                   h    ::Int64,
+                   i    ::Int64,
+                   model::NTuple{3,Bool})
+
+Return expression for dispersal in Matrix form.
+"""
+function dispersal_expr(s    ::Sgh,
+                        oa   ::Array{Int64,1},
+                        S    ::Array{Sgh,1},
+                        ns   ::Int64,
+                        k    ::Int64,
+                        h    ::Int64,
+                        i    ::Int64,
+                        model::NTuple{3,Bool})
+
+  m3s = model[1]*k*h + model[2]*k*h
+
+  ida = findall(x -> length(union(s.g, x.g))     == length(s.g)+1 && 
+                     length(intersect(s.g, x.g)) == length(s.g)   &&
+                     s.h == x.h, S)
+
+  ex = Expr(:call, :+)
+
+  # if dispersal covariate
+  if model[3]
+    for a = s.g, (l, j) = enumerate(oa)
+      j -= a <= j ? 1 : 0
+      push!(ex.args, :(eaft[$(m3s + s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
+                       u[$(ida[l]), $i]))
+    end
+  else
+    for a = s.g, (l, j) = enumerate(oa)
+      j -= a <= j ? 1 : 0
+      push!(ex.args, :(p[$(2h*k + h + s.h*k*(k-1) + (k-1)*(a-1) + j)] * 
+                       u[$(ida[l]), $i]))
+    end
+  end
+
+  return ex
+end
+
+
+
+
+
+"""
+    hidtran_expr(s  ::Sgh,
+                 S  ::Array{Sgh,1},
+                 ns ::Int64,
+                 k  ::Int64,
+                 h  ::Int64,
+                 i  ::Int64)
+
+Return expression for hidden states transitions in Matrix form.
+"""
+function hidtran_expr(s  ::Sgh,
+                      S  ::Array{Sgh,1},
+                      ns ::Int64,
+                      k  ::Int64,
+                      h  ::Int64,
+                      i  ::Int64)
+
+  hs = findall(x -> isequal(s.g, x.g) && 
+                   !isequal(s.h, x.h), S)
+
+  ex = Expr(:call, :+)
+  for j in hs
+    hi = S[j].h
+    hi -= s.h <= hi ? 0 : -1
+    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
+                     u[$j, $i]))
+  end
+  return ex
+end
+
+
+
+
 
 """
     hidtran_expr(s  ::Sgh,
@@ -311,7 +764,7 @@ end
                  h  ::Int64,
                  ext::Bool)
 
-Return expression for hidden states transitions.
+Return expression for hidden states transitions in Vector form.
 """
 function hidtran_expr(s  ::Sgh,
                       S  ::Array{Sgh,1},
@@ -344,9 +797,64 @@ end
                 s    ::Sgh,
                 ns   ::Int64,
                 k    ::Int64,
+                i    ::Int64,
                 model::NTuple{3,Bool})
 
-Return expression for within-region speciation.
+Return expression for within-region speciation in Matrix form.
+"""
+function wrspec_expr(si   ::Int64,
+                     s    ::Sgh,
+                     ns   ::Int64,
+                     k    ::Int64,
+                     i    ::Int64,
+                     model::NTuple{3,Bool})
+
+  # if model speciation
+  if model[1]
+    if isone(length(s.g))
+      ex = Expr(:call, :*, 2.0)
+      for j = s.g
+        push!(ex.args, :(eaft[$(j + s.h*k)] * 
+               rE[$(j + s.h*(2^k-1))] * u[$(j + s.h*(2^k-1)), $i]))
+      end
+    else
+      ex = Expr(:call, :+)
+      for j = s.g
+        push!(ex.args, :(eaft[$(j + s.h*k)] * 
+          (rE[$(j + s.h*(2^k-1))] * u[$(si), $i] + 
+           rE[$(si)] * u[$(j + s.h*(2^k-1)), $i])))
+      end
+    end
+
+  # if model *NOT* speciation
+  else
+    if isone(length(s.g)) 
+      ex = :(2.0 * p[$si] * rE[$(si)] * u[$(si)])
+    else
+      ex = Expr(:call, :+)
+      for j = s.g
+        push!(ex.args, :(p[$(j + s.h*(k+1))] * 
+          (rE[$(j + s.h*(2^k-1))] * u[$(si), $i] + 
+           rE[$(si)] * u[$(j + s.h*(2^k-1)), $i])))
+      end
+    end
+  end
+
+  return ex
+end
+
+
+
+
+
+"""
+    wrspec_expr(si   ::Int64,
+                s    ::Sgh,
+                ns   ::Int64,
+                k    ::Int64,
+                model::NTuple{3,Bool})
+
+Return expression for within-region speciation in Vector form.
 """
 function wrspec_expr(si   ::Int64,
                      s    ::Sgh,
@@ -393,44 +901,76 @@ end
 
 
 """
-    brspec_expr(s  ::Sgh,
-                S  ::Array{Sgh,1},
-                ns ::Int64,
-                k  ::Int64, 
-                ext::Bool)
+    brspec_expr(s   ::Sgh,
+                S   ::Array{Sgh,1},
+                ns  ::Int64,
+                k   ::Int64,
+                i   ::Int64, 
+                ext ::Bool, 
+                flow::Bool)
 
-Return expression for between-region speciation.
+Return expression for between-region speciation in Vector form.
 """
-function brspec_expr(s  ::Sgh,
-                     S  ::Array{Sgh,1},
-                     ns ::Int64,
-                     k  ::Int64, 
-                     ext::Bool)
+function brspec_expr(s   ::Sgh,
+                     S   ::Array{Sgh,1},
+                     ns  ::Int64,
+                     k   ::Int64,
+                     ext ::Bool, 
+                     flow::Bool)
 
   if ext
     va = vicsubsets(s.g)[1:div(end,2)]
-    wu = ns
+    wu1 = ns
+    wu2 = ns
   else
     va = vicsubsets(s.g)
-    wu = 0
+    wu1 = flow ? 0 : ns
+    wu2 = 0
   end
 
   ex = Expr(:call, :+)
   for (la, ra) = va
-    push!(ex.args,
-      :(u[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h + ns)] *
-        u[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h + wu)]))
+  push!(ex.args,
+    :(u[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h + wu1)] *
+      u[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h + wu2)]))
   end
-  # ex = :($(2^(length(s.g)-1) - 1.0) * p[$(k+1+s.h*(k+1))] * $ex)
 
   ex = :(p[$(k+1+s.h*(k+1))] * $ex)
 
-  # if ext
-  #   ex = :(p[$(k+1+s.h*(k+1))] * $ex)
-  # else
-  #   ex = :(2.0 * p[$(k+1+s.h*(k+1))] * $ex)
-  # end
-  #isone(ex.args[2]) && deleteat!(ex.args, 2)
+  return ex
+end
+
+
+
+
+
+"""
+    brspec_expr(s   ::Sgh,
+                S   ::Array{Sgh,1},
+                ns  ::Int64,
+                k   ::Int64,
+                i   ::Int64)
+
+
+Return expression for between-region speciation in Matrix form.
+"""
+function brspec_expr(s   ::Sgh,
+                     S   ::Array{Sgh,1},
+                     ns  ::Int64,
+                     k   ::Int64,
+                     i   ::Int64)
+
+  va = vicsubsets(s.g)
+  
+  ex = Expr(:call, :+)
+
+  for (la, ra) = va
+  push!(ex.args,
+    :(rE[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)] *
+       u[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h), $i]))
+  end
+
+  ex = :(p[$(k+1+s.h*(k+1))] * $ex)
 
   return ex
 end
@@ -454,7 +994,10 @@ function ext_expr(s    ::Sgh,
                   ns   ::Int64,
                   k    ::Int64,
                   h    ::Int64,
-                  model::NTuple{3,Bool})
+                  model::NTuple{3,Bool},
+                  flow ::Bool)
+
+  wu = flow ? 0 : ns
 
   m2s = model[1]*k*h
 
@@ -472,14 +1015,14 @@ function ext_expr(s    ::Sgh,
       for i = s.g
         push!(ex.args, :(eaft[$(m2s + k*s.h + i)] * 
                          u[$(findfirst(x -> isSghequal(x, 
-                                            Sgh(setdiff(s.g, i),s.h)), S) + ns)]))
+                                            Sgh(setdiff(s.g, i),s.h)), S) + wu)]))
       end
     else
       ex = Expr(:call, :+)
       for i = s.g
         push!(ex.args, :(p[$(i + (k+1)*h + s.h*k + k*h*k)] * 
                          u[$(findfirst(x -> isSghequal(x, 
-                                            Sgh(setdiff(s.g, i),s.h)), S) + ns)]))
+                                            Sgh(setdiff(s.g, i),s.h)), S) + wu)]))
       end
     end
   end
@@ -497,7 +1040,8 @@ end
                 s    ::Sgh,
                 ns   ::Int64,
                 k    ::Int64,
-                model::NTuple{3,Bool})
+                model::NTuple{3,Bool},
+                flow ::Bool)
 
 Return expression of extinction for within-region speciation.
 """
@@ -505,30 +1049,33 @@ function wrsext_expr(si   ::Int64,
                      s    ::Sgh,
                      ns   ::Int64,
                      k    ::Int64,
-                     model::NTuple{3,Bool})
+                     model::NTuple{3,Bool},
+                     flow ::Bool)
+
+  wu = flow ? 0 : ns
 
   # if speciation model
   if model[1]
     if isone(length(s.g))
       for i = s.g
-        ex = :(eaft[$(i + s.h*k)] * u[$(i + s.h*(2^k-1) + ns)]^2)
+        ex = :(eaft[$(i + s.h*k)] * u[$(i + s.h*(2^k-1) + wu)]^2)
       end
     else
       ex = Expr(:call, :+)
       for i = s.g
         push!(ex.args, :(eaft[$(i + s.h*k)] * 
-                         u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
+                         u[$(i + s.h*(2^k-1) + wu)] * u[$(si + wu)]))
       end
     end
   # if *NOT* speciation model
   else
     if isone(length(s.g)) 
-      ex = :(p[$si] * u[$(si + ns)]^2)
+      ex = :(p[$si] * u[$(si + wu)]^2)
     else
       ex = Expr(:call, :+)
       for i = s.g
         push!(ex.args, :(p[$(i + s.h*(k+1))] * 
-                         u[$(i + s.h*(2^k-1) + ns)] * u[$(si + ns)]))
+                         u[$(i + s.h*(2^k-1) + wu)] * u[$(si + wu)]))
       end
     end
   end
@@ -555,7 +1102,7 @@ end
                   ::Val{model}) where {k, h, ny, model}
 
 Creates Covariate GeoHiSSE ODE equation function for `k` areas, 
-`h` hidden states and `ny` covariates of name `:name`.
+`h` hidden states and `ny` covariates.
 """
 @generated function geohisse_full(du  ::Array{Float64,1}, 
                                   u   ::Array{Float64,1}, 
@@ -611,8 +1158,9 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     if ls > 1
       # local extinction
       lex = localext_expr(s, S, k, h, model)
+
       # between-region speciation
-      brs = brspec_expr(s, S, ns, k, false)
+      brs = brspec_expr(s, S, ns, k, false, false)
     end
 
     # dispersal
@@ -738,129 +1286,5 @@ function make_egeohisse(::Val{k},
 end
 
 
-
-
-
-"""
-    egeohisse_2k_gen_s(af!::Function)
-
-EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states 
-and `2` ny for `speciation` model.
-"""
-function egeohisse_2k_gen_s(af!::Function)
-
-  r    = Array{Float64,1}(undef, 4)
-  eaft = Array{Float64,1}(undef, 4)
-
-  function f(du::Array{Float64,1}, 
-             u ::Array{Float64,1}, 
-             p ::Array{Float64,1}, 
-             t ::Float64)
-    @inbounds begin
-      af!(t, r)
-      eaft[1] = p[1] * exp(p[21] * r[1] + p[22] * r[2])
-      eaft[2] = p[2] * exp(p[23] * r[3] + p[24] * r[4])
-      eaft[3] = p[4] * exp(p[25] * r[1] + p[26] * r[2])
-      eaft[4] = p[5] * exp(p[27] * r[3] + p[28] * r[4])
-      du[1]   = -1.0 * (eaft[1] + p[7] + p[11] + p[19]) * u[1] + +(p[11] * u[3]) + +(p[19] * u[4]) + 2.0 * (eaft[1] * u[7] * u[1])
-      du[2]   = -1.0 * (eaft[2] + p[8] + p[12] + p[19]) * u[2] + +(p[12] * u[3]) + +(p[19] * u[5]) + 2.0 * (eaft[2] * u[8] * u[2])
-      du[3]   = -1.0 * (1.0 * p[3] + (eaft[2] + p[16] + p[19]) + (eaft[1] + p[15])) * u[3] + (p[16] * u[1] + p[15] * u[2]) + +(p[19] * u[6]) + (eaft[2] * (u[8] * u[3] + u[9] * u[2]) + eaft[1] * (u[7] * u[3] + u[9] * u[1])) + p[3] * (u[7] * u[2] + u[8] * u[1])
-      du[4]   = -1.0 * (eaft[3] + p[9] + p[13] + p[20]) * u[4] + +(p[13] * u[6]) + +(p[20] * u[1]) + 2.0 * (eaft[3] * u[10] * u[4])
-      du[5]   = -1.0 * (eaft[4] + p[10] + p[14] + p[20]) * u[5] + +(p[14] * u[6]) + +(p[20] * u[2]) + 2.0 * (eaft[4] * u[11] * u[5])
-      du[6]   = -1.0 * (1.0 * p[6] + (eaft[4] + p[18] + p[20]) + (eaft[3] + p[17])) * u[6] + (p[18] * u[4] + p[17] * u[5]) + +(p[20] * u[3]) + (eaft[4] * (u[11] * u[6] + u[12] * u[5]) + eaft[3] * (u[10] * u[6] + u[12] * u[4])) + p[6] * (u[10] * u[5] + u[11] * u[4])
-      du[7]   = -1.0 * (eaft[1] + p[7] + p[11] + p[19]) * u[7] + +(p[7]) + +(p[11] * u[9]) + +(p[19] * u[10]) + 2.0 * (eaft[1] * u[7] ^ 2)
-      du[8]   = -1.0 * (eaft[2] + p[8] + p[12] + p[19]) * u[8] + +(p[8]) + +(p[12] * u[9]) + +(p[19] * u[11]) + 2.0 * (eaft[2] * u[8] ^ 2)
-      du[9]   = -1.0 * (1.0 * p[3] + (eaft[2] + p[16] + p[19]) + (eaft[1] + p[15])) * u[9] + (p[16] * u[7] + p[15] * u[8]) + +(p[19] * u[12]) + (eaft[2] * u[8] * u[9] + eaft[1] * u[7] * u[9]) + p[3] * +(u[7] * u[8])
-      du[10]  = -1.0 * (eaft[3] + p[9] + p[13] + p[20]) * u[10] + +(p[9]) + +(p[13] * u[12]) + +(p[20] * u[7]) + 2.0 * (eaft[3] * u[10] ^ 2)
-      du[11]  = -1.0 * (eaft[4] + p[10] + p[14] + p[20]) * u[11] + +(p[10]) + +(p[14] * u[12]) + +(p[20] * u[8]) + 2.0 * (eaft[4] * u[11] ^ 2)
-      du[12]  = -1.0 * (1.0 * p[6] + (eaft[4] + p[18] + p[20]) + (eaft[3] + p[17])) * u[12] + (p[18] * u[10] + p[17] * u[11]) + +(p[20] * u[9]) + (eaft[4] * u[11] * u[12] + eaft[3] * u[10] * u[12]) + p[6] * +(u[10] * u[11])
-    end
-    return nothing
-  end
-end
-
-
-
-
-
-"""
-    egeohisse_2k_gen_e(af!::Function)
-
-EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states and 
-`2` ny for `extinction` model.
-"""
-function egeohisse_2k_gen_e(af!::Function)
-
-  r    = Array{Float64,1}(undef, 4)
-  eaft = Array{Float64,1}(undef, 4)
-
-  function f(du::Array{Float64,1}, 
-             u ::Array{Float64,1}, 
-             p ::Array{Float64,1}, 
-             t ::Float64)
-    @inbounds begin
-      af!(t, r)
-      eaft[1] = p[7] * exp(p[21] * r[1] + p[22] * r[2])
-      eaft[2] = p[8] * exp(p[23] * r[3] + p[24] * r[4])
-      eaft[3] = p[9] * exp(p[25] * r[1] + p[26] * r[2])
-      eaft[4] = p[10] * exp(p[27] * r[3] + p[28] * r[4])
-      du[1]   = -1.0 * (p[1] + eaft[1] + p[11] + p[19]) * u[1] + +(p[11] * u[3]) + +(p[19] * u[4]) + 2.0 * p[1] * u[7] * u[1]
-      du[2]   = -1.0 * (p[2] + eaft[2] + p[12] + p[19]) * u[2] + +(p[12] * u[3]) + +(p[19] * u[5]) + 2.0 * p[2] * u[8] * u[2]
-      du[3]   = -1.0 * (1.0 * p[3] + (p[2] + p[16] + p[19]) + (p[1] + p[15])) * u[3] + (p[16] * u[1] + p[15] * u[2]) + +(p[19] * u[6]) + (p[2] * (u[8] * u[3] + u[9] * u[2]) + p[1] * (u[7] * u[3] + u[9] * u[1])) + p[3] * (u[7] * u[2] + u[8] * u[1])
-      du[4]   = -1.0 * (p[4] + eaft[3] + p[13] + p[20]) * u[4] + +(p[13] * u[6]) + +(p[20] * u[1]) + 2.0 * p[4] * u[10] * u[4]
-      du[5]   = -1.0 * (p[5] + eaft[4] + p[14] + p[20]) * u[5] + +(p[14] * u[6]) + +(p[20] * u[2]) + 2.0 * p[5] * u[11] * u[5]
-      du[6]   = -1.0 * (1.0 * p[6] + (p[5] + p[18] + p[20]) + (p[4] + p[17])) * u[6] + (p[18] * u[4] + p[17] * u[5]) + +(p[20] * u[3]) + (p[5] * (u[11] * u[6] + u[12] * u[5]) + p[4] * (u[10] * u[6] + u[12] * u[4])) + p[6] * (u[10] * u[5] + u[11] * u[4])
-      du[7]   = -1.0 * (p[1] + eaft[1] + p[11] + p[19]) * u[7] + +(eaft[1]) + +(p[11] * u[9]) + +(p[19] * u[10]) + p[1] * u[7] ^ 2
-      du[8]   = -1.0 * (p[2] + eaft[2] + p[12] + p[19]) * u[8] + +(eaft[2]) + +(p[12] * u[9]) + +(p[19] * u[11]) + p[2] * u[8] ^ 2
-      du[9]   = -1.0 * (1.0 * p[3] + (p[2] + p[16] + p[19]) + (p[1] + p[15])) * u[9] + (p[16] * u[7] + p[15] * u[8]) + +(p[19] * u[12]) + (p[2] * u[8] * u[9] + p[1] * u[7] * u[9]) + p[3] * +(u[7] * u[8])
-      du[10]  = -1.0 * (p[4] + eaft[3] + p[13] + p[20]) * u[10] + +(eaft[3]) + +(p[13] * u[12]) + +(p[20] * u[7]) + p[4] * u[10] ^ 2
-      du[11]  = -1.0 * (p[5] + eaft[4] + p[14] + p[20]) * u[11] + +(eaft[4]) + +(p[14] * u[12]) + +(p[20] * u[8]) + p[5] * u[11] ^ 2
-      du[12]  = -1.0 * (1.0 * p[6] + (p[5] + p[18] + p[20]) + (p[4] + p[17])) * u[12] + (p[18] * u[10] + p[17] * u[11]) + +(p[20] * u[9]) + (p[5] * u[11] * u[12] + p[4] * u[10] * u[12]) + p[6] * +(u[10] * u[11])
-    end
-    return nothing
-  end
-end
-
-
-
-
-
-"""
-    egeohisse_2k_gen_q(af!::Function)
-
-EGeoHiSSE + extinction ODE equation for `2` areas, `2` hidden states and 
-`2` ny for `transition` model.
-"""
-function egeohisse_2k_gen_q(af!::Function)
-
-  r    = Array{Float64,1}(undef, 4)
-  eaft = Array{Float64,1}(undef, 4)
-
-  function f(du::Array{Float64,1}, 
-             u ::Array{Float64,1}, 
-             p ::Array{Float64,1}, 
-             t ::Float64)
-    @inbounds begin
-      af!(t, r)
-      eaft[1] = p[11] * exp(p[21] * r[1] + p[22] * r[2])
-      eaft[2] = p[12] * exp(p[23] * r[3] + p[24] * r[4])
-      eaft[3] = p[13] * exp(p[25] * r[1] + p[26] * r[2])
-      eaft[4] = p[14] * exp(p[27] * r[3] + p[28] * r[4])
-      du[1]   = -1.0 * (p[1] + p[7] + eaft[1] + p[19]) * u[1] + +(eaft[1] * u[3]) + +(p[19] * u[4]) + 2.0 * p[1] * u[7] * u[1]
-      du[2]   = -1.0 * (p[2] + p[8] + eaft[2] + p[19]) * u[2] + +(eaft[2] * u[3]) + +(p[19] * u[5]) + 2.0 * p[2] * u[8] * u[2]
-      du[3]   = -1.0 * (1.0 * p[3] + (p[2] + p[16] + p[19]) + (p[1] + p[15])) * u[3] + (p[16] * u[1] + p[15] * u[2]) + +(p[19] * u[6]) + (p[2] * (u[8] * u[3] + u[9] * u[2]) + p[1] * (u[7] * u[3] + u[9] * u[1])) + p[3] * (u[7] * u[2] + u[8] * u[1])
-      du[4]   = -1.0 * (p[4] + p[9] + eaft[3] + p[20]) * u[4] + +(eaft[3] * u[6]) + +(p[20] * u[1]) + 2.0 * p[4] * u[10] * u[4]
-      du[5]   = -1.0 * (p[5] + p[10] + eaft[4] + p[20]) * u[5] + +(eaft[4] * u[6]) + +(p[20] * u[2]) + 2.0 * p[5] * u[11] * u[5]
-      du[6]   = -1.0 * (1.0 * p[6] + (p[5] + p[18] + p[20]) + (p[4] + p[17])) * u[6] + (p[18] * u[4] + p[17] * u[5]) + +(p[20] * u[3]) + (p[5] * (u[11] * u[6] + u[12] * u[5]) + p[4] * (u[10] * u[6] + u[12] * u[4])) + p[6] * (u[10] * u[5] + u[11] * u[4])
-      du[7]   = -1.0 * (p[1] + p[7] + eaft[1] + p[19]) * u[7] + +(p[7]) + +(eaft[1] * u[9]) + +(p[19] * u[10]) + p[1] * u[7] ^ 2
-      du[8]   = -1.0 * (p[2] + p[8] + eaft[2] + p[19]) * u[8] + +(p[8]) + +(eaft[2] * u[9]) + +(p[19] * u[11]) + p[2] * u[8] ^ 2
-      du[9]   = -1.0 * (1.0 * p[3] + (p[2] + p[16] + p[19]) + (p[1] + p[15])) * u[9] + (p[16] * u[7] + p[15] * u[8]) + +(p[19] * u[12]) + (p[2] * u[8] * u[9] + p[1] * u[7] * u[9]) + p[3] * +(u[7] * u[8])
-      du[10]  = -1.0 * (p[4] + p[9] + eaft[3] + p[20]) * u[10] + +(p[9]) + +(eaft[3] * u[12]) + +(p[20] * u[7]) + p[4] * u[10] ^ 2
-      du[11]  = -1.0 * (p[5] + p[10] + eaft[4] + p[20]) * u[11] + +(p[10]) + +(eaft[4] * u[12]) + +(p[20] * u[8]) + p[5] * u[11] ^ 2
-      du[12]  = -1.0 * (1.0 * p[6] + (p[5] + p[18] + p[20]) + (p[4] + p[17])) * u[12] + (p[18] * u[10] + p[17] * u[11]) + +(p[20] * u[9]) + (p[5] * u[11] * u[12] + p[4] * u[10] * u[12]) + p[6] * +(u[10] * u[11])
-    end
-    return nothing
-  end
-end
 
 

@@ -302,12 +302,14 @@ end
 
 
 
+
+
 # make tree in R
 using RCall
 
 ntip = 50
 
-tr, bts = make_ape_tree(ntip, 0.5, 0.0, order= "postorder")
+tr, bts = make_ape_tree(ntip, 0.5, 0.0, order = "postorder")
 
 ed  = copy(tr.ed)
 el  = copy(tr.el)
