@@ -10,11 +10,7 @@ Created 18 03 2019
 =#
 
 
-#=
-Create flow version of EGeoHiSSE
-=#
 
-# create extinction-only differential equation
 
 
 
@@ -129,35 +125,41 @@ end
 
 
 
-
 """
-    make_fbisseM(afE!, idxl::Int64)
+    make_egeohisse_E(::Val{k},
+                     ::Val{h},
+                     ::Val{ny},
+                     ::Val{model},
+                     af!::Function) where {k, h, ny, model}
 
-Make function for BiSSE Matrix form of differential equations for flow 
-algorithm and given an Extinction approximation function.
+Make closure for Extinction function of EGeoHiSSE.
 """
-function make_fbisseM(afE!, idxl::Int64)
+function make_egeohisse_E(::Val{k},
+                        ::Val{h},
+                        ::Val{ny},
+                        ::Val{model},
+                        af!::Function) where {k, h, ny, model}
 
-  rE  = Array{Float64,1}(undef,2)
+  r    = Array{Float64,1}(undef, ny)
+  eaft = Array{Float64,1}(undef,
+    model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
 
-  function f(du::Array{Float64,2}, 
-             u ::Array{Float64,2}, 
-             p ::Array{Array{Float64,1},1}, 
-             t ::Float64)
-    @inbounds begin
-      par = p[idxl]
-      afE!(t, rE, p)
-      du[1,1] = -1.0 * (par[1] + par[3] + par[5]) * u[1,1] + par[5] * u[2,1] + 2.0 * par[1] * rE[1] * u[1,1]
-      du[2,1] = -1.0 * (par[2] + par[4] + par[6]) * u[2,1] + par[6] * u[1,1] + 2.0 * par[2] * rE[2] * u[2,1]
-      du[1,2] = -1.0 * (par[1] + par[3] + par[5]) * u[1,2] + par[5] * u[2,2] + 2.0 * par[1] * rE[1] * u[1,2]
-      du[2,2] = -1.0 * (par[2] + par[4] + par[6]) * u[2,2] + par[6] * u[1,2] + 2.0 * par[2] * rE[2] * u[2,2]
+  # make ode function with closure
+  ode_fun = (du::Array{Float64,1}, 
+             u::Array{Float64,1}, 
+             p::Array{Float64,1}, 
+             t::Float64) -> 
+    begin
+      geohisse_E(du::Array{Float64,1}, 
+                 u ::Array{Float64,1}, 
+                 p ::Array{Float64,1}, 
+                 t ::Float64,
+                 r, eaft, af!, Val(k), Val(h), Val(ny), Val(model))
+      return nothing
     end
 
-    return nothing
-  end
+  return ode_fun
 end
-
-
 
 
 
@@ -285,6 +287,59 @@ end
 
 
 
+
+
+"""
+    make_egeohisse_M(::Val{k},
+                     ::Val{h},
+                     ::Val{ny},
+                     ::Val{model},
+                     af!::Function) where {k, h, ny, model}
+
+Make closure for EGeoHiSSE given `E(t)` and in matrix form.
+"""
+function make_egeohisse_M(::Val{k},
+                          ::Val{h},
+                          ::Val{ny},
+                          ::Val{model},
+                          af! ::Function,
+                          afE!::Function,
+                          idxl::Int64)) where {k, h, ny, model}
+
+  ns = (2^k - 1)*h
+
+  r    = Array{Float64,1}(undef, ny)
+  eaft = Array{Float64,1}(undef,
+    model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
+  rE  = Array{Float64,1}(undef,ns)
+
+  # make ode function with closure
+  ode_fun = (du::Array{Float64,1}, 
+             u ::Array{Float64,1}, 
+             pp::Array{Array{Float64,1},1}, 
+             t ::Float64) -> 
+    begin
+      geohisse_M(du::Array{Float64,1}, 
+                 u ::Array{Float64,1}, 
+                 pp::Array{Array{Float64,1},1}, 
+                 t ::Float64,
+                 r, eaft, rE, af!, afE!, idxl,
+                 Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
+
+  return ode_fun
+end
+
+
+
+
+"""
+HERE ---> need to test the newly created EGeoHiSSE functions
+
+
+
+"""
 
 
 """
