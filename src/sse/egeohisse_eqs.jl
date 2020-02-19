@@ -13,335 +13,6 @@ Created 18 03 2019
 
 
 
-
-"""
-    geohisse_E(du  ::Array{Float64,1}, 
-               u   ::Array{Float64,1}, 
-               p   ::Array{Float64,1}, 
-               t   ::Float64,
-               r   ::Array{Float64,1},
-               eaft::Array{Float64,1},
-               af! ::Function,
-               ::Val{k},
-               ::Val{h},
-               ::Val{ny},
-               ::Val{model}) where {k, h, ny, model}
-
-Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas, 
-`h` hidden states and `ny` covariates for the specific `model`.
-"""
-@generated function geohisse_E(du  ::Array{Float64,1}, 
-                               u   ::Array{Float64,1}, 
-                               p   ::Array{Float64,1}, 
-                               t   ::Float64,
-                               r   ::Array{Float64,1},
-                               eaft::Array{Float64,1},
-                               af! ::Function,
-                               ::Val{k},
-                               ::Val{h},
-                               ::Val{ny},
-                               ::Val{model}) where {k, h, ny, model}
-
-  # n states
-  ns = (2^k - 1)*h
-
-  # create individual areas subsets
-  S = create_states(k, h)
-
-  # start Expression for ODE equations
-  eqs = quote end
-  popfirst!(eqs.args)
-
-  # add environmental function
-  push!(eqs.args, :(af!(t, r)))
-
-  # compute exponential for each β*covariable
-  expex = exp_expr(k, h, ny, model)
-
-  for ex in expex.args
-    push!(eqs.args, ex)
-  end
-
-  for si = Base.OneTo(ns)
-
-    # state range
-    s = S[si]
-
-    # length of geographic range
-    ls = length(s.g)
-
-    # which single areas do not occur in r
-    oa = setdiff(1:k, s.g)
-
-    # no events
-    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, false)
-
-    # extinction
-    ext = ext_expr(s, S, ns, k, h, model, true) 
-
-    # dispersal and extinction
-    if ls != k
-      dis = dispersal_expr(s, oa, S, ns, k, h, model, false)
-    end
-
-    # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns, k, h, false) : :0.0
-
-    # within-region extinction
-    wrs = wrsext_expr(si, s, ns, k, model, true)
-
-    # between-region extinction
-    if ls > 1
-      brs = brspec_expr(s, S, ns, k, true, true)
-    end
-
-    # push `E` equation to to eqs
-    if isone(ls)
-      push!(eqs.args, 
-        :(du[$(si)] = $nev + $ext + $dis + $hid + $wrs))
-    elseif ls == k
-      push!(eqs.args, 
-        :(du[$(si)] = $nev + $ext + $hid + $wrs + $brs))
-    else
-      push!(eqs.args, 
-        :(du[$(si)] = $nev + $ext + $dis + $hid + $wrs + $brs))
-    end
-
-  end
-
-  # print for checking
-  println(eqs)
-
-  return quote 
-    @inbounds begin
-      $eqs
-    end
-    return nothing
-  end
-
-end
-
-
-
-
-
-"""
-    make_egeohisse_E(::Val{k},
-                     ::Val{h},
-                     ::Val{ny},
-                     ::Val{model},
-                     af!::Function) where {k, h, ny, model}
-
-Make closure for Extinction function of EGeoHiSSE.
-"""
-function make_egeohisse_E(::Val{k},
-                        ::Val{h},
-                        ::Val{ny},
-                        ::Val{model},
-                        af!::Function) where {k, h, ny, model}
-
-  r    = Array{Float64,1}(undef, ny)
-  eaft = Array{Float64,1}(undef,
-    model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
-
-  # make ode function with closure
-  ode_fun = (du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64) -> 
-    begin
-      geohisse_E(du::Array{Float64,1}, 
-                 u ::Array{Float64,1}, 
-                 p ::Array{Float64,1}, 
-                 t ::Float64,
-                 r, eaft, af!, Val(k), Val(h), Val(ny), Val(model))
-      return nothing
-    end
-
-  return ode_fun
-end
-
-
-
-
-
-"""
-    geohisse_M(du  ::Array{Float64,1}, 
-               u   ::Array{Float64,1}, 
-               p   ::Array{Float64,1}, 
-               t   ::Float64,
-               r   ::Array{Float64,1},
-               eaft::Array{Float64,1},
-               af! ::Function,
-               ::Val{k},
-               ::Val{h},
-               ::Val{ny},
-               ::Val{model}) where {k, h, ny, model}
-
-Creates Covariate GeoHiSSE Likelihood ODE equation function for `k` areas, 
-`h` hidden states and `ny` covariates in Matrix form.
-"""
-@generated function geohisse_M(du  ::Array{Float64,2}, 
-                               u   ::Array{Float64,2}, 
-                               pp  ::Array{Array{Float64,1},1}, 
-                               t   ::Float64,
-                               r   ::Array{Float64,1},
-                               eaft::Array{Float64,1},
-                               rE  ::Array{Float64,1},
-                               af! ::Function,
-                               afE!::Function,
-                               idxl::Int64,
-                               ::Val{k},
-                               ::Val{h},
-                               ::Val{ny},
-                               ::Val{model}) where {k, h, ny, model}
-
-  # n states
-  ns = (2^k - 1)*h
-
-  # create individual areas subsets
-  S = create_states(k, h)
-
-  # start Expression for ODE equations
-  eqs = quote end
-  popfirst!(eqs.args)
-
-  # add parameter subset
-  push!(eqs.args, :(p = pp[idxl]))
-
-  # add extinction function
-  push!(eqs.args, :(afE!(t, rE, pp)))
-
-  # add environmental function
-  push!(eqs.args, :(af!(t, r)))
-
-  # compute exponential for each β*covariable
-  expex = exp_expr(k, h, ny, model)
-
-  for ex in expex.args
-    push!(eqs.args, ex)
-  end
-
-  for i in Base.OneTo(ns), si = Base.OneTo(ns)
-
-    # state range
-    s = S[si]
-
-    # length of geographic range
-    ls = length(s.g)
-
-    # which single areas do not occur in r
-    oa = setdiff(1:k, s.g)
-
-    # no events
-    nev = noevents_expr(si, s, ls, oa, k, h, ns, i, model)
-
-    # remove if !isone(lr)
-    if ls > 1
-      # local extinction
-      lex = localext_expr(s, S, k, h, i, model)
-
-      # between-region speciation
-      brs = brspec_expr(s, S, ns, k, i)
-    end
-
-    # dispersal
-    # remove if lr == k
-    if ls != k
-      dis = dispersal_expr(s, oa, S, ns, k, h, i, model)
-    end
-
-    # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, i) : :0.0
-
-    # within-region speciation
-    wrs = wrspec_expr(si, s, ns, k, i, model)
-
-    # push `D` equation to to eqs
-    if isone(ls)
-      push!(eqs.args, 
-        :(du[$si, $i] = $nev + $dis + $hid + $wrs))
-    elseif ls == k
-      push!(eqs.args, 
-        :(du[$si, $i] = $nev + $lex + $hid + $wrs + $brs))
-    else
-      push!(eqs.args, 
-        :(du[$si, $i] = $nev + $lex + $dis + $hid + $wrs + $brs))
-    end
-
-  end
-
-  ## aesthetic touches
-  # sort `du`s
-
-  println(eqs)
-
-  return quote 
-    @inbounds begin
-      $eqs
-    end
-    return nothing
-  end
-
-end
-
-
-
-
-
-"""
-    make_egeohisse_M(::Val{k},
-                     ::Val{h},
-                     ::Val{ny},
-                     ::Val{model},
-                     af!::Function) where {k, h, ny, model}
-
-Make closure for EGeoHiSSE given `E(t)` and in matrix form.
-"""
-function make_egeohisse_M(::Val{k},
-                          ::Val{h},
-                          ::Val{ny},
-                          ::Val{model},
-                          af! ::Function,
-                          afE!::Function,
-                          idxl::Int64)) where {k, h, ny, model}
-
-  ns = (2^k - 1)*h
-
-  r    = Array{Float64,1}(undef, ny)
-  eaft = Array{Float64,1}(undef,
-    model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
-  rE  = Array{Float64,1}(undef,ns)
-
-  # make ode function with closure
-  ode_fun = (du::Array{Float64,1}, 
-             u ::Array{Float64,1}, 
-             pp::Array{Array{Float64,1},1}, 
-             t ::Float64) -> 
-    begin
-      geohisse_M(du::Array{Float64,1}, 
-                 u ::Array{Float64,1}, 
-                 pp::Array{Array{Float64,1},1}, 
-                 t ::Float64,
-                 r, eaft, rE, af!, afE!, idxl,
-                 Val(k), Val(h), Val(ny), Val(model))
-      return nothing
-    end
-
-  return ode_fun
-end
-
-
-
-
-"""
-HERE ---> need to test the newly created EGeoHiSSE functions
-
-
-
-"""
-
-
 """
     exp_expr(k    ::Int64,
              h    ::Int64,
@@ -1089,7 +760,6 @@ end
 
 
 
-
 """
     wrsext_expr(si   ::Int64,
                 s    ::Sgh,
@@ -1340,6 +1010,327 @@ function make_egeohisse(::Val{k},
   return ode_fun
 end
 
+
+
+
+
+
+"""
+    geohisse_E(du  ::Array{Float64,1}, 
+               u   ::Array{Float64,1}, 
+               p   ::Array{Float64,1}, 
+               t   ::Float64,
+               r   ::Array{Float64,1},
+               eaft::Array{Float64,1},
+               af! ::Function,
+               ::Val{k},
+               ::Val{h},
+               ::Val{ny},
+               ::Val{model}) where {k, h, ny, model}
+
+Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas, 
+`h` hidden states and `ny` covariates for the specific `model`.
+"""
+@generated function geohisse_E(du  ::Array{Float64,1}, 
+                               u   ::Array{Float64,1}, 
+                               p   ::Array{Float64,1}, 
+                               t   ::Float64,
+                               r   ::Array{Float64,1},
+                               eaft::Array{Float64,1},
+                               af! ::Function,
+                               ::Val{k},
+                               ::Val{h},
+                               ::Val{ny},
+                               ::Val{model}) where {k, h, ny, model}
+
+  # n states
+  ns = (2^k - 1)*h
+
+  # create individual areas subsets
+  S = create_states(k, h)
+
+  # start Expression for ODE equations
+  eqs = quote end
+  popfirst!(eqs.args)
+
+  # add environmental function
+  push!(eqs.args, :(af!(t, r)))
+
+  # compute exponential for each β*covariable
+  expex = exp_expr(k, h, ny, model)
+
+  for ex in expex.args
+    push!(eqs.args, ex)
+  end
+
+  for si = Base.OneTo(ns)
+
+    # state range
+    s = S[si]
+
+    # length of geographic range
+    ls = length(s.g)
+
+    # which single areas do not occur in r
+    oa = setdiff(1:k, s.g)
+
+    # no events
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, model, false)
+
+    # extinction
+    ext = ext_expr(s, S, ns, k, h, model, true) 
+
+    # dispersal and extinction
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, model, false)
+    end
+
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns, k, h, false) : :0.0
+
+    # within-region extinction
+    wrs = wrsext_expr(si, s, ns, k, model, true)
+
+    # between-region extinction
+    if ls > 1
+      brs = brspec_expr(s, S, ns, k, true, true)
+    end
+
+    # push `E` equation to to eqs
+    if isone(ls)
+      push!(eqs.args, 
+        :(du[$(si)] = $nev + $ext + $dis + $hid + $wrs))
+    elseif ls == k
+      push!(eqs.args, 
+        :(du[$(si)] = $nev + $ext + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$(si)] = $nev + $ext + $dis + $hid + $wrs + $brs))
+    end
+
+  end
+
+  # print for checking
+  println(eqs)
+
+  return quote 
+    @inbounds begin
+      $eqs
+    end
+    return nothing
+  end
+
+end
+
+
+
+
+
+"""
+    make_egeohisse_E(::Val{k},
+                     ::Val{h},
+                     ::Val{ny},
+                     ::Val{model},
+                     af!::Function) where {k, h, ny, model}
+
+Make closure for Extinction function of EGeoHiSSE.
+"""
+function make_egeohisse_E(::Val{k},
+                        ::Val{h},
+                        ::Val{ny},
+                        ::Val{model},
+                        af!::Function) where {k, h, ny, model}
+
+  r    = Array{Float64,1}(undef, ny)
+  eaft = Array{Float64,1}(undef,
+    model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
+
+  # make ode function with closure
+  ode_fun = (du::Array{Float64,1}, 
+             u::Array{Float64,1}, 
+             p::Array{Float64,1}, 
+             t::Float64) -> 
+    begin
+      geohisse_E(du::Array{Float64,1}, 
+                 u ::Array{Float64,1}, 
+                 p ::Array{Float64,1}, 
+                 t ::Float64,
+                 r, eaft, af!, Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
+
+  return ode_fun
+end
+
+
+
+
+
+"""
+    geohisse_M(du  ::Array{Float64,1}, 
+               u   ::Array{Float64,1}, 
+               p   ::Array{Float64,1}, 
+               t   ::Float64,
+               r   ::Array{Float64,1},
+               eaft::Array{Float64,1},
+               af! ::Function,
+               ::Val{k},
+               ::Val{h},
+               ::Val{ny},
+               ::Val{model}) where {k, h, ny, model}
+
+Creates Covariate GeoHiSSE Likelihood ODE equation function for `k` areas, 
+`h` hidden states and `ny` covariates in Matrix form.
+"""
+@generated function geohisse_M(du  ::Array{Float64,2}, 
+                               u   ::Array{Float64,2}, 
+                               pp  ::Array{Array{Float64,1},1}, 
+                               t   ::Float64,
+                               r   ::Array{Float64,1},
+                               eaft::Array{Float64,1},
+                               rE  ::Array{Float64,1},
+                               af! ::Function,
+                               afE!::Function,
+                               idxl::Int64,
+                               ::Val{k},
+                               ::Val{h},
+                               ::Val{ny},
+                               ::Val{model}) where {k, h, ny, model}
+
+  # n states
+  ns = (2^k - 1)*h
+
+  # create individual areas subsets
+  S = create_states(k, h)
+
+  # start Expression for ODE equations
+  eqs = quote end
+  popfirst!(eqs.args)
+
+  # add parameter subset
+  push!(eqs.args, :(p = pp[idxl]))
+
+  # add extinction function
+  push!(eqs.args, :(afE!(t, rE, pp)))
+
+  # add environmental function
+  push!(eqs.args, :(af!(t, r)))
+
+  # compute exponential for each β*covariable
+  expex = exp_expr(k, h, ny, model)
+
+  for ex in expex.args
+    push!(eqs.args, ex)
+  end
+
+  for i in Base.OneTo(ns), si = Base.OneTo(ns)
+
+    # state range
+    s = S[si]
+
+    # length of geographic range
+    ls = length(s.g)
+
+    # which single areas do not occur in r
+    oa = setdiff(1:k, s.g)
+
+    # no events
+    nev = noevents_expr(si, s, ls, oa, k, h, ns, i, model)
+
+    # remove if !isone(lr)
+    if ls > 1
+      # local extinction
+      lex = localext_expr(s, S, k, h, i, model)
+
+      # between-region speciation
+      brs = brspec_expr(s, S, ns, k, i)
+    end
+
+    # dispersal
+    # remove if lr == k
+    if ls != k
+      dis = dispersal_expr(s, oa, S, ns, k, h, i, model)
+    end
+
+    # hidden states transitions
+    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, i) : :0.0
+
+    # within-region speciation
+    wrs = wrspec_expr(si, s, ns, k, i, model)
+
+    # push `D` equation to to eqs
+    if isone(ls)
+      push!(eqs.args, 
+        :(du[$si, $i] = $nev + $dis + $hid + $wrs))
+    elseif ls == k
+      push!(eqs.args, 
+        :(du[$si, $i] = $nev + $lex + $hid + $wrs + $brs))
+    else
+      push!(eqs.args, 
+        :(du[$si, $i] = $nev + $lex + $dis + $hid + $wrs + $brs))
+    end
+
+  end
+
+  ## aesthetic touches
+  # sort `du`s
+
+  println(eqs)
+
+  return quote 
+    @inbounds begin
+      $eqs
+    end
+    return nothing
+  end
+
+end
+
+
+
+
+
+"""
+    make_egeohisse_M(::Val{k},
+                     ::Val{h},
+                     ::Val{ny},
+                     ::Val{model},
+                     af!::Function) where {k, h, ny, model}
+
+Make closure for EGeoHiSSE given `E(t)` and in matrix form.
+"""
+function make_egeohisse_M(::Val{k},
+                          ::Val{h},
+                          ::Val{ny},
+                          ::Val{model},
+                          af! ::Function,
+                          afE!::Function,
+                          idxl::Int64) where {k, h, ny, model}
+
+  ns = (2^k - 1)*h
+
+  r    = Array{Float64,1}(undef, ny)
+  eaft = Array{Float64,1}(undef,
+    model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
+  rE  = Array{Float64,1}(undef,ns)
+
+  # make ode function with closure
+  ode_fun = (du::Array{Float64,2}, 
+             u ::Array{Float64,2}, 
+             pp::Array{Array{Float64,1},1}, 
+             t ::Float64) -> 
+    begin
+      geohisse_M(du::Array{Float64,2}, 
+                 u ::Array{Float64,2}, 
+                 pp::Array{Array{Float64,1},1}, 
+                 t ::Float64,
+                 r, eaft, rE, af!, afE!, idxl,
+                 Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
+
+  return ode_fun
+end
 
 
 
