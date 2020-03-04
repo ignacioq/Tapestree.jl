@@ -142,17 +142,13 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
   extp = Array{Float64,1}(undef, ns)
 
   # make speciation events and closure
-  λevent! = (t   ::Float64, 
-             llik::Array{Float64,1}, 
-             ud1 ::Array{Float64,1}, 
-             ud2 ::Array{Float64,1},
-             λts::Array{Float64,1},
-             p   ::Array{Float64,1}) ->
-    begin
-      λevent_full(t, llik, ud1, ud2, λts, p, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))
-      return nothing
-    end
+  λevent! = make_λevent(h, k, ny, false, model, af!)
+
+
+"""
+replace root as well
+"""
+
 
   # make root full likelihood estimation and closure
   rootll = (t   ::Float64,
@@ -220,7 +216,7 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
       normbysum!(llik, w, ns)
 
       # combine root likelihoods
-      ll = rootll(elrt1[ne], llik, extp, w, p, λts)
+      ll = rootll(elrt1[ne], llik, extp, w, p)
 
       return (log(ll) + llxtra)::Float64
     end
@@ -228,7 +224,6 @@ function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
 
   return f
 end
-
 
 
 
@@ -247,7 +242,8 @@ end
                 ::Val{h}, 
                 ::Val{ny}, 
                 ::Val{mdS}) where {k,h,ny,mdS}
-Generated function for full tree likelihood at the root.
+
+Generated function for full tree likelihood at the root for normal likelihoods.
 """
 @generated function rootll_full(t   ::Float64,
                                 llik::Array{Float64,1},
@@ -380,6 +376,156 @@ end
 
 
 
+
+"""
+    make_rootll(t   ::Float64,
+                llik::Array{Float64,1},
+                extp::Array{Float64,1},
+                w   ::Array{Float64,1},
+                p   ::Array{Float64,1},
+                lλs ::Array{Float64,1},
+                λts::Array{Float64,1},
+                r   ::Array{Float64,1},
+                ::Val{k}, 
+                ::Val{h}, 
+                ::Val{ny}, 
+                ::Val{mdS}) where {k,h,ny,mdS}
+
+Generated function for full tree likelihood at the root for flow likelihood.
+"""
+@generated function rootll_full(t   ::Float64,
+                                llik::Array{Float64,1},
+                                extp::Array{Float64,1},
+                                w   ::Array{Float64,1},
+                                p   ::Array{Float64,1},
+                                λts ::Array{Float64,1},
+                                r   ::Array{Float64,1},
+                                af! ::Function,
+                                ::Val{k},
+                                ::Val{h},
+                                ::Val{ny},
+                                ::Val{model})::Float64 where {k, h, ny, model}
+
+  S = create_states(k, h)
+
+  eqs = quote end
+  popfirst!(eqs.args)
+
+  if model[1]
+   # last non β parameters
+    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+
+    # ncov
+    ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
+
+    # y per parameter
+    yppar = isone(ny) ? 1 : div(ny,ncov)
+
+    # add environmental function
+    push!(eqs.args, :(af!(t, r)))
+
+    isone(ny) && push!(eqs.args, :(r1 = r[1]))
+
+    # add environmental dependency evaluation
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      coex = Expr(:call, :+)
+      for yi in Base.OneTo(yppar)
+        rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
+        push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
+      end
+      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+    end
+
+    eq = Expr(:call, :+)
+    for j in Base.OneTo(h)
+      # for single areas
+      for i in Base.OneTo(k)
+        push!(eq.args,
+          :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+            (λts[$(i + k*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+      end
+      # for widespread
+      for i in k+1:2^k-1
+        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] /(le))
+
+        lams = Expr(:call, :+)
+        # single area speciation
+        for a in S[i + (2^k-1)*(j-1)].g
+          push!(lams.args, :(
+            λts[$(a + k*(j-1))] * 
+           (1.0-extp[$(a + (j-1)*(2^k-1))]) * (1.0-extp[$(i + (j-1)*(2^k-1))])))
+        end
+
+        # for allopatric speciation
+        for (la, ra) = vicsubsets(S[i + (2^k-1)*(j-1)].g)[1:(div(end,2))]
+          push!(lams.args, 
+            :(p[$((k+1)*(1+(j-1)))] *
+             (1.0-extp[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*(j-1))]) * 
+             (1.0-extp[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*(j-1))])))
+        end
+
+        # change l in wl
+        wl.args[3] = lams
+
+        push!(eq.args, wl)
+      end
+    end
+
+  else
+
+
+    eq = Expr(:call, :+)
+    for j in Base.OneTo(h)
+      # for single areas
+      for i in Base.OneTo(k)
+        push!(eq.args,
+          :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+      end
+      # for widespread
+      for i in k+1:2^k-1
+        wl = :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] /(le))
+
+        lams = Expr(:call, :+)
+        # single area speciation
+        for a in S[i + (2^k-1)*(j-1)].g
+          push!(lams.args, :(
+            p[$(a + (k+1)*(j-1))] * 
+           (1.0-extp[$(a + (j-1)*(2^k-1))]) * (1.0-extp[$(i + (j-1)*(2^k-1))])))
+        end
+
+        # for allopatric speciation
+        for (la, ra) = vicsubsets(S[i + (2^k-1)*(j-1)].g)[1:(div(end,2))]
+          push!(lams.args, 
+            :(p[$((k+1)*(1+(j-1)))] *
+             (1.0-extp[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*(j-1))]) * 
+             (1.0-extp[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*(j-1))])))
+        end
+
+        # change l in wl
+        wl.args[3] = lams
+
+        push!(eq.args, wl)
+      end
+    end
+  end
+
+  push!(eqs.args, :($eq))
+
+  println(eqs)
+
+  return quote
+    @inbounds begin
+      $eqs
+    end
+  end
+end
+
+
+
+
+
+
 """
     λevent_full(t   ::Float64, 
                 llik::Array{Float64,1}, 
@@ -394,14 +540,15 @@ end
                 ::Val{ny}, 
                 ::Val{S},
                 ::Val{mdS})
-Generated function for speciation event likelihoods
+
+Generated function for speciation event likelihoods for normal likelihood.
 """
 @generated function λevent_full(t   ::Float64, 
                                 llik::Array{Float64,1}, 
                                 ud1 ::Array{Float64,1}, 
                                 ud2 ::Array{Float64,1},
-                                λts::Array{Float64,1},
                                 p   ::Array{Float64,1},
+                                λts ::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
                                 ::Val{k}, 
@@ -505,6 +652,152 @@ Generated function for speciation event likelihoods
       end
 
       push!(eqs.args, :(llik[$(i + (2^k-1)*(j-1))] = $ex))
+    end
+  end
+
+  println(eqs)
+
+
+  return quote 
+    @inbounds begin
+      $eqs
+    end
+    return nothing
+  end
+end
+
+
+
+
+
+
+"""
+    λevent_full(t   ::Float64, 
+                llik::Array{Array{Float64,1},1}, 
+                ud1 ::Array{Float64,1}, 
+                ud2 ::Array{Float64,1},
+                p   ::Array{Float64,1},
+                pr  ::Int64,
+                λts ::Array{Float64,1},
+                r   ::Array{Float64,1},
+                af! ::Function,
+                ::Val{k}, 
+                ::Val{h}, 
+                ::Val{ny}, 
+                ::Val{model}) where {k, h, ny, model}
+
+Generated function for speciation event likelihoods for flow algorithm.
+"""
+@generated function λevent_full(t   ::Float64, 
+                                llik::Array{Array{Float64,1},1}, 
+                                ud1 ::Array{Float64,1}, 
+                                ud2 ::Array{Float64,1},
+                                p   ::Array{Float64,1},
+                                pr  ::Int64,
+                                λts ::Array{Float64,1},
+                                r   ::Array{Float64,1},
+                                af! ::Function,
+                                ::Val{k}, 
+                                ::Val{h}, 
+                                ::Val{ny}, 
+                                ::Val{model}) where {k, h, ny, model}
+
+  eqs = quote end
+  popfirst!(eqs.args)
+
+  S = create_states(k, h)
+
+  # if speciation model
+  if model[1] 
+ 
+    # last non β parameters
+    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+
+    # ncov
+    ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
+
+    # y per parameter
+    yppar = isone(ny) ? 1 : div(ny,ncov)
+
+    # add environmental function
+    push!(eqs.args, :(af!(t, r)))
+
+    isone(ny) && push!(eqs.args, :(r1 = r[1]))
+
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      coex = Expr(:call, :+)
+      for yi in Base.OneTo(yppar)
+        rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
+        push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
+      end
+      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+    end
+
+    # likelihood for individual areas states
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      push!(eqs.args, 
+          :(llik[pr][$(i+(2^k-1)*(j-1))] = 
+            ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * λts[$(i+k*(j-1))]))
+    end
+
+    # likelihood for widespread states
+    for j = Base.OneTo(h), i = k+1:2^k-1
+      s = S[i + (2^k-1)*(j-1)]
+
+      # within region speciation
+      ex = Expr(:call, :+)
+      for a in s.g
+        push!(ex.args, :((ud1[$(a + s.h*(2^k-1))]   * ud2[$(i + (2^k-1)*(j-1))] + 
+                          ud1[$(i + (2^k-1)*(j-1))] * ud2[$(a + s.h*(2^k-1))]) *
+                          0.5 * λts[$(a + s.h*(k))]))
+      end
+
+      # between region speciation
+      for (la, ra) = vicsubsets(s.g)[1:div(end,2)]
+        push!(ex.args, 
+         :((ud1[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
+            ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
+            0.5 * p[$((k+1)*(1+s.h))]))
+      end
+
+      push!(eqs.args, :(llik[pr][$(i + (2^k-1)*(j-1))] = $ex))
+    end
+
+  # *not* speciation model
+  else
+
+    # likelihood for individual areas states
+    for j = Base.OneTo(h), i = Base.OneTo(k)
+      push!(eqs.args, 
+          :(llik[pr][$(i+(2^k-1)*(j-1))] = 
+            ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
+    end
+
+    # likelihood for widespread states
+    for j = Base.OneTo(h), i = k+1:2^k-1
+      s = S[i + (2^k-1)*(j-1)]
+
+      # within region speciation
+      ex = Expr(:call, :+)
+      for a in s.g
+        push!(ex.args, :((ud1[$(a + s.h*(k+1))]*ud2[$(i + (2^k-1)*(j-1))] + 
+                          ud1[$(i + (2^k-1)*(j-1))]*ud2[$(a + s.h*(k+1))]) *
+                          0.5 * p[$(a + s.h*(k+1))]))
+      end
+
+      # between region speciation
+      for (la, ra) = vicsubsets(s.g)[1:div(end,2)]
+        push!(ex.args, 
+         :((ud1[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] + 
+            ud1[$(findfirst(x -> isequal(la,x.g), S) + (2^k-1)*s.h)] *
+            ud2[$(findfirst(x -> isequal(ra,x.g), S) + (2^k-1)*s.h)]) *
+            0.5 * p[$((k+1)*(1+s.h))]))
+      end
+
+      push!(eqs.args, :(llik[pr][$(i + (2^k-1)*(j-1))] = $ex))
     end
   end
 

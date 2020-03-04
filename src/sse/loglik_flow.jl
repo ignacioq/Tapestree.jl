@@ -115,21 +115,17 @@ end
                Eδt::Float64 = 0.01,
                ti ::Float64 = 0.0)
 
-Prepare EGeoSSE likelihoods for flow algorithm given input model
+Prepare EGeoSSE likelihoods for flow algorithm given input model.
 """
-function prepare_ll(ode_make_lik,
-                    ode_ext,
-                    cov_mod::NTuple{M,String},
-                    tv  ::Dict{Int64,Array{Float64,1}},
-                    ed  ::Array{Int64,2},
-                    el  ::Array{Float64,1},
-                    bts ::Array{Float64,1},
-                    p0  ::Array{Float64,1},
-                    E0  ::Array{Float64,1},
-                    h   ::Int64,
-                    ntip::Int64;
-                    Eδt::Float64 = 0.01,
-                    ti ::Float64 = 0.0) where{M}
+function prepare_ll(cov_mod::NTuple{M,String},
+                    tv     ::Dict{Int64,Array{Float64,1}},
+                    ed     ::Array{Int64,2},
+                    el     ::Array{Float64,1},
+                    bts    ::Array{Float64,1},
+                    E0     ::Array{Float64,1},
+                    h      ::Int64,
+                    Eδt    ::Float64 = 0.01,
+                    ti     ::Float64 = 0.0) where{M}
 
   # k areas
   k = length(tv[1])::Int64
@@ -139,6 +135,16 @@ function prepare_ll(ode_make_lik,
 
   # number of states
   ns = (2^k - 1)*h
+
+  # number of tips
+  ntip = length(tv)
+
+  # add root of length 0
+  ed = cat(ed, [2*ntip ntip + 1], dims = 1)
+  push!(el, 0.0)
+
+  # number of edges
+  ned = size(ed,1)
 
   # make z(t) approximation from discrete data `af!()`
   af! = make_af(x, y, Val(ny))
@@ -232,8 +238,6 @@ function prepare_ll(ode_make_lik,
   # assign hidden factors
   assign_hidfacs!(p, fp)
 
-  ntip = length(tv)
-
   # Estimate extinction at `ts` times
   tf = maximum(bts)
   ts = [ti:Eδt:tf...]
@@ -241,10 +245,10 @@ function prepare_ll(ode_make_lik,
   egeohisse_E = make_egeohisse_E(Val(k), Val(h), Val(ny), Val(model), af!)
 
   # Make extinction integral
-  Et = make_Et(egeohisse_E, p0, E0, ts, ti, tf)
+  Et = make_Et(egeohisse_E, p, E0, ts, ti, tf)
 
   # estimate first Extinction probabilities at times `ts`
-  Ets  = Et(p0)
+  Ets  = Et(p)
   nets = length(Ets) + 1
 
   # Make extinction approximated function
@@ -256,7 +260,7 @@ function prepare_ll(ode_make_lik,
     make_egeohisse_M(Val(k), Val(h), Val(ny), Val(model), af!, afE!, nets)
 
   # push parameters as the last vector in Ets
-  push!(Ets, p0)
+  push!(Ets, p)
 
   # make Gt function
   Gt = make_Gt(ode_intf, Ets, Matrix{Float64}(I, ns, ns), bts, ti, tf)
@@ -294,8 +298,7 @@ function prepare_ll(ode_make_lik,
 
   # create states 
   S = create_states(k, h)
-  
-  ne    = size(ed,1)
+
   child = ed[:,2]
   wtp   = findall(child .<= ntip)
 
@@ -305,7 +308,13 @@ function prepare_ll(ode_make_lik,
     X[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
-  return Gt, Et, X, triads, lbts, ns, ned, nets
+  # make λevent!
+  λevent! = make_λevent(h, k, ny, true, model, af!)
+
+  # make root likelihood conditioning
+  rootll = make_rootll(h, k, ny, model, af!)
+
+  return Gt, Et, X, triads, lbts, ns, ned, nets, λevent!, rootll
 end
 
 
@@ -416,31 +425,132 @@ end
 
 
 """
-    make_loglik(Gt    ::Function, 
-                Et    ::Function, 
-                triads::Array{Array{Int64,1},1}, 
-                ns    ::Int64, 
-                ned   ::Int64, 
-                nets  ::Int64)
+    make_λevent(h    ::Int64, 
+                k    ::Int64, 
+                ny   ::Int64, 
+                flow ::Bool,
+                model::NTuple{3,Bool},
+                af!  ::Function)
+
+Make function for λevent.
+"""
+function make_λevent(h    ::Int64, 
+                     k    ::Int64, 
+                     ny   ::Int64, 
+                     flow ::Bool,
+                     model::NTuple{3,Bool},
+                     af!  ::Function)
+
+  λts = Array{Float64,1}(undef,h*k)
+  r   = Array{Float64,1}(undef,ny)
+
+  if flow
+    λevent! = (t   ::Float64, 
+               llik::Array{Array{Float64,1},1},
+               ud1 ::Array{Float64,1},
+               ud2 ::Array{Float64,1},
+               p   ::Array{Float64,1},
+               pr  ::Int64) ->
+    begin
+      λevent_full(t, llik, ud1, ud2, p, pr, λts, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
+  else
+       # make speciation events and closure
+    λevent! = (t   ::Float64, 
+               llik::Array{Float64,1},
+               ud1 ::Array{Float64,1},
+               ud2 ::Array{Float64,1},
+               p   ::Array{Float64,1}) ->
+    begin
+      λevent_full(t, llik, ud1, ud2, p, λts, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
+  end
+
+  return λevent!
+end
+
+
+
+
+
+"""
+    make_rootll(h    ::Int64, 
+                k    ::Int64, 
+                ny   ::Int64, 
+                model::NTuple{3,Bool},
+                af!  ::Function)
+
+Make root conditioning likelihood function.
+"""
+function make_rootll(h    ::Int64, 
+                     k    ::Int64, 
+                     ny   ::Int64, 
+                     model::NTuple{3,Bool},
+                     af!  ::Function)
+
+  λts = Array{Float64,1}(undef,h*k)
+  r   = Array{Float64,1}(undef,ny)
+
+  rootll = (t   ::Float64,
+            llik::Array{Float64,1},
+            extp::Array{Float64,1},
+            w   ::Array{Float64,1},
+            p   ::Array{Float64,1}) -> 
+    begin
+      rootll_full(t, llik, extp, w, p, λts, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))
+    end
+
+
+  return rootll
+end
+
+
+
+
+
+"""
+    make_loglik(Gt     ::Function, 
+                Et     ::Function,
+                X      ::Array{Array{Float64,1},1}, 
+                triads ::Array{Array{Int64,1},1},
+                lbts   ::Array{Int64,2},
+                bts    ::Array{Float64,1},
+                ns     ::Int64, 
+                ned    ::Int64, 
+                nets   ::Int64,
+                ntip   ::Int64,
+                λevent!::Function,
+                rootll ::Function)
 
 
 Make log-likelihood function using the flow algorithm.
 """
-function make_loglik(Gt    ::Function, 
-                     Et    ::Function,
-                     X     ::Array{Array{Float64,1},1}, 
-                     triads::Array{Array{Int64,1},1},
-                     lbts  ::Array{Int64,2},
-                     ns    ::Int64, 
-                     ned   ::Int64, 
-                     nets  ::Int64)
+function make_loglik(Gt     ::Function, 
+                     Et     ::Function,
+                     X      ::Array{Array{Float64,1},1}, 
+                     triads ::Array{Array{Int64,1},1},
+                     lbts   ::Array{Int64,2},
+                     bts    ::Array{Float64,1},
+                     ns     ::Int64, 
+                     ned    ::Int64, 
+                     nets   ::Int64,
+                     λevent!::Function,
+                     rootll ::Function)
 
   # preallocate arrays
   Xp1 = Array{Float64,1}(undef,ns)
   Xp2 = Array{Float64,1}(undef,ns)
   Xr  = Array{Float64,1}(undef,ns)
   wg  = Array{Float64,1}(undef,ns)
-  XR  = Array{Float64,1}(undef,ns)
+  Er  = Array{Float64,1}(undef,ns)
+  
+  nbts  = length(bts)
+  rtime = bts[end]
 
   # start ll function for parameters
   function f(p::Array{Float64,1})
@@ -459,6 +569,7 @@ function make_loglik(Gt    ::Function,
       ll = 0.0
 
       for trio in triads
+
         pr, d1, d2 = trio
 
         ## first daughter
@@ -469,50 +580,31 @@ function make_loglik(Gt    ::Function,
         X0 = Gts[lbts[d2,2]]\X[d2]
         mul!(Xp2, Gts[lbts[d2,1]], X0)
 
+        λtime = bts[lbts[d1,1]]
 
-"""
-HERE --> apply proper node combination
-"""
+        λevent!(λtime, X, Xp1, Xp2, p, pr)
 
-        # combine with speciation rates
-        for k in Base.OneTo(ns)
-          X[pr][k] = Xp1[k] * Xp2[k] * p[k]
+        if pr != ned
+          mdlus  = sum(X[pr])
+          X[pr] /= mdlus
+          ll += log(mdlus)
         end
-
-        mdlus  = sum(X[pr])
-        X[pr] /= mdlus
-        global ll    += log(mdlus)
       end
 
-
-
-"""
-HERE --> apply proper root conditioning
-"""
-
-
-      # Root conditioning
-      for k in Base.OneTo(ns)
-        Xr[k] = X[ned-1][k] * X[ned][k] * p[k]
+      # assign root likelihoods
+      @simd for i in Base.OneTo(ns)
+        Xr[i] = X[ned][i]
       end
 
-      #estimate weights
-      ss = sum(Xr)
-      for k in Base.OneTo(ns)
-        wg[k] = Xr[k]/ss
+      # assign root extinction
+      @simd for i in Base.OneTo(ns)
+        Er[i] = Ets[nets - 1][i]
       end
 
-      # condition on no extinction
-      α = 0.0
-      for k in Base.OneTo(ns)
-        α += wg[k] * p[k] * (1.0 - Ets[nets-1][k])^2
-      end
+      # estimate weights
+      normbysum!(Xr, wg, ns)
 
-      rmul!(Xr, 1.0/α)
-
-      XR .= Xr .* wg
-
-      ll += log(sum(XR))
+      ll += log(rootll(rtime, Xr, Er, wg, p))
     end
 
     return ll
@@ -524,63 +616,16 @@ end
 
 
 
+Gt, Et, X, triads, lbts, ns, ned, nets, λevent!, rootll = 
+  prepare_ll(cov_mod, tv, ed, el, bts, E0, h)
 
 
 
-# # make tree in R
-using RCall
+llf = 
+  make_loglik(Gt, Et, X, triads , lbts, bts, ns, ned, nets, 
+    λevent!, rootll)
 
-ntip = 50
-
-tr, bts = make_ape_tree(ntip, 0.5, 0.0, order = "postorder")
-
-ed  = copy(tr.ed)
-el  = copy(tr.el)
-ned = size(ed,1)
-
-
-# make tip values GeoSSE
-function sdat() 
-  r = rand(0.0:1.0,k)
-  while sum(r) < 1.0
-    r = rand(0.0:1.0,k)
-  end
-  return r
-end
-
-# create dictionaries
-tv = Dict(i => sdat() for i = 1:ntip)
-
-
-
-E0 = zeros(6)
-k = 2
-h = 2
-
-
-
-
-
-# Gt, Et, X, triads, lbts, ns, ned, nets = 
-#   prepare_ll(make_fbisseM, fbisseE, tv, ed, el, copy(bts), p0, E0, k, h, ntip)
-
-
-# llf = make_loglik(Gt, Et, X, triads, lbts, ns, ned, nets)
-
-
-# p = rand(6) 
-
-# llf(p)
-
-# @benchmark llf(p)
-
-
-
-
-
-
-
-
-
+p = rand(24)
+@benchmark llf(p)
 
 
