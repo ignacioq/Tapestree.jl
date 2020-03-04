@@ -502,7 +502,7 @@ function make_rootll(h    ::Int64,
             p   ::Array{Float64,1}) -> 
     begin
       rootll_full(t, llik, extp, w, p, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))
+        Val(k), Val(h), Val(ny), Val(model))::Float64
     end
 
 
@@ -548,9 +548,9 @@ function make_loglik(Gt     ::Function,
   Xr  = Array{Float64,1}(undef,ns)
   wg  = Array{Float64,1}(undef,ns)
   Er  = Array{Float64,1}(undef,ns)
-  
-  nbts  = length(bts)
-  rtime = bts[end]
+
+  rtime  = bts[end]
+  netsm1 = nets - 1
 
   # start ll function for parameters
   function f(p::Array{Float64,1})
@@ -598,13 +598,13 @@ function make_loglik(Gt     ::Function,
 
       # assign root extinction
       @simd for i in Base.OneTo(ns)
-        Er[i] = Ets[nets - 1][i]
+        Er[i] = Ets[netsm1][i]
       end
 
       # estimate weights
       normbysum!(Xr, wg, ns)
 
-      ll += log(rootll(rtime, Xr, Er, wg, p))
+      ll += log(rootll(rtime, Xr, Er, wg, p)::Float64)
     end
 
     return ll
@@ -616,16 +616,5 @@ end
 
 
 
-Gt, Et, X, triads, lbts, ns, ned, nets, λevent!, rootll = 
-  prepare_ll(cov_mod, tv, ed, el, bts, E0, h)
-
-
-
-llf = 
-  make_loglik(Gt, Et, X, triads , lbts, bts, ns, ned, nets, 
-    λevent!, rootll)
-
-p = rand(24)
-@benchmark llf(p)
 
 
