@@ -11,6 +11,72 @@ November 20 2017
 =#
 
 
+"""
+
+HERE -> Create generic slice sampler function with likelihoods and priors as only inputs
+
+"""
+
+
+
+
+
+
+
+
+"""
+    slice_sampler(tip_val     ::Dict{Int64,Array{Float64,1}},
+                  ed          ::Array{Int64,2},
+                  el          ::Array{Float64,1},
+                  x           ::Array{Float64,1},
+                  y           ::Array{Float64},
+                  cov_mod     ::String,
+                  out_file    ::String,
+                  h           ::Int64;
+                  constraints ::NTuple{N,String}  = (" ",),
+                  niter       ::Int64             = 10_000,
+                  nthin       ::Int64             = 10,
+                  λpriors     ::Float64           = .1,
+                  μpriors     ::Float64           = .1,
+                  gpriors     ::Float64           = .1,
+                  lpriors     ::Float64           = .1,
+                  qpriors     ::Float64           = .1,
+                  βpriors     ::NTuple{2,Float64} = (0.0, 5.0),
+                  optimal_w   ::Float64           = 0.8,
+                  screen_print::Int64             = 5) where {N}
+
+Run slice-sampling Markov Chain given posterior function.
+"""
+function slice_sampler(lhf         ::Function, 
+                       p           ::Array{Float64,1},
+                       fp          ::Array{Float64,1},
+                       nnps        ::Array{Int64,1},
+                       nps         ::Array{Int64,1},
+                       phid        ::Array{Int64,1},
+                       npars       ::Int64,
+                       niter       ::Int64,
+                       nthin       ::Int64,
+                       optimal_w   ::Float64,
+                       screen_print::Int64)
+
+  # estimate optimal w
+  p, fp, w = 
+    w_sampler(lhf, p, fp, nnps, nps, phid, npars, optimal_w, screen_print)
+
+  # slice-sampler
+  its, hlog, ps = 
+    loop_slice_sampler(lhf, p, fp, nnps, nps, phid, w, npars, niter, nthin, screen_print)
+
+  # save samples
+  R = hcat(its, hlog, ps)
+
+  return R
+end
+
+
+
+
+
 
 
 """

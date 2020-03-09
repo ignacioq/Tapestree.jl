@@ -292,24 +292,24 @@ function find_real_int(p    ::Array{Float64,1},
                        j    ::Int64, 
                        S    ::Float64, 
                        postf::Function, 
-                       w    ::Float64)
+                       wj   ::Float64)
 
   copyto!(pp, p)
 
-  L = pp[j] - w*rand()
-  R = L + w
+  L = pp[j] - wj*rand()
+  R = L + wj
 
   # left extreme
   pp[j] = L::Float64
   while S < postf(pp, fp)
-    L    -= w::Float64
+    L    -= wj::Float64
     pp[j] = L::Float64
   end
 
   # right extreme
   pp[j] = R::Float64
   while S < postf(pp, fp)
-    R    += w::Float64
+    R    += wj::Float64
     pp[j] = R::Float64
   end
 
