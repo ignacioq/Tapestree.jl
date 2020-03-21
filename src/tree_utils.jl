@@ -128,7 +128,6 @@ end
 
 
 
-
 """
     maketriads(ed::Array{Int64,2})
 
@@ -166,7 +165,7 @@ end
                       ed  ::Array{Int64,2},
                       ntip::Int64)
 
-Make array with absolute intial and end time for each 
+Make array with absolute initial and end time for each 
 branch. Time goes backwards with the present being `0.0`.
 """
 function abs_time_branches(el  ::Array{Float64,1}, 

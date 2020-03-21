@@ -100,11 +100,6 @@ end
 
 
 
-
-
-
-
-
 """
     make_λevent(h    ::Int64, 
                 k    ::Int64, 
@@ -251,6 +246,14 @@ function make_loglik(Gt     ::Function,
       ll = 0.0
 
       if rank(Gts[nbts]) == ns
+
+        for i in Base.OneTo(nbts) 
+          if rank(Gts[i]) != ns
+            @show Gts[nbts]
+            @show Gts[i]
+          end
+
+        end
 
         for trio in triads
 

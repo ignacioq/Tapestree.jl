@@ -27,15 +27,18 @@ Created 05 03 2020
 
 Prepare **EGeoHiSSE** likelihoods using the **flow** algorithm given input data.
 """
-function prepare_ll(cov_mod::NTuple{M,String},
-                    tv     ::Dict{Int64,Array{Float64,1}},
-                    ed     ::Array{Int64,2},
-                    el     ::Array{Float64,1},
-                    bts    ::Array{Float64,1},
-                    E0     ::Array{Float64,1},
-                    h      ::Int64;
-                    Eδt    ::Float64 = 0.01,
-                    ti     ::Float64 = 0.0) where{M}
+function prepare_ll(cov_mod    ::NTuple{M,String},
+                    tv         ::Dict{Int64,Array{Float64,1}},
+                    x          ::Array{Float64,1},
+                    y          ::Array{Float64,N},
+                    ed         ::Array{Int64,2},
+                    el         ::Array{Float64,1},
+                    bts        ::Array{Float64,1},
+                    E0         ::Array{Float64,1},
+                    h          ::Int64;
+                    constraints::NTuple{O,String} = (" ",),
+                    Eδt        ::Float64          = 0.01,
+                    ti         ::Float64          = 0.0) where {N,M,O}
 
   # k areas
   k = length(tv[1])::Int64
@@ -79,7 +82,7 @@ function prepare_ll(cov_mod::NTuple{M,String},
   end
 
   # create factor parameter vector
-  fp = fill(1e-4, npars)
+  fp = zeros(npars)
 
   # generate initial parameter values
   p  = fill(0.1,npars)
@@ -148,13 +151,14 @@ function prepare_ll(cov_mod::NTuple{M,String},
   # assign hidden factors
   assign_hidfacs!(p, fp)
 
+
+
+
+
+
   # Estimate extinction at `ts` times
   tf = maximum(bts)
   ts = [ti:Eδt:tf...]
-
-  if E0 == [0.0,0.0]
-    E0 = zeros(ns)
-  end
 
   egeohisse_E = make_egeohisse_E(Val(k), Val(h), Val(ny), Val(model), af!)
 
@@ -192,17 +196,19 @@ function prepare_ll(cov_mod::NTuple{M,String},
 
   ## link edges with initial and end branching times 
   abts = abs_time_branches(el, ed, ntip)
-  lbts = Array{Int64,2}(undef,size(abts))
+  
 
-  # preallocate absolute minimum matrix of differences
-  minM = Array{Float64,1}(undef, nbts)
-  # find links
-  for i in Base.OneTo(ned*2)
-    for j in Base.OneTo(nbts)
-      minM[j] = abs(abts[i] - bts[j])
+    lbts = Array{Int64,2}(undef,size(abts))
+
+    # preallocate absolute minimum matrix of differences
+    minM = Array{Float64,1}(undef, nbts)
+    # find links
+    for i in Base.OneTo(2ned)
+      for j in Base.OneTo(nbts)
+        minM[j] = abs(abts[i] - bts[j])
+      end
+      lbts[i] = argmin(minM)
     end
-    lbts[i] = argmin(minM)
-  end
 
   # make internal node triads
   triads = maketriads(ed)
@@ -250,7 +256,23 @@ end
 Prepare **EGeoHiSSE** likelihoods using the **pruning** algorithm 
 given input data.
 """
-function prepare_ll()
+function prepare_ll(cov_mod    ::NTuple{M,String},
+                    tv         ::Dict{Int64,Array{Float64,1}},
+                    x          ::Array{Float64,1},
+                    y          ::Array{Float64,N},
+                    ed         ::Array{Int64,2},
+                    el         ::Array{Float64,1},
+                    bts        ::Array{Float64,1},
+                    E0         ::Array{Float64,1},
+                    h          ::Int64;
+                    constraints::NTuple{O,String} = (" ",))
+
+
+
+
+
+
+
 end
 
 
