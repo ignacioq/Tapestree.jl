@@ -57,10 +57,11 @@ function ESSE(states_file ::String,
               ti          ::Float64           = 0.0,
               E0          ::Array{Float64,1}  = [0.0,0.0]) where {M,N}
 
+  # read data 
   tv, ed, el, bts, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
 
-  # if scale y
+  # scale y
   if scale_y[1]
     # if scale each function separately or together
     if scale_y[2]
@@ -78,12 +79,14 @@ function ESSE(states_file ::String,
     end
   end
 
+  # prepare data
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, dcp, dcfp, 
     pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0 = 
         prepare_data(cov_mod, tv, x, y, ed, el, E0, h, constraints) 
 
   # make likelihood function
   if occursin(r"^[f|F][A-za-z]*", algorithm) 
+
     # prepare likelihood
     Gt, Et, X, p, fp, triads, lbts, ns, ned, nets, pupd, phid, nnps, nps,
     dcp, dcfp, pardic, k, h, ny, model, λevent!, rootll, assign_hidfacs! = 
@@ -102,7 +105,7 @@ function ESSE(states_file ::String,
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, ode_solve, 
-      λevent!, rootll, k, h, ns)
+      λevent!, rootll, k, h, ns, ned)
 
   else
     error("No matching likelihood algorithm")

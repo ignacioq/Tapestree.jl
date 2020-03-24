@@ -88,11 +88,11 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
                      rootll   ::Function,
                      k        ::Int64,
                      h        ::Int64,
-                     ns       ::Int64)
+                     ns       ::Int64,
+                     ned      ::Int64)
 
   # preallocate vectors
   llik = Array{Float64,1}(undef,ns)
-  λts  = Array{Float64,1}(undef,h*k)
   w    = Array{Float64,1}(undef,ns)
   extp = Array{Float64,1}(undef, ns)
 
@@ -116,7 +116,7 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(abts2[pr], llik, ud1, ud2, λts, p)
+        λevent!(abts2[pr], llik, ud1, ud2, p)
 
         # loglik to sum for integration
         tosum = normbysum!(llik, ns)

@@ -812,7 +812,6 @@ end
 
 
 
-
 """
     geohisse_full(du  ::Array{Float64,1}, 
                   u   ::Array{Float64,1}, 
@@ -920,7 +919,7 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     nev = noevents_expr(si, s, ls, oa, k, h, ns, model, true)
 
     # extinction
-    ext = ext_expr(s, S, ns, k, h, model) 
+    ext = ext_expr(s, S, ns, k, h, model, false) 
 
     # dispersal and extinction
     if ls != k
@@ -931,11 +930,11 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     hid = h > 1 ? hidtran_expr(s, S, ns,k, h, true) : :0.0
 
     # within-region extinction
-    wrs = wrsext_expr(si, s, ns, k, model)
+    wrs = wrsext_expr(si, s, ns, k, model, false)
 
     # between-region extinction
     if ls > 1
-      brs = brspec_expr(s, S, ns, k, true)
+      brs = brspec_expr(s, S, ns, k, true, false)
     end
 
     # push `E` equation to to eqs
