@@ -13,9 +13,18 @@ Created 16 03 2020
 
 
 """
-prepare_data()
+    prepare_data(cov_mod    ::NTuple{M,String},
+                 tv         ::Dict{Int64,Array{Float64,1}},
+                 x          ::Array{Float64,1},
+                 y          ::Array{Float64,N},
+                 ed         ::Array{Int64,2},
+                 el         ::Array{Float64,1},
+                 bts        ::Array{Float64,1},
+                 E0         ::Array{Float64,1},
+                 h          ::Int64,
+                 constraints::NTuple{O,String}) 
 
-
+Prepare data for **EGeoHiSSE** likelihood calculations.
 """
 function prepare_data(cov_mod    ::NTuple{M,String},
                       tv         ::Dict{Int64,Array{Float64,1}},
@@ -23,10 +32,9 @@ function prepare_data(cov_mod    ::NTuple{M,String},
                       y          ::Array{Float64,N},
                       ed         ::Array{Int64,2},
                       el         ::Array{Float64,1},
-                      bts        ::Array{Float64,1},
                       E0         ::Array{Float64,1},
-                      h          ::Int64;
-                      constraints::NTuple{O,String} = (" ",)) where {N,M,O}
+                      h          ::Int64,
+                      constraints::NTuple{O,String}) where {N,M,O}
 
   # k areas
   k = length(tv[1])::Int64
@@ -75,7 +83,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # generate initial parameter values
   p  = fill(1e-1, npars)
   βs = h*(k^2 + 2k + h) + 1
-  δ  = Float64(length(tip_val)-1)/sum(el)
+  δ  = Float64(ntip-1)/sum(el)
   p[βs:end]             .= 0.0                  # set βs
   p[1:(k+1)*h]          .= δ + rand()*δ         # set λs
   p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ             # set μs
@@ -116,8 +124,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   nps  = filter(x -> βs <= x, pupd)
 
   # make hidden factors assigning 
-  assign_hidfacs! = 
-    make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
+  assign_hidfacs! = make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
 
   # force same parameter values for constraints
   for wp in keys(dcp)
@@ -159,14 +166,18 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   child = ed[:,2]
   wtp   = findall(child .<= ntip)
 
-
-
   # assign states to terminal branches
   for wi in wtp 
     wig = Set(findall(map(x -> isone(x), tv[child[wi]])))
     X[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
+  return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, dcp, dcfp, 
+    pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0
 
 end
+
+
+
+
 

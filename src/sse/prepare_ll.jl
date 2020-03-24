@@ -156,43 +156,43 @@ function prepare_ll(cov_mod    ::NTuple{M,String},
 
 
 
-  # Estimate extinction at `ts` times
-  tf = maximum(bts)
-  ts = [ti:Eδt:tf...]
+    # Estimate extinction at `ts` times
+    tf = maximum(bts)
+    ts = [ti:Eδt:tf...]
 
-  egeohisse_E = make_egeohisse_E(Val(k), Val(h), Val(ny), Val(model), af!)
+    egeohisse_E = make_egeohisse_E(Val(k), Val(h), Val(ny), Val(model), af!)
 
-  # Make extinction integral
-  Et = make_Et(egeohisse_E, p, E0, ts, ti, tf)
+    # Make extinction integral
+    Et = make_Et(egeohisse_E, p, E0, ts, ti, tf)
 
-  # estimate first Extinction probabilities at times `ts`
-  Ets  = Et(p)
-  nets = length(Ets) + 1
+    # estimate first Extinction probabilities at times `ts`
+    Ets  = Et(p)
+    nets = length(Ets) + 1
 
-  # Make extinction approximated function
-  # ** this make order is crucial **
-  afE! = make_af(ts,  Ets, Val(ns))
+    # Make extinction approximated function
+    # ** this make order is crucial **
+    afE! = make_af(ts,  Ets, Val(ns))
 
-  # make likelihood integral
-  ode_intf = 
-    make_egeohisse_M(Val(k), Val(h), Val(ny), Val(model), af!, afE!, nets)
+    # make likelihood integral
+    ode_intf = 
+      make_egeohisse_M(Val(k), Val(h), Val(ny), Val(model), af!, afE!, nets)
 
-  # push parameters as the last vector in Ets
-  push!(Ets, p)
+    # push parameters as the last vector in Ets
+    push!(Ets, p)
 
-  # make Gt function
-  Gt = make_Gt(ode_intf, Ets, Matrix{Float64}(I, ns, ns), bts, ti, tf)
+    # make Gt function
+    Gt = make_Gt(ode_intf, Ets, Matrix{Float64}(I, ns, ns), bts, ti, tf)
 
-  # sort branching times
-  sort!(bts)
+    # sort branching times
+    sort!(bts)
 
-  # add the present `0.0`
-  pushfirst!(bts, 0.0)
+    # add the present `0.0`
+    pushfirst!(bts, 0.0)
 
-  nbts = lastindex(bts)
+    nbts = lastindex(bts)
 
-  # estimate `Gts` according to `Ets` and `p0`
-  Gts = Gt(Ets)
+    # estimate `Gts` according to `Ets` and `p0`
+    Gts = Gt(Ets)
 
   ## link edges with initial and end branching times 
   abts = abs_time_branches(el, ed, ntip)
@@ -228,11 +228,11 @@ function prepare_ll(cov_mod    ::NTuple{M,String},
     X[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
-  # make λevent!
-  λevent! = make_λevent(h, k, ny, true, model, af!)
+    # make λevent!
+    λevent! = make_λevent(h, k, ny, true, model, af!)
 
-  # make root likelihood conditioning
-  rootll = make_rootll(h, k, ny, model, af!)
+    # make root likelihood conditioning
+    rootll = make_rootll(h, k, ny, model, af!)
 
   return Gt, Et, X, p, fp, triads, lbts, ns, ned, nets, pupd, phid, nnps, nps,
     dcp, dcfp, pardic, k, h, ny, model, λevent!, rootll, assign_hidfacs!
@@ -243,36 +243,52 @@ end
 
 
 """
-    prepare_ll(cov_mod::NTuple{M,String},
-               tv     ::Dict{Int64,Array{Float64,1}},
-               ed     ::Array{Int64,2},
-               el     ::Array{Float64,1},
-               bts    ::Array{Float64,1},
-               E0     ::Array{Float64,1},
-               h      ::Int64;
-               Eδt    ::Float64 = 0.01,
-               ti     ::Float64 = 0.0) where{M}
+    prepare_ll(X    ::Array{Array{Float64,1},1},
+               p    ::Array{Float64,1},
+               E0   ::Array{Float64,1},
+               ns   ::Int64,
+               k    ::Int64,
+               h    ::Int64,
+               ny   ::Int64,
+               model::NTuple{3, Bool},
+               abts ::Array{Float64,2},
+               af!  ::Function)
 
 Prepare **EGeoHiSSE** likelihoods using the **pruning** algorithm 
 given input data.
 """
-function prepare_ll(cov_mod    ::NTuple{M,String},
-                    tv         ::Dict{Int64,Array{Float64,1}},
-                    x          ::Array{Float64,1},
-                    y          ::Array{Float64,N},
-                    ed         ::Array{Int64,2},
-                    el         ::Array{Float64,1},
-                    bts        ::Array{Float64,1},
-                    E0         ::Array{Float64,1},
-                    h          ::Int64;
-                    constraints::NTuple{O,String} = (" ",))
+function prepare_ll(X    ::Array{Array{Float64,1},1},
+                    p    ::Array{Float64,1},
+                    E0   ::Array{Float64,1},
+                    ns   ::Int64,
+                    k    ::Int64,
+                    h    ::Int64,
+                    ny   ::Int64,
+                    model::NTuple{3, Bool},
+                    abts ::Array{Float64,2},
+                    af!  ::Function)
 
+  # add extinction to likelihood vector
+  for i in Base.OneTo(lastindex(X))
+    append!(X[i], E0)
+  end
 
+  abts1 = abts[:,1]
+  abts2 = abts[:,2]
 
+  # make speciation events and closure
+  λevent! = make_λevent(h, k, ny, false, model, af!)
 
+  # make root likelihood conditioning
+  rootll = make_rootll(h, k, ny, model, af!)
 
+  # make ODE function
+  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
 
+  # make ODE solver
+  ode_solve = make_solver(ode_fun, p, zeros(2*h*(2^k-1)))
 
+  return X, ode_solve, λevent!, rootll, abts1, abts2
 end
 
 

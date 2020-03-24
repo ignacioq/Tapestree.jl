@@ -14,20 +14,20 @@ Updated 26 03 2019
 
 
 """
-    make_lhf(llf, prf)
+    make_lhf(llf ::Function, 
+             lpf ::Function, 
+             assign_hidfacs!::Function,
+             dcp ::Dict{Int64,Int64},
+             dcfp::Dict{Int64,Int64})
 
 Make log posterior function with the likelihood, **llf**, 
 and prior, **lpf**, functions.
 """
-function make_lhf(llf ::Function, 
-                  lpf ::Function, 
+function make_lhf(llf            ::Function, 
+                  lpf            ::Function, 
                   assign_hidfacs!::Function,
-                  dcp ::Dict{Int64,Int64},
-                  dcfp::Dict{Int64,Int64},
-                  ::Val{k},
-                  ::Val{h},
-                  ::Val{ny},
-                  ::Val{model}) where {k, h, ny, model}
+                  dcp            ::Dict{Int64,Int64},
+                  dcfp           ::Dict{Int64,Int64})
 
   ks  = keys(dcp)
   ksf = keys(dcfp)
@@ -66,101 +66,35 @@ end
 
 
 """
-    make_llf(tip_val::Dict{Int64,Array{Float64,1}},
-             ed     ::Array{Int64,2},
-             el     ::Array{Float64,1},
-             ode_fun,
-             af!    ::Function,
-             p      ::Array{Float64,1},
-             h      ::Int64,
-             ny     ::Int64,
-             model  ::Int64)
+    make_loglik(X        ::Array{Array{Float64,1},1},
+                abts1    ::Array{Float64,1},
+                abts2    ::Array{Float64,1},
+                trios    ::Array{Array{Int64,1},1},
+                ode_solve::Function,
+                λevent!  ::Function, 
+                rootll   ::Function,
+                k        ::Int64,
+                h        ::Int64,
+                ns       ::Int64)
 
 Make likelihood function for a tree given an ODE function.
 """
-function make_llf(tip_val::Dict{Int64,Array{Float64,1}},
-                  ed     ::Array{Int64,2},
-                  el     ::Array{Float64,1},
-                  ode_solve,
-                  af!    ::Function,
-                  ::Val{k},
-                  ::Val{h},
-                  ::Val{ny},
-                  ::Val{model}) where {k, h, ny, model}
+function make_loglik(X        ::Array{Array{Float64,1},1},
+                     abts1    ::Array{Float64,1},
+                     abts2    ::Array{Float64,1},
+                     trios    ::Array{Array{Int64,1},1},
+                     ode_solve::Function,
+                     λevent!  ::Function, 
+                     rootll   ::Function,
+                     k        ::Int64,
+                     h        ::Int64,
+                     ns       ::Int64)
 
-  ns   = h*(2^k-1)
-  ntip = length(tip_val)
-
-  # add root of length 0
-  ed = cat(ed, [2*ntip ntip + 1], dims = 1)
-  push!(el, 0.0)
-
-  # get absolute times of branches as related to z(t)
-  elrt = abs_time_branches(el, ed, ntip)
-
-  elrt1 = elrt[:,1]
-  elrt2 = elrt[:,2]
-
-  ne    = size(ed,1)
-  child = ed[:,2]
-  wtp   = findall(child .<= ntip)
-
-  # make trios
-  trios = maketriads(ed, rev = true)
-
-  # preallocate tip likelihoods
-  led = Array{Float64,1}[]
-  for i in Base.OneTo(ne)
-    push!(led, zeros(Float64, 2*ns))
-  end
-
-  # create states 
-  S = create_states(k, h)
-
-  # assign states to terminal branches
-  for wi in wtp 
-    wig = Set(findall(map(x -> isone(x), tip_val[child[wi]])))
-    led[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
-  end
-
-  # partial log-likelihoods
+  # preallocate vectors
   llik = Array{Float64,1}(undef,ns)
-
-  # log lambdas 
-  lλs = Array{Float64,1}(undef,h*(k+1))
-
-  # log lambdas covariates
-  λts = Array{Float64,1}(undef,h*k)
-
-  # preallocate output of y covariates
-  r = Array{Float64,1}(undef,ny)
-
-  # preallocate weights
-  w = Array{Float64,1}(undef,ns)
-
-  # preallocate extinction probabilities at root
+  λts  = Array{Float64,1}(undef,h*k)
+  w    = Array{Float64,1}(undef,ns)
   extp = Array{Float64,1}(undef, ns)
-
-  # make speciation events and closure
-  λevent! = make_λevent(h, k, ny, false, model, af!)
-
-
-"""
-replace root as well
-"""
-
-
-  # make root full likelihood estimation and closure
-  rootll = (t   ::Float64,
-            llik::Array{Float64,1},
-            extp::Array{Float64,1},
-            w   ::Array{Float64,1},
-            p   ::Array{Float64,1},
-            λts::Array{Float64,1}) -> 
-    begin
-      rootll_full(t, llik, extp, w, p, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))
-    end
 
   function f(p::Array{Float64,1})
 
@@ -173,25 +107,19 @@ replace root as well
 
         pr, d1, d2 = triad::Array{Int64,1}
 
-        ud1 = ode_solve(led[d1], p, elrt2[d1], elrt1[d1])::Array{Float64,1}
+        ud1 = ode_solve(X[d1], p, abts2[d1], abts1[d1])::Array{Float64,1}
 
         check_negs(ud1, ns) && return -Inf
 
-        ud2 = ode_solve(led[d2], p, elrt2[d2], elrt1[d2])::Array{Float64,1}
+        ud2 = ode_solve(X[d2], p, abts2[d2], abts1[d2])::Array{Float64,1}
 
         check_negs(ud2, ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(elrt2[pr], llik, ud1, ud2, λts, p)
+        λevent!(abts2[pr], llik, ud1, ud2, λts, p)
 
         # loglik to sum for integration
-        tosum = 0.0
-        for i in Base.OneTo(ns)
-          tosum += llik[i]
-        end
-        for i in Base.OneTo(ns)
-          llik[i] /= tosum
-        end
+        tosum = normbysum!(llik, ns)
 
         llxtra += log(tosum)
 
@@ -200,23 +128,23 @@ replace root as well
         # check for extinction of `1.0`
         for i in Base.OneTo(ns)
           ud1[i+ns] > 1.0 && return -Inf
-          led[pr][i+ns] = ud1[i+ns]
-          led[pr][i]    = llik[i]
+          X[pr][i+ns] = ud1[i+ns]
+          X[pr][i]    = llik[i]
         end
       end
 
       # assign root likelihood in non log terms &
       # assign root extinction probabilities
       for i in Base.OneTo(ns)
-        llik[i] = led[ne][i]
-        extp[i] = led[ne][i+ns]
+        llik[i] = X[ned][i]
+        extp[i] = X[ned][i+ns]
       end
 
       # estimate likelihood weights
       normbysum!(llik, w, ns)
 
       # combine root likelihoods
-      ll = rootll(elrt1[ne], llik, extp, w, p)
+      ll = rootll(abts1[ned], llik, extp, w, p)
 
       return (log(ll) + llxtra)::Float64
     end
@@ -835,6 +763,26 @@ end
 
 
 """
+    normbysum!(v::Array{Float64,1}, ns::Int64)
+
+Return weights by the sum of all elements of the array to sum 1 and overwrites. 
+"""
+function normbysum!(v::Array{Float64,1}, ns::Int64)
+  s = sum(v)
+  @inbounds begin
+    @simd for i in Base.OneTo(ns)
+      v[i] /= s
+    end
+  end
+  return s
+end
+
+
+
+
+
+
+"""
     make_lpf(pupd   ::Array{Int64,1},
              phid   ::Array{Int64,1},
              λpriors::Float64,
@@ -1079,6 +1027,90 @@ end
 
 
 
+"""
+    make_λevent(h    ::Int64, 
+                k    ::Int64, 
+                ny   ::Int64, 
+                flow ::Bool,
+                model::NTuple{3,Bool},
+                af!  ::Function)
+
+Make function for λevent.
+"""
+function make_λevent(h    ::Int64, 
+                     k    ::Int64, 
+                     ny   ::Int64, 
+                     flow ::Bool,
+                     model::NTuple{3,Bool},
+                     af!  ::Function)
+
+  λts = Array{Float64,1}(undef,h*k)
+  r   = Array{Float64,1}(undef,ny)
+
+  # make speciation events and closure
+  if flow
+    λevent! = (t   ::Float64, 
+               llik::Array{Array{Float64,1},1},
+               ud1 ::Array{Float64,1},
+               ud2 ::Array{Float64,1},
+               p   ::Array{Float64,1},
+               pr  ::Int64) ->
+    begin
+      λevent_full(t, llik, ud1, ud2, p, pr, λts, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
+
+  else
+    λevent! = (t   ::Float64, 
+               llik::Array{Float64,1},
+               ud1 ::Array{Float64,1},
+               ud2 ::Array{Float64,1},
+               p   ::Array{Float64,1}) ->
+    begin
+      λevent_full(t, llik, ud1, ud2, p, λts, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))
+      return nothing
+    end
+  end
+
+  return λevent!
+end
+
+
+
+
+
+"""
+    make_rootll(h    ::Int64, 
+                k    ::Int64, 
+                ny   ::Int64, 
+                model::NTuple{3,Bool},
+                af!  ::Function)
+
+Make root conditioning likelihood function.
+"""
+function make_rootll(h    ::Int64, 
+                     k    ::Int64, 
+                     ny   ::Int64, 
+                     model::NTuple{3,Bool},
+                     af!  ::Function)
+
+  λts = Array{Float64,1}(undef,h*k)
+  r   = Array{Float64,1}(undef,ny)
+
+  rootll = (t   ::Float64,
+            llik::Array{Float64,1},
+            extp::Array{Float64,1},
+            w   ::Array{Float64,1},
+            p   ::Array{Float64,1}) -> 
+    begin
+      rootll_full(t, llik, extp, w, p, λts, r, af!,
+        Val(k), Val(h), Val(ny), Val(model))::Float64
+    end
+
+  return rootll
+end
 
 
 
