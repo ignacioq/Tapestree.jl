@@ -42,6 +42,9 @@ function ESSE(states_file ::String,
               constraints ::NTuple{N,String}  = (" ",),
               niter       ::Int64             = 10_000,
               nthin       ::Int64             = 10,
+              nburn       ::Int64             = 200,
+              ntakew      ::Int64             = 100,
+              winit       ::Float64             = 2.0,
               scale_y     ::NTuple{2,Bool}    = (true, false),
               algorithm   ::String            = "pruning",
               λpriors     ::Float64           = .1,
@@ -124,7 +127,7 @@ function ESSE(states_file ::String,
 
   # run slice sampler
   R = slice_sampler(lhf, p, fp, nnps, nps, phid, length(pardic), 
-                    niter, nthin, optimal_w, screen_print)
+                    niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
 
   write_ssr(R, pardic, out_file)
 

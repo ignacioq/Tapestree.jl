@@ -118,10 +118,13 @@ function w_sampler(lhf         ::Function,
                    phid        ::Array{Int64,1},
                    npars       ::Int64,
                    optimal_w   ::Float64,
-                   screen_print::Int64)
+                   screen_print::Int64,
+                   nburn       ::Int64,
+                   ntakew      ::Int64,
+                   winit       ::Float64)
 
-  w  = ones(npars)
-  ps = Array{Float64,2}(undef, 100, npars)
+  w  = fill(winit, npars)
+  ps = Array{Float64,2}(undef, nburn, npars)
 
   # posterior
   hc = lhf(p, fp)
@@ -130,9 +133,9 @@ function w_sampler(lhf         ::Function,
   pp  = copy(p)
   fpp = copy(fp)
 
-  prog = Progress(100, screen_print, "estimating optimal widths...", 20)
+  prog = Progress(nburn, screen_print, "estimating optimal widths...", 20)
 
-  for it in Base.OneTo(100)
+  for it in Base.OneTo(nburn)
 
     for j in nnps
       S     = (hc - Random.randexp())
@@ -156,6 +159,8 @@ function w_sampler(lhf         ::Function,
 
     next!(prog)
   end
+
+  ps = ps[(nburn-ntakew):nburn,:]
 
   w = optimal_w .* (reduce(max, ps, dims=1) .- reduce(min, ps, dims=1))
   w = reshape(w, size(w,2))
