@@ -27,14 +27,19 @@ Created 05 03 2020
 
 Prepare **EGeoHiSSE** likelihoods using the **flow** algorithm given input data.
 """
-function prepare_ll(p          ::Array{Float64,1},
-                    bts        ::Array{Float64,1},
-                    E0         ::Array{Float64,1},
-                    k          ::Int64,
-                    h          ::Int64,
-                    ny         ::Int64,
-                    Eδt        ::Float64,
-                    ti         ::Float64)
+function prepare_ll(p    ::Array{Float64,1},
+                    bts  ::Array{Float64,1},
+                    E0   ::Array{Float64,1},
+                    k    ::Int64,
+                    h    ::Int64,
+                    ny   ::Int64,
+                    ns   ::Int64,
+                    ned  ::Int64,
+                    model::NTuple{3, Bool},
+                    Eδt  ::Float64,
+                    ti   ::Float64,
+                    abts ::Array{Float64,2},
+                    af!  ::Function)
 
   # Estimate extinction at `ts` times
   tf = maximum(bts)

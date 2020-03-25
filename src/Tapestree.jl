@@ -65,6 +65,9 @@ include("sse/slice_sampler_utils.jl")
 include("sse/slice_sampler.jl")
 include("sse/ode_solve.jl")
 include("sse/egeohisse_eqs.jl")
+include("sse/prepare_data.jl")
+include("sse/prepare_ll.jl")
 include("sse/loglik_geo.jl")
+include("sse/loglik_flow.jl")
 
 end # module Tapestree

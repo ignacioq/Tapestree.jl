@@ -61,7 +61,7 @@ function ESSE(states_file ::String,
   tv, ed, el, bts, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
 
-  printstyled("Data successfully read", color = :green)
+  printstyled("Data successfully read \n", color = :green)
 
   # scale y
   if scale_y[1]
@@ -86,14 +86,14 @@ function ESSE(states_file ::String,
     pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0 = 
         prepare_data(cov_mod, tv, x, y, ed, el, E0, h, constraints) 
 
-  printstyled("Data successfully prepared", color = :green)
+  printstyled("Data successfully prepared \n", color = :green)
 
   # make likelihood function
   if occursin(r"^[f|F][A-za-z]*", algorithm) 
 
     # prepare likelihood
     Gt, Et, lbts, nets, λevent!, rootll = 
-      prepare_ll(p, bts, E0, k, h, ny, Eδt, ti)
+      prepare_ll(p, bts, E0, k, h, ny, ns, ned, model, Eδt, ti, abts, af!)
 
     # make likelihood function
     llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
