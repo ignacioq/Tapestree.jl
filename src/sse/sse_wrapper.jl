@@ -53,13 +53,15 @@ function ESSE(states_file ::String,
               hpriors     ::Float64           = .1,
               optimal_w   ::Float64           = 0.8,
               screen_print::Int64             = 5,
-              Eδt         ::Float64           = 0.01,
+              Eδt         ::Float64           = 1e-3,
               ti          ::Float64           = 0.0,
               E0          ::Array{Float64,1}  = [0.0,0.0]) where {M,N}
 
   # read data 
   tv, ed, el, bts, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
+
+  printstyled("Data successfully read", color = :green)
 
   # scale y
   if scale_y[1]
@@ -84,17 +86,17 @@ function ESSE(states_file ::String,
     pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0 = 
         prepare_data(cov_mod, tv, x, y, ed, el, E0, h, constraints) 
 
+  printstyled("Data successfully prepared", color = :green)
+
   # make likelihood function
   if occursin(r"^[f|F][A-za-z]*", algorithm) 
 
     # prepare likelihood
-    Gt, Et, X, p, fp, triads, lbts, ns, ned, nets, pupd, phid, nnps, nps,
-    dcp, dcfp, pardic, k, h, ny, model, λevent!, rootll, assign_hidfacs! = 
-      prepare_ll(cov_mod, tv, x, y, ed, el, bts, E0, h, 
-        constraints = constraints, Eδt = Eδt, ti = ti)
+    Gt, Et, lbts, nets, λevent!, rootll = 
+      prepare_ll(p, bts, E0, k, h, ny, Eδt, ti)
 
     # make likelihood function
-    llf = make_loglik(Gt, Et, X, triads, lbts, bts, ns, ned, nets, 
+    llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
                       λevent!, rootll)
 
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
@@ -109,6 +111,7 @@ function ESSE(states_file ::String,
 
   else
     error("No matching likelihood algorithm")
+
   end
 
   # create prior function
