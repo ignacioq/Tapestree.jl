@@ -21,6 +21,12 @@ September 26 2017
          constraints ::NTuple{N,String}  = (" ",),
          niter       ::Int64             = 10_000,
          nthin       ::Int64             = 10,
+         nburn       ::Int64             = 200,
+         nchains     ::Int64             = 1,
+         ntakew      ::Int64             = 100,
+         winit       ::Float64             = 2.0,
+         scale_y     ::NTuple{2,Bool}    = (true, false),
+         algorithm   ::String            = "pruning",
          λpriors     ::Float64           = .1,
          μpriors     ::Float64           = .1,
          gpriors     ::Float64           = .1,
@@ -29,7 +35,10 @@ September 26 2017
          βpriors     ::NTuple{2,Float64} = (0.0, 10.0),
          hpriors     ::Float64           = .1,
          optimal_w   ::Float64           = 0.8,
-         screen_print::Int64             = 5)
+         screen_print::Int64             = 5,
+         Eδt         ::Float64           = 1e-3,
+         ti          ::Float64           = 0.0,
+         E0          ::Array{Float64,1}  = [0.0,0.0]) where {M,N}
 
 Wrapper for running a SSE model.
 """
@@ -43,6 +52,7 @@ function ESSE(states_file ::String,
               niter       ::Int64             = 10_000,
               nthin       ::Int64             = 10,
               nburn       ::Int64             = 200,
+              nchains     ::Int64             = 1,
               ntakew      ::Int64             = 100,
               winit       ::Float64             = 2.0,
               scale_y     ::NTuple{2,Bool}    = (true, false),
@@ -64,7 +74,7 @@ function ESSE(states_file ::String,
   tv, ed, el, bts, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
 
-  printstyled("Data successfully read \n", color = :green)
+  @info "Data successfully read"
 
   # scale y
   if scale_y[1]
@@ -89,7 +99,7 @@ function ESSE(states_file ::String,
     pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0 = 
         prepare_data(cov_mod, tv, x, y, ed, el, E0, h, constraints) 
 
-  printstyled("Data successfully prepared \n", color = :green)
+  @info "Data successfully prepared"
 
   # make likelihood function
   if occursin(r"^[f|F][A-za-z]*", algorithm) 
@@ -105,7 +115,7 @@ function ESSE(states_file ::String,
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
-    X, ode_solve, λevent!, rootll, abts1, abts2 = 
+    cov_modX, ode_solve, λevent!, rootll, abts1, abts2 = 
       prepare_ll(X, p, E0, ns, k, h, ny, model, abts ,af!)
 
     # make likelihood function
@@ -113,7 +123,7 @@ function ESSE(states_file ::String,
       λevent!, rootll, k, h, ns, ned)
 
   else
-    error("No matching likelihood algorithm")
+    @error "No matching likelihood algorithm"
 
   end
 
@@ -125,11 +135,27 @@ function ESSE(states_file ::String,
   # create posterior functions
   lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp)
 
-  # run slice sampler
-  R = slice_sampler(lhf, p, fp, nnps, nps, phid, length(pardic), 
-                    niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+  # number of parameters
+  npars = length(pardic)
 
-  write_ssr(R, pardic, out_file)
+  # number of samples
+  nlogs = fld(niter,nthin)
+
+  # where to write in the Shared Array
+  cits = [(1+j):(nlogs+j) for j in 0:nlogs:(nchains-1)*nlogs]
+
+  # run slice-sampling in parallel
+  R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
+
+  # run parallel loop
+  @sync @distributed for ci in Base.OneTo(nchains)
+    R[cits[ci],:] = 
+      slice_sampler(lhf, p, fp, nnps, nps, phid, npars, 
+        niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+  end
+
+  # write output
+  write_ssr(R, pardic, out_file, cits)
 
   return R
 end
@@ -206,14 +232,15 @@ end
             pardic  ::Dict{String,Int64},
             out_file::String)
 
-Write the samples from an MCMC data frame given a Dictionary of parameters.
+Write the samples from an MC sampler data frame 
+given a Dictionary of parameters.
 """
 function write_ssr(R       ::Array{Float64,2}, 
                    pardic  ::Dict{String,Int64},
                    out_file::String)
 
   # column names
-  col_nam = ["Iteration", "Posterior"]
+  col_nam = ["Chain", "Iteration", "Posterior"]
 
   for (k,v) in sort!(collect(pardic), by = x -> x[2])
     push!(col_nam, k)
@@ -223,6 +250,40 @@ function write_ssr(R       ::Array{Float64,2},
 
   writedlm(out_file*".log", R)
 end
+
+
+
+
+
+"""
+  write_ssr(R       ::SharedArray{Float64,2}, 
+            pardic  ::Dict{String,Int64},
+            out_file::String,
+            cits    ::Array{UnitRange{Int64},1})
+
+Write the samples from multiple chains of MC sampler data frame 
+given a Dictionary of parameters.
+"""
+function write_ssr(R       ::SharedArray{Float64,2}, 
+                   pardic  ::Dict{String,Int64},
+                   out_file::String,
+                   cits    ::Array{UnitRange{Int64},1})
+
+  # column names
+  col_nam = ["Iteration", "Posterior"]
+
+  for (k,v) in sort!(collect(pardic), by = x -> x[2])
+    push!(col_nam, k)
+  end
+
+  for ci in Base.OneTo(length(cits))
+    ri = vcat(reshape(col_nam, 1, lastindex(col_nam)), R[cits[ci],:])
+    writedlm(out_file*"_chain_$ci.log", ri)
+  end
+
+end
+
+
 
 
 

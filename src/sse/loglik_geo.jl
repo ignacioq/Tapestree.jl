@@ -291,7 +291,7 @@ Generated function for full tree likelihood at the root for normal likelihoods.
 
   push!(eqs.args, :($eq))
 
-  println(eqs)
+  #Core.println(eqs)
 
   return quote
     @inbounds begin
@@ -434,7 +434,7 @@ Generated function for speciation event likelihoods for normal likelihood.
     end
   end
 
-  println(eqs)
+  #Core.println(eqs)
 
 
   return quote 
@@ -580,7 +580,7 @@ Generated function for speciation event likelihoods for flow algorithm.
     end
   end
 
-  println(eqs)
+  #Core.println(eqs)
 
 
   return quote 
@@ -844,7 +844,7 @@ factor+parameter `fp` vector.
       (p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))])))
   end
 
-  println(ex)
+  #Core.println(ex)
 
   return quote
     @inbounds begin

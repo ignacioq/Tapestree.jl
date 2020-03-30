@@ -39,9 +39,9 @@ function loop_slice_sampler(lhf         ::Function,
                             screen_print::Int64)
 
   nlogs = fld(niter,nthin)
-  its   = zeros(Float64,nlogs)
-  hlog  = zeros(Float64,nlogs)
-  ps    = zeros(Float64,nlogs,npars)
+  its   = Array{Float64,1}(undef, nlogs)
+  hlog  = Array{Float64,1}(undef, nlogs)
+  ps    = Array{Float64,2}(undef, nlogs,npars)
 
   lthin, lit = 0, 0
 
@@ -123,6 +123,10 @@ function w_sampler(lhf         ::Function,
                    ntakew      ::Int64,
                    winit       ::Float64)
 
+  if nburn < ntakew
+    ntakew = nburn
+  end
+
   w  = fill(winit, npars)
   ps = Array{Float64,2}(undef, nburn, npars)
 
@@ -160,7 +164,9 @@ function w_sampler(lhf         ::Function,
     next!(prog)
   end
 
-  ps = ps[(nburn-ntakew):nburn,:]
+  sps = nburn-ntakew
+
+  ps = ps[(nburn-ntakew+1):nburn,:]
 
   w = optimal_w .* (reduce(max, ps, dims=1) .- reduce(min, ps, dims=1))
   w = reshape(w, size(w,2))
