@@ -18,6 +18,8 @@ using Random
 using DelimitedFiles
 using Statistics
 using LinearAlgebra
+using Distributed
+using SharedArrays
 
 # `true' dependencies
 using RCall
