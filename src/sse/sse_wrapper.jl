@@ -141,21 +141,31 @@ function ESSE(states_file ::String,
   # number of samples
   nlogs = fld(niter,nthin)
 
-  # where to write in the Shared Array
-  cits = [(1+j):(nlogs+j) for j in 0:nlogs:(nchains-1)*nlogs]
+  # if parallel
+  if nchains > 1
+    # where to write in the Shared Array
+    cits = [(1+j):(nlogs+j) for j in 0:nlogs:(nchains-1)*nlogs]
 
-  # run slice-sampling in parallel
-  R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
+    # run slice-sampling in parallel
+    R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
 
-  # run parallel loop
-  @sync @distributed for ci in Base.OneTo(nchains)
-    R[cits[ci],:] = 
-      slice_sampler(lhf, p, fp, nnps, nps, phid, npars, 
-        niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+    # run parallel loop
+    @sync @distributed for ci in Base.OneTo(nchains)
+      R[cits[ci],:] = 
+        slice_sampler(lhf, p, fp, nnps, nps, phid, npars, 
+          niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+    end
+
+    # write output
+    write_ssr(R, pardic, out_file, cits)
+  else
+
+    R = slice_sampler(lhf, p, fp, nnps, nps, phid, npars, 
+          niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+
+    # write output
+    write_ssr(R, pardic, out_file)
   end
-
-  # write output
-  write_ssr(R, pardic, out_file, cits)
 
   return R
 end
@@ -240,7 +250,7 @@ function write_ssr(R       ::Array{Float64,2},
                    out_file::String)
 
   # column names
-  col_nam = ["Chain", "Iteration", "Posterior"]
+  col_nam = ["Iteration", "Posterior"]
 
   for (k,v) in sort!(collect(pardic), by = x -> x[2])
     push!(col_nam, k)
