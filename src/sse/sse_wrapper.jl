@@ -38,7 +38,7 @@ September 26 2017
          screen_print::Int64             = 5,
          Eδt         ::Float64           = 1e-3,
          ti          ::Float64           = 0.0,
-         E0          ::Array{Float64,1}  = [0.0,0.0]) where {M,N}
+         ρ           ::Float64           = 1.0) where {M,N}
 
 Wrapper for running a SSE model.
 """
@@ -68,7 +68,7 @@ function ESSE(states_file ::String,
               screen_print::Int64             = 5,
               Eδt         ::Float64           = 1e-3,
               ti          ::Float64           = 0.0,
-              E0          ::Array{Float64,1}  = [0.0,0.0]) where {M,N}
+              ρ           ::Float64           = 1.0) where {M,N}
 
   # read data 
   tv, ed, el, bts, x, y = 
@@ -97,7 +97,7 @@ function ESSE(states_file ::String,
   # prepare data
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, dcp, dcfp, 
     pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0 = 
-        prepare_data(cov_mod, tv, x, y, ed, el, E0, h, constraints) 
+        prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints) 
 
   @info "Data successfully prepared"
 
@@ -115,7 +115,7 @@ function ESSE(states_file ::String,
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
-    cov_modX, ode_solve, λevent!, rootll, abts1, abts2 = 
+    X, ode_solve, λevent!, rootll, abts1, abts2 = 
       prepare_ll(X, p, E0, ns, k, h, ny, model, abts ,af!)
 
     # make likelihood function

@@ -20,7 +20,7 @@ Created 16 03 2020
                  ed         ::Array{Int64,2},
                  el         ::Array{Float64,1},
                  bts        ::Array{Float64,1},
-                 E0         ::Array{Float64,1},
+                 ρ          ::Float64,
                  h          ::Int64,
                  constraints::NTuple{O,String}) 
 
@@ -32,7 +32,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
                       y          ::Array{Float64,N},
                       ed         ::Array{Int64,2},
                       el         ::Array{Float64,1},
-                      E0         ::Array{Float64,1},
+                      ρ          ::Float64,
                       h          ::Int64,
                       constraints::NTuple{O,String}) where {N,M,O}
 
@@ -146,10 +146,8 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # assign hidden factors
   assign_hidfacs!(p, fp)
 
-  # extinction at time 0
-  if E0 == [0.0,0.0]
-    E0 = zeros(ns)
-  end
+  # extinction at time 0 with sampling fraction ρ
+  E0 = fill(1.0 - ρ, ns)
 
   # create geographic & hidden states 
   S = create_states(k, h)
