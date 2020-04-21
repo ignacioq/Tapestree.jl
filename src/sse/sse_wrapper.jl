@@ -123,7 +123,7 @@ function ESSE(states_file ::String,
       λevent!, rootll, k, h, ns, ned)
 
   else
-    @error "No matching likelihood algorithm"
+    @error "No matching likelihood for algorithm: $algorithm"
 
   end
 
