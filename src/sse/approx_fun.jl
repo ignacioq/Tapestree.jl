@@ -141,7 +141,7 @@ end
 
 
 """
-  make_af(x, y, ::Val{ny})
+  make_af(x::Array{Float64,1}, y::Array{Float64,N}, ::Val{ny})
 
 make approximate function closure
 """
@@ -227,7 +227,7 @@ end
 
 
 """
-  make_af(x, y, ::Val{ny})
+  make_af(x::Array{Float64,1}, y::Array{Array{Float64,1},1}, ::Val{ny})
 
 make approximate function closure
 """
