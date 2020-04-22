@@ -69,7 +69,7 @@ function ESSE(states_file ::String,
               screen_print::Int64             = 5,
               Eδt         ::Float64           = 1e-3,
               ti          ::Float64           = 0.0,
-              ρ           ::Float64           = 1.0) where {M,N,O}
+              ρ           ::Array{Float64,1}  = [1.0]) where {M,N,O}
 
   # read data 
   tv, ed, el, bts, x, y = 

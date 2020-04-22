@@ -19,10 +19,10 @@ Created 16 03 2020
                  y          ::Array{Float64,N},
                  ed         ::Array{Int64,2},
                  el         ::Array{Float64,1},
-                 bts        ::Array{Float64,1},
-                 ρ          ::Float64,
+                 ρ          ::Array{Float64,1},
                  h          ::Int64,
-                 constraints::NTuple{O,String}) 
+                 constraints::NTuple{O,String},
+                 mvpars     ::NTuple{P,String})
 
 Prepare data for **EGeoHiSSE** likelihood calculations.
 """
@@ -32,7 +32,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
                       y          ::Array{Float64,N},
                       ed         ::Array{Int64,2},
                       el         ::Array{Float64,1},
-                      ρ          ::Float64,
+                      ρ          ::Array{Float64,1},
                       h          ::Int64,
                       constraints::NTuple{O,String},
                       mvpars     ::NTuple{P,String}) where {N,M,O,P}
@@ -189,8 +189,17 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # assign hidden factors
   assign_hidfacs!(p, fp)
 
-  # extinction at time 0 with sampling fraction ρ
-  E0 = fill(1.0 - ρ, ns)
+  # extinction at time 0 with sampling fraction `ρ_i`
+  if isone(lastindex(ρ))
+    E0 = fill(1.0 - ρ[1], ns)
+  elseif lastindex(ρ) == ns
+    E0 = ones(Float64, ns)
+    for i in Base.OneTo(ns)
+      E0[i] -= ρ[i] 
+    end
+  else
+    @error "Length of sampling fraction vector $(lastindex(ρ)) does not match length of the number of states $ns"
+  end
 
   # create geographic & hidden states 
   S = create_states(k, h)
