@@ -525,6 +525,10 @@ function set_multivariate(mvpars::NTuple{N,String},
     spl = map(x -> strip(x), split(c, '='))
     si = spl[1]
 
+    if si == ""
+      break
+    end
+
     for (k,v) in pardic
       # if matches a parameter
       if occursin(Regex("^$si"), k)

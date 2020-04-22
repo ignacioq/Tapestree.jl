@@ -47,7 +47,11 @@ function loop_slice_sampler(lhf         ::Function,
                             screen_print::Int64)
 
   # maximum number of multivariate updates
-  maxmvu = maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
+  maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
+    zero(1)
+  else
+    maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
+  end
 
   nlogs = fld(niter,nthin)
   its   = Array{Float64,1}(undef, nlogs)
@@ -174,9 +178,14 @@ function w_sampler(lhf         ::Function,
   end
 
   # maximum number of multivariate updates
-  maxmvu = maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
-  Lv    = Array{Float64,1}(undef, maxmvu)
-  Rv    = Array{Float64,1}(undef, maxmvu)
+  maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
+    zero(1)
+  else
+    maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
+  end
+
+  Lv = Array{Float64,1}(undef, maxmvu)
+  Rv = Array{Float64,1}(undef, maxmvu)
 
   w  = fill(winit, npars)
   ps = Array{Float64,2}(undef, nburn, npars)

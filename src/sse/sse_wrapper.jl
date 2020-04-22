@@ -102,7 +102,8 @@ function ESSE(states_file ::String,
 
   @info "Data successfully prepared"
 
-  # make likelihood function
+  ## make likelihood function
+  # flow algorithm
   if occursin(r"^[f|F][A-za-z]*", algorithm) 
 
     # prepare likelihood
@@ -112,7 +113,7 @@ function ESSE(states_file ::String,
     # make likelihood function
     llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
                       λevent!, rootll)
-
+  # prunning algorithm
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
