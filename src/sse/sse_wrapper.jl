@@ -49,6 +49,7 @@ function ESSE(states_file ::String,
               out_file    ::String,
               h           ::Int64;
               constraints ::NTuple{N,String}  = (" ",),
+              mvpars      ::NTuple{O,String}  = ("lambda = beta",),
               niter       ::Int64             = 10_000,
               nthin       ::Int64             = 10,
               nburn       ::Int64             = 200,
@@ -68,7 +69,7 @@ function ESSE(states_file ::String,
               screen_print::Int64             = 5,
               Eδt         ::Float64           = 1e-3,
               ti          ::Float64           = 0.0,
-              ρ           ::Float64           = 1.0) where {M,N}
+              ρ           ::Float64           = 1.0) where {M,N,O}
 
   # read data 
   tv, ed, el, bts, x, y = 
@@ -95,9 +96,9 @@ function ESSE(states_file ::String,
   end
 
   # prepare data
-  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, dcp, dcfp, 
-    pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0 = 
-        prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints) 
+  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, mvps, nngps, mvhfs, 
+  dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0 = 
+        prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
   @info "Data successfully prepared"
 
@@ -152,7 +153,7 @@ function ESSE(states_file ::String,
     # run parallel loop
     @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
-        slice_sampler(lhf, p, fp, nnps, nps, phid, npars, 
+        slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
           niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
     end
 
@@ -160,7 +161,7 @@ function ESSE(states_file ::String,
     write_ssr(R, pardic, out_file, cits)
   else
 
-    R = slice_sampler(lhf, p, fp, nnps, nps, phid, npars, 
+    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
           niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
 
     # write output

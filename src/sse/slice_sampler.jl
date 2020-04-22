@@ -14,7 +14,6 @@ November 20 2017
 
 
 
-
 """
     slice_sampler(tip_val     ::Dict{Int64,Array{Float64,1}},
                   ed          ::Array{Int64,2},
@@ -44,6 +43,9 @@ function slice_sampler(lhf         ::Function,
                        nnps        ::Array{Int64,1},
                        nps         ::Array{Int64,1},
                        phid        ::Array{Int64,1},
+                       mvps        ::Array{Array{Int64,1},1},
+                       nngps       ::Array{Array{Bool,1},1},
+                       mvhfs       ::Array{Array{Int64,1},1},
                        npars       ::Int64,
                        niter       ::Int64,
                        nthin       ::Int64,
@@ -55,12 +57,13 @@ function slice_sampler(lhf         ::Function,
 
   # estimate optimal w
   p, fp, w = 
-    w_sampler(lhf, p, fp, nnps, nps, phid, npars, optimal_w, screen_print,
-      nburn, ntakew, winit)
+    w_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, 
+      npars, optimal_w, screen_print, nburn, ntakew, winit)
 
   # slice-sampler
   its, hlog, ps = 
-    loop_slice_sampler(lhf, p, fp, nnps, nps, phid, w, npars, niter, nthin, screen_print)
+    loop_slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, 
+      w, npars, niter, nthin, screen_print)
 
   # save samples
   R = hcat(its, hlog, ps)

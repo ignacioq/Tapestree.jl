@@ -1,6 +1,6 @@
 #=
 
-handling of discrete states for ESSE and EGeoHiSSE
+Handling of discrete states and parameters for ESSE
 
 Ignacio Quintero Mächler
 
@@ -505,6 +505,50 @@ function dict_hscor(k::Int64, h::Int64, ny::Int64, model::NTuple{3, Bool})
   end
 
   return hsc
+end
+
+
+
+
+
+"""
+  set_multivariate(mvpars::NTuple{N,String},
+                   pardic::Dict{String,Int64}) where {N}
+
+Returns all vectors for multivariate updates given mvpars.
+"""
+function set_multivariate(mvpars::NTuple{N,String},
+                          pardic::Dict{String,Int64}) where {N}
+
+  mvps = Array{Int64,1}[]
+  for c in mvpars
+    spl = map(x -> strip(x), split(c, '='))
+    si = spl[1]
+
+    for (k,v) in pardic
+      # if matches a parameter
+      if occursin(Regex("^$si"), k)
+        mvp = [v]
+        # get area of parameter
+        ar = match(r"[A-Z]", k).match 
+        occursin('W', ar) && continue
+        # get hidden state
+        hd = match(r"[0-9]$", k).match 
+        # get other parameters in c that has this area and hidden state
+        for sj in spl
+          si == sj && continue
+          for (kj, vj) in pardic
+            if occursin(Regex("^$sj"), kj) && occursin(ar*"_"*hd, kj)
+              push!(mvp, vj)
+            end
+          end
+        end
+        push!(mvps, sort!(mvp))
+      end
+    end
+  end
+
+  return mvps
 end
 
 

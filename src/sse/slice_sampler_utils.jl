@@ -38,6 +38,7 @@ function loop_slice_sampler(lhf         ::Function,
                             nps         ::Array{Int64,1},
                             phid        ::Array{Int64,1},
                             mvps        ::Array{Array{Int64,1},1},
+                            nngps       ::Array{Array{Bool,1},1},
                             mvhfs       ::Array{Array{Int64,1},1},
                             w           ::Array{Float64,1},
                             npars       ::Int64,
@@ -76,38 +77,38 @@ function loop_slice_sampler(lhf         ::Function,
     # nonnegative parameters
     for j in nnps
      S     = hc - Random.randexp()
-     L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j])
-     p, hc = sample_int(p, pp, fp, j, L, R, S, lhf)
+     L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j], npars)
+     p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # real line parameters
     for j in nps
       S     = hc - Random.randexp()
-      L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j])
-      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf)
+      L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j], npars)
+      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # hidden factors
     for j in phid
      S     = hc - Random.randexp()
-     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j])
-     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf)
+     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars)
+     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars)
     end
 
     #=
     multivariate updates
     =#
     # non hidden factors
-    for mvp in mvps
+    for (i,mvp) in enumerate(mvps)
       S = hc - Random.randexp()
-      find_rect(p, pp, fp, mvp, ngp, S, lhf, w, Lv, Rv, npars)
+      @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
       p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
     end
 
     # hidden factors
     for mvp in mvhfs
       S = hc - Random.randexp()
-      find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
+      @views find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
       p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, S, lhf, npars)
     end
 
@@ -159,6 +160,7 @@ function w_sampler(lhf         ::Function,
                    nps         ::Array{Int64,1},
                    phid        ::Array{Int64,1},
                    mvps        ::Array{Array{Int64,1},1},
+                   nngps        ::Array{Array{Bool,1},1},
                    mvhfs       ::Array{Array{Int64,1},1},
                    npars       ::Int64,
                    optimal_w   ::Float64,
@@ -170,6 +172,11 @@ function w_sampler(lhf         ::Function,
   if nburn < ntakew
     ntakew = nburn
   end
+
+  # maximum number of multivariate updates
+  maxmvu = maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
+  Lv    = Array{Float64,1}(undef, maxmvu)
+  Rv    = Array{Float64,1}(undef, maxmvu)
 
   w  = fill(winit, npars)
   ps = Array{Float64,2}(undef, nburn, npars)
@@ -191,38 +198,38 @@ function w_sampler(lhf         ::Function,
     # nonnegative parameters
     for j in nnps
      S     = hc - Random.randexp()
-     L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j])
-     p, hc = sample_int(p, pp, fp, j, L, R, S, lhf)
+     L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j], npars)
+     p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # real line parameters
     for j in nps
       S     = hc - Random.randexp()
-      L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j])
-      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf)
+      L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j], npars)
+      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # hidden factors
     for j in phid
      S     = hc - Random.randexp()
-     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j])
-     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf)
+     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars)
+     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars)
     end
 
     #=
     multivariate updates
     =#
     # non hidden factors
-    for mvp in mvps
+    for (i, mvp) in enumerate(mvps)
       S = hc - Random.randexp()
-      find_rect(p, pp, fp, mvp, ngp, S, lhf, w, Lv, Rv, npars)
+      @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
       p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
     end
 
     # hidden factors
     for mvp in mvhfs
       S = hc - Random.randexp()
-      find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
+      @views find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
       p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, S, lhf, npars)
     end
 
@@ -505,7 +512,7 @@ end
               pp   ::Array{Float64,1}, 
               fp   ::Array{Float64,1}, 
               mvp  ::Array{Int64,1}, 
-              ngp  ::Array{Bool,1},
+              nngp  ::Array{Bool,1},
               S    ::Float64, 
               postf::Function, 
               w    ::Array{Float64,1},
@@ -519,7 +526,7 @@ function find_rect(p    ::Array{Float64,1},
                    pp   ::Array{Float64,1}, 
                    fp   ::Array{Float64,1}, 
                    mvp  ::Array{Int64,1}, 
-                   ngp  ::Array{Bool,1},
+                   nngp  ::Array{Bool,1},
                    S    ::Float64, 
                    postf::Function, 
                    w    ::Array{Float64,1},
@@ -534,7 +541,7 @@ function find_rect(p    ::Array{Float64,1},
     # randomly start rectangle
     for (i,j) in enumerate(mvp)
       Lv[i] = pp[j] - w[j]*rand()
-      if ngp[i] && Lv[i] <= 0.0
+      if nngp[i] && Lv[i] <= 0.0
         Lv[i] = 1e-30
       end
       Rv[i] = Lv[i] + w[j]
@@ -545,7 +552,7 @@ function find_rect(p    ::Array{Float64,1},
       pp[j] = Lv[i]::Float64
       while S < postf(pp, fp)
         Lv[i] -= w[j]::Float64
-        if ngp[i] && Lv[i] <= 0.0
+        if nngp[i] && Lv[i] <= 0.0
           Lv[i] = 1e-30
           break
         end
@@ -575,7 +582,7 @@ end
               pp   ::Array{Float64,1}, 
               fp   ::Array{Float64,1}, 
               mvp  ::Array{Int64,1}, 
-              ngp  ::Array{Bool,1},
+              nngp  ::Array{Bool,1},
               S    ::Float64, 
               postf::Function, 
               w    ::Array{Float64,1},

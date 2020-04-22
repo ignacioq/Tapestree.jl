@@ -34,7 +34,8 @@ function prepare_data(cov_mod    ::NTuple{M,String},
                       el         ::Array{Float64,1},
                       ρ          ::Float64,
                       h          ::Int64,
-                      constraints::NTuple{O,String}) where {N,M,O}
+                      constraints::NTuple{O,String},
+                      mvpars     ::NTuple{P,String}) where {N,M,O,P}
 
   # k areas
   k = length(tv[1])::Int64
@@ -91,9 +92,12 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # parameter update
   pupd = 1:npars
 
-  # parameters constraint and fixed to 0
+  # parameters constraints and fixed to 0
   dcp, dcfp, zp, zfp = 
     set_constraints(constraints, pardic, k, h, ny, model)
+
+  # set multivariate sampled parameters
+  mvps0 = set_multivariate(mvpars, pardic)
 
   # remove hidden factors from being updated from `p`
   pupd = setdiff(pupd, phid)
@@ -103,15 +107,11 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     p[i] = 0.0
   end
 
-  # remove contraints from being updated
-  pupd = setdiff(pupd, values(dcp)) 
-  phid = setdiff(phid, values(dcfp)) 
+  # remove constraints and fixed to zero parameters from being updated
+  setdiff!(pupd, values(dcp), zp)
+  setdiff!(phid, values(dcfp), zfp)
 
-  # remove fixed to zero parameters from being updated
-  pupd = setdiff(pupd, zp)
-  phid = setdiff(phid, zfp)
-
-  # check if there are hidden factors hold to 0 that also have a forced equality
+  # check if there are hidden factors forced to 0 that also have a forced equality
   for (k,v) in dcfp
     if in(k, zfp) || in(v, zfp) 
       filter!(x -> x ≠ k, phid)
@@ -122,6 +122,49 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # divide between non-negative and negative values
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
+
+  # divide multivariate updates into hidden and non-hidden updates
+  mvps  = Array{Int64,1}[]
+  nngps = Array{Bool,1}[]
+  mvhfs = Array{Int64,1}[]
+  for (p1, p2) in mvps0
+
+    p1nn = in(p1, nnps)
+    p1n  = in(p1, nps)
+    p2nn = in(p2, nnps)
+    p2n  = in(p2, nps)
+
+    if p1nn && p2nn
+      setdiff!(nnps, p1, p2)
+      push!(mvps, [p1,p2])
+      push!(nngps, [p1nn,p2nn])
+    end
+
+    if p1n && p2nn
+      setdiff!(nps,  p1)
+      setdiff!(nnps, p2)
+      push!(mvps, [p1,p2])
+      push!(nngps, [p1nn, p2nn])
+    end
+
+    if p1nn && p2n
+      setdiff!(nnps, p1)
+      setdiff!(nps,  p2)
+      push!(mvps, [p1,p2])
+      push!(nngps, [p1nn, p2nn])
+    end
+
+    if p1n && p2n
+      setdiff!(nps, p1, p2)
+      push!(mvps, [p1,p2])
+      push!(nngps, [p1nn, p2nn])
+    end
+
+    if in(p1, phid) && in(p2, phid)
+      setdiff!(phid, p1, p2)
+      push!(mvhfs, [p1,p2])
+    end
+  end
 
   # make hidden factors assigning 
   assign_hidfacs! = make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
@@ -170,8 +213,8 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     X[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
-  return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, dcp, dcfp, 
-    pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0
+  return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, mvps, nngps, mvhfs,
+    dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0
 
 end
 
