@@ -49,6 +49,10 @@ function loop_slice_sampler(lhf         ::Function,
   # maximum number of multivariate updates
   maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
     zero(1)
+  elseif iszero(lastindex(mvhfs))
+    maximum(map(length,mvps))
+  elseif iszero(lastindex(mvps))
+    maximum(map(length,mvhfs))
   else
     maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
   end
@@ -180,6 +184,10 @@ function w_sampler(lhf         ::Function,
   # maximum number of multivariate updates
   maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
     zero(1)
+  elseif iszero(lastindex(mvhfs))
+    maximum(map(length,mvps))
+  elseif iszero(lastindex(mvps))
+    maximum(map(length,mvhfs))
   else
     maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
   end
