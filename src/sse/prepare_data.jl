@@ -207,6 +207,12 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # get absolute times of branches as related to z(t)
   abts = abs_time_branches(el, ed, ntip)
 
+  # get branching times
+  bts = map(x -> round(x; digits = 9), abts[:,1])
+  bts = unique!(bts)
+
+  sort!(bts)
+
   # make trios
   trios = maketriads(ed, rev = true)
 
@@ -223,7 +229,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   end
 
   return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, mvps, nngps, mvhfs,
-    dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, E0
+    dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, bts, E0
 
 end
 

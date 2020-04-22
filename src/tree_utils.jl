@@ -199,6 +199,48 @@ end
 
 
 """
+    brts(el  ::Array{Float64,1}, 
+                ed  ::Array{Int64,2},
+                ntip::Int64)
+
+Get branching times for a tree in "cladewise" order. 
+Time goes backwards with the present being `0.0`.
+"""
+function brts(el  ::Array{Float64,1}, 
+              ed  ::Array{Int64,2},
+              ntip::Int64)
+
+  @inbounds begin
+    # make real time edges
+
+    # edges 1
+    ed1 = ed[:,1]
+    ed2 = ed[:,2]
+
+    ne   = lastindex(ed1)
+    nn   = zeros(ntip-1)
+    intn = findall(map(x -> x > ntip, ed2))
+
+    for i in intn
+      nn[ed2[i]-ntip] = nn[ed1[i] - ntip] + el[i]
+    end
+
+    # tree height
+    trh = nn[ed1[ne] - ntip] + el[ne]
+    for i in Base.OneTo(ntip-1)
+      nn[i] = trh - nn[i]
+    end
+
+  end
+
+  return nn
+end
+
+
+
+
+
+"""
     tree_height(el  ::Array{Float64,1}, 
                 ed  ::Array{Int64,2},
                 ntip::Int64)

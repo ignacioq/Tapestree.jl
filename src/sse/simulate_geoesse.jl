@@ -47,14 +47,14 @@ function simulate_sse(λ       ::Array{Float64,1},
   ed, el, st, n, S, k = 
     simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
 
-  println("Tree with $n species successfully simulated")
+  @info "Tree with $n species successfully simulated"
 
   if retry_ext 
-    in(0.0, el) && println("a lineage speciated at time 0.0...")
+    in(0.0, el) && @warn "a lineage speciated at time 0.0..."
     while ed == 0 || n < nspp_min || n > nspp_max || in(0.0, el)
       ed, el, st, n, S, k = 
         simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
-      println("Tree with $n species successfully simulated")
+      @info ("Tree with $n species successfully simulated")
     end
   else 
     if ed == 0
@@ -65,6 +65,15 @@ function simulate_sse(λ       ::Array{Float64,1},
   # organize in postorder
   ed     = numberedges(ed, n)
   ed, el = postorderedges(ed, el, n)
+
+  ## round branch lengths
+  # find out order of simulation
+  i = 1
+  while !isone(δt*10^i)
+    i += 1
+  end
+
+  el = map(x -> round(x; digits = i+1), el)
 
   # organize states
   tip_val = Dict(i => st[i] for i = 1:n)
