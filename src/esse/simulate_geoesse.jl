@@ -25,7 +25,8 @@ January 12 2017
                  δt      ::Float64 = 1e-4,
                  nspp_min::Int64   = 1,
                  nspp_max::Int64   = 200_000,
-                 retry_ext::Bool   = true))
+                 retry_ext::Bool   = true,
+                 power    ::Bool   = false) where {M,N}
 
 Simulate tree according to EGeoHiSSE.
 """
@@ -889,7 +890,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
                       k    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
-                      ny   ::Int64
+                      ny   ::Int64,
                       rfun ::Function)
 
   # expected number of covariates
