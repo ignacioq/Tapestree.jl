@@ -30,7 +30,7 @@ logdexp(x::Float64, λ::Float64) = (log(λ) - λ * x)::Float64
 
 Standard uniform distribution (`[0.0,1.0]`).
 """
-logdunifU(x::Float64) = 1.0
+logdunifU(x::Float64) = 0.0
 
 
 

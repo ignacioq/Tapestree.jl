@@ -40,8 +40,8 @@ function make_esse_s(k ::Int64,
              t::Float64)
 
     Qf!(Q, p)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
+    @views BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
+    @views BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
 
     aft = af(t)::Float64
 
@@ -87,8 +87,8 @@ function make_esse_s(k  ::Int64,
   function f(du, u, p, t)
 
     Qf!(Q, p)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
+    @views BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
+    @views BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
 
     af!(t, r)
 
@@ -132,8 +132,8 @@ function make_esse_e(k ::Int64,
   function f(du, u, p, t)
 
     Qf!(Q, p)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
+    @views BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
+    @views BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
 
     aft = af(t)::Float64
 
@@ -180,8 +180,8 @@ function make_esse_e(k  ::Int64,
   function f(du, u, p, t)
 
     Qf!(Q, p)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
+    @views BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
+    @views BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
 
     af!(t, r)
 
@@ -223,8 +223,8 @@ function make_esse_q(k ::Int64,
   function f(du, u, p, t)
 
     Qft!(Q, p, af(t))
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
+    @views BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
+    @views BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
 
     for i in Base.OneTo(k)
       du[i]   =        - (p[i] + p[k+i])*u[i]   + 2.0*p[i]*u[i+k]*u[i]   + Qs[i]
@@ -264,8 +264,8 @@ function make_esse_q(k  ::Int64,
   function f(du, u, p, t)
 
     Qft!(Q, p, t) 
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
-    @views LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
+    @views BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
+    @views BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
 
     for i in Base.OneTo(k)
       du[i]   =        - (p[i] + p[k+i])*u[i]   + 2.0*p[i]*u[i+k]*u[i]   + Qs[i]

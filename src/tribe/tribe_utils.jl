@@ -59,7 +59,7 @@ coinsamp(p0::Float64) = rand() < p0 ? 0 : 1
 Generate one random sample from a **Exponential** distribution
 with mean `λ`. 
 """
-rexp(λ::Float64) = (Random.randexp()/λ)::Float64
+rexp(λ::Float64) = (randexp()/λ)::Float64
 
 
 

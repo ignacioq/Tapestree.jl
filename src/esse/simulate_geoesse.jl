@@ -1109,63 +1109,6 @@ end
 
 
 
-
-"""
-    postorderedges(ed  ::Array{Int64,2},
-                   el  ::Array{Float64,1},
-                   nspp::Int64)
-
-Organize edges, edge lengths in postorder traversal fashion.
-"""
-function postorderedges(ed  ::Array{Int64,2},
-                        el  ::Array{Float64,1},
-                        nspp::Int64)
-
-  # post-order transversal using 2 stacks
-  stack1 = [ed[1]]
-  stack2 = Int64[]
-
-  while lastindex(stack1) > 0
-    nod = pop!(stack1)
-    push!(stack2, nod)
-
-    if nod <= nspp
-      continue
-    else
-      wn = findfirst(isequal(nod), ed[:,1])
-      push!(stack1, ed[wn,2],ed[(wn+1),2])
-    end
-  end
-
-  # rearrange edges accordingly
-  indx = deleteat!(indexin(reverse(stack2), ed[:,2]),size(ed,1)+1)
-
-  ed = ed[indx,:]
-  el = el[indx]
-
-  # advance nodes with only daughter tips
-  tnd = Int64[]
-  ndp = Int64[]
-  for nd in unique(ed[:,1])
-    fed = findall(ed[:,1 ] .== nd)
-    if length(filter(x -> x <= nspp, ed[fed,2])) == 2
-      push!(tnd, nd)
-      push!(ndp, fed[1], fed[2])
-    end
-  end
-
-
-  append!(ndp,setdiff(1:(2nspp-2), ndp))
-
-  ed[ndp,:]
-
-  return ed[ndp,:], el[ndp]
-end
-
-
-
-
-
 """
     numberedges(ed::Array{Int64,2}, nspp::Int64)
 

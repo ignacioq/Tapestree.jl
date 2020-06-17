@@ -154,7 +154,7 @@ function burn_tribe(total_llf     ::Function,
 
             llr = Rupd_llr(xpi, Xc, σ²c)::Float64
 
-            if -Random.randexp() < llr
+            if -randexp() < llr
               llc     += llr::Float64
               Xc[1,:]  = xpi::Array{Float64,1}
               lac[up] += 1   # log acceptance
@@ -196,7 +196,7 @@ function burn_tribe(total_llf     ::Function,
                              ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
             end
 
-            if -Random.randexp() < llr
+            if -randexp() < llr
               llc        += llr::Float64
               Xc[xi,:]    = xpi::Array{Float64,1}
               δXc[:,:,xi] = δxi::Array{Float64,2}
@@ -218,7 +218,7 @@ function burn_tribe(total_llf     ::Function,
 
         prr = llrdexp_x(λ1p, λ1c, λprior)
 
-        if -Random.randexp() < (llr + prr + log(λ1p/λ1c))
+        if -randexp() < (llr + prr + log(λ1p/λ1c))
           llc    += llr::Float64
           prc    += prr::Float64
           λ1c     = λ1p::Float64
@@ -243,7 +243,7 @@ function burn_tribe(total_llf     ::Function,
 
         prr = llrdexp_x(λ0p, λ0c, λprior)
 
-        if -Random.randexp() < (llr + prr + log(λ0p/λ0c))
+        if -randexp() < (llr + prr + log(λ0p/λ0c))
           llc     += llr::Float64
           prc     += prr::Float64
           λ0c      = λ0p::Float64
@@ -273,7 +273,7 @@ function burn_tribe(total_llf     ::Function,
         # prior ratio
         prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
-        if -Random.randexp() < (llr + prr + log(σ²p/σ²c))
+        if -randexp() < (llr + prr + log(σ²p/σ²c))
           llc += llr::Float64
           prc += prr::Float64
           σ²c  = σ²p::Float64
@@ -291,7 +291,7 @@ function burn_tribe(total_llf     ::Function,
         # prior ratio
         prr = llrdnorm_x(ωxp, ωxc, ωxprior[1], ωxprior[2])
 
-        if -Random.randexp() < (llr + prr)
+        if -randexp() < (llr + prr)
           llc += llr::Float64
           prc += prr::Float64
           ωxc  = ωxp::Float64
@@ -309,7 +309,7 @@ function burn_tribe(total_llf     ::Function,
         # prior ratio
         prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
-        if -Random.randexp() < (llr + prr)
+        if -randexp() < (llr + prr)
           llc += llr::Float64
           prc += prr::Float64
           ω1c  = ω1p::Float64
@@ -335,7 +335,7 @@ function burn_tribe(total_llf     ::Function,
         # prior ratio
         prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
 
-        if -Random.randexp() < (llr + prr)
+        if -randexp() < (llr + prr)
           llc += llr
           prc += prr
           ω0c  = ω0p

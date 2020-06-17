@@ -211,7 +211,7 @@ Make function for the stepsize for the adaptive update.
 """
 function makestepsize(η::Float64)
   
-  β::Float64 = rand(linspace((1.0/(1.0 + η)),1))
+  β::Float64 = rand(range((1.0/(1.0 + η)),1))
 
   function f(t::Float64, C::Float64)
     return (C/(t^β))::Float64

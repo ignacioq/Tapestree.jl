@@ -15,6 +15,69 @@ Created 05 03 2020
 
 
 """
+    prepare_ll(X    ::Array{Array{Float64,1},1},
+               p    ::Array{Float64,1},
+               E0   ::Array{Float64,1},
+               ns   ::Int64,
+               k    ::Int64,
+               h    ::Int64,
+               ny   ::Int64,
+               model::NTuple{3, Bool},
+               abts ::Array{Float64,2},
+               af!  ::Function)
+
+Prepare **EGeoHiSSE** likelihoods using the **pruning** algorithm 
+given input data.
+"""
+function prepare_ll(X    ::Array{Array{Float64,1},1},
+                    p    ::Array{Float64,1},
+                    E0   ::Array{Float64,1},
+                    ns   ::Int64,
+                    k    ::Int64,
+                    h    ::Int64,
+                    ny   ::Int64,
+                    model::NTuple{3, Bool},
+                    abts ::Array{Float64,2},
+                    af!  ::Function)
+
+  # add extinction to likelihood vector
+  for i in Base.OneTo(lastindex(X))
+    append!(X[i], E0)
+  end
+
+  # make them vectors for indexing efficiency
+  abts1 = abts[:,1]
+  abts2 = abts[:,2]
+
+  # make speciation events and closure
+  λevent! = make_λevent(h, k, ny, false, model, af!)
+
+  # make root likelihood conditioning
+  rootll = make_rootll(h, k, ny, model, af!)
+
+  # make ODE function
+  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
+
+  # make integral problem
+  prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0,1.0), p)
+
+  int = init(prob, Tsit5(),
+             save_everystep  = false, 
+             calck           = false,
+             force_dtmin     = true,
+             save_start      = false,
+             initialize_save = false,
+             maxiters        = 100_000_000,
+             verbose         = false)
+
+  return X, int, λevent!, rootll, abts1, abts2
+end
+
+
+
+
+
+"""
     prepare_ll(cov_mod::NTuple{M,String},
                tv     ::Dict{Int64,Array{Float64,1}},
                ed     ::Array{Int64,2},
@@ -99,60 +162,6 @@ function prepare_ll(p    ::Array{Float64,1},
   rootll = make_rootll(h, k, ny, model, af!)
 
   return Gt, Et, lbts, nets, λevent!, rootll
-end
-
-
-
-
-
-"""
-    prepare_ll(X    ::Array{Array{Float64,1},1},
-               p    ::Array{Float64,1},
-               E0   ::Array{Float64,1},
-               ns   ::Int64,
-               k    ::Int64,
-               h    ::Int64,
-               ny   ::Int64,
-               model::NTuple{3, Bool},
-               abts ::Array{Float64,2},
-               af!  ::Function)
-
-Prepare **EGeoHiSSE** likelihoods using the **pruning** algorithm 
-given input data.
-"""
-function prepare_ll(X    ::Array{Array{Float64,1},1},
-                    p    ::Array{Float64,1},
-                    E0   ::Array{Float64,1},
-                    ns   ::Int64,
-                    k    ::Int64,
-                    h    ::Int64,
-                    ny   ::Int64,
-                    model::NTuple{3, Bool},
-                    abts ::Array{Float64,2},
-                    af!  ::Function)
-
-  # add extinction to likelihood vector
-  for i in Base.OneTo(lastindex(X))
-    append!(X[i], E0)
-  end
-
-  # make them vectors for indexing efficiency
-  abts1 = abts[:,1]
-  abts2 = abts[:,2]
-
-  # make speciation events and closure
-  λevent! = make_λevent(h, k, ny, false, model, af!)
-
-  # make root likelihood conditioning
-  rootll = make_rootll(h, k, ny, model, af!)
-
-  # make ODE function
-  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
-
-  # make ODE solver
-  ode_solve = make_solver(ode_fun, p, zeros(2*h*(2^k-1)))
-
-  return X, ode_solve, λevent!, rootll, abts1, abts2
 end
 
 
