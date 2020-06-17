@@ -69,7 +69,7 @@ function tribe(tree_file   ::String,
                screen_print::Int64             = 5)
 
   tip_values, tip_areas, tree, bts = 
-    read_data(tree_file, data_file)
+    read_data_tribe(tree_file, data_file)
 
   X, Y, B, ncoup, δt, tree, si = 
     initialize_data(tip_values, tip_areas, min_dt, tree, bts)

@@ -59,7 +59,7 @@ coinsamp(p0::Float64) = rand() < p0 ? 0 : 1
 Generate one random sample from a **Exponential** distribution
 with mean `λ`. 
 """
-rexp(λ::Float64) = (randexp()/λ)::Float64
+rexp(λ::Float64) = (Random.randexp()/λ)::Float64
 
 
 
@@ -261,7 +261,6 @@ end
 
 
 
-
 """
     make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2})
   
@@ -314,39 +313,6 @@ end
 
 
 """
-    maketriads(ed::Array{Int64,2})
-
-Make branch triads:
-returns a separate vector with indexes for each 
-branch connecting to a node.
-First number is the parent branch
-second and third numbers each the daughters.
-"""
-function maketriads(ed::Array{Int64,2})
-
-  # internal nodes
-  ins = unique(ed[:,1])[1:(end-1)]::Array{Int64,1}
-
-  ed1 = ed[:,1]
-  ed2 = ed[:,2]
-
-  trios = Array{Int64,1}[]
-
-  # for all internal nodes
-  for i in ins
-    daus = findall(isequal(i), ed1)
-    pushfirst!(daus, findfirst(isequal(i), ed2))
-    push!(trios, daus)
-  end
-
-  return trios::Array{Array{Int64,1},1}
-end
-
-
-
-
-
-"""
     create_wcol(X::Array{Float64,2})
 
 Returns indices for columns along `m` timesteps.
@@ -364,6 +330,20 @@ function create_wcol(X::Array{Float64,2})
   return wcol
 end
 
+
+
+
+
+"""
+    Pc(λi::Float64, λj::Float64, δt::Float64)
+
+Estimate probability of collision.
+"""
+function Pc(λ1::Float64, λ0::Float64, δt::Float64)
+    λt = (λ1 + λ0)*δt
+    er = exp(-λt)
+    return 1.0 - er - λt*er
+end
 
 
 
@@ -386,8 +366,6 @@ function collision(λ1   ::Float64,
 
   return 1.0 - p
 end
-
-
 
 
 
