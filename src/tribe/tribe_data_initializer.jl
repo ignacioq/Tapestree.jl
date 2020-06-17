@@ -26,14 +26,14 @@ function read_data_tribe(tree_file::String,
 
   tip_labels = Dict(i => val for (val,i) = enumerate(tree.tlab))
 
-  data = DelimitedFiles.readdlm(data_file)
+  data = readdlm(data_file)
 
   if size(data,1) != (tree.nnod + 1)
-    data = DelimitedFiles.readdlm(data_file, '\t', '\r')
+    data = readdlm(data_file, '\t', '\r')
   end
 
   if size(data,1) != (tree.nnod + 1)
-    data = DelimitedFiles.readdlm(data_file, '\t', '\n')
+    data = readdlm(data_file, '\t', '\n')
   end
 
   if size(data,1) != (tree.nnod + 1) 
@@ -226,8 +226,8 @@ function initialize_X!(tip_values::Dict{Int64,Float64},
                                     iterations = 100_000,
                                     store_trace = false))
 
-  ar = Optim.minimizer(op)[2:end]
-  si = Optim.minimizer(op)[1]
+  ar = minimizer(op)[2:end]
+  si = minimizer(op)[1]
 
   X[Xnod[:,1]] = ar
 

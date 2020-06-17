@@ -35,8 +35,8 @@ function make_musse(k::Int64)
   function f(du, u, p, t)
 
     Qf!(Q, p)
-    LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
-    LinearAlgebra.BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
+    BLAS.gemv!('N', 1.0, Q, u[qsi], 0.0, Qs)
+    BLAS.gemv!('N', 1.0, Q, u[qei], 0.0, Qe)
 
     for i in Base.OneTo(k)
       du[i]   =        - (p[i] + p[k+i])*u[i]   + 2.0*p[i]*u[i+k]*u[i]   + Qs[i]

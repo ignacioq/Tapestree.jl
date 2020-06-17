@@ -11,9 +11,10 @@ September 19 2017
 =#
 
 
+
+
 """
     make_solver(odef, p0::Array{Float64,1})
-
 Make **ODE** solver for `odef`.
 """
 function make_solver(odef, p0::Array{Float64,1}, u0::Array{Float64,1})
@@ -40,4 +41,30 @@ function make_solver(odef, p0::Array{Float64,1}, u0::Array{Float64,1})
   end
   return f
 end
+
+
+
+
+
+"""
+    solvef(int::DEIntegrator,
+           u  ::Array{Float64,1},
+           ti ::Float64,
+           tf ::Float64)
+
+Solve an IDE integrator for new `u` and and `ti` and `tf`.
+"""
+function solvef(int::DiffEqBase.DEIntegrator,
+                u  ::Array{Float64,1},
+                ti ::Float64,
+                tf ::Float64)
+  @inbounds begin
+    reinit!(int, u, t0 = ti, tf = tf)
+    return solve!(int).u[1]
+  end
+end
+
+
+
+
 

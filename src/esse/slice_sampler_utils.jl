@@ -84,21 +84,21 @@ function loop_slice_sampler(lhf         ::Function,
     =#
     # nonnegative parameters
     for j in nnps
-     S     = hc - Random.randexp()
+     S     = hc - randexp()
      L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j], npars)
      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # real line parameters
     for j in nps
-      S     = hc - Random.randexp()
+      S     = hc - randexp()
       L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j], npars)
       p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # hidden factors
     for j in phid
-     S     = hc - Random.randexp()
+     S     = hc - randexp()
      L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars)
      p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars)
     end
@@ -108,14 +108,14 @@ function loop_slice_sampler(lhf         ::Function,
     =#
     # non hidden factors
     for (i,mvp) in enumerate(mvps)
-      S = hc - Random.randexp()
+      S = hc - randexp()
       @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
       p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
     end
 
     # hidden factors
     for mvp in mvhfs
-      S = hc - Random.randexp()
+      S = hc - randexp()
       @views find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
       p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, S, lhf, npars)
     end
@@ -214,21 +214,21 @@ function w_sampler(lhf         ::Function,
     =#
     # nonnegative parameters
     for j in nnps
-     S     = hc - Random.randexp()
+     S     = hc - randexp()
      L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j], npars)
      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # real line parameters
     for j in nps
-      S     = hc - Random.randexp()
+      S     = hc - randexp()
       L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j], npars)
       p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
     end
 
     # hidden factors
     for j in phid
-     S     = hc - Random.randexp()
+     S     = hc - randexp()
      L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars)
      p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars)
     end
@@ -238,14 +238,14 @@ function w_sampler(lhf         ::Function,
     =#
     # non hidden factors
     for (i, mvp) in enumerate(mvps)
-      S = hc - Random.randexp()
+      S = hc - randexp()
       @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
       p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
     end
 
     # hidden factors
     for mvp in mvhfs
-      S = hc - Random.randexp()
+      S = hc - randexp()
       @views find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
       p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, S, lhf, npars)
     end

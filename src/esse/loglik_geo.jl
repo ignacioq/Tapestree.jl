@@ -83,7 +83,7 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
                      abts1    ::Array{Float64,1},
                      abts2    ::Array{Float64,1},
                      trios    ::Array{Array{Int64,1},1},
-                     ode_solve::Function,
+                     int      ::DiffEqBase.DEIntegrator,
                      λevent!  ::Function, 
                      rootll   ::Function,
                      k        ::Int64,
@@ -92,13 +92,15 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
                      ned      ::Int64)
 
   # preallocate vectors
-  llik = Array{Float64,1}(undef,ns)
-  w    = Array{Float64,1}(undef,ns)
+  llik = Array{Float64,1}(undef, ns)
+  w    = Array{Float64,1}(undef, ns)
   extp = Array{Float64,1}(undef, ns)
 
   function f(p::Array{Float64,1})
 
     @inbounds begin
+
+      int.p = p
 
       llxtra = 0.0
 
@@ -107,11 +109,11 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
 
         pr, d1, d2 = triad::Array{Int64,1}
 
-        ud1 = ode_solve(X[d1], p, abts2[d1], abts1[d1])::Array{Float64,1}
+        ud1 = @views solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
 
         check_negs(ud1, ns) && return -Inf
 
-        ud2 = ode_solve(X[d2], p, abts2[d2], abts1[d2])::Array{Float64,1}
+        ud2 = @views solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
 
         check_negs(ud2, ns) && return -Inf
 
@@ -126,18 +128,21 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
         # assign the remaining likelihoods &
         # assign extinction probabilities and 
         # check for extinction of `1.0`
+        @views Xpr = X[pr]
         for i in Base.OneTo(ns)
           ud1[i+ns] > 1.0 && return -Inf
-          X[pr][i+ns] = ud1[i+ns]
-          X[pr][i]    = llik[i]
+          Xpr[i+ns] = ud1[i+ns]
+          Xpr[i]    = llik[i]
         end
+
       end
 
       # assign root likelihood in non log terms &
       # assign root extinction probabilities
+      @views Xned = X[ned]
       for i in Base.OneTo(ns)
-        llik[i] = X[ned][i]
-        extp[i] = X[ned][i+ns]
+        llik[i] = Xned[i]
+        extp[i] = Xned[i+ns]
       end
 
       # estimate likelihood weights

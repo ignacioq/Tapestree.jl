@@ -15,7 +15,7 @@ September 26 2017
 
 
 """
-    ESSE(states_file ::String,
+    esse(states_file ::String,
          tree_file   ::String,
          envdata_file::String,
          cov_mod     ::NTuple{M,String},
@@ -28,9 +28,10 @@ September 26 2017
          nburn       ::Int64             = 200,
          nchains     ::Int64             = 1,
          ntakew      ::Int64             = 100,
-         winit       ::Float64             = 2.0,
+         winit       ::Float64           = 2.0,
          scale_y     ::NTuple{2,Bool}    = (true, false),
          algorithm   ::String            = "pruning",
+         power       ::Bool              = false,
          λpriors     ::Float64           = .1,
          μpriors     ::Float64           = .1,
          gpriors     ::Float64           = .1,
@@ -46,7 +47,7 @@ September 26 2017
 
 Wrapper for running a SSE model from file.
 """
-function ESSE(states_file ::String,
+function esse(states_file ::String,
               tree_file   ::String,
               envdata_file::String,
               cov_mod     ::NTuple{M,String},
@@ -59,9 +60,10 @@ function ESSE(states_file ::String,
               nburn       ::Int64             = 200,
               nchains     ::Int64             = 1,
               ntakew      ::Int64             = 100,
-              winit       ::Float64             = 2.0,
+              winit       ::Float64           = 2.0,
               scale_y     ::NTuple{2,Bool}    = (true, false),
               algorithm   ::String            = "pruning",
+              power       ::Bool              = false,
               λpriors     ::Float64           = .1,
               μpriors     ::Float64           = .1,
               gpriors     ::Float64           = .1,
@@ -79,7 +81,7 @@ function ESSE(states_file ::String,
   tv, ed, el, bts, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
 
-  @info "Data successfully read"
+  @info "Data for $(length(tv)) species successfully read"
 
   # scale y
   if scale_y[1]
@@ -121,11 +123,11 @@ function ESSE(states_file ::String,
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
-    X, ode_solve, λevent!, rootll, abts1, abts2 = 
-      prepare_ll(X, p, E0, ns, k, h, ny, model, abts ,af!)
+    X, int, λevent!, rootll, abts1, abts2 = 
+      prepare_ll(X, p, E0, ns, k, h, ny, model, power, abts ,af!)
 
     # make likelihood function
-    llf = make_loglik(X, abts1, abts2, trios, ode_solve, 
+    llf = make_loglik(X, abts1, abts2, trios, int, 
       λevent!, rootll, k, h, ns, ned)
 
   else
@@ -180,7 +182,7 @@ end
 
 
 """
-    ESSE(tv          ::Dict{Int64,Array{Float64,1}},
+    esse(tv          ::Dict{Int64,Array{Float64,1}},
          ed          ::Array{Int64,2}, 
          el          ::Array{Float64,1}, 
          x           ::Array{Float64,1},
@@ -213,7 +215,7 @@ end
 
 Wrapper for running a SSE model from simulations.
 """
-function ESSE(tv          ::Dict{Int64,Array{Float64,1}},
+function esse(tv          ::Dict{Int64,Array{Float64,1}},
               ed          ::Array{Int64,2}, 
               el          ::Array{Float64,1}, 
               x           ::Array{Float64,1},
@@ -228,9 +230,10 @@ function ESSE(tv          ::Dict{Int64,Array{Float64,1}},
               nburn       ::Int64             = 200,
               nchains     ::Int64             = 1,
               ntakew      ::Int64             = 100,
-              winit       ::Float64             = 2.0,
+              winit       ::Float64           = 2.0,
               scale_y     ::NTuple{2,Bool}    = (true, false),
               algorithm   ::String            = "pruning",
+              power       ::Bool              = false,
               λpriors     ::Float64           = .1,
               μpriors     ::Float64           = .1,
               gpriors     ::Float64           = .1,
@@ -266,11 +269,11 @@ function ESSE(tv          ::Dict{Int64,Array{Float64,1}},
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
-    X, ode_solve, λevent!, rootll, abts1, abts2 = 
-      prepare_ll(X, p, E0, ns, k, h, ny, model, abts ,af!)
+    X, int, λevent!, rootll, abts1, abts2 = 
+      prepare_ll(X, p, E0, ns, k, h, ny, model, power, abts ,af!)
 
     # make likelihood function
-    llf = make_loglik(X, abts1, abts2, trios, ode_solve, 
+    llf = make_loglik(X, abts1, abts2, trios, int, 
       λevent!, rootll, k, h, ns, ned)
 
   else
@@ -356,14 +359,14 @@ function read_data_esse(states_file ::String,
   end
 
   # read states text file
-  data = DelimitedFiles.readdlm(states_file)
+  data = readdlm(states_file)
 
   if size(data,1) != ntip
-    data = DelimitedFiles.readdlm(states_file, '\t', '\r')
+    data = readdlm(states_file, '\t', '\r')
   end
 
   if size(data,1) != ntip
-    data = DelimitedFiles.readdlm(states_file, '\t', '\n')
+    data = readdlm(states_file, '\t', '\n')
   end
 
   if size(data,1) != ntip 
@@ -378,7 +381,7 @@ function read_data_esse(states_file ::String,
                    for (i,val) = enumerate(data_tlab))
 
   # process environmental data file
-  envdata = DelimitedFiles.readdlm(envdata_file)
+  envdata = readdlm(envdata_file)
 
   x = envdata[:,1]
   y = envdata[:,2:end]

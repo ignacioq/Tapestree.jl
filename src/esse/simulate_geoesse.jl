@@ -41,11 +41,12 @@ function simulate_sse(λ       ::Array{Float64,1},
                       δt      ::Float64 = 1e-4,
                       nspp_min::Int64   = 1,
                       nspp_max::Int64   = 200_000,
-                      retry_ext::Bool   = true) where {M,N}
+                      retry_ext::Bool   = true,
+                      power    ::Bool   = false) where {M,N}
 
   # make simulation
   ed, el, st, n, S, k = 
-    simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
+    simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max, power)
 
   @info "Tree with $n species successfully simulated"
 
@@ -112,7 +113,8 @@ function simulate_edges(λ       ::Array{Float64,1},
                         y       ::Array{Float64, N},
                         δt      ::Float64,
                         cov_mod ::NTuple{M,String},
-                        nssp_max::Int64) where {M,N}
+                        nssp_max::Int64,
+                        power   ::Bool) where {M,N}
 
   h = Int64((sqrt(length(q)*4 + 1) + 1)/2)
   k = div(length(l), h)
@@ -123,6 +125,9 @@ function simulate_edges(λ       ::Array{Float64,1},
 
   # check number of parameters and data
   model = id_mod(cov_mod, k, h, ny, λ, μ, l, g, q, β)
+
+  # if power or exponential regression
+  rfun = power ? powf : expf 
 
   # total simulation time
   simt = x[end]
@@ -149,7 +154,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   isp = Array{Float64,1}(undef, length(S))
 
   # assign initial state probabilities
-  init_states_pr!(isp, λ, l, g, q, μ, β, S, r, k, h, ny, model, md, as, hs)
+  init_states_pr!(isp, λ, l, g, q, μ, β, S, r, k, h, ny, model, md, as, hs, rfun)
 
   # preallocate vector of individual area probabilities 
   spr = Array{Float64,1}(undef, ns)
@@ -173,12 +178,12 @@ function simulate_edges(λ       ::Array{Float64,1},
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
-   event_probs(λ, μ, l, g, q, β, r, S, k, h, ny, model, md, δt, ns, as, hs)
+   event_probs(λ, μ, l, g, q, β, r, S, k, h, ny, model, md, δt, ns, as, hs, rfun)
 
   # make λ, μ, g & q probability functions
-  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md, ny)
-  updμpr! = make_updμpr!(μ, l, β, μpr, Sμpr, δt, k, h, model, md, ny)
-  updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, h, model, md, as, S, ny)
+  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md, ny, rfun)
+  updμpr! = make_updμpr!(μ, l, β, μpr, Sμpr, δt, k, h, model, md, ny, rfun)
+  updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, h, model, md, as, S, ny, rfun)
   updqpr! = make_updqpr!(Sqpr)
 
   # preallocate states probabilities for specific lengths of each event
@@ -521,7 +526,8 @@ function init_states_pr!(isp  ::Array{Float64,1},
                          model::NTuple{3,Bool},
                          md   ::Bool,
                          as   ::UnitRange{Int64},
-                         hs   ::UnitRange{Int64})
+                         hs   ::UnitRange{Int64},
+                         rfun ::Function)
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -556,7 +562,7 @@ function init_states_pr!(isp  ::Array{Float64,1},
       gr = 0.0
       if length(s.g) > 1
         for ta = s.g, fa = setdiff(s.g, ta)
-          gr += expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+          gr += rfun(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                      β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                      md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])
         end
@@ -624,7 +630,8 @@ function event_probs(λ    ::Array{Float64,1},
                      δt   ::Float64,
                      ns   ::Int64,
                      as   ::UnitRange{Int64},
-                     hs   ::UnitRange{Int64})
+                     hs   ::UnitRange{Int64},
+                     rfun ::Function)
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -653,7 +660,7 @@ function event_probs(λ    ::Array{Float64,1},
       if model[1]
         for a in s.g
           na += 1
-          λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
+          λpr[si][na] = rfun(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
         end
       else
         for a in s.g
@@ -678,7 +685,7 @@ function event_probs(λ    ::Array{Float64,1},
       if isone(length(s.g))
         if model[2]
           for a in s.g
-            μpr[si][1] = expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+            μpr[si][1] = rfun(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
           end
         else
           for a in s.g
@@ -705,7 +712,7 @@ function event_probs(λ    ::Array{Float64,1},
       if model[3]
         for (i,ta) = enumerate(setdiff(as,s.g)), fa = s.g
           gpr[si][i] += 
-            expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+            rfun(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
         end
@@ -882,7 +889,8 @@ function make_updλpr!(λ    ::Array{Float64,1},
                       k    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
-                      ny   ::Int64)
+                      ny   ::Int64
+                      rfun ::Function)
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -906,7 +914,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
       # within-area speciation
       for a in s.g
         na += 1
-        λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
+        λpr[si][na] = rfun(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
       end
       # between-area speciation
       if na > 1
@@ -960,7 +968,8 @@ function make_updμpr!(μ    ::Array{Float64,1},
                       h    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
-                      ny   ::Int64)
+                      ny   ::Int64,
+                      rfun ::Function)
   
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -982,12 +991,12 @@ function make_updμpr!(μ    ::Array{Float64,1},
       if isone(length(s.g))
         for a in s.g
           μpr[si][1] = 
-            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+            rfun(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       else
         for a in s.g
           μpr[si][a] =
-            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+            rfun(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       end
 
@@ -1040,7 +1049,8 @@ function make_updgpr!(g    ::Array{Float64,1},
                       md   ::Bool,
                       as   ::UnitRange{Int64},
                       S    ::Array{Sgh,1},
-                      ny   ::Int64)
+                      ny   ::Int64,
+                      rfun ::Function)
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -1066,7 +1076,7 @@ function make_updgpr!(g    ::Array{Float64,1},
         gpr[si][i] = 0.0
         for fa = s.g
           gpr[si][i] += 
-            expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+            rfun(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
         end
@@ -1105,63 +1115,6 @@ function make_updqpr!(Sqpr::Array{Float64,1})
 
   return f
 end
-
-
-
-
-
-"""
-    postorderedges(ed  ::Array{Int64,2},
-                   el  ::Array{Float64,1},
-                   nspp::Int64)
-
-Organize edges, edge lengths in postorder traversal fashion.
-"""
-function postorderedges(ed  ::Array{Int64,2},
-                        el  ::Array{Float64,1},
-                        nspp::Int64)
-
-  # post-order transversal using 2 stacks
-  stack1 = [ed[1]]
-  stack2 = Int64[]
-
-  while lastindex(stack1) > 0
-    nod = pop!(stack1)
-    push!(stack2, nod)
-
-    if nod <= nspp
-      continue
-    else
-      wn = findfirst(isequal(nod), ed[:,1])
-      push!(stack1, ed[wn,2],ed[(wn+1),2])
-    end
-  end
-
-  # rearrange edges accordingly
-  indx = deleteat!(indexin(reverse(stack2), ed[:,2]),size(ed,1)+1)
-
-  ed = ed[indx,:]
-  el = el[indx]
-
-  # advance nodes with only daughter tips
-  tnd = Int64[]
-  ndp = Int64[]
-  for nd in unique(ed[:,1])
-    fed = findall(ed[:,1 ] .== nd)
-    if length(filter(x -> x <= nspp, ed[fed,2])) == 2
-      push!(tnd, nd)
-      push!(ndp, fed[1], fed[2])
-    end
-  end
-
-
-  append!(ndp,setdiff(1:(2nspp-2), ndp))
-
-  ed[ndp,:]
-
-  return ed[ndp,:], el[ndp]
-end
-
 
 
 
@@ -1208,6 +1161,15 @@ coefficient `β` and covariate `x`.
 """
 expf(α::Float64, β::Float64, x::Float64) = α * exp(β * x)
 
+
+
+"""
+    powf(α::Float64, β::Float64, x::Float64)
+
+Power regression function for rates with base rate `α`, 
+coefficient `β` and covariate `x`.
+"""
+powf(α::Float64, β::Float64, x::Float64) = α * x^β
 
 
 
