@@ -37,6 +37,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
                     h    ::Int64,
                     ny   ::Int64,
                     model::NTuple{3, Bool},
+                    power::Bool,
                     abts ::Array{Float64,2},
                     af!  ::Function)
 
@@ -56,7 +57,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   rootll = make_rootll(h, k, ny, model, af!)
 
   # make ODE function
-  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), af!)
+  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), Val(power), af!)
 
   # make integral problem
   prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0,1.0), p)
