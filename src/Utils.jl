@@ -9,9 +9,9 @@ module Utils
 # package dependencies
 using RCall: reval, rcopy
 
-include("Utils/utils.jl")
-include("Utils/tree_utils.jl")
-include("Utils/density_functions.jl")
+include("utils/utils.jl")
+include("utils/tree_utils.jl")
+include("utils/density_functions.jl")
 
 export rtree, read_tree, make_ape_tree, maketriads, abs_time_branches,
   brts, tree_height, postorderedges, logdexp, logdunifU, logdunif, llrdexp_x,
