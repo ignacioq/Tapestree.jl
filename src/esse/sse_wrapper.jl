@@ -161,10 +161,11 @@ function esse(states_file ::String,
       R[cits[ci],:] = 
         slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
           niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+
+      # write output
+      write_ssr(R, pardic, out_file, cits, ci)
     end
 
-    # write output
-    write_ssr(R, pardic, out_file, cits)
   else
 
     R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
@@ -307,10 +308,11 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
       R[cits[ci],:] = 
         slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
           niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+
+      # write output
+      write_ssr(R, pardic, out_file, cits, ci)
     end
 
-    # write output
-    write_ssr(R, pardic, out_file, cits)
   else
 
     R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
@@ -433,7 +435,8 @@ given a Dictionary of parameters.
 function write_ssr(R       ::SharedArray{Float64,2}, 
                    pardic  ::Dict{String,Int64},
                    out_file::String,
-                   cits    ::Array{UnitRange{Int64},1})
+                   cits    ::Array{UnitRange{Int64},1},
+                   ci      ::Int64)
 
   # column names
   col_nam = ["Iteration", "Posterior"]
@@ -442,11 +445,9 @@ function write_ssr(R       ::SharedArray{Float64,2},
     push!(col_nam, k)
   end
 
-  for ci in Base.OneTo(length(cits))
-    ri = vcat(reshape(col_nam, 1, lastindex(col_nam)), R[cits[ci],:])
-    writedlm(out_file*"_chain_$ci.log", ri)
-  end
+  ri = vcat(reshape(col_nam, 1, lastindex(col_nam)), R[cits[ci],:])
 
+  writedlm(out_file*"_chain_$ci.log", ri)
 end
 
 
