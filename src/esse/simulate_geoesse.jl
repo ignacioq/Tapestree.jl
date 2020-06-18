@@ -889,7 +889,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
                       k    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
-                      ny   ::Int64
+                      ny   ::Int64,
                       rfun ::Function)
 
   # expected number of covariates
