@@ -55,7 +55,7 @@ function simulate_sse(λ       ::Array{Float64,1},
     in(0.0, el) && @warn "a lineage speciated at time 0.0..."
     while ed == 0 || n < nspp_min || n > nspp_max || in(0.0, el)
       ed, el, st, n, S, k = 
-        simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max)
+        simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max, power)
       @info ("Tree with $n species successfully simulated")
     end
   else 
