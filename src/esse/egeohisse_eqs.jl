@@ -109,7 +109,12 @@ function exp_expr(k    ::Int64,
                   model::NTuple{3,Bool})
 
   # last non β parameters
-  bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+  bbase = 
+    if isone(k)
+      h + 2*h + h*(h-1)
+    else
+      h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) 
+    end
 
   # ncov
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -138,7 +143,11 @@ function exp_expr(k    ::Int64,
         rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
         push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      if isone(k)
+        push!(ex.args, :(eaft[$(i + (j-1))] = p[$(i + k*(j-1))]*exp($coex)))
+      else
+        push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      end
     end
   end 
   # extinction 
@@ -217,14 +226,22 @@ function noevents_expr(si   ::Int64,
     if model[1]
       push!(ex.args, :(eaft[$(v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + s.h)]))
+      else
+        push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      end
     end
 
     # extinction 
     if model[2] 
       push!(ex.args, :(eaft[$(m2s + v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + h + s.h + ts)]))
+      else
+        push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      end
     end
 
     # dispersal
@@ -246,8 +263,13 @@ function noevents_expr(si   ::Int64,
   # add hidden state shifts
   for hi in setdiff(0:(h-1), s.h)
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    if isone(k)
+      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    end
   end
+
 
   # multiply by u
   ex = :(-1.0 * $ex * u[$(si + wu)])
@@ -300,14 +322,22 @@ function noevents_expr(si     ::Int64,
     if model[1]
       push!(ex.args, :(eaft[$(v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + s.h)]))
+      else
+        push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      end
     end
 
     # extinction 
     if model[2] 
       push!(ex.args, :(eaft[$(m2s + v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + h + s.h + ts)]))
+      else
+        push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      end
     end
 
     # dispersal
@@ -329,7 +359,11 @@ function noevents_expr(si     ::Int64,
   # add hidden state shifts
   for hi in setdiff(0:(h-1), s.h)
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    if isone(k)
+      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    end
   end
 
   # multiply by u
@@ -554,8 +588,13 @@ function hidtran_expr(s  ::Sgh,
   for j in hs
     hi = S[j].h
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
-                     u[$j, $i]))
+    if isone(k)
+      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)] * 
+                       u[$j, $i]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
+                       u[$j, $i]))
+    end
   end
   return ex
 end
@@ -590,8 +629,13 @@ function hidtran_expr(s  ::Sgh,
   for i in hs
     hi = S[i].h
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
-                     u[$(i + wu)]))
+     if isone(k)
+      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)] * 
+                       u[$(i + wu)]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
+                       u[$(i + wu)]))
+    end
   end
   return ex
 end
@@ -815,7 +859,11 @@ function ext_expr(s    ::Sgh,
       for i in s.g push!(ex.args, :(eaft[$(m2s + k*s.h + i)])) end
     else
       ex = Expr(:call, :+)
-      for i in s.g push!(ex.args, :(p[$((k+1)*h + k*s.h + i)])) end
+      if isone(k)
+        for i in s.g push!(ex.args, :(p[$(h + s.h + i)])) end
+      else
+        for i in s.g push!(ex.args, :(p[$((k+1)*h + k*s.h + i)])) end
+      end
     end
   else
     if model[2]
@@ -981,15 +1029,20 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     end
 
     # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.0
+    hid = h > 1 ? hidtran_expr(s, S, ns, k, h, false) : :0.0
 
     # within-region speciation
     wrs = wrspec_expr(si, s, ns, k, model)
 
     # push `D` equation to to eqs
     if isone(ls)
-      push!(eqs.args, 
-        :(du[$si] = $nev + $dis + $hid + $wrs))
+      if isone(k)
+        push!(eqs.args, 
+          :(du[$si] = $nev + $hid + $wrs))
+      else
+        push!(eqs.args, 
+          :(du[$si] = $nev + $dis + $hid + $wrs))
+      end
     elseif ls == k
       push!(eqs.args, 
         :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
@@ -1026,8 +1079,13 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
 
     # push `E` equation to to eqs
     if isone(ls)
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
+      if isone(k)
+        push!(eqs.args, 
+          :(du[$(si + ns)] = $nev + $ext + $hid + $wrs))
+      else
+        push!(eqs.args, 
+          :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
+      end
     elseif ls == k
       push!(eqs.args, 
         :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
@@ -1044,7 +1102,7 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     eqs.args[append!([(end-(ns*2)+1):2:end...],
             [(end-(ns*2)+2):2:end...])]
 
-  #Core.println(eqs)
+  Core.println(eqs)
 
   return quote 
     @inbounds begin
