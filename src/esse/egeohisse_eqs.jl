@@ -1102,7 +1102,7 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     eqs.args[append!([(end-(ns*2)+1):2:end...],
             [(end-(ns*2)+2):2:end...])]
 
-  Core.println(eqs)
+  @debug Core.println(eqs)
 
   return quote 
     @inbounds begin
@@ -1256,8 +1256,7 @@ Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas,
 
   end
 
-  # print for checking
-  #Core.println(eqs)
+  @debug Core.println(eqs)
 
   return quote 
     @inbounds begin
@@ -1420,8 +1419,7 @@ Creates Covariate GeoHiSSE Likelihood ODE equation function for `k` areas,
 
   ## aesthetic touches
   # sort `du`s
-
-  #Core.println(eqs)
+  @debug Core.println(eqs)
 
   return quote 
     @inbounds begin

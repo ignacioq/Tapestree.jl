@@ -83,11 +83,20 @@ function prepare_data(cov_mod    ::NTuple{M,String},
 
   # generate initial parameter values
   p  = fill(1e-1, npars)
-  βs = h*(k^2 + 2k + h) + 1
-  δ  = Float64(ntip-1)/sum(el)
-  p[βs:end]             .= 0.0                  # set βs
-  p[1:(k+1)*h]          .= δ + rand()*δ         # set λs
-  p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ             # set μs
+
+  if isone(k)
+    βs = (3*h + h*(h-1)) + 1
+    δ  = Float64(ntip-1)/sum(el)
+    p[βs:end]      .= 0.0           # set βs
+    p[1:(k*h)]     .= δ + rand()*δ  # set λs
+    p[(h+1):(3*h)] .= p[1] - δ          # set μs
+  else
+    βs = h*(k^2 + 2k + h) + 1
+    δ  = Float64(ntip-1)/sum(el)
+    p[βs:end]             .= 0.0                  # set βs
+    p[1:(k+1)*h]          .= δ + rand()*δ         # set λs
+    p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ             # set μs
+  end
 
   # parameter update
   pupd = 1:npars

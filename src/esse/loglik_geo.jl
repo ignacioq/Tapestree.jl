@@ -197,8 +197,10 @@ Generated function for full tree likelihood at the root for normal likelihoods.
   popfirst!(eqs.args)
 
   if model[1]
-   # last non β parameters
-    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+
+    # last non β parameters
+    bbase = isone(k) ? 
+      (h + 2*h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
 
     # ncov
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -217,7 +219,11 @@ Generated function for full tree likelihood at the root for normal likelihoods.
         rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
         push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      if isone(k)
+        push!(eqs.args, :(λts[$(i + (j-1))] = p[$(i + (j-1))]*exp($coex)))
+      else
+        push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      end
     end
 
     eq = Expr(:call, :+)
@@ -255,16 +261,22 @@ Generated function for full tree likelihood at the root for normal likelihoods.
       end
     end
 
+  # not speciation model
   else
-
 
     eq = Expr(:call, :+)
     for j in Base.OneTo(h)
       # for single areas
       for i in Base.OneTo(k)
-        push!(eq.args,
-          :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
-            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+        if isone(k)
+          push!(eq.args,
+            :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+              (p[$(i + (j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+        else
+          push!(eq.args,
+            :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+              (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+        end
       end
       # for widespread
       for i in k+1:2^k-1
@@ -309,7 +321,6 @@ end
 
 
 
-
 """
     λevent_full(t   ::Float64, 
                 llik::Array{Float64,1}, 
@@ -325,7 +336,7 @@ end
                 ::Val{S},
                 ::Val{mdS})
 
-Generated function for speciation event likelihoods for normal likelihood.
+Generated function for speciation event likelihoods for pruning algorithm.
 """
 @generated function λevent_full(t   ::Float64, 
                                 llik::Array{Float64,1}, 
@@ -347,9 +358,10 @@ Generated function for speciation event likelihoods for normal likelihood.
 
   # if speciation model
   if model[1] 
- 
+
     # last non β parameters
-    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+    bbase = isone(k) ? 
+      (h + 2*h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
 
     # ncov
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -368,7 +380,11 @@ Generated function for speciation event likelihoods for normal likelihood.
         rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
         push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      if isone(k)
+        push!(eqs.args, :(λts[$(i + (j-1))] = p[$(i + (j-1))]*exp($coex)))
+      else
+        push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      end
     end
 
     # likelihood for individual areas states
@@ -408,9 +424,15 @@ Generated function for speciation event likelihoods for normal likelihood.
 
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
-      push!(eqs.args, 
-          :(llik[$(i+(2^k-1)*(j-1))] = 
-            ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
+      if isone(k)
+        push!(eqs.args, 
+            :(llik[$(i+(2^k-1)*(j-1))] = 
+              ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(j-1))]))
+      else
+        push!(eqs.args, 
+            :(llik[$(i+(2^k-1)*(j-1))] = 
+              ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
+      end
     end
 
     # likelihood for widespread states
@@ -439,8 +461,7 @@ Generated function for speciation event likelihoods for normal likelihood.
     end
   end
 
-  #Core.println(eqs)
-
+  @debug Core.println(eqs)
 
   return quote 
     @inbounds begin
@@ -585,8 +606,7 @@ Generated function for speciation event likelihoods for flow algorithm.
     end
   end
 
-  #Core.println(eqs)
-
+  @debug Core.println(eqs)
 
   return quote 
     @inbounds begin
@@ -668,17 +688,30 @@ function make_lpf(pupd   ::Array{Int64,1},
                   ny     ::Int64,
                   model  ::Tuple{Bool,Bool,Bool})
 
-  λupds = intersect(1:(h*(k+1)), pupd)
-  μupds = intersect((h*(k+1)+1):(h*(k+1)+k*h), pupd)
-  gupds = intersect((h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h), pupd)
-  lupds = intersect((h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h), pupd)
-  qupds = intersect((h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)), 
-            pupd)
-  bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
+  if isone(k)
+    λupds = intersect(1:h, pupd)
+    μupds = intersect((h+1):2h, pupd)
+    lupds = intersect((2h+1):3h, pupd)
+    gupds = []
+    qupds = intersect((3h+1):(3h + h*(h-1)), pupd)
+    bbase = (3h+h*(h-1))
+    yppar = ny == 1 ? 1 : div(ny,
+      model[1]*k + 
+      model[2]*k + 
+      model[3]*k*(k-1))
+  else
+    λupds = intersect(1:(h*(k+1)), pupd)
+    μupds = intersect((h*(k+1)+1):(h*(k+1)+k*h), pupd)
+    gupds = intersect((h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h), pupd)
+    lupds = intersect((h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h), pupd)
+    qupds = intersect((h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)), 
+              pupd)
+    bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
+    yppar = ny == 1 ? 1 : div(ny,
+      model[1]*k + 
+      model[2]*k + 
+      model[3]*k*(k-1))
+  end
 
   ncov  = model[1]*k*yppar + model[2]*k*yppar + model[3]*k*(k-1)*yppar
   βupds = intersect((bbase+1):(bbase+ncov), pupd)
@@ -789,67 +822,103 @@ factor+parameter `fp` vector.
   ex = quote end
   pop!(ex.args)
 
-  for j in 1:(h-1)
-    for i in 1:k
+  if isone(k)
+
+    for j in 1:(h-1)
 
       # speciation
-      push!(ex.args, :(p[$((k+1)*j + i)] = 
-        p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
+      s = 0
+      push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
 
       # extinction
-      s = (k+1)*h 
-      push!(ex.args, 
-        :(p[$(s + k*j + i)] = 
-            p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
-
-      # gain
-      s = (2k+1)*h
-      for a in 1:(k-1)
-        push!(ex.args, 
-          :(p[$(s + k*(k-1)*j + a + (k-1)*(i-1))] = 
-              p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] + 
-              fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))]))
-      end
+      s = h 
+      push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
 
       # loss 
-      s = (2k+1 + k*(k-1))*h
-      push!(ex.args, 
-        :(p[$(s + k*j + i)] = 
-            p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+      s = 2h 
+      push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
 
       # betas
-      s = (3k+1+k*(k-1))*h + h*(h-1)
+      s = 3h + h*(h-1)
       if model[1]
         for l = Base.OneTo(yppar)
           push!(ex.args, 
-            :(p[$(s + l + yppar*(i-1) + k*j*yppar)] = 
-              p[$(s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
-              fp[$(s + l + yppar*(i-1) + k*j*yppar)]))
+            :(p[$(s + l + j*yppar)] = 
+                p[$(s + l + (j-1)*yppar)] + fp[$(s + l + j*yppar)]))
         end
       end
       if model[2]
         for l = Base.OneTo(yppar)
           push!(ex.args,
-            :(p[$(s + m2s + l + yppar*(i-1) + k*j*yppar)] = 
-              p[$(s + m2s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
-              fp[$(s + m2s + l + yppar*(i-1) + k*j*yppar)]))
-        end
-      end
-      if model[3]
-        for a = 1:(k-1), l = Base.OneTo(yppar)
-          push!(ex.args, 
-            :(p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)] = 
-              p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*(j-1)*yppar)] + 
-              fp[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)]))
+            :(p[$(s + m2s + l + j*yppar)] = 
+               p[$(s + m2s + l + (j-1)*yppar)] + fp[$(s + m2s + l + j*yppar)]))
         end
       end
     end
-    # between-region speciation
-    push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
-      (p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))])))
+
+  else
+    for j in 1:(h-1)
+      for i in 1:k
+
+        # speciation
+        push!(ex.args, :(p[$((k+1)*j + i)] = 
+          p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
+
+        # extinction
+        s = (k+1)*h 
+        push!(ex.args, 
+          :(p[$(s + k*j + i)] = 
+              p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+
+        # gain
+        s = (2k+1)*h
+        for a in 1:(k-1)
+          push!(ex.args, 
+            :(p[$(s + k*(k-1)*j + a + (k-1)*(i-1))] = 
+                p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] + 
+                fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))]))
+        end
+
+        # loss 
+        s = (2k+1 + k*(k-1))*h
+        push!(ex.args, 
+          :(p[$(s + k*j + i)] = 
+              p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
+
+        # betas
+        s = (3k+1+k*(k-1))*h + h*(h-1)
+        if model[1]
+          for l = Base.OneTo(yppar)
+            push!(ex.args, 
+              :(p[$(s + l + yppar*(i-1) + k*j*yppar)] = 
+                p[$(s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
+                fp[$(s + l + yppar*(i-1) + k*j*yppar)]))
+          end
+        end
+        if model[2]
+          for l = Base.OneTo(yppar)
+            push!(ex.args,
+              :(p[$(s + m2s + l + yppar*(i-1) + k*j*yppar)] = 
+                p[$(s + m2s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
+                fp[$(s + m2s + l + yppar*(i-1) + k*j*yppar)]))
+          end
+        end
+        if model[3]
+          for a = 1:(k-1), l = Base.OneTo(yppar)
+            push!(ex.args, 
+              :(p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)] = 
+                p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*(j-1)*yppar)] + 
+                fp[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)]))
+          end
+        end
+      end
+      # between-region speciation
+      push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
+        (p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))])))
+    end
   end
 
-  #Core.println(ex)
+  @debug Core.println(ex)
 
   return quote
     @inbounds begin
