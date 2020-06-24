@@ -108,6 +108,8 @@ function esse(states_file ::String,
 
   @info "Data successfully prepared"
 
+  @debug sort!(collect(pardic), by = x -> x[2])
+
   ## make likelihood function
   # flow algorithm
   if occursin(r"^[f|F][A-za-z]*", algorithm) 
@@ -275,6 +277,8 @@ function esse(tree_file   ::String,
         prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
   @info "Data successfully prepared"
+
+  @debug sort!(collect(pardic), by = x -> x[2])
 
   ## make likelihood function
   # flow algorithm

@@ -128,6 +128,8 @@ Returns the values of `y` at `t` using an approximation function.
   popfirst!(lex.args[2].args[3].args)
   lex.args[2].args[3] = lex.args[2].args[3].args[1]
 
+  @debug lex
+
   return quote
     @inbounds begin
       $lex
@@ -213,6 +215,8 @@ when `y` is an array of arrays.
 
   popfirst!(lex.args[2].args[3].args)
   lex.args[2].args[3] = lex.args[2].args[3].args[1]
+
+  @debug lex
 
   return quote
     @inbounds begin

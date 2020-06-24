@@ -308,7 +308,7 @@ Generated function for full tree likelihood at the root for normal likelihoods.
 
   push!(eqs.args, :($eq))
 
-  #Core.println(eqs)
+  @debug eqs
 
   return quote
     @inbounds begin
@@ -461,7 +461,7 @@ Generated function for speciation event likelihoods for pruning algorithm.
     end
   end
 
-  @debug Core.println(eqs)
+  @debug eqs
 
   return quote 
     @inbounds begin
@@ -606,7 +606,7 @@ Generated function for speciation event likelihoods for flow algorithm.
     end
   end
 
-  @debug Core.println(eqs)
+  @debug eqs
 
   return quote 
     @inbounds begin
@@ -834,12 +834,8 @@ factor+parameter `fp` vector.
       s = h 
       push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
 
-      # loss 
-      s = 2h 
-      push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
-
       # betas
-      s = 3h + h*(h-1)
+      s = 2h + h*(h-1)
       if model[1]
         for l = Base.OneTo(yppar)
           push!(ex.args, 
@@ -918,7 +914,7 @@ factor+parameter `fp` vector.
     end
   end
 
-  @debug Core.println(ex)
+  @debug ex
 
   return quote
     @inbounds begin

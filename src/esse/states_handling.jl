@@ -181,7 +181,7 @@ end
 """
     build_par_names(k::Int64, h::Int64, ny::Int64, model::Array{Int64,1})
 
-Build dictionary for parameter names and indexes for EGeoHiSSE for
+Build dictionary for parameter names and indexes for `ESSE.g` for
 `k` areas, `h` hidden states and `ny` covariates.
 """
 function build_par_names(k    ::Int64, 
@@ -221,7 +221,7 @@ function build_par_names(k    ::Int64,
   # add area looses `l`
   # transitions can only through **one area** transition
   for i = 0:(h-1), a = ia
-    push!(par_nams, "loss_"*string(a)*"_"*string(i))
+    lastindex(ia) > 1 && push!(par_nams, "loss_"*string(a)*"_"*string(i))
   end
 
   # add q between hidden states
@@ -256,8 +256,7 @@ function build_par_names(k    ::Int64,
     end
   end
 
-  pardic::Dict{String, Int64} = Dict(par_nams[i]::String => i::Int64
-    for i = Base.OneTo(lastindex(par_nams)))
+  pardic = Dict(v => i for (i,v) = enumerate(par_nams))
 
   return pardic::Dict{String, Int64}
 end
@@ -269,7 +268,7 @@ end
 """
     build_par_names(k::Int64, T::Bool)
 
-Build dictionary for parameter names and indexes for EHiSSE.
+Build dictionary for parameter names and indexes for ESSE.
 """
 function build_par_names(k::Int64, T::Bool)
 
@@ -342,14 +341,18 @@ function set_constraints(constraints::NTuple{N,String},
 
     spl = map(x -> strip(x), split(c, '='))
 
-    if occursin("q", spl[1])
-      dcp0[pardic[spl[2]]] = pardic[spl[1]]
+    # if no equality
+    if length(spl) < 2
+      @warn "No equality found in $c, no constraints applied for this expression"
       continue
     end
 
-    # if no equality
-    if length(spl) < 2
-      @warn "No equality found in $c"
+    # if hidden state rates
+    if occursin("q", spl[1])
+      for i in Base.OneTo(length(spl)-1) 
+        dcp0[pardic[spl[i+1]]] = pardic[spl[i]]
+      end
+
       continue
     end
 
@@ -432,6 +435,35 @@ function set_constraints(constraints::NTuple{N,String},
     dcfp[key] = value
   end
 
+  pnv = collect(values(pardic))
+  pnk = collect(keys(pardic))
+  pnk = pnk[sortperm(pnv)]
+
+  if length(dcp) > 0 || length(dcpf) > 0
+    ss = "Enforced parameter equalities: \n"
+    for (k,v) in dcp
+      ss *= "$(pnk[k]) = $(pnk[v]) \n"
+    end
+    for (k,v) in dcfp
+      ss *= "$(pnk[k]) = $(pnk[v]) \n"
+    end
+
+    @info ss
+  end
+
+  if length(zp) > 0 || length(zfp) > 0
+    ss = "Parameters set to 0: \n"
+    for k in zp
+      ss *= "$(pnk[k]) \n"
+    end
+    for (k,v) in zfp
+      ss *= "$(pnk[k]) \n"
+    end
+
+    @info ss
+  end
+
+
   return dcp, dcfp, zp, zfp
 end
 
@@ -458,50 +490,81 @@ function dict_hscor(k::Int64, h::Int64, ny::Int64, model::NTuple{3, Bool})
 
   hsc = Dict{Int64,Int64}()
 
-  for j in 1:(h-1)
-    for i in 1:k
+  if isone(k)
+
+    for j in 1:(h-1)
 
       # speciation
-      hsc[(k+1)*j + i] = (k+1)*(j-1) + i
+      s = 0
+      hsc[s + j + 1] = s + j
 
       # extinction
-      s = (k+1)*h 
-      hsc[s + k*j + i] = s + k*(j-1) + i
-
-      # gain
-      s = (2k+1)*h
-      for a in 1:(k-1)
-        hsc[s + k*(k-1)*j + a + (k-1)*(i-1)] = s + k*(k-1)*(j-1) + a + (k-1)*(i-1)
-      end
-
-      # loss 
-      s = (2k+1 + k*(k-1))*h
-      hsc[s + k*j + i] = s + k*(j-1) + i
+      s = h
+      hsc[s + j + 1] = s + j
 
       # betas
-      s = (3k+1+k*(k-1))*h + h*(h-1)
-
+      s = 2h + h*(h-1)
       if model[1]
         for l = Base.OneTo(yppar)
-          hsc[s + k*j + i + (l-1)*(i-1)] = s + k*(j-1) + i + (l-1)*(i-1)
+          hsc[s + yppar*j + l] = s + yppar*(j-1) + l
         end
       end
       if model[2]
         for l = Base.OneTo(yppar)
-          hsc[s + k*j + m2s + i + (l-1)*(i-1)] = s + k*(j-1) + m2s + i + (l-1)*(i-1)
-        end
-      end
-
-      if model[3]
-        for a = 1:(k-1), l = Base.OneTo(yppar)
-          hsc[s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1)] = 
-            s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1)
+          hsc[m2s + s + yppar*j + l] = m2s + s + yppar*(j-1) + l
         end
       end
     end
 
-    # between-region speciation
-    hsc[(k+1)*j + (k+1)] = (k+1)*(j-1) + (k+1)
+  else
+
+    for j in 1:(h-1)
+      for i in 1:k
+
+        # speciation
+        hsc[(k+1)*j + i] = (k+1)*(j-1) + i
+
+        # extinction
+        s = (k+1)*h 
+        hsc[s + k*j + i] = s + k*(j-1) + i
+
+        # gain
+        s = (2k+1)*h
+        for a in 1:(k-1)
+          hsc[s + k*(k-1)*j + a + (k-1)*(i-1)] = 
+            s + k*(k-1)*(j-1) + a + (k-1)*(i-1)
+        end
+
+        # loss 
+        s = (2k+1 + k*(k-1))*h
+        hsc[s + k*j + i] = s + k*(j-1) + i
+
+        # betas
+        s = (3k+1+k*(k-1))*h + h*(h-1)
+        if model[1]
+          for l = Base.OneTo(yppar)
+            hsc[s + l + yppar*(i-1) + yppar*k*j] = 
+              s + l + yppar*(i-1) + yppar*k*(j-1)
+          end
+        end
+        if model[2]
+          for l = Base.OneTo(yppar)
+            hsc[s + m2s + l + yppar*(i-1) + yppar*k*j] = 
+              s + m2s + l + yppar*(i-1) + yppar*k*(j-1)
+          end
+        end
+        if model[3]
+          for a = 1:(k-1), l = Base.OneTo(yppar)
+            hsc[s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1)] = 
+              s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1)
+          end
+        end
+      end
+
+      # between-region speciation
+      hsc[(k+1)*j + (k+1)] = (k+1)*(j-1) + (k+1)
+    end
+
   end
 
   return hsc

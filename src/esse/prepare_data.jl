@@ -85,11 +85,11 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   p  = fill(1e-1, npars)
 
   if isone(k)
-    βs = (3*h + h*(h-1)) + 1
+    βs = (2*h + h*(h-1)) + 1
     δ  = Float64(ntip-1)/sum(el)
     p[βs:end]      .= 0.0           # set βs
-    p[1:(k*h)]     .= δ + rand()*δ  # set λs
-    p[(h+1):(3*h)] .= p[1] - δ          # set μs
+    p[1:h]         .= δ + rand()*δ  # set λs
+    p[(h+1):(2*h)] .= p[1] - δ      # set μs
   else
     βs = h*(k^2 + 2k + h) + 1
     δ  = Float64(ntip-1)/sum(el)
@@ -174,6 +174,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
       push!(mvhfs, [p1,p2])
     end
   end
+
 
   # make hidden factors assigning 
   assign_hidfacs! = make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
