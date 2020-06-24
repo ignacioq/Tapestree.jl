@@ -130,16 +130,19 @@ function esse(states_file ::String,
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 
-      λevent!, rootll, k, h, ns, ned)
+      λevent!, rootll, ns, ned)
 
   else
     @error "No matching likelihood for algorithm: $algorithm"
   end
 
+  λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
+    make_prior_updates(pupd, phid, mvhfs, βpriors, k, h, ny, model)
+
   # create prior function
-  lpf = make_lpf(pupd, phid, 
-    λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, 
-    k, h, ny, model)
+  lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
+          λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
+
 
   # create posterior functions
   lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp)
@@ -449,16 +452,18 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 
-      λevent!, rootll, k, h, ns, ned)
+      λevent!, rootll, ns, ned)
 
   else
     @error "No matching likelihood for algorithm: $algorithm"
   end
 
+  λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
+    make_prior_updates(pupd, phid, mvhfs, βpriors, k, h, ny, model)
+
   # create prior function
-  lpf = make_lpf(pupd, phid, 
-    λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, 
-    k, h, ny, model)
+  lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
+          λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
 
   # create posterior functions
   lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp)
