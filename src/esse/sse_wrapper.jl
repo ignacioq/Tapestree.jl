@@ -296,7 +296,11 @@ function esse(tree_file   ::String,
 
     # prepare likelihood
     X, int, λevent!, rootll, abts1, abts2 = 
-      prepare_ll(X, p, E0, ns, k, h, ny, model, power, abts ,af!)
+      prepare_ll(X, p, E0, k, h, ny, model, power, abts, af!)
+
+"""
+HERE!!!
+"""
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 

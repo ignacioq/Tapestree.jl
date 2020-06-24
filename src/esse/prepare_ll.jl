@@ -32,7 +32,6 @@ given input data.
 function prepare_ll(X    ::Array{Array{Float64,1},1},
                     p    ::Array{Float64,1},
                     E0   ::Array{Float64,1},
-                    ns   ::Int64,
                     k    ::Int64,
                     h    ::Int64,
                     ny   ::Int64,

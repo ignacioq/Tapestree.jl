@@ -111,7 +111,7 @@ function exp_expr(k    ::Int64,
   # last non β parameters
   bbase = 
     if isone(k)
-      h + 2*h + h*(h-1)
+      2*h + h*(h-1)
     else
       h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) 
     end
@@ -264,7 +264,7 @@ function noevents_expr(si   ::Int64,
   for hi in setdiff(0:(h-1), s.h)
     hi -= s.h <= hi ? 0 : -1
     if isone(k)
-      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)]))
+      push!(ex.args, :(p[$(2h + s.h*(h-1) + hi)]))
     else
       push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
     end
@@ -589,7 +589,7 @@ function hidtran_expr(s  ::Sgh,
     hi = S[j].h
     hi -= s.h <= hi ? 0 : -1
     if isone(k)
-      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)] * 
+      push!(ex.args, :(p[$(2h + s.h*(h-1) + hi)] * 
                        u[$j, $i]))
     else
       push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
@@ -630,7 +630,7 @@ function hidtran_expr(s  ::Sgh,
     hi = S[i].h
     hi -= s.h <= hi ? 0 : -1
      if isone(k)
-      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)] * 
+      push!(ex.args, :(p[$(2h + s.h*(h-1) + hi)] * 
                        u[$(i + wu)]))
     else
       push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
