@@ -173,7 +173,7 @@ end
                 ::Val{ny}, 
                 ::Val{mdS}) where {k,h,ny,mdS}
 
-Generated function for full tree likelihood at the root for normal likelihoods.
+Generated function for full tree likelihood at the root for pruning likelihoods.
 """
 @generated function rootll_full(t   ::Float64,
                                 llik::Array{Float64,1},
@@ -197,7 +197,7 @@ Generated function for full tree likelihood at the root for normal likelihoods.
 
     # last non β parameters
     bbase = isone(k) ? 
-      (h + 2*h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
+      (2h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
 
     # ncov
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -358,7 +358,7 @@ Generated function for speciation event likelihoods for pruning algorithm.
 
     # last non β parameters
     bbase = isone(k) ? 
-      (h + 2*h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
+      (2h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
 
     # ncov
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
