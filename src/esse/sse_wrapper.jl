@@ -298,20 +298,18 @@ function esse(tree_file   ::String,
     X, int, λevent!, rootll, abts1, abts2 = 
       prepare_ll(X, p, E0, k, h, ny, model, power, abts, af!)
 
-"""
-HERE!!!
-"""
-
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 
-      λevent!, rootll, k, h, ns, ned)
+      λevent!, rootll, ns, ned)
 
   else
     @error "No matching likelihood for algorithm: $algorithm"
   end
 
+
+
   # create prior function
-  lpf = make_lpf(pupd, phid, 
+  lpf = make_lpf(pupd, phid, mvhfs,
     λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, 
     k, h, ny, model)
 

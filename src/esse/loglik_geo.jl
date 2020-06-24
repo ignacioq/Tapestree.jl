@@ -70,12 +70,11 @@ end
                 abts1    ::Array{Float64,1},
                 abts2    ::Array{Float64,1},
                 trios    ::Array{Array{Int64,1},1},
-                ode_solve::Function,
+                int      ::DiffEqBase.DEIntegrator,
                 λevent!  ::Function, 
                 rootll   ::Function,
-                k        ::Int64,
-                h        ::Int64,
-                ns       ::Int64)
+                ns       ::Int64,
+                ned      ::Int64)
 
 Make likelihood function for a tree given an ODE function.
 """
@@ -86,8 +85,6 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
                      int      ::DiffEqBase.DEIntegrator,
                      λevent!  ::Function, 
                      rootll   ::Function,
-                     k        ::Int64,
-                     h        ::Int64,
                      ns       ::Int64,
                      ned      ::Int64)
 
@@ -676,6 +673,7 @@ Make log-prior function.
 """
 function make_lpf(pupd   ::Array{Int64,1},
                   phid   ::Array{Int64,1},
+                  mvhfs  ::Array{Array{Int64,1},1},
                   λpriors::Float64,
                   μpriors::Float64,
                   gpriors::Float64,
@@ -691,14 +689,11 @@ function make_lpf(pupd   ::Array{Int64,1},
   if isone(k)
     λupds = intersect(1:h, pupd)
     μupds = intersect((h+1):2h, pupd)
-    lupds = intersect((2h+1):3h, pupd)
-    gupds = []
-    qupds = intersect((3h+1):(3h + h*(h-1)), pupd)
-    bbase = (3h+h*(h-1))
-    yppar = ny == 1 ? 1 : div(ny,
-      model[1]*k + 
-      model[2]*k + 
-      model[3]*k*(k-1))
+    lupds = Int64[]
+    gupds = Int64[]
+    qupds = intersect((2h+1):(2h + h*(h-1)), pupd)
+    bbase = (2h+h*(h-1))
+    yppar = ny == 1 ? 1 : div(ny, model[1] + model[2])
   else
     λupds = intersect(1:(h*(k+1)), pupd)
     μupds = intersect((h*(k+1)+1):(h*(k+1)+k*h), pupd)
@@ -711,6 +706,12 @@ function make_lpf(pupd   ::Array{Int64,1},
       model[1]*k + 
       model[2]*k + 
       model[3]*k*(k-1))
+  end
+
+  # hidden factors
+  hfps = copy(phid)
+  for j in mvhfs, i in j
+    push!(hfps, i)
   end
 
   ncov  = model[1]*k*yppar + model[2]*k*yppar + model[3]*k*(k-1)*yppar
@@ -753,7 +754,7 @@ function make_lpf(pupd   ::Array{Int64,1},
     end
   
     # hidden states factors
-    for i in phid
+    for i in hfps
       lq += logdexp(fp[i], hpriors)
     end
 
