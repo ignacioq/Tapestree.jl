@@ -652,39 +652,26 @@ end
 
 
 
-
-
-
 """
-    make_lpf(pupd   ::Array{Int64,1},
-             phid   ::Array{Int64,1},
-             λpriors::Float64,
-             μpriors::Float64,
-             gpriors::Float64,
-             lpriors::Float64,
-             qpriors::Float64,
-             βpriors::Tuple{Float64,Float64},
-             hpriors::Float64,
-             k      ::Int64,
-             h      ::Int64,
-             model  ::Tuple{Bool,Bool,Bool})
+    make_prior_updates(pupd   ::Array{Int64,1},
+                       phid   ::Array{Int64,1},
+                       mvhfs  ::Array{Array{Int64,1},1},
+                       βpriors::Tuple{Float64,Float64},
+                       k      ::Int64,
+                       h      ::Int64,
+                       ny     ::Int64,
+                       model  ::Tuple{Bool,Bool,Bool})
 
-Make log-prior function.
+Make update iterators for priors.
 """
-function make_lpf(pupd   ::Array{Int64,1},
-                  phid   ::Array{Int64,1},
-                  mvhfs  ::Array{Array{Int64,1},1},
-                  λpriors::Float64,
-                  μpriors::Float64,
-                  gpriors::Float64,
-                  lpriors::Float64,
-                  qpriors::Float64,
-                  βpriors::Tuple{Float64,Float64},
-                  hpriors::Float64,
-                  k      ::Int64,
-                  h      ::Int64,
-                  ny     ::Int64,
-                  model  ::Tuple{Bool,Bool,Bool})
+function make_prior_updates(pupd   ::Array{Int64,1},
+                            phid   ::Array{Int64,1},
+                            mvhfs  ::Array{Array{Int64,1},1},
+                            βpriors::Tuple{Float64,Float64},
+                            k      ::Int64,
+                            h      ::Int64,
+                            ny     ::Int64,
+                            model  ::Tuple{Bool,Bool,Bool})
 
   if isone(k)
     λupds = intersect(1:h, pupd)
@@ -719,43 +706,95 @@ function make_lpf(pupd   ::Array{Int64,1},
 
   βp_m, βp_v = βpriors
 
+  ss = "prior indices: \n"
+  ss *= "λupds = $λupds \n"
+  ss *= "μupds = $μupds \n"
+  ss *= "lupds = $lupds \n"
+  ss *= "gupds = $gupds \n"
+  ss *= "qupds = $qupds \n"
+  ss *= "βupds = $βupds \n"
+  ss *= "hfps = $hfps"
+
+  @debug ss
+
+  return λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v
+end
+
+
+
+
+"""
+    make_lpf(λupds  ::Array{Int64,1}, 
+             μupds  ::Array{Int64,1}, 
+             lupds  ::Array{Int64,1}, 
+             gupds  ::Array{Int64,1}, 
+             qupds  ::Array{Int64,1}, 
+             βupds  ::Array{Int64,1}, 
+             hfps   ::Array{Int64,1}, 
+             λpriors::Float64,
+             μpriors::Float64,
+             gpriors::Float64,
+             lpriors::Float64,
+             qpriors::Float64,
+             βp_m   ::Float64, 
+             βp_v   ::Float64,
+             hpriors::Float64)
+
+Make log-prior function.
+"""
+function make_lpf(λupds  ::Array{Int64,1}, 
+                  μupds  ::Array{Int64,1}, 
+                  lupds  ::Array{Int64,1}, 
+                  gupds  ::Array{Int64,1}, 
+                  qupds  ::Array{Int64,1}, 
+                  βupds  ::Array{Int64,1}, 
+                  hfps   ::Array{Int64,1}, 
+                  λpriors::Float64,
+                  μpriors::Float64,
+                  gpriors::Float64,
+                  lpriors::Float64,
+                  qpriors::Float64,
+                  βp_m   ::Float64, 
+                  βp_v   ::Float64,
+                  hpriors::Float64)
+
   function f(p ::Array{Float64,1}, 
              fp::Array{Float64,1})
     lq = 0.0
 
     # speciation priors
-    for i in λupds
-      lq += logdexp(p[i], λpriors)
+    for i::Int64 in λupds
+      lq += logdexp(p[i], λpriors)::Float64
     end
 
     # global extinction priors
-    for i in μupds
-      lq += logdexp(p[i], μpriors)
+    for i::Int64 in μupds
+      lq += logdexp(p[i], μpriors)::Float64
     end
 
     # area colonization priors
-    for i in gupds
-      lq += logdexp(p[i], gpriors)
+    for i::Int64 in gupds
+      lq += logdexp(p[i], gpriors)::Float64
     end
 
     # area loss priors
-    for i in lupds
-      lq += logdexp(p[i], lpriors)
+    for i::Int64 in lupds
+      lq += logdexp(p[i], lpriors)::Float64
     end
 
     # hidden states transition
-    for i in qupds
-      lq += logdexp(p[i], qpriors)
+    for i::Int64 in qupds
+      lq += logdexp(p[i], qpriors)::Float64
     end
 
     # betas
-    for i in βupds
-      lq += logdnorm(p[i], βp_m, βp_v)
+    for i::Int64 in βupds
+      lq += logdnorm(p[i], βp_m, βp_v)::Float64
     end
   
     # hidden states factors
-    for i in hfps
-      lq += logdexp(fp[i], hpriors)
+    for i::Int64 in hfps
+      lq += logdexp(fp[i], hpriors)::Float64
     end
 
     return lq

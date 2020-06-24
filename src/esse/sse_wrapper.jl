@@ -306,12 +306,12 @@ function esse(tree_file   ::String,
     @error "No matching likelihood for algorithm: $algorithm"
   end
 
-
+  λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
+    make_prior_updates(pupd, phid, mvhfs, βpriors, k, h, ny, model)
 
   # create prior function
-  lpf = make_lpf(pupd, phid, mvhfs,
-    λpriors, μpriors, gpriors, lpriors, qpriors, βpriors, hpriors, 
-    k, h, ny, model)
+  lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
+          λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
 
   # create posterior functions
   lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp)
