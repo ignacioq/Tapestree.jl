@@ -21,6 +21,10 @@ include("ESSE.jl")
 # TRIBE: Trait and Range Interspecific Biogeographic Evolution
 include("TRIBE.jl")
 
+# INSANE: joINt Speciation And Niche Evolution
+include("INSANE.jl")
+
+
 #=
  Exported functions 
 =#
