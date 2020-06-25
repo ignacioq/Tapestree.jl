@@ -439,7 +439,7 @@ function set_constraints(constraints::NTuple{N,String},
   pnk = collect(keys(pardic))
   pnk = pnk[sortperm(pnv)]
 
-  if length(dcp) > 0 || length(dcpf) > 0
+  if length(dcp) > 0 || length(dcfp) > 0
     ss = "Enforced parameter equalities: \n"
     for (k,v) in dcp
       ss *= "$(pnk[k]) = $(pnk[v]) \n"

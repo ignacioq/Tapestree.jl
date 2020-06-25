@@ -48,7 +48,7 @@ function define_mod(cov_mod::NTuple{N,String},
   mexp = replace(mexp, "," => ", ")
   mexp = mexp[1:(end-2)]
 
-  printstyled("running $mexp EGeoHiSSE model with:
+  printstyled("running $mexp ESSE.g model with:
     $k single area$(k>1 ? "s" : "") 
     $h hidden state$(h>1 ? "s" : "")
     $ny covariate$(ny>1 ? "s" : "") \n", color=:green)

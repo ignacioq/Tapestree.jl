@@ -175,7 +175,6 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     end
   end
 
-
   # make hidden factors assigning 
   assign_hidfacs! = make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
 
