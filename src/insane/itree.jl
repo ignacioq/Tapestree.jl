@@ -10,7 +10,7 @@ Created 25 06 2020
 =#
 
 
-struct Phy
+struct itree
     g::SimpleDiGraph{Int64}
     el::Dict{LightGraphs.SimpleGraphs.SimpleEdge{Int64}, Float64}
 end
