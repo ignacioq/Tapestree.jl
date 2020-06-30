@@ -11,7 +11,7 @@ using DelimitedFiles: readdlm, writedlm
 using ProgressMeter: Progress, next!
 using DifferentialEquations: ODEProblem, init, reinit!, solve!, Tsit5, DiffEqBase
 using LinearAlgebra: BLAS.gemv!, rank, mul!, ldiv!, qr!
-using Distributed: pmap
+using Distributed: @distributed, @sync
 using SharedArrays: SharedArray
 
 # other submodules dependencies

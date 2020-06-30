@@ -333,7 +333,7 @@ end
                 ::Val{S},
                 ::Val{mdS})
 
-Generated function for speciation event likelihoods for pruning algorithm.
+Generated function for speciation event likelihoods for *pruning* algorithm.
 """
 @generated function λevent_full(t   ::Float64, 
                                 llik::Array{Float64,1}, 

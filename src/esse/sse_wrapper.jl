@@ -162,7 +162,7 @@ function esse(states_file ::String,
     R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
 
     # run parallel loop
-    pmap(Base.OneTo(nchains)) do ci
+    @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
             slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
               niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
@@ -293,7 +293,8 @@ function esse(tree_file   ::String,
     # make likelihood function
     llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
                       λevent!, rootll)
-  # prunning algorithm
+  
+  # pruning algorithm
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
@@ -333,7 +334,7 @@ function esse(tree_file   ::String,
     R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
 
     # run parallel loop
-    pmap(Base.OneTo(nchains)) do ci
+    @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
             slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
               niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
@@ -481,7 +482,7 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
     R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
 
     # run parallel loop
-    pmap(Base.OneTo(nchains)) do ci
+    @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
             slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
               niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
