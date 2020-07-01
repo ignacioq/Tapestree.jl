@@ -6,11 +6,8 @@
 
 module INSANE
 
+using LightGraphs: SimpleDiGraph, SimpleGraphs.SimpleEdge, add_edge!, rem_edge!, add_vertex!, add_vertices!, rem_vertex!, inneighbors, outneighbors 
 using Random: randexp
-using DelimitedFiles: readdlm, writedlm
-using ProgressMeter: Progress, next!
-using Distributed: @sync, @distributed
-using SharedArrays: SharedArray
 
 # other submodules dependencies
 using ..Utils
