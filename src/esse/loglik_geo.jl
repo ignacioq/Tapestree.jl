@@ -128,17 +128,17 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
         # check for extinction of `1.0`
         @views Xpr = X[pr]
         for i in Base.OneTo(ns)
-          ud1[i+ns] > 1.0 && return -Inf
+          ud1[i+ns] >= 1.0 && return -Inf
           Xpr[i+ns] = ud1[i+ns]
           Xpr[i]    = llik[i]
         end
-
       end
 
       # assign root likelihood in non log terms &
       # assign root extinction probabilities
       @views Xned = X[ned]
       for i in Base.OneTo(ns)
+        Xned[i+ns] >= 1.0 && return -Inf
         llik[i] = Xned[i]
         extp[i] = Xned[i+ns]
       end

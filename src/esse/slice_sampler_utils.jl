@@ -290,8 +290,8 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   unsafe_copyto!(pp, 1, p, 1, npars)
 
-  L::Float64 = pp[j] - w*rand()
-  R::Float64 = L + w
+  L = pp[j] - w*rand()
+  R = L + w
 
   if L <= 0.0
     L = 1e-30
