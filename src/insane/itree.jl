@@ -39,17 +39,22 @@ struct itree
   nμ::Base.RefValue{Int64}
   nt::Base.RefValue{Int64}
 
+  # bare bones constructor
   itree() = 
     new(SimpleDiGraph{Int64}(),
         Dict{LightGraphs.Edge{Int64}, Float64}(),
         Ref(0.0), Ref(0), Ref(0), Ref(0))
+end
 
-  Base.show(io::IO, tree::itree) = print(io, 
+
+# pretty-printing
+function Base.show(io::IO, tree::itree)
     "insane phylogenetic tree: ", 
     tree.nt[], " extant + ", 
     tree.nμ[], " extinct tips, ", 
     tree.nλ[], " internal nodes")
 end
+
 
 
 
