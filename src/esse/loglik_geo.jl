@@ -58,7 +58,7 @@ function make_lhf(llf            ::Function,
 
       return llf(p) + lpf(p, fp)
     end
-
+  end
   return f
 end
 
