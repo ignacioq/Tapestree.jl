@@ -32,31 +32,32 @@ function make_lhf(llf            ::Function,
   ks  = keys(dcp)
   ksf = keys(dcfp)
 
-  function f(p ::Array{Float64,1}, 
-             fp::Array{Float64,1})
-
-    # constraints
-    for wp in ks
-      while haskey(dcp, wp)
-        tp = dcp[wp]
-        p[tp] = p[wp]
-        wp = tp
+  f = let ks = ks, ksf = ksf, assign_hidfacs! = assign_hidfacs!, dcp = dcp, dcfp = dcfp, llf = llf, lpf = lpf
+    (p ::Array{Float64,1}, 
+     fp::Array{Float64,1}) ->
+    begin
+      # constraints
+      for wp in ks
+        while haskey(dcp, wp)
+          tp = dcp[wp]
+          p[tp] = p[wp]
+          wp = tp
+        end
       end
-    end
 
-    for wp in ksf
-      while haskey(dcfp, wp)
-        tp = dcfp[wp]
-        fp[tp] = fp[wp]
-        wp = tp
+      for wp in ksf
+        while haskey(dcfp, wp)
+          tp = dcfp[wp]
+          fp[tp] = fp[wp]
+          wp = tp
+        end
       end
+
+     # factors
+      assign_hidfacs!(p, fp)
+
+      return llf(p) + lpf(p, fp)
     end
-
-   # factors
-    assign_hidfacs!(p, fp)
-
-    return llf(p) + lpf(p, fp)
-  end
 
   return f
 end
@@ -989,50 +990,54 @@ end
 
 
 """
-    make_λevent(h    ::Int64, 
-                k    ::Int64, 
-                ny   ::Int64, 
+    make_λevent(::Val{h}, 
+                ::Val{k}, 
+                ::Val{ny}, 
                 flow ::Bool,
-                model::NTuple{3,Bool},
-                af!  ::Function)
+                ::Val{model},
+                af!  ::Function) where {h, k, ny, model}
 
 Make function for λevent.
 """
-function make_λevent(h    ::Int64, 
-                     k    ::Int64, 
-                     ny   ::Int64, 
+function make_λevent(::Val{h}, 
+                     ::Val{k}, 
+                     ::Val{ny}, 
                      flow ::Bool,
-                     model::NTuple{3,Bool},
-                     af!  ::Function)
+                     ::Val{model},
+                     af!  ::Function) where {h, k, ny, model}
 
   λts = Array{Float64,1}(undef,h*k)
   r   = Array{Float64,1}(undef,ny)
 
   # make speciation events and closure
   if flow
-    λevent! = (t   ::Float64, 
-               llik::Array{Array{Float64,1},1},
-               ud1 ::Array{Float64,1},
-               ud2 ::Array{Float64,1},
-               p   ::Array{Float64,1},
-               pr  ::Int64) ->
-    begin
-      λevent_full(t, llik, ud1, ud2, p, pr, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))
-      return nothing
+    λevent! = let λts = λts, r = r, af! = af!
+      (t   ::Float64, 
+       llik::Array{Array{Float64,1},1},
+       ud1 ::Array{Float64,1},
+       ud2 ::Array{Float64,1},
+       p   ::Array{Float64,1},
+       pr  ::Int64) ->
+      begin
+        λevent_full(t, llik, ud1, ud2, p, pr, λts, r, af!,
+          Val(k), Val(h), Val(ny), Val(model))
+        return nothing
+      end
+    end
+  else
+    λevent! = let λts = λts, r = r, af! = af!
+      (t   ::Float64, 
+       llik::Array{Float64,1},
+       ud1 ::Array{Float64,1},
+       ud2 ::Array{Float64,1},
+       p   ::Array{Float64,1}) ->
+      begin
+        λevent_full(t, llik, ud1, ud2, p, λts, r, af!,
+          Val(k), Val(h), Val(ny), Val(model))
+        return nothing
+      end
     end
 
-  else
-    λevent! = (t   ::Float64, 
-               llik::Array{Float64,1},
-               ud1 ::Array{Float64,1},
-               ud2 ::Array{Float64,1},
-               p   ::Array{Float64,1}) ->
-    begin
-      λevent_full(t, llik, ud1, ud2, p, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))
-      return nothing
-    end
   end
 
   return λevent!
@@ -1051,31 +1056,29 @@ end
 
 Make root conditioning likelihood function.
 """
-function make_rootll(h    ::Int64, 
-                     k    ::Int64, 
-                     ny   ::Int64, 
-                     model::NTuple{3,Bool},
-                     af!  ::Function)
+function make_rootll(::Val{h}, 
+                     ::Val{k}, 
+                     ::Val{ny}, 
+                     ::Val{model},
+                     af!  ::Function) where {h, k, ny, model}
 
   λts = Array{Float64,1}(undef,h*k)
   r   = Array{Float64,1}(undef,ny)
 
-  rootll = (t   ::Float64,
-            llik::Array{Float64,1},
-            extp::Array{Float64,1},
-            w   ::Array{Float64,1},
-            p   ::Array{Float64,1}) -> 
-    begin
-      rootll_full(t, llik, extp, w, p, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))::Float64
-    end
-
+  rootll = let r = r, λts = λts, af! = af!
+      (t   ::Float64,
+              llik::Array{Float64,1},
+              extp::Array{Float64,1},
+              w   ::Array{Float64,1},
+              p   ::Array{Float64,1}) -> 
+      begin
+        rootll_full(t, llik, extp, w, p, λts, r, af!,
+          Val(k), Val(h), Val(ny), Val(model))::Float64
+      end
+  end
+  
   return rootll
 end
-
-
-
-
 
 
 

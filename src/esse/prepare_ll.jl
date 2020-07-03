@@ -26,7 +26,7 @@ Created 05 03 2020
                abts ::Array{Float64,2},
                af!  ::Function)
 
-Prepare **EGeoHiSSE** likelihoods using the **pruning** algorithm 
+Prepare **ESSE.h** likelihoods using the **pruning** algorithm 
 given input data.
 """
 function prepare_ll(X    ::Array{Array{Float64,1},1},
@@ -50,10 +50,10 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   abts2 = abts[:,2]
 
   # make speciation events and closure
-  λevent! = make_λevent(h, k, ny, false, model, af!)
+  λevent! = make_λevent(Val(h), Val(k), Val(ny), false, Val(model), af!)
 
   # make root likelihood conditioning
-  rootll = make_rootll(h, k, ny, model, af!)
+  rootll = make_rootll(Val(h), Val(k), Val(ny), Val(model), af!)
 
   # make ODE function
   ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), Val(power), af!)

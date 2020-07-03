@@ -1140,10 +1140,11 @@ function make_egeohisse(::Val{k},
     model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
 
   # make ode function with closure
-  ode_fun = (du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64) -> 
+  ode_fun = let r = r, eaft = eaft, af! = af!
+    (du::Array{Float64,1}, 
+     u::Array{Float64,1}, 
+     p::Array{Float64,1}, 
+     t::Float64) -> 
     begin
       geohisse_full(du::Array{Float64,1},
                     u ::Array{Float64,1},
@@ -1152,6 +1153,7 @@ function make_egeohisse(::Val{k},
                     r,eaft,af!,Val(k),Val(h),Val(ny),Val(model),Val(power))
       return nothing
     end
+  end
 
   return ode_fun
 end
