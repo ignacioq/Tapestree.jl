@@ -21,6 +21,7 @@ for `insane` use, with the following fields:
   d2: daughter tree 2
   pe: pendant edge
   at: absolute node time
+  iμ: is an extinction node
 
     itree()
 
@@ -43,14 +44,25 @@ mutable struct itree
   d2::Union{itree, Nothing}
   pe::Float64
   at::Float64
+  iμ::Bool
 
   # constructors
-  itree() = new(nothing, nothing, 0.0, 0.0)
-  itree(pe::Float64) = new(nothing, nothing, pe, 0.0)
-  itree(d1::itree, d2::itree, pe::Float64) = new(d1, d2, pe, 0.0)
+  itree() = new(nothing, nothing, 0.0, 0.0, false)
+  itree(pe::Float64) = new(nothing, nothing, pe, 0.0, false)
+  itree(pe::Float64, iμ::Bool) = 
+    new(nothing, nothing, pe, 0.0, isμ)
+  itree(d1::itree, d2::itree, pe::Float64, isμ::Bool) = 
+    new(d1, d2, pe, 0.0, isμ)
+  itree(d1::itree, d2::itree, pe::Float64) = new(d1, d2, pe, 0.0, false)
   itree(d1::itree, d2::itree, pe::Float64, at::Float64) = 
-    new(d1, d2, pe, at)
+    new(d1, d2, pe, at, false)
+  itree(d1::itree, d2::itree, pe::Float64, at::Float64, 
+        isλ::Bool, isμ::Bool, ist::Bool) = 
+    new(d1, d2, pe, at, isμ)
 end
+
+
+
 
 
 

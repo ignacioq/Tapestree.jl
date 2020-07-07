@@ -11,12 +11,50 @@ Created 25 06 2020
 
 
 
+
+"""
+    istip(tree::itree)
+
+Return if is either an extant or extinct tip node.
+"""
+istip(tree::itree) = isnothing(tree.d1) && isnothing(tree.d2)
+
+
+
+
+"""
+    isλ(tree::itree)
+
+Return if is an extinction node.
+"""
+isextinct(tree::itree) = getproperty(tree,:isμ)
+
+
+
+
+"""
+    pe(tree::itree)
+
+Return pendant edge.
+"""
+pe(tree::itree) = getproperty(tree,:pe)
+
+"""
+    pe(tree::itree)
+
+Return pendant edge.
+"""
+pe(::Nothing) = 0.0
+
+
+
+
 """
     treelength(tree::itree)
 
 Return the branch length sum of `tree`.
 """
-treelength(tree::itree) = treelength(tree.d1) + treelength(tree.d2) + tree.pe
+treelength(tree::itree) = treelength(tree.d1) + treelength(tree.d2) + pe(tree)
 
 """
     treelength(::Nothing)
@@ -29,37 +67,93 @@ treelength(::Nothing) = 0.0
 
 
 """
-    subnn(tree::itree)
+    treeheight(tree::itree)
 
-Return the number of descendant nodes of `tree`.
+Return the tree height of `tree`.
 """
-subnn(tree::itree) = subnn(tree.d1) + subnn(tree.d2) + 1
-
-"""
-    subnn(::Nothing)
-
-Return the number of descendant nodes of `tree`.
-"""
-subnn(::Nothing) = 0
-
-
-
-
+function treeheight(tree::itree)
+  th1 = treeheight(tree.d1)
+  th2 = treeheight(tree.d2)
+  (th1 > th2 ? th1 : th2) + pe(tree)
+end
 
 """
     treeheight(tree::itree)
 
-Return the number of descendant nodes of `tree`.
-"""
-treeheight(tree::itree) = 
-
-
-"""
-    subnn(::Nothing)
-
-Return the number of descendant nodes of `tree`.
+Return the tree height of `tree`.
 """
 treeheight(::Nothing) = 0.0
+
+
+
+
+"""
+    snn(tree::itree)
+
+Return the number of descendant nodes for `tree`.
+"""
+snn(tree::itree) = snn(tree.d1) + snn(tree.d2) + 1
+
+"""
+    snn(::Nothing)
+
+Return the number of descendant nodes for `tree`.
+"""
+snn(::Nothing) = 0
+
+
+
+
+"""
+    snin(tree::itree)
+
+Return the number of internal nodes for `tree`.
+"""
+function snin(tree::itree)
+    if istip(tree)
+      return 0
+    else
+      return snin(tree.d1) + snin(tree.d2) + 1
+    end
+end
+
+"""
+    snin(::Nothing)
+
+Return the number of internal nodes for `tree`.
+"""
+snin(::Nothing) = 0
+
+
+
+
+
+"""
+    sntn(tree::itree)
+
+Return the number of tip nodes for `tree`.
+"""
+function sntn(tree::itree)
+    if istip(tree)
+      return 1
+    else
+      return sntn(tree.d1) + sntn(tree.d2)
+    end
+end
+
+
+"""
+    sntn(::Nothing)
+
+Return the number of tip nodes for `tree`.
+"""
+sntn(::Nothing) = 0
+
+
+
+
+
+
 
 
 # """
