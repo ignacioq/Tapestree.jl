@@ -6,7 +6,7 @@
 
 module INSANE
 
-using LightGraphs: SimpleDiGraph, SimpleGraphs.SimpleEdge, add_edge!, rem_edge!, add_vertex!, add_vertices!, rem_vertex!, inneighbors, outneighbors 
+using RecipesBase: @recipe
 using Random: randexp
 
 # other submodules dependencies
