@@ -24,13 +24,55 @@ cbd_wait(n::Float64, λ::Float64, μ::Float64) = rexp(n*(λ + μ))
 
 
 """
+    cbd_wait(n::Float64, λ::Float64, μ::Float64)
+
+Sample a per-lineage waiting time for constant birth-death species 
+with speciation rate `λ` and extinction rate `μ`.
+"""
+cbd_wait(λ::Float64, μ::Float64) = rexp(λ + μ)
+
+
+
+
+"""
+    cpb_wait(λ::Float64)
+
+Sample a per-lineage waiting time for pure-birth species 
+with speciation rate `λ`.
+"""
+cpb_wait(λ::Float64) = rexp(λ)
+
+
+
+
+"""
     rexp(r::Float64)
 
 Generate an exponential sample with rate `r`.
 """
-rexp(r::Float64) = randexp()/r
+rexp(r::Float64) = @fastmath randexp()/r
 
 
+
+
+
+"""
+  sim_cpb(t::Float64, λ::Float64)
+
+Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`.
+"""
+function sim_cpb(t::Float64, λ::Float64)
+
+  tw = cpb_wait(λ)
+
+  if tw > t
+    return iTree(t)
+  end
+
+  iTree(sim_iTree(t - tw, λ, μ), sim_iTree(t - tw, λ, μ), tw)
+end
+
+@code_warntype sim_cpb(1.0, 0.5)
 
 
 """
@@ -44,12 +86,12 @@ Return `true` if speciation event
 
 
 """
-    addpe!(tree::itree, bs::Array{Bool,1}, pe::Float64)
+    addpe!(tree::iTree, bs::Array{Bool,1}, pe::Float64)
 
 Add `pe` to pendant edge of node given by binary search vector `bs`.
 Binary search vector follows (left -> false, right -> true).
 """
-function addpe!(tree::itree, bs::Array{Bool,1}, pe::Float64)
+function addpe!(tree::iTree, bs::Array{Bool,1}, pe::Float64)
   for i in bs
     tree = i ? tree.d2 : tree.d1
   end
@@ -59,27 +101,77 @@ end
 
 
 
+
+
+
 """
-    newλ!(tree::itree, bs::Array{Bool,1})
+    newλ!(tree::iTree, bs::Array{Bool,1})
 
 Add new daughters to node given by binary search vector `bs`.
 Binary search vector follows (left -> false, right -> true).
 """
-function newλ!(tree::itree, bs::Array{Bool,1})
+function newλ!(tree::iTree, bs::Array{Bool,1})
   for i in bs
     tree = i ? tree.d2 : tree.d1
   end
-  tree.d1 = itree()
-  tree.d2 = itree()
+  tree.d1 = iTree()
+  tree.d2 = iTree()
 end
 
 
 
 
+
+
+# try to make a recursive tree simulator
+
+λ = 0.2
+μ = 0.05
+tf = 2.0
+tc = 0.0   # current time
+nF = 1.0   # number of alive lineages (Float)
+nI = 1     # number of alive lineages (Int)
+
+nλ = 0     # number of speciation events
+nμ = 0     # number of extinction events
+
+tree = iTree()
+
+"""
+"""
+function sim_(t::Float64, λ::Float64)
+
+  tw = cbd_wait(1.0, λ, μ)
+
+  if tw > t
+    return iTree(t)
+  end
+
+  iTree(sim_iTree(t - tw, λ, μ), sim_iTree(t - tw, λ, μ), tw)
+end
+
+
+
+t = sim_iTree(3.0, 1., 0.0)
+treeheight(t)
+treelength(t)
+sntn(t)
+
+t = sim_cbd(1., 0.0, 3.)
+
+
+treeheight(t)
+treelength(t)
+sntn(t)
+
+@benchmark sim_iTree(3.0, 1., 0.0)
+@benchmark sim_cbd(1., 0.0, 3., true)
+
+
 """
     sim_cbd(λ::Float64, μ::Float64, tf::Float64)
 
-Simulate complete birth-death trees in `itree` format until time `tf`.
+Simulate complete birth-death trees in `iTree` format until time `tf`.
 """
 function sim_cbd(λ::Float64, μ::Float64, tf::Float64)
 
@@ -90,7 +182,7 @@ function sim_cbd(λ::Float64, μ::Float64, tf::Float64)
   nλ = 0     # number of speciation events
   nμ = 0     # number of extinction events
 
-  tree  = itree()
+  tree  = iTree()
 
   wa = Array{Bool,1}[]
   push!(wa, Bool[])
