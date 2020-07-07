@@ -156,8 +156,6 @@ end
 
 
 
-
-
 """
     sim_cbd(λ::Float64, μ::Float64, tf::Float64)
 
