@@ -76,7 +76,7 @@ Recipe for plotting a Type `iTree`.
   fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
   xlims           --> (0, treeheight(tree))
-  ylims           --> (0, sntn(tree))
+  ylims           --> (0, sntn(tree)+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
   grid            --> :off

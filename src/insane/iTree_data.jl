@@ -27,7 +27,7 @@ istip(tree::iTree) = isnothing(tree.d1) && isnothing(tree.d2)
 
 Return if is an extinction node.
 """
-isextinct(tree::iTree) = getproperty(tree,:isμ)
+isextinct(tree::iTree) = getproperty(tree,:iμ)
 
 
 
@@ -151,6 +151,27 @@ sntn(::Nothing) = 0
 
 
 
+
+"""
+    snen(tree::iTree)
+
+Return the number of tip nodes for `tree`.
+"""
+function snen(tree::iTree)
+    if isextinct(tree)
+      return 1
+    else
+      return snen(tree.d1) + snen(tree.d2)
+    end
+end
+
+
+"""
+    snen(::Nothing)
+
+Return the number of tip nodes for `tree`.
+"""
+snen(::Nothing) = 0
 
 
 
