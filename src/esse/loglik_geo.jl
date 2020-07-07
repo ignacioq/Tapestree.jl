@@ -184,10 +184,10 @@ Generated function for full tree likelihood at the root for pruning likelihoods.
                                 λts ::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
-                                ::Val{k},
-                                ::Val{h},
-                                ::Val{ny},
-                                ::Val{model})::Float64 where {k, h, ny, model}
+                                ::Type{Val{k}},
+                                ::Type{Val{h}},
+                                ::Type{Val{ny}},
+                                ::Type{Val{model}})::Float64 where {k, h, ny, model}
 
   S = create_states(k, h)
 
@@ -344,10 +344,10 @@ Generated function for speciation event likelihoods for *pruning* algorithm.
                                 λts ::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
-                                ::Val{k}, 
-                                ::Val{h}, 
-                                ::Val{ny}, 
-                                ::Val{model}) where {k, h, ny, model}
+                                ::Type{Val{k}}, 
+                                ::Type{Val{h}}, 
+                                ::Type{Val{ny}}, 
+                                ::Type{Val{model}}) where {k, h, ny, model}
 
   eqs = quote end
   popfirst!(eqs.args)
@@ -500,10 +500,10 @@ Generated function for speciation event likelihoods for flow algorithm.
                                 λts ::Array{Float64,1},
                                 r   ::Array{Float64,1},
                                 af! ::Function,
-                                ::Val{k}, 
-                                ::Val{h}, 
-                                ::Val{ny}, 
-                                ::Val{model}) where {k, h, ny, model}
+                                ::Type{Val{k}}, 
+                                ::Type{Val{h}}, 
+                                ::Type{Val{ny}}, 
+                                ::Type{Val{model}}) where {k, h, ny, model}
 
   eqs = quote end
   popfirst!(eqs.args)
@@ -817,13 +817,13 @@ end
 Generated function to assign factors to parameters given 
 factor+parameter `fp` vector.
 """
-function make_assign_hidfacs(::Val{k},
-                             ::Val{h},
-                             ::Val{ny},
-                             ::Val{model}) where {k, h, ny, model}
+function make_assign_hidfacs(::Type{Val{k}},
+                             ::Type{Val{h}},
+                             ::Type{Val{ny}},
+                             ::Type{Val{model}}) where {k, h, ny, model}
 
   assign_hidfacs! = (p::Array{Float64,1}, fp::Array{Float64,1}) -> 
-    assign_hidfacs_full(p, fp, Val(k), Val(h), Val(ny), Val(model))
+    assign_hidfacs_full(p, fp, Val{k}, Val{h}, Val{ny}, Val{model})
 
   return assign_hidfacs!
 end
@@ -845,10 +845,10 @@ factor+parameter `fp` vector.
 """
 @generated function assign_hidfacs_full(p ::Array{Float64,1},
                                         fp::Array{Float64,1},
-                                        ::Val{k},
-                                        ::Val{h},
-                                        ::Val{ny},
-                                        ::Val{model}) where {k, h, ny, model}
+                                        ::Type{Val{k}},
+                                        ::Type{Val{h}},
+                                        ::Type{Val{ny}},
+                                        ::Type{Val{model}}) where {k, h, ny, model}
 
   # number of covariates
   yppar = ny == 1 ? 1 : div(ny,
@@ -999,11 +999,11 @@ end
 
 Make function for λevent.
 """
-function make_λevent(::Val{h}, 
-                     ::Val{k}, 
-                     ::Val{ny}, 
+function make_λevent(::Type{Val{h}}, 
+                     ::Type{Val{k}}, 
+                     ::Type{Val{ny}}, 
                      flow ::Bool,
-                     ::Val{model},
+                     ::Type{Val{model}},
                      af!  ::Function) where {h, k, ny, model}
 
   λts = Array{Float64,1}(undef,h*k)
@@ -1020,7 +1020,7 @@ function make_λevent(::Val{h},
        pr  ::Int64) ->
       begin
         λevent_full(t, llik, ud1, ud2, p, pr, λts, r, af!,
-          Val(k), Val(h), Val(ny), Val(model))
+          Val{k}, Val{h}, Val{ny}, Val{model})
         return nothing
       end
     end
@@ -1033,7 +1033,7 @@ function make_λevent(::Val{h},
        p   ::Array{Float64,1}) ->
       begin
         λevent_full(t, llik, ud1, ud2, p, λts, r, af!,
-          Val(k), Val(h), Val(ny), Val(model))
+          Val{k}, Val{h}, Val{ny}, Val{model})
         return nothing
       end
     end
@@ -1056,10 +1056,10 @@ end
 
 Make root conditioning likelihood function.
 """
-function make_rootll(::Val{h}, 
-                     ::Val{k}, 
-                     ::Val{ny}, 
-                     ::Val{model},
+function make_rootll(::Type{Val{h}}, 
+                     ::Type{Val{k}}, 
+                     ::Type{Val{ny}}, 
+                     ::Type{Val{model}},
                      af!  ::Function) where {h, k, ny, model}
 
   λts = Array{Float64,1}(undef,h*k)
@@ -1073,7 +1073,7 @@ function make_rootll(::Val{h},
               p   ::Array{Float64,1}) -> 
       begin
         rootll_full(t, llik, extp, w, p, λts, r, af!,
-          Val(k), Val(h), Val(ny), Val(model))::Float64
+          Val{k}, Val{h}, Val{ny}, Val{model})::Float64
       end
   end
   

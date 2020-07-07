@@ -50,13 +50,13 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   abts2 = abts[:,2]
 
   # make speciation events and closure
-  λevent! = make_λevent(Val(h), Val(k), Val(ny), false, Val(model), af!)
+  λevent! = make_λevent(Val{h}, Val{k}, Val{ny}, false, Val{model}, af!)
 
   # make root likelihood conditioning
-  rootll = make_rootll(Val(h), Val(k), Val(ny), Val(model), af!)
+  rootll = make_rootll(Val{h}, Val{k}, Val{ny}, Val{model}, af!)
 
   # make ODE function
-  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), Val(power), af!)
+  ode_fun = make_egeohisse(Val{k}, Val{h}, Val{ny}, Val{model}, Val{power}, af!)
 
   # make integral problem
   prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0,1.0), p)
@@ -109,7 +109,7 @@ function prepare_ll(p    ::Array{Float64,1},
   ts = [ti:Eδt:tf...]
 
   # Make extinction integral
-  egeohisse_E = make_egeohisse_E(Val(k), Val(h), Val(ny), Val(model), af!)
+  egeohisse_E = make_egeohisse_E(Val{k}, Val{h}, Val{ny}, Val{model}, af!)
 
   # Make extinction function at times `ts`
   Et = make_Et(egeohisse_E, p, E0, ts, ti, tf)
@@ -119,11 +119,11 @@ function prepare_ll(p    ::Array{Float64,1},
   nets = length(Ets) + 1
 
   # Make extinction approximated function
-  afE! = make_af(ts,  Ets, Val(ns))
+  afE! = make_af(ts,  Ets, Val{ns})
 
   # make likelihood integral
   ode_intf = 
-    make_egeohisse_M(Val(k), Val(h), Val(ny), Val(model), af!, afE!, nets)
+    make_egeohisse_M(Val{k}, Val{h}, Val{ny}, Val{model}, af!, afE!, nets)
 
   # push parameters as the last vector in Ets
   push!(Ets, p)
@@ -215,7 +215,7 @@ function prepare_ll(ode_make_lik,
 
   # Make extinction approximated function
   # ** this make order is crucial **
-  afE! = make_af(ts,  Ets, Val(ns))
+  afE! = make_af(ts,  Ets, Val{ns})
 
   # make likelihood integral
   ode_intf = ode_make_lik(afE!, nets)

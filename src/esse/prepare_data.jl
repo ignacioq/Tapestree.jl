@@ -57,7 +57,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   ned = size(ed,1)
 
   # make z(t) approximation from discrete data `af!()`
-  af! = make_af(x, y, Val(ny))
+  af! = make_af(x, y, Val{ny})
 
   # define model
   model = define_mod(cov_mod, k, h, ny)
@@ -177,7 +177,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   end
 
   # make hidden factors assigning 
-  assign_hidfacs! = make_assign_hidfacs(Val(k), Val(h), Val(ny), Val(model))
+  assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h}, Val{ny}, Val{model})
 
   # force same parameter values for constraints
   for wp in keys(dcp)
