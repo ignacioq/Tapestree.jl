@@ -10,19 +10,22 @@ Created 25 06 2020
 =#
 
 
+"""
+  setpe!(tree::iTree, pe::Float64)
 
-setpe!(tree::iTree, pe::Float64) = tree.pe = pe
+Set pendant edge for `tree`.
+"""
+setpe!(tree::iTree, pe::Float64) = setproperty!(tree, :pe, pe)
 
-# remove extinct tips
 
 
 
-t.d1
+"""
+    remove_extinct(tree::iTree)
 
-isextinct(t.d2)
-
-remove_extinct(::Nothing) = nothing
-
+Remove extinct tips from `iTree`.
+WARNING: it changes the `tree` object.
+"""
 function remove_extinct(tree::iTree)
 
 
@@ -43,33 +46,9 @@ function remove_extinct(tree::iTree)
 end
 
 """
-deletes in place 
+    remove_extinct(::Nothing)
+
+Remove extinct tips from `iTree`.
+WARNING: it changes the `tree` object.
 """
-
-tree = deepcopy(t)
-
-te = remove_extinct(deepcopy(tree))
-
-plot(t)
-plot(te)
-
-snn(tree)
-treeheight(tree)
-
-snn(t)
-treeheight(t)
-snen(t)
-
-plot(tree)
-
-function sim_cpb(t::Float64, λ::Float64)
-
-  tw = cpb_wait(λ)
-
-  if tw > t
-    return iTree(t)
-  end
-
-  iTree(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
-end
-
+remove_extinct(::Nothing) = nothing

@@ -11,9 +11,9 @@ Created 07 07 2020
 
 
 """
-    read_newick(out_file::String)
+    read_newick(in_file::String)
 
-Writes `iTree` as a newick tree to `out_file`.
+Readsa newick tree into `iTree` from `in_file`.
 """
 function read_newick(in_file::String)
 
@@ -64,20 +64,14 @@ function read_newick(in_file::String)
   return tree
 end
 
-# io = open(homedir()*"/Desktop/tree.tre")
-# sr = readlines(io)[1]
-# close(io)
-# sr = sr[2:(findfirst(isequal(';'), sr)-2)]
-
-# io = open(homedir()*"/Desktop/t.tre")
-# sn = readlines(io)[1]
-# close(io)
-# sn = sn[2:(findfirst(isequal(';'), sn)-2)]
 
 
 
-# s = sn
+"""
+    from_string(s::String)
 
+Returns `iTree` from newick string.
+"""
 function from_string(s::String)
 
   # find pendant edge
