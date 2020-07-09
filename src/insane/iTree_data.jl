@@ -19,6 +19,7 @@ Return if is either an extant or extinct tip node.
 """
 istip(tree::iTree) = isnothing(tree.d1) && isnothing(tree.d2)
 
+istip(::Nothing) = false
 
 
 
@@ -29,6 +30,7 @@ Return if is an extinction node.
 """
 isextinct(tree::iTree) = getproperty(tree,:iμ)
 
+isextinct(::Nothing) = false
 
 
 

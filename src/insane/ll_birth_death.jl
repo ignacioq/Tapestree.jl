@@ -23,8 +23,7 @@ function llik_cbd(tree::iTree, λ::Float64, μ::Float64)
   if istip(tree) 
     - pe(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
   else
-    llik_cbd(tree.d1, λ, μ) +
-    llik_cbd(tree.d2, λ, μ) + 
+    llik_cbd(tree.d1, λ, μ) + llik_cbd(tree.d2, λ, μ) + 
     log(λ) - pe(tree)*(λ + μ)
   end
 end
