@@ -881,14 +881,14 @@ factor+parameter `fp` vector.
         for l = Base.OneTo(yppar)
           push!(ex.args, 
             :(p[$(s + l + j*yppar)] = 
-                p[$(s + l + (j-1)*yppar)] + fp[$(s + l + j*yppar)]))
+                p[$(s + l + (j-1)*yppar)] - fp[$(s + l + j*yppar)]))
         end
       end
       if model[2]
         for l = Base.OneTo(yppar)
           push!(ex.args,
             :(p[$(s + m2s + l + j*yppar)] = 
-               p[$(s + m2s + l + (j-1)*yppar)] + fp[$(s + m2s + l + j*yppar)]))
+               p[$(s + m2s + l + (j-1)*yppar)] - fp[$(s + m2s + l + j*yppar)]))
         end
       end
     end
@@ -928,7 +928,7 @@ factor+parameter `fp` vector.
           for l = Base.OneTo(yppar)
             push!(ex.args, 
               :(p[$(s + l + yppar*(i-1) + k*j*yppar)] = 
-                p[$(s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
+                p[$(s + l + yppar*(i-1) + k*(j-1)*yppar)] - 
                 fp[$(s + l + yppar*(i-1) + k*j*yppar)]))
           end
         end
@@ -936,7 +936,7 @@ factor+parameter `fp` vector.
           for l = Base.OneTo(yppar)
             push!(ex.args,
               :(p[$(s + m2s + l + yppar*(i-1) + k*j*yppar)] = 
-                p[$(s + m2s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
+                p[$(s + m2s + l + yppar*(i-1) + k*(j-1)*yppar)] -
                 fp[$(s + m2s + l + yppar*(i-1) + k*j*yppar)]))
           end
         end
@@ -944,7 +944,7 @@ factor+parameter `fp` vector.
           for a = 1:(k-1), l = Base.OneTo(yppar)
             push!(ex.args, 
               :(p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)] = 
-                p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*(j-1)*yppar)] + 
+                p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*(j-1)*yppar)] -
                 fp[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)]))
           end
         end
