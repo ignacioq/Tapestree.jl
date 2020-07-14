@@ -238,7 +238,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   end
 
   return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
-    mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+    mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
     af!, assign_hidfacs!, abts, bts, E0
 
 end

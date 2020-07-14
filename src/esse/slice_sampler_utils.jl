@@ -118,7 +118,8 @@ function loop_slice_sampler(lhf         ::Function,
     for (i,mvp) in enumerate(mvhfs)
       S = hc - randexp()
       @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars)
-      p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
+      @views p, fp, hc = 
+        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
     end
 
     # log samples
@@ -249,7 +250,8 @@ function w_sampler(lhf         ::Function,
     for (i,mvp) in enumerate(mvhfs)
       S = hc - randexp()
       @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars)
-      p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
+      @views p, fp, hc = 
+        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
     end
 
     @inbounds setindex!(ps, p, it, :)

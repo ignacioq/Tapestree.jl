@@ -103,7 +103,7 @@ function esse(states_file ::String,
 
   # prepare data
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
-  mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+  mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
@@ -163,9 +163,8 @@ function esse(states_file ::String,
     # run parallel loop
     @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
-            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
-              npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
-      # write output
+        slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
       write_ssr(R, pardic, out_file, cits, ci)
     end
 
@@ -173,6 +172,7 @@ function esse(states_file ::String,
 
     R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
           npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+
 
     # write output
     write_ssr(R, pardic, out_file)
@@ -274,7 +274,7 @@ function esse(tree_file   ::String,
 
   # prepare data
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
-  mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+  mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
@@ -336,8 +336,8 @@ function esse(tree_file   ::String,
     # run parallel loop
     @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
-            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
-              npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+        slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
       # write output
       write_ssr(R, pardic, out_file, cits, ci)
     end
@@ -426,7 +426,7 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
 
   # prepare data
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
-  mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+  mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
@@ -485,8 +485,8 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
     # run parallel loop
     @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
-            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
-              npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+        slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
       # write output
       write_ssr(R, pardic, out_file, cits, ci)
     end
