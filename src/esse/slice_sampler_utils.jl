@@ -67,11 +67,12 @@ function loop_slice_sampler(lhf         ::Function,
 
   lthin, lit = 0, 0
 
-  # preallocate pp
-  pp = copy(p)
-
-  # preallocate fpp
+  # preallocate pp and fpp
+  pp  = copy(p)
   fpp = copy(fp)
+
+  # length fp
+  lfp = length(fp)
 
   # start iterations
   prog = Progress(niter, screen_print, "running slice-sampler...", 20)
@@ -100,8 +101,8 @@ function loop_slice_sampler(lhf         ::Function,
     # hidden factors
     for j in phid
      S     = hc - randexp()
-     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars)
-     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars)
+     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars, lfp)
+     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars, lfp)
     end
 
     #=
@@ -117,9 +118,9 @@ function loop_slice_sampler(lhf         ::Function,
     # for joint hidden factors
     for (i,mvp) in enumerate(mvhfs)
       S = hc - randexp()
-      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars)
+      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars, lfp)
       @views p, fp, hc = 
-        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
+        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars, lfp)
     end
 
     # log samples
@@ -208,6 +209,9 @@ function w_sampler(lhf         ::Function,
   pp  = copy(p)
   fpp = copy(fp)
 
+  # length fp
+  lfp = length(fp)
+
   prog = Progress(nburn, screen_print, "estimating optimal widths...", 20)
 
   for it in Base.OneTo(nburn)
@@ -232,15 +236,15 @@ function w_sampler(lhf         ::Function,
     # hidden factors
     for j in phid
      S     = hc - randexp()
-     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars)
-     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars)
+     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars, lfp)
+     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars, lfp)
     end
 
     #=
     multivariate updates
     =#
     # non hidden factors
-    for (i, mvp) in enumerate(mvps)
+    for (i,mvp) in enumerate(mvps)
       S = hc - randexp()
       @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
       p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
@@ -249,9 +253,9 @@ function w_sampler(lhf         ::Function,
     # for joint hidden factors
     for (i,mvp) in enumerate(mvhfs)
       S = hc - randexp()
-      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars)
+      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars, lfp)
       @views p, fp, hc = 
-        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
+        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars, lfp)
     end
 
     @inbounds setindex!(ps, p, it, :)
@@ -346,10 +350,11 @@ function find_nonneg_int(p    ::Array{Float64,1},
                          S    ::Float64, 
                          postf::Function, 
                          w    ::Float64,
-                         npars::Int64)
+                         npars::Int64,
+                         lfp  ::Int64)
 
   unsafe_copyto!(pp,  1, p,  1, npars)
-  unsafe_copyto!(fpp, 1, fp, 1, npars)
+  unsafe_copyto!(fpp, 1, fp, 1, lfp)
 
   L = fpp[j] - w*rand()
   R = L + w
@@ -498,11 +503,12 @@ function sample_int(p    ::Array{Float64,1},
                     R    ::Float64, 
                     S    ::Float64, 
                     postf::Function, 
-                    npars::Int64)
+                    npars::Int64,
+                    lfp  ::Int64)
 
   @inbounds begin
     unsafe_copyto!(pp,  1, p,  1, npars)
-    unsafe_copyto!(fpp, 1, fp, 1, npars)
+    unsafe_copyto!(fpp, 1, fp, 1, lfp)
 
     while true
       fpp[j] = (L + rand()*(R-L))::Float64
@@ -510,7 +516,7 @@ function sample_int(p    ::Array{Float64,1},
       hc = postf(pp, fpp)::Float64
       if S < hc
         unsafe_copyto!(p,  1, pp,  1, npars)
-        unsafe_copyto!(fp, 1, fpp, 1, npars)
+        unsafe_copyto!(fp, 1, fpp, 1, lfp)
         return (p, fp, hc)::Tuple{Array{Float64,1}, Array{Float64,1}, Float64}
       end
 
@@ -625,12 +631,13 @@ function find_rect(p    ::Array{Float64,1},
                    w    ::Array{Float64,1},
                    Lv   ::Array{Float64,1},
                    Rv   ::Array{Float64,1},
-                   npars::Int64)
+                   npars::Int64,
+                   lfp  ::Int64)
 
   @inbounds begin
 
     unsafe_copyto!(pp,  1, p,  1, npars)
-    unsafe_copyto!(fpp, 1, fp, 1, npars)
+    unsafe_copyto!(fpp, 1, fp, 1, lfp)
 
     # randomly start rectangle
     for (i,j) in enumerate(mvp)
@@ -776,12 +783,13 @@ function sample_rect(p    ::Array{Float64,1},
                      hfgp ::Array{Bool,1},
                      S    ::Float64, 
                      postf::Function, 
-                     npars::Int64)
+                     npars::Int64,
+                     lfp  ::Int64)
 
   @inbounds begin
 
     unsafe_copyto!(pp,  1, p,  1, npars)
-    unsafe_copyto!(fpp, 1, fp, 1, npars)
+    unsafe_copyto!(fpp, 1, fp, 1, lfp)
 
     while true
 
@@ -799,7 +807,7 @@ function sample_rect(p    ::Array{Float64,1},
 
       if S < hc
         unsafe_copyto!(p, 1, pp, 1, npars)
-        unsafe_copyto!(fp, 1, fpp, 1, npars)
+        unsafe_copyto!(fp, 1, fpp, 1, lfp)
         return(p, fp, hc)::Tuple{Array{Float64,1}, Array{Float64,1}, Float64}
       end
 

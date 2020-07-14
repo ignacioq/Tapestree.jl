@@ -173,7 +173,6 @@ function esse(states_file ::String,
     R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
           npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
 
-
     # write output
     write_ssr(R, pardic, out_file)
   end
