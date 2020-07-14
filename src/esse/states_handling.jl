@@ -332,10 +332,9 @@ function set_constraints(constraints::NTuple{N,String},
   # Dict of hidden state correspondence
   hsc = dict_hscor(k, h, ny, model)
 
-  dcp0  = Dict{Int64,Int64}()  # constrains dictionary for base hidden state 0
-  dcfp0 = Dict{Int64,Int64}()  # constrains dictionary for other hidden states
-  zp    = Set(Int64[])         # zeros for base hidden state 0
-  zfp   = Set(Int64[])         # zeros for other hidden states
+  dcp0  = Dict{Int64,Int64}()  # constrains dictionary for parameters
+  zp    = Set(Int64[])         # zeros for parameters
+  zfp   = Set(Int64[])         # zeros for λ hidden states
 
   for c in constraints
 
@@ -347,7 +346,7 @@ function set_constraints(constraints::NTuple{N,String},
       continue
     end
 
-    # if hidden state rates
+    # if hidden state rates `q_ij`
     if occursin("q", spl[1])
       for i in Base.OneTo(length(spl)-1) 
         dcp0[pardic[spl[i+1]]] = pardic[spl[i]]
@@ -360,10 +359,10 @@ function set_constraints(constraints::NTuple{N,String},
     if isequal(spl[end], "0")
       for i in Base.OneTo(length(spl)-1)
         hsi  = split(spl[i], "_")[end]
-        if hsi == "0" 
-          push!(zp, pardic[spl[i]])
-        else
+        if hsi != "0" && occursin(r"^lambda_.*", spl)
           push!(zfp, pardic[spl[i]])
+        else
+          push!(zp, pardic[spl[i]])
         end
       end
 
@@ -374,44 +373,38 @@ function set_constraints(constraints::NTuple{N,String},
         sp1 = spl[i]
         sp2 = spl[i+1]
 
-        # divide
-        spl1 = split(sp1, "_")
-        spl2 = split(sp2, "_")
+        # if not λ
+        if !occursin(r"^lambda_.*", sp1) && !occursin(r"^lambda_.*", sp2)
+          dcp0[pardic[sp1]] = pardic[sp2]
 
-        # concatenate without hidden state
-        spc1 = spc2 = ""
-        for s in Base.OneTo(lastindex(spl1)-1)
-          spc1 *= spl1[s]*"_"
-        end
-        for s in Base.OneTo(lastindex(spl2)-1)
-          spc2 *= spl2[s]*"_"
-        end
+        else
+          spl1 = split(sp1, "_")
+          spl2 = split(sp2, "_")
 
-        # convert to hidden states
-        hs1 = parse(Int64, spl1[end])
-        hs2 = parse(Int64, spl2[end])
+          # concatenate without hidden state
+          spc1 = spc2 = ""
+          for s in Base.OneTo(lastindex(spl1)-1)
+            spc1 *= spl1[s]*"_"
+          end
+          for s in Base.OneTo(lastindex(spl2)-1)
+            spc2 *= spl2[s]*"_"
+          end
 
-        # minmax for hidden states
-        mnh, mxh = minmax(hs1, hs2)
-        
-        # which the maximum
-        spmn, spmx = hs1 < hs2 ? (sp1, sp2) : (sp2, sp1)
+          # convert to hidden states
+          hs1 = parse(Int64, spl1[end])
+          hs2 = parse(Int64, spl2[end])
 
-        # set non-shared hidden states to 0
-        wp = pardic[spmx]
-        for j in (mnh+1):mxh
-          push!(zfp, wp)
-          wp = hsc[wp]
-        end
+          # minmax for hidden states
+          mnh, mxh = minmax(hs1, hs2)
 
-        if spc1 != spc2
-          # set shared hidden states equal
-          for j in 0:mnh
-            if iszero(j)
-              dcp0[pardic[spc2*"0"]] = pardic[spc1*"0"]
-            else
-              dcfp0[pardic[spc2*"$j"]] = pardic[spc1*"$j"]
-            end
+          # which the maximum
+          spmn, spmx = hs1 < hs2 ? (sp1, sp2) : (sp2, sp1)
+
+          # set non-shared hidden states to 0
+          wp = pardic[spmx]
+          for j in (mnh+1):mxh
+            push!(zfp, wp)
+            wp = hsc[wp]
           end
         end
       end
@@ -427,27 +420,15 @@ function set_constraints(constraints::NTuple{N,String},
     dcp[key] = value
   end
 
-  dcfp = Dict{Int64,Int64}()
-  for (key, value) in dcfp0
-    if in(value, keys(dcfp)) && key == dcfp[value]
-      continue
-    end
-    dcfp[key] = value
-  end
-
   pnv = collect(values(pardic))
   pnk = collect(keys(pardic))
   pnk = pnk[sortperm(pnv)]
 
-  if length(dcp) > 0 || length(dcfp) > 0
+  if length(dcp) > 0
     ss = "Enforced parameter equalities: \n"
     for (k,v) in dcp
       ss *= "$(pnk[k]) = $(pnk[v]) \n"
     end
-    for (k,v) in dcfp
-      ss *= "$(pnk[k]) = $(pnk[v]) \n"
-    end
-
     @info ss
   end
 
@@ -456,7 +437,7 @@ function set_constraints(constraints::NTuple{N,String},
     for k in zp
       ss *= "$(pnk[k]) \n"
     end
-    for (k,v) in zfp
+    for k in zfp
       ss *= "$(pnk[k]) \n"
     end
 
@@ -464,7 +445,7 @@ function set_constraints(constraints::NTuple{N,String},
   end
 
 
-  return dcp, dcfp, zp, zfp
+  return dcp, zp, zfp
 end
 
 
@@ -474,91 +455,26 @@ end
 """
     dict_hscor(k::Int64, h::Int64, ny::Int64)
 
-Create dictionary of hidden states correspondence.
+Create dictionary of hidden states correspondence for λ.
 """
 function dict_hscor(k::Int64, h::Int64, ny::Int64, model::NTuple{3, Bool})
-
- # number of covariates
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
-
-  # starting indices for models 2 and 3
-  m2s = model[1]*k*h*yppar
-  m3s = m2s + model[2]*k*h*yppar
 
   hsc = Dict{Int64,Int64}()
 
   if isone(k)
 
     for j in 1:(h-1)
-
       # speciation
       s = 0
       hsc[s + j + 1] = s + j
-
-      # extinction
-      s = h
-      hsc[s + j + 1] = s + j
-
-      # betas
-      s = 2h + h*(h-1)
-      if model[1]
-        for l = Base.OneTo(yppar)
-          hsc[s + yppar*j + l] = s + yppar*(j-1) + l
-        end
-      end
-      if model[2]
-        for l = Base.OneTo(yppar)
-          hsc[m2s + s + yppar*j + l] = m2s + s + yppar*(j-1) + l
-        end
-      end
     end
 
   else
 
     for j in 1:(h-1)
       for i in 1:k
-
-        # speciation
+        # within-region speciation
         hsc[(k+1)*j + i] = (k+1)*(j-1) + i
-
-        # extinction
-        s = (k+1)*h 
-        hsc[s + k*j + i] = s + k*(j-1) + i
-
-        # gain
-        s = (2k+1)*h
-        for a in 1:(k-1)
-          hsc[s + k*(k-1)*j + a + (k-1)*(i-1)] = 
-            s + k*(k-1)*(j-1) + a + (k-1)*(i-1)
-        end
-
-        # loss 
-        s = (2k+1 + k*(k-1))*h
-        hsc[s + k*j + i] = s + k*(j-1) + i
-
-        # betas
-        s = (3k+1+k*(k-1))*h + h*(h-1)
-        if model[1]
-          for l = Base.OneTo(yppar)
-            hsc[s + l + yppar*(i-1) + yppar*k*j] = 
-              s + l + yppar*(i-1) + yppar*k*(j-1)
-          end
-        end
-        if model[2]
-          for l = Base.OneTo(yppar)
-            hsc[s + m2s + l + yppar*(i-1) + yppar*k*j] = 
-              s + m2s + l + yppar*(i-1) + yppar*k*(j-1)
-          end
-        end
-        if model[3]
-          for a = 1:(k-1), l = Base.OneTo(yppar)
-            hsc[s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1)] = 
-              s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1)
-          end
-        end
       end
 
       # between-region speciation

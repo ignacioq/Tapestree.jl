@@ -68,10 +68,10 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # get number of parameters
   npars = length(pardic)
 
-  # find hidden factors for hidden states 
+  # find λ hidden factors for hidden states 
   phid = Int64[] 
   if h > 1
-    re   = Regex(".*_[1-"*string(h-1)*"]\$")
+    re   = Regex("^lambda_.*_[1-"*string(h-1)*"]\$")
     for (k,v) in pardic 
       occursin(re, k) && push!(phid, v)
     end
@@ -79,7 +79,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   end
 
   # create factor parameter vector
-  fp = zeros(npars)
+  fp = zeros(k > 1 ? (k+1)*h : h)
 
   # generate initial parameter values
   p  = fill(1e-1, npars)
@@ -100,17 +100,17 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   end
 
   # parameter update
-  pupd = 1:npars
+  pupd = [1:npars...]
 
   # parameters constraints and fixed to 0
-  dcp, dcfp, zp, zfp = 
+  dcp, zp, zfp = 
     set_constraints(constraints, pardic, k, h, ny, model)
 
   # set multivariate sampled parameters
   mvps0 = set_multivariate(mvpars, pardic)
 
   # remove hidden factors from being updated from `p`
-  pupd = setdiff(pupd, phid)
+  setdiff!(pupd, phid)
 
   # force pars in zerp to 0
   for i in zp
@@ -119,24 +119,17 @@ function prepare_data(cov_mod    ::NTuple{M,String},
 
   # remove constraints and fixed to zero parameters from being updated
   setdiff!(pupd, values(dcp), zp)
-  setdiff!(phid, values(dcfp), zfp)
-
-  # check if there are hidden factors forced to 0 that also have a forced equality
-  for (k,v) in dcfp
-    if in(k, zfp) || in(v, zfp) 
-      filter!(x -> x ≠ k, phid)
-      filter!(x -> x ≠ v, phid)
-    end
-  end
+  setdiff!(phid, zfp)
 
   # divide between non-negative and negative values
   nnps = filter(x -> βs >  x, pupd)
   nps  = filter(x -> βs <= x, pupd)
 
-  # divide multivariate updates into hidden and non-hidden updates
+  # divide multivariate updates for λ into hidden and non-hidden updates
   mvps  = Array{Int64,1}[]
-  nngps = Array{Bool,1}[]
   mvhfs = Array{Int64,1}[]
+  nngps = Array{Bool,1}[]
+  hfgps = Array{Bool,1}[]
   for (p1, p2) in mvps0
 
     p1nn = in(p1, nnps)
@@ -170,11 +163,25 @@ function prepare_data(cov_mod    ::NTuple{M,String},
       push!(nngps, [p1nn, p2nn])
     end
 
-    if in(p1, phid) && in(p2, phid)
-      setdiff!(phid, p1, p2)
+    if in(p1, phid)
       push!(mvhfs, [p1,p2])
+      if in(p2, phid)
+        push!(hfgps, [true, true])
+      else
+        push!(hfgps, [true, false])
+      end
+      setdiff!(phid, p1, p2)
+    elseif in(p2, phid)
+      push!(mvhfs, [p1,p2])
+      if in(p1, phid)
+        push!(hfgps, [true, true])
+      else
+        push!(hfgps, [false, true])
+      end
+      setdiff!(phid, p1, p2)
     end
   end
+
 
   # make hidden factors assigning 
   assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h}, Val{ny}, Val{model})
@@ -184,14 +191,6 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     while haskey(dcp, wp)
       tp = dcp[wp]
       p[tp] = p[wp]
-      wp = tp
-    end
-  end
-
-  for wp in keys(dcfp)
-    while haskey(dcfp, wp)
-      tp = dcfp[wp]
-      fp[tp] = fp[wp]
       wp = tp
     end
   end
@@ -238,8 +237,9 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     X[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
-  return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, mvps, nngps, mvhfs,
-    dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, bts, E0
+  return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
+    mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+    af!, assign_hidfacs!, abts, bts, E0
 
 end
 

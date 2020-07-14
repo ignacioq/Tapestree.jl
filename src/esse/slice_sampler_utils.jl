@@ -40,13 +40,14 @@ function loop_slice_sampler(lhf         ::Function,
                             mvps        ::Array{Array{Int64,1},1},
                             nngps       ::Array{Array{Bool,1},1},
                             mvhfs       ::Array{Array{Int64,1},1},
+                            hfgps       ::Array{Array{Bool,1},1},
                             w           ::Array{Float64,1},
                             npars       ::Int64,
                             niter       ::Int64,
                             nthin       ::Int64,
                             screen_print::Int64)
 
-  # maximum number of multivariate updates
+  # maximum number of parameters in multivariate updates
   maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
     zero(1)
   elseif iszero(lastindex(mvhfs))
@@ -113,11 +114,11 @@ function loop_slice_sampler(lhf         ::Function,
       p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
     end
 
-    # hidden factors
-    for mvp in mvhfs
+    # for joint hidden factors
+    for (i,mvp) in enumerate(mvhfs)
       S = hc - randexp()
-      @views find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
-      p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, S, lhf, npars)
+      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars)
+      p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
     end
 
     # log samples
@@ -170,6 +171,7 @@ function w_sampler(lhf         ::Function,
                    mvps        ::Array{Array{Int64,1},1},
                    nngps        ::Array{Array{Bool,1},1},
                    mvhfs       ::Array{Array{Int64,1},1},
+                   hfgps       ::Array{Array{Bool,1},1},
                    npars       ::Int64,
                    optimal_w   ::Float64,
                    screen_print::Int64,
@@ -243,11 +245,11 @@ function w_sampler(lhf         ::Function,
       p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
     end
 
-    # hidden factors
-    for mvp in mvhfs
+    # for joint hidden factors
+    for (i,mvp) in enumerate(mvhfs)
       S = hc - randexp()
-      @views find_rect(p, pp, fp, fpp, mvp, S, lhf, w, Lv, Rv, npars)
-      p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, S, lhf, npars)
+      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars)
+      p, fp, hc = sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars)
     end
 
     @inbounds setindex!(ps, p, it, :)
@@ -598,8 +600,9 @@ end
     find_rect(p    ::Array{Float64,1}, 
               pp   ::Array{Float64,1}, 
               fp   ::Array{Float64,1}, 
+              fpp  ::Array{Float64,1},
               mvp  ::Array{Int64,1}, 
-              nngp  ::Array{Bool,1},
+              hfgp ::Array{Bool,1},
               S    ::Float64, 
               postf::Function, 
               w    ::Array{Float64,1},
@@ -607,13 +610,14 @@ end
               Rv   ::Array{Float64,1},
               npars::Int64)
 
-Returns left and right vertices of an hyper-rectangle for hidden factors.
+Returns left and right vertices of an hyper-rectangle for mixed hidden factors.
 """
 function find_rect(p    ::Array{Float64,1}, 
                    pp   ::Array{Float64,1}, 
                    fp   ::Array{Float64,1}, 
                    fpp  ::Array{Float64,1},
                    mvp  ::Array{Int64,1}, 
+                   hfgp ::Array{Bool,1},
                    S    ::Float64, 
                    postf::Function, 
                    w    ::Array{Float64,1},
@@ -623,37 +627,58 @@ function find_rect(p    ::Array{Float64,1},
 
   @inbounds begin
 
-    unsafe_copyto!(pp,  1, p, 1, npars)
+    unsafe_copyto!(pp,  1, p,  1, npars)
     unsafe_copyto!(fpp, 1, fp, 1, npars)
 
     # randomly start rectangle
     for (i,j) in enumerate(mvp)
-      Lv[i] = fpp[j] - w[j]*rand()
-      if Lv[i] <= 0.0
-        Lv[i] = 1e-30
+      if hfgp[i]
+        Lv[i] = fpp[j] - w[j]*rand()
+        if Lv[i] <= 0.0
+          Lv[i] = 1e-30
+        end
+        Rv[i] = Lv[i] + w[j]
+      else
+        Lv[i] = pp[j] - w[j]*rand()
+        Rv[i] = Lv[i] + w[j]
       end
-      Rv[i] = Lv[i] + w[j]
     end
 
     # left extremes
     for (i,j) in enumerate(mvp)
-      fpp[j] = Lv[i]::Float64
-      while S < postf(pp, fpp)
-        Lv[i] -= w[j]::Float64
-        if Lv[i] <= 0.0
-          Lv[i] = 1e-30
-          break
-        end
+      if hfgp[i]
         fpp[j] = Lv[i]::Float64
+        while S < postf(pp, fpp)
+          Lv[i] -= w[j]::Float64
+          if Lv[i] <= 0.0
+            Lv[i] = 1e-30
+            break
+          end
+          fpp[j] = Lv[i]::Float64
+        end
+      else
+        pp[j] = Lv[i]::Float64
+        while S < postf(pp, fpp)
+          Lv[i] -= w[j]::Float64
+          pp[j]  = Lv[i]::Float64
+        end
       end
     end
 
     # right extremes
     for (i,j) in enumerate(mvp)
-      fpp[j] = Rv[i]::Float64
-      while S < postf(pp, fpp)
-        Rv[i] += w[j]::Float64
-        fpp[j]  = Rv[i]::Float64
+      if hfgp[i]
+        fpp[j] = Rv[i]::Float64
+        while S < postf(pp, fpp)
+          Rv[i] += w[j]::Float64
+          fpp[j]  = Rv[i]::Float64
+        end
+      else
+        pp[j] = Rv[i]::Float64
+        while S < postf(pp, fpp)
+          Rv[i] += w[j]::Float64
+          pp[j]  = Rv[i]::Float64
+        end
       end
     end
   end
@@ -729,9 +754,10 @@ end
     sample_rect(p    ::Array{Float64,1}, 
                 pp   ::Array{Float64,1},
                 fp   ::Array{Float64,1},
+                fpp  ::Array{Float64,1},
                 Lv   ::Array{Float64,1}, 
                 Rv   ::Array{Float64,1}, 
-                mvp  ::Array{Float64,1},
+                mvp  ::Array{Int64,1},
                 S    ::Float64, 
                 postf::Function, 
                 npars::Int64)
@@ -745,6 +771,7 @@ function sample_rect(p    ::Array{Float64,1},
                      Lv   ::Array{Float64,1}, 
                      Rv   ::Array{Float64,1}, 
                      mvp  ::Array{Int64,1},
+                     hfgp ::Array{Bool,1},
                      S    ::Float64, 
                      postf::Function, 
                      npars::Int64)
@@ -758,7 +785,11 @@ function sample_rect(p    ::Array{Float64,1},
 
       # multivariate uniform sample
       for (i,j) in enumerate(mvp)
-        fpp[j] = Lv[i] + rand()*(Rv[i] - Lv[i])
+        if hfgp[i]
+          fpp[j] = Lv[i] + rand()*(Rv[i] - Lv[i])
+        else
+          pp[j] = Lv[i] + rand()*(Rv[i] - Lv[i])
+        end
       end
 
       # posterior
@@ -771,10 +802,18 @@ function sample_rect(p    ::Array{Float64,1},
       end
 
       for (i,j) in enumerate(mvp)
-        if fpp[j] < fp[j]
-            Lv[i] = fpp[j]::Float64
+        if hfgp[i]
+          if fpp[j] < fp[j]
+              Lv[i] = fpp[j]::Float64
+          else
+              Rv[i] = fpp[j]::Float64
+          end
         else
-            Rv[i] = fpp[j]::Float64
+         if pp[j] < p[j]
+              Lv[i] = pp[j]::Float64
+          else
+              Rv[i] = pp[j]::Float64
+          end
         end
       end
 

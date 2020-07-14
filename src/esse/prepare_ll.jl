@@ -26,7 +26,7 @@ Created 05 03 2020
                abts ::Array{Float64,2},
                af!  ::Function)
 
-Prepare **ESSE.h** likelihoods using the **pruning** algorithm 
+Prepare **ESSE.g** likelihoods using the **pruning** algorithm 
 given input data.
 """
 function prepare_ll(X    ::Array{Array{Float64,1},1},

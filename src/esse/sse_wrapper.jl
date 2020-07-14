@@ -102,9 +102,10 @@ function esse(states_file ::String,
   end
 
   # prepare data
-  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, mvps, nngps, mvhfs, 
-  dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, bts, E0 = 
-        prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
+  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
+  mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+  af!, assign_hidfacs!, abts, bts, E0 = 
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
   @info "Data successfully prepared"
 
@@ -137,15 +138,14 @@ function esse(states_file ::String,
   end
 
   λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
-    make_prior_updates(pupd, phid, mvhfs, βpriors, k, h, ny, model)
+    make_prior_updates(pupd, phid, mvhfs, hfgps, βpriors, k, h, ny, model)
 
   # create prior function
   lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
           λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
 
-
   # create posterior functions
-  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp)
+  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp)
 
   # number of parameters
   npars = length(pardic)
@@ -153,7 +153,6 @@ function esse(states_file ::String,
   # number of samples
   nlogs = fld(niter,nthin)
 
-  # if parallel
   if nchains > 1
     # where to write in the Shared Array
     cits = [(1+j):(nlogs+j) for j in 0:nlogs:(nchains-1)*nlogs]
@@ -164,16 +163,16 @@ function esse(states_file ::String,
     # run parallel loop
     @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
-            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
-              niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
+              npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
       # write output
       write_ssr(R, pardic, out_file, cits, ci)
     end
 
   else
 
-    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
-          niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
 
     # write output
     write_ssr(R, pardic, out_file)
@@ -274,9 +273,10 @@ function esse(tree_file   ::String,
   end
 
   # prepare data
-  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, mvps, nngps, mvhfs, 
-  dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, bts, E0 = 
-        prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
+  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
+  mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+  af!, assign_hidfacs!, abts, bts, E0 = 
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
   @info "Data successfully prepared"
 
@@ -310,14 +310,14 @@ function esse(tree_file   ::String,
   end
 
   λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
-    make_prior_updates(pupd, phid, mvhfs, βpriors, k, h, ny, model)
+    make_prior_updates(pupd, phid, mvhfs, hfgps, βpriors, k, h, ny, model)
 
   # create prior function
   lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
           λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
 
   # create posterior functions
-  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp)
+  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp)
 
   # number of parameters
   npars = length(pardic)
@@ -336,16 +336,16 @@ function esse(tree_file   ::String,
     # run parallel loop
     @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
-            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
-              niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
+              npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
       # write output
       write_ssr(R, pardic, out_file, cits, ci)
     end
 
   else
 
-    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
-          niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
 
     # write output
     write_ssr(R, pardic, out_file)
@@ -425,9 +425,10 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
               ρ           ::Array{Float64,1}  = [1.0]) where {L,M,N,O}
 
   # prepare data
-  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, mvps, nngps, mvhfs, 
-  dcp, dcfp, pardic, k, h, ny, model, af!, assign_hidfacs!, abts, bts, E0 = 
-        prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
+  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
+  mvps, nngps, mvhfs, hfgps, dcp, dcfp, pardic, k, h, ny, model, 
+  af!, assign_hidfacs!, abts, bts, E0 = 
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
 
   @info "Data successfully prepared"
 
@@ -458,14 +459,14 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
   end
 
   λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
-    make_prior_updates(pupd, phid, mvhfs, βpriors, k, h, ny, model)
+    make_prior_updates(pupd, phid, mvhfs, hfgps, βpriors, k, h, ny, model)
 
   # create prior function
   lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
           λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
 
   # create posterior functions
-  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp, dcfp)
+  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp)
 
   # number of parameters
   npars = length(pardic)
@@ -484,16 +485,16 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
     # run parallel loop
     @sync @distributed for ci in Base.OneTo(nchains)
       R[cits[ci],:] = 
-            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
-              niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+            slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
+              npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
       # write output
       write_ssr(R, pardic, out_file, cits, ci)
     end
 
   else
 
-    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, npars, 
-          niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
 
     # write output
     write_ssr(R, pardic, out_file)

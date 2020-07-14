@@ -26,13 +26,11 @@ and prior, **lpf**, functions.
 function make_lhf(llf            ::Function, 
                   lpf            ::Function, 
                   assign_hidfacs!::Function,
-                  dcp            ::Dict{Int64,Int64},
-                  dcfp           ::Dict{Int64,Int64})
+                  dcp            ::Dict{Int64,Int64})
 
   ks  = keys(dcp)
-  ksf = keys(dcfp)
 
-  f = let ks = ks, ksf = ksf, assign_hidfacs! = assign_hidfacs!, dcp = dcp, dcfp = dcfp, llf = llf, lpf = lpf
+  f = let ks = ks, assign_hidfacs! = assign_hidfacs!, dcp = dcp, llf = llf, lpf = lpf
     (p ::Array{Float64,1}, 
      fp::Array{Float64,1}) ->
     begin
@@ -41,14 +39,6 @@ function make_lhf(llf            ::Function,
         while haskey(dcp, wp)
           tp = dcp[wp]
           p[tp] = p[wp]
-          wp = tp
-        end
-      end
-
-      for wp in ksf
-        while haskey(dcfp, wp)
-          tp = dcfp[wp]
-          fp[tp] = fp[wp]
           wp = tp
         end
       end
@@ -668,6 +658,7 @@ Make update iterators for priors.
 function make_prior_updates(pupd   ::Array{Int64,1},
                             phid   ::Array{Int64,1},
                             mvhfs  ::Array{Array{Int64,1},1},
+                            hfgps  ::Array{Array{Bool,1},1},
                             βpriors::Tuple{Float64,Float64},
                             k      ::Int64,
                             h      ::Int64,
@@ -698,12 +689,12 @@ function make_prior_updates(pupd   ::Array{Int64,1},
 
   # hidden factors
   hfps = copy(phid)
-  for j in mvhfs, i in j
-    push!(hfps, i)
+  for (i,v) in enumerate(mvhfs), (j,n) in enumerate(v)
+    hfgps[i][j] && push!(hfps, n)
   end
 
-  ncov  = model[1]*k*yppar + model[2]*k*yppar + model[3]*k*(k-1)*yppar
-  βupds = intersect((bbase+1):(bbase+ncov), pupd)
+  ncov  = model[1]*yppar + model[2]*yppar + model[3]*yppar
+  βupds = intersect((bbase+1):(bbase+1+ncov), pupd)
 
   βp_m, βp_v = βpriors
 
@@ -866,88 +857,17 @@ factor+parameter `fp` vector.
   if isone(k)
 
     for j in 1:(h-1)
-
       # speciation
       s = 0
       push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
-
-      # extinction
-      s = h 
-      push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
-
-      # betas
-      s = 2h + h*(h-1)
-      if model[1]
-        for l = Base.OneTo(yppar)
-          push!(ex.args, 
-            :(p[$(s + l + j*yppar)] = 
-                p[$(s + l + (j-1)*yppar)] - fp[$(s + l + j*yppar)]))
-        end
-      end
-      if model[2]
-        for l = Base.OneTo(yppar)
-          push!(ex.args,
-            :(p[$(s + m2s + l + j*yppar)] = 
-               p[$(s + m2s + l + (j-1)*yppar)] - fp[$(s + m2s + l + j*yppar)]))
-        end
-      end
     end
 
   else
     for j in 1:(h-1)
       for i in 1:k
-
-        # speciation
+        # within-region speciation
         push!(ex.args, :(p[$((k+1)*j + i)] = 
           p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
-
-        # extinction
-        s = (k+1)*h 
-        push!(ex.args, 
-          :(p[$(s + k*j + i)] = 
-              p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
-
-        # gain
-        s = (2k+1)*h
-        for a in 1:(k-1)
-          push!(ex.args, 
-            :(p[$(s + k*(k-1)*j + a + (k-1)*(i-1))] = 
-                p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] + 
-                fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))]))
-        end
-
-        # loss 
-        s = (2k+1 + k*(k-1))*h
-        push!(ex.args, 
-          :(p[$(s + k*j + i)] = 
-              p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
-
-        # betas
-        s = (3k+1+k*(k-1))*h + h*(h-1)
-        if model[1]
-          for l = Base.OneTo(yppar)
-            push!(ex.args, 
-              :(p[$(s + l + yppar*(i-1) + k*j*yppar)] = 
-                p[$(s + l + yppar*(i-1) + k*(j-1)*yppar)] - 
-                fp[$(s + l + yppar*(i-1) + k*j*yppar)]))
-          end
-        end
-        if model[2]
-          for l = Base.OneTo(yppar)
-            push!(ex.args,
-              :(p[$(s + m2s + l + yppar*(i-1) + k*j*yppar)] = 
-                p[$(s + m2s + l + yppar*(i-1) + k*(j-1)*yppar)] -
-                fp[$(s + m2s + l + yppar*(i-1) + k*j*yppar)]))
-          end
-        end
-        if model[3]
-          for a = 1:(k-1), l = Base.OneTo(yppar)
-            push!(ex.args, 
-              :(p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)] = 
-                p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*(j-1)*yppar)] -
-                fp[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)]))
-          end
-        end
       end
       # between-region speciation
       push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
