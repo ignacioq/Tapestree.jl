@@ -693,7 +693,7 @@ function make_prior_updates(pupd   ::Array{Int64,1},
     hfgps[i][j] && push!(hfps, n)
   end
 
-  ncov  = model[1]*yppar + model[2]*yppar + model[3]*yppar
+  ncov  = model[1]*yppar*h + model[2]*yppar*h + model[3]*yppar*h
   βupds = intersect((bbase+1):(bbase+1+ncov), pupd)
 
   βp_m, βp_v = βpriors

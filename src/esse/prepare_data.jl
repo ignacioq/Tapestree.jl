@@ -164,24 +164,27 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     end
 
     if in(p1, phid)
+      setdiff!(phid, p1)
       push!(mvhfs, [p1,p2])
       if in(p2, phid)
+        setdiff!(phid, p2)
         push!(hfgps, [true, true])
       else
+        p2nn ? setdiff!(nnps, p2) : setdiff!(nps, p2)
         push!(hfgps, [true, false])
       end
       setdiff!(phid, p1, p2)
     elseif in(p2, phid)
+      p1nn ? setdiff!(nnps, p1) : setdiff!(nps, p1)
+      setdiff!(phid, p2)
       push!(mvhfs, [p1,p2])
-      if in(p1, phid)
-        push!(hfgps, [true, true])
-      else
-        push!(hfgps, [false, true])
-      end
-      setdiff!(phid, p1, p2)
+      push!(hfgps, [false, true])
     end
   end
 
+  @debug "nps = $nps, nnps = $nnps 
+          mvps = $mvps, nngps = $nngps, 
+          mvhfs = $mvhfs, hfgps = $hfgps"
 
   # make hidden factors assigning 
   assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h}, Val{ny}, Val{model})
