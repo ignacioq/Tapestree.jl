@@ -26,4 +26,3 @@ function llik_cpb(tree::iTree, λ::Float64)
     llik_cpb(tree.d1, λ) + llik_cpb(tree.d2, λ) + log(λ) - pe(tree)*λ
   end
 end
-
