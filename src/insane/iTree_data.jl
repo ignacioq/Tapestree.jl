@@ -157,7 +157,7 @@ sntn(::Nothing) = 0
 """
     snen(tree::iTree)
 
-Return the number of tip nodes for `tree`.
+Return the number of extinct tip nodes for `tree`.
 """
 function snen(tree::iTree)
     if isextinct(tree)
@@ -171,7 +171,7 @@ end
 """
     snen(::Nothing)
 
-Return the number of tip nodes for `tree`.
+Return the number of extinct tip nodes for `tree`.
 """
 snen(::Nothing) = 0
 

@@ -63,7 +63,9 @@ end
 
 
 
-
+# pretty-printing
+Base.show(io::IO, t::iTree) = 
+  print(io, "insane tree with ", sntn(t), " tips (", snen(t)," extinct)")
 
 
 
