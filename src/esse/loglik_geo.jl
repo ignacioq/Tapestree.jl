@@ -32,7 +32,8 @@ function make_lhf(llf            ::Function,
 
   f = let ks = ks, assign_hidfacs! = assign_hidfacs!, dcp = dcp, llf = llf, lpf = lpf
     (p ::Array{Float64,1}, 
-     fp::Array{Float64,1}) ->
+     fp::Array{Float64,1},
+     t ::Float64) ->
     begin
       # constraints
       for wp in ks
@@ -46,7 +47,7 @@ function make_lhf(llf            ::Function,
      # factors
       assign_hidfacs!(p, fp)
 
-      return llf(p) + lpf(p, fp)
+      return t*(llf(p) + lpf(p, fp))
     end
   end
   return f

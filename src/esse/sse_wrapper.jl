@@ -275,7 +275,7 @@ function esse(tree_file   ::String,
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
   mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
-    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, nchains, constraints, mvpars)
 
   @info "Data successfully prepared"
 
@@ -321,11 +321,11 @@ function esse(tree_file   ::String,
   # number of parameters
   npars = length(pardic)
 
-  # number of samples
-  nlogs = fld(niter,nthin)
-
   # if parallel
   if nchains > 1
+    # number of samples
+    nlogs = fld(niter,nthin)
+
     # where to write in the Shared Array
     cits = [(1+j):(nlogs+j) for j in 0:nlogs:(nchains-1)*nlogs]
 

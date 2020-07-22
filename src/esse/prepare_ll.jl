@@ -30,7 +30,7 @@ Prepare **ESSE.g** likelihoods using the **pruning** algorithm
 given input data.
 """
 function prepare_ll(X    ::Array{Array{Float64,1},1},
-                    p    ::Array{Float64,1},
+                    p    ::Array{Array{Float64,1},1},
                     E0   ::Array{Float64,1},
                     k    ::Int64,
                     h    ::Int64,
@@ -59,7 +59,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   ode_fun = make_egeohisse(Val{k}, Val{h}, Val{ny}, Val{model}, Val{power}, af!)
 
   # make integral problem
-  prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0,1.0), p)
+  prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0, 1.0), p[1])
 
   int = init(prob, Tsit5(),
              save_everystep  = false, 

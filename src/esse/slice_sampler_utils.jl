@@ -29,11 +29,11 @@ September 23 2017
                        nthin       ::Int64,
                        screen_print::Int64)
 
-Run slice sampling.
+Run slice-sampling.
 """
 function loop_slice_sampler(lhf         ::Function, 
-                            p           ::Array{Float64,1},
-                            fp          ::Array{Float64,1},
+                            p           ::Array{Array{Float64,1},1},
+                            fp          ::Array{Array{Float64,1},1},
                             nnps        ::Array{Int64,1},
                             nps         ::Array{Int64,1},
                             phid        ::Array{Int64,1},
@@ -59,50 +59,67 @@ function loop_slice_sampler(lhf         ::Function,
   end
 
   nlogs = fld(niter,nthin)
-  its   = Array{Float64,1}(undef, nlogs)
-  hlog  = Array{Float64,1}(undef, nlogs)
-  ps    = Array{Float64,2}(undef, nlogs,npars)
+
+  #preallocate logging arrays
+  its  = [Array{Float64,1}(undef, nlogs)        for i in Base.OneTo(nchains)]
+  hlog = [Array{Float64,1}(undef, nlogs)        for i in Base.OneTo(nchains)]
+  ps   = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(nchains)]
+
+  # preallocate chains order
+  Olog   = Array{Int64,2}(undef, nlogs, nchains)
+  Ts, Os = make_temperature(0.1, nchains)
+
+  # preallocate changing vectors
   Lv    = Array{Float64,1}(undef, maxmvu)
   Rv    = Array{Float64,1}(undef, maxmvu)
 
   lthin, lit = 0, 0
 
   # preallocate pp and fpp
-  pp  = copy(p)
-  fpp = copy(fp)
+  pp  = copy(p[1])
+  fpp = copy(fp[1])
 
   # length fp
-  lfp = length(fp)
+  lfp = length(fp[1])
 
   # start iterations
   prog = Progress(niter, screen_print, "running slice-sampler...", 20)
 
-  hc = lhf(p, fp)
+  # starting posteriors
+  lhc = [lhf(p[c], fp[c], Ts[c]) for c in Base.OneTo(nchains)]
 
-  for it in Base.OneTo(niter) 
+
+  for c in Base.OneTo(nchains), it in Base.OneTo(niter) 
+
+    """
+    #check if receiving p[c] changes in place
+    """
+
+
+
 
     #=
     univariate updates
     =#
     # nonnegative parameters
     for j in nnps
-     S     = hc - randexp()
-     L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j], npars)
-     p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
+     S     = lhc[c] - randexp()
+     L, R  = find_nonneg_int(p[c], pp, fp[c], j, S, lhf, w[j], npars)
+     p[c], hc = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, npars)
     end
 
     # real line parameters
     for j in nps
-      S     = hc - randexp()
-      L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j], npars)
-      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
+      S     = lhc[c] - randexp()
+      L, R  = find_real_int(p[c], pp, fp[c], j, S, lhf, w[j], npars)
+      p[c], hc = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, npars)
     end
 
     # hidden factors
     for j in phid
-     S     = hc - randexp()
-     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars, lfp)
-     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars, lfp)
+     S     = lhc[c] - randexp()
+     L, R  = find_nonneg_int(p[c], pp, fp[c], fpp, j, S, lhf, w[j], npars, lfp)
+     p[c], fp, hc = sample_int(p[c], pp, fp[c], fpp, j, L, R, S, lhf, npars, lfp)
     end
 
     #=
@@ -110,18 +127,20 @@ function loop_slice_sampler(lhf         ::Function,
     =#
     # non hidden factors
     for (i,mvp) in enumerate(mvps)
-      S = hc - randexp()
-      @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
-      p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
+      S = lhc[c] - randexp()
+      @views find_rect(p[c], pp, fp[c], mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
+      p[c], hc  = sample_rect(p[c], pp, fp[c], Lv, Rv, mvp, S, lhf, npars)
     end
 
     # for joint hidden factors
     for (i,mvp) in enumerate(mvhfs)
-      S = hc - randexp()
-      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars, lfp)
-      @views p, fp, hc = 
-        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars, lfp)
+      S = lhc[c] - randexp()
+      @views find_rect(p[c], pp, fp[c], fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars, lfp)
+      @views p[c], fp, hc = 
+        sample_rect(p[c], pp, fp[c], fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars, lfp)
     end
+
+
 
     # log samples
     lthin += 1
@@ -137,6 +156,15 @@ function loop_slice_sampler(lhf         ::Function,
 
     next!(prog)
   end
+
+
+  swap_chains(Os ::Array{Int64,1},
+                     Ts ::Array{Float64,1},
+                     lhc::Array{Float64,1},
+                     p  ::Array{Array{Float64,1},1},
+                     fp ::Array{Array{Float64,1},1},
+                     lhf::Function)
+
 
   return its, hlog, ps
 end
