@@ -38,8 +38,8 @@ November 20 2017
 Run slice-sampling Markov Chain given posterior function.
 """
 function slice_sampler(lhf         ::Function, 
-                       p           ::Array{Float64,1},
-                       fp          ::Array{Float64,1},
+                       p           ::Array{Array{Float64,1},1},
+                       fp          ::Array{Array{Float64,1},1},
                        nnps        ::Array{Int64,1},
                        nps         ::Array{Int64,1},
                        phid        ::Array{Int64,1},
@@ -52,25 +52,46 @@ function slice_sampler(lhf         ::Function,
                        nthin       ::Int64,
                        nburn       ::Int64,
                        ntakew      ::Int64,
+                       nswap       ::Int64,
+                       nchains     ::Int64,
                        winit       ::Float64,
                        optimal_w   ::Float64,
                        screen_print::Int64)
 
   # estimate optimal w
-  p, fp, w = 
+  p, fp, w, T, Os, Ts = 
     w_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
-      npars, optimal_w, screen_print, nburn, ntakew, winit)
+      npars, optimal_w, screen_print, nburn, ntakew, nswap, nchains, winit)
 
   # slice-sampler
-  its, hlog, ps = 
+  its, hlog, ps, Olog = 
     loop_slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-      w, npars, niter, nthin, screen_print)
+      w, npars, niter, nthin, nswap, nchains, Os, Ts, screen_print)
+
+
+  # choose cold chain (is equal to 1)
+  P = Array{Float64,2}(undef, length(its), npars)
+  H = Array{Float64,1}(undef, length(its))
+  @inbounds begin
+    for i in Base.OneTo(length(its))
+      @views ii = findfirst(x -> isone(x), Olog[i,:])
+      P[i,:] = ps[ii][i,:]
+      H[i]   = hlog[i,ii]
+    end
+  end
 
   # save samples
-  R = hcat(its, hlog, ps)
+  R = hcat(its, H, P)
 
   return R
 end
+
+
+
+
+
+
+
 
 
 

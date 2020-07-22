@@ -45,6 +45,10 @@ function loop_slice_sampler(lhf         ::Function,
                             npars       ::Int64,
                             niter       ::Int64,
                             nthin       ::Int64,
+                            nswap       ::Int64,
+                            nchains     ::Int64,
+                            Os          ::Array{Int64,1}, 
+                            Ts          ::Array{Float64,1},
                             screen_print::Int64)
 
   # maximum number of parameters in multivariate updates
@@ -61,19 +65,18 @@ function loop_slice_sampler(lhf         ::Function,
   nlogs = fld(niter,nthin)
 
   #preallocate logging arrays
-  its  = [Array{Float64,1}(undef, nlogs)        for i in Base.OneTo(nchains)]
-  hlog = [Array{Float64,1}(undef, nlogs)        for i in Base.OneTo(nchains)]
+  its  =  Array{Float64,1}(undef, nlogs)
+  hlog =  Array{Float64,2}(undef, nlogs, nchains)
   ps   = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(nchains)]
 
   # preallocate chains order
   Olog   = Array{Int64,2}(undef, nlogs, nchains)
-  Ts, Os = make_temperature(0.1, nchains)
 
   # preallocate changing vectors
   Lv    = Array{Float64,1}(undef, maxmvu)
   Rv    = Array{Float64,1}(undef, maxmvu)
 
-  lthin, lit = 0, 0
+  lthin, lit, lswap = 0, 0, 0
 
   # preallocate pp and fpp
   pp  = copy(p[1])
@@ -88,88 +91,84 @@ function loop_slice_sampler(lhf         ::Function,
   # starting posteriors
   lhc = [lhf(p[c], fp[c], Ts[c]) for c in Base.OneTo(nchains)]
 
+  for it in Base.OneTo(niter) 
+    for c in Base.OneTo(nchains)
 
-  for c in Base.OneTo(nchains), it in Base.OneTo(niter) 
+      #=
+      univariate updates
+      =#
+      # nonnegative parameters
+      for j in nnps
+        S      = lhc[c] - randexp()
+        L, R   = find_nonneg_int(p[c], pp, fp[c], j, S, lhf, w[j], Ts[c], npars)
+        lhc[c] = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, Ts[c], npars)
+      end
 
-    """
-    #check if receiving p[c] changes in place
-    """
+      # real line parameters
+      for j in nps
+        S      = lhc[c] - randexp()
+        L, R   = find_real_int(p[c], pp, fp[c], j, S, lhf, w[j], Ts[c], npars)
+        lhc[c] = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, Ts[c], npars)
+      end
 
+      # hidden factors
+      for j in phid
+        S    = lhc[c] - randexp()
+        L, R = 
+          find_nonneg_int(p[c], pp, fp[c], fpp, j, S, lhf, w[j], Ts[c], npars, lfp)
+        lhc[c] = 
+          sample_int(p[c], pp, fp[c], fpp, j, L, R, S, lhf, Ts[c], npars, lfp)
+      end
 
+      #=
+      multivariate updates
+      =#
+      # non hidden factors
+      for (i, mvp) in enumerate(mvps)
+        S = lhc[c] - randexp()
+        @views find_rect(p[c], pp, fp[c], mvp, nngps[i], 
+                  S, lhf, w, Lv, Rv, Ts[c], npars)
+        lhc[c] = sample_rect(p[c], pp, fp[c], Lv, Rv, mvp, 
+                  S, lhf, Ts[c], npars)
+      end
 
-
-    #=
-    univariate updates
-    =#
-    # nonnegative parameters
-    for j in nnps
-     S     = lhc[c] - randexp()
-     L, R  = find_nonneg_int(p[c], pp, fp[c], j, S, lhf, w[j], npars)
-     p[c], hc = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, npars)
+      # for joint hidden factors
+      for (i,mvp) in enumerate(mvhfs)
+        S = lhc[c] - randexp()
+        @views find_rect(p[c], pp, fp[c], fpp, mvp, hfgps[i], 
+                S, lhf, w, Lv, Rv, Ts[c],npars, lfp)
+        @views lhc[c] = sample_rect(p[c], pp, fp[c], fpp, Lv, Rv, mvp, hfgps[i], 
+                          S, lhf, Ts[c], npars, lfp)
+      end
     end
-
-    # real line parameters
-    for j in nps
-      S     = lhc[c] - randexp()
-      L, R  = find_real_int(p[c], pp, fp[c], j, S, lhf, w[j], npars)
-      p[c], hc = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, npars)
-    end
-
-    # hidden factors
-    for j in phid
-     S     = lhc[c] - randexp()
-     L, R  = find_nonneg_int(p[c], pp, fp[c], fpp, j, S, lhf, w[j], npars, lfp)
-     p[c], fp, hc = sample_int(p[c], pp, fp[c], fpp, j, L, R, S, lhf, npars, lfp)
-    end
-
-    #=
-    multivariate updates
-    =#
-    # non hidden factors
-    for (i,mvp) in enumerate(mvps)
-      S = lhc[c] - randexp()
-      @views find_rect(p[c], pp, fp[c], mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
-      p[c], hc  = sample_rect(p[c], pp, fp[c], Lv, Rv, mvp, S, lhf, npars)
-    end
-
-    # for joint hidden factors
-    for (i,mvp) in enumerate(mvhfs)
-      S = lhc[c] - randexp()
-      @views find_rect(p[c], pp, fp[c], fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars, lfp)
-      @views p[c], fp, hc = 
-        sample_rect(p[c], pp, fp[c], fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars, lfp)
-    end
-
-
 
     # log samples
     lthin += 1
     if lthin == nthin
       @inbounds begin
         lit += 1
-        setindex!(its,  it, lit)
-        setindex!(hlog, hc, lit)
-        setindex!(ps,   p,  lit, :)
+        setindex!(its,  it,  lit)
+        setindex!(hlog, lhc, lit, :)
+        for c in Base.OneTo(nchains)
+          setindex!(ps[c], p[c], lit, :)
+        end
+        setindex!(Olog, Os, lit, :)
       end
       lthin = 0
+    end
+
+    # swap chains
+    lswap += 1
+    if lswap == nswap
+      swap_chains(Os, Ts, lhc)
+      lswap = 0
     end
 
     next!(prog)
   end
 
-
-  swap_chains(Os ::Array{Int64,1},
-                     Ts ::Array{Float64,1},
-                     lhc::Array{Float64,1},
-                     p  ::Array{Array{Float64,1},1},
-                     fp ::Array{Array{Float64,1},1},
-                     lhf::Function)
-
-
-  return its, hlog, ps
+  return its, hlog, ps, Olog
 end
-
-
 
 
 
@@ -193,8 +192,8 @@ end
 Run slice sampler for burn-in and to estimate appropriate w's.
 """
 function w_sampler(lhf         ::Function, 
-                   p           ::Array{Float64,1},
-                   fp          ::Array{Float64,1},
+                   p           ::Array{Array{Float64,1},1},
+                   fp          ::Array{Array{Float64,1},1},
                    nnps        ::Array{Int64,1},
                    nps         ::Array{Int64,1},
                    phid        ::Array{Int64,1},
@@ -207,6 +206,8 @@ function w_sampler(lhf         ::Function,
                    screen_print::Int64,
                    nburn       ::Int64,
                    ntakew      ::Int64,
+                   nswap       ::Int64,
+                   nchains     ::Int64,
                    winit       ::Float64)
 
   if nburn < ntakew
@@ -224,83 +225,111 @@ function w_sampler(lhf         ::Function,
     maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
   end
 
+  # temperature
+  T = 0.2
+  Ts, Os = make_temperature(T, nchains)
+
   Lv = Array{Float64,1}(undef, maxmvu)
   Rv = Array{Float64,1}(undef, maxmvu)
 
   w  = fill(winit, npars)
-  ps = Array{Float64,2}(undef, nburn, npars)
+  ps = [Array{Float64,2}(undef, nburn, npars) for i in Base.OneTo(nchains)]
 
-  # posterior
-  hc = lhf(p, fp)
+  # starting posteriors
+  lhc = [lhf(p[c], fp[c], Ts[c]) for c in Base.OneTo(nchains)]
 
   # preallocate pp and fpp
-  pp  = copy(p)
-  fpp = copy(fp)
+  pp  = copy(p[1])
+  fpp = copy(fp[1])
 
   # length fp
-  lfp = length(fp)
+  lfp = length(fp[1])
 
   prog = Progress(nburn, screen_print, "estimating optimal widths...", 20)
 
-  for it in Base.OneTo(nburn)
+  lswap  = 0
+  ls, as = 0.0, 0.0
 
-    #=
-    univariate updates
-    =#
-    # nonnegative parameters
-    for j in nnps
-     S     = hc - randexp()
-     L, R  = find_nonneg_int(p, pp, fp, j, S, lhf, w[j], npars)
-     p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
+  for it in Base.OneTo(nburn) 
+    for c in Base.OneTo(nchains)
+
+      #=
+      univariate updates
+      =#
+      # nonnegative parameters
+      for j in nnps
+        S      = lhc[c] - randexp()
+        L, R   = find_nonneg_int(p[c], pp, fp[c], j, S, lhf, w[j], Ts[c], npars)
+        lhc[c] = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, Ts[c], npars)
+      end
+
+      # real line parameters
+      for j in nps
+        S      = lhc[c] - randexp()
+        L, R   = find_real_int(p[c], pp, fp[c], j, S, lhf, w[j], Ts[c], npars)
+        lhc[c] = sample_int(p[c], pp, fp[c], j, L, R, S, lhf, Ts[c], npars)
+      end
+
+      # hidden factors
+      for j in phid
+        S    = lhc[c] - randexp()
+        L, R = 
+          find_nonneg_int(p[c], pp, fp[c], fpp, j, S, lhf, w[j], Ts[c], npars, lfp)
+        lhc[c] = 
+          sample_int(p[c], pp, fp[c], fpp, j, L, R, S, lhf, Ts[c], npars, lfp)
+      end
+
+      #=
+      multivariate updates
+      =#
+      # non hidden factors
+      for (i, mvp) in enumerate(mvps)
+        S = lhc[c] - randexp()
+        @views find_rect(p[c], pp, fp[c], mvp, nngps[i], 
+                  S, lhf, w, Lv, Rv, Ts[c], npars)
+        lhc[c] = sample_rect(p[c], pp, fp[c], Lv, Rv, mvp, 
+                  S, lhf, Ts[c], npars)
+      end
+
+      # for joint hidden factors
+      for (i,mvp) in enumerate(mvhfs)
+        S = lhc[c] - randexp()
+        @views find_rect(p[c], pp, fp[c], fpp, mvp, hfgps[i], 
+                S, lhf, w, Lv, Rv, Ts[c],npars, lfp)
+        @views lhc[c] = sample_rect(p[c], pp, fp[c], fpp, Lv, Rv, mvp, hfgps[i], 
+                          S, lhf, Ts[c], npars, lfp)
+      end
     end
 
-    # real line parameters
-    for j in nps
-      S     = hc - randexp()
-      L, R  = find_real_int(p, pp, fp, j, S, lhf, w[j], npars)
-      p, hc = sample_int(p, pp, fp, j, L, R, S, lhf, npars)
+    # log samples
+    for c in Base.OneTo(nchains)
+      @inbounds setindex!(ps[c], p[c], it, :)
     end
 
-    # hidden factors
-    for j in phid
-     S     = hc - randexp()
-     L, R  = find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], npars, lfp)
-     p, fp, hc = sample_int(p, pp, fp, fpp, j, L, R, S, lhf, npars, lfp)
+    # swap chains
+    lswap += 1
+    if lswap == nswap
+      swap_chains(Os, Ts, lhc)
+      # ls += 1.0
+      # as += swap_chains(Os, Ts, lhc)
+      # rescale according to acceptance rates
+      # T = scaleT(T, as/ls)
+      # temperature!(Ts, Os, T)
+      lswap = 0
     end
-
-    #=
-    multivariate updates
-    =#
-    # non hidden factors
-    for (i,mvp) in enumerate(mvps)
-      S = hc - randexp()
-      @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, npars)
-      p, hc  = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, npars)
-    end
-
-    # for joint hidden factors
-    for (i,mvp) in enumerate(mvhfs)
-      S = hc - randexp()
-      @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, npars, lfp)
-      @views p, fp, hc = 
-        sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, npars, lfp)
-    end
-
-    @inbounds setindex!(ps, p, it, :)
 
     next!(prog)
   end
 
   sps = nburn-ntakew
 
-  ps = ps[(nburn-ntakew+1):nburn,:]
+  ps = ps[findfirst(x -> isone(x), Os)][(nburn-ntakew+1):nburn,:]
 
   w = optimal_w .* (reduce(max, ps, dims=1) .- reduce(min, ps, dims=1))
   w = reshape(w, size(w,2))
 
-  return (p, fp, w)::Tuple{Array{Float64,1},Array{Float64,1},Array{Float64,1}}
+  return p, fp, w, T, Os, Ts
 end
-
 
 
 
@@ -320,8 +349,9 @@ function find_nonneg_int(p    ::Array{Float64,1},
                          fp   ::Array{Float64,1},
                          j    ::Int64, 
                          S    ::Float64, 
-                         postf::Function, 
+                         lhf::Function, 
                          w    ::Float64,
+                         T    ::Float64,
                          npars::Int64)
 
   unsafe_copyto!(pp, 1, p, 1, npars)
@@ -335,7 +365,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # left extreme
   pp[j] = L
-  while S < postf(pp, fp)
+  while S < lhf(pp, fp, T)
     L -= w
     if L <= 0.0
       L = 1e-30
@@ -346,7 +376,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # right extreme
   pp[j] = R
-  while S < postf(pp, fp)
+  while S < lhf(pp, fp, T)
     R    += w
     pp[j] = R
   end
@@ -376,8 +406,9 @@ function find_nonneg_int(p    ::Array{Float64,1},
                          fpp  ::Array{Float64,1},
                          j    ::Int64, 
                          S    ::Float64, 
-                         postf::Function, 
+                         lhf  ::Function, 
                          w    ::Float64,
+                         T    ::Float64,
                          npars::Int64,
                          lfp  ::Int64)
 
@@ -393,7 +424,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # left extreme
   fpp[j] = L
-  while S < postf(pp, fpp)
+  while S < lhf(pp, fpp, T)
     L -= w
     if L <= 0.0
       L = 1e-30
@@ -404,7 +435,7 @@ function find_nonneg_int(p    ::Array{Float64,1},
 
   # right extreme
   fpp[j] = R
-  while S < postf(pp, fpp)
+  while S < lhf(pp, fpp, T)
     R    += w
     fpp[j] = R
   end
@@ -432,26 +463,27 @@ function find_real_int(p    ::Array{Float64,1},
                        fp   ::Array{Float64,1}, 
                        j    ::Int64, 
                        S    ::Float64, 
-                       postf::Function, 
-                       wj   ::Float64,
+                       lhf  ::Function, 
+                       w    ::Float64,
+                       T    ::Float64,
                        npars::Int64)
 
   unsafe_copyto!(pp, 1, p, 1, npars)
 
-  L = pp[j] - wj*rand()
-  R = L + wj
+  L = pp[j] - w*rand()
+  R = L + w
 
   # left extreme
   pp[j] = L::Float64
-  while S < postf(pp, fp)
-    L    -= wj::Float64
+  while S < lhf(pp, fp, T)
+    L    -= w::Float64
     pp[j] = L::Float64
   end
 
   # right extreme
   pp[j] = R::Float64
-  while S < postf(pp, fp)
-    R    += wj::Float64
+  while S < lhf(pp, fp, T)
+    R    += w::Float64
     pp[j] = R::Float64
   end
 
@@ -480,7 +512,8 @@ function sample_int(p    ::Array{Float64,1},
                     L    ::Float64, 
                     R    ::Float64, 
                     S    ::Float64, 
-                    postf::Function, 
+                    lhf  ::Function,
+                    T    ::Float64,
                     npars::Int64)
 
   @inbounds begin
@@ -489,10 +522,10 @@ function sample_int(p    ::Array{Float64,1},
     while true
       pp[j] = (L + rand()*(R-L))::Float64
 
-      hc = postf(pp, fp)::Float64
+      hc = lhf(pp, fp, T)::Float64
       if S < hc
         unsafe_copyto!(p, 1, pp, 1, npars)
-        return (p, hc)::Tuple{Array{Float64,1}, Float64}
+        return hc::Float64
       end
 
       if pp[j] < p[j]
@@ -530,7 +563,8 @@ function sample_int(p    ::Array{Float64,1},
                     L    ::Float64, 
                     R    ::Float64, 
                     S    ::Float64, 
-                    postf::Function, 
+                    lhf  ::Function, 
+                    T    ::Float64,
                     npars::Int64,
                     lfp  ::Int64)
 
@@ -541,11 +575,11 @@ function sample_int(p    ::Array{Float64,1},
     while true
       fpp[j] = (L + rand()*(R-L))::Float64
 
-      hc = postf(pp, fpp)::Float64
+      hc = lhf(pp, fpp, T)::Float64
       if S < hc
         unsafe_copyto!(p,  1, pp,  1, npars)
         unsafe_copyto!(fp, 1, fpp, 1, lfp)
-        return (p, fp, hc)::Tuple{Array{Float64,1}, Array{Float64,1}, Float64}
+        return hc::Float64
       end
 
       if fpp[j] < fp[j]
@@ -583,10 +617,11 @@ function find_rect(p    ::Array{Float64,1},
                    mvp  ::Array{Int64,1}, 
                    nngp  ::Array{Bool,1},
                    S    ::Float64, 
-                   postf::Function, 
+                   lhf  ::Function, 
                    w    ::Array{Float64,1},
                    Lv   ::Array{Float64,1},
                    Rv   ::Array{Float64,1},
+                   T    ::Float64,
                    npars::Int64)
 
   @inbounds begin
@@ -605,7 +640,7 @@ function find_rect(p    ::Array{Float64,1},
     # left extremes
     for (i,j) in enumerate(mvp)
       pp[j] = Lv[i]::Float64
-      while S < postf(pp, fp)
+      while S < lhf(pp, fp, T)
         Lv[i] -= w[j]::Float64
         if nngp[i] && Lv[i] <= 0.0
           Lv[i] = 1e-30
@@ -618,7 +653,7 @@ function find_rect(p    ::Array{Float64,1},
     # right extremes
     for (i,j) in enumerate(mvp)
       pp[j] = Rv[i]::Float64
-      while S < postf(pp, fp)
+      while S < lhf(pp, fp, T)
         Rv[i] += w[j]::Float64
         pp[j]  = Rv[i]::Float64
       end
@@ -655,10 +690,11 @@ function find_rect(p    ::Array{Float64,1},
                    mvp  ::Array{Int64,1}, 
                    hfgp ::Array{Bool,1},
                    S    ::Float64, 
-                   postf::Function, 
+                   lhf  ::Function, 
                    w    ::Array{Float64,1},
                    Lv   ::Array{Float64,1},
                    Rv   ::Array{Float64,1},
+                   T    ::Float64,
                    npars::Int64,
                    lfp  ::Int64)
 
@@ -685,7 +721,7 @@ function find_rect(p    ::Array{Float64,1},
     for (i,j) in enumerate(mvp)
       if hfgp[i]
         fpp[j] = Lv[i]::Float64
-        while S < postf(pp, fpp)
+        while S < lhf(pp, fpp, T)
           Lv[i] -= w[j]::Float64
           if Lv[i] <= 0.0
             Lv[i] = 1e-30
@@ -695,7 +731,7 @@ function find_rect(p    ::Array{Float64,1},
         end
       else
         pp[j] = Lv[i]::Float64
-        while S < postf(pp, fpp)
+        while S < lhf(pp, fpp, T)
           Lv[i] -= w[j]::Float64
           pp[j]  = Lv[i]::Float64
         end
@@ -706,13 +742,13 @@ function find_rect(p    ::Array{Float64,1},
     for (i,j) in enumerate(mvp)
       if hfgp[i]
         fpp[j] = Rv[i]::Float64
-        while S < postf(pp, fpp)
+        while S < lhf(pp, fpp, T)
           Rv[i] += w[j]::Float64
           fpp[j]  = Rv[i]::Float64
         end
       else
         pp[j] = Rv[i]::Float64
-        while S < postf(pp, fpp)
+        while S < lhf(pp, fpp, T)
           Rv[i] += w[j]::Float64
           pp[j]  = Rv[i]::Float64
         end
@@ -747,7 +783,8 @@ function sample_rect(p    ::Array{Float64,1},
                      Rv   ::Array{Float64,1}, 
                      mvp  ::Array{Int64,1},
                      S    ::Float64, 
-                     postf::Function, 
+                     lhf  ::Function,
+                     T    ::Float64,
                      npars::Int64)
 
   @inbounds begin
@@ -762,11 +799,11 @@ function sample_rect(p    ::Array{Float64,1},
       end
 
       # posterior
-      hc = postf(pp, fp)
+      hc = lhf(pp, fp, T)
 
       if S < hc
         unsafe_copyto!(p, 1, pp, 1, npars)
-        return(p, hc)::Tuple{Array{Float64,1}, Float64}
+        return hc::Float64
       end
 
       for (i,j) in enumerate(mvp)
@@ -810,7 +847,8 @@ function sample_rect(p    ::Array{Float64,1},
                      mvp  ::Array{Int64,1},
                      hfgp ::Array{Bool,1},
                      S    ::Float64, 
-                     postf::Function, 
+                     lhf  ::Function, 
+                     T    ::Float64,
                      npars::Int64,
                      lfp  ::Int64)
 
@@ -831,12 +869,12 @@ function sample_rect(p    ::Array{Float64,1},
       end
 
       # posterior
-      hc = postf(pp, fpp)
+      hc = lhf(pp, fpp, T)
 
       if S < hc
         unsafe_copyto!(p, 1, pp, 1, npars)
         unsafe_copyto!(fp, 1, fpp, 1, lfp)
-        return(p, fp, hc)::Tuple{Array{Float64,1}, Array{Float64,1}, Float64}
+        return hc::Float64
       end
 
       for (i,j) in enumerate(mvp)
@@ -860,4 +898,26 @@ function sample_rect(p    ::Array{Float64,1},
 
   return nothing
 end
+
+
+
+
+
+
+"""
+    scaleT(T::Float64, rate::Float64)
+
+Make scaling function given the objective acceptance rates.
+"""
+function scaleT(T::Float64, rate::Float64)
+  if 0.4 > rate
+    T /= (2.0 - rate/0.4)
+  else
+    T *= (1.0 + (rate - 0.4)/0.6)
+  end
+
+  return T
+end
+
+
 

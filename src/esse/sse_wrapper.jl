@@ -228,6 +228,7 @@ function esse(tree_file   ::String,
               niter       ::Int64             = 10_000,
               nthin       ::Int64             = 10,
               nburn       ::Int64             = 200,
+              nswap       ::Int64             = 10,
               nchains     ::Int64             = 1,
               ntakew      ::Int64             = 100,
               winit       ::Float64           = 2.0,
@@ -322,33 +323,34 @@ function esse(tree_file   ::String,
   npars = length(pardic)
 
   # if parallel
-  if nchains > 1
-    # number of samples
-    nlogs = fld(niter,nthin)
+  # if nchains > 1
+  #   # number of samples
+  #   nlogs = fld(niter,nthin)
 
-    # where to write in the Shared Array
-    cits = [(1+j):(nlogs+j) for j in 0:nlogs:(nchains-1)*nlogs]
+  #   # where to write in the Shared Array
+  #   cits = [(1+j):(nlogs+j) for j in 0:nlogs:(nchains-1)*nlogs]
 
-    # run slice-sampling in parallel
-    R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
+  #   # run slice-sampling in parallel
+  #   R = SharedArray{Float64,2}(nlogs*nchains, npars+2)
 
-    # run parallel loop
-    @sync @distributed for ci in Base.OneTo(nchains)
-      R[cits[ci],:] = 
-        slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
-      # write output
-      write_ssr(R, pardic, out_file, cits, ci)
-    end
+  #   # run parallel loop
+  #   @sync @distributed for ci in Base.OneTo(nchains)
+  #     R[cits[ci],:] = 
+  #       slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+  #         npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+  #     # write output
+  #     write_ssr(R, pardic, out_file, cits, ci)
+  #   end
 
-  else
+  # else
 
-    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
+  R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+        npars, niter, nthin, nburn, ntakew, nswap, nchains, winit, optimal_w, 
+        screen_print)
 
-    # write output
-    write_ssr(R, pardic, out_file)
-  end
+  # write output
+  write_ssr(R, pardic, out_file)
+  # end
 
   return R
 end

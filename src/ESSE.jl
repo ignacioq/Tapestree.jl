@@ -35,5 +35,6 @@ include("esse/prepare_data.jl")
 include("esse/prepare_ll.jl")
 include("esse/loglik_geo.jl")
 include("esse/loglik_flow.jl")
+include("esse/mc3.jl")
 
 end # module ESSE

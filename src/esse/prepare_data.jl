@@ -101,8 +101,8 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   end
 
   # make vector for nchains
-  p  = [p  for i in Base.OneTo(nchains)]
-  fp = [fp for i in Base.OneTo(nchains)]
+  p  = [copy(p)  for i in Base.OneTo(nchains)]
+  fp = [copy(fp) for i in Base.OneTo(nchains)]
 
   # parameter update
   pupd = [1:npars...]
