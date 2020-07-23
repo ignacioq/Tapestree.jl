@@ -16,17 +16,23 @@ September 23 2017
 
 """
     loop_slice_sampler(lhf         ::Function, 
-                       p           ::Array{Float64,1},
-                       fp          ::Array{Float64,1},
+                       p           ::Array{Array{Float64,1},1},
+                       fp          ::Array{Array{Float64,1},1},
                        nnps        ::Array{Int64,1},
                        nps         ::Array{Int64,1},
                        phid        ::Array{Int64,1},
                        mvps        ::Array{Array{Int64,1},1},
+                       nngps       ::Array{Array{Bool,1},1},
                        mvhfs       ::Array{Array{Int64,1},1},
+                       hfgps       ::Array{Array{Bool,1},1},
                        w           ::Array{Float64,1},
                        npars       ::Int64,
                        niter       ::Int64,
                        nthin       ::Int64,
+                       nswap       ::Int64,
+                       ncch        ::Int64,
+                       Os          ::Array{Int64,1}, 
+                       Ts          ::Array{Float64,1},
                        screen_print::Int64)
 
 Run slice-sampling.
@@ -46,7 +52,7 @@ function loop_slice_sampler(lhf         ::Function,
                             niter       ::Int64,
                             nthin       ::Int64,
                             nswap       ::Int64,
-                            nchains     ::Int64,
+                            ncch        ::Int64,
                             Os          ::Array{Int64,1}, 
                             Ts          ::Array{Float64,1},
                             screen_print::Int64)
@@ -66,11 +72,11 @@ function loop_slice_sampler(lhf         ::Function,
 
   #preallocate logging arrays
   its  =  Array{Float64,1}(undef, nlogs)
-  hlog =  Array{Float64,2}(undef, nlogs, nchains)
-  ps   = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(nchains)]
+  hlog =  Array{Float64,2}(undef, nlogs, ncch)
+  ps   = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(ncch)]
 
   # preallocate chains order
-  Olog   = Array{Int64,2}(undef, nlogs, nchains)
+  Olog   = Array{Int64,2}(undef, nlogs, ncch)
 
   # preallocate changing vectors
   Lv    = Array{Float64,1}(undef, maxmvu)
@@ -89,10 +95,10 @@ function loop_slice_sampler(lhf         ::Function,
   prog = Progress(niter, screen_print, "running slice-sampler...", 20)
 
   # starting posteriors
-  lhc = [lhf(p[c], fp[c], Ts[c]) for c in Base.OneTo(nchains)]
+  lhc = [lhf(p[c], fp[c], Ts[c]) for c in Base.OneTo(ncch)]
 
   for it in Base.OneTo(niter) 
-    for c in Base.OneTo(nchains)
+    for c in Base.OneTo(ncch)
 
       #=
       univariate updates
@@ -149,7 +155,7 @@ function loop_slice_sampler(lhf         ::Function,
         lit += 1
         setindex!(its,  it,  lit)
         setindex!(hlog, lhc, lit, :)
-        for c in Base.OneTo(nchains)
+        for c in Base.OneTo(ncch)
           setindex!(ps[c], p[c], lit, :)
         end
         setindex!(Olog, Os, lit, :)
@@ -158,10 +164,12 @@ function loop_slice_sampler(lhf         ::Function,
     end
 
     # swap chains
-    lswap += 1
-    if lswap == nswap
-      swap_chains(Os, Ts, lhc)
-      lswap = 0
+    if ncch > 1
+      lswap += 1
+      if lswap == nswap
+        swap_chains(Os, Ts, lhc)
+        lswap = 0
+      end
     end
 
     next!(prog)
@@ -175,18 +183,22 @@ end
 
 """
     w_sampler(lhf         ::Function, 
-              p           ::Array{Float64,1},
-              fp          ::Array{Float64,1},
+              p           ::Array{Array{Float64,1},1},
+              fp          ::Array{Array{Float64,1},1},
               nnps        ::Array{Int64,1},
               nps         ::Array{Int64,1},
               phid        ::Array{Int64,1},
               mvps        ::Array{Array{Int64,1},1},
+              nngps        ::Array{Array{Bool,1},1},
               mvhfs       ::Array{Array{Int64,1},1},
+              hfgps       ::Array{Array{Bool,1},1},
               npars       ::Int64,
               optimal_w   ::Float64,
               screen_print::Int64,
               nburn       ::Int64,
               ntakew      ::Int64,
+              nswap       ::Int64,
+              ncch        ::Int64,
               winit       ::Float64)
 
 Run slice sampler for burn-in and to estimate appropriate w's.
@@ -207,7 +219,7 @@ function w_sampler(lhf         ::Function,
                    nburn       ::Int64,
                    ntakew      ::Int64,
                    nswap       ::Int64,
-                   nchains     ::Int64,
+                   ncch        ::Int64,
                    winit       ::Float64)
 
   if nburn < ntakew
@@ -227,16 +239,16 @@ function w_sampler(lhf         ::Function,
 
   # temperature
   T = 0.2
-  Ts, Os = make_temperature(T, nchains)
+  Ts, Os = make_temperature(T, ncch)
 
   Lv = Array{Float64,1}(undef, maxmvu)
   Rv = Array{Float64,1}(undef, maxmvu)
 
   w  = fill(winit, npars)
-  ps = [Array{Float64,2}(undef, nburn, npars) for i in Base.OneTo(nchains)]
+  ps = [Array{Float64,2}(undef, nburn, npars) for i in Base.OneTo(ncch)]
 
   # starting posteriors
-  lhc = [lhf(p[c], fp[c], Ts[c]) for c in Base.OneTo(nchains)]
+  lhc = [lhf(p[c], fp[c], Ts[c]) for c in Base.OneTo(ncch)]
 
   # preallocate pp and fpp
   pp  = copy(p[1])
@@ -251,7 +263,7 @@ function w_sampler(lhf         ::Function,
   ls, as = 0.0, 0.0
 
   for it in Base.OneTo(nburn) 
-    for c in Base.OneTo(nchains)
+    for c in Base.OneTo(ncch)
 
       #=
       univariate updates
@@ -302,20 +314,22 @@ function w_sampler(lhf         ::Function,
     end
 
     # log samples
-    for c in Base.OneTo(nchains)
+    for c in Base.OneTo(ncch)
       @inbounds setindex!(ps[c], p[c], it, :)
     end
 
     # swap chains
-    lswap += 1
-    if lswap == nswap
-      swap_chains(Os, Ts, lhc)
-      # ls += 1.0
-      # as += swap_chains(Os, Ts, lhc)
-      # rescale according to acceptance rates
-      # T = scaleT(T, as/ls)
-      # temperature!(Ts, Os, T)
-      lswap = 0
+    if ncch > 1
+      lswap += 1
+      if lswap == nswap
+        swap_chains(Os, Ts, lhc)
+        # ls += 1.0
+        # as += swap_chains(Os, Ts, lhc)
+        # rescale according to acceptance rates
+        # T = scaleT(T, as/ls)
+        # temperature!(Ts, Os, T)
+        lswap = 0
+      end
     end
 
     next!(prog)
@@ -323,7 +337,25 @@ function w_sampler(lhf         ::Function,
 
   sps = nburn-ntakew
 
+
+
+
+  # choose cold chain (is equal to 1)
+  P = Array{Float64,2}(undef, length(its), npars)
+  H = Array{Float64,1}(undef, length(its))
+  @inbounds begin
+    for i in Base.OneTo(length(its))
+      @views ii = findfirst(x -> isone(x), Olog[i,:])
+      P[i,:] = ps[ii][i,:]
+      H[i]   = hlog[i,ii]
+    end
+  end
+
+
+
   ps = ps[findfirst(x -> isone(x), Os)][(nburn-ntakew+1):nburn,:]
+
+
 
   w = optimal_w .* (reduce(max, ps, dims=1) .- reduce(min, ps, dims=1))
   w = reshape(w, size(w,2))

@@ -12,13 +12,13 @@ t(-_-t)
 
 
 """
-  make_temperature(T::Float64, nchains::Int64)
+  make_temperature(T::Float64, ncch::Int64)
 
 Set chain temperature vectors.
 """
-make_temperature(T::Float64, nchains::Int64) = 
-  [1.0/(1.0 + (T*(i-1.0))) for i in 1.0:1.0:Float64(nchains)],
-  [1:nchains...]
+make_temperature(T::Float64, ncch::Int64) = 
+  [1.0/(1.0 + (T*(i-1.0))) for i in 1.0:1.0:Float64(ncch)],
+  [1:ncch...]
 
 
 
