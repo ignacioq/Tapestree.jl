@@ -220,7 +220,8 @@ function w_sampler(lhf         ::Function,
                    ntakew      ::Int64,
                    nswap       ::Int64,
                    ncch        ::Int64,
-                   winit       ::Float64)
+                   winit       ::Float64,
+                   T           ::Float64)
 
   if nburn < ntakew
     ntakew = nburn
@@ -238,7 +239,6 @@ function w_sampler(lhf         ::Function,
   end
 
   # temperature
-  T = 0.2
   Ts, Os = make_temperature(T, ncch)
 
   Lv = Array{Float64,1}(undef, maxmvu)
@@ -260,7 +260,6 @@ function w_sampler(lhf         ::Function,
   prog = Progress(nburn, screen_print, "estimating optimal widths...", 20)
 
   lswap  = 0
-  ls, as = 0.0, 0.0
 
   for it in Base.OneTo(nburn) 
     for c in Base.OneTo(ncch)
@@ -323,11 +322,6 @@ function w_sampler(lhf         ::Function,
       lswap += 1
       if lswap == nswap
         swap_chains(Os, Ts, lhc)
-        # ls += 1.0
-        # as += swap_chains(Os, Ts, lhc)
-        # rescale according to acceptance rates
-        # T = scaleT(T, as/ls)
-        # temperature!(Ts, Os, T)
         lswap = 0
       end
     end
@@ -337,28 +331,12 @@ function w_sampler(lhf         ::Function,
 
   sps = nburn-ntakew
 
-
-
-
-  # choose cold chain (is equal to 1)
-  P = Array{Float64,2}(undef, length(its), npars)
-  H = Array{Float64,1}(undef, length(its))
-  @inbounds begin
-    for i in Base.OneTo(length(its))
-      @views ii = findfirst(x -> isone(x), Olog[i,:])
-      P[i,:] = ps[ii][i,:]
-      H[i]   = hlog[i,ii]
-    end
-  end
-
-
-
   ps = ps[findfirst(x -> isone(x), Os)][(nburn-ntakew+1):nburn,:]
-
-
 
   w = optimal_w .* (reduce(max, ps, dims=1) .- reduce(min, ps, dims=1))
   w = reshape(w, size(w,2))
+
+  @info T
 
   return p, fp, w, T, Os, Ts
 end
