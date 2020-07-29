@@ -26,7 +26,9 @@ September 26 2017
          niter       ::Int64             = 10_000,
          nthin       ::Int64             = 10,
          nburn       ::Int64             = 200,
+         nswap       ::Int64             = 10,
          ncch        ::Int64             = 1,
+         T           ::Float64           = 0.2,
          ntakew      ::Int64             = 100,
          winit       ::Float64           = 2.0,
          scale_y     ::NTuple{2,Bool}    = (true, false),
@@ -43,9 +45,9 @@ September 26 2017
          screen_print::Int64             = 5,
          Eδt         ::Float64           = 1e-3,
          ti          ::Float64           = 0.0,
-         ρ           ::Array{Float64,1}  = [1.0]) where {M,N,O}
+         ρ           ::Array{Float64,1}  = [1.0])
 
-Wrapper for running a SSE model from file.
+Wrapper for running a ESSE.g model from file.
 """
 function esse(states_file ::String,
               tree_file   ::String,
@@ -107,7 +109,7 @@ function esse(states_file ::String,
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
   mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
-    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars)
 
   @info "Data successfully prepared"
 
@@ -129,7 +131,7 @@ function esse(states_file ::String,
 
     # prepare likelihood
     X, int, λevent!, rootll, abts1, abts2 = 
-      prepare_ll(X, p, E0, ns, k, h, ny, model, power, abts ,af!)
+      prepare_ll(X, p[1], E0, k, h, ny, model, power, abts, af!)
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 
@@ -152,32 +154,13 @@ function esse(states_file ::String,
   # number of parameters
   npars = length(pardic)
 
-  # number of samples
-  nlogs = fld(niter,nthin)
+  # run slice-sampler
+  R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, T,
+        screen_print)
 
-  if ncch    > 1
-    # where to write in the Shared Array
-    cits = [(1+j):(nlogs+j) for j in 0:nlogs:(ncch   -1)*nlogs]
-
-    # run slice-sampling in parallel
-    R = SharedArray{Float64,2}(nlogs*ncch   , npars+2)
-
-    # run parallel loop
-    @sync @distributed for ci in Base.OneTo(ncch   )
-      R[cits[ci],:] = 
-        slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
-      write_ssr(R, pardic, out_file, cits, ci)
-    end
-
-  else
-
-    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
-
-    # write output
-    write_ssr(R, pardic, out_file)
-  end
+  # write output
+  write_ssr(R, pardic, out_file)
 
   return R
 end
@@ -188,8 +171,7 @@ end
 
 
 """
-    esse(states_file ::String,
-         tree_file   ::String,
+    esse(tree_file   ::String,
          envdata_file::String,
          cov_mod     ::NTuple{M,String},
          out_file    ::String,
@@ -199,7 +181,9 @@ end
          niter       ::Int64             = 10_000,
          nthin       ::Int64             = 10,
          nburn       ::Int64             = 200,
+         nswap       ::Int64             = 10,
          ncch        ::Int64             = 1,
+         T           ::Float64           = 0.2,
          ntakew      ::Int64             = 100,
          winit       ::Float64           = 2.0,
          scale_y     ::NTuple{2,Bool}    = (true, false),
@@ -218,7 +202,7 @@ end
          ti          ::Float64           = 0.0,
          ρ           ::Array{Float64,1}  = [1.0]) where {M,N,O}
 
-Wrapper for running a SSE model without states from file.
+Wrapper for running a ESSE.0 model without states from file.
 """
 function esse(tree_file   ::String,
               envdata_file::String,
@@ -232,6 +216,7 @@ function esse(tree_file   ::String,
               nburn       ::Int64             = 200,
               nswap       ::Int64             = 10,
               ncch        ::Int64             = 1,
+              parallel    ::Bool              = false,
               T           ::Float64           = 0.2,
               ntakew      ::Int64             = 100,
               winit       ::Float64           = 2.0,
@@ -274,6 +259,141 @@ function esse(tree_file   ::String,
       end
     end
   end
+
+  # prepare data
+  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
+  mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
+  af!, assign_hidfacs!, abts, bts, E0 = 
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
+      parallel)
+
+  @info "Data successfully prepared"
+
+  @debug sort!(collect(pardic), by = x -> x[2])
+
+  ## make likelihood function
+  # flow algorithm
+  if occursin(r"^[f|F][A-za-z]*", algorithm) 
+
+    # prepare likelihood
+    Gt, Et, lbts, nets, λevent!, rootll = 
+      prepare_ll(p[1], bts, E0, k, h, ny, ns, ned, model, Eδt, ti, abts, af!)
+
+    # make likelihood function
+    llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
+                      λevent!, rootll)
+  
+  # pruning algorithm
+  elseif occursin(r"^[p|P][A-za-z]*", algorithm)
+
+    # prepare likelihood
+    X, int, λevent!, rootll, abts1, abts2 = 
+      prepare_ll(X, p[1], E0, k, h, ny, model, power, abts, af!)
+
+    # make likelihood function
+    llf = make_loglik(X, abts1, abts2, trios, int, 
+      λevent!, rootll, ns, ned)
+
+  else
+    @error "No matching likelihood for algorithm: $algorithm"
+  end
+
+  λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
+    make_prior_updates(pupd, phid, mvhfs, hfgps, βpriors, k, h, ny, model)
+
+  # create prior function
+  lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
+          λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
+
+  # create posterior functions
+  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp)
+
+  # number of parameters
+  npars = length(pardic)
+
+
+
+  # run slice-sampler
+  R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
+        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, T,
+        screen_print)
+
+  write_ssr(R, pardic, out_file)
+
+  return R
+end
+
+
+
+
+
+"""
+    esse(tv          ::Dict{Int64,Array{Float64,1}},
+         ed          ::Array{Int64,2}, 
+         el          ::Array{Float64,1}, 
+         x           ::Array{Float64,1},
+         y           ::Array{Float64,L}, 
+         cov_mod     ::NTuple{M,String},
+         out_file    ::String,
+         h           ::Int64;
+         constraints ::NTuple{N,String}  = (" ",),
+         mvpars      ::NTuple{O,String}  = ("lambda = beta",),
+         niter       ::Int64             = 10_000,
+         nthin       ::Int64             = 10,
+         nburn       ::Int64             = 200,
+         ncch        ::Int64             = 1,
+         ntakew      ::Int64             = 100,
+         winit       ::Float64             = 2.0,
+         scale_y     ::NTuple{2,Bool}    = (true, false),
+         algorithm   ::String            = "pruning",
+         λpriors     ::Float64           = .1,
+         μpriors     ::Float64           = .1,
+         gpriors     ::Float64           = .1,
+         lpriors     ::Float64           = .1,
+         qpriors     ::Float64           = .1,
+         βpriors     ::NTuple{2,Float64} = (0.0, 10.0),
+         hpriors     ::Float64           = .1,
+         optimal_w   ::Float64           = 0.8,
+         screen_print::Int64             = 5,
+         Eδt         ::Float64           = 1e-3,
+         ti          ::Float64           = 0.0,
+         ρ           ::Array{Float64,1}  = [1.0]) where {L,M,N,O}
+
+Wrapper for running a ESSE model from simulations.
+"""
+function esse(tv          ::Dict{Int64,Array{Float64,1}},
+              ed          ::Array{Int64,2}, 
+              el          ::Array{Float64,1}, 
+              x           ::Array{Float64,1},
+              y           ::Array{Float64,L}, 
+              cov_mod     ::NTuple{M,String},
+              out_file    ::String,
+              h           ::Int64;
+              constraints ::NTuple{N,String}  = (" ",),
+              mvpars      ::NTuple{O,String}  = ("lambda = beta",),
+              niter       ::Int64             = 10_000,
+              nthin       ::Int64             = 10,
+              nburn       ::Int64             = 200,
+              nswap       ::Int64             = 10,
+              ncch        ::Int64             = 1,
+              T           ::Float64           = 0.2,
+              ntakew      ::Int64             = 100,
+              winit       ::Float64           = 2.0,
+              scale_y     ::NTuple{2,Bool}    = (true, false),
+              algorithm   ::String            = "pruning",
+              power       ::Bool              = false,
+              λpriors     ::Float64           = .1,
+              μpriors     ::Float64           = .1,
+              gpriors     ::Float64           = .1,
+              lpriors     ::Float64           = .1,
+              qpriors     ::Float64           = .1,
+              βpriors     ::NTuple{2,Float64} = (0.0, 10.0),
+              hpriors     ::Float64           = .1,
+              optimal_w   ::Float64           = 0.8,
+              screen_print::Int64             = 5,
+              Eδt         ::Float64           = 1e-3,
+              ti          ::Float64           = 0.0,
+              ρ           ::Array{Float64,1}  = [1.0]) where {L,M,N,O}
 
   # prepare data
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
@@ -331,157 +451,6 @@ function esse(tree_file   ::String,
         screen_print)
 
   write_ssr(R, pardic, out_file)
-
-  return R
-end
-
-
-
-
-
-"""
-    esse(tv          ::Dict{Int64,Array{Float64,1}},
-         ed          ::Array{Int64,2}, 
-         el          ::Array{Float64,1}, 
-         x           ::Array{Float64,1},
-         y           ::Array{Float64,L}, 
-         cov_mod     ::NTuple{M,String},
-         out_file    ::String,
-         h           ::Int64;
-         constraints ::NTuple{N,String}  = (" ",),
-         mvpars      ::NTuple{O,String}  = ("lambda = beta",),
-         niter       ::Int64             = 10_000,
-         nthin       ::Int64             = 10,
-         nburn       ::Int64             = 200,
-         ncch        ::Int64             = 1,
-         ntakew      ::Int64             = 100,
-         winit       ::Float64             = 2.0,
-         scale_y     ::NTuple{2,Bool}    = (true, false),
-         algorithm   ::String            = "pruning",
-         λpriors     ::Float64           = .1,
-         μpriors     ::Float64           = .1,
-         gpriors     ::Float64           = .1,
-         lpriors     ::Float64           = .1,
-         qpriors     ::Float64           = .1,
-         βpriors     ::NTuple{2,Float64} = (0.0, 10.0),
-         hpriors     ::Float64           = .1,
-         optimal_w   ::Float64           = 0.8,
-         screen_print::Int64             = 5,
-         Eδt         ::Float64           = 1e-3,
-         ti          ::Float64           = 0.0,
-         ρ           ::Array{Float64,1}  = [1.0]) where {L,M,N,O}
-
-Wrapper for running a SSE model from simulations.
-"""
-function esse(tv          ::Dict{Int64,Array{Float64,1}},
-              ed          ::Array{Int64,2}, 
-              el          ::Array{Float64,1}, 
-              x           ::Array{Float64,1},
-              y           ::Array{Float64,L}, 
-              cov_mod     ::NTuple{M,String},
-              out_file    ::String,
-              h           ::Int64;
-              constraints ::NTuple{N,String}  = (" ",),
-              mvpars      ::NTuple{O,String}  = ("lambda = beta",),
-              niter       ::Int64             = 10_000,
-              nthin       ::Int64             = 10,
-              nburn       ::Int64             = 200,
-              nswap       ::Int64             = 10,
-              ncch        ::Int64             = 1,
-              T           ::Float64           = 0.2,
-              ntakew      ::Int64             = 100,
-              winit       ::Float64           = 2.0,
-              scale_y     ::NTuple{2,Bool}    = (true, false),
-              algorithm   ::String            = "pruning",
-              power       ::Bool              = false,
-              λpriors     ::Float64           = .1,
-              μpriors     ::Float64           = .1,
-              gpriors     ::Float64           = .1,
-              lpriors     ::Float64           = .1,
-              qpriors     ::Float64           = .1,
-              βpriors     ::NTuple{2,Float64} = (0.0, 10.0),
-              hpriors     ::Float64           = .1,
-              optimal_w   ::Float64           = 0.8,
-              screen_print::Int64             = 5,
-              Eδt         ::Float64           = 1e-3,
-              ti          ::Float64           = 0.0,
-              ρ           ::Array{Float64,1}  = [1.0]) where {L,M,N,O}
-
-  # prepare data
-  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
-  mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
-  af!, assign_hidfacs!, abts, bts, E0 = 
-    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, constraints, mvpars) 
-
-  @info "Data successfully prepared"
-
-  ## make likelihood function
-  # flow algorithm
-  if occursin(r"^[f|F][A-za-z]*", algorithm) 
-
-    # prepare likelihood
-    Gt, Et, lbts, nets, λevent!, rootll = 
-      prepare_ll(p, bts, E0, k, h, ny, ns, ned, model, Eδt, ti, abts, af!)
-
-    # make likelihood function
-    llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
-                      λevent!, rootll)
-  # pruning algorithm
-  elseif occursin(r"^[p|P][A-za-z]*", algorithm)
-
-    # prepare likelihood
-    X, int, λevent!, rootll, abts1, abts2 = 
-      prepare_ll(X, p, E0, ns, k, h, ny, model, power, abts ,af!)
-
-    # make likelihood function
-    llf = make_loglik(X, abts1, abts2, trios, int, 
-      λevent!, rootll, ns, ned)
-
-  else
-    @error "No matching likelihood for algorithm: $algorithm"
-  end
-
-  λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
-    make_prior_updates(pupd, phid, mvhfs, hfgps, βpriors, k, h, ny, model)
-
-  # create prior function
-  lpf = make_lpf(λupds, μupds, lupds, gupds, qupds, βupds, hfps, 
-          λpriors, μpriors, gpriors, lpriors, qpriors, βp_m, βp_v, hpriors)
-
-  # create posterior functions
-  lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp)
-
-  # number of parameters
-  npars = length(pardic)
-
-  # number of samples
-  nlogs = fld(niter,nthin)
-
-  # if parallel
-  if ncch    > 1
-    # where to write in the Shared Array
-    cits = [(1+j):(nlogs+j) for j in 0:nlogs:(ncch   -1)*nlogs]
-
-    # run slice-sampling in parallel
-    R = SharedArray{Float64,2}(nlogs*ncch   , npars+2)
-
-    # run parallel loop
-    @sync @distributed for ci in Base.OneTo(ncch   )
-      R[cits[ci],:] = 
-        slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
-      # write output
-      write_ssr(R, pardic, out_file, cits, ci)
-    end
-
-  else
-
-    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-          npars, niter, nthin, nburn, ntakew, winit, optimal_w, screen_print)
-
-    # write output
-    write_ssr(R, pardic, out_file)
-  end
 
   return R
 end

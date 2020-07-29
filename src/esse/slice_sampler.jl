@@ -60,14 +60,15 @@ function slice_sampler(lhf         ::Function,
                        screen_print::Int64)
 
   # estimate optimal w
-  p, fp, w, T, Os, Ts = 
+  p, fp, w, o, t = 
     w_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
       npars, optimal_w, screen_print, nburn, ntakew, nswap, ncch, winit, T)
+
 
   # slice-sampler
   its, hlog, ps, Olog = 
     loop_slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-      w, npars, niter, nthin, nswap, ncch, Os, Ts, screen_print)
+      w, npars, niter, nthin, nswap, ncch, o, t, screen_print)
 
 
   # choose cold chain (is equal to 1)

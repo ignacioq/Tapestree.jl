@@ -21,10 +21,11 @@ Created 16 03 2020
                  el         ::Array{Float64,1},
                  ρ          ::Array{Float64,1},
                  h          ::Int64,
+                 ncch       ::Int64,
                  constraints::NTuple{O,String},
-                 mvpars     ::NTuple{P,String})
+                 mvpars     ::NTuple{P,String}) where {N,M,O,P}
 
-Prepare data for **EGeoHiSSE** likelihood calculations.
+Prepare data for **ESSE.g** likelihood calculations.
 """
 function prepare_data(cov_mod    ::NTuple{M,String},
                       tv         ::Dict{Int64,Array{Float64,1}},
@@ -34,9 +35,10 @@ function prepare_data(cov_mod    ::NTuple{M,String},
                       el         ::Array{Float64,1},
                       ρ          ::Array{Float64,1},
                       h          ::Int64,
-                      nchains    ::Int64,
+                      ncch       ::Int64,
                       constraints::NTuple{O,String},
-                      mvpars     ::NTuple{P,String}) where {N,M,O,P}
+                      mvpars     ::NTuple{P,String},
+                      parallel   ::Bool) where {N,M,O,P}
 
   # k areas
   k = length(tv[1])::Int64
@@ -100,9 +102,15 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ             # set μs
   end
 
-  # make vector for nchains
-  p  = [copy(p)  for i in Base.OneTo(nchains)]
-  fp = [copy(fp) for i in Base.OneTo(nchains)]
+  # make vector for ncch
+  p  = [copy(p)  for i in Base.OneTo(ncch)]
+  fp = [copy(fp) for i in Base.OneTo(ncch)]
+
+  # if parallel
+  if parallel
+    p  = distribute(p)
+    fp = distribute(fp)
+  end
 
   # parameter update
   pupd = [1:npars...]
@@ -118,8 +126,8 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   setdiff!(pupd, phid)
 
   # force pars in zerp to 0
-  for c in Base.OneTo(nchains), i in zp
-    p[c][i] = 0.0
+  for c in procs(p), i in zp
+    @spawnat c p[:l][i] = 0.0
   end
 
   # remove constraints and fixed to zero parameters from being updated
@@ -195,17 +203,17 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h}, Val{ny}, Val{model})
 
   # force same parameter values for constraints
-  for c in Base.OneTo(nchains)
+  for c in procs(p)
     for wp in keys(dcp)
       while haskey(dcp, wp)
         tp = dcp[wp]
-        p[c][tp] = p[c][wp]
+        @spawnat c p[:l][tp] = p[:l][wp]
         wp = tp
       end
     end
 
     # assign hidden factors
-    assign_hidfacs!(p[c], fp[c])
+    @spawnat c assign_hidfacs!(p[:l], fp[:l])
   end
 
   # extinction at time 0 with sampling fraction `ρ_i`
