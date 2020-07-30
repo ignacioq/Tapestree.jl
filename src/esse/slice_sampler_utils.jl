@@ -12,10 +12,142 @@ September 23 2017
 
 
 
+
+
 """
     w_sampler(lhf         ::Function, 
               p           ::Array{Array{Float64,1},1},
-              fp          ::Array{Array{Float64,1},1},
+              fp          ::Array{Array{Float64,1},1},,
+              nnps        ::Array{Int64,1},
+              nps         ::Array{Int64,1},
+              phid        ::Array{Int64,1},
+              mvps        ::Array{Array{Int64,1},1},
+              nngps       ::Array{Array{Bool,1},1},
+              mvhfs       ::Array{Array{Int64,1},1},
+              hfgps       ::Array{Array{Bool,1},1},
+              npars       ::Int64,
+              optimal_w   ::Float64,
+              screen_print::Int64,
+              nburn       ::Int64,
+              ntakew      ::Int64,
+              nswap       ::Int64,
+              ncch        ::Int64,
+              winit       ::Float64,
+              dt          ::Float64)
+
+Run slice sampler for burn-in and to estimate appropriate w's.
+"""
+function w_sampler(lhf         ::Function, 
+                   p           ::Array{Array{Float64,1},1},
+                   fp          ::Array{Array{Float64,1},1},
+                   nnps        ::Array{Int64,1},
+                   nps         ::Array{Int64,1},
+                   phid        ::Array{Int64,1},
+                   mvps        ::Array{Array{Int64,1},1},
+                   nngps       ::Array{Array{Bool,1},1},
+                   mvhfs       ::Array{Array{Int64,1},1},
+                   hfgps       ::Array{Array{Bool,1},1},
+                   npars       ::Int64,
+                   optimal_w   ::Float64,
+                   screen_print::Int64,
+                   nburn       ::Int64,
+                   ntakew      ::Int64,
+                   nswap       ::Int64,
+                   ncch        ::Int64,
+                   winit       ::Float64,
+                   dt          ::Float64)
+
+  if nburn < ntakew
+    ntakew = nburn
+  end
+
+  # maximum number of multivariate updates
+  maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
+    zero(1)
+  elseif iszero(lastindex(mvhfs))
+    maximum(map(length,mvps))
+  elseif iszero(lastindex(mvps))
+    maximum(map(length,mvhfs))
+  else
+    maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
+  end
+
+  # temperature
+  t, o = make_temperature(dt, ncch)
+
+  Lv = Array{Float64,1}(undef, maxmvu)
+  Rv = Array{Float64,1}(undef, maxmvu)
+
+  # preallocate pp and fpp
+  pp  = copy(p[1])
+  fpp = copy(fp[1])
+
+  w  = fill(winit, npars)
+
+  # Make distributed array log for parameters
+  pl = [Array{Float64,2}(undef, nburn, npars) for i in Base.OneTo(ncch)]
+
+  # Make SharedArray array for temperature order `o`
+  ol = Array{Int64,2}(zeros(Int64, nburn, ncch))
+
+  # make Array for current posteriors
+  lhc  = [lhf(p[c], fp[c], t[o[c]]) for c in Base.OneTo(ncch)]
+
+  # length fp
+  lfp = length(fp[1])
+
+  lswap = 0
+
+  prog = Progress(nburn, screen_print, "slice-sampler burn-in...", 20)
+
+  # start slice-sampling
+  for it in Base.OneTo(nburn) 
+    for c in Base.OneTo(ncch)
+      lhc[c] = 
+        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp,
+          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, t[o[c]])
+
+      # log parameters and order
+      @inbounds begin
+        pl[c][it, :] = p[c]
+        ol[it,c]     = o[c]
+      end
+    end
+
+    # swap chains
+    if ncch > 1
+      lswap += 1
+      if lswap == nswap
+        swap_chains!(o, t, lhc)
+        lswap = 0
+      end
+    end
+
+    next!(prog)
+  end
+
+  # choose cold chain (is equal to 1)
+  P = Array{Float64,2}(undef, nburn, npars)
+  @inbounds begin
+    for i in Base.OneTo(nburn)
+      @views ii = findfirst(x -> isone(x), ol[i,:])
+      P[i,:]    = pl[ii][i,:]
+    end
+  end
+
+  w = optimal_w .* (reduce(max, P, dims=1) .- reduce(min, P, dims=1))
+  w = reshape(w, size(w,2))
+
+  return p, fp, w, o, t
+end
+
+
+
+
+"""
+    w_sampler(lhf         ::Function, 
+              p           ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
+              fp          ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
               nnps        ::Array{Int64,1},
               nps         ::Array{Int64,1},
               phid        ::Array{Int64,1},
@@ -30,9 +162,10 @@ September 23 2017
               ntakew      ::Int64,
               nswap       ::Int64,
               ncch        ::Int64,
-              winit       ::Float64)
+              winit       ::Float64,
+              dt          ::Float64)
 
-Run slice sampler for burn-in and to estimate appropriate w's.
+Parallel run slice sampler for burn-in and to estimate appropriate w's.
 """
 function w_sampler(lhf         ::Function, 
                    p           ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
@@ -78,10 +211,6 @@ function w_sampler(lhf         ::Function,
   Lv = Array{Float64,1}(undef, maxmvu)
   Rv = Array{Float64,1}(undef, maxmvu)
 
-  # preallocate pp and fpp
-  pp  = copy(p[1])
-  fpp = copy(fp[1])
-
   w  = fill(winit, npars)
 
   # Make distributed array log for parameters
@@ -107,11 +236,16 @@ function w_sampler(lhf         ::Function,
   # length fp
   lfp = length(fp[1])
 
+  # start parallel slice-sampling
   @sync @distributed for c in Base.OneTo(ncch)
 
     # swap variables
     lswap, ws = 0, 0
     prog = Progress(nburn, screen_print, "slice-sampler burn-in...", 20)
+
+    # preallocate pp and fpp
+    pp  = copy(p[c])
+    fpp = copy(fp[c])
 
     for it in Base.OneTo(nburn)
 
@@ -120,34 +254,29 @@ function w_sampler(lhf         ::Function,
         slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
           nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
 
-      # log chain current iter
-      ipc[c] = it
-
       # log parameters and order
       @inbounds begin
         pl[c][it, :] = p[c]
         ol[it,c]     = o[c]
       end
 
+      # log chain current iter
+      ipc[c] = it
+
       ## swap chains
       lswap += 1
       if lswap == nswap
         ws += 1
-
         j, k = allsw[ws]
-
         cij = c == j   # c is j
         cik = c == k   # c is k
-
         # swapper
         if cij
           while true
             ipc[c] == ipc[k] && swl[ws] && break
           end
           swr[ws] = swap_chains!(j, k, o, t, lhc)
-          println("swap ", ipc)
         end
-
         # swappee
         if cik
           swl[ws] = true
@@ -175,9 +304,6 @@ function w_sampler(lhf         ::Function,
 
   return p, fp, w, o, t
 end
-
-
-
 
 
 
@@ -239,12 +365,12 @@ function loop_slice_sampler(lhf         ::Function,
   nlogs = fld(niter,nthin)
 
   #preallocate logging arrays
-  its  =  Array{Float64,1}(undef, nlogs)
-  hlog =  Array{Float64,2}(undef, nlogs, ncch)
-  ps   = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(ncch)]
+  il  =  Array{Float64,1}(undef, nlogs)
+  hl =  Array{Float64,2}(undef, nlogs, ncch)
+  pl   = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(ncch)]
 
   # preallocate chains order
-  olog   = Array{Int64,2}(undef, nlogs, ncch)
+  ol   = Array{Int64,2}(undef, nlogs, ncch)
 
   # preallocate changing vectors
   Lv    = Array{Float64,1}(undef, maxmvu)
@@ -268,8 +394,8 @@ function loop_slice_sampler(lhf         ::Function,
   for it in Base.OneTo(niter) 
     for c in Base.OneTo(ncch)
       lhc[c] = 
-        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp,
-          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, t[o[c]])
+        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
+          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
     end
 
     # log samples
@@ -277,12 +403,12 @@ function loop_slice_sampler(lhf         ::Function,
     if lthin == nthin
       @inbounds begin
         lit += 1
-        setindex!(its,  it,  lit)
-        setindex!(hlog, lhc, lit, :)
+        setindex!(il,  it,  lit)
+        setindex!(hl, lhc, lit, :)
         for c in Base.OneTo(ncch)
-          setindex!(ps[c], p[c], lit, :)
+          setindex!(pl[c], p[c], lit, :)
         end
-        setindex!(olog, o, lit, :)
+        setindex!(ol, o, lit, :)
       end
       lthin = 0
     end
@@ -299,7 +425,159 @@ function loop_slice_sampler(lhf         ::Function,
     next!(prog)
   end
 
-  return its, hlog, ps, olog
+  return il, hl, pl, ol
+end
+
+
+
+
+
+"""
+    loop_slice_sampler(lhf         ::Function, 
+                       p           ::Array{Array{Float64,1},1},
+                       fp          ::Array{Array{Float64,1},1},
+                       nnps        ::Array{Int64,1},
+                       nps         ::Array{Int64,1},
+                       phid        ::Array{Int64,1},
+                       mvps        ::Array{Array{Int64,1},1},
+                       nngps       ::Array{Array{Bool,1},1},
+                       mvhfs       ::Array{Array{Int64,1},1},
+                       hfgps       ::Array{Array{Bool,1},1},
+                       w           ::Array{Float64,1},
+                       npars       ::Int64,
+                       niter       ::Int64,
+                       nthin       ::Int64,
+                       nswap       ::Int64,
+                       ncch        ::Int64,
+                       o          ::Array{Int64,1}, 
+                       t          ::Array{Float64,1},
+                       screen_print::Int64)
+
+Parallel run slice-sampling.
+"""
+function loop_slice_sampler(lhf         ::Function, 
+                            p           ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
+                            fp          ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
+                            nnps        ::Array{Int64,1},
+                            nps         ::Array{Int64,1},
+                            phid        ::Array{Int64,1},
+                            mvps        ::Array{Array{Int64,1},1},
+                            nngps       ::Array{Array{Bool,1},1},
+                            mvhfs       ::Array{Array{Int64,1},1},
+                            hfgps       ::Array{Array{Bool,1},1},
+                            w           ::Array{Float64,1},
+                            npars       ::Int64,
+                            niter       ::Int64,
+                            nthin       ::Int64,
+                            nswap       ::Int64,
+                            ncch        ::Int64,
+                            o           ::SharedArray{Int64,1}, 
+                            t           ::Array{Float64,1},
+                            screen_print::Int64)
+
+  # maximum number of parameters in multivariate updates
+  maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
+    zero(1)
+  elseif iszero(lastindex(mvhfs))
+    maximum(map(length,mvps))
+  elseif iszero(lastindex(mvps))
+    maximum(map(length,mvhfs))
+  else
+    maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
+  end
+
+  nlogs = fld(niter,nthin)
+
+  #preallocate logging arrays
+  il =  SharedArray{Int64,2}(zeros(nlogs, ncch))
+  hl =  SharedArray{Float64,2}(zeros(nlogs, ncch))
+  pl = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(ncch)]
+  pl = distribute(pl)
+
+  # Make distributed array for iterations per chain `ipc`
+  ipc = SharedArray{Int64,1}(zeros(Int64,ncch))
+
+  # preallocate chains order
+  ol   = SharedArray{Int64,2}(zeros(Int64, nlogs, ncch))
+
+  # preallocate changing vectors
+  Lv = Array{Float64,1}(undef, maxmvu)
+  Rv = Array{Float64,1}(undef, maxmvu)
+
+  # length fp
+  lfp = length(fp[1])
+
+  # starting posteriors
+  lhc = SharedArray([lhf(p[c], fp[c], t[o[c]]) for c in Base.OneTo(ncch)])
+
+  # pre-estimate chain swaps 
+  tns   = fld(niter, nswap)
+  allsw = [wchains(o) for i in Base.OneTo(tns)]
+  swr   = SharedArray{Bool,1}(fill(false, tns))
+  swl   = SharedArray{Bool,1}(fill(false, tns))
+
+  # start parallel slice-sampling
+  @sync @distributed for c in Base.OneTo(ncch)
+
+    # log variables
+    lthin, lit, lswap, ws = 0, 0, 0, 0
+    prog = Progress(niter, screen_print, "running slice-sampler...", 20)
+
+    # preallocate pp and fpp
+    pp  = copy(p[c])
+    fpp = copy(fp[c])
+
+    for it in Base.OneTo(niter) 
+
+      # slice parameter cycle
+      lhc[c] = 
+        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
+          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
+
+      # log samples
+      lthin += 1
+      if lthin == nthin
+        @inbounds begin
+          lit += 1
+          il[lit, c]    = it
+          hl[lit, c]    = lhc[c]
+          ol[lit, c]    = o[c]
+          pl[c][lit, :] = p[c]
+        end
+        lthin = 0
+      end
+
+      # log chain current iter
+      ipc[c] = it
+
+      ## swap chains
+      lswap += 1
+      if lswap == nswap
+        ws += 1
+        j, k = allsw[ws]
+        cij = c == j   # c is j
+        cik = c == k   # c is k
+        # swapper
+        if cij
+          while true
+            ipc[c] == ipc[k] && swl[ws] && break
+          end
+          swr[ws] = swap_chains!(j, k, o, t, lhc)
+        end
+        # swappee
+        if cik
+          swl[ws] = true
+          while true
+            ipc[c] == ipc[j] && swr[ws] && break
+          end
+        end
+        lswap = 0
+      end
+      next!(prog)
+    end
+  end
+
+  return il, hl, pl, ol
 end
 
 

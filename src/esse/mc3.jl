@@ -126,11 +126,10 @@ end
 
 Return new temperature order `o`.
 """
-function swap_chains!(j  ::Int64,
-                      k  ::Int64,
-                      o ::Array{Int64,1},
-                      t ::Array{Float64,1},
+function swap_chains!(o  ::Array{Int64,1},
+                      t  ::Array{Float64,1},
                       lhc::Array{Float64,1})
+  j, k = wchains(o)
 
   if swap(j, k, lhc, o, t)
     oj   = o[j]
@@ -150,16 +149,16 @@ end
 """
     swap_chains!(j  ::Int64,
                  k  ::Int64,
-                 o ::Array{Int64,1},
-                 t ::Array{Float64,1},
-                 lhc::Array{Float64,1})
+                 o  ::SharedArray{Int64,1},
+                 t  ::Array{Float64,1},
+                 lhc::SharedArray{Float64,1})
 
 Return new temperature order `o`.
 """
 function swap_chains!(j  ::Int64,
                       k  ::Int64,
-                      o ::SharedArray{Int64,1},
-                      t ::Array{Float64,1},
+                      o  ::SharedArray{Int64,1},
+                      t  ::Array{Float64,1},
                       lhc::SharedArray{Float64,1})
 
   if swap(j, k, lhc, o, t)

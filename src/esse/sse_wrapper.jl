@@ -109,7 +109,8 @@ function esse(states_file ::String,
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
   mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
-    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars)
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
+      parallel)
 
   @info "Data successfully prepared"
 
@@ -121,12 +122,13 @@ function esse(states_file ::String,
 
     # prepare likelihood
     Gt, Et, lbts, nets, λevent!, rootll = 
-      prepare_ll(p, bts, E0, k, h, ny, ns, ned, model, Eδt, ti, abts, af!)
+      prepare_ll(p[1], bts, E0, k, h, ny, ns, ned, model, Eδt, ti, abts, af!)
 
     # make likelihood function
     llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
                       λevent!, rootll)
-  # prunning algorithm
+  
+  # pruning algorithm
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
@@ -156,7 +158,7 @@ function esse(states_file ::String,
 
   # run slice-sampler
   R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, T,
+        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, dt,
         screen_print)
 
   # write output
@@ -183,7 +185,8 @@ end
          nburn       ::Int64             = 200,
          nswap       ::Int64             = 10,
          ncch        ::Int64             = 1,
-         T           ::Float64           = 0.2,
+         parallel    ::Bool              = false,
+         dt          ::Float64           = 0.2,
          ntakew      ::Int64             = 100,
          winit       ::Float64           = 2.0,
          scale_y     ::NTuple{2,Bool}    = (true, false),
@@ -217,7 +220,7 @@ function esse(tree_file   ::String,
               nswap       ::Int64             = 10,
               ncch        ::Int64             = 1,
               parallel    ::Bool              = false,
-              T           ::Float64           = 0.2,
+              dt          ::Float64           = 0.2,
               ntakew      ::Int64             = 100,
               winit       ::Float64           = 2.0,
               scale_y     ::NTuple{2,Bool}    = (true, false),
@@ -311,11 +314,9 @@ function esse(tree_file   ::String,
   # number of parameters
   npars = length(pardic)
 
-
-
   # run slice-sampler
   R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, T,
+        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, dt,
         screen_print)
 
   write_ssr(R, pardic, out_file)
@@ -395,11 +396,13 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
               ti          ::Float64           = 0.0,
               ρ           ::Array{Float64,1}  = [1.0]) where {L,M,N,O}
 
+
   # prepare data
   X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
   mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
-    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars)
+    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
+      parallel)
 
   @info "Data successfully prepared"
 
@@ -411,7 +414,7 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
 
     # prepare likelihood
     Gt, Et, lbts, nets, λevent!, rootll = 
-      prepare_ll(p, bts, E0, k, h, ny, ns, ned, model, Eδt, ti, abts, af!)
+      prepare_ll(p[1], bts, E0, k, h, ny, ns, ned, model, Eδt, ti, abts, af!)
 
     # make likelihood function
     llf = make_loglik(Gt, Et, X, trios, lbts, bts, ns, ned, nets, 
@@ -422,7 +425,7 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
 
     # prepare likelihood
     X, int, λevent!, rootll, abts1, abts2 = 
-      prepare_ll(X, p, E0, k, h, ny, model, power, abts, af!)
+      prepare_ll(X, p[1], E0, k, h, ny, model, power, abts, af!)
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 
@@ -447,7 +450,7 @@ function esse(tv          ::Dict{Int64,Array{Float64,1}},
 
   # run slice-sampler
   R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, T,
+        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, dt,
         screen_print)
 
   write_ssr(R, pardic, out_file)
