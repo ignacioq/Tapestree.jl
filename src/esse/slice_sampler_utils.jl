@@ -107,7 +107,6 @@ function w_sampler(lhf         ::Function,
   # length fp
   lfp = length(fp[1])
 
-
   @sync @distributed for c in Base.OneTo(ncch)
 
     # swap variables
