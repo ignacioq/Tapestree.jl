@@ -72,6 +72,9 @@ function w_sampler(lhf         ::Function,
   # temperature
   t, o = make_temperature(dt, ncch)
 
+  # make SharedArray for temperature order `o`
+  o = SharedArray(o)
+
   Lv = Array{Float64,1}(undef, maxmvu)
   Rv = Array{Float64,1}(undef, maxmvu)
 
@@ -81,9 +84,12 @@ function w_sampler(lhf         ::Function,
 
   w  = fill(winit, npars)
 
-  # Make distributed array for parameters
-  ps = [Array{Float64,2}(undef, nburn, npars) for i in Base.OneTo(ncch)]
-  ps = distribute(ps)
+  # Make distributed array log for parameters
+  pl = [Array{Float64,2}(undef, nburn, npars) for i in Base.OneTo(ncch)]
+  pl = distribute(pl)
+
+  # Make SharedArray array for temperature order `o`
+  ol = SharedArray{Int64,2}(zeros(Int64, nburn, ncch))
 
   # Make distributed array for iterations per chain `ipc`
   ipc = SharedArray{Int64,1}(zeros(Int64,ncch))
@@ -92,14 +98,11 @@ function w_sampler(lhf         ::Function,
   lhc  = [lhf(p[c], fp[c], t[o[c]]) for c in Base.OneTo(ncch)]
   lhc = SharedArray(lhc)
 
-  # make SharedArray for temperature order `o`
-  o = SharedArray(o)
-
   # pre-estimate chain swaps
   tns   = fld(nburn,nswap)
   allsw = [wchains(o) for i in Base.OneTo(tns)]
-  ssper = SharedArray{Bool,1}(fill(false, tns))
-  sspee = SharedArray{Bool,1}(fill(false, tns))
+  swr = SharedArray{Bool,1}(fill(false, tns))
+  swl = SharedArray{Bool,1}(fill(false, tns))
 
   # length fp
   lfp = length(fp[1])
@@ -109,6 +112,7 @@ function w_sampler(lhf         ::Function,
 
     # swap variables
     lswap, ws = 0, 0
+    prog = Progress(nburn, screen_print, "slice-sampler burn-in...", 20)
 
     for it in Base.OneTo(nburn)
 
@@ -117,11 +121,14 @@ function w_sampler(lhf         ::Function,
         slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
           nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
 
-      #log chain current iter
+      # log chain current iter
       ipc[c] = it
 
-      # log parameters
-      @inbounds ps[c][it, :] = p[c]
+      # log parameters and order
+      @inbounds begin
+        pl[c][it, :] = p[c]
+        ol[it,c]     = o[c]
+      end
 
       ## swap chains
       lswap += 1
@@ -133,49 +140,38 @@ function w_sampler(lhf         ::Function,
         cij = c == j   # c is j
         cik = c == k   # c is k
 
-        println("swap for j = ", j, " <-> k = ",k)
         # swapper
         if cij
-          println("swapper came in swap")
-          # wait for other chain
           while true
-            ipc[c] == ipc[k] && break
-            #println("iter c:", ipc[c], "; iter k:", ipc[k])
+            ipc[c] == ipc[k] && swl[ws] && break
           end
-          println(c, " was able to move onto swap ", ipc)
-          # make swap
-          ssper[ws] = swap_chains!(j, k, o, t, lhc)
-          println("SWAP for ", j," ", k)
-          while true 
-            sspee[ws] && break
-          end
+          swr[ws] = swap_chains!(j, k, o, t, lhc)
+          println("swap ", ipc)
         end
 
         # swappee
         if cik
-          println("swappee came in swap")
-          # wait for other chain and swap to complete
+          swl[ws] = true
           while true
-            ipc[c] == ipc[j] && ssper[ws] && break
-            #println("iter c:", ipc[c], "; iter j:", ipc[j])
+            ipc[c] == ipc[j] && swr[ws] && break
           end
-          sspee[ws] = true
-          println("swappee moved on from swap")
         end
-
         lswap = 0
-        println(c, " moved out of swap")
       end
+      next!(prog)
     end
   end
 
+  # choose cold chain (is equal to 1)
+  P = Array{Float64,2}(undef, nburn, npars)
+  @inbounds begin
+    for i in Base.OneTo(nburn)
+      @views ii = findfirst(x -> isone(x), ol[i,:])
+      P[i,:]    = pl[ii][i,:]
+    end
+  end
 
-
-  sps = nburn-ntakew
-
-  ps = ps[findfirst(x -> isone(x), o)][(nburn-ntakew+1):nburn,:]
-
-  w = optimal_w .* (reduce(max, ps, dims=1) .- reduce(min, ps, dims=1))
+  w = optimal_w .* (reduce(max, P, dims=1) .- reduce(min, P, dims=1))
   w = reshape(w, size(w,2))
 
   return p, fp, w, o, t

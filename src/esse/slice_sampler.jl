@@ -62,7 +62,8 @@ function slice_sampler(lhf         ::Function,
   # estimate optimal w
   p, fp, w, o, t = 
     w_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps,
-      npars, optimal_w, screen_print, nburn, ntakew, nswap, ncch, winit, T)
+      npars, optimal_w, screen_print, nburn, ntakew, nswap, ncch, winit, dt)
+
 
 
   # slice-sampler
