@@ -106,12 +106,6 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   p  = [copy(p)  for i in Base.OneTo(ncch)]
   fp = [copy(fp) for i in Base.OneTo(ncch)]
 
-  # if parallel
-  if parallel
-    p  = distribute(p)
-    fp = distribute(fp)
-  end
-
   # parameter update
   pupd = [1:npars...]
 
@@ -126,8 +120,8 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   setdiff!(pupd, phid)
 
   # force pars in zerp to 0
-  for c in procs(p), i in zp
-    @spawnat c p[:l][i] = 0.0
+  for c in Base.OneTo(ncch), i in zp
+    p[c][i] = 0.0
   end
 
   # remove constraints and fixed to zero parameters from being updated
@@ -203,17 +197,23 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h}, Val{ny}, Val{model})
 
   # force same parameter values for constraints
-  for c in procs(p)
+  for c in Base.OneTo(ncch)
     for wp in keys(dcp)
       while haskey(dcp, wp)
         tp = dcp[wp]
-        @spawnat c p[:l][tp] = p[:l][wp]
+        p[c][tp] = p[c][wp]
         wp = tp
       end
     end
 
     # assign hidden factors
-    @spawnat c assign_hidfacs!(p[:l], fp[:l])
+    assign_hidfacs!(p[c], fp[c])
+  end
+
+  # if parallel
+  if parallel
+    p  = distribute(p)
+    fp = distribute(fp)
   end
 
   # extinction at time 0 with sampling fraction `ρ_i`

@@ -13,6 +13,7 @@ using DifferentialEquations: ODEProblem, init, reinit!, solve!, Tsit5, DiffEqBas
 using LinearAlgebra: BLAS.gemv!, rank, mul!, ldiv!, qr!
 using Distributed: @distributed, @sync
 using SharedArrays: SharedArray
+using DistributedArrays: DArray, d_closeall, distribute
 
 # other submodules dependencies
 using ..Utils
