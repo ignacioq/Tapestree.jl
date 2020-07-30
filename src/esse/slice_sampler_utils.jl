@@ -104,8 +104,8 @@ function w_sampler(lhf         ::Function,
   for it in Base.OneTo(nburn) 
     for c in Base.OneTo(ncch)
       lhc[c] = 
-        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp,
-          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, t[o[c]])
+        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
+          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
 
       # log parameters and order
       @inbounds begin
@@ -365,9 +365,9 @@ function loop_slice_sampler(lhf         ::Function,
   nlogs = fld(niter,nthin)
 
   #preallocate logging arrays
-  il  =  Array{Float64,1}(undef, nlogs)
+  il =  Array{Float64,1}(undef, nlogs)
   hl =  Array{Float64,2}(undef, nlogs, ncch)
-  pl   = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(ncch)]
+  pl = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(ncch)]
 
   # preallocate chains order
   ol   = Array{Int64,2}(undef, nlogs, ncch)
