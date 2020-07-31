@@ -59,7 +59,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   ode_fun = make_egeohisse(Val{k}, Val{h}, Val{ny}, Val{model}, Val{power}, af!)
 
   # make integral problem
-  prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0,1.0), p)
+  prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0, 1.0), p)
 
   int = init(prob, Tsit5(),
              save_everystep  = false, 

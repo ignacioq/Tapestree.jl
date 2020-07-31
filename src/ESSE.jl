@@ -13,6 +13,7 @@ using DifferentialEquations: ODEProblem, init, reinit!, solve!, Tsit5, DiffEqBas
 using LinearAlgebra: BLAS.gemv!, rank, mul!, ldiv!, qr!
 using Distributed: @distributed, @sync
 using SharedArrays: SharedArray
+using DistributedArrays: DArray, d_closeall, distribute
 
 # other submodules dependencies
 using ..Utils
@@ -35,5 +36,6 @@ include("esse/prepare_data.jl")
 include("esse/prepare_ll.jl")
 include("esse/loglik_geo.jl")
 include("esse/loglik_flow.jl")
+include("esse/mc3.jl")
 
 end # module ESSE
