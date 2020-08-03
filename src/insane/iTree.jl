@@ -51,9 +51,10 @@ mutable struct iTree
   iTree(pe::Float64) = new(nothing, nothing, pe, 0.0, false)
   iTree(pe::Float64, iμ::Bool) = 
     new(nothing, nothing, pe, 0.0, iμ)
+  iTree(d1::iTree, d2::iTree, pe::Float64) = 
+    new(d1, d2, pe, 0.0, false)
   iTree(d1::iTree, d2::iTree, pe::Float64, iμ::Bool) = 
     new(d1, d2, pe, 0.0, iμ)
-  iTree(d1::iTree, d2::iTree, pe::Float64) = new(d1, d2, pe, 0.0, false)
   iTree(d1::iTree, d2::iTree, pe::Float64, at::Float64) = 
     new(d1, d2, pe, at, false)
   iTree(d1::iTree, d2::iTree, pe::Float64, at::Float64, 

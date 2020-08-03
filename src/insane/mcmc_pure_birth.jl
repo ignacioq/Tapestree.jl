@@ -140,7 +140,7 @@ function mcmc_cpb(tree  ::iTree,
                   niter ::Int64,
                   nthin ::Int64,
                   λtn   ::Float64)
-  
+
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0

@@ -19,6 +19,15 @@ setpe!(tree::iTree, pe::Float64) = setproperty!(tree, :pe, pe)
 
 
 
+"""
+  addpe!(tree::iTree, pe::Float64)
+
+Add `pe` to pendant edge of `tree`.
+"""
+addpe!(tree::iTree, pe::Float64) = tree.pe += pe
+
+
+
 
 """
     remove_extinct(tree::iTree)
@@ -52,3 +61,4 @@ Remove extinct tips from `iTree`.
 WARNING: it changes the `tree` object.
 """
 remove_extinct(::Nothing) = nothing
+
