@@ -37,7 +37,6 @@ WARNING: it changes the `tree` object.
 """
 function remove_extinct(tree::iTree)
 
-
   if isextinct(tree.d1)
     npe  = pe(tree) + pe(tree.d2)
     tree = tree.d2

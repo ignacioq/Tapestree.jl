@@ -156,12 +156,12 @@ end
 
 
 """
-    sim_cbd_b(λ::Float64, μ::Float64, mxt::Float64)
+    sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64)
 
 Simulate constant birth-death in backward time conditioned on extinction 
-and not having a greater tree height than `mxt`.
+and not having a greater tree height than `mxth`.
 """
-function sim_cbd_b(λ::Float64, μ::Float64, mxt::Float64)
+function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64)
 
   nF = 1.0
   nI = 1
@@ -169,15 +169,15 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxt::Float64)
   # disjoint trees vector 
   tv = [iTree(0.0, true)]
 
-  tm = 0.0
+  th = 0.0
 
   # start simulation
   while true
     w   = cbd_wait(nF, λ, μ)
 
     # track backward time
-    tm += w
-    tm > mxt && break
+    th += w
+    th > mxth && break
 
     for t in tv
       addpe!(t, w)
@@ -186,7 +186,7 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxt::Float64)
     # if speciation
     if λorμ(λ, μ)
       if isone(nI)
-        return tv[nI] 
+        return tv[nI], th
       else
         j, k = samp2(Base.OneTo(nI))
         tv[j] = iTree(tv[j], tv[k], 0.0)
