@@ -10,6 +10,7 @@ Created 25 06 2020
 =#
 
 
+
 """
   setpe!(tree::iTree, pe::Float64)
 
@@ -19,12 +20,68 @@ setpe!(tree::iTree, pe::Float64) = setproperty!(tree, :pe, pe)
 
 
 
+
 """
   addpe!(tree::iTree, pe::Float64)
 
 Add `pe` to pendant edge of `tree`.
 """
 addpe!(tree::iTree, pe::Float64) = tree.pe += pe
+
+
+
+
+"""
+  setd1!(tree::iTree, stree::iTree)
+
+Set `d1` to `stree` in `tree`.
+"""
+setd1!(tree::iTree,  stree::iTree) = setproperty!(tree, :d1, stree)
+
+
+
+
+"""
+  setd2!(tree::iTree, stree::iTree)
+
+Set `d2` to `stree` in `tree`.
+"""
+setd2!(tree::iTree,  stree::iTree) = setproperty!(tree, :d2, stree)
+
+
+
+
+"""
+    graftree!(tree ::iTree,
+              stree::iTree,
+              idr  ::iDir,
+              h    ::Float64,
+              ldr  ::Int64;
+              ix   ::Int64 = 0)
+
+Graft `stree` into `tree` given the address `idr`.
+"""
+function graftree!(tree ::iTree,
+                   stree::iTree,
+                   idr  ::iDir,
+                   h    ::Float64,
+                   ldr  ::Int64;
+                   ix   ::Int64 = 0)
+
+  if ix == ldr 
+    pe0 = ti(idr) - h
+    addpe!(tree, -pe0)
+    tree = iTree(tree, stree, pe0)
+    return tree
+  else
+    ix += 1
+    if idr.dr[ix]
+      tree.d1 = graftree!(tree.d1, stree, idr, h, ldr, ix = ix)
+    else
+      tree.d2 = graftree!(tree.d2, stree, idr, h, ldr, ix = ix)
+    end
+  end
+end
 
 
 

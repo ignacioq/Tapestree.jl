@@ -23,6 +23,7 @@ istip(::Nothing) = false
 
 
 
+
 """
     isλ(tree::iTree)
 
@@ -31,6 +32,7 @@ Return if is an extinction node.
 isextinct(tree::iTree) = getproperty(tree,:iμ)
 
 isextinct(::Nothing) = false
+
 
 
 
@@ -177,106 +179,6 @@ snen(::Nothing) = 0
 
 
 
-
-
-# """
-#     nλ(tree::iTree)
-
-# Return number of speciation events for an `iTree` tree.
-# """
-# nλ(tree::iTree) = getproperty(tree, :nλ)[]
-
-
-
-
-# """
-#     nμ(tree::iTree)
-# Return number of extinction events for an `iTree` tree.
-# """
-# nμ(tree::iTree) = getproperty(tree, :nμ)[]
-
-
-
-
-# """
-#     nt(tree::iTree)
-# Return number of extant tips for an `iTree` tree.
-# """
-# nt(tree::iTree) = getproperty(tree, :ne)[]
-
-
-
-
-# """
-#     th(tree::iTree)
-
-# Return the tree height for an `iTree` tree.
-# """
-# th(tree::iTree) = getproperty(tree, :th)[]
-
-
-
-
-
-# """
-#     nn(tree::iTree)
-
-# Return the number of nodes for an `iTree` tree.
-# """
-# nn(tree::iTree) = nv(getproperty(tree, :dg))
-
-
-
-
-
-# """
-#     blength(tree::iTree, p::Int64, d::Int64)
-
-# Return the branch length of a branch an `iTree` tree.
-# """
-# blength(tree::iTree, p::Int64, d::Int64) = tree.bl[Edge(p,d)]
-
-
-
-
-# """
-#     pnode(tree::iTree, n::Int64)
-
-# Retrieve parent node.
-# """
-# pnode(tree::iTree, n::Int64) = LightGraphs.inneighbors(tree.dg, n)
-
-
-
-
-# """
-#     dnodes(tree::iTree, n::Int64)
-
-# Retrieve daughter nodes.
-# """
-# dnodes(tree::iTree, n::Int64) = LightGraphs.outneighbors(tree.dg, n)
-
-
-
-
-
-# """
-#     branches(tree::iTree)
-
-# Basic iterator over branches.
-# """
-# branches(tree::iTree) = LightGraphs.edges(tree.dg)
-
-
-
-
-
-# """
-#     nodes(tree::iTree)
-
-# Basic iterator over nodes.
-# """
-# nodes(tree::iTree) = LightGraphs.vertices(tree.dg)
 
 
 
