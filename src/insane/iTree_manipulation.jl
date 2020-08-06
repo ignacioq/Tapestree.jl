@@ -13,82 +13,86 @@ Created 25 06 2020
 
 
 """
-    rgraftree!(tree ::iTree,
-               th   ::Float64,
-               stree::iTree,
+    randbranch(th   ::Float64,
                sth  ::Float64,
                idv  ::Array{iDir,1},
                wbr  ::BitArray{1})
 
-Randomly graft `stree` onto `tree`.
+Randomly select branch to graft a subtree with height `sth` onto tree 
+with height `th`.
 """
-function rgraftree!(tree ::iTree,
-                    th   ::Float64,
-                    stree::iTree,
+function randbranch(th   ::Float64,
                     sth  ::Float64,
                     idv  ::Array{iDir,1},
                     wbr  ::BitArray{1})
 
   # uniformly set the height at which to insert `stree`
-  h::Float64 = sth + rand()*(th - sth)
+  h = sth + rand()*(th - sth)
 
   # get which branches are cut by `h` and sample one at random
-  nb::Int64  = branchescut!(wbr, h, idv)
-  rn::Int64  = rand(Base.OneTo(nb))
-  br::iDir   = getbranch(wbr, rn, idv)
-  dri::BitArray{1} = dr(br)
-  ldr::Int64 = lastindex(dri)
-  insertree!(tree, stree, dri, h, ldr, th, 0)
+  nb  = branchescut!(wbr, h, idv)
+  rn  = rand(Base.OneTo(nb))
+  br  = getbranch(wbr, rn, idv)
+  dri = dr(br)
+  ldr = lastindex(dri)
+
+  return dri, ldr
 end
 
 
 
 
 """
-    insertree!(tree ::iTree,
-               stree::iTree,
-               dri  ::BitArray{1},
-               h    ::Float64,
-               ldr  ::Int64,
-               thc  ::Float64;
-               ix   ::Int64 = 0)
+    graftree!(tree ::iTree,
+              stree::iTree,
+              dri  ::BitArray{1},
+              h    ::Float64,
+              ldr  ::Int64,
+              thc  ::Float64;
+              ix   ::Int64 = 0)
 
 Graft `stree` into `tree` given the address `idr`.
 """
-function insertree!(tree ::iTree,
-                    stree::iTree,
-                    dri  ::BitArray{1},
-                    h    ::Float64,
-                    ldr  ::Int64,
-                    thc  ::Float64,
-                    ix   ::Int64)
+function graftree!(tree ::iTree,
+                   stree::iTree,
+                   dri  ::BitArray{1},
+                   h    ::Float64,
+                   ldr  ::Int64,
+                   thc  ::Float64,
+                   ix   ::Int64)
 
   if ix == ldr 
-    """
-    this is good for arriving, but not for continuing if there is already a 
-    da tree.
-    """
-    npe = thc - h
-    addpe!(tree, -npe)
-    tree = rand() <= 0.5 ? iTree(tree, stree, npe, false, true) :
-                           iTree(stree, tree, npe, false, true)
+    if thc > h > (thc - pe(tree))
+      npe = thc - h
+      addpe!(tree, -npe)
+      tree = rand() <= 0.5 ? iTree(tree, stree, npe, false, true) :
+                             iTree(stree, tree, npe, false, true)
+    else
+      if isfix(tree.d1)
+        tree.d1 = 
+          graftree!(tree.d1, stree, dri, h, ldr, thc - pe(tree), ix)
+      else
+        tree.d2 =
+          graftree!(tree.d2, stree, dri, h, ldr, thc - pe(tree), ix)
+      end
+    end
   elseif ix < ldr
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
       ix += 1
       if dri[ix]
         tree.d1 = 
-          insertree!(tree.d1, stree, dri, h, ldr, thc - pe(tree), ix)
+          graftree!(tree.d1, stree, dri, h, ldr, thc - pe(tree), ix)
       else
         tree.d2 = 
-          insertree!(tree.d2, stree, dri, h, ldr, thc - pe(tree), ix)
+          graftree!(tree.d2, stree, dri, h, ldr, thc - pe(tree), ix)
       end
     elseif ifx1
       tree.d1 = 
-        insertree!(tree.d1, stree, dri, h, ldr, thc - pe(tree), ix)
+        graftree!(tree.d1, stree, dri, h, ldr, thc - pe(tree), ix)
     else
       tree.d2 =
-        insertree!(tree.d2, stree, dri, h, ldr, thc - pe(tree), ix)
+        graftree!(tree.d2, stree, dri, h, ldr, thc - pe(tree), ix)
     end
   end
 
@@ -98,11 +102,11 @@ end
 
 
 
+
 """
     remove_extinct(tree::iTree)
 
 Remove extinct tips from `iTree`.
-WARNING: it changes the `tree` object.
 """
 function remove_extinct(tree::iTree)
 
@@ -126,7 +130,6 @@ end
     remove_extinct(::Nothing)
 
 Remove extinct tips from `iTree`.
-WARNING: it changes the `tree` object.
 """
 remove_extinct(::Nothing) = nothing
 

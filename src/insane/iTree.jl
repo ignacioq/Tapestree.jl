@@ -41,18 +41,22 @@ mutable struct iTree
   iμ::Bool
   fx::Bool
 
-  # constructors
-  iTree() = new(nothing, nothing, 0.0, false, false)
-  iTree(pe::Float64) = new(nothing, nothing, pe, false, false)
-  iTree(pe::Float64, iμ::Bool) = new(nothing, nothing, pe, iμ, false)
-  iTree(d1::iTree, d2::iTree, pe::Float64) = new(d1, d2, pe, false, false)
-  iTree(d1::iTree, d2::iTree, pe::Float64, iμ::Bool) = 
-    new(d1, d2, pe, iμ, false)
-  iTree(d1::iTree, d2::iTree, pe::Float64, iμ::Bool, fx::Bool) = 
-    new(d1, d2, pe, iμ, fx)
+  # inner constructor
+  iTree(d1::Union{iTree, Nothing}, d2::Union{iTree, Nothing}, 
+    pe::Float64, iμ::Bool, fx::Bool) = new(d1, d2, pe, iμ, fx)
 end
 
+# outer constructors
+iTree() = iTree(nothing, nothing, 0.0, false, false)
 
+iTree(pe::Float64) = iTree(nothing, nothing, pe, false, false)
+
+iTree(pe::Float64, iμ::Bool) = iTree(nothing, nothing, pe, iμ, false)
+
+iTree(d1::iTree, d2::iTree, pe::Float64) = iTree(d1, d2, pe, false, false)
+
+iTree(d1::iTree, d2::iTree, pe::Float64, iμ::Bool) = 
+  iTree(d1, d2, pe, iμ, false)
 
 # pretty-printing
 Base.show(io::IO, t::iTree) = 
