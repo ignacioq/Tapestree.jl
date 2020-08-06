@@ -11,6 +11,17 @@ Created 25 06 2020
 
 
 
+"""
+    isfix(tree::iTree)
+
+Return if is either an extant or extinct tip node.
+"""
+isfix(tree::iTree) = getproperty(tree,:fx)
+
+isfix(::Nothing) = true
+
+
+
 
 """
     istip(tree::iTree)

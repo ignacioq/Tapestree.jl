@@ -39,13 +39,17 @@ mutable struct iTree
   d2::Union{iTree, Nothing}
   pe::Float64
   iμ::Bool
+  fx::Bool
 
   # constructors
-  iTree() = new(nothing, nothing, 0.0, false)
-  iTree(pe::Float64) = new(nothing, nothing, pe, false)
-  iTree(pe::Float64, iμ::Bool) = new(nothing, nothing, pe, iμ)
-  iTree(d1::iTree, d2::iTree, pe::Float64) = new(d1, d2, pe, false)
-  iTree(d1::iTree, d2::iTree, pe::Float64, iμ::Bool) = new(d1, d2, pe, iμ)
+  iTree() = new(nothing, nothing, 0.0, false, false)
+  iTree(pe::Float64) = new(nothing, nothing, pe, false, false)
+  iTree(pe::Float64, iμ::Bool) = new(nothing, nothing, pe, iμ, false)
+  iTree(d1::iTree, d2::iTree, pe::Float64) = new(d1, d2, pe, false, false)
+  iTree(d1::iTree, d2::iTree, pe::Float64, iμ::Bool) = 
+    new(d1, d2, pe, iμ, false)
+  iTree(d1::iTree, d2::iTree, pe::Float64, iμ::Bool, fx::Bool) = 
+    new(d1, d2, pe, iμ, fx)
 end
 
 
@@ -54,6 +58,7 @@ end
 Base.show(io::IO, t::iTree) = 
   print(io, "insane tree with ", sntn(t), " tips (", snen(t)," extinct)")
 
+  
 
 
 
