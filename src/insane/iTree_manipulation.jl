@@ -36,7 +36,7 @@ function randbranch(th   ::Float64,
   dri = dr(br)
   ldr = lastindex(dri)
 
-  return dri, ldr
+  return h, dri, ldr
 end
 
 
@@ -98,7 +98,6 @@ function graftree!(tree ::iTree,
 
   return tree
 end
-
 
 
 
