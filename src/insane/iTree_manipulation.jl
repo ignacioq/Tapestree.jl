@@ -106,6 +106,9 @@ WARNING: it changes the `tree` object.
 """
 function remove_extinct(tree::iTree)
 
+  tree.d1 = remove_extinct(tree.d1)
+  tree.d2 = remove_extinct(tree.d2)
+
   if isextinct(tree.d1)
     npe  = pe(tree) + pe(tree.d2)
     tree = tree.d2
@@ -115,9 +118,6 @@ function remove_extinct(tree::iTree)
     tree = tree.d1
     setpe!(tree, npe)
   end
-
-  tree.d1 = remove_extinct(tree.d1)
-  tree.d2 = remove_extinct(tree.d2)
 
   return tree
 end
