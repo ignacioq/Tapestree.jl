@@ -10,6 +10,43 @@ Created 03 07 2020
 =#
 
 
+"""
+    addda!(id::iDir)
+
+Add `1` to number of data augmented branches. 
+"""
+addda!(id::iDir) = id.da[] += 1
+
+
+
+
+"""
+    randbranch(th   ::Float64,
+               sth  ::Float64,
+               idv  ::Array{iDir,1},
+               wbr  ::BitArray{1})
+
+Randomly select branch to graft a subtree with height `sth` onto tree 
+with height `th`.
+"""
+function randbranch(th   ::Float64,
+                    sth  ::Float64,
+                    idv  ::Array{iDir,1},
+                    wbr  ::BitArray{1})
+
+  # uniformly set the height at which to insert `stree`
+  h = sth + rand()*(th - sth)
+
+  # get which branches are cut by `h` and sample one at random
+  nb  = branchescut!(wbr, h, idv)
+  rn  = rand(Base.OneTo(nb))
+  br  = getbranch(wbr, rn, idv)
+
+  return h, br
+end
+
+
+
 
 """
     getbranch(wbr::BitArray{1}, rn::Int64, idv::Array{iDir,1})

@@ -13,36 +13,6 @@ Created 25 06 2020
 
 
 """
-    randbranch(th   ::Float64,
-               sth  ::Float64,
-               idv  ::Array{iDir,1},
-               wbr  ::BitArray{1})
-
-Randomly select branch to graft a subtree with height `sth` onto tree 
-with height `th`.
-"""
-function randbranch(th   ::Float64,
-                    sth  ::Float64,
-                    idv  ::Array{iDir,1},
-                    wbr  ::BitArray{1})
-
-  # uniformly set the height at which to insert `stree`
-  h = sth + rand()*(th - sth)
-
-  # get which branches are cut by `h` and sample one at random
-  nb  = branchescut!(wbr, h, idv)
-  rn  = rand(Base.OneTo(nb))
-  br  = getbranch(wbr, rn, idv)
-  dri = dr(br)
-  ldr = lastindex(dri)
-
-  return h, dri, ldr
-end
-
-
-
-
-"""
     graftree!(tree ::iTree,
               stree::iTree,
               dri  ::BitArray{1},
@@ -93,6 +63,70 @@ function graftree!(tree ::iTree,
     else
       tree.d2 =
         graftree!(tree.d2, stree, dri, h, ldr, thc - pe(tree), ix)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    prunetree!(tree::iTree, 
+               dri ::BitArray{1}, 
+               ldr ::Int64,
+               wpr ::Int64
+               ix  ::Int64, 
+               px  ::Int64)
+
+Prune tree at branch given by `dri` and grafted `wpr`.
+"""
+function prunetree!(tree::iTree, 
+                    dri ::BitArray{1}, 
+                    ldr ::Int64,
+                    wpr ::Int64,
+                    ix  ::Int64, 
+                    px  ::Int64)
+
+  if ix == ldr
+    if px == wpr
+      if isfix(tree.d1)
+        npe  = pe(tree) + pe(tree.d1)
+        setpe!(tree.d1, npe)
+        tree = tree.d1
+      elseif isfix(tree.d2)
+        npe  = pe(tree) + pe(tree.d2)
+        setpe!(tree.d2, npe)
+        tree = tree.d2
+      end
+    else
+      px += 1
+      if isfix(tree.d1)
+        tree.d1 = 
+          prunetree!(tree.d1, dri, ldr, wpr, ix, px)
+      else
+        tree.d2 =
+          prunetree!(tree.d2, dri, ldr, wpr, ix, px)
+      end
+    end
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      ix += 1
+      if dri[ix]
+        tree.d1 = 
+          prunetree!(tree.d1, dri, ldr, wpr, ix, px)
+      else
+        tree.d2 = 
+          prunetree!(tree.d2, dri, ldr, wpr, ix, px)
+      end
+    elseif ifx1
+      tree.d1 = 
+        prunetree!(tree.d1, dri, ldr, wpr, ix, px)
+    else
+      tree.d2 =
+        prunetree!(tree.d2, dri, ldr, wpr, ix, px)
     end
   end
 
