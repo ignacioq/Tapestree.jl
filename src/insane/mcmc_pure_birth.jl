@@ -14,11 +14,14 @@ Created 06 07 2020
 
 """
     insane_cpb(tree    ::iTree, 
-               out_file::String; 
+               out_file::String;
                λprior  ::Float64 = 0.1,
                niter   ::Int64   = 1_000,
                nthin   ::Int64   = 10,
-               nburn   ::Int64   = 200)
+               nburn   ::Int64   = 200,
+               tune_int::Int64   = 100,
+               λtni    ::Float64 = 1.0,
+               obj_ar  ::Float64 = 0.4)
 
 Run insane for constant pure-birth.
 """
@@ -33,8 +36,8 @@ function insane_cpb(tree    ::iTree,
                     obj_ar  ::Float64 = 0.4)
 
   # tree characters
-  tl = treelength(t)
-  nt = sntn(t)
+  tl = treelength(tree)
+  nt = sntn(tree)
 
   scalef = makescalef(obj_ar)
 
@@ -45,7 +48,7 @@ function insane_cpb(tree    ::iTree,
   # mcmc
   R =  mcmc_cpb(tree, llc, prc, λc, λprior, niter, nthin, λtn)
 
-  pardic = Dict(("lambda" => 1),)
+  pardic = Dict(("lambda" => 1))
 
   write_ssr(R, pardic, out_file)
 
@@ -62,7 +65,8 @@ end
                   tune_int::Int64,
                   λprior  ::Float64,
                   nburn   ::Int64,
-                  λtni    ::Float64)
+                  λtni    ::Float64, 
+                  scalef  ::Function)
 
 MCMC chain for constant pure-birth.
 """
@@ -77,8 +81,8 @@ function mcmc_burn_cpb(tree    ::iTree,
 
   # initialize acceptance log
   ltn = 0
-  lup = 0
-  lac = 0
+  lup = 0.0
+  lac = 0.0
   λtn = λtni
 
   # starting parameters
@@ -99,12 +103,12 @@ function mcmc_burn_cpb(tree    ::iTree,
       llc  = llp::Float64
       prc += prr::Float64
       λc   = λp::Float64
-      lac += 1
+      lac += 1.0
     end
 
     # log tuning parameters
     ltn += 1
-    lup += 1
+    lup += 1.0
     if ltn == tune_int
       λtn = scalef(λtn,lac/lup)
       ltn = 0
@@ -120,11 +124,9 @@ end
 
 """
     mcmc_cpb(tree  ::iTree,
-             tl    ::Float64,
-             nt    ::Int64,
              llc   ::Float64,
              prc   ::Float64,
-             λc    ::Float64
+             λc    ::Float64,
              λprior::Float64,
              niter ::Int64,
              nthin ::Int64,
@@ -167,7 +169,7 @@ function mcmc_cpb(tree  ::iTree,
     if lthin == nthin
       lit += 1
       @inbounds begin
-        R[lit,1] = lit
+        R[lit,1] = Float64(lit)
         R[lit,2] = llc
         R[lit,3] = prc
         R[lit,4] = λc

@@ -91,18 +91,18 @@ tf(id::iDir) = getproperty(id, :tf)
 
 Make `iDir` vector for an `iTree`.
 """
-function makeiDir(tree::iTree, idv ::Array{iDir,1}, bit ::BitArray{1})
+function makeiDir!(tree::iTree, idv ::Array{iDir,1}, bit::BitArray{1})
 
   push!(idv, iDir(bit, 0, treeheight(tree), treeheight(tree) - pe(tree)))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
-  
+
   push!(bit1, true)
-  makeiDir(tree.d1, idv, bit1)
+  makeiDir!(tree.d1, idv, bit1)
 
   push!(bit2, false)
-  makeiDir(tree.d2, idv, bit2)
+  makeiDir!(tree.d2, idv, bit2)
 
   return nothing
 end
@@ -115,7 +115,7 @@ end
 
 Make `iDir` vector for an `iTree`.
 """
-makeiDir(::Nothing, idv::Array{iDir,1}, bit::BitArray{1}) = nothing
+makeiDir!(::Nothing, idv::Array{iDir,1}, bit::BitArray{1}) = nothing
 
 
 

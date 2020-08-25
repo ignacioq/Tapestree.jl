@@ -21,6 +21,16 @@ addda!(id::iDir) = id.da[] += 1
 
 
 """
+    rmda!(id::iDir)
+
+Substract `1` to number of data augmented branches. 
+"""
+rmda!(id::iDir) = id.da[] -= 1
+
+
+
+
+"""
     randbranch(th   ::Float64,
                sth  ::Float64,
                idv  ::Array{iDir,1},
@@ -40,9 +50,9 @@ function randbranch(th   ::Float64,
   # get which branches are cut by `h` and sample one at random
   nb  = branchescut!(wbr, h, idv)
   rn  = rand(Base.OneTo(nb))
-  br  = getbranch(wbr, rn, idv)
+  br, i  = getbranch(wbr, rn, idv)
 
-  return h, br
+  return h, br, i
 end
 
 
@@ -56,7 +66,8 @@ randomly picked `rn`.
 """
 function getbranch(wbr::BitArray{1}, 
                    rn ::Int64, 
-                   idv::Array{iDir,1})::iDir
+                   idv::Array{iDir,1})::Tuple{iDir,Int64}
+
   i::Int64 = 0
   n::Int64 = 0
   for bit in wbr
@@ -64,7 +75,7 @@ function getbranch(wbr::BitArray{1},
     if bit
       n += 1
       if n == rn
-        return idv[i]::iDir
+        return (idv[i], i)::Tuple{iDir,Int64}
       end
     end
   end

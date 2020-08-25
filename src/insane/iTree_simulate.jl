@@ -177,7 +177,10 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64)
 
     # track backward time
     th += w
-    th > mxth && break
+
+    if th > mxth 
+     return tv[nI], th
+    end
 
     for t in tv
       addpe!(t, w)
