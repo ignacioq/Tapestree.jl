@@ -161,7 +161,7 @@ end
 Simulate constant birth-death in backward time conditioned on extinction 
 and not having a greater tree height than `mxth`.
 """
-function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64)
+function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64, maxn::Int64)
 
   nF = 1.0
   nI = 1
@@ -178,6 +178,10 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64)
     # track backward time
     th += w
 
+    if nI > maxn
+      return tv[nI], (mxth + 0.1)
+    end
+    
     if th > mxth 
      return tv[nI], th
     end

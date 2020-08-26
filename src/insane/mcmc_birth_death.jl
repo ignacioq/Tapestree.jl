@@ -37,7 +37,8 @@ function insane_cbd(tree    ::iTree,
                     tune_int::Int64   = 100,
                     λtni    ::Float64 = 1.0,
                     μtni    ::Float64 = 1.0,
-                    obj_ar  ::Float64 = 0.4)
+                    obj_ar  ::Float64 = 0.4,
+                    prints  ::Int64   = 5)
 
   # tree characters
   tl = treelength(tree)
@@ -62,11 +63,11 @@ function insane_cbd(tree    ::iTree,
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
       mcmc_burn_cbd(tree, tl, nt, th, tune_int, λprior, μprior, 
-        nburn, λtni, μtni, scalef, idv, wbr, dabr)
+        nburn, λtni, μtni, scalef, idv, wbr, dabr, prints)
 
   # mcmc
   R = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
-        niter, nthin, λtn, μtn, th, idv, wbr, dabr)
+        niter, nthin, λtn, μtn, th, idv, wbr, dabr, prints)
 
   pardic = Dict(("lambda" => 1),("mu" => 2))
 
@@ -111,7 +112,8 @@ function mcmc_burn_cbd(tree    ::iTree,
                        scalef  ::Function,
                        idv     ::Array{iDir,1},
                        wbr     ::BitArray{1},
-                       dabr    ::Array{Int64,1})
+                       dabr    ::Array{Int64,1},
+                       prints  ::Int64)
 
   # initialize acceptance log
   ltn = 0
@@ -125,21 +127,23 @@ function mcmc_burn_cbd(tree    ::iTree,
   μc  = δ*rand()
   λc  = δ + μc
   llc = llik_cbd(tree, λc, μc)
-  prc = logdexp(λc, λprior)
+  prc = logdexp(λc, λprior) + logdexp(μc, μprior)
+
+  pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for it in Base.OneTo(nburn)
 
     # λ proposal
-    llc, prc, λc = λp(llc, prc, λc, lac, λtn, μc)
+    llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior)
 
     # μ proposal
-    llc, prc, μc = μp(llc, prc, μc, lac, μtn, λc)
+    llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior)
 
     # graft proposal
-    tree, llc = graftp(tree, th, λc, μc, idv, wbr, dabr)
+    tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr)
 
     # prune proposal
-    tree, llc = prunep(tree, λc, μc, idv, dabr)
+    tree, llc = prunep(tree, llc, λc, μc, idv, dabr)
 
     # log tuning parameters
     ltn += 1
@@ -150,6 +154,7 @@ function mcmc_burn_cbd(tree    ::iTree,
       ltn = 0
     end
 
+    next!(pbar)
   end
 
   return llc, prc, tree, λc, μc, λtn, μtn, idv, dabr
@@ -192,7 +197,8 @@ function mcmc_cbd(tree  ::iTree,
                   th    ::Float64,
                   idv   ::Array{iDir,1},
                   wbr   ::BitArray{1},
-                  dabr  ::Array{Int64,1})
+                  dabr  ::Array{Int64,1},
+                  prints::Int64)
 
   # logging
   nlogs = fld(niter,nthin)
@@ -200,19 +206,21 @@ function mcmc_cbd(tree  ::iTree,
 
   R = Array{Float64,2}(undef, nlogs, 5)
 
+  pbar = Progress(niter, prints, "running mcmc...", 20)
+
   for it in Base.OneTo(niter)
 
     # λ proposal
-    llc, prc, λc = λp(llc, prc, λc, λtn, μc)
+    llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior)
 
     # μ proposal
-    llc, prc, μc = μp(llc, prc, μc, μtn, λc)
+    llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior)
 
     # graft proposal
-    tree, llc = graftp(tree, th, λc, μc, idv, wbr, dabr)
+    tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr)
 
-    # prune proposal
-    tree, llc = prunep(tree, λc, μc, idv, dabr)
+    # prune #proposal
+    tree, llc = prunep(tree, llc, λc, μc, idv, dabr)
 
     # log parameters
     lthin += 1
@@ -228,145 +236,10 @@ function mcmc_cbd(tree  ::iTree,
       lthin = 0
     end
 
+    next!(pbar)
   end
 
   return R
-end
-
-
-
-
-"""
-    λp(llc::Float64,
-       prc::Float64,
-       λc::Float64,
-       lac::Array{Float64,1},
-       λtn::Float64,
-       μc ::Float64)
-
-`λ` proposal function for constant birth-death in adaptive phase.
-"""
-function λp(llc::Float64,
-            prc::Float64,
-            λc ::Float64,
-            lac::Array{Float64,1},
-            λtn::Float64,
-            μc ::Float64)
-
-    λp = mulupt(λc, λtn)::Float64
-
-    llp = llik_cbd(tree, λp, μc)
-    prr = llrdexp_x(λp, λc, λprior)
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc     = llp::Float64
-      prc    += prr::Float64
-      λc      = λp::Float64
-      lac[1] += 1.0
-    end
-
-    return llc, prc, λc
-end
-
-
-
-
-"""
-    λp(llc::Float64,
-       prc::Float64,
-       λc::Float64,
-       λtn::Float64,
-       μc ::Float64)
-
-`λ` proposal function for constant birth-death.
-"""
-function λp(llc::Float64,
-            prc::Float64,
-            λc::Float64,
-            λtn::Float64,
-            μc ::Float64)
-
-    λp = mulupt(λc, λtn)::Float64
-
-    llp = llik_cbd(tree, λp, μc)
-    prr = llrdexp_x(λp, λc, λprior)
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc     = llp::Float64
-      prc    += prr::Float64
-      λc      = λp::Float64
-    end
-
-    return llc, prc, λc 
-end
-
-
-
-
-"""
-    μp(llc::Float64,
-       prc::Float64,
-       μc::Float64,
-       lac::Array{Float64,1},
-       μtn::Float64,
-       λc ::Float64)
-
-`μ` proposal function for constant birth-death in adaptive phase.
-"""
-function μp(llc::Float64,
-            prc::Float64,
-            μc::Float64,
-            lac::Array{Float64,1},
-            μtn::Float64,
-            λc ::Float64)
-
-    μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
-
-    # one could make a ratio likelihood function
-    llp = llik_cbd(tree, λc, μp)
-    prr = llrdexp_x(μp, μc, μprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-      lac[2] += 1.0
-    end
-
-    return llc, prc, μc 
-end
-
-
-
-
-"""
-    μp(llc::Float64,
-       prc::Float64,
-       μc::Float64,
-       μtn::Float64,
-       λc ::Float64)
-
-`μ` proposal function for constant birth-death.
-"""
-function μp(llc::Float64,
-            prc::Float64,
-            μc::Float64,
-            μtn::Float64,
-            λc ::Float64)
-
-    μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
-
-    # one could make a ratio likelihood function
-    llp = llik_cbd(tree, λc, μp)
-    prr = llrdexp_x(μp, μc, μprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-    end
-
-    return llc, prc, μc 
 end
 
 
@@ -384,27 +257,28 @@ end
 Graft proposal function for constant birth-death.
 """
 function graftp(tree::iTree,
-                th  ::Float64,
+                llc ::Float64,
                 λc  ::Float64,
                 μc  ::Float64,
+                th  ::Float64,
                 idv ::Array{iDir,1}, 
                 wbr ::BitArray{1},
                 dabr::Array{Int64,1})
 
-  λn = lnr()
-  μn = lnr()
+  λn, μn = λμprop() 
 
   #simulate extinct lineage
-  t0, t0h = sim_cbd_b(λn, μn, th)
+  t0, t0h = sim_cbd_b(λc, μc, th, 100)
 
       # if useful simulation
   if t0h < th
 
-    # check this!!!!!!!
-    llr = llik_cbd(t0, λc, μc) + log(λc) - 
-          llik_cbd(t0, λn, μn) - log(λn)
+    # 
+    llr = llik_cbd(t0, λc, μc) + log(λc) + log(μc)
 
-    if -randexp() < llr
+    #llp = llik_cbd(t0, λn, μn) + log(λn) + log(μn)
+
+    if -randexp() < llr #- llp
       llc += llr
       # randomly select branch to graft
       h, br, bri  = randbranch(th, t0h, idv, wbr)
@@ -434,6 +308,7 @@ end
 Prune proposal function for constant birth-death.
 """
 function prunep(tree::iTree,
+                llc ::Float64,
                 λc  ::Float64,
                 μc  ::Float64,
                 idv ::Array{iDir,1}, 
@@ -446,7 +321,8 @@ function prunep(tree::iTree,
     ldr   = lastindex(dri)
     wpr   = rand(Base.OneTo(da(br)))
 
-    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - log(λc)
+    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - 
+            log(λc) - log(μc)
 
     if -randexp() < llr
       llc += llr
@@ -465,12 +341,186 @@ end
 
 
 
+
+"""
+    λp(tree  ::iTree,
+       llc   ::Float64,
+       prc   ::Float64,
+       λc    ::Float64,
+       lac   ::Array{Float64,1},
+       λtn   ::Float64,
+       μc    ::Float64,
+       λprior::Float64)
+
+`λ` proposal function for constant birth-death in adaptive phase.
+"""
+function λp(tree  ::iTree,
+            llc   ::Float64,
+            prc   ::Float64,
+            λc    ::Float64,
+            lac   ::Array{Float64,1},
+            λtn   ::Float64,
+            μc    ::Float64,
+            λprior::Float64)
+
+    λp = mulupt(λc, λtn)::Float64
+
+    llp = llik_cbd(tree, λp, μc)
+    prr = llrdexp_x(λp, λc, λprior)
+
+    if -randexp() < (llp - llc + prr + log(λp/λc))
+      llc     = llp::Float64
+      prc    += prr::Float64
+      λc      = λp::Float64
+      lac[1] += 1.0
+    end
+
+    return llc, prc, λc
+end
+
+
+
+
+"""
+    λp(tree  ::iTree,
+       llc   ::Float64,
+       prc   ::Float64,
+       λc    ::Float64,
+       λtn   ::Float64,
+       μc    ::Float64,
+       λprior::Float64)
+
+`λ` proposal function for constant birth-death.
+"""
+function λp(tree  ::iTree,
+            llc   ::Float64,
+            prc   ::Float64,
+            λc    ::Float64,
+            λtn   ::Float64,
+            μc    ::Float64,
+            λprior::Float64)
+
+    λp = mulupt(λc, λtn)::Float64
+
+    llp = llik_cbd(tree, λp, μc)
+    prr = llrdexp_x(λp, λc, λprior)
+
+    if -randexp() < (llp - llc + prr + log(λp/λc))
+      llc     = llp::Float64
+      prc    += prr::Float64
+      λc      = λp::Float64
+    end
+
+    return llc, prc, λc 
+end
+
+
+
+
+"""
+    μp(tree  ::iTree,
+       llc   ::Float64,
+       prc   ::Float64,
+       μc    ::Float64,
+       lac   ::Array{Float64,1},
+       μtn   ::Float64,
+       λc    ::Float64,
+       μprior::Float64)
+
+`μ` proposal function for constant birth-death in adaptive phase.
+"""
+function μp(tree  ::iTree,
+            llc   ::Float64,
+            prc   ::Float64,
+            μc    ::Float64,
+            lac   ::Array{Float64,1},
+            μtn   ::Float64,
+            λc    ::Float64,
+            μprior::Float64)
+
+    μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
+
+    # one could make a ratio likelihood function
+    llp = llik_cbd(tree, λc, μp)
+    prr = llrdexp_x(μp, μc, μprior)
+
+    if -randexp() < (llp - llc + prr + log(μp/μc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+      lac[2] += 1.0
+    end
+
+    return llc, prc, μc 
+end
+
+
+
+
+"""
+    μp(tree  ::iTree,
+       llc   ::Float64,
+       prc   ::Float64,
+       μc    ::Float64,
+       μtn   ::Float64,
+       λc    ::Float64,
+       μprior::Float64)
+
+`μ` proposal function for constant birth-death.
+"""
+function μp(tree  ::iTree,
+            llc   ::Float64,
+            prc   ::Float64,
+            μc    ::Float64,
+            μtn   ::Float64,
+            λc    ::Float64,
+            μprior::Float64)
+
+    μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
+
+    # one could make a ratio likelihood function
+    llp = llik_cbd(tree, λc, μp)
+    prr = llrdexp_x(μp, μc, μprior)
+
+    if -randexp() < (llp - llc + prr + log(μp/μc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+    end
+
+    return llc, prc, μc 
+end
+
+
+
+
+"""
+    λμprop()
+
+Generate proportional proposals for `λ` and `μ`
+using random samples from **LogNormal** distributions. 
+"""
+function λμprop() 
+
+  lg = lnr()
+
+  return lg*exp(randn()*0.3 - 0.044),
+         lg*exp(randn()*0.3 - 0.044) 
+end
+
+
+
+
 """
     lnr()
 
 **LogNormal** random samples with median of `1`. 
 """
 lnr() = @fastmath exp(randn())
+
+
+
+
 
 
 
