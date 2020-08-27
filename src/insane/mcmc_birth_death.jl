@@ -35,6 +35,7 @@ function insane_cbd(tree    ::iTree,
                     nthin   ::Int64   = 10,
                     nburn   ::Int64   = 200,
                     tune_int::Int64   = 100,
+                    ϵi      ::Float64 = 0.4,
                     λtni    ::Float64 = 1.0,
                     μtni    ::Float64 = 1.0,
                     obj_ar  ::Float64 = 0.4,
@@ -63,7 +64,7 @@ function insane_cbd(tree    ::iTree,
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
       mcmc_burn_cbd(tree, tl, nt, th, tune_int, λprior, μprior, 
-        nburn, λtni, μtni, scalef, idv, wbr, dabr, prints)
+        nburn, ϵi, λtni, μtni, scalef, idv, wbr, dabr, prints)
 
   # mcmc
   R = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
@@ -107,6 +108,7 @@ function mcmc_burn_cbd(tree    ::iTree,
                        λprior  ::Float64,
                        μprior  ::Float64,
                        nburn   ::Int64,
+                       ϵi      ::Float64,
                        λtni    ::Float64, 
                        μtni    ::Float64, 
                        scalef  ::Function,
@@ -122,10 +124,10 @@ function mcmc_burn_cbd(tree    ::iTree,
   λtn = λtni
   μtn = μtni
 
-  # starting parameters
-  δ   = Float64(nt-1)/tl
-  μc  = δ*rand()
-  λc  = δ + μc
+  # starting parameters (using method of moments)
+  δ   = 1.0/tl * log(Float64(nt)*(1.0 - ϵi) + ϵi)
+  λc  = δ/(1.0 - ϵi)
+  μc  = λc - δ 
   llc = llik_cbd(tree, λc, μc)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
