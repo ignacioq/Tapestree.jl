@@ -192,4 +192,63 @@ snen(::Nothing) = 0
 
 
 
+"""
+    stree_ll_cbd(tree::iTree,
+                 ll  ::Float64, 
+                 λc  ::Float64, 
+                 μc  ::Float64,
+                 dri ::BitArray{1}, 
+                 ldr ::Int64,
+                 wpr ::Int64,
+                 ix  ::Int64, 
+                 px  ::Int64)
+
+Return the Log-likelihood under constant birth-death 
+of a grafted subtree determined by `dri`. 
+"""
+function streeheight(tree::iTree,
+                     th  ::Float64, 
+                     dri ::BitArray{1}, 
+                     ldr ::Int64,
+                     wpr ::Int64,
+                     ix  ::Int64, 
+                     px  ::Int64)
+
+  if ix == ldr
+    if px == wpr
+      if isfix(tree.d1)
+        return th - pe(tree)
+      elseif isfix(tree.d2)
+        return th - pe(tree)
+      end
+    else
+      px += 1
+      if isfix(tree.d1)
+        th = 
+          streeheight(tree.d1, th - pe(tree), dri, ldr, wpr, ix, px)
+      else
+        th =
+          streeheight(tree.d2, th - pe(tree), dri, ldr, wpr, ix, px)
+      end
+    end
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      ix += 1
+      if dri[ix]
+        th = 
+          streeheight(tree.d1, th - pe(tree), dri, ldr, wpr, ix, px)
+      else
+        th = 
+          streeheight(tree.d2, th - pe(tree), dri, ldr, wpr, ix, px)
+      end
+    elseif ifx1
+      th = 
+        streeheight(tree.d1, th - pe(tree), dri, ldr, wpr, ix, px)
+    else
+      th =
+        streeheight(tree.d2, th - pe(tree), dri, ldr, wpr, ix, px)
+    end
+  end
+end
 

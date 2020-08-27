@@ -52,7 +52,7 @@ function randbranch(th   ::Float64,
   rn  = rand(Base.OneTo(nb))
   br, i  = getbranch(wbr, rn, idv)
 
-  return h, br, i
+  return h, br, i, nb
 end
 
 

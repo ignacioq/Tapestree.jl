@@ -29,17 +29,18 @@ Run insane for constant pure-birth.
 """
 function insane_cbd(tree    ::iTree, 
                     out_file::String;
-                    λprior  ::Float64 = 0.1,
-                    μprior  ::Float64 = 0.1,
-                    niter   ::Int64   = 1_000,
-                    nthin   ::Int64   = 10,
-                    nburn   ::Int64   = 200,
-                    tune_int::Int64   = 100,
-                    ϵi      ::Float64 = 0.4,
-                    λtni    ::Float64 = 1.0,
-                    μtni    ::Float64 = 1.0,
-                    obj_ar  ::Float64 = 0.4,
-                    prints  ::Int64   = 5)
+                    λprior  ::Float64           = 0.1,
+                    μprior  ::Float64           = 0.1,
+                    niter   ::Int64             = 1_000,
+                    nthin   ::Int64             = 10,
+                    nburn   ::Int64             = 200,
+                    tune_int::Int64             = 100,
+                    ϵi      ::Float64           = 0.4,
+                    λtni    ::Float64           = 1.0,
+                    μtni    ::Float64           = 1.0,
+                    obj_ar  ::Float64           = 0.4,
+                    pupdp   ::NTuple{4,Float64} = (0.4,0.4,0.1,0.1),
+                    prints  ::Int64              = 5)
 
   # tree characters
   tl = treelength(tree)
@@ -48,7 +49,14 @@ function insane_cbd(tree    ::iTree,
 
   fixtree!(tree)
 
+  # make objecting scaling function for tuning
   scalef = makescalef(obj_ar)
+
+  # make parameter updates scaling function for tuning
+  pup = Int64[]
+  for i in Base.OneTo(4) 
+    append!(pup, fill(i, Int64(100.0 * pupdp[i])))
+  end
 
   # make fix tree directory
   idv = iDir[]
@@ -63,12 +71,12 @@ function insane_cbd(tree    ::iTree,
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
-      mcmc_burn_cbd(tree, tl, nt, th, tune_int, λprior, μprior, 
-        nburn, ϵi, λtni, μtni, scalef, idv, wbr, dabr, prints)
+      mcmc_burn_cbd(tree, nt, th, tune_int, λprior, μprior, 
+        nburn, ϵi, λtni, μtni, scalef, idv, wbr, dabr, pup, pupdp, prints)
 
   # mcmc
   R = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
-        niter, nthin, λtn, μtn, th, idv, wbr, dabr, prints)
+        niter, nthin, λtn, μtn, th, idv, wbr, dabr, pup, pupdp, prints)
 
   pardic = Dict(("lambda" => 1),("mu" => 2))
 
@@ -101,7 +109,6 @@ end
 MCMC da chain for constant birth-death.
 """
 function mcmc_burn_cbd(tree    ::iTree,
-                       tl      ::Float64,
                        nt      ::Int64,
                        th      ::Float64,
                        tune_int::Int64,
@@ -115,19 +122,21 @@ function mcmc_burn_cbd(tree    ::iTree,
                        idv     ::Array{iDir,1},
                        wbr     ::BitArray{1},
                        dabr    ::Array{Int64,1},
+                       pup     ::Array{Int64,1}, 
+                       pupdp   ::NTuple{4,Float64},
                        prints  ::Int64)
 
   # initialize acceptance log
   ltn = 0
-  lup = 0.0
+  lup = Float64[0.0,0.0]
   lac = Float64[0.0,0.0]
   λtn = λtni
   μtn = μtni
 
   # starting parameters (using method of moments)
-  δ   = 1.0/tl * log(Float64(nt)*(1.0 - ϵi) + ϵi)
+  δ   = 1.0/th * log(Float64(nt)*(1.0 - ϵi) + ϵi)
   λc  = δ/(1.0 - ϵi)
-  μc  = λc - δ 
+  μc  = λc - δ
   llc = llik_cbd(tree, λc, μc)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
@@ -135,27 +144,40 @@ function mcmc_burn_cbd(tree    ::iTree,
 
   for it in Base.OneTo(nburn)
 
-    # λ proposal
-    llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior)
+    shuffle!(pup)
 
-    # μ proposal
-    llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior)
+    for p in pup
 
-    # graft proposal
-    tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr)
+      # λ proposal
+      if p == 1
+        llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior)
+        lup[1] += 1.0
+      end
 
-    # prune proposal
-    tree, llc = prunep(tree, llc, λc, μc, idv, dabr)
+      # μ proposal
+      if p == 2
+        llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior)
+        lup[2] += 1.0
+      end
+      
+      # graft proposal
+      if p == 3
+        tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+      end
+      
+      # prune proposal
+      if p == 4
+        tree, llc = prunep(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+      end
 
-    # log tuning parameters
-    ltn += 1
-    lup += 1.0
-    if ltn == tune_int
-      λtn = scalef(λtn,lac[1]/lup)
-      μtn = scalef(μtn,lac[2]/lup)
-      ltn = 0
+      # log tuning parameters
+      ltn += 1
+      if ltn == tune_int
+        λtn = scalef(λtn,lac[1]/lup[1])
+        μtn = scalef(μtn,lac[2]/lup[2])
+        ltn = 0
+      end
     end
-
     next!(pbar)
   end
 
@@ -200,6 +222,8 @@ function mcmc_cbd(tree  ::iTree,
                   idv   ::Array{iDir,1},
                   wbr   ::BitArray{1},
                   dabr  ::Array{Int64,1},
+                  pup     ::Array{Int64,1}, 
+                  pupdp   ::NTuple{4,Float64},
                   prints::Int64)
 
   # logging
@@ -212,17 +236,31 @@ function mcmc_cbd(tree  ::iTree,
 
   for it in Base.OneTo(niter)
 
-    # λ proposal
-    llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior)
+    shuffle!(pup)
 
-    # μ proposal
-    llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior)
+    for p in pup
 
-    # graft proposal
-    tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr)
+      # λ proposal
+      if p == 1
+        llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior)
+      end
 
-    # prune #proposal
-    tree, llc = prunep(tree, llc, λc, μc, idv, dabr)
+      # μ proposal
+      if p == 2
+        llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior)
+      end
+      
+      # graft proposal
+      if p == 3
+        tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+      end
+      
+      # prune proposal
+      if p == 4
+        tree, llc = prunep(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+      end
+
+    end
 
     # log parameters
     lthin += 1
@@ -265,9 +303,10 @@ function graftp(tree::iTree,
                 th  ::Float64,
                 idv ::Array{iDir,1}, 
                 wbr ::BitArray{1},
-                dabr::Array{Int64,1})
+                dabr::Array{Int64,1},
+                pupdp::NTuple{4,Float64})
 
-  λn, μn = λμprop() 
+  #λn, μn = λμprop() 
 
   #simulate extinct lineage
   t0, t0h = sim_cbd_b(λc, μc, th, 100)
@@ -275,19 +314,23 @@ function graftp(tree::iTree,
       # if useful simulation
   if t0h < th
 
-    # 
-    llr = llik_cbd(t0, λc, μc) + log(λc) + log(μc)
+    # randomly select branch to graft
+    h, br, bri, nb  = randbranch(th, t0h, idv, wbr)
 
-    #llp = llik_cbd(t0, λn, μn) + log(λn) + log(μn)
+    # proposal ratio
+    lpr = 0.69314718055994528622676398299518041312694549560546875 + 
+          log((th - t0h)*Float64(nb) * (λc + μc) * pupdp[4]) - 
+          log((Float64(lastindex(dabr)) + 1.0) * μc * pupdp[3])
 
-    if -randexp() < llr #- llp
+    # likelihood ratio
+    llr = llik_cbd(t0, λc, μc) + log(λc)
+
+    if -randexp() < lpr #+ llr
       llc += llr
-      # randomly select branch to graft
-      h, br, bri  = randbranch(th, t0h, idv, wbr)
       # graft branch
-      dri = dr(br)
+      dri  = dr(br)
       tree = graftree!(tree, t0, dri, h, lastindex(dri), th, 0)
-      # add graft to branch
+      # add n graft to branch
       addda!(br)
       # log branch as being data augmented
       push!(dabr, bri)
@@ -313,20 +356,36 @@ function prunep(tree::iTree,
                 llc ::Float64,
                 λc  ::Float64,
                 μc  ::Float64,
+                th  ::Float64,
                 idv ::Array{iDir,1}, 
-                dabr::Array{Int64,1})
+                wbr ::BitArray{1},
+                dabr::Array{Int64,1},
+                pupdp::NTuple{4,Float64})
 
-  if lastindex(dabr) > 0
-    dabri = rand(Base.OneTo(lastindex(dabr)))
+  ng = lastindex(dabr)
+
+  if ng > 0
+    dabri = rand(Base.OneTo(ng))
     br    = idv[dabr[dabri]]
     dri   = dr(br)
     ldr   = lastindex(dri)
     wpr   = rand(Base.OneTo(da(br)))
 
-    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - 
-            log(λc) - log(μc)
+    # return tree height
+    h = streeheight(tree, th, dri, ldr, wpr, 0, 1)
 
-    if -randexp() < llr
+    # get how many branches are cut at `th0`
+    nb  = branchescut!(wbr, h, idv)
+
+    # proposal ratio
+    lpr = log(Float64(ng) * μc * pupdp[3]) -
+          0.69314718055994528622676398299518041312694549560546875 -
+          log((th - t0h)*Float64(nb)*(λc + μc)* pupdp[4])
+
+    # likelihood ratio
+    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - log(λc)
+
+    if -randexp() < lpr # + llr
       llc += llr
       tree = prunetree!(tree, dri, ldr, wpr, 0, 1)
       # remove graft from branch
