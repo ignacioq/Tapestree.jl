@@ -259,7 +259,6 @@ function mcmc_cbd(tree  ::iTree,
       if p == 4
         tree, llc = prunep(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
       end
-
     end
 
     # log parameters
@@ -319,7 +318,7 @@ function graftp(tree::iTree,
 
     # proposal ratio
     lpr = 0.69314718055994528622676398299518041312694549560546875 + 
-          log((th - t0h)*Float64(nb) * (λc + μc) * pupdp[4]) - 
+          log((th - t0h) * Float64(nb) * pupdp[4]) - 
           log((Float64(lastindex(dabr)) + 1.0) * μc * pupdp[3])
 
     # likelihood ratio
@@ -372,15 +371,15 @@ function prunep(tree::iTree,
     wpr   = rand(Base.OneTo(da(br)))
 
     # return tree height
-    h = streeheight(tree, th, dri, ldr, wpr, 0, 1)
+    h, th0 = streeheight(tree, th, 0.0, dri, ldr, wpr, 0, 1)
 
-    # get how many branches are cut at `th0`
+    # get how many branches are cut at `h`
     nb  = branchescut!(wbr, h, idv)
 
     # proposal ratio
     lpr = log(Float64(ng) * μc * pupdp[3]) -
           0.69314718055994528622676398299518041312694549560546875 -
-          log((th - t0h)*Float64(nb)*(λc + μc)* pupdp[4])
+          log((th - th0)* Float64(nb) * pupdp[4])
 
     # likelihood ratio
     llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - log(λc)

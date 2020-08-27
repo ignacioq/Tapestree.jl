@@ -207,7 +207,8 @@ Return the Log-likelihood under constant birth-death
 of a grafted subtree determined by `dri`. 
 """
 function streeheight(tree::iTree,
-                     th  ::Float64, 
+                     h   ::Float64, 
+                     th  ::Float64,
                      dri ::BitArray{1}, 
                      ldr ::Int64,
                      wpr ::Int64,
@@ -217,18 +218,18 @@ function streeheight(tree::iTree,
   if ix == ldr
     if px == wpr
       if isfix(tree.d1)
-        return th - pe(tree)
+        return h - pe(tree), treeheight(tree.d2)
       elseif isfix(tree.d2)
-        return th - pe(tree)
+        return h - pe(tree), treeheight(tree.d1)
       end
     else
       px += 1
       if isfix(tree.d1)
-        th = 
-          streeheight(tree.d1, th - pe(tree), dri, ldr, wpr, ix, px)
+        h, th = 
+          streeheight(tree.d1, h - pe(tree), th, dri, ldr, wpr, ix, px)
       else
-        th =
-          streeheight(tree.d2, th - pe(tree), dri, ldr, wpr, ix, px)
+        h, th =
+          streeheight(tree.d2, h - pe(tree), th, dri, ldr, wpr, ix, px)
       end
     end
   elseif ix < ldr
@@ -236,18 +237,18 @@ function streeheight(tree::iTree,
     if ifx1 && isfix(tree.d2)
       ix += 1
       if dri[ix]
-        th = 
-          streeheight(tree.d1, th - pe(tree), dri, ldr, wpr, ix, px)
+        h, th = 
+          streeheight(tree.d1, h - pe(tree), th, dri, ldr, wpr, ix, px)
       else
-        th = 
-          streeheight(tree.d2, th - pe(tree), dri, ldr, wpr, ix, px)
+        h, th = 
+          streeheight(tree.d2, h - pe(tree), th, dri, ldr, wpr, ix, px)
       end
     elseif ifx1
-      th = 
-        streeheight(tree.d1, th - pe(tree), dri, ldr, wpr, ix, px)
+      h, th = 
+        streeheight(tree.d1, h - pe(tree), th, dri, ldr, wpr, ix, px)
     else
-      th =
-        streeheight(tree.d2, th - pe(tree), dri, ldr, wpr, ix, px)
+      h, th =
+        streeheight(tree.d2, h - pe(tree), th, dri, ldr, wpr, ix, px)
     end
   end
 end
