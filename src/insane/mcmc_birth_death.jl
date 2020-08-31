@@ -36,6 +36,8 @@ function insane_cbd(tree    ::iTree,
                     nburn   ::Int64             = 200,
                     tune_int::Int64             = 100,
                     ϵi      ::Float64           = 0.4,
+                    λi      ::Float64           = 100.,
+                    μi      ::Float64           = 100.,
                     λtni    ::Float64           = 1.0,
                     μtni    ::Float64           = 1.0,
                     obj_ar  ::Float64           = 0.4,
@@ -43,7 +45,6 @@ function insane_cbd(tree    ::iTree,
                     prints  ::Int64              = 5)
 
   # tree characters
-  tl = treelength(tree)
   th = treeheight(tree)
   nt = sntn(tree)
 
@@ -72,17 +73,20 @@ function insane_cbd(tree    ::iTree,
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
       mcmc_burn_cbd(tree, nt, th, tune_int, λprior, μprior, 
-        nburn, ϵi, λtni, μtni, scalef, idv, wbr, dabr, pup, pupdp, prints)
+        nburn, ϵi, λi, μi, λtni, μtni, scalef, idv, wbr, dabr, pup, pupdp, prints)
 
   # mcmc
-  R = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
+  R, tree = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
         niter, nthin, λtn, μtn, th, idv, wbr, dabr, pup, pupdp, prints)
 
-  pardic = Dict(("lambda" => 1),("mu" => 2))
+  pardic = Dict(("lambda" => 1),
+                ("mu" => 2), 
+                ("Next" => 3),
+                ("length" => 4))
 
   write_ssr(R, pardic, out_file)
 
-  return R
+  return R, tree
 end
 
 
@@ -116,6 +120,8 @@ function mcmc_burn_cbd(tree    ::iTree,
                        μprior  ::Float64,
                        nburn   ::Int64,
                        ϵi      ::Float64,
+                       λi      ::Float64,
+                       μi      ::Float64,
                        λtni    ::Float64, 
                        μtni    ::Float64, 
                        scalef  ::Function,
@@ -134,9 +140,15 @@ function mcmc_burn_cbd(tree    ::iTree,
   μtn = μtni
 
   # starting parameters (using method of moments)
-  δ   = 1.0/th * log(Float64(nt)*(1.0 - ϵi) + ϵi)
-  λc  = δ/(1.0 - ϵi)
-  μc  = λc - δ
+  if λi == 100.0 && μi == 100.0
+    δ   = 1.0/th * log(Float64(nt)*(1.0 - ϵi) + ϵi)
+    λc  = δ/(1.0 - ϵi)
+    μc  = λc - δ
+  else
+    λc = λi
+    μc = μi
+  end
+
   llc = llik_cbd(tree, λc, μc)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
@@ -178,6 +190,7 @@ function mcmc_burn_cbd(tree    ::iTree,
         ltn = 0
       end
     end
+
     next!(pbar)
   end
 
@@ -222,15 +235,15 @@ function mcmc_cbd(tree  ::iTree,
                   idv   ::Array{iDir,1},
                   wbr   ::BitArray{1},
                   dabr  ::Array{Int64,1},
-                  pup     ::Array{Int64,1}, 
-                  pupdp   ::NTuple{4,Float64},
+                  pup   ::Array{Int64,1}, 
+                  pupdp ::NTuple{4,Float64},
                   prints::Int64)
 
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  R = Array{Float64,2}(undef, nlogs, 5)
+  R = Array{Float64,2}(undef, nlogs, 7)
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -259,8 +272,8 @@ function mcmc_cbd(tree  ::iTree,
       if p == 4
         tree, llc = prunep(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
       end
-    end
 
+    end
     # log parameters
     lthin += 1
     if lthin == nthin
@@ -271,6 +284,8 @@ function mcmc_cbd(tree  ::iTree,
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
+        R[lit,6] = Float64(snen(tree))
+        R[lit,7] = treelength(tree)
       end
       lthin = 0
     end
@@ -278,7 +293,7 @@ function mcmc_cbd(tree  ::iTree,
     next!(pbar)
   end
 
-  return R
+  return R, tree
 end
 
 
@@ -286,12 +301,14 @@ end
 
 """
     graftp(tree::iTree,
-           th  ::Float64,
+           llc ::Float64,
            λc  ::Float64,
            μc  ::Float64,
+           th  ::Float64,
            idv ::Array{iDir,1}, 
            wbr ::BitArray{1},
-           dabr::Array{Int64,1})
+           dabr::Array{Int64,1},
+           pupdp::NTuple{4,Float64})
 
 Graft proposal function for constant birth-death.
 """
@@ -317,12 +334,11 @@ function graftp(tree::iTree,
     h, br, bri, nb  = randbranch(th, t0h, idv, wbr)
 
     # proposal ratio
-    lpr = 0.69314718055994528622676398299518041312694549560546875 + 
-          log((th - t0h) * Float64(nb) * pupdp[4]) - 
-          log((Float64(lastindex(dabr)) + 1.0) * μc * pupdp[3])
+    lpr = log(λc * (th - t0h) * Float64(nb) * pupdp[4]) - 
+          log((Float64(lastindex(dabr)) + 1.0) * pupdp[3])
 
     # likelihood ratio
-    llr = llik_cbd(t0, λc, μc) + log(λc)
+    llr = llik_cbd(t0, λc, μc) + log(2.0*λc) 
 
     if -randexp() < lpr #+ llr
       llc += llr
@@ -344,10 +360,14 @@ end
 
 """
     prunep(tree::iTree,
+           llc ::Float64,
            λc  ::Float64,
            μc  ::Float64,
+           th  ::Float64,
            idv ::Array{iDir,1}, 
-           dabr::Array{Int64,1})
+           wbr ::BitArray{1},
+           dabr::Array{Int64,1},
+           pupdp::NTuple{4,Float64})
 
 Prune proposal function for constant birth-death.
 """
@@ -374,17 +394,17 @@ function prunep(tree::iTree,
     h, th0 = streeheight(tree, th, 0.0, dri, ldr, wpr, 0, 1)
 
     # get how many branches are cut at `h`
-    nb  = branchescut!(wbr, h, idv)
+    nb = branchescut!(wbr, h, idv)
 
     # proposal ratio
-    lpr = log(Float64(ng) * μc * pupdp[3]) -
-          0.69314718055994528622676398299518041312694549560546875 -
-          log((th - th0)* Float64(nb) * pupdp[4])
+    lpr = log(Float64(ng) * pupdp[3]) -
+          log(λc * (th - th0) * Float64(nb) * pupdp[4])
 
     # likelihood ratio
-    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - log(λc)
+    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - 
+            log(2.0 * λc)
 
-    if -randexp() < lpr # + llr
+    if -randexp() < lpr #+ llr
       llc += llr
       tree = prunetree!(tree, dri, ldr, wpr, 0, 1)
       # remove graft from branch
