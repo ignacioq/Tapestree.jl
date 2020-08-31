@@ -334,7 +334,7 @@ function graftp(tree::iTree,
     h, br, bri, nb  = randbranch(th, t0h, idv, wbr)
 
     # proposal ratio
-    lpr = log(λc * (th - t0h) * Float64(nb) * pupdp[4]) - 
+    lpr = log(2.0 * μc * (th - t0h) * Float64(nb) * pupdp[4]) - 
           log((Float64(lastindex(dabr)) + 1.0) * pupdp[3])
 
     # likelihood ratio
@@ -398,7 +398,7 @@ function prunep(tree::iTree,
 
     # proposal ratio
     lpr = log(Float64(ng) * pupdp[3]) -
-          log(λc * (th - th0) * Float64(nb) * pupdp[4])
+          log(2.0 * μc *(th - th0) * Float64(nb) * pupdp[4])
 
     # likelihood ratio
     llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - 
