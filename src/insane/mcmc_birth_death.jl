@@ -71,8 +71,8 @@ function insane_cbd(tree    ::iTree,
   dabr = Int64[]
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(tree)) ? crown_prob_surv :
-                            stem_prob_surv
+  svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
+                           stem_prob_surv_cbd
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
@@ -84,10 +84,10 @@ function insane_cbd(tree    ::iTree,
   R, tree = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
         niter, nthin, λtn, μtn, th, idv, wbr, dabr, pup, pupdp, prints, svf)
 
-  pardic = Dict(("lambda" => 1),
-                ("mu" => 2), 
-                ("Next" => 3),
-                ("length" => 4))
+  pardic = Dict(("lambda"      => 1),
+                ("mu"          => 2), 
+                ("n_extinct"   => 3),
+                ("tree_length" => 4))
 
   write_ssr(R, pardic, out_file)
 
