@@ -70,14 +70,19 @@ function insane_cbd(tree    ::iTree,
   # create da branches vector
   dabr = Int64[]
 
+  # make survival conditioning function (stem or crown)
+  svf = iszero(pe(tree)) ? crown_prob_surv :
+                            stem_prob_surv
+
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
       mcmc_burn_cbd(tree, nt, th, tune_int, λprior, μprior, 
-        nburn, ϵi, λi, μi, λtni, μtni, scalef, idv, wbr, dabr, pup, pupdp, prints)
+        nburn, ϵi, λi, μi, λtni, μtni, scalef, idv, wbr, dabr, pup, pupdp, 
+        prints, svf)
 
   # mcmc
   R, tree = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
-        niter, nthin, λtn, μtn, th, idv, wbr, dabr, pup, pupdp, prints)
+        niter, nthin, λtn, μtn, th, idv, wbr, dabr, pup, pupdp, prints, svf)
 
   pardic = Dict(("lambda" => 1),
                 ("mu" => 2), 
@@ -130,7 +135,8 @@ function mcmc_burn_cbd(tree    ::iTree,
                        dabr    ::Array{Int64,1},
                        pup     ::Array{Int64,1}, 
                        pupdp   ::NTuple{4,Float64},
-                       prints  ::Int64)
+                       prints  ::Int64,
+                       svf     ::Function)
 
   # initialize acceptance log
   ltn = 0
@@ -149,7 +155,7 @@ function mcmc_burn_cbd(tree    ::iTree,
     μc = μi
   end
 
-  llc = llik_cbd(tree, λc, μc)
+  llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -162,13 +168,13 @@ function mcmc_burn_cbd(tree    ::iTree,
 
       # λ proposal
       if p == 1
-        llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior)
+        llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior, th, svf)
         lup[1] += 1.0
       end
 
       # μ proposal
       if p == 2
-        llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior)
+        llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
         lup[2] += 1.0
       end
       
@@ -237,7 +243,8 @@ function mcmc_cbd(tree  ::iTree,
                   dabr  ::Array{Int64,1},
                   pup   ::Array{Int64,1}, 
                   pupdp ::NTuple{4,Float64},
-                  prints::Int64)
+                  prints::Int64,
+                  svf   ::Function)
 
   # logging
   nlogs = fld(niter,nthin)
@@ -255,12 +262,12 @@ function mcmc_cbd(tree  ::iTree,
 
       # λ proposal
       if p == 1
-        llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior)
+        llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
       end
 
       # μ proposal
       if p == 2
-        llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior)
+        llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
       end
       
       # graft proposal
@@ -331,10 +338,10 @@ function graftp(tree::iTree,
   if t0h < th
 
     # randomly select branch to graft
-    h, br, bri, nb  = randbranch(th, t0h, idv, wbr)
+    h, br, bri, nbh  = randbranch(th, t0h, idv, wbr)
 
     # proposal ratio
-    lpr = log(2.0 * μc * (th - t0h) * Float64(nb) * pupdp[4]) - 
+    lpr = log(2.0 * μc * (th - t0h) * Float64(nbh) * pupdp[4]) - 
           log((Float64(lastindex(dabr)) + 1.0) * pupdp[3])
 
     # likelihood ratio
@@ -394,11 +401,11 @@ function prunep(tree::iTree,
     h, th0 = streeheight(tree, th, 0.0, dri, ldr, wpr, 0, 1)
 
     # get how many branches are cut at `h`
-    nb = branchescut!(wbr, h, idv)
+    nbh = branchescut!(wbr, h, idv)
 
     # proposal ratio
     lpr = log(Float64(ng) * pupdp[3]) -
-          log(2.0 * μc *(th - th0) * Float64(nb) * pupdp[4])
+          log(2.0 * μc * (th - th0) * Float64(nbh) * pupdp[4])
 
     # likelihood ratio
     llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - 
@@ -441,11 +448,13 @@ function λp(tree  ::iTree,
             lac   ::Array{Float64,1},
             λtn   ::Float64,
             μc    ::Float64,
-            λprior::Float64)
+            λprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
 
     λp = mulupt(λc, λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc)
+    llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llp - llc + prr + log(λp/λc))
@@ -478,11 +487,13 @@ function λp(tree  ::iTree,
             λc    ::Float64,
             λtn   ::Float64,
             μc    ::Float64,
-            λprior::Float64)
+            λprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
 
     λp = mulupt(λc, λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc)
+    llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llp - llc + prr + log(λp/λc))
@@ -516,12 +527,16 @@ function μp(tree  ::iTree,
             lac   ::Array{Float64,1},
             μtn   ::Float64,
             λc    ::Float64,
-            μprior::Float64)
+            μprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
 
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
     # one could make a ratio likelihood function
-    llp = llik_cbd(tree, λc, μp)
+    sc  = svf(λc, μp, th)
+    llp = sc == -Inf ? -Inf : llik_cbd(tree, λc, μp) - sc
+
     prr = llrdexp_x(μp, μc, μprior)
 
     if -randexp() < (llp - llc + prr + log(μp/μc))
@@ -554,12 +569,16 @@ function μp(tree  ::iTree,
             μc    ::Float64,
             μtn   ::Float64,
             λc    ::Float64,
-            μprior::Float64)
+            μprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
 
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
     # one could make a ratio likelihood function
-    llp = llik_cbd(tree, λc, μp)
+    sc  = svf(λc, μp, th)
+    llp = sc == -Inf ? -Inf : llik_cbd(tree, λc, μp) - sc
+
     prr = llrdexp_x(μp, μc, μprior)
 
     if -randexp() < (llp - llc + prr + log(μp/μc))

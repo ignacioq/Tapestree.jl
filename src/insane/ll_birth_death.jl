@@ -11,8 +11,38 @@ Created 06 07 2020
 
 
 
+
 """
-    llik_cbd_r(tree::iTree, λ::Float64, μ::Float64)
+    stem_prob_surv(λ::Float64, μ::Float64, t::Float64)
+
+Log-probability of at least one lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` from stem age.
+"""
+function stem_prob_surv(λ::Float64, μ::Float64, t::Float64)
+  μ += λ == μ ? 1e-14 : 0.0
+  log(1.0 - (μ - μ*exp(-(λ - μ)*t))/(λ - μ * exp(-(λ - μ)*t)))
+end
+
+
+
+
+"""
+    crown_prob_surv(λ::Float64, μ::Float64, t::Float64)
+
+Log-probability of at least one lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` from stem age.
+"""
+function crown_prob_surv(λ::Float64, μ::Float64, t::Float64)
+  μ += λ == μ ? 1e-14 : 0.0
+  2.0*log(1.0 - (μ - μ*exp(-(λ - μ)*t))/(λ - μ * exp(-(λ - μ)*t))) +
+  log(2.0*λ)
+end
+
+
+
+
+"""
+    llik_cbd(tree::iTree, λ::Float64, μ::Float64)
 
 Log-likelihood up to a constant for constant birth-death 
 given a complete `iTree` recursively.
