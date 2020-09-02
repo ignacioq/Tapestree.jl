@@ -695,7 +695,7 @@ function make_prior_updates(pupd   ::Array{Int64,1},
   end
 
   ncov  = model[1]*yppar*h + model[2]*yppar*h + model[3]*yppar*h
-  βupds = intersect((bbase+1):(bbase+1+ncov), pupd)
+  βupds = intersect((bbase+1):(bbase+k*ncov), pupd)
 
   βp_m, βp_v = βpriors
 
