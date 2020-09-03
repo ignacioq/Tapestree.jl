@@ -65,10 +65,10 @@ function sim_cpb(t::Float64, λ::Float64)
   tw = cpb_wait(λ)
 
   if tw > t
-    return iTree(t)
+    return iTsimple(t)
   end
 
-  iTree(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
+  iTsimple(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
 end
 
 
@@ -95,13 +95,13 @@ function sim_cbd(t::Float64, λ::Float64, μ::Float64)
   tw = cbd_wait(λ, μ)
 
   if tw > t
-    return iTree(t)
+    return iTsimple(t)
   end
 
   if λorμ(λ, μ)
-    return iTree(sim_cbd(t - tw, λ, μ), sim_cbd(t - tw, λ, μ), tw)
+    return iTsimple(sim_cbd(t - tw, λ, μ), sim_cbd(t - tw, λ, μ), tw)
   else
-    return iTree(tw, true)
+    return iTsimple(tw, true)
   end
 end
 
@@ -121,7 +121,7 @@ function sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
   # disjoint trees vector 
   tv = iTree[]
   for i in Base.OneTo(nI)
-    push!(tv, iTree(0.0))
+    push!(tv, iTsimple(0.0))
   end
 
   # start simulation
@@ -138,7 +138,7 @@ function sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
         return tv[nI] 
       else
         j, k = samp2(Base.OneTo(nI))
-        tv[j] = iTree(tv[j], tv[k], 0.0)
+        tv[j] = iTsimple(tv[j], tv[k], 0.0)
         deleteat!(tv,k)
         nI -= 1
         nF -= 1.0
@@ -147,7 +147,7 @@ function sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
     else
       nI += 1
       nF += 1.0
-      push!(tv, iTree(0.0, true))
+      push!(tv, iTsimple(0.0, true))
     end
   end
 end
@@ -167,7 +167,7 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64, maxn::Int64)
   nI = 1
 
   # disjoint trees vector 
-  tv = [iTree(0.0, true)]
+  tv = [iTsimple(0.0, true)]
 
   th = 0.0
 
@@ -196,7 +196,7 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64, maxn::Int64)
         return tv[nI], th
       else
         j, k = samp2(Base.OneTo(nI))
-        tv[j] = iTree(tv[j], tv[k], 0.0)
+        tv[j] = iTsimple(tv[j], tv[k], 0.0)
         deleteat!(tv,k)
         nI -= 1
         nF -= 1.0
@@ -205,7 +205,7 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64, maxn::Int64)
     else
       nI += 1
       nF += 1.0
-      push!(tv, iTree(0.0, true))
+      push!(tv, iTsimple(0.0, true))
     end
   end
 end

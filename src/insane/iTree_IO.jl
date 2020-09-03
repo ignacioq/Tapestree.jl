@@ -15,7 +15,7 @@ Created 07 07 2020
 """
     read_newick(in_file::String)
 
-Readsa newick tree into `iTree` from `in_file`.
+Readsa newick tree into `iTsimple` from `in_file`.
 """
 function read_newick(in_file::String)
 
@@ -57,7 +57,7 @@ function read_newick(in_file::String)
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = iTree(from_string(s1), from_string(s2), 0.0)
+    tree = iTsimple(from_string(s1), from_string(s2), 0.0)
   # if root
   else
     tree = from_string(s)
@@ -72,7 +72,7 @@ end
 """
     from_string(s::String)
 
-Returns `iTree` from newick string.
+Returns `iTsimple` from newick string.
 """
 function from_string(s::String)
 
@@ -83,7 +83,7 @@ function from_string(s::String)
 
   # if tip
   if !(occursin('(', s) || occursin(',', s))
-      return iTree(pei)
+      return iTsimple(pei)
   else
     # estimate number of parentheses (when np returns to 1)
     nrp = 0
@@ -104,7 +104,7 @@ function from_string(s::String)
   s1 = s[1:(ci-1)]
   s2 = s[(ci+1):end]
 
-  iTree(from_string(s1), from_string(s2), pei)
+  iTsimple(from_string(s1), from_string(s2), pei)
 end
 
 
@@ -115,11 +115,11 @@ end
 
 
 """
-    write_newick(tree::iTree, out_file::String)
+    write_newick(tree::iTsimple, out_file::String)
 
-Writes `iTree` as a newick tree to `out_file`.
+Writes `iTsimple` as a newick tree to `out_file`.
 """
-function write_newick(tree::iTree, out_file::String)
+function write_newick(tree::iTsimple, out_file::String)
 
   s = to_string(tree, n = 0)
   s = string("(", s, ");")
@@ -135,11 +135,11 @@ end
 
 
 """
-    to_string(tree::iTree; n::Int64 = 0)
+    to_string(tree::iTsimple; n::Int64 = 0)
 
 Returns newick string.
 """
-function to_string(tree::iTree; n::Int64 = 0)
+function to_string(tree::iTsimple; n::Int64 = 0)
 
   if istip(tree.d1)
     if istip(tree.d2)
