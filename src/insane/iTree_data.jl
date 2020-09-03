@@ -12,11 +12,11 @@ Created 25 06 2020
 
 
 """
-    isfix(tree::iTree)
+    isfix(tree::T) where {T <: iTree} 
 
 Return if is either an extant or extinct tip node.
 """
-isfix(tree::iTree) = getproperty(tree,:fx)
+isfix(tree::T) where {T <: iTree} = getproperty(tree,:fx)
 
 isfix(::Nothing) = true
 
@@ -24,11 +24,11 @@ isfix(::Nothing) = true
 
 
 """
-    istip(tree::iTree)
+    istip(tree::T) where {T <: iTree}
 
 Return if is either an extant or extinct tip node.
 """
-istip(tree::iTree) = isnothing(tree.d1) && isnothing(tree.d2)
+istip(tree::T) where {T <: iTree} = isnothing(tree.d1) && isnothing(tree.d2)
 
 istip(::Nothing) = false
 
@@ -36,26 +36,31 @@ istip(::Nothing) = false
 
 
 """
-    isλ(tree::iTree)
+    isextinct(tree::T) where {T <: iTree}
 
 Return if is an extinction node.
 """
-isextinct(tree::iTree) = getproperty(tree,:iμ)
+isextinct(tree::T) where {T <: iTree} = getproperty(tree,:iμ)
 
+"""
+    isextinct(::Nothing)
+
+Return if is an extinction node.
+"""
 isextinct(::Nothing) = false
 
 
 
 
 """
-    pe(tree::iTree)
+    pe(tree::T) where {T <: iTree}
 
 Return pendant edge.
 """
-pe(tree::iTree) = getproperty(tree,:pe)
+pe(tree::T) where {T <: iTree} = getproperty(tree,:pe)
 
 """
-    pe(tree::iTree)
+    pe(::Nothing)
 
 Return pendant edge.
 """
@@ -65,11 +70,11 @@ pe(::Nothing) = 0.0
 
 
 """
-    treelength(tree::iTree)
+    treelength(tree::T) where {T <: iTree}
 
 Return the branch length sum of `tree`.
 """
-treelength(tree::iTree) = treelength(tree.d1) + treelength(tree.d2) + pe(tree)
+treelength(tree::T) where {T <: iTree} = treelength(tree.d1) + treelength(tree.d2) + pe(tree)
 
 """
     treelength(::Nothing)
@@ -82,18 +87,18 @@ treelength(::Nothing) = 0.0
 
 
 """
-    treeheight(tree::iTree)
+    treeheight(tree::T) where {T <: iTree}
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::iTree)
+function treeheight(tree::T) where {T <: iTree}
   th1 = treeheight(tree.d1)
   th2 = treeheight(tree.d2)
   (th1 > th2 ? th1 : th2) + pe(tree)
 end
 
 """
-    treeheight(tree::iTree)
+    treeheight(::Nothing)
 
 Return the tree height of `tree`.
 """
@@ -103,11 +108,11 @@ treeheight(::Nothing) = 0.0
 
 
 """
-    snn(tree::iTree)
+    snn(tree::T) where {T <: iTree}
 
 Return the number of descendant nodes for `tree`.
 """
-snn(tree::iTree) = snn(tree.d1) + snn(tree.d2) + 1
+snn(tree::T) where {T <: iTree} = snn(tree.d1) + snn(tree.d2) + 1
 
 """
     snn(::Nothing)
@@ -120,11 +125,11 @@ snn(::Nothing) = 0
 
 
 """
-    snin(tree::iTree)
+    snin(tree::T) where {T <: iTree}
 
 Return the number of internal nodes for `tree`.
 """
-function snin(tree::iTree)
+function snin(tree::T) where {T <: iTree}
     if istip(tree)
       return 0
     else
@@ -144,11 +149,11 @@ snin(::Nothing) = 0
 
 
 """
-    sntn(tree::iTree)
+    sntn(tree::T) where {T <: iTree}
 
 Return the number of tip nodes for `tree`.
 """
-function sntn(tree::iTree)
+function sntn(tree::T) where {T <: iTree}
     if istip(tree)
       return 1
     else
@@ -168,11 +173,11 @@ sntn(::Nothing) = 0
 
 
 """
-    snen(tree::iTree)
+    snen(tree::T) where {T <: iTree}
 
 Return the number of extinct tip nodes for `tree`.
 """
-function snen(tree::iTree)
+function snen(tree::T) where {T <: iTree}
     if isextinct(tree)
       return 1
     else
@@ -206,50 +211,100 @@ snen(::Nothing) = 0
 Return the Log-likelihood under constant birth-death 
 of a grafted subtree determined by `dri`. 
 """
-function streeheight(tree::iTree,
+function streeheight(tree::T,
                      h   ::Float64, 
                      th  ::Float64,
                      dri ::BitArray{1}, 
                      ldr ::Int64,
                      wpr ::Int64,
                      ix  ::Int64, 
-                     px  ::Int64)
+                     px  ::Int64) where {T <: iTree}
 
   if ix == ldr
     if px == wpr
-      if isfix(tree.d1)
+      if isfix(tree.d1::T)
         return h - pe(tree), treeheight(tree.d2)
-      elseif isfix(tree.d2)
+      elseif isfix(tree.d2::T)
         return h - pe(tree), treeheight(tree.d1)
       end
     else
       px += 1
-      if isfix(tree.d1)
+      if isfix(tree.d1::T)
         h, th = 
-          streeheight(tree.d1, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
       else
         h, th =
-          streeheight(tree.d2, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
       end
     end
   elseif ix < ldr
-    ifx1 = isfix(tree.d1)
-    if ifx1 && isfix(tree.d2)
+    ifx1 = isfix(tree.d1::T)
+    if ifx1 && isfix(tree.d2::T)
       ix += 1
       if dri[ix]
         h, th = 
-          streeheight(tree.d1, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
       else
         h, th = 
-          streeheight(tree.d2, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
       end
     elseif ifx1
       h, th = 
-        streeheight(tree.d1, h - pe(tree), th, dri, ldr, wpr, ix, px)
+        streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
     else
       h, th =
-        streeheight(tree.d2, h - pe(tree), th, dri, ldr, wpr, ix, px)
+        streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
     end
   end
 end
 
+
+
+
+"""
+    ts(tree::iTgbm)
+
+Return pendant edge.
+"""
+ts(tree::iTgbm) = getproperty(tree,:ts)
+
+"""
+    pe(tree::iTree)
+
+Return pendant edge.
+"""
+ts(::Nothing) = 0.0
+
+
+
+
+"""
+    lλ(tree::iTgbm)
+
+Return pendant edge.
+"""
+lλ(tree::iTgbm) = getproperty(tree,:lλ)
+
+"""
+    pe(tree::iTree)
+
+Return pendant edge.
+"""
+lλ(::Nothing) = 0.0
+
+
+
+
+"""
+    lμ(tree::iTgbm)
+
+Return pendant edge.
+"""
+lμ(tree::iTgbm) = getproperty(tree,:lμ)
+
+"""
+    pe(tree::iTree)
+
+Return pendant edge.
+"""
+lμ(::Nothing) = 0.0

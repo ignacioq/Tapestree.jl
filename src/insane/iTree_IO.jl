@@ -13,11 +13,11 @@ Created 07 07 2020
 
 
 """
-    read_newick(in_file::String)
+    read_newick(in_file::String, ::Type{T}) where {T <: iTree} 
 
 Readsa newick tree into `iTsimple` from `in_file`.
 """
-function read_newick(in_file::String)
+function read_newick(in_file::String, ::Type{T}) where {T <: iTree} 
 
   io = open(in_file)
   s = readlines(io)[1]
@@ -57,10 +57,10 @@ function read_newick(in_file::String)
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = iTsimple(from_string(s1), from_string(s2), 0.0)
+    tree = T(from_string(s1, T), from_string(s2, T), 0.0)
   # if root
   else
-    tree = from_string(s)
+    tree = from_string(s, T)
   end
 
   return tree
@@ -70,11 +70,11 @@ end
 
 
 """
-    from_string(s::String)
+    from_string(s::String, ::Type{T}) where {T <: iTree} )
 
-Returns `iTsimple` from newick string.
+Returns `iTree` from newick string.
 """
-function from_string(s::String)
+function from_string(s::String, ::Type{T}) where {T <: iTree}
 
   # find pendant edge
   wd  = findlast(isequal(':'), s)
@@ -83,7 +83,7 @@ function from_string(s::String)
 
   # if tip
   if !(occursin('(', s) || occursin(',', s))
-      return iTsimple(pei)
+      return T(pei)
   else
     # estimate number of parentheses (when np returns to 1)
     nrp = 0
@@ -104,12 +104,8 @@ function from_string(s::String)
   s1 = s[1:(ci-1)]
   s2 = s[(ci+1):end]
 
-  iTsimple(from_string(s1), from_string(s2), pei)
+  T(from_string(s1, T), from_string(s2, T), pei)
 end
-
-
-
-
 
 
 
@@ -119,7 +115,7 @@ end
 
 Writes `iTsimple` as a newick tree to `out_file`.
 """
-function write_newick(tree::iTsimple, out_file::String)
+function write_newick(tree::T, out_file::String) where {T <: iTree}
 
   s = to_string(tree, n = 0)
   s = string("(", s, ");")
@@ -135,11 +131,11 @@ end
 
 
 """
-    to_string(tree::iTsimple; n::Int64 = 0)
+    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
 
 Returns newick string.
 """
-function to_string(tree::iTsimple; n::Int64 = 0)
+function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
 
   if istip(tree.d1)
     if istip(tree.d2)

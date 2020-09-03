@@ -13,19 +13,19 @@ Created 07 07 2020
 
 
 """
-    rplottree(tree::iTree, 
+    rplottree(tree::T, 
               xc  ::Float64, 
               yr  ::UnitRange{Int64},
               x   ::Array{Float64,1}, 
-              y   ::Array{Float64,1})
+              y   ::Array{Float64,1}) where {T <: iTree}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function rplottree(tree::iTree, 
+function rplottree(tree::T, 
                    xc  ::Float64, 
                    yr  ::UnitRange{Int64},
                    x   ::Array{Float64,1}, 
-                   y   ::Array{Float64,1})
+                   y   ::Array{Float64,1}) where {T <: iTree}
 
   # add horizontal lines
   push!(x, xc)
@@ -60,11 +60,11 @@ end
 
 
 """
-   f(tree::iTree)
+    function f(tree::T) where {T <: iTree}
 
 Recipe for plotting a Type `iTree`.
 """
-@recipe function f(tree::iTree)
+@recipe function f(tree::T) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]

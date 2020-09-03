@@ -23,6 +23,9 @@ with the following fields:
   d2: daughter tree 2
   pe: pendant edge
   iμ: is an extinction node
+  ts: array of time vectors concordant with `lλ` and `lμ`
+  lλ: array of a Brownian motion evolution of `log(λ)`
+  lμ: array of a Brownian motion evolution of `log(μ)`
 
     iTgbm()
 
@@ -42,24 +45,50 @@ mutable struct iTgbm <: iTree
   pe::Float64
   iμ::Bool
   fx::Bool
+  ts::Array{Float64,1}
+  lλ::Array{Float64,1}
+  lμ::Array{Float64,1}
 
   # inner constructor
   iTgbm(d1::Union{iTgbm, Nothing}, d2::Union{iTgbm, Nothing}, 
-    pe::Float64, iμ::Bool, fx::Bool) = new(d1, d2, pe, iμ, fx)
+    pe::Float64, iμ::Bool, fx::Bool, 
+    ts::Array{Float64,1}, lλ::Array{Float64,1},lμ::Array{Float64,1}) = 
+      new(d1, d2, pe, iμ, fx, ts, lλ, lμ)
 end
 
 # outer constructors
-iTgbm() = iTgbm(nothing, nothing, 0.0, false, false)
+iTgbm() = iTgbm(nothing, nothing, 0.0, false, false, 
+            Float64[], Float64[], Float64[])
 
-iTgbm(pe::Float64) = iTgbm(nothing, nothing, pe, false, false)
+iTgbm(pe::Float64) = iTgbm(nothing, nothing, pe, false, false,
+                       Float64[], Float64[], Float64[])
 
-iTgbm(pe::Float64, iμ::Bool) = iTgbm(nothing, nothing, pe, iμ, false)
+iTgbm(pe::Float64, iμ::Bool) = iTgbm(nothing, nothing, pe, iμ, false,
+                                 Float64[], Float64[], Float64[])
 
-iTgbm(d1::iTgbm, d2::iTgbm, pe::Float64) = iTgbm(d1, d2, pe, false, false)
+iTgbm(d1::iTgbm, d2::iTgbm, pe::Float64) = 
+  iTgbm(d1, d2, pe, false, false,Float64[], Float64[], Float64[])
 
 iTgbm(d1::iTgbm, d2::iTgbm, pe::Float64, iμ::Bool) = 
-  iTgbm(d1, d2, pe, iμ, false)
+  iTgbm(d1, d2, pe, iμ, false, Float64[], Float64[], Float64[])
+
 
 # pretty-printing
 Base.show(io::IO, t::iTgbm) = 
-  print(io, "insane tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane gbm tree with ", sntn(t), " tips (", snen(t)," extinct)")
+
+
+
+# conversion
+# iTgbm(tree::iT) = 
+#   iTgbm(d1, d2, pe, iμ, false, Float64[], Float64[], Float64[])
+
+# convert(::Type{iTgbm}, x::iT) = iTgbm(x)
+
+
+
+
+
+
+
+

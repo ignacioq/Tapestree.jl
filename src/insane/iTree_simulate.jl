@@ -60,15 +60,15 @@ rexp(r::Float64) = @fastmath randexp()/r
 
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`.
 """
-function sim_cpb(t::Float64, λ::Float64)
+function sim_cpb(t::Float64, λ::Float64, ::Type{T}) where {T <: iTree}
 
   tw = cpb_wait(λ)
 
   if tw > t
-    return iTsimple(t)
+    return T(t)
   end
 
-  iTsimple(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
+  T(sim_cpb(t - tw, λ, T), sim_cpb(t - tw, λ, T), tw)
 end
 
 
@@ -90,18 +90,21 @@ Return `true` if speciation event
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
 and extinction rate `μ`.
 """
-function sim_cbd(t::Float64, λ::Float64, μ::Float64)
+function sim_cbd(t::Float64, 
+                 λ::Float64, 
+                 μ::Float64, 
+                 ::Type{T}) where {T <: iTree}
 
   tw = cbd_wait(λ, μ)
 
   if tw > t
-    return iTsimple(t)
+    return T(t)
   end
 
   if λorμ(λ, μ)
-    return iTsimple(sim_cbd(t - tw, λ, μ), sim_cbd(t - tw, λ, μ), tw)
+    return T(sim_cbd(t - tw, λ, μ, T), sim_cbd(t - tw, λ, μ, T), tw)
   else
-    return iTsimple(tw, true)
+    return T(tw, true)
   end
 end
 
@@ -113,15 +116,18 @@ end
 
 Simulate constant birth-death in backward time.
 """
-function sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
+function sim_cbd_b(n::Int64, 
+                   λ::Float64, 
+                   μ::Float64, 
+                   ::Type{T}) where {T <: iTree}
 
   nF = Float64(n)
   nI = n
 
   # disjoint trees vector 
-  tv = iTree[]
+  tv = T[]
   for i in Base.OneTo(nI)
-    push!(tv, iTsimple(0.0))
+    push!(tv, iT(0.0))
   end
 
   # start simulation
@@ -138,7 +144,7 @@ function sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
         return tv[nI] 
       else
         j, k = samp2(Base.OneTo(nI))
-        tv[j] = iTsimple(tv[j], tv[k], 0.0)
+        tv[j] = T(tv[j], tv[k], 0.0)
         deleteat!(tv,k)
         nI -= 1
         nF -= 1.0
@@ -147,7 +153,7 @@ function sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
     else
       nI += 1
       nF += 1.0
-      push!(tv, iTsimple(0.0, true))
+      push!(tv, T(0.0, true))
     end
   end
 end
@@ -161,13 +167,17 @@ end
 Simulate constant birth-death in backward time conditioned on extinction 
 and not having a greater tree height than `mxth`.
 """
-function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64, maxn::Int64)
+function sim_cbd_b(λ::Float64, 
+                   μ::Float64, 
+                   mxth::Float64, 
+                   maxn::Int64, 
+                   ::Type{T}) where {T <: iTree}
 
   nF = 1.0
   nI = 1
 
   # disjoint trees vector 
-  tv = [iTsimple(0.0, true)]
+  tv = [T(0.0, true)]
 
   th = 0.0
 
@@ -196,7 +206,7 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64, maxn::Int64)
         return tv[nI], th
       else
         j, k = samp2(Base.OneTo(nI))
-        tv[j] = iTsimple(tv[j], tv[k], 0.0)
+        tv[j] = T(tv[j], tv[k], 0.0)
         deleteat!(tv,k)
         nI -= 1
         nF -= 1.0
@@ -205,7 +215,7 @@ function sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64, maxn::Int64)
     else
       nI += 1
       nF += 1.0
-      push!(tv, iTsimple(0.0, true))
+      push!(tv, T(0.0, true))
     end
   end
 end

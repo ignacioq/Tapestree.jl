@@ -91,7 +91,9 @@ tf(id::iDir) = getproperty(id, :tf)
 
 Make `iDir` vector for an `iTree`.
 """
-function makeiDir!(tree::iTree, idv ::Array{iDir,1}, bit::BitArray{1})
+function makeiDir!(tree::T, 
+                   idv ::Array{iDir,1}, 
+                   bit ::BitArray{1}) where {T <: iTree} 
 
   push!(idv, iDir(bit, 0, treeheight(tree), treeheight(tree) - pe(tree)))
 
