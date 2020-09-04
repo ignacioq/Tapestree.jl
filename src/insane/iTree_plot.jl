@@ -13,6 +13,111 @@ Created 07 07 2020
 
 
 """
+    rplottree_gbm(tree::iTgbm, 
+                  xc  ::Float64, 
+                  yr  ::UnitRange{Int64},
+                  x   ::Array{Float64,1}, 
+                  y   ::Array{Float64,1})
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function rplottree(tree::iTgbm, 
+                   xc  ::Float64, 
+                   yr  ::UnitRange{Int64},
+                   zfun::Function,
+                   x   ::Array{Float64,1}, 
+                   y   ::Array{Float64,1},
+                   z   ::Array{Float64,1})
+
+  # add horizontal lines
+  xv  = ts(tree)
+  yc  = Float64(yr[1] + yr[end])/2.0
+  zv  = zfun(tree)
+  lts = lastindex(xv)
+  for i in Base.OneTo(lts)
+    push!(x, xc - xv[i])
+    push!(y, yc)
+    push!(z, zv[i])
+  end
+
+  # push!(x, NaN)
+  # push!(y, NaN)
+  # push!(z, NaN)
+
+  if !istip(tree)
+    ntip1 = sntn(tree.d1)
+    ntip2 = sntn(tree.d2)
+
+    yr1 = yr[1:ntip1]
+    yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+
+    xcmpe = xc - pe(tree)
+    # add vertical lines
+    push!(x, xcmpe, xcmpe)
+    push!(y, Float64(yr1[1] + yr1[end])/2.0, 
+             Float64(yr2[1] + yr2[end])/2.0)
+    push!(z, z[end-1])
+    push!(z, z[end-2])
+
+    # push!(x, NaN)
+    # push!(y, NaN)
+    # push!(z, NaN)
+
+    rplottree(tree.d1, xcmpe, yr1, zfun, x, y, z)
+    rplottree(tree.d2, xcmpe, yr2, zfun, x, y, z)
+  end
+
+end
+
+
+
+
+"""
+    function f(tree::iTgbm, cfun::Function)
+
+Recipe for plotting a Type `iTgbm`.
+"""
+@recipe function f(tree::iTgbm, zfun::Function)
+
+  x = Float64[]
+  y = Float64[]
+  z = Float64[]
+  rplottree(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
+  pop!(x)
+  pop!(y)
+  pop!(z)
+
+  # plot defaults
+  line_z          --> z
+  linecolor       --> :inferno
+  legend          --> :none
+  colorbar        --> true
+  xguide          --> "time"
+  fontfamily      --> font(2, "Helvetica")
+  xlims           --> (0, treeheight(tree))
+  ylims           --> (0, sntn(tree)+1)
+  xflip           --> true
+  xtickfont       --> font(8, "Helvetica")
+  grid            --> :off
+  xtick_direction --> :out
+  yshowaxis       --> false
+
+  # nan_inds = findall(x -> isnan(x),z)
+  # for i in eachindex(nan_inds)
+  #     start = 1 + (i == 1 ? 0 : nan_inds[i - 1])
+  #     stop = nan_inds[i] - 1
+  #     @series begin
+  #         line_z --> z[start:stop]
+  #         x[start:stop], y[start:stop]
+  #     end
+  # end
+  return x, y
+end
+
+
+
+
+"""
     rplottree(tree::T, 
               xc  ::Float64, 
               yr  ::UnitRange{Int64},
@@ -45,8 +150,8 @@ function rplottree(tree::T,
 
     # add vertical lines
     push!(x, xc, xc)
-    push!(y, (yr1[1] + yr1[end])/2.0)
-    push!(y, (yr2[1] + yr2[end])/2.0)
+    push!(y, Float64(yr1[1] + yr1[end])/2.0)
+    push!(y, Float64(yr2[1] + yr2[end])/2.0)
     push!(x, NaN)
     push!(y, NaN)
 
@@ -69,7 +174,7 @@ Recipe for plotting a Type `iTree`.
   x = Float64[]
   y = Float64[]
   rplottree(tree, treeheight(tree), 1:sntn(tree), x, y)
-  
+
   # plot defaults
   legend          --> false
   xguide          --> "time"
