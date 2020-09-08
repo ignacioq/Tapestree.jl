@@ -1,6 +1,6 @@
 #=
 
-birth-death simulation
+constant birth-death simulation
 
 Ignacio Quintero Mächler
 
@@ -34,16 +34,6 @@ cbd_wait(λ::Float64, μ::Float64) = rexp(λ + μ)
 
 
 
-"""
-    cpb_wait(λ::Float64)
-
-Sample a per-lineage waiting time for pure-birth species 
-with speciation rate `λ`.
-"""
-cpb_wait(λ::Float64) = rexp(λ)
-
-
-
 
 """
     rexp(r::Float64)
@@ -51,25 +41,6 @@ cpb_wait(λ::Float64) = rexp(λ)
 Generate an exponential sample with rate `r`.
 """
 rexp(r::Float64) = @fastmath randexp()/r
-
-
-
-
-"""
-  sim_cpb(t::Float64, λ::Float64)
-
-Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`.
-"""
-function sim_cpb(t::Float64, λ::Float64, ::Type{T}) where {T <: iTree}
-
-  tw = cpb_wait(λ)
-
-  if tw > t
-    return T(t)
-  end
-
-  T(sim_cpb(t - tw, λ, T), sim_cpb(t - tw, λ, T), tw)
-end
 
 
 
@@ -164,7 +135,7 @@ end
 """
     sim_cbd_b(λ::Float64, μ::Float64, mxth::Float64)
 
-Simulate constant birth-death in backward time conditioned on extinction 
+Simulate constant birth-death in backward time conditioned on 1 survival 
 and not having a greater tree height than `mxth`.
 """
 function sim_cbd_b(λ::Float64, 

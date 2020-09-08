@@ -1,6 +1,6 @@
 #=
 
-Anagenetic GBM birth-death likelihoods
+GBM birth-death likelihood
 
 Ignacio Quintero Mächler
 
