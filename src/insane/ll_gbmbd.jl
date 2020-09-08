@@ -13,13 +13,13 @@ Created 03 09 2020
 
 
 """
-    llik_gbmbd(tree::iTgbm, 
+    llik_gbm(tree::iTgbm, 
              σ_λ ::Float64, 
              σ_μ ::Float64)
 
 Returns the log-likelihood for a `iTgbm` according to GBM birth-death.
 """
-function llik_gbmbd(tree::iTgbm, 
+function llik_gbm(tree::iTgbm, 
                   σ_λ ::Float64, 
                   σ_μ ::Float64)
 
@@ -28,11 +28,11 @@ function llik_gbmbd(tree::iTgbm,
   lμb = lμ(tree)
 
   if istip(tree) 
-    ll_gbmbd_b(tsb, lλb, lμb, σ_λ, σ_μ) + (isextinct(tree) ? lμb[end] : 0.0)
+    ll_gbm_b(tsb, lλb, lμb, σ_λ, σ_μ) + (isextinct(tree) ? lμb[end] : 0.0)
   else
-    ll_gbmbd_b(tsb, lλb, lμb, σ_λ, σ_μ)  + (2.0*lλb[end])
-    llik_gbmbd(tree.d1::iTgbm, σ_λ, σ_μ) + 
-    llik_gbmbd(tree.d2::iTgbm, σ_λ, σ_μ)
+    ll_gbm_b(tsb, lλb, lμb, σ_λ, σ_μ)  + (2.0*lλb[end])
+    llik_gbm(tree.d1::iTgbm, σ_λ, σ_μ) + 
+    llik_gbm(tree.d2::iTgbm, σ_λ, σ_μ)
   end
 end
 
@@ -40,7 +40,7 @@ end
 
 
 """
-    ll_gbmbd_b(t  ::Array{Float64,1},
+    ll_gbm_b(t  ::Array{Float64,1},
              lλv::Array{Float64,1},
              lμv::Array{Float64,1},
              σ_λ::Float64,
@@ -48,7 +48,7 @@ end
 
 Returns the log-likelihood for a branch according to GBM birth-death.
 """
-function ll_gbmbd_b(t  ::Array{Float64,1},
+function ll_gbm_b(t  ::Array{Float64,1},
                   lλv::Array{Float64,1},
                   lμv::Array{Float64,1},
                   σ_λ::Float64,

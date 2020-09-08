@@ -16,5 +16,14 @@ Created 03 09 2020
 An abstract type for all composite recursive types 
 representing a binary phylogenetic tree for `insane` use
 """
-
 abstract type iTree end
+
+
+"""
+    iTgbm
+
+An abstract type for all composite recursive types 
+representing a binary phylogenetic tree with Geometric
+Brownian motion rates for `insane` use
+"""
+abstract type iTgbm <: iTree end

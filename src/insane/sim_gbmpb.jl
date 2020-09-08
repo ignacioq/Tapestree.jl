@@ -1,19 +1,9 @@
-#=
-
-Anagenetic GBM birth-death Simulation
-
-Ignacio Quintero Mächler
-
-t(-_-t)
-
-Created 03 09 2020
-=#
 
 
 
 
 """
-    sim_gbm(t   ::Float64,
+    sim_gbmpb(t   ::Float64,
                  λt  ::Float64,
                  μt  ::Float64,
                  σ_λ ::Float64,
@@ -23,7 +13,7 @@ Created 03 09 2020
 
 Simulate `iTree` according to a geometric Brownian motion.
 """
-function sim_gbm(t   ::Float64,
+function sim_gbmpb(t   ::Float64,
                  λt  ::Float64,
                  μt  ::Float64,
                  σ_λ ::Float64,
@@ -58,8 +48,8 @@ function sim_gbm(t   ::Float64,
     if divev(λm, μm, dt)
       # if speciation
       if λorμ(λm, μm)
-        return iTgbm(sim_gbm(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
-                     sim_gbm(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
+        return iTgbm(sim_gbmpb(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
+                     sim_gbmpb(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
                 bt, false, false, ts, λv, μv)
       # if extinction
       else
@@ -111,6 +101,4 @@ avg2(x1::Float64, x2::Float64) = (x1 + x2)*0.5
 Geometric average for two numbers.
 """
 geoavg2(x1::Float64, x2::Float64) = sqrt(x1*x2)
-
-
 
