@@ -262,11 +262,11 @@ end
 
 
 """
-    ts(tree::iTgbm)
+    ts(tree::T) where {T <: iTgbm} 
 
 Return pendant edge.
 """
-ts(tree::iTgbm) = getproperty(tree,:ts)
+ts(tree::T) where {T <: iTgbm} = getproperty(tree,:ts)
 
 """
     pe(tree::iTree)
@@ -279,11 +279,11 @@ ts(::Nothing) = 0.0
 
 
 """
-    lλ(tree::iTgbm)
+    lλ(tree::T) where {T <: iTgbm}
 
 Return pendant edge.
 """
-lλ(tree::iTgbm) = getproperty(tree,:lλ)
+lλ(tree::T) where {T <: iTgbm} = getproperty(tree,:lλ)
 
 """
     pe(tree::iTree)
@@ -300,7 +300,7 @@ lλ(::Nothing) = 0.0
 
 Return pendant edge.
 """
-lμ(tree::iTgbm) = getproperty(tree,:lμ)
+lμ(tree::iTgbmbd) = getproperty(tree,:lμ)
 
 """
     pe(tree::iTree)

@@ -17,7 +17,7 @@ Created 03 09 2020
 
 
 """
-    sim_gbmbd(t   ::Float64,
+    sim_gbm(t   ::Float64,
                  λt  ::Float64,
                  μt  ::Float64,
                  σ_λ ::Float64,
@@ -27,13 +27,13 @@ Created 03 09 2020
 
 Simulate `iTree` according to a geometric Brownian motion.
 """
-function sim_gbmbd(t   ::Float64,
-                 λt  ::Float64,
-                 μt  ::Float64,
-                 σ_λ ::Float64,
-                 σ_μ ::Float64,
-                 dt  ::Float64,
-                 srdt::Float64)
+function sim_gbm(t   ::Float64,
+                   λt  ::Float64,
+                   μt  ::Float64,
+                   σ_λ ::Float64,
+                   σ_μ ::Float64,
+                   dt  ::Float64,
+                   srdt::Float64)
 
   λv = Float64[λt]
   μv = Float64[μt]
@@ -53,7 +53,7 @@ function sim_gbmbd(t   ::Float64,
     push!(ts, bt)
 
     if 0.0 > t - dt
-      return iTgbm(nothing, nothing, bt, false, false, ts, λv, μv)
+      return iTgbmbd(nothing, nothing, bt, false, false, ts, λv, μv)
     end
 
     λm = geoavg2(λt, λt1)
@@ -62,12 +62,12 @@ function sim_gbmbd(t   ::Float64,
     if divev(λm, μm, dt)
       # if speciation
       if λorμ(λm, μm)
-        return iTgbm(sim_gbmbd(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
-                     sim_gbmbd(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
+        return iTgbmbd(sim_gbm(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
+                       sim_gbm(t, λt1, μt1, σ_λ, σ_μ, dt, srdt), 
                 bt, false, false, ts, λv, μv)
       # if extinction
       else
-        return iTgbm(nothing, nothing, bt, true, false, ts, λv, μv)
+        return iTgbmbd(nothing, nothing, bt, true, false, ts, λv, μv)
       end
     end
 

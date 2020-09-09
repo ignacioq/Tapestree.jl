@@ -12,16 +12,19 @@ Created 07 07 2020
 
 
 
+
 """
-    rplottree_gbm(tree::iTgbm, 
-                  xc  ::Float64, 
-                  yr  ::UnitRange{Int64},
-                  x   ::Array{Float64,1}, 
-                  y   ::Array{Float64,1})
+    rplottree!(tree::iTgbm, 
+               xc  ::Float64, 
+               yr  ::UnitRange{Int64},
+               zfun::Function,
+               x   ::Array{Float64,1}, 
+               y   ::Array{Float64,1},
+               z   ::Array{Float64,1})
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function rplottree(tree::iTgbm, 
+function rplottree!(tree::iTgbm, 
                    xc  ::Float64, 
                    yr  ::UnitRange{Int64},
                    zfun::Function,
@@ -31,8 +34,8 @@ function rplottree(tree::iTgbm,
 
   # add horizontal lines
   xv  = ts(tree)
-  yc  = Float64(yr[1] + yr[end])/2.0
-  zv  = zfun(tree)
+  yc  = Float64(yr[1] + yr[end])*0.5
+  zv  = exp.(zfun(tree))
   lts = lastindex(xv)
   for i in Base.OneTo(lts)
     push!(x, xc - xv[i])
@@ -54,8 +57,8 @@ function rplottree(tree::iTgbm,
     xcmpe = xc - pe(tree)
     # add vertical lines
     push!(x, xcmpe, xcmpe)
-    push!(y, Float64(yr1[1] + yr1[end])/2.0, 
-             Float64(yr2[1] + yr2[end])/2.0)
+    push!(y, Float64(yr1[1] + yr1[end])*0.5, 
+             Float64(yr2[1] + yr2[end])*0.5)
     push!(z, z[end-1])
     push!(z, z[end-2])
 
@@ -63,8 +66,8 @@ function rplottree(tree::iTgbm,
     # push!(y, NaN)
     # push!(z, NaN)
 
-    rplottree(tree.d1, xcmpe, yr1, zfun, x, y, z)
-    rplottree(tree.d2, xcmpe, yr2, zfun, x, y, z)
+    rplottree!(tree.d1, xcmpe, yr1, zfun, x, y, z)
+    rplottree!(tree.d2, xcmpe, yr2, zfun, x, y, z)
   end
 
 end
@@ -74,7 +77,6 @@ end
 
 """
     function f(tree::iTgbm, cfun::Function)
-
 Recipe for plotting a Type `iTgbm`.
 """
 @recipe function f(tree::iTgbm, zfun::Function)
@@ -82,7 +84,7 @@ Recipe for plotting a Type `iTgbm`.
   x = Float64[]
   y = Float64[]
   z = Float64[]
-  rplottree(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
+  rplottree!(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
   pop!(x)
   pop!(y)
   pop!(z)
@@ -118,15 +120,14 @@ end
 
 
 """
-    rplottree(tree::T, 
+    rplottree!(tree::T, 
               xc  ::Float64, 
               yr  ::UnitRange{Int64},
               x   ::Array{Float64,1}, 
               y   ::Array{Float64,1}) where {T <: iTree}
-
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function rplottree(tree::T, 
+function rplottree!(tree::T, 
                    xc  ::Float64, 
                    yr  ::UnitRange{Int64},
                    x   ::Array{Float64,1}, 
@@ -135,11 +136,9 @@ function rplottree(tree::T,
   # add horizontal lines
   push!(x, xc)
   xc  -= pe(tree)
-  push!(x, xc)
-  yc = (yr[1] + yr[end])/2.0
-  push!(y, yc, yc)
-  push!(x, NaN)
-  push!(y, NaN)
+  push!(x, xc, NaN)
+  yc = (yr[1] + yr[end])*0.5
+  push!(y, yc, yc, NaN)
 
   if !istip(tree)
     ntip1 = sntn(tree.d1)
@@ -149,14 +148,13 @@ function rplottree(tree::T,
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
     # add vertical lines
-    push!(x, xc, xc)
-    push!(y, Float64(yr1[1] + yr1[end])/2.0)
-    push!(y, Float64(yr2[1] + yr2[end])/2.0)
-    push!(x, NaN)
-    push!(y, NaN)
+    push!(x, xc, xc, NaN)
+    push!(y, Float64(yr1[1] + yr1[end])*0.5,
+             Float64(yr2[1] + yr2[end])*0.5,
+             NaN)
 
-    rplottree(tree.d1, xc, yr1, x, y)
-    rplottree(tree.d2, xc, yr2, x, y)
+    rplottree!(tree.d1, xc, yr1, x, y)
+    rplottree!(tree.d2, xc, yr2, x, y)
   end
 
 end
@@ -166,14 +164,13 @@ end
 
 """
     function f(tree::T) where {T <: iTree}
-
 Recipe for plotting a Type `iTree`.
 """
 @recipe function f(tree::T) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
-  rplottree(tree, treeheight(tree), 1:sntn(tree), x, y)
+  rplottree!(tree, treeheight(tree), 1:sntn(tree), x, y)
 
   # plot defaults
   legend          --> false

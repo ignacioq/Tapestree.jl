@@ -64,7 +64,7 @@ iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, pe::Float64) =
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
-  print(io, "insane pb-gbm tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane pb-gbm tree with ", sntn(t), " tips")
 
 
 
