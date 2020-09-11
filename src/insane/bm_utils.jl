@@ -52,6 +52,45 @@ end
 
 
 """
+    bm!(x   ::Array{Float64,1},
+        xi  ::Float64,
+        t   ::Array{Float64,1},
+        σ   ::Float64,
+        srδt::Float64)
+
+Brownian motion simulation function for updating a branch in place.
+"""
+function bm!(x   ::Array{Float64,1},
+             xi  ::Float64,
+             t   ::Array{Float64,1},
+             σ   ::Float64,
+             srδt::Float64)
+
+  @inbounds begin
+    l = lastindex(x)
+
+    randn!(x)
+
+    # for standard δt
+    x[1] = xi
+    @simd for i = Base.OneTo(l-2)
+      x[i+1] *= srδt*σ
+    end
+
+    cumsum!(x, x)
+
+    # for last non-standard δt
+    x[l] = rnorm(x[l-1], sqrt(t[l] - t[l-1])*σ)
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
     bb!(x   ::Array{Float64,1},
         xi  ::Float64,
         xf  ::Float64,
@@ -71,11 +110,15 @@ function bb!(x   ::Array{Float64,1},
   @inbounds begin
     l = lastindex(x)
 
+    randn!(x)
+
     # for standard δt
     x[1] = xi
-    for i = Base.OneTo(l-2)
-      x[i+1] = rnorm(x[i], srδt*σ)
+    @simd for i = Base.OneTo(l-2)
+      x[i+1] *= srδt*σ
     end
+
+    cumsum!(x,x)
 
     # for last non-standard δt
     x[l] = rnorm(x[l-1], sqrt(t[l] - t[l-1])*σ)
@@ -84,7 +127,7 @@ function bb!(x   ::Array{Float64,1},
     ite = 1.0/t[l]
     xdf = (x[l] - xf)
 
-    for i = Base.OneTo(l)
+    @simd for i = Base.OneTo(l)
       x[i] -= (t[i] * ite * xdf)
     end
   end
@@ -104,15 +147,19 @@ Returns a Brownian motion vector starting in `xa`, with diffusion rate
 function sim_bm(xa::Float64, σ::Float64, tsv::Array{Float64,1})
 
   @inbounds begin
-    x    = similar(tsv)
+
+    l = lastindex(tsv)
+    x = randn(l)
     x[1] = xa
-    for i in Base.OneTo(lastindex(x)-1)
-      x[i+1] = rnorm(x[i], sqrt(tsv[i+1] - tsv[i])*σ)
+    @simd for i in Base.OneTo(l-1)
+      x[i+1] *= sqrt(tsv[i+1] - tsv[i])*σ
     end
+    cumsum!(x, x)
   end
 
   return x
 end
+
 
 
 
