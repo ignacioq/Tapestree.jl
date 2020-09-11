@@ -139,22 +139,26 @@ end
 
 
 """
-    sim_bm(xa::Float64, σ::Float64, tsv::Array{Float64,1})
+    sim_bm(xa::Float64, σ::Float64, srδt ::Float64, t::Array{Float64,1})
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
-`σ` and times `tsv`. 
+`σ` and times `t`. 
 """
-function sim_bm(xa::Float64, σ::Float64, tsv::Array{Float64,1})
+function sim_bm(xa::Float64, σ::Float64, srδt::Float64, t::Array{Float64,1})
 
   @inbounds begin
 
-    l = lastindex(tsv)
+    l = lastindex(t)
     x = randn(l)
+    # for standard δt
     x[1] = xa
-    @simd for i in Base.OneTo(l-1)
-      x[i+1] *= sqrt(tsv[i+1] - tsv[i])*σ
+    @simd for i in Base.OneTo(l-2)
+      x[i+1] *= srδt*σ
     end
     cumsum!(x, x)
+
+    # for last non-standard δt
+    x[l] = rnorm(x[l-1], sqrt(t[l] - t[l-1])*σ)
   end
 
   return x
