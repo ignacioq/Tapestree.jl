@@ -85,9 +85,6 @@ Recipe for plotting a Type `iTgbm`.
   y = Float64[]
   z = Float64[]
   rplottree!(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
-  pop!(x)
-  pop!(y)
-  pop!(z)
 
   # plot defaults
   line_z          --> z

@@ -28,15 +28,15 @@ cpb_wait(λ::Float64) = rexp(λ)
 
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`.
 """
-function sim_cpb(t::Float64, λ::Float64, ::Type{T}) where {T <: iTree}
+function sim_cpb(t::Float64, λ::Float64)
 
   tw = cpb_wait(λ)
 
   if tw > t
-    return T(t)
+    return iTpb(t)
   end
 
-  T(sim_cpb(t - tw, λ, T), sim_cpb(t - tw, λ, T), tw)
+  iTpb(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
 end
 
 

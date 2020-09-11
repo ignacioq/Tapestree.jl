@@ -69,8 +69,30 @@ Base.show(io::IO, t::iTgbmpb) =
 
 
 # conversion
-# iTgbmpb(tree::iT) = 
-#   iTgbmpb(d1, d2, pe, iμ, false, Float64[], Float64[], Float64[])
+"""
+    iTgbmpb(tree::iTpb, δt::Float64, lλa::Float64, σλ::Float64)
 
-# convert(::Type{iTgbmpb}, x::iT) = iTgbmpb(x)
+Promotes an `iTpb` to `iTgbmpb` according to some values for `λ` diffusion.
+"""
+function iTgbmpb(tree::iTpb, δt::Float64, lλa::Float64, σλ::Float64)
+
+  # make ts vector
+  pet = pe(tree)
+  tsv = [0.0:δt:pet...]
+  push!(tsv, pet)
+
+  lλv = sim_bm(lλa, σλ, tsv)
+
+  iTgbmpb(iTgbmpb(tree.d1, δt, lλv[end], σλ), 
+          iTgbmpb(tree.d2, δt, lλv[end], σλ),
+          pet, tsv, lλv)
+
+end
+
+"""
+    iTgbmpb(::Nothing, δt::Float64, lλa::Float64, σλ::Float64)
+
+Promotes an `iTpb` to `iTgbmpb` according to some values for `λ` diffusion.
+"""
+iTgbmpb(::Nothing, δt::Float64, lλa::Float64, σλ::Float64) = nothing
 

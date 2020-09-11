@@ -1,6 +1,6 @@
 #=
 
-insane tree structure
+insane tree structure for birth-death
 
 Ignacio Quintero Mächler
 
@@ -13,9 +13,9 @@ Created 25 06 2020
 
 
 """
-    iT
+    iTbd
 
-The simplest composite recursive type of supertype `iTree` 
+The simplest composite recursive type of supertype `iTbdree` 
 representing a binary phylogenetic tree for `insane` use, 
 with the following fields:
 
@@ -24,44 +24,44 @@ with the following fields:
   pe: pendant edge
   iμ: is an extinction node
 
-    iT()
+    iTbd()
 
-Constructs an empty `iT` object.
+Constructs an empty `iTbd` object.
 
-    iT(pe::Float64)
+    iTbd(pe::Float64)
 
-Constructs an empty `iT` object with pendant edge `pe`.
+Constructs an empty `iTbd` object with pendant edge `pe`.
 
-    iT(d1::iT, d2::iT, pe::Float64)
+    iTbd(d1::iTbd, d2::iTbd, pe::Float64)
 
-Constructs an `iT` object with two `iT` daughters and pendant edge `pe`.
+Constructs an `iTbd` object with two `iTbd` daughters and pendant edge `pe`.
 """
-mutable struct iT <: iTree
-  d1::Union{iT, Nothing}
-  d2::Union{iT, Nothing}
+mutable struct iTbd <: iT
+  d1::Union{iTbd, Nothing}
+  d2::Union{iTbd, Nothing}
   pe::Float64
   iμ::Bool
   fx::Bool
 
   # inner constructor
-  iT(d1::Union{iT, Nothing}, d2::Union{iT, Nothing}, 
+  iTbd(d1::Union{iTbd, Nothing}, d2::Union{iTbd, Nothing}, 
     pe::Float64, iμ::Bool, fx::Bool) = new(d1, d2, pe, iμ, fx)
 end
 
 # outer constructors
-iT() = iT(nothing, nothing, 0.0, false, false)
+iTbd() = iTbd(nothing, nothing, 0.0, false, false)
 
-iT(pe::Float64) = iT(nothing, nothing, pe, false, false)
+iTbd(pe::Float64) = iTbd(nothing, nothing, pe, false, false)
 
-iT(pe::Float64, iμ::Bool) = iT(nothing, nothing, pe, iμ, false)
+iTbd(pe::Float64, iμ::Bool) = iTbd(nothing, nothing, pe, iμ, false)
 
-iT(d1::iT, d2::iT, pe::Float64) = iT(d1, d2, pe, false, false)
+iTbd(d1::iTbd, d2::iTbd, pe::Float64) = iTbd(d1, d2, pe, false, false)
 
-iT(d1::iT, d2::iT, pe::Float64, iμ::Bool) = 
-  iT(d1, d2, pe, iμ, false)
+iTbd(d1::iTbd, d2::iTbd, pe::Float64, iμ::Bool) = 
+  iTbd(d1, d2, pe, iμ, false)
 
 # pretty-printing
-Base.show(io::IO, t::iT) = 
-  print(io, "insane simple tree with ", sntn(t), " tips (", snen(t)," extinct)")
+Base.show(io::IO, t::iTbd) = 
+  print(io, "insane simple birth-death tree with ", sntn(t), " tips (", snen(t)," extinct)")
 
   

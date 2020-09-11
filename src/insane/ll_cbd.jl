@@ -42,18 +42,18 @@ end
 
 
 """
-    llik_cbd(tree::T, λ::Float64, μ::Float64) where {T <: iTree}
+    llik_cbd(tree::iTbd, λ::Float64, μ::Float64)
 
 Log-likelihood up to a constant for constant birth-death 
 given a complete `iTree` recursively.
 """
-function llik_cbd(tree::T, λ::Float64, μ::Float64) where {T <: iTree}
+function llik_cbd(tree::iTbd, λ::Float64, μ::Float64)
   if istip(tree) 
     - pe(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
   else
     log(2.0*λ) - pe(tree)*(λ + μ) +
-    llik_cbd(tree.d1::T, λ, μ) + 
-    llik_cbd(tree.d2::T, λ, μ)
+    llik_cbd(tree.d1::iTbd, λ, μ) + 
+    llik_cbd(tree.d2::iTbd, λ, μ)
   end
 end
 
@@ -61,7 +61,7 @@ end
 
 
 """
-     stree_ll_cbd(tree::T,
+     stree_ll_cbd(tree::iTbd,
                   ll  ::Float64, 
                   λc  ::Float64, 
                   μc  ::Float64,
@@ -69,12 +69,12 @@ end
                   ldr ::Int64,
                   wpr ::Int64,
                   ix  ::Int64, 
-                  px  ::Int64) where {T <: iTree}
+                  px  ::Int64)
 
 Return the Log-likelihood under constant birth-death 
 of a grafted subtree determined by `dri`. 
 """
-function stree_ll_cbd(tree::T,
+function stree_ll_cbd(tree::iTbd,
                       ll  ::Float64, 
                       λc  ::Float64, 
                       μc  ::Float64,
@@ -82,42 +82,42 @@ function stree_ll_cbd(tree::T,
                       ldr ::Int64,
                       wpr ::Int64,
                       ix  ::Int64, 
-                      px  ::Int64) where {T <: iTree}
+                      px  ::Int64)
 
   if ix == ldr
     if px == wpr
-      if isfix(tree.d1::T)
-        ll += llik_cbd(tree.d2::T, λc, μc)
-      elseif isfix(tree.d2::T)
-        ll += llik_cbd(tree.d1::T, λc, μc)
+      if isfix(tree.d1::iTbd)
+        ll += llik_cbd(tree.d2::iTbd, λc, μc)
+      elseif isfix(tree.d2::iTbd)
+        ll += llik_cbd(tree.d1::iTbd, λc, μc)
       end
     else
       px += 1
-      if isfix(tree.d1::T)
+      if isfix(tree.d1::iTbd)
         ll += 
-          stree_ll_cbd(tree.d1::T, ll, λc, μc, dri, ldr, wpr, ix, px)
+          stree_ll_cbd(tree.d1::iTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
       else
         ll +=
-          stree_ll_cbd(tree.d2::T, ll, λc, μc, dri, ldr, wpr, ix, px)
+          stree_ll_cbd(tree.d2::iTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
       end
     end
   elseif ix < ldr
-    ifx1 = isfix(tree.d1::T)
-    if ifx1 && isfix(tree.d2::T)
+    ifx1 = isfix(tree.d1::iTbd)
+    if ifx1 && isfix(tree.d2::iTbd)
       ix += 1
       if dri[ix]
         ll += 
-          stree_ll_cbd(tree.d1::T, ll, λc, μc, dri, ldr, wpr, ix, px)
+          stree_ll_cbd(tree.d1::iTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
       else
         ll += 
-          stree_ll_cbd(tree.d2::T, ll, λc, μc, dri, ldr, wpr, ix, px)
+          stree_ll_cbd(tree.d2::iTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
       end
     elseif ifx1
       ll += 
-        stree_ll_cbd(tree.d1::T, ll, λc, μc, dri, ldr, wpr, ix, px)
+        stree_ll_cbd(tree.d1::iTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
     else
       ll +=
-        stree_ll_cbd(tree.d2::T, ll, λc, μc, dri, ldr, wpr, ix, px)
+        stree_ll_cbd(tree.d2::iTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
     end
   end
 

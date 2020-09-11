@@ -15,7 +15,7 @@ Created 07 07 2020
 """
     read_newick(in_file::String, ::Type{T}) where {T <: iTree} 
 
-Readsa newick tree into `iTsimple` from `in_file`.
+Reads a newick tree into `iTsimple` from `in_file`.
 """
 function read_newick(in_file::String, ::Type{T}) where {T <: iTree} 
 
