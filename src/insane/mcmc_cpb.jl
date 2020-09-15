@@ -185,6 +185,8 @@ end
 
 
 
+
+
 """
   write_ssr(R       ::Array{Float64,2}, 
             pardic  ::Dict{String,Int64},

@@ -114,6 +114,64 @@ end
 
 
 """
+    make_inodes(idv::Array{iDir, 1})
+
+Return all the internal node indices for a given `iDir` vector and a vector
+that is true for which ever daughter is a tip.
+"""
+function make_inodes(idv::Array{iDir, 1})
+
+  inodes   = Int64[]
+  terminus = BitArray{1}[]
+
+  for i in 1:length(idv)
+    pr  = i
+    drpr = dr(idv[i])
+    drd1 = push!(copy(drpr), true)
+    drd2 = push!(copy(drpr), false)
+
+    # d1
+    d1 = findfirst(x -> dr(x) == drd1, idv)
+    # d2
+    d2 = findfirst(x -> dr(x) == drd2, idv) 
+
+    if !isnothing(d1) && !isnothing(d2)
+      push!(inodes, pr)
+
+      bit = BitArray{1}([false, false])
+
+      # check if either of the tips are terminal
+      drd11 = push!(copy(drd1), true)
+      drd12 = push!(copy(drd1), false)
+      # d1
+      d11 = findfirst(x -> dr(x) == drd11, idv)
+      # d2
+      d12 = findfirst(x -> dr(x) == drd12, idv) 
+
+      if isnothing(d11) && isnothing(d12) 
+        bit[1] = true
+      end
+
+      drd21 = push!(copy(drd2), true)
+      drd22 = push!(copy(drd2), false)
+      # d1
+      d21 = findfirst(x -> dr(x) == drd21, idv)
+      # d2
+      d22 = findfirst(x -> dr(x) == drd22, idv) 
+
+      if isnothing(d21) && isnothing(d22) 
+        bit[2] = true
+      end
+      push!(terminus, bit)
+    end
+  end
+
+  return inodes, terminus
+end
+
+
+
+"""
     make_triads(idv::Array{iDir, 1})
 
 Return parent and two daughter indices for a given `iDir` vector and a vector
@@ -168,5 +226,3 @@ function make_triads(idv::Array{iDir, 1})
 
   return triads, terminus
 end
-
-
