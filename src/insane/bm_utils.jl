@@ -15,15 +15,15 @@ Created 10 09 2020
 """
     ll_bm(t ::Array{Float64,1},
           x ::Array{Float64,1},
-          σ²::Float64, 
+          σ ::Float64, 
           δt::Float64)
 
 Returns the log-likelihood for a brownian motion.
 """
 function ll_bm(t ::Array{Float64,1},
                x ::Array{Float64,1},
-               σ²::Float64, 
-               δt::Float64)
+               σ ::Float64, 
+               srδt::Float64)
  @inbounds begin
 
     # estimate standard `δt` likelihood
@@ -38,11 +38,11 @@ function ll_bm(t ::Array{Float64,1},
     end
 
     # add to global likelihood
-    ll *= (-1.0/(2.0*σ²*δt))
-    ll -= 0.5*Float64(nI)*log(σ²*δt)
+    ll *= (-0.5/((σ*srδt)^2))
+    ll -= Float64(nI)*log(σ*srδt)
 
     # add final non-standard `δt`
-    ll += logdnorm_tc(x[nI+2], x[nI+1], (t[nI+2] - t[nI+1])*σ²)
+    ll += logdnorm_tc(x[nI+2], x[nI+1], sqrt(t[nI+2] - t[nI+1])*σ)
   end
 
   return ll
@@ -172,18 +172,18 @@ end
            xd2::Float64,
            td1::Float64, 
            td2::Float64,
-           σ² ::Float64)
+           σ  ::Float64)
 
 Proposal for a duo of Gaussians.
 """
 function duoprop(xd1::Float64,
-                xd2::Float64,
-                td1::Float64, 
-                td2::Float64,
-                σ² ::Float64)
+                 xd2::Float64,
+                 td1::Float64, 
+                 td2::Float64,
+                 σ  ::Float64)
   invt = 1.0/(td1 + td2)
   return rnorm((td2 * invt * xd1 + td1 * invt * xd2),
-               sqrt(td1 * td2 * invt * σ²))
+               sqrt(td1 * td2 * invt)*σ)
 end
 
 
@@ -196,7 +196,7 @@ end
             tpr::Float64, 
             td1::Float64, 
             td2::Float64,
-            σ² ::Float64)
+            σ  ::Float64)
 
 Proposal for a trio of Gaussians.
 """
@@ -206,10 +206,10 @@ function trioprop(xpr::Float64,
                  tpr::Float64, 
                  td1::Float64, 
                  td2::Float64,
-                 σ² ::Float64)
+                 σ  ::Float64)
 
     t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
     return rnorm((xpr/tpr + xd1/td1 + xd2/td2)*t,
-                 sqrt(t*σ²))
+                 sqrt(t)*σ)
 end
 

@@ -83,14 +83,15 @@ function iTgbmpb(tree::iTpb,
   # make ts vector
   pet = pe(tree)
   tsv = [0.0:δt:pet...]
-  push!(tsv, pet)
+  if tsv[end] != pet
+    push!(tsv, pet)
+  end
 
   lλv = sim_bm(lλa, σλ, srδt, tsv)
 
   iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[end], σλ), 
           iTgbmpb(tree.d2, δt, srδt, lλv[end], σλ),
           pet, tsv, lλv)
-
 end
 
 """
@@ -100,4 +101,6 @@ Promotes an `iTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
 iTgbmpb(::Nothing, δt::Float64, srδt::Float64, lλa::Float64, σλ::Float64) = 
   nothing
+
+
 
