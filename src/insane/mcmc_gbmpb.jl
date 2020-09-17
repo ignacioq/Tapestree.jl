@@ -382,31 +382,35 @@ function triad_lλupdate_noded12!(treec::iTgbmpb,
   td1v = ts(treec.d1)
   td2v = ts(treec.d2)
 
+  # make sigma proposal
+  σλϕ = randexp()
+
   # fill with Brownian motion
-  bm!(λprv_p, λpr, tprv, σλ, srδt)
+  bm!(λprv_p, λpr, tprv, σλϕ, srδt)
   lλp = λprv_p[end]
-  bm!(λd1v_p, lλp, td1v, σλ, srδt)
-  bm!(λd2v_p, lλp, td2v, σλ, srδt)
+  bm!(λd1v_p, lλp, td1v, σλϕ, srδt)
+  bm!(λd2v_p, lλp, td2v, σλϕ, srδt)
 
   ## make acceptance ratio 
-  # estimate likelihoods separately
-  llbmprp,llpbprp = ll_gbm_b_sep(tprv, λprv_p, σλ, δt, srδt)
-  llbmd1p,llpbd1p = ll_gbm_b_sep(td1v, λd1v_p, σλ, δt, srδt)
-  llbmd2p,llpbd2p = ll_gbm_b_sep(td2v, λd2v_p, σλ, δt, srδt)
-  llbmprc,llpbprc = ll_gbm_b_sep(tprv, λprv_c, σλ, δt, srδt)
-  llbmd1c,llpbd1c = ll_gbm_b_sep(td1v, λd1v_c, σλ, δt, srδt)
-  llbmd2c,llpbd2c = ll_gbm_b_sep(td2v, λd2v_c, σλ, δt, srδt)
+  # estimate likelihoods
+  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
+        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
+        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
+        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
+        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
+        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
+        2.0*lλp - 2.0*λd1v_c[1]
 
-  # speciation likelihood ratio
-  λlr = 2.0*lλp - 2.0*λd1v_c[1]
+  # proposal ratio
+  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
+          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
+          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
+          ll_bm(λprv_p, tprv, σλϕ, srδt) -
+          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
+          ll_bm(λd2v_p, td2v, σλϕ, srδt)
 
-  # likelihood ratio
-  llr = llbmprp + llpbprp + llbmd1p + llpbd1p + llbmd2p + llpbd2p -
-        llbmprc - llpbprc - llbmd1c - llpbd1c - llbmd2c - llpbd2c +
-        λlr
   # acceptance ratio
-  acr = llpbprp + llpbd1p + llpbd2p -
-        llpbprc - llpbd1c - llpbd2c + λlr
+  acr = llr + propr
 
   if -randexp() < acr
     llc += llr
@@ -454,33 +458,36 @@ function triad_lλupdate_noded1!(treec::iTgbmpb,
   td1v = ts(treec.d1)
   td2v = ts(treec.d2)
 
-  # node proposal
-  lλp = duoprop(λpr, λd2, pe(treec), pe(treec.d2), σλ)
+  # make sigma proposal
+  σλϕ = randexp()
 
-  bb!(λprv_p, λpr, lλp, tprv, σλ, srδt)
-  bm!(λd1v_p, lλp, td1v, σλ, srδt)
-  bb!(λd2v_p, lλp, λd2, td2v, σλ, srδt)
+  # node proposal
+  lλp = duoprop(λpr, λd2, pe(treec), pe(treec.d2), σλϕ)
+
+  bb!(λprv_p, λpr, lλp, tprv, σλϕ, srδt)
+  bm!(λd1v_p, lλp, td1v, σλϕ, srδt)
+  bb!(λd2v_p, lλp, λd2, td2v, σλϕ, srδt)
 
   ## make acceptance ratio 
-  # estimate likelihoods separately
-  llbmprp,llpbprp = ll_gbm_b_sep(tprv, λprv_p, σλ, δt, srδt)
-  llbmd1p,llpbd1p = ll_gbm_b_sep(td1v, λd1v_p, σλ, δt, srδt)
-  llbmd2p,llpbd2p = ll_gbm_b_sep(td2v, λd2v_p, σλ, δt, srδt)
-  llbmprc,llpbprc = ll_gbm_b_sep(tprv, λprv_c, σλ, δt, srδt)
-  llbmd1c,llpbd1c = ll_gbm_b_sep(td1v, λd1v_c, σλ, δt, srδt)
-  llbmd2c,llpbd2c = ll_gbm_b_sep(td2v, λd2v_c, σλ, δt, srδt)
+  # estimate likelihoods
+  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
+        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
+        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
+        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
+        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
+        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
+        2.0*lλp - 2.0*λd1v_c[1]
 
-  # speciation likelihood ratio
-  λlr = 2.0*lλp - 2.0*λd1v_c[1]
-
-  # likelihood ratio
-  llr = llbmprp + llpbprp + llbmd1p + llpbd1p + llbmd2p + llpbd2p -
-        llbmprc - llpbprc - llbmd1c - llpbd1c - llbmd2c - llpbd2c +
-        λlr
+  # proposal ratio
+  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
+          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
+          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
+          ll_bm(λprv_p, tprv, σλϕ, srδt) -
+          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
+          ll_bm(λd2v_p, td2v, σλϕ, srδt)
 
   # acceptance ratio
-  acr = llpbprp + llpbd1p + llpbd2p -
-        llpbprc - llpbd1c - llpbd2c + λlr
+  acr = llr + propr
 
   if -randexp() < acr
     llc += llr
@@ -528,33 +535,36 @@ function triad_lλupdate_noded2!(treec::iTgbmpb,
   td1v = ts(treec.d1)
   td2v = ts(treec.d2)
 
-  # node proposal
-  lλp = duoprop(λpr, λd1, pe(treec), pe(treec.d1), σλ)
+  # make sigma proposal
+  σλϕ = randexp()
 
-  bb!(λprv_p, λpr, lλp, tprv, σλ, srδt)
-  bb!(λd1v_p, lλp, λd1, td1v, σλ, srδt)
-  bm!(λd2v_p, lλp, td2v, σλ, srδt)
+  # node proposal
+  lλp = duoprop(λpr, λd1, pe(treec), pe(treec.d1), σλϕ)
+
+  bb!(λprv_p, λpr, lλp, tprv, σλϕ, srδt)
+  bb!(λd1v_p, lλp, λd1, td1v, σλϕ, srδt)
+  bm!(λd2v_p, lλp, td2v, σλϕ, srδt)
 
   ## make acceptance ratio 
-  # estimate likelihoods separately
-  llbmprp,llpbprp = ll_gbm_b_sep(tprv, λprv_p, σλ, δt, srδt)
-  llbmd1p,llpbd1p = ll_gbm_b_sep(td1v, λd1v_p, σλ, δt, srδt)
-  llbmd2p,llpbd2p = ll_gbm_b_sep(td2v, λd2v_p, σλ, δt, srδt)
-  llbmprc,llpbprc = ll_gbm_b_sep(tprv, λprv_c, σλ, δt, srδt)
-  llbmd1c,llpbd1c = ll_gbm_b_sep(td1v, λd1v_c, σλ, δt, srδt)
-  llbmd2c,llpbd2c = ll_gbm_b_sep(td2v, λd2v_c, σλ, δt, srδt)
+  # estimate likelihoods
+  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
+        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
+        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
+        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
+        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
+        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
+        2.0*lλp - 2.0*λd1v_c[1]
 
-  # speciation likelihood ratio
-  λlr = 2.0*lλp - 2.0*λd1v_c[1]
-
-  # likelihood ratio
-  llr = llbmprp + llpbprp + llbmd1p + llpbd1p + llbmd2p + llpbd2p -
-        llbmprc - llpbprc - llbmd1c - llpbd1c - llbmd2c - llpbd2c +
-        λlr
+  # proposal ratio
+  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
+          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
+          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
+          ll_bm(λprv_p, tprv, σλϕ, srδt) -
+          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
+          ll_bm(λd2v_p, td2v, σλϕ, srδt)
 
   # acceptance ratio
-  acr = llpbprp + llpbd1p + llpbd2p -
-        llpbprc - llpbd1c - llpbd2c + λlr
+  acr = llr + propr
 
   if -randexp() < acr 
     llc += llr
@@ -603,33 +613,36 @@ function triad_lλupdate_node!(treec   ::iTgbmpb,
   td1v = ts(treec.d1)
   td2v = ts(treec.d2)
 
-  # node proposal
-  lλp = trioprop(λpr, λd1, λd2, pe(treep), pe(treep.d1), pe(treep.d1), σλ)
+  # make sigma proposal
+  σλϕ = randexp()
 
-  bb!(λprv_p, λpr, lλp, tprv, σλ, srδt)
-  bb!(λd1v_p, lλp, λd1, td1v, σλ, srδt)
-  bb!(λd2v_p, lλp, λd2, td2v, σλ, srδt)
+  # node proposal
+  lλp = trioprop(λpr, λd1, λd2, pe(treep), pe(treep.d1), pe(treep.d1), σλϕ)
+
+  bb!(λprv_p, λpr, lλp, tprv, σλϕ, srδt)
+  bb!(λd1v_p, lλp, λd1, td1v, σλϕ, srδt)
+  bb!(λd2v_p, lλp, λd2, td2v, σλϕ, srδt)
 
   ## make acceptance ratio 
-  # estimate likelihoods separately
-  llbmprp,llpbprp = ll_gbm_b_sep(tprv, λprv_p, σλ, δt, srδt)
-  llbmd1p,llpbd1p = ll_gbm_b_sep(td1v, λd1v_p, σλ, δt, srδt)
-  llbmd2p,llpbd2p = ll_gbm_b_sep(td2v, λd2v_p, σλ, δt, srδt)
-  llbmprc,llpbprc = ll_gbm_b_sep(tprv, λprv_c, σλ, δt, srδt)
-  llbmd1c,llpbd1c = ll_gbm_b_sep(td1v, λd1v_c, σλ, δt, srδt)
-  llbmd2c,llpbd2c = ll_gbm_b_sep(td2v, λd2v_c, σλ, δt, srδt)
+  # estimate likelihoods
+  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
+        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
+        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
+        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
+        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
+        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
+        2.0*lλp - 2.0*λd1v_c[1]
 
-  # speciation likelihood ratio
-  λlr = 2.0*lλp - 2.0*λd1v_c[1]
-
-  # likelihood ratio
-  llr = llbmprp + llpbprp + llbmd1p + llpbd1p + llbmd2p + llpbd2p -
-        llbmprc - llpbprc - llbmd1c - llpbd1c - llbmd2c - llpbd2c +
-        λlr
+  # proposal ratio
+  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
+          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
+          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
+          ll_bm(λprv_p, tprv, σλϕ, srδt) -
+          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
+          ll_bm(λd2v_p, td2v, σλϕ, srδt)
 
   # acceptance ratio
-  acr = llpbprp + llpbd1p + llpbd2p -
-        llpbprc - llpbd1c - llpbd2c + λlr
+  acr = llr + propr
 
   if -randexp() < acr
     llc += llr
@@ -683,42 +696,45 @@ function triad_lλupdate_root!(treec   ::iTgbmpb,
   td1v = ts(treec.d1)
   td2v = ts(treec.d2)
 
+  # make sigma proposal
+  σλϕ = randexp()
+
   # proposal given daughters
-  lλp = duoprop(λd1, λd2, pe(treec.d1), pe(treec.d2), σλ)
+  lλp = duoprop(λd1, λd2, pe(treec.d1), pe(treec.d2), σλϕ)
 
   # propose for root
-  lλrp = rnorm(lλp, sqrt(pe(treec))*σλ)
+  lλrp = rnorm(lλp, sqrt(pe(treec))*σλϕ)
 
   # make Brownian bridge proposals
-  bb!(λprv_p, lλrp, lλp, tprv, σλ, srδt)
-  bb!(λd1v_p, lλp,  λd1, td1v, σλ, srδt)
-  bb!(λd2v_p, lλp,  λd2, td2v, σλ, srδt)
+  bb!(λprv_p, lλrp, lλp, tprv, σλϕ, srδt)
+  bb!(λd1v_p, lλp,  λd1, td1v, σλϕ, srδt)
+  bb!(λd2v_p, lλp,  λd2, td2v, σλϕ, srδt)
 
   ## make acceptance ratio 
-  # estimate likelihoods separately
-  llbmprp,llpbprp = ll_gbm_b_sep(tprv, λprv_p, σλ, δt, srδt)
-  llbmd1p,llpbd1p = ll_gbm_b_sep(td1v, λd1v_p, σλ, δt, srδt)
-  llbmd2p,llpbd2p = ll_gbm_b_sep(td2v, λd2v_p, σλ, δt, srδt)
-  llbmprc,llpbprc = ll_gbm_b_sep(tprv, λprv_c, σλ, δt, srδt)
-  llbmd1c,llpbd1c = ll_gbm_b_sep(td1v, λd1v_c, σλ, δt, srδt)
-  llbmd2c,llpbd2c = ll_gbm_b_sep(td2v, λd2v_c, σλ, δt, srδt)
+  # estimate likelihoods
+  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
+        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
+        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
+        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
+        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
+        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
+        2.0*lλp - 2.0*λd1v_c[1]
 
-  # speciation likelihood ratio
-  λlr = 2.0*lλp - 2.0*λd1v_c[1]
-
-  # likelihood ratio
-  llr = llbmprp + llpbprp + llbmd1p + llpbd1p + llbmd2p + llpbd2p -
-        llbmprc - llpbprc - llbmd1c - llpbd1c - llbmd2c - llpbd2c +
-        λlr
+  # proposal ratio
+  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
+          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
+          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
+          ll_bm(λprv_p, tprv, σλϕ, srδt) -
+          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
+          ll_bm(λd2v_p, td2v, σλϕ, srδt)
 
   # prior ratio
   prr = llrdnorm_x(lλrp, λpr, λa_prior[1], λa_prior[2])
 
   # acceptance ratio
-  acr = llpbprp + llpbd1p + llpbd2p -
-        llpbprc - llpbd1c - llpbd2c + λlr
+  acr = llr + propr + prr
 
-  if -randexp() < (acr + prr)
+  if -randexp() < acr 
     llc += llr
     prc += prr
     copyto!(λprv_c, λprv_p)
