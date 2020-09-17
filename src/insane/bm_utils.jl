@@ -169,10 +169,10 @@ end
 
 """
     duoprop(xd1::Float64,
-           xd2::Float64,
-           td1::Float64, 
-           td2::Float64,
-           σ  ::Float64)
+            xd2::Float64,
+            td1::Float64, 
+            td2::Float64,
+            σ  ::Float64)
 
 Proposal for a duo of Gaussians.
 """
@@ -191,22 +191,22 @@ end
 
 """
     trioprop(xpr::Float64,
-            xd1::Float64,
-            xd2::Float64,
-            tpr::Float64, 
-            td1::Float64, 
-            td2::Float64,
-            σ  ::Float64)
+             xd1::Float64,
+             xd2::Float64,
+             tpr::Float64, 
+             td1::Float64, 
+             td2::Float64,
+             σ  ::Float64)
 
 Proposal for a trio of Gaussians.
 """
 function trioprop(xpr::Float64,
-                 xd1::Float64,
-                 xd2::Float64,
-                 tpr::Float64, 
-                 td1::Float64, 
-                 td2::Float64,
-                 σ  ::Float64)
+                  xd1::Float64,
+                  xd2::Float64,
+                  tpr::Float64, 
+                  td1::Float64, 
+                  td2::Float64,
+                  σ  ::Float64)
 
     t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
     return rnorm((xpr/tpr + xd1/td1 + xd2/td2)*t,

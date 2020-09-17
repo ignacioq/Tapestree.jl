@@ -15,14 +15,17 @@ Created 14 09 2020
 
 """
     insane_gbmpb(tree    ::iTpb, 
-               out_file::String;
-               λprior  ::Float64 = 0.1,
-               niter   ::Int64   = 1_000,
-               nthin   ::Int64   = 10,
-               nburn   ::Int64   = 200,
-               tune_int::Int64   = 100,
-               λtni    ::Float64 = 1.0,
-               obj_ar  ::Float64 = 0.4)
+                 out_file::String;
+                 λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
+                 σλprior ::Float64  = 0.1,
+                 δt      ::Float64  = 1e-2,
+                 niter   ::Int64    = 1_000,
+                 nthin   ::Int64    = 10,
+                 nburn   ::Int64    = 200,
+                 tune_int::Int64    = 100,
+                 σλtni   ::Float64  = 1.0,
+                 obj_ar  ::Float64  = 0.234,
+                 prints  ::Int64    = 5)
 
 Run insane for constant pure-birth.
 """
@@ -35,7 +38,7 @@ function insane_gbmpb(tree    ::iTpb,
                       nthin   ::Int64    = 10,
                       nburn   ::Int64    = 200,
                       tune_int::Int64    = 100,
-                      σλtni   ::Float64 = 1.0,
+                      σλtni   ::Float64  = 1.0,
                       obj_ar  ::Float64  = 0.234,
                       prints  ::Int64    = 5)
 
@@ -343,8 +346,6 @@ function lλupdate!(treec   ::iTgbmpb,
 
   return llc, prc
 end
-
-
 
 
 
@@ -809,7 +810,7 @@ function update_σλ!(σλc    ::Float64,
   if -randexp() < (llp - llc + prr + log(σλp/σλc))
     llc  = llp::Float64
     prc += prr::Float64
-    σλc = σλp::Float64
+    σλc  = σλp::Float64
     lac += 1.0
   end
 
