@@ -49,7 +49,7 @@ function insane_gbmpb(tree    ::iTpb,
   lλa = log(λmle_cpb(tree))
 
   # make tree current and proposal parameters
-  treec = iTgbmpb(tree, δt, srδt, lλa, 1.0)
+  treec = iTgbmpb(tree, δt, srδt, lλa, 0.1)
   treep = deepcopy(treec)
 
   # make fix tree directory
@@ -383,7 +383,7 @@ function triad_lλupdate_noded12!(treec::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()
+  σλϕ = randexp()*10.0
 
   # fill with Brownian motion
   bm!(λprv_p, λpr, tprv, σλϕ, srδt)
@@ -459,7 +459,7 @@ function triad_lλupdate_noded1!(treec::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()
+  σλϕ = randexp()*10.0
 
   # node proposal
   lλp = duoprop(λpr, λd2, pe(treec), pe(treec.d2), σλϕ)
@@ -536,7 +536,7 @@ function triad_lλupdate_noded2!(treec::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()
+  σλϕ = randexp()*10.0
 
   # node proposal
   lλp = duoprop(λpr, λd1, pe(treec), pe(treec.d1), σλϕ)
@@ -614,7 +614,7 @@ function triad_lλupdate_node!(treec   ::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()
+  σλϕ = randexp()*10.0
 
   # node proposal
   lλp = trioprop(λpr, λd1, λd2, pe(treep), pe(treep.d1), pe(treep.d1), σλϕ)
@@ -697,7 +697,7 @@ function triad_lλupdate_root!(treec   ::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()
+  σλϕ = randexp()*10.0
 
   # proposal given daughters
   lλp = duoprop(λd1, λd2, pe(treec.d1), pe(treec.d2), σλϕ)
