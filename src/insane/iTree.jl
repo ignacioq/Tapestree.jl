@@ -11,6 +11,7 @@ Created 03 09 2020
 
 
 
+
 """
     iTree
 
@@ -196,7 +197,6 @@ iTgbmpb(pe::Float64) =
 iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, pe::Float64) = 
   iTgbmpb(d1, d2, pe, Float64[], Float64[])
 
-
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
   print(io, "insane pb-gbm tree with ", sntn(t), " tips")
@@ -235,7 +235,6 @@ Promotes an `iTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
 iTgbmpb(::Nothing, δt::Float64, srδt::Float64, lλa::Float64, σλ::Float64) = 
   nothing
-
 
 
 
@@ -300,7 +299,6 @@ iTgbmbd(d1::iTgbmbd, d2::iTgbmbd, pe::Float64) =
 
 iTgbmbd(d1::iTgbmbd, d2::iTgbmbd, pe::Float64, iμ::Bool) = 
   iTgbmbd(d1, d2, pe, iμ, false, Float64[], Float64[], Float64[])
-
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 
