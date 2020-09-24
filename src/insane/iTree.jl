@@ -209,10 +209,10 @@ Base.show(io::IO, t::iTgbmpb) =
 Promotes an `iTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
 function iTgbmpb(tree::iTpb, 
-                 δt::Float64, 
+                 δt  ::Float64, 
                  srδt::Float64, 
-                 lλa::Float64, 
-                 σλ::Float64)
+                 lλa ::Float64, 
+                 σλ  ::Float64)
 
   # make ts vector
   pet = pe(tree)

@@ -71,13 +71,13 @@ function ll_gbm_b(t   ::Array{Float64,1},
     end
 
     # add to global likelihood
-    ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*log(σλ*srδt)
+    ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
     ll -= llpb*δt
 
     # add final non-standard `δt`
     δtf   = t[nI+2] - t[nI+1]
     lλvi1 = lλv[nI+2]
-    ll += logdnorm_tc(lλvi1, lλvi, sqrt(δtf)*σλ)
+    ll += ldnorm_bm(lλvi1, lλvi, sqrt(δtf)*σλ)
     ll -= δtf*exp(0.5*(lλvi + lλvi1))
   end
 
@@ -118,13 +118,13 @@ function ll_gbm_b_sep(t   ::Array{Float64,1},
 
     # add to global likelihood
     llbm *= (-0.5/((σλ*srδt)^2))
-    llbm -= Float64(nI)*log(σλ*srδt)
+    llbm -= Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
     llpb *= (-δt)
 
     # add final non-standard `δt`
     δtf   = t[nI+2] - t[nI+1]
     lλvi1 = lλv[nI+2]
-    llbm += logdnorm_tc(lλvi1, lλvi, sqrt(δtf)*σλ)
+    llbm += ldnorm_bm(lλvi1, lλvi, sqrt(δtf)*σλ)
     llpb -= δtf*exp(0.5*(lλvi + lλvi1))
   end
 
@@ -155,7 +155,7 @@ function ll_gbm_b_pb(t  ::Array{Float64,1},
     lλvi = lλv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
-      ll += exp(0.5*(lλvi + lλvi1))
+      ll   += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
 

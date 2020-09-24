@@ -104,13 +104,13 @@ end
 
 
 """
-    logdnorm(x::Float64, μ::Float64, σ::Float64)
+    logdnorm(x::Float64, μ::Float64, σ²::Float64)
   
 Compute the logarithmic transformation of the 
-**Normal** density with mean `μ` and standard density `σ` for `x`.
+**Normal** density with mean `μ` and variance `σ²` for `x`.
 """
-logdnorm(x::Float64, μ::Float64, σ::Float64) = 
-  -0.5*log(2.0π) - log(σ) - 0.5*((x - μ)/σ)^2
+logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
+  -0.5*log(2.0π) - 0.5*log(σ²) - (x - μ)^2/(2.0*σ²)
 
 
 
@@ -119,10 +119,10 @@ logdnorm(x::Float64, μ::Float64, σ::Float64) =
     logdnorm_tc(x::Float64, μ::Float64, σ²::Float64)
 
 Compute the logarithmic transformation of the **Normal** density 
-with mean `μ` and standard density `σ` for `x`, up to a constant.
+with mean `μ` and variance `σ²` for `x`, up to a constant.
 """
-logdnorm_tc(x::Float64, μ::Float64, σ::Float64) =
-  - log(σ) - 0.5*((x - μ)/σ)^2
+logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
+  -0.5*log(σ²) - (x - μ)^2/(2.0*σ²)
 
 
 

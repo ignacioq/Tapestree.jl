@@ -40,6 +40,7 @@ function insane_gbmpb(tree    ::iTpb,
                       tune_int::Int64    = 100,
                       σλtni   ::Float64  = 1.0,
                       obj_ar  ::Float64  = 0.234,
+                      pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
                       prints  ::Int64    = 5)
 
   δt  *= treeheight(tree)
@@ -61,8 +62,9 @@ function insane_gbmpb(tree    ::iTpb,
   inodes, terminus = make_inodes(idv)
 
   # parameter update vector
-  pup  = Random.SamplerRangeFast(0:lastindex(inodes))
-  pups = rand(pup, lastindex(inodes))
+  nin = lastindex(inodes)
+
+  pup = make_pup(pupdp, nin)
 
   # make scaling function
   scalef = makescalef(obj_ar)
@@ -70,11 +72,11 @@ function insane_gbmpb(tree    ::iTpb,
   # burn-in phase
   llc, prc, σλc, σλtn =
     mcmc_burn_gbmpb(treec, treep, λa_prior, σλprior, nburn, tune_int, σλtni, 
-      δt, srδt, idv, inodes, terminus, pups, pup, prints, scalef)
+      δt, srδt, idv, inodes, terminus, pup, prints, scalef)
 
   # mcmc
   R, treev = mcmc_gbmpb(treec, treep, llc, prc, σλc, λa_prior, σλprior, 
-        niter, nthin, σλtn, δt, srδt, idv, inodes, terminus, pups, pup, prints)
+        niter, nthin, σλtn, δt, srδt, idv, inodes, terminus, pup, prints)
 
   pardic = Dict(("lambda_root" => 1,
                  "sigma_lambda" => 2))
@@ -109,14 +111,13 @@ function mcmc_burn_gbmpb(treec   ::iTgbmpb,
                          σλprior::Float64,
                          nburn   ::Int64,
                          tune_int::Int64,
-                         σλtni  ::Float64,
+                         σλtni   ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
                          idv     ::Array{iDir,1},
                          inodes  ::Array{Int64,1},
                          terminus::Array{BitArray{1}},
-                         pups    ::Array{Int64,1},
-                         pup     ::Random.SamplerRangeFast{UInt64,Int64},
+                         pup     ::Array{Int64,1},
                          prints  ::Int64,
                          scalef  ::Function)
 
@@ -127,7 +128,7 @@ function mcmc_burn_gbmpb(treec   ::iTgbmpb,
   σλtn = σλtni
 
   # starting parameters
-  σλc = 1.0
+  σλc = 0.5
   llc  = llik_gbm(treec, σλc, δt, srδt)
   prc  = logdexp(σλc, σλprior) + 
          logdnorm_tc(lλ(treec)[1], λa_prior[1], λa_prior[2])
@@ -136,9 +137,9 @@ function mcmc_burn_gbmpb(treec   ::iTgbmpb,
 
   for it in Base.OneTo(nburn)
 
-    rand!(pups, pup)
+    shuffle!(pup)
 
-    for pupi in pups
+    for pupi in pup
       ## parameter updates
       if iszero(pupi)
         # `λ` diffusion rate updates
@@ -211,8 +212,7 @@ function mcmc_gbmpb(treec   ::iTgbmpb,
                     idv     ::Array{iDir,1},
                     inodes  ::Array{Int64,1},
                     terminus::Array{BitArray{1}},
-                    pups    ::Array{Int64,1},
-                    pup     ::Random.SamplerRangeFast{UInt64,Int64},
+                    pup     ::Array{Int64,1},
                     prints  ::Int64)
 
   # logging
@@ -228,9 +228,10 @@ function mcmc_gbmpb(treec   ::iTgbmpb,
 
   for it in Base.OneTo(niter)
 
-    rand!(pups, pup)
+    shuffle!(pup)
 
-    for pupi in pups
+    for pupi in pup
+
       ## parameter updates
       if iszero(pupi)
         # `λ` diffusion rate updates
@@ -383,7 +384,7 @@ function triad_lλupdate_noded12!(treec::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()*10.0
+  σλϕ = exp(randn())
 
   # fill with Brownian motion
   bm!(λprv_p, λpr, tprv, σλϕ, srδt)
@@ -393,21 +394,8 @@ function triad_lλupdate_noded12!(treec::iTgbmpb,
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
-        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
-        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
-        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
-        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
-        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
-        2.0*lλp - 2.0*λd1v_c[1]
-
-  # proposal ratio
-  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
-          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
-          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
-          ll_bm(λprv_p, tprv, σλϕ, srδt) -
-          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
-          ll_bm(λd2v_p, td2v, σλϕ, srδt)
+  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
 
   # acceptance ratio
   acr = llr + propr
@@ -459,7 +447,7 @@ function triad_lλupdate_noded1!(treec::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()*10.0
+  σλϕ = exp(randn())
 
   # node proposal
   lλp = duoprop(λpr, λd2, pe(treec), pe(treec.d2), σλϕ)
@@ -470,21 +458,8 @@ function triad_lλupdate_noded1!(treec::iTgbmpb,
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
-        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
-        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
-        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
-        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
-        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
-        2.0*lλp - 2.0*λd1v_c[1]
-
-  # proposal ratio
-  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
-          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
-          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
-          ll_bm(λprv_p, tprv, σλϕ, srδt) -
-          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
-          ll_bm(λd2v_p, td2v, σλϕ, srδt)
+  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
 
   # acceptance ratio
   acr = llr + propr
@@ -536,7 +511,7 @@ function triad_lλupdate_noded2!(treec::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()*10.0
+  σλϕ = exp(randn())
 
   # node proposal
   lλp = duoprop(λpr, λd1, pe(treec), pe(treec.d1), σλϕ)
@@ -547,21 +522,9 @@ function triad_lλupdate_noded2!(treec::iTgbmpb,
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
-        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
-        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
-        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
-        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
-        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
-        2.0*lλp - 2.0*λd1v_c[1]
+  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
 
-  # proposal ratio
-  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
-          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
-          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
-          ll_bm(λprv_p, tprv, σλϕ, srδt) -
-          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
-          ll_bm(λd2v_p, td2v, σλϕ, srδt)
 
   # acceptance ratio
   acr = llr + propr
@@ -614,7 +577,7 @@ function triad_lλupdate_node!(treec   ::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()*10.0
+  σλϕ = exp(randn())
 
   # node proposal
   lλp = trioprop(λpr, λd1, λd2, pe(treep), pe(treep.d1), pe(treep.d1), σλϕ)
@@ -625,21 +588,8 @@ function triad_lλupdate_node!(treec   ::iTgbmpb,
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
-        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
-        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
-        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
-        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
-        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
-        2.0*lλp - 2.0*λd1v_c[1]
-
-  # proposal ratio
-  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
-          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
-          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
-          ll_bm(λprv_p, tprv, σλϕ, srδt) -
-          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
-          ll_bm(λd2v_p, td2v, σλϕ, srδt)
+  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
 
   # acceptance ratio
   acr = llr + propr
@@ -697,7 +647,7 @@ function triad_lλupdate_root!(treec   ::iTgbmpb,
   td2v = ts(treec.d2)
 
   # make sigma proposal
-  σλϕ = randexp()*10.0
+  σλϕ = exp(randn())
 
   # proposal given daughters
   lλp = duoprop(λd1, λd2, pe(treec.d1), pe(treec.d2), σλϕ)
@@ -711,22 +661,8 @@ function triad_lλupdate_root!(treec   ::iTgbmpb,
   bb!(λd2v_p, lλp,  λd2, td2v, σλϕ, srδt)
 
   ## make acceptance ratio 
-  # estimate likelihoods
-  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
-        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
-        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) -
-        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
-        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
-        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) +
-        2.0*lλp - 2.0*λd1v_c[1]
-
-  # proposal ratio
-  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
-          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
-          ll_bm(λd2v_c, td2v, σλϕ, srδt) +
-          ll_bm(λprv_p, tprv, σλϕ, srδt) -
-          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
-          ll_bm(λd2v_p, td2v, σλϕ, srδt)
+  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
 
   # prior ratio
   prr = llrdnorm_x(lλrp, λpr, λa_prior[1], λa_prior[2])
@@ -743,6 +679,65 @@ function triad_lλupdate_root!(treec   ::iTgbmpb,
   end
 
   return llc, prc
+end
+
+
+
+
+"""
+    llr_propr(tprv  ::Array{Float64,1},
+              td1v  ::Array{Float64,1},
+              td2v  ::Array{Float64,1},
+              λprv_p::Array{Float64,1},
+              λd1v_p::Array{Float64,1},
+              λd2v_p::Array{Float64,1},
+              λprv_c::Array{Float64,1},
+              λd1v_c::Array{Float64,1},
+              λd2v_c::Array{Float64,1},
+              σλ    ::Float64,
+              σλϕ   ::Float64,
+              δt    ::Float64,
+              srδt  ::Float64,
+              lλp   ::Float64,
+              lλc   ::Float64)
+
+Return the likelihood and proposal ratio for pure-birth gbm.
+"""
+function llr_propr(tprv  ::Array{Float64,1},
+                   td1v  ::Array{Float64,1},
+                   td2v  ::Array{Float64,1},
+                   λprv_p::Array{Float64,1},
+                   λd1v_p::Array{Float64,1},
+                   λd2v_p::Array{Float64,1},
+                   λprv_c::Array{Float64,1},
+                   λd1v_c::Array{Float64,1},
+                   λd2v_c::Array{Float64,1},
+                   σλ    ::Float64,
+                   σλϕ   ::Float64,
+                   δt    ::Float64,
+                   srδt  ::Float64,
+                   lλp   ::Float64,
+                   lλc   ::Float64)
+
+  # likelihood ratio
+  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
+        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
+        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) +
+        2.0*lλp                              -
+        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
+        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
+        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) -
+        2.0*lλc
+
+  # proposal ratio
+  propr = ll_bm(λprv_c, tprv, σλϕ, srδt) +
+          ll_bm(λd1v_c, td1v, σλϕ, srδt) +
+          ll_bm(λd2v_c, td2v, σλϕ, srδt) -
+          ll_bm(λprv_p, tprv, σλϕ, srδt) -
+          ll_bm(λd1v_p, td1v, σλϕ, srδt) -
+          ll_bm(λd2v_p, td2v, σλϕ, srδt) 
+
+  return llr, propr
 end
 
 
@@ -832,4 +827,49 @@ function update_σλ!(σλc    ::Float64,
 
   return llc, prc, σλc, ltn, lup, lac
 end
+
+
+
+
+
+"""
+    make_pup(pupdp::NTuple{N,Float64}, 
+             nin  ::Int64) where {N}
+
+Make the weighted parameter update vector according to probabilities `pupdp`.
+"""
+function make_pup(pupdp::NTuple{N,Float64}, 
+                  nin  ::Int64) where {N}
+
+  # standardize pr vector
+  pups = Array{Float64,1}(undef,N)
+  spupdp = sum(pupdp)
+  for i in Base.OneTo(N)
+    pups[i] = pupdp[i]/spupdp
+  end
+
+  pup = Int64[]
+  # da parameters
+  if pups[1] > 0.0
+    append!(pup,[1:nin...])
+  end
+
+  if pups[2] > 0.0
+    if pups[1] > 0.0
+      append!(pup, 
+        fill(0, ceil(Int64, pups[2]*Float64(nin)/pups[1])))
+    else 
+      push!(pup,0)
+    end
+  end
+
+  return return pup
+end
+
+
+
+
+
+
+
 
