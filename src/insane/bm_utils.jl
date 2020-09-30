@@ -13,15 +13,15 @@ Created 10 09 2020
 
 
 """
-    ll_bm(x ::Array{Float64,1},
-          t ::Array{Float64,1},
+    ll_bm(t ::Array{Float64,1},
+          x ::Array{Float64,1},
           σ ::Float64, 
           srδt::Float64)
 
 Returns the log-likelihood for a brownian motion.
 """
-function ll_bm(x ::Array{Float64,1},
-               t ::Array{Float64,1},
+function ll_bm(t ::Array{Float64,1},
+               x ::Array{Float64,1},
                σ ::Float64, 
                srδt::Float64)
 
@@ -230,3 +230,32 @@ ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
 
 
 
+"""
+    ncrep!(xp::Array{Float64,1}, 
+          xc::Array{Float64,1}, 
+          t ::Array{Float64,1}, 
+          σ ::Float64)
+
+Non-centered reparametization of data augmentation for `σ`.
+"""
+function ncrep!(xp::Array{Float64,1}, 
+                xc::Array{Float64,1}, 
+                t ::Array{Float64,1}, 
+                σ ::Float64)
+
+  @inbounds begin
+    l   = lastindex(xc)
+    xi  = xc[1]
+    xf  = xc[l]
+    itf = 1.0/t[l]
+    iσ  = 1.0/σ
+
+    for i in 2:(l-1)
+      xp[i] = (xc[i] - xi + t[i]*(xi - xf)*itf)*iσ
+    end
+
+    xp[1] = xp[l] = 0.0
+  end
+
+  return nothing
+end
