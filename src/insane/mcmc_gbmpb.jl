@@ -14,7 +14,7 @@ Created 14 09 2020
 
 
 """
-    insane_gbmpb(tree    ::iTpb, 
+    insane_gbmpb(Ψ    ::iTpb, 
                  out_file::String;
                  λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
                  σλprior ::Float64  = 0.1,
@@ -29,7 +29,7 @@ Created 14 09 2020
 
 Run insane for constant pure-birth.
 """
-function insane_gbmpb(tree    ::iTpb, 
+function insane_gbmpb(Ψ    ::iTpb, 
                       out_file::String;
                       λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
                       σλprior ::Float64  = 0.1,
@@ -43,17 +43,17 @@ function insane_gbmpb(tree    ::iTpb,
                       pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
                       prints  ::Int64    = 5)
 
-  δt  *= treeheight(tree)
+  δt  *= Ψheight(Ψ)
   srδt = sqrt(δt)
 
   # lλ root node
-  lλa = log(λmle_cpb(tree))
+  lλa = log(λmle_cpb(Ψ))
 
-  # make tree current and proposal parameters
-  Ψc = iTgbmpb(tree, δt, srδt, lλa, 1e-2)
+  # make Ψ current and proposal parameters
+  Ψc = iTgbmpb(Ψ, δt, srδt, lλa, 1e-2)
   Ψp = deepcopy(Ψc)
 
-  # make fix tree directory
+  # make fix Ψ directory
   idv = iDir[]
   bit = BitArray{1}()
   makeiDir!(Ψc, idv, bit)
@@ -75,7 +75,7 @@ function insane_gbmpb(tree    ::iTpb,
       δt, srδt, idv, inodes, terminus, pup, prints, scalef)
 
   # mcmc
-  R, treev = mcmc_gbmpb(Ψp, Ψc, llc, prc, σλc, λa_prior, σλprior, 
+  R, Ψv = mcmc_gbmpb(Ψp, Ψc, llc, prc, σλc, λa_prior, σλprior, 
         niter, nthin, σλtn, δt, srδt, idv, inodes, terminus, pup, prints)
 
   pardic = Dict(("lambda_root" => 1,
@@ -83,7 +83,7 @@ function insane_gbmpb(tree    ::iTpb,
 
   write_ssr(R, pardic, out_file)
 
-  return R, treev
+  return R, Ψv
 end
 
 
@@ -144,7 +144,7 @@ function mcmc_burn_gbmpb(Ψp   ::iTgbmpb,
       if iszero(pupi)
         # `λ` diffusion rate updates
         llc, prc, σλc, ltn, lup, lac = 
-          update_σλ!(σλc, Ψp, Ψc, llc, prc, 
+          update_σλ!(σλc, Ψc, llc, prc, 
             σλtn, ltn, lup, lac, δt, srδt, σλprior)
       else
         # gbm updates
@@ -221,8 +221,8 @@ function mcmc_gbmpb(Ψp   ::iTgbmpb,
 
   R = Array{Float64,2}(undef, nlogs, 5)
 
-  # make tree vector
-  treev = iTgbmpb[]
+  # make Ψ vector
+  Ψv = iTgbmpb[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -236,7 +236,7 @@ function mcmc_gbmpb(Ψp   ::iTgbmpb,
       if iszero(pupi)
         # `λ` diffusion rate updates
         llc, prc, σλc = 
-          update_σλ!(σλc, Ψp, Ψc, llc, prc, σλtn, δt, srδt, σλprior)
+          update_σλ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλprior)
       else
         # gbm updates
         ter  = terminus[pupi]
@@ -261,7 +261,7 @@ function mcmc_gbmpb(Ψp   ::iTgbmpb,
         R[lit,3] = prc
         R[lit,4] = exp(lλ(Ψc)[1])
         R[lit,5] = σλc
-        push!(treev, deepcopy(Ψc))
+        push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
     end
@@ -269,7 +269,7 @@ function mcmc_gbmpb(Ψp   ::iTgbmpb,
     next!(pbar)
   end
 
-  return R, treev
+  return R, Ψv
 end
 
 
@@ -752,8 +752,7 @@ end
 MCMC update for σλ.
 """
 function update_σλ!(σλc    ::Float64,
-                    Ψp  ::iTgbmpb,
-                    Ψc  ::iTgbmpb,
+                    Ψ   ::iTgbmpb,
                     llc    ::Float64,
                     prc    ::Float64,
                     σλtn   ::Float64,
@@ -767,15 +766,14 @@ function update_σλ!(σλc    ::Float64,
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
 
-  # one could make a ratio likelihood function
-  #llrs = llr_gbm_bm(Ψp, σλp, σλc, 1.0)
-  llr = llr_gbm_bm(Ψc, σλp, σλc, srδt)
+  # log likelihood and prior ratio
+  llr = llr_gbm_bm(Ψ, σλp, σλc, srδt)
   prr = llrdexp_x(σλp, σλc, σλprior)
 
   if -randexp() < (llr + prr + log(σλp/σλc))
     llc += llr
-    prc += prr::Float64
-    σλc  = σλp::Float64
+    prc += prr
+    σλc  = σλp
   end
 
   return llc, prc, σλc
@@ -786,7 +784,7 @@ end
 
 """
     update_σλ!(σλc    ::Float64,
-               tree   ::iTgbmpb,
+               Ψ   ::iTgbmpb,
                llc    ::Float64,
                prc    ::Float64,
                σλtn   ::Float64,
@@ -800,8 +798,7 @@ end
 MCMC update for σλ with acceptance log.
 """
 function update_σλ!(σλc    ::Float64,
-                    Ψp     ::iTgbmpb,
-                    Ψc     ::iTgbmpb,
+                    Ψ   ::iTgbmpb,
                     llc    ::Float64,
                     prc    ::Float64,
                     σλtn   ::Float64,
@@ -818,9 +815,8 @@ function update_σλ!(σλc    ::Float64,
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
 
-  # one could make a ratio likelihood function
-  #llrs = llr_gbm_bm(Ψp, σλp, σλc, 1.0)
-  llr = llr_gbm_bm(Ψc, σλp, σλc, srδt)
+  # log likelihood and prior ratio
+  llr = llr_gbm_bm(Ψ, σλp, σλc, srδt)
   prr = llrdexp_x(σλp, σλc, σλprior)
 
   ltn += 1
@@ -828,8 +824,8 @@ function update_σλ!(σλc    ::Float64,
 
   if -randexp() < (llr + prr + log(σλp/σλc))
     llc += llr
-    prc += prr::Float64
-    σλc  = σλp::Float64
+    prc += prr
+    σλc  = σλp
     lac += 1.0
   end
 
@@ -900,7 +896,26 @@ end
 
 
 
+"""
+    ncrep!(Ψp::iTgbmpb, 
+           Ψc::iTgbmpb,
+           σ    ::Float64)
 
+Non-centered reparametization of data augmentation for `σ`.
+"""
+function ncrep!(Ψp::iTgbmpb, 
+                Ψc::iTgbmpb,
+                σ ::Float64)
+
+  ncrep!(lλ(Ψp), lλ(Ψc), ts(Ψc), σ)
+
+  if !istip(Ψc.d1)
+    ncrep!(Ψp.d1::iTgbmpb, Ψc.d1::iTgbmpb, σ)
+  end
+  if !istip(Ψc.d2)
+    ncrep!(Ψp.d2::iTgbmpb, Ψc.d2::iTgbmpb, σ)
+  end
+end
 
 
 

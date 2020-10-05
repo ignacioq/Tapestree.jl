@@ -232,9 +232,9 @@ ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
 
 """
     ncrep!(xp::Array{Float64,1}, 
-          xc::Array{Float64,1}, 
-          t ::Array{Float64,1}, 
-          σ ::Float64)
+           xc::Array{Float64,1}, 
+           t ::Array{Float64,1}, 
+           σ ::Float64)
 
 Non-centered reparametization of data augmentation for `σ`.
 """
@@ -259,3 +259,5 @@ function ncrep!(xp::Array{Float64,1},
 
   return nothing
 end
+
+
