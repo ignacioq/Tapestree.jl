@@ -870,6 +870,26 @@ end
 
 
 
+"""
+    ncrep!(Ψp::iTgbmpb, 
+           Ψc::iTgbmpb,
+           σ    ::Float64)
+
+Non-centered reparametization of data augmentation for `σ`.
+"""
+function ncrep!(Ψp::iTgbmpb, 
+                Ψc::iTgbmpb,
+                σ ::Float64)
+
+  ncrep!(lλ(Ψp), lλ(Ψc), ts(Ψc), σ)
+
+  if !istip(Ψc.d1)
+    ncrep!(Ψp.d1::iTgbmpb, Ψc.d1::iTgbmpb, σ)
+  end
+  if !istip(Ψc.d2)
+    ncrep!(Ψp.d2::iTgbmpb, Ψc.d2::iTgbmpb, σ)
+  end
+end
 
 
 
