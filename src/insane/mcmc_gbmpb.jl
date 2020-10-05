@@ -29,7 +29,7 @@ Created 14 09 2020
 
 Run insane for constant pure-birth.
 """
-function insane_gbmpb(Ψ    ::iTpb, 
+function insane_gbmpb(tree    ::iTpb, 
                       out_file::String;
                       λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
                       σλprior ::Float64  = 0.1,
@@ -43,14 +43,14 @@ function insane_gbmpb(Ψ    ::iTpb,
                       pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
                       prints  ::Int64    = 5)
 
-  δt  *= Ψheight(Ψ)
+  δt  *= treeheight(tree)
   srδt = sqrt(δt)
 
   # lλ root node
-  lλa = log(λmle_cpb(Ψ))
+  lλa = log(λmle_cpb(tree))
 
   # make Ψ current and proposal parameters
-  Ψc = iTgbmpb(Ψ, δt, srδt, lλa, 1e-2)
+  Ψc = iTgbmpb(tree, δt, srδt, lλa, 1e-2)
   Ψp = deepcopy(Ψc)
 
   # make fix Ψ directory
@@ -752,7 +752,7 @@ end
 MCMC update for σλ.
 """
 function update_σλ!(σλc    ::Float64,
-                    Ψ   ::iTgbmpb,
+                    Ψ      ::iTgbmpb,
                     llc    ::Float64,
                     prc    ::Float64,
                     σλtn   ::Float64,
@@ -798,7 +798,7 @@ end
 MCMC update for σλ with acceptance log.
 """
 function update_σλ!(σλc    ::Float64,
-                    Ψ   ::iTgbmpb,
+                    Ψ      ::iTgbmpb,
                     llc    ::Float64,
                     prc    ::Float64,
                     σλtn   ::Float64,
