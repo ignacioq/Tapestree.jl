@@ -144,13 +144,14 @@ mulupt(p::Float64, tn::Float64) = p * exp((rand() - 0.5) * tn)
 Make scaling function given the objective acceptance rates.
 """
 function makescalef(obj_ar::Float64)
-  nar::Float64 = 1.0 - obj_ar
+  inar::Float64 = 1.0/(1.0 - obj_ar)
+  iobj_ar::Float64 = 1.0/obj_ar
 
-  function f(window::Float64, rate::Float64)
+  f(window::Float64, rate::Float64) = let obj_ar = obj_ar, inar = inar, iobj_ar = iobj_ar
     if rate > obj_ar
-      window *= (1.0 + (rate - obj_ar) / nar)::Float64
+      window *= (1.0 + (rate - obj_ar)*inar)::Float64
     else
-      window /= (2.0 - rate / obj_ar)::Float64
+      window /= (2.0 - rate*iobj_ar)::Float64
     end
     
     return window::Float64

@@ -39,7 +39,7 @@ function llik_gbm(tree::iTgbmpb,
 end
 
 
-
+ll_gbm_b(tprv, λprv_p, σλ, δt, srδt)
 
 """
     ll_gbm_b(t   ::Array{Float64,1},
