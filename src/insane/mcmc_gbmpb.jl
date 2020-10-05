@@ -765,14 +765,14 @@ function update_σλ!(σλc    ::Float64,
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
 
-  # one could make a ratio likelihood function
-  llp = llik_gbm(tree, σλp, δt, srδt)
+  # log likelihood and prior ratio
+  llr = llr_gbm_bm(tree, σλp, σλc, srδt)
   prr = llrdexp_x(σλp, σλc, σλprior)
 
-  if -randexp() < (llp - llc + prr + log(σλp/σλc))
-    llc  = llp::Float64
-    prc += prr::Float64
-    σλc  = σλp::Float64
+  if -randexp() < (llr + prr + log(σλp/σλc))
+    llc += llr
+    prc += prr
+    σλc  = σλp
   end
 
   return llc, prc, σλc
@@ -811,17 +811,17 @@ function update_σλ!(σλc    ::Float64,
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
 
-  # one could make a ratio likelihood function
-  llp = llik_gbm(tree, σλp, δt, srδt)
+  # log likelihood and prior ratio
+  llr = llr_gbm_bm(tree, σλp, σλc, srδt)
   prr = llrdexp_x(σλp, σλc, σλprior)
 
   ltn += 1
   lup += 1.0
 
-  if -randexp() < (llp - llc + prr + log(σλp/σλc))
-    llc  = llp::Float64
-    prc += prr::Float64
-    σλc  = σλp::Float64
+  if -randexp() < (llr + prr + log(σλp/σλc))
+    llc += llr
+    prc += prr
+    σλc  = σλp
     lac += 1.0
   end
 

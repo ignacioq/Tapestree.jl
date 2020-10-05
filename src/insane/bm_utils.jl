@@ -13,16 +13,16 @@ Created 10 09 2020
 
 
 """
-    ll_bm(x ::Array{Float64,1},
-          t ::Array{Float64,1},
-          σ ::Float64, 
+    ll_bm(x   ::Array{Float64,1},
+          t   ::Array{Float64,1},
+          σ   ::Float64, 
           srδt::Float64)
 
 Returns the log-likelihood for a brownian motion.
 """
-function ll_bm(x ::Array{Float64,1},
-               t ::Array{Float64,1},
-               σ ::Float64, 
+function ll_bm(x   ::Array{Float64,1},
+               t   ::Array{Float64,1},
+               σ   ::Float64, 
                srδt::Float64)
 
  @inbounds begin

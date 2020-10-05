@@ -169,3 +169,71 @@ function ll_gbm_b_pb(t  ::Array{Float64,1},
   return ll
 end
 
+
+
+
+"""
+    llr_gbm_bm(tree::iTgbmpb, 
+               σλp  ::Float64,
+               σλc  ::Float64,
+               srδt::Float64)
+Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
+"""
+function llr_gbm_bm(tree::iTgbmpb, 
+                    σλp  ::Float64,
+                    σλc  ::Float64,
+                    srδt::Float64)
+
+  if istip(tree) 
+    llr_gbm_bm(ts(tree), lλ(tree), σλp, σλc, srδt)
+  else
+    llr_gbm_bm(ts(tree), lλ(tree), σλp, σλc, srδt) +
+    llr_gbm_bm(tree.d1::iTgbmpb, σλp, σλc, srδt)   +
+    llr_gbm_bm(tree.d2::iTgbmpb, σλp, σλc, srδt)
+  end
+end
+
+
+
+
+"""
+    llr_gbm_bm(t   ::Array{Float64,1},
+               lλv ::Array{Float64,1},
+               σλp  ::Float64, 
+               σλc  ::Float64, 
+               srδt::Float64)
+Returns the log-likelihood ratio for a branch according to BM for `σ` proposal.
+"""
+function llr_gbm_bm(t   ::Array{Float64,1},
+                    lλv ::Array{Float64,1},
+                    σλp  ::Float64, 
+                    σλc  ::Float64, 
+                    srδt::Float64)
+  @inbounds begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(t)-2
+
+    ss   = 0.0
+    lλvi = lλv[1]
+    @simd for i in Base.OneTo(nI)
+      lλvi1 = lλv[i+1]
+      ss   += (lλvi1 - lλvi)^2
+      lλvi  = lλvi1
+    end
+
+    # likelihood ratio
+    llr = ss*(0.5/((σλc*srδt)^2) - 0.5/((σλp*srδt)^2)) - 
+          Float64(nI)*(log(σλp/σλc))
+
+    # add final non-standard `δt`
+    δtf   = t[nI+2] - t[nI+1]
+    lλvi1 = lλv[nI+2]
+    llr += ldnorm_bm(lλvi1, lλvi, sqrt(δtf)*σλp) - 
+           ldnorm_bm(lλvi1, lλvi, sqrt(δtf)*σλc)
+  end
+
+  return llr
+end
+
+
