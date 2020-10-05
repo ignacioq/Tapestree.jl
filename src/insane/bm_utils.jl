@@ -52,6 +52,52 @@ end
 
 
 
+
+"""
+    llr_bm(t   ::Array{Float64,1},
+           xp  ::Array{Float64,1},
+           xc  ::Array{Float64,1},
+           σ   ::Float64, 
+           srδt::Float64)
+
+Returns the log-likelihood ratio for Brownian motion.
+"""
+function llr_bm(t   ::Array{Float64,1},
+                xp  ::Array{Float64,1},
+                xc  ::Array{Float64,1},
+                σ   ::Float64, 
+                srδt::Float64)
+
+ @inbounds begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(t)-2
+
+    llr = 0.0
+    xpi = xp[1]
+    xci = xc[1]
+    @simd for i in Base.OneTo(nI)
+      xpi1 = xp[i+1]
+      xci1 = xc[i+1]
+      llr += (xpi1 - xpi)^2 - (xci1 - xci)^2
+      xpi  = xpi1
+      xci  = xci1
+    end
+
+    # add to global likelihood
+    llr *= (-0.5/((σ*srδt)^2))
+
+    # add final non-standard `δt`
+    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1], xc[nI+2], xc[nI+1], 
+              sqrt(t[nI+2] - t[nI+1])*σ)
+  end
+
+  return llr
+end
+
+
+
+
 """
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
@@ -226,6 +272,28 @@ Compute the logarithmic transformation of the
 """
 ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
   -0.5*log(2.0π) - log(σsrt) - 0.5*((x - μ)/σsrt)^2
+
+
+
+"""
+    lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float64) =
+
+Compute the logarithmic transformation of the 
+**Normal** density with mean `μ` and standard density `σ` for `x`.
+"""
+lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float64) =
+  -0.5*((xp - μp)^2 - (xc - μc)^2)/σsrt^2
+
+
+
+"""
+    lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64) =
+
+Compute the logarithmic transformation of the 
+**Normal** density with mean `μ` and standard density `σ` for `x`.
+"""
+lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64) =
+  - log(σpsrt/σcsrt) - 0.5*(x - μ)^2*(1.0/σpsrt^2 - 1.0/σcsrt^2)
 
 
 

@@ -38,7 +38,7 @@ function insane_gbmpb(tree    ::iTpb,
                       nthin   ::Int64    = 10,
                       nburn   ::Int64    = 200,
                       tune_int::Int64    = 100,
-                      σλi     ::Float64  = 1e-2,
+                      σλi     ::Float64  = 0.5,
                       σλtni   ::Float64  = 1.0,
                       obj_ar  ::Float64  = 0.234,
                       pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
@@ -148,12 +148,10 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
     for pupi in pup
       ## parameter updates
       if iszero(pupi)
-        # `λ` diffusion rate updates
         llc, prc, σλc, ltn, lup, lac = 
           update_σλ!(σλc, Ψc, llc, prc, 
             σλtn, ltn, lup, lac, δt, srδt, σλprior)
       else
-        # gbm updates
         ter  = terminus[pupi]
         inod = inodes[pupi]
 
@@ -722,26 +720,65 @@ function llr_propr(tprv  ::Array{Float64,1},
                    lλp   ::Float64,
                    lλc   ::Float64)
 
-  # MAKE log likelihood ratio functions
-  llr = ll_gbm_b(tprv, λprv_p, σλ, δt, srδt) + 
-        ll_gbm_b(td1v, λd1v_p, σλ, δt, srδt) + 
-        ll_gbm_b(td2v, λd2v_p, σλ, δt, srδt) +
-        2.0*lλp                              -
-        ll_gbm_b(tprv, λprv_c, σλ, δt, srδt) -
-        ll_gbm_b(td1v, λd1v_c, σλ, δt, srδt) -
-        ll_gbm_b(td2v, λd2v_c, σλ, δt, srδt) -
-        2.0*lλc
+  # log likelihood ratio functions
+  llr = llr_gbm_b(tprv, λprv_p, λprv_c, σλ, δt, srδt) + 
+        llr_gbm_b(td1v, λd1v_p, λd1v_c, σλ, δt, srδt) + 
+        llr_gbm_b(td2v, λd2v_p, λd2v_c, σλ, δt, srδt) +
+        2.0*(lλp - lλc)
 
   # log proposal ratio
-  propr = ll_bm(tprv, λprv_c, σλϕ, srδt) +
-          ll_bm(td1v, λd1v_c, σλϕ, srδt) +
-          ll_bm(td2v, λd2v_c, σλϕ, srδt) -
-          ll_bm(tprv, λprv_p, σλϕ, srδt) -
-          ll_bm(td1v, λd1v_p, σλϕ, srδt) -
-          ll_bm(td2v, λd2v_p, σλϕ, srδt) 
+  propr = llr_bm(tprv, λprv_c, λprv_p, σλϕ, srδt) +
+          llr_bm(td1v, λd1v_c, λd1v_p, σλϕ, srδt) +
+          llr_bm(td2v, λd2v_c, λd2v_p, σλϕ, srδt) 
 
   return llr, propr
 end
+
+
+
+
+
+
+
+
+function llr_bm(t   ::Array{Float64,1},
+                xp  ::Array{Float64,1},
+                xc  ::Array{Float64,1},
+                σ   ::Float64, 
+                srδt::Float64)
+
+ @inbounds begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(t)-2
+
+    llr = 0.0
+    xpi = xp[1]
+    xci = xc[1]
+    @simd for i in Base.OneTo(nI)
+      xpi1 = xp[i+1]
+      xci1 = xc[i+1]
+      llr += (xpi1 - xpi)^2 - (xci1 - xci)^2
+      xpi  = xpi1
+      xci  = xci1
+    end
+
+    # add to global likelihood
+    llr *= (-0.5/((σ*srδt)^2))
+
+    # add final non-standard `δt`
+    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1], xc[nI+2], xc[nI+1], 
+              sqrt(t[nI+2] - t[nI+1])*σ)
+  end
+
+  return llr
+end
+
+
+
+
+
+
 
 
 
