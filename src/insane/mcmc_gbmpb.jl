@@ -23,15 +23,16 @@ Created 14 09 2020
                  nthin   ::Int64    = 10,
                  nburn   ::Int64    = 200,
                  tune_int::Int64    = 100,
+                 σλi     ::Float64  = 0.5,
                  σλtni   ::Float64  = 1.0,
                  obj_ar  ::Float64  = 0.234,
+                 pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
                  prints  ::Int64    = 5)
 
 Run insane for constant pure-birth.
 """
 function insane_gbmpb(tree    ::iTpb, 
                       out_file::String;
-                      λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
                       σλprior ::Float64  = 0.1,
                       δt      ::Float64  = 1e-2,
                       niter   ::Int64    = 1_000,
@@ -41,8 +42,9 @@ function insane_gbmpb(tree    ::iTpb,
                       σλi     ::Float64  = 0.5,
                       σλtni   ::Float64  = 1.0,
                       obj_ar  ::Float64  = 0.234,
+                      prints  ::Int64    = 5,
                       pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
-                      prints  ::Int64    = 5)
+                      λa_prior::Tuple{Float64,Float64} = (0.0,10.0))
 
   δt  *= treeheight(tree)
   srδt = sqrt(δt)
@@ -544,12 +546,12 @@ end
 
 
 """
-    triad_lλupdate_node!(Ψc     ::iTgbmpb, 
-                         Ψp    ::iTgbmpb,
-                         llc     ::Float64,
-                         σλ      ::Float64,
-                         δt      ::Float64, 
-                         srδt    ::Float64)
+    triad_lλupdate_node!(Ψp  ::iTgbmpb, 
+                         Ψc  ::iTgbmpb,
+                         llc ::Float64,
+                         σλ  ::Float64,
+                         δt  ::Float64, 
+                         srδt::Float64)
 
 Make a trio of Brownian motion MCMC updates when node is internal and 
 no daughters are terminal.
@@ -609,8 +611,8 @@ end
 
 
 """
-    triad_lλupdate_root!(Ψc   ::iTgbmpb, 
-                         Ψp   ::iTgbmpb,
+    triad_lλupdate_root!(Ψc      ::iTgbmpb, 
+                         Ψp      ::iTgbmpb,
                          llc     ::Float64,
                          prc     ::Float64,
                          σλ      ::Float64, 
@@ -622,8 +624,8 @@ end
 
 Make a trio of Brownian motion MCMC updates when the root is involved.
 """
-function triad_lλupdate_root!(Ψp   ::iTgbmpb, 
-                              Ψc   ::iTgbmpb,
+function triad_lλupdate_root!(Ψp      ::iTgbmpb, 
+                              Ψc      ::iTgbmpb,
                               llc     ::Float64,
                               prc     ::Float64,
                               σλ      ::Float64, 
@@ -737,52 +739,6 @@ end
 
 
 
-
-
-
-
-function llr_bm(t   ::Array{Float64,1},
-                xp  ::Array{Float64,1},
-                xc  ::Array{Float64,1},
-                σ   ::Float64, 
-                srδt::Float64)
-
- @inbounds begin
-
-    # estimate standard `δt` likelihood
-    nI = lastindex(t)-2
-
-    llr = 0.0
-    xpi = xp[1]
-    xci = xc[1]
-    @simd for i in Base.OneTo(nI)
-      xpi1 = xp[i+1]
-      xci1 = xc[i+1]
-      llr += (xpi1 - xpi)^2 - (xci1 - xci)^2
-      xpi  = xpi1
-      xci  = xci1
-    end
-
-    # add to global likelihood
-    llr *= (-0.5/((σ*srδt)^2))
-
-    # add final non-standard `δt`
-    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1], xc[nI+2], xc[nI+1], 
-              sqrt(t[nI+2] - t[nI+1])*σ)
-  end
-
-  return llr
-end
-
-
-
-
-
-
-
-
-
-
 """
     update_σλ!(σλc    ::Float64,
                Ψ      ::iTgbmpb,
@@ -803,9 +759,6 @@ function update_σλ!(σλc    ::Float64,
                     δt     ::Float64,
                     srδt   ::Float64,
                     σλprior::Float64)
-
-  # standardize data augmentation
-  #ncrep!(Ψp, Ψc, σλc)
 
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
@@ -852,9 +805,6 @@ function update_σλ!(σλc    ::Float64,
                     δt     ::Float64,
                     srδt   ::Float64,
                     σλprior::Float64)
-
-  # standardize data augmentation
-  #ncrep!(Ψp, Ψc, σλc)
 
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
@@ -936,30 +886,5 @@ function make_pup(pupdp::NTuple{N,Float64},
 
   return return pup
 end
-
-
-
-
-"""
-    ncrep!(Ψp::iTgbmpb, 
-           Ψc::iTgbmpb,
-           σ    ::Float64)
-
-Non-centered reparametization of data augmentation for `σ`.
-"""
-function ncrep!(Ψp::iTgbmpb, 
-                Ψc::iTgbmpb,
-                σ ::Float64)
-
-  ncrep!(lλ(Ψp), lλ(Ψc), ts(Ψc), σ)
-
-  if !istip(Ψc.d1)
-    ncrep!(Ψp.d1::iTgbmpb, Ψc.d1::iTgbmpb, σ)
-  end
-  if !istip(Ψc.d2)
-    ncrep!(Ψp.d2::iTgbmpb, Ψc.d2::iTgbmpb, σ)
-  end
-end
-
 
 

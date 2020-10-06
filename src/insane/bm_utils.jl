@@ -18,7 +18,7 @@ Created 10 09 2020
           σ ::Float64, 
           srδt::Float64)
 
-Returns the log-likelihood for a brownian motion.
+Returns the log-likelihood for Brownian motion.
 """
 function ll_bm(t ::Array{Float64,1},
                x ::Array{Float64,1},
@@ -136,7 +136,6 @@ end
 
 
 
-
 """
     bb!(x   ::Array{Float64,1},
         xi  ::Float64,
@@ -186,7 +185,7 @@ end
 
 
 """
-    sim_bm(xa::Float64, σ::Float64, srδt ::Float64, t::Array{Float64,1})
+    sim_bm(xa::Float64, σ::Float64, srδt::Float64, t::Array{Float64,1})
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
 `σ` and times `t`. 
@@ -266,9 +265,9 @@ end
 
 """
     ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64)
-  
-Compute the logarithmic transformation of the 
-**Normal** density with mean `μ` and standard density `σ` for `x`.
+
+Compute the **Normal** density in logarithmic scale with 
+mean `μ` and standard density `σ` for `x`.
 """
 ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
   -0.5*log(2.0π) - log(σsrt) - 0.5*((x - μ)/σsrt)^2
@@ -276,10 +275,15 @@ ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
 
 
 """
-    lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float64) =
+    lrdnorm_bm_x(xp::Float64, 
+                 μp::Float64, 
+                 xc::Float64, 
+                 μc::Float64, 
+                 σsrt::Float64)
 
-Compute the logarithmic transformation of the 
-**Normal** density with mean `μ` and standard density `σ` for `x`.
+Compute the **Normal** density ratio in logarithmic scale with 
+standard density `σ,` proposal mean `μp` and current mean `μc` for `xp`
+and `xc`, respectively.
 """
 lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float64) =
   -0.5*((xp - μp)^2 - (xc - μc)^2)/σsrt^2
@@ -287,10 +291,10 @@ lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float6
 
 
 """
-    lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64) =
+    lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64)
 
-Compute the logarithmic transformation of the 
-**Normal** density with mean `μ` and standard density `σ` for `x`.
+Compute the **Normal** density ratio in logarithmic scale with mean `μ` 
+and proposal standard density `σpsrt` and current `σcsrt` for `x`.
 """
 lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64) =
   - log(σpsrt/σcsrt) - 0.5*(x - μ)^2*(1.0/σpsrt^2 - 1.0/σcsrt^2)
@@ -304,7 +308,8 @@ lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64) =
            t ::Array{Float64,1}, 
            σ ::Float64)
 
-Non-centered reparametization of data augmentation for `σ`.
+Non-centered reparametization of data augmentation for `σ`, based on 
+Roberts and Stramer (2001).
 """
 function ncrep!(xp::Array{Float64,1}, 
                 xc::Array{Float64,1}, 

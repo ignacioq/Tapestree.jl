@@ -141,10 +141,11 @@ end
 
 
 """
-    ll_gbm_b_sep(t  ::Array{Float64,1},
-                 lλv::Array{Float64,1},
-                 σ²λ::Float64, 
-                 δt ::Float64)
+    ll_gbm_b_sep(t   ::Array{Float64,1},
+                 lλv ::Array{Float64,1},
+                 σλ  ::Float64, 
+                 δt  ::Float64,
+                 srδt::Float64)
 
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
@@ -189,9 +190,8 @@ end
 
 """
     ll_gbm_b_pb(t  ::Array{Float64,1},
-                 lλv::Array{Float64,1},
-                 σ²λ::Float64, 
-                 δt ::Float64)
+                lλv::Array{Float64,1},
+                δt ::Float64)
 
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
