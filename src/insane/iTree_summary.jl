@@ -11,71 +11,124 @@ Created 03 09 2020
 
 
 
+
 """
-    extractp!(tree::T, p::Array{Float64,1}, lv::Function) where {T <: iTgbm}
+    linearize_gbm!(tree::iTgbmpb, 
+                   lv  ::Function,
+                   v   ::Array{Float64,1})
 
-Extract all the data augmented parameters returned by function `lv`.
+Extract the parameters given by `lv` into a linear Array.
 """
-function extractp!(treev::Array{T,1}, vs::Array{Array{Float64,1},1}, lv::Function) where {T <: iTgbm}
+function linearize_gbm!(tree::iTgbmpb, 
+                        lv  ::Function,
+                        v   ::Array{Float64,1})
 
-  nt = lastindex(treev)
+  append!(v, lv(tree))
+  if !istip(tree.d1)
+    linearize_gbm!(tree.d1::iTgbmpb, lv, v)
+  end
+  if !istip(tree.d2)
+    linearize_gbm!(tree.d2::iTgbmpb, lv, v)
+  end
+end
 
-  for j in Base.OneTo(nt)
-    append!(vs[j], lv(treev[j]))
+
+
+
+"""
+    extractp(tree::iTgbmpb, δt::Float64, lv::Function)
+
+Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
+"""
+function extractp(tree::iTgbmpb, δt::Float64, lv::Function)
+
+  t = ts(tree)
+  v = lv(tree)
+
+  # make ts vector
+  pet = pe(tree)
+  tsv = [0.0:δt:pet...]
+  if tsv[end] != pet
+    push!(tsv, pet)
   end
 
-  if isnothing(treev[1].d1)
-    treev1 = nothing
-  else
-    treev1 = iTgbmpb[]
-    for t in Base.OneTo(nt)
-        push!(treev1, treev[t].d1)
-    end 
+  pv = Float64[]
+
+  # linearly predict λ
+  for i in tsv
+    ix, out = idxrange(t, i)
+    if out
+      push!(pv, linpred(i, t[ix], t[ix+1], v[ix], v[ix+1]))
+    else
+      push!(pv, v[ix])
+    end
   end
 
-  if isnothing(treev[1].d2)
-    treev2 = nothing
-  else
-    treev2 = iTgbmpb[]
-    for t in Base.OneTo(nt)
-        push!(treev2, treev[t].d2)
-    end 
-  end
-
-  extractp!(treev1, vs, lv)
-  extractp!(treev2, vs, lv)
+  iTgbmpb(extractp(tree.d1, δt, lv), 
+          extractp(tree.d2, δt, lv),
+          pet, tsv, pv)
 end
 
 """
-    extractp!(::Nothing, p::Array{Float64,1}, lv::Function)
+    extractp(tree::Nothing, δt::Float64, lv::Function)
 
-Extract all the data augmented parameters returned by function `lv`.
+Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
 """
-extractp!(::Nothing, vs::Array{Array{Float64,1},1}, lv::Function) = nothing
-
-
+extractp(tree::Nothing, δt::Float64, lv::Function) = nothing
 
 
 
 
 """
-    extractp!(tree::T, p::Array{Float64,1}, lv::Function) where {T <: iTgbm}
+    linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64)
 
-Extract all the data augmented parameters returned by function `lv`.
+Estimate val according to linear interpolation for a range.
 """
-function extractp!(tree::T, p::Array{Float64,1}, lv::Function) where {T <: iTgbm}
-  append!(p, lv(tree))
+linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) = 
+  (y1 + (val - x1)*(y2 - y1)/(x2 - x1))::Float64
 
-  extractp!(tree.d1, p, lv)
-  extractp!(tree.d2, p, lv)
-end
+
+
 
 """
-    extractp!(::Nothing, p::Array{Float64,1}, lv::Function)
+    idxrange(x::Array{Float64,1}, val::Float64)
 
-Extract all the data augmented parameters returned by function `lv`.
+Get indexes in sorted vector `x` corresponding to the range in which 
+`val` is in using a sort of uniroot algorithm.
 """
-extractp!(::Nothing, p::Array{Float64,1}, lv::Function) = nothing
+function idxrange(x::Array{Float64,1}, val::Float64)
+  
+  @inbounds begin
+
+    a::Int64 = 1
+
+    if x[a] > val
+      return a, false
+    end
+
+    b::Int64 = lastindex(x)
+  
+    if x[b] < val
+      return b, false
+    end
+
+    mid::Int64 = div(b,2)
+
+    while b-a > 1
+      val < x[mid] ? b = mid : a = mid
+      mid = div(b + a, 2)
+    end
+
+    if x[a] == val 
+      return a, false
+    elseif x[b] == val
+      return b, false
+    else
+      return a, true
+    end
+
+  end
+end 
 
 
 
@@ -130,12 +183,13 @@ function iquantile(treev::Array{iTgbmpb,1}, p::Float64, lv::Function)
     tsv[end], tsv, sv)
 end
 
-
 """
     iquantile(::Nothing, p::Float64, lv::Function)
 
 Make an `iTgbmpb` with the quantile specified by `p` in data specified in 
 function `lv`.
 """
-iquantile(::Nothing, p::Float64, lv::Function) = 
-  nothing
+iquantile(::Nothing, p::Float64, lv::Function) = nothing
+
+
+
