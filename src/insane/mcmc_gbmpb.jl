@@ -387,22 +387,16 @@ function triad_lλupdate_noded12!(Ψp  ::iTgbmpb,
   td1v = ts(Ψc.d1)
   td2v = ts(Ψc.d2)
 
-  # make sigma proposal
-  σλϕ = exp(randn())
-
   # fill with Brownian motion
-  bm!(λprv_p, λpr, tprv, σλϕ, srδt)
+  bm!(λprv_p, λpr, tprv, σλ, srδt)
   lλp = λprv_p[end]
-  bm!(λd1v_p, lλp, td1v, σλϕ, srδt)
-  bm!(λd2v_p, lλp, td2v, σλϕ, srδt)
+  bm!(λd1v_p, lλp, td1v, σλ, srδt)
+  bm!(λd2v_p, lλp, td2v, σλ, srδt)
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
-    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
-
-  # acceptance ratio
-  acr = llr + propr
+  llr, acr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, δt, srδt, lλp, λd1v_c[1])
 
   if -randexp() < acr
     llc += llr
@@ -450,23 +444,17 @@ function triad_lλupdate_noded1!(Ψp  ::iTgbmpb,
   td1v = ts(Ψc.d1)
   td2v = ts(Ψc.d2)
 
-  # make sigma proposal
-  σλϕ = exp(randn())
-
   # node proposal
-  lλp = duoprop(λpr, λd2, pe(Ψc), pe(Ψc.d2), σλϕ)
+  lλp = duoprop(λpr, λd2, pe(Ψc), pe(Ψc.d2), σλ)
 
-  bb!(λprv_p, λpr, lλp, tprv, σλϕ, srδt)
-  bm!(λd1v_p, lλp, td1v, σλϕ, srδt)
-  bb!(λd2v_p, lλp, λd2, td2v, σλϕ, srδt)
+  bb!(λprv_p, λpr, lλp, tprv, σλ, srδt)
+  bm!(λd1v_p, lλp, td1v, σλ, srδt)
+  bb!(λd2v_p, lλp, λd2, td2v, σλ, srδt)
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
-    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
-
-  # acceptance ratio
-  acr = llr + propr
+  llr, acr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, δt, srδt, lλp, λd1v_c[1])
 
   if -randexp() < acr
     llc += llr
@@ -514,23 +502,17 @@ function triad_lλupdate_noded2!(Ψp  ::iTgbmpb,
   td1v = ts(Ψc.d1)
   td2v = ts(Ψc.d2)
 
-  # make sigma proposal
-  σλϕ = exp(randn())
-
   # node proposal
-  lλp = duoprop(λpr, λd1, pe(Ψc), pe(Ψc.d1), σλϕ)
+  lλp = duoprop(λpr, λd1, pe(Ψc), pe(Ψc.d1), σλ)
 
-  bb!(λprv_p, λpr, lλp, tprv, σλϕ, srδt)
-  bb!(λd1v_p, lλp, λd1, td1v, σλϕ, srδt)
-  bm!(λd2v_p, lλp, td2v, σλϕ, srδt)
+  bb!(λprv_p, λpr, lλp, tprv, σλ, srδt)
+  bb!(λd1v_p, lλp, λd1, td1v, σλ, srδt)
+  bm!(λd2v_p, lλp, td2v, σλ, srδt)
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
-    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
-
-  # acceptance ratio
-  acr = llr + propr
+  llr, acr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, δt, srδt, lλp, λd1v_c[1])
 
   if -randexp() < acr 
     llc += llr
@@ -579,23 +561,17 @@ function triad_lλupdate_node!(Ψp  ::iTgbmpb,
   td1v = ts(Ψc.d1)
   td2v = ts(Ψc.d2)
 
-  # make sigma proposal
-  σλϕ = exp(randn())
-
   # node proposal
-  lλp = trioprop(λpr, λd1, λd2, pe(Ψc), pe(Ψc.d1), pe(Ψc.d2), σλϕ)
+  lλp = trioprop(λpr, λd1, λd2, pe(Ψc), pe(Ψc.d1), pe(Ψc.d2), σλ)
 
-  bb!(λprv_p, λpr, lλp, tprv, σλϕ, srδt)
-  bb!(λd1v_p, lλp, λd1, td1v, σλϕ, srδt)
-  bb!(λd2v_p, lλp, λd2, td2v, σλϕ, srδt)
+  bb!(λprv_p, λpr, lλp, tprv, σλ, srδt)
+  bb!(λd1v_p, lλp, λd1, td1v, σλ, srδt)
+  bb!(λd2v_p, lλp, λd2, td2v, σλ, srδt)
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
-    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
-
-  # acceptance ratio
-  acr = llr + propr
+  llr, acr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, δt, srδt, lλp, λd1v_c[1])
 
   if -randexp() < acr
     llc += llr
@@ -649,29 +625,26 @@ function triad_lλupdate_root!(Ψp      ::iTgbmpb,
   td1v = ts(Ψc.d1)
   td2v = ts(Ψc.d2)
 
-  # make sigma proposal
-  σλϕ = exp(randn())
-
   # proposal given daughters
-  lλp = duoprop(λd1, λd2, pe(Ψc.d1), pe(Ψc.d2), σλϕ)
+  lλp = duoprop(λd1, λd2, pe(Ψc.d1), pe(Ψc.d2), σλ)
 
   # propose for root
-  lλrp = rnorm(lλp, sqrt(pe(Ψc))*σλϕ)
+  lλrp = rnorm(lλp, sqrt(pe(Ψc))*σλ)
 
   # make Brownian bridge proposals
-  bb!(λprv_p, lλrp, lλp, tprv, σλϕ, srδt)
-  bb!(λd1v_p, lλp,  λd1, td1v, σλϕ, srδt)
-  bb!(λd2v_p, lλp,  λd2, td2v, σλϕ, srδt)
+  bb!(λprv_p, lλrp, lλp, tprv, σλ, srδt)
+  bb!(λd1v_p, lλp,  λd1, td1v, σλ, srδt)
+  bb!(λd2v_p, lλp,  λd2, td2v, σλ, srδt)
 
   ## make acceptance ratio 
-  llr, propr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
-    λprv_c, λd1v_c, λd2v_c, σλ, σλϕ, δt, srδt, lλp, λd1v_c[1])
+  llr, acr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
+    λprv_c, λd1v_c, λd2v_c, σλ, δt, srδt, lλp, λd1v_c[1])
 
   # prior ratio
   prr = llrdnorm_x(lλrp, λpr, λa_prior[1], λa_prior[2])
 
   # acceptance ratio
-  acr = llr + propr + prr
+  acr += prr
 
   if -randexp() < acr 
     llc += llr
@@ -698,7 +671,7 @@ end
               λd1v_c::Array{Float64,1},
               λd2v_c::Array{Float64,1},
               σλ    ::Float64,
-              σλϕ   ::Float64,
+              σλ   ::Float64,
               δt    ::Float64,
               srδt  ::Float64,
               lλp   ::Float64,
@@ -716,24 +689,24 @@ function llr_propr(tprv  ::Array{Float64,1},
                    λd1v_c::Array{Float64,1},
                    λd2v_c::Array{Float64,1},
                    σλ    ::Float64,
-                   σλϕ   ::Float64,
                    δt    ::Float64,
                    srδt  ::Float64,
                    lλp   ::Float64,
                    lλc   ::Float64)
 
   # log likelihood ratio functions
-  llr = llr_gbm_b(tprv, λprv_p, λprv_c, σλ, δt, srδt) + 
-        llr_gbm_b(td1v, λd1v_p, λd1v_c, σλ, δt, srδt) + 
-        llr_gbm_b(td2v, λd2v_p, λd2v_c, σλ, δt, srδt) +
+  llrbm_pr, llrpb_pr = llr_gbm_b_sep(tprv, λprv_p, λprv_c, σλ, δt, srδt)
+  llrbm_d1, llrpb_d1 = llr_gbm_b_sep(td1v, λd1v_p, λd1v_c, σλ, δt, srδt)
+  llrbm_d2, llrpb_d2 = llr_gbm_b_sep(td2v, λd2v_p, λd2v_c, σλ, δt, srδt)
+
+  llr = llrbm_pr + llrpb_pr +
+        llrbm_d1 + llrpb_d1 +
+        llrbm_d2 + llrpb_d2 +
         2.0*(lλp - lλc)
 
-  # log proposal ratio
-  propr = llr_bm(tprv, λprv_c, λprv_p, σλϕ, srδt) +
-          llr_bm(td1v, λd1v_c, λd1v_p, σλϕ, srδt) +
-          llr_bm(td2v, λd2v_c, λd2v_p, σλϕ, srδt) 
+  acr = llr - llrbm_pr - llrbm_d1 - llrbm_d2 
 
-  return llr, propr
+  return llr, acr
 end
 
 

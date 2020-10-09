@@ -13,6 +13,41 @@ Created 03 09 2020
 
 
 """
+    mcmc_array(treev::Array{iTgbmpb,1},
+               δt   ::Float64,
+               lv   ::Function)
+
+Return an Array with a row for each sampled tree for interpolated
+parameters accessed by `lv` at times determined by `δt`.
+"""
+function mcmc_array(treev::Array{iTgbmpb,1},
+                    δt   ::Float64,
+                    lv   ::Function)
+
+  @inbounds begin
+
+    nti = extractp(treev[1], δt, lv)
+    vi = Float64[]
+    linearize_gbm!(nti, lv, vi)
+
+    ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vt))
+    ra[1,:] = vi
+
+    for i in 2:lastindex(treev)
+      nti = extractp(treev[i], 0.1, lv)
+      vi  = Float64[]
+      linearize_gbm!(nti, lv, vi)
+      ra[i, :] = vi
+    end
+  end
+
+  return ra
+end
+
+
+
+
+"""
     linearize_gbm!(tree::iTgbmpb, 
                    lv  ::Function,
                    v   ::Array{Float64,1})
@@ -48,7 +83,7 @@ function extractp(tree::iTgbmpb, δt::Float64, lv::Function)
   # make ts vector
   pet = pe(tree)
   tsv = [0.0:δt:pet...]
-  if tsv[end] != pet
+  if istip(tree) && tsv[end] != pet
     push!(tsv, pet)
   end
 

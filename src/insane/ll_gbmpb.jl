@@ -189,6 +189,58 @@ end
 
 
 """
+    llr_gbm_b_sep(t   ::Array{Float64,1},
+                 lλv ::Array{Float64,1},
+                 σλ  ::Float64, 
+                 δt  ::Float64,
+                 srδt::Float64)
+
+Returns the log-likelihood for a branch according to GBM pure-birth 
+separately for the Brownian motion and the pure-birth
+"""
+function llr_gbm_b_sep(t   ::Array{Float64,1},
+                       lλp ::Array{Float64,1},
+                       lλc ::Array{Float64,1},
+                       σλ  ::Float64, 
+                       δt  ::Float64,
+                       srδt::Float64)
+  @inbounds begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(t)-2
+
+    llrbm = 0.0
+    llrpb = 0.0
+    lλpi = lλp[1]
+    lλci = lλc[1]
+    @simd for i in Base.OneTo(nI)
+      lλpi1  = lλp[i+1]
+      lλci1  = lλc[i+1]
+      llrbm += (lλpi1 - lλpi)^2 - (lλci1 - lλci)^2
+      llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+      lλpi   = lλpi1
+      lλci   = lλci1
+    end
+
+    # add to global likelihood
+    llrbm *= (-0.5/((σλ*srδt)^2))
+    llrpb *= (-δt)
+
+    # add final non-standard `δt`
+    δtf   = t[nI+2] - t[nI+1]
+    lλpi1 = lλp[nI+2]
+    lλci1 = lλc[nI+2]
+    llrbm += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, sqrt(δtf)*σλ)
+    llrpb -= δtf*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+  end
+
+  return llrbm, llrpb
+end
+
+
+
+
+"""
     ll_gbm_b_pb(t  ::Array{Float64,1},
                 lλv::Array{Float64,1},
                 δt ::Float64)
