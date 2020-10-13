@@ -702,7 +702,7 @@ function llr_propr(tprv  ::Array{Float64,1},
   llr = llrbm_pr + llrpb_pr +
         llrbm_d1 + llrpb_d1 +
         llrbm_d2 + llrpb_d2 +
-        (lλp - lλc)
+        lλp - lλc
 
   acr = llr - llrbm_pr - llrbm_d1 - llrbm_d2 
 

@@ -11,13 +11,11 @@ Created 03 09 2020
 
 
 
-
 """
     llik_gbm(tree::iTgbmpb, 
              σλ  ::Float64,
              δt  ::Float64
              srδt::Float64)
-
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """
 function llik_gbm(tree::iTgbmpb, 
@@ -32,7 +30,7 @@ function llik_gbm(tree::iTgbmpb,
     ll_gbm_b(tsb, lλb, σλ, δt, srδt)
   else
     ll_gbm_b(tsb, lλb, σλ, δt, srδt)         +
-    lλb[end]                             +
+    log(2.0) + lλb[end]                      +
     llik_gbm(tree.d1::iTgbmpb, σλ, δt, srδt) +
     llik_gbm(tree.d2::iTgbmpb, σλ, δt, srδt)
   end
@@ -47,7 +45,6 @@ end
              σλ  ::Float64, 
              δt  ::Float64,
              srδt::Float64)
-
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
 function ll_gbm_b(t   ::Array{Float64,1},
@@ -60,22 +57,15 @@ function ll_gbm_b(t   ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
 
-    lλvi = lλv[1]
     llbm = 0.0
-    llpb = 0.5*exp(lλvi)
-    @simd for i in Base.OneTo(nI-1)
+    llpb = 0.0
+    lλvi = lλv[1]
+    @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
       llbm += (lλvi1 - lλvi)^2
-      llpb += exp(lλvi1)
+      llpb += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
-
-    # last interval for the end 0.5 in pure-birth
-    lλvi1 = lλv[nI+1]
-    llbm += (lλvi1 - lλvi)^2
-    elλv1 = exp(lλvi1)
-    llpb += 0.5*elλv1
-    lλvi  = lλvi1
 
     # add to global likelihood
     ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
@@ -85,7 +75,7 @@ function ll_gbm_b(t   ::Array{Float64,1},
     δtf   = t[nI+2] - t[nI+1]
     lλvi1 = lλv[nI+2]
     ll += ldnorm_bm(lλvi1, lλvi, sqrt(δtf)*σλ)
-    ll -= δtf*0.5*(elλv1 + exp(lλvi1))
+    ll -= δtf*exp(0.5*(lλvi + lλvi1))
   end
 
   return ll
@@ -102,7 +92,6 @@ end
               σλ  ::Float64, 
               δt  ::Float64,
               srδt::Float64)
-
 Returns the log-likelihood ratio for a branch according to GBM pure-birth.
 """
 function llr_gbm_b(t   ::Array{Float64,1},
@@ -116,28 +105,18 @@ function llr_gbm_b(t   ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
 
+    llbm = 0.0
+    llpb = 0.0
     lλpi = lλp[1]
     lλci = lλc[1]
-    llbm = 0.0
-    llpb = 0.5*exp(lλpi) - 0.5*exp(lλci)
-    @simd for i in Base.OneTo(nI-1)
+    @simd for i in Base.OneTo(nI)
       lλpi1 = lλp[i+1]
       lλci1 = lλc[i+1]
       llbm += (lλpi1 - lλpi)^2 - (lλci1 - lλci)^2
-      llpb += exp(lλpi1) - exp(lλci1)
+      llpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
       lλpi  = lλpi1
       lλci  = lλci1
     end
-
-    # last interval for the end 0.5 in pure-birth
-    lλpi1 = lλp[nI+1]
-    lλci1 = lλc[nI+1]
-    llbm += (lλpi1 - lλpi)^2 - (lλci1 - lλci)^2
-    elλp1 = exp(lλpi1)
-    elλc1 = exp(lλci1)
-    llpb += 0.5*elλp1 - 0.5*elλc1
-    lλpi  = lλpi1
-    lλci  = lλci1
 
     # add to global likelihood
     llr  = llbm*(-0.5/((σλ*srδt)^2))
@@ -148,7 +127,7 @@ function llr_gbm_b(t   ::Array{Float64,1},
     lλpi1 = lλp[nI+2]
     lλci1 = lλc[nI+2]
     llr += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, sqrt(δtf)*σλ)
-    llr -= δtf*0.5*((elλp1 + exp(lλpi1)) - (elλc1 + exp(lλci1)))
+    llr -= δtf*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
   end
 
   return llr
@@ -163,7 +142,6 @@ end
                  σλ  ::Float64, 
                  δt  ::Float64,
                  srδt::Float64)
-
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
@@ -172,28 +150,20 @@ function ll_gbm_b_sep(t   ::Array{Float64,1},
                       σλ  ::Float64, 
                       δt  ::Float64,
                       srδt::Float64)
-
   @inbounds begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
 
-    lλvi = lλv[1]
     llbm = 0.0
-    llpb = 0.5*exp(lλvi)
-    @simd for i in Base.OneTo(nI-1)
+    llpb = 0.0
+    lλvi = lλv[1]
+    @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
       llbm += (lλvi1 - lλvi)^2
-      llpb += exp(lλvi1)
+      llpb += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
-
-    # last interval for the end 0.5 in pure-birth
-    lλvi1 = lλv[nI+1]
-    llbm += (lλvi1 - lλvi)^2
-    elλv1 = exp(lλvi1)
-    llpb += 0.5*elλv1
-    lλvi  = lλvi1
 
     # add to global likelihood
     llbm *= (-0.5/((σλ*srδt)^2))
@@ -204,7 +174,7 @@ function ll_gbm_b_sep(t   ::Array{Float64,1},
     δtf   = t[nI+2] - t[nI+1]
     lλvi1 = lλv[nI+2]
     llbm += ldnorm_bm(lλvi1, lλvi, sqrt(δtf)*σλ)
-    llpb -= δtf*0.5*(elλv1 + exp(lλvi1))
+    llpb -= δtf*exp(0.5*(lλvi + lλvi1))
   end
 
   return llbm, llpb
@@ -219,7 +189,6 @@ end
                  σλ  ::Float64, 
                  δt  ::Float64,
                  srδt::Float64)
-
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
@@ -234,28 +203,18 @@ function llr_gbm_b_sep(t   ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
 
+    llrbm = 0.0
+    llrpb = 0.0
     lλpi = lλp[1]
     lλci = lλc[1]
-    llrbm = 0.0
-    llrpb = 0.5*exp(lλpi) - 0.5*exp(lλci)
-    @simd for i in Base.OneTo(nI-1)
-      lλpi1 = lλp[i+1]
-      lλci1 = lλc[i+1]
+    @simd for i in Base.OneTo(nI)
+      lλpi1  = lλp[i+1]
+      lλci1  = lλc[i+1]
       llrbm += (lλpi1 - lλpi)^2 - (lλci1 - lλci)^2
-      llrpb += exp(lλpi1) - exp(lλci1)
-      lλpi  = lλpi1
-      lλci  = lλci1
+      llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+      lλpi   = lλpi1
+      lλci   = lλci1
     end
-
-    # last interval for the end 0.5 in pure-birth
-    lλpi1 = lλp[nI+1]
-    lλci1 = lλc[nI+1]
-    llrbm += (lλpi1 - lλpi)^2 - (lλci1 - lλci)^2
-    elλp1 = exp(lλpi1)
-    elλc1 = exp(lλci1)
-    llrpb += 0.5*elλp1 - 0.5*elλc1
-    lλpi  = lλpi1
-    lλci  = lλci1
 
     # add to global likelihood
     llrbm *= (-0.5/((σλ*srδt)^2))
@@ -266,7 +225,7 @@ function llr_gbm_b_sep(t   ::Array{Float64,1},
     lλpi1 = lλp[nI+2]
     lλci1 = lλc[nI+2]
     llrbm += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, sqrt(δtf)*σλ)
-    llrpb -= δtf*0.5*((elλp1 + exp(lλpi1)) - (elλc1 + exp(lλci1)))
+    llrpb -= δtf*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
   end
 
   return llrbm, llrpb
@@ -279,7 +238,6 @@ end
     ll_gbm_b_pb(t  ::Array{Float64,1},
                 lλv::Array{Float64,1},
                 δt ::Float64)
-
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
@@ -291,25 +249,19 @@ function ll_gbm_b_pb(t  ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
 
+    ll = 0.0
     lλvi = lλv[1]
-    ll = 0.5*exp(lλvi)
-    @simd for i in Base.OneTo(nI-1)
+    @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
-      ll   += exp(lλvi1)
+      ll   += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
-
-    # last interval for the end 0.5 in pure-birth
-    lλvi1 = lλv[nI+1]
-    elλv1 = exp(lλvi1)
-    ll   += 0.5*elλv1
-    lλvi  = lλvi1
 
     # add to global likelihood
     ll *= (-δt)
 
     # add final non-standard `δt`
-    ll -= (t[nI+2] - t[nI+1])*0.5*(elλv1 + exp(lλv[nI+2]))
+    ll -= (t[nI+2] - t[nI+1])*exp(0.5*(lλvi + lλv[nI+2]))
   end
 
   return ll
@@ -323,7 +275,6 @@ end
                σλp  ::Float64,
                σλc  ::Float64,
                srδt::Float64)
-
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """
 function llr_gbm_bm(tree::iTgbmpb, 
@@ -349,7 +300,6 @@ end
                σλp  ::Float64, 
                σλc  ::Float64, 
                srδt::Float64)
-
 Returns the log-likelihood ratio for a branch according to BM for `σ` proposal.
 """
 function llr_gbm_bm(t   ::Array{Float64,1},

@@ -30,11 +30,11 @@ function mcmc_array(treev::Array{iTgbmpb,1},
     vi = Float64[]
     linearize_gbm!(nti, lv, vi)
 
-    ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vt))
+    ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vi))
     ra[1,:] = vi
 
     for i in 2:lastindex(treev)
-      nti = extractp(treev[i], 0.1, lv)
+      nti = extractp(treev[i], δt, lv)
       vi  = Float64[]
       linearize_gbm!(nti, lv, vi)
       ra[i, :] = vi
