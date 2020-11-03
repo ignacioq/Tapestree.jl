@@ -359,7 +359,7 @@ function set_constraints(constraints::NTuple{N,String},
     if isequal(spl[end], "0")
       for i in Base.OneTo(length(spl)-1)
         hsi  = split(spl[i], "_")[end]
-        if hsi != "0" && occursin(r"^lambda_.*", spl)
+        if hsi != "0" && occursin(r"^lambda_.*", spl[i])
           push!(zfp, pardic[spl[i]])
         else
           push!(zp, pardic[spl[i]])
