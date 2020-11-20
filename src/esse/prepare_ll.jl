@@ -36,7 +36,6 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
                     h    ::Int64,
                     ny   ::Int64,
                     model::NTuple{3, Bool},
-                    power::Bool,
                     abts ::Array{Float64,2},
                     af!  ::Function)
 
@@ -56,7 +55,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   rootll = make_rootll(Val{h}, Val{k}, Val{ny}, Val{model}, af!)
 
   # make ODE function
-  ode_fun = make_egeohisse(Val{k}, Val{h}, Val{ny}, Val{model}, Val{power}, af!)
+  ode_fun = make_egeohisse(Val{k}, Val{h}, Val{ny}, Val{model}, af!)
 
   # make integral problem
   prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0, 1.0), p)
@@ -88,7 +87,7 @@ end
                Eδt    ::Float64 = 0.01,
                ti     ::Float64 = 0.0) where{M}
 
-Prepare **EGeoHiSSE** likelihoods using the **flow** algorithm given input data.
+Prepare **ESSE.g** likelihoods using the **flow** algorithm given input data.
 """
 function prepare_ll(p    ::Array{Float64,1},
                     bts  ::Array{Float64,1},

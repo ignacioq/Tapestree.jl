@@ -165,7 +165,8 @@ end
                 ::Val{ny}, 
                 ::Val{mdS}) where {k,h,ny,mdS}
 
-Generated function for full tree likelihood at the root for pruning likelihoods.
+Generated function for full tree likelihood at the root for 
+**pruning** likelihoods.
 """
 @generated function rootll_full(t   ::Float64,
                                 llik::Array{Float64,1},
@@ -195,7 +196,7 @@ Generated function for full tree likelihood at the root for pruning likelihoods.
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
     # y per parameter
-    yppar = isone(ny) ? 1 : div(ny,ncov)
+    yppar = isone(ny) ? 1 : ceil(Int64,ny/ncov)
 
     # add environmental function
     push!(eqs.args, :(af!(t, r)))
@@ -325,7 +326,7 @@ end
                 ::Val{S},
                 ::Val{mdS})
 
-Generated function for speciation event likelihoods for *pruning* algorithm.
+Generated function for speciation event likelihoods for **pruning** algorithm.
 """
 @generated function λevent_full(t   ::Float64, 
                                 llik::Array{Float64,1}, 
@@ -356,7 +357,7 @@ Generated function for speciation event likelihoods for *pruning* algorithm.
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
     # y per parameter
-    yppar = isone(ny) ? 1 : div(ny,ncov)
+    yppar = isone(ny) ? 1 : ceil(Int64,ny/ncov)
 
     # add environmental function
     push!(eqs.args, :(af!(t, r)))
@@ -480,7 +481,7 @@ end
                 ::Val{ny}, 
                 ::Val{model}) where {k, h, ny, model}
 
-Generated function for speciation event likelihoods for flow algorithm.
+Generated function for speciation event likelihoods for **flow**  algorithm.
 """
 @generated function λevent_full(t   ::Float64, 
                                 llik::Array{Array{Float64,1},1}, 
@@ -527,10 +528,14 @@ Generated function for speciation event likelihoods for flow algorithm.
       push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
     end
 
+    # preallocate llik
+    push!(eqs.args, 
+      :(lpr = llik[pr]))
+
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
-          :(llik[pr][$(i+(2^k-1)*(j-1))] = 
+          :(lpr[$(i+(2^k-1)*(j-1))] = 
             ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * λts[$(i+k*(j-1))]))
     end
 
@@ -556,16 +561,20 @@ Generated function for speciation event likelihoods for flow algorithm.
             0.5 * p[$((k+1)*(1+s.h))]))
       end
 
-      push!(eqs.args, :(llik[pr][$(i + (2^k-1)*(j-1))] = $ex))
+      push!(eqs.args, :(lpr[$(i + (2^k-1)*(j-1))] = $ex))
     end
 
   # *not* speciation model
   else
 
+    # preallocate llik
+    push!(eqs.args, 
+      :(lpr = llik[pr]))
+
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
-          :(llik[pr][$(i+(2^k-1)*(j-1))] = 
+          :(lpr[$(i+(2^k-1)*(j-1))] = 
             ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
     end
 
@@ -591,7 +600,7 @@ Generated function for speciation event likelihoods for flow algorithm.
             0.5 * p[$((k+1)*(1+s.h))]))
       end
 
-      push!(eqs.args, :(llik[pr][$(i + (2^k-1)*(j-1))] = $ex))
+      push!(eqs.args, :(lpr[$(i + (2^k-1)*(j-1))] = $ex))
     end
   end
 
@@ -626,7 +635,6 @@ end
 
 
 
-
 """
     normbysum!(v::Array{Float64,1}, ns::Int64)
 
@@ -641,6 +649,7 @@ function normbysum!(v::Array{Float64,1}, ns::Int64)
   end
   return s
 end
+
 
 
 
@@ -673,7 +682,7 @@ function make_prior_updates(pupd   ::Array{Int64,1},
     gupds = Int64[]
     qupds = intersect((2h+1):(2h + h*(h-1)), pupd)
     bbase = (2h+h*(h-1))
-    yppar = ny == 1 ? 1 : div(ny, model[1] + model[2])
+    yppar = ny == 1 ? 1 : ceil(Int64,ny, model[1] + model[2])
   else
     λupds = intersect(1:(h*(k+1)), pupd)
     μupds = intersect((h*(k+1)+1):(h*(k+1)+k*h), pupd)
@@ -682,10 +691,14 @@ function make_prior_updates(pupd   ::Array{Int64,1},
     qupds = intersect((h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)), 
               pupd)
     bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
-    yppar = ny == 1 ? 1 : div(ny,
-      model[1]*k + 
-      model[2]*k + 
-      model[3]*k*(k-1))
+    if any(model)
+      yppar = ny == 1 ? 1 : ceil(Int64, ny/(
+        model[1]*k + 
+        model[2]*k + 
+        model[3]*k*(k-1)))
+    else
+      yppar = 0
+    end
   end
 
   # hidden factors
@@ -801,21 +814,17 @@ end
 
 
 """
-    make_assign_hidfacs(::Val{k},
-                        ::Val{h},
-                        ::Val{ny},
-                        ::Val{model}) where {k, h, ny, model})
+    make_assign_hidfacs(::Type{Val{k}},
+                        ::Type{Val{h}}) where {k, h}
 
 Generated function to assign factors to parameters given 
 factor+parameter `fp` vector.
 """
 function make_assign_hidfacs(::Type{Val{k}},
-                             ::Type{Val{h}},
-                             ::Type{Val{ny}},
-                             ::Type{Val{model}}) where {k, h, ny, model}
+                             ::Type{Val{h}}) where {k, h}
 
   assign_hidfacs! = (p::Array{Float64,1}, fp::Array{Float64,1}) -> 
-    assign_hidfacs_full(p, fp, Val{k}, Val{h}, Val{ny}, Val{model})
+    assign_hidfacs_full(p, fp, Val{k}, Val{h})
 
   return assign_hidfacs!
 end
@@ -825,12 +834,10 @@ end
 
 
 """
-    assign_hidfacs(p ::Array{Float64,1},
-                   fp::Array{Float64,1},
-                   ::Val{k},
-                   ::Val{h},
-                   ::Val{ny},
-                   ::Val{model}) where {k, h, ny, model}
+    assign_hidfacs_full(p ::Array{Float64,1},
+                        fp::Array{Float64,1},
+                        ::Type{Val{k}},
+                        ::Type{Val{h}})  where {k, h}
 
 Generated function to assign factors to parameters given 
 factor+parameter `fp` vector.
@@ -838,19 +845,7 @@ factor+parameter `fp` vector.
 @generated function assign_hidfacs_full(p ::Array{Float64,1},
                                         fp::Array{Float64,1},
                                         ::Type{Val{k}},
-                                        ::Type{Val{h}},
-                                        ::Type{Val{ny}},
-                                        ::Type{Val{model}}) where {k, h, ny, model}
-
-  # number of covariates
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
-
-  # starting indices for models 2 and 3
-  m2s = model[1]*k*h*yppar
-  m3s = m2s + model[2]*k*h*yppar
+                                        ::Type{Val{h}}) where {k, h}
 
   ex = quote end
   pop!(ex.args)

@@ -12,89 +12,6 @@ Created 18 03 2019
 
 
 
-
-"""
-    power_expr(k    ::Int64,
-               h    ::Int64,
-               ny   ::Int64,
-               model::NTuple{3,Bool})
-
-Return exponential expression for one time evaluation of covariates.
-"""
-function power_expr(k    ::Int64,
-                    h    ::Int64,
-                    ny   ::Int64,
-                    model::NTuple{3,Bool})
-
-  # last non β parameters
-  bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
-
-  # ncov
-  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
-
-  # y per parameter
-  yppar = isone(ny) ? 1 : div(ny,ncov)
-
-  # starting indices for models 2 and 3
-  m2s = model[1]*k*h
-  m3s = m2s + model[2]*k*h
-
-  y2s = model[1]*yppar*k
-  y3s = y2s + model[2]*yppar*k
-
-  # start expression 
-  ex = quote end
-  pop!(ex.args)
-
-  isone(ny) && push!(ex.args, :(r1 = r[1]))
-
-  # speciation 
-  if model[1]
-    for j = Base.OneTo(h), i = Base.OneTo(k)
-      coex = Expr(:call, :*)
-      for yi in Base.OneTo(yppar)
-        rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
-        push!(coex.args, :($rex^p[$(bbase + yi + yppar*((i-1) + k*(j-1)))]))
-      end
-      push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*$coex))
-    end
-  end
-
-  # extinction 
-  if model[2]
-    for j = Base.OneTo(h), i = Base.OneTo(k)
-      coex = Expr(:call, :*)
-      for yi in Base.OneTo(yppar)
-        rex = isone(ny) ? :(r1) : :(r[$(y2s + yi+yppar*(i-1))])
-        push!(coex.args, 
-          :($rex^p[$(bbase + yi + m2s*yppar + yppar*((i-1) + k*(k-1)*(j-1)))]))
-      end
-      push!(ex.args, :(eaft[$(i + k*(j-1) + m2s)] = 
-        p[$((k+1)*h + i + k*(j-1))]*$coex))
-    end
-  end
-
-  # transition 
-  if model[3]
-    for j = Base.OneTo(h), i = Base.OneTo(k*(k-1))
-      coex = Expr(:call, :+)
-      for yi in Base.OneTo(yppar)
-        rex = isone(ny) ? :(r1) : :(r[$(y3s + yi+yppar*(i-1))])
-        push!(coex.args, 
-          :($rex^p[$(bbase + yi + m3s*yppar + yppar*((i-1) + k*(k-1)*(j-1)))]))
-      end
-      push!(ex.args, :(eaft[$(i + k*(j-1) + m3s)] = 
-        p[$(h*(2k+1) + i + k*(k-1)*(j-1))]*$coex))
-    end
-  end
-
-  return ex
-end
-
-
-
-
-
 """
     exp_expr(k    ::Int64,
              h    ::Int64,
@@ -120,14 +37,19 @@ function exp_expr(k    ::Int64,
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
   # y per parameter
-  yppar = isone(ny) ? 1 : div(ny,ncov)
+  yppar = isone(ny) ? 1 : ceil(Int64, ny/ncov)
 
   # starting indices for models 2 and 3
   m2s = model[1]*k*h
   m3s = m2s + model[2]*k*h
 
-  y2s = model[1]*yppar*k
-  y3s = y2s + model[2]*yppar*k
+  if ny < ncov
+    y2s = 0
+    y3s = 0
+  else
+    y2s = model[1]*yppar*k
+    y3s = y2s + model[2]*yppar*k
+  end
 
   # start expression 
   ex = quote end
@@ -968,8 +890,7 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
                                   ::Type{Val{k}},
                                   ::Type{Val{h}},
                                   ::Type{Val{ny}},
-                                  ::Type{Val{model}},
-                                  ::Type{Val{power}}) where {k, h, ny, model, power}
+                                  ::Type{Val{model}}) where {k, h, ny, model}
 
   # n states
   ns = (2^k - 1)*h
@@ -982,17 +903,15 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
   popfirst!(eqs.args)
 
   # add environmental function
-  push!(eqs.args, :(af!(t, r)))
+  if any(model)
+    push!(eqs.args, :(af!(t, r)))
 
-  # compute exponential for each β*covariable
-  if power
-    expex = power_expr(k, h, ny, model)
-  else
+    # compute exponential for each β*covariable
     expex = exp_expr(k, h, ny, model)
-  end
 
-  for ex in expex.args
-    push!(eqs.args, ex)
+    for ex in expex.args
+      push!(eqs.args, ex)
+    end
   end
 
   for si = Base.OneTo(ns)
@@ -1132,8 +1051,7 @@ function make_egeohisse(::Type{Val{k}},
                         ::Type{Val{h}},
                         ::Type{Val{ny}},
                         ::Type{Val{model}},
-                        ::Type{Val{power}},
-                        af!::Function) where {k, h, ny, model, power}
+                        af!::Function) where {k, h, ny, model}
 
   r    = Array{Float64,1}(undef, ny)
   eaft = Array{Float64,1}(undef,
@@ -1150,7 +1068,7 @@ function make_egeohisse(::Type{Val{k}},
                     u ::Array{Float64,1},
                     p ::Array{Float64,1},
                     t ::Float64,
-                    r,eaft,af!,Val{k},Val{h},Val{ny},Val{model},Val{power})
+                    r,eaft,af!,Val{k},Val{h},Val{ny},Val{model})
       return nothing
     end
   end

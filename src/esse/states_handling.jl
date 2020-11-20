@@ -230,29 +230,32 @@ function build_par_names(k    ::Int64,
     push!(par_nams, "q_"*string(j)*string(i))
   end
 
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
+  if any(model)
 
-  # add betas
-  if model[1]
-    for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
-      push!(par_nams, 
-        "beta_lambda_"*string(l)*"_"*string(a)*"_"*string(i))
+    yppar = ny == 1 ? 1 : ceil(Int64,ny/
+      (model[1]*k + 
+       model[2]*k + 
+       model[3]*k*(k-1)))
+
+    # add betas
+    if model[1]
+      for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
+        push!(par_nams, 
+          "beta_lambda_"*string(l)*"_"*string(a)*"_"*string(i))
+      end
     end
-  end
-  if model[2]
-    for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
-      push!(par_nams, 
-        "beta_mu_"*string(l)*"_"*string(a)*"_"*string(i))
+    if model[2]
+      for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
+        push!(par_nams, 
+          "beta_mu_"*string(l)*"_"*string(a)*"_"*string(i))
+      end
     end
-  end
-  if model[3]
-    for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(yppar)
-      a == b && continue
-      push!(par_nams, 
-        "beta_q_"*string(l)*"_"*string(a)*string(b)*"_"*string(i))
+    if model[3]
+      for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(yppar)
+        a == b && continue
+        push!(par_nams, 
+          "beta_q_"*string(l)*"_"*string(a)*string(b)*"_"*string(i))
+      end
     end
   end
 
@@ -268,7 +271,7 @@ end
 """
     build_par_names(k::Int64, T::Bool)
 
-Build dictionary for parameter names and indexes for ESSE.
+Build dictionary for parameter names and indexes for `ESSE.d`.
 """
 function build_par_names(k::Int64, T::Bool)
 

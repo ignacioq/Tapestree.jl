@@ -189,13 +189,16 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     end
   end
 
-  @debug "nps = $nps, nnps = $nnps 
-          mvps = $mvps, nngps = $nngps, 
-          mvhfs = $mvhfs, hfgps = $hfgps,
-          phid = $phid"
+  @debug " nps   = $nps 
+          nnps  = $nnps 
+          mvps  = $mvps 
+          nngps = $nngps 
+          mvhfs = $mvhfs 
+          hfgps = $hfgps
+          phid  = $phid"
 
   # make hidden factors assigning 
-  assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h}, Val{ny}, Val{model})
+  assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h})
 
   # force same parameter values for constraints
   for c in Base.OneTo(ncch)

@@ -33,7 +33,6 @@ September 26 2017
          winit       ::Float64           = 2.0,
          scale_y     ::NTuple{2,Bool}    = (true, false),
          algorithm   ::String            = "pruning",
-         power       ::Bool              = false,
          λpriors     ::Float64           = .1,
          μpriors     ::Float64           = .1,
          gpriors     ::Float64           = .1,
@@ -68,7 +67,6 @@ function esse(states_file ::String,
               winit       ::Float64           = 2.0,
               scale_y     ::NTuple{2,Bool}    = (true, false),
               algorithm   ::String            = "pruning",
-              power       ::Bool              = false,
               λpriors     ::Float64           = .1,
               μpriors     ::Float64           = .1,
               gpriors     ::Float64           = .1,
@@ -134,11 +132,13 @@ function esse(states_file ::String,
 
     # prepare likelihood
     X, int, λevent!, rootll, abts1, abts2 = 
-      prepare_ll(X, p[1], E0, k, h, ny, model, power, abts, af!)
+      prepare_ll(X, p[1], E0, k, h, ny, model, abts, af!)
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 
       λevent!, rootll, ns, ned)
+
+    @info "likelihood based on pruning algorithm prepared"
 
   else
     @error "No matching likelihood for algorithm: $algorithm"
