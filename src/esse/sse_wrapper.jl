@@ -131,38 +131,15 @@ function esse(states_file ::String,
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
-    X, int, λevent!, rootll, abts1, abts2 = 
+    X, int, λevent!, rootll, rootll_nj!, abts1, abts2 = 
       prepare_ll(X, p[1], E0, k, h, ny, model, abts, af!)
 
     # make likelihood function
     llf = make_loglik(X, abts1, abts2, trios, int, 
       λevent!, rootll, ns, ned)
 
-
     llfnj = make_loglik_nj(X, abts1, abts2, trios, int, 
-      λevent!, rootll, ns, ned)
-
-llf(p)
-llx = X[99][1:ns]
-
-ll = zeros(6)
-for i in 1:ns
-  ll[i] = llfnj(p,99,i)
-end
-
-
-exp.(ll) ./ (sum(exp.(ll)))
-llx
-
-exp(l1)/(exp(l2) + exp(l1))
-
-exp(l2)/(exp(l2) + exp(l1))
-
-exp(l2)/exp(l1)
-exp(l1)/exp(l2)
-
-l1 - l2
-l2 - l1
+      λevent!, rootll_nj!, ns, ned)
 
     @info "likelihood based on pruning algorithm prepared"
 

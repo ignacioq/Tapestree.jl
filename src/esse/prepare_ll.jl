@@ -54,6 +54,9 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   # make root likelihood conditioning
   rootll = make_rootll(Val{h}, Val{k}, Val{ny}, Val{model}, af!)
 
+  # make root likelihood conditioning for marginal ancestral states
+  rootll_nj! = make_rootll_nj(Val{h}, Val{k}, Val{ny}, Val{model}, af!)
+
   # make ODE function
   ode_fun = make_egeohisse(Val{k}, Val{h}, Val{ny}, Val{model}, af!)
 
@@ -69,7 +72,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
              maxiters        = 100_000_000,
              verbose         = false)
 
-  return X, int, λevent!, rootll, abts1, abts2
+  return X, int, λevent!, rootll, rootll_nj!, abts1, abts2
 end
 
 
