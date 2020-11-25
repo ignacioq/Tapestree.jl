@@ -17,35 +17,49 @@ make node to root path to only integrate over those equations.
 """
 
 
-trios
-ed
-ed1 = ed[:,1]
-ed2 = ed[:,2]
-# identify node
-n = 1
 
 
-# make path
-ndic = Int64[] 
+"""
+"""
+function nodetoroot_triads(ed   ::Array{Int64,2},
+                           trios::Array{Array{Int64,1},1})
 
-while true
-  push!(ndic, n)
-  pr, da = ed[n,:]
-  n = findfirst(isequal(pr), ed2)
-  if isnothing(n)
-    break
+  ed2 = ed[:,2]
+
+  tdic = Array{Tuple{Array{Int64,1},Int64},1}[]
+
+  for i in Base.OneTo(size(ed,1))
+
+    # make node-to-root path
+    ndic = Int64[] 
+
+    n = i
+    while true
+      push!(ndic, n)
+      pr, da = ed[n,:]
+      n = findfirst(isequal(pr), ed2)
+      if isnothing(n)
+        break
+      end
+    end
+
+    # determine trios where the nodes in ndic are
+    tdicn = Tuple{Array{Int64,1},Int64}[]
+    for n in ndic, t in trios
+      @views pos = findfirst(isequal(n), t[2:3])
+      if !isnothing(pos)
+        push!(tdicn, (t, pos))
+      end
+    end
+
+    push!(tdic, tdicn)
   end
+
+  return tdic
 end
 
 
-# determine trios where the nodes in ndic are
-tdic = Int64[]
-for n in ndic, t in trios
-  if in(n, t)
-    push!(, tdic)
-  end
-
-end
+tdic = nodetoroot_triads(ed, trios)
 
 
 Xfix = deepcopy(X)
@@ -103,6 +117,7 @@ Make likelihood function for tree and tip states following an ODE function
 where node `n` has state `j`.
 """
 function make_loglik_nj(X         ::Array{Array{Float64,1},1},
+                        tdic      ::Array{Array{Tuple{Array{Int64,1},Int64},1},1},
                         abts1     ::Array{Float64,1},
                         abts2     ::Array{Float64,1},
                         trios     ::Array{Array{Int64,1},1},
@@ -117,7 +132,10 @@ function make_loglik_nj(X         ::Array{Array{Float64,1},1},
   w    = Array{Float64,1}(undef, ns)
   extp = Array{Float64,1}(undef, ns)
 
-  function f(p::Array{Float64,1}, n::Int64, j::Int64)
+  function f(p   ::Array{Float64,1}, 
+             n   ::Int64, 
+             j   ::Int64, 
+             Xfix::Array{Array{Float64,1},1})
 
     @inbounds begin
 
@@ -125,32 +143,38 @@ function make_loglik_nj(X         ::Array{Array{Float64,1},1},
 
       llxtra = 0.0
 
-      # loop for integrating over internal branches
-      for triad in trios
+      tdicn = tdic[n]
 
-        pr, d1, d2 = triad::Array{Int64,1}
+      # copy from fix
+      @simd for i in Base.OneTo(ned)
+        unsafe_copyto!(X[i], 1, Xfix[i], 1, ns)
+      end
 
-        if d1 == n
-          for i in Base.OneTo(ns)
-            i == j && continue
-            X[d1][i] = 0.0
-          end
-        end
+      # make node likelihood `0.0` to all other states
+      for i in Base.OneTo(ns)
+        i == j && continue
+        X[n][i] = 0.0
+      end
+
+      # loop for integrating over internal branches from node-to-root
+      for (triad, pos) in tdicn
+
+        pr, d1, d2 = triad
 
         ud1 = @views solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
-
         check_negs(ud1, ns) && return -Inf
 
-        if d2 == n
-          for i in Base.OneTo(ns)
-            i == j && continue
-            X[d2][i] = 0.0
-          end
-        end
+        # ud1fix = @views solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
+        # check_negs(ud1, ns) && return -Inf
+
 
         ud2 = @views solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
-
         check_negs(ud2, ns) && return -Inf
+
+        #=
+        perhaps have to recompute as well for Xfix to know the difference 
+        in likelihoods
+        =#
 
         # update likelihoods with speciation event
         λevent!(abts2[pr], llik, ud1, ud2, p)

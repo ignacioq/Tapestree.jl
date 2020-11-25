@@ -105,7 +105,7 @@ function esse(states_file ::String,
   end
 
   # prepare data
-  X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
+  X, p, fp, ed, trios, ns, ned, pupd, phid, nnps, nps, 
   mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,

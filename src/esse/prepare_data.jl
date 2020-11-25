@@ -53,7 +53,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   ntip = length(tv)
 
   # add root of length 0
-  ed = cat(ed, [2*ntip ntip + 1], dims = 1)
+  ed = vcat(ed, [2*ntip ntip + 1])
   push!(el, 0.0)
 
   # number of edges
@@ -259,7 +259,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     X[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
-  return X, p, fp, trios, ns, ned, pupd, phid, nnps, nps, 
+  return X, p, fp, ed, trios, ns, ned, pupd, phid, nnps, nps, 
     mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
     af!, assign_hidfacs!, abts, bts, E0
 
