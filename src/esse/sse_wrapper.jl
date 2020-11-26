@@ -135,7 +135,7 @@ function esse(states_file ::String,
       prepare_ll(X, p[1], E0, k, h, ny, model, abts, af!)
 
     # make likelihood function
-    llf = make_loglik(X, abts1, abts2, trios, int, 
+    llf2 = make_loglik(X, U, abts1, abts2, trios, int, 
       λevent!, rootll, ns, ned)
 
     llfnj = make_loglik_nj(X, abts1, abts2, trios, int, 

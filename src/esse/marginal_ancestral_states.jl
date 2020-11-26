@@ -74,7 +74,7 @@ end
 Make likelihood function for tree and tip states following an ODE function 
 where node `n` has state `j`.
 """
-function make_loglik_nj_fast(X         ::Array{Array{Float64,1},1},
+function make_loglik_nj(X         ::Array{Array{Float64,1},1},
                         tdic      ::Array{Array{Tuple{Array{Int64,1},Int64},1},1},
                         abts1     ::Array{Float64,1},
                         abts2     ::Array{Float64,1},
@@ -95,7 +95,8 @@ function make_loglik_nj_fast(X         ::Array{Array{Float64,1},1},
   function f(p   ::Array{Float64,1}, 
              n   ::Int64, 
              j   ::Int64, 
-             Xtl::Array{Array{Float64,1},1})
+             Xtl::Array{Array{Float64,1},1},
+             U   ::Array{Array{Float64,1},1})
 
     @inbounds begin
 
@@ -121,32 +122,30 @@ function make_loglik_nj_fast(X         ::Array{Array{Float64,1},1},
 
         pr, d1, d2 = triad
 
-        ud1 = solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
-        check_negs(ud1, ns) && return -Inf
+        if pos == 1
+          ud1 = solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
+          check_negs(ud1, ns) && return -Inf
+          ud2 = U[d2]
+        else
+          ud1 = U[d1]
+          ud2 = solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
+          check_negs(ud2, ns) && return -Inf
+        end
 
-        ud2 = solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
-        check_negs(ud2, ns) && return -Inf
-
-        #=
-        perhaps have to recompute as well for Xtl to know the difference 
-        in likelihoods
-        =#
-
-        # update likelihoods with speciation event
+        # update marginal likelihoods with speciation event
         λevent!(abts2[pr], llik, ud1, ud2, p)
+
+        # update total likelihoods with speciation event
+        λevent!(abts2[pr], llik_tl, U[d1], U[d2], p)
 
         # loglik for marginal likelihood of n
         tosum = normbysum!(llik, ns)
 
-        # # loglik for joint likelihood
-        # Xtlpr = Xtl[pr]
-        # for i in Base.OneTo(ns)
-        #   llik_tl[i] = Xtlpr[i]
-        # end
-        # tosum_tl = normbysum!(llik_tl, ns)
+        # loglik for total likelihood
+        tosum_tl = normbysum!(llik_tl, ns)
 
-        # # loglik to sum for fixed node
-        # llxtra += log(tosum_tl) - log(tosum)
+        # loglik to sum for fixed node
+        llxtra += log(tosum) - log(tosum_tl)
 
         # assign the remaining likelihoods &
         # assign extinction probabilities and 
@@ -171,7 +170,7 @@ function make_loglik_nj_fast(X         ::Array{Array{Float64,1},1},
       end
 
       # estimate likelihood weights
-      normbysum!(llik, w, ns)
+      normbysum!(llik,    w,    ns)
       normbysum!(llik_tl, w_tl, ns)
 
       # combine root likelihoods for marginal likelihood
@@ -181,125 +180,13 @@ function make_loglik_nj_fast(X         ::Array{Array{Float64,1},1},
       if n == ned
         return llik[j]::Float64
       else
-        return (log(sum(llik)) + llxtra)::Float64
+        return (log(sum(llik)) - log(sum(llik_tl)) + llxtra)::Float64
       end
     end
   end
 
   return f
 end
-
-
-
-
-
-"""   
-   make_loglik_nj(X        ::Array{Array{Float64,1},1},   
-                  abts1    ::Array{Float64,1},    
-                  abts2    ::Array{Float64,1},    
-                  trios    ::Array{Array{Int64,1},1},   
-                  int      ::DiffEqBase.DEIntegrator,   
-                  λevent!  ::Function,    
-                  rootll   ::Function,    
-                  ns       ::Int64,   
-                  ned      ::Int64)   
-  
-Make likelihood function for tree and tip states following an ODE function     
-where node `n` has state `j`.    
-"""    
-function make_loglik_nj(X        ::Array{Array{Float64,1},1},    
-                       abts1    ::Array{Float64,1},   
-                       abts2    ::Array{Float64,1},   
-                       trios    ::Array{Array{Int64,1},1},    
-                       int      ::DiffEqBase.DEIntegrator,    
-                       λevent!  ::Function,     
-                       rootll_nj!   ::Function,   
-                       ns       ::Int64,    
-                       ned      ::Int64)    
-
-  # preallocate vectors   
- llik = Array{Float64,1}(undef, ns)   
- w    = Array{Float64,1}(undef, ns)   
- extp = Array{Float64,1}(undef, ns)   
-
-  function f(p::Array{Float64,1}, n::Int64, j::Int64)   
-
-    @inbounds begin   
-
-      int.p = p   
-
-      llxtra = 0.0    
-
-      # loop for integrating over internal branches   
-     for triad in trios   
-
-        pr, d1, d2 = triad::Array{Int64,1}    
-
-        if d1 == n    
-         for i in Base.OneTo(ns)    
-           i == j && continue   
-           X[d1][i] = 0.0   
-         end    
-       end    
-
-        ud1 = @views solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}   
-
-        check_negs(ud1, ns) && return -Inf    
-
-        if d2 == n    
-         for i in Base.OneTo(ns)    
-           i == j && continue   
-           X[d2][i] = 0.0   
-         end    
-       end    
-
-        ud2 = @views solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}   
-
-        check_negs(ud2, ns) && return -Inf    
-
-        # update likelihoods with speciation event    
-       λevent!(abts2[pr], llik, ud1, ud2, p)    
-
-        # loglik to sum for integration   
-       tosum = normbysum!(llik, ns)   
-
-        llxtra += log(tosum)    
-
-        # assign the remaining likelihoods &    
-       # assign extinction probabilities and    
-       # check for extinction of `1.0`    
-       @views Xpr = X[pr]   
-       for i in Base.OneTo(ns)    
-         ud1[i+ns] >= 1.0 && return -Inf    
-         Xpr[i+ns] = ud1[i+ns]    
-         Xpr[i]    = llik[i]    
-       end    
-     end    
-
-      # assign root likelihood in non log terms &   
-     # assign root extinction probabilities   
-     @views Xned = X[ned]   
-     for i in Base.OneTo(ns)    
-       Xned[i+ns] >= 1.0 && return -Inf   
-       llik[i] = Xned[i]    
-       extp[i] = Xned[i+ns]   
-     end    
-
-      # estimate likelihood weights   
-     normbysum!(llik, w, ns)    
-
-      # combine root likelihoods    
-     ll = rootll_nj!(abts1[ned], llik, extp, w, p)   
-
-      return (log(ll) + llxtra)::Float64    
-   end    
- end    
-
-  return f    
-end    
-
-
-
 
 
 

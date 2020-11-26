@@ -56,7 +56,6 @@ end
 
 
 
-
 """
     make_loglik(X        ::Array{Array{Float64,1},1},
                 abts1    ::Array{Float64,1},
@@ -71,6 +70,7 @@ end
 Make likelihood function for a tree given an ODE function.
 """
 function make_loglik(X        ::Array{Array{Float64,1},1},
+                     U        ::Array{Array{Float64,1},1},
                      abts1    ::Array{Float64,1},
                      abts2    ::Array{Float64,1},
                      trios    ::Array{Array{Int64,1},1},
@@ -98,16 +98,16 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
 
         pr, d1, d2 = triad::Array{Int64,1}
 
-        ud1 = @views solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
+        U[d1] = solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
 
-        check_negs(ud1, ns) && return -Inf
+        check_negs(U[d1], ns) && return -Inf
 
-        ud2 = @views solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
+        U[d2] = solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
 
-        check_negs(ud2, ns) && return -Inf
+        check_negs(U[d2], ns) && return -Inf
 
         # update likelihoods with speciation event
-        λevent!(abts2[pr], llik, ud1, ud2, p)
+        λevent!(abts2[pr], llik, U[d1], U[d2], p)
 
         # loglik to sum for integration
         tosum = normbysum!(llik, ns)
@@ -118,6 +118,7 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
         # assign extinction probabilities and 
         # check for extinction of `1.0`
         @views Xpr = X[pr]
+        @views ud1 = U[d1]
         for i in Base.OneTo(ns)
           ud1[i+ns] >= 1.0 && return -Inf
           Xpr[i+ns] = ud1[i+ns]
