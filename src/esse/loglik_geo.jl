@@ -28,7 +28,7 @@ function make_lhf(llf            ::Function,
                   assign_hidfacs!::Function,
                   dcp            ::Dict{Int64,Int64})
 
-  ks  = keys(dcp)
+  ks = keys(dcp)
 
   f = let ks = ks, assign_hidfacs! = assign_hidfacs!, dcp = dcp, llf = llf, lpf = lpf
     (p ::Array{Float64,1}, 
@@ -652,6 +652,7 @@ function normbysum!(v::Array{Float64,1}, ns::Int64)
   end
   return s
 end
+
 
 
 

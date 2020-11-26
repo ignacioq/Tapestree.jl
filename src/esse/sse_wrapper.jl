@@ -54,6 +54,7 @@ function esse(states_file ::String,
               cov_mod     ::NTuple{M,String},
               out_file    ::String,
               h           ::Int64;
+              node_ps     ::Tuple{Bool, Int64}= (true, 10)
               constraints ::NTuple{N,String}  = (" ",),
               mvpars      ::NTuple{O,String}  = ("lambda = beta",),
               niter       ::Int64             = 10_000,
@@ -131,19 +132,15 @@ function esse(states_file ::String,
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
-    X, int, λevent!, rootll, rootll_nj!, abts1, abts2 = 
+    X, U, M, int, λevent!, rootll, rootll_nj!, abts1, abts2 = 
       prepare_ll(X, p[1], E0, k, h, ny, model, abts, af!)
 
     # make likelihood function
-    llf2 = make_loglik(X, U, abts1, abts2, trios, int, 
+    llf = make_loglik(X, U, abts1, abts2, trios, int, 
       λevent!, rootll, ns, ned)
 
-    llfnj = make_loglik_nj(X, abts1, abts2, trios, int, 
+    llfnj = make_loglik_nj(X, tdic, abts1, abts2, trios, int, 
       λevent!, rootll_nj!, ns, ned)
-
-    llfnj_f = make_loglik_nj_fast(X, tdic, abts1, abts2, trios, int, 
-      λevent!, rootll_nj!, ns, ned)
-
 
     @info "likelihood based on pruning algorithm prepared"
 
@@ -161,16 +158,29 @@ function esse(states_file ::String,
   # create posterior functions
   lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp)
 
+  spf = make_state_posteriors(llf, lpf, llfnj, X, U, M, ns, ned)
+
   # number of parameters
   npars = length(pardic)
 
   # run slice-sampler
-  R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-        npars, niter, nthin, nburn, ntakew, nswap, ncch, winit, optimal_w, dt,
-        screen_print)
+  R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, 
+        nngps, mvhfs, hfgps, npars, niter, nthin, nburn, ntakew, nswap, 
+        ncch, winit, optimal_w, dt, screen_print)
 
   # write output
   write_ssr(R, pardic, out_file)
+
+  # run ancestral state marginal probabilities
+  if node_ps[1]
+  
+"""
+here
+"""
+
+    sample_node_ps(
+
+  end
 
   return R
 end

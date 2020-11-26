@@ -13,6 +13,99 @@ September 26 2017
 
 
 
+  # run ancestral state marginal probabilities
+  
+  
+"""
+here
+"""
+function sample_node_ps(R  ::Array{Float64,2},
+                        spf::Function,
+                        nsamples::Int64, 
+                        ns::Int64, 
+                        ned::Int64)
+
+  #prellocate results
+  A = Array{Float64,2}(undef, nsamples, ns*ned + 2)
+
+"""
+here
+"""
+
+  for i in Base.OneTo(nsamples)
+    A[i,]
+
+  spf(p)
+
+end
+
+
+
+
+
+"""
+    make_state_posteriors(llf  ::Function,
+                          lpf  ::Function, 
+                          llfnj::Function,
+                          X    ::Array{Array{Float64,1},1},
+                          U    ::Array{Array{Float64,1},1},
+                          M    ::Array{Array{Float64,1},1},
+                          ns   ::Int64,
+                          ned  ::Int64)
+
+Make function to estimate node states marginal posterior probabilities.
+"""
+function make_state_posteriors(llf  ::Function,
+                               lpf  ::Function, 
+                               llfnj::Function,
+                               X    ::Array{Array{Float64,1},1},
+                               U    ::Array{Array{Float64,1},1},
+                               M    ::Array{Array{Float64,1},1},
+                               ns   ::Int64,
+                               ned  ::Int64)
+
+  Xtl = deepcopy(X)::Array{Array{Float64,1},1}
+
+  # estimate fp for prior
+  """
+  here: estimate number of hidden states
+  """
+
+  function f(p::Array{Float64,1})
+    # estimate total likelihood
+    tll  = llf(p)
+    # estimate prior
+    tlp  = lpf(p, fp)
+    # estimate posterior
+    tlpp =  tlp + tll
+
+    # copy to fix
+    @simd for i in Base.OneTo(ned)
+      unsafe_copyto!(Xtl[i], 1, X[i], 1, ns)
+    end
+
+    for n in Base.OneTo(ned)
+      Mn = M[n]
+      for i in Base.OneTo(ns)
+        Mn[i] = exp(tll + llfnj(p, n, i, Xtl, U) + tlp)
+        if isnan(Mn[i])
+          Mn[i] = 0.0
+        end
+      end
+      sM = sum(Mn)
+      for i in Base.OneTo(ns)
+        Mn[i] /= sM
+      end
+    end
+  end
+
+  return f
+end
+
+
+
+
+
 """
     nodetoroot_triads(ed   ::Array{Int64,2},
                       trios::Array{Array{Int64,1},1})
@@ -122,7 +215,7 @@ function make_loglik_nj(X         ::Array{Array{Float64,1},1},
 
         pr, d1, d2 = triad
 
-        if pos == 1
+        if isone(pos)
           ud1 = solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
           check_negs(ud1, ns) && return -Inf
           ud2 = U[d2]

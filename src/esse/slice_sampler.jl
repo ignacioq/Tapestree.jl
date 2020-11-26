@@ -66,8 +66,8 @@ function slice_sampler(lhf         ::Function,
 
   # slice-sampler
   il, hl, pl, ol = 
-    loop_slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-      w, npars, niter, nthin, nswap, ncch, o, t, screen_print)
+    loop_slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, 
+      hfgps, w, npars, niter, nthin, nswap, ncch, o, t, screen_print)
 
   # choose cold chain (is equal to 1)
   P = Array{Float64,2}(undef, size(hl,1), npars)
