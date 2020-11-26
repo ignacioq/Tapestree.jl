@@ -247,6 +247,8 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # make trios
   trios = maketriads(ed, rev = true)
 
+  tdic = nodetoroot_triads(ed, trios)
+
   # preallocate tip likelihoods
   X = [zeros(ns) for i in Base.OneTo(ned)]
 
@@ -259,7 +261,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     X[wi][findall(map(x -> isequal(x.g, wig), S))] .= 1.0
   end
 
-  return X, p, fp, ed, trios, ns, ned, pupd, phid, nnps, nps, 
+  return X, p, fp, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
     mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
     af!, assign_hidfacs!, abts, bts, E0
 

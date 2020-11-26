@@ -105,7 +105,7 @@ function esse(states_file ::String,
   end
 
   # prepare data
-  X, p, fp, ed, trios, ns, ned, pupd, phid, nnps, nps, 
+  X, p, fp, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
   mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
@@ -140,6 +140,10 @@ function esse(states_file ::String,
 
     llfnj = make_loglik_nj(X, abts1, abts2, trios, int, 
       λevent!, rootll_nj!, ns, ned)
+
+    llfnj_f = make_loglik_nj_fast(X, tdic, abts1, abts2, trios, int, 
+      λevent!, rootll_nj!, ns, ned)
+
 
     @info "likelihood based on pruning algorithm prepared"
 
