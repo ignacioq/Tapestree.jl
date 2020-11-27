@@ -55,7 +55,7 @@ function esse(states_file ::String,
               out_file    ::String,
               h           ::Int64;
               node_ps     ::Tuple{Bool,Int64} = (true, 10),
-              out_states  ::String            = "" 
+              out_states  ::String            = "",
               constraints ::NTuple{N,String}  = (" ",),
               mvpars      ::NTuple{O,String}  = ("lambda = beta",),
               niter       ::Int64             = 10_000,
@@ -134,7 +134,7 @@ function esse(states_file ::String,
 
     # prepare likelihood
     X, U, A, int, λevent!, rootll, rootll_nj!, abts1, abts2 = 
-      prepare_ll(X, p[1], E0, k, h, ny, model, abts, af!)
+      prepare_ll(X, p[1], E0, k, h, ny, ns, model, abts, af!)
 
     # make likelihood function
     llf = make_loglik(X, U, abts1, abts2, trios, int, 
@@ -175,7 +175,7 @@ function esse(states_file ::String,
   # run ancestral state marginal probabilities
   if node_ps[1]
     @info "estimating node marginal states probabilities..."
-    S = sample_node_ps(R, spf, nsamples, ns, ned)
+    S = sample_node_ps(R, A, spf, node_ps[2], ns, ned)
 
     # make dictionary for names
     nodic = Dict{String, Int64}()
@@ -193,8 +193,6 @@ function esse(states_file ::String,
 
   return R
 end
-
-
 
 
 

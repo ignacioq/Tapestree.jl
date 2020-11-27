@@ -23,6 +23,7 @@ September 26 2017
 Run node marginal probabilities estimation.
 """
 function sample_node_ps(R       ::Array{Float64,2},
+                        A       ::Array{Array{Float64,1},1},
                         spf     ::Function,
                         nsamples::Int64, 
                         ns      ::Int64, 
@@ -34,16 +35,17 @@ function sample_node_ps(R       ::Array{Float64,2},
   nlit = size(R, 1)
   npar = size(R, 2) - 2
 
-  lever = ceil(Int64, nlit/nsamples)
-
   nsamples = nsamples > nlit ? nlit : nsamples
+  lever = ceil(Int64, nlit/nsamples)
 
   pv = zeros(npar)
 
-  for s in Base.OneTo(nsamples)
-    spf(R[s,3:(npar+2)])
-    S[s,1] = R[s,1]
-    S[s,2] = R[s,2]
+  ss = 1:lever:nlit
+
+  for s in Base.OneTo(lastindex(ss))
+    spf(R[ss[s],3:(npar+2)])
+    S[s,1] = R[ss[s],1]
+    S[s,2] = R[ss[s],2]
 
     # copy to fix
     @simd for i in Base.OneTo(ned)
@@ -55,27 +57,6 @@ function sample_node_ps(R       ::Array{Float64,2},
 
   return S
 end
-
-
-
-
-
-function write_ssr(R       ::Array{Float64,2}, 
-                   pardic  ::Dict{String,Int64},
-                   out_file::String)
-
-  # column names
-  col_nam = ["Iteration", "Posterior"]
-
-  for (k,v) in sort!(collect(pardic), by = x -> x[2])
-    push!(col_nam, k)
-  end
-
-  R = vcat(reshape(col_nam, 1, lastindex(col_nam)), R)
-
-  writedlm(out_file*".log", R)
-end
-
 
 
 

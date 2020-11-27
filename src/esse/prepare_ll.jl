@@ -35,6 +35,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
                     k    ::Int64,
                     h    ::Int64,
                     ny   ::Int64,
+                    ns   ::Int64,
                     model::NTuple{3, Bool},
                     abts ::Array{Float64,2},
                     af!  ::Function)
@@ -48,7 +49,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
   U = deepcopy(X)
 
   # make marginal state probabilities array
-  M = [zeros(ns) for i in Base.OneTo(lastindex(X))]
+  A = [zeros(ns) for i in Base.OneTo(lastindex(X))]
 
   # make them vectors for indexing efficiency
   abts1 = abts[:,1]
@@ -78,7 +79,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
              maxiters        = 100_000_000,
              verbose         = false)
 
-  return X, U, M, int, λevent!, rootll, rootll_nj!, abts1, abts2
+  return X, U, A, int, λevent!, rootll, rootll_nj!, abts1, abts2
 end
 
 
