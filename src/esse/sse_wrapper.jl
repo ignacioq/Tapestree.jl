@@ -54,7 +54,8 @@ function esse(states_file ::String,
               cov_mod     ::NTuple{M,String},
               out_file    ::String,
               h           ::Int64;
-              node_ps     ::Tuple{Bool, Int64}= (true, 10)
+              node_ps     ::Tuple{Bool,Int64} = (true, 10),
+              out_states  ::String            = "" 
               constraints ::NTuple{N,String}  = (" ",),
               mvpars      ::NTuple{O,String}  = ("lambda = beta",),
               niter       ::Int64             = 10_000,
@@ -106,7 +107,7 @@ function esse(states_file ::String,
   end
 
   # prepare data
-  X, p, fp, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
+  X, p, fp, ed, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
   mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
   af!, assign_hidfacs!, abts, bts, E0 = 
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
@@ -132,7 +133,7 @@ function esse(states_file ::String,
   elseif occursin(r"^[p|P][A-za-z]*", algorithm)
 
     # prepare likelihood
-    X, U, M, int, λevent!, rootll, rootll_nj!, abts1, abts2 = 
+    X, U, A, int, λevent!, rootll, rootll_nj!, abts1, abts2 = 
       prepare_ll(X, p[1], E0, k, h, ny, model, abts, af!)
 
     # make likelihood function
@@ -158,7 +159,7 @@ function esse(states_file ::String,
   # create posterior functions
   lhf = make_lhf(llf, lpf, assign_hidfacs!, dcp)
 
-  spf = make_state_posteriors(llf, lpf, llfnj, X, U, M, ns, ned)
+  spf = make_state_posteriors(llf, lpf, llfnj, X, U, A, ns, ned, k, h)
 
   # number of parameters
   npars = length(pardic)
@@ -168,19 +169,27 @@ function esse(states_file ::String,
         nngps, mvhfs, hfgps, npars, niter, nthin, nburn, ntakew, nswap, 
         ncch, winit, optimal_w, dt, screen_print)
 
-  # write output
+  # write chain output
   write_ssr(R, pardic, out_file)
 
   # run ancestral state marginal probabilities
   if node_ps[1]
-  
-"""
-here
-"""
+    @info "estimating node marginal states probabilities..."
+    S = sample_node_ps(R, spf, nsamples, ns, ned)
 
-    sample_node_ps(
+    # make dictionary for names
+    nodic = Dict{String, Int64}()
 
+    ed2 = ed[:,2]
+    for j in Base.OneTo(ned), i in Base.OneTo(ns)
+      push!(nodic, string("node_", ed2[j],"_state_",i) => i + (j-1)*(ns))
+    end
+
+    # write ancestral node reconstruction
+    write_ssr(S, nodic, out_states)
   end
+
+  @info "Finished"
 
   return R
 end

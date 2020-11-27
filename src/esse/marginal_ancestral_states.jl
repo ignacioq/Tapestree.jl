@@ -13,30 +13,67 @@ September 26 2017
 
 
 
-  # run ancestral state marginal probabilities
-  
-  
 """
-here
+    sample_node_ps(R       ::Array{Float64,2},
+                   spf     ::Function,
+                   nsamples::Int64, 
+                   ns      ::Int64, 
+                   ned     ::Int64)
+
+Run node marginal probabilities estimation.
 """
-function sample_node_ps(R  ::Array{Float64,2},
-                        spf::Function,
+function sample_node_ps(R       ::Array{Float64,2},
+                        spf     ::Function,
                         nsamples::Int64, 
-                        ns::Int64, 
-                        ned::Int64)
+                        ns      ::Int64, 
+                        ned     ::Int64)
 
   #prellocate results
-  A = Array{Float64,2}(undef, nsamples, ns*ned + 2)
+  S = Array{Float64,2}(undef, nsamples, ns*ned+2)
 
-"""
-here
-"""
+  nlit = size(R, 1)
+  npar = size(R, 2) - 2
 
-  for i in Base.OneTo(nsamples)
-    A[i,]
+  lever = ceil(Int64, nlit/nsamples)
 
-  spf(p)
+  nsamples = nsamples > nlit ? nlit : nsamples
 
+  pv = zeros(npar)
+
+  for s in Base.OneTo(nsamples)
+    spf(R[s,3:(npar+2)])
+    S[s,1] = R[s,1]
+    S[s,2] = R[s,2]
+
+    # copy to fix
+    @simd for i in Base.OneTo(ned)
+      i_i = (i + (i-1)*(ns-1)) + 2
+      i_f = (i + (i-1)*(ns-1) + (ns-1)) + 2
+      S[s,i_i:i_f] = copy(A[i])
+    end
+  end
+
+  return S
+end
+
+
+
+
+
+function write_ssr(R       ::Array{Float64,2}, 
+                   pardic  ::Dict{String,Int64},
+                   out_file::String)
+
+  # column names
+  col_nam = ["Iteration", "Posterior"]
+
+  for (k,v) in sort!(collect(pardic), by = x -> x[2])
+    push!(col_nam, k)
+  end
+
+  R = vcat(reshape(col_nam, 1, lastindex(col_nam)), R)
+
+  writedlm(out_file*".log", R)
 end
 
 
@@ -51,7 +88,9 @@ end
                           U    ::Array{Array{Float64,1},1},
                           M    ::Array{Array{Float64,1},1},
                           ns   ::Int64,
-                          ned  ::Int64)
+                          ned  ::Int64,
+                          k    ::Int64,
+                          h    ::Int64)
 
 Make function to estimate node states marginal posterior probabilities.
 """
@@ -60,41 +99,65 @@ function make_state_posteriors(llf  ::Function,
                                llfnj::Function,
                                X    ::Array{Array{Float64,1},1},
                                U    ::Array{Array{Float64,1},1},
-                               M    ::Array{Array{Float64,1},1},
+                               A    ::Array{Array{Float64,1},1},
                                ns   ::Int64,
-                               ned  ::Int64)
+                               ned  ::Int64,
+                               k    ::Int64,
+                               h    ::Int64)
 
   Xtl = deepcopy(X)::Array{Array{Float64,1},1}
 
   # estimate fp for prior
-  """
-  here: estimate number of hidden states
-  """
+  hdic = Dict{Int64, Int64}()
+  if isone(k)
+    for i in Base.OneTo(h-1)
+      for j in Base.OneTo(k)
+        push!(hdic, j + k*(i-1) => j + k*i)
+      end
+    end
+  else
+    for i in Base.OneTo(h-1)
+      for j in Base.OneTo(k+1)
+        push!(hdic, j + (k+1)*(i-1) => j + (k+1)*i)
+      end
+    end
+  end
+
+  fp = isone(k) ? zeros(k*h) : zeros((k+1)*h)
 
   function f(p::Array{Float64,1})
-    # estimate total likelihood
-    tll  = llf(p)
-    # estimate prior
-    tlp  = lpf(p, fp)
-    # estimate posterior
-    tlpp =  tlp + tll
 
-    # copy to fix
-    @simd for i in Base.OneTo(ned)
-      unsafe_copyto!(Xtl[i], 1, X[i], 1, ns)
-    end
+    @inbounds begin
+      # estimate total likelihood
+      tll  = llf(p)
 
-    for n in Base.OneTo(ned)
-      Mn = M[n]
-      for i in Base.OneTo(ns)
-        Mn[i] = exp(tll + llfnj(p, n, i, Xtl, U) + tlp)
-        if isnan(Mn[i])
-          Mn[i] = 0.0
-        end
+      # estimate fp from p
+      for (k,v) in hdic
+        fp[v] = p[v] - p[k]
       end
-      sM = sum(Mn)
-      for i in Base.OneTo(ns)
-        Mn[i] /= sM
+
+      # estimate prior
+      tlp  = lpf(p, fp)
+      # estimate posterior
+      tlpp =  tlp + tll
+
+      # copy to fix
+      @simd for i in Base.OneTo(ned)
+        unsafe_copyto!(Xtl[i], 1, X[i], 1, ns)
+      end
+
+      for n in Base.OneTo(ned)
+        An = A[n]
+        for i in Base.OneTo(ns)
+          An[i] = exp(tll + llfnj(p, n, i, Xtl, U) + tlp)
+          if isnan(An[i])
+            An[i] = 0.0
+          end
+        end
+        sA = sum(An)
+        for i in Base.OneTo(ns)
+          An[i] /= sA
+        end
       end
     end
   end
