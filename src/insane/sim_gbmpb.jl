@@ -19,7 +19,7 @@ Created 03 09 2020
             δt  ::Float64,
             srδt::Float64)
 
-Simulate `iTree` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmbd` according to a pure-birth geometric Brownian motion.
 """
 function sim_gbm(t   ::Float64,
                  λt  ::Float64,

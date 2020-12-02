@@ -13,7 +13,7 @@ Created 06 07 2020
 
 
 """
-    insane_cpb(tree    ::iTpb, 
+    insane_cpb(tree    ::sTpb, 
                out_file::String;
                λprior  ::Float64 = 0.1,
                niter   ::Int64   = 1_000,
@@ -25,7 +25,7 @@ Created 06 07 2020
 
 Run insane for constant pure-birth.
 """
-function insane_cpb(tree    ::iTpb, 
+function insane_cpb(tree    ::sTpb, 
                     out_file::String;
                     λprior  ::Float64 = 0.1,
                     niter   ::Int64   = 1_000,
@@ -59,7 +59,7 @@ end
 
 
 """
-    mcmc_burn_cpb(tree    ::iTpb, 
+    mcmc_burn_cpb(tree    ::sTpb, 
                   tl      ::Float64,
                   nt      ::Int64,
                   tune_int::Int64,
@@ -70,7 +70,7 @@ end
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_burn_cpb(tree    ::iTpb, 
+function mcmc_burn_cpb(tree    ::sTpb, 
                        tl      ::Float64,
                        nt      ::Int64,
                        tune_int::Int64,
@@ -123,7 +123,7 @@ end
 
 
 """
-    mcmc_cpb(tree  ::iTpb,
+    mcmc_cpb(tree  ::sTpb,
              llc   ::Float64,
              prc   ::Float64,
              λc    ::Float64,
@@ -134,7 +134,7 @@ end
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_cpb(tree  ::iTpb,
+function mcmc_cpb(tree  ::sTpb,
                   llc   ::Float64,
                   prc   ::Float64,
                   λc    ::Float64,

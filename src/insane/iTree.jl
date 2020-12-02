@@ -24,20 +24,20 @@ abstract type iTree end
 
 
 """
-    iT
+    sT
 
 An abstract type for all composite recursive types 
 representing a simple binary phylogenetic tree for `insane` use
 """
-abstract type iT <: iTree end
+abstract type sT <: iTree end
 
 
 
 
 """
-    iTpb
+    sTpb
 
-The simplest composite recursive type of supertype `iTpbree` 
+The simplest composite recursive type of supertype `iTree` 
 representing a binary phylogenetic tree for `insane` use, 
 with the following fields:
 
@@ -46,45 +46,45 @@ with the following fields:
   pe: pendant edge
   iμ: is an extinction node
 
-    iTpb()
+    sTpb()
 
-Constructs an empty `iTpb` object.
+Constructs an empty `sTpb` object.
 
-    iTpb(pe::Float64)
+    sTpb(pe::Float64)
 
-Constructs an empty `iTpb` object with pendant edge `pe`.
+Constructs an empty `sTpb` object with pendant edge `pe`.
 
-    iTpb(d1::iTpb, d2::iTpb, pe::Float64)
+    sTpb(d1::sTpb, d2::sTpb, pe::Float64)
 
-Constructs an `iTpb` object with two `iTpb` daughters and pendant edge `pe`.
+Constructs an `sTpb` object with two `sTpb` daughters and pendant edge `pe`.
 """
-mutable struct iTpb <: iT
-  d1::Union{iTpb, Nothing}
-  d2::Union{iTpb, Nothing}
+mutable struct sTpb <: sT
+  d1::Union{sTpb, Nothing}
+  d2::Union{sTpb, Nothing}
   pe::Float64
 
   # inner constructor
-  iTpb(d1::Union{iTpb, Nothing}, d2::Union{iTpb, Nothing}, pe::Float64) = 
+  sTpb(d1::Union{sTpb, Nothing}, d2::Union{sTpb, Nothing}, pe::Float64) = 
     new(d1, d2, pe)
 end
 
 # outer constructors
-iTpb() = iTpb(nothing, nothing, 0.0)
+sTpb() = sTpb(nothing, nothing, 0.0)
 
-iTpb(pe::Float64) = iTpb(nothing, nothing, pe)
+sTpb(pe::Float64) = sTpb(nothing, nothing, pe)
 
 
 # pretty-printing
-Base.show(io::IO, t::iTpb) = 
+Base.show(io::IO, t::sTpb) = 
   print(io, "insane simple pure-birth tree with ", sntn(t), " tips")
 
 
 
 
 """
-    iTbd
+    sTbd
 
-The simplest composite recursive type of supertype `iTbdree` 
+The simplest composite recursive type of supertype `sTbdree` 
 representing a binary phylogenetic tree for `insane` use, 
 with the following fields:
 
@@ -93,44 +93,44 @@ with the following fields:
   pe: pendant edge
   iμ: is an extinction node
 
-    iTbd()
+    sTbd()
 
-Constructs an empty `iTbd` object.
+Constructs an empty `sTbd` object.
 
-    iTbd(pe::Float64)
+    sTbd(pe::Float64)
 
-Constructs an empty `iTbd` object with pendant edge `pe`.
+Constructs an empty `sTbd` object with pendant edge `pe`.
 
-    iTbd(d1::iTbd, d2::iTbd, pe::Float64)
+    sTbd(d1::sTbd, d2::sTbd, pe::Float64)
 
-Constructs an `iTbd` object with two `iTbd` daughters and pendant edge `pe`.
+Constructs an `sTbd` object with two `sTbd` daughters and pendant edge `pe`.
 """
-mutable struct iTbd <: iT
-  d1::Union{iTbd, Nothing}
-  d2::Union{iTbd, Nothing}
+mutable struct sTbd <: sT
+  d1::Union{sTbd, Nothing}
+  d2::Union{sTbd, Nothing}
   pe::Float64
   iμ::Bool
   fx::Bool
 
   # inner constructor
-  iTbd(d1::Union{iTbd, Nothing}, d2::Union{iTbd, Nothing}, 
+  sTbd(d1::Union{sTbd, Nothing}, d2::Union{sTbd, Nothing}, 
     pe::Float64, iμ::Bool, fx::Bool) = new(d1, d2, pe, iμ, fx)
 end
 
 # outer constructors
-iTbd() = iTbd(nothing, nothing, 0.0, false, false)
+sTbd() = sTbd(nothing, nothing, 0.0, false, false)
 
-iTbd(pe::Float64) = iTbd(nothing, nothing, pe, false, false)
+sTbd(pe::Float64) = sTbd(nothing, nothing, pe, false, false)
 
-iTbd(pe::Float64, iμ::Bool) = iTbd(nothing, nothing, pe, iμ, false)
+sTbd(pe::Float64, iμ::Bool) = sTbd(nothing, nothing, pe, iμ, false)
 
-iTbd(d1::iTbd, d2::iTbd, pe::Float64) = iTbd(d1, d2, pe, false, false)
+sTbd(d1::sTbd, d2::sTbd, pe::Float64) = sTbd(d1, d2, pe, false, false)
 
-iTbd(d1::iTbd, d2::iTbd, pe::Float64, iμ::Bool) = 
-  iTbd(d1, d2, pe, iμ, false)
+sTbd(d1::sTbd, d2::sTbd, pe::Float64, iμ::Bool) = 
+  sTbd(d1, d2, pe, iμ, false)
 
 # pretty-printing
-Base.show(io::IO, t::iTbd) = 
+Base.show(io::IO, t::sTbd) = 
   print(io, "insane simple birth-death tree with ", sntn(t), " tips (", snen(t)," extinct)")
 
 
@@ -206,9 +206,9 @@ Base.show(io::IO, t::iTgbmpb) =
 """
     iTgbmpb(tree::iTpb, δt::Float64, lλa::Float64, σλ::Float64)
 
-Promotes an `iTpb` to `iTgbmpb` according to some values for `λ` diffusion.
+Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
-function iTgbmpb(tree::iTpb, 
+function iTgbmpb(tree::sTpb, 
                  δt  ::Float64, 
                  srδt::Float64, 
                  lλa ::Float64, 
@@ -231,7 +231,7 @@ end
 """
     iTgbmpb(::Nothing, δt::Float64, lλa::Float64, σλ::Float64)
 
-Promotes an `iTpb` to `iTgbmpb` according to some values for `λ` diffusion.
+Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
 iTgbmpb(::Nothing, δt::Float64, srδt::Float64, lλa::Float64, σλ::Float64) = 
   nothing

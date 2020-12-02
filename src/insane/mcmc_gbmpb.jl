@@ -14,7 +14,7 @@ Created 14 09 2020
 
 
 """
-    insane_gbmpb(tree    ::iTpb, 
+    insane_gbmpb(tree    ::sTpb, 
                  out_file::String;
                  λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
                  σλprior ::Float64  = 0.1,
@@ -31,7 +31,7 @@ Created 14 09 2020
 
 Run insane for constant pure-birth.
 """
-function insane_gbmpb(tree    ::iTpb, 
+function insane_gbmpb(tree    ::sTpb, 
                       out_file::String;
                       σλprior ::Float64  = 0.1,
                       δt      ::Float64  = 1e-2,

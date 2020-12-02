@@ -13,17 +13,17 @@ Created 06 07 2020
 
 
 """
-    llik_cpb(tree::iTree, λ::Float64)
+    llik_cpb(tree::sTpb, λ::Float64)
 
 Log-likelihood up to a constant for constant pure-birth 
 given a complete `iTree`.
 """
-function llik_cpb(tree::iTpb, λ::Float64)
+function llik_cpb(tree::sTpb, λ::Float64)
 
   if istip(tree) 
     - pe(tree)*λ
   else
-    llik_cpb(tree.d1::iTpb, λ) + llik_cpb(tree.d2::iTpb, λ) + log(λ) - pe(tree)*λ
+    llik_cpb(tree.d1::sTpb, λ) + llik_cpb(tree.d2::sTpb, λ) + log(λ) - pe(tree)*λ
   end
 end
 

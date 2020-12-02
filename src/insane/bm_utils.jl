@@ -274,6 +274,7 @@ ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
 
 
 
+
 """
     lrdnorm_bm_x(xp::Float64, 
                  μp::Float64, 
@@ -287,6 +288,7 @@ and `xc`, respectively.
 """
 lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float64) =
   -0.5*((xp - μp)^2 - (xc - μc)^2)/σsrt^2
+
 
 
 

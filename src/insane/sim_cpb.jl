@@ -33,10 +33,10 @@ function sim_cpb(t::Float64, λ::Float64)
   tw = cpb_wait(λ)
 
   if tw > t
-    return iTpb(t)
+    return sTpb(t)
   end
 
-  iTpb(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
+  sTpb(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
 end
 
 

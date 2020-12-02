@@ -13,16 +13,16 @@ Created 03 09 2020
 
 
 """
-    mcmc_array(treev::Array{iTgbmpb,1},
+    mcmc_array(treev::Array{T,1},
                δt   ::Float64,
-               lv   ::Function)
+               lv   ::Function) where {T <: iTgbm}
 
 Return an Array with a row for each sampled tree for interpolated
 parameters accessed by `lv` at times determined by `δt`.
 """
-function mcmc_array(treev::Array{iTgbmpb,1},
+function mcmc_array(treev::Array{T,1},
                     δt   ::Float64,
-                    lv   ::Function)
+                    lv   ::Function) where {T <: iTgbm}
 
   @inbounds begin
 
@@ -48,15 +48,15 @@ end
 
 
 """
-    linearize_gbm!(tree::iTgbmpb, 
+    linearize_gbm!(tree::T, 
                    lv  ::Function,
-                   v   ::Array{Float64,1})
+                   v   ::Array{Float64,1}) where {T <: iTgbm}
 
 Extract the parameters given by `lv` into a linear Array.
 """
-function linearize_gbm!(tree::iTgbmpb, 
+function linearize_gbm!(tree::T, 
                         lv  ::Function,
-                        v   ::Array{Float64,1})
+                        v   ::Array{Float64,1}) where {T <: iTgbm}
 
   append!(v, lv(tree))
   if !istip(tree.d1)
@@ -71,11 +71,11 @@ end
 
 
 """
-    extractp(tree::iTgbmpb, δt::Float64, lv::Function)
+    extractp(tree::T, δt::Float64, lv::Function) where {T <: iTgbm}
 
 Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
 """
-function extractp(tree::iTgbmpb, δt::Float64, lv::Function)
+function extractp(tree::T, δt::Float64, lv::Function) where {T <: iTgbm}
 
   t = ts(tree)
   v = lv(tree)
@@ -169,13 +169,16 @@ end
 
 
 """
-    iquantile(treev::Array{iTgbmpb,1}, p::Float64, lv::Function)
-
+    iquantile(treev::Array{T,1}, 
+              p    ::Float64, 
+              lv   ::Function) where {T <: iTgbm}
 
 Make an `iTgbmpb` with the quantile specified by `p` in data specified in 
 function `lv`.
 """
-function iquantile(treev::Array{iTgbmpb,1}, p::Float64, lv::Function)
+function iquantile(treev::Array{T,1}, 
+                   p    ::Float64, 
+                   lv   ::Function) where {T <: iTgbm}
 
   tsv = ts(treev[1])
   nt = lastindex(treev)

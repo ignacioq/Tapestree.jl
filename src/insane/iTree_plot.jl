@@ -24,13 +24,13 @@ Created 07 07 2020
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function rplottree!(tree::iTgbm, 
-                   xc  ::Float64, 
-                   yr  ::UnitRange{Int64},
-                   zfun::Function,
-                   x   ::Array{Float64,1}, 
-                   y   ::Array{Float64,1},
-                   z   ::Array{Float64,1})
+function rplottree!(tree::T, 
+                    xc  ::Float64, 
+                    yr  ::UnitRange{Int64},
+                    zfun::Function,
+                    x   ::Array{Float64,1}, 
+                    y   ::Array{Float64,1},
+                    z   ::Array{Float64,1}) where {T <: iTgbm}
 
   # add horizontal lines
   xv  = ts(tree)
@@ -79,7 +79,7 @@ end
     function f(tree::iTgbm, cfun::Function)
 Recipe for plotting a Type `iTgbm`.
 """
-@recipe function f(tree::iTgbm, zfun::Function)
+@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
 
   x = Float64[]
   y = Float64[]
@@ -122,13 +122,14 @@ end
               yr  ::UnitRange{Int64},
               x   ::Array{Float64,1}, 
               y   ::Array{Float64,1}) where {T <: iTree}
+
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
 function rplottree!(tree::T, 
-                   xc  ::Float64, 
-                   yr  ::UnitRange{Int64},
-                   x   ::Array{Float64,1}, 
-                   y   ::Array{Float64,1}) where {T <: iTree}
+                    xc  ::Float64, 
+                    yr  ::UnitRange{Int64},
+                    x   ::Array{Float64,1}, 
+                    y   ::Array{Float64,1}) where {T <: iTree}
 
   # add horizontal lines
   push!(x, xc)

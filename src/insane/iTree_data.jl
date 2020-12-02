@@ -198,18 +198,16 @@ snen(::Nothing) = 0
 
 
 """
-    stree_ll_cbd(tree::iTree,
-                 ll  ::Float64, 
-                 λc  ::Float64, 
-                 μc  ::Float64,
-                 dri ::BitArray{1}, 
-                 ldr ::Int64,
-                 wpr ::Int64,
-                 ix  ::Int64, 
-                 px  ::Int64)
+    streeheight(tree::T,
+                h   ::Float64, 
+                th  ::Float64,
+                dri ::BitArray{1}, 
+                ldr ::Int64,
+                wpr ::Int64,
+                ix  ::Int64, 
+                px  ::Int64) where {T <: iTree}
 
-Return the Log-likelihood under constant birth-death 
-of a grafted subtree determined by `dri`. 
+Return the height of a grafted subtree in `tree`. 
 """
 function streeheight(tree::T,
                      h   ::Float64, 

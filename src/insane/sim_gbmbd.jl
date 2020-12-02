@@ -18,6 +18,16 @@ Created 03 09 2020
 
 """
     sim_gbm(t   ::Float64,
+            λt  ::Float64,
+            μt  ::Float64,
+            σ_λ ::Float64,
+            σ_μ ::Float64,
+            dt  ::Float64,
+            srdt::Float64)
+
+Simulate `iTgbmbd` according to a geometric Brownian motion.
+"""
+function sim_gbm(t   ::Float64,
                  λt  ::Float64,
                  μt  ::Float64,
                  σ_λ ::Float64,
@@ -25,15 +35,9 @@ Created 03 09 2020
                  dt  ::Float64,
                  srdt::Float64)
 
-Simulate `iTree` according to a geometric Brownian motion.
 """
-function sim_gbm(t   ::Float64,
-                   λt  ::Float64,
-                   μt  ::Float64,
-                   σ_λ ::Float64,
-                   σ_μ ::Float64,
-                   dt  ::Float64,
-                   srdt::Float64)
+here: do it in log scale instead check sim_gbm for iTgbmpb
+"""
 
   λv = Float64[λt]
   μv = Float64[μt]
