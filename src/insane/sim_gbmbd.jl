@@ -10,10 +10,6 @@ Created 03 09 2020
 =#
 
 
-# Augment an empty tree made with constant birth-death given an ancestor
-
-
-
 
 
 """
@@ -49,8 +45,8 @@ here: do it in log scale instead check sim_gbm for iTgbmpb
     t  -= dt
     bt += dt
 
-    λt1 = exp(rnorm(log(λt), srdt*σ_λ))
-    μt1 = exp(rnorm(log(μt), srdt*σ_μ))
+    λt1 = rnorm(λt, srdt*σ_λ)
+    μt1 = rnorm(μt, srdt*σ_μ)
 
     push!(λv, λt1)
     push!(μv, μt1)
@@ -60,8 +56,8 @@ here: do it in log scale instead check sim_gbm for iTgbmpb
       return iTgbmbd(nothing, nothing, bt, false, false, ts, λv, μv)
     end
 
-    λm = geoavg2(λt, λt1)
-    μm = geoavg2(μt, μt1)
+    λm = exp(0.5*(λt + λt1))
+    μm = exp(0.5*(μt + μt1))
 
     if divev(λm, μm, dt)
       # if speciation
@@ -100,25 +96,6 @@ Generate a normal variable with mean `μ` and variance `σ`.
 """
 rnorm(μ::Float64, σ::Float64) = @fastmath randn()*σ + μ
 
-
-
-
-"""
-    avg2(x1::Float64, x2::Float64)
-
-Arithmetic average for two numbers.
-"""
-avg2(x1::Float64, x2::Float64) = (x1 + x2)*0.5
-
-
-
-
-"""
-    geoavg2(x1::Float64, x2::Float64) 
-
-Geometric average for two numbers.
-"""
-geoavg2(x1::Float64, x2::Float64) = sqrt(x1*x2)
 
 
 
