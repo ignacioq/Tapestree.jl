@@ -29,14 +29,14 @@ function sample_node_ps(R       ::Array{Float64,2},
                         ns      ::Int64, 
                         ned     ::Int64)
 
-  #prellocate results
-  S = Array{Float64,2}(undef, nsamples, ns*ned+2)
-
   nlit = size(R, 1)
   npar = size(R, 2) - 2
 
   nsamples = nsamples > nlit ? nlit : nsamples
   lever = ceil(Int64, nlit/nsamples)
+
+  #prellocate results
+  S = Array{Float64,2}(undef, nsamples, ns*ned+2)
 
   pv = zeros(npar)
 
@@ -130,7 +130,7 @@ function make_state_posteriors(llf  ::Function,
       for n in Base.OneTo(ned)
         An = A[n]
         for i in Base.OneTo(ns)
-          An[i] = exp(tll + llfnj(p, n, i, Xtl, U) + tlp)
+          An[i] = exp(llfnj(p, n, i, Xtl, U))
           if isnan(An[i])
             An[i] = 0.0
           end
@@ -145,7 +145,6 @@ function make_state_posteriors(llf  ::Function,
 
   return f
 end
-
 
 
 
