@@ -45,6 +45,8 @@ end
              σλ  ::Float64, 
              δt  ::Float64,
              srδt::Float64)
+
+
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
 function ll_gbm_b(t   ::Array{Float64,1},
@@ -92,6 +94,8 @@ end
               σλ  ::Float64, 
               δt  ::Float64,
               srδt::Float64)
+
+
 Returns the log-likelihood ratio for a branch according to GBM pure-birth.
 """
 function llr_gbm_b(t   ::Array{Float64,1},
