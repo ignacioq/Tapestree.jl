@@ -15,15 +15,20 @@ Created 25 08 2020
 """
     insane_cbd(tree    ::sTbd, 
                out_file::String;
-               λprior  ::Float64 = 0.1,
-               μprior  ::Float64 = 0.1,
-               niter   ::Int64   = 1_000,
-               nthin   ::Int64   = 10,
-               nburn   ::Int64   = 200,
-               tune_int::Int64   = 100,
-               λtni    ::Float64 = 1.0,
-               μtni    ::Float64 = 1.0,
-               obj_ar  ::Float64 = 0.4)
+               λprior  ::Float64           = 0.1,
+               μprior  ::Float64           = 0.1,
+               niter   ::Int64             = 1_000,
+               nthin   ::Int64             = 10,
+               nburn   ::Int64             = 200,
+               tune_int::Int64             = 100,
+               ϵi      ::Float64           = 0.4,
+               λi      ::Float64           = NaN,
+               μi      ::Float64           = NaN,
+               λtni    ::Float64           = 1.0,
+               μtni    ::Float64           = 1.0,
+               obj_ar  ::Float64           = 0.4,
+               pupdp   ::NTuple{4,Float64} = (0.4,0.4,0.1,0.1),
+               prints  ::Int64              = 5)
 
 Run insane for constant pure-birth.
 """
@@ -46,7 +51,7 @@ function insane_cbd(tree    ::sTbd,
 
   # tree characters
   th = treeheight(tree)
-  nt = sntn(tree)
+  n  = sntn(tree)
 
   fixtree!(tree)
 
@@ -76,7 +81,7 @@ function insane_cbd(tree    ::sTbd,
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
-      mcmc_burn_cbd(tree, nt, th, tune_int, λprior, μprior, 
+      mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior, 
         nburn, ϵi, λi, μi, λtni, μtni, scalef, idv, wbr, dabr, pup, pupdp, 
         prints, svf)
 
@@ -118,7 +123,7 @@ end
 MCMC da chain for constant birth-death.
 """
 function mcmc_burn_cbd(tree    ::sTbd,
-                       nt      ::Int64,
+                       n       ::Int64,
                        th      ::Float64,
                        tune_int::Int64,
                        λprior  ::Float64,
