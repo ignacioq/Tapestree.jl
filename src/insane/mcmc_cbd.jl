@@ -36,8 +36,8 @@ function insane_cbd(tree    ::sTbd,
                     nburn   ::Int64             = 200,
                     tune_int::Int64             = 100,
                     ϵi      ::Float64           = 0.4,
-                    λi      ::Float64           = 100.,
-                    μi      ::Float64           = 100.,
+                    λi      ::Float64           = NaN,
+                    μi      ::Float64           = NaN,
                     λtni    ::Float64           = 1.0,
                     μtni    ::Float64           = 1.0,
                     obj_ar  ::Float64           = 0.4,
@@ -145,14 +145,11 @@ function mcmc_burn_cbd(tree    ::sTbd,
   λtn = λtni
   μtn = μtni
 
-  # starting parameters (using method of moments)
-  if λi == 100.0 && μi == 100.0
-    δ   = 1.0/th * log(Float64(nt)*(1.0 - ϵi) + ϵi)
-    λc  = δ/(1.0 - ϵi)
-    μc  = λc - δ
+  # starting parameters
+  if isnan(λi) && isnan(μi)
+    λc, μc = moments(Float64(n), th, ϵi)
   else
-    λc = λi
-    μc = μi
+    λc, μc = λi, μi
   end
 
   llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)

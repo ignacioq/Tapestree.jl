@@ -54,7 +54,7 @@ function ll_gbm_b(t   ::Array{Float64,1},
                   σλ  ::Float64, 
                   δt  ::Float64,
                   srδt::Float64)
-  @inbounds begin
+  @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
@@ -104,7 +104,7 @@ function llr_gbm_b(t   ::Array{Float64,1},
                    σλ  ::Float64, 
                    δt  ::Float64,
                    srδt::Float64)
-  @inbounds begin
+  @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
@@ -154,7 +154,7 @@ function ll_gbm_b_sep(t   ::Array{Float64,1},
                       σλ  ::Float64, 
                       δt  ::Float64,
                       srδt::Float64)
-  @inbounds begin
+  @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
@@ -202,7 +202,7 @@ function llr_gbm_b_sep(t   ::Array{Float64,1},
                        σλ  ::Float64, 
                        δt  ::Float64,
                        srδt::Float64)
-  @inbounds begin
+  @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
@@ -248,7 +248,7 @@ separately for the Brownian motion and the pure-birth
 function ll_gbm_b_pb(t  ::Array{Float64,1},
                      lλv::Array{Float64,1},
                      δt ::Float64)
-  @inbounds begin
+  @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
@@ -311,7 +311,7 @@ function llr_gbm_bm(t   ::Array{Float64,1},
                     σλp  ::Float64, 
                     σλc  ::Float64, 
                     srδt::Float64)
-  @inbounds begin
+  @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2

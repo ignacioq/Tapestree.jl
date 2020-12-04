@@ -99,7 +99,8 @@ Recipe for plotting a Type `iTgbm`.
   xtickfont       --> font(8, "Helvetica")
   grid            --> :off
   xtick_direction --> :out
-  yshowaxis       --> false
+  yticks          --> (nothing)
+  showaxis        --> :x
 
   # nan_inds = findall(x -> isnan(x),z)
   # for i in eachindex(nan_inds)
@@ -181,7 +182,8 @@ Recipe for plotting a Type `iTree`.
   xtickfont       --> font(8, "Helvetica")
   grid            --> :off
   xtick_direction --> :out
-  yshowaxis       --> false
+  yticks          --> (nothing)
+  showaxis        --> :x
 
   return x, y
 end

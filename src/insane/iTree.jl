@@ -255,15 +255,15 @@ with the following fields:
   lλ: array of a Brownian motion evolution of `log(λ)`
   lμ: array of a Brownian motion evolution of `log(μ)`
 
-    iTgbmbd()
-
-Constructs an empty `iTgbmbd` object.
-
-    iTgbmbd(pe::Float64)
-
-Constructs an empty `iTgbmbd` object with pendant edge `pe`.
-
-    iTgbmbd(d1::iTgbmbd, d2::iTgbmbd, pe::Float64)
+    iTgbmbd(d1::Union{iTgbmbd, Nothing}, 
+            d2::Union{iTgbmbd, Nothing}, 
+            pe::Float64, 
+            iμ::Bool, 
+            fx::Bool, 
+            ts::Array{Float64,1}, 
+            lλ::Array{Float64,1},
+            lμ::Array{Float64,1}) = 
+      new(d1, d2, pe, iμ, fx, ts, lλ, lμ)
 
 Constructs an `iTgbmbd` object with two `iTgbmbd` daughters and pendant edge `pe`.
 """
@@ -304,4 +304,79 @@ iTgbmbd(d1::iTgbmbd, d2::iTgbmbd, pe::Float64, iμ::Bool) =
 Base.show(io::IO, t::iTgbmbd) = 
   print(io, "insane bd-gbm tree with ", sntn(t), " tips (", snen(t)," extinct)")
 
+
+
+
+"""
+    sTbd(tree::iTgbmbd)
+
+Demotes a tree of type `iTgbmbd` to `sTbd`.
+"""
+sTbd(tree::iTgbmbd) =
+  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
+
+"""
+    sTbd(tree::Nothing) 
+
+Demotes a tree of type `iTgbmbd` to `sTbd`.
+"""
+sTbd(tree::Nothing) = nothing
+
+
+
+
+"""
+    iTgbmbd(tree::sTbd, 
+            δt  ::Float64, 
+            srδt::Float64, 
+            lλa ::Float64, 
+            lμa ::Float64, 
+            σλ  ::Float64,
+            σμ  ::Float64)
+
+Promotes an `sTbd` to `iTgbmbd` according to some values for `λ` and `μ` 
+diffusion.
+"""
+function iTgbmbd(tree::sTbd, 
+                 δt  ::Float64, 
+                 srδt::Float64, 
+                 lλa ::Float64, 
+                 lμa ::Float64, 
+                 σλ  ::Float64,
+                 σμ  ::Float64)
+
+  # make ts vector
+  pet = pe(tree)
+  tsv = [0.0:δt:pet...]
+  if tsv[end] != pet
+    push!(tsv, pet)
+  end
+
+  lλv = sim_bm(lλa, σλ, srδt, tsv)
+  lμv = sim_bm(lμa, σμ, srδt, tsv)
+
+  iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[end], lμv[end], σλ, σμ), 
+          iTgbmbd(tree.d2, δt, srδt, lλv[end], lμv[end], σλ, σμ),
+          pet, isextinct(tree), false, tsv, lλv, lμv)
+end
+
+"""
+    iTgbmbd(::Nothing, 
+            δt  ::Float64, 
+            srδt::Float64, 
+            lλa ::Float64, 
+            lμa ::Float64, 
+            σλ  ::Float64,
+            σμ  ::Float64)
+
+Promotes an `sTbd` to `iTgbmbd` according to some values for `λ` and `μ` 
+diffusion.
+"""
+iTgbmbd(::Nothing, 
+        δt  ::Float64, 
+        srδt::Float64, 
+        lλa ::Float64, 
+        lμa ::Float64, 
+        σλ  ::Float64,
+        σμ  ::Float64) = nothing
 

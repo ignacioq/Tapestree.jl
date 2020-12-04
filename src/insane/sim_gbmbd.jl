@@ -31,10 +31,6 @@ function sim_gbm(t   ::Float64,
                  dt  ::Float64,
                  srdt::Float64)
 
-"""
-here: do it in log scale instead check sim_gbm for iTgbmpb
-"""
-
   λv = Float64[λt]
   μv = Float64[μt]
   bt = 0.0

@@ -62,7 +62,7 @@ function ll_gbm_b(t   ::Array{Float64,1},
                   δt  ::Float64, 
                   srδt::Float64)
 
-  @inbounds begin
+  @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
@@ -90,10 +90,11 @@ function ll_gbm_b(t   ::Array{Float64,1},
 
     # add final non-standard `δt`
     δtf   = t[nI+2] - t[nI+1]
+    srδtf = sqrt(δtf)
     lλvi1 = lλv[nI+2]
     lμvi1 = lμv[nI+2]
-    ll += ldnorm_bm(lλvi1, lλvi, sqrt(δtf)*σλ)
-    ll += ldnorm_bm(lμvi1, lμvi, sqrt(δtf)*σμ)
+    ll += ldnorm_bm(lλvi1, lλvi, srδtf*σλ)
+    ll += ldnorm_bm(lμvi1, lμvi, srδtf*σμ)
     ll -= δtf*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
   end
 
