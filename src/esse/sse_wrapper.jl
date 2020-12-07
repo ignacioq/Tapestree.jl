@@ -510,12 +510,8 @@ function read_data_esse(states_file ::String,
 
   # assign tip labels to edge numbers
   tip_labels = Dict{String,Integer}()
-  ii = 0
-  for i in Base.OneTo(size(ed,1))
-    if ed[i,2] <= ntip
-      ii += 1
-      tip_labels[tlab[ii]] = ed[i,2]
-    end
+  for i in Base.OneTo(lastindex(tlab))
+    tip_labels[tlab[i]] = i
   end
 
   # read states text file
