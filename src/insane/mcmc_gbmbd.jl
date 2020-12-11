@@ -172,8 +172,11 @@ function update_σλ!(σλc    ::Float64,
 
 
 """
-here: start with log likleihood ratio for speciation rate variance
+here: start with log likelihood ratio for speciation rate variance
 """
+
+
+
 
   # log likelihood and prior ratio
   llr = llr_gbm_bm(Ψ, σλp, σλc, srδt)
