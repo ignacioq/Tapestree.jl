@@ -864,14 +864,11 @@ factor+parameter `fp` vector.
 
   else
     for j in 1:(h-1)
-      for i in 1:k
+      for i in 1
         # within-region speciation
         push!(ex.args, :(p[$((k+1)*j + i)] = 
           p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
       end
-      # between-region speciation
-      push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
-        (p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))])))
     end
   end
 

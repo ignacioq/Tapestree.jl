@@ -74,14 +74,14 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   # find λ hidden factors for hidden states 
   phid = Int64[] 
   if h > 1
-    re   = Regex("^lambda_.*_[1-"*string(h-1)*"]\$")
+    re   = Regex("^lambda_A_[1-"*string(h-1)*"]\$")
     for (k,v) in pardic 
       occursin(re, k) && push!(phid, v)
     end
     sort!(phid)
   end
 
-  # create factor parameter vector
+  # create hidden factor parameter vector
   fp = zeros(k > 1 ? (k+1)*h : h)
 
   # generate initial parameter values
@@ -92,13 +92,13 @@ function prepare_data(cov_mod    ::NTuple{M,String},
 
   if isone(k)
     βs = (2*h + h*(h-1)) + 1
-    p[βs:end]      .= 0.0           # set βs
+    p[βs:end]      .= 0.0               # set βs
     p[1:h]         .= δ + 0.1*rand()*δ  # set λs
-    p[(h+1):(2*h)] .= p[1] - δ      # set μs
+    p[(h+1):(2*h)] .= p[1] - δ          # set μs
   else
     βs = h*(k^2 + 2k + h) + 1
     p[βs:end]             .= 0.0                  # set βs
-    p[1:(k+1)*h]          .= δ + 0.1*rand()*δ         # set λs
+    p[1:(k+1)*h]          .= δ + 0.1*rand()*δ     # set λs
     p[(k+1)*h+1:h*(2k+1)] .= p[1] - δ             # set μs
   end
 
