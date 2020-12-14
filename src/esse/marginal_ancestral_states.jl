@@ -253,10 +253,6 @@ function make_loglik_nj(X         ::Array{Array{Float64,1},1},
         X[n][i] = 0.0
       end
 
-"""
-here: for root have one triad as well
-"""
-
       # loop for integrating over internal branches from node-to-root
       for (triad, pos) in tdicn
 
@@ -310,6 +306,10 @@ here: for root have one triad as well
       end
 
       if n == ned
+        # # combine root likelihoods for marginal likelihood
+        rootll_nj!(abts1[ned], llik,    extp, w,    p)
+        rootll_nj!(abts1[ned], llik_tl, extp, w_tl, p)
+
         return (log(llik[j]) - log(sum(llik_tl)) + llxtra)
       else
         # estimate likelihood weights
@@ -319,6 +319,7 @@ here: for root have one triad as well
         # combine root likelihoods for marginal likelihood
         rootll_nj!(abts1[ned], llik,    extp, w,    p)
         rootll_nj!(abts1[ned], llik_tl, extp, w_tl, p)
+
         return (log(sum(llik)) - log(sum(llik_tl)) + llxtra)::Float64
       end
     end
