@@ -306,8 +306,14 @@ function make_loglik_nj(X         ::Array{Array{Float64,1},1},
       end
 
       if n == ned
+        # estimate likelihood weights
+        normbysum!(llik_tl, w_tl, ns)
+
+        # combine root likelihoods for marginal likelihood
+        rootll_nj!(abts1[ned], llik_tl, extp, w_tl, p)
+
         # for root, weights and extinction have already been estimated
-        return (log(llik[j]) - log(sum(llik_tl)) + llxtra)
+        return (log(llik_tl[j]) - log(sum(llik_tl)) + llxtra)
       else
         # estimate likelihood weights
         normbysum!(llik,    w,    ns)
