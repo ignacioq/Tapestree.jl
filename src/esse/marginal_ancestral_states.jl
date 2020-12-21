@@ -149,6 +149,7 @@ end
 
 
 
+
 """
     nodetoroot_triads(ed   ::Array{Int64,2},
                       trios::Array{Array{Int64,1},1})
@@ -260,12 +261,10 @@ function make_loglik_nj(X         ::Array{Array{Float64,1},1},
 
         if isone(pos)
           ud1 = solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
-          check_negs(ud1, ns) && return -Inf
           ud2 = U[d2]
         else
           ud1 = U[d1]
           ud2 = solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
-          check_negs(ud2, ns) && return -Inf
         end
 
         # update marginal likelihoods with speciation event
