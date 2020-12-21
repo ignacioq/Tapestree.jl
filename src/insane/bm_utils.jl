@@ -267,11 +267,22 @@ end
     ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64)
 
 Compute the **Normal** density in logarithmic scale with 
-mean `μ` and standard density `σ` for `x`.
+mean `μ` and standard density `σsrt` for `x`.
 """
 ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
   -0.5*log(2.0π) - log(σsrt) - 0.5*((x - μ)/σsrt)^2
 
+
+
+
+"""
+    ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64)
+
+Compute the **Normal** density in with 
+mean `μ` and standard density `σsrt` for `x`.
+"""
+dnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
+  1.0/(σsrt*sqrt(2.0π)) * exp(-0.5*((x - μ)/σsrt)^2)
 
 
 
