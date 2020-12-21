@@ -99,15 +99,12 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
         pr, d1, d2 = triad::Array{Int64,1}
 
         U[d1] = solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
-
-        check_negs(U[d1], ns) && return -Inf
-
         U[d2] = solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
-
-        check_negs(U[d2], ns) && return -Inf
 
         # update likelihoods with speciation event
         λevent!(abts2[pr], llik, U[d1], U[d2], p)
+
+        check_negs(llik, ns) && return -Inf
 
         # loglik to sum for integration
         tosum = normbysum!(llik, ns)

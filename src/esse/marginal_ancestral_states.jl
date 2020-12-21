@@ -131,7 +131,7 @@ function make_state_posteriors(llf  ::Function,
         An = A[n]
         for i in Base.OneTo(ns)
           An[i] = exp(llfnj(p, n, i, Xtl, U))
-          if isnan(An[i])
+          if isnan(An[i]) || isinf(An[i])
             An[i] = 0.0
           end
         end
@@ -269,6 +269,7 @@ function make_loglik_nj(X         ::Array{Array{Float64,1},1},
 
         # update marginal likelihoods with speciation event
         λevent!(abts2[pr], llik, ud1, ud2, p)
+        check_negs(llik, ns) && return -Inf
 
         # update total likelihoods with speciation event
         λevent!(abts2[pr], llik_tl, U[d1], U[d2], p)
