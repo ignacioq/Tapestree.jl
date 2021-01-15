@@ -23,7 +23,7 @@ function insane_gbmbd(tree    ::sTbd,
                       λtni    ::Float64           = 1.0,
                       μtni    ::Float64           = 1.0,
                       obj_ar  ::Float64           = 0.4,
-                      pupdp   ::NTuple{4,Float64} = (0.4,0.4,0.1,0.1),
+                      pupdp   ::NTuple{3,Float64} = (0.8,0.2,0.1),
                       prints  ::Int64              = 5)
 
   # fix tree
@@ -66,15 +66,11 @@ function insane_gbmbd(tree    ::sTbd,
 
   scalef = makescalef(obj_ar)
 
-
+  # number of internal nodes
   nin = lastindex(inodes)
 
-  pupdp = (0.9, 0.1)
-  
+  # parameter updates (gbm, graft, σλ & σμ)
   pup = make_pup(pupdp, nin)
-
-
-
 
   # initialize acceptance log
   ltn  = 0
@@ -96,19 +92,35 @@ function insane_gbmbd(tree    ::sTbd,
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
 
-
-
-
   for it in Base.OneTo(nburn)
 
     shuffle!(pup)
 
     for pupi in pup
+
+
       ## parameter updates
-      if iszero(pupi)
+      # graft
+      if pupi == 0
+
+      # prune
+      elseif pupi == -1
+
+      # update σλ
+      elseif pupi == -3
+
+
+        """
+        make this ones first
+        """
+
         llc, prc, σλc, ltn, lup, lac = 
           update_σλ!(σλc, Ψc, llc, prc, 
             σλtn, ltn, lup, lac, δt, srδt, σλprior)
+
+      # update σμ
+      elseif pupi == -3
+
       else
         ter  = terminus[pupi]
         inod = inodes[pupi]
@@ -197,5 +209,60 @@ end
 
 
 
+
+
+
+
+"""
+    make_pup(pupdp::NTuple{3,Float64}, 
+             nin  ::Int64)
+
+Make the weighted parameter update vector according to probabilities `pupdp`.
+"""
+function make_pup(pupdp::NTuple{3,Float64}, 
+                  nin  ::Int64)
+
+  # standardize pr vector
+  pups = Array{Float64,1}(undef,3)
+  spupdp = sum(pupdp)
+  for i in Base.OneTo(3)
+    pups[i] = pupdp[i]/spupdp
+  end
+
+  pup = Int64[]
+  # `gbm` parameters
+  if pups[1] > 0.0
+    append!(pup,[1:nin...])
+  end
+
+  # probability `nin` given 
+  prnin = pups[1] > 0.0 ? Float64(nin)/pups[1] : 0.0
+
+  # `graft/prune` parameters (0,-1)
+  if pups[2] > 0.0
+    if prnin > 0.0
+      append!(pup, 
+        fill(-1, ceil(Int64, pups[2]*prnin)))
+      append!(pup, 
+        fill(0, ceil(Int64, pups[2]*prnin)))
+    else
+      push!(pup, -1, 0)
+    end
+  end
+
+  # `σλ & σμ` parameters (-2,-3)
+  if pups[3] > 0.0
+    if prnin > 0.0
+      append!(pup, 
+        fill(-2, ceil(Int64, pups[3]*prnin)))
+      append!(pup, 
+        fill(-3, ceil(Int64, pups[3]*prnin)))
+    else
+      push!(pup, -2, -3)
+    end
+  end
+
+  return return pup
+end
 
 

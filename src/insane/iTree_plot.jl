@@ -100,7 +100,7 @@ Recipe for plotting a Type `iTgbm`.
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
-  showaxis        --> :x
+  yshowaxis       --> false
 
   # nan_inds = findall(x -> isnan(x),z)
   # for i in eachindex(nan_inds)
@@ -183,7 +183,7 @@ Recipe for plotting a Type `iTree`.
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
-  showaxis        --> :x
+  yshowaxis       --> false
 
   return x, y
 end

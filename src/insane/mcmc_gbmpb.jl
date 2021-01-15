@@ -832,13 +832,13 @@ end
 
 Make the weighted parameter update vector according to probabilities `pupdp`.
 """
-function make_pup(pupdp::NTuple{N,Float64}, 
-                  nin  ::Int64) where {N}
+function make_pup(pupdp::NTuple{2,Float64}, 
+                  nin  ::Int64)
 
   # standardize pr vector
-  pups = Array{Float64,1}(undef,N)
+  pups = Array{Float64,1}(undef,2)
   spupdp = sum(pupdp)
-  for i in Base.OneTo(N)
+  for i in Base.OneTo(2)
     pups[i] = pupdp[i]/spupdp
   end
 
