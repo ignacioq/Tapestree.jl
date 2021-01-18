@@ -16,6 +16,7 @@ Created 03 09 2020
              σλ  ::Float64,
              δt  ::Float64
              srδt::Float64)
+
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """
 function llik_gbm(tree::iTgbmpb, 
@@ -45,7 +46,6 @@ end
              σλ  ::Float64, 
              δt  ::Float64,
              srδt::Float64)
-
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
@@ -94,7 +94,6 @@ end
               σλ  ::Float64, 
               δt  ::Float64,
               srδt::Float64)
-
 
 Returns the log-likelihood ratio for a branch according to GBM pure-birth.
 """
@@ -146,6 +145,7 @@ end
                  σλ  ::Float64, 
                  δt  ::Float64,
                  srδt::Float64)
+
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
@@ -193,6 +193,7 @@ end
                  σλ  ::Float64, 
                  δt  ::Float64,
                  srδt::Float64)
+
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
@@ -242,6 +243,7 @@ end
     ll_gbm_b_pb(t  ::Array{Float64,1},
                 lλv::Array{Float64,1},
                 δt ::Float64)
+
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
@@ -279,7 +281,9 @@ end
                σλp  ::Float64,
                σλc  ::Float64,
                srδt::Float64)
-Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
+
+Returns the log-likelihood ration for a `iTgbmpb` according 
+to GBM pure-birth for a `σ` proposal.
 """
 function llr_gbm_bm(tree::iTgbmpb, 
                     σλp  ::Float64,
@@ -300,38 +304,39 @@ end
 
 """
     llr_gbm_bm(t   ::Array{Float64,1},
-               lλv ::Array{Float64,1},
-               σλp  ::Float64, 
-               σλc  ::Float64, 
+               lv  ::Array{Float64,1},
+               σp  ::Float64, 
+               σc  ::Float64, 
                srδt::Float64)
+
 Returns the log-likelihood ratio for a branch according to BM for `σ` proposal.
 """
 function llr_gbm_bm(t   ::Array{Float64,1},
-                    lλv ::Array{Float64,1},
-                    σλp  ::Float64, 
-                    σλc  ::Float64, 
+                    lv  ::Array{Float64,1},
+                    σp  ::Float64, 
+                    σc  ::Float64, 
                     srδt::Float64)
+
   @inbounds @fastmath begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
 
-    ss   = 0.0
-    lλvi = lλv[1]
+    ss  = 0.0
+    lvi = lv[1]
     @simd for i in Base.OneTo(nI)
-      lλvi1 = lλv[i+1]
-      ss   += (lλvi1 - lλvi)^2
-      lλvi  = lλvi1
+      lvi1 = lv[i+1]
+      ss  += (lvi1 - lvi)^2
+      lvi  = lvi1
     end
 
     # likelihood ratio
-    llr = ss*(0.5/((σλc*srδt)^2) - 0.5/((σλp*srδt)^2)) - 
-          Float64(nI)*(log(σλp/σλc))
+    llr = ss*(0.5/((σc*srδt)^2) - 0.5/((σp*srδt)^2)) - 
+          Float64(nI)*(log(σp/σc))
 
     # add final non-standard `δt`
     srδtf = sqrt(t[nI+2] - t[nI+1])
-    lλvi1 = lλv[nI+2]
-    llr  += lrdnorm_bm_σ(lλvi1, lλvi, srδtf*σλp, srδtf*σλc)
+    llr  += lrdnorm_bm_σ(lv[nI+2], lvi, srδtf*σp, srδtf*σc)
   end
 
   return llr

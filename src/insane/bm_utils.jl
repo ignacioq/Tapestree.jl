@@ -316,6 +316,20 @@ lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64) =
 
 
 """
+    pnorm(x::Float64, y::Float64, μ::Float64, σ::Float64)
+
+Cumulative probability between `x` and `y`, with `x < y` for a 
+**Normal** Distribution with mean `μ` and standard deviation `σ`.
+"""
+function pnorm(x::Float64, y::Float64, μ::Float64, σ::Float64)
+  iσ = 1.0/(σ*sqrt(2.0))
+  0.5*(erf((x - μ)*iσ, (y - μ)*iσ))
+end
+
+
+
+
+"""
     ncrep!(xp::Array{Float64,1}, 
            xc::Array{Float64,1}, 
            t ::Array{Float64,1}, 

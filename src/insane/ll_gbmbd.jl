@@ -108,20 +108,29 @@ end
 
 
 """
-    pnorm(x::Float64, y::Float64, μ::Float64, σ::Float64)
+    llr_gbm_bm(tree::iTgbmbd, 
+               σp  ::Float64,
+               σc  ::Float64,
+               srδt::Float64,
+               lf  ::Function)
 
-Cumulative probability between `x` and `y`, with `x < y` for a 
-**Normal** Distribution with mean `μ` and standard deviation `σ`.
+Returns the log-likelihood ration for a `iTgbmpb` according 
+to GBM birth-death for a `σ` proposal.
 """
-function pnorm(x::Float64, y::Float64, μ::Float64, σ::Float64)
-  iσ = 1.0/(σ*sqrt(2.0))
-  0.5*(erf((x - μ)*iσ, (y - μ)*iσ))
+function llr_gbm_bm(tree::iTgbmbd, 
+                    σp  ::Float64,
+                    σc  ::Float64,
+                    srδt::Float64,
+                    lf  ::Function)
+
+  if istip(tree) 
+    llr_gbm_bm(ts(tree), lf(tree), σp, σc, srδt)
+  else
+    llr_gbm_bm(ts(tree), lf(tree), σp, σc, srδt)   +
+    llr_gbm_bm(tree.d1::iTgbmbd, σp, σc, srδt, lf) +
+    llr_gbm_bm(tree.d2::iTgbmbd, σp, σc, srδt, lf)
+  end
 end
-
-
-
-
-
 
 
 

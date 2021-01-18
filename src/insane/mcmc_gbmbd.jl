@@ -73,10 +73,11 @@ function insane_gbmbd(tree    ::sTbd,
   pup = make_pup(pupdp, nin)
 
   # initialize acceptance log
-  ltn  = 0
-  lup  = 0.0
-  lac  = 0.0
+  lλtn = 0
+  lλup = lλac =0.0
   σλtn = σλtni
+  lμtn = 0
+  lμup = lμac =0.0
   σμtn = σμtni
 
   # starting parameters
@@ -107,21 +108,25 @@ function insane_gbmbd(tree    ::sTbd,
       elseif pupi == -1
 
       # update σλ
-      elseif pupi == -3
+      elseif pupi == -2
 
-
-        """
-        make this ones first
-        """
-
-        llc, prc, σλc, ltn, lup, lac = 
-          update_σλ!(σλc, Ψc, llc, prc, 
-            σλtn, ltn, lup, lac, δt, srδt, σλprior)
+        llc, prc, σλc, lλtn, lλup, lλac = 
+          update_σ!(σλc, Ψc, llc, prc, 
+            σλtn, lλtn, lλup, lλac, δt, srδt, σλprior, lλ)
 
       # update σμ
       elseif pupi == -3
 
+        llc, prc, σμc, lμtn, lμup, lμac = 
+          update_σ!(σμc, Ψc, llc, prc, 
+            σμtn, lμtn, lμup, lμac, δt, srδt, σμprior, lμ)
+
+      # update GBM
       else
+        """
+         here
+        """
+
         ter  = terminus[pupi]
         inod = inodes[pupi]
 
@@ -147,64 +152,52 @@ function insane_gbmbd(tree    ::sTbd,
 
 
 
-
-
-
-
-
 """
-    update_σλ!(σλc    ::Float64,
-               Ψ      ::iTgbmbd,
-               llc    ::Float64,
-               prc    ::Float64,
-               σλtn   ::Float64,
-               ltn    ::Int64,
-               lup    ::Float64,
-               lac    ::Float64,
-               δt     ::Float64,
-               srδt   ::Float64,
-               σλprior::Float64)
+    update_σ!(σc    ::Float64,
+              Ψ     ::iTgbmbd,
+              llc   ::Float64,
+              prc   ::Float64,
+              σtn   ::Float64,
+              ltn   ::Int64,
+              lup   ::Float64,
+              lac   ::Float64,
+              δt    ::Float64,
+              srδt  ::Float64,
+              σprior::Float64)
 
-MCMC update for σλ with acceptance log.
+MCMC update for `σ` with acceptance log.
 """
-function update_σλ!(σλc    ::Float64,
-                    Ψ      ::iTgbmbd,
-                    llc    ::Float64,
-                    prc    ::Float64,
-                    σλtn   ::Float64,
-                    ltn    ::Int64,
-                    lup    ::Float64,
-                    lac    ::Float64,
-                    δt     ::Float64,
-                    srδt   ::Float64,
-                    σλprior::Float64)
+function update_σ!(σc    ::Float64,
+                   Ψ     ::iTgbmbd,
+                   llc   ::Float64,
+                   prc   ::Float64,
+                   σtn   ::Float64,
+                   ltn   ::Int64,
+                   lup   ::Float64,
+                   lac   ::Float64,
+                   δt    ::Float64,
+                   srδt  ::Float64,
+                   σprior::Float64,
+                   lf    ::Function)
 
   # parameter proposals
-  σλp = mulupt(σλc, σλtn)::Float64
-
-
-"""
-here: start with log likelihood ratio for speciation rate variance
-"""
-
-
-
+  σp = mulupt(σc, σtn)::Float64
 
   # log likelihood and prior ratio
-  llr = llr_gbm_bm(Ψ, σλp, σλc, srδt)
-  prr = llrdexp_x(σλp, σλc, σλprior)
+  llr = llr_gbm_bm(Ψ, σp, σc, srδt, lf)
+  prr = llrdexp_x(σp, σc, σprior)
 
   ltn += 1
   lup += 1.0
 
-  if -randexp() < (llr + prr + log(σλp/σλc))
-    σλc  = σλp
+  if -randexp() < (llr + prr + log(σp/σc))
+    σc   = σp
     llc += llr
     prc += prr
     lac += 1.0
   end
 
-  return llc, prc, σλc, ltn, lup, lac
+  return llc, prc, σc, ltn, lup, lac
 end
 
 
