@@ -260,6 +260,73 @@ end
 
 
 """
+    streeheight(tree::T,
+                h   ::Float64, 
+                th  ::Float64,
+                dri ::BitArray{1}, 
+                ldr ::Int64,
+                wpr ::Int64,
+                ix  ::Int64, 
+                px  ::Int64) where {T <: iTree}
+
+Return the `λ`,`μ` and time of `tree` at closest to `h`. 
+"""
+function λμath(tree::iTgbmbd,
+               h   ::Float64, 
+                     th  ::Float64,
+                     dri ::BitArray{1}, 
+                     ldr ::Int64,
+                     wpr ::Int64,
+                     ix  ::Int64, 
+                     px  ::Int64) where {T <: iTree}
+
+"""
+here: get these three parameters using the directory
+"""
+
+  if ix == ldr
+    if px == wpr
+      if isfix(tree.d1::T)
+        return h - pe(tree), treeheight(tree.d2)
+      elseif isfix(tree.d2::T)
+        return h - pe(tree), treeheight(tree.d1)
+      end
+    else
+      px += 1
+      if isfix(tree.d1::T)
+        h, th = 
+          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+      else
+        h, th =
+          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+      end
+    end
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::T)
+    if ifx1 && isfix(tree.d2::T)
+      ix += 1
+      if dri[ix]
+        h, th = 
+          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+      else
+        h, th = 
+          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+      end
+    elseif ifx1
+      h, th = 
+        streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+    else
+      h, th =
+        streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+    end
+  end
+end
+
+
+
+
+
+"""
     ts(tree::T) where {T <: iTgbm} 
 
 Return pendant edge.

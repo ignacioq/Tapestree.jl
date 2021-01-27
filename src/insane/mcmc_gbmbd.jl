@@ -101,30 +101,11 @@ function insane_gbmbd(tree    ::sTbd,
 
 
       ## parameter updates
-      # graft
-      if pupi == 0
+      # update gbm
+      if pupi > 0
 
-      # prune
-      elseif pupi == -1
-
-      # update σλ
-      elseif pupi == -2
-
-        llc, prc, σλc, lλtn, lλup, lλac = 
-          update_σ!(σλc, Ψc, llc, prc, 
-            σλtn, lλtn, lλup, lλac, δt, srδt, σλprior, lλ)
-
-      # update σμ
-      elseif pupi == -3
-
-        llc, prc, σμc, lμtn, lμup, lμac = 
-          update_σ!(σμc, Ψc, llc, prc, 
-            σμtn, lμtn, lμup, lμac, δt, srδt, σμprior, lμ)
-
-      # update GBM
-      else
         """
-         here
+        do graft/prune first
         """
 
         ter  = terminus[pupi]
@@ -134,9 +115,35 @@ function insane_gbmbd(tree    ::sTbd,
         ldr = lastindex(dri)
 
         llc, prc = 
-          lλupdate!(Ψp, Ψc, llc, prc, σλc, δt, srδt, 
+          lvupdate!(Ψp, Ψc, llc, prc, σλc, δt, srδt, 
             λa_prior, dri, ldr, ter, 0)
+
+      # graft
+      elseif pupi == 0
+
+        """
+        first graph and then update gbm (to account for grafted gbm)
+        """
+
+
+
+      # prune
+      elseif pupi == -1
+
+
+      # update σλ
+      elseif pupi == -2
+        llc, prc, σλc, lλtn, lλup, lλac = 
+          update_σ!(σλc, Ψc, llc, prc, 
+            σλtn, lλtn, lλup, lλac, δt, srδt, σλprior, lλ)
+
+      # update σμ
+      else
+        llc, prc, σμc, lμtn, lμup, lμac = 
+          update_σ!(σμc, Ψc, llc, prc, 
+            σμtn, lμtn, lμup, lμac, δt, srδt, σμprior, lμ)
       end
+
 
       if ltn == tune_int
         σλtn = scalef(σλtn,lac/lup)
@@ -147,6 +154,170 @@ function insane_gbmbd(tree    ::sTbd,
 
     next!(pbar)
   end
+
+
+
+
+
+
+
+"""
+    graftp(tree::sTbd,
+           llc ::Float64,
+           λc  ::Float64,
+           μc  ::Float64,
+           th  ::Float64,
+           idv ::Array{iDir,1}, 
+           wbr ::BitArray{1},
+           dabr::Array{Int64,1},
+           pupdp::NTuple{4,Float64})
+
+Graft proposal function for constant birth-death.
+"""
+function graftp(Ψ    ::iTgbmbd,
+                llc  ::Float64,
+                λc   ::Float64,
+                μc   ::Float64,
+                th   ::Float64,
+                idv  ::Array{iDir,1}, 
+                wbr  ::BitArray{1},
+                dabr ::Array{Int64,1},
+                pupdp::NTuple{4,Float64},
+                δt   ::Float64)
+                
+
+  λn, μn = λμprop() 
+
+  #simulate extinct lineage
+  t0, t0h = sim_cbd_b(λn, μn, th, 100)
+
+  # if useful simulation
+  if t0h < th
+
+    # randomly select branch to graft
+    h, br, bri, nbh  = randbranch(th, t0h, idv, wbr)
+
+
+    # check `δt` to graft to and it's current λ, μ
+    
+
+
+
+
+    # gbm augment tree with constant rates
+    # but do the augmentation only if grafted
+    t0 = iTgbmbd(t0, δt, srδt, log(0.1), log(0.1), 0.0, 0.0)
+
+
+
+
+
+    # proposal ratio
+    lpr = log(2.0 * μc * (th - t0h) * Float64(nbh) * pupdp[4]) - 
+          log((Float64(lastindex(dabr)) + 1.0) * pupdp[3])
+
+    # likelihood ratio
+    llr = llik_cbd(t0, λc, μc) + log(2.0*λc) 
+
+    if -randexp() < lpr #+ llr
+      llc += llr
+      # graft branch
+      dri  = dr(br)
+      tree = graftree!(tree, t0, dri, h, lastindex(dri), th, 0)
+      # add n graft to branch
+      addda!(br)
+      # log branch as being data augmented
+      push!(dabr, bri)
+    end
+  end
+
+  return tree, llc
+end
+
+
+
+
+
+
+
+
+
+
+"""
+    lvupdate!(Ψp      ::iTgbmbd,
+              Ψc      ::iTgbmbd,
+              llc     ::Float64, 
+              prc     ::Float64,
+              σ      ::Float64, 
+              δt      ::Float64, 
+              srδt    ::Float64, 
+              a_prior::Tuple{Float64,Float64},
+              dri     ::BitArray{1},
+              ldr     ::Int64,
+              ter     ::BitArray{1},
+              ix      ::Int64)
+
+Make a gbm update for a triad.
+"""
+function lvupdate!(Ψp      ::iTgbmbd,
+                   Ψc      ::iTgbmbd,
+                   llc     ::Float64, 
+                   prc     ::Float64,
+                   σ       ::Float64, 
+                   δt      ::Float64, 
+                   srδt    ::Float64, 
+                   a_prior::Tuple{Float64,Float64},
+                   dri     ::BitArray{1},
+                   ldr     ::Int64,
+                   ter     ::BitArray{1},
+                   ix      ::Int64)
+
+  """
+  here
+  """
+
+  if ix == ldr 
+    # if root
+    if ldr == 0
+      llc, prc = triad_lupdate_root!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
+                   llc, prc, σ, δt, srδt, a_prior)
+    else
+      if ter[1]
+        if ter[2]
+          # if both are terminal
+          llc = triad_lupdate_noded12!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
+                        llc, σ, δt, srδt)
+        else
+          # if d1 is terminal
+          llc = triad_lupdate_noded1!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
+                       llc, σ, δt, srδt)
+        end
+      elseif ter[2]
+        # if d2 is terminal
+        llc = triad_lupdate_noded2!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
+                     llc, σ, δt, srδt)
+      else
+        # if no terminal branches involved
+        llc = triad_lupdate_node!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
+                     llc, σ, δt, srδt)
+      end
+    end
+
+  elseif ix < ldr
+    ix += 1
+    if dri[ix]
+      llc, prc = 
+        lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, 
+          llc, prc, σ, δt, srδt, a_prior, dri, ldr, ter, ix)
+    else
+      llc, prc = 
+        lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, 
+          llc, prc, σ, δt, srδt, a_prior, dri, ldr, ter, ix)
+    end
+  end
+
+  return llc, prc
+end
 
 
 
@@ -257,5 +428,7 @@ function make_pup(pupdp::NTuple{3,Float64},
 
   return return pup
 end
+
+
 
 
