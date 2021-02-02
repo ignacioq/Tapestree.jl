@@ -74,10 +74,10 @@ function insane_gbmbd(tree    ::sTbd,
 
   # initialize acceptance log
   lλtn = 0
-  lλup = lλac =0.0
+  lλup = lλac = 0.0
   σλtn = σλtni
   lμtn = 0
-  lμup = lμac =0.0
+  lμup = lμac = 0.0
   σμtn = σμtni
 
   # starting parameters
@@ -124,6 +124,8 @@ function insane_gbmbd(tree    ::sTbd,
         """
         first graph and then update gbm (to account for grafted gbm)
         """
+
+
 
 
 
@@ -197,9 +199,14 @@ function graftp(Ψ    ::iTgbmbd,
     # randomly select branch to graft
     h, br, bri, nbh  = randbranch(th, t0h, idv, wbr)
 
+    dri = dr(br)
+    ldr = lastindex(dri)
+    dai = da(br)
 
     # check `δt` to graft to and it's current λ, μ
-    
+    λh, μh, nh = λμath(Ψ, h, th, dri, ldr, dai, 0, 0)
+
+
 
 
 

@@ -203,63 +203,6 @@ end
 
 
 
-"""
-    idxlessthan(x::Array{Float64,1}, val::Float64)
-
-Get index in sorted vector `x` corresponding to the value 
-that is closest to but less than `val` in sorted arrays 
-using a sort of uniroot algorithm.
-"""
-function idxlessthan(x::Array{Float64,1}, val::Float64) 
-  
-  @inbounds begin
-
-    a::Int64 = 1
-    b::Int64 = lastindex(x)
-  
-    if x[b] < val
-      return b
-    end
-
-    mid::Int64 = div(b,2)  
-
-    while b-a > 1
-      val < x[mid] ? b = mid : a = mid
-      mid = div(b + a, 2)
-    end
-
-  end
-
-  return a
-end 
-
-
-
-
-
-"""
-    indmindif_sorted(x::Array{Float64,1}, val::Float64)
-
-Get index in sorted vector `x` corresponding to the value 
-that is closest to `val` in sorted arrays 
-using a sort of uniroot algorithm.
-"""
-function indmindif_sorted(x::Array{Float64,1}, val::Float64) 
-  a::Int64   = 1
-  b::Int64   = lastindex(x)
-  mid::Int64 = div(b,2)  
-
-  while b-a > 1
-    val < x[mid] ? b = mid : a = mid
-    mid = div(b + a, 2)
-  end
-
-  abs(x[a] - val) < abs(x[b] - val) ? a : b
-end 
-
-
-
-
 
 """
     make_edgeind(childs::Array{Int64,1}, B::Array{Float64,2})

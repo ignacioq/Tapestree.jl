@@ -260,64 +260,63 @@ end
 
 
 """
-    streeheight(tree::T,
-                h   ::Float64, 
-                th  ::Float64,
-                dri ::BitArray{1}, 
-                ldr ::Int64,
-                wpr ::Int64,
-                ix  ::Int64, 
-                px  ::Int64) where {T <: iTree}
+    λμath(tree::iTgbmbd,
+          h    ::Float64, 
+          th   ::Float64,
+          dri  ::BitArray{1}, 
+          ldr  ::Int64,
+          wpr  ::Int64,
+          ix   ::Int64, 
+          px   ::Int64)
 
 Return the `λ`,`μ` and time of `tree` at closest to `h`. 
 """
 function λμath(tree::iTgbmbd,
                h   ::Float64, 
-                     th  ::Float64,
-                     dri ::BitArray{1}, 
-                     ldr ::Int64,
-                     wpr ::Int64,
-                     ix  ::Int64, 
-                     px  ::Int64) where {T <: iTree}
-
-"""
-here: get these three parameters using the directory
-"""
+               th  ::Float64,
+               dri ::BitArray{1}, 
+               ldr ::Int64,
+               wda ::Int64,
+               ix  ::Int64, 
+               dx  ::Int64)
 
   if ix == ldr
-    if px == wpr
-      if isfix(tree.d1::T)
-        return h - pe(tree), treeheight(tree.d2)
-      elseif isfix(tree.d2::T)
-        return h - pe(tree), treeheight(tree.d1)
-      end
+    if dx == wda
+
+      bh  = th - h
+      tsi = ts(tree)
+      hix = indmindif_sorted(tsi, bh)
+      λh  = lλ(tree)[hix]
+      μh  = lμ(tree)[hix]
+      nh  = th - tsi[hix]
+
+      return λh, μh, nh
+
+      """
+      here
+      """
+
     else
-      px += 1
-      if isfix(tree.d1::T)
-        h, th = 
-          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+      dx += 1
+      if isfix(tree.d1::iTgbmbd)
+        λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
       else
-        h, th =
-          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+        λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
       end
     end
   elseif ix < ldr
-    ifx1 = isfix(tree.d1::T)
-    if ifx1 && isfix(tree.d2::T)
+    ifx1 = isfix(tree.d1::iTgbmbd)
+    if ifx1 && isfix(tree.d2::iTgbmbd)
       ix += 1
       if dri[ix]
-        h, th = 
-          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+        λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
       else
-        h, th = 
-          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+        λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
       end
     elseif ifx1
-      h, th = 
-        streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+      λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
     else
-      h, th =
-        streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+      λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
     end
   end
 end

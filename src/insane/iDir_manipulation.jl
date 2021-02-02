@@ -1,6 +1,6 @@
 #=
 
-iDir manipulation
+iB manipulation
 
 Ignacio Quintero Mächler
 
@@ -11,21 +11,21 @@ Created 03 07 2020
 
 
 """
-    addda!(id::iDir)
+    addda!(id::iBf)
 
 Add `1` to number of data augmented branches. 
 """
-addda!(id::iDir) = id.da[] += 1
+addda!(id::iBf) = id.da[] += 1
 
 
 
 
 """
-    rmda!(id::iDir)
+    rmda!(id::iBf)
 
 Substract `1` to number of data augmented branches. 
 """
-rmda!(id::iDir) = id.da[] -= 1
+rmda!(id::iBf) = id.da[] -= 1
 
 
 
@@ -33,7 +33,7 @@ rmda!(id::iDir) = id.da[] -= 1
 """
     randbranch(th   ::Float64,
                sth  ::Float64,
-               idv  ::Array{iDir,1},
+               idv  ::Array{iB,1},
                wbr  ::BitArray{1})
 
 Randomly select branch to graft a subtree with height `sth` onto tree 
@@ -41,7 +41,7 @@ with height `th`.
 """
 function randbranch(th   ::Float64,
                     sth  ::Float64,
-                    idv  ::Array{iDir,1},
+                    idv  ::Array{iBf,1},
                     wbr  ::BitArray{1})
 
   # uniformly set the height at which to insert `stree`
@@ -58,15 +58,47 @@ end
 
 
 
+
 """
-    getbranch(wbr::BitArray{1}, rn::Int64, idv::Array{iDir,1})
+    randbranch(th   ::Float64,
+               sth  ::Float64,
+               idf  ::Array{iBf,1},
+               ida  ::Array{iBa,1},
+               wbr  ::BitArray{1})
+
+Randomly select branch to graft a subtree with height `sth` onto tree 
+with height `th`.
+"""
+function randbranch(th   ::Float64,
+                    sth  ::Float64,
+                    idf  ::Array{iBf,1},
+                    ida  ::Array{iBa,1},
+                    wbr  ::BitArray{1})
+
+  # uniformly set the height at which to insert `stree`
+  h = sth + rand()*(th - sth)
+
+  # get which branches are cut by `h` and sample one at random
+  nb  = branchescut!(wbr, h, idf, ida)
+  rn  = rand(Base.OneTo(nb))
+  br, i  = getbranch(wbr, rn, idv)
+
+  return h, br, i, nb
+end
+
+
+
+
+
+"""
+    getbranch(wbr::BitArray{1}, rn::Int64, idv::Array{iB,1})
 
 Sample one branch among those in `wbr` that are `true` according to 
 randomly picked `rn`.
 """
 function getbranch(wbr::BitArray{1}, 
                    rn ::Int64, 
-                   idv::Array{iDir,1})::Tuple{iDir,Int64}
+                   idv::Array{iB,1})::Tuple{iB,Int64}
 
   i::Int64 = 0
   n::Int64 = 0
@@ -75,7 +107,7 @@ function getbranch(wbr::BitArray{1},
     if bit
       n += 1
       if n == rn
-        return (idv[i], i)::Tuple{iDir,Int64}
+        return (idv[i], i)::Tuple{iB,Int64}
       end
     end
   end
@@ -84,26 +116,29 @@ end
 
 
 
+
 """
     branchescut!(wbr::BitArray{1}, 
                  h  ::Float64, 
-                 idv::Array{iDir,1}; 
-                 n  ::Int64 = 0)::Int64
+                 idv::Array{iBf,1})
 
 Fill the bit array with branches that are cut by  `h`.
 """
 function branchescut!(wbr::BitArray{1}, 
                       h  ::Float64, 
-                      idv::Array{iDir,1})::Int64
-  n::Int64 = 0
-  i::Int64 = 0
-  for b in idv
-    i += 1
-    if ti(b) > h > tf(b)
-      wbr[i] = true
-      n += 1
-    else
-      wbr[i] = false
+                      idv::Array{iBf,1})::Int64
+
+  @inbounds begin
+    n::Int64 = 0
+    i::Int64 = 0
+    for b in idv
+      i += 1
+      if ti(b) > h > tf(b)
+        wbr[i] = true
+        n += 1
+      else
+        wbr[i] = false
+      end
     end
   end
 
@@ -113,13 +148,66 @@ end
 
 
 
-"""
-    make_inodes(idv::Array{iDir, 1})
 
-Return all the internal node indices for a given `iDir` vector and a vector
+"""
+    branchescut!(wbf::BitArray{1}, 
+                 wba::BitArray{1},
+                 h  ::Float64, 
+                 idf::Array{iBf,1},
+                 ida::Array{iBa,1})
+
+Fill the bit arrays with both fixed and augmented branches 
+that are cut by  `h`.
+"""
+function branchescut!(wbf::BitArray{1}, 
+                      wba::BitArray{1},
+                      h  ::Float64, 
+                      idf::Array{iBf,1},
+                      ida::Array{iBa,1})::Int64
+
+  @inbounds begin
+
+    n::Int64 = 0
+    i::Int64 = 0
+    for b in idf
+      i += 1
+      if ti(b) > h > tf(b)
+        wbf[i] = true
+        n += 1
+      else
+        wbf[i] = false
+      end
+    end
+
+    i = 0
+    for b in ida
+      i += 1
+      if ti(b) > h > tf(b)
+        wba[i] = true
+        n += 1
+      else
+        wba[i] = false
+      end
+    end
+
+  end
+
+  return n
+end
+
+
+
+
+
+
+
+"""
+    make_inodes(idv::Array{iBf, 1})
+
+Return all the internal node indices for a given `iBf` vector and a vector
 that is true for which ever daughter is a tip.
 """
-function make_inodes(idv::Array{iDir, 1})
+function make_inodes(idv::Array{iBf, 1})
 
   inodes   = Int64[]
   terminus = BitArray{1}[]
@@ -172,12 +260,12 @@ end
 
 
 """
-    make_triads(idv::Array{iDir, 1})
+    make_triads(idv::Array{iBf, 1})
 
-Return parent and two daughter indices for a given `iDir` vector and a vector
+Return parent and two daughter indices for a given `iB` vector and a vector
 that is true for which ever daughter is a tip.
 """
-function make_triads(idv::Array{iDir, 1})
+function make_triads(idv::Array{iBf, 1})
 
   triads   = Array{Int64,1}[]
   terminus = BitArray{1}[]
