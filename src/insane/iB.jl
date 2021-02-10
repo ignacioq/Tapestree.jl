@@ -67,16 +67,16 @@ function makeiBf!(tree::T,
                   idv ::Array{iBf,1}, 
                   bit ::BitArray{1}) where {T <: iTree} 
 
-  push!(idv, iB(bit, 0, treeheight(tree), treeheight(tree) - pe(tree)))
+  push!(idv, iBf(bit, 0, treeheight(tree), treeheight(tree) - pe(tree)))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
 
   push!(bit1, true)
-  makeiB!(tree.d1, idv, bit1)
+  makeiBf!(tree.d1, idv, bit1)
 
   push!(bit2, false)
-  makeiB!(tree.d2, idv, bit2)
+  makeiBf!(tree.d2, idv, bit2)
 
   return nothing
 end
@@ -100,7 +100,7 @@ makeiBf!(::Nothing, idv::Array{iBf,1}, bit::BitArray{1}) = nothing
 A Composite type representing node address for an **augmented** branch in `iTree`:
 
   `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
-  `fB`: Link to `iDir` array specifying which fixed branch it attaches to.
+  `fB`: Link to `iBf` array specifying which fixed branch it attaches to.
   `ti`: initial absolute time.
   `tf`: final absolute time.
 

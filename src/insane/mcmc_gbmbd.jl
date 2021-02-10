@@ -47,18 +47,20 @@ function insane_gbmbd(tree    ::sTbd,
   Ψp = deepcopy(Ψc)
 
   # make fix Ψ directory
-  idv = iDir[]
+  idf = iBf[]
   bit = BitArray{1}()
-  makeiDir!(Ψc, idv, bit)
+  makeiBf!(Ψc, idf, bit)
 
-  # make parent node directory to `iDir`
-  inodes, terminus = make_inodes(idv)
-
-  # create wbr vector
-  wbr = falses(lastindex(idv))
+  # make parent node directory to `iBf`
+  inodes, terminus = make_inodes(idf)
 
   # create da branches vector
-  dabr = Int64[]
+  ida = iBa[]
+
+  # create wbf and wba vector
+  wbf = falses(lastindex(idf))
+  wba = falses(lastindex(ida))
+
 
   # make survival conditioning function (stem or crown)
   # svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
@@ -169,7 +171,7 @@ function insane_gbmbd(tree    ::sTbd,
            λc  ::Float64,
            μc  ::Float64,
            th  ::Float64,
-           idv ::Array{iDir,1}, 
+           idv ::Array{iBf,1}, 
            wbr ::BitArray{1},
            dabr::Array{Int64,1},
            pupdp::NTuple{4,Float64})
@@ -181,8 +183,10 @@ function graftp(Ψ    ::iTgbmbd,
                 λc   ::Float64,
                 μc   ::Float64,
                 th   ::Float64,
-                idv  ::Array{iDir,1}, 
-                wbr  ::BitArray{1},
+                idf  ::Array{iBf,1}, 
+                ida  ::Array{iBa,1}, 
+                wbf  ::BitArray{1},
+                wba  ::BitArray{1},
                 dabr ::Array{Int64,1},
                 pupdp::NTuple{4,Float64},
                 δt   ::Float64)
@@ -196,15 +200,33 @@ function graftp(Ψ    ::iTgbmbd,
   # if useful simulation
   if t0h < th
 
-    # randomly select branch to graft
-    h, br, bri, nbh  = randbranch(th, t0h, idv, wbr)
+    # get height and number of intersecting branches
+    h, nf, na, rn = randbranch(th, t0h, wbf, wba, idf, ida)
 
-    dri = dr(br)
-    ldr = lastindex(dri)
-    dai = da(br)
+    # if branch is fixed
+    if rn <= nf
+      bf, i = getbranch(rn, wbf, idf)
 
-    # check `δt` to graft to and it's current λ, μ
-    λh, μh, nh = λμath(Ψ, h, th, dri, ldr, dai, 0, 0)
+      dri = dr(bf)
+      ldr = lastindex(dri)
+      dai = da(bf)
+
+      # check `δt` to graft to and it's current λ, μ
+      λh, μh, nh = λμath(Ψ, h, th, dri, ldr, 0)
+
+
+
+
+    # if branch is from da
+    else
+      ba, i = getbranch(rn - nf, wba, ida)
+    
+
+
+    end
+
+
+
 
 
 

@@ -57,11 +57,11 @@ function insane_gbmpb(tree    ::sTpb,
   Ψp = deepcopy(Ψc)
 
   # make fix Ψ directory
-  idv = iDir[]
+  idv = iBf[]
   bit = BitArray{1}()
-  makeiDir!(Ψc, idv, bit)
+  makeiBf!(Ψc, idv, bit)
 
-  # make parent node directory to `iDir`
+  # make parent node directory to `iBf`
   inodes, terminus = make_inodes(idv)
 
   # parameter update vector
@@ -103,7 +103,7 @@ end
                     σλtni   ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idv     ::Array{iDir,1},
+                    idv     ::Array{iBf,1},
                     inodes  ::Array{Int64,1},
                     terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},
@@ -122,7 +122,7 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
                          σλtni   ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
-                         idv     ::Array{iDir,1},
+                         idv     ::Array{iBf,1},
                          inodes  ::Array{Int64,1},
                          terminus::Array{BitArray{1}},
                          pup     ::Array{Int64,1},
@@ -194,7 +194,7 @@ end
                σλtn    ::Float64,
                δt      ::Float64,
                srδt    ::Float64,
-               idv     ::Array{iDir,1},
+               idv     ::Array{iBf,1},
                inodes  ::Array{Int64,1},
                terminus::Array{BitArray{1}},
                pup     ::Array{Int64,1},
@@ -214,7 +214,7 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
                     σλtn    ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idv     ::Array{iDir,1},
+                    idv     ::Array{iBf,1},
                     inodes  ::Array{Int64,1},
                     terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},

@@ -65,12 +65,12 @@ function insane_cbd(tree    ::sTbd,
   end
 
   # make fix tree directory
-  idv = iDir[]
+  idf = iBf[]
   bit = BitArray{1}()
-  makeiDir!(tree, idv, bit)
+  makeiBf!(tree, idf, bit)
 
-  # create wbr vector
-  wbr = falses(lastindex(idv))
+  # create wbf vector
+  wbf = falses(lastindex(idf))
 
   # create da branches vector
   dabr = Int64[]
@@ -80,14 +80,14 @@ function insane_cbd(tree    ::sTbd,
                            stem_prob_surv_cbd
 
   # adaptive phase
-  llc, prc, tree, λc, μc, λtn, μtn, idv, dabr = 
+  llc, prc, tree, λc, μc, λtn, μtn, idf, dabr = 
       mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior, 
-        nburn, ϵi, λi, μi, λtni, μtni, scalef, idv, wbr, dabr, pup, pupdp, 
+        nburn, ϵi, λi, μi, λtni, μtni, scalef, idf, wbf, dabr, pup, pupdp, 
         prints, svf)
 
   # mcmc
   R, tree = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
-        niter, nthin, λtn, μtn, th, idv, wbr, dabr, pup, pupdp, prints, svf)
+        niter, nthin, λtn, μtn, th, idf, wbf, dabr, pup, pupdp, prints, svf)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2), 
@@ -116,8 +116,8 @@ end
                   scalef  ::Function,
                   λprior  ::Float64,
                   μprior  ::Float64,
-                  idv     ::Array{iDir,1},
-                  wbr     ::BitArray{1},
+                  idf     ::Array{iBf,1},
+                  wbf     ::BitArray{1},
                   dabr    ::Array{Int64,1})
 
 MCMC da chain for constant birth-death.
@@ -135,8 +135,8 @@ function mcmc_burn_cbd(tree    ::sTbd,
                        λtni    ::Float64, 
                        μtni    ::Float64, 
                        scalef  ::Function,
-                       idv     ::Array{iDir,1},
-                       wbr     ::BitArray{1},
+                       idf     ::Array{iBf,1},
+                       wbf     ::BitArray{1},
                        dabr    ::Array{Int64,1},
                        pup     ::Array{Int64,1}, 
                        pupdp   ::NTuple{4,Float64},
@@ -182,12 +182,12 @@ function mcmc_burn_cbd(tree    ::sTbd,
       
       # graft proposal
       if p == 3
-        tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+        tree, llc = graftp(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
       end
       
       # prune proposal
       if p == 4
-        tree, llc = prunep(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+        tree, llc = prunep(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
       end
 
       # log tuning parameters
@@ -202,7 +202,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
     next!(pbar)
   end
 
-  return llc, prc, tree, λc, μc, λtn, μtn, idv, dabr
+  return llc, prc, tree, λc, μc, λtn, μtn, idf, dabr
 end
 
 
@@ -222,8 +222,8 @@ end
              λtn   ::Float64,
              μtn   ::Float64, 
              th    ::Float64,
-             idv   ::Array{iDir,1},
-             wbr   ::BitArray{1},
+             idf   ::Array{iBf,1},
+             wbf   ::BitArray{1},
              dabr  ::Array{Int64,1})
 
 MCMC da chain for constant birth-death.
@@ -240,8 +240,8 @@ function mcmc_cbd(tree  ::sTbd,
                   λtn   ::Float64,
                   μtn   ::Float64, 
                   th    ::Float64,
-                  idv   ::Array{iDir,1},
-                  wbr   ::BitArray{1},
+                  idf   ::Array{iBf,1},
+                  wbf   ::BitArray{1},
                   dabr  ::Array{Int64,1},
                   pup   ::Array{Int64,1}, 
                   pupdp ::NTuple{4,Float64},
@@ -274,12 +274,12 @@ function mcmc_cbd(tree  ::sTbd,
       
       # graft proposal
       if p == 3
-        tree, llc = graftp(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+        tree, llc = graftp(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
       end
       
       # prune proposal
       if p == 4
-        tree, llc = prunep(tree, llc, λc, μc, th, idv, wbr, dabr, pupdp)
+        tree, llc = prunep(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
       end
 
     end
@@ -314,8 +314,8 @@ end
            λc  ::Float64,
            μc  ::Float64,
            th  ::Float64,
-           idv ::Array{iDir,1}, 
-           wbr ::BitArray{1},
+           idf ::Array{iBf,1}, 
+           wbf ::BitArray{1},
            dabr::Array{Int64,1},
            pupdp::NTuple{4,Float64})
 
@@ -326,8 +326,8 @@ function graftp(tree::sTbd,
                 λc  ::Float64,
                 μc  ::Float64,
                 th  ::Float64,
-                idv ::Array{iDir,1}, 
-                wbr ::BitArray{1},
+                idf ::Array{iBf,1}, 
+                wbf ::BitArray{1},
                 dabr::Array{Int64,1},
                 pupdp::NTuple{4,Float64})
 
@@ -340,7 +340,7 @@ function graftp(tree::sTbd,
   if t0h < th
 
     # randomly select branch to graft
-    h, br, bri, nbh  = randbranch(th, t0h, idv, wbr)
+    h, br, bri, nbh  = randbranch(th, t0h, idf, wbf)
 
     # proposal ratio
     lpr = log(2.0 * μc * (th - t0h) * Float64(nbh) * pupdp[4]) - 
@@ -373,8 +373,8 @@ end
            λc  ::Float64,
            μc  ::Float64,
            th  ::Float64,
-           idv ::Array{iDir,1}, 
-           wbr ::BitArray{1},
+           idf ::Array{iBf,1}, 
+           wbf ::BitArray{1},
            dabr::Array{Int64,1},
            pupdp::NTuple{4,Float64})
 
@@ -385,8 +385,8 @@ function prunep(tree::sTbd,
                 λc  ::Float64,
                 μc  ::Float64,
                 th  ::Float64,
-                idv ::Array{iDir,1}, 
-                wbr ::BitArray{1},
+                idf ::Array{iBf,1}, 
+                wbf ::BitArray{1},
                 dabr::Array{Int64,1},
                 pupdp::NTuple{4,Float64})
 
@@ -394,7 +394,7 @@ function prunep(tree::sTbd,
 
   if ng > 0
     dabri = rand(Base.OneTo(ng))
-    br    = idv[dabr[dabri]]
+    br    = idf[dabr[dabri]]
     dri   = dr(br)
     ldr   = lastindex(dri)
     wpr   = rand(Base.OneTo(da(br)))
@@ -403,7 +403,7 @@ function prunep(tree::sTbd,
     h, th0 = streeheight(tree, th, 0.0, dri, ldr, wpr, 0, 1)
 
     # get how many branches are cut at `h`
-    nbh = branchescut!(wbr, h, idv)
+    nbh = branchescut!(wbf, h, idf)
 
     # proposal ratio
     lpr = log(Float64(ng) * pupdp[3]) -

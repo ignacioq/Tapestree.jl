@@ -357,7 +357,7 @@ function iTgbmbd(tree::sTbd,
 
   iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[end], lμv[end], σλ, σμ), 
           iTgbmbd(tree.d2, δt, srδt, lλv[end], lμv[end], σλ, σμ),
-          pet, isextinct(tree), false, tsv, lλv, lμv)
+          pet, isextinct(tree), isfix(tree), tsv, lλv, lμv)
 end
 
 """

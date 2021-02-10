@@ -196,6 +196,56 @@ snen(::Nothing) = 0
 
 
 
+"""
+    ts(tree::T) where {T <: iTgbm} 
+
+Return pendant edge.
+"""
+ts(tree::T) where {T <: iTgbm} = getproperty(tree,:ts)
+
+"""
+    pe(tree::iTree)
+
+Return pendant edge.
+"""
+ts(::Nothing) = nothing
+
+
+
+
+"""
+    lλ(tree::T) where {T <: iTgbm}
+
+Return pendant edge.
+"""
+lλ(tree::T) where {T <: iTgbm} = getproperty(tree,:lλ)
+
+"""
+    pe(tree::iTree)
+
+Return pendant edge.
+"""
+lλ(::Nothing) = nothing
+
+
+
+
+"""
+    lμ(tree::iTgbm)
+
+Return pendant edge.
+"""
+lμ(tree::iTgbmbd) = getproperty(tree,:lμ)
+
+"""
+    pe(tree::iTree)
+
+Return pendant edge.
+"""
+lμ(::Nothing) = nothing
+
+
+
 
 """
     streeheight(tree::T,
@@ -276,12 +326,13 @@ function λμath(tree::iTgbmbd,
                th  ::Float64,
                dri ::BitArray{1}, 
                ldr ::Int64,
-               wda ::Int64,
-               ix  ::Int64, 
-               dx  ::Int64)
+               ix  ::Int64)
 
   if ix == ldr
-    if dx == wda
+
+    pei = pe(tree)
+
+    if th > h > (th - pei)
 
       bh  = th - h
       tsi = ts(tree)
@@ -291,17 +342,11 @@ function λμath(tree::iTgbmbd,
       nh  = th - tsi[hix]
 
       return λh, μh, nh
-
-      """
-      here
-      """
-
     else
-      dx += 1
       if isfix(tree.d1::iTgbmbd)
-        λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
+        λμath(tree.d1::iTgbmbd, h, th - pei, dri, ldr, ix)
       else
-        λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
+        λμath(tree.d2::iTgbmbd, h, th - pei, dri, ldr, ix)
       end
     end
   elseif ix < ldr
@@ -309,66 +354,16 @@ function λμath(tree::iTgbmbd,
     if ifx1 && isfix(tree.d2::iTgbmbd)
       ix += 1
       if dri[ix]
-        λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
+        λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
       else
-        λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
+        λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
       end
     elseif ifx1
-      λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
+      λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
     else
-      λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, wda, ix, dx)
+      λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
     end
   end
 end
 
 
-
-
-
-"""
-    ts(tree::T) where {T <: iTgbm} 
-
-Return pendant edge.
-"""
-ts(tree::T) where {T <: iTgbm} = getproperty(tree,:ts)
-
-"""
-    pe(tree::iTree)
-
-Return pendant edge.
-"""
-ts(::Nothing) = 0.0
-
-
-
-
-"""
-    lλ(tree::T) where {T <: iTgbm}
-
-Return pendant edge.
-"""
-lλ(tree::T) where {T <: iTgbm} = getproperty(tree,:lλ)
-
-"""
-    pe(tree::iTree)
-
-Return pendant edge.
-"""
-lλ(::Nothing) = 0.0
-
-
-
-
-"""
-    lμ(tree::iTgbm)
-
-Return pendant edge.
-"""
-lμ(tree::iTgbmbd) = getproperty(tree,:lμ)
-
-"""
-    pe(tree::iTree)
-
-Return pendant edge.
-"""
-lμ(::Nothing) = 0.0
