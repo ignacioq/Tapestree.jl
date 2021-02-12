@@ -74,7 +74,8 @@ pe(::Nothing) = 0.0
 
 Return the branch length sum of `tree`.
 """
-treelength(tree::T) where {T <: iTree} = treelength(tree.d1) + treelength(tree.d2) + pe(tree)
+treelength(tree::T) where {T <: iTree} = 
+  treelength(tree.d1) + treelength(tree.d2) + pe(tree)
 
 """
     treelength(::Nothing)
@@ -329,19 +330,17 @@ function λμath(tree::iTgbmbd,
                ix  ::Int64)
 
   if ix == ldr
-
     pei = pe(tree)
-
     if th > h > (th - pei)
 
       bh  = th - h
       tsi = ts(tree)
-      hix = indmindif_sorted(tsi, bh)
-      λh  = lλ(tree)[hix]
-      μh  = lμ(tree)[hix]
-      nh  = th - tsi[hix]
+      hi = indmindif_sorted(tsi, bh)
+      λh  = lλ(tree)[hi]
+      μh  = lμ(tree)[hi]
+      nh  = th - tsi[hi]
 
-      return λh, μh, nh
+      return λh, μh, nh, hi
     else
       if isfix(tree.d1::iTgbmbd)
         λμath(tree.d1::iTgbmbd, h, th - pei, dri, ldr, ix)

@@ -1,6 +1,6 @@
 #=
 
-constant birth-death MCMC prune graft
+constant birth-death MCMC forward simulation
 
 Ignacio Quintero Mächler
 
@@ -8,7 +8,6 @@ t(-_-t)
 
 Created 25 08 2020
 =#
-
 
 
 
@@ -72,9 +71,6 @@ function insane_cbd(tree    ::sTbd,
   # create wbf vector
   wbf = falses(lastindex(idf))
 
-  # create da branches vector
-  dabr = Int64[]
-
   # make survival conditioning function (stem or crown)
   svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
                            stem_prob_surv_cbd
@@ -120,7 +116,7 @@ end
                   wbf     ::BitArray{1},
                   dabr    ::Array{Int64,1})
 
-MCMC da chain for constant birth-death.
+adaptive MCMC phase for da chain for constant birth-death.
 """
 function mcmc_burn_cbd(tree    ::sTbd,
                        n       ::Int64,
@@ -180,15 +176,11 @@ function mcmc_burn_cbd(tree    ::sTbd,
         lup[2] += 1.0
       end
       
-      # graft proposal
-      if p == 3
-        tree, llc = graftp(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
-      end
-      
-      # prune proposal
-      if p == 4
-        tree, llc = prunep(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
-      end
+      # forward simulation proposal proposal
+
+      """
+      here
+      """
 
       # log tuning parameters
       ltn += 1
@@ -308,46 +300,100 @@ end
 
 
 
+bi = idf[1]
+t0, ret = fsbi(bi, λc, μc, ntry)
+
+
+
+# exchange t0 in branch bi
+
+
+
 """
-    graftp(tree::sTbd,
-           llc ::Float64,
-           λc  ::Float64,
-           μc  ::Float64,
-           th  ::Float64,
-           idf ::Array{iBf,1}, 
-           wbf ::BitArray{1},
-           dabr::Array{Int64,1},
-           pupdp::NTuple{4,Float64})
+    swapbranch!(tree ::sTbd,
+                nbtr::sTbd,
+                dri  ::BitArray{1}, 
+                ldr  ::Int64,
+                ix   ::Int64)
 
-Graft proposal function for constant birth-death.
+Prune tree at branch given by `dri` and grafted `wpr`.
 """
-function graftp(tree::sTbd,
-                llc ::Float64,
-                λc  ::Float64,
-                μc  ::Float64,
-                th  ::Float64,
-                idf ::Array{iBf,1}, 
-                wbf ::BitArray{1},
-                dabr::Array{Int64,1},
-                pupdp::NTuple{4,Float64})
+function swapbranch!(tree ::sTbd,
+                     nbtr::sTbd,
+                     dri  ::BitArray{1}, 
+                     ldr  ::Int64,
+                     ix   ::Int64)
 
-  #λn, μn = λμprop() 
+  if ix == ldr
+    addtree(nbtr, tree, 1, 0) 
 
-  #simulate extinct lineage
-  t0, t0h = sim_cbd_b(λc, μc, th, 100)
+    return nbtr
+  elseif ix < ldr
+    ix += 1
+    if dri[ix]
+      tree.d1 = 
+        swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, ix)
+    else
+      tree.d2 = 
+        swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, ix)
+    end
+  end
 
-      # if useful simulation
-  if t0h < th
+  return tree
+end
 
-    # randomly select branch to graft
-    h, br, bri, nbh  = randbranch(th, t0h, idf, wbf)
+
+
+
+
+
+"""
+    fsp(tree::sTbd,
+        llc ::Float64,
+        λc  ::Float64,
+        μc  ::Float64,
+        th  ::Float64,
+        idf ::Array{iBf,1}, 
+        wbf ::BitArray{1},
+        dabr::Array{Int64,1},
+        pupdp::NTuple{4,Float64})
+
+Forward simulation proposal function for constant birth-death.
+"""
+function fsp(tree::sTbd,
+             bi  ::iBf,
+             λc::Float64, 
+             μc::Float64,
+             ntry::Int64)
+
+  # simulate an internal branch
+  t0, ret = fsbi(bi, λc, μc, ntry)
+
+  # if retain simulation
+  if ret 
+
+    dri = dr(bi)
+    ldr = lastindex(dri)
+
+    tree = swapbranch!(tree, nbtr, dri, ldr, 0)
 
     # proposal ratio
-    lpr = log(2.0 * μc * (th - t0h) * Float64(nbh) * pupdp[4]) - 
-          log((Float64(lastindex(dabr)) + 1.0) * pupdp[3])
+    lpr = - log(λc) 
+
+    """
+    here
+    """
 
     # likelihood ratio
     llr = llik_cbd(t0, λc, μc) + log(2.0*λc) 
+
+
+    llik_cbd(treex, λc, μc) - llik_cbd(tree, λc, μc)
+
+    llik_cbd(t0, λc, μc) - log(λc)
+
+
+
 
     if -randexp() < lpr #+ llr
       llc += llr
@@ -362,70 +408,163 @@ function graftp(tree::sTbd,
   end
 
   return tree, llc
+
 end
 
 
 
 
+
+
 """
-    prunep(tree::sTbd,
-           llc ::Float64,
-           λc  ::Float64,
-           μc  ::Float64,
-           th  ::Float64,
-           idf ::Array{iBf,1}, 
-           wbf ::BitArray{1},
-           dabr::Array{Int64,1},
-           pupdp::NTuple{4,Float64})
+    fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
 
-Prune proposal function for constant birth-death.
+Forward simulation for branch `bi`
 """
-function prunep(tree::sTbd,
-                llc ::Float64,
-                λc  ::Float64,
-                μc  ::Float64,
-                th  ::Float64,
-                idf ::Array{iBf,1}, 
-                wbf ::BitArray{1},
-                dabr::Array{Int64,1},
-                pupdp::NTuple{4,Float64})
+function fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
 
-  ng = lastindex(dabr)
+  # times
+  tfb = tf(bi)
 
-  if ng > 0
-    dabri = rand(Base.OneTo(ng))
-    br    = idf[dabr[dabri]]
-    dri   = dr(br)
-    ldr   = lastindex(dri)
-    wpr   = rand(Base.OneTo(da(br)))
+  t0 = sim_cbd(ti(bi) - tfb, λc, μc)
 
-    # return tree height
-    h, th0 = streeheight(tree, th, 0.0, dri, ldr, wpr, 0, 1)
+  ne = snen(t0)
+  nt = sntn(t0)
 
-    # get how many branches are cut at `h`
-    nbh = branchescut!(wbf, h, idf)
+  ret = true
 
-    # proposal ratio
-    lpr = log(Float64(ng) * pupdp[3]) -
-          log(2.0 * μc * (th - th0) * Float64(nbh) * pupdp[4])
-
-    # likelihood ratio
-    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - 
-            log(2.0 * λc)
-
-    if -randexp() < lpr #+ llr
-      llc += llr
-      tree = prunetree!(tree, dri, ldr, wpr, 0, 1)
-      # remove graft from branch
-      # add graft to branch
-      rmda!(br)
-      # log branch as being data augmented
-      deleteat!(dabr, dabri)
+  # goes extinct
+  if ne == nt
+    ret = false
+  else
+    # ntry per unobserved branch to go extinct
+    for i in Base.OneTo(nt - ne - 1)
+      for j in Base.OneTo(ntry)
+        st0 = sim_cbd(tfb, λc, μc)
+        th0 = treeheight(st0)
+        # if goes extinct before the present
+        if (th0 + 1e-10) < tfb
+          #graft to tip
+          add1(t0, st0, 1, 0)
+          break
+        end
+        if j === ntry
+          ret = false
+        end
+      end
     end
   end
 
-  return tree, llc
+  return t0, ret
 end
+
+
+
+
+
+
+"""
+    addtree(tree::sTbd, dtree::sTbd, it::Int64, ix::Int64) 
+
+Add `dtree` to not extinct tip in `tree` as speciation event.
+"""
+function addtree(tree::sTbd, dtree::sTbd, it::Int64, ix::Int64) 
+
+  if istip(tree) && !isextinct(tree)
+    ix += 1
+    if ix === it
+      tree.d1 = dtree.d1
+      tree.d2 = dtree.d2
+    end
+    return ix 
+  end
+
+  if !isnothing(tree.d1) && ix <= it
+    ix = addtree(tree.d1::sTbd, dtree::sTbd, it, ix)
+  end
+  if !isnothing(tree.d2) && ix <= it
+    ix = addtree(tree.d2::sTbd, dtree::sTbd, it, ix)
+  end
+
+  return ix
+end
+
+
+
+
+
+
+
+"""
+    add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
+
+Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
+"""
+function add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
+
+  if istip(tree) && !isextinct(tree)
+    ix += 1
+
+    if ix === it
+      npe = pe(tree) + pe(stree)
+      setpe!(tree, npe)
+      setproperty!(tree, :iμ, stree.iμ)
+      tree.d1 = stree.d1
+      tree.d2 = stree.d2
+    end
+    return ix 
+  end
+
+  if !isnothing(tree.d1) && ix <= it
+    ix = add1(tree.d1::sTbd, stree, it, ix)
+  end
+  if !isnothing(tree.d2) && ix <= it
+    ix = add1(tree.d2::sTbd, stree, it, ix)
+  end
+
+  return ix
+end
+
+
+
+
+"""
+    add2(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
+
+Add `stree` to tip in `tree` given by `it` in `tree.d2` order.
+"""
+function add2(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
+
+  if istip(tree) && !isextinct(tree)
+    ix += 1
+
+    if ix === it
+      npe = pe(tree) + pe(stree)
+      setpe!(tree, npe)
+      setproperty!(tree, :iμ, stree.iμ)
+      tree.d1 = stree.d1
+      tree.d2 = stree.d2
+    end
+    return ix 
+  end
+
+  if !isnothing(tree.d2) && ix <= it
+    ix = add2(tree.d2::sTbd, stree, it, ix)
+  end
+  if !isnothing(tree.d1) && ix <= it
+    ix = add2(tree.d1::sTbd, stree, it, ix)
+  end
+
+  return ix
+end
+
+
+
+
+
+
+
+
 
 
 
@@ -618,12 +757,5 @@ end
 **LogNormal** random samples with median of `1`. 
 """
 lnr() = @fastmath exp(randn())
-
-
-
-
-
-
-
 
 

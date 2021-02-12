@@ -192,6 +192,11 @@ function graftp(Ψ    ::iTgbmbd,
                 δt   ::Float64)
                 
 
+#=
+check if we can choose the tree length first to simulate from the
+lambda, extinction
+=#
+
   λn, μn = λμprop() 
 
   #simulate extinct lineage
@@ -211,16 +216,14 @@ function graftp(Ψ    ::iTgbmbd,
       ldr = lastindex(dri)
       dai = da(bf)
 
-      # check `δt` to graft to and it's current λ, μ
-      λh, μh, nh = λμath(Ψ, h, th, dri, ldr, 0)
-
-
-
+      # check `δt` to graft to (and index `hi`) and it's current 
+      # `λ`, `μ` at `nh`
+      λh, μh, nh, hi = λμath(Ψ, h, th, dri, ldr, 0)
 
     # if branch is from da
     else
       ba, i = getbranch(rn - nf, wba, ida)
-    
+
 
 
     end
@@ -228,15 +231,12 @@ function graftp(Ψ    ::iTgbmbd,
 
 
 
+    """
+    here
+    """
 
-
-
-
-
-    # gbm augment tree with constant rates
-    # but do the augmentation only if grafted
-    t0 = iTgbmbd(t0, δt, srδt, log(0.1), log(0.1), 0.0, 0.0)
-
+    # make likelihood for GBM but knowing all rates are constant
+    # also for proposal ratio
 
 
 
@@ -250,6 +250,15 @@ function graftp(Ψ    ::iTgbmbd,
 
     if -randexp() < lpr #+ llr
       llc += llr
+
+
+
+      # gbm augment tree with constant rates
+      # but do the augmentation only if grafted
+      t0 = iTgbmbd(t0, δt, srδt, log(0.1), log(0.1), 0.0, 0.0)
+
+
+
       # graft branch
       dri  = dr(br)
       tree = graftree!(tree, t0, dri, h, lastindex(dri), th, 0)
