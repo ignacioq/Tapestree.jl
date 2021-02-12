@@ -300,6 +300,178 @@ end
 
 
 
+function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
+  if istip(tree) 
+    - pe(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
+  else
+    log(2.0*λ) - pe(tree)*(λ + μ) +
+    llik_cbd(tree.d1::sTbd, λ, μ) + 
+    llik_cbd(tree.d2::sTbd, λ, μ)
+  end
+end
+
+
+
+
+function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
+
+  if istip(tree)
+    ll = - pe(tree)*(λ + μ)
+  else
+    ll = log(2.0*λ) - pe(tree)*(λ + μ)
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      return ll
+    elseif ifx1
+      ll += llik_cbd_f(tree.d1::sTbd, λ, μ) +
+            llik_cbd(  tree.d2::sTbd, λ, μ)
+    else
+      ll += llik_cbd(  tree.d1::sTbd, λ, μ) + 
+            llik_cbd_f(tree.d2::sTbd, λ, μ)
+    end
+  end
+
+  return ll
+end
+
+
+
+
+
+"""
+    br_ll_cbd(tree::sTbd,
+              λc  ::Float64, 
+              μc  ::Float64,
+              dri ::BitArray{1}, 
+              ldr ::Int64,
+              ix  ::Int64)
+
+Returns constant birth-death likelihood for whole branch `br`.
+"""
+function br_ll_cbd(tree::sTbd,
+                   λc  ::Float64, 
+                   μc  ::Float64,
+                   dri ::BitArray{1}, 
+                   ldr ::Int64,
+                   ix  ::Int64)
+
+  if ix == ldr
+    return llik_cbd_f(tree, λc, μc)
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::sTbd)
+    if ifx1 && isfix(tree.d2::sTbd)
+      ix += 1
+      if dri[ix]
+        ll = br_ll_cbd(tree.d1::sTbd, λc, μc, dri, ldr, ix)
+      else
+        ll = br_ll_cbd(tree.d2::sTbd, λc, μc, dri, ldr, ix)
+      end
+    elseif ifx1
+      ll = br_ll_cbd(tree.d1::sTbd, λc, μc, dri, ldr, ix)
+    else
+      ll = br_ll_cbd(tree.d2::sTbd, λc, μc, dri, ldr, ix)
+    end
+  end
+
+  return ll
+end
+
+
+
+
+bi = rand(idf)
+
+bi = rand(idf)
+
+
+
+
+log(2.0*λc) - pe(tree)*(λc + μc) 
+
+ - 2.0202169070555076*(λc + μc) 
+
+
+
+"""
+    fsp(tree::sTbd,
+        llc ::Float64,
+        λc  ::Float64,
+        μc  ::Float64,
+        th  ::Float64,
+        idf ::Array{iBf,1}, 
+        wbf ::BitArray{1},
+        dabr::Array{Int64,1},
+        pupdp::NTuple{4,Float64})
+
+Forward simulation proposal function for constant birth-death.
+"""
+function fsp(tree::sTbd,
+             bi  ::iBf,
+             λc::Float64, 
+             μc::Float64,
+             ntry::Int64)
+
+  # simulate an internal branch
+  t0, ret = fsbi(bi, λc, μc, ntry)
+
+  fixalive!(t0)
+
+
+  # if retain simulation
+  if ret 
+
+    dri = dr(bi)
+    ldr = lastindex(dri)
+
+    tree = swapbranch!(tree, t0, dri, ldr, 0)
+
+
+    """
+    here
+
+    check the proposal ratios for all branches!!!!
+    """
+
+    # get branch likelihood
+    brll = 
+
+    # proposal ratio
+    lpr = - log(λc) 
+
+
+    # likelihood ratio
+    llr = llik_cbd(t0, λc, μc)  - 
+          br_ll_cbd(treex, λc, μc, dri, ldr, 0)
+
+
+    llik_cbd(tree, λc, μc) - llik_cbd(treex, λc, μc)
+
+
+    llik_cbd(t0, λc, μc) - log(λc)
+
+
+    br_ll_cbd(tree, λc, μc, dri, ldr, ix)
+
+
+    if -randexp() < lpr #+ llr
+      llc += llr
+      # graft branch
+      dri  = dr(br)
+      tree = graftree!(tree, t0, dri, h, lastindex(dri), th, 0)
+      # add n graft to branch
+      addda!(br)
+      # log branch as being data augmented
+      push!(dabr, bri)
+    end
+  end
+
+  return tree, llc
+
+end
+
+
+
+
 
 """
     swapbranch!(tree ::sTbd,
@@ -343,84 +515,6 @@ function swapbranch!(tree::sTbd,
 
   return tree
 end
-
-
-
-bi = rand(idf)
-
-
-"""
-    fsp(tree::sTbd,
-        llc ::Float64,
-        λc  ::Float64,
-        μc  ::Float64,
-        th  ::Float64,
-        idf ::Array{iBf,1}, 
-        wbf ::BitArray{1},
-        dabr::Array{Int64,1},
-        pupdp::NTuple{4,Float64})
-
-Forward simulation proposal function for constant birth-death.
-"""
-function fsp(tree::sTbd,
-             bi  ::iBf,
-             λc::Float64, 
-             μc::Float64,
-             ntry::Int64)
-
-  # simulate an internal branch
-  t0, ret = fsbi(bi, λc, μc, ntry)
-
-  fixalive!(t0)
-
-
-  # if retain simulation
-  if ret 
-
-    dri = dr(bi)
-    ldr = lastindex(dri)
-
-    tree = swapbranch!(tree, t0, dri, ldr, 0)
-
-
-
-    """
-    here
-    """
-
-
-    # proposal ratio
-    lpr = - log(λc) 
-
-
-    # likelihood ratio
-    llr = llik_cbd(t0, λc, μc) + log(2.0*λc) 
-
-
-    llik_cbd(treex, λc, μc) - llik_cbd(tree, λc, μc)
-
-    llik_cbd(t0, λc, μc) - log(λc)
-
-
-
-
-    if -randexp() < lpr #+ llr
-      llc += llr
-      # graft branch
-      dri  = dr(br)
-      tree = graftree!(tree, t0, dri, h, lastindex(dri), th, 0)
-      # add n graft to branch
-      addda!(br)
-      # log branch as being data augmented
-      push!(dabr, bri)
-    end
-  end
-
-  return tree, llc
-
-end
-
-
 
 
 
