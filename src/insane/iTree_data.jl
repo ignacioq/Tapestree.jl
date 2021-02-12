@@ -18,7 +18,7 @@ Return if is either an extant or extinct tip node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree,:fx)
 
-isfix(::Nothing) = true
+isfix(::Nothing) = nothing
 
 
 

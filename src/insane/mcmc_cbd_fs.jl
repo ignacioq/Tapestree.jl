@@ -300,14 +300,6 @@ end
 
 
 
-bi = idf[1]
-t0, ret = fsbi(bi, λc, μc, ntry)
-
-
-
-# exchange t0 in branch bi
-
-
 
 """
     swapbranch!(tree ::sTbd,
@@ -318,24 +310,34 @@ t0, ret = fsbi(bi, λc, μc, ntry)
 
 Prune tree at branch given by `dri` and grafted `wpr`.
 """
-function swapbranch!(tree ::sTbd,
+function swapbranch!(tree::sTbd,
                      nbtr::sTbd,
-                     dri  ::BitArray{1}, 
-                     ldr  ::Int64,
-                     ix   ::Int64)
+                     dri ::BitArray{1}, 
+                     ldr ::Int64,
+                     ix  ::Int64)
 
   if ix == ldr
-    addtree(nbtr, tree, 1, 0) 
-
+    if !istip(tree)
+      addtree(nbtr, tree, 1, 0) 
+    end
     return nbtr
   elseif ix < ldr
-    ix += 1
-    if dri[ix]
+    ifx1 = isfix(tree.d1::sTbd)
+    if ifx1 && isfix(tree.d2::sTbd)
+      ix += 1
+      if dri[ix]
+        tree.d1 = 
+          swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, ix)
+      else
+        tree.d2 = 
+          swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, ix)
+      end
+    elseif ifx1
       tree.d1 = 
-        swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, ix)
+          swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, ix)
     else
       tree.d2 = 
-        swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, ix)
+          swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, ix)
     end
   end
 
@@ -344,7 +346,7 @@ end
 
 
 
-
+bi = rand(idf)
 
 
 """
@@ -369,20 +371,27 @@ function fsp(tree::sTbd,
   # simulate an internal branch
   t0, ret = fsbi(bi, λc, μc, ntry)
 
+  fixalive!(t0)
+
+
   # if retain simulation
   if ret 
 
     dri = dr(bi)
     ldr = lastindex(dri)
 
-    tree = swapbranch!(tree, nbtr, dri, ldr, 0)
+    tree = swapbranch!(tree, t0, dri, ldr, 0)
 
-    # proposal ratio
-    lpr = - log(λc) 
+
 
     """
     here
     """
+
+
+    # proposal ratio
+    lpr = - log(λc) 
+
 
     # likelihood ratio
     llr = llik_cbd(t0, λc, μc) + log(2.0*λc) 
@@ -491,6 +500,30 @@ end
 
 
 
+"""
+    fixalive!(tree::sTbd)
+
+Fixes the the path from root to the only species alive.
+"""
+function fixalive!(tree::sTbd)
+
+  if !isnothing(tree.d2)
+    f = fixalive!(tree.d2::sTbd)
+    f && fix!(tree)
+  end
+
+  if !isnothing(tree.d1)
+    f = fixalive!(tree.d1::sTbd)
+    f && fix!(tree)
+  end
+
+  if istip(tree::sTbd) && !isextinct(tree::sTbd)
+    fix!(tree::sTbd)
+    return true
+  end
+
+  return false
+end
 
 
 
