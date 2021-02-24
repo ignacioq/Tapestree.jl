@@ -42,6 +42,7 @@ function insane_cbd(tree    ::sTbd,
                     ϵi      ::Float64           = 0.4,
                     λi      ::Float64           = NaN,
                     μi      ::Float64           = NaN,
+                    ntry    ::Int64             = 20,
                     λtni    ::Float64           = 1.0,
                     μtni    ::Float64           = 1.0,
                     obj_ar  ::Float64           = 0.4,
@@ -59,7 +60,7 @@ function insane_cbd(tree    ::sTbd,
 
   # make parameter updates scaling function for tuning
   pup = Int64[]
-  for i in Base.OneTo(4) 
+  for i in Base.OneTo(3) 
     append!(pup, fill(i, Int64(100.0 * pupdp[i])))
   end
 
@@ -158,6 +159,11 @@ function mcmc_burn_cbd(tree    ::sTbd,
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
+
+"""
+here check if forward simulation it works
+"""
+
   for it in Base.OneTo(nburn)
 
     shuffle!(pup)
@@ -165,22 +171,22 @@ function mcmc_burn_cbd(tree    ::sTbd,
     for p in pup
 
       # λ proposal
-      if p == 1
+      if p === 1
         llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior, th, svf)
         lup[1] += 1.0
       end
 
       # μ proposal
-      if p == 2
+      if p === 2
         llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
         lup[2] += 1.0
       end
       
       # forward simulation proposal proposal
-
-      """
-      here
-      """
+      if p === 3
+        bi = rand(idf)
+        tree, llc = fsp(tree, bi, llc, λc, μc, ntry)
+      end
 
       # log tuning parameters
       ltn += 1
@@ -255,23 +261,19 @@ function mcmc_cbd(tree  ::sTbd,
     for p in pup
 
       # λ proposal
-      if p == 1
-        llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
+      if p === 1
+        llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior, th, svf)
       end
 
       # μ proposal
-      if p == 2
-        llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
+      if p === 2
+        llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
       end
       
-      # graft proposal
-      if p == 3
-        tree, llc = graftp(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
-      end
-      
-      # prune proposal
-      if p == 4
-        tree, llc = prunep(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
+      # forward simulation proposal proposal
+      if p === 3
+        bi = rand(idf)
+        tree, llc = fsp(tree, bi, llc, λc, μc, ntry)
       end
 
     end
@@ -374,28 +376,25 @@ end
 
 
 bi = rand(idf)
-
-
+tree, llc = fsp(tree, bi, llc, λc, μc, ntry)
 
 
 
 """
     fsp(tree::sTbd,
+        bi  ::iBf,
         llc ::Float64,
-        λc  ::Float64,
+        λc  ::Float64, 
         μc  ::Float64,
-        th  ::Float64,
-        idf ::Array{iBf,1}, 
-        wbf ::BitArray{1},
-        dabr::Array{Int64,1},
-        pupdp::NTuple{4,Float64})
+        ntry::Int64)
 
 Forward simulation proposal function for constant birth-death.
 """
 function fsp(tree::sTbd,
              bi  ::iBf,
-             λc::Float64, 
-             μc::Float64,
+             llc ::Float64,
+             λc  ::Float64, 
+             μc  ::Float64,
              ntry::Int64)
 
   # forward simulate an internal branch
@@ -405,12 +404,10 @@ function fsp(tree::sTbd,
 
   # if retain simulation
   if ret
-
+    # get branch information
     dri = dr(bi)
     ldr = lastindex(dri)
     itb = it(bi)
-
-    # here t0 is changed... so likelihood has to be estimated before!
 
     # if speciation (if branch is internal)
     iλ = itb ? 0.0 : log(2.0*λc)
