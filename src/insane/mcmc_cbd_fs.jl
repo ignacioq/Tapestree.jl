@@ -300,19 +300,13 @@ end
 
 
 
-function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
-  if istip(tree) 
-    - pe(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
-  else
-    log(2.0*λ) - pe(tree)*(λ + μ) +
-    llik_cbd(tree.d1::sTbd, λ, μ) + 
-    llik_cbd(tree.d2::sTbd, λ, μ)
-  end
-end
 
 
+"""
+    llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
 
-
+Estimate constant birth-death likelihood for the tree in a branch.
+"""
 function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
 
   if istip(tree)
@@ -381,15 +375,11 @@ end
 
 bi = rand(idf)
 
-bi = rand(idf)
-
-
 
 
 log(2.0*λc) - pe(tree)*(λc + μc) 
 
- - 2.0202169070555076*(λc + μc) 
-
+log(2.0*λc) - 1.4794099909435816*(λc + μc) 
 
 
 """
@@ -411,25 +401,29 @@ function fsp(tree::sTbd,
              μc::Float64,
              ntry::Int64)
 
-  # simulate an internal branch
+  # forward simulate an internal branch
   t0, ret = fsbi(bi, λc, μc, ntry)
 
   fixalive!(t0)
-
 
   # if retain simulation
   if ret 
 
     dri = dr(bi)
     ldr = lastindex(dri)
+    itb = it(bi)
 
-    tree = swapbranch!(tree, t0, dri, ldr, 0)
+    # here t0 is changed... so likelihood has to be estimated before!
+
+    tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
 
 
     """
     here
 
-    check the proposal ratios for all branches!!!!
+    swap branch when the proposal has fewer extinct without the extinct
+
+    check the proposal ratios for all branches!
     """
 
     # get branch likelihood
@@ -440,7 +434,8 @@ function fsp(tree::sTbd,
 
 
     # likelihood ratio
-    llr = llik_cbd(t0, λc, μc)  - 
+    llr = llik_cbd(tx, λc, μc)     + 
+          (itb ? 0.0 : log(2.0*λc))  - 
           br_ll_cbd(treex, λc, μc, dri, ldr, 0)
 
 
@@ -467,53 +462,6 @@ function fsp(tree::sTbd,
 
   return tree, llc
 
-end
-
-
-
-
-
-"""
-    swapbranch!(tree ::sTbd,
-                nbtr::sTbd,
-                dri  ::BitArray{1}, 
-                ldr  ::Int64,
-                ix   ::Int64)
-
-Prune tree at branch given by `dri` and grafted `wpr`.
-"""
-function swapbranch!(tree::sTbd,
-                     nbtr::sTbd,
-                     dri ::BitArray{1}, 
-                     ldr ::Int64,
-                     ix  ::Int64)
-
-  if ix == ldr
-    if !istip(tree)
-      addtree(nbtr, tree, 1, 0) 
-    end
-    return nbtr
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1::sTbd)
-    if ifx1 && isfix(tree.d2::sTbd)
-      ix += 1
-      if dri[ix]
-        tree.d1 = 
-          swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, ix)
-      else
-        tree.d2 = 
-          swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, ix)
-      end
-    elseif ifx1
-      tree.d1 = 
-          swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, ix)
-    else
-      tree.d2 = 
-          swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, ix)
-    end
-  end
-
-  return tree
 end
 
 
@@ -564,33 +512,103 @@ end
 
 
 
+"""
+    swapbranch!(tree ::sTbd,
+                nbtr::sTbd,
+                dri  ::BitArray{1}, 
+                ldr  ::Int64,
+                ix   ::Int64)
+
+Swap branch given by `dri` by `nbtr` and return the tree.
+"""
+function swapbranch!(tree::sTbd,
+                     nbtr::sTbd,
+                     dri ::BitArray{1}, 
+                     ldr ::Int64,
+                     it  ::Bool,
+                     ix  ::Int64)
+
+  if ix == ldr
+    if !it
+      addtree(nbtr, tree) 
+    end
+    return nbtr
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::sTbd)
+    if ifx1 && isfix(tree.d2::sTbd)
+      ix += 1
+      if dri[ix]
+        tree.d1 = 
+          swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, it, ix)
+      else
+        tree.d2 = 
+          swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, it, ix)
+      end
+    elseif ifx1
+      tree.d1 = 
+          swapbranch!(tree.d1::sTbd, nbtr::sTbd, dri, ldr, it, ix)
+    else
+      tree.d2 = 
+          swapbranch!(tree.d2::sTbd, nbtr::sTbd, dri, ldr, it, ix)
+    end
+  end
+
+  return tree
+end
+
+
 
 
 """
-    addtree(tree::sTbd, dtree::sTbd, it::Int64, ix::Int64) 
+    addtree(tree::sTbd, dtree::sTbd) 
 
-Add `dtree` to not extinct tip in `tree` as speciation event.
+Add `dtree` to not extinct tip in `tree` as speciation event, making
+sure that the daughters of `dtree` are fixed.
 """
-function addtree(tree::sTbd, dtree::sTbd, it::Int64, ix::Int64) 
+function addtree(tree::sTbd, dtree::sTbd) 
 
   if istip(tree) && !isextinct(tree)
-    ix += 1
-    if ix === it
-      tree.d1 = dtree.d1
-      tree.d2 = dtree.d2
-    end
-    return ix 
+
+    dtree = fixds(dtree)
+
+    tree.d1 = dtree.d1
+    tree.d2 = dtree.d2
+
+    return tree
   end
 
-  if !isnothing(tree.d1) && ix <= it
-    ix = addtree(tree.d1::sTbd, dtree::sTbd, it, ix)
+  if !isnothing(tree.d1)
+    tree.d1 = addtree(tree.d1::sTbd, dtree::sTbd)
   end
-  if !isnothing(tree.d2) && ix <= it
-    ix = addtree(tree.d2::sTbd, dtree::sTbd, it, ix)
+  if !isnothing(tree.d2)
+    tree.d2 = addtree(tree.d2::sTbd, dtree::sTbd)
   end
 
-  return ix
+  return tree
 end
+
+
+
+
+"""
+    fixds(tree::sTbd)
+
+Returns the first tree with both daughters fixed.
+"""
+function fixds(tree::sTbd)
+
+  ifx1 = isfix(tree.d1::sTbd)
+  if ifx1 && isfix(tree.d2::sTbd)
+    return tree
+  elseif ifx1
+    tree = fixds(tree.d1::sTbd)
+  else
+    tree = fixds(tree.d2::sTbd)
+  end
+
+  return tree
+end
+
 
 
 
@@ -601,19 +619,25 @@ Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::sTbd)
 
+  if istip(tree::sTbd) && !isextinct(tree::sTbd)
+    fix!(tree::sTbd)
+    return true
+  end
+
   if !isnothing(tree.d2)
     f = fixalive!(tree.d2::sTbd)
-    f && fix!(tree)
+    if f 
+      fix!(tree)
+      return true
+    end
   end
 
   if !isnothing(tree.d1)
     f = fixalive!(tree.d1::sTbd)
-    f && fix!(tree)
-  end
-
-  if istip(tree::sTbd) && !isextinct(tree::sTbd)
-    fix!(tree::sTbd)
-    return true
+    if f 
+      fix!(tree)
+      return true
+    end
   end
 
   return false
@@ -684,14 +708,6 @@ function add2(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
 
   return ix
 end
-
-
-
-
-
-
-
-
 
 
 

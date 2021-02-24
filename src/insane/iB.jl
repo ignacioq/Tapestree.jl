@@ -32,6 +32,8 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `da`: mutable scalar denoting the number of grafted data augmented branches.
   `ti`: initial absolute time.
   `tf`: final absolute time.
+  `it`: `true` if a terminal branch.
+  `ie`: `true` if a terminal branch and extinct.
 
     iBf()
 
@@ -42,17 +44,19 @@ struct iBf <: iB
   da::Base.RefValue{Int64}
   ti::Float64
   tf::Float64
+  it::Bool
+  ie::Bool
 
   # constructors
-  iBf() = new(BitArray{1}(), Ref(0), 0.0, 0.0)
-  iBf(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64) = 
-    new(dr, Ref(da), ti, tf)
+  iBf() = new(BitArray{1}(), Ref(0), 0.0, 0.0, false, false)
+  iBf(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64, it::Bool, ie::Bool) = 
+    new(dr, Ref(da), ti, tf, it, ie)
 end
 
 
 # pretty-printing
 Base.show(io::IO, id::iBf) = 
-  print(io, "fixed ibranch (", ti(id), ", ", tf(id), "), ", dr(id), 
+  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id), 
     " with ", da(id), " graft", isone(da(id)) ? "" : "s")
 
 
@@ -67,7 +71,11 @@ function makeiBf!(tree::T,
                   idv ::Array{iBf,1}, 
                   bit ::BitArray{1}) where {T <: iTree} 
 
-  push!(idv, iBf(bit, 0, treeheight(tree), treeheight(tree) - pe(tree)))
+  itb = istip(tree)
+  ieb = isextinct(tree)
+
+  push!(idv, 
+    iBf(bit, 0, treeheight(tree), treeheight(tree) - pe(tree), itb, ieb))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
@@ -179,6 +187,12 @@ tf(id::iB) = getproperty(id, :tf)
 
 
 
+"""
+    tf(id::iBf)
+
+Return final absolute time.
+"""
+it(id::iBf) = getproperty(id, :it)
 
 
 
