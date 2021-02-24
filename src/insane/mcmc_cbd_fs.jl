@@ -377,9 +377,6 @@ bi = rand(idf)
 
 
 
-log(2.0*λc) - pe(tree)*(λc + μc) 
-
-log(2.0*λc) - 1.4794099909435816*(λc + μc) 
 
 
 """
@@ -407,7 +404,7 @@ function fsp(tree::sTbd,
   fixalive!(t0)
 
   # if retain simulation
-  if ret 
+  if ret
 
     dri = dr(bi)
     ldr = lastindex(dri)
@@ -415,53 +412,21 @@ function fsp(tree::sTbd,
 
     # here t0 is changed... so likelihood has to be estimated before!
 
-    tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
-
-
-    """
-    here
-
-    swap branch when the proposal has fewer extinct without the extinct
-
-    check the proposal ratios for all branches!
-    """
-
-    # get branch likelihood
-    brll = 
-
-    # proposal ratio
-    lpr = - log(λc) 
-
+    # if speciation (if branch is internal)
+    iλ = itb ? 0.0 : log(2.0*λc)
 
     # likelihood ratio
-    llr = llik_cbd(tx, λc, μc)     + 
-          (itb ? 0.0 : log(2.0*λc))  - 
-          br_ll_cbd(treex, λc, μc, dri, ldr, 0)
+    llr = llik_cbd(t0, λc, μc) + iλ - 
+          br_ll_cbd(tree, λc, μc, dri, ldr, 0)
 
-
-    llik_cbd(tree, λc, μc) - llik_cbd(treex, λc, μc)
-
-
-    llik_cbd(t0, λc, μc) - log(λc)
-
-
-    br_ll_cbd(tree, λc, μc, dri, ldr, ix)
-
-
-    if -randexp() < lpr #+ llr
+    if -randexp() < iλ
       llc += llr
-      # graft branch
-      dri  = dr(br)
-      tree = graftree!(tree, t0, dri, h, lastindex(dri), th, 0)
-      # add n graft to branch
-      addda!(br)
-      # log branch as being data augmented
-      push!(dabr, bri)
+      # swap branch
+      tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
     end
   end
 
   return tree, llc
-
 end
 
 
