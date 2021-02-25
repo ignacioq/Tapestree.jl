@@ -24,7 +24,7 @@ Created 25 08 2020
                   ϵi      ::Float64           = 0.4,
                   λi      ::Float64           = NaN,
                   μi      ::Float64           = NaN,
-                  ntry    ::Int64             = 20,
+                  ntry    ::Int64             = 1,
                   λtni    ::Float64           = 1.0,
                   μtni    ::Float64           = 1.0,
                   obj_ar  ::Float64           = 0.4,
@@ -44,7 +44,7 @@ function insane_cbd_fs(tree    ::sTbd,
                        ϵi      ::Float64           = 0.4,
                        λi      ::Float64           = NaN,
                        μi      ::Float64           = NaN,
-                       ntry    ::Int64             = 20,
+                       ntry    ::Int64             = 2,
                        λtni    ::Float64           = 1.0,
                        μtni    ::Float64           = 1.0,
                        obj_ar  ::Float64           = 0.4,
@@ -403,7 +403,7 @@ function fsp(tree::sTbd,
     llr = llik_cbd(t0, λc, μc) + iλ - 
           br_ll_cbd(tree, λc, μc, dri, ldr, 0)
 
-    if -randexp() < 0.0
+    if -randexp() <= 0.0
       llc += llr
       # swap branch
       tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
@@ -434,7 +434,7 @@ function fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
   ret = true
 
   # goes extinct
-  if ne == nt
+  if ne === nt
     ret = false
   else
     # ntry per unobserved branch to go extinct
