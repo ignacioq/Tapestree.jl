@@ -310,6 +310,46 @@ end
 
 
 
+
+
+"""
+    λμi(tree::iTgbmbd,
+        dri ::BitArray{1}, 
+        ldr ::Int64,
+        ix  ::Int64)
+
+Return the `λ`,`μ` at the start . 
+"""
+function λμi(tree::iTgbmbd,
+             dri ::BitArray{1}, 
+             ldr ::Int64,
+             ix  ::Int64)
+
+  if ix == ldr
+    λ0 = lλ(tree)[1]
+    μ0 = lμ(tree)[1]
+
+    return λ0, μ0
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::iTgbmbd)
+    if ifx1 && isfix(tree.d2::iTgbmbd)
+      ix += 1
+      if dri[ix]
+        λμi(tree.d1::iTgbmbd, dri, ldr, ix)
+      else
+        λμi(tree.d2::iTgbmbd, dri, ldr, ix)
+      end
+    elseif ifx1
+      λμi(tree.d1::iTgbmbd, dri, ldr, ix)
+    else
+      λμi(tree.d2::iTgbmbd, dri, ldr, ix)
+    end
+  end
+end
+
+
+
+
 """
     λμath(tree::iTgbmbd,
           h    ::Float64, 

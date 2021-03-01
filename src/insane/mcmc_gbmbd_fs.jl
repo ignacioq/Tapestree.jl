@@ -51,16 +51,6 @@ function insane_gbmbd(tree    ::sTbd,
   bit = BitArray{1}()
   makeiBf!(Ψc, idf, bit)
 
-  # make parent node directory to `iBf`
-  inodes, terminus = make_inodes(idf)
-
-  # create da branches vector
-  ida = iBa[]
-
-  # create wbf and wba vector
-  wbf = falses(lastindex(idf))
-  wba = falses(lastindex(ida))
-
 
   # make survival conditioning function (stem or crown)
   # svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
@@ -68,11 +58,11 @@ function insane_gbmbd(tree    ::sTbd,
 
   scalef = makescalef(obj_ar)
 
-  # number of internal nodes
-  nin = lastindex(inodes)
-
-  # parameter updates (gbm, graft, σλ & σμ)
-  pup = make_pup(pupdp, nin)
+  # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation,)
+  pup = Int64[]
+  for i in Base.OneTo(3) 
+    append!(pup, fill(i, Int64(100.0 * pupdp[i])))
+  end
 
   # initialize acceptance log
   lλtn = 0
@@ -103,49 +93,41 @@ function insane_gbmbd(tree    ::sTbd,
 
 
       ## parameter updates
-      # update gbm
-      if pupi > 0
+      # update σλ or σμ
+      if pupi === 1
 
-        """
-        do graft/prune first
-        """
-
-        ter  = terminus[pupi]
-        inod = inodes[pupi]
-
-        dri = dr(idv[inod])
-        ldr = lastindex(dri)
-
-        llc, prc = 
-          lvupdate!(Ψp, Ψc, llc, prc, σλc, δt, srδt, 
-            λa_prior, dri, ldr, ter, 0)
-
-      # graft
-      elseif pupi == 0
-
-        """
-        first graph and then update gbm (to account for grafted gbm)
-        """
-
-
-
-
-
-      # prune
-      elseif pupi == -1
-
-
-      # update σλ
-      elseif pupi == -2
         llc, prc, σλc, lλtn, lλup, lλac = 
           update_σ!(σλc, Ψc, llc, prc, 
             σλtn, lλtn, lλup, lλac, δt, srδt, σλprior, lλ)
 
-      # update σμ
-      else
         llc, prc, σμc, lμtn, lμup, lμac = 
           update_σ!(σμc, Ψc, llc, prc, 
             σμtn, lμtn, lμup, lμac, δt, srδt, σμprior, lμ)
+
+
+      # gbm update
+      elseif pupi === 2
+
+        # ter  = terminus[pupi]
+        # inod = inodes[pupi]
+
+        # dri = dr(idv[inod])
+        # ldr = lastindex(dri)
+
+        # llc, prc = 
+        #   lvupdate!(Ψp, Ψc, llc, prc, σλc, δt, srδt, 
+        #     λa_prior, dri, ldr, ter, 0)
+
+
+      # forward simulation update
+      else
+
+        """
+        here
+        """
+
+        tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
+
       end
 
 
@@ -159,118 +141,88 @@ function insane_gbmbd(tree    ::sTbd,
     next!(pbar)
   end
 
+  return llc
+end
 
 
+
+
+
+
+
+
+
+
+
+tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
+
+
+
+
+bi = rand(idf)
+
+# get branch start λ and μ
+dri = dr(bi)
+ldr = length(dri)
+λt, μt = λμi(Ψc, dri, ldr, 0)
 
 
 
 
 """
-    graftp(tree::sTbd,
-           llc ::Float64,
-           λc  ::Float64,
-           μc  ::Float64,
-           th  ::Float64,
-           idv ::Array{iBf,1}, 
-           wbr ::BitArray{1},
-           dabr::Array{Int64,1},
-           pupdp::NTuple{4,Float64})
+    fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
 
-Graft proposal function for constant birth-death.
+Forward simulation for branch `bi`
 """
-function graftp(Ψ    ::iTgbmbd,
-                llc  ::Float64,
-                λc   ::Float64,
-                μc   ::Float64,
-                th   ::Float64,
-                idf  ::Array{iBf,1}, 
-                ida  ::Array{iBa,1}, 
-                wbf  ::BitArray{1},
-                wba  ::BitArray{1},
-                dabr ::Array{Int64,1},
-                pupdp::NTuple{4,Float64},
-                δt   ::Float64)
-                
+function fsbi(bi  ::iBf, 
+              λc  ::Float64, 
+              μc  ::Float64, 
+              ntry::Int64)
 
-#=
-check if we can choose the tree length first to simulate from the
-lambda, extinction
-=#
+  # times
+  tfb = tf(bi)
 
-  λn, μn = λμprop() 
+  # simulate tree
+  t0  = sim_gbm(ti(bi) - tfb, λt, μt, σλ, σμ, δt, srδt)
 
-  #simulate extinct lineage
-  t0, t0h = sim_cbd_b(λn, μn, th, 100)
-
-  # if useful simulation
-  if t0h < th
-
-    # get height and number of intersecting branches
-    h, nf, na, rn = randbranch(th, t0h, wbf, wba, idf, ida)
-
-    # if branch is fixed
-    if rn <= nf
-      bf, i = getbranch(rn, wbf, idf)
-
-      dri = dr(bf)
-      ldr = lastindex(dri)
-      dai = da(bf)
-
-      # check `δt` to graft to (and index `hi`) and it's current 
-      # `λ`, `μ` at `nh`
-      λh, μh, nh, hi = λμath(Ψ, h, th, dri, ldr, 0)
-
-    # if branch is from da
-    else
-      ba, i = getbranch(rn - nf, wba, ida)
-
-
-
-    end
+  
 
 
 
 
-    """
-    here
-    """
+  ne = snen(t0)
+  nt = sntn(t0)
 
-    # make likelihood for GBM but knowing all rates are constant
-    # also for proposal ratio
+  ret = true
 
-
-
-
-    # proposal ratio
-    lpr = log(2.0 * μc * (th - t0h) * Float64(nbh) * pupdp[4]) - 
-          log((Float64(lastindex(dabr)) + 1.0) * pupdp[3])
-
-    # likelihood ratio
-    llr = llik_cbd(t0, λc, μc) + log(2.0*λc) 
-
-    if -randexp() < lpr #+ llr
-      llc += llr
-
-
-
-      # gbm augment tree with constant rates
-      # but do the augmentation only if grafted
-      t0 = iTgbmbd(t0, δt, srδt, log(0.1), log(0.1), 0.0, 0.0)
-
-
-
-      # graft branch
-      dri  = dr(br)
-      tree = graftree!(tree, t0, dri, h, lastindex(dri), th, 0)
-      # add n graft to branch
-      addda!(br)
-      # log branch as being data augmented
-      push!(dabr, bri)
+  # goes extinct
+  if ne === nt
+    ret = false
+  else
+    # ntry per unobserved branch to go extinct
+    for i in Base.OneTo(nt - ne - 1)
+      for j in Base.OneTo(ntry)
+        st0 = sim_cbd(tfb, λc, μc)
+        th0 = treeheight(st0)
+        # if goes extinct before the present
+        if (th0 + 1e-10) < tfb
+          #graft to tip
+          add1(t0, st0, 1, 0)
+          break
+        end
+        if j === ntry
+          ret = false
+        end
+      end
     end
   end
 
-  return tree, llc
+  return t0, ret
 end
+
+
+
+
 
 
 
@@ -411,61 +363,6 @@ end
 
 
 
-
-
-
-
-"""
-    make_pup(pupdp::NTuple{3,Float64}, 
-             nin  ::Int64)
-
-Make the weighted parameter update vector according to probabilities `pupdp`.
-"""
-function make_pup(pupdp::NTuple{3,Float64}, 
-                  nin  ::Int64)
-
-  # standardize pr vector
-  pups = Array{Float64,1}(undef,3)
-  spupdp = sum(pupdp)
-  for i in Base.OneTo(3)
-    pups[i] = pupdp[i]/spupdp
-  end
-
-  pup = Int64[]
-  # `gbm` parameters
-  if pups[1] > 0.0
-    append!(pup,[1:nin...])
-  end
-
-  # probability `nin` given 
-  prnin = pups[1] > 0.0 ? Float64(nin)/pups[1] : 0.0
-
-  # `graft/prune` parameters (0,-1)
-  if pups[2] > 0.0
-    if prnin > 0.0
-      append!(pup, 
-        fill(-1, ceil(Int64, pups[2]*prnin)))
-      append!(pup, 
-        fill(0, ceil(Int64, pups[2]*prnin)))
-    else
-      push!(pup, -1, 0)
-    end
-  end
-
-  # `σλ & σμ` parameters (-2,-3)
-  if pups[3] > 0.0
-    if prnin > 0.0
-      append!(pup, 
-        fill(-2, ceil(Int64, pups[3]*prnin)))
-      append!(pup, 
-        fill(-3, ceil(Int64, pups[3]*prnin)))
-    else
-      push!(pup, -2, -3)
-    end
-  end
-
-  return return pup
-end
 
 
 
