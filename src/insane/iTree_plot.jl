@@ -43,9 +43,9 @@ function rplottree!(tree::T,
     push!(z, zv[i])
   end
 
-  # push!(x, NaN)
-  # push!(y, NaN)
-  # push!(z, NaN)
+  push!(x, NaN)
+  push!(y, NaN)
+  push!(z, NaN)
 
   if !istip(tree)
     ntip1 = sntn(tree.d1)
@@ -62,9 +62,9 @@ function rplottree!(tree::T,
     push!(z, z[end-1])
     push!(z, z[end-2])
 
-    # push!(x, NaN)
-    # push!(y, NaN)
-    # push!(z, NaN)
+    push!(x, NaN)
+    push!(y, NaN)
+    push!(z, NaN)
 
     rplottree!(tree.d1, xcmpe, yr1, zfun, x, y, z)
     rplottree!(tree.d2, xcmpe, yr2, zfun, x, y, z)
@@ -84,7 +84,15 @@ Recipe for plotting a Type `iTgbm`.
   x = Float64[]
   y = Float64[]
   z = Float64[]
+
   rplottree!(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
+  # x = [0.1, 0.2, 0.3, 0.4, NaN, 0.2, 0.1, NaN, 0.5, 0.4, 0.3, 0.1, NaN]
+  # y = [0.5, 0.5, 0.5, 0.5, NaN, 3.0, 3.0, NaN, 5.0, 5.0, 5.0, 5.0, NaN] 
+  # z = [0.2, 0.8, 0.6, 1.0, NaN, 0.1, 0.9, NaN, 0.1, 0.9, 0.2, 0.3, NaN]
+
+  # x = [0.1, 0.2, 0.3, 0.4, 0.2, 0.1, 0.5, 0.4, 0.3, 0.1]
+  # y = [0.5, 0.5, 0.5, 0.5, 3.0, 3.0, 5.0, 5.0, 5.0, 5.0] 
+  # z = [0.2, 0.8, 0.6, 1.0, 0.1, 0.9, 0.1, 0.9, 0.2, 0.3]
 
   # plot defaults
   line_z          --> z

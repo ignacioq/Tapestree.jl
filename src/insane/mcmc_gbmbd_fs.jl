@@ -51,6 +51,22 @@ function insane_gbmbd(tree    ::sTbd,
   bit = BitArray{1}()
   makeiBf!(Ψc, idf, bit)
 
+  # allocate `bb` for each fix branch and their `ts` vectors
+  bbλ = Array{Float64,1}[]
+  tsv = Array{Float64,1}[]
+
+  makebbv!(Ψc, bbλ, tsv)
+
+  # allocate bbμ
+  bbμ = deepcopy(bbλ)
+
+
+
+
+
+
+
+
 
   # make survival conditioning function (stem or crown)
   # svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
@@ -154,18 +170,41 @@ end
 
 
 
-tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
+# tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
 
 
 
 
-bi = rand(idf)
+nbr = lastindex(idf)
+bix = ceil(Int64,rand()*nbr)
+bi  = idf[bix]
 
-# get branch start λ and μ
+# get branch start and end λ & μ
 dri = dr(bi)
 ldr = length(dri)
-λt, μt = λμi(Ψc, dri, ldr, 0)
+λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
 
+tsi  = tsv[bix]
+bbiλ = bbλ[bix]
+bbiμ = bbμ[bix]
+
+
+# make bb given endpoints
+
+λ0, μ0, λ1, μ1 
+
+tl = lastindex(tsi)
+
+bb!(bbiλ, λ0, λ1, tsi, σλc, srδt)
+bb!(bbiμ, μ0, μ1, tsi, σμc, srδt)
+
+
+
+t1 = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt)
+plot(t1)
+treeheight(t1)
+plot(t1, lλ)
+plot(t1, lμ)
 
 
 
@@ -182,12 +221,12 @@ function fsbi(bi  ::iBf,
   # times
   tfb = tf(bi)
 
+
+
   # simulate tree
   t0  = sim_gbm(ti(bi) - tfb, λt, μt, σλ, σμ, δt, srδt)
 
-  
-
-
+  "here: simulate with new Brownian bridge path"
 
 
   ne = snen(t0)

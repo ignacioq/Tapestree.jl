@@ -311,38 +311,55 @@ end
 
 
 
-
 """
-    λμi(tree::iTgbmbd,
-        dri ::BitArray{1}, 
-        ldr ::Int64,
-        ix  ::Int64)
+    λμ01(tree::iTgbmbd,
+         dri ::BitArray{1}, 
+         ldr ::Int64,
+         ix  ::Int64,
+         λ0  ::Float64,
+         μ0  ::Float64)
 
-Return the `λ`,`μ` at the start . 
+Return the `λ`,`μ` at the start `0` and end `1` of a fixed branch. 
 """
-function λμi(tree::iTgbmbd,
-             dri ::BitArray{1}, 
-             ldr ::Int64,
-             ix  ::Int64)
+function λμ01(tree::iTgbmbd,
+              dri ::BitArray{1}, 
+              ldr ::Int64,
+              ix  ::Int64,
+              λ0  ::Float64,
+              μ0  ::Float64)
 
   if ix == ldr
-    λ0 = lλ(tree)[1]
-    μ0 = lμ(tree)[1]
 
-    return λ0, μ0
+    if isnan(λ0)
+      λ0 = lλ(tree)[1]
+      μ0 = lμ(tree)[1]
+    end
+
+    ifx1 = isfix(tree.d1::iTgbmbd)
+    if ifx1 && isfix(tree.d2::iTgbmbd)
+      λ1 = lλ(tree)[end]
+      μ1 = lμ(tree)[end]
+
+      return λ0, μ0, λ1, μ1
+    elseif ifx1
+      λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
+    else
+      λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
+    end
+
   elseif ix < ldr
     ifx1 = isfix(tree.d1::iTgbmbd)
     if ifx1 && isfix(tree.d2::iTgbmbd)
       ix += 1
       if dri[ix]
-        λμi(tree.d1::iTgbmbd, dri, ldr, ix)
+        λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
       else
-        λμi(tree.d2::iTgbmbd, dri, ldr, ix)
+        λμ01(tree.d2::iTgbmbd, dri, ldr, ix, λ0, μ0)
       end
     elseif ifx1
-      λμi(tree.d1::iTgbmbd, dri, ldr, ix)
+      λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
     else
-      λμi(tree.d2::iTgbmbd, dri, ldr, ix)
+      λμ01(tree.d2::iTgbmbd, dri, ldr, ix, λ0, μ0)
     end
   end
 end
@@ -404,5 +421,48 @@ function λμath(tree::iTgbmbd,
     end
   end
 end
+
+
+
+
+
+"""
+    makebbv!(tree::Nothing, 
+             bbv ::Array{Array{Float64,1},1}, 
+             tsv ::Array{Array{Float64,1},1})
+
+Make `bbv` vector with allocated `bb` (brownian bridges) and 
+with `tsv` vector of branches times `ts`.
+"""
+function makebbv!(tree::T, 
+                  bbv ::Array{Array{Float64,1},1}, 
+                  tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm} 
+
+  tsi = ts(tree)
+  lts = lastindex(tsi)
+
+  push!(tsv, tsi)
+  push!(bbv, Array{Float64,1}(undef,lts))
+
+  makebbv!(tree.d1, bbv, tsv)
+  makebbv!(tree.d2, bbv, tsv)
+
+  return nothing
+end
+
+
+
+
+"""
+    makebbv!(tree::Nothing, 
+             bbv ::Array{Array{Float64,1},1}, 
+             tsv ::Array{Array{Float64,1},1})
+
+Make `bbv` vector with allocated `bb` (brownian bridges) and 
+with `tsv` vector of branches times `ts`.
+"""
+makebbv!(tree::Nothing, 
+         bbv ::Array{Array{Float64,1},1}, 
+         tsv ::Array{Array{Float64,1},1}) = nothing
 
 
