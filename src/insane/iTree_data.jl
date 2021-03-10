@@ -425,6 +425,30 @@ end
 
 
 
+"""
+    ifxe(tree::iTgbmbd)
+
+Return `true` if fix branch goes extict for GBM forward simulation. 
+"""
+function ifxe(tree::iTgbmbd)
+
+  if istip(tree)
+    if isextinct(tree)
+      return true
+    else
+      return false
+    end
+  else
+    if isfix(tree.d1::iTgbmbd)
+      ifxe(tree.d1::iTgbmbd)
+    else
+      ifxe(tree.d2::iTgbmbd)
+    end
+  end
+end
+
+
+
 
 """
     makebbv!(tree::Nothing, 

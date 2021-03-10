@@ -201,10 +201,18 @@ bb!(bbiμ, μ0, μ1, tsi, σμc, srδt)
 
 
 t1 = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt)
+ifxe(t1)
+
 plot(t1)
 treeheight(t1)
 plot(t1, lλ)
 plot(t1, lμ)
+
+
+
+# check if fix goes extinct
+
+
 
 
 
@@ -217,27 +225,25 @@ function fsbi(bi  ::iBf,
               λc  ::Float64, 
               μc  ::Float64, 
               ntry::Int64)
+  
+  # retain?
+  ret = true
 
   # times
   tfb = tf(bi)
 
-
-
   # simulate tree
-  t0  = sim_gbm(ti(bi) - tfb, λt, μt, σλ, σμ, δt, srδt)
+  t0 = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt)
 
-  "here: simulate with new Brownian bridge path"
-
-
-  ne = snen(t0)
-  nt = sntn(t0)
-
-  ret = true
-
-  # goes extinct
-  if ne === nt
+  # if fix goes extinct
+  if ifxe(t0)
     ret = false
   else
+
+    """
+    here continue in forward simulation
+    """
+
     # ntry per unobserved branch to go extinct
     for i in Base.OneTo(nt - ne - 1)
       for j in Base.OneTo(ntry)
