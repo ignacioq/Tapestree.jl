@@ -209,7 +209,7 @@ plot(t1, lλ)
 plot(t1, lμ)
 
 
-
+ntry = 2
 # check if fix goes extinct
 
 
@@ -225,8 +225,8 @@ function fsbi(bi  ::iBf,
               λc  ::Float64, 
               μc  ::Float64, 
               ntry::Int64)
-  
-  # retain?
+
+  # retain the simulation?
   ret = true
 
   # times
@@ -239,14 +239,25 @@ function fsbi(bi  ::iBf,
   if ifxe(t0)
     ret = false
   else
-
-    """
-    here continue in forward simulation
-    """
+    nt = sntn(t0)
+    ne = snen(t0)
 
     # ntry per unobserved branch to go extinct
     for i in Base.OneTo(nt - ne - 1)
+
+      # get their final λ and μ to continue forward simulation
+      ix, λt, μt = fλμ1(t0, NaN, NaN, i, 0)
+
+
+
       for j in Base.OneTo(ntry)
+
+
+
+
+        sim_gbm(tfb, λt, μt, σλ, σμ, δt, srδt)
+
+
         st0 = sim_cbd(tfb, λc, μc)
         th0 = treeheight(st0)
         # if goes extinct before the present
@@ -268,7 +279,36 @@ end
 
 
 
+"""
+    fλμ1(tree::iTgbmbd, λt::Float64, μt::Float64, it::Int64, ix::Int64)
 
+Get end `λ` and `μ` for a `it` tip in `tree` given in `tree.d1` order
+not taking into account the fixed tip.
+"""
+function fλμ1(tree::iTgbmbd, λt::Float64, μt::Float64, iit::Int64, ix::Int64)
+
+  if istip(tree) && !isextinct(tree)
+    if !isfix(tree)
+      ix += 1
+    end
+
+    if ix === iit
+      λt = lλ(tree)[end]
+      μt = lμ(tree)[end]
+      ix += 1
+    end
+    return ix, λt, μt
+  end
+
+  if !isnothing(tree.d1) && ix <= iit
+    ix, λt, μt = fλμ1(tree.d1::iTgbmbd, λt, μt, iit, ix)
+  end
+  if !isnothing(tree.d2) && ix <= iit
+    ix, λt, μt = fλμ1(tree.d2::iTgbmbd, λt, μt, iit, ix)
+  end
+
+  return ix, λt, μt
+end
 
 
 
