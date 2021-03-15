@@ -100,6 +100,8 @@ function insane_gbmbd(tree    ::sTbd,
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
+  # number of branches
+  nbr  = lastindex(idf)
 
   for it in Base.OneTo(nburn)
 
@@ -138,11 +140,18 @@ function insane_gbmbd(tree    ::sTbd,
       # forward simulation update
       else
 
+        bix  = ceil(Int64,rand()*nbr)
+        bi   = idf[bix]
+        tsi  = tsv[bix]
+        bbiλ = bbλ[bix]
+        bbiμ = bbμ[bix]
+
         """
-        here
+        here, make sure it works fine
         """
 
-        tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
+        Ψc, llc = 
+          fsp(Ψc, bi, llc, σλc, σμc, tsi, bbiλ, bbiμ, δt, srδt, ntry)
 
       end
 
@@ -168,51 +177,78 @@ end
 
 
 
+"""
+    fsp(tree::sTbd,
+        bi  ::iBf,
+        llc ::Float64,
+        λc  ::Float64, 
+        μc  ::Float64,
+        ntry::Int64)
 
+Forward simulation proposal function for gbm birth-death.
+"""
+function fsp(Ψc  ::iTgbmbd,
+             bi  ::iBf,
+             llc ::Float64,
+             σλc ::Float64, 
+             σμc ::Float64,
+             tsi ::Array{Float64,1},
+             bbiλ::Array{Float64,1}, 
+             bbiμ::Array{Float64,1}, 
+             δt  ::Float64, 
+             srδt::Float64,
+             ntry::Int64)
 
-# tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
+  # get branch start and end λ & μ
+  dri = dr(bi)
+  ldr = length(dri)
+  λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
 
+  # make bb given endpoints
+  bb!(bbiλ, λ0, λ1, tsi, σλc, srδt)
+  bb!(bbiμ, μ0, μ1, tsi, σμc, srδt)
 
+  # forward simulate a branch
+  t0, ret = fsbi(bi, bbiλ, bbiμ, tsi, σλc, σμc, δt, srδt, ntry)
 
+  # if retain simulation
+  if ret
 
-nbr = lastindex(idf)
-bix = ceil(Int64,rand()*nbr)
-bi  = idf[bix]
+    itb = it(bi)
 
-# get branch start and end λ & μ
-dri = dr(bi)
-ldr = length(dri)
-λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
+    # if speciation (if branch is internal)
+    iλ = it(bi) ? 0.0 : (log(2.0) + λ1)
 
-tsi  = tsv[bix]
-bbiλ = bbλ[bix]
-bbiμ = bbμ[bix]
+    # likelihood ratio
+    llr = llik_gbm(t0, σλc, σμc, δt, srδt) + iλ - 
+          br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
+    if -randexp() <= 0.0
+      llc += llr
 
-# make bb given endpoints
+      # swap branch
+      Ψc = swapbranch!(Ψc, t0, dri, ldr, itb, 0)
+    end
+  end
 
-λ0, μ0, λ1, μ1 
+  return Ψc, llc
+end
 
-tl = lastindex(tsi)
-
-bb!(bbiλ, λ0, λ1, tsi, σλc, srδt)
-bb!(bbiμ, μ0, μ1, tsi, σμc, srδt)
-
-
-
-
-ntry = 2
-# check if fix goes extinct
-
-
-t0, ret = fsbi(bi, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt, ntry)
 
 
 
 """
-    fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
+    fsbi(bi  ::iBf, 
+         bbiλ::Array{Float64,1}, 
+         bbiμ::Array{Float64,1}, 
+         tsi ::Array{Float64,1},
+         σλ  ::Float64, 
+         σμ  ::Float64, 
+         δt  ::Float64, 
+         srδt::Float64,
+         ntry::Int64)
 
-Forward simulation for branch `bi`
+Forward gbm birth-death simulation for branch `bi`.
 """
 function fsbi(bi  ::iBf, 
               bbiλ::Array{Float64,1}, 
@@ -251,6 +287,10 @@ function fsbi(bi  ::iBf,
 
       # get their final λ and μ to continue forward simulation
       ix, λt, μt = fλμ1(t0, NaN, NaN, i, 0)
+
+      """
+      check here what happens is we have already added one
+      """
 
       for j in Base.OneTo(ntry)
         st0 = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt)

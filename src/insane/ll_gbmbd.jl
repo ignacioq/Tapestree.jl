@@ -135,3 +135,91 @@ end
 
 
 
+"""
+    llik_gbm_f(tree::iTgbmbd,
+               σλ  ::Float64,
+               σμ  ::Float64,
+               δt  ::Float64,
+               srδt::Float64)
+
+Estimate gbm birth-death likelihood for the tree in a branch.
+"""
+function llik_gbm_f(tree::iTgbmbd,
+                    σλ  ::Float64,
+                    σμ  ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64)
+
+  tsb = ts(tree)
+  lλb = lλ(tree)
+  lμb = lμ(tree)
+
+  if istip(tree)
+    ll = ll_gbm_b(tsb, lλb, lμb, σλ, σμ, δt, srδt) + 
+         (isextinct(tree) ? lμb[end] : 0.0)
+  else
+    ll = ll_gbm_b(tsb, lλb, lμb, σλ, σμ, δt, srδt) + 
+         log(2.0) + lλb[end]
+
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      return ll
+    elseif ifx1
+      ll += llik_gbm_f(tree.d1::iTgbmbd, σλ, σμ, δt, srδt) +
+            llik_gbm(  tree.d2::iTgbmbd, σλ, σμ, δt, srδt)
+    else
+      ll += llik_gbm(  tree.d1::iTgbmbd, σλ, σμ, δt, srδt) + 
+            llik_gbm_f(tree.d2::iTgbmbd, σλ, σμ, δt, srδt)
+    end
+  end
+
+  return ll
+end
+
+
+
+
+
+"""
+    br_ll_cbd(tree::sTbd,
+              λc  ::Float64, 
+              μc  ::Float64,
+              dri ::BitArray{1}, 
+              ldr ::Int64,
+              ix  ::Int64)
+
+Returns gbm birth-death likelihood for whole branch `br`.
+"""
+function br_ll_gbm(tree::iTgbmbd,
+                   σλ  ::Float64,
+                   σμ  ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64,
+                   dri ::BitArray{1},
+                   ldr ::Int64,
+                   ix  ::Int64)
+
+  if ix === ldr
+    return llik_gbm_f(tree::iTgbmbd, σλ, σμ, δt, srδt)
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::iTgbmbd)
+    if ifx1 && isfix(tree.d2::iTgbmbd)
+      ix += 1
+      if dri[ix]
+        ll = br_ll_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt, dri, ldr, ix)
+      else
+        ll = br_ll_gbm(tree.d2::iTgbmbd, σλ, σμ, δt, srδt, dri, ldr, ix)
+      end
+    elseif ifx1
+      ll = br_ll_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt, dri, ldr, ix)
+    else
+      ll = br_ll_gbm(tree.d2::iTgbmbd, σλ, σμ, δt, srδt, dri, ldr, ix)
+    end
+  end
+
+  return ll
+end
+
+
+
+

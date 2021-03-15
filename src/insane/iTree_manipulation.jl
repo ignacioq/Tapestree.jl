@@ -13,6 +13,108 @@ Created 25 06 2020
 
 
 """
+    swapbranch!(tree::iTgbmbd,
+                nbtr::iTgbmbd,
+                dri ::BitArray{1}, 
+                ldr ::Int64,
+                it  ::Bool,
+                ix  ::Int64)
+
+Swap branch given by `dri` by `nbtr` and return the tree.
+"""
+function swapbranch!(tree::T,
+                     nbtr::T,
+                     dri ::BitArray{1}, 
+                     ldr ::Int64,
+                     it  ::Bool,
+                     ix  ::Int64) where {T <: iTree}
+
+  if ix === ldr
+    if !it
+      addtree(nbtr, tree) 
+    end
+    return nbtr
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::T)
+    if ifx1 && isfix(tree.d2::T)
+      ix += 1
+      if dri[ix]
+        tree.d1 = 
+          swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
+      else
+        tree.d2 = 
+          swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
+      end
+    elseif ifx1
+      tree.d1 = 
+          swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
+    else
+      tree.d2 = 
+          swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    addtree(tree::sTbd, dtree::sTbd) 
+
+Add `dtree` to not extinct tip in `tree` as speciation event, making
+sure that the daughters of `dtree` are fixed.
+"""
+function addtree(tree::T, dtree::T) where {T <: iTree}
+
+  if istip(tree::T) && !isextinct(tree::T)
+
+    dtree = fixds(dtree)
+
+    tree.d1 = dtree.d1
+    tree.d2 = dtree.d2
+
+    return tree
+  end
+
+  if !isnothing(tree.d1)
+    tree.d1 = addtree(tree.d1::T, dtree::T)
+  end
+  if !isnothing(tree.d2)
+    tree.d2 = addtree(tree.d2::T, dtree::T)
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    fixds(tree::T)
+
+Returns the first tree with both daughters fixed.
+"""
+function fixds(tree::T) where {T <: iTree}
+
+  ifx1 = isfix(tree.d1::T)
+  if ifx1 && isfix(tree.d2::T)
+    return tree
+  elseif ifx1
+    tree = fixds(tree.d1::T)
+  else
+    tree = fixds(tree.d2::T)
+  end
+
+  return tree
+end
+
+
+
+
+
+"""
     graftree!(tree ::T,
               stree::T,
               dri  ::BitArray{1},

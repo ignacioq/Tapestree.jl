@@ -328,25 +328,30 @@ function λμ01(tree::iTgbmbd,
               λ0  ::Float64,
               μ0  ::Float64)
 
-  if ix == ldr
-
+  if ix === ldr
     if isnan(λ0)
       λ0 = lλ(tree)[1]
       μ0 = lμ(tree)[1]
     end
 
-    ifx1 = isfix(tree.d1::iTgbmbd)
-    if ifx1 && isfix(tree.d2::iTgbmbd)
+    if istip(tree) && !isextinct(tree)
       λ1 = lλ(tree)[end]
       μ1 = lμ(tree)[end]
 
       return λ0, μ0, λ1, μ1
-    elseif ifx1
-      λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
     else
-      λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
-    end
+      ifx1 = isfix(tree.d1::iTgbmbd)
+      if ifx1 && isfix(tree.d2::iTgbmbd)
+        λ1 = lλ(tree)[end]
+        μ1 = lμ(tree)[end]
 
+        return λ0, μ0, λ1, μ1
+      elseif ifx1
+        λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
+      else
+        λμ01(tree.d2::iTgbmbd, dri, ldr, ix, λ0, μ0)
+      end
+    end
   elseif ix < ldr
     ifx1 = isfix(tree.d1::iTgbmbd)
     if ifx1 && isfix(tree.d2::iTgbmbd)
