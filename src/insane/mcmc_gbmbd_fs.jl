@@ -200,19 +200,12 @@ bb!(bbiμ, μ0, μ1, tsi, σμc, srδt)
 
 
 
-t1 = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt)
-ifxe(t1)
-
-plot(t1)
-treeheight(t1)
-plot(t1, lλ)
-plot(t1, lμ)
-
 
 ntry = 2
 # check if fix goes extinct
 
 
+t0, ret = fsbi(bi, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt, ntry)
 
 
 
@@ -222,8 +215,13 @@ ntry = 2
 Forward simulation for branch `bi`
 """
 function fsbi(bi  ::iBf, 
-              λc  ::Float64, 
-              μc  ::Float64, 
+              bbiλ::Array{Float64,1}, 
+              bbiμ::Array{Float64,1}, 
+              tsi ::Array{Float64,1},
+              σλ  ::Float64, 
+              σμ  ::Float64, 
+              δt  ::Float64, 
+              srδt::Float64,
               ntry::Int64)
 
   # retain the simulation?
@@ -231,6 +229,9 @@ function fsbi(bi  ::iBf,
 
   # times
   tfb = tf(bi)
+
+  # gbm length
+  tl = lastindex(tsi)
 
   # simulate tree
   t0 = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt)
@@ -242,27 +243,22 @@ function fsbi(bi  ::iBf,
     nt = sntn(t0)
     ne = snen(t0)
 
+    # remaining time for last non-standard δt for simulation
+    nsδt = δt - (tsi[tl] - tsi[tl-1])
+
     # ntry per unobserved branch to go extinct
     for i in Base.OneTo(nt - ne - 1)
 
       # get their final λ and μ to continue forward simulation
       ix, λt, μt = fλμ1(t0, NaN, NaN, i, 0)
 
-
-
       for j in Base.OneTo(ntry)
-
-
-
-
-        sim_gbm(tfb, λt, μt, σλ, σμ, δt, srδt)
-
-
-        st0 = sim_cbd(tfb, λc, μc)
+        st0 = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt)
         th0 = treeheight(st0)
+
         # if goes extinct before the present
         if (th0 + 1e-10) < tfb
-          #graft to tip
+          # graft to tip
           add1(t0, st0, 1, 0)
           break
         end
@@ -280,19 +276,83 @@ end
 
 
 """
-    fλμ1(tree::iTgbmbd, λt::Float64, μt::Float64, it::Int64, ix::Int64)
+    add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64)
 
-Get end `λ` and `μ` for a `it` tip in `tree` given in `tree.d1` order
-not taking into account the fixed tip.
+Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function fλμ1(tree::iTgbmbd, λt::Float64, μt::Float64, iit::Int64, ix::Int64)
+function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64) 
 
   if istip(tree) && !isextinct(tree)
     if !isfix(tree)
       ix += 1
     end
 
-    if ix === iit
+    if ix === it
+      pet = pe(tree)
+      npe = pet + pe(stree)
+      setpe!(tree, npe)
+
+      setproperty!(tree, :iμ, stree.iμ)
+
+      sts0 = ts(stree)
+      ls   = lastindex(sts0)
+
+      @simd for i in Base.OneTo(ls) 
+        sts0[i] += pet
+      end
+
+      ts0 = ts(tree)
+      lλ0 = lλ(tree)
+      lμ0 = lμ(tree)
+
+      pop!(ts0)
+      pop!(lλ0)
+      pop!(lμ0)
+
+      @views append!(ts0, sts0[2:ls])
+      @views append!(lλ0, lλ(stree)[2:ls])
+      @views append!(lμ0, lμ(stree)[2:ls])
+
+      tree.d1 = stree.d1
+      tree.d2 = stree.d2
+
+      ix += 1
+    end
+
+    return ix 
+  end
+
+  if ix <= it && !isnothing(tree.d1) 
+    ix = add1(tree.d1::iTgbmbd, stree, it, ix)
+  end
+  if ix <= it && !isnothing(tree.d2) 
+    ix = add1(tree.d2::iTgbmbd, stree, it, ix)
+  end
+
+  return ix
+end
+
+
+
+
+"""
+    fλμ1(tree::iTgbmbd, λt::Float64, μt::Float64, it::Int64, ix::Int64)
+
+Get end `λ` and `μ` for a `it` tip in `tree` given in `tree.d1` order
+not taking into account the fixed tip.
+"""
+function fλμ1(tree::iTgbmbd, 
+              λt   ::Float64, 
+              μt   ::Float64, 
+              it   ::Int64, 
+              ix   ::Int64)
+
+  if istip(tree) && !isextinct(tree)
+    if !isfix(tree)
+      ix += 1
+    end
+
+    if ix === it
       λt = lλ(tree)[end]
       μt = lμ(tree)[end]
       ix += 1
@@ -300,15 +360,17 @@ function fλμ1(tree::iTgbmbd, λt::Float64, μt::Float64, iit::Int64, ix::Int64
     return ix, λt, μt
   end
 
-  if !isnothing(tree.d1) && ix <= iit
-    ix, λt, μt = fλμ1(tree.d1::iTgbmbd, λt, μt, iit, ix)
+  if ix <= it && !isnothing(tree.d1)
+    ix, λt, μt = fλμ1(tree.d1::iTgbmbd, λt, μt, it, ix)
   end
-  if !isnothing(tree.d2) && ix <= iit
-    ix, λt, μt = fλμ1(tree.d2::iTgbmbd, λt, μt, iit, ix)
+  if ix <= it && !isnothing(tree.d2)
+    ix, λt, μt = fλμ1(tree.d2::iTgbmbd, λt, μt, it, ix)
   end
 
   return ix, λt, μt
 end
+
+
 
 
 
