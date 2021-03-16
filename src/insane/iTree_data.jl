@@ -64,7 +64,7 @@ pe(tree::T) where {T <: iTree} = getproperty(tree,:pe)
 
 Return pendant edge.
 """
-pe(::Nothing) = 0.0
+pe(::Nothing) = nothing
 
 
 

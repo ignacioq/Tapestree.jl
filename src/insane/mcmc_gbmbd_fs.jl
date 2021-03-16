@@ -146,10 +146,6 @@ function insane_gbmbd(tree    ::sTbd,
         bbiλ = bbλ[bix]
         bbiμ = bbμ[bix]
 
-        """
-        here, make sure it works fine
-        """
-
         Ψc, llc = 
           fsp(Ψc, bi, llc, σλc, σμc, tsi, bbiλ, bbiμ, δt, srδt, ntry)
 
@@ -217,7 +213,7 @@ function fsp(Ψc  ::iTgbmbd,
     itb = it(bi)
 
     # if speciation (if branch is internal)
-    iλ = it(bi) ? 0.0 : (log(2.0) + λ1)
+    iλ = itb ? 0.0 : (log(2.0) + λ1)
 
     # likelihood ratio
     llr = llik_gbm(t0, σλc, σμc, δt, srδt) + iλ - 
@@ -283,14 +279,13 @@ function fsbi(bi  ::iBf,
     nsδt = δt - (tsi[tl] - tsi[tl-1])
 
     # ntry per unobserved branch to go extinct
+    ii = 0
     for i in Base.OneTo(nt - ne - 1)
 
-      # get their final λ and μ to continue forward simulation
-      ix, λt, μt = fλμ1(t0, NaN, NaN, i, 0)
+      ii += 1
 
-      """
-      check here what happens is we have already added one
-      """
+      # get their final λ and μ to continue forward simulation
+      ix, λt, μt = fλμ1(t0, NaN, NaN, ii, 0)
 
       for j in Base.OneTo(ntry)
         st0 = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt)
@@ -299,7 +294,8 @@ function fsbi(bi  ::iBf,
         # if goes extinct before the present
         if (th0 + 1e-10) < tfb
           # graft to tip
-          add1(t0, st0, 1, 0)
+          add1(t0, st0, ii, 0)
+          ii -= 1
           break
         end
         if j === ntry
