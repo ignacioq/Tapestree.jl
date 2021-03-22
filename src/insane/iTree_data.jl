@@ -456,25 +456,25 @@ end
 
 
 """
-    makebbv!(tree::Nothing, 
-             bbv ::Array{Array{Float64,1},1}, 
+    makebbv!(tree::iTgbmbd, 
+             bbλ ::Array{Array{Float64,1},1}, 
+             bbμ ::Array{Array{Float64,1},1}, 
              tsv ::Array{Array{Float64,1},1})
 
 Make `bbv` vector with allocated `bb` (brownian bridges) and 
 with `tsv` vector of branches times `ts`.
 """
-function makebbv!(tree::T, 
-                  bbv ::Array{Array{Float64,1},1}, 
-                  tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm} 
+function makebbv!(tree::iTgbmbd, 
+                  bbλ ::Array{Array{Float64,1},1}, 
+                  bbμ ::Array{Array{Float64,1},1}, 
+                  tsv ::Array{Array{Float64,1},1})
 
-  tsi = ts(tree)
-  lts = lastindex(tsi)
+  push!(tsv, ts(tree))
+  push!(bbλ, lλ(tree))
+  push!(bbμ, lμ(tree))
 
-  push!(tsv, tsi)
-  push!(bbv, Array{Float64,1}(undef,lts))
-
-  makebbv!(tree.d1, bbv, tsv)
-  makebbv!(tree.d2, bbv, tsv)
+  makebbv!(tree.d1, bbλ, bbμ, tsv)
+  makebbv!(tree.d2, bbλ, bbμ, tsv)
 
   return nothing
 end
@@ -483,15 +483,17 @@ end
 
 
 """
-    makebbv!(tree::Nothing, 
-             bbv ::Array{Array{Float64,1},1}, 
+    makebbv!(tree::iTgbmbd, 
+             bbλ ::Array{Array{Float64,1},1}, 
+             bbμ ::Array{Array{Float64,1},1}, 
              tsv ::Array{Array{Float64,1},1})
 
 Make `bbv` vector with allocated `bb` (brownian bridges) and 
 with `tsv` vector of branches times `ts`.
 """
 makebbv!(tree::Nothing, 
-         bbv ::Array{Array{Float64,1},1}, 
+         bbλ ::Array{Array{Float64,1},1}, 
+         bbμ ::Array{Array{Float64,1},1}, 
          tsv ::Array{Array{Float64,1},1}) = nothing
 
 
