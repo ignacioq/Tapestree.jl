@@ -11,6 +11,100 @@ Created 10 09 2020
 
 
 
+"""
+    bm!(tree::iTgbmbd,
+        bbiλ::Array{Float64,1},
+        bbiμ::Array{Float64,1},
+        ii  ::Int64,
+        tl  ::Int64,
+        σλ  ::Float64,
+        σμ  ::Float64,
+        srδt::Float64)
+
+Fill fix with previously simulated geometric Brownian motion and simulate
+geometric Brownian motion in place for the unfixed trees.
+"""
+function bm!(tree::iTgbmbd,
+             bbiλ::Array{Float64,1},
+             bbiμ::Array{Float64,1},
+             ii  ::Int64,
+             tl  ::Int64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             srδt::Float64)
+
+  @inbounds begin
+
+    tsi = ts(tree)
+    λv  = lλ(tree)
+    μv  = lμ(tree)
+    l   = lastindex(tsi)
+    cix = ii:(ii+l-1)
+
+    @simd for i in Base.OneTo(l)
+      λv[i] = bbiλ[cix[i]]
+      μv[i] = bbiμ[cix[i]]
+    end
+
+    if l < tl
+      if isfix(tree.d1)
+        bm!(tree.d1::iTgbmbd, bbiλ, bbiμ, l, tl, σλ, σμ, srδt)
+        bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+      elseif isfix(tree.d2)
+        bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+        bm!(tree.d2::iTgbmbd, bbiλ, bbiμ, l, tl, σλ, σμ, srδt)
+      end
+    end
+
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    bm!(tree::iTgbmbd,
+        λt  ::Float64,
+        μt  ::Float64,
+        σλ  ::Float64,
+        σμ  ::Float64,
+        srδt::Float64)
+
+Simulate birth-death geometric Brownian motion in place.
+"""
+function bm!(tree::iTgbmbd,
+             λt  ::Float64,
+             μt  ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             srδt::Float64)
+
+  tsi = ts(tree)
+  λv  = lλ(tree)
+  μv  = lμ(tree)
+
+  bm!(λv, λt, tsi, σλ, srδt)
+  bm!(μv, μt, tsi, σμ, srδt)
+
+  l = lastindex(tsi)
+
+  if !isnothing(tree.d1)
+    bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+  end
+
+  if !isnothing(tree.d2)
+    bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+  end
+
+  return nothing
+end
+
+
+
+
+
 
 """
     ll_bm(t ::Array{Float64,1},
@@ -180,6 +274,73 @@ function bb!(x   ::Array{Float64,1},
 
   return nothing
 end
+
+
+
+
+"""
+    bb!(x0  ::Array{Float64,1},
+        x0i ::Float64,
+        x0f ::Float64,
+        x1  ::Array{Float64,1},
+        x1i ::Float64,
+        x1f ::Float64,
+        t   ::Array{Float64,1},
+        σ0  ::Float64,
+        σ1  ::Float64,
+        srδt::Float64)
+
+Brownian bridge simulation function for updating two vectors 
+(`0` & `1`) with shared times in place.
+"""
+function bb!(x0  ::Array{Float64,1},
+             x0i ::Float64,
+             x0f ::Float64,
+             x1  ::Array{Float64,1},
+             x1i ::Float64,
+             x1f ::Float64,
+             t   ::Array{Float64,1},
+             σ0  ::Float64,
+             σ1  ::Float64,
+             srδt::Float64)
+
+  @inbounds begin
+    l = lastindex(x0)
+
+    randn!(x0)
+    randn!(x1)
+
+    # for standard δt
+    x0[1] = x0i
+    x1[1] = x1i
+    @simd for i = Base.OneTo(l-2)
+      x0[i+1] *= srδt*σ0
+      x1[i+1] *= srδt*σ1
+    end
+
+    cumsum!(x0, x0)
+    cumsum!(x1, x1)
+
+    # for last non-standard δt
+    srlt  = sqrt(t[l] - t[l-1])
+    x0[l] = rnorm(x0[l-1], srlt*σ0)
+    x1[l] = rnorm(x1[l-1], srlt*σ1)
+
+    # make bridge
+    ite = 1.0/t[l]
+    x0df = (x0[l] - x0f)
+    x1df = (x1[l] - x1f)
+
+    @simd for i = Base.OneTo(l)
+      iti   = t[i] * ite
+      x0[i] -= (iti * x0df)
+      x1[i] -= (iti * x1df)
+    end
+  end
+
+  return nothing
+end
+
 
 
 

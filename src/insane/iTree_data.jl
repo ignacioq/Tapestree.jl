@@ -454,6 +454,41 @@ end
 
 
 
+"""
+    fixd1(tree::iTgbmbd)
+
+Return the first fixed daughter `d1`. Works only for internal branches
+"""
+function fixd1(tree::iTgbmbd)
+  ifx1 = isfix(tree.d1::iTgbmbd)
+  if ifx1 && isfix(tree.d2::iTgbmbd)
+    return tree.d1
+  elseif ifx1
+    fixd1(tree.d1::iTgbmbd)
+  else
+    fixd1(tree.d2::iTgbmbd)
+  end
+end
+
+
+"""
+    fixd2(tree::iTgbmbd)
+
+Return the first fixed daughter `d2`. Works only for internal branches
+"""
+function fixd2(tree::iTgbmbd)
+  ifx1 = isfix(tree.d1::iTgbmbd)
+  if ifx1 && isfix(tree.d2::iTgbmbd)
+    return tree.d2
+  elseif ifx1
+    fixd1(tree.d1::iTgbmbd)
+  else
+    fixd1(tree.d2::iTgbmbd)
+  end
+end
+
+
+
 
 """
     makebbv!(tree::iTgbmbd, 

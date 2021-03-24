@@ -473,18 +473,6 @@ function lvupdate!(Ψp     ::iTgbmbd,
 
 
 
-  
-
-
-
-  """
-  here:
-   - make trio update
-   - then change each branch accordingly for the data
-  """
-
-
-
 
   if ix == ldr 
     # if root
@@ -495,6 +483,10 @@ function lvupdate!(Ψp     ::iTgbmbd,
       if ter[1]
         if ter[2]
           # if both are terminal
+
+
+
+
           llc = triad_lupdate_noded12!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
                         llc, σ, δt, srδt)
         else
@@ -507,9 +499,16 @@ function lvupdate!(Ψp     ::iTgbmbd,
         llc = triad_lupdate_noded2!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
                      llc, σ, δt, srδt)
       else
+
+        """
+        *********
+        Make all the rest as respective "copies" for the rest from this one
+        *********
+        """
+
         # if no terminal branches involved
-        llc = triad_lupdate_node!(Ψp::iTgbmbd, Ψc::iTgbmbd, 
-                     llc, σ, δt, srδt)
+        llc = triad_lλupdate_node!(Ψp::iTgbmbd, Ψc::iTgbmbd,
+                bbλp, bbμp, bbλc, bbμc, tsv, llc, pr, d1, d2, σλ, δt, srδt)
       end
     end
 
@@ -726,6 +725,8 @@ end
 
 
 
+
+
 """
     triad_lλupdate_node!(Ψp  ::iTgbmpb, 
                          Ψc  ::iTgbmpb,
@@ -737,20 +738,30 @@ end
 Make a trio of Brownian motion MCMC updates when node is internal and 
 no daughters are terminal.
 """
-function triad_lλupdate_node!(Ψp  ::iTgbmpb, 
-                              Ψc  ::iTgbmpb,
-                   bbλp::Array{Array{Float64,1},1}, 
-                   bbμp::Array{Array{Float64,1},1}, 
-                   bbλc::Array{Array{Float64,1},1}, 
-                   bbμc::Array{Array{Float64,1},1}, 
-                   tsi  ::Array{Array{Float64,1},1}, 
-
+function triad_lλupdate_node!(treep  ::iTgbmbd, 
+                              treec  ::iTgbmbd,
+                              bbλp::Array{Array{Float64,1},1}, 
+                              bbμp::Array{Array{Float64,1},1}, 
+                              bbλc::Array{Array{Float64,1},1}, 
+                              bbμc::Array{Array{Float64,1},1}, 
+                              tsv ::Array{Array{Float64,1},1}, 
                               llc ::Float64,
+                              pr  ::Int64,
+                              d1  ::Int64,
+                              d2  ::Int64,
                               σλ  ::Float64,
                               δt  ::Float64, 
                               srδt::Float64)
 
-  # get reference vectors
+  ## get reference vectors
+  # time vectors
+  tprv = tsv[pr]
+  td1v = tsv[d1]
+  td2v = tsv[d2]
+  lipr = lastindex(tprv)
+  lid1 = lastindex(td1v)
+  lid2 = lastindex(td2v)
+
   # speciation vectors
   λprv_p = bbλp[pr]
   λd1v_p = bbλp[d1]
@@ -759,8 +770,8 @@ function triad_lλupdate_node!(Ψp  ::iTgbmpb,
   λd1v_c = bbλc[d1]
   λd2v_c = bbλc[d2]
   λpr    = λprv_c[1]
-  λd1    = λd1v_c[end]
-  λd2    = λd2v_c[end]
+  λd1    = λd1v_c[lid1]
+  λd2    = λd2v_c[lid2]
 
   # extinction vectors
   μprv_p = bbμp[pr]
@@ -770,167 +781,53 @@ function triad_lλupdate_node!(Ψp  ::iTgbmpb,
   μd1v_c = bbμc[d1]
   μd2v_c = bbμc[d2]
   μpr    = μprv_c[1]
-  μd1    = μd1v_c[end]
-  μd2    = μd2v_c[end]
+  μd1    = μd1v_c[lid1]
+  μd2    = μd2v_c[lid2]
 
-  # time vectors
-  tprv = tsv[pr]
-  td1v = tsv[d1]
-  td2v = tsv[d2]
+  # get fixed daughters
+  treecd1 = fixd1(treec)
+  treecd2 = fixd2(treec)
+  treepd1 = fixd1(treep)
+  treepd2 = fixd2(treep)
 
   # node proposal
-  lλp = trioprop(λpr, λd1, λd2, pe(Ψc), pe(Ψc.d1), pe(Ψc.d2), σλ)
-  lμp = trioprop(μpr, μd1, μd2, pe(Ψc), pe(Ψc.d1), pe(Ψc.d2), σμ)
+  pepr = pe(treec)
+  ped1 = pe(treecd1) 
+  ped2 = pe(treecd1)
+  lλp = trioprop(λpr, λd1, λd2, pepr, ped1, ped2, σλ)
+  lμp = trioprop(μpr, μd1, μd2, pepr, ped1, ped2, σμ)
 
-  bb!(λprv_p, λpr, lλp, tprv, σλ, srδt)
-  bb!(λd1v_p, lλp, λd1, td1v, σλ, srδt)
-  bb!(λd2v_p, lλp, λd2, td2v, σλ, srδt)
-  bb!(μprv_p, μpr, lμp, tprv, σμ, srδt)
-  bb!(μd1v_p, lμp, μd1, td1v, σμ, srδt)
-  bb!(μd2v_p, lμp, μd2, td2v, σμ, srδt)
+  # simulate fix tree vector
+  bb!(λprv_p, λpr, lλp, μprv_p, μpr, lμp, tprv, σλ, σμ, srδt)
+  bb!(λd1v_p, lλp, λd1, μd1v_p, lμp, μd1, td1v, σλ, σμ, srδt)
+  bb!(λd2v_p, lλp, λd2, μd2v_p, lμp, μd2, td2v, σλ, σμ, srδt)
 
-
-
-
-
-
-  """
-  here: 
-
-    - fill the fixed part with those vectors and forward simulate the
-      unfix parts. 
-  """
+  # fill fix and simulate unfix tree
+  bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)
+  bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
+  bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
 
   ## make acceptance ratio 
   # estimate likelihoods
-  llr, acr = llr_propr(tprv, td1v, td2v, λprv_p, λd1v_p, λd2v_p, 
-    λprv_c, λd1v_c, λd2v_c, σλ, δt, srδt, lλp, λd1v_c[1])
+  llr, acr = llr_propr(treep, treepd1, treepd2, 
+                       treec, treecd1, treecd2, 
+                       σλ, σμ, δt, srδt)
 
   if -randexp() < acr
     llc += llr
     copyto!(λprv_c, λprv_p)
     copyto!(λd1v_c, λd1v_p)
     copyto!(λd2v_c, λd2v_p)
+    copyto!(μprv_c, μprv_p)
+    copyto!(μd1v_c, μd1v_p)
+    copyto!(μd2v_c, μd2v_p)
+    gbm_copy_f!(treec, treep)
+    gbm_copy_f!(treecd1, treepd1)
+    gbm_copy_f!(treecd2, treepd2)
   end
 
   return llc
 end
-
-
-
-
-
-bm!(tree, bbiλp, bbiμp, 1, 5, σλ, σμ, srδt)
-
-
-
-"""
-    bm!(tree::iTgbmbd,
-        bbiλ::Array{Float64,1},
-        bbiμ::Array{Float64,1},
-        ii  ::Int64,
-        tl  ::Int64,
-        σλ  ::Float64,
-        σμ  ::Float64,
-        srδt::Float64)
-
-Fill fix with previously simulated geometric Brownian motion and simulate
-geometric Brownian motion in place for the unfixed trees.
-"""
-function bm!(tree::iTgbmbd,
-             bbiλ::Array{Float64,1},
-             bbiμ::Array{Float64,1},
-             ii  ::Int64,
-             tl  ::Int64,
-             σλ  ::Float64,
-             σμ  ::Float64,
-             srδt::Float64)
-
-  @inbounds begin
-
-    tsi = ts(tree)
-    λv  = lλ(tree)
-    μv  = lμ(tree)
-    l   = lastindex(tsi)
-    cix = ii:(ii+l-1)
-
-    @simd for i in Base.OneTo(l)
-      λv[i] = bbiλ[cix[i]]
-      μv[i] = bbiμ[cix[i]]
-    end
-
-    if l <= tl
-      if isfix(tree.d1)
-        bm!(tree.d1::iTgbmbd, bbiλ, bbiμ, l, tl, σλ, σμ, srδt)
-        bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-      elseif isfix(tree.d2)
-        bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-        bm!(tree.d2::iTgbmbd, bbiλ, bbiμ, l, tl, σλ, σμ, srδt)
-      end
-    end
-
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    bm!(tree::iTgbmbd,
-        λt  ::Float64,
-        μt  ::Float64,
-        σλ  ::Float64,
-        σμ  ::Float64,
-        srδt::Float64)
-
-Simulate birth-death geometric Brownian motion in place.
-"""
-function bm!(tree::iTgbmbd,
-             λt  ::Float64,
-             μt  ::Float64,
-             σλ  ::Float64,
-             σμ  ::Float64,
-             srδt::Float64)
-
-  tsi = ts(tree)
-  λv  = lλ(tree)
-  μv  = lμ(tree)
-
-  bm!(λv, λt, tsi, σλ, srδt)
-  bm!(μv, μt, tsi, σμ, srδt)
-
-  l = lastindex(tsi)
-
-  if !isnothing(tree.d1)
-    bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-  end
-
-  if !isnothing(tree.d2)
-    bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-  end
-
-  return nothing
-end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1017,64 +914,51 @@ end
 
 
 
-"""
-    llr_propr(tprv  ::Array{Float64,1},
-              td1v  ::Array{Float64,1},
-              td2v  ::Array{Float64,1},
-              λprv_p::Array{Float64,1},
-              λd1v_p::Array{Float64,1},
-              λd2v_p::Array{Float64,1},
-              λprv_c::Array{Float64,1},
-              λd1v_c::Array{Float64,1},
-              λd2v_c::Array{Float64,1},
-              σλ    ::Float64,
-              σλ   ::Float64,
-              δt    ::Float64,
-              srδt  ::Float64,
-              lλp   ::Float64,
-              lλc   ::Float64)
 
-Return the likelihood and proposal ratio for pure-birth gbm.
-"""
-function llr_propr(tprv  ::Array{Float64,1},
-                   td1v  ::Array{Float64,1},
-                   td2v  ::Array{Float64,1},
-                   λprv_p::Array{Float64,1},
-                   λd1v_p::Array{Float64,1},
-                   λd2v_p::Array{Float64,1},
-                   λprv_c::Array{Float64,1},
-                   λd1v_c::Array{Float64,1},
-                   λd2v_c::Array{Float64,1},
-                   σλ    ::Float64,
-                   δt    ::Float64,
-                   srδt  ::Float64,
-                   lλp   ::Float64,
-                   lλc   ::Float64)
 
-  # log likelihood ratio functions
-  llrbm_pr, llrpb_pr = llr_gbm_b_sep(tprv, λprv_p, λprv_c, σλ, δt, srδt)
-  llrbm_d1, llrpb_d1 = llr_gbm_b_sep(td1v, λd1v_p, λd1v_c, σλ, δt, srδt)
-  llrbm_d2, llrpb_d2 = llr_gbm_b_sep(td2v, λd2v_p, λd2v_c, σλ, δt, srδt)
+
+
+
+
+
+"""
+    llr_propr(treep  ::iTgbmbd,
+              treepd1::iTgbmbd,
+              treepd2::iTgbmbd,
+              treec  ::iTgbmbd,
+              treecd1::iTgbmbd,
+              treecd2::iTgbmbd,
+              σλ     ::Float64,
+              σμ     ::Float64,
+              δt     ::Float64,
+              srδt   ::Float64)
+
+Return the likelihood and proposal ratio for birth-death gbm.
+"""
+function llr_propr(treep  ::iTgbmbd,
+                   treepd1::iTgbmbd,
+                   treepd2::iTgbmbd,
+                   treec  ::iTgbmbd,
+                   treecd1::iTgbmbd,
+                   treecd2::iTgbmbd,
+                   σλ     ::Float64,
+                   σμ     ::Float64,
+                   δt     ::Float64,
+                   srδt   ::Float64)
+
+  llrbm_pr, llrpb_pr = llr_gbm_sep_f(treep, treec, σλ, σμ, δt, srδt)
+  llrbm_d1, llrpb_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
+  llrbm_d2, llrpb_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
 
   llr = llrbm_pr + llrpb_pr +
         llrbm_d1 + llrpb_d1 +
-        llrbm_d2 + llrpb_d2 +
-        lλp - lλc
+        llrbm_d2 + llrpb_d2
+  #     lλp - lλc
 
   acr = llr - llrbm_pr - llrbm_d1 - llrbm_d2 
 
   return llr, acr
 end
-
-
-
-
-
-
-
-
-
-
 
 
 

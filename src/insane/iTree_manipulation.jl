@@ -113,6 +113,60 @@ end
 
 
 
+"""
+    gbm_copy!(treec::iTgbmbd,
+              treep::iTgbmbd)
+
+Copies the gbm birth-death in place for a fixed branch.
+"""
+function gbm_copy_f!(treec::iTgbmbd,
+                     treep::iTgbmbd)
+
+  copyto!(lλ(treec), lλ(treep))
+  copyto!(lμ(treec), lμ(treep))
+
+  if !istip(treec)
+    ifx1 = isfix(treec.d1::iTgbmbd)
+    if ifx1 && isfix(treec.d2::iTgbmbd)
+      return nothing
+    elseif ifx1
+      gbm_copy_f!(treec.d1::iTgbmbd, treep.d1::iTgbmbd)
+      gbm_copy!(  treec.d2::iTgbmbd, treep.d2::iTgbmbd)
+    else
+      gbm_copy!(  treec.d1::iTgbmbd, treep.d1::iTgbmbd)
+      gbm_copy_f!(treec.d2::iTgbmbd, treep.d2::iTgbmbd)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    gbm_copy!(treec::iTgbmbd,
+              treep::iTgbmbd)
+
+Copies the gbm birth-death in place.
+"""
+function gbm_copy!(treec::iTgbmbd,
+                   treep::iTgbmbd)
+
+  copyto!(lλ(treec), lλ(treep))
+  copyto!(lμ(treec), lμ(treep))
+
+  if !istip(treec)
+    gbm_copy!(treec.d1::iTgbmbd, treep.d1::iTgbmbd)
+    gbm_copy!(treec.d2::iTgbmbd, treep.d2::iTgbmbd)
+  end
+
+  return nothing
+end
+
+
+
+
 
 """
     graftree!(tree ::T,
