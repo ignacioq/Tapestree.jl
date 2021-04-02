@@ -97,8 +97,9 @@ function insane_gbmbd(tree    ::sTbd,
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
-  # number of branches
+  # number of branches and of triads
   nbr  = lastindex(idf)
+  ntr  = lastindex(triads)
 
   for it in Base.OneTo(nburn)
 
@@ -122,26 +123,18 @@ function insane_gbmbd(tree    ::sTbd,
       # gbm update
       elseif pupi === 2
 
+        bix = ceil(Int64,rand()*ntr)
 
+        pr, d1, d2 = triads[bix]
 
-        """
-        here! check if only GBM or 3 branch forward simulation update
-        or both!
-        """
+        bi  = idf[pr]
+        dri = dr(bi)
+        ldr = length(dri)
+        ter = terminus[bix]
 
-
-
-
-        # ter  = terminus[pupi]
-        # inod = inodes[pupi]
-
-        # dri = dr(idv[inod])
-        # ldr = lastindex(dri)
-
-        # llc, prc = 
-        #   lvupdate!(Ψp, Ψc, llc, prc, σλc, δt, srδt, 
-        #     λa_prior, dri, ldr, ter, 0)
-
+        llc, prc = 
+          lvupdate!(Ψp, Ψc, llc, prc, bbλp, bbμp, bbλc, bbμc, 
+            σλ, σμ, δt, srδt, λa_prior, μa_prior, dri, ldr, ter, 0)
 
       # forward simulation update
       else
@@ -171,13 +164,6 @@ function insane_gbmbd(tree    ::sTbd,
 
   return llc
 end
-
-
-
-
-
-
-
 
 
 
@@ -424,17 +410,6 @@ end
 
 
 
-
-
-
-pr, d1, d2 = triads[1]
-
-bi = idf[pr]
-dri = dr(bi)
-ldr = length(dri)
-
-
-
 """
     lvupdate!(Ψp     ::iTgbmbd,
               Ψc     ::iTgbmbd,
@@ -457,24 +432,24 @@ ldr = length(dri)
 
 Make a gbm update for speciation and extinction for a fixed triad.
 """
-function lvupdate!(Ψp     ::iTgbmbd,
-                   Ψc     ::iTgbmbd,
-                   llc    ::Float64, 
-                   prc    ::Float64,
-                   bbiλp  ::Array{Float64,1}, 
-                   bbiμp  ::Array{Float64,1}, 
-                   bbiλc  ::Array{Float64,1}, 
-                   bbiμc  ::Array{Float64,1}, 
-                   σλ     ::Float64, 
-                   σμ     ::Float64, 
-                   δt     ::Float64, 
-                   srδt   ::Float64, 
+function lvupdate!(Ψp      ::iTgbmbd,
+                   Ψc      ::iTgbmbd,
+                   llc     ::Float64, 
+                   prc     ::Float64,
+                   bbλp    ::Array{Array{Float64,1},1}, 
+                   bbμp    ::Array{Array{Float64,1},1}, 
+                   bbλc    ::Array{Array{Float64,1},1}, 
+                   bbμc    ::Array{Array{Float64,1},1}, 
+                   σλ      ::Float64, 
+                   σμ      ::Float64, 
+                   δt      ::Float64, 
+                   srδt    ::Float64, 
                    λa_prior::Tuple{Float64,Float64},
                    μa_prior::Tuple{Float64,Float64},
-                   dri    ::BitArray{1},
-                   ldr    ::Int64,
-                   ter    ::BitArray{1},
-                   ix     ::Int64)
+                   dri     ::BitArray{1},
+                   ldr     ::Int64,
+                   ter     ::BitArray{1},
+                   ix      ::Int64)
 
   if ix == ldr 
     # if root
@@ -511,13 +486,21 @@ function lvupdate!(Ψp     ::iTgbmbd,
 
   elseif ix < ldr
 
-    """
-    here, add fix counting
-    """
-
-
-    ix += 1
-    if dri[ix]
+    ifx1 = isfix(Ψc.d1::iTgbmbd)
+    if ifx1 && isfix(Ψc.d2::iTgbmbd)
+      ix += 1
+      if dri[ix]
+        llc, prc = 
+          lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, prc, 
+            bbλp, bbμp, bbλc, bbμc, σλ, σμ, δt, srδt, λa_prior, μa_prior,
+            dri, ldr, ter, ix)
+      else
+        llc, prc = 
+          lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, llc, prc, 
+            bbλp, bbμp, bbλc, bbμc, σλ, σμ, δt, srδt, λa_prior, μa_prior,
+            dri, ldr, ter, ix)
+      end
+    elseif ifx1
       llc, prc = 
         lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, prc, 
           bbiλp, bbiμp, bbiλc, bbiμc, σλ, σμ, δt, srδt, λa_prior, μa_prior,
@@ -532,8 +515,6 @@ function lvupdate!(Ψp     ::iTgbmbd,
 
   return llc, prc
 end
-
-
 
 
 
@@ -860,8 +841,6 @@ function triad_lupdate_noded2!(treep  ::iTgbmbd,
 
   return llc
 end
-
-
 
 
 
