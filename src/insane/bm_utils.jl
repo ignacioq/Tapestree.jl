@@ -193,6 +193,58 @@ end
 
 
 """
+    bm!(x0   ::Array{Float64,1},
+        x1   ::Array{Float64,1},
+        x0i  ::Float64,
+        x1i  ::Float64,
+        t    ::Array{Float64,1},
+        σ0   ::Float64,
+        σ1   ::Float64,
+        srδt::Float64)
+
+Brownian motion simulation function for updating a branch for two 
+vectors that share times in place.
+"""
+function bm!(x0   ::Array{Float64,1},
+             x1   ::Array{Float64,1},
+             x0i  ::Float64,
+             x1i  ::Float64,
+             t    ::Array{Float64,1},
+             σ0   ::Float64,
+             σ1   ::Float64,
+             srδt::Float64)
+
+  @inbounds begin
+    l = lastindex(x0)
+
+    randn!(x0)
+    randn!(x1)
+
+    # for standard δt
+    x0[1] = x0i
+    x1[1] = x1i
+    @simd for i = Base.OneTo(l-2)
+      x0[i+1] *= srδt*σ0
+      x1[i+1] *= srδt*σ1
+    end
+
+    cumsum!(x0, x0)
+    cumsum!(x1, x1)
+
+    # for last non-standard δt
+    srlt  = sqrt(t[l] - t[l-1])
+    x0[l] = rnorm(x0[l-1], srlt*σ0)
+    x1[l] = rnorm(x1[l-1], srlt*σ1)
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
         t   ::Array{Float64,1},
