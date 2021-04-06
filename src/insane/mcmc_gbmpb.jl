@@ -258,7 +258,7 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
 
     # log parameters
     lthin += 1
-    if lthin == nthin
+    if lthin === nthin
       lit += 1
       @inbounds begin
         R[lit,1] = Float64(lit)
