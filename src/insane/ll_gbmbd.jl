@@ -114,7 +114,7 @@ end
                srδt::Float64,
                lf  ::Function)
 
-Returns the log-likelihood ratio for a `iTgbmpb` according 
+Returns the log-likelihood ratio for a `iTgbmbd` according 
 to GBM birth-death for a `σ` proposal.
 """
 function llr_gbm_bm(tree::iTgbmbd, 
@@ -323,14 +323,14 @@ function llr_gbm_sep_f(treep::iTgbmbd,
       llrbm0, llrbd0 = 
         llr_gbm_sep_f(treep.d1::iTgbmbd, treec.d1::iTgbmbd, σλ, σμ, δt, srδt)
       llrbm1, llrbd1 = 
-        llr_gbm_sep(treep.d1::iTgbmbd, treec.d1::iTgbmbd, σλ, σμ, δt, srδt)
+        llr_gbm_sep(treep.d2::iTgbmbd, treec.d2::iTgbmbd, σλ, σμ, δt, srδt)
       llrbm += llrbm0 + llrbm1
       llrbd += llrbd0 + llrbd1
     else
       llrbm0, llrbd0 = 
         llr_gbm_sep(treep.d1::iTgbmbd, treec.d1::iTgbmbd, σλ, σμ, δt, srδt)
       llrbm1, llrbd1 = 
-        llr_gbm_sep_f(treep.d1::iTgbmbd, treec.d1::iTgbmbd, σλ, σμ, δt, srδt)
+        llr_gbm_sep_f(treep.d2::iTgbmbd, treec.d2::iTgbmbd, σλ, σμ, δt, srδt)
       llrbm += llrbm0 + llrbm1
       llrbd += llrbd0 + llrbd1
     end
@@ -346,8 +346,8 @@ end
 """
     llr_gbm_sep(treep::iTgbmbd, 
                 treec::iTgbmbd,
-                σλp  ::Float64,
-                σλc  ::Float64,
+                σλ   ::Float64,
+                σμ   ::Float64,
                 δt   ::Float64,
                 srδt::Float64)
 
@@ -356,8 +356,8 @@ separately (for gbm and bd).
 """
 function llr_gbm_sep(treep::iTgbmbd, 
                      treec::iTgbmbd,
-                     σλp  ::Float64,
-                     σλc  ::Float64,
+                     σλ   ::Float64,
+                     σμ   ::Float64,
                      δt   ::Float64,
                      srδt::Float64)
 
@@ -378,9 +378,9 @@ function llr_gbm_sep(treep::iTgbmbd,
     llrbd += lλvp[lv] - lλvc[lv]
 
     llrbm0, llrbd0 = 
-      llr_gbm_sep(treep.d1::iTgbmpb, treec.d1::iTgbmpb, σλp, σλc, δt, srδt) 
+      llr_gbm_sep(treep.d1::iTgbmbd, treec.d1::iTgbmbd, σλ, σμ, δt, srδt) 
     llrbm1, llrbd1 = 
-      llr_gbm_sep(treep.d2::iTgbmpb, treec.d2::iTgbmpb, σλp, σλc, δt, srδt)
+      llr_gbm_sep(treep.d2::iTgbmbd, treec.d2::iTgbmbd, σλ, σμ, δt, srδt)
 
     llrbm += llrbm0 + llrbm1
     llrbd += llrbd0 + llrbd1
