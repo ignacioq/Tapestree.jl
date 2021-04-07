@@ -29,7 +29,7 @@ Created 14 09 2020
                  pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
                  prints  ::Int64    = 5)
 
-Run insane for constant pure-birth.
+Run insane for GBM pure-birth.
 """
 function insane_gbmpb(tree    ::sTpb, 
                       out_file::String;

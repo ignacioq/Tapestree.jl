@@ -13,29 +13,53 @@ Created 03 09 2020
 
 
 """
+    insane_gbmbd(tree    ::sTbd, 
+                 out_file::String;
+                 σλprior ::Float64           = 0.1,
+                 σμprior ::Float64           = 0.1,
+                 λa_prior::NTuple{2,Float64} = (0.0,10.0),
+                 μa_prior::NTuple{2,Float64} = (0.0,10.0),
+                 niter   ::Int64             = 1_000,
+                 nthin   ::Int64             = 10,
+                 nburn   ::Int64             = 200,
+                 tune_int::Int64             = 100,
+                 ϵi      ::Float64           = 0.2,
+                 λi      ::Float64           = NaN,
+                 μi      ::Float64           = NaN,
+                 σλi     ::Float64           = 0.01, 
+                 σμi     ::Float64           = 0.01,
+                 σλtni   ::Float64           = 1.0,
+                 σμtni   ::Float64           = 1.0,
+                 obj_ar  ::Float64           = 0.4,
+                 pupdp   ::NTuple{3,Float64} = (0.8,0.2,0.1),
+                 ntry    ::Int64             = 2,
+                 δt      ::Float64           = 1e-2,
+                 prints  ::Int64             = 5)
+
+Run insane for GBM birth-death.
 """
 function insane_gbmbd(tree    ::sTbd, 
                       out_file::String;
-                      σλprior ::Float64                = 0.1,
-                      σμprior ::Float64                = 0.1,
-                      λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
-                      μa_prior::Tuple{Float64,Float64} = (0.0,10.0),
-                      niter   ::Int64                  = 1_000,
-                      nthin   ::Int64                  = 10,
-                      nburn   ::Int64                  = 200,
-                      tune_int::Int64                  = 100,
-                      ϵi      ::Float64                = 0.2,
-                      λi      ::Float64                = NaN,
-                      μi      ::Float64                = NaN,
-                      σλi     ::Float64                = 0.01, 
-                      σμi     ::Float64                = 0.01,
-                      σλtni   ::Float64                = 1.0,
-                      σμtni   ::Float64                = 1.0,
-                      obj_ar  ::Float64                = 0.4,
-                      pupdp   ::NTuple{3,Float64}      = (0.8,0.2,0.1),
-                      ntry    ::Int64                  = 2,
-                      δt      ::Float64                = 1e-2,
-                      prints  ::Int64                  = 5)
+                      σλprior ::Float64           = 0.1,
+                      σμprior ::Float64           = 0.1,
+                      λa_prior::NTuple{2,Float64} = (0.0,10.0),
+                      μa_prior::NTuple{2,Float64} = (0.0,10.0),
+                      niter   ::Int64             = 1_000,
+                      nthin   ::Int64             = 10,
+                      nburn   ::Int64             = 200,
+                      tune_int::Int64             = 100,
+                      ϵi      ::Float64           = 0.2,
+                      λi      ::Float64           = NaN,
+                      μi      ::Float64           = NaN,
+                      σλi     ::Float64           = 0.01, 
+                      σμi     ::Float64           = 0.01,
+                      σλtni   ::Float64           = 1.0,
+                      σμtni   ::Float64           = 1.0,
+                      obj_ar  ::Float64           = 0.4,
+                      pupdp   ::NTuple{3,Float64} = (0.8,0.2,0.1),
+                      ntry    ::Int64             = 2,
+                      δt      ::Float64           = 1e-2,
+                      prints  ::Int64             = 5)
 
   # fix tree
   fixtree!(tree)
@@ -328,8 +352,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
     for pupi in pup
 
       ## parameter updates
-      # update σλ or σμ
       if pupi === 1
+        # update σλ or σμ
 
         llc, prc, σλc = 
           update_σ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλprior, lλ)
@@ -367,6 +391,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsi, bbiλp, bbiμp, bbiλc, bbiμc, 
               δt, srδt, ntry)
+
       end
     end
 
@@ -829,10 +854,6 @@ function triad_lupdate_noded12!(treep::iTgbmbd,
   llr, acr = llr_propr(treep, treepd1, treepd2, 
                        treec, treecd1, treecd2, 
                        σλ, σμ, δt, srδt)
-
-# llik_gbm(treep, σλ, σμ, δt, srδt) - llik_gbm(treec, σλ, σμ, δt, srδt)
-# llik_gbm(Ψp, σλ, σμ, δt, srδt) - llik_gbm(Ψc, σλ, σμ, δt, srδt)
-# llik_gbm(Ψc, σλ, σμ, δt, srδt) + llr
 
   if -randexp() < acr
     llc += llr

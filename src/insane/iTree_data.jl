@@ -471,6 +471,8 @@ function fixd1(tree::iTgbmbd)
 end
 
 
+
+
 """
     fixd2(tree::iTgbmbd)
 
@@ -481,9 +483,9 @@ function fixd2(tree::iTgbmbd)
   if ifx1 && isfix(tree.d2::iTgbmbd)
     return tree.d2
   elseif ifx1
-    fixd1(tree.d1::iTgbmbd)
+    fixd2(tree.d1::iTgbmbd)
   else
-    fixd1(tree.d2::iTgbmbd)
+    fixd2(tree.d2::iTgbmbd)
   end
 end
 

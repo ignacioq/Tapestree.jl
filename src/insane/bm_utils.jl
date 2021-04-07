@@ -35,24 +35,24 @@ function bm!(tree::iTgbmbd,
 
   @inbounds begin
 
-    tsi = ts(tree)
     λv  = lλ(tree)
     μv  = lμ(tree)
-    l   = lastindex(tsi)
-    cix = ii:(ii+l-1)
+    l   = lastindex(λv)
+    fi  = ii + l - 1
+    cix = ii:fi
 
     @simd for i in Base.OneTo(l)
       λv[i] = bbiλ[cix[i]]
       μv[i] = bbiμ[cix[i]]
     end
 
-    if l < tl
+    if fi < tl
       if isfix(tree.d1)
-        bm!(tree.d1::iTgbmbd, bbiλ, bbiμ, l, tl, σλ, σμ, srδt)
+        bm!(tree.d1::iTgbmbd, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
         bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
       elseif isfix(tree.d2)
         bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-        bm!(tree.d2::iTgbmbd, bbiλ, bbiμ, l, tl, σλ, σμ, srδt)
+        bm!(tree.d2::iTgbmbd, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
       end
     end
 
