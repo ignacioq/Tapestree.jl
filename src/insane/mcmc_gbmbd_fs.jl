@@ -58,6 +58,7 @@ function insane_gbmbd(tree    ::sTbd,
                       obj_ar  ::Float64           = 0.4,
                       pupdp   ::NTuple{3,Float64} = (0.8,0.2,0.1),
                       ntry    ::Int64             = 2,
+                      nlim    ::Int64             = 500,
                       δt      ::Float64           = 1e-2,
                       prints  ::Int64             = 5)
 
@@ -116,13 +117,13 @@ function insane_gbmbd(tree    ::sTbd,
   Ψp, Ψc, llc, prc, σλc, σμc, σλtn, σμtn =
     mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, μa_prior, 
       σλprior, σμprior, nburn, tune_int, σλi, σμi, σλtni, σμtni, 
-      δt, srδt, idf, triads, terminus, pup, ntry, prints, scalef)
+      δt, srδt, idf, triads, terminus, pup, ntry, nlim, prints, scalef)
 
   # mcmc
   R, Ψv =
     mcmc_gbmbd(Ψp, Ψc, llc, prc, σλc, σμc, bbλp, bbμp, bbλc, bbμp, tsv,
       λa_prior, μa_prior, σλprior, σμprior, niter, nthin, 
-      σλtn, σμtn, δt, srδt, idf, triads, terminus, pup, ntry, prints)
+      σλtn, σμtn, δt, srδt, idf, triads, terminus, pup, ntry, nlim, prints)
 
 
   pardic = Dict(("lambda_root"  => 1,
@@ -186,6 +187,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          terminus::Array{BitArray{1}},
                          pup     ::Array{Int64,1},
                          ntry    ::Int64,
+                         nlim    ::Int64,
                          prints  ::Int64,
                          scalef  ::Function)
 
@@ -256,7 +258,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
 
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsi, bbiλp, bbiμp, bbiλc, bbiμc, 
-              δt, srδt, ntry)
+              δt, srδt, ntry, nlim)
       end
 
       # tune parameters
@@ -327,6 +329,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},
                     ntry    ::Int64,
+                    nlim    ::Int64,
                     prints  ::Int64)
 
   # logging
@@ -390,7 +393,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsi, bbiλp, bbiμp, bbiλc, bbiμc, 
-              δt, srδt, ntry)
+              δt, srδt, ntry, nlim)
 
       end
     end
@@ -444,7 +447,8 @@ function fsp(Ψp   ::iTgbmbd,
              bbiμc::Array{Float64,1}, 
              δt   ::Float64, 
              srδt ::Float64,
-             ntry ::Int64)
+             ntry ::Int64,
+             nlim ::Int64)
 
   # get branch start and end λ & μ
   dri = dr(bi)
@@ -456,7 +460,7 @@ function fsp(Ψp   ::iTgbmbd,
   bb!(bbiμp, μ0, μ1, tsi, σμ, srδt)
 
   # forward simulate a branch
-  t0, ret = fsbi(bi, bbiλp, bbiμp, tsi, σλ, σμ, δt, srδt, ntry)
+  t0, ret = fsbi(bi, bbiλp, bbiμp, tsi, σλ, σμ, δt, srδt, ntry, nlim)
 
   # if retain simulation
   if ret
@@ -509,7 +513,8 @@ function fsbi(bi  ::iBf,
               σμ  ::Float64, 
               δt  ::Float64, 
               srδt::Float64,
-              ntry::Int64)
+              ntry::Int64, 
+              nlim::Int64)
 
   # retain the simulation?
   ret = true
@@ -521,7 +526,8 @@ function fsbi(bi  ::iBf,
   tl = lastindex(tsi)
 
   # simulate tree
-  t0 = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, σλ, σμ, δt, srδt)
+  t0 = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, 
+    σλ, σμ, δt, srδt, 1, nlim)
 
   # if fix goes extinct
   if ifxe(t0)
@@ -543,7 +549,12 @@ function fsbi(bi  ::iBf,
       ix, λt, μt = fλμ1(t0, NaN, NaN, ii, 0)
 
       for j in Base.OneTo(ntry)
-        st0 = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt)
+        st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+
+        if nsp === nlim
+          continue
+        end
+
         th0 = treeheight(st0)
 
         # if goes extinct before the present
@@ -553,9 +564,15 @@ function fsbi(bi  ::iBf,
           ii -= 1
           break
         end
+        # if not succeeded after `ntry` tries. 
         if j === ntry
           ret = false
         end
+      end
+      # if not a successful simulation after `ntry` tries, 
+      # stop for further lineages
+      if ret === false
+        break
       end
     end
   end
