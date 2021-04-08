@@ -31,7 +31,7 @@ function swapbranch!(tree::T,
 
   if ix === ldr
     if !it
-      addtree(nbtr, tree) 
+      nbtr = addtree(nbtr, tree) 
     end
     return nbtr
   elseif ix < ldr
@@ -63,7 +63,7 @@ end
 """
     addtree(tree::sTbd, dtree::sTbd) 
 
-Add `dtree` to not extinct tip in `tree` as speciation event, making
+Add `dtree` to not-extinct tip in `tree` as speciation event, making
 sure that the daughters of `dtree` are fixed.
 """
 function addtree(tree::T, dtree::T) where {T <: iTree}

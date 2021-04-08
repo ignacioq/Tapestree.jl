@@ -493,6 +493,26 @@ end
 
 
 """
+    drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64)
+
+Returns the tree given by `dr`. Assuming no unfix branches.
+"""
+function drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64) where T <: iTree
+  if ldr === ix
+    return tree
+  elseif ldr > ix
+    ix += 1
+    if dri[ix]
+      drtree(tree.d1::iTgbmbd, dri, ldr, ix)
+    else
+      drtree(tree.d2::iTgbmbd, dri, ldr, ix)
+    end
+  end
+end
+
+
+
+"""
     makebbv!(tree::iTgbmbd, 
              bbλ ::Array{Array{Float64,1},1}, 
              bbμ ::Array{Array{Float64,1},1}, 
