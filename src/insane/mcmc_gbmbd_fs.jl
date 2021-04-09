@@ -193,6 +193,8 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          prints  ::Int64,
                          scalef  ::Function)
 
+  @info "started burn-in"
+
   # initialize acceptance log
   ltn = 0
   lup = lλac = lμac = 0.0
@@ -211,8 +213,6 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   # number of branches and of triads
   nbr  = lastindex(idf)
   ntr  = lastindex(triads)
-
-  br = false
 
   for it in Base.OneTo(nburn)
 
@@ -263,9 +263,6 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsi, bbiλp, bbiμp, bbiλc, bbiμc, 
               δt, srδt, ntry, nlim)
-
-        # llik_gbm(Ψc,  σλc, σμc, δt, srδt)
-
       end
 
       # tune parameters
@@ -274,9 +271,6 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
         σμtn = scalef(σμtn,lμac/lup)
         ltn = 0
       end
-    end
-    if br
-      break
     end
 
     next!(pbar)
@@ -577,6 +571,10 @@ function fsbi(bi  ::iBf,
     # remaining time for last non-standard δt for simulation
     nsδt = δt - (tsi[tl] - tsi[tl-1])
 
+    if nsδt < 1e-16
+      nsδt = 1e-16
+    end
+
     # ntry per unobserved branch to go extinct
     ii = 0
     for i in Base.OneTo(nt - ne - 1)
@@ -590,6 +588,9 @@ function fsbi(bi  ::iBf,
         st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
 
         if nsp === nlim
+          if j === ntry
+            ret = false
+          end
           continue
         end
 
@@ -602,6 +603,7 @@ function fsbi(bi  ::iBf,
           ii -= 1
           break
         end
+
         # if not succeeded after `ntry` tries. 
         if j === ntry
           ret = false
