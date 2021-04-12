@@ -566,6 +566,13 @@ function fsbi(bi  ::iBf,
     if abs(nsδt) < 1e-15
       # when there is no standard δt (rare)
 
+
+      #=
+      here, check the add 1
+      =#
+
+
+
       # ntry per unobserved branch to go extinct
       ii = 0
       for i in Base.OneTo(nt - ne - 1)
@@ -590,7 +597,7 @@ function fsbi(bi  ::iBf,
           # if goes extinct before the present
           if (th0 + 1e-10) < tfb
             # graft to tip
-            add1(t0, st0, ii, 0)
+            add1(t0, st0, ii, 0, false)
             ii -= 1
             break
           end
@@ -714,6 +721,68 @@ function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64)
 
   return ix
 end
+
+
+
+
+
+"""
+    add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64, w::Bool) 
+
+Add `stree` to tip in `tree` given by `it` in `tree.d1` order when there is no
+non-standard delta time.
+"""
+function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64, w::Bool) 
+
+  if istip(tree) && !isextinct(tree)
+    if !isfix(tree)
+      ix += 1
+    end
+
+    if ix === it
+      pet = pe(tree)
+      npe = pet + pe(stree)
+      setpe!(tree, npe)
+
+      setproperty!(tree, :iμ, stree.iμ)
+
+      sts0 = ts(stree)
+
+      @simd for i in Base.OneTo(lastindex(sts0)) 
+        sts0[i] += pet
+      end
+
+      ts0 = ts(tree)
+      lλ0 = lλ(tree)
+      lμ0 = lμ(tree)
+
+      pop!(ts0)
+      pop!(lλ0)
+      pop!(lμ0)
+
+      @views append!(ts0, sts0)
+      @views append!(lλ0, lλ(stree))
+      @views append!(lμ0, lμ(stree))
+
+      tree.d1 = stree.d1
+      tree.d2 = stree.d2
+
+      ix += 1
+    end
+
+    return ix 
+  end
+
+  if ix <= it && !isnothing(tree.d1) 
+    ix = add1(tree.d1::iTgbmbd, stree, it, ix, w)
+  end
+  if ix <= it && !isnothing(tree.d2) 
+    ix = add1(tree.d2::iTgbmbd, stree, it, ix, w)
+  end
+
+  return ix
+end
+
 
 
 

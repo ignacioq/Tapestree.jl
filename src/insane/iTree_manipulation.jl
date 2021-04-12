@@ -292,20 +292,118 @@ end
 
 
 
-"""
-    remove_extinct(tree::T) where {T <: iTree}
 
-Remove extinct tips from `iTree`.
 """
-function remove_extinct(tree::T) where {T <: iTree}
+    remove_extinct(tree::iTgbmbd)
+
+Remove extinct tips from `iTgbmbd`.
+"""
+function remove_extinct(tree::iTgbmbd)
 
   tree.d1 = remove_extinct(tree.d1)
   tree.d2 = remove_extinct(tree.d2)
 
   if isextinct(tree.d1)
-    npe  = pe(tree) + pe(tree.d2)
-    tree = tree.d2
+    if isextinct(tree.d2)
+      tree.d1 = nothing
+      tree.d2 = nothing
+      setproperty!(tree, :iμ, true)
+    else
+      ppr = pe(tree)
+      npe = ppr + pe(tree.d2)
+      ts2 = ts(tree.d2)
+      ls  = lastindex(ts2)
+
+      @simd for i in Base.OneTo(ls) 
+        ts2[i] += ppr
+      end
+
+      ts0 = ts(tree)
+      lλ0 = lλ(tree)
+      lμ0 = lμ(tree)
+
+      pop!(ts0)
+      pop!(lλ0)
+      pop!(lμ0)
+
+      prepend!(ts2, ts0) 
+      prepend!(lλ(tree.d2), lλ0) 
+      prepend!(lμ(tree.d2), lμ0)
+
+      tree = tree.d2
+      setpe!(tree, npe)
+
+    end
+  elseif isextinct(tree.d2)
+    ppr = pe(tree)
+    npe = ppr + pe(tree.d1)
+
+    ts1 = ts(tree.d1)
+
+    @simd for i in Base.OneTo(lastindex(ts1)) 
+      ts1[i] += ppr
+    end
+
+    ts0 = ts(tree)
+    lλ0 = lλ(tree)
+    lμ0 = lμ(tree)
+
+    pop!(ts0)
+    pop!(lλ0)
+    pop!(lμ0)
+
+    prepend!(ts1, ts0) 
+    prepend!(lλ(tree.d1), lλ0) 
+    prepend!(lμ(tree.d1), lμ0)
+
+    tree = tree.d1
     setpe!(tree, npe)
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    remove_extinct(treev::Array{T,1}) where {T <: iTree}
+
+Remove extinct taxa for a vector of trees.
+"""
+function remove_extinct(treev::Array{T,1}) where {T <: iTree}
+
+  treevne = T[]
+  for t in treev
+    push!(treevne, remove_extinct(deepcopy(t)))
+  end
+
+  return treevne
+end
+
+
+
+
+"""
+    remove_extinct(tree::T) where {T <: sT}
+
+Remove extinct tips from `sT`.
+"""
+function remove_extinct(tree::sTbd)
+
+  tree.d1 = remove_extinct(tree.d1)
+  tree.d2 = remove_extinct(tree.d2)
+
+  if isextinct(tree.d1)
+    if isextinct(tree.d2)
+      tree.d1 = nothing
+      tree.d2 = nothing
+      setproperty!(tree, :iμ, true)
+    else
+      npe  = pe(tree) + pe(tree.d2)
+      tree = tree.d2
+      setpe!(tree, npe)
+    end
   elseif isextinct(tree.d2)
     npe  = pe(tree) + pe(tree.d1)
     tree = tree.d1
@@ -318,9 +416,11 @@ end
 """
     remove_extinct(::Nothing)
 
-Remove extinct tips from `iTree`.
+Remove extinct tips from `sT`.
 """
 remove_extinct(::Nothing) = nothing
+
+
 
 
 

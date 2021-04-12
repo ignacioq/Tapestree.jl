@@ -106,7 +106,6 @@ end
 
 
 
-
 """
     llr_gbm_bm(tree::iTgbmbd, 
                σp  ::Float64,
@@ -181,10 +180,12 @@ end
 
 
 """
-    br_ll_cbd(tree::sTbd,
-              λc  ::Float64, 
-              μc  ::Float64,
-              dri ::BitArray{1}, 
+    br_ll_gbm(tree::iTgbmbd,
+              σλ  ::Float64,
+              σμ  ::Float64,
+              δt  ::Float64,
+              srδt::Float64,
+              dri ::BitArray{1},
               ldr ::Int64,
               ix  ::Int64)
 
