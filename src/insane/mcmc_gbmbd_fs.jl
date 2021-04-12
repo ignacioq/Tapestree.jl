@@ -110,7 +110,7 @@ function insane_gbmbd(tree    ::sTbd,
   spup = sum(pupdp)
   pup  = Int64[]
   for i in Base.OneTo(3) 
-    append!(pup, fill(i, floor(Int64, 100.0 * pupdp[i]/spup)))
+    append!(pup, fill(i, floor(Int64, Float64(n) * pupdp[i]/spup)))
   end
 
   # burn-in phase
@@ -129,9 +129,8 @@ function insane_gbmbd(tree    ::sTbd,
                  "mu_root"      => 2,
                  "sigma_lambda" => 3,
                  "sigma_mu"     => 4,
-                 "n_tips"       => 5,
-                 "n_extinct"    => 6,
-                 "tree_length"  => 7))
+                 "n_extinct"    => 5,
+                 "tree_length"  => 6))
 
   write_ssr(R, pardic, out_file)
 
@@ -350,7 +349,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
   lthin, lit = 0, 0
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 10)
+  R = Array{Float64,2}(undef, nlogs, 9)
 
   # make Ψ vector
   Ψv = iTgbmbd[]
@@ -361,7 +360,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
-  br = false
   for it in Base.OneTo(niter)
 
     shuffle!(pup)
@@ -411,11 +409,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
       end
     end
 
-    if br
-      break
-    end
-
-
     # log parameters
     lthin += 1
     if lthin === nthin
@@ -428,9 +421,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         R[lit,5] = exp(lμ(Ψc)[1])
         R[lit,6] = σλc
         R[lit,7] = σμc
-        R[lit,8] = sntn(Ψc)
-        R[lit,9] = snen(Ψc)
-        R[lit,10] = treelength(Ψc)
+        R[lit,8] = snen(Ψc)
+        R[lit,9] = treelength(Ψc)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -571,50 +563,94 @@ function fsbi(bi  ::iBf,
     # remaining time for last non-standard δt for simulation
     nsδt = δt - (tsi[tl] - tsi[tl-1])
 
-    if nsδt < 1e-16
-      nsδt = 1e-16
-    end
+    if abs(nsδt) < 1e-15
+      # when there is no standard δt (rare)
 
-    # ntry per unobserved branch to go extinct
-    ii = 0
-    for i in Base.OneTo(nt - ne - 1)
+      # ntry per unobserved branch to go extinct
+      ii = 0
+      for i in Base.OneTo(nt - ne - 1)
 
-      ii += 1
+        ii += 1
 
-      # get their final λ and μ to continue forward simulation
-      ix, λt, μt = fλμ1(t0, NaN, NaN, ii, 0)
+        # get their final λ and μ to continue forward simulation
+        ix, λt, μt = fλμ1(t0, NaN, NaN, ii, 0)
 
-      for j in Base.OneTo(ntry)
-        st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+        for j in Base.OneTo(ntry)
+          st0, nsp = sim_gbm(tbf, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
 
-        if nsp === nlim
+          if nsp === nlim
+            if j === ntry
+              ret = false
+            end
+            continue
+          end
+
+          th0 = treeheight(st0)
+
+          # if goes extinct before the present
+          if (th0 + 1e-10) < tfb
+            # graft to tip
+            add1(t0, st0, ii, 0)
+            ii -= 1
+            break
+          end
+
+          # if not succeeded after `ntry` tries. 
           if j === ntry
             ret = false
           end
-          continue
         end
-
-        th0 = treeheight(st0)
-
-        # if goes extinct before the present
-        if (th0 + 1e-10) < tfb
-          # graft to tip
-          add1(t0, st0, ii, 0)
-          ii -= 1
+        # if not a successful simulation after `ntry` tries, 
+        # stop for further lineages
+        if ret === false
           break
         end
+      end
+    else
+      # for non-standard δt
 
-        # if not succeeded after `ntry` tries. 
-        if j === ntry
-          ret = false
+      # ntry per unobserved branch to go extinct
+      ii = 0
+      for i in Base.OneTo(nt - ne - 1)
+
+        ii += 1
+
+        # get their final λ and μ to continue forward simulation
+        ix, λt, μt = fλμ1(t0, NaN, NaN, ii, 0)
+
+        for j in Base.OneTo(ntry)
+          st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+
+          if nsp === nlim
+            if j === ntry
+              ret = false
+            end
+            continue
+          end
+
+          th0 = treeheight(st0)
+
+          # if goes extinct before the present
+          if (th0 + 1e-10) < tfb
+            # graft to tip
+            add1(t0, st0, ii, 0)
+            ii -= 1
+            break
+          end
+
+          # if not succeeded after `ntry` tries. 
+          if j === ntry
+            ret = false
+          end
+        end
+        # if not a successful simulation after `ntry` tries, 
+        # stop for further lineages
+        if ret === false
+          break
         end
       end
-      # if not a successful simulation after `ntry` tries, 
-      # stop for further lineages
-      if ret === false
-        break
-      end
     end
+    
     return t0, ret
   end
 end
