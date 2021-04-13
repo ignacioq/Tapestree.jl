@@ -85,8 +85,11 @@ function bm!(tree::iTgbmbd,
   λv  = lλ(tree)
   μv  = lμ(tree)
 
-  bm!(λv, λt, tsi, σλ, srδt)
-  bm!(μv, μt, tsi, σμ, srδt)
+  if lastindex(tsi) < 2
+    @show tree, pe(tree), tsi, lλ(tree)
+  end
+
+  bm!(λv, μv, λt, μt, tsi, σλ, σμ, srδt)
 
   l = lastindex(tsi)
 
@@ -232,7 +235,14 @@ function bm!(x0   ::Array{Float64,1},
     cumsum!(x1, x1)
 
     # for last non-standard δt
+    if (t[l] - t[l-1]) < 0.0
+      @show t, x0, x1
+      @show (t[l] - t[l-1])
+      @show t[l], t[l-1]
+    end
+
     srlt  = sqrt(t[l] - t[l-1])
+
     x0[l] = rnorm(x0[l-1], srlt*σ0)
     x1[l] = rnorm(x1[l-1], srlt*σ1)
   end

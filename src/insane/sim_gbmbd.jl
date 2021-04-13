@@ -38,19 +38,15 @@ function sim_gbm(t   ::Float64,
 
   while true
 
-    tc = t - δt
+    if t <= δt
+      bt  += t
+      srt = sqrt(t)
+      λt1 = rnorm(λt, srt*σλ)
+      μt1 = rnorm(μt, srt*σμ)
 
-    if tc < 0.0
-      if t > 1e-11
-        bt  += t
-        srt = sqrt(t)
-        λt1 = rnorm(λt, srt*σλ)
-        μt1 = rnorm(μt, srt*σμ)
-
-        push!(λv, λt1)
-        push!(μv, μt1)
-        push!(tv, bt)
-      end
+      push!(λv, λt1)
+      push!(μv, μt1)
+      push!(tv, bt)
 
       return iTgbmbd(nothing, nothing, bt, false, false, tv, λv, μv)
     end
@@ -121,19 +117,15 @@ function sim_gbm(t   ::Float64,
 
     while true
 
-      tc = t - δt
+      if t <= δt
+        bt  += t
+        srt = sqrt(t)
+        λt1 = rnorm(λt, srt*σλ)
+        μt1 = rnorm(μt, srt*σμ)
 
-      if tc < 0.0
-        if t > 1e-11
-          bt  += t
-          srt = sqrt(t)
-          λt1 = rnorm(λt, srt*σλ)
-          μt1 = rnorm(μt, srt*σμ)
-
-          push!(λv, λt1)
-          push!(μv, μt1)
-          push!(tv, bt)
-        end
+        push!(λv, λt1)
+        push!(μv, μt1)
+        push!(tv, bt)
 
         return iTgbmbd(nothing, nothing, bt, false, false, tv, λv, μv), nsp
       end
@@ -272,7 +264,9 @@ end
                σλ  ::Float64,
                σμ  ::Float64,
                δt  ::Float64,
-               srδt::Float64)
+               srδt::Float64,
+               nsp ::Int64,
+               nlim::Int64)
 
 Simulate `iTgbmbd` on top of a Brownian bridge for a branch.
 """
@@ -339,19 +333,20 @@ function sim_ov_gbm(t   ::Float64,
       λt = λt1
       μt = μt1
     end
+
+    bt += (tsi[tl] - tsi[tl-1])
+    λt1 = bbiλ[tl]
+    μt1 = bbiμ[tl]
+
+    push!(λv, λt1)
+    push!(μv, μt1)
+    push!(tv, bt)
+
+    return iTgbmbd(nothing, nothing, bt, false, true, tv, λv, μv), nsp
   else
     return nothing, nsp
   end
 
-  bt += (tsi[tl] - tsi[tl-1])
-  λt1 = bbiλ[tl]
-  μt1 = bbiμ[tl]
-
-  push!(λv, λt1)
-  push!(μv, μt1)
-  push!(tv, bt)
-
-  return iTgbmbd(nothing, nothing, bt, false, true, tv, λv, μv), nsp
 end
 
 
@@ -385,19 +380,15 @@ function sim_gbm(nsδt::Float64,
   tv = Float64[bt]
 
   ## first: non-standard δt
-  tc = t - nsδt
+  if t <= nsδt
+    bt  += t
+    srt = sqrt(t)
+    λt1 = rnorm(λt, srt*σλ)
+    μt1 = rnorm(μt, srt*σμ)
 
-  if tc < 0.0
-    if t > 1e-11
-      bt  += t
-      srt = sqrt(t)
-      λt1 = rnorm(λt, srt*σλ)
-      μt1 = rnorm(μt, srt*σμ)
-
-      push!(λv, λt1)
-      push!(μv, μt1)
-      push!(tv, bt)
-    end
+    push!(λv, λt1)
+    push!(μv, μt1)
+    push!(tv, bt)
 
     return iTgbmbd(nothing, nothing, bt, false, false, tv, λv, μv)
   end
@@ -435,19 +426,15 @@ function sim_gbm(nsδt::Float64,
   ## second: standard δt
   while true
 
-    tc = t - δt
+    if t <= δt
+      bt  += t
+      srt = sqrt(t)
+      λt1 = rnorm(λt, srt*σλ)
+      μt1 = rnorm(μt, srt*σμ)
 
-    if tc < 0.0
-      if t > 1e-11
-        bt  += t
-        srt = sqrt(t)
-        λt1 = rnorm(λt, srt*σλ)
-        μt1 = rnorm(μt, srt*σμ)
-
-        push!(λv, λt1)
-        push!(μv, μt1)
-        push!(tv, bt)
-      end
+      push!(λv, λt1)
+      push!(μv, μt1)
+      push!(tv, bt)
 
       return iTgbmbd(nothing, nothing, bt, false, false, tv, λv, μv)
     end
@@ -518,19 +505,15 @@ function sim_gbm(nsδt::Float64,
   tv = Float64[bt]
 
   ## first: non-standard δt
-  tc = t - nsδt
+  if t <= nsδt
+    bt  += t
+    srt = sqrt(t)
+    λt1 = rnorm(λt, srt*σλ)
+    μt1 = rnorm(μt, srt*σμ)
 
-  if tc < 0.0
-    if t > 1e-11
-      bt  += t
-      srt = sqrt(t)
-      λt1 = rnorm(λt, srt*σλ)
-      μt1 = rnorm(μt, srt*σμ)
-
-      push!(λv, λt1)
-      push!(μv, μt1)
-      push!(tv, bt)
-    end
+    push!(λv, λt1)
+    push!(μv, μt1)
+    push!(tv, bt)
 
     return iTgbmbd(nothing, nothing, bt, false, false, tv, λv, μv), nsp
   end
@@ -564,7 +547,6 @@ function sim_gbm(nsδt::Float64,
     end
   end
 
-
   λt = λt1
   μt = μt1
 
@@ -573,19 +555,15 @@ function sim_gbm(nsδt::Float64,
     ## second: standard δt
     while true
 
-      tc = t - δt
+      if t <= δt
+        bt  += t
+        srt = sqrt(t)
+        λt1 = rnorm(λt, srt*σλ)
+        μt1 = rnorm(μt, srt*σμ)
 
-      if tc < 0.0
-        if t > 1e-11
-          bt  += t
-          srt = sqrt(t)
-          λt1 = rnorm(λt, srt*σλ)
-          μt1 = rnorm(μt, srt*σμ)
-
-          push!(λv, λt1)
-          push!(μv, μt1)
-          push!(tv, bt)
-        end
+        push!(λv, λt1)
+        push!(μv, μt1)
+        push!(tv, bt)
 
         return iTgbmbd(nothing, nothing, bt, false, false, tv, λv, μv), nsp
       end
