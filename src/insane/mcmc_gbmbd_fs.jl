@@ -478,8 +478,7 @@ function fsp(Ψp   ::iTgbmbd,
   λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
 
   # make bb given endpoints
-  bb!(bbiλp, λ0, λ1, tsi, σλ, srδt)
-  bb!(bbiμp, μ0, μ1, tsi, σμ, srδt)
+  bb!(bbiλp, λ0, λ1, bbiμp, μ0, μ1, tsi, σλ, σμ, srδt)
 
   # forward simulate a branch
   t0, ret = fsbi(bi, bbiλp, bbiμp, tsi, σλ, σμ, δt, srδt, ntry, nlim)
@@ -551,11 +550,16 @@ function fsbi(bi  ::iBf,
   t0, nsp = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, 
     σλ, σμ, δt, srδt, 1, nlim)
 
-  # if fix goes extinct
   if nsp === nlim
+
+    # if simulation reached the maximum limit of species
     return t0, false
+
   elseif ifxe(t0)
+
+    # if fix goes extinct
     return t0, false
+
   else
 
     # remaining time for last non-standard δt for simulation
@@ -1514,7 +1518,7 @@ function update_σ!(σc    ::Float64,
                    lf    ::Function)
 
   # parameter proposals
-  σp = mulupt(σc, σtn)::Float64
+  σp = mulupt(σc, rand() < 0.3 ? σtn : σtn*4.0)::Float64
 
   # log likelihood and prior ratio
   llr = llr_gbm_bm(Ψ, σp, σc, srδt, lf)
