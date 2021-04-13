@@ -148,6 +148,30 @@ snin(::Nothing) = 0
 
 
 
+"""
+    snan(tree::T) where {T <: iTree}
+
+Return the number of alive nodes for `tree`.
+"""
+function snan(tree::T) where {T <: iTree}
+    if istip(tree) && !isextinct(tree)
+      return 1
+    else
+      return snan(tree.d1) + snan(tree.d2)
+    end
+end
+
+
+"""
+    sntn(::Nothing)
+
+Return the number of tip nodes for `tree`.
+"""
+snan(::Nothing) = 0
+
+
+
+
 
 """
     sntn(tree::T) where {T <: iTree}

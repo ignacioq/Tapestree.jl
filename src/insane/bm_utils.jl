@@ -85,10 +85,6 @@ function bm!(tree::iTgbmbd,
   λv  = lλ(tree)
   μv  = lμ(tree)
 
-  if lastindex(tsi) < 2
-    @show tree, pe(tree), tsi, lλ(tree)
-  end
-
   bm!(λv, μv, λt, μt, tsi, σλ, σμ, srδt)
 
   l = lastindex(tsi)
@@ -122,7 +118,7 @@ function ll_bm(t ::Array{Float64,1},
                σ ::Float64, 
                srδt::Float64)
 
- @inbounds begin
+  @inbounds begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2
@@ -165,7 +161,7 @@ function llr_bm(t   ::Array{Float64,1},
                 σ   ::Float64, 
                 srδt::Float64)
 
- @inbounds begin
+  @inbounds begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(t)-2

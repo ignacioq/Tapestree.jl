@@ -557,15 +557,13 @@ function fsbi(bi  ::iBf,
   elseif ifxe(t0)
     return t0, false
   else
-    nt = sntn(t0)
-    ne = snen(t0)
 
     # remaining time for last non-standard δt for simulation
     nsδt = δt - (tsi[tl] - tsi[tl-1])
 
     # ntry per unobserved branch to go extinct
     ii = 0
-    for i in Base.OneTo(nt - ne - 1)
+    for i in Base.OneTo(snan(t0) - 1)
 
       ii += 1
 
