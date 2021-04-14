@@ -12,13 +12,14 @@ Created 25 06 2020
 
 
 
+
 """
-    swapbranch!(tree::iTgbmbd,
-                nbtr::iTgbmbd,
+    swapbranch!(tree::T,
+                nbtr::T,
                 dri ::BitArray{1}, 
                 ldr ::Int64,
                 it  ::Bool,
-                ix  ::Int64)
+                ix  ::Int64) where {T <: iTree}
 
 Swap branch given by `dri` by `nbtr` and return the tree.
 """

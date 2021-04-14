@@ -372,7 +372,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         llc, prc, σλc = 
           update_σ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλprior, lλ)
-
         llc, prc, σμc  = 
           update_σ!(σμc, Ψc, llc, prc, σμtn, δt, srδt, σμprior, lμ)
 
@@ -406,6 +405,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsi, bbiλp, bbiμp, bbiλc, bbiμc, 
               δt, srδt, ntry, nlim)
+
       end
     end
 
@@ -475,13 +475,15 @@ function fsp(Ψp   ::iTgbmbd,
   # get branch start and end λ & μ
   dri = dr(bi)
   ldr = lastindex(dri)
-  λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
+  # λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
 
   # make bb given endpoints
-  bb!(bbiλp, λ0, λ1, bbiμp, μ0, μ1, tsi, σλ, σμ, srδt)
+  # bb!(bbiλp, λ0, λ1, bbiμp, μ0, μ1, tsi, σλ, σμ, srδt)
 
   # forward simulate a branch
-  t0, ret = fsbi(bi, bbiλp, bbiμp, tsi, σλ, σμ, δt, srδt, ntry, nlim)
+  # t0, ret = fsbi(bi, bbiλp, bbiμp, tsi, σλ, σμ, δt, srδt, ntry, nlim)
+
+  t0, ret = fsbi(bi, bbiλc, bbiμc, tsi, σλ, σμ, δt, srδt, ntry, nlim)
 
   # if retain simulation
   if ret
@@ -489,21 +491,25 @@ function fsp(Ψp   ::iTgbmbd,
     itb = it(bi)
 
     # if speciation (if branch is internal)
-    iλ = itb ? 0.0 : (log(2.0) + λ1)
+    iλ = itb ? 0.0 : (0.6931471805599453 + bbiλc[end])
 
     # likelihood ratio
-    llr = llik_gbm(t0, σλ, σμ, δt, srδt) + iλ - 
+    llr = llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
           br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
-    if -randexp() <= 0.0
+    # acceptance ratio
+    acr = -iλ
+
+    if -randexp() < acr
       llc += llr
 
       # swap branch
+      # make combined swap branch
       Ψp = swapbranch!(Ψp, deepcopy(t0), dri, ldr, itb, 0)
       Ψc = swapbranch!(Ψc, t0, dri, ldr, itb, 0)
 
-      copyto!(bbiλc, bbiλp)
-      copyto!(bbiμc, bbiμp)
+#     copyto!(bbiλc, bbiλp)
+#     copyto!(bbiμc, bbiμp)
     end
   end
 
@@ -1430,15 +1436,12 @@ function llr_propr(treep  ::iTgbmbd,
                    δt     ::Float64,
                    srδt   ::Float64)
 
-  llrbm_pr, llrpb_pr = llr_gbm_sep_f(treep, treec, σλ, σμ, δt, srδt)
-  llrbm_d1, llrpb_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
-  llrbm_d2, llrpb_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
+  llrbm_pr, llrbd_pr = llr_gbm_sep_f(treep,   treec,   σλ, σμ, δt, srδt)
+  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
+  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
 
-  llr = llrbm_pr + llrpb_pr +
-        llrbm_d1 + llrpb_d1 +
-        llrbm_d2 + llrpb_d2
-
-  acr = llr - llrbm_pr - llrbm_d1 - llrbm_d2 
+  acr = llrbd_pr + llrbd_d1 + llrbd_d2 
+  llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr
 
   return llr, acr
 end
@@ -1518,7 +1521,7 @@ function update_σ!(σc    ::Float64,
                    lf    ::Function)
 
   # parameter proposals
-  σp = mulupt(σc, rand() < 0.3 ? σtn : σtn*4.0)::Float64
+  σp = mulupt(σc, rand() < 0.3 ? σtn*4.0 : σtn)::Float64
 
   # log likelihood and prior ratio
   llr = llr_gbm_bm(Ψ, σp, σc, srδt, lf)

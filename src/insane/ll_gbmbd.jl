@@ -107,6 +107,111 @@ end
 
 
 """
+    ll_gbm_b_bm(t   ::Array{Float64,1},
+                lλv ::Array{Float64,1},
+                lμv ::Array{Float64,1},
+                σλ  ::Float64,
+                σμ  ::Float64,
+                δt  ::Float64, 
+                srδt::Float64)
+
+Returns the log-likelihood for the GBM part of a branch for GBM birth-death.
+"""
+function ll_gbm_b_bm(t   ::Array{Float64,1},
+                     lλv ::Array{Float64,1},
+                     lμv ::Array{Float64,1},
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64, 
+                     srδt::Float64)
+
+  @inbounds @fastmath begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(t)-2
+
+    llλ  = 0.0
+    llμ  = 0.0
+    lλvi = lλv[1]
+    lμvi = lμv[1]
+    @simd for i in Base.OneTo(nI)
+      lλvi1 = lλv[i+1]
+      lμvi1 = lμv[i+1]
+      llλ  += (lλvi1 - lλvi)^2
+      llμ  += (lμvi1 - lμvi)^2
+      lλvi  = lλvi1
+      lμvi  = lμvi1
+    end
+
+    # add to global likelihood
+    ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) + 
+         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
+
+    # add final non-standard `δt`
+    δtf   = t[nI+2] - t[nI+1]
+    srδtf = sqrt(δtf)
+    ll   += ldnorm_bm(lλv[nI+2], lλvi, srδtf*σλ) + 
+            ldnorm_bm(lμv[nI+2], lμvi, srδtf*σμ)
+  end
+
+  return ll
+end
+
+
+
+
+"""
+    ll_gbm_b_bd(t   ::Array{Float64,1},
+                lλv ::Array{Float64,1},
+                lμv ::Array{Float64,1},
+                σλ  ::Float64,
+                σμ  ::Float64,
+                δt  ::Float64, 
+                srδt::Float64)
+
+Returns the log-likelihood for the birth-death part of a branch for GBM 
+birth-death.
+"""
+function ll_gbm_b_bd(t   ::Array{Float64,1},
+                     lλv ::Array{Float64,1},
+                     lμv ::Array{Float64,1},
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64, 
+                     srδt::Float64)
+
+  @inbounds @fastmath begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(t)-2
+
+    ll   = 0.0
+    lλvi = lλv[1]
+    lμvi = lμv[1]
+    @simd for i in Base.OneTo(nI)
+      lλvi1 = lλv[i+1]
+      lμvi1 = lμv[i+1]
+      ll   += exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)) 
+      lλvi  = lλvi1
+      lμvi  = lμvi1
+    end
+
+    # global likelihood
+    ll *= (-δt)
+
+    # add final non-standard `δt`
+    ll -= 
+      (t[nI+2] - t[nI+1])*
+       (exp(0.5*(lλvi + lλv[nI+2])) + exp(0.5*(lμvi + lμv[nI+2])))
+  end
+
+  return ll
+end
+
+
+
+
+"""
     llr_gbm_bm(tree::iTgbmbd, 
                σp  ::Float64,
                σc  ::Float64,
@@ -220,8 +325,6 @@ function br_ll_gbm(tree::iTgbmbd,
 
   return ll
 end
-
-
 
 
 
