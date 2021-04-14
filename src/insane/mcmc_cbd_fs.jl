@@ -44,7 +44,7 @@ function insane_cbd_fs(tree    ::sTbd,
                        ϵi      ::Float64           = 0.4,
                        λi      ::Float64           = NaN,
                        μi      ::Float64           = NaN,
-                       ntry    ::Int64             = 2,
+                       ntry    ::Int64             = 1,
                        λtni    ::Float64           = 1.0,
                        μtni    ::Float64           = 1.0,
                        obj_ar  ::Float64           = 0.4,
@@ -398,10 +398,10 @@ function fsp(tree::sTbd,
     iλ = itb ? 0.0 : log(2.0*λc)
 
     # likelihood ratio
-    llr = llik_cbd(t0, λc, μc) + iλ - 
+    llr = llik_cbd( t0, λc, μc) + iλ - 
           br_ll_cbd(tree, λc, μc, dri, ldr, 0)
 
-    if -randexp() <= 0.0
+    if -randexp() < -iλ
       llc += llr
       # swap branch
       tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
@@ -436,12 +436,12 @@ function fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
     ret = false
   else
     # ntry per unobserved branch to go extinct
-    for i in Base.OneTo(nt - ne - 1)
+    for i in Base.OneTo(snan(t0) - 1)
       for j in Base.OneTo(ntry)
         st0 = sim_cbd(tfb, λc, μc)
         th0 = treeheight(st0)
         # if goes extinct before the present
-        if (th0 + 1e-10) < tfb
+        if (th0 + 1e-11) < tfb
           #graft to tip
           add1(t0, st0, 1, 0)
           break
@@ -449,6 +449,9 @@ function fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
         if j === ntry
           ret = false
         end
+      end
+      if ret === false
+        break
       end
     end
   end
@@ -613,10 +616,10 @@ function add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
     return ix 
   end
 
-  if !isnothing(tree.d1) && ix <= it
+  if ix <= it && !isnothing(tree.d1)
     ix = add1(tree.d1::sTbd, stree, it, ix)
   end
-  if !isnothing(tree.d2) && ix <= it
+  if ix <= it && !isnothing(tree.d2)
     ix = add1(tree.d2::sTbd, stree, it, ix)
   end
 

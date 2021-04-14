@@ -259,8 +259,7 @@ function llik_gbm_f(tree::iTgbmbd,
   lμb = lμ(tree)
 
   if istip(tree)
-    ll = ll_gbm_b(tsb, lλb, lμb, σλ, σμ, δt, srδt) + 
-         (isextinct(tree) ? lμb[end] : 0.0)
+    ll = ll_gbm_b(tsb, lλb, lμb, σλ, σμ, δt, srδt)
   else
     ll = ll_gbm_b(tsb, lλb, lμb, σλ, σμ, δt, srδt) + 
          log(2.0) + lλb[end]

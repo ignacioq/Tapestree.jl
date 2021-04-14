@@ -557,15 +557,11 @@ function fsbi(bi  ::iBf,
     σλ, σμ, δt, srδt, 1, nlim)
 
   if nsp === nlim
-
     # if simulation reached the maximum limit of species
     return t0, false
-
   elseif ifxe(t0)
-
     # if fix goes extinct
     return t0, false
-
   else
 
     # remaining time for last non-standard δt for simulation
