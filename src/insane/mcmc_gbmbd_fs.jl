@@ -497,10 +497,7 @@ function fsp(Ψp   ::iTgbmbd,
     llr = llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
           br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
-    # acceptance ratio
-    acr = -iλ
-
-    if -randexp() < acr
+    #if -randexp() < acr
       llc += llr
 
       # swap branch
