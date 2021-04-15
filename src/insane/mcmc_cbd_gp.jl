@@ -493,7 +493,7 @@ function λp(tree  ::sTbd,
             th    ::Float64,
             svf   ::Function)
 
-    λp = mulupt(λc, λtn)::Float64
+    λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
     llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
     prr = llrdexp_x(λp, λc, λprior)
@@ -533,7 +533,7 @@ function μp(tree  ::sTbd,
             th    ::Float64,
             svf   ::Function)
 
-    μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
+    μp = mulupt(μc, μtn)::Float64
 
     # one could make a ratio likelihood function
     sc  = svf(λc, μp, th)

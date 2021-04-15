@@ -401,11 +401,9 @@ function fsp(tree::sTbd,
     llr = llik_cbd( t0, λc, μc) + iλ - 
           br_ll_cbd(tree, λc, μc, dri, ldr, 0)
 
-    if -randexp() < -iλ
-      llc += llr
-      # swap branch
-      tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
-    end
+    llc += llr
+    # swap branch
+    tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
   end
 
   return tree, llc
@@ -426,17 +424,15 @@ function fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
 
   t0 = sim_cbd(ti(bi) - tfb, λc, μc)
 
-  ne = snen(t0)
-  nt = sntn(t0)
-
+  na = snan(t0)
   ret = true
 
   # goes extinct
-  if ne === nt
+  if iszero(na)
     ret = false
   else
     # ntry per unobserved branch to go extinct
-    for i in Base.OneTo(snan(t0) - 1)
+    for i in Base.OneTo(na - 1)
       for j in Base.OneTo(ntry)
         st0 = sim_cbd(tfb, λc, μc)
         th0 = treeheight(st0)

@@ -46,7 +46,7 @@ function insane_cbd(tree        ::sTbd,
                     μi          ::Float64           = NaN,
                     λtni        ::Float64           = 1.0,
                     μtni        ::Float64           = 1.0,
-                    ntry        ::Int64             = 2,
+                    ntry        ::Int64             = 1,
                     obj_ar      ::Float64           = 0.4,
                     pupdp       ::Array{Float64,1}  = [0.4,0.4,0.1,0.1],
                     prints      ::Int64             = 5)
