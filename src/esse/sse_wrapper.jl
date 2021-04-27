@@ -164,10 +164,23 @@ function esse(states_file ::String,
   # number of parameters
   npars = length(pardic)
 
-  # run slice-sampler
-  R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, 
+  if occursin(r"^[m|M][A-za-z]*[h|H][A-za-z]*", mc)
+    @info "Running Metropilis-Hastings Markov chain"
+
+    R = mcmcmh(lhf, p, fp, nnps, nps, phid, mvps, 
         nngps, mvhfs, hfgps, npars, niter, nthin, nburn, ntakew, nswap, 
         ncch, winit, optimal_w, dt, screen_print)
+
+  elseif occursin(r"^[s|S][A-za-z]*[s|S][A-za-z]*", mc)
+    @info "Running slice-sampler Markov chain"
+
+    # run slice-sampler
+    R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, 
+        nngps, mvhfs, hfgps, npars, niter, nthin, nburn, ntakew, nswap, 
+        ncch, winit, optimal_w, dt, screen_print)
+  else
+    @error "No matching Markov chain: $mc"
+  end
 
   # write chain output
   write_ssr(R, pardic, out_file)

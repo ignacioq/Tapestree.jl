@@ -1,6 +1,6 @@
 #=
 
-Slice sampling utilities
+MCMC Metropilis-Hastings utilities
 
 Ignacio Quintero Mächler
 
@@ -11,80 +11,31 @@ September 23 2017
 =#
 
 
-
-
-
 """
-    w_sampler(lhf         ::Function, 
-              p           ::Array{Array{Float64,1},1},
-              fp          ::Array{Array{Float64,1},1},,
-              nnps        ::Array{Int64,1},
-              nps         ::Array{Int64,1},
-              phid        ::Array{Int64,1},
-              mvps        ::Array{Array{Int64,1},1},
-              nngps       ::Array{Array{Bool,1},1},
-              mvhfs       ::Array{Array{Int64,1},1},
-              hfgps       ::Array{Array{Bool,1},1},
-              npars       ::Int64,
-              optimal_w   ::Float64,
-              screen_print::Int64,
-              nburn       ::Int64,
-              ntakew      ::Int64,
-              nswap       ::Int64,
-              ncch        ::Int64,
-              winit       ::Float64,
-              dt          ::Float64)
+    mcmcmh_burn()
 
-Run slice sampler for burn-in and to estimate appropriate w's.
+Run Metropolis-Hastings burn-in phase.
 """
-function w_sampler(lhf         ::Function, 
-                   p           ::Array{Array{Float64,1},1},
-                   fp          ::Array{Array{Float64,1},1},
-                   nnps        ::Array{Int64,1},
-                   nps         ::Array{Int64,1},
-                   phid        ::Array{Int64,1},
-                   mvps        ::Array{Array{Int64,1},1},
-                   nngps       ::Array{Array{Bool,1},1},
-                   mvhfs       ::Array{Array{Int64,1},1},
-                   hfgps       ::Array{Array{Bool,1},1},
-                   npars       ::Int64,
-                   optimal_w   ::Float64,
-                   screen_print::Int64,
-                   nburn       ::Int64,
-                   ntakew      ::Int64,
-                   nswap       ::Int64,
-                   ncch        ::Int64,
-                   winit       ::Float64,
-                   dt          ::Float64)
+function mcmcmh_burn()
 
-  if nburn < ntakew
-    ntakew = nburn
-  end
 
-  # maximum number of multivariate updates
-  maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
-    zero(1)
-  elseif iszero(lastindex(mvhfs))
-    maximum(map(length,mvps))
-  elseif iszero(lastindex(mvps))
-    maximum(map(length,mvhfs))
-  else
-    maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
-  end
+  tni = 1.0
 
-  Lv = Array{Float64,1}(undef, maxmvu)
-  Rv = Array{Float64,1}(undef, maxmvu)
+  # temperature
+  t, o = make_temperature(dt, ncch)
+
 
   # preallocate pp and fpp
   pp  = copy(p[1])
   fpp = copy(fp[1])
 
-  w  = fill(winit, npars)
+  tn  = fill(tni, npars)
 
-  # Make distributed array log for parameters
+
+  # Make array log for parameters
   pl = [Array{Float64,2}(undef, nburn, npars) for i in Base.OneTo(ncch)]
 
-  # Make SharedArray array for temperature order `o`
+  # Make array for temperature order `o`
   ol = Array{Int64,2}(zeros(Int64, nburn, ncch))
 
   # make Array for current posteriors
@@ -95,14 +46,26 @@ function w_sampler(lhf         ::Function,
 
   lswap = 0
 
-  prog = Progress(nburn, screen_print, "slice-sampler burn-in...", 20)
+  prog = Progress(nburn, screen_print, "mcmc-mh burn-in...", 20)
 
-  # start slice-sampling
+
+  # make array of arrays for acceptance rates
+  lac = [zeros(Float64,npars) for i in Base.OneTo(ncch)]
+
+
+  ltn = 0
+  lup = 0.0
+  lac = zeros(Float64, npars)
+
+
+  # start burn-in iterations
   for it in Base.OneTo(nburn) 
+
     for c in Base.OneTo(ncch)
+
       lhc[c] = 
-        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
-          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
+        par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, lac, 
+          nnps, nps, phid, tn, t[o[c]])
 
       # log parameters and order
       @inbounds begin
@@ -578,94 +541,89 @@ function loop_slice_sampler(lhf         ::Function,
 end
 
 
+"""
+    mulupt(p::Float64, tn::Float64)
+
+Multiplicative parameter window move.
+"""
+mulupt(p::Float64, tn::Float64) = p * exp((rand() - 0.5) * tn)
+
+
+"""
+    addupt(p::Float64, tn::Float64)
+
+Gaussian parameter window move.
+"""
+addupt(p::Float64, tn::Float64) = p + randn() * tn
 
 
 
 """
-    slice_cycle(lhf  ::Function, 
-                lhc  ::Float64,
-                p    ::Array{Float64,1},
-                fp   ::Array{Float64,1},
-                pp   ::Array{Float64,1}, 
-                fpp  ::Array{Float64,1}, 
-                Lv   ::Array{Float64,1},
-                Rv   ::Array{Float64,1},
-                nnps ::Array{Int64,1},
-                nps  ::Array{Int64,1},
-                phid ::Array{Int64,1},
-                mvps ::Array{Array{Int64,1},1},
-                nngps::Array{Array{Bool,1},1},
-                mvhfs::Array{Array{Int64,1},1},
-                hfgps::Array{Array{Bool,1},1},
-                w    ::Array{Float64,1},
-                npars::Int64,
-                lfp  ::Int64,
-                ti   ::Float64)
+    par_cycle(lhf  ::Function, 
+              lhc  ::Float64,
+              p    ::Array{Float64,1},
+              fp   ::Array{Float64,1},
+              pp   ::Array{Float64,1}, 
+              fpp  ::Array{Float64,1}, 
+              lac  ::Array{Float64,1},
+              nnps ::Array{Int64,1},
+              nps  ::Array{Int64,1},
+              phid ::Array{Int64,1},
+              tn   ::Array{Float64,1},
+              ti   ::Float64)
 
-A full parameter cycle for slice-sampling.
+A full parameter update MH cycle.
 """
-function slice_cycle(lhf  ::Function, 
-                     lhc  ::Float64,
-                     p    ::Array{Float64,1},
-                     fp   ::Array{Float64,1},
-                     pp   ::Array{Float64,1}, 
-                     fpp  ::Array{Float64,1}, 
-                     Lv   ::Array{Float64,1},
-                     Rv   ::Array{Float64,1},
-                     nnps ::Array{Int64,1},
-                     nps  ::Array{Int64,1},
-                     phid ::Array{Int64,1},
-                     mvps ::Array{Array{Int64,1},1},
-                     nngps::Array{Array{Bool,1},1},
-                     mvhfs::Array{Array{Int64,1},1},
-                     hfgps::Array{Array{Bool,1},1},
-                     w    ::Array{Float64,1},
-                     npars::Int64,
-                     lfp  ::Int64,
-                     ti   ::Float64)
+function par_cycle(lhf  ::Function, 
+                   lhc  ::Float64,
+                   p    ::Array{Float64,1},
+                   fp   ::Array{Float64,1},
+                   pp   ::Array{Float64,1}, 
+                   fpp  ::Array{Float64,1}, 
+                   lac  ::Array{Float64,1},
+                   nnps ::Array{Int64,1},
+                   nps  ::Array{Int64,1},
+                   phid ::Array{Int64,1},
+                   tn   ::Array{Float64,1},
+                   ti   ::Float64)
 
-  #=
-  univariate updates
-  =#
   # nonnegative parameters
-  for j in nnps
-    S    = lhc - randexp()
-    L, R = find_nonneg_int(p, pp, fp, j, S, lhf, w[j], ti, npars)
-    lhc  = sample_int(p, pp, fp, j, L, R, S, lhf, ti, npars)
+  for j in shuffle!(nnps)
+
+    pp[j] = mulupt(p[j], tn[j])
+    lhp   = lhf(pp, fp, ti)
+
+    if -randexp() < (lhp - lhc + log(pp[j]/p[j]))
+      lhc     = lhp
+      p[j]    = pp[j] 
+      lac[j] += 1.0
+    end
   end
 
   # real line parameters
-  for j in nps
-    S    = lhc - randexp()
-    L, R = find_real_int(p, pp, fp, j, S, lhf, w[j], ti, npars)
-    lhc  = sample_int(p, pp, fp, j, L, R, S, lhf, ti, npars)
+  for j in shuffle!(nps)
+
+    pp[j] = addupt(p[j], tn[j])
+    lhp   = lhf(pp, fp, ti)
+
+    if -randexp() < (lhp - lhc)
+      lhc    = lhp
+      p[j]   = pp[j] 
+      lac[j] += 1.0
+    end
   end
 
   # hidden factors
   for j in phid
-    S    = lhc - randexp()
-    L, R = 
-      find_nonneg_int(p, pp, fp, fpp, j, S, lhf, w[j], ti, npars, lfp)
-    lhc = 
-      sample_int(p, pp, fp, fpp, j, L, R, S, lhf, ti, npars, lfp)
-  end
 
-  #=
-  multivariate updates
-  =#
-  # non hidden factors
-  for (i, mvp) in enumerate(mvps)
-    S = lhc - randexp()
-    @views find_rect(p, pp, fp, mvp, nngps[i], S, lhf, w, Lv, Rv, ti, npars)
-    lhc = sample_rect(p, pp, fp, Lv, Rv, mvp, S, lhf, ti,  npars)
-  end
+    fpp[j] = mulupt(fp[j], tn[j])
+    lhp    = lhf(p, fpp, ti)
 
-  # for joint hidden factors
-  for (i, mvp) in enumerate(mvhfs)
-    S = lhc - randexp()
-    @views find_rect(p, pp, fp, fpp, mvp, hfgps[i], S, lhf, w, Lv, Rv, ti, npars, lfp)
-    @views lhc = 
-      sample_rect(p, pp, fp, fpp, Lv, Rv, mvp, hfgps[i], S, lhf, ti, npars, lfp)
+    if -randexp() < (lhp - lhc + log(fpp[j]/fp[j]))
+      lhc    = lhp
+      fpp[j] = fp[j] 
+      lac[j] += 1.0
+    end
   end
 
   return lhc
@@ -1262,6 +1220,4 @@ function scaleT(T::Float64, rate::Float64)
 
   return T
 end
-
-
 
