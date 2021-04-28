@@ -72,6 +72,9 @@ function w_sampler(lhf         ::Function,
     maximum((maximum(map(length,mvps)), maximum(map(length,mvhfs))))
   end
 
+  # temperature
+  t, o = make_temperature(dt, ncch)
+
   Lv = Array{Float64,1}(undef, maxmvu)
   Rv = Array{Float64,1}(undef, maxmvu)
 

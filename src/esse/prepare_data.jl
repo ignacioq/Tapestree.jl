@@ -214,6 +214,11 @@ function prepare_data(cov_mod    ::NTuple{M,String},
     assign_hidfacs!(p[c], fp[c])
   end
 
+  # start with non zero for valid fps
+  for c in Base.OneTo(ncch), i in phid
+    fp[c][i] = 1e-5
+  end
+
   # if parallel
   if parallel
     p  = distribute(p)

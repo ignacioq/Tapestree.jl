@@ -57,10 +57,11 @@ function esse(states_file ::String,
               node_ps     ::Tuple{Bool,Int64} = (true, 10),
               out_states  ::String            = "",
               constraints ::NTuple{N,String}  = (" ",),
-              mvpars      ::NTuple{O,String}  = ("lambda = beta",),
+              mvpars      ::NTuple{O,String}  = (" ",),
               niter       ::Int64             = 10_000,
               nthin       ::Int64             = 10,
               nburn       ::Int64             = 200,
+              tune_int    ::Int64             = 100,
               nswap       ::Int64             = 10,
               ncch        ::Int64             = 1,
               parallel    ::Bool              = false,
@@ -69,6 +70,7 @@ function esse(states_file ::String,
               winit       ::Float64           = 2.0,
               scale_y     ::NTuple{2,Bool}    = (true, false),
               algorithm   ::String            = "pruning",
+              mc          ::String            = "slice",
               λpriors     ::Float64           = .1,
               μpriors     ::Float64           = .1,
               gpriors     ::Float64           = .1,
@@ -77,6 +79,8 @@ function esse(states_file ::String,
               βpriors     ::NTuple{2,Float64} = (0.0, 10.0),
               hpriors     ::Float64           = .1,
               optimal_w   ::Float64           = 0.8,
+              tni         ::Float64           = 1.0,
+              obj_ar      ::Float64           = 0.6,
               screen_print::Int64             = 5,
               Eδt         ::Float64           = 1e-3,
               ti          ::Float64           = 0.0,
@@ -167,11 +171,10 @@ function esse(states_file ::String,
   if occursin(r"^[m|M][A-za-z]*[h|H][A-za-z]*", mc)
     @info "Running Metropilis-Hastings Markov chain"
 
-    R = mcmcmh(lhf, p, fp, nnps, nps, phid, mvps, 
-        nngps, mvhfs, hfgps, npars, niter, nthin, nburn, ntakew, nswap, 
-        ncch, winit, optimal_w, dt, screen_print)
+    R = mcmcmh(lhf, p, fp, nnps, nps, phid, npars, niter, nthin, nburn, nswap, 
+      ncch, tni, tune_int, dt, screen_print, obj_ar)
 
-  elseif occursin(r"^[s|S][A-za-z]*[s|S][A-za-z]*", mc)
+  elseif occursin(r"^[s|S][A-za-z]*", mc)
     @info "Running slice-sampler Markov chain"
 
     # run slice-sampler
