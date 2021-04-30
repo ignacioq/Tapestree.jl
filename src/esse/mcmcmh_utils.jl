@@ -119,19 +119,20 @@ end
 
 """
     mcmcmh_burn(lhf         ::Function, 
-                p           ::Array{Array{Float64,1},1},
-                fp          ::Array{Array{Float64,1},1},
+                p           ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
+                fp          ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
                 nnps        ::Array{Int64,1},
                 nps         ::Array{Int64,1},
                 phid        ::Array{Int64,1},
                 nburn       ::Int64,
                 ncch        ::Int64,
                 nswap       ::Int64,
-                dt          ::Float64
+                dt          ::Float64,
                 tni         ::Float64,
                 tune_int    ::Int64,
                 npars       ::Int64,
-                screen_print::Int64)
+                screen_print::Int64,
+                obj_ar      ::Float64)
 
 Run parallel Metropolis-Hastings burn-in phase.
 """
@@ -148,10 +149,11 @@ function mcmcmh_burn(lhf         ::Function,
                      tni         ::Float64,
                      tune_int    ::Int64,
                      npars       ::Int64,
-                     screen_print::Int64)
+                     screen_print::Int64,
+                     obj_ar      ::Float64)
 
   # temperature
-  t, o = make_temperature(dt, ncch)
+  t, o = make_temperature(0.0, ncch)
 
   # make SharedArray for temperature order `o`
   o = SharedArray(o)
@@ -171,15 +173,17 @@ function mcmcmh_burn(lhf         ::Function,
 
   # tuning array
   tn = [fill(tni, npars) for i in Base.OneTo(ncch)]
-  tn = SharedArray(tn)
+  tn = distribute(tn)
 
   # make array of arrays for tuning and acceptance rates
   lup = zeros(Float64, ncch)
   lup = SharedArray(lup)
   lac = [zeros(Float64, npars) for i in Base.OneTo(ncch)]
-  lac = SharedArray(lac)
+  lac = distribute(lac)
 
   scalef = makescalef(obj_ar)
+
+  lfp = lastindex(fp[1])
 
   # start parallel mc3
   @sync @distributed for c in Base.OneTo(ncch)
@@ -191,28 +195,29 @@ function mcmcmh_burn(lhf         ::Function,
     # preallocate pp and fpp and tuning
     pp  = copy(p[c])
     fpp = copy(fp[c])
-    lfp = lastindex(fpp)
 
     ltn = 0
 
     # start burn-in iterations
     for it in Base.OneTo(nburn) 
 
-      lhc[c] = par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, lac[o[c]], 
-                 nnps, nps, phid, tn[o[c]], t[o[c]], npars, lfp)
+      lhc[c] = par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, lac[c], 
+                 nnps, nps, phid, tn[c], t[o[c]], npars, lfp)
 
       # log tuning parameters only for T = 1
-      lup[o[c]] += 1.0
+      lup[c] += 1.0
       ltn += 1
       if ltn == tune_int
+        tnc  = tn[c]
+        lacc = lac[c]
         for j in nnps
-          tn[o[c]][j] = scalef(tn[o[c]][j], lac[o[c]][j]/lup[o[c]])
+          tnc[j] = scalef(tnc[j], lacc[j]/lup[c])
         end
         for j in nps
-          tn[o[c]][j] = scalef(tn[o[c]][j], lac[o[c]][j]/lup[o[c]])
+          tnc[j] = scalef(tnc[j], lacc[j]/lup[c])
         end
         for j in phid
-          tn[o[c]][j] = scalef(tn[o[c]][j], lac[o[c]][j]/lup[o[c]])
+          tnc[j] = scalef(tnc[j], lacc[j]/lup[c])
         end
         ltn = 0
       end
@@ -247,7 +252,7 @@ function mcmcmh_burn(lhf         ::Function,
     end
   end
 
-  return p, fp, tn[findfirst(isone,o)], o, t
+  return p, fp, tn[1], o, t
 end
 
 
@@ -352,6 +357,135 @@ end
 
 
 
+
+"""
+    mcmcmh_mcmc(lhf         ::Function, 
+                p           ::Array{Array{Float64,1},1},
+                fp          ::Array{Array{Float64,1},1},
+                nnps        ::Array{Int64,1},
+                nps         ::Array{Int64,1},
+                phid        ::Array{Int64,1},
+                niter       ::Int64,
+                nthin       ::Int64,
+                ncch        ::Int64,
+                nswap       ::Int64,
+                tn          ::Array{Float64,1},
+                o           ::Array{Int64,1}, 
+                t           ::Array{Float64,1},
+                npars       ::Int64,
+                screen_print::Int64)
+
+Run Metropolis-Hastings burn-in phase.
+"""
+function mcmcmh_mcmc(lhf         ::Function, 
+                     p           ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
+                     fp          ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
+                     nnps        ::Array{Int64,1},
+                     nps         ::Array{Int64,1},
+                     phid        ::Array{Int64,1},
+                     niter       ::Int64,
+                     nthin       ::Int64,
+                     ncch        ::Int64,
+                     nswap       ::Int64,
+                     tn          ::Array{Float64,1},
+                     o           ::SharedArray{Int64,1}, 
+                     t           ::Array{Float64,1},
+                     npars       ::Int64,
+                     screen_print::Int64)
+
+  nlogs = fld(niter, nthin)
+
+  #preallocate logging arrays
+  il =  SharedArray{Int64,2}(zeros(Int64,nlogs, ncch))
+  hl =  SharedArray{Float64,2}(zeros(nlogs, ncch))
+  pl = [Array{Float64,2}(undef, nlogs, npars) for i in Base.OneTo(ncch)]
+  pl = distribute(pl)
+
+  # Make distributed array for iterations per chain `ipc`
+  ipc = SharedArray{Int64,1}(zeros(Int64,ncch))
+
+  # preallocate chains order
+  ol   = SharedArray{Int64,2}(zeros(Int64, nlogs, ncch))
+
+  # length fp
+  lfp = length(fp[1])
+
+  # starting posteriors
+  lhc = SharedArray([lhf(p[c], fp[c], t[o[c]]) for c in Base.OneTo(ncch)])
+
+  # pre-estimate chain swaps 
+  tns   = fld(niter, nswap)
+  allsw = [wchains(o) for i in Base.OneTo(tns)]
+  swr   = SharedArray{Bool,1}(fill(false, tns))
+  swl   = SharedArray{Bool,1}(fill(false, tns))
+
+  # start parallel slice-sampling
+  @sync @distributed for c in Base.OneTo(ncch)
+    # log variables
+    lthin, lit, lswap, ws = 0, 0, 0, 0
+    prog = Progress(niter, screen_print, "running mcmc-mh...", 20)
+
+    # preallocate pp and fpp
+    pp  = copy(p[c])
+    fpp = copy(fp[c])
+
+   # start burn-in iterations
+    for it in Base.OneTo(niter) 
+
+      # updates
+      lhc[c] = par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, 
+                 nnps, nps, phid, tn, t[o[c]], npars, lfp)
+
+      # log samples
+      lthin += 1
+      if lthin === nthin
+        @inbounds begin
+          lit += 1
+          il[lit, c]    = it
+          hl[lit, c]    = lhc[c]
+          ol[lit, c]    = o[c]
+          pl[c][lit, :] = p[c]
+        end
+        lthin = 0
+      end
+
+      # log chain current iter
+      ipc[c] = it
+
+      ## swap chains
+      lswap += 1
+      if lswap == nswap
+        ws += 1
+        j, k = allsw[ws]
+        cij = c == j   # c is j
+        cik = c == k   # c is k
+        # swapper
+        if cij
+          while true
+            ipc[c] == ipc[k] && swl[ws] && break
+          end
+          swr[ws] = swap_chains!(j, k, o, t, lhc)
+        end
+        # swappee
+        if cik
+          swl[ws] = true
+          while true
+            ipc[c] == ipc[j] && swr[ws] && break
+          end
+        end
+        lswap = 0
+      end
+      next!(prog)
+    end
+  end
+
+  return il, hl, pl, ol
+end
+
+
+
+
+
 """
     mulupt(p::Float64, tn::Float64)
 
@@ -360,12 +494,15 @@ Multiplicative parameter window move.
 mulupt(p::Float64, tn::Float64) = p * exp((rand() - 0.5) * tn)
 
 
+
+
 """
     addupt(p::Float64, tn::Float64)
 
 Gaussian parameter window move.
 """
 addupt(p::Float64, tn::Float64) = p + randn() * tn
+
 
 
 
@@ -527,9 +664,6 @@ function par_cycle(lhf  ::Function,
 
   return lhc
 end
-
-
-
 
 
 
