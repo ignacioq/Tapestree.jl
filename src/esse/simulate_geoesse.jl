@@ -60,7 +60,7 @@ function simulate_sse(λ       ::Array{Float64,1},
     end
   else 
     if ed == 0
-      return 0, 0, 0
+      return 0, zeros(Int64,0,2), 0.0
     end
   end
 
@@ -1184,7 +1184,7 @@ given `prv`.
 function prop_sample(s::Array{Float64,1}, prv::Array{Float64,1}, ns::Int64)
 
   cumsum!(s, prv)
-  for i in Base.OneTo(ns)
+  @simd for i in Base.OneTo(ns)
     s[i] /= s[ns]  
   end
 
