@@ -45,10 +45,10 @@ function simulate_sse(λ       ::Array{Float64,1},
   @info "Tree with $n extant species successfully simulated"
 
   if iszero(n)
-    @warn "\n
-    What would you do if an endangered animal is eating an endangered plant? \n 
-    Sometimes nature is too cruel..."
-    printstyled("tree went extinct... \n", color=:light_red)
+    printstyled("What would you do if an endangered animal is eating an endangered plant? \n 
+    Sometimes nature is too cruel...", color=:light_red)
+
+    @warn "tree went extinct..."
   end
 
   if n > nspp_max
