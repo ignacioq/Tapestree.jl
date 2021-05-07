@@ -793,7 +793,7 @@ function makecorresschg(gpr::Array{Array{Float64,1},1},
     end
   end
 
-  # for *losses*
+  # # for *losses*
   μtos = Array{Int64,1}[]
   for i in Base.OneTo(ns)
     push!(μtos, zeros(Int64,length(μpr[i])))
@@ -808,7 +808,7 @@ function makecorresschg(gpr::Array{Array{Float64,1},1},
     end
   end
 
-  # for *hidden states*
+  # # for *hidden states*
   qtos = Array{Int64,1}[]
   for i in Base.OneTo(ns)
     push!(qtos, zeros(Int64,length(qpr[i])))
@@ -820,19 +820,7 @@ function makecorresschg(gpr::Array{Array{Float64,1},1},
     end
   end
 
-  # for *hidden states*
-  qtos = Array{Int64,1}[]
-  for i in Base.OneTo(ns)
-    push!(qtos, zeros(Int64,length(qpr[i])))
-  end
-  for si in Base.OneTo(ns)
-    s = S[si]
-     for (i, th) = enumerate(setdiff(hs, s.h))
-      qtos[si][i] = th*(2^k-1) + si - s.h*(2^k-1)
-    end
-  end
-
-  # for *speciation*
+  # # for *speciation*
   λtos = Array{Array{Int64,1},1}[]
   for i in Base.OneTo(ns)
     push!(λtos, fill([0,0],length(λpr[i])))
@@ -849,14 +837,14 @@ function makecorresschg(gpr::Array{Array{Float64,1},1},
       # within-area speciation
       for a in s.g
         na += 1
-        λtos[si][na] = [a + (2^k-1)*s.h,si]
+        λtos[si][na] = [a + (2^k-1)*s.h, si]
       end
       # between-area speciation
       vs = vicsubsets(s.g)[1:div(end,2)]
       for v in vs
         na += 1
         λtos[si][na] = 
-          [findfirst(r -> isSghequal(r,Sgh(v[1],s.h)), S),
+          Int64[findfirst(r -> isSghequal(r,Sgh(v[1],s.h)), S),
            findfirst(r -> isSghequal(r,Sgh(v[2],s.h)), S)]
       end
     end

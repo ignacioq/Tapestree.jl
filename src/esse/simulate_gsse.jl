@@ -42,18 +42,52 @@ function simulate_sse(λ       ::Array{Float64,1},
   ed, el, st, n, S, k = 
     simulate_edges(λ, μ, l, g, q, t, δt, ast, nspp_max)
 
-  @info "Tree with $n species successfully simulated"
+  @info "Tree with $n extant species successfully simulated"
+
+  if iszero(n)
+    @warn "\n
+    What would you do if an endangered animal is eating an endangered plant? \n 
+    Sometimes nature is too cruel..."
+    printstyled("tree went extinct... \n", color=:light_red)
+  end
+
+  if n > nspp_max
+    @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+  end
+
+  if in(0.0, el)
+    @warn "Bad Luck! a lineage speciated at time 0.0... \n 
+    rerun simulation"
+  end
 
   if retry_ext 
-    in(0.0, el) && @warn "a lineage speciated at time 0.0..."
     while iszero(size(ed,1)) || n < nspp_min || n > nspp_max || in(0.0, el)
       ed, el, st, n, S, k = 
-        simulate_edges(λ, μ, l, g, q, t, δt, nspp_max)
-      @info ("Tree with $n species successfully simulated")
+        simulate_edges(λ, μ, l, g, q, t, δt, ast, nspp_max)
+
+      @info "Tree with $n extant species successfully simulated"
+
+      if iszero(n)
+        @warn "\n
+        What would you do if an endangered animal is eating an endangered plant? \n 
+        Sometimes nature is too cruel..."
+        printstyled("tree went extinct... \n", color=:light_red)
+      end
+
+      if n > nspp_max
+        @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+      end
+
+      if in(0.0, el)
+        @warn "Bad Luck! a lineage speciated at time 0.0... \n 
+        rerun simulation"
+      end
+
+      @info "But, don't worry, will rerun the simulation..."
     end
   else 
-    if iszero(ed)
-      return Dict{Int64, Vector{Float64}}[], zeros(Int64,0,2), Float64[]
+    if iszero(size(ed,1))
+      return Dict{Int64, Vector{Float64}}(), ed, el
     end
   end
 
@@ -64,11 +98,11 @@ function simulate_sse(λ       ::Array{Float64,1},
   ## round branch lengths
   # find out order of simulation
   i = 1
-  while !isone(δt*10^i)
+  while !isone(δt*Float64(10^i))
     i += 1
   end
 
-  el = map(x -> round(x; digits = i+1), el)
+  el = map(x -> round(x; digits = i+1), el)::Array{Float64,1}
 
   # organize states
   tip_val = Dict(i => st[i] for i = 1:n)
@@ -81,7 +115,6 @@ end
 
 
 
-
 """
     simulate_edges(λ       ::Array{Float64,1},
                    μ       ::Array{Float64,1},
@@ -90,7 +123,7 @@ end
                    q       ::Array{Float64,1},
                    simt    ::Float64, 
                    δt      ::Float64,
-                   nssp_max::Int64)
+                   nspp_max::Int64)
 
 Simulate edges tree according to `SSE_g`.
 """
@@ -102,7 +135,7 @@ function simulate_edges(λ       ::Array{Float64,1},
                         simt    ::Float64, 
                         δt      ::Float64,
                         si      ::Int64,
-                        nssp_max::Int64)
+                        nspp_max::Int64)
 
   h = div(isqrt(length(q)*4 + 1) + 1, 2)
   k = div(length(l), h)
@@ -139,12 +172,12 @@ function simulate_edges(λ       ::Array{Float64,1},
   ea = [1, 2]
 
   # edge array
-  ed = zeros(Int64, nssp_max*2, 2)
+  ed = zeros(Int64, nspp_max*2, 2)
   ed[ea,:] = [1 2;
               1 3]
 
   # edge lengths
-  el = zeros(nssp_max*2)
+  el = zeros(nspp_max*2)
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
@@ -163,7 +196,8 @@ function simulate_edges(λ       ::Array{Float64,1},
   end
 
   # make state change vectors
-  gtos, μtos, qtos, λtos = makecorresschg(gpr, μpr, qpr, λpr, S, as, hs, k, ns)
+  gtos, μtos, qtos, λtos = 
+    makecorresschg(gpr, μpr, qpr, λpr, S, as, hs, k, ns)
 
   # model first speciation event for daughter inheritance
   st = λtos[si][prop_sample(svλ[si], λpr[si], length(svλ[si]))]
@@ -214,17 +248,14 @@ function simulate_edges(λ       ::Array{Float64,1},
           nod = ed[ea[i],1]
 
           # top or bottom edge of node
-          top = nod == ed[ea[i]+1, 1] 
+          top = nod === ed[ea[i]+1, 1] 
 
           # remove edge (only preserving persisting species)
           ned = findfirst(isequal(0), ed)[1]
 
-          if ned == 3
-            printstyled("What would you do if an endangered animal is eating an endangered plant? Sometimes nature is too cruel... \n", 
-              color=:light_red)
-            printstyled("tree went extinct... rerun simulation \n",
-              color=:light_red)
-            return 0, 0, 0, 0, 0, 0
+          # if goes extinct
+          if ned === 3
+            return zeros(Int64,0,2), Float64[], Int64[], 0, Sgh[], 0
           end
 
           @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
@@ -237,14 +268,17 @@ function simulate_edges(λ       ::Array{Float64,1},
           ea[i:end] .-= 1
 
           # remove node and extra edge
-          @views pr = findfirst(isequal(nod), ed[:,1])
-          @views da = findfirst(isequal(nod), ed[:,2])
+          @views pr = findfirst(isequal(nod), ed[:,1])::Int64
+          
+          @views so = findfirst(isequal(nod), ed[:,2])
 
-          if isnothing(da)
+          if isnothing(so)
             da = 0
+          else
+            da = so::Int64
           end
 
-          if da != 0
+          if !iszero(da)
             ed[da,2] = ed[pr,2]
             el[da]  += el[pr]
           end
@@ -257,10 +291,10 @@ function simulate_edges(λ       ::Array{Float64,1},
 
           ## update alive lineages
           # is the remaining node terminal?
-          if da == 0 || in(ed[da,2], ed[:,1])
+          @views if iszero(da) || in(ed[da,2], ed[:,1])
             ea[i:end] .-= 1
           else 
-            ea[findfirst(isequal(pr),ea)] = da
+            ea[findfirst(isequal(pr),ea)::Int64] = da
             sort!(ea)
             if top
               ea[(i+1):end] .-= 1
@@ -282,7 +316,7 @@ function simulate_edges(λ       ::Array{Float64,1},
         else
           @inbounds st[i] = 
             μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
-        
+
           # no more events at this time
           continue
         end
@@ -344,9 +378,8 @@ function simulate_edges(λ       ::Array{Float64,1},
 
     simt < 0.0 && break
 
-    if n === nssp_max 
-      @warn "more than $nssp_max species"
-      return zeros(Int64,0,2), 0.0, Int64[], n, Sgh[], 0
+    if n > nspp_max 
+      return zeros(Int64,0,2), Float64[], Int64[], n, Sgh[], 0
     end
   end
 
