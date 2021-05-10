@@ -145,18 +145,13 @@ function mcmcmh_burn(lhf         ::Function,
                      nburn       ::Int64,
                      ncch        ::Int64,
                      nswap       ::Int64,
-                     dt          ::Float64,
+                     o           ::SharedArray{Int64,1}, 
+                     t           ::Array{Float64,1},
                      tni         ::Float64,
                      tune_int    ::Int64,
                      npars       ::Int64,
                      screen_print::Int64,
                      obj_ar      ::Float64)
-
-  # temperature
-  t, o = make_temperature(0.0, ncch)
-
-  # make SharedArray for temperature order `o`
-  o = SharedArray(o)
 
   # Make distributed array for iterations per chain `ipc`
   ipc = SharedArray{Int64,1}(zeros(Int64,ncch))
@@ -237,7 +232,7 @@ function mcmcmh_burn(lhf         ::Function,
           while true
             ipc[c] == ipc[k] && swl[ws] && break
           end
-          swr[ws] = swap_chains!(j, k, o, t, lhc)
+          swr[ws] = swap_chains!(j, k, o, lhc)
         end
         # swappee
         if cik
@@ -360,8 +355,8 @@ end
 
 """
     mcmcmh_mcmc(lhf         ::Function, 
-                p           ::Array{Array{Float64,1},1},
-                fp          ::Array{Array{Float64,1},1},
+                p           ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
+                fp          ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
                 nnps        ::Array{Int64,1},
                 nps         ::Array{Int64,1},
                 phid        ::Array{Int64,1},
@@ -370,7 +365,7 @@ end
                 ncch        ::Int64,
                 nswap       ::Int64,
                 tn          ::Array{Float64,1},
-                o           ::Array{Int64,1}, 
+                o           ::SharedArray{Int64,1}, 
                 t           ::Array{Float64,1},
                 npars       ::Int64,
                 screen_print::Int64)
@@ -421,6 +416,7 @@ function mcmcmh_mcmc(lhf         ::Function,
 
   # start parallel slice-sampling
   @sync @distributed for c in Base.OneTo(ncch)
+
     # log variables
     lthin, lit, lswap, ws = 0, 0, 0, 0
     prog = Progress(niter, screen_print, "running mcmc-mh...", 20)

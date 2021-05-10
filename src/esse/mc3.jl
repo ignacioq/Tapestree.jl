@@ -12,7 +12,7 @@ t(-_-t)
 
 
 """
-  make_temperature(dt::Float64, ncch::Int64)
+    make_temperature(dt::Float64, ncch::Int64)
 
 Set chain temperature vectors.
 """
@@ -30,13 +30,32 @@ make_temperature(dt::Float64, ncch::Int64) =
 
 Set chain temperature vectors.
 """
-function temperature!(t::Array{Float64,1}, 
-                      o::Array{Int64,1},
-                      dt ::Float64)
+function temperature!(t ::Array{Float64,1}, 
+                      o ::Array{Int64,1},
+                      dt::Float64)
   for (i,v) in enumerate(o)
     t[i] = 1.0/(1.0 + (dt*(Float64(v)-1.0)))
   end
 end
+
+
+
+
+"""
+    temperature!(t::Array{Float64,1}, 
+                 o ::Array{Int64,1},
+                 dt ::Float64)
+
+Set chain temperature vectors.
+"""
+function temperature!(t ::Array{Float64,1}, 
+                      o ::SharedArray{Int64,1},
+                      dt::Float64)
+  for (i,v) in enumerate(o)
+    t[i] = 1.0/(1.0 + (dt*(Float64(v)-1.0)))
+  end
+end
+
 
 
 
@@ -71,6 +90,7 @@ function wchains(o::SharedArray{Int64,1})
   end
   return j, k
 end
+
 
 
 
@@ -111,6 +131,26 @@ function swap(j  ::Int64,
               t  ::Array{Float64,1})
   @inbounds begin
     -randexp() < ((t[o[j]] - t[o[k]]) * (lhc[k]/t[o[k]] - lhc[j]/t[o[j]]))
+  end
+end
+
+
+
+
+"""
+    swap(j  ::Int64,
+         k  ::Int64,
+         lhc::SharedArray{Float64,1},
+         o::SharedArray{Int64,1},
+         t ::Array{Float64,1})
+
+Returns `true` if chains should be swapped, when `dt = 0`.
+"""
+function swap(j  ::Int64,
+              k  ::Int64,
+              lhc::SharedArray{Float64,1})
+  @inbounds begin
+    -randexp() < (lhc[k] - lhc[j])
   end
 end
 
@@ -174,3 +214,28 @@ function swap_chains!(j  ::Int64,
 end
 
 
+
+
+
+"""
+    swap_chains!(j  ::Int64,
+                 k  ::Int64,
+                 o  ::SharedArray{Int64,1},
+                 t  ::Array{Float64,1},
+                 lhc::SharedArray{Float64,1})
+
+Return new temperature order `o` for `dt = 0`.
+"""
+function swap_chains!(j  ::Int64,
+                      k  ::Int64,
+                      o  ::SharedArray{Int64,1},
+                      lhc::SharedArray{Float64,1})
+
+  if swap(j, k, lhc)
+    oj   = o[j]
+    o[j] = o[k]
+    o[k] = oj
+  end
+
+  return true
+end

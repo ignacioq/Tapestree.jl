@@ -122,10 +122,18 @@ function mcmcmh(lhf         ::Function,
                 screen_print::Int64,
                 obj_ar      ::Float64)
 
+  # temperature
+  t, o = make_temperature(0.0, ncch)
+
+  # make SharedArray for temperature order `o`
+  o = SharedArray(o)
+
   # run burnin phase
   p, fp, tn, o, t = 
     mcmcmh_burn(lhf, p, fp, nnps, nps, phid, nburn, ncch, nswap, 
-      dt, tni, tune_int, npars, screen_print, obj_ar)
+      o, t, tni, tune_int, npars, screen_print, obj_ar)
+
+  temperature!(t, o, dt)
 
   # run mcmc
   il, hl, pl, ol = 
