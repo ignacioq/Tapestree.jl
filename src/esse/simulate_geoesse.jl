@@ -28,7 +28,7 @@ January 12 2017
                  retry_ext::Bool   = true,
                  power    ::Bool   = false) where {M,N}
 
-Simulate tree according to EGeoHiSSE.
+Simulate tree according to `esse_g`.
 """
 function simulate_sse(λ       ::Array{Float64,1},
                       μ       ::Array{Float64,1},
@@ -36,31 +36,72 @@ function simulate_sse(λ       ::Array{Float64,1},
                       g       ::Array{Float64,1},
                       q       ::Array{Float64,1},
                       β       ::Array{Float64,1},
+                      t       ::Float64,
                       x       ::Array{Float64,1},
                       y       ::Array{Float64,N},
-                      cov_mod ::NTuple{M,String};
+                      cov_mod ::Tuple{Vararg{String}};
                       δt      ::Float64 = 1e-4,
+                      ast     ::Int64   = 0,
                       nspp_min::Int64   = 1,
                       nspp_max::Int64   = 200_000,
                       retry_ext::Bool   = true,
-                      power    ::Bool   = false) where {M,N}
+                      rejectel0::Bool   = false) where {N}
 
   # make simulation
   ed, el, st, n, S, k = 
-    simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max, power)
+    simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
 
-  @info "Tree with $n species successfully simulated"
+  @info "Tree with $n extant species successfully simulated"
+
+  if iszero(n)
+    @warn "\n
+    What would you do if an endangered animal is eating an endangered plant? \n 
+    Sometimes nature is too cruel..."
+    printstyled("tree went extinct... \n", color=:light_red)
+  end
+
+  if n > nspp_max
+    @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+  end
+
+  if rejectel0 && in(0.0, el)
+    @warn "Bad Luck! a lineage speciated at time 0.0... \n 
+    rerun simulation"
+  end
 
   if retry_ext 
-    in(0.0, el) && @warn "a lineage speciated at time 0.0..."
-    while ed == 0 || n < nspp_min || n > nspp_max || in(0.0, el)
+    while iszero(size(ed,1)) || (rejectel0 && in(0.0, el)) ||
+          n < nspp_min       || n > nspp_max 
       ed, el, st, n, S, k = 
-        simulate_edges(λ, μ, l, g, q, β, x, y, δt, cov_mod, nspp_max, power)
-      @info ("Tree with $n species successfully simulated")
+        simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
+
+      @info "Tree with $n extant species successfully simulated"
+
+      if iszero(n)
+        @warn "\n
+        What would you do if an endangered animal is eating an endangered plant? \n 
+        Sometimes nature is too cruel..."
+        printstyled("tree went extinct... \n", color=:light_red)
+
+        @info "But, don't worry, will rerun the simulation..."
+      end
+
+      if n > nspp_max
+        @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+
+        @info "But, don't worry, will rerun the simulation..."
+      end
+
+      if rejectel0 && in(0.0, el)
+        @warn "Bad Luck! a lineage speciated at time 0.0... \n 
+        rerun simulation"
+
+        @info "But, don't worry, will rerun the simulation..."
+      end
     end
   else 
-    if ed == 0
-      return 0, zeros(Int64,0,2), 0.0
+    if iszero(size(ed,1))
+      return Dict{Int64, Vector{Float64}}(), ed, el
     end
   end
 
@@ -71,11 +112,11 @@ function simulate_sse(λ       ::Array{Float64,1},
   ## round branch lengths
   # find out order of simulation
   i = 1
-  while !isone(δt*10^i)
+  while !isone(δt*Float64(10^i))
     i += 1
   end
 
-  el = map(x -> round(x; digits = i+1), el)
+  el = map(x -> round(x; digits = i+1), el)::Array{Float64,1}
 
   # organize states
   tip_val = Dict(i => st[i] for i = 1:n)
@@ -100,7 +141,7 @@ end
                    y       ::Array{Float64, N},
                    δt      ::Float64,
                    cov_mod ::NTuple{M,String},
-                   nssp_max::Int64)
+                   nspp_max::Int64)
 
 Simulate edges tree according to EGeoHiSSE.
 """
@@ -111,30 +152,25 @@ function simulate_edges(λ       ::Array{Float64,1},
                         q       ::Array{Float64,1},
                         β       ::Array{Float64,1},
                         x       ::Array{Float64,1},
-                        y       ::Array{Float64, N},
+                        y       ::Array{Float64,N},
+                        si      ::Int64,
+                        simt    ::Float64,
                         δt      ::Float64,
-                        cov_mod ::NTuple{M,String},
-                        nssp_max::Int64,
-                        power   ::Bool) where {M,N}
+                        cov_mod ::Tuple{Vararg{String}},
+                        nspp_max::Int64) where {N}
 
-  h = Int64((sqrt(length(q)*4 + 1) + 1)/2)
-  k = div(length(l), h)
+  h  = div(isqrt(length(q)*4 + 1) + 1, 2)
+  k  = div(length(l), h)
   ny = size(y, 2)
 
   # if multidimensional
-  md = ny > 1
+  md = !isone(N)
 
   # check number of parameters and data
   model = id_mod(cov_mod, k, h, ny, λ, μ, l, g, q, β)
 
-  # if power or exponential regression
-  rfun = power ? powf : expf 
-
-  # total simulation time
-  simt = x[end]
-
   # make approximate time function
-  af! = make_af(x, y, Val(size(y,2)))
+  af! = make_af(x, y, Val{size(y,2)})
 
   # preallocate af! result vector 
   r = Array{Float64,1}(undef, size(y,2))
@@ -151,17 +187,21 @@ function simulate_edges(λ       ::Array{Float64,1},
   as = 1:k
   hs = 0:(h-1)
 
-  # vector of initial state probabilities
-  isp = Array{Float64,1}(undef, length(S))
+  # if initial state not assigned
+  if iszero(si)
 
-  # assign initial state probabilities
-  init_states_pr!(isp, λ, l, g, q, μ, β, S, r, k, h, ny, model, md, as, hs, rfun)
+    # vector of initial state probabilities
+    isp = Array{Float64,1}(undef, length(S))
 
-  # preallocate vector of individual area probabilities 
-  spr = Array{Float64,1}(undef, ns)
+    # assign initial state probabilities
+    init_states_pr!(isp, λ, μ, l, g, q, β, S, r, k, h, ny, model, md, as, hs)
 
-  # sample initial state
-  si = prop_sample(spr, isp, ns)
+    # preallocate vector of individual area probabilities 
+    spr = Array{Float64,1}(undef, ns)
+
+    # sample initial state
+    si = prop_sample(spr, isp, ns)
+  end
 
   # n = 2 starting lineages (assume no stem branch)
   n = 2
@@ -170,21 +210,21 @@ function simulate_edges(λ       ::Array{Float64,1},
   ea = [1, 2]
 
   # edge array
-  ed = zeros(Int64, nssp_max*2, 2)
+  ed = zeros(Int64, nspp_max*2, 2)
   ed[ea,:] = [1 2;
               1 3]
 
   # edge lengths
-  el = zeros(nssp_max*2)
+  el = zeros(nspp_max*2)
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
-   event_probs(λ, μ, l, g, q, β, r, S, k, h, ny, model, md, δt, ns, as, hs, rfun)
+    event_probs(λ, μ, l, g, q, β, r, S, k, h, ny, model, md, δt, ns, as, hs)
 
   # make λ, μ, g & q probability functions
-  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md, ny, rfun)
-  updμpr! = make_updμpr!(μ, l, β, μpr, Sμpr, δt, k, h, model, md, ny, rfun)
-  updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, h, model, md, as, S, ny, rfun)
+  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md, ny)
+  updμpr! = make_updμpr!(μ, l, β, μpr, Sμpr, δt, k, h, model, md, ny)
+  updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, h, model, md, as, S, ny)
   updqpr! = make_updqpr!(Sqpr)
 
   # preallocate states probabilities for specific lengths of each event
@@ -258,12 +298,8 @@ function simulate_edges(λ       ::Array{Float64,1},
           # remove edge (only preserving persisting species)
           ned = findfirst(isequal(0), ed)[1]
 
-          if ned == 3
-            printstyled("What would you do if an endangered animal is eating an endangered plant? Sometimes nature is too cruel... \n", 
-              color=:light_red)
-            printstyled("tree went extinct... rerun simulation \n",
-              color=:light_red)
-            return 0, 0, 0, 0, 0, 0
+          if ned === 3
+            return zeros(Int64,0,2), Float64[], Int64[], 0, Sgh[], 0
           end
 
           @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
@@ -319,7 +355,8 @@ function simulate_edges(λ       ::Array{Float64,1},
 
         # if local extinction (state change)
         else
-          @inbounds st[i] = μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
+          @inbounds st[i] =
+            μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
         
           # no more events at this time
           continue
@@ -331,7 +368,8 @@ function simulate_edges(λ       ::Array{Float64,1},
           q event?
       =#
       if rand() < updqpr!(sti) 
-        @inbounds st[i] = qtos[sti][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
+        @inbounds st[i] = 
+          qtos[sti][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
 
         # no more events at this time
         continue
@@ -381,9 +419,8 @@ function simulate_edges(λ       ::Array{Float64,1},
 
     simt < 0.0 && break
 
-    if n == nssp_max 
-      @warn "more than $nssp_max species"
-      return 0, 0, 0, n, 0, 0
+    if n > nspp_max 
+      return zeros(Int64,0,2), Float64[], Int64[], n, Sgh[], 0
     end
   end
 
@@ -414,16 +451,16 @@ end
 Check if number of parameters and `z(t)` functions 
 is consistent with specified model.
 """
-function id_mod(cov_mod::NTuple{N,String}, 
+function id_mod(cov_mod::Tuple{Vararg{String}}, 
                 k      ::Int64, 
                 h      ::Int64, 
-                ny    ::Int64,
+                ny     ::Int64,
                 λ      ::Array{Float64,1}, 
                 μ      ::Array{Float64,1}, 
                 l      ::Array{Float64,1},
                 g      ::Array{Float64,1},
                 q      ::Array{Float64,1},
-                β      ::Array{Float64,1}) where {N}
+                β      ::Array{Float64,1})
 
   all_ok = true
 
@@ -433,16 +470,16 @@ function id_mod(cov_mod::NTuple{N,String},
        lastindex(l) != k*h       ||
        lastindex(g) != k*(k-1)*h ||
        lastindex(q) != h*(h-1))
-     printstyled("$k areas with $h hidden states should have the following parameter lengths:
-       λ = $((k+1)*h) parameters
-       μ = $(k*h) parameters
-       l = $(k*h) parameters
-       g = $(k*(k-1)*h) parameter matrix
-       q = $(h*(h-1)) parameters")
-    error("Parameter vector lengths not consistent with the number of states")
+    @info string(k, " areas with ", h, " hidden states should have the following parameter lengths:
+       λ = ", ((k+1)*h), " parameters
+       μ = ", (k*h), " parameters
+       l = ", (k*h), " parameters
+       g = ", (k*(k-1)*h), " parameter matrix
+       q = ", (h*(h-1)), " parameters")
+    @error "Parameter vector lengths not consistent with the number of states"
   end
 
-   model = [false, false, false]
+  model = [false, false, false]
 
   for m in cov_mod
     # if speciation
@@ -468,11 +505,10 @@ function id_mod(cov_mod::NTuple{N,String},
   betaE = model[1]*k*h*yppar + model[2]*k*h*yppar + model[3]*k*(k-1)*h*yppar
 
   if lastindex(β) == betaE
-    printstyled("Number of parameters are consistent with specified model \n", 
-      color=:green)
+    @info "Number of parameters are consistent with specified model"
   else
     all_ok = false
-    printstyled("this covariate model with $k areas, $ny covariates and $h hidden states should have a β vector length of $betaE \n")
+    @error string("this covariate model with ", k," areas, ",ny," covariates and ", h, " hidden states should have a β vector length of ", betaE)
   end
 
   mexp = "$(model[1] ? "speciation," : "")$(model[2] ? "extinction," : "")$(model[3] ? "transition," : "")"
@@ -480,13 +516,12 @@ function id_mod(cov_mod::NTuple{N,String},
   mexp = mexp[1:(end-2)]
 
   if all_ok 
-    printstyled("Simulating $mexp covariate SSE model with $k states, $h hidden states and $ny covariates \n", 
-      color=:green)
+    @info string("Simulating ", mexp, " covariate SSE model with ", k," states, ",h, " hidden states and ", ny, " covariates") 
   else
-    error("Parameter and z(t) function number not consistent with specified model")
+    @error "Parameter and z(t) function number not consistent with specified model"
   end
 
-  return tuple(model...)
+  return tuple(model...)::Tuple{Bool, Bool, Bool}
 end
 
 
@@ -496,12 +531,13 @@ end
 """
     init_states_pr!(isp  ::Array{Float64,1},
                     λ    ::Array{Float64,1},
+                    μ    ::Array{Float64,1},
                     l    ::Array{Float64,1},
                     g    ::Array{Float64,1},
                     q    ::Array{Float64,1},
-                    μ    ::Array{Float64,1},
                     β    ::Array{Float64,1},
                     S    ::Array{Sgh,1},
+                    r    ::Array{Float64,1},
                     k    ::Int64,
                     h    ::Int64,
                     ny   ::Int64,
@@ -514,10 +550,10 @@ end
 """
 function init_states_pr!(isp  ::Array{Float64,1},
                          λ    ::Array{Float64,1},
+                         μ    ::Array{Float64,1},
                          l    ::Array{Float64,1},
                          g    ::Array{Float64,1},
                          q    ::Array{Float64,1},
-                         μ    ::Array{Float64,1},
                          β    ::Array{Float64,1},
                          S    ::Array{Sgh,1},
                          r    ::Array{Float64,1},
@@ -527,8 +563,7 @@ function init_states_pr!(isp  ::Array{Float64,1},
                          model::NTuple{3,Bool},
                          md   ::Bool,
                          as   ::UnitRange{Int64},
-                         hs   ::UnitRange{Int64},
-                         rfun ::Function)
+                         hs   ::UnitRange{Int64})
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -563,7 +598,7 @@ function init_states_pr!(isp  ::Array{Float64,1},
       gr = 0.0
       if length(s.g) > 1
         for ta = s.g, fa = setdiff(s.g, ta)
-          gr += rfun(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+          gr += expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                      β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                      md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])
         end
@@ -631,8 +666,7 @@ function event_probs(λ    ::Array{Float64,1},
                      δt   ::Float64,
                      ns   ::Int64,
                      as   ::UnitRange{Int64},
-                     hs   ::UnitRange{Int64},
-                     rfun ::Function)
+                     hs   ::UnitRange{Int64})
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -661,7 +695,7 @@ function event_probs(λ    ::Array{Float64,1},
       if model[1]
         for a in s.g
           na += 1
-          λpr[si][na] = rfun(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
+          λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
         end
       else
         for a in s.g
@@ -686,7 +720,7 @@ function event_probs(λ    ::Array{Float64,1},
       if isone(length(s.g))
         if model[2]
           for a in s.g
-            μpr[si][1] = rfun(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+            μpr[si][1] = expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
           end
         else
           for a in s.g
@@ -713,7 +747,7 @@ function event_probs(λ    ::Array{Float64,1},
       if model[3]
         for (i,ta) = enumerate(setdiff(as,s.g)), fa = s.g
           gpr[si][i] += 
-            rfun(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+            expf(q[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
         end
@@ -777,10 +811,10 @@ function makecorresschg(gpr::Array{Array{Float64,1},1},
                         qpr::Array{Array{Float64,1},1},
                         λpr::Array{Array{Float64,1},1},
                         S  ::Array{Sgh, 1},
-                        as::UnitRange{Int64},
-                        hs::UnitRange{Int64},
-                        k ::Int64,
-                        ns::Int64)
+                        as ::UnitRange{Int64},
+                        hs ::UnitRange{Int64},
+                        k  ::Int64,
+                        ns ::Int64)
   # for *gains*
   gtos = Array{Int64,1}[]
   for i in Base.OneTo(ns)
@@ -878,8 +912,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
                       k    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
-                      ny   ::Int64,
-                      rfun ::Function)
+                      ny   ::Int64)
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -903,7 +936,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
       # within-area speciation
       for a in s.g
         na += 1
-        λpr[si][na] = rfun(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
+        λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
       end
       # between-area speciation
       if na > 1
@@ -957,8 +990,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
                       h    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
-                      ny   ::Int64,
-                      rfun ::Function)
+                      ny   ::Int64)
   
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -980,12 +1012,12 @@ function make_updμpr!(μ    ::Array{Float64,1},
       if isone(length(s.g))
         for a in s.g
           μpr[si][1] = 
-            rfun(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       else
         for a in s.g
           μpr[si][a] =
-            rfun(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
         end
       end
 
@@ -1038,8 +1070,7 @@ function make_updgpr!(g    ::Array{Float64,1},
                       md   ::Bool,
                       as   ::UnitRange{Int64},
                       S    ::Array{Sgh,1},
-                      ny   ::Int64,
-                      rfun ::Function)
+                      ny   ::Int64)
 
   # expected number of covariates
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
@@ -1065,7 +1096,7 @@ function make_updgpr!(g    ::Array{Float64,1},
         gpr[si][i] = 0.0
         for fa = s.g
           gpr[si][i] += 
-            rfun(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+            expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
                  md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
         end
@@ -1150,15 +1181,6 @@ coefficient `β` and covariate `x`.
 """
 expf(α::Float64, β::Float64, x::Float64) = α * exp(β * x)
 
-
-
-"""
-    powf(α::Float64, β::Float64, x::Float64)
-
-Power regression function for rates with base rate `α`, 
-coefficient `β` and covariate `x`.
-"""
-powf(α::Float64, β::Float64, x::Float64) = α * x^β
 
 
 

@@ -130,9 +130,10 @@ end
                    q       ::Array{Float64,1},
                    simt    ::Float64, 
                    δt      ::Float64,
+                   si      ::Int64,
                    nspp_max::Int64)
 
-Simulate edges tree according to `SSE_g`.
+Simulate edges tree according to `sse_g`.
 """
 function simulate_edges(λ       ::Array{Float64,1},
                         μ       ::Array{Float64,1},
