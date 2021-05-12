@@ -30,9 +30,12 @@ t(-_-t)
            tni         ::Float64,
            tune_int    ::Int64,
            dt          ::Float64,
-           screen_print::Int64)
+           out_file    ::String,
+           pardic      ::Dict{String, Int64},
+           screen_print::Int64,
+           obj_ar      ::Float64)
 
-Run slice-sampling Markov Chain given posterior function.
+Run Metropolis-Hastings Markov Chain given posterior function.
 """
 function mcmcmh(lhf         ::Function, 
                 p           ::Array{Array{Float64,1},1},
@@ -49,6 +52,8 @@ function mcmcmh(lhf         ::Function,
                 tni         ::Float64,
                 tune_int    ::Int64,
                 dt          ::Float64,
+                out_file    ::String,
+                pardic      ::Dict{String, Int64},
                 screen_print::Int64,
                 obj_ar      ::Float64)
 
@@ -60,7 +65,7 @@ function mcmcmh(lhf         ::Function,
   # run mcmc
   il, hl, pl, ol = 
     mcmcmh_mcmc(lhf, p, fp, nnps, nps, phid, niter, nthin, ncch, nswap, 
-      tn, o, t, npars, screen_print)
+      tn, o, t, npars, out_file, pardic, screen_print)
 
   # choose cold chain (is equal to 1)
   P = Array{Float64,2}(undef, size(hl,1), npars)
@@ -99,10 +104,12 @@ end
            tni         ::Float64,
            tune_int    ::Int64,
            dt          ::Float64,
+           out_file    ::String,
+           pardic      ::Dict{String, Int64},
            screen_print::Int64,
            obj_ar      ::Float64)
 
-Run slice-sampling Markov Chain given posterior function.
+Run Metropolis-Hastings Markov Chain given posterior function.
 """
 function mcmcmh(lhf         ::Function, 
                 p           ::DArray{Array{Float64,1},1,Array{Array{Float64,1},1}},
@@ -119,6 +126,8 @@ function mcmcmh(lhf         ::Function,
                 tni         ::Float64,
                 tune_int    ::Int64,
                 dt          ::Float64,
+                out_file    ::String,
+                pardic      ::Dict{String, Int64},
                 screen_print::Int64,
                 obj_ar      ::Float64)
 
@@ -138,7 +147,7 @@ function mcmcmh(lhf         ::Function,
   # run mcmc
   il, hl, pl, ol = 
     mcmcmh_mcmc(lhf, p, fp, nnps, nps, phid, niter, nthin, ncch, nswap, 
-      tn, o, t, npars, screen_print)
+      tn, o, t, npars, out_file, pardic, screen_print)
 
   # choose cold chain (is equal to 1)
   P = Array{Float64,2}(undef, size(hl,1), npars)

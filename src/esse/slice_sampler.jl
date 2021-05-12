@@ -57,6 +57,8 @@ function slice_sampler(lhf         ::Function,
                        winit       ::Float64,
                        optimal_w   ::Float64,
                        dt          ::Float64,
+                       out_file    ::String,
+                       pardic      ::Dict{String, Int64},
                        screen_print::Int64)
 
   # estimate optimal w
@@ -67,7 +69,8 @@ function slice_sampler(lhf         ::Function,
   # slice-sampler
   il, hl, pl, ol = 
     loop_slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, 
-      hfgps, w, npars, niter, nthin, nswap, ncch, o, t, screen_print)
+      hfgps, w, npars, niter, nthin, nswap, ncch, o, t, screen_print,
+      out_file, pardic)
 
   # choose cold chain (is equal to 1)
   P = Array{Float64,2}(undef, size(hl,1), npars)
@@ -136,6 +139,8 @@ function slice_sampler(lhf         ::Function,
                        winit       ::Float64,
                        optimal_w   ::Float64,
                        dt          ::Float64,
+                       out_file    ::String,
+                       pardic      ::Dict{String, Int64},
                        screen_print::Int64)
 
   # estimate optimal w
@@ -146,7 +151,8 @@ function slice_sampler(lhf         ::Function,
   # slice-sampler
   il, hl, pl, ol = 
     loop_slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, nngps, mvhfs, hfgps, 
-      w, npars, niter, nthin, nswap, ncch, o, t, screen_print)
+      w, npars, niter, nthin, nswap, ncch, o, t, screen_print,
+      out_file, pardic)
 
   # choose cold chain (is equal to 1)
   P = Array{Float64,2}(undef, size(hl,1), npars)

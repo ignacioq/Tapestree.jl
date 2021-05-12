@@ -349,7 +349,9 @@ function loop_slice_sampler(lhf         ::Function,
                             ncch        ::Int64,
                             o          ::Array{Int64,1}, 
                             t          ::Array{Float64,1},
-                            screen_print::Int64)
+                            screen_print::Int64,
+                            out_file    ::String,
+                            pardic      ::Dict{String, Int64})
 
   # maximum number of parameters in multivariate updates
   maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
@@ -385,44 +387,71 @@ function loop_slice_sampler(lhf         ::Function,
   # length fp
   lfp = length(fp[1])
 
-  # start iterations
-  prog = Progress(niter, screen_print, "running slice-sampler...", 20)
-
   # starting posteriors
   lhc = [lhf(p[c], fp[c], t[o[c]]) for c in Base.OneTo(ncch)]
 
-  for it in Base.OneTo(niter) 
-    for c in Base.OneTo(ncch)
-      lhc[c] = 
-        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
-          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
-    end
+  # start iterations
+  prog = Progress(niter, screen_print, "running slice-sampler...", 20)
 
-    # log samples
-    lthin += 1
-    if lthin == nthin
-      @inbounds begin
-        lit += 1
-        setindex!(il,  it,  lit)
-        setindex!(hl, lhc, lit, :)
-        for c in Base.OneTo(ncch)
-          setindex!(pl[c], p[c], lit, :)
+  # make header of file
+  pdc = sort!(collect(pardic), by = x -> x[2])
+  hh  = "Iteration\tPosterior"
+  for (k,v) in pdc
+    hh *= "\t"*k
+  end
+  hh *= "\n"
+
+  open(out_file*"_flush.log", "w") do of
+
+    write(of, hh)
+    flush(of)
+
+    for it in Base.OneTo(niter) 
+      for c in Base.OneTo(ncch)
+        lhc[c] = 
+          slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
+            nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
+      end
+
+      # log samples
+      lthin += 1
+      if lthin === nthin
+        # write to table
+        @inbounds begin
+          lit += 1
+          setindex!(il,  it,  lit)
+          setindex!(hl, lhc, lit, :)
+          for c in Base.OneTo(ncch)
+            setindex!(pl[c], p[c], lit, :)
+          end
+          setindex!(ol, o, lit, :)
         end
-        setindex!(ol, o, lit, :)
-      end
-      lthin = 0
-    end
 
-    # swap chains
-    if ncch > 1
-      lswap += 1
-      if lswap == nswap
-        swap_chains!(o, t, lhc)
-        lswap = 0
-      end
-    end
+        # write to file (only chain 1)
+        o1 = findfirst(isone, o)
+        p1 = p[o1]
+        sts = string(it,"\t",lhc[o1],"\t")
+        for i in Base.OneTo(npars)
+          sts *= string(p1[i], "\t")
+        end
+        sts *= "\n"
+        write(of, sts)
+        flush(of)
 
-    next!(prog)
+        lthin = 0
+      end
+
+      # swap chains
+      if ncch > 1
+        lswap += 1
+        if lswap == nswap
+          swap_chains!(o, t, lhc)
+          lswap = 0
+        end
+      end
+
+      next!(prog)
+    end
   end
 
   return il, hl, pl, ol
@@ -473,7 +502,9 @@ function loop_slice_sampler(lhf         ::Function,
                             ncch        ::Int64,
                             o           ::SharedArray{Int64,1}, 
                             t           ::Array{Float64,1},
-                            screen_print::Int64)
+                            screen_print::Int64,
+                            out_file    ::String,
+                            pardic      ::Dict{String, Int64})
 
   # maximum number of parameters in multivariate updates
   maxmvu = if iszero(lastindex(mvps)) && iszero(lastindex(mvhfs))
@@ -516,64 +547,89 @@ function loop_slice_sampler(lhf         ::Function,
   swr   = SharedArray{Bool,1}(fill(false, tns))
   swl   = SharedArray{Bool,1}(fill(false, tns))
 
+  # make header of file
+  pdc = sort!(collect(pardic), by = x -> x[2])
+  hh  = "Iteration\tPosterior"
+  for (k,v) in pdc
+    hh *= "\t"*k
+  end
+  hh *= "\tchain_t\n"
+
   # start parallel slice-sampling
   @sync @distributed for c in Base.OneTo(ncch)
 
-    # log variables
-    lthin, lit, lswap, ws = 0, 0, 0, 0
-    prog = Progress(niter, screen_print, "running slice-sampler...", 20)
+    open(string(out_file,"_",c,"_flush.log"), "w") do of
 
-    # preallocate pp and fpp
-    pp  = copy(p[c])
-    fpp = copy(fp[c])
+      write(of, hh)
+      flush(of)
 
-    for it in Base.OneTo(niter) 
+      # log variables
+      lthin, lit, lswap, ws = 0, 0, 0, 0
+      prog = Progress(niter, screen_print, "running slice-sampler...", 20)
 
-      # slice parameter cycle
-      lhc[c] = 
-        slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
-          nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
+      # preallocate pp and fpp
+      pp  = copy(p[c])
+      fpp = copy(fp[c])
 
-      # log samples
-      lthin += 1
-      if lthin == nthin
-        @inbounds begin
-          lit += 1
-          il[lit, c]    = it
-          hl[lit, c]    = lhc[c]
-          ol[lit, c]    = o[c]
-          pl[c][lit, :] = p[c]
-        end
-        lthin = 0
-      end
+      for it in Base.OneTo(niter) 
 
-      # log chain current iter
-      ipc[c] = it
+        # slice parameter cycle
+        lhc[c] = 
+          slice_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, Lv, Rv, 
+            nnps, nps, phid, mvps, nngps, mvhfs, hfgps, w, npars, lfp, t[o[c]])
 
-      ## swap chains
-      lswap += 1
-      if lswap == nswap
-        ws += 1
-        j, k = allsw[ws]
-        cij = c == j   # c is j
-        cik = c == k   # c is k
-        # swapper
-        if cij
-          while true
-            ipc[c] == ipc[k] && swl[ws] && break
+        # log samples
+        lthin += 1
+        if lthin == nthin
+          # write to table
+          @inbounds begin
+            lit += 1
+            il[lit, c]    = it
+            hl[lit, c]    = lhc[c]
+            ol[lit, c]    = o[c]
+            pl[c][lit, :] = p[c]
           end
-          swr[ws] = swap_chains!(j, k, o, t, lhc)
-        end
-        # swappee
-        if cik
-          swl[ws] = true
-          while true
-            ipc[c] == ipc[j] && swr[ws] && break
+
+           # write to file
+          sts = string(it,"\t",lhc[c],"\t")
+          for i in Base.OneTo(npars)
+            sts *= string(p[c][i], "\t")
           end
+          sts *= string(o[c], "\n")
+          write(of, sts)
+          flush(of)
+
+          lthin = 0
         end
-        lswap = 0
+
+        # log chain current iter
+        ipc[c] = it
+
+        ## swap chains
+        lswap += 1
+        if lswap == nswap
+          ws += 1
+          j, k = allsw[ws]
+          cij = c == j   # c is j
+          cik = c == k   # c is k
+          # swapper
+          if cij
+            while true
+              ipc[c] == ipc[k] && swl[ws] && break
+            end
+            swr[ws] = swap_chains!(j, k, o, t, lhc)
+          end
+          # swappee
+          if cik
+            swl[ws] = true
+            while true
+              ipc[c] == ipc[j] && swr[ws] && break
+            end
+          end
+          lswap = 0
+        end
+        next!(prog)
       end
-      next!(prog)
     end
   end
 

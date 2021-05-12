@@ -90,7 +90,7 @@ function esse(states_file ::String,
   tv, ed, el, bts, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
 
-  @info "Data for $(length(tv)) species successfully read"
+  @info "data for $(length(tv)) species successfully read"
 
   # scale y
   if scale_y[1]
@@ -117,7 +117,7 @@ function esse(states_file ::String,
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
       parallel)
 
-  @info "Data successfully prepared"
+  @info "data successfully prepared"
 
   @debug sort!(collect(pardic), by = x -> x[2])
 
@@ -150,7 +150,7 @@ function esse(states_file ::String,
     @info "likelihood based on pruning algorithm prepared"
 
   else
-    @error "No matching likelihood for algorithm: $algorithm"
+    @error "no matching likelihood for algorithm: $algorithm"
   end
 
   λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v = 
@@ -170,22 +170,22 @@ function esse(states_file ::String,
 
   if occursin(r"^[m|M][A-za-z]*[h|H][A-za-z]*", mc)
 
-    @info "Running Metropolis-Hastings Markov chain"
+    @info "running Metropolis-Hastings Markov chain"
 
     R = mcmcmh(lhf, p, fp, nnps, nps, phid, npars, niter, nthin, nburn, nswap, 
-      ncch, tni, tune_int, dt, screen_print, obj_ar)
+      ncch, tni, tune_int, dt, out_file, pardic, screen_print, obj_ar)
 
   elseif occursin(r"^[s|S][A-za-z]*", mc)
 
-    @info "Running Slice-Sampler Markov chain"
+    @info "running Slice-Sampler Markov chain"
 
     # run slice-sampler
     R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, 
         nngps, mvhfs, hfgps, npars, niter, nthin, nburn, ntakew, nswap, 
-        ncch, winit, optimal_w, dt, screen_print)
+        ncch, winit, optimal_w, dt, out_file, pardic, screen_print)
   else
 
-    @error "No matching Markov chain: $mc"
+    @error "no matching Markov chain: $mc"
   end
 
   # write chain output

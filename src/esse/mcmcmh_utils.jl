@@ -268,6 +268,8 @@ end
                 o           ::Array{Int64,1}, 
                 t           ::Array{Float64,1},
                 npars       ::Int64,
+                out_file    ::String,
+                pardic      ::Dict{String, Int64},
                 screen_print::Int64)
 
 Run Metropolis-Hastings burn-in phase.
@@ -286,6 +288,8 @@ function mcmcmh_mcmc(lhf         ::Function,
                      o           ::Array{Int64,1}, 
                      t           ::Array{Float64,1},
                      npars       ::Int64,
+                     out_file    ::String,
+                     pardic      ::Dict{String, Int64},
                      screen_print::Int64)
 
   nlogs = fld(niter, nthin)
@@ -310,40 +314,67 @@ function mcmcmh_mcmc(lhf         ::Function,
 
   prog = Progress(niter, screen_print, "running mcmc-mh...", 20)
 
-  # start burn-in iterations
-  for it in Base.OneTo(niter) 
+  # make header of file
+  pdc = sort!(collect(pardic), by = x -> x[2])
+  hh  = "Iteration\tPosterior"
+  for (k,v) in pdc
+    hh *= "\t"*k
+  end
+  hh *= "\n"
 
-    # updates
-    for c in Base.OneTo(ncch)
-      lhc[c] = par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, 
-                 nnps, nps, phid, tn, t[o[c]], npars, lfp)
-    end
+  open(out_file*"_flush.log", "w") do of
 
-    # log samples
-    lthin += 1
-    if lthin == nthin
-      @inbounds begin
-        lit += 1
-        setindex!(il,  it,  lit)
-        setindex!(hl, lhc, lit, :)
-        for c in Base.OneTo(ncch)
-          setindex!(pl[c], p[c], lit, :)
+    write(of, hh)
+    flush(of)
+
+    # start burn-in iterations
+    for it in Base.OneTo(niter) 
+
+      # updates
+      for c in Base.OneTo(ncch)
+        lhc[c] = par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, 
+                   nnps, nps, phid, tn, t[o[c]], npars, lfp)
+      end
+
+      # log samples
+      lthin += 1
+      if lthin === nthin
+        # write to table
+        @inbounds begin
+          lit += 1
+          setindex!(il,  it,  lit)
+          setindex!(hl, lhc, lit, :)
+          for c in Base.OneTo(ncch)
+            setindex!(pl[c], p[c], lit, :)
+          end
+          setindex!(ol, o, lit, :)
         end
-        setindex!(ol, o, lit, :)
-      end
-      lthin = 0
-    end
 
-    # swap chains
-    if ncch > 1
-      lswap += 1
-      if lswap == nswap
-        swap_chains!(o, t, lhc)
-        lswap = 0
-      end
-    end
+        # write to file (only chain 1)
+        o1 = findfirst(isone, o)
+        p1 = p[o1]
+        sts = string(it,"\t",lhc[o1],"\t")
+        for i in Base.OneTo(npars)
+          sts *= string(p1[i], "\t")
+        end
+        sts *= "\n"
+        write(of, sts)
+        flush(of)
 
-    next!(prog)
+        lthin = 0
+      end
+
+      # swap chains
+      if ncch > 1
+        lswap += 1
+        if lswap == nswap
+          swap_chains!(o, t, lhc)
+          lswap = 0
+        end
+      end
+
+      next!(prog)
+    end
   end
 
   return il, hl, pl, ol
@@ -368,6 +399,8 @@ end
                 o           ::SharedArray{Int64,1}, 
                 t           ::Array{Float64,1},
                 npars       ::Int64,
+                out_file    ::String,
+                pardic      ::Dict{String, Int64},
                 screen_print::Int64)
 
 Run Metropolis-Hastings burn-in phase.
@@ -386,6 +419,8 @@ function mcmcmh_mcmc(lhf         ::Function,
                      o           ::SharedArray{Int64,1}, 
                      t           ::Array{Float64,1},
                      npars       ::Int64,
+                     out_file    ::String,
+                     pardic      ::Dict{String, Int64},
                      screen_print::Int64)
 
   nlogs = fld(niter, nthin)
@@ -414,64 +449,89 @@ function mcmcmh_mcmc(lhf         ::Function,
   swr   = SharedArray{Bool,1}(fill(false, tns))
   swl   = SharedArray{Bool,1}(fill(false, tns))
 
+  # make header of file
+  pdc = sort!(collect(pardic), by = x -> x[2])
+  hh  = "Iteration\tPosterior"
+  for (k,v) in pdc
+    hh *= "\t"*k
+  end
+  hh *= "\tchain_t\n"
+
   # start parallel slice-sampling
   @sync @distributed for c in Base.OneTo(ncch)
 
-    # log variables
-    lthin, lit, lswap, ws = 0, 0, 0, 0
-    prog = Progress(niter, screen_print, "running mcmc-mh...", 20)
+    open(string(out_file,"_",c,"_flush.log"), "w") do of
 
-    # preallocate pp and fpp
-    pp  = copy(p[c])
-    fpp = copy(fp[c])
+      write(of, hh)
+      flush(of)
 
-   # start burn-in iterations
-    for it in Base.OneTo(niter) 
+      # log variables
+      lthin, lit, lswap, ws = 0, 0, 0, 0
+      prog = Progress(niter, screen_print, "running mcmc-mh...", 20)
 
-      # updates
-      lhc[c] = par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, 
-                 nnps, nps, phid, tn, t[o[c]], npars, lfp)
+      # preallocate pp and fpp
+      pp  = copy(p[c])
+      fpp = copy(fp[c])
 
-      # log samples
-      lthin += 1
-      if lthin === nthin
-        @inbounds begin
-          lit += 1
-          il[lit, c]    = it
-          hl[lit, c]    = lhc[c]
-          ol[lit, c]    = o[c]
-          pl[c][lit, :] = p[c]
-        end
-        lthin = 0
-      end
+     # start burn-in iterations
+      for it in Base.OneTo(niter) 
 
-      # log chain current iter
-      ipc[c] = it
+        # updates
+        lhc[c] = par_cycle(lhf, lhc[c], p[c], fp[c], pp, fpp, 
+                   nnps, nps, phid, tn, t[o[c]], npars, lfp)
 
-      ## swap chains
-      lswap += 1
-      if lswap == nswap
-        ws += 1
-        j, k = allsw[ws]
-        cij = c == j   # c is j
-        cik = c == k   # c is k
-        # swapper
-        if cij
-          while true
-            ipc[c] == ipc[k] && swl[ws] && break
+        # log samples
+        lthin += 1
+        if lthin === nthin
+          # write to table
+          @inbounds begin
+            lit += 1
+            il[lit, c]    = it
+            hl[lit, c]    = lhc[c]
+            ol[lit, c]    = o[c]
+            pl[c][lit, :] = p[c]
           end
-          swr[ws] = swap_chains!(j, k, o, t, lhc)
-        end
-        # swappee
-        if cik
-          swl[ws] = true
-          while true
-            ipc[c] == ipc[j] && swr[ws] && break
+
+          # write to file
+          sts = string(it,"\t",lhc[c],"\t")
+          for i in Base.OneTo(npars)
+            sts *= string(p[c][i], "\t")
           end
+          sts *= string(o[c], "\n")
+          write(of, sts)
+          flush(of)
+
+          lthin = 0
         end
-        lswap = 0
+
+        # log chain current iter
+        ipc[c] = it
+
+        ## swap chains
+        lswap += 1
+        if lswap == nswap
+          ws += 1
+          j, k = allsw[ws]
+          cij = c == j   # c is j
+          cik = c == k   # c is k
+          # swapper
+          if cij
+            while true
+              ipc[c] == ipc[k] && swl[ws] && break
+            end
+            swr[ws] = swap_chains!(j, k, o, t, lhc)
+          end
+          # swappee
+          if cik
+            swl[ws] = true
+            while true
+              ipc[c] == ipc[j] && swr[ws] && break
+            end
+          end
+          lswap = 0
+        end
+        next!(prog)
       end
-      next!(prog)
     end
   end
 
@@ -541,7 +601,7 @@ function par_cycle(lhf  ::Function,
     lhp   = lhf(pp, fp, ti)
 
     if -randexp() < (lhp - lhc[1] + log(pp[j]/p[j]))
-      lhc     = lhp
+      lhc = lhp
       unsafe_copyto!(p, 1, pp, 1, npars)
 
       lac[j] += 1.0
@@ -556,7 +616,7 @@ function par_cycle(lhf  ::Function,
     lhp   = lhf(pp, fp, ti)
 
     if -randexp() < (lhp - lhc)
-      lhc    = lhp
+      lhc = lhp
       unsafe_copyto!(p, 1, pp, 1, npars)
 
       lac[j] += 1.0
@@ -573,7 +633,7 @@ function par_cycle(lhf  ::Function,
     lhp    = lhf(p, fpp, ti)
 
     if -randexp() < (lhp - lhc + log(fpp[j]/fp[j]))
-      lhc    = lhp
+      lhc = lhp
       unsafe_copyto!(fp, 1, fpp, 1, lfp)
       unsafe_copyto!(p, 1, pp, 1, npars)
       lac[j] += 1.0
