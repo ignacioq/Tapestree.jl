@@ -45,28 +45,31 @@ function simulate_sse(λ       ::Array{Float64,1},
                       nspp_min::Int64   = 1,
                       nspp_max::Int64   = 200_000,
                       retry_ext::Bool   = true,
-                      rejectel0::Bool   = false) where {N}
+                      rejectel0::Bool   = false,
+                      verbose  ::Bool   = true) where {N}
 
   # make simulation
   ed, el, st, n, S, k = 
     simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
 
-  @info "Tree with $n extant species successfully simulated"
+  if verbose
+    @info "Tree with $n extant species successfully simulated"
 
-  if iszero(n)
-    @warn "\n
-    What would you do if an endangered animal is eating an endangered plant? \n 
-    Sometimes nature is too cruel..."
-    printstyled("tree went extinct... \n", color=:light_red)
-  end
+    if iszero(n)
+      @warn "\n
+      What would you do if an endangered animal is eating an endangered plant? \n 
+      Sometimes nature is too cruel..."
+      printstyled("tree went extinct... \n", color=:light_red)
+    end
 
-  if n > nspp_max
-    @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
-  end
+    if n > nspp_max
+      @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+    end
 
-  if rejectel0 && in(0.0, el)
-    @warn "Bad Luck! a lineage speciated at time 0.0... \n 
-    rerun simulation"
+    if rejectel0 && in(0.0, el)
+      @warn "Bad Luck! a lineage speciated at time 0.0... \n 
+      rerun simulation"
+    end
   end
 
   if retry_ext 
@@ -75,28 +78,30 @@ function simulate_sse(λ       ::Array{Float64,1},
       ed, el, st, n, S, k = 
         simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
 
-      @info "Tree with $n extant species successfully simulated"
+      if verbose
+        @info "Tree with $n extant species successfully simulated"
 
-      if iszero(n)
-        @warn "\n
-        What would you do if an endangered animal is eating an endangered plant? \n 
-        Sometimes nature is too cruel..."
-        printstyled("tree went extinct... \n", color=:light_red)
+        if iszero(n)
+          @warn "\n
+          What would you do if an endangered animal is eating an endangered plant? \n 
+          Sometimes nature is too cruel..."
+          printstyled("tree went extinct... \n", color=:light_red)
 
-        @info "But, don't worry, will rerun the simulation..."
-      end
+          @info "But, don't worry, will rerun the simulation..."
+        end
 
-      if n > nspp_max
-        @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+        if n > nspp_max
+          @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
 
-        @info "But, don't worry, will rerun the simulation..."
-      end
+          @info "But, don't worry, will rerun the simulation..."
+        end
 
-      if rejectel0 && in(0.0, el)
-        @warn "Bad Luck! a lineage speciated at time 0.0... \n 
-        rerun simulation"
+        if rejectel0 && in(0.0, el)
+          @warn "Bad Luck! a lineage speciated at time 0.0... \n 
+          rerun simulation"
 
-        @info "But, don't worry, will rerun the simulation..."
+          @info "But, don't worry, will rerun the simulation..."
+        end
       end
     end
   else 
