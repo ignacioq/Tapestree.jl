@@ -50,7 +50,7 @@ rexp(r::Float64) = @fastmath randexp()/r
 
 Return `true` if speciation event
 """
-λorμ(λ::Float64, μ::Float64) = λ/(λ + μ) > rand() ? true : false
+λorμ(λ::Float64, μ::Float64) = (λ/(λ + μ)) > rand() ? true : false
 
 
 

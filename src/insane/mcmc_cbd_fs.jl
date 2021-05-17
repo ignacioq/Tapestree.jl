@@ -48,7 +48,7 @@ function insane_cbd_fs(tree    ::sTbd,
                        λtni    ::Float64           = 1.0,
                        μtni    ::Float64           = 1.0,
                        obj_ar  ::Float64           = 0.4,
-                       pupdp   ::Array{Float64,1}  = [0.4,0.4,0.1],
+                       pupdp   ::Array{Float64,1}  = [0.2,0.2,0.5],
                        prints  ::Int64             = 5)
 
   # tree characters
@@ -303,7 +303,7 @@ function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
   if istip(tree)
     ll = - pe(tree)*(λ + μ)
   else
-    ll = log(2.0*λ) - pe(tree)*(λ + μ)
+    ll = log(λ) - pe(tree)*(λ + μ)
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
       return ll
@@ -340,7 +340,7 @@ function br_ll_cbd(tree::sTbd,
                    ldr ::Int64,
                    ix  ::Int64)
 
-  if ix == ldr
+  if ix === ldr
     return llik_cbd_f(tree, λc, μc)
   elseif ix < ldr
     ifx1 = isfix(tree.d1::sTbd)
@@ -365,6 +365,8 @@ end
 
 
 
+
+
 """
     fsp(tree::sTbd,
         bi  ::iBf,
@@ -384,7 +386,6 @@ function fsp(tree::sTbd,
 
   # forward simulate an internal branch
   t0, ret = fsbi(bi, λc, μc, ntry)
-
   fixalive!(t0)
 
   # if retain simulation
@@ -395,13 +396,13 @@ function fsp(tree::sTbd,
     itb = it(bi)
 
     # if speciation (if branch is internal)
-    iλ = itb ? 0.0 : log(2.0*λc)
+    iλ = itb ? 0.0 : log(λc)
 
     # likelihood ratio
-    llr = llik_cbd( t0, λc, μc) + iλ - 
+    llr = llik_cbd(t0, λc, μc) + iλ - 
           br_ll_cbd(tree, λc, μc, dri, ldr, 0)
-
     llc += llr
+
     # swap branch
     tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
   end
@@ -411,6 +412,7 @@ end
 
 
 
+#bi = idf[197]
 
 """
     fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
@@ -423,47 +425,43 @@ function fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
   tfb = tf(bi)
 
   t0 = sim_cbd(ti(bi) - tfb, λc, μc)
-
   na = snan(t0)
-  ret = true
 
-  # goes extinct
-  if iszero(na)
-    ret = false
-  else
-    # ntry per unobserved branch to go extinct
-    for i in Base.OneTo(na - 1)
-      for j in Base.OneTo(ntry)
+  if isone(na)
+    return t0, true
+  elseif iszero(na)
+    return t0, false
+  elseif na > 1
+    if bi.it
+      return t0, false
+    else
+      for i in Base.OneTo(na - 1)
         st0 = sim_cbd(tfb, λc, μc)
         th0 = treeheight(st0)
         # if goes extinct before the present
         if (th0 + 1e-11) < tfb
           #graft to tip
           add1(t0, st0, 1, 0)
-          break
+          continue
         end
-        if j === ntry
-          ret = false
-        end
+        return t0, false
       end
-      if ret === false
-        break
-      end
+
+      return t0, true
     end
   end
-
-  return t0, ret
 end
 
 
 
 
 """
-    swapbranch!(tree ::sTbd,
+    swapbranch!(tree::sTbd,
                 nbtr::sTbd,
-                dri  ::BitArray{1}, 
-                ldr  ::Int64,
-                ix   ::Int64)
+                dri ::BitArray{1}, 
+                ldr ::Int64,
+                it  ::Bool,
+                ix  ::Int64)
 
 Swap branch given by `dri` by `nbtr` and return the tree.
 """

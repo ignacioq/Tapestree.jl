@@ -163,9 +163,9 @@ end
 
 
 """
-    sntn(::Nothing)
+    snan(::Nothing)
 
-Return the number of tip nodes for `tree`.
+Return the number of alive nodes for `tree`.
 """
 snan(::Nothing) = 0
 
