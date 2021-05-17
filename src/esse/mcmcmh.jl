@@ -142,6 +142,7 @@ function mcmcmh(lhf         ::Function,
     mcmcmh_burn(lhf, p, fp, nnps, nps, phid, nburn, ncch, nswap, 
       o, t, tni, tune_int, npars, screen_print, obj_ar)
 
+  # reorder for new temperature
   temperature!(t, o, dt)
 
   # run mcmc

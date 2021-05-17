@@ -449,7 +449,7 @@ function mcmcmh_mcmc(lhf         ::Function,
   swr   = SharedArray{Bool,1}(fill(false, tns))
   swl   = SharedArray{Bool,1}(fill(false, tns))
 
-  # make header of file
+  # make file header
   pdc = sort!(collect(pardic), by = x -> x[2])
   hh  = "Iteration\tPosterior"
   for (k,v) in pdc

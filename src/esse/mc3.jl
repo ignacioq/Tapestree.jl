@@ -33,29 +33,10 @@ Set chain temperature vectors.
 function temperature!(t ::Array{Float64,1}, 
                       o ::Array{Int64,1},
                       dt::Float64)
-  for (i,v) in enumerate(o)
-    t[i] = 1.0/(1.0 + (dt*(Float64(v)-1.0)))
+  for i in o
+    t[i] = 1.0/(1.0 + (dt*(Float64(i)-1.0)))
   end
 end
-
-
-
-
-"""
-    temperature!(t::Array{Float64,1}, 
-                 o ::Array{Int64,1},
-                 dt ::Float64)
-
-Set chain temperature vectors.
-"""
-function temperature!(t ::Array{Float64,1}, 
-                      o ::SharedArray{Int64,1},
-                      dt::Float64)
-  for (i,v) in enumerate(o)
-    t[i] = 1.0/(1.0 + (dt*(Float64(v)-1.0)))
-  end
-end
-
 
 
 
