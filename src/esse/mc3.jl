@@ -108,7 +108,7 @@ function swap(j  ::Int64,
               o  ::Array{Int64,1},
               t  ::Array{Float64,1})
   @inbounds begin
-    -randexp() < ((t[o[j]] - t[o[k]]) * (lhc[k] - lhc[j]))
+    -randexp() < ((t[o[j]] - t[o[k]]) * (lhc[k]/t[o[k]] - lhc[j]/t[o[j]]))
   end
 end
 
@@ -130,7 +130,7 @@ function swap(j  ::Int64,
               o  ::SharedArray{Int64,1},
               t  ::Array{Float64,1})
   @inbounds begin
-    -randexp() < ((t[o[j]] - t[o[k]]) * (lhc[k] - lhc[j]))
+    -randexp() < ((t[o[j]] - t[o[k]]) * (lhc[k]/t[o[k]] - lhc[j]/t[o[j]]))
   end
 end
 
