@@ -90,7 +90,7 @@ function esse(states_file ::String,
   tv, ed, el, bts, x, y = 
     read_data_esse(states_file, tree_file, envdata_file)
 
-  @info "data for $(length(tv)) species successfully read"
+  @info "Data for $(length(tv)) species successfully read"
 
   # scale y
   if scale_y[1]
@@ -117,7 +117,7 @@ function esse(states_file ::String,
     prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
       parallel)
 
-  @info "data successfully prepared"
+  @info "Data successfully prepared"
 
   @debug sort!(collect(pardic), by = x -> x[2])
 
@@ -147,7 +147,7 @@ function esse(states_file ::String,
     llfnj = make_loglik_nj(X, tdic, abts1, abts2, trios, int, 
       λevent!, rootll_nj!, ns, ned)
 
-    @info "likelihood based on pruning algorithm prepared"
+    @info "Likelihood based on pruning algorithm prepared"
 
   else
     @error "no matching likelihood for algorithm: $algorithm"
@@ -170,14 +170,14 @@ function esse(states_file ::String,
 
   if occursin(r"^[m|M][A-za-z]*[h|H][A-za-z]*", mc)
 
-    @info "running Metropolis-Hastings Markov chain"
+    @info "Running Metropolis-Hastings Markov chain"
 
     R = mcmcmh(lhf, p, fp, nnps, nps, phid, npars, niter, nthin, nburn, nswap, 
       ncch, tni, tune_int, dt, out_file, pardic, screen_print, obj_ar)
 
   elseif occursin(r"^[s|S][A-za-z]*", mc)
 
-    @info "running Slice-Sampler Markov chain"
+    @info "Running Slice-Sampler Markov chain"
 
     # run slice-sampler
     R = slice_sampler(lhf, p, fp, nnps, nps, phid, mvps, 
@@ -185,7 +185,7 @@ function esse(states_file ::String,
         ncch, winit, optimal_w, dt, out_file, pardic, screen_print)
   else
 
-    @error "no matching Markov chain: $mc"
+    @error "No matching Markov chain: $mc"
   end
 
   # write chain output
@@ -193,7 +193,7 @@ function esse(states_file ::String,
 
   # run ancestral state marginal probabilities
   if node_ps[1]
-    @info "estimating node marginal states probabilities..."
+    @info "Estimating node marginal states probabilities..."
     S = sample_node_ps(R, A, spf, node_ps[2], ns, ned)
 
     # make dictionary for names
