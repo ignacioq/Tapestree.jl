@@ -400,7 +400,7 @@ function fsp(tree::sTbd,
 
   # if retain simulation
   if ret
-    
+
     fixalive!(t0)
 
     # get branch information
@@ -439,6 +439,7 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
   # times
   tfb = tf(bi)
 
+  # forward simulation during branch length
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
   na = snan(t0)
 
