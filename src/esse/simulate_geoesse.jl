@@ -42,8 +42,7 @@ function simulate_sse(λ       ::Array{Float64,1},
                       cov_mod ::Tuple{Vararg{String}};
                       δt      ::Float64 = 1e-4,
                       ast     ::Int64   = 0,
-                      nspp_min::Int64   = 1,
-                      nspp_max::Int64   = 200_000,
+                      nspp_max::Int64   = 100_000,
                       retry_ext::Bool   = true,
                       rejectel0::Bool   = false,
                       verbose  ::Bool   = true) where {N}
@@ -62,19 +61,22 @@ function simulate_sse(λ       ::Array{Float64,1},
       printstyled("tree went extinct... \n", color=:light_red)
     end
 
-    if n > nspp_max
-      @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
-    end
-
     if rejectel0 && in(0.0, el)
       @warn "Bad Luck! a lineage speciated at time 0.0... \n 
       rerun simulation"
     end
   end
 
+  if n > nspp_max
+    if verbose
+      @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+    end
+    return Dict{Int64, Vector{Float64}}(), ones(Int64,n,2), ones(Float64,n)
+  end
+
   if retry_ext 
-    while iszero(size(ed,1)) || (rejectel0 && in(0.0, el)) ||
-          n < nspp_min       || n > nspp_max 
+    while iszero(size(ed,1)) || (rejectel0 && in(0.0, el))
+
       ed, el, st, n, S, k = 
         simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
 
@@ -90,18 +92,19 @@ function simulate_sse(λ       ::Array{Float64,1},
           @info "But, don't worry, will rerun the simulation..."
         end
 
-        if n > nspp_max
-          @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
-
-          @info "But, don't worry, will rerun the simulation..."
-        end
-
         if rejectel0 && in(0.0, el)
           @warn "Bad Luck! a lineage speciated at time 0.0... \n 
           rerun simulation"
 
           @info "But, don't worry, will rerun the simulation..."
         end
+      end
+
+      if n > nspp_max
+        if verbose
+          @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
+        end
+        return Dict{Int64, Vector{Float64}}(), ones(Int64,n,2), ones(Float64,n)
       end
     end
   else 
