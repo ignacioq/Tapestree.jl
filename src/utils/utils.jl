@@ -129,6 +129,56 @@ end
 
 
 
+"""
+    fIrand(s::Int64)
+
+Fast sampling of an Integer from `0:(s-1)` based on 
+`https://discourse.julialang.org/t/rand-1-10-vs-int-round-10-rand/14339/9`
+"""
+@inline function fIrand(s::Int64)
+    __nearlydivisionless(s, UInt64, UInt128, UInt128(1) << 64, 64)
+end
+
+
+
+
+"""
+    __nearlydivisionless(s::Integer, T, T2, maxval, nbits)
+
+Fast sampling of an Integer from `1:s` based on 
+`https://discourse.julialang.org/t/rand-1-10-vs-int-round-10-rand/14339/9`
+"""
+@inline function __nearlydivisionless(s::Integer, T, T2, maxval, nbits)
+    l, m = drawl(s, maxval, T, T2)
+    if (l < s)
+        t = maxval % s
+        while l < t
+            l, m = drawl(s, maxval, T, T2)
+        end
+    end
+    return Int64(m >> nbits)
+end
+
+
+
+
+"""
+    drawl(s::Integer, maxval, T, T2)
+
+Fast sampling of an Integer from `1:s` based on 
+`https://discourse.julialang.org/t/rand-1-10-vs-int-round-10-rand/14339/9`
+"""
+@inline function drawl(s::Integer, maxval, T, T2)
+    x = rand(T)
+    m = convert(T2, x) * s
+    l = m % maxval
+    return (l, m)
+end
+
+
+
+
+
 
 
 
