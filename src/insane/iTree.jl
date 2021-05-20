@@ -92,6 +92,7 @@ with the following fields:
   d2: daughter tree 2
   pe: pendant edge
   iμ: is an extinction node
+  fx: if it is fix
 
     sTbd()
 

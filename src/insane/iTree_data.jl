@@ -457,9 +457,9 @@ end
 """
     ifxe(tree::iTgbmbd)
 
-Return `true` if fix branch goes extict for GBM forward simulation. 
+Return `true` if fix branch goes extinct for GBM forward simulation. 
 """
-function ifxe(tree::iTgbmbd)
+function ifxe(tree::T) where T <: iTree
 
   if istip(tree)
     if isextinct(tree)
@@ -468,10 +468,10 @@ function ifxe(tree::iTgbmbd)
       return false
     end
   else
-    if isfix(tree.d1::iTgbmbd)
-      ifxe(tree.d1::iTgbmbd)
+    if isfix(tree.d1::T)
+      ifxe(tree.d1::T)
     else
-      ifxe(tree.d2::iTgbmbd)
+      ifxe(tree.d2::T)
     end
   end
 end

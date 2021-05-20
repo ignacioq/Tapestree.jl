@@ -14,42 +14,40 @@ Created 25 08 2020
 
 """
     insane_cbd_fs(tree    ::sTbd, 
-                  out_file::String;
-                  λprior  ::Float64           = 0.1,
-                  μprior  ::Float64           = 0.1,
-                  niter   ::Int64             = 1_000,
-                  nthin   ::Int64             = 10,
-                  nburn   ::Int64             = 200,
-                  tune_int::Int64             = 100,
-                  ϵi      ::Float64           = 0.4,
-                  λi      ::Float64           = NaN,
-                  μi      ::Float64           = NaN,
-                  ntry    ::Int64             = 1,
-                  λtni    ::Float64           = 1.0,
-                  μtni    ::Float64           = 1.0,
-                  obj_ar  ::Float64           = 0.4,
-                  pupdp   ::NTuple{3,Float64} = (0.4,0.4,0.1),
-                  prints  ::Int64              = 5)
+                  out_file::String,
+                  λprior  ::Float64,
+                  μprior  ::Float64,
+                  niter   ::Int64,
+                  nthin   ::Int64,
+                  nburn   ::Int64,
+                  tune_int::Int64,
+                  ϵi      ::Float64,
+                  λi      ::Float64,
+                  μi      ::Float64,
+                  λtni    ::Float64,
+                  μtni    ::Float64,
+                  obj_ar  ::Float64,
+                  pupdp   ::Array{Float64,1},
+                  prints  ::Int64)
 
 Run insane for constant pure-birth.
 """
 function insane_cbd_fs(tree    ::sTbd, 
-                       out_file::String;
-                       λprior  ::Float64           = 0.1,
-                       μprior  ::Float64           = 0.1,
-                       niter   ::Int64             = 1_000,
-                       nthin   ::Int64             = 10,
-                       nburn   ::Int64             = 200,
-                       tune_int::Int64             = 100,
-                       ϵi      ::Float64           = 0.4,
-                       λi      ::Float64           = NaN,
-                       μi      ::Float64           = NaN,
-                       ntry    ::Int64             = 1,
-                       λtni    ::Float64           = 1.0,
-                       μtni    ::Float64           = 1.0,
-                       obj_ar  ::Float64           = 0.4,
-                       pupdp   ::Array{Float64,1}  = [0.2,0.2,0.5],
-                       prints  ::Int64             = 5)
+                       out_file::String,
+                       λprior  ::Float64,
+                       μprior  ::Float64,
+                       niter   ::Int64,
+                       nthin   ::Int64,
+                       nburn   ::Int64,
+                       tune_int::Int64,
+                       ϵi      ::Float64,
+                       λi      ::Float64,
+                       μi      ::Float64,
+                       λtni    ::Float64,
+                       μtni    ::Float64,
+                       obj_ar  ::Float64,
+                       pupdp   ::Array{Float64,1},
+                       prints  ::Int64)
 
   # tree characters
   th = treeheight(tree)
@@ -77,11 +75,11 @@ function insane_cbd_fs(tree    ::sTbd,
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn = 
-      mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior, ntry,
+      mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior,
         nburn, ϵi, λi, μi, λtni, μtni, scalef, idf, pup, prints, svf)
 
   # mcmc
-  R, tree = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior, ntry,
+  R, tree = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
         niter, nthin, λtn, μtn, th, idf, pup, prints, svf)
 
   pardic = Dict(("lambda"      => 1),
@@ -125,7 +123,6 @@ function mcmc_burn_cbd(tree    ::sTbd,
                        tune_int::Int64,
                        λprior  ::Float64,
                        μprior  ::Float64,
-                       ntry    ::Int64,
                        nburn   ::Int64,
                        ϵi      ::Float64,
                        λi      ::Float64,
@@ -152,6 +149,10 @@ function mcmc_burn_cbd(tree    ::sTbd,
     λc, μc = λi, μi
   end
 
+  # length(idf)
+  lidf = lastindex(idf)
+
+  # likelihood
   llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
@@ -177,7 +178,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
       
       # forward simulation proposal proposal
       if p === 3
-        tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
+        tree, llc = fsp(tree, idf[fIrand(lidf) + 1], llc, λc, μc)
       end
 
       # log tuning parameters
@@ -226,7 +227,6 @@ function mcmc_cbd(tree  ::sTbd,
                   μc    ::Float64,
                   λprior::Float64,
                   μprior::Float64,
-                  ntry  ::Int64,
                   niter ::Int64,
                   nthin ::Int64,
                   λtn   ::Float64,
@@ -236,6 +236,9 @@ function mcmc_cbd(tree  ::sTbd,
                   pup   ::Array{Int64,1}, 
                   prints::Int64,
                   svf   ::Function)
+
+  # length(idf)
+  lidf = lastindex(idf)
 
   # logging
   nlogs = fld(niter,nthin)
@@ -252,18 +255,18 @@ function mcmc_cbd(tree  ::sTbd,
     for p in pup
 
       # λ proposal
-      if p == 1
+      if p === 1
         llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
       end
 
       # μ proposal
-      if p == 2
+      if p === 2
         llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
       end
 
       # forward simulation proposal proposal
       if p === 3
-        tree, llc = fsp(tree, rand(idf), llc, λc, μc, ntry)
+        tree, llc = fsp(tree, idf[fIrand(lidf) + 1], llc, λc, μc)
       end
 
     end
@@ -303,7 +306,7 @@ function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
   if istip(tree)
     ll = - pe(tree)*(λ + μ)
   else
-    ll = log(λ) - pe(tree)*(λ + μ)
+    ll = log(2.0*λ) - pe(tree)*(λ + μ)
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
       return ll
@@ -322,7 +325,6 @@ end
 
 
 
-
 """
     br_ll_cbd(tree::sTbd,
               λc  ::Float64, 
@@ -334,33 +336,32 @@ end
 Returns constant birth-death likelihood for whole branch `br`.
 """
 function br_ll_cbd(tree::sTbd,
-                   λc  ::Float64, 
-                   μc  ::Float64,
+                   λ   ::Float64, 
+                   μ   ::Float64,
                    dri ::BitArray{1}, 
                    ldr ::Int64,
                    ix  ::Int64)
 
   if ix === ldr
-    return llik_cbd_f(tree, λc, μc)
+    return llik_cbd_f(tree, λ, μ)
   elseif ix < ldr
     ifx1 = isfix(tree.d1::sTbd)
     if ifx1 && isfix(tree.d2::sTbd)
       ix += 1
       if dri[ix]
-        ll = br_ll_cbd(tree.d1::sTbd, λc, μc, dri, ldr, ix)
+        ll = br_ll_cbd(tree.d1::sTbd, λ, μ, dri, ldr, ix)
       else
-        ll = br_ll_cbd(tree.d2::sTbd, λc, μc, dri, ldr, ix)
+        ll = br_ll_cbd(tree.d2::sTbd, λ, μ, dri, ldr, ix)
       end
     elseif ifx1
-      ll = br_ll_cbd(tree.d1::sTbd, λc, μc, dri, ldr, ix)
+      ll = br_ll_cbd(tree.d1::sTbd, λ, μ, dri, ldr, ix)
     else
-      ll = br_ll_cbd(tree.d2::sTbd, λc, μc, dri, ldr, ix)
+      ll = br_ll_cbd(tree.d2::sTbd, λ, μ, dri, ldr, ix)
     end
   end
 
   return ll
 end
-
 
 
 
@@ -380,27 +381,40 @@ Forward simulation proposal function for constant birth-death.
 function fsp(tree::sTbd,
              bi  ::iBf,
              llc ::Float64,
-             λc  ::Float64, 
-             μc  ::Float64,
-             ntry::Int64)
+             λ   ::Float64, 
+             μ   ::Float64)
 
   # forward simulate an internal branch
-  t0, ret = fsbi(bi, λc, μc, ntry)
-  fixalive!(t0)
+  t0, ret = fsbi(bi, λ, μ)
+
+  # times
+  # tib = ti(bi)
+
+  # forward simulate an internal branch
+  # t0 = sim_cbd(tib, tib - tf(bi), λ, μ)
+  # while ifxe(t0)
+  #   t0 = sim_cbd(tib, tib - tf(bi), λ, μ)
+  # end
+
+  # na = snan(t0)
 
   # if retain simulation
   if ret
+    
+    fixalive!(t0)
+
     # get branch information
     dri = dr(bi)
     ldr = lastindex(dri)
     itb = it(bi)
 
     # if speciation (if branch is internal)
-    iλ = itb ? 0.0 : log(λc)
+    iλ = itb ? 0.0 : log(2.0*λ)
 
     # likelihood ratio
-    llr = llik_cbd(t0, λc, μc) + iλ - 
-          br_ll_cbd(tree, λc, μc, dri, ldr, 0)
+    llr = llik_cbd(t0, λ, μ) + iλ - 
+          br_ll_cbd(tree, λ, μ, dri, ldr, 0)
+
     llc += llr
 
     # swap branch
@@ -412,45 +426,51 @@ end
 
 
 
-#bi = idf[197]
-
 """
-    fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
+    fsbi(bi::iBf, λ::Float64, μ::Float64, ntry::Int64)
 
 Forward simulation for branch `bi`
 """
-function fsbi(bi::iBf, λc::Float64, μc::Float64, ntry::Int64)
+function fsbi(bi::iBf, λ::Float64, μ::Float64)
+
+  # retain?
+  ret = true
 
   # times
   tfb = tf(bi)
 
-  t0 = sim_cbd(ti(bi) - tfb, λc, μc)
+  t0 = sim_cbd(ti(bi) - tfb, λ, μ)
   na = snan(t0)
 
-  if isone(na)
-    return t0, true
-  elseif iszero(na)
-    return t0, false
+  if iszero(na)
+    ret = false
   elseif na > 1
-    if bi.it
-      return t0, false
+    if it(bi)
+      ret = false
     else
-      for i in Base.OneTo(na - 1)
-        st0 = sim_cbd(tfb, λc, μc)
-        th0 = treeheight(st0)
-        # if goes extinct before the present
-        if (th0 + 1e-11) < tfb
-          #graft to tip
-          add1(t0, st0, 1, 0)
-          continue
+      for j in Base.OneTo(na - 1)
+        for i in Base.OneTo(2)
+          st0 = sim_cbd(tfb, λ, μ)
+          th0 = treeheight(st0)
+          # if goes extinct before the present
+          if (th0 + 1e-11) < tfb
+            #graft to tip
+            add1(t0, st0, 1, 0)
+            break
+          end
+          if i === 2
+            ret = false
+          end
         end
-        return t0, false
+        !ret && break
       end
-
-      return t0, true
     end
   end
+
+  return t0, ret
 end
+
+
 
 
 
@@ -472,7 +492,7 @@ function swapbranch!(tree::sTbd,
                      it  ::Bool,
                      ix  ::Int64)
 
-  if ix == ldr
+  if ix === ldr
     if !it
       addtree(nbtr, tree) 
     end
@@ -552,6 +572,7 @@ function fixds(tree::sTbd)
 
   return tree
 end
+
 
 
 

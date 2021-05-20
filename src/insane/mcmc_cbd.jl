@@ -46,47 +46,22 @@ function insane_cbd(tree        ::sTbd,
                     μi          ::Float64           = NaN,
                     λtni        ::Float64           = 1.0,
                     μtni        ::Float64           = 1.0,
-                    ntry        ::Int64             = 2,
                     obj_ar      ::Float64           = 0.4,
-                    pupdp       ::Array{Float64,1}  = [0.4,0.4,0.1,0.1],
+                    pupdp       ::Array{Float64,1}  = [0.2,0.2,0.5],
                     prints      ::Int64             = 5)
 
   # forward simulation
   if occursin(r"^[f|F][A-za-z]*", augmentation)
     R, tree = insane_cbd_fs(tree, out_file, 
-      λprior = λprior, 
-      μprior = μprior, 
-      niter = niter, 
-      nthin = nthin, 
-      nburn = nburn, 
-      tune_int = tune_int, 
-      ϵi = ϵi, 
-      λi = λi, 
-      μi = μi, 
-      ntry = ntry, 
-      λtni = λtni, 
-      μtni = μtni, 
-      obj_ar = obj_ar, 
-      pupdp = pupdp, 
-      prints = prints)
+      λprior, μprior, niter, nthin, nburn, tune_int, ϵi, λi, μi, λtni, μtni, 
+      obj_ar, pupdp, prints)
+
 
   # graft/prune
   elseif occursin(r"^[g|G][A-za-z]*", augmentation)
     R, tree = insane_cbd_gp(tree, out_file, 
-      λprior = λprior, 
-      μprior = μprior, 
-      niter = niter, 
-      nthin = nthin, 
-      nburn = nburn, 
-      tune_int = tune_int, 
-      ϵi = ϵi, 
-      λi = λi, 
-      μi = μi, 
-      λtni = λtni, 
-      μtni = μtni, 
-      obj_ar = obj_ar, 
-      pupdp = pupdp, 
-      prints = prints)
+      λprior, μprior, niter, nthin, nburn, tune_int, ϵi, λi, μi, λtni, μtni, 
+      obj_ar, pupdp, prints)
   else
     @error string(augmentation," does not match `fs` or `gp`")
   end

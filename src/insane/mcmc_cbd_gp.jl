@@ -34,20 +34,20 @@ Run insane for constant pure-birth.
 """
 function insane_cbd_gp(tree    ::sTbd, 
                        out_file::String;
-                       λprior  ::Float64           = 0.1,
-                       μprior  ::Float64           = 0.1,
-                       niter   ::Int64             = 1_000,
-                       nthin   ::Int64             = 10,
-                       nburn   ::Int64             = 200,
-                       tune_int::Int64             = 100,
-                       ϵi      ::Float64           = 0.4,
-                       λi      ::Float64           = NaN,
-                       μi      ::Float64           = NaN,
-                       λtni    ::Float64           = 1.0,
-                       μtni    ::Float64           = 1.0,
-                       obj_ar  ::Float64           = 0.4,
-                       pupdp   ::Array{Float64,1}  = [0.4,0.4,0.1,0.1],
-                       prints  ::Int64             = 5)
+                       λprior  ::Float64,
+                       μprior  ::Float64,
+                       niter   ::Int64,
+                       nthin   ::Int64,
+                       nburn   ::Int64,
+                       tune_int::Int64,
+                       ϵi      ::Float64,
+                       λi      ::Float64,
+                       μi      ::Float64,
+                       λtni    ::Float64,
+                       μtni    ::Float64,
+                       obj_ar  ::Float64,
+                       pupdp   ::Array{Float64,1},
+                       prints  ::Int64)
 
   # tree characters
   th = treeheight(tree)
