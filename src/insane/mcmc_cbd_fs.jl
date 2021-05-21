@@ -387,22 +387,8 @@ function fsp(tree::sTbd,
   # forward simulate an internal branch
   t0, ret = fsbi(bi, λ, μ)
 
-  # times
-  # tib = ti(bi)
-
-  # forward simulate an internal branch
-  # t0 = sim_cbd(tib, tib - tf(bi), λ, μ)
-  # while ifxe(t0)
-  #   t0 = sim_cbd(tib, tib - tf(bi), λ, μ)
-  # end
-
-  # na = snan(t0)
-
   # if retain simulation
   if ret
-
-    fixalive!(t0)
-
     # get branch information
     dri = dr(bi)
     ldr = lastindex(dri)
@@ -426,6 +412,7 @@ end
 
 
 
+
 """
     fsbi(bi::iBf, λ::Float64, μ::Float64, ntry::Int64)
 
@@ -443,6 +430,8 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
   na = snan(t0)
 
+  fixrtip!(t0)
+
   if iszero(na)
     ret = false
   elseif na > 1
@@ -456,7 +445,7 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
           # if goes extinct before the present
           if (th0 + 1e-11) < tfb
             #graft to tip
-            add1(t0, st0, 1, 0)
+            add1fx(t0, st0, 1, 0)
             break
           end
           if i === 2
@@ -470,7 +459,6 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
 
   return t0, ret
 end
-
 
 
 
@@ -612,6 +600,39 @@ end
 
 
 
+
+"""
+    fixrtip!(tree::sTbd)
+
+Fixes the the path for a random non extinct tip.
+"""
+function fixrtip!(tree::sTbd)
+
+  fix!(tree)
+
+  if !istip(tree)
+    if isextinct(tree.d1::sTbd)
+      fixrtip!(tree.d2::sTbd)
+    elseif isextinct(tree.d2::sTbd)
+      fixrtip!(tree.d1::sTbd)
+    else
+      na1 = snan(tree.d1::sTbd)
+      na2 = snan(tree.d2::sTbd)
+      # probability proportional to number of lineages
+      if (fIrand(na1+na2) + 1) > na1
+        fixrtip!(tree.d2::sTbd)
+      else
+        fixrtip!(tree.d1::sTbd)
+      end
+    end
+  end
+end
+
+
+
+
+
+
 """
     add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
 
@@ -637,6 +658,39 @@ function add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
   end
   if ix <= it && !isnothing(tree.d2)
     ix = add1(tree.d2::sTbd, stree, it, ix)
+  end
+
+  return ix
+end
+
+
+
+
+"""
+    add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
+
+Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
+"""
+function add1fx(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
+
+  if istip(tree) && !isextinct(tree) && !isfix(tree)
+    ix += 1
+
+    if ix === it
+      npe = pe(tree) + pe(stree)
+      setpe!(tree, npe)
+      setproperty!(tree, :iμ, stree.iμ)
+      tree.d1 = stree.d1
+      tree.d2 = stree.d2
+    end
+    return ix 
+  end
+
+  if ix <= it && !isnothing(tree.d1)
+    ix = add1fx(tree.d1::sTbd, stree, it, ix)
+  end
+  if ix <= it && !isnothing(tree.d2)
+    ix = add1fx(tree.d2::sTbd, stree, it, ix)
   end
 
   return ix
