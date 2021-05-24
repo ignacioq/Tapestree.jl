@@ -192,8 +192,6 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          prints  ::Int64,
                          scalef  ::Function)
 
-  @info "started burn-in"
-
   # initialize acceptance log
   ltn = 0
   lup = lλac = lμac = 0.0
@@ -212,6 +210,8 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   # number of branches and of triads
   nbr  = lastindex(idf)
   ntr  = lastindex(triads)
+
+  @info "started burn-in"
 
   for it in Base.OneTo(nburn)
 
@@ -472,9 +472,18 @@ function fsp(Ψp   ::iTgbmbd,
              ntry ::Int64,
              nlim ::Int64)
 
+
+  """
+  here, forward simulation cannot know which is the fix branch but
+  has to be assigned later.
+  For more efficiency, do a triad update
+  """
+
   # get branch start and end λ & μ
   dri = dr(bi)
   ldr = lastindex(dri)
+
+
   # λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
 
   # make bb given endpoints
