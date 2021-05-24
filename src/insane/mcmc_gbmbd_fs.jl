@@ -613,7 +613,7 @@ function fsbi(bi  ::iBf,
       end
     end
   end
-  
+
   return t0, ret, λf, μf
 end
 

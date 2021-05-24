@@ -162,7 +162,7 @@ function sim_gbm(t   ::Float64,
     end
 
   else
-    return nothing, nsp
+    return iTgbmbd(), nsp
   end
 end
 
@@ -344,7 +344,7 @@ function sim_ov_gbm(t   ::Float64,
 
     return iTgbmbd(nothing, nothing, bt, false, true, tv, λv, μv), nsp
   else
-    return nothing, nsp
+    return iTgbmbd(), nsp
   end
 
 end
@@ -599,7 +599,7 @@ function sim_gbm(nsδt::Float64,
       μt = μt1
     end
   else
-    return nothing, nsp
+    return iTgbmbd(), nsp
   end
 end
 
