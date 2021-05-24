@@ -98,7 +98,7 @@ function insane_gbmbd(tree    ::sTbd,
   bbμp = deepcopy(bbμc)
 
   # make trios
-  triads, terminus = make_triads(idf)
+  triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
   # svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
@@ -251,8 +251,13 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
       else
         # forward simulation update
 
+        """
+        here
+        """
+
         bix   = ceil(Int64,rand()*nbr)
         bi    = idf[bix]
+        triad = triads[btotriad[bix]]
         tsi   = tsv[bix]
         bbiλp = bbλp[bix]
         bbiμp = bbμp[bix]
@@ -472,32 +477,29 @@ function fsp(Ψp   ::iTgbmbd,
              ntry ::Int64,
              nlim ::Int64)
 
+  tl   = lastindex(tsi)
+  nsδt = δt - (tsi[tl] - tsi[tl-1])
 
-  """
-  here, forward simulation cannot know which is the fix branch but
-  has to be assigned later.
-  For more efficiency, do a triad update
-  """
-
-  # get branch start and end λ & μ
-  dri = dr(bi)
-  ldr = lastindex(dri)
-
-
-  # λ0, μ0, λ1, μ1 = λμ01(Ψc, dri, ldr, 0, NaN, NaN)
-
-  # make bb given endpoints
-  # bb!(bbiλp, λ0, λ1, bbiμp, μ0, μ1, tsi, σλ, σμ, srδt)
-
-  # forward simulate a branch
-  # t0, ret = fsbi(bi, bbiλp, bbiμp, tsi, σλ, σμ, δt, srδt, ntry, nlim)
-
-  t0, ret = fsbi(bi, bbiλc, bbiμc, tsi, σλ, σμ, δt, srδt, ntry, nlim)
+  t0, ret, λf, μf = fsbi(bi, bbiλc[1], bbiμc[1], nsδt, σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
 
+    """
+    here: if inner branch, make a bb proposal for daughters to match selected 
+    fix tip 
+    """
+    # get branch information
+    dri = dr(bi)
+    ldr = lastindex(dri)
     itb = it(bi)
+
+
+    pr, d1, d2 = triad
+
+
+
+
 
     # if speciation (if branch is internal)
     iλ = itb ? 0.0 : (0.6931471805599453 + bbiλc[end])
@@ -539,14 +541,13 @@ end
 Forward gbm birth-death simulation for branch `bi`.
 """
 function fsbi(bi  ::iBf, 
-              bbiλ::Array{Float64,1}, 
-              bbiμ::Array{Float64,1}, 
-              tsi ::Array{Float64,1},
+              iλ  ::Float64, 
+              iμ  ::Float64, 
+              nsδt::Float64,
               σλ  ::Float64, 
               σμ  ::Float64, 
               δt  ::Float64, 
               srδt::Float64,
-              ntry::Int64, 
               nlim::Int64)
 
   # retain the simulation?
@@ -555,68 +556,56 @@ function fsbi(bi  ::iBf,
   # times
   tfb = tf(bi)
 
-  # gbm length
-  tl = lastindex(tsi)
-
   # simulate tree
-  t0, nsp = sim_ov_gbm(ti(bi) - tfb, 1, tl, bbiλ, bbiμ, tsi, 
-    σλ, σμ, δt, srδt, 1, nlim)
+  t0, nsp = sim_gbm(ti(bi) - tfb, iλ, iμ, σλ, σμ, δt, srδt, 1, nlim)
+  na = snan(t0)
 
-  if nsp === nlim
-    # if simulation reached the maximum limit of species
-    return t0, false
-  elseif ifxe(t0)
-    # if fix goes extinct
-    return t0, false
-  else
+  # fix random tip and return end λ(t) and μ(t) 
+  λf, μf = fixrtip!(t0, na, NaN, NaN)
 
-    # remaining time for last non-standard δt for simulation
-    nsδt = δt - (tsi[tl] - tsi[tl-1])
+  # if simulation reached the maximum limit of species
+  if iszero(na)
+    ret = false
+  # if simulation goes extinct
+  elseif nsp === nlim
+    ret = false
+  # if more than one surviving lineages
+  elseif na > 1
 
-    # ntry per unobserved branch to go extinct
-    ii = 0
-    for i in Base.OneTo(snan(t0) - 1)
-
-      ii += 1
+    for j in Base.OneTo(na - 1)
 
       # get their final λ and μ to continue forward simulation
-      ix, λt, μt = fλμ1(t0, NaN, NaN, ii, 0)
+      ix, λt, μt = fλμ1(t0, NaN, NaN, 1, 0)
 
-      for j in Base.OneTo(ntry)
+      for i in Base.OneTo(2)
 
         st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
 
         if nsp === nlim
-          if j === ntry
+          if i === 2
             ret = false
           end
           continue
         end
 
-        th0 = treeheight(st0)
-
         # if goes extinct before the present
+        th0 = treeheight(st0)
         if (th0 + 1e-11) < tfb
           # graft to tip
-          add1(t0, st0, ii, 0)
-          ii -= 1
+          add1(t0, st0, 1, 0)
           break
         end
 
-        # if not succeeded after `ntry` tries. 
-        if j === ntry
+        # if not succeeded after 2 tries. 
+        if i === 2
           ret = false
         end
       end
-      # if not a successful simulation after `ntry` tries, 
-      # stop for further lineages
-      if ret === false
-        break
-      end
+      !ret && break
     end
-  
-    return t0, ret
   end
+  
+  return t0, ret, λf, μf
 end
 
 
@@ -678,6 +667,47 @@ function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64)
 
   return ix
 end
+
+
+
+
+"""
+    fixrtip!(tree::iTgbmbd, 
+             na  ::Int64, 
+             λf  ::Float64, 
+             μf  ::Float64) 
+
+Fixes the the path for a random non extinct tip.
+"""
+function fixrtip!(tree::iTgbmbd, 
+                  na  ::Int64, 
+                  λf  ::Float64, 
+                  μf  ::Float64) 
+
+  fix!(tree)
+
+  if !istip(tree)
+    if isextinct(tree.d1::iTgbmbd)
+      λf, μf = fixrtip!(tree.d2::iTgbmbd, na, λf, μf)
+    elseif isextinct(tree.d2::iTgbmbd)
+      λf, μf = fixrtip!(tree.d1::iTgbmbd, na, λf, μf)
+    else
+      na1 = snan(tree.d1::iTgbmbd)
+      # probability proportional to number of lineages
+      if (fIrand(na) + 1) > na1
+        λf, μf = fixrtip!(tree.d2::iTgbmbd, na - na1, λf, μf)
+      else
+        λf, μf = fixrtip!(tree.d1::iTgbmbd, na1, λf, μf)
+      end
+    end
+  else
+    λf = lλ(tree)[end]
+    μf = lμ(tree)[end]
+  end
+
+  return λf, μf
+end
+
 
 
 

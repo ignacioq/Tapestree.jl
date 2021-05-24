@@ -291,6 +291,7 @@ end
 
 
 
+
 """
     make_triads(idf::Array{iBf, 1})
 
@@ -301,6 +302,9 @@ function make_triads(idf::Array{iBf, 1})
 
   triads   = Array{Int64,1}[]
   terminus = BitArray{1}[]
+  btotriad = Int64[]
+
+  ii = 0
 
   for i in 1:length(idf)
     pr  = i
@@ -308,43 +312,27 @@ function make_triads(idf::Array{iBf, 1})
     drd1 = push!(copy(drpr), true)
     drd2 = push!(copy(drpr), false)
 
-    # d1
     d1 = findfirst(x -> dr(x) == drd1, idf)
-    # d2
     d2 = findfirst(x -> dr(x) == drd2, idf) 
 
     if !isnothing(d1) && !isnothing(d2)
+      # push to triads
       push!(triads, [pr, d1, d2])
 
-      bit = BitArray{1}([false, false])
-
-      # check if either of the tips are terminal
-      drd11 = push!(copy(drd1), true)
-      drd12 = push!(copy(drd1), false)
-      # d1
-      d11 = findfirst(x -> dr(x) == drd11, idf)
-      # d2
-      d12 = findfirst(x -> dr(x) == drd12, idf) 
-
-      if isnothing(d11) && isnothing(d12) 
-        bit[1] = true
-      end
-
-      drd21 = push!(copy(drd2), true)
-      drd22 = push!(copy(drd2), false)
-      # d1
-      d21 = findfirst(x -> dr(x) == drd21, idf)
-      # d2
-      d22 = findfirst(x -> dr(x) == drd22, idf) 
-
-      if isnothing(d21) && isnothing(d22) 
-        bit[2] = true
-      end
+      # check terminus
+      bit = BitArray{1}([it(idf[d1]), it(idf[d2])])
       push!(terminus, bit)
+
+      # push to btotriad
+      ii += 1
+      push!(btotriad, ii)
+    else
+      # push to btotriad
+      push!(btotriad, 0)
     end
   end
 
-  return triads, terminus
+  return triads, terminus, btotriad
 end
 
 

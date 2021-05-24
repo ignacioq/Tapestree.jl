@@ -430,6 +430,7 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
   na = snan(t0)
 
+  # fix random tip
   fixrtip!(t0, na)
 
   if iszero(na)
@@ -602,26 +603,26 @@ end
 
 
 """
-    fixrtip!(tree::sTbd)
+    fixrtip!(tree::T, na::Int64) where T <: iTree
 
 Fixes the the path for a random non extinct tip.
 """
-function fixrtip!(tree::sTbd, na::Int64)
+function fixrtip!(tree::T, na::Int64) where T <: iTree
 
   fix!(tree)
 
   if !istip(tree)
-    if isextinct(tree.d1::sTbd)
-      fixrtip!(tree.d2::sTbd, na)
-    elseif isextinct(tree.d2::sTbd)
-      fixrtip!(tree.d1::sTbd, na)
+    if isextinct(tree.d1::T)
+      fixrtip!(tree.d2::T, na)
+    elseif isextinct(tree.d2::T)
+      fixrtip!(tree.d1::T, na)
     else
-      na1 = snan(tree.d1::sTbd)
+      na1 = snan(tree.d1::T)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        fixrtip!(tree.d2::sTbd, na - na1)
+        fixrtip!(tree.d2::T, na - na1)
       else
-        fixrtip!(tree.d1::sTbd, na1)
+        fixrtip!(tree.d1::T, na1)
       end
     end
   end
