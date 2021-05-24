@@ -560,48 +560,57 @@ function fsbi(bi  ::iBf,
   t0, nsp = sim_gbm(ti(bi) - tfb, iλ, iμ, σλ, σμ, δt, srδt, 1, nlim)
   na = snan(t0)
 
-  # fix random tip and return end λ(t) and μ(t) 
-  λf, μf = fixrtip!(t0, na, NaN, NaN)
+  λf, μf = NaN, NaN
 
-  # if simulation reached the maximum limit of species
+  # if simulation goes extinct
   if iszero(na)
     ret = false
-  # if simulation goes extinct
+  # if simulation reached the maximum limit of species
   elseif nsp === nlim
     ret = false
-  # if more than one surviving lineages
+  # if one surviving lineage
+  elseif isone(na)
+    λf, μf = fixalive!(t0, NaN, NaN)
   elseif na > 1
+    # if terminal branch
+    if it(bi)
+      ret = false
+    # if continue the simulation
+    else
+      # fix random tip and return end λ(t) and μ(t) 
+      λf, μf = fixrtip!(t0, na, NaN, NaN)
 
-    for j in Base.OneTo(na - 1)
+      for j in Base.OneTo(na - 1)
 
-      # get their final λ and μ to continue forward simulation
-      ix, λt, μt = fλμ1(t0, NaN, NaN, 1, 0)
+        # get their final λ and μ to continue forward simulation
+        ix, λt, μt = fλμ1(t0, NaN, NaN, 1, 0)
 
-      for i in Base.OneTo(2)
+        for i in Base.OneTo(2)
 
-        st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+          st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
 
-        if nsp === nlim
+          if nsp === nlim
+            if i === 2
+              ret = false
+            end
+            continue
+          end
+
+          # if goes extinct before the present
+          th0 = treeheight(st0)
+          if (th0 + 1e-11) < tfb
+            # graft to tip
+            add1(t0, st0, 1, 0)
+            break
+          end
+
+          # if not succeeded after 2 tries. 
           if i === 2
             ret = false
           end
-          continue
         end
-
-        # if goes extinct before the present
-        th0 = treeheight(st0)
-        if (th0 + 1e-11) < tfb
-          # graft to tip
-          add1(t0, st0, 1, 0)
-          break
-        end
-
-        # if not succeeded after 2 tries. 
-        if i === 2
-          ret = false
-        end
+        !ret && break
       end
-      !ret && break
     end
   end
   
@@ -708,6 +717,31 @@ function fixrtip!(tree::iTgbmbd,
   return λf, μf
 end
 
+
+
+
+"""
+    fixalive!(tree::iTgbmbd, λf::Float64, μf::Float64)
+
+Fixes the the path from root to the only species alive.
+"""
+function fixalive!(tree::iTgbmbd, λf::Float64, μf::Float64)
+
+  fix!(tree)
+
+  if !istip(tree)
+    if isextinct(tree.d1::iTgbmbd)
+      λf, μf = fixalive!(tree.d2::iTgbmbd, λf, μf)
+    elseif isextinct(tree.d2::iTgbmbd)
+      λf, μf = fixalive!(tree.d1::iTgbmbd, λf, μf)
+    end
+  else
+    λf = lλ(tree)[end]
+    μf = lμ(tree)[end]
+  end
+
+  return λf, μf
+end
 
 
 

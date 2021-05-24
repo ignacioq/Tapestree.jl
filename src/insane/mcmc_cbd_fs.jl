@@ -430,15 +430,18 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
   na = snan(t0)
 
-  # fix random tip
-  fixrtip!(t0, na)
 
   if iszero(na)
     ret = false
+  elseif isone(na)
+    fixalive!(t0)
   elseif na > 1
     if it(bi)
       ret = false
     else
+      # fix random tip
+      fixrtip!(t0, na)
+
       for j in Base.OneTo(na - 1)
         for i in Base.OneTo(2)
           st0 = sim_cbd(tfb, λ, μ)
@@ -568,34 +571,21 @@ end
 
 
 """
-    fixalive!(tree::sTbd)
+    fixalive!(tree::T) where T <: iTree
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::sTbd)
+function fixalive!(tree::T) where T <: iTree
 
-  if istip(tree::sTbd) && !isextinct(tree::sTbd)
-    fix!(tree::sTbd)
-    return true
-  end
+  fix!(tree)
 
-  if !isnothing(tree.d2)
-    f = fixalive!(tree.d2::sTbd)
-    if f 
-      fix!(tree)
-      return true
+  if !istip(tree)
+    if isextinct(tree.d1::T)
+      fixalive!(tree.d2::T)
+    elseif isextinct(tree.d2::T)
+      fixalive!(tree.d1::T)
     end
   end
-
-  if !isnothing(tree.d1)
-    f = fixalive!(tree.d1::sTbd)
-    if f 
-      fix!(tree)
-      return true
-    end
-  end
-
-  return false
 end
 
 
