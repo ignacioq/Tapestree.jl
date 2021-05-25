@@ -211,8 +211,6 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   nbr  = lastindex(idf)
   ntr  = lastindex(triads)
 
-  @info "started burn-in"
-
   for it in Base.OneTo(nburn)
 
     shuffle!(pup)
@@ -258,11 +256,11 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
         bix   = ceil(Int64,rand()*nbr)
         bi    = idf[bix]
         triad = triads[btotriad[bix]]
-        tsi   = tsv[bix]
         bbiλp = bbλp[bix]
         bbiμp = bbμp[bix]
         bbiλc = bbλc[bix]
         bbiμc = bbμc[bix]
+        tsi   = tsv[bix]
 
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsi, bbiλp, bbiμp, bbiλc, bbiμc, 
@@ -346,8 +344,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     ntry    ::Int64,
                     nlim    ::Int64,
                     prints  ::Int64)
-
-  @info "started mcmc"
 
   # logging
   nlogs = fld(niter,nthin)
@@ -485,36 +481,55 @@ function fsp(Ψp   ::iTgbmbd,
   # if retain simulation
   if ret
 
-    """
-    here: if inner branch, make a bb proposal for daughters to match selected 
-    fix tip 
-    """
     # get branch information
     dri = dr(bi)
     ldr = lastindex(dri)
     itb = it(bi)
 
-
-    pr, d1, d2 = triad
-
-
-
-
-
-    # if speciation (if branch is internal)
-    iλ = itb ? 0.0 : (0.6931471805599453 + bbiλc[end])
+    if !itb
+      iλ = 0.6931471805599453 + λf
+      # make daughter proposal to be concordant with `t0`
+      llr, acr = ldprop!(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, 
+          d1, d2, σλ, σμ, δt, srδt, dri, ldr, 0)
+    else
+      iλ, llr, acr = 0.0, 0.0, 0.0
+    end
 
     # likelihood ratio
-    llr = llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
-          br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
+    llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
+           br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
-    #if -randexp() < acr
+  if -randexp() < acr
+    llc += llr
+
+  end
+
+
+    if -randexp() < acr
       llc += llr
 
       # swap branch
       # make combined swap branch
       Ψp = swapbranch!(Ψp, deepcopy(t0), dri, ldr, itb, 0)
-      Ψc = swapbranch!(Ψc, t0, dri, ldr, itb, 0)
+      Ψc = swapbranch!(Ψc, t0,           dri, ldr, itb, 0)
+    
+      """
+      here, have to do all these copies below!
+
+      perhaps can do the MH update inside ldprop! since it alone controls
+      the acceptance ratio, this allows copying within the function. Then just
+      swap swap t0 into the new tree
+      """ 
+
+         copyto!(λprv_c, λprv_p)
+    copyto!(λd1v_c, λd1v_p)
+    copyto!(λd2v_c, λd2v_p)
+    copyto!(μprv_c, μprv_p)
+    copyto!(μd1v_c, μd1v_p)
+    copyto!(μd2v_c, μd2v_p)
+    gbm_copy_f!(treec, treep)
+    gbm_copy_f!(treecd1, treepd1)
+    gbm_copy_f!(treecd2, treepd2)
 
 #     copyto!(bbiλc, bbiλp)
 #     copyto!(bbiμc, bbiμp)
@@ -523,6 +538,158 @@ function fsp(Ψp   ::iTgbmbd,
 
   return Ψp, Ψc, llc
 end
+
+
+
+
+"""
+    ldprop!(treep   ::iTgbmbd,
+            treec   ::iTgbmbd,
+            bbλp    ::Array{Array{Float64,1},1}, 
+            bbμp    ::Array{Array{Float64,1},1}, 
+            bbλc    ::Array{Array{Float64,1},1}, 
+            bbμc    ::Array{Array{Float64,1},1}, 
+            tsv     ::Array{Array{Float64,1},1},
+            d1      ::Int64,
+            d2      ::Int64,
+            σλ      ::Float64, 
+            σμ      ::Float64, 
+            δt      ::Float64, 
+            srδt    ::Float64, 
+            dri     ::BitArray{1},
+            ldr     ::Int64,
+            ix      ::Int64)
+
+Make a gbm update for speciation and extinction for a fixed triad.
+"""
+function ldprop!(treep   ::iTgbmbd,
+                 treec   ::iTgbmbd,
+                 bbλp    ::Array{Array{Float64,1},1}, 
+                 bbμp    ::Array{Array{Float64,1},1}, 
+                 bbλc    ::Array{Array{Float64,1},1}, 
+                 bbμc    ::Array{Array{Float64,1},1}, 
+                 tsv     ::Array{Array{Float64,1},1},
+                 d1      ::Int64,
+                 d2      ::Int64,
+                 σλ      ::Float64, 
+                 σμ      ::Float64, 
+                 δt      ::Float64, 
+                 srδt    ::Float64, 
+                 dri     ::BitArray{1},
+                 ldr     ::Int64,
+                 ix      ::Int64)
+
+  if ix === ldr 
+    llr, acr = daughters_lprop!(treep::iTgbmbd, treec::iTgbmbd, 
+      bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt)
+
+  elseif ix < ldr
+
+    ifx1 = isfix(treec.d1::iTgbmbd)
+    if ifx1 && isfix(treec.d2::iTgbmbd)
+      ix += 1
+      if dri[ix]
+        llr, acr = 
+          ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, 
+            bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ix)
+      else
+        llr, acr = 
+          ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, 
+            bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ix)
+      end
+    elseif ifx1
+      llr, acr = 
+        ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, 
+          bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ix)
+    else
+      llr, acr = 
+        ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, 
+          bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ix)
+    end
+  end
+
+  return llr, acr
+end
+
+
+
+
+
+"""
+    daughters_lprop!(treep::iTgbmbd, 
+                     treec::iTgbmbd,
+                     bbλp::Array{Array{Float64,1},1}, 
+                     bbμp::Array{Array{Float64,1},1}, 
+                     bbλc::Array{Array{Float64,1},1}, 
+                     bbμc::Array{Array{Float64,1},1}, 
+                     tsv ::Array{Array{Float64,1},1}, 
+                     d1  ::Int64,
+                     d2  ::Int64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64, 
+                     srδt::Float64)
+
+Make a `gbm-bd` proposal for daughters when node is internal.
+"""
+function daughters_lprop!(treep::iTgbmbd, 
+                          treec::iTgbmbd,
+                          bbλp::Array{Array{Float64,1},1}, 
+                          bbμp::Array{Array{Float64,1},1}, 
+                          bbλc::Array{Array{Float64,1},1}, 
+                          bbμc::Array{Array{Float64,1},1}, 
+                          tsv ::Array{Array{Float64,1},1}, 
+                          d1  ::Int64,
+                          d2  ::Int64,
+                          σλ  ::Float64,
+                          σμ  ::Float64,
+                          δt  ::Float64, 
+                          srδt::Float64)
+
+  ## get reference vectors
+  # time vectors
+  td1v = tsv[d1]
+  td2v = tsv[d2]
+  lid1 = lastindex(td1v)
+  lid2 = lastindex(td2v)
+
+  # speciation vectors
+  λd1v_p = bbλp[d1]
+  λd2v_p = bbλp[d2]
+  λd1    = λd1v_c[lid1]
+  λd2    = λd2v_c[lid2]
+
+  # extinction vectors
+  μd1v_p = bbμp[d1]
+  μd2v_p = bbμp[d2]
+  μd1    = μd1v_c[lid1]
+  μd2    = μd2v_c[lid2]
+
+  # get fixed daughters
+  treecd1, treecd2 = fixds(treec)
+  treepd1, treepd2 = fixds(treep)
+
+  # pendant edges
+  ped1 = td1v[lid1]
+  ped2 = td2v[lid2]
+
+  # simulate fix tree vector
+  bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v, σλ, σμ, srδt)
+  bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v, σλ, σμ, srδt)
+
+  # fill fix and simulate unfix tree
+  bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
+  bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
+
+  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
+  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
+
+  acr = llrbd_d1 + llrbd_d2 
+  llr = llrbm_d1 + llrbm_d2 + acr
+
+  return llr, acr
+end
+
 
 
 
@@ -830,7 +997,7 @@ function lvupdate!(Ψp      ::iTgbmbd,
                    ter     ::BitArray{1},
                    ix      ::Int64)
 
-  if ix == ldr 
+  if ix === ldr 
     # if root
     if ldr === 0
       llc, prc = 

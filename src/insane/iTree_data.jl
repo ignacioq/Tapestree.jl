@@ -478,6 +478,29 @@ end
 
 
 
+
+
+"""
+    fixds(tree::iTgbmbd)
+
+Return the first fixed daughters `d1` and `d2`. Works only for 
+internal branches.
+"""
+function fixds(tree::iTgbmbd)
+  ifx1 = isfix(tree.d1::iTgbmbd)
+  if ifx1 && isfix(tree.d2::iTgbmbd)
+    return tree.d1, tree.d2
+  elseif ifx1
+    fixds(tree.d1::iTgbmbd)
+  else
+    fixds(tree.d2::iTgbmbd)
+  end
+end
+
+
+
+
+
 """
     fixd1(tree::iTgbmbd)
 
