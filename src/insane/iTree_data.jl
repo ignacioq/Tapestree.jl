@@ -502,6 +502,29 @@ end
 
 
 """
+    fixdstree(tree::T) where {T <: iTree}
+
+Returns the first tree with both daughters fixed.
+"""
+function fixdstree(tree::T) where {T <: iTree}
+
+  ifx1 = isfix(tree.d1::T)
+  if ifx1 && isfix(tree.d2::T)
+    return tree
+  elseif ifx1
+    tree = fixdstree(tree.d1::T)
+  else
+    tree = fixdstree(tree.d2::T)
+  end
+
+  return tree
+end
+
+
+
+
+
+"""
     fixd1(tree::iTgbmbd)
 
 Return the first fixed daughter `d1`. Works only for internal branches

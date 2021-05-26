@@ -14,6 +14,59 @@ Created 25 06 2020
 
 
 """
+    swapbranch!(treep::T,
+                treec::T,
+                nbtr ::T,
+                dri  ::BitArray{1}, 
+                ldr  ::Int64,
+                it   ::Bool,
+                ix   ::Int64) where {T <: iTree}
+
+Swap branch given by `dri` by `nbtr` and return the tree.
+"""
+function swapbranch!(treep::T,
+                     treec::T,
+                     nbtr ::T,
+                     dri  ::BitArray{1}, 
+                     ldr  ::Int64,
+                     it   ::Bool,
+                     ix   ::Int64) where {T <: iTree}
+
+  if ix === ldr
+    nbtrp = deepcopy(nbtr)
+    if !it
+      nbtrp = addtree(nbtrp, treep) 
+      nbtr  = addtree(nbtr,  treec) 
+    end
+    return nbtrp, nbtr
+  elseif ix < ldr
+    ifx1 = isfix(treec.d1::T)
+    if ifx1 && isfix(treec.d2::T)
+      ix += 1
+      if dri[ix]
+        treep.d1, treec.d1 = 
+          swapbranch!(treep.d1::T, treec.d1::T, nbtr::T, dri, ldr, it, ix)
+      else
+        treep.d2, treec.d2 = 
+          swapbranch!(treep.d2::T, treec.d2::T, nbtr::T, dri, ldr, it, ix)
+      end
+    elseif ifx1
+      treep.d1, treec.d1 = 
+          swapbranch!(treep.d1::T, treec.d1::T, nbtr::T, dri, ldr, it, ix)
+    else
+      treep.d2, treec.d2 = 
+          swapbranch!(treep.d2::T, treec.d2::T, nbtr::T, dri, ldr, it, ix)
+    end
+  end
+
+  return treep, treec
+end
+
+
+
+
+
+"""
     swapbranch!(tree::T,
                 nbtr::T,
                 dri ::BitArray{1}, 
@@ -71,7 +124,7 @@ function addtree(tree::T, dtree::T) where {T <: iTree}
 
   if istip(tree::T) && !isextinct(tree::T)
 
-    dtree = fixds(dtree)
+    dtree = fixdstree(dtree)
 
     tree.d1 = dtree.d1
     tree.d2 = dtree.d2
@@ -93,30 +146,50 @@ end
 
 
 """
-    fixds(tree::T)
+    gbm_copy_f!(tree::iTgbmbd,
+                bbλ ::Array{Float64,1},
+                bbμ ::Array{Float64,1},
+                ii  ::Int64)
 
-Returns the first tree with both daughters fixed.
+Copies the gbm birth-death in place for a fixed branch into the 
+help arrays `bbλ` and `bbμ`.
 """
-function fixds(tree::T) where {T <: iTree}
+function gbm_copy_f!(tree::iTgbmbd,
+                     bbλ ::Array{Float64,1},
+                     bbμ ::Array{Float64,1},
+                     ii  ::Int64)
 
-  ifx1 = isfix(tree.d1::T)
-  if ifx1 && isfix(tree.d2::T)
-    return tree
-  elseif ifx1
-    tree = fixds(tree.d1::T)
-  else
-    tree = fixds(tree.d2::T)
+  lλv = lλ(tree)
+  lμv = lμ(tree)
+  lt  = lastindex(lλv)
+
+  @simd for i in Base.OneTo(lt)
+    ii     += 1
+    bbλ[ii] = lλv[i]
+    bbμ[ii] = lμv[i]
   end
 
-  return tree
+  if !istip(tree)
+    ifx1 = isfix(tree.d1::iTgbmbd)
+    if ifx1 && isfix(tree.d2::iTgbmbd)
+      return nothing
+    elseif ifx1
+      gbm_copy_f!(tree.d1::iTgbmbd, bbλ, bbμ, ii-1)
+    else
+      gbm_copy_f!(tree.d2::iTgbmbd, bbλ, bbμ, ii-1)
+    end
+  end
+
+  return nothing
 end
 
 
 
 
+
 """
-    gbm_copy!(treec::iTgbmbd,
-              treep::iTgbmbd)
+    gbm_copy_f!(treec::iTgbmbd,
+                treep::iTgbmbd)
 
 Copies the gbm birth-death in place for a fixed branch.
 """
@@ -163,6 +236,70 @@ function gbm_copy!(treec::iTgbmbd,
   end
 
   return nothing
+end
+
+
+
+
+"""
+    fixalive!(tree::T) where T <: iTree
+
+Fixes the the path from root to the only species alive.
+"""
+function fixalive!(tree::T) where T <: iTree
+
+  if istip(tree::T) && !isextinct(tree::T)
+    fix!(tree::T)
+    return true
+  end
+
+  if !isnothing(tree.d2)
+    f = fixalive!(tree.d2::T)
+    if f 
+      fix!(tree)
+      return true
+    end
+  end
+
+  if !isnothing(tree.d1)
+    f = fixalive!(tree.d1::T)
+    if f 
+      fix!(tree)
+      return true
+    end
+  end
+
+  return false
+end
+
+
+
+
+
+"""
+    fixrtip!(tree::T, na::Int64) where T <: iTree
+
+Fixes the the path for a random non extinct tip.
+"""
+function fixrtip!(tree::T, na::Int64) where T <: iTree
+
+  fix!(tree)
+
+  if !istip(tree)
+    if isextinct(tree.d1::T)
+      fixrtip!(tree.d2::T, na)
+    elseif isextinct(tree.d2::T)
+      fixrtip!(tree.d1::T, na)
+    else
+      na1 = snan(tree.d1::T)
+      # probability proportional to number of lineages
+      if (fIrand(na) + 1) > na1
+        fixrtip!(tree.d2::T, na - na1)
+      else
+        fixrtip!(tree.d1::T, na1)
+      end
+    end
+  end
 end
 
 
