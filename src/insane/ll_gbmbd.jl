@@ -262,7 +262,7 @@ function llik_gbm_f(tree::iTgbmbd,
     ll = ll_gbm_b(tsb, lλb, lμb, σλ, σμ, δt, srδt)
   else
     ll = ll_gbm_b(tsb, lλb, lμb, σλ, σμ, δt, srδt) + 
-         log(2.0) + lλb[end]
+         0.6931471805599453 + lλb[end]
 
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)

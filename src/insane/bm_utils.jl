@@ -230,13 +230,6 @@ function bm!(x0   ::Array{Float64,1},
     cumsum!(x0, x0)
     cumsum!(x1, x1)
 
-    # for last non-standard δt
-    if (t[l] - t[l-1]) < 0.0
-      @show t, x0, x1
-      @show (t[l] - t[l-1])
-      @show t[l], t[l-1]
-    end
-
     srlt  = sqrt(t[l] - t[l-1])
 
     x0[l] = rnorm(x0[l-1], srlt*σ0)
