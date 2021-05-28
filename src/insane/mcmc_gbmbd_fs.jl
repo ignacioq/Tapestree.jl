@@ -212,6 +212,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
 
   # make empty triad
   emptytriad = Int64[]
+  emptyter   = BitArray([])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -416,6 +417,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim)
 
+          llik_gbm(Ψc, σλc, σμc, δt, srδt)
+
       end
     end
 
@@ -501,33 +504,67 @@ function fsp(Ψp   ::iTgbmbd,
     ldr = lastindex(dri)
     itb = it(bi)
 
-    # accept?
-    acc = true
-
     if !itb
-      pr, d1, d2 = triad
-
-      iλ = 0.6931471805599453 + λf
       # make daughter proposal to be concordant with `t0`
-      llc, acc = ldprop!(Ψp, Ψc, llc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
+      pr, d1, d2 = triad
+      llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
         tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, 0)
+
+      # estimate for `llr` and `acr`
+      iλ   = 0.6931471805599453 + λf
+      acr += λf - bbλc[pr][tl]
+
+      if ter[1]
+        if ter[2]
+          # if both are terminal
+        else
+          # if d1 is terminal
+          acr += duoldnorm(λf, bbλc[pr][1], bbλc[d2][end], tsv[pr][end],tsv[d2][end], σλ) - 
+                 duoldnorm(bbλc[pr][tl], bbλc[pr][1], bbλc[d2][end], tsv[pr][end],tsv[d2][end], σλ) + 
+                 duoldnorm(μf, bbμc[pr][end], bbμc[d2][end], tsv[pr][end], tsv[d2][end], σμ) - 
+                 duoldnorm(bbμc[pr][tl], bbμc[pr][end], bbμc[d2][end], tsv[pr][end], tsv[d2][end], σμ)
+        end
+      elseif ter[2]
+        # if d2 is terminal
+        acr += duoldnorm(λf, bbλc[pr][1], bbλc[d1][end], tsv[pr][end],tsv[d1][end], σλ) - 
+               duoldnorm(bbλc[pr][tl], bbλc[pr][1], bbλc[d1][end], tsv[pr][end],tsv[d1][end], σλ) + 
+               duoldnorm(μf, bbμc[pr][end], bbμc[d1][end], tsv[pr][end], tsv[d1][end], σμ) - 
+               duoldnorm(bbμc[pr][tl], bbμc[pr][end], bbμc[d1][end], tsv[pr][end], tsv[d1][end], σμ)
+
+      else
+        # if no terminal branches involved
+        acr += trioldnorm(λf, bbλc[pr][1], bbλc[d1][end], bbλc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σλ) - 
+               trioldnorm(bbλc[pr][tl], bbλc[pr][1], bbλc[d1][end], bbλc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σλ) + 
+               trioldnorm(μf, bbμc[pr][end], bbμc[d1][end], bbμc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σμ) - 
+               trioldnorm(bbμc[pr][tl], bbμc[pr][end], bbμc[d1][end], bbμc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σμ)
+      end
+
     else
-      pr = bix
-      iλ = 0.0
+      pr  = bix
+      iλ  = 0.0
+      llr = 0.0
+      acr = 0.0
     end
 
-    """
-    here, there is a proposal ratio for speciation!
-    """
-
-    # if proposal was accepted
-    # (bbλc[tl] - λf)
-    if acc
-      llc += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
+    # mh ratio
+    if -randexp() < acr
+      llc += llr + 
+             llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
-      # copy to aid vectors
+      # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], bbμc[pr], 0)
+
+      # copy daughters vectors
+      if !itb
+        pr, d1, d2 = triad
+
+        copyto!(bbλc[d1], bbλp[d1])
+        copyto!(bbλc[d2], bbλp[d2])
+        copyto!(bbμc[d1], bbμp[d1])
+        copyto!(bbμc[d2], bbμp[d2])
+        gbm_copy_dsf!(Ψc, Ψp, dri, ldr, 0)
+      end
 
       # make combined swap branch
       Ψp, Ψc = swapbranch!(Ψp, Ψc, t0, dri, ldr, itb, 0)
@@ -536,6 +573,7 @@ function fsp(Ψp   ::iTgbmbd,
 
   return Ψp, Ψc, llc
 end
+
 
 
 
@@ -562,7 +600,6 @@ Make a gbm update for speciation and extinction for a fixed triad.
 """
 function ldprop!(treep::iTgbmbd,
                  treec::iTgbmbd,
-                 llc  ::Float64,
                  λf   ::Float64,
                  μf   ::Float64,
                  bbλp ::Array{Array{Float64,1},1}, 
@@ -583,25 +620,8 @@ function ldprop!(treep::iTgbmbd,
 
   if ix === ldr 
 
-    if ter[1]
-      if ter[2]
-        # if both are terminal
-        llc, acc = daughters_lprop12!(treep::iTgbmbd, treec::iTgbmbd, llc,
-            λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt)
-      else
-        # if d1 is terminal
-        llc, acc = daughters_lprop1!(treep::iTgbmbd, treec::iTgbmbd, llc,
-          λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt)
-      end
-    elseif ter[2]
-      # if d2 is terminal
-      llc, acc = daughters_lprop2!(treep::iTgbmbd, treec::iTgbmbd, llc,
-          λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt)
-    else
-      # if no terminal branches involved
-      llc, acc = daughters_lprop!(treep::iTgbmbd, treec::iTgbmbd, llc,
-          λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt)
-    end
+    llr, acr = daughters_lprop!(treep::iTgbmbd, treec::iTgbmbd,
+        λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, ter, σλ, σμ, δt, srδt)
 
   elseif ix < ldr
 
@@ -609,28 +629,27 @@ function ldprop!(treep::iTgbmbd,
     if ifx1 && isfix(treec.d2::iTgbmbd)
       ix += 1
       if dri[ix]
-        llc, acc = 
-          ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, llc, λf, μf, bbλp, bbμp, 
+        llr, acr = 
+          ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
             bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
       else
-        llc, acc = 
-          ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, llc, λf, μf, bbλp, bbμp, 
+        llr, acr = 
+          ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
             bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
       end
     elseif ifx1
-      llc, acc = 
-        ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, llc, λf, μf, bbλp, bbμp, 
+      llr, acr = 
+        ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
           bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
     else
-      llc, acc = 
-        ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, llc, λf, μf, bbλp, bbμp, 
+      llr, acr = 
+        ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
           bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
     end
   end
 
-  return llc, acc
+  return llr, acr
 end
-
 
 
 
@@ -697,6 +716,7 @@ function fsbi(bi  ::iBf,
 
           st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
 
+          # if maximum number of species reached.
           if nsp === nlim
             if i === 2
               ret = false
@@ -712,7 +732,7 @@ function fsbi(bi  ::iBf,
             break
           end
 
-          # if not succeeded after 2 tries. 
+          # if not succeeded after 2 tries.
           if i === 2
             ret = false
           end

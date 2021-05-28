@@ -489,7 +489,7 @@ internal branches.
 function fixds(tree::iTgbmbd)
   ifx1 = isfix(tree.d1::iTgbmbd)
   if ifx1 && isfix(tree.d2::iTgbmbd)
-    return tree.d1, tree.d2
+    return tree.d1::iTgbmbd, tree.d2::iTgbmbd
   elseif ifx1
     fixds(tree.d1::iTgbmbd)
   else

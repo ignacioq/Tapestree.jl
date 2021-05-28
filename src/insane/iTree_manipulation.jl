@@ -146,6 +146,50 @@ end
 
 
 """
+    gbm_copy_dsf!(treec::iTgbmbd,
+                  treep::iTgbmbd,
+                  dri ::BitArray{1}, 
+                  ldr ::Int64,
+                  ix  ::Int64)
+
+Copy from `treep` to `treec` the contents of the fixed daughter branch.
+"""
+function gbm_copy_dsf!(treec::iTgbmbd,
+                       treep::iTgbmbd,
+                       dri ::BitArray{1}, 
+                       ldr ::Int64,
+                       ix  ::Int64)
+
+  if ix === ldr
+
+    treecd1, treecd2 = fixds(treec)
+    treepd1, treepd2 = fixds(treep)
+
+    gbm_copy_f!(treecd1, treepd1)
+    gbm_copy_f!(treecd2, treepd2)
+
+  elseif ix < ldr
+    ifx1 = isfix(treec.d1::iTgbmbd)
+    if ifx1 && isfix(treec.d2::iTgbmbd)
+      ix += 1
+      if dri[ix]
+        gbm_copy_dsf!(treec.d1::iTgbmbd, treep.d1::iTgbmbd, dri, ldr, ix)
+      else
+        gbm_copy_dsf!(treec.d2::iTgbmbd, treep.d2::iTgbmbd, dri, ldr, ix)
+      end
+    elseif ifx1
+      gbm_copy_dsf!(treec.d1::iTgbmbd, treep.d1::iTgbmbd, dri, ldr, ix)
+    else
+      gbm_copy_dsf!(treec.d2::iTgbmbd, treep.d2::iTgbmbd, dri, ldr, ix)
+    end
+  end
+
+  return nothing
+end
+
+
+
+"""
     gbm_copy_f!(tree::iTgbmbd,
                 bbλ ::Array{Float64,1},
                 bbμ ::Array{Float64,1},

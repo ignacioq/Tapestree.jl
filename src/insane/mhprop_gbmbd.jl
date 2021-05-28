@@ -1,12 +1,12 @@
 #=
 
-Anagenetic GBM birth-death proposals
+Anagenetic GBM birth-death MH proposals
 
 Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 03 09 2020
+Created 27 05 2020
 =#
 
 
@@ -31,307 +31,8 @@ Created 03 09 2020
 Make a `gbm-bd` proposal for daughters when node is internal and both
 daughters are terminal.
 """
-function daughters_lprop12!(treep::iTgbmbd, 
-                            treec::iTgbmbd,
-                            llc  ::Float64,
-                            λf   ::Float64,
-                            μf   ::Float64,
-                            bbλp ::Array{Array{Float64,1},1}, 
-                            bbμp ::Array{Array{Float64,1},1}, 
-                            bbλc ::Array{Array{Float64,1},1}, 
-                            bbμc ::Array{Array{Float64,1},1}, 
-                            tsv  ::Array{Array{Float64,1},1}, 
-                            d1   ::Int64,
-                            d2   ::Int64,
-                            σλ   ::Float64,
-                            σμ   ::Float64,
-                            δt   ::Float64, 
-                            srδt ::Float64)
-
-  ## get reference vectors
-  # time vectors
-  td1v = tsv[d1]
-  td2v = tsv[d2]
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
-
-  # speciation vectors
-  λd1v_p = bbλp[d1]
-  λd2v_p = bbλp[d2]
-  λd1v_c = bbλc[d1]
-  λd2v_c = bbλc[d2]
-  λd1    = λd1v_c[lid1]
-  λd2    = λd2v_c[lid2]
-
-  # extinction vectors
-  μd1v_p = bbμp[d1]
-  μd2v_p = bbμp[d2]
-  μd1v_c = bbμc[d1]
-  μd2v_c = bbμc[d2]
-  μd1    = μd1v_c[lid1]
-  μd2    = μd2v_c[lid2]
-
-  # get fixed daughters
-  treecd1, treecd2 = fixds(treec)
-  treepd1, treepd2 = fixds(treep)
-
-  # pendant edges
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
-
-  # simulate fix tree vector
-  bm!(λd1v_p, μd1v_p, λf, μf, td1v, σλ, σμ, srδt)
-  bm!(λd2v_p, μd2v_p, λf, μf, td2v, σλ, σμ, srδt)
-
-  # fill fix and simulate unfix tree
-  bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
-  bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
-
-  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
-  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
-
-  acr = llrbd_d1 + llrbd_d2 
-  llr = llrbm_d1 + llrbm_d2 + acr
-
-  # accept?
-  acc = false
-
-  if -randexp() < acr
-    acc = true
-    llc += llr
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
-    copyto!(μd1v_c, μd1v_p)
-    copyto!(μd2v_c, μd2v_p)
-    gbm_copy_f!(treecd1, treepd1)
-    gbm_copy_f!(treecd2, treepd2)
-  end
-
-  return llc, acc
-end
-
-
-
-
-"""
-    daughters_lprop1!(treep::iTgbmbd, 
-                       treec::iTgbmbd,
-                       bbλp::Array{Array{Float64,1},1}, 
-                       bbμp::Array{Array{Float64,1},1}, 
-                       bbλc::Array{Array{Float64,1},1}, 
-                       bbμc::Array{Array{Float64,1},1}, 
-                       tsv ::Array{Array{Float64,1},1}, 
-                       d1  ::Int64,
-                       d2  ::Int64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       δt  ::Float64, 
-                       srδt::Float64)
-
-Make a `gbm-bd` proposal for daughters when node is internal and `d1`
-is terminal.
-"""
-function daughters_lprop1!(treep::iTgbmbd, 
-                           treec::iTgbmbd,
-                           llc  ::Float64,
-                           λf   ::Float64,
-                           μf   ::Float64,
-                           bbλp ::Array{Array{Float64,1},1}, 
-                           bbμp ::Array{Array{Float64,1},1}, 
-                           bbλc ::Array{Array{Float64,1},1}, 
-                           bbμc ::Array{Array{Float64,1},1}, 
-                           tsv  ::Array{Array{Float64,1},1}, 
-                           d1   ::Int64,
-                           d2   ::Int64,
-                           σλ   ::Float64,
-                           σμ   ::Float64,
-                           δt   ::Float64, 
-                           srδt ::Float64)
-
-  ## get reference vectors
-  # time vectors
-  td1v = tsv[d1]
-  td2v = tsv[d2]
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
-
-  # speciation vectors
-  λd1v_p = bbλp[d1]
-  λd2v_p = bbλp[d2]
-  λd1v_c = bbλc[d1]
-  λd2v_c = bbλc[d2]
-  λd1    = λd1v_c[lid1]
-  λd2    = λd2v_c[lid2]
-
-  # extinction vectors
-  μd1v_p = bbμp[d1]
-  μd2v_p = bbμp[d2]
-  μd1v_c = bbμc[d1]
-  μd2v_c = bbμc[d2]
-  μd1    = μd1v_c[lid1]
-  μd2    = μd2v_c[lid2]
-
-  # get fixed daughters
-  treecd1, treecd2 = fixds(treec)
-  treepd1, treepd2 = fixds(treep)
-
-  # pendant edges
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
-
-  # simulate fix tree vector
-  bm!(λd1v_p, μd1v_p, λf, μf, td1v, σλ, σμ, srδt)
-  bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v, σλ, σμ, srδt)
-
-  # fill fix and simulate unfix tree
-  bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
-  bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
-
-  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
-  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
-
-  acr = llrbd_d1 + llrbd_d2 
-  llr = llrbm_d1 + llrbm_d2 + acr
-
-  # accept?
-  acc = false
-
-  if -randexp() < acr
-    acc = true
-    llc += llr
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
-    copyto!(μd1v_c, μd1v_p)
-    copyto!(μd2v_c, μd2v_p)
-    gbm_copy_f!(treecd1, treepd1)
-    gbm_copy_f!(treecd2, treepd2)
-  end
-
-  return llc, acc
-end
-
-
-
-"""
-    daughters_lprop2!(treep::iTgbmbd, 
-                       treec::iTgbmbd,
-                       bbλp::Array{Array{Float64,1},1}, 
-                       bbμp::Array{Array{Float64,1},1}, 
-                       bbλc::Array{Array{Float64,1},1}, 
-                       bbμc::Array{Array{Float64,1},1}, 
-                       tsv ::Array{Array{Float64,1},1}, 
-                       d1  ::Int64,
-                       d2  ::Int64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       δt  ::Float64, 
-                       srδt::Float64)
-
-Make a `gbm-bd` proposal for daughters when node is internal and `d2`
- is terminal.
-"""
-function daughters_lprop2!(treep::iTgbmbd, 
-                            treec::iTgbmbd,
-                            llc  ::Float64,
-                            λf   ::Float64,
-                            μf   ::Float64,
-                            bbλp ::Array{Array{Float64,1},1}, 
-                            bbμp ::Array{Array{Float64,1},1}, 
-                            bbλc ::Array{Array{Float64,1},1}, 
-                            bbμc ::Array{Array{Float64,1},1}, 
-                            tsv  ::Array{Array{Float64,1},1}, 
-                            d1   ::Int64,
-                            d2   ::Int64,
-                            σλ   ::Float64,
-                            σμ   ::Float64,
-                            δt   ::Float64, 
-                            srδt ::Float64)
-
-  ## get reference vectors
-  # time vectors
-  td1v = tsv[d1]
-  td2v = tsv[d2]
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
-
-  # speciation vectors
-  λd1v_p = bbλp[d1]
-  λd2v_p = bbλp[d2]
-  λd1v_c = bbλc[d1]
-  λd2v_c = bbλc[d2]
-  λd1    = λd1v_c[lid1]
-  λd2    = λd2v_c[lid2]
-
-  # extinction vectors
-  μd1v_p = bbμp[d1]
-  μd2v_p = bbμp[d2]
-  μd1v_c = bbμc[d1]
-  μd2v_c = bbμc[d2]
-  μd1    = μd1v_c[lid1]
-  μd2    = μd2v_c[lid2]
-
-  # get fixed daughters
-  treecd1, treecd2 = fixds(treec)
-  treepd1, treepd2 = fixds(treep)
-
-  # pendant edges
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
-
-  # simulate fix tree vector
-  bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v, σλ, σμ, srδt)
-  bm!(λd2v_p, μd2v_p, λf, μf, td2v, σλ, σμ, srδt)
-
-  # fill fix and simulate unfix tree
-  bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
-  bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
-
-  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
-  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
-
-  acr = llrbd_d1 + llrbd_d2 
-  llr = llrbm_d1 + llrbm_d2 + acr
-
-  # accept?
-  acc = false
-
-  if -randexp() < acr
-    acc = true
-    llc += llr
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
-    copyto!(μd1v_c, μd1v_p)
-    copyto!(μd2v_c, μd2v_p)
-    gbm_copy_f!(treecd1, treepd1)
-    gbm_copy_f!(treecd2, treepd2)
-  end
-
-  return llc, acc
-end
-
-
-
-
-"""
-    daughters_lprop!(treep::iTgbmbd, 
-                     treec::iTgbmbd,
-                     bbλp::Array{Array{Float64,1},1}, 
-                     bbμp::Array{Array{Float64,1},1}, 
-                     bbλc::Array{Array{Float64,1},1}, 
-                     bbμc::Array{Array{Float64,1},1}, 
-                     tsv ::Array{Array{Float64,1},1}, 
-                     d1  ::Int64,
-                     d2  ::Int64,
-                     σλ  ::Float64,
-                     σμ  ::Float64,
-                     δt  ::Float64, 
-                     srδt::Float64)
-
-Make a `gbm-bd` proposal for daughters when node is internal.
-"""
 function daughters_lprop!(treep::iTgbmbd, 
                           treec::iTgbmbd,
-                          llc  ::Float64,
                           λf   ::Float64,
                           μf   ::Float64,
                           bbλp ::Array{Array{Float64,1},1}, 
@@ -341,6 +42,7 @@ function daughters_lprop!(treep::iTgbmbd,
                           tsv  ::Array{Array{Float64,1},1}, 
                           d1   ::Int64,
                           d2   ::Int64,
+                          ter  ::BitArray{1},
                           σλ   ::Float64,
                           σμ   ::Float64,
                           δt   ::Float64, 
@@ -378,8 +80,25 @@ function daughters_lprop!(treep::iTgbmbd,
   ped2 = td2v[lid2]
 
   # simulate fix tree vector
-  bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v, σλ, σμ, srδt)
-  bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v, σλ, σμ, srδt)
+  if ter[1]
+    if ter[2]
+      # if both are terminal
+      bm!(λd1v_p, μd1v_p, λf, μf, td1v, σλ, σμ, srδt)
+      bm!(λd2v_p, μd2v_p, λf, μf, td2v, σλ, σμ, srδt)
+    else
+      # if d1 is terminal
+      bm!(λd1v_p, μd1v_p, λf, μf, td1v, σλ, σμ, srδt)
+      bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v, σλ, σμ, srδt)
+    end
+  elseif ter[2]
+    # if d2 is terminal
+    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v, σλ, σμ, srδt)
+    bm!(λd2v_p, μd2v_p, λf, μf, td2v, σλ, σμ, srδt)
+  else
+    # if no terminal branches involved
+    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v, σλ, σμ, srδt)
+    bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v, σλ, σμ, srδt)
+  end
 
   # fill fix and simulate unfix tree
   bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
@@ -391,24 +110,8 @@ function daughters_lprop!(treep::iTgbmbd,
   acr = llrbd_d1 + llrbd_d2 
   llr = llrbm_d1 + llrbm_d2 + acr
 
-  # accept?
-  acc = false
-
-  if -randexp() < acr
-    acc = true
-    llc += llr
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
-    copyto!(μd1v_c, μd1v_p)
-    copyto!(μd2v_c, μd2v_p)
-    gbm_copy_f!(treecd1, treepd1)
-    gbm_copy_f!(treecd2, treepd2)
-  end
-
-  return llc, acc
+  return llr, acr
 end
-
-
 
 
 

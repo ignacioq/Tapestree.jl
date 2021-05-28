@@ -381,7 +381,7 @@ function sim_gbm(nsδt::Float64,
 
   ## first: non-standard δt
   if t <= nsδt
-    bt  += t
+    bt += t
     srt = sqrt(t)
     λt1 = rnorm(λt, srt*σλ)
     μt1 = rnorm(μt, srt*σμ)
@@ -427,7 +427,7 @@ function sim_gbm(nsδt::Float64,
   while true
 
     if t <= δt
-      bt  += t
+      bt += t
       srt = sqrt(t)
       λt1 = rnorm(λt, srt*σλ)
       μt1 = rnorm(μt, srt*σμ)

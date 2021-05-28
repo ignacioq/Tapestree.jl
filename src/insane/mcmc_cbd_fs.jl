@@ -430,7 +430,6 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
   na = snan(t0)
 
-
   if iszero(na)
     ret = false
   elseif isone(na)
@@ -463,7 +462,6 @@ function fsbi(bi::iBf, λ::Float64, μ::Float64)
 
   return t0, ret
 end
-
 
 
 
