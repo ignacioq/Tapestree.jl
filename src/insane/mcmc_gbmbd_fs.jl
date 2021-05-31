@@ -111,7 +111,7 @@ function insane_gbmbd(tree    ::sTbd,
   spup = sum(pupdp)
   pup  = Int64[]
   for i in Base.OneTo(3) 
-    append!(pup, fill(i, ceil(Int64, Float64(n) * pupdp[i]/spup)))
+    append!(pup, fill(i, ceil(Int64, Float64(2*n) * pupdp[i]/spup)))
   end
 
   # burn-in phase
@@ -508,36 +508,11 @@ function fsp(Ψp   ::iTgbmbd,
       # make daughter proposal to be concordant with `t0`
       pr, d1, d2 = triad
       llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
-        tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, 0)
+        tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, 0)
 
       # estimate for `llr` and `acr`
       iλ   = 0.6931471805599453 + λf
       acr += λf - bbλc[pr][tl]
-
-      if ter[1]
-        if ter[2]
-          # if both are terminal
-        else
-          # if d1 is terminal
-          acr += duoldnorm(λf, bbλc[pr][1], bbλc[d2][end], tsv[pr][end],tsv[d2][end], σλ) - 
-                 duoldnorm(bbλc[pr][tl], bbλc[pr][1], bbλc[d2][end], tsv[pr][end],tsv[d2][end], σλ) + 
-                 duoldnorm(μf, bbμc[pr][end], bbμc[d2][end], tsv[pr][end], tsv[d2][end], σμ) - 
-                 duoldnorm(bbμc[pr][tl], bbμc[pr][end], bbμc[d2][end], tsv[pr][end], tsv[d2][end], σμ)
-        end
-      elseif ter[2]
-        # if d2 is terminal
-        acr += duoldnorm(λf, bbλc[pr][1], bbλc[d1][end], tsv[pr][end],tsv[d1][end], σλ) - 
-               duoldnorm(bbλc[pr][tl], bbλc[pr][1], bbλc[d1][end], tsv[pr][end],tsv[d1][end], σλ) + 
-               duoldnorm(μf, bbμc[pr][end], bbμc[d1][end], tsv[pr][end], tsv[d1][end], σμ) - 
-               duoldnorm(bbμc[pr][tl], bbμc[pr][end], bbμc[d1][end], tsv[pr][end], tsv[d1][end], σμ)
-
-      else
-        # if no terminal branches involved
-        acr += trioldnorm(λf, bbλc[pr][1], bbλc[d1][end], bbλc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σλ) - 
-               trioldnorm(bbλc[pr][tl], bbλc[pr][1], bbλc[d1][end], bbλc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σλ) + 
-               trioldnorm(μf, bbμc[pr][end], bbμc[d1][end], bbμc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σμ) - 
-               trioldnorm(bbμc[pr][tl], bbμc[pr][end], bbμc[d1][end], bbμc[d2][end], tsv[pr][end], tsv[d1][end], tsv[d2][end], σμ)
-      end
 
     else
       pr  = bix
@@ -607,6 +582,7 @@ function ldprop!(treep::iTgbmbd,
                  bbλc ::Array{Array{Float64,1},1}, 
                  bbμc ::Array{Array{Float64,1},1}, 
                  tsv  ::Array{Array{Float64,1},1},
+                 pr   ::Int64,
                  d1   ::Int64,
                  d2   ::Int64,
                  σλ   ::Float64, 
@@ -621,7 +597,7 @@ function ldprop!(treep::iTgbmbd,
   if ix === ldr 
 
     llr, acr = daughters_lprop!(treep::iTgbmbd, treec::iTgbmbd,
-        λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, d1, d2, ter, σλ, σμ, δt, srδt)
+        λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, ter, σλ, σμ, δt, srδt)
 
   elseif ix < ldr
 
@@ -631,20 +607,20 @@ function ldprop!(treep::iTgbmbd,
       if dri[ix]
         llr, acr = 
           ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
-            bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
       else
         llr, acr = 
           ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
-            bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
       end
     elseif ifx1
       llr, acr = 
         ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
-          bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
     else
       llr, acr = 
         ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
-          bbλc, bbμc, tsv, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
     end
   end
 
