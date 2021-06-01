@@ -12,7 +12,6 @@ Created 25 06 2020
 
 
 
-
 """
     swapbranch!(treep::T,
                 treec::T,
