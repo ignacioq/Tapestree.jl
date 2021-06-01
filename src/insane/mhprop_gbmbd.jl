@@ -53,14 +53,13 @@ function daughters_lprop!(treep::iTgbmbd,
   # time vectors
   td1v = tsv[d1]
   td2v = tsv[d2]
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
-
   # speciation vectors
   λd1v_p = bbλp[d1]
   λd2v_p = bbλp[d2]
   λd1v_c = bbλc[d1]
   λd2v_c = bbλc[d2]
+  lid1 = lastindex(λd1v_c)
+  lid2 = lastindex(λd2v_c)
   λd1    = λd1v_c[lid1]
   λd2    = λd2v_c[lid2]
 
@@ -77,8 +76,8 @@ function daughters_lprop!(treep::iTgbmbd,
   treepd1, treepd2 = fixds(treep)
 
   # pendant edges
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
+  ped1 = td1v[1]
+  ped2 = td2v[2]
 
   # acceptance rate
   normprop = 0.0
@@ -87,17 +86,17 @@ function daughters_lprop!(treep::iTgbmbd,
   if ter[1]
     if ter[2]
       # if both are terminal
-      bm!(λd1v_p, μd1v_p, λf, μf, td1v, σλ, σμ, srδt)
-      bm!(λd2v_p, μd2v_p, λf, μf, td2v, σλ, σμ, srδt)
+      bm!(λd1v_p, μd1v_p, λf, μf, td1v[2], σλ, σμ, srδt)
+      bm!(λd2v_p, μd2v_p, λf, μf, td2v[2], σλ, σμ, srδt)
     else
       # if d1 is terminal
-      bm!(λd1v_p, μd1v_p, λf, μf, td1v, σλ, σμ, srδt)
-      bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v, σλ, σμ, srδt)
+      bm!(λd1v_p, μd1v_p, λf, μf, td1v[2], σλ, σμ, srδt)
+      bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
       # acceptance ratio 
       λpr1_c = bbλc[pr][1]
       μpr1_c = bbμc[pr][1]
-      pepr   = tsv[pr][end]
+      pepr   = tsv[pr][1]
 
       normprop += 
              duoldnorm(λf, λpr1_c, λd2, pepr, ped2, σλ)        -
@@ -108,13 +107,13 @@ function daughters_lprop!(treep::iTgbmbd,
     end
   elseif ter[2]
     # if d2 is terminal
-    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v, σλ, σμ, srδt)
-    bm!(λd2v_p, μd2v_p, λf, μf, td2v, σλ, σμ, srδt)
+    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
+    bm!(λd2v_p, μd2v_p, λf, μf, td2v[2], σλ, σμ, srδt)
 
     # acceptance ration
     λpr1_c = bbλc[pr][1]
     μpr1_c = bbμc[pr][1]
-    pepr   = tsv[pr][end]
+    pepr   = tsv[pr][1]
 
     normprop += 
            duoldnorm(λf, λpr1_c, λd1, pepr, ped1, σλ)        -
@@ -123,13 +122,13 @@ function daughters_lprop!(treep::iTgbmbd,
            duoldnorm(μd1v_c[1], μpr1_c, μd1, pepr, ped1, σμ)
   else
     # if no terminal branches involved
-    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v, σλ, σμ, srδt)
-    bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v, σλ, σμ, srδt)
+    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
+    bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
     # acceptance ration
     λpr1_c = bbλc[pr][1]
     μpr1_c = bbμc[pr][1]
-    pepr   = tsv[pr][end]
+    pepr   = tsv[pr][1]
 
     normprop += 
            trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
@@ -213,11 +212,11 @@ function triad_lupdate_noded12!(treep::iTgbmbd,
   treepd1, treepd2 = fixds(treep)
 
   # simulate fix tree vector
-  bm!(λprv_p, μprv_p, λprv_c[1], μprv_c[1], tsv[pr], σλ, σμ, srδt)
+  bm!(λprv_p, μprv_p, λprv_c[1], μprv_c[1], tsv[pr][2], σλ, σμ, srδt)
   lλp = λprv_p[lipr]
   lμp = μprv_p[lipr]
-  bm!(λd1v_p, μd1v_p, lλp, lμp, tsv[d1], σλ, σμ, srδt)
-  bm!(λd2v_p, μd2v_p, lλp, lμp, tsv[d2], σλ, σμ, srδt)
+  bm!(λd1v_p, μd1v_p, lλp, lμp, tsv[d1][2], σλ, σμ, srδt)
+  bm!(λd2v_p, μd2v_p, lλp, lμp, tsv[d2][2], σλ, σμ, srδt)
 
   # fill fix and simulate unfix tree
   bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)
@@ -290,9 +289,6 @@ function triad_lupdate_noded1!(treep  ::iTgbmbd,
   tprv = tsv[pr]
   td1v = tsv[d1]
   td2v = tsv[d2]
-  lipr = lastindex(tprv)
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
 
   # speciation vectors
   λprv_p = bbλp[pr]
@@ -301,6 +297,10 @@ function triad_lupdate_noded1!(treep  ::iTgbmbd,
   λprv_c = bbλc[pr]
   λd1v_c = bbλc[d1]
   λd2v_c = bbλc[d2]
+
+  lipr = lastindex(λprv_c)
+  lid1 = lastindex(λd1v_c)
+  lid2 = lastindex(λd2v_c)
   λpr    = λprv_c[1]
   λd2    = λd2v_c[lid2]
 
@@ -319,18 +319,17 @@ function triad_lupdate_noded1!(treep  ::iTgbmbd,
   treepd1, treepd2 = fixds(treep)
 
   # pendant edges
-  pepr = tprv[lipr]
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
+  pepr = tprv[1]
+  ped2 = td2v[1]
 
   # node proposal
   lλp = duoprop(λpr, λd2, pepr, ped2, σλ)
   lμp = duoprop(μpr, μd2, pepr, ped2, σμ)
 
   # simulate fix tree vector
-  bb!(λprv_p, λpr, lλp, μprv_p, μpr, lμp, tprv, σλ, σμ, srδt)
-  bm!(λd1v_p, μd1v_p, lλp, lμp, td1v, σλ, σμ, srδt)
-  bb!(λd2v_p, lλp, λd2, μd2v_p, lμp, μd2, td2v, σλ, σμ, srδt)
+  bb!(λprv_p, λpr, lλp, μprv_p, μpr, lμp, tprv[2], σλ, σμ, δt, srδt)
+  bm!(λd1v_p, μd1v_p, lλp, lμp, td1v[2], σλ, σμ, srδt)
+  bb!(λd2v_p, lλp, λd2, μd2v_p, lμp, μd2, td2v[2], σλ, σμ, δt, srδt)
 
   # fill fix and simulate unfix tree
   bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)
@@ -403,9 +402,6 @@ function triad_lupdate_noded2!(treep  ::iTgbmbd,
   tprv = tsv[pr]
   td1v = tsv[d1]
   td2v = tsv[d2]
-  lipr = lastindex(tprv)
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
 
   # speciation vectors
   λprv_p = bbλp[pr]
@@ -414,6 +410,9 @@ function triad_lupdate_noded2!(treep  ::iTgbmbd,
   λprv_c = bbλc[pr]
   λd1v_c = bbλc[d1]
   λd2v_c = bbλc[d2]
+  lipr   = lastindex(λprv_c)
+  lid1   = lastindex(λd1v_c)
+  lid2   = lastindex(λd2v_c)
   λpr    = λprv_c[1]
   λd1    = λd1v_c[lid1]
 
@@ -432,18 +431,17 @@ function triad_lupdate_noded2!(treep  ::iTgbmbd,
   treepd1, treepd2 = fixds(treep)
 
   # pendant edges
-  pepr = tprv[lipr]
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
+  pepr = tprv[1]
+  ped1 = td1v[1]
 
   # node proposal
   lλp = duoprop(λpr, λd1, pepr, ped1, σλ)
   lμp = duoprop(μpr, μd1, pepr, ped1, σμ)
 
   # simulate fix tree vector
-  bb!(λprv_p, λpr, lλp, μprv_p, μpr, lμp, tprv, σλ, σμ, srδt)
-  bb!(λd1v_p, lλp, λd1, μd1v_p, lμp, μd1, td1v, σλ, σμ, srδt)
-  bm!(λd2v_p, μd2v_p, lλp, lμp, td2v, σλ, σμ, srδt)
+  bb!(λprv_p, λpr, lλp, μprv_p, μpr, lμp, tprv[2], σλ, σμ, δt, srδt)
+  bb!(λd1v_p, lλp, λd1, μd1v_p, lμp, μd1, td1v[2], σλ, σμ, δt, srδt)
+  bm!(λd2v_p, μd2v_p, lλp, lμp, td2v[2], σλ, σμ, srδt)
 
   # fill fix and simulate unfix tree
   bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)
@@ -516,9 +514,6 @@ function triad_lupdate_node!(treep  ::iTgbmbd,
   tprv = tsv[pr]
   td1v = tsv[d1]
   td2v = tsv[d2]
-  lipr = lastindex(tprv)
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
 
   # speciation vectors
   λprv_p = bbλp[pr]
@@ -527,6 +522,9 @@ function triad_lupdate_node!(treep  ::iTgbmbd,
   λprv_c = bbλc[pr]
   λd1v_c = bbλc[d1]
   λd2v_c = bbλc[d2]
+  lipr = lastindex(λprv_c)
+  lid1 = lastindex(λd1v_c)
+  lid2 = lastindex(λd2v_c)
   λpr    = λprv_c[1]
   λd1    = λd1v_c[lid1]
   λd2    = λd2v_c[lid2]
@@ -547,18 +545,18 @@ function triad_lupdate_node!(treep  ::iTgbmbd,
   treepd1, treepd2 = fixds(treep)
 
   # pendant edges
-  pepr = tprv[lipr]
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
+  pepr = tprv[1]
+  ped1 = td1v[1]
+  ped2 = td2v[1]
 
   # node proposal
   lλp  = trioprop(λpr, λd1, λd2, pepr, ped1, ped2, σλ)
   lμp  = trioprop(μpr, μd1, μd2, pepr, ped1, ped2, σμ)
 
   # simulate fix tree vector
-  bb!(λprv_p, λpr, lλp, μprv_p, μpr, lμp, tprv, σλ, σμ, srδt)
-  bb!(λd1v_p, lλp, λd1, μd1v_p, lμp, μd1, td1v, σλ, σμ, srδt)
-  bb!(λd2v_p, lλp, λd2, μd2v_p, lμp, μd2, td2v, σλ, σμ, srδt)
+  bb!(λprv_p, λpr, lλp, μprv_p, μpr, lμp, tprv[2], σλ, σμ, δt, srδt)
+  bb!(λd1v_p, lλp, λd1, μd1v_p, lμp, μd1, td1v[2], σλ, σμ, δt, srδt)
+  bb!(λd2v_p, lλp, λd2, μd2v_p, lμp, μd2, td2v[2], σλ, σμ, δt, srδt)
 
   # fill fix and simulate unfix tree
   bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)
@@ -636,9 +634,6 @@ function triad_lupdate_root!(treep  ::iTgbmbd,
   tprv = tsv[pr]
   td1v = tsv[d1]
   td2v = tsv[d2]
-  lipr = lastindex(tprv)
-  lid1 = lastindex(td1v)
-  lid2 = lastindex(td2v)
 
   # speciation vectors
   λprv_p = bbλp[pr]
@@ -647,6 +642,9 @@ function triad_lupdate_root!(treep  ::iTgbmbd,
   λprv_c = bbλc[pr]
   λd1v_c = bbλc[d1]
   λd2v_c = bbλc[d2]
+  lipr = lastindex(λprv_c)
+  lid1 = lastindex(λd1v_c)
+  lid2 = lastindex(λd2v_c)
   λpr    = λprv_c[1]
   λd1    = λd1v_c[lid1]
   λd2    = λd2v_c[lid2]
@@ -667,9 +665,9 @@ function triad_lupdate_root!(treep  ::iTgbmbd,
   treepd1, treepd2 = fixds(treep)
 
   # pendant edges
-  pepr = tprv[lipr]
-  ped1 = td1v[lid1]
-  ped2 = td2v[lid2]
+  pepr = tprv[1]
+  ped1 = td1v[1]
+  ped2 = td2v[1]
 
   # proposal given daughters
   lλp = duoprop(λd1, λd2, ped1, ped2, σλ)
@@ -681,9 +679,9 @@ function triad_lupdate_root!(treep  ::iTgbmbd,
   lμrp = rnorm(lμp, srpepr*σμ)
 
   # simulate fix tree vector
-  bb!(λprv_p, lλrp, lλp, μprv_p, lμrp, lμp, tprv, σλ, σμ, srδt)
-  bb!(λd1v_p, lλp,  λd1, μd1v_p,  lμp, μd1, td1v, σλ, σμ, srδt)
-  bb!(λd2v_p, lλp,  λd2, μd2v_p,  lμp, μd2, td2v, σλ, σμ, srδt)
+  bb!(λprv_p, lλrp, lλp, μprv_p, lμrp, lμp, tprv[2], σλ, σμ, δt, srδt)
+  bb!(λd1v_p, lλp,  λd1, μd1v_p,  lμp, μd1, td1v[2], σλ, σμ, δt, srδt)
+  bb!(λd2v_p, lλp,  λd2, μd2v_p,  lμp, μd2, td2v[2], σλ, σμ, δt, srδt)
 
   # fill fix and simulate unfix tree
   bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)

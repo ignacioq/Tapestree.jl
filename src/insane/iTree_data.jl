@@ -57,7 +57,7 @@ isextinct(::Nothing) = false
 
 Return pendant edge.
 """
-pe(tree::T) where {T <: iTree} = getproperty(tree,:pe)
+pe(tree::T) where {T <: iTree} = getproperty(tree, :pe)
 
 """
     pe(::Nothing)
@@ -65,6 +65,43 @@ pe(tree::T) where {T <: iTree} = getproperty(tree,:pe)
 Return pendant edge.
 """
 pe(::Nothing) = nothing
+
+
+
+
+"""
+    dt(tree::T) where {T <: iTree}
+
+Return `δt`.
+"""
+dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
+
+"""
+    dt(::Nothing)
+
+Return `δt`.
+"""
+dt(::Nothing) = nothing
+
+
+
+
+
+"""
+    nsdt(tree::T) where {T <: iTree}
+
+Return last non-standard `δt`.
+"""
+nsdt(tree::T) where {T <: iTree} = getproperty(tree, :nsdt)
+
+"""
+    nsdt(::Nothing)
+
+Return last non-standard `δt`.
+"""
+nsdt(::Nothing) = nothing
+
+
 
 
 
@@ -217,23 +254,6 @@ end
 Return the number of extinct tip nodes for `tree`.
 """
 snen(::Nothing) = 0
-
-
-
-
-"""
-    ts(tree::T) where {T <: iTgbm} 
-
-Return pendant edge.
-"""
-ts(tree::T) where {T <: iTgbm} = getproperty(tree,:ts)
-
-"""
-    pe(tree::iTree)
-
-Return pendant edge.
-"""
-ts(::Nothing) = nothing
 
 
 
@@ -596,7 +616,7 @@ function makebbv!(tree::iTgbmbd,
                   bbμ ::Array{Array{Float64,1},1}, 
                   tsv ::Array{Array{Float64,1},1})
 
-  push!(tsv, ts(tree))
+  push!(tsv, [pe(tree), nsdt(tree)])
   push!(bbλ, lλ(tree))
   push!(bbμ, lμ(tree))
 
@@ -610,7 +630,7 @@ end
 
 
 """
-    makebbv!(tree::iTgbmbd, 
+    makebbv!(tree::Nothing, 
              bbλ ::Array{Array{Float64,1},1}, 
              bbμ ::Array{Array{Float64,1},1}, 
              tsv ::Array{Array{Float64,1},1})

@@ -157,11 +157,12 @@ representing a binary phylogenetic tree with no extinction
 and `λ` evolving as a Geometric Brownian motion  for `insane` use, 
 with the following fields:
 
-  d1: daughter tree 1
-  d2: daughter tree 2
-  pe: pendant edge
-  ts: array of time vectors concordant with `lλ`
-  lλ: array of a Brownian motion evolution of `log(λ)`
+  d1:  daughter tree 1
+  d2:  daughter tree 2
+  pe:  pendant edge
+  dt:  choice of time lag
+  fdt: final `δt`
+  lλ:  array of a Brownian motion evolution of `log(λ)`
 
     iTgbmpb()
 
@@ -176,27 +177,22 @@ Constructs an empty `iTgbmpb` object with pendant edge `pe`.
 Constructs an `iTgbmpb` object with two `iTgbmpb` daughters and pendant edge `pe`.
 """
 mutable struct iTgbmpb <: iTgbm
-  d1::Union{iTgbmpb, Nothing}
-  d2::Union{iTgbmpb, Nothing}
-  pe::Float64
-  ts::Array{Float64,1}
-  lλ::Array{Float64,1}
+  d1 ::Union{iTgbmpb, Nothing}
+  d2 ::Union{iTgbmpb, Nothing}
+  pe ::Float64
+  dt ::Float64
+  fdt::Float64
+  lλ ::Array{Float64,1}
 
   # inner constructor
-  iTgbmpb(d1::Union{iTgbmpb, Nothing}, d2::Union{iTgbmpb, Nothing}, 
-    pe::Float64, ts::Array{Float64,1}, lλ::Array{Float64,1}) = 
-      new(d1, d2, pe, ts, lλ)
+  iTgbmpb(d1::Union{iTgbmpb, Nothing}, d2::Union{iTgbmpb, Nothing}, pe::Float64, 
+    dt::Float64, nt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
+      new(d1, d2, pe, dt, fdt, lλ)
 end
 
 # outer constructors
 iTgbmpb() = 
-  iTgbmpb(nothing, nothing, 0.0, Float64[], Float64[])
-
-iTgbmpb(pe::Float64) = 
-  iTgbmpb(nothing, nothing, pe, Float64[], Float64[])
-
-iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, pe::Float64) = 
-  iTgbmpb(d1, d2, pe, Float64[], Float64[])
+  iTgbmpb(nothing, nothing, 0.0, 0.0, 0.0, Float64[])
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
@@ -205,7 +201,11 @@ Base.show(io::IO, t::iTgbmpb) =
 
 
 """
-    iTgbmpb(tree::iTpb, δt::Float64, lλa::Float64, σλ::Float64)
+    iTgbmpb(tree::sTpb, 
+            δt  ::Float64, 
+            srδt::Float64, 
+            lλa ::Float64, 
+            σλ  ::Float64)
 
 Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
@@ -215,27 +215,35 @@ function iTgbmpb(tree::sTpb,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  # make ts vector
   pet = pe(tree)
-  tsv = [0.0:δt:pet...]
-  if tsv[end] != pet
-    push!(tsv, pet)
+  nt  = floor(pet, δt)
+  fdt = mod(pet, δt)
+
+  if iszero(fdt)
+    fdt = δt
   end
 
-  lλv = sim_bm(lλa, σλ, srδt, tsv)
+  lλv = sim_bm(lλa, σλ, srδt, nt, fdt)
 
   iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[end], σλ), 
           iTgbmpb(tree.d2, δt, srδt, lλv[end], σλ),
-          pet, tsv, lλv)
+          pe(tree), δt, fdt, lλv)
 end
 
 """
-    iTgbmpb(::Nothing, δt::Float64, lλa::Float64, σλ::Float64)
+    iTgbmpb(tree::sTpb, 
+            δt  ::Float64, 
+            srδt::Float64, 
+            lλa ::Float64, 
+            σλ  ::Float64)
 
 Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
-iTgbmpb(::Nothing, δt::Float64, srδt::Float64, lλa::Float64, σλ::Float64) = 
-  nothing
+iTgbmpb(::Nothing, 
+        δt  ::Float64, 
+        srδt::Float64, 
+        lλa ::Float64, 
+        σλ  ::Float64) = nothing
 
 
 
@@ -248,58 +256,55 @@ representing a binary phylogenetic tree with  `λ` and `μ`
 evolving as a Geometric Brownian motion  for `insane` use, 
 with the following fields:
 
-  d1: daughter tree 1
-  d2: daughter tree 2
-  pe: pendant edge
-  iμ: is an extinction node
-  ts: array of time vectors concordant with `lλ` and `lμ`
-  lλ: array of a Brownian motion evolution of `log(λ)`
-  lμ: array of a Brownian motion evolution of `log(μ)`
+  d1:   daughter tree 1
+  d2:   daughter tree 2
+  pe:   pendant edge
+  iμ:   if extinct node
+  fx:   if fix (observed) node
+  dt:   choice of time lag
+  fdt:  final `dt`
+  lλ:   array of a Brownian motion evolution of `log(λ)`
+  lμ:   array of a Brownian motion evolution of `log(μ)`
 
-    iTgbmbd(d1::Union{iTgbmbd, Nothing}, 
-            d2::Union{iTgbmbd, Nothing}, 
-            pe::Float64, 
-            iμ::Bool, 
-            fx::Bool, 
-            ts::Array{Float64,1}, 
-            lλ::Array{Float64,1},
-            lμ::Array{Float64,1}) = 
-      new(d1, d2, pe, iμ, fx, ts, lλ, lμ)
+  iTgbmbd(d1  ::Union{iTgbmbd, Nothing}, 
+          d2  ::Union{iTgbmbd, Nothing}, 
+          pe  ::Float64, 
+          dt  ::Float64,
+          fdt::Float64,
+          iμ   ::Bool, 
+          fx   ::Bool, 
+          lλ   ::Array{Float64,1},
+          lμ   ::Array{Float64,1})
 
 Constructs an `iTgbmbd` object with two `iTgbmbd` daughters and pendant edge `pe`.
 """
 mutable struct iTgbmbd <: iTgbm
-  d1::Union{iTgbmbd, Nothing}
-  d2::Union{iTgbmbd, Nothing}
-  pe::Float64
-  iμ::Bool
-  fx::Bool
-  ts::Array{Float64,1}
-  lλ::Array{Float64,1}
-  lμ::Array{Float64,1}
+  d1 ::Union{iTgbmbd, Nothing}
+  d2 ::Union{iTgbmbd, Nothing}
+  pe ::Float64
+  dt ::Float64
+  fdt::Float64
+  iμ ::Bool
+  fx ::Bool
+  lλ ::Array{Float64,1}
+  lμ ::Array{Float64,1}
 
   # inner constructor
-  iTgbmbd(d1::Union{iTgbmbd, Nothing}, d2::Union{iTgbmbd, Nothing}, 
-    pe::Float64, iμ::Bool, fx::Bool, 
-    ts::Array{Float64,1}, lλ::Array{Float64,1},lμ::Array{Float64,1}) = 
-      new(d1, d2, pe, iμ, fx, ts, lλ, lμ)
+  iTgbmbd(d1 ::Union{iTgbmbd, Nothing}, 
+          d2 ::Union{iTgbmbd, Nothing}, 
+          pe ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1}) = 
+    new(d1, d2, pe, dt, fdt, iμ, fx, lλ, lμ)
 end
 
 # outer constructors
-iTgbmbd() = iTgbmbd(nothing, nothing, 0.0, false, false, 
-            Float64[], Float64[], Float64[])
-
-iTgbmbd(pe::Float64) = iTgbmbd(nothing, nothing, pe, false, false,
-                       Float64[], Float64[], Float64[])
-
-iTgbmbd(pe::Float64, iμ::Bool) = iTgbmbd(nothing, nothing, pe, iμ, false,
-                                 Float64[], Float64[], Float64[])
-
-iTgbmbd(d1::iTgbmbd, d2::iTgbmbd, pe::Float64) = 
-  iTgbmbd(d1, d2, pe, false, false,Float64[], Float64[], Float64[])
-
-iTgbmbd(d1::iTgbmbd, d2::iTgbmbd, pe::Float64, iμ::Bool) = 
-  iTgbmbd(d1, d2, pe, iμ, false, Float64[], Float64[], Float64[])
+iTgbmbd() = iTgbmbd(nothing, nothing, 0.0, 0.0, 0.0, false, false, 
+            Float64[], Float64[])
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 
@@ -346,19 +351,22 @@ function iTgbmbd(tree::sTbd,
                  σλ  ::Float64,
                  σμ  ::Float64)
 
-  # make ts vector
   pet = pe(tree)
-  tsv = [0.0:δt:pet...]
-  if tsv[end] != pet
-    push!(tsv, pet)
+  nt  = floor(Int64,pet/δt)
+  fdt = mod(pet, δt)
+
+  if iszero(fdt)
+    fdt = δt
   end
 
-  lλv = sim_bm(lλa, σλ, srδt, tsv)
-  lμv = sim_bm(lμa, σμ, srδt, tsv)
+  lλv = sim_bm(lλa, σλ, srδt, nt, fdt)
+  lμv = sim_bm(lμa, σμ, srδt, nt, fdt)
 
-  iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[end], lμv[end], σλ, σμ), 
-          iTgbmbd(tree.d2, δt, srδt, lλv[end], lμv[end], σλ, σμ),
-          pet, isextinct(tree), isfix(tree), tsv, lλv, lμv)
+  l = lastindex(lμv)
+
+  iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
+          iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
+          pe(tree), δt, fdt, isextinct(tree), isfix(tree), lλv, lμv)
 end
 
 """

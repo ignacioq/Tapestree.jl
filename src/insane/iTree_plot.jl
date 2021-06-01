@@ -32,20 +32,28 @@ function rplottree!(tree::T,
                     y   ::Array{Float64,1},
                     z   ::Array{Float64,1}) where {T <: iTgbm}
 
+  # tree δt and nsδt
+  δt = dt(tree)
+
   # add horizontal lines
-  xv  = ts(tree)
-  yc  = Float64(yr[1] + yr[end])*0.5
-  zv  = exp.(zfun(tree))
-  lts = lastindex(xv)
-  for i in Base.OneTo(lts)
-    push!(x, xc - xv[i])
+  yc = Float64(yr[1] + yr[end])*0.5
+  zv = exp.(zfun(tree))
+  l  = lastindex(zv)
+  for i in Base.OneTo(l-1)
+    push!(x, xc - Float64(i-1)*δt)
     push!(y, yc)
     push!(z, zv[i])
   end
 
-  push!(x, NaN)
-  push!(y, NaN)
-  push!(z, NaN)
+  nsdt0 = nsdt(tree)
+
+  if iszero(nsdt0)
+    push!(x, xc - (Float64(l-1)*δt), NaN)
+  else
+    push!(x, xc - (Float64(l-2)*δt + nsdt0), NaN)
+  end
+  push!(y, yc, NaN)
+  push!(z, zv[l], NaN)
 
   if !istip(tree)
     ntip1 = sntn(tree.d1)
@@ -76,7 +84,8 @@ end
 
 
 """
-    function f(tree::iTgbm, cfun::Function)
+    function f(tree::T, zfun::Function)
+
 Recipe for plotting a Type `iTgbm`.
 """
 @recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
@@ -86,13 +95,6 @@ Recipe for plotting a Type `iTgbm`.
   z = Float64[]
 
   rplottree!(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
-  # x = [0.1, 0.2, 0.3, 0.4, NaN, 0.2, 0.1, NaN, 0.5, 0.4, 0.3, 0.1, NaN]
-  # y = [0.5, 0.5, 0.5, 0.5, NaN, 3.0, 3.0, NaN, 5.0, 5.0, 5.0, 5.0, NaN] 
-  # z = [0.2, 0.8, 0.6, 1.0, NaN, 0.1, 0.9, NaN, 0.1, 0.9, 0.2, 0.3, NaN]
-
-  # x = [0.1, 0.2, 0.3, 0.4, 0.2, 0.1, 0.5, 0.4, 0.3, 0.1]
-  # y = [0.5, 0.5, 0.5, 0.5, 3.0, 3.0, 5.0, 5.0, 5.0, 5.0] 
-  # z = [0.2, 0.8, 0.6, 1.0, 0.1, 0.9, 0.1, 0.9, 0.2, 0.3]
 
   # plot defaults
   line_z          --> z
@@ -110,15 +112,6 @@ Recipe for plotting a Type `iTgbm`.
   yticks          --> (nothing)
   yshowaxis       --> false
 
-  # nan_inds = findall(x -> isnan(x),z)
-  # for i in eachindex(nan_inds)
-  #     start = 1 + (i == 1 ? 0 : nan_inds[i - 1])
-  #     stop = nan_inds[i] - 1
-  #     @series begin
-  #         line_z --> z[start:stop]
-  #         x[start:stop], y[start:stop]
-  #     end
-  # end
   return x, y
 end
 

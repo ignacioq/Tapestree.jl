@@ -88,7 +88,8 @@ function insane_gbmbd(tree    ::sTbd,
   bit = BitArray{1}()
   makeiBf!(Ψc, idf, bit)
 
-  # allocate `bb` for each fix branch and their `ts` vectors
+  # allocate `bb` for each fix branch and their `ts` vectors consisting of 
+  # [pe(tree), nsdt(tree)]
   bbλc = Array{Float64,1}[]
   bbμc = Array{Float64,1}[]
   tsv  = Array{Float64,1}[]
@@ -111,7 +112,7 @@ function insane_gbmbd(tree    ::sTbd,
   spup = sum(pupdp)
   pup  = Int64[]
   for i in Base.OneTo(3) 
-    append!(pup, fill(i, ceil(Int64, Float64(2*n) * pupdp[i]/spup)))
+    append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
   # burn-in phase
@@ -416,9 +417,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim)
-
-          llik_gbm(Ψc, σλc, σμc, δt, srδt)
-
       end
     end
 
@@ -489,9 +487,7 @@ function fsp(Ψp   ::iTgbmbd,
              srδt ::Float64,
              nlim ::Int64)
 
-  tsi  = tsv[bix]
-  tl   = lastindex(tsi)
-  nsδt = δt - (tsi[tl] - tsi[tl-1])
+  nsδt = tsv[bix][2]
 
   t0, ret, λf, μf = fsbi(bi, bbλc[bix][1], bbμc[bix][1], 
     nsδt, σλ, σμ, δt, srδt, nlim)
@@ -512,7 +508,7 @@ function fsp(Ψp   ::iTgbmbd,
 
       # estimate for `llr` and `acr`
       iλ   = 0.6931471805599453 + λf
-      acr += λf - bbλc[pr][tl]
+      acr += λf - bbλc[pr][end]
 
     else
       pr  = bix
@@ -549,6 +545,109 @@ function fsp(Ψp   ::iTgbmbd,
   return Ψp, Ψc, llc
 end
 
+
+
+
+
+"""
+    fsbi(bi  ::iBf, 
+         iλ  ::Float64, 
+         iμ  ::Float64, 
+         nsδt::Float64,
+         σλ  ::Float64, 
+         σμ  ::Float64, 
+         δt  ::Float64, 
+         srδt::Float64,
+         nlim::Int64)
+
+Forward gbm birth-death simulation for branch `bi`.
+"""
+function fsbi(bi  ::iBf, 
+              iλ  ::Float64, 
+              iμ  ::Float64, 
+              nsδt::Float64,
+              σλ  ::Float64, 
+              σμ  ::Float64, 
+              δt  ::Float64, 
+              srδt::Float64,
+              nlim::Int64)
+
+  # retain the simulation?
+  ret = true
+
+  # times
+  tfb = tf(bi)
+
+  # simulate tree
+  t0, nsp = sim_gbm(ti(bi) - tfb, iλ, iμ, σλ, σμ, δt, srδt, 1, nlim)
+
+
+  """
+    here: this is creating extra length in vector
+  """
+
+
+  na = snan(t0)
+
+  λf, μf = NaN, NaN
+
+  # if simulation goes extinct
+  if iszero(na)
+    ret = false
+  # if simulation reached the maximum limit of species
+  elseif nsp === nlim
+    ret = false
+  # if one surviving lineage
+  elseif isone(na)
+    f, λf, μf = fixalive!(t0, NaN, NaN)
+  elseif na > 1
+    # if terminal branch
+    if it(bi)
+      ret = false
+    # if continue the simulation
+    else
+      nsδt0 = max(δt-nsδt, 0.0)
+
+      # fix random tip and return end λ(t) and μ(t) 
+      λf, μf = fixrtip!(t0, na, NaN, NaN)
+
+      for j in Base.OneTo(na - 1)
+
+        # get their final λ and μ to continue forward simulation
+        ix, λt, μt = fλμ1(t0, NaN, NaN, 1, 0)
+
+        for i in Base.OneTo(2)
+
+          st0, nsp = sim_gbm(nsδt0, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+
+          # if maximum number of species reached.
+          if nsp === nlim
+            if i === 2
+              ret = false
+            end
+            continue
+          end
+
+          # if goes extinct before the present
+          th0 = treeheight(st0)
+          if (th0 + 1e-11) < tfb
+            # graft to tip
+            add1(t0, st0, 1, 0)
+            break
+          end
+
+          # if not succeeded after 2 tries.
+          if i === 2
+            ret = false
+          end
+        end
+        !ret && break
+      end
+    end
+  end
+
+  return t0, ret, λf, μf
+end
 
 
 
@@ -631,100 +730,6 @@ end
 
 
 """
-    fsbi(bi  ::iBf, 
-         bbiλ::Array{Float64,1}, 
-         bbiμ::Array{Float64,1}, 
-         tsi ::Array{Float64,1},
-         σλ  ::Float64, 
-         σμ  ::Float64, 
-         δt  ::Float64, 
-         srδt::Float64,
-         ntry::Int64)
-
-Forward gbm birth-death simulation for branch `bi`.
-"""
-function fsbi(bi  ::iBf, 
-              iλ  ::Float64, 
-              iμ  ::Float64, 
-              nsδt::Float64,
-              σλ  ::Float64, 
-              σμ  ::Float64, 
-              δt  ::Float64, 
-              srδt::Float64,
-              nlim::Int64)
-
-  # retain the simulation?
-  ret = true
-
-  # times
-  tfb = tf(bi)
-
-  # simulate tree
-  t0, nsp = sim_gbm(ti(bi) - tfb, iλ, iμ, σλ, σμ, δt, srδt, 1, nlim)
-  na = snan(t0)
-
-  λf, μf = NaN, NaN
-
-  # if simulation goes extinct
-  if iszero(na)
-    ret = false
-  # if simulation reached the maximum limit of species
-  elseif nsp === nlim
-    ret = false
-  # if one surviving lineage
-  elseif isone(na)
-    f, λf, μf = fixalive!(t0, NaN, NaN)
-  elseif na > 1
-    # if terminal branch
-    if it(bi)
-      ret = false
-    # if continue the simulation
-    else
-      # fix random tip and return end λ(t) and μ(t) 
-      λf, μf = fixrtip!(t0, na, NaN, NaN)
-
-      for j in Base.OneTo(na - 1)
-
-        # get their final λ and μ to continue forward simulation
-        ix, λt, μt = fλμ1(t0, NaN, NaN, 1, 0)
-
-        for i in Base.OneTo(2)
-
-          st0, nsp = sim_gbm(nsδt, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
-
-          # if maximum number of species reached.
-          if nsp === nlim
-            if i === 2
-              ret = false
-            end
-            continue
-          end
-
-          # if goes extinct before the present
-          th0 = treeheight(st0)
-          if (th0 + 1e-11) < tfb
-            # graft to tip
-            add1(t0, st0, 1, 0)
-            break
-          end
-
-          # if not succeeded after 2 tries.
-          if i === 2
-            ret = false
-          end
-        end
-        !ret && break
-      end
-    end
-  end
-
-  return t0, ret, λf, μf
-end
-
-
-
-
-"""
     add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64)
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
@@ -741,26 +746,28 @@ function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64)
       npe = pet + pe(stree)
       setpe!(tree, npe)
 
-      setproperty!(tree, :iμ, stree.iμ)
+      setproperty!(tree, :iμ, isextinct(stree))
 
-      sts0 = ts(stree)
-      ls   = lastindex(sts0)
-
-      @simd for i in Base.OneTo(ls) 
-        sts0[i] += pet
-      end
-
-      ts0 = ts(tree)
       lλ0 = lλ(tree)
       lμ0 = lμ(tree)
 
-      pop!(ts0)
       pop!(lλ0)
       pop!(lμ0)
 
-      @views append!(ts0, sts0[2:ls])
-      @views append!(lλ0, lλ(stree)[2:ls])
-      @views append!(lμ0, lμ(stree)[2:ls])
+      lλs = lλ(stree)
+      lμs = lμ(stree)
+
+      popfirst!(lλs)
+      popfirst!(lμs)
+
+      append!(lλ0, lλs)
+      append!(lμ0, lμs)
+
+      if isone(lastindex(lλs))
+        setnsdt!(tree, nsdt(tree) + nsdt(stree))
+      else
+        setnsdt!(tree, nsdt(stree))
+      end
 
       tree.d1 = stree.d1
       tree.d2 = stree.d2

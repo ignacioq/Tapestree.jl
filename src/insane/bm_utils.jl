@@ -24,14 +24,14 @@ Created 10 09 2020
 Fill fix with previously simulated geometric Brownian motion and simulate
 geometric Brownian motion in place for the unfixed trees.
 """
-function bm!(tree::iTgbmbd,
-             bbiλ::Array{Float64,1},
-             bbiμ::Array{Float64,1},
-             ii  ::Int64,
-             tl  ::Int64,
-             σλ  ::Float64,
-             σμ  ::Float64,
-             srδt::Float64)
+@inline function bm!(tree::iTgbmbd,
+                     bbiλ::Array{Float64,1},
+                     bbiμ::Array{Float64,1},
+                     ii  ::Int64,
+                     tl  ::Int64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     srδt::Float64)
 
   @inbounds begin
 
@@ -81,13 +81,12 @@ function bm!(tree::iTgbmbd,
              σμ  ::Float64,
              srδt::Float64)
 
-  tsi = ts(tree)
   λv  = lλ(tree)
   μv  = lμ(tree)
 
-  bm!(λv, μv, λt, μt, tsi, σλ, σμ, srδt)
+  bm!(λv, μv, λt, μt, nsdt(tree), σλ, σμ, srδt)
 
-  l = lastindex(tsi)
+  l = lastindex(λv)
 
   if !isnothing(tree.d1)
     bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
@@ -103,25 +102,23 @@ end
 
 
 
-
-
 """
-    ll_bm(t ::Array{Float64,1},
-          x ::Array{Float64,1},
-          σ ::Float64, 
+    ll_bm(x   ::Array{Float64,1},
+          nsdt::Float64,
+          σ   ::Float64, 
           srδt::Float64)
 
 Returns the log-likelihood for Brownian motion.
 """
-function ll_bm(t ::Array{Float64,1},
-               x ::Array{Float64,1},
-               σ ::Float64, 
-               srδt::Float64)
+@inline function ll_bm(x   ::Array{Float64,1},
+                       nsdt::Float64,
+                       σ   ::Float64, 
+                       srδt::Float64)
 
   @inbounds begin
 
     # estimate standard `δt` likelihood
-    nI = lastindex(t)-2
+    nI = lastindex(x)-2
 
     ll = 0.0
     xi = x[1]
@@ -136,7 +133,7 @@ function ll_bm(t ::Array{Float64,1},
     ll -= Float64(nI)*(log(σ*srδt) + 0.5*log(2.0π))
 
     # add final non-standard `δt`
-    ll += ldnorm_bm(x[nI+2], x[nI+1], sqrt(t[nI+2] - t[nI+1])*σ)
+    ll += ldnorm_bm(x[nI+2], x[nI+1], sqrt(nsdt)*σ)
   end
 
   return ll
@@ -147,24 +144,24 @@ end
 
 
 """
-    llr_bm(t   ::Array{Float64,1},
-           xp  ::Array{Float64,1},
+    llr_bm(xp  ::Array{Float64,1},
            xc  ::Array{Float64,1},
+           nsdt::Float64,
            σ   ::Float64, 
            srδt::Float64)
 
 Returns the log-likelihood ratio for Brownian motion.
 """
-function llr_bm(t   ::Array{Float64,1},
-                xp  ::Array{Float64,1},
-                xc  ::Array{Float64,1},
-                σ   ::Float64, 
-                srδt::Float64)
+@inline function llr_bm(xp  ::Array{Float64,1},
+                        xc  ::Array{Float64,1},
+                        nsdt::Float64,
+                        σ   ::Float64, 
+                        srδt::Float64)
 
   @inbounds begin
 
     # estimate standard `δt` likelihood
-    nI = lastindex(t)-2
+    nI = lastindex(xp)-2
 
     llr = 0.0
     xpi = xp[1]
@@ -181,8 +178,7 @@ function llr_bm(t   ::Array{Float64,1},
     llr *= (-0.5/((σ*srδt)^2))
 
     # add final non-standard `δt`
-    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1], xc[nI+2], xc[nI+1], 
-              sqrt(t[nI+2] - t[nI+1])*σ)
+    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1], xc[nI+2], xc[nI+1], sqrt(nsdt)*σ)
   end
 
   return llr
@@ -196,7 +192,7 @@ end
         x1   ::Array{Float64,1},
         x0i  ::Float64,
         x1i  ::Float64,
-        t    ::Array{Float64,1},
+        nsdt ::Float64,
         σ0   ::Float64,
         σ1   ::Float64,
         srδt::Float64)
@@ -204,14 +200,14 @@ end
 Brownian motion simulation function for updating a branch for two 
 vectors that share times in place.
 """
-function bm!(x0   ::Array{Float64,1},
-             x1   ::Array{Float64,1},
-             x0i  ::Float64,
-             x1i  ::Float64,
-             t    ::Array{Float64,1},
-             σ0   ::Float64,
-             σ1   ::Float64,
-             srδt::Float64)
+@inline function bm!(x0   ::Array{Float64,1},
+                     x1   ::Array{Float64,1},
+                     x0i  ::Float64,
+                     x1i  ::Float64,
+                     nsdt ::Float64,
+                     σ0   ::Float64,
+                     σ1   ::Float64,
+                     srδt::Float64)
 
   @inbounds begin
     l = lastindex(x0)
@@ -226,14 +222,12 @@ function bm!(x0   ::Array{Float64,1},
       x0[i+1] *= srδt*σ0
       x1[i+1] *= srδt*σ1
     end
+    srlt   = sqrt(nsdt)
+    x0[l] *= srlt*σ0
+    x1[l] *= srlt*σ1
 
     cumsum!(x0, x0)
     cumsum!(x1, x1)
-
-    srlt  = sqrt(t[l] - t[l-1])
-
-    x0[l] = rnorm(x0[l-1], srlt*σ0)
-    x1[l] = rnorm(x1[l-1], srlt*σ1)
   end
 
   return nothing
@@ -242,25 +236,23 @@ end
 
 
 
-
 """
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
-        t   ::Array{Float64,1},
+        nsdt::Float64,
         σ   ::Float64,
         srδt::Float64)
 
 Brownian motion simulation function for updating a branch in place.
 """
-function bm!(x   ::Array{Float64,1},
-             xi  ::Float64,
-             t   ::Array{Float64,1},
-             σ   ::Float64,
-             srδt::Float64)
+@inline function bm!(x   ::Array{Float64,1},
+                     xi  ::Float64,
+                     nsdt::Float64,
+                     σ   ::Float64,
+                     srδt::Float64)
 
   @inbounds begin
     l = lastindex(x)
-
     randn!(x)
 
     # for standard δt
@@ -268,11 +260,8 @@ function bm!(x   ::Array{Float64,1},
     @simd for i = Base.OneTo(l-2)
       x[i+1] *= srδt*σ
     end
-
+    x[l] *= sqrt(nsdt)*σ
     cumsum!(x, x)
-
-    # for last non-standard δt
-    x[l] = rnorm(x[l-1], sqrt(t[l] - t[l-1])*σ)
   end
 
   return nothing
@@ -285,18 +274,22 @@ end
     bb!(x   ::Array{Float64,1},
         xi  ::Float64,
         xf  ::Float64,
-        t   ::Array{Float64,1},
+        nt  ::Float64,
+        nsdt::Float64,
         σ   ::Float64,
+        δt  ::Float64,
         srδt::Float64)
 
 Brownian bridge simulation function for updating a branch in place.
 """
-function bb!(x   ::Array{Float64,1},
-             xi  ::Float64,
-             xf  ::Float64,
-             t   ::Array{Float64,1},
-             σ   ::Float64,
-             srδt::Float64)
+@inline function bb!(x   ::Array{Float64,1},
+                     xi  ::Float64,
+                     xf  ::Float64,
+                     nt  ::Float64,
+                     nsdt::Float64,
+                     σ   ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
 
   @inbounds begin
     l = lastindex(x)
@@ -308,19 +301,19 @@ function bb!(x   ::Array{Float64,1},
     @simd for i = Base.OneTo(l-2)
       x[i+1] *= srδt*σ
     end
-
+    x[l] *= sqrt(nsdt)*σ
     cumsum!(x, x)
 
-    # for last non-standard δt
-    x[l] = rnorm(x[l-1], sqrt(t[l] - t[l-1])*σ)
-
     # make bridge
-    ite = 1.0/t[l]
+    ite = 1.0/(Float64(l-1)*δt + nsdt)
     xdf = (x[l] - xf)
 
-    @simd for i = Base.OneTo(l)
-      x[i] -= (t[i] * ite * xdf)
+    @simd for i = Base.OneTo(l-1)
+      x[i] -= (Float64(i-1)*δt*ite * xdf)
     end
+
+    # for last non-standard δt
+    x[l] = xf
   end
 
   return nothing
@@ -336,24 +329,27 @@ end
         x1  ::Array{Float64,1},
         x1i ::Float64,
         x1f ::Float64,
-        t   ::Array{Float64,1},
+        nsdt::Float64,
         σ0  ::Float64,
         σ1  ::Float64,
+        δt  ::Float64,
         srδt::Float64)
 
 Brownian bridge simulation function for updating two vectors 
 (`0` & `1`) with shared times in place.
 """
-function bb!(x0  ::Array{Float64,1},
-             x0i ::Float64,
-             x0f ::Float64,
-             x1  ::Array{Float64,1},
-             x1i ::Float64,
-             x1f ::Float64,
-             t   ::Array{Float64,1},
-             σ0  ::Float64,
-             σ1  ::Float64,
-             srδt::Float64)
+@inline function bb!(x0  ::Array{Float64,1},
+                     x0i ::Float64,
+                     x0f ::Float64,
+                     x1  ::Array{Float64,1},
+                     x1i ::Float64,
+                     x1f ::Float64,
+                     nsdt::Float64,
+                     σ0  ::Float64,
+                     σ1  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
+
 
   @inbounds begin
     l = lastindex(x0)
@@ -368,25 +364,26 @@ function bb!(x0  ::Array{Float64,1},
       x0[i+1] *= srδt*σ0
       x1[i+1] *= srδt*σ1
     end
-
+    srlt  = sqrt(nsdt)
+    x0[l] *= srlt*σ0
+    x1[l] *= srlt*σ1
     cumsum!(x0, x0)
     cumsum!(x1, x1)
 
-    # for last non-standard δt
-    srlt  = sqrt(t[l] - t[l-1])
-    x0[l] = rnorm(x0[l-1], srlt*σ0)
-    x1[l] = rnorm(x1[l-1], srlt*σ1)
-
     # make bridge
-    ite = 1.0/t[l]
+    ite = 1.0/(Float64(l-1)*δt + nsdt)
     x0df = (x0[l] - x0f)
     x1df = (x1[l] - x1f)
 
-    @simd for i = Base.OneTo(l)
-      iti   = t[i] * ite
+    @simd for i = Base.OneTo(l-1)
+      iti    = Float64(i-1)*δt*ite
       x0[i] -= (iti * x0df)
       x1[i] -= (iti * x1df)
     end
+
+    # for last non-standard δt
+    x0[l] = x0f
+    x1[l] = x1f
   end
 
   return nothing
@@ -397,26 +394,31 @@ end
 
 
 """
-    sim_bm(xa::Float64, σ::Float64, srδt::Float64, t::Array{Float64,1})
+    sim_bm(xa  ::Float64, 
+           σ   ::Float64, 
+           srδt::Float64, 
+           nt  ::Float64, 
+           nsdt::Float64)
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
 `σ` and times `t`. 
 """
-function sim_bm(xa::Float64, σ::Float64, srδt::Float64, t::Array{Float64,1})
+@inline function sim_bm(xa  ::Float64, 
+                        σ   ::Float64, 
+                        srδt::Float64, 
+                        nt  ::Int64, 
+                        nsdt::Float64)
 
   @inbounds begin
-
-    l = lastindex(t)
+    l = nt + 2
     x = randn(l)
     # for standard δt
     x[1] = xa
     @simd for i in Base.OneTo(l-2)
       x[i+1] *= srδt*σ
     end
+    x[l] *= sqrt(nsdt)*σ
     cumsum!(x, x)
-
-    # for last non-standard δt
-    x[l] = rnorm(x[l-1], sqrt(t[l] - t[l-1])*σ)
   end
 
   return x
