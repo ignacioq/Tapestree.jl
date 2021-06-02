@@ -504,11 +504,11 @@ function remove_extinct(tree::iTgbmbd)
 
       fdt0 = fdt(tree) + fdt(tree.d2)
 
-      if fdt0 >= dt(tree) 
+      if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
 
-      setfdt!(tree, fdt1) 
+      setfdt!(tree, fdt0) 
 
       tree = tree.d2
       setpe!(tree, npe)
@@ -518,23 +518,22 @@ function remove_extinct(tree::iTgbmbd)
     ppr = pe(tree)
     npe = ppr + pe(tree.d1)
 
-    ts1 = ts(tree.d1)
-
-    @simd for i in Base.OneTo(lastindex(ts1)) 
-      ts1[i] += ppr
-    end
-
-    ts0 = ts(tree)
     lλ0 = lλ(tree)
     lμ0 = lμ(tree)
 
-    pop!(ts0)
     pop!(lλ0)
     pop!(lμ0)
 
-    prepend!(ts1, ts0) 
     prepend!(lλ(tree.d1), lλ0) 
     prepend!(lμ(tree.d1), lμ0)
+
+    fdt0 = fdt(tree) + fdt(tree.d1)
+
+    if fdt0 > dt(tree) 
+      fdt0 -= dt(tree) 
+    end
+
+    setfdt!(tree, fdt0) 
 
     tree = tree.d1
     setpe!(tree, npe)

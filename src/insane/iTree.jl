@@ -186,7 +186,7 @@ mutable struct iTgbmpb <: iTgbm
 
   # inner constructor
   iTgbmpb(d1::Union{iTgbmpb, Nothing}, d2::Union{iTgbmpb, Nothing}, pe::Float64, 
-    dt::Float64, nt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
+    dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
       new(d1, d2, pe, dt, fdt, lλ)
 end
 
@@ -305,6 +305,15 @@ end
 # outer constructors
 iTgbmbd() = iTgbmbd(nothing, nothing, 0.0, 0.0, 0.0, false, false, 
             Float64[], Float64[])
+
+# outer constructors
+iTgbmbd(d1 ::Union{iTgbmbd, Nothing}, 
+        d2 ::Union{iTgbmbd, Nothing}, 
+        pe ::Float64, 
+        dt ::Float64,
+        fdt::Float64,
+        lλ ::Array{Float64,1}) = 
+  iTgbmbd(d1, d2, pe, dt, fdt, false, false, lλ, Float64[])
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 

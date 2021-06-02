@@ -628,24 +628,24 @@ end
 
 Make a trio of Brownian motion MCMC updates when the root is involved.
 """
-function triad_lupdate_root!(treep  ::iTgbmbd, 
-                             treec  ::iTgbmbd,
-                             bbλp::Array{Array{Float64,1},1}, 
-                             bbμp::Array{Array{Float64,1},1}, 
-                             bbλc::Array{Array{Float64,1},1}, 
-                             bbμc::Array{Array{Float64,1},1}, 
-                             tsv ::Array{Array{Float64,1},1}, 
-                             llc ::Float64,
-                             prc ::Float64,
-                             pr  ::Int64,
-                             d1  ::Int64,
-                             d2  ::Int64,
-                             σλ  ::Float64,
-                             σμ  ::Float64,
-                             δt  ::Float64, 
-                             srδt::Float64,
-                             λa_prior::Tuple{Float64, Float64},
-                             μa_prior::Tuple{Float64, Float64})
+function triad_lupdate_root!(treep   ::iTgbmbd, 
+                             treec   ::iTgbmbd,
+                             bbλp    ::Array{Array{Float64,1},1}, 
+                             bbμp    ::Array{Array{Float64,1},1}, 
+                             bbλc    ::Array{Array{Float64,1},1}, 
+                             bbμc    ::Array{Array{Float64,1},1}, 
+                             tsv     ::Array{Array{Float64,1},1}, 
+                             llc     ::Float64,
+                             prc     ::Float64,
+                             pr      ::Int64,
+                             d1      ::Int64,
+                             d2      ::Int64,
+                             σλ      ::Float64,
+                             σμ      ::Float64,
+                             δt      ::Float64, 
+                             srδt    ::Float64,
+                             λa_prior::Float64,
+                             μa_prior::Float64)
 
   ## get reference vectors
   # time vectors
@@ -713,8 +713,8 @@ function triad_lupdate_root!(treep  ::iTgbmbd,
                        σλ, σμ, δt, srδt)
 
   # prior ratio
-  prr = llrdnorm_x(lλrp, λpr, λa_prior[1], λa_prior[2]) +
-        llrdnorm_x(lμrp, μpr, μa_prior[1], μa_prior[2])
+  prr = llrdexp_x(lλrp, λpr, λa_prior) + 
+        llrdexp_x(lμrp, μpr, μa_prior)
 
   # acceptance ratio
   acr += prr

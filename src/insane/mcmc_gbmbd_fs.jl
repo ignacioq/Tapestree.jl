@@ -15,10 +15,10 @@ Created 03 09 2020
 """
     insane_gbmbd(tree    ::sTbd, 
                  out_file::String;
-                 σλprior ::Float64           = 0.1,
-                 σμprior ::Float64           = 0.1,
-                 λa_prior::NTuple{2,Float64} = (0.0,10.0),
-                 μa_prior::NTuple{2,Float64} = (0.0,10.0),
+                 σλ_prior::Float64           = 0.1,
+                 σμ_prior::Float64           = 0.1,
+                 λa_prior::Float64           = 0.1,
+                 μa_prior::Float64           = 0.1,
                  niter   ::Int64             = 1_000,
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
@@ -31,7 +31,7 @@ Created 03 09 2020
                  σλtni   ::Float64           = 1.0,
                  σμtni   ::Float64           = 1.0,
                  obj_ar  ::Float64           = 0.4,
-                 pupdp   ::NTuple{3,Float64} = (0.1,0.4,0.4),
+                 pupdp   ::NTuple{3,Float64} = (0.3,0.1,0.1),
                  ntry    ::Int64             = 2,
                  nlim    ::Int64             = 500,
                  δt      ::Float64           = 1e-2,
@@ -41,10 +41,10 @@ Run insane for GBM birth-death.
 """
 function insane_gbmbd(tree    ::sTbd, 
                       out_file::String;
-                      σλprior ::Float64           = 0.1,
-                      σμprior ::Float64           = 0.1,
-                      λa_prior::NTuple{2,Float64} = (0.0,10.0),
-                      μa_prior::NTuple{2,Float64} = (0.0,10.0),
+                      σλ_prior::Float64           = 0.1,
+                      σμ_prior::Float64           = 0.1,
+                      λa_prior::Float64           = 0.1,
+                      μa_prior::Float64           = 0.1,
                       niter   ::Int64             = 1_000,
                       nthin   ::Int64             = 10,
                       nburn   ::Int64             = 200,
@@ -57,7 +57,7 @@ function insane_gbmbd(tree    ::sTbd,
                       σλtni   ::Float64           = 1.0,
                       σμtni   ::Float64           = 1.0,
                       obj_ar  ::Float64           = 0.4,
-                      pupdp   ::NTuple{3,Float64} = (0.1,0.4,0.4),
+                      pupdp   ::NTuple{3,Float64} = (0.3,0.1,0.1),
                       ntry    ::Int64             = 2,
                       nlim    ::Int64             = 500,
                       δt      ::Float64           = 1e-2,
@@ -118,13 +118,13 @@ function insane_gbmbd(tree    ::sTbd,
   # burn-in phase
   Ψp, Ψc, llc, prc, σλc, σμc, σλtn, σμtn =
     mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, μa_prior, 
-      σλprior, σμprior, nburn, tune_int, σλi, σμi, σλtni, σμtni, 
+      σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, σλtni, σμtni, 
       δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, scalef)
 
   # mcmc
   R, Ψv =
     mcmc_gbmbd(Ψp, Ψc, llc, prc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
-      λa_prior, μa_prior, σλprior, σμprior, niter, nthin, 
+      λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, 
       σλtn, σμtn, δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints)
 
   pardic = Dict(("lambda_root"  => 1,
@@ -145,10 +145,10 @@ end
 """
     mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                     Ψc      ::iTgbmbd,
-                    λa_prior::Tuple{Float64,Float64},
-                    μa_prior::Tuple{Float64,Float64},
-                    σλprior ::Float64,
-                    σμprior ::Float64,
+                    λa_prior::Float64,
+                    μa_prior::Float64,
+                    σλ_prior ::Float64,
+                    σμ_prior ::Float64,
                     nburn   ::Int64,
                     tune_int::Int64,
                     σλc     ::Float64,
@@ -173,10 +173,10 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          bbλc    ::Array{Array{Float64,1},1},
                          bbμc    ::Array{Array{Float64,1},1},
                          tsv     ::Array{Array{Float64,1},1},
-                         λa_prior::Tuple{Float64,Float64},
-                         μa_prior::Tuple{Float64,Float64},
-                         σλprior ::Float64,
-                         σμprior ::Float64,
+                         λa_prior::Float64,
+                         μa_prior::Float64,
+                         σλ_prior::Float64,
+                         σμ_prior::Float64,
                          nburn   ::Int64,
                          tune_int::Int64,
                          σλc     ::Float64,
@@ -202,10 +202,10 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   σμtn = σμtni
 
   llc = llik_gbm(Ψc, σλc, σμc, δt, srδt)
-  prc = logdexp(σλc, σλprior)                            +
-        logdexp(σμc, σμprior)                            +
-        logdnorm_tc(lλ(Ψc)[1], λa_prior[1], λa_prior[2]) +
-        logdnorm_tc(lμ(Ψc)[1], μa_prior[1], μa_prior[2])
+  prc = logdexp(σλc, σλ_prior)            +
+        logdexp(σμc, σμ_prior)            +
+        logdexp(exp(lλ(Ψc)[1]), λa_prior) +
+        logdexp(exp(lμ(Ψc)[1]), μa_prior)
 
   # number of branches and of triads
   nbr  = lastindex(idf)
@@ -231,10 +231,10 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
         lup += 1.0
 
         llc, prc, σλc, lλac = 
-          update_σ!(σλc, Ψc, llc, prc, σλtn, lλac, δt, srδt, σλprior, lλ)
+          update_σ!(σλc, Ψc, llc, prc, σλtn, lλac, δt, srδt, σλ_prior, lλ)
 
         llc, prc, σμc, lμac = 
-          update_σ!(σμc, Ψc, llc, prc, σμtn, lμac, δt, srδt, σμprior, lμ)
+          update_σ!(σμc, Ψc, llc, prc, σμtn, lμac, δt, srδt, σμ_prior, lμ)
 
       # gbm update
       elseif pupi === 2
@@ -300,10 +300,10 @@ end
                 bbλc    ::Array{Array{Float64,1},1},
                 bbμc    ::Array{Array{Float64,1},1},
                 tsv     ::Array{Array{Float64,1},1},
-                λa_prior::Tuple{Float64,Float64},
-                μa_prior::Tuple{Float64,Float64},
-                σλprior ::Float64,
-                σμprior ::Float64,
+                λa_prior::Float64,
+                μa_prior::Float64,
+                σλ_prior ::Float64,
+                σμ_prior ::Float64,
                 niter   ::Int64,
                 nthin   ::Int64,
                 σλtn    ::Float64,
@@ -330,10 +330,10 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     bbλc    ::Array{Array{Float64,1},1},
                     bbμc    ::Array{Array{Float64,1},1},
                     tsv     ::Array{Array{Float64,1},1},
-                    λa_prior::Tuple{Float64,Float64},
-                    μa_prior::Tuple{Float64,Float64},
-                    σλprior ::Float64,
-                    σμprior ::Float64,
+                    λa_prior::Float64,
+                    μa_prior::Float64,
+                    σλ_prior::Float64,
+                    σμ_prior::Float64,
                     niter   ::Int64,
                     nthin   ::Int64,
                     σλtn    ::Float64,
@@ -379,9 +379,9 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
       if pupi === 1
 
         llc, prc, σλc = 
-          update_σ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλprior, lλ)
+          update_σ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλ_prior, lλ)
         llc, prc, σμc  = 
-          update_σ!(σμc, Ψc, llc, prc, σμtn, δt, srδt, σμprior, lμ)
+          update_σ!(σμc, Ψc, llc, prc, σμtn, δt, srδt, σμ_prior, lμ)
 
       # gbm update
       elseif pupi === 2
@@ -912,8 +912,8 @@ end
               σμ     ::Float64, 
               δt     ::Float64, 
               srδt   ::Float64, 
-              λa_prior::Tuple{Float64,Float64},
-              μa_prior::Tuple{Float64,Float64},
+              λa_prior::Float64,
+              μa_prior::Float64,
               dri    ::BitArray{1},
               ldr    ::Int64,
               ter    ::BitArray{1},
@@ -936,8 +936,8 @@ function lvupdate!(Ψp      ::iTgbmbd,
                    σμ      ::Float64, 
                    δt      ::Float64, 
                    srδt    ::Float64, 
-                   λa_prior::Tuple{Float64,Float64},
-                   μa_prior::Tuple{Float64,Float64},
+                   λa_prior::Float64,
+                   μa_prior::Float64,
                    dri     ::BitArray{1},
                    ldr     ::Int64,
                    ter     ::BitArray{1},

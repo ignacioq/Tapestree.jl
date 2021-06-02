@@ -71,38 +71,40 @@ end
 
 
 """
-    extractp(tree::T, δt::Float64, lv::Function) where {T <: iTgbm}
+    extractp(tree::T, nδt::Float64, lv::Function) where {T <: iTgbm}
 
-Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
+Log-linearly predict Geometric Brownian motion for `lv` at times given by `nδt`.
 """
-function extractp(tree::iTgbmbd, δt::Float64, lv::Function)
+function extractp(tree::T, nδt::Float64, lv::Function) where {T <: iTgbm}
 
-  t = ts(tree)
-  v = lv(tree)
-
-  # make ts vector
   pet = pe(tree)
-  tsv = [0.0:δt:pet...]
-  if istip(tree) && tsv[end] != pet
-    push!(tsv, pet)
-  end
+  δt  = dt(tree)
+  v   = lv(tree)
+  n   = floor(Int64, pet/nδt)
 
   pv = Float64[]
 
-  # linearly predict λ
-  for i in tsv
-    ix, out = idxrange(t, i)
-    if out
-      push!(pv, linpred(i, t[ix], t[ix+1], v[ix], v[ix+1]))
-    else
-      push!(pv, v[ix])
-    end
+  for i in Base.OneTo(n)
+    iti = Float64(i-1)*nδt
+    ix  = floor(Int64, iti/δt) + 1
+    tts = δt*Float64(ix-1)
+    ttf = δt*Float64(ix)
+    push!(pv, linpred(iti, tts, ttf, v[ix], v[ix+1]))
   end
 
-  iTgbmbd(extractp(tree.d1, δt, lv), 
-          extractp(tree.d2, δt, lv),
-          pet, tsv, pv)
+  if (Float64(n)*nδt) !== pet
+    push!(pv, v[end])
+    nfdt = nδt
+  else
+    nfdt = mod(pet,nδt)
+  end
+
+  T(extractp(tree.d1, δt, lv), 
+    extractp(tree.d2, δt, lv),
+    pet, nδt, nfdt, pv)
 end
+
+
 
 """
     extractp(tree::Nothing, δt::Float64, lv::Function)
@@ -113,49 +115,48 @@ extractp(tree::Nothing, δt::Float64, lv::Function) = nothing
 
 
 
-
-
 """
-    extractp(tree::T, δt::Float64, lv::Function) where {T <: iTgbm}
+    extractp(tree::iTgbmbd, nδt::Float64)
 
-Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
+Log-linearly predict Geometric Brownian motion for `lλ` and `lμ` 
+at times given by `nδt`.
 """
-function extractp(tree::iTgbmbd, δt::Float64)
+function extractp(tree::iTgbmbd, nδt::Float64)
 
-  t  = ts(tree)
-  vλ = lλ(tree)
-  vμ = lμ(tree)
-
-  # make ts vector
   pet = pe(tree)
-  tsv = [0.0:δt:pet...]
-  if tsv[end] != pet
-    push!(tsv, pet)
-  end
+  δt  = dt(tree)
+  vλ  = lλ(tree)
+  vμ  = lμ(tree)
+  n   = floor(Int64, pet/nδt)
 
   pλv = Float64[]
   pμv = Float64[]
-  # linearly predict λ & μ
-  for i in tsv
-    ix, out = idxrange(t, i)
-    if out
-      push!(pλv, linpred(i, t[ix], t[ix+1], vλ[ix], vλ[ix+1]))
-      push!(pμv, linpred(i, t[ix], t[ix+1], vμ[ix], vμ[ix+1]))
-    else
-      push!(pλv, vλ[ix])
-      push!(pμv, vμ[ix])
-    end
+  for i in Base.OneTo(n+1)
+    iti = Float64(i-1)*nδt
+    ix  = floor(Int64, iti/δt) + 1
+    tts = δt*Float64(ix-1)
+    ttf = δt*Float64(ix)
+    push!(pλv, linpred(iti, tts, ttf, vλ[ix], vλ[ix+1]))
+    push!(pμv, linpred(iti, tts, ttf, vμ[ix], vμ[ix+1]))
   end
 
+  if (Float64(n+1)*nδt) !== pet
+    push!(pλv, vλ[end])
+    push!(pμv, vμ[end])
+    nfdt = mod(pet,nδt)
+  else
+    nfdt = nδt
+  end
 
-  iTgbmbd(extractp(tree.d1, δt), 
-          extractp(tree.d2, δt), pet, false, false, tsv, pλv, pμv)
+  iTgbmbd(extractp(tree.d1, nδt), 
+          extractp(tree.d2, nδt), pet, nδt, nfdt, false, false, pλv, pμv)
 end
 
 """
     extractp(tree::Nothing, δt::Float64)
 
-Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
+Log-linearly predict Geometric Brownian motion for `lλ` and `lμ` 
+at times given by `nδt`.
 """
 extractp(tree::Nothing, δt::Float64) = nothing
 
@@ -291,7 +292,8 @@ function iquantile(treev::Array{iTgbmbd,1},
                    p    ::Float64)
 
   nt  = lastindex(treev)
-  tsv = ts(treev[1])
+
+  t1 = treev[1]
 
   # make vector of lambdas and mus
   vsλ = Array{Float64,1}[]
@@ -306,7 +308,7 @@ function iquantile(treev::Array{iTgbmbd,1},
   # make fill vector to estimate statistics
   vλ = Array{Float64,1}(undef, nt)
   vμ = Array{Float64,1}(undef, nt)
-  for i in Base.OneTo(lastindex(tsv))
+  for i in Base.OneTo(lastindex(vsλ[1]))
     for t in Base.OneTo(nt)
       vλ[t] = vsλ[t][i]
       vμ[t] = vsμ[t][i]
@@ -334,7 +336,8 @@ function iquantile(treev::Array{iTgbmbd,1},
   end
 
   iTgbmbd(iquantile(treev1, p), 
-          iquantile(treev2, p), tsv[end], false, false, tsv, svλ, svμ)
+          iquantile(treev2, p), 
+          pe(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
 end
 
 """
