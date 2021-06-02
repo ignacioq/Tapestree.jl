@@ -89,7 +89,7 @@ function insane_gbmbd(tree    ::sTbd,
   makeiBf!(Ψc, idf, bit)
 
   # allocate `bb` for each fix branch and their `ts` vectors consisting of 
-  # [pe(tree), nsdt(tree)]
+  # [pe(tree), fdt(tree)]
   bbλc = Array{Float64,1}[]
   bbμc = Array{Float64,1}[]
   tsv  = Array{Float64,1}[]
@@ -269,7 +269,6 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim)
-
       end
 
       # tune parameters
@@ -581,12 +580,6 @@ function fsbi(bi  ::iBf,
   # simulate tree
   t0, nsp = sim_gbm(ti(bi) - tfb, iλ, iμ, σλ, σμ, δt, srδt, 1, nlim)
 
-
-  """
-    here: this is creating extra length in vector
-  """
-
-
   na = snan(t0)
 
   λf, μf = NaN, NaN
@@ -764,9 +757,9 @@ function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64)
       append!(lμ0, lμs)
 
       if isone(lastindex(lλs))
-        setnsdt!(tree, nsdt(tree) + nsdt(stree))
+        setfdt!(tree, fdt(tree) + fdt(stree))
       else
-        setnsdt!(tree, nsdt(stree))
+        setfdt!(tree, fdt(stree))
       end
 
       tree.d1 = stree.d1

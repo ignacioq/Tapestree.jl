@@ -39,19 +39,13 @@ function rplottree!(tree::T,
   yc = Float64(yr[1] + yr[end])*0.5
   zv = exp.(zfun(tree))
   l  = lastindex(zv)
-  for i in Base.OneTo(l-1)
+  @simd for i in Base.OneTo(l-1)
     push!(x, xc - Float64(i-1)*δt)
     push!(y, yc)
     push!(z, zv[i])
   end
 
-  nsdt0 = nsdt(tree)
-
-  if iszero(nsdt0)
-    push!(x, xc - (Float64(l-1)*δt), NaN)
-  else
-    push!(x, xc - (Float64(l-2)*δt + nsdt0), NaN)
-  end
+  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
   push!(y, yc, NaN)
   push!(z, zv[l], NaN)
 

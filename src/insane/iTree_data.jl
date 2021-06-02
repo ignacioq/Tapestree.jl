@@ -88,18 +88,18 @@ dt(::Nothing) = nothing
 
 
 """
-    nsdt(tree::T) where {T <: iTree}
+    fdt(tree::T) where {T <: iTree}
 
-Return last non-standard `δt`.
+Return final `δt`.
 """
-nsdt(tree::T) where {T <: iTree} = getproperty(tree, :nsdt)
+fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
 
 """
-    nsdt(::Nothing)
+    fdt(::Nothing)
 
-Return last non-standard `δt`.
+Return final `δt`.
 """
-nsdt(::Nothing) = nothing
+fdt(::Nothing) = nothing
 
 
 
@@ -616,7 +616,7 @@ function makebbv!(tree::iTgbmbd,
                   bbμ ::Array{Array{Float64,1},1}, 
                   tsv ::Array{Array{Float64,1},1})
 
-  push!(tsv, [pe(tree), nsdt(tree)])
+  push!(tsv, [pe(tree), fdt(tree)])
   push!(bbλ, lλ(tree))
   push!(bbμ, lμ(tree))
 
