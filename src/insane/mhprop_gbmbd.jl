@@ -93,7 +93,7 @@ function daughters_lprop!(treep::iTgbmbd,
       bm!(λd1v_p, μd1v_p, λf, μf, td1v[2], σλ, σμ, srδt)
       bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
-      # acceptance ratio 
+      # acceptance ratio
       λpr1_c = bbλc[pr][1]
       μpr1_c = bbμc[pr][1]
       pepr   = tsv[pr][1]
@@ -104,13 +104,18 @@ function daughters_lprop!(treep::iTgbmbd,
              duoldnorm(μf, μpr1_c, μd2, pepr, ped2, σμ)        -
              duoldnorm(μd2v_c[1], μpr1_c, μd2, pepr, ped2, σμ)
 
+      #normprop += 
+      #       ldnorm_bm(λf, λd2, sqrt(ped2)*σλ)        - 
+      #       ldnorm_bm(λd2v_c[1], λd2, sqrt(ped2)*σλ) + 
+      #       ldnorm_bm(μf, μd2, sqrt(ped2)*σμ)        - 
+      #       ldnorm_bm(μd2v_c[1], μd2, sqrt(ped2)*σμ)
     end
   elseif ter[2]
     # if d2 is terminal
     bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
     bm!(λd2v_p, μd2v_p, λf, μf, td2v[2], σλ, σμ, srδt)
 
-    # acceptance ration
+    # acceptance ratio
     λpr1_c = bbλc[pr][1]
     μpr1_c = bbμc[pr][1]
     pepr   = tsv[pr][1]
@@ -120,12 +125,18 @@ function daughters_lprop!(treep::iTgbmbd,
            duoldnorm(λd1v_c[1], λpr1_c, λd1, pepr, ped1, σλ) +
            duoldnorm(μf, μpr1_c, μd1, pepr, ped1, σμ)        -
            duoldnorm(μd1v_c[1], μpr1_c, μd1, pepr, ped1, σμ)
+
+    #normprop += 
+    #   ldnorm_bm(λf, λd1, sqrt(ped1)*σλ)        - 
+    #   ldnorm_bm(λd1v_c[1], λd1, sqrt(ped1)*σλ) + 
+    #   ldnorm_bm(μf, μd1, sqrt(ped1)*σμ)        - 
+    #   ldnorm_bm(μd1v_c[1], μd1, sqrt(ped1)*σμ)
   else
     # if no terminal branches involved
     bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
     bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
-    # acceptance ration
+    # acceptance ratio
     λpr1_c = bbλc[pr][1]
     μpr1_c = bbμc[pr][1]
     pepr   = tsv[pr][1]
@@ -135,6 +146,13 @@ function daughters_lprop!(treep::iTgbmbd,
            trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
            trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
            trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
+
+    #normprop += 
+    #       duoldnorm(λf, λd1, λd2, ped1, ped2, σλ)        -
+    #       duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ) +
+    #       duoldnorm(μf, μd1, μd2, ped1, ped2, σμ)        -
+    #       duoldnorm(μd1v_c[1], μd1, μd2, ped1, ped2, σμ)
+
   end
 
   # fill fix and simulate unfix tree
