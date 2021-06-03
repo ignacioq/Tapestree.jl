@@ -11,6 +11,79 @@ Created 06 07 2020
 
 
 
+"""
+    stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
+
+Log-probability of at least one lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` from stem age.
+"""
+function stem_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
+  n = count_alone_nodes_stem(tree, 0.0, 0)
+  return Float64(n)*log(λ/(λ+μ))
+end
+
+
+"""
+    stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
+
+Log-probability of at least one lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` from stem age.
+"""
+function crown_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
+  n = count_alone_nodes_crown(tree)
+  return Float64(n)*log(λ/(λ+μ)) - log(λ)
+end
+
+
+
+
+"""
+    count_alone_nodes_ds(tree::sTbd, tna::Float64, n::Int64)
+
+Count nodes in stem lineage when a diversification event could have 
+returned an overall extinction.
+"""
+function count_alone_nodes_crown(tree::sTbd)
+
+  n0 = count_alone_nodes_stem(tree.d1::sTbd, 0.0, 0)
+  n1 = count_alone_nodes_stem(tree.d2::sTbd, 0.0, 0)
+
+  return (n0 + n1)
+end
+
+
+
+
+"""
+    count_alone_nodes_b(tree::sTbd, tna::Float64, n::Int64)
+
+Count nodes in stem lineage when a diversification event could have 
+returned an overall extinction.
+"""
+function count_alone_nodes_stem(tree::sTbd, tna::Float64, n::Int64)
+
+  if tna < pe(tree)
+    n += 1
+  end
+  tna -= pe(tree)
+
+  if isfix(tree.d1::sTbd)
+    if isfix(tree.d2::sTbd)
+      return n
+    else
+      tnx = treeheight(tree.d2::sTbd)
+      tna = tnx > tna ? tnx : tna
+      count_alone_nodes_stem(tree.d1::sTbd, tna, n)
+    end
+  else
+    tnx = treeheight(tree.d1::sTbd)
+    tna = tnx > tna ? tnx : tna
+    count_alone_nodes_stem(tree.d2::sTbd, tna, n)
+  end
+end
+
+
+
 
 """
     moments(n::Float64, th::Float64, ϵ::Float64)

@@ -27,7 +27,7 @@ Created 25 08 2020
                   λtni    ::Float64,
                   μtni    ::Float64,
                   obj_ar  ::Float64,
-                  pupdp   ::Array{Float64,1},
+                  pupdp   ::NTuple{3,Float64},
                   prints  ::Int64)
 
 Run insane for constant pure-birth.
@@ -46,7 +46,7 @@ function insane_cbd_fs(tree    ::sTbd,
                        λtni    ::Float64,
                        μtni    ::Float64,
                        obj_ar  ::Float64,
-                       pupdp   ::Array{Float64,1},
+                       pupdp   ::NTuple{3,Float64},
                        prints  ::Int64)
 
   # tree characters
@@ -59,9 +59,10 @@ function insane_cbd_fs(tree    ::sTbd,
   scalef = makescalef(obj_ar)
 
   # make parameter updates scaling function for tuning
-  pup = Int64[]
+  spup = sum(pupdp)
+  pup  = Int64[]
   for i in Base.OneTo(3) 
-    append!(pup, fill(i, Int64(100.0 * pupdp[i])))
+    append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
   # make fix tree directory
@@ -70,8 +71,12 @@ function insane_cbd_fs(tree    ::sTbd,
   makeiBf!(tree, idf, bit)
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
-                           stem_prob_surv_cbd
+
+  #svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
+  #                         stem_prob_surv_cbd
+
+  svf = iszero(pe(tree)) ? crown_prob_surv_da :
+                           stem_prob_surv_da
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn = 
@@ -91,6 +96,7 @@ function insane_cbd_fs(tree    ::sTbd,
 
   return R, tree
 end
+
 
 
 
@@ -153,7 +159,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
   lidf = lastindex(idf)
 
   # likelihood
-  llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
+  llc = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
