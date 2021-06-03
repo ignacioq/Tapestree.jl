@@ -13,6 +13,59 @@ Created 03 09 2020
 
 
 """
+    cond_alone_events_crown(tree::iTgbmbd, tna::Float64, ll::Int64)
+
+Condition events when there is only one alive lineage in the stem branch
+to only be speciation events.
+"""
+function cond_alone_events_crown(tree::iTgbmbd)
+
+  ll0 = cond_alone_events_stem(tree.d1::iTgbmbd, 0.0, 0.0)
+  ll1 = cond_alone_events_stem(tree.d2::iTgbmbd, 0.0, 0.0)
+
+  return (ll0 + ll1 - lλ(tree.d1::iTgbmbd)[1])
+end
+
+
+
+
+"""
+    cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Int64)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
+
+  if tna < pe(tree)
+    lλv = lλ(tree)
+    li  = lastindex(lλv)
+    λi  = lλv[li]
+    μi  = lμ(tree)[li]
+    ll += λi - log(exp(λi) + exp(μi))
+  end
+  tna -= pe(tree)
+
+  if isfix(tree.d1::iTgbmbd)
+    if isfix(tree.d2::iTgbmbd)
+      return ll
+    else
+      tnx = treeheight(tree.d2::iTgbmbd)
+      tna = tnx > tna ? tnx : tna
+      count_alone_nodes_stem(tree.d1::iTgbmbd, tna, ll)
+    end
+  else
+    tnx = treeheight(tree.d1::iTgbmbd)
+    tna = tnx > tna ? tnx : tna
+    count_alone_nodes_stem(tree.d2::iTgbmbd, tna, ll)
+  end
+end
+
+
+
+
+
+"""
     llik_gbm(tree::iTgbmbd, 
              σλ  ::Float64, 
              σμ  ::Float64,
@@ -34,9 +87,9 @@ function llik_gbm(tree::iTgbmbd,
     ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + 
     (isextinct(tree) ? lμb[end] : 0.0)
   else
-    ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt)         + 
-    log(2.0) + lλb[end]                                + 
-    llik_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt) + 
+    ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + 
+    log(2.0) + lλb[end]                             + 
+    llik_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt)    + 
     llik_gbm(tree.d2::iTgbmbd, σλ, σμ, δt, srδt)
   end
 end

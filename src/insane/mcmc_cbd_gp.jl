@@ -456,8 +456,6 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, λtn)::Float64
 
-
-
     llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
     prr = llrdexp_x(λp, λc, λprior)
 

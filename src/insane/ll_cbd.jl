@@ -12,10 +12,10 @@ Created 06 07 2020
 
 
 """
-    stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
+    stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
 
 Log-probability of at least one lineage surviving after time `t` for 
-birth-death process with `λ` and `μ` from stem age.
+birth-death process with `λ` and `μ` for stem age.
 """
 function stem_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
   n = count_alone_nodes_stem(tree, 0.0, 0)
@@ -24,10 +24,10 @@ end
 
 
 """
-    stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
+    crown_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
 
-Log-probability of at least one lineage surviving after time `t` for 
-birth-death process with `λ` and `μ` from stem age.
+Log-probability of at least two lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` for crown age.
 """
 function crown_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
   n = count_alone_nodes_crown(tree)
@@ -40,7 +40,7 @@ end
 """
     count_alone_nodes_ds(tree::sTbd, tna::Float64, n::Int64)
 
-Count nodes in stem lineage when a diversification event could have 
+Count nodes in crown lineages when a diversification event could have 
 returned an overall extinction.
 """
 function count_alone_nodes_crown(tree::sTbd)
@@ -109,7 +109,7 @@ birth-death process with `λ` and `μ` from stem age.
 """
 function stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
   @fastmath begin
-    μ += λ == μ ? 1e-14 : 0.0
+    μ += λ === μ ? 1e-14 : 0.0
     log((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))
   end
 end
@@ -124,8 +124,8 @@ Log-probability of at least one lineage surviving after time `t` for
 birth-death process with `λ` and `μ` from stem age.
 """
 function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
-    μ += λ == μ ? 1e-14 : 0.0
-    log(λ * ((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
+    μ += λ === μ ? 1e-14 : 0.0
+    log(1.0/λ * ((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
 end
 
 
@@ -141,7 +141,7 @@ function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
   if istip(tree) 
     - pe(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
   else
-    log(2.0*λ) - pe(tree)*(λ + μ)     +
+    log(λ) - pe(tree)*(λ + μ)     +
     llik_cbd(tree.d1::sTbd, λ, μ) + 
     llik_cbd(tree.d2::sTbd, λ, μ)
   end

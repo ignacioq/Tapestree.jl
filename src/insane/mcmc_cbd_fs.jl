@@ -312,7 +312,7 @@ function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
   if istip(tree)
     ll = - pe(tree)*(λ + μ)
   else
-    ll = log(2.0*λ) - pe(tree)*(λ + μ)
+    ll = log(λ) - pe(tree)*(λ + μ)
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
       return ll
@@ -401,7 +401,7 @@ function fsp(tree::sTbd,
     itb = it(bi)
 
     # if speciation (if branch is internal)
-    iλ = itb ? 0.0 : log(2.0*λ)
+    iλ = itb ? 0.0 : log(λ)
 
     # likelihood ratio
     llr = llik_cbd(t0, λ, μ) + iλ - 
