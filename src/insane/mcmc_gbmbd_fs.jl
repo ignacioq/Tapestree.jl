@@ -505,10 +505,9 @@ function fsp(Ψp   ::iTgbmbd,
       llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
         tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, 0)
 
-      # estimate for `llr` and `acr`
-      iλ   = 0.6931471805599453 + λf
+      # add for `llr` and `acr`
+      iλ   = λf
       acr += λf - bbλc[pr][end]
-
     else
       pr  = bix
       iλ  = 0.0

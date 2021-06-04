@@ -456,7 +456,9 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
+    llp = llik_cbd(tree, λp, μc) - svf(tree, λp, μc)
+    #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llp - llc + prr + log(λp/λc))
@@ -495,7 +497,9 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
+    llp = llik_cbd(tree, λp, μc) - svf(tree, λp, μc)
+    #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llp - llc + prr + log(λp/λc))
@@ -537,7 +541,9 @@ function μp(tree  ::sTbd,
 
     # one could make a ratio likelihood function
     sc  = svf(tree, λc, μp)
-    llp = sc == -Inf ? -Inf : llik_cbd(tree, λc, μp) + sc
+    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    #sc  = svf(λc, μp, th)
+    #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
 
     prr = llrdexp_x(μp, μc, μprior)
 
@@ -579,7 +585,9 @@ function μp(tree  ::sTbd,
 
     # one could make a ratio likelihood function
     sc  = svf(tree, λc, μp)
-    llp = sc == -Inf ? -Inf : llik_cbd(tree, λc, μp) + sc
+    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    #sc  = svf(λc, μp, th)
+    #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
 
     prr = llrdexp_x(μp, μc, μprior)
 

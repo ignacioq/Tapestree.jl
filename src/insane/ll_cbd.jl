@@ -125,7 +125,7 @@ birth-death process with `λ` and `μ` from stem age.
 """
 function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
     μ += λ === μ ? 1e-14 : 0.0
-    log(1.0/λ * ((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
+    log(λ * ((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
 end
 
 

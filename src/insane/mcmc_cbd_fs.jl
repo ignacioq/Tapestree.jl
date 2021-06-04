@@ -71,12 +71,9 @@ function insane_cbd_fs(tree    ::sTbd,
   makeiBf!(tree, idf, bit)
 
   # make survival conditioning function (stem or crown)
+  #svf = iszero(pe(tree)) ? crown_prob_surv_cbd : stem_prob_surv_cbd
 
-  #svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
-  #                         stem_prob_surv_cbd
-
-  svf = iszero(pe(tree)) ? crown_prob_surv_da :
-                           stem_prob_surv_da
+  svf = iszero(pe(tree)) ? crown_prob_surv_da : stem_prob_surv_da
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn = 
@@ -159,7 +156,8 @@ function mcmc_burn_cbd(tree    ::sTbd,
   lidf = lastindex(idf)
 
   # likelihood
-  llc = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
+  llc = llik_cbd(tree, λc, μc) - svf(tree, λc, μc)
+  #llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)

@@ -38,10 +38,12 @@ to only be speciation events.
 function cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if tna < pe(tree)
-    lλv = lλ(tree)
-    li  = lastindex(lλv)
-    λi  = lλv[li]
-    μi  = lμ(tree)[li]
+    #= 
+    remember: that the first element of daughter is the same as the last one
+    of parent
+    =# 
+    λi  = lλ(tree.d1::iTgbmbd)[1]
+    μi  = lμ(tree.d1::iTgbmbd)[1]
     ll += λi - log(exp(λi) + exp(μi))
   end
   tna -= pe(tree)
@@ -60,7 +62,6 @@ function cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
     count_alone_nodes_stem(tree.d2::iTgbmbd, tna, ll)
   end
 end
-
 
 
 
@@ -87,8 +88,7 @@ function llik_gbm(tree::iTgbmbd,
     ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + 
     (isextinct(tree) ? lμb[end] : 0.0)
   else
-    ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + 
-    log(2.0) + lλb[end]                             + 
+    ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + lλb[end] + 
     llik_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt)    + 
     llik_gbm(tree.d2::iTgbmbd, σλ, σμ, δt, srδt)
   end
@@ -309,8 +309,7 @@ function llik_gbm_f(tree::iTgbmbd,
   if istip(tree)
     ll = ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt)
   else
-    ll = ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + 
-         0.6931471805599453 + lλb[end]
+    ll = ll_gbm_b(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + lλb[end]
 
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
