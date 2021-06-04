@@ -84,9 +84,9 @@ function insane_gbmbd(tree    ::sTbd,
   Ψp = deepcopy(Ψc)
 
   # make fix Ψ directory
-  idf = iBf[]
+  idf = iBffs[]
   bit = BitArray{1}()
-  makeiBf!(Ψc, idf, bit)
+  makeiBffs!(Ψc, idf, bit)
 
   # allocate `bb` for each fix branch and their `ts` vectors consisting of 
   # [pe(tree), fdt(tree)]
@@ -103,8 +103,9 @@ function insane_gbmbd(tree    ::sTbd,
   triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(tree)) ? cond_alone_events_crown : cond_alone_events_stem
+  svf = iszero(pe(Ψc)) ? cond_alone_events_crown : cond_alone_events_stem
 
+  # make scaling function to objective acceptance rate
   scalef = makescalef(obj_ar)
 
   # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
@@ -117,14 +118,14 @@ function insane_gbmbd(tree    ::sTbd,
   # burn-in phase
   Ψp, Ψc, llc, prc, σλc, σμc, σλtn, σμtn =
     mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, μa_prior, 
-      σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, σλtni, σμtni, 
-      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf)
+      σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, σλtni, σμtni, δt, srδt, 
+      idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf, cb)
 
   # mcmc
   R, Ψv =
     mcmc_gbmbd(Ψp, Ψc, llc, prc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
       λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, σλtn, σμtn, 
-      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, svf)
+      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, svf, cb)
 
   pardic = Dict(("lambda_root"  => 1,
                  "mu_root"      => 2,
@@ -156,7 +157,7 @@ end
                     σμtni   ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idf     ::Array{iBf,1},
+                    idf     ::Array{iBffs,1},
                     triads  ::Array{Array{Int64,1},1},
                     terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},
@@ -184,14 +185,19 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          σμtni   ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
-                         idf     ::Array{iBf,1},
+                         idf     ::Array{iBffs,1},
                          triads  ::Array{Array{Int64,1},1},
                          terminus::Array{BitArray{1}},
                          btotriad::Array{Int64,1},
                          pup     ::Array{Int64,1},
                          nlim    ::Int64,
                          prints  ::Int64,
-                         scalef  ::Function)
+                         scalef  ::Function,
+                         svf     ::Function,
+                         cb      ::Array{Int64,1})
+
+  # crown or stem conditioning
+  icr = iszero(pe(Ψc))
 
   # initialize acceptance log
   ltn = 0
@@ -247,9 +253,16 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
         ldr = length(dri)
         ter = terminus[tix]
 
+        wbc = 23
+        if iszero(sc(bi))
+          wbc = 0
+        elseif isone(sc(bi))
+          wbc = 1
+        end
+
         llc, prc = 
           lvupdate!(Ψp, Ψc, llc, prc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
-            σλc, σμc, δt, srδt, λa_prior, μa_prior, dri, ldr, ter, 0)
+            σλc, σμc, δt, srδt, λa_prior, μa_prior, icr, wbc, dri, ldr, ter, 0)
 
       # forward simulation update
       else
@@ -309,7 +322,7 @@ end
                 σμtn    ::Float64,
                 δt      ::Float64,
                 srδt    ::Float64,
-                idf     ::Array{iBf,1},
+                idf     ::Array{iBffs,1},
                 triads  ::Array{Array{Int64,1},1},
                 terminus::Array{BitArray{1}},
                 pup     ::Array{Int64,1},
@@ -339,7 +352,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     σμtn    ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idf     ::Array{iBf,1},
+                    idf     ::Array{iBffs,1},
                     triads  ::Array{Array{Int64,1},1},
                     terminus::Array{BitArray{1}},
                     btotriad::Array{Int64,1},
@@ -394,9 +407,16 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         ldr = length(dri)
         ter = terminus[tix]
 
+        wbc = 23
+        if iszero(sc(bi))
+          wbc = 0
+        elseif isone(sc(bi))
+          wbc = 1
+        end
+
         llc, prc = 
           lvupdate!(Ψp, Ψc, llc, prc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
-            σλc, σμc, δt, srδt, λa_prior, μa_prior, dri, ldr, ter, 0)
+            σλc, σμc, δt, srδt, λa_prior, μa_prior, icr, wbc, dri, ldr, ter, 0)
 
       # forward simulation update
       else
@@ -449,7 +469,7 @@ end
 """
     fsp(Ψp   ::iTgbmbd,
         Ψc   ::iTgbmbd,
-        bi   ::iBf,
+        bi   ::iBffs,
         llc  ::Float64,
         σλ   ::Float64, 
         σμ   ::Float64,
@@ -469,7 +489,7 @@ Forward simulation proposal function for gbm birth-death.
 """
 function fsp(Ψp   ::iTgbmbd,
              Ψc   ::iTgbmbd,
-             bi   ::iBf,
+             bi   ::iBffs,
              llc  ::Float64,
              σλ   ::Float64, 
              σμ   ::Float64,
@@ -547,7 +567,7 @@ end
 
 
 """
-    fsbi(bi  ::iBf, 
+    fsbi(bi  ::iBffs, 
          iλ  ::Float64, 
          iμ  ::Float64, 
          nsδt::Float64,
@@ -559,7 +579,7 @@ end
 
 Forward gbm birth-death simulation for branch `bi`.
 """
-function fsbi(bi  ::iBf, 
+function fsbi(bi  ::iBffs, 
               iλ  ::Float64, 
               iμ  ::Float64, 
               nsδt::Float64,
@@ -898,24 +918,31 @@ end
 
 
 """
-    lvupdate!(Ψp     ::iTgbmbd,
-              Ψc     ::iTgbmbd,
-              llc    ::Float64, 
-              prc    ::Float64,
-              bbiλp  ::Array{Float64,1}, 
-              bbiμp  ::Array{Float64,1}, 
-              bbiλc  ::Array{Float64,1}, 
-              bbiμc  ::Array{Float64,1}, 
-              σλ     ::Float64, 
-              σμ     ::Float64, 
-              δt     ::Float64, 
-              srδt   ::Float64, 
+    lvupdate!(Ψp      ::iTgbmbd,
+              Ψc      ::iTgbmbd,
+              llc     ::Float64, 
+              prc     ::Float64,
+              bbλp    ::Array{Array{Float64,1},1}, 
+              bbμp    ::Array{Array{Float64,1},1}, 
+              bbλc    ::Array{Array{Float64,1},1}, 
+              bbμc    ::Array{Array{Float64,1},1}, 
+              tsv     ::Array{Array{Float64,1},1},
+              pr      ::Int64,
+              d1      ::Int64,
+              d2      ::Int64,
+              σλ      ::Float64, 
+              σμ      ::Float64, 
+              δt      ::Float64, 
+              srδt    ::Float64, 
               λa_prior::Float64,
               μa_prior::Float64,
-              dri    ::BitArray{1},
-              ldr    ::Int64,
-              ter    ::BitArray{1},
-              ix     ::Int64)
+              icr     ::Bool,
+              wbc     ::Int64,
+              dri     ::BitArray{1},
+              ldr     ::Int64,
+              ter     ::BitArray{1},
+              ix      ::Int64)
+
 Make a gbm update for speciation and extinction for a fixed triad.
 """
 function lvupdate!(Ψp      ::iTgbmbd,
@@ -936,6 +963,8 @@ function lvupdate!(Ψp      ::iTgbmbd,
                    srδt    ::Float64, 
                    λa_prior::Float64,
                    μa_prior::Float64,
+                   icr     ::Bool,
+                   wbc     ::Int64,
                    dri     ::BitArray{1},
                    ldr     ::Int64,
                    ter     ::BitArray{1},
@@ -946,34 +975,12 @@ function lvupdate!(Ψp      ::iTgbmbd,
     if ldr === 0
       llc, prc = 
         triad_lupdate_root!(Ψp::iTgbmbd, Ψc::iTgbmbd, bbλp, bbμp, bbλc, bbμc, 
-              tsv, llc, prc, pr, d1, d2, σλ, σμ, δt, srδt,
-              λa_prior, μa_prior)
+          tsv, llc, prc, pr, d1, d2, σλ, σμ, δt, srδt, λa_prior, μa_prior, icr)
     else
-      if ter[1]
-        if ter[2]
-          # if both are terminal
-          llc = 
-            triad_lupdate_noded12!(Ψp::iTgbmbd, Ψc::iTgbmbd,
-              bbλp, bbμp, bbλc, bbμc, tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt)
-        else
-          # if d1 is terminal
-          llc = 
-            triad_lupdate_noded1!(Ψp::iTgbmbd, Ψc::iTgbmbd,
-              bbλp, bbμp, bbλc, bbμc, tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt)
-        end
-      elseif ter[2]
-        # if d2 is terminal
-        llc = 
-          triad_lupdate_noded2!(Ψp::iTgbmbd, Ψc::iTgbmbd,
-            bbλp, bbμp, bbλc, bbμc, tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt)
-      else
-        # if no terminal branches involved
-        llc = 
-          triad_lupdate_node!(Ψp::iTgbmbd, Ψc::iTgbmbd,
-            bbλp, bbμp, bbλc, bbμc, tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt)
-      end
+      llc = 
+        triad_lvupdate_trio!(Ψp::iTgbmbd, Ψc::iTgbmbd, bbλp, bbμp, bbλc, bbμc, 
+          tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt, icr, wcb)
     end
-
   elseif ix < ldr
 
     ifx1 = isfix(Ψc.d1::iTgbmbd)
@@ -983,23 +990,23 @@ function lvupdate!(Ψp      ::iTgbmbd,
         llc, prc = 
           lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, prc, 
             bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-            λa_prior, μa_prior, dri, ldr, ter, ix)
+            λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
       else
         llc, prc = 
           lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, llc, prc, 
             bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-            λa_prior, μa_prior, dri, ldr, ter, ix)
+            λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
       end
     elseif ifx1
       llc, prc = 
         lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, prc, 
           bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-          λa_prior, μa_prior, dri, ldr, ter, ix)
+          λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
     else
       llc, prc = 
         lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, llc, prc, 
           bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-          λa_prior, μa_prior, dri, ldr, ter, ix)
+          λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
     end
   end
 

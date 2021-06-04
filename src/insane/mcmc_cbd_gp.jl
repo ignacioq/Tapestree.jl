@@ -65,7 +65,7 @@ function insane_cbd_gp(tree    ::sTbd,
   end
 
   # make fix tree directory
-  idf = iBf[]
+  idf = iBfgp[]
   bit = BitArray{1}()
   makeiBf!(tree, idf, bit)
 

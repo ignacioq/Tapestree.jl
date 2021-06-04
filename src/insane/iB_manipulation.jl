@@ -298,7 +298,7 @@ end
 Return parent and two daughter indices for a given `iB` vector and a vector
 that is true for which ever daughter is a tip.
 """
-function make_triads(idf::Array{iBf, 1})
+function make_triads(idf::Array{iBffs, 1})
 
   triads   = Array{Int64,1}[]
   terminus = BitArray{1}[]

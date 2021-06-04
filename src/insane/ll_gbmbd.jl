@@ -60,6 +60,10 @@ function cond_alone_events_ll(tree::iTgbmbd, tna::Float64, ll::Float64)
   end
   tna -= pe(tree)
 
+  if istip(tree)
+    return ll
+  end
+
   if isfix(tree.d1::iTgbmbd)
     if isfix(tree.d2::iTgbmbd)
       return ll
