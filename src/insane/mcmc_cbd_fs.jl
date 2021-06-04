@@ -70,19 +70,25 @@ function insane_cbd_fs(tree    ::sTbd,
   bit = BitArray{1}()
   makeiBf!(tree, idf, bit)
 
-  # make survival conditioning function (stem or crown)
+  # make survival conditioning function (stem or crown) and identify branches
+  # from `idf`
   #svf = iszero(pe(tree)) ? crown_prob_surv_cbd : stem_prob_surv_cbd
-
-  svf = iszero(pe(tree)) ? crown_prob_surv_da : stem_prob_surv_da
+  if iszero(pe(tree))
+     svf = crown_prob_surv_da
+     cb = findall(x -> isone(lastindex(dr(x))), idf)
+  else
+     svf = stem_prob_surv_da
+     cb = Int64[findfirst(x -> iszero(lastindex(dr(x))), idf)]
+  end
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn = 
       mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior,
-        nburn, ϵi, λi, μi, λtni, μtni, scalef, idf, pup, prints, svf)
+        nburn, ϵi, λi, μi, λtni, μtni, scalef, idf, pup, prints, svf, cb)
 
   # mcmc
   R, tree = mcmc_cbd(tree, llc, prc, λc, μc, λprior, μprior,
-        niter, nthin, λtn, μtn, th, idf, pup, prints, svf)
+        niter, nthin, λtn, μtn, th, idf, pup, prints, svf, cb)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2), 
@@ -136,7 +142,8 @@ function mcmc_burn_cbd(tree    ::sTbd,
                        idf     ::Array{iBf,1},
                        pup     ::Array{Int64,1}, 
                        prints  ::Int64,
-                       svf     ::Function)
+                       svf     ::Function,
+                       cb      ::Array{Int64,1})
 
   # initialize acceptance log
   ltn = 0
@@ -182,7 +189,8 @@ function mcmc_burn_cbd(tree    ::sTbd,
       
       # forward simulation proposal proposal
       if p === 3
-        tree, llc = fsp(tree, idf[fIrand(lidf) + 1], llc, λc, μc)
+        bix = fIrand(lidf) + 1
+        tree, llc = fsp(tree, idf[bix], llc, λc, μc, in(bix, cb))
       end
 
       # log tuning parameters
@@ -239,9 +247,9 @@ function mcmc_cbd(tree  ::sTbd,
                   idf   ::Array{iBf,1},
                   pup   ::Array{Int64,1}, 
                   prints::Int64,
-                  svf   ::Function)
+                  svf   ::Function,
+                  cb    ::Array{Int64,1})
 
-  # length(idf)
   lidf = lastindex(idf)
 
   # logging
@@ -270,7 +278,8 @@ function mcmc_cbd(tree  ::sTbd,
 
       # forward simulation proposal proposal
       if p === 3
-        tree, llc = fsp(tree, idf[fIrand(lidf) + 1], llc, λc, μc)
+        bix = fIrand(lidf) + 1
+        tree, llc = fsp(tree, idf[bix], llc, λc, μc, in(bix, cb))
       end
 
     end
@@ -370,8 +379,6 @@ end
 
 
 
-
-
 """
     fsp(tree::sTbd,
         bi  ::iBf,
@@ -386,7 +393,8 @@ function fsp(tree::sTbd,
              bi  ::iBf,
              llc ::Float64,
              λ   ::Float64, 
-             μ   ::Float64)
+             μ   ::Float64,
+             scb ::Bool)
 
   # forward simulate an internal branch
   t0, ret = fsbi(bi, λ, μ)
@@ -401,9 +409,35 @@ function fsp(tree::sTbd,
     # if speciation (if branch is internal)
     iλ = itb ? 0.0 : log(λ)
 
-    # likelihood ratio
-    llr = llik_cbd(t0, λ, μ) + iλ - 
-          br_ll_cbd(tree, λ, μ, dri, ldr, 0)
+    # if conditioning branch
+    if scb 
+      # if one of crown branches
+      if isone(lastindex(dri))
+        if isone(dri[1])
+          # likelihood ratio
+          llr = llik_cbd(t0, λ, μ) + iλ            - 
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                stem_prob_surv_da(t0, λ, μ)        - 
+                stem_prob_surv_da(tree.d1, λ, μ)
+        else
+          # likelihood ratio
+          llr = llik_cbd(t0, λ, μ) + iλ            - 
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                stem_prob_surv_da(t0, λ, μ)        - 
+                stem_prob_surv_da(tree.d2, λ, μ)
+        end
+      else
+        # likelihood ratio
+        llr = llik_cbd(t0, λ, μ) + iλ            - 
+              br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+              stem_prob_surv_da(t0, λ, μ)        - 
+              stem_prob_surv_da(tree, λ, μ)
+      end
+    else
+      # likelihood ratio
+      llr = llik_cbd(t0, λ, μ) + iλ - 
+            br_ll_cbd(tree, λ, μ, dri, ldr, 0)
+    end
 
     llc += llr
 

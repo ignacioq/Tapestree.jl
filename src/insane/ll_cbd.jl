@@ -11,6 +11,7 @@ Created 06 07 2020
 
 
 
+
 """
     stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
 
@@ -67,6 +68,10 @@ function count_alone_nodes_stem(tree::sTbd, tna::Float64, n::Int64)
   end
   tna -= pe(tree)
 
+  if istip(tree)
+    return n
+  end
+
   if isfix(tree.d1::sTbd)
     if isfix(tree.d2::sTbd)
       return n
@@ -80,6 +85,7 @@ function count_alone_nodes_stem(tree::sTbd, tna::Float64, n::Int64)
     tna = tnx > tna ? tnx : tna
     count_alone_nodes_stem(tree.d2::sTbd, tna, n)
   end
+
 end
 
 

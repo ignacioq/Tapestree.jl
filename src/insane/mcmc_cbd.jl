@@ -47,7 +47,7 @@ function insane_cbd(tree        ::sTbd,
                     λtni        ::Float64           = 1.0,
                     μtni        ::Float64           = 1.0,
                     obj_ar      ::Float64           = 0.4,
-                    pupdp       ::NTuple{3,Float64} = [0.2,0.2,0.5],
+                    pupdp       ::NTuple{3,Float64} = (0.2,0.2,0.5),
                     prints      ::Int64             = 5)
 
   # forward simulation

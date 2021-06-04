@@ -35,7 +35,19 @@ end
 Condition events when there is only one alive lineage in the crown subtrees 
 to only be speciation events.
 """
-function cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
+cond_alone_events_stem(tree::iTgbmbd) = 
+  cond_alone_events_ll(tree, 0.0, 0.0)
+
+
+
+
+"""
+    cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Int64)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function cond_alone_events_ll(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if tna < pe(tree)
     #= 
@@ -54,12 +66,12 @@ function cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
     else
       tnx = treeheight(tree.d2::iTgbmbd)
       tna = tnx > tna ? tnx : tna
-      count_alone_nodes_stem(tree.d1::iTgbmbd, tna, ll)
+      cond_alone_events_ll(tree.d1::iTgbmbd, tna, ll)
     end
   else
     tnx = treeheight(tree.d1::iTgbmbd)
     tna = tnx > tna ? tnx : tna
-    count_alone_nodes_stem(tree.d2::iTgbmbd, tna, ll)
+    cond_alone_events_ll(tree.d2::iTgbmbd, tna, ll)
   end
 end
 

@@ -103,8 +103,7 @@ function insane_gbmbd(tree    ::sTbd,
   triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
-  # svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
-  #                          stem_prob_surv_cbd
+  svf = iszero(pe(tree)) ? cond_alone_events_crown : cond_alone_events_stem
 
   scalef = makescalef(obj_ar)
 
@@ -119,13 +118,13 @@ function insane_gbmbd(tree    ::sTbd,
   Ψp, Ψc, llc, prc, σλc, σμc, σλtn, σμtn =
     mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, μa_prior, 
       σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, σλtni, σμtni, 
-      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, scalef)
+      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf)
 
   # mcmc
   R, Ψv =
     mcmc_gbmbd(Ψp, Ψc, llc, prc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
-      λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, 
-      σλtn, σμtn, δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints)
+      λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, σλtn, σμtn, 
+      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, svf)
 
   pardic = Dict(("lambda_root"  => 1,
                  "mu_root"      => 2,
@@ -201,7 +200,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   σλtn = σλtni
   σμtn = σμtni
 
-  llc = llik_gbm(Ψc, σλc, σμc, δt, srδt)
+  llc = llik_gbm(Ψc, σλc, σμc, δt, srδt) - svf(Ψc)
   prc = logdexp(σλc, σλ_prior)            +
         logdexp(σμc, σμ_prior)            +
         logdexp(exp(lλ(Ψc)[1]), λa_prior) +
