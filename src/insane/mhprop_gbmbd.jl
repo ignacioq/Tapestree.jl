@@ -46,6 +46,8 @@ function daughters_lprop!(treep::iTgbmbd,
                           ter  ::BitArray{1},
                           σλ   ::Float64,
                           σμ   ::Float64,
+                          icr  ::Bool, 
+                          wbc  ::Int64,
                           δt   ::Float64, 
                           srδt ::Float64)
 
@@ -155,6 +157,13 @@ function daughters_lprop!(treep::iTgbmbd,
 
   end
 
+  llrcond = 0.0
+  # only if crown conditioning
+  if icr && iszero(wbc)
+    llrcond += cond_alone_events_crown(treep) - 
+               cond_alone_events_crown(treec)
+  end
+
   # fill fix and simulate unfix tree
   bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
   bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
@@ -162,8 +171,8 @@ function daughters_lprop!(treep::iTgbmbd,
   llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
   llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
 
-  acr  = llrbd_d1 + llrbd_d2
-  llr  = llrbm_d1 + llrbm_d2 + acr
+  acr  = llrbd_d1 + llrbd_d2 + llrcond
+  llr  = llrbm_d1 + llrbm_d2 + acr 
   acr += normprop
 
   return llr, acr
@@ -192,7 +201,7 @@ end
                          δt   ::Float64, 
                          srδt ::Float64,
                          ter  ::BitArray{1},
-                         wcb  ::Bool,
+                         wbc  ::Bool,
                          svf  ::Function)
 
 Make a trio of Brownian motion MCMC updates when node is internal and 
@@ -215,7 +224,7 @@ function triad_lvupdate_trio!(treep::iTgbmbd,
                               srδt ::Float64,
                               ter  ::BitArray{1},
                               icr  ::Bool,
-                              wcb  ::Int64)
+                              wbc  ::Int64)
 
   ## get reference vectors
   # time vectors
@@ -260,16 +269,16 @@ function triad_lvupdate_trio!(treep::iTgbmbd,
   if ter[1]
     if ter[2]
       # if both are terminal
-      bm!(λprv_p, μprv_p, λprv_c[1], μprv_c[1], tsv[pr][2], σλ, σμ, srδt)
+      bm!(λprv_p, μprv_p, λpr, μpr, tprv[2], σλ, σμ, srδt)
       lλp = λprv_p[lipr]
       lμp = μprv_p[lipr]
-      bm!(λd1v_p, μd1v_p, lλp, lμp, tsv[d1][2], σλ, σμ, srδt)
-      bm!(λd2v_p, μd2v_p, lλp, lμp, tsv[d2][2], σλ, σμ, srδt)
+      bm!(λd1v_p, μd1v_p, lλp, lμp, td1v[2], σλ, σμ, srδt)
+      bm!(λd2v_p, μd2v_p, lλp, lμp, td2v[2], σλ, σμ, srδt)
 
       # fill fix and simulate unfix tree
       bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)
-      bm!(treepd1, λd1v_p, μd1v_p, 1, lastindex(λd1v_p), σλ, σμ, srδt)
-      bm!(treepd2, λd2v_p, μd2v_p, 1, lastindex(λd2v_p), σλ, σμ, srδt)
+      bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
+      bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
 
     else
       # if d1 is terminal
@@ -324,7 +333,7 @@ function triad_lvupdate_trio!(treep::iTgbmbd,
   # estimate likelihoods
   llr, acr = llr_propr(treep, treepd1, treepd2, 
                        treec, treecd1, treecd2, 
-                       σλ, σμ, δt, srδt, icr, wcb)
+                       σλ, σμ, δt, srδt, icr, wbc)
 
   if -randexp() < acr
     llc += llr
@@ -440,9 +449,9 @@ function triad_lupdate_root!(treep   ::iTgbmbd,
   lμrp = rnorm(lμp, srpepr*σμ)
 
   # simulate fix tree vector
-  bb!(λprv_p, lλrp, lλp, μprv_p, lμrp, lμp, pepr, σλ, σμ, δt, srδt)
-  bb!(λd1v_p, lλp,  λd1, μd1v_p, lμp,  μd1, ped1, σλ, σμ, δt, srδt)
-  bb!(λd2v_p, lλp,  λd2, μd2v_p, lμp,  μd2, ped2, σλ, σμ, δt, srδt)
+  bb!(λprv_p, lλrp, lλp, μprv_p, lμrp, lμp, tprv[2], σλ, σμ, δt, srδt)
+  bb!(λd1v_p, lλp,  λd1, μd1v_p, lμp,  μd1, td1v[2], σλ, σμ, δt, srδt)
+  bb!(λd2v_p, lλp,  λd2, μd2v_p, lμp,  μd2, td2v[2], σλ, σμ, δt, srδt)
 
   # fill fix and simulate unfix tree
   bm!(treep,   λprv_p, μprv_p, 1, lipr, σλ, σμ, srδt)
@@ -509,7 +518,7 @@ function llr_propr(treep  ::iTgbmbd,
                    δt     ::Float64,
                    srδt   ::Float64,
                    icr    ::Bool,
-                   wcb    ::Int64)
+                   wbc    ::Int64)
 
   llrbm_pr, llrbd_pr = llr_gbm_sep_f(treep,   treec,   σλ, σμ, δt, srδt)
   llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
@@ -517,17 +526,20 @@ function llr_propr(treep  ::iTgbmbd,
 
   llrcond = 0.0
 
-  if iszero(wcb)
-    if icr 
-      llrcond += cond_alone_events_crown(treep) - cond_alone_events_crown(treec)
-    else
-      llrcond += cond_alone_events_stem(treep) - cond_alone_events_stem(treec)
-    end
-  elseif isone(wcb) && icr
-    llrcond += cond_alone_events_stem(treep) - cond_alone_events_stem(treec)
-  end
+  #if iszero(wbc)
+  #  if icr 
+  #    llrcond += - cond_alone_events_crown(treep) + 
+  #                 cond_alone_events_crown(treec)
+  #  else
+  #    llrcond += - cond_alone_events_stem(treep) + 
+  #                 cond_alone_events_stem(treec)
+  #  end
+  #elseif isone(wbc) && icr
+  #  llrcond += - cond_alone_events_stem(treep) + 
+  #               cond_alone_events_stem(treec)
+  #end
 
-  acr = llrbd_pr + llrbd_d1 + llrbd_d2 + llrcond
+  acr = llrbd_pr + llrbd_d1 + llrbd_d2 #+ llrcond
   llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr
 
   return llr, acr

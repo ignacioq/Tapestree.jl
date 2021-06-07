@@ -20,8 +20,8 @@ to only be speciation events.
 """
 function cond_alone_events_crown(tree::iTgbmbd)
 
-  ll0 = cond_alone_events_stem(tree.d1::iTgbmbd, 0.0, 0.0)
-  ll1 = cond_alone_events_stem(tree.d2::iTgbmbd, 0.0, 0.0)
+  ll0 = cond_alone_events_ll(tree.d1::iTgbmbd, 0.0, 0.0)
+  ll1 = cond_alone_events_ll(tree.d2::iTgbmbd, 0.0, 0.0)
 
   return (ll0 + ll1 - lλ(tree.d1::iTgbmbd)[1])
 end
@@ -50,12 +50,12 @@ to only be speciation events.
 function cond_alone_events_ll(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if tna < pe(tree)
-    #= 
-    remember: that the first element of daughter is the same as the last one
-    of parent
-    =# 
-    λi  = lλ(tree.d1::iTgbmbd)[1]
-    μi  = lμ(tree.d1::iTgbmbd)[1]
+    @inbounds begin
+      lλv = lλ(tree)
+      lv  = lastindex(lλv)
+      λi  = lλv[lv]
+      μi  = lμ(tree)[lv]
+    end
     ll += λi - log(exp(λi) + exp(μi))
   end
   tna -= pe(tree)

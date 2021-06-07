@@ -30,7 +30,7 @@ function llik_gbm(tree::iTgbmpb,
     ll_gbm_b(lλb, σλ, δt, fdt(tree), srδt)
   else
     ll_gbm_b(lλb, σλ, δt, fdt(tree), srδt)   +
-    0.6931471805599453 + lλb[end]            +
+    lλb[end]                                 +
     llik_gbm(tree.d1::iTgbmpb, σλ, δt, srδt) +
     llik_gbm(tree.d2::iTgbmpb, σλ, δt, srδt)
   end

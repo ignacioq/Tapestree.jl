@@ -86,7 +86,7 @@ function insane_gbmbd(tree    ::sTbd,
   # make fix Ψ directory
   idf = iBffs[]
   bit = BitArray{1}()
-  makeiBffs!(Ψc, idf, bit)
+  makeiBf!(Ψc, idf, bit)
 
   # allocate `bb` for each fix branch and their `ts` vectors consisting of 
   # [pe(tree), fdt(tree)]
@@ -119,13 +119,13 @@ function insane_gbmbd(tree    ::sTbd,
   Ψp, Ψc, llc, prc, σλc, σμc, σλtn, σμtn =
     mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, μa_prior, 
       σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, σλtni, σμtni, δt, srδt, 
-      idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf, cb)
+      idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf)
 
   # mcmc
   R, Ψv =
     mcmc_gbmbd(Ψp, Ψc, llc, prc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
       λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, σλtn, σμtn, 
-      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints, svf, cb)
+      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints)
 
   pardic = Dict(("lambda_root"  => 1,
                  "mu_root"      => 2,
@@ -193,8 +193,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          nlim    ::Int64,
                          prints  ::Int64,
                          scalef  ::Function,
-                         svf     ::Function,
-                         cb      ::Array{Int64,1})
+                         svf     ::Function)
 
   # crown or stem conditioning
   icr = iszero(pe(Ψc))
@@ -206,7 +205,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   σλtn = σλtni
   σμtn = σμtni
 
-  llc = llik_gbm(Ψc, σλc, σμc, δt, srδt) - svf(Ψc)
+  llc = llik_gbm(Ψc, σλc, σμc, δt, srδt) #- svf(Ψc)
   prc = logdexp(σλc, σλ_prior)            +
         logdexp(σμc, σμ_prior)            +
         logdexp(exp(lλ(Ψc)[1]), λa_prior) +
@@ -278,9 +277,17 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
           ter   = terminus[btotriad[bix]]
         end
 
+        wbc = 23
+        if iszero(sc(bi))
+          wbc = 0
+        elseif isone(sc(bi))
+          wbc = 1
+        end
+
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
-              bix, triad, ter, δt, srδt, nlim)
+              bix, triad, ter, δt, srδt, nlim, icr, wbc)
+
       end
 
       # tune parameters
@@ -360,6 +367,9 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     nlim    ::Int64,
                     prints  ::Int64)
 
+  # crown or stem conditioning
+  icr = iszero(pe(Ψc))
+
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
@@ -432,9 +442,17 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           ter   = terminus[btotriad[bix]]
         end
 
+        wbc = 23
+        if iszero(sc(bi))
+          wbc = 0
+        elseif isone(sc(bi))
+          wbc = 1
+        end
+
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
-              bix, triad, ter, δt, srδt, nlim)
+              bix, triad, ter, δt, srδt, nlim, icr, wbc)
+
       end
     end
 
@@ -503,7 +521,9 @@ function fsp(Ψp   ::iTgbmbd,
              ter  ::BitArray{1},
              δt   ::Float64, 
              srδt ::Float64,
-             nlim ::Int64)
+             nlim ::Int64,
+             icr  ::Bool, 
+             wbc  ::Int64)
 
   nsδt = tsv[bix][2]
 
@@ -522,7 +542,7 @@ function fsp(Ψp   ::iTgbmbd,
       # make daughter proposal to be concordant with `t0`
       pr, d1, d2 = triad
       llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
-        tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, 0)
+        tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
       # add for `llr` and `acr`
       iλ   = λf
@@ -536,9 +556,23 @@ function fsp(Ψp   ::iTgbmbd,
 
     # mh ratio
     if -randexp() < acr
-      llc += llr + 
-             llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
+      llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
+
+      if icr && isone(wbc)
+        if dri[1]
+          llr += cond_alone_events_stem(t0) - 
+                 cond_alone_events_stem(Ψc.d1::iTgbmbd)
+        else
+          llr += cond_alone_events_stem(t0) -
+                 cond_alone_events_stem(Ψc.d2::iTgbmbd)
+        end
+      elseif iszero(wbc)
+        llr += cond_alone_events_stem(t0) -
+               cond_alone_events_stem(Ψc)
+      end
+
+      llc += llr
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], bbμc[pr], 0)
@@ -697,6 +731,8 @@ function ldprop!(treep::iTgbmbd,
                  d2   ::Int64,
                  σλ   ::Float64, 
                  σμ   ::Float64, 
+                 icr  ::Bool, 
+                 wbc  ::Int64,
                  δt   ::Float64, 
                  srδt ::Float64, 
                  dri  ::BitArray{1},
@@ -706,8 +742,8 @@ function ldprop!(treep::iTgbmbd,
 
   if ix === ldr 
 
-    llr, acr = daughters_lprop!(treep::iTgbmbd, treec::iTgbmbd,
-        λf, μf, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, ter, σλ, σμ, δt, srδt)
+    llr, acr = daughters_lprop!(treep::iTgbmbd, treec::iTgbmbd, λf, μf, 
+      bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, ter, σλ, σμ, icr, wbc, δt, srδt)
 
   elseif ix < ldr
 
@@ -717,20 +753,24 @@ function ldprop!(treep::iTgbmbd,
       if dri[ix]
         llr, acr = 
           ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
-            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+            dri, ldr, ter, ix)
       else
         llr, acr = 
           ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
-            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+            dri, ldr, ter, ix)
       end
     elseif ifx1
       llr, acr = 
         ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
-          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+          dri, ldr, ter, ix)
     else
       llr, acr = 
         ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
-          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, dri, ldr, ter, ix)
+          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+          dri, ldr, ter, ix)
     end
   end
 
@@ -979,7 +1019,8 @@ function lvupdate!(Ψp      ::iTgbmbd,
     else
       llc = 
         triad_lvupdate_trio!(Ψp::iTgbmbd, Ψc::iTgbmbd, bbλp, bbμp, bbλc, bbμc, 
-          tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt, icr, wcb)
+          tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt, ter, icr, wbc)
+
     end
   elseif ix < ldr
 
@@ -990,23 +1031,23 @@ function lvupdate!(Ψp      ::iTgbmbd,
         llc, prc = 
           lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, prc, 
             bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-            λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
+            λa_prior, μa_prior, icr, wbc, dri, ldr, ter, ix)
       else
         llc, prc = 
           lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, llc, prc, 
             bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-            λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
+            λa_prior, μa_prior, icr, wbc, dri, ldr, ter, ix)
       end
     elseif ifx1
       llc, prc = 
         lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, prc, 
           bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-          λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
+          λa_prior, μa_prior, icr, wbc, dri, ldr, ter, ix)
     else
       llc, prc = 
         lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, llc, prc, 
           bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
-          λa_prior, μa_prior, icr, wcb, dri, ldr, ter, ix)
+          λa_prior, μa_prior, icr, wbc, dri, ldr, ter, ix)
     end
   end
 
