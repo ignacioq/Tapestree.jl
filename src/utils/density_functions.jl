@@ -54,8 +54,6 @@ end
 
 
 
-
-
 """
     llrdexp_x(xp::Float64, xc::Float64, λ::Float64)
 

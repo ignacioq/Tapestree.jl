@@ -160,7 +160,7 @@ function daughters_lprop!(treep::iTgbmbd,
   llrcond = 0.0
   # only if crown conditioning
   if icr && iszero(wbc)
-    llrcond += cond_alone_events_crown(treep) - 
+    llrcond += cond_alone_events_crown(treep) -
                cond_alone_events_crown(treec)
   end
 
@@ -171,8 +171,8 @@ function daughters_lprop!(treep::iTgbmbd,
   llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
   llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
 
-  acr  = llrbd_d1 + llrbd_d2 + llrcond
-  llr  = llrbm_d1 + llrbm_d2 + acr 
+  acr  = llrbd_d1 + llrbd_d2 + llrcond 
+  llr  = llrbm_d1 + llrbm_d2 + acr
   acr += normprop
 
   return llr, acr
@@ -379,25 +379,24 @@ end
 
 Make a trio of Brownian motion MCMC updates when the root is involved.
 """
-function triad_lupdate_root!(treep   ::iTgbmbd, 
-                             treec   ::iTgbmbd,
-                             bbλp    ::Array{Array{Float64,1},1}, 
-                             bbμp    ::Array{Array{Float64,1},1}, 
-                             bbλc    ::Array{Array{Float64,1},1}, 
-                             bbμc    ::Array{Array{Float64,1},1}, 
-                             tsv     ::Array{Array{Float64,1},1}, 
-                             llc     ::Float64,
-                             prc     ::Float64,
-                             pr      ::Int64,
-                             d1      ::Int64,
-                             d2      ::Int64,
-                             σλ      ::Float64,
-                             σμ      ::Float64,
-                             δt      ::Float64, 
-                             srδt    ::Float64,
-                             λa_prior::Float64,
-                             μa_prior::Float64,
-                             icr     ::Bool)
+function triad_lupdate_root!(treep ::iTgbmbd, 
+                             treec ::iTgbmbd,
+                             bbλp  ::Array{Array{Float64,1},1}, 
+                             bbμp  ::Array{Array{Float64,1},1}, 
+                             bbλc  ::Array{Array{Float64,1},1}, 
+                             bbμc  ::Array{Array{Float64,1},1}, 
+                             tsv   ::Array{Array{Float64,1},1}, 
+                             llc   ::Float64,
+                             pr    ::Int64,
+                             d1    ::Int64,
+                             d2    ::Int64,
+                             σλ    ::Float64,
+                             σμ    ::Float64,
+                             δt    ::Float64, 
+                             srδt  ::Float64,
+                             lλmxpr::Float64,
+                             lμmxpr::Float64,
+                             icr   ::Bool)
 
   ## get reference vectors
   # time vectors
@@ -466,15 +465,15 @@ function triad_lupdate_root!(treep   ::iTgbmbd,
                        σλ, σμ, δt, srδt, icr, 0)
 
   # prior ratio
-  prr = llrdexp_x(lλrp, λpr, λa_prior) + 
-        llrdexp_x(lμrp, μpr, μa_prior)
-
-  # acceptance ratio
-  acr += prr
+  if lλrp > lλmxpr
+    acr += -Inf
+  end
+  if lμrp > lμmxpr
+    acr += -Inf
+  end
 
   if -randexp() < acr
     llc += llr
-    prc += prr
     copyto!(λprv_c, λprv_p)
     copyto!(λd1v_c, λd1v_p)
     copyto!(λd2v_c, λd2v_p)
@@ -486,7 +485,7 @@ function triad_lupdate_root!(treep   ::iTgbmbd,
     gbm_copy_f!(treecd2, treepd2)
   end
 
-  return llc, prc
+  return llc
 end
 
 
@@ -526,20 +525,20 @@ function llr_propr(treep  ::iTgbmbd,
 
   llrcond = 0.0
 
-  #if iszero(wbc)
-  #  if icr 
-  #    llrcond += - cond_alone_events_crown(treep) + 
-  #                 cond_alone_events_crown(treec)
-  #  else
-  #    llrcond += - cond_alone_events_stem(treep) + 
-  #                 cond_alone_events_stem(treec)
-  #  end
-  #elseif isone(wbc) && icr
-  #  llrcond += - cond_alone_events_stem(treep) + 
-  #               cond_alone_events_stem(treec)
-  #end
+  if iszero(wbc)
+    if icr 
+      llrcond += cond_alone_events_crown(treep) -
+                 cond_alone_events_crown(treec)
+    else
+      llrcond += cond_alone_events_stem(treep) -
+                 cond_alone_events_stem(treec)
+    end
+  elseif isone(wbc) && icr
+    llrcond += cond_alone_events_stem(treep) -
+               cond_alone_events_stem(treec)
+  end
 
-  acr = llrbd_pr + llrbd_d1 + llrbd_d2 #+ llrcond
+  acr = llrbd_pr + llrbd_d1 + llrbd_d2 + llrcond
   llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr
 
   return llr, acr
