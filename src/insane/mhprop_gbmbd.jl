@@ -171,8 +171,8 @@ function daughters_lprop!(treep::iTgbmbd,
   llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
   llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
 
-  acr  = llrbd_d1 + llrbd_d2 + llrcond 
-  llr  = llrbm_d1 + llrbm_d2 + acr
+  acr  = llrbd_d1 + llrbd_d2 
+  llr  = llrbm_d1 + llrbm_d2 + acr + llrcond 
   acr += normprop
 
   return llr, acr
@@ -538,8 +538,8 @@ function llr_propr(treep  ::iTgbmbd,
                cond_alone_events_stem(treec)
   end
 
-  acr = llrbd_pr + llrbd_d1 + llrbd_d2 + llrcond
-  llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr
+  acr = llrbd_pr + llrbd_d1 + llrbd_d2 
+  llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr + llrcond
 
   return llr, acr
 end
