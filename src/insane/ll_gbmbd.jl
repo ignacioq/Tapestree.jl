@@ -29,6 +29,45 @@ end
 
 
 
+
+
+"""
+    cond_alone_events_stem(tree::iTgbmbd,
+                           dri ::BitArray{1},
+                           ldr ::Int64,
+                           ix  ::Int64)
+
+Returns gbm birth-death likelihood for whole branch `br`.
+"""
+function cond_alone_events_stem(tree::iTgbmbd,
+                                dri ::BitArray{1},
+                                ldr ::Int64,
+                                ix  ::Int64)
+
+  if ix === ldr
+    return cond_alone_events_ll(tree, 0.0, 0.0)
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::iTgbmbd)
+    if ifx1 && isfix(tree.d2::iTgbmbd)
+      ix += 1
+      if dri[ix]
+        cond_alone_events_stem(tree.d1::iTgbmbd, dri, ldr, ix)
+      else
+        cond_alone_events_stem(tree.d2::iTgbmbd, dri, ldr, ix)
+      end
+    elseif ifx1
+      cond_alone_events_stem(tree.d1::iTgbmbd, dri, ldr, ix)
+    else
+      cond_alone_events_stem(tree.d2::iTgbmbd, dri, ldr, ix)
+    end
+  end
+
+end
+
+
+
+
+
 """
     cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Int64)
 
@@ -41,8 +80,50 @@ cond_alone_events_stem(tree::iTgbmbd) =
 
 
 
+
 """
-    cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Int64)
+    cond_alone_events_tip_ll(tree::iTgbmbd, tna::Float64, ll::Int64)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function cond_alone_events_tip_ll(tree::iTgbmbd, tna::Float64, ll::Float64)
+
+  if tna < pe(tree)
+    @inbounds begin
+      lλv = lλ(tree)
+      lv  = lastindex(lλv)
+      λi  = lλv[lv]
+      μi  = lμ(tree)[lv]
+    end
+    ll += λi - log(exp(λi) + exp(μi))
+  end
+  tna -= pe(tree)
+
+  if istip(tree)
+    return ll
+  end
+
+  if isfix(tree.d1::iTgbmbd)
+    if isfix(tree.d2::iTgbmbd)
+      return ll
+    else
+      tnx = treeheight(tree.d2::iTgbmbd)
+      tna = tnx > tna ? tnx : tna
+      cond_alone_events_ll(tree.d1::iTgbmbd, tna, ll)
+    end
+  else
+    tnx = treeheight(tree.d1::iTgbmbd)
+    tna = tnx > tna ? tnx : tna
+    cond_alone_events_ll(tree.d2::iTgbmbd, tna, ll)
+  end
+end
+
+
+
+
+"""
+    cond_alone_events_ll(tree::iTgbmbd, tna::Float64, ll::Int64)
 
 Condition events when there is only one alive lineage in the crown subtrees 
 to only be speciation events.

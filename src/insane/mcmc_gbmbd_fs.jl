@@ -549,9 +549,10 @@ function fsp(Ψp   ::iTgbmbd,
       llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
         tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
-      # add for `llr` and `acr`
+      # acceptance ratio
       iλ   = λf
-      acr += λf - bbλc[pr][end]
+      acr += λf            + cond_alone_events_stem(t0) - 
+             bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
     else
       pr  = bix
       iλ  = 0.0
@@ -559,27 +560,25 @@ function fsp(Ψp   ::iTgbmbd,
       acr = 0.0
     end
 
-    cll = 0.0
-    if icr && isone(wbc)
-      if dri[1]
-        cll += cond_alone_events_stem(t0) - 
-               cond_alone_events_stem(Ψc.d1::iTgbmbd)
-      else
-        cll += cond_alone_events_stem(t0) -
-               cond_alone_events_stem(Ψc.d2::iTgbmbd)
-      end
-    elseif iszero(wbc)
-      cll += cond_alone_events_stem(t0) -
-             cond_alone_events_stem(Ψc)
-    end
-
     # mh ratio
-    if -randexp() < acr #+ cll
+    if -randexp() < acr
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
+      if icr && isone(wbc)
+        if dri[1]
+          llr += cond_alone_events_stem(t0) - 
+                 cond_alone_events_stem(Ψc.d1::iTgbmbd)
+        else
+          llr += cond_alone_events_stem(t0) -
+                 cond_alone_events_stem(Ψc.d2::iTgbmbd)
+        end
+      elseif iszero(wbc)
+        llr += cond_alone_events_stem(t0) -
+               cond_alone_events_stem(Ψc)
+      end
 
-      llc += llr + cll
+      llc += llr 
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], bbμc[pr], 0)

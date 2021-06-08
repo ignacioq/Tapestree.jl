@@ -66,7 +66,7 @@ function insane_cbd_fs(tree    ::sTbd,
   end
 
   # make fix tree directory
-  idf = iBf[]
+  idf = iBffs[]
   bit = BitArray{1}()
   makeiBf!(tree, idf, bit)
 
@@ -118,7 +118,7 @@ end
                   λtni    ::Float64, 
                   μtni    ::Float64, 
                   scalef  ::Function,
-                  idf     ::Array{iBf,1},
+                  idf     ::Array{iBffs,1},
                   pup     ::Array{Int64,1}, 
                   prints  ::Int64,
                   svf     ::Function)
@@ -139,7 +139,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
                        λtni    ::Float64, 
                        μtni    ::Float64, 
                        scalef  ::Function,
-                       idf     ::Array{iBf,1},
+                       idf     ::Array{iBffs,1},
                        pup     ::Array{Int64,1}, 
                        prints  ::Int64,
                        svf     ::Function,
@@ -225,7 +225,7 @@ end
              λtn   ::Float64,
              μtn   ::Float64, 
              th    ::Float64,
-             idf   ::Array{iBf,1},
+             idf   ::Array{iBffs,1},
              pup   ::Array{Int64,1}, 
              prints::Int64,
              svf   ::Function)
@@ -244,7 +244,7 @@ function mcmc_cbd(tree  ::sTbd,
                   λtn   ::Float64,
                   μtn   ::Float64, 
                   th    ::Float64,
-                  idf   ::Array{iBf,1},
+                  idf   ::Array{iBffs,1},
                   pup   ::Array{Int64,1}, 
                   prints::Int64,
                   svf   ::Function,
@@ -381,7 +381,7 @@ end
 
 """
     fsp(tree::sTbd,
-        bi  ::iBf,
+        bi  ::iBffs,
         llc ::Float64,
         λc  ::Float64, 
         μc  ::Float64,
@@ -390,7 +390,7 @@ end
 Forward simulation proposal function for constant birth-death.
 """
 function fsp(tree::sTbd,
-             bi  ::iBf,
+             bi  ::iBffs,
              llc ::Float64,
              λ   ::Float64, 
              μ   ::Float64,
@@ -416,21 +416,21 @@ function fsp(tree::sTbd,
         if isone(dri[1])
           # likelihood ratio
           llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-                stem_prob_surv_da(t0, λ, μ)        - 
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) -
+                stem_prob_surv_da(t0, λ, μ)        + 
                 stem_prob_surv_da(tree.d1, λ, μ)
         else
           # likelihood ratio
           llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-                stem_prob_surv_da(t0, λ, μ)        - 
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) -
+                stem_prob_surv_da(t0, λ, μ)        + 
                 stem_prob_surv_da(tree.d2, λ, μ)
         end
       else
         # likelihood ratio
         llr = llik_cbd(t0, λ, μ) + iλ            - 
-              br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-              stem_prob_surv_da(t0, λ, μ)        - 
+              br_ll_cbd(tree, λ, μ, dri, ldr, 0) -
+              stem_prob_surv_da(t0, λ, μ)        + 
               stem_prob_surv_da(tree, λ, μ)
       end
     else
@@ -452,11 +452,11 @@ end
 
 
 """
-    fsbi(bi::iBf, λ::Float64, μ::Float64, ntry::Int64)
+    fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
 
 Forward simulation for branch `bi`
 """
-function fsbi(bi::iBf, λ::Float64, μ::Float64)
+function fsbi(bi::iBffs, λ::Float64, μ::Float64)
 
   # retain?
   ret = true
@@ -599,6 +599,205 @@ function add2(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
 
   return ix
 end
+
+
+
+
+"""
+    λp(tree  ::sTbd,
+       llc   ::Float64,
+       prc   ::Float64,
+       λc    ::Float64,
+       lac   ::Array{Float64,1},
+       λtn   ::Float64,
+       μc    ::Float64,
+       λprior::Float64)
+
+`λ` proposal function for constant birth-death in adaptive phase.
+"""
+function λp(tree  ::sTbd,
+            llc   ::Float64,
+            prc   ::Float64,
+            λc    ::Float64,
+            lac   ::Array{Float64,1},
+            λtn   ::Float64,
+            μc    ::Float64,
+            λprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
+
+    λp = mulupt(λc, λtn)::Float64
+
+    llp = llik_cbd(tree, λp, μc) - svf(tree, λp, μc)
+    #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+
+    prr = llrdexp_x(λp, λc, λprior)
+
+    if -randexp() < (llp - llc + prr + log(λp/λc))
+      llc     = llp::Float64
+      prc    += prr::Float64
+      λc      = λp::Float64
+      lac[1] += 1.0
+    end
+
+    return llc, prc, λc
+end
+
+
+
+
+"""
+    λp(tree  ::sTbd,
+       llc   ::Float64,
+       prc   ::Float64,
+       λc    ::Float64,
+       λtn   ::Float64,
+       μc    ::Float64,
+       λprior::Float64)
+
+`λ` proposal function for constant birth-death.
+"""
+function λp(tree  ::sTbd,
+            llc   ::Float64,
+            prc   ::Float64,
+            λc    ::Float64,
+            λtn   ::Float64,
+            μc    ::Float64,
+            λprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
+
+    λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
+
+    llp = llik_cbd(tree, λp, μc) - svf(tree, λp, μc)
+    #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+
+    prr = llrdexp_x(λp, λc, λprior)
+
+    if -randexp() < (llp - llc + prr + log(λp/λc))
+      llc     = llp::Float64
+      prc    += prr::Float64
+      λc      = λp::Float64
+    end
+
+    return llc, prc, λc 
+end
+
+
+
+
+"""
+    μp(tree  ::sTbd,
+       llc   ::Float64,
+       prc   ::Float64,
+       μc    ::Float64,
+       lac   ::Array{Float64,1},
+       μtn   ::Float64,
+       λc    ::Float64,
+       μprior::Float64)
+
+`μ` proposal function for constant birth-death in adaptive phase.
+"""
+function μp(tree  ::sTbd,
+            llc   ::Float64,
+            prc   ::Float64,
+            μc    ::Float64,
+            lac   ::Array{Float64,1},
+            μtn   ::Float64,
+            λc    ::Float64,
+            μprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
+
+    μp = mulupt(μc, μtn)::Float64
+
+    # one could make a ratio likelihood function
+    sc  = svf(tree, λc, μp)
+    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    #sc  = svf(λc, μp, th)
+    #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+
+    prr = llrdexp_x(μp, μc, μprior)
+
+    if -randexp() < (llp - llc + prr + log(μp/μc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+      lac[2] += 1.0
+    end
+
+    return llc, prc, μc 
+end
+
+
+
+
+"""
+    μp(tree  ::sTbd,
+       llc   ::Float64,
+       prc   ::Float64,
+       μc    ::Float64,
+       μtn   ::Float64,
+       λc    ::Float64,
+       μprior::Float64)
+
+`μ` proposal function for constant birth-death.
+"""
+function μp(tree  ::sTbd,
+            llc   ::Float64,
+            prc   ::Float64,
+            μc    ::Float64,
+            μtn   ::Float64,
+            λc    ::Float64,
+            μprior::Float64,
+            th    ::Float64,
+            svf   ::Function)
+
+    μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
+
+    # one could make a ratio likelihood function
+    sc  = svf(tree, λc, μp)
+    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    #sc  = svf(λc, μp, th)
+    #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+
+    prr = llrdexp_x(μp, μc, μprior)
+
+    if -randexp() < (llp - llc + prr + log(μp/μc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+    end
+
+    return llc, prc, μc 
+end
+
+
+
+
+"""
+    λμprop()
+
+Generate proportional proposals for `λ` and `μ`
+using random samples from **LogNormal** distributions. 
+"""
+function λμprop() 
+
+  lg = lnr()
+
+  return lg*exp(randn()*0.3 - 0.044),
+         lg*exp(randn()*0.3 - 0.044) 
+end
+
+
+
+
+"""
+    lnr()
+
+**LogNormal** random samples with median of `1`. 
+"""
+lnr() = @fastmath exp(randn())
 
 
 
