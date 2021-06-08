@@ -163,7 +163,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
   lidf = lastindex(idf)
 
   # likelihood
-  llc = llik_cbd(tree, λc, μc) - svf(tree, λc, μc)
+  llc = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
   #llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
@@ -416,21 +416,21 @@ function fsp(tree::sTbd,
         if isone(dri[1])
           # likelihood ratio
           llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) -
-                stem_prob_surv_da(t0, λ, μ)        + 
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                stem_prob_surv_da(t0, λ, μ)        - 
                 stem_prob_surv_da(tree.d1, λ, μ)
         else
           # likelihood ratio
           llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) -
-                stem_prob_surv_da(t0, λ, μ)        + 
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                stem_prob_surv_da(t0, λ, μ)        - 
                 stem_prob_surv_da(tree.d2, λ, μ)
         end
       else
         # likelihood ratio
         llr = llik_cbd(t0, λ, μ) + iλ            - 
-              br_ll_cbd(tree, λ, μ, dri, ldr, 0) -
-              stem_prob_surv_da(t0, λ, μ)        + 
+              br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+              stem_prob_surv_da(t0, λ, μ)        - 
               stem_prob_surv_da(tree, λ, μ)
       end
     else
@@ -628,7 +628,7 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc) - svf(tree, λp, μc)
+    llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
     #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
 
     prr = llrdexp_x(λp, λc, λprior)
@@ -669,7 +669,7 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc) - svf(tree, λp, μc)
+    llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
     #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
 
     prr = llrdexp_x(λp, λc, λprior)
@@ -713,7 +713,7 @@ function μp(tree  ::sTbd,
 
     # one could make a ratio likelihood function
     sc  = svf(tree, λc, μp)
-    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) + sc
     #sc  = svf(λc, μp, th)
     #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
 
@@ -757,7 +757,7 @@ function μp(tree  ::sTbd,
 
     # one could make a ratio likelihood function
     sc  = svf(tree, λc, μp)
-    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) + sc
     #sc  = svf(λc, μp, th)
     #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
 

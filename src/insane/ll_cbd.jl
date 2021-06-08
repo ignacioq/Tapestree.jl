@@ -20,7 +20,7 @@ birth-death process with `λ` and `μ` for stem age.
 """
 function stem_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
   n = count_alone_nodes_stem(tree, 0.0, 0)
-  return Float64(n)*log(λ/(λ+μ))
+  return Float64(n)*log((λ+μ)/λ)
 end
 
 
@@ -32,7 +32,7 @@ birth-death process with `λ` and `μ` for crown age.
 """
 function crown_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
   n = count_alone_nodes_crown(tree)
-  return Float64(n)*log(λ/(λ+μ)) - log(λ)
+  return Float64(n)*log((λ+μ)/λ) - log(λ)
 end
 
 
