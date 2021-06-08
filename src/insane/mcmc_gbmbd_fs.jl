@@ -559,25 +559,27 @@ function fsp(Ψp   ::iTgbmbd,
       acr = 0.0
     end
 
+    cll = 0.0
+    if icr && isone(wbc)
+      if dri[1]
+        cll += cond_alone_events_stem(t0) - 
+               cond_alone_events_stem(Ψc.d1::iTgbmbd)
+      else
+        cll += cond_alone_events_stem(t0) -
+               cond_alone_events_stem(Ψc.d2::iTgbmbd)
+      end
+    elseif iszero(wbc)
+      cll += cond_alone_events_stem(t0) -
+             cond_alone_events_stem(Ψc)
+    end
+
     # mh ratio
-    if -randexp() < acr 
+    if -randexp() < acr #+ cll
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
-      if icr && isone(wbc)
-        if dri[1]
-          llr += cond_alone_events_stem(t0) - 
-                 cond_alone_events_stem(Ψc.d1::iTgbmbd)
-        else
-          llr += cond_alone_events_stem(t0) -
-                 cond_alone_events_stem(Ψc.d2::iTgbmbd)
-        end
-      elseif iszero(wbc)
-        llr += cond_alone_events_stem(t0) -
-               cond_alone_events_stem(Ψc)
-      end
 
-      llc += llr
+      llc += llr + cll
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], bbμc[pr], 0)
