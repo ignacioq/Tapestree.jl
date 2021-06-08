@@ -217,17 +217,17 @@ function iTgbmpb(tree::sTpb,
 
   pet = pe(tree)
   nt  = floor(pet, δt)
-  fdt = mod(pet, δt)
+  fdtt = mod(pet, δt)
 
-  if iszero(fdt)
-    fdt = δt
+  if iszero(fdtt)
+    fdtt = δt
   end
 
-  lλv = sim_bm(lλa, σλ, srδt, nt, fdt)
+  lλv = sim_bm(lλa, σλ, srδt, nt, fdtt)
 
   iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[end], σλ), 
           iTgbmpb(tree.d2, δt, srδt, lλv[end], σλ),
-          pe(tree), δt, fdt, lλv)
+          pe(tree), δt, fdtt, lλv)
 end
 
 """
@@ -360,23 +360,33 @@ function iTgbmbd(tree::sTbd,
                  σλ  ::Float64,
                  σμ  ::Float64)
 
-  pet = pe(tree)
-  nt  = floor(Int64,pet/δt)
-  fdt = mod(pet, δt)
+  pet  = pe(tree)
 
-  if iszero(fdt)
-    fdt = δt
+  # if crown root
+  if iszero(pet)
+    iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, σλ, σμ), 
+            iTgbmbd(tree.d2, δt, srδt, lλa, lμa, σλ, σμ),
+            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), 
+            Float64[lλa], Float64[lμa])
+  else
+    nt   = floor(Int64,pet/δt)
+    fdti = mod(pet, δt)
+
+    lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
+    lμv = sim_bm(lμa, σμ, srδt, nt, fdti)
+
+    if iszero(fdti)
+      fdti = δt
+    end
+
+    l = lastindex(lμv)
+
+    iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
+            iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
+            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
   end
-
-  lλv = sim_bm(lλa, σλ, srδt, nt, fdt)
-  lμv = sim_bm(lμa, σμ, srδt, nt, fdt)
-
-  l = lastindex(lμv)
-
-  iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
-          iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
-          pe(tree), δt, fdt, isextinct(tree), isfix(tree), lλv, lμv)
 end
+
 
 """
     iTgbmbd(::Nothing, 
