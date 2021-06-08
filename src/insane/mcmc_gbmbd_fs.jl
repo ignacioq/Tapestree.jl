@@ -551,8 +551,9 @@ function fsp(Ψp   ::iTgbmbd,
 
       # acceptance ratio
       iλ   = λf
-      acr += λf            + cond_alone_events_stem(t0) - 
-             bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
+      acr += λf - bbλc[pr][end]
+      #acr += λf            + cond_alone_events_stem(t0) - 
+      #       bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
     else
       pr  = bix
       iλ  = 0.0
