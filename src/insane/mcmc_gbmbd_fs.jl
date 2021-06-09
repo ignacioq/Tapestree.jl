@@ -190,8 +190,8 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   icr = iszero(pe(Ψc))
 
   llc = llik_gbm(Ψc, σλc, σμc, δt, srδt) + svf(Ψc)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], 1.0/σλ_prior[2])      + 
-        logdinvgamma(σμc^2, σμ_prior[1], 1.0/σμ_prior[2])      + 
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
+        logdinvgamma(σμc^2, σμ_prior[1], σμ_prior[2])      + 
         logdunif(exp(lλ(Ψc)[1]), λa_prior[1], λa_prior[2]) +
         logdunif(exp(lμ(Ψc)[1]), μa_prior[1], μa_prior[2])
 
@@ -1047,8 +1047,8 @@ end
 
 Gibbs update for `σ`.
 """
-function update_σ!(σλ      ::Float64,
-                   σμ      ::Float64,
+function update_σ!(σλc     ::Float64,
+                   σμc     ::Float64,
                    Ψ       ::iTgbmbd,
                    llc     ::Float64,
                    prc     ::Float64,
@@ -1061,15 +1061,15 @@ function update_σ!(σλ      ::Float64,
   sssλ, sssμ, n = sss_gbm(Ψ)
 
   # Gibbs update for σ
-  σλ2 = randinvgamma(σλ_prior[1] + 0.5 * n, 1.0/(σλ_prior[2] + sssλ))
-  σμ2 = randinvgamma(σμ_prior[1] + 0.5 * n, 1.0/(σμ_prior[2] + sssμ))
+  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + sssλ))
+  σμp2 = randinvgamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + sssμ))
 
   # update prior
-  prc = llrdinvgamma(σλ2, σλ^2, σλ_prior[1], 1.0/σλ_prior[2]) + 
-        llrdinvgamma(σμ2, σμ^2, σμ_prior[1], 1.0/σμ_prior[2])
+  prc += llrdinvgamma(σλp2, σλc^2, σλ_prior[1], σλ_prior[2]) + 
+         llrdinvgamma(σμp2, σμc^2, σμ_prior[1], σμ_prior[2])
 
-  σλp = sqrt(σλ2)
-  σμp = sqrt(σμ2)
+  σλp = sqrt(σλp2)
+  σμp = sqrt(σμp2)
 
   # update likelihood
   llc += llr_gbm_σp(σλp, σμp, σλ, σμ, sssλ, sssμ, n)
