@@ -579,7 +579,7 @@ function fsp(Ψp   ::iTgbmbd,
                cond_alone_events_stem(Ψc)
       end
 
-      llc += llr 
+      llc += llr
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], bbμc[pr], 0)
