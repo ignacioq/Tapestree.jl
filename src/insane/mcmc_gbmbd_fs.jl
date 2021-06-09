@@ -219,7 +219,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
       if pupi === 1
 
         llc, prc, σλc, σμc = 
-          update_σ!(σλc, σμc, Ψc, llc, prc, δt, srδt, σλ_prior, σμ_prior)
+          update_σ!(σλc, σμc, Ψc, llc, prc, σλ_prior, σμ_prior)
 
       # gbm update
       elseif pupi === 2
@@ -375,7 +375,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
       if pupi === 1
 
         llc, prc, σλc, σμc = 
-          update_σ!(σλc, σμc, Ψc, llc, prc, δt, srδt, σλ_prior, σμ_prior)
+          update_σ!(σλc, σμc, Ψc, llc, prc, σλ_prior, σμ_prior)
 
       # gbm update
       elseif pupi === 2
@@ -1033,27 +1033,21 @@ end
 
 
 """
-    update_σ!(σc    ::Float64,
-              Ψ     ::iTgbmbd,
-              llc   ::Float64,
-              prc   ::Float64,
-              σtn   ::Float64,
-              ltn   ::Int64,
-              lup   ::Float64,
-              lac   ::Float64,
-              δt    ::Float64,
-              srδt  ::Float64,
-              σprior::Float64)
+    update_σ!(σλc     ::Float64,
+              σμc     ::Float64,
+              Ψ       ::iTgbmbd,
+              llc     ::Float64,
+              prc     ::Float64,
+              σλ_prior::NTuple{2,Float64},
+              σμ_prior::NTuple{2,Float64})
 
-Gibbs update for `σ`.
+Gibbs update for `σλ` and `σμ`.
 """
 function update_σ!(σλc     ::Float64,
                    σμc     ::Float64,
                    Ψ       ::iTgbmbd,
                    llc     ::Float64,
                    prc     ::Float64,
-                   δt      ::Float64,
-                   srδt    ::Float64,
                    σλ_prior::NTuple{2,Float64},
                    σμ_prior::NTuple{2,Float64})
 
@@ -1061,8 +1055,8 @@ function update_σ!(σλc     ::Float64,
   sssλ, sssμ, n = sss_gbm(Ψ)
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + sssλ))
-  σμp2 = randinvgamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + sssμ))
+  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + sssλ)
+  σμp2 = randinvgamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + sssμ)
 
   # update prior
   prc += llrdinvgamma(σλp2, σλc^2, σλ_prior[1], σλ_prior[2]) + 
@@ -1072,7 +1066,7 @@ function update_σ!(σλc     ::Float64,
   σμp = sqrt(σμp2)
 
   # update likelihood
-  llc += llr_gbm_σp(σλp, σμp, σλ, σμ, sssλ, sssμ, n)
+  llc += llr_gbm_σp(σλp, σμp, σλc, σμc, sssλ, sssμ, n)
 
   return llc, prc, σλp, σμp
 end
