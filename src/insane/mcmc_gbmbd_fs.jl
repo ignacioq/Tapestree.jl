@@ -43,8 +43,8 @@ function insane_gbmbd(tree    ::sTbd,
                       out_file::String;
                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                       μa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      σλ_prior::Float64           = 0.1,
-                      σμ_prior::Float64           = 0.1,
+                      σλ_prior::NTuple{2,Float64} = (0.05, 0.5),
+                      σμ_prior::NTuple{2,Float64} = (0.05, 0.5),
                       niter   ::Int64             = 1_000,
                       nthin   ::Int64             = 10,
                       nburn   ::Int64             = 200,
@@ -54,9 +54,6 @@ function insane_gbmbd(tree    ::sTbd,
                       μi      ::Float64           = NaN,
                       σλi     ::Float64           = 0.01, 
                       σμi     ::Float64           = 0.01,
-                      σλtni   ::Float64           = 1.0,
-                      σμtni   ::Float64           = 1.0,
-                      obj_ar  ::Float64           = 0.4,
                       pupdp   ::NTuple{3,Float64} = (0.3,0.1,0.1),
                       ntry    ::Int64             = 2,
                       nlim    ::Int64             = 500,
@@ -105,9 +102,6 @@ function insane_gbmbd(tree    ::sTbd,
   # make survival conditioning function (stem or crown)
   svf = iszero(pe(Ψc)) ? cond_alone_events_crown : cond_alone_events_stem
 
-  # make scaling function to objective acceptance rate
-  scalef = makescalef(obj_ar)
-
   # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
   spup = sum(pupdp)
   pup  = Int64[]
@@ -116,16 +110,16 @@ function insane_gbmbd(tree    ::sTbd,
   end
 
   # burn-in phase
-  Ψp, Ψc, llc, prc, σλc, σμc, σλtn, σμtn =
+  Ψp, Ψc, llc, prc, σλc, σμc =
     mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, μa_prior, 
-      σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, σλtni, σμtni, δt, srδt, 
-      idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf)
+      σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, δt, srδt, 
+      idf, triads, terminus, btotriad, pup, nlim, prints, svf)
 
   # mcmc
   R, Ψv =
     mcmc_gbmbd(Ψp, Ψc, llc, prc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
-      λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, σλtn, σμtn, 
-      δt, srδt, idf, triads, terminus, btotriad, pup, nlim, prints)
+      λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, δt, srδt, 
+      idf, triads, terminus, btotriad, pup, nlim, prints)
 
   pardic = Dict(("lambda_root"  => 1,
                  "mu_root"      => 2,
@@ -175,14 +169,12 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          tsv     ::Array{Array{Float64,1},1},
                          λa_prior::NTuple{2,Float64},
                          μa_prior::NTuple{2,Float64},
-                         σλ_prior::Float64,
-                         σμ_prior::Float64,
+                         σλ_prior::NTuple{2,Float64},
+                         σμ_prior::NTuple{2,Float64},
                          nburn   ::Int64,
                          tune_int::Int64,
                          σλc     ::Float64,
                          σμc     ::Float64,
-                         σλtni   ::Float64,
-                         σμtni   ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
                          idf     ::Array{iBffs,1},
@@ -192,22 +184,14 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          pup     ::Array{Int64,1},
                          nlim    ::Int64,
                          prints  ::Int64,
-                         scalef  ::Function,
                          svf     ::Function)
 
   # crown or stem conditioning
   icr = iszero(pe(Ψc))
 
-  # initialize acceptance log
-  ltn = 0
-  lup = lλac = lμac = 0.0
-
-  σλtn = σλtni
-  σμtn = σμtni
-
   llc = llik_gbm(Ψc, σλc, σμc, δt, srδt) + svf(Ψc)
-  prc = logdexp(σλc, σλ_prior)                             +
-        logdexp(σμc, σμ_prior)                             +
+  prc = logdinvgamma(σλc^2, σλ_prior[1], 1.0/σλ_prior[2])      + 
+        logdinvgamma(σμc^2, σμ_prior[1], 1.0/σμ_prior[2])      + 
         logdunif(exp(lλ(Ψc)[1]), λa_prior[1], λa_prior[2]) +
         logdunif(exp(lμ(Ψc)[1]), μa_prior[1], μa_prior[2])
 
@@ -234,14 +218,8 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
       # update σλ or σμ
       if pupi === 1
 
-        ltn += 1
-        lup += 1.0
-
-        llc, prc, σλc, lλac = 
-          update_σ!(σλc, Ψc, llc, prc, σλtn, lλac, δt, srδt, σλ_prior, lλ)
-
-        llc, prc, σμc, lμac = 
-          update_σ!(σμc, Ψc, llc, prc, σμtn, lμac, δt, srδt, σμ_prior, lμ)
+        llc, prc, σλc, σμc = 
+          update_σ!(σλc, σμc, Ψc, llc, prc, δt, srδt, σλ_prior, σμ_prior)
 
       # gbm update
       elseif pupi === 2
@@ -291,19 +269,12 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
       end
-
-      # tune parameters
-      if ltn === tune_int
-        σλtn = scalef(σλtn,lλac/lup)
-        σμtn = scalef(σμtn,lμac/lup)
-        ltn = 0
-      end
     end
 
     next!(pbar)
   end
 
-  return Ψp, Ψc, llc, prc, σλc, σμc, σλtn, σμtn
+  return Ψp, Ψc, llc, prc, σλc, σμc
 end
 
 
@@ -353,12 +324,10 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     tsv     ::Array{Array{Float64,1},1},
                     λa_prior::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
-                    σλ_prior::Float64,
-                    σμ_prior::Float64,
+                    σλ_prior::NTuple{2,Float64},
+                    σμ_prior::NTuple{2,Float64},
                     niter   ::Int64,
                     nthin   ::Int64,
-                    σλtn    ::Float64,
-                    σμtn    ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     idf     ::Array{iBffs,1},
@@ -405,10 +374,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
       # update σλ or σμ
       if pupi === 1
 
-        llc, prc, σλc = 
-          update_σ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλ_prior, lλ)
-        llc, prc, σμc  = 
-          update_σ!(σμc, Ψc, llc, prc, σμtn, δt, srδt, σμ_prior, lμ)
+        llc, prc, σλc, σμc = 
+          update_σ!(σλc, σμc, Ψc, llc, prc, δt, srδt, σλ_prior, σμ_prior)
 
       # gbm update
       elseif pupi === 2
@@ -1065,8 +1032,6 @@ end
 
 
 
-
-
 """
     update_σ!(σc    ::Float64,
               Ψ     ::iTgbmbd,
@@ -1082,129 +1047,35 @@ end
 
 Gibbs update for `σ`.
 """
-function update_σ!(Ψ     ::iTgbmbd,
-                   llc   ::Float64,
-                   prc   ::Float64,
-                   σtn   ::Float64,
-                   lac   ::Float64,
-                   δt    ::Float64,
-                   srδt  ::Float64,
-                   σprior::Float64,
-                   lf    ::Function)
-
-  """
-  make update for sigma lambda and sigma mu for computational efficiency of
-  estimating sss
-  """
+function update_σ!(σλ      ::Float64,
+                   σμ      ::Float64,
+                   Ψ       ::iTgbmbd,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   σλ_prior::NTuple{2,Float64},
+                   σμ_prior::NTuple{2,Float64})
 
   # standardized sum of squares
-  sss, n = ss_gbm(...)
+  sssλ, sssμ, n = sss_gbm(Ψ)
 
   # Gibbs update for σ
-  σp = randinvgamma(σprior[1] + 0.5 * n, σprior[2] + sss)
+  σλ2 = randinvgamma(σλ_prior[1] + 0.5 * n, 1.0/(σλ_prior[2] + sssλ))
+  σμ2 = randinvgamma(σμ_prior[1] + 0.5 * n, 1.0/(σμ_prior[2] + sssμ))
 
-  # update likeihood
-  llc = llf(ss, ...)
-  prc = logdinvgamma(σp, σprior[1], σprior[2])
+  # update prior
+  prc = llrdinvgamma(σλ2, σλ^2, σλ_prior[1], 1.0/σλ_prior[2]) + 
+        llrdinvgamma(σμ2, σμ^2, σμ_prior[1], 1.0/σμ_prior[2])
 
-  return llc, prc, σc
+  σλp = sqrt(σλ2)
+  σμp = sqrt(σμ2)
+
+  # update likelihood
+  llc += llr_gbm_σp(σλp, σμp, σλ, σμ, sssλ, sssμ, n)
+
+  return llc, prc, σλp, σμp
 end
-
-
-
-
-
-
-
-
-"""
-    update_σ!(σc    ::Float64,
-              Ψ     ::iTgbmbd,
-              llc   ::Float64,
-              prc   ::Float64,
-              σtn   ::Float64,
-              ltn   ::Int64,
-              lup   ::Float64,
-              lac   ::Float64,
-              δt    ::Float64,
-              srδt  ::Float64,
-              σprior::Float64)
-
-MCMC update for `σ` with acceptance log.
-"""
-function update_σ!(σc    ::Float64,
-                   Ψ     ::iTgbmbd,
-                   llc   ::Float64,
-                   prc   ::Float64,
-                   σtn   ::Float64,
-                   lac   ::Float64,
-                   δt    ::Float64,
-                   srδt  ::Float64,
-                   σprior::Float64,
-                   lf    ::Function)
-
-  # parameter proposals
-  σp = mulupt(σc, σtn)::Float64
-
-  # log likelihood and prior ratio
-  llr = llr_gbm_bm(Ψ, σp, σc, srδt, lf)
-  prr = llrdexp_x(σp, σc, σprior)
-
-  if -randexp() < (llr + prr + log(σp/σc))
-    σc   = σp
-    llc += llr
-    prc += prr
-    lac += 1.0
-  end
-
-  return llc, prc, σc, lac
-end
-
-
-
-
-
-"""
-    update_σ!(σc    ::Float64,
-              Ψ     ::iTgbmbd,
-              llc   ::Float64,
-              prc   ::Float64,
-              σtn   ::Float64,
-              δt    ::Float64,
-              srδt  ::Float64,
-              σprior::Float64,
-              lf    ::Function)
-
-
-MCMC update for `σ`.
-"""
-function update_σ!(σc    ::Float64, 
-                   Ψ     ::iTgbmbd,
-                   llc   ::Float64,
-                   prc   ::Float64,
-                   σtn   ::Float64,
-                   δt    ::Float64,
-                   srδt  ::Float64,
-                   σprior::Float64,
-                   lf    ::Function)
-
-  # parameter proposals
-  σp = mulupt(σc, rand() < 0.3 ? σtn*4.0 : σtn)::Float64
-
-  # log likelihood and prior ratio
-  llr = llr_gbm_bm(Ψ, σp, σc, srδt, lf)
-  prr = llrdexp_x(σp, σc, σprior)
-
-  if -randexp() < (llr + prr + log(σp/σc))
-    σc   = σp
-    llc += llr
-    prc += prr
-  end
-
-  return llc, prc, σc
-end
-
-
 
 
 

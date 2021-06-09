@@ -259,7 +259,6 @@ end
                 lμv ::Array{Float64,1},
                 σλ  ::Float64,
                 σμ  ::Float64,
-                δt  ::Float64, 
                 fdt ::Float64,
                 srδt::Float64)
 
@@ -269,7 +268,6 @@ Returns the log-likelihood for the GBM part of a branch for GBM birth-death.
                              lμv ::Array{Float64,1},
                              σλ  ::Float64,
                              σμ  ::Float64,
-                             δt  ::Float64, 
                              fdt ::Float64,
                              srδt::Float64)
 
@@ -359,56 +357,113 @@ end
 
 
 
+"""
+    sss_gbm(tree::iTgbmbd)
+
+Returns the log-likelihood ratio for a `iTgbmbd` according 
+to GBM birth-death for a `σ` proposal.
+"""
+function sss_gbm(tree::iTgbmbd)
+
+  if istip(tree) 
+    ssλ, ssμ, n = 
+      sss_gbm_b(lλ(tree), lμ(tree), dt(tree), fdt(tree))
+  else
+    ssλ, ssμ, n = 
+      sss_gbm_b(lλ(tree), lμ(tree), dt(tree), fdt(tree))
+    ssλ1, ssμ1, n1 = 
+      sss_gbm(tree.d1::iTgbmbd)
+    ssλ2, ssμ2, n2 = 
+      sss_gbm(tree.d2::iTgbmbd)
+
+    ssλ += ssλ1 + ssλ2
+    ssμ += ssμ1 + ssμ2
+    n   += n1 + n2
+  end
+
+  return ssλ, ssμ, n
+end
+
+
+
 
 """
-    ll_gbm_b_bm(lλv ::Array{Float64,1},
-                lμv ::Array{Float64,1},
-                σλ  ::Float64,
-                σμ  ::Float64,
-                δt  ::Float64, 
-                fdt ::Float64,
-                srδt::Float64)
+    sss_gbm_b(lλv ::Array{Float64,1},
+              lμv ::Array{Float64,1},
+              σλ  ::Float64,
+              σμ  ::Float64,
+              δt  ::Float64, 
+              fdt ::Float64)
 
-Returns the log-likelihood for the GBM part of a branch for GBM birth-death.
+Returns the standardized sum of squares for the GBM part of a branch 
+for GBM birth-death.
 """
-@inline function ll_gbm_b_bm(lλv ::Array{Float64,1},
-                             lμv ::Array{Float64,1},
-                             σλ  ::Float64,
-                             σμ  ::Float64,
-                             δt  ::Float64, 
-                             fdt ::Float64,
-                             srδt::Float64)
+@inline function sss_gbm_b(lλv ::Array{Float64,1},
+                           lμv ::Array{Float64,1},
+                           δt  ::Float64, 
+                           fdt ::Float64)
 
   @inbounds begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    llλ  = 0.0
-    llμ  = 0.0
+    ssλ  = 0.0
+    ssμ  = 0.0
     lλvi = lλv[1]
     lμvi = lμv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
       lμvi1 = lμv[i+1]
-      llλ  += (lλvi1 - lλvi)^2
-      llμ  += (lμvi1 - lμvi)^2
+      ssλ  += (lλvi1 - lλvi)^2
+      ssμ  += (lμvi1 - lμvi)^2
       lλvi  = lλvi1
       lμvi  = lμvi1
     end
 
     # add to global likelihood
-    ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) + 
-         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
+    invt = 1.0/(2.0*δt)
+    ssλ *= invt
+    ssμ *= invt
 
     # add final non-standard `δt`
-    srfdt = sqrt(fdt)
-    ll   += ldnorm_bm(lλv[nI+2], lλvi, srfdt*σλ) + 
-            ldnorm_bm(lμv[nI+2], lμvi, srfdt*σμ)
+    invt = 1.0/(2.0*fdt)
+    ssλ += invt * (lλv[nI+2] - lλvi)^2
+    ssμ += invt * (lμv[nI+2] - lμvi)^2
   end
 
-  return ll
+  return ssλ, ssμ, Float64(nI + 1)
 end
+
+
+
+
+"""
+    llr_gbm_bm(σλp ::Float64, 
+               σμp ::Float64, 
+               σλc ::Float64, 
+               σμc ::Float64,
+               sssλ::FLoat64,
+               sssμ::FLoat64,
+               n   ::Float64)
+
+Returns the log-likelihood ratio according to GBM for `σ` proposal
+after computing standard sum of squares `sss`.
+"""
+function llr_gbm_σp(σλp ::Float64,
+                    σμp ::Float64,
+                    σλc ::Float64,
+                    σμc ::Float64,
+                    sssλ::Float64,
+                    sssμ::Float64,
+                    n   ::Float64)
+
+  llr = sssλ*(1.0/σλc^2 - 1.0/σλp^2) - n*(log(σλp/σλc)) + 
+        sssμ*(1.0/σμc^2 - 1.0/σμp^2) - n*(log(σμp/σμc))
+
+  return llr
+end
+
 
 
 
