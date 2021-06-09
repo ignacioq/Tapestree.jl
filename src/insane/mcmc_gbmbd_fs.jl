@@ -400,6 +400,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
             σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
 
+        llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        if !isapprox(llci, llc, atol = 1e-4)
+          @show llci, llc, i, 2
+          return 
+        end
+
       # forward simulation update
       else
 
@@ -425,6 +431,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
+      end
+
+      llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+      if !isapprox(llci, llc, atol = 1e-4)
+        @show llci, llc, i, 3, bi, llc, σλc, σμc
+        return 
       end
     end
 
@@ -497,10 +509,10 @@ function fsp(Ψp   ::iTgbmbd,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  nsδt = tsv[bix][2]
+  fdti = tsv[bix][2]
 
   t0, ret, λf, μf = fsbi(bi, bbλc[bix][1], bbμc[bix][1], 
-    nsδt, σλ, σμ, δt, srδt, nlim)
+    fdti, σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -528,25 +540,40 @@ function fsp(Ψp   ::iTgbmbd,
       acr = 0.0
     end
 
+    cll = 0.0
+    if icr && isone(wbc)
+      if dri[1]
+        cll += cond_alone_events_stem(t0) - 
+               cond_alone_events_stem(Ψc.d1::iTgbmbd)
+      else
+        cll += cond_alone_events_stem(t0) -
+               cond_alone_events_stem(Ψc.d2::iTgbmbd)
+      end
+    elseif iszero(wbc)
+      cll += cond_alone_events_stem(t0) -
+             cond_alone_events_stem(Ψc)
+    end
+
+
     # mh ratio
-    if -randexp() < acr
+    if -randexp() < acr #+ cll
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
-      if icr && isone(wbc)
-        if dri[1]
-          llr += cond_alone_events_stem(t0) - 
-                 cond_alone_events_stem(Ψc.d1::iTgbmbd)
-        else
-          llr += cond_alone_events_stem(t0) -
-                 cond_alone_events_stem(Ψc.d2::iTgbmbd)
-        end
-      elseif iszero(wbc)
-        llr += cond_alone_events_stem(t0) -
-               cond_alone_events_stem(Ψc)
-      end
+      # if icr && isone(wbc)
+      #   if dri[1]
+      #     llr += cond_alone_events_stem(t0) - 
+      #            cond_alone_events_stem(Ψc.d1::iTgbmbd)
+      #   else
+      #     llr += cond_alone_events_stem(t0) -
+      #            cond_alone_events_stem(Ψc.d2::iTgbmbd)
+      #   end
+      # elseif iszero(wbc)
+      #   llr += cond_alone_events_stem(t0) -
+      #          cond_alone_events_stem(Ψc)
+      # end
 
-      llc += llr
+      llc += llr + cll
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], bbμc[pr], 0)
@@ -578,7 +605,7 @@ end
     fsbi(bi  ::iBffs, 
          iλ  ::Float64, 
          iμ  ::Float64, 
-         nsδt::Float64,
+         fdt::Float64,
          σλ  ::Float64, 
          σμ  ::Float64, 
          δt  ::Float64, 
@@ -590,7 +617,7 @@ Forward gbm birth-death simulation for branch `bi`.
 function fsbi(bi  ::iBffs, 
               iλ  ::Float64, 
               iμ  ::Float64, 
-              nsδt::Float64,
+              fdti::Float64,
               σλ  ::Float64, 
               σμ  ::Float64, 
               δt  ::Float64, 
@@ -625,7 +652,7 @@ function fsbi(bi  ::iBffs,
       ret = false
     # if continue the simulation
     else
-      nsδt0 = max(δt-nsδt, 0.0)
+      fdt0 = max(δt - fdti, 0.0)
 
       # fix random tip and return end λ(t) and μ(t) 
       λf, μf = fixrtip!(t0, na, NaN, NaN)
@@ -637,7 +664,7 @@ function fsbi(bi  ::iBffs,
 
         for i in Base.OneTo(2)
 
-          st0, nsp = sim_gbm(nsδt0, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+          st0, nsp = sim_gbm(fdt0, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
 
           # if maximum number of species reached.
           if nsp === nlim
