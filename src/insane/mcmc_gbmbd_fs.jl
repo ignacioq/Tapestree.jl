@@ -1064,6 +1064,59 @@ end
 
 
 
+
+
+
+"""
+    update_σ!(σc    ::Float64,
+              Ψ     ::iTgbmbd,
+              llc   ::Float64,
+              prc   ::Float64,
+              σtn   ::Float64,
+              ltn   ::Int64,
+              lup   ::Float64,
+              lac   ::Float64,
+              δt    ::Float64,
+              srδt  ::Float64,
+              σprior::Float64)
+
+Gibbs update for `σ`.
+"""
+function update_σ!(Ψ     ::iTgbmbd,
+                   llc   ::Float64,
+                   prc   ::Float64,
+                   σtn   ::Float64,
+                   lac   ::Float64,
+                   δt    ::Float64,
+                   srδt  ::Float64,
+                   σprior::Float64,
+                   lf    ::Function)
+
+  """
+  make update for sigma lambda and sigma mu for computational efficiency of
+  estimating sss
+  """
+
+  # standardized sum of squares
+  sss, n = ss_gbm(...)
+
+  # Gibbs update for σ
+  σp = randinvgamma(σprior[1] + 0.5 * n, σprior[2] + sss)
+
+  # update likeihood
+  llc = llf(ss, ...)
+  prc = logdinvgamma(σp, σprior[1], σprior[2])
+
+  return llc, prc, σc
+end
+
+
+
+
+
+
+
+
 """
     update_σ!(σc    ::Float64,
               Ψ     ::iTgbmbd,

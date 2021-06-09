@@ -276,3 +276,29 @@ Compute the logarithmic transformation of the
 logdhcau1(x::Float64) = 
   log(2.0/(π * (x * x + 1.)))
 
+
+
+
+"""
+    logdgamma(x::Float64, α::Float64, β::Float64)
+  
+Compute the logarithmic transformation of the 
+**Gamma** density with shape `α` and scale `β` for `x`.
+"""
+logdgamma(x::Float64, α::Float64, β::Float64) = 
+  α*log(β) - loggamma(α) + (α-1.0) * log(x) - β * x
+
+
+
+
+"""
+    logdinvgamma(x::Float64, α::Float64, β::Float64)
+  
+Compute the logarithmic transformation of the 
+**Inverse Gamma** density with shape `α` and scale `β` for `x`.
+"""
+logdinvgamma(x::Float64, α::Float64, β::Float64) = 
+  α*log(β) - loggamma(α) + (-α-1.0) * log(x) - β / x
+
+
+

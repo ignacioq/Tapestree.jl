@@ -13,6 +13,7 @@ include("utils/utils.jl")
 include("utils/tree_utils.jl")
 include("utils/density_functions.jl")
 include("utils/mcmc_utils.jl")
+include("utils/rand_vargen.jl")
 
 export rtree, read_tree, make_ape_tree, maketriads, abs_time_branches,
   brts, tree_height, postorderedges, logdexp, logdunifU, logdunif, llrdexp_x,
@@ -20,6 +21,6 @@ export rtree, read_tree, make_ape_tree, maketriads, abs_time_branches,
   llrdnorm_μ, llrdnorm_x, llrdnorm_xμ, logdtnorm, llrdtnorm_x, erf_custom,
   logdhcau, logdhcau1, uniupt, addupt, addupt_lims, addupt!, duoupd, trioupd,
   absaddupt, mulupt, makescalef, globalscalef, adaptiveupd!, makestepsize,
-  makemvnproposal
+  makemvnproposal, randinvgamma, randgamma
 
 end # module Utils
