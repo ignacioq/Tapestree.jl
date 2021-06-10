@@ -178,43 +178,41 @@ function llik_gbm(tree::iTgbmbd,
                   δt  ::Float64,
                   srδt::Float64)
 
-  lλb = lλ(tree)
-  lμb = lμ(tree)
-  l   = lastindex(lλb) 
+  lλb  = lλ(tree)
+  lμb  = lμ(tree)
+  fdti = fdt(tree)
+  l    = lastindex(lλb) 
 
   if istip(tree) 
     if isextinct(tree)
-      ll_gbm_ib(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt) + 
-      0.5*(lμb[l-1] + lμb[l])
+      ll_gbm_ev(lλb, lμb, σλ, σμ, δt, fdti, srδt) +
+      log(fdti) + 0.5*(lμb[l-1] + lμb[l])
     else
-      ll_gbm_tb(lλb, lμb, σλ, σμ, δt, fdt(tree), srδt)
+      ll_gbm_ne(lλb, lμb, σλ, σμ, δt, fdti, srδt)
     end
   else
-    ll_gbm_ib(lλb, lμb, σλ, σμ, δt, srδt)        + 
-    0.5*(lλb[l-1] + lλb[l])                      + 
-    llik_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt) + 
+    ll_gbm_ev(lλb, lμb, σλ, σμ, δt, fdti, srδt)  +
+    log(fdti) + 0.5*(lλb[l-1] + lλb[l])          +
+    llik_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt) +
     llik_gbm(tree.d2::iTgbmbd, σλ, σμ, δt, srδt)
   end
 end
 
 
 
-"""
-here: make sure this is correct! but I think this is much better... 
-likelihood now matches exactly the simulation!!!
-"""
 
 """
-    ll_gbm_ib(lλv ::Array{Float64,1},
+    ll_gbm_ev(lλv ::Array{Float64,1},
               lμv ::Array{Float64,1},
               σλ  ::Float64,
               σμ  ::Float64,
               δt  ::Float64, 
               srδt::Float64)
 
-Returns the log-likelihood for a internal branch according to GBM birth-death.
+Returns the log-likelihood for a branch with an end event according 
+to GBM birth-death.
 """
-@inline function ll_gbm_ib(lλv ::Array{Float64,1},
+@inline function ll_gbm_ev(lλv ::Array{Float64,1},
                            lμv ::Array{Float64,1},
                            σλ  ::Float64,
                            σμ  ::Float64,
@@ -248,7 +246,7 @@ Returns the log-likelihood for a internal branch according to GBM birth-death.
     # add to global likelihood
     ll -= llbd*δt
 
-    # add final non-standard `δt`
+    # add final non-standard `δt` only for GBM
     srfdt = sqrt(fdt)
     ll += ldnorm_bm(lλv[nI+2], lλvi, srfdt*σλ)
     ll += ldnorm_bm(lμv[nI+2], lμvi, srfdt*σμ)
@@ -262,7 +260,7 @@ end
 
 
 """
-    ll_gbm_tb(lλv ::Array{Float64,1},
+    ll_gbm_ne(lλv ::Array{Float64,1},
              lμv ::Array{Float64,1},
              σλ  ::Float64,
              σμ  ::Float64,
@@ -270,9 +268,10 @@ end
              fdt::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a terminal branch according to GBM birth-death.
+Returns the log-likelihood for a branch not ending in an event 
+according to GBM birth-death.
 """
-@inline function ll_gbm_tb(lλv ::Array{Float64,1},
+@inline function ll_gbm_ne(lλv ::Array{Float64,1},
                            lμv ::Array{Float64,1},
                            σλ  ::Float64,
                            σμ  ::Float64,
