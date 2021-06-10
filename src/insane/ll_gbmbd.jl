@@ -240,18 +240,20 @@ Returns the log-likelihood for a branch according to GBM birth-death.
     ll -= llbd*δt
 
     # add final non-standard `δt`
-    srfdt = sqrt(fdt)
-    lλvi1 = lλv[nI+2]
-    lμvi1 = lμv[nI+2]
-    ll += ldnorm_bm(lλvi1, lλvi, srfdt*σλ)
-    ll += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
+    if !iszero(fdt)
+      srfdt = sqrt(fdt)
+      lλvi1 = lλv[nI+2]
+      lμvi1 = lμv[nI+2]
+      ll += ldnorm_bm(lλvi1, lλvi, srfdt*σλ)
+      ll += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
 
-    if λev
-      ll += log(fdt) + 0.5*(lλvi + lλvi1)
-    elseif !μev
-      ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
-    else
-      ll += log(fdt) + 0.5*(lμvi + lμvi1)
+      if λev
+        ll += log(fdt) + 0.5*(lλvi + lλvi1)
+      elseif !μev
+        ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
+      else
+        ll += log(fdt) + 0.5*(lμvi + lμvi1)
+      end
     end
   end
 
@@ -301,9 +303,11 @@ Returns the log-likelihood for the GBM part of a branch for GBM birth-death.
          llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
 
     # add final non-standard `δt`
-    srfdt = sqrt(fdt)
-    ll   += ldnorm_bm(lλv[nI+2], lλvi, srfdt*σλ) + 
-            ldnorm_bm(lμv[nI+2], lμvi, srfdt*σμ)
+    if !iszero(fdt)
+      srfdt = sqrt(fdt)
+      ll   += ldnorm_bm(lλv[nI+2], lλvi, srfdt*σλ) + 
+              ldnorm_bm(lμv[nI+2], lμvi, srfdt*σμ)
+    end
   end
 
   return ll
@@ -356,12 +360,14 @@ function ll_gbm_b_bd(lλv ::Array{Float64,1},
     ll *= (-δt)
 
     # add final non-standard `δt`
-    if λev
-      ll += log(fdt) + 0.5*(lλvi + lλv[nI+2])
-    elseif !μev
-      ll -= fdt*(exp(0.5*(lλvi + lλv[nI+2])) + exp(0.5*(lμvi + lμv[nI+2])))
-    else
-      ll += log(fdt) + 0.5*(lμvi + lμv[nI+2])
+    if !iszero(fdt)
+      if λev
+        ll += log(fdt) + 0.5*(lλvi + lλv[nI+2])
+      elseif !μev
+        ll -= fdt*(exp(0.5*(lλvi + lλv[nI+2])) + exp(0.5*(lμvi + lμv[nI+2])))
+      else
+        ll += log(fdt) + 0.5*(lμvi + lμv[nI+2])
+      end
     end
   end
 
@@ -440,9 +446,11 @@ for GBM birth-death.
     ssμ *= invt
 
     # add final non-standard `δt`
-    invt = 1.0/(2.0*fdt)
-    ssλ += invt * (lλv[nI+2] - lλvi)^2
-    ssμ += invt * (lμv[nI+2] - lμvi)^2
+    if !iszero(fdt)
+      invt = 1.0/(2.0*fdt)
+      ssλ += invt * (lλv[nI+2] - lλvi)^2
+      ssμ += invt * (lμv[nI+2] - lμvi)^2
+    end
   end
 
   return ssλ, ssμ, Float64(nI + 1)
@@ -805,22 +813,25 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbd  *= (-δt)
 
     # add final non-standard `δt`
-    srfdt = sqrt(fdt)
-    lλpi1 = lλp[nI+2]
-    lμpi1 = lμp[nI+2]
-    lλci1 = lλc[nI+2]
-    lμci1 = lμc[nI+2]
+    if !iszero(fdt)
 
-    llrbm  = llrbmλ + lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, srfdt*σλ) +
-             llrbmμ + lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
+      srfdt = sqrt(fdt)
+      lλpi1 = lλp[nI+2]
+      lμpi1 = lμp[nI+2]
+      lλci1 = lλc[nI+2]
+      lμci1 = lμc[nI+2]
 
-    if λev
-      llrbd += 0.5*(lλpi + lλpi1 - lλci - lλci1) 
-    elseif !μev
-      llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
-                    exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
-    else
-      llrbd += 0.5*(lμpi + lμpi1 - lμci - lμci1) 
+      llrbm  = llrbmλ + lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, srfdt*σλ) +
+               llrbmμ + lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
+
+      if λev
+        llrbd += 0.5*(lλpi + lλpi1 - lλci - lλci1) 
+      elseif !μev
+        llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
+                      exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
+      else
+        llrbd += 0.5*(lμpi + lμpi1 - lμci - lμci1) 
+      end
     end
   end
 

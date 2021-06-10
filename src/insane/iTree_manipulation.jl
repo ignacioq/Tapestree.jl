@@ -202,14 +202,16 @@ function gbm_copy_f!(tree::iTgbmbd,
                      bbμ ::Array{Float64,1},
                      ii  ::Int64)
 
-  lλv = lλ(tree)
-  lμv = lμ(tree)
-  lt  = lastindex(lλv)
+  if !iszero(fdt(tree))
+    lλv = lλ(tree)
+    lμv = lμ(tree)
+    lt  = lastindex(lλv)
 
-  @simd for i in Base.OneTo(lt)
-    ii     += 1
-    bbλ[ii] = lλv[i]
-    bbμ[ii] = lμv[i]
+    @simd for i in Base.OneTo(lt)
+      ii     += 1
+      bbλ[ii] = lλv[i]
+      bbμ[ii] = lμv[i]
+    end
   end
 
   if !istip(tree)

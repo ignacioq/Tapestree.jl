@@ -368,9 +368,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
     shuffle!(pup)
 
+    ii = 0
     # parameter updates
-    for pupi in pup
+    for pupi in pup[1:7]
 
+      ii += 1
       # update σλ or σμ
       if pupi === 1
 
@@ -400,12 +402,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
             σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
-        if !isapprox(llci, llc, atol = 1e-4)
-          @show llci, llc, i, 2
-          return 
-        end
-
       # forward simulation update
       else
 
@@ -430,14 +426,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
-
-        llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
-        if !isapprox(llci, llc, atol = 1e-4)
-          @show llci, llc, i, 2
-          return 
-        end
-
-
       end
     end
 
@@ -512,8 +500,8 @@ function fsp(Ψp   ::iTgbmbd,
 
   fdti = tsv[bix][2]
 
-  t0, ret, λfm1, μfm1, λf, μf = fsbi(bi, bbλc[bix][1], bbμc[bix][1], 
-    fdti, σλ, σμ, δt, srδt, nlim)
+  t0, ret, λfm1, μfm1, λf, μf, dft0 = 
+    fsbi(bi, bbλc[bix][1], bbμc[bix][1], fdti, σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -530,14 +518,13 @@ function fsp(Ψp   ::iTgbmbd,
         tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
       # change last event by speciation for llr
-      fdtt0 = fdt(t0)
-      iλ = fdtt0*(exp(0.5*(λfm1 + λf)) + exp(0.5*(μfm1 + μf))) +
-           log(fdtt0) + 0.5*(λfm1 + λf)
+      iλ = dft0*(exp(0.5*(λfm1 + λf)) + exp(0.5*(μfm1 + μf))) +
+           log(dft0) + 0.5*(λfm1 + λf)
 
       # acceptance ratio
       bbλcpr = bbλc[pr]
       l = lastindex(bbλcpr)
-      acr +=  0.5*(λfm1 + λf - bbλcpr[l-1] - bbλcpr[l])
+      acr += 0.5*(λfm1 + λf - bbλcpr[l-1] - bbλcpr[l])
 
       #acr += λf            + cond_alone_events_stem(t0) - 
       #       bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
@@ -643,17 +630,14 @@ function fsbi(bi  ::iBffs,
 
   na = snan(t0)
 
-  λfm1, μfm1, λf, μf = NaN, NaN, NaN, NaN
+  λfm1, μfm1, λf, μf, dft0 = NaN, NaN, NaN, NaN, NaN
 
-  # if simulation goes extinct
-  if iszero(na)
-    ret = false
-  # if simulation reached the maximum limit of species
-  elseif nsp === nlim
+  # if simulation goes extinct or maximum number of species reached
+  if iszero(na) || nsp === nlim
     ret = false
   # if one surviving lineage
   elseif isone(na)
-    f, λfm1, μfm1, λf, μf = fixalive!(t0, NaN, NaN, NaN, NaN)
+    f, λfm1, μfm1, λf, μf, dft0 = fixalive!(t0, NaN, NaN, NaN, NaN, NaN)
   elseif na > 1
     # if terminal branch
     if it(bi)
@@ -663,7 +647,7 @@ function fsbi(bi  ::iBffs,
       fdt0 = max(δt - fdti, 0.0)
 
       # fix random tip and return end λ(t) and μ(t) 
-      λfm1, μfm1, λf, μf = fixrtip!(t0, na, NaN, NaN, NaN, NaN)
+      λfm1, μfm1, λf, μf, dft0 = fixrtip!(t0, na, NaN, NaN, NaN, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
 
@@ -700,7 +684,12 @@ function fsbi(bi  ::iBffs,
     end
   end
 
-  return t0, ret, λfm1, μfm1, λf, μf 
+  # speciates at time `tfb`
+  if iszero(dft0)
+    ret = false
+  end
+
+  return t0, ret, λfm1, μfm1, λf, μf, dft0
 end
 
 
@@ -865,25 +854,31 @@ function fixrtip!(tree::iTgbmbd,
                   λfm1::Float64,
                   μfm1::Float64,
                   λf  ::Float64, 
-                  μf  ::Float64) 
+                  μf  ::Float64,
+                  dft0::Float64) 
 
   fix!(tree)
 
   if !istip(tree)
     if isextinct(tree.d1::iTgbmbd)
-      λfm1, μfm1, λf, μf = fixrtip!(tree.d2::iTgbmbd, na, λfm1, μfm1, λf, μf)
+      λfm1, μfm1, λf, μf, dft0 = 
+        fixrtip!(tree.d2::iTgbmbd, na, λfm1, μfm1, λf, μf, dft0)
     elseif isextinct(tree.d2::iTgbmbd)
-      λfm1, μfm1, λf, μf = fixrtip!(tree.d1::iTgbmbd, na, λfm1, μfm1, λf, μf)
+      λfm1, μfm1, λf, μf, dft0 = 
+        fixrtip!(tree.d1::iTgbmbd, na, λfm1, μfm1, λf, μf, dft0)
     else
       na1 = snan(tree.d1::iTgbmbd)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λfm1, μfm1, λf, μf = fixrtip!(tree.d2::iTgbmbd, na - na1, λfm1, μfm1, λf, μf)
+        λfm1, μfm1, λf, μf, dft0 = 
+          fixrtip!(tree.d2::iTgbmbd, na - na1, λfm1, μfm1, λf, μf, dft0)
       else
-        λfm1, μfm1, λf, μf = fixrtip!(tree.d1::iTgbmbd, na1, λfm1, μfm1, λf, μf)
+        λfm1, μfm1, λf, μf, dft0 = 
+          fixrtip!(tree.d1::iTgbmbd, na1, λfm1, μfm1, λf, μf, dft0)
       end
     end
   else
+    dft0 = fdt(tree)
     lλv  = lλ(tree)
     lμv  = lμ(tree)
     l    = lastindex(lλv)
@@ -893,7 +888,7 @@ function fixrtip!(tree::iTgbmbd,
     μf   = lμv[l]
   end
 
-  return λfm1, μfm1, λf, μf
+  return λfm1, μfm1, λf, μf, dft0
 end
 
 
@@ -911,10 +906,12 @@ function fixalive!(tree::iTgbmbd,
                    λfm1::Float64, 
                    μfm1::Float64,
                    λf  ::Float64, 
-                   μf  ::Float64)
+                   μf  ::Float64,
+                   dft0::Float64)
 
   if istip(tree) && !isextinct(tree)
     fix!(tree)
+    dft0 = fdt(tree)
     lλv  = lλ(tree)
     lμv  = lμ(tree)
     l    = lastindex(lλv)
@@ -923,26 +920,28 @@ function fixalive!(tree::iTgbmbd,
     μfm1 = lμv[l-1]
     μf   = lμv[l]
 
-    return true, λfm1, μfm1, λf, μf
+    return true, λfm1, μfm1, λf, μf, dft0
   end
 
   if !isnothing(tree.d2)
-    f, λfm1, μfm1, λf, μf = fixalive!(tree.d2::iTgbmbd, λfm1, μfm1, λf, μf)
+    f, λfm1, μfm1, λf, μf, dft0 = 
+      fixalive!(tree.d2::iTgbmbd, λfm1, μfm1, λf, μf, dft0)
     if f 
       fix!(tree)
-      return true, λfm1, μfm1, λf, μf
+      return true, λfm1, μfm1, λf, μf, dft0
     end
   end
 
   if !isnothing(tree.d1)
-    f, λfm1, μfm1, λf, μf = fixalive!(tree.d1::iTgbmbd, λfm1, μfm1, λf, μf)
+    f, λfm1, μfm1, λf, μf, dft0 = 
+      fixalive!(tree.d1::iTgbmbd, λfm1, μfm1, λf, μf, dft0)
     if f 
       fix!(tree)
-      return true, λfm1, μfm1, λf, μf
+      return true, λfm1, μfm1, λf, μf, dft0
     end
   end
 
-  return false, λfm1, μfm1, λf, μf
+  return false, λfm1, μfm1, λf, μf, dft0
 end
 
 
