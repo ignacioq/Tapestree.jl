@@ -450,10 +450,13 @@ for GBM birth-death.
       invt = 1.0/(2.0*fdt)
       ssλ += invt * (lλv[nI+2] - lλvi)^2
       ssμ += invt * (lμv[nI+2] - lμvi)^2
+      n = Float64(nI + 1)
+    else
+      n = Float64(nI)
     end
   end
 
-  return ssλ, ssμ, Float64(nI + 1)
+  return ssλ, ssμ, n
 end
 
 
@@ -811,6 +814,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbmλ *= (-0.5/((σλ*srδt)^2))
     llrbmμ *= (-0.5/((σμ*srδt)^2))
     llrbd  *= (-δt)
+    llrbm   = llrbmλ + llrbmμ
 
     # add final non-standard `δt`
     if !iszero(fdt)
@@ -821,8 +825,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
       lλci1 = lλc[nI+2]
       lμci1 = lμc[nI+2]
 
-      llrbm  = llrbmλ + lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, srfdt*σλ) +
-               llrbmμ + lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
+      llrbm += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, srfdt*σλ) +
+               lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
 
       if λev
         llrbd += 0.5*(lλpi + lλpi1 - lλci - lλci1) 

@@ -379,6 +379,13 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         llc, prc, σλc, σμc = 
           update_σ!(σλc, σμc, Ψc, llc, prc, σλ_prior, σμ_prior)
 
+        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, i, 1
+        #    return 
+        # end
+
+
       # gbm update
       elseif pupi === 2
 
@@ -401,6 +408,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         llc = 
           lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
             σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
+
+        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, i, 2
+        #    return 
+        # end
 
       # forward simulation update
       else
@@ -426,6 +439,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
+        
+        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, i, 3
+        #    return 
+        # end
       end
     end
 
@@ -524,7 +543,8 @@ function fsp(Ψp   ::iTgbmbd,
       # acceptance ratio
       bbλcpr = bbλc[pr]
       l = lastindex(bbλcpr)
-      acr += 0.5*(λfm1 + λf - bbλcpr[l-1] - bbλcpr[l])
+      acr += 0.5*(λfm1 + λf) - 0.5*(bbλcpr[l-1] + bbλcpr[l])
+      #acr += 0.5*(bbλcpr[l-1] + bbλcpr[l]) - 0.5*(λfm1 + λf)
 
       #acr += λf            + cond_alone_events_stem(t0) - 
       #       bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
@@ -551,7 +571,7 @@ function fsp(Ψp   ::iTgbmbd,
 
 
     # mh ratio
-    if -randexp() < acr #+ cll
+    if -randexp() < acr + cll
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
