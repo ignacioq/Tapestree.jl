@@ -431,12 +431,13 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
-      end
+        llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        if !isapprox(llci, llc, atol = 1e-4)
+          @show llci, llc, i, 2
+          return 
+        end
 
-      llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
-      if !isapprox(llci, llc, atol = 1e-4)
-        @show llci, llc, i, 3, bi, llc, σλc, σμc
-        return 
+
       end
     end
 
@@ -511,7 +512,7 @@ function fsp(Ψp   ::iTgbmbd,
 
   fdti = tsv[bix][2]
 
-  t0, ret, λf, μf = fsbi(bi, bbλc[bix][1], bbμc[bix][1], 
+  t0, ret, λfm1, μfm1, λf, μf = fsbi(bi, bbλc[bix][1], bbμc[bix][1], 
     fdti, σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
@@ -528,9 +529,16 @@ function fsp(Ψp   ::iTgbmbd,
       llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
         tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
+      # change last event by speciation for llr
+      fdtt0 = fdt(t0)
+      iλ = fdtt0*(exp(0.5*(λfm1 + λf)) + exp(0.5*(μfm1 + μf))) +
+           log(fdtt0) + 0.5*(λfm1 + λf)
+
       # acceptance ratio
-      iλ   = λf
-      acr += λf - bbλc[pr][end]
+      bbλcpr = bbλc[pr]
+      l = lastindex(bbλcpr)
+      acr +=  0.5*(λfm1 + λf - bbλcpr[l-1] - bbλcpr[l])
+
       #acr += λf            + cond_alone_events_stem(t0) - 
       #       bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
     else
@@ -635,7 +643,7 @@ function fsbi(bi  ::iBffs,
 
   na = snan(t0)
 
-  λf, μf = NaN, NaN
+  λfm1, μfm1, λf, μf = NaN, NaN, NaN, NaN
 
   # if simulation goes extinct
   if iszero(na)
@@ -645,7 +653,7 @@ function fsbi(bi  ::iBffs,
     ret = false
   # if one surviving lineage
   elseif isone(na)
-    f, λf, μf = fixalive!(t0, NaN, NaN)
+    f, λfm1, μfm1, λf, μf = fixalive!(t0, NaN, NaN, NaN, NaN)
   elseif na > 1
     # if terminal branch
     if it(bi)
@@ -655,7 +663,7 @@ function fsbi(bi  ::iBffs,
       fdt0 = max(δt - fdti, 0.0)
 
       # fix random tip and return end λ(t) and μ(t) 
-      λf, μf = fixrtip!(t0, na, NaN, NaN)
+      λfm1, μfm1, λf, μf = fixrtip!(t0, na, NaN, NaN, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
 
@@ -692,7 +700,7 @@ function fsbi(bi  ::iBffs,
     end
   end
 
-  return t0, ret, λf, μf
+  return t0, ret, λfm1, μfm1, λf, μf 
 end
 
 
@@ -846,6 +854,7 @@ end
 """
     fixrtip!(tree::iTgbmbd, 
              na  ::Int64, 
+             λfm1::Float64,
              λf  ::Float64, 
              μf  ::Float64) 
 
@@ -853,6 +862,8 @@ Fixes the the path for a random non extinct tip.
 """
 function fixrtip!(tree::iTgbmbd, 
                   na  ::Int64, 
+                  λfm1::Float64,
+                  μfm1::Float64,
                   λf  ::Float64, 
                   μf  ::Float64) 
 
@@ -860,60 +871,78 @@ function fixrtip!(tree::iTgbmbd,
 
   if !istip(tree)
     if isextinct(tree.d1::iTgbmbd)
-      λf, μf = fixrtip!(tree.d2::iTgbmbd, na, λf, μf)
+      λfm1, μfm1, λf, μf = fixrtip!(tree.d2::iTgbmbd, na, λfm1, μfm1, λf, μf)
     elseif isextinct(tree.d2::iTgbmbd)
-      λf, μf = fixrtip!(tree.d1::iTgbmbd, na, λf, μf)
+      λfm1, μfm1, λf, μf = fixrtip!(tree.d1::iTgbmbd, na, λfm1, μfm1, λf, μf)
     else
       na1 = snan(tree.d1::iTgbmbd)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λf, μf = fixrtip!(tree.d2::iTgbmbd, na - na1, λf, μf)
+        λfm1, μfm1, λf, μf = fixrtip!(tree.d2::iTgbmbd, na - na1, λfm1, μfm1, λf, μf)
       else
-        λf, μf = fixrtip!(tree.d1::iTgbmbd, na1, λf, μf)
+        λfm1, μfm1, λf, μf = fixrtip!(tree.d1::iTgbmbd, na1, λfm1, μfm1, λf, μf)
       end
     end
   else
-    λf = lλ(tree)[end]
-    μf = lμ(tree)[end]
+    lλv  = lλ(tree)
+    lμv  = lμ(tree)
+    l    = lastindex(lλv)
+    λfm1 = lλv[l-1]
+    λf   = lλv[l]
+    μfm1 = lμv[l-1]
+    μf   = lμv[l]
   end
 
-  return λf, μf
+  return λfm1, μfm1, λf, μf
 end
 
 
 
 
 """
-    fixalive!(tree::iTgbmbd, λf::Float64, μf::Float64)
+    fixalive!(tree::iTgbmbd,
+              λfm1::Float64, 
+              λf  ::Float64, 
+              μf  ::Float64)
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::iTgbmbd, λf::Float64, μf::Float64)
+function fixalive!(tree::iTgbmbd,
+                   λfm1::Float64, 
+                   μfm1::Float64,
+                   λf  ::Float64, 
+                   μf  ::Float64)
 
   if istip(tree) && !isextinct(tree)
     fix!(tree)
-    λf = lλ(tree)[end]
-    μf = lμ(tree)[end]
-    return true, λf, μf
+    lλv  = lλ(tree)
+    lμv  = lμ(tree)
+    l    = lastindex(lλv)
+    λfm1 = lλv[l-1]
+    λf   = lλv[l]
+    μfm1 = lμv[l-1]
+    μf   = lμv[l]
+
+    return true, λfm1, μfm1, λf, μf
   end
 
   if !isnothing(tree.d2)
-    f, λf, μf = fixalive!(tree.d2::iTgbmbd, λf, μf)
+    f, λfm1, μfm1, λf, μf = fixalive!(tree.d2::iTgbmbd, λfm1, μfm1, λf, μf)
     if f 
       fix!(tree)
-      return true, λf, μf
+      return true, λfm1, μfm1, λf, μf
     end
   end
 
   if !isnothing(tree.d1)
-    f, λf, μf = fixalive!(tree.d1::iTgbmbd, λf, μf)
+    f, λfm1, μfm1, λf, μf = fixalive!(tree.d1::iTgbmbd, λfm1, μfm1, λf, μf)
     if f 
       fix!(tree)
-      return true, λf, μf
+      return true, λfm1, μfm1, λf, μf
     end
   end
 
-  return false, λf, μf
+  return false, λfm1, μfm1, λf, μf
 end
 
 

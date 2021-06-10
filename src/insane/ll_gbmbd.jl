@@ -524,7 +524,7 @@ function llik_gbm_f(tree::iTgbmbd,
                     srδt::Float64)
 
   if istip(tree)
-    ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, fdt(tree), srδt, false, false)
+    ll = ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, fdt(tree), srδt, false, false)
   else
     ll = ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, fdt(tree), srδt, true, false)
 
