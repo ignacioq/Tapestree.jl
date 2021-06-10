@@ -67,7 +67,6 @@ end
 
 
 
-
 """
     cond_alone_events_stem(tree::iTgbmbd, tna::Float64, ll::Int64)
 
@@ -814,8 +813,6 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
     llrbm  = llrbmλ + lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, srfdt*σλ) +
              llrbmμ + lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
-    llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
-                  exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
 
     if λev
       llrbd += 0.5*(lλpi + lλpi1 - lλci - lλci1) 
