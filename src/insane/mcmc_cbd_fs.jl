@@ -256,7 +256,11 @@ function mcmc_cbd(tree  ::sTbd,
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
+  # parameter results
   R = Array{Float64,2}(undef, nlogs, 7)
+
+  # make Ψ vector
+  treev = sTbd[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -296,6 +300,7 @@ function mcmc_cbd(tree  ::sTbd,
         R[lit,5] = μc
         R[lit,6] = Float64(snen(tree))
         R[lit,7] = treelength(tree)
+        push!(treev, deepcopy(tree))
       end
       lthin = 0
     end
@@ -303,7 +308,7 @@ function mcmc_cbd(tree  ::sTbd,
     next!(pbar)
   end
 
-  return R, tree
+  return R, treev
 end
 
 

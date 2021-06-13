@@ -123,10 +123,10 @@ function daughters_lprop!(treep::iTgbmbd,
       #        ldnorm_bm(λd2v_c[1], λd2, sqrt(ped2)*σλ) + 
       #        ldnorm_bm(μf, μd2, sqrt(ped2)*σμ)        - 
       #        ldnorm_bm(μd2v_c[1], μd2, sqrt(ped2)*σμ)
-
+  
       normprop += 
-             ldnorm_bm(λf, λd2, sqrt(ped2)*σλ) +  
-             ldnorm_bm(μf, μd2, sqrt(ped2)*σμ)
+            duoldnorm(λf, λpr1_c, λd2, pepr, ped2, σλ) + 
+            duoldnorm(μf, μpr1_c, μd2, pepr, ped2, σμ)
 
     end
   elseif ter[2]
@@ -158,8 +158,8 @@ function daughters_lprop!(treep::iTgbmbd,
     #    ldnorm_bm(μd1v_c[1], μd1, sqrt(ped1)*σμ)
 
     normprop += 
-       ldnorm_bm(λf, λd1, sqrt(ped1)*σλ) +  
-       ldnorm_bm(μf, μd1, sqrt(ped1)*σμ) 
+          duoldnorm(λf, λpr1_c, λd1, pepr, ped1, σλ) +
+          duoldnorm(μf, μpr1_c, μd1, pepr, ped1, σμ)
 
   else
     # if no terminal branches involved
@@ -184,8 +184,8 @@ function daughters_lprop!(treep::iTgbmbd,
     #        duoldnorm(μd1v_c[1], μd1, μd2, ped1, ped2, σμ)
 
     normprop += 
-           duoldnorm(λf, λd1, λd2, ped1, ped2, σλ) +
-           duoldnorm(μf, μd1, μd2, ped1, ped2, σμ)
+          trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
+          trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
 
   end
 
