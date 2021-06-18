@@ -215,23 +215,33 @@ function iTgbmpb(tree::sTpb,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet = pe(tree)
-  nt  = floor(pet, δt)
-  fdtt = mod(pet, δt)
+  pet  = pe(tree)
 
-  if iszero(fdtt)
-    fdtt = δt
+  if iszero(pet)
+    iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, σλ), 
+            iTgbmpb(tree.d2, δt, srδt, lλa, σλ),
+            pe(tree), δt, 0.0, Float64[lλa])
+
+  else
+    nt   = Int64(fld(3.12, 0.12312))
+    fdti = mod(pet, δt)
+
+    if iszero(fdti)
+      fdti = δt
+    end
+
+    lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
+    l   = lastindex(lλv)
+
+    iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], σλ), 
+            iTgbmpb(tree.d2, δt, srδt, lλv[l], σλ),
+            pe(tree), δt, fdti, lλv)
+
   end
-
-  lλv = sim_bm(lλa, σλ, srδt, nt, fdtt)
-
-  iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[end], σλ), 
-          iTgbmpb(tree.d2, δt, srδt, lλv[end], σλ),
-          pe(tree), δt, fdtt, lλv)
 end
 
 """
-    iTgbmpb(tree::sTpb, 
+    iTgbmpb(::Nothing, 
             δt  ::Float64, 
             srδt::Float64, 
             lλa ::Float64, 
@@ -239,11 +249,8 @@ end
 
 Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 """
-iTgbmpb(::Nothing, 
-        δt  ::Float64, 
-        srδt::Float64, 
-        lλa ::Float64, 
-        σλ  ::Float64) = nothing
+iTgbmpb(::Nothing, δt::Float64, srδt::Float64, lλa::Float64, σλ::Float64) = 
+  nothing
 
 
 

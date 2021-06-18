@@ -230,16 +230,13 @@ end
 
 
 
-
-
-
 """
     make_inodes(idf::Array{iBf, 1})
 
 Return all the internal node indices for a given `iBf` vector and a vector
 that is true for which ever daughter is a tip.
 """
-function make_inodes(idf::Array{iBf, 1})
+function make_inodes(idf::Array{B, 1}) where B <: iBf
 
   inodes   = Int64[]
   terminus = BitArray{1}[]

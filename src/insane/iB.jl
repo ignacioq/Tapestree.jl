@@ -33,6 +33,78 @@ abstract type iBf <: iB end
 
 
 """
+    iBfb
+
+A Composite type representing node address for a **fixed** branch in `iTree`:
+
+  `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
+  `ti`: initial absolute time.
+  `tf`: final absolute time.
+  `it`: `true` if a terminal branch.
+
+    iBfb()
+
+Constructs an empty `iBfb` object.
+"""
+struct iBfb <: iBf
+  dr::BitArray{1}
+  da::Base.RefValue{Int64}
+  ti::Float64
+  tf::Float64
+  it::Bool
+
+  # constructors
+  iBfb() = new(BitArray{1}(), Ref(0), 0.0, 0.0, false)
+  iBfb(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64, it::Bool) = 
+    new(dr, Ref(da), ti, tf, it)
+end
+
+
+# pretty-printing
+Base.show(io::IO, id::iBfb) = 
+  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id))
+
+
+
+
+"""
+    makeiBf!(tree::iTree, idv ::Array{iBfb,1}, bit ::BitArray{1})
+
+Make `iBfb` vector for an `iTree`.
+"""
+function makeiBf!(tree::T, 
+                  idv ::Array{iBfb,1}, 
+                  bit ::BitArray{1}) where {T <: iTree} 
+
+  itb = istip(tree)
+
+  push!(idv, 
+    iBfb(bit, 0, treeheight(tree), treeheight(tree) - pe(tree), itb))
+
+  bit1 = copy(bit)
+  bit2 = copy(bit)
+
+  push!(bit1, true)
+  makeiBf!(tree.d1, idv, bit1)
+
+  push!(bit2, false)
+  makeiBf!(tree.d2, idv, bit2)
+
+  return nothing
+end
+
+"""
+    makeiB(::Nothing, idv ::Array{iBfb,1}, bit ::BitArray{1})
+
+Make `iBf` vector for an `iTree`.
+"""
+makeiBf!(::Nothing, idv::Array{iBfb,1}, bit::BitArray{1}) = nothing
+
+
+
+
+
+"""
     iBfgp
 
 A Composite type representing node address for a **fixed** branch in `iTree`:

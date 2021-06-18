@@ -285,7 +285,6 @@ Brownian bridge simulation function for updating a branch in place.
 @inline function bb!(x   ::Array{Float64,1},
                      xi  ::Float64,
                      xf  ::Float64,
-                     nt  ::Float64,
                      fdt::Float64,
                      σ   ::Float64,
                      δt  ::Float64,
@@ -394,11 +393,11 @@ end
 
 
 """
-    sim_bm(xa  ::Float64, 
-           σ   ::Float64, 
-           srδt::Float64, 
-           nt  ::Float64, 
-           fdt::Float64)
+   sim_bm(xa  ::Float64, 
+          σ   ::Float64, 
+          srδt::Float64, 
+          nt  ::Int64, 
+          fdt::Float64)
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
 `σ` and times `t`. 
