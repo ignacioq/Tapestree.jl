@@ -65,12 +65,12 @@ end
 
 
 """
-    bm!(tree::iTgbmbd,
-        λt  ::Float64,
-        μt  ::Float64,
-        σλ  ::Float64,
-        σμ  ::Float64,
-        srδt::Float64)
+  bm!(tree::iTgbmbd,
+      λt  ::Float64,
+      μt  ::Float64,
+      σλ  ::Float64,
+      σμ  ::Float64,
+      srδt::Float64)
 
 Simulate birth-death geometric Brownian motion in place.
 """
@@ -274,7 +274,6 @@ end
     bb!(x   ::Array{Float64,1},
         xi  ::Float64,
         xf  ::Float64,
-        nt  ::Float64,
         fdt::Float64,
         σ   ::Float64,
         δt  ::Float64,
@@ -285,7 +284,7 @@ Brownian bridge simulation function for updating a branch in place.
 @inline function bb!(x   ::Array{Float64,1},
                      xi  ::Float64,
                      xf  ::Float64,
-                     fdt::Float64,
+                     fdt ::Float64,
                      σ   ::Float64,
                      δt  ::Float64,
                      srδt::Float64)
@@ -328,7 +327,7 @@ end
         x1  ::Array{Float64,1},
         x1i ::Float64,
         x1f ::Float64,
-        fdt ::Float64,
+        fdt::Float64,
         σ0  ::Float64,
         σ1  ::Float64,
         δt  ::Float64,

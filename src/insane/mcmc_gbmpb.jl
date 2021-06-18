@@ -17,7 +17,7 @@ Created 14 09 2020
     insane_gbmpb(tree    ::sTpb, 
                  out_file::String;
                  λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
-                 σλprior ::Float64  = 0.1,
+                 σλ_prior ::Float64  = 0.1,
                  δt      ::Float64  = 1e-2,
                  niter   ::Int64    = 1_000,
                  nthin   ::Int64    = 10,
@@ -33,7 +33,7 @@ Run insane for GBM pure-birth.
 """
 function insane_gbmpb(tree    ::sTpb, 
                       out_file::String;
-                      σλprior ::Float64  = 0.1,
+                      σλ_prior ::Float64  = 0.1,
                       δt      ::Float64  = 1e-2,
                       niter   ::Int64    = 1_000,
                       nthin   ::Int64    = 10,
@@ -44,7 +44,7 @@ function insane_gbmpb(tree    ::sTpb,
                       obj_ar  ::Float64  = 0.234,
                       prints  ::Int64    = 5,
                       pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
-                      λa_prior::Tuple{Float64,Float64} = (0.0,10.0))
+                      λa_prior::Tuple{Float64,Float64} = (0.0,100.0))
 
   δt  *= treeheight(tree)
   srδt = sqrt(δt)
@@ -74,11 +74,11 @@ function insane_gbmpb(tree    ::sTpb,
 
   # burn-in phase
   llc, prc, σλc, σλtn =
-    mcmc_burn_gbmpb(Ψp, Ψc, λa_prior, σλprior, nburn, tune_int, σλi, σλtni, 
+    mcmc_burn_gbmpb(Ψp, Ψc, λa_prior, σλ_prior, nburn, tune_int, σλi, σλtni, 
       δt, srδt, idv, inodes, terminus, pup, prints, scalef)
 
   # mcmc
-  R, Ψv = mcmc_gbmpb(Ψp, Ψc, llc, prc, σλc, λa_prior, σλprior, 
+  R, Ψv = mcmc_gbmpb(Ψp, Ψc, llc, prc, σλc, λa_prior, σλ_prior, 
         niter, nthin, σλtn, δt, srδt, idv, inodes, terminus, pup, prints)
 
   pardic = Dict(("lambda_root"  => 1,
@@ -96,7 +96,7 @@ end
     mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
                     Ψc      ::iTgbmpb,
                     λa_prior::Tuple{Float64,Float64},
-                    σλprior ::Float64,
+                    σλ_prior ::Float64,
                     nburn   ::Int64,
                     tune_int::Int64,
                     σλi     ::Float64,
@@ -115,7 +115,7 @@ MCMC burn-in chain for GBM pure-birth.
 function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
                          Ψc      ::iTgbmpb,
                          λa_prior::Tuple{Float64,Float64},
-                         σλprior ::Float64,
+                         σλ_prior ::Float64,
                          nburn   ::Int64,
                          tune_int::Int64,
                          σλi     ::Float64,
@@ -138,8 +138,10 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
   # starting parameters
   σλc = σλi
   llc = llik_gbm(Ψc, σλc, δt, srδt)
-  prc = logdexp(σλc, σλprior) + 
-        logdnorm_tc(lλ(Ψc)[1], λa_prior[1], λa_prior[2])
+  prc = logdexp(σλc, σλ_prior) + 
+        logdunif(exp(lλ(Ψc)[1]), λa_prior[1], λa_prior[2])
+
+  lλmxpr = log(λa_prior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -152,7 +154,7 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
       if iszero(pupi)
         llc, prc, σλc, ltn, lup, lac = 
           update_σλ!(σλc, Ψc, llc, prc, 
-            σλtn, ltn, lup, lac, δt, srδt, σλprior)
+            σλtn, ltn, lup, lac, δt, srδt, σλ_prior)
       else
         ter  = terminus[pupi]
         inod = inodes[pupi]
@@ -160,9 +162,7 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
         dri = dr(idv[inod])
         ldr = lastindex(dri)
 
-        llc, prc = 
-          lλupdate!(Ψp, Ψc, llc, prc, σλc, δt, srδt, 
-            λa_prior, dri, ldr, ter, 0)
+        llc = lλupdate!(Ψp, Ψc, llc, σλc, δt, srδt, lλmxpr, dri, ldr, ter, 0)
       end
 
       if ltn == tune_int
@@ -188,7 +188,7 @@ end
                prc     ::Float64,
                σλc     ::Float64,
                λa_prior::Tuple{Float64,Float64},
-               σλprior ::Float64,
+               σλ_prior ::Float64,
                niter   ::Int64,
                nthin   ::Int64,
                σλtn    ::Float64,
@@ -208,7 +208,7 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
                     prc     ::Float64,
                     σλc     ::Float64,
                     λa_prior::Tuple{Float64,Float64},
-                    σλprior ::Float64,
+                    σλ_prior ::Float64,
                     niter   ::Int64,
                     nthin   ::Int64,
                     σλtn    ::Float64,
@@ -229,6 +229,9 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
   # make Ψ vector
   Ψv = iTgbmpb[]
 
+  # prior
+  lλmxpr = log(λa_prior[2])
+
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
   for it in Base.OneTo(niter)
@@ -241,7 +244,7 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
       if iszero(pupi)
         # `λ` diffusion rate updates
         llc, prc, σλc = 
-          update_σλ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλprior)
+          update_σλ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλ_prior)
       else
         # gbm updates
         ter  = terminus[pupi]
@@ -250,9 +253,7 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
         dri = dr(idv[inod])
         ldr = lastindex(dri)
 
-        llc, prc = 
-          lλupdate!(Ψp, Ψc, llc, prc, σλc, δt, srδt, 
-            λa_prior, dri, ldr, ter, 0)
+        llc = lλupdate!(Ψp, Ψc, llc, σλc, δt, srδt, lλmxpr, dri, ldr, ter, 0)
       end
     end
 
@@ -296,61 +297,56 @@ end
 
 Make a λgbm update for a triad.
 """
-function lλupdate!(Ψp      ::iTgbmpb,
-                   Ψc      ::iTgbmpb,
-                   llc     ::Float64, 
-                   prc     ::Float64,
-                   σλ      ::Float64, 
-                   δt      ::Float64, 
-                   srδt    ::Float64, 
-                   λa_prior::Tuple{Float64,Float64},
-                   dri     ::BitArray{1},
-                   ldr     ::Int64,
-                   ter     ::BitArray{1},
-                   ix      ::Int64)
+function lλupdate!(Ψp    ::iTgbmpb,
+                   Ψc    ::iTgbmpb,
+                   llc   ::Float64, 
+                   σλ    ::Float64, 
+                   δt    ::Float64, 
+                   srδt  ::Float64, 
+                   lλmxpr::Float64,
+                   dri   ::BitArray{1},
+                   ldr   ::Int64,
+                   ter   ::BitArray{1},
+                   ix    ::Int64)
 
   if ix === ldr 
     # if root
-    if ldr == 0
-      llc, prc = triad_lλupdate_root!(Ψp, Ψc, llc, prc, σλ, δt, srδt, λa_prior)
+    if iszero(ldr)
+      llc = triad_lλupdate_root!(Ψp, Ψc, llc, σλ, δt, srδt, lλmxpr)
     else
-      llc = triad_lvupdate_trio!(Ψp, Ψc, llc, σλ, δt, srδt, ter)
+      llc = triad_lλupdate_trio!(Ψp, Ψc, llc, σλ, δt, srδt, ter)
     end
   elseif ix < ldr
     ix += 1
     if dri[ix]
-      llc, prc = 
+      llc = 
         lλupdate!(Ψp.d1::iTgbmpb, Ψc.d1::iTgbmpb, 
-          llc, prc, σλ, δt, srδt, λa_prior, dri, ldr, ter, ix)
+          llc, σλ, δt, srδt, lλmxpr, dri, ldr, ter, ix)
     else
-      llc, prc = 
+      llc = 
         lλupdate!(Ψp.d2::iTgbmpb, Ψc.d2::iTgbmpb, 
-          llc, prc, σλ, δt, srδt, λa_prior, dri, ldr, ter, ix)
+          llc, σλ, δt, srδt, lλmxpr, dri, ldr, ter, ix)
     end
   end
 
-  return llc, prc
+  return llc
 end
 
 
 
 
 """
-    triad_lvupdate_trio!(treep::iTgbmpb, 
+    triad_lλupdate_trio!(treep::iTgbmpb, 
                          treec::iTgbmpb,
-                         bbλp ::Array{Array{Float64,1},1}, 
-                         bbλc ::Array{Array{Float64,1},1}, 
-                         tsv  ::Array{Array{Float64,1},1}, 
                          llc  ::Float64,
                          σλ   ::Float64,
                          δt   ::Float64, 
                          srδt ::Float64,
                          ter  ::BitArray{1})
 
-Make a trio of Brownian motion MCMC updates when node is internal and 
-no daughters are terminal.
+Make a trio of Brownian motion MCMC updates for an internal node.
 """
-function triad_lvupdate_trio!(treep::iTgbmpb, 
+function triad_lλupdate_trio!(treep::iTgbmpb, 
                               treec::iTgbmpb,
                               llc  ::Float64,
                               σλ   ::Float64,
@@ -393,8 +389,8 @@ function triad_lvupdate_trio!(treep::iTgbmpb,
 
       # simulate fix tree vector
       bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
-      bm!(λd1v_p, lλp, fdtd1, σλ, srδt)
-      bb!(λd2v_p, lλp, λpr, fdtd2, σλ, δt, srδt)
+      bm!(λd1v_p, lλp,      fdtd1, σλ, srδt)
+      bb!(λd2v_p, lλp, λd2, fdtd2, σλ, δt, srδt)
     end
   elseif ter[2]
     # if d2 is terminal
@@ -403,8 +399,8 @@ function triad_lvupdate_trio!(treep::iTgbmpb,
 
     # simulate fix tree vector
     bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
-    bb!(λd1v_p, lλp, λpr, fdtd1, σλ, δt, srδt)
-    bm!(λd2v_p, lλp, fdtd2, σλ, srδt)
+    bb!(λd1v_p, lλp, λd1, fdtd1, σλ, δt, srδt)
+    bm!(λd2v_p, lλp,      fdtd2, σλ, srδt)
 
   else
     # if no terminal branches involved
@@ -413,13 +409,13 @@ function triad_lvupdate_trio!(treep::iTgbmpb,
 
     # simulate fix tree vector
     bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
-    bb!(λd1v_p, lλp, λpr, fdtd1, σλ, δt, srδt)
-    bb!(λd2v_p, lλp, λpr, fdtd2, σλ, δt, srδt)
+    bb!(λd1v_p, lλp, λd1, fdtd1, σλ, δt, srδt)
+    bb!(λd2v_p, lλp, λd2, fdtd2, σλ, δt, srδt)
   end
 
   # acceptance ratio
   llr, acr = llr_propr(λprv_p, λd1v_p, λd2v_p, λprv_c, λd1v_c, λd2v_c, 
-    σλ, δt, fdtpr, fdtd1, fdtd2, srδt, lλp, λd1v_c[1])
+    σλ, δt, fdtpr, fdtd1, fdtd2, srδt, !ter[1], !ter[2])
 
   if -randexp() < acr 
     llc += llr
@@ -435,25 +431,24 @@ end
 
 
 """
-    triad_lλupdate_root!(treep   ::iTgbmpb, 
-                         treec   ::iTgbmpb,
-                         llc     ::Float64,
-                         prc     ::Float64,
-                         σλ      ::Float64, 
-                         δt      ::Float64,
-                         srδt    ::Float64,
-                         λa_prior::Tuple{Float64, Float64})
+    triad_lλupdate_root!(treep ::iTgbmpb, 
+                         treec ::iTgbmpb,
+                         llc   ::Float64,
+                         prc   ::Float64,
+                         σλ    ::Float64, 
+                         δt    ::Float64,
+                         srδt  ::Float64,
+                         lλmxpr::Float64)
 
 Make a trio of Brownian motion MCMC updates when the root is involved.
 """
-function triad_lλupdate_root!(treep   ::iTgbmpb, 
-                              treec   ::iTgbmpb,
-                              llc     ::Float64,
-                              prc     ::Float64,
-                              σλ      ::Float64, 
-                              δt      ::Float64,
-                              srδt    ::Float64,
-                              λa_prior::Tuple{Float64, Float64})
+function triad_lλupdate_root!(treep ::iTgbmpb, 
+                              treec ::iTgbmpb,
+                              llc   ::Float64,
+                              σλ    ::Float64, 
+                              δt    ::Float64,
+                              srδt  ::Float64,
+                              lλmxpr::Float64)
 
   # get reference vectors
   λprv_p = lλ(treep)
@@ -484,28 +479,26 @@ function triad_lλupdate_root!(treep   ::iTgbmpb,
 
   # make Brownian bridge proposals
   bb!(λprv_p, lλrp, lλp, fdtpr, σλ, δt, srδt)
-  bb!(λd1v_p, lλp, λpr, fdtd1, σλ, δt, srδt)
-  bb!(λd2v_p, lλp, λpr, fdtd2, σλ, δt, srδt)
+  bb!(λd1v_p, lλp,  λd1, fdtd1, σλ, δt, srδt)
+  bb!(λd2v_p, lλp,  λd2, fdtd2, σλ, δt, srδt)
 
   ## make acceptance ratio 
   llr, acr = llr_propr(λprv_p, λd1v_p, λd2v_p, λprv_c, λd1v_c, λd2v_c, 
-    σλ, δt, fdtpr, fdtd1, fdtd2, srδt, lλp, λd1v_c[1])
+    σλ, δt, fdtpr, fdtd1, fdtd2, srδt, !istip(treec.d1), !istip(treec.d2))
 
   # prior ratio
-  prr = llrdnorm_x(lλrp, λpr, λa_prior[1], λa_prior[2])
-
-  # acceptance ratio
-  acr += prr
+  if lλrp > lλmxpr
+    acr += -Inf
+  end
 
   if -randexp() < acr 
     llc += llr
-    prc += prr
     copyto!(λprv_c, λprv_p)
     copyto!(λd1v_c, λd1v_p)
     copyto!(λd2v_c, λd2v_p)
   end
 
-  return llc, prc
+  return llc
 end
 
 
@@ -542,16 +535,16 @@ function llr_propr(λprv_p::Array{Float64,1},
                    fdtd1 ::Float64,
                    fdtd2 ::Float64,
                    srδt  ::Float64,
-                   lλp   ::Float64,
-                   lλc   ::Float64)
+                   itd1  ::Bool,
+                   itd2  ::Bool)
 
   # log likelihood ratio functions
-  llrbm_pr, llrpb_pr = llr_gbm_b_sep(λprv_p, λprv_c, σλ, δt, fdtpr, srδt)
-  llrbm_d1, llrpb_d1 = llr_gbm_b_sep(λd1v_p, λd1v_c, σλ, δt, fdtd1, srδt)
-  llrbm_d2, llrpb_d2 = llr_gbm_b_sep(λd2v_p, λd2v_c, σλ, δt, fdtd2, srδt)
+  llrbm_pr, llrpb_pr = llr_gbm_b_sep(λprv_p, λprv_c, σλ, δt, fdtpr, srδt, true)
+  llrbm_d1, llrpb_d1 = llr_gbm_b_sep(λd1v_p, λd1v_c, σλ, δt, fdtd1, srδt, itd1)
+  llrbm_d2, llrpb_d2 = llr_gbm_b_sep(λd2v_p, λd2v_c, σλ, δt, fdtd2, srδt, itd2)
 
-  acr =       llrpb_pr + llrpb_d1 + llrpb_d2 + lλp - lλc
-  llr = acr + llrbm_pr + llrbm_d1 + llrbm_d2
+  acr = llrpb_pr + llrpb_d1 + llrpb_d2
+  llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr
 
   return llr, acr
 end
@@ -567,7 +560,7 @@ end
                σλtn   ::Float64,
                δt     ::Float64,
                srδt   ::Float64,
-               σλprior::Float64)
+               σλ_prior::Float64)
 
 MCMC update for σλ.
 """
@@ -578,14 +571,14 @@ function update_σλ!(σλc    ::Float64,
                     σλtn   ::Float64,
                     δt     ::Float64,
                     srδt   ::Float64,
-                    σλprior::Float64)
+                    σλ_prior::Float64)
 
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
 
   # log likelihood and prior ratio
   llr = llr_gbm_bm(Ψ, σλp, σλc, srδt)
-  prr = llrdexp_x(σλp, σλc, σλprior)
+  prr = llrdexp_x(σλp, σλc, σλ_prior)
 
   if -randexp() < (llr + prr + log(σλp/σλc))
     σλc  = σλp
@@ -610,7 +603,7 @@ end
                lac    ::Float64,
                δt     ::Float64,
                srδt   ::Float64,
-               σλprior::Float64)
+               σλ_prior::Float64)
 
 MCMC update for σλ with acceptance log.
 """
@@ -624,14 +617,14 @@ function update_σλ!(σλc    ::Float64,
                     lac    ::Float64,
                     δt     ::Float64,
                     srδt   ::Float64,
-                    σλprior::Float64)
+                    σλ_prior::Float64)
 
   # parameter proposals
   σλp = mulupt(σλc, σλtn)::Float64
 
   # log likelihood and prior ratio
   llr = llr_gbm_bm(Ψ, σλp, σλc, srδt)
-  prr = llrdexp_x(σλp, σλc, σλprior)
+  prr = llrdexp_x(σλp, σλc, σλ_prior)
 
   ltn += 1
   lup += 1.0

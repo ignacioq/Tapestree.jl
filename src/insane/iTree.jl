@@ -223,7 +223,7 @@ function iTgbmpb(tree::sTpb,
             pe(tree), δt, 0.0, Float64[lλa])
 
   else
-    nt   = Int64(fld(3.12, 0.12312))
+    nt   = Int64(fld(pet,δt))
     fdti = mod(pet, δt)
 
     if iszero(fdti)
@@ -376,7 +376,7 @@ function iTgbmbd(tree::sTbd,
             pe(tree), δt, 0.0, isextinct(tree), isfix(tree), 
             Float64[lλa], Float64[lμa])
   else
-    nt   = floor(Int64,pet/δt)
+    nt   = Int64(fld(pet,δt))
     fdti = mod(pet, δt)
 
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
