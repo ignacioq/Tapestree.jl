@@ -32,24 +32,37 @@ function sim_gbm(t   ::Float64,
 
   while true
 
+    if t <= δt 
+      bt  += t
+
+      t   = max(0.0,t)
+      λt1 = rnorm(λt, sqrt(t)*σλ)
+      push!(λv, λt1)
+
+      λm = exp(0.5*(λt + λt1))
+
+      if divev(λm, δt)
+        return iTgbmpb(sim_gbm(0.0, λt1, σλ, δt, srδt), 
+                       sim_gbm(0.0, λt1, σλ, δt, srδt), 
+                 bt, δt, t, λv)
+      end
+
+      return iTgbmpb(nothing, nothing, bt, δt, t, λv)
+    end
+
     t  -= δt
     bt += δt
 
     λt1 = rnorm(λt, srδt*σλ)
 
     push!(λv, λt1)
-    push!(ts, bt)
-
-    if t <= δt 
-      return iTgbmpb(nothing, nothing, bt, δt, nsdt, λv)
-    end
 
     λm = exp(0.5*(λt + λt1))
 
     if divev(λm, δt)
       return iTgbmpb(sim_gbm(t, λt1, σλ, δt, srδt), 
                      sim_gbm(t, λt1, σλ, δt, srδt), 
-              bt, δt, nsdt, λv)
+              bt, δt, δt, λv)
     end
 
     λt = λt1
