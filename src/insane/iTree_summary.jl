@@ -26,7 +26,7 @@ function mcmc_array(treev::Array{T,1},
 
   @inbounds begin
 
-    nti = extractp(treev[1], δt)
+    nti = extractp(treev[1], δt, lv)
     vi = Float64[]
     linearize_gbm!(nti, lv, vi)
 
@@ -34,7 +34,7 @@ function mcmc_array(treev::Array{T,1},
     ra[1,:] = vi
 
     for i in 2:lastindex(treev)
-      nti = extractp(treev[i], δt)
+      nti = extractp(treev[i], δt, lv)
       vi  = Float64[]
       linearize_gbm!(nti, lv, vi)
       ra[i, :] = vi
@@ -225,22 +225,21 @@ Make an `iTgbmpb` with the quantile specified by `p` in data specified in
 function `lv`.
 """
 function iquantile(treev::Array{iTgbmpb,1}, 
-                   p    ::Float64, 
-                   lv   ::Function)
+                   p    ::Float64)
 
-  tsv = ts(treev[1])
   nt = lastindex(treev)
+  t1 = treev[1]
 
   # make vector of lambdas
   vs = Array{Float64,1}[]
   for t in treev
-    push!(vs, lv(t)) 
+    push!(vs, lλ(t)) 
   end
 
   sv = Float64[]
   # make fill vector to estimate statistics
   v = Array{Float64,1}(undef, nt)
-  for i in Base.OneTo(lastindex(tsv))
+  for i in Base.OneTo(lastindex(vs[1]))
     for t in Base.OneTo(nt)
       v[t] = vs[t][i]
     end
@@ -265,8 +264,8 @@ function iquantile(treev::Array{iTgbmpb,1},
     end 
   end
 
-  iTgbmpb(iquantile(treev1, p, lv), iquantile(treev2, p, lv),
-    tsv[end], tsv, sv)
+  iTgbmpb(iquantile(treev1, p), iquantile(treev2, p),
+    pe(t1), dt(t1), fdt(t1), sv)
 end
 
 """
@@ -275,7 +274,7 @@ end
 Make an `iTgbmpb` with the quantile specified by `p` in data specified in 
 function `lv`.
 """
-iquantile(::Nothing, p::Float64, lv::Function) = nothing
+iquantile(::Nothing, p::Float64) = nothing
 
 
 
