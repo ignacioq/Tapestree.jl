@@ -16,35 +16,31 @@ Created 14 09 2020
 """
     insane_gbmpb(tree    ::sTpb, 
                  out_file::String;
-                 λa_prior::Tuple{Float64,Float64} = (0.0,10.0),
-                 σλ_prior ::Float64  = 0.1,
                  δt      ::Float64  = 1e-2,
                  niter   ::Int64    = 1_000,
                  nthin   ::Int64    = 10,
                  nburn   ::Int64    = 200,
                  tune_int::Int64    = 100,
                  σλi     ::Float64  = 0.5,
-                 σλtni   ::Float64  = 1.0,
-                 obj_ar  ::Float64  = 0.234,
-                 pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
-                 prints  ::Int64    = 5)
+                 prints  ::Int64    = 5,
+                 pupdp   ::NTuple{2,Float64} = (0.9, 0.1),
+                 λa_prior::NTuple{2,Float64} = (0.0,100.0),
+                 σλ_prior::NTuple{2,Float64} = (0.05, 0.5))
 
 Run insane for GBM pure-birth.
 """
 function insane_gbmpb(tree    ::sTpb, 
                       out_file::String;
-                      σλ_prior ::Float64  = 0.1,
                       δt      ::Float64  = 1e-2,
                       niter   ::Int64    = 1_000,
                       nthin   ::Int64    = 10,
                       nburn   ::Int64    = 200,
                       tune_int::Int64    = 100,
                       σλi     ::Float64  = 0.5,
-                      σλtni   ::Float64  = 1.0,
-                      obj_ar  ::Float64  = 0.234,
                       prints  ::Int64    = 5,
-                      pupdp   ::Tuple{Float64,Float64} = (0.9, 0.1),
-                      λa_prior::Tuple{Float64,Float64} = (0.0,100.0))
+                      pupdp   ::NTuple{2,Float64} = (0.9, 0.1),
+                      λa_prior::NTuple{2,Float64} = (0.0,100.0),
+                      σλ_prior::NTuple{2,Float64} = (0.05, 0.5))
 
   δt  *= treeheight(tree)
   srδt = sqrt(δt)
@@ -69,17 +65,14 @@ function insane_gbmpb(tree    ::sTpb,
 
   pup = make_pup(pupdp, nin)
 
-  # make scaling function
-  scalef = makescalef(obj_ar)
-
   # burn-in phase
-  llc, prc, σλc, σλtn =
-    mcmc_burn_gbmpb(Ψp, Ψc, λa_prior, σλ_prior, nburn, tune_int, σλi, σλtni, 
-      δt, srδt, idv, inodes, terminus, pup, prints, scalef)
+  llc, prc, σλc =
+    mcmc_burn_gbmpb(Ψp, Ψc, λa_prior, σλ_prior, nburn, σλi, 
+      δt, srδt, idv, inodes, terminus, pup, prints)
 
   # mcmc
   R, Ψv = mcmc_gbmpb(Ψp, Ψc, llc, prc, σλc, λa_prior, σλ_prior, 
-        niter, nthin, σλtn, δt, srδt, idv, inodes, terminus, pup, prints)
+        niter, nthin, δt, srδt, idv, inodes, terminus, pup, prints)
 
   pardic = Dict(("lambda_root"  => 1,
                  "sigma_lambda" => 2))
@@ -95,50 +88,38 @@ end
 """
     mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
                     Ψc      ::iTgbmpb,
-                    λa_prior::Tuple{Float64,Float64},
-                    σλ_prior ::Float64,
+                    λa_prior::NTuple{2,Float64},
+                    σλ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
-                    tune_int::Int64,
                     σλi     ::Float64,
-                    σλtni   ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     idv     ::Array{iBfb,1},
                     inodes  ::Array{Int64,1},
                     terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},
-                    prints  ::Int64,
-                    scalef  ::Function)
+                    prints  ::Int64)
 
 MCMC burn-in chain for GBM pure-birth.
 """
 function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
                          Ψc      ::iTgbmpb,
-                         λa_prior::Tuple{Float64,Float64},
-                         σλ_prior ::Float64,
+                         λa_prior::NTuple{2,Float64},
+                         σλ_prior::NTuple{2,Float64},
                          nburn   ::Int64,
-                         tune_int::Int64,
                          σλi     ::Float64,
-                         σλtni   ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
                          idv     ::Array{iBfb,1},
                          inodes  ::Array{Int64,1},
                          terminus::Array{BitArray{1}},
                          pup     ::Array{Int64,1},
-                         prints  ::Int64,
-                         scalef  ::Function)
-
-  # initialize acceptance log
-  ltn  = 0
-  lup  = 0.0
-  lac  = 0.0
-  σλtn = σλtni
+                         prints  ::Int64)
 
   # starting parameters
   σλc = σλi
   llc = llik_gbm(Ψc, σλc, δt, srδt)
-  prc = logdexp(σλc, σλ_prior) + 
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
         logdunif(exp(lλ(Ψc)[1]), λa_prior[1], λa_prior[2])
 
   lλmxpr = log(λa_prior[2])
@@ -152,10 +133,10 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
     for pupi in pup
       ## parameter updates
       if iszero(pupi)
-        llc, prc, σλc, ltn, lup, lac = 
-          update_σλ!(σλc, Ψc, llc, prc, 
-            σλtn, ltn, lup, lac, δt, srδt, σλ_prior)
+
+        llc, prc, σλc = update_σ!(σλc, Ψc, llc, prc, σλ_prior)
       else
+
         ter  = terminus[pupi]
         inod = inodes[pupi]
 
@@ -165,17 +146,12 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
         llc = lλupdate!(Ψp, Ψc, llc, σλc, δt, srδt, lλmxpr, dri, ldr, ter, 0)
       end
 
-      if ltn == tune_int
-        σλtn = scalef(σλtn,lac/lup)
-        ltn = 0
-      end
-
     end
 
     next!(pbar)
   end
 
-  return llc, prc, σλc, σλtn
+  return llc, prc, σλc
 end
 
 
@@ -191,7 +167,6 @@ end
                σλ_prior ::Float64,
                niter   ::Int64,
                nthin   ::Int64,
-               σλtn    ::Float64,
                δt      ::Float64,
                srδt    ::Float64,
                idv     ::Array{iBfb,1},
@@ -207,11 +182,10 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
                     llc     ::Float64,
                     prc     ::Float64,
                     σλc     ::Float64,
-                    λa_prior::Tuple{Float64,Float64},
-                    σλ_prior ::Float64,
+                    λa_prior::NTuple{2,Float64},
+                    σλ_prior::NTuple{2,Float64},
                     niter   ::Int64,
                     nthin   ::Int64,
-                    σλtn    ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     idv     ::Array{iBfb,1},
@@ -242,9 +216,8 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
 
       ## parameter updates
       if iszero(pupi)
-        # `λ` diffusion rate updates
-        llc, prc, σλc = 
-          update_σλ!(σλc, Ψc, llc, prc, σλtn, δt, srδt, σλ_prior)
+
+        llc, prc, σλc =  update_σ!(σλc, Ψc, llc, prc, σλ_prior)
       else
         # gbm updates
         ter  = terminus[pupi]
@@ -547,6 +520,43 @@ function llr_propr(λprv_p::Array{Float64,1},
   llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr
 
   return llr, acr
+end
+
+
+
+
+
+
+"""
+    update_σ!(σλc     ::Float64,
+              Ψ       ::iTgbmpb,
+              llc     ::Float64,
+              prc     ::Float64,
+              σλ_prior::NTuple{2,Float64})
+
+Gibbs update for `σλ` and `σμ`.
+"""
+function update_σ!(σλc     ::Float64,
+                   Ψ       ::iTgbmpb,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   σλ_prior::NTuple{2,Float64})
+
+  # standardized sum of squares
+  sssλ, n = sss_gbm(Ψ)
+
+  # Gibbs update for σ
+  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + sssλ)
+
+  # update prior
+  prc += llrdinvgamma(σλp2, σλc^2, σλ_prior[1], σλ_prior[2])
+
+  σλp = sqrt(σλp2)
+
+  # update likelihood
+  llc += llr_gbm_σp(σλp, σλc, sssλ, n)
+
+  return llc, prc, σλp
 end
 
 
