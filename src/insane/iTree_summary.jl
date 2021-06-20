@@ -26,7 +26,7 @@ function mcmc_array(treev::Array{T,1},
 
   @inbounds begin
 
-    nti = extractp(treev[1], δt, lv)
+    nti = extractp(treev[1], δt)
     vi = Float64[]
     linearize_gbm!(nti, lv, vi)
 
@@ -34,7 +34,7 @@ function mcmc_array(treev::Array{T,1},
     ra[1,:] = vi
 
     for i in 2:lastindex(treev)
-      nti = extractp(treev[i], δt, lv)
+      nti = extractp(treev[i], δt)
       vi  = Float64[]
       linearize_gbm!(nti, lv, vi)
       ra[i, :] = vi
@@ -75,16 +75,15 @@ end
 
 Log-linearly predict Geometric Brownian motion for `lv` at times given by `nδt`.
 """
-function extractp(tree::T, nδt::Float64, lv::Function) where {T <: iTgbm}
+function extractp(tree::iTgbmpb, nδt::Float64)
 
   pet = pe(tree)
   δt  = dt(tree)
-  v   = lv(tree)
+  v   = lλ(tree)
   n   = floor(Int64, pet/nδt)
 
   pv = Float64[]
-
-  for i in Base.OneTo(n)
+  for i in Base.OneTo(n+1)
     iti = Float64(i-1)*nδt
     ix  = floor(Int64, iti/δt) + 1
     tts = δt*Float64(ix-1)
@@ -92,16 +91,15 @@ function extractp(tree::T, nδt::Float64, lv::Function) where {T <: iTgbm}
     push!(pv, linpred(iti, tts, ttf, v[ix], v[ix+1]))
   end
 
-  if (Float64(n)*nδt) !== pet
+  if (Float64(n+1)*nδt) !== pet
     push!(pv, v[end])
-    nfdt = nδt
-  else
     nfdt = mod(pet,nδt)
+  else
+    nfdt = nδt
   end
 
-  T(extractp(tree.d1, δt, lv), 
-    extractp(tree.d2, δt, lv),
-    pet, nδt, nfdt, pv)
+  iTgbmpb(extractp(tree.d1, nδt), 
+          extractp(tree.d2, nδt), pet, nδt, nfdt, pv)
 end
 
 
@@ -111,7 +109,7 @@ end
 
 Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
 """
-extractp(tree::Nothing, δt::Float64, lv::Function) = nothing
+extractp(tree::Nothing, nδt::Float64) = nothing
 
 
 
