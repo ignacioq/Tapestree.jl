@@ -11,34 +11,6 @@ Created 03 09 2020
 
 
 
-"""
-    mcmc_array(treev::Array{iTgbmpb,1}, δt::Float64)
-
-Return an Array with a row for each sampled tree for interpolated
-`λ` parameters at times determined by `δt`.
-"""
-function mcmc_array(treev::Array{iTgbmpb,1}, δt::Float64)
-
-  @inbounds begin
-
-    vi = Float64[]
-    extract_vector!(treev[1], vi, δt, 0.0)
-
-    ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vi))
-    ra[1,:] = vi
-
-    for i in 2:lastindex(treev)
-      vi = Float64[]
-      extract_vector!(treev[i], vi, δt, 0.0)
-      ra[i, :] = vi
-    end
-  end
-
-  return ra
-end
-
-
-
 
 """
     mcmc_array(treev::Array{T,1},
@@ -54,22 +26,66 @@ function mcmc_array(treev::Array{T,1},
 
   @inbounds begin
 
-    nti = extractp(treev[1], δt)
     vi = Float64[]
-    linearize_gbm!(nti, lv, vi)
+    extract_vector!(treev[1], vi, δt, 0.0, lv)
 
     ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vi))
     ra[1,:] = vi
 
     for i in 2:lastindex(treev)
-      nti = extractp(treev[i], δt)
-      vi  = Float64[]
-      linearize_gbm!(nti, lv, vi)
+      vi = Float64[]
+      extract_vector!(treev[i], vi, δt, 0.0, lv)
       ra[i, :] = vi
     end
   end
 
   return ra
+end
+
+
+
+
+"""
+    extract_vector!(tree::T, 
+                    v   ::Array{Float64,1}, 
+                    nδt ::Float64, 
+                    ct  ::Float64,
+                    lv  ::Function) where {T <: iTgbm}
+
+Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
+and return a vector.
+"""
+function extract_vector!(tree::T, 
+                         v   ::Array{Float64,1}, 
+                         nδt ::Float64, 
+                         ct  ::Float64,
+                         lv  ::Function) where {T <: iTgbm}
+
+  pet = pe(tree)
+  δt  = dt(tree)
+  vt  = lv(tree)
+  n   = floor(Int64, (pet - ct)/nδt)
+  i1  = isapprox(pet - ct, Float64(n)*nδt, atol = 1e-11) ? 0 : 1
+
+  pv = Float64[]
+  iti = ct
+  for i in Base.OneTo(n+i1)
+    ix  = fld(iti,δt)
+    tts = δt *  ix
+    ttf = δt * (ix + 1.0)
+    Ix  = Int64(ix)
+    push!(pv, linpred(iti + 0.5*δt, tts, ttf, vt[Ix+1], vt[Ix+2]))
+    iti = Float64(i)*nδt + ct
+  end
+
+  append!(v, pv)
+
+  if !isnothing(tree.d1)
+    extract_vector!(tree.d1::iTgbmpb, v, nδt, max(0.0, iti - pet), lv)
+  end
+  if !isnothing(tree.d2)
+    extract_vector!(tree.d2::iTgbmpb, v, nδt, max(0.0, iti - pet), lv)
+  end
 end
 
 
@@ -141,50 +157,6 @@ end
 Log-linearly predict Geometric Brownian motion for `lv` at times given by `δt`.
 """
 extract_tree(tree::Nothing, nδt::Float64) = nothing
-
-
-
-
-"""
-    extract_vector!(tree::iTgbmpb,
-                   v   ::Array{Float64,1}, 
-                   nδt ::Float64, 
-                   ct  ::Float64)
-
-Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
-and return a vector.
-"""
-function extract_vector!(tree::iTgbmpb, 
-                         v   ::Array{Float64,1}, 
-                         nδt ::Float64, 
-                         ct  ::Float64)
-
-  pet = pe(tree)
-  δt  = dt(tree)
-  vt  = lλ(tree)
-  n   = floor(Int64, (pet - ct)/nδt)
-  i1  = isapprox(pet - ct, Float64(n)*nδt, atol = 1e-11) ? 0 : 1
-
-  pv = Float64[]
-  iti = ct
-  for i in Base.OneTo(n+i1)
-    ix  = fld(iti,δt)
-    tts = δt *  ix
-    ttf = δt * (ix + 1.0)
-    Ix  = Int64(ix)
-    push!(pv, linpred(iti + 0.5*δt, tts, ttf, vt[Ix+1], vt[Ix+2]))
-    iti = Float64(i)*nδt + ct
-  end
-
-  append!(v, pv)
-
-  if !isnothing(tree.d1)
-    extract_vector!(tree.d1::iTgbmpb, v, nδt, max(0.0, iti - pet))
-  end
-  if !isnothing(tree.d2)
-    extract_vector!(tree.d2::iTgbmpb, v, nδt, max(0.0, iti - pet))
-  end
-end
 
 
 
