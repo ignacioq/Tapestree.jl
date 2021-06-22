@@ -25,7 +25,7 @@ January 12 2017
                  retry_ext::Bool   = true,
                  rejectel0::Bool   = false)
 
-Simulate tree according to `SSE.g`.
+Simulate tree according to `sse_g`.
 """
 function simulate_sse(λ       ::Array{Float64,1},
                       μ       ::Array{Float64,1},
