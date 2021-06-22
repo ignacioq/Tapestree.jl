@@ -177,8 +177,8 @@ function llik_gbm(tree::iTgbmbd,
                   δt  ::Float64,
                   srδt::Float64)
   if istip(tree) 
-    ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, 
-      fdt(tree), srδt, false, isextinct(tree))
+    ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, fdt(tree), srδt, 
+      false, isextinct(tree))
   else
     ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, fdt(tree), srδt, true, false) +
     llik_gbm(tree.d1::iTgbmbd, σλ, σμ, δt, srδt)                           +
@@ -246,13 +246,12 @@ Returns the log-likelihood for a branch according to GBM birth-death.
       lμvi1 = lμv[nI+2]
       ll += ldnorm_bm(lλvi1, lλvi, srfdt*σλ)
       ll += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
+      ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
 
       if λev
-        ll += log(fdt) + 0.5*(lλvi + lλvi1)
-      elseif !μev
-        ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
-      else
-        ll += log(fdt) + 0.5*(lμvi + lμvi1)
+        ll += lλvi1
+      elseif μev
+        ll += lμvi1
       end
     end
   end
@@ -360,13 +359,14 @@ function ll_gbm_b_bd(lλv ::Array{Float64,1},
     ll *= (-δt)
 
     # add final non-standard `δt`
+    lλvi1 = lλv[nI+2]
+    lμvi1 = lμv[nI+2]
+    ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
     if !iszero(fdt)
       if λev
-        ll += log(fdt) + 0.5*(lλvi + lλv[nI+2])
-      elseif !μev
-        ll -= fdt*(exp(0.5*(lλvi + lλv[nI+2])) + exp(0.5*(lμvi + lμv[nI+2])))
-      else
-        ll += log(fdt) + 0.5*(lμvi + lμv[nI+2])
+        ll += lλvi1
+      elseif μev
+        ll += lμvi1
       end
     end
   end
@@ -827,14 +827,13 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
       llrbm += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, srfdt*σλ) +
                lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
+      llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
+                    exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
 
       if λev
-        llrbd += 0.5*(lλpi + lλpi1 - lλci - lλci1) 
-      elseif !μev
-        llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
-                      exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
-      else
-        llrbd += 0.5*(lμpi + lμpi1 - lμci - lμci1) 
+        llrbd += lλpi1 - lλci1 
+      elseif μev
+        llrbd += lμpi1 - lμci1 
       end
     end
   end

@@ -81,10 +81,10 @@ function extract_vector!(tree::T,
   append!(v, pv)
 
   if !isnothing(tree.d1)
-    extract_vector!(tree.d1::iTgbmpb, v, nδt, max(0.0, iti - pet), lv)
+    extract_vector!(tree.d1::T, v, nδt, max(0.0, iti - pet), lv)
   end
   if !isnothing(tree.d2)
-    extract_vector!(tree.d2::iTgbmpb, v, nδt, max(0.0, iti - pet), lv)
+    extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - pet), lv)
   end
 end
 

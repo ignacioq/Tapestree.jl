@@ -66,8 +66,8 @@ function daughters_lprop!(treep::iTgbmbd,
   λd2v_p = bbλp[d2]
   λd1v_c = bbλc[d1]
   λd2v_c = bbλc[d2]
-  lid1 = lastindex(λd1v_c)
-  lid2 = lastindex(λd2v_c)
+  lid1   = lastindex(λd1v_c)
+  lid2   = lastindex(λd2v_c)
   λd1    = λd1v_c[lid1]
   λd2    = λd2v_c[lid2]
 
@@ -90,104 +90,158 @@ function daughters_lprop!(treep::iTgbmbd,
   # acceptance rate
   normprop = 0.0
 
-  # simulate fix tree vector
-  if ter[1]
-    if ter[2]
-      # if both are terminal
-      bm!(λd1v_p, μd1v_p, λf, μf, td1v[2], σλ, σμ, srδt)
-      bm!(λd2v_p, μd2v_p, λf, μf, td2v[2], σλ, σμ, srδt)
-    else
-      # if d1 is terminal
-      bm!(λd1v_p, μd1v_p, λf, μf, td1v[2], σλ, σμ, srδt)
-      bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
+  bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
+  bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
-      # acceptance ratio
-      λpr1_c = bbλc[pr][1]
-      μpr1_c = bbμc[pr][1]
-      pepr   = tsv[pr][1]
+  λpr1_c = bbλc[pr][1]
+  μpr1_c = bbμc[pr][1]
+  pepr   = tsv[pr][1]
 
-      # normprop += 
-      #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
-      #   trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
-      #   trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
-      #   trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
 
-      # normprop += 
-      #       duoldnorm(λf, λpr1_c, λd2, pepr, ped2, σλ)        -
-      #       duoldnorm(λd2v_c[1], λpr1_c, λd2, pepr, ped2, σλ) +
-      #       duoldnorm(μf, μpr1_c, μd2, pepr, ped2, σμ)        -
-      #       duoldnorm(μd2v_c[1], μpr1_c, μd2, pepr, ped2, σμ)
+   normprop += 
+    trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
+    trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
 
-      # normprop += 
-      #        ldnorm_bm(λf, λd2, sqrt(ped2)*σλ)        - 
-      #        ldnorm_bm(λd2v_c[1], λd2, sqrt(ped2)*σλ) + 
-      #        ldnorm_bm(μf, μd2, sqrt(ped2)*σμ)        - 
-      #        ldnorm_bm(μd2v_c[1], μd2, sqrt(ped2)*σμ)
+
+  # normprop += 
+  #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
+  #   trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
+  #   trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
+  #   trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
+
+  # normprop += 
+    # duoldnorm(λf, λd1, λd2, ped1, ped2, σλ)        -
+    # duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ) +
+    # duoldnorm(μf, μd1, μd2, ped1, ped2, σμ)        
+    # duoldnorm(μd1v_c[1], μd1, μd2, ped1, ped2, σμ)
+
+  # normprop += 
+  #   ldnorm_bm(λpr1_c, λf,        sqrt(pepr) * σλ) +
+  #   # ldnorm_bm(λpr1_c, λd1v_c[1], sqrt(pepr) * σλ) +
+  #   ldnorm_bm(λf,        λd1, sqrt(ped1) * σλ) +
+  #   # ldnorm_bm(λd1v_c[1], λd1, sqrt(ped1) * σλ) +
+  #   ldnorm_bm(λf,        λd2, sqrt(ped2) * σλ) +
+  #   # ldnorm_bm(λd2v_c[1], λd2, sqrt(ped2) * σλ) +
+  #   ldnorm_bm(μpr1_c, μf,        sqrt(pepr) * σμ) +
+  #   # ldnorm_bm(μpr1_c, μd1v_c[1], sqrt(pepr) * σμ) +
+  #   ldnorm_bm(μf,        μd1, sqrt(ped1) * σμ) +
+  #   # ldnorm_bm(μd1v_c[1], μd1, sqrt(ped1) * σμ) +
+  #   ldnorm_bm(μf,        μd2, sqrt(ped2) * σμ)
+  #   # ldnorm_bm(μd2v_c[1], μd2, sqrt(ped2) * σμ)
+
+  # # simulate fix tree vector
+  # if ter[1]
+  #   if ter[2]
+  #     # if both are terminal
+  #     bm!(λd1v_p, μd1v_p, λf, μf, td1v[2], σλ, σμ, srδt)
+  #     bm!(λd2v_p, μd2v_p, λf, μf, td2v[2], σλ, σμ, srδt)
+
+  #   else
+  #     # if d1 is terminal
+  #     # bm!(λd1v_p, μd1v_p, λf, μf, td1v[2], σλ, σμ, srδt)
+  #     # bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
+
+
+  #     bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
+  #     bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
+
+  #     # acceptance ratio
+  #     λpr1_c = bbλc[pr][1]
+  #     μpr1_c = bbμc[pr][1]
+  #     pepr   = tsv[pr][1]
+
+
+  #     # normprop += 
+  #     #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
+  #     #   trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
+  #     #   trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
+  #     #   trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
+
+  #     # normprop += 
+  #     #       duoldnorm(λf, λpr1_c, λd2, pepr, ped2, σλ)        -
+  #     #       duoldnorm(λd2v_c[1], λpr1_c, λd2, pepr, ped2, σλ) +
+  #     #       duoldnorm(μf, μpr1_c, μd2, pepr, ped2, σμ)        -
+  #     #       duoldnorm(μd2v_c[1], μpr1_c, μd2, pepr, ped2, σμ)
+
+  #     # normprop += 
+  #     #        ldnorm_bm(λf, λd2, sqrt(ped2)*σλ)        - 
+  #     #        ldnorm_bm(λd2v_c[1], λd2, sqrt(ped2)*σλ) + 
+  #     #        ldnorm_bm(μf, μd2, sqrt(ped2)*σμ)        - 
+  #     #        ldnorm_bm(μd2v_c[1], μd2, sqrt(ped2)*σμ)
   
-      normprop += 
-            duoldnorm(λf, λpr1_c, λd2, pepr, ped2, σλ) + 
-            duoldnorm(μf, μpr1_c, μd2, pepr, ped2, σμ)
+  #     # normprop += 
+  #     #       duoldnorm(λf, λpr1_c, λd2, pepr, ped2, σλ) + 
+  #     #       duoldnorm(μf, μpr1_c, μd2, pepr, ped2, σμ)
 
-    end
-  elseif ter[2]
-    # if d2 is terminal
-    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
-    bm!(λd2v_p, μd2v_p, λf, μf, td2v[2], σλ, σμ, srδt)
+  #   end
+  # elseif ter[2]
+  #   # if d2 is terminal
+  #   # bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
+  #   # bm!(λd2v_p, μd2v_p, λf, μf, td2v[2], σλ, σμ, srδt)
 
-    # acceptance ratio
-    λpr1_c = bbλc[pr][1]
-    μpr1_c = bbμc[pr][1]
-    pepr   = tsv[pr][1]
+  #   bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
+  #   bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
-    # normprop += 
-    #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
-    #   trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
-    #   trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
-    #   trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
+  #   # acceptance ratio
+  #   λpr1_c = bbλc[pr][1]
+  #   μpr1_c = bbμc[pr][1]
+  #   pepr   = tsv[pr][1]
 
-    # normprop += 
-    #       duoldnorm(λf, λpr1_c, λd1, pepr, ped1, σλ)        -
-    #       duoldnorm(λd1v_c[1], λpr1_c, λd1, pepr, ped1, σλ) +
-    #       duoldnorm(μf, μpr1_c, μd1, pepr, ped1, σμ)        -
-    #       duoldnorm(μd1v_c[1], μpr1_c, μd1, pepr, ped1, σμ)
+  #   # normprop += 
+  #   #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
+  #   #   trioldnorm(λd1v_c[1], λpr1_c, λd1v_p[lid1], λd2v_p[lid2], pepr, ped1, ped2, σλ) +
+  #   #   trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
+  #   #   trioldnorm(μd1v_c[1], μpr1_c, μd1v_p[lid1], μd2v_p[lid2], pepr, ped1, ped2, σμ)
 
-    # normprop += 
-    #    ldnorm_bm(λf, λd1, sqrt(ped1)*σλ)        - 
-    #    ldnorm_bm(λd1v_c[1], λd1, sqrt(ped1)*σλ) + 
-    #    ldnorm_bm(μf, μd1, sqrt(ped1)*σμ)        - 
-    #    ldnorm_bm(μd1v_c[1], μd1, sqrt(ped1)*σμ)
+  #   # normprop += 
+  #   #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
+  #   #   trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
+  #   #   trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
+  #   #   trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
 
-    normprop += 
-          duoldnorm(λf, λpr1_c, λd1, pepr, ped1, σλ) +
-          duoldnorm(μf, μpr1_c, μd1, pepr, ped1, σμ)
+  #   # normprop += 
+  #   #       duoldnorm(λf, λpr1_c, λd1, pepr, ped1, σλ)        -
+  #   #       duoldnorm(λd1v_c[1], λpr1_c, λd1, pepr, ped1, σλ) +
+  #   #       duoldnorm(μf, μpr1_c, μd1, pepr, ped1, σμ)        -
+  #   #       duoldnorm(μd1v_c[1], μpr1_c, μd1, pepr, ped1, σμ)
 
-  else
-    # if no terminal branches involved
-    bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
-    bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
+  #   # normprop += 
+  #   #    ldnorm_bm(λf, λd1, sqrt(ped1)*σλ)        - 
+  #   #    ldnorm_bm(λd1v_c[1], λd1, sqrt(ped1)*σλ) + 
+  #   #    ldnorm_bm(μf, μd1, sqrt(ped1)*σμ)        - 
+  #   #    ldnorm_bm(μd1v_c[1], μd1, sqrt(ped1)*σμ)
 
-    # acceptance ratio
-    λpr1_c = bbλc[pr][1]
-    μpr1_c = bbμc[pr][1]
-    pepr   = tsv[pr][1]
+  #   # normprop += 
+  #   #       duoldnorm(λf, λpr1_c, λd1, pepr, ped1, σλ) +
+  #   #       duoldnorm(μf, μpr1_c, μd1, pepr, ped1, σμ)
 
-    # normprop += 
-    #       trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
-    #       trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
-    #       trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
-    #       trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
+  # else
+  #   # if no terminal branches involved
+  #   bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
+  #   bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
-    # normprop += 
-    #        duoldnorm(λf, λd1, λd2, ped1, ped2, σλ)        -
-    #        duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ) +
-    #        duoldnorm(μf, μd1, μd2, ped1, ped2, σμ)        -
-    #        duoldnorm(μd1v_c[1], μd1, μd2, ped1, ped2, σμ)
+  #   # acceptance ratio
+  #   λpr1_c = bbλc[pr][1]
+  #   μpr1_c = bbμc[pr][1]
+  #   pepr   = tsv[pr][1]
 
-    normprop += 
-          trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
-          trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
+  #   # normprop += 
+  #   #       trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
+  #   #       trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
+  #   #       trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)        -
+  #   #       trioldnorm(μd1v_c[1], μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
 
-  end
+  #   # normprop += 
+  #   #        duoldnorm(λf, λd1, λd2, ped1, ped2, σλ)        -
+  #   #        duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ) +
+  #   #        duoldnorm(μf, μd1, μd2, ped1, ped2, σμ)        -
+  #   #        duoldnorm(μd1v_c[1], μd1, μd2, ped1, ped2, σμ)
+
+  #   # normprop += 
+  #   #       trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
+  #   #       trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
+
+  # end
 
   llrcond = 0.0
   # only if crown conditioning

@@ -43,8 +43,8 @@ function insane_gbmbd(tree    ::sTbd,
                       out_file::String;
                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                       μa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      σλ_prior::NTuple{2,Float64} = (0.05, 0.5),
-                      σμ_prior::NTuple{2,Float64} = (0.05, 0.5),
+                      σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
+                      σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
                       niter   ::Int64             = 1_000,
                       nthin   ::Int64             = 10,
                       nburn   ::Int64             = 200,
@@ -537,15 +537,14 @@ function fsp(Ψp   ::iTgbmbd,
         tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
       # change last event by speciation for llr
-      iλ = dft0*(exp(0.5*(λfm1 + λf)) + exp(0.5*(μfm1 + μf))) +
-           log(dft0) + 0.5*(λfm1 + λf)
+      iλ = λf
 
       # acceptance ratio
       bbλcpr = bbλc[pr]
       l = lastindex(bbλcpr)
-      acr += 0.5*(λfm1 + λf) - 0.5*(bbλcpr[l-1] + bbλcpr[l])
-      #acr += 0.5*(bbλcpr[l-1] + bbλcpr[l]) - 0.5*(λfm1 + λf)
+      acr += λf - bbλcpr[l]
 
+      #acr += 0.5*(bbλcpr[l-1] + bbλcpr[l]) - 0.5*(λfm1 + λf)
       #acr += λf            + cond_alone_events_stem(t0) - 
       #       bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
     else
