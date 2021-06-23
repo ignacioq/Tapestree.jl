@@ -540,37 +540,48 @@ function fsp(Ψp   ::iTgbmbd,
       iλ = λf
 
       # acceptance ratio
-      bbλcpr = bbλc[pr]
-      l = lastindex(bbλcpr)
-      acr += λf - bbλcpr[l]
+      # bbλcpr = bbλc[pr]
+      # l = lastindex(bbλcpr)
+      # acr += bbλcpr[l] - λf
 
-      #acr += 0.5*(bbλcpr[l-1] + bbλcpr[l]) - 0.5*(λfm1 + λf)
-      #acr += λf            + cond_alone_events_stem(t0) - 
-      #       bbλc[pr][end] - cond_alone_events_stem(Ψc, dri, ldr, 0)
+      # acr += cond_alone_events_stem(Ψc, dri, ldr, 0) -
+      #        cond_alone_events_stem_λ(t0)
+
     else
       pr  = bix
       iλ  = 0.0
       llr = 0.0
       acr = 0.0
+
+      # acr += cond_alone_events_stem(Ψc, dri, ldr, 0) -
+      #        cond_alone_events_stem(t0)
     end
 
     cll = 0.0
     if icr && isone(wbc)
       if dri[1]
-        cll += cond_alone_events_stem(t0) - 
+        cll += cond_alone_events_stem_λ(t0) - 
                cond_alone_events_stem(Ψc.d1::iTgbmbd)
       else
-        cll += cond_alone_events_stem(t0) -
+        cll += cond_alone_events_stem_λ(t0) -
                cond_alone_events_stem(Ψc.d2::iTgbmbd)
       end
     elseif iszero(wbc)
-      cll += cond_alone_events_stem(t0) -
+      cll += cond_alone_events_stem_λ(t0) -
              cond_alone_events_stem(Ψc)
     end
 
 
+    # if iszero(wbc)
+    #   acr += cond_alone_events_stem(Ψc)   - 
+    #          cond_alone_events_stem_λ(t0)
+    # else
+    # acr += cond_alone_events_stem_woλ(Ψc, dri, ldr, 0) -
+    #        cond_alone_events_stem(t0)
+    # end
+
     # mh ratio
-    if -randexp() < acr + cll
+    if -randexp() < acr #+ cll
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
