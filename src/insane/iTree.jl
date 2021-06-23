@@ -357,15 +357,14 @@ function iTgbmce(tree::sTbd,
                  δt  ::Float64, 
                  srδt::Float64, 
                  lλa ::Float64, 
-                 σλ  ::Float64,
-                 σμ  ::Float64)
+                 σλ  ::Float64)
 
   pet  = pe(tree)
 
   # if crown root
   if iszero(pet)
-    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, σλ, σμ), 
-            iTgbmce(tree.d2, δt, srδt, lλa σλ, σμ),
+    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, σλ), 
+            iTgbmce(tree.d2, δt, srδt, lλa, σλ),
             pe(tree), δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
   else
     nt   = Int64(fld(pet,δt))
@@ -379,8 +378,8 @@ function iTgbmce(tree::sTbd,
 
     l = lastindex(lλv)
 
-    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], σλ, σμ), 
-            iTgbmce(tree.d2, δt, srδt, lλv[l], σλ, σμ),
+    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], σλ), 
+            iTgbmce(tree.d2, δt, srδt, lλv[l], σλ),
             pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv)
   end
 end
@@ -402,8 +401,7 @@ iTgbmce(::Nothing,
         δt  ::Float64, 
         srδt::Float64, 
         lλa ::Float64, 
-        σλ  ::Float64,
-        σμ  ::Float64) = nothing
+        σλ  ::Float64) = nothing
 
 
 

@@ -198,12 +198,12 @@ function cond_alone_events_ll_λ(tree::iTgbmbd, tna::Float64, ll::Float64)
     else
       tnx = treeheight(tree.d2::iTgbmbd)
       tna = tnx > tna ? tnx : tna
-      cond_alone_events_ll(tree.d1::iTgbmbd, tna, ll)
+      cond_alone_events_ll_λ(tree.d1::iTgbmbd, tna, ll)
     end
   else
     tnx = treeheight(tree.d1::iTgbmbd)
     tna = tnx > tna ? tnx : tna
-    cond_alone_events_ll(tree.d2::iTgbmbd, tna, ll)
+    cond_alone_events_ll_λ(tree.d2::iTgbmbd, tna, ll)
   end
 end
 

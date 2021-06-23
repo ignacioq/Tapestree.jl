@@ -624,8 +624,8 @@ function llr_propr(treep  ::iTgbmbd,
                cond_alone_events_stem(treec)
   end
 
-  acr = llrbd_pr + llrbd_d1 + llrbd_d2 + llrcond
-  llr = llrbm_pr + llrbm_d1 + llrbm_d2 + acr
+  acr = llrbd_pr + llrbd_d1 + llrbd_d2
+  llr = acr + llrbm_pr + llrbm_d1 + llrbm_d2 + llrcond
 
   return llr, acr
 end

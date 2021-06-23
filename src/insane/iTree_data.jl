@@ -235,25 +235,36 @@ sntn(::Nothing) = 0
 
 
 """
-    snen(tree::T) where {T <: iTree}
+    treelength_ne(tree::T)
 
-Return the number of extinct tip nodes for `tree`.
+Return the tree length and Float number of extinct tip nodes for `tree`.
 """
-function snen(tree::T) where {T <: iTree}
-    if isextinct(tree)
-      return 1
-    else
-      return snen(tree.d1) + snen(tree.d2)
-    end
+function treelength_ne(tree::T) where {T <: iTree}
+  if istip(tree)
+    l  = pe(tree)
+    ne = isextinct(tree) ? 1.0 : 0.0
+  else 
+    l1, ne1 = treelength_ne(tree.d1::T)
+    l2, ne2 = treelength_ne(tree.d2::T)
+    l  = l1 + l2 + pe(tree)
+    ne = ne1 + ne2
+  end
+
+  return l, ne
 end
 
 
-"""
-    snen(::Nothing)
 
-Return the number of extinct tip nodes for `tree`.
+
 """
-snen(::Nothing) = 0
+    treelength(tree::T) where {T <: iTree}
+
+Return the branch length sum of `tree`.
+"""
+treelength(tree::T) where {T <: iTree} = 
+  treelength(tree.d1) + treelength(tree.d2) + pe(tree)
+
+
 
 
 
@@ -501,19 +512,19 @@ end
 
 
 """
-    fixds(tree::iTgbmbd)
+    fixds(tree::T) where {T <: iTgbm}
 
 Return the first fixed daughters `d1` and `d2`. Works only for 
 internal branches.
 """
-function fixds(tree::iTgbmbd)
-  ifx1 = isfix(tree.d1::iTgbmbd)
-  if ifx1 && isfix(tree.d2::iTgbmbd)
-    return tree.d1::iTgbmbd, tree.d2::iTgbmbd
+function fixds(tree::T) where {T <: iTgbm}
+  ifx1 = isfix(tree.d1::T)
+  if ifx1 && isfix(tree.d2::T)
+    return tree.d1::T, tree.d2::T
   elseif ifx1
-    fixds(tree.d1::iTgbmbd)
+    fixds(tree.d1::T)
   else
-    fixds(tree.d2::iTgbmbd)
+    fixds(tree.d2::T)
   end
 end
 
@@ -599,6 +610,44 @@ function drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64) where T <: iTr
     end
   end
 end
+
+
+
+"""
+    makebbv!(tree::iTgbmce, 
+             bbλ ::Array{Array{Float64,1},1}, 
+             tsv ::Array{Array{Float64,1},1})
+
+Make `bbv` vector with allocated `bb` (brownian bridges) and 
+with `tsv` vector of branches times `ts`.
+"""
+function makebbv!(tree::iTgbmce, 
+                  bbλ ::Array{Array{Float64,1},1}, 
+                  tsv ::Array{Array{Float64,1},1})
+
+  push!(tsv, [pe(tree), fdt(tree)])
+  push!(bbλ, lλ(tree))
+
+  makebbv!(tree.d1, bbλ, tsv)
+  makebbv!(tree.d2, bbλ, tsv)
+
+  return nothing
+end
+
+
+
+
+"""
+    makebbv!(tree::Nothing, 
+             bbλ ::Array{Array{Float64,1},1}, 
+             tsv ::Array{Array{Float64,1},1})
+
+Make `bbv` vector with allocated `bb` (brownian bridges) and 
+with `tsv` vector of branches times `ts`.
+"""
+makebbv!(tree::Nothing, 
+         bbλ ::Array{Array{Float64,1},1}, 
+         tsv ::Array{Array{Float64,1},1}) = nothing
 
 
 
