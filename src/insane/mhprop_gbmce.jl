@@ -17,18 +17,15 @@ Created 27 05 2020
     daughters_lprop!(treep::iTgbmce, 
                      treec::iTgbmce,
                      λf   ::Float64,
-                     μf   ::Float64,
                      bbλp ::Array{Array{Float64,1},1}, 
-                     bbμp ::Array{Array{Float64,1},1}, 
                      bbλc ::Array{Array{Float64,1},1}, 
-                     bbμc ::Array{Array{Float64,1},1}, 
                      tsv  ::Array{Array{Float64,1},1}, 
                      pr   ::Int64,
                      d1   ::Int64,
                      d2   ::Int64,
                      ter  ::BitArray{1},
+                     μ    ::Float64,
                      σλ   ::Float64,
-                     σμ   ::Float64,
                      icr  ::Bool, 
                      wbc  ::Int64,
                      δt   ::Float64, 
@@ -40,18 +37,15 @@ daughters are terminal.
 function daughters_lprop!(treep::iTgbmce, 
                           treec::iTgbmce,
                           λf   ::Float64,
-                          μf   ::Float64,
                           bbλp ::Array{Array{Float64,1},1}, 
-                          bbμp ::Array{Array{Float64,1},1}, 
                           bbλc ::Array{Array{Float64,1},1}, 
-                          bbμc ::Array{Array{Float64,1},1}, 
                           tsv  ::Array{Array{Float64,1},1}, 
                           pr   ::Int64,
                           d1   ::Int64,
                           d2   ::Int64,
                           ter  ::BitArray{1},
+                          μ    ::Float64,
                           σλ   ::Float64,
-                          σμ   ::Float64,
                           icr  ::Bool, 
                           wbc  ::Int64,
                           δt   ::Float64, 
@@ -71,14 +65,6 @@ function daughters_lprop!(treep::iTgbmce,
   λd1    = λd1v_c[lid1]
   λd2    = λd2v_c[lid2]
 
-  # extinction vectors
-  μd1v_p = bbμp[d1]
-  μd2v_p = bbμp[d2]
-  μd1v_c = bbμc[d1]
-  μd2v_c = bbμc[d2]
-  μd1    = μd1v_c[lid1]
-  μd2    = μd2v_c[lid2]
-
   # get fixed daughters
   treecd1, treecd2 = fixds(treec)
   treepd1, treepd2 = fixds(treep)
@@ -90,18 +76,14 @@ function daughters_lprop!(treep::iTgbmce,
   # acceptance rate
   normprop = 0.0
 
-  bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
-  bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
+  bb!(λd1v_p, λf, λd1, td1v[2], σλ, δt, srδt)
+  bb!(λd2v_p, λf, λd2, td2v[2], σλ, δt, srδt)
 
   λpr1_c = bbλc[pr][1]
-  μpr1_c = bbμc[pr][1]
   pepr   = tsv[pr][1]
 
-
   normprop += 
-    trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) +
-    trioldnorm(μf, μpr1_c, μd1, μd2, pepr, ped1, ped2, σμ)
-
+    trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)
 
   # normprop += 
   #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -
@@ -246,16 +228,16 @@ function daughters_lprop!(treep::iTgbmce,
   llrcond = 0.0
   # only if crown conditioning
   if icr && iszero(wbc)
-    llrcond += cond_alone_events_crown(treep) -
-               cond_alone_events_crown(treec)
+    llrcond += cond_alone_events_crown(treep, μ) -
+               cond_alone_events_crown(treec, μ)
   end
 
   # fill fix and simulate unfix tree
-  bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
-  bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, σλ, σμ, srδt)
+  bm!(treepd1, λd1v_p, 1, lid1, σλ, srδt)
+  bm!(treepd2, λd2v_p, 1, lid2, σλ, srδt)
 
-  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
-  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
+  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, δt, srδt)
+  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, δt, srδt)
 
   acr  = llrbd_d1 + llrbd_d2 + llrcond
   llr  = llrbm_d1 + llrbm_d2 + acr
@@ -263,9 +245,6 @@ function daughters_lprop!(treep::iTgbmce,
 
   return llr, acr
 end
-
-
-
 
 
 
@@ -418,24 +397,21 @@ end
 
 
 """
-    triad_lupdate_root!(treep  ::iTgbmce, 
-                        treec  ::iTgbmce,
-                        bbλp::Array{Array{Float64,1},1}, 
-                        bbμp::Array{Array{Float64,1},1}, 
-                        bbλc::Array{Array{Float64,1},1}, 
-                        bbμc::Array{Array{Float64,1},1}, 
-                        tsv ::Array{Array{Float64,1},1}, 
-                        llc ::Float64,
-                        prc ::Float64,
-                        pr  ::Int64,
-                        d1  ::Int64,
-                        d2  ::Int64,
-                        σλ  ::Float64,
-                        σμ  ::Float64,
-                        δt  ::Float64, 
-                        srδt::Float64,
-                        λa_prior::Tuple{Float64, Float64},
-                        μa_prior::Tuple{Float64, Float64})
+    triad_lupdate_root!(treep ::iTgbmce, 
+                        treec ::iTgbmce,
+                        bbλp  ::Array{Array{Float64,1},1}, 
+                        bbλc  ::Array{Array{Float64,1},1}, 
+                        tsv   ::Array{Array{Float64,1},1}, 
+                        llc   ::Float64,
+                        pr    ::Int64,
+                        d1    ::Int64,
+                        d2    ::Int64,
+                        μ     ::Float64,
+                        σλ    ::Float64,
+                        δt    ::Float64, 
+                        srδt  ::Float64,
+                        lλmxpr::Float64,
+                        icr   ::Bool)
 
 Make a trio of Brownian motion MCMC updates when the root is involved.
 """
@@ -536,10 +512,12 @@ end
               treec  ::iTgbmce,
               treecd1::iTgbmce,
               treecd2::iTgbmce,
+              μ      ::Float64,
               σλ     ::Float64,
-              σμ     ::Float64,
               δt     ::Float64,
-              srδt   ::Float64)
+              srδt   ::Float64,
+              icr    ::Bool,
+              wbc    ::Int64)
 
 Return the likelihood and proposal ratio for birth-death gbm.
 """

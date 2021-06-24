@@ -74,7 +74,7 @@ function bm!(tree::T,
 
   λv  = lλ(tree)
 
-  bm!(λv, λt, fdt(tree), σλ, σμ, srδt)
+  bm!(λv, λt, fdt(tree), σλ, srδt)
 
   l = lastindex(λv)
 

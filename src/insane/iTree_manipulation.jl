@@ -145,19 +145,19 @@ end
 
 
 """
-    gbm_copy_dsf!(treec::iTgbmbd,
-                  treep::iTgbmbd,
+    gbm_copy_dsf!(treec::T,
+                  treep::T,
                   dri ::BitArray{1}, 
                   ldr ::Int64,
-                  ix  ::Int64)
+                  ix  ::Int64) where {T <: iTgbm}
 
 Copy from `treep` to `treec` the contents of the fixed daughter branch.
 """
-function gbm_copy_dsf!(treec::iTgbmbd,
-                       treep::iTgbmbd,
+function gbm_copy_dsf!(treec::T,
+                       treep::T,
                        dri ::BitArray{1}, 
                        ldr ::Int64,
-                       ix  ::Int64)
+                       ix  ::Int64) where {T <: iTgbm}
 
   if ix === ldr
 
@@ -168,23 +168,64 @@ function gbm_copy_dsf!(treec::iTgbmbd,
     gbm_copy_f!(treecd2, treepd2)
 
   elseif ix < ldr
-    ifx1 = isfix(treec.d1::iTgbmbd)
-    if ifx1 && isfix(treec.d2::iTgbmbd)
+    ifx1 = isfix(treec.d1::T)
+    if ifx1 && isfix(treec.d2::T)
       ix += 1
       if dri[ix]
-        gbm_copy_dsf!(treec.d1::iTgbmbd, treep.d1::iTgbmbd, dri, ldr, ix)
+        gbm_copy_dsf!(treec.d1::T, treep.d1::T, dri, ldr, ix)
       else
-        gbm_copy_dsf!(treec.d2::iTgbmbd, treep.d2::iTgbmbd, dri, ldr, ix)
+        gbm_copy_dsf!(treec.d2::T, treep.d2::T, dri, ldr, ix)
       end
     elseif ifx1
-      gbm_copy_dsf!(treec.d1::iTgbmbd, treep.d1::iTgbmbd, dri, ldr, ix)
+      gbm_copy_dsf!(treec.d1::T, treep.d1::T, dri, ldr, ix)
     else
-      gbm_copy_dsf!(treec.d2::iTgbmbd, treep.d2::iTgbmbd, dri, ldr, ix)
+      gbm_copy_dsf!(treec.d2::T, treep.d2::T, dri, ldr, ix)
     end
   end
 
   return nothing
 end
+
+
+
+
+"""
+    gbm_copy_f!(tree::iTgbmce,
+                bbλ ::Array{Float64,1},
+                ii  ::Int64)
+
+Copies the gbm birth-death in place for a fixed branch into the 
+help arrays `bbλ`.
+"""
+function gbm_copy_f!(tree::iTgbmce,
+                     bbλ ::Array{Float64,1},
+                     ii  ::Int64)
+
+  if !iszero(fdt(tree))
+    lλv = lλ(tree)
+    lt  = lastindex(lλv)
+
+    @simd for i in Base.OneTo(lt)
+      ii     += 1
+      bbλ[ii] = lλv[i]
+    end
+  end
+
+  if !istip(tree)
+    ifx1 = isfix(tree.d1::iTgbmce)
+    if ifx1 && isfix(tree.d2::iTgbmce)
+      return nothing
+    elseif ifx1
+      gbm_copy_f!(tree.d1::iTgbmce, bbλ, ii-1)
+    else
+      gbm_copy_f!(tree.d2::iTgbmce, bbλ, ii-1)
+    end
+  end
+
+  return nothing
+end
+
+
 
 
 

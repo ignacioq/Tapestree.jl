@@ -598,33 +598,33 @@ end
 
 """
     llik_gbm_f(tree::iTgbmce,
+               μ   ::Float64,
                σλ  ::Float64,
-               σμ  ::Float64,
                δt  ::Float64,
                srδt::Float64)
 
 Estimate gbm birth-death likelihood for the tree in a fix branch.
 """
 function llik_gbm_f(tree::iTgbmce,
+                    μ   ::Float64,
                     σλ  ::Float64,
-                    σμ  ::Float64,
                     δt  ::Float64,
                     srδt::Float64)
 
   if istip(tree)
-    ll = ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, fdt(tree), srδt, false, false)
+    ll = ll_gbm_b(lλ(tree), μ, σλ, δt, fdt(tree), srδt, false, false)
   else
-    ll = ll_gbm_b(lλ(tree), lμ(tree), σλ, σμ, δt, fdt(tree), srδt, true, false)
+    ll = ll_gbm_b(lλ(tree), μ, σλ, δt, fdt(tree), srδt, true, false)
 
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
       return ll
     elseif ifx1
-      ll += llik_gbm_f(tree.d1::iTgbmce, σλ, σμ, δt, srδt) +
-            llik_gbm(  tree.d2::iTgbmce, σλ, σμ, δt, srδt)
+      ll += llik_gbm_f(tree.d1::iTgbmce, μ, σλ, δt, srδt) +
+            llik_gbm(  tree.d2::iTgbmce, μ, σλ, δt, srδt)
     else
-      ll += llik_gbm(  tree.d1::iTgbmce, σλ, σμ, δt, srδt) + 
-            llik_gbm_f(tree.d2::iTgbmce, σλ, σμ, δt, srδt)
+      ll += llik_gbm(  tree.d1::iTgbmce, μ, σλ, δt, srδt) + 
+            llik_gbm_f(tree.d2::iTgbmce, μ, σλ, δt, srδt)
     end
   end
 
@@ -636,8 +636,8 @@ end
 
 """
     br_ll_gbm(tree::iTgbmce,
+              μ   ::Float64,
               σλ  ::Float64,
-              σμ  ::Float64,
               δt  ::Float64,
               srδt::Float64,
               dri ::BitArray{1},
@@ -647,8 +647,8 @@ end
 Returns gbm birth-death likelihood for whole branch `br`.
 """
 function br_ll_gbm(tree::iTgbmce,
+                   μ   ::Float64,
                    σλ  ::Float64,
-                   σμ  ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
                    dri ::BitArray{1},
@@ -656,20 +656,20 @@ function br_ll_gbm(tree::iTgbmce,
                    ix  ::Int64)
 
   if ix === ldr
-    return llik_gbm_f(tree::iTgbmce, σλ, σμ, δt, srδt)
+    return llik_gbm_f(tree::iTgbmce, μ, σλ, δt, srδt)
   elseif ix < ldr
     ifx1 = isfix(tree.d1::iTgbmce)
     if ifx1 && isfix(tree.d2::iTgbmce)
       ix += 1
       if dri[ix]
-        ll = br_ll_gbm(tree.d1::iTgbmce, σλ, σμ, δt, srδt, dri, ldr, ix)
+        ll = br_ll_gbm(tree.d1::iTgbmce, μ, σλ, δt, srδt, dri, ldr, ix)
       else
-        ll = br_ll_gbm(tree.d2::iTgbmce, σλ, σμ, δt, srδt, dri, ldr, ix)
+        ll = br_ll_gbm(tree.d2::iTgbmce, μ, σλ, δt, srδt, dri, ldr, ix)
       end
     elseif ifx1
-      ll = br_ll_gbm(tree.d1::iTgbmce, σλ, σμ, δt, srδt, dri, ldr, ix)
+      ll = br_ll_gbm(tree.d1::iTgbmce, μ, σλ, δt, srδt, dri, ldr, ix)
     else
-      ll = br_ll_gbm(tree.d2::iTgbmce, σλ, σμ, δt, srδt, dri, ldr, ix)
+      ll = br_ll_gbm(tree.d2::iTgbmce, μ, σλ, δt, srδt, dri, ldr, ix)
     end
   end
 
@@ -740,7 +740,6 @@ end
     llr_gbm_sep_f(treep::iTgbmce,
                   treec::iTgbmce,
                   σλ  ::Float64,
-                  σμ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
 

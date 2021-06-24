@@ -185,6 +185,29 @@ snin(::Nothing) = 0
 
 
 
+
+"""
+    snen(tree::T) where {T <: iTree}
+
+Return the number of extinct nodes for `tree`.
+"""
+function snen(tree::T) where {T <: iTree}
+    if istip(tree) && isextinct(tree)
+      return 1
+    else
+      return snen(tree.d1) + snen(tree.d2)
+    end
+end
+
+"""
+    snen(::Nothing)
+
+Return the number of internal nodes for `tree`.
+"""
+snen(::Nothing) = 0
+
+
+
 """
     snan(tree::T) where {T <: iTree}
 
