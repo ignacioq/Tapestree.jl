@@ -202,7 +202,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
         logdunif(μc, μ_prior[1], μ_prior[2])
 
   lλmxpr = log(λa_prior[2])
-  μmxpr = log(μ_prior[2])
+  μmxpr  = log(μ_prior[2])
 
   # number of branches and of triads
   nbr  = lastindex(idf)
@@ -224,12 +224,11 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
       # update σλ or σμ
       if pupi === 1
 
-        llc, prc, σλc = 
-          update_σ!(σλc, Ψc, llc, prc, σλ_prior)
+        llc, prc, σλc = update_σ!(σλc, Ψc, llc, prc, σλ_prior)
 
-        llc, μc, lac = 
-          update_μ!(μc, Ψc, llc, μtn, lac, μmxpr, svf)
-          lup += 1.0
+        llc, μc, lac = update_μ!(μc, Ψc, llc, μtn, lac, μmxpr, svf)
+
+        lup += 1.0
 
       # gbm update
       elseif pupi === 2
@@ -276,15 +275,15 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
 
         Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, μc, σλc, tsv, bbλp, bbλc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
-      end
 
-      # log tuning parameters
-      ltn += 1
-      if ltn == tune_int
-        μtn = scalef(μtn,lac/lup)
-        ltn = 0
       end
+    end
 
+    # log tuning parameters
+    ltn += 1
+    if ltn === tune_int
+      μtn = scalef(μtn, lac/lup)
+      ltn = 0
     end
 
     next!(pbar)
@@ -383,11 +382,9 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
 
     shuffle!(pup)
 
-    ii = 0
     # parameter updates
-    for pupi in pup[1:7]
+    for pupi in pup
 
-      ii += 1
       # update σλ or σμ
       if pupi === 1
 
@@ -1097,11 +1094,11 @@ end
 
 MCMC update for `σ` with acceptance log.
 """
-function update_μ!(μc    ::Float64,
-                   Ψ     ::iTgbmce,
-                   llc   ::Float64,
-                   μtn   ::Float64,
-                   lac   ::Float64,
+function update_μ!(μc   ::Float64,
+                   Ψ    ::iTgbmce,
+                   llc  ::Float64,
+                   μtn  ::Float64,
+                   lac  ::Float64,
                    μmxpr::Float64,
                    svf  ::Function)
 

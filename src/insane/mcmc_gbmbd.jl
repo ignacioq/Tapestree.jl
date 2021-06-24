@@ -368,11 +368,9 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
     shuffle!(pup)
 
-    ii = 0
     # parameter updates
-    for pupi in pup[1:7]
+    for pupi in pup
 
-      ii += 1
       # update σλ or σμ
       if pupi === 1
 
