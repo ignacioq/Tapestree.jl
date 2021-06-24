@@ -299,6 +299,7 @@ function triad_lvupdate_trio!(treep::iTgbmce,
                               pr   ::Int64,
                               d1   ::Int64,
                               d2   ::Int64,
+                              μ    ::Float64,
                               σλ   ::Float64,
                               δt   ::Float64, 
                               srδt ::Float64,
@@ -398,7 +399,7 @@ function triad_lvupdate_trio!(treep::iTgbmce,
   # estimate likelihoods
   llr, acr = llr_propr(treep, treepd1, treepd2, 
                        treec, treecd1, treecd2, 
-                       σλ, δt, srδt, icr, wbc)
+                       μ, σλ, δt, srδt, icr, wbc)
 
   if -randexp() < acr
     llc += llr
@@ -447,6 +448,7 @@ function triad_lupdate_root!(treep ::iTgbmce,
                              pr    ::Int64,
                              d1    ::Int64,
                              d2    ::Int64,
+                             μ     ::Float64,
                              σλ    ::Float64,
                              δt    ::Float64, 
                              srδt  ::Float64,
@@ -504,7 +506,7 @@ function triad_lupdate_root!(treep ::iTgbmce,
   # estimate likelihoods
   llr, acr = llr_propr(treep, treepd1, treepd2, 
                        treec, treecd1, treecd2, 
-                       σλ, δt, srδt, icr, 0)
+                       μ, σλ, δt, srδt, icr, 0)
 
   # prior ratio
   if lλrp > lλmxpr
@@ -547,6 +549,7 @@ function llr_propr(treep  ::iTgbmce,
                    treec  ::iTgbmce,
                    treecd1::iTgbmce,
                    treecd2::iTgbmce,
+                   μ      ::Float64,
                    σλ     ::Float64,
                    δt     ::Float64,
                    srδt   ::Float64,

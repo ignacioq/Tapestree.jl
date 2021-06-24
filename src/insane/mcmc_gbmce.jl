@@ -240,13 +240,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
 
         llc = 
           lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
-            σλc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
-
-          """
-          here
-          """
-
-
+            μc, σλc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
       # forward simulation update
       else
@@ -1052,6 +1046,7 @@ function lvupdate!(Ψp    ::iTgbmce,
                    pr    ::Int64,
                    d1    ::Int64,
                    d2    ::Int64,
+                   μ     ::Float64,
                    σλ    ::Float64, 
                    δt    ::Float64, 
                    srδt  ::Float64, 
@@ -1069,11 +1064,11 @@ function lvupdate!(Ψp    ::iTgbmce,
     if ldr === 0
       llc = 
         triad_lupdate_root!(Ψp::iTgbmce, Ψc::iTgbmce, bbλp, bbλc, 
-          tsv, llc, pr, d1, d2, σλ, δt, srδt, lλmxpr, icr)
+          tsv, llc, pr, d1, d2, μ, σλ, δt, srδt, lλmxpr, icr)
     else
       llc = 
         triad_lvupdate_trio!(Ψp::iTgbmce, Ψc::iTgbmce, bbλp, bbλc, 
-          tsv, llc, pr, d1, d2, σλ, δt, srδt, ter, icr, wbc)
+          tsv, llc, pr, d1, d2, μ, σλ, δt, srδt, ter, icr, wbc)
 
     end
   elseif ix < ldr
@@ -1084,23 +1079,23 @@ function lvupdate!(Ψp    ::iTgbmce,
       if dri[ix]
         llc = 
           lvupdate!(Ψp.d1::iTgbmce, Ψc.d1::iTgbmce, llc, 
-            bbλp, bbλc, tsv, pr, d1, d2, σλ, δt, srδt, 
+            bbλp, bbλc, tsv, pr, d1, d2, μ, σλ, δt, srδt, 
             lλmxpr, icr, wbc, dri, ldr, ter, ix)
       else
         llc = 
           lvupdate!(Ψp.d2::iTgbmce, Ψc.d2::iTgbmce, llc, 
-            bbλp, bbλc, tsv, pr, d1, d2, σλ, δt, srδt, 
+            bbλp, bbλc, tsv, pr, d1, d2, μ, σλ, δt, srδt, 
             lλmxpr, icr, wbc, dri, ldr, ter, ix)
       end
     elseif ifx1
       llc = 
         lvupdate!(Ψp.d1::iTgbmce, Ψc.d1::iTgbmce, llc, 
-          bbλp, bbλc, tsv, pr, d1, d2, σλ, δt, srδt, 
+          bbλp, bbλc, tsv, pr, d1, d2, μ, σλ, δt, srδt, 
           lλmxpr, icr, wbc, dri, ldr, ter, ix)
     else
       llc = 
         lvupdate!(Ψp.d2::iTgbmce, Ψc.d2::iTgbmce, llc, 
-          bbλp, bbλc, tsv, pr, d1, d2, σλ, δt, srδt, 
+          bbλp, bbλc, tsv, pr, d1, d2, μ, σλ, δt, srδt, 
           lλmxpr, icr, wbc, dri, ldr, ter, ix)
     end
   end

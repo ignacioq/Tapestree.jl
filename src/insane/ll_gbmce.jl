@@ -758,7 +758,7 @@ function llr_gbm_sep_f(treep::iTgbmce,
       llr_gbm_b_sep(lλ(treep), lλ(treec), σλ, δt, fdt(treec), srδt, false)
   else
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), σλ, δt, fdt(treec), srδt, false) 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), σλ, δt, fdt(treec), srδt, true) 
 
     ifx1 = isfix(treec.d1)
     if ifx1 && isfix(treec.d2)
@@ -824,6 +824,7 @@ end
 
 
 
+
 """
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
@@ -850,18 +851,18 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     nI = lastindex(lλc)-2
 
     llrbm = 0.0
-    llrbd  = 0.0
+    llrbd = 0.0
  
     lλpi = lλp[1]
     lλci = lλc[1]
 
     @simd for i in Base.OneTo(nI)
-      lλpi1   = lλp[i+1]
-      lλci1   = lλc[i+1]
+      lλpi1  = lλp[i+1]
+      lλci1  = lλc[i+1]
       llrbm += (lλpi1 - lλpi)^2 - (lλci1 - lλci)^2
       llrbd += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-      lλpi    = lλpi1
-      lλci    = lλci1
+      lλpi   = lλpi1
+      lλci   = lλci1
     end
     # overall
     llrbm *= (-0.5/((σλ*srδt)^2))
@@ -869,12 +870,9 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
     # add final non-standard `δt`
     if !iszero(fdt)
-
-      srfdt = sqrt(fdt)
       lλpi1 = lλp[nI+2]
       lλci1 = lλc[nI+2]
-
-      llrbm += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, srfdt*σλ)
+      llrbm += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, sqrt(fdt)*σλ)
       llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
 
       if λev
