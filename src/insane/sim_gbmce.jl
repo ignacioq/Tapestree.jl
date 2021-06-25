@@ -343,7 +343,7 @@ function sim_gbmce(nsδt::Float64,
   if t <= nsδt
     bt  += t
 
-    t   = max(0.0,t)
+    t   = max(0.0, t)
     srt = sqrt(t)
     λt1 = rnorm(λt, srt*σλ)
 

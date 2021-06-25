@@ -83,7 +83,12 @@ function daughters_lprop!(treep::iTgbmce,
   pepr   = tsv[pr][1]
 
   normprop += 
-    trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)
+    duoldnorm(λf,        λd1, λd2, ped1, ped2, σλ) -
+    duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ)
+
+  # normprop += 
+  #   trioldnorm(λf,        λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ) - 
+  #   trioldnorm(λd1v_c[1], λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)
 
   # normprop += 
   #   trioldnorm(λf, λpr1_c, λd1, λd2, pepr, ped1, ped2, σλ)        -

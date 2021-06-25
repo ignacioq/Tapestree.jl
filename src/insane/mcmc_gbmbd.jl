@@ -515,10 +515,8 @@ function fsp(Ψp   ::iTgbmbd,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  fdti = tsv[bix][2]
-
   t0, ret, λfm1, μfm1, λf, μf, dft0 = 
-    fsbi(bi, bbλc[bix][1], bbμc[bix][1], fdti, σλ, σμ, δt, srδt, nlim)
+    fsbi(bi, bbλc[bix][1], bbμc[bix][1], σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -640,7 +638,6 @@ Forward gbm birth-death simulation for branch `bi`.
 function fsbi(bi  ::iBffs, 
               iλ  ::Float64, 
               iμ  ::Float64, 
-              fdti::Float64,
               σλ  ::Float64, 
               σμ  ::Float64, 
               δt  ::Float64, 
@@ -658,33 +655,33 @@ function fsbi(bi  ::iBffs,
 
   na = snan(t0)
 
-  λfm1, μfm1, λf, μf, dft0 = NaN, NaN, NaN, NaN, NaN
+  λf, μf, dft0 = NaN, NaN, NaN
 
   # if simulation goes extinct or maximum number of species reached
   if iszero(na) || nsp === nlim
     ret = false
   # if one surviving lineage
   elseif isone(na)
-    f, λfm1, μfm1, λf, μf, dft0 = fixalive!(t0, NaN, NaN, NaN, NaN, NaN)
+    f, λf, μf, dft0 = fixalive!(t0, NaN, NaN, NaN)
   elseif na > 1
     # if terminal branch
     if it(bi)
       ret = false
     # if continue the simulation
     else
-      fdt0 = max(δt - fdti, 0.0)
 
       # fix random tip and return end λ(t) and μ(t) 
-      λfm1, μfm1, λf, μf, dft0 = fixrtip!(t0, na, NaN, NaN, NaN, NaN, NaN)
+      λf, μf, dft0 = fixrtip!(t0, na, NaN, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
 
         # get their final λ and μ to continue forward simulation
-        ix, λt, μt = fλμ1(t0, NaN, NaN, 1, 0)
+        ix, λt, μt, fdti = fλμ1(t0, NaN, NaN, NaN, 1, 0)
 
         for i in Base.OneTo(2)
 
-          st0, nsp = sim_gbm(fdt0, tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+          st0, nsp = 
+            sim_gbm(max(δt - fdti, 0.0), tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
 
           # if maximum number of species reached.
           if nsp === nlim
@@ -879,8 +876,6 @@ Fixes the the path for a random non extinct tip.
 """
 function fixrtip!(tree::iTgbmbd, 
                   na  ::Int64, 
-                  λfm1::Float64,
-                  μfm1::Float64,
                   λf  ::Float64, 
                   μf  ::Float64,
                   dft0::Float64) 
@@ -889,34 +884,31 @@ function fixrtip!(tree::iTgbmbd,
 
   if !istip(tree)
     if isextinct(tree.d1::iTgbmbd)
-      λfm1, μfm1, λf, μf, dft0 = 
-        fixrtip!(tree.d2::iTgbmbd, na, λfm1, μfm1, λf, μf, dft0)
+      λf, μf, dft0 = 
+        fixrtip!(tree.d2::iTgbmbd, na, λf, μf, dft0)
     elseif isextinct(tree.d2::iTgbmbd)
-      λfm1, μfm1, λf, μf, dft0 = 
-        fixrtip!(tree.d1::iTgbmbd, na, λfm1, μfm1, λf, μf, dft0)
+      λf, μf, dft0 = 
+        fixrtip!(tree.d1::iTgbmbd, na, λf, μf, dft0)
     else
       na1 = snan(tree.d1::iTgbmbd)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λfm1, μfm1, λf, μf, dft0 = 
-          fixrtip!(tree.d2::iTgbmbd, na - na1, λfm1, μfm1, λf, μf, dft0)
+        λf, μf, dft0 = 
+          fixrtip!(tree.d2::iTgbmbd, na - na1, λf, μf, dft0)
       else
-        λfm1, μfm1, λf, μf, dft0 = 
-          fixrtip!(tree.d1::iTgbmbd, na1, λfm1, μfm1, λf, μf, dft0)
+        λf, μf, dft0 = 
+          fixrtip!(tree.d1::iTgbmbd, na1, λf, μf, dft0)
       end
     end
   else
     dft0 = fdt(tree)
     lλv  = lλ(tree)
-    lμv  = lμ(tree)
     l    = lastindex(lλv)
-    λfm1 = lλv[l-1]
     λf   = lλv[l]
-    μfm1 = lμv[l-1]
-    μf   = lμv[l]
+    μf   = lμ(tree)[l]
   end
 
-  return λfm1, μfm1, λf, μf, dft0
+  return λf, μf, dft0
 end
 
 
@@ -931,8 +923,6 @@ end
 Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::iTgbmbd,
-                   λfm1::Float64, 
-                   μfm1::Float64,
                    λf  ::Float64, 
                    μf  ::Float64,
                    dft0::Float64)
@@ -941,35 +931,32 @@ function fixalive!(tree::iTgbmbd,
     fix!(tree)
     dft0 = fdt(tree)
     lλv  = lλ(tree)
-    lμv  = lμ(tree)
     l    = lastindex(lλv)
-    λfm1 = lλv[l-1]
     λf   = lλv[l]
-    μfm1 = lμv[l-1]
-    μf   = lμv[l]
+    μf   = lμ(tree)[l]
 
-    return true, λfm1, μfm1, λf, μf, dft0
+    return true, λf, μf, dft0
   end
 
   if !isnothing(tree.d2)
-    f, λfm1, μfm1, λf, μf, dft0 = 
-      fixalive!(tree.d2::iTgbmbd, λfm1, μfm1, λf, μf, dft0)
+    f, λf, μf, dft0 = 
+      fixalive!(tree.d2::iTgbmbd, λf, μf, dft0)
     if f 
       fix!(tree)
-      return true, λfm1, μfm1, λf, μf, dft0
+      return true, λf, μf, dft0
     end
   end
 
   if !isnothing(tree.d1)
-    f, λfm1, μfm1, λf, μf, dft0 = 
-      fixalive!(tree.d1::iTgbmbd, λfm1, μfm1, λf, μf, dft0)
+    f, λf, μf, dft0 = 
+      fixalive!(tree.d1::iTgbmbd, λf, μf, dft0)
     if f 
       fix!(tree)
-      return true, λfm1, μfm1, λf, μf, dft0
+      return true, λf, μf, dft0
     end
   end
 
-  return false, λfm1, μfm1, λf, μf, dft0
+  return false, λf, μf, dft0
 end
 
 
@@ -983,10 +970,11 @@ Get end `λ` and `μ` for a `it` tip in `tree` given in `tree.d1` order
 not taking into account the fixed tip.
 """
 function fλμ1(tree::iTgbmbd, 
-              λt   ::Float64, 
-              μt   ::Float64, 
-              it   ::Int64, 
-              ix   ::Int64)
+              λt  ::Float64, 
+              μt  ::Float64, 
+              fdti::Float64,
+              it  ::Int64, 
+              ix  ::Int64)
 
   if istip(tree) && !isextinct(tree)
     if !isfix(tree)
@@ -994,21 +982,22 @@ function fλμ1(tree::iTgbmbd,
     end
 
     if ix === it
-      λt = lλ(tree)[end]
-      μt = lμ(tree)[end]
+      λt   = lλ(tree)[end]
+      μt   = lμ(tree)[end]
+      fdti = fdt(tree)
       ix += 1
     end
-    return ix, λt, μt
+    return ix, λt, μt, fdti
   end
 
   if ix <= it && !isnothing(tree.d1)
-    ix, λt, μt = fλμ1(tree.d1::iTgbmbd, λt, μt, it, ix)
+    ix, λt, μt, fdti = fλμ1(tree.d1::iTgbmbd, λt, μt, fdti, it, ix)
   end
   if ix <= it && !isnothing(tree.d2)
-    ix, λt, μt = fλμ1(tree.d2::iTgbmbd, λt, μt, it, ix)
+    ix, λt, μt, fdti = fλμ1(tree.d2::iTgbmbd, λt, μt, fdti, it, ix)
   end
 
-  return ix, λt, μt
+  return ix, λt, μt, fdti
 end
 
 

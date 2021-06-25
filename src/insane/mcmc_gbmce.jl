@@ -351,7 +351,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
                     prints  ::Int64,
                     svf     ::Function)
 
-
   # crown or stem conditioning
   icr = iszero(pe(Ψc))
 
@@ -382,17 +381,27 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
 
     shuffle!(pup)
 
+    ii = 0
     # parameter updates
     for pupi in pup
 
+      ii += 1
       # update σλ or σμ
       if pupi === 1
 
         llc, prc, σλc = 
           update_σ!(σλc, Ψc, llc, prc, σλ_prior)
 
+          μxx = μc
+          llxx = llc
         llc, μc = 
           update_μ!(μc, Ψc, llc, μtn, μmxpr, svf)
+
+        # ll0 = llik_gbm(Ψc, μc, σλc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, ii, 1, μc
+        #    return 
+        # end
 
       # gbm update
       elseif pupi === 2
@@ -415,6 +424,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
 
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
             μc, σλc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
+
+        # ll0 = llik_gbm(Ψc, μc, σλc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, 2
+        #    return 
+        # end
 
       # forward simulation update
       else
@@ -439,6 +454,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
 
         Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, μc, σλc, tsv, bbλp, bbλc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
+
+        # ll0 = llik_gbm(Ψc, μc, σλc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, 3
+        #    return 
+        # end
 
       end
     end
@@ -510,10 +531,8 @@ function fsp(Ψp   ::iTgbmce,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  fdti = tsv[bix][2]
-
   t0, ret, λf = 
-    fsbi(bi, bbλc[bix][1], fdti, μ, σλ, δt, srδt, nlim)
+    fsbi(bi, bbλc[bix][1], μ, σλ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -631,7 +650,6 @@ Forward gbmce simulation for branch `bi`.
 """
 function fsbi(bi  ::iBffs, 
               iλ  ::Float64, 
-              fdti::Float64,
               μ   ::Float64, 
               σλ  ::Float64, 
               δt  ::Float64, 
@@ -663,7 +681,6 @@ function fsbi(bi  ::iBffs,
       ret = false
     # if continue the simulation
     else
-      fdt0 = max(δt - fdti, 0.0)
 
       # fix random tip and return end λ(t)
       λf, dft0 = fixrtip!(t0, na, NaN, NaN)
@@ -671,11 +688,12 @@ function fsbi(bi  ::iBffs,
       for j in Base.OneTo(na - 1)
 
         # get their final λ to continue forward simulation
-        ix, λt = fλ1(t0, NaN, 1, 0)
+        ix, λt, fdti = fλ1(t0, NaN, NaN, 1, 0)
 
         for i in Base.OneTo(2)
 
-          st0, nsp = sim_gbmce(fdt0, tfb, λt, μ, σλ, δt, srδt, 1, nlim)
+          st0, nsp = 
+            sim_gbmce(max(δt - fdti, 0.0), tfb, λt, μ, σλ, δt, srδt, 1, nlim)
 
           # if maximum number of species reached.
           if nsp === nlim
@@ -922,12 +940,12 @@ end
 
 
 """
-    fλ1(tree::T, λt::Float64, it::Int64, ix::Int64) where {T <: iTgbm}
+    fλ1(tree::T, λt::Float64, fdti::Float64, it::Int64, ix::Int64) where {T <: iTgbm}
 
 Get final `λ(t)` for a `it` tip in `tree` given in `tree.d1` order
 not taking into account the fixed tip.
 """
-function fλ1(tree::T, λt::Float64, it::Int64, ix::Int64) where {T <: iTgbm}
+function fλ1(tree::T, λt::Float64, fdti::Float64, it::Int64, ix::Int64) where {T <: iTgbm}
 
   if istip(tree) && !isextinct(tree)
     if !isfix(tree)
@@ -935,20 +953,21 @@ function fλ1(tree::T, λt::Float64, it::Int64, ix::Int64) where {T <: iTgbm}
     end
 
     if ix === it
-      λt = lλ(tree)[end]
+      λt   = lλ(tree)[end]
+      fdti = fdt(tree)
       ix += 1
     end
-    return ix, λt
+    return ix, λt, fdti
   end
 
   if ix <= it && !isnothing(tree.d1)
-    ix, λt = fλ1(tree.d1::T, λt, it, ix)
+    ix, λt, fdti = fλ1(tree.d1::T, λt, fdti, it, ix)
   end
   if ix <= it && !isnothing(tree.d2)
-    ix, λt = fλ1(tree.d2::T, λt, it, ix)
+    ix, λt, fdti = fλ1(tree.d2::T, λt, fdti, it, ix)
   end
 
-  return ix, λt
+  return ix, λt, fdti
 end
 
 
@@ -1123,6 +1142,59 @@ end
 
 
 
+
+
+#   μxx = μc
+#   llxx = llc
+# llc, μc = 
+#   update_μ!(μc, Ψc, llc, μtn, μmxpr, svf)
+
+
+# llik_gbm(Ψc, μc, σλc, δt, srδt) + svf(Ψc, μc) - 
+# llik_gbm(Ψc, μxx, σλc, δt, srδt) - svf(Ψc, μxx)
+
+# l, ne = treelength_ne(Ψ)
+# llr   = ne*(log(μc) - log(μxx)) + l*(μxx - μc) + svf(Ψ, μc) - svf(Ψ, μxx)
+
+
+# fdt(Ψ)
+# dt(Ψ)
+
+
+# fdt(Ψ.d2)
+# dt(Ψ.d2)
+
+# fdt(Ψ.d1)
+# dt(Ψ.d1)
+
+# Ψxx = deepcopy(Ψc)
+
+
+
+
+# # d2
+
+# Ψxx = Ψxx.d2
+
+# l, ne = treelength_ne(Ψxx)
+# llr   = ne*(log(μc) - log(μxx)) + l*(μxx - μc) + svf(Ψxx, μc) - svf(Ψxx, μxx)
+
+# llik_gbm(Ψxx, μc, σλc, δt, srδt) + svf(Ψxx, μc) - 
+# llik_gbm(Ψxx, μxx, σλc, δt, srδt) - svf(Ψxx, μxx)
+
+
+
+
+# # d2.d1
+
+# Ψxx = deepcopy(Ψc)
+# Ψxx = Ψxx.d2.d2
+
+# l, ne = treelength_ne(Ψxx)
+# llr   = ne*(log(μc) - log(μxx)) + l*(μxx - μc) + svf(Ψxx, μc) - svf(Ψxx, μxx)
+
+# llik_gbm(Ψxx, μc, σλc, δt, srδt) + svf(Ψxx, μc) - 
+# llik_gbm(Ψxx, μxx, σλc, δt, srδt) - svf(Ψxx, μxx)
 
 
 """
