@@ -64,7 +64,6 @@ function simulate_sse(λ       ::Array{Float64,1},
     if verbose
       @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
     end
-    return Dict{Int64, Vector{Float64}}(), ones(Int64,n,2), ones(Float64,n)
   end
 
   if retry_ext 
@@ -97,7 +96,6 @@ function simulate_sse(λ       ::Array{Float64,1},
         if verbose
           @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
         end
-        return Dict{Int64, Vector{Float64}}(), ones(Int64,n,2), ones(Float64,n)
       end
     end
   else 
@@ -395,7 +393,10 @@ function simulate_edges(λ       ::Array{Float64,1},
     simt < 0.0 && break
 
     if n > nspp_max 
-      return zeros(Int64,0,2), Float64[], Int64[], n, Sgh[], 0
+      ed = ed[1:(2n-2),:]
+      el = el[1:(2n-2)]
+
+      return ed, el, st, n, S, k
     end
   end
 
