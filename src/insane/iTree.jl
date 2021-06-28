@@ -406,6 +406,158 @@ iTgbmce(::Nothing,
 
 
 
+
+"""
+    iTgbmct
+
+A composite recursive type of supertype `iTgbm` 
+representing a binary phylogenetic tree with  `λ` evolving as a 
+Geometric Brownian motion and constant `μ` for `insane` use, 
+with the following fields:
+
+  d1:   daughter tree 1
+  d2:   daughter tree 2
+  pe:   pendant edge
+  iμ:   if extinct node
+  fx:   if fix (observed) node
+  dt:   choice of time lag
+  fdt:  final `dt`
+  lλ:   array of a Brownian motion evolution of `log(λ)`
+
+  iTgbmct(d1  ::Union{iTgbmct, Nothing}, 
+          d2  ::Union{iTgbmct, Nothing}, 
+          pe  ::Float64, 
+          dt  ::Float64,
+          fdt::Float64,
+          iμ   ::Bool, 
+          fx   ::Bool, 
+          lλ   ::Array{Float64,1})
+
+Constructs an `iTgbmct` object with two `iTgbmct` daughters and pendant edge `pe`.
+"""
+mutable struct iTgbmct <: iTgbm
+  d1 ::Union{iTgbmct, Nothing}
+  d2 ::Union{iTgbmct, Nothing}
+  pe ::Float64
+  dt ::Float64
+  fdt::Float64
+  iμ ::Bool
+  fx ::Bool
+  lλ ::Array{Float64,1}
+
+  # inner constructor
+  iTgbmct(d1 ::Union{iTgbmct, Nothing}, 
+          d2 ::Union{iTgbmct, Nothing}, 
+          pe ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1}) = 
+    new(d1, d2, pe, dt, fdt, iμ, fx, lλ)
+end
+
+# outer constructors
+iTgbmct() = iTgbmct(nothing, nothing, 0.0, 0.0, 0.0, false, false, Float64[])
+
+# outer constructors
+iTgbmct(d1 ::Union{iTgbmct, Nothing}, 
+        d2 ::Union{iTgbmct, Nothing}, 
+        pe ::Float64, 
+        dt ::Float64,
+        fdt::Float64,
+        lλ ::Array{Float64,1}) = 
+  iTgbmct(d1, d2, pe, dt, fdt, false, false, lλ)
+
+# pretty-printing
+Base.show(io::IO, t::iTgbmct) = 
+  print(io, "insane gbm-ct tree with ", sntn(t), " tips (", snen(t)," extinct)")
+
+
+
+
+"""
+    sTbd(tree::iTgbmct)
+
+Demotes a tree of type `iTgbmct` to `sTbd`.
+"""
+sTbd(tree::iTgbmct) =
+  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
+
+"""
+    sTbd(tree::Nothing) 
+
+Demotes a tree of type `iTgbmct` to `sTbd`.
+"""
+sTbd(tree::Nothing) = nothing
+
+
+
+
+"""
+    iTgbmct(tree::sTbd, 
+            δt  ::Float64, 
+            srδt::Float64, 
+            lλa ::Float64, 
+            σλ  ::Float64,
+            σμ  ::Float64)
+
+Promotes an `sTbd` to `iTgbmct` according to some values for `λ` and `μ` 
+diffusion.
+"""
+function iTgbmct(tree::sTbd, 
+                 δt  ::Float64, 
+                 srδt::Float64, 
+                 lλa ::Float64, 
+                 σλ  ::Float64)
+
+  pet  = pe(tree)
+
+  # if crown root
+  if iszero(pet)
+    iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, σλ), 
+            iTgbmct(tree.d2, δt, srδt, lλa, σλ),
+            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
+  else
+    nt   = Int64(fld(pet,δt))
+    fdti = mod(pet, δt)
+
+    lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
+
+    if iszero(fdti)
+      fdti = δt
+    end
+
+    l = lastindex(lλv)
+
+    iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], σλ), 
+            iTgbmct(tree.d2, δt, srδt, lλv[l], σλ),
+            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv)
+  end
+end
+
+
+"""
+    iTgbmct(::Nothing, 
+            δt  ::Float64, 
+            srδt::Float64, 
+            lλa ::Float64, 
+            lμa ::Float64, 
+            σλ  ::Float64,
+            σμ  ::Float64)
+
+Promotes an `sTbd` to `iTgbmct` according to some values for `λ` and `μ` 
+diffusion.
+"""
+iTgbmct(::Nothing, 
+        δt  ::Float64, 
+        srδt::Float64, 
+        lλa ::Float64, 
+        σλ  ::Float64) = nothing
+
+
+
+
 """
     iTgbmbd
 

@@ -113,6 +113,45 @@ end
 
 
 """
+    function f(tree::T, zfun::Function, ϵ::Float64)
+
+Recipe for plotting a Type `iTgbmct` given `ϵ`.
+"""
+@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
+
+  x = Float64[]
+  y = Float64[]
+  z = Float64[]
+
+  rplottree!(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
+
+  @simd for i in Base.OneTo(lastindex(z))
+    z[i] *= ϵ
+  end
+
+  # plot defaults
+  line_z          --> z
+  linecolor       --> :inferno
+  legend          --> :none
+  colorbar        --> true
+  xguide          --> "time"
+  fontfamily      --> font(2, "Helvetica")
+  xlims           --> (0, treeheight(tree))
+  ylims           --> (0, sntn(tree)+1)
+  xflip           --> true
+  xtickfont       --> font(8, "Helvetica")
+  grid            --> :off
+  xtick_direction --> :out
+  yticks          --> (nothing)
+  yshowaxis       --> false
+
+  return x, y
+end
+
+
+
+
+"""
     rplottree!(tree::T, 
               xc  ::Float64, 
               yr  ::UnitRange{Int64},

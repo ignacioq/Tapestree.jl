@@ -1143,60 +1143,6 @@ end
 
 
 
-
-#   μxx = μc
-#   llxx = llc
-# llc, μc = 
-#   update_μ!(μc, Ψc, llc, μtn, μmxpr, svf)
-
-
-# llik_gbm(Ψc, μc, σλc, δt, srδt) + svf(Ψc, μc) - 
-# llik_gbm(Ψc, μxx, σλc, δt, srδt) - svf(Ψc, μxx)
-
-# l, ne = treelength_ne(Ψ)
-# llr   = ne*(log(μc) - log(μxx)) + l*(μxx - μc) + svf(Ψ, μc) - svf(Ψ, μxx)
-
-
-# fdt(Ψ)
-# dt(Ψ)
-
-
-# fdt(Ψ.d2)
-# dt(Ψ.d2)
-
-# fdt(Ψ.d1)
-# dt(Ψ.d1)
-
-# Ψxx = deepcopy(Ψc)
-
-
-
-
-# # d2
-
-# Ψxx = Ψxx.d2
-
-# l, ne = treelength_ne(Ψxx)
-# llr   = ne*(log(μc) - log(μxx)) + l*(μxx - μc) + svf(Ψxx, μc) - svf(Ψxx, μxx)
-
-# llik_gbm(Ψxx, μc, σλc, δt, srδt) + svf(Ψxx, μc) - 
-# llik_gbm(Ψxx, μxx, σλc, δt, srδt) - svf(Ψxx, μxx)
-
-
-
-
-# # d2.d1
-
-# Ψxx = deepcopy(Ψc)
-# Ψxx = Ψxx.d2.d2
-
-# l, ne = treelength_ne(Ψxx)
-# llr   = ne*(log(μc) - log(μxx)) + l*(μxx - μc) + svf(Ψxx, μc) - svf(Ψxx, μxx)
-
-# llik_gbm(Ψxx, μc, σλc, δt, srδt) + svf(Ψxx, μc) - 
-# llik_gbm(Ψxx, μxx, σλc, δt, srδt) - svf(Ψxx, μxx)
-
-
 """
     update_μ!(μc    ::Float64,
               Ψ     ::iTgbmce,
