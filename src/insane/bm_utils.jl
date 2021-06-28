@@ -650,6 +650,22 @@ lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float6
 
 
 """
+    lrdnorm_bm_x(xp::Float64, 
+                 xc::Float64, 
+                 μ ::Float64, 
+                 σsrt::Float64)
+
+Compute the **Normal** density ratio in logarithmic scale with 
+standard density `σ` and mean `μ` for `xp`
+and `xc`, respectively.
+"""
+lrdnorm_bm_x(xp::Float64, xc::Float64, μ::Float64, σsrt::Float64) =
+  -0.5*((xp - μ)^2 - (xc - μ)^2)/σsrt^2
+
+
+
+
+"""
     lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64)
 
 Compute the **Normal** density ratio in logarithmic scale with mean `μ` 
