@@ -392,8 +392,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
         llc, prc, σλc = 
           update_σ!(σλc, Ψc, llc, prc, σλ_prior)
 
-          μxx = μc
-          llxx = llc
         llc, μc = 
           update_μ!(μc, Ψc, llc, μtn, μmxpr, svf)
 

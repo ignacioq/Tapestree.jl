@@ -297,6 +297,34 @@ end
 
 
 
+"""
+    sss_gbm(tree::iTgbmct)
+
+Returns the log-likelihood ratio for a `iTgbmct` according 
+to GBM birth-death for a `σ` proposal.
+"""
+function sss_gbm(tree::iTgbmct)
+
+  if istip(tree) 
+    ssλ, n = 
+      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+  else
+    ssλ, n = 
+      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+    ssλ1, n1 = 
+      sss_gbm(tree.d1::iTgbmct)
+    ssλ2, n2 = 
+      sss_gbm(tree.d2::iTgbmct)
+
+    ssλ += ssλ1 + ssλ2
+    n   += n1 + n2
+  end
+
+  return ssλ, n
+end
+
+
+
 
 """
     ll_gbm_b(lλv ::Array{Float64,1},
@@ -519,8 +547,8 @@ separately (for gbm and bd).
 """
 function llr_gbm_sep_f(treep::iTgbmct,
                        treec::iTgbmct,
-                       σλ   ::Float64,
                        ϵ    ::Float64,
+                       σλ   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64)
 
@@ -605,11 +633,13 @@ end
 """
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
+                  ϵ   ::Float64,
                   σλ  ::Float64,
                   δt  ::Float64, 
                   fdt::Float64,
                   srδt::Float64,
-                  λev ::Bool)
+                  λev ::Bool,
+                  μev ::Bool)
 
 Returns the log-likelihood for a branch according to GBM birth-death 
 separately (for gbm and bd).

@@ -190,16 +190,16 @@ end
 
 
 """
-    gbm_copy_f!(tree::iTgbmce,
+    gbm_copy_f!(tree::T,
                 bbλ ::Array{Float64,1},
-                ii  ::Int64)
+                ii  ::Int64) where {T <: iTgbm}
 
 Copies the gbm birth-death in place for a fixed branch into the 
 help arrays `bbλ`.
 """
-function gbm_copy_f!(tree::iTgbmce,
+function gbm_copy_f!(tree::T,
                      bbλ ::Array{Float64,1},
-                     ii  ::Int64)
+                     ii  ::Int64) where {T <: iTgbm}
 
   if !iszero(fdt(tree))
     lλv = lλ(tree)
@@ -212,13 +212,13 @@ function gbm_copy_f!(tree::iTgbmce,
   end
 
   if !istip(tree)
-    ifx1 = isfix(tree.d1::iTgbmce)
-    if ifx1 && isfix(tree.d2::iTgbmce)
+    ifx1 = isfix(tree.d1::T)
+    if ifx1 && isfix(tree.d2::T)
       return nothing
     elseif ifx1
-      gbm_copy_f!(tree.d1::iTgbmce, bbλ, ii-1)
+      gbm_copy_f!(tree.d1::T, bbλ, ii-1)
     else
-      gbm_copy_f!(tree.d2::iTgbmce, bbλ, ii-1)
+      gbm_copy_f!(tree.d2::T, bbλ, ii-1)
     end
   end
 
