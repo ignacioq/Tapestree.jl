@@ -530,7 +530,7 @@ function fsp(Ψp   ::iTgbmce,
              wbc  ::Int64)
 
   t0, ret, λf = 
-    fsbi(bi, bbλc[bix][1], μ, σλ, δt, srδt, nlim)
+    fsbi_ct(bi, bbλc[bix][1], μ, σλ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -635,24 +635,24 @@ end
 
 
 """
-    fsbi(bi  ::iBffs, 
-         iλ  ::Float64, 
-         fdti::Float64,
-         μ   ::Float64, 
-         σλ  ::Float64, 
-         δt  ::Float64, 
-         srδt::Float64,
-         nlim::Int64)
+    fsbi_ct(bi  ::iBffs, 
+            iλ  ::Float64, 
+            fdti::Float64,
+            μ   ::Float64, 
+            σλ  ::Float64, 
+            δt  ::Float64, 
+            srδt::Float64,
+            nlim::Int64)
 
 Forward gbmce simulation for branch `bi`.
 """
-function fsbi(bi  ::iBffs, 
-              iλ  ::Float64, 
-              μ   ::Float64, 
-              σλ  ::Float64, 
-              δt  ::Float64, 
-              srδt::Float64,
-              nlim::Int64)
+function fsbi_ct(bi  ::iBffs, 
+                 iλ  ::Float64, 
+                 μ   ::Float64, 
+                 σλ  ::Float64, 
+                 δt  ::Float64, 
+                 srδt::Float64,
+                 nlim::Int64)
 
   # retain the simulation?
   ret = true

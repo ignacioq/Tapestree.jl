@@ -632,6 +632,70 @@ end
 
 
 
+"""
+    remove_extinct(tree::iTgbmct)
+
+Remove extinct tips from `iTgbmct`.
+"""
+function remove_extinct(tree::iTgbmct)
+
+  tree.d1 = remove_extinct(tree.d1)
+  tree.d2 = remove_extinct(tree.d2)
+
+  if isextinct(tree.d1)
+    if isextinct(tree.d2)
+      tree.d1 = nothing
+      tree.d2 = nothing
+      setproperty!(tree, :iμ, true)
+    else
+      ppr = pe(tree)
+      npe = ppr + pe(tree.d2)
+
+      lλ0 = lλ(tree)
+
+      pop!(lλ0)
+
+      prepend!(lλ(tree.d2), lλ0) 
+
+      fdt0 = fdt(tree) + fdt(tree.d2)
+
+      if fdt0 > dt(tree) 
+        fdt0 -= dt(tree) 
+      end
+
+      setfdt!(tree, fdt0) 
+
+      tree = tree.d2
+      setpe!(tree, npe)
+
+    end
+  elseif isextinct(tree.d2)
+    ppr = pe(tree)
+    npe = ppr + pe(tree.d1)
+
+    lλ0 = lλ(tree)
+
+    pop!(lλ0)
+
+    prepend!(lλ(tree.d1), lλ0) 
+
+    fdt0 = fdt(tree) + fdt(tree.d1)
+
+    if fdt0 > dt(tree) 
+      fdt0 -= dt(tree) 
+    end
+
+    setfdt!(tree, fdt0) 
+
+    tree = tree.d1
+    setpe!(tree, npe)
+  end
+
+  return tree
+end
+
+
+
 
 """
     remove_extinct(tree::iTgbmbd)

@@ -313,13 +313,56 @@ function iquantile(treev::Array{iTgbmce,1}, p::Float64)
     pe(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
 end
 
-"""
-    iquantile(::Nothing, p::Float64, lv::Function)
 
-Make an `iTgbmce` with the quantile specified by `p` in data specified in 
+
+"""
+    iquantile(treev::Array{iTgbmct,1}, p::Float64)
+
+Make an `iTgbmct` with the quantile specified by `p` in data specified in 
 function `lv`.
 """
-iquantile(::Nothing, p::Float64) = nothing
+function iquantile(treev::Array{iTgbmct,1}, p::Float64)
+
+  nt = lastindex(treev)
+  t1 = treev[1]
+
+  # make vector of lambdas
+  vs = Array{Float64,1}[]
+  for t in treev
+    push!(vs, lλ(t)) 
+  end
+
+  sv = Float64[]
+  # make fill vector to estimate statistics
+  v = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vs[1]))
+    for t in Base.OneTo(nt)
+      v[t] = vs[t][i]
+    end
+    push!(sv, quantile(v, p))
+  end
+
+  if isnothing(treev[1].d1)
+    treev1 = nothing
+  else
+    treev1 = iTgbmct[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end 
+  end
+
+  if isnothing(treev[1].d2)
+    treev2 = nothing
+  else
+    treev2 = iTgbmct[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end 
+  end
+
+  iTgbmct(iquantile(treev1, p), iquantile(treev2, p),
+    pe(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
+end
 
 
 
