@@ -361,29 +361,62 @@ end
 
 
 """
-    sss_gbm(tree::iTgbmct)
+    sλ_gbm_b(lλv::Array{Float64,1},
+              lμv::Array{Float64,1},
+              δt ::Float64, 
+              fdt::Float64)
 
-Returns the log-likelihood ratio for a `iTgbmct` according 
-to GBM birth-death for a `σ` proposal.
+Returns the sum of `λ` rates for a `iTgbmct` branch according 
+to GBM birth-death for a `ϵ` proposal.
 """
-function sss_gbm(tree::iTgbmct)
+@inline function sλ_gbm_b(lλv::Array{Float64,1},
+                          δt ::Float64, 
+                          fdt::Float64)
 
-  if istip(tree) 
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
-  else
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
-    ssλ1, n1 = 
-      sss_gbm(tree.d1::iTgbmct)
-    ssλ2, n2 = 
-      sss_gbm(tree.d2::iTgbmct)
+  @inbounds begin
 
-    ssλ += ssλ1 + ssλ2
-    n   += n1 + n2
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
+
+    sλt  = 0.0
+    lλvi = lλv[1]
+    @simd for i in Base.OneTo(nI)
+      lλvi1 = lλv[i+1]
+      sλt  += exp(0.5*(lλvi + lλvi1))
+      lλvi  = lλvi1
+    end
+
+    # add to global sum
+    sλt *= δt
+
+    # add final non-standard `δt`
+    if !iszero(fdt)
+      sλt += fdt * exp(0.5*(lλv[nI+2] + lλvi))
+    end
   end
 
-  return ssλ, n
+  return sλt
+end
+
+
+
+"""
+    sλ_gbm(tree::iTgbmct)
+
+Returns the sum of `λ` rates for a `iTgbmct` according 
+to GBM birth-death for a `ϵ` proposal.
+"""
+function sλ_gbm(tree::iTgbmct)
+
+  if istip(tree) 
+    sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
+  else
+    sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree)) + 
+          sλ_gbm(tree.d1::iTgbmct)                + 
+          sλ_gbm(tree.d2::iTgbmct)
+  end
+
+  return sλt
 end
 
 
@@ -589,7 +622,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        fdt::Float64,
                        srδt::Float64,
                        λev ::Bool,
-                       μev ::Bool))
+                       μev ::Bool)
 
   @inbounds @fastmath begin
 

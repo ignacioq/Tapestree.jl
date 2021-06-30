@@ -208,6 +208,30 @@ snen(::Nothing) = 0
 
 
 
+
+"""
+    snenF(tree::T) where {T <: iTree}
+
+Return the number of extinct nodes for `tree` as Float64.
+"""
+function snenF(tree::T) where {T <: iTree}
+    if isextinct(tree)
+      return 1.0
+    else
+      return snenF(tree.d1) + snenF(tree.d2)
+    end 
+end
+
+"""
+    snen(::Nothing)
+
+Return the number of internal nodes for `tree`.
+"""
+snenF(::Nothing) = 0.0
+
+
+
+
 """
     snan(tree::T) where {T <: iTree}
 
@@ -637,16 +661,16 @@ end
 
 
 """
-    makebbv!(tree::iTgbmce, 
+    makebbv!(tree::T, 
              bbλ ::Array{Array{Float64,1},1}, 
-             tsv ::Array{Array{Float64,1},1})
+             tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
 
 Make `bbv` vector with allocated `bb` (brownian bridges) and 
 with `tsv` vector of branches times `ts`.
 """
-function makebbv!(tree::iTgbmce, 
+function makebbv!(tree::T, 
                   bbλ ::Array{Array{Float64,1},1}, 
-                  tsv ::Array{Array{Float64,1},1})
+                  tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
 
   push!(tsv, [pe(tree), fdt(tree)])
   push!(bbλ, lλ(tree))
