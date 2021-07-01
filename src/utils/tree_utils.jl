@@ -398,7 +398,7 @@ function save_esse_sim(tv      ::Dict{Int64, Vector{Float64}},
               class(t) <- "phylo"
               write.tree(t, file = "$out_file.tre")
               write.table(data.frame(lbs,sv), file = "$out_file.txt",
-              row.names = FALSE, col.names = FALSE)
+              row.names = FALSE, col.names = FALSE, quotes = FALSE)
             """)
 end
 
