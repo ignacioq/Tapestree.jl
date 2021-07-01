@@ -14,25 +14,32 @@ September 26 2017
 
 
 
+
+
 """
-    esse(states_file ::String,
-         tree_file   ::String,
-         envdata_file::String,
-         cov_mod     ::NTuple{M,String},
+    esse(tree_file   ::String,
          out_file    ::String,
          h           ::Int64;
+         states_file ::String            = "NaN",
+         envdata_file::String            = "NaN",
+         cov_mod     ::NTuple{M,String}  = ("",),
+         node_ps     ::Tuple{Bool,Int64} = (true, 10),
+         out_states  ::String            = "",
          constraints ::NTuple{N,String}  = (" ",),
-         mvpars      ::NTuple{O,String}  = ("lambda = beta",),
+         mvpars      ::NTuple{O,String}  = (" ",),
          niter       ::Int64             = 10_000,
          nthin       ::Int64             = 10,
          nburn       ::Int64             = 200,
+         tune_int    ::Int64             = 100,
          nswap       ::Int64             = 10,
          ncch        ::Int64             = 1,
-         T           ::Float64           = 0.2,
+         parallel    ::Bool              = false,
+         dt           ::Float64          = 0.2,
          ntakew      ::Int64             = 100,
          winit       ::Float64           = 2.0,
          scale_y     ::NTuple{2,Bool}    = (true, false),
          algorithm   ::String            = "pruning",
+         mc          ::String            = "slice",
          λpriors     ::Float64           = .1,
          μpriors     ::Float64           = .1,
          gpriors     ::Float64           = .1,
@@ -41,19 +48,21 @@ September 26 2017
          βpriors     ::NTuple{2,Float64} = (0.0, 10.0),
          hpriors     ::Float64           = .1,
          optimal_w   ::Float64           = 0.8,
+         tni         ::Float64           = 1.0,
+         obj_ar      ::Float64           = 0.6,
          screen_print::Int64             = 5,
          Eδt         ::Float64           = 1e-3,
          ti          ::Float64           = 0.0,
-         ρ           ::Array{Float64,1}  = [1.0])
+         ρ           ::Array{Float64,1}  = [1.0]) where {M,N,O}
 
-Wrapper for running a ESSE.g model from file.
+Wrapper for running a `esse_g` model from file.
 """
-function esse(states_file ::String,
-              tree_file   ::String,
-              envdata_file::String,
-              cov_mod     ::NTuple{M,String},
+function esse(tree_file   ::String,
               out_file    ::String,
               h           ::Int64;
+              states_file ::String            = "NaN",
+              envdata_file::String            = "NaN",
+              cov_mod     ::NTuple{M,String}  = ("",),
               node_ps     ::Tuple{Bool,Int64} = (true, 10),
               out_states  ::String            = "",
               constraints ::NTuple{N,String}  = (" ",),
@@ -86,36 +95,68 @@ function esse(states_file ::String,
               ti          ::Float64           = 0.0,
               ρ           ::Array{Float64,1}  = [1.0]) where {M,N,O}
 
+
+  states = !occursin(r"^NaN$", states_file)
+  enviro = !occursin(r"^NaN$", envdata_file)
+
   # read data 
-  tv, ed, el, bts, x, y = 
-    read_data_esse(states_file, tree_file, envdata_file)
-
-  @info "Data for $(length(tv)) species successfully read"
-
-  # scale y
-  if scale_y[1]
-    # if scale each function separately or together
-    if scale_y[2]
-      ymin = minimum(y)
-      ymax = maximum(y)
-      for j in axes(y,2), i in axes(y,1)
-        y[i,j] = (y[i,j] - ymin)/(ymax - ymin)
-      end
+  if states
+    if enviro
+      tv, ed, el, bts, x, y = 
+        read_data_esse(states_file, tree_file, envdata_file)
     else
-      ymin = minimum(y, dims = 1)
-      ymax = maximum(y, dims = 1)
-      for j in axes(y,2), i in axes(y,1)
-        y[i,j] = (y[i,j] - ymin[j])/(ymax[j] - ymin[j])
+      tv, ed, el, bts = 
+        read_data_sse(states_file, tree_file)
+    end
+  elseif enviro
+    tv, ed, el, bts, x, y = 
+      read_data_e(tree_file, envdata_file)
+  else
+    tv, ed, el, bts = 
+      read_data_esse(tree_file)
+  end
+
+
+  if enviro
+    # scale y
+    if scale_y[1]
+      # if scale each function separately or together
+      if scale_y[2]
+        ymin = minimum(y)
+        ymax = maximum(y)
+        for j in axes(y,2), i in axes(y,1)
+          y[i,j] = (y[i,j] - ymin)/(ymax - ymin)
+        end
+      else
+        ymin = minimum(y, dims = 1)
+        ymax = maximum(y, dims = 1)
+        for j in axes(y,2), i in axes(y,1)
+          y[i,j] = (y[i,j] - ymin[j])/(ymax[j] - ymin[j])
+        end
       end
     end
   end
 
+
+  @info "Data for $(length(tv)) species successfully read"
+
+  """
+  here
+  """
+
   # prepare data
-  X, p, fp, ed, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
-  mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
-  af!, assign_hidfacs!, abts, bts, E0 = 
-    prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
-      parallel)
+  if enviro
+    X, p, fp, ed, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
+    mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
+    af!, assign_hidfacs!, abts, bts, E0 = 
+      prepare_data(cov_mod, tv, x, y, ed, el, ρ, h, ncch, constraints, mvpars,
+        parallel)
+  else
+    X, p, fp, ed, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
+    mvps, nngps, mvhfs, hfgps, dcp, pardic, k, h, ny, model, 
+    af!, assign_hidfacs!, abts, bts, E0 = 
+      prepare_data(tv, ed, el, ρ, h, ncch, constraints, mvpars, parallel)
+  end
 
   @info "Data successfully prepared"
 
@@ -212,6 +253,7 @@ function esse(states_file ::String,
 
   return R
 end
+
 
 
 
@@ -415,10 +457,6 @@ end
 
 
 
-
-
-
-
 """
     read_data_esse(states_file ::String, 
                    tree_file   ::String, 
@@ -477,6 +515,53 @@ end
 
 
 
+"""
+    read_data_sse(states_file ::String, 
+                  tree_file   ::String)
+
+Process tree and state file to run ESSE.
+"""
+function read_data_sse(states_file ::String, 
+                       tree_file   ::String)
+
+  # read tree in postorder and assign to objects
+  tree, bts = read_tree(tree_file, order = "postorder", branching_times = true)
+  ntip = tree.nnod + 1
+  ed   = tree.ed
+  el   = tree.el
+  tlab = tree.tlab
+
+  # assign tip labels to edge numbers
+  tip_labels = Dict{String,Integer}()
+  for i in Base.OneTo(lastindex(tlab))
+    tip_labels[tlab[i]] = i
+  end
+
+  # read states text file
+  data = readdlm(states_file)
+
+  if size(data,1) != ntip
+    data = readdlm(states_file, '\t', '\r')
+  end
+
+  if size(data,1) != ntip
+    data = readdlm(states_file, '\t', '\n')
+  end
+
+  if size(data,1) != ntip 
+    error("Data file cannot be made of the right dimensions.\n Make sure the data file has the same number of rows as tips in the tree")
+  end
+
+  data_tlab    = convert(Array{String,1}, data[:,1])
+  data_states  = convert(Array{Float64,2},  data[:,2:end])
+
+  # create dictionary
+  tip_states = Dict(tip_labels[val] => data_states[i,:] 
+                   for (i,val) = enumerate(data_tlab))
+
+  return tip_states, ed, el, bts
+end
+
 
 
 """
@@ -485,8 +570,8 @@ end
 
 Process tree and state and environmental data file to run ESSE.
 """
-function read_data_esse(tree_file   ::String, 
-                        envdata_file::String)
+function read_data_e(tree_file   ::String, 
+                     envdata_file::String)
 
   # read tree in postorder and assign to objects
   tree, bts = read_tree(tree_file, order = "postorder", branching_times = true)
@@ -506,6 +591,39 @@ function read_data_esse(tree_file   ::String,
 
   return tip_states, ed, el, bts, x, y
 end
+
+
+
+
+"""
+    read_data_esse(states_file ::String, 
+                   tree_file   ::String, 
+                   envdata_file::String)
+
+Process tree and state and environmental data file to run ESSE.
+"""
+function read_data_esse(tree_file   ::String)
+
+  # read tree in postorder and assign to objects
+  tree, bts = read_tree(tree_file, order = "postorder", branching_times = true)
+  ntip = tree.nnod + 1
+  ed   = tree.ed
+  el   = tree.el
+  tlab = tree.tlab
+
+  # assign tip labels to edge numbers
+  tip_labels = Dict{String,Integer}()
+  for i in Base.OneTo(lastindex(tlab))
+    tip_labels[tlab[i]] = i
+  end
+
+  # create dictionary
+  tip_states = Dict(i => [1.0] for i = Base.OneTo(ntip))
+
+  return tip_states, ed, el, bts
+end
+
+
 
 
 

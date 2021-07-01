@@ -262,6 +262,8 @@ function simulate_edges(λ       ::Array{Float64,1},
     # keep track of time
     simt -= δt
 
+    simt < 0.0 && break
+
     # estimate `z(simt)`
     af!(simt, r)
  
@@ -422,8 +424,6 @@ function simulate_edges(λ       ::Array{Float64,1},
       end
 
     end
-
-    simt < 0.0 && break
 
     if n > nspp_max 
       ed = ed[1:(2n-2),:]

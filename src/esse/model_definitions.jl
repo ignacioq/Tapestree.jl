@@ -15,10 +15,29 @@ t(-_-t)
 
 
 """
-    define_mod(cov_mod::String,
-               k            ::Int64,
-               h            ::Int64,
-               ny           ::Int64)
+    define_mod(k::Int64, h::Int64)
+
+Defines ESSE model for `k` areas, `h` hidden states and no covariates.
+"""
+function define_mod(k::Int64, h::Int64)
+
+  printstyled("running `sse_g` model with:
+    $k single area$(k>1 ? "s" : "") 
+    $h hidden state$(h>1 ? "s" : "")
+    no covariates \n", color=:green)
+
+  return (false, false, false)
+end
+
+
+
+
+
+"""
+    define_mod(cov_mod::NTuple{N,String},
+               k      ::Int64,
+               h      ::Int64,
+               ny     ::Int64) where {N}
 
 Defines ESSE model for `k` areas, `h` hidden states and `ny` covariates.
 """
@@ -48,7 +67,7 @@ function define_mod(cov_mod::NTuple{N,String},
   mexp = replace(mexp, "," => ", ")
   mexp = mexp[1:(end-2)]
 
-  printstyled("running $mexp ESSE.g model with:
+  printstyled("running $mexp `esse_g` model with:
     $k single area$(k>1 ? "s" : "") 
     $h hidden state$(h>1 ? "s" : "")
     $ny covariate$(ny>1 ? "s" : "") \n", color=:green)

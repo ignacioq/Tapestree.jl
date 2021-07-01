@@ -108,6 +108,7 @@ function simulate_sse(λ       ::Array{Float64,1},
   ed     = numberedges(ed, n)
   ed, el = postorderedges(ed, el, n)
 
+
   ## round branch lengths
   # find out order of simulation
   i = 1
@@ -226,6 +227,8 @@ function simulate_edges(λ       ::Array{Float64,1},
 
     # keep track of time
     simt -= δt
+
+    simt < 0.0 && break
 
     # one time step
     for i in Base.OneTo(n)
@@ -389,8 +392,6 @@ function simulate_edges(λ       ::Array{Float64,1},
       end
 
     end
-
-    simt < 0.0 && break
 
     if n > nspp_max 
       ed = ed[1:(2n-2),:]
