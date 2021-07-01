@@ -128,7 +128,6 @@ end
 
 
 
-
 """
     simulate_edges(λ       ::Array{Float64,1},
                    μ       ::Array{Float64,1},
@@ -601,4 +600,44 @@ end
 
 
 
+
+
+"""
+    save_esse_sim(tv::Dict{Int64, Vector{Float64}},
+                  ed::Array{Int64,2},
+                  el::Array{Float64,1},
+                  out_file::String)
+
+Write esse simulation output, tree and states.
+"""
+function save_esse_sim(tv      ::Dict{Int64, Vector{Float64}},
+                       ed      ::Array{Int64,2},
+                       el      ::Array{Float64,1},
+                       out_file::String)
+
+  n    = length(tv)
+  nnod = n - 1
+
+  wt = ed[:,2] .<= n 
+
+  tlab = Dict(i => string("t", i) for i in ed[wt,2])
+
+  sv  = zeros(n, length(tv[1]))
+  lbs = String[]
+  for i in Base.OneTo(length(tv))
+    push!(lbs, tlab[i])
+    sv[i,:] = tv[i]
+  end
+
+  @rput ed el nnod sv lbs
+
+  str = reval("""
+              library(ape)
+              t <- list(edge = ed, edge.length = el, Nnode = nnod, tip.label = lbs)
+              class(t) <- "phylo"
+              write.tree(t, file = "$out_file.tre")
+              write.table(data.frame(lbs,sv), file = "$out_file.txt",
+              row.names = FALSE, col.names = FALSE, quote = FALSE)
+            """)
+end
 

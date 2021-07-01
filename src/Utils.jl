@@ -7,7 +7,7 @@
 module Utils
 
 # package dependencies
-using RCall: @rput, reval, rcopy
+using RCall: reval, rcopy
 
 include("utils/utils.jl")
 include("utils/tree_utils.jl")
