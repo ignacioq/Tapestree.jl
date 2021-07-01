@@ -336,32 +336,6 @@ end
 
 
 
-# convert to r tree
-
-"""
-Immutable type of an R tree `phylo` object type.
-"""
-struct rtree
-  ed  ::Array{Int64,2}
-  el  ::Array{Float64,1}
-  tlab::Array{String,1}
-  nnod::Int64
-end
-
-function rtree(tv::Dict{Int64, Vector{Float64}},
-               ed::Array{Int64,2},
-               el::Array{Float64,1}) 
-
-  n = length(tv)
-  tlab = [string("t", i) for i in Base.OneTo(n)]
-
-  rtree(ed, el, tlab, n - 1)
-
-end
-
-
-
-
 
 """
     save_esse_sim(tv::Dict{Int64, Vector{Float64}},
