@@ -45,14 +45,17 @@ function simulate_sse(λ       ::Array{Float64,1},
                       nspp_max::Int64   = 100_000,
                       retry_ext::Bool   = true,
                       rejectel0::Bool   = false,
-                      verbose  ::Bool   = true) where {N}
+                      verbose  ::Bool   = true,
+                      rm_ext   ::Bool   = true) where {N}
 
   # make simulation
-  ed, el, st, n, S, k = 
+  ed, el, st, ea, ee, n, S, k = 
     simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
 
+  ne = lastindex(ee)
+
   if verbose
-    @info "Tree with $n extant species successfully simulated"
+    @info "Tree with $n extant and $ne extinct species successfully simulated"
 
     if iszero(n)
       @warn "\n
@@ -76,11 +79,11 @@ function simulate_sse(λ       ::Array{Float64,1},
   if retry_ext 
     while iszero(size(ed,1)) || (rejectel0 && in(0.0, el))
 
-      ed, el, st, n, S, k = 
-        simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
+      ed, el, st, ea, ee, n, S, k = 
+        simulate_edges(λ, μ, l, g, q, t, δt, ast, nspp_max)
 
       if verbose
-        @info "Tree with $n extant species successfully simulated"
+        @info "Tree with $n extant and $ne extinct species successfully simulated"
 
         if iszero(n)
           @warn "\n
@@ -111,9 +114,23 @@ function simulate_sse(λ       ::Array{Float64,1},
     end
   end
 
+  # tip numbers
+  tN = ed[ea,2]
+
+  # tip states
+  tS = st[ea]
+
+  # remove extinct
+  if rm_ext 
+    ed, el = remove_extinct(ed, el, ee)
+    nt = n
+  else
+    nt = n + ne
+  end
+
   # organize in postorder
-  ed     = numberedges(ed, n)
-  ed, el = postorderedges(ed, el, n)
+  ed, tv = numberedges(ed, tN, tS)
+  ed, el = postorderedges(ed, el, nt)
 
   ## round branch lengths
   # find out order of simulation
@@ -121,17 +138,12 @@ function simulate_sse(λ       ::Array{Float64,1},
   while !isone(δt*Float64(10^i))
     i += 1
   end
-
   el = map(x -> round(x; digits = i+1), el)::Array{Float64,1}
 
-  # organize states
-  tip_val = Dict(i => st[i] for i = 1:n)
+  tv = states_to_values(tv, S, k)
 
-  tip_val = states_to_values(tip_val, S, k)
-
-  return tip_val, ed, el
+  return tv, ed, el
 end
-
 
 
 
@@ -215,13 +227,16 @@ function simulate_edges(λ       ::Array{Float64,1},
   # edges alive
   ea = [1, 2]
 
+  # edges extinct
+  ee = Int64[]
+
   # edge array
   ed = zeros(Int64, nspp_max*2, 2)
   ed[ea,:] = [1 2;
               1 3]
 
-  # edge lengths
-  el = zeros(nspp_max*2)
+  el = zeros(nspp_max*2)            # edge lengths
+  st = zeros(Int64,nspp_max*2)      # state for each edge
 
   # make probability vectors
   λpr, μpr, gpr, qpr, Sλpr, Sμpr, Sgpr, Sqpr = 
@@ -248,195 +263,142 @@ function simulate_edges(λ       ::Array{Float64,1},
   # make state change vectors
   gtos, μtos, qtos, λtos = makecorresschg(gpr, μpr, qpr, λpr, S, as, hs, k, ns)
 
+  # make BitVector of being one area (global extinction) or not
+  i1S = falses(length(S))
+  for (i,s) in enumerate(S)
+    if isone(length(s.g))
+      i1S[i] = true
+    end
+  end
+
   # model first speciation event for daughter inheritance
-  st = λtos[si][prop_sample(svλ[si], λpr[si], length(svλ[si]))]
+  st[ea] = λtos[si][prop_sample(svλ[si], λpr[si], length(svλ[si]))]
 
-  # random assignment to daughters
-  if rand() < 0.5
-    reverse!(st)
-  end
+  i0 = 3 # current first edge with 0
+  n  = 2 # current number of species
+  mx = 3 # current maximum node number
 
-  # start simulation
-  while true
+  ieaa = Int64[] # indexes of ea to add
+  iead = Int64[] # indexes of ea to delete
 
-    # keep track of time
-    simt -= δt
+  @inbounds begin
 
-    simt < 0.0 && break
+    # start simulation
+    while true
 
-    # estimate `z(simt)`
-    af!(simt, r)
- 
-    # one time step
-    for i in Base.OneTo(n)
+      # keep track of time
+      simt -= δt
 
-      # update edge length
-      el[ea[i]] += δt
+      simt < 0.0 && break
 
-      sti = st[i]
+      # one time step for all edges alive `ea`
+      for (i,v) in enumerate(ea)
 
-      #=
-        gain event?
-      =#
-      if rand() < updgpr!(sti, S[sti], r)
-        # sample from the transition probabilities
-        @inbounds st[i] = gtos[sti][prop_sample(svg[sti], gpr[sti], length(svg[sti]))]
+        el[v] += δt         # update edge length
+        sti    = st[v]      # get state of living edge
 
-        # no more events at this time
-        continue
-      end
+        #=
+        speciation
+        =#
+        if rand() < updλpr!(sti, S[sti], r)
 
-      #=
-        μ or loss event?
-      =#
-      if rand() < updμpr!(sti, S[sti], r)
+          ### add new edges
+          # start node
+          ed[i0,1] = ed[i0+1,1] = ed[v,2]
 
-        # if extinction
-        if isone(length(S[sti].g))
+          # end nodes
+          ed[i0,    2] = mx + 1
+          ed[i0 + 1,2] = mx + 2
 
-          # update time in other extant lineages
-          el[ea[(i+1):n]] .+= δt
+          # to update living edges
+          push!(iead, i)
+          push!(ieaa, i0, i0 + 1)
 
-          # node to remove
-          nod = ed[ea[i],1]
+          # update living states according to speciation event
+          s1, s2 = 
+            λtos[sti][prop_sample(svλ[sti], λpr[sti], length(svλ[sti]))]
 
-          # top or bottom edge of node
-          top = nod == ed[ea[i]+1, 1] 
+          st[i0]   = s1
+          st[i0+1] = s2
 
-          # remove edge (only preserving persisting species)
-          ned = findfirst(isequal(0), ed)[1]
+          # update `i0`, `n` and `mx`
+          n  += 1
+          i0 += 2
+          mx += 2
 
-          if ned === 3
-            return zeros(Int64,0,2), Float64[], Int64[], 0, Sgh[], 0
-          end
+        #=
+          extinction
+        =#
+        elseif rand() < updμpr!(sti, S[sti], r)
 
-          @views ed[ea[i]:(ned-1),:] = ed[(ea[i]+1):ned,:]
+          # if global extinction
+          if i1S[sti]
 
-          # remove edge length
-          @views el[ea[i]:(ned-1)] = el[(ea[i]+1):ned]
-
-          # update alive lineages
-          deleteat!(ea,i)
-          ea[i:end] .-= 1
-
-          # remove node and extra edge
-          @views pr = findfirst(isequal(nod), ed[:,1])
-          @views da = findfirst(isequal(nod), ed[:,2])
-
-          if isnothing(da)
-            da = 0
-          end
-
-          if da != 0
-            ed[da,2] = ed[pr,2]
-            el[da]  += el[pr]
-          end
-
-          # remove intervening edge
-          @views ed[pr:(ned-2),:] = ed[(pr+1):(ned-1),:]
-
-          # remove edge lengths of intervening node
-          @views el[pr:(ned-2)] = el[(pr+1):(ned-1)]
-
-          ## update alive lineages
-          # is the remaining node terminal?
-          if da == 0 || in(ed[da,2], ed[:,1])
-            ea[i:end] .-= 1
-          else 
-            ea[findfirst(isequal(pr),ea)] = da
-            sort!(ea)
-            if top
-              ea[(i+1):end] .-= 1
-            else
-              ea[i:end]     .-= 1
+            # if tree goes extinct
+            if isone(n)
+              return zeros(Int64,0,2), Float64[], Int64[], Int64[], Int64[], 0, Sgh[], 0
             end
+
+            push!(ee, v)      # extinct edges
+            push!(iead, i)    # to update alive lineages
+
+            n -= 1            # update number of alive species
+
+          # if local extinction (state change)
+          else
+
+            st[v] = 
+              μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
+
           end
 
-          # update living species states
-          deleteat!(st,i)
+        #=
+          gain event
+        =#
+        elseif rand() < updgpr!(sti, S[sti], r)
 
-          # update n species
-          n = lastindex(ea)
+          st[v] = 
+            gtos[sti][prop_sample(svg[sti], gpr[sti], length(svg[sti]))]
 
-          # break loop
-          break
+        #=
+            q event?
+        =#
+        elseif rand() < updqpr!(sti) 
 
-        # if local extinction (state change)
-        else
-          @inbounds st[i] =
-            μtos[sti][prop_sample(svμ[sti], μpr[sti], length(svμ[sti]))]
-        
-          # no more events at this time
-          continue
+          st[v] = 
+            qtos[sti][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
+
         end
-
       end
 
-      #=
-          q event?
-      =#
-      if rand() < updqpr!(sti) 
-        @inbounds st[i] = 
-          qtos[sti][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
-
-        # no more events at this time
-        continue
+      # to add
+      if !isempty(ieaa)
+        append!(ea, ieaa)
+        empty!(ieaa)
       end
 
-      #=
-          λ event?
-      =#
-      if rand() < updλpr!(sti, S[sti], r)
-
-        # update time in other extant lineages
-        el[ea[(i+1):n]] .+= δt
-
-        ### add new edges
-        # start node
-        ed[ea[end] + 1,1] = ed[ea[end] + 2,1] = ed[ea[i],2]
-
-        # end nodes
-        ed[ea[end] + 1,2] = maximum(ed)+1
-        ed[ea[end] + 2,2] = maximum(ed)+1
-
-        # update living edges
-        push!(ea, ea[end]+1, ea[end]+2)
-        deleteat!(ea, i)
-
-        # update living states according to speciation event
-        nst1, nst2 = 
-          λtos[sti][prop_sample(svλ[sti], λpr[sti], length(svλ[sti]))]
-
-        # random assignment to daughters
-        if rand() < 0.5
-          push!(st,nst1,nst2)
-        else
-          push!(st,nst2,nst1)
-        end
-
-        deleteat!(st,i)
-
-        # update number of species alive
-        n = lastindex(ea)
-
-        # no more events for any of the remaining lineages
-        break
+      # to delete
+      if !isempty(iead)
+        deleteat!(ea, iead)
+        empty!(iead)
       end
 
+      if n > nspp_max 
+        ed = ed[1:(i0-1),:]
+        el = el[1:(i0-1)]
+        st = st[1:(i0-1)]
+
+        return ed, el, st, ea, ee, n, S, k
+      end
     end
 
-    if n > nspp_max 
-      ed = ed[1:(2n-2),:]
-      el = el[1:(2n-2)]
-      return ed, el, st, n, S, k
-    end
+    # remove 0s
+    ed = ed[1:(i0-1),:]
+    el = el[1:(i0-1)]
+    st = st[1:(i0-1)]
   end
 
-  # remove 0s
-  ed = ed[1:(2n-2),:]
-  el = el[1:(2n-2)]
-
-  return ed, el, st, n, S, k
+  return ed, el, st, ea, ee, n, S, k
 end
 
 
