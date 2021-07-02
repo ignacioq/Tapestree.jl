@@ -542,11 +542,13 @@ end
 
 
 """
-    states_to_values(tipst::Dict{Int64,Int64}, S::Array{Sgh,1}, k::Int64, h::Int64)
+    states_to_values(tipst::Dict{Int64,Int64}, S::Array{Sgh,1}, k::Int64)
     
 Transform numbered tip_values to array with 1s and 0s
 """
-function states_to_values(tipst::Dict{Int64,Int64}, S::Array{Sgh,1}, k::Int64)
+function states_to_values(tipst::Dict{Int64,Int64}, 
+                          S    ::Array{Sgh,1}, 
+                          k    ::Int64)
 
   tip_val = Dict{Int64,Array{Float64,1}}()
   for (key, val) in tipst

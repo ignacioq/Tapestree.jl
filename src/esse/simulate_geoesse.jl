@@ -1147,39 +1147,6 @@ end
 
 
 
-"""
-    numberedges(ed::Array{Int64,2}, nspp::Int64)
-
-Change numbering scheme so that tips are `1:numerofspecies` followed
-by node numbering. MRCA is `numerofspecies+1`.
-"""
-function numberedges(ed::Array{Int64,2}, nspp::Int64)
-  nel = 1
-  nnd = nspp + 1
-
-  edc         = zeros(Int64,size(ed))
-  edc[1:2,1] .= nnd
-  nnd        += 1
-
-  for i in axes(ed,1)
-    #if internal node
-    if in(ed[i,2],ed[:,1])
-      e1                = findfirst(isequal(ed[i,2]), ed[:,1])
-      edc[e1:(e1+1),1] .= nnd
-      edc[i,2]          = nnd
-      nnd              += 1 
-    else
-      edc[i,2] = nel
-      nel     += 1
-    end
-  end
-
-  return edc
-end
-
-
-
-
 
 """
     expf(α::Float64, β::Float64, x::Float64)
