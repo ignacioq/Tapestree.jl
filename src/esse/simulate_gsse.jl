@@ -45,20 +45,7 @@ function simulate_sse(λ       ::Array{Float64,1},
   ed, el, st, ea, ee, n, S, k = 
     simulate_edges(λ, μ, l, g, q, t, δt, ast, nspp_max)
 
-  ne = lastindex(ee)  
-
-  # tip numbers
-  tN = ed[ea,2] 
-  # tip states
-  tS = st[ea]
-
-  # remove extinct
-  if rm_ext 
-    ed, el = remove_extinct(ed, el, ee)
-    nt = n
-  else
-    nt = n + ne
-  end
+  ne = lastindex(ee)
 
   if verbose
     @info "Tree with $n extant and $ne extinct species successfully simulated"
@@ -120,8 +107,22 @@ function simulate_sse(λ       ::Array{Float64,1},
     end
   end
 
+  # tip numbers
+  tN = ed[ea,2]
+
+  # tip states
+  tS = st[ea]
+
+  # remove extinct
+  if rm_ext 
+    ed, el = remove_extinct(ed, el, ee)
+    nt = n
+  else
+    nt = n + ne
+  end
+
   # organize in postorder
-  ed     = numberedges(ed, tN)
+  ed, tv = numberedges(ed, tN, tS)
   ed, el = postorderedges(ed, el, nt)
 
   ## round branch lengths
@@ -130,15 +131,11 @@ function simulate_sse(λ       ::Array{Float64,1},
   while !isone(δt*Float64(10^i))
     i += 1
   end
-
   el = map(x -> round(x; digits = i+1), el)::Array{Float64,1}
 
-  # organize states
-  tip_val = Dict(i => tS[i] for i = 1:n)
+  tv = states_to_values(tv, S, k)
 
-  tip_val = states_to_values(tip_val, S, k)
-
-  return tip_val, ed, el
+  return tv, ed, el
 end
 
 

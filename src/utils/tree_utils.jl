@@ -289,7 +289,7 @@ end
 Change numbering scheme so that tips are `1:numerofspecies` followed
 by node numbering. MRCA is `numerofspecies+1`.
 """
-function numberedges(ed::Array{Int64,2}, tN::Array{Int64,1})
+function numberedges(ed::Array{Int64,2}, tN::Array{Int64,1}, tS::Array{Int64,1})
   nt = 1
   ni = lastindex(tN) + 1
 
@@ -299,20 +299,27 @@ function numberedges(ed::Array{Int64,2}, tN::Array{Int64,1})
 
   e1 = ed[:,1]
 
+  # make tip values Dictionary
+  tv = Dict{Int64, Int64}()
+
   for i in axes(ed,1)
 
+    nn = ed[i,2]
+    ww = findfirst(isequal(nn), tN)
+
     # if tip
-    if in(ed[i,2], tN)
+    if !isnothing(ww)
       edc[i,2] = nt
-      nt     += 1
+      push!(tv, nt => tS[ww])
+      nt      += 1
     else
-      ii = findfirst(isequal(ed[i,2]), e1)
+      ii = findfirst(isequal(nn), e1)
       edc[ii,1] = edc[ii+1,1] = edc[i,2] = ni
       ni              += 1 
     end
   end
 
-  return edc
+  return edc, tv
 end
 
 
