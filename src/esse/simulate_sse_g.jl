@@ -265,6 +265,16 @@ function simulate_edges(λ       ::Array{Float64,1},
         =#
         if rand() < Sλpr[sti]
 
+          n  += 1
+
+          if n >= nspp_max 
+            ed = ed[1:(i0-1),:]
+            el = el[1:(i0-1)]
+            st = st[1:(i0-1)]
+
+            return ed, el, st, ea, ee, n, S, k
+          end
+
           ### add new edges
           # start node
           ed[i0,1] = ed[i0+1,1] = ed[v,2]
@@ -285,7 +295,6 @@ function simulate_edges(λ       ::Array{Float64,1},
           st[i0+1] = s2
 
           # update `i0`, `n` and `mx`
-          n  += 1
           i0 += 2
           mx += 2
 
@@ -344,14 +353,6 @@ function simulate_edges(λ       ::Array{Float64,1},
       if !isempty(iead)
         deleteat!(ea, iead)
         empty!(iead)
-      end
-
-      if n > nspp_max 
-        ed = ed[1:(i0-1),:]
-        el = el[1:(i0-1)]
-        st = st[1:(i0-1)]
-
-        return ed, el, st, ea, ee, n, S, k
       end
     end
 
