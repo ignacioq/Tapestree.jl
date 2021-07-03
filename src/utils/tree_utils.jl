@@ -291,6 +291,7 @@ by node numbering. MRCA is `numerofspecies+1`.
 """
 function numberedges(ed::Array{Int64,2}, tN::Array{Int64,1}, tS::Array{Int64,1})
   nt = 1
+
   ni = lastindex(tN) + 1
 
   edc = zeros(Int64,size(ed))
@@ -311,12 +312,13 @@ function numberedges(ed::Array{Int64,2}, tN::Array{Int64,1}, tS::Array{Int64,1})
     if !isnothing(ww)
       edc[i,2] = nt
       push!(tv, nt => tS[ww])
-      nt      += 1
+      nt += 1
     else
       ii = findfirst(isequal(nn), e1)
       edc[ii,1] = edc[ii+1,1] = edc[i,2] = ni
-      ni              += 1 
+      ni  += 1 
     end
+
   end
 
   return edc, tv

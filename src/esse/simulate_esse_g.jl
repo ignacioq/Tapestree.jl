@@ -70,7 +70,7 @@ function simulate_sse(λ       ::Array{Float64,1},
     end
   end
 
-  if n > nspp_max
+  if (n + ne) > nspp_max
     if verbose
       @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
     end
@@ -81,6 +81,8 @@ function simulate_sse(λ       ::Array{Float64,1},
 
       ed, el, st, ea, ee, n, S, k = 
         simulate_edges(λ, μ, l, g, q, t, δt, ast, nspp_max)
+
+      ne = lastindex(ee)
 
       if verbose
         @info "Tree with $n extant and $ne extinct species successfully simulated"
@@ -102,7 +104,7 @@ function simulate_sse(λ       ::Array{Float64,1},
         end
       end
 
-      if n > nspp_max
+      if (n + ne) > nspp_max
         if verbose
           @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
         end
@@ -281,7 +283,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   ieaa = Int64[] # indexes of ea to add
   iead = Int64[] # indexes of ea to delete
 
-  #@inbounds begin
+  @inbounds begin
 
     # start simulation
     while true
@@ -302,12 +304,20 @@ function simulate_edges(λ       ::Array{Float64,1},
         =#
         if rand() < updλpr!(sti, S[sti], r)
 
-          n  += 1
-
-          if n >= nspp_max 
+          if i0 >= (nspp_max*2 + 1)
             ed = ed[1:(i0-1),:]
             el = el[1:(i0-1)]
             st = st[1:(i0-1)]
+
+            # in case of events at same time in different lineages
+            if !isempty(ieaa)
+              append!(ea, ieaa)
+              empty!(ieaa)
+            end
+            if !isempty(iead)
+              deleteat!(ea, iead)
+              empty!(iead)
+            end
 
             return ed, el, st, ea, ee, n, S, k
           end
@@ -334,6 +344,7 @@ function simulate_edges(λ       ::Array{Float64,1},
           # update `i0`, `n` and `mx`
           i0 += 2
           mx += 2
+          n  += 1
 
         #=
           extinction
@@ -398,7 +409,7 @@ function simulate_edges(λ       ::Array{Float64,1},
     ed = ed[1:(i0-1),:]
     el = el[1:(i0-1)]
     st = st[1:(i0-1)]
-  #end
+  end
 
   return ed, el, st, ea, ee, n, S, k
 end
