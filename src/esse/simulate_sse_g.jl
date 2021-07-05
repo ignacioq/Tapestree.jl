@@ -283,6 +283,9 @@ function simulate_edges(λ       ::Array{Float64,1},
               empty!(iead)
             end
 
+            # update dt for other lineages
+            el[ea[i+1]:ea[end]] .+= δt
+
             return ed, el, st, ea, ee, n, S, k
           end
 

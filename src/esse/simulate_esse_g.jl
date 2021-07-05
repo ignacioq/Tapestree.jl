@@ -291,6 +291,7 @@ function simulate_edges(λ       ::Array{Float64,1},
       # keep track of time
       simt -= δt
 
+      # estimate environment
       af!(simt, r)
 
       simt < 0.0 && break
@@ -320,6 +321,9 @@ function simulate_edges(λ       ::Array{Float64,1},
               deleteat!(ea, iead)
               empty!(iead)
             end
+
+            # update dt for other lineages
+            el[ea[i+1]:ea[end]] .+= δt
 
             return ed, el, st, ea, ee, n, S, k
           end
