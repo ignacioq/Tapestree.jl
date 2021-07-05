@@ -294,6 +294,11 @@ function simulate_edges(λ       ::Array{Float64,1},
       # estimate environment
       af!(simt, r)
 
+      # update probabilities
+      updλpr!(r)
+      updμpr!(r)
+      updgpr!(r)
+
       simt < 0.0 && break
 
       # one time step for all edges alive `ea`
@@ -305,7 +310,7 @@ function simulate_edges(λ       ::Array{Float64,1},
         #=
         speciation
         =#
-        if rand() < updλpr!(sti, S[sti], r)
+        if rand() < Sλpr[sti]
 
           if i0 >= (nspp_max*2 + 1)
             ed = ed[1:(i0-1),:]
@@ -355,7 +360,7 @@ function simulate_edges(λ       ::Array{Float64,1},
         #=
           extinction
         =#
-        elseif rand() < updμpr!(sti, S[sti], r)
+        elseif rand() < Sμpr[sti]
 
           # if global extinction
           if i1S[sti]
@@ -381,7 +386,7 @@ function simulate_edges(λ       ::Array{Float64,1},
         #=
           gain event
         =#
-        elseif rand() < updgpr!(sti, S[sti], r)
+        elseif rand() < Sgpr[sti]
 
           st[v] = 
             gtos[sti][prop_sample(svg[sti], gpr[sti], length(svg[sti]))]
@@ -389,7 +394,7 @@ function simulate_edges(λ       ::Array{Float64,1},
         #=
             q event?
         =#
-        elseif rand() < updqpr!(sti) 
+        elseif rand() < Sqpr[sti]
 
           st[v] = 
             qtos[sti][prop_sample(svq[sti], qpr[sti], length(svq[sti]))]
@@ -915,32 +920,35 @@ function make_updλpr!(λ    ::Array{Float64,1},
   y2s = model[1]*yppar*k
   y3s = y2s + model[2]*yppar*k
 
+  lS = length(S)
+
   # if dependent on `z(t)` and multidimensional
-  function f1(si ::Int64,
-              s  ::Sgh,
-              r::Array{Float64,1})
+  function f1(r::Array{Float64,1})
 
     @inbounds begin
-      na = 0
-      # within-area speciation
-      for a in s.g
-        na += 1
-        λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
-      end
-      # between-area speciation
-      if na > 1
-        λpr[si][k+1:end] .= λ[k+1 + (k+1)*s.h]*δt
-      end
+      for si in Base.OneTo(lS)
 
-      return Sλpr[si] = sum(λpr[si]) 
+        s = S[si]
+
+        na = 0
+        # within-area speciation
+        for a in s.g
+          na += 1
+          λpr[si][na] = expf(λ[(k+1)*s.h + a], β[s.h*ncov + a], md ? r[a] : r[1])*δt
+        end
+        # between-area speciation
+        if na > 1
+          λpr[si][k+1:end] .= λ[k+1 + (k+1)*s.h]*δt
+        end
+
+        Sλpr[si] = sum(λpr[si]) 
+
+      end
     end
   end
 
   # if dependent on `z(t)` and unidimensional
-  function f2(si ::Int64,
-              s  ::Sgh,
-              r::Array{Float64,1})
-    return Sλpr[si]
+  function f2(r::Array{Float64,1})
   end
 
   if model[1]
@@ -993,32 +1001,34 @@ function make_updμpr!(μ    ::Array{Float64,1},
   y2s = model[1]*yppar*k
   y3s = y2s + model[2]*yppar*k
 
-  function f1(si::Int64,
-              s ::Sgh,
-              r ::Array{Float64,1})
+  lS = length(S)
+
+  function f1(r ::Array{Float64,1})
 
     @inbounds begin
-      if isone(length(s.g))
-        for a in s.g
-          μpr[si][1] = 
-            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
-        end
-      else
-        for a in s.g
-          μpr[si][a] =
-            expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
-        end
-      end
+      for si in Base.OneTo(lS)
 
-      return Sμpr[si] = sum(μpr[si]) 
+        s = S[si]
+
+        if isone(length(s.g))
+          for a in s.g
+            μpr[si][1] = 
+              expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+          end
+        else
+          for a in s.g
+            μpr[si][a] =
+              expf(μ[k*s.h + a], β[m2s + s.h*ncov + a], md ? r[y2s + a] : r[1])*δt
+          end
+        end
+
+        Sμpr[si] = sum(μpr[si]) 
+      end
     end
   end
 
   # if dependent on `z(t)` and unidimensional
-  function f2(si ::Int64,
-              s  ::Sgh,
-              r::Array{Float64,1})
-    return Sμpr[si]
+  function f2(r::Array{Float64,1})
   end
 
   if model[2]
@@ -1077,27 +1087,32 @@ function make_updgpr!(g    ::Array{Float64,1},
     push!(sdf, setdiff(as,s.g))
   end
 
-  function f1(si ::Int64,
-              s  ::Sgh,
-              r::Array{Float64,1})
+  lS = length(S)
+
+  function f1(r::Array{Float64,1})
+
     @inbounds begin
-      for (i,ta) = enumerate(sdf[si])
-        gpr[si][i] = 0.0
-        for fa = s.g
-          gpr[si][i] += 
-            expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-                 β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
-                 md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+      for si in Base.OneTo(lS)
+
+        s = S[si]
+
+        for (i,ta) = enumerate(sdf[si])
+          gpr[si][i] = 0.0
+          for fa = s.g
+            gpr[si][i] += 
+              expf(g[s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                   β[m3s + s.h*k*(k-1) + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)], 
+                   md ? r[y3s + (fa-1)*(k-1) + (ta > fa ? ta - 1 : ta)] : r[1])*δt
+          end
         end
+
+        Sgpr[si] = sum(gpr[si]) 
+
       end
-      return Sgpr[si] = sum(gpr[si]) 
     end
   end
 
-  function f2(si ::Int64,
-              s  ::Sgh,
-              r::Array{Float64,1})
-    return Sgpr[si]
+  function f2(r::Array{Float64,1})
   end
 
   if model[3]
