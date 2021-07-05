@@ -291,6 +291,8 @@ function simulate_edges(λ       ::Array{Float64,1},
       # keep track of time
       simt -= δt
 
+      af!(simt, r)
+
       simt < 0.0 && break
 
       # one time step for all edges alive `ea`
