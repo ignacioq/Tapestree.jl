@@ -245,8 +245,8 @@ function simulate_edges(λ       ::Array{Float64,1},
     event_probs(λ, μ, l, g, q, β, r, S, k, h, ny, model, md, δt, ns, as, hs)
 
   # make λ, μ, g & q probability functions
-  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md, ny)
-  updμpr! = make_updμpr!(μ, l, β, μpr, Sμpr, δt, k, h, model, md, ny)
+  updλpr! = make_updλpr!(λ, β, λpr, Sλpr, δt, k, model, md, S, ny)
+  updμpr! = make_updμpr!(μ, l, β, μpr, Sμpr, δt, k, h, model, md, S, ny)
   updgpr! = make_updgpr!(g, β, gpr, Sgpr, δt, k, h, model, md, as, S, ny)
   updqpr! = make_updqpr!(Sqpr)
 
@@ -906,6 +906,7 @@ function make_updλpr!(λ    ::Array{Float64,1},
                       k    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
+                      S  ::Array{Sgh, 1},
                       ny   ::Int64)
 
   # expected number of covariates
@@ -987,6 +988,7 @@ function make_updμpr!(μ    ::Array{Float64,1},
                       h    ::Int64,
                       model::NTuple{3,Bool},
                       md   ::Bool,
+                      S  ::Array{Sgh, 1},
                       ny   ::Int64)
   
   # expected number of covariates
