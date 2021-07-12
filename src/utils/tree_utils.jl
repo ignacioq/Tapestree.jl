@@ -413,7 +413,7 @@ function remove_extinct(ed::Array{Int64,2},
     end
 
     # ancestral row
-    ar = @views findfirst(x -> x === pn, e2) 
+    ar = findfirst(x -> x === pn, e2) 
 
     if !isnothing(ar)
       # assign node
