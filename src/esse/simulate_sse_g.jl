@@ -50,7 +50,7 @@ function simulate_sse(λ       ::Array{Float64,1},
   if verbose
     @info "Tree with $n extant and $ne extinct species successfully simulated"
 
-    if iszero(n)
+    if n < 2
       @warn "\n
       What would you do if an endangered animal is eating an endangered plant? \n 
       Sometimes nature is too cruel..."
@@ -70,7 +70,7 @@ function simulate_sse(λ       ::Array{Float64,1},
   end
 
   if retry_ext 
-    while iszero(size(ed,1)) || (rejectel0 && in(0.0, el))
+    while n < 2 || (rejectel0 && in(0.0, el))
 
       ed, el, st, ea, ee, n, S, k = 
         simulate_edges(λ, μ, l, g, q, t, δt, ast, nspp_max)
@@ -80,7 +80,7 @@ function simulate_sse(λ       ::Array{Float64,1},
       if verbose
         @info "Tree with $n extant and $ne extinct species successfully simulated"
 
-        if iszero(n)
+        if n < 2
           @warn "\n
           What would you do if an endangered animal is eating an endangered plant? \n 
           Sometimes nature is too cruel..."
