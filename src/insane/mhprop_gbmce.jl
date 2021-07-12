@@ -73,13 +73,11 @@ function daughters_lprop!(treep::iTgbmce,
   ped1 = td1v[1]
   ped2 = td2v[2]
 
-  # acceptance rate
-  normprop = 0.0
-
   bb!(λd1v_p, λf, λd1, td1v[2], σλ, δt, srδt)
   bb!(λd2v_p, λf, λd2, td2v[2], σλ, δt, srδt)
 
-  normprop += 
+  # acceptance rate
+  normprop = 
     duoldnorm(λf,        λd1, λd2, ped1, ped2, σλ) -
     duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ)
 

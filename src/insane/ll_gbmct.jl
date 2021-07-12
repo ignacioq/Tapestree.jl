@@ -286,9 +286,9 @@ function llik_gbm(tree::iTgbmct,
                   δt  ::Float64,
                   srδt::Float64)
   if istip(tree) 
-    ll_gbm_b(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, false, isextinct(tree))
+    ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, false, isextinct(tree))
   else
-    ll_gbm_b(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, true, false) +
+    ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, true, false) +
     llik_gbm(tree.d1::iTgbmct, ϵ, σλ, δt, srδt)                 +
     llik_gbm(tree.d2::iTgbmct, ϵ, σλ, δt, srδt)
   end
@@ -327,7 +327,7 @@ end
 
 
 """
-    ll_gbm_b(lλv ::Array{Float64,1},
+    ll_gbm_b_ϵ(lλv ::Array{Float64,1},
              ϵ   ::Float64,
              σλ  ::Float64,
              δt  ::Float64, 
@@ -338,7 +338,7 @@ end
 
 Returns the log-likelihood for a branch according to GBM birth-death.
 """
-@inline function ll_gbm_b(lλv ::Array{Float64,1},
+@inline function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
                           ϵ   ::Float64,
                           σλ  ::Float64,
                           δt  ::Float64, 
@@ -466,9 +466,9 @@ function llik_gbm_f(tree::iTgbmct,
                     srδt::Float64)
 
   if istip(tree)
-    ll = ll_gbm_b(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, false, false)
+    ll = ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, false, false)
   else
-    ll = ll_gbm_b(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, true, false)
+    ll = ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, true, false)
 
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)

@@ -567,17 +567,8 @@ function fsp(Ψp   ::iTgbmbd,
              cond_alone_events_stem(Ψc)
     end
 
-
-    # if iszero(wbc)
-    #   acr += cond_alone_events_stem(Ψc)   - 
-    #          cond_alone_events_stem_λ(t0)
-    # else
-    # acr += cond_alone_events_stem_woλ(Ψc, dri, ldr, 0) -
-    #        cond_alone_events_stem(t0)
-    # end
-
     # mh ratio
-    if -randexp() < acr #+ cll
+    if -randexp() < acr + cll
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 

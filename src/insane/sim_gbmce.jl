@@ -13,20 +13,20 @@ Created 03 09 2020
 
 """
     sim_gbmce(t   ::Float64,
-            λt  ::Float64,
-            μ   ::Float64,
-            σλ  ::Float64,
-            δt  ::Float64,
-            srδt::Float64)
+              λt  ::Float64,
+              μ   ::Float64,
+              σλ  ::Float64,
+              δt  ::Float64,
+              srδt::Float64)
 
 Simulate `iTgbmce` according to a geometric Brownian motion.
 """
 function sim_gbmce(t   ::Float64,
-                 λt  ::Float64,
-                 μ   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64)
+                   λt  ::Float64,
+                   μ   ::Float64,
+                   σλ  ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64)
 
   λv = Float64[λt]
   bt = 0.0

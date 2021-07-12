@@ -554,17 +554,11 @@ function fsp(Ψp   ::iTgbmce,
       # l = lastindex(bbλcpr)
       # acr += bbλcpr[l] - λf
 
-      # acr += cond_alone_events_stem(Ψc, dri, ldr, 0) -
-      #        cond_alone_events_stem_λ(t0)
-
     else
       pr  = bix
       iλ  = 0.0
       llr = 0.0
       acr = 0.0
-
-      # acr += cond_alone_events_stem(Ψc, dri, ldr, 0) -
-      #        cond_alone_events_stem(t0)
     end
 
     cll = 0.0
@@ -591,7 +585,7 @@ function fsp(Ψp   ::iTgbmce,
     # end
 
     # mh ratio
-    if -randexp() < acr #+ cll
+    if -randexp() < acr + cll
       llr += llik_gbm( t0, μ, σλ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, μ, σλ, δt, srδt, dri, ldr, 0)
 
