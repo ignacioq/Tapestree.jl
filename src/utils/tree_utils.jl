@@ -406,7 +406,7 @@ function remove_extinct(ed::Array{Int64,2},
     pn = e1[r] 
 
     # other row
-    or = e1[r+1] === pn ? r+1 : r-1
+    or = e1[r-1] === pn ? r-1 : r+1
 
     # ancestral row
     ar = @views findfirst(x -> x === pn, e2) 
