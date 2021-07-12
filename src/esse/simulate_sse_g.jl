@@ -109,7 +109,7 @@ function simulate_sse(λ       ::Array{Float64,1},
     end
   else 
     if n < 2
-      return Dict{Int64, Vector{Float64}}(), ed, el
+      return Dict{Int64, Vector{Float64}}(), ed, el, false
     end
   end
 
