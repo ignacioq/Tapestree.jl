@@ -47,6 +47,8 @@ function simulate_sse(λ       ::Array{Float64,1},
 
   ne = lastindex(ee)
 
+  maxsp = false
+
   if verbose
     @info "Tree with $n extant and $ne extinct species successfully simulated"
 
@@ -67,6 +69,7 @@ function simulate_sse(λ       ::Array{Float64,1},
     if verbose
       @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
     end
+    maxsp = true
   end
 
   if retry_ext 
@@ -101,10 +104,11 @@ function simulate_sse(λ       ::Array{Float64,1},
         if verbose
           @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
         end
+        maxsp = true
       end
     end
   else 
-    if iszero(size(ed,1))
+    if n < 2
       return Dict{Int64, Vector{Float64}}(), ed, el
     end
   end
@@ -138,7 +142,7 @@ function simulate_sse(λ       ::Array{Float64,1},
 
   tv = states_to_values(tv, S, k)
 
-  return tv, ed, el
+  return tv, ed, el, maxsp
 end
 
 
