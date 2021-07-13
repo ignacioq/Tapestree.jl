@@ -559,24 +559,24 @@ function fsp(Ψp   ::iTgbmct,
       acr = 0.0
     end
 
-    cll = 0.0
-    if icr && isone(wbc)
-      if dri[1]
-        cll += cond_alone_events_stem_λ(t0, ϵ) - 
-               cond_alone_events_stem(Ψc.d1::iTgbmct, ϵ)
-      else
-        cll += cond_alone_events_stem_λ(t0, ϵ) -
-               cond_alone_events_stem(Ψc.d2::iTgbmct, ϵ)
-      end
-    elseif iszero(wbc)
-      cll += cond_alone_events_stem_λ(t0, ϵ) -
-             cond_alone_events_stem(Ψc, ϵ)
-    end
-
     # mh ratio
-    if -randexp() < acr + cll
+    if -randexp() < acr
       llr += llik_gbm( t0, ϵ, σλ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, ϵ, σλ, δt, srδt, dri, ldr, 0)
+
+      cll = 0.0
+      if icr && isone(wbc)
+        if dri[1]
+          cll += cond_alone_events_stem_λ(t0, ϵ) - 
+                 cond_alone_events_stem(Ψc.d1::iTgbmct, ϵ)
+        else
+          cll += cond_alone_events_stem_λ(t0, ϵ) -
+                 cond_alone_events_stem(Ψc.d2::iTgbmct, ϵ)
+        end
+      elseif iszero(wbc)
+        cll += cond_alone_events_stem_λ(t0, ϵ) -
+               cond_alone_events_stem(Ψc, ϵ)
+      end
 
       llc += llr + cll
 

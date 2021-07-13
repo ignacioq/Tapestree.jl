@@ -515,7 +515,7 @@ function fsp(Ψp   ::iTgbmbd,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  t0, ret, λfm1, μfm1, λf, μf, dft0 = 
+  t0, ret, λf, μf = 
     fsbi(bi, bbλc[bix][1], bbμc[bix][1], σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
@@ -540,50 +540,30 @@ function fsp(Ψp   ::iTgbmbd,
       # l = lastindex(bbλcpr)
       # acr += bbλcpr[l] - λf
 
-      # acr += cond_alone_events_stem(Ψc, dri, ldr, 0) -
-      #        cond_alone_events_stem_λ(t0)
-
     else
       pr  = bix
       iλ  = 0.0
       llr = 0.0
       acr = 0.0
-
-      # acr += cond_alone_events_stem(Ψc, dri, ldr, 0) -
-      #        cond_alone_events_stem(t0)
-    end
-
-    cll = 0.0
-    if icr && isone(wbc)
-      if dri[1]
-        cll += cond_alone_events_stem_λ(t0) - 
-               cond_alone_events_stem(Ψc.d1::iTgbmbd)
-      else
-        cll += cond_alone_events_stem_λ(t0) -
-               cond_alone_events_stem(Ψc.d2::iTgbmbd)
-      end
-    elseif iszero(wbc)
-      cll += cond_alone_events_stem_λ(t0) -
-             cond_alone_events_stem(Ψc)
     end
 
     # mh ratio
-    if -randexp() < acr + cll
+    if -randexp() < acr 
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
-      # if icr && isone(wbc)
-      #   if dri[1]
-      #     llr += cond_alone_events_stem(t0) - 
-      #            cond_alone_events_stem(Ψc.d1::iTgbmbd)
-      #   else
-      #     llr += cond_alone_events_stem(t0) -
-      #            cond_alone_events_stem(Ψc.d2::iTgbmbd)
-      #   end
-      # elseif iszero(wbc)
-      #   llr += cond_alone_events_stem(t0) -
-      #          cond_alone_events_stem(Ψc)
-      # end
+      if icr && isone(wbc)
+        if dri[1]
+          llr += cond_alone_events_stem(t0) - 
+                 cond_alone_events_stem(Ψc.d1::iTgbmbd)
+        else
+          llr += cond_alone_events_stem(t0) -
+                 cond_alone_events_stem(Ψc.d2::iTgbmbd)
+        end
+      elseif iszero(wbc)
+        llr += cond_alone_events_stem(t0) -
+               cond_alone_events_stem(Ψc)
+      end
 
       llc += llr + cll
 
@@ -705,7 +685,7 @@ function fsbi(bi  ::iBffs,
     ret = false
   end
 
-  return t0, ret, λfm1, μfm1, λf, μf, dft0
+  return t0, ret, λf, μf
 end
 
 

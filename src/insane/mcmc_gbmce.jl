@@ -561,46 +561,23 @@ function fsp(Ψp   ::iTgbmce,
       acr = 0.0
     end
 
-    cll = 0.0
-    if icr && isone(wbc)
-      if dri[1]
-        cll += cond_alone_events_stem_λ(t0, μ) - 
-               cond_alone_events_stem(Ψc.d1::iTgbmce, μ)
-      else
-        cll += cond_alone_events_stem_λ(t0, μ) -
-               cond_alone_events_stem(Ψc.d2::iTgbmce, μ)
-      end
-    elseif iszero(wbc)
-      cll += cond_alone_events_stem_λ(t0, μ) -
-             cond_alone_events_stem(Ψc, μ)
-    end
-
-
-    # if iszero(wbc)
-    #   acr += cond_alone_events_stem(Ψc)   - 
-    #          cond_alone_events_stem_λ(t0)
-    # else
-    # acr += cond_alone_events_stem_woλ(Ψc, dri, ldr, 0) -
-    #        cond_alone_events_stem(t0)
-    # end
-
     # mh ratio
-    if -randexp() < acr + cll
+    if -randexp() < acr 
       llr += llik_gbm( t0, μ, σλ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, μ, σλ, δt, srδt, dri, ldr, 0)
 
-      # if icr && isone(wbc)
-      #   if dri[1]
-      #     llr += cond_alone_events_stem(t0) - 
-      #            cond_alone_events_stem(Ψc.d1::iTgbmce)
-      #   else
-      #     llr += cond_alone_events_stem(t0) -
-      #            cond_alone_events_stem(Ψc.d2::iTgbmce)
-      #   end
-      # elseif iszero(wbc)
-      #   llr += cond_alone_events_stem(t0) -
-      #          cond_alone_events_stem(Ψc)
-      # end
+      if icr && isone(wbc)
+        if dri[1]
+          llr += cond_alone_events_stem(t0) - 
+                 cond_alone_events_stem(Ψc.d1::iTgbmce)
+        else
+          llr += cond_alone_events_stem(t0) -
+                 cond_alone_events_stem(Ψc.d2::iTgbmce)
+        end
+      elseif iszero(wbc)
+        llr += cond_alone_events_stem(t0) -
+               cond_alone_events_stem(Ψc)
+      end
 
       llc += llr + cll
 

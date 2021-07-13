@@ -12,6 +12,119 @@ Created 03 09 2020
 
 
 
+
+"""
+    time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
+
+Return quantiles given by probabilities `p` vector.
+"""
+function time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
+  
+  fx = Array{Float64,2}(undef, lastindex(r), lastindex(p))
+  for (i, ri) in enumerate(r)
+    fx[i,:] = quantile(ri)
+  end
+  return fx
+end
+
+
+
+
+
+"""
+    time_fun(f::Function, r::Array{Array{Float64,1},1})
+
+Apply function `f` to each vector in `r` and return the value. 
+"""
+function time_fun(f::Function, r::Array{Array{Float64,1},1})
+  lr = lastindex(r)
+  fx = Array{Float64,1}(undef, lr)
+  for i in Base.OneTo(lr)
+    fx[i] = f(r[i])
+  end
+  return fx
+end
+
+
+
+
+"""
+    time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
+
+Extract values from `lv` function at times `ts` across the tree.
+"""
+function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
+
+  th = treeheight(tree)
+
+  # make time vector (present = 0.0)
+  tdt = 0.02
+  ts  = [0.0:tdt:th...]
+  reverse!(ts)
+
+  # make vector of vector to push rates
+  r = [Float64[] for i in Base.OneTo(lastindex(ts))]
+
+  # do recursive 
+  _time_rate!(tree, ts, tdt, r, 1, th, lv)
+  pop!(r)
+  pop!(ts)
+
+  return ts, r
+end
+
+
+
+
+"""
+    _time_rate!(tree::T, 
+               ts  ::Array{Float64,1},
+               tdt ::Float64, 
+               r   ::Array{Array{Float64,1},1}, 
+               tii ::Int64,
+               ct  ::Float64,
+               lv  ::Function) where {T <: iTgbm}
+
+Extract values from `lv` function at times `ts` across the tree.
+"""
+function _time_rate!(tree::T, 
+                     ts  ::Array{Float64,1},
+                     tdt ::Float64, 
+                     r   ::Array{Array{Float64,1},1}, 
+                     tii ::Int64,
+                     ct  ::Float64,
+                     lv  ::Function) where {T <: iTgbm}
+
+  pet = pe(tree)
+  δt  = dt(tree)
+  vt  = lv(tree)
+
+  nts = Int64(fld(pet - (ct - ts[tii]), tdt))
+  tsr = tii:(tii + nts)
+
+  # have to match ts times to lv vector
+  @simd for i in tsr
+    tsi = ts[i]
+    bt  = ct - tsi
+    ix  = fld(bt, δt)
+    tts = δt *  ix
+    ttf = δt * (ix + 1.0)
+    Ix  = Int64(ix)
+    push!(r[i], linpred(bt, tts, ttf, vt[Ix+1], vt[Ix+2]))
+  end
+
+  if !isnothing(tree.d1)
+    _time_rate!(tree.d1::T, ts, tdt, r, tii + nts + 1, ct - pet, lv)
+  end
+  if !isnothing(tree.d2)
+    _time_rate!(tree.d2::T, ts, tdt, r, tii + nts + 1, ct - pet, lv)
+  end
+end
+
+
+
+
+
 """
     mcmc_array(treev::Array{T,1},
                δt   ::Float64,

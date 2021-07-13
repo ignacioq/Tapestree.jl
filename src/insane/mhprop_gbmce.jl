@@ -81,13 +81,6 @@ function daughters_lprop!(treep::iTgbmce,
     duoldnorm(λf,        λd1, λd2, ped1, ped2, σλ) -
     duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ)
 
-  llrcond = 0.0
-  # only if crown conditioning
-  if icr && iszero(wbc)
-    llrcond += cond_alone_events_crown(treep, μ) -
-               cond_alone_events_crown(treec, μ)
-  end
-
   # fill fix and simulate unfix tree
   bm!(treepd1, λd1v_p, 1, lid1, σλ, srδt)
   bm!(treepd2, λd2v_p, 1, lid2, σλ, srδt)
@@ -95,7 +88,7 @@ function daughters_lprop!(treep::iTgbmce,
   llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, δt, srδt)
   llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, δt, srδt)
 
-  acr  = llrbd_d1 + llrbd_d2 + llrcond
+  acr  = llrbd_d1 + llrbd_d2
   llr  = llrbm_d1 + llrbm_d2 + acr
   acr += normprop
 

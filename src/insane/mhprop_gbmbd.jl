@@ -87,8 +87,6 @@ function daughters_lprop!(treep::iTgbmbd,
   ped1 = td1v[1]
   ped2 = td2v[2]
 
-  # acceptance rate
-  normprop = 0.0
 
   bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
   bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
@@ -97,18 +95,11 @@ function daughters_lprop!(treep::iTgbmbd,
   μpr1_c = bbμc[pr][1]
   pepr   = tsv[pr][1]
 
-  normprop += 
+  normprop = 
     duoldnorm(λf,        λd1, λd2, ped1, ped2, σλ) -
     duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ) +
     duoldnorm(μf,        μd1, μd2, ped1, ped2, σμ) -
     duoldnorm(μd1v_c[1], μd1, μd2, ped1, ped2, σμ)
-
-  llrcond = 0.0
-  # only if crown conditioning
-  if icr && iszero(wbc)
-    llrcond += cond_alone_events_crown(treep) -
-               cond_alone_events_crown(treec)
-  end
 
   # fill fix and simulate unfix tree
   bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, σλ, σμ, srδt)
@@ -117,7 +108,7 @@ function daughters_lprop!(treep::iTgbmbd,
   llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, σλ, σμ, δt, srδt)
   llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, σλ, σμ, δt, srδt)
 
-  acr  = llrbd_d1 + llrbd_d2 + llrcond
+  acr  = llrbd_d1 + llrbd_d2
   llr  = llrbm_d1 + llrbm_d2 + acr
   acr += normprop
 
