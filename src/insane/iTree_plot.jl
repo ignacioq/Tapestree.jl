@@ -10,19 +10,20 @@ Created 07 07 2020
 =#
 
 
-"""
-    plot_time_values(tree::T, 
-                     lv  ::Function; 
-                     dt  ::Float64 = 0.2,
-                     e   ::Bool    = false) where {T <: iTgbm}
+# make this into a recipe
 
-Plot range and median values given by `lv` through time.
-"""
-function plot_time_values(tree::T, 
-                          lv  ::Function; 
-                          dt  ::Float64 = 0.2,
-                          e   ::Bool    = false) where {T <: iTgbm}
 
+"""
+    function f(tree::T, lv::Function, dt::Float64, e::Bool)
+
+Recipe for plotting values given by `lv` through time for a `iTgbm`.
+"""
+@recipe function f(tree::T, 
+                   lv  ::Function, 
+                   dt  ::Float64,
+                   e   ::Bool) where {T <: iTgbm}
+
+  # prepare data
   ts, r = time_rate(tree, dt, lv)
 
   if e
@@ -33,46 +34,58 @@ function plot_time_values(tree::T,
 
   lf = size(fx,1)
 
-  # range shape
-  sh0 = Tuple{Float64,Float64}[]
-  for i in Base.OneTo(lf)
-    push!(sh0, (ts[i], fx[i,1]))
-  end
-  for i in lf:-1:1
-    push!(sh0, (ts[i], fx[i,5]))
-  end
-
-  sh0 = Shape(sh0)
-
-  plot(sh0, 
-    fillcolor = plot_color(:orange, 0.3),
-    linecolor       = nothing,
-    legend          = :none,
-    xguide          = "time",
-    yguide          = "λ(t)",
-    fontfamily      = font(2, "Helvetica"),
-    xflip           = true,
-    xtickfont       = font(8, "Helvetica"),
-    grid            = :off,
-    xtick_direction = :out)
+  # common shape plot defaults
+  legend          --> :none
+  xguide          --> "time"
+  yguide          --> string(lv)[2:end]*"(t)"
+  fontfamily      --> font(2, "Helvetica")
+  xflip           --> true
+  xtickfont       --> font(8, "Helvetica")
+  grid            --> :off
+  xtick_direction --> :out
+  ytick_direction --> :out
+  fillcolor       --> plot_color(:orange, 0.3)
 
   # range shape
-  sh1 = Tuple{Float64,Float64}[]
-  for i in Base.OneTo(lf)
-    push!(sh1, (ts[i], fx[i,2]))
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh0 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lf)
+      push!(sh0, (ts[i], fx[i,1]))
+    end
+    for i in lf:-1:1
+      push!(sh0, (ts[i], fx[i,5]))
+    end
+
+    Shape(sh0)
   end
-  for i in lf:-1:1
-    push!(sh1, (ts[i], fx[i,4]))
+
+  # [0.25, 0.75] quantile range shape
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh1 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lf)
+      push!(sh1, (ts[i], fx[i,2]))
+    end
+    for i in lf:-1:1
+      push!(sh1, (ts[i], fx[i,4]))
+    end
+
+    Shape(sh1)
   end
 
-  sh1 = Shape(sh1)
+  # midline
+  @series begin
+    seriestype := :line
+    linecolor --> "#00304999"
+    linewidth --> 1.4
 
-  plot!(sh1, fillcolor = plot_color(:orange, 0.3),
-        linecolor = nothing)
-
-  plot!(ts, fx[:,3],
-    linecolor = "#00304999",
-    linewidths = 1.4)
+    ts, fx[:,3]
+  end
 
 end
 
