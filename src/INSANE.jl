@@ -8,7 +8,7 @@ module INSANE
 
 using RecipesBase: @recipe
 using Random: randexp
-using DelimitedFiles: writelm
+using DelimitedFiles: writedlm
 
 # other submodules dependencies
 using ..Utils
