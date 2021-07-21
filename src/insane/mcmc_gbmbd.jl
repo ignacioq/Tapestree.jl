@@ -100,7 +100,7 @@ function insane_gbmbd(tree    ::sTbd,
   triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(Ψc)) ? cond_alone_events_crown : cond_alone_events_stem
+  svf = iszero(pe(Ψc)) ? cond_surv_crown : cond_surv_stem
 
   # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
   spup = sum(pupdp)
@@ -377,7 +377,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         llc, prc, σλc, σμc = 
           update_σ!(σλc, σμc, Ψc, llc, prc, σλ_prior, σμ_prior)
 
-        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_surv_stem(Ψc)
         #  if !isapprox(llci, llc, atol = 1e-4)
         #    @show llci, llc, i, 1
         #    return 
@@ -407,7 +407,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
             σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_surv_stem(Ψc)
         #  if !isapprox(llci, llc, atol = 1e-4)
         #    @show llci, llc, i, 2
         #    return 
@@ -438,7 +438,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
         
-        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_alone_events_stem(Ψc)
+        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_surv_stem(Ψc)
         #  if !isapprox(llci, llc, atol = 1e-4)
         #    @show llci, llc, i, 3
         #    return 
@@ -549,23 +549,24 @@ function fsp(Ψp   ::iTgbmbd,
 
     # mh ratio
     if -randexp() < acr 
+
       llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
 
       if icr && isone(wbc)
         if dri[1]
-          llr += cond_alone_events_stem(t0) - 
-                 cond_alone_events_stem(Ψc.d1::iTgbmbd)
+          llr += cond_surv_stem(t0) - 
+                 cond_surv_stem(Ψc.d1::iTgbmbd)
         else
-          llr += cond_alone_events_stem(t0) -
-                 cond_alone_events_stem(Ψc.d2::iTgbmbd)
+          llr += cond_surv_stem(t0) -
+                 cond_surv_stem(Ψc.d2::iTgbmbd)
         end
       elseif iszero(wbc)
-        llr += cond_alone_events_stem(t0) -
-               cond_alone_events_stem(Ψc)
+        llr += cond_surv_stem(t0) -
+               cond_surv_stem(Ψc)
       end
 
-      llc += llr + cll
+      llc += llr
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], bbμc[pr], 0)
@@ -588,7 +589,6 @@ function fsp(Ψp   ::iTgbmbd,
 
   return Ψp, Ψc, llc
 end
-
 
 
 

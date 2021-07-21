@@ -101,7 +101,7 @@ function insane_gbmce(tree    ::sTbd,
   triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(Ψc)) ? cond_alone_events_crown : cond_alone_events_stem
+  svf = iszero(pe(Ψc)) ? cond_surv_crown : cond_surv_stem
 
   # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
   spup = sum(pupdp)
@@ -530,7 +530,7 @@ function fsp(Ψp   ::iTgbmce,
              wbc  ::Int64)
 
   t0, ret, λf = 
-    fsbi_ct(bi, bbλc[bix][1], μ, σλ, δt, srδt, nlim)
+    fsbi_ce(bi, bbλc[bix][1], μ, σλ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -568,18 +568,18 @@ function fsp(Ψp   ::iTgbmce,
 
       if icr && isone(wbc)
         if dri[1]
-          llr += cond_alone_events_stem(t0) - 
-                 cond_alone_events_stem(Ψc.d1::iTgbmce)
+          llr += cond_surv_stem(t0, μ) - 
+                 cond_surv_stem(Ψc.d1::iTgbmce, μ)
         else
-          llr += cond_alone_events_stem(t0) -
-                 cond_alone_events_stem(Ψc.d2::iTgbmce)
+          llr += cond_surv_stem(t0, μ) -
+                 cond_surv_stem(Ψc.d2::iTgbmce, μ)
         end
       elseif iszero(wbc)
-        llr += cond_alone_events_stem(t0) -
-               cond_alone_events_stem(Ψc)
+        llr += cond_surv_stem(t0, μ) -
+               cond_surv_stem(Ψc, μ)
       end
 
-      llc += llr + cll
+      llc += llr
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], 0)
@@ -606,7 +606,7 @@ end
 
 
 """
-    fsbi_ct(bi  ::iBffs, 
+    fsbi_ce(bi  ::iBffs, 
             iλ  ::Float64, 
             fdti::Float64,
             μ   ::Float64, 
@@ -617,7 +617,7 @@ end
 
 Forward gbmce simulation for branch `bi`.
 """
-function fsbi_ct(bi  ::iBffs, 
+function fsbi_ce(bi  ::iBffs, 
                  iλ  ::Float64, 
                  μ   ::Float64, 
                  σλ  ::Float64, 

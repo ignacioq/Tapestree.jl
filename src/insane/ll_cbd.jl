@@ -10,17 +10,15 @@ Created 06 07 2020
 =#
 
 
-
-
 """
     stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
 
 Log-probability of at least one lineage surviving after time `t` for 
 birth-death process with `λ` and `μ` for stem age.
 """
-function stem_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
-  n = count_alone_nodes_stem(tree, 0.0, 0)
-  return Float64(n)*log((λ+μ)/λ)
+function cond_surv_stem(tree::sTbd, λ::Float64, μ::Float64)
+  n, t = sum_alone_stem(tree, 0.0, 0.0, 0.0)
+  return n*log((λ + μ)/λ) + μ*t
 end
 
 
@@ -30,63 +28,117 @@ end
 Log-probability of at least two lineage surviving after time `t` for 
 birth-death process with `λ` and `μ` for crown age.
 """
-function crown_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
-  n = count_alone_nodes_crown(tree)
-  return Float64(n)*log((λ+μ)/λ) - log(λ)
+function cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
+  n1, t1 = sum_alone_stem(tree.d1::sTbd, 0.0, 0.0, 0.0)
+  n2, t2 = sum_alone_stem(tree.d2::sTbd, 0.0, 0.0, 0.0)
+  n = n1 + n2
+  t = t1 + t2
+
+  return n*log((λ + μ)/λ) - log(λ) + μ*t
 end
 
 
 
 
+# """
+#     stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
+
+# Log-probability of at least one lineage surviving after time `t` for 
+# birth-death process with `λ` and `μ` for stem age.
+# """
+# function stem_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
+#   n = count_alone_nodes_stem(tree, 0.0, 0.0)
+#   return n*log((λ+μ)/λ)
+# end
+
+
+# """
+#     crown_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
+
+# Log-probability of at least two lineage surviving after time `t` for 
+# birth-death process with `λ` and `μ` for crown age.
+# """
+# function crown_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
+#   n = count_alone_nodes_stem(tree.d1::sTbd, 0.0, 0.0) + 
+#       count_alone_nodes_stem(tree.d2::sTbd, 0.0, 0.0)
+#   return n*log((λ+μ)/λ) - log(λ)
+# end
+
+
+
+
 """
-    count_alone_nodes_ds(tree::sTbd, tna::Float64, n::Int64)
-
-Count nodes in crown lineages when a diversification event could have 
-returned an overall extinction.
-"""
-function count_alone_nodes_crown(tree::sTbd)
-
-  n0 = count_alone_nodes_stem(tree.d1::sTbd, 0.0, 0)
-  n1 = count_alone_nodes_stem(tree.d2::sTbd, 0.0, 0)
-
-  return (n0 + n1)
-end
-
-
-
-
-"""
-    count_alone_nodes_b(tree::sTbd, tna::Float64, n::Int64)
+    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
 
 Count nodes in stem lineage when a diversification event could have 
 returned an overall extinction.
 """
-function count_alone_nodes_stem(tree::sTbd, tna::Float64, n::Int64)
+function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
+
+  if istip(tree)
+    if tna < pe(tree)
+      lt += pe(tree) - tna
+    end
+    return n, t
+  end
 
   if tna < pe(tree)
-    n += 1
+    n += 1.0
+    t += pe(tree) - tna
   end
   tna -= pe(tree)
 
-  if istip(tree)
-    return n
-  end
-
   if isfix(tree.d1::sTbd)
     if isfix(tree.d2::sTbd)
-      return n
+      return n, t
     else
       tnx = treeheight(tree.d2::sTbd)
       tna = tnx > tna ? tnx : tna
-      count_alone_nodes_stem(tree.d1::sTbd, tna, n)
+      sum_alone_stem(tree.d1::sTbd, tna, n, t)
     end
   else
     tnx = treeheight(tree.d1::sTbd)
     tna = tnx > tna ? tnx : tna
-    count_alone_nodes_stem(tree.d2::sTbd, tna, n)
+    sum_alone_stem(tree.d2::sTbd, tna, n, t)
   end
 
 end
+
+
+
+
+# """
+#     count_alone_nodes_b(tree::sTbd, tna::Float64, n::Int64)
+
+# Count nodes in stem lineage when a diversification event could have 
+# returned an overall extinction.
+# """
+# function count_alone_nodes_stem(tree::sTbd, tna::Float64, n::Float64)
+
+#   if tna < pe(tree)
+#     n += 1.0
+#   end
+#   tna -= pe(tree)
+
+#   if istip(tree)
+#     return n
+#   end
+
+#   if isfix(tree.d1::sTbd)
+#     if isfix(tree.d2::sTbd)
+#       return n
+#     else
+#       tnx = treeheight(tree.d2::sTbd)
+#       tna = tnx > tna ? tnx : tna
+#       count_alone_nodes_stem(tree.d1::sTbd, tna, n)
+#     end
+#   else
+#     tnx = treeheight(tree.d1::sTbd)
+#     tna = tnx > tna ? tnx : tna
+#     count_alone_nodes_stem(tree.d2::sTbd, tna, n)
+#   end
+
+# end
 
 
 

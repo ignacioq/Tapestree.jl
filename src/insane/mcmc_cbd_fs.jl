@@ -74,10 +74,10 @@ function insane_cbd_fs(tree    ::sTbd,
   # from `idf`
   #svf = iszero(pe(tree)) ? crown_prob_surv_cbd : stem_prob_surv_cbd
   if iszero(pe(tree))
-     svf = crown_prob_surv_da
+     svf = cond_surv_crown
      cb = findall(x -> isone(lastindex(dr(x))), idf)
   else
-     svf = stem_prob_surv_da
+     svf = cond_surv_stem
      cb = Int64[findfirst(x -> iszero(lastindex(dr(x))), idf)]
   end
 

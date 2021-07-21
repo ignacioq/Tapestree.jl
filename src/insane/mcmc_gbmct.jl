@@ -527,7 +527,7 @@ function fsp(Ψp   ::iTgbmct,
              wbc  ::Int64)
 
   t0, ret, λf = 
-    fsbi(bi, bbλc[bix][1], ϵ, σλ, δt, srδt, nlim)
+    fsbi_ct(bi, bbλc[bix][1], ϵ, σλ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -551,7 +551,6 @@ function fsp(Ψp   ::iTgbmct,
       # l = lastindex(bbλcpr)
       # acr += bbλcpr[l] - λf
 
-
     else
       pr  = bix
       iλ  = 0.0
@@ -564,21 +563,20 @@ function fsp(Ψp   ::iTgbmct,
       llr += llik_gbm( t0, ϵ, σλ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, ϵ, σλ, δt, srδt, dri, ldr, 0)
 
-      cll = 0.0
       if icr && isone(wbc)
         if dri[1]
-          cll += cond_alone_events_stem_λ(t0, ϵ) - 
+          llr += cond_alone_events_stem_λ(t0, ϵ) - 
                  cond_alone_events_stem(Ψc.d1::iTgbmct, ϵ)
         else
-          cll += cond_alone_events_stem_λ(t0, ϵ) -
+          llr += cond_alone_events_stem_λ(t0, ϵ) -
                  cond_alone_events_stem(Ψc.d2::iTgbmct, ϵ)
         end
       elseif iszero(wbc)
-        cll += cond_alone_events_stem_λ(t0, ϵ) -
+        llr += cond_alone_events_stem_λ(t0, ϵ) -
                cond_alone_events_stem(Ψc, ϵ)
       end
 
-      llc += llr + cll
+      llc += llr
 
       # copy parent to aid vectors
       gbm_copy_f!(t0, bbλc[pr], 0)
@@ -605,23 +603,23 @@ end
 
 
 """
-    fsbi(bi  ::iBffs, 
-         iλ  ::Float64, 
-         ϵ   ::Float64, 
-         σλ  ::Float64, 
-         δt  ::Float64, 
-         srδt::Float64,
-         nlim::Int64)
+    fsbi_ct(bi  ::iBffs, 
+            iλ  ::Float64, 
+            ϵ   ::Float64, 
+            σλ  ::Float64, 
+            δt  ::Float64, 
+            srδt::Float64,
+            nlim::Int64)
 
 Forward gbmct simulation for branch `bi`.
 """
-function fsbi(bi  ::iBffs, 
-              iλ  ::Float64, 
-              ϵ   ::Float64, 
-              σλ  ::Float64, 
-              δt  ::Float64, 
-              srδt::Float64,
-              nlim::Int64)
+function fsbi_ct(bi  ::iBffs, 
+                iλ  ::Float64, 
+                ϵ   ::Float64, 
+                σλ  ::Float64, 
+                δt  ::Float64, 
+                srδt::Float64,
+                nlim::Int64)
 
   # retain the simulation?
   ret = true

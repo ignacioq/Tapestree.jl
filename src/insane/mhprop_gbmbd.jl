@@ -464,15 +464,15 @@ function llr_propr(treep  ::iTgbmbd,
 
   if iszero(wbc)
     if icr 
-      llrcond += cond_alone_events_crown(treep) -
-                 cond_alone_events_crown(treec)
+      llrcond += cond_surv_crown(treep) -
+                 cond_surv_crown(treec)
     else
-      llrcond += cond_alone_events_stem(treep) -
-                 cond_alone_events_stem(treec)
+      llrcond += cond_surv_stem(treep) -
+                 cond_surv_stem(treec)
     end
   elseif isone(wbc) && icr
-    llrcond += cond_alone_events_stem(treep) -
-               cond_alone_events_stem(treec)
+    llrcond += cond_surv_stem(treep) -
+               cond_surv_stem(treec)
   end
 
   acr = llrbd_pr + llrbd_d1 + llrbd_d2 + llrcond

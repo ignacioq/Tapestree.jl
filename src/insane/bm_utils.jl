@@ -235,7 +235,7 @@ Returns the log-likelihood ratio for Brownian motion.
 """
 @inline function llr_bm(xp  ::Array{Float64,1},
                         xc  ::Array{Float64,1},
-                        fdt::Float64,
+                        fdt ::Float64,
                         σ   ::Float64, 
                         srδt::Float64)
 
