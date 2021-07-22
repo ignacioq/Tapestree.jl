@@ -79,6 +79,8 @@ function insane_cbd_gp(tree    ::sTbd,
   svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
                            stem_prob_surv_cbd
 
+  @info "Running constant birth-death with graft prune"
+
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn, idf, dabr = 
       mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior, 

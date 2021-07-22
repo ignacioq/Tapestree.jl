@@ -87,7 +87,7 @@ function sum_alone_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if istip(tree)
     if tna < pe(tree)
-      ll += ll_μ(tree, tna)
+      #ll += ll_μ(tree, tna)
     end
     return ll
   end
@@ -99,7 +99,7 @@ function sum_alone_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
       λi  = lλv[lv]
       μi  = lμ(tree)[lv]
     end
-    ll += log((exp(λi) + exp(μi))) - λi + ll_μ(tree, tna)
+    ll += log((exp(λi) + exp(μi))) - λi #+ ll_μ(tree, tna)
   end
   tna -= pe(tree)
 

@@ -10,17 +10,6 @@ Created 06 07 2020
 =#
 
 
-"""
-    stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
-
-Log-probability of at least one lineage surviving after time `t` for 
-birth-death process with `λ` and `μ` for stem age.
-"""
-function cond_surv_stem(tree::sTbd, λ::Float64, μ::Float64)
-  n, t = sum_alone_stem(tree, 0.0, 0.0, 0.0)
-  return n*log((λ + μ)/λ) + μ*t
-end
-
 
 """
     crown_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
@@ -34,9 +23,62 @@ function cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
   n = n1 + n2
   t = t1 + t2
 
-  return n*log((λ + μ)/λ) - log(λ) + μ*t
+  return n*log((λ + μ)/λ) #+ μ*t
 end
 
+
+
+
+"""
+    stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
+
+Log-probability of at least one lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` for stem age.
+"""
+function cond_surv_stem(tree::sTbd, λ::Float64, μ::Float64)
+  n, t = sum_alone_stem(tree, 0.0, 0.0, 0.0)
+  return n*log((λ + μ)/λ) #+ μ*t
+end
+
+
+
+
+"""
+    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
+
+Count nodes in stem lineage when a diversification event could have 
+returned an overall extinction.
+"""
+function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
+
+  if istip(tree)
+    if tna < pe(tree)
+      t += pe(tree) - tna
+    end
+    return n, t
+  end
+
+  if tna < pe(tree)
+    n += 1.0
+    t += pe(tree) - tna
+  end
+  tna -= pe(tree)
+
+  if isfix(tree.d1::sTbd)
+    if isfix(tree.d2::sTbd)
+      return n, t
+    else
+      tnx = treeheight(tree.d2::sTbd)
+      tna = tnx > tna ? tnx : tna
+      sum_alone_stem(tree.d1::sTbd, tna, n, t)
+    end
+  else
+    tnx = treeheight(tree.d1::sTbd)
+    tna = tnx > tna ? tnx : tna
+    sum_alone_stem(tree.d2::sTbd, tna, n, t)
+  end
+
+end
 
 
 
@@ -63,46 +105,6 @@ end
 #       count_alone_nodes_stem(tree.d2::sTbd, 0.0, 0.0)
 #   return n*log((λ+μ)/λ) - log(λ)
 # end
-
-
-
-
-"""
-    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
-
-Count nodes in stem lineage when a diversification event could have 
-returned an overall extinction.
-"""
-function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
-
-  if istip(tree)
-    if tna < pe(tree)
-      lt += pe(tree) - tna
-    end
-    return n, t
-  end
-
-  if tna < pe(tree)
-    n += 1.0
-    t += pe(tree) - tna
-  end
-  tna -= pe(tree)
-
-  if isfix(tree.d1::sTbd)
-    if isfix(tree.d2::sTbd)
-      return n, t
-    else
-      tnx = treeheight(tree.d2::sTbd)
-      tna = tnx > tna ? tnx : tna
-      sum_alone_stem(tree.d1::sTbd, tna, n, t)
-    end
-  else
-    tnx = treeheight(tree.d1::sTbd)
-    tna = tnx > tna ? tnx : tna
-    sum_alone_stem(tree.d2::sTbd, tna, n, t)
-  end
-
-end
 
 
 
@@ -183,7 +185,7 @@ birth-death process with `λ` and `μ` from stem age.
 """
 function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
     μ += λ === μ ? 1e-14 : 0.0
-    log(λ * ((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
+    log(((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
 end
 
 

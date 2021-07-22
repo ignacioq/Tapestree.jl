@@ -72,7 +72,14 @@ function insane_cbd_fs(tree    ::sTbd,
 
   # make survival conditioning function (stem or crown) and identify branches
   # from `idf`
-  #svf = iszero(pe(tree)) ? crown_prob_surv_cbd : stem_prob_surv_cbd
+  # if iszero(pe(tree))
+  #    svf = crown_prob_surv_cbd
+  #    cb = findall(x -> isone(lastindex(dr(x))), idf)
+  # else
+  #    svf = stem_prob_surv_cbd
+  #    cb = Int64[findfirst(x -> iszero(lastindex(dr(x))), idf)]
+  # end
+
   if iszero(pe(tree))
      svf = cond_surv_crown
      cb = findall(x -> isone(lastindex(dr(x))), idf)
@@ -80,6 +87,8 @@ function insane_cbd_fs(tree    ::sTbd,
      svf = cond_surv_stem
      cb = Int64[findfirst(x -> iszero(lastindex(dr(x))), idf)]
   end
+
+  @info "Running constant birth-death with forward simulation"
 
   # adaptive phase
   llc, prc, tree, λc, μc, λtn, μtn = 
@@ -164,7 +173,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
 
   # likelihood
   llc = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
-  #llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
+  # llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -418,25 +427,25 @@ function fsp(tree::sTbd,
     if scb 
       # if one of crown branches
       if isone(lastindex(dri))
-        if isone(dri[1])
+        if dri[1]
           # likelihood ratio
           llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-                stem_prob_surv_da(t0, λ, μ)        - 
-                stem_prob_surv_da(tree.d1, λ, μ)
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) #+
+                # cond_surv_stem(t0, λ, μ)        - 
+                # cond_surv_stem(tree.d1, λ, μ)
         else
           # likelihood ratio
           llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-                stem_prob_surv_da(t0, λ, μ)        - 
-                stem_prob_surv_da(tree.d2, λ, μ)
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) #+
+                # cond_surv_stem(t0, λ, μ)        - 
+                # cond_surv_stem(tree.d2, λ, μ)
         end
       else
         # likelihood ratio
         llr = llik_cbd(t0, λ, μ) + iλ            - 
-              br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-              stem_prob_surv_da(t0, λ, μ)        - 
-              stem_prob_surv_da(tree, λ, μ)
+              br_ll_cbd(tree, λ, μ, dri, ldr, 0) #+
+              # cond_surv_stem(t0, λ, μ)        - 
+              # cond_surv_stem(tree, λ, μ)
       end
     else
       # likelihood ratio
@@ -487,9 +496,8 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
       for j in Base.OneTo(na - 1)
         for i in Base.OneTo(2)
           st0 = sim_cbd(tfb, λ, μ)
-          th0 = treeheight(st0)
           # if goes extinct before the present
-          if (th0 + 1e-11) < tfb
+          if iszero(snan(st0))
             #graft to tip
             add1fx(t0, st0, 1, 0)
             break
@@ -634,7 +642,7 @@ function λp(tree  ::sTbd,
     λp = mulupt(λc, λtn)::Float64
 
     llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
-    #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+    # llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
 
     prr = llrdexp_x(λp, λc, λprior)
 
@@ -675,7 +683,7 @@ function λp(tree  ::sTbd,
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
     llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
-    #llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+    # llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
 
     prr = llrdexp_x(λp, λc, λprior)
 
@@ -719,8 +727,8 @@ function μp(tree  ::sTbd,
     # one could make a ratio likelihood function
     sc  = svf(tree, λc, μp)
     llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) + sc
-    #sc  = svf(λc, μp, th)
-    #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    # sc  = svf(λc, μp, th)
+    # llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
 
     prr = llrdexp_x(μp, μc, μprior)
 
@@ -763,8 +771,8 @@ function μp(tree  ::sTbd,
     # one could make a ratio likelihood function
     sc  = svf(tree, λc, μp)
     llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) + sc
-    #sc  = svf(λc, μp, th)
-    #llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    # sc  = svf(λc, μp, th)
+    # llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
 
     prr = llrdexp_x(μp, μc, μprior)
 

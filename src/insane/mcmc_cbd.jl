@@ -48,7 +48,7 @@ function insane_cbd(tree        ::sTbd,
                     λtni        ::Float64           = 1.0,
                     μtni        ::Float64           = 1.0,
                     obj_ar      ::Float64           = 0.4,
-                    pupdp       ::NTuple{3,Float64} = (0.2,0.2,0.5),
+                    pupdp       ::NTuple{3,Float64} = (0.2,0.2,0.2),
                     prints      ::Int64             = 5)
 
   # forward simulation
@@ -56,7 +56,6 @@ function insane_cbd(tree        ::sTbd,
     R, tree = insane_cbd_fs(tree, out_file, 
       λprior, μprior, niter, nthin, nburn, tune_int, ϵi, λi, μi, λtni, μtni, 
       obj_ar, pupdp, prints)
-
 
   # graft/prune
   elseif occursin(r"^[g|G][A-za-z]*", augmentation)

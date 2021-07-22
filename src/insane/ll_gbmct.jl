@@ -30,192 +30,6 @@ end
 
 
 """
-    cond_alone_events_stem(tree::iTgbmct,
-                           ϵ   ::Float64,
-                           dri ::BitArray{1},
-                           ldr ::Int64,
-                           ix  ::Int64)
-
-Returns gbm birth-death likelihood for whole branch `br`.
-"""
-function cond_alone_events_stem(tree::iTgbmct,
-                                ϵ   ::Float64,
-                                dri ::BitArray{1},
-                                ldr ::Int64,
-                                ix  ::Int64)
-
-  if ix === ldr
-    return cond_alone_events_ll(tree, 0.0, 0.0, ϵ)
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1::iTgbmct)
-    if ifx1 && isfix(tree.d2::iTgbmct)
-      ix += 1
-      if dri[ix]
-        cond_alone_events_stem(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
-      else
-        cond_alone_events_stem(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
-      end
-    elseif ifx1
-      cond_alone_events_stem(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
-    else
-      cond_alone_events_stem(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
-    end
-  end
-
-end
-
-
-
-"""
-    cond_alone_events_stem_woλ(tree::iTgbmct,
-                               ϵ   ::Float64,
-                               dri ::BitArray{1},
-                               ldr ::Int64,
-                               ix  ::Int64)
-
-Returns gbm birth-death likelihood for whole branch `br`.
-"""
-function cond_alone_events_stem_woλ(tree::iTgbmct,
-                                    ϵ   ::Float64,
-                                    dri ::BitArray{1},
-                                    ldr ::Int64,
-                                    ix  ::Int64)
-
-  if ix === ldr
-    return cond_alone_events_ll_woλ(tree, 0.0, 0.0, ϵ)
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1::iTgbmct)
-    if ifx1 && isfix(tree.d2::iTgbmct)
-      ix += 1
-      if dri[ix]
-        cond_alone_events_stem_woλ(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
-      else
-        cond_alone_events_stem_woλ(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
-      end
-    elseif ifx1
-      cond_alone_events_stem_woλ(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
-    else
-      cond_alone_events_stem_woλ(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
-    end
-  end
-
-end
-
-
-
-
-
-"""
-    cond_alone_events_stem_woλ(tree::iTgbmct, ϵ::Float64) = 
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-cond_alone_events_stem_woλ(tree::iTgbmct, ϵ::Float64) = 
-  cond_alone_events_ll_woλ(tree, 0.0, 0.0, ϵ)
-
-
-"""
-    cond_alone_events_ll_woλ(tree::iTgbmct, 
-                             tna ::Float64, 
-                             ll  ::Float64,
-                             ϵ   ::Float64)
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-function cond_alone_events_ll_woλ(tree::iTgbmct, 
-                                  tna ::Float64, 
-                                  ll  ::Float64,
-                                  ϵ   ::Float64)
-
-  if istip(tree)
-    return ll
-  end
-
-  if isfix(tree.d1::iTgbmct) && isfix(tree.d2::iTgbmct)
-    return ll
-  end
-
-  if tna < pe(tree)
-    ll += log(1.0 + ϵ)
-  end
-  tna -= pe(tree)
-
-  if isfix(tree.d1::iTgbmct)
-    if isfix(tree.d2::iTgbmct)
-      return ll
-    else
-      tnx = treeheight(tree.d2::iTgbmct)
-      tna = tnx > tna ? tnx : tna
-      cond_alone_events_ll_woλ(tree.d1::iTgbmct, tna, ll, ϵ)
-    end
-  else
-    tnx = treeheight(tree.d1::iTgbmct)
-    tna = tnx > tna ? tnx : tna
-    cond_alone_events_ll_woλ(tree.d2::iTgbmct, tna, ll, ϵ)
-  end
-end
-
-
-
-
-"""
-    cond_alone_events_stem_λ(tree::iTgbmct, ϵ::Float64) = 
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-cond_alone_events_stem_λ(tree::iTgbmct, ϵ::Float64) = 
-  cond_alone_events_ll_λ(tree, 0.0, 0.0, ϵ)
-
-
-
-
-"""
-    cond_alone_events_ll_λ(tree::iTgbmct, 
-                           tna ::Float64, 
-                           ll  ::Float64, 
-                           ϵ   ::Float64)
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-function cond_alone_events_ll_λ(tree::iTgbmct, 
-                                tna ::Float64, 
-                                ll  ::Float64, 
-                                ϵ   ::Float64)
-
-
-  if tna < pe(tree)
-    ll += log(1.0 + ϵ)
-  end
-  tna -= pe(tree)
-
-  if istip(tree)
-    return ll
-  end
-
-  if isfix(tree.d1::iTgbmct)
-    if isfix(tree.d2::iTgbmct)
-      return ll
-    else
-      tnx = treeheight(tree.d2::iTgbmct)
-      tna = tnx > tna ? tnx : tna
-      cond_alone_events_ll_λ(tree.d1::iTgbmct, tna, ll, ϵ)
-    end
-  else
-    tnx = treeheight(tree.d1::iTgbmct)
-    tna = tnx > tna ? tnx : tna
-    cond_alone_events_ll_λ(tree.d2::iTgbmct, tna, ll, ϵ)
-  end
-end
-
-
-
-
-
-"""
     cond_alone_events_stem(tree::iTgbmct, ϵ::Float64)
 
 Condition events when there is only one alive lineage in the crown subtrees 
@@ -236,10 +50,10 @@ cond_alone_events_stem(tree::iTgbmct, ϵ::Float64) =
 Condition events when there is only one alive lineage in the crown subtrees 
 to only be speciation events.
 """
-function cond_alone_events_ll(tree::iTgbmct, 
-                              tna ::Float64, 
-                              ll  ::Float64, 
-                              ϵ   ::Float64)
+function sum_alone_stem(tree::iTgbmct, 
+                        tna ::Float64, 
+                        ll  ::Float64, 
+                        ϵ   ::Float64)
 
   if istip(tree)
     return ll
@@ -265,6 +79,189 @@ function cond_alone_events_ll(tree::iTgbmct,
   end
 end
 
+
+
+# """
+#     cond_alone_events_stem(tree::iTgbmct,
+#                            ϵ   ::Float64,
+#                            dri ::BitArray{1},
+#                            ldr ::Int64,
+#                            ix  ::Int64)
+
+# Returns gbm birth-death likelihood for whole branch `br`.
+# """
+# function cond_alone_events_stem(tree::iTgbmct,
+#                                 ϵ   ::Float64,
+#                                 dri ::BitArray{1},
+#                                 ldr ::Int64,
+#                                 ix  ::Int64)
+
+#   if ix === ldr
+#     return cond_alone_events_ll(tree, 0.0, 0.0, ϵ)
+#   elseif ix < ldr
+#     ifx1 = isfix(tree.d1::iTgbmct)
+#     if ifx1 && isfix(tree.d2::iTgbmct)
+#       ix += 1
+#       if dri[ix]
+#         cond_alone_events_stem(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
+#       else
+#         cond_alone_events_stem(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
+#       end
+#     elseif ifx1
+#       cond_alone_events_stem(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
+#     else
+#       cond_alone_events_stem(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
+#     end
+#   end
+
+# end
+
+
+
+# """
+#     cond_alone_events_stem_woλ(tree::iTgbmct,
+#                                ϵ   ::Float64,
+#                                dri ::BitArray{1},
+#                                ldr ::Int64,
+#                                ix  ::Int64)
+
+# Returns gbm birth-death likelihood for whole branch `br`.
+# """
+# function cond_alone_events_stem_woλ(tree::iTgbmct,
+#                                     ϵ   ::Float64,
+#                                     dri ::BitArray{1},
+#                                     ldr ::Int64,
+#                                     ix  ::Int64)
+
+#   if ix === ldr
+#     return cond_alone_events_ll_woλ(tree, 0.0, 0.0, ϵ)
+#   elseif ix < ldr
+#     ifx1 = isfix(tree.d1::iTgbmct)
+#     if ifx1 && isfix(tree.d2::iTgbmct)
+#       ix += 1
+#       if dri[ix]
+#         cond_alone_events_stem_woλ(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
+#       else
+#         cond_alone_events_stem_woλ(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
+#       end
+#     elseif ifx1
+#       cond_alone_events_stem_woλ(tree.d1::iTgbmct, ϵ, dri, ldr, ix)
+#     else
+#       cond_alone_events_stem_woλ(tree.d2::iTgbmct, ϵ, dri, ldr, ix)
+#     end
+#   end
+
+# end
+
+
+
+
+
+# """
+#     cond_alone_events_stem_woλ(tree::iTgbmct, ϵ::Float64) = 
+
+# Condition events when there is only one alive lineage in the crown subtrees 
+# to only be speciation events.
+# """
+# cond_alone_events_stem_woλ(tree::iTgbmct, ϵ::Float64) = 
+#   cond_alone_events_ll_woλ(tree, 0.0, 0.0, ϵ)
+
+
+# """
+#     cond_alone_events_ll_woλ(tree::iTgbmct, 
+#                              tna ::Float64, 
+#                              ll  ::Float64,
+#                              ϵ   ::Float64)
+
+# Condition events when there is only one alive lineage in the crown subtrees 
+# to only be speciation events.
+# """
+# function cond_alone_events_ll_woλ(tree::iTgbmct, 
+#                                   tna ::Float64, 
+#                                   ll  ::Float64,
+#                                   ϵ   ::Float64)
+
+#   if istip(tree)
+#     return ll
+#   end
+
+#   if isfix(tree.d1::iTgbmct) && isfix(tree.d2::iTgbmct)
+#     return ll
+#   end
+
+#   if tna < pe(tree)
+#     ll += log(1.0 + ϵ)
+#   end
+#   tna -= pe(tree)
+
+#   if isfix(tree.d1::iTgbmct)
+#     if isfix(tree.d2::iTgbmct)
+#       return ll
+#     else
+#       tnx = treeheight(tree.d2::iTgbmct)
+#       tna = tnx > tna ? tnx : tna
+#       cond_alone_events_ll_woλ(tree.d1::iTgbmct, tna, ll, ϵ)
+#     end
+#   else
+#     tnx = treeheight(tree.d1::iTgbmct)
+#     tna = tnx > tna ? tnx : tna
+#     cond_alone_events_ll_woλ(tree.d2::iTgbmct, tna, ll, ϵ)
+#   end
+# end
+
+
+
+
+# """
+#     cond_alone_events_stem_λ(tree::iTgbmct, ϵ::Float64) = 
+
+# Condition events when there is only one alive lineage in the crown subtrees 
+# to only be speciation events.
+# """
+# cond_alone_events_stem_λ(tree::iTgbmct, ϵ::Float64) = 
+#   cond_alone_events_ll_λ(tree, 0.0, 0.0, ϵ)
+
+
+
+
+# """
+#     cond_alone_events_ll_λ(tree::iTgbmct, 
+#                            tna ::Float64, 
+#                            ll  ::Float64, 
+#                            ϵ   ::Float64)
+
+# Condition events when there is only one alive lineage in the crown subtrees 
+# to only be speciation events.
+# """
+# function cond_alone_events_ll_λ(tree::iTgbmct, 
+#                                 tna ::Float64, 
+#                                 ll  ::Float64, 
+#                                 ϵ   ::Float64)
+
+
+#   if tna < pe(tree)
+#     ll += log(1.0 + ϵ)
+#   end
+#   tna -= pe(tree)
+
+#   if istip(tree)
+#     return ll
+#   end
+
+#   if isfix(tree.d1::iTgbmct)
+#     if isfix(tree.d2::iTgbmct)
+#       return ll
+#     else
+#       tnx = treeheight(tree.d2::iTgbmct)
+#       tna = tnx > tna ? tnx : tna
+#       cond_alone_events_ll_λ(tree.d1::iTgbmct, tna, ll, ϵ)
+#     end
+#   else
+#     tnx = treeheight(tree.d1::iTgbmct)
+#     tna = tnx > tna ? tnx : tna
+#     cond_alone_events_ll_λ(tree.d2::iTgbmct, tna, ll, ϵ)
+#   end
+# end
 
 
 
