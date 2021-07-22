@@ -28,7 +28,7 @@ isfix(::Nothing) = false
 
 Return if is either an extant or extinct tip node.
 """
-istip(tree::T) where {T <: iTree} = isnothing(tree.d1) && isnothing(tree.d2)
+istip(tree::T) where {T <: iTree} = isnothing(tree.d1)
 
 istip(::Nothing) = false
 
