@@ -81,43 +81,6 @@ end
 
 
 
-
-"""
-    sim_cbd_fx(t::Float64, ti::Float64, λ::Float64, μ::Float64)
-
-Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
-and extinction rate `μ`, with only one randomly chosen lineage 
-stopping at time `ti` where `ti <= t`.
-"""
-function sim_cbd_fx(t ::Float64, 
-                    λ ::Float64, 
-                    μ ::Float64)
-
-  tw = cbd_wait(λ, μ)
-
-  if tw > t
-    return sTbd(nothing, nothing, t, false, true)
-  end
-
-  if λorμ(λ, μ)
-    if rand(Bool)
-      return sTbd(sim_cbd_fx(t - tw, λ, μ), 
-                  sim_cbd(   t - tw, λ, μ), 
-                  tw, false, true)
-    else
-      return sTbd(sim_cbd(   t - tw, λ, μ), 
-                  sim_cbd_fx(t - tw, λ, μ), 
-                  tw, false, true)
-    end
-  else
-    return sTbd(nothing, nothing, tw, true, true)
-  end
-end
-
-
-
-
-
 """
    sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
 

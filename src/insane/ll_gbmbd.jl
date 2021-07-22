@@ -19,8 +19,7 @@ Crown conditioning on survival for `tree`.
 """
 cond_surv_crown(tree::iTgbmbd) = 
   cond_surv_stem(tree.d1::iTgbmbd, 0.0, 0.0) + 
-  cond_surv_stem(tree.d2::iTgbmbd, 0.0, 0.0) - 
-  lλ(tree.d1::iTgbmbd)[1]
+  cond_surv_stem(tree.d2::iTgbmbd, 0.0, 0.0)
 
 
 

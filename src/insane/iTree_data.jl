@@ -28,7 +28,7 @@ isfix(::Nothing) = false
 
 Return if is either an extant or extinct tip node.
 """
-istip(tree::T) where {T <: iTree} = isnothing(tree.d1)
+istip(tree::T) where {T <: iTree} = getproperty(tree,:d1) === nothing
 
 istip(::Nothing) = false
 
@@ -49,6 +49,21 @@ Return if is an extinction node.
 """
 isextinct(::Nothing) = false
 
+
+
+"""
+    isalive(tree::T) where {T <: iTree}
+
+Return if is an extinction node.
+"""
+isalive(tree::T) where {T <: iTree} = !getproperty(tree,:iμ)
+
+"""
+    isalive(::Nothing)
+
+Return if is an extinction node.
+"""
+isalive(::Nothing) = false
 
 
 
@@ -499,7 +514,7 @@ function λμath(tree::iTgbmbd,
 
       bh  = th - h
       tsi = ts(tree)
-      hi = indmindif_sorted(tsi, bh)
+      hi  = indmindif_sorted(tsi, bh)
       λh  = lλ(tree)[hi]
       μh  = lμ(tree)[hi]
       nh  = th - tsi[hi]

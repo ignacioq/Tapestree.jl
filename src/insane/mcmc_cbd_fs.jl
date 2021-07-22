@@ -282,17 +282,35 @@ function mcmc_cbd(tree  ::sTbd,
       # λ proposal
       if p === 1
         llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
+
+        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, i, 1
+        #    return 
+        # end
       end
 
       # μ proposal
       if p === 2
         llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
+      
+        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, i, 2
+        #    return 
+        # end
       end
 
       # forward simulation proposal proposal
       if p === 3
         bix = fIrand(lidf) + 1
         tree, llc = fsp(tree, idf[bix], llc, λc, μc, in(bix, cb))
+      
+        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, i, 3
+        #    return 
+        # end
       end
 
     end
@@ -392,6 +410,11 @@ end
 
 
 
+# bix = fIrand(lidf) + 1
+
+# bi = idf[bix]
+
+# svf = in(bix, cb)
 
 """
     fsp(tree::sTbd,
@@ -415,7 +438,7 @@ function fsp(tree::sTbd,
 
   # if retain simulation
   if ret
-    # get branch information
+
     dri = dr(bi)
     ldr = lastindex(dri)
     itb = it(bi)
@@ -429,23 +452,23 @@ function fsp(tree::sTbd,
       if isone(lastindex(dri))
         if dri[1]
           # likelihood ratio
-          llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) #+
-                # cond_surv_stem(t0, λ, μ)        - 
-                # cond_surv_stem(tree.d1, λ, μ)
+          llr = llik_cbd(   t0, λ, μ) + iλ         - 
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                cond_surv_stem_p(t0,    λ, μ)      - 
+                cond_surv_stem(tree.d1, λ, μ)
         else
           # likelihood ratio
-          llr = llik_cbd(t0, λ, μ) + iλ            - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) #+
-                # cond_surv_stem(t0, λ, μ)        - 
-                # cond_surv_stem(tree.d2, λ, μ)
+          llr = llik_cbd(   t0, λ, μ) + iλ         -
+                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                cond_surv_stem_p(t0,    λ, μ)      -
+                cond_surv_stem(tree.d2, λ, μ)
         end
       else
         # likelihood ratio
-        llr = llik_cbd(t0, λ, μ) + iλ            - 
-              br_ll_cbd(tree, λ, μ, dri, ldr, 0) #+
-              # cond_surv_stem(t0, λ, μ)        - 
-              # cond_surv_stem(tree, λ, μ)
+        llr = llik_cbd(t0,    λ, μ) + iλ         -
+              br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+              cond_surv_stem_p(t0, λ, μ)         -
+              cond_surv_stem(tree, λ, μ)
       end
     else
       # likelihood ratio
@@ -499,7 +522,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
           # if goes extinct before the present
           if iszero(snan(st0))
             #graft to tip
-            add1fx(t0, st0, 1, 0)
+            add1fx(t0, st0, false)
             break
           end
           if i === 2
@@ -518,96 +541,34 @@ end
 
 
 """
-    add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
+    add1fx(tree::sTbd, stree::sTbd, ix::Bool) 
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
+function add1fx(tree::sTbd, stree::sTbd, ix::Bool) 
 
-  if istip(tree) && !isextinct(tree)
-    ix += 1
+  if istip(tree)
 
-    if ix === it
-      npe = pe(tree) + pe(stree)
-      setpe!(tree, npe)
+    if isalive(tree) && !isfix(tree)
+
+      setpe!(tree, pe(tree) + pe(stree))
       setproperty!(tree, :iμ, stree.iμ)
       tree.d1 = stree.d1
       tree.d2 = stree.d2
+
+      ix = true
+
+      return ix
     end
+
     return ix 
   end
 
-  if ix <= it && !isnothing(tree.d1)
-    ix = add1(tree.d1::sTbd, stree, it, ix)
+  if !ix
+    ix = add1fx(tree.d1::sTbd, stree, ix)
   end
-  if ix <= it && !isnothing(tree.d2)
-    ix = add1(tree.d2::sTbd, stree, it, ix)
-  end
-
-  return ix
-end
-
-
-
-
-"""
-    add1(tree::sTbd, stree::sTbd, it::Int64, ix::Int64)
-
-Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
-"""
-function add1fx(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
-
-  if istip(tree) && !isextinct(tree) && !isfix(tree)
-    ix += 1
-
-    if ix === it
-      npe = pe(tree) + pe(stree)
-      setpe!(tree, npe)
-      setproperty!(tree, :iμ, stree.iμ)
-      tree.d1 = stree.d1
-      tree.d2 = stree.d2
-    end
-    return ix 
-  end
-
-  if ix <= it && !isnothing(tree.d1)
-    ix = add1fx(tree.d1::sTbd, stree, it, ix)
-  end
-  if ix <= it && !isnothing(tree.d2)
-    ix = add1fx(tree.d2::sTbd, stree, it, ix)
-  end
-
-  return ix
-end
-
-
-
-
-"""
-    add2(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
-
-Add `stree` to tip in `tree` given by `it` in `tree.d2` order.
-"""
-function add2(tree::sTbd, stree::sTbd, it::Int64, ix::Int64) 
-
-  if istip(tree) && !isextinct(tree)
-    ix += 1
-
-    if ix === it
-      npe = pe(tree) + pe(stree)
-      setpe!(tree, npe)
-      setproperty!(tree, :iμ, stree.iμ)
-      tree.d1 = stree.d1
-      tree.d2 = stree.d2
-    end
-    return ix 
-  end
-
-  if !isnothing(tree.d2) && ix <= it
-    ix = add2(tree.d2::sTbd, stree, it, ix)
-  end
-  if !isnothing(tree.d1) && ix <= it
-    ix = add2(tree.d1::sTbd, stree, it, ix)
+  if !ix
+    ix = add1fx(tree.d2::sTbd, stree, ix)
   end
 
   return ix

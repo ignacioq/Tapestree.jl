@@ -18,12 +18,10 @@ Log-probability of at least two lineage surviving after time `t` for
 birth-death process with `λ` and `μ` for crown age.
 """
 function cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
-  n1, t1 = sum_alone_stem(tree.d1::sTbd, 0.0, 0.0, 0.0)
-  n2, t2 = sum_alone_stem(tree.d2::sTbd, 0.0, 0.0, 0.0)
-  n = n1 + n2
-  t = t1 + t2
+  n = sum_alone_stem(tree.d1::sTbd, 0.0, 0.0) +
+      sum_alone_stem(tree.d2::sTbd, 0.0, 0.0)
 
-  return n*log((λ + μ)/λ) #+ μ*t
+  return n*log((λ + μ)/λ)
 end
 
 
@@ -36,8 +34,8 @@ Log-probability of at least one lineage surviving after time `t` for
 birth-death process with `λ` and `μ` for stem age.
 """
 function cond_surv_stem(tree::sTbd, λ::Float64, μ::Float64)
-  n, t = sum_alone_stem(tree, 0.0, 0.0, 0.0)
-  return n*log((λ + μ)/λ) #+ μ*t
+  n = sum_alone_stem(tree, 0.0, 0.0)
+  return n*log((λ + μ)/λ)
 end
 
 
@@ -49,99 +47,170 @@ end
 Count nodes in stem lineage when a diversification event could have 
 returned an overall extinction.
 """
-function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
+function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64)
 
   if istip(tree)
-    if tna < pe(tree)
-      t += pe(tree) - tna
-    end
-    return n, t
+    return n
   end
 
   if tna < pe(tree)
     n += 1.0
-    t += pe(tree) - tna
   end
   tna -= pe(tree)
 
   if isfix(tree.d1::sTbd)
     if isfix(tree.d2::sTbd)
-      return n, t
+      return n
     else
       tnx = treeheight(tree.d2::sTbd)
       tna = tnx > tna ? tnx : tna
-      sum_alone_stem(tree.d1::sTbd, tna, n, t)
+      sum_alone_stem(tree.d1::sTbd, tna, n)
     end
   else
     tnx = treeheight(tree.d1::sTbd)
     tna = tnx > tna ? tnx : tna
-    sum_alone_stem(tree.d2::sTbd, tna, n, t)
+    sum_alone_stem(tree.d2::sTbd, tna, n)
   end
 
 end
 
 
 
-# """
-#     stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
 
-# Log-probability of at least one lineage surviving after time `t` for 
-# birth-death process with `λ` and `μ` for stem age.
-# """
-# function stem_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
-#   n = count_alone_nodes_stem(tree, 0.0, 0.0)
-#   return n*log((λ+μ)/λ)
-# end
+"""
+    stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
 
-
-# """
-#     crown_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
-
-# Log-probability of at least two lineage surviving after time `t` for 
-# birth-death process with `λ` and `μ` for crown age.
-# """
-# function crown_prob_surv_da(tree::sTbd, λ::Float64, μ::Float64)
-#   n = count_alone_nodes_stem(tree.d1::sTbd, 0.0, 0.0) + 
-#       count_alone_nodes_stem(tree.d2::sTbd, 0.0, 0.0)
-#   return n*log((λ+μ)/λ) - log(λ)
-# end
+Log-probability of at least one lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` for stem age.
+"""
+function cond_surv_stem_p(tree::sTbd, λ::Float64, μ::Float64)
+  n = sum_alone_stem_p(tree, 0.0, 0.0)
+  return n*log((λ + μ)/λ)
+end
 
 
 
 
-# """
-#     count_alone_nodes_b(tree::sTbd, tna::Float64, n::Int64)
+"""
+    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
 
-# Count nodes in stem lineage when a diversification event could have 
-# returned an overall extinction.
-# """
-# function count_alone_nodes_stem(tree::sTbd, tna::Float64, n::Float64)
+Count nodes in stem lineage when a diversification event could have 
+returned an overall extinction.
+"""
+function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
 
-#   if tna < pe(tree)
-#     n += 1.0
-#   end
-#   tna -= pe(tree)
+  if tna < pe(tree)
+    n += 1.0
+  end
+  tna -= pe(tree)
 
-#   if istip(tree)
-#     return n
-#   end
+  if istip(tree)
+    return n
+  end
 
-#   if isfix(tree.d1::sTbd)
-#     if isfix(tree.d2::sTbd)
-#       return n
-#     else
-#       tnx = treeheight(tree.d2::sTbd)
-#       tna = tnx > tna ? tnx : tna
-#       count_alone_nodes_stem(tree.d1::sTbd, tna, n)
-#     end
-#   else
-#     tnx = treeheight(tree.d1::sTbd)
-#     tna = tnx > tna ? tnx : tna
-#     count_alone_nodes_stem(tree.d2::sTbd, tna, n)
-#   end
+  if isfix(tree.d1::sTbd)
+    if isfix(tree.d2::sTbd)
+      return n
+    else
+      tnx = treeheight(tree.d2::sTbd)
+      tna = tnx > tna ? tnx : tna
+      sum_alone_stem_p(tree.d1::sTbd, tna, n)
+    end
+  else
+    tnx = treeheight(tree.d1::sTbd)
+    tna = tnx > tna ? tnx : tna
+    sum_alone_stem_p(tree.d2::sTbd, tna, n)
+  end
 
-# end
+end
 
+
+
+
+"""
+    stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
+
+Log-probability of at least one lineage surviving after time `t` for 
+birth-death process with `λ` and `μ` for stem age.
+"""
+function cond_surv_stem_f(tree::sTbd, λ::Float64, μ::Float64)
+  n = sum_alone_stem_f(tree, 0.0, 0.0)
+  return n*log((λ + μ)/λ)
+end
+
+
+
+
+"""
+    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
+
+Count nodes in stem lineage when a diversification event could have 
+returned an overall extinction.
+"""
+function sum_alone_stem_f(tree::sTbd, tna::Float64, n::Float64)
+
+  if istip(tree) || (isfix(tree.d1::sTbd) && isfix(tree.d2::sTbd))
+    return n
+  end
+
+  if tna < pe(tree)
+    n += 1.0
+  end
+  tna -= pe(tree)
+
+  if isfix(tree.d1::sTbd)
+    if isfix(tree.d2::sTbd)
+      return n
+    else
+      tnx = treeheight(tree.d2::sTbd)
+      tna = tnx > tna ? tnx : tna
+      sum_alone_stem_f(tree.d1::sTbd, tna, n)
+    end
+  else
+    tnx = treeheight(tree.d1::sTbd)
+    tna = tnx > tna ? tnx : tna
+    sum_alone_stem_f(tree.d2::sTbd, tna, n)
+  end
+
+end
+
+
+
+
+"""
+    cond_surv_events_stem(tree::iTgbmce,
+                           dri ::BitArray{1},
+                           ldr ::Int64,
+                           ix  ::Int64)
+
+Returns gbm birth-death likelihood for whole branch `br`.
+"""
+function cond_surv_stem_f(tree::sTbd, 
+                          λ   ::Float64, 
+                          μ   ::Float64,
+                          dri ::BitArray{1},
+                          ldr ::Int64,
+                          ix  ::Int64)
+
+  if ix === ldr
+    return cond_surv_stem_f(tree, λ, μ)
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1::sTbd)
+    if ifx1 && isfix(tree.d2::sTbd)
+      ix += 1
+      if dri[ix]
+        cond_surv_stem_f(tree.d1::sTbd, λ, μ, dri, ldr, ix)
+      else
+        cond_surv_stem_f(tree.d2::sTbd, λ, μ, dri, ldr, ix)
+      end
+    elseif ifx1
+      cond_surv_stem_f(tree.d1::sTbd, λ, μ, dri, ldr, ix)
+    else
+      cond_surv_stem_f(tree.d2::sTbd, λ, μ, dri, ldr, ix)
+    end
+  end
+
+end
 
 
 
