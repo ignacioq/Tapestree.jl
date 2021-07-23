@@ -522,7 +522,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
           # if goes extinct before the present
           if iszero(snan(st0))
             #graft to tip
-            add1fx(t0, st0, false)
+            addtotip(t0, st0, false)
             break
           end
           if i === 2
@@ -541,14 +541,13 @@ end
 
 
 """
-    add1fx(tree::sTbd, stree::sTbd, ix::Bool) 
+    addtotip(tree::sTbd, stree::sTbd, ix::Bool) 
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function add1fx(tree::sTbd, stree::sTbd, ix::Bool) 
+function addtotip(tree::sTbd, stree::sTbd, ix::Bool) 
 
   if istip(tree)
-
     if isalive(tree) && !isfix(tree)
 
       setpe!(tree, pe(tree) + pe(stree))
@@ -557,18 +556,16 @@ function add1fx(tree::sTbd, stree::sTbd, ix::Bool)
       tree.d2 = stree.d2
 
       ix = true
-
-      return ix
     end
 
     return ix 
   end
 
   if !ix
-    ix = add1fx(tree.d1::sTbd, stree, ix)
+    ix = addtotip(tree.d1::sTbd, stree, ix)
   end
   if !ix
-    ix = add1fx(tree.d2::sTbd, stree, ix)
+    ix = addtotip(tree.d2::sTbd, stree, ix)
   end
 
   return ix

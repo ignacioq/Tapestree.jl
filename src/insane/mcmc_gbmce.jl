@@ -228,7 +228,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
 
         llc, prc, σλc = update_σ!(σλc, Ψc, llc, prc, σλ_prior)
 
-        llc, μc, lac = update_μ!(μc, Ψc, llc, μtn, lac, μmxpr, svf)
+        llc, μc, lac  = update_μ!(μc, Ψc, llc, μtn, lac, μmxpr, svf)
 
         lup += 1.0
 
@@ -552,10 +552,7 @@ function fsp(Ψp   ::iTgbmce,
       iλ = λf
 
       # acceptance ratio
-      # bbλcpr = bbλc[pr]
-      # l = lastindex(bbλcpr)
-      # acr += bbλcpr[l] - λf
-
+      acr += λf - bbλc[d1][1]
     else
       pr  = bix
       iλ  = 0.0
@@ -570,15 +567,15 @@ function fsp(Ψp   ::iTgbmce,
 
       if icr && isone(wbc)
         if dri[1]
-          llr += cond_surv_stem(t0, μ) - 
-                 cond_surv_stem(Ψc.d1::iTgbmce, μ)
+          llr += cond_surv_stem_p(t0, μ) - 
+                 cond_surv_stem(  Ψc.d1::iTgbmce, μ)
         else
-          llr += cond_surv_stem(t0, μ) -
-                 cond_surv_stem(Ψc.d2::iTgbmce, μ)
+          llr += cond_surv_stem_p(t0, μ) -
+                 cond_surv_stem(  Ψc.d2::iTgbmce, μ)
         end
       elseif iszero(wbc)
-        llr += cond_surv_stem(t0, μ) -
-               cond_surv_stem(Ψc, μ)
+        llr += cond_surv_stem_p(t0, μ) -
+               cond_surv_stem(  Ψc, μ)
       end
 
       llc += llr
@@ -652,20 +649,15 @@ function fsbi_ce(bi  ::iBffs,
       ret = false
     # if continue the simulation
     else
-
       # fix random tip and return end λ(t)
       λf, dft0 = fixrtip!(t0, na, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
-
         # get their final λ to continue forward simulation
-        ix, λt, fdti = fλ1(t0, NaN, NaN, 1, 0)
-
+        ix, λt, fdti = fλ1(t0, NaN, NaN, false)
         for i in Base.OneTo(2)
-
           st0, nsp = 
             sim_gbmce(max(δt - fdti, 0.0), tfb, λt, μ, σλ, δt, srδt, 1, nlim)
-
           # if maximum number of species reached.
           if nsp === nlim
             if i === 2
@@ -673,16 +665,12 @@ function fsbi_ce(bi  ::iBffs,
             end
             continue
           end
-
           # if goes extinct before the present
-          th0 = treeheight(st0)
-          if (th0 + 1e-11) < tfb
+          if iszero(snan(st0))
             # graft to tip
-            add1(t0, st0, 1, 0)
+            addtotip(t0, st0, false)
             break
           end
-
-          # if not succeeded after 2 tries.
           if i === 2
             ret = false
           end
@@ -783,32 +771,23 @@ end
 
 
 """
-    add1(tree::iTgbmce, stree::iTgbmce, it::Int64, ix::Int64)
+    addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function add1(tree::iTgbmce, stree::iTgbmce, it::Int64, ix::Int64) 
+function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool) 
 
-  if istip(tree) && !isextinct(tree)
-    if !isfix(tree)
-      ix += 1
-    end
+  if istip(tree) 
+    if isalive(tree) && !isfix(tree)
 
-    if ix === it
-      pet = pe(tree)
-      npe = pet + pe(stree)
-      setpe!(tree, npe)
-
+      setpe!(tree, pe(tree) + pe(stree))
       setproperty!(tree, :iμ, isextinct(stree))
 
       lλ0 = lλ(tree)
-
-      pop!(lλ0)
-
       lλs = lλ(stree)
 
+      pop!(lλ0)
       popfirst!(lλs)
-
       append!(lλ0, lλs)
 
       if isone(lastindex(lλs))
@@ -820,17 +799,17 @@ function add1(tree::iTgbmce, stree::iTgbmce, it::Int64, ix::Int64)
       tree.d1 = stree.d1
       tree.d2 = stree.d2
 
-      ix += 1
+      ix = true
     end
 
-    return ix 
+    return ix
   end
 
-  if ix <= it && !isnothing(tree.d1) 
-    ix = add1(tree.d1::iTgbmce, stree, it, ix)
+  if !ix
+    ix = addtotip(tree.d1::iTgbmce, stree, ix)
   end
-  if ix <= it && !isnothing(tree.d2) 
-    ix = add1(tree.d2::iTgbmce, stree, it, ix)
+  if !ix
+    ix = addtotip(tree.d2::iTgbmce, stree, ix)
   end
 
   return ix
@@ -880,7 +859,7 @@ Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::iTgbmce, λf::Float64, dft0::Float64)
 
-  if istip(tree) && !isextinct(tree)
+  if istip(tree) && isalive(tree)
     fix!(tree)
     λf   = lλ(tree)[end]
     dft0 = fdt(tree)
@@ -909,33 +888,29 @@ end
 
 
 
-
 """
-    fλ1(tree::T, λt::Float64, fdti::Float64, it::Int64, ix::Int64) where {T <: iTgbm}
+    fλ1(tree::T, λt::Float64, fdti::Float64, ix::Bool) where {T <: iTgbm}
 
 Get final `λ(t)` for a `it` tip in `tree` given in `tree.d1` order
 not taking into account the fixed tip.
 """
-function fλ1(tree::T, λt::Float64, fdti::Float64, it::Int64, ix::Int64) where {T <: iTgbm}
+function fλ1(tree::T, λt::Float64, fdti::Float64, ix::Bool) where {T <: iTgbm}
 
-  if istip(tree) && !isextinct(tree)
-    if !isfix(tree)
-      ix += 1
-    end
-
-    if ix === it
+  if istip(tree) 
+    if isalive(tree) && !isfix(tree)
       λt   = lλ(tree)[end]
       fdti = fdt(tree)
-      ix += 1
+      ix = true
     end
+
     return ix, λt, fdti
   end
 
-  if ix <= it && !isnothing(tree.d1)
-    ix, λt, fdti = fλ1(tree.d1::T, λt, fdti, it, ix)
+  if !ix
+    ix, λt, fdti = fλ1(tree.d1::T, λt, fdti, ix)
   end
-  if ix <= it && !isnothing(tree.d2)
-    ix, λt, fdti = fλ1(tree.d2::T, λt, fdti, it, ix)
+  if !ix
+    ix, λt, fdti = fλ1(tree.d2::T, λt, fdti, ix)
   end
 
   return ix, λt, fdti
@@ -1032,7 +1007,6 @@ function lvupdate!(Ψp    ::iTgbmce,
 
   return llc
 end
-
 
 
 
