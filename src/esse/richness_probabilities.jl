@@ -207,29 +207,29 @@ t(-_-t)
 
 
 """
-    pdt_k(pkt1::Array{Float64,1}, 
-          pkt ::Array{Float64,1}, 
-          pwt ::Array{Float64,1}, 
-          λk  ::Float64, 
-          λw  ::Float64, 
-          μk  ::Float64, 
-          μj  ::Float64, 
-          gkj ::Float64,
-          dt  ::Float64,
-          lp  ::Int64)
+    pdt_k!(pkt1::Array{Float64,1}, 
+           pkt ::Array{Float64,1}, 
+           pwt ::Array{Float64,1}, 
+           λk  ::Float64, 
+           λw  ::Float64, 
+           μk  ::Float64, 
+           μj  ::Float64, 
+           gkj ::Float64,
+           dt  ::Float64,
+           lp  ::Int64)
 
 One step for single area `k` in sse_g
 """
-@inline function pdt_k(pkt1::Array{Float64,1}, 
-                       pkt ::Array{Float64,1}, 
-                       pwt ::Array{Float64,1}, 
-                       λk  ::Float64, 
-                       λw  ::Float64, 
-                       μk  ::Float64, 
-                       μj  ::Float64, 
-                       gkj ::Float64,
-                       dt  ::Float64,
-                       lp  ::Int64)
+@inline function pdt_k!(pkt1::Array{Float64,1}, 
+                        pkt ::Array{Float64,1}, 
+                        pwt ::Array{Float64,1}, 
+                        λk  ::Float64, 
+                        λw  ::Float64, 
+                        μk  ::Float64, 
+                        μj  ::Float64, 
+                        gkj ::Float64,
+                        dt  ::Float64,
+                        lp  ::Int64)
 
   @inbounds begin
     bs = ws = be = 0.0
@@ -254,37 +254,39 @@ One step for single area `k` in sse_g
 
     end
   end
+
+  return nothing
 end
 
 
 
 
 """
-    pdt_w(pwt1::Array{Float64,1}, 
-          pwt ::Array{Float64,1}, 
-          pkt ::Array{Float64,1}, 
-          pjt ::Array{Float64,1}, 
-          λw  ::Float64, 
-          μk  ::Float64, 
-          μj  ::Float64, 
-          gkj ::Float64,
-          gjk ::Float64,
-          dt  ::Float64,
-          lp  ::Int64)
+    pdt_w!(pwt1::Array{Float64,1}, 
+           pwt ::Array{Float64,1}, 
+           pkt ::Array{Float64,1}, 
+           pjt ::Array{Float64,1}, 
+           λw  ::Float64, 
+           μk  ::Float64, 
+           μj  ::Float64, 
+           gkj ::Float64,
+           gjk ::Float64,
+           dt  ::Float64,
+           lp  ::Int64)
 
 One step for widespread area `w` in sse_g
 """
-@inline function pdt_w(pwt1::Array{Float64,1}, 
-                       pwt ::Array{Float64,1}, 
-                       pkt ::Array{Float64,1}, 
-                       pjt ::Array{Float64,1}, 
-                       λw  ::Float64, 
-                       μk  ::Float64, 
-                       μj  ::Float64, 
-                       gkj ::Float64,
-                       gjk ::Float64,
-                       dt  ::Float64,
-                       lp  ::Int64)
+@inline function pdt_w!(pwt1::Array{Float64,1}, 
+                        pwt ::Array{Float64,1}, 
+                        pkt ::Array{Float64,1}, 
+                        pjt ::Array{Float64,1}, 
+                        λw  ::Float64, 
+                        μk  ::Float64, 
+                        μj  ::Float64, 
+                        gkj ::Float64,
+                        gjk ::Float64,
+                        dt  ::Float64,
+                        lp  ::Int64)
 
   @inbounds begin
 
@@ -306,49 +308,50 @@ One step for widespread area `w` in sse_g
         (sk + sj)                       * pwtim1 * dt -
         (nw * (μk + μj + λw) + sk + sj) * pwti   * dt 
     end
-
   end
+
+  return nothing
 end
 
 
 
 
 """
-    _p_t(t ::Float64,
-         pkt1::Array{Float64,1}, 
-         pjt1::Array{Float64,1}, 
-         pwt1::Array{Float64,1}, 
-         pkt ::Array{Float64,1}, 
-         pjt ::Array{Float64,1}, 
-         pwt ::Array{Float64,1}, 
-         λk::Float64,
-         λj::Float64,
-         λw::Float64,
-         μk::Float64,
-         μj::Float64,
-         gkj::Float64,
-         gjk::Float64,
-         dt ::Float64, 
-         lp ::Int64)
+    _p_t!(t ::Float64,
+          pkt1::Array{Float64,1}, 
+          pjt1::Array{Float64,1}, 
+          pwt1::Array{Float64,1}, 
+          pkt ::Array{Float64,1}, 
+          pjt ::Array{Float64,1}, 
+          pwt ::Array{Float64,1}, 
+          λk::Float64,
+          λj::Float64,
+          λw::Float64,
+          μk::Float64,
+          μj::Float64,
+          gkj::Float64,
+          gjk::Float64,
+          dt ::Float64, 
+          lp ::Int64)
 
 Richness probabilities after time t.
 """
-function _p_t(t ::Float64,
-              pkt1::Array{Float64,1}, 
-              pjt1::Array{Float64,1}, 
-              pwt1::Array{Float64,1}, 
-              pkt ::Array{Float64,1}, 
-              pjt ::Array{Float64,1}, 
-              pwt ::Array{Float64,1}, 
-              λk::Float64,
-              λj::Float64,
-              λw::Float64,
-              μk::Float64,
-              μj::Float64,
-              gkj::Float64,
-              gjk::Float64,
-              dt ::Float64, 
-              lp ::Int64)
+function _p_t!(t ::Float64,
+               pkt1::Array{Float64,1}, 
+               pjt1::Array{Float64,1}, 
+               pwt1::Array{Float64,1}, 
+               pkt ::Array{Float64,1}, 
+               pjt ::Array{Float64,1}, 
+               pwt ::Array{Float64,1}, 
+               λk::Float64,
+               λj::Float64,
+               λw::Float64,
+               μk::Float64,
+               μj::Float64,
+               gkj::Float64,
+               gjk::Float64,
+               dt ::Float64, 
+               lp ::Int64)
 
   n = fld(t, dt)
 
@@ -357,9 +360,9 @@ function _p_t(t ::Float64,
   unsafe_copyto!(pwt1, 1, pwt, 1, lp)
 
   for i in Base.OneTo(Int64(n))
-    pdt_k(pkt1, pkt, pwt, λk, λw, μk, μj, gkj, dt, lp)
-    pdt_k(pjt1, pjt, pwt, λj, λw, μj, μk, gjk, dt, lp)
-    pdt_w(pwt1, pwt, pkt, pjt, λw, μk, μj, gkj, gjk, dt, lp)
+    pdt_k!(pkt1, pkt, pwt, λk, λw, μk, μj, gkj, dt, lp)
+    pdt_k!(pjt1, pjt, pwt, λj, λw, μj, μk, gjk, dt, lp)
+    pdt_w!(pwt1, pwt, pkt, pjt, λw, μk, μj, gkj, gjk, dt, lp)
 
     unsafe_copyto!(pkt, 1, pkt1, 1, lp)
     unsafe_copyto!(pjt, 1, pjt1, 1, lp)
@@ -368,9 +371,9 @@ function _p_t(t ::Float64,
 
   # last time
   m  = mod(t, dt)
-  pdt_k(pkt1, pkt, pwt, λk, λw, μk, μj, gkj, m, lp)
-  pdt_k(pjt1, pjt, pwt, λj, λw, μj, μk, gjk, m, lp)
-  pdt_w(pwt1, pwt, pkt, pjt, λw, μk, μj, gkj, gjk, m, lp)
+  pdt_k!(pkt1, pkt, pwt, λk, λw, μk, μj, gkj, m, lp)
+  pdt_k!(pjt1, pjt, pwt, λj, λw, μj, μk, gjk, m, lp)
+  pdt_w!(pwt1, pwt, pkt, pjt, λw, μk, μj, gkj, gjk, m, lp)
 
   return nothing
 end
@@ -418,7 +421,7 @@ function p_t(t   ::Float64,
   pjt[init[2]+1] = 1.0
   pwt[init[3]+1] = 1.0
 
-  _p_t(t, pkt1, pjt1, pwt1, pkt, pjt, pwt, 
+  _p_t!(t, pkt1, pjt1, pwt1, pkt, pjt, pwt, 
     λk, λj, λw, μk, μj, gkj, gjk, dt, nspp)
 
   return pkt1, pjt1, pwt1
