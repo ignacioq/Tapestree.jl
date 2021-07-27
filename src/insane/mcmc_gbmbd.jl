@@ -538,10 +538,7 @@ function fsp(Ψp   ::iTgbmbd,
       iλ = λf
 
       # acceptance ratio
-      # bbλcpr = bbλc[pr]
-      # l = lastindex(bbλcpr)
-      # acr += bbλcpr[l] - λf
-
+      acr += λf - bbλc[d1][1]
     else
       pr  = bix
       iλ  = 0.0
@@ -557,14 +554,14 @@ function fsp(Ψp   ::iTgbmbd,
 
       if icr && isone(wbc)
         if dri[1]
-          llr += cond_surv_stem(t0) - 
+          llr += cond_surv_stem_p(t0) - 
                  cond_surv_stem(Ψc.d1::iTgbmbd)
         else
-          llr += cond_surv_stem(t0) -
+          llr += cond_surv_stem_p(t0) -
                  cond_surv_stem(Ψc.d2::iTgbmbd)
         end
       elseif iszero(wbc)
-        llr += cond_surv_stem(t0) -
+        llr += cond_surv_stem_p(t0) -
                cond_surv_stem(Ψc)
       end
 
@@ -642,20 +639,15 @@ function fsbi(bi  ::iBffs,
       ret = false
     # if continue the simulation
     else
-
       # fix random tip and return end λ(t) and μ(t) 
       λf, μf, dft0 = fixrtip!(t0, na, NaN, NaN, NaN)
-
+      
       for j in Base.OneTo(na - 1)
-
         # get their final λ and μ to continue forward simulation
         ix, λt, μt, fdti = fλμ1(t0, NaN, NaN, NaN, 1, 0)
-
         for i in Base.OneTo(2)
-
           st0, nsp = 
             sim_gbm(max(δt - fdti, 0.0), tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
-
           # if maximum number of species reached.
           if nsp === nlim
             if i === 2
@@ -663,15 +655,12 @@ function fsbi(bi  ::iBffs,
             end
             continue
           end
-
           # if goes extinct before the present
-          th0 = treeheight(st0)
-          if (th0 + 1e-11) < tfb
+          if iszero(snan(st0))
             # graft to tip
-            add1(t0, st0, 1, 0)
+            addtotip(t0, st0, false)
             break
           end
-
           # if not succeeded after 2 tries.
           if i === 2
             ret = false
@@ -781,32 +770,23 @@ end
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64) 
+function addtotip(tree::iTgbmbd, stree::iTgbmbd, ix::Bool) 
 
-  if istip(tree) && !isextinct(tree)
-    if !isfix(tree)
-      ix += 1
-    end
+  if istip(tree) 
+    if isalive(tree) && !isfix(tree)
 
-    if ix === it
-      pet = pe(tree)
-      npe = pet + pe(stree)
-      setpe!(tree, npe)
-
+      setpe!(tree, pe(tree) + pe(stree))
       setproperty!(tree, :iμ, isextinct(stree))
 
       lλ0 = lλ(tree)
       lμ0 = lμ(tree)
-
-      pop!(lλ0)
-      pop!(lμ0)
-
       lλs = lλ(stree)
       lμs = lμ(stree)
 
+      pop!(lλ0)
+      pop!(lμ0)
       popfirst!(lλs)
       popfirst!(lμs)
-
       append!(lλ0, lλs)
       append!(lμ0, lμs)
 
@@ -819,17 +799,17 @@ function add1(tree::iTgbmbd, stree::iTgbmbd, it::Int64, ix::Int64)
       tree.d1 = stree.d1
       tree.d2 = stree.d2
 
-      ix += 1
+      ix = true
     end
 
     return ix 
   end
 
-  if ix <= it && !isnothing(tree.d1) 
-    ix = add1(tree.d1::iTgbmbd, stree, it, ix)
+  if !ix
+    ix = addtotip(tree.d1::iTgbmbd, stree, ix)
   end
-  if ix <= it && !isnothing(tree.d2) 
-    ix = add1(tree.d2::iTgbmbd, stree, it, ix)
+  if !ix
+    ix = addtotip(tree.d2::iTgbmbd, stree, ix)
   end
 
   return ix
@@ -937,37 +917,37 @@ end
 
 
 """
-    fλμ1(tree::iTgbmbd, λt::Float64, μt::Float64, it::Int64, ix::Int64)
+    fλμ1(tree::iTgbmbd, 
+         λt  ::Float64, 
+         μt  ::Float64, 
+         fdti::Float64,
+         ix  ::Bool)
 
-Get end `λ` and `μ` for a `it` tip in `tree` given in `tree.d1` order
+Get end `λ` and `μ` for a tip in `tree` given in `tree.d1` order
 not taking into account the fixed tip.
 """
 function fλμ1(tree::iTgbmbd, 
               λt  ::Float64, 
               μt  ::Float64, 
               fdti::Float64,
-              it  ::Int64, 
-              ix  ::Int64)
+              ix  ::Bool)
 
-  if istip(tree) && !isextinct(tree)
-    if !isfix(tree)
-      ix += 1
-    end
-
-    if ix === it
+  if istip(tree) 
+    if isalive(tree) &&!isfix(tree)
       λt   = lλ(tree)[end]
       μt   = lμ(tree)[end]
       fdti = fdt(tree)
-      ix += 1
+      ix = true
     end
+
     return ix, λt, μt, fdti
   end
 
-  if ix <= it && !isnothing(tree.d1)
-    ix, λt, μt, fdti = fλμ1(tree.d1::iTgbmbd, λt, μt, fdti, it, ix)
+  if !ix
+    ix, λt, μt, fdti = fλμ1(tree.d1::iTgbmbd, λt, μt, fdti, ix)
   end
-  if ix <= it && !isnothing(tree.d2)
-    ix, λt, μt, fdti = fλμ1(tree.d2::iTgbmbd, λt, μt, fdti, it, ix)
+  if !ix
+    ix, λt, μt, fdti = fλμ1(tree.d2::iTgbmbd, λt, μt, fdti, ix)
   end
 
   return ix, λt, μt, fdti

@@ -77,9 +77,8 @@ function daughters_lprop!(treep::iTgbmce,
   bb!(λd2v_p, λf, λd2, td2v[2], σλ, δt, srδt)
 
   # acceptance rate
-  normprop = 
-    duoldnorm(λf,        λd1, λd2, ped1, ped2, σλ) -
-    duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ)
+  normprop = duoldnorm(λf,        λd1, λd2, ped1, ped2, σλ) -
+             duoldnorm(λd1v_c[1], λd1, λd2, ped1, ped2, σλ)
 
   # fill fix and simulate unfix tree
   bm!(treepd1, λd1v_p, 1, lid1, σλ, srδt)

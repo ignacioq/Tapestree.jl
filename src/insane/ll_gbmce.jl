@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    cond_surv_events_crown(tree::iTgbmce, tna::Float64, ll::Int64)
+    cond_surv_crown(tree::iTgbmce, μ::Float64)
 
 Condition events when there is only one alive lineage in the stem branch
 to only be speciation events.
@@ -83,7 +83,7 @@ end
 
 
 """
-    cond_surv_events_stem_λ(tree::iTgbmce, μ::Float64) = 
+    cond_surv_stem_p(tree::iTgbmce, μ::Float64) = 
 
 Condition events when there is only one alive lineage in the crown subtrees 
 to only be speciation events.
@@ -95,7 +95,7 @@ cond_surv_stem_p(tree::iTgbmce, μ::Float64) =
 
 
 """
-    sum_alone_stem_λ(tree::iTgbmce, 
+    sum_alone_stem_p(tree::iTgbmce, 
                      tna ::Float64, 
                      ll  ::Float64, 
                      μ   ::Float64)
@@ -300,33 +300,6 @@ for GBM birth-death.
   return ssλ, n
 end
 
-
-
-
-"""
-    llr_gbm_bm(tree::iTgbmce, 
-               σp  ::Float64,
-               σc  ::Float64,
-               srδt::Float64,
-               lf  ::Function)
-
-Returns the log-likelihood ratio for a `iTgbmce` according 
-to GBM birth-death for a `σ` proposal.
-"""
-function llr_gbm_bm(tree::iTgbmce, 
-                    σp  ::Float64,
-                    σc  ::Float64,
-                    srδt::Float64,
-                    lf  ::Function)
-
-  if istip(tree) 
-    llr_gbm_bm(lf(tree), σp, σc, fdt(tree), srδt)
-  else
-    llr_gbm_bm(lf(tree), σp, σc, fdt(tree), srδt)   +
-    llr_gbm_bm(tree.d1::iTgbmce, σp, σc, srδt, lf) +
-    llr_gbm_bm(tree.d2::iTgbmce, σp, σc, srδt, lf)
-  end
-end
 
 
 
