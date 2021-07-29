@@ -27,19 +27,20 @@ January 12 2017
 
 Simulate tree according to `sse_g`.
 """
-function simulate_sse(λ       ::Array{Float64,1},
-                      μ       ::Array{Float64,1},
-                      l       ::Array{Float64,1},
-                      g       ::Array{Float64,1},
-                      q       ::Array{Float64,1},
-                      t       ::Float64;
-                      δt      ::Float64 = 1e-4,
-                      ast     ::Int64   = 0,
-                      nspp_max::Int64   = 200_000,
-                      retry_ext::Bool   = true,
-                      rejectel0::Bool   = true,
-                      verbose  ::Bool   = true,
-                      rm_ext   ::Bool   = true)
+function simulate_sse(λ          ::Array{Float64,1},
+                      μ          ::Array{Float64,1},
+                      l          ::Array{Float64,1},
+                      g          ::Array{Float64,1},
+                      q          ::Array{Float64,1},
+                      t          ::Float64;
+                      δt         ::Float64 = 1e-4,
+                      ast        ::Int64   = 0,
+                      nspp_max   ::Int64   = 200_000,
+                      retry_ext  ::Bool   = true,
+                      rejectel0  ::Bool   = true,
+                      verbose    ::Bool   = true,
+                      rm_ext     ::Bool   = true,
+                      states_only::Bool   = false)
 
   # make simulation
   ed, el, st, ea, ee, n, S, k = 
@@ -116,8 +117,13 @@ function simulate_sse(λ       ::Array{Float64,1},
   # tip numbers
   tN = ed[ea,2]
 
-  # tip states
   tS = st[ea]
+  # tip states
+  if states_only
+    tv = tip_dictionary(tS)
+    tv = states_to_values(tv, S, k)
+    return tv, ed, el, maxsp
+  end
 
   # remove extinct
   if rm_ext 
@@ -130,7 +136,6 @@ function simulate_sse(λ       ::Array{Float64,1},
   # organize in postorder
   ed, tv = numberedges(ed, tN, tS)
   ed, el = postorderedges(ed, el, nt)
-
 
   ## round branch lengths
   # find out order of simulation

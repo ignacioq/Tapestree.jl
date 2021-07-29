@@ -282,6 +282,25 @@ end
 
 
 
+"""
+    tip_dictionary(tS::Array{Int64,1})
+
+Create a dictionary. WARNING: ONLY FOR USE WITHOUT CARING ABOUT TOPOLOGY.
+"""
+function tip_dictionary(tS::Array{Int64,1})
+
+  # make tip values Dictionary
+  tv = Dict{Int64, Int64}()
+
+  for i in Base.OneTo(lastindex(tv))
+    push!(tv, i => tS[i])
+  end
+
+  return tv
+end
+
+
+
 
 """
     numberedges(ed::Array{Int64,2}, tN::Array{Int64,1})
