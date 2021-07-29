@@ -57,7 +57,6 @@ One step for single area `k` in sse_g
         (nk + 1.0) * (μk + gkj)               * pktip1 * dt + 
         ((nk - 1.0) * λk + bs + ws + be)      * pktim1 * dt - 
         (nk * (λk + μk + gkj) + bs + ws + be) * pkti   * dt
-
     end
   end
 
