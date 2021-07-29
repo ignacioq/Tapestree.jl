@@ -292,7 +292,7 @@ function tip_dictionary(tS::Array{Int64,1})
   # make tip values Dictionary
   tv = Dict{Int64, Int64}()
 
-  for i in Base.OneTo(lastindex(tv))
+  for i in Base.OneTo(lastindex(tS))
     push!(tv, i => tS[i])
   end
 
