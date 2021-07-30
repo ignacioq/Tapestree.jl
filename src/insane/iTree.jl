@@ -43,36 +43,29 @@ with the following fields:
 
   d1: daughter tree 1
   d2: daughter tree 2
-  pe: pendant edge
-  iμ: is an extinction node
+  e:  edge
 
     sTpb()
 
 Constructs an empty `sTpb` object.
 
-    sTpb(pe::Float64)
+    sTpb(e::Float64)
 
-Constructs an empty `sTpb` object with pendant edge `pe`.
+Constructs an empty `sTpb` object with edge `e`.
 
-    sTpb(d1::sTpb, d2::sTpb, pe::Float64)
+    sTpb(d1::sTpb, d2::sTpb, e::Float64)
 
-Constructs an `sTpb` object with two `sTpb` daughters and pendant edge `pe`.
+Constructs an `sTpb` object with two `sTpb` daughters and edge `e`.
 """
 mutable struct sTpb <: sT
-  d1::Union{sTpb, Nothing}
-  d2::Union{sTpb, Nothing}
-  pe::Float64
+  d1::sTpb
+  d2::sTpb
+  e ::Float64
 
-  # inner constructor
-  sTpb(d1::Union{sTpb, Nothing}, d2::Union{sTpb, Nothing}, pe::Float64) = 
-    new(d1, d2, pe)
+  sTpb() = (x = new(); x.e = 0.0; x)
+  sTpb(e::Float64) = (x = new(); x.e = e; x)
+  sTpb(d1::sTpb, d2::sTpb, e::Float64) = new(d1, d2, e)
 end
-
-# outer constructors
-sTpb() = sTpb(nothing, nothing, 0.0)
-
-sTpb(pe::Float64) = sTpb(nothing, nothing, pe)
-
 
 # pretty-printing
 Base.show(io::IO, t::sTpb) = 
@@ -90,7 +83,7 @@ with the following fields:
 
   d1: daughter tree 1
   d2: daughter tree 2
-  pe: pendant edge
+  e:  edge
   iμ: is an extinction node
   fx: if it is fix
 
@@ -98,37 +91,33 @@ with the following fields:
 
 Constructs an empty `sTbd` object.
 
-    sTbd(pe::Float64)
+    sTbd(e::Float64)
 
-Constructs an empty `sTbd` object with pendant edge `pe`.
+Constructs an empty `sTbd` object with edge `e`.
 
-    sTbd(d1::sTbd, d2::sTbd, pe::Float64)
+    sTbd(d1::sTbd, d2::sTbd, e::Float64)
 
-Constructs an `sTbd` object with two `sTbd` daughters and pendant edge `pe`.
+Constructs an `sTbd` object with two `sTbd` daughters and edge `e`.
 """
 mutable struct sTbd <: sT
-  d1::Union{sTbd, Nothing}
-  d2::Union{sTbd, Nothing}
-  pe::Float64
+  d1::sTbd
+  d2::sTbd
+  e ::Float64
   iμ::Bool
   fx::Bool
 
-  # inner constructor
-  sTbd(d1::Union{sTbd, Nothing}, d2::Union{sTbd, Nothing}, 
-    pe::Float64, iμ::Bool, fx::Bool) = new(d1, d2, pe, iμ, fx)
+  sTbd() = (x = new(); x.e = 0.0; x.iμ = false; x.fx = false; x)
+  sTbd(e::Float64) = 
+    (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
+  sTbd(e::Float64, iμ::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.fx = false; x)
+  sTbd(d1::sTbd, d2::sTbd, e::Float64) = 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.iμ = false; x.fx = false; x)
+  sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool) = 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.iμ = iμ; x.fx = false; x)
+  sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool, fx::Bool) = 
+    new(d1, d2, e, iμ, fx)
 end
-
-# outer constructors
-sTbd() = sTbd(nothing, nothing, 0.0, false, false)
-
-sTbd(pe::Float64) = sTbd(nothing, nothing, pe, false, false)
-
-sTbd(pe::Float64, iμ::Bool) = sTbd(nothing, nothing, pe, iμ, false)
-
-sTbd(d1::sTbd, d2::sTbd, pe::Float64) = sTbd(d1, d2, pe, false, false)
-
-sTbd(d1::sTbd, d2::sTbd, pe::Float64, iμ::Bool) = 
-  sTbd(d1, d2, pe, iμ, false)
 
 # pretty-printing
 Base.show(io::IO, t::sTbd) = 
@@ -159,7 +148,7 @@ with the following fields:
 
   d1:  daughter tree 1
   d2:  daughter tree 2
-  pe:  pendant edge
+  e:   edge
   dt:  choice of time lag
   fdt: final `δt`
   lλ:  array of a Brownian motion evolution of `log(λ)`
@@ -168,31 +157,31 @@ with the following fields:
 
 Constructs an empty `iTgbmpb` object.
 
-    iTgbmpb(pe::Float64)
+    iTgbmpb(e::Float64)
 
 Constructs an empty `iTgbmpb` object with pendant edge `pe`.
 
-    iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, pe::Float64)
+    iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64)
 
 Constructs an `iTgbmpb` object with two `iTgbmpb` daughters and pendant edge `pe`.
 """
 mutable struct iTgbmpb <: iTgbm
-  d1 ::Union{iTgbmpb, Nothing}
-  d2 ::Union{iTgbmpb, Nothing}
-  pe ::Float64
+  d1 ::iTgbmpb
+  d2 ::iTgbmpb
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   lλ ::Array{Float64,1}
 
-  # inner constructor
-  iTgbmpb(d1::Union{iTgbmpb, Nothing}, d2::Union{iTgbmpb, Nothing}, pe::Float64, 
+  iTgbmpb() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; x.lλ = Float64[]; x)
+  iTgbmpb(e::Float64, dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
+  iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, 
     dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
-      new(d1, d2, pe, dt, fdt, lλ)
+      new(d1, d2, e, dt, fdt, lλ)
 end
 
-# outer constructors
-iTgbmpb() = 
-  iTgbmpb(nothing, nothing, 0.0, 0.0, 0.0, Float64[])
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
@@ -215,16 +204,16 @@ function iTgbmpb(tree::sTpb,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet  = pe(tree)
+  pet  = e(tree)
 
-  if iszero(pet)
+  if iszero(et)
     iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, σλ), 
             iTgbmpb(tree.d2, δt, srδt, lλa, σλ),
-            pe(tree), δt, 0.0, Float64[lλa])
+            e(tree), δt, 0.0, Float64[lλa])
 
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt   = Int64(fld(et,δt))
+    fdti = mod(et, δt)
 
     if iszero(fdti)
       fdti = δt
@@ -235,7 +224,7 @@ function iTgbmpb(tree::sTpb,
 
     iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], σλ), 
             iTgbmpb(tree.d2, δt, srδt, lλv[l], σλ),
-            pe(tree), δt, fdti, lλv)
+            e(tree), δt, fdti, lλv)
 
   end
 end
@@ -265,57 +254,55 @@ with the following fields:
 
   d1:   daughter tree 1
   d2:   daughter tree 2
-  pe:   pendant edge
+  e:    edge
   iμ:   if extinct node
   fx:   if fix (observed) node
   dt:   choice of time lag
   fdt:  final `dt`
   lλ:   array of a Brownian motion evolution of `log(λ)`
 
-  iTgbmce(d1  ::Union{iTgbmce, Nothing}, 
-          d2  ::Union{iTgbmce, Nothing}, 
-          pe  ::Float64, 
-          dt  ::Float64,
+  iTgbmce(d1 ::iTgbmce, 
+          d2 ::iTgbmce, 
+          e  ::Float64, 
+          dt ::Float64,
           fdt::Float64,
-          iμ   ::Bool, 
-          fx   ::Bool, 
-          lλ   ::Array{Float64,1})
-
-Constructs an `iTgbmce` object with two `iTgbmce` daughters and pendant edge `pe`.
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1})
 """
 mutable struct iTgbmce <: iTgbm
-  d1 ::Union{iTgbmce, Nothing}
-  d2 ::Union{iTgbmce, Nothing}
-  pe ::Float64
+  d1 ::iTgbmce
+  d2 ::iTgbmce
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   iμ ::Bool
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  # inner constructor
-  iTgbmce(d1 ::Union{iTgbmce, Nothing}, 
-          d2 ::Union{iTgbmce, Nothing}, 
-          pe ::Float64, 
+  iTgbmce() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[])
+
+  iTgbmce(d1 ::iTgbmce, 
+          d2 ::iTgbmce, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.d1 = d1, x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[])
+
+  iTgbmce(d1 ::iTgbmce, 
+          d2 ::iTgbmce, 
+          e  ::Float64, 
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool, 
           fx ::Bool, 
           lλ ::Array{Float64,1}) = 
-    new(d1, d2, pe, dt, fdt, iμ, fx, lλ)
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ)
 end
-
-# outer constructors
-iTgbmce() = iTgbmce(nothing, nothing, 0.0, 0.0, 0.0, false, false, Float64[])
-
-# outer constructors
-iTgbmce(d1 ::Union{iTgbmce, Nothing}, 
-        d2 ::Union{iTgbmce, Nothing}, 
-        pe ::Float64, 
-        dt ::Float64,
-        fdt::Float64,
-        lλ ::Array{Float64,1}) = 
-  iTgbmce(d1, d2, pe, dt, fdt, false, false, lλ)
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmce) = 
@@ -417,57 +404,57 @@ with the following fields:
 
   d1:   daughter tree 1
   d2:   daughter tree 2
-  pe:   pendant edge
+  e:    edge
   iμ:   if extinct node
   fx:   if fix (observed) node
   dt:   choice of time lag
   fdt:  final `dt`
   lλ:   array of a Brownian motion evolution of `log(λ)`
 
-  iTgbmct(d1  ::Union{iTgbmct, Nothing}, 
-          d2  ::Union{iTgbmct, Nothing}, 
-          pe  ::Float64, 
-          dt  ::Float64,
+  iTgbmct(d1 ::iTgbmct, 
+          d2 ::iTgbmct, 
+          e  ::Float64, 
+          dt ::Float64,
           fdt::Float64,
-          iμ   ::Bool, 
-          fx   ::Bool, 
-          lλ   ::Array{Float64,1})
-
-Constructs an `iTgbmct` object with two `iTgbmct` daughters and pendant edge `pe`.
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1})
 """
 mutable struct iTgbmct <: iTgbm
-  d1 ::Union{iTgbmct, Nothing}
-  d2 ::Union{iTgbmct, Nothing}
-  pe ::Float64
+  d1 ::iTgbmct
+  d2 ::iTgbmct
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   iμ ::Bool
   fx ::Bool
   lλ ::Array{Float64,1}
 
+  iTgbmct() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[])
+
+  iTgbmct(d1 ::iTgbmct, 
+          d2 ::iTgbmct, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.d1 = d1, x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[])
+
   # inner constructor
-  iTgbmct(d1 ::Union{iTgbmct, Nothing}, 
-          d2 ::Union{iTgbmct, Nothing}, 
-          pe ::Float64, 
+  iTgbmct(d1 ::iTgbmct, 
+          d2 ::iTgbmct, 
+          e  ::Float64, 
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool, 
           fx ::Bool, 
           lλ ::Array{Float64,1}) = 
-    new(d1, d2, pe, dt, fdt, iμ, fx, lλ)
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ)
 end
 
-# outer constructors
-iTgbmct() = iTgbmct(nothing, nothing, 0.0, 0.0, 0.0, false, false, Float64[])
-
-# outer constructors
-iTgbmct(d1 ::Union{iTgbmct, Nothing}, 
-        d2 ::Union{iTgbmct, Nothing}, 
-        pe ::Float64, 
-        dt ::Float64,
-        fdt::Float64,
-        lλ ::Array{Float64,1}) = 
-  iTgbmct(d1, d2, pe, dt, fdt, false, false, lλ)
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmct) = 
@@ -568,7 +555,7 @@ with the following fields:
 
   d1:   daughter tree 1
   d2:   daughter tree 2
-  pe:   pendant edge
+  e:    pendant edge
   iμ:   if extinct node
   fx:   if fix (observed) node
   dt:   choice of time lag
@@ -576,22 +563,20 @@ with the following fields:
   lλ:   array of a Brownian motion evolution of `log(λ)`
   lμ:   array of a Brownian motion evolution of `log(μ)`
 
-  iTgbmbd(d1  ::Union{iTgbmbd, Nothing}, 
-          d2  ::Union{iTgbmbd, Nothing}, 
-          pe  ::Float64, 
-          dt  ::Float64,
+  iTgbmbd(d1 ::iTgbmbd, 
+          d2 ::iTgbmbd, 
+          e  ::Float64, 
+          dt ::Float64,
           fdt::Float64,
-          iμ   ::Bool, 
-          fx   ::Bool, 
-          lλ   ::Array{Float64,1},
-          lμ   ::Array{Float64,1})
-
-Constructs an `iTgbmbd` object with two `iTgbmbd` daughters and pendant edge `pe`.
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1})
 """
 mutable struct iTgbmbd <: iTgbm
-  d1 ::Union{iTgbmbd, Nothing}
-  d2 ::Union{iTgbmbd, Nothing}
-  pe ::Float64
+  d1 ::iTgbmbd
+  d2 ::iTgbmbd
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   iμ ::Bool
@@ -599,31 +584,31 @@ mutable struct iTgbmbd <: iTgbm
   lλ ::Array{Float64,1}
   lμ ::Array{Float64,1}
 
-  # inner constructor
-  iTgbmbd(d1 ::Union{iTgbmbd, Nothing}, 
-          d2 ::Union{iTgbmbd, Nothing}, 
-          pe ::Float64, 
+  iTgbmbd() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x.lμ = Float64[])
+
+  iTgbmbd(d1 ::iTgbmbd, 
+          d2 ::iTgbmbd, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = false; x.fx = false; x.lλ = lλ; x.lμ = lμ)
+
+  iTgbmbd(d1 ::iTgbmbd, 
+          d2 ::iTgbmbd, 
+          e  ::Float64, 
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool, 
           fx ::Bool, 
           lλ ::Array{Float64,1},
           lμ ::Array{Float64,1}) = 
-    new(d1, d2, pe, dt, fdt, iμ, fx, lλ, lμ)
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ, lμ)
 end
 
-# outer constructors
-iTgbmbd() = iTgbmbd(nothing, nothing, 0.0, 0.0, 0.0, false, false, 
-            Float64[], Float64[])
-
-# outer constructors
-iTgbmbd(d1 ::Union{iTgbmbd, Nothing}, 
-        d2 ::Union{iTgbmbd, Nothing}, 
-        pe ::Float64, 
-        dt ::Float64,
-        fdt::Float64,
-        lλ ::Array{Float64,1}) = 
-  iTgbmbd(d1, d2, pe, dt, fdt, false, false, lλ, Float64[])
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 

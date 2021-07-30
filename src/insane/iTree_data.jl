@@ -16,9 +16,7 @@ Created 25 06 2020
 
 Return if is either an extant or extinct tip node.
 """
-isfix(tree::T) where {T <: iTree} = getproperty(tree,:fx)
-
-isfix(::Nothing) = false
+isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
 
 
 
@@ -28,9 +26,7 @@ isfix(::Nothing) = false
 
 Return if is either an extant or extinct tip node.
 """
-istip(tree::T) where {T <: iTree} = getproperty(tree,:d1) === nothing
-
-istip(::Nothing) = false
+istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 
 
 
@@ -40,14 +36,8 @@ istip(::Nothing) = false
 
 Return if is an extinction node.
 """
-isextinct(tree::T) where {T <: iTree} = getproperty(tree,:iμ)
+isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 
-"""
-    isextinct(::Nothing)
-
-Return if is an extinction node.
-"""
-isextinct(::Nothing) = false
 
 
 
@@ -56,30 +46,17 @@ isextinct(::Nothing) = false
 
 Return if is an extinction node.
 """
-isalive(tree::T) where {T <: iTree} = !getproperty(tree,:iμ)
+isalive(tree::T) where {T <: iTree} = !getproperty(tree, :iμ)
 
-"""
-    isalive(::Nothing)
-
-Return if is an extinction node.
-"""
-isalive(::Nothing) = false
 
 
 
 """
-    pe(tree::T) where {T <: iTree}
+    e(tree::T) where {T <: iTree}
 
-Return pendant edge.
+Return edge length.
 """
-pe(tree::T) where {T <: iTree} = getproperty(tree, :pe)
-
-"""
-    pe(::Nothing)
-
-Return pendant edge.
-"""
-pe(::Nothing) = nothing
+e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 
@@ -91,14 +68,6 @@ Return `δt`.
 """
 dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
 
-"""
-    dt(::Nothing)
-
-Return `δt`.
-"""
-dt(::Nothing) = nothing
-
-
 
 
 
@@ -109,14 +78,6 @@ Return final `δt`.
 """
 fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
 
-"""
-    fdt(::Nothing)
-
-Return final `δt`.
-"""
-fdt(::Nothing) = nothing
-
-
 
 
 
@@ -126,77 +87,66 @@ fdt(::Nothing) = nothing
 
 Return the branch length sum of `tree`.
 """
-treelength(tree::T) where {T <: iTree} = 
-  treelength(tree.d1) + treelength(tree.d2) + pe(tree)
+function treelength(tree::T, l::Float64) where {T <: iTree}
+  l += e(tree)
+  if isdefined(tree, :d1)
+    l = treelength(tree.d1, l)::Float64
+    l = treelength(tree.d2, l)::Float64
+  end
+  return l
+end
+
+
+
 
 """
-    treelength(::Nothing)
-
-Return the branch length sum of `tree`.
-"""
-treelength(::Nothing) = 0.0
-
-
-
-
-"""
-    treeheight(tree::T) where {T <: iTree}
+    treeheight(tree::T, th1::Float64, th2::Float64)
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::T) where {T <: iTree}
-  th1 = treeheight(tree.d1)
-  th2 = treeheight(tree.d2)
-  (th1 > th2 ? th1 : th2) + pe(tree)
+function treeheight(tree::T, th1::Float64, th2::Float64) where {T <: iTree}
+  if isdefined(tree, :d1)
+    th1 = treeheight(tree.d1)
+    th2 = treeheight(tree.d2)
+  end
+  (th1 > th2 ? th1 : th2) + e(tree)
 end
 
-"""
-    treeheight(::Nothing)
-
-Return the tree height of `tree`.
-"""
-treeheight(::Nothing) = 0.0
-
 
 
 
 """
-    snn(tree::T) where {T <: iTree}
+    snn(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of descendant nodes for `tree`.
 """
-snn(tree::T) where {T <: iTree} = snn(tree.d1) + snn(tree.d2) + 1
-
-"""
-    snn(::Nothing)
-
-Return the number of descendant nodes for `tree`.
-"""
-snn(::Nothing) = 0
-
-
-
-
-"""
-    snin(tree::T) where {T <: iTree}
-
-Return the number of internal nodes for `tree`.
-"""
-function snin(tree::T) where {T <: iTree}
-    if istip(tree)
-      return 0
-    else
-      return snin(tree.d1) + snin(tree.d2) + 1
-    end
+function snn(tree::T, n::Int64) where {T <: iTree} 
+  n += 1
+  if isdefined(tree, :d1)
+    n = snn(tree.d1, n)
+    n = snn(tree.d2, n)
+  end
+  
+  return n
 end
 
+
+
+
 """
-    snin(::Nothing)
+    snin(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of internal nodes for `tree`.
 """
-snin(::Nothing) = 0
+function snin(tree::T, n::Int64) where {T <: iTree}
+  if isdefined(tree, :d1)
+    n += 1
+    n = snin(tree.d1, n)
+    n = snin(tree.d2, n)
+  end
 
+  return n
+end
 
 
 
@@ -206,20 +156,16 @@ snin(::Nothing) = 0
 
 Return the number of extinct nodes for `tree`.
 """
-function snen(tree::T) where {T <: iTree}
-    if istip(tree) && isextinct(tree)
-      return 1
-    else
-      return snen(tree.d1) + snen(tree.d2)
-    end
+function snen(tree::T, n::Int64) where {T <: iTree}
+  if isdefined(tree, :d1)
+    n = snen(tree.d1, n)
+    n = snen(tree.d2, n)
+  elseif isextinct(tree)
+    n += 1
+  end
+
+  return n
 end
-
-"""
-    snen(::Nothing)
-
-Return the number of internal nodes for `tree`.
-"""
-snen(::Nothing) = 0
 
 
 
@@ -229,20 +175,35 @@ snen(::Nothing) = 0
 
 Return the number of extinct nodes for `tree` as Float64.
 """
-function snenF(tree::T) where {T <: iTree}
-    if isextinct(tree)
-      return 1.0
-    else
-      return snenF(tree.d1) + snenF(tree.d2)
-    end 
+function snenF(tree::T, n::Int64) where {T <: iTree}
+  if isdefined(tree, :d1)
+    n = snen(tree.d1, n)
+    n = snen(tree.d2, n)
+  elseif isextinct(tree)
+    n += 1
+  end
+
+  return n
 end
 
-"""
-    snen(::Nothing)
 
-Return the number of internal nodes for `tree`.
+
 """
-snenF(::Nothing) = 0.0
+    snenF(tree::T, n::Float64) where {T <: iTree}
+
+Return the number of extinct nodes for `tree` as Float64.
+"""
+function snenF(tree::T, n::Float64) where {T <: iTree}
+
+  if isdefined(tree, :d1)
+    n = snenF(tree.d1, n)
+    n = snenF(tree.d2, n)
+  elseif isextinct(tree)
+    n += 1.0
+  end
+
+  return n
+end
 
 
 
@@ -252,22 +213,17 @@ snenF(::Nothing) = 0.0
 
 Return the number of alive nodes for `tree`.
 """
-function snan(tree::T) where {T <: iTree}
-    if istip(tree) && !isextinct(tree)
-      return 1
-    else
-      return snan(tree.d1) + snan(tree.d2)
-    end
+function snan(tree::T, n::Int64) where {T <: iTree}
+
+  if isdefined(tree, :d1)
+    n = snan(tree.d1, n)
+    n = snan(tree.d2, n)
+  elseif isalive(tree)
+    n += 1
+  end
+
+  return n
 end
-
-
-"""
-    snan(::Nothing)
-
-Return the number of alive nodes for `tree`.
-"""
-snan(::Nothing) = 0
-
 
 
 
@@ -277,21 +233,33 @@ snan(::Nothing) = 0
 
 Return the number of tip nodes for `tree`.
 """
-function sntn(tree::T) where {T <: iTree}
-    if istip(tree)
-      return 1
-    else
-      return sntn(tree.d1) + sntn(tree.d2)
-    end
+function sntn(tree::T, n::Int64) where {T <: iTree}
+
+  if isdefined(tree, :d1)
+    n = sntn(tree.d1, n)
+    n = sntn(tree.d2, n)
+  else
+    n += 1
+  end
+
+  return n
 end
 
 
-"""
-    sntn(::Nothing)
 
-Return the number of tip nodes for `tree`.
+
 """
-sntn(::Nothing) = 0
+here!!!
+"""
+
+
+@benchmark sntn($t0)
+@code_warntype sntn(t0)
+
+
+@benchmark sntn($t, 0)
+@code_warntype sntn(t, 0)
+
 
 
 
