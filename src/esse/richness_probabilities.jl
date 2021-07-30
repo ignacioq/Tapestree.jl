@@ -11,52 +11,130 @@ t(-_-t)
 
 
 
+@inline function pdt!(p1  ::Array{Float64,3}, 
+                      p   ::Array{Float64,3}, 
+                      λk  ::Float64, 
+                      λj  ::Float64, 
+                      λw  ::Float64, 
+                      μk  ::Float64, 
+                      μj  ::Float64,
+                      gkj ::Float64,
+                      gjk ::Float64,
+                      nspp::Int64,
+                      dt  ::Float64)
 
-"""
-    pdt_k!(pkt1::Array{Float64,1}, 
-           pkt ::Array{Float64,1}, 
-           pwt ::Array{Float64,1}, 
-           λk  ::Float64, 
-           λw  ::Float64, 
-           μk  ::Float64, 
-           μj  ::Float64, 
-           gkj ::Float64,
-           dt  ::Float64,
-           lp  ::Int64)
+  @inbounds @fastmath begin
 
-One step for single area `k` in sse_g
-"""
-@inline function pdt_k!(pkt1::Array{Float64,1}, 
-                        pkt ::Array{Float64,1}, 
-                        pwt ::Array{Float64,1}, 
-                        λk  ::Float64, 
-                        λw  ::Float64, 
-                        μk  ::Float64, 
-                        μj  ::Float64, 
-                        gkj ::Float64,
-                        dt  ::Float64,
-                        lp  ::Int64)
+    for w in Base.OneTo(nspp - 1) 
+      nw = Float64(w - 1)
+      wh1 = w > 1
 
-  @inbounds begin
-    bs = ws = be = 0.0
-    @simd for i in Base.OneTo(lp-1)
-      pwti   = pwt[i]
-      nw     = Float64(i - 1)
-      bs  += nw * λw * pwti
-      ws  += nw * λk * pwti
-      be  += nw * μj * pwti
-    end
+      for j in Base.OneTo(nspp - 1) 
+        nj  = Float64(j - 1)
+        jh1 = j > 1
 
-    @simd for i in Base.OneTo(lp-1)
-      pkti   = pkt[i]
-      pktim1 = i > 1 ? pkt[i-1] : 0.0
-      pktip1 = pkt[i+1]
-      nk     = Float64(i - 1)
+        @simd for k in Base.OneTo(nspp - 1)
+          nk = Float64(k - 1)
+          kh1 = k > 1
 
-      pkt1[i] +=
-        (nk + 1.0) * (μk + gkj)               * pktip1 * dt + 
-        ((nk - 1.0) * λk + bs + ws + be)      * pktim1 * dt - 
-        (nk * (λk + μk + gkj) + bs + ws + be) * pkti   * dt
+          # if 0, 0, 0
+          if !kh1 && !jh1 && !wh1
+ 
+            p1[1,1,1] = 0.0
+
+          # if 1, 0, 0
+          elseif k === 2 && !jh1 && !wh1
+
+            p1[2,1,1] += 
+              (
+                ## events
+                # global extinction in k
+                2.0 * μk * p[3,1,1] + 
+                # global extinction in j
+                μj * p[2,2,1]       +
+                # local extinction in j
+                μj * p[1,1,2]       -
+
+                ## non events
+                (
+                  # speciation in k
+                  λk  + 
+                  # colonization k -> j
+                  gkj
+                ) * p[2,1,1]
+              ) * dt
+
+          # if 0, 1, 0
+          elseif !kh1 && j === 2 && !wh1
+
+            p1[1,2,1] += 
+              (
+                ## events
+                # global extinction in j
+                2.0 * μj * p[1,3,1] + 
+                # global extinction in k
+                μk * p[2,2,1]       +
+                # local extinction in k
+                μk * p[1,1,2]       -
+
+                ## non events
+                (
+                # speciation in j
+                  λj  + 
+                  # colonization j -> k
+                  gjk
+                ) * p[1,2,1]
+              ) * dt
+
+          else
+
+            p1[k,j,w] += 
+              (
+                ## events
+                # speciation in k
+                (nk - 1.0 + nw) * λk * (kh1 ? p[k-1,j,w] : 0.0)       + 
+                # speciation in j
+                (nj - 1.0 + nw) * λj * (jh1 ? p[k,j-1,w] : 0.0)       + 
+                # widespread speciation
+                (nw + 1.0) * λw * (jh1 && kh1 ? p[k-1,j-1,w+1] : 0.0) +
+                # global extinction in k
+                (nk + 1.0) * μk * p[k+1,j,w]                          + 
+                # global extinction in j
+                (nj + 1.0) * μj * p[k,j+1,w]                          +
+                # local extinction in k
+                (nw + 1.0) * μk * (jh1 ? p[k,j-1,w+1] : 0.0)          + 
+                # local extinction in j
+                (nw + 1.0) * μj * (kh1 ? p[k-1,j,w+1] : 0.0)          + 
+                # colonization k -> j
+                (nk + 1.0) * gkj * (wh1 ? p[k+1,j,w-1] : 0.0)         + 
+                # colonization j -> k
+                (nj + 1.0) * gjk * (wh1 ? p[k,j+1,w-1] : 0.0)         - 
+
+                ## non events
+                (
+                  # speciation in k
+                  (nk + nw) * λk + 
+                  # speciation in j
+                  (nj + nw) * λj +
+                  # widespread speciation
+                  nw * λw        +
+                  # global extinction in k
+                  nk * μk        + 
+                  # global extinction in j
+                  nj * μj        +
+                  # local extinction in k
+                  nw * μk        +
+                  # local extinction in j
+                  nw * μj        + 
+                  # colonization k -> j
+                  nk * gkj       + 
+                  # colonization j -> k
+                  nj * gjk
+                ) * p[k,j,w]
+              ) * dt
+          end
+        end
+      end
     end
   end
 
@@ -67,118 +145,45 @@ end
 
 
 """
-    pdt_w!(pwt1::Array{Float64,1}, 
-           pwt ::Array{Float64,1}, 
-           pkt ::Array{Float64,1}, 
-           pjt ::Array{Float64,1}, 
-           λw  ::Float64, 
-           μk  ::Float64, 
-           μj  ::Float64, 
-           gkj ::Float64,
-           gjk ::Float64,
-           dt  ::Float64,
-           lp  ::Int64)
-
-One step for widespread area `w` in sse_g
-"""
-@inline function pdt_w!(pwt1::Array{Float64,1}, 
-                        pwt ::Array{Float64,1}, 
-                        pkt ::Array{Float64,1}, 
-                        pjt ::Array{Float64,1}, 
-                        λw  ::Float64, 
-                        μk  ::Float64, 
-                        μj  ::Float64, 
-                        gkj ::Float64,
-                        gjk ::Float64,
-                        dt  ::Float64,
-                        lp  ::Int64)
-
-  @inbounds begin
-
-    sk = sj = 0.0
-    @simd for i in Base.OneTo(lp-1)
-      n    = Float64(i - 1)
-      sk  += n * gkj * pkt[i]
-      sj  += n * gjk * pjt[i]
-    end
-
-    @simd for i in Base.OneTo(lp-1)
-      pwti   = pwt[i]
-      pwtim1 = i > 1 ? pwt[i-1] : 0.0
-      pwtip1 = pwt[i+1]
-      nw = Float64(i - 1)
-
-      pwt1[i] +=
-        (nw + 1.0) * (μk + μj + λw)     * pwtip1 * dt + 
-        (sk + sj)                       * pwtim1 * dt -
-        (nw * (μk + μj + λw) + sk + sj) * pwti   * dt 
-    end
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    _p_t!(t ::Float64,
-          pkt1::Array{Float64,1}, 
-          pjt1::Array{Float64,1}, 
-          pwt1::Array{Float64,1}, 
-          pkt ::Array{Float64,1}, 
-          pjt ::Array{Float64,1}, 
-          pwt ::Array{Float64,1}, 
-          λk::Float64,
-          λj::Float64,
-          λw::Float64,
-          μk::Float64,
-          μj::Float64,
-          gkj::Float64,
-          gjk::Float64,
-          dt ::Float64, 
-          lp ::Int64)
+    _pdt!(t   ::Float64,
+          p1  ::Array{Float64,3}, 
+          p   ::Array{Float64,3}, 
+          λk  ::Float64, 
+          λj  ::Float64, 
+          λw  ::Float64, 
+          μk  ::Float64, 
+          μj  ::Float64,
+          gkj ::Float64,
+          gjk ::Float64,
+          nssp::Int64,
+          dt  ::Float64)
 
 Richness probabilities after time t.
 """
-function _p_t!(t ::Float64,
-               pkt1::Array{Float64,1}, 
-               pjt1::Array{Float64,1}, 
-               pwt1::Array{Float64,1}, 
-               pkt ::Array{Float64,1}, 
-               pjt ::Array{Float64,1}, 
-               pwt ::Array{Float64,1}, 
-               λk::Float64,
-               λj::Float64,
-               λw::Float64,
-               μk::Float64,
-               μj::Float64,
-               gkj::Float64,
-               gjk::Float64,
-               dt ::Float64, 
-               lp ::Int64)
+function _pdt!(t   ::Float64,
+               p1  ::Array{Float64,3}, 
+               p   ::Array{Float64,3}, 
+               λk  ::Float64, 
+               λj  ::Float64, 
+               λw  ::Float64, 
+               μk  ::Float64, 
+               μj  ::Float64,
+               gkj ::Float64,
+               gjk ::Float64,
+               nspp::Int64,
+               dt  ::Float64)
 
   n = fld(t, dt)
-
-  unsafe_copyto!(pkt1, 1, pkt, 1, lp)
-  unsafe_copyto!(pjt1, 1, pjt, 1, lp)
-  unsafe_copyto!(pwt1, 1, pwt, 1, lp)
+  tl = nspp^3
 
   for i in Base.OneTo(Int64(n))
-    pdt_k!(pkt1, pkt, pwt, λk, λw, μk, μj, gkj, dt, lp)
-    pdt_k!(pjt1, pjt, pwt, λj, λw, μj, μk, gjk, dt, lp)
-    pdt_w!(pwt1, pwt, pkt, pjt, λw, μk, μj, gkj, gjk, dt, lp)
-
-    unsafe_copyto!(pkt, 1, pkt1, 1, lp)
-    unsafe_copyto!(pjt, 1, pjt1, 1, lp)
-    unsafe_copyto!(pwt, 1, pwt1, 1, lp)
+    pdt!(p1, p, λk, λj, λw, μk, μj, gkj, gjk, nspp, dt)
+    unsafe_copyto!(p, 1, p1, 1, tl)
   end
 
   # last time
   m  = mod(t, dt)
-  pdt_k!(pkt1, pkt, pwt, λk, λw, μk, μj, gkj, m, lp)
-  pdt_k!(pjt1, pjt, pwt, λj, λw, μj, μk, gjk, m, lp)
-  pdt_w!(pwt1, pwt, pkt, pjt, λw, μk, μj, gkj, gjk, m, lp)
+  pdt!(p1, p, λk, λj, λw, μk, μj, gkj, gjk, nspp, m)
 
   return nothing
 end
@@ -214,22 +219,13 @@ function p_t(t   ::Float64,
              gkj ::Float64 = 0.1,
              gjk ::Float64 = 0.1)
 
-  pkt  = zeros(nspp)
-  pjt  = zeros(nspp)
-  pwt  = zeros(nspp)
-  pkt1 = zeros(nspp)
-  pjt1 = zeros(nspp)
-  pwt1 = zeros(nspp)
+  p = zeros(nspp, nspp, nspp)
+  p[init[1]+1, init[2]+1, init[3]+1] = 1.0
+  p1 = copy(p)
 
-  # starting values
-  pkt[init[1]+1] = 1.0
-  pjt[init[2]+1] = 1.0
-  pwt[init[3]+1] = 1.0
+  _pdt!(t, p1, p, λk, λj, λw, μk, μj, gkj, gjk, nspp, dt)
 
-  _p_t!(t, pkt1, pjt1, pwt1, pkt, pjt, pwt, 
-    λk, λj, λw, μk, μj, gkj, gjk, dt, nspp)
-
-  return pkt1, pjt1, pwt1
+  return p1
 end
 
 
