@@ -644,7 +644,7 @@ function fsbi(bi  ::iBffs,
       
       for j in Base.OneTo(na - 1)
         # get their final λ and μ to continue forward simulation
-        ix, λt, μt, fdti = fλμ1(t0, NaN, NaN, NaN, 1, 0)
+        ix, λt, μt, fdti = fλμ1(t0, NaN, NaN, NaN, false)
         for i in Base.OneTo(2)
           st0, nsp = 
             sim_gbm(max(δt - fdti, 0.0), tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
