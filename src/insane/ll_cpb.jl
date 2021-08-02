@@ -20,12 +20,13 @@ given a complete `iTree`.
 """
 function llik_cpb(tree::sTpb, λ::Float64)
 
-  if istip(tree) 
-    - pe(tree)*λ
+  if isdefined(tree, :d1)
+    llik_cpb(tree.d1::sTpb, λ) + llik_cpb(tree.d2::sTpb, λ) + log(λ) - e(tree)*λ
   else
-    llik_cpb(tree.d1::sTpb, λ) + llik_cpb(tree.d2::sTpb, λ) + log(λ) - pe(tree)*λ
+    - e(tree) * λ
   end
 end
+
 
 
 

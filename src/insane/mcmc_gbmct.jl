@@ -59,8 +59,8 @@ function insane_gbmct(tree    ::sTbd,
   fixtree!(tree)
 
   # `n` tips, `th` treeheight define δt
-  n    = sntn(tree)
-  th   = treeheight(tree)
+  n    = sntn(tree, 0)
+  th   = treeheight(tree, 0.0, 0.0)
   δt  *= th
   srδt = sqrt(δt)
 
@@ -98,7 +98,7 @@ function insane_gbmct(tree    ::sTbd,
   triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(Ψc)) ? cond_surv_crown : cond_surv_stem
+  svf = iszero(e(Ψc)) ? cond_surv_crown : cond_surv_stem
 
   # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
   spup = sum(pupdp)
@@ -193,7 +193,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmct,
   lac = 0.0
 
   # crown or stem conditioning
-  icr = iszero(pe(Ψc))
+  icr = iszero(e(Ψc))
 
   llc = llik_gbm(Ψc, ϵc, σλc, δt, srδt) + svf(Ψc, ϵc)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
@@ -351,7 +351,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmct,
                     svf     ::Function)
 
   # crown or stem conditioning
-  icr = iszero(pe(Ψc))
+  icr = iszero(e(Ψc))
 
   lλmxpr = log(λa_prior[2])
   ϵmxpr  = log(ϵ_prior[2])
@@ -471,8 +471,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmct,
         R[lit,4] = exp(lλ(Ψc)[1])
         R[lit,5] = ϵc
         R[lit,6] = σλc
-        R[lit,7] = snen(Ψc)
-        R[lit,8] = treelength(Ψc)
+        R[lit,7] = snen(Ψc, 0)
+        R[lit,8] = treelength(Ψc, 0.0)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -629,7 +629,7 @@ function fsbi_ct(bi  ::iBffs,
   # simulate tree
   t0, nsp = sim_gbmct(ti(bi) - tfb, iλ, ϵ, σλ, δt, srδt, 1, nlim)
 
-  na = snan(t0)
+  na = snan(t0, 0)
 
   λf, dft0 = NaN, NaN
 
@@ -665,7 +665,7 @@ function fsbi_ct(bi  ::iBffs,
             continue
           end
           # if goes extinct before the present
-          if iszero(snan(st0))
+          if iszero(snan(st0, 0))
             # graft to tip
             addtotip(t0, st0, false)
             break
@@ -827,13 +827,13 @@ function fixrtip!(tree::iTgbmct, na::Int64, λf::Float64, dft0::Float64)
 
   fix!(tree)
 
-  if !istip(tree)
+  if isdefined(tree, :d1)
     if isextinct(tree.d1::iTgbmct)
       λf, dft0 = fixrtip!(tree.d2::iTgbmct, na, λf, dft0)
     elseif isextinct(tree.d2::iTgbmct)
       λf, dft0 = fixrtip!(tree.d1::iTgbmct, na, λf, dft0)
     else
-      na1 = snan(tree.d1::iTgbmct)
+      na1 = snan(tree.d1::iTgbmct, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
         λf, dft0 = fixrtip!(tree.d2::iTgbmct, na - na1, λf, dft0)
@@ -859,22 +859,19 @@ Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::iTgbmct, λf::Float64, dft0::Float64)
 
-  if istip(tree) && !isextinct(tree)
-    fix!(tree)
-    λf   = lλ(tree)[end]
-    dft0 = fdt(tree)
-    return true, λf, dft0
-  end
-
-  if !isnothing(tree.d2)
+  if istip(tree) 
+    if isalive(tree)
+      fix!(tree)
+      λf   = lλ(tree)[end]
+      dft0 = fdt(tree)
+      return true, λf, dft0
+    end
+  else
     f, λf, dft0 = fixalive!(tree.d2::iTgbmct, λf, dft0)
     if f 
       fix!(tree)
       return true, λf, dft0
     end
-  end
-
-  if !isnothing(tree.d1)
     f, λf, dft0 = fixalive!(tree.d1::iTgbmct, λf, dft0)
     if f 
       fix!(tree)
@@ -1039,7 +1036,7 @@ function update_ϵ!(ϵc    ::Float64,
   ϵn = mulupt(ϵc, ϵtn)::Float64
 
   # log likelihood and prior ratio
-  ne   = snenF(Ψ)
+  ne   = snenF(Ψ, 0.0)
   ssλt = sλ_gbm(Ψ)
   llr = ne*(log(ϵn) - log(ϵc)) + 
         ssλt*(ϵc - ϵn) + svf(Ψ, ϵn) - svf(Ψ, ϵc)
@@ -1080,7 +1077,7 @@ function update_ϵ!(ϵc    ::Float64,
   ϵn = mulupt(ϵc, ϵtn)::Float64
 
   # log likelihood and prior ratio
-  ne   = snenF(Ψ)
+  ne   = snenF(Ψ, 0.0)
   ssλt = sλ_gbm(Ψ)
   llr = ne*(log(ϵn) - log(ϵc)) + 
         ssλt*(ϵc - ϵn) + svf(Ψ, ϵn) - svf(Ψ, ϵc)

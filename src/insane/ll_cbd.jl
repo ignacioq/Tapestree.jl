@@ -53,21 +53,21 @@ function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64)
     return n
   end
 
-  if tna < pe(tree)
+  if tna < e(tree)
     n += 1.0
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if isfix(tree.d1::sTbd)
     if isfix(tree.d2::sTbd)
       return n
     else
-      tnx = treeheight(tree.d2::sTbd)
+      tnx = treeheight(tree.d2::sTbd, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem(tree.d1::sTbd, tna, n)
     end
   else
-    tnx = treeheight(tree.d1::sTbd)
+    tnx = treeheight(tree.d1::sTbd, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem(tree.d2::sTbd, tna, n)
   end
@@ -99,10 +99,10 @@ returned an overall extinction.
 """
 function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
 
-  if tna < pe(tree)
+  if tna < e(tree)
     n += 1.0
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if istip(tree)
     return n
@@ -112,12 +112,12 @@ function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
     if isfix(tree.d2::sTbd)
       return n
     else
-      tnx = treeheight(tree.d2::sTbd)
+      tnx = treeheight(tree.d2::sTbd, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem_p(tree.d1::sTbd, tna, n)
     end
   else
-    tnx = treeheight(tree.d1::sTbd)
+    tnx = treeheight(tree.d1::sTbd, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::sTbd, tna, n)
   end
@@ -181,9 +181,9 @@ given a complete `iTree` recursively.
 """
 function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
   if istip(tree) 
-    - pe(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
+    - e(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
   else
-    log(λ) - pe(tree)*(λ + μ)     +
+    log(λ) - e(tree)*(λ + μ)      +
     llik_cbd(tree.d1::sTbd, λ, μ) + 
     llik_cbd(tree.d2::sTbd, λ, μ)
   end
@@ -216,8 +216,8 @@ function stree_ll_cbd(tree::sTbd,
                       ix  ::Int64, 
                       px  ::Int64)
 
-  if ix == ldr
-    if px == wpr
+  if ix === ldr
+    if px === wpr
       if isfix(tree.d1::sTbd)
         ll += llik_cbd(tree.d2::sTbd, λc, μc)
       elseif isfix(tree.d2::sTbd)

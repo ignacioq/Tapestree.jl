@@ -50,7 +50,7 @@ function insane_cbd_fs(tree    ::sTbd,
                        prints  ::Int64)
 
   # tree characters
-  th = treeheight(tree)
+  th = treeheight(tree, 0.0, 0.0)
   n  = sntn(tree)
 
   fixtree!(tree)
@@ -72,7 +72,7 @@ function insane_cbd_fs(tree    ::sTbd,
 
   # make survival conditioning function (stem or crown) and identify branches
   # from `idf`
-  # if iszero(pe(tree))
+  # if iszero(e(tree))
   #    svf = crown_prob_surv_cbd
   #    cb = findall(x -> isone(lastindex(dr(x))), idf)
   # else
@@ -80,7 +80,7 @@ function insane_cbd_fs(tree    ::sTbd,
   #    cb = Int64[findfirst(x -> iszero(lastindex(dr(x))), idf)]
   # end
 
-  if iszero(pe(tree))
+  if iszero(e(tree))
      svf = cond_surv_crown
      cb = findall(x -> isone(lastindex(dr(x))), idf)
   else
@@ -348,10 +348,10 @@ Estimate constant birth-death likelihood for the tree in a branch.
 """
 function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
 
-  if istip(tree)
-    ll = - pe(tree)*(λ + μ)
-  else
-    ll = log(λ) - pe(tree)*(λ + μ)
+  ll = - e(tree)*(λ + μ)
+
+  if isdefined(tree, :d1)
+    ll += log(λ)
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
       return ll
@@ -410,11 +410,7 @@ end
 
 
 
-# bix = fIrand(lidf) + 1
 
-# bi = idf[bix]
-
-# svf = in(bix, cb)
 
 """
     fsp(tree::sTbd,
@@ -503,7 +499,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
 
   # forward simulation during branch length
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
-  na = snan(t0)
+  na = snan(t0, 0)
 
   if iszero(na)
     ret = false
@@ -520,7 +516,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
         for i in Base.OneTo(2)
           st0 = sim_cbd(tfb, λ, μ)
           # if goes extinct before the present
-          if iszero(snan(st0))
+          if iszero(snan(st0, 0))
             #graft to tip
             addtotip(t0, st0, false)
             break
@@ -550,7 +546,7 @@ function addtotip(tree::sTbd, stree::sTbd, ix::Bool)
   if istip(tree)
     if isalive(tree) && !isfix(tree)
 
-      setpe!(tree, pe(tree) + pe(stree))
+      setpe!(tree, e(tree) + e(stree))
       setproperty!(tree, :iμ, stree.iμ)
       tree.d1 = stree.d1
       tree.d2 = stree.d2

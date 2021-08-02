@@ -48,7 +48,7 @@ function sum_alone_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
     return ll
   end
 
-  if tna < pe(tree)
+  if tna < e(tree)
     @inbounds begin
       lλv = lλ(tree)
       lv  = lastindex(lλv)
@@ -57,18 +57,18 @@ function sum_alone_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
     end
     ll += log((exp(λi) + exp(μi))) - λi
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if isfix(tree.d1::iTgbmbd)
     if isfix(tree.d2::iTgbmbd)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmbd)
+      tnx = treeheight(tree.d2::iTgbmbd, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem(tree.d1::iTgbmbd, tna, ll)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmbd)
+    tnx = treeheight(tree.d1::iTgbmbd, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem(tree.d2::iTgbmbd, tna, ll)
   end
@@ -97,7 +97,7 @@ speciation events.
 """
 function sum_alone_stem_p(tree::iTgbmbd, tna::Float64, ll::Float64)
 
-  if tna < pe(tree)
+  if tna < e(tree)
     @inbounds begin
       lλv = lλ(tree)
       lv  = lastindex(lλv)
@@ -106,7 +106,7 @@ function sum_alone_stem_p(tree::iTgbmbd, tna::Float64, ll::Float64)
     end
     ll += log((exp(λi) + exp(μi))) - λi
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if istip(tree)
     return ll
@@ -116,19 +116,16 @@ function sum_alone_stem_p(tree::iTgbmbd, tna::Float64, ll::Float64)
     if isfix(tree.d2::iTgbmbd)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmbd)
+      tnx = treeheight(tree.d2::iTgbmbd, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem_p(tree.d1::iTgbmbd, tna, ll)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmbd)
+    tnx = treeheight(tree.d1::iTgbmbd, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::iTgbmbd, tna, ll)
   end
 end
-
-
-
 
 
 
@@ -358,12 +355,10 @@ to GBM birth-death for a `σ` proposal.
 """
 function sss_gbm(tree::iTgbmbd)
 
-  if istip(tree) 
-    ssλ, ssμ, n = 
-      sss_gbm_b(lλ(tree), lμ(tree), dt(tree), fdt(tree))
-  else
-    ssλ, ssμ, n = 
-      sss_gbm_b(lλ(tree), lμ(tree), dt(tree), fdt(tree))
+  ssλ, ssμ, n = 
+    sss_gbm_b(lλ(tree), lμ(tree), dt(tree), fdt(tree))
+
+  if isdefined(tree, :d1) 
     ssλ1, ssμ1, n1 = 
       sss_gbm(tree.d1::iTgbmbd)
     ssλ2, ssμ2, n2 = 
@@ -482,7 +477,7 @@ function llr_gbm_bm(tree::iTgbmbd,
   if istip(tree) 
     llr_gbm_bm(lf(tree), σp, σc, fdt(tree), srδt)
   else
-    llr_gbm_bm(lf(tree), σp, σc, fdt(tree), srδt)   +
+    llr_gbm_bm(lf(tree), σp, σc, fdt(tree), srδt)  +
     llr_gbm_bm(tree.d1::iTgbmbd, σp, σc, srδt, lf) +
     llr_gbm_bm(tree.d2::iTgbmbd, σp, σc, srδt, lf)
   end

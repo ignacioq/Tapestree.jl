@@ -64,8 +64,8 @@ function insane_gbmbd(tree    ::sTbd,
   fixtree!(tree)
 
   # `n` tips, `th` treeheight define δt
-  n    = sntn(tree)
-  th   = treeheight(tree)
+  n    = sntn(tree, 0)
+  th   = treeheight(tree, 0.0, 0.0)
   δt  *= th
   srδt = sqrt(δt)
 
@@ -100,7 +100,7 @@ function insane_gbmbd(tree    ::sTbd,
   triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(Ψc)) ? cond_surv_crown : cond_surv_stem
+  svf = iszero(e(Ψc)) ? cond_surv_crown : cond_surv_stem
 
   # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
   spup = sum(pupdp)
@@ -189,7 +189,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          svf     ::Function)
 
   # crown or stem conditioning
-  icr = iszero(pe(Ψc))
+  icr = iszero(e(Ψc))
 
   llc = llik_gbm(Ψc, σλc, σμc, δt, srδt) + svf(Ψc)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
@@ -341,7 +341,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     prints  ::Int64)
 
   # crown or stem conditioning
-  icr = iszero(pe(Ψc))
+  icr = iszero(e(Ψc))
 
   lλmxpr = log(λa_prior[2])
   lμmxpr = log(μa_prior[2])
@@ -460,8 +460,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         R[lit,5] = exp(lμ(Ψc)[1])
         R[lit,6] = σλc
         R[lit,7] = σμc
-        R[lit,8] = snen(Ψc)
-        R[lit,9] = treelength(Ψc)
+        R[lit,8] = snen(Ψc, 0)
+        R[lit,9] = treelength(Ψc, 0.0)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -623,7 +623,7 @@ function fsbi(bi  ::iBffs,
   # simulate tree
   t0, nsp = sim_gbm(ti(bi) - tfb, iλ, iμ, σλ, σμ, δt, srδt, 1, nlim)
 
-  na = snan(t0)
+  na = snan(t0, 0)
 
   λf, μf, dft0 = NaN, NaN, NaN
 
@@ -641,10 +641,11 @@ function fsbi(bi  ::iBffs,
     else
       # fix random tip and return end λ(t) and μ(t) 
       λf, μf, dft0 = fixrtip!(t0, na, NaN, NaN, NaN)
-      
+
       for j in Base.OneTo(na - 1)
         # get their final λ and μ to continue forward simulation
         ix, λt, μt, fdti = fλμ1(t0, NaN, NaN, NaN, 1, 0)
+
         for i in Base.OneTo(2)
           st0, nsp = 
             sim_gbm(max(δt - fdti, 0.0), tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
@@ -656,7 +657,7 @@ function fsbi(bi  ::iBffs,
             continue
           end
           # if goes extinct before the present
-          if iszero(snan(st0))
+          if iszero(snan(st0), 0)
             # graft to tip
             addtotip(t0, st0, false)
             break
@@ -835,7 +836,7 @@ function fixrtip!(tree::iTgbmbd,
 
   fix!(tree)
 
-  if !istip(tree)
+  if isdefined(tree, :d1)
     if isextinct(tree.d1::iTgbmbd)
       λf, μf, dft0 = 
         fixrtip!(tree.d2::iTgbmbd, na, λf, μf, dft0)
@@ -843,7 +844,7 @@ function fixrtip!(tree::iTgbmbd,
       λf, μf, dft0 = 
         fixrtip!(tree.d1::iTgbmbd, na, λf, μf, dft0)
     else
-      na1 = snan(tree.d1::iTgbmbd)
+      na1 = snan(tree.d1::iTgbmbd, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
         λf, μf, dft0 = 
@@ -880,27 +881,24 @@ function fixalive!(tree::iTgbmbd,
                    μf  ::Float64,
                    dft0::Float64)
 
-  if istip(tree) && !isextinct(tree)
-    fix!(tree)
-    dft0 = fdt(tree)
-    lλv  = lλ(tree)
-    l    = lastindex(lλv)
-    λf   = lλv[l]
-    μf   = lμ(tree)[l]
+  if istip(tree) 
+    if isalive(tree)
+      fix!(tree)
+      dft0 = fdt(tree)
+      lλv  = lλ(tree)
+      l    = lastindex(lλv)
+      λf   = lλv[l]
+      μf   = lμ(tree)[l]
 
-    return true, λf, μf, dft0
-  end
-
-  if !isnothing(tree.d2)
+      return true, λf, μf, dft0
+    end
+  else
     f, λf, μf, dft0 = 
       fixalive!(tree.d2::iTgbmbd, λf, μf, dft0)
     if f 
       fix!(tree)
       return true, λf, μf, dft0
     end
-  end
-
-  if !isnothing(tree.d1)
     f, λf, μf, dft0 = 
       fixalive!(tree.d1::iTgbmbd, λf, μf, dft0)
     if f 

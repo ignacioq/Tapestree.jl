@@ -209,7 +209,7 @@ end
 
 
 """
-    snan(tree::T) where {T <: iTree}
+    snan(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of alive nodes for `tree`.
 """
@@ -229,7 +229,7 @@ end
 
 
 """
-    sntn(tree::T) where {T <: iTree}
+    sntn(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of tip nodes for `tree`.
 """

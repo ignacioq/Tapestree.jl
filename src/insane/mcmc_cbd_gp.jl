@@ -50,7 +50,7 @@ function insane_cbd_gp(tree    ::sTbd,
                        prints  ::Int64)
 
   # tree characters
-  th = treeheight(tree)
+  th = treeheight(tree, 0.0, 0.0)
   n  = sntn(tree)
 
   fixtree!(tree)

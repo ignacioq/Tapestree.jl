@@ -64,12 +64,12 @@ function sum_alone_stem(tree::iTgbmct,
     if isfix(tree.d2::iTgbmct)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmct)
+      tnx = treeheight(tree.d2::iTgbmct, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem(tree.d1::iTgbmct, tna, ll, ϵ)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmct)
+    tnx = treeheight(tree.d1::iTgbmct, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem(tree.d2::iTgbmct, tna, ll, ϵ)
   end
@@ -118,12 +118,12 @@ function sum_alone_stem_p(tree::iTgbmct,
     if isfix(tree.d2::iTgbmct)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmct)
+      tnx = treeheight(tree.d2::iTgbmct, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem_p(tree.d1::iTgbmct, tna, ll, ϵ)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmct)
+    tnx = treeheight(tree.d1::iTgbmct, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::iTgbmct, tna, ll, ϵ)
   end
@@ -166,12 +166,9 @@ to GBM birth-death for a `σ` proposal.
 """
 function sss_gbm(tree::iTgbmct)
 
-  if istip(tree) 
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
-  else
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+  ssλ, n = sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+
+  if isdefined(tree, :d1) 
     ssλ1, n1 = 
       sss_gbm(tree.d1::iTgbmct)
     ssλ2, n2 = 
@@ -297,12 +294,11 @@ to GBM birth-death for a `ϵ` proposal.
 """
 function sλ_gbm(tree::iTgbmct)
 
-  if istip(tree) 
-    sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
-  else
-    sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree)) + 
-          sλ_gbm(tree.d1::iTgbmct)                + 
-          sλ_gbm(tree.d2::iTgbmct)
+  sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
+
+  if isdefined(tree, :d1) 
+    sλt += sλ_gbm(tree.d1::iTgbmct) + 
+           sλ_gbm(tree.d2::iTgbmct)
   end
 
   return sλt

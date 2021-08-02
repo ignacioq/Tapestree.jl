@@ -55,22 +55,22 @@ function sum_alone_stem(tree::iTgbmce,
     return ll
   end
 
-  if tna < pe(tree)
+  if tna < e(tree)
     λi  = lλ(tree)[end]
     ll += log((exp(λi) + μ)) - λi
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if isfix(tree.d1::iTgbmce)
     if isfix(tree.d2::iTgbmce)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmce)
+      tnx = treeheight(tree.d2::iTgbmce, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem(tree.d1::iTgbmce, tna, ll, μ)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmce)
+    tnx = treeheight(tree.d1::iTgbmce, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem(tree.d2::iTgbmce, tna, ll, μ)
   end
@@ -108,11 +108,11 @@ function sum_alone_stem_p(tree::iTgbmce,
                           ll  ::Float64, 
                           μ   ::Float64)
 
-  if tna < pe(tree)
+  if tna < e(tree)
     λi  = lλ(tree)[end]
     ll += log((exp(λi) + μ)) - λi
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if istip(tree)
     return ll
@@ -122,12 +122,12 @@ function sum_alone_stem_p(tree::iTgbmce,
     if isfix(tree.d2::iTgbmce)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmce)
+      tnx = treeheight(tree.d2::iTgbmce, 0.0, 0.0)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem_p(tree.d1::iTgbmce, tna, ll, μ)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmce)
+    tnx = treeheight(tree.d1::iTgbmce, 0.0, 0.0)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::iTgbmce, tna, ll, μ)
   end
@@ -236,12 +236,9 @@ to GBM birth-death for a `σ` proposal.
 """
 function sss_gbm(tree::iTgbmce)
 
-  if istip(tree) 
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
-  else
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+  ssλ, n = sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+
+  if isdefined(tree, :d1) 
     ssλ1, n1 = 
       sss_gbm(tree.d1::iTgbmce)
     ssλ2, n2 = 
@@ -253,53 +250,6 @@ function sss_gbm(tree::iTgbmce)
 
   return ssλ, n
 end
-
-
-
-
-"""
-    sss_gbm_b(lλv::Array{Float64,1},
-              lμv::Array{Float64,1},
-              δt ::Float64, 
-              fdt::Float64)
-
-Returns the standardized sum of squares for the GBM part of a branch 
-for GBM birth-death.
-"""
-@inline function sss_gbm_b(lλv::Array{Float64,1},
-                           δt ::Float64, 
-                           fdt::Float64)
-
-  @inbounds begin
-
-    # estimate standard `δt` likelihood
-    nI = lastindex(lλv)-2
-
-    ssλ  = 0.0
-    lλvi = lλv[1]
-    @simd for i in Base.OneTo(nI)
-      lλvi1 = lλv[i+1]
-      ssλ  += (lλvi1 - lλvi)^2
-      lλvi  = lλvi1
-    end
-
-    # add to global sum
-    invt = 1.0/(2.0*δt)
-    ssλ *= invt
-
-    # add final non-standard `δt`
-    if !iszero(fdt)
-      invt = 1.0/(2.0*fdt)
-      ssλ += invt * (lλv[nI+2] - lλvi)^2
-      n = Float64(nI + 1)
-    else
-      n = Float64(nI)
-    end
-  end
-
-  return ssλ, n
-end
-
 
 
 
