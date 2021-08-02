@@ -644,7 +644,7 @@ function fsbi(bi  ::iBffs,
 
       for j in Base.OneTo(na - 1)
         # get their final λ and μ to continue forward simulation
-        ix, λt, μt, fdti = fλμ1(t0, NaN, NaN, NaN, 1, 0)
+        ix, λt, μt, fdti = fλμ1(t0, NaN, NaN, NaN, false)
 
         for i in Base.OneTo(2)
           st0, nsp = 
@@ -657,7 +657,7 @@ function fsbi(bi  ::iBffs,
             continue
           end
           # if goes extinct before the present
-          if iszero(snan(st0), 0)
+          if iszero(snan(st0, 0))
             # graft to tip
             addtotip(t0, st0, false)
             break

@@ -644,7 +644,7 @@ function makebbv!(tree::iTgbmbd,
                   bbμ ::Array{Array{Float64,1},1}, 
                   tsv ::Array{Array{Float64,1},1})
 
-  push!(tsv, [pe(tree), fdt(tree)])
+  push!(tsv, [e(tree), fdt(tree)])
   push!(bbλ, lλ(tree))
   push!(bbμ, lμ(tree))
 
