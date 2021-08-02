@@ -50,8 +50,8 @@ function insane_cbd_fs(tree    ::sTbd,
                        prints  ::Int64)
 
   # tree characters
-  th = treeheight(tree, 0.0, 0.0)
-  n  = sntn(tree)
+  th = treeheight(tree)
+  n  = sntn(tree, 0)
 
   fixtree!(tree)
 
@@ -325,8 +325,8 @@ function mcmc_cbd(tree  ::sTbd,
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        R[lit,6] = Float64(snen(tree))
-        R[lit,7] = treelength(tree)
+        R[lit,6] = Float64(snen(tree, 0))
+        R[lit,7] = treelength(tree, 0.0)
         push!(treev, deepcopy(tree))
       end
       lthin = 0
@@ -407,7 +407,6 @@ function br_ll_cbd(tree::sTbd,
 
   return ll
 end
-
 
 
 
@@ -546,10 +545,13 @@ function addtotip(tree::sTbd, stree::sTbd, ix::Bool)
   if istip(tree)
     if isalive(tree) && !isfix(tree)
 
-      setpe!(tree, e(tree) + e(stree))
+      sete!(tree, e(tree) + e(stree))
       setproperty!(tree, :iμ, stree.iμ)
-      tree.d1 = stree.d1
-      tree.d2 = stree.d2
+
+      if isdefined(stree, :d1)
+        tree.d1 = stree.d1
+        tree.d2 = stree.d2
+      end
 
       ix = true
     end

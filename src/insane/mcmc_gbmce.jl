@@ -65,7 +65,7 @@ function insane_gbmce(tree    ::sTbd,
 
   # `n` tips, `th` treeheight define δt
   n    = sntn(tree, 0)
-  th   = treeheight(tree, 0.0, 0.0)
+  th   = treeheight(tree)
   δt  *= th
   srδt = sqrt(δt)
 
@@ -780,7 +780,7 @@ function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
   if istip(tree) 
     if isalive(tree) && !isfix(tree)
 
-      setpe!(tree, pe(tree) + pe(stree))
+      sete!(tree, e(tree) + e(stree))
       setproperty!(tree, :iμ, isextinct(stree))
 
       lλ0 = lλ(tree)
@@ -796,8 +796,10 @@ function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
         setfdt!(tree, fdt(stree))
       end
 
-      tree.d1 = stree.d1
-      tree.d2 = stree.d2
+      if isdefined(stree, :d1)
+        tree.d1 = stree.d1
+        tree.d2 = stree.d2
+      end
 
       ix = true
     end

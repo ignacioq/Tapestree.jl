@@ -431,7 +431,7 @@ function fixrtip!(tree::T, na::Int64) where T <: iTree
     elseif isextinct(tree.d2::T)
       fixrtip!(tree.d1::T, na)
     else
-      na1 = snan(tree.d1::T)
+      na1 = snan(tree.d1::T, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
         fixrtip!(tree.d2::T, na - na1)

@@ -63,12 +63,12 @@ function sum_alone_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
     if isfix(tree.d2::iTgbmbd)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmbd, 0.0, 0.0)
+      tnx = treeheight(tree.d2::iTgbmbd)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem(tree.d1::iTgbmbd, tna, ll)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmbd, 0.0, 0.0)
+    tnx = treeheight(tree.d1::iTgbmbd)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem(tree.d2::iTgbmbd, tna, ll)
   end
@@ -116,12 +116,12 @@ function sum_alone_stem_p(tree::iTgbmbd, tna::Float64, ll::Float64)
     if isfix(tree.d2::iTgbmbd)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmbd, 0.0, 0.0)
+      tnx = treeheight(tree.d2::iTgbmbd)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem_p(tree.d1::iTgbmbd, tna, ll)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmbd, 0.0, 0.0)
+    tnx = treeheight(tree.d1::iTgbmbd)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::iTgbmbd, tna, ll)
   end

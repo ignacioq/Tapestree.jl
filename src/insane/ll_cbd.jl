@@ -62,12 +62,12 @@ function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64)
     if isfix(tree.d2::sTbd)
       return n
     else
-      tnx = treeheight(tree.d2::sTbd, 0.0, 0.0)
+      tnx = treeheight(tree.d2::sTbd)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem(tree.d1::sTbd, tna, n)
     end
   else
-    tnx = treeheight(tree.d1::sTbd, 0.0, 0.0)
+    tnx = treeheight(tree.d1::sTbd)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem(tree.d2::sTbd, tna, n)
   end
@@ -112,12 +112,12 @@ function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
     if isfix(tree.d2::sTbd)
       return n
     else
-      tnx = treeheight(tree.d2::sTbd, 0.0, 0.0)
+      tnx = treeheight(tree.d2::sTbd)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem_p(tree.d1::sTbd, tna, n)
     end
   else
-    tnx = treeheight(tree.d1::sTbd, 0.0, 0.0)
+    tnx = treeheight(tree.d1::sTbd)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::sTbd, tna, n)
   end

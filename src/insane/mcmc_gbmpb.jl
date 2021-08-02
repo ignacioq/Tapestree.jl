@@ -42,7 +42,7 @@ function insane_gbmpb(tree    ::sTpb,
                       λa_prior::NTuple{2,Float64} = (0.0,100.0),
                       σλ_prior::NTuple{2,Float64} = (0.05, 0.5))
 
-  δt  *= treeheight(tree, 0.0, 0.0)
+  δt  *= treeheight(tree)
   srδt = sqrt(δt)
 
   # lλ root node

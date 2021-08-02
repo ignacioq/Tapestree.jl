@@ -112,7 +112,7 @@ function _time_rate!(tree::T,
     push!(r[i], linpred(bt, tts, ttf, vt[Ix+1], vt[Ix+2]))
   end
 
-  if isdefined(tree., :d1)
+  if isdefined(tree, :d1)
     _time_rate!(tree.d1::T, ts, tdt, r, tii + nts + 1, ct - et, lv)
     _time_rate!(tree.d2::T, ts, tdt, r, tii + nts + 1, ct - et, lv)
   end

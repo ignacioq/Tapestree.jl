@@ -104,12 +104,13 @@ end
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::T, th1::Float64, th2::Float64) where {T <: iTree}
+function treeheight(tree::T) where {T <: iTree}
   if isdefined(tree, :d1)
     th1 = treeheight(tree.d1)
     th2 = treeheight(tree.d2)
+    return (th1 > th2 ? th1 : th2) + e(tree)
   end
-  (th1 > th2 ? th1 : th2) + e(tree)
+  return e(tree)
 end
 
 
@@ -315,9 +316,9 @@ function streeheight(tree::T,
   if ix === ldr
     if px === wpr
       if isfix(tree.d1)
-        return h - e(tree), treeheight(tree.d2)
+        return h - e(tree), treeheight(tree.d2, 0.0, 0.0)
       elseif isfix(tree.d2)
-        return h - e(tree), treeheight(tree.d1)
+        return h - e(tree), treeheight(tree.d1, 0.0, 0.0)
       end
     else
       px += 1

@@ -69,7 +69,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::sTpb) = 
-  print(io, "insane simple pure-birth tree with ", sntn(t), " tips")
+  print(io, "insane simple pure-birth tree with ", sntn(t,0), " tips")
 
 
 
@@ -121,7 +121,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::sTbd) = 
-  print(io, "insane simple birth-death tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane simple birth-death tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 
@@ -187,7 +187,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
-  print(io, "insane pb-gbm tree with ", sntn(t), " tips")
+  print(io, "insane pb-gbm tree with ", sntn(t,0), " tips")
 
 
 
@@ -274,7 +274,7 @@ mutable struct iTgbmce <: iTgbm
 
   iTgbmce() = 
     (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[])
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
 
   iTgbmce(e  ::Float64, 
           dt ::Float64,
@@ -291,7 +291,7 @@ mutable struct iTgbmce <: iTgbm
           dt ::Float64,
           fdt::Float64,
           lλ ::Array{Float64,1}) = 
-    (x = new(); x.d1 = d1, x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
       x.iμ = false; x.fx = false; x.lλ = lλ; x)
 
   iTgbmce(d1 ::iTgbmce, 
@@ -307,7 +307,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmce) = 
-  print(io, "insane gbm-ce tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane gbm-ce tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 
@@ -432,7 +432,7 @@ mutable struct iTgbmct <: iTgbm
           dt ::Float64,
           fdt::Float64,
           lλ ::Array{Float64,1}) = 
-    (x = new(); x.d1 = d1, x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
       x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
 
   # inner constructor
@@ -450,7 +450,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmct) = 
-  print(io, "insane gbm-ct tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane gbm-ct tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 
@@ -579,7 +579,7 @@ mutable struct iTgbmbd <: iTgbm
           fdt::Float64,
           lλ ::Array{Float64,1},
           lμ ::Array{Float64,1}) = 
-    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
       x.iμ = false; x.fx = false; x.lλ = lλ; x.lμ = lμ; x)
 
   iTgbmbd(d1 ::iTgbmbd, 
@@ -597,7 +597,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 
-  print(io, "insane bd-gbm tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane bd-gbm tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 

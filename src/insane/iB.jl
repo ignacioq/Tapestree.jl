@@ -233,7 +233,7 @@ function makeiBf!(tree::T,
   end
 
   push!(idv, 
-    iBffs(bit, treeheight(tree), treeheight(tree) - p(tree), itb, ieb, sc))
+    iBffs(bit, treeheight(tree), treeheight(tree) - e(tree), itb, ieb, sc))
 
   bit1 = copy(bit)
   bit2 = copy(bit)

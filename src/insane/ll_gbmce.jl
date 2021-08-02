@@ -65,12 +65,12 @@ function sum_alone_stem(tree::iTgbmce,
     if isfix(tree.d2::iTgbmce)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmce, 0.0, 0.0)
+      tnx = treeheight(tree.d2::iTgbmce)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem(tree.d1::iTgbmce, tna, ll, μ)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmce, 0.0, 0.0)
+    tnx = treeheight(tree.d1::iTgbmce)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem(tree.d2::iTgbmce, tna, ll, μ)
   end
@@ -122,12 +122,12 @@ function sum_alone_stem_p(tree::iTgbmce,
     if isfix(tree.d2::iTgbmce)
       return ll
     else
-      tnx = treeheight(tree.d2::iTgbmce, 0.0, 0.0)
+      tnx = treeheight(tree.d2::iTgbmce)
       tna = tnx > tna ? tnx : tna
       sum_alone_stem_p(tree.d1::iTgbmce, tna, ll, μ)
     end
   else
-    tnx = treeheight(tree.d1::iTgbmce, 0.0, 0.0)
+    tnx = treeheight(tree.d1::iTgbmce)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::iTgbmce, tna, ll, μ)
   end
