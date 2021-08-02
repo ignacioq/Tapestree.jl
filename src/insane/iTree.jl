@@ -111,6 +111,8 @@ mutable struct sTbd <: sT
     (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
   sTbd(e::Float64, iμ::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.fx = false; x)
+  sTbd(e::Float64, iμ::Bool, fx::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x)
   sTbd(d1::sTbd, d2::sTbd, e::Float64) = 
     (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.iμ = false; x.fx = false; x)
   sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool) = 
@@ -424,7 +426,7 @@ mutable struct iTgbmct <: iTgbm
           fx ::Bool, 
           lλ ::Array{Float64,1}) = 
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = iμ; x.fx = fx; x.lλ = Float64[]; x)
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
 
   iTgbmct(d1 ::iTgbmct, 
           d2 ::iTgbmct, 
@@ -433,7 +435,7 @@ mutable struct iTgbmct <: iTgbm
           fdt::Float64,
           lλ ::Array{Float64,1}) = 
     (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
+      x.iμ = false; x.fx = false; x.lλ = lλ; x)
 
   # inner constructor
   iTgbmct(d1 ::iTgbmct, 
@@ -568,7 +570,8 @@ mutable struct iTgbmbd <: iTgbm
           fdt::Float64,
           iμ ::Bool, 
           fx ::Bool, 
-          lλ ::Array{Float64,1}) = 
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1}) = 
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
 

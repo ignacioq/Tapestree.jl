@@ -37,4 +37,4 @@ Returns the maximum likelihood estimate for `λ` according
 to a constant pure-birth process.
 """
 λmle_cpb(tree::T) where {T <: iTree} = 
-  Float64(sntn(tree)-1)/treelength(tree)
+  Float64(sntn(tree, 0)-1)/treelength(tree, 0.0)

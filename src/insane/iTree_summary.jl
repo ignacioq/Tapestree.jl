@@ -86,13 +86,13 @@ end
 
 Extract values from `lv` function at times `ts` across the tree.
 """
-function _time_rate!(tree::T, 
-                     ts  ::Array{Float64,1},
-                     tdt ::Float64, 
-                     r   ::Array{Array{Float64,1},1}, 
-                     tii ::Int64,
-                     ct  ::Float64,
-                     lv  ::Function) where {T <: iTgbm}
+@inline function _time_rate!(tree::T, 
+                             ts  ::Array{Float64,1},
+                             tdt ::Float64, 
+                             r   ::Array{Array{Float64,1},1}, 
+                             tii ::Int64,
+                             ct  ::Float64,
+                             lv  ::Function) where {T <: iTgbm}
 
   et = e(tree)
   δt = dt(tree)
@@ -113,8 +113,8 @@ function _time_rate!(tree::T,
   end
 
   if isdefined(tree, :d1)
-    _time_rate!(tree.d1::T, ts, tdt, r, tii + nts + 1, ct - et, lv)
-    _time_rate!(tree.d2::T, ts, tdt, r, tii + nts + 1, ct - et, lv)
+    _time_rate!(tree.d1, ts, tdt, r, tii + nts + 1, ct - et, lv)
+    _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
   end
 end
 

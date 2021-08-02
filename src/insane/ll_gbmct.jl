@@ -55,10 +55,10 @@ function sum_alone_stem(tree::iTgbmct,
     return ll
   end
 
-  if tna < pe(tree)
+  if tna < e(tree)
     ll += log(1.0 + ϵ)
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if isfix(tree.d1::iTgbmct)
     if isfix(tree.d2::iTgbmct)
@@ -105,10 +105,10 @@ function sum_alone_stem_p(tree::iTgbmct,
                           ll  ::Float64, 
                           ϵ   ::Float64)
 
-  if tna < pe(tree)
+  if tna < e(tree)
     ll += log(1.0 + ϵ)
   end
-  tna -= pe(tree)
+  tna -= e(tree)
 
   if istip(tree)
     return ll

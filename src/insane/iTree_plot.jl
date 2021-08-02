@@ -129,8 +129,8 @@ function _rplottree!(tree::T,
   push!(z, zv[l], NaN)
 
   if isdefined(tree, :d1)
-    ntip1 = sntn(tree.d1)
-    ntip2 = sntn(tree.d2)
+    ntip1 = sntn(tree.d1, 0)
+    ntip2 = sntn(tree.d2, 0)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
@@ -246,10 +246,10 @@ end
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
 function _rplottree!(tree::T, 
-                    xc  ::Float64, 
-                    yr  ::UnitRange{Int64},
-                    x   ::Array{Float64,1}, 
-                    y   ::Array{Float64,1}) where {T <: iTree}
+                     xc  ::Float64, 
+                     yr  ::UnitRange{Int64},
+                     x   ::Array{Float64,1}, 
+                     y   ::Array{Float64,1}) where {T <: iTree}
 
   # add horizontal lines
   push!(x, xc)

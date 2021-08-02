@@ -78,11 +78,8 @@ function bm!(tree::T,
 
   l = lastindex(λv)
 
-  if !isnothing(tree.d1)
+  if isdefined(tree,:d1)
     bm!(tree.d1::T, λv[l], σλ, srδt)
-  end
-
-  if !isnothing(tree.d2)
     bm!(tree.d2::T, λv[l], σλ, srδt)
   end
 
@@ -169,11 +166,8 @@ function bm!(tree::iTgbmbd,
 
   l = lastindex(λv)
 
-  if !isnothing(tree.d1)
+  if isdefined(tree, :d1)
     bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-  end
-
-  if !isnothing(tree.d2)
     bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
   end
 

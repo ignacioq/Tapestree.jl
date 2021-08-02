@@ -315,7 +315,7 @@ function gbm_copy!(treec::T,
   l   = lastindex(lλp)
   unsafe_copyto!(lλ(treec), 1, lλp, 1, l)
 
-  if isdefined(tree, :d1)
+  if isdefined(treec, :d1)
     gbm_copy!(treec.d1::T, treep.d1::T)
     gbm_copy!(treec.d2::T, treep.d2::T)
   end
@@ -467,10 +467,10 @@ function graftree!(tree ::T,
 
   if ix === ldr 
     if thc > h > (thc - e(tree))
-      npe = thc - h
-      addpe!(tree, -npe)
-      tree = rand() <= 0.5 ? T(tree, stree, npe, false, true) :
-                             T(stree, tree, npe, false, true)
+      ne = thc - h
+      addpe!(tree, -ne)
+      tree = rand() <= 0.5 ? T(tree, stree, ne, false, true) :
+                             T(stree, tree, ne, false, true)
     else
       if isfix(tree.d1)
         tree.d1 = 
@@ -526,12 +526,12 @@ function prunetree!(tree::T,
   if ix === ldr
     if px === wpr
       if isfix(tree.d1::T)
-        npe  = e(tree) + e(tree.d1)
-        setpe!(tree.d1, npe)
+        ne  = e(tree) + e(tree.d1)
+        sete!(tree.d1, ne)
         tree = tree.d1
       elseif isfix(tree.d2::T)
-        npe  = e(tree) + e(tree.d2)
-        setpe!(tree.d2, npe)
+        ne  = e(tree) + e(tree.d2)
+        sete!(tree.d2, ne)
         tree = tree.d2
       end
     else
@@ -577,56 +577,46 @@ Remove extinct tips from `iTgbmce`.
 """
 function remove_extinct(tree::iTgbmce)
 
-  tree.d1 = remove_extinct(tree.d1)
-  tree.d2 = remove_extinct(tree.d2)
+  if isdefined(tree, :d1)
 
-  if isextinct(tree.d1)
-    if isextinct(tree.d2)
-      tree.d1 = nothing
-      tree.d2 = nothing
-      setproperty!(tree, :iμ, true)
-    else
-      ppr = e(tree)
-      npe = ppr + e(tree.d2)
+    tree.d1 = remove_extinct(tree.d1)
+    tree.d2 = remove_extinct(tree.d2)
 
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return iTgbmce(e(tree), dt(tree), fdt(tree), 
+          true, isfix(tree), lλ(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+
+        pop!(lλ0)
+        prepend!(lλ(tree.d2), lλ0) 
+        fdt0 = fdt(tree) + fdt(tree.d2)
+        if fdt0 > dt(tree) 
+          fdt0 -= dt(tree) 
+        end
+        setfdt!(tree, fdt0) 
+
+        tree = tree.d2
+        sete!(tree, ne)
+      end
+    elseif isextinct(tree.d2)
+      ne  = e(tree) + e(tree.d1)
       lλ0 = lλ(tree)
 
       pop!(lλ0)
-
-      prepend!(lλ(tree.d2), lλ0) 
-
-      fdt0 = fdt(tree) + fdt(tree.d2)
+      prepend!(lλ(tree.d1), lλ0) 
+      fdt0 = fdt(tree) + fdt(tree.d1)
 
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-
       setfdt!(tree, fdt0) 
 
-      tree = tree.d2
-      setpe!(tree, npe)
-
+      tree = tree.d1
+      sete!(tree, ne)
     end
-  elseif isextinct(tree.d2)
-    ppr = e(tree)
-    npe = ppr + e(tree.d1)
-
-    lλ0 = lλ(tree)
-
-    pop!(lλ0)
-
-    prepend!(lλ(tree.d1), lλ0) 
-
-    fdt0 = fdt(tree) + fdt(tree.d1)
-
-    if fdt0 > dt(tree) 
-      fdt0 -= dt(tree) 
-    end
-
-    setfdt!(tree, fdt0) 
-
-    tree = tree.d1
-    setpe!(tree, npe)
   end
 
   return tree
@@ -642,25 +632,40 @@ Remove extinct tips from `iTgbmct`.
 """
 function remove_extinct(tree::iTgbmct)
 
-  tree.d1 = remove_extinct(tree.d1)
-  tree.d2 = remove_extinct(tree.d2)
+  if isdefined(tree, :d1)
 
-  if isextinct(tree.d1)
-    if isextinct(tree.d2)
-      tree.d1 = nothing
-      tree.d2 = nothing
-      setproperty!(tree, :iμ, true)
-    else
-      ppr = e(tree)
-      npe = ppr + e(tree.d2)
+    tree.d1 = remove_extinct(tree.d1)
+    tree.d2 = remove_extinct(tree.d2)
 
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return iTgbmct(e(tree), dt(tree), fdt(tree), 
+          true, isfix(tree), lλ(tree))
+      else
+        ne = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+
+        pop!(lλ0)
+        prepend!(lλ(tree.d2), lλ0) 
+
+        fdt0 = fdt(tree) + fdt(tree.d2)
+        if fdt0 > dt(tree) 
+          fdt0 -= dt(tree) 
+        end
+        setfdt!(tree, fdt0) 
+
+        tree = tree.d2
+        sete!(tree, ne)
+
+      end
+    elseif isextinct(tree.d2)
+      ne = e(tree) + e(tree.d1)
       lλ0 = lλ(tree)
 
       pop!(lλ0)
+      prepend!(lλ(tree.d1), lλ0) 
 
-      prepend!(lλ(tree.d2), lλ0) 
-
-      fdt0 = fdt(tree) + fdt(tree.d2)
+      fdt0 = fdt(tree) + fdt(tree.d1)
 
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
@@ -668,30 +673,9 @@ function remove_extinct(tree::iTgbmct)
 
       setfdt!(tree, fdt0) 
 
-      tree = tree.d2
-      setpe!(tree, npe)
-
+      tree = tree.d1
+      sete!(tree, ne)
     end
-  elseif isextinct(tree.d2)
-    ppr = e(tree)
-    npe = ppr + e(tree.d1)
-
-    lλ0 = lλ(tree)
-
-    pop!(lλ0)
-
-    prepend!(lλ(tree.d1), lλ0) 
-
-    fdt0 = fdt(tree) + fdt(tree.d1)
-
-    if fdt0 > dt(tree) 
-      fdt0 -= dt(tree) 
-    end
-
-    setfdt!(tree, fdt0) 
-
-    tree = tree.d1
-    setpe!(tree, npe)
   end
 
   return tree
@@ -707,62 +691,56 @@ Remove extinct tips from `iTgbmbd`.
 """
 function remove_extinct(tree::iTgbmbd)
 
-  tree.d1 = remove_extinct(tree.d1)
-  tree.d2 = remove_extinct(tree.d2)
+  if isdefined(tree, :d1)
 
-  if isextinct(tree.d1)
-    if isextinct(tree.d2)
-      tree.d1 = nothing
-      tree.d2 = nothing
-      setproperty!(tree, :iμ, true)
-    else
-      ppr = e(tree)
-      npe = ppr + e(tree.d2)
+    tree.d1 = remove_extinct(tree.d1)
+    tree.d2 = remove_extinct(tree.d2)
 
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return iTgbmbd(e(tree), dt(tree), fdt(tree), 
+          true, isfix(tree), lλ(tree), lμ(tree))
+      else
+        ne = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lμ0 = lμ(tree)
+
+        pop!(lλ0)
+        pop!(lμ0)
+
+        prepend!(lλ(tree.d2), lλ0) 
+        prepend!(lμ(tree.d2), lμ0)
+
+        fdt0 = fdt(tree) + fdt(tree.d2)
+        if fdt0 > dt(tree) 
+          fdt0 -= dt(tree) 
+        end
+        setfdt!(tree, fdt0) 
+
+        tree = tree.d2
+        sete!(tree, ne)
+      end
+    elseif isextinct(tree.d2)
+
+      ne = e(tree) + e(tree.d1)
       lλ0 = lλ(tree)
       lμ0 = lμ(tree)
 
       pop!(lλ0)
       pop!(lμ0)
 
-      prepend!(lλ(tree.d2), lλ0) 
-      prepend!(lμ(tree.d2), lμ0)
+      prepend!(lλ(tree.d1), lλ0) 
+      prepend!(lμ(tree.d1), lμ0)
 
-      fdt0 = fdt(tree) + fdt(tree.d2)
-
+      fdt0 = fdt(tree) + fdt(tree.d1)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-
       setfdt!(tree, fdt0) 
 
-      tree = tree.d2
-      setpe!(tree, npe)
-
+      tree = tree.d1
+      sete!(tree, ne)
     end
-  elseif isextinct(tree.d2)
-    ppr = e(tree)
-    npe = ppr + e(tree.d1)
-
-    lλ0 = lλ(tree)
-    lμ0 = lμ(tree)
-
-    pop!(lλ0)
-    pop!(lμ0)
-
-    prepend!(lλ(tree.d1), lλ0) 
-    prepend!(lμ(tree.d1), lμ0)
-
-    fdt0 = fdt(tree) + fdt(tree.d1)
-
-    if fdt0 > dt(tree) 
-      fdt0 -= dt(tree) 
-    end
-
-    setfdt!(tree, fdt0) 
-
-    tree = tree.d1
-    setpe!(tree, npe)
   end
 
   return tree
@@ -802,20 +780,19 @@ function remove_extinct(tree::sTbd)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        tree.d1 = nothing
-        tree.d2 = nothing
-        setproperty!(tree, :iμ, true)
+        return sTbd(e(tree), true, isfix(tree))
       else
-        npe  = e(tree) + e(tree.d2)
+        ne  = e(tree) + e(tree.d2)
         tree = tree.d2
-        setpe!(tree, npe)
+        sete!(tree, ne)
       end
     elseif isextinct(tree.d2)
-      npe  = e(tree) + e(tree.d1)
+      ne  = e(tree) + e(tree.d1)
       tree = tree.d1
-      setpe!(tree, npe)
+      sete!(tree, ne)
     end
   end
+
   return tree
 end
 
@@ -864,7 +841,7 @@ setfdt!(tree::T, fdt::Float64) where {T <: iTgbm} =
 
 
 """
-  setpe!(tree::T, e::Float64) where {T <: iTree}
+  sete!(tree::T, e::Float64) where {T <: iTree}
 
 Set endant edge for `tree`.
 """
