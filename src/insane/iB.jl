@@ -79,27 +79,20 @@ function makeiBf!(tree::T,
   itb = istip(tree)
 
   push!(idv, 
-    iBfb(bit, 0, treeheight(tree), treeheight(tree) - pe(tree), itb))
+    iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
 
-  push!(bit1, true)
-  makeiBf!(tree.d1, idv, bit1)
 
-  push!(bit2, false)
-  makeiBf!(tree.d2, idv, bit2)
-
+  if isdefined(tree, :d1)
+    push!(bit1, true)
+    makeiBf!(tree.d1, idv, bit1)
+    push!(bit2, false)
+    makeiBf!(tree.d2, idv, bit2)
+  end
   return nothing
 end
-
-"""
-    makeiB(::Nothing, idv ::Array{iBfb,1}, bit ::BitArray{1})
-
-Make `iBf` vector for an `iTree`.
-"""
-makeiBf!(::Nothing, idv::Array{iBfb,1}, bit::BitArray{1}) = nothing
-
 
 
 
@@ -156,31 +149,20 @@ function makeiBf!(tree::T,
   ieb = isextinct(tree)
 
   push!(idv, 
-    iBfgp(bit, 0, treeheight(tree), treeheight(tree) - pe(tree), itb, ieb))
+    iBfgp(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb, ieb))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
 
-  push!(bit1, true)
-  makeiBf!(tree.d1, idv, bit1)
-
-  push!(bit2, false)
-  makeiBf!(tree.d2, idv, bit2)
+  if isdefined(tree, :d1)
+    push!(bit1, true)
+    makeiBf!(tree.d1, idv, bit1)
+    push!(bit2, false)
+    makeiBf!(tree.d2, idv, bit2)
+  end
 
   return nothing
 end
-
-
-
-
-"""
-    makeiB(::Nothing, idv ::Array{iB,1}, bit ::BitArray{1})
-
-Make `iBf` vector for an `iTree`.
-"""
-makeiBf!(::Nothing, idv::Array{iBfgp,1}, bit::BitArray{1}) = nothing
-
-
 
 
 
@@ -251,30 +233,20 @@ function makeiBf!(tree::T,
   end
 
   push!(idv, 
-    iBffs(bit, treeheight(tree), treeheight(tree) - pe(tree), itb, ieb, sc))
+    iBffs(bit, treeheight(tree), treeheight(tree) - p(tree), itb, ieb, sc))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
 
-  push!(bit1, true)
-  makeiBf!(tree.d1, idv, bit1)
-
-  push!(bit2, false)
-  makeiBf!(tree.d2, idv, bit2)
+  if isdefined(tree, :d1)
+    push!(bit1, true)
+    makeiBf!(tree.d1, idv, bit1)
+    push!(bit2, false)
+    makeiBf!(tree.d2, idv, bit2)
+  end
 
   return nothing
 end
-
-
-
-
-"""
-    makeiB(::Nothing, idv ::Array{iB,1}, bit ::BitArray{1})
-
-Make `iBf` vector for an `iTree`.
-"""
-makeiBf!(::Nothing, idv::Array{iBffs,1}, bit::BitArray{1}) = nothing
-
 
 
 

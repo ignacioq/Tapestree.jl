@@ -249,52 +249,24 @@ end
 
 
 """
-here!!!
-"""
-
-
-@benchmark sntn($t0)
-@code_warntype sntn(t0)
-
-
-@benchmark sntn($t, 0)
-@code_warntype sntn(t, 0)
-
-
-
-
-
-"""
-    treelength_ne(tree::T)
+    treelength_ne(tree::T, l::Float64, n::Float64)
 
 Return the tree length and Float number of extinct tip nodes for `tree`.
 """
-function treelength_ne(tree::T) where {T <: iTree}
-  if istip(tree)
-    l  = pe(tree)
-    ne = isextinct(tree) ? 1.0 : 0.0
-  else 
-    l1, ne1 = treelength_ne(tree.d1::T)
-    l2, ne2 = treelength_ne(tree.d2::T)
-    l  = l1 + l2 + pe(tree)
-    ne = ne1 + ne2
+function treelength_ne(tree::T, l::Float64, n::Float64) where {T <: iTree}
+
+  l += e(tree)
+  if isdefined(tree, :d1)
+    l, n = treelength_ne(tree.d1, l, n)
+    l, n = treelength_ne(tree.d2, l, n)
+  else
+    if isextinct(tree)
+      n += 1.0
+    end
   end
 
-  return l, ne
+  return l, n
 end
-
-
-
-
-"""
-    treelength(tree::T) where {T <: iTree}
-
-Return the branch length sum of `tree`.
-"""
-treelength(tree::T) where {T <: iTree} = 
-  treelength(tree.d1) + treelength(tree.d2) + pe(tree)
-
-
 
 
 
@@ -304,14 +276,7 @@ treelength(tree::T) where {T <: iTree} =
 
 Return pendant edge.
 """
-lλ(tree::T) where {T <: iTgbm} = getproperty(tree,:lλ)
-
-"""
-    pe(tree::iTree)
-
-Return pendant edge.
-"""
-lλ(::Nothing) = nothing
+lλ(tree::T) where {T <: iTgbm} = getproperty(tree, :lλ)
 
 
 
@@ -322,13 +287,6 @@ lλ(::Nothing) = nothing
 Return pendant edge.
 """
 lμ(tree::iTgbmbd) = getproperty(tree,:lμ)
-
-"""
-    pe(tree::iTree)
-
-Return pendant edge.
-"""
-lμ(::Nothing) = nothing
 
 
 
@@ -354,40 +312,40 @@ function streeheight(tree::T,
                      ix  ::Int64, 
                      px  ::Int64) where {T <: iTree}
 
-  if ix == ldr
-    if px == wpr
-      if isfix(tree.d1::T)
-        return h - pe(tree), treeheight(tree.d2)
-      elseif isfix(tree.d2::T)
-        return h - pe(tree), treeheight(tree.d1)
+  if ix === ldr
+    if px === wpr
+      if isfix(tree.d1)
+        return h - e(tree), treeheight(tree.d2)
+      elseif isfix(tree.d2)
+        return h - e(tree), treeheight(tree.d1)
       end
     else
       px += 1
-      if isfix(tree.d1::T)
+      if isfix(tree.d1)
         h, th = 
-          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d1, h - e(tree), th, dri, ldr, wpr, ix, px)
       else
         h, th =
-          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d2, h - e(tree), th, dri, ldr, wpr, ix, px)
       end
     end
   elseif ix < ldr
-    ifx1 = isfix(tree.d1::T)
-    if ifx1 && isfix(tree.d2::T)
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
       ix += 1
       if dri[ix]
         h, th = 
-          streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d1, h - e(tree), th, dri, ldr, wpr, ix, px)
       else
         h, th = 
-          streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+          streeheight(tree.d2, h - e(tree), th, dri, ldr, wpr, ix, px)
       end
     elseif ifx1
       h, th = 
-        streeheight(tree.d1::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+        streeheight(tree.d1, h - e(tree), th, dri, ldr, wpr, ix, px)
     else
       h, th =
-        streeheight(tree.d2::T, h - pe(tree), th, dri, ldr, wpr, ix, px)
+        streeheight(tree.d2, h - e(tree), th, dri, ldr, wpr, ix, px)
     end
   end
 end
@@ -419,7 +377,7 @@ function λμ01(tree::iTgbmbd,
       μ0 = lμ(tree)[1]
     end
 
-    if istip(tree) && !isextinct(tree)
+    if istip(tree) && islive(tree)
       λ1 = lλ(tree)[end]
       μ1 = lμ(tree)[end]
 
@@ -457,6 +415,7 @@ end
 
 
 
+
 """
     λμath(tree::iTgbmbd,
           h    ::Float64, 
@@ -476,8 +435,8 @@ function λμath(tree::iTgbmbd,
                ldr ::Int64,
                ix  ::Int64)
 
-  if ix == ldr
-    pei = pe(tree)
+  if ix === ldr
+    pei = e(tree)
     if th > h > (th - pei)
 
       bh  = th - h
@@ -500,17 +459,18 @@ function λμath(tree::iTgbmbd,
     if ifx1 && isfix(tree.d2::iTgbmbd)
       ix += 1
       if dri[ix]
-        λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
+        λμath(tree.d1::iTgbmbd, h, th - e(tree), dri, ldr, ix)
       else
-        λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
+        λμath(tree.d2::iTgbmbd, h, th - e(tree), dri, ldr, ix)
       end
     elseif ifx1
-      λμath(tree.d1::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
+      λμath(tree.d1::iTgbmbd, h, th - e(tree), dri, ldr, ix)
     else
-      λμath(tree.d2::iTgbmbd, h, th - pe(tree), dri, ldr, ix)
+      λμath(tree.d2::iTgbmbd, h, th - e(tree), dri, ldr, ix)
     end
   end
 end
+
 
 
 
@@ -529,10 +489,10 @@ function ifxe(tree::T) where T <: iTree
       return false
     end
   else
-    if isfix(tree.d1::T)
-      ifxe(tree.d1::T)
+    if isfix(tree.d1)
+      ifxe(tree.d1)
     else
-      ifxe(tree.d2::T)
+      ifxe(tree.d2)
     end
   end
 end
@@ -655,29 +615,17 @@ function makebbv!(tree::T,
                   bbλ ::Array{Array{Float64,1},1}, 
                   tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
 
-  push!(tsv, [pe(tree), fdt(tree)])
+  push!(tsv, [e(tree), fdt(tree)])
   push!(bbλ, lλ(tree))
 
-  makebbv!(tree.d1, bbλ, tsv)
-  makebbv!(tree.d2, bbλ, tsv)
+  if isdefined(tree, :d1)
+    makebbv!(tree.d1, bbλ, tsv)
+    makebbv!(tree.d2, bbλ, tsv)
+  end
 
   return nothing
 end
 
-
-
-
-"""
-    makebbv!(tree::Nothing, 
-             bbλ ::Array{Array{Float64,1},1}, 
-             tsv ::Array{Array{Float64,1},1})
-
-Make `bbv` vector with allocated `bb` (brownian bridges) and 
-with `tsv` vector of branches times `ts`.
-"""
-makebbv!(tree::Nothing, 
-         bbλ ::Array{Array{Float64,1},1}, 
-         tsv ::Array{Array{Float64,1},1}) = nothing
 
 
 
@@ -699,27 +647,14 @@ function makebbv!(tree::iTgbmbd,
   push!(bbλ, lλ(tree))
   push!(bbμ, lμ(tree))
 
-  makebbv!(tree.d1, bbλ, bbμ, tsv)
-  makebbv!(tree.d2, bbλ, bbμ, tsv)
+  if isdefined(tree, :d1)
+    makebbv!(tree.d1, bbλ, bbμ, tsv)
+    makebbv!(tree.d2, bbλ, bbμ, tsv)
+  end
 
   return nothing
 end
 
 
-
-
-"""
-    makebbv!(tree::Nothing, 
-             bbλ ::Array{Array{Float64,1},1}, 
-             bbμ ::Array{Array{Float64,1},1}, 
-             tsv ::Array{Array{Float64,1},1})
-
-Make `bbv` vector with allocated `bb` (brownian bridges) and 
-with `tsv` vector of branches times `ts`.
-"""
-makebbv!(tree::Nothing, 
-         bbλ ::Array{Array{Float64,1},1}, 
-         bbμ ::Array{Array{Float64,1},1}, 
-         tsv ::Array{Array{Float64,1},1}) = nothing
 
 

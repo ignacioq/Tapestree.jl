@@ -175,8 +175,10 @@ mutable struct iTgbmpb <: iTgbm
 
   iTgbmpb() = 
     (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; x.lλ = Float64[]; x)
+
   iTgbmpb(e::Float64, dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
+
   iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, 
     dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
       new(d1, d2, e, dt, fdt, lλ)
@@ -204,16 +206,15 @@ function iTgbmpb(tree::sTpb,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet  = e(tree)
+  et = e(tree)
 
   if iszero(et)
     iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, σλ), 
             iTgbmpb(tree.d2, δt, srδt, lλa, σλ),
-            e(tree), δt, 0.0, Float64[lλa])
-
+            et, δt, 0.0, Float64[lλa])
   else
-    nt   = Int64(fld(et,δt))
-    fdti = mod(et, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     if iszero(fdti)
       fdti = δt
@@ -222,24 +223,15 @@ function iTgbmpb(tree::sTpb,
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
     l   = lastindex(lλv)
 
-    iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], σλ), 
-            iTgbmpb(tree.d2, δt, srδt, lλv[l], σλ),
-            e(tree), δt, fdti, lλv)
-
+    if isdefined(tree, :d1)
+      iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], σλ), 
+              iTgbmpb(tree.d2, δt, srδt, lλv[l], σλ),
+              et, δt, fdti, lλv)
+    else
+      iTgbmpb(et, δt, fdti, lλv)
+    end
   end
 end
-
-"""
-    iTgbmpb(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            σλ  ::Float64)
-
-Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
-"""
-iTgbmpb(::Nothing, δt::Float64, srδt::Float64, lλa::Float64, σλ::Float64) = 
-  nothing
 
 
 
@@ -284,6 +276,15 @@ mutable struct iTgbmce <: iTgbm
     (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
       x.iμ = false; x.fx = false; x.lλ = Float64[])
 
+  iTgbmce(e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool,
+          fx ::Bool,
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
+
   iTgbmce(d1 ::iTgbmce, 
           d2 ::iTgbmce, 
           e  ::Float64, 
@@ -291,7 +292,7 @@ mutable struct iTgbmce <: iTgbm
           fdt::Float64,
           lλ ::Array{Float64,1}) = 
     (x = new(); x.d1 = d1, x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[])
+      x.iμ = false; x.fx = false; x.lλ = lλ; x)
 
   iTgbmce(d1 ::iTgbmce, 
           d2 ::iTgbmce, 
@@ -316,15 +317,13 @@ Base.show(io::IO, t::iTgbmce) =
 
 Demotes a tree of type `iTgbmce` to `sTbd`.
 """
-sTbd(tree::iTgbmce) =
-  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
-
-"""
-    sTbd(tree::Nothing) 
-
-Demotes a tree of type `iTgbmce` to `sTbd`.
-"""
-sTbd(tree::Nothing) = nothing
+function sTbd(tree::iTgbmce)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
+  else
+    sTbd(e(tree), isextinct(tree))
+  end
+end
 
 
 
@@ -346,16 +345,16 @@ function iTgbmce(tree::sTbd,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet  = pe(tree)
+  et = e(tree)
 
   # if crown root
-  if iszero(pet)
+  if iszero(et)
     iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, σλ), 
             iTgbmce(tree.d2, δt, srδt, lλa, σλ),
-            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
+            et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
 
@@ -365,31 +364,15 @@ function iTgbmce(tree::sTbd,
 
     l = lastindex(lλv)
 
-    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], σλ), 
-            iTgbmce(tree.d2, δt, srδt, lλv[l], σλ),
-            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv)
+    if isdefined(tree, :d1)
+      iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], σλ), 
+              iTgbmce(tree.d2, δt, srδt, lλv[l], σλ),
+              et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    else
+      iTgbmce(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    end
   end
 end
-
-
-"""
-    iTgbmce(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            lμa ::Float64, 
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmce` according to some values for `λ` and `μ` 
-diffusion.
-"""
-iTgbmce(::Nothing, 
-        δt  ::Float64, 
-        srδt::Float64, 
-        lλa ::Float64, 
-        σλ  ::Float64) = nothing
-
 
 
 
@@ -432,7 +415,16 @@ mutable struct iTgbmct <: iTgbm
 
   iTgbmct() = 
     (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[])
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
+
+  iTgbmct(e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = iμ; x.fx = fx; x.lλ = Float64[]; x)
 
   iTgbmct(d1 ::iTgbmct, 
           d2 ::iTgbmct, 
@@ -441,7 +433,7 @@ mutable struct iTgbmct <: iTgbm
           fdt::Float64,
           lλ ::Array{Float64,1}) = 
     (x = new(); x.d1 = d1, x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[])
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
 
   # inner constructor
   iTgbmct(d1 ::iTgbmct, 
@@ -468,15 +460,13 @@ Base.show(io::IO, t::iTgbmct) =
 
 Demotes a tree of type `iTgbmct` to `sTbd`.
 """
-sTbd(tree::iTgbmct) =
-  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
-
-"""
-    sTbd(tree::Nothing) 
-
-Demotes a tree of type `iTgbmct` to `sTbd`.
-"""
-sTbd(tree::Nothing) = nothing
+function sTbd(tree::iTgbmct)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
+  else
+    sTbd(e(tree), isextinct(tree))
+  end
+end
 
 
 
@@ -498,16 +488,16 @@ function iTgbmct(tree::sTbd,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet  = pe(tree)
+  et = e(tree)
 
   # if crown root
-  if iszero(pet)
+  if iszero(et)
     iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, σλ), 
             iTgbmct(tree.d2, δt, srδt, lλa, σλ),
-            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
+            et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
 
@@ -517,30 +507,15 @@ function iTgbmct(tree::sTbd,
 
     l = lastindex(lλv)
 
-    iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], σλ), 
-            iTgbmct(tree.d2, δt, srδt, lλv[l], σλ),
-            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv)
+    if isdefined(tree, :d1)
+      iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], σλ), 
+              iTgbmct(tree.d2, δt, srδt, lλv[l], σλ),
+              et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    else
+      iTgbmct(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    end
   end
 end
-
-
-"""
-    iTgbmct(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            lμa ::Float64, 
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmct` according to some values for `λ` and `μ` 
-diffusion.
-"""
-iTgbmct(::Nothing, 
-        δt  ::Float64, 
-        srδt::Float64, 
-        lλa ::Float64, 
-        σλ  ::Float64) = nothing
 
 
 
@@ -586,16 +561,26 @@ mutable struct iTgbmbd <: iTgbm
 
   iTgbmbd() = 
     (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[]; x.lμ = Float64[])
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x.lμ = Float64[]; x)
+
+  iTgbmbd(e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
 
   iTgbmbd(d1 ::iTgbmbd, 
           d2 ::iTgbmbd, 
           e  ::Float64, 
           dt ::Float64,
           fdt::Float64,
-          lλ ::Array{Float64,1}) = 
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1}) = 
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = false; x.fx = false; x.lλ = lλ; x.lμ = lμ)
+      x.iμ = false; x.fx = false; x.lλ = lλ; x.lμ = lμ; x)
 
   iTgbmbd(d1 ::iTgbmbd, 
           d2 ::iTgbmbd, 
@@ -622,15 +607,13 @@ Base.show(io::IO, t::iTgbmbd) =
 
 Demotes a tree of type `iTgbmbd` to `sTbd`.
 """
-sTbd(tree::iTgbmbd) =
-  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
-
-"""
-    sTbd(tree::Nothing) 
-
-Demotes a tree of type `iTgbmbd` to `sTbd`.
-"""
-sTbd(tree::Nothing) = nothing
+function sTbd(tree::iTgbmbd)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
+  else  
+    sTbd(e(tree), isextinct(tree), false)
+  end
+end
 
 
 
@@ -655,17 +638,17 @@ function iTgbmbd(tree::sTbd,
                  σλ  ::Float64,
                  σμ  ::Float64)
 
-  pet  = pe(tree)
+  et  = e(tree)
 
   # if crown root
-  if iszero(pet)
+  if iszero(et)
     iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, σλ, σμ), 
             iTgbmbd(tree.d2, δt, srδt, lλa, lμa, σλ, σμ),
-            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), 
+            e(tree), δt, 0.0, isextinct(tree), isfix(tree), 
             Float64[lλa], Float64[lμa])
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
     lμv = sim_bm(lμa, σμ, srδt, nt, fdti)
@@ -676,30 +659,13 @@ function iTgbmbd(tree::sTbd,
 
     l = lastindex(lμv)
 
-    iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
-            iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
-            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
+    if isdefined(tree, :d1)
+      iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
+              iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
+              e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
+    else
+      iTgbmbd(e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
+    end
   end
 end
-
-
-"""
-    iTgbmbd(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            lμa ::Float64, 
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmbd` according to some values for `λ` and `μ` 
-diffusion.
-"""
-iTgbmbd(::Nothing, 
-        δt  ::Float64, 
-        srδt::Float64, 
-        lλa ::Float64, 
-        lμa ::Float64, 
-        σλ  ::Float64,
-        σμ  ::Float64) = nothing
 

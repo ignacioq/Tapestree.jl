@@ -14,7 +14,7 @@ Created 07 07 2020
 
 
 """
-    function f(tree::T, lv::Function, dt::Float64, e::Bool)
+    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iTgbm}
 
 Recipe for plotting values given by `lv` through time for a `iTgbm`.
 """
@@ -94,22 +94,22 @@ end
 
 """
     _rplottree!(tree::iTgbm, 
-               xc  ::Float64, 
-               yr  ::UnitRange{Int64},
-               zfun::Function,
-               x   ::Array{Float64,1}, 
-               y   ::Array{Float64,1},
-               z   ::Array{Float64,1})
+                xc  ::Float64, 
+                yr  ::UnitRange{Int64},
+                zfun::Function,
+                x   ::Array{Float64,1}, 
+                y   ::Array{Float64,1},
+                z   ::Array{Float64,1})
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
 function _rplottree!(tree::T, 
-                    xc  ::Float64, 
-                    yr  ::UnitRange{Int64},
-                    zfun::Function,
-                    x   ::Array{Float64,1}, 
-                    y   ::Array{Float64,1},
-                    z   ::Array{Float64,1}) where {T <: iTgbm}
+                     xc  ::Float64, 
+                     yr  ::UnitRange{Int64},
+                     zfun::Function,
+                     x   ::Array{Float64,1}, 
+                     y   ::Array{Float64,1},
+                     z   ::Array{Float64,1}) where {T <: iTgbm}
 
   # tree δt and nsδt
   δt = dt(tree)
@@ -128,14 +128,14 @@ function _rplottree!(tree::T,
   push!(y, yc, NaN)
   push!(z, zv[l], NaN)
 
-  if !istip(tree)
+  if isdefined(tree, :d1)
     ntip1 = sntn(tree.d1)
     ntip2 = sntn(tree.d2)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
-    xcmpe = xc - pe(tree)
+    xcmpe = xc - e(tree)
     # add vertical lines
     push!(x, xcmpe, xcmpe)
     push!(y, Float64(yr1[1] + yr1[end])*0.5, 
@@ -247,12 +247,12 @@ function _rplottree!(tree::T,
 
   # add horizontal lines
   push!(x, xc)
-  xc  -= pe(tree)
+  xc  -= e(tree)
   push!(x, xc, NaN)
   yc = (yr[1] + yr[end])*0.5
   push!(y, yc, yc, NaN)
 
-  if !istip(tree)
+  if isdefined(tree, :d1)
     ntip1 = sntn(tree.d1)
     ntip2 = sntn(tree.d2)
 
