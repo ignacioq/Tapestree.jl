@@ -269,7 +269,7 @@ function simulate_edges(λ       ::Array{Float64,1},
     n  = 2 # current number of species
     mx = 3 # current maximum node number
   else
-    st[ea] = si
+    st[ea] .= si
     i0 = 2 # current first edge with 0
     n  = 1 # current number of species
     mx = 2 # current maximum node number
