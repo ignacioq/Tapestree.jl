@@ -48,23 +48,23 @@ t(-_-t)
               (
                 ## events
                 # speciation in k
-                (nk - 1.0 + nw) * λk * (kh1 ? p[k-1,j,w] : 0.0)       + 
+                (nk - 1.0 + nw) * λk * (kh1 ? p[k-1,j,w] : 0.0)         + 
                 # speciation in j
-                (nj - 1.0 + nw) * λj * (jh1 ? p[k,j-1,w] : 0.0)       + 
+                (nj - 1.0 + nw) * λj * (jh1 ? p[k,j-1,w] : 0.0)         + 
                 # widespread speciation
-                (nw + 1.0) * λw * (jh1 && kh1 ? p[k-1,j-1,w+1] : 0.0) +
+                (nw + 1.0) * λw * ((jh1 && kh1) ? p[k-1,j-1,w+1] : 0.0) +
                 # global extinction in k
-                (nk + 1.0) * μk * p[k+1,j,w]                          + 
+                (nk + 1.0) * μk * p[k+1,j,w]                            + 
                 # global extinction in j
-                (nj + 1.0) * μj * p[k,j+1,w]                          +
+                (nj + 1.0) * μj * p[k,j+1,w]                            +
                 # local extinction in k
-                (nw + 1.0) * μk * (jh1 ? p[k,j-1,w+1] : 0.0)          + 
+                (nw + 1.0) * μk * (jh1 ? p[k,j-1,w+1] : 0.0)            + 
                 # local extinction in j
-                (nw + 1.0) * μj * (kh1 ? p[k-1,j,w+1] : 0.0)          + 
+                (nw + 1.0) * μj * (kh1 ? p[k-1,j,w+1] : 0.0)            + 
                 # colonization k -> j
-                (nk + 1.0) * gkj * (wh1 ? p[k+1,j,w-1] : 0.0)         + 
+                (nk + 1.0) * gkj * (wh1 ? p[k+1,j,w-1] : 0.0)           + 
                 # colonization j -> k
-                (nj + 1.0) * gjk * (wh1 ? p[k,j+1,w-1] : 0.0)         - 
+                (nj + 1.0) * gjk * (wh1 ? p[k,j+1,w-1] : 0.0)           - 
 
                 ## non events
                 (
