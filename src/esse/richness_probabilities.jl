@@ -42,50 +42,6 @@ t(-_-t)
  
             p1[1,1,1] = 0.0
 
-          # if 1, 0, 0
-          elseif k === 2 && !jh1 && !wh1
-
-            p1[2,1,1] += 
-              (
-                ## events
-                # global extinction in k
-                2.0 * μk * p[3,1,1] + 
-                # global extinction in j
-                μj * p[2,2,1]       +
-                # local extinction in j
-                μj * p[1,1,2]       -
-
-                ## non events
-                (
-                  # speciation in k
-                  λk  + 
-                  # colonization k -> j
-                  gkj
-                ) * p[2,1,1]
-              ) * dt
-
-          # if 0, 1, 0
-          elseif !kh1 && j === 2 && !wh1
-
-            p1[1,2,1] += 
-              (
-                ## events
-                # global extinction in j
-                2.0 * μj * p[1,3,1] + 
-                # global extinction in k
-                μk * p[2,2,1]       +
-                # local extinction in k
-                μk * p[1,1,2]       -
-
-                ## non events
-                (
-                # speciation in j
-                  λj  + 
-                  # colonization j -> k
-                  gjk
-                ) * p[1,2,1]
-              ) * dt
-
           else
 
             p1[k,j,w] += 
