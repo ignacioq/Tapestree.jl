@@ -74,7 +74,7 @@ function simulate_sse(λ          ::Array{Float64,1},
     end
   end
 
-  if (n + ne) > nspp_max
+  if (n + ne) > (nspp_max - (start == :crown ? 0 : 1))
     if verbose
       @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
     end
@@ -109,7 +109,7 @@ function simulate_sse(λ          ::Array{Float64,1},
         end
       end
 
-      if (n + ne) > nspp_max
+      if (n + ne) > (nspp_max - (start == :crown ? 0 : 1))
         if verbose
           @warn string("Simulation surpassed the maximum of lineages allowed : ", nspp_max)
         end
@@ -237,28 +237,27 @@ function simulate_edges(λ       ::Array{Float64,1},
     si = prop_sample(spr, isp, ns)
   end
 
-  if start == :crown
+  # edges 
+  ed = zeros(Int64, nspp_max*2, 2)
+  # edges extinct
+  ee = Int64[]
 
+  if start == :crown
     # edges alive
     ea = [1, 2]
-
-    # edges extinct
-    ee = Int64[]
 
     # edge array
     ed = zeros(Int64, nspp_max*2, 2)
     ed[ea,:] = [1 2;
                 1 3]
+    mxi0 = (nspp_max*2 + 1)
   else
     # edges alive
     ea = [1]
 
-    # edges extinct
-    ee = Int64[]
-
     # edge array
-    ed = zeros(Int64, nspp_max*2, 2)
     ed[ea,:] = [1 2]
+    mxi0 = (nspp_max*2)
   end
 
   el = zeros(nspp_max*2)            # edge lengths
@@ -343,7 +342,7 @@ function simulate_edges(λ       ::Array{Float64,1},
         =#
         if rand() < Sλpr[sti]
 
-          if i0 >= (nspp_max*2 + 1)
+          if i0 === mxi0
             ed = ed[1:(i0-1),:]
             el = el[1:(i0-1)]
             st = st[1:(i0-1)]
@@ -399,8 +398,7 @@ function simulate_edges(λ       ::Array{Float64,1},
             # if tree goes extinct
             if isone(n)
               push!(ee, v)      # extinct edges
-              deleteat!(ea, i)
-              return ed, el, st, ea, ee, 0, S, k
+              return ed, el, st, Int64[], ee, 0, S, k
             end
 
             push!(ee, v)      # extinct edges
