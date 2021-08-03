@@ -52,11 +52,11 @@ function sim_gbmct(t   ::Float64,
                   bt, δt, t, false, false, λv)
         # if extinction
         else
-          return iTgbmct(nothing, nothing, bt, δt, t, true, false, λv)
+          return iTgbmct(bt, δt, t, true, false, λv)
         end
       end
 
-      return iTgbmct(nothing, nothing, bt, δt, t, false, false, λv)
+      return iTgbmct(bt, δt, t, false, false, λv)
     end
 
     t  -= δt
@@ -76,7 +76,7 @@ function sim_gbmct(t   ::Float64,
                 bt, δt, δt, false, false, λv)
       # if extinction
       else
-        return iTgbmct(nothing, nothing, bt, δt, δt, true, false, λv)
+        return iTgbmct(bt, δt, δt, true, false, λv)
       end
     end
 
@@ -137,11 +137,11 @@ function sim_gbmct(t   ::Float64,
             return iTgbmct(td1, td2, bt, δt, t, false, false, λv), nsp
           # if extinction
           else
-            return iTgbmct(nothing, nothing, bt, δt, t, true, false, λv), nsp
+            return iTgbmct(bt, δt, t, true, false, λv), nsp
           end
         end
 
-        return iTgbmct(nothing, nothing, bt, δt, t, false, false, λv), nsp
+        return iTgbmct(bt, δt, t, false, false, λv), nsp
       end
 
       t  -= δt
@@ -163,7 +163,7 @@ function sim_gbmct(t   ::Float64,
           return iTgbmct(td1, td2, bt, δt, δt, false, false, λv), nsp
         # if extinction
         else
-          return iTgbmct(nothing, nothing, bt, δt, δt, true, false, λv), nsp
+          return iTgbmct(bt, δt, δt, true, false, λv), nsp
         end
       end
 
@@ -222,11 +222,11 @@ function sim_gbmct(nsδt::Float64,
                 bt, δt, t, false, false, λv)
       # if extinction
       else
-        return iTgbmct(nothing, nothing, bt, δt, t, true, false, λv)
+        return iTgbmct(bt, δt, t, true, false, λv)
       end
     end
 
-    return iTgbmct(nothing, nothing, bt, δt, t, false, false, λv)
+    return iTgbmct(bt, δt, t, false, false, λv)
   end
 
   t  -= nsδt
@@ -248,7 +248,7 @@ function sim_gbmct(nsδt::Float64,
               bt, δt, nsδt, false, false, λv)
     # if extinction
     else
-      return iTgbmct(nothing, nothing, bt, δt, nsδt, true, false, λv)
+      return iTgbmct(bt, δt, nsδt, true, false, λv)
     end
   end
 
@@ -276,11 +276,11 @@ function sim_gbmct(nsδt::Float64,
                   bt, δt, t, false, false, λv)
         # if extinction
         else
-          return iTgbmct(nothing, nothing, bt, δt, t, true, false, λv)
+          return iTgbmct(bt, δt, t, true, false, λv)
         end
       end
 
-      return iTgbmct(nothing, nothing, bt, δt, t, false, false, λv)
+      return iTgbmct(bt, δt, t, false, false, λv)
     end
 
     t  -= δt
@@ -300,7 +300,7 @@ function sim_gbmct(nsδt::Float64,
                 bt, δt, δt, false, false, λv)
       # if extinction
       else
-        return iTgbmct(nothing, nothing, bt, δt, δt, true, false, λv)
+        return iTgbmct(bt, δt, δt, true, false, λv)
       end
     end
 
@@ -361,11 +361,11 @@ function sim_gbmct(nsδt::Float64,
         return iTgbmct(td1, td2, bt, δt, t, false, false, λv), nsp
       # if extinction
       else
-        return iTgbmct(nothing, nothing, bt, δt, t, true, false, λv), nsp
+        return iTgbmct(bt, δt, t, true, false, λv), nsp
       end
     end
 
-    return iTgbmct(nothing, nothing, bt, δt, t, false, false, λv), nsp
+    return iTgbmct(bt, δt, t, false, false, λv), nsp
   end
 
   t  -= nsδt
@@ -389,7 +389,7 @@ function sim_gbmct(nsδt::Float64,
       return iTgbmct(td1, td2, bt, δt, nsδt, false, false, λv), nsp
     else
     # if extinction
-      return iTgbmct(nothing, nothing, bt, δt, nsδt, true, false, λv), nsp
+      return iTgbmct(bt, δt, nsδt, true, false, λv), nsp
     end
   end
 
@@ -421,11 +421,11 @@ function sim_gbmct(nsδt::Float64,
             return iTgbmct(td1, td2, bt, δt, t, false, false, λv), nsp
           # if extinction
           else
-            return iTgbmct(nothing, nothing, bt, δt, t, true, false, λv), nsp
+            return iTgbmct(bt, δt, t, true, false, λv), nsp
           end
         end
 
-        return iTgbmct(nothing, nothing, bt, δt, t, false, false, λv), nsp
+        return iTgbmct(bt, δt, t, false, false, λv), nsp
       end
 
       t  -= δt
@@ -447,7 +447,7 @@ function sim_gbmct(nsδt::Float64,
           return iTgbmct(td1, td2, bt, δt, δt, false, false, λv), nsp
         # if extinction
         else
-          return iTgbmct(nothing, nothing, bt, δt, δt, true, false, λv), nsp
+          return iTgbmct(bt, δt, δt, true, false, λv), nsp
         end
       end
 

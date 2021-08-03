@@ -47,7 +47,7 @@ function sim_gbm(t   ::Float64,
                  bt, δt, t, λv)
       end
 
-      return iTgbmpb(nothing, nothing, bt, δt, t, λv)
+      return iTgbmpb(bt, δt, t, λv)
     end
 
     t  -= δt

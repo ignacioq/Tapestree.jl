@@ -339,9 +339,9 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
   λd2 = λd2v_c[end]
 
   # pendant edges
-  pepr = pe(treec)
-  ped1 = pe(treec.d1)
-  ped2 = pe(treec.d2)
+  pepr = e(treec)
+  ped1 = e(treec.d1)
+  ped2 = e(treec.d2)
 
   # final dt
   fdtpr = fdt(treec)
@@ -435,9 +435,9 @@ function triad_lλupdate_root!(treep ::iTgbmpb,
   λd2 = λd2v_c[end]
 
   # pendant edges
-  pepr = pe(treec)
-  ped1 = pe(treec.d1)
-  ped2 = pe(treec.d2)
+  pepr = e(treec)
+  ped1 = e(treec.d1)
+  ped2 = e(treec.d2)
 
   # final dt
   fdtpr = fdt(treec)

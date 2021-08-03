@@ -218,7 +218,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
-function llr_gbm_b_sep(lλp ::Array{Float64,1},
+@inline function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        σλ  ::Float64, 
                        δt  ::Float64,
@@ -226,7 +226,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        srδt::Float64,
                        λev ::Bool)
 
-  @inbounds @fastmath begin
+  @inbounds begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(lλp)-2
@@ -274,12 +274,12 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth 
 separately for the Brownian motion and the pure-birth
 """
-function ll_gbm_b_pb(lλv::Array{Float64,1},
+@inline function ll_gbm_b_pb(lλv::Array{Float64,1},
                      δt ::Float64,
                      fdt::Float64,
                      λev::Bool)
 
-  @inbounds @fastmath begin
+  @inbounds begin
 
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
@@ -392,12 +392,9 @@ to GBM birth-death for a `σ` proposal.
 """
 function sss_gbm(tree::iTgbmpb)
 
-  if istip(tree) 
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
-  else
-    ssλ, n = 
-      sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+  ssλ, n = sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
+
+  if isdefined(tree, :d1) 
     ssλ1, n1 = 
       sss_gbm(tree.d1::iTgbmpb)
     ssλ2, n2 = 
@@ -432,7 +429,6 @@ for GBM birth-death.
     nI = lastindex(lλv)-2
 
     ssλ  = 0.0
-    ssμ  = 0.0
     lλvi = lλv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]

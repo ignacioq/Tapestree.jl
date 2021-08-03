@@ -14,7 +14,7 @@ Created 07 07 2020
 
 
 """
-    function f(tree::T, lv::Function, dt::Float64, e::Bool)
+    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iTgbm}
 
 Recipe for plotting values given by `lv` through time for a `iTgbm`.
 """
@@ -94,22 +94,22 @@ end
 
 """
     _rplottree!(tree::iTgbm, 
-               xc  ::Float64, 
-               yr  ::UnitRange{Int64},
-               zfun::Function,
-               x   ::Array{Float64,1}, 
-               y   ::Array{Float64,1},
-               z   ::Array{Float64,1})
+                xc  ::Float64, 
+                yr  ::UnitRange{Int64},
+                zfun::Function,
+                x   ::Array{Float64,1}, 
+                y   ::Array{Float64,1},
+                z   ::Array{Float64,1})
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
 function _rplottree!(tree::T, 
-                    xc  ::Float64, 
-                    yr  ::UnitRange{Int64},
-                    zfun::Function,
-                    x   ::Array{Float64,1}, 
-                    y   ::Array{Float64,1},
-                    z   ::Array{Float64,1}) where {T <: iTgbm}
+                     xc  ::Float64, 
+                     yr  ::UnitRange{Int64},
+                     zfun::Function,
+                     x   ::Array{Float64,1}, 
+                     y   ::Array{Float64,1},
+                     z   ::Array{Float64,1}) where {T <: iTgbm}
 
   # tree δt and nsδt
   δt = dt(tree)
@@ -128,14 +128,14 @@ function _rplottree!(tree::T,
   push!(y, yc, NaN)
   push!(z, zv[l], NaN)
 
-  if !istip(tree)
-    ntip1 = sntn(tree.d1)
-    ntip2 = sntn(tree.d2)
+  if isdefined(tree, :d1)
+    ntip1 = sntn(tree.d1, 0)
+    ntip2 = sntn(tree.d2, 0)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
-    xcmpe = xc - pe(tree)
+    xcmpe = xc - e(tree)
     # add vertical lines
     push!(x, xcmpe, xcmpe)
     push!(y, Float64(yr1[1] + yr1[end])*0.5, 
@@ -167,7 +167,10 @@ Recipe for plotting a Type `iTgbm`.
   y = Float64[]
   z = Float64[]
 
-  _rplottree!(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
+  th = treeheight(tree)
+  nt = sntn(tree, 0)
+
+  _rplottree!(tree, th, 1:nt, zfun, x, y, z)
 
   # plot defaults
   line_z          --> z
@@ -176,8 +179,8 @@ Recipe for plotting a Type `iTgbm`.
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
-  xlims           --> (0, treeheight(tree))
-  ylims           --> (0, sntn(tree)+1)
+  xlims           --> (0, th)
+  ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
   grid            --> :off
@@ -202,7 +205,10 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   y = Float64[]
   z = Float64[]
 
-  _rplottree!(tree, treeheight(tree), 1:sntn(tree), zfun, x, y, z)
+  th = treeheight(tree)
+  nt = sntn(tree, 0)
+
+  _rplottree!(tree, th, 1:nt, zfun, x, y, z)
 
   @simd for i in Base.OneTo(lastindex(z))
     z[i] *= ϵ
@@ -215,8 +221,8 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
-  xlims           --> (0, treeheight(tree))
-  ylims           --> (0, sntn(tree)+1)
+  xlims           --> (0, th)
+  ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
   grid            --> :off
@@ -240,21 +246,21 @@ end
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
 function _rplottree!(tree::T, 
-                    xc  ::Float64, 
-                    yr  ::UnitRange{Int64},
-                    x   ::Array{Float64,1}, 
-                    y   ::Array{Float64,1}) where {T <: iTree}
+                     xc  ::Float64, 
+                     yr  ::UnitRange{Int64},
+                     x   ::Array{Float64,1}, 
+                     y   ::Array{Float64,1}) where {T <: iTree}
 
   # add horizontal lines
   push!(x, xc)
-  xc  -= pe(tree)
+  xc  -= e(tree)
   push!(x, xc, NaN)
   yc = (yr[1] + yr[end])*0.5
   push!(y, yc, yc, NaN)
 
-  if !istip(tree)
-    ntip1 = sntn(tree.d1)
-    ntip2 = sntn(tree.d2)
+  if isdefined(tree, :d1)
+    ntip1 = sntn(tree.d1, 0)
+    ntip2 = sntn(tree.d2, 0)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
@@ -282,15 +288,19 @@ Recipe for plotting a Type `iTree`.
 
   x = Float64[]
   y = Float64[]
-  _rplottree!(tree, treeheight(tree), 1:sntn(tree), x, y)
+
+  th = treeheight(tree)
+  nt = sntn(tree, 0)
+
+  _rplottree!(tree, th, 1:nt, x, y)
 
   # plot defaults
   legend          --> false
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
-  xlims           --> (0, treeheight(tree))
-  ylims           --> (0, sntn(tree)+1)
+  xlims           --> (0, th)
+  ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
   grid            --> :off

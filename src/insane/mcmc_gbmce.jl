@@ -64,7 +64,7 @@ function insane_gbmce(tree    ::sTbd,
   fixtree!(tree)
 
   # `n` tips, `th` treeheight define δt
-  n    = sntn(tree)
+  n    = sntn(tree, 0)
   th   = treeheight(tree)
   δt  *= th
   srδt = sqrt(δt)
@@ -101,7 +101,7 @@ function insane_gbmce(tree    ::sTbd,
   triads, terminus, btotriad = make_triads(idf)
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(Ψc)) ? cond_surv_crown : cond_surv_stem
+  svf = iszero(e(Ψc)) ? cond_surv_crown : cond_surv_stem
 
   # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
   spup = sum(pupdp)
@@ -196,7 +196,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
   lac = 0.0
 
   # crown or stem conditioning
-  icr = iszero(pe(Ψc))
+  icr = iszero(e(Ψc))
 
   llc = llik_gbm(Ψc, μc, σλc, δt, srδt) + svf(Ψc, μc)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
@@ -354,7 +354,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
                     svf     ::Function)
 
   # crown or stem conditioning
-  icr = iszero(pe(Ψc))
+  icr = iszero(e(Ψc))
 
   lλmxpr = log(λa_prior[2])
   μmxpr  = log(μ_prior[2])
@@ -475,8 +475,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
         R[lit,4] = exp(lλ(Ψc)[1])
         R[lit,5] = μc
         R[lit,6] = σλc
-        R[lit,7] = snen(Ψc)
-        R[lit,8] = treelength(Ψc)
+        R[lit,7] = snen(Ψc, 0)
+        R[lit,8] = treelength(Ψc, 0.0)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -633,7 +633,7 @@ function fsbi_ce(bi  ::iBffs,
   # simulate tree
   t0, nsp = sim_gbmce(ti(bi) - tfb, iλ, μ, σλ, δt, srδt, 1, nlim)
 
-  na = snan(t0)
+  na = snan(t0, 0)
 
   λf, dft0 = NaN, NaN
 
@@ -666,7 +666,7 @@ function fsbi_ce(bi  ::iBffs,
             continue
           end
           # if goes extinct before the present
-          if iszero(snan(st0))
+          if iszero(snan(st0, 0))
             # graft to tip
             addtotip(t0, st0, false)
             break
@@ -780,7 +780,7 @@ function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
   if istip(tree) 
     if isalive(tree) && !isfix(tree)
 
-      setpe!(tree, pe(tree) + pe(stree))
+      sete!(tree, e(tree) + e(stree))
       setproperty!(tree, :iμ, isextinct(stree))
 
       lλ0 = lλ(tree)
@@ -796,8 +796,10 @@ function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
         setfdt!(tree, fdt(stree))
       end
 
-      tree.d1 = stree.d1
-      tree.d2 = stree.d2
+      if isdefined(stree, :d1)
+        tree.d1 = stree.d1
+        tree.d2 = stree.d2
+      end
 
       ix = true
     end
@@ -833,7 +835,7 @@ function fixrtip!(tree::iTgbmce, na::Int64, λf::Float64, dft0::Float64)
     elseif isextinct(tree.d2::iTgbmce)
       λf, dft0 = fixrtip!(tree.d1::iTgbmce, na, λf, dft0)
     else
-      na1 = snan(tree.d1::iTgbmce)
+      na1 = snan(tree.d1::iTgbmce, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
         λf, dft0 = fixrtip!(tree.d2::iTgbmce, na - na1, λf, dft0)
@@ -859,22 +861,19 @@ Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::iTgbmce, λf::Float64, dft0::Float64)
 
-  if istip(tree) && isalive(tree)
-    fix!(tree)
-    λf   = lλ(tree)[end]
-    dft0 = fdt(tree)
-    return true, λf, dft0
-  end
-
-  if !isnothing(tree.d2)
+  if istip(tree) 
+    if isalive(tree)
+      fix!(tree)
+      λf   = lλ(tree)[end]
+      dft0 = fdt(tree)
+      return true, λf, dft0
+    end
+  else
     f, λf, dft0 = fixalive!(tree.d2::iTgbmce, λf, dft0)
     if f 
       fix!(tree)
       return true, λf, dft0
     end
-  end
-
-  if !isnothing(tree.d1)
     f, λf, dft0 = fixalive!(tree.d1::iTgbmce, λf, dft0)
     if f 
       fix!(tree)
@@ -962,7 +961,6 @@ function lvupdate!(Ψp    ::iTgbmce,
                    ldr   ::Int64,
                    ter   ::BitArray{1},
                    ix    ::Int64)
-
 
   if ix === ldr 
     # if root
@@ -1070,7 +1068,7 @@ function update_μ!(μc   ::Float64,
   μn = mulupt(μc, μtn)::Float64
 
   # log likelihood and prior ratio
-  l, ne = treelength_ne(Ψ)
+  l, ne = treelength_ne(Ψ, 0.0, 0.0)
   llr   = ne*(log(μn) - log(μc)) + l*(μc - μn) + svf(Ψ, μn) - svf(Ψ, μc)
 
   # prior ratio
@@ -1110,7 +1108,7 @@ function update_μ!(μc    ::Float64,
   μn = mulupt(μc, μtn)::Float64
 
   # log likelihood and prior ratio
-  l, ne = treelength_ne(Ψ)
+  l, ne = treelength_ne(Ψ, 0.0, 0.0)
   llr   = ne*(log(μn) - log(μc)) + l*(μc - μn) + svf(Ψ, μn) - svf(Ψ, μc)
 
   # prior ratio

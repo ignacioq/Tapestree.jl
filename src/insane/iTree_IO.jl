@@ -140,22 +140,22 @@ function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
   if istip(tree.d1)
     if istip(tree.d2)
       n += 1
-      s1 = string("(t",n,":",pe(tree.d1),",")
+      s1 = string("(t",n,":",e(tree.d1),",")
       n += 1
-      s2 = string("t",n,":",pe(tree.d2),"):",pe(tree))
+      s2 = string("t",n,":",e(tree.d2),"):",e(tree))
       return s1*s2
     else 
       n += 1
-      return string("(t",n,":",pe(tree.d1), ",",
-              to_string(tree.d2, n = n),"):", pe(tree))
+      return string("(t",n,":",e(tree.d1), ",",
+              to_string(tree.d2, n = n),"):", e(tree))
     end
   elseif istip(tree.d2)
     n += 1
     return string("(", to_string(tree.d1, n = n), 
-      ",t",n,":",pe(tree.d2), "):", pe(tree))
+      ",t",n,":",e(tree.d2), "):", e(tree))
   else
     return string("(",to_string(tree.d1, n = n),",",
-               to_string(tree.d2, n = sntn(tree.d1) + n),"):",pe(tree))
+               to_string(tree.d2, n = sntn(tree.d1, 0) + n),"):",e(tree))
   end
 end
 

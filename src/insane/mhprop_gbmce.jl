@@ -230,9 +230,9 @@ function triad_lvupdate_trio!(treep::iTgbmce,
 
   if -randexp() < acr
     llc += llr
-    copyto!(λprv_c, λprv_p)
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
+    unsafe_copyto!(λprv_c, 1, λprv_p, 1, lipr)
+    unsafe_copyto!(λd1v_c, 1, λd1v_p, 1, lid1)
+    unsafe_copyto!(λd2v_c, 1, λd2v_p, 1, lid2)
     gbm_copy_f!(treec, treep)
     gbm_copy_f!(treecd1, treepd1)
     gbm_copy_f!(treecd2, treepd2)
@@ -339,9 +339,9 @@ function triad_lupdate_root!(treep ::iTgbmce,
 
   if -randexp() < acr
     llc += llr
-    copyto!(λprv_c, λprv_p)
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
+    unsafe_copyto!(λprv_c, 1, λprv_p, 1, lipr)
+    unsafe_copyto!(λd1v_c, 1, λd1v_p, 1, lid1)
+    unsafe_copyto!(λd2v_c, 1, λd2v_p, 1, lid2)
     gbm_copy_f!(treec, treep)
     gbm_copy_f!(treecd1, treepd1)
     gbm_copy_f!(treecd2, treepd2)

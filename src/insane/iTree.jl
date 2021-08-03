@@ -43,40 +43,33 @@ with the following fields:
 
   d1: daughter tree 1
   d2: daughter tree 2
-  pe: pendant edge
-  iμ: is an extinction node
+  e:  edge
 
     sTpb()
 
 Constructs an empty `sTpb` object.
 
-    sTpb(pe::Float64)
+    sTpb(e::Float64)
 
-Constructs an empty `sTpb` object with pendant edge `pe`.
+Constructs an empty `sTpb` object with edge `e`.
 
-    sTpb(d1::sTpb, d2::sTpb, pe::Float64)
+    sTpb(d1::sTpb, d2::sTpb, e::Float64)
 
-Constructs an `sTpb` object with two `sTpb` daughters and pendant edge `pe`.
+Constructs an `sTpb` object with two `sTpb` daughters and edge `e`.
 """
 mutable struct sTpb <: sT
-  d1::Union{sTpb, Nothing}
-  d2::Union{sTpb, Nothing}
-  pe::Float64
+  d1::sTpb
+  d2::sTpb
+  e ::Float64
 
-  # inner constructor
-  sTpb(d1::Union{sTpb, Nothing}, d2::Union{sTpb, Nothing}, pe::Float64) = 
-    new(d1, d2, pe)
+  sTpb() = (x = new(); x.e = 0.0; x)
+  sTpb(e::Float64) = (x = new(); x.e = e; x)
+  sTpb(d1::sTpb, d2::sTpb, e::Float64) = new(d1, d2, e)
 end
-
-# outer constructors
-sTpb() = sTpb(nothing, nothing, 0.0)
-
-sTpb(pe::Float64) = sTpb(nothing, nothing, pe)
-
 
 # pretty-printing
 Base.show(io::IO, t::sTpb) = 
-  print(io, "insane simple pure-birth tree with ", sntn(t), " tips")
+  print(io, "insane simple pure-birth tree with ", sntn(t,0), " tips")
 
 
 
@@ -90,7 +83,7 @@ with the following fields:
 
   d1: daughter tree 1
   d2: daughter tree 2
-  pe: pendant edge
+  e:  edge
   iμ: is an extinction node
   fx: if it is fix
 
@@ -98,41 +91,39 @@ with the following fields:
 
 Constructs an empty `sTbd` object.
 
-    sTbd(pe::Float64)
+    sTbd(e::Float64)
 
-Constructs an empty `sTbd` object with pendant edge `pe`.
+Constructs an empty `sTbd` object with edge `e`.
 
-    sTbd(d1::sTbd, d2::sTbd, pe::Float64)
+    sTbd(d1::sTbd, d2::sTbd, e::Float64)
 
-Constructs an `sTbd` object with two `sTbd` daughters and pendant edge `pe`.
+Constructs an `sTbd` object with two `sTbd` daughters and edge `e`.
 """
 mutable struct sTbd <: sT
-  d1::Union{sTbd, Nothing}
-  d2::Union{sTbd, Nothing}
-  pe::Float64
+  d1::sTbd
+  d2::sTbd
+  e ::Float64
   iμ::Bool
   fx::Bool
 
-  # inner constructor
-  sTbd(d1::Union{sTbd, Nothing}, d2::Union{sTbd, Nothing}, 
-    pe::Float64, iμ::Bool, fx::Bool) = new(d1, d2, pe, iμ, fx)
+  sTbd() = (x = new(); x.e = 0.0; x.iμ = false; x.fx = false; x)
+  sTbd(e::Float64) = 
+    (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
+  sTbd(e::Float64, iμ::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.fx = false; x)
+  sTbd(e::Float64, iμ::Bool, fx::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x)
+  sTbd(d1::sTbd, d2::sTbd, e::Float64) = 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.iμ = false; x.fx = false; x)
+  sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool) = 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.iμ = iμ; x.fx = false; x)
+  sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool, fx::Bool) = 
+    new(d1, d2, e, iμ, fx)
 end
-
-# outer constructors
-sTbd() = sTbd(nothing, nothing, 0.0, false, false)
-
-sTbd(pe::Float64) = sTbd(nothing, nothing, pe, false, false)
-
-sTbd(pe::Float64, iμ::Bool) = sTbd(nothing, nothing, pe, iμ, false)
-
-sTbd(d1::sTbd, d2::sTbd, pe::Float64) = sTbd(d1, d2, pe, false, false)
-
-sTbd(d1::sTbd, d2::sTbd, pe::Float64, iμ::Bool) = 
-  sTbd(d1, d2, pe, iμ, false)
 
 # pretty-printing
 Base.show(io::IO, t::sTbd) = 
-  print(io, "insane simple birth-death tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane simple birth-death tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 
@@ -159,7 +150,7 @@ with the following fields:
 
   d1:  daughter tree 1
   d2:  daughter tree 2
-  pe:  pendant edge
+  e:   edge
   dt:  choice of time lag
   fdt: final `δt`
   lλ:  array of a Brownian motion evolution of `log(λ)`
@@ -168,35 +159,37 @@ with the following fields:
 
 Constructs an empty `iTgbmpb` object.
 
-    iTgbmpb(pe::Float64)
+    iTgbmpb(e::Float64)
 
 Constructs an empty `iTgbmpb` object with pendant edge `pe`.
 
-    iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, pe::Float64)
+    iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64)
 
 Constructs an `iTgbmpb` object with two `iTgbmpb` daughters and pendant edge `pe`.
 """
 mutable struct iTgbmpb <: iTgbm
-  d1 ::Union{iTgbmpb, Nothing}
-  d2 ::Union{iTgbmpb, Nothing}
-  pe ::Float64
+  d1 ::iTgbmpb
+  d2 ::iTgbmpb
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   lλ ::Array{Float64,1}
 
-  # inner constructor
-  iTgbmpb(d1::Union{iTgbmpb, Nothing}, d2::Union{iTgbmpb, Nothing}, pe::Float64, 
+  iTgbmpb() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; x.lλ = Float64[]; x)
+
+  iTgbmpb(e::Float64, dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
+
+  iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, 
     dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
-      new(d1, d2, pe, dt, fdt, lλ)
+      new(d1, d2, e, dt, fdt, lλ)
 end
 
-# outer constructors
-iTgbmpb() = 
-  iTgbmpb(nothing, nothing, 0.0, 0.0, 0.0, Float64[])
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
-  print(io, "insane pb-gbm tree with ", sntn(t), " tips")
+  print(io, "insane pb-gbm tree with ", sntn(t,0), " tips")
 
 
 
@@ -215,16 +208,15 @@ function iTgbmpb(tree::sTpb,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet  = pe(tree)
+  et = e(tree)
 
-  if iszero(pet)
+  if iszero(et)
     iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, σλ), 
             iTgbmpb(tree.d2, δt, srδt, lλa, σλ),
-            pe(tree), δt, 0.0, Float64[lλa])
-
+            et, δt, 0.0, Float64[lλa])
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     if iszero(fdti)
       fdti = δt
@@ -233,24 +225,15 @@ function iTgbmpb(tree::sTpb,
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
     l   = lastindex(lλv)
 
-    iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], σλ), 
-            iTgbmpb(tree.d2, δt, srδt, lλv[l], σλ),
-            pe(tree), δt, fdti, lλv)
-
+    if isdefined(tree, :d1)
+      iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], σλ), 
+              iTgbmpb(tree.d2, δt, srδt, lλv[l], σλ),
+              et, δt, fdti, lλv)
+    else
+      iTgbmpb(et, δt, fdti, lλv)
+    end
   end
 end
-
-"""
-    iTgbmpb(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            σλ  ::Float64)
-
-Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
-"""
-iTgbmpb(::Nothing, δt::Float64, srδt::Float64, lλa::Float64, σλ::Float64) = 
-  nothing
 
 
 
@@ -265,61 +248,68 @@ with the following fields:
 
   d1:   daughter tree 1
   d2:   daughter tree 2
-  pe:   pendant edge
+  e:    edge
   iμ:   if extinct node
   fx:   if fix (observed) node
   dt:   choice of time lag
   fdt:  final `dt`
   lλ:   array of a Brownian motion evolution of `log(λ)`
 
-  iTgbmce(d1  ::Union{iTgbmce, Nothing}, 
-          d2  ::Union{iTgbmce, Nothing}, 
-          pe  ::Float64, 
-          dt  ::Float64,
+  iTgbmce(d1 ::iTgbmce, 
+          d2 ::iTgbmce, 
+          e  ::Float64, 
+          dt ::Float64,
           fdt::Float64,
-          iμ   ::Bool, 
-          fx   ::Bool, 
-          lλ   ::Array{Float64,1})
-
-Constructs an `iTgbmce` object with two `iTgbmce` daughters and pendant edge `pe`.
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1})
 """
 mutable struct iTgbmce <: iTgbm
-  d1 ::Union{iTgbmce, Nothing}
-  d2 ::Union{iTgbmce, Nothing}
-  pe ::Float64
+  d1 ::iTgbmce
+  d2 ::iTgbmce
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   iμ ::Bool
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  # inner constructor
-  iTgbmce(d1 ::Union{iTgbmce, Nothing}, 
-          d2 ::Union{iTgbmce, Nothing}, 
-          pe ::Float64, 
+  iTgbmce() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
+
+  iTgbmce(e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool,
+          fx ::Bool,
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
+
+  iTgbmce(d1 ::iTgbmce, 
+          d2 ::iTgbmce, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = false; x.fx = false; x.lλ = lλ; x)
+
+  iTgbmce(d1 ::iTgbmce, 
+          d2 ::iTgbmce, 
+          e  ::Float64, 
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool, 
           fx ::Bool, 
           lλ ::Array{Float64,1}) = 
-    new(d1, d2, pe, dt, fdt, iμ, fx, lλ)
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ)
 end
-
-# outer constructors
-iTgbmce() = iTgbmce(nothing, nothing, 0.0, 0.0, 0.0, false, false, Float64[])
-
-# outer constructors
-iTgbmce(d1 ::Union{iTgbmce, Nothing}, 
-        d2 ::Union{iTgbmce, Nothing}, 
-        pe ::Float64, 
-        dt ::Float64,
-        fdt::Float64,
-        lλ ::Array{Float64,1}) = 
-  iTgbmce(d1, d2, pe, dt, fdt, false, false, lλ)
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmce) = 
-  print(io, "insane gbm-ce tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane gbm-ce tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 
@@ -329,15 +319,13 @@ Base.show(io::IO, t::iTgbmce) =
 
 Demotes a tree of type `iTgbmce` to `sTbd`.
 """
-sTbd(tree::iTgbmce) =
-  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
-
-"""
-    sTbd(tree::Nothing) 
-
-Demotes a tree of type `iTgbmce` to `sTbd`.
-"""
-sTbd(tree::Nothing) = nothing
+function sTbd(tree::iTgbmce)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
+  else
+    sTbd(e(tree), isextinct(tree))
+  end
+end
 
 
 
@@ -359,16 +347,16 @@ function iTgbmce(tree::sTbd,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet  = pe(tree)
+  et = e(tree)
 
   # if crown root
-  if iszero(pet)
+  if iszero(et)
     iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, σλ), 
             iTgbmce(tree.d2, δt, srδt, lλa, σλ),
-            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
+            et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
 
@@ -378,31 +366,15 @@ function iTgbmce(tree::sTbd,
 
     l = lastindex(lλv)
 
-    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], σλ), 
-            iTgbmce(tree.d2, δt, srδt, lλv[l], σλ),
-            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv)
+    if isdefined(tree, :d1)
+      iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], σλ), 
+              iTgbmce(tree.d2, δt, srδt, lλv[l], σλ),
+              et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    else
+      iTgbmce(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    end
   end
 end
-
-
-"""
-    iTgbmce(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            lμa ::Float64, 
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmce` according to some values for `λ` and `μ` 
-diffusion.
-"""
-iTgbmce(::Nothing, 
-        δt  ::Float64, 
-        srδt::Float64, 
-        lλa ::Float64, 
-        σλ  ::Float64) = nothing
-
 
 
 
@@ -417,61 +389,70 @@ with the following fields:
 
   d1:   daughter tree 1
   d2:   daughter tree 2
-  pe:   pendant edge
+  e:    edge
   iμ:   if extinct node
   fx:   if fix (observed) node
   dt:   choice of time lag
   fdt:  final `dt`
   lλ:   array of a Brownian motion evolution of `log(λ)`
 
-  iTgbmct(d1  ::Union{iTgbmct, Nothing}, 
-          d2  ::Union{iTgbmct, Nothing}, 
-          pe  ::Float64, 
-          dt  ::Float64,
+  iTgbmct(d1 ::iTgbmct, 
+          d2 ::iTgbmct, 
+          e  ::Float64, 
+          dt ::Float64,
           fdt::Float64,
-          iμ   ::Bool, 
-          fx   ::Bool, 
-          lλ   ::Array{Float64,1})
-
-Constructs an `iTgbmct` object with two `iTgbmct` daughters and pendant edge `pe`.
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1})
 """
 mutable struct iTgbmct <: iTgbm
-  d1 ::Union{iTgbmct, Nothing}
-  d2 ::Union{iTgbmct, Nothing}
-  pe ::Float64
+  d1 ::iTgbmct
+  d2 ::iTgbmct
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   iμ ::Bool
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  # inner constructor
-  iTgbmct(d1 ::Union{iTgbmct, Nothing}, 
-          d2 ::Union{iTgbmct, Nothing}, 
-          pe ::Float64, 
+  iTgbmct() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
+
+  iTgbmct(e  ::Float64, 
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool, 
           fx ::Bool, 
           lλ ::Array{Float64,1}) = 
-    new(d1, d2, pe, dt, fdt, iμ, fx, lλ)
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
+
+  iTgbmct(d1 ::iTgbmct, 
+          d2 ::iTgbmct, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          lλ ::Array{Float64,1}) = 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = false; x.fx = false; x.lλ = lλ; x)
+
+  # inner constructor
+  iTgbmct(d1 ::iTgbmct, 
+          d2 ::iTgbmct, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1}) = 
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ)
 end
 
-# outer constructors
-iTgbmct() = iTgbmct(nothing, nothing, 0.0, 0.0, 0.0, false, false, Float64[])
-
-# outer constructors
-iTgbmct(d1 ::Union{iTgbmct, Nothing}, 
-        d2 ::Union{iTgbmct, Nothing}, 
-        pe ::Float64, 
-        dt ::Float64,
-        fdt::Float64,
-        lλ ::Array{Float64,1}) = 
-  iTgbmct(d1, d2, pe, dt, fdt, false, false, lλ)
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmct) = 
-  print(io, "insane gbm-ct tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane gbm-ct tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 
@@ -481,15 +462,13 @@ Base.show(io::IO, t::iTgbmct) =
 
 Demotes a tree of type `iTgbmct` to `sTbd`.
 """
-sTbd(tree::iTgbmct) =
-  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
-
-"""
-    sTbd(tree::Nothing) 
-
-Demotes a tree of type `iTgbmct` to `sTbd`.
-"""
-sTbd(tree::Nothing) = nothing
+function sTbd(tree::iTgbmct)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
+  else
+    sTbd(e(tree), isextinct(tree))
+  end
+end
 
 
 
@@ -511,16 +490,16 @@ function iTgbmct(tree::sTbd,
                  lλa ::Float64, 
                  σλ  ::Float64)
 
-  pet  = pe(tree)
+  et = e(tree)
 
   # if crown root
-  if iszero(pet)
+  if iszero(et)
     iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, σλ), 
             iTgbmct(tree.d2, δt, srδt, lλa, σλ),
-            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
+            et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
 
@@ -530,30 +509,15 @@ function iTgbmct(tree::sTbd,
 
     l = lastindex(lλv)
 
-    iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], σλ), 
-            iTgbmct(tree.d2, δt, srδt, lλv[l], σλ),
-            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv)
+    if isdefined(tree, :d1)
+      iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], σλ), 
+              iTgbmct(tree.d2, δt, srδt, lλv[l], σλ),
+              et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    else
+      iTgbmct(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
+    end
   end
 end
-
-
-"""
-    iTgbmct(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            lμa ::Float64, 
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmct` according to some values for `λ` and `μ` 
-diffusion.
-"""
-iTgbmct(::Nothing, 
-        δt  ::Float64, 
-        srδt::Float64, 
-        lλa ::Float64, 
-        σλ  ::Float64) = nothing
 
 
 
@@ -568,7 +532,7 @@ with the following fields:
 
   d1:   daughter tree 1
   d2:   daughter tree 2
-  pe:   pendant edge
+  e:    pendant edge
   iμ:   if extinct node
   fx:   if fix (observed) node
   dt:   choice of time lag
@@ -576,22 +540,20 @@ with the following fields:
   lλ:   array of a Brownian motion evolution of `log(λ)`
   lμ:   array of a Brownian motion evolution of `log(μ)`
 
-  iTgbmbd(d1  ::Union{iTgbmbd, Nothing}, 
-          d2  ::Union{iTgbmbd, Nothing}, 
-          pe  ::Float64, 
-          dt  ::Float64,
+  iTgbmbd(d1 ::iTgbmbd, 
+          d2 ::iTgbmbd, 
+          e  ::Float64, 
+          dt ::Float64,
           fdt::Float64,
-          iμ   ::Bool, 
-          fx   ::Bool, 
-          lλ   ::Array{Float64,1},
-          lμ   ::Array{Float64,1})
-
-Constructs an `iTgbmbd` object with two `iTgbmbd` daughters and pendant edge `pe`.
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1})
 """
 mutable struct iTgbmbd <: iTgbm
-  d1 ::Union{iTgbmbd, Nothing}
-  d2 ::Union{iTgbmbd, Nothing}
-  pe ::Float64
+  d1 ::iTgbmbd
+  d2 ::iTgbmbd
+  e  ::Float64
   dt ::Float64
   fdt::Float64
   iμ ::Bool
@@ -599,35 +561,46 @@ mutable struct iTgbmbd <: iTgbm
   lλ ::Array{Float64,1}
   lμ ::Array{Float64,1}
 
-  # inner constructor
-  iTgbmbd(d1 ::Union{iTgbmbd, Nothing}, 
-          d2 ::Union{iTgbmbd, Nothing}, 
-          pe ::Float64, 
+  iTgbmbd() = 
+    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
+      x.iμ = false; x.fx = false; x.lλ = Float64[]; x.lμ = Float64[]; x)
+
+  iTgbmbd(e  ::Float64, 
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool, 
           fx ::Bool, 
           lλ ::Array{Float64,1},
           lμ ::Array{Float64,1}) = 
-    new(d1, d2, pe, dt, fdt, iμ, fx, lλ, lμ)
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+
+  iTgbmbd(d1 ::iTgbmbd, 
+          d2 ::iTgbmbd, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1}) = 
+    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
+      x.iμ = false; x.fx = false; x.lλ = lλ; x.lμ = lμ; x)
+
+  iTgbmbd(d1 ::iTgbmbd, 
+          d2 ::iTgbmbd, 
+          e  ::Float64, 
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool, 
+          fx ::Bool, 
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1}) = 
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ, lμ)
 end
 
-# outer constructors
-iTgbmbd() = iTgbmbd(nothing, nothing, 0.0, 0.0, 0.0, false, false, 
-            Float64[], Float64[])
-
-# outer constructors
-iTgbmbd(d1 ::Union{iTgbmbd, Nothing}, 
-        d2 ::Union{iTgbmbd, Nothing}, 
-        pe ::Float64, 
-        dt ::Float64,
-        fdt::Float64,
-        lλ ::Array{Float64,1}) = 
-  iTgbmbd(d1, d2, pe, dt, fdt, false, false, lλ, Float64[])
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 
-  print(io, "insane bd-gbm tree with ", sntn(t), " tips (", snen(t)," extinct)")
+  print(io, "insane bd-gbm tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
 
 
 
@@ -637,15 +610,13 @@ Base.show(io::IO, t::iTgbmbd) =
 
 Demotes a tree of type `iTgbmbd` to `sTbd`.
 """
-sTbd(tree::iTgbmbd) =
-  sTbd(sTbd(tree.d1), sTbd(tree.d2), pe(tree), isextinct(tree), false)
-
-"""
-    sTbd(tree::Nothing) 
-
-Demotes a tree of type `iTgbmbd` to `sTbd`.
-"""
-sTbd(tree::Nothing) = nothing
+function sTbd(tree::iTgbmbd)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
+  else  
+    sTbd(e(tree), isextinct(tree), false)
+  end
+end
 
 
 
@@ -670,17 +641,17 @@ function iTgbmbd(tree::sTbd,
                  σλ  ::Float64,
                  σμ  ::Float64)
 
-  pet  = pe(tree)
+  et  = e(tree)
 
   # if crown root
-  if iszero(pet)
+  if iszero(et)
     iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, σλ, σμ), 
             iTgbmbd(tree.d2, δt, srδt, lλa, lμa, σλ, σμ),
-            pe(tree), δt, 0.0, isextinct(tree), isfix(tree), 
+            e(tree), δt, 0.0, isextinct(tree), isfix(tree), 
             Float64[lλa], Float64[lμa])
   else
-    nt   = Int64(fld(pet,δt))
-    fdti = mod(pet, δt)
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
 
     lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
     lμv = sim_bm(lμa, σμ, srδt, nt, fdti)
@@ -691,30 +662,13 @@ function iTgbmbd(tree::sTbd,
 
     l = lastindex(lμv)
 
-    iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
-            iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
-            pe(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
+    if isdefined(tree, :d1)
+      iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
+              iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
+              e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
+    else
+      iTgbmbd(e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
+    end
   end
 end
-
-
-"""
-    iTgbmbd(::Nothing, 
-            δt  ::Float64, 
-            srδt::Float64, 
-            lλa ::Float64, 
-            lμa ::Float64, 
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmbd` according to some values for `λ` and `μ` 
-diffusion.
-"""
-iTgbmbd(::Nothing, 
-        δt  ::Float64, 
-        srδt::Float64, 
-        lλa ::Float64, 
-        lμa ::Float64, 
-        σλ  ::Float64,
-        σμ  ::Float64) = nothing
 

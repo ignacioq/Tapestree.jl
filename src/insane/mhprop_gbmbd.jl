@@ -273,12 +273,12 @@ function triad_lvupdate_trio!(treep::iTgbmbd,
 
   if -randexp() < acr
     llc += llr
-    copyto!(λprv_c, λprv_p)
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
-    copyto!(μprv_c, μprv_p)
-    copyto!(μd1v_c, μd1v_p)
-    copyto!(μd2v_c, μd2v_p)
+    unsafe_copyto!(λprv_c, 1, λprv_p, 1, lipr)
+    unsafe_copyto!(λd1v_c, 1, λd1v_p, 1, lid1)
+    unsafe_copyto!(λd2v_c, 1, λd2v_p, 1, lid2)
+    unsafe_copyto!(μprv_c, 1, μprv_p, 1, lipr)
+    unsafe_copyto!(μd1v_c, 1, μd1v_p, 1, lid1)
+    unsafe_copyto!(μd2v_c, 1, μd2v_p, 1, lid2)
     gbm_copy_f!(treec, treep)
     gbm_copy_f!(treecd1, treepd1)
     gbm_copy_f!(treecd2, treepd2)
@@ -410,12 +410,12 @@ function triad_lupdate_root!(treep ::iTgbmbd,
 
   if -randexp() < acr
     llc += llr
-    copyto!(λprv_c, λprv_p)
-    copyto!(λd1v_c, λd1v_p)
-    copyto!(λd2v_c, λd2v_p)
-    copyto!(μprv_c, μprv_p)
-    copyto!(μd1v_c, μd1v_p)
-    copyto!(μd2v_c, μd2v_p)
+    unsafe_copyto!(λprv_c, 1, λprv_p, 1, lipr)
+    unsafe_copyto!(λd1v_c, 1, λd1v_p, 1, lid1)
+    unsafe_copyto!(λd2v_c, 1, λd2v_p, 1, lid2)
+    unsafe_copyto!(μprv_c, 1, μprv_p, 1, lipr)
+    unsafe_copyto!(μd1v_c, 1, μd1v_p, 1, lid1)
+    unsafe_copyto!(μd2v_c, 1, μd2v_p, 1, lid2)
     gbm_copy_f!(treec, treep)
     gbm_copy_f!(treecd1, treepd1)
     gbm_copy_f!(treecd2, treepd2)
