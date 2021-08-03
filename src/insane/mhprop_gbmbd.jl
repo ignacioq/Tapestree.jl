@@ -87,7 +87,6 @@ function daughters_lprop!(treep::iTgbmbd,
   ped1 = td1v[1]
   ped2 = td2v[2]
 
-
   bb!(λd1v_p, λf, λd1, μd1v_p, μf, μd1, td1v[2], σλ, σμ, δt, srδt)
   bb!(λd2v_p, λf, λd2, μd2v_p, μf, μd2, td2v[2], σλ, σμ, δt, srδt)
 
