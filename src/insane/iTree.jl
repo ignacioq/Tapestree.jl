@@ -62,7 +62,7 @@ mutable struct sTpb <: sT
   d2::sTpb
   e ::Float64
 
-  sTpb() = (x = new(); x.e = 0.0; x)
+  sTpb() = new()
   sTpb(e::Float64) = (x = new(); x.e = e; x)
   sTpb(d1::sTpb, d2::sTpb, e::Float64) = new(d1, d2, e)
 end
@@ -106,17 +106,13 @@ mutable struct sTbd <: sT
   iμ::Bool
   fx::Bool
 
-  sTbd() = (x = new(); x.e = 0.0; x.iμ = false; x.fx = false; x)
+  sTbd() = new()
   sTbd(e::Float64) = 
-    (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
+    (x = new(); x.e = e; x)
   sTbd(e::Float64, iμ::Bool) = 
-    (x = new(); x.e = e; x.iμ = iμ; x.fx = false; x)
+    (x = new(); x.e = e; x.iμ = iμ; x)
   sTbd(e::Float64, iμ::Bool, fx::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x)
-  sTbd(d1::sTbd, d2::sTbd, e::Float64) = 
-    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.iμ = false; x.fx = false; x)
-  sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool) = 
-    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.iμ = iμ; x.fx = false; x)
   sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool, fx::Bool) = 
     new(d1, d2, e, iμ, fx)
 end
@@ -175,8 +171,7 @@ mutable struct iTgbmpb <: iTgbm
   fdt::Float64
   lλ ::Array{Float64,1}
 
-  iTgbmpb() = 
-    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; x.lλ = Float64[]; x)
+  iTgbmpb() = new()
 
   iTgbmpb(e::Float64, dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
@@ -274,9 +269,7 @@ mutable struct iTgbmce <: iTgbm
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  iTgbmce() = 
-    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
+  iTgbmce() = new()
 
   iTgbmce(e  ::Float64, 
           dt ::Float64,
@@ -286,15 +279,6 @@ mutable struct iTgbmce <: iTgbm
           lλ ::Array{Float64,1}) = 
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
-
-  iTgbmce(d1 ::iTgbmce, 
-          d2 ::iTgbmce, 
-          e  ::Float64, 
-          dt ::Float64,
-          fdt::Float64,
-          lλ ::Array{Float64,1}) = 
-    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = false; x.fx = false; x.lλ = lλ; x)
 
   iTgbmce(d1 ::iTgbmce, 
           d2 ::iTgbmce, 
@@ -415,9 +399,7 @@ mutable struct iTgbmct <: iTgbm
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  iTgbmct() = 
-    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[]; x)
+  iTgbmct() = new()
 
   iTgbmct(e  ::Float64, 
           dt ::Float64,
@@ -428,16 +410,6 @@ mutable struct iTgbmct <: iTgbm
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
 
-  iTgbmct(d1 ::iTgbmct, 
-          d2 ::iTgbmct, 
-          e  ::Float64, 
-          dt ::Float64,
-          fdt::Float64,
-          lλ ::Array{Float64,1}) = 
-    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = false; x.fx = false; x.lλ = lλ; x)
-
-  # inner constructor
   iTgbmct(d1 ::iTgbmct, 
           d2 ::iTgbmct, 
           e  ::Float64, 
@@ -561,9 +533,7 @@ mutable struct iTgbmbd <: iTgbm
   lλ ::Array{Float64,1}
   lμ ::Array{Float64,1}
 
-  iTgbmbd() = 
-    (x = new(); x.e = 0.0; x.dt = 0.0; x.fdt = 0.0; 
-      x.iμ = false; x.fx = false; x.lλ = Float64[]; x.lμ = Float64[]; x)
+  iTgbmbd() = new()
 
   iTgbmbd(e  ::Float64, 
           dt ::Float64,
@@ -574,16 +544,6 @@ mutable struct iTgbmbd <: iTgbm
           lμ ::Array{Float64,1}) = 
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; 
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
-
-  iTgbmbd(d1 ::iTgbmbd, 
-          d2 ::iTgbmbd, 
-          e  ::Float64, 
-          dt ::Float64,
-          fdt::Float64,
-          lλ ::Array{Float64,1},
-          lμ ::Array{Float64,1}) = 
-    (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; x.dt = dt; x.fdt = fdt; 
-      x.iμ = false; x.fx = false; x.lλ = lλ; x.lμ = lμ; x)
 
   iTgbmbd(d1 ::iTgbmbd, 
           d2 ::iTgbmbd, 
