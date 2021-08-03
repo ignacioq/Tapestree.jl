@@ -47,11 +47,12 @@ function simulate_sse(λ          ::Array{Float64,1},
                       rejectel0  ::Bool   = false,
                       verbose    ::Bool   = true,
                       rm_ext     ::Bool   = true,
-                      states_only::Bool   = false) where {N}
+                      states_only::Bool   = false,
+                      start      ::Symbol = :crown) where {N}
 
   # make simulation
   ed, el, st, ea, ee, n, S, k = 
-    simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max)
+    simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max, start)
 
   ne = lastindex(ee)
 
@@ -60,7 +61,7 @@ function simulate_sse(λ          ::Array{Float64,1},
   if verbose
     @info "Tree with $n extant and $ne extinct species successfully simulated"
 
-    if n < 2
+    if n < 1
       @warn "\n
       What would you do if an endangered animal is eating an endangered plant? \n 
       Sometimes nature is too cruel..."
@@ -81,17 +82,17 @@ function simulate_sse(λ          ::Array{Float64,1},
   end
 
   if retry_ext 
-    while n < 2 || (rejectel0 && in(0.0, el))
+    while n < 1 || (rejectel0 && in(0.0, el))
 
       ed, el, st, ea, ee, n, S, k = 
-        simulate_edges(λ, μ, l, g, q, t, δt, ast, nspp_max)
+        simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max, start)
 
       ne = lastindex(ee)
 
       if verbose
         @info "Tree with $n extant and $ne extinct species successfully simulated"
 
-        if n < 2
+        if n < 1
           @warn "\n
           What would you do if an endangered animal is eating an endangered plant? \n 
           Sometimes nature is too cruel..."
@@ -116,7 +117,7 @@ function simulate_sse(λ          ::Array{Float64,1},
       end
     end
   else 
-    if n < 2
+    if n < 1
       return Dict{Int64, Vector{Float64}}(), ed, el, false
     end
   end
@@ -189,7 +190,8 @@ function simulate_edges(λ       ::Array{Float64,1},
                         simt    ::Float64,
                         δt      ::Float64,
                         cov_mod ::Tuple{Vararg{String}},
-                        nspp_max::Int64) where {N}
+                        nspp_max::Int64,
+                        start   ::Symbol) where {N}
 
   h  = div(isqrt(length(q)*4 + 1) + 1, 2)
   k  = div(length(l), h)
@@ -235,19 +237,29 @@ function simulate_edges(λ       ::Array{Float64,1},
     si = prop_sample(spr, isp, ns)
   end
 
-  # n = 2 starting lineages (assume no stem branch)
-  n = 2
+  if start == :crown
 
-  # edges alive
-  ea = [1, 2]
+    # edges alive
+    ea = [1, 2]
 
-  # edges extinct
-  ee = Int64[]
+    # edges extinct
+    ee = Int64[]
 
-  # edge array
-  ed = zeros(Int64, nspp_max*2, 2)
-  ed[ea,:] = [1 2;
-              1 3]
+    # edge array
+    ed = zeros(Int64, nspp_max*2, 2)
+    ed[ea,:] = [1 2;
+                1 3]
+  else
+    # edges alive
+    ea = [1]
+
+    # edges extinct
+    ee = Int64[]
+
+    # edge array
+    ed = zeros(Int64, nspp_max*2, 2)
+    ed[ea,:] = [1 2]
+  end
 
   el = zeros(nspp_max*2)            # edge lengths
   st = zeros(Int64,nspp_max*2)      # state for each edge
@@ -285,12 +297,19 @@ function simulate_edges(λ       ::Array{Float64,1},
     end
   end
 
-  # model first speciation event for daughter inheritance
-  st[ea] = λtos[si][prop_sample(svλ[si], λpr[si], length(svλ[si]))]
-
-  i0 = 3 # current first edge with 0
-  n  = 2 # current number of species
-  mx = 3 # current maximum node number
+  # start states
+  if start == :crown
+    # model first speciation event for daughter inheritance
+    st[ea] = λtos[si][prop_sample(svλ[si], λpr[si], length(svλ[si]))]
+    i0 = 3 # current first edge with 0
+    n  = 2 # current number of species
+    mx = 3 # current maximum node number
+  else
+    st[ea] = si
+    i0 = 2 # current first edge with 0
+    n  = 1 # current number of species
+    mx = 2 # current maximum node number
+  end
 
   ieaa = Int64[] # indexes of ea to add
   iead = Int64[] # indexes of ea to delete
@@ -379,7 +398,9 @@ function simulate_edges(λ       ::Array{Float64,1},
 
             # if tree goes extinct
             if isone(n)
-              return zeros(Int64,0,2), Float64[], Int64[], Int64[], Int64[], 0, Sgh[], 0
+              push!(ee, v)      # extinct edges
+              deleteat!(ea, i)
+              return ed, el, st, ea, ee, 0, S, k
             end
 
             push!(ee, v)      # extinct edges
