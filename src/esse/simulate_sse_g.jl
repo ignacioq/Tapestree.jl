@@ -397,10 +397,9 @@ function simulate_edges(λ       ::Array{Float64,1},
       end
 
       # time stop trigger
-      isapprox(simt, 0.0, atol = atol) && break
-
-      # to be  safe
-      simt < 0.0 && break
+      if isapprox(simt, 0.0, atol = atol) || simt < 0.0
+        break
+      end
     end
 
     # remove 0s
