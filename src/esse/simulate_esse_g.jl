@@ -149,11 +149,7 @@ function simulate_sse(λ          ::Array{Float64,1},
 
   ## round branch lengths
   # find out order of simulation
-  i = 1
-  while !isone(δt*Float64(10^i))
-    i += 1
-  end
-  el = map(x -> round(x; digits = i+1), el)::Array{Float64,1}
+  map!(x -> round(x; digits = abs(ceil(Int64, log10(δt)))+1), el, el)
 
   tv = states_to_values(tv, S, k)
 
@@ -310,6 +306,8 @@ function simulate_edges(λ       ::Array{Float64,1},
     mx = 2 # current maximum node number
   end
 
+  atol = 10.0^(floor(Int64, log10(δt)) - 2)
+
   ieaa = Int64[] # indexes of ea to add
   iead = Int64[] # indexes of ea to delete
 
@@ -328,8 +326,6 @@ function simulate_edges(λ       ::Array{Float64,1},
       updλpr!(r)
       updμpr!(r)
       updgpr!(r)
-
-      simt < 0.0 && break
 
       # one time step for all edges alive `ea`
       for (i,v) in enumerate(ea)
@@ -445,6 +441,11 @@ function simulate_edges(λ       ::Array{Float64,1},
         empty!(iead)
       end
 
+      # time stop trigger
+      isapprox(simt, 0.0, atol = atol) && break
+
+      # to be  safe
+      simt < 0.0 && break
     end
 
     # remove 0s
