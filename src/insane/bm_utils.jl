@@ -17,7 +17,9 @@ Created 10 09 2020
         bbiλ::Array{Float64,1},
         ii  ::Int64,
         tl  ::Int64,
+        α   ::Float64,
         σλ  ::Float64,
+        δt  ::Float64,
         srδt::Float64) where {T <: iTgbm}
 
 Fill fix with previously simulated geometric Brownian motion and simulate
@@ -27,7 +29,9 @@ geometric Brownian motion in place for the unfixed trees.
                      bbiλ::Array{Float64,1},
                      ii  ::Int64,
                      tl  ::Int64,
+                     α   ::Float64,
                      σλ  ::Float64,
+                     δt  ::Float64,
                      srδt::Float64) where {T <: iTgbm}
 
   @inbounds begin
@@ -43,11 +47,11 @@ geometric Brownian motion in place for the unfixed trees.
 
     if fi < tl
       if isfix(tree.d1)
-        bm!(tree.d1::T, bbiλ, fi, tl, σλ, srδt)
-        bm!(tree.d2::T, λv[l], σλ, srδt)
+        bm!(tree.d1::T, bbiλ, fi, tl, α, σλ, δt, srδt)
+        bm!(tree.d2::T, λv[l], α, σλ, δt, srδt)
       elseif isfix(tree.d2)
-        bm!(tree.d1::T, λv[l], σλ, srδt)
-        bm!(tree.d2::T, bbiλ, fi, tl, σλ, srδt)
+        bm!(tree.d1::T, λv[l], α, σλ, δt, srδt)
+        bm!(tree.d2::T, bbiλ, fi, tl, α, σλ, δt, srδt)
       end
     end
 
@@ -60,31 +64,36 @@ end
 
 
 """
-  bm!(tree::T,
+    bm!(tree::T,
       λt  ::Float64,
+      α   ::Float64,
       σλ  ::Float64,
+      δt  ::Float64,
       srδt::Float64) where {T <: iTgbm}
 
 Simulate birth-death geometric Brownian motion in place.
 """
 function bm!(tree::T,
              λt  ::Float64,
+             α   ::Float64,
              σλ  ::Float64,
+             δt  ::Float64,
              srδt::Float64) where {T <: iTgbm}
 
   λv  = lλ(tree)
 
-  bm!(λv, λt, fdt(tree), σλ, srδt)
+  bm!(λv, λt, α, σλ, δt, fdt(tree), srδt)
 
   l = lastindex(λv)
 
-  if isdefined(tree,:d1)
-    bm!(tree.d1::T, λv[l], σλ, srδt)
-    bm!(tree.d2::T, λv[l], σλ, srδt)
+  if isdefined(tree, :d1)
+    bm!(tree.d1::T, λv[l], α, σλ, δt, srδt)
+    bm!(tree.d2::T, λv[l], α, σλ, δt, srδt)
   end
 
   return nothing
 end
+
 
 
 
@@ -95,8 +104,10 @@ end
         bbiμ::Array{Float64,1},
         ii  ::Int64,
         tl  ::Int64,
+        α   ::Float64,
         σλ  ::Float64,
         σμ  ::Float64,
+        δt  ::Float64,
         srδt::Float64)
 
 Fill fix with previously simulated geometric Brownian motion and simulate
@@ -107,8 +118,10 @@ geometric Brownian motion in place for the unfixed trees.
                      bbiμ::Array{Float64,1},
                      ii  ::Int64,
                      tl  ::Int64,
+                     α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
+                     δt  ::Float64,
                      srδt::Float64)
 
   @inbounds begin
@@ -126,11 +139,11 @@ geometric Brownian motion in place for the unfixed trees.
 
     if fi < tl
       if isfix(tree.d1)
-        bm!(tree.d1::iTgbmbd, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
-        bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+        bm!(tree.d1, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
+        bm!(tree.d2, λv[l], μv[l], α, σλ, σμ, δt, srδt)
       elseif isfix(tree.d2)
-        bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-        bm!(tree.d2::iTgbmbd, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
+        bm!(tree.d1, λv[l], μv[l], α, σλ, σμ, δt, srδt)
+        bm!(tree.d2, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
       end
     end
 
@@ -142,33 +155,41 @@ end
 
 
 
+
 """
   bm!(tree::iTgbmbd,
       λt  ::Float64,
       μt  ::Float64,
+      α   ::Float64,
       σλ  ::Float64,
       σμ  ::Float64,
+      δt  ::Float64,
       srδt::Float64)
 
 Simulate birth-death geometric Brownian motion in place.
 """
-function bm!(tree::iTgbmbd,
-             λt  ::Float64,
-             μt  ::Float64,
-             σλ  ::Float64,
-             σμ  ::Float64,
-             srδt::Float64)
+@inline function bm!(tree::iTgbmbd,
+                     λt  ::Float64,
+                     μt  ::Float64,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
 
-  λv  = lλ(tree)
-  μv  = lμ(tree)
+  @inbounds begin
 
-  bm!(λv, μv, λt, μt, fdt(tree), σλ, σμ, srδt)
+    λv  = lλ(tree)
+    μv  = lμ(tree)
 
-  l = lastindex(λv)
+    bm!(λv, μv, λt, μt, α, σλ, σμ, δt, fdt(tree), srδt)
 
-  if isdefined(tree, :d1)
-    bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-    bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+    l = lastindex(λv)
+
+    if isdefined(tree, :d1)
+      bm!(tree.d1, λv[l], μv[l], α, σλ, σμ, δt, srδt)
+      bm!(tree.d2, λv[l], μv[l], α, σλ, σμ, δt, srδt)
+    end
   end
 
   return nothing
@@ -221,28 +242,24 @@ end
 
 
 
-ll_bm(x0, 1.4, 0.3, 0.1, 0.1, sqrt(0.1)) - 
-ll_bm(x1, 1.4, 0.3, 0.1, 0.1, sqrt(0.1))
-
-llr_bm(x0, x1, 1.4, 0.3, 0.1, 0.1, sqrt(0.1))
-
-
 
 """
     llr_bm(xp  ::Array{Float64,1},
            xc  ::Array{Float64,1},
-           fdt::Float64,
-           σ   ::Float64, 
+           α   ::Float64,
+           σ   ::Float64,
+           δt  ::Float64,
+           fdt ::Float64,
            srδt::Float64)
 
 Returns the log-likelihood ratio for Brownian motion.
 """
 @inline function llr_bm(xp  ::Array{Float64,1},
                         xc  ::Array{Float64,1},
-                        α  ::Float64,
-                        σ  ::Float64,
-                        δt ::Float64,
-                        fdt::Float64,
+                        α   ::Float64,
+                        σ   ::Float64,
+                        δt  ::Float64,
+                        fdt ::Float64,
                         srδt::Float64)
 
   @inbounds begin
