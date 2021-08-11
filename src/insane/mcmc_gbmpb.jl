@@ -419,7 +419,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
 
     else
       # if d1 is terminal
-      lλp = duoprop(λpr - α*pepr, λd2 + α*ped2, pepr, ped2, σλ)
+      lλp = duoprop(λpr + α*pepr, λd2 - α*ped2, pepr, ped2, σλ)
 
       # simulate fix tree vector
       bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
@@ -429,7 +429,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
   elseif ter[2]
     # if d2 is terminal
     # node proposal
-    lλp = duoprop(λpr - α*pepr, λd1 + α*ped1, pepr, ped1, σλ)
+    lλp = duoprop(λpr + α*pepr, λd1 - α*ped1, pepr, ped1, σλ)
 
     # simulate fix tree vector
     bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
@@ -439,7 +439,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
   else
     # if no terminal branches involved
     # node proposal
-    lλp  = trioprop(λpr - α*pepr, λd1 + α*ped1, λd2 - α*ped2, 
+    lλp  = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
              pepr, ped1, ped2, σλ)
 
     # simulate fix tree vector
@@ -507,7 +507,7 @@ function triad_lλupdate_root!(treep ::iTgbmpb,
   fdtd2 = fdt(treec.d2)
 
   # proposal given daughters
-  lλp = duoprop(λd1 + α*ped1, λd2 + α*ped2, ped1, ped2, σλ)
+  lλp = duoprop(λd1 - α*ped1, λd2 - α*ped2, ped1, ped2, σλ)
 
   # propose for root
   lλrp = rnorm(lλp + α*pepr, sqrt(pepr)*σλ)
@@ -645,7 +645,6 @@ function update_α!(αc     ::Float64,
                    prc    ::Float64,
                    α_prior::NTuple{2,Float64})
 
-
   # difference sum and tree length
   dλ, l = treelength_dλ(Ψ, 0.0, 0.0)
 
@@ -668,40 +667,5 @@ function update_α!(αc     ::Float64,
 end
 
 
-
-
-"""
-    make_pup(pupdp::NTuple{N,Float64}, 
-             nin  ::Int64) where {N}
-
-Make the weighted parameter update vector according to probabilities `pupdp`.
-"""
-function make_pup(pupdp::NTuple{2,Float64}, 
-                  nin  ::Int64)
-
-  # standardize pr vector
-  pups = Array{Float64,1}(undef,2)
-  spupdp = sum(pupdp)
-  for i in Base.OneTo(2)
-    pups[i] = pupdp[i]/spupdp
-  end
-
-  pup = Int64[]
-  # da parameters
-  if pups[1] > 0.0
-    append!(pup,[1:nin...])
-  end
-
-  if pups[2] > 0.0
-    if pups[1] > 0.0
-      append!(pup, 
-        fill(0, ceil(Int64, pups[2]*Float64(nin)/pups[1])))
-    else 
-      push!(pup,0)
-    end
-  end
-
-  return return pup
-end
 
 

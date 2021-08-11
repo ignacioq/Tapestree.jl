@@ -15,6 +15,7 @@ Created 03 09 2020
 """
     sim_gbm(t   ::Float64,
             λt  ::Float64,
+            α   ::Float64,
             σλ  ::Float64,
             δt  ::Float64,
             srδt::Float64)
@@ -43,8 +44,8 @@ function sim_gbm(t   ::Float64,
       λm = exp(0.5*(λt + λt1))
 
       if divev(λm, t)
-        return iTgbmpb(sim_gbm(0.0, λt1, σλ, δt, srδt), 
-                       sim_gbm(0.0, λt1, σλ, δt, srδt), 
+        return iTgbmpb(sim_gbm(0.0, λt1, α, σλ, δt, srδt), 
+                       sim_gbm(0.0, λt1, α, σλ, δt, srδt), 
                  bt, δt, t, λv)
       end
 
@@ -61,8 +62,8 @@ function sim_gbm(t   ::Float64,
     λm = exp(0.5*(λt + λt1))
 
     if divev(λm, δt)
-      return iTgbmpb(sim_gbm(t, λt1, σλ, δt, srδt), 
-                     sim_gbm(t, λt1, σλ, δt, srδt), 
+      return iTgbmpb(sim_gbm(t, λt1, α, σλ, δt, srδt), 
+                     sim_gbm(t, λt1, α, σλ, δt, srδt), 
               bt, δt, δt, λv)
     end
 
