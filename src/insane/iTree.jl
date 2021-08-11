@@ -192,7 +192,8 @@ Base.show(io::IO, t::iTgbmpb) =
     iTgbmpb(tree::sTpb, 
             δt  ::Float64, 
             srδt::Float64, 
-            lλa ::Float64, 
+            lλa ::Float64,
+            α   ::Float64,
             σλ  ::Float64)
 
 Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
@@ -200,14 +201,15 @@ Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
 function iTgbmpb(tree::sTpb, 
                  δt  ::Float64, 
                  srδt::Float64, 
-                 lλa ::Float64, 
+                 lλa ::Float64,
+                 α   ::Float64,
                  σλ  ::Float64)
 
   et = e(tree)
 
   if iszero(et)
-    iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, σλ), 
-            iTgbmpb(tree.d2, δt, srδt, lλa, σλ),
+    iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, α, σλ), 
+            iTgbmpb(tree.d2, δt, srδt, lλa, α, σλ),
             et, δt, 0.0, Float64[lλa])
   else
     nt, fdti = divrem(et, δt, RoundDown)
@@ -217,12 +219,12 @@ function iTgbmpb(tree::sTpb,
       fdti = δt
     end
 
-    lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
+    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
 
     if isdefined(tree, :d1)
-      iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], σλ), 
-              iTgbmpb(tree.d2, δt, srδt, lλv[l], σλ),
+      iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], α, σλ), 
+              iTgbmpb(tree.d2, δt, srδt, lλv[l], α, σλ),
               et, δt, fdti, lλv)
     else
       iTgbmpb(et, δt, fdti, lλv)

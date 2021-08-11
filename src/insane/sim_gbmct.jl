@@ -474,7 +474,8 @@ divevϵ(λ::Float64, ϵ::Float64, δt::Float64) = @fastmath rand() < (1.0 + ϵ)*
 
 """
     rnorm(μ::Float64, σ::Float64)
-Generate a normal variable with mean `μ` and variance `σ`.
+
+Generate a normal variable with mean `μ` and standard deviation `σ`.
 """
 rnorm(μ::Float64, σ::Float64) = @fastmath randn()*σ + μ
 

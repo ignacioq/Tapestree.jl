@@ -19,10 +19,11 @@ Created 03 09 2020
             δt  ::Float64,
             srδt::Float64)
 
-Simulate `iTgbmbd` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
 """
 function sim_gbm(t   ::Float64,
                  λt  ::Float64,
+                 α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
                  srδt::Float64)
@@ -36,7 +37,7 @@ function sim_gbm(t   ::Float64,
       bt  += t
 
       t   = max(0.0, t)
-      λt1 = rnorm(λt, sqrt(t)*σλ)
+      λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
       push!(λv, λt1)
 
       λm = exp(0.5*(λt + λt1))
@@ -53,7 +54,7 @@ function sim_gbm(t   ::Float64,
     t  -= δt
     bt += δt
 
-    λt1 = rnorm(λt, srδt*σλ)
+    λt1 = rnorm(λt + α*δt, srδt*σλ)
 
     push!(λv, λt1)
 

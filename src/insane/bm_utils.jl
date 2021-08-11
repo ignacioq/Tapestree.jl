@@ -157,14 +157,14 @@ end
 
 
 """
-  bm!(tree::iTgbmbd,
-      λt  ::Float64,
-      μt  ::Float64,
-      α   ::Float64,
-      σλ  ::Float64,
-      σμ  ::Float64,
-      δt  ::Float64,
-      srδt::Float64)
+    bm!(tree::iTgbmbd,
+        λt  ::Float64,
+        μt  ::Float64,
+        α   ::Float64,
+        σλ  ::Float64,
+        σμ  ::Float64,
+        δt  ::Float64,
+        srδt::Float64)
 
 Simulate birth-death geometric Brownian motion in place.
 """
@@ -509,13 +509,13 @@ end
 
 
 """
-   sim_bm(xa  ::Float64, 
-          α   ::Float64,
-          σ   ::Float64, 
-          δt  ::Float64, 
-          fdt ::Float64,
-          srδt::Float64, 
-          nt  ::Int64)
+    sim_bm(xa  ::Float64, 
+           α   ::Float64,
+           σ   ::Float64, 
+           δt  ::Float64, 
+           fdt ::Float64,
+           srδt::Float64, 
+           nt  ::Int64)
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
 `σ` and times `t`. 
