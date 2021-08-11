@@ -141,8 +141,8 @@ separately for the Brownian motion and the pure-birth
     if !iszero(fdt)
       lλpi1 = lλp[nI+2]
       lλci1 = lλc[nI+2]
-      llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*δt, 
-                            lλci1, lλci + α*δt, sqrt(fdt)*σλ)
+      llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
+                            lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
       llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
       if λev
         llrpb += lλpi1 - lλci1

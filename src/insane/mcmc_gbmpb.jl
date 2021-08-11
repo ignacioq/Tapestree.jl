@@ -1,4 +1,4 @@
-c#=
+#=
 
 Anagenetic GBM pure-birth MCMC
 
@@ -36,16 +36,17 @@ function insane_gbmpb(tree    ::sTpb,
                       nthin   ::Int64    = 10,
                       nburn   ::Int64    = 200,
                       tune_int::Int64    = 100,
-                      σλi     ::Float64  = 0.5,
+                      σλi     ::Float64  = 0.1,
                       αi      ::Float64  = 0.0,
                       prints  ::Int64    = 5,
-                      pupdp   ::NTuple{2,Float64} = (0.9, 0.1),
+                      pupdp   ::NTuple{3,Float64} = (0.1,0.1, 0.8),
                       λa_prior::NTuple{2,Float64} = (0.0,100.0),
                       α_prior ::NTuple{2,Float64} = (0.0,10.0),
                       σλ_prior::NTuple{2,Float64} = (0.05, 0.5))
 
   δt  *= treeheight(tree)
   srδt = sqrt(δt)
+  n    = sntn(tree, 0)
 
   # lλ root node
   lλa = log(λmle_cpb(tree))
@@ -62,10 +63,12 @@ function insane_gbmpb(tree    ::sTpb,
   # make parent node directory to `iBfb`
   inodes, terminus = make_inodes(idv)
 
-  # parameter update vector
-  nin = lastindex(inodes)
-
-  pup = make_pup(pupdp, nin)
+  # parameter updates (1: α, 2: σ, 3: gbm)
+  spup = sum(pupdp)
+  pup  = Int64[]
+  for i in Base.OneTo(3) 
+    append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
+  end
 
   # burn-in phase
   llc, prc, αc, σλc =
@@ -73,11 +76,12 @@ function insane_gbmpb(tree    ::sTpb,
       δt, srδt, idv, inodes, terminus, pup, prints)
 
   # mcmc
-  R, Ψv = mcmc_gbmpb(Ψp, Ψc, llc, prc, σλc, λa_prior, σλ_prior, 
+  R, Ψv = mcmc_gbmpb(Ψp, Ψc, llc, prc, αc, σλc, λa_prior, α_prior, σλ_prior, 
         niter, nthin, δt, srδt, idv, inodes, terminus, pup, prints)
 
   pardic = Dict(("lambda_root"  => 1,
-                 "sigma_lambda" => 2))
+                 "alpha" => 2,
+                 "sigma_lambda" => 3))
 
   write_ssr(R, pardic, out_file)
 
@@ -130,6 +134,8 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
 
   lλmxpr = log(λa_prior[2])
 
+  ntr = lastindex(inodes)
+
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for it in Base.OneTo(nburn)
@@ -139,18 +145,22 @@ function mcmc_burn_gbmpb(Ψp      ::iTgbmpb,
     for pupi in pup
 
       ## parameter updates
-      if iszero(pupi)
-
-        # update diffusion
-        llc, prc, σλc = update_σ!(σλc, Ψc, llc, prc, σλ_prior)
+      if pupi === 1
 
         # update drift
         llc, prc, αc = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-      else
+      elseif pupi === 2
 
-        ter  = terminus[pupi]
-        inod = inodes[pupi]
+        # update diffusion
+        llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
+
+      else 
+
+        tix = ceil(Int64,rand()*ntr)
+
+        ter  = terminus[tix]
+        inod = inodes[tix]
 
         dri = dr(idv[inod])
         ldr = lastindex(dri)
@@ -176,9 +186,10 @@ end
                Ψc      ::iTgbmpb,
                llc     ::Float64,
                prc     ::Float64,
+               αc      ::Float64,
                σλc     ::Float64,
-               λa_prior::Tuple{Float64,Float64},
-               σλ_prior ::Float64,
+               λa_prior::NTuple{2,Float64},
+               σλ_prior::NTuple{2,Float64},
                niter   ::Int64,
                nthin   ::Int64,
                δt      ::Float64,
@@ -195,8 +206,10 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
                     Ψc      ::iTgbmpb,
                     llc     ::Float64,
                     prc     ::Float64,
+                    αc      ::Float64,
                     σλc     ::Float64,
                     λa_prior::NTuple{2,Float64},
+                    α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     niter   ::Int64,
                     nthin   ::Int64,
@@ -212,10 +225,12 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  R = Array{Float64,2}(undef, nlogs, 5)
+  R = Array{Float64,2}(undef, nlogs, 6)
 
   # make Ψ vector
   Ψv = iTgbmpb[]
+
+  ntr = lastindex(inodes)
 
   # prior
   lλmxpr = log(λa_prior[2])
@@ -229,24 +244,46 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
     for pupi in pup
 
       ## parameter updates
-      if iszero(pupi)
-
-        # update diffusion
-        llc, prc, σλc =  update_σ!(σλc, Ψc, llc, prc, σλ_prior)
+      if pupi === 1
 
         # update drift
         llc, prc, αc = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-      else
-        # gbm updates
-        ter  = terminus[pupi]
-        inod = inodes[pupi]
+        # ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 1, it
+        #    return 
+        # end
+
+      elseif pupi === 2
+
+        # update diffusion
+        llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
+
+        # ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 1, it
+        #    return 
+        # end
+
+      else 
+
+        tix = ceil(Int64,rand()*ntr)
+
+        ter  = terminus[tix]
+        inod = inodes[tix]
 
         dri = dr(idv[inod])
         ldr = lastindex(dri)
 
         llc = lλupdate!(Ψp, Ψc, llc, αc, σλc, δt, srδt, lλmxpr, 
                 dri, ldr, ter, 0)
+
+        # ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 1, it
+        #    return 
+        # end
 
       end
     end
@@ -382,7 +419,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
 
     else
       # if d1 is terminal
-      lλp = duoprop(λpr + α*pepr, λd2 - α*ped2, pepr, ped2, σλ)
+      lλp = duoprop(λpr - α*pepr, λd2 + α*ped2, pepr, ped2, σλ)
 
       # simulate fix tree vector
       bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
@@ -392,7 +429,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
   elseif ter[2]
     # if d2 is terminal
     # node proposal
-    lλp = duoprop(λpr + α*pepr, λd1 - α*ped1, pepr, ped1, σλ)
+    lλp = duoprop(λpr - α*pepr, λd1 + α*ped1, pepr, ped1, σλ)
 
     # simulate fix tree vector
     bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
@@ -402,7 +439,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
   else
     # if no terminal branches involved
     # node proposal
-    lλp  = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
+    lλp  = trioprop(λpr - α*pepr, λd1 + α*ped1, λd2 - α*ped2, 
              pepr, ped1, ped2, σλ)
 
     # simulate fix tree vector
@@ -470,10 +507,10 @@ function triad_lλupdate_root!(treep ::iTgbmpb,
   fdtd2 = fdt(treec.d2)
 
   # proposal given daughters
-  lλp = duoprop(λd1 - α*ped1, λd2- α*ped2, ped1, ped2, σλ)
+  lλp = duoprop(λd1 + α*ped1, λd2 + α*ped2, ped1, ped2, σλ)
 
   # propose for root
-  lλrp = rnorm(lλp - α*pepr, sqrt(pepr)*σλ)
+  lλrp = rnorm(lλp + α*pepr, sqrt(pepr)*σλ)
 
   # make Brownian bridge proposals
   bb!(λprv_p, lλrp, lλp, fdtpr, σλ, δt, srδt)
@@ -556,6 +593,7 @@ end
 
 """
     update_σ!(σλc     ::Float64,
+              α       ::Float64,
               Ψ       ::iTgbmpb,
               llc     ::Float64,
               prc     ::Float64,
@@ -564,13 +602,14 @@ end
 Gibbs update for `σλ` and `σμ`.
 """
 function update_σ!(σλc     ::Float64,
+                   α       ::Float64,
                    Ψ       ::iTgbmpb,
                    llc     ::Float64,
                    prc     ::Float64,
                    σλ_prior::NTuple{2,Float64})
 
   # standardized sum of squares
-  sssλ, n = sss_gbm(Ψ)
+  sssλ, n = sss_gbm(Ψ, α)
 
   # Gibbs update for σ
   σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + sssλ)
