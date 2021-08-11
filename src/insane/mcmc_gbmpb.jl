@@ -609,10 +609,10 @@ function update_σ!(σλc     ::Float64,
                    σλ_prior::NTuple{2,Float64})
 
   # standardized sum of squares
-  sssλ, n = sss_gbm(Ψ, α)
+  ssλ, n = sss_gbm(Ψ, α, 0.0, 0.0)
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + sssλ)
+  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + ssλ)
 
   # update prior
   prc += llrdinvgamma(σλp2, σλc^2, σλ_prior[1], σλ_prior[2])
@@ -620,7 +620,7 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
 
   # update likelihood
-  llc += llr_gbm_σp(σλp, σλc, sssλ, n)
+  llc += llr_gbm_σp(σλp, σλc, ssλ, n)
 
   return llc, prc, σλp
 end

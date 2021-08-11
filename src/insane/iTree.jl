@@ -330,21 +330,22 @@ diffusion.
 function iTgbmce(tree::sTbd, 
                  δt  ::Float64, 
                  srδt::Float64, 
-                 lλa ::Float64, 
+                 lλa ::Float64,
+                 α   ::Float64,
                  σλ  ::Float64)
 
   et = e(tree)
 
   # if crown root
   if iszero(et)
-    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, σλ), 
-            iTgbmce(tree.d2, δt, srδt, lλa, σλ),
+    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, α, σλ), 
+            iTgbmce(tree.d2, δt, srδt, lλa, α, σλ),
             et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
 
-    lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
+    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
 
     if iszero(fdti)
       fdti = δt
@@ -353,8 +354,8 @@ function iTgbmce(tree::sTbd,
     l = lastindex(lλv)
 
     if isdefined(tree, :d1)
-      iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], σλ), 
-              iTgbmce(tree.d2, δt, srδt, lλv[l], σλ),
+      iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], α, σλ), 
+              iTgbmce(tree.d2, δt, srδt, lλv[l], α, σλ),
               et, δt, fdti, isextinct(tree), isfix(tree), lλv)
     else
       iTgbmce(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
@@ -462,20 +463,21 @@ function iTgbmct(tree::sTbd,
                  δt  ::Float64, 
                  srδt::Float64, 
                  lλa ::Float64, 
+                 α   ::Float64,
                  σλ  ::Float64)
 
   et = e(tree)
 
   # if crown root
   if iszero(et)
-    iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, σλ), 
-            iTgbmct(tree.d2, δt, srδt, lλa, σλ),
+    iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, α, σλ), 
+            iTgbmct(tree.d2, δt, srδt, lλa, α, σλ),
             et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
 
-    lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
+    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
 
     if iszero(fdti)
       fdti = δt
@@ -484,8 +486,8 @@ function iTgbmct(tree::sTbd,
     l = lastindex(lλv)
 
     if isdefined(tree, :d1)
-      iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], σλ), 
-              iTgbmct(tree.d2, δt, srδt, lλv[l], σλ),
+      iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], α, σλ), 
+              iTgbmct(tree.d2, δt, srδt, lλv[l], α, σλ),
               et, δt, fdti, isextinct(tree), isfix(tree), lλv)
     else
       iTgbmct(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
@@ -607,16 +609,16 @@ function iTgbmbd(tree::sTbd,
 
   # if crown root
   if iszero(et)
-    iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, σλ, σμ), 
-            iTgbmbd(tree.d2, δt, srδt, lλa, lμa, σλ, σμ),
+    iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, α, σλ, σμ), 
+            iTgbmbd(tree.d2, δt, srδt, lλa, lμa, α, σλ, σμ),
             e(tree), δt, 0.0, isextinct(tree), isfix(tree), 
             Float64[lλa], Float64[lμa])
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
 
-    lλv = sim_bm(lλa, σλ, srδt, nt, fdti)
-    lμv = sim_bm(lμa, σμ, srδt, nt, fdti)
+    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    lμv = sim_bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
 
     if iszero(fdti)
       fdti = δt
@@ -625,8 +627,8 @@ function iTgbmbd(tree::sTbd,
     l = lastindex(lμv)
 
     if isdefined(tree, :d1)
-      iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], σλ, σμ), 
-              iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], σλ, σμ),
+      iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ), 
+              iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ),
               e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
     else
       iTgbmbd(e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)

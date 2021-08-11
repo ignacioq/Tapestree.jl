@@ -100,7 +100,7 @@ end
 
 
 """
-    treeheight(tree::T, th1::Float64, th2::Float64)
+    treeheight(tree::T)
 
 Return the tree height of `tree`.
 """

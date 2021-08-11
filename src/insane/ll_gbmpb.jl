@@ -157,23 +157,21 @@ end
 
 
 """
-    sss_gbm(tree::iTgbmpb, α::Float64)
+    sss_gbm(tree::iTgbmpb, α::Float64, ssλ::Float64, n::Float64)
 
-Returns the log-likelihood ratio for a `iTgbmpb` according 
+Returns the standardized sum of squares a `iTgbmpb` according 
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(tree::iTgbmpb, α::Float64)
+function sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64) where {T < iTgbm}
 
-  ssλ, n = sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
+  ssλ0, n0 = sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
+
+  ssλ += ssλ0
+  n   += n0
 
   if isdefined(tree, :d1) 
-    ssλ1, n1 = 
-      sss_gbm(tree.d1, α)
-    ssλ2, n2 = 
-      sss_gbm(tree.d2, α)
-
-    ssλ += ssλ1 + ssλ2
-    n   += n1 + n2
+    ssλ, n = sss_gbm(tree.d1, α, ssλ, n)
+    ssλ, n = sss_gbm(tree.d2, α, ssλ, n)
   end
 
   return ssλ, n
@@ -247,21 +245,6 @@ end
 
 
 
-
-
-"""
-    treelength(tree::T) where {T <: iTree}
-
-Return the branch length sum of `tree`.
-"""
-function treelength(tree::T, l::Float64) where {T <: iTree}
-  l += e(tree)
-  if isdefined(tree, :d1)
-    l = treelength(tree.d1, l)::Float64
-    l = treelength(tree.d2, l)::Float64
-  end
-  return l
-end
 
 
 
