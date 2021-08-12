@@ -827,7 +827,7 @@ function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
       popfirst!(lλs)
       append!(lλ0, lλs)
 
-      if isone(lastindex(lλs))
+      if lastindex(lλs) === 2
         setfdt!(tree, fdt(tree) + fdt(stree))
       else
         setfdt!(tree, fdt(stree))
@@ -1006,38 +1006,38 @@ function lvupdate!(Ψp    ::iTgbmce,
     # if root
     if ldr === 0
       llc = 
-        triad_lupdate_root!(Ψp::iTgbmce, Ψc::iTgbmce, bbλp, bbλc, 
+        triad_lupdate_root!(Ψp, Ψc, bbλp, bbλc, 
           tsv, llc, pr, d1, d2, α, σλ, μ, δt, srδt, lλmxpr, icr)
     else
       llc = 
-        triad_lvupdate_trio!(Ψp::iTgbmce, Ψc::iTgbmce, bbλp, bbλc, 
+        triad_lvupdate_trio!(Ψp, Ψc, bbλp, bbλc, 
           tsv, llc, pr, d1, d2, α, σλ, μ, δt, srδt, ter, icr, wbc)
 
     end
   elseif ix < ldr
 
-    ifx1 = isfix(Ψc.d1::iTgbmce)
-    if ifx1 && isfix(Ψc.d2::iTgbmce)
+    ifx1 = isfix(Ψc.d1)
+    if ifx1 && isfix(Ψc.d2)
       ix += 1
       if dri[ix]
         llc = 
-          lvupdate!(Ψp.d1::iTgbmce, Ψc.d1::iTgbmce, llc, 
+          lvupdate!(Ψp.d1, Ψc.d1, llc, 
             bbλp, bbλc, tsv, pr, d1, d2, α, σλ, μ, δt, srδt, 
             lλmxpr, icr, wbc, dri, ldr, ter, ix)
       else
         llc = 
-          lvupdate!(Ψp.d2::iTgbmce, Ψc.d2::iTgbmce, llc, 
+          lvupdate!(Ψp.d2, Ψc.d2, llc, 
             bbλp, bbλc, tsv, pr, d1, d2, α, σλ, μ, δt, srδt, 
             lλmxpr, icr, wbc, dri, ldr, ter, ix)
       end
     elseif ifx1
       llc = 
-        lvupdate!(Ψp.d1::iTgbmce, Ψc.d1::iTgbmce, llc, 
+        lvupdate!(Ψp.d1, Ψc.d1, llc, 
           bbλp, bbλc, tsv, pr, d1, d2, α, σλ, μ, δt, srδt, 
           lλmxpr, icr, wbc, dri, ldr, ter, ix)
     else
       llc = 
-        lvupdate!(Ψp.d2::iTgbmce, Ψc.d2::iTgbmce, llc, 
+        lvupdate!(Ψp.d2, Ψc.d2, llc, 
           bbλp, bbλc, tsv, pr, d1, d2, α, σλ, μ, δt, srδt, 
           lλmxpr, icr, wbc, dri, ldr, ter, ix)
     end

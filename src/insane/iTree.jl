@@ -113,6 +113,8 @@ mutable struct sTbd <: sT
     (x = new(); x.e = e; x.iμ = iμ; x)
   sTbd(e::Float64, iμ::Bool, fx::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x)
+  sTbd(d1::sTbd, d2::sTbd, e::Float64) = 
+    (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
   sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool, fx::Bool) = 
     new(d1, d2, e, iμ, fx)
 end
@@ -336,7 +338,6 @@ function iTgbmce(tree::sTbd,
 
   et = e(tree)
 
-  # if crown root
   if iszero(et)
     if isdefined(tree, :d1)
       iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, α, σλ), 

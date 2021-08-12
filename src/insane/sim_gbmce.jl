@@ -49,8 +49,8 @@ function sim_gbmce(t   ::Float64,
       if divev(λm, μ, t)
         # if speciation
         if λorμ(λm, μ)
-          return iTgbmce(sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt), 
-                         sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt), 
+          return iTgbmce(iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                         iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
                   bt, δt, t, false, false, λv)
         # if extinction
         else
@@ -123,7 +123,7 @@ function sim_gbmce(t   ::Float64,
       if t <= δt
         bt  += t
 
-        t = max(0.0,t)
+        t  = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
 
@@ -135,10 +135,10 @@ function sim_gbmce(t   ::Float64,
           # if speciation
           if λorμ(λm, μ)
             nsp += 1
-            td1, nsp = sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt, nsp, nlim)
-            td2, nsp = sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt, nsp, nlim)
-
-            return iTgbmce(td1, td2, bt, δt, t, false, false, λv), nsp
+            return iTgbmce(
+                     iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                     iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                     bt, δt, t, false, false, λv), nsp
           # if extinction
           else
             return iTgbmce(bt, δt, t, true, false, λv), nsp
@@ -223,9 +223,10 @@ function sim_gbmce(nsδt::Float64,
     if divev(λm, μ, t)
       # if speciation
       if λorμ(λm, μ)
-        return iTgbmce(sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt), 
-                       sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt), 
-                bt, δt, t, false, false, λv)
+        return iTgbmce(
+                 iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                 iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                 bt, δt, t, false, false, λv)
       # if extinction
       else
         return iTgbmce(bt, δt, t, true, false, λv)
@@ -277,9 +278,10 @@ function sim_gbmce(nsδt::Float64,
       if divev(λm, μ, t)
         # if speciation
         if λorμ(λm, μ)
-          return iTgbmce(sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt), 
-                         sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt), 
-                  bt, δt, t, false, false, λv)
+          return iTgbmce(
+                   iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                   iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                   bt, δt, t, false, false, λv)
         # if extinction
         else
           return iTgbmce(bt, δt, t, true, false, λv)
@@ -363,10 +365,10 @@ function sim_gbmce(nsδt::Float64,
       # if speciation
       if λorμ(λm, μ)
         nsp += 1
-        td1, nsp = sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt, nsp, nlim)
-        td2, nsp = sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt, nsp, nlim)
-
-        return iTgbmce(td1, td2, bt, δt, t, false, false, λv), nsp
+        return iTgbmce(
+                 iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                 iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                 bt, δt, t, false, false, λv), nsp
       # if extinction
       else
         return iTgbmce(bt, δt, t, true, false, λv), nsp
@@ -465,7 +467,6 @@ function sim_gbmce(nsδt::Float64,
     return iTgbmce(), nsp
   end
 end
-
 
 
 
