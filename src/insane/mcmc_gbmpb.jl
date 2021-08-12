@@ -597,16 +597,16 @@ end
               Ψ       ::iTgbmpb,
               llc     ::Float64,
               prc     ::Float64,
-              σλ_prior::NTuple{2,Float64})
+              σλ_prior::NTuple{2,Float64}) where {T <: iTgbm}
 
-Gibbs update for `σλ` and `σμ`.
+Gibbs update for `σλ`.
 """
 function update_σ!(σλc     ::Float64,
                    α       ::Float64,
-                   Ψ       ::iTgbmpb,
+                   Ψ       ::T,
                    llc     ::Float64,
                    prc     ::Float64,
-                   σλ_prior::NTuple{2,Float64})
+                   σλ_prior::NTuple{2,Float64}) where {T <: iTgbm}
 
   # standardized sum of squares
   ssλ, n = sss_gbm(Ψ, α, 0.0, 0.0)
@@ -631,19 +631,19 @@ end
 """
     update_α!(αc     ::Float64,
               σλ     ::Float64,
-              Ψ      ::iTgbmpb,
+              Ψ      ::T,
               llc    ::Float64,
               prc    ::Float64,
-              α_prior::NTuple{2,Float64})
+              α_prior::NTuple{2,Float64}) where {T <: iTgbm}
 
 Gibbs update for `α`.
 """
 function update_α!(αc     ::Float64,
                    σλ     ::Float64,
-                   Ψ      ::iTgbmpb,
+                   Ψ      ::T,
                    llc    ::Float64,
                    prc    ::Float64,
-                   α_prior::NTuple{2,Float64})
+                   α_prior::NTuple{2,Float64}) where {T <: iTgbm}
 
   # difference sum and tree length
   dλ, l = treelength_dλ(Ψ, 0.0, 0.0)

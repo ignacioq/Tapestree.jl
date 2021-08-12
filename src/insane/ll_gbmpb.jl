@@ -162,7 +162,7 @@ end
 Returns the standardized sum of squares a `iTgbmpb` according 
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64) where {T < iTgbm}
+function sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64) where {T <: iTgbm}
 
   ssλ0, n0 = sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
 
@@ -250,12 +250,12 @@ end
 
 
 """
-    treelength_dλ(tree::iTgbmpb, dλ::Float64, l::Float64)
+    treelength_dλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
 
 Returns the log-likelihood ratio for a `iTgbmpb` according 
 to GBM birth-death for a `σ` proposal.
 """
-function treelength_dλ(tree::iTgbmpb, dλ::Float64, l::Float64)
+function treelength_dλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
 
   lλv = lλ(tree)
   dλ += lλv[end] - lλv[1]
