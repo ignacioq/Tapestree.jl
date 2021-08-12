@@ -40,9 +40,9 @@ cond_surv_stem(tree::iTgbmce, μ::Float64) =
 
 """
     sum_alone_stem(tree::iTgbmce, 
-                        tna ::Float64, 
-                        ll  ::Float64,
-                        μ   ::Float64)
+                   tna ::Float64, 
+                   ll  ::Float64,
+                   μ   ::Float64)
 
 Condition events when there is only one alive lineage in the crown subtrees 
 to only be speciation events.
