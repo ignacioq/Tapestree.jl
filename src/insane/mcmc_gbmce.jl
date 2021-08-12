@@ -690,6 +690,7 @@ function fsbi_ce(bi  ::iBffs,
       for j in Base.OneTo(na - 1)
         # get their final λ to continue forward simulation
         ix, λt, fdti = fλ1(t0, NaN, NaN, false)
+
         for i in Base.OneTo(2)
           st0, nsp = 
             sim_gbmce(max(δt - fdti, 0.0), tfb, λt, α, σλ, μ, δt, srδt, 1, nlim)
@@ -814,7 +815,7 @@ Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
 function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool) 
 
-  if istip(tree) 
+  if istip(tree)
     if isalive(tree) && !isfix(tree)
 
       sete!(tree, e(tree) + e(stree))
@@ -823,15 +824,15 @@ function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
       lλ0 = lλ(tree)
       lλs = lλ(stree)
 
-      pop!(lλ0)
-      popfirst!(lλs)
-      append!(lλ0, lλs)
-
       if lastindex(lλs) === 2
         setfdt!(tree, fdt(tree) + fdt(stree))
       else
-        setfdt!(tree, fdt(stree))
+        setfdt!(tree, dt(tree))
       end
+
+      pop!(lλ0)
+      popfirst!(lλs)
+      append!(lλ0, lλs)
 
       if isdefined(stree, :d1)
         tree.d1 = stree.d1
