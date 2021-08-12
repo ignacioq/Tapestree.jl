@@ -70,6 +70,8 @@ function insane_gbmpb(tree    ::sTpb,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
+  @info "running pure-birth gbm"
+
   # burn-in phase
   llc, prc, αc, σλc =
     mcmc_burn_gbmpb(Ψp, Ψc, λa_prior, α_prior, σλ_prior, nburn, αi, σλi, 

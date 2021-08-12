@@ -107,7 +107,7 @@ function insane_gbmct(tree    ::sTbd,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running birth-death Geometric Brownian motion with constant turnover"
+  @info "running birth-death gbm with constant ϵ"
 
   # burn-in phase
   Ψp, Ψc, llc, prc, ϵc, σλc, ϵtn =

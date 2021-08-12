@@ -110,7 +110,7 @@ function insane_gbmce(tree    ::sTbd,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running birth-death Geometric Brownian motion with constant extinction"
+  @info "running birth-death gbm with constant μ"
 
   # burn-in phase
   Ψp, Ψc, llc, prc, αc, σλc, μc, μtn =
@@ -408,13 +408,31 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
+        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 1, it
+        #    return 
+        # end
+
       elseif pupi === 2
 
         llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
 
+        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 2, it
+        #    return 
+        # end
+
       elseif pupi === 3
 
         llc, μc = update_μ!(μc, Ψc, llc, μtn, μmxpr, svf)
+
+        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 3, it
+        #    return 
+        # end
 
       # gbm update
       elseif pupi === 4
@@ -437,6 +455,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
 
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
             αc, σλc, μc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
+
+        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 4, it
+        #    return 
+        # end
 
       # forward simulation update
       else
@@ -461,6 +485,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
 
         Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, tsv, bbλp, bbλc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
+
+        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 5, it
+        #    return 
+        # end
 
       end
     end
