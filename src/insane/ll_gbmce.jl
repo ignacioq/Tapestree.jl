@@ -20,7 +20,8 @@ to only be speciation events.
 """
 cond_surv_crown(tree::iTgbmce, μ::Float64) = 
   cond_surv_stem(tree.d1, 0.0, 0.0, μ) +
-  cond_surv_stem(tree.d2, 0.0, 0.0, μ)
+  cond_surv_stem(tree.d2, 0.0, 0.0, μ) - 
+  lλ(tree)[1]
 
 
 
@@ -210,16 +211,21 @@ Returns the log-likelihood for a branch according to GBM birth-death.
     llbd += Float64(nI)*μ
     ll   -= llbd*δt
 
+    lλvi1 = lλv[nI+2]
+
     # add final non-standard `δt`
-    if !iszero(fdt)
-      lλvi1 = lλv[nI+2]
+    if fdt > 0.0
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
       ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
-      if λev
-        ll += lλvi1
-      elseif μev
-        ll += log(μ)
-      end
+    end
+
+    # if speciation
+    if λev
+      ll += lλvi1
+    end
+    # if extinction
+    if μev
+      ll += log(μ)
     end
   end
 

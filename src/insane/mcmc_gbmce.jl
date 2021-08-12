@@ -32,7 +32,6 @@ Created 03 09 2020
                  μtni    ::Float64           = 1.0, 
                  obj_ar  ::Float64           = 0.234,
                  pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
-                 ntry    ::Int64             = 2,
                  nlim    ::Int64             = 500,
                  δt      ::Float64           = 1e-2,
                  prints  ::Int64             = 5)
@@ -57,7 +56,6 @@ function insane_gbmce(tree    ::sTbd,
                       μtni    ::Float64           = 1.0, 
                       obj_ar  ::Float64           = 0.234,
                       pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
-                      ntry    ::Int64             = 2,
                       nlim    ::Int64             = 500,
                       δt      ::Float64           = 1e-2,
                       prints  ::Int64             = 5)

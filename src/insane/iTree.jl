@@ -338,9 +338,14 @@ function iTgbmce(tree::sTbd,
 
   # if crown root
   if iszero(et)
-    iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, α, σλ), 
-            iTgbmce(tree.d2, δt, srδt, lλa, α, σλ),
-            et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
+    if isdefined(tree, :d1)
+      iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, α, σλ), 
+              iTgbmce(tree.d2, δt, srδt, lλa, α, σλ),
+              et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
+    else
+      iTgbmce(et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
+    end
+
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
@@ -470,9 +475,13 @@ function iTgbmct(tree::sTbd,
 
   # if crown root
   if iszero(et)
-    iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, α, σλ), 
-            iTgbmct(tree.d2, δt, srδt, lλa, α, σλ),
-            et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa])
+    if isdefined(tree, :d1)
+      iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, α, σλ), 
+              iTgbmct(tree.d2, δt, srδt, lλa, α, σλ),
+              et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
+    else
+      iTgbmct(et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
+    end
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
@@ -609,10 +618,15 @@ function iTgbmbd(tree::sTbd,
 
   # if crown root
   if iszero(et)
-    iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, α, σλ, σμ), 
-            iTgbmbd(tree.d2, δt, srδt, lλa, lμa, α, σλ, σμ),
-            e(tree), δt, 0.0, isextinct(tree), isfix(tree), 
-            Float64[lλa], Float64[lμa])
+    if isdefined(tree, :d1)
+      iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, α, σλ, σμ), 
+              iTgbmbd(tree.d2, δt, srδt, lλa, lμa, α, σλ, σμ),
+              e(tree), δt, 0.0, isextinct(tree), isfix(tree), 
+              Float64[lλa, lλa], Float64[lμa, lμa])
+    else
+      iTgbmbd(e(tree), δt, 0.0, isextinct(tree), isfix(tree), 
+              Float64[lλa, lλa], Float64[lμa, lμa])
+    end
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)

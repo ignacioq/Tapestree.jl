@@ -76,14 +76,14 @@ function ll_gbm_b(lλv ::Array{Float64,1},
     ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
     ll -= llpb*δt
 
+    lλvi1 = lλv[nI+2]
     # add final non-standard `δt`
-    if !iszero(fdt)
-      lλvi1 = lλv[nI+2]
+    if fdt > 0.0
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
       ll -= fdt*exp(0.5*(lλvi + lλvi1))
-      if λev
-        ll += lλvi1
-      end
+    end
+    if λev
+      ll += lλvi1
     end
   end
 
@@ -137,16 +137,19 @@ separately for the Brownian motion and the pure-birth
     llrbm *= (-0.5/((σλ*srδt)^2))
     llrpb *= (-δt)
 
+    lλpi1 = lλp[nI+2]
+    lλci1 = lλc[nI+2]
+
     # add final non-standard `δt`
-    if !iszero(fdt)
-      lλpi1 = lλp[nI+2]
-      lλci1 = lλc[nI+2]
+    if fdt > 0.0
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
       llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-      if λev
-        llrpb += lλpi1 - lλci1
-      end
+    end
+
+    # if speciation
+    if λev
+      llrpb += lλpi1 - lλci1
     end
   end
 
@@ -211,7 +214,7 @@ for GBM birth-death.
     ssλ *= 1.0/(2.0*δt)
 
     # add final non-standard `δt`
-    if !iszero(fdt)
+    if fdt > 0.0
       ssλ += 1.0/(2.0*fdt) * (lλv[nI+2] - lλvi - α*fdt)^2
       n = Float64(nI + 1)
     else
@@ -242,9 +245,6 @@ function llr_gbm_σp(σλp::Float64,
 
   return llr
 end
-
-
-
 
 
 
