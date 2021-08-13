@@ -114,13 +114,13 @@ function insane_gbmce(tree    ::sTbd,
 
   # burn-in phase
   Ψp, Ψc, llc, prc, αc, σλc, μc, μtn =
-    mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbλc, tsv, λa_prior, α_prior, 
+    mcmc_burn_gbmce(Ψp, Ψc, bbλp, bbλc, tsv, λa_prior, α_prior, 
       σλ_prior, μ_prior, nburn, tune_int, αi, σλi, μc, μtni, δt, srδt, 
       idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf)
 
   # mcmc
   R, Ψv =
-    mcmc_gbmbd(Ψp, Ψc, llc, prc, αc, σλc, μc, μtn, bbλp, bbλc, tsv,
+    mcmc_gbmce(Ψp, Ψc, llc, prc, αc, σλc, μc, μtn, bbλp, bbλc, tsv,
       λa_prior, α_prior, σλ_prior, μ_prior, niter, nthin, δt, srδt, 
       idf, triads, terminus, btotriad, pup, nlim, prints, svf)
 
@@ -128,8 +128,7 @@ function insane_gbmce(tree    ::sTbd,
                  "alpha"        => 2,
                  "sigma_lambda" => 3,
                  "mu"           => 4,
-                 "n_extinct"    => 5,
-                 "tree_length"  => 6))
+                 "n_extinct"    => 5))
 
   write_ssr(R, pardic, out_file)
 
@@ -140,7 +139,7 @@ end
 
 
 """
-    mcmc_burn_gbmbd(Ψp      ::iTgbmce,
+    mcmc_burn_gbmce(Ψp      ::iTgbmce,
                     Ψc      ::iTgbmce,
                     bbλp    ::Array{Array{Float64,1},1},
                     bbλc    ::Array{Array{Float64,1},1},
@@ -169,7 +168,7 @@ end
 
 MCMC burn-in chain for GBM birth-death.
 """
-function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
+function mcmc_burn_gbmce(Ψp      ::iTgbmce,
                          Ψc      ::iTgbmce,
                          bbλp    ::Array{Array{Float64,1},1},
                          bbλc    ::Array{Array{Float64,1},1},
@@ -229,7 +228,6 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmce,
     # parameter updates
     for pupi in pup
 
-      # update σλ or σμ
       if pupi === 1
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
@@ -312,7 +310,7 @@ end
 
 
 """
-     mcmc_gbmbd(Ψp      ::iTgbmce,
+     mcmc_gbmce(Ψp      ::iTgbmce,
                 Ψc      ::iTgbmce,
                 llc     ::Float64,
                 prc     ::Float64,
@@ -342,7 +340,7 @@ end
 
 MCMC chain for GBM birth-death.
 """
-function mcmc_gbmbd(Ψp      ::iTgbmce,
+function mcmc_gbmce(Ψp      ::iTgbmce,
                     Ψc      ::iTgbmce,
                     llc     ::Float64,
                     prc     ::Float64,
@@ -381,7 +379,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
   lthin, lit = 0, 0
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 9)
+  R = Array{Float64,2}(undef, nlogs, 8)
 
   # make Ψ vector
   Ψv = iTgbmce[]
@@ -508,7 +506,6 @@ function mcmc_gbmbd(Ψp      ::iTgbmce,
         R[lit,6] = σλc
         R[lit,7] = μc
         R[lit,8] = snen(Ψc, 0)
-        R[lit,9] = treelength(Ψc, 0.0)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -810,11 +807,11 @@ end
 
 
 """
-    addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool)
+    addtotip(tree::T, stree::iTgbmce, ix::Bool) where {T < iTgbm}
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function addtotip(tree::iTgbmce, stree::iTgbmce, ix::Bool) 
+function addtotip(tree::T, stree::iTgbmce, ix::Bool) where {T < iTgbm}
 
   if istip(tree)
     if isalive(tree) && !isfix(tree)
@@ -860,15 +857,21 @@ end
 
 
 """
-    fixrtip!(tree::iTgbmce, na::Int64, λf::Float64, dft0::Float64)
+    fixrtip!(tree::T, 
+             na  ::Int64, 
+             λf  ::Float64, 
+             dft0::Float64) where {T <: iTgbm}
 
 Fixes the the path for a random non extinct tip and returns final `λ(t)`.
 """
-function fixrtip!(tree::iTgbmce, na::Int64, λf::Float64, dft0::Float64) 
+function fixrtip!(tree::T, 
+                  na  ::Int64, 
+                  λf  ::Float64, 
+                  dft0::Float64) where {T <: iTgbm}
 
   fix!(tree)
 
-  if !istip(tree)
+  if isdefined(tree, :d1)
     if isextinct(tree.d1)
       λf, dft0 = fixrtip!(tree.d2, na, λf, dft0)
     elseif isextinct(tree.d2)
@@ -894,11 +897,11 @@ end
 
 
 """
-    fixalive!(tree::iTgbmce, λf::Float64, dft0::Float64)
+    fixalive!(tree::T, λf::Float64, dft0::Float64) where {T <:iTgbm}
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::iTgbmce, λf::Float64, dft0::Float64)
+function fixalive!(tree::T, λf::Float64, dft0::Float64) where {T <:iTgbm}
 
   if istip(tree) 
     if isalive(tree)

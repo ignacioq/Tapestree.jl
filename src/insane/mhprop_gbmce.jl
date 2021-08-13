@@ -32,8 +32,7 @@ Created 27 05 2020
                      δt   ::Float64, 
                      srδt ::Float64)
 
-Make a `gbm-bd` proposal for daughters when node is internal and both
-daughters are terminal.
+Make a `gbmce` proposal for daughters of forwards simulated branch.
 """
 function daughters_lprop!(treep::iTgbmce, 
                           treec::iTgbmce,

@@ -19,8 +19,9 @@ Condition events when there is only one alive lineage in the stem branch
 to only be speciation events.
 """
 cond_surv_crown(tree::iTgbmct, ϵ::Float64) = 
-  cond_surv_stem(tree.d1::iTgbmct, 0.0, 0.0, ϵ) +
-  cond_surv_stem(tree.d2::iTgbmct, 0.0, 0.0, ϵ)
+  cond_surv_stem(tree.d1, 0.0, 0.0, ϵ) +
+  cond_surv_stem(tree.d2, 0.0, 0.0, ϵ) - 
+  lλ(tree)[1]
 
 
 
@@ -133,52 +134,30 @@ end
 
 
 """
-    llik_gbm(tree::iTgbmct, 
-             ϵ   ::Float64
+    llik_gbm(tree::iTgbmct,
+             α   ::Float64, 
              σλ  ::Float64, 
+             ϵ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmct` according to GBM birth-death.
 """
-function llik_gbm(tree::iTgbmct, 
-                  ϵ   ::Float64,
+function llik_gbm(tree::iTgbmct,
+                  α   ::Float64, 
                   σλ  ::Float64, 
+                  ϵ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
-  if istip(tree) 
-    ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, false, isextinct(tree))
+
+  if istip(tree)
+    ll_gbm_b_ϵ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, false, isextinct(tree))
   else
-    ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, true, false) +
-    llik_gbm(tree.d1::iTgbmct, ϵ, σλ, δt, srδt)                 +
-    llik_gbm(tree.d2::iTgbmct, ϵ, σλ, δt, srδt)
-  end
-end
-
-
-
-
-"""
-    sss_gbm(tree::iTgbmct)
-
-Returns the log-likelihood ratio for a `iTgbmct` according 
-to GBM birth-death for a `σ` proposal.
-"""
-function sss_gbm(tree::iTgbmct)
-
-  ssλ, n = sss_gbm_b(lλ(tree), dt(tree), fdt(tree))
-
-  if isdefined(tree, :d1) 
-    ssλ1, n1 = 
-      sss_gbm(tree.d1::iTgbmct)
-    ssλ2, n2 = 
-      sss_gbm(tree.d2::iTgbmct)
-
-    ssλ += ssλ1 + ssλ2
-    n   += n1 + n2
+    ll_gbm_b_ϵ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, true, false) +
+    llik_gbm(tree.d1, α, σλ, ϵ, δt, srδt)                            +
+    llik_gbm(tree.d2, α, σλ, ϵ, δt, srδt)
   end
 
-  return ssλ, n
 end
 
 
@@ -186,8 +165,9 @@ end
 
 """
     ll_gbm_b_ϵ(lλv ::Array{Float64,1},
-               ϵ   ::Float64,
+               α   ::Float64,
                σλ  ::Float64,
+               ϵ   ::Float64,
                δt  ::Float64, 
                fdt ::Float64,
                srδt::Float64,
@@ -197,8 +177,9 @@ end
 Returns the log-likelihood for a branch according to GBM birth-death.
 """
 @inline function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
-                            ϵ   ::Float64,
+                            α   ::Float64,
                             σλ  ::Float64,
+                            ϵ   ::Float64,
                             δt  ::Float64, 
                             fdt ::Float64,
                             srδt::Float64,
@@ -215,7 +196,7 @@ Returns the log-likelihood for a branch according to GBM birth-death.
     lλvi = lλv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
-      llλ  += (lλvi1 - lλvi)^2
+      llλ  += (lλvi1 - lλvi - α*δt)^2
       llbd += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
@@ -227,16 +208,19 @@ Returns the log-likelihood for a branch according to GBM birth-death.
     ll   -= llbd*δt*(1.0 + ϵ)
 
     # add final non-standard `δt`
-    if !iszero(fdt)
+    if fdt > 0.0
       lλvi1 = lλv[nI+2]
-      ll += ldnorm_bm(lλvi1, lλvi, sqrt(fdt)*σλ)
+      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
       ll -= fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
+    end
 
-      if λev
-        ll += lλvi1
-      elseif μev
-        ll += lλvi1 + log(ϵ)
-      end
+    # if speciation
+    if λev
+      ll += lλvi1
+    end
+    # if extinction
+    if μev
+      ll += lλvi1 + log(ϵ)
     end
   end
 
@@ -248,9 +232,8 @@ end
 
 """
     sλ_gbm_b(lλv::Array{Float64,1},
-              lμv::Array{Float64,1},
-              δt ::Float64, 
-              fdt::Float64)
+             δt ::Float64, 
+             fdt::Float64)
 
 Returns the sum of `λ` rates for a `iTgbmct` branch according 
 to GBM birth-death for a `ϵ` proposal.
@@ -276,7 +259,7 @@ to GBM birth-death for a `ϵ` proposal.
     sλt *= δt
 
     # add final non-standard `δt`
-    if !iszero(fdt)
+    if fdt > 0.0
       sλt += fdt * exp(0.5*(lλv[nI+2] + lλvi))
     end
   end
@@ -287,21 +270,20 @@ end
 
 
 """
-    sλ_gbm(tree::iTgbmct)
+    sλ_gbm(tree::iTgbmct, sλ::Float64)
 
 Returns the sum of `λ` rates for a `iTgbmct` according 
 to GBM birth-death for a `ϵ` proposal.
 """
-function sλ_gbm(tree::iTgbmct)
+function sλ_gbm(tree::iTgbmct, sλ::Float64)
 
-  sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
+  sλ += sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
 
   if isdefined(tree, :d1) 
-    sλt += sλ_gbm(tree.d1::iTgbmct) + 
-           sλ_gbm(tree.d2::iTgbmct)
+    sλ = sλ_gbm(tree.d1, sλ) + sλ_gbm(tree.d2, sλ)
   end
 
-  return sλt
+  return sλ
 end
 
 
@@ -309,33 +291,35 @@ end
 
 """
     llik_gbm_f(tree::iTgbmct,
-               μ   ::Float64,
+               α    ::Float64,
                σλ  ::Float64,
+               ϵ   ::Float64,
                δt  ::Float64,
                srδt::Float64)
 
 Estimate gbm birth-death likelihood for the tree in a fix branch.
 """
 function llik_gbm_f(tree::iTgbmct,
-                    ϵ   ::Float64,
+                    α    ::Float64,
                     σλ  ::Float64,
+                    ϵ   ::Float64,
                     δt  ::Float64,
                     srδt::Float64)
 
   if istip(tree)
-    ll = ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, false, false)
+    ll = ll_gbm_b_ϵ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, false, false)
   else
-    ll = ll_gbm_b_ϵ(lλ(tree), ϵ, σλ, δt, fdt(tree), srδt, true, false)
+    ll = ll_gbm_b_ϵ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, true, false)
 
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
       return ll
     elseif ifx1
-      ll += llik_gbm_f(tree.d1::iTgbmct, ϵ, σλ, δt, srδt) +
-            llik_gbm(  tree.d2::iTgbmct, ϵ, σλ, δt, srδt)
+      ll += llik_gbm_f(tree.d1, α, σλ, ϵ, δt, srδt) +
+            llik_gbm(  tree.d2, α, σλ, ϵ, δt, srδt)
     else
-      ll += llik_gbm(  tree.d1::iTgbmct, ϵ, σλ, δt, srδt) + 
-            llik_gbm_f(tree.d2::iTgbmct, ϵ, σλ, δt, srδt)
+      ll += llik_gbm(  tree.d1, α, σλ, ϵ, δt, srδt) + 
+            llik_gbm_f(tree.d2, α, σλ, ϵ, δt, srδt)
     end
   end
 
@@ -347,8 +331,9 @@ end
 
 """
     br_ll_gbm(tree::iTgbmct,
-              ϵ   ::Float64,
+              α    ::Float64,
               σλ  ::Float64,
+              ϵ   ::Float64,
               δt  ::Float64,
               srδt::Float64,
               dri ::BitArray{1},
@@ -358,8 +343,9 @@ end
 Returns gbm birth-death likelihood for whole branch `br`.
 """
 function br_ll_gbm(tree::iTgbmct,
-                   ϵ   ::Float64,
+                   α    ::Float64,
                    σλ  ::Float64,
+                   ϵ   ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
                    dri ::BitArray{1},
@@ -367,20 +353,20 @@ function br_ll_gbm(tree::iTgbmct,
                    ix  ::Int64)
 
   if ix === ldr
-    return llik_gbm_f(tree::iTgbmct, ϵ, σλ, δt, srδt)
+    return llik_gbm_f(tree, α, σλ, ϵ, δt, srδt)
   elseif ix < ldr
-    ifx1 = isfix(tree.d1::iTgbmct)
-    if ifx1 && isfix(tree.d2::iTgbmct)
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
       ix += 1
       if dri[ix]
-        ll = br_ll_gbm(tree.d1::iTgbmct, ϵ, σλ, δt, srδt, dri, ldr, ix)
+        ll = br_ll_gbm(tree.d1, α, σλ, ϵ, δt, srδt, dri, ldr, ix)
       else
-        ll = br_ll_gbm(tree.d2::iTgbmct, ϵ, σλ, δt, srδt, dri, ldr, ix)
+        ll = br_ll_gbm(tree.d2, α, σλ, ϵ, δt, srδt, dri, ldr, ix)
       end
     elseif ifx1
-      ll = br_ll_gbm(tree.d1::iTgbmct, ϵ, σλ, δt, srδt, dri, ldr, ix)
+      ll = br_ll_gbm(tree.d1, α, σλ, ϵ, δt, srδt, dri, ldr, ix)
     else
-      ll = br_ll_gbm(tree.d2::iTgbmct, ϵ, σλ, δt, srδt, dri, ldr, ix)
+      ll = br_ll_gbm(tree.d2, α, σλ, ϵ, δt, srδt, dri, ldr, ix)
     end
   end
 
@@ -394,6 +380,7 @@ end
 """
     llr_gbm_sep_f(treep::iTgbmct,
                   treec::iTgbmct,
+                  α    ::Float64,
                   σλ   ::Float64,
                   ϵ    ::Float64,
                   δt   ::Float64,
@@ -404,35 +391,32 @@ separately (for gbm and bd).
 """
 function llr_gbm_sep_f(treep::iTgbmct,
                        treec::iTgbmct,
-                       ϵ    ::Float64,
+                       α    ::Float64,
                        σλ   ::Float64,
+                       ϵ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64)
 
   if istip(treec)
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), ϵ, σλ, δt, fdt(treec), srδt, 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, ϵ, δt, fdt(treec), srδt, 
         false, isextinct(treec))
   else
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), ϵ, σλ, δt, fdt(treec), srδt, 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, ϵ, δt, fdt(treec), srδt, 
         true, false) 
 
     ifx1 = isfix(treec.d1)
     if ifx1 && isfix(treec.d2)
       return llrbm, llrbd
     elseif ifx1
-      llrbm0, llrbd0 = 
-        llr_gbm_sep_f(treep.d1::iTgbmct, treec.d1::iTgbmct, ϵ, σλ, δt, srδt)
-      llrbm1, llrbd1 = 
-        llr_gbm_sep(treep.d2::iTgbmct, treec.d2::iTgbmct, ϵ, σλ, δt, srδt)
+      llrbm0, llrbd0 = llr_gbm_sep_f(treep.d1, treec.d1, α, σλ, ϵ, δt, srδt)
+      llrbm1, llrbd1 = llr_gbm_sep(  treep.d2, treec.d2, α, σλ, ϵ, δt, srδt)
       llrbm += llrbm0 + llrbm1
       llrbd += llrbd0 + llrbd1
     else
-      llrbm0, llrbd0 = 
-        llr_gbm_sep(treep.d1::iTgbmct, treec.d1::iTgbmct, ϵ, σλ, δt, srδt)
-      llrbm1, llrbd1 = 
-        llr_gbm_sep_f(treep.d2::iTgbmct, treec.d2::iTgbmct, ϵ, σλ, δt, srδt)
+      llrbm0, llrbd0 = llr_gbm_sep(  treep.d1, treec.d1, α, σλ, ϵ, δt, srδt)
+      llrbm1, llrbd1 = llr_gbm_sep_f(treep.d2, treec.d2, α, σλ, ϵ, δt, srδt)
       llrbm += llrbm0 + llrbm1
       llrbd += llrbd0 + llrbd1
     end
@@ -447,6 +431,7 @@ end
 """
     llr_gbm_sep(treep::iTgbmct, 
                 treec::iTgbmct,
+                α    ::Float64,
                 σλ   ::Float64,
                 ϵ    ::Float64,
                 δt   ::Float64,
@@ -457,24 +442,23 @@ separately (for gbm and bd).
 """
 function llr_gbm_sep(treep::iTgbmct, 
                      treec::iTgbmct,
-                     ϵ    ::Float64,
+                     α    ::Float64,
                      σλ   ::Float64,
+                     ϵ    ::Float64,
                      δt   ::Float64,
                      srδt::Float64)
 
   if istip(treec) 
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), ϵ, σλ, δt, fdt(treec), srδt, 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, ϵ, δt, fdt(treec), srδt, 
         false, isextinct(treec))
   else
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), ϵ, σλ, δt, fdt(treec), srδt, 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, ϵ, δt, fdt(treec), srδt, 
         true, false) 
 
-    llrbm0, llrbd0 = 
-      llr_gbm_sep(treep.d1::iTgbmct, treec.d1::iTgbmct, ϵ, σλ, δt, srδt) 
-    llrbm1, llrbd1 = 
-      llr_gbm_sep(treep.d2::iTgbmct, treec.d2::iTgbmct, ϵ, σλ, δt, srδt)
+    llrbm0, llrbd0 = llr_gbm_sep(treep.d1, treec.d1, α, σλ, ϵ, δt, srδt) 
+    llrbm1, llrbd1 = llr_gbm_sep(treep.d2, treec.d2, α, σλ, ϵ, δt, srδt)
 
     llrbm += llrbm0 + llrbm1
     llrbd += llrbd0 + llrbd1
@@ -490,8 +474,9 @@ end
 """
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
-                  ϵ   ::Float64,
+                  α   ::Float64,
                   σλ  ::Float64,
+                  ϵ   ::Float64,
                   δt  ::Float64, 
                   fdt::Float64,
                   srδt::Float64,
@@ -503,8 +488,9 @@ separately (for gbm and bd).
 """
 function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
-                       ϵ   ::Float64,
+                       α   ::Float64,
                        σλ  ::Float64,
+                       ϵ   ::Float64,
                        δt  ::Float64, 
                        fdt::Float64,
                        srδt::Float64,
@@ -518,14 +504,12 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
     llrbm = 0.0
     llrbd = 0.0
- 
     lλpi = lλp[1]
     lλci = lλc[1]
-
     @simd for i in Base.OneTo(nI)
       lλpi1  = lλp[i+1]
       lλci1  = lλc[i+1]
-      llrbm += (lλpi1 - lλpi)^2 - (lλci1 - lλci)^2
+      llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
       llrbd += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
       lλpi   = lλpi1
       lλci   = lλci1
@@ -535,18 +519,23 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbd *= -δt*(1.0 + ϵ)
 
     # add final non-standard `δt`
-    if !iszero(fdt)
+    if fdt > 0.0
       lλpi1 = lλp[nI+2]
       lλci1 = lλc[nI+2]
-      llrbm += lrdnorm_bm_x(lλpi1, lλpi, lλci1, lλci, sqrt(fdt)*σλ)
+      llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
+                            lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
       llrbd -= fdt*(1.0 + ϵ)*
                (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+    end
 
-      if λev
-        llrbd += lλpi1 - lλci1
-      elseif μev
-        llrbd += lλpi1 - lλci1
-      end
+    # if speciation
+    if λev
+      llrbd += lλpi1 - lλci1
+    end
+
+    # if extinction
+    if μev
+      llrbd += lλpi1 - lλci1
     end
   end
 

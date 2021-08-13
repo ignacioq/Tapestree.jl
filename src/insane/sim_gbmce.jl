@@ -425,10 +425,11 @@ function sim_gbmce(nsδt::Float64,
           # if speciation
           if λorμ(λm, μ)
             nsp += 1
-            td1, nsp = sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt, nsp, nlim)
-            td2, nsp = sim_gbmce(0.0, λt1, α, σλ, μ, δt, srδt, nsp, nlim)
 
-            return iTgbmce(td1, td2, bt, δt, t, false, false, λv), nsp
+            return iTgbmce(
+                     iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                     iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                     bt, δt, t, false, false, λv), nsp
           # if extinction
           else
             return iTgbmce(bt, δt, t, true, false, λv), nsp
