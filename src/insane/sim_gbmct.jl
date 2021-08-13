@@ -136,8 +136,8 @@ function sim_gbmct(t   ::Float64,
           if λorμ(λm, ϵ*λm)
             nsp += 1
             return iTgbmct(
-                    iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1])
-                    iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1])
+                    iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                    iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                     bt, δt, t, false, false, λv), nsp
           # if extinction
           else
@@ -364,7 +364,7 @@ function sim_gbmct(nsδt::Float64,
         nsp += 1
 
         return iTgbmct(
-                 iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1])
+                 iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                  iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                  bt, δt, t, false, false, λv), nsp
       # if extinction

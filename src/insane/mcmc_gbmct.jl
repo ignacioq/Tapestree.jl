@@ -29,7 +29,7 @@ Created 03 09 2020
                  ϵi      ::Float64           = 0.2,
                  ϵtni    ::Float64           = 1.0, 
                  obj_ar  ::Float64           = 0.234,
-                 pupdp   ::NTuple{5,Float64} = (0.1, 0.1,0.1,0.2,0.2),
+                 pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
                  ntry    ::Int64             = 2,
                  nlim    ::Int64             = 500,
                  δt      ::Float64           = 1e-2,
@@ -53,7 +53,7 @@ function insane_gbmct(tree    ::sTbd,
                       ϵi      ::Float64           = 0.2,
                       ϵtni    ::Float64           = 1.0, 
                       obj_ar  ::Float64           = 0.234,
-                      pupdp   ::NTuple{5,Float64} = (0.1, 0.1,0.1,0.2,0.2),
+                      pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
                       ntry    ::Int64             = 2,
                       nlim    ::Int64             = 500,
                       δt      ::Float64           = 1e-2,
@@ -119,7 +119,7 @@ function insane_gbmct(tree    ::sTbd,
       idf, triads, terminus, btotriad, pup, nlim, prints, scalef, svf)
 
   # mcmc
-  R, Ψv =
+  R, Ψv = 
     mcmc_gbmct(Ψp, Ψc, llc, prc, αc, σλc, ϵc, ϵtn, bbλp, bbλc, tsv,
       λa_prior, α_prior, σλ_prior, ϵ_prior, niter, nthin, δt, srδt, 
       idf, triads, terminus, btotriad, pup, nlim, prints, svf)
@@ -145,12 +145,14 @@ end
                     bbλc    ::Array{Array{Float64,1},1},
                     tsv     ::Array{Array{Float64,1},1},
                     λa_prior::NTuple{2,Float64},
-                    ϵ_prior ::NTuple{2,Float64},
+                    α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
+                    ϵ_prior ::NTuple{2,Float64},
                     nburn   ::Int64,
                     tune_int::Int64,
-                    ϵc      ::Float64,
+                    αc      ::Float64,
                     σλc     ::Float64,
+                    ϵc      ::Float64,
                     ϵtn     ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
@@ -164,7 +166,7 @@ end
                     scalef  ::Function,
                     svf     ::Function)
 
-MCMC burn-in chain for GBM birth-death.
+MCMC burn-in chain for `gbmct`.
 """
 function mcmc_burn_gbmct(Ψp      ::iTgbmct,
                          Ψc      ::iTgbmct,
@@ -172,8 +174,9 @@ function mcmc_burn_gbmct(Ψp      ::iTgbmct,
                          bbλc    ::Array{Array{Float64,1},1},
                          tsv     ::Array{Array{Float64,1},1},
                          λa_prior::NTuple{2,Float64},
-                         ϵ_prior ::NTuple{2,Float64},
+                         α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
+                         ϵ_prior ::NTuple{2,Float64},
                          nburn   ::Int64,
                          tune_int::Int64,
                          αc      ::Float64,
@@ -335,7 +338,7 @@ end
                 prints  ::Int64,
                 svf     ::Function)
 
-MCMC chain for GBM birth-death.
+MCMC chain for `gbmct`.
 """
 function mcmc_gbmct(Ψp      ::iTgbmct,
                     Ψc      ::iTgbmct,

@@ -166,7 +166,7 @@ end
                     scalef  ::Function,
                     svf     ::Function)
 
-MCMC burn-in chain for GBM birth-death.
+MCMC burn-in chain for `gbmce`.
 """
 function mcmc_burn_gbmce(Ψp      ::iTgbmce,
                          Ψc      ::iTgbmce,
@@ -338,7 +338,7 @@ end
                 prints  ::Int64,
                 svf     ::Function)
 
-MCMC chain for GBM birth-death.
+MCMC chain for `gbmce`.
 """
 function mcmc_gbmce(Ψp      ::iTgbmce,
                     Ψc      ::iTgbmce,
@@ -807,11 +807,11 @@ end
 
 
 """
-    addtotip(tree::T, stree::iTgbmce, ix::Bool) where {T < iTgbm}
+    addtotip(tree::T, stree::T, ix::Bool) where {T < iTgbm}
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function addtotip(tree::T, stree::iTgbmce, ix::Bool) where {T < iTgbm}
+function addtotip(tree::T, stree::T, ix::Bool) where {T <: iTgbm}
 
   if istip(tree)
     if isalive(tree) && !isfix(tree)

@@ -397,8 +397,8 @@ function llr_propr(treep  ::iTgbmct,
                cond_surv_stem(treec, ϵ)
   end
 
-  acr = llrbd_pr + llrbd_d1 + llrbd_d2 #+ llrcond
-  llr = acr + llrbm_pr + llrbm_d1 + llrbm_d2 + llrcond
+  acr = llrbd_pr + llrbd_d1 + llrbd_d2 + llrcond
+  llr = acr + llrbm_pr + llrbm_d1 + llrbm_d2
 
   return llr, acr
 end
