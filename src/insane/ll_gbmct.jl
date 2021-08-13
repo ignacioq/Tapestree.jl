@@ -270,20 +270,20 @@ end
 
 
 """
-    sλ_gbm(tree::iTgbmct, sλ::Float64)
-
+    sλ_gbm(tree::iTgbmct)
 Returns the sum of `λ` rates for a `iTgbmct` according 
 to GBM birth-death for a `ϵ` proposal.
 """
-function sλ_gbm(tree::iTgbmct, sλ::Float64)
+function sλ_gbm(tree::iTgbmct)
 
-  sλ += sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
+  sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
 
   if isdefined(tree, :d1) 
-    sλ = sλ_gbm(tree.d1, sλ) + sλ_gbm(tree.d2, sλ)
+    sλt += sλ_gbm(tree.d1::iTgbmct) + 
+           sλ_gbm(tree.d2::iTgbmct)
   end
 
-  return sλ
+  return sλt
 end
 
 

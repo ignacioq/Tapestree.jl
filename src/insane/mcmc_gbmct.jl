@@ -505,8 +505,8 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         R[lit,4] = exp(lλ(Ψc)[1])
         R[lit,5] = αc
         R[lit,6] = σλc
-        R[lit,5] = ϵc
-        R[lit,7] = snen(Ψc, 0)
+        R[lit,7] = ϵc
+        R[lit,8] = snen(Ψc, 0)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -920,7 +920,7 @@ function update_ϵ!(ϵc   ::Float64,
 
   # log likelihood and prior ratio
   ne   = snenF(Ψ, 0.0)
-  ssλt = sλ_gbm(Ψ, 0.0)
+  ssλt = sλ_gbm(Ψ)
   llr = ne*(log(ϵp) - log(ϵc)) + 
         ssλt*(ϵc - ϵp) + svf(Ψ, ϵp) - svf(Ψ, ϵc)
 
@@ -961,7 +961,7 @@ function update_ϵ!(ϵc    ::Float64,
 
   # log likelihood and prior ratio
   ne   = snenF(Ψ, 0.0)
-  ssλt = sλ_gbm(Ψ, 0.0)
+  ssλt = sλ_gbm(Ψ)
   llr = ne*(log(ϵp) - log(ϵc)) + 
         ssλt*(ϵc - ϵp) + svf(Ψ, ϵp) - svf(Ψ, ϵc)
 

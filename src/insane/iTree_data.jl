@@ -172,24 +172,6 @@ end
 
 
 """
-    snenF(tree::T) where {T <: iTree}
-
-Return the number of extinct nodes for `tree` as Float64.
-"""
-function snenF(tree::T, n::Int64) where {T <: iTree}
-  if isdefined(tree, :d1)
-    n = snen(tree.d1, n)
-    n = snen(tree.d2, n)
-  elseif isextinct(tree)
-    n += 1
-  end
-
-  return n
-end
-
-
-
-"""
     snenF(tree::T, n::Float64) where {T <: iTree}
 
 Return the number of extinct nodes for `tree` as Float64.
