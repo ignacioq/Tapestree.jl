@@ -600,7 +600,6 @@ function fsp(Ψp   ::iTgbmce,
       llr += llik_gbm( t0, α, σλ, μ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, α, σλ, μ, δt, srδt, dri, ldr, 0)
 
-      llr = 0.0
       if icr && isone(wbc)
         if dri[1]
           llr += cond_surv_stem_p(t0, μ) - 
