@@ -786,15 +786,15 @@ function addtotip(tree::iTgbmct, stree::iTgbmct, ix::Bool)
       lλ0 = lλ(tree)
       lλs = lλ(stree)
 
+      if lastindex(lλs) === 2
+        setfdt!(tree, fdt(tree) + fdt(stree))
+      else
+        setfdt!(tree, dt(tree))
+      end
+
       pop!(lλ0)
       popfirst!(lλs)
       append!(lλ0, lλs)
-
-      if isone(lastindex(lλs))
-        setfdt!(tree, fdt(tree) + fdt(stree))
-      else
-        setfdt!(tree, fdt(stree))
-      end
 
       if isdefined(stree, :d1)
         tree.d1 = stree.d1
