@@ -16,8 +16,8 @@ Created 03 09 2020
     insane_gbmbd(tree    ::sTbd, 
                  out_file::String;
                  λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                  μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
                  σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
                  niter   ::Int64             = 1_000,
@@ -25,11 +25,11 @@ Created 03 09 2020
                  nburn   ::Int64             = 200,
                  ϵi      ::Float64           = 0.2,
                  λi      ::Float64           = NaN,
-                 αi      ::Float64           = NaN,
                  μi      ::Float64           = NaN,
+                 αi      ::Float64           = 0.0,
                  σλi     ::Float64           = 0.01, 
                  σμi     ::Float64           = 0.01,
-                 pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
+                 pupdp   ::NTuple{4,Float64} = (0.1,0.1,0.2,0.2),
                  ntry    ::Int64             = 2,
                  nlim    ::Int64             = 500,
                  δt      ::Float64           = 1e-2,
@@ -40,8 +40,8 @@ Run insane for `gbmbd`.
 function insane_gbmbd(tree    ::sTbd, 
                       out_file::String;
                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                       μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                      α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                       σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
                       σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
                       niter   ::Int64             = 1_000,
@@ -49,8 +49,8 @@ function insane_gbmbd(tree    ::sTbd,
                       nburn   ::Int64             = 200,
                       ϵi      ::Float64           = 0.2,
                       λi      ::Float64           = NaN,
-                      αi      ::Float64           = NaN,
                       μi      ::Float64           = NaN,
+                      αi      ::Float64           = 0.0,
                       σλi     ::Float64           = 0.01, 
                       σμi     ::Float64           = 0.01,
                       pupdp   ::NTuple{4,Float64} = (0.1,0.1,0.2,0.2),
@@ -112,19 +112,19 @@ function insane_gbmbd(tree    ::sTbd,
 
   # burn-in phase
   Ψp, Ψc, llc, prc, αc, σλc, σμc =
-    mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, α_prior,
-     μa_prior, σλ_prior, σμ_prior, nburn, αi, σλi, σμi, δt, srδt, 
+    mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, 
+     μa_prior, α_prior, σλ_prior, σμ_prior, nburn, αi, σλi, σμi, δt, srδt, 
       idf, triads, terminus, btotriad, pup, nlim, prints, svf)
 
   # mcmc
   R, Ψv =
     mcmc_gbmbd(Ψp, Ψc, llc, prc, αc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
-      λa_prior, α_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, δt, srδt, 
+      λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, niter, nthin, δt, srδt, 
       idf, triads, terminus, btotriad, pup, nlim, prints, svf)
 
   pardic = Dict(("lambda_root"  => 1,
-                 "alpha"        => 2,
-                 "mu_root"      => 3,
+                 "mu_root"      => 2,
+                 "alpha"        => 3,
                  "sigma_lambda" => 4,
                  "sigma_mu"     => 5,
                  "n_extinct"    => 6))
@@ -146,8 +146,8 @@ end
                     bbμc    ::Array{Array{Float64,1},1},
                     tsv     ::Array{Array{Float64,1},1},
                     λa_prior::NTuple{2,Float64},
-                    α_prior ::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
+                    α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
@@ -175,8 +175,8 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          bbμc    ::Array{Array{Float64,1},1},
                          tsv     ::Array{Array{Float64,1},1},
                          λa_prior::NTuple{2,Float64},
-                         α_prior ::NTuple{2,Float64},
                          μa_prior::NTuple{2,Float64},
+                         α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
                          σμ_prior::NTuple{2,Float64},
                          nburn   ::Int64,
@@ -410,7 +410,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         # end
 
       # gbm update
-      elseif pupi === 2
+      elseif pupi === 3
 
         tix = ceil(Int64,rand()*ntr)
 
@@ -479,8 +479,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         R[lit,2] = llc
         R[lit,3] = prc
         R[lit,4] = exp(lλ(Ψc)[1])
-        R[lit,5] = αc
-        R[lit,6] = exp(lμ(Ψc)[1])
+        R[lit,5] = exp(lμ(Ψc)[1])
+        R[lit,6] = αc
         R[lit,7] = σλc
         R[lit,8] = σμc
         R[lit,9] = snen(Ψc, 0)

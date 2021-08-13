@@ -601,6 +601,7 @@ end
             srδt::Float64, 
             lλa ::Float64, 
             lμa ::Float64, 
+            α   ::Float64,
             σλ  ::Float64,
             σμ  ::Float64)
 
@@ -612,6 +613,7 @@ function iTgbmbd(tree::sTbd,
                  srδt::Float64, 
                  lλa ::Float64, 
                  lμa ::Float64, 
+                 α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64)
 
@@ -632,7 +634,7 @@ function iTgbmbd(tree::sTbd,
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
 
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    lλv = sim_bm(lλa, α,   σλ, δt, fdti, srδt, nt)
     lμv = sim_bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
 
     if iszero(fdti)

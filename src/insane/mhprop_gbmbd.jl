@@ -251,9 +251,9 @@ function triad_lvupdate_trio!(treep::iTgbmbd,
     end
 
     # fill fix and simulate unfix tree
-    bm!(treep,   λprv_p, μprv_p, 1, lipr, α, σλ, σμ, srδt)
-    bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, α, σλ, σμ, srδt)
-    bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, α, σλ, σμ, srδt)
+    bm!(treep,   λprv_p, μprv_p, 1, lipr, α, σλ, σμ, δt, srδt)
+    bm!(treepd1, λd1v_p, μd1v_p, 1, lid1, α, σλ, σμ, δt, srδt)
+    bm!(treepd2, λd2v_p, μd2v_p, 1, lid2, α, σλ, σμ, δt, srδt)
 
     ## make acceptance ratio 
     # estimate likelihoods

@@ -139,11 +139,11 @@ geometric Brownian motion in place for the unfixed trees.
 
     if fi < tl
       if isfix(tree.d1)
-        bm!(tree.d1, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
+        bm!(tree.d1, bbiλ, bbiμ, fi, tl, α, σλ, σμ, δt, srδt)
         bm!(tree.d2, λv[l], μv[l], α, σλ, σμ, δt, srδt)
       elseif isfix(tree.d2)
         bm!(tree.d1, λv[l], μv[l], α, σλ, σμ, δt, srδt)
-        bm!(tree.d2, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
+        bm!(tree.d2, bbiλ, bbiμ, fi, tl, α, σλ, σμ, δt, srδt)
       end
     end
 
