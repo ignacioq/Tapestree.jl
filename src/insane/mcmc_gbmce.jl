@@ -594,6 +594,7 @@ function fsp(Ψp   ::iTgbmce,
 
     # mh ratio
     if -randexp() < acr
+
       llr += llik_gbm( t0, α, σλ, μ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, α, σλ, μ, δt, srδt, dri, ldr, 0)
 

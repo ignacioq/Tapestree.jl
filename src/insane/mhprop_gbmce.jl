@@ -120,8 +120,7 @@ end
                          icr  ::Bool,
                          wbc  ::Int64)
 
-Make a trio of Brownian motion MCMC updates when node is internal and 
-no daughters are terminal.
+Make a `gbmce` trio proposal.
 """
 function triad_lvupdate_trio!(treep::iTgbmce, 
                               treec::iTgbmce,

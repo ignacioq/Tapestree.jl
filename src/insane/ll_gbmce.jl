@@ -1,6 +1,6 @@
 #=
 
-GBM birth-death likelihood
+`gbmce` likelihood
 
 Ignacio Quintero Mächler
 
@@ -146,7 +146,7 @@ end
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmce` according to GBM birth-death.
+Returns the log-likelihood for a `iTgbmce` according to `gbmce`.
 """
 function llik_gbm(tree::iTgbmce, 
                   α   ::Float64,
@@ -177,7 +177,7 @@ end
              λev ::Bool,
              μev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM birth-death.
+Returns the log-likelihood for a branch according to `gbmce`.
 """
 @inline function ll_gbm_b(lλv ::Array{Float64,1},
                           α   ::Float64,
@@ -243,7 +243,7 @@ end
                δt  ::Float64,
                srδt::Float64)
 
-Estimate gbm birth-death likelihood for the tree in a fix branch.
+Estimate `gbmce` likelihood for the tree in a fix branch.
 """
 function llik_gbm_f(tree::iTgbmce,
                     α   ::Float64,
@@ -286,7 +286,7 @@ end
               ldr ::Int64,
               ix  ::Int64)
 
-Returns gbm birth-death likelihood for whole branch `br`.
+Returns `gbmce` likelihood for whole branch `br`.
 """
 function br_ll_gbm(tree::iTgbmce,
                    α   ::Float64,
@@ -331,7 +331,7 @@ end
                   δt   ::Float64,
                   srδt ::Float64)
 
-Returns the log-likelihood for a branch according to GBM birth-death 
+Returns the log-likelihood for a branch according to `gbmce` 
 separately (for gbm and bd).
 """
 function llr_gbm_sep_f(treep::iTgbmce,
@@ -382,7 +382,7 @@ end
                 δt   ::Float64,
                 srδt::Float64)
 
-Returns the log-likelihood ratio for a tree according to GBM birth-death 
+Returns the log-likelihood ratio for a tree according to `gbmce` 
 separately (for gbm and bd).
 """
 function llr_gbm_sep(treep::iTgbmce, 

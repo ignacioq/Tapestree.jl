@@ -1,6 +1,6 @@
 #=
 
-GBM birth-death likelihood for constant turnover
+`gbmct` likelihood for constant turnover
 
 Ignacio Quintero Mächler
 
@@ -141,7 +141,7 @@ end
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmct` according to GBM birth-death.
+Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
 function llik_gbm(tree::iTgbmct,
                   α   ::Float64, 
@@ -174,7 +174,7 @@ end
                λev ::Bool,
                μev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM birth-death.
+Returns the log-likelihood for a branch according to `gbmct`.
 """
 @inline function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
                             α   ::Float64,
@@ -207,9 +207,9 @@ Returns the log-likelihood for a branch according to GBM birth-death.
     # add to global likelihood
     ll   -= llbd*δt*(1.0 + ϵ)
 
+    lλvi1 = lλv[nI+2]
     # add final non-standard `δt`
     if fdt > 0.0
-      lλvi1 = lλv[nI+2]
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
       ll -= fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
     end
@@ -236,7 +236,7 @@ end
              fdt::Float64)
 
 Returns the sum of `λ` rates for a `iTgbmct` branch according 
-to GBM birth-death for a `ϵ` proposal.
+to `gbmct` for a `ϵ` proposal.
 """
 @inline function sλ_gbm_b(lλv::Array{Float64,1},
                           δt ::Float64, 
@@ -272,7 +272,7 @@ end
 """
     sλ_gbm(tree::iTgbmct)
 Returns the sum of `λ` rates for a `iTgbmct` according 
-to GBM birth-death for a `ϵ` proposal.
+to `gbmct` for a `ϵ` proposal.
 """
 function sλ_gbm(tree::iTgbmct)
 
@@ -297,7 +297,7 @@ end
                δt  ::Float64,
                srδt::Float64)
 
-Estimate gbm birth-death likelihood for the tree in a fix branch.
+Estimate `gbmct` likelihood for the tree in a fix branch.
 """
 function llik_gbm_f(tree::iTgbmct,
                     α    ::Float64,
@@ -340,7 +340,7 @@ end
               ldr ::Int64,
               ix  ::Int64)
 
-Returns gbm birth-death likelihood for whole branch `br`.
+Returns `gbmct` likelihood for whole branch `br`.
 """
 function br_ll_gbm(tree::iTgbmct,
                    α    ::Float64,
@@ -386,7 +386,7 @@ end
                   δt   ::Float64,
                   srδt ::Float64)
 
-Returns the log-likelihood for a branch according to GBM birth-death 
+Returns the log-likelihood for a branch according to `gbmct` 
 separately (for gbm and bd).
 """
 function llr_gbm_sep_f(treep::iTgbmct,
@@ -437,7 +437,7 @@ end
                 δt   ::Float64,
                 srδt::Float64)
 
-Returns the log-likelihood ratio for a tree according to GBM birth-death 
+Returns the log-likelihood ratio for a tree according to `gbmct` 
 separately (for gbm and bd).
 """
 function llr_gbm_sep(treep::iTgbmct, 
@@ -483,7 +483,7 @@ end
                   λev ::Bool,
                   μev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM birth-death 
+Returns the log-likelihood for a branch according to `gbmct` 
 separately (for gbm and bd).
 """
 function llr_gbm_b_sep(lλp ::Array{Float64,1},
@@ -518,10 +518,11 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbm *= (-0.5/((σλ*srδt)^2))
     llrbd *= -δt*(1.0 + ϵ)
 
+    lλpi1 = lλp[nI+2]
+    lλci1 = lλc[nI+2]
+
     # add final non-standard `δt`
     if fdt > 0.0
-      lλpi1 = lλp[nI+2]
-      lλci1 = lλc[nI+2]
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
       llrbd -= fdt*(1.0 + ϵ)*

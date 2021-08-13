@@ -406,7 +406,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        # ll0 = llik_gbm(Ψc, ϵc, σλc, δt, srδt) + svf(Ψc, ϵc)
+        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, 1
         #    return 
@@ -416,7 +416,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
 
-        # ll0 = llik_gbm(Ψc, ϵc, σλc, δt, srδt) + svf(Ψc, ϵc)
+        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, 2
         #    return 
@@ -426,7 +426,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         llc, ϵc  = update_ϵ!(ϵc, Ψc, llc, ϵtn, ϵmxpr, svf)
 
-        # ll0 = llik_gbm(Ψc, ϵc, σλc, δt, srδt) + svf(Ψc, ϵc)
+        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, 3
         #    return 
@@ -454,7 +454,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
             αc, σλc, ϵc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        # ll0 = llik_gbm(Ψc, ϵc, σλc, δt, srδt) + svf(Ψc, ϵc)
+        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, 4
         #    return 
@@ -484,7 +484,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, αc, σλc, ϵc, tsv, bbλp, bbλc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
-        # ll0 = llik_gbm(Ψc, ϵc, σλc, δt, srδt) + svf(Ψc, ϵc)
+        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, 2
         #    return 

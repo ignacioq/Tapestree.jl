@@ -587,7 +587,7 @@ Demotes a tree of type `iTgbmbd` to `sTbd`.
 function sTbd(tree::iTgbmbd)
   if isdefined(tree, :d1)
     sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
-  else  
+  else
     sTbd(e(tree), isextinct(tree), false)
   end
 end
