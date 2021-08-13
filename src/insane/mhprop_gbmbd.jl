@@ -259,7 +259,7 @@ function triad_lvupdate_trio!(treep::iTgbmbd,
     # estimate likelihoods
     llr, acr = llr_propr(treep, treepd1, treepd2, 
                          treec, treecd1, treecd2, 
-                         α,, σλ, σμ, δt, srδt, icr, wbc)
+                         α, σλ, σμ, δt, srδt, icr, wbc)
 
     if -randexp() < acr
       llc += llr

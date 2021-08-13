@@ -84,8 +84,8 @@ function sim_gbmbd(t   ::Float64,
     if divev(λm, μm, δt)
       # if speciation
       if λorμ(λm, μm)
-        return iTgbmbd(sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt), 
-                       sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt), 
+        return iTgbmbd(sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt), 
+                       sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt), 
                 bt, δt, δt, false, false, λv, μv)
       # if extinction
       else
@@ -183,8 +183,8 @@ function sim_gbmbd(t   ::Float64,
         # if speciation
         if λorμ(λm, μm)
           nsp += 1
-          td1, nsp = sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt, nsp, nlim)
-          td2, nsp = sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt, nsp, nlim)
+          td1, nsp = sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt, nsp, nlim)
+          td2, nsp = sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt, nsp, nlim)
 
           return iTgbmbd(td1, td2, bt, δt, δt, false, false, λv, μv), nsp
         # if extinction
@@ -283,8 +283,8 @@ function sim_gbmbd(nsδt::Float64,
   if divev(λm, μm, nsδt)
     # if speciation
     if λorμ(λm, μm)
-      return iTgbmbd(sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt), 
-                     sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt), 
+      return iTgbmbd(sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt), 
+                     sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt), 
               bt, δt, nsδt, false, false, λv, μv)
     # if extinction
     else
@@ -344,8 +344,8 @@ function sim_gbmbd(nsδt::Float64,
     if divev(λm, μm, δt)
       # if speciation
       if λorμ(λm, μm)
-        return iTgbmbd(sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt), 
-                       sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt), 
+        return iTgbmbd(sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt), 
+                       sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt), 
                 bt, δt, δt, false, false, λv, μv)
       # if extinction
       else
@@ -446,8 +446,8 @@ function sim_gbmbd(nsδt::Float64,
     # if speciation
     if λorμ(λm, μm)
       nsp += 1
-      td1, nsp = sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt, nsp, nlim)
-      td2, nsp = sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt, nsp, nlim)
+      td1, nsp = sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt, nsp, nlim)
+      td2, nsp = sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt, nsp, nlim)
 
       return iTgbmbd(td1, td2, bt, δt, nsδt, false, false, λv, μv), nsp
     else
@@ -513,8 +513,12 @@ function sim_gbmbd(nsδt::Float64,
         # if speciation
         if λorμ(λm, μm)
           nsp += 1
-          td1, nsp = sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt, nsp, nlim)
-          td2, nsp = sim_gbmbd(t, λt1, μt1, σλ, σμ, δt, srδt, nsp, nlim)
+
+          """
+          here error below on order
+          """
+          td1, nsp = sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt, nsp, nlim)
+          td2, nsp = sim_gbmbd(t, λt1, α, μt1, σλ, σμ, δt, srδt, nsp, nlim)
 
           return iTgbmbd(td1, td2, bt, δt, δt, false, false, λv, μv), nsp
         # if extinction

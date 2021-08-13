@@ -276,7 +276,7 @@ for `gbmbd`.
 """
 @inline function sss_gbm_b(lλv::Array{Float64,1},
                            lμv::Array{Float64,1},
-                           α  ::FLoat64,
+                           α  ::Float64,
                            δt ::Float64, 
                            fdt::Float64)
 
