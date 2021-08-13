@@ -13,16 +13,18 @@ Created 03 09 2020
 
 
 """
-    sim_gbm(t   ::Float64,
+    sim_gbmpb(t   ::Float64,
             λt  ::Float64,
+            α   ::Float64,
             σλ  ::Float64,
             δt  ::Float64,
             srδt::Float64)
 
-Simulate `iTgbmbd` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
 """
-function sim_gbm(t   ::Float64,
+function sim_gbmpb(t   ::Float64,
                  λt  ::Float64,
+                 α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
                  srδt::Float64)
@@ -36,14 +38,14 @@ function sim_gbm(t   ::Float64,
       bt  += t
 
       t   = max(0.0, t)
-      λt1 = rnorm(λt, sqrt(t)*σλ)
+      λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
       push!(λv, λt1)
 
       λm = exp(0.5*(λt + λt1))
 
       if divev(λm, t)
-        return iTgbmpb(sim_gbm(0.0, λt1, σλ, δt, srδt), 
-                       sim_gbm(0.0, λt1, σλ, δt, srδt), 
+        return iTgbmpb(sim_gbmpb(0.0, λt1, α, σλ, δt, srδt), 
+                       sim_gbmpb(0.0, λt1, α, σλ, δt, srδt), 
                  bt, δt, t, λv)
       end
 
@@ -53,15 +55,15 @@ function sim_gbm(t   ::Float64,
     t  -= δt
     bt += δt
 
-    λt1 = rnorm(λt, srδt*σλ)
+    λt1 = rnorm(λt + α*δt, srδt*σλ)
 
     push!(λv, λt1)
 
     λm = exp(0.5*(λt + λt1))
 
     if divev(λm, δt)
-      return iTgbmpb(sim_gbm(t, λt1, σλ, δt, srδt), 
-                     sim_gbm(t, λt1, σλ, δt, srδt), 
+      return iTgbmpb(sim_gbmpb(t, λt1, α, σλ, δt, srδt), 
+                     sim_gbmpb(t, λt1, α, σλ, δt, srδt), 
               bt, δt, δt, λv)
     end
 

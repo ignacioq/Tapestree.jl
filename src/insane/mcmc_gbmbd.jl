@@ -1,6 +1,6 @@
 #=
 
-Anagenetic GBM birth-death MCMC using forward simulation
+Anagenetic `gbmbd` MCMC using forward simulation
 
 Ignacio Quintero Mächler
 
@@ -15,46 +15,45 @@ Created 03 09 2020
 """
     insane_gbmbd(tree    ::sTbd, 
                  out_file::String;
-                 σλ_prior::Float64           = 0.1,
-                 σμ_prior::Float64           = 0.1,
                  λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                  μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                 σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
+                 σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
                  niter   ::Int64             = 1_000,
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
-                 tune_int::Int64             = 100,
                  ϵi      ::Float64           = 0.2,
                  λi      ::Float64           = NaN,
                  μi      ::Float64           = NaN,
+                 αi      ::Float64           = 0.0,
                  σλi     ::Float64           = 0.01, 
                  σμi     ::Float64           = 0.01,
-                 σλtni   ::Float64           = 1.0,
-                 σμtni   ::Float64           = 1.0,
-                 obj_ar  ::Float64           = 0.4,
-                 pupdp   ::NTuple{3,Float64} = (0.3,0.1,0.1),
+                 pupdp   ::NTuple{4,Float64} = (0.1,0.1,0.2,0.2),
                  ntry    ::Int64             = 2,
                  nlim    ::Int64             = 500,
                  δt      ::Float64           = 1e-2,
                  prints  ::Int64             = 5)
 
-Run insane for GBM birth-death.
+Run insane for `gbmbd`.
 """
 function insane_gbmbd(tree    ::sTbd, 
                       out_file::String;
                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                       μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                      α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                       σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
                       σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
                       niter   ::Int64             = 1_000,
                       nthin   ::Int64             = 10,
                       nburn   ::Int64             = 200,
-                      tune_int::Int64             = 100,
                       ϵi      ::Float64           = 0.2,
                       λi      ::Float64           = NaN,
                       μi      ::Float64           = NaN,
+                      αi      ::Float64           = 0.0,
                       σλi     ::Float64           = 0.01, 
                       σμi     ::Float64           = 0.01,
-                      pupdp   ::NTuple{3,Float64} = (0.3,0.1,0.1),
+                      pupdp   ::NTuple{4,Float64} = (0.1,0.1,0.2,0.2),
                       ntry    ::Int64             = 2,
                       nlim    ::Int64             = 500,
                       δt      ::Float64           = 1e-2,
@@ -77,7 +76,7 @@ function insane_gbmbd(tree    ::sTbd,
   end
 
   # make Ψ current and proposal parameters
-  Ψc = iTgbmbd(tree, δt, srδt, log(λc), log(μc), σλi, σμi)
+  Ψc = iTgbmbd(tree, δt, srδt, log(λc), log(μc), αi, σλi, σμi)
   Ψp = deepcopy(Ψc)
 
   # make fix Ψ directory
@@ -102,33 +101,33 @@ function insane_gbmbd(tree    ::sTbd,
   # make survival conditioning function (stem or crown)
   svf = iszero(e(Ψc)) ? cond_surv_crown : cond_surv_stem
 
-  # parameter updates (1: σλ & σμ, 2: gbm, 3: forward simulation)
+  # parameter updates (1: α, 2: σλ, 3: σμ, 4: gbm, 5: forward simulation)
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(3) 
+  for i in Base.OneTo(4) 
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running birth-death Geometric Brownian motion"
+  @info "running birth-death gbm"
 
   # burn-in phase
-  Ψp, Ψc, llc, prc, σλc, σμc =
-    mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, μa_prior, 
-      σλ_prior, σμ_prior, nburn, tune_int, σλi, σμi, δt, srδt, 
+  Ψp, Ψc, llc, prc, αc, σλc, σμc =
+    mcmc_burn_gbmbd(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, tsv, λa_prior, 
+     μa_prior, α_prior, σλ_prior, σμ_prior, nburn, αi, σλi, σμi, δt, srδt, 
       idf, triads, terminus, btotriad, pup, nlim, prints, svf)
 
   # mcmc
   R, Ψv =
-    mcmc_gbmbd(Ψp, Ψc, llc, prc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
-      λa_prior, μa_prior, σλ_prior, σμ_prior, niter, nthin, δt, srδt, 
-      idf, triads, terminus, btotriad, pup, nlim, prints)
+    mcmc_gbmbd(Ψp, Ψc, llc, prc, αc, σλc, σμc, bbλp, bbμp, bbλc, bbμc, tsv,
+      λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, niter, nthin, δt, srδt, 
+      idf, triads, terminus, btotriad, pup, nlim, prints, svf)
 
   pardic = Dict(("lambda_root"  => 1,
                  "mu_root"      => 2,
-                 "sigma_lambda" => 3,
-                 "sigma_mu"     => 4,
-                 "n_extinct"    => 5,
-                 "tree_length"  => 6))
+                 "alpha"        => 3,
+                 "sigma_lambda" => 4,
+                 "sigma_mu"     => 5,
+                 "n_extinct"    => 6))
 
   write_ssr(R, pardic, out_file)
 
@@ -141,26 +140,32 @@ end
 """
     mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                     Ψc      ::iTgbmbd,
-                    λa_prior::Float64,
-                    μa_prior::Float64,
-                    σλ_prior ::Float64,
-                    σμ_prior ::Float64,
+                    bbλp    ::Array{Array{Float64,1},1},
+                    bbμp    ::Array{Array{Float64,1},1},
+                    bbλc    ::Array{Array{Float64,1},1},
+                    bbμc    ::Array{Array{Float64,1},1},
+                    tsv     ::Array{Array{Float64,1},1},
+                    λa_prior::NTuple{2,Float64},
+                    μa_prior::NTuple{2,Float64},
+                    α_prior ::NTuple{2,Float64},
+                    σλ_prior::NTuple{2,Float64},
+                    σμ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
-                    tune_int::Int64,
+                    αc     ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
-                    σλtni   ::Float64,
-                    σμtni   ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     idf     ::Array{iBffs,1},
                     triads  ::Array{Array{Int64,1},1},
                     terminus::Array{BitArray{1}},
+                    btotriad::Array{Int64,1},
                     pup     ::Array{Int64,1},
+                    nlim    ::Int64,
                     prints  ::Int64,
-                    scalef  ::Function
+                    svf     ::Function)
 
-MCMC burn-in chain for GBM birth-death.
+MCMC burn-in chain for `gbmbd`.
 """
 function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          Ψc      ::iTgbmbd,
@@ -171,10 +176,11 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
                          tsv     ::Array{Array{Float64,1},1},
                          λa_prior::NTuple{2,Float64},
                          μa_prior::NTuple{2,Float64},
+                         α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
                          σμ_prior::NTuple{2,Float64},
                          nburn   ::Int64,
-                         tune_int::Int64,
+                         αc     ::Float64,
                          σλc     ::Float64,
                          σμc     ::Float64,
                          δt      ::Float64,
@@ -191,9 +197,10 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
   # crown or stem conditioning
   icr = iszero(e(Ψc))
 
-  llc = llik_gbm(Ψc, σλc, σμc, δt, srδt) + svf(Ψc)
+  llc = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
         logdinvgamma(σμc^2, σμ_prior[1], σμ_prior[2])      + 
+        logdnorm(αc, α_prior[1], α_prior[2]^2)             +
         logdunif(exp(lλ(Ψc)[1]), λa_prior[1], λa_prior[2]) +
         logdunif(exp(lμ(Ψc)[1]), μa_prior[1], μa_prior[2])
 
@@ -217,14 +224,16 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
     # parameter updates
     for pupi in pup
 
-      # update σλ or σμ
       if pupi === 1
 
-        llc, prc, σλc, σμc = 
-          update_σ!(σλc, σμc, Ψc, llc, prc, σλ_prior, σμ_prior)
+        llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-      # gbm update
       elseif pupi === 2
+
+        llc, prc, σλc, σμc = 
+          update_σ!(σλc, σμc, αc, Ψc, llc, prc, σλ_prior, σμ_prior)
+
+      elseif pupi === 3
 
         tix = ceil(Int64,rand()*ntr)
 
@@ -242,9 +251,8 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
           wbc = 1
         end
 
-        llc = 
-          lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
-            σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
+        llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
+            αc, σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
 
       # forward simulation update
       else
@@ -268,7 +276,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
         end
 
         Ψp, Ψc, llc = 
-          fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
+          fsp(Ψp, Ψc, bi, llc, αc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
       end
     end
@@ -276,7 +284,7 @@ function mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
     next!(pbar)
   end
 
-  return Ψp, Ψc, llc, prc, σλc, σμc
+  return Ψp, Ψc, llc, prc, αc, σλc, σμc
 end
 
 
@@ -287,6 +295,7 @@ end
                 Ψc      ::iTgbmbd,
                 llc     ::Float64,
                 prc     ::Float64,
+                αc      ::Float64,
                 σλc     ::Float64,
                 σμc     ::Float64,
                 bbλp    ::Array{Array{Float64,1},1},
@@ -294,29 +303,31 @@ end
                 bbλc    ::Array{Array{Float64,1},1},
                 bbμc    ::Array{Array{Float64,1},1},
                 tsv     ::Array{Array{Float64,1},1},
-                λa_prior::Float64,
-                μa_prior::Float64,
-                σλ_prior ::Float64,
-                σμ_prior ::Float64,
+                λa_prior::NTuple{2,Float64},
+                α_prior ::NTuple{2,Float64},
+                μa_prior::NTuple{2,Float64},
+                σλ_prior::NTuple{2,Float64},
+                σμ_prior::NTuple{2,Float64},
                 niter   ::Int64,
                 nthin   ::Int64,
-                σλtn    ::Float64,
-                σμtn    ::Float64,
                 δt      ::Float64,
                 srδt    ::Float64,
                 idf     ::Array{iBffs,1},
                 triads  ::Array{Array{Int64,1},1},
                 terminus::Array{BitArray{1}},
+                btotriad::Array{Int64,1},
                 pup     ::Array{Int64,1},
                 nlim    ::Int64,
-                prints  ::Int64)
+                prints  ::Int64,
+                svf     ::Function)
 
-MCMC chain for GBM birth-death.
+MCMC chain for `gbmbd`.
 """
 function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     Ψc      ::iTgbmbd,
                     llc     ::Float64,
                     prc     ::Float64,
+                    αc      ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
                     bbλp    ::Array{Array{Float64,1},1},
@@ -325,6 +336,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     bbμc    ::Array{Array{Float64,1},1},
                     tsv     ::Array{Array{Float64,1},1},
                     λa_prior::NTuple{2,Float64},
+                    α_prior ::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
@@ -338,7 +350,8 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     btotriad::Array{Int64,1},
                     pup     ::Array{Int64,1},
                     nlim    ::Int64,
-                    prints  ::Int64)
+                    prints  ::Int64,
+                    svf     ::Function)
 
   # crown or stem conditioning
   icr = iszero(e(Ψc))
@@ -376,18 +389,28 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
       # update σλ or σμ
       if pupi === 1
 
-        llc, prc, σλc, σμc = 
-          update_σ!(σλc, σμc, Ψc, llc, prc, σλ_prior, σμ_prior)
+        llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_surv_stem(Ψc)
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
         #  if !isapprox(llci, llc, atol = 1e-4)
-        #    @show llci, llc, i, 1
+        #    @show llci, llc, 1
         #    return 
         # end
 
-
       # gbm update
       elseif pupi === 2
+
+        llc, prc, σλc, σμc = 
+          update_σ!(σλc, σμc, αc, Ψc, llc, prc, σλ_prior, σμ_prior)
+
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, 2
+        #    return 
+        # end
+
+      # gbm update
+      elseif pupi === 3
 
         tix = ceil(Int64,rand()*ntr)
 
@@ -405,13 +428,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           wbc = 1
         end
 
-        llc = 
-          lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
-            σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
+        llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
+            αc, σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_surv_stem(Ψc)
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
         #  if !isapprox(llci, llc, atol = 1e-4)
-        #    @show llci, llc, i, 2
+        #    @show llci, llc, 3
         #    return 
         # end
 
@@ -437,12 +459,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         end
 
         Ψp, Ψc, llc = 
-          fsp(Ψp, Ψc, bi, llc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
+          fsp(Ψp, Ψc, bi, llc, αc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
         
-        # llci = llik_gbm(Ψc, σλc, σμc, δt, srδt) + cond_surv_stem(Ψc)
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
         #  if !isapprox(llci, llc, atol = 1e-4)
-        #    @show llci, llc, i, 3
+        #    @show llci, llc, 4
         #    return 
         # end
       end
@@ -458,10 +480,10 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         R[lit,3] = prc
         R[lit,4] = exp(lλ(Ψc)[1])
         R[lit,5] = exp(lμ(Ψc)[1])
-        R[lit,6] = σλc
-        R[lit,7] = σμc
-        R[lit,8] = snen(Ψc, 0)
-        R[lit,9] = treelength(Ψc, 0.0)
+        R[lit,6] = αc
+        R[lit,7] = σλc
+        R[lit,8] = σμc
+        R[lit,9] = snen(Ψc, 0)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -481,6 +503,7 @@ end
         Ψc   ::iTgbmbd,
         bi   ::iBffs,
         llc  ::Float64,
+        α    ::Float64, 
         σλ   ::Float64, 
         σμ   ::Float64,
         tsv  ::Array{Array{Float64,1},1},
@@ -490,17 +513,20 @@ end
         bbμc ::Array{Array{Float64,1},1}, 
         bix  ::Int64,
         triad::Array{Int64,1},
+        ter  ::BitArray{1},
         δt   ::Float64, 
         srδt ::Float64,
-        nlim ::Int64)
+        nlim ::Int64,
+        icr  ::Bool, 
+        wbc  ::Int64)
 
-
-Forward simulation proposal function for gbm birth-death.
+Forward simulation proposal function for `gbmbd`.
 """
 function fsp(Ψp   ::iTgbmbd,
              Ψc   ::iTgbmbd,
              bi   ::iBffs,
              llc  ::Float64,
+             α    ::Float64, 
              σλ   ::Float64, 
              σμ   ::Float64,
              tsv  ::Array{Array{Float64,1},1},
@@ -518,7 +544,7 @@ function fsp(Ψp   ::iTgbmbd,
              wbc  ::Int64)
 
   t0, ret, λf, μf = 
-    fsbi(bi, bbλc[bix][1], bbμc[bix][1], σλ, σμ, δt, srδt, nlim)
+    fsbi(bi, bbλc[bix][1], bbμc[bix][1], α, σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
@@ -532,7 +558,7 @@ function fsp(Ψp   ::iTgbmbd,
       # make daughter proposal to be concordant with `t0`
       pr, d1, d2 = triad
       llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
-        tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
+        tsv, pr, d1, d2, α, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
       # change last event by speciation for llr
       iλ = λf
@@ -549,16 +575,16 @@ function fsp(Ψp   ::iTgbmbd,
     # mh ratio
     if -randexp() < acr 
 
-      llr += llik_gbm( t0, σλ, σμ, δt, srδt) + iλ - 
-             br_ll_gbm(Ψc, σλ, σμ, δt, srδt, dri, ldr, 0)
+      llr += llik_gbm( t0, α, σλ, σμ, δt, srδt) + iλ - 
+             br_ll_gbm(Ψc, α, σλ, σμ, δt, srδt, dri, ldr, 0)
 
       if icr && isone(wbc)
         if dri[1]
           llr += cond_surv_stem_p(t0) - 
-                 cond_surv_stem(Ψc.d1::iTgbmbd)
+                 cond_surv_stem(Ψc.d1)
         else
           llr += cond_surv_stem_p(t0) -
-                 cond_surv_stem(Ψc.d2::iTgbmbd)
+                 cond_surv_stem(Ψc.d2)
         end
       elseif iszero(wbc)
         llr += cond_surv_stem_p(t0) -
@@ -596,18 +622,19 @@ end
     fsbi(bi  ::iBffs, 
          iλ  ::Float64, 
          iμ  ::Float64, 
-         fdt::Float64,
+         α   ::Float64, 
          σλ  ::Float64, 
          σμ  ::Float64, 
          δt  ::Float64, 
          srδt::Float64,
          nlim::Int64)
 
-Forward gbm birth-death simulation for branch `bi`.
+Forward `gbmbd` simulation for branch `bi`.
 """
 function fsbi(bi  ::iBffs, 
               iλ  ::Float64, 
               iμ  ::Float64, 
+              α   ::Float64, 
               σλ  ::Float64, 
               σμ  ::Float64, 
               δt  ::Float64, 
@@ -621,7 +648,7 @@ function fsbi(bi  ::iBffs,
   tfb = tf(bi)
 
   # simulate tree
-  t0, nsp = sim_gbm(ti(bi) - tfb, iλ, iμ, σλ, σμ, δt, srδt, 1, nlim)
+  t0, nsp = sim_gbmbd(ti(bi) - tfb, iλ, iμ, α, σλ, σμ, δt, srδt, 1, nlim)
 
   na = snan(t0, 0)
 
@@ -648,7 +675,8 @@ function fsbi(bi  ::iBffs,
 
         for i in Base.OneTo(2)
           st0, nsp = 
-            sim_gbm(max(δt - fdti, 0.0), tfb, λt, μt, σλ, σμ, δt, srδt, 1, nlim)
+            sim_gbmbd(max(δt - fdti, 0.0), tfb, λt, μt, α, σλ, σμ, 
+                      δt, srδt, 1, nlim)
           # if maximum number of species reached.
           if nsp === nlim
             if i === 2
@@ -684,22 +712,29 @@ end
 
 
 """
-    ldprop!(treep   ::iTgbmbd,
-            treec   ::iTgbmbd,
-            bbλp    ::Array{Array{Float64,1},1}, 
-            bbμp    ::Array{Array{Float64,1},1}, 
-            bbλc    ::Array{Array{Float64,1},1}, 
-            bbμc    ::Array{Array{Float64,1},1}, 
-            tsv     ::Array{Array{Float64,1},1},
-            d1      ::Int64,
-            d2      ::Int64,
-            σλ      ::Float64, 
-            σμ      ::Float64, 
-            δt      ::Float64, 
-            srδt    ::Float64, 
-            dri     ::BitArray{1},
-            ldr     ::Int64,
-            ix      ::Int64)
+    ldprop!(treep::iTgbmbd,
+            treec::iTgbmbd,
+            λf   ::Float64,
+            μf   ::Float64,
+            bbλp ::Array{Array{Float64,1},1}, 
+            bbμp ::Array{Array{Float64,1},1}, 
+            bbλc ::Array{Array{Float64,1},1}, 
+            bbμc ::Array{Array{Float64,1},1}, 
+            tsv  ::Array{Array{Float64,1},1},
+            pr   ::Int64,
+            d1   ::Int64,
+            d2   ::Int64,
+            α    ::Float64, 
+            σλ   ::Float64, 
+            σμ   ::Float64, 
+            icr  ::Bool, 
+            wbc  ::Int64,
+            δt   ::Float64, 
+            srδt ::Float64, 
+            dri  ::BitArray{1},
+            ldr  ::Int64,
+            ter  ::BitArray{1},
+            ix   ::Int64)
 
 Make a gbm update for speciation and extinction for a fixed triad.
 """
@@ -715,6 +750,7 @@ function ldprop!(treep::iTgbmbd,
                  pr   ::Int64,
                  d1   ::Int64,
                  d2   ::Int64,
+                 α    ::Float64, 
                  σλ   ::Float64, 
                  σμ   ::Float64, 
                  icr  ::Bool, 
@@ -728,34 +764,34 @@ function ldprop!(treep::iTgbmbd,
 
   if ix === ldr 
 
-    llr, acr = daughters_lprop!(treep::iTgbmbd, treec::iTgbmbd, λf, μf, 
-      bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, ter, σλ, σμ, icr, wbc, δt, srδt)
+    llr, acr = daughters_lprop!(treep, treec, λf, μf, bbλp, bbμp, bbλc, bbμc, 
+      tsv, pr, d1, d2, ter, α, σλ, σμ, icr, wbc, δt, srδt)
 
   elseif ix < ldr
 
-    ifx1 = isfix(treec.d1::iTgbmbd)
-    if ifx1 && isfix(treec.d2::iTgbmbd)
+    ifx1 = isfix(treec.d1)
+    if ifx1 && isfix(treec.d2)
       ix += 1
       if dri[ix]
         llr, acr = 
-          ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
-            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+          ldprop!(treep.d1, treec.d1, λf, μf, bbλp, bbμp, 
+            bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, icr, wbc, δt, srδt, 
             dri, ldr, ter, ix)
       else
         llr, acr = 
-          ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
-            bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+          ldprop!(treep.d2, treec.d2, λf, μf, bbλp, bbμp, 
+            bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, icr, wbc, δt, srδt, 
             dri, ldr, ter, ix)
       end
     elseif ifx1
       llr, acr = 
-        ldprop!(treep.d1::iTgbmbd, treec.d1::iTgbmbd, λf, μf, bbλp, bbμp, 
-          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+        ldprop!(treep.d1, treec.d1, λf, μf, bbλp, bbμp, 
+          bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, icr, wbc, δt, srδt, 
           dri, ldr, ter, ix)
     else
       llr, acr = 
-        ldprop!(treep.d2::iTgbmbd, treec.d2::iTgbmbd, λf, μf, bbλp, bbμp, 
-          bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, icr, wbc, δt, srδt, 
+        ldprop!(treep.d2, treec.d2, λf, μf, bbλp, bbμp, 
+          bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, icr, wbc, δt, srδt, 
           dri, ldr, ter, ix)
     end
   end
@@ -784,18 +820,18 @@ function addtotip(tree::iTgbmbd, stree::iTgbmbd, ix::Bool)
       lλs = lλ(stree)
       lμs = lμ(stree)
 
+      if lastindex(lλs) === 2
+        setfdt!(tree, fdt(tree) + fdt(stree))
+      else
+        setfdt!(tree, dt(tree))
+      end
+
       pop!(lλ0)
       pop!(lμ0)
       popfirst!(lλs)
       popfirst!(lμs)
       append!(lλ0, lλs)
       append!(lμ0, lμs)
-
-      if isone(lastindex(lλs))
-        setfdt!(tree, fdt(tree) + fdt(stree))
-      else
-        setfdt!(tree, fdt(stree))
-      end
 
       if isdefined(stree, :d1)
         tree.d1 = stree.d1
@@ -809,10 +845,10 @@ function addtotip(tree::iTgbmbd, stree::iTgbmbd, ix::Bool)
   end
 
   if !ix
-    ix = addtotip(tree.d1::iTgbmbd, stree, ix)
+    ix = addtotip(tree.d1, stree, ix)
   end
   if !ix
-    ix = addtotip(tree.d2::iTgbmbd, stree, ix)
+    ix = addtotip(tree.d2, stree, ix)
   end
 
   return ix
@@ -839,21 +875,21 @@ function fixrtip!(tree::iTgbmbd,
   fix!(tree)
 
   if isdefined(tree, :d1)
-    if isextinct(tree.d1::iTgbmbd)
+    if isextinct(tree.d1)
       λf, μf, dft0 = 
-        fixrtip!(tree.d2::iTgbmbd, na, λf, μf, dft0)
-    elseif isextinct(tree.d2::iTgbmbd)
+        fixrtip!(tree.d2, na, λf, μf, dft0)
+    elseif isextinct(tree.d2)
       λf, μf, dft0 = 
-        fixrtip!(tree.d1::iTgbmbd, na, λf, μf, dft0)
+        fixrtip!(tree.d1, na, λf, μf, dft0)
     else
-      na1 = snan(tree.d1::iTgbmbd, 0)
+      na1 = snan(tree.d1, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
         λf, μf, dft0 = 
-          fixrtip!(tree.d2::iTgbmbd, na - na1, λf, μf, dft0)
+          fixrtip!(tree.d2, na - na1, λf, μf, dft0)
       else
         λf, μf, dft0 = 
-          fixrtip!(tree.d1::iTgbmbd, na1, λf, μf, dft0)
+          fixrtip!(tree.d1, na1, λf, μf, dft0)
       end
     end
   else
@@ -896,13 +932,13 @@ function fixalive!(tree::iTgbmbd,
     end
   else
     f, λf, μf, dft0 = 
-      fixalive!(tree.d2::iTgbmbd, λf, μf, dft0)
+      fixalive!(tree.d2, λf, μf, dft0)
     if f 
       fix!(tree)
       return true, λf, μf, dft0
     end
     f, λf, μf, dft0 = 
-      fixalive!(tree.d1::iTgbmbd, λf, μf, dft0)
+      fixalive!(tree.d1, λf, μf, dft0)
     if f 
       fix!(tree)
       return true, λf, μf, dft0
@@ -934,9 +970,13 @@ function fλμ1(tree::iTgbmbd,
 
   if istip(tree) 
     if isalive(tree) &&!isfix(tree)
-      λt   = lλ(tree)[end]
-      μt   = lμ(tree)[end]
-      fdti = fdt(tree)
+      @inbounds begin
+        lλv  = lλ(tree)
+        l    = lastindex(lλv)
+        λt   = lλv[l]
+        μt   = lμ(tree)[l]
+        fdti = fdt(tree)
+      end
       ix = true
     end
 
@@ -944,10 +984,10 @@ function fλμ1(tree::iTgbmbd,
   end
 
   if !ix
-    ix, λt, μt, fdti = fλμ1(tree.d1::iTgbmbd, λt, μt, fdti, ix)
+    ix, λt, μt, fdti = fλμ1(tree.d1, λt, μt, fdti, ix)
   end
   if !ix
-    ix, λt, μt, fdti = fλμ1(tree.d2::iTgbmbd, λt, μt, fdti, ix)
+    ix, λt, μt, fdti = fλμ1(tree.d2, λt, μt, fdti, ix)
   end
 
   return ix, λt, μt, fdti
@@ -957,30 +997,30 @@ end
 
 
 """
-    lvupdate!(Ψp      ::iTgbmbd,
-              Ψc      ::iTgbmbd,
-              llc     ::Float64, 
-              prc     ::Float64,
-              bbλp    ::Array{Array{Float64,1},1}, 
-              bbμp    ::Array{Array{Float64,1},1}, 
-              bbλc    ::Array{Array{Float64,1},1}, 
-              bbμc    ::Array{Array{Float64,1},1}, 
-              tsv     ::Array{Array{Float64,1},1},
-              pr      ::Int64,
-              d1      ::Int64,
-              d2      ::Int64,
-              σλ      ::Float64, 
-              σμ      ::Float64, 
-              δt      ::Float64, 
-              srδt    ::Float64, 
-              λa_prior::Float64,
-              μa_prior::Float64,
-              icr     ::Bool,
-              wbc     ::Int64,
-              dri     ::BitArray{1},
-              ldr     ::Int64,
-              ter     ::BitArray{1},
-              ix      ::Int64)
+    lvupdate!(Ψp    ::iTgbmbd,
+              Ψc    ::iTgbmbd,
+              llc   ::Float64, 
+              bbλp  ::Array{Array{Float64,1},1}, 
+              bbμp  ::Array{Array{Float64,1},1}, 
+              bbλc  ::Array{Array{Float64,1},1}, 
+              bbμc  ::Array{Array{Float64,1},1}, 
+              tsv   ::Array{Array{Float64,1},1},
+              pr    ::Int64,
+              d1    ::Int64,
+              d2    ::Int64,
+              α     ::Float64, 
+              σλ    ::Float64, 
+              σμ    ::Float64, 
+              δt    ::Float64, 
+              srδt  ::Float64, 
+              lλmxpr::Float64,
+              lμmxpr::Float64,
+              icr   ::Bool,
+              wbc   ::Int64,
+              dri   ::BitArray{1},
+              ldr   ::Int64,
+              ter   ::BitArray{1},
+              ix    ::Int64)
 
 Make a gbm update for speciation and extinction for a fixed triad.
 """
@@ -995,6 +1035,7 @@ function lvupdate!(Ψp    ::iTgbmbd,
                    pr    ::Int64,
                    d1    ::Int64,
                    d2    ::Int64,
+                   α     ::Float64, 
                    σλ    ::Float64, 
                    σμ    ::Float64, 
                    δt    ::Float64, 
@@ -1008,44 +1049,43 @@ function lvupdate!(Ψp    ::iTgbmbd,
                    ter   ::BitArray{1},
                    ix    ::Int64)
 
-
   if ix === ldr 
     # if root
     if ldr === 0
       llc = 
-        triad_lupdate_root!(Ψp::iTgbmbd, Ψc::iTgbmbd, bbλp, bbμp, bbλc, bbμc, 
-          tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt, lλmxpr, lμmxpr, icr)
+        triad_lupdate_root!(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, 
+          tsv, llc, pr, d1, d2, α, σλ, σμ, δt, srδt, lλmxpr, lμmxpr, icr)
     else
       llc = 
-        triad_lvupdate_trio!(Ψp::iTgbmbd, Ψc::iTgbmbd, bbλp, bbμp, bbλc, bbμc, 
-          tsv, llc, pr, d1, d2, σλ, σμ, δt, srδt, ter, icr, wbc)
+        triad_lvupdate_trio!(Ψp, Ψc, bbλp, bbμp, bbλc, bbμc, 
+          tsv, llc, pr, d1, d2, α, σλ, σμ, δt, srδt, ter, icr, wbc)
 
     end
   elseif ix < ldr
 
-    ifx1 = isfix(Ψc.d1::iTgbmbd)
-    if ifx1 && isfix(Ψc.d2::iTgbmbd)
+    ifx1 = isfix(Ψc.d1)
+    if ifx1 && isfix(Ψc.d2)
       ix += 1
       if dri[ix]
         llc = 
-          lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, 
-            bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
+          lvupdate!(Ψp.d1, Ψc.d1, llc, 
+            bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, δt, srδt, 
             lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, ix)
       else
         llc = 
-          lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, llc, 
-            bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
+          lvupdate!(Ψp.d2, Ψc.d2, llc, 
+            bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, δt, srδt, 
             lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, ix)
       end
     elseif ifx1
       llc = 
-        lvupdate!(Ψp.d1::iTgbmbd, Ψc.d1::iTgbmbd, llc, 
-          bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
+        lvupdate!(Ψp.d1, Ψc.d1, llc, 
+          bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, δt, srδt, 
           lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, ix)
     else
       llc = 
-        lvupdate!(Ψp.d2::iTgbmbd, Ψc.d2::iTgbmbd, llc, 
-          bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, σλ, σμ, δt, srδt, 
+        lvupdate!(Ψp.d2, Ψc.d2, llc, 
+          bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2, α, σλ, σμ, δt, srδt, 
           lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, ix)
     end
   end
@@ -1060,6 +1100,7 @@ end
 """
     update_σ!(σλc     ::Float64,
               σμc     ::Float64,
+              α       ::Float64,
               Ψ       ::iTgbmbd,
               llc     ::Float64,
               prc     ::Float64,
@@ -1070,6 +1111,7 @@ Gibbs update for `σλ` and `σμ`.
 """
 function update_σ!(σλc     ::Float64,
                    σμc     ::Float64,
+                   α       ::Float64,
                    Ψ       ::iTgbmbd,
                    llc     ::Float64,
                    prc     ::Float64,
@@ -1077,7 +1119,7 @@ function update_σ!(σλc     ::Float64,
                    σμ_prior::NTuple{2,Float64})
 
   # standardized sum of squares
-  sssλ, sssμ, n = sss_gbm(Ψ)
+  sssλ, sssμ, n = sss_gbm(Ψ, α)
 
   # Gibbs update for σ
   σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + sssλ)
@@ -1091,7 +1133,8 @@ function update_σ!(σλc     ::Float64,
   σμp = sqrt(σμp2)
 
   # update likelihood
-  llc += llr_gbm_σp(σλp, σμp, σλc, σμc, sssλ, sssμ, n)
+  llc += sssλ*(1.0/σλc^2 - 1.0/σλp^2) - n*(log(σλp/σλc)) + 
+         sssμ*(1.0/σμc^2 - 1.0/σμp^2) - n*(log(σμp/σμc))
 
   return llc, prc, σλp, σμp
 end

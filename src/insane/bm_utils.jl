@@ -17,7 +17,9 @@ Created 10 09 2020
         bbiλ::Array{Float64,1},
         ii  ::Int64,
         tl  ::Int64,
+        α   ::Float64,
         σλ  ::Float64,
+        δt  ::Float64,
         srδt::Float64) where {T <: iTgbm}
 
 Fill fix with previously simulated geometric Brownian motion and simulate
@@ -27,7 +29,9 @@ geometric Brownian motion in place for the unfixed trees.
                      bbiλ::Array{Float64,1},
                      ii  ::Int64,
                      tl  ::Int64,
+                     α   ::Float64,
                      σλ  ::Float64,
+                     δt  ::Float64,
                      srδt::Float64) where {T <: iTgbm}
 
   @inbounds begin
@@ -43,11 +47,11 @@ geometric Brownian motion in place for the unfixed trees.
 
     if fi < tl
       if isfix(tree.d1)
-        bm!(tree.d1::T, bbiλ, fi, tl, σλ, srδt)
-        bm!(tree.d2::T, λv[l], σλ, srδt)
+        bm!(tree.d1::T, bbiλ, fi, tl, α, σλ, δt, srδt)
+        bm!(tree.d2::T, λv[l], α, σλ, δt, srδt)
       elseif isfix(tree.d2)
-        bm!(tree.d1::T, λv[l], σλ, srδt)
-        bm!(tree.d2::T, bbiλ, fi, tl, σλ, srδt)
+        bm!(tree.d1::T, λv[l], α, σλ, δt, srδt)
+        bm!(tree.d2::T, bbiλ, fi, tl, α, σλ, δt, srδt)
       end
     end
 
@@ -60,31 +64,36 @@ end
 
 
 """
-  bm!(tree::T,
+    bm!(tree::T,
       λt  ::Float64,
+      α   ::Float64,
       σλ  ::Float64,
+      δt  ::Float64,
       srδt::Float64) where {T <: iTgbm}
 
 Simulate birth-death geometric Brownian motion in place.
 """
 function bm!(tree::T,
              λt  ::Float64,
+             α   ::Float64,
              σλ  ::Float64,
+             δt  ::Float64,
              srδt::Float64) where {T <: iTgbm}
 
   λv  = lλ(tree)
 
-  bm!(λv, λt, fdt(tree), σλ, srδt)
+  bm!(λv, λt, α, σλ, δt, fdt(tree), srδt)
 
   l = lastindex(λv)
 
-  if isdefined(tree,:d1)
-    bm!(tree.d1::T, λv[l], σλ, srδt)
-    bm!(tree.d2::T, λv[l], σλ, srδt)
+  if isdefined(tree, :d1)
+    bm!(tree.d1::T, λv[l], α, σλ, δt, srδt)
+    bm!(tree.d2::T, λv[l], α, σλ, δt, srδt)
   end
 
   return nothing
 end
+
 
 
 
@@ -95,8 +104,10 @@ end
         bbiμ::Array{Float64,1},
         ii  ::Int64,
         tl  ::Int64,
+        α   ::Float64,
         σλ  ::Float64,
         σμ  ::Float64,
+        δt  ::Float64,
         srδt::Float64)
 
 Fill fix with previously simulated geometric Brownian motion and simulate
@@ -107,8 +118,10 @@ geometric Brownian motion in place for the unfixed trees.
                      bbiμ::Array{Float64,1},
                      ii  ::Int64,
                      tl  ::Int64,
+                     α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
+                     δt  ::Float64,
                      srδt::Float64)
 
   @inbounds begin
@@ -126,11 +139,11 @@ geometric Brownian motion in place for the unfixed trees.
 
     if fi < tl
       if isfix(tree.d1)
-        bm!(tree.d1::iTgbmbd, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
-        bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+        bm!(tree.d1, bbiλ, bbiμ, fi, tl, α, σλ, σμ, δt, srδt)
+        bm!(tree.d2, λv[l], μv[l], α, σλ, σμ, δt, srδt)
       elseif isfix(tree.d2)
-        bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-        bm!(tree.d2::iTgbmbd, bbiλ, bbiμ, fi, tl, σλ, σμ, srδt)
+        bm!(tree.d1, λv[l], μv[l], α, σλ, σμ, δt, srδt)
+        bm!(tree.d2, bbiλ, bbiμ, fi, tl, α, σλ, σμ, δt, srδt)
       end
     end
 
@@ -142,33 +155,41 @@ end
 
 
 
+
 """
-  bm!(tree::iTgbmbd,
-      λt  ::Float64,
-      μt  ::Float64,
-      σλ  ::Float64,
-      σμ  ::Float64,
-      srδt::Float64)
+    bm!(tree::iTgbmbd,
+        λt  ::Float64,
+        μt  ::Float64,
+        α   ::Float64,
+        σλ  ::Float64,
+        σμ  ::Float64,
+        δt  ::Float64,
+        srδt::Float64)
 
 Simulate birth-death geometric Brownian motion in place.
 """
-function bm!(tree::iTgbmbd,
-             λt  ::Float64,
-             μt  ::Float64,
-             σλ  ::Float64,
-             σμ  ::Float64,
-             srδt::Float64)
+@inline function bm!(tree::iTgbmbd,
+                     λt  ::Float64,
+                     μt  ::Float64,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
 
-  λv  = lλ(tree)
-  μv  = lμ(tree)
+  @inbounds begin
 
-  bm!(λv, μv, λt, μt, fdt(tree), σλ, σμ, srδt)
+    λv  = lλ(tree)
+    μv  = lμ(tree)
 
-  l = lastindex(λv)
+    bm!(λv, μv, λt, μt, α, σλ, σμ, δt, fdt(tree), srδt)
 
-  if isdefined(tree, :d1)
-    bm!(tree.d1::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
-    bm!(tree.d2::iTgbmbd, λv[l], μv[l], σλ, σμ, srδt)
+    l = lastindex(λv)
+
+    if isdefined(tree, :d1)
+      bm!(tree.d1, λv[l], μv[l], α, σλ, σμ, δt, srδt)
+      bm!(tree.d2, λv[l], μv[l], α, σλ, σμ, δt, srδt)
+    end
   end
 
   return nothing
@@ -177,17 +198,22 @@ end
 
 
 
+
 """
-    ll_bm(x   ::Array{Float64,1},
-          fdt ::Float64,
-          σ   ::Float64, 
+    ll_bm(x  ::Array{Float64,1},
+          α  ::Float64,
+          σ  ::Float64,
+          δt ::Float64,
+          fdt::Float64,
           srδt::Float64)
 
-Returns the log-likelihood for Brownian motion.
+Returns the log-likelihood for Brownian motion with drift.
 """
-@inline function ll_bm(x   ::Array{Float64,1},
-                       fdt ::Float64,
-                       σ   ::Float64, 
+@inline function ll_bm(x  ::Array{Float64,1},
+                       α  ::Float64,
+                       σ  ::Float64,
+                       δt ::Float64,
+                       fdt::Float64,
                        srδt::Float64)
 
   @inbounds begin
@@ -199,7 +225,7 @@ Returns the log-likelihood for Brownian motion.
     xi = x[1]
     @simd for i in Base.OneTo(nI)
       xi1 = x[i+1]
-      ll += (xi1 - xi)^2
+      ll += (xi1 - xi - α*δt)^2
       xi  = xi1
     end
 
@@ -208,7 +234,7 @@ Returns the log-likelihood for Brownian motion.
     ll -= Float64(nI)*(log(σ*srδt) + 0.5*log(2.0π))
 
     # add final non-standard `δt`
-    ll += ldnorm_bm(x[nI+2], x[nI+1], sqrt(fdt)*σ)
+    ll += ldnorm_bm(x[nI+2], x[nI+1] + α*fdt, sqrt(fdt)*σ)
   end
 
   return ll
@@ -217,26 +243,29 @@ end
 
 
 
-
 """
     llr_bm(xp  ::Array{Float64,1},
            xc  ::Array{Float64,1},
-           fdt::Float64,
-           σ   ::Float64, 
+           α   ::Float64,
+           σ   ::Float64,
+           δt  ::Float64,
+           fdt ::Float64,
            srδt::Float64)
 
 Returns the log-likelihood ratio for Brownian motion.
 """
 @inline function llr_bm(xp  ::Array{Float64,1},
                         xc  ::Array{Float64,1},
+                        α   ::Float64,
+                        σ   ::Float64,
+                        δt  ::Float64,
                         fdt ::Float64,
-                        σ   ::Float64, 
                         srδt::Float64)
 
   @inbounds begin
 
     # estimate standard `δt` likelihood
-    nI = lastindex(xp)-2
+    nI = lastindex(xp) - 2
 
     llr = 0.0
     xpi = xp[1]
@@ -244,7 +273,7 @@ Returns the log-likelihood ratio for Brownian motion.
     @simd for i in Base.OneTo(nI)
       xpi1 = xp[i+1]
       xci1 = xc[i+1]
-      llr += (xpi1 - xpi)^2 - (xci1 - xci)^2
+      llr += (xpi1 - xpi - α*δt)^2 - (xci1 - xci - α*δt)^2
       xpi  = xpi1
       xci  = xci1
     end
@@ -253,7 +282,8 @@ Returns the log-likelihood ratio for Brownian motion.
     llr *= (-0.5/((σ*srδt)^2))
 
     # add final non-standard `δt`
-    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1], xc[nI+2], xc[nI+1], sqrt(fdt)*σ)
+    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1] + α*fdt, 
+                        xc[nI+2], xc[nI+1] + α*fdt, sqrt(fdt)*σ)
   end
 
   return llr
@@ -262,26 +292,31 @@ end
 
 
 
+
 """
-    bm!(x0   ::Array{Float64,1},
-        x1   ::Array{Float64,1},
-        x0i  ::Float64,
-        x1i  ::Float64,
+    bm!(x0  ::Array{Float64,1},
+        x1  ::Array{Float64,1},
+        x0i ::Float64,
+        x1i ::Float64,
+        α   ::Float64,
+        σ0  ::Float64,
+        σ1  ::Float64,
+        δt  ::Float64,
         fdt ::Float64,
-        σ0   ::Float64,
-        σ1   ::Float64,
         srδt::Float64)
 
 Brownian motion simulation function for updating a branch for two 
-vectors that share times in place.
+vectors that share times and x0 follows drift α.
 """
-@inline function bm!(x0   ::Array{Float64,1},
-                     x1   ::Array{Float64,1},
-                     x0i  ::Float64,
-                     x1i  ::Float64,
+@inline function bm!(x0  ::Array{Float64,1},
+                     x1  ::Array{Float64,1},
+                     x0i ::Float64,
+                     x1i ::Float64,
+                     α   ::Float64,
+                     σ0  ::Float64,
+                     σ1  ::Float64,
+                     δt  ::Float64,
                      fdt ::Float64,
-                     σ0   ::Float64,
-                     σ1   ::Float64,
                      srδt::Float64)
 
   @inbounds begin
@@ -295,10 +330,12 @@ vectors that share times in place.
     x1[1] = x1i
     @simd for i = Base.OneTo(l-2)
       x0[i+1] *= srδt*σ0
+      x0[i+1] += α*δt
       x1[i+1] *= srδt*σ1
     end
     srfdt  = sqrt(fdt)
     x0[l] *= srfdt*σ0
+    x0[l] += α*fdt
     x1[l] *= srfdt*σ1
 
     cumsum!(x0, x0)
@@ -314,16 +351,20 @@ end
 """
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
-        fdt::Float64,
+        α   ::Float64,
         σ   ::Float64,
+        δt  ::Float64,
+        fdt::Float64,
         srδt::Float64)
 
 Brownian motion simulation function for updating a branch in place.
 """
 @inline function bm!(x   ::Array{Float64,1},
                      xi  ::Float64,
-                     fdt::Float64,
+                     α   ::Float64,
                      σ   ::Float64,
+                     δt  ::Float64,
+                     fdt::Float64,
                      srδt::Float64)
 
   @inbounds begin
@@ -334,8 +375,10 @@ Brownian motion simulation function for updating a branch in place.
     x[1] = xi
     @simd for i = Base.OneTo(l-2)
       x[i+1] *= srδt*σ
+      x[i+1] += α*δt
     end
     x[l] *= sqrt(fdt)*σ
+    x[l] += α*fdt
     cumsum!(x, x)
   end
 
@@ -465,31 +508,36 @@ end
 
 
 
-
 """
-   sim_bm(xa  ::Float64, 
-          σ   ::Float64, 
-          srδt::Float64, 
-          nt  ::Int64, 
-          fdt::Float64)
+    sim_bm(xa  ::Float64, 
+           α   ::Float64,
+           σ   ::Float64, 
+           δt  ::Float64, 
+           fdt ::Float64,
+           srδt::Float64, 
+           nt  ::Int64)
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
 `σ` and times `t`. 
 """
 @inline function sim_bm(xa  ::Float64, 
+                        α   ::Float64,
                         σ   ::Float64, 
+                        δt  ::Float64, 
+                        fdt ::Float64,
                         srδt::Float64, 
-                        nt  ::Int64, 
-                        fdt::Float64)
+                        nt  ::Int64)
   @inbounds begin
     l = nt + 2
     x = randn(l)
     # for standard δt
     x[1] = xa
-    @simd for i in Base.OneTo(l-2)
+    @simd for i in Base.OneTo(nt)
       x[i+1] *= srδt*σ
+      x[i+1] += α*δt
     end
     x[l] *= sqrt(fdt)*σ
+    x[l] += α*fdt
     cumsum!(x, x)
   end
 
@@ -656,17 +704,6 @@ and `xc`, respectively.
 lrdnorm_bm_x(xp::Float64, xc::Float64, μ::Float64, σsrt::Float64) =
   -0.5*((xp - μ)^2 - (xc - μ)^2)/σsrt^2
 
-
-
-
-"""
-    lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64)
-
-Compute the **Normal** density ratio in logarithmic scale with mean `μ` 
-and proposal standard density `σpsrt` and current `σcsrt` for `x`.
-"""
-lrdnorm_bm_σ(x::Float64, μ::Float64, σpsrt::Float64, σcsrt::Float64) =
-  - log(σpsrt/σcsrt) - 0.5*(x - μ)^2*(1.0/σpsrt^2 - 1.0/σcsrt^2)
 
 
 

@@ -441,32 +441,29 @@ function fsp(tree::sTbd,
     # if speciation (if branch is internal)
     iλ = itb ? 0.0 : log(λ)
 
+    ## likelihood ratio
     # if conditioning branch
     if scb 
       # if one of crown branches
       if isone(lastindex(dri))
         if dri[1]
-          # likelihood ratio
           llr = llik_cbd(   t0, λ, μ) + iλ         - 
                 br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
                 cond_surv_stem_p(t0,    λ, μ)      - 
                 cond_surv_stem(tree.d1, λ, μ)
         else
-          # likelihood ratio
           llr = llik_cbd(   t0, λ, μ) + iλ         -
                 br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
                 cond_surv_stem_p(t0,    λ, μ)      -
                 cond_surv_stem(tree.d2, λ, μ)
         end
       else
-        # likelihood ratio
         llr = llik_cbd(t0,    λ, μ) + iλ         -
               br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
               cond_surv_stem_p(t0, λ, μ)         -
               cond_surv_stem(tree, λ, μ)
       end
     else
-      # likelihood ratio
       llr = llik_cbd(t0, λ, μ) + iλ - 
             br_ll_cbd(tree, λ, μ, dri, ldr, 0)
     end
