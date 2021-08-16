@@ -461,7 +461,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         Ψp, Ψc, llc = 
           fsp(Ψp, Ψc, bi, llc, αc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
-        
+
         # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
         #  if !isapprox(llci, llc, atol = 1e-4)
         #    @show llci, llc, 4
