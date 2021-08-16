@@ -83,7 +83,7 @@ fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
 
 
 """
-    treelength(tree::T) where {T <: iTree}
+    treelength(tree::T, l::Float64) where {T <: iTree}
 
 Return the branch length sum of `tree`.
 """
@@ -93,6 +93,27 @@ function treelength(tree::T, l::Float64) where {T <: iTree}
     l = treelength(tree.d1, l)::Float64
     l = treelength(tree.d2, l)::Float64
   end
+  return l
+end
+
+
+
+
+"""
+    _ctl(tree::T, l::Float64) where {T <: iTree}
+
+Return the branch length sum of `tree` based on `δt` and `fδt` 
+for debugging purposes.
+"""
+function _ctl(tree::T, l::Float64) where {T <: iTgbm}
+
+  l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
+
+  if isdefined(tree, :d1)
+    l = _ctl(tree.d1, l)
+    l = _ctl(tree.d2, l)
+  end
+
   return l
 end
 

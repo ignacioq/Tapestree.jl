@@ -406,31 +406,31 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 1, it
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 1, i, Ψc
+           return 
+        end
 
       elseif pupi === 2
 
         llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 2, it
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 2, i, Ψc
+           return 
+        end
 
       elseif pupi === 3
 
         llc, μc = update_μ!(μc, Ψc, llc, μtn, μmxpr, svf)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 3, it
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 3, i, Ψc
+           return 
+        end
 
       # gbm update
       elseif pupi === 4
@@ -454,11 +454,11 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
             αc, σλc, μc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 4, it
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 4, i, Ψc
+           return 
+        end
 
       # forward simulation update
       else
@@ -484,11 +484,11 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
         Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, tsv, bbλp, bbλc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 5, it
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 5, i, Ψc
+           return 
+        end
 
       end
     end
@@ -826,7 +826,7 @@ function addtotip(tree::T, stree::T, ix::Bool) where {T <: iTgbm}
       if lastindex(lλs) === 2
         setfdt!(tree, fdt(tree) + fdt(stree))
       else
-        setfdt!(tree, dt(tree))
+        setfdt!(tree, fdt(stree))
       end
 
       pop!(lλ0)

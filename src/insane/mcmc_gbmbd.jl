@@ -823,7 +823,7 @@ function addtotip(tree::iTgbmbd, stree::iTgbmbd, ix::Bool)
       if lastindex(lλs) === 2
         setfdt!(tree, fdt(tree) + fdt(stree))
       else
-        setfdt!(tree, dt(tree))
+        setfdt!(tree, fdt(stree))
       end
 
       pop!(lλ0)

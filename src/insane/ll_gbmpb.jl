@@ -227,27 +227,6 @@ end
 
 
 
-"""
-    llr_gbm_σp(σλp::Float64,
-               σλc::Float64,
-               ssλ::Float64,
-               n  ::Float64)
-
-Returns the log-likelihood ratio according to GBM for `σ` proposal
-after computing standard sum of squares `sss`.
-"""
-function llr_gbm_σp(σλp::Float64,
-                    σλc::Float64,
-                    ssλ::Float64,
-                    n  ::Float64)
-
-  llr = ssλ*(1.0/σλc^2 - 1.0/σλp^2) - n*(log(σλp/σλc))
-
-  return llr
-end
-
-
-
 
 """
     treelength_dλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}

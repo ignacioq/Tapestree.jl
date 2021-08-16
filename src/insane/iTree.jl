@@ -114,11 +114,7 @@ mutable struct sTbd <: sT
   sTbd(e::Float64, iμ::Bool, fx::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x)
   sTbd(d1::sTbd, d2::sTbd, e::Float64) = 
-<<<<<<< HEAD
     new(d1, d2, e, false, false) 
-=======
-    (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
->>>>>>> drift
   sTbd(d1::sTbd, d2::sTbd, e::Float64, iμ::Bool, fx::Bool) = 
     new(d1, d2, e, iμ, fx)
 end

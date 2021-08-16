@@ -622,7 +622,7 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
 
   # update likelihood
-  llc += llr_gbm_σp(σλp, σλc, ssλ, n)
+  llc += ssλ*(1.0/σλc^2 - 1.0/σλp^2) - n*(log(σλp/σλc))
 
   return llc, prc, σλp
 end
@@ -667,7 +667,6 @@ function update_α!(αc     ::Float64,
 
   return llc, prc, αp
 end
-
 
 
 

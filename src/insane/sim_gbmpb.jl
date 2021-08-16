@@ -14,20 +14,20 @@ Created 03 09 2020
 
 """
     sim_gbmpb(t   ::Float64,
-            λt  ::Float64,
-            α   ::Float64,
-            σλ  ::Float64,
-            δt  ::Float64,
-            srδt::Float64)
+              λt  ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              δt  ::Float64,
+              srδt::Float64)
 
 Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
 """
 function sim_gbmpb(t   ::Float64,
-                 λt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64)
+                   λt  ::Float64,
+                   α   ::Float64,
+                   σλ  ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64)
 
   λv = Float64[λt]
   bt = 0.0
