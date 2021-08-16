@@ -662,3 +662,87 @@ end
 
 
 
+"""
+    eventimes(tree::T) where {T <: iTree}
+
+Return speciation and extinction event times.
+"""
+function eventimes(tree::T) where {T <: iTree}
+  se = Float64[]
+  ee = Float64[]
+
+  _eventimes!(tree, 0.0, se, ee)
+
+  return se, ee
+end
+
+
+
+
+"""
+    _eventimes!(tree::T, 
+                t   ::Float64, 
+                se  ::Array{Float64,1}, 
+                ee  ::Array{Float64,1}) where {T <: iTree}
+
+Recursive structure that returns speciation and extinction event times.
+"""
+function _eventimes!(tree::T, 
+                     t   ::Float64, 
+                     se  ::Array{Float64,1}, 
+                     ee  ::Array{Float64,1}) where {T <: iTree}
+
+  et = e(tree)
+  if isextinct(tree)
+    push!(ee, t + et)
+  elseif isdefined(tree, :d1)
+    push!(se, t + et)
+
+    _eventimes!(tree.d1, t + et, se, ee)
+    _eventimes!(tree.d2, t + et, se, ee)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    ltt(tree::T) where {T <: iTree}
+
+Returns number of species through time.
+"""
+function ltt(tree::T) where {T <: iTree}
+
+  # speciation and extinction events
+  se, ee = eventimes(tree)
+
+  sort!(se)
+  # which ones are extinctions when appended
+  ii = lastindex(se)
+  sort!(ee)
+
+  append!(se, ee)
+  l = lastindex(se)
+
+  sp = sortperm(se)
+  t  = Float64[]
+  n  = ones(Int64, l+1)
+
+  sort!(se)
+
+  for i in Base.OneTo(l)
+    if sp[i] > ii
+      n[i+1] = n[i] - 1
+    else
+      n[i+1] = n[i] + 1
+    end
+  end
+
+  pushfirst!(se, 0.0)
+
+  return se, n
+end
+
+
