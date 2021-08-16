@@ -6,14 +6,48 @@
 
 module INSANE
 
-using RecipesBase: @recipe
-using Random: randexp
+using Random: randexp, randn!
+using SpecialFunctions: erf
 using DelimitedFiles: writedlm
+using Plots: plot
+using RecipesBase: @recipe, @series
+using ProgressMeter: Progress, next!
 
 # other submodules dependencies
 using ..Utils
 
 # files
-include("insane/itree.jl")
+include("insane/iTree.jl")
+include("insane/iTree_summary.jl")
+include("insane/iB.jl")
+include("insane/iB_manipulation.jl")
+include("insane/iTree_data.jl")
+include("insane/iTree_manipulation.jl")
+include("insane/iTree_plot.jl")
+include("insane/iTree_IO.jl")
+include("insane/sim_cbd.jl")
+include("insane/sim_cpb.jl")
+include("insane/sim_gbmpb.jl")
+include("insane/sim_gbmbd.jl")
+include("insane/sim_gbmce.jl")
+include("insane/sim_gbmct.jl")
+include("insane/ll_cpb.jl")
+include("insane/ll_cbd.jl")
+include("insane/ll_gbmpb.jl")
+include("insane/ll_gbmbd.jl")
+include("insane/ll_gbmce.jl")
+include("insane/ll_gbmct.jl")
+include("insane/mcmc_cpb.jl")
+include("insane/mcmc_cbd_gp.jl")
+include("insane/mcmc_cbd_fs.jl")
+include("insane/mcmc_cbd.jl")
+include("insane/mcmc_gbmpb.jl")
+include("insane/mcmc_gbmbd.jl")
+include("insane/mcmc_gbmce.jl")
+include("insane/mcmc_gbmct.jl")
+include("insane/mhprop_gbmbd.jl")
+include("insane/mhprop_gbmce.jl")
+include("insane/mhprop_gbmct.jl")
+include("insane/bm_utils.jl")
 
 end # module INSANE

@@ -537,6 +537,7 @@ end
 
 """
     divev(λ::Float64, μ::Float64, δt::Float64)
+
 Return true if diversification event.
 """
 divev(λ::Float64, μ::Float64, δt::Float64) = @fastmath rand() < (λ + μ)*δt 
@@ -546,6 +547,7 @@ divev(λ::Float64, μ::Float64, δt::Float64) = @fastmath rand() < (λ + μ)*δt
 
 """
     rnorm(μ::Float64, σ::Float64)
+
 Generate a normal variable with mean `μ` and variance `σ`.
 """
 rnorm(μ::Float64, σ::Float64) = @fastmath randn()*σ + μ

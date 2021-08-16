@@ -35,5 +35,9 @@ export esse, simulate_sse
 using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe
 
+using .INSANE: sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd,
+  insane_cpb, insane_cbd, insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd
+export sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd,
+  insane_cpb, insane_cbd, insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd
 
 end # module Tapestree
