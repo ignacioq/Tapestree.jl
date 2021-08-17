@@ -210,9 +210,13 @@ function iTgbmpb(tree::sTpb,
   et = e(tree)
 
   if iszero(et)
-    iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, α, σλ), 
-            iTgbmpb(tree.d2, δt, srδt, lλa, α, σλ),
-            et, δt, 0.0, Float64[lλa])
+    if isdefined(tree, :d1)
+      iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, α, σλ), 
+              iTgbmpb(tree.d2, δt, srδt, lλa, α, σλ),
+              et, δt, 0.0, Float64[lλa, lλa])
+    else
+      iTgbmpb(et, δt, 0.0, Float64[lλa, lλa])
+    end
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
