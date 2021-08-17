@@ -8,6 +8,8 @@ module Utils
 
 # package dependencies
 using RCall: reval, rcopy
+using SpecialFunctions: loggamma
+using Random: randexp
 
 include("utils/utils.jl")
 include("utils/tree_utils.jl")
@@ -21,6 +23,7 @@ export rtree, read_tree, make_ape_tree, maketriads, abs_time_branches,
   llrdnorm_μ, llrdnorm_x, llrdnorm_xμ, logdtnorm, llrdtnorm_x, erf_custom,
   logdhcau, logdhcau1, uniupt, addupt, addupt_lims, addupt!, duoupd, trioupd,
   absaddupt, mulupt, makescalef, globalscalef, adaptiveupd!, makestepsize,
-  makemvnproposal, randinvgamma, randgamma
+  makemvnproposal, randinvgamma, randgamma, logdinvgamma, llrdinvgamma,
+  logdgamma, fIrand
 
 end # module Utils

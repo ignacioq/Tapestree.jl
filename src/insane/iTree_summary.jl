@@ -22,7 +22,7 @@ function time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
   
   fx = Array{Float64,2}(undef, lastindex(r), lastindex(p))
   for (i, ri) in enumerate(r)
-    fx[i,:] = quantile(ri)
+    fx[i,:] = quantile(ri, p)
   end
   return fx
 end
@@ -545,7 +545,7 @@ function iquantile(treev::Array{iTgbmbd,1},
     push!(svμ, quantile(vμ, p))
   end
 
-  if isdefined(t1.d1)
+  if isdefined(t1, :d1)
     treev1 = iTgbmbd[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)

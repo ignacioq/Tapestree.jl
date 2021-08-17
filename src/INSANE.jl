@@ -6,12 +6,13 @@
 
 module INSANE
 
-using Random: randexp, randn!
+using Random: randexp, randn!, shuffle!
 using SpecialFunctions: erf
 using DelimitedFiles: writedlm
 using Plots: plot
 using RecipesBase: @recipe, @series
 using ProgressMeter: Progress, next!
+using Statistics: quantile
 
 # other submodules dependencies
 using ..Utils
