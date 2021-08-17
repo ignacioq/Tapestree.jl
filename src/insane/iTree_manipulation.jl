@@ -11,6 +11,210 @@ Created 25 06 2020
 
 
 
+"""
+    cutbottom(tree::T, c::Float64) where {T <: iTree}
+
+Cut the bottom part of the tree after `c`.
+"""
+cutbottom(tree::T, c::Float64) where {T <: iTree} = 
+  _cutbottom(tree, c, 0.0)
+
+
+
+
+"""
+    _cutbottom(tree::sTpb, 
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`.
+"""
+function _cutbottom(tree::sTpb, 
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = sTpb(c - t)
+  elseif isdefined(tree, :d1)
+    tree.d1 = _cutbottom(tree.d1, c, t + et)
+    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::sTbd, 
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`.
+"""
+function _cutbottom(tree::sTbd, 
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = sTbd(c - t, false, isfix(tree))
+  elseif isdefined(tree, :d1)
+    tree.d1 = _cutbottom(tree.d1, c, t + et)
+    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::iTgbmpb, 
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`.
+"""
+function _cutbottom(tree::iTgbmpb, 
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+
+    lλv = lλ(tree)
+    δt  = dt(tree)
+    fδt = fdt(tree)
+
+    # find final lλ
+    ix  = fld(c - t, δt)
+    Ix  = Int64(ix)
+    tii = ix*δt
+    tff = tii + δt
+    if tff > et
+      tff = tii + fδt
+    end
+    eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
+
+    lλv = lλv[1:Ix]
+
+    push!(lλv, eλ)
+
+    tree = iTgbmpb(c - t, δt, fδt, lλv)
+
+  elseif isdefined(tree, :d1)
+    tree.d1 = _cutbottom(tree.d1, c, t + et)
+    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::T, 
+               c   ::Float64,
+               t   ::Float64) where {T <: iTgbm}
+
+Cut the bottom part of the tree after `c`.
+"""
+function _cutbottom(tree::T, 
+                    c   ::Float64,
+                    t   ::Float64) where {T <: iTgbm}
+
+  et = e(tree)
+
+  if (t + et) > c
+
+    lλv = lλ(tree)
+    δt  = dt(tree)
+    fδt = fdt(tree)
+
+    # find final lλ
+    ix  = fld(c - t, δt)
+    Ix  = Int64(ix)
+    tii = ix*δt
+    tff = tii + δt
+    if tff > et
+      tff = tii + fδt
+    end
+    eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
+
+    lλv = lλv[1:Ix]
+
+    push!(lλv, eλ)
+
+    tree = T(c - t, δt, fδt, false, isfix(tree), lλv)
+
+  elseif isdefined(tree, :d1)
+    tree.d1 = _cutbottom(tree.d1, c, t + et)
+    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::iTgbmbd,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`.
+"""
+function _cutbottom(tree::iTgbmbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+
+    lλv = lλ(tree)
+    lμv = lμ(tree)
+    δt  = dt(tree)
+    fδt = fdt(tree)
+
+    # find final lλ & lμ
+    ix  = fld(c - t, δt)
+    Ix  = Int64(ix)
+    tii = ix*δt
+    tff = tii + δt
+    if tff > et
+      tff = tii + fδt
+    end
+    eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
+    eμ = linpred(c - t, tii, tff, lμv[Ix], lμv[Ix+1])
+
+    lλv = lλv[1:Ix]
+    lμv = lμv[1:Ix]
+
+    push!(lλv, eλ)
+    push!(lμv, eμ)
+
+    tree = iTgbmbd(c - t, δt, fδt, false, isfix(tree), lλv, lμv)
+
+  elseif isdefined(tree, :d1)
+    tree.d1 = _cutbottom(tree.d1, c, t + et)
+    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  end
+
+  return tree
+end
+
+
+
 
 """
     swapbranch!(treep::T,

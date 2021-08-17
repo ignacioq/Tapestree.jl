@@ -109,7 +109,7 @@ Extract values from `lv` function at times `ts` across the tree.
     tts = δt *  ix
     ttf = δt * (ix + 1.0)
     Ix  = Int64(ix)
-    push!(r[i], linpred(bt, tts, ttf, vt[Ix+1], vt[Ix+2]))
+    push!(r[i], linpred(bt, tts, ttf, vt[Ix], vt[Ix+1]))
   end
 
   if isdefined(tree, :d1)
