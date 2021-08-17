@@ -312,3 +312,29 @@ Recipe for plotting a Type `iTree`.
 end
 
 
+
+
+"""
+    f(nt::Ltt)
+
+Recipe for plotting lineage through time plots of type `Ltt`.
+"""
+@recipe function f(nt::Ltt)
+
+  x = nt.t
+  y = nt.n
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "N lineages"
+  fontfamily      --> font(2, "Helvetica")
+  seriescolor     --> :black
+  tickfont        --> font(8, "Helvetica")
+  grid            --> :off
+  tick_direction  --> :out
+  seriestype      --> :steppost
+  yaxis           --> :log
+
+  return  x, y
+end

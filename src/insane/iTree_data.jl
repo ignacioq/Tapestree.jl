@@ -742,7 +742,7 @@ function ltt(tree::T) where {T <: iTree}
 
   pushfirst!(se, 0.0)
 
-  return se, n
+  return Ltt(n, se)
 end
 
 
