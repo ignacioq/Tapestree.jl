@@ -38,13 +38,24 @@ function sim_gbmbd(t   ::Float64;
     lλ0 = log(λ0)
     lμ0 = log(μ0)
     d1, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 1, nlim)
+    if nsp >= nlim 
+      @warn "maximum number of lineages surpassed"
+    end
+
     d2, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 1, nlim)
+    if nsp >= nlim 
+      @warn "maximum number of lineages surpassed"
+    end
 
     tree = iTgbmbd(d1, d2, 0.0, δt, 0.0, false, false, 
       Float64[lλ0, lλ0], Float64[lμ0, lμ0])
 
   elseif init === :stem
     tree, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 1, nlim)
+
+    if nsp >= nlim 
+      @warn "maximum number of lineages surpassed"
+    end
   else
     @error string(init, " does not match either crown or stem")
   end
