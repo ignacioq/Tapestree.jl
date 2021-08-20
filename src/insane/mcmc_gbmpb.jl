@@ -622,7 +622,7 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
 
   # update likelihood
-  llc += ssλ*(1.0/σλc^2 - 1.0/σλp^2) - n*(log(σλp/σλc))
+  llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc))
 
   return llc, prc, σλp
 end
