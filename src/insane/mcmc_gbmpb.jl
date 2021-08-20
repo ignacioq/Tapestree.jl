@@ -657,7 +657,7 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
 
   # gibbs update for σ
-  αp = rnorm((dλ + rs*ν)/(rs + l), σλ/(rs + l))
+  αp = rnorm((dλ + rs*ν)/(rs + l), sqrt(σλ2/(rs + l)))
 
   # update prior
   prc += llrdnorm_x(αp, αc, ν, τ2)
