@@ -12,6 +12,16 @@ Created 25 06 2020
 
 
 """
+    iscrowntree(tree::T) where {T <: iTree}
+
+Return if the tree is a crown tree.
+"""
+iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
+
+
+
+
+"""
     isfix(tree::T) where {T <: iTree} 
 
 Return if is either an extant or extinct tip node.

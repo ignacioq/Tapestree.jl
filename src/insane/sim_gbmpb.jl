@@ -11,15 +11,15 @@ Created 03 09 2020
 
 
 
+
 """
-    _sim_gbmpb(t   ::Float64,
-              λt  ::Float64,
-              α   ::Float64,
-              σλ  ::Float64,
-              δt  ::Float64,
-              srδt::Float64,
-              nsp ::Int64,
-              nlim::Int64)
+    sim_gbmpb(t   ::Float64;
+              λ0  ::Float64 = 1.0,
+              α   ::Float64 = 0.0,
+              σλ  ::Float64 = 0.1,
+              δt  ::Float64 = 1e-3,
+              nlim::Int64   = 10_000,
+              init::Symbol  = :crown)
 
 Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
 """
@@ -31,13 +31,13 @@ function sim_gbmpb(t   ::Float64;
                    nlim::Int64   = 10_000,
                    init::Symbol  = :crown)
 
-  if init == :crown
+  if init === :crown
     lλ0 = log(λ0)
     d1, nsp = _sim_gbmpb(t, lλ0, α, σλ, δt, sqrt(δt), 1, nlim)
     d2, nsp = _sim_gbmpb(t, lλ0, α, σλ, δt, sqrt(δt), 1, nlim)
 
     tree = iTgbmpb(d1, d2, 0.0, δt, 0.0, Float64[lλ0, lλ0])
-  elseif init == :stem
+  elseif init === :stem
     tree, nsp = _sim_gbmpb(t, log(λ0), α, σλ, δt, sqrt(δt), 1, nlim)
   else
     @error string(init, " does not match either crown or stem")

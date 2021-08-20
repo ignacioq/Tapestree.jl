@@ -665,7 +665,7 @@ function fsbi_ce(bi  ::iBffs,
   tfb = tf(bi)
 
   # simulate tree
-  t0, nsp = sim_gbmce(ti(bi) - tfb, iλ, α, σλ, μ, δt, srδt, 1, nlim)
+  t0, nsp = _sim_gbmce(ti(bi) - tfb, iλ, α, σλ, μ, δt, srδt, 1, nlim)
 
   na = snan(t0, 0)
 
@@ -692,7 +692,7 @@ function fsbi_ce(bi  ::iBffs,
 
         for i in Base.OneTo(2)
           st0, nsp = 
-            sim_gbmce(max(δt - fdti, 0.0), tfb, λt, α, σλ, μ, δt, srδt, 1, nlim)
+            _sim_gbmce(max(δt - fdti, 0.0), tfb, λt, α, σλ, μ, δt, srδt, 1, nlim)
           # if maximum number of species reached.
           if nsp === nlim
             if i === 2

@@ -19,8 +19,8 @@ Condition events when there is only one alive lineage in the stem branch
 to only be speciation events.
 """
 cond_surv_crown(tree::iTgbmct, ϵ::Float64) = 
-  cond_surv_stem(tree.d1, 0.0, 0.0, ϵ) +
-  cond_surv_stem(tree.d2, 0.0, 0.0, ϵ) - 
+  sum_alone_stem(tree.d1, 0.0, 0.0, ϵ) +
+  sum_alone_stem(tree.d2, 0.0, 0.0, ϵ) - 
   lλ(tree)[1]
 
 

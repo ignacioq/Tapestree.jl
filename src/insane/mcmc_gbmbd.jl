@@ -648,7 +648,7 @@ function fsbi(bi  ::iBffs,
   tfb = tf(bi)
 
   # simulate tree
-  t0, nsp = sim_gbmbd(ti(bi) - tfb, iλ, iμ, α, σλ, σμ, δt, srδt, 1, nlim)
+  t0, nsp = _sim_gbmbd(ti(bi) - tfb, iλ, iμ, α, σλ, σμ, δt, srδt, 1, nlim)
 
   na = snan(t0, 0)
 
@@ -675,7 +675,7 @@ function fsbi(bi  ::iBffs,
 
         for i in Base.OneTo(2)
           st0, nsp = 
-            sim_gbmbd(max(δt - fdti, 0.0), tfb, λt, μt, α, σλ, σμ, 
+            _sim_gbmbd(max(δt - fdti, 0.0), tfb, λt, μt, α, σλ, σμ, 
                       δt, srδt, 1, nlim)
           # if maximum number of species reached.
           if nsp === nlim
