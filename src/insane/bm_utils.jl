@@ -421,13 +421,14 @@ Brownian bridge simulation function for updating a branch in place.
     cumsum!(x, x)
 
     # make bridge
-    ite = 1.0/(Float64(l-2) * δt + fdt)
-    xdf = (x[l] - xf)
+    if l > 2
+      ite = 1.0/(Float64(l-2) * δt + fdt)
+      xdf = (x[l] - xf)
 
-    @simd for i = Base.OneTo(l-1)
-      x[i] -= (Float64(i-1) * δt * ite * xdf)
+      @simd for i = Base.OneTo(l-1)
+        x[i] -= (Float64(i-1) * δt * ite * xdf)
+      end
     end
-
     # for last non-standard δt
     x[l] = xf
   end
@@ -487,14 +488,16 @@ Brownian bridge simulation function for updating two vectors
     cumsum!(x1, x1)
 
     # make bridge
-    ite = 1.0/(Float64(l-2) * δt + fdt)
-    x0df = (x0[l] - x0f)
-    x1df = (x1[l] - x1f)
+    if l > 2
+      ite = 1.0/(Float64(l-2) * δt + fdt)
+      x0df = (x0[l] - x0f)
+      x1df = (x1[l] - x1f)
 
-    @simd for i = Base.OneTo(l-1)
-      iti    = Float64(i-1) * δt * ite
-      x0[i] -= (iti * x0df)
-      x1[i] -= (iti * x1df)
+      @simd for i = Base.OneTo(l-1)
+        iti    = Float64(i-1) * δt * ite
+        x0[i] -= (iti * x0df)
+        x1[i] -= (iti * x1df)
+      end
     end
 
     # for last non-standard δt
