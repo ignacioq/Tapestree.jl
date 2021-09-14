@@ -377,6 +377,47 @@ end
 
 
 """
+    iTgbmce(e0::Array{Int64,1}, 
+            e1::Array{Int64,1}, 
+            el::Array{Float64,1}, 
+            λs::Array{Array{Float64,1},1}, 
+            ea::Array{Int64,1}, 
+            ee::Array{Int64,1},
+            ni::Int64, 
+            ei::Int64,
+            δt::Float64)
+
+Transform edge structure to `iTgbmce`.
+"""
+function iTgbmce(e0::Array{Int64,1}, 
+                 e1::Array{Int64,1}, 
+                 el::Array{Float64,1}, 
+                 λs::Array{Array{Float64,1},1}, 
+                 ea::Array{Int64,1}, 
+                 ee::Array{Int64,1},
+                 ni::Int64, 
+                 ei::Int64,
+                 δt::Float64)
+
+  # if tip
+  if in(ei, ea)
+    return iTgbmce(el[ei], δt, δt, false, false, λs[ei])
+  # if extinct
+  elseif in(ei, ee)
+    return iTgbmce(el[ei], δt, δt, true, false, λs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    n1, n2   = e1[ei1:ei2]
+    return iTgbmce(iTgbmce(e0, e1, el, λs, ea, ee, n1, ei1, δt), 
+                   iTgbmce(e0, e1, el, λs, ea, ee, n2, ei2, δt), 
+                   el[ei], δt, δt, false, false, λs[ei])
+  end
+end
+
+
+
+
+"""
     iTgbmct
 
 A composite recursive type of supertype `iTgbm` 

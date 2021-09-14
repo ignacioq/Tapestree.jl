@@ -12,6 +12,7 @@ Created 03 09 2020
 
 
 
+
 """
     sim_gbmpb(t   ::Float64;
               λ0  ::Float64 = 1.0,
@@ -21,7 +22,8 @@ Created 03 09 2020
               nlim::Int64   = 10_000,
               init::Symbol  = :crown)
 
-Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion 
+conditional in stopping at time `t`.
 """
 function sim_gbmpb(t   ::Float64;
                    λ0  ::Float64 = 1.0,
