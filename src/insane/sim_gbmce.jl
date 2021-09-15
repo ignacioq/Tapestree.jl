@@ -28,7 +28,6 @@ Sample conditional on number of species
               σλ   ::Float64 = 0.1, 
               μ    ::Float64 = 0.0,
               δt   ::Float64 = 1e-3,
-              init ::Symbol  = :crown,
               nstar::Int64   = 2*n,
               p    ::Float64 = 5.0)
 
@@ -40,7 +39,6 @@ function sim_gbmce(n    ::Int64;
                    σλ   ::Float64 = 0.1, 
                    μ    ::Float64 = 0.0,
                    δt   ::Float64 = 1e-3,
-                   init ::Symbol  = :crown,
                    nstar::Int64   = 2*n,
                    p    ::Float64 = 5.0)
 
@@ -103,8 +101,8 @@ function _sedges_gbmce(n   ::Int64,
   # edges alive
   ea = [1]
   # first edge
-  push!(e0,1)
-  push!(e1,2)
+  push!(e0, 1)
+  push!(e1, 2)
   # max index
   mxi0 = n*2
   # edge lengths
@@ -144,7 +142,7 @@ function _sedges_gbmce(n   ::Int64,
         el[v] += δt
         li[v] += 1
 
-        # sample new speciation
+        # sample new speciation rates
         λt1 = rnorm(λt + α*δt, srδt*σλ)
         push!(λsi, λt1)
         λm = exp(0.5*(λt + λt1))
@@ -158,24 +156,26 @@ function _sedges_gbmce(n   ::Int64,
             # if reached `n` species
             if n === na
 
-              # in case of events at same time in different lineages
+              # update λs and δt for other lineages
+              for vi in ea[i+1:end]
+                el[vi] += δt
+                λsi = λs[vi]
+                lvi = li[vi]
+                λt  = λsi[lvi]
+
+                push!(λsi, rnorm(λt + α*δt, srδt*σλ))
+              end
+
+              # to add
               if !isempty(ieaa)
                 append!(ea, ieaa)
                 empty!(ieaa)
               end
+
+             # to delete
               if !isempty(iead)
                 deleteat!(ea, iead)
                 empty!(iead)
-              end
-
-              # update λs and dt for other lineages
-              for ii in ea[i+1]:ea[end]
-                el[ii] += δt
-                λsi = λs[ii]
-                lii = li[ii]
-                λt  = λsi[lii]
-
-                push!(λsi, rnorm(λt + α*δt, srδt*σλ))
               end
 
               return e0, e1, el, λs, ea, ee, na, simt
@@ -209,14 +209,20 @@ function _sedges_gbmce(n   ::Int64,
           else
             # if tree goes extinct
             if isone(na)
-              push!(ee, v)      # extinct edges
+              # extinct edges
+              push!(ee, v)
+              # delete from alive lineages
+              deleteat!(ea, i)
+
               return e0, e1, el, λs, ea, ee, 0, simt
             end
 
-            push!(ee, v)      # extinct edges
-            push!(iead, i)    # to update alive lineages
-
-            na -= 1            # update number of alive species
+            # extinct edges
+            push!(ee, v)
+            # to update alive lineages
+            push!(iead, i)
+            # update number of alive species
+            na -= 1
           end
         end
 
@@ -235,7 +241,6 @@ function _sedges_gbmce(n   ::Int64,
       end
     end
   end
-
 end
 
 
