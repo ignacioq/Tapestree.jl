@@ -52,6 +52,18 @@ isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 
 
 """
+    isextinct(tree::sTpb)
+    isextinct(tree::iTgbmpb)
+
+Return if is an extinction node.
+"""
+isextinct(tree::sTpb) = false
+isextinct(tree::iTgbmpb) = false
+
+
+
+
+"""
     isalive(tree::T) where {T <: iTree}
 
 Return if is an extinction node.

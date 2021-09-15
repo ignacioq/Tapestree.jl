@@ -241,6 +241,44 @@ end
 
 
 
+
+"""
+    iTgbmpb(e0::Array{Int64,1}, 
+            e1::Array{Int64,1}, 
+            el::Array{Float64,1}, 
+            λs::Array{Array{Float64,1},1}, 
+            ea::Array{Int64,1}, 
+            ni::Int64, 
+            ei::Int64,
+            δt::Float64)
+
+Transform edge structure to `iTgbmpb`.
+"""
+function iTgbmpb(e0::Array{Int64,1}, 
+                 e1::Array{Int64,1}, 
+                 el::Array{Float64,1}, 
+                 λs::Array{Array{Float64,1},1}, 
+                 ea::Array{Int64,1}, 
+                 ni::Int64, 
+                 ei::Int64,
+                 δt::Float64)
+
+  # if tip
+  if in(ei, ea)
+    return iTgbmpb(el[ei], δt, δt, λs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    n1, n2   = e1[ei1:ei2]
+    return iTgbmpb(iTgbmpb(e0, e1, el, λs, ea, n1, ei1, δt), 
+                   iTgbmpb(e0, e1, el, λs, ea, n2, ei2, δt), 
+                   el[ei], δt, δt, λs[ei])
+  end
+end
+
+
+
+
+
 """
     iTgbmce
 
@@ -554,6 +592,47 @@ end
 
 
 """
+    iTgbmct(e0::Array{Int64,1}, 
+            e1::Array{Int64,1}, 
+            el::Array{Float64,1}, 
+            λs::Array{Array{Float64,1},1}, 
+            ea::Array{Int64,1}, 
+            ee::Array{Int64,1},
+            ni::Int64, 
+            ei::Int64,
+            δt::Float64)
+
+Transform edge structure to `iTgbmct`.
+"""
+function iTgbmct(e0::Array{Int64,1}, 
+                 e1::Array{Int64,1}, 
+                 el::Array{Float64,1}, 
+                 λs::Array{Array{Float64,1},1}, 
+                 ea::Array{Int64,1}, 
+                 ee::Array{Int64,1},
+                 ni::Int64, 
+                 ei::Int64,
+                 δt::Float64)
+
+  # if tip
+  if in(ei, ea)
+    return iTgbmct(el[ei], δt, δt, false, false, λs[ei])
+  # if extinct
+  elseif in(ei, ee)
+    return iTgbmct(el[ei], δt, δt, true, false, λs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    n1, n2   = e1[ei1:ei2]
+    return iTgbmct(iTgbmct(e0, e1, el, λs, ea, ee, n1, ei1, δt), 
+                   iTgbmct(e0, e1, el, λs, ea, ee, n2, ei2, δt), 
+                   el[ei], δt, δt, false, false, λs[ei])
+  end
+end
+
+
+
+
+"""
     iTgbmbd
 
 A composite recursive type of supertype `iTgbm` 
@@ -698,3 +777,47 @@ function iTgbmbd(tree::sTbd,
   end
 end
 
+
+
+
+
+
+"""
+    iTgbmbd(e0::Array{Int64,1}, 
+            e1::Array{Int64,1}, 
+            el::Array{Float64,1}, 
+            λs::Array{Array{Float64,1},1}, 
+            μs::Array{Array{Float64,1},1}, 
+            ea::Array{Int64,1}, 
+            ee::Array{Int64,1},
+            ni::Int64, 
+            ei::Int64,
+            δt::Float64)
+
+Transform edge structure to `iTgbmbd`.
+"""
+function iTgbmbd(e0::Array{Int64,1}, 
+                 e1::Array{Int64,1}, 
+                 el::Array{Float64,1}, 
+                 λs::Array{Array{Float64,1},1}, 
+                 μs::Array{Array{Float64,1},1}, 
+                 ea::Array{Int64,1}, 
+                 ee::Array{Int64,1},
+                 ni::Int64, 
+                 ei::Int64,
+                 δt::Float64)
+
+  # if tip
+  if in(ei, ea)
+    return iTgbmbd(el[ei], δt, δt, false, false, λs[ei], μs[ei])
+  # if extinct
+  elseif in(ei, ee)
+    return iTgbmbd(el[ei], δt, δt, true, false, λs[ei], μs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    n1, n2   = e1[ei1:ei2]
+    return iTgbmbd(iTgbmbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt), 
+                   iTgbmbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt), 
+                   el[ei], δt, δt, false, false, λs[ei], μs[ei])
+  end
+end
