@@ -35,13 +35,14 @@ Sample conditional on number of species
 Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
 """
 function sim_gbmce(n    ::Int64;
-                   λ0   ::Float64 = 1.0, 
-                   α    ::Float64 = 0.0, 
-                   σλ   ::Float64 = 0.1, 
-                   μ    ::Float64 = 0.0,
-                   δt   ::Float64 = 1e-3,
-                   nstar::Int64   = 2*n,
-                   p    ::Float64 = 5.0)
+                   λ0   ::Float64    = 1.0, 
+                   α    ::Float64    = 0.0, 
+                   σλ   ::Float64    = 0.1, 
+                   μ    ::Float64    = 0.0,
+                   δt   ::Float64    = 1e-3,
+                   nstar::Int64      = 2*n,
+                   p       ::Float64 = 5.0,
+                   warnings::Bool    = true)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, ee, na, simt = 
@@ -51,7 +52,7 @@ function sim_gbmce(n    ::Int64;
   t = iTgbmce(e0, e1, el, λs, ea, ee, e1[1], 1, δt)
 
   if iszero(snan(t, 0))
-    @warn "tree went extinct"
+    warnings && @warn "tree went extinct"
     return t
   end
 
@@ -61,7 +62,7 @@ function sim_gbmce(n    ::Int64;
   c  = usample(tn, p)
 
   if iszero(c)
-    @warn "tree not sampled, try increasing `p`"
+    warnings && @warn "tree not sampled, try increasing `p`"
     return iTgbmce()
   else
     # cut the tree

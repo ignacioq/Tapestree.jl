@@ -24,22 +24,24 @@ Sample conditional on number of species
 
 """
     sim_gbmpb(n    ::Int64;
-              λ0   ::Float64 = 1.0, 
-              α    ::Float64 = 0.0, 
-              σλ   ::Float64 = 0.1, 
-              δt   ::Float64 = 1e-3,
-              nstar::Int64   = 2*n,
-              p    ::Float64 = 5.0)
+              λ0   ::Float64    = 1.0, 
+              α    ::Float64    = 0.0, 
+              σλ   ::Float64    = 0.1, 
+              δt   ::Float64    = 1e-3,
+              nstar::Int64      = 2*n,
+              p       ::Float64 = 5.0,
+              warnings::Bool    = true)
 
 Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
 """
 function sim_gbmpb(n    ::Int64;
-                   λ0   ::Float64 = 1.0, 
-                   α    ::Float64 = 0.0, 
-                   σλ   ::Float64 = 0.1, 
-                   δt   ::Float64 = 1e-3,
-                   nstar::Int64   = 2*n,
-                   p    ::Float64 = 5.0)
+                   λ0   ::Float64    = 1.0, 
+                   α    ::Float64    = 0.0, 
+                   σλ   ::Float64    = 0.1, 
+                   δt   ::Float64    = 1e-3,
+                   nstar::Int64      = 2*n,
+                   p       ::Float64 = 5.0,
+                   warnings::Bool    = true)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, na, simt = 
@@ -54,7 +56,7 @@ function sim_gbmpb(n    ::Int64;
   c  = usample(tn, p)
 
   if iszero(c)
-    @warn "tree not sampled, try increasing `p`"
+    warnings && @warn "tree not sampled, try increasing `p`"
     return iTgbmpb()
   else
     # cut the tree
@@ -165,7 +167,7 @@ function _sedges_gbmpb(n   ::Int64,
               empty!(iead)
             end
 
-            return e0, e1, el, λs, ea, ee, na, simt
+            return e0, e1, el, λs, ea, na, simt
           end
 
           ### add new edges

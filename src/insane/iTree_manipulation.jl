@@ -34,7 +34,6 @@ _rm_stem(tree::sTpb) = sete!(tree, 0.0)
 
 
 
-
 """
     _rm_stem(tree::T) where {T <: iTgbm}
 
