@@ -10,6 +10,69 @@ Created 25 06 2020
 =#
 
 
+"""
+    rm_stem(tree::T)  where {T <: iTree}
+
+Removes stem branch.
+"""
+rm_stem!(tree::T)  where {T <: iTree} = 
+  _rm_stem(tree)
+
+
+
+
+
+"""
+    _cutbottom(tree::sTpb, 
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`.
+"""
+_rm_stem(tree::sTpb) = sete!(tree, 0.0)
+
+
+
+
+
+"""
+    _rm_stem(tree::T) where {T <: iTgbm}
+
+Remove stem branch.
+"""
+function _rm_stem(tree::T) where {T <: iTgbm}
+
+  sete!(  tree, 0.0)
+  setfdt!(tree, 0.0)
+  lλe = lλ(tree)[end]
+  setlλ!( tree, [lλe,lλe])
+
+  return tree
+end
+
+
+
+
+"""
+    _rm_stem(tree::iTgbmbd)
+
+Remove stem branch.
+"""
+function _rm_stem(tree::iTgbmbd)
+
+  sete!(  tree, 0.0)
+  setfdt!(tree, 0.0)
+  lλe = lλ(tree)[end]
+  lμe = lμ(tree)[end]
+  setlλ!( tree, [lλe, lλe])
+  setlμ!( tree, [lμe, lμe])
+
+  return tree
+end
+
+
+
+
 
 """
     cutbottom(tree::T, c::Float64) where {T <: iTree}
@@ -1021,13 +1084,34 @@ end
 
 
 
-
 """
-  fix!(tree::T) where {T <: iTree}
+    fix!(tree::T) where {T <: iTree}
 
 Fix `tree`.
 """
 fix!(tree::T) where {T <: iTree} = setproperty!(tree, :fx, true)
+
+
+
+
+"""
+    setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iTgbm}
+
+Set number of `δt` for `tree`.
+"""
+setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iTgbm} = 
+  setproperty!(tree, :lλ, lλ)
+
+
+
+
+"""
+    setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTgbmbd}
+
+Set number of `δt` for `tree`.
+"""
+setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTgbmbd} = 
+  setproperty!(tree, :lμ, lμ)
 
 
 
@@ -1040,6 +1124,16 @@ Set number of `δt` for `tree`.
 setfdt!(tree::T, fdt::Float64) where {T <: iTgbm} = 
   setproperty!(tree, :fdt, fdt)
 
+
+
+
+"""
+  setdt!(tree::T, dt::Float64) where {T <: iTgbm}
+
+Set number of `δt` for `tree`.
+"""
+setdt!(tree::T, dt::Float64) where {T <: iTgbm} = 
+  setproperty!(tree, :dt, dt)
 
 
 
