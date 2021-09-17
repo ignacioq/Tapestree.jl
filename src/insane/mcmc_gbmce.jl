@@ -562,7 +562,7 @@ function fsp(Ψp   ::iTgbmce,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  t0, ret, λf = 
+  t0, ret, λf, λf1, dft0 = 
     fsbi_ce(bi, bbλc[bix][1], α, σλ, μ, δt, srδt, nlim)
 
   # if retain simulation
@@ -580,10 +580,14 @@ function fsp(Ψp   ::iTgbmce,
         tsv, pr, d1, d2, α, σλ, μ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
       # change last event by speciation for llr
-      iλ = λf
+      iλ = 0.5*(λf1 + λf) + log(dft0) + 
+           dft0*(exp(0.5*(λf1 + λf)) + μ)
+
+      bbλi = bbλc[pr]
+      l    = lastindex(bbλi)
 
       # acceptance ratio
-      acr += λf - bbλc[d1][1]
+      acr += 0.5*(λf1 + λf) - 0.5*(bbλi[l-1] + bbλi[l])
     else
       pr  = bix
       iλ  = 0.0
@@ -669,14 +673,14 @@ function fsbi_ce(bi  ::iBffs,
 
   na = snan(t0, 0)
 
-  λf, dft0 = NaN, NaN
+  λf, λf1, dft0 = NaN, NaN, NaN
 
   # if simulation goes extinct or maximum number of species reached
   if iszero(na) || nsp === nlim
     ret = false
   # if one surviving lineage
   elseif isone(na)
-    f, λf, dft0 = fixalive!(t0, NaN, NaN)
+    f, λf, λf1, dft0 = fixalive!(t0, NaN, NaN, NaN)
   elseif na > 1
     # if terminal branch
     if it(bi)
@@ -684,7 +688,7 @@ function fsbi_ce(bi  ::iBffs,
     # if continue the simulation
     else
       # fix random tip and return end λ(t)
-      λf, dft0 = fixrtip!(t0, na, NaN, NaN)
+      λf, λf1, dft0 = fixrtip!(t0, na, NaN, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
         # get their final λ to continue forward simulation
@@ -720,7 +724,7 @@ function fsbi_ce(bi  ::iBffs,
     ret = false
   end
 
-  return t0, ret, λf
+  return t0, ret, λf, λf1, dft0
 end
 
 
@@ -868,30 +872,34 @@ Fixes the the path for a random non extinct tip and returns final `λ(t)`.
 function fixrtip!(tree::T, 
                   na  ::Int64, 
                   λf  ::Float64, 
+                  λf1 ::Float64,
                   dft0::Float64) where {T <: iTgbm}
 
   fix!(tree)
 
   if isdefined(tree, :d1)
     if isextinct(tree.d1)
-      λf, dft0 = fixrtip!(tree.d2, na, λf, dft0)
+      λf, λf1, dft0 = fixrtip!(tree.d2, na, λf, λf1, dft0)
     elseif isextinct(tree.d2)
-      λf, dft0 = fixrtip!(tree.d1, na, λf, dft0)
+      λf, λf1, dft0 = fixrtip!(tree.d1, na, λf, λf1, dft0)
     else
       na1 = snan(tree.d1, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λf, dft0 = fixrtip!(tree.d2, na - na1, λf, dft0)
+        λf, λf1, dft0 = fixrtip!(tree.d2, na - na1, λf, λf1, dft0)
       else
-        λf, dft0 = fixrtip!(tree.d1, na1,      λf, dft0)
+        λf, λf1, dft0 = fixrtip!(tree.d1, na1,      λf, λf1, dft0)
       end
     end
   else
-    λf   = lλ(tree)[end]
+    λv   = lλ(tree)
+    l    = lastindex(λv)
+    λf   = λv[l]
+    λf1  = λv[l-1]
     dft0 = fdt(tree)
   end
 
-  return λf, dft0
+  return λf, λf1, dft0
 end
 
 
@@ -902,29 +910,32 @@ end
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::T, λf::Float64, dft0::Float64) where {T <:iTgbm}
+function fixalive!(tree::T, λf::Float64, λf1::Float64, dft0::Float64) where {T <:iTgbm} 
 
   if istip(tree) 
     if isalive(tree)
       fix!(tree)
-      λf   = lλ(tree)[end]
+      λv   = lλ(tree)
+      l    = lastindex(λv)
+      λf   = λv[l]
+      λf1  = λv[l-1]
       dft0 = fdt(tree)
-      return true, λf, dft0
+      return true, λf, λf1, dft0
     end
   else
-    f, λf, dft0 = fixalive!(tree.d2, λf, dft0)
+    f, λf, λf1, dft0 = fixalive!(tree.d2, λf, λf1, dft0)
     if f 
       fix!(tree)
-      return true, λf, dft0
+      return true, λf, λf1, dft0
     end
-    f, λf, dft0 = fixalive!(tree.d1, λf, dft0)
+    f, λf, λf1, dft0 = fixalive!(tree.d1, λf, λf1, dft0)
     if f 
       fix!(tree)
-      return true, λf, dft0
+      return true, λf, λf1, dft0
     end
   end
 
-  return false, λf, dft0
+  return false, λf, λf1, dft0
 end
 
 

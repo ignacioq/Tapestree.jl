@@ -57,8 +57,10 @@ function sum_alone_stem(tree::iTgbmce,
   end
 
   if tna < e(tree)
-    λi  = lλ(tree)[end]
-    ll += log(exp(λi) + μ) - λi
+    λv  = lλ(tree)
+    l   = lastindex(λv)
+    λm  = 0.5*(λv[l-1] + λv[l])
+    ll += log((exp(λm) + μ)) - λm
   end
   tna -= e(tree)
 
@@ -110,8 +112,10 @@ function sum_alone_stem_p(tree::iTgbmce,
                           μ   ::Float64)
 
   if tna < e(tree)
-    λi  = lλ(tree)[end]
-    ll += log(exp(λi) + μ) - λi
+    λv  = lλ(tree)
+    l   = lastindex(λv)
+    λm  = 0.5*(λv[l-1] + λv[l])
+    ll += log((exp(λm) + μ)) - λm
   end
   tna -= e(tree)
 
@@ -216,16 +220,16 @@ Returns the log-likelihood for a branch according to `gbmce`.
     # add final non-standard `δt`
     if fdt > 0.0
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
-      ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
-    end
 
-    # if speciation
-    if λev
+      if λev
+        ll += log(fdt) + 0.5*(lλvi + lλvi1)
+      elseif μev
+        ll += log(fdt * μ) 
+      else
+        ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
+      end
+    elseif λev
       ll += lλvi1
-    end
-    # if extinction
-    if μev
-      ll += log(μ)
     end
   end
 

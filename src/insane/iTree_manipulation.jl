@@ -23,13 +23,11 @@ rm_stem!(tree::T)  where {T <: iTree} =
 
 
 """
-    _cutbottom(tree::sTpb, 
-               c   ::Float64,
-               t   ::Float64)
+    _rm_stem(tree::T) where {T <: sT}
 
-Cut the bottom part of the tree after `c`.
+Remove stem branch.
 """
-_rm_stem(tree::sTpb) = sete!(tree, 0.0)
+_rm_stem(tree::T) where {T <: sT} = sete!(tree, 0.0)
 
 
 

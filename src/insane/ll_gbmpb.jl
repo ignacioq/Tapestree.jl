@@ -140,17 +140,19 @@ separately for the Brownian motion and the pure-birth
     lλpi1 = lλp[nI+2]
     lλci1 = lλc[nI+2]
 
-    # add final non-standard `δt`
+   # add final non-standard `δt`
     if fdt > 0.0
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-      llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-    end
-
-    # if speciation
-    if λev
+      if λev
+        llrpb += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
+      else
+        llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+      end
+    elseif λev
       llrpb += lλpi1 - lλci1
     end
+
   end
 
   return llrbm, llrpb
