@@ -642,7 +642,7 @@ function makebbv!(tree::T,
                   tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
 
   push!(tsv, [e(tree), fdt(tree)])
-  push!(bbλ, lλ(tree))
+  push!(bbλ, copy(lλ(tree)))
 
   if isdefined(tree, :d1)
     makebbv!(tree.d1, bbλ, tsv)
@@ -670,8 +670,8 @@ function makebbv!(tree::iTgbmbd,
                   tsv ::Array{Array{Float64,1},1})
 
   push!(tsv, [e(tree), fdt(tree)])
-  push!(bbλ, lλ(tree))
-  push!(bbμ, lμ(tree))
+  push!(bbλ, copy(lλ(tree)))
+  push!(bbμ, copy(lμ(tree)))
 
   if isdefined(tree, :d1)
     makebbv!(tree.d1, bbλ, bbμ, tsv)
