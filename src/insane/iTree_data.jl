@@ -275,18 +275,25 @@ end
 
 
 """
-    treelength_ne(tree::T, l::Float64, n::Float64)
+    treelength_ne(tree::T, 
+                  l   ::Float64, 
+                  ldt ::Float64, 
+                  n   ::Float64) where {T <: iTree}
 
-Return the tree length and Float number of extinct tip nodes for `tree`.
+Return the tree length minus fdts and sum of fdts where there was extinction.
 """
-function treelength_ne(tree::T, l::Float64, n::Float64) where {T <: iTree}
+function treelength_ne(tree::T, 
+                       l   ::Float64, 
+                       n   ::Float64) where {T <: iTree}
 
   l += e(tree)
   if isdefined(tree, :d1)
+    l -= fdt(tree)
     l, n = treelength_ne(tree.d1, l, n)
     l, n = treelength_ne(tree.d2, l, n)
   else
     if isextinct(tree)
+      l -= fdt(tree)
       n += 1.0
     end
   end

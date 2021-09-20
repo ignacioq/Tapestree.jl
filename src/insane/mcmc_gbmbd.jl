@@ -391,11 +391,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-        #  if !isapprox(llci, llc, atol = 1e-4)
-        #    @show llci, llc, 1
-        #    return 
-        # end
+        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+         if !isapprox(llci, llc, atol = 1e-4)
+           @show llci, llc, 1
+           return 
+        end
 
       # gbm update
       elseif pupi === 2
@@ -403,11 +403,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         llc, prc, σλc, σμc = 
           update_σ!(σλc, σμc, αc, Ψc, llc, prc, σλ_prior, σμ_prior)
 
-        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-        #  if !isapprox(llci, llc, atol = 1e-4)
-        #    @show llci, llc, 2
-        #    return 
-        # end
+        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+         if !isapprox(llci, llc, atol = 1e-4)
+           @show llci, llc, 2
+           return 
+        end
 
       # gbm update
       elseif pupi === 3
@@ -431,11 +431,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
             αc, σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-        #  if !isapprox(llci, llc, atol = 1e-4)
-        #    @show llci, llc, 3
-        #    return 
-        # end
+        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+         if !isapprox(llci, llc, atol = 1e-4)
+           @show llci, llc, 3
+           return 
+        end
 
       # forward simulation update
       else
@@ -462,11 +462,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           fsp(Ψp, Ψc, bi, llc, αc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
-        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-        #  if !isapprox(llci, llc, atol = 1e-4)
-        #    @show llci, llc, 4
-        #    return 
-        # end
+        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+         if !isapprox(llci, llc, atol = 1e-4)
+           @show llci, llc, 4
+           return 
+        end
       end
     end
 

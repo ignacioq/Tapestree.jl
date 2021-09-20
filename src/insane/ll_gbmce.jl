@@ -57,10 +57,12 @@ function sum_alone_stem(tree::iTgbmce,
   end
 
   if tna < e(tree)
-    λv  = lλ(tree)
-    l   = lastindex(λv)
-    λm  = 0.5*(λv[l-1] + λv[l])
-    ll += log((exp(λm) + μ)) - λm
+    @inbounds begin
+      λv  = lλ(tree)
+      l   = lastindex(λv)
+      λm  = 0.5*(λv[l-1] + λv[l])
+      ll += log(exp(λm) + μ) - λm
+    end
   end
   tna -= e(tree)
 
@@ -109,10 +111,12 @@ function sum_alone_stem_p(tree::iTgbmce,
                           μ   ::Float64)
 
   if tna < e(tree)
-    λv  = lλ(tree)
-    l   = lastindex(λv)
-    λm  = 0.5*(λv[l-1] + λv[l])
-    ll += log((exp(λm) + μ)) - λm
+    @inbounds begin
+      λv  = lλ(tree)
+      l   = lastindex(λv)
+      λm  = 0.5*(λv[l-1] + λv[l])
+      ll += log(exp(λm) + μ) - λm
+    end
   end
   tna -= e(tree)
 
