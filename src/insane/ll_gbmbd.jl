@@ -51,12 +51,13 @@ function sum_alone_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if tna < e(tree)
     @inbounds begin
-      lλv = lλ(tree)
-      lv  = lastindex(lλv)
-      λi  = lλv[lv]
-      μi  = lμ(tree)[lv]
+      λv  = lλ(tree)
+      μv  = lμ(tree)
+      l   = lastindex(λv)
+      λm  = 0.5*(λv[l-1] + λv[l])
+      μm  = 0.5*(μv[l-1] + μv[l])
+      @fastmath ll += log(exp(λm) + exp(μm)) - λm
     end
-    @fastmath ll += log(exp(λi) + exp(μi)) - λi
   end
   tna -= e(tree)
 
@@ -99,12 +100,13 @@ function sum_alone_stem_p(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if tna < e(tree)
     @inbounds begin
-      lλv = lλ(tree)
-      lv  = lastindex(lλv)
-      λi  = lλv[lv]
-      μi  = lμ(tree)[lv]
+      λv  = lλ(tree)
+      μv  = lμ(tree)
+      l   = lastindex(λv)
+      λm  = 0.5*(λv[l-1] + λv[l])
+      μm  = 0.5*(μv[l-1] + μv[l])
+      @fastmath ll += log(exp(λm) + exp(μm)) - λm
     end
-    @fastmath ll += log(exp(λi) + exp(μi)) - λi
   end
   tna -= e(tree)
 
@@ -220,16 +222,16 @@ Returns the log-likelihood for a branch according to `gbmbd`.
       srfdt = sqrt(fdt)
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)
       ll += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
-      ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
-    end
 
-    #if speciation
-    if λev
+      if λev
+        ll += log(fdt) + 0.5*(lλvi + lλvi1)
+      elseif μev
+        ll += log(fdt) + 0.5*(lμvi + lμvi1)
+      else
+        ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
+      end
+    elseif λev
       ll += lλvi1
-    end
-    #if extinction
-    if μev
-      ll += lμvi1
     end
   end
 
