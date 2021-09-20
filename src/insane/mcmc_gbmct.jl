@@ -406,31 +406,31 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 1, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 1, i, αc, σλc, ϵc
+           return 
+        end
 
       elseif pupi === 2
 
         llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 2, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 2, i, αc, σλc, ϵc
+           return 
+        end
 
       elseif pupi === 3
 
         llc, ϵc  = update_ϵ!(ϵc, Ψc, llc, ϵtn, ϵmxpr, svf)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 3, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 3, i, αc, σλc, ϵc
+           return 
+        end
 
       # gbm update
       elseif pupi === 4
@@ -454,11 +454,11 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
             αc, σλc, ϵc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 4, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 4, i, αc, σλc, ϵc
+           return 
+        end
 
       # forward simulation update
       else
@@ -484,11 +484,11 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, αc, σλc, ϵc, tsv, bbλp, bbλc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 5, i,  bix, Ψc, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, 5, i,  bix, Ψc, αc, σλc, ϵc
+           return 
+        end
 
       end
 
@@ -563,7 +563,7 @@ function fsp(Ψp   ::iTgbmct,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  t0, ret, λf = 
+  t0, ret, λf, λf1, dft0 = 
     fsbi_ct(bi, bbλc[bix][1], α, σλ, ϵ, δt, srδt, nlim)
 
   # if retain simulation
@@ -580,11 +580,15 @@ function fsp(Ψp   ::iTgbmct,
       llr, acr = ldprop!(Ψp, Ψc, λf, bbλp, bbλc,
         tsv, pr, d1, d2, α, σλ, ϵ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
-      # change last event by speciation for llr
-      iλ = λf
+     # change last event by speciation for llr
+      iλ = 0.5*(λf1 + λf) + log(dft0) + 
+           dft0*exp(0.5*(λf1 + λf))*(1.0 + ϵ)
+
+      bbλi = bbλc[pr]
+      l    = lastindex(bbλi)
 
       # acceptance ratio
-      acr += λf - bbλc[d1][1]
+      acr += 0.5*(λf1 + λf) - 0.5*(bbλi[l-1] + bbλi[l])
 
     else
       pr  = bix
@@ -669,14 +673,14 @@ function fsbi_ct(bi  ::iBffs,
 
   na = snan(t0, 0)
 
-  λf, dft0 = NaN, NaN
+  λf, λf1, dft0 = NaN, NaN, NaN
 
   # if simulation goes extinct or maximum number of species reached
   if iszero(na) || nsp === nlim
     ret = false
   # if one surviving lineage
   elseif isone(na)
-    f, λf, dft0 = fixalive!(t0, NaN, NaN)
+    f, λf, λf1, dft0 = fixalive!(t0, NaN, NaN, NaN)
   elseif na > 1
     # if terminal branch
     if it(bi)
@@ -684,7 +688,7 @@ function fsbi_ct(bi  ::iBffs,
     # if continue the simulation
     else
       # fix random tip and return end λ(t)
-      λf, dft0 = fixrtip!(t0, na, NaN, NaN)
+      λf, λf1, dft0 = fixrtip!(t0, na, NaN, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
 
@@ -722,7 +726,7 @@ function fsbi_ct(bi  ::iBffs,
     ret = false
   end
 
-  return t0, ret, λf
+  return t0, ret, λf, λf1, dft0
 end
 
 

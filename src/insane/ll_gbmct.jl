@@ -208,19 +208,19 @@ Returns the log-likelihood for a branch according to `gbmct`.
     ll   -= llbd*δt*(1.0 + ϵ)
 
     lλvi1 = lλv[nI+2]
-    # add final non-standard `δt`
+
     if fdt > 0.0
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
-      ll -= fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
-    end
 
-    # if speciation
-    if λev
+      if λev
+        ll += log(fdt) + 0.5*(lλvi + lλvi1)
+      elseif μev
+        ll += 0.5*(lλvi + lλvi1) + log(ϵ * fdt)
+      else
+        ll -= fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
+      end
+    elseif λev
       ll += lλvi1
-    end
-    # if extinction
-    if μev
-      ll += lλvi1 + log(ϵ)
     end
   end
 
@@ -523,19 +523,19 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
     # add final non-standard `δt`
     if fdt > 0.0
+      srfdt = sqrt(fdt)
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-      llrbd -= fdt*(1.0 + ϵ)*
-               (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-    end
 
-    # if speciation
-    if λev
-      llrbd += lλpi1 - lλci1
-    end
-
-    # if extinction
-    if μev
+      if λev
+        llrbd += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
+      elseif μev
+        llrbd += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
+      else
+        llrbd -= fdt*(1.0 + ϵ)*
+                 (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+      end
+    elseif λev
       llrbd += lλpi1 - lλci1
     end
   end
