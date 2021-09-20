@@ -543,7 +543,7 @@ function fsp(Ψp   ::iTgbmbd,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  t0, ret, λf, μf = 
+  t0, ret, λf, λf1, μf, μf1, dft0 = 
     fsbi(bi, bbλc[bix][1], bbμc[bix][1], α, σλ, σμ, δt, srδt, nlim)
 
   # if retain simulation
@@ -561,10 +561,15 @@ function fsp(Ψp   ::iTgbmbd,
         tsv, pr, d1, d2, α, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
       # change last event by speciation for llr
-      iλ = λf
+      iλ = 0.5*(λf1 + λf) + log(dft0) + 
+           dft0*(exp(0.5*(λf1 + λf)) + exp(0.5*(μf1 + μf)))
+
+      bbλi = bbλc[pr]
+      l    = lastindex(bbλi)
 
       # acceptance ratio
-      acr += λf - bbλc[d1][1]
+      acr += 0.5*(λf1 + λf) - 0.5*(bbλi[l-1] + bbλi[l])
+
     else
       pr  = bix
       iλ  = 0.0
@@ -652,14 +657,14 @@ function fsbi(bi  ::iBffs,
 
   na = snan(t0, 0)
 
-  λf, μf, dft0 = NaN, NaN, NaN
+  λf, λf1, μf, μf1, dft0 = NaN, NaN, NaN, NaN, NaN
 
   # if simulation goes extinct or maximum number of species reached
   if iszero(na) || nsp === nlim
     ret = false
   # if one surviving lineage
   elseif isone(na)
-    f, λf, μf, dft0 = fixalive!(t0, NaN, NaN, NaN)
+    f, λf, λf1, μf, μf1, dft0 = fixalive!(t0, NaN, NaN, NaN, NaN, NaN)
   elseif na > 1
     # if terminal branch
     if it(bi)
@@ -667,7 +672,7 @@ function fsbi(bi  ::iBffs,
     # if continue the simulation
     else
       # fix random tip and return end λ(t) and μ(t) 
-      λf, μf, dft0 = fixrtip!(t0, na, NaN, NaN, NaN)
+      λf, λf1, μf, μf1, dft0 = fixrtip!(t0, na, NaN, NaN, NaN, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
         # get their final λ and μ to continue forward simulation
@@ -705,7 +710,7 @@ function fsbi(bi  ::iBffs,
     ret = false
   end
 
-  return t0, ret, λf, μf
+  return t0, ret, λf, λf1, μf, μf1, dft0
 end
 
 
@@ -869,83 +874,96 @@ Fixes the the path for a random non extinct tip.
 function fixrtip!(tree::iTgbmbd, 
                   na  ::Int64, 
                   λf  ::Float64, 
+                  λf1 ::Float64, 
                   μf  ::Float64,
+                  μf1 ::Float64,
                   dft0::Float64) 
 
   fix!(tree)
 
   if isdefined(tree, :d1)
     if isextinct(tree.d1)
-      λf, μf, dft0 = 
-        fixrtip!(tree.d2, na, λf, μf, dft0)
+      λf, λf1, μf, μf1, dft0 = 
+        fixrtip!(tree.d2, na, λf, λf1, μf, μf1, dft0)
     elseif isextinct(tree.d2)
-      λf, μf, dft0 = 
-        fixrtip!(tree.d1, na, λf, μf, dft0)
+      λf, λf1, μf, μf1, dft0 = 
+        fixrtip!(tree.d1, na, λf, λf1, μf, μf1, dft0)
     else
       na1 = snan(tree.d1, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λf, μf, dft0 = 
-          fixrtip!(tree.d2, na - na1, λf, μf, dft0)
+        λf, λf1, μf, μf1, dft0 = 
+          fixrtip!(tree.d2, na - na1, λf, λf1, μf, μf1, dft0)
       else
-        λf, μf, dft0 = 
-          fixrtip!(tree.d1, na1, λf, μf, dft0)
+        λf, λf1, μf, μf1, dft0 = 
+          fixrtip!(tree.d1, na1, λf, λf1, μf, μf1, dft0)
       end
     end
   else
+
     dft0 = fdt(tree)
-    lλv  = lλ(tree)
-    l    = lastindex(lλv)
-    λf   = lλv[l]
-    μf   = lμ(tree)[l]
+    λv   = lλ(tree)
+    μv   = lμ(tree)
+    l    = lastindex(λv)
+    λf   = λv[l]
+    λf1  = λv[l-1]
+    μf   = μv[l]
+    μf1  = μv[l-1]
   end
 
-  return λf, μf, dft0
+  return λf, λf1, μf, μf1, dft0
 end
 
 
 
 
 """
-    fixalive!(tree::iTgbmbd,
-              λfm1::Float64, 
-              λf  ::Float64, 
-              μf  ::Float64)
+    ixalive!(tree::iTgbmbd,
+             λf  ::Float64,
+             λf1 ::Float64,
+             μf  ::Float64,
+             μf1 ::Float64,
+             dft0::Float64)
 
 Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::iTgbmbd,
-                   λf  ::Float64, 
+                   λf  ::Float64,
+                   λf1 ::Float64,
                    μf  ::Float64,
+                   μf1 ::Float64,
                    dft0::Float64)
 
   if istip(tree) 
     if isalive(tree)
       fix!(tree)
       dft0 = fdt(tree)
-      lλv  = lλ(tree)
-      l    = lastindex(lλv)
-      λf   = lλv[l]
-      μf   = lμ(tree)[l]
+      λv   = lλ(tree)
+      μv   = lμ(tree)
+      l    = lastindex(λv)
+      λf   = λv[l]
+      λf1  = λv[l-1]
+      μf   = μv[l]
+      μf1  = μv[l-1]
 
-      return true, λf, μf, dft0
+      return true, λf, λf1, μf, μf1, dft0
     end
   else
-    f, λf, μf, dft0 = 
-      fixalive!(tree.d2, λf, μf, dft0)
+    f, λf, λf1, μf, μf1, dft0 = 
+      fixalive!(tree.d2, λf, λf1, μf, μf1, dft0)
     if f 
       fix!(tree)
-      return true, λf, μf, dft0
+      return true, λf, λf1, μf, μf1, dft0
     end
-    f, λf, μf, dft0 = 
-      fixalive!(tree.d1, λf, μf, dft0)
+    f, λf, λf1, μf, μf1, dft0 = 
+      fixalive!(tree.d1, λf, λf1, μf, μf1, dft0)
     if f 
       fix!(tree)
-      return true, λf, μf, dft0
+      return true, λf, λf1, μf, μf1, dft0
     end
   end
 
-  return false, λf, μf, dft0
+  return false, λf, λf1, μf, μf1, dft0
 end
 
 
