@@ -278,6 +278,21 @@ end
 
 
 
+"""
+    sTpb(tree::iTgbmpb)
+
+Demotes a tree of type `iTgbmce` to `sTpb`.
+"""
+function sTpb(tree::iTgbmpb)
+  if isdefined(tree, :d1)
+    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree))
+  else
+    sTpb(e(tree))
+  end
+end
+
+
+
 
 """
     iTgbmce
