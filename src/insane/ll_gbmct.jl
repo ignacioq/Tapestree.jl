@@ -231,6 +231,27 @@ end
 
 
 """
+    sλ_gbm(tree::iTgbmct)
+Returns the sum of `λ` rates for a `iTgbmct` according 
+to `gbmct` for a `ϵ` proposal.
+"""
+function sλ_gbm(tree::iTgbmct)
+
+  if istip(tree)
+    sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree), isextinct(tree))
+  else
+    sλt  = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree), true)
+    sλt += sλ_gbm(tree.d1::iTgbmct) + 
+           sλ_gbm(tree.d2::iTgbmct)
+  end
+
+  return sλt
+end
+
+
+
+
+"""
     sλ_gbm_b(lλv::Array{Float64,1},
              δt ::Float64, 
              fdt::Float64)
@@ -240,7 +261,8 @@ to `gbmct` for a `ϵ` proposal.
 """
 @inline function sλ_gbm_b(lλv::Array{Float64,1},
                           δt ::Float64, 
-                          fdt::Float64)
+                          fdt::Float64,
+                          ev ::Bool)
 
   @inbounds begin
 
@@ -259,28 +281,9 @@ to `gbmct` for a `ϵ` proposal.
     sλt *= δt
 
     # add final non-standard `δt`
-    if fdt > 0.0
+    if fdt > 0.0 && !ev
       sλt += fdt * exp(0.5*(lλv[nI+2] + lλvi))
     end
-  end
-
-  return sλt
-end
-
-
-
-"""
-    sλ_gbm(tree::iTgbmct)
-Returns the sum of `λ` rates for a `iTgbmct` according 
-to `gbmct` for a `ϵ` proposal.
-"""
-function sλ_gbm(tree::iTgbmct)
-
-  sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
-
-  if isdefined(tree, :d1) 
-    sλt += sλ_gbm(tree.d1::iTgbmct) + 
-           sλ_gbm(tree.d2::iTgbmct)
   end
 
   return sλt
@@ -492,7 +495,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        σλ  ::Float64,
                        ϵ   ::Float64,
                        δt  ::Float64, 
-                       fdt::Float64,
+                       fdt ::Float64,
                        srδt::Float64,
                        λev ::Bool,
                        μev ::Bool)

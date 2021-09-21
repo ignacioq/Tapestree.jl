@@ -251,22 +251,22 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
         # update drift
         llc, prc, αc = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, 1, it
-           return 
-        end
+        # ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 1, it
+        #    return 
+        # end
 
       elseif pupi === 2
 
         # update diffusion
         llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
 
-        ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, 1, it
-           return 
-        end
+        # ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 1, it
+        #    return 
+        # end
 
       else 
 
@@ -281,11 +281,11 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
         llc = lλupdate!(Ψp, Ψc, llc, αc, σλc, δt, srδt, lλmxpr, 
                 dri, ldr, ter, 0)
 
-        ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, 1, it
-           return 
-        end
+        # ll0 = llik_gbm(Ψc, αc, σλc, δt, srδt)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, 1, it
+        #    return 
+        # end
 
       end
     end
