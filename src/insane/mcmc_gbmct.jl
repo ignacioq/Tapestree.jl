@@ -209,7 +209,7 @@ function mcmc_burn_gbmct(Ψp      ::iTgbmct,
         logdunif(ϵc, ϵ_prior[1], ϵ_prior[2])
 
   lλmxpr = log(λa_prior[2])
-  ϵmxpr  = log(ϵ_prior[2])
+  ϵmxpr  = ϵ_prior[2]
 
   # number of branches and of triads
   nbr  = lastindex(idf)
@@ -372,7 +372,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
   icr = iszero(e(Ψc))
 
   lλmxpr = log(λa_prior[2])
-  ϵmxpr  = log(ϵ_prior[2])
+  ϵmxpr  = ϵ_prior[2]
 
   # logging
   nlogs = fld(niter,nthin)
@@ -406,31 +406,31 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 1, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 1, i, αc, σλc, ϵc
+           return 
+        end
 
       elseif pupi === 2
 
         llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 2, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 2, i, αc, σλc, ϵc
+           return 
+        end
 
       elseif pupi === 3
 
         llc, ϵc  = update_ϵ!(ϵc, Ψc, llc, ϵtn, ϵmxpr, svf)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 3, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 3, i, αc, σλc, ϵc
+           return 
+        end
 
       # gbm update
       elseif pupi === 4
@@ -454,11 +454,11 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
             αc, σλc, ϵc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 4, i, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, 4, i, αc, σλc, ϵc
+           return 
+        end
 
       # forward simulation update
       else
@@ -484,11 +484,11 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, αc, σλc, ϵc, tsv, bbλp, bbλc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
-        # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 5, i,  bix, Ψc, αc, σλc, ϵc
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, 5, i,  bix, Ψc, αc, σλc, ϵc
+           return 
+        end
 
       end
 
@@ -944,19 +944,19 @@ end
 
 
 """
-    update_ϵ!(ϵc    ::Float64,
-              Ψ     ::iTgbmct,
-              llc   ::Float64,
-              ϵtn   ::Float64,
+    update_ϵ!(ϵc   ::Float64,
+              Ψ    ::iTgbmct,
+              llc  ::Float64,
+              ϵtn  ::Float64,
               ϵmxpr::Float64,
               svf  ::Function)
 
 MCMC update for `ϵ`.
 """
-function update_ϵ!(ϵc    ::Float64,
-                   Ψ     ::iTgbmct,
-                   llc   ::Float64,
-                   ϵtn   ::Float64,
+function update_ϵ!(ϵc   ::Float64,
+                   Ψ    ::iTgbmct,
+                   llc  ::Float64,
+                   ϵtn  ::Float64,
                    ϵmxpr::Float64,
                    svf  ::Function)
 

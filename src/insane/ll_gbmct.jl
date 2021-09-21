@@ -530,9 +530,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
 
-      if λev
-        llrbd += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
-      elseif μev
+      if λev || μev
         llrbd += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
       else
         llrbd -= fdt*(1.0 + ϵ)*

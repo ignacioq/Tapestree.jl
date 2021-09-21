@@ -209,7 +209,7 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
         logdunif(μc, μ_prior[1], μ_prior[2])
 
   lλmxpr = log(λa_prior[2])
-  μmxpr  = log(μ_prior[2])
+  μmxpr  = μ_prior[2]
 
   # number of branches and of triads
   nbr  = lastindex(idf)
@@ -372,7 +372,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
   icr = iszero(e(Ψc))
 
   lλmxpr = log(λa_prior[2])
-  μmxpr  = log(μ_prior[2])
+  μmxpr  = μ_prior[2]
 
   # logging
   nlogs = fld(niter,nthin)
