@@ -580,15 +580,19 @@ function fsp(Ψp   ::iTgbmct,
       llr, acr = ldprop!(Ψp, Ψc, λf, bbλp, bbλc,
         tsv, pr, d1, d2, α, σλ, ϵ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
-     # change last event by speciation for llr
-      iλ = 0.5*(λf1 + λf) + log(dft0) + 
-           dft0*exp(0.5*(λf1 + λf))*(1.0 + ϵ)
-
+      # lambda proposal and current
       bbλi = bbλc[pr]
       l    = lastindex(bbλi)
+      λmp  = 0.5*(λf1 + λf)
+      λmc  = 0.5*(bbλi[l-1] + bbλi[l])
+      nep  = -dft0*exp(λmp)*(1.0 + ϵ)
+      # nec  = -dft0*exp(λmc)*(1.0 + ϵ)
+
+     # change last event by speciation for llr
+      iλ = λmp + log(dft0) - nep
 
       # acceptance ratio
-      acr += 0.5*(λf1 + λf) - 0.5*(bbλi[l-1] + bbλi[l])
+      acr += λmp - λmc #+ nec - nep
 
     else
       pr  = bix

@@ -238,7 +238,7 @@ end
     treelength_dλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
 
 Returns the log-likelihood ratio for a `iTgbmpb` according 
-to GBM birth-death for a `σ` proposal.
+to GBM birth-death for a `α` proposal.
 """
 function treelength_dλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
 

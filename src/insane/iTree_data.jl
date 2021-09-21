@@ -617,6 +617,50 @@ end
 
 
 """
+    fixfdt(tree::T, 
+           ffdt::Float64,
+           dri ::BitArray{1}, 
+           ldr ::Int64,
+           ix  ::Int64) where T <: iTgbm
+
+Returns the last `fdt`.
+"""
+function fixfdt(tree::T, 
+                ffdt::Float64,
+                dri ::BitArray{1}, 
+                ldr ::Int64,
+                ix  ::Int64) where T <: iTgbm
+
+  if ix === ldr
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      return fdt(tree)
+    elseif ifx1
+      ffdt = fixfdt(tree.d1, ffdt, dri, ldr, ix)
+    else
+      ffdt = fixfdt(tree.d2, ffdt, dri, ldr, ix)
+    end
+  elseif ix < ldr
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      ix += 1
+      if dri[ix]
+        ffdt = fixfdt(tree.d1, ffdt, dri, ldr, ix)
+      else
+        ffdt = fixfdt(tree.d2, ffdt, dri, ldr, ix)
+      end
+    elseif ifx1
+      fixfdt(tree.d1, ffdt, dri, ldr, ix)
+    else
+      fixfdt(tree.d2, ffdt, dri, ldr, ix)
+    end
+  end
+end
+
+
+
+
+"""
     drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64)
 
 Returns the tree given by `dr`. Assuming no unfix branches.

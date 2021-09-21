@@ -579,15 +579,20 @@ function fsp(Ψp   ::iTgbmce,
       llr, acr = ldprop!(Ψp, Ψc, λf, bbλp, bbλc,
         tsv, pr, d1, d2, α, σλ, μ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
-      # change last event by speciation for llr
-      iλ = 0.5*(λf1 + λf) + log(dft0) + 
-           dft0*(exp(0.5*(λf1 + λf)) + μ)
-
+      # lambda proposal and current
       bbλi = bbλc[pr]
       l    = lastindex(bbλi)
+      λmp  = 0.5*(λf1 + λf)
+      λmc  = 0.5*(bbλi[l-1] + bbλi[l])
+      nep  = -dft0*(exp(λmp) + μ)
+      #nec  = -dft0*(exp(λmc) + μ)
+
+     # change last event by speciation for llr
+      iλ = λmp + log(dft0) - nep
 
       # acceptance ratio
-      acr += 0.5*(λf1 + λf) - 0.5*(bbλi[l-1] + bbλi[l])
+      acr += λmp - λmc #+ nec - nep
+
     else
       pr  = bix
       iλ  = 0.0
@@ -696,7 +701,7 @@ function fsbi_ce(bi  ::iBffs,
 
         for i in Base.OneTo(2)
           st0, nsp = 
-            _sim_gbmce(max(δt - fdti, 0.0), tfb, λt, α, σλ, μ, δt, srδt, 1, nlim)
+            _sim_gbmce(max(δt-fdti, 0.0), tfb, λt, α, σλ, μ, δt, srδt, 1, nlim)
           # if maximum number of species reached.
           if nsp === nlim
             if i === 2
@@ -865,6 +870,7 @@ end
     fixrtip!(tree::T, 
              na  ::Int64, 
              λf  ::Float64, 
+             λf1 ::Float64,
              dft0::Float64) where {T <: iTgbm}
 
 Fixes the the path for a random non extinct tip and returns final `λ(t)`.

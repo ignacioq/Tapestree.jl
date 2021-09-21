@@ -348,10 +348,12 @@ function llr_gbm_sep_f(treep::iTgbmce,
 
   if istip(treec)
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, false)
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, 
+        false, isextinct(treec))
   else
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, true) 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, 
+        true, false) 
 
     ifx1 = isfix(treec.d1)
     if ifx1 && isfix(treec.d2)
@@ -452,21 +454,21 @@ separately for the Brownian motion and the pure-birth
     nI = lastindex(lλp)-2
 
     llrbm = 0.0
-    llrpb = 0.0
+    llrce = 0.0
     lλpi = lλp[1]
     lλci = lλc[1]
     @simd for i in Base.OneTo(nI)
       lλpi1  = lλp[i+1]
       lλci1  = lλc[i+1]
       llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-      llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+      llrce += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
       lλpi   = lλpi1
       lλci   = lλci1
     end
 
     # add to global likelihood
     llrbm *= (-0.5/((σλ*srδt)^2))
-    llrpb *= (-δt)
+    llrce *= (-δt)
 
     lλpi1 = lλp[nI+2]
     lλci1 = lλc[nI+2]
@@ -476,17 +478,17 @@ separately for the Brownian motion and the pure-birth
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
       if λev
-        llrpb += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
+        llrce += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
       elseif !μev
-        llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+        llrce -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
       end
     elseif λev
-      llrpb += lλpi1 - lλci1
+      llrce += lλpi1 - lλci1
     end
 
   end
 
-  return llrbm, llrpb
+  return llrbm, llrce
 end
 
 

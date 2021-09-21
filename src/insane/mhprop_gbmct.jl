@@ -320,7 +320,6 @@ function triad_lupdate_root!(treep ::iTgbmct,
     bm!(treepd1, λd1v_p, 1, lid1, α, σλ, δt, srδt)
     bm!(treepd2, λd2v_p, 1, lid2, α, σλ, δt, srδt)
 
-
     ## make acceptance and likelihood ratio 
     llr, acr = llr_propr(treep, treepd1, treepd2, 
                          treec, treecd1, treecd2, 
