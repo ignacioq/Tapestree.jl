@@ -600,7 +600,6 @@ function fsp(Ψp   ::iTgbmce,
       acr = 0.0
     end
 
-
     # mh ratio
     if -randexp() < acr
 
