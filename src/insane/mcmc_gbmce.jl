@@ -404,10 +404,10 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
       # update σλ or σμ
       if pupi === 1
 
-        llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
+        llc, prc, αc = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
+        # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, 1, i, Ψc
         #    return 
         # end
@@ -417,7 +417,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
         llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
+        # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, 2, i, Ψc
         #    return 
         # end
@@ -427,7 +427,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
         llc, μc = update_μ!(μc, Ψc, llc, μtn, μmxpr, svf)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
+        # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, 3, i, Ψc
         #    return 
         # end
@@ -455,7 +455,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
             αc, σλc, μc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
+        # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, 4, i, Ψc
         #    return 
         # end
@@ -485,8 +485,8 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 5, i, Ψc
+        # if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, 5, bix, i, Ψc
         #    return 
         # end
 
@@ -585,7 +585,6 @@ function fsp(Ψp   ::iTgbmce,
       λmp  = 0.5*(λf1 + λf)
       λmc  = 0.5*(bbλi[l-1] + bbλi[l])
       nep  = -dft0*(exp(λmp) + μ)
-      #nec  = -dft0*(exp(λmc) + μ)
 
      # change last event by speciation for llr
       iλ = λmp + log(dft0) - nep
@@ -607,12 +606,11 @@ function fsp(Ψp   ::iTgbmce,
              br_ll_gbm(Ψc, α, σλ, μ, δt, srδt, dri, ldr, 0)
 
       if icr && isone(wbc)
+        css = itb ? cond_surv_stem : cond_surv_stem_p
         if dri[1]
-          llr += cond_surv_stem_p(t0, μ) - 
-                 cond_surv_stem(  Ψc.d1, μ)
+          llr += css(t0, μ) - cond_surv_stem(Ψc.d1, μ)
         else
-          llr += cond_surv_stem_p(t0, μ) -
-                 cond_surv_stem(  Ψc.d2, μ)
+          llr += css(t0, μ) -cond_surv_stem(  Ψc.d2, μ)
         end
       elseif iszero(wbc)
         llr += cond_surv_stem_p(t0, μ) -
@@ -826,15 +824,16 @@ function addtotip(tree::T, stree::T, ix::Bool) where {T <: iTgbm}
     if isalive(tree) && !isfix(tree)
 
       sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, isextinct(stree))
+      ie = isextinct(stree)
+      setproperty!(tree, :iμ, ie)
 
       lλ0 = lλ(tree)
       lλs = lλ(stree)
 
-      if lastindex(lλs) === 2
-        setfdt!(tree, fdt(tree) + fdt(stree))
+      if lastindex(lλs) > 2
+        setfdt!(tree, dt(tree))
       else
-        setfdt!(tree, fdt(stree))
+        setfdt!(tree, min(dt(tree), fdt(tree) + fdt(stree)))
       end
 
       pop!(lλ0)

@@ -57,12 +57,8 @@ function sum_alone_stem(tree::iTgbmce,
   end
 
   if tna < e(tree)
-    @inbounds begin
-      λv  = lλ(tree)
-      l   = lastindex(λv)
-      λm  = 0.5*(λv[l-1] + λv[l])
-      ll += log(exp(λm) + μ) - λm
-    end
+    λi  = lλ(tree)[end]
+    ll += log(exp(λi) + μ) - λi
   end
   tna -= e(tree)
 
@@ -111,12 +107,8 @@ function sum_alone_stem_p(tree::iTgbmce,
                           μ   ::Float64)
 
   if tna < e(tree)
-    @inbounds begin
-      λv  = lλ(tree)
-      l   = lastindex(λv)
-      λm  = 0.5*(λv[l-1] + λv[l])
-      ll += log(exp(λm) + μ) - λm
-    end
+    λi  = lλ(tree)[end]
+    ll += log(exp(λi) + μ) - λi
   end
   tna -= e(tree)
 
@@ -220,17 +212,16 @@ Returns the log-likelihood for a branch according to `gbmce`.
 
     # add final non-standard `δt`
     if fdt > 0.0
-      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
-
-      if λev
-        ll += log(fdt) + 0.5*(lλvi + lλvi1)
-      elseif μev
-        ll += log(fdt * μ) 
-      else
-        ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
-      end
-    elseif λev
+      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+            fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
+    end
+    # if speciation
+    if λev
       ll += lλvi1
+    end
+    # if extinction
+    if μev
+      ll += log(μ)
     end
   end
 
@@ -348,12 +339,10 @@ function llr_gbm_sep_f(treep::iTgbmce,
 
   if istip(treec)
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, 
-        false, isextinct(treec))
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, false)
   else
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, 
-        true, false) 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, true) 
 
     ifx1 = isfix(treec.d1)
     if ifx1 && isfix(treec.d2)
@@ -401,12 +390,10 @@ function llr_gbm_sep(treep::iTgbmce,
 
   if istip(treec) 
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, 
-        false, isextinct(treec))
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, false)
   else
     llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, 
-        true, false) 
+      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, δt, fdt(treec), srδt, true) 
 
     llrbm0, llrbd0 = 
       llr_gbm_sep(treep.d1, treec.d1, α, σλ, δt, srδt) 
@@ -418,77 +405,6 @@ function llr_gbm_sep(treep::iTgbmce,
   end
   
   return llrbm, llrbd
-end
-
-
-
-
-
-"""
-    llr_gbm_b_sep(lλp ::Array{Float64,1},
-                  lλc ::Array{Float64,1},
-                  α   ::Float64,
-                  σλ  ::Float64, 
-                  δt  ::Float64,
-                  fdt ::Float64,
-                  srδt::Float64,
-                  λev ::Bool,
-                  μev ::Bool)
-
-Returns the log-likelihood for a branch according to GBM pure-birth 
-separately for the Brownian motion and the pure-birth
-"""
-@inline function llr_gbm_b_sep(lλp ::Array{Float64,1},
-                               lλc ::Array{Float64,1},
-                               α   ::Float64,
-                               σλ  ::Float64, 
-                               δt  ::Float64,
-                               fdt ::Float64,
-                               srδt::Float64,
-                               λev ::Bool,
-                               μev ::Bool)
-
-  @inbounds begin
-
-    # estimate standard `δt` likelihood
-    nI = lastindex(lλp)-2
-
-    llrbm = 0.0
-    llrce = 0.0
-    lλpi = lλp[1]
-    lλci = lλc[1]
-    @simd for i in Base.OneTo(nI)
-      lλpi1  = lλp[i+1]
-      lλci1  = lλc[i+1]
-      llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-      llrce += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-      lλpi   = lλpi1
-      lλci   = lλci1
-    end
-
-    # add to global likelihood
-    llrbm *= (-0.5/((σλ*srδt)^2))
-    llrce *= (-δt)
-
-    lλpi1 = lλp[nI+2]
-    lλci1 = lλc[nI+2]
-
-   # add final non-standard `δt`
-    if fdt > 0.0
-      llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
-                            lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-      if λev
-        llrce += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
-      elseif !μev
-        llrce -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-      end
-    elseif λev
-      llrce += lλpi1 - lλci1
-    end
-
-  end
-
-  return llrbm, llrce
 end
 
 

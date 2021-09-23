@@ -209,18 +209,18 @@ Returns the log-likelihood for a branch according to `gbmct`.
 
     lλvi1 = lλv[nI+2]
 
+    # add final non-standard `δt`
     if fdt > 0.0
-      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
-
-      if λev
-        ll += log(fdt) + 0.5*(lλvi + lλvi1)
-      elseif μev
-        ll += 0.5*(lλvi + lλvi1) + log(ϵ * fdt)
-      else
-        ll -= fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
-      end
-    elseif λev
+      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+            fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
+    end
+    # if speciation
+    if λev
       ll += lλvi1
+    end
+    # if extinction
+    if μev
+      ll += lλvi1 + log(ϵ)
     end
   end
 
@@ -238,9 +238,9 @@ to `gbmct` for a `ϵ` proposal.
 function sλ_gbm(tree::iTgbmct)
 
   if istip(tree)
-    sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree), isextinct(tree))
+    sλt = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
   else
-    sλt  = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree), true)
+    sλt  = sλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
     sλt += sλ_gbm(tree.d1::iTgbmct) + 
            sλ_gbm(tree.d2::iTgbmct)
   end
@@ -261,8 +261,7 @@ to `gbmct` for a `ϵ` proposal.
 """
 @inline function sλ_gbm_b(lλv::Array{Float64,1},
                           δt ::Float64, 
-                          fdt::Float64,
-                          ev ::Bool)
+                          fdt::Float64)
 
   @inbounds begin
 
@@ -281,7 +280,7 @@ to `gbmct` for a `ϵ` proposal.
     sλt *= δt
 
     # add final non-standard `δt`
-    if fdt > 0.0 && !ev
+    if fdt > 0.0
       sλt += fdt * exp(0.5*(lλv[nI+2] + lλvi))
     end
   end
@@ -526,17 +525,13 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
     # add final non-standard `δt`
     if fdt > 0.0
-      srfdt = sqrt(fdt)
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-
-      if λev || μev
-        llrbd += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
-      else
-        llrbd -= fdt*(1.0 + ϵ)*
-                 (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-      end
-    elseif λev
+      llrbd -= fdt*(1.0 + ϵ)*
+               (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+    end
+    # if speciation or extinction
+    if λev || μev
       llrbd += lλpi1 - lλci1
     end
   end

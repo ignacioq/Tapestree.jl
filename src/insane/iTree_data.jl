@@ -288,12 +288,10 @@ function treelength_ne(tree::T,
 
   l += e(tree)
   if isdefined(tree, :d1)
-    l -= fdt(tree)
     l, n = treelength_ne(tree.d1, l, n)
     l, n = treelength_ne(tree.d2, l, n)
   else
     if isextinct(tree)
-      l -= fdt(tree)
       n += 1.0
     end
   end

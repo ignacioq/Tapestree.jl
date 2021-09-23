@@ -310,107 +310,30 @@ end
 
 
 
-"""
-    _sim_gbmce(t   ::Float64,
-              λt  ::Float64,
-              α   ::Float64,
-              σλ  ::Float64,
-              μ   ::Float64,
-              δt  ::Float64,
-              srδt::Float64)
-
-Simulate `iTgbmce` according to a geometric Brownian motion.
-"""
-function _sim_gbmce(t   ::Float64,
-                   λt  ::Float64,
-                   α   ::Float64,
-                   σλ  ::Float64,
-                   μ   ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64)
-
-  λv = Float64[λt]
-  bt = 0.0
-
-  while true
-
-    if t <= δt
-      bt  += t
-
-      t = max(0.0,t)
-      srt = sqrt(t)
-      λt1 = rnorm(λt + α*t, srt*σλ)
-
-      push!(λv, λt1)
-
-      λm = exp(0.5*(λt + λt1))
-
-      if divev(λm, μ, t)
-        # if speciation
-        if λorμ(λm, μ)
-          return iTgbmce(iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
-                         iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
-                  bt, δt, t, false, false, λv)
-        # if extinction
-        else
-          return iTgbmce(bt, δt, t, true, false, λv)
-        end
-      end
-
-      return iTgbmce(bt, δt, t, false, false, λv)
-    end
-
-    t  -= δt
-    bt += δt
-
-    λt1 = rnorm(λt + α*δt, srδt*σλ)
-
-    push!(λv, λt1)
-
-    λm = exp(0.5*(λt + λt1))
-
-    if divev(λm, μ, δt)
-      # if speciation
-      if λorμ(λm, μ)
-        return iTgbmce(_sim_gbmce(t, λt1, α, σλ, μ, δt, srδt), 
-                       _sim_gbmce(t, λt1, α, σλ, μ, δt, srδt), 
-                bt, δt, δt, false, false, λv)
-      # if extinction
-      else
-        return iTgbmce(bt, δt, δt, true, false, λv)
-      end
-    end
-
-    λt = λt1
-  end
-end
-
-
-
 
 """
     _sim_gbmce(t   ::Float64,
-              λt  ::Float64,
-              α   ::Float64,
-              σλ  ::Float64,
-              μ   ::Float64,
-              δt  ::Float64,
-              srδt::Float64,
-              nsp ::Int64,
-              nlim::Int64)
+               λt  ::Float64,
+               α   ::Float64,
+               σλ  ::Float64,
+               μ   ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               nsp ::Int64,
+               nlim::Int64)
 
 Simulate `iTgbmce` according to a geometric Brownian motion with a limit
 on the number lineages allowed to reach.
 """
 function _sim_gbmce(t   ::Float64,
-                   λt  ::Float64,
-                   α   ::Float64,
-                   σλ  ::Float64,
-                   μ   ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64,
-                   nsp ::Int64,
-                   nlim::Int64)
+                    λt  ::Float64,
+                    α   ::Float64,
+                    σλ  ::Float64,
+                    μ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    nsp ::Int64,
+                    nlim::Int64)
 
   if nsp < nlim
 
@@ -425,10 +348,8 @@ function _sim_gbmce(t   ::Float64,
         t  = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
-
+        λm  = exp(0.5*(λt + λt1))
         push!(λv, λt1)
-
-        λm = exp(0.5*(λt + λt1))
 
         if divev(λm, μ, t)
           # if speciation
@@ -451,10 +372,8 @@ function _sim_gbmce(t   ::Float64,
       bt += δt
 
       λt1 = rnorm(λt + α*δt, srδt*σλ)
-
+      λm  = exp(0.5*(λt + λt1))
       push!(λv, λt1)
-
-      λm = exp(0.5*(λt + λt1))
 
       if divev(λm, μ, δt)
         # if speciation
@@ -490,143 +409,6 @@ end
               σλ  ::Float64,
               μ   ::Float64,
               δt  ::Float64,
-              srδt::Float64)
-
-Simulate `iTgbmce` according to a geometric Brownian motion starting 
-with a non-standard δt.
-"""
-function _sim_gbmce(nsδt::Float64,
-                   t   ::Float64,
-                   λt  ::Float64,
-                   α   ::Float64,
-                   σλ  ::Float64,
-                   μ   ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64)
-
-  λv = Float64[λt]
-  bt = 0.0
-
-  ## first: non-standard δt
-  if t <= nsδt
-    bt  += t
-
-    t   = max(0.0,t)
-    srt = sqrt(t)
-    λt1 = rnorm(λt + α*t, srt*σλ)
-
-    push!(λv, λt1)
-
-    λm = exp(0.5*(λt + λt1))
-
-    if divev(λm, μ, t)
-      # if speciation
-      if λorμ(λm, μ)
-        return iTgbmce(
-                 iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
-                 iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
-                 bt, δt, t, false, false, λv)
-      # if extinction
-      else
-        return iTgbmce(bt, δt, t, true, false, λv)
-      end
-    end
-
-    return iTgbmce(bt, δt, t, false, false, λv)
-  end
-
-  t  -= nsδt
-  bt += nsδt
-
-  srnsδt = sqrt(nsδt)
-
-  λt1 = rnorm(λt + α*nsδt, srnsδt*σλ)
-
-  push!(λv, λt1)
-
-  λm = exp(0.5*(λt + λt1))
-
-  if divev(λm, μ, nsδt)
-    # if speciation
-    if λorμ(λm, μ)
-      return iTgbmce(_sim_gbmce(t, λt1, α, σλ, μ, δt, srδt), 
-                     _sim_gbmce(t, λt1, α, σλ, μ, δt, srδt), 
-              bt, δt, nsδt, false, false, λv)
-    # if extinction
-    else
-      return iTgbmce(bt, δt, nsδt, true, false, λv)
-    end
-  end
-
-  λt = λt1
-
-  ## second: standard δt
-  while true
-
-    if t <= δt
-      bt  += t
-
-      t   = max(0.0,t)
-      srt = sqrt(t)
-      λt1 = rnorm(λt + α*t, srt*σλ)
-
-      push!(λv, λt1)
-
-      λm = exp(0.5*(λt + λt1))
-
-      if divev(λm, μ, t)
-        # if speciation
-        if λorμ(λm, μ)
-          return iTgbmce(
-                   iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
-                   iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
-                   bt, δt, t, false, false, λv)
-        # if extinction
-        else
-          return iTgbmce(bt, δt, t, true, false, λv)
-        end
-      end
-
-      return iTgbmce(bt, δt, t, false, false, λv)
-    end
-
-    t  -= δt
-    bt += δt
-
-    λt1 = rnorm(λt + α*δt, srδt*σλ)
-
-    push!(λv, λt1)
-
-    λm = exp(0.5*(λt + λt1))
-
-    if divev(λm, μ, δt)
-      # if speciation
-      if λorμ(λm, μ)
-        return iTgbmce(_sim_gbmce(t, λt1, α, σλ, μ, δt, srδt), 
-                       _sim_gbmce(t, λt1, α, σλ, μ, δt, srδt), 
-                bt, δt, δt, false, false, λv)
-      # if extinction
-      else
-        return iTgbmce(bt, δt, δt, true, false, λv)
-      end
-    end
-
-    λt = λt1
-  end
-end
-
-
-
-
-
-"""
-    _sim_gbmce(nsδt::Float64,
-              t   ::Float64,
-              λt  ::Float64,
-              α   ::Float64,
-              σλ  ::Float64,
-              μ   ::Float64,
-              δt  ::Float64,
               srδt::Float64, 
               nsp ::Int64,
               nlim::Int64)
@@ -635,15 +417,15 @@ Simulate `iTgbmce` according to a geometric Brownian motion starting
 with a non-standard δt with a limit in the number of species.
 """
 function _sim_gbmce(nsδt::Float64,
-                   t   ::Float64,
-                   λt  ::Float64,
-                   α   ::Float64,
-                   σλ  ::Float64,
-                   μ   ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64, 
-                   nsp ::Int64,
-                   nlim::Int64)
+                    t   ::Float64,
+                    λt  ::Float64,
+                    α   ::Float64,
+                    σλ  ::Float64,
+                    μ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64, 
+                    nsp ::Int64,
+                    nlim::Int64)
 
   λv = Float64[λt]
   bt = 0.0
@@ -655,10 +437,8 @@ function _sim_gbmce(nsδt::Float64,
     t   = max(0.0, t)
     srt = sqrt(t)
     λt1 = rnorm(λt + α*t, srt*σλ)
-
+    λm  = exp(0.5*(λt + λt1))
     push!(λv, λt1)
-
-    λm = exp(0.5*(λt + λt1))
 
     if divev(λm, μ, t)
       # if speciation
@@ -681,12 +461,9 @@ function _sim_gbmce(nsδt::Float64,
   bt += nsδt
 
   srnsδt = sqrt(nsδt)
-
-  λt1 = rnorm(λt + α*nsδt, srnsδt*σλ)
-
+  λt1    = rnorm(λt + α*nsδt, srnsδt*σλ)
+  λm     = exp(0.5*(λt + λt1))
   push!(λv, λt1)
-
-  λm = exp(0.5*(λt + λt1))
 
   if divev(λm, μ, nsδt)
     # if speciation
@@ -715,10 +492,8 @@ function _sim_gbmce(nsδt::Float64,
         t   = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
-
+        λm  = exp(0.5*(λt + λt1))
         push!(λv, λt1)
-
-        λm = exp(0.5*(λt + λt1))
 
         if divev(λm, μ, t)
           # if speciation
@@ -742,10 +517,8 @@ function _sim_gbmce(nsδt::Float64,
       bt += δt
 
       λt1 = rnorm(λt + α*δt, srδt*σλ)
-
+      λm  = exp(0.5*(λt + λt1))
       push!(λv, λt1)
-
-      λm = exp(0.5*(λt + λt1))
 
       if divev(λm, μ, δt)
         # if speciation
