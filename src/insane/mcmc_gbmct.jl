@@ -408,7 +408,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 1, i, αc, σλc, ϵc
+        #    @show ll0, llc, pupi, i,
         #    return 
         # end
 
@@ -418,7 +418,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 2, i, αc, σλc, ϵc
+        #    @show ll0, llc, pupi, i,
         #    return 
         # end
 
@@ -428,7 +428,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 3, i, αc, σλc, ϵc
+        #    @show ll0, llc, pupi, i,
         #    return 
         # end
 
@@ -456,7 +456,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
         #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 4, i, αc, σλc, ϵc
+        #    @show ll0, llc, pupi, i,
         #    return 
         # end
 
@@ -485,8 +485,8 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, ϵc, δt, srδt) + svf(Ψc, ϵc)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, 5, i,  bix, Ψc, αc, σλc, ϵc
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i,
         #    return 
         # end
 
@@ -580,19 +580,11 @@ function fsp(Ψp   ::iTgbmct,
       llr, acr = ldprop!(Ψp, Ψc, λf, bbλp, bbλc,
         tsv, pr, d1, d2, α, σλ, ϵ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
-      # lambda proposal and current
-      bbλi = bbλc[pr]
-      l    = lastindex(bbλi)
-      λmp  = 0.5*(λf1 + λf)
-      λmc  = 0.5*(bbλi[l-1] + bbλi[l])
-      nep  = -dft0*exp(λmp)*(1.0 + ϵ)
-      # nec  = -dft0*exp(λmc)*(1.0 + ϵ)
-
-     # change last event by speciation for llr
-      iλ = λmp + log(dft0) - nep
+      # change last event by speciation for llr
+      iλ = λf
 
       # acceptance ratio
-      acr += λmp - λmc #+ nec - nep
+      acr += λf - bbλc[d1][1]
 
     else
       pr  = bix
@@ -603,6 +595,7 @@ function fsp(Ψp   ::iTgbmct,
 
     # mh ratio
     if -randexp() < acr
+
       llr += llik_gbm( t0, α, σλ, ϵ, δt, srδt) + iλ - 
              br_ll_gbm(Ψc, α, σλ, ϵ, δt, srδt, dri, ldr, 0)
 

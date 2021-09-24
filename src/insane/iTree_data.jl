@@ -277,10 +277,9 @@ end
 """
     treelength_ne(tree::T, 
                   l   ::Float64, 
-                  ldt ::Float64, 
                   n   ::Float64) where {T <: iTree}
 
-Return the tree length minus fdts and sum of fdts where there was extinction.
+Return the tree length and extinction events.
 """
 function treelength_ne(tree::T, 
                        l   ::Float64, 

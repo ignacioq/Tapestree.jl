@@ -66,7 +66,7 @@ function insane_gbmce(tree    ::sTbd,
   # `n` tips, `th` treeheight define δt
   n    = sntn(tree, 0)
   th   = treeheight(tree)
-  δt  *= th
+  δt  *= max(0.1,round(th, RoundDown, digits = 2))
   srδt = sqrt(δt)
 
    # starting parameters (using method of moments)
@@ -408,7 +408,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 1, i, Ψc
+        #    @show ll0, llc, pupi, i, Ψc
         #    return 
         # end
 
@@ -418,7 +418,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 2, i, Ψc
+        #    @show ll0, llc, pupi, i, Ψc
         #    return 
         # end
 
@@ -428,7 +428,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 3, i, Ψc
+        #    @show ll0, llc, pupi, i, Ψc
         #    return 
         # end
 
@@ -456,7 +456,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 4, i, Ψc
+        #    @show ll0, llc, pupi, i, Ψc
         #    return 
         # end
 
@@ -486,7 +486,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, 5, bix, i, Ψc
+        #    @show ll0, llc, pupi, i, Ψc
         #    return 
         # end
 
@@ -579,18 +579,10 @@ function fsp(Ψp   ::iTgbmce,
       llr, acr = ldprop!(Ψp, Ψc, λf, bbλp, bbλc,
         tsv, pr, d1, d2, α, σλ, μ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
-      # lambda proposal and current
-      bbλi = bbλc[pr]
-      l    = lastindex(bbλi)
-      λmp  = 0.5*(λf1 + λf)
-      λmc  = 0.5*(bbλi[l-1] + bbλi[l])
-      nep  = -dft0*(exp(λmp) + μ)
-
-     # change last event by speciation for llr
-      iλ = λmp + log(dft0) - nep
-
+      # speciation
+      iλ = λf
       # acceptance ratio
-      acr += λmp - λmc #+ nec - nep
+      acr += λf - bbλc[d1][1]
 
     else
       pr  = bix
@@ -815,7 +807,6 @@ end
 
 """
     addtotip(tree::T, stree::T, ix::Bool) where {T < iTgbm}
-
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
 function addtotip(tree::T, stree::T, ix::Bool) where {T <: iTgbm}
@@ -824,16 +815,15 @@ function addtotip(tree::T, stree::T, ix::Bool) where {T <: iTgbm}
     if isalive(tree) && !isfix(tree)
 
       sete!(tree, e(tree) + e(stree))
-      ie = isextinct(stree)
-      setproperty!(tree, :iμ, ie)
+      setproperty!(tree, :iμ, isextinct(stree))
 
       lλ0 = lλ(tree)
       lλs = lλ(stree)
 
-      if lastindex(lλs) > 2
-        setfdt!(tree, dt(tree))
+      if lastindex(lλs) === 2
+        setfdt!(tree, fdt(tree) + fdt(stree))
       else
-        setfdt!(tree, min(dt(tree), fdt(tree) + fdt(stree)))
+        setfdt!(tree, fdt(stree))
       end
 
       pop!(lλ0)
