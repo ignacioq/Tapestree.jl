@@ -600,16 +600,15 @@ function fsp(Ψp   ::iTgbmct,
              br_ll_gbm(Ψc, α, σλ, ϵ, δt, srδt, dri, ldr, 0)
 
       if icr && isone(wbc)
+        css = itb ? cond_surv_stem : cond_surv_stem_p
         if dri[1]
-          llr += cond_surv_stem_p(t0, ϵ)    -
-                 cond_surv_stem(  Ψc.d1, ϵ)
+          llr += css(t0, ϵ) - cond_surv_stem(Ψc.d1, ϵ)
         else
-          llr += cond_surv_stem_p(t0, ϵ)    -
-                 cond_surv_stem(  Ψc.d2, ϵ)
+          llr += css(t0, ϵ) - cond_surv_stem(Ψc.d2, ϵ)
         end
       elseif iszero(wbc)
         llr += cond_surv_stem_p(t0, ϵ) -
-               cond_surv_stem(  Ψc, ϵ)
+               cond_surv_stem(  Ψc, ϵ) 
       end
 
       llc += llr

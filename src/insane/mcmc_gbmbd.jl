@@ -391,11 +391,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         llc, prc, αc  = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
 
-        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-         if !isapprox(llci, llc, atol = 1e-4)
-           @show llci, llc, pupi
-           return 
-        end
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, pupi
+        #    return 
+        # end
 
       # gbm update
       elseif pupi === 2
@@ -403,11 +403,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         llc, prc, σλc, σμc = 
           update_σ!(σλc, σμc, αc, Ψc, llc, prc, σλ_prior, σμ_prior)
 
-        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-         if !isapprox(llci, llc, atol = 1e-4)
-           @show llci, llc, pupi
-           return 
-        end
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, pupi
+        #    return 
+        # end
 
       # gbm update
       elseif pupi === 3
@@ -431,11 +431,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbμp, bbλc, bbμc, tsv, pr, d1, d2,
             αc, σλc, σμc, δt, srδt, lλmxpr, lμmxpr, icr, wbc, dri, ldr, ter, 0)
 
-        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-         if !isapprox(llci, llc, atol = 1e-4)
-           @show llci, llc, pupi
-           return 
-        end
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, pupi
+        #    return 
+        # end
 
       # forward simulation update
       else
@@ -462,11 +462,11 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
           fsp(Ψp, Ψc, bi, llc, αc, σλc, σμc, tsv, bbλp, bbμp, bbλc, bbμc, 
               bix, triad, ter, δt, srδt, nlim, icr, wbc)
 
-        llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
-         if !isapprox(llci, llc, atol = 1e-4)
-           @show llci, llc, pupi
-           return 
-        end
+        # llci = llik_gbm(Ψc, αc, σλc, σμc, δt, srδt) + svf(Ψc)
+        #  if !isapprox(llci, llc, atol = 1e-4)
+        #    @show llci, llc, pupi
+        #    return 
+        # end
       end
     end
 
@@ -560,22 +560,11 @@ function fsp(Ψp   ::iTgbmbd,
       llr, acr = ldprop!(Ψp, Ψc, λf, μf, bbλp, bbμp, bbλc, bbμc, 
         tsv, pr, d1, d2, α, σλ, σμ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
 
-      # lambda proposal and current
-      bbλi = bbλc[pr]
-      # bbμi = bbμc[pr]
-      l    = lastindex(bbλi)
-      λmp  = 0.5*(λf1 + λf)
-      λmc  = 0.5*(bbλi[l-1] + bbλi[l])
-      μmp  = 0.5*(μf1 + μf)
-      # μmc  = 0.5*(bbμi[l-1] + bbμi[l])
-      nep  = -dft0*(exp(λmp) + exp(μmp))
-      # nec  = -dft0*(exp(λmc) + exp(μmc))
-
-     # change last event by speciation for llr
-      iλ = λmp + log(dft0) - nep
+      # change last event by speciation for llr
+      iλ = λf
 
       # acceptance ratio
-      acr += λmp - λmc #+ nec - nep
+      acr += λf - bbλc[d1][1]
 
     else
       pr  = bix
@@ -591,16 +580,15 @@ function fsp(Ψp   ::iTgbmbd,
              br_ll_gbm(Ψc, α, σλ, σμ, δt, srδt, dri, ldr, 0)
 
       if icr && isone(wbc)
+        css = itb ? cond_surv_stem : cond_surv_stem_p
         if dri[1]
-          llr += cond_surv_stem_p(t0) - 
-                 cond_surv_stem(Ψc.d1)
+          llr += css(t0) - cond_surv_stem(Ψc.d1)
         else
-          llr += cond_surv_stem_p(t0) -
-                 cond_surv_stem(Ψc.d2)
+          llr += css(t0) - cond_surv_stem(Ψc.d2)
         end
       elseif iszero(wbc)
         llr += cond_surv_stem_p(t0) -
-               cond_surv_stem(Ψc)
+               cond_surv_stem(  Ψc) 
       end
 
       llc += llr

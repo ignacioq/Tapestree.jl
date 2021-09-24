@@ -51,13 +51,12 @@ function sum_alone_stem(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if tna < e(tree)
     @inbounds begin
-      λv  = lλ(tree)
-      μv  = lμ(tree)
-      l   = lastindex(λv)
-      λm  = 0.5*(λv[l-1] + λv[l])
-      μm  = 0.5*(μv[l-1] + μv[l])
-      @fastmath ll += log(exp(λm) + exp(μm)) - λm
+      lλv = lλ(tree)
+      lv  = lastindex(lλv)
+      λi  = lλv[lv]
+      μi  = lμ(tree)[lv]
     end
+    @fastmath ll += log(exp(λi) + exp(μi)) - λi
   end
   tna -= e(tree)
 
@@ -100,13 +99,12 @@ function sum_alone_stem_p(tree::iTgbmbd, tna::Float64, ll::Float64)
 
   if tna < e(tree)
     @inbounds begin
-      λv  = lλ(tree)
-      μv  = lμ(tree)
-      l   = lastindex(λv)
-      λm  = 0.5*(λv[l-1] + λv[l])
-      μm  = 0.5*(μv[l-1] + μv[l])
-      @fastmath ll += log(exp(λm) + exp(μm)) - λm
+      lλv = lλ(tree)
+      lv  = lastindex(lλv)
+      λi  = lλv[lv]
+      μi  = lμ(tree)[lv]
     end
+    @fastmath ll += log(exp(λi) + exp(μi)) - λi
   end
   tna -= e(tree)
 
@@ -222,16 +220,16 @@ Returns the log-likelihood for a branch according to `gbmbd`.
       srfdt = sqrt(fdt)
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)
       ll += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
+      ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
+    end
 
-      if λev
-        ll += log(fdt) + 0.5*(lλvi + lλvi1)
-      elseif μev
-        ll += log(fdt) + 0.5*(lμvi + lμvi1)
-      else
-        ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
-      end
-    elseif λev
+    #if speciation
+    if λev
       ll += lλvi1
+    end
+    #if extinction
+    if μev
+      ll += lμvi1
     end
   end
 
@@ -580,17 +578,15 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, srfdt*σλ) +
                lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
+      llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
+                    exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
+    end
 
-      if λev
-        llrbd += 0.5*(lλpi + lλpi1) - 0.5*(lλci + lλci1)
-      elseif μev
-        llrbd += 0.5*(lμpi + lμpi1) - 0.5*(lμci + lμci1)
-      else
-        llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
-                      exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
-      end
-    elseif λev
-      llrbd += lλpi1 - lλci1
+    if λev
+      llrbd += lλpi1 - lλci1 
+    end
+    if μev
+      llrbd += lμpi1 - lμci1 
     end
   end
 
