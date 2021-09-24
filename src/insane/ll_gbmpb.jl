@@ -78,15 +78,12 @@ function ll_gbm_b(lλv ::Array{Float64,1},
 
     lλvi1 = lλv[nI+2]
 
+    # add final non-standard `δt`
     if fdt > 0.0
-      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ)
-
-      if λev
-        ll += log(fdt) + 0.5*(lλvi + lλvi1)
-      else
-        ll -= fdt*exp(0.5*(lλvi + lλvi1))
-      end
-    elseif λev
+      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+            fdt*exp(0.5*(lλvi + lλvi1))
+    end
+    if λev
       ll += lλvi1
     end
   end
