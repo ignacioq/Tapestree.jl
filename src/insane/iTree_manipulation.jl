@@ -474,10 +474,7 @@ function gbm_copy_f!(tree::T,
   end
 
   if !istip(tree)
-    ifx1 = isfix(tree.d1::T)
-    if ifx1 && isfix(tree.d2::T)
-      return nothing
-    elseif ifx1
+    if isfix(tree.d1::T)
       gbm_copy_f!(tree.d1::T, bbλ, ii-1)
     else
       gbm_copy_f!(tree.d2::T, bbλ, ii-1)
@@ -518,10 +515,7 @@ function gbm_copy_f!(tree::iTgbmbd,
   end
 
   if !istip(tree)
-    ifx1 = isfix(tree.d1::iTgbmbd)
-    if ifx1 && isfix(tree.d2::iTgbmbd)
-      return nothing
-    elseif ifx1
+    if isfix(tree.d1::iTgbmbd)
       gbm_copy_f!(tree.d1::iTgbmbd, bbλ, bbμ, ii-1)
     else
       gbm_copy_f!(tree.d2::iTgbmbd, bbλ, bbμ, ii-1)

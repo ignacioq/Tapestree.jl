@@ -310,7 +310,7 @@ function triad_lupdate_root!(treep ::iTgbmce,
     lλp = duoprop(λd1 - α*ped1, λd2 - α*ped2, ped1, ped2, σλ)
 
     # propose for root
-    lλrp = rnorm(lλp + α*pepr, sqrt(pepr)*σλ)
+    lλrp = rnorm(lλp - α*pepr, sqrt(pepr)*σλ)
 
     # simulate fix tree vector
     bb!(λprv_p, lλrp, lλp, tprv[2], σλ, δt, srδt)

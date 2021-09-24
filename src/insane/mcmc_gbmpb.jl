@@ -442,7 +442,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
     # if no terminal branches involved
     # node proposal
     lλp  = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
-             pepr, ped1, ped2, σλ)
+      pepr, ped1, ped2, σλ)
 
     # simulate fix tree vector
     bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
@@ -463,6 +463,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
 
   return llc
 end
+
 
 
 
@@ -512,7 +513,7 @@ function triad_lλupdate_root!(treep ::iTgbmpb,
   lλp = duoprop(λd1 - α*ped1, λd2 - α*ped2, ped1, ped2, σλ)
 
   # propose for root
-  lλrp = rnorm(lλp + α*pepr, sqrt(pepr)*σλ)
+  lλrp = rnorm(lλp - α*pepr, sqrt(pepr)*σλ)
 
   # make Brownian bridge proposals
   bb!(λprv_p, lλrp, lλp, fdtpr, σλ, δt, srδt)

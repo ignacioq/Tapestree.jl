@@ -168,7 +168,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
     λc, μc = λi, μi
   end
 
-  # length(idf)
+  # length idf
   lidf = lastindex(idf)
 
   # likelihood

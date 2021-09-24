@@ -176,7 +176,7 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `ti`: initial absolute time.
   `tf`: final absolute time.
   `it`: `true` if a terminal branch.
-  `ie`: `true` if a terminal branch and extinct.
+  `ie`: `true` if an extinct branch.
   `sc`: is `0` if stem branch, `1` if either of the crown branches and `23` if 
         another plebeian branch.
 
