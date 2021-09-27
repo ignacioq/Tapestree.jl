@@ -245,48 +245,37 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
       # gbm update
       elseif pupi === 4
 
-        tix = ceil(Int64,rand()*ntr)
+        # tix = ceil(Int64,rand()*ntr)
 
-        pr, d1, d2 = triads[tix]
+        # pr, d1, d2 = triads[tix]
 
-        bi  = idf[pr]
-        dri = dr(bi)
-        ldr = length(dri)
-        ter = terminus[tix]
+        # bi  = idf[pr]
+        # dri = dr(bi)
+        # ldr = length(dri)
+        # ter = terminus[tix]
 
-        wbc = 23
-        if iszero(sc(bi))
-          wbc = 0
-        elseif isone(sc(bi))
-          wbc = 1
-        end
+        # wbc = 23
+        # if iszero(sc(bi))
+        #   wbc = 0
+        # elseif isone(sc(bi))
+        #   wbc = 1
+        # end
 
-        llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
-            αc, σλc, μc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
+        # llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
+        #     αc, σλc, μc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
       # forward simulation update
       else
 
-        bix = ceil(Int64,rand()*nbr)
-        bi  = idf[bix]
+        bi  = idf[ceil(Int64,rand()*nbr)]
 
-        if it(bi)
-          triad = emptytriad
-          ter   = emptyter
-        else
-          triad = triads[btotriad[bix]]
-          ter   = terminus[btotriad[bix]]
+        # if root propose a new root
+        if iszero(sc(bi)) 
+          llc = root_update!(Ψp, Ψc, αc, σλc, μc, llc, δt, srδt, lλmxpr, icr)
         end
 
-        wbc = 23
-        if iszero(sc(bi))
-          wbc = 0
-        elseif isone(sc(bi))
-          wbc = 1
-        end
-
-        Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, tsv, bbλp, bbλc, 
-              bix, triad, ter, δt, srδt, nlim, icr, wbc)
+        Ψp, Ψc, llc = 
+          fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, nlim, icr, sc(bi))
 
       end
     end
@@ -435,24 +424,24 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
       # gbm update
       elseif pupi === 4
 
-        tix = ceil(Int64,rand()*ntr)
+        # tix = ceil(Int64,rand()*ntr)
 
-        pr, d1, d2 = triads[tix]
+        # pr, d1, d2 = triads[tix]
 
-        bi  = idf[pr]
-        dri = dr(bi)
-        ldr = length(dri)
-        ter = terminus[tix]
+        # bi  = idf[pr]
+        # dri = dr(bi)
+        # ldr = length(dri)
+        # ter = terminus[tix]
 
-        wbc = 23
-        if iszero(sc(bi))
-          wbc = 0
-        elseif isone(sc(bi))
-          wbc = 1
-        end
+        # wbc = 23
+        # if iszero(sc(bi))
+        #   wbc = 0
+        # elseif isone(sc(bi))
+        #   wbc = 1
+        # end
 
-        llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
-            αc, σλc, μc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
+        # llc = lvupdate!(Ψp, Ψc, llc, bbλp, bbλc, tsv, pr, d1, d2,
+        #     αc, σλc, μc, δt, srδt, lλmxpr, icr, wbc, dri, ldr, ter, 0)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
@@ -463,26 +452,15 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
       # forward simulation update
       else
 
-        bix = ceil(Int64,rand()*nbr)
-        bi  = idf[bix]
+        bi  = idf[ceil(Int64,rand()*nbr)]
 
-        if it(bi)
-          triad = emptytriad
-          ter   = emptyter
-        else
-          triad = triads[btotriad[bix]]
-          ter   = terminus[btotriad[bix]]
+        # if root propose a new root
+        if iszero(sc(bi)) 
+          llc = root_update!(Ψp, Ψc, αc, σλc, μc, llc, δt, srδt, lλmxpr, icr)
         end
 
-        wbc = 23
-        if iszero(sc(bi))
-          wbc = 0
-        elseif isone(sc(bi))
-          wbc = 1
-        end
-
-        Ψp, Ψc, llc = fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, tsv, bbλp, bbλc, 
-              bix, triad, ter, δt, srδt, nlim, icr, wbc)
+        Ψp, Ψc, llc = 
+          fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, nlim, icr, sc(bi))
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
@@ -521,6 +499,7 @@ end
 
 
 
+
 """
     fsp(Ψp   ::iTgbmce,
         Ψc   ::iTgbmce,
@@ -529,11 +508,6 @@ end
         α    ::Float64, 
         σλ   ::Float64, 
         μ    ::Float64,
-        tsv  ::Array{Array{Float64,1},1},
-        bbλp ::Array{Array{Float64,1},1}, 
-        bbλc ::Array{Array{Float64,1},1}, 
-        bix  ::Int64,
-        triad::Array{Int64,1},
         ter  ::BitArray{1},
         δt   ::Float64, 
         srδt ::Float64,
@@ -550,42 +524,40 @@ function fsp(Ψp   ::iTgbmce,
              α    ::Float64, 
              σλ   ::Float64, 
              μ    ::Float64,
-             tsv  ::Array{Array{Float64,1},1},
-             bbλp ::Array{Array{Float64,1},1}, 
-             bbλc ::Array{Array{Float64,1},1}, 
-             bix  ::Int64,
-             triad::Array{Int64,1},
-             ter  ::BitArray{1},
              δt   ::Float64, 
              srδt ::Float64,
              nlim ::Int64,
              icr  ::Bool, 
              wbc  ::Int64)
 
-  t0, ret, λf, λf1, dft0 = 
-    fsbi_ce(bi, bbλc[bix][1], α, σλ, μ, δt, srδt, nlim)
+  # get branch information
+  dri = dr(bi)
+  ldr = lastindex(dri)
+  itb = it(bi)
+
+  # go to branch to be updated
+  treec, treep = drtree(Ψc, Ψp, dri, ldr, 0)
+
+  t0, ret, λf, dft0 = 
+    fsbi_ce(bi, lλ(treec)[1], α, σλ, μ, δt, srδt, nlim)
 
   # if retain simulation
   if ret
 
-    # get branch information
-    dri = dr(bi)
-    ldr = lastindex(dri)
-    itb = it(bi)
-
     if !itb
       # make daughter proposal to be concordant with `t0`
-      pr, d1, d2 = triad
-      llr, acr = ldprop!(Ψp, Ψc, λf, bbλp, bbλc,
-        tsv, pr, d1, d2, α, σλ, μ, icr, wbc, δt, srδt, dri, ldr, ter, 0)
+      llr, acr = daughters_lprop!(treep, treec, λf, α, σλ, μ, δt, srδt)
 
       # speciation
       iλ = λf
+
+      # get previous ending λ
+      ft1, ft2 = fixds(treec)
+
       # acceptance ratio
-      acr += λf - bbλc[d1][1]
+      acr += λf - lλ(ft1)[1]
 
     else
-      pr  = bix
       iλ  = 0.0
       llr = 0.0
       acr = 0.0
@@ -594,8 +566,8 @@ function fsp(Ψp   ::iTgbmce,
     # mh ratio
     if -randexp() < acr
 
-      llr += llik_gbm( t0, α, σλ, μ, δt, srδt) + iλ - 
-             br_ll_gbm(Ψc, α, σλ, μ, δt, srδt, dri, ldr, 0)
+      llr += llik_gbm(     t0, α, σλ, μ, δt, srδt) + iλ - 
+             llik_gbm_f(treec, α, σλ, μ, δt, srδt)
 
       if icr && isone(wbc)
         css = itb ? cond_surv_stem : cond_surv_stem_p
@@ -611,16 +583,14 @@ function fsp(Ψp   ::iTgbmce,
 
       llc += llr
 
-      # copy parent to aid vectors
-      gbm_copy_f!(t0, bbλc[pr], 0)
-
       # copy daughters vectors
       if !itb
-        pr, d1, d2 = triad
 
-        copyto!(bbλc[d1], bbλp[d1])
-        copyto!(bbλc[d2], bbλp[d2])
-        gbm_copy_dsf!(Ψc, Ψp, dri, ldr, 0)
+        treecd1, treecd2 = fixds(treec)
+        treepd1, treepd2 = fixds(treep)
+
+        copyto!(lλ(treecd1), lλ(treepd1))
+        copyto!(lλ(treecd2), lλ(treepd2))
       end
 
       # make combined swap branch
@@ -667,14 +637,14 @@ function fsbi_ce(bi  ::iBffs,
 
   na = snan(t0, 0)
 
-  λf, λf1, dft0 = NaN, NaN, NaN
+  λf, dft0 = NaN, NaN
 
   # if simulation goes extinct or maximum number of species reached
   if iszero(na) || nsp === nlim
     ret = false
   # if one surviving lineage
   elseif isone(na)
-    f, λf, λf1, dft0 = fixalive!(t0, NaN, NaN, NaN)
+    f, λf, dft0 = fixalive!(t0, NaN, NaN)
   elseif na > 1
     # if terminal branch
     if it(bi)
@@ -682,7 +652,7 @@ function fsbi_ce(bi  ::iBffs,
     # if continue the simulation
     else
       # fix random tip and return end λ(t)
-      λf, λf1, dft0 = fixrtip!(t0, na, NaN, NaN, NaN)
+      λf, dft0 = fixrtip!(t0, na, NaN, NaN)
 
       for j in Base.OneTo(na - 1)
         # get their final λ to continue forward simulation
@@ -718,7 +688,7 @@ function fsbi_ce(bi  ::iBffs,
     ret = false
   end
 
-  return t0, ret, λf, λf1, dft0
+  return t0, ret, λf, dft0
 end
 
 
@@ -771,8 +741,11 @@ function ldprop!(treep::iTgbmce,
 
   if ix === ldr 
 
-    llr, acr = daughters_lprop!(treep, treec, λf,
-      bbλp, bbλc, tsv, pr, d1, d2, ter, α, σλ, μ, icr, wbc, δt, srδt)
+    # llr, acr = daughters_lprop!(treep, treec, λf,
+    #   bbλp, bbλc, tsv, pr, d1, d2, ter, α, σλ, μ, icr, wbc, δt, srδt)
+
+    llr, acr =
+      daughters_lprop!(treep, treec, λf, α, σλ, μ, δt, srδt)
 
   elseif ix < ldr
 
@@ -858,7 +831,6 @@ end
     fixrtip!(tree::T, 
              na  ::Int64, 
              λf  ::Float64, 
-             λf1 ::Float64,
              dft0::Float64) where {T <: iTgbm}
 
 Fixes the the path for a random non extinct tip and returns final `λ(t)`.
@@ -866,70 +838,63 @@ Fixes the the path for a random non extinct tip and returns final `λ(t)`.
 function fixrtip!(tree::T, 
                   na  ::Int64, 
                   λf  ::Float64, 
-                  λf1 ::Float64,
                   dft0::Float64) where {T <: iTgbm}
 
   fix!(tree)
 
   if isdefined(tree, :d1)
     if isextinct(tree.d1)
-      λf, λf1, dft0 = fixrtip!(tree.d2, na, λf, λf1, dft0)
+      λf, dft0 = fixrtip!(tree.d2, na, λf, dft0)
     elseif isextinct(tree.d2)
-      λf, λf1, dft0 = fixrtip!(tree.d1, na, λf, λf1, dft0)
+      λf, dft0 = fixrtip!(tree.d1, na, λf, dft0)
     else
       na1 = snan(tree.d1, 0)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λf, λf1, dft0 = fixrtip!(tree.d2, na - na1, λf, λf1, dft0)
+        λf, dft0 = fixrtip!(tree.d2, na - na1, λf, dft0)
       else
-        λf, λf1, dft0 = fixrtip!(tree.d1, na1,      λf, λf1, dft0)
+        λf, dft0 = fixrtip!(tree.d1, na1,      λf, dft0)
       end
     end
   else
-    λv   = lλ(tree)
-    l    = lastindex(λv)
-    λf   = λv[l]
-    λf1  = λv[l-1]
+    λf   = lλ(tree)[end]
     dft0 = fdt(tree)
   end
 
-  return λf, λf1, dft0
+  return λf, dft0
 end
 
 
 
 
 """
-    fixalive!(tree::T, λf::Float64, λf1::Float64, dft0::Float64) where {T <:iTgbm} 
+    fixalive!(tree::T, λf::Float64, dft0::Float64) where {T <:iTgbm} 
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::T, λf::Float64, λf1::Float64, dft0::Float64) where {T <:iTgbm} 
+function fixalive!(tree::T, λf::Float64, dft0::Float64) where {T <:iTgbm} 
 
   if istip(tree) 
     if isalive(tree)
       fix!(tree)
-      λv   = lλ(tree)
-      l    = lastindex(λv)
-      λf   = λv[l]
-      λf1  = λv[l-1]
+      λf   = lλ(tree)[end]
       dft0 = fdt(tree)
-      return true, λf, λf1, dft0
+      return true, λf, dft0
     end
   else
-    f, λf, λf1, dft0 = fixalive!(tree.d2, λf, λf1, dft0)
+    f, λf, dft0 = fixalive!(tree.d2, λf, dft0)
     if f 
       fix!(tree)
-      return true, λf, λf1, dft0
+      return true, λf, dft0
     end
-    f, λf, λf1, dft0 = fixalive!(tree.d1, λf, λf1, dft0)
+    f, λf, dft0 = fixalive!(tree.d1, λf, dft0)
     if f 
       fix!(tree)
-      return true, λf, λf1, dft0
+      return true, λf, dft0
     end
   end
 
-  return false, λf, λf1, dft0
+  return false, λf, dft0
 end
 
 
