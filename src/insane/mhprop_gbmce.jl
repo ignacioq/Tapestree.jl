@@ -12,6 +12,163 @@ Created 27 05 2020
 
 
 
+@benchmark triad_lvupdate!($treep, $treec, $αc, $σλc, $δt, $srδt)
+
+
+
+
+"""
+    triad_lvupdate!(treep::iTgbmce,
+                    treec::iTgbmce,
+                    α    ::Float64,
+                    σλ   ::Float64,
+                    δt   ::Float64,
+                    srδt ::Float64)
+
+Make a `gbmce` trio proposal.
+"""
+function triad_lvupdate!(treep::iTgbmce,
+                         treec::iTgbmce,
+                         α    ::Float64,
+                         σλ   ::Float64,
+                         δt   ::Float64,
+                         srδt ::Float64)
+
+  @inbounds begin
+
+    it2 = istip(treec.d2)
+
+    if istip(treec.d1)
+      # if both daughters are terminal
+      if it2
+
+        lλpr = lλ(treep)
+
+        bm!(lλpr, lλ(treec)[1], α, σλ, δt, fdt(treec), srδt)
+        lλp = lλpr[end]
+        bm!(lλ(treep.d1), lλp, α, σλ, δt, fdt(treec.d1), srδt)
+        bm!(lλ(treep.d2), lλp, α, σλ, δt, fdt(treec.d2), srδt)
+
+      # if d1 is terminal
+      else
+
+        λpr  = lλ(treec)[1]
+        λd2  = lλ(treec.d2)[end]
+        epr  = e(treec)
+        ed2  = e(treec.d2)
+
+        # node proposal
+        lλp = duoprop(λpr + α*epr, λd2 - α*ed2, epr, ed2, σλ)
+
+        # simulate fix tree vector
+        bb!(lλ(treep),    λpr, lλp, σλ, δt, fdt(treec),    srδt)
+        bm!(lλ(treep.d1), lλp,   α, σλ, δt, fdt(treec.d1), srδt)
+        bb!(lλ(treep.d2), lλp, λd2, σλ, δt, fdt(treec.d2), srδt)
+
+      end
+    
+    # if d2 is terminal
+    elseif it2
+
+      λpr  = lλ(treec)[1]
+      λd1  = lλ(treec.d1)[end]
+      epr  = e(treec)
+      ed1  = e(treec.d1)
+
+      # node proposal
+      lλp = duoprop(λpr + α*epr, λd1 - α*ed1, epr, ed1, σλ)
+
+      # simulate fix tree vector
+      bb!(lλ(treep),    λpr, lλp, σλ, δt, fdt(treec),    srδt)
+      bb!(lλ(treep.d1), lλp, λd1, σλ, δt, fdt(treec.d1), srδt)
+      bm!(lλ(treep.d2), lλp,   α, σλ, δt, fdt(treec.d2), srδt)
+
+    # if no terminal branches involved
+    else
+
+      λpr  = lλ(treec)[1]
+      λd1  = lλ(treec.d1)[end]
+      λd2  = lλ(treec.d2)[end]
+      epr  = e(treec)
+      ed1  = e(treec.d1)
+      ed2  = e(treec.d2)
+
+      # node proposal
+      lλp  = trioprop(λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
+               epr, ed1, ed2, σλ)
+
+      # simulate fix tree vector
+      bb!(lλ(treep),    λpr, lλp, σλ, δt, fdt(treec),    srδt)
+      bb!(lλ(treep.d1), lλp, λd1, σλ, δt, fdt(treec.d1), srδt)
+      bb!(lλ(treep.d2), lλp, λd2, σλ, δt, fdt(treec.d2), srδt)
+    end
+
+  end
+
+  return nothing
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """
     daughters_lprop!(treep::iTgbmce, 
