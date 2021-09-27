@@ -271,7 +271,9 @@ function iTgbmpb(e0::Array{Int64,1},
     n1, n2   = e1[ei1:ei2]
     return iTgbmpb(iTgbmpb(e0, e1, el, λs, ea, n1, ei1, δt), 
                    iTgbmpb(e0, e1, el, λs, ea, n2, ei2, δt), 
-                   el[ei], δt, δt, λs[ei])
+                   el[ei], δt, 
+                   (el[ei] == 0.0 ? 0.0 : δt), 
+                   λs[ei])
   end
 end
 

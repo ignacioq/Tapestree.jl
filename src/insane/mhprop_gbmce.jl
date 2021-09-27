@@ -159,7 +159,7 @@ function triad_lvupdate!(treep::iTgbmce,
     acr = llrbd + llrbd1 + llrbd2
     llr = acr + llrbm + llrbm1 + llrbm2
 
-    if -randexp() < acr
+    if -randexp() < (acr + normprop)
       llc += llr
       copyto!(λpc, λpp)
       copyto!(λ1c, λ1p)
@@ -213,14 +213,31 @@ function root_update!(treep ::iTgbmce,
     fdt1 = fdt(treec.d1)
     fdt2 = fdt(treec.d2)
 
+    λpr = λpc[1]
     λd1 = λ1c[end]
     λd2 = λ2c[end]
 
-    # proposal given daughters
-    lλp = duoprop(λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
+    if icr
+      # node proposal
+      lλp  = duoprop(λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
+      lλrp = lλp
 
-    # propose for root
-    lλrp = rnorm(lλp - α*epr, sqrt(epr)*σλ)
+      normprop = 
+        duoldnorm(lλp,    λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ) -
+        duoldnorm(λ1c[1], λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
+    else
+      # node proposal
+      lλp = trioprop(λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
+             epr, ed1, ed2, σλ)
+      # propose for root
+      lλrp = rnorm(lλp - α*epr, sqrt(epr)*σλ)
+
+      normprop = 
+        trioldnorm(lλp, λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
+             epr, ed1, ed2, σλ) + ldnorm_bm(lλrp, lλp - α*epr, sqrt(epr)*σλ) - 
+        trioldnorm(λ1c[1], λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
+             epr, ed1, ed2, σλ) - ldnorm_bm(λpr, λ1c[1] - α*epr, sqrt(epr)*σλ)
+    end
 
     # simulate fix tree vector
     bb!(λpp, lλrp, lλp, σλ, δt, fdtp, srδt)
@@ -250,7 +267,7 @@ function root_update!(treep ::iTgbmce,
       acr += -Inf
     end
 
-    if -randexp() < acr
+    if -randexp() < (acr + normprop)
       llc += llr
       copyto!(λpc, λpp)
       copyto!(λ1c, λ1p)
