@@ -177,7 +177,6 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
                          scalef  ::Function,
                          svf     ::Function)
 
-
   ltn = 0
   lup = 0.0
   lac = 0.0
@@ -225,11 +224,11 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
 
         bi = idf[ceil(Int64,rand()*nbr)]
 
-        # if root propose a new root
+        # if root
         if iszero(sc(bi)) 
           llc = root_update!(Ψp, Ψc, αc, σλc, μc, llc, δt, srδt, lλmxpr, icr)
-        else
-          llc = gbm!(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, icr, sc(bi))
+        elseif sc(bi) === 23
+          llc = gbm!(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt)
         end
 
       # forward simulation update
@@ -237,8 +236,12 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
 
         bi  = idf[ceil(Int64,rand()*nbr)]
 
+        if iszero(sc(bi)) 
+          llc = root_update!(Ψp, Ψc, αc, σλc, μc, llc, δt, srδt, lλmxpr, icr)
+        end
+
         Ψp, Ψc, llc = 
-          fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, nlim, icr, sc(bi))
+          fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, nlim, icr)
 
       end
     end
@@ -378,11 +381,11 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         bi = idf[ceil(Int64,rand()*nbr)]
 
-        # if root propose a new root
+        # if root
         if iszero(sc(bi)) 
           llc = root_update!(Ψp, Ψc, αc, σλc, μc, llc, δt, srδt, lλmxpr, icr)
-        else
-          llc = gbm!(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, icr, sc(bi))
+        elseif sc(bi) === 23
+          llc = gbm!(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt)
         end
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
@@ -396,15 +399,18 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
 
         bi  = idf[ceil(Int64,rand()*nbr)]
 
+        if iszero(sc(bi)) 
+          llc = root_update!(Ψp, Ψc, αc, σλc, μc, llc, δt, srδt, lλmxpr, icr)
+        end
+
         Ψp, Ψc, llc = 
-          fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, nlim, icr, sc(bi))
+          fsp(Ψp, Ψc, bi, llc, αc, σλc, μc, δt, srδt, nlim, icr)
 
         # ll0 = llik_gbm(Ψc, αc, σλc, μc, δt, srδt) + svf(Ψc, μc)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψc
         #    return 
         # end
-
       end
     end
 
@@ -445,9 +451,7 @@ end
          σλ   ::Float64,
          μ    ::Float64,
          δt   ::Float64,
-         srδt ::Float64,
-         icr  ::Bool,
-         wbc  ::Int64)
+         srδt ::Float64)
 
 Update the gbm for branch `bi`.
 """
@@ -459,9 +463,7 @@ function gbm!(Ψp   ::iTgbmce,
               σλ   ::Float64,
               μ    ::Float64,
               δt   ::Float64,
-              srδt ::Float64,
-              icr  ::Bool,
-              wbc  ::Int64)
+              srδt ::Float64)
 
   # get branch information
   dri = dr(bi)
@@ -471,13 +473,7 @@ function gbm!(Ψp   ::iTgbmce,
   # go to branch to be updated
   treec, treep = drtree(Ψc, Ψp, dri, ldr, 0)
 
-  if isone(wbc) && icr
-    scond = true
-  else
-    scond = false
-  end
-
-  llc = gbm_update!(treep, treec, α, σλ, llc, δt, srδt, scond)
+  llc = gbm_update!(treep, treec, α, σλ, μ, llc, δt, srδt)
 
   return llc
 end
@@ -512,8 +508,7 @@ function fsp(Ψp   ::iTgbmce,
              δt   ::Float64, 
              srδt ::Float64,
              nlim ::Int64,
-             icr  ::Bool, 
-             wbc  ::Int64)
+             icr  ::Bool)
 
   # get branch information
   dri = dr(bi)
@@ -554,16 +549,16 @@ function fsp(Ψp   ::iTgbmce,
       llr += llik_gbm(     t0, α, σλ, μ, δt, srδt) + iλ - 
              llik_gbm_f(treec, α, σλ, μ, δt, srδt)
 
-      if icr && isone(wbc)
+      if isone(sc(bi)) && icr
         css = itb ? cond_surv_stem : cond_surv_stem_p
         if dri[1]
-          llr += css(t0, μ) - cond_surv_stem(Ψc.d1, μ)
+          llr += css(t0, μ) - cond_surv_stem(treec, μ)
         else
-          llr += css(t0, μ) -cond_surv_stem(  Ψc.d2, μ)
+          llr += css(t0, μ) - cond_surv_stem(treec, μ)
         end
-      elseif iszero(wbc)
-        llr += cond_surv_stem_p(t0, μ) -
-               cond_surv_stem(  Ψc, μ) 
+      elseif iszero(sc(bi))
+        llr += cond_surv_stem_p(t0,  μ) -
+               cond_surv_stem(treec, μ) 
       end
 
       llc += llr
@@ -679,6 +674,7 @@ end
 
 """
     addtotip(tree::T, stree::T, ix::Bool) where {T < iTgbm}
+
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
 function addtotip(tree::T, stree::T, ix::Bool) where {T <: iTgbm}

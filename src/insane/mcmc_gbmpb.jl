@@ -421,7 +421,8 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
 
     else
       # if d1 is terminal
-      lλp = duoprop(λpr + α*pepr, λd2 - α*ped2, pepr, ped2, σλ)
+      lλp = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
+        pepr, ped1, ped2, σλ)
 
       # simulate fix tree vector
       bb!(λprv_p, λpr, lλp, σλ, δt, fdtpr, srδt)
@@ -431,7 +432,8 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
   elseif ter[2]
     # if d2 is terminal
     # node proposal
-    lλp = duoprop(λpr + α*pepr, λd1 - α*ped1, pepr, ped1, σλ)
+    lλp = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
+      pepr, ped1, ped2, σλ)
 
     # simulate fix tree vector
     bb!(λprv_p, λpr, lλp, σλ, δt, fdtpr, srδt)
@@ -441,7 +443,7 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
   else
     # if no terminal branches involved
     # node proposal
-    lλp  = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
+    lλp = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
       pepr, ped1, ped2, σλ)
 
     # simulate fix tree vector

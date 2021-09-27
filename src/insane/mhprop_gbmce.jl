@@ -17,6 +17,7 @@ Created 27 05 2020
                 treec::iTgbmce,
                 α    ::Float64,
                 σλ   ::Float64,
+                μ    ::Float64,
                 llc  ::Float64,
                 δt   ::Float64,
                 srδt ::Float64,
@@ -28,21 +29,22 @@ function gbm_update!(treep::iTgbmce,
                      treec::iTgbmce,
                      α    ::Float64,
                      σλ   ::Float64,
+                     μ    ::Float64,
                      llc  ::Float64,
                      δt   ::Float64,
-                     srδt ::Float64,
-                     scond::Bool)
+                     srδt ::Float64)
 
   if isdefined(treec, :d1)
+    llc = triad_lvupdate!(treep, treec, α, σλ, μ, llc, δt, srδt)
+
     if isfix(treec.d1) && isfix(treec.d2)
-      llc = triad_lvupdate!(treep, treec, α, σλ, llc, δt, srδt, false)
+      return llc
     else
-      llc = triad_lvupdate!(treep, treec,   α, σλ, llc, δt, srδt, scond)
-      llc = gbm_update!(treep.d1, treec.d1, α, σλ, llc, δt, srδt, scond)
-      llc = gbm_update!(treep.d2, treec.d2, α, σλ, llc, δt, srδt, scond)
+      llc = gbm_update!(treep.d1, treec.d1, α, σλ, μ, llc, δt, srδt)
+      llc = gbm_update!(treep.d2, treec.d2, α, σλ, μ, llc, δt, srδt)
     end
   else
-    llc = fs_lvupdate!(treep, treec, α, σλ, llc, δt, srδt, false)
+    llc = fs_lvupdate!(treep, treec, α, σλ, μ, llc, δt, srδt)
   end
 
   return llc
@@ -56,6 +58,7 @@ end
                  treec::iTgbmce,
                  α    ::Float64,
                  σλ   ::Float64,
+                 μ    ::Float64,
                  δt   ::Float64,
                  srδt ::Float64,
                  scond::Bool)
@@ -66,10 +69,10 @@ function fs_lvupdate!(treep::iTgbmce,
                       treec::iTgbmce,
                       α    ::Float64,
                       σλ   ::Float64,
+                      μ    ::Float64,
                       llc  ::Float64,
                       δt   ::Float64,
-                      srδt ::Float64,
-                      scond::Bool)
+                      srδt ::Float64)
 
   @inbounds begin
 
@@ -79,17 +82,9 @@ function fs_lvupdate!(treep::iTgbmce,
 
     bm!(λpp, λpc[1], α, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd = 
-      llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, false)
+    llrbm, llrbd = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, false)
 
-    llrcond = 0.0
-
-    if scond
-      llrcond += cond_surv_stem(treep, μ) -
-                 cond_surv_stem(treec, μ)
-    end
-
-    acr = llrbd + llrcond
+    acr = llrbd
     llr = acr + llrbm
 
     if -randexp() < acr
@@ -109,6 +104,7 @@ end
                     treec::iTgbmce,
                     α    ::Float64,
                     σλ   ::Float64,
+                    μ    ::Float64,
                     δt   ::Float64,
                     srδt ::Float64,
                     scond::Bool)
@@ -119,10 +115,10 @@ function triad_lvupdate!(treep::iTgbmce,
                          treec::iTgbmce,
                          α    ::Float64,
                          σλ   ::Float64,
+                         μ    ::Float64,
                          llc  ::Float64,
                          δt   ::Float64,
-                         srδt ::Float64,
-                         scond::Bool)
+                         srδt ::Float64)
 
   @inbounds begin
 
@@ -140,88 +136,36 @@ function triad_lvupdate!(treep::iTgbmce,
     fdt1 = fdt(treec.d1)
     fdt2 = fdt(treec.d2)
 
-    it1 = istip(treec.d1)
-    it2 = istip(treec.d2)
+    λpr  = λpc[1]
+    λd1  = λ1c[end]
+    λd2  = λ2c[end]
 
-    if it1
-      # if both d1 & d2 are terminal
-      if it2
+    # node proposal
+    lλp = trioprop(λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
+             epr, ed1, ed2, σλ)
 
-        bm!(λpp, λpc[1], α, σλ, δt, fdtp, srδt)
-        lλp = λpp[end]
-        bm!(λ1p, lλp, α, σλ, δt, fdt1, srδt)
-        bm!(λ2p, lλp, α, σλ, δt, fdt2, srδt)
+    # simulate fix tree vector
+    bb!(λpp, λpr, lλp, σλ, δt, fdtp, srδt)
+    bb!(λ1p, lλp, λd1, σλ, δt, fdt1, srδt)
+    bb!(λ2p, lλp, λd2, σλ, δt, fdt2, srδt)
 
-      # if d1 is terminal
-      else
+    llrbm, llrbd = 
+      llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
+    llrbm1, llrbd1 = 
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, !istip(treec.d1))
+    llrbm2, llrbd2 = 
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, !istip(treec.d2))
 
-        λpr  = λpc[1]
-        λd2  = λ2c[end]
+    acr = llrbd + llrbd1 + llrbd2
+    llr = acr + llrbm + llrbm1 + llrbm2
 
-        # node proposal
-        lλp = duoprop(λpr + α*epr, λd2 - α*ed2, epr, ed2, σλ)
-
-        # simulate fix tree vector
-        bb!(λpp, λpr, lλp, σλ, δt, fdtp, srδt)
-        bm!(λ1p, lλp,   α, σλ, δt, fdt1, srδt)
-        bb!(λ2p, lλp, λd2, σλ, δt, fdt2, srδt)
-      end
-    
-    # if d2 is terminal
-    elseif it2
-
-      λpr  = λpc[1]
-      λd1  = λ2c[end]
-
-      # node proposal
-      lλp = duoprop(λpr + α*epr, λd1 - α*ed1, epr, ed1, σλ)
-
-      # simulate fix tree vector
-      bb!(λpp, λpr, lλp, σλ, δt, fdtp, srδt)
-      bb!(λ1p, lλp, λd1, σλ, δt, fdt1, srδt)
-      bm!(λ2p, lλp,   α, σλ, δt, fdt2, srδt)
-
-    # if no terminal branches involved
-    else
-
-      λpr  = λpc[1]
-      λd1  = λ1c[end]
-      λd2  = λ2c[end]
-
-      # node proposal
-      lλp  = trioprop(λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
-               epr, ed1, ed2, σλ)
-
-      # simulate fix tree vector
-      bb!(λpp, λpr, lλp, σλ, δt, fdtp, srδt)
-      bb!(λ1p, lλp, λd1, σλ, δt, fdt1, srδt)
-      bb!(λ2p, lλp, λd2, σλ, δt, fdt2, srδt)
+    if -randexp() < acr
+      llc += llr
+      copyto!(λpc, λpp)
+      copyto!(λ1c, λ1p)
+      copyto!(λ2c, λ2p)
     end
   end
-
-  llrbm, llrbd = 
-    llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
-  llrbm1, llrbd1 = 
-    llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, !it1)
-  llrbm2, llrbd2 = 
-    llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, !it2)
-
-  llrcond = 0.0
-
-  if scond
-    llrcond += cond_surv_stem(treep, μ) -
-               cond_surv_stem(treec, μ)
-  end
-
-  acr = llrbd + llrbd1 + llrbd2 + llrcond
-  llr = acr + llrbm + llrbm1 + llrbm2
-
-  if -randexp() < acr
-    llc += llr
-    copyto!(λpc, λpp)
-    copyto!(λ1c, λ1p)
-    copyto!(λ2c, λ2p)
-  end 
 
   return llc
 end
