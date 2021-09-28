@@ -13,6 +13,67 @@ Created 27 05 2020
 
 
 """
+    daughters_lprop!(treep::iTgbmce, 
+                     treec::iTgbmce,
+                     λf   ::Float64,
+                     α    ::Float64,
+                     σλ   ::Float64,
+                     μ    ::Float64,
+                     δt   ::Float64, 
+                     srδt ::Float64)
+
+Make a `gbmce` proposal for daughters of forwards simulated branch.
+"""
+function daughters_lprop!(treep::iTgbmce, 
+                          treec::iTgbmce,
+                          λf   ::Float64,
+                          α    ::Float64,
+                          σλ   ::Float64,
+                          μ    ::Float64,
+                          δt   ::Float64, 
+                          srδt ::Float64)
+  @inbounds begin
+
+    # get fixed daughters
+    treecd1, treecd2 = fixds(treec)
+    treepd1, treepd2 = fixds(treep)
+
+    # edges
+    ed1 = e(treecd1)
+    ed2 = e(treecd2)
+
+    lλ1 = lλ(treecd1)
+    λn  = lλ1[1]
+    λd1 = lλ1[end]
+    λd2 = lλ(treecd2)[end]
+
+    bb!(lλ(treepd1), λf, λd1, σλ, δt, fdt(treecd1), srδt)
+    bb!(lλ(treepd2), λf, λd2, σλ, δt, fdt(treecd2), srδt)
+
+    # acceptance rate
+    normprop = 
+      duoldnorm(λf, λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ) -
+      duoldnorm(λn, λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
+
+    llrbm1, llrbd1 = 
+      llr_gbm_b_sep(lλ(treepd1), lλ(treecd1), α, σλ, δt, 
+        fdt(treecd1), srδt, !istip(treecd1))
+    llrbm2, llrbd2 = 
+      llr_gbm_b_sep(lλ(treepd2), lλ(treecd2), α, σλ, δt, 
+        fdt(treecd2), srδt, !istip(treecd2))
+
+    acr  = llrbd1 + llrbd2
+    llr  = llrbm1 + llrbm2 + acr
+    acr += normprop
+  end
+
+  return llr, acr
+end
+
+
+
+
+"""
     gbm_update!(treep::iTgbmce,
                 treec::iTgbmce,
                 α    ::Float64,
@@ -159,7 +220,7 @@ function triad_lvupdate!(treep::iTgbmce,
     acr = llrbd + llrbd1 + llrbd2
     llr = acr + llrbm + llrbm1 + llrbm2
 
-    if -randexp() < (acr + normprop)
+    if -randexp() < acr
       llc += llr
       copyto!(λpc, λpp)
       copyto!(λ1c, λ1p)
@@ -221,22 +282,12 @@ function root_update!(treep ::iTgbmce,
       # node proposal
       lλp  = duoprop(λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
       lλrp = lλp
-
-      normprop = 
-        duoldnorm(lλp,    λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ) -
-        duoldnorm(λ1c[1], λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
     else
       # node proposal
       lλp = trioprop(λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
              epr, ed1, ed2, σλ)
       # propose for root
       lλrp = rnorm(lλp - α*epr, sqrt(epr)*σλ)
-
-      normprop = 
-        trioldnorm(lλp, λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
-             epr, ed1, ed2, σλ) + ldnorm_bm(lλrp, lλp - α*epr, sqrt(epr)*σλ) - 
-        trioldnorm(λ1c[1], λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
-             epr, ed1, ed2, σλ) - ldnorm_bm(λpr, λ1c[1] - α*epr, sqrt(epr)*σλ)
     end
 
     # simulate fix tree vector
@@ -267,7 +318,7 @@ function root_update!(treep ::iTgbmce,
       acr += -Inf
     end
 
-    if -randexp() < (acr + normprop)
+    if -randexp() < acr
       llc += llr
       copyto!(λpc, λpp)
       copyto!(λ1c, λ1p)
@@ -276,67 +327,6 @@ function root_update!(treep ::iTgbmce,
   end
   
   return llc
-end
-
-
-
-
-"""
-    daughters_lprop!(treep::iTgbmce, 
-                     treec::iTgbmce,
-                     λf   ::Float64,
-                     α    ::Float64,
-                     σλ   ::Float64,
-                     μ    ::Float64,
-                     δt   ::Float64, 
-                     srδt ::Float64)
-
-Make a `gbmce` proposal for daughters of forwards simulated branch.
-"""
-function daughters_lprop!(treep::iTgbmce, 
-                          treec::iTgbmce,
-                          λf   ::Float64,
-                          α    ::Float64,
-                          σλ   ::Float64,
-                          μ    ::Float64,
-                          δt   ::Float64, 
-                          srδt ::Float64)
-  @inbounds begin
-
-    # get fixed daughters
-    treecd1, treecd2 = fixds(treec)
-    treepd1, treepd2 = fixds(treep)
-
-    # edges
-    ed1 = e(treecd1)
-    ed2 = e(treecd2)
-
-    lλ1 = lλ(treecd1)
-    λn  = lλ1[1]
-    λd1 = lλ1[end]
-    λd2 = lλ(treecd2)[end]
-
-    bb!(lλ(treepd1), λf, λd1, σλ, δt, fdt(treecd1), srδt)
-    bb!(lλ(treepd2), λf, λd2, σλ, δt, fdt(treecd2), srδt)
-
-    # acceptance rate
-    normprop = 
-      duoldnorm(λf, λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ) -
-      duoldnorm(λn, λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
-
-    llrbm1, llrbd1 = 
-      llr_gbm_b_sep(lλ(treepd1), lλ(treecd1), α, σλ, δt, 
-        fdt(treecd1), srδt, !istip(treecd1))
-    llrbm2, llrbd2 = 
-      llr_gbm_b_sep(lλ(treepd2), lλ(treecd2), α, σλ, δt, 
-        fdt(treecd2), srδt, !istip(treecd2))
-
-    acr  = llrbd1 + llrbd2
-    llr  = llrbm1 + llrbm2 + acr
-    acr += normprop
-  end
-
-  return llr, acr
 end
 
 
