@@ -108,7 +108,7 @@ Extract values from `lv` function at times `ts` across the tree.
     ix  = fld(bt, δt)
     tts = δt *  ix
     ttf = δt * (ix + 1.0)
-    Ix  = Int64(ix)
+    Ix  = Int64(ix) + 1
     push!(r[i], linpred(bt, tts, ttf, vt[Ix], vt[Ix+1]))
   end
 

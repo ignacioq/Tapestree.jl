@@ -36,7 +36,8 @@ Sample conditional on number of species
               p       ::Float64 = 5.0,
               warnings::Bool    = true)
 
-Simulate `iTgbmbd` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmbd` according to geometric Brownian motions for birth and death 
+rates.
 """
 function sim_gbmbd(n       ::Int64;
                    λ0      ::Float64 = 1.0,
@@ -288,7 +289,8 @@ Sample conditional on time
               nlim::Int64   = 10_000,
               init::Symbol  = :crown)
 
-Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmbd` according to geometric Brownian motions for birth and death 
+rates.
 """
 function sim_gbmbd(t   ::Float64;
                    λ0  ::Float64 = 1.0,
@@ -344,8 +346,8 @@ end
                nsp ::Int64,
                nlim::Int64)
 
-Simulate `iTgbmbd` according to a geometric Brownian motion with a limit
-on the number lineages allowed to reach.
+Simulate `iTgbmbd` according to geometric Brownian motions for birth and death 
+rates, with a limit on the number lineages allowed to reach.
 """
 function _sim_gbmbd(t   ::Float64,
                     λt  ::Float64,
@@ -448,9 +450,8 @@ end
                srδt::Float64, 
                nsp ::Int64,
                nlim::Int64)
-
-Simulate `iTgbmbd` according to a geometric Brownian motion starting 
-with a non-standard δt with a limit in the number of species.
+Simulate `iTgbmbd` according to geometric Brownian motions for birth and death 
+rates, starting with a non-standard δt with a limit in the number of species.
 """
 function _sim_gbmbd(nsδt::Float64,
                     t   ::Float64,

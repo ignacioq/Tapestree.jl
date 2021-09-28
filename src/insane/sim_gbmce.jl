@@ -30,9 +30,11 @@ Sample conditional on number of species
               μ    ::Float64 = 0.0,
               δt   ::Float64 = 1e-3,
               nstar::Int64   = 2*n,
-              p    ::Float64 = 5.0)
+              p    ::Float64 = 5.0,
+              warnings::Bool = true))
 
-Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmce` according to a geometric Brownian motion for birth rates and 
+constant extinction.
 """
 function sim_gbmce(n    ::Int64;
                    λ0   ::Float64    = 1.0, 
@@ -270,7 +272,8 @@ Sample conditional on time
               nlim::Int64   = 10_000,
               init::Symbol  = :crown)
 
-Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
+Simulate `iTgbmce` according to a geometric Brownian motion for birth rates and 
+constant extinction.
 """
 function sim_gbmce(t   ::Float64;
                    λ0  ::Float64 = 1.0,
@@ -322,8 +325,8 @@ end
                nsp ::Int64,
                nlim::Int64)
 
-Simulate `iTgbmce` according to a geometric Brownian motion with a limit
-on the number lineages allowed to reach.
+Simulate `iTgbmce` according to a geometric Brownian motion for birth rates and 
+constant extinction, with a limit on the number lineages allowed to reach.
 """
 function _sim_gbmce(t   ::Float64,
                     λt  ::Float64,
@@ -413,8 +416,9 @@ end
               nsp ::Int64,
               nlim::Int64)
 
-Simulate `iTgbmce` according to a geometric Brownian motion starting 
-with a non-standard δt with a limit in the number of species.
+Simulate `iTgbmce` according to a geometric Brownian motion for birth rates and 
+constant extinction, starting with a non-standard δt with a limit in the number 
+of species.
 """
 function _sim_gbmce(nsδt::Float64,
                     t   ::Float64,
