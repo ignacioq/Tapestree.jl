@@ -506,6 +506,7 @@ function fsp(Ψp   ::iTgbmce,
   # go to branch to be updated
   treec, treep = drtree(Ψc, Ψp, dri, ldr, 0)
 
+  # forward simulation
   t0, ret, λf, dft0 = 
     fsbi_ce(bi, lλ(treec)[1], α, σλ, μ, δt, srδt, nlim)
 
@@ -566,7 +567,6 @@ function fsp(Ψp   ::iTgbmce,
 
   return Ψp, Ψc, llc
 end
-
 
 
 

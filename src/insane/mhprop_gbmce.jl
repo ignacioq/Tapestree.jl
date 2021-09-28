@@ -167,8 +167,7 @@ end
                     σλ   ::Float64,
                     μ    ::Float64,
                     δt   ::Float64,
-                    srδt ::Float64,
-                    scond::Bool)
+                    srδt ::Float64)
 
 Make a `gbmce` trio proposal.
 """
