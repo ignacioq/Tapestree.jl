@@ -31,6 +31,7 @@ Sample conditional on number of species
               α       ::Float64 = 0.0,
               σλ      ::Float64 = 0.1,
               σμ      ::Float64 = 0.1,
+              start   ::Symbol  = :stem,
               δt      ::Float64 = 1e-3,
               nstar   ::Int64   = 2*n,
               p       ::Float64 = 5.0,
@@ -45,6 +46,7 @@ function sim_gbmbd(n       ::Int64;
                    α       ::Float64 = 0.0,
                    σλ      ::Float64 = 0.1,
                    σμ      ::Float64 = 0.1,
+                   start   ::Symbol  = :stem,
                    δt      ::Float64 = 1e-3,
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
@@ -52,7 +54,7 @@ function sim_gbmbd(n       ::Int64;
 
   # simulate in non-recursive manner
   e0, e1, el, λs, μs, ea, ee, na, simt = 
-    _sedges_gbmbd(nstar, log(λ0), log(μ0), α, σλ, σμ, δt, sqrt(δt))
+    _sedges_gbmbd(nstar, log(λ0), log(μ0), α, σλ, σμ, δt, sqrt(δt), start)
 
   # transform to iTree
   t = iTgbmbd(e0, e1, el, λs, μs, ea, ee, e1[1], 1, δt)
@@ -82,55 +84,90 @@ end
 
 
 """
-    _sedges_gbmbd(n   ::Int64,
-                  λ0  ::Float64,
-                  μ0  ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  σμ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+    _sedges_gbmbd(n    ::Int64,
+                  λ0   ::Float64,
+                  μ0   ::Float64,
+                  α    ::Float64,
+                  σλ   ::Float64,
+                  σμ   ::Float64,
+                  δt   ::Float64,
+                  srδt ::Float64,
+                  start::Symbol)
 
 Simulate `gbmbd` just until hitting `n` alive species. Note that this is 
 a biased sample for a tree conditional on `n` species.
 """
-function _sedges_gbmbd(n   ::Int64,
-                       λ0  ::Float64,
-                       μ0  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+function _sedges_gbmbd(n    ::Int64,
+                       λ0   ::Float64,
+                       μ0   ::Float64,
+                       α    ::Float64,
+                       σλ   ::Float64,
+                       σμ   ::Float64,
+                       δt   ::Float64,
+                       srδt ::Float64,
+                       start::Symbol)
 
   # edges
   e0 = Int64[]
   e1 = Int64[]
   # edges extinct
   ee = Int64[]
-  # edges alive
-  ea = [1]
-  # first edge
-  push!(e0, 1)
-  push!(e1, 2)
-  # max index
-  mxi0 = n*2
-  # edge lengths
-  el = [0.0]
-  # lambda and mu vector for each edge
-  λs = [Float64[]]
-  μs = [Float64[]]
 
-  na = 1 # current number of alive species
-  ne = 2 # current maximum node number
+
+  if start == :stem
+    # edges alive
+    ea = [1]
+    # first edge
+    push!(e0, 1)
+    push!(e1, 2)
+    # max index
+    mxi0 = n*2
+    # edge lengths
+    el = [0.0]
+    # lambda and mu vector for each edge
+    λs = [Float64[]]
+    μs = [Float64[]]
+    # starting speciation rate 
+    push!(λs[1], λ0)
+    push!(μs[1], μ0)
+    # lastindex for each edge
+    li = [1]
+
+    na = 1 # current number of alive species
+    ne = 2 # current maximum node number
+
+  elseif start == :crown
+    # edges alive
+    ea = [2, 3]
+    # first edges
+    push!(e0, 1, 2, 2)
+    push!(e1, 2, 3, 4)
+    # max index
+    mxi0 = n*2
+    # edge lengths
+    el = [0.0, 0.0, 0.0]
+    # lambda vector for each edge
+    λs = [Float64[], Float64[], Float64[]]
+    μs = [Float64[], Float64[], Float64[]]
+    # starting speciation and extinction rate 
+    push!(λs[1], λ0, λ0)
+    push!(λs[2], λ0)
+    push!(λs[3], λ0)
+    push!(μs[1], μ0, μ0)
+    push!(μs[2], μ0)
+    push!(μs[3], μ0)
+    # lastindex for each edge
+    li = [2, 1, 1]
+
+    na = 2 # current number of alive species
+    ne = 4 # current maximum node number
+
+  else
+    @error "$start does not match stem or crown"
+  end
+
   ieaa = Int64[] # indexes of ea to add
   iead = Int64[] # indexes of ea to delete
-
-  # starting speciation rate 
-  push!(λs[1], λ0)
-  push!(μs[1], μ0)
-  # lastindex for each edge
-  li = [1]
 
   # simulation time
   simt = 0.0

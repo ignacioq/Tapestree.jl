@@ -421,33 +421,35 @@ function triad_lλupdate_trio!(treep::iTgbmpb,
 
     else
       # if d1 is terminal
-      lλp = duoprop(λpr + α*pepr, λd2 - α*ped2, pepr, ped2, σλ)
+      lλp = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
+        pepr, ped1, ped2, σλ)
 
       # simulate fix tree vector
-      bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
-      bm!(λd1v_p, lλp, α, σλ, δt, fdtd1, srδt)
-      bb!(λd2v_p, lλp, λd2, fdtd2, σλ, δt, srδt)
+      bb!(λprv_p, λpr, lλp, σλ, δt, fdtpr, srδt)
+      bm!(λd1v_p, lλp, α,   σλ, δt, fdtd1, srδt)
+      bb!(λd2v_p, lλp, λd2, σλ, δt, fdtd2, srδt)
     end
   elseif ter[2]
     # if d2 is terminal
     # node proposal
-    lλp = duoprop(λpr + α*pepr, λd1 - α*ped1, pepr, ped1, σλ)
+    lλp = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
+      pepr, ped1, ped2, σλ)
 
     # simulate fix tree vector
-    bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
-    bb!(λd1v_p, lλp, λd1, fdtd1, σλ, δt, srδt)
-    bm!(λd2v_p, lλp, α, σλ, δt, fdtd2, srδt)
+    bb!(λprv_p, λpr, lλp, σλ, δt, fdtpr, srδt)
+    bb!(λd1v_p, lλp, λd1, σλ, δt, fdtd1, srδt)
+    bm!(λd2v_p, lλp, α, σλ,   δt, fdtd2, srδt)
 
   else
     # if no terminal branches involved
     # node proposal
-    lλp  = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
+    lλp = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
       pepr, ped1, ped2, σλ)
 
     # simulate fix tree vector
-    bb!(λprv_p, λpr, lλp, fdtpr, σλ, δt, srδt)
-    bb!(λd1v_p, lλp, λd1, fdtd1, σλ, δt, srδt)
-    bb!(λd2v_p, lλp, λd2, fdtd2, σλ, δt, srδt)
+    bb!(λprv_p, λpr, lλp, σλ, δt, fdtpr, srδt)
+    bb!(λd1v_p, lλp, λd1, σλ, δt, fdtd1, srδt)
+    bb!(λd2v_p, lλp, λd2, σλ, δt, fdtd2, srδt)
   end
 
   # acceptance ratio
@@ -516,9 +518,9 @@ function triad_lλupdate_root!(treep ::iTgbmpb,
   lλrp = rnorm(lλp - α*pepr, sqrt(pepr)*σλ)
 
   # make Brownian bridge proposals
-  bb!(λprv_p, lλrp, lλp, fdtpr, σλ, δt, srδt)
-  bb!(λd1v_p, lλp,  λd1, fdtd1, σλ, δt, srδt)
-  bb!(λd2v_p, lλp,  λd2, fdtd2, σλ, δt, srδt)
+  bb!(λprv_p, lλrp, lλp, σλ, δt, fdtpr, srδt)
+  bb!(λd1v_p, lλp,  λd1, σλ, δt, fdtd1, srδt)
+  bb!(λd2v_p, lλp,  λd2, σλ, δt, fdtd2, srδt)
 
   ## make acceptance ratio 
   llr, acr = llr_propr(λprv_p, λd1v_p, λd2v_p, λprv_c, λd1v_c, λd2v_c, 

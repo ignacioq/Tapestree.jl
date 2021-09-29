@@ -392,9 +392,9 @@ end
     bb!(x   ::Array{Float64,1},
         xi  ::Float64,
         xf  ::Float64,
-        fdt::Float64,
         σ   ::Float64,
         δt  ::Float64,
+        fdt::Float64,
         srδt::Float64)
 
 Brownian bridge simulation function for updating a branch in place.
@@ -402,9 +402,9 @@ Brownian bridge simulation function for updating a branch in place.
 @inline function bb!(x   ::Array{Float64,1},
                      xi  ::Float64,
                      xf  ::Float64,
-                     fdt ::Float64,
                      σ   ::Float64,
                      δt  ::Float64,
+                     fdt ::Float64,
                      srδt::Float64)
 
   @inbounds begin
@@ -446,10 +446,10 @@ end
         x1  ::Array{Float64,1},
         x1i ::Float64,
         x1f ::Float64,
-        fdt::Float64,
         σ0  ::Float64,
         σ1  ::Float64,
         δt  ::Float64,
+        fdt ::Float64,
         srδt::Float64)
 
 Brownian bridge simulation function for updating two vectors 
@@ -461,10 +461,10 @@ Brownian bridge simulation function for updating two vectors
                      x1  ::Array{Float64,1},
                      x1i ::Float64,
                      x1f ::Float64,
-                     fdt::Float64,
                      σ0  ::Float64,
                      σ1  ::Float64,
                      δt  ::Float64,
+                     fdt ::Float64,
                      srδt::Float64)
 
 

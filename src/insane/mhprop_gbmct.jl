@@ -11,23 +11,13 @@ Created 27 05 2020
 
 
 
-
 """
     daughters_lprop!(treep::iTgbmct, 
                      treec::iTgbmct,
                      λf   ::Float64,
-                     bbλp ::Array{Array{Float64,1},1}, 
-                     bbλc ::Array{Array{Float64,1},1}, 
-                     tsv  ::Array{Array{Float64,1},1}, 
-                     pr   ::Int64,
-                     d1   ::Int64,
-                     d2   ::Int64,
-                     ter  ::BitArray{1},
                      α    ::Float64,
                      σλ   ::Float64,
                      ϵ    ::Float64,
-                     icr  ::Bool, 
-                     wbc  ::Int64,
                      δt   ::Float64, 
                      srδt ::Float64)
 
@@ -36,63 +26,46 @@ Make a `gbmct` proposal for daughters of forwards simulated branch.
 function daughters_lprop!(treep::iTgbmct, 
                           treec::iTgbmct,
                           λf   ::Float64,
-                          bbλp ::Array{Array{Float64,1},1}, 
-                          bbλc ::Array{Array{Float64,1},1}, 
-                          tsv  ::Array{Array{Float64,1},1}, 
-                          pr   ::Int64,
-                          d1   ::Int64,
-                          d2   ::Int64,
-                          ter  ::BitArray{1},
                           α    ::Float64,
                           σλ   ::Float64,
                           ϵ    ::Float64,
-                          icr  ::Bool, 
-                          wbc  ::Int64,
                           δt   ::Float64, 
                           srδt ::Float64)
   @inbounds begin
-
-    ## get reference vectors
-    # time vectors
-    td1v = tsv[d1]
-    td2v = tsv[d2]
-    # speciation vectors
-    λd1v_p = bbλp[d1]
-    λd2v_p = bbλp[d2]
-    λd1v_c = bbλc[d1]
-    λd2v_c = bbλc[d2]
-    lid1   = lastindex(λd1v_c)
-    lid2   = lastindex(λd2v_c)
-    λd1    = λd1v_c[lid1]
-    λd2    = λd2v_c[lid2]
 
     # get fixed daughters
     treecd1, treecd2 = fixds(treec)
     treepd1, treepd2 = fixds(treep)
 
-    # pendant edges
-    ped1 = td1v[1]
-    ped2 = td2v[2]
+    # edges
+    ed1 = e(treecd1)
+    ed2 = e(treecd2)
 
-    bb!(λd1v_p, λf, λd1, td1v[2], σλ, δt, srδt)
-    bb!(λd2v_p, λf, λd2, td2v[2], σλ, δt, srδt)
+    lλ1 = lλ(treecd1)
+    λn  = lλ1[1]
+    λd1 = lλ1[end]
+    λd2 = lλ(treecd2)[end]
 
+    bb!(lλ(treepd1), λf, λd1, σλ, δt, fdt(treecd1), srδt)
+    bb!(lλ(treepd2), λf, λd2, σλ, δt, fdt(treecd2), srδt)
+
+    # acceptance rate
     normprop = 
-      duoldnorm(λf,        λd1 - α*ped1, λd2 - α*ped2, ped1, ped2, σλ) -
-      duoldnorm(λd1v_c[1], λd1 - α*ped1, λd2 - α*ped2, ped1, ped2, σλ)
+      duoldnorm(λf, λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ) -
+      duoldnorm(λn, λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
 
-    # fill fix and simulate unfix tree
-    bm!(treepd1, λd1v_p, 1, lid1, α, σλ, δt, srδt)
-    bm!(treepd2, λd2v_p, 1, lid2, α, σλ, δt, srδt)
+    llrbm1, llrbd1 = 
+      llr_gbm_b_sep(lλ(treepd1), lλ(treecd1), α, σλ, ϵ, δt, 
+        fdt(treecd1), srδt, !istip(treecd1), isextinct(treecd1))
+    llrbm2, llrbd2 = 
+      llr_gbm_b_sep(lλ(treepd2), lλ(treecd2), α, σλ, ϵ, δt, 
+        fdt(treecd2), srδt, !istip(treecd2), isextinct(treecd2))
 
-    llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, α, σλ, ϵ, δt, srδt)
-    llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, α, σλ, ϵ, δt, srδt)
-
-    acr  = llrbd_d1 + llrbd_d2
-    llr  = llrbm_d1 + llrbm_d2 + acr
+    acr  = llrbd1 + llrbd2
+    llr  = llrbm1 + llrbm2 + acr
     acr += normprop
-
   end
+
   return llr, acr
 end
 
@@ -100,134 +73,164 @@ end
 
 
 """
-    triad_lvupdate_trio!(treep::iTgbmct, 
-                         treec::iTgbmct,
-                         bbλp ::Array{Array{Float64,1},1}, 
-                         bbλc ::Array{Array{Float64,1},1}, 
-                         tsv  ::Array{Array{Float64,1},1}, 
-                         llc  ::Float64,
-                         pr   ::Int64,
-                         d1   ::Int64,
-                         d2   ::Int64,
-                         α    ::Float64,
-                         σλ   ::Float64,
-                         ϵ    ::Float64,
-                         δt   ::Float64, 
-                         srδt ::Float64,
-                         ter  ::BitArray{1},
-                         icr  ::Bool,
-                         wbc  ::Int64)
+    gbm_update!(treep::iTgbmct,
+                treec::iTgbmct,
+                α    ::Float64,
+                σλ   ::Float64,
+                ϵ    ::Float64,
+                llc  ::Float64,
+                δt   ::Float64,
+                srδt ::Float64,
+                scond::Bool)
 
-Make a trio of Brownian motion MCMC updates when node is internal and 
-no daughters are terminal.
+Do gbm updates for all internal nodes across a fixed branch.
 """
-function triad_lvupdate_trio!(treep::iTgbmct, 
-                              treec::iTgbmct,
-                              bbλp ::Array{Array{Float64,1},1}, 
-                              bbλc ::Array{Array{Float64,1},1}, 
-                              tsv  ::Array{Array{Float64,1},1}, 
-                              llc  ::Float64,
-                              pr   ::Int64,
-                              d1   ::Int64,
-                              d2   ::Int64,
-                              α    ::Float64,
-                              σλ   ::Float64,
-                              ϵ    ::Float64,
-                              δt   ::Float64, 
-                              srδt ::Float64,
-                              ter  ::BitArray{1},
-                              icr  ::Bool,
-                              wbc  ::Int64)
+function gbm_update!(treep::iTgbmct,
+                     treec::iTgbmct,
+                     α    ::Float64,
+                     σλ   ::Float64,
+                     ϵ    ::Float64,
+                     llc  ::Float64,
+                     δt   ::Float64,
+                     srδt ::Float64)
+
+  if isdefined(treec, :d1)
+    llc = triad_lvupdate!(treep, treec, α, σλ, ϵ, llc, δt, srδt)
+
+    if isfix(treec.d1) && isfix(treec.d2)
+      return llc
+    else
+      llc = gbm_update!(treep.d1, treec.d1, α, σλ, ϵ, llc, δt, srδt)
+      llc = gbm_update!(treep.d2, treec.d2, α, σλ, ϵ, llc, δt, srδt)
+    end
+  else
+    llc = fs_lvupdate!(treep, treec, α, σλ, ϵ, llc, δt, srδt)
+  end
+
+  return llc
+end
+
+
+
+
+
+
+"""
+    fs_lvupdate!(treep::iTgbmct,
+                 treec::iTgbmct,
+                 α    ::Float64,
+                 σλ   ::Float64,
+                 ϵ    ::Float64,
+                 δt   ::Float64,
+                 srδt ::Float64,
+                 scond::Bool)
+
+Make a `gbmct` trio proposal.
+"""
+function fs_lvupdate!(treep::iTgbmct,
+                      treec::iTgbmct,
+                      α    ::Float64,
+                      σλ   ::Float64,
+                      ϵ    ::Float64,
+                      llc  ::Float64,
+                      δt   ::Float64,
+                      srδt ::Float64)
 
   @inbounds begin
-    ## get reference vectors
-    # time vectors
-    tprv = tsv[pr]
-    td1v = tsv[d1]
-    td2v = tsv[d2]
 
-    # speciation vectors
-    λprv_p = bbλp[pr]
-    λd1v_p = bbλp[d1]
-    λd2v_p = bbλp[d2]
-    λprv_c = bbλc[pr]
-    λd1v_c = bbλc[d1]
-    λd2v_c = bbλc[d2]
-    lipr = lastindex(λprv_c)
-    lid1 = lastindex(λd1v_c)
-    lid2 = lastindex(λd2v_c)
-    λpr    = λprv_c[1]
-    λd1    = λd1v_c[lid1]
-    λd2    = λd2v_c[lid2]
+    λpp  = lλ(treep)
+    λpc  = lλ(treec)
+    fdtp = fdt(treec)
 
-    # get fixed daughters
-    treecd1, treecd2 = fixds(treec)
-    treepd1, treepd2 = fixds(treep)
+    bm!(λpp, λpc[1], α, σλ, δt, fdtp, srδt)
 
-    # pendant edges
-    pepr = tprv[1]
-    ped1 = td1v[1]
-    ped2 = td2v[1]
+    llrbm, llrbd = llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, 
+      false, isextinct(treec))
 
-    if ter[1]
-      if ter[2]
-        # if both are terminal
-        bm!(λprv_p, λpr, α, σλ, δt, tprv[2], srδt)
-        lλp = λprv_p[lipr]
-        bm!(λd1v_p, lλp, α, σλ, δt, td1v[2], srδt)
-        bm!(λd2v_p, lλp, α, σλ, δt, td2v[2], srδt)
-
-      else
-        # if d1 is terminal
-        lλp = duoprop(λpr + α*pepr, λd2 - α*ped2, pepr, ped2, σλ)
-
-        # simulate fix tree vector
-        bb!(λprv_p, λpr, lλp, tprv[2], σλ, δt, srδt)
-        bm!(λd1v_p, lλp, α, σλ, δt, td1v[2], srδt)
-        bb!(λd2v_p, lλp, λd2, td2v[2], σλ, δt, srδt)
-
-      end
-    elseif ter[2]
-      # if d2 is terminal
-      # node proposal
-      lλp = duoprop(λpr + α*pepr, λd1 - α*ped1, pepr, ped1, σλ)
-
-      # simulate fix tree vector
-      bb!(λprv_p, λpr, lλp, tprv[2], σλ, δt, srδt)
-      bb!(λd1v_p, lλp, λd1, td1v[2], σλ, δt, srδt)
-      bm!(λd2v_p, lλp, α, σλ, δt, td2v[2], srδt)
-
-    else
-      # if no terminal branches involved
-      # node proposal
-      lλp  = trioprop(λpr + α*pepr, λd1 - α*ped1, λd2 - α*ped2, 
-               pepr, ped1, ped2, σλ)
-
-      # simulate fix tree vector
-      bb!(λprv_p, λpr, lλp, tprv[2], σλ, δt, srδt)
-      bb!(λd1v_p, lλp, λd1, td1v[2], σλ, δt, srδt)
-      bb!(λd2v_p, lλp, λd2, td2v[2], σλ, δt, srδt)
-    end
-
-    # fill fix and simulate unfix tree
-    bm!(treep,   λprv_p, 1, lipr, α, σλ, δt, srδt)
-    bm!(treepd1, λd1v_p, 1, lid1, α, σλ, δt, srδt)
-    bm!(treepd2, λd2v_p, 1, lid2, α, σλ, δt, srδt)
-
-    ## make acceptance ratio 
-    # estimate likelihoods
-    llr, acr = llr_propr(treep, treepd1, treepd2, 
-                         treec, treecd1, treecd2, 
-                         α, σλ, ϵ, δt, srδt, icr, wbc)
+    acr = llrbd
+    llr = acr + llrbm
 
     if -randexp() < acr
       llc += llr
-      unsafe_copyto!(λprv_c, 1, λprv_p, 1, lipr)
-      unsafe_copyto!(λd1v_c, 1, λd1v_p, 1, lid1)
-      unsafe_copyto!(λd2v_c, 1, λd2v_p, 1, lid2)
-      gbm_copy_f!(treec, treep)
-      gbm_copy_f!(treecd1, treepd1)
-      gbm_copy_f!(treecd2, treepd2)
+      copyto!(λpc, λpp)
+    end 
+  end
+
+  return llc
+end
+
+
+
+
+
+
+"""
+    triad_lvupdate!(treep::iTgbmct,
+                    treec::iTgbmct,
+                    α    ::Float64,
+                    σλ   ::Float64,
+                    ϵ    ::Float64,
+                    δt   ::Float64,
+                    srδt ::Float64,
+                    scond::Bool)
+
+Make a `gbmct` trio proposal.
+"""
+function triad_lvupdate!(treep::iTgbmct,
+                         treec::iTgbmct,
+                         α    ::Float64,
+                         σλ   ::Float64,
+                         ϵ    ::Float64,
+                         llc  ::Float64,
+                         δt   ::Float64,
+                         srδt ::Float64)
+
+  @inbounds begin
+
+    λpp = lλ(treep)
+    λ1p = lλ(treep.d1)
+    λ2p = lλ(treep.d2)
+    λpc = lλ(treec)
+    λ1c = lλ(treec.d1)
+    λ2c = lλ(treec.d2)
+
+    epr  = e(treec)
+    ed1  = e(treec.d1)
+    ed2  = e(treec.d2)
+    fdtp = fdt(treec)
+    fdt1 = fdt(treec.d1)
+    fdt2 = fdt(treec.d2)
+
+    λpr  = λpc[1]
+    λd1  = λ1c[end]
+    λd2  = λ2c[end]
+
+    # node proposal
+    lλp = trioprop(λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
+             epr, ed1, ed2, σλ)
+
+    # simulate fix tree vector
+    bb!(λpp, λpr, lλp, σλ, δt, fdtp, srδt)
+    bb!(λ1p, lλp, λd1, σλ, δt, fdt1, srδt)
+    bb!(λ2p, lλp, λd2, σλ, δt, fdt2, srδt)
+
+    llrbm, llrbd = 
+      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, true)
+    llrbm1, llrbd1 = 
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, !istip(treec.d1),
+        isextinct(treec.d1))
+    llrbm2, llrbd2 = 
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, !istip(treec.d2),
+        isextinct(treec.d2))
+
+    acr = llrbd + llrbd1 + llrbd2
+    llr = acr + llrbm + llrbm1 + llrbm2
+
+    if -randexp() < acr
+      llc += llr
+      copyto!(λpc, λpp)
+      copyto!(λ1c, λ1p)
+      copyto!(λ2c, λ2p)
     end
   end
 
@@ -237,93 +240,87 @@ end
 
 
 
+
 """
-    triad_lupdate_root!(treep ::iTgbmct, 
-                        treec ::iTgbmct,
-                        bbλp  ::Array{Array{Float64,1},1}, 
-                        bbλc  ::Array{Array{Float64,1},1}, 
-                        tsv   ::Array{Array{Float64,1},1}, 
-                        llc   ::Float64,
-                        pr    ::Int64,
-                        d1    ::Int64,
-                        d2    ::Int64,
-                        α     ::Float64,
-                        σλ    ::Float64,
-                        ϵ     ::Float64,
-                        δt    ::Float64, 
-                        srδt  ::Float64,
-                        lλmxpr::Float64,
-                        icr   ::Bool)
+    root_update!(treep ::iTgbmct, 
+                 treec ::iTgbmct,
+                 α     ::Float64,
+                 σλ    ::Float64,
+                 ϵ     ::Float64,
+                 δt    ::Float64, 
+                 srδt  ::Float64,
+                 lλmxpr::Float64,
+                 icr   ::Bool)
 
 Make a trio of Brownian motion MCMC updates when the root is involved.
 """
-function triad_lupdate_root!(treep ::iTgbmct, 
-                             treec ::iTgbmct,
-                             bbλp  ::Array{Array{Float64,1},1}, 
-                             bbλc  ::Array{Array{Float64,1},1}, 
-                             tsv   ::Array{Array{Float64,1},1}, 
-                             llc   ::Float64,
-                             pr    ::Int64,
-                             d1    ::Int64,
-                             d2    ::Int64,
-                             α     ::Float64,
-                             σλ    ::Float64,
-                             ϵ     ::Float64,
-                             δt    ::Float64, 
-                             srδt  ::Float64,
-                             lλmxpr::Float64,
-                             icr   ::Bool)
+function root_update!(treep ::iTgbmct, 
+                      treec ::iTgbmct,
+                      α     ::Float64,
+                      σλ    ::Float64,
+                      ϵ     ::Float64,
+                      llc   ::Float64,
+                      δt    ::Float64, 
+                      srδt  ::Float64,
+                      lλmxpr::Float64,
+                      icr   ::Bool)
 
   @inbounds begin
-    ## get reference vectors
-    # time vectors
-    tprv = tsv[pr]
-    td1v = tsv[d1]
-    td2v = tsv[d2]
 
-    # speciation vectors
-    λprv_p = bbλp[pr]
-    λd1v_p = bbλp[d1]
-    λd2v_p = bbλp[d2]
-    λprv_c = bbλc[pr]
-    λd1v_c = bbλc[d1]
-    λd2v_c = bbλc[d2]
-    lipr = lastindex(λprv_c)
-    lid1 = lastindex(λd1v_c)
-    lid2 = lastindex(λd2v_c)
-    λpr    = λprv_c[1]
-    λd1    = λd1v_c[lid1]
-    λd2    = λd2v_c[lid2]
+    λpp = lλ(treep)
+    λ1p = lλ(treep.d1)
+    λ2p = lλ(treep.d2)
+    λpc = lλ(treec)
+    λ1c = lλ(treec.d1)
+    λ2c = lλ(treec.d2)
 
-    # get fixed daughters
-    treecd1, treecd2 = fixds(treec)
-    treepd1, treepd2 = fixds(treep)
+    epr  = e(treec)
+    ed1  = e(treec.d1)
+    ed2  = e(treec.d2)
+    fdtp = fdt(treec)
+    fdt1 = fdt(treec.d1)
+    fdt2 = fdt(treec.d2)
 
-    # pendant edges
-    pepr = tprv[1]
-    ped1 = td1v[1]
-    ped2 = td2v[1]
+    λpr = λpc[1]
+    λd1 = λ1c[end]
+    λd2 = λ2c[end]
 
-    # proposal given daughters
-    lλp = duoprop(λd1 - α*ped1, λd2 - α*ped2, ped1, ped2, σλ)
-
-    # propose for root
-    lλrp = rnorm(lλp - α*pepr, sqrt(pepr)*σλ)
+    if icr
+      # node proposal
+      lλp  = duoprop(λd1 - α*ed1, λd2 - α*ed2, ed1, ed2, σλ)
+      lλrp = lλp
+    else
+      # node proposal
+      lλp = trioprop(λpr + α*epr, λd1 - α*ed1, λd2 - α*ed2, 
+             epr, ed1, ed2, σλ)
+      # propose for root
+      lλrp = rnorm(lλp - α*epr, sqrt(epr)*σλ)
+    end
 
     # simulate fix tree vector
-    bb!(λprv_p, lλrp, lλp, tprv[2], σλ, δt, srδt)
-    bb!(λd1v_p, lλp,  λd1, td1v[2], σλ, δt, srδt)
-    bb!(λd2v_p, lλp,  λd2, td2v[2], σλ, δt, srδt)
+    bb!(λpp, lλrp, lλp, σλ, δt, fdtp, srδt)
+    bb!(λ1p, lλp,  λd1, σλ, δt, fdt1, srδt)
+    bb!(λ2p, lλp,  λd2, σλ, δt, fdt2, srδt)
 
-    # fill fix and simulate unfix tree
-    bm!(treep,   λprv_p, 1, lipr, α, σλ, δt, srδt)
-    bm!(treepd1, λd1v_p, 1, lid1, α, σλ, δt, srδt)
-    bm!(treepd2, λd2v_p, 1, lid2, α, σλ, δt, srδt)
+    llrbm, llrbd = 
+      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, true, false)
+    llrbm1, llrbd1 = 
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, !istip(treec.d1),
+        isextinct(treec.d1))
+    llrbm2, llrbd2 = 
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, !istip(treec.d2),
+        isextinct(treec.d2))
 
-    ## make acceptance and likelihood ratio 
-    llr, acr = llr_propr(treep, treepd1, treepd2, 
-                         treec, treecd1, treecd2, 
-                         α, σλ, ϵ, δt, srδt, icr, 0)
+    if icr 
+      llrcond = cond_surv_crown(treep, ϵ) -
+                cond_surv_crown(treec, ϵ)
+    else
+      llrcond = cond_surv_stem(treep, ϵ) -
+                cond_surv_stem(treec, ϵ)
+    end
+
+    acr = llrbd + llrbd1 + llrbd2 + llrcond
+    llr = acr + llrbm + llrbm1 + llrbm2
 
     # prior ratio
     if lλrp > lλmxpr
@@ -332,73 +329,15 @@ function triad_lupdate_root!(treep ::iTgbmct,
 
     if -randexp() < acr
       llc += llr
-      unsafe_copyto!(λprv_c, 1, λprv_p, 1, lipr)
-      unsafe_copyto!(λd1v_c, 1, λd1v_p, 1, lid1)
-      unsafe_copyto!(λd2v_c, 1, λd2v_p, 1, lid2)
-      gbm_copy_f!(treec, treep)
-      gbm_copy_f!(treecd1, treepd1)
-      gbm_copy_f!(treecd2, treepd2)
-    end
+      copyto!(λpc, λpp)
+      copyto!(λ1c, λ1p)
+      copyto!(λ2c, λ2p)
+    end 
   end
-
+  
   return llc
 end
 
 
 
-
-"""
-    llr_propr(treep  ::iTgbmct,
-              treepd1::iTgbmct,
-              treepd2::iTgbmct,
-              treec  ::iTgbmct,
-              treecd1::iTgbmct,
-              treecd2::iTgbmct,
-              ϵ      ::Float64,
-              σλ     ::Float64,
-              δt     ::Float64,
-              srδt   ::Float64,
-              icr    ::Bool,
-              wbc    ::Int64)
-
-Return the likelihood and proposal ratio for birth-death gbm.
-"""
-function llr_propr(treep  ::iTgbmct,
-                   treepd1::iTgbmct,
-                   treepd2::iTgbmct,
-                   treec  ::iTgbmct,
-                   treecd1::iTgbmct,
-                   treecd2::iTgbmct,
-                   α      ::Float64,
-                   σλ     ::Float64,
-                   ϵ      ::Float64,
-                   δt     ::Float64,
-                   srδt   ::Float64,
-                   icr    ::Bool,
-                   wbc    ::Int64)
-
-  llrbm_pr, llrbd_pr = llr_gbm_sep_f(treep,   treec,   α, σλ, ϵ, δt, srδt)
-  llrbm_d1, llrbd_d1 = llr_gbm_sep_f(treepd1, treecd1, α, σλ, ϵ, δt, srδt)
-  llrbm_d2, llrbd_d2 = llr_gbm_sep_f(treepd2, treecd2, α, σλ, ϵ, δt, srδt)
-
-  llrcond = 0.0
-
-  if iszero(wbc)
-    if icr 
-      llrcond += cond_surv_crown(treep, ϵ) -
-                 cond_surv_crown(treec, ϵ)
-    else
-      llrcond += cond_surv_stem(treep, ϵ) -
-                 cond_surv_stem(treec, ϵ)
-    end
-  elseif isone(wbc) && icr
-    llrcond += cond_surv_stem(treep, ϵ) -
-               cond_surv_stem(treec, ϵ)
-  end
-
-  acr = llrbd_pr + llrbd_d1 + llrbd_d2 + llrcond
-  llr = acr + llrbm_pr + llrbm_d1 + llrbm_d2
-
-  return llr, acr
-end
 

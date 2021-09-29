@@ -271,7 +271,9 @@ function iTgbmpb(e0::Array{Int64,1},
     n1, n2   = e1[ei1:ei2]
     return iTgbmpb(iTgbmpb(e0, e1, el, λs, ea, n1, ei1, δt), 
                    iTgbmpb(e0, e1, el, λs, ea, n2, ei2, δt), 
-                   el[ei], δt, δt, λs[ei])
+                   el[ei], δt, 
+                   (el[ei] == 0.0 ? 0.0 : δt), 
+                   λs[ei])
   end
 end
 
@@ -463,7 +465,7 @@ function iTgbmce(e0::Array{Int64,1},
     n1, n2   = e1[ei1:ei2]
     return iTgbmce(iTgbmce(e0, e1, el, λs, ea, ee, n1, ei1, δt), 
                    iTgbmce(e0, e1, el, λs, ea, ee, n2, ei2, δt), 
-                   el[ei], δt, δt, false, false, λs[ei])
+                   el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), false, false, λs[ei])
   end
 end
 
@@ -640,7 +642,7 @@ function iTgbmct(e0::Array{Int64,1},
     n1, n2   = e1[ei1:ei2]
     return iTgbmct(iTgbmct(e0, e1, el, λs, ea, ee, n1, ei1, δt), 
                    iTgbmct(e0, e1, el, λs, ea, ee, n2, ei2, δt), 
-                   el[ei], δt, δt, false, false, λs[ei])
+                   el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), false, false, λs[ei])
   end
 end
 
@@ -795,8 +797,6 @@ end
 
 
 
-
-
 """
     iTgbmbd(e0::Array{Int64,1}, 
             e1::Array{Int64,1}, 
@@ -833,6 +833,7 @@ function iTgbmbd(e0::Array{Int64,1},
     n1, n2   = e1[ei1:ei2]
     return iTgbmbd(iTgbmbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt), 
                    iTgbmbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt), 
-                   el[ei], δt, δt, false, false, λs[ei], μs[ei])
+                   el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), 
+                   false, false, λs[ei], μs[ei])
   end
 end

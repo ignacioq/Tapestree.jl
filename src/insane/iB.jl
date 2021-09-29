@@ -339,7 +339,7 @@ tf(id::iB) = getproperty(id, :tf)
 """
     it(id::iBf)
 
-Return final absolute time.
+Return if is terminal.
 """
 it(id::iBf) = getproperty(id, :it)
 
@@ -349,7 +349,8 @@ it(id::iBf) = getproperty(id, :it)
 """
     sc(id::iBffs)
 
-Return final absolute time.
+Return `0` if stem branch, `1` if either of the crown branches and `23` if 
+another plebeian branch.
 """
 sc(id::iBffs) = getproperty(id, :sc)
 
