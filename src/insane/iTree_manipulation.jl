@@ -154,8 +154,14 @@ function _cutbottom(tree::iTgbmpb,
     fδt = fdt(tree)
 
     # find final lλ
-    ix  = fld(c - t, δt)
-    Ix  = Int64(ix) + 1
+    if isapprox(c - t, et)
+      Ix = lastindex(lλv) - 1
+      ix = Float64(Ix) - 1.0
+    else
+      ix  = fld(c - t, δt)
+      Ix  = Int64(ix) + 1
+    end
+
     tii = ix*δt
     tff = tii + δt
     if tff > et
@@ -200,8 +206,13 @@ function _cutbottom(tree::T,
     fδt = fdt(tree)
 
     # find final lλ
-    ix  = fld(c - t, δt)
-    Ix  = Int64(ix) + 1
+    if isapprox(c - t, et)
+      Ix = lastindex(lλv) - 1
+      ix = Float64(Ix) - 1.0
+    else
+      ix  = fld(c - t, δt)
+      Ix  = Int64(ix) + 1
+    end
     tii = ix*δt
     tff = tii + δt
     if tff > et
@@ -247,8 +258,13 @@ function _cutbottom(tree::iTgbmbd,
     fδt = fdt(tree)
 
     # find final lλ & lμ
-    ix  = fld(c - t, δt)
-    Ix  = Int64(ix) + 1
+    if isapprox(c - t, et)
+      Ix = lastindex(lλv) - 1
+      ix = Float64(Ix) - 1.0
+    else
+      ix  = fld(c - t, δt)
+      Ix  = Int64(ix) + 1
+    end
     tii = ix*δt
     tff = tii + δt
     if tff > et
