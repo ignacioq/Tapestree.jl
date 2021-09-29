@@ -62,7 +62,7 @@ function sim_gbmpb(n       ::Int64;
     return iTgbmpb()
   else
     # cut the tree
-    tc = cutbottom(deepcopy(t), c)
+    t = cutbottom(t, c)
     return t
   end
 end
