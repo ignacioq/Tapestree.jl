@@ -50,7 +50,7 @@ rexp(r::Float64) = @fastmath randexp()/r
 
 Return `true` if speciation event
 """
-λorμ(λ::Float64, μ::Float64) = (λ/(λ + μ)) > rand() ? true : false
+λorμ(λ::Float64, μ::Float64) = (λ/(λ + μ)) > rand()
 
 
 
@@ -94,7 +94,7 @@ function sim_cbd_b(n::Int64,
   nI = n
 
   # disjoint trees vector 
-  tv = T[]
+  tv = sTbd[]
   for i in Base.OneTo(nI)
     push!(tv, sTbd(0.0))
   end
@@ -104,13 +104,13 @@ function sim_cbd_b(n::Int64,
     w = cbd_wait(nF, λ, μ)
 
     for t in tv
-      addpe!(t, w)
+      adde!(t, w)
     end
 
     # if speciation
     if λorμ(λ, μ)
       if isone(nI)
-        return tv[nI] 
+        return tv[nI]
       else
         j, k = samp2(Base.OneTo(nI))
         tv[j] = sTbd(tv[j], tv[k], 0.0)
@@ -148,7 +148,7 @@ function sim_cbd_b(λ::Float64,
   nI = 1
 
   # disjoint trees vector 
-  tv = [sTbd(0.0, true)]
+  tv = [sTbd(0.0, false)]
 
   th = 0.0
 
@@ -168,7 +168,7 @@ function sim_cbd_b(λ::Float64,
     end
 
     for t in tv
-      addpe!(t, w)
+      adde!(t, w)
     end
 
     # if speciation
