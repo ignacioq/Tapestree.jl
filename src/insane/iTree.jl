@@ -37,7 +37,7 @@ abstract type sT <: iTree end
 """
     sTpb
 
-The simplest composite recursive type of supertype `iTree` 
+The simplest composite recursive type of supertype `sT` 
 representing a binary phylogenetic tree for `insane` use, 
 with the following fields:
 
@@ -77,7 +77,7 @@ Base.show(io::IO, t::sTpb) =
 """
     sTbd
 
-The simplest composite recursive type of supertype `sTbdree` 
+The simplest composite recursive type of supertype `sT` 
 representing a binary phylogenetic tree for `insane` use, 
 with the following fields:
 

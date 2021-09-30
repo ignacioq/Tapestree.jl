@@ -74,6 +74,28 @@ isalive(tree::T) where {T <: iTree} = !getproperty(tree, :iμ)
 
 
 """
+    isfossil(tree::T) where {T <: iTree}
+
+Return if is a fossil tip node.
+"""
+isfossil(tree::T) where {T <: iTree} = istip(tree) && isextinct(tree) && isfix(tree)
+
+
+
+
+"""
+    isfossil(tree::sTpb)
+    isfossil(tree::iTgbmpb)
+
+Return if is a fossil tip node.
+"""
+isfossil(tree::sTpb) = false
+isfossil(tree::iTgbmpb) = false
+
+
+
+
+"""
     e(tree::T) where {T <: iTree}
 
 Return edge length.
