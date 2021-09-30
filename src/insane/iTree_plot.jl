@@ -334,7 +334,9 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   grid            --> :off
   tick_direction  --> :out
   seriestype      --> :steppost
-  yaxis           --> :log
+  if maximum(y)>=10
+    yaxis         --> :log
+  end
 
   return  x, y
 end

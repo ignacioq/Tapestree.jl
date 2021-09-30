@@ -726,7 +726,7 @@ function graftree!(tree ::T,
   if ix === ldr 
     if thc > h > (thc - e(tree))
       ne = thc - h
-      addpe!(tree, -ne)
+      adde!(tree, -ne)
       tree = rand() <= 0.5 ? T(tree, stree, ne, false, true) :
                              T(stree, tree, ne, false, true)
     else
@@ -1140,7 +1140,7 @@ sete!(tree::T, e::Float64) where {T <: iTree} = setproperty!(tree, :e, e)
 
 
 """
-  addpe!(tree::T, e::Float64) where {T <: iTree}
+  adde!(tree::T, e::Float64) where {T <: iTree}
 
 Add `e` to edge of `tree`.
 """

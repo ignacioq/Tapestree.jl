@@ -513,11 +513,7 @@ Return `true` if fix branch goes extinct for GBM forward simulation.
 function ifxe(tree::T) where T <: iTree
 
   if istip(tree)
-    if isextinct(tree)
-      return true
-    else
-      return false
-    end
+    return isextinct(tree)
   else
     if isfix(tree.d1)
       ifxe(tree.d1)
@@ -788,10 +784,8 @@ function ltt(tree::T) where {T <: iTree}
   # speciation and extinction events
   se, ee = eventimes(tree)
 
-  sort!(se)
   # which ones are extinctions when appended
   ii = lastindex(se)
-  sort!(ee)
 
   append!(se, ee)
   l = lastindex(se)
@@ -813,6 +807,27 @@ function ltt(tree::T) where {T <: iTree}
   pushfirst!(se, 0.0)
 
   return Ltt(n, se)
+end
+
+
+
+
+"""
+    ltt2(tree::T) where {T <: iTree}
+
+Returns number of species through time.
+"""
+function ltt2(tree::T) where {T <: iTree}
+  # speciation and extinction events
+  se, ee = eventimes(tree)
+  # start with 1 lineage
+  push!(se,0.0)
+
+  events = vcat(se, ee)
+  jumps_order = sortperm(events)
+  jumps = append!(fill(1,lastindex(se)), fill(-1,lastindex(ee)))[jumps_order]
+  
+  return Ltt(cumsum(jumps), events[jumps_order])
 end
 
 
