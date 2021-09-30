@@ -23,32 +23,34 @@ Sample conditional on number of species
 
 
 """
-    sim_gbmce(n    ::Int64;
-              λ0   ::Float64 = 1.0, 
-              α    ::Float64 = 0.0, 
-              σλ   ::Float64 = 0.1, 
-              μ    ::Float64 = 0.0,
-              δt   ::Float64 = 1e-3,
-              nstar::Int64   = 2*n,
-              p    ::Float64 = 5.0,
-              warnings::Bool = true))
+    sim_gbmce(n       ::Int64;
+              λ0      ::Float64 = 1.0, 
+              α       ::Float64 = 0.0, 
+              σλ      ::Float64 = 0.1, 
+              μ       ::Float64 = 0.0,
+              δt      ::Float64 = 1e-3,
+              start   ::Symbol  = :stem,
+              nstar   ::Int64   = 2*n,
+              p       ::Float64 = 5.0,
+              warnings::Bool    = true)
 
 Simulate `iTgbmce` according to a geometric Brownian motion for birth rates and 
 constant extinction.
 """
-function sim_gbmce(n    ::Int64;
-                   λ0   ::Float64    = 1.0, 
-                   α    ::Float64    = 0.0, 
-                   σλ   ::Float64    = 0.1, 
-                   μ    ::Float64    = 0.0,
-                   δt   ::Float64    = 1e-3,
-                   nstar::Int64      = 2*n,
+function sim_gbmce(n       ::Int64;
+                   λ0      ::Float64 = 1.0, 
+                   α       ::Float64 = 0.0, 
+                   σλ      ::Float64 = 0.1, 
+                   μ       ::Float64 = 0.0,
+                   δt      ::Float64 = 1e-3,
+                   start   ::Symbol  = :stem,
+                   nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, ee, na, simt = 
-    _sedges_gbmce(nstar, log(λ0), α, σλ, μ, δt, sqrt(δt))
+    _sedges_gbmce(nstar, log(λ0), α, σλ, μ, δt, sqrt(δt), start)
 
   # transform to iTree
   t = iTgbmce(e0, e1, el, λs, ea, ee, e1[1], 1, δt)
@@ -89,40 +91,71 @@ end
 Simulate `gbmce` just until hitting `n` alive species. Note that this is 
 a biased sample for a tree conditional on `n` species.
 """
-function _sedges_gbmce(n   ::Int64, 
-                       λ0  ::Float64, 
-                       α   ::Float64, 
-                       σλ  ::Float64, 
-                       μ   ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+function _sedges_gbmce(n    ::Int64, 
+                       λ0   ::Float64, 
+                       α    ::Float64, 
+                       σλ   ::Float64, 
+                       μ    ::Float64,
+                       δt   ::Float64,
+                       srδt ::Float64,
+                       start::Symbol)
 
   # edges
   e0 = Int64[]
   e1 = Int64[]
   # edges extinct
   ee = Int64[]
-  # edges alive
-  ea = [1]
-  # first edge
-  push!(e0, 1)
-  push!(e1, 2)
-  # max index
-  mxi0 = n*2
-  # edge lengths
-  el = [0.0]
-  # lambda vector for each edge
-  λs = [Float64[]]
 
-  na = 1 # current number of alive species
-  ne = 2 # current maximum node number
-  ieaa = Int64[] # indexes of ea to add
-  iead = Int64[] # indexes of ea to delete
+  if start == :stem
+    # edges alive
+    ea = [1]
+    # first edge
+    push!(e0, 1)
+    push!(e1, 2)
+    # max index
+    mxi0 = n*2
+    # edge lengths
+    el = [0.0]
+    # lambda vector for each edge
+    λs = [Float64[]]
+    # starting speciation rate 
+    push!(λs[1], λ0)
+    # lastindex for each edge
+    li = [1]
 
-  # starting speciation rate 
-  push!(λs[1], λ0)
-  # lastindex for each edge
-  li = [1]
+    na = 1 # current number of alive species
+    ne = 2 # current maximum node number
+    ieaa = Int64[] # indexes of ea to add
+    iead = Int64[] # indexes of ea to delete
+
+  elseif start == :crown
+    # edges alive
+    ea = [2, 3]
+    # first edges
+    push!(e0, 1, 2, 2)
+    push!(e1, 2, 3, 4)
+    # max index
+    mxi0 = n*2
+    # edge lengths
+    el = [0.0, 0.0, 0.0]
+    # lambda vector for each edge
+    λs = [Float64[], Float64[], Float64[]]
+    # starting speciation rate 
+    push!(λs[1], λ0, λ0)
+    push!(λs[2], λ0)
+    push!(λs[3], λ0)
+    # lastindex for each edge
+    li = [2, 1, 1]
+
+    na = 2 # current number of alive species
+    ne = 4 # current maximum node number
+    ieaa = Int64[] # indexes of ea to add
+    iead = Int64[] # indexes of ea to delete
+
+  else
+    @error "$start does not match stem or crown"
+  end
+
 
   # simulation time
   simt = 0.0

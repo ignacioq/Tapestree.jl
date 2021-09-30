@@ -656,20 +656,60 @@ end
 """
     drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64)
 
-Returns the tree given by `dr`. Assuming no unfix branches.
+Returns the tree given by `dr`, circumventing unfix branches.
 """
-function drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64) where T <: iTree
+function drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64) where T <: iTgbm
   if ldr === ix
     return tree
   elseif ldr > ix
-    ix += 1
-    if dri[ix]
-      drtree(tree.d1::iTgbmbd, dri, ldr, ix)
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      ix += 1
+      if dri[ix]
+        drtree(tree.d1::T, dri, ldr, ix)
+      else
+        drtree(tree.d2::T, dri, ldr, ix)
+      end
+    elseif ifx1
+      drtree(tree.d1::T, dri, ldr, ix)
     else
-      drtree(tree.d2::iTgbmbd, dri, ldr, ix)
+      drtree(tree.d2::T, dri, ldr, ix)
     end
   end
 end
+
+
+
+"""
+    drtree(treec::T, treep::T, dri::BitArray{1}, ldr::Int64, ix::Int64)
+
+Returns the trees given by `dr`, circumventing unfix branches.
+"""
+function drtree(treec::T, 
+                treep::T, 
+                dri  ::BitArray{1}, 
+                ldr  ::Int64, 
+                ix   ::Int64) where T <: iTree
+
+  if ldr === ix
+    return treec, treep
+  elseif ldr > ix
+    ifx1 = isfix(treec.d1)
+    if ifx1 && isfix(treec.d2)
+      ix += 1
+      if dri[ix]
+        drtree(treec.d1::T, treep.d1::T, dri, ldr, ix)
+      else
+        drtree(treec.d2::T, treep.d2::T, dri, ldr, ix)
+      end
+    elseif ifx1
+      drtree(treec.d1::T, treep.d1::T, dri, ldr, ix)
+    else
+      drtree(treec.d2::T, treep.d2::T, dri, ldr, ix)
+    end
+  end
+end
+
 
 
 
