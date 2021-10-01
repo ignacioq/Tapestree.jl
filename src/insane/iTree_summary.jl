@@ -51,7 +51,7 @@ end
 """
     time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
 
-Extract values from `lv` function at times `ts` across the tree.
+Extract values from `lv` function at times sampled every `tdt` across the tree.
 """
 function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
 
