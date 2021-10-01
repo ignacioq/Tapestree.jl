@@ -96,6 +96,25 @@ isfossil(tree::iTgbmpb) = false
 
 
 """
+    isSampledAncestor(tree::T; propagate::Bool=false) where {T <: iTree}
+
+Return if is a sampled ancestor, i.e. a fossil tip node with 0.0 edge length. 
+If propagate == true, also includes the internal node associated with the 
+sampled ancestor.
+"""
+function isSampledAncestor(tree::T; propagate::Bool=false) where {T <: iTree}
+  sa = isfossil(tree) && (tree.e == 0.0)
+  # if true, propagate the evaluation to the node's daughters
+  if (propagate && isdefined(tree, :d1))
+    sa = sa || isSampledAncestor(tree.d1) || isSampledAncestor(tree.d2)
+  end
+  return sa
+end
+
+
+
+
+"""
     e(tree::T) where {T <: iTree}
 
 Return edge length.
