@@ -44,14 +44,14 @@ function sim_gbmpb(n       ::Int64;
                    nstar   ::Int64   = n + 2,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
-                   maxt    ::FLoat64 = δt*1e6)
+                   maxt    ::Float64 = δt*1e6)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, na, simt = 
     _sedges_gbmpb(nstar, log(λ0), α, σλ, δt, sqrt(δt), start, maxt)
 
-  if simt > maxt
-    warnings && @warn "simulation "
+  if simt >= maxt
+    warnings && @warn "simulation surpassed maximum time"
   end
 
   # transform to iTree
