@@ -114,25 +114,6 @@ isSampledAncestor(tree::T) where {T <: iTree} = isfossil(tree) && !istip(tree)
 
 
 """
-    isSampledAncestor(tree::T; propagate::Bool=false) where {T <: iTree}
-
-Return if is a sampled ancestor, i.e. a fossil tip node with 0.0 edge length. 
-If propagate == true, also includes the internal node associated with the 
-sampled ancestor.
-"""
-#function isSampledAncestor(tree::T; propagate::Bool=false) where {T <: iTree}
-#  sa = isfossil(tree) && (tree.e == 0.0)
-#  # if true, propagate the evaluation to the node's daughters
-#  if (propagate && isdefined(tree, :d1))
-#    sa = sa || isSampledAncestor(tree.d1) || isSampledAncestor(tree.d2)
-#  end
-#  return sa
-#end
-
-
-
-
-"""
     e(tree::T) where {T <: iTree}
 
 Return edge length.
@@ -180,8 +161,8 @@ Return the branch length sum of `tree`, initialized at l.
 function _treelength(tree::T, l::Float64) where {T <: iTree}
   l += e(tree)
   
-  if isdefined(tree, :d1) l = treelength(tree.d1, l)::Float64 end
-  if isdefined(tree, :d2) l = treelength(tree.d2, l)::Float64 end
+  if isdefined(tree, :d1) l = _treelength(tree.d1, l)::Float64 end
+  if isdefined(tree, :d2) l = _treelength(tree.d2, l)::Float64 end
   
   return l
 end

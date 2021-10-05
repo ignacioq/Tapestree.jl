@@ -152,6 +152,11 @@ Constructs an empty `sTfbd` object with edge `e`.
     sTfbd(d1::sTfbd, d2::sTfbd, e::Float64)
 
 Constructs an `sTfbd` object with two `sTfbd` daughters and edge `e`.
+
+    sTfbd(d1::sTfbd, e::Float64)
+
+Constructs an `sTfbd` object with one sampled ancestor, one `sTfbd` daughter and 
+edge `e`.
 """
 mutable struct sTfbd <: sT
   d1::sTfbd
