@@ -401,7 +401,7 @@ sure that the daughters of `dtree` are fixed.
 """
 function addtree(tree::T, dtree::T) where {T <: iTree}
 
-  if istip(tree::T) && !isextinct(tree::T)
+  if istip(tree::T) && isalive(tree::T)
 
     dtree = fixdstree(dtree)
 
@@ -705,7 +705,7 @@ function fixrtip!(tree::T, na::Int64) where T <: iTree
     elseif isextinct(tree.d2::T)
       fixrtip!(tree.d1::T, na)
     else
-      na1 = snan(tree.d1::T, 0)
+      na1 = ntipsalive(tree.d1::T)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
         fixrtip!(tree.d2::T, na - na1)

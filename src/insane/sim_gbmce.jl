@@ -55,7 +55,7 @@ function sim_gbmce(n       ::Int64;
   # transform to iTree
   t = iTgbmce(e0, e1, el, λs, ea, ee, e1[1], 1, δt)
 
-  if iszero(snan(t, 0))
+  if iszero(ntipsalive(t))
     warnings && @warn "tree went extinct"
     return t
   end

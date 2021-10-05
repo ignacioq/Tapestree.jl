@@ -69,7 +69,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::sTpb) = 
-  print(io, "insane simple pure-birth tree with ", sntn(t,0), " tips")
+  print(io, "insane simple pure-birth tree with ", ntips(t), " tips")
 
 
 
@@ -121,7 +121,69 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::sTbd) = 
-  print(io, "insane simple birth-death tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
+  print(io, "insane simple birth-death tree with ", ntips(t), " tips (", 
+    ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    sTfbd
+
+The simplest composite recursive type of supertype `sT` 
+representing a binary phylogenetic tree for `insane` use, 
+with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  iμ: is an extinction node
+  iψ: is a fossil node
+  fx: if it is fix
+
+    sTfbd()
+
+Constructs an empty `sTfbd` object.
+
+    sTfbd(e::Float64)
+
+Constructs an empty `sTfbd` object with edge `e`.
+
+    sTfbd(d1::sTfbd, d2::sTfbd, e::Float64)
+
+Constructs an `sTfbd` object with two `sTfbd` daughters and edge `e`.
+"""
+mutable struct sTfbd <: sT
+  d1::sTfbd
+  d2::sTfbd
+  e ::Float64
+  iμ::Bool
+  iψ::Bool
+  fx::Bool
+
+  sTfbd() = new()
+  sTfbd(e::Float64) = 
+    (x = new(); x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
+  sTfbd(e::Float64, iμ::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = false; x)
+  sTfbd(e::Float64, iμ::Bool, fx::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iμ && fx; x.fx = fx; x)
+  sTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
+  sTfbd(d1::sTfbd, d2::sTfbd, e::Float64) = 
+    new(d1, d2, e, false, false, false)
+  sTfbd(d1::sTfbd, e::Float64) = 
+    (x = new(); x.d1 = d1; x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
+  sTfbd(d1::sTfbd, d2::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
+    new(d1, d2, e, iμ, iψ, fx)
+  sTfbd(d1::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
+    (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
+end
+
+# pretty-printing
+Base.show(io::IO, t::sTfbd) = 
+  print(io, "insane simple fossilized birth-death tree with ", ntips(t), 
+    " tips (", ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
 
 
 
@@ -186,7 +248,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
-  print(io, "insane pb-gbm tree with ", sntn(t,0), " tips")
+  print(io, "insane pb-gbm tree with ", ntips(t), " tips")
 
 
 
@@ -356,7 +418,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmce) = 
-  print(io, "insane gbm-ce tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
+  print(io, "insane gbm-ce tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
@@ -533,7 +595,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmct) = 
-  print(io, "insane gbm-ct tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
+  print(io, "insane gbm-ct tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
@@ -715,7 +777,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 
-  print(io, "insane bd-gbm tree with ", sntn(t,0), " tips (", snen(t,0)," extinct)")
+  print(io, "insane bd-gbm tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 

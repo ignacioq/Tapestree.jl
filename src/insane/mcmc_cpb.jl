@@ -36,8 +36,8 @@ function insane_cpb(tree    ::sTpb,
                     obj_ar  ::Float64 = 0.4)
 
   # tree characters
-  tl = treelength(tree, 0.0)
-  nt = sntn(tree)
+  tl = treelength(tree)
+  nt = ntips(tree)
 
   scalef = makescalef(obj_ar)
 

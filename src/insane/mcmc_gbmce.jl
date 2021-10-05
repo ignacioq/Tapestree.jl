@@ -64,7 +64,7 @@ function insane_gbmce(tree    ::sTbd,
   fixtree!(tree)
 
   # `n` tips, `th` treeheight define δt
-  n    = sntn(tree, 0)
+  n    = ntips(tree)
   th   = treeheight(tree)
   δt  *= max(0.1,round(th, RoundDown, digits = 2))
   srδt = sqrt(δt)
@@ -414,7 +414,7 @@ function mcmc_gbmce(Ψp      ::iTgbmce,
         R[lit,5] = αc
         R[lit,6] = σλc
         R[lit,7] = μc
-        R[lit,8] = snen(Ψc, 0)
+        R[lit,8] = ntipsextinct(Ψc)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -601,7 +601,7 @@ function fsbi_ce(bi  ::iBffs,
   # simulate tree
   t0, nsp = _sim_gbmce(ti(bi) - tfb, iλ, α, σλ, μ, δt, srδt, 1, nlim)
 
-  na = snan(t0, 0)
+  na = ntipsalive(t0)
 
   λf, dft0 = NaN, NaN
 
@@ -635,7 +635,7 @@ function fsbi_ce(bi  ::iBffs,
             continue
           end
           # if goes extinct before the present
-          if iszero(snan(st0, 0))
+          if iszero(ntipsalive(st0))
             # graft to tip
             addtotip(t0, st0, false)
             break
@@ -731,7 +731,7 @@ function fixrtip!(tree::T,
     elseif isextinct(tree.d2)
       λf, dft0 = fixrtip!(tree.d1, na, λf, dft0)
     else
-      na1 = snan(tree.d1, 0)
+      na1 = ntipsalive(tree.d1)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
         λf, dft0 = fixrtip!(tree.d2, na - na1, λf, dft0)

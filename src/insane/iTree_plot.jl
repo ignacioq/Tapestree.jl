@@ -129,8 +129,8 @@ function _rplottree!(tree::T,
   push!(z, zv[l], NaN)
 
   if isdefined(tree, :d1)
-    ntip1 = sntn(tree.d1, 0)
-    ntip2 = sntn(tree.d2, 0)
+    ntip1 = ntips(tree.d1)
+    ntip2 = ntips(tree.d2)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
@@ -168,7 +168,7 @@ Recipe for plotting a Type `iTgbm`.
   z = Float64[]
 
   th = treeheight(tree)
-  nt = sntn(tree, 0)
+  nt = ntips(tree)
 
   _rplottree!(tree, th, 1:nt, zfun, x, y, z)
 
@@ -206,7 +206,7 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   z = Float64[]
 
   th = treeheight(tree)
-  nt = sntn(tree, 0)
+  nt = ntips(tree)
 
   _rplottree!(tree, th, 1:nt, zfun, x, y, z)
 
@@ -259,8 +259,8 @@ function _rplottree!(tree::T,
   push!(y, yc, yc, NaN)
 
   if isdefined(tree, :d1)
-    ntip1 = sntn(tree.d1, 0)
-    ntip2 = sntn(tree.d2, 0)
+    ntip1 = ntips(tree.d1)
+    ntip2 = ntips(tree.d2)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
@@ -290,7 +290,7 @@ Recipe for plotting a Type `iTree`.
   y = Float64[]
 
   th = treeheight(tree)
-  nt = sntn(tree, 0)
+  nt = ntips(tree)
 
   _rplottree!(tree, th, 1:nt, x, y)
 
