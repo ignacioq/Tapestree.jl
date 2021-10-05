@@ -50,11 +50,16 @@ function sim_gbmbd(n       ::Int64;
                    δt      ::Float64 = 1e-3,
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
-                   warnings::Bool    = true)
+                   warnings::Bool    = true,
+                   maxt    ::Float64 = δt*1e6)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, μs, ea, ee, na, simt = 
-    _sedges_gbmbd(nstar, log(λ0), log(μ0), α, σλ, σμ, δt, sqrt(δt), start)
+    _sedges_gbmbd(nstar, log(λ0), log(μ0), α, σλ, σμ, δt, sqrt(δt), start, maxt)
+
+  if simt >= maxt
+    warnings && @warn "simulation surpassed maximum time"
+  end
 
   # transform to iTree
   t = iTgbmbd(e0, e1, el, λs, μs, ea, ee, e1[1], 1, δt)
@@ -105,14 +110,14 @@ function _sedges_gbmbd(n    ::Int64,
                        σμ   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       start::Symbol)
+                       start::Symbol,
+                       maxt ::Float64)
 
   # edges
   e0 = Int64[]
   e1 = Int64[]
   # edges extinct
   ee = Int64[]
-
 
   if start == :stem
     # edges alive
@@ -179,6 +184,11 @@ function _sedges_gbmbd(n    ::Int64,
 
       # keep track of time
       simt += δt
+
+      # time guard
+      if simt > maxt
+        return e0, e1, el, λs, ea, ee, na, simt
+      end
 
       # one time step for all edges alive `ea`
       for (i,v) in enumerate(ea)

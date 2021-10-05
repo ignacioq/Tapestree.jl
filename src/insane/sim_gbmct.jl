@@ -47,11 +47,16 @@ function sim_gbmct(n    ::Int64;
                    start   ::Symbol  = :stem,
                    nstar::Int64      = 2*n,
                    p       ::Float64 = 5.0,
-                   warnings::Bool    = true)
+                   warnings::Bool    = true,
+                   maxt    ::Float64 = δt*1e6)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, ee, na, simt = 
-    _sedges_gbmct(nstar, log(λ0), α, σλ, ϵ, δt, sqrt(δt), start)
+    _sedges_gbmct(nstar, log(λ0), α, σλ, ϵ, δt, sqrt(δt), start, maxt)
+
+  if simt >= maxt
+    warnings && @warn "simulation surpassed maximum time"
+  end
 
   # transform to iTree
   t = iTgbmct(e0, e1, el, λs, ea, ee, e1[1], 1, δt)
@@ -100,7 +105,8 @@ function _sedges_gbmct(n    ::Int64,
                        ϵ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       start::Symbol)
+                       start::Symbol,
+                       maxt ::Float64)
 
   # edges
   e0 = Int64[]
@@ -167,6 +173,11 @@ function _sedges_gbmct(n    ::Int64,
 
       # keep track of time
       simt += δt
+
+      # time guard
+      if simt > maxt
+        return e0, e1, el, λs, ea, ee, na, simt
+      end
 
       # one time step for all edges alive `ea`
       for (i,v) in enumerate(ea)
