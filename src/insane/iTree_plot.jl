@@ -128,27 +128,32 @@ function _rplottree!(tree::T,
   push!(y, yc, NaN)
   push!(z, zv[l], NaN)
 
-  if isdefined(tree, :d1)
+  xc -= e(tree)
+  
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+
     ntip1 = ntips(tree.d1)
     ntip2 = ntips(tree.d2)
 
+    # add vertical lines
+    push!(x, xc, xc, NaN)
+
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+    push!(y, Float64(yr1[1] + yr1[end])*0.5,
+             Float64(yr2[1] + yr2[end])*0.5,
+             NaN)
 
-    xcmpe = xc - e(tree)
-    # add vertical lines
-    push!(x, xcmpe, xcmpe)
-    push!(y, Float64(yr1[1] + yr1[end])*0.5, 
-             Float64(yr2[1] + yr2[end])*0.5)
-    push!(z, z[end-1])
-    push!(z, z[end-2])
+    push!(z, z[end-1], z[end-1], NaN)
 
-    push!(x, NaN)
-    push!(y, NaN)
-    push!(z, NaN)
-
-    _rplottree!(tree.d1, xcmpe, yr1, zfun, x, y, z)
-    _rplottree!(tree.d2, xcmpe, yr2, zfun, x, y, z)
+    _rplottree!(tree.d1, xc, yr1, zfun, x, y, z)
+    _rplottree!(tree.d2, xc, yr2, zfun, x, y, z)
+  
+  elseif defd1  _rplottree!(tree.d1, xc, yr, zfun, x, y, z)
+  elseif defd2  _rplottree!(tree.d2, xc, yr, zfun, x, y, z)
   end
 
 end
@@ -161,7 +166,7 @@ end
 
 Recipe for plotting a Type `iTgbm`.
 """
-@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
+@recipe function f(tree::T, zfun::Function; shownodes=false) where {T <: iTgbm}
 
   x = Float64[]
   y = Float64[]
@@ -176,6 +181,7 @@ Recipe for plotting a Type `iTgbm`.
   line_z          --> z
   linecolor       --> :inferno
   legend          --> :none
+  markershape     --> (shownodes ? :circle : :none)
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
@@ -199,7 +205,7 @@ end
 
 Recipe for plotting a Type `iTgbmct` given `ϵ`.
 """
-@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
+@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64; shownodes=false)
 
   x = Float64[]
   y = Float64[]
@@ -218,6 +224,7 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   line_z          --> z
   linecolor       --> :inferno
   legend          --> :none
+  markershape     --> (shownodes ? :circle : :none)
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
@@ -238,10 +245,10 @@ end
 
 """
     _rplottree!(tree::T, 
-              xc  ::Float64, 
-              yr  ::UnitRange{Int64},
-              x   ::Array{Float64,1}, 
-              y   ::Array{Float64,1}) where {T <: iTree}
+                xc  ::Float64, 
+                yr  ::UnitRange{Int64},
+                x   ::Array{Float64,1}, 
+                y   ::Array{Float64,1}) where {T <: iTree}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
@@ -253,28 +260,35 @@ function _rplottree!(tree::T,
 
   # add horizontal lines
   push!(x, xc)
-  xc  -= e(tree)
+  xc -= e(tree)
   push!(x, xc, NaN)
   yc = (yr[1] + yr[end])*0.5
   push!(y, yc, yc, NaN)
 
-  if isdefined(tree, :d1)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+    
     ntip1 = ntips(tree.d1)
     ntip2 = ntips(tree.d2)
+
+    # add vertical lines
+    push!(x, xc, xc, NaN)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
-    # add vertical lines
-    push!(x, xc, xc, NaN)
-    push!(y, Float64(yr1[1] + yr1[end])*0.5,
+    push!(y, Float64(yr1[1] + yr1[end])*0.5, 
              Float64(yr2[1] + yr2[end])*0.5,
              NaN)
 
     _rplottree!(tree.d1, xc, yr1, x, y)
     _rplottree!(tree.d2, xc, yr2, x, y)
+  
+  elseif defd1  _rplottree!(tree.d1, xc, yr, x, y)
+  elseif defd2  _rplottree!(tree.d2, xc, yr, x, y)
   end
-
 end
 
 
@@ -284,7 +298,7 @@ end
     function f(tree::T) where {T <: iTree}
 Recipe for plotting a Type `iTree`.
 """
-@recipe function f(tree::T) where {T <: iTree}
+@recipe function f(tree::T; shownodes=false) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
@@ -296,6 +310,7 @@ Recipe for plotting a Type `iTree`.
 
   # plot defaults
   legend          --> false
+  markershape     --> (shownodes ? :circle : :none)
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
