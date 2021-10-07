@@ -166,7 +166,7 @@ end
 
 Recipe for plotting a Type `iTgbm`.
 """
-@recipe function f(tree::T, zfun::Function; shownodes=false) where {T <: iTgbm}
+@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
 
   x = Float64[]
   y = Float64[]
@@ -181,11 +181,10 @@ Recipe for plotting a Type `iTgbm`.
   line_z          --> z
   linecolor       --> :inferno
   legend          --> :none
-  markershape     --> (shownodes ? :circle : :none)
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
-  xlims           --> (0, th)
+  xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -205,7 +204,7 @@ end
 
 Recipe for plotting a Type `iTgbmct` given `ϵ`.
 """
-@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64; shownodes=false)
+@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
 
   x = Float64[]
   y = Float64[]
@@ -224,11 +223,10 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   line_z          --> z
   linecolor       --> :inferno
   legend          --> :none
-  markershape     --> (shownodes ? :circle : :none)
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
-  xlims           --> (0, th)
+  xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -295,10 +293,10 @@ end
 
 
 """
-    function f(tree::T) where {T <: iTree}
+    function f(tree::T; shownodes=true) where {T <: iTree}
 Recipe for plotting a Type `iTree`.
 """
-@recipe function f(tree::T; shownodes=false) where {T <: iTree}
+@recipe function f(tree::T; shownodes=true) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
@@ -310,11 +308,10 @@ Recipe for plotting a Type `iTree`.
 
   # plot defaults
   legend          --> false
-  markershape     --> (shownodes ? :circle : :none)
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
-  xlims           --> (0, th)
+  xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -323,7 +320,62 @@ Recipe for plotting a Type `iTree`.
   yticks          --> (nothing)
   yshowaxis       --> false
 
+  if shownodes
+    shape = Symbol[:circle]
+    col = Symbol[:pink]
+    alpha = Float64[0.5+0.5*isfix(tree)]
+    _nodeproperties!(tree, shape, col, alpha)
+
+    markershape       --> shape
+    markercolor       --> col
+    markeralpha       --> alpha
+  end
+
   return x, y
+end
+
+
+
+
+"""
+    function _nodeproperties!(tree::T, shape::Vector{Symbol}, col::Vector{Symbol}, 
+                              alpha::Vector{Float64}) where {T <: iTree}
+Completes the lists of node shapes, colors and alphas according to their 
+properties.
+"""
+function _nodeproperties!(tree::T, shape::Vector{Symbol}, col::Vector{Symbol}, 
+                          alpha::Vector{Float64}) where {T <: iTree}
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 || defd2
+    # not a tip
+
+    if defd1 && defd2
+      # speciation event
+      push!(shape, :circle, fill(:none,5)...)
+      push!(col, :gray, fill(:white,5)...)
+      push!(alpha, 0.5+0.5*isfix(tree), 0, 0, 0, 0, 0)
+      _nodeproperties!(tree.d1, shape, col, alpha)
+      push!(shape, :none, :none)
+      push!(col, :white, :white)
+      push!(alpha, 0, 0)
+      _nodeproperties!(tree.d2, shape, col, alpha)
+    else
+      # sampled ancestor
+      push!(shape, :none, :none, :square)
+      push!(col, :white, :white, :red)
+      push!(alpha, 0, 0, 0.5+0.5*isfix(tree))
+      _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
+    end
+  else
+    # tip
+    isfossil(tree) ? push!(shape, :square) : push!(shape, :circle)
+    isfossil(tree) ? push!(col, :red) : push!(col, :blue)
+    push!(alpha, 0.5+0.5*isfix(tree))
+  end
+  
+  return nothing
 end
 
 

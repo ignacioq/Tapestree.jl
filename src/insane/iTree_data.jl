@@ -27,6 +27,8 @@ iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
 Return if is a fixed (i.e. observed) node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
+isfix(tree::sTpb) = false  # no fx property for pure-birth trees
+isfix(tree::iTgbmpb) = false  # no fx property for pure-birth trees
 
 
 
