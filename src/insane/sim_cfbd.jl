@@ -35,17 +35,6 @@ cfbd_wait(λ::Float64, μ::Float64, ψ::Float64) = rexp(λ + μ + ψ)
 
 
 
-
-"""
-    rexp(r::Float64)
-
-Generate an exponential sample with rate `r`.
-"""
-rexp(r::Float64) = @fastmath randexp()/r
-
-
-
-
 """
     λevent(λ::Float64, μ::Float64, ψ::Float64)
 
@@ -137,10 +126,14 @@ function sim_cfbd_b(n::Int64,
         nF -= 1.0
       end
     # if extinction
-    else
+    elseif μevent(μ, ψ)
       nI += 1
       nF += 1.0
       push!(tv, sTfbd(0.0, true))
+    # if fossil sampling
+    else
+      j = rand(Base.OneTo(nI))
+      tv[j] = sTfbd(tv[j], 0.0, false, true, false)
     end
   end
 end
@@ -203,31 +196,17 @@ function sim_cfbd_b(λ::Float64,
         nF -= 1.0
       end
     # if extinction
-    else
+    elseif μevent(μ, ψ)
       nI += 1
       nF += 1.0
       push!(tv, sTfbd(0.0, true))
+    # if fossil sampling
+    else
+      j = rand(Base.OneTo(nI))
+      tv[j] = sTfbd(tv[j], 0.0, false, true, false)
     end
   end
 end
-
-
-
-
-"""
-    samp2(o::Base.OneTo{Int64})
-
-Sample `2` without replacement from `o`.
-"""
-function samp2(o::Base.OneTo{Int64})
-  j = rand(o)
-  k = rand(o)
-  while k == j
-    k = rand(o)
-  end
-  return j, k
-end
-
 
 
 
