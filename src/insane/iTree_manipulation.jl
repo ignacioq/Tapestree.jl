@@ -845,16 +845,16 @@ end
 
 
 """
-    remove_extinct(tree::iTgbmce)
+    remove_extinct!(tree::iTgbmce)
 
 Remove extinct tips from `iTgbmce`.
 """
-function remove_extinct(tree::iTgbmce)
+function remove_extinct!(tree::iTgbmce)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -900,16 +900,16 @@ end
 
 
 """
-    remove_extinct(tree::iTgbmct)
+    remove_extinct!(tree::iTgbmct)
 
 Remove extinct tips from `iTgbmct`.
 """
-function remove_extinct(tree::iTgbmct)
+function remove_extinct!(tree::iTgbmct)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -959,16 +959,16 @@ end
 
 
 """
-    remove_extinct(tree::iTgbmbd)
+    remove_extinct!(tree::iTgbmbd)
 
 Remove extinct tips from `iTgbmbd`.
 """
-function remove_extinct(tree::iTgbmbd)
+function remove_extinct!(tree::iTgbmbd)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1024,15 +1024,15 @@ end
 
 
 """
-    remove_extinct(treev::Array{T,1}) where {T <: iTree}
+    remove_extinct!(treev::Array{T,1}) where {T <: iTree}
 
 Remove extinct taxa for a vector of trees.
 """
-function remove_extinct(treev::Array{T,1}) where {T <: iTree}
+function remove_extinct!(treev::Array{T,1}) where {T <: iTree}
 
   treevne = T[]
   for t in treev
-    push!(treevne, remove_extinct(deepcopy(t)))
+    push!(treevne, remove_extinct!(deepcopy(t)))
   end
 
   return treevne
@@ -1042,15 +1042,15 @@ end
 
 
 """
-    remove_extinct(tree::T) where {T <: sT}
+    remove_extinct!(tree::sTbd)
 
-Remove extinct tips from `sT`.
+Remove extinct tips from `sTbd`.
 """
-function remove_extinct(tree::sTbd)
+function remove_extinct!(tree::sTbd)
 
   if isdefined(tree, :d1)
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1071,6 +1071,90 @@ function remove_extinct(tree::sTbd)
 end
 
 
+
+
+"""
+    remove_extinct!(tree::sTfbd)
+
+Remove extinct tips from `sTfbd`.
+"""
+function remove_extinct!(tree::sTfbd)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 tree.d1 = remove_extinct!(tree.d1) end
+  if defd2 tree.d2 = remove_extinct!(tree.d2) end
+
+  if !defd1 && !defd2
+    return tree
+  end
+
+  extd1 = defd1 && isextinct(tree.d1)
+  extd2 = defd2 && isextinct(tree.d2)
+
+  # 2 extinct branches or sampled ancestor -> extinct tip
+  if extd1 && extd2 || (extd1 && !defd2) || (!defd1 && extd2)
+    return sTfbd(e(tree), true, isfix(tree))
+  end
+
+  # 1 extinct and 1 alive branch -> keep only the alive one
+  if extd1 ne = e(tree) + e(tree.d2) ; tree = tree.d2 ; sete!(tree, ne) end
+  if extd2 ne = e(tree) + e(tree.d1) ; tree = tree.d1 ; sete!(tree, ne) end
+
+  return tree
+end
+
+
+
+
+"""
+    reconstructed!(tree::T) where {T <: iTree}
+
+Returns the reconstructed tree, i.e. the observed tree from sampled extant 
+tips and fossils.
+"""
+reconstructed!(tree::T) where {T <: iTree} = remove_extinct!(tree)
+# For all trees without fossils, it simply means removing extinct lineages
+
+
+
+
+"""
+    reconstructed!(tree::sTfbd)
+
+Returns the reconstructed tree, i.e. the observed tree from sampled extant 
+tips and fossils.
+"""
+function reconstructed!(tree::sTfbd)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 tree.d1 = reconstructed!(tree.d1) end
+  if defd2 tree.d2 = reconstructed!(tree.d2) end
+
+  if !defd1 && !defd2
+    return tree
+  end
+
+  extd1 = defd1 && isextinct(tree.d1) && !isfossil(tree.d1)
+  extd2 = defd2 && isextinct(tree.d2) && !isfossil(tree.d2)
+
+  # 2 extinct branches -> extinct tip
+  if extd1 && extd2
+    return sTfbd(e(tree), true, isfix(tree))
+  end
+
+  # sampled ancestor -> fossil tip
+  if (extd1 && !defd2) || (!defd1 && extd2)
+    return sTfbd(e(tree), true, true, isfix(tree))
+  end
+
+  # 1 extinct and 1 alive branch -> keep only the alive one
+  if extd1 ne = e(tree) + e(tree.d2) ; tree = tree.d2 ; sete!(tree, ne) end
+  if extd2 ne = e(tree) + e(tree.d1) ; tree = tree.d1 ; sete!(tree, ne) end
+
+  return tree
+end
 
 
 
