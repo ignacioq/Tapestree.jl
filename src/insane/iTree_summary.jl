@@ -192,6 +192,8 @@ function extract_vector!(tree::T,
 
   if isdefined(tree, :d1)
     extract_vector!(tree.d1::T, v, nδt, max(0.0, iti - et), lv)
+  end
+  if isdefined(tree, :d2)
     extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - et), lv)
   end
 end
@@ -200,21 +202,34 @@ end
 
 
 """
-    linearize_gbm!(tree::T, 
-                   lv  ::Function,
-                   v   ::Array{Float64,1}) where {T <: iTgbm}
+    linearize_gbm(tree::T, lv::Function) where {T <: iTgbm}
 
 Extract the parameters given by `lv` into a linear Array.
 """
-function linearize_gbm!(tree::T, 
-                        lv  ::Function,
-                        v   ::Array{Float64,1}) where {T <: iTgbm}
+function linearize_gbm(tree::T, lv::Function) where {T <: iTgbm}
+  v = Float64[]
+  _linearize_gbm!(tree, lv, v)
+  return v
+end
+
+
+
+
+"""
+    _linearize_gbm!(tree::T, 
+                    lv  ::Function,
+                    v   ::Array{Float64,1}) where {T <: iTgbm}
+
+Extract the parameters given by `lv` into a linear Array, initialized with an
+array `v`.
+"""
+function _linearize_gbm!(tree::T, 
+                         lv  ::Function,
+                         v   ::Array{Float64,1}) where {T <: iTgbm}
 
   append!(v, lv(tree))
-  if isdefined(tree, :d1)
-    linearize_gbm!(tree.d1::T, lv, v)
-    linearize_gbm!(tree.d2::T, lv, v)
-  end
+  if isdefined(tree, :d1) _linearize_gbm!(tree.d1::T, lv, v) end
+  if isdefined(tree, :d2) _linearize_gbm!(tree.d2::T, lv, v) end
 end
 
 

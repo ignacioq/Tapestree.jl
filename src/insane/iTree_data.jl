@@ -106,7 +106,7 @@ isfossil(tree::iTgbmbd) = false
 
 
 """
-    isSampledAncestor(tree::T) where {T <: iTree}
+    issampledancestor(tree::T) where {T <: iTree}
 
 Return if is a sampled ancestor, i.e. a fossil internal node.
 """
