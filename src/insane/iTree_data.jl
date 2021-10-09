@@ -796,7 +796,7 @@ function drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64) where T <: iTg
     return tree
   elseif ldr > ix
     ifx1 = isfix(tree.d1)
-    if ifx1 && isdefined(tree, :d2) && isfix(tree.d2)
+    if ifx1 && isfix(tree.d2)
       ix += 1
       if dri[ix]
         drtree(tree.d1::T, dri, ldr, ix)
@@ -828,7 +828,7 @@ function drtree(treec::T,
     return treec, treep
   elseif ldr > ix
     ifx1 = isfix(treec.d1)
-    if ifx1 && isdefined(tree, :d2) && isfix(treec.d2)
+    if ifx1 && isfix(treec.d2)
       ix += 1
       if dri[ix]
         drtree(treec.d1::T, treep.d1::T, dri, ldr, ix)

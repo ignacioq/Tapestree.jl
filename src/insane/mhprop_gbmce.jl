@@ -310,7 +310,7 @@ function root_update!(treep ::iTgbmce,
     end
 
     acr = llrbd + llrbd1 + llrbd2 + llrcond
-    llr = acr + llrbm + llrbm1 + llrbm2
+    llr = acr + llrbm + llrbm1 + llrbm2 #+ llrcond
 
     # prior ratio
     if lλrp > lλmxpr
