@@ -215,7 +215,7 @@ function triad_lvupdate!(treep::iTgbmct,
     bb!(λ2p, lλp, λd2, σλ, δt, fdt2, srδt)
 
     llrbm, llrbd = 
-      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, true)
+      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, true, false)
     llrbm1, llrbd1 = 
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, !istip(treec.d1),
         isextinct(treec.d1))

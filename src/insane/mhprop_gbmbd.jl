@@ -67,10 +67,10 @@ function daughters_lprop!(treep::iTgbmbd,
 
     llrbm1, llrbd1 = 
       llr_gbm_b_sep(lλ(treepd1), lμ(treepd1), lλ1, lμ1, 
-        α, σλ, σμ, δt, fdt(treecd1), srδt, false, isextinct(treecd1))
+        α, σλ, σμ, δt, fdt(treecd1), srδt, !istip(treec.d1), isextinct(treecd1))
     llrbm2, llrbd2 = 
       llr_gbm_b_sep(lλ(treepd2), lμ(treepd2), lλ(treecd2), lμ(treecd2), 
-        α, σλ, σμ, δt, fdt(treecd2), srδt, false, isextinct(treecd2))
+        α, σλ, σμ, δt, fdt(treecd2), srδt, !istip(treec.d2), isextinct(treecd2))
 
     acr  = llrbd1 + llrbd2
     llr  = llrbm1 + llrbm2 + acr
