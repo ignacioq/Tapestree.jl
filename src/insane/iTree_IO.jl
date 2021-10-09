@@ -155,7 +155,7 @@ function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
       ",t",n,":",e(tree.d2), "):", e(tree))
   else
     return string("(",to_string(tree.d1, n = n),",",
-               to_string(tree.d2, n = sntn(tree.d1, 0) + n),"):",e(tree))
+               to_string(tree.d2, n = ntips(tree.d1) + n),"):",e(tree))
   end
 end
 

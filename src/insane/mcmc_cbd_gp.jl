@@ -51,7 +51,7 @@ function insane_cbd_gp(tree    ::sTbd,
 
   # tree characters
   th = treeheight(tree)
-  n  = sntn(tree)
+  n  = ntips(tree)
 
   fixtree!(tree)
 
@@ -295,7 +295,7 @@ function mcmc_cbd(tree  ::sTbd,
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        R[lit,6] = Float64(snen(tree))
+        R[lit,6] = Float64(ntipsextinct(tree))
         R[lit,7] = treelength(tree)
       end
       lthin = 0

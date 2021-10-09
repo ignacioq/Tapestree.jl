@@ -128,27 +128,32 @@ function _rplottree!(tree::T,
   push!(y, yc, NaN)
   push!(z, zv[l], NaN)
 
-  if isdefined(tree, :d1)
-    ntip1 = sntn(tree.d1, 0)
-    ntip2 = sntn(tree.d2, 0)
+  xc -= e(tree)
+  
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+
+    ntip1 = ntips(tree.d1)
+    ntip2 = ntips(tree.d2)
+
+    # add vertical lines
+    push!(x, xc, xc, NaN)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+    push!(y, Float64(yr1[1] + yr1[end])*0.5,
+             Float64(yr2[1] + yr2[end])*0.5,
+             NaN)
 
-    xcmpe = xc - e(tree)
-    # add vertical lines
-    push!(x, xcmpe, xcmpe)
-    push!(y, Float64(yr1[1] + yr1[end])*0.5, 
-             Float64(yr2[1] + yr2[end])*0.5)
-    push!(z, z[end-1])
-    push!(z, z[end-2])
+    push!(z, z[end-1], z[end-1], NaN)
 
-    push!(x, NaN)
-    push!(y, NaN)
-    push!(z, NaN)
-
-    _rplottree!(tree.d1, xcmpe, yr1, zfun, x, y, z)
-    _rplottree!(tree.d2, xcmpe, yr2, zfun, x, y, z)
+    _rplottree!(tree.d1, xc, yr1, zfun, x, y, z)
+    _rplottree!(tree.d2, xc, yr2, zfun, x, y, z)
+  
+  elseif defd1  _rplottree!(tree.d1, xc, yr, zfun, x, y, z)
+  elseif defd2  _rplottree!(tree.d2, xc, yr, zfun, x, y, z)
   end
 
 end
@@ -168,7 +173,7 @@ Recipe for plotting a Type `iTgbm`.
   z = Float64[]
 
   th = treeheight(tree)
-  nt = sntn(tree, 0)
+  nt = ntips(tree)
 
   _rplottree!(tree, th, 1:nt, zfun, x, y, z)
 
@@ -179,7 +184,7 @@ Recipe for plotting a Type `iTgbm`.
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
-  xlims           --> (0, th)
+  xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -206,7 +211,7 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   z = Float64[]
 
   th = treeheight(tree)
-  nt = sntn(tree, 0)
+  nt = ntips(tree)
 
   _rplottree!(tree, th, 1:nt, zfun, x, y, z)
 
@@ -221,7 +226,7 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
-  xlims           --> (0, th)
+  xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -238,10 +243,10 @@ end
 
 """
     _rplottree!(tree::T, 
-              xc  ::Float64, 
-              yr  ::UnitRange{Int64},
-              x   ::Array{Float64,1}, 
-              y   ::Array{Float64,1}) where {T <: iTree}
+                xc  ::Float64, 
+                yr  ::UnitRange{Int64},
+                x   ::Array{Float64,1}, 
+                y   ::Array{Float64,1}) where {T <: iTree}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
@@ -253,44 +258,51 @@ function _rplottree!(tree::T,
 
   # add horizontal lines
   push!(x, xc)
-  xc  -= e(tree)
+  xc -= e(tree)
   push!(x, xc, NaN)
   yc = (yr[1] + yr[end])*0.5
   push!(y, yc, yc, NaN)
 
-  if isdefined(tree, :d1)
-    ntip1 = sntn(tree.d1, 0)
-    ntip2 = sntn(tree.d2, 0)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+    
+    ntip1 = ntips(tree.d1)
+    ntip2 = ntips(tree.d2)
+
+    # add vertical lines
+    push!(x, xc, xc, NaN)
 
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
-    # add vertical lines
-    push!(x, xc, xc, NaN)
-    push!(y, Float64(yr1[1] + yr1[end])*0.5,
+    push!(y, Float64(yr1[1] + yr1[end])*0.5, 
              Float64(yr2[1] + yr2[end])*0.5,
              NaN)
 
     _rplottree!(tree.d1, xc, yr1, x, y)
     _rplottree!(tree.d2, xc, yr2, x, y)
+  
+  elseif defd1  _rplottree!(tree.d1, xc, yr, x, y)
+  elseif defd2  _rplottree!(tree.d2, xc, yr, x, y)
   end
-
 end
 
 
 
 
 """
-    function f(tree::T) where {T <: iTree}
+    function f(tree::T; shownodes=true) where {T <: iTree}
 Recipe for plotting a Type `iTree`.
 """
-@recipe function f(tree::T) where {T <: iTree}
+@recipe function f(tree::T; shownodes=true) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
 
   th = treeheight(tree)
-  nt = sntn(tree, 0)
+  nt = ntips(tree)
 
   _rplottree!(tree, th, 1:nt, x, y)
 
@@ -299,7 +311,7 @@ Recipe for plotting a Type `iTree`.
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
-  xlims           --> (0, th)
+  xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -308,7 +320,62 @@ Recipe for plotting a Type `iTree`.
   yticks          --> (nothing)
   yshowaxis       --> false
 
+  if shownodes
+    shape = Symbol[:circle]
+    col = Symbol[:pink]
+    alpha = Float64[0.5+0.5*isfix(tree)]
+    _nodeproperties!(tree, shape, col, alpha)
+
+    markershape       --> shape
+    markercolor       --> col
+    markeralpha       --> alpha
+  end
+
   return x, y
+end
+
+
+
+
+"""
+    function _nodeproperties!(tree::T, shape::Vector{Symbol}, col::Vector{Symbol}, 
+                              alpha::Vector{Float64}) where {T <: iTree}
+Completes the lists of node shapes, colors and alphas according to their 
+properties.
+"""
+function _nodeproperties!(tree::T, shape::Vector{Symbol}, col::Vector{Symbol}, 
+                          alpha::Vector{Float64}) where {T <: iTree}
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 || defd2
+    # not a tip
+
+    if defd1 && defd2
+      # speciation event
+      push!(shape, :circle, fill(:none,5)...)
+      push!(col, :gray, fill(:white,5)...)
+      push!(alpha, 0.5+0.5*isfix(tree), 0, 0, 0, 0, 0)
+      _nodeproperties!(tree.d1, shape, col, alpha)
+      push!(shape, :none, :none)
+      push!(col, :white, :white)
+      push!(alpha, 0, 0)
+      _nodeproperties!(tree.d2, shape, col, alpha)
+    else
+      # sampled ancestor
+      push!(shape, :none, :none, :square)
+      push!(col, :white, :white, :red)
+      push!(alpha, 0, 0, 0.5+0.5*isfix(tree))
+      _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
+    end
+  else
+    # tip
+    isfossil(tree) ? push!(shape, :square) : push!(shape, :circle)
+    isfossil(tree) ? push!(col, :red) : push!(col, :blue)
+    push!(alpha, 0.5+0.5*isfix(tree))
+  end
+  
+  return nothing
 end
 
 
@@ -334,7 +401,9 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   grid            --> :off
   tick_direction  --> :out
   seriestype      --> :steppost
-  yaxis           --> :log
+  if maximum(y)>=10
+    yaxis         --> :log
+  end
 
   return  x, y
 end

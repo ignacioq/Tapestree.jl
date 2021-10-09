@@ -46,7 +46,7 @@ function insane_gbmpb(tree    ::sTpb,
 
   δt  *= treeheight(tree)
   srδt = sqrt(δt)
-  n    = sntn(tree, 0)
+  n    = ntips(tree)
 
   # lλ root node
   lλa = log(λmle_cpb(tree))

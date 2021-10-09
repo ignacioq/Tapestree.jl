@@ -97,9 +97,9 @@ function _cutbottom(tree::sTpb,
 
   if (t + et) > c
     tree = sTpb(c - t)
-  elseif isdefined(tree, :d1)
-    tree.d1 = _cutbottom(tree.d1, c, t + et)
-    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  else
+    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
+    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
   end
 
   return tree
@@ -123,9 +123,9 @@ function _cutbottom(tree::sTbd,
 
   if (t + et) > c
     tree = sTbd(c - t, false, isfix(tree))
-  elseif isdefined(tree, :d1)
-    tree.d1 = _cutbottom(tree.d1, c, t + et)
-    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  else
+    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
+    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
   end
 
   return tree
@@ -175,9 +175,9 @@ function _cutbottom(tree::iTgbmpb,
 
     tree = iTgbmpb(c - t, δt, c - t - tii, lλv)
 
-  elseif isdefined(tree, :d1)
-    tree.d1 = _cutbottom(tree.d1, c, t + et)
-    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  else
+    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
+    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
   end
 
   return tree
@@ -226,9 +226,9 @@ function _cutbottom(tree::T,
 
     tree = T(c - t, δt, c - t - tii, false, isfix(tree), lλv)
 
-  elseif isdefined(tree, :d1)
-    tree.d1 = _cutbottom(tree.d1, c, t + et)
-    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  else
+    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
+    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
   end
 
   return tree
@@ -281,9 +281,9 @@ function _cutbottom(tree::iTgbmbd,
 
     tree = iTgbmbd(c - t, δt, c - t - tii, false, isfix(tree), lλv, lμv)
 
-  elseif isdefined(tree, :d1)
-    tree.d1 = _cutbottom(tree.d1, c, t + et)
-    tree.d2 = _cutbottom(tree.d2, c, t + et)
+  else
+    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
+    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
   end
 
   return tree
@@ -344,7 +344,6 @@ end
 
 
 
-
 """
     swapbranch!(tree::T,
                 nbtr::T,
@@ -401,7 +400,7 @@ sure that the daughters of `dtree` are fixed.
 """
 function addtree(tree::T, dtree::T) where {T <: iTree}
 
-  if istip(tree::T) && !isextinct(tree::T)
+  if istip(tree::T) && isalive(tree::T)
 
     dtree = fixdstree(dtree)
 
@@ -411,10 +410,8 @@ function addtree(tree::T, dtree::T) where {T <: iTree}
     return tree
   end
 
-  if isdefined(tree, :d1)
-    tree.d1 = addtree(tree.d1::T, dtree::T)
-    tree.d2 = addtree(tree.d2::T, dtree::T)
-  end
+  if isdefined(tree, :d1) tree.d1 = addtree(tree.d1::T, dtree::T) end
+  if isdefined(tree, :d2) tree.d2 = addtree(tree.d2::T, dtree::T) end
 
   return tree
 end
@@ -589,10 +586,8 @@ function gbm_copy!(treec::T,
   l   = lastindex(lλp)
   unsafe_copyto!(lλ(treec), 1, lλp, 1, l)
 
-  if isdefined(treec, :d1)
-    gbm_copy!(treec.d1::T, treep.d1::T)
-    gbm_copy!(treec.d2::T, treep.d2::T)
-  end
+  if isdefined(treec, :d1) gbm_copy!(treec.d1::T, treep.d1::T) end
+  if isdefined(treec, :d2) gbm_copy!(treec.d2::T, treep.d2::T) end
 
   return nothing
 end
@@ -647,10 +642,8 @@ function gbm_copy!(treec::iTgbmbd,
   unsafe_copyto!(lλ(treec), 1, lλp, 1, l)
   unsafe_copyto!(lμ(treec), 1, lμ(treep), 1, l)
 
-  if isdefined(treec, :d1)
-    gbm_copy!(treec.d1::iTgbmbd, treep.d1::iTgbmbd)
-    gbm_copy!(treec.d2::iTgbmbd, treep.d2::iTgbmbd)
-  end
+  if isdefined(treec, :d1) gbm_copy!(treec.d1::iTgbmbd, treep.d1::iTgbmbd) end
+  if isdefined(treec, :d2) gbm_copy!(treec.d2::iTgbmbd, treep.d2::iTgbmbd) end
 
   return nothing
 end
@@ -661,7 +654,7 @@ end
 """
     fixalive!(tree::T) where T <: iTree
 
-Fixes the the path from root to the only species alive.
+Fixes the path from root to the only species alive.
 """
 function fixalive!(tree::T) where T <: iTree
 
@@ -670,12 +663,15 @@ function fixalive!(tree::T) where T <: iTree
     return true
   end
 
-  if isdefined(tree, :d1)
+  if isdefined(tree, :d2)
     f = fixalive!(tree.d2::T)
     if f 
       fix!(tree)
       return true
     end
+  end
+
+  if isdefined(tree, :d1)
     f = fixalive!(tree.d1::T)
     if f 
       fix!(tree)
@@ -691,28 +687,45 @@ end
 
 
 """
-    fixrtip!(tree::T, na::Int64) where T <: iTree
+    fixrtip!(tree::T) where T <: iTree
 
 Fixes the the path for a random non extinct tip.
+"""
+fixrtip!(tree::T) where T <: iTree = fixrtip!(tree, ntipsalive(tree))
+
+
+
+
+"""
+    _fixrtip!(tree::T, na::Int64) where T <: iTree
+
+Fixes the the path for a random non extinct tip, initialized at `na` alive tips.
 """
 function fixrtip!(tree::T, na::Int64) where T <: iTree
 
   fix!(tree)
 
   if isdefined(tree, :d1)
-    if isextinct(tree.d1::T)
-      fixrtip!(tree.d2::T, na)
-    elseif isextinct(tree.d2::T)
-      fixrtip!(tree.d1::T, na)
-    else
-      na1 = snan(tree.d1::T, 0)
-      # probability proportional to number of lineages
-      if (fIrand(na) + 1) > na1
-        fixrtip!(tree.d2::T, na - na1)
+    if isdefined(tree, :d2)
+      if isextinct(tree.d1::T)
+        fixrtip!(tree.d2::T, na)
+      elseif isextinct(tree.d2::T)
+        fixrtip!(tree.d1::T, na)
       else
-        fixrtip!(tree.d1::T, na1)
+        na1 = ntipsalive(tree.d1::T)
+        # probability proportional to number of lineages
+        if (fIrand(na) + 1) > na1
+          fixrtip!(tree.d2::T, na - na1)
+        else
+          fixrtip!(tree.d1::T, na1)
+        end
       end
+    else
+      fixrtip!(tree.d1::T, na)
     end
+  
+  elseif isdefined(tree, :d2) && isalive(tree.d2::T)
+    fixrtip!(tree.d2::T, na)
   end
 end
 
@@ -742,7 +755,7 @@ function graftree!(tree ::T,
   if ix === ldr 
     if thc > h > (thc - e(tree))
       ne = thc - h
-      addpe!(tree, -ne)
+      adde!(tree, -ne)
       tree = rand() <= 0.5 ? T(tree, stree, ne, false, true) :
                              T(stree, tree, ne, false, true)
     else
@@ -845,16 +858,16 @@ end
 
 
 """
-    remove_extinct(tree::iTgbmce)
+    remove_extinct!(tree::iTgbmce)
 
 Remove extinct tips from `iTgbmce`.
 """
-function remove_extinct(tree::iTgbmce)
+function remove_extinct!(tree::iTgbmce)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -900,16 +913,16 @@ end
 
 
 """
-    remove_extinct(tree::iTgbmct)
+    remove_extinct!(tree::iTgbmct)
 
 Remove extinct tips from `iTgbmct`.
 """
-function remove_extinct(tree::iTgbmct)
+function remove_extinct!(tree::iTgbmct)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -959,16 +972,16 @@ end
 
 
 """
-    remove_extinct(tree::iTgbmbd)
+    remove_extinct!(tree::iTgbmbd)
 
 Remove extinct tips from `iTgbmbd`.
 """
-function remove_extinct(tree::iTgbmbd)
+function remove_extinct!(tree::iTgbmbd)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1024,15 +1037,15 @@ end
 
 
 """
-    remove_extinct(treev::Array{T,1}) where {T <: iTree}
+    remove_extinct!(treev::Array{T,1}) where {T <: iTree}
 
 Remove extinct taxa for a vector of trees.
 """
-function remove_extinct(treev::Array{T,1}) where {T <: iTree}
+function remove_extinct!(treev::Array{T,1}) where {T <: iTree}
 
   treevne = T[]
   for t in treev
-    push!(treevne, remove_extinct(deepcopy(t)))
+    push!(treevne, remove_extinct!(deepcopy(t)))
   end
 
   return treevne
@@ -1042,15 +1055,15 @@ end
 
 
 """
-    remove_extinct(tree::T) where {T <: sT}
+    remove_extinct!(tree::sTbd)
 
-Remove extinct tips from `sT`.
+Remove extinct tips from `sTbd`.
 """
-function remove_extinct(tree::sTbd)
+function remove_extinct!(tree::sTbd)
 
   if isdefined(tree, :d1)
-    tree.d1 = remove_extinct(tree.d1)
-    tree.d2 = remove_extinct(tree.d2)
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1073,6 +1086,90 @@ end
 
 
 
+"""
+    remove_extinct!(tree::sTfbd)
+
+Remove extinct tips from `sTfbd`.
+"""
+function remove_extinct!(tree::sTfbd)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 tree.d1 = remove_extinct!(tree.d1) end
+  if defd2 tree.d2 = remove_extinct!(tree.d2) end
+
+  if !defd1 && !defd2
+    return tree
+  end
+
+  extd1 = defd1 && isextinct(tree.d1)
+  extd2 = defd2 && isextinct(tree.d2)
+
+  # 2 extinct branches or sampled ancestor -> extinct tip
+  if extd1 && extd2 || (extd1 && !defd2) || (!defd1 && extd2)
+    return sTfbd(e(tree), true, isfix(tree))
+  end
+
+  # 1 extinct and 1 alive branch -> keep only the alive one
+  if extd1 ne = e(tree) + e(tree.d2) ; tree = tree.d2 ; sete!(tree, ne) end
+  if extd2 ne = e(tree) + e(tree.d1) ; tree = tree.d1 ; sete!(tree, ne) end
+
+  return tree
+end
+
+
+
+
+"""
+    reconstructed!(tree::T) where {T <: iTree}
+
+Returns the reconstructed tree, i.e. the observed tree from sampled extant 
+tips and fossils.
+"""
+reconstructed!(tree::T) where {T <: iTree} = remove_extinct!(tree)
+# For all trees without fossils, it simply means removing extinct lineages
+
+
+
+
+"""
+    reconstructed!(tree::sTfbd)
+
+Returns the reconstructed tree, i.e. the observed tree from sampled extant 
+tips and fossils.
+"""
+function reconstructed!(tree::sTfbd)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 tree.d1 = reconstructed!(tree.d1) end
+  if defd2 tree.d2 = reconstructed!(tree.d2) end
+
+  if !defd1 && !defd2
+    return tree
+  end
+
+  extd1 = defd1 && isextinct(tree.d1) && !isfossil(tree.d1)
+  extd2 = defd2 && isextinct(tree.d2) && !isfossil(tree.d2)
+
+  # 2 extinct branches -> extinct tip
+  if extd1 && extd2
+    return sTfbd(e(tree), true, isfix(tree))
+  end
+
+  # sampled ancestor -> fossil tip
+  if (extd1 && !defd2) || (!defd1 && extd2)
+    return sTfbd(e(tree), true, true, isfix(tree))
+  end
+
+  # 1 extinct and 1 alive branch -> keep only the alive one
+  if extd1 ne = e(tree) + e(tree.d2) ; tree = tree.d2 ; sete!(tree, ne) end
+  if extd2 ne = e(tree) + e(tree.d1) ; tree = tree.d1 ; sete!(tree, ne) end
+
+  return tree
+end
+
+
 
 
 """
@@ -1082,10 +1179,8 @@ Fix all `tree`.
 """
 function fixtree!(tree::T) where {T <: iTree}
   fix!(tree)
-  if isdefined(tree, :d1)
-    fixtree!(tree.d1)
-    fixtree!(tree.d2)
-  end
+  if isdefined(tree, :d1) fixtree!(tree.d1) end
+  if isdefined(tree, :d2) fixtree!(tree.d2) end
 end
 
 
@@ -1156,7 +1251,7 @@ sete!(tree::T, e::Float64) where {T <: iTree} = setproperty!(tree, :e, e)
 
 
 """
-  addpe!(tree::T, e::Float64) where {T <: iTree}
+  adde!(tree::T, e::Float64) where {T <: iTree}
 
 Add `e` to edge of `tree`.
 """

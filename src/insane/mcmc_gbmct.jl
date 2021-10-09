@@ -63,7 +63,7 @@ function insane_gbmct(tree    ::sTbd,
   fixtree!(tree)
 
   # `n` tips, `th` treeheight define δt
-  n    = sntn(tree, 0)
+  n    = ntips(tree)
   th   = treeheight(tree)
   δt  *= th
   srδt = sqrt(δt)
@@ -415,7 +415,7 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         R[lit,5] = αc
         R[lit,6] = σλc
         R[lit,7] = ϵc
-        R[lit,8] = snen(Ψc, 0)
+        R[lit,8] = ntipsextinct(Ψc)
         push!(Ψv, deepcopy(Ψc))
       end
       lthin = 0
@@ -601,7 +601,7 @@ function fsbi_ct(bi  ::iBffs,
   # simulate tree
   t0, nsp = _sim_gbmct(ti(bi) - tfb, iλ, α, σλ, ϵ, δt, srδt, 1, nlim)
 
-  na = snan(t0, 0)
+  na = ntipsalive(t0)
 
   λf, dft0 = NaN, NaN
 
@@ -636,7 +636,7 @@ function fsbi_ct(bi  ::iBffs,
             continue
           end
           # if goes extinct before the present
-          if iszero(snan(st0, 0))
+          if iszero(ntipsalive(st0))
             # graft to tip
             addtotip(t0, st0, false)
             break
@@ -685,7 +685,7 @@ function update_ϵ!(ϵc   ::Float64,
   ϵp = mulupt(ϵc, ϵtn)::Float64
 
   # log likelihood and prior ratio
-  ne   = snenF(Ψ, 0.0)
+  ne   = ntipsextinctF(Ψ)
   ssλt = sλ_gbm(Ψ)
   llr = ne*(log(ϵp) - log(ϵc)) + 
         ssλt*(ϵc - ϵp) + svf(Ψ, ϵp) - svf(Ψ, ϵc)
@@ -726,7 +726,7 @@ function update_ϵ!(ϵc   ::Float64,
   ϵp = mulupt(ϵc, ϵtn)::Float64
 
   # log likelihood and prior ratio
-  ne   = snenF(Ψ, 0.0)
+  ne   = ntipsextinctF(Ψ)
   ssλt = sλ_gbm(Ψ)
   llr = ne*(log(ϵp) - log(ϵc)) + 
         ssλt*(ϵc - ϵp) + svf(Ψ, ϵp) - svf(Ψ, ϵc)

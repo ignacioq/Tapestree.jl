@@ -51,7 +51,7 @@ function insane_cbd_fs(tree    ::sTbd,
 
   # tree characters
   th = treeheight(tree)
-  n  = sntn(tree, 0)
+  n  = ntips(tree)
 
   fixtree!(tree)
 
@@ -325,8 +325,8 @@ function mcmc_cbd(tree  ::sTbd,
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        R[lit,6] = Float64(snen(tree, 0))
-        R[lit,7] = treelength(tree, 0.0)
+        R[lit,6] = Float64(ntipsextinct(tree))
+        R[lit,7] = treelength(tree)
         push!(treev, deepcopy(tree))
       end
       lthin = 0
@@ -495,7 +495,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
 
   # forward simulation during branch length
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
-  na = snan(t0, 0)
+  na = ntipsalive(t0)
 
   if iszero(na)
     ret = false
@@ -512,7 +512,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
         for i in Base.OneTo(2)
           st0 = sim_cbd(tfb, λ, μ)
           # if goes extinct before the present
-          if iszero(snan(st0, 0))
+          if iszero(ntipsalive(st0))
             #graft to tip
             addtotip(t0, st0, false)
             break
