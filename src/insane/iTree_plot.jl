@@ -293,10 +293,10 @@ end
 
 
 """
-    function f(tree::T; shownodes=true) where {T <: iTree}
+    function f(tree::T; shownodes=false) where {T <: iTree}
 Recipe for plotting a Type `iTree`.
 """
-@recipe function f(tree::T; shownodes=true) where {T <: iTree}
+@recipe function f(tree::T; shownodes=false) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
