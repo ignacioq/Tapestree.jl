@@ -326,7 +326,7 @@ function mcmc_cbd(tree  ::sTbd,
         R[lit,4] = λc
         R[lit,5] = μc
         R[lit,6] = Float64(ntipsextinct(tree))
-        R[lit,7] = treelength(tree)
+        R[lit,7] = treelength(tree, 0.0)
         push!(treev, deepcopy(tree))
       end
       lthin = 0

@@ -12,9 +12,9 @@ Created 06 07 2020
 
 
 """
-    crown_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
+    cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
 
-Log-probability of at least two lineage surviving after time `t` for 
+Log-probability of at least two lineage surviving for 
 birth-death process with `λ` and `μ` for crown age.
 """
 function cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
@@ -28,9 +28,9 @@ end
 
 
 """
-    stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
+    cond_surv_stem(tree::sTbd, λ::Float64, μ::Float64)
 
-Log-probability of at least one lineage surviving after time `t` for 
+Log-probability of at least one lineage surviving for 
 birth-death process with `λ` and `μ` for stem age.
 """
 function cond_surv_stem(tree::sTbd, λ::Float64, μ::Float64)
@@ -42,7 +42,7 @@ end
 
 
 """
-    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
+    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64)
 
 Count nodes in stem lineage when a diversification event could have 
 returned an overall extinction.
@@ -78,7 +78,7 @@ end
 
 
 """
-    stem_prob_surv_da(λ::Float64, μ::Float64, t::Float64)
+    cond_surv_stem_p(tree::sTbd, λ::Float64, μ::Float64)
 
 Log-probability of at least one lineage surviving after time `t` for 
 birth-death process with `λ` and `μ` for stem age.
@@ -92,7 +92,7 @@ end
 
 
 """
-    sum_alone_stem(tree::sTbd, tna::Float64, n::Float64, t::Float64)
+    sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
 
 Count nodes in stem lineage when a diversification event could have 
 returned an overall extinction.

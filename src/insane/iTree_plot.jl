@@ -291,12 +291,12 @@ end
 
 
 
-
 """
-    function f(tree::T; shownodes=true) where {T <: iTree}
-Recipe for plotting a Type `iTree`.
+    function f(tree::T; shownodes=(T==sTfbd)) where {T <: iTree}
+Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
+== true`. True by default for `sTfbd` trees to make sampled ancestors visible.
 """
-@recipe function f(tree::T; shownodes=true) where {T <: iTree}
+@recipe function f(tree::T; shownodes=(T==sTfbd)) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
