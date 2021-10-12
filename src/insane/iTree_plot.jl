@@ -292,7 +292,7 @@ end
 
 
 """
-    function f(tree::T; shownodes=false) where {T <: iTree}
+    function f(tree::T; shownodes=(T==sTfbd)) where {T <: iTree}
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
 == true`. True by default for `sTfbd` trees to make sampled ancestors visible.
 """
