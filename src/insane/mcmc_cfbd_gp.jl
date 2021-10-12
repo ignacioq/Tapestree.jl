@@ -14,7 +14,7 @@ Created 07 10 2021
 
 
 """
-    insane_cfbd_gp(tree    ::sTbd, 
+    insane_cfbd_gp(tree    ::sTfbd, 
                    out_file::String;
                    λprior  ::Float64           = 0.1,
                    μprior  ::Float64           = 0.1,
@@ -33,7 +33,7 @@ Created 07 10 2021
 
 Run insane for constant pure-birth.
 """
-function insane_cfbd_gp(tree    ::sTbd, 
+function insane_cfbd_gp(tree    ::sTfbd, 
                         out_file::String;
                         λprior  ::Float64,
                         μprior  ::Float64,
@@ -106,7 +106,7 @@ end
 
 
 """
-    mcmc_burn_cfbd(tree    ::sTbd,
+    mcmc_burn_cfbd(tree    ::sTfbd,
                    tl      ::Float64,
                    nt      ::Int64,
                    th      ::Float64,
@@ -125,7 +125,7 @@ end
 
 MCMC da chain for constant birth-death.
 """
-function mcmc_burn_cfbd(tree    ::sTbd,
+function mcmc_burn_cfbd(tree    ::sTfbd,
                         n       ::Int64,
                         th      ::Float64,
                         tune_int::Int64,
@@ -213,7 +213,7 @@ end
 
 
 """
-    mcmc_cfbd(tree  ::sTbd,
+    mcmc_cfbd(tree  ::sTfbd,
               llc   ::Float64,
               prc   ::Float64,
               λc    ::Float64,
@@ -231,7 +231,7 @@ end
 
 MCMC da chain for constant birth-death.
 """
-function mcmc_cfbd(tree  ::sTbd,
+function mcmc_cfbd(tree  ::sTfbd,
                    llc   ::Float64,
                    prc   ::Float64,
                    λc    ::Float64,
@@ -312,7 +312,7 @@ end
 
 
 """
-    graftp(tree::sTbd,
+    graftp(tree::sTfbd,
            llc ::Float64,
            λc  ::Float64,
            μc  ::Float64,
@@ -324,7 +324,7 @@ end
 
 Graft proposal function for constant birth-death.
 """
-function graftp(tree::sTbd,
+function graftp(tree::sTfbd,
                 llc ::Float64,
                 λc  ::Float64,
                 μc  ::Float64,
@@ -371,7 +371,7 @@ end
 
 
 """
-    prunep(tree::sTbd,
+    prunep(tree::sTfbd,
            llc ::Float64,
            λc  ::Float64,
            μc  ::Float64,
@@ -383,7 +383,7 @@ end
 
 Prune proposal function for constant birth-death.
 """
-function prunep(tree::sTbd,
+function prunep(tree::sTfbd,
                 llc ::Float64,
                 λc  ::Float64,
                 μc  ::Float64,

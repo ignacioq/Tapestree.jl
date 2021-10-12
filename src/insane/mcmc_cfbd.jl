@@ -14,7 +14,7 @@ Created 07 10 2021
 
 
 """
-    insane_cfbd(tree        ::sTbd, 
+    insane_cfbd(tree        ::sTfbd, 
                 out_file    ::String;
                 augmentation::String            = "fs",
                 λprior      ::Float64           = 0.1,
@@ -32,12 +32,12 @@ Created 07 10 2021
                 μtni        ::Float64           = 1.0,
                 ψtni        ::Float64           = 1.0,
                 obj_ar      ::Float64           = 0.4,
-                pupdp       ::NTuple{3,Float64} = (0.2,0.2,0.5),
+                pupdp       ::NTuple{4,Float64} = (0.2,0.2,0.5),
                 prints      ::Int64             = 5)
 
 Run insane for constant fossilized pure-birth.
 """
-function insane_cfbd(tree        ::sTbd, 
+function insane_cfbd(tree        ::sTfbd, 
                      out_file    ::String;
                      augmentation::String            = "fs",
                      λprior      ::Float64           = 0.1,
@@ -55,7 +55,7 @@ function insane_cfbd(tree        ::sTbd,
                      μtni        ::Float64           = 1.0,
                      ψtni        ::Float64           = 1.0,
                      obj_ar      ::Float64           = 0.4,
-                     pupdp       ::NTuple{3,Float64} = (0.2,0.2,0.2),
+                     pupdp       ::NTuple{4,Float64} = (0.2,0.2,0.2,0.2),
                      prints      ::Int64             = 5)
 
   # forward simulation

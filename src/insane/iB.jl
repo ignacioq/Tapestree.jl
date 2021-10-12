@@ -88,6 +88,8 @@ function makeiBf!(tree::T,
   if isdefined(tree, :d1)
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
+  end
+  if isdefined(tree, :d2)
     push!(bit2, false)
     makeiBf!(tree.d2, idv, bit2)
   end
@@ -157,6 +159,8 @@ function makeiBf!(tree::T,
   if isdefined(tree, :d1)
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
+  end
+  if isdefined(tree, :d2)
     push!(bit2, false)
     makeiBf!(tree.d2, idv, bit2)
   end
@@ -241,6 +245,8 @@ function makeiBf!(tree::T,
   if isdefined(tree, :d1)
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
+  end
+  if isdefined(tree, :d2)
     push!(bit2, false)
     makeiBf!(tree.d2, idv, bit2)
   end

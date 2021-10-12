@@ -383,7 +383,7 @@ end
 """
     nfossils(tree::T) where {T <: iTree}
 
-Return the number of extinct nodes for `tree`.
+Return the number of fossil nodes for `tree`.
 """
 nfossils(tree::T) where {T <: iTree} = _nfossils(tree, 0)
 
@@ -391,7 +391,7 @@ nfossils(tree::T) where {T <: iTree} = _nfossils(tree, 0)
 """
     _nfossils(tree::T, n::Int64) where {T <: iTree}
 
-Return the number of extinct nodes for `tree`, initialized at n.
+Return the number of fossil nodes for `tree`, initialized at n.
 """
 function _nfossils(tree::T, n::Int64) where {T <: iTree}
   if isfossil(tree)

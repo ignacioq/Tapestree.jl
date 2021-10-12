@@ -14,7 +14,7 @@ Created 07 10 2021
 
 
 """
-    insane_cfbd_fs(tree    ::sTbd, 
+    insane_cfbd_fs(tree    ::sTfbd, 
                    out_file::String,
                    λprior  ::Float64,
                    μprior  ::Float64,
@@ -31,12 +31,12 @@ Created 07 10 2021
                    μtni    ::Float64,
                    ψtni    ::Float64,
                    obj_ar  ::Float64,
-                   pupdp   ::NTuple{3,Float64},
+                   pupdp   ::NTuple{4,Float64},
                    prints  ::Int64)
 
 Run insane for constant pure-birth.
 """
-function insane_cfbd_fs(tree    ::sTbd, 
+function insane_cfbd_fs(tree    ::sTfbd, 
                         out_file::String,
                         λprior  ::Float64,
                         μprior  ::Float64,
@@ -53,7 +53,7 @@ function insane_cfbd_fs(tree    ::sTbd,
                         μtni    ::Float64,
                         ψtni    ::Float64,
                         obj_ar  ::Float64,
-                        pupdp   ::NTuple{3,Float64},
+                        pupdp   ::NTuple{4,Float64},
                         prints  ::Int64)
 
   # tree characters
@@ -121,7 +121,7 @@ end
 
 
 """
-    mcmc_burn_cfbd(tree    ::sTbd,
+    mcmc_burn_cfbd(tree    ::sTfbd,
                    n       ::Int64,
                    th      ::Float64,
                    tune_int::Int64,
@@ -135,6 +135,7 @@ end
                    ψi      ::Float64,
                    λtni    ::Float64, 
                    μtni    ::Float64, 
+                   ψtni    ::Float64, 
                    scalef  ::Function,
                    idf     ::Array{iBffs,1},
                    pup     ::Array{Int64,1}, 
@@ -144,7 +145,7 @@ end
 Adaptive MCMC phase for da chain for constant birth-death using forward
 simulation.
 """
-function mcmc_burn_cfbd(tree    ::sTbd,
+function mcmc_burn_cfbd(tree    ::sTfbd,
                         n       ::Int64,
                         th      ::Float64,
                         tune_int::Int64,
@@ -155,9 +156,10 @@ function mcmc_burn_cfbd(tree    ::sTbd,
                         ϵi      ::Float64,
                         λi      ::Float64,
                         μi      ::Float64,
-                        ψi      ::Float64,
+                        ψi      ::Float64, 
                         λtni    ::Float64, 
                         μtni    ::Float64, 
+                        ψtni    ::Float64,
                         scalef  ::Function,
                         idf     ::Array{iBffs,1},
                         pup     ::Array{Int64,1}, 
@@ -175,7 +177,8 @@ function mcmc_burn_cfbd(tree    ::sTbd,
 
   # starting parameters
   if isnan(λi) && isnan(μi) && isnan(ψi)
-    λc, μc, ψc = moments(Float64(n), th, ϵi)
+    λc, μc = moments(Float64(n), th, ϵi)
+    ψc = nfossils(tree)/treelength(tree)
   else
     λc, μc, ψc = λi, μi, ψi
   end
@@ -184,7 +187,7 @@ function mcmc_burn_cfbd(tree    ::sTbd,
   lidf = lastindex(idf)
 
   # likelihood
-  llc = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc, ψc)
+  llc = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
   # llc = llik_cfbd(tree, λc, μc, ψc) - svf(λc, μc, th)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
@@ -241,7 +244,7 @@ end
 
 
 """
-    mcmc_cfbd(tree  ::sTbd,
+    mcmc_cfbd(tree  ::sTfbd,
               llc   ::Float64,
               prc   ::Float64,
               λc    ::Float64,
@@ -263,7 +266,7 @@ end
 
 MCMC da chain for constant birth-death using forward simulation.
 """
-function mcmc_cfbd(tree  ::sTbd,
+function mcmc_cfbd(tree  ::sTfbd,
                    llc   ::Float64,
                    prc   ::Float64,
                    λc    ::Float64,
@@ -294,7 +297,7 @@ function mcmc_cfbd(tree  ::sTbd,
   R = Array{Float64,2}(undef, nlogs, 7)
 
   # make Ψ vector
-  treev = sTbd[]
+  treev = sTfbd[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -308,7 +311,7 @@ function mcmc_cfbd(tree  ::sTbd,
       if p === 1
         llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, ψc, λprior, th, svf)
 
-        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc, ψc)
+        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, 1
         #    return 
@@ -319,7 +322,7 @@ function mcmc_cfbd(tree  ::sTbd,
       if p === 2
         llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, ψc, μprior, th, svf)
       
-        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc, ψc)
+        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, 2
         #    return 
@@ -330,7 +333,7 @@ function mcmc_cfbd(tree  ::sTbd,
       if p === 3
         llc, prc, ψc = ψp(tree, llc, prc, ψc, μtn, λc, μc, ψprior, th, svf)
       
-        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc, ψc)
+        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, 2
         #    return 
@@ -342,7 +345,7 @@ function mcmc_cfbd(tree  ::sTbd,
         bix = fIrand(lidf) + 1
         tree, llc = fsp(tree, idf[bix], llc, λc, μc, ψc, in(bix, cb))
       
-        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc, ψc)
+        # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, 3
         #    return 
@@ -378,11 +381,11 @@ end
 
 
 """
-    llik_cfbd_f(tree::sTbd, λ::Float64, μ::Float64)
+    llik_cfbd_f(tree::sTfbd, λ::Float64, μ::Float64)
 
 Estimate constant birth-death likelihood for the tree in a branch.
 """
-function llik_cfbd_f(tree::sTbd, λ::Float64, μ::Float64, ψ::Float64)
+function llik_cfbd_f(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
 
   ll = - e(tree)*(λ + μ + ψ)
 
@@ -392,11 +395,11 @@ function llik_cfbd_f(tree::sTbd, λ::Float64, μ::Float64, ψ::Float64)
     if ifx1 && isfix(tree.d2)
       return ll
     elseif ifx1
-      ll += llik_cfbd_f(tree.d1::sTbd, λ, μ, ψ) +
-            llik_cfbd(  tree.d2::sTbd, λ, μ, ψ)
+      ll += llik_cfbd_f(tree.d1::sTfbd, λ, μ, ψ) +
+            llik_cfbd(  tree.d2::sTfbd, λ, μ, ψ)
     else
-      ll += llik_cfbd(  tree.d1::sTbd, λ, μ, ψ) + 
-            llik_cfbd_f(tree.d2::sTbd, λ, μ, ψ)
+      ll += llik_cfbd(  tree.d1::sTfbd, λ, μ, ψ) + 
+            llik_cfbd_f(tree.d2::sTfbd, λ, μ, ψ)
     end
   end
 
@@ -407,7 +410,7 @@ end
 
 
 """
-    br_ll_cfbd(tree::sTbd,
+    br_ll_cfbd(tree::sTfbd,
                λc  ::Float64, 
                μc  ::Float64,
                dri ::BitArray{1}, 
@@ -416,7 +419,7 @@ end
 
 Returns constant birth-death likelihood for whole branch `br`.
 """
-function br_ll_cfbd(tree::sTbd,
+function br_ll_cfbd(tree::sTfbd,
                     λ   ::Float64, 
                     μ   ::Float64,
                     ψ   ::Float64,
@@ -426,19 +429,28 @@ function br_ll_cfbd(tree::sTbd,
 
   if ix === ldr
     return llik_cfbd_f(tree, λ, μ, ψ)
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1::sTbd)
-    if ifx1 && isfix(tree.d2::sTbd)
+  end
+  
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+  
+  # Sampled ancestors
+  if defd1 && !defd2 return br_ll_cfbd(tree.d1::sTfbd, λ, μ, ψ, dri, ldr, ix) end
+  if defd2 && !defd1 return br_ll_cfbd(tree.d2::sTfbd, λ, μ, ψ, dri, ldr, ix) end
+
+  if ix < ldr
+    ifx1 = isfix(tree.d1::sTfbd)
+    if ifx1 && isfix(tree.d2::sTfbd)
       ix += 1
       if dri[ix]
-        ll = br_ll_cfbd(tree.d1::sTbd, λ, μ, ψ, dri, ldr, ix)
+        ll = br_ll_cfbd(tree.d1::sTfbd, λ, μ, ψ, dri, ldr, ix)
       else
-        ll = br_ll_cfbd(tree.d2::sTbd, λ, μ, ψ, dri, ldr, ix)
+        ll = br_ll_cfbd(tree.d2::sTfbd, λ, μ, ψ, dri, ldr, ix)
       end
     elseif ifx1
-      ll = br_ll_cfbd(tree.d1::sTbd, λ, μ, ψ, dri, ldr, ix)
+      ll = br_ll_cfbd(tree.d1::sTfbd, λ, μ, ψ, dri, ldr, ix)
     else
-      ll = br_ll_cfbd(tree.d2::sTbd, λ, μ, ψ, dri, ldr, ix)
+      ll = br_ll_cfbd(tree.d2::sTfbd, λ, μ, ψ, dri, ldr, ix)
     end
   end
 
@@ -449,7 +461,7 @@ end
 
 
 """
-    fsp(tree::sTbd,
+    fsp(tree::sTfbd,
         bi  ::iBffs,
         llc ::Float64,
         λc  ::Float64, 
@@ -458,7 +470,7 @@ end
 
 Forward simulation proposal function for constant birth-death.
 """
-function fsp(tree::sTbd,
+function fsp(tree::sTfbd,
              bi  ::iBffs,
              llc ::Float64,
              λ   ::Float64, 
@@ -487,19 +499,19 @@ function fsp(tree::sTbd,
         if dri[1]
           llr = llik_cfbd(   t0, λ, μ, ψ) + iλ         - 
                 br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0) +
-                cond_surv_stem_p(t0,    λ, μ, ψ)      - 
-                cond_surv_stem(tree.d1, λ, μ, ψ)
+                cond_surv_stem_p(t0,    λ, μ)      - 
+                cond_surv_stem(tree.d1, λ, μ)
         else
           llr = llik_cfbd(   t0, λ, μ, ψ) + iλ         -
                 br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0) +
-                cond_surv_stem_p(t0,    λ, μ, ψ)      -
-                cond_surv_stem(tree.d2, λ, μ, ψ)
+                cond_surv_stem_p(t0,    λ, μ)      -
+                cond_surv_stem(tree.d2, λ, μ)
         end
       else
         llr = llik_cfbd(t0,    λ, μ, ψ) + iλ         -
               br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0) +
-              cond_surv_stem_p(t0, λ, μ, ψ)         -
-              cond_surv_stem(tree, λ, μ, ψ)
+              cond_surv_stem_p(t0, λ, μ)         -
+              cond_surv_stem(tree, λ, μ)
       end
     else
       llr = llik_cfbd(t0, λ, μ, ψ) + iλ - 
@@ -571,11 +583,11 @@ end
 
 
 """
-    addtotip(tree::sTbd, stree::sTbd, ix::Bool) 
+    addtotip(tree::sTfbd, stree::sTfbd, ix::Bool) 
 
 Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
 """
-function addtotip(tree::sTbd, stree::sTbd, ix::Bool) 
+function addtotip(tree::sTfbd, stree::sTfbd, ix::Bool) 
 
   if istip(tree)
     if isalive(tree) && !isfix(tree)
@@ -595,10 +607,10 @@ function addtotip(tree::sTbd, stree::sTbd, ix::Bool)
   end
 
   if !ix
-    ix = addtotip(tree.d1::sTbd, stree, ix)
+    ix = addtotip(tree.d1::sTfbd, stree, ix)
   end
   if !ix
-    ix = addtotip(tree.d2::sTbd, stree, ix)
+    ix = addtotip(tree.d2::sTfbd, stree, ix)
   end
 
   return ix
@@ -608,7 +620,7 @@ end
 
 
 """
-    λp(tree  ::sTbd,
+    λp(tree  ::sTfbd,
        llc   ::Float64,
        prc   ::Float64,
        λc    ::Float64,
@@ -620,7 +632,7 @@ end
 
 `λ` proposal function for constant birth-death in adaptive phase.
 """
-function λp(tree  ::sTbd,
+function λp(tree  ::sTfbd,
             llc   ::Float64,
             prc   ::Float64,
             λc    ::Float64,
@@ -634,7 +646,7 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, λtn)::Float64
 
-    llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc, ψc)
+    llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
     # llp = llik_cfbd(tree, λp, μc) - svf(λp, μc, th)
 
     prr = llrdexp_x(λp, λc, λprior)
@@ -653,7 +665,7 @@ end
 
 
 """
-    λp(tree  ::sTbd,
+    λp(tree  ::sTfbd,
        llc   ::Float64,
        prc   ::Float64,
        λc    ::Float64,
@@ -664,7 +676,7 @@ end
 
 `λ` proposal function for constant birth-death.
 """
-function λp(tree  ::sTbd,
+function λp(tree  ::sTfbd,
             llc   ::Float64,
             prc   ::Float64,
             λc    ::Float64,
@@ -677,7 +689,7 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
-    llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc, ψc)
+    llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
     # llp = llik_cfbd(tree, λp, μc) - svf(λp, μc, th)
 
     prr = llrdexp_x(λp, λc, λprior)
@@ -695,7 +707,7 @@ end
 
 
 """
-    μp(tree  ::sTbd,
+    μp(tree  ::sTfbd,
        llc   ::Float64,
        prc   ::Float64,
        μc    ::Float64,
@@ -707,7 +719,7 @@ end
 
 `μ` proposal function for constant birth-death in adaptive phase.
 """
-function μp(tree  ::sTbd,
+function μp(tree  ::sTfbd,
             llc   ::Float64,
             prc   ::Float64,
             μc    ::Float64,
@@ -722,10 +734,10 @@ function μp(tree  ::sTbd,
     μp = mulupt(μc, μtn)::Float64
 
     # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μp, ψp)
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψp) + sc
+    sc  = svf(tree, λc, μp)
+    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
     # sc  = svf(λc, μp, th)
-    # llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψp) - sc
+    # llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) - sc
 
     prr = llrdexp_x(μp, μc, μprior)
 
@@ -743,7 +755,7 @@ end
 
 
 """
-    μp(tree  ::sTbd,
+    μp(tree  ::sTfbd,
        llc   ::Float64,
        prc   ::Float64,
        μc    ::Float64,
@@ -754,7 +766,7 @@ end
 
 `μ` proposal function for constant birth-death.
 """
-function μp(tree  ::sTbd,
+function μp(tree  ::sTfbd,
             llc   ::Float64,
             prc   ::Float64,
             μc    ::Float64,
@@ -768,10 +780,10 @@ function μp(tree  ::sTbd,
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
     # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μp, ψp)
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψp) + sc
+    sc  = svf(tree, λc, μp)
+    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
     # sc  = svf(λc, μp, th)
-    # llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψp) - sc
+    # llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) - sc
 
     prr = llrdexp_x(μp, μc, μprior)
 
