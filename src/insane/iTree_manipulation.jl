@@ -653,25 +653,21 @@ end
 
 """
     fixalive!(tree::T) where T <: iTree
-
-Fixes the path from root to the only species alive.
+Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::T) where T <: iTree
 
-  if istip(tree::T) && isalive(tree::T)
-    fix!(tree::T)
-    return true
-  end
-
-  if isdefined(tree, :d2)
+  if istip(tree::T) 
+    if isalive(tree::T)
+      fix!(tree::T)
+      return true
+    end
+  else
     f = fixalive!(tree.d2::T)
     if f 
       fix!(tree)
       return true
     end
-  end
-
-  if isdefined(tree, :d1)
     f = fixalive!(tree.d1::T)
     if f 
       fix!(tree)
@@ -685,50 +681,110 @@ end
 
 
 
+"""
+    fixalive!(tree::sTfbd) where T <: iTree
+
+Fixes the path from root to the only species alive.
+"""
+function fixalive!(tree::sTfbd) where T <: iTree
+
+  if istip(tree::sTfbd) && isalive(tree::sTfbd)
+    fix!(tree::sTfbd)
+    return true
+  end
+
+  if isdefined(tree, :d2)
+    f = fixalive!(tree.d2::sTfbd)
+    if f 
+      fix!(tree)
+      return true
+    end
+  end
+
+  if isdefined(tree, :d1)
+    f = fixalive!(tree.d1::sTfbd)
+    if f 
+      fix!(tree)
+      return true
+    end
+  end
+
+  return false
+end
+
+
+
 
 """
     fixrtip!(tree::T) where T <: iTree
 
 Fixes the the path for a random non extinct tip.
 """
-fixrtip!(tree::T) where T <: iTree = fixrtip!(tree, ntipsalive(tree))
+fixrtip!(tree::T) where T <: iTree = _fixrtip!(tree, ntipsalive(tree))
+
+
+
+"""
+    fixrtip!(tree::T, na::Int64) where {T <: iTgbm}
+
+Fixes the the path for a random non extinct tip and returns final `λ(t)`.
+"""
+function _fixrtip!(tree::T, na::Int64) where T <: iTree
+
+  fix!(tree)
+
+  if isdefined(tree, :d1)
+    if isextinct(tree.d1)
+      _fixrtip!(tree.d2, na)
+    elseif isextinct(tree.d2)
+      _fixrtip!(tree.d1, na)
+    else
+      na1 = ntipsalive(tree.d1)
+      # probability proportional to number of lineages
+      if (fIrand(na) + 1) > na1
+        _fixrtip!(tree.d2, na - na1)
+      else
+        _fixrtip!(tree.d1, na1)
+      end
+    end
+  end
+end
 
 
 
 
 """
-    _fixrtip!(tree::T, na::Int64) where T <: iTree
+    _fixrtip!(tree::sTfbd, na::Int64)
 
 Fixes the the path for a random non extinct tip, initialized at `na` alive tips.
 """
-function fixrtip!(tree::T, na::Int64) where T <: iTree
+function _fixrtip!(tree::sTfbd, na::Int64)
 
   fix!(tree)
 
   if isdefined(tree, :d1)
     if isdefined(tree, :d2)
       if isextinct(tree.d1::T)
-        fixrtip!(tree.d2::T, na)
+        _fixrtip!(tree.d2::T, na)
       elseif isextinct(tree.d2::T)
-        fixrtip!(tree.d1::T, na)
+        _fixrtip!(tree.d1::T, na)
       else
         na1 = ntipsalive(tree.d1::T)
         # probability proportional to number of lineages
         if (fIrand(na) + 1) > na1
-          fixrtip!(tree.d2::T, na - na1)
+          _fixrtip!(tree.d2::T, na - na1)
         else
-          fixrtip!(tree.d1::T, na1)
+          _fixrtip!(tree.d1::T, na1)
         end
       end
     else
-      fixrtip!(tree.d1::T, na)
+      _fixrtip!(tree.d1::T, na)
     end
   
   elseif isdefined(tree, :d2) && isalive(tree.d2::T)
-    fixrtip!(tree.d2::T, na)
+    _fixrtip!(tree.d2::T, na)
   end
 end
-
 
 
 
