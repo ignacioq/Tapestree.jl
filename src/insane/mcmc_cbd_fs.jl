@@ -326,7 +326,7 @@ function mcmc_cbd(tree  ::sTbd,
         R[lit,4] = λc
         R[lit,5] = μc
         R[lit,6] = Float64(ntipsextinct(tree))
-        R[lit,7] = treelength(tree, 0.0)
+        R[lit,7] = treelength(tree)
         push!(treev, deepcopy(tree))
       end
       lthin = 0
@@ -543,7 +543,7 @@ function addtotip(tree::sTbd, stree::sTbd, ix::Bool)
     if isalive(tree) && !isfix(tree)
 
       sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, stree.iμ)
+      setproperty!(tree, :iμ, isextinct(stree))
 
       if isdefined(stree, :d1)
         tree.d1 = stree.d1
