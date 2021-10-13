@@ -78,8 +78,34 @@ function makeiBf!(tree::T,
 
   itb = istip(tree)
 
-  push!(idv, 
-    iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
+  push!(idv, iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
+
+  bit1 = copy(bit)
+  bit2 = copy(bit)
+
+
+  if isdefined(tree, :d1)
+    push!(bit1, true)
+    makeiBf!(tree.d1, idv, bit1)
+    push!(bit2, false)
+    makeiBf!(tree.d2, idv, bit2)
+  end
+  return nothing
+end
+
+
+
+
+"""
+    makeiBf!(tree::sTfbd, idv ::Array{iBfb,1}, bit ::BitArray{1})
+
+Make `iBfb` vector for an `iTree`.
+"""
+function makeiBf!(tree::sTfbd, idv ::Array{iBfb,1}, bit ::BitArray{1})
+
+  itb = istip(tree)
+
+  push!(idv, iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
@@ -159,6 +185,37 @@ function makeiBf!(tree::T,
   if isdefined(tree, :d1)
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
+    push!(bit2, false)
+    makeiBf!(tree.d2, idv, bit2)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    makeiBf!(tree::sTfbd, idv ::Array{iBfgp,1}, bit ::BitArray{1})
+
+Make `iBfgp` vector for an `iTree`.
+"""
+function makeiBf!(tree::sTfbd, 
+                  idv ::Array{iBfgp,1}, 
+                  bit ::BitArray{1}) where {T <: iTree} 
+
+  itb = istip(tree)
+  ieb = isextinct(tree)
+
+  push!(idv, 
+    iBfgp(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb, ieb))
+
+  bit1 = copy(bit)
+  bit2 = copy(bit)
+
+  if isdefined(tree, :d1)
+    push!(bit1, true)
+    makeiBf!(tree.d1, idv, bit1)
   end
   if isdefined(tree, :d2)
     push!(bit2, false)
@@ -221,6 +278,46 @@ Base.show(io::IO, id::iBffs) =
 Make `iBf` vector for an `iTree`.
 """
 function makeiBf!(tree::T, 
+                  idv ::Array{iBffs,1}, 
+                  bit ::BitArray{1}) where {T <: iTree} 
+
+  itb = istip(tree)
+  ieb = isextinct(tree)
+
+  lb = lastindex(bit)
+
+  sc = 23
+  if iszero(lb)
+    sc = 0
+  elseif isone(lb)
+    sc = 1
+  end
+
+  push!(idv, 
+    iBffs(bit, treeheight(tree), treeheight(tree) - e(tree), itb, ieb, sc))
+
+  bit1 = copy(bit)
+  bit2 = copy(bit)
+
+  if isdefined(tree, :d1)
+    push!(bit1, true)
+    makeiBf!(tree.d1, idv, bit1)
+    push!(bit2, false)
+    makeiBf!(tree.d2, idv, bit2)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    makeiBf!(tree::sTfbd, idv ::Array{iBf,1}, bit ::BitArray{1})
+
+Make `iBf` vector for an `iTree`.
+"""
+function makeiBf!(tree::sTfbd, 
                   idv ::Array{iBffs,1}, 
                   bit ::BitArray{1}) where {T <: iTree} 
 
