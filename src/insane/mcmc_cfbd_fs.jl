@@ -433,6 +433,8 @@ function br_ll_cfbd(tree::sTfbd,
   
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
+
+  println("dri = $(dri), ix = $(ix), ldr = $(ldr), defd1 = $(defd1), defd1 = $(defd1)")
   
   # Sampled ancestors
   if defd1 && !defd2 return br_ll_cfbd(tree.d1::sTfbd, λ, μ, ψ, dri, ldr, ix) end
@@ -593,7 +595,7 @@ function addtotip(tree::sTfbd, stree::sTfbd, ix::Bool)
     if isalive(tree) && !isfix(tree)
 
       sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, stree.iμ)
+      setproperty!(tree, :iμ, isextinct(stree))
 
       if isdefined(stree, :d1)
         tree.d1 = stree.d1

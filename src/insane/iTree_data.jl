@@ -160,7 +160,7 @@ treelength(tree::T) where {T <: iTree} = _treelength(tree, 0.0)
 """
     _treelength(tree::T, l::Float64) where {T <: iTree}
 
-Return the branch length sum of `tree`.
+Return the branch length sum of `tree`, initialized at `l`.
 """
 function _treelength(tree::T, l::Float64) where {T <: iTree}
   l += e(tree)
@@ -177,7 +177,7 @@ end
 """
     _treelength(tree::sTfbd, l::Float64)
 
-Return the branch length sum of `tree`, initialized at l.
+Return the branch length sum of `tree`, initialized at `l`.
 """
 function _treelength(tree::sTfbd, l::Float64)
   l += e(tree)
@@ -290,7 +290,7 @@ nnodes(tree::T) where {T <: iTree} = _nnodes(tree, 0)
 """
     _nnodes(tree::T, n::Int64) where {T <: iTree}
 
-Return the number of descendant nodes for `tree`.
+Return the number of descendant nodes for `tree`, initialized at `n`.
 """
 function _nnodes(tree::T, n::Int64) where {T <: iTree} 
   n += 1
@@ -308,7 +308,7 @@ end
 """
     _nnodes(tree::sTfbd, n::Int64)
 
-Return the number of descendant nodes for `tree`, initialized at n.
+Return the number of descendant nodes for `tree`, initialized at `n`.
 """
 function _nnodes(tree::sTfbd, n::Int64)
   n += 1
@@ -335,7 +335,7 @@ nnodesinternal(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
 """
     _nnodesinternal(tree::T, n::Int64) where {T <: iTree}
 
-Return the number of internal nodes for `tree`.
+Return the number of internal nodes for `tree`, initialized at `n`.
 """
 function _nnodesinternal(tree::T, n::Int64) where {T <: iTree}
   if isdefined(tree, :d1)
@@ -353,7 +353,7 @@ end
 """
     _nnodesinternal(tree::sTfbd, n::Int64)
 
-Return the number of internal nodes for `tree`, initialized at n.
+Return the number of internal nodes for `tree`, initialized at `n`.
 """
 function _nnodesinternal(tree::sTfbd, n::Int64)
   defd1 = isdefined(tree, :d1)
@@ -382,15 +382,15 @@ ntips(tree::T) where {T <: iTree} = _ntips(tree, 0)
 """
     _ntips(tree::T, n::Int64) where {T <: iTree}
 
-Return the number of tip nodes for `tree`, initialized at n.
+Return the number of tip nodes for `tree`, initialized at `n`.
 """
 function _ntips(tree::T, n::Int64) where {T <: iTree}
 
   if isdefined(tree, :d1) 
-    n = _ntips(tree.d1, n) end
-    n = _ntips(tree.d2, n) end
+    n = _ntips(tree.d1, n)
+    n = _ntips(tree.d2, n)
   else
-    n += 1 end
+    n += 1
   end
 
   return n
@@ -401,9 +401,9 @@ end
 """
     _ntips(tree:sTfbd, n::Int64)
 
-Return the number of tip nodes for `tree`, initialized at n.
+Return the number of tip nodes for `tree`, initialized at `n`.
 """
-function _ntips(tree:sTfbd, n::Int64)
+function _ntips(tree::sTfbd, n::Int64)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
@@ -427,8 +427,8 @@ ntipsalive(tree::T) where {T <: iTree} = _ntipsalive(tree, 0)
 
 
 """
-    snan(tree::T, n::Int64) where {T <: iTree}
-Return the number of alive nodes for `tree`.
+    _ntipsalive(tree::T, n::Int64) where {T <: iTree}
+Return the number of alive nodes for `tree`, initialized at `n`.
 """
 function _ntipsalive(tree::T, n::Int64) where {T <: iTree}
 
@@ -448,7 +448,7 @@ end
 """
     _ntipsalive(tree::sTfbd, n::Int64)
 
-Return the number of alive nodes for `tree`, initialized at n.
+Return the number of alive nodes for `tree`, initialized at `n`.
 """
 function _ntipsalive(tree::sTfbd, n::Int64)
   defd1 = isdefined(tree, :d1)
@@ -477,7 +477,7 @@ ntipsextinct(tree::T) where {T <: iTree} = _ntipsextinct(tree, 0)
 """
     _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
 
-Return the number of extinct nodes for `tree`, initialized at n.
+Return the number of extinct nodes for `tree`, initialized at `n`.
 """
 function _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
 
@@ -499,7 +499,7 @@ end
 """
     _ntipsextinct(tree::sTfbd, n::Int64)
 
-Return the number of extinct nodes for `tree`, initialized at n.
+Return the number of extinct nodes for `tree`, initialized at `n`.
 """
 function _ntipsextinct(tree::sTfbd, n::Int64)
   defd1 = isdefined(tree, :d1)
@@ -528,17 +528,20 @@ ntipsextinctF(tree::T) where {T <: iTree} = _ntipsextinctF(tree, 0.0)
 """
     _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
 
-Return the number of extinct nodes for `tree` as Float64, initialized at n.
+Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
 function _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
+  
   if isdefined(tree, :d1) 
-    n = _ntipsextinct(tree.d1, n) 
-    n = _ntipsextinct(tree.d2, n) 
+    n = _ntipsextinctF(tree.d1, n) 
+    n = _ntipsextinctF(tree.d2, n) 
   else
     if isextinct(tree) 
       n += 1.0
     end
   end
+
+  return n
 end
 
 
@@ -547,7 +550,7 @@ end
 """
     _ntipsextinctF(tree::sTfbd, n::Float64)
 
-Return the number of extinct nodes for `tree` as Float64, initialized at n.
+Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
 function _ntipsextinctF(tree::sTfbd, n::Float64)
   defd1 = isdefined(tree, :d1)
@@ -574,7 +577,7 @@ nfossils(tree::T) where {T <: iTree} = _nfossils(tree, 0)
 """
     _nfossils(tree::T, n::Int64) where {T <: iTree}
 
-Return the number of fossil nodes for `tree`, initialized at n.
+Return the number of fossil nodes for `tree`, initialized at `n`.
 """
 function _nfossils(tree::T, n::Int64) where {T <: iTree}
   if isfossil(tree)
@@ -594,6 +597,7 @@ end
     treelength_ne(tree::T, 
                   l   ::Float64, 
                   n   ::Float64) where {T <: iTree}
+
 Return the tree length and extinction events.
 """
 function treelength_ne(tree::T, 
