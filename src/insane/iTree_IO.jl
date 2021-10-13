@@ -70,7 +70,7 @@ end
 
 
 """
-    from_string(s::String, ::Type{T}) where {T <: iTree} )
+    from_string(s::String, ::Type{T}) where {T <: iTree}
 
 Returns `iTree` from newick string.
 """
@@ -111,7 +111,7 @@ end
 
 
 """
-    write_newick(tree::iTsimple, out_file::String)
+    write_newick(tree::T, out_file::String)
 
 Writes `iTsimple` as a newick tree to `out_file`.
 """
