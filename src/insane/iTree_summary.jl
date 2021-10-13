@@ -192,9 +192,53 @@ function extract_vector!(tree::T,
 
   if isdefined(tree, :d1)
     extract_vector!(tree.d1::T, v, nδt, max(0.0, iti - et), lv)
+    extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - et), lv)
+  end
+end
+
+
+
+
+"""
+    extract_vector!(tree::sTfbd, 
+                    v   ::Array{Float64,1}, 
+                    nδt ::Float64, 
+                    ct  ::Float64,
+                    lv  ::Function) where {T <: iTgbm}
+
+Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
+and return a vector.
+"""
+function extract_vector!(tree::sTfbd, 
+                         v   ::Array{Float64,1}, 
+                         nδt ::Float64, 
+                         ct  ::Float64,
+                         lv  ::Function) where {T <: iTgbm}
+
+  et = e(tree)
+  δt = dt(tree)
+  vt = lv(tree)
+  n  = floor(Int64, (et - ct)/nδt)
+  i1 = isapprox(et - ct, Float64(n)*nδt, atol = 1e-11) ? 0 : 1
+
+  pv = Float64[]
+  iti = ct
+  for i in Base.OneTo(n+i1)
+    ix  = fld(iti,δt)
+    tts = δt *  ix
+    ttf = δt * (ix + 1.0)
+    Ix  = Int64(ix)
+    push!(pv, linpred(iti + 0.5*δt, tts, ttf, vt[Ix+1], vt[Ix+2]))
+    iti = Float64(i)*nδt + ct
+  end
+
+  append!(v, pv)
+
+  if isdefined(tree, :d1)
+    extract_vector!(tree.d1::sTfbd, v, nδt, max(0.0, iti - et), lv)
   end
   if isdefined(tree, :d2)
-    extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - et), lv)
+    extract_vector!(tree.d2::sTfbd, v, nδt, max(0.0, iti - et), lv)
   end
 end
 
@@ -224,6 +268,28 @@ Extract the parameters given by `lv` into a linear Array, initialized with an
 array `v`.
 """
 function _linearize_gbm!(tree::T, 
+                         lv  ::Function,
+                         v   ::Array{Float64,1}) where {T <: iTgbm}
+
+  append!(v, lv(tree))
+  if isdefined(tree, :d1)
+    _linearize_gbm!(tree.d1::T, lv, v)
+    _linearize_gbm!(tree.d2::T, lv, v)
+  end
+end
+
+
+
+
+"""
+    _linearize_gbm!(tree::sTfbd, 
+                    lv  ::Function,
+                    v   ::Array{Float64,1}) where {T <: iTgbm}
+
+Extract the parameters given by `lv` into a linear Array, initialized with an
+array `v`.
+"""
+function _linearize_gbm!(tree::sTfbd, 
                          lv  ::Function,
                          v   ::Array{Float64,1}) where {T <: iTgbm}
 

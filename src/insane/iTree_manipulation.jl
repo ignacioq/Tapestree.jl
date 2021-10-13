@@ -76,8 +76,7 @@ end
 
 Cut the bottom part of the tree after `c`.
 """
-cutbottom(tree::T, c::Float64) where {T <: iTree} = 
-  _cutbottom(tree, c, 0.0)
+cutbottom(tree::T, c::Float64) where {T <: iTree} = _cutbottom(tree, c, 0.0)
 
 
 
@@ -87,7 +86,7 @@ cutbottom(tree::T, c::Float64) where {T <: iTree} =
                c   ::Float64,
                t   ::Float64)
 
-Cut the bottom part of the tree after `c`.
+Cut the bottom part of the tree after `c`, starting at time `t`.
 """
 function _cutbottom(tree::sTpb, 
                     c   ::Float64,
@@ -98,8 +97,10 @@ function _cutbottom(tree::sTpb,
   if (t + et) > c
     tree = sTpb(c - t)
   else
-    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
-    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
+    if isdefined(tree, :d1)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
   end
 
   return tree
@@ -113,7 +114,7 @@ end
                c   ::Float64,
                t   ::Float64)
 
-Cut the bottom part of the tree after `c`.
+Cut the bottom part of the tree after `c`, starting at time `t`.
 """
 function _cutbottom(tree::sTbd, 
                     c   ::Float64,
@@ -123,6 +124,34 @@ function _cutbottom(tree::sTbd,
 
   if (t + et) > c
     tree = sTbd(c - t, false, isfix(tree))
+  else
+    if isdefined(tree, :d1)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::sTfbd, 
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::sTfbd, 
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = sTfbd(c - t, false, false, isfix(tree))
   else
     if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
     if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
@@ -139,7 +168,7 @@ end
                c   ::Float64,
                t   ::Float64)
 
-Cut the bottom part of the tree after `c`.
+Cut the bottom part of the tree after `c`, starting at time `t`.
 """
 function _cutbottom(tree::iTgbmpb, 
                     c   ::Float64,
@@ -176,8 +205,10 @@ function _cutbottom(tree::iTgbmpb,
     tree = iTgbmpb(c - t, δt, c - t - tii, lλv)
 
   else
-    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
-    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
+    if isdefined(tree, :d1)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
   end
 
   return tree
@@ -191,7 +222,7 @@ end
                c   ::Float64,
                t   ::Float64) where {T <: iTgbm}
 
-Cut the bottom part of the tree after `c`.
+Cut the bottom part of the tree after `c`, starting at time `t`.
 """
 function _cutbottom(tree::T, 
                     c   ::Float64,
@@ -227,8 +258,10 @@ function _cutbottom(tree::T,
     tree = T(c - t, δt, c - t - tii, false, isfix(tree), lλv)
 
   else
-    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
-    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
+    if isdefined(tree, :d1)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
   end
 
   return tree
@@ -242,7 +275,7 @@ end
                c   ::Float64,
                t   ::Float64)
 
-Cut the bottom part of the tree after `c`.
+Cut the bottom part of the tree after `c`, starting at time `t`.
 """
 function _cutbottom(tree::iTgbmbd,
                     c   ::Float64,
@@ -282,8 +315,10 @@ function _cutbottom(tree::iTgbmbd,
     tree = iTgbmbd(c - t, δt, c - t - tii, false, isfix(tree), lλv, lμv)
 
   else
-    if isdefined(tree, :d1) tree.d1 = _cutbottom(tree.d1, c, t + et) end
-    if isdefined(tree, :d2) tree.d2 = _cutbottom(tree.d2, c, t + et) end
+    if isdefined(tree, :d1)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
   end
 
   return tree
@@ -410,8 +445,37 @@ function addtree(tree::T, dtree::T) where {T <: iTree}
     return tree
   end
 
-  if isdefined(tree, :d1) tree.d1 = addtree(tree.d1::T, dtree::T) end
-  if isdefined(tree, :d2) tree.d2 = addtree(tree.d2::T, dtree::T) end
+  if isdefined(tree, :d1)
+    tree.d1 = addtree(tree.d1::T, dtree::T)
+    tree.d2 = addtree(tree.d2::T, dtree::T)
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    addtree(tree::sTfbd, dtree::sTfbd) 
+
+Add `dtree` to not-extinct tip in `tree` as speciation event, making
+sure that the daughters of `dtree` are fixed.
+"""
+function addtree(tree::sTfbd, dtree::sTfbd)
+
+  if istip(tree::sTfbd) && isalive(tree::sTfbd)
+
+    dtree = fixdstree(dtree::sTfbd)
+
+    tree.d1 = dtree.d1
+    tree.d2 = dtree.d2
+
+    return tree
+  end
+
+  if isdefined(tree, :d1) tree.d1 = addtree(tree.d1::sTfbd, dtree::sTfbd) end
+  if isdefined(tree, :d2) tree.d2 = addtree(tree.d2::sTfbd, dtree::sTfbd) end
 
   return tree
 end
@@ -586,8 +650,30 @@ function gbm_copy!(treec::T,
   l   = lastindex(lλp)
   unsafe_copyto!(lλ(treec), 1, lλp, 1, l)
 
-  if isdefined(treec, :d1) gbm_copy!(treec.d1::T, treep.d1::T) end
-  if isdefined(treec, :d2) gbm_copy!(treec.d2::T, treep.d2::T) end
+  if isdefined(treec, :d1)
+    gbm_copy!(treec.d1::T, treep.d1::T)
+    gbm_copy!(treec.d2::T, treep.d2::T)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    gbm_copy!(treec::sTfbd, treep::sTfbd)
+
+Copies the gbm birth-death in place.
+"""
+function gbm_copy!(treec::sTfbd, treep::sTfbd)
+
+  lλp = lλ(treep)
+  l   = lastindex(lλp)
+  unsafe_copyto!(lλ(treec), 1, lλp, 1, l)
+
+  if isdefined(treec, :d1) gbm_copy!(treec.d1::sTfbd, treep.d1::sTfbd) end
+  if isdefined(treec, :d2) gbm_copy!(treec.d2::sTfbd, treep.d2::sTfbd) end
 
   return nothing
 end
@@ -642,8 +728,10 @@ function gbm_copy!(treec::iTgbmbd,
   unsafe_copyto!(lλ(treec), 1, lλp, 1, l)
   unsafe_copyto!(lμ(treec), 1, lμ(treep), 1, l)
 
-  if isdefined(treec, :d1) gbm_copy!(treec.d1::iTgbmbd, treep.d1::iTgbmbd) end
-  if isdefined(treec, :d2) gbm_copy!(treec.d2::iTgbmbd, treep.d2::iTgbmbd) end
+  if isdefined(treec, :d1)
+    gbm_copy!(treec.d1::iTgbmbd, treep.d1::iTgbmbd)
+    gbm_copy!(treec.d2::iTgbmbd, treep.d2::iTgbmbd)
+  end
 
   return nothing
 end
@@ -725,9 +813,9 @@ fixrtip!(tree::T) where T <: iTree = _fixrtip!(tree, ntipsalive(tree))
 
 
 """
-    fixrtip!(tree::T, na::Int64) where {T <: iTgbm}
+    _fixrtip!(tree::T, na::Int64) where {T <: iTgbm}
 
-Fixes the the path for a random non extinct tip and returns final `λ(t)`.
+Fixes the the path for a random non extinct tip among `na`.
 """
 function _fixrtip!(tree::T, na::Int64) where T <: iTree
 
@@ -756,7 +844,7 @@ end
 """
     _fixrtip!(tree::sTfbd, na::Int64)
 
-Fixes the the path for a random non extinct tip, initialized at `na` alive tips.
+Fixes the the path for a random non extinct tip among `na`.
 """
 function _fixrtip!(tree::sTfbd, na::Int64)
 
@@ -764,25 +852,25 @@ function _fixrtip!(tree::sTfbd, na::Int64)
 
   if isdefined(tree, :d1)
     if isdefined(tree, :d2)
-      if isextinct(tree.d1::T)
-        _fixrtip!(tree.d2::T, na)
-      elseif isextinct(tree.d2::T)
-        _fixrtip!(tree.d1::T, na)
+      if isextinct(tree.d1::sTfbd)
+        _fixrtip!(tree.d2::sTfbd, na)
+      elseif isextinct(tree.d2::sTfbd)
+        _fixrtip!(tree.d1::sTfbd, na)
       else
-        na1 = ntipsalive(tree.d1::T)
+        na1 = ntipsalive(tree.d1::sTfbd)
         # probability proportional to number of lineages
         if (fIrand(na) + 1) > na1
-          _fixrtip!(tree.d2::T, na - na1)
+          _fixrtip!(tree.d2::sTfbd, na - na1)
         else
-          _fixrtip!(tree.d1::T, na1)
+          _fixrtip!(tree.d1::sTfbd, na1)
         end
       end
     else
-      _fixrtip!(tree.d1::T, na)
+      _fixrtip!(tree.d1::sTfbd, na)
     end
   
-  elseif isdefined(tree, :d2) && isalive(tree.d2::T)
-    _fixrtip!(tree.d2::T, na)
+  elseif isdefined(tree, :d2) && isalive(tree.d2::sTfbd)
+    _fixrtip!(tree.d2::sTfbd, na)
   end
 end
 
@@ -1234,6 +1322,22 @@ end
 Fix all `tree`.
 """
 function fixtree!(tree::T) where {T <: iTree}
+  fix!(tree)
+  if isdefined(tree, :d1)
+    fixtree!(tree.d1)
+    fixtree!(tree.d2)
+  end
+end
+
+
+
+
+"""
+    fixtree!(tree::sTfbd)
+
+Fix all `tree`.
+"""
+function fixtree!(tree::sTfbd)
   fix!(tree)
   if isdefined(tree, :d1) fixtree!(tree.d1) end
   if isdefined(tree, :d2) fixtree!(tree.d2) end

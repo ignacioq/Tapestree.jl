@@ -593,7 +593,7 @@ function addtotip(tree::sTfbd, stree::sTfbd, ix::Bool)
     if isalive(tree) && !isfix(tree)
 
       sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, stree.iμ)
+      setproperty!(tree, :iμ, isextinct(stree))
 
       if isdefined(stree, :d1)
         tree.d1 = stree.d1
