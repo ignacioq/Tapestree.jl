@@ -879,13 +879,13 @@ Return the first fixed daughters `d1` and `d2`. Works only for
 internal branches.
 """
 function fixds(tree::sTfbd)
-  ifx1 = isfix(tree.d1::T)
-  if ifx1 && isdefined(tree, :d2) && isfix(tree.d2::T)
-    return tree.d1::T, tree.d2::T
+  ifx1 = isdefined(tree, :d1) && isfix(tree.d1::sTfbd)
+  if ifx1 && isdefined(tree, :d2) && isfix(tree.d2::sTfbd)
+    return tree.d1::sTfbd, tree.d2::sTfbd
   elseif ifx1
-    fixds(tree.d1::T)
+    fixds(tree.d1::sTfbd)
   else
-    fixds(tree.d2::T)
+    fixds(tree.d2::sTfbd)
   end
 end
 
@@ -914,19 +914,22 @@ end
 
 
 """
-    fixdstree(tree::T) where {T <: iTree}
+    fixdstree(tree::sTfbd)
 
-Returns the first tree with both daughters fixed.
+Returns the first tree with every daughter fixed.
 """
-function fixdstree(tree::sTfbd) where {T <: iTree}
+function fixdstree(tree::sTfbd)
 
-  ifx1 = isfix(tree.d1::T)
-  if ifx1 && isdefined(tree, :d2) && isfix(tree.d2::T)
+  ifx1 = isdefined(tree, :d1) && isfix(tree.d1::sTfbd)
+  ifx2 = isdefined(tree, :d2) && isfix(tree.d2::sTfbd)
+
+  if (ifx1 && ifx2) || isfossil(tree)
+    # every defined daughter is fixed, or sampled ancestor
     return tree
   elseif ifx1
-    tree = fixdstree(tree.d1::T)
+    tree = fixdstree(tree.d1::sTfbd)
   else
-    tree = fixdstree(tree.d2::T)
+    tree = fixdstree(tree.d2::sTfbd)
   end
 end
 
@@ -965,6 +968,37 @@ end
 
 
 """
+    drtree(tree::sTfbd, dri::BitArray{1}, ldr::Int64, ix::Int64)
+
+Returns the tree given by `dr`, circumventing unfix branches.
+"""
+function drtree(tree::sTfbd, 
+                dri ::BitArray{1}, 
+                ldr ::Int64, 
+                ix  ::Int64)
+  if ldr === ix
+    return tree
+  elseif ldr > ix
+    ifx1 = isdefined(tree, :d1) && isfix(tree.d1)
+    if ifx1 && isdefined(tree, :d2) && isfix(tree.d2)
+      ix += 1
+      if dri[ix]
+        drtree(tree.d1::sTfbd, dri, ldr, ix)
+      else
+        drtree(tree.d2::sTfbd, dri, ldr, ix)
+      end
+    elseif ifx1
+      drtree(tree.d1::sTfbd, dri, ldr, ix)
+    else
+      drtree(tree.d2::sTfbd, dri, ldr, ix)
+    end
+  end
+end
+
+
+
+
+"""
     drtree(treec::T, treep::T, dri::BitArray{1}, ldr::Int64, ix::Int64)
 
 Returns the trees given by `dr`, circumventing unfix branches.
@@ -990,6 +1024,39 @@ function drtree(treec::T,
       drtree(treec.d1::T, treep.d1::T, dri, ldr, ix)
     else
       drtree(treec.d2::T, treep.d2::T, dri, ldr, ix)
+    end
+  end
+end
+
+
+
+
+"""
+    drtree(treec::sTfbd, treep::sTfbd, dri::BitArray{1}, ldr::Int64, ix::Int64)
+
+Returns the trees given by `dr`, circumventing unfix branches.
+"""
+function drtree(treec::sTfbd, 
+                treep::sTfbd, 
+                dri  ::BitArray{1}, 
+                ldr  ::Int64, 
+                ix   ::Int64)
+
+  if ldr === ix
+    return treec, treep
+  elseif ldr > ix
+    ifx1 = isdefined(tree, :d1) && isfix(tree.d1)
+    if ifx1 && isdefined(tree, :d2) && isfix(tree.d2)
+      ix += 1
+      if dri[ix]
+        drtree(treec.d1::sTfbd, treep.d1::sTfbd, dri, ldr, ix)
+      else
+        drtree(treec.d2::sTfbd, treep.d2::sTfbd, dri, ldr, ix)
+      end
+    elseif ifx1
+      drtree(treec.d1::sTfbd, treep.d1::sTfbd, dri, ldr, ix)
+    else
+      drtree(treec.d2::sTfbd, treep.d2::sTfbd, dri, ldr, ix)
     end
   end
 end

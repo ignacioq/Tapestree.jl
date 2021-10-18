@@ -313,16 +313,80 @@ end
 
 
 """
+    iBfffs
+
+A Composite type representing node address for a **fixed** branch in `iTree`:
+
+  `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
+  `ti`: initial absolute time.
+  `tf`: final absolute time.
+  `it`: `true` if a terminal branch.
+  `ie`: `true` if an extinct branch.
+  `iψ`: `true` if a fossil branch.
+  `sc`: is `0` if stem branch, `1` if either of the crown branches and `23` if 
+        another plebeian branch.
+
+    iBfffs()
+
+Constructs an empty `iBf` object.
+"""
+struct iBfffs <: iBf
+  dr::BitArray{1}
+  ti::Float64
+  tf::Float64
+  it::Bool
+  ie::Bool
+  iψ::Bool
+  sc::Int64
+
+  # constructors
+  iBfffs() = new(BitArray{1}(), 0.0, 0.0, false, false, false, 23)
+  iBfffs(dr::BitArray{1}, ti::Float64, tf::Float64, it::Bool, ie::Bool, iψ::Bool, 
+    sc::Int64) = 
+    new(dr, ti, tf, it, ie, iψ, sc)
+end
+
+
+# pretty-printing
+Base.show(io::IO, id::iBfffs) = 
+  print(io, "fixed", 
+    it(id)     ? " terminal" : "",
+    iψ(id)     ? " fossil" : "", 
+    iszero(sc(id)) ? " stem" : "", 
+    isone(sc(id))  ? " crown" : "", 
+    " ibranch (", ti(id), ", ", tf(id), "), ", dr(id))
+
+
+
+
+"""
     makeiBf!(tree::sTfbd, idv ::Array{iBf,1}, bit ::BitArray{1})
 
 Make `iBf` vector for an `iTree`.
 """
 function makeiBf!(tree::sTfbd, 
-                  idv ::Array{iBffs,1}, 
-                  bit ::BitArray{1}) where {T <: iTree} 
+                   idv::Array{iBfffs,1}, 
+                   bit::BitArray{1}) where {T <: iTree}
+  
+  return _makeiBf!(tree, idv, bit, treeheight(tree))
+end
+
+
+
+
+"""
+    _makeiBf!(tree::sTfbd, idv ::Array{iBf,1}, bit ::BitArray{1}, ti::Float64)
+
+Make `iBf` vector for an `iTree`, initialized at time `ti`.
+"""
+function _makeiBf!(tree::sTfbd, 
+                   idv ::Array{iBfffs,1}, 
+                   bit ::BitArray{1},
+                   ti::Float64) where {T <: iTree} 
 
   itb = istip(tree)
   ieb = isextinct(tree)
+  iψb = isfossil(tree)
 
   lb = lastindex(bit)
 
@@ -333,19 +397,20 @@ function makeiBf!(tree::sTfbd,
     sc = 1
   end
 
-  push!(idv, 
-    iBffs(bit, treeheight(tree), treeheight(tree) - e(tree), itb, ieb, sc))
+  tf = ti-e(tree)
+
+  push!(idv, iBfffs(bit, ti, tf, itb, ieb, iψb, sc))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
 
   if isdefined(tree, :d1)
     push!(bit1, true)
-    makeiBf!(tree.d1, idv, bit1)
+    _makeiBf!(tree.d1, idv, bit1, tf)
   end
   if isdefined(tree, :d2)
     push!(bit2, false)
-    makeiBf!(tree.d2, idv, bit2)
+    _makeiBf!(tree.d2, idv, bit2, tf)
   end
 
   return nothing
@@ -456,6 +521,16 @@ Return `0` if stem branch, `1` if either of the crown branches and `23` if
 another plebeian branch.
 """
 sc(id::iBffs) = getproperty(id, :sc)
+
+
+
+
+"""
+    iψ(id::iBfffs)
+
+Return if is a fossil.
+"""
+iψ(id::iBfffs) = getproperty(id, :iψ)
 
 
 

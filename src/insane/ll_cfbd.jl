@@ -192,7 +192,9 @@ given a complete `iTree` recursively.
 """
 function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
   if istip(tree)
-    - e(tree)*(λ + μ + ψ) + (isextinct(tree) ? log(μ) : 0.0)
+    - e(tree)*(λ + μ + ψ) + 
+        (isextinct(tree) ? log(μ) : 0.0) + 
+        (isfossil( tree) ? log(ψ) : 0.0)
   
   elseif issampledancestor(tree)
     - e(tree)*(λ + μ + ψ) + log(ψ) +
@@ -200,8 +202,8 @@ function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
         (isdefined(tree, :d2) ? llik_cfbd(tree.d2::sTfbd, λ, μ, ψ) : 0.0)
   else
     - e(tree)*(λ + μ + ψ) + log(λ) +
-      llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) + 
-      llik_cfbd(tree.d2::sTfbd, λ, μ, ψ)
+        llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) + 
+        llik_cfbd(tree.d2::sTfbd, λ, μ, ψ)
   end
 end
 

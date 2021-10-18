@@ -172,7 +172,7 @@ mutable struct sTfbd <: sT
   sTfbd(e::Float64, iμ::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool, fx::Bool) = 
-    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iμ && fx; x.fx = fx; x)
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = fx; x)
   sTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
   sTfbd(d1::sTfbd, d2::sTfbd, e::Float64) = 

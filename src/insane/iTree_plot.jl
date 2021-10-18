@@ -361,17 +361,24 @@ function _nodeproperties!(tree::T, shape::Vector{Symbol}, col::Vector{Symbol},
       push!(col, :white, :white)
       push!(alpha, 0, 0)
       _nodeproperties!(tree.d2, shape, col, alpha)
-    else
+    elseif isfossil(tree)
       # sampled ancestor
       push!(shape, :none, :none, :square)
       push!(col, :white, :white, :red)
       push!(alpha, 0, 0, 0.5+0.5*isfix(tree))
       _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
+    else
+      # error
+      @warn "Star node incorrectly defined (neither tip, speciation or fossil)"
+      push!(shape, :none, :none, :star)
+      push!(col, :white, :white, :yellow)
+      push!(alpha, 0, 0, 0.5+0.5*isfix(tree))
+      _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
     end
   else
     # tip
-    isfossil(tree) ? push!(shape, :square) : push!(shape, :circle)
-    isfossil(tree) ? push!(col, :red) : push!(col, :blue)
+    isfossil(tree) ? (push!(shape, :square); push!(col, :red)) : 
+                     (push!(shape, :circle); push!(col, :blue))
     push!(alpha, 0.5+0.5*isfix(tree))
   end
   

@@ -358,18 +358,95 @@ function swapbranch!(treep::T,
     if ifx1 && isfix(treec.d2::T)
       ix += 1
       if dri[ix]
-        treep.d1, treec.d1 = 
-          swapbranch!(treep.d1::T, treec.d1::T, nbtr::T, dri, ldr, it, ix)
+        treep.d1, treec.d1 = swapbranch!(treep.d1::T, treec.d1::T, nbtr::T, 
+                                         dri, ldr, it, ix)
       else
-        treep.d2, treec.d2 = 
-          swapbranch!(treep.d2::T, treec.d2::T, nbtr::T, dri, ldr, it, ix)
+        treep.d2, treec.d2 = swapbranch!(treep.d2::T, treec.d2::T, nbtr::T, 
+                                         dri, ldr, it, ix)
       end
     elseif ifx1
-      treep.d1, treec.d1 = 
-          swapbranch!(treep.d1::T, treec.d1::T, nbtr::T, dri, ldr, it, ix)
+      treep.d1, treec.d1 = swapbranch!(treep.d1::T, treec.d1::T, nbtr::T, 
+                                       dri, ldr, it, ix)
     else
-      treep.d2, treec.d2 = 
-          swapbranch!(treep.d2::T, treec.d2::T, nbtr::T, dri, ldr, it, ix)
+      treep.d2, treec.d2 = swapbranch!(treep.d2::T, treec.d2::T, nbtr::T, 
+                                       dri, ldr, it, ix)
+    end
+  end
+
+  return treep, treec
+end
+
+
+
+
+"""
+    swapbranch!(treep::sTfbd,
+                treec::sTfbd,
+                nbtr ::sTfbd,
+                dri  ::BitArray{1}, 
+                ldr  ::Int64,
+                it   ::Bool,
+                iψ  ::Bool,
+                ix   ::Int64)
+
+Swap branch given by `dri` by `nbtr` and return the tree.
+"""
+function swapbranch!(treep::sTfbd,
+                     treec::sTfbd,
+                     nbtr ::sTfbd,
+                     dri  ::BitArray{1}, 
+                     ldr  ::Int64,
+                     it   ::Bool,
+                     iψ  ::Bool,
+                     ix   ::Int64)
+
+  if ix === ldr
+    nbtrp = deepcopy(nbtr)
+    if !it
+      if iψ 
+        maketipfossil!(nbtrp)
+        maketipfossil!(nbtr)
+      end
+      nbtrp = addtree(nbtrp, treep) 
+      nbtr  = addtree(nbtr,  treec) 
+    end
+    return nbtrp, nbtr
+  
+  elseif ix < ldr
+    
+    # Sampled ancestors
+    defd1 = isdefined(treec::sTfbd, :d1)
+    defd2 = isdefined(treec::sTfbd, :d2)
+    if defd1 && !defd2
+      ix += 1
+      treep.d1, treec.d1 = swapbranch!(treep.d1::sTfbd, treec.d1::sTfbd, 
+                                       nbtr::sTfbd, dri, ldr, it, ix)
+      return treep, treec
+    end
+    if defd2 && !defd1
+      ix += 1
+      treep.d2, treec.d2 = swapbranch!(treep.d2::sTfbd, treec.d2::sTfbd, 
+                                       nbtr::sTfbd, dri, ldr, it, ix)
+      return treep, treec
+    end
+
+    # Birth
+    ifx1 = isfix(treec.d1::sTfbd)
+    if ifx1 && isfix(treec.d2::sTfbd)
+      ix += 1
+      if dri[ix]
+        treep.d1, treec.d1 = swapbranch!(treep.d1::sTfbd, treec.d1::sTfbd, 
+                                         nbtr::sTfbd, dri, ldr, it, ix)
+      else
+        treep.d2, treec.d2 = swapbranch!(treep.d2::sTfbd, treec.d2::sTfbd, 
+                                         nbtr::sTfbd, dri, ldr, it, ix)
+      end
+    elseif ifx1
+      treep.d1, treec.d1 = swapbranch!(treep.d1::sTfbd, treec.d1::sTfbd, 
+                                       nbtr::sTfbd, dri, ldr, it, ix)
+    else
+      treep.d2, treec.d2 = swapbranch!(treep.d2::sTfbd, treec.d2::sTfbd, 
+                                       nbtr::sTfbd, dri, ldr, it, ix)
     end
   end
 
@@ -406,22 +483,146 @@ function swapbranch!(tree::T,
     if ifx1 && isfix(tree.d2::T)
       ix += 1
       if dri[ix]
-        tree.d1 = 
-          swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
+        tree.d1 = swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
       else
-        tree.d2 = 
-          swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
+        tree.d2 = swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
       end
     elseif ifx1
-      tree.d1 = 
-          swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
+      tree.d1 = swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
     else
-      tree.d2 = 
-          swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
+      tree.d2 = swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
     end
   end
 
   return tree
+end
+
+
+
+
+"""
+    swapbranch!(tree::sTfbd,
+                nbtr::sTfbd,
+                dri ::BitArray{1}, 
+                ldr ::Int64,
+                it  ::Bool,
+                iψ  ::Bool,
+                ix  ::Int64)
+
+Swap branch given by `dri` by `nbtr` and return the tree.
+"""
+function swapbranch!(tree::sTfbd,
+                     nbtr::sTfbd,
+                     dri ::BitArray{1}, 
+                     ldr ::Int64,
+                     it  ::Bool,
+                     iψ  ::Bool,
+                     ix  ::Int64)
+
+  # branch reached
+  if ix === ldr
+    if !it
+      if iψ maketipfossil!(nbtr) end
+      nbtr = addtree(nbtr, tree)
+    end
+    return nbtr
+  
+  elseif ix < ldr
+    
+    # sampled ancestors
+    defd1 = isdefined(tree, :d1)
+    defd2 = isdefined(tree, :d2)
+    if defd1 && !defd2
+      ix += 1
+      tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      return tree
+    end
+    if defd2 && !defd1
+      ix += 1
+      tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      return tree
+    end
+
+    # birth
+    ifx1 = isfix(tree.d1::sTfbd)
+    if ifx1 && isfix(tree.d2::sTfbd)
+      ix += 1
+      if dri[ix]
+        tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      else
+        tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      end
+    elseif ifx1
+      tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+    else
+      tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    swapfossil!(tree::sTfbd,
+                nbtr::sTfbd,
+                dri ::BitArray{1}, 
+                ldr ::Int64,
+                ix  ::Int64)
+
+Swap the subtree following the tip of the branch at `dri` by `nbtr`.
+"""
+function swapfossil!(tree::sTfbd,
+                     nttr::sTfbd,
+                     dri ::BitArray{1}, 
+                     ldr ::Int64,
+                     ix  ::Int64)
+  # branch reached
+  if ix === ldr
+    # end of branch reached
+    if isfossil(tree)
+      tree.d1 = nttr
+    elseif !istip(tree)
+      if isfix(tree.d1::sTfbd)
+        swapfossil!(tree.d1::sTfbd, nttr::sTfbd, dri, ldr, ix)
+      else
+        swapfossil!(tree.d2::sTfbd, nttr::sTfbd, dri, ldr, ix)
+      end
+    end
+
+  elseif ix < ldr
+
+    # sampled ancestors
+    defd1 = isdefined(tree, :d1)
+    defd2 = isdefined(tree, :d2)
+    if defd1 && !defd2
+      ix += 1
+      swapfossil!(tree.d1::sTfbd, nttr::sTfbd, dri, ldr, ix)
+      return nothing
+    end
+    if defd2 && !defd1
+      ix += 1
+      swapfossil!(tree.d2::sTfbd, nttr::sTfbd, dri, ldr, ix)
+      return nothing
+    end
+
+    # birth
+    ifx1 = isfix(tree.d1::sTfbd)
+    if ifx1 && isfix(tree.d2::sTfbd)
+      ix += 1
+      if dri[ix]
+        swapfossil!(tree.d1::sTfbd, nttr::sTfbd, dri, ldr, ix)
+      else
+        swapfossil!(tree.d2::sTfbd, nttr::sTfbd, dri, ldr, ix)
+      end
+    elseif ifx1
+      swapfossil!(tree.d1::sTfbd, nttr::sTfbd, dri, ldr, ix)
+    else
+      swapfossil!(tree.d2::sTfbd, nttr::sTfbd, dri, ldr, ix)
+    end
+  end
 end
 
 
@@ -460,7 +661,7 @@ end
     addtree(tree::sTfbd, dtree::sTfbd) 
 
 Add `dtree` to not-extinct tip in `tree` as speciation event, making
-sure that the daughters of `dtree` are fixed.
+sure that every daughter of `dtree` is fixed.
 """
 function addtree(tree::sTfbd, dtree::sTfbd)
 
@@ -468,8 +669,9 @@ function addtree(tree::sTfbd, dtree::sTfbd)
 
     dtree = fixdstree(dtree::sTfbd)
 
-    tree.d1 = dtree.d1
-    tree.d2 = dtree.d2
+    if isdefined(dtree, :d1) tree.d1 = dtree.d1 end
+    if isdefined(dtree, :d2) tree.d2 = dtree.d2 end
+    tree.iψ = isfossil(dtree)
 
     return tree
   end
@@ -478,6 +680,24 @@ function addtree(tree::sTfbd, dtree::sTfbd)
   if isdefined(tree, :d2) tree.d2 = addtree(tree.d2::sTfbd, dtree::sTfbd) end
 
   return tree
+end
+
+
+
+
+"""
+    maketipfossil!(tree::sTfbd) 
+
+Change extant tip to fossil tip.
+"""
+function maketipfossil!(tree::sTfbd)
+
+  if istip(tree::sTfbd) && isalive(tree::sTfbd)
+    tree.iψ = true
+  end
+
+  if isdefined(tree, :d1) maketipfossil!(tree.d1::sTfbd) end
+  if isdefined(tree, :d2) maketipfossil!(tree.d2::sTfbd) end
 end
 
 
@@ -938,6 +1158,66 @@ end
 
 
 """
+    graftree!(tree ::sTfbd,
+              stree::sTfbd,
+              dri  ::BitArray{1},
+              h    ::Float64,
+              ldr  ::Int64,
+              thc  ::Float64,
+              ix   ::Int64)
+
+Graft `stree` into `tree` given the address `idr`.
+"""
+function graftree!(tree ::sTfbd,
+                   stree::sTfbd,
+                   dri  ::BitArray{1},
+                   h    ::Float64,
+                   ldr  ::Int64,
+                   thc  ::Float64,
+                   ix   ::Int64)
+
+  if ix === ldr 
+    if thc > h > (thc - e(tree))
+      ne = thc - h
+      adde!(tree, -ne)
+      tree = rand() <= 0.5 ? sTfbd(tree, stree, ne, false, false, true) :
+                             sTfbd(stree, tree, ne, false, false, true)
+    else
+      if isfix(tree.d1)
+        tree.d1 = 
+          graftree!(tree.d1::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
+      else
+        tree.d2 =
+          graftree!(tree.d2::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
+      end
+    end
+  elseif ix < ldr
+    ifx1 = isdefined(stree, :d1) && isfix(tree.d1)
+    if ifx1 && isdefined(stree, :d2) && isfix(tree.d2)
+      ix += 1
+      if dri[ix]
+        tree.d1 = 
+          graftree!(tree.d1::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
+      else
+        tree.d2 = 
+          graftree!(tree.d2::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
+      end
+    elseif ifx1
+      tree.d1 = 
+        graftree!(tree.d1::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
+    else
+      tree.d2 =
+        graftree!(tree.d2::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
     prunetree!(tree::T, 
                dri ::BitArray{1}, 
                ldr ::Int64,
@@ -1002,16 +1282,80 @@ end
 
 
 """
-    remove_extinct!(tree::iTgbmce)
+    prunetree!(tree::sTfbd, 
+               dri ::BitArray{1}, 
+               ldr ::Int64,
+               wpr ::Int64,
+               ix  ::Int64, 
+               px  ::Int64)
+
+Prune tree at branch given by `dri` and grafted `wpr`.
+"""
+function prunetree!(tree::sTfbd, 
+                    dri ::BitArray{1}, 
+                    ldr ::Int64,
+                    wpr ::Int64,
+                    ix  ::Int64, 
+                    px  ::Int64)
+
+  if ix === ldr
+    if px === wpr
+      if isfix(tree.d1::sTfbd)
+        ne  = e(tree) + e(tree.d1)
+        sete!(tree.d1, ne)
+        tree = tree.d1
+      elseif isfix(tree.d2::sTfbd)
+        ne  = e(tree) + e(tree.d2)
+        sete!(tree.d2, ne)
+        tree = tree.d2
+      end
+    else
+      px += 1
+      if isfix(tree.d1::sTfbd)
+        tree.d1 = 
+          prunetree!(tree.d1::sTfbd, dri, ldr, wpr, ix, px)
+      else
+        tree.d2 =
+          prunetree!(tree.d2::sTfbd, dri, ldr, wpr, ix, px)
+      end
+    end
+  elseif ix < ldr
+    ifx1 = isdefined(stree, :d1) && isfix(tree.d1::sTfbd)
+    if ifx1 && isdefined(stree, :d2) && isfix(tree.d2::sTfbd)
+      ix += 1
+      if dri[ix]
+        tree.d1 = 
+          prunetree!(tree.d1::sTfbd, dri, ldr, wpr, ix, px)
+      else
+        tree.d2 = 
+          prunetree!(tree.d2::sTfbd, dri, ldr, wpr, ix, px)
+      end
+    elseif ifx1
+      tree.d1 = 
+        prunetree!(tree.d1::sTfbd, dri, ldr, wpr, ix, px)
+    else
+      tree.d2 =
+        prunetree!(tree.d2::sTfbd, dri, ldr, wpr, ix, px)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    remove_extinct(tree::iTgbmce)
 
 Remove extinct tips from `iTgbmce`.
 """
-function remove_extinct!(tree::iTgbmce)
+function remove_extinct(tree::iTgbmce)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_extinct(tree.d1)
+    tree.d2 = remove_extinct(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1057,16 +1401,16 @@ end
 
 
 """
-    remove_extinct!(tree::iTgbmct)
+    remove_extinct(tree::iTgbmct)
 
 Remove extinct tips from `iTgbmct`.
 """
-function remove_extinct!(tree::iTgbmct)
+function remove_extinct(tree::iTgbmct)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_extinct(tree.d1)
+    tree.d2 = remove_extinct(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1116,16 +1460,16 @@ end
 
 
 """
-    remove_extinct!(tree::iTgbmbd)
+    remove_extinct(tree::iTgbmbd)
 
 Remove extinct tips from `iTgbmbd`.
 """
-function remove_extinct!(tree::iTgbmbd)
+function remove_extinct(tree::iTgbmbd)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_extinct(tree.d1)
+    tree.d2 = remove_extinct(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1181,15 +1525,15 @@ end
 
 
 """
-    remove_extinct!(treev::Array{T,1}) where {T <: iTree}
+    remove_extinct(treev::Array{T,1}) where {T <: iTree}
 
 Remove extinct taxa for a vector of trees.
 """
-function remove_extinct!(treev::Array{T,1}) where {T <: iTree}
+function remove_extinct(treev::Array{T,1}) where {T <: iTree}
 
   treevne = T[]
   for t in treev
-    push!(treevne, remove_extinct!(deepcopy(t)))
+    push!(treevne, remove_extinct(deepcopy(t)))
   end
 
   return treevne
@@ -1199,15 +1543,15 @@ end
 
 
 """
-    remove_extinct!(tree::sTbd)
+    remove_extinct(tree::sTbd)
 
 Remove extinct tips from `sTbd`.
 """
-function remove_extinct!(tree::sTbd)
+function remove_extinct(tree::sTbd)
 
   if isdefined(tree, :d1)
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_extinct(tree.d1)
+    tree.d2 = remove_extinct(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1231,16 +1575,16 @@ end
 
 
 """
-    remove_extinct!(tree::sTfbd)
+    remove_extinct(tree::sTfbd)
 
 Remove extinct tips from `sTfbd`.
 """
-function remove_extinct!(tree::sTfbd)
+function remove_extinct(tree::sTfbd)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  if defd1 tree.d1 = remove_extinct!(tree.d1) end
-  if defd2 tree.d2 = remove_extinct!(tree.d2) end
+  if defd1 tree.d1 = remove_extinct(tree.d1) end
+  if defd2 tree.d2 = remove_extinct(tree.d2) end
 
   if !defd1 && !defd2
     return tree
@@ -1265,29 +1609,29 @@ end
 
 
 """
-    reconstructed!(tree::T) where {T <: iTree}
+    reconstructed(tree::T) where {T <: iTree}
 
 Returns the reconstructed tree, i.e. the observed tree from sampled extant 
 tips and fossils.
 """
-reconstructed!(tree::T) where {T <: iTree} = remove_extinct!(tree)
+reconstructed(tree::T) where {T <: iTree} = remove_extinct(tree)
 # For all trees without fossils, it simply means removing extinct lineages
 
 
 
 
 """
-    reconstructed!(tree::sTfbd)
+    reconstructed(tree::sTfbd)
 
 Returns the reconstructed tree, i.e. the observed tree from sampled extant 
 tips and fossils.
 """
-function reconstructed!(tree::sTfbd)
+function reconstructed(tree::sTfbd)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  if defd1 tree.d1 = reconstructed!(tree.d1) end
-  if defd2 tree.d2 = reconstructed!(tree.d2) end
+  if defd1 tree.d1 = reconstructed(tree.d1) end
+  if defd2 tree.d2 = reconstructed(tree.d2) end
 
   if !defd1 && !defd2
     return tree
@@ -1303,7 +1647,7 @@ function reconstructed!(tree::sTfbd)
 
   # sampled ancestor -> fossil tip
   if (extd1 && !defd2) || (!defd1 && extd2)
-    return sTfbd(e(tree), true, true, isfix(tree))
+    return sTfbd(e(tree), false, true, isfix(tree))
   end
 
   # 1 extinct and 1 alive branch -> keep only the alive one
