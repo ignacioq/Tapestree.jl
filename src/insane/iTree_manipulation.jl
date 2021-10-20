@@ -402,11 +402,11 @@ function swapbranch!(treep::sTfbd,
 
   if ix === ldr
     nbtrp = deepcopy(nbtr)
-    if !it
-      if iψ 
-        maketipfossil!(nbtrp)
-        maketipfossil!(nbtr)
-      end
+    if iψ 
+      maketipfossil!(nbtrp)
+      maketipfossil!(nbtr)
+    end
+    if !it || iψ
       nbtrp = addtree(nbtrp, treep) 
       nbtr  = addtree(nbtr,  treec) 
     end
@@ -521,8 +521,8 @@ function swapbranch!(tree::sTfbd,
 
   # branch reached
   if ix === ldr
-    if !it
-      if iψ maketipfossil!(nbtr) end
+    if iψ maketipfossil!(nbtr) end
+    if !it || iψ
       nbtr = addtree(nbtr, tree)
     end
     return nbtr
@@ -534,12 +534,12 @@ function swapbranch!(tree::sTfbd,
     defd2 = isdefined(tree, :d2)
     if defd1 && !defd2
       ix += 1
-      tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, iψ, ix)
       return tree
     end
     if defd2 && !defd1
       ix += 1
-      tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, iψ, ix)
       return tree
     end
 
@@ -548,14 +548,14 @@ function swapbranch!(tree::sTfbd,
     if ifx1 && isfix(tree.d2::sTfbd)
       ix += 1
       if dri[ix]
-        tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+        tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, iψ, ix)
       else
-        tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+        tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, iψ, ix)
       end
     elseif ifx1
-      tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      tree.d1 = swapbranch!(tree.d1::sTfbd, nbtr::sTfbd, dri, ldr, it, iψ, ix)
     else
-      tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, ix)
+      tree.d2 = swapbranch!(tree.d2::sTfbd, nbtr::sTfbd, dri, ldr, it, iψ, ix)
     end
   end
 

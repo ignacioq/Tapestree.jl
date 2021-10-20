@@ -192,7 +192,7 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
   lidf = lastindex(idf)
 
   # add simulated subtrees to all fossil tips
-  for bi in filter(x -> it(x) && iψ(x), idf)
+  for bi in filter(x -> it(x) && ifos(x), idf)
     dri = dr(bi)
     ldr = lastindex(dri)
     ret = false
@@ -407,19 +407,17 @@ function llik_cfbd_f(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
 
   ll = - e(tree)*(λ + μ + ψ)
 
-  #defd1 = isdefined(tree, :d1)
-  #defd2 = isdefined(tree, :d2)
+  if issampledancestor(tree)
+    # end of the fixed branch
+    return ll + log(ψ)
+  end
 
-  # Sampled ancestors
-  #if defd1 && !defd2 ll += log(ψ) + llik_cfbd_f(tree.d1::sTfbd, λ, μ, ψ) end
-  #if defd2 && !defd1 ll += log(ψ) + llik_cfbd_f(tree.d1::sTfbd, λ, μ, ψ) end
-
-  # Birth
+  # birth
   if isdefined(tree, :d1) && isdefined(tree, :d2)
     ll += log(λ)
     ifx1 = isfix(tree.d1)
     if ifx1 && isfix(tree.d2)
-      # End of the fixed branch
+      # end of the fixed branch
       return ll
     elseif ifx1
       ll += llik_cfbd_f(tree.d1::sTfbd, λ, μ, ψ) +
@@ -495,23 +493,23 @@ end
 
 """
     tipψ_ll_cfbd(tree::sTfbd,
-                λ   ::Float64, 
-                μ   ::Float64,
-                ψ   ::Float64,
-                dri ::BitArray{1}, 
-                ldr ::Int64,
-                ix  ::Int64)
+                 λ   ::Float64, 
+                 μ   ::Float64,
+                 ψ   ::Float64,
+                 dri ::BitArray{1}, 
+                 ldr ::Int64,
+                 ix  ::Int64)
 
 Returns constant fossilized birth-death likelihood for augmented subtree 
 following the observed fossil tip at `dri`.
 """
 function tipψ_ll_cfbd(tree::sTfbd,
-                     λ   ::Float64, 
-                     μ   ::Float64,
-                     ψ   ::Float64,
-                     dri ::BitArray{1}, 
-                     ldr ::Int64,
-                     ix  ::Int64)
+                      λ   ::Float64, 
+                      μ   ::Float64,
+                      ψ   ::Float64,
+                      dri ::BitArray{1}, 
+                      ldr ::Int64,
+                      ix  ::Int64)
   # branch reached
   if ix === ldr
     # end of branch reached
@@ -590,9 +588,12 @@ function fsp(tree::sTfbd,
     dri = dr(bi)
     ldr = lastindex(dri)
     itb = it(bi)
+    iψb = ifos(bi)
 
     # if speciation (if branch is internal)
-    iλ = itb ? 0.0 : log(λ)
+    iλ = itb||iψb ? 0.0 : log(λ)
+    # if fossil sampling (if branch is internal)
+    iψ = iψb ? 0.0 : log(ψ)
 
     ## likelihood ratio
     # if conditioning branch
@@ -600,41 +601,42 @@ function fsp(tree::sTfbd,
       # if one of crown branches
       if isone(lastindex(dri))
         if dri[1]
-          llr = llik_cfbd(   t0, λ, μ, ψ) + iλ         - 
+          llr = llik_cfbd(   t0, λ, μ, ψ) + iλ + iψ    - 
                 br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0) +
                 cond_surv_stem_p(t0,    λ, μ)      - 
                 cond_surv_stem(tree.d1, λ, μ)
         else
-          llr = llik_cfbd(   t0, λ, μ, ψ) + iλ         -
+          llr = llik_cfbd(   t0, λ, μ, ψ) + iλ + iψ    -
                 br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0) +
                 cond_surv_stem_p(t0,    λ, μ)      -
                 cond_surv_stem(tree.d2, λ, μ)
         end
       else
-        llr = llik_cfbd(t0,    λ, μ, ψ) + iλ         -
+        llr = llik_cfbd(t0,    λ, μ, ψ) + iλ + iψ    -
               br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0) +
               cond_surv_stem_p(t0, λ, μ)         -
               cond_surv_stem(tree, λ, μ)
       end
     else
-      llr = llik_cfbd(t0, λ, μ, ψ) + iλ - 
+      llr = llik_cfbd(t0, λ, μ, ψ) + iλ + iψ - 
             br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0)
     end
 
     llc += llr
 
     # swap branch
-    tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
+    tree = swapbranch!(tree, t0, dri, ldr, itb, iψb, 0)
   end
 
   # if branch ending with fossil tip: proposal for following the simulation
-  if it(bi) && iψ(bi)
+  if it(bi) && ifos(bi)
     # forward simulate the prolongation of a fossil tip
     t0, ret = fsψtip(bi, λ, μ, ψ)
     if ret
       dri = dr(bi)
       ldr = lastindex(dri)
-      llc += llik_cfbd(t0, λ, μ, ψ) - tipψ_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0)
+      llr = llik_cfbd(t0, λ, μ, ψ) - tipψ_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0)
+      llc += llr
 
       # swap fossil tip
       swapfossil!(tree, t0, dri, ldr, 0)
@@ -725,68 +727,6 @@ function fsψtip(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64)
   return t0, ret
 end
 
-
-
-
-#="""
-    addtoψtip!(tree::sTfbd,
-               stree::sTfbd,
-               dri ::BitArray{1}, 
-               ldr ::Int64,
-               ix  ::Int64)
-
-Add simulated subtrees to all fossil tips.
-"""
-
-function addtoψtip!(tree::sTfbd,
-                    stree::sTfbd,
-                    dri ::BitArray{1}, 
-                    ldr ::Int64,
-                    ix  ::Int64)
-
-  # branch reached
-  if ix === ldr
-    # end of branch reached
-    if istip(tree)
-      tree.d1 = stree
-    else
-      if isfix(tree.d1::sTfbd)
-        addtoψtip!(tree.d1::sTfbd, stree::sTfbd, dri, ldr, ix)
-      else
-        addtoψtip!(tree.d2::sTfbd, stree::sTfbd, dri, ldr, ix)
-    end
-  
-  elseif ix < ldr
-    
-    # sampled ancestors
-    defd1 = isdefined(tree, :d1)
-    defd2 = isdefined(tree, :d2)
-    if defd1 && !defd2
-      ix += 1
-      addtoψtip!(tree.d1::sTfbd, stree::sTfbd, dri, ldr, ix)
-    end
-    if defd2 && !defd1
-      ix += 1
-      addtoψtip!(tree.d2::sTfbd, stree::sTfbd, dri, ldr, ix)
-    end
-
-    # birth
-    ifx1 = isfix(tree.d1::sTfbd)
-    if ifx1 && isfix(tree.d2::sTfbd)
-      ix += 1
-      if dri[ix]
-        addtoψtip!(tree.d1::sTfbd, stree::sTfbd, dri, ldr, ix)
-      else
-        addtoψtip!(tree.d2::sTfbd, stree::sTfbd, dri, ldr, ix)
-      end
-    elseif ifx1
-      addtoψtip!(tree.d1::sTfbd, stree::sTfbd, dri, ldr, ix)
-    else
-      addtoψtip!(tree.d2::sTfbd, stree::sTfbd, dri, ldr, ix)
-    end
-  end
-
-end=#
 
 
 
@@ -1024,7 +964,7 @@ end
        th    ::Float64,
        svf   ::Function)
 
-`μ` proposal function for constant fossilized birth-death in adaptive phase.
+`ψ` proposal function for constant fossilized birth-death in adaptive phase.
 """
 function ψp(tree  ::sTfbd,
             llc   ::Float64,

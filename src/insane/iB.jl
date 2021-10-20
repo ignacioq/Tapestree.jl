@@ -351,7 +351,7 @@ end
 Base.show(io::IO, id::iBfffs) = 
   print(io, "fixed", 
     it(id)     ? " terminal" : "",
-    iψ(id)     ? " fossil" : "", 
+    ifos(id)     ? " fossil" : "", 
     iszero(sc(id)) ? " stem" : "", 
     isone(sc(id))  ? " crown" : "", 
     " ibranch (", ti(id), ", ", tf(id), "), ", dr(id))
@@ -516,21 +516,23 @@ it(id::iBf) = getproperty(id, :it)
 
 """
     sc(id::iBffs)
+    sc(id::iBfffs)
 
 Return `0` if stem branch, `1` if either of the crown branches and `23` if 
 another plebeian branch.
 """
 sc(id::iBffs) = getproperty(id, :sc)
+sc(id::iBfffs) = getproperty(id, :sc)
 
 
 
 
 """
-    iψ(id::iBfffs)
+    ifos(id::iBfffs)
 
 Return if is a fossil.
 """
-iψ(id::iBfffs) = getproperty(id, :iψ)
+ifos(id::iBfffs) = getproperty(id, :iψ)
 
 
 
