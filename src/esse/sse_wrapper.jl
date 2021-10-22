@@ -140,10 +140,6 @@ function esse(tree_file   ::String,
 
   @info "Data for $(length(tv)) species successfully read"
 
-  """
-  here
-  """
-
   # prepare data
   if enviro
     X, p, fp, ed, trios, tdic, ns, ned, pupd, phid, nnps, nps, 
