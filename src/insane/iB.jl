@@ -49,14 +49,14 @@ Constructs an empty `iBfb` object.
 """
 struct iBfb <: iBf
   dr::BitArray{1}
-  ρ ::Float64
   ti::Float64
   tf::Float64
+  ρ ::Float64
   it::Bool
 
   # constructors
-  iBfb() = new(BitArray{1}(), 1.0, 0.0, 0.0, false)
-  iBfb(dr::BitArray{1}, ρ::Float64, ti::Float64, tf::Float64, it::Bool) = 
+  iBfb() = new(BitArray{1}(), 0.0, 0.0, 1.0, false)
+  iBfb(dr::BitArray{1}, ti::Float64, tf::Float64, ρ::Float64, it::Bool) = 
     new(dr, ρ, ti, tf, it)
 end
 
@@ -69,20 +69,24 @@ Base.show(io::IO, id::iBfb) =
 
 
 """
-    makeiBf!(tree::iTree, idv ::Array{iBfb,1}, bit ::BitArray{1})
+    tree::sT_label, 
+    idv ::Array{iBfb,1}, 
+    bitv::BitArray{1},
+    tρ  ::Dict{String, Float64}
 
-Make `iBfb` vector for an `iTree`.
+Make `iBfb` vector for an `iTree` taking into account 
+species-specific sampling fraction `ρ`.
 """
 function makeiBf!(tree::sT_label, 
                   idv ::Array{iBfb,1}, 
-                  bitv ::BitArray{1},
+                  bitv::BitArray{1},
                   tρ  ::Dict{String, Float64})
 
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
     push!(idv, 
-      iBfb(bitv, ρi, treeheight(tree), treeheight(tree) - e(tree), true))
+      iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, true))
     return ρi, 1, bitv
   end
 
@@ -105,45 +109,9 @@ function makeiBf!(tree::sT_label,
   n  = n1 + n2 
   ρi = n / (n1/ρ1 + n2/ρ2)
   push!(idv, 
-    iBfb(bitv, ρi, treeheight(tree), treeheight(tree) - e(tree), false))
+    iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, false))
 
   return ρi, n, bitv
-end
-
-
-
-
-
-
-
-
-
-
-"""
-    makeiBf!(tree::iTree, idv ::Array{iBfb,1}, bit ::BitArray{1})
-
-Make `iBfb` vector for an `iTree`.
-"""
-function makeiBf!(tree::T, 
-                  idv ::Array{iBfb,1}, 
-                  bit ::BitArray{1}) where {T <: iTree} 
-
-  itb = istip(tree)
-
-  push!(idv, 
-    iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
-
-  bit1 = copy(bit)
-  bit2 = copy(bit)
-
-
-  if !itb
-    push!(bit1, true)
-    makeiBf!(tree.d1, idv, bit1)
-    push!(bit2, false)
-    makeiBf!(tree.d2, idv, bit2)
-  end
-  return nothing
 end
 
 
@@ -302,15 +270,16 @@ struct iBffs <: iBf
   dr::BitArray{1}
   ti::Float64
   tf::Float64
+  ρ ::Float64
   it::Bool
   ie::Bool
   sc::Int64
 
   # constructors
-  iBffs() = new(BitArray{1}(), 0.0, 0.0, false, false, 23)
-  iBffs(dr::BitArray{1}, ti::Float64, tf::Float64, it::Bool, ie::Bool, 
-    sc::Int64) = 
-    new(dr, ti, tf, it, ie, sc)
+  iBffs() = new(BitArray{1}(), 0.0, 0.0, 1.0, false, false, 23)
+  iBffs(dr::BitArray{1}, ti::Float64, tf::Float64, ρ::Float64, it::Bool, 
+    ie::Bool, sc::Int64) = 
+    new(dr, ti, tf, ρ, it, ie, sc)
 end
 
 
@@ -326,18 +295,47 @@ Base.show(io::IO, id::iBffs) =
 
 
 """
-    makeiBf!(tree::iTree, idv ::Array{iBf,1}, bit ::BitArray{1})
+    makeiBf!(tree::sT_label, 
+             idv ::Array{iBffs,1}, 
+             bitv::BitArray{1},
+             tρ  ::Dict{String, Float64})
 
 Make `iBf` vector for an `iTree`.
 """
-function makeiBf!(tree::T, 
+function makeiBf!(tree::sT_label, 
                   idv ::Array{iBffs,1}, 
-                  bit ::BitArray{1}) where {T <: iTree} 
+                  bitv::BitArray{1},
+                  tρ  ::Dict{String, Float64})
 
-  itb = istip(tree)
-  ieb = isextinct(tree)
+  if istip(tree)
+    lab = l(tree)
+    ρi  = tρ[lab]
+    push!(idv, 
+      iBffs(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, 
+        true, false, 23))
+    return ρi, 1, bitv
+  end
 
-  lb = lastindex(bit)
+  bitv1 = copy(bitv)
+  bitv2 = copy(bitv)
+
+  if isdefined(tree, :d1)
+    push!(bitv1, true)
+    ρ1, n1, bitv1 = makeiBf!(tree.d1, idv, bitv1, tρ)
+  end
+
+  if isdefined(tree, :d2)
+    push!(bitv2, false)
+    ρ2, n2, bitv2 = makeiBf!(tree.d2, idv, bitv2, tρ)
+  end
+
+  bitv = copy(bitv1)
+  pop!(bitv)
+
+  n  = n1 + n2 
+  ρi = n / (n1/ρ1 + n2/ρ2)
+
+  lb = lastindex(bitv)
 
   sc = 23
   if iszero(lb)
@@ -347,19 +345,10 @@ function makeiBf!(tree::T,
   end
 
   push!(idv, 
-    iBffs(bit, treeheight(tree), treeheight(tree) - e(tree), itb, ieb, sc))
+    iBffs(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, false,
+      false, sc))
 
-  bit1 = copy(bit)
-  bit2 = copy(bit)
-
-  if isdefined(tree, :d1)
-    push!(bit1, true)
-    makeiBf!(tree.d1, idv, bit1)
-    push!(bit2, false)
-    makeiBf!(tree.d2, idv, bit2)
-  end
-
-  return nothing
+  return ρi, n, bitv
 end
 
 
@@ -514,3 +503,9 @@ sc(id::iBffs) = getproperty(id, :sc)
 
 
 
+"""
+    ρi(id::iBffs)
+
+Return the branch-specific sampling fraction. 
+"""
+ρi(id::iBffs) = getproperty(id, :ρ)
