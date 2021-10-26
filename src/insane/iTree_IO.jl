@@ -11,13 +11,12 @@ Created 07 07 2020
 
 
 
-
 """
-    read_newick(in_file::String, ::Type{T}) where {T <: iTree} 
+    read_newick(in_file::String)
 
 Reads a newick tree into `iTsimple` from `in_file`.
 """
-function read_newick(in_file::String, ::Type{T}) where {T <: iTree} 
+function read_newick(in_file::String)
 
   io = open(in_file)
   s = readlines(io)[1]
@@ -57,10 +56,10 @@ function read_newick(in_file::String, ::Type{T}) where {T <: iTree}
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = T(from_string(s1, T), from_string(s2, T), 0.0)
+    tree = sT_label(from_string(s1), from_string(s2), 0.0, "")
   # if root
   else
-    tree = from_string(s, T)
+    tree = from_string(s)
   end
 
   return tree
@@ -70,20 +69,21 @@ end
 
 
 """
-    from_string(s::String, ::Type{T}) where {T <: iTree}
+    from_string(s::String)
 
 Returns `iTree` from newick string.
 """
-function from_string(s::String, ::Type{T}) where {T <: iTree}
+function from_string(s::String)
 
   # find pendant edge
   wd  = findlast(isequal(':'), s)
   pei = parse(Float64, s[(wd+1):end])
-  s = s[2:(wd-2)]
+  lab = s[1:(wd-1)]
+  s   = s[2:(wd-2)]
 
   # if tip
   if !(occursin('(', s) || occursin(',', s))
-      return T(pei)
+      return sT_label(pei, lab)
   else
     # estimate number of parentheses (when np returns to 1)
     nrp = 0
@@ -104,7 +104,7 @@ function from_string(s::String, ::Type{T}) where {T <: iTree}
   s1 = s[1:(ci-1)]
   s2 = s[(ci+1):end]
 
-  T(from_string(s1, T), from_string(s2, T), pei)
+  sT_label(from_string(s1), from_string(s2), pei, "")
 end
 
 

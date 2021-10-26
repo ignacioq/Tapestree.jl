@@ -38,6 +38,7 @@ abstract type iBf <: iB end
 A Composite type representing node address for a **fixed** branch in `iTree`:
 
   `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
+   `ρ`: specific sampling fraction.
   `ti`: initial absolute time.
   `tf`: final absolute time.
   `it`: `true` if a terminal branch.
@@ -48,15 +49,15 @@ Constructs an empty `iBfb` object.
 """
 struct iBfb <: iBf
   dr::BitArray{1}
-  da::Base.RefValue{Int64}
+  ρ ::Float64
   ti::Float64
   tf::Float64
   it::Bool
 
   # constructors
-  iBfb() = new(BitArray{1}(), Ref(0), 0.0, 0.0, false)
-  iBfb(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64, it::Bool) = 
-    new(dr, Ref(da), ti, tf, it)
+  iBfb() = new(BitArray{1}(), 1.0, 0.0, 0.0, false)
+  iBfb(dr::BitArray{1}, ρ::Float64, ti::Float64, tf::Float64, it::Bool) = 
+    new(dr, ρ, ti, tf, it)
 end
 
 
@@ -72,19 +73,71 @@ Base.show(io::IO, id::iBfb) =
 
 Make `iBfb` vector for an `iTree`.
 """
+function makeiBf!(tree::sT_label, 
+                  idv ::Array{iBfb,1}, 
+                  bitv ::BitArray{1},
+                  tρ  ::Dict{String, Float64})
+
+  if istip(tree)
+    lab = l(tree)
+    ρi  = tρ[lab]
+    push!(idv, 
+      iBfb(bitv, ρi, treeheight(tree), treeheight(tree) - e(tree), true))
+    return ρi, 1, bitv
+  end
+
+  bitv1 = copy(bitv)
+  bitv2 = copy(bitv)
+
+  if isdefined(tree, :d1)
+    push!(bitv1, true)
+    ρ1, n1, bitv1 = makeiBf!(tree.d1, idv, bitv1, tρ)
+  end
+
+  if isdefined(tree, :d2)
+    push!(bitv2, false)
+    ρ2, n2, bitv2 = makeiBf!(tree.d2, idv, bitv2, tρ)
+  end
+
+  bitv = copy(bitv1)
+  pop!(bitv)
+
+  n  = n1 + n2 
+  ρi = n / (n1/ρ1 + n2/ρ2)
+  push!(idv, 
+    iBfb(bitv, ρi, treeheight(tree), treeheight(tree) - e(tree), false))
+
+  return ρi, n, bitv
+end
+
+
+
+
+
+
+
+
+
+
+"""
+    makeiBf!(tree::iTree, idv ::Array{iBfb,1}, bit ::BitArray{1})
+
+Make `iBfb` vector for an `iTree`.
+"""
 function makeiBf!(tree::T, 
                   idv ::Array{iBfb,1}, 
                   bit ::BitArray{1}) where {T <: iTree} 
 
   itb = istip(tree)
 
-  push!(idv, iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
+  push!(idv, 
+    iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
 
   bit1 = copy(bit)
   bit2 = copy(bit)
 
 
-  if isdefined(tree, :d1)
+  if !itb
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
     push!(bit2, false)

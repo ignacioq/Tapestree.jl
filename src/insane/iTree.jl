@@ -75,6 +75,66 @@ Base.show(io::IO, t::sTpb) =
 
 
 """
+    sT_label
+
+A composite recursive type of supertype `sT` 
+representing a labelled binary phylogenetic tree for `insane` use, 
+with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  l:  label
+
+    sT_label()
+
+Constructs an empty `sT_label` object.
+
+    sT_label(e::Float64)
+
+Constructs an empty `sT_label` object with edge `e`.
+
+    sT_label(d1::sT_label, d2::sT_label, e::Float64)
+
+Constructs an `sT_label` object with two `sT_label` daughters and edge `e`.
+"""
+mutable struct sT_label <: sT
+  d1::sT_label
+  d2::sT_label
+  e ::Float64
+  l ::String
+
+  sT_label() = new()
+  sT_label(e::Float64, l::String) = (x = new(); x.e = e; x.l = l; x)
+  sT_label(d1::sT_label, 
+           d2::sT_label, 
+           e ::Float64,
+           l ::String) = new(d1, d2, e, l)
+end
+
+# pretty-printing
+Base.show(io::IO, t::sT_label) = 
+  print(io, "insane simple labelled tree with ", ntips(t), " tips")
+
+
+
+
+"""
+    sTpb(tree::sT_label)
+
+Demotes a tree of type `iTgbmce` to `sTpb`.
+"""
+function sTpb(tree::sT_label)
+  if isdefined(tree, :d1)
+    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree))
+  else
+    sTpb(e(tree))
+  end
+end
+
+
+
+"""
     sTbd
 
 The simplest composite recursive type of supertype `sT` 
@@ -123,6 +183,23 @@ end
 Base.show(io::IO, t::sTbd) = 
   print(io, "insane simple birth-death tree with ", ntips(t), " tips (", 
     ntipsextinct(t)," extinct)")
+
+
+
+
+
+"""
+    sTbd(tree::sT_label)
+
+Transforms a tree of type `sT_label` to `sTbd`.
+"""
+function sTbd(tree::sT_label)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), false, false)
+  else
+    sTbd(e(tree), false)
+  end
+end
 
 
 

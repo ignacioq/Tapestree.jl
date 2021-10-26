@@ -127,6 +127,48 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 
+
+"""
+    l(tree::sT_label)
+
+Return label.
+"""
+l(tree::sT_label) = getproperty(tree, :l)
+
+
+
+
+"""
+    tiplabels!(tree::sT_label)
+
+Returns tip labels for `sT_label`.
+"""
+tiplabels(tree::sT_label) = _tiplabels!(tree, String[])
+
+
+
+
+"""
+    _tiplabels!(tree::sT_label, labels::Array{String,1})
+
+Returns tip labels for `sT_label`.
+"""
+function _tiplabels!(tree::sT_label, labels::Array{String,1})
+
+  if !isdefined(tree, :d1)
+    push!(labels, l(tree))
+  else
+    _tiplabels!(tree.d1, labels)
+    _tiplabels!(tree.d2, labels)
+  end
+end
+
+
+
+
+
+
+
 """
     dt(tree::T) where {T <: iTree}
 

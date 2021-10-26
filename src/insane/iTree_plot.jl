@@ -226,7 +226,7 @@ Recipe for plotting a Type `iTgbmct` given `ϵ`.
   colorbar        --> true
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
-  xlims           --> (-th*0.05, th*1.05)
+  xlims           --> (-th*0.05, th*1.1)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -267,7 +267,7 @@ function _rplottree!(tree::T,
   defd2 = isdefined(tree, :d2)
 
   if defd1 && defd2
-    
+
     ntip1 = ntips(tree.d1)
     ntip2 = ntips(tree.d2)
 
@@ -291,12 +291,15 @@ end
 
 
 
+
 """
     function f(tree::T; shownodes=(T==sTfbd)) where {T <: iTree}
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
 == true`. True by default for `sTfbd` trees to make sampled ancestors visible.
 """
-@recipe function f(tree::T; shownodes=(T==sTfbd)) where {T <: iTree}
+@recipe function f(tree::T; 
+                   shownodes  = (T === sTfbd),
+                   showlabels = (T === sT_label)) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
@@ -322,7 +325,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 
   if shownodes
     shape = Symbol[:circle]
-    col = Symbol[:pink]
+    col   = Symbol[:pink]
     alpha = Float64[0.5+0.5*isfix(tree)]
     _nodeproperties!(tree, shape, col, alpha)
 
@@ -331,8 +334,26 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     markeralpha       --> alpha
   end
 
+  if showlabels
+    labels = String[]
+    _tiplabels!(tree, labels)
+
+    txt = [(0.0, i, labels[i]) for i in 1:nt]
+
+    @series begin
+      seriestype  := :scatter
+      primary     := false
+      markersize  := 0
+      markeralpha := fill(0.0,nt)
+      series_annotations := Plots.series_annotations(labels, 
+        Plots.font("Helvetica", 10))
+      fill(0.0 - 0.02*th, nt), 1:nt
+    end
+  end
+
   return x, y
 end
+
 
 
 
@@ -343,7 +364,9 @@ end
 Completes the lists of node shapes, colors and alphas according to their 
 properties.
 """
-function _nodeproperties!(tree::T, shape::Vector{Symbol}, col::Vector{Symbol}, 
+function _nodeproperties!(tree ::T, 
+                          shape::Vector{Symbol}, 
+                          col  ::Vector{Symbol}, 
                           alpha::Vector{Float64}) where {T <: iTree}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
