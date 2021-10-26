@@ -593,6 +593,31 @@ end
 
 
 
+
+"""
+    treelength_ns(tree::T, 
+                  l   ::Float64, 
+                  n   ::Float64) where {T <: iTree}
+
+Return the tree length and speciation events events.
+"""
+function treelength_ns(tree::T, 
+                       l   ::Float64, 
+                       n   ::Float64) where {T <: iTree}
+
+  l += e(tree)
+  if isdefined(tree, :d1)
+    n += 1.0
+    l, n = treelength_ns(tree.d1, l, n)
+    l, n = treelength_ns(tree.d2, l, n)
+  end
+
+  return l, n
+end
+
+
+
+
 """
     treelength_ne(tree::T, 
                   l   ::Float64, 
