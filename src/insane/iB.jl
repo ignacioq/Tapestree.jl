@@ -51,19 +51,20 @@ struct iBfb <: iBf
   dr::BitArray{1}
   ti::Float64
   tf::Float64
-  ρ ::Float64
+  ρi::Float64
   it::Bool
 
   # constructors
   iBfb() = new(BitArray{1}(), 0.0, 0.0, 1.0, false)
-  iBfb(dr::BitArray{1}, ti::Float64, tf::Float64, ρ::Float64, it::Bool) = 
-    new(dr, ρ, ti, tf, it)
+  iBfb(dr::BitArray{1}, ti::Float64, tf::Float64, ρi::Float64, it::Bool) = 
+    new(dr, ρi, ti, tf, it)
 end
 
 
 # pretty-printing
 Base.show(io::IO, id::iBfb) = 
-  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id))
+  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", 
+    ti(id), ", ", tf(id), "), ", dr(id))
 
 
 
@@ -270,16 +271,16 @@ struct iBffs <: iBf
   dr::BitArray{1}
   ti::Float64
   tf::Float64
-  ρ ::Float64
+  ρi::Float64
   it::Bool
   ie::Bool
   sc::Int64
 
   # constructors
   iBffs() = new(BitArray{1}(), 0.0, 0.0, 1.0, false, false, 23)
-  iBffs(dr::BitArray{1}, ti::Float64, tf::Float64, ρ::Float64, it::Bool, 
+  iBffs(dr::BitArray{1}, ti::Float64, tf::Float64, ρi::Float64, it::Bool, 
     ie::Bool, sc::Int64) = 
-    new(dr, ti, tf, ρ, it, ie, sc)
+    new(dr, ti, tf, ρi, it, ie, sc)
 end
 
 
@@ -350,6 +351,25 @@ function makeiBf!(tree::sT_label,
 
   return ρi, n, bitv
 end
+
+
+
+
+"""
+    prob_ρ(idv::Array{iBffs,1})
+
+Estimate initial sampling fraction probability without augmented data.
+"""
+function prob_ρ(idv::Array{iBffs,1})
+  ll = 0.0
+  for bi in idv
+    if it(bi)
+      ll += log(ρi(bi))
+    end
+  end
+  return ll
+end
+
 
 
 
@@ -502,10 +522,9 @@ sc(id::iBffs) = getproperty(id, :sc)
 
 
 
-
 """
     ρi(id::iBffs)
 
 Return the branch-specific sampling fraction. 
 """
-ρi(id::iBffs) = getproperty(id, :ρ)
+ρi(id::iBffs) = getproperty(id, :ρi)

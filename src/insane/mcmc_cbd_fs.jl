@@ -68,7 +68,7 @@ function insane_cbd_fs(tree    ::sTbd,
   # make fix tree directory
   idf = iBffs[]
   bit = BitArray{1}()
-  makeiBf!(tree, idf, bit)
+  makeiBf!(tree, idf, bit, tρ)
 
   # make survival conditioning function (stem or crown) and identify branches
   # from `idf`
@@ -172,8 +172,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
   lidf = lastindex(idf)
 
   # likelihood
-  llc = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
-  # llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
+  llc = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -428,8 +427,16 @@ function fsp(tree::sTbd,
              μ   ::Float64,
              scb ::Bool)
 
+
+  """
+  here, check the retain function when adding ρ
+  """
+
   # forward simulate an internal branch
-  t0, ret = fsbi(bi, λ, μ)
+  t0, ret, ni = fsbi(bi, λ, μ)
+
+  treeheight(t0)
+  plot(t0)
 
   # if retain simulation
   if ret
@@ -502,31 +509,26 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
   elseif isone(na)
     fixalive!(t0)
   elseif na > 1
-    if it(bi)
-      ret = false
-    else
-      # fix random tip
-      fixrtip!(t0)
 
-      for j in Base.OneTo(na - 1)
-        for i in Base.OneTo(2)
-          st0 = sim_cbd(tfb, λ, μ)
-          # if goes extinct before the present
-          if iszero(ntipsalive(st0))
-            #graft to tip
-            addtotip(t0, st0, false)
-            break
-          end
-          if i === 2
-            ret = false
-          end
-        end
-        !ret && break
+    # fix random tip
+    fixrtip!(t0)
+
+    # add tips until the present
+    for j in Base.OneTo(na - 1)
+      for i in Base.OneTo(2)
+        st0 = sim_cbd(tfb, λ, μ)
+"""
+FIX! this only bypasses extinct and fixed! need a way to bypass alive lineages
+"""
+
+        addtotip(t0, st0, false)
+        na += ntipsalive(st0) - 1
+        break
       end
     end
   end
 
-  return t0, ret
+  return t0, ret, na
 end
 
 
