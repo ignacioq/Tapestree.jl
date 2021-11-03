@@ -10,6 +10,18 @@ Created 03 07 2020
 =#
 
 
+
+
+"""
+    setni!(id::iBffs)
+
+Add `1` to number of data augmented branches. 
+"""
+setni!(id::iBffs, ni::Int64) = id.ni[] = ni
+
+
+
+
 """
     addda!(id::iBf)
 

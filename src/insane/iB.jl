@@ -262,6 +262,7 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `ie`: `true` if an extinct branch.
   `sc`: is `0` if stem branch, `1` if either of the crown branches and `23` if 
         another plebeian branch.
+  `ni`: Current direct alive descendants.
 
     iBffs()
 
@@ -275,12 +276,13 @@ struct iBffs <: iBf
   it::Bool
   ie::Bool
   sc::Int64
+  ni::Base.RefValue{Int64}
 
   # constructors
-  iBffs() = new(BitArray{1}(), 0.0, 0.0, 1.0, false, false, 23)
+  iBffs() = new(BitArray{1}(), 0.0, 0.0, 1.0, false, false, 23, 0)
   iBffs(dr::BitArray{1}, ti::Float64, tf::Float64, ρi::Float64, it::Bool, 
-    ie::Bool, sc::Int64) = 
-    new(dr, ti, tf, ρi, it, ie, sc)
+    ie::Bool, sc::Int64, ni::Int64) = 
+    new(dr, ti, tf, ρi, it, ie, sc, Ref(ni))
 end
 
 
@@ -313,7 +315,7 @@ function makeiBf!(tree::sT_label,
     ρi  = tρ[lab]
     push!(idv, 
       iBffs(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, 
-        true, false, 23))
+        true, false, 23, 1))
     return ρi, 1, bitv
   end
 
@@ -347,7 +349,7 @@ function makeiBf!(tree::sT_label,
 
   push!(idv, 
     iBffs(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, false,
-      false, sc))
+      false, sc, 0))
 
   return ρi, n, bitv
 end
@@ -363,8 +365,11 @@ Estimate initial sampling fraction probability without augmented data.
 function prob_ρ(idv::Array{iBffs,1})
   ll = 0.0
   for bi in idv
+    nbi = ni(bi)
     if it(bi)
-      ll += log(ρi(bi))
+      ll += log(Float64(nbi) * (1.0 - ρi(bi))^(nbi - 1))
+    else
+      ll += log((1.0 - ρi(bi))^(nbi))
     end
   end
   return ll
@@ -528,3 +533,15 @@ sc(id::iBffs) = getproperty(id, :sc)
 Return the branch-specific sampling fraction. 
 """
 ρi(id::iBffs) = getproperty(id, :ρi)
+
+
+
+
+"""
+    ni(id::iBffs)
+
+Return the current number of direct descendants alive at the present.
+"""
+ni(id::iBffs) = getproperty(id, :ni)[]
+
+

@@ -196,7 +196,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
         llc, prc, μc = μu(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
         lup[2] += 1.0
       end
-      
+
       # forward simulation proposal proposal
       if p === 3
         bix = fIrand(lidf) + 1
@@ -284,7 +284,7 @@ function mcmc_cbd(tree  ::sTbd,
       if p === 1
         llc, prc, λc = λu(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
 
-        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
+        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
         #    return 
@@ -295,7 +295,7 @@ function mcmc_cbd(tree  ::sTbd,
       if p === 2
         llc, prc, μc = μu(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
       
-        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
+        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
         #    return 
@@ -306,8 +306,8 @@ function mcmc_cbd(tree  ::sTbd,
       if p === 3
         bix = fIrand(lidf) + 1
         tree, llc = fsp(tree, idf[bix], llc, λc, μc, in(bix, cb))
-      
-        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
+
+        llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
         #    return 
@@ -432,52 +432,68 @@ function fsp(tree::sTbd,
   # forward simulate an internal branch
   t0 = fsbi(bi, λ, μ)
 
-  if -randexp()
+  treeheight(t0)
 
+  itb = it(bi)         # is it terminal
+  ρbi = ρi(bi)         # get branch sampling fraction
+  nc  = ni(bi)         # current ni
+  np  = ntipsalive(t0) # proposal n
 
+  if !iszero(np)
 
-
-  # if retain simulation
-  if ret
-
-    dri = dr(bi)
-    ldr = lastindex(dri)
-    itb = it(bi)
-
-    # if speciation (if branch is internal)
-    iλ = itb ? 0.0 : log(λ)
-
-    ## likelihood ratio
-    # if conditioning branch
-    if scb 
-      # if one of crown branches
-      if isone(lastindex(dri))
-        if dri[1]
-          llr = llik_cbd(   t0, λ, μ) + iλ         - 
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-                cond_surv_stem_p(t0,    λ, μ)      - 
-                cond_surv_stem(tree.d1, λ, μ)
-        else
-          llr = llik_cbd(   t0, λ, μ) + iλ         -
-                br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-                cond_surv_stem_p(t0,    λ, μ)      -
-                cond_surv_stem(tree.d2, λ, μ)
-        end
-      else
-        llr = llik_cbd(t0,    λ, μ) + iλ         -
-              br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
-              cond_surv_stem_p(t0, λ, μ)         -
-              cond_surv_stem(tree, λ, μ)
-      end
+    # if terminal branch
+    if itb
+      llr = log(np/nc * (1.0 - ρbi)^(np - nc))
     else
-      llr = llik_cbd(t0, λ, μ) + iλ - 
-            br_ll_cbd(tree, λ, μ, dri, ldr, 0)
+      np  -= 1
+      llr = log((1.0 - ρbi)^(np - nc))
     end
 
-    llc += llr
+    # metropolis-hastings ration
+    if -randexp() < llr
 
-    # swap branch
-    tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
+      dri = dr(bi)
+      ldr = lastindex(dri)
+
+      # if speciation (if branch is internal)
+      iλ = itb ? 0.0 : log(λ)
+
+      ## likelihood ratio
+      # if conditioning branch
+      if scb 
+        # if one of crown branches
+        if isone(lastindex(dri))
+          if dri[1]
+            llr += llik_cbd(   t0, λ, μ) + iλ         - 
+                   br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                   cond_surv_stem_p(t0,    λ, μ)      - 
+                   cond_surv_stem(tree.d1, λ, μ)
+          else
+            llr += llik_cbd(   t0, λ, μ) + iλ         -
+                   br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                   cond_surv_stem_p(t0,    λ, μ)      -
+                   cond_surv_stem(tree.d2, λ, μ)
+          end
+        else
+          llr += llik_cbd(t0,    λ, μ) + iλ         -
+                 br_ll_cbd(tree, λ, μ, dri, ldr, 0) +
+                 cond_surv_stem_p(t0, λ, μ)         -
+                 cond_surv_stem(tree, λ, μ)
+        end
+      else
+        llr += llik_cbd(t0, λ, μ) + iλ - 
+               br_ll_cbd(tree, λ, μ, dri, ldr, 0)
+      end
+
+      # set new likelihood
+      llc += llr
+
+      # set new ni
+      setni!(bi, np)
+
+      # swap branch
+      tree = swapbranch!(tree, t0, dri, ldr, itb, 0)
+    end
   end
 
   return tree, llc
@@ -502,11 +518,13 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
 
   if isone(na)
     fixalive!(t0)
-  elseif na > 1 && !it(bi)
+  elseif na > 1 
     # fix random tip
     fixrtip!(t0)
-    # add tips until the present
-    tip_sims!(t0, tfb, λ, μ)
+    if !it(bi)
+      # add tips until the present
+      tip_sims!(t0, tfb, λ, μ)
+    end
   end
 
   return t0

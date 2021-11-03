@@ -428,14 +428,14 @@ end
 
 
 """
-    addtree(tree::sTbd, dtree::sTbd) 
+    addtree(tree::T, dtree::T) 
 
 Add `dtree` to not-extinct tip in `tree` as speciation event, making
 sure that the daughters of `dtree` are fixed.
 """
 function addtree(tree::T, dtree::T) where {T <: iTree}
 
-  if istip(tree::T) && isalive(tree::T)
+  if istip(tree::T) && isalive(tree::T) && isfix(tree::T)
 
     dtree = fixdstree(dtree)
 
