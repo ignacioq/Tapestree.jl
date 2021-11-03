@@ -53,10 +53,14 @@ function insane_cbd_fs(tree    ::sTbd,
   th = treeheight(tree)
   n  = ntips(tree)
 
-  fixtree!(tree)
+  # make fix tree directory
+  idf = iBffs[]
+  bit = BitArray{1}()
+  makeiBf!(tree, idf, bit, tρ)
 
-  # make objecting scaling function for tuning
-  scalef = makescalef(obj_ar)
+  # make an insane tree and fix it
+  tree = sTbd(tree)
+  fixtree!(tree)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -65,10 +69,8 @@ function insane_cbd_fs(tree    ::sTbd,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  # make fix tree directory
-  idf = iBffs[]
-  bit = BitArray{1}()
-  makeiBf!(tree, idf, bit, tρ)
+  # make objecting scaling function for tuning
+  scalef = makescalef(obj_ar)
 
   # make survival conditioning function (stem or crown) and identify branches
   # from `idf`
@@ -427,16 +429,13 @@ function fsp(tree::sTbd,
              μ   ::Float64,
              scb ::Bool)
 
-
-  """
-  here, check the retain function when adding ρ
-  """
-
   # forward simulate an internal branch
-  t0, ret, ni = fsbi(bi, λ, μ)
+  t0 = fsbi(bi, λ, μ)
 
-  treeheight(t0)
-  plot(t0)
+  if -randexp()
+
+
+
 
   # if retain simulation
   if ret
@@ -494,9 +493,6 @@ Forward simulation for branch `bi`
 """
 function fsbi(bi::iBffs, λ::Float64, μ::Float64)
 
-  # retain?
-  ret = true
-
   # times
   tfb = tf(bi)
 
@@ -504,32 +500,51 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
   t0 = sim_cbd(ti(bi) - tfb, λ, μ)
   na = ntipsalive(t0)
 
-  if iszero(na)
-    ret = false
-  elseif isone(na)
+  if isone(na)
     fixalive!(t0)
-  elseif na > 1
-
+  elseif na > 1 && !it(bi)
     # fix random tip
     fixrtip!(t0)
-
     # add tips until the present
-    for j in Base.OneTo(na - 1)
-      for i in Base.OneTo(2)
-        st0 = sim_cbd(tfb, λ, μ)
-"""
-FIX! this only bypasses extinct and fixed! need a way to bypass alive lineages
-"""
-
-        addtotip(t0, st0, false)
-        na += ntipsalive(st0) - 1
-        break
-      end
-    end
+    tip_sims!(t0, tfb, λ, μ)
   end
 
-  return t0, ret, na
+  return t0
 end
+
+
+
+
+"""
+    tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
+
+Continue simulation until time `t` for unfixed tips in `tree`. 
+"""
+function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
+
+  if istip(tree) 
+    if !isfix(tree) && isalive(tree)
+      stree = sim_cbd(t, λ, μ)
+      sete!(tree, e(tree) + e(stree))
+      setproperty!(tree, :iμ, isextinct(stree))
+      if isdefined(stree, :d1)
+        tree.d1 = stree.d1
+        tree.d2 = stree.d2
+      end
+    end
+    return tree
+  else
+    tree.d1 = tip_sims!(tree.d1, t, λ, μ)
+    tree.d2 = tip_sims!(tree.d2, t, λ, μ)
+  end
+
+  return tree
+end
+
+
+
+
+
 
 
 
