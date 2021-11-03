@@ -111,6 +111,54 @@ end
 
 
 """
+    from_string(s::String, ::Type{T}) where {T <: sTfbd}
+
+Returns `sTfbd` from newick string.
+"""
+function from_string(s::String, ::Type{T}) where {T <: sTfbd}
+
+  # find pendant edge
+  wd  = findlast(isequal(':'), s)
+  pei = parse(Float64, s[(wd+1):end])
+  s = s[2:(wd-2)]
+  
+  # if tip
+  if isempty(s)
+      return sTfbd(pei)
+  else
+    # estimate number of parentheses (when np returns to 1)
+    nrp = 0
+    nlp = 0
+    ci  = 0
+    for (i,v) in enumerate(s)
+      if v == '('
+        nlp += 1
+      elseif v == ')'
+        nrp += 1
+      elseif v == ',' && nlp == nrp
+        ci = i
+        break
+      end
+    end
+  end
+
+  s1 = s[1:(ci-1)]
+  s2 = s[(ci+1):end]
+
+  if isempty(s1)
+    return sTfbd(from_string(s2, sTfbd), pei, false, true, false)
+  elseif isempty(s2)
+    return sTfbd(from_string(s1, sTfbd), pei, false, true, false)
+  else
+    return sTfbd(from_string(s1, sTfbd), from_string(s2, sTfbd), 
+                 pei, false, true, false)
+  end
+end
+
+
+
+
+"""
     write_newick(tree::T, out_file::String)
 
 Writes `iTsimple` as a newick tree to `out_file`.
@@ -156,6 +204,57 @@ function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
   else
     return string("(",to_string(tree.d1, n = n),",",
                to_string(tree.d2, n = ntips(tree.d1) + n),"):",e(tree))
+  end
+end
+
+
+
+
+"""
+    to_string(tree::sTfbd; n::Int64 = 0)
+
+Returns newick string.
+"""
+function to_string(tree::sTfbd; n::Int64 = 0)
+
+  if isdefined(tree, :d1) && isdefined(tree, :d2)
+    if istip(tree.d1)
+      if istip(tree.d2)
+        n += 1
+        s1 = string("(t",n,":",e(tree.d1),",")
+        n += 1
+        s2 = string("t",n,":",e(tree.d2),"):",e(tree))
+        return s1*s2
+      else 
+        n += 1
+        return string("(t",n,":",e(tree.d1), ",",
+                to_string(tree.d2, n = n),"):", e(tree))
+      end
+    elseif istip(tree.d2)
+      n += 1
+      return string("(", to_string(tree.d1, n = n), 
+        ",t",n,":",e(tree.d2), "):", e(tree))
+    else
+      return string("(",to_string(tree.d1, n = n),",",
+                        to_string(tree.d2, n = ntips(tree.d1) + n),"):",
+                        e(tree))
+    end
+  
+  # sampled ancestors
+  elseif isdefined(tree, :d1)
+    if istip(tree.d1)
+      n += 1
+      return string("(t",n,":",e(tree.d1),"):", e(tree))
+    else
+      return string("(",to_string(tree.d1, n = n),"):",e(tree))
+    end
+  else
+    if istip(tree.d2)
+      n += 1
+      return string("(t",n,":",e(tree.d2),"):", e(tree))
+    else
+      return string("(",to_string(tree.d2, n = n),"):",e(tree))
+    end
   end
 end
 
