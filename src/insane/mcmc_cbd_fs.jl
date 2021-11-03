@@ -186,13 +186,13 @@ function mcmc_burn_cbd(tree    ::sTbd,
 
       # λ proposal
       if p === 1
-        llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, λprior, th, svf)
+        llc, prc, λc = λu(tree, llc, prc, λc, lac, λtn, μc, λprior, th, svf)
         lup[1] += 1.0
       end
 
       # μ proposal
       if p === 2
-        llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
+        llc, prc, μc = μu(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
         lup[2] += 1.0
       end
       
@@ -281,22 +281,22 @@ function mcmc_cbd(tree  ::sTbd,
 
       # λ proposal
       if p === 1
-        llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
+        llc, prc, λc = λu(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
 
         # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
         # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, i, 1
+        #    @show llci, llc, i, p
         #    return 
         # end
       end
 
       # μ proposal
       if p === 2
-        llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
+        llc, prc, μc = μu(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
       
         # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
         # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, i, 2
+        #    @show llci, llc, i, p
         #    return 
         # end
       end
@@ -308,7 +308,7 @@ function mcmc_cbd(tree  ::sTbd,
       
         # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc)
         # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, i, 3
+        #    @show llci, llc, i, p
         #    return 
         # end
       end
@@ -506,7 +506,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64)
       ret = false
     else
       # fix random tip
-      fixrtip!(t0, na)
+      fixrtip!(t0)
 
       for j in Base.OneTo(na - 1)
         for i in Base.OneTo(2)
@@ -570,7 +570,7 @@ end
 
 
 """
-    λp(tree  ::sTbd,
+    λu(tree  ::sTbd,
        llc   ::Float64,
        prc   ::Float64,
        λc    ::Float64,
@@ -581,7 +581,7 @@ end
 
 `λ` proposal function for constant birth-death in adaptive phase.
 """
-function λp(tree  ::sTbd,
+function λu(tree  ::sTbd,
             llc   ::Float64,
             prc   ::Float64,
             λc    ::Float64,
@@ -594,15 +594,15 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
-    # llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+    l, s =  treelength_ns(tree, 0.0, 0.0)
+    λr   = log(λp/λc)
+    llr  = s*λr + l*(λc - λp) + svf(tree, λp, μc) - svf(tree, λc, μc)
+    prr  = llrdexp_x(λp, λc, λprior)
 
-    prr = llrdexp_x(λp, λc, λprior)
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc     = llp::Float64
-      prc    += prr::Float64
-      λc      = λp::Float64
+    if -randexp() < (llr + prr + λr)
+      llc    += llr
+      prc    += prr
+      λc      = λp
       lac[1] += 1.0
     end
 
@@ -613,7 +613,7 @@ end
 
 
 """
-    λp(tree  ::sTbd,
+    λu(tree  ::sTbd,
        llc   ::Float64,
        prc   ::Float64,
        λc    ::Float64,
@@ -623,7 +623,7 @@ end
 
 `λ` proposal function for constant birth-death.
 """
-function λp(tree  ::sTbd,
+function λu(tree  ::sTbd,
             llc   ::Float64,
             prc   ::Float64,
             λc    ::Float64,
@@ -635,15 +635,15 @@ function λp(tree  ::sTbd,
 
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
-    llp = llik_cbd(tree, λp, μc) + svf(tree, λp, μc)
-    # llp = llik_cbd(tree, λp, μc) - svf(λp, μc, th)
+    l, s =  treelength_ns(tree, 0.0, 0.0)
+    λr   = log(λp/λc)
+    llr  = s*λr + l*(λc - λp) + svf(tree, λp, μc) - svf(tree, λc, μc)
+    prr  = llrdexp_x(λp, λc, λprior)
 
-    prr = llrdexp_x(λp, λc, λprior)
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc     = llp::Float64
-      prc    += prr::Float64
-      λc      = λp::Float64
+    if -randexp() < (llr + prr + λr)
+      llc += llr
+      prc += prr
+      λc   = λp
     end
 
     return llc, prc, λc 
@@ -653,18 +653,20 @@ end
 
 
 """
-    μp(tree  ::sTbd,
+    μu(tree  ::sTbd,
        llc   ::Float64,
        prc   ::Float64,
        μc    ::Float64,
        lac   ::Array{Float64,1},
        μtn   ::Float64,
        λc    ::Float64,
-       μprior::Float64)
+       μprior::Float64,
+       th    ::Float64,
+       svf   ::Function)
 
 `μ` proposal function for constant birth-death in adaptive phase.
 """
-function μp(tree  ::sTbd,
+function μu(tree  ::sTbd,
             llc   ::Float64,
             prc   ::Float64,
             μc    ::Float64,
@@ -677,18 +679,15 @@ function μp(tree  ::sTbd,
 
     μp = mulupt(μc, μtn)::Float64
 
-    # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μp)
-    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) + sc
-    # sc  = svf(λc, μp, th)
-    # llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    l, m =  treelength_ne(tree, 0.0, 0.0)
+    μr   = log(μp/μc)
+    llr  = m*μr + l*(μc - μp) + svf(tree, λc, μp) - svf(tree, λc, μc)
+    prr  = llrdexp_x(μp, μc, μprior)
 
-    prr = llrdexp_x(μp, μc, μprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
+    if -randexp() < (llr + prr + μr)
+      llc    += llr
+      prc    += prr
+      μc      = μp
       lac[2] += 1.0
     end
 
@@ -699,17 +698,19 @@ end
 
 
 """
-    μp(tree  ::sTbd,
+    μu(tree  ::sTbd,
        llc   ::Float64,
        prc   ::Float64,
        μc    ::Float64,
        μtn   ::Float64,
        λc    ::Float64,
-       μprior::Float64)
+       μprior::Float64,
+       th    ::Float64,
+       svf   ::Function)
 
 `μ` proposal function for constant birth-death.
 """
-function μp(tree  ::sTbd,
+function μu(tree  ::sTbd,
             llc   ::Float64,
             prc   ::Float64,
             μc    ::Float64,
@@ -721,18 +722,15 @@ function μp(tree  ::sTbd,
 
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
-    # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μp)
-    llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) + sc
-    # sc  = svf(λc, μp, th)
-    # llp = isinf(sc) ? -Inf : llik_cbd(tree, λc, μp) - sc
+    l, m =  treelength_ne(tree, 0.0, 0.0)
+    μr   = log(μp/μc)
+    llr  = m*μr + l*(μc - μp) + svf(tree, λc, μp) - svf(tree, λc, μc)
+    prr  = llrdexp_x(μp, μc, μprior)
 
-    prr = llrdexp_x(μp, μc, μprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
+    if -randexp() < (llr + prr + μr)
+      llc += llr
+      prc += prr
+      μc   = μp
     end
 
     return llc, prc, μc 
