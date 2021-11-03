@@ -99,17 +99,21 @@ returned an overall extinction.
 """
 function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
 
+  # isolated stem branch
   if tna < e(tree)
     n += 1.0
   end
   tna -= e(tree)
 
+  # tip
   if istip(tree)
     return n
   end
 
+  # birth
   if isfix(tree.d1::sTbd)
     if isfix(tree.d2::sTbd)
+      # birth of 2 fixed daughters: extinction is now impossible
       return n
     else
       tnx = treeheight(tree.d2::sTbd)
@@ -121,7 +125,6 @@ function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::sTbd, tna, n)
   end
-
 end
 
 

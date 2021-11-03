@@ -365,24 +365,29 @@ Base.show(io::IO, id::iBfffs) =
 Make `iBf` vector for an `iTree`.
 """
 function makeiBf!(tree::sTfbd, 
-                   idv::Array{iBfffs,1}, 
-                   bit::BitArray{1}) where {T <: iTree}
+                  idv::Array{iBfffs,1}, 
+                  bit::BitArray{1}) where {T <: iTree}
   
-  return _makeiBf!(tree, idv, bit, treeheight(tree))
+  return _makeiBf!(tree, idv, bit, treeheight(tree), 0)
 end
 
 
 
 
 """
-    _makeiBf!(tree::sTfbd, idv ::Array{iBf,1}, bit ::BitArray{1}, ti::Float64)
+    _makeiBf!(tree::sTfbd, 
+              idv ::Array{iBf,1}, 
+              bit ::BitArray{1}, 
+              ti::Float64, 
+              sc::Int64)
 
-Make `iBf` vector for an `iTree`, initialized at time `ti`.
+Make `iBf` vector for an `iTree`, initialized at time `ti` and status `sc`.
 """
 function _makeiBf!(tree::sTfbd, 
                    idv ::Array{iBfffs,1}, 
                    bit ::BitArray{1},
-                   ti::Float64) where {T <: iTree} 
+                   ti::Float64,
+                   sc::Int64) where {T <: iTree}
 
   itb = istip(tree)
   ieb = isextinct(tree)
@@ -390,12 +395,6 @@ function _makeiBf!(tree::sTfbd,
 
   lb = lastindex(bit)
 
-  sc = 23
-  if iszero(lb)
-    sc = 0
-  elseif isone(lb)
-    sc = 1
-  end
 
   tf = ti-e(tree)
 
@@ -404,13 +403,16 @@ function _makeiBf!(tree::sTfbd,
   bit1 = copy(bit)
   bit2 = copy(bit)
 
+  survd1 = isdefined(tree, :d1) && survives(tree.d1)
+  survd2 = isdefined(tree, :d2) && survives(tree.d2)
+  
   if isdefined(tree, :d1)
     push!(bit1, true)
-    _makeiBf!(tree.d1, idv, bit1, tf)
+    _makeiBf!(tree.d1, idv, bit1, tf, sc + (survd1&&survd2))
   end
   if isdefined(tree, :d2)
     push!(bit2, false)
-    _makeiBf!(tree.d2, idv, bit2, tf)
+    _makeiBf!(tree.d2, idv, bit2, tf, sc + (survd1&&survd2))
   end
 
   return nothing
@@ -450,6 +452,30 @@ end
 Base.show(io::IO, id::iBa) = 
   print(io, "augmented ibranch (", ti(id), ", ", tf(id), "), ", dr(id), 
     " attached to ", fB(id))
+
+
+
+
+"""
+    findsubtree(tree::sTfbd, dri::BitArray{1})
+
+Return the subtree in `tree` localized by the directory `dri`.
+"""
+function findsubtree(tree::sTfbd, dri::BitArray{1})
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+  fixd1 = defd1 && isfix(tree.d1)
+  fixd2 = defd2 && isfix(tree.d2)
+  if (fixd1 && fixd2) || (fixd1 && !defd2) || (!defd1 && fixd2)
+    if isone(lastindex(dri))
+      return dri[1] ? tree.d1 : tree.d2
+    else
+      return findsubtree(dri[1] ? tree.d1 : tree.d2, dri[2:end])
+    end
+  else
+    return findsubtree(fixd1 ? tree.d1 : tree.d2, dri::BitArray{1})
+  end
+end
 
 
 

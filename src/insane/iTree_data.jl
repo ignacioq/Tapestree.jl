@@ -70,7 +70,7 @@ isextinct(tree::iTgbmpb) = false
 """
     isalive(tree::T) where {T <: iTree}
 
-Return if is an extinction node.
+Return if is an alive node.
 """
 isalive(tree::T) where {T <: iTree} = !isextinct(tree)
 
@@ -594,6 +594,24 @@ end
 
 
 """
+    survives(tree::T) where {T <: iTree}
+
+Return if the tree survives until present.
+"""
+function survives(tree::T) where {T <: iTree}
+
+  if istip(tree) && isalive(tree) && !isfossil(tree)
+    return true
+  else
+    return (isdefined(tree, :d1) && survives(tree.d1)) ||
+           (isdefined(tree, :d2) && survives(tree.d2))
+  end
+end
+
+
+
+
+"""
     treelength_ne(tree::T, 
                   l   ::Float64, 
                   n   ::Float64) where {T <: iTree}
@@ -1058,6 +1076,40 @@ function drtree(treec::sTfbd,
     else
       drtree(treec.d2::sTfbd, treep.d2::sTfbd, dri, ldr, ix)
     end
+  end
+end
+
+
+
+
+"""
+    survivaldr(tree::sTfbd)
+
+Returns the directory of the first node with 2 surviving daughters.
+"""
+survivaldr(tree::sTfbd) = _survivaldr(tree, BitArray{1}())
+
+
+
+
+"""
+    _survivaldr(tree::sTfbd, bit::BitArray{1})
+
+Returns the directory of the first node with 2 surviving daughters, initialized
+at `bit`.
+"""
+function _survivaldr(tree::sTfbd, bit::BitArray{1})
+
+  if isdefined(tree, :d1) && survives(tree.d1)
+    if isdefined(tree, :d2) && survives(tree.d2)
+      return bit
+    else
+      push!(bit,true)
+      _survivaldr(tree.d1, bit)
+    end
+  else
+    push!(bit,false)
+    _survivaldr(tree.d2, bit)
   end
 end
 

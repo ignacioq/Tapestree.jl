@@ -1609,6 +1609,81 @@ end
 
 
 """
+    remove_fossils!(tree::sTfbd)
+
+Remove fossils from `sTfbd`.
+"""
+function remove_fossils!(tree::sTfbd)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  while isfossil(tree)
+    if isdefined(tree, :d1)
+      tree.d1.e += tree.e
+      tree = tree.d1
+    elseif isdefined(tree, :d2)
+      tree.d2.e += tree.e
+      tree = tree.d2
+    else
+      break
+    end
+  end
+
+
+  if isdefined(tree, :d1) tree.d1 = remove_fossils!(tree.d1) end
+  if isdefined(tree, :d2) tree.d2 = remove_fossils!(tree.d2) end
+
+  if isdefined(tree, :d1)
+    if isfossil(tree.d1)
+      if isfossil(tree.d2)
+        return sTfbd(1.0, false, true, true)
+      else
+        tree.d2.e += tree.e
+        tree = tree.d2
+      end
+    elseif isfossil(tree.d2)
+      tree.d1.e += tree.e
+      tree = tree.d1
+    end
+  end
+  return tree
+end
+
+
+
+
+"""
+    remove_sampled_ancestors!(tree::sTfbd)
+
+Remove sampled ancestors (non-tip fossils) from `sTfbd`.
+"""
+function remove_sampled_ancestors!(tree::sTfbd)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  while isfossil(tree)
+    if isdefined(tree, :d1)
+      tree.d1.e += tree.e
+      tree = tree.d1
+    elseif isdefined(tree, :d2)
+      tree.d2.e += tree.e
+      tree = tree.d2
+    else
+      break
+    end
+  end
+
+
+  if isdefined(tree, :d1) tree.d1 = remove_sampled_ancestors!(tree.d1) end
+  if isdefined(tree, :d2) tree.d2 = remove_sampled_ancestors!(tree.d2) end
+
+  return tree
+end
+
+
+
+
+"""
     reconstructed(tree::T) where {T <: iTree}
 
 Returns the reconstructed tree, i.e. the observed tree from sampled extant 

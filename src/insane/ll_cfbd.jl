@@ -19,9 +19,12 @@ Log-probability of at least two lineage surviving for fossilized birth-death
 process with `λ` and `μ` for crown age.
 """
 function cond_surv_crown(tree::sTfbd, λ::Float64, μ::Float64)
-  n = sum_alone_stem(tree.d1::sTfbd, 0.0, 0.0) +
-      sum_alone_stem(tree.d2::sTfbd, 0.0, 0.0)
-
+  survdr1 = survivaldr(tree.d1::sTfbd)
+  survdr2 = survivaldr(tree.d2::sTfbd)
+  ldr1 = lastindex(survdr1)
+  ldr2 = lastindex(survdr2)
+  n = sum_alone_stem(treermfossils.d1::sTfbd, 0.0, 0.0, survdr1, ldr2, 0) +
+      sum_alone_stem(treermfossils.d2::sTfbd, 0.0, 0.0, survdr1, ldr2, 0)
   return n*log((λ + μ)/λ)
 end
 
@@ -35,7 +38,9 @@ Log-probability of at least one lineage surviving for fossilized birth-death
 process with `λ` and `μ` for stem age.
 """
 function cond_surv_stem(tree::sTfbd, λ::Float64, μ::Float64)
-  n = sum_alone_stem(tree, 0.0, 0.0)
+  survdr = survivaldr(tree::sTfbd)
+  ldr = lastindex(survdr)
+  n = sum_alone_stem(tree::sTfbd, 0.0, 0.0, survdr, ldr, 0)
   return n*log((λ + μ)/λ)
 end
 
@@ -43,112 +48,63 @@ end
 
 
 """
-    sum_alone_stem(tree::sTfbd, tna::Float64, n::Float64)
+    cond_nothing(tree::sTfbd, λ::Float64, μ::Float64)
+
+No conditioning when computing tree likelihood.
+"""
+cond_nothing(tree::sTfbd, λ::Float64, μ::Float64) = 0
+
+
+
+
+"""
+    sum_alone_stem(tree::sTfbd,
+                   tna::Float64,
+                   n::Float64, 
+                   survdr::BitArray{1})
 
 Count nodes in stem lineage when a diversification event could have 
 returned an overall extinction.
 """
-function sum_alone_stem(tree::sTfbd, tna::Float64, n::Float64)
+function sum_alone_stem(tree::sTfbd,
+                        tna::Float64,
+                        n::Float64, 
+                        survdr::BitArray{1},
+                        ldr ::Int64,
+                        ix  ::Int64)
 
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  # Tip
+  # tip
   if !defd1 && !defd2
     return n
   end
 
-  # Sampled ancestors
-  if (defd1 && !defd2) 
-    sum_alone_stem(tree.d1::sTfbd, max(0,tna-e(tree)), n)
-  elseif (defd2 && !defd1) 
-    sum_alone_stem(tree.d2::sTfbd, max(0,tna-e(tree)), n)
-  
-  else
-    if tna < e(tree)
-      n += 1.0
-    end
-    tna -= e(tree)
-
-    if isfix(tree.d1::sTfbd)
-      if isfix(tree.d2::sTfbd)
-        # Birth of 2 fixed daughters: extinction is now impossible
-        return n
-      else
-        tnx = treeheight(tree.d2::sTfbd)
-        tna = tnx > tna ? tnx : tna
-        sum_alone_stem(tree.d1::sTfbd, tna, n)
-      end
-    else
-      tnx = treeheight(tree.d1::sTfbd)
-      tna = tnx > tna ? tnx : tna
-      sum_alone_stem(tree.d2::sTfbd, tna, n)
-    end
+  # sampled ancestors
+  if (!defd1 || !defd2)
+    ix += 1
+    return sum_alone_stem(survdr[ix] ? tree.d1::sTfbd : tree.d2::sTfbd, 
+                          tna-e(tree), n, survdr, ldr, ix)
   end
-
-end
-
-
-
-
-"""
-    cond_surv_stem_p(tree::sTfbd, λ::Float64, μ::Float64)
-
-Log-probability of at least one lineage surviving after time `t` for 
-fossilized birth-death process with `λ` and `μ` for stem age.
-"""
-function cond_surv_stem_p(tree::sTfbd, λ::Float64, μ::Float64)
-  n = sum_alone_stem_p(tree, 0.0, 0.0)
-  return n*log((λ + μ)/λ)
-end
-
-
-
-
-"""
-    sum_alone_stem(tree::sTfbd, tna::Float64, n::Float64)
-
-Count nodes in stem lineage when a diversification event could have 
-returned an overall extinction.
-"""
-function sum_alone_stem_p(tree::sTfbd, tna::Float64, n::Float64)
-
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-
+  
+  # isolated stem branch
   if tna < e(tree)
     n += 1.0
   end
   tna -= e(tree)
 
-  # Tip
-  if !defd1 && !defd2
-     return n
+  # final birth node with 2 surviving daughters reached
+  if ix === ldr && isfix(tree.d1::sTfbd) && isfix(tree.d2::sTfbd) 
+    return n
   end
 
-  # Sampled ancestors
-  if (defd1 && !defd2) 
-    sum_alone_stem(tree.d1::sTfbd, max(0,tna-e(tree)), n)
-  elseif (defd2 && !defd1) 
-    sum_alone_stem(tree.d2::sTfbd, max(0,tna-e(tree)), n)
-
-  else
-    if isfix(tree.d1::sTfbd)
-      if isfix(tree.d2::sTfbd)
-        # Birth of 2 fixed daughters: extinction is now impossible
-        return n
-      else
-        tnx = treeheight(tree.d2::sTfbd)
-        tna = tnx > tna ? tnx : tna
-        sum_alone_stem_p(tree.d1::sTfbd, tna, n)
-      end
-    else
-      tnx = treeheight(tree.d1::sTfbd)
-      tna = tnx > tna ? tnx : tna
-      sum_alone_stem_p(tree.d2::sTfbd, tna, n)
-    end
-  end
-
+  # birth
+  ix += 1
+  tnx = treeheight(survdr[ix] ? tree.d2::sTfbd : tree.d1::sTfbd)
+  tna = tnx > tna ? tnx : tna
+  sum_alone_stem(survdr[ix] ? tree.d1::sTfbd : tree.d2::sTfbd, 
+                 tna, n, survdr, ldr, ix)
 end
 
 
@@ -174,7 +130,7 @@ end
     crown_prob_surv_cfbd(λ::Float64, μ::Float64, t::Float64)
 
 Log-probability of at least one lineage surviving after time `t` for 
-fossilized birth-death process with `λ` and `μ` from stem age.
+fossilized birth-death process with `λ` and `μ` from crown age.
 """
 function crown_prob_surv_cfbd(λ::Float64, μ::Float64, t::Float64)
     μ += λ === μ ? 1e-14 : 0.0
