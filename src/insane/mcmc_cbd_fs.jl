@@ -62,9 +62,7 @@ function insane_cbd_fs(tree    ::sT_label,
   end
 
   # make fix tree directory
-  idf = iBffs[]
-  bit = BitArray{1}()
-  makeiBf!(tree, idf, bit, tρ)
+  idf = make_idf(tree, tρ)
 
   # make an insane tree and fix it
   tree = sTbd(tree)

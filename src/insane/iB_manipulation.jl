@@ -11,6 +11,35 @@ Created 03 07 2020
 
 
 
+"""
+    setpa!(id::iBffs)
+
+Set parent branch.
+"""
+setpa!(id::iBffs, pa::Int64) = id.pa[] = pa
+
+
+
+
+"""
+    setd1!(id::iBffs)
+
+Set daughter 1 branch.
+"""
+setd1!(id::iBffs, d1::Int64) = id.d1[] = d1
+
+
+
+
+"""
+    setd2!(id::iBffs)
+
+Set daughter 2 branch
+"""
+setd2!(id::iBffs, d2::Int64) = id.d2[] = d2
+
+
+
 
 """
     setni!(id::iBffs)
