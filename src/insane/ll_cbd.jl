@@ -21,7 +21,7 @@ function cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
   n = sum_alone_stem(tree.d1::sTbd, 0.0, 0.0) +
       sum_alone_stem(tree.d2::sTbd, 0.0, 0.0)
 
-  return n*log((λ + μ)/λ)
+  return n*log((λ + μ)/λ) - log(λ)
 end
 
 
@@ -184,7 +184,7 @@ function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
     - e(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
   else
     log(λ) - e(tree)*(λ + μ)      +
-    llik_cbd(tree.d1::sTbd, λ, μ) + 
+    llik_cbd(tree.d1::sTbd, λ, μ) +
     llik_cbd(tree.d2::sTbd, λ, μ)
   end
 end

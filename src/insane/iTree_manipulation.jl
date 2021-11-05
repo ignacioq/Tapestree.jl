@@ -830,6 +830,7 @@ function _fixrtip!(tree::T, na::Int64) where T <: iTree
       na1 = ntipsalive(tree.d1)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
+      # if rand() < 0.5
         _fixrtip!(tree.d2, na - na1)
       else
         _fixrtip!(tree.d1, na1)

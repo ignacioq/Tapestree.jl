@@ -81,6 +81,41 @@ end
 
 
 
+
+"""
+    sim_cbd(t ::Float64, 
+            λ ::Float64, 
+            μ ::Float64,
+            na::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ`.
+"""
+function sim_cbd(t ::Float64, 
+                 λ ::Float64, 
+                 μ ::Float64,
+                 na::Int64)
+
+  tw = cbd_wait(λ, μ)
+
+  if tw > t
+    na += 1
+    return sTbd(t), na
+  end
+
+  if λorμ(λ, μ)
+    d1, na = sim_cbd(t - tw, λ, μ, na)
+    d2, na = sim_cbd(t - tw, λ, μ, na)
+
+    return sTbd(d1, d2, tw), na
+  else
+    return sTbd(tw, true), na
+  end
+end
+
+
+
+
 """
    sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
 

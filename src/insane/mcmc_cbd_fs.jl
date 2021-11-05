@@ -13,7 +13,7 @@ Created 25 08 2020
 
 
 """
-    insane_cbd_fs(tree    ::sTbd, 
+    insane_cbd_fs(tree    ::sT_label, 
                   out_file::String,
                   λprior  ::Float64,
                   μprior  ::Float64,
@@ -32,7 +32,7 @@ Created 25 08 2020
 
 Run insane for constant pure-birth.
 """
-function insane_cbd_fs(tree    ::sTbd, 
+function insane_cbd_fs(tree    ::sT_label, 
                        out_file::String,
                        λprior  ::Float64,
                        μprior  ::Float64,
@@ -47,11 +47,19 @@ function insane_cbd_fs(tree    ::sTbd,
                        μtni    ::Float64,
                        obj_ar  ::Float64,
                        pupdp   ::NTuple{3,Float64},
-                       prints  ::Int64)
+                       prints  ::Int64,
+                       tρ      ::Dict{String, Float64})
 
   # tree characters
   th = treeheight(tree)
   n  = ntips(tree)
+
+  # set tips sampling fraction
+  if isone(length(tρ))
+    tl = tiplabels(tree)
+    tρu = tρ[""]
+    tρ = Dict(tl[i] => tρu for i in 1:n)
+  end
 
   # make fix tree directory
   idf = iBffs[]
@@ -102,9 +110,7 @@ function insane_cbd_fs(tree    ::sTbd,
         niter, nthin, λtn, μtn, th, idf, pup, prints, svf, cb)
 
   pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2), 
-                ("n_extinct"   => 3),
-                ("tree_length" => 4))
+                ("mu"          => 2))
 
   write_ssr(R, pardic, out_file)
 
@@ -187,13 +193,13 @@ function mcmc_burn_cbd(tree    ::sTbd,
 
       # λ proposal
       if p === 1
-        llc, prc, λc = λu(tree, llc, prc, λc, lac, λtn, μc, λprior, th, svf)
+        llc, prc, λc = λu(tree, llc, prc, λc, lac, λtn, μc, λprior, svf)
         lup[1] += 1.0
       end
 
       # μ proposal
       if p === 2
-        llc, prc, μc = μu(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
+        llc, prc, μc = μu(tree, llc, prc, μc, lac, μtn, λc, μprior, svf)
         lup[2] += 1.0
       end
 
@@ -267,7 +273,7 @@ function mcmc_cbd(tree  ::sTbd,
   lthin, lit = 0, 0
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 7)
+  R = Array{Float64,2}(undef, nlogs, 5)
 
   # make Ψ vector
   treev = sTbd[]
@@ -282,7 +288,7 @@ function mcmc_cbd(tree  ::sTbd,
 
       # λ proposal
       if p === 1
-        llc, prc, λc = λu(tree, llc, prc, λc, λtn, μc, λprior, th, svf)
+        llc, prc, λc = λu(tree, llc, prc, λc, λtn, μc, λprior, svf)
 
         # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -293,8 +299,8 @@ function mcmc_cbd(tree  ::sTbd,
 
       # μ proposal
       if p === 2
-        llc, prc, μc = μu(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
-      
+        llc, prc, μc = μu(tree, llc, prc, μc, μtn, λc, μprior, svf)
+
         # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
@@ -307,7 +313,7 @@ function mcmc_cbd(tree  ::sTbd,
         bix = fIrand(lidf) + 1
         tree, llc = fsp(tree, idf[bix], llc, λc, μc, in(bix, cb))
 
-        llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
+        # llci = llik_cbd(tree, λc, μc) + svf(tree, λc, μc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
         #    return 
@@ -326,8 +332,6 @@ function mcmc_cbd(tree  ::sTbd,
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        R[lit,6] = Float64(ntipsextinct(tree))
-        R[lit,7] = treelength(tree)
         push!(treev, deepcopy(tree))
       end
       lthin = 0
@@ -430,16 +434,13 @@ function fsp(tree::sTbd,
              scb ::Bool)
 
   # forward simulate an internal branch
-  t0 = fsbi(bi, λ, μ)
-
-  treeheight(t0)
+  t0, np = fsbi(bi, λ, μ, 1_000)
 
   itb = it(bi)         # is it terminal
   ρbi = ρi(bi)         # get branch sampling fraction
   nc  = ni(bi)         # current ni
-  np  = ntipsalive(t0) # proposal n
 
-  if !iszero(np)
+  if np > 0
 
     # if terminal branch
     if itb
@@ -449,7 +450,7 @@ function fsp(tree::sTbd,
       llr = log((1.0 - ρbi)^(np - nc))
     end
 
-    # metropolis-hastings ration
+    # MH ratio
     if -randexp() < llr
 
       dri = dr(bi)
@@ -507,28 +508,38 @@ end
 
 Forward simulation for branch `bi`
 """
-function fsbi(bi::iBffs, λ::Float64, μ::Float64)
+function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
 
   # times
   tfb = tf(bi)
 
-  # forward simulation during branch length
-  t0 = sim_cbd(ti(bi) - tfb, λ, μ)
-  na = ntipsalive(t0)
+  ext = 0
+  # condition on non-extinction
+  while ext < ntry 
+    ext += 1
 
-  if isone(na)
-    fixalive!(t0)
-  elseif na > 1 
-    # fix random tip
-    fixrtip!(t0)
-    if !it(bi)
-      # add tips until the present
-      tip_sims!(t0, tfb, λ, μ)
+    # forward simulation during branch length
+    t0, na = sim_cbd(ti(bi) - tfb, λ, μ, 0)
+
+    if isone(na)
+      fixalive!(t0)
+
+      return t0, na
+    elseif na > 1 
+      # fix random tip
+      fixrtip!(t0)
+      if !it(bi)
+        # add tips until the present
+        tx, na = tip_sims!(t0, tfb, λ, μ, na)
+      end
+
+      return t0, na
     end
   end
 
-  return t0
+  return sTbd(), 0
 end
+
 
 
 
@@ -538,11 +549,15 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
-function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
+function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64, na::Int64)
 
   if istip(tree) 
     if !isfix(tree) && isalive(tree)
-      stree = sim_cbd(t, λ, μ)
+
+      # simulate
+      stree, na = sim_cbd(t, λ, μ, na-1)
+
+      # merge to current tip
       sete!(tree, e(tree) + e(stree))
       setproperty!(tree, :iμ, isextinct(stree))
       if isdefined(stree, :d1)
@@ -550,19 +565,13 @@ function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
         tree.d2 = stree.d2
       end
     end
-    return tree
   else
-    tree.d1 = tip_sims!(tree.d1, t, λ, μ)
-    tree.d2 = tip_sims!(tree.d2, t, λ, μ)
+    tree.d1, na = tip_sims!(tree.d1, t, λ, μ, na)
+    tree.d2, na = tip_sims!(tree.d2, t, λ, μ, na)
   end
 
-  return tree
+  return tree, na
 end
-
-
-
-
-
 
 
 
@@ -624,12 +633,11 @@ function λu(tree  ::sTbd,
             λtn   ::Float64,
             μc    ::Float64,
             λprior::Float64,
-            th    ::Float64,
             svf   ::Function)
 
     λp = mulupt(λc, λtn)::Float64
 
-    l, s =  treelength_ns(tree, 0.0, 0.0)
+    l, s = treelength_ns(tree, 0.0, 0.0)
     λr   = log(λp/λc)
     llr  = s*λr + l*(λc - λp) + svf(tree, λp, μc) - svf(tree, λc, μc)
     prr  = llrdexp_x(λp, λc, λprior)
@@ -665,12 +673,11 @@ function λu(tree  ::sTbd,
             λtn   ::Float64,
             μc    ::Float64,
             λprior::Float64,
-            th    ::Float64,
             svf   ::Function)
 
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
-    l, s =  treelength_ns(tree, 0.0, 0.0)
+    l, s = treelength_ns(tree, 0.0, 0.0)
     λr   = log(λp/λc)
     llr  = s*λr + l*(λc - λp) + svf(tree, λp, μc) - svf(tree, λc, μc)
     prr  = llrdexp_x(λp, λc, λprior)
@@ -709,12 +716,11 @@ function μu(tree  ::sTbd,
             μtn   ::Float64,
             λc    ::Float64,
             μprior::Float64,
-            th    ::Float64,
             svf   ::Function)
 
     μp = mulupt(μc, μtn)::Float64
 
-    l, m =  treelength_ne(tree, 0.0, 0.0)
+    l, m = treelength_ne(tree, 0.0, 0.0)
     μr   = log(μp/μc)
     llr  = m*μr + l*(μc - μp) + svf(tree, λc, μp) - svf(tree, λc, μc)
     prr  = llrdexp_x(μp, μc, μprior)
@@ -752,12 +758,11 @@ function μu(tree  ::sTbd,
             μtn   ::Float64,
             λc    ::Float64,
             μprior::Float64,
-            th    ::Float64,
             svf   ::Function)
 
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
-    l, m =  treelength_ne(tree, 0.0, 0.0)
+    l, m = treelength_ne(tree, 0.0, 0.0)
     μr   = log(μp/μc)
     llr  = m*μr + l*(μc - μp) + svf(tree, λc, μp) - svf(tree, λc, μc)
     prr  = llrdexp_x(μp, μc, μprior)
