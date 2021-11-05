@@ -386,7 +386,7 @@ function prob_ρ(idv::Array{iBffs,1})
   ll = 0.0
   for bi in idv
     nbi = ni(bi)
-    if it(bi)
+    if iszero(d1(bi))
       ll += log(Float64(nbi) * (1.0 - ρi(bi))^(nbi - 1))
     else
       ll += log((1.0 - ρi(bi))^(nbi))
@@ -529,6 +529,16 @@ d1(id::iBffs) = getproperty(id, :d1)[]
 Return daughter edge.
 """
 d2(id::iBffs) = getproperty(id, :d2)[]
+
+
+
+
+"""
+    e(id::iB)
+
+Return initial absolute time.
+"""
+e(id::iB) = getproperty(id, :t)
 
 
 

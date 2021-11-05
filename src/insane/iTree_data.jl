@@ -190,6 +190,22 @@ fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
 
 
 """
+    treelength(psi::Vector{sTbd})
+
+Return the branch length sum of `Ψ`.
+"""
+function treelength(psi::Vector{sTbd})
+  L = 0.0
+  for ψ in psi
+    L += _treelength(ψ, 0.0)
+  end
+  return L
+end
+
+
+
+
+"""
     treelength(tree::T) where {T <: iTree}
 
 Return the branch length sum of `tree`.

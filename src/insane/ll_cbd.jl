@@ -193,68 +193,120 @@ end
 
 
 """
-     stree_ll_cbd(tree::sTbd,
-                  ll  ::Float64, 
-                  λc  ::Float64, 
-                  μc  ::Float64,
-                  dri ::BitArray{1}, 
-                  ldr ::Int64,
-                  wpr ::Int64,
-                  ix  ::Int64, 
-                  px  ::Int64)
+    llik_cbd(psi::Vector{sTbd}, 
+             idf::Vector{iBffs},
+             λ   ::Float64, 
+             μ   ::Float64, 
+             scond::Function)
 
-Return the Log-likelihood under constant birth-death 
-of a grafted subtree determined by `dri`. 
+Log-likelihood up to a constant for constant birth-death 
+given a complete `iTree` for edge trees.
 """
-function stree_ll_cbd(tree::sTbd,
-                      ll  ::Float64, 
-                      λc  ::Float64, 
-                      μc  ::Float64,
-                      dri ::BitArray{1}, 
-                      ldr ::Int64,
-                      wpr ::Int64,
-                      ix  ::Int64, 
-                      px  ::Int64)
+function llik_cbd(psi::Vector{sTbd}, 
+                  idf::Vector{iBffs},
+                  λ   ::Float64, 
+                  μ   ::Float64, 
+                  scond::Function)
 
-  if ix === ldr
-    if px === wpr
-      if isfix(tree.d1::sTbd)
-        ll += llik_cbd(tree.d2::sTbd, λc, μc)
-      elseif isfix(tree.d2::sTbd)
-        ll += llik_cbd(tree.d1::sTbd, λc, μc)
+  ll = 0.0
+  for ψ in psi
+    ll += llik_cbd(ψ, λ, μ)
+  end
+
+  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ) + scond(psi, λ, μ)
+
+  return ll
+end
+
+
+
+
+"""
+    make_cond(idf::Vector{iBffs}, stem::Bool)
+
+Make closure for conditioning function
+"""
+function make_cond(idf::Vector{iBffs}, stem::Bool)
+
+  # conditioning
+  if stem
+    function f(psi::Vector{sTbd}, λ::Float64, μ::Float64)
+      cond_surv_stem_p(psi[1], λ, μ)
+    end
+  else
+    b1  = idf[1]
+    d1i = d1(b1)
+    d2i = d2(b1)
+    t1  = iszero(d1(idf[d1i]))
+    t2  = iszero(d1(idf[d2i]))
+
+    if t1 
+      if t2
+        f = let d1i = d1i, d2i = d2i
+          (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
+            cond_surv_stem(psi[d1i], λ, μ) + 
+            cond_surv_stem(psi[d2i], λ, μ)  - 
+            log(λ)
+        end
+      else
+        f = let d1i = d1i, d2i = d2i
+          (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
+          cond_surv_stem(  psi[d1i], λ, μ) + 
+          cond_surv_stem_p(psi[d2i], λ, μ) - 
+          log(λ)
+        end 
+      end
+    elseif t2
+      f = let d1i = d1i, d2i = d2i
+        (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
+        cond_surv_stem_p(psi[d1i], λ, μ) + 
+        cond_surv_stem(psi[d2i], λ, μ) - 
+        log(λ)
       end
     else
-      px += 1
-      if isfix(tree.d1::sTbd)
-        ll += 
-          stree_ll_cbd(tree.d1::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-      else
-        ll +=
-          stree_ll_cbd(tree.d2::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
+      f = let d1i = d1i, d2i = d2i
+        (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
+        cond_surv_stem_p(psi[d1i], λ, μ) + 
+        cond_surv_stem_p(psi[d2i], λ, μ) - 
+        log(λ)
       end
     end
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1::sTbd)
-    if ifx1 && isfix(tree.d2::sTbd)
-      ix += 1
-      if dri[ix]
-        ll += 
-          stree_ll_cbd(tree.d1::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-      else
-        ll += 
-          stree_ll_cbd(tree.d2::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-      end
+  end
+
+  return f
+end
+
+
+
+
+
+"""
+    llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
+
+Estimate constant birth-death likelihood for the tree in a branch.
+"""
+function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
+
+  ll = - e(tree)*(λ + μ)
+
+  if isdefined(tree, :d1)
+    ll += log(λ)
+    ifx1 = isfix(tree.d1)
+    if ifx1 && isfix(tree.d2)
+      return ll
     elseif ifx1
-      ll += 
-        stree_ll_cbd(tree.d1::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
+      ll += llik_cbd_f(tree.d1::sTbd, λ, μ) +
+            llik_cbd(  tree.d2::sTbd, λ, μ)
     else
-      ll +=
-        stree_ll_cbd(tree.d2::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
+      ll += llik_cbd(  tree.d1::sTbd, λ, μ) + 
+            llik_cbd_f(tree.d2::sTbd, λ, μ)
     end
   end
 
   return ll
 end
+
+
 
 
 

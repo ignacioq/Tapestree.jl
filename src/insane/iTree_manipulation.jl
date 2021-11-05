@@ -10,6 +10,8 @@ Created 25 06 2020
 =#
 
 
+
+
 """
     rm_stem(tree::T)  where {T <: iTree}
 
@@ -17,7 +19,6 @@ Removes stem branch.
 """
 rm_stem!(tree::T)  where {T <: iTree} = 
   _rm_stem(tree)
-
 
 
 
