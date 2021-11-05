@@ -271,22 +271,22 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
       if p === 1
         llc, prc, λc = λu(Ψ, llc, prc, λc, λtn, μc, ns, L, λprior, scond)
 
-        llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, i, p
-           return 
-        end
+        # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, i, p
+        #    return 
+        # end
       end
 
       # μ proposal
       if p === 2
         llc, prc, μc = μu(Ψ, llc, prc, μc, μtn, λc, ne, L, μprior, scond)
 
-        llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, i, p
-           return 
-        end
+        # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, i, p
+        #    return 
+        # end
       end
 
       # forward simulation proposal proposal
@@ -294,11 +294,11 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
         bix = fIrand(el) + 1
         llc, ns, ne, L = fsp!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
 
-        llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, i, p
-           return 
-        end
+        # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, i, p
+        #    return 
+        # end
       end
     end
 
