@@ -313,7 +313,7 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        push!(treev, build(deepcopy(Ψ), idf, 1))
+        push!(treev, couple(deepcopy(Ψ), idf, 1))
       end
       lthin = 0
     end
@@ -357,8 +357,11 @@ function fsp!(bix  ::Int64,
 
   bi = idf[bix]
 
+  # sample ratio
+  lU = -randexp()
+
   # forward simulate an internal branch
-  tp, np = fsbi(bi, λ, μ, 1_000)
+  tp, np = fsbi(bi, λ, μ, 500)
 
   itb = iszero(d1(bi)) # is it terminal
   ρbi = ρi(bi)         # get branch sampling fraction
@@ -419,7 +422,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
   tfb = tf(bi)
 
   ext = 0
-  # condition on non-extinction
+  # condition on non-extinction (helps in mixing)
   while ext < ntry 
     ext += 1
 

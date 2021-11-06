@@ -30,22 +30,22 @@ end
 
 
 """
-    build(psi::Vector{T},
-          idf::Vector{iBffs},
-          ix ::Int64) where {T <: iTree}
+    couple(psi::Vector{T},
+           idf::Vector{iBffs},
+           ix ::Int64) where {T <: iTree}
 
 Build tree from decoupled tree.
 """
-function build(psi::Vector{T},
-               idf::Vector{iBffs},
-               ix ::Int64) where {T <: iTree}
+function couple(psi::Vector{T},
+                idf::Vector{iBffs},
+                ix ::Int64) where {T <: iTree}
 
   bi = idf[ix]
   ψi = psi[ix]
   if !iszero(d1(bi))
     ψit = fixtip(ψi)
-    ψit.d1 = build(psi, idf, d1(bi))
-    ψit.d2 = build(psi, idf, d2(bi))
+    ψit.d1 = couple(psi, idf, d1(bi))
+    ψit.d2 = couple(psi, idf, d2(bi))
   end
 
   return ψi
