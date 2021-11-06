@@ -54,20 +54,20 @@ function insane_cbd(tree        ::sT_label,
 
   # forward simulation
   if occursin(r"^[f|F][A-za-z]*", augmentation)
-    R, tree = insane_cbd_fs(tree, out_file, 
+    R, dtrees, trees = insane_cbd_fs(tree, out_file, 
       λprior, μprior, niter, nthin, nburn, tune_int, ϵi, λi, μi, λtni, μtni, 
       obj_ar, pupdp, prints, tρ)
 
   # graft/prune
   elseif occursin(r"^[g|G][A-za-z]*", augmentation)
-    R, tree = insane_cbd_gp(tree, out_file, 
+    R, trees = insane_cbd_gp(tree, out_file, 
       λprior, μprior, niter, nthin, nburn, tune_int, ϵi, λi, μi, λtni, μtni, 
       obj_ar, pupdp, prints)
   else
     @error string(augmentation," does not match `fs` or `gp`")
   end
 
-  return R, tree
+  return R, dtrees, trees
 end
 
 

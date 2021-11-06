@@ -86,7 +86,7 @@ function insane_cbd_fs(tree    ::sT_label,
         ϵi, λi, μi, λtni, μtni, scalef, idf, pup, prints, scond)
 
   # mcmc
-  R, treev = mcmc_cbd(Ψ, llc, prc, λc, μc, λprior, μprior,
+  R, dtrees, treev = mcmc_cbd(Ψ, llc, prc, λc, μc, λprior, μprior,
         niter, nthin, λtn, μtn, idf, pup, prints, scond)
 
   pardic = Dict(("lambda"      => 1),
@@ -94,7 +94,7 @@ function insane_cbd_fs(tree    ::sT_label,
 
   write_ssr(R, pardic, out_file)
 
-  return R, treev
+  return R, dtrees, treev
 end
 
 
@@ -257,7 +257,8 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
   R = Array{Float64,2}(undef, nlogs, 5)
 
   # make Ψ vector
-  treev = sTbd[]
+  treev  = sTbd[]
+  dtrees = Vector{sTbd}[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -314,6 +315,7 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
         R[lit,4] = λc
         R[lit,5] = μc
         push!(treev, build(deepcopy(Ψ), idf, 1))
+        push!(dtrees, deepcopy(Ψ))
       end
       lthin = 0
     end
@@ -321,7 +323,7 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
     next!(pbar)
   end
 
-  return R, treev
+  return R, dtrees, treev
 end
 
 

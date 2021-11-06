@@ -166,9 +166,6 @@ end
 
 
 
-
-
-
 """
     dt(tree::T) where {T <: iTree}
 
@@ -185,22 +182,6 @@ dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
 Return final `δt`.
 """
 fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
-
-
-
-
-"""
-    treelength(psi::Vector{sTbd})
-
-Return the branch length sum of `Ψ`.
-"""
-function treelength(psi::Vector{sTbd})
-  L = 0.0
-  for ψ in psi
-    L += _treelength(ψ, 0.0)
-  end
-  return L
-end
 
 
 
@@ -934,6 +915,23 @@ end
 
 
 
+"""
+    fixtip(tree::T) where {T <: iTree}
+
+Return the first fixed tip.
+"""
+function fixtip(tree::T) where {T <: iTree}
+  if istip(tree)
+    return tree
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T)
+  else
+    fixtip(tree.d2::T)
+  end
+end
+
+
+
 
 """
     fixds(tree::T) where {T <: iTgbm}
@@ -941,7 +939,7 @@ end
 Return the first fixed daughters `d1` and `d2`. Works only for 
 internal branches.
 """
-function fixds(tree::T) where {T <: iTgbm}
+function fixds(tree::T) where {T <: iTree}
   ifx1 = isfix(tree.d1::T)
   if ifx1 && isfix(tree.d2::T)
     return tree.d1::T, tree.d2::T
