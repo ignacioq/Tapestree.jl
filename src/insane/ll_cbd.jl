@@ -244,64 +244,31 @@ function make_cond(idf::Vector{iBffs}, stem::Bool)
         f = let d1i = d1i, d2i = d2i
           (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
             cond_surv_stem(psi[d1i], λ, μ) + 
-            cond_surv_stem(psi[d2i], λ, μ) #- log(λ)
+            cond_surv_stem(psi[d2i], λ, μ) + log((λ + μ)/λ)
         end
       else
         f = let d1i = d1i, d2i = d2i
           (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
           cond_surv_stem(  psi[d1i], λ, μ) + 
-          cond_surv_stem_p(psi[d2i], λ, μ) #- log(λ)
+          cond_surv_stem_p(psi[d2i], λ, μ) + log((λ + μ)/λ)
         end 
       end
     elseif t2
       f = let d1i = d1i, d2i = d2i
         (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
         cond_surv_stem_p(psi[d1i], λ, μ) + 
-        cond_surv_stem(psi[d2i], λ, μ)   #- log(λ)
+        cond_surv_stem(  psi[d2i], λ, μ) + log((λ + μ)/λ)
       end
     else
       f = let d1i = d1i, d2i = d2i
         (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
         cond_surv_stem_p(psi[d1i], λ, μ) + 
-        cond_surv_stem_p(psi[d2i], λ, μ) #- log(λ)
+        cond_surv_stem_p(psi[d2i], λ, μ) + log((λ + μ)/λ)
       end
     end
   end
 
   return f
 end
-
-
-
-
-
-"""
-    llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
-
-Estimate constant birth-death likelihood for the tree in a branch.
-"""
-function llik_cbd_f(tree::sTbd, λ::Float64, μ::Float64)
-
-  ll = - e(tree)*(λ + μ)
-
-  if isdefined(tree, :d1)
-    ll += log(λ)
-    ifx1 = isfix(tree.d1)
-    if ifx1 && isfix(tree.d2)
-      return ll
-    elseif ifx1
-      ll += llik_cbd_f(tree.d1::sTbd, λ, μ) +
-            llik_cbd(  tree.d2::sTbd, λ, μ)
-    else
-      ll += llik_cbd(  tree.d1::sTbd, λ, μ) + 
-            llik_cbd_f(tree.d2::sTbd, λ, μ)
-    end
-  end
-
-  return ll
-end
-
-
-
 
 
