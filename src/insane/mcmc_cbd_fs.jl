@@ -489,44 +489,6 @@ end
 
 
 
-
-"""
-    addtotip(tree::sTbd, stree::sTbd, ix::Bool) 
-
-Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
-"""
-function addtotip(tree::sTbd, stree::sTbd, ix::Bool) 
-
-  if istip(tree)
-    if isalive(tree) && !isfix(tree)
-
-      sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, isextinct(stree))
-
-      if isdefined(stree, :d1)
-        tree.d1 = stree.d1
-        tree.d2 = stree.d2
-      end
-
-      ix = true
-    end
-
-    return ix 
-  end
-
-  if !ix
-    ix = addtotip(tree.d1::sTbd, stree, ix)
-  end
-  if !ix
-    ix = addtotip(tree.d2::sTbd, stree, ix)
-  end
-
-  return ix
-end
-
-
-
-
 """
     λu(psi   ::Vector{sTbd}
        llc   ::Float64,
@@ -701,34 +663,6 @@ function μu(psi   ::Vector{sTbd},
 
     return llc, prc, μc 
 end
-
-
-
-
-"""
-    λμprop()
-
-Generate proportional proposals for `λ` and `μ`
-using random samples from **LogNormal** distributions. 
-"""
-function λμprop() 
-
-  lg = lnr()
-
-  return lg*exp(randn()*0.3 - 0.044),
-         lg*exp(randn()*0.3 - 0.044) 
-end
-
-
-
-
-"""
-    lnr()
-
-**LogNormal** random samples with median of `1`. 
-"""
-lnr() = @fastmath exp(randn())
-
 
 
 
