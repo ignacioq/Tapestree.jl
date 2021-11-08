@@ -44,9 +44,21 @@ setd2!(id::iBffs, d2::Int64) = id.d2[] = d2
 """
     setni!(id::iBffs)
 
-Add `1` to number of data augmented branches. 
+Set number of alive lineages at present. 
 """
 setni!(id::iBffs, ni::Int64) = id.ni[] = ni
+
+
+
+
+
+"""
+    setnt!(id::iBffs)
+
+Set number of alive lineages at time `t`. 
+"""
+setnt!(id::iBffs, nt::Int64) = id.nt[] = nt
+
 
 
 

@@ -1298,3 +1298,26 @@ function treeapply(tree::T, FUN::Function) where {T <: iTree}
 end
 
 
+
+
+"""
+    nlin_t(tree::T, t::Float64, tc::Float64) where {T <: iTree}
+
+Number of lineages at time t
+"""
+function nlin_t(tree::T, t::Float64, tc::Float64) where {T <: iTree}
+
+  el = e(tree)
+  if tc < t
+    if t - 1e-12 <= tc + el
+      return 1
+    elseif isdefined(tree, :d1)
+      return nlin_t(tree.d1, t, tc + el) +
+             nlin_t(tree.d2, t, tc + el)
+    else
+      return 0
+    end
+  end
+end
+
+

@@ -262,7 +262,8 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `ti`: initial absolute time.
   `tf`: final absolute time.
   `ie`: `true` if an extinct branch.
-  `ni`: Current direct alive descendants.
+  `ni`: current direct alive descendants.
+  `nt`: current alive descendants at time `t`.
 
     iBffs()
 
@@ -278,13 +279,14 @@ struct iBffs <: iBf
   ρi::Float64
   ie::Bool
   ni::Base.RefValue{Int64}
+  nt::Base.RefValue{Int64}
 
   # constructors
   iBffs() = new(0., Ref(0), Ref(0), Ref(0), 
                 0., 0., 1., false, Ref(0))
-  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, 
-    ti::Float64, tf::Float64, ρi::Float64, it::Bool, ie::Bool, ni::Int64) = 
-    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, ρi, ie, Ref(ni))
+  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
+    ρi::Float64, it::Bool, ie::Bool, ni::Int64, nt::Int64) = 
+    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, ρi, ie, Ref(ni), Ref(nt))
 end
 
 
@@ -318,7 +320,7 @@ function makeiBf!(tree::sT_label,
     ρi  = tρ[lab]
     push!(idv, 
       iBffs(e(tree), 0, 0, 0, treeheight(tree), 
-            treeheight(tree) - e(tree), ρi, true, false, 1))
+            treeheight(tree) - e(tree), ρi, true, false, 1, 1))
     push!(n2v, 0)
     return ρi, 1
   end
@@ -336,7 +338,7 @@ function makeiBf!(tree::sT_label,
 
   push!(idv, 
     iBffs(e(tree), 0, 1, 1, treeheight(tree), 
-      treeheight(tree) - e(tree), ρi, false, false, 0))
+      treeheight(tree) - e(tree), ρi, false, false, 0, 1))
   push!(n2v, n2)
 
   return ρi, n
@@ -602,3 +604,11 @@ Return the current number of direct descendants alive at the present.
 ni(id::iBffs) = getproperty(id, :ni)[]
 
 
+
+
+"""
+    nt(id::iBffs)
+
+Return the current number of direct descendants alive at time `t`.
+"""
+nt(id::iBffs) = getproperty(id, :nt)[]

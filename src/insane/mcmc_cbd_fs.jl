@@ -256,7 +256,7 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
   # parameter results
   R = Array{Float64,2}(undef, nlogs, 5)
 
-  # make Ψ vector
+  # make tree vector
   treev  = sTbd[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
@@ -328,8 +328,6 @@ end
 
 
 
-
-
 """
     fsp!(bix  ::Int64,
          Ψ    ::Vector{sTbd},
@@ -358,30 +356,34 @@ function fsp!(bix  ::Int64,
   bi = idf[bix]
 
   # sample ratio
-  lU = -randexp()
+  # lU = -randexp()
 
   # forward simulate an internal branch
-  tp, np = fsbi(bi, λ, μ, 500)
+  tp, np, ntp = fsbi(bi, λ, μ, 500)
 
   itb = iszero(d1(bi)) # is it terminal
   ρbi = ρi(bi)         # get branch sampling fraction
   nc  = ni(bi)         # current ni
+  ntc = nt(bi)         # current nt
 
   if np > 0
 
+    # current tree
+    tc  = Ψ[bix]
+
     # if terminal branch
     if itb
-      llr = log(np/nc * (1.0 - ρbi)^(np - nc))
+      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr = 0.0
     else
       np  -= 1
       llr = log((1.0 - ρbi)^(np - nc))
+      acr = log(Float64(ntp)/Float64(ntc))
     end
 
     # MH ratio
-    if -randexp() < llr
+    if -randexp() < llr + acr
 
-      # current tree
-      tc  = Ψ[bix]
       # update ns, ne & L
       ns += Float64(nnodesinternal(tp) - nnodesinternal(tc))
       ne += Float64(ntipsextinct(tp)   - ntipsextinct(tc))
@@ -399,8 +401,9 @@ function fsp!(bix  ::Int64,
         Ψ[bix] = tp
       end
 
-      llc += llr     # set new likelihood
-      setni!(bi, np) # set new ni
+      llc += llr      # set new likelihood
+      setni!(bi, np)  # set new ni
+      setnt!(bi, ntp) # set new nt
     end
   end
 
@@ -429,10 +432,12 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
     # forward simulation during branch length
     t0, na = sim_cbd(e(bi), λ, μ, 0)
 
+    nat = na
+
     if isone(na)
       fixalive!(t0)
 
-      return t0, na
+      return t0, na, nat
     elseif na > 1
       # fix random tip
       fixrtip!(t0)
@@ -442,13 +447,12 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
         tx, na = tip_sims!(t0, tfb, λ, μ, na)
       end
 
-      return t0, na
+      return t0, na, nat
     end
   end
 
-  return sTbd(), 0
+  return sTbd(), 0, 0
 end
-
 
 
 
@@ -481,6 +485,7 @@ function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64, na::Int64)
 
   return tree, na
 end
+
 
 
 

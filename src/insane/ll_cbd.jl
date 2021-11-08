@@ -20,7 +20,6 @@ birth-death process with `λ` and `μ` for crown age.
 function cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
   n = sum_alone_stem(tree.d1::sTbd, 0.0, 0.0) +
       sum_alone_stem(tree.d2::sTbd, 0.0, 0.0)
-
   return n*log((λ + μ)/λ) - log(λ)
 end
 
@@ -245,30 +244,26 @@ function make_cond(idf::Vector{iBffs}, stem::Bool)
         f = let d1i = d1i, d2i = d2i
           (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
             cond_surv_stem(psi[d1i], λ, μ) + 
-            cond_surv_stem(psi[d2i], λ, μ)  - 
-            log(λ)
+            cond_surv_stem(psi[d2i], λ, μ) #- log(λ)
         end
       else
         f = let d1i = d1i, d2i = d2i
           (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
           cond_surv_stem(  psi[d1i], λ, μ) + 
-          cond_surv_stem_p(psi[d2i], λ, μ) - 
-          log(λ)
+          cond_surv_stem_p(psi[d2i], λ, μ) #- log(λ)
         end 
       end
     elseif t2
       f = let d1i = d1i, d2i = d2i
         (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
         cond_surv_stem_p(psi[d1i], λ, μ) + 
-        cond_surv_stem(psi[d2i], λ, μ) - 
-        log(λ)
+        cond_surv_stem(psi[d2i], λ, μ)   #- log(λ)
       end
     else
       f = let d1i = d1i, d2i = d2i
         (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
         cond_surv_stem_p(psi[d1i], λ, μ) + 
-        cond_surv_stem_p(psi[d2i], λ, μ) - 
-        log(λ)
+        cond_surv_stem_p(psi[d2i], λ, μ) #- log(λ)
       end
     end
   end
