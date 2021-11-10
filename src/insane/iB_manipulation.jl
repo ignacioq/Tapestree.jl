@@ -51,7 +51,6 @@ setni!(id::iBffs, ni::Int64) = id.ni[] = ni
 
 
 
-
 """
     setnt!(id::iBffs)
 
@@ -59,6 +58,25 @@ Set number of alive lineages at time `t`.
 """
 setnt!(id::iBffs, nt::Int64) = id.nt[] = nt
 
+
+
+
+"""
+    setλt!(id::iBffs)
+
+Set number of alive lineages at time `t`. 
+"""
+setλt!(id::iBffs, λt::Float64) = id.λt[] = λt
+
+
+
+
+"""
+    setμt!(id::iBffs)
+
+Set number of alive lineages at time `t`. 
+"""
+setμt!(id::iBffs, μt::Float64) = id.μt[] = μt
 
 
 

@@ -17,13 +17,59 @@ Created 05 11 2020
 
 Make edge tree `Ψ` from the edge directory.
 """
-function make_Ψ(idf::Vector{iBffs})
+function make_Ψ(idf::Vector{iBffs}, ::Type{sTbd})
   Ψ = sTbd[]
   for i in Base.OneTo(lastindex(idf))
     ψ = sTbd(e(idf[i]), false, true)
     push!(Ψ, ψ)
   end
   return Ψ
+end
+
+
+
+
+"""
+    iTgbmpb!(Ψ   ::Vector{iTgbmpb},
+             tree::sT_label,
+             δt  ::Float64, 
+             srδt::Float64, 
+             lλa ::Float64,
+             α   ::Float64,
+             σλ  ::Float64)
+
+Make edge tree `Ψ` from the edge directory.
+"""
+function iTgbmpb!(Ψ   ::Vector{iTgbmpb},
+                  tree::sT_label,
+                  δt  ::Float64, 
+                  srδt::Float64, 
+                  lλa ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64)
+
+  et = e(tree)
+
+  if iszero(et)
+    lλv  = Float64[lλa, lλa]
+    fdti = 0.0
+    l    = 2
+  else
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
+
+    if iszero(fdti)
+      fdti = δt
+    end
+    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    l   = lastindex(lλv)
+  end
+
+  push!(Ψ, iTgbmpb(et, δt, fdti, lλv))
+  if isdefined(tree, :d1)
+    iTgbmpb!(Ψ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmpb!(Ψ, tree.d1, δt, srδt, lλv[l], α, σλ)
+  end
 end
 
 
@@ -59,7 +105,7 @@ end
 
 Return the branch length sum of `Ψ`.
 """
-function treelength(psi::Vector{sTbd})
+function treelength(psi::Vector{T}) where {T<: iTree}
   L = 0.0
   for ψ in psi
     L += _treelength(ψ, 0.0)

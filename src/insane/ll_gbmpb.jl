@@ -39,6 +39,42 @@ end
 
 
 """
+    llik_gbm(psi ::Vector{iTgbmpb},
+             idf ::Vector{iBffs}, 
+             α   ::Float64,
+             σλ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64)
+
+Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
+"""
+function llik_gbm(psi ::Vector{iTgbmpb},
+                  idf ::Vector{iBffs}, 
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64)
+
+  @inbounds begin
+    ll = 0.0
+    for i in Base.OneTo(lastindex(psi))
+      ψi  = psi[i]
+      bi  = idf[i]
+      ll += llik_gbm(ψi, α, σλ, δt, srδt)
+
+      if !iszero(d1(bi))
+        ll += λt(bi)
+      end
+    end
+  end
+
+  return ll
+end
+
+
+
+
+"""
     ll_gbm_b(lλv ::Array{Float64,1},
              α   ::Float64,
              σλ  ::Float64, 
@@ -123,6 +159,7 @@ separately for the Brownian motion and the pure-birth
 
     llrbm = 0.0
     llrpb = 0.0
+    ssrλ  = 0.0
     lλpi = lλp[1]
     lλci = lλc[1]
     @simd for i in Base.OneTo(nI)
@@ -134,6 +171,8 @@ separately for the Brownian motion and the pure-birth
       lλci   = lλci1
     end
 
+    # standardized sum of squares
+    ssrλ  = llrbm/(2.0*δt)
     # add to global likelihood
     llrbm *= (-0.5/((σλ*srδt)^2))
     llrpb *= (-δt)
@@ -143,6 +182,7 @@ separately for the Brownian motion and the pure-birth
 
    # add final non-standard `δt`
     if fdt > 0.0
+      ssrλ  += ((lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2)/(2.0*fdt) 
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
       llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
@@ -153,28 +193,48 @@ separately for the Brownian motion and the pure-birth
     end
   end
 
-  return llrbm, llrpb
+  return llrbm, llrpb, ssrλ
 end
 
 
 
 
 """
-    sss_gbm(tree::iTgbmpb, α::Float64, ssλ::Float64, n::Float64)
+    sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
 
-Returns the standardized sum of squares a `iTgbmpb` according 
+Returns the standardized sum of squares a `iTgbm` according 
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64) where {T <: iTgbm}
+function sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
 
-  ssλ0, n0 = sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
+  n   = 0.0
+  ssλ = 0.0
+  for ψi in psi
+    ssλ, n = _sss_gbm(ψi, α, ssλ, n)
+  end
+
+  return ssλ, n
+end
+
+
+
+
+"""
+    sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64)
+
+Returns the standardized sum of squares a `iTgbm` according 
+to GBM birth-death for a `σ` proposal.
+"""
+function _sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64) where {T <: iTgbm}
+
+  ssλ0, n0 = _sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
 
   ssλ += ssλ0
   n   += n0
 
   if isdefined(tree, :d1) 
-    ssλ, n = sss_gbm(tree.d1, α, ssλ, n)
-    ssλ, n = sss_gbm(tree.d2, α, ssλ, n)
+    ssλ, n = _sss_gbm(tree.d1, α, ssλ, n)
+    ssλ, n = _sss_gbm(tree.d2, α, ssλ, n)
   end
 
   return ssλ, n
@@ -192,10 +252,10 @@ end
 Returns the standardized sum of squares for the stochastic GBM part of a branch 
 for GBM birth-death.
 """
-@inline function sss_gbm_b(lλv::Array{Float64,1},
-                           α  ::Float64,
-                           δt ::Float64, 
-                           fdt::Float64)
+@inline function _sss_gbm_b(lλv::Array{Float64,1},
+                            α  ::Float64,
+                            δt ::Float64, 
+                            fdt::Float64)
 
   @inbounds begin
 
@@ -229,24 +289,40 @@ end
 
 
 """
-    treelength_dλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
+    deltaλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
+
+Returns the log-likelihood ratio for according to GBM 
+for a drift `α` proposal.
+"""
+function deltaλ(psi::Vector{T}) where {T <: iTgbm}
+
+  dλ = 0.0
+
+  for ψi in psi
+    dλ += _deltaλ(ψi)
+  end
+
+  return dλ
+end
+
+
+
+
+"""
+    _deltaλ(tree::T) where {T <: iTgbm}
 
 Returns the log-likelihood ratio for a `iTgbmpb` according 
 to GBM birth-death for a `α` proposal.
 """
-function treelength_dλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
+function _deltaλ(tree::T) where {T <: iTgbm}
 
   lλv = lλ(tree)
-  dλ += lλv[end] - lλv[1]
-  l  += e(tree)
 
   if isdefined(tree, :d1) 
-    dλ, l = treelength_dλ(tree.d1, dλ, l)
-    dλ, l = treelength_dλ(tree.d2, dλ, l)
+    lλv[end] - lλv[1] + _deltaλ(tree.d1) + _deltaλ(tree.d2)
+  else
+    lλv[end] - lλv[1]
   end
-
-  return dλ, l
 end
-
 
 

@@ -264,6 +264,8 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `ie`: `true` if an extinct branch.
   `ni`: current direct alive descendants.
   `nt`: current alive descendants at time `t`.
+  `λt`: final speciation rate for fixed at time `t`.
+  `μt`: final extinction rate for fixed at time `t`.
 
     iBffs()
 
@@ -280,13 +282,17 @@ struct iBffs <: iBf
   ie::Bool
   ni::Base.RefValue{Int64}
   nt::Base.RefValue{Int64}
+  λt::Base.RefValue{Float64}
+  μt::Base.RefValue{Float64}
 
   # constructors
   iBffs() = new(0., Ref(0), Ref(0), Ref(0), 
-                0., 0., 1., false, Ref(0))
+                0., 0., 1., false, Ref(0), Ref(0.0). Ref(0.0))
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
-    ρi::Float64, it::Bool, ie::Bool, ni::Int64, nt::Int64) = 
-    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, ρi, ie, Ref(ni), Ref(nt))
+    ρi::Float64, it::Bool, ie::Bool, ni::Int64, nt::Int64, 
+    λt::Float64, μt::Float64) = 
+    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, ρi, ie, 
+      Ref(ni), Ref(nt), Ref(λt), Ref(μt))
 end
 
 
@@ -320,7 +326,7 @@ function makeiBf!(tree::sT_label,
     ρi  = tρ[lab]
     push!(idv, 
       iBffs(e(tree), 0, 0, 0, treeheight(tree), 
-            treeheight(tree) - e(tree), ρi, true, false, 1, 1))
+            treeheight(tree) - e(tree), ρi, true, false, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     return ρi, 1
   end
@@ -338,7 +344,7 @@ function makeiBf!(tree::sT_label,
 
   push!(idv, 
     iBffs(e(tree), 0, 1, 1, treeheight(tree), 
-      treeheight(tree) - e(tree), ρi, false, false, 0, 1))
+      treeheight(tree) - e(tree), ρi, false, false, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   return ρi, n
@@ -612,3 +618,27 @@ ni(id::iBffs) = getproperty(id, :ni)[]
 Return the current number of direct descendants alive at time `t`.
 """
 nt(id::iBffs) = getproperty(id, :nt)[]
+
+
+
+
+"""
+    λt(id::iBffs)
+
+Return final speciation rate for fixed at time `t
+"""
+λt(id::iBffs) = getproperty(id, :λt)[]
+
+
+
+
+"""
+    μt(id::iBffs)
+
+Return final extinction rate for fixed at time `t`.
+"""
+μt(id::iBffs) = getproperty(id, :μt)[]
+
+
+
+

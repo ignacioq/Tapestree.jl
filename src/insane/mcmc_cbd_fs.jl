@@ -63,7 +63,7 @@ function insane_cbd_fs(tree    ::sT_label,
   idf = make_idf(tree, tρ)
 
   # make an edges tree and fix it
-  Ψ = make_Ψ(idf)
+  Ψ = make_Ψ(idf, sTbd)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
