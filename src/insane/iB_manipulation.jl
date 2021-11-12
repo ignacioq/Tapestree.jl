@@ -12,7 +12,7 @@ Created 03 07 2020
 
 
 """
-    setpa!(id::iBffs)
+    setpa!(id::iBffs, pa::Int64)
 
 Set parent branch.
 """
@@ -22,7 +22,7 @@ setpa!(id::iBffs, pa::Int64) = id.pa[] = pa
 
 
 """
-    setd1!(id::iBffs)
+    setd1!(id::iBffs, d1::Int64)
 
 Set daughter 1 branch.
 """
@@ -32,7 +32,7 @@ setd1!(id::iBffs, d1::Int64) = id.d1[] = d1
 
 
 """
-    setd2!(id::iBffs)
+    setd2!(id::iBffs, d2::Int64)
 
 Set daughter 2 branch
 """
@@ -42,7 +42,7 @@ setd2!(id::iBffs, d2::Int64) = id.d2[] = d2
 
 
 """
-    setni!(id::iBffs)
+    setni!(id::iBffs, ni::Int64) 
 
 Set number of alive lineages at present. 
 """
@@ -52,7 +52,7 @@ setni!(id::iBffs, ni::Int64) = id.ni[] = ni
 
 
 """
-    setnt!(id::iBffs)
+    setnt!(id::iBffs, nt::Int64)
 
 Set number of alive lineages at time `t`. 
 """
@@ -62,7 +62,7 @@ setnt!(id::iBffs, nt::Int64) = id.nt[] = nt
 
 
 """
-    setλt!(id::iBffs)
+    setλt!(id::iBffs, λt::Float64) 
 
 Set number of alive lineages at time `t`. 
 """

@@ -261,6 +261,8 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `d2`: daughter 2 node
   `ti`: initial absolute time.
   `tf`: final absolute time.
+  `it`: `true` if a terminal branch.
+  `ρi`: branch specific sampling fraction.
   `ie`: `true` if an extinct branch.
   `ni`: current direct alive descendants.
   `nt`: current alive descendants at time `t`.
@@ -278,6 +280,7 @@ struct iBffs <: iBf
   d2::Base.RefValue{Int64}
   ti::Float64
   tf::Float64
+  it::Bool
   ρi::Float64
   ie::Bool
   ni::Base.RefValue{Int64}
@@ -287,11 +290,11 @@ struct iBffs <: iBf
 
   # constructors
   iBffs() = new(0., Ref(0), Ref(0), Ref(0), 
-                0., 0., 1., false, Ref(0), Ref(0.0). Ref(0.0))
+                0., 0., false, 1., false, Ref(0), Ref(0.0). Ref(0.0))
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
-    ρi::Float64, it::Bool, ie::Bool, ni::Int64, nt::Int64, 
+    it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64, 
     λt::Float64, μt::Float64) = 
-    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, ρi, ie, 
+    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, 
       Ref(ni), Ref(nt), Ref(λt), Ref(μt))
 end
 
@@ -299,11 +302,11 @@ end
 # pretty-printing
 Base.show(io::IO, id::iBffs) = 
   print(io, "fixed", 
-    iszero(d1(id))   ? " terminal" : "", 
-    # iszero(sc(id)) ? " stem" : "", 
-    # isone(sc(id))  ? " crown" : "", 
-    " ibranch (", ti(id), ", ", tf(id), "), p:", 
-    pa(id), ", d1:", d1(id), ", d2:", d2(id))
+    it(id)         ? " terminal" : "", 
+    iszero(pa(id)) ? " stem" : "", 
+    isone(pa(id))  ? " crown" : "", 
+    " ibranch (", ti(id), ", ", tf(id), 
+    "), p:", pa(id), ", d1:", d1(id), ", d2:", d2(id))
 
 
 
@@ -321,12 +324,14 @@ function makeiBf!(tree::sT_label,
                   n2v ::Array{Int64,1}, 
                   tρ  ::Dict{String, Float64})
 
+  th = treeheight(tree)
+  el = e(tree)
+
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
     push!(idv, 
-      iBffs(e(tree), 0, 0, 0, treeheight(tree), 
-            treeheight(tree) - e(tree), ρi, true, false, 1, 1, 0.0, 0.0))
+      iBffs(el, 0, 0, 0, th, th - el, true, ρi, false, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     return ρi, 1
   end
@@ -343,8 +348,7 @@ function makeiBf!(tree::sT_label,
   ρi = n / (n1/ρ1 + n2/ρ2)
 
   push!(idv, 
-    iBffs(e(tree), 0, 1, 1, treeheight(tree), 
-      treeheight(tree) - e(tree), ρi, false, false, 0, 1, 0.0, 0.0))
+    iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   return ρi, n
@@ -394,15 +398,14 @@ function prob_ρ(idv::Array{iBffs,1})
   ll = 0.0
   for bi in idv
     nbi = ni(bi)
-    if iszero(d1(bi))
-      ll += log(Float64(nbi) * (1.0 - ρi(bi))^(nbi - 1))
+    if it(bi)
+      ll += log(Float64(nbi) * ρi(bi) * (1.0 - ρi(bi))^(nbi - 1))
     else
       ll += log((1.0 - ρi(bi))^(nbi))
     end
   end
   return ll
 end
-
 
 
 

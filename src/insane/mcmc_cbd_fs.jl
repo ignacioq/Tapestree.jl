@@ -361,7 +361,7 @@ function fsp!(bix  ::Int64,
   # forward simulate an internal branch
   tp, np, ntp = fsbi(bi, λ, μ, 500)
 
-  itb = iszero(d1(bi)) # is it terminal
+  itb = it(bi) # is it terminal
   ρbi = ρi(bi)         # get branch sampling fraction
   nc  = ni(bi)         # current ni
   ntc = nt(bi)         # current nt
@@ -442,7 +442,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
       # fix random tip
       fixrtip!(t0)
 
-      if !iszero(d1(bi))
+      if !it(bi)
         # add tips until the present
         tx, na = tip_sims!(t0, tfb, λ, μ, na)
       end

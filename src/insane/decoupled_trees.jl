@@ -88,7 +88,7 @@ function couple(psi::Vector{T},
 
   bi = idf[ix]
   ψi = psi[ix]
-  if !iszero(d1(bi))
+  if !it(bi)
     ψit = fixtip(ψi)
     ψit.d1 = couple(psi, idf, d1(bi))
     ψit.d2 = couple(psi, idf, d2(bi))

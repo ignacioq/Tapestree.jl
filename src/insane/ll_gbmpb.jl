@@ -62,7 +62,7 @@ function llik_gbm(psi ::Vector{iTgbmpb},
       bi  = idf[i]
       ll += llik_gbm(ψi, α, σλ, δt, srδt)
 
-      if !iszero(d1(bi))
+      if !it(bi)
         ll += λt(bi)
       end
     end

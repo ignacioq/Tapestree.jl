@@ -236,8 +236,8 @@ function make_cond(idf::Vector{iBffs}, stem::Bool)
     b1  = idf[1]
     d1i = d1(b1)
     d2i = d2(b1)
-    t1  = iszero(d1(idf[d1i]))
-    t2  = iszero(d1(idf[d2i]))
+    t1  = it(idf[d1i])
+    t2  = it(idf[d2i])
 
     if t1 
       if t2
