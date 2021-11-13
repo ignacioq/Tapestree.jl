@@ -187,7 +187,7 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
       # forward simulation proposal proposal
       if p === 3
         bix = fIrand(el) + 1
-        llc, ns, ne, L = fsp!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
+        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
       end
 
       # log tuning parameters
@@ -292,7 +292,7 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
       # forward simulation proposal proposal
       if p === 3
         bix = fIrand(el) + 1
-        llc, ns, ne, L = fsp!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
+        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
 
         # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -329,29 +329,29 @@ end
 
 
 """
-    fsp!(bix  ::Int64,
-         Ψ    ::Vector{sTbd},
-         idf  ::Vector{iBffs},
-         llc  ::Float64,
-         λ    ::Float64, 
-         μ    ::Float64,
-         ns   ::Float64,
-         ne   ::Float64,
-         L    ::Float64,
-         scond::Function)
+    update_fs!(bix  ::Int64,
+               Ψ    ::Vector{sTbd},
+               idf  ::Vector{iBffs},
+               llc  ::Float64,
+               λ    ::Float64, 
+               μ    ::Float64,
+               ns   ::Float64,
+               ne   ::Float64,
+               L    ::Float64,
+               scond::Function)
 
 Forward simulation proposal function for constant birth-death.
 """
-function fsp!(bix  ::Int64,
-              Ψ    ::Vector{sTbd},
-              idf  ::Vector{iBffs},
-              llc  ::Float64,
-              λ    ::Float64, 
-              μ    ::Float64,
-              ns   ::Float64,
-              ne   ::Float64,
-              L    ::Float64,
-              scond::Function)
+function update_fs!(bix  ::Int64,
+                    Ψ    ::Vector{sTbd},
+                    idf  ::Vector{iBffs},
+                    llc  ::Float64,
+                    λ    ::Float64, 
+                    μ    ::Float64,
+                    ns   ::Float64,
+                    ne   ::Float64,
+                    L    ::Float64,
+                    scond::Function)
 
   bi = idf[bix]
 

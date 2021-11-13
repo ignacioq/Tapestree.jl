@@ -172,6 +172,9 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
 
         llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
 
+        # update ssλ with new drift `α`
+        ssλ, nλ = sss_gbm(Ψ, αc)
+
       # update diffusion
       elseif pupi === 2
 
@@ -183,7 +186,8 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, ssλ = update_gbm!(bix, Ψ, idf, αc, σλc, llc, ssλ, δt, srδt, lλxpr)
+        llc, dλ, ssλ = 
+          update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt, lλxpr)
 
       # forward simulation
       else
@@ -257,7 +261,12 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
   nin = lastindex(inodes)
 
   # prior
-  lλmxpr = log(λa_prior[2])
+  lλxpr = log(λa_prior[2])
+
+  L       = treelength(Ψ)      # tree length
+  dλ      = deltaλ(Ψ)          # delta change in λ
+  ssλ, nλ = sss_gbm(Ψ, αc)     # sum squares in λ
+  nin     = lastindex(inodes)  # number of internal nodes
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -271,37 +280,40 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
       if pupi === 1
 
         # update drift
-        llc, prc, αc = update_α!(αc, σλc, Ψc, llc, prc, α_prior)
+        llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, pupi, it
-        #    return 
-        # end
+        # update ssλ with new drift `α`
+        ssλ, nλ = sss_gbm(Ψ, αc)
+
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, pupi, it
+           return 
+        end
 
       elseif pupi === 2
 
         # update diffusion
-        llc, prc, σλc = update_σ!(σλc, αc, Ψc, llc, prc, σλ_prior)
+        llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, pupi, it
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, pupi, it
+           return 
+        end
 
       else 
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, ssλ = update_gbm!(bix, Ψ, idf, αc, σλc, llc, ssλ, δt, srδt, lλxpr)
+        llc, dλ, ssλ = 
+          update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt, lλxpr)
 
-
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, pupi, it
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, pupi, it
+           return 
+        end
 
       end
     end
@@ -338,6 +350,7 @@ end
                 α    ::Float64,
                 σλ   ::Float64,
                 llc  ::Float64,
+                dλ   ::Float64,
                 ssλ  ::Float64,
                 δt   ::Float64,
                 srδt ::Float64,
@@ -351,6 +364,7 @@ function update_gbm!(bix  ::Int64,
                      α    ::Float64,
                      σλ   ::Float64,
                      llc  ::Float64,
+                     dλ   ::Float64,
                      ssλ  ::Float64,
                      δt   ::Float64,
                      srδt ::Float64,
@@ -365,30 +379,31 @@ function update_gbm!(bix  ::Int64,
 
   # if crown root
   if iszero(pa(bi)) && iszero(e(ψi))
-    llc, ssλ = _crown_update!(ψi, ψ1, ψ2, α, σλ, llc, ssλ, δt, srδt, lλxpr)
+    llc, dλ, ssλ = 
+      _crown_update!(ψi, ψ1, ψ2, α, σλ, llc, dλ, ssλ, δt, srδt, lλxpr)
     setλt!(bi, lλ(ψi)[1])
   else
     # if stem
     if iszero(pa(bi))
-      _stem_update!(ψi, α, σλ, llc, ssλ, δt, srδt, lλxpr)
+     lc, dλ, ssλ = _stem_update!(ψi, α, σλ, llc, dλ, ssλ, δt, srδt, lλxpr)
     end
 
     # updates within the parent branch
-    llc, ssλ, lψi = _update_gbm!(ψi, α, σλ, llc, ssλ, δt, srδt, false)
+    llc, dλ, ssλ, lψi = _update_gbm!(ψi, α, σλ, llc, dλ, ssλ, δt, srδt, false)
 
     # make between decoupled trees node update
-    llc, ssλ = update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), e(lψi), e(ψ1), e(ψ2), 
-      fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, llc, ssλ, δt, srδt)
+    llc, dλ, ssλ = update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), e(lψi), e(ψ1), e(ψ2), 
+      fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, llc, dλ, ssλ, δt, srδt)
 
     # set fixed `λ(t)` in branch
     setλt!(bi, lλ(lψi)[end])
   end
 
   # carry on updates in the daughters
-  llc, ssλ, tree = _update_gbm!(ψ1, α, σλ, llc, ssλ, δt, srδt, ter1)
-  llc, ssλ, tree = _update_gbm!(ψ2, α, σλ, llc, ssλ, δt, srδt, ter2)
+  llc, dλ, ssλ, tree = _update_gbm!(ψ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1)
+  llc, dλ, ssλ, tree = _update_gbm!(ψ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
 
-  return llc, ssλ
+  return llc, dλ, ssλ
 end
 
 
@@ -399,6 +414,7 @@ end
                   α    ::Float64,
                   σλ   ::Float64,
                   llc  ::Float64,
+                  dλ   ::Float64,
                   ssλ  ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
@@ -410,6 +426,7 @@ function _stem_update!(ψi   ::iTgbmpb,
                        α    ::Float64,
                        σλ   ::Float64,
                        llc  ::Float64,
+                       dλ   ::Float64,
                        ssλ  ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
@@ -437,16 +454,16 @@ function _stem_update!(ψi   ::iTgbmpb,
     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
     acr = llrbd
-    llr = acr + llrbm
 
     if -randexp() < acr
-      llc += llr
+      llc += acr + llrbm
+      dλ  += λc[1] - λr
       ssλ += ssrλ
       unsafe_copyto!(λc, 1, λp, 1, l)
     end
   end
 
-  return llc, ssλ
+  return llc, dλ, ssλ
 end
 
 
@@ -459,6 +476,7 @@ end
                    α    ::Float64,
                    σλ   ::Float64,
                    llc  ::Float64,
+                   dλ   ::Float64,
                    ssλ  ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
@@ -472,6 +490,7 @@ function _crown_update!(ψi   ::iTgbmpb,
                         α    ::Float64,
                         σλ   ::Float64,
                         llc  ::Float64,
+                        dλ   ::Float64,
                         ssλ  ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
@@ -497,7 +516,7 @@ function _crown_update!(ψi   ::iTgbmpb,
 
     # prior ratio
     if λr > lλxpr
-      return llc, ssλ
+      return llc, dλ, ssλ
     end
 
     # simulate fix tree vector
@@ -511,19 +530,18 @@ function _crown_update!(ψi   ::iTgbmpb,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
     acr  = llrpb1 + llrpb2 + λr - λpc[1]
-    llr  = llrbm1 + llrbm2 + acr
-    ssrλ = ssrλ1 + ssrλ2
 
     if -randexp() < acr
-      llc += llr
-      ssλ += ssrλ
+      llc += llrbm1 + llrbm2 + acr
+      dλ  += 2.0*(λ1c[1] - λr)
+      ssλ += ssrλ1 + ssrλ2
       fill!(λpc, λr)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
     end
   end
 
-  return llc, ssλ
+  return llc, dλ, ssλ
 end
 
 
@@ -534,6 +552,7 @@ end
                  α   ::Float64,
                  σλ  ::Float64,
                  llc ::Float64,
+                 dλ  ::Float64,
                  ssλ ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
@@ -545,33 +564,37 @@ function _update_gbm!(tree::iTgbmpb,
                       α   ::Float64,
                       σλ  ::Float64,
                       llc ::Float64,
+                      dλ  ::Float64,
                       ssλ ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
                       ter ::Bool)
 
   if isdefined(tree, :d1)
-    llc, ssλ = update_triad!(tree, α, σλ, llc, ssλ, δt, srδt)
+    llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
 
-    llc, ssλ, tree.d1 = _update_gbm!(tree.d1, α, σλ, llc, ssλ, δt, srδt, ter)
-    llc, ssλ, tree.d2 = _update_gbm!(tree.d2, α, σλ, llc, ssλ, δt, srδt, ter)
+    llc, dλ, ssλ, tree.d1 = 
+      _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
+    llc, dλ, ssλ, tree.d2 = 
+      _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
   else
     if !isfix(tree) || ter
-      llc, ssλ = update_tip!(tree, α, σλ, llc, ssλ, δt, srδt)
+      llc, dλ, ssλ = update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
     end
   end
 
-  return llc, ssλ, tree
+  return llc, dλ, ssλ, tree
 end
 
 
 
 
 """
-    update_tip!(tree::iTgbmpb
+    update_tip!(tree::iTgbmpb,
                 α   ::Float64,
                 σλ  ::Float64,
                 llc ::Float64,
+                dλ  ::Float64,
                 ssλ ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
@@ -582,6 +605,7 @@ function update_tip!(tree::iTgbmpb,
                      α   ::Float64,
                      σλ  ::Float64,
                      llc ::Float64,
+                     dλ  ::Float64,
                      ssλ ::Float64,
                      δt  ::Float64,
                      srδt::Float64)
@@ -598,16 +622,16 @@ function update_tip!(tree::iTgbmpb,
     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
     acr = llrbd
-    llr = llrbm + acr
 
     if -randexp() < acr
-      llc += llr
+      llc += llrbm + acr
+      dλ  += λp[l] - λc[l]
       ssλ += ssrλ
       unsafe_copyto!(λc, 1, λp, 1, l)
     end 
   end
 
-  return llc, ssλ
+  return llc, dλ, ssλ
 end
 
 
@@ -644,6 +668,7 @@ function update_triad!(λpc ::Vector{Float64},
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,
+                       dλ  ::Float64,
                        ssλ ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
@@ -673,6 +698,7 @@ function update_triad!(λpc ::Vector{Float64},
 
     if -randexp() < acr
       llc += llr
+      dλ  += (λ1c[1] - λn)
       ssλ += ssrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
@@ -680,7 +706,7 @@ function update_triad!(λpc ::Vector{Float64},
     end
   end
 
-  return llc, ssλ
+  return llc, dλ, ssλ
 end
 
 
@@ -701,6 +727,7 @@ function update_triad!(tree::iTgbmpb,
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,
+                       dλ  ::Float64,
                        ssλ ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
@@ -739,6 +766,7 @@ function update_triad!(tree::iTgbmpb,
 
     if -randexp() < acr
       llc += llr
+      dλ  += (λ1c[1] - λn)
       ssλ += ssrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
@@ -746,28 +774,26 @@ function update_triad!(tree::iTgbmpb,
     end
   end
 
-  return llc, ssλ
+  return llc, dλ, ssλ
 end
 
 
 
 
 """
-    llr_propr(λprv_p::Array{Float64,1},
-              λd1v_p::Array{Float64,1},
-              λd2v_p::Array{Float64,1},
-              λprv_c::Array{Float64,1},
-              λd1v_c::Array{Float64,1},
-              λd2v_c::Array{Float64,1},
-              α     ::Float64,
-              σλ    ::Float64,
-              δt    ::Float64,
-              fdtpr ::Float64,
-              fdtd1 ::Float64,
-              fdtd2 ::Float64,
-              srδt  ::Float64,
-              itd1  ::Bool,
-              itd2  ::Bool)
+    llr_propr(λpp  ::Array{Float64,1},
+              λ1p  ::Array{Float64,1},
+              λ2p  ::Array{Float64,1},
+              λpc  ::Array{Float64,1},
+              λ1c  ::Array{Float64,1},
+              λ2c  ::Array{Float64,1},
+              α    ::Float64,
+              σλ   ::Float64,
+              δt   ::Float64,
+              fdtpr::Float64,
+              fdtd1::Float64,
+              fdtd2::Float64,
+              srδt ::Float64)
 
 Return the likelihood and proposal ratio for pure-birth gbm.
 """

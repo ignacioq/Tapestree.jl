@@ -58,9 +58,8 @@ function llik_gbm(psi ::Vector{iTgbmpb},
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(psi))
-      ψi  = psi[i]
       bi  = idf[i]
-      ll += llik_gbm(ψi, α, σλ, δt, srδt)
+      ll += llik_gbm(psi[i], α, σλ, δt, srδt)
 
       if !it(bi)
         ll += λt(bi)
@@ -275,7 +274,7 @@ for GBM birth-death.
 
     # add final non-standard `δt`
     if fdt > 0.0
-      ssλ += 1.0/(2.0*fdt) * (lλv[nI+2] - lλvi - α*fdt)^2
+      ssλ += (lλv[nI+2] - lλvi - α*fdt)^2/(2.0*fdt)
       n = Float64(nI + 1)
     else
       n = Float64(nI)
