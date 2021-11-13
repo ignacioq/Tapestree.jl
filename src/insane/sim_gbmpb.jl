@@ -324,13 +324,13 @@ end
 
 """
     _sim_gbmpb(t   ::Float64,
-              λt  ::Float64,
-              α   ::Float64,
-              σλ  ::Float64,
-              δt  ::Float64,
-              srδt::Float64,
-              nsp ::Int64,
-              nlim::Int64)
+               λt  ::Float64,
+               α   ::Float64,
+               σλ  ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               nsp ::Int64,
+               nlim::Int64)
 
 Simulate `iTgbmpb` according to a pure-birth geometric Brownian motion.
 """
@@ -351,9 +351,8 @@ function _sim_gbmpb(t   ::Float64,
     while true
 
       if t <= δt 
-        bt  += t
-
         t   = max(0.0, t)
+        bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
 
@@ -361,8 +360,8 @@ function _sim_gbmpb(t   ::Float64,
 
         if divev(λm, t)
           nsp += 1
-          return iTgbmpb(iTgbmpb(0.0, δt, 0.0, λv),
-                         iTgbmpb(0.0, δt, 0.0, λv),
+          return iTgbmpb(iTgbmpb(0.0, δt, 0.0, Float64[λt1, λt1]),
+                         iTgbmpb(0.0, δt, 0.0, Float64[λt1, λt1]),
                          bt, δt, t, λv), nsp
         end
 
@@ -382,7 +381,7 @@ function _sim_gbmpb(t   ::Float64,
         nsp += 1
         td1, nsp = _sim_gbmpb(t, λt1, α, σλ, δt, srδt, nsp, nlim)
         td2, nsp = _sim_gbmpb(t, λt1, α, σλ, δt, srδt, nsp, nlim)
-        
+
         return iTgbmpb(td1, td2, bt, δt, δt, λv), nsp
       end
 

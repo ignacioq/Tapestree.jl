@@ -291,7 +291,7 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
 
       # forward simulation proposal proposal
       if p === 3
-        bix = fIrand(el) + 1
+        bix = ceil(Int64,rand()*el)
         llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
 
         # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
@@ -354,9 +354,6 @@ function update_fs!(bix  ::Int64,
                     scond::Function)
 
   bi = idf[bix]
-
-  # sample ratio
-  # lU = -randexp()
 
   # forward simulate an internal branch
   tp, np, ntp = fsbi(bi, λ, μ, 500)

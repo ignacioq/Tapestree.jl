@@ -258,8 +258,6 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
   # make Ψ vector
   Ψv = iTgbmpb[]
 
-  nin = lastindex(inodes)
-
   # prior
   lλxpr = log(λa_prior[2])
 
@@ -267,6 +265,7 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
   dλ      = deltaλ(Ψ)          # delta change in λ
   ssλ, nλ = sss_gbm(Ψ, αc)     # sum squares in λ
   nin     = lastindex(inodes)  # number of internal nodes
+  el      = lastindex(idf)     # number of branches
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -277,9 +276,9 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
     for pupi in pup
 
       ## parameter updates
+      # update drift
       if pupi === 1
 
-        # update drift
         llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
 
         # update ssλ with new drift `α`
@@ -291,9 +290,9 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
            return 
         end
 
+      # update diffusion rate
       elseif pupi === 2
 
-        # update diffusion
         llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior)
 
         ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
@@ -302,7 +301,9 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
            return 
         end
 
-      else 
+      # update gbm
+      elseif pupi === 3
+
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
@@ -314,6 +315,15 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
            @show ll0, llc, pupi, it
            return 
         end
+
+      # update by forward simulation
+      else
+        bix = ceil(Int64,rand()*el)
+
+        """
+        here
+        """
+        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, dλ, ssλ, nλ)
 
       end
     end
@@ -338,6 +348,160 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
   end
 
   return R, Ψv
+end
+
+
+
+
+"""
+    update_fs!(bix  ::Int64,
+               Ψ    ::Vector{iTgbmpb},
+               idf  ::Vector{iBffs},
+               llc  ::Float64,
+               λ    ::Float64, 
+               μ    ::Float64,
+               ns   ::Float64,
+               ne   ::Float64,
+               L    ::Float64,
+               scond::Function)
+
+Forward simulation proposal function for constant birth-death.
+"""
+function update_fs!(bix  ::Int64,
+                    Ψ    ::Vector{iTgbmpb},
+                    idf  ::Vector{iBffs},
+                    llc  ::Float64,
+                    λ    ::Float64, 
+                    scond::Function)
+
+  bi = idf[bix]
+
+  """
+  here
+  """
+
+  # forward simulate an internal branch
+  tp, np, ntp = fsbi(bi, λ, μ, 500)
+
+  itb = it(bi) # is it terminal
+  ρbi = ρi(bi)         # get branch sampling fraction
+  nc  = ni(bi)         # current ni
+  ntc = nt(bi)         # current nt
+
+  if np > 0
+
+    # current tree
+    tc  = Ψ[bix]
+
+    # if terminal branch
+    if itb
+      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr = 0.0
+    else
+      np  -= 1
+      llr = log((1.0 - ρbi)^(np - nc))
+      acr = log(Float64(ntp)/Float64(ntc))
+    end
+
+    # MH ratio
+    if -randexp() < llr + acr
+
+      # update ns, ne & L
+      ns += Float64(nnodesinternal(tp) - nnodesinternal(tc))
+      ne += Float64(ntipsextinct(tp)   - ntipsextinct(tc))
+      L  += treelength(tp) - treelength(tc)
+
+      # likelihood ratio
+      llr += llik_cbd(tp, λ, μ) - llik_cbd(tc, λ, μ)
+
+      # if conditioning branch
+      if pa(bi) < 2
+        llr -= scond(Ψ, λ, μ)
+        Ψ[bix] = tp
+        llr += scond(Ψ, λ, μ)
+      else
+        Ψ[bix] = tp
+      end
+
+      llc += llr      # set new likelihood
+      setni!(bi, np)  # set new ni
+      setnt!(bi, ntp) # set new nt
+    end
+  end
+
+  return llc, ns, ne, L
+end
+
+
+
+
+"""
+    fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
+
+Forward simulation for branch `bi`
+"""
+function fsbi(bi::iBffs, λ0::Float64, α::Float64, σλ::Float64, srδt::Float64)
+
+  # times
+  tfb = tf(bi)
+
+  # forward simulation during branch length
+  t0, na = _sim_gbmpb(e(bi), log(λ0), α, σλ, δt, sqrt(δt), 1, 1_000)
+
+t0, na = _sim_gbmpb(10.0, log(λ0), α, σλ, δt, sqrt(δt), 1, 1_000)
+plot(t0, lλ)
+
+  nat = na
+
+  if isone(na)
+    fixalive!(t0)
+
+    return t0, na, nat
+  elseif na > 1
+    # fix random tip
+    fixrtip!(t0)
+
+    if !it(bi)
+      # add tips until the present
+      tx, na = tip_sims!(t0, tfb, λ, μ, na)
+    end
+
+    return t0, na, nat
+  end
+
+  return sTbd(), 0, 0
+end
+
+
+
+
+"""
+    tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
+
+Continue simulation until time `t` for unfixed tips in `tree`. 
+"""
+function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64, na::Int64)
+
+  if istip(tree) 
+    if !isfix(tree) && isalive(tree)
+
+      # simulate
+      stree, na = sim_cbd(t, λ, μ, na-1)
+
+      # merge to current tip
+      sete!(tree, e(tree) + e(stree))
+      setproperty!(tree, :iμ, isextinct(stree))
+      if isdefined(stree, :d1)
+        tree.d1 = stree.d1
+        tree.d2 = stree.d2
+      end
+    end
+  else
+    tree.d1, na = tip_sims!(tree.d1, t, λ, μ, na)
+    tree.d2, na = tip_sims!(tree.d2, t, λ, μ, na)
+  end
+
+  return tree, na
 end
 
 
