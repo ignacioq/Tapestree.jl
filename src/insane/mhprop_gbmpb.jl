@@ -239,9 +239,9 @@ function _update_gbm!(tree::iTgbmpb,
   if isdefined(tree, :d1)
     llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
 
-    llc, dλ, ssλ, tree.d1 = 
+    llc, dλ, ssλ = 
       _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-    llc, dλ, ssλ, tree.d2 = 
+    llc, dλ, ssλ = 
       _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
   else
     if !isfix(tree) || ter
@@ -249,7 +249,7 @@ function _update_gbm!(tree::iTgbmpb,
     end
   end
 
-  return llc, dλ, ssλ, tree
+  return llc, dλ, ssλ
 end
 
 
@@ -316,6 +316,7 @@ end
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
+                  dλ  ::Float64,
                   ssλ ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
@@ -341,15 +342,15 @@ function update_triad!(λpc ::Vector{Float64},
 
   @inbounds begin
 
-    lp   = lastindex(λpc)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λpp  = Vector{Float64}(undef,lp)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λp   = λpc[1]
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
+    lp  = lastindex(λpc)
+    l1  = lastindex(λ1c)
+    l2  = lastindex(λ2c)
+    λpp = Vector{Float64}(undef,lp)
+    λ1p = Vector{Float64}(undef,l1)
+    λ2p = Vector{Float64}(undef,l2)
+    λp  = λpc[1]
+    λ1  = λ1c[l1]
+    λ2  = λ2c[l2]
 
     # node proposal
     λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
@@ -414,7 +415,7 @@ function update_triad!(tree::iTgbmpb,
     λ2   = λ2c[l2]
     ep   = e(tree)
     e1   = e(tree.d1)
-    e1   = e(tree.d2)
+    e2   = e(tree.d2)
     fdtp = fdt(tree)
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
@@ -472,15 +473,15 @@ function llr_propr(λpp  ::Array{Float64,1},
                    α    ::Float64,
                    σλ   ::Float64,
                    δt   ::Float64,
-                   fdtpr::Float64,
-                   fdtd1::Float64,
-                   fdtd2::Float64,
+                   fdtp::Float64,
+                   fdt1::Float64,
+                   fdt2::Float64,
                    srδt ::Float64)
 
   # log likelihood ratios
-  llrbmp, llrpbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtpr, srδt, true)
-  llrbm1, llrpb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdtd1, srδt, false)
-  llrbm2, llrpb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdtd2, srδt, false)
+  llrbmp, llrpbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
+  llrbm1, llrpb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+  llrbm2, llrpb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
   acr  = llrpbp + llrpb1 + llrpb2
   llr  = llrbmp + llrbm1 + llrbm2 + acr

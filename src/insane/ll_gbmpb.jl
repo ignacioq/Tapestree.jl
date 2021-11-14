@@ -215,7 +215,7 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
     if fdt > 0.0
       ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
              fdt*exp(0.5*(lλvi + lλvi1))
-      ssλ += (lλvi1 - lλvi - α*δt)^2/(2.0*fdt)
+      ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
       nλ  += 1.0
     end
     if λev
@@ -259,7 +259,6 @@ separately for the Brownian motion and the pure-birth
 
     llrbm = 0.0
     llrpb = 0.0
-    ssrλ  = 0.0
     lλpi = lλp[1]
     lλci = lλc[1]
     @simd for i in Base.OneTo(nI)
@@ -282,7 +281,7 @@ separately for the Brownian motion and the pure-birth
 
    # add final non-standard `δt`
     if fdt > 0.0
-      ssrλ  += ((lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2)/(2.0*fdt) 
+      ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt) 
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
       llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))

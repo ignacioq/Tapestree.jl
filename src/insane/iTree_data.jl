@@ -974,6 +974,7 @@ end
 
 """
     fixdstree(tree::T) where {T <: iTree}
+
 Returns the first tree with both daughters fixed.
 """
 function fixdstree(tree::T) where {T <: iTree}

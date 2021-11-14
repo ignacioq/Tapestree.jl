@@ -548,8 +548,7 @@ end
 Make an `iTgbmpb` with the quantile specified by `p` in data specified in 
 function `lv`.
 """
-function iquantile(treev::Array{iTgbmpb,1}, 
-                   p    ::Float64)
+function iquantile(treev::Array{iTgbmpb,1}, p::Float64)
 
   nt = lastindex(treev)
   t1 = treev[1]
@@ -580,9 +579,9 @@ function iquantile(treev::Array{iTgbmpb,1},
         push!(treev2, treev[t].d2)
     end 
     iTgbmpb(iquantile(treev1, p), iquantile(treev2, p),
-      e(t1), dt(t1), fdt(t1), sv)
+      e(t1), true, dt(t1), fdt(t1), sv)
   else
-    iTgbmpb(e(t1), dt(t1), fdt(t1), sv)
+    iTgbmpb(e(t1), true, dt(t1), fdt(t1), sv)
   end
 end
 
