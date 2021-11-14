@@ -146,8 +146,8 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
 
   # starting likelihood and prior
   llc = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
-        logdnorm(αc, α_prior[1], α_prior[2]^2)             +
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        +
+        logdnorm(αc, α_prior[1], α_prior[2]^2)               +
         logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2])
 
   # maximum bound in log space for uniform
@@ -157,6 +157,7 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
   dλ      = deltaλ(Ψ)          # delta change in λ
   ssλ, nλ = sss_gbm(Ψ, αc)     # sum squares in λ
   nin     = lastindex(inodes)  # number of internal nodes
+  el      = lastindex(idf)     # number of branches
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -191,11 +192,10 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
 
       # forward simulation
       else
+        bix = ceil(Int64,rand()*el)
 
-        """
-        here
-        """
-
+        llc, dλ, ssλ, nλ, L = 
+          update_fs!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
       end
 
     end
@@ -310,6 +310,10 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
         llc, dλ, ssλ = 
           update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt, lλxpr)
 
+        treelength(Ψ)  
+        deltaλ(Ψ)      
+        sss_gbm(Ψ, αc) 
+
         ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-4)
            @show ll0, llc, pupi, it
@@ -320,11 +324,18 @@ function mcmc_gbmpb(Ψp      ::iTgbmpb,
       else
         bix = ceil(Int64,rand()*el)
 
-        """
-        here
-        """
-        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, dλ, ssλ, nλ)
+        llc, dλ, ssλ, nλ, L = 
+          update_fs!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
 
+        treelength(Ψ)  
+        deltaλ(Ψ)      
+        sss_gbm(Ψ, αc) 
+
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, pupi, it
+           return 
+        end
       end
     end
 
@@ -357,148 +368,196 @@ end
     update_fs!(bix  ::Int64,
                Ψ    ::Vector{iTgbmpb},
                idf  ::Vector{iBffs},
+               α    ::Float64,
+               σλ   ::Float64,
                llc  ::Float64,
-               λ    ::Float64, 
-               μ    ::Float64,
-               ns   ::Float64,
-               ne   ::Float64,
+               dλ   ::Float64,
+               ssλ  ::Float64,
+               nλ   ::Float64,
                L    ::Float64,
-               scond::Function)
+               δt   ::Float64,
+               srδt ::Float64)
 
 Forward simulation proposal function for constant birth-death.
 """
 function update_fs!(bix  ::Int64,
                     Ψ    ::Vector{iTgbmpb},
                     idf  ::Vector{iBffs},
+                    α    ::Float64,
+                    σλ   ::Float64,
                     llc  ::Float64,
-                    λ    ::Float64, 
-                    scond::Function)
+                    dλ   ::Float64,
+                    ssλ  ::Float64,
+                    nλ   ::Float64,
+                    L    ::Float64,
+                    δt   ::Float64,
+                    srδt ::Float64)
 
   bi = idf[bix]
+  ρbi = ρi(bi) # get branch sampling fraction
+  nc  = ni(bi) # current ni
+  ntc = nt(bi) # current nt
+  itb = it(bi) # if terminal
 
-  """
-  here
-  """
+  ψc  = Ψ[bix]
+  if !itb
+    ψ1  = Ψ[d1(bi)]
+    ψ2  = Ψ[d2(bi)]
+  end
 
   # forward simulate an internal branch
-  tp, np, ntp = fsbi(bi, λ, μ, 500)
+  ψp, np, ntp, λf = fsbi(bi, lλ(ψc)[1], α, σλ, δt, srδt)
 
-  itb = it(bi) # is it terminal
-  ρbi = ρi(bi)         # get branch sampling fraction
-  nc  = ni(bi)         # current ni
-  ntc = nt(bi)         # current nt
+  ρbi = ρi(bi) # get branch sampling fraction
+  nc  = ni(bi) # current ni
+  ntc = nt(bi) # current nt
 
-  if np > 0
+  # if terminal branch
+  if itb
+    llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+    acr  = 0.0
+    drλ  = 0.0
+    ssrλ = 0.0
+  else
+    np  -= 1
+    llr = log((1.0 - ρbi)^(np - nc))
+    acr = log(Float64(ntp)/Float64(ntc))
 
-    # current tree
-    tc  = Ψ[bix]
+    # change daughters
+    if isfinite(llr)
 
-    # if terminal branch
-    if itb
-      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr = 0.0
-    else
-      np  -= 1
-      llr = log((1.0 - ρbi)^(np - nc))
-      acr = log(Float64(ntp)/Float64(ntc))
-    end
+      llrd, acrd, drλ, ssrλ, λ1p, λ2p = 
+        _daughters_update!(ψ1, ψ2, λf, α, σλ, δt, srδt)
 
-    # MH ratio
-    if -randexp() < llr + acr
-
-      # update ns, ne & L
-      ns += Float64(nnodesinternal(tp) - nnodesinternal(tc))
-      ne += Float64(ntipsextinct(tp)   - ntipsextinct(tc))
-      L  += treelength(tp) - treelength(tc)
-
-      # likelihood ratio
-      llr += llik_cbd(tp, λ, μ) - llik_cbd(tc, λ, μ)
-
-      # if conditioning branch
-      if pa(bi) < 2
-        llr -= scond(Ψ, λ, μ)
-        Ψ[bix] = tp
-        llr += scond(Ψ, λ, μ)
-      else
-        Ψ[bix] = tp
-      end
-
-      llc += llr      # set new likelihood
-      setni!(bi, np)  # set new ni
-      setnt!(bi, ntp) # set new nt
+      llr += llrd
+      acr += acrd
     end
   end
 
-  return llc, ns, ne, L
+  # MH ratio
+  if -randexp() < llr + acr
+
+    ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ψp, α, σλ, δt, srδt)
+    ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, δt, srδt)
+
+    # update llr, ssλ, nλ, L
+    llr += ll1  - ll0
+    dλ  += dλ1  - dλ0  + drλ
+    ssλ += ssλ1 - ssλ0 + ssrλ
+    nλ  += nλ1  - nλ0
+    L   += treelength(ψp) - treelength(ψc)
+
+    Ψ[bix] = ψp          # set new tree
+    llc += llr           # set new likelihood
+    setni!(bi, np)       # set new ni
+    setnt!(bi, ntp)      # set new nt
+    setλt!(bi, λf)       # set new λt
+    if !itb
+      copyto!(lλ(ψ1), λ1p) # set new daughter 1 λ vector
+      copyto!(lλ(ψ2), λ2p) # set new daughter 2 λ vector
+    end
+  end
+
+  return llc, dλ, ssλ, nλ, L
 end
 
 
 
 
 """
-    fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
+    fsbi(bi  ::iBffs, 
+         λ0  ::Float64, 
+         α   ::Float64, 
+         σλ  ::Float64, 
+         δt  ::Float64, 
+         srδt::Float64)
 
 Forward simulation for branch `bi`
 """
-function fsbi(bi::iBffs, λ0::Float64, α::Float64, σλ::Float64, srδt::Float64)
+function fsbi(bi  ::iBffs,
+              λ0  ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              δt  ::Float64,
+              srδt::Float64)
 
   # times
   tfb = tf(bi)
 
   # forward simulation during branch length
-  t0, na = _sim_gbmpb(e(bi), log(λ0), α, σλ, δt, sqrt(δt), 1, 1_000)
-
-t0, na = _sim_gbmpb(10.0, log(λ0), α, σλ, δt, sqrt(δt), 1, 1_000)
-plot(t0, lλ)
+  t0, na = _sim_gbmpb(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
 
   nat = na
 
   if isone(na)
-    fixalive!(t0)
+    f, λf = fixalive!(t0, NaN)
 
-    return t0, na, nat
+    return t0, na, nat, λf
   elseif na > 1
     # fix random tip
-    fixrtip!(t0)
+    λf = fixrtip!(t0, na, NaN)
 
     if !it(bi)
       # add tips until the present
-      tx, na = tip_sims!(t0, tfb, λ, μ, na)
+      tx, na = tip_sims!(t0, tfb, α, σλ, δt, srδt, na)
     end
 
-    return t0, na, nat
+    return t0, na, nat, λf
   end
 
-  return sTbd(), 0, 0
+  return iTgbmpb(), 0, 0, 0.0
 end
 
 
 
 
 """
-    tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
+    tip_sims!(tree::iTgbmpb, t::Float64, λ::Float64, μ::Float64)
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
-function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64, na::Int64)
+function tip_sims!(tree::iTgbmpb, 
+                   t   ::Float64, 
+                   α   ::Float64, 
+                   σλ  ::Float64, 
+                   δt  ::Float64,
+                   srδt::Float64,
+                   na  ::Int64)
 
   if istip(tree) 
-    if !isfix(tree) && isalive(tree)
+    if !isfix(tree)
+
+      fdti = fdt(tree)
+      lλ0  = lλ(tree)
 
       # simulate
-      stree, na = sim_cbd(t, λ, μ, na-1)
+      stree, na = 
+        _sim_gbmpb(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt, 
+                   na, 1_000)
 
-      # merge to current tip
       sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, isextinct(stree))
+
+      lλs = lλ(stree)
+
+      if lastindex(lλs) === 2
+        setfdt!(tree, fdt(tree) + fdt(stree))
+      else
+        setfdt!(tree, fdt(stree))
+      end
+
+      pop!(lλ0)
+      popfirst!(lλs)
+      append!(lλ0, lλs)
+
       if isdefined(stree, :d1)
         tree.d1 = stree.d1
         tree.d2 = stree.d2
       end
+
     end
   else
-    tree.d1, na = tip_sims!(tree.d1, t, λ, μ, na)
-    tree.d2, na = tip_sims!(tree.d2, t, λ, μ, na)
+    tree.d1, na = tip_sims!(tree.d1, t, α, σλ, δt, srδt, na)
+    tree.d2, na = tip_sims!(tree.d2, t, α, σλ, δt, srδt, na)
   end
 
   return tree, na
@@ -568,423 +627,6 @@ function update_gbm!(bix  ::Int64,
   llc, dλ, ssλ, tree = _update_gbm!(ψ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
 
   return llc, dλ, ssλ
-end
-
-
-
-
-"""
-    _stem_update!(ψi   ::iTgbmpb, 
-                  α    ::Float64,
-                  σλ   ::Float64,
-                  llc  ::Float64,
-                  dλ   ::Float64,
-                  ssλ  ::Float64,
-                  δt   ::Float64,
-                  srδt ::Float64,
-                  lλxpr::Float64)
-
-Do gbm update for crown root.
-"""
-function _stem_update!(ψi   ::iTgbmpb, 
-                       α    ::Float64,
-                       σλ   ::Float64,
-                       llc  ::Float64,
-                       dλ   ::Float64,
-                       ssλ  ::Float64,
-                       δt   ::Float64,
-                       srδt ::Float64,
-                       lλxpr::Float64)
-
-  @inbounds begin
-    λc   = lλ(ψi)
-    l    = lastindex(λc)
-    λp   = Vector{Float64}(undef,l)
-    λn   = λc[l]
-    el   = e(ψi)
-    fdtp = fdt(ψi)
-
-    # node proposal
-    λr = rnorm(λn - α*el, σλ*sqrt(el))
-
-    # prior ratio
-    if λr > lλxpr
-      return llc, ssλ
-    end
-
-    # simulate fix tree vector
-    bb!(λp, λr, λn, σλ, δt, fdt, srδt)
-
-    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
-
-    acr = llrbd
-
-    if -randexp() < acr
-      llc += acr + llrbm
-      dλ  += λc[1] - λr
-      ssλ += ssrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
-
-
-
-"""
-    _crown_update!(ψi   ::iTgbmpb, 
-                   ψ1   ::iTgbmpb, 
-                   ψ2   ::iTgbmpb, 
-                   α    ::Float64,
-                   σλ   ::Float64,
-                   llc  ::Float64,
-                   dλ   ::Float64,
-                   ssλ  ::Float64,
-                   δt   ::Float64,
-                   srδt ::Float64,
-                   lλxpr::Float64)
-
-Do gbm update for crown root.
-"""
-function _crown_update!(ψi   ::iTgbmpb, 
-                        ψ1   ::iTgbmpb, 
-                        ψ2   ::iTgbmpb, 
-                        α    ::Float64,
-                        σλ   ::Float64,
-                        llc  ::Float64,
-                        dλ   ::Float64,
-                        ssλ  ::Float64,
-                        δt   ::Float64,
-                        srδt ::Float64,
-                        lλxpr::Float64)
-
-  @inbounds begin
-    λpc  = lλ(ψi)
-    λ1c  = lλ(ψ1)
-    λ2c  = lλ(ψ2)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    e1   = e(ψ1)
-    e2   = e(ψ2)
-    fdt1 = fdt(ψ1)
-    fdt2 = fdt(ψ2)
-
-    # node proposal
-    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
-    # prior ratio
-    if λr > lλxpr
-      return llc, dλ, ssλ
-    end
-
-    # simulate fix tree vector
-    bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
-
-    # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 = 
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 = 
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
-
-    acr  = llrpb1 + llrpb2 + λr - λpc[1]
-
-    if -randexp() < acr
-      llc += llrbm1 + llrbm2 + acr
-      dλ  += 2.0*(λ1c[1] - λr)
-      ssλ += ssrλ1 + ssrλ2
-      fill!(λpc, λr)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
-
-
-
-"""
-    _update_gbm!(tree::iTgbmpb,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 llc ::Float64,
-                 dλ  ::Float64,
-                 ssλ ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 ter ::Bool)
-
-Do gbm updates on a decoupled tree recursively.
-"""
-function _update_gbm!(tree::iTgbmpb,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      llc ::Float64,
-                      dλ  ::Float64,
-                      ssλ ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      ter ::Bool)
-
-  if isdefined(tree, :d1)
-    llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
-
-    llc, dλ, ssλ, tree.d1 = 
-      _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-    llc, dλ, ssλ, tree.d2 = 
-      _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-  else
-    if !isfix(tree) || ter
-      llc, dλ, ssλ = update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
-    end
-  end
-
-  return llc, dλ, ssλ, tree
-end
-
-
-
-
-"""
-    update_tip!(tree::iTgbmpb,
-                α   ::Float64,
-                σλ  ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
-
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::iTgbmpb,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
-
-  @inbounds begin
-
-    λc   = lλ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
-
-    bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
-
-    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
-
-    acr = llrbd
-
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-    end 
-  end
-
-  return llc, dλ, ssλ
-end
-
-
-
-
-"""
-    update_triad!(λpc ::Vector{Float64},
-                  λ1c ::Vector{Float64},
-                  λ2c ::Vector{Float64},
-                  ep  ::Float64,
-                  e1  ::Float64,
-                  e2  ::Float64,
-                  fdtp::Float64,
-                  fdt1::Float64,
-                  fdt2::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  llc ::Float64,
-                  ssλ ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
-
-Make a `gbm` trio proposal.
-"""
-function update_triad!(λpc ::Vector{Float64},
-                       λ1c ::Vector{Float64},
-                       λ2c ::Vector{Float64},
-                       ep  ::Float64,
-                       e1  ::Float64,
-                       e2  ::Float64,
-                       fdtp::Float64,
-                       fdt1::Float64,
-                       fdt2::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       llc ::Float64,
-                       dλ  ::Float64,
-                       ssλ ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
-
-  @inbounds begin
-
-    lp   = lastindex(λpc)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λpp  = Vector{Float64}(undef,lp)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λp   = λpc[1]
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-
-    # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
-
-    # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
-
-    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
-      α, σλ, δt, fdtp, fdt1, fdt2, srδt)
-
-    if -randexp() < acr
-      llc += llr
-      dλ  += (λ1c[1] - λn)
-      ssλ += ssrλ
-      unsafe_copyto!(λpc, 1, λpp, 1, lp)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
-
-
-
-"""
-    update_triad!(tree::iTgbmpb,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  llc ::Float64,
-                  ssλ ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
-
-Make a `gbm` trio proposal.
-"""
-function update_triad!(tree::iTgbmpb,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       llc ::Float64,
-                       dλ  ::Float64,
-                       ssλ ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
-
-  @inbounds begin
-
-    λpc  = lλ(tree)
-    λ1c  = lλ(tree.d1)
-    λ2c  = lλ(tree.d2)
-    lp   = lastindex(λpc)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λpp  = Vector{Float64}(undef,lp)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λp   = λpc[1]
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    ep   = e(tree)
-    e1   = e(tree.d1)
-    e1   = e(tree.d2)
-    fdtp = fdt(tree)
-    fdt1 = fdt(tree.d1)
-    fdt2 = fdt(tree.d2)
-
-    # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
-
-    # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
-
-    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
-      α, σλ, δt, fdtp, fdt1, fdt2, srδt)
-
-    if -randexp() < acr
-      llc += llr
-      dλ  += (λ1c[1] - λn)
-      ssλ += ssrλ
-      unsafe_copyto!(λpc, 1, λpp, 1, lp)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
-
-
-
-"""
-    llr_propr(λpp  ::Array{Float64,1},
-              λ1p  ::Array{Float64,1},
-              λ2p  ::Array{Float64,1},
-              λpc  ::Array{Float64,1},
-              λ1c  ::Array{Float64,1},
-              λ2c  ::Array{Float64,1},
-              α    ::Float64,
-              σλ   ::Float64,
-              δt   ::Float64,
-              fdtpr::Float64,
-              fdtd1::Float64,
-              fdtd2::Float64,
-              srδt ::Float64)
-
-Return the likelihood and proposal ratio for pure-birth gbm.
-"""
-function llr_propr(λpp  ::Array{Float64,1},
-                   λ1p  ::Array{Float64,1},
-                   λ2p  ::Array{Float64,1},
-                   λpc  ::Array{Float64,1},
-                   λ1c  ::Array{Float64,1},
-                   λ2c  ::Array{Float64,1},
-                   α    ::Float64,
-                   σλ   ::Float64,
-                   δt   ::Float64,
-                   fdtpr::Float64,
-                   fdtd1::Float64,
-                   fdtd2::Float64,
-                   srδt ::Float64)
-
-  # log likelihood ratios
-  llrbmp, llrpbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtpr, srδt, true)
-  llrbm1, llrpb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdtd1, srδt, false)
-  llrbm2, llrpb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdtd2, srδt, false)
-
-  acr  = llrpbp + llrpb1 + llrpb2
-  llr  = llrbmp + llrbm1 + llrbm2 + acr
-  ssrλ = ssrλp + ssrλ1 + ssrλ2
-
-  return llr, acr, ssrλ
 end
 
 

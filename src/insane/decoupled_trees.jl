@@ -65,7 +65,7 @@ function iTgbmpb!(Ψ   ::Vector{iTgbmpb},
     l   = lastindex(lλv)
   end
 
-  push!(Ψ, iTgbmpb(et, δt, fdti, lλv))
+  push!(Ψ, iTgbmpb(et, true, δt, fdti, lλv))
   if isdefined(tree, :d1)
     iTgbmpb!(Ψ, tree.d2, δt, srδt, lλv[l], α, σλ) 
     iTgbmpb!(Ψ, tree.d1, δt, srδt, lλv[l], α, σλ)

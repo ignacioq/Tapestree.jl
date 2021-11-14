@@ -130,6 +130,107 @@ end
 
 
 """
+    llik_gbm(tree::iTgbmpb, 
+             α   ::Float64,
+             σλ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64)
+
+Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
+"""
+function llik_gbm_ssλ(tree::iTgbmpb, 
+                      α   ::Float64,
+                      σλ  ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64)
+
+  if istip(tree) 
+    ll, dλ, ssλ, nλ = ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+  else
+    ll, dλ, ssλ, nλ = ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
+
+    ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(tree.d1::iTgbmpb, α, σλ, δt, srδt)
+    ll2, dλ2, ssλ2, nλ2 = llik_gbm_ssλ(tree.d2::iTgbmpb, α, σλ, δt, srδt)
+  
+    ll  += ll1  + ll2
+    dλ  += dλ1  + dλ2
+    ssλ += ssλ1 + ssλ2
+    nλ  += nλ1  + nλ2
+  end
+
+  return ll, dλ, ssλ, nλ
+end
+
+
+
+
+"""
+    ll_gbm_b_ssλ(lλv ::Array{Float64,1},
+                 α   ::Float64,
+                 σλ  ::Float64, 
+                 δt  ::Float64,
+                 fdt ::Float64,
+                 srδt::Float64,
+                 λev ::Bool)
+
+Returns the log-likelihood for a branch according to GBM pure-birth.
+"""
+function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
+                      α   ::Float64,
+                      σλ  ::Float64, 
+                      δt  ::Float64,
+                      fdt ::Float64,
+                      srδt::Float64,
+                      λev ::Bool)
+
+  @inbounds @fastmath begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
+
+    llbm = 0.0
+    llpb = 0.0
+    ssλ  = 0.0
+    nλ   = Float64(nI)
+    lλvi = lλv[1]
+    @simd for i in Base.OneTo(nI)
+      lλvi1 = lλv[i+1]
+      llbm += (lλvi1 - lλvi - α*δt)^2
+      llpb += exp(0.5*(lλvi + lλvi1))
+      lλvi  = lλvi1
+    end
+
+    # standardized sum of squares
+    ssλ  = llbm/(2.0*δt)
+
+    # add to global likelihood
+    ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+    ll -= llpb*δt
+
+    lλvi1 = lλv[nI+2]
+
+    dλ = lλvi1 - lλv[1]
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+             fdt*exp(0.5*(lλvi + lλvi1))
+      ssλ += (lλvi1 - lλvi - α*δt)^2/(2.0*fdt)
+      nλ  += 1.0
+    end
+    if λev
+      ll += lλvi1
+    end
+  end
+
+  return ll, dλ, ssλ, nλ
+end
+
+
+
+
+
+"""
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
                   α   ::Float64,

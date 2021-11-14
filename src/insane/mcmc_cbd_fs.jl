@@ -356,7 +356,7 @@ function update_fs!(bix  ::Int64,
   bi = idf[bix]
 
   # forward simulate an internal branch
-  tp, np, ntp = fsbi(bi, λ, μ, 500)
+  ψp, np, ntp = fsbi(bi, λ, μ, 500)
 
   itb = it(bi) # is it terminal
   ρbi = ρi(bi)         # get branch sampling fraction
@@ -366,7 +366,7 @@ function update_fs!(bix  ::Int64,
   if np > 0
 
     # current tree
-    tc  = Ψ[bix]
+    ψc  = Ψ[bix]
 
     # if terminal branch
     if itb
@@ -382,20 +382,20 @@ function update_fs!(bix  ::Int64,
     if -randexp() < llr + acr
 
       # update ns, ne & L
-      ns += Float64(nnodesinternal(tp) - nnodesinternal(tc))
-      ne += Float64(ntipsextinct(tp)   - ntipsextinct(tc))
-      L  += treelength(tp) - treelength(tc)
+      ns += Float64(nnodesinternal(ψp) - nnodesinternal(ψc))
+      ne += Float64(ntipsextinct(ψp)   - ntipsextinct(ψc))
+      L  += treelength(ψp) - treelength(ψc)
 
       # likelihood ratio
-      llr += llik_cbd(tp, λ, μ) - llik_cbd(tc, λ, μ)
+      llr += llik_cbd(ψp, λ, μ) - llik_cbd(ψc, λ, μ)
 
       # if conditioning branch
       if pa(bi) < 2
         llr -= scond(Ψ, λ, μ)
-        Ψ[bix] = tp
+        Ψ[bix] = ψp
         llr += scond(Ψ, λ, μ)
       else
-        Ψ[bix] = tp
+        Ψ[bix] = ψp
       end
 
       llc += llr      # set new likelihood

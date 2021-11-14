@@ -711,73 +711,65 @@ end
 
 
 """
-    fixrtip!(tree::T, 
-             na  ::Int64, 
-             λf  ::Float64, 
-             dft0::Float64) where {T <: iTgbm}
+    fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
 
 Fixes the the path for a random non extinct tip and returns final `λ(t)`.
 """
-function fixrtip!(tree::T, 
-                  na  ::Int64, 
-                  λf  ::Float64, 
-                  dft0::Float64) where {T <: iTgbm}
+function fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
 
   fix!(tree)
 
   if isdefined(tree, :d1)
     if isextinct(tree.d1)
-      λf, dft0 = fixrtip!(tree.d2, na, λf, dft0)
+      λf = fixrtip!(tree.d2, na, λf)
     elseif isextinct(tree.d2)
-      λf, dft0 = fixrtip!(tree.d1, na, λf, dft0)
+      λf = fixrtip!(tree.d1, na, λf)
     else
       na1 = ntipsalive(tree.d1)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λf, dft0 = fixrtip!(tree.d2, na - na1, λf, dft0)
+        λf = fixrtip!(tree.d2, na - na1, λf)
       else
-        λf, dft0 = fixrtip!(tree.d1, na1,      λf, dft0)
+        λf = fixrtip!(tree.d1, na1,      λf)
       end
     end
   else
     λf   = lλ(tree)[end]
-    dft0 = fdt(tree)
   end
 
-  return λf, dft0
+  return λf
 end
 
 
 
 
 """
-    fixalive!(tree::T, λf::Float64, dft0::Float64) where {T <:iTgbm} 
+    fixalive!(tree::T, λf::Float64) where {T <:iTgbm}  
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::T, λf::Float64, dft0::Float64) where {T <:iTgbm} 
+function fixalive!(tree::T, λf::Float64) where {T <:iTgbm} 
 
   if istip(tree) 
     if isalive(tree)
       fix!(tree)
       λf   = lλ(tree)[end]
-      dft0 = fdt(tree)
-      return true, λf, dft0
+      return true, λf
     end
   else
-    f, λf, dft0 = fixalive!(tree.d2, λf, dft0)
+    f, λf = fixalive!(tree.d2, λf)
     if f 
       fix!(tree)
-      return true, λf, dft0
+      return true, λf
     end
-    f, λf, dft0 = fixalive!(tree.d1, λf, dft0)
+    f, λf = fixalive!(tree.d1, λf)
     if f 
       fix!(tree)
-      return true, λf, dft0
+      return true, λf
     end
   end
 
-  return false, λf, dft0
+  return false, λf
 end
 
 

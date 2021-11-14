@@ -480,11 +480,9 @@ function _sim_gbmce(nsδt::Float64,
 
   ## first: non-standard δt
   if t <= nsδt
-    bt  += t
-
     t   = max(0.0, t)
-    srt = sqrt(t)
-    λt1 = rnorm(λt + α*t, srt*σλ)
+    bt += t
+    λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
     λm  = exp(0.5*(λt + λt1))
     push!(λv, λt1)
 
@@ -508,8 +506,7 @@ function _sim_gbmce(nsδt::Float64,
   t  -= nsδt
   bt += nsδt
 
-  srnsδt = sqrt(nsδt)
-  λt1    = rnorm(λt + α*nsδt, srnsδt*σλ)
+  λt1    = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
   λm     = exp(0.5*(λt + λt1))
   push!(λv, λt1)
 

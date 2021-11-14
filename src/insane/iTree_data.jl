@@ -28,7 +28,6 @@ Return if is a fixed (i.e. observed) node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
 isfix(tree::sTpb) = true  # no fx property for pure-birth trees
-isfix(tree::iTgbmpb) = true  # no fx property for pure-birth trees
 
 
 

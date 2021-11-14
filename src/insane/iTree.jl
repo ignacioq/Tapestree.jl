@@ -293,6 +293,7 @@ with the following fields:
   d1:  daughter tree 1
   d2:  daughter tree 2
   e:   edge
+  fx:  if fix tree
   dt:  choice of time lag
   fdt: final `δt`
   lλ:  array of a Brownian motion evolution of `log(λ)`
@@ -313,18 +314,20 @@ mutable struct iTgbmpb <: iTgbm
   d1 ::iTgbmpb
   d2 ::iTgbmpb
   e  ::Float64
+  fx ::Bool
   dt ::Float64
   fdt::Float64
   lλ ::Array{Float64,1}
 
   iTgbmpb() = new()
 
-  iTgbmpb(e::Float64, dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
-    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
+  iTgbmpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64, 
+    lλ::Array{Float64,1}) = 
+      (x = new(); x.e = e; x.fx = fx; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
 
-  iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, 
+  iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, fx::Bool,
     dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
-      new(d1, d2, e, dt, fdt, lλ)
+      new(d1, d2, e, fx, dt, fdt, lλ)
 end
 
 
@@ -357,9 +360,9 @@ function iTgbmpb(tree::sTpb,
     if isdefined(tree, :d1)
       iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, α, σλ), 
               iTgbmpb(tree.d2, δt, srδt, lλa, α, σλ),
-              et, δt, 0.0, Float64[lλa, lλa])
+              et, isfix(tree), δt, 0.0, Float64[lλa, lλa])
     else
-      iTgbmpb(et, δt, 0.0, Float64[lλa, lλa])
+      iTgbmpb(et, isfix(tree), δt, 0.0, Float64[lλa, lλa])
     end
   else
     nt, fdti = divrem(et, δt, RoundDown)
@@ -375,9 +378,9 @@ function iTgbmpb(tree::sTpb,
     if isdefined(tree, :d1)
       iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], α, σλ), 
               iTgbmpb(tree.d2, δt, srδt, lλv[l], α, σλ),
-              et, δt, fdti, lλv)
+              et, isfix(tree), δt, fdti, lλv)
     else
-      iTgbmpb(et, δt, fdti, lλv)
+      iTgbmpb(et, isfix(tree), δt, fdti, lλv)
     end
   end
 end
@@ -409,15 +412,13 @@ function iTgbmpb(e0::Array{Int64,1},
 
   # if tip
   if in(ei, ea)
-    return iTgbmpb(el[ei], δt, δt, λs[ei])
+    return iTgbmpb(el[ei], true, δt, δt, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
     return iTgbmpb(iTgbmpb(e0, e1, el, λs, ea, n1, ei1, δt), 
                    iTgbmpb(e0, e1, el, λs, ea, n2, ei2, δt), 
-                   el[ei], δt, 
-                   (el[ei] == 0.0 ? 0.0 : δt), 
-                   λs[ei])
+                   el[ei], true, δt, (el[ei] == 0.0 ? 0.0 : δt), λs[ei])
   end
 end
 
