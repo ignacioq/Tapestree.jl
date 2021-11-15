@@ -71,7 +71,6 @@ end
 
 
 
-
 """
     cutbottom(tree::T, c::Float64) where {T <: iTree}
 

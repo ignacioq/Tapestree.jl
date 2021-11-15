@@ -444,7 +444,7 @@ function _sim_gbmpb(nsδt::Float64,
   t  -= nsδt
   bt += nsδt
 
-  λt1 = rnorm(λt + α*δt, sqrt(nsδt)*σλ)
+  λt1 = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
   λm  = exp(0.5*(λt + λt1))
   push!(λv, λt1)
 

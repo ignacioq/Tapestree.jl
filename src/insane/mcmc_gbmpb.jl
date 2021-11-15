@@ -282,7 +282,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi, Ψ
+        #    @show ll0, llc, it, pupi
         #    return 
         # end
 
@@ -293,7 +293,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi, Ψ
+        #    @show ll0, llc, it, pupi
         #    return 
         # end
 
@@ -308,7 +308,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi, Ψ
+        #    @show ll0, llc, it, pupi
         #    return 
         # end
 
@@ -321,7 +321,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi, Ψ
+        #    @show ll0, llc, it, pupi
         #    return 
         # end
       end
@@ -404,16 +404,15 @@ function update_fs!(bix  ::Int64,
   # if terminal branch
   if itb
     llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-    acr  = 0.0
+    acr  = llr
     drλ  = 0.0
     ssrλ = 0.0
   else
     np -= 1
     llr = log((1.0 - ρbi)^(np - nc))
-    acr = log(Float64(ntp)/Float64(ntc))
-
+    acr = llr + log(Float64(ntp)/Float64(ntc))
     # change daughters
-    if isfinite(llr)
+    if isfinite(acr)
 
       llrd, acrd, drλ, ssrλ, λ1p, λ2p = 
         _daughters_update!(ψ1, ψ2, λf, α, σλ, δt, srδt)
@@ -424,7 +423,7 @@ function update_fs!(bix  ::Int64,
   end
 
   # MH ratio
-  if -randexp() < llr + acr
+  if -randexp() < acr
 
     ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ψp, α, σλ, δt, srδt)
     ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, δt, srδt)
