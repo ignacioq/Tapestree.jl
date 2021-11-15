@@ -203,7 +203,7 @@ function _cutbottom(tree::iTgbmpb,
 
     push!(lλv, eλ)
 
-    tree = iTgbmpb(c - t, δt, c - t - tii, lλv)
+    tree = iTgbmpb(c - t, true, δt, c - t - tii, lλv)
 
   else
     if isdefined(tree, :d1)
