@@ -538,20 +538,15 @@ end
 
 
 
-
-
 """
-    iquantile(treev::Array{T,1}, 
-              p    ::Float64, 
-              lv   ::Function) where {T <: iTgbm}
+    iquantile(reev::Vector{iTgbmpb}, p::Float64)
 
-Make an `iTgbmpb` with the quantile specified by `p` in data specified in 
-function `lv`.
+Make an `iTgbmpb` with the quantile specified by `p`.
 """
-function iquantile(treev::Array{iTgbmpb,1}, p::Float64)
+function iquantile(treev::Vector{iTgbmpb}, p::Float64)
 
-  nt = lastindex(treev)
-  t1 = treev[1]
+  nts = lastindex(treev)
+  t1  = treev[1]
 
   # make vector of lambdas
   vs = Array{Float64,1}[]
@@ -561,9 +556,9 @@ function iquantile(treev::Array{iTgbmpb,1}, p::Float64)
 
   sv = Float64[]
   # make fill vector to estimate statistics
-  v = Array{Float64,1}(undef, nt)
+  v = Array{Float64,1}(undef, nts)
   for i in Base.OneTo(lastindex(vs[1]))
-    for t in Base.OneTo(nt)
+    for t in Base.OneTo(nts)
       v[t] = vs[t][i]
     end
     push!(sv, quantile(v, p))
@@ -571,11 +566,11 @@ function iquantile(treev::Array{iTgbmpb,1}, p::Float64)
 
   if isdefined(t1, :d1)
     treev1 = iTgbmpb[]
-    for t in Base.OneTo(nt)
+    for t in Base.OneTo(nts)
         push!(treev1, treev[t].d1)
     end 
     treev2 = iTgbmpb[]
-    for t in Base.OneTo(nt)
+    for t in Base.OneTo(nts)
         push!(treev2, treev[t].d2)
     end 
     iTgbmpb(iquantile(treev1, p), iquantile(treev2, p),

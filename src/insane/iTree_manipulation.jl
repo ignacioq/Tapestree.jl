@@ -1003,16 +1003,74 @@ end
 
 
 """
-    remove_extinct!(tree::iTgbmce)
+    remove_unsampled!(tree::iTgbmpb)
 
-Remove extinct tips from `iTgbmce`.
+Remove extinct tips from `iTgbmpb`.
 """
-function remove_extinct!(tree::iTgbmce)
+function remove_unsampled!(tree::iTgbmpb)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_unsampled!(tree.d1)
+    tree.d2 = remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return iTgbmpb(e(tree), isfix(tree), dt(tree), fdt(tree), lλ(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lλ2 = lλ(tree.d2)
+
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        iszero(fdt2) && popfirst!(lλ2)
+        prepend!(lλ2, lλ0) 
+        fdt0 = fdt(tree) + fdt2
+        if fdt0 > dt(tree) 
+          fdt0 -= dt(tree) 
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0) 
+      end
+    elseif !isfix(tree.d2)
+      ne  = e(tree) + e(tree.d1)
+      lλ0 = lλ(tree)
+      lλ1 = lλ(tree.d1)
+
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      iszero(fdt1) && popfirst!(lλ1)
+      prepend!(lλ1, lλ0) 
+      fdt0 = fdt(tree) + fdt1
+      if fdt0 > dt(tree) 
+        fdt0 -= dt(tree) 
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0) 
+    end
+  end
+
+  return tree
+end
+
+
+
+
+
+"""
+    remove_unsampled!(tree::iTgbmce)
+
+Remove extinct tips from `iTgbmce`.
+"""
+function remove_unsampled!(tree::iTgbmce)
+
+  if isdefined(tree, :d1)
+
+    tree.d1 = remove_unsampled!(tree.d1)
+    tree.d2 = remove_unsampled!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1058,16 +1116,16 @@ end
 
 
 """
-    remove_extinct!(tree::iTgbmct)
+    remove_unsampled!(tree::iTgbmct)
 
 Remove extinct tips from `iTgbmct`.
 """
-function remove_extinct!(tree::iTgbmct)
+function remove_unsampled!(tree::iTgbmct)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_unsampled!(tree.d1)
+    tree.d2 = remove_unsampled!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1117,16 +1175,16 @@ end
 
 
 """
-    remove_extinct!(tree::iTgbmbd)
+    remove_unsampled!(tree::iTgbmbd)
 
 Remove extinct tips from `iTgbmbd`.
 """
-function remove_extinct!(tree::iTgbmbd)
+function remove_unsampled!(tree::iTgbmbd)
 
   if isdefined(tree, :d1)
 
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_unsampled!(tree.d1)
+    tree.d2 = remove_unsampled!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1182,15 +1240,15 @@ end
 
 
 """
-    remove_extinct!(treev::Array{T,1}) where {T <: iTree}
+    remove_unsampled!(treev::Vector{T}) where {T <: iTree}
 
 Remove extinct taxa for a vector of trees.
 """
-function remove_extinct!(treev::Array{T,1}) where {T <: iTree}
+function remove_unsampled!(treev::Vector{T}) where {T <: iTree}
 
   treevne = T[]
   for t in treev
-    push!(treevne, remove_extinct!(deepcopy(t)))
+    push!(treevne, remove_unsampled!(deepcopy(t)))
   end
 
   return treevne
@@ -1200,15 +1258,15 @@ end
 
 
 """
-    remove_extinct!(tree::sTbd)
+    remove_unsampled!(tree::sTbd)
 
 Remove extinct tips from `sTbd`.
 """
-function remove_extinct!(tree::sTbd)
+function remove_unsampled!(tree::sTbd)
 
   if isdefined(tree, :d1)
-    tree.d1 = remove_extinct!(tree.d1)
-    tree.d2 = remove_extinct!(tree.d2)
+    tree.d1 = remove_unsampled!(tree.d1)
+    tree.d2 = remove_unsampled!(tree.d2)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
@@ -1232,16 +1290,16 @@ end
 
 
 """
-    remove_extinct!(tree::sTfbd)
+    remove_unsampled!(tree::sTfbd)
 
 Remove extinct tips from `sTfbd`.
 """
-function remove_extinct!(tree::sTfbd)
+function remove_unsampled!(tree::sTfbd)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  if defd1 tree.d1 = remove_extinct!(tree.d1) end
-  if defd2 tree.d2 = remove_extinct!(tree.d2) end
+  if defd1 tree.d1 = remove_unsampled!(tree.d1) end
+  if defd2 tree.d2 = remove_unsampled!(tree.d2) end
 
   if !defd1 && !defd2
     return tree
@@ -1271,7 +1329,7 @@ end
 Returns the reconstructed tree, i.e. the observed tree from sampled extant 
 tips and fossils.
 """
-reconstructed!(tree::T) where {T <: iTree} = remove_extinct!(tree)
+reconstructed!(tree::T) where {T <: iTree} = remove_unsampled!(tree)
 # For all trees without fossils, it simply means removing extinct lineages
 
 

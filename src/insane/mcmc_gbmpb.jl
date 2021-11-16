@@ -419,6 +419,8 @@ function update_fs!(bix  ::Int64,
 
       llr += llrd
       acr += acrd
+    else
+      acr = -Inf
     end
   end
 
