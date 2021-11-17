@@ -297,11 +297,10 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTree
     end
     # for new proposal
     f0 = function (psi::T, μ::Float64, ter::Bool)
-        if ter
-          sum_alone_stem(  psi, 0.0, 0.0, μ)
-        else
-          sum_alone_stem_p(psi, 0.0, 0.0, μ)
-        end
+      if ter
+        sum_alone_stem(  psi, 0.0, 0.0, μ)
+      else
+        sum_alone_stem_p(psi, 0.0, 0.0, μ)
       end
     end
   end

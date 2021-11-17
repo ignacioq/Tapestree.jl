@@ -248,7 +248,7 @@ function _update_gbm!(tree::iTgbmce,
       _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
   else
     if !isfix(tree) || ter
-      llc, dλ, ssλ = update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+      llc, dλ, ssλ = update_tip!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
     end
   end
 
@@ -291,14 +291,14 @@ function _update_gbm!(tree ::iTgbmce,
   if isdefined(tree, :d1)
     # if should condition node
     if sn[ix]
-      llc, dλ, ssλ = update_triad_sc!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+      llc, dλ, ssλ = update_triad_sc!(tree, α, σλ ,μ, llc, dλ, ssλ, δt, srδt)
     else
-      llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+      llc, dλ, ssλ = update_triad!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
     end
 
     if isfix(tree.d1)
       llc, dλ, ssλ = 
-        _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, sn, ix + 1)
+        _update_gbm!(tree.d1, α, σλ,   llc, dλ, ssλ, δt, srδt, sn, ix + 1)
       llc, dλ, ssλ = 
         _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
     else
@@ -309,7 +309,7 @@ function _update_gbm!(tree ::iTgbmce,
     end
   else
     if !isfix(tree) || ter
-      llc, dλ, ssλ = update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+      llc, dλ, ssλ = update_tip!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
     end
   end
 
@@ -386,7 +386,8 @@ end
                   dλ  ::Float64,
                   ssλ ::Float64,
                   δt  ::Float64,
-                  srδt::Float64)
+                  srδt::Float64,
+                  cn  ::Bool)
 
 Make a `gbm` trio proposal.
 """
@@ -406,7 +407,8 @@ function update_triad!(λpc ::Vector{Float64},
                        dλ  ::Float64,
                        ssλ ::Float64,
                        δt  ::Float64,
-                       srδt::Float64)
+                       srδt::Float64,
+                       cn  ::Bool)
 
   @inbounds begin
 
@@ -431,8 +433,16 @@ function update_triad!(λpc ::Vector{Float64},
     llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
-    if -randexp() < acr
-      llc += llr
+    if cn
+      eλi = exp(λi)
+      eλn = exp(λn)
+      lls = log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
+    else
+      lls = 0.0
+    end
+
+    if -randexp() < acr + lls
+      llc += llr + lls
       dλ  += (λ1c[1] - λn)
       ssλ += ssrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
@@ -518,7 +528,6 @@ end
 
 
 
-
 """
     update_triad_sc!(tree::iTgbmce,
                      α   ::Float64,
@@ -576,7 +585,9 @@ function update_triad_sc!(tree::iTgbmce,
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
     # add conditioning 
-    lls += log(λi*(exp(λn) + μ)/(λn*(exp(λi) + μ)))
+    eλi = exp(eλi)
+    eλn = exp(eλn)
+    lls = log(eλi*(eλi + μ)/(eλn*(eλn + μ)))
 
     if -randexp() < acr + lls
       llc += llr + lls
@@ -591,53 +602,6 @@ function update_triad_sc!(tree::iTgbmce,
   return llc, dλ, ssλ
 end
 
-
-
-
-"""
-    llr_propr(λpp  ::Array{Float64,1},
-              λ1p  ::Array{Float64,1},
-              λ2p  ::Array{Float64,1},
-              λpc  ::Array{Float64,1},
-              λ1c  ::Array{Float64,1},
-              λ2c  ::Array{Float64,1},
-              α    ::Float64,
-              σλ   ::Float64,
-              μ    ::Float64,
-              δt   ::Float64,
-              fdtpr::Float64,
-              fdtd1::Float64,
-              fdtd2::Float64,
-              srδt ::Float64)
-
-Return the likelihood and proposal ratio for pure-birth gbm.
-"""
-function llr_propr(λpp  ::Array{Float64,1},
-                   λ1p  ::Array{Float64,1},
-                   λ2p  ::Array{Float64,1},
-                   λpc  ::Array{Float64,1},
-                   λ1c  ::Array{Float64,1},
-                   λ2c  ::Array{Float64,1},
-                   α    ::Float64,
-                   σλ   ::Float64,
-                   μ    ::Float64,
-                   δt   ::Float64,
-                   fdtp::Float64,
-                   fdt1::Float64,
-                   fdt2::Float64,
-                   srδt ::Float64)
-
-  # log likelihood ratios
-  llrbmp, llrpbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
-  llrbm1, llrpb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-  llrbm2, llrpb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
-
-  acr  = llrpbp + llrpb1 + llrpb2
-  llr  = llrbmp + llrbm1 + llrbm2 + acr
-  ssrλ = ssrλp + ssrλ1 + ssrλ2
-
-  return llr, acr, ssrλ
-end
 
 
 

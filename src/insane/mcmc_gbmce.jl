@@ -110,17 +110,17 @@ function insane_gbmce(tree    ::sT_label,
   # conditioning functions
   sns = (BitVector(), BitVector(), BitVector())
   snodes! = make_snodes(idf, !iszero(e(tree)), iTgbmce)
+  snodes!(Ψ, sns)
   iszero(e(tree)) && push!(sns[1], true)
   scond, scond0 = make_scond(idf, !iszero(e(tree)), iTgbmce)
-
 
   @info "running birth-death gbm with constant μ"
 
   # burn-in phase
   Ψp, Ψc, llc, prc, αc, σλc, μc, μtn =
-    mcmc_burn_gbmce( λa_prior, α_prior, σλ_prior, μ_prior, 
-      nburn, tune_int, αi, σλi, μc, μtni, δt, srδt,  idf, pup, 
-      nlim, prints, scalef, svf)
+    mcmc_burn_gbmce(Ψ, idf, λa_prior, α_prior, σλ_prior, μ_prior, 
+      nburn, tune_int, αi, σλi, μc, μtni, sns, δt, srδt, pup, prints, 
+      scalef, snodes, scond, scond0)
 
   # mcmc
   R, Ψv =
@@ -143,8 +143,8 @@ end
 
 
 """
-    mcmc_burn_gbmce(Ψp      ::iTgbmce,
-                    Ψc      ::iTgbmce,
+    mcmc_burn_gbmce(Ψ       ::Vector{iTgbmpb},
+                    idf     ::Vector{iBffs},
                     λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
@@ -157,17 +157,17 @@ end
                     μtn     ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idf     ::Array{iBffs,1},
                     pup     ::Array{Int64,1},
-                    nlim    ::Int64,
                     prints  ::Int64,
                     scalef  ::Function,
-                    svf     ::Function)
+                    snodes! ::Function,
+                    scond   ::Function,
+                    scond0  ::Function)
 
 MCMC burn-in chain for `gbmce`.
 """
-function mcmc_burn_gbmce(Ψp      ::iTgbmce,
-                         Ψc      ::iTgbmce,
+function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmpb},
+                         idf     ::Vector{iBffs},
                          λa_prior::NTuple{2,Float64},
                          α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
@@ -178,29 +178,30 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
                          σλc     ::Float64,
                          μc      ::Float64,
                          μtn     ::Float64,
+                         sns     ::NTuple{3,BitVector},
                          δt      ::Float64,
                          srδt    ::Float64,
-                         idf     ::Array{iBffs,1},
                          pup     ::Array{Int64,1},
-                         nlim    ::Int64,
                          prints  ::Int64,
                          scalef  ::Function,
-                         snodes!  ::Function,
-                         scond   ::Function)
+                         snodes! ::Function,
+                         scond   ::Function,
+                         scond0  ::Function)
 
   ltn = 0
   lup = 0.0
   lac = 0.0
 
-  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
+  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + 
+        scond(Ψ, μc, sns) + prob_ρ(idf)
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        + 
         logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2]) +
-        logdnorm(αc, α_prior[1], α_prior[2]^2)             +
+        logdnorm(αc, α_prior[1], α_prior[2]^2)               +
         logdunif(μc, μ_prior[1], μ_prior[2])
 
   # maximum bounds according to unfiorm priors
-  lλmxpr = log(λa_prior[2])
-  μmxpr  = μ_prior[2]
+  lλxpr = log(λa_prior[2])
+  μxpr  = μ_prior[2]
 
   L       = treelength(Ψ)      # tree length
   dλ      = deltaλ(Ψ)          # delta change in λ
@@ -234,7 +235,7 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
       # update extinction
       elseif pupi === 3
 
-        llc, μc, lac  = update_μ!(Ψ, llc, μc, μtn, lac, ne, L, μmxpr, scond)
+        llc, μc, lac  = update_μ!(Ψ, llc, μc, μtn, lac, ne, L, μxpr, scond)
 
         lup += 1.0
 
@@ -245,8 +246,8 @@ function mcmc_burn_gbmce(Ψp      ::iTgbmce,
         bix = inodes[nix]
 
         llc, dλ, ssλ = 
-          update_gbm!(bix, Ψ, idf, αc, σλc, μc, llc, 
-                      dλ, ssλ, sns, δt, srδt, lλxpr)
+          update_gbm!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, sns, δt, 
+            srδt, lλxpr)
 
       # forward simulation update
       else
@@ -491,28 +492,45 @@ function update_gbm!(bix  ::Int64,
     ter1 = it(idf[d1(bi)]) 
     ter2 = it(idf[d2(bi)])
 
+    cn = false
     # if crown root
-    if iszero(pa(bi)) && iszero(e(ψi))
+    if iszero(pa(bi)) && iszero(e(bi))
       llc, dλ, ssλ = 
-        _crown_update!(ψi, ψ1, ψ2, α, σλ, llc, dλ, ssλ, δt, srδt, lλxpr)
+        _crown_update!(ψi, ψ1, ψ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, lλxpr)
       setλt!(bi, lλ(ψi)[1])
 
       # carry on updates in the crown daughter branches
       llc, dλ, ssλ = 
-        _update_gbm!(ψ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1, sn[2], 1)
+        _update_gbm!(ψ1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter1, sns[2], 1)
       llc, dλ, ssλ = 
-        _update_gbm!(ψ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2, sn[3], 1)
+        _update_gbm!(ψ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter2, sns[3], 1)
     else
-      # if stem
+      # if stem branch
       if iszero(pa(bi))
-        llc, dλ, ssλ = _stem_update!(ψi, α, σλ, llc, dλ, ssλ, δt, srδt, lλxpr)
+        llc, dλ, ssλ = _stem_update!(ψi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, lλxpr)
 
         # updates within the stem branch in stem conditioning
         llc, dλ, ssλ = 
-          _update_gbm!(ψ1, α, σλ, llc, dλ, ssλ, δt, srδt, false, sn[1], 1)
+          _update_gbm!(ψi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, false, sns[1], 1)
+
+        # if observed node should be conditioned
+        cn = sns[1][end]
+
+      # if crown branch
+      elseif isone(pa(bi)) && iszero(e(Ψ[1]))
+        wsn = bix === d1(idf[pa(bi)]) ? 2 : 3
+        sni = sns[wsn]
+        # updates within the crown branch with crown conditioning
+        llc, dλ, ssλ = 
+          _update_gbm!(ψi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, false, sni, 1)
+
+        # if observed node should be conditioned
+        if lastindex(sni) > 0
+          cn = sni[end]
+        end
       else
         # updates within the parent branch
-        llc, dλ, ssλ = _update_gbm!(ψi, α, σλ, llc, dλ, ssλ, δt, srδt, false)
+        llc, dλ, ssλ = _update_gbm!(ψi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, false)
       end
 
       # get fixed tip 
@@ -520,14 +538,14 @@ function update_gbm!(bix  ::Int64,
 
       # make between decoupled trees node update
       llc, dλ, ssλ = update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), e(lψi), e(ψ1), e(ψ2), 
-        fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, llc, dλ, ssλ, δt, srδt)
+        fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, μ, llc, dλ, ssλ, δt, srδt, cn)
 
       # set fixed `λ(t)` in branch
       setλt!(bi, lλ(lψi)[end])
 
       # carry on updates in the daughters
-      llc, dλ, ssλ = _update_gbm!(ψ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1)
-      llc, dλ, ssλ = _update_gbm!(ψ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
+      llc, dλ, ssλ = _update_gbm!(ψ1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter1)
+      llc, dλ, ssλ = _update_gbm!(ψ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter2)
     end
   end
 
