@@ -252,14 +252,11 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmpb},
       # forward simulation update
       else
 
-        """
-        here
-        """
-
         bix = ceil(Int64,rand()*el)
 
-        llc, dλ, ssλ, nλ, L = 
-          update_fs!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
+        llc, dλ, ssλ, nλ, ne, L, sns = 
+          update_fs!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
+            sns, δt, srδt)
 
       end
     end
@@ -555,8 +552,6 @@ end
 
 
 
-
-
 """
     update_fs!(bix  ::Int64,
                Ψ    ::Vector{iTgbmce},
@@ -605,67 +600,69 @@ function update_fs!(bix  ::Int64,
   # forward simulate an internal branch
   ψp, np, ntp, λf = fsbi_ce(bi, lλ(ψc)[1], α, σλ, μ, δt, srδt)
 
-  # check for non-exploding simulation
-  if np >= 1000
-    return llc, dλ, ssλ, nλ, ne, L, sns
-  end
+  if ntp > 0
+    # check for non-exploding simulation
+    if np >= 1000
+      return llc, dλ, ssλ, nλ, ne, L, sns
+    end
 
-  # if terminal branch
-  if itb
-    llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-    acr  = llr
-    drλ  = 0.0
-    ssrλ = 0.0
-  else
-    np -= 1
-    llr = log((1.0 - ρbi)^(np - nc))
-    acr = llr + log(Float64(ntp)/Float64(ntc))
-    # change daughters
-    if isfinite(acr)
-
-      llrd, acrd, drλ, ssrλ, λ1p, λ2p = 
-        _daughters_update!(ψ1, ψ2, λf, α, σλ, μ, δt, srδt)
-
-      llr += llrd
-      acr += acrd
+    # if terminal branch
+    if itb
+      llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr  = llr
+      drλ  = 0.0
+      ssrλ = 0.0
     else
-      acr = -Inf
-    end
-  end
+      np -= 1
+      llr = log((1.0 - ρbi)^(np - nc))
+      acr = llr + log(Float64(ntp)/Float64(ntc))
+      # change daughters
+      if isfinite(acr)
 
-  # MH ratio
-  if -randexp() < acr
+        llrd, acrd, drλ, ssrλ, λ1p, λ2p = 
+          _daughters_update!(ψ1, ψ2, λf, α, σλ, μ, δt, srδt)
 
-    ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ψp, α, σλ, μ, δt, srδt)
-    ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, μ, δt, srδt)
-
-    # if stem conditioned
-    if iszero(pa(bi)) && e(bi) > 0.0
-        llr += scond0(ψp, μ, false) - scond0(ψc, μ, false)
-    end
-
-    # if crown conditioned
-    if isone(pa(bi)) && iszero(e(Ψ[1]))
-        llr += scond0(ψp, μ, itb) - scond0(ψc, μ, itb) 
+        llr += llrd
+        acr += acrd
+      else
+        acr = -Inf
+      end
     end
 
-    # update llr, ssλ, nλ, sns, ne, L,
-    llr += ll1  - ll0
-    dλ  += dλ1  - dλ0  + drλ
-    ssλ += ssλ1 - ssλ0 + ssrλ
-    nλ  += nλ1  - nλ0
-    ne  += ntipsextinct(ψp) - ntipsextinct(ψc)
-    L   += treelength(ψp)   - treelength(ψc)
+    # MH ratio
+    if -randexp() < acr
 
-    Ψ[bix] = ψp          # set new tree
-    llc += llr           # set new likelihood
-    snodes!(Ψ, sns)      # set new sns
-    setni!(bi, np)       # set new ni
-    setnt!(bi, ntp)      # set new nt
-    setλt!(bi, λf)       # set new λt
-    if !itb
-      copyto!(lλ(ψ1), λ1p) # set new daughter 1 λ vector
-      copyto!(lλ(ψ2), λ2p) # set new daughter 2 λ vector
+      ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ψp, α, σλ, μ, δt, srδt)
+      ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, μ, δt, srδt)
+
+      # if stem conditioned
+      if iszero(pa(bi)) && e(bi) > 0.0
+          llr += scond0(ψp, μ, false) - scond0(ψc, μ, false)
+      end
+
+      # if crown conditioned
+      if isone(pa(bi)) && iszero(e(Ψ[1]))
+          llr += scond0(ψp, μ, itb) - scond0(ψc, μ, itb) 
+      end
+
+      # update llr, ssλ, nλ, sns, ne, L,
+      llr += ll1  - ll0
+      dλ  += dλ1  - dλ0  + drλ
+      ssλ += ssλ1 - ssλ0 + ssrλ
+      nλ  += nλ1  - nλ0
+      ne  += ntipsextinct(ψp) - ntipsextinct(ψc)
+      L   += treelength(ψp)   - treelength(ψc)
+
+      Ψ[bix] = ψp          # set new tree
+      llc += llr           # set new likelihood
+      snodes!(Ψ, sns)      # set new sns
+      setni!(bi, np)       # set new ni
+      setnt!(bi, ntp)      # set new nt
+      setλt!(bi, λf)       # set new λt
+      if !itb
+        copyto!(lλ(ψ1), λ1p) # set new daughter 1 λ vector
+        copyto!(lλ(ψ2), λ2p) # set new daughter 2 λ vector
+      end
     end
   end
 
@@ -698,7 +695,7 @@ function fsbi_ce(bi  ::iBffs,
   tfb = tf(bi)
 
   # forward simulation during branch length
-  t0, na = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 1, 1_000)
+  t0, na, nsp = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
   if na >= 1_000
     return iTgbmce(), 1_000, 0, 0.0
@@ -750,20 +747,21 @@ function tip_sims!(tree::iTgbmce,
                    na  ::Int64)
 
   if istip(tree) 
-    if !isfix(tree)
+    if !isfix(tree) && isalive(tree)
 
       fdti = fdt(tree)
       lλ0  = lλ(tree)
 
       # simulate
-      stree, na = 
+      stree, na, nsp = 
         _sim_gbmce(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt, 
-                   na, 1_000)
+                   na - 1, 1, 1_000)
 
       if !isdefined(stree, :lλ)
         return tree, 1_000
       end
 
+      setproperty!(tree, :iμ, isextinct(stree))
       sete!(tree, e(tree) + e(stree))
 
       lλs = lλ(stree)

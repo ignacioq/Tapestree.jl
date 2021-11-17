@@ -361,7 +361,7 @@ function update_fs!(bix  ::Int64,
   nc  = ni(bi)         # current ni
   ntc = nt(bi)         # current nt
 
-  if np > 0
+  if ntp > 0
 
     # current tree
     ψc  = Ψ[bix]
