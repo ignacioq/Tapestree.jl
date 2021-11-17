@@ -298,14 +298,14 @@ function _update_gbm!(tree ::iTgbmce,
 
     if isfix(tree.d1)
       llc, dλ, ssλ = 
-        _update_gbm!(tree.d1, α, σλ,   llc, dλ, ssλ, δt, srδt, sn, ix + 1)
+        _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter, sn, ix + 1)
       llc, dλ, ssλ = 
-        _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+        _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
     else
       llc, dλ, ssλ = 
-        _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+        _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
       llc, dλ, ssλ = 
-        _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, sn, ix + 1)
+        _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter, sn, ix + 1)
     end
   else
     if !isfix(tree) || ter
@@ -585,8 +585,8 @@ function update_triad_sc!(tree::iTgbmce,
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
     # add conditioning 
-    eλi = exp(eλi)
-    eλn = exp(eλn)
+    eλi = exp(λi)
+    eλn = exp(λn)
     lls = log(eλi*(eλi + μ)/(eλn*(eλn + μ)))
 
     if -randexp() < acr + lls
