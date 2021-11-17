@@ -130,11 +130,11 @@ end
 
 
 """
-    llik_gbm(tree::iTgbmpb, 
-             α   ::Float64,
-             σλ  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
+    llik_gbm_ssλ(tree::iTgbmpb, 
+                 α   ::Float64,
+                 σλ  ::Float64,
+                 δt  ::Float64,
+                 srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """

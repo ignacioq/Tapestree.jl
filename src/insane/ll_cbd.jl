@@ -212,11 +212,11 @@ end
 
 
 """
-    make_cond(idf::Vector{iBffs}, stem::Bool)
+    make_cond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
 
 Make closure for conditioning function
 """
-function make_cond(idf::Vector{iBffs}, stem::Bool)
+function make_cond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
 
   # conditioning
   if stem

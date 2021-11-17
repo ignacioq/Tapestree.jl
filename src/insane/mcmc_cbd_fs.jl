@@ -62,6 +62,13 @@ function insane_cbd_fs(tree    ::sT_label,
   # make fix tree directory
   idf = make_idf(tree, tρ)
 
+  # starting parameters
+  if isnan(λi) && isnan(μi)
+    λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
+  else
+    λc, μc = λi, μi
+  end
+
   # make an edges tree and fix it
   Ψ = make_Ψ(idf, sTbd)
 
@@ -76,14 +83,14 @@ function insane_cbd_fs(tree    ::sT_label,
   scalef = makescalef(obj_ar)
 
   # if stem or crown conditioning
-  scond = make_cond(idf, !iszero(e(tree)))
+  scond = make_cond(idf, !iszero(e(tree)), sTbd)
 
   @info "Running constant birth-death with forward simulation"
 
   # adaptive phase
   llc, prc, λc, μc, λtn, μtn,= 
       mcmc_burn_cbd(Ψ, n, tune_int, λprior, μprior, nburn, 
-        ϵi, λi, μi, λtni, μtni, scalef, idf, pup, prints, scond)
+        λc, μc, λtni, μtni, scalef, idf, pup, prints, scond)
 
   # mcmc
   R, treev = mcmc_cbd(Ψ, llc, prc, λc, μc, λprior, μprior,
@@ -108,7 +115,6 @@ end
                   λprior  ::Float64,
                   μprior  ::Float64,
                   nburn   ::Int64,
-                  ϵi      ::Float64,
                   λi      ::Float64,
                   μi      ::Float64,
                   λtni    ::Float64, 
@@ -128,7 +134,6 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
                        λprior  ::Float64,
                        μprior  ::Float64,
                        nburn   ::Int64,
-                       ϵi      ::Float64,
                        λi      ::Float64,
                        μi      ::Float64,
                        λtni    ::Float64, 
@@ -145,13 +150,6 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
   lac = Float64[0.0,0.0]
   λtn = λtni
   μtn = μtni
-
-  # starting parameters
-  if isnan(λi) && isnan(μi)
-    λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
-  else
-    λc, μc = λi, μi
-  end
 
   # length idf
   el = lastindex(idf)

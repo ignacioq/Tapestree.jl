@@ -48,9 +48,10 @@ function insane_gbmpb(tree    ::sT_label,
                       σλ_prior::NTuple{2,Float64}     = (0.05, 0.5),
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  δt  *= treeheight(tree)
-  srδt = sqrt(δt)
   n    = ntips(tree)
+  th   = treeheight(tree)
+  δt  *= max(0.1, round(th, RoundDown, digits = 2))
+  srδt = sqrt(δt)
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -506,7 +507,13 @@ end
 
 
 """
-    tip_sims!(tree::iTgbmpb, t::Float64, λ::Float64, μ::Float64)
+    tip_sims!(tree::iTgbmpb, 
+              t   ::Float64, 
+              α   ::Float64, 
+              σλ  ::Float64, 
+              δt  ::Float64,
+              srδt::Float64,
+              na  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
