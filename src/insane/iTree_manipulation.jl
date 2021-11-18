@@ -816,8 +816,8 @@ function remove_unsampled!(tree::iTgbmce)
     tree.d1 = remove_unsampled!(tree.d1)
     tree.d2 = remove_unsampled!(tree.d2)
 
-    if isextinct(tree.d1)
-      if isextinct(tree.d2)
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
         return iTgbmce(e(tree), dt(tree), fdt(tree), 
           true, isfix(tree), lλ(tree))
       else
@@ -837,7 +837,7 @@ function remove_unsampled!(tree::iTgbmce)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
-    elseif isextinct(tree.d2)
+    elseif !isfix(tree.d2)
       ne  = e(tree) + e(tree.d1)
       lλ0 = lλ(tree)
       lλ1 = lλ(tree.d1)
@@ -874,8 +874,8 @@ function remove_unsampled!(tree::iTgbmct)
     tree.d1 = remove_unsampled!(tree.d1)
     tree.d2 = remove_unsampled!(tree.d2)
 
-    if isextinct(tree.d1)
-      if isextinct(tree.d2)
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
         return iTgbmct(e(tree), dt(tree), fdt(tree), 
           true, isfix(tree), lλ(tree))
       else
@@ -895,7 +895,7 @@ function remove_unsampled!(tree::iTgbmct)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
-    elseif isextinct(tree.d2)
+    elseif !isfix(tree.d2)
       ne  = e(tree) + e(tree.d1)
       lλ0 = lλ(tree)
       lλ1 = lλ(tree.d1)
@@ -932,8 +932,8 @@ function remove_unsampled!(tree::iTgbmbd)
     tree.d1 = remove_unsampled!(tree.d1)
     tree.d2 = remove_unsampled!(tree.d2)
 
-    if isextinct(tree.d1)
-      if isextinct(tree.d2)
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
         return iTgbmbd(e(tree), dt(tree), fdt(tree), 
           true, isfix(tree), lλ(tree), lμ(tree))
       else
@@ -960,7 +960,7 @@ function remove_unsampled!(tree::iTgbmbd)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
-    elseif isextinct(tree.d2)
+    elseif !isfix(tree.d2)
       ne = e(tree) + e(tree.d1)
       lλ0 = lλ(tree)
       lμ0 = lμ(tree)

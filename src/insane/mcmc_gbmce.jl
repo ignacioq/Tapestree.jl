@@ -58,7 +58,8 @@ function insane_gbmce(tree    ::sT_label,
                       pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
                       nlim    ::Int64             = 500,
                       δt      ::Float64           = 1e-2,
-                      prints  ::Int64             = 5)
+                      prints  ::Int64             = 5,
+                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
   th   = treeheight(tree)
@@ -117,14 +118,14 @@ function insane_gbmce(tree    ::sT_label,
   @info "running birth-death gbm with constant μ"
 
   # burn-in phase
-  Ψp, Ψc, llc, prc, αc, σλc, μc, μtn =
+  Ψ, llc, prc, αc, σλc, μc, μtn, sns =
     mcmc_burn_gbmce(Ψ, idf, λa_prior, α_prior, σλ_prior, μ_prior, 
-      nburn, tune_int, αi, σλi, μc, μtni, sns, δt, srδt, pup, prints, 
-      scalef, snodes!, scond, scond0)
+      nburn, tune_int, αi, σλi, μc, μtni, sns, δt, srδt, inodes, pup, 
+      prints, scalef, snodes!, scond, scond0)
 
   # mcmc
   R, Ψv =
-    mcmc_gbmce(Ψ, idf, llc, prc, αc, σλc, μc, μtn,
+    mcmc_gbmce(Ψ, idf, llc, prc, αc, σλc, μc, μtn, sns,
       λa_prior, α_prior, σλ_prior, μ_prior, niter, nthin, δt, srδt, 
       inodes, pup, prints, snodes!, scond, scond0)
 
@@ -180,7 +181,8 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
                          sns     ::NTuple{3,BitVector},
                          δt      ::Float64,
                          srδt    ::Float64,
-                         pup     ::Array{Int64,1},
+                         inodes  ::Vector{Int64},
+                         pup     ::Vector{Int64},
                          prints  ::Int64,
                          scalef  ::Function,
                          snodes! ::Function,
@@ -253,7 +255,7 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
 
         bix = ceil(Int64,rand()*el)
 
-        llc, dλ, ssλ, nλ, ne, L, sns = 
+        llc, dλ, ssλ, nλ, ne, L = 
           update_fs!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
             sns, δt, srδt, snodes!, scond0)
       end
@@ -269,7 +271,7 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
     next!(pbar)
   end
 
-  return Ψp, Ψc, llc, prc, αc, σλc, μc, μtn
+  return Ψ, llc, prc, αc, σλc, μc, μtn, sns
 end
 
 
@@ -310,6 +312,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
                     σλc     ::Float64,
                     μc      ::Float64,
                     μtn     ::Float64,
+                    sns     ::NTuple{3,BitVector},
                     λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
@@ -363,31 +366,31 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       elseif pupi === 2
 
         llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       elseif pupi === 3
 
         llc, μc  = update_μ!(Ψ, llc, μc, μtn, ne, L, sns, μxpr, scond)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       # gbm update
       elseif pupi === 4
@@ -399,11 +402,11 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_gbm!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, sns, δt, 
             srδt, lλxpr)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       # forward simulation update
       else
@@ -414,11 +417,11 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_fs!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
             sns, δt, srδt, snodes!, scond0)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
       end
     end
 
@@ -607,7 +610,7 @@ function update_fs!(bix    ::Int64,
   if ntp > 0
     # check for non-exploding simulation
     if np >= 1000
-      return llc, dλ, ssλ, nλ, ne, L, sns
+      return llc, dλ, ssλ, nλ, ne, L
     end
 
     # if terminal branch

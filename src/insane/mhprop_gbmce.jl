@@ -419,6 +419,7 @@ function update_triad!(λpc ::Vector{Float64},
     λ1p = Vector{Float64}(undef,l1)
     λ2p = Vector{Float64}(undef,l2)
     λp  = λpc[1]
+    λi  = λ1c[1]
     λ1  = λ1c[l1]
     λ2  = λ2c[l2]
 
@@ -433,12 +434,11 @@ function update_triad!(λpc ::Vector{Float64},
     llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
+    lls = 0.0
     if cn
-      eλi = exp(λi)
-      eλn = exp(λn)
-      lls = log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
-    else
-      lls = 0.0
+      eλi  = exp(λi)
+      eλn  = exp(λn)
+      lls += log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
     end
 
     if -randexp() < acr + lls
