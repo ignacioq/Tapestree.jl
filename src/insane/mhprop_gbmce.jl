@@ -240,7 +240,7 @@ function _update_gbm!(tree::iTgbmce,
                       ter ::Bool)
 
   if isdefined(tree, :d1)
-    llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+    llc, dλ, ssλ = update_triad!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
 
     llc, dλ, ssλ = 
       _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
@@ -291,7 +291,7 @@ function _update_gbm!(tree ::iTgbmce,
   if isdefined(tree, :d1)
     # if should condition node
     if sn[ix]
-      llc, dλ, ssλ = update_triad_sc!(tree, α, σλ ,μ, llc, dλ, ssλ, δt, srδt)
+      llc, dλ, ssλ = update_triad_sc!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
     else
       llc, dλ, ssλ = update_triad!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
     end
@@ -587,7 +587,7 @@ function update_triad_sc!(tree::iTgbmce,
     # add conditioning 
     eλi = exp(λi)
     eλn = exp(λn)
-    lls = log(eλi*(eλi + μ)/(eλn*(eλn + μ)))
+    lls = log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
 
     if -randexp() < acr + lls
       llc += llr + lls

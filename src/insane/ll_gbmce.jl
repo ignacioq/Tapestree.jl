@@ -276,7 +276,7 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTree
     f = let d1i = d1i, d2i = d2i
       function (psi::Vector{T}, μ::Float64, sns::NTuple{3,BitVector})
         sn1 = sns[1]
-        cond_ll(psi[1], 0.0, μ, lastindex(sn1), l1, 1)
+        cond_ll(psi[1], 0.0, μ,  sn1, lastindex(sn1), 1)
       end
     end
     # for new proposal

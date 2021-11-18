@@ -149,7 +149,7 @@ end
 
 
 """
-    treelength(psi::Vector{sTbd})
+    treelength(psi::Vector{T}) where {T<: iTree}
 
 Return the branch length sum of `Ψ`.
 """
@@ -165,11 +165,11 @@ end
 
 
 """
-    nnodesinternal(psi::Vector{sTbd})
+    nnodesinternal(psi::Vector{T}) where {T<: iTree}
 
 Return the internal nodes of `Ψ`.
 """
-function nnodesinternal(psi::Vector{sTbd})
+function nnodesinternal(psi::Vector{T}) where {T<: iTree}
   n = 0
   for ψ in psi
     n += _nnodesinternal(ψ, 0)
@@ -183,11 +183,11 @@ end
 
 
 """
-    ntipsextinct(psi::Vector{sTbd})
+    ntipsextinct(psi::Vector{T}) where {T<: iTree}
 
 Return the internal nodes of `Ψ`.
 """
-function ntipsextinct(psi::Vector{sTbd})
+function ntipsextinct(psi::Vector{T}) where {T<: iTree}
   n = 0
   for ψ in psi
     n += _ntipsextinct(ψ, 0)

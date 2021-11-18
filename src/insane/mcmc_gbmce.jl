@@ -142,7 +142,7 @@ end
 
 
 """
-    mcmc_burn_gbmce(Ψ       ::Vector{iTgbmpb},
+    mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
                     idf     ::Vector{iBffs},
                     λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -165,7 +165,7 @@ end
 
 MCMC burn-in chain for `gbmce`.
 """
-function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmpb},
+function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
                          idf     ::Vector{iBffs},
                          λa_prior::NTuple{2,Float64},
                          α_prior ::NTuple{2,Float64},
@@ -278,7 +278,7 @@ end
 
 
 """
-    mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
+    mcmc_gbmce(Ψ       ::Vector{iTgbmce},
                idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
@@ -302,7 +302,7 @@ end
 
 MCMC chain for `gbmce`.
 """
-function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
+function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
                     idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
@@ -333,15 +333,15 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
   lλxpr = log(λa_prior[2])
   μxpr  = μ_prior[2]
 
-  L       = treelength(Ψ)      # tree length
-  dλ      = deltaλ(Ψ)          # delta change in λ
-  ssλ, nλ = sss_gbm(Ψ, αc)     # sum squares in λ
-  ne      = 0.0                # number of extinction events
-  nin     = lastindex(inodes)  # number of internal nodes
-  el      = lastindex(idf)     # number of branches
+  L       = treelength(Ψ)            # tree length
+  dλ      = deltaλ(Ψ)                # delta change in λ
+  ssλ, nλ = sss_gbm(Ψ, αc)           # sum squares in λ
+  ne      = Float64(ntipsextinct(Ψ)) # number of extinction events
+  nin     = lastindex(inodes)        # number of internal nodes
+  el      = lastindex(idf)           # number of branches
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 8)
+  R = Array{Float64,2}(undef, nlogs, 7)
 
   # make Ψ vector
   Ψv = iTgbmce[]
@@ -365,7 +365,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
 
         ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψc
+           @show ll0, llc, pupi, i, Ψ
            return 
         end
 
@@ -375,7 +375,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
 
         ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψc
+           @show ll0, llc, pupi, i, Ψ
            return 
         end
 
@@ -385,7 +385,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
 
         ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψc
+           @show ll0, llc, pupi, i, Ψ
            return 
         end
 
@@ -401,7 +401,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
 
         ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψc
+           @show ll0, llc, pupi, i, Ψ
            return 
         end
 
@@ -416,7 +416,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
 
         ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + scond(Ψ, μc, sns) + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψc
+           @show ll0, llc, pupi, i, Ψ
            return 
         end
       end
@@ -430,7 +430,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmpb},
         R[lit,1] = Float64(lit)
         R[lit,2] = llc
         R[lit,3] = prc
-        R[lit,4] = exp(lλ(Ψc)[1])
+        R[lit,4] = exp(lλ(Ψ[1])[1])
         R[lit,5] = αc
         R[lit,6] = σλc
         R[lit,7] = μc
