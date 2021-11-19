@@ -196,7 +196,7 @@ function _crown_update!(ψi   ::iTgbmce,
     llrbm2, llrpb2, ssrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr = llrpb1 + llrpb2 + log((exp(λr) + μ)/(exp(λpc[1]) + μ))
+    acr = llrpb1 + llrpb2
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr

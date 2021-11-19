@@ -261,11 +261,11 @@ end
 
 
 """
-    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{T})
+    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmce})
 
 Return closure for log-likelihood for conditioning
 """
-function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTree}
+function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmce})
 
   b1  = idf[1]
   d1i = d1(b1)
@@ -274,29 +274,28 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTree
   if stem
     # for whole likelihood
     f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{T}, μ::Float64, sns::NTuple{3,BitVector})
+      function (psi::Vector{iTgbmce}, μ::Float64, sns::NTuple{3,BitVector})
         sn1 = sns[1]
         cond_ll(psi[1], 0.0, μ,  sn1, lastindex(sn1), 1)
       end
     end
     # for new proposal
-    f0 = (psi::T, μ::Float64, ter::Bool) -> sum_alone_stem_p(psi, 0.0, 0.0, μ)
+    f0 = (psi::iTgbmce, μ::Float64) -> sum_alone_stem_p(psi, 0.0, 0.0, μ)
   else
     # for whole likelihood
     f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{T}, μ::Float64, sns::NTuple{3,BitVector})
+      function (psi::Vector{iTgbmce}, μ::Float64, sns::NTuple{3,BitVector})
 
-        sn1 = sns[1]
         sn2 = sns[2]
         sn3 = sns[3]
 
-        cond_ll(psi[1],   0.0, μ, sn1, lastindex(sn1), 1) +
         cond_ll(psi[d1i], 0.0, μ, sn2, lastindex(sn2), 1) +
-        cond_ll(psi[d2i], 0.0, μ, sn3, lastindex(sn3), 1)
+        cond_ll(psi[d2i], 0.0, μ, sn3, lastindex(sn3), 1) -
+        lλ(psi[1])[1]
       end
     end
     # for new proposal
-    f0 = function (psi::T, μ::Float64, ter::Bool)
+    f0 = function (psi::iTgbmce, μ::Float64, ter::Bool)
       if ter
         sum_alone_stem(  psi, 0.0, 0.0, μ)
       else
