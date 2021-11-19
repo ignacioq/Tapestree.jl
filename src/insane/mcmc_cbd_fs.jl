@@ -82,19 +82,22 @@ function insane_cbd_fs(tree    ::sT_label,
   # make objecting scaling function for tuning
   scalef = makescalef(obj_ar)
 
-  # if stem or crown conditioning
-  scond = make_cond(idf, !iszero(e(tree)), sTbd)
+  # conditioning functions
+  sns = (BitVector(), BitVector(), BitVector())
+  snodes! = make_snodes(idf, !iszero(e(tree)), sTbd)
+  snodes!(Ψ, sns)
+  scond, scond0 = make_scond(idf, !iszero(e(tree)), sTbd)
 
   @info "Running constant birth-death with forward simulation"
 
   # adaptive phase
   llc, prc, λc, μc, λtn, μtn,= 
-      mcmc_burn_cbd(Ψ, n, tune_int, λprior, μprior, nburn, 
-        λc, μc, λtni, μtni, scalef, idf, pup, prints, scond)
+      mcmc_burn_cbd(Ψ, n, tune_int, λprior, μprior, nburn, λc, μc, λtni, μtni, 
+        scalef, idf, pup, prints, sns, snodes!, scond, scond0)
 
   # mcmc
-  R, treev = mcmc_cbd(Ψ, llc, prc, λc, μc, λprior, μprior,
-        niter, nthin, λtn, μtn, idf, pup, prints, scond)
+  R, treev = mcmc_cbd(Ψ, llc, prc, λc, μc, λprior, μprior, niter, nthin, 
+    λtn, μtn, idf, pup, prints, sns, snodes!, scond, scond0)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2))
@@ -115,15 +118,18 @@ end
                   λprior  ::Float64,
                   μprior  ::Float64,
                   nburn   ::Int64,
-                  λi      ::Float64,
-                  μi      ::Float64,
+                  λc      ::Float64,
+                  μc      ::Float64,
                   λtni    ::Float64, 
                   μtni    ::Float64, 
                   scalef  ::Function,
                   idf     ::Array{iBffs,1},
                   pup     ::Array{Int64,1}, 
                   prints  ::Int64,
-                  scond   ::Function)
+                  sns     ::NTuple{3, BitVector},
+                  snodes! ::Function,
+                  scond   ::Function,
+                  scond0  ::Function)
 
 Adaptive MCMC phase for da chain for constant birth-death using forward
 simulation.
@@ -134,15 +140,18 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
                        λprior  ::Float64,
                        μprior  ::Float64,
                        nburn   ::Int64,
-                       λi      ::Float64,
-                       μi      ::Float64,
+                       λc      ::Float64,
+                       μc      ::Float64,
                        λtni    ::Float64, 
                        μtni    ::Float64, 
                        scalef  ::Function,
                        idf     ::Array{iBffs,1},
                        pup     ::Array{Int64,1}, 
                        prints  ::Int64,
-                       scond   ::Function)
+                       sns     ::NTuple{3, BitVector},
+                       snodes! ::Function,
+                       scond   ::Function,
+                       scond0  ::Function)
 
   # initialize acceptance log
   ltn = 0
@@ -151,15 +160,14 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
   λtn = λtni
   μtn = μtni
 
-  # length idf
-  el = lastindex(idf)
 
+  el = lastindex(idf)
   L  = treelength(Ψ)     # tree length
   ns = Float64(el-1)/2.0 # number of speciation events
   ne = 0.0               # number of extinction events
 
   # likelihood
-  llc = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
+  llc = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -172,20 +180,24 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
 
       # λ proposal
       if p === 1
-        llc, prc, λc = λu(Ψ, llc, prc, λc, lac, λtn, μc, ns, L, λprior, scond)
+        llc, prc, λc = 
+          update_λ!(Ψ, llc, prc, λc, lac, λtn, μc, ns, L, sns, λprior, scond)
         lup[1] += 1.0
       end
 
       # μ proposal
       if p === 2
-        llc, prc, μc = μu(Ψ, llc, prc, μc, lac, μtn, λc, ne, L, μprior, scond)
+        llc, prc, μc = 
+          update_μ!(Ψ, llc, prc, μc, lac, μtn, λc, ne, L, sns, μprior, scond)
         lup[2] += 1.0
       end
 
       # forward simulation proposal proposal
       if p === 3
         bix = fIrand(el) + 1
-        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
+        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
+                           snodes!, scond0)
+
       end
 
       # log tuning parameters
@@ -226,21 +238,24 @@ end
 
 MCMC da chain for constant birth-death using forward simulation.
 """
-function mcmc_cbd(Ψ     ::Vector{sTbd},
-                  llc   ::Float64,
-                  prc   ::Float64,
-                  λc    ::Float64,
-                  μc    ::Float64,
-                  λprior::Float64,
-                  μprior::Float64,
-                  niter ::Int64,
-                  nthin ::Int64,
-                  λtn   ::Float64,
-                  μtn   ::Float64, 
-                  idf   ::Array{iBffs,1},
-                  pup   ::Array{Int64,1}, 
-                  prints::Int64,
-                  scond ::Function)
+function mcmc_cbd(Ψ      ::Vector{sTbd},
+                  llc    ::Float64,
+                  prc    ::Float64,
+                  λc     ::Float64,
+                  μc     ::Float64,
+                  λprior ::Float64,
+                  μprior ::Float64,
+                  niter  ::Int64,
+                  nthin  ::Int64,
+                  λtn    ::Float64,
+                  μtn    ::Float64, 
+                  idf    ::Array{iBffs,1},
+                  pup    ::Array{Int64,1}, 
+                  prints ::Int64,
+                  sns    ::NTuple{3, BitVector},
+                  snodes!::Function,
+                  scond  ::Function,
+                  scond0 ::Function)
 
   el = lastindex(idf)
   ns = Float64(nnodesinternal(Ψ))
@@ -267,9 +282,10 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
 
       # λ proposal
       if p === 1
-        llc, prc, λc = λu(Ψ, llc, prc, λc, λtn, μc, ns, L, λprior, scond)
+        llc, prc, λc = 
+          update_λ!(Ψ, llc, prc, λc, λtn, μc, ns, L, sns, λprior, scond)
 
-        # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
+        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
         #    return 
@@ -278,9 +294,10 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
 
       # μ proposal
       if p === 2
-        llc, prc, μc = μu(Ψ, llc, prc, μc, μtn, λc, ne, L, μprior, scond)
+        llc, prc, μc = 
+          update_μ!(Ψ, llc, prc, μc, μtn, λc, ne, L, sns, μprior, scond)
 
-        # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
+        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
         #    return 
@@ -290,9 +307,10 @@ function mcmc_cbd(Ψ     ::Vector{sTbd},
       # forward simulation proposal proposal
       if p === 3
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, scond)
+        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
+                           snodes!, scond0)
 
-        # llci = llik_cbd(Ψ, idf, λc, μc, scond) + prob_ρ(idf)
+        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, i, p
         #    return 
@@ -340,16 +358,18 @@ end
 
 Forward simulation proposal function for constant birth-death.
 """
-function update_fs!(bix  ::Int64,
-                    Ψ    ::Vector{sTbd},
-                    idf  ::Vector{iBffs},
-                    llc  ::Float64,
-                    λ    ::Float64, 
-                    μ    ::Float64,
-                    ns   ::Float64,
-                    ne   ::Float64,
-                    L    ::Float64,
-                    scond::Function)
+function update_fs!(bix    ::Int64,
+                    Ψ      ::Vector{sTbd},
+                    idf    ::Vector{iBffs},
+                    llc    ::Float64,
+                    λ      ::Float64, 
+                    μ      ::Float64,
+                    ns     ::Float64,
+                    ne     ::Float64,
+                    L      ::Float64,
+                    sns    ::NTuple{3, BitVector},
+                    snodes!::Function,
+                    scond0 ::Function)
 
   bi = idf[bix]
 
@@ -357,11 +377,11 @@ function update_fs!(bix  ::Int64,
   ψp, np, ntp = fsbi(bi, λ, μ, 500)
 
   itb = it(bi) # is it terminal
-  ρbi = ρi(bi)         # get branch sampling fraction
-  nc  = ni(bi)         # current ni
-  ntc = nt(bi)         # current nt
+  ρbi = ρi(bi) # get branch sampling fraction
+  nc  = ni(bi) # current ni
+  ntc = nt(bi) # current nt
 
-  if ntp > 0
+  if np > 0
 
     # current tree
     ψc  = Ψ[bix]
@@ -369,15 +389,26 @@ function update_fs!(bix  ::Int64,
     # if terminal branch
     if itb
       llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr = 0.0
+      acr = llr
     else
       np  -= 1
       llr = log((1.0 - ρbi)^(np - nc))
-      acr = log(Float64(ntp)/Float64(ntc))
+      acr = llr + log(Float64(ntp)/Float64(ntc))
+    end
+
+    lls = 0.0
+    # if stem conditioned
+    if iszero(pa(bi)) && e(bi) > 0.0
+        lls += scond0(ψp, λ, μ) - scond0(ψc, λ, μ)
+    end
+
+    # if crown conditioned
+    if isone(pa(bi)) && iszero(e(Ψ[1]))
+        lls += scond0(ψp, λ, μ, itb) - scond0(ψc, λ, μ, itb) 
     end
 
     # MH ratio
-    if -randexp() < llr + acr
+    if -randexp() < acr + lls
 
       # update ns, ne & L
       ns += Float64(nnodesinternal(ψp) - nnodesinternal(ψc))
@@ -385,18 +416,11 @@ function update_fs!(bix  ::Int64,
       L  += treelength(ψp) - treelength(ψc)
 
       # likelihood ratio
-      llr += llik_cbd(ψp, λ, μ) - llik_cbd(ψc, λ, μ)
+      llr += llik_cbd(ψp, λ, μ) - llik_cbd(ψc, λ, μ) + lls
 
-      # if conditioning branch
-      if pa(bi) < 2
-        llr -= scond(Ψ, λ, μ)
-        Ψ[bix] = ψp
-        llr += scond(Ψ, λ, μ)
-      else
-        Ψ[bix] = ψp
-      end
-
+      Ψ[bix] = ψp     # set new decoupled tree
       llc += llr      # set new likelihood
+      snodes!(Ψ, sns) # set new sns
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
     end
@@ -485,36 +509,38 @@ end
 
 
 """
-    λu(psi   ::Vector{sTbd}
-       llc   ::Float64,
-       prc   ::Float64,
-       λc    ::Float64,
-       lac   ::Array{Float64,1},
-       λtn   ::Float64,
-       μc    ::Float64,
-       ns    ::Float64,
-       L     ::Float64,
-       λprior::Float64,
-       scond ::Function)
+    update_λ!(psi   ::Vector{sTbd},
+              llc   ::Float64,
+              prc   ::Float64,
+              λc    ::Float64,
+              lac   ::Array{Float64,1},
+              λtn   ::Float64,
+              μc    ::Float64,
+              ns    ::Float64,
+              L     ::Float64,
+              sns   ::NTuple{3,BitVector},
+              λprior::Float64,
+              scond ::Function)
 
 `λ` proposal function for constant birth-death in adaptive phase.
 """
-function λu(psi   ::Vector{sTbd},
-            llc   ::Float64,
-            prc   ::Float64,
-            λc    ::Float64,
-            lac   ::Array{Float64,1},
-            λtn   ::Float64,
-            μc    ::Float64,
-            ns    ::Float64,
-            L     ::Float64,
-            λprior::Float64,
-            scond ::Function)
+function update_λ!(psi   ::Vector{sTbd},
+                   llc   ::Float64,
+                   prc   ::Float64,
+                   λc    ::Float64,
+                   lac   ::Array{Float64,1},
+                   λtn   ::Float64,
+                   μc    ::Float64,
+                   ns    ::Float64,
+                   L     ::Float64,
+                   sns   ::NTuple{3,BitVector},
+                   λprior::Float64,
+                   scond ::Function)
 
     λp = mulupt(λc, λtn)::Float64
 
     λr  = log(λp/λc)
-    llr = ns*λr + L*(λc - λp) + scond(psi, λp, μc) - scond(psi, λc, μc)
+    llr = ns*λr + L*(λc - λp) + scond(λp, μc, sns) - scond(λc, μc, sns)
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llr + prr + λr)
@@ -531,7 +557,7 @@ end
 
 
 """
-    λu(psi   ::Vector{sTbd},
+    update_λ!(psi   ::Vector{sTbd},
        llc   ::Float64,
        prc   ::Float64,
        λc    ::Float64,
@@ -539,26 +565,28 @@ end
        μc    ::Float64,
        ns    ::Float64,
        L     ::Float64,
+       sns   ::NTuple{3,BitVector},
        λprior::Float64,
        scond ::Function)
 
 `λ` proposal function for constant birth-death.
 """
-function λu(psi   ::Vector{sTbd},
-            llc   ::Float64,
-            prc   ::Float64,
-            λc    ::Float64,
-            λtn   ::Float64,
-            μc    ::Float64,
-            ns    ::Float64,
-            L     ::Float64,
-            λprior::Float64,
-            scond ::Function)
+function update_λ!(psi   ::Vector{sTbd},
+                   llc   ::Float64,
+                   prc   ::Float64,
+                   λc    ::Float64,
+                   λtn   ::Float64,
+                   μc    ::Float64,
+                   ns    ::Float64,
+                   L     ::Float64,
+                   sns   ::NTuple{3,BitVector},
+                   λprior::Float64,
+                   scond ::Function)
 
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
     λr  = log(λp/λc)
-    llr = ns*λr + L*(λc - λp) + scond(psi, λp, μc) - scond(psi, λc, μc)
+    llr = ns*λr + L*(λc - λp) + scond(λp, μc, sns) - scond(λc, μc, sns)
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llr + prr + λr)
@@ -574,36 +602,38 @@ end
 
 
 """
-    μu(psi   ::Vector{sTbd},
-       llc   ::Float64,
-       prc   ::Float64,
-       μc    ::Float64,
-       lac   ::Array{Float64,1},
-       μtn   ::Float64,
-       λc    ::Float64,
-       ne    ::Float64,
-       L     ::Float64,
-       μprior::Float64,
-       scond ::Function)
+    update_μ!(psi   ::Vector{sTbd},
+              llc   ::Float64,
+              prc   ::Float64,
+              μc    ::Float64,
+              lac   ::Array{Float64,1},
+              μtn   ::Float64,
+              λc    ::Float64,
+              ne    ::Float64,
+              L     ::Float64,
+              sns   ::NTuple{3,BitVector},
+              μprior::Float64,
+              scond ::Function)
 
 `μ` proposal function for constant birth-death in adaptive phase.
 """
-function μu(psi   ::Vector{sTbd},
-            llc   ::Float64,
-            prc   ::Float64,
-            μc    ::Float64,
-            lac   ::Array{Float64,1},
-            μtn   ::Float64,
-            λc    ::Float64,
-            ne    ::Float64,
-            L     ::Float64,
-            μprior::Float64,
-            scond ::Function)
+function update_μ!(psi   ::Vector{sTbd},
+                   llc   ::Float64,
+                   prc   ::Float64,
+                   μc    ::Float64,
+                   lac   ::Array{Float64,1},
+                   μtn   ::Float64,
+                   λc    ::Float64,
+                   ne    ::Float64,
+                   L     ::Float64,
+                   sns   ::NTuple{3,BitVector},
+                   μprior::Float64,
+                   scond ::Function)
 
     μp = mulupt(μc, μtn)::Float64
 
     μr   = log(μp/μc)
-    llr  = ne*μr + L*(μc - μp) + scond(psi, λc, μp) - scond(psi, λc, μc)
+    llr  = ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
     prr  = llrdexp_x(μp, μc, μprior)
 
     if -randexp() < (llr + prr + μr)
@@ -620,34 +650,36 @@ end
 
 
 """
-    μu(psi   ::Vector{sTbd},
-       llc   ::Float64,
-       prc   ::Float64,
-       μc    ::Float64,
-       μtn   ::Float64,
-       λc    ::Float64,
-       ne    ::Float64,
-       L     ::Float64,
-       μprior::Float64,
-       scond ::Function)
+    update_μ!(psi   ::Vector{sTbd},
+              llc   ::Float64,
+              prc   ::Float64,
+              μc    ::Float64,
+              μtn   ::Float64,
+              λc    ::Float64,
+              ne    ::Float64,
+              L     ::Float64,
+              sns   ::NTuple{3,BitVector},
+              μprior::Float64,
+              scond ::Function)
 
 `μ` proposal function for constant birth-death.
 """
-function μu(psi   ::Vector{sTbd},
-            llc   ::Float64,
-            prc   ::Float64,
-            μc    ::Float64,
-            μtn   ::Float64,
-            λc    ::Float64,
-            ne    ::Float64,
-            L     ::Float64,
-            μprior::Float64,
-            scond ::Function)
+function update_μ!(psi   ::Vector{sTbd},
+                   llc   ::Float64,
+                   prc   ::Float64,
+                   μc    ::Float64,
+                   μtn   ::Float64,
+                   λc    ::Float64,
+                   ne    ::Float64,
+                   L     ::Float64,
+                   sns   ::NTuple{3,BitVector},
+                   μprior::Float64,
+                   scond ::Function)
 
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
     μr   = log(μp/μc)
-    llr  = ne*μr + L*(μc - μp) + scond(psi, λc, μp) - scond(psi, λc, μc)
+    llr  = ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
     prr  = llrdexp_x(μp, μc, μprior)
 
     if -randexp() < (llr + prr + μr)

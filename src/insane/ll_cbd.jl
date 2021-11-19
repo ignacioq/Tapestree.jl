@@ -186,24 +186,22 @@ end
     llik_cbd(psi::Vector{sTbd}, 
              idf::Vector{iBffs},
              λ   ::Float64, 
-             μ   ::Float64, 
-             scond::Function)
+             μ   ::Float64)
 
 Log-likelihood up to a constant for constant birth-death 
 given a complete `iTree` for edge trees.
 """
-function llik_cbd(psi::Vector{sTbd}, 
-                  idf::Vector{iBffs},
-                  λ   ::Float64, 
-                  μ   ::Float64, 
-                  scond::Function)
+function llik_cbd(psi ::Vector{sTbd}, 
+                  idf ::Vector{iBffs},
+                  λ    ::Float64, 
+                  μ    ::Float64)
 
   ll = 0.0
   for ψ in psi
     ll += llik_cbd(ψ, λ, μ)
   end
 
-  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ) + scond(psi, λ, μ)
+  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ)
 
   return ll
 end
@@ -212,54 +210,50 @@ end
 
 
 """
-    make_cond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
+    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
 
-Make closure for conditioning function
+Return closure for log-likelihood for conditioning
 """
-function make_cond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
+function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
 
-  # conditioning
+  b1  = idf[1]
+  d1i = d1(b1)
+  d2i = d2(b1)
+
   if stem
-    function f(psi::Vector{sTbd}, λ::Float64, μ::Float64)
-      cond_surv_stem_p(psi[1], λ, μ)
-    end
+    # for whole likelihood
+    f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
+          cond_ll(λ, μ, sns[1])
+    # for new proposal
+    f0 = (psi::sTbd, λ::Float64, μ::Float64) -> cond_surv_stem_p(psi, λ, μ)
   else
-    b1  = idf[1]
-    d1i = d1(b1)
-    d2i = d2(b1)
-    t1  = it(idf[d1i])
-    t2  = it(idf[d2i])
-
-    if t1 
-      if t2
-        f = let d1i = d1i, d2i = d2i
-          (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
-            cond_surv_stem(psi[d1i], λ, μ) + 
-            cond_surv_stem(psi[d2i], λ, μ) + log((λ + μ)/λ)
-        end
+    # for whole likelihood
+    f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
+          cond_ll(λ, μ, sns[2]) + cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
+    # for new proposal
+    f0 = function (psi::sTbd, λ::Float64, μ::Float64, ter::Bool)
+      if ter
+        cond_surv_stem(  psi, λ, μ)
       else
-        f = let d1i = d1i, d2i = d2i
-          (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
-          cond_surv_stem(  psi[d1i], λ, μ) + 
-          cond_surv_stem_p(psi[d2i], λ, μ) + log((λ + μ)/λ)
-        end 
-      end
-    elseif t2
-      f = let d1i = d1i, d2i = d2i
-        (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
-        cond_surv_stem_p(psi[d1i], λ, μ) + 
-        cond_surv_stem(  psi[d2i], λ, μ) + log((λ + μ)/λ)
-      end
-    else
-      f = let d1i = d1i, d2i = d2i
-        (psi::Vector{sTbd}, λ::Float64, μ::Float64) ->
-        cond_surv_stem_p(psi[d1i], λ, μ) + 
-        cond_surv_stem_p(psi[d2i], λ, μ) + log((λ + μ)/λ)
+        cond_surv_stem_p(psi, λ, μ)
       end
     end
   end
 
-  return f
+  return f, f0
 end
+
+
+
+
+"""
+    cond_ll(λ::Float64, μ::Float64, sn::BitVector)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+cond_ll(λ::Float64, μ::Float64, sn::BitVector) =
+  Float64(sum(sn)) * log((λ + μ)/λ)
+
 
 

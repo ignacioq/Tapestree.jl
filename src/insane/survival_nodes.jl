@@ -118,7 +118,6 @@ function make_snodes(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTre
             empty!(sns[3])
             sum_alone_stem!(  psi[d1i], 0.0, sns[2])
             sum_alone_stem_p!(psi[d2i], 0.0, sns[3])
-            log(exp(λi) + μ) - λi
           end
         end 
       end
