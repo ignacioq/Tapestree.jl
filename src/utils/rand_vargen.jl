@@ -9,6 +9,29 @@ Created 08 06 2021
 =#
 
 
+
+"""
+    sample(items::Vector{Int64}, weights::Vector{Float64})
+
+Sample from `items` using weights.
+"""
+function sample(items::Vector{Int64}, weights::Vector{Float64})
+  U  = rand()
+  s  = sum(weights)
+  ss = 0.0
+  @inbounds begin
+    for i in Base.OneTo(lastindex(weights))
+      ss += weights[i]/s
+      if ss > U
+        return items[i]
+      end
+    end
+  end
+end
+
+
+
+
 """
   randinvgamma(α::Float64, β::Float64)
 
