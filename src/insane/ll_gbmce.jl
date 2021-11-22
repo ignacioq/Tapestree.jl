@@ -280,7 +280,7 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmce})
       end
     end
     # for new proposal
-    f0 = (psi::iTgbmce, μ::Float64) -> 
+    f0 = (psi::iTgbmce, μ::Float64, ter::Bool) -> 
             sum_alone_stem_p(psi, 0.0, false, 0.0, μ)
   else
     # for whole likelihood
@@ -289,11 +289,9 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmce})
 
         sn2 = sns[2]
         sn3 = sns[3]
-        λi = lλ(psi[1])[1]
 
         cond_ll(psi[d1i], 0.0, μ, sn2, lastindex(sn2), 1) +
-        cond_ll(psi[d2i], 0.0, μ, sn3, lastindex(sn3), 1) +
-        log(exp(λi) + μ) - λi
+        cond_ll(psi[d2i], 0.0, μ, sn3, lastindex(sn3), 1) - lλ(psi[1])[1]
       end
     end
     # for new proposal

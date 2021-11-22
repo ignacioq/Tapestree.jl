@@ -89,13 +89,13 @@ Do gbm update for stem root.
 function _stem_update!(ψi   ::iTgbmce, 
                        α    ::Float64,
                        σλ   ::Float64,
+                       μ    ::Float64,
                        llc  ::Float64,
                        dλ   ::Float64,
                        ssλ  ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       lλxpr::Float64,
-                       scond::Function)
+                       lλxpr::Float64)
 
   @inbounds begin
     λc   = lλ(ψi)
@@ -114,7 +114,7 @@ function _stem_update!(ψi   ::iTgbmce,
     end
 
     # simulate fix tree vector
-    bb!(λp, λr, λn, σλ, δt, fdt, srδt)
+    bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
@@ -197,7 +197,7 @@ function _crown_update!(ψi   ::iTgbmce,
     llrbm2, llrpb2, ssrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr = llrpb1 + llrpb2 + log((exp(λr) + μ)/(exp(λi) + μ))
+    acr = llrpb1 + llrpb2
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr
@@ -442,7 +442,7 @@ function update_triad!(λpc ::Vector{Float64},
       lls += log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
     end
 
-    if -randexp() < acr + lls
+    if -randexp() < acr #+ lls
       llc += llr + lls
       dλ  += (λ1c[1] - λn)
       ssλ += ssrλ

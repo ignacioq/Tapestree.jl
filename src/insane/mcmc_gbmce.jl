@@ -549,7 +549,7 @@ function update_fs!(bix    ::Int64,
       end
 
       # update llr, ssλ, nλ, sns, ne, L,
-      llr += ll1  - ll0 + lls
+      llr += ll1  - ll0
       dλ  += dλ1  - dλ0  + drλ
       ssλ += ssλ1 - ssλ0 + ssrλ
       nλ  += nλ1  - nλ0
@@ -719,7 +719,7 @@ function fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
       end
     end
   else
-    λf   = lλ(tree)[end]
+    λf = lλ(tree)[end]
   end
 
   return λf
@@ -814,7 +814,8 @@ function update_gbm!(bix  ::Int64,
     else
       # if stem branch
       if iszero(pa(bi))
-        llc, dλ, ssλ = _stem_update!(ψi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, lλxpr)
+        llc, dλ, ssλ = 
+          _stem_update!(ψi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, lλxpr)
 
         # updates within the stem branch in stem conditioning
         llc, dλ, ssλ = 

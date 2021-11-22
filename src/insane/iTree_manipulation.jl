@@ -861,8 +861,6 @@ end
 
 
 
-
-
 """
     remove_unsampled!(tree::iTgbmce)
 

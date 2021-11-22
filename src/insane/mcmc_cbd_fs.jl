@@ -396,19 +396,13 @@ function update_fs!(bix    ::Int64,
       acr = llr + log(Float64(ntp)/Float64(ntc))
     end
 
-    lls = 0.0
-    # if stem conditioned
-    if iszero(pa(bi)) && e(bi) > 0.0
-        lls += scond0(ψp, λ, μ) - scond0(ψc, λ, μ)
-    end
-
-    # if crown conditioned
-    if isone(pa(bi)) && iszero(e(Ψ[1]))
-        lls += scond0(ψp, λ, μ, itb) - scond0(ψc, λ, μ, itb) 
-    end
-
     # MH ratio
-    if -randexp() < acr + lls
+    if -randexp() < acr
+
+      # if stem conditioned
+      if (iszero(pa(bi)) && e(bi) > 0.0) || (isone(pa(bi)) && iszero(e(Ψ[1])))
+          llr += scond0(ψp, λ, μ, itb) - scond0(ψc, λ, μ, itb)
+      end
 
       # update ns, ne & L
       ns += Float64(nnodesinternal(ψp) - nnodesinternal(ψc))
@@ -416,7 +410,7 @@ function update_fs!(bix    ::Int64,
       L  += treelength(ψp) - treelength(ψc)
 
       # likelihood ratio
-      llr += llik_cbd(ψp, λ, μ) - llik_cbd(ψc, λ, μ) + lls
+      llr += llik_cbd(ψp, λ, μ) - llik_cbd(ψc, λ, μ)
 
       Ψ[bix] = ψp     # set new decoupled tree
       llc += llr      # set new likelihood
