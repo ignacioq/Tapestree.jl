@@ -164,6 +164,25 @@ end
 
 
 
+
+"""
+    _ctl(tree::Vector{T}) where {T <: iTgbm}
+
+Return the branch length sum of `tree` based on `δt` and `fδt` 
+for debugging purposes.
+"""
+function _ctl(tree::Vector{T}) where {T <: iTgbm}
+
+  L = 0.0
+  for ψ in psi
+    L += _ctl(ψ, 0.0)
+  end
+  return L
+end
+
+
+
+
 """
     nnodesinternal(psi::Vector{T}) where {T<: iTree}
 

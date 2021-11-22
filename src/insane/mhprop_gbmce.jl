@@ -165,6 +165,7 @@ function _crown_update!(ψi   ::iTgbmce,
 
   @inbounds begin
     λpc  = lλ(ψi)
+    λi   = λpc[1]
     λ1c  = lλ(ψ1)
     λ2c  = lλ(ψ2)
     l1   = lastindex(λ1c)
@@ -196,11 +197,11 @@ function _crown_update!(ψi   ::iTgbmce,
     llrbm2, llrpb2, ssrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr = llrpb1 + llrpb2
+    acr = llrpb1 + llrpb2 + log((exp(λr) + μ)/(exp(λi) + μ))
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr
-      dλ  += 2.0*(λ1c[1] - λr)
+      dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       fill!(λpc, λr)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)

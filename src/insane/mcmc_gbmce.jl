@@ -140,10 +140,6 @@ end
 
 
 
-# function checkΨ(Ψ::Vector{iTgbmce})
-# end
-
-
 
 """
     mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
@@ -536,9 +532,10 @@ function update_fs!(bix    ::Int64,
         llr += llrd
         acr += acrd
       else
-        acr = -Inf
+        return llc, dλ, ssλ, nλ, ne, L
       end
     end
+
 
     # MH ratio
     if -randexp() < acr
@@ -546,18 +543,13 @@ function update_fs!(bix    ::Int64,
       ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ψp, α, σλ, μ, δt, srδt)
       ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, μ, δt, srδt)
 
-      # if stem conditioned
-      if iszero(pa(bi)) && e(bi) > 0.0
+      # if stem or crown conditioned
+      if (iszero(pa(bi)) && e(bi) > 0.0) || (isone(pa(bi)) && iszero(e(Ψ[1])))
           llr += scond0(ψp, μ, false) - scond0(ψc, μ, false)
       end
 
-      # if crown conditioned
-      if isone(pa(bi)) && iszero(e(Ψ[1]))
-          llr += scond0(ψp, μ, itb) - scond0(ψc, μ, itb) 
-      end
-
       # update llr, ssλ, nλ, sns, ne, L,
-      llr += ll1  - ll0
+      llr += ll1  - ll0 + lls
       dλ  += dλ1  - dλ0  + drλ
       ssλ += ssλ1 - ssλ0 + ssrλ
       nλ  += nλ1  - nλ0
@@ -783,7 +775,7 @@ end
                 srδt ::Float64,
                 lλxpr::Float64)
 
-Make a `gbm` update for an interna branch and its descendants.
+Make a `gbm` update for an internal branch and its descendants.
 """
 function update_gbm!(bix  ::Int64,
                      Ψ    ::Vector{iTgbmce},
