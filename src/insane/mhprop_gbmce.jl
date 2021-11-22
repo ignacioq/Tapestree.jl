@@ -62,8 +62,6 @@ function _daughters_update!(ψ1  ::iTgbmce,
 
     acr  = llrpb1 + llrpb2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
-    # acr  = llrbm1 + llrbm2 + llrpb1 + llrpb2 + λf - λi
-    # llr  = acr
     acr += normprop
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
