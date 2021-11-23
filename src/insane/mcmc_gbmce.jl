@@ -536,7 +536,6 @@ function update_fs!(bix    ::Int64,
       end
     end
 
-
     # MH ratio
     if -randexp() < acr
 
@@ -544,8 +543,10 @@ function update_fs!(bix    ::Int64,
       ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, μ, δt, srδt)
 
       # if stem or crown conditioned
-      if (iszero(pa(bi)) && e(bi) > 0.0) || (isone(pa(bi)) && iszero(e(Ψ[1])))
-          llr += scond0(ψp, μ, false) - scond0(ψc, μ, false)
+      scn = (iszero(pa(bi)) && e(bi) > 0.0) || 
+             (isone(pa(bi)) && iszero(e(Ψ[1])))
+      if scn
+        llr += scond0(ψp, μ, itb) - scond0(ψc, μ, itb)
       end
 
       # update llr, ssλ, nλ, sns, ne, L,
@@ -558,7 +559,9 @@ function update_fs!(bix    ::Int64,
 
       Ψ[bix] = ψp          # set new tree
       llc += llr           # set new likelihood
-      snodes!(Ψ, sns)      # set new sns
+      if scn
+        snodes!(Ψ, sns)    # set new sns
+      end
       setni!(bi, np)       # set new ni
       setnt!(bi, ntp)      # set new nt
       setλt!(bi, λf)       # set new λt
