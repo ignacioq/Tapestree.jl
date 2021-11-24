@@ -928,6 +928,64 @@ end
 
 
 """
+    remove_extinct!(tree::iTgbmct)
+
+Remove extinct tips from `iTgbmct`.
+"""
+function remove_extinct!(tree::iTgbmct)
+
+  if isdefined(tree, :d1)
+
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return iTgbmct(e(tree), dt(tree), fdt(tree), 
+          true, isfix(tree), lλ(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lλ2 = lλ(tree.d2)
+
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        iszero(fdt2) && popfirst!(lλ2)
+        prepend!(lλ2, lλ0) 
+        fdt0 = fdt(tree) + fdt2
+        if fdt0 > dt(tree) 
+          fdt0 -= dt(tree) 
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0) 
+      end
+    elseif isextinct(tree.d2)
+      ne  = e(tree) + e(tree.d1)
+      lλ0 = lλ(tree)
+      lλ1 = lλ(tree.d1)
+
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      iszero(fdt1) && popfirst!(lλ1)
+      prepend!(lλ1, lλ0) 
+      fdt0 = fdt(tree) + fdt1
+      if fdt0 > dt(tree) 
+        fdt0 -= dt(tree) 
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0) 
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
     remove_unsampled!(tree::iTgbmce)
 
 Remove extinct tips from `iTgbmce`.
