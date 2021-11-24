@@ -118,14 +118,14 @@ function insane_gbmct(tree    ::sT_label,
   # burn-in phase
   Ψ, idf, llc, prc, αc, σλc, ϵc, ϵtn, sns =
     mcmc_burn_gbmct(Ψ, idf, λa_prior, α_prior, σλ_prior, ϵ_prior, 
-      nburn, tune_int, αi, σλi, ϵc, ϵtni, δt, srδt, indoes, pup,
+      nburn, tune_int, αi, σλi, ϵc, ϵtni, sns, δt, srδt, inodes, pup,
        prints, scalef, snodes!, scond, scond0)
 
   # mcmc
   R, Ψv = 
-    mcmc_gbmct(Ψp, Ψc, llc, prc, αc, σλc, ϵc, ϵtn,
+    mcmc_gbmct(Ψ, idf, llc, prc, αc, σλc, ϵc, ϵtn, sns,
       λa_prior, α_prior, σλ_prior, ϵ_prior, niter, nthin, δt, srδt, 
-      idf, pup, nlim, prints, svf)
+      inodes, pup, prints, snodes!, scond, scond0)
 
   pardic = Dict(("lambda_root"   => 1,
                  "alpha"        => 2,
@@ -141,8 +141,8 @@ end
 
 
 """
-    mcmc_burn_gbmct(Ψp      ::iTgbmct,
-                    Ψc      ::iTgbmct,
+    mcmc_burn_gbmct(Ψ       ::Vector{iTgbmct},
+                    idf     ::Vector{iBffs},
                     λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
@@ -153,14 +153,16 @@ end
                     σλc     ::Float64,
                     ϵc      ::Float64,
                     ϵtn     ::Float64,
+                    sns     ::NTuple{3,BitVector},
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idf     ::Array{iBffs,1},
-                    pup     ::Array{Int64,1},
-                    nlim    ::Int64,
+                    inodes  ::Vector{Int64},
+                    pup     ::Vector{Int64},
                     prints  ::Int64,
                     scalef  ::Function,
-                    svf     ::Function)
+                    snodes! ::Function,
+                    scond   ::Function,
+                    scond0  ::Function)
 
 MCMC burn-in chain for `gbmct`.
 """
@@ -270,21 +272,22 @@ function mcmc_burn_gbmct(Ψ       ::Vector{iTgbmct},
     next!(pbar)
   end
 
-  return Ψp, Ψc, llc, prc, αc, σλc, ϵc, ϵtn
+  return Ψ, idf, llc, prc, αc, σλc, ϵc, ϵtn, sns
 end
 
 
 
 
 """
-     mcmc_gbmct(Ψp      ::iTgbmct,
-                Ψc      ::iTgbmct,
+     mcmc_gbmce(Ψ       ::Vector{iTgbmct},
+                idf     ::Vector{iBffs},
                 llc     ::Float64,
                 prc     ::Float64,
                 αc      ::Float64,
                 σλc     ::Float64,
                 ϵc      ::Float64,
                 ϵtn     ::Float64,
+                sns     ::NTuple{3,BitVector},
                 λa_prior::NTuple{2,Float64},
                 α_prior ::NTuple{2,Float64},
                 σλ_prior::NTuple{2,Float64},
@@ -293,22 +296,24 @@ end
                 nthin   ::Int64,
                 δt      ::Float64,
                 srδt    ::Float64,
-                idf     ::Array{iBffs,1},
+                inodes  ::Array{Int64,1},
                 pup     ::Array{Int64,1},
-                nlim    ::Int64,
                 prints  ::Int64,
-                svf     ::Function)
+                snodes! ::Function,
+                scond   ::Function,
+                scond0  ::Function)
 
 MCMC chain for `gbmct`.
 """
-function mcmc_gbmct(Ψp      ::iTgbmct,
-                    Ψc      ::iTgbmct,
+function mcmc_gbmct(Ψ       ::Vector{iTgbmct},
+                    idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
                     αc      ::Float64,
                     σλc     ::Float64,
                     ϵc      ::Float64,
                     ϵtn     ::Float64,
+                    sns     ::NTuple{3,BitVector},
                     λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
@@ -317,11 +322,12 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
                     nthin   ::Int64,
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idf     ::Array{iBffs,1},
+                    inodes  ::Array{Int64,1},
                     pup     ::Array{Int64,1},
-                    nlim    ::Int64,
                     prints  ::Int64,
-                    svf     ::Function)
+                    snodes! ::Function,
+                    scond   ::Function,
+                    scond0  ::Function)
 
   # logging
   nlogs = fld(niter,nthin)
@@ -362,31 +368,31 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       elseif pupi === 2
 
         llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       elseif pupi === 3
 
-        llc, ϵc, lac = update_ϵ!(Ψ, llc, ϵc, ϵtn, lac, ne, Σλ, sns, ϵxpr, scond)
+        llc, ϵc = update_ϵ!(Ψ, llc, ϵc, ϵtn, ne, Σλ, sns, ϵxpr, scond)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       # gbm update
       elseif pupi === 4
@@ -398,11 +404,11 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
           update_gbm!(bix, Ψ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, δt, 
             srδt, lλxpr)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       # forward simulation update
       else
@@ -413,11 +419,11 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
           update_fs!(bix, Ψ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, nλ, ne, L, 
             sns, δt, srδt, snodes!, scond0)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + scond(Ψ, ϵc, sns) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       end
 
@@ -431,11 +437,11 @@ function mcmc_gbmct(Ψp      ::iTgbmct,
         R[lit,1] = Float64(lit)
         R[lit,2] = llc
         R[lit,3] = prc
-        R[lit,4] = exp(lλ(Ψc)[1])
+        R[lit,4] = exp(lλ(Ψ[1])[1])
         R[lit,5] = αc
         R[lit,6] = σλc
         R[lit,7] = ϵc
-        push!(Ψv, deepcopy(Ψc))
+        push!(Ψv, couple(deepcopy(Ψ), idf, 1))
       end
       lthin = 0
     end
