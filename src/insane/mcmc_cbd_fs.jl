@@ -69,7 +69,7 @@ function insane_cbd_fs(tree    ::sT_label,
     λc, μc = λi, μi
   end
 
-  # make an edges tree and fix it
+  # make a decoupled tree and fix it
   Ψ = make_Ψ(idf, sTbd)
 
   # make parameter updates scaling function for tuning

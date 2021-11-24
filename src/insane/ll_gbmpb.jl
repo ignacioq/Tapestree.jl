@@ -299,26 +299,6 @@ end
 
 
 """
-    sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
-
-Returns the standardized sum of squares a `iTgbm` according 
-to GBM birth-death for a `σ` proposal.
-"""
-function sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
-
-  n   = 0.0
-  ssλ = 0.0
-  for ψi in psi
-    ssλ, n = _sss_gbm(ψi, α, ssλ, n)
-  end
-
-  return ssλ, n
-end
-
-
-
-
-"""
     sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64)
 
 Returns the standardized sum of squares a `iTgbm` according 

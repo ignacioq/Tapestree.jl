@@ -216,8 +216,6 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
 
     llbm = 0.0
     llbd = 0.0
-    ssλ  = 0.0
-    nλ   = Float64(nI)
     lλvi = lλv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
@@ -228,6 +226,7 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
 
     # standardized sum of squares
     ssλ  = llbm/(2.0*δt)
+    nλ   = Float64(nI)
 
     # add to global likelihood
     ll    = llbm * 

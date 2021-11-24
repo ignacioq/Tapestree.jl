@@ -12,7 +12,6 @@ Created 03 09 2020
 
 
 
-
 """
     insane_gbmce(tree    ::sT_label, 
                  out_file::String;
@@ -34,7 +33,8 @@ Created 03 09 2020
                  pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
                  nlim    ::Int64             = 500,
                  δt      ::Float64           = 1e-2,
-                 prints  ::Int64             = 5)
+                 prints  ::Int64             = 5,
+                 tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for GBM birth-death.
 """
@@ -83,7 +83,7 @@ function insane_gbmce(tree    ::sT_label,
     λc, μc = λi, μi
   end
 
-  # make an edges tree
+  # make a decoupled tree
   Ψ = iTgbmce[]
   iTgbmce!(Ψ, tree, δt, srδt, log(λc), αi, σλi)
 
@@ -507,11 +507,8 @@ function update_fs!(bix    ::Int64,
   # forward simulate an internal branch
   ψp, np, ntp, λf = fsbi_ce(bi, lλ(ψc)[1], α, σλ, μ, δt, srδt)
 
+  # check for survival or non-exploding simulation
   if np > 0
-    # check for non-exploding simulation
-    if np >= 1000
-      return llc, dλ, ssλ, nλ, ne, L
-    end
 
     # if terminal branch
     if itb
@@ -604,7 +601,7 @@ function fsbi_ce(bi  ::iBffs,
   t0, na, nsp = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
   if nsp >= 1_000
-    return iTgbmce(), 1_000, 0, 0.0
+    return iTgbmce(), 0, 0, 0.0
   end
 
   nat = na
@@ -695,70 +692,6 @@ function tip_sims!(tree::iTgbmce,
   return tree, na
 end
 
-
-
-
-"""
-    fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
-
-Fixes the the path for a random non extinct tip and returns final `λ(t)`.
-"""
-function fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
-
-  fix!(tree)
-
-  if isdefined(tree, :d1)
-    if isextinct(tree.d1)
-      λf = fixrtip!(tree.d2, na, λf)
-    elseif isextinct(tree.d2)
-      λf = fixrtip!(tree.d1, na, λf)
-    else
-      na1 = ntipsalive(tree.d1)
-      # probability proportional to number of lineages
-      if (fIrand(na) + 1) > na1
-        λf = fixrtip!(tree.d2, na - na1, λf)
-      else
-        λf = fixrtip!(tree.d1, na1,      λf)
-      end
-    end
-  else
-    λf = lλ(tree)[end]
-  end
-
-  return λf
-end
-
-
-
-
-"""
-    fixalive!(tree::T, λf::Float64) where {T <:iTgbm}  
-
-Fixes the the path from root to the only species alive.
-"""
-function fixalive!(tree::T, λf::Float64) where {T <:iTgbm} 
-
-  if istip(tree) 
-    if isalive(tree)
-      fix!(tree)
-      λf   = lλ(tree)[end]
-      return true, λf
-    end
-  else
-    f, λf = fixalive!(tree.d2, λf)
-    if f 
-      fix!(tree)
-      return true, λf
-    end
-    f, λf = fixalive!(tree.d1, λf)
-    if f 
-      fix!(tree)
-      return true, λf
-    end
-  end
-
-  return false, λf
-end
 
 
 
@@ -941,7 +874,7 @@ function update_μ!(psi  ::Vector{iTgbmce},
                    scond::Function)
 
   # parameter proposal
-  μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
+  μp = mulupt(μc, μtn)::Float64
 
   # log likelihood and prior ratio
   μr   = log(μp/μc)

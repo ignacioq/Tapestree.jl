@@ -403,3 +403,108 @@ end
 
 
 
+
+"""
+    sum_alone_stem(tree::iTgbmct, 
+                   tna ::Float64,
+                   exx ::Bool, 
+                   ll  ::Float64,
+                   ϵ   ::Float64)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function sum_alone_stem(tree::iTgbmct, 
+                        tna ::Float64,
+                        exx ::Bool, 
+                        ll  ::Float64,
+                        ϵ   ::Float64)
+
+  if istip(tree)
+    return ll
+  end
+
+  et = e(tree)
+  if isapprox(tna, et, atol = 1e-6)
+    if exx
+      ll += log(1.0 + ϵ)
+    end
+  elseif tna < et
+    ll += log(1.0 + ϵ)
+  end
+  tna -= et
+
+  if isfix(tree.d1::iTgbmct)
+    tnx = treeheight(tree.d2::iTgbmct)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d2)) && exx
+    elseif  tnx > tna
+      exx = iszero(ntipsalive(tree.d2))
+      tna = tnx
+    end
+    sum_alone_stem(tree.d1::iTgbmct, tna, exx, ll, ϵ)
+  else
+    tnx = treeheight(tree.d1::iTgbmct)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d1)) && exx
+    elseif tnx > tna
+      exx = iszero(ntipsalive(tree.d1))
+      tna = tnx
+    end
+    sum_alone_stem(tree.d2::iTgbmct, tna, exx, ll, ϵ)
+  end
+end
+
+
+
+
+"""
+    sum_alone_stem_p(tree::iTgbmct, 
+                     tna ::Float64, 
+                     exx ::Bool,
+                     ll  ::Float64, 
+                     ϵ   ::Float64)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function sum_alone_stem_p(tree::iTgbmct, 
+                          tna ::Float64, 
+                          exx ::Bool,
+                          ll  ::Float64, 
+                          ϵ   ::Float64)
+
+  et = e(tree)
+  if isapprox(tna, et, atol = 1e-6)
+    if exx
+      ll += log(1.0 + ϵ)
+    end
+  elseif tna < et
+    ll += log(1.0 + ϵ)
+  end
+  tna -= et
+
+  if istip(tree)
+    return ll
+  end
+
+  if isfix(tree.d1::iTgbmct)
+    tnx = treeheight(tree.d2::iTgbmct)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d2)) && exx
+    elseif  tnx > tna
+      exx = iszero(ntipsalive(tree.d2))
+      tna = tnx
+    end
+    sum_alone_stem_p(tree.d1::iTgbmct, tna, exx, ll, ϵ)
+  else
+    tnx = treeheight(tree.d1::iTgbmct)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d1)) && exx
+    elseif tnx > tna
+      exx = iszero(ntipsalive(tree.d1))
+      tna = tnx
+    end
+    sum_alone_stem_p(tree.d2::iTgbmct, tna, exx, ll, ϵ)
+  end
+end

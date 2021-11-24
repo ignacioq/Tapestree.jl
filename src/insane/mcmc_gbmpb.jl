@@ -66,7 +66,7 @@ function insane_gbmpb(tree    ::sT_label,
   # make fix tree directory
   idf = make_idf(tree, tρ)
 
-  # make an edges tree
+  # make a decoupled tree
   Ψ = iTgbmpb[]
   iTgbmpb!(Ψ, tree, δt, srδt, lλa, αi, σλi)
 

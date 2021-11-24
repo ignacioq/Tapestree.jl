@@ -122,6 +122,51 @@ end
 
 
 
+"""
+    iTgbmct!(Ψ   ::Vector{iTgbmct},
+             tree::sT_label,
+             δt  ::Float64, 
+             srδt::Float64, 
+             lλa ::Float64,
+             α   ::Float64,
+             σλ  ::Float64)
+
+Make edge tree `Ψ` from the edge directory.
+"""
+function iTgbmct!(Ψ   ::Vector{iTgbmct},
+                  tree::sT_label,
+                  δt  ::Float64, 
+                  srδt::Float64, 
+                  lλa ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64)
+
+  et = e(tree)
+
+  if iszero(et)
+    lλv  = Float64[lλa, lλa]
+    fdti = 0.0
+    l    = 2
+  else
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
+
+    if iszero(fdti)
+      fdti = δt
+    end
+    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    l   = lastindex(lλv)
+  end
+
+  push!(Ψ, iTgbmct(et, δt, fdti, false, true, lλv))
+  if isdefined(tree, :d1)
+    iTgbmct!(Ψ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmct!(Ψ, tree.d1, δt, srδt, lλv[l], α, σλ)
+  end
+end
+
+
+
 
 """
     couple(psi::Vector{T},
@@ -212,5 +257,42 @@ function ntipsextinct(psi::Vector{T}) where {T<: iTree}
     n += _ntipsextinct(ψ, 0)
   end
   return n
+end
+
+
+
+
+
+"""
+    sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
+
+Returns the standardized sum of squares a `iTgbm` according 
+to GBM birth-death for a `σ` proposal.
+"""
+function sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
+
+  n   = 0.0
+  ssλ = 0.0
+  for ψi in psi
+    ssλ, n = _sss_gbm(ψi, α, ssλ, n)
+  end
+
+  return ssλ, n
+end
+
+
+
+
+"""
+    Σλ_gbm(psi::Vector{T}) where {T<: iTgbm}
+
+Return the internal nodes of `Ψ`.
+"""
+function Σλ_gbm(psi::Vector{T}) where {T <: iTgbm}
+  Σλ = 0.0
+  for ψ in psi
+    Σλ += Σλ_gbm(ψ)
+  end
+  return Σλ
 end
 

@@ -442,7 +442,7 @@ function update_triad!(λpc ::Vector{Float64},
       lls += log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
     end
 
-    if -randexp() < acr #+ lls
+    if -randexp() < acr + lls
       llc += llr + lls
       dλ  += (λ1c[1] - λn)
       ssλ += ssrλ

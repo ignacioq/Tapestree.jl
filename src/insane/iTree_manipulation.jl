@@ -484,6 +484,72 @@ end
 
 
 """
+    fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
+
+Fixes the the path for a random non extinct tip and returns final `λ(t)`.
+"""
+function fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
+
+  fix!(tree)
+
+  if isdefined(tree, :d1)
+    if isextinct(tree.d1)
+      λf = fixrtip!(tree.d2, na, λf)
+    elseif isextinct(tree.d2)
+      λf = fixrtip!(tree.d1, na, λf)
+    else
+      na1 = ntipsalive(tree.d1)
+      # probability proportional to number of lineages
+      if (fIrand(na) + 1) > na1
+        λf = fixrtip!(tree.d2, na - na1, λf)
+      else
+        λf = fixrtip!(tree.d1, na1,      λf)
+      end
+    end
+  else
+    λf = lλ(tree)[end]
+  end
+
+  return λf
+end
+
+
+
+
+"""
+    fixalive!(tree::T, λf::Float64) where {T <:iTgbm}  
+
+Fixes the the path from root to the only species alive.
+"""
+function fixalive!(tree::T, λf::Float64) where {T <:iTgbm} 
+
+  if istip(tree) 
+    if isalive(tree)
+      fix!(tree)
+      λf   = lλ(tree)[end]
+      return true, λf
+    end
+  else
+    f, λf = fixalive!(tree.d2, λf)
+    if f 
+      fix!(tree)
+      return true, λf
+    end
+    f, λf = fixalive!(tree.d1, λf)
+    if f 
+      fix!(tree)
+      return true, λf
+    end
+  end
+
+  return false, λf
+end
+
+
+
+
+
+"""
     fixalive!(tree::T) where T <: iTree
 Fixes the the path from root to the only species alive.
 """
