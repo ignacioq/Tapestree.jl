@@ -116,7 +116,7 @@ function _stem_update!(ψi   ::iTgbmct,
 
     # prior ratio
     if λr > lλxpr
-      return llc, ssλ
+      return llc, dλ, ssλ, Σλ
     end
 
     # simulate fix tree vector
@@ -203,9 +203,9 @@ function _crown_update!(ψi   ::iTgbmct,
 
     # log likelihood ratios
     llrbm1, llrpb1, ssrλ1, Σrλ1 = 
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdtp, srδt, false, false)
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
     llrbm2, llrpb2, ssrλ2, Σrλ2 = 
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdtp, srδt, false, false)
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
     acr = llrpb1 + llrpb2
 

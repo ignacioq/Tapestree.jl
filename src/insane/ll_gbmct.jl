@@ -16,10 +16,9 @@ Created 03 09 2020
              idf::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
-             μ   ::Float64, 
+             ϵ   ::Float64, 
              δt  ::Float64,
-             srδt::Float64,
-             scond::Function)
+             srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmct` according to `gbmce`.
 """
@@ -27,14 +26,14 @@ function llik_gbm(psi::Vector{iTgbmct},
                   idf::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
-                  μ   ::Float64, 
+                  ϵ   ::Float64, 
                   δt  ::Float64,
                   srδt::Float64)
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(psi))
       bi  = idf[i]
-      ll += llik_gbm(psi[i], α, σλ, μ, δt, srδt)
+      ll += llik_gbm(psi[i], α, σλ, ϵ, δt, srδt)
       if !it(bi)
         ll += λt(bi)
       end
@@ -143,12 +142,12 @@ end
 
 
 """
-    llik_gbm(tree::iTgbmct,
-             α   ::Float64, 
-             σλ  ::Float64, 
-             ϵ   ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
+    llik_gbm_ssλ(tree::iTgbmct,
+                 α   ::Float64, 
+                 σλ  ::Float64, 
+                 ϵ   ::Float64,
+                 δt  ::Float64,
+                 srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
@@ -214,19 +213,19 @@ Returns the log-likelihood for a branch according to `gbmct`.
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    llbm  = 0.0
+    llbm = 0.0
     llbd = 0.0
     lλvi = lλv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
-      llbm  += (lλvi1 - lλvi - α*δt)^2
+      llbm += (lλvi1 - lλvi - α*δt)^2
       llbd += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
 
     # standardized sum of squares
-    ssλ  = llbm/(2.0*δt)
-    nλ   = Float64(nI)
+    ssλ = llbm/(2.0*δt)
+    nλ  = Float64(nI)
 
     # add to global likelihood
     ll    = llbm * 
@@ -241,11 +240,11 @@ Returns the log-likelihood for a branch according to `gbmct`.
 
     # add final non-standard `δt`
     if fdt > 0.0
-      lli = fdt*exp(0.5*(lλvi + lλvi1))
-      ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) - lli*(1.0 + ϵ)
+      lli  = fdt * exp(0.5*(lλvi + lλvi1))
+      ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) - lli*(1.0 + ϵ)
       ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
       nλ  += 1.0
-      Σλ += lli
+      Σλ  += lli
     end
     # if speciation
     if λev
@@ -323,49 +322,6 @@ end
 
 
 """
-    llr_gbm_sep(treep::iTgbmct, 
-                treec::iTgbmct,
-                α    ::Float64,
-                σλ   ::Float64,
-                ϵ    ::Float64,
-                δt   ::Float64,
-                srδt::Float64)
-
-Returns the log-likelihood ratio for a tree according to `gbmct` 
-separately (for gbm and bd).
-"""
-function llr_gbm_sep(treep::iTgbmct, 
-                     treec::iTgbmct,
-                     α    ::Float64,
-                     σλ   ::Float64,
-                     ϵ    ::Float64,
-                     δt   ::Float64,
-                     srδt::Float64)
-
-  if istip(treec) 
-    llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, ϵ, δt, fdt(treec), srδt, 
-        false, isextinct(treec))
-  else
-    llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lλ(treec), α, σλ, ϵ, δt, fdt(treec), srδt, 
-        true, false) 
-
-    llrbm0, llrbd0 = llr_gbm_sep(treep.d1, treec.d1, α, σλ, ϵ, δt, srδt) 
-    llrbm1, llrbd1 = llr_gbm_sep(treep.d2, treec.d2, α, σλ, ϵ, δt, srδt)
-
-    llrbm += llrbm0 + llrbm1
-    llrbd += llrbd0 + llrbd1
-  end
-  
-  return llrbm, llrbd
-end
-
-
-
-
-
-"""
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
                   α   ::Float64,
@@ -423,11 +379,11 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     # add final non-standard `δt`
     if fdt > 0.0
       ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt) 
-      llri   = (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-      Σrλ   += fdt * llri
+      llri   = fdt * (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+      Σrλ   += llri
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-      llrbd -= fdt * (1.0 + ϵ) * llri
+      llrbd -= (1.0 + ϵ) * llri
     end
     # if speciation or extinction
     if λev || μev

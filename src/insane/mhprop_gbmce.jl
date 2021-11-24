@@ -110,7 +110,7 @@ function _stem_update!(ψi   ::iTgbmce,
 
     # prior ratio
     if λr > lλxpr
-      return llc, ssλ
+      return llc, dλ, ssλ
     end
 
     # simulate fix tree vector

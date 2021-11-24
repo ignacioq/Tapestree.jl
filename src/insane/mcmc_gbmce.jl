@@ -332,7 +332,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  # maximum bounds according to unfiorm priors
+  # maximum bounds according to uniform priors
   lλxpr = log(λa_prior[2])
 
   L       = treelength(Ψ)            # tree length
@@ -494,9 +494,6 @@ function update_fs!(bix    ::Int64,
 
   bi  = idf[bix]
   itb = it(bi) # if is terminal
-  ρbi = ρi(bi) # get branch sampling fraction
-  nc  = ni(bi) # current ni
-  ntc = nt(bi) # current nt
 
   ψc  = Ψ[bix]
   if !itb
@@ -509,6 +506,10 @@ function update_fs!(bix    ::Int64,
 
   # check for survival or non-exploding simulation
   if np > 0
+
+    ρbi = ρi(bi) # get branch sampling fraction
+    nc  = ni(bi) # current ni
+    ntc = nt(bi) # current nt
 
     # if terminal branch
     if itb
@@ -541,7 +542,7 @@ function update_fs!(bix    ::Int64,
 
       # if stem or crown conditioned
       scn = (iszero(pa(bi)) && e(bi) > 0.0) || 
-             (isone(pa(bi)) && iszero(e(Ψ[1])))
+            (isone(pa(bi)) && iszero(e(bi)))
       if scn
         llr += scond0(ψp, μ, itb) - scond0(ψc, μ, itb)
       end
