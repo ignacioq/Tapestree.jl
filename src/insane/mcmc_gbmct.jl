@@ -546,7 +546,7 @@ function update_fs!(bix    ::Int64,
 
       # if stem or crown conditioned
       scn = (iszero(pa(bi)) && e(bi) > 0.0) || 
-            (isone(pa(bi)) && iszero(e(bi)))
+            (isone(pa(bi)) && iszero(e(Ψ[1])))
       if scn
         llr += scond0(ψp, ϵ, itb) - scond0(ψc, ϵ, itb)
       end
