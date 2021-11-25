@@ -158,6 +158,140 @@ end
 
 
 """
+    llik_gbm_ss(tree::iTgbmbd,
+                α   ::Float64, 
+                σλ  ::Float64, 
+                ϵ   ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
+
+Returns the log-likelihood for a `iTgbmbd` according to `gbmbd`.
+"""
+function llik_gbm_ss(tree::iTgbmbd,
+                     α   ::Float64, 
+                     σλ  ::Float64, 
+                     σμ  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
+
+  if istip(tree)
+    ll, dλ, ssλ, ssμ, nλ = 
+      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, δt, fdt(tree), srδt, 
+        false, isextinct(tree))
+  else
+    ll, dλ, ssλ, ssμ, nλ = 
+      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, δt, fdt(tree), srδt, 
+        true, false)
+
+    ll1, dλ1, ssλ1, ssμ1, nλ1 = 
+      llik_gbm_ss(tree.d1, α, σλ, σμ, δt, srδt)
+    ll2, dλ2, ssλ2, ssμ2, nλ2 = 
+      llik_gbm_ss(tree.d2, α, σλ, σμ, δt, srδt)
+
+    ll  += ll1  + ll2
+    dλ  += dλ1  + dλ2
+    ssλ += ssλ1 + ssλ2
+    ssμ += ssμ1 + ssμ2
+    nλ  += nλ1  + nλ2
+  end
+
+  return ll, dλ, ssλ, ssμ, nλ
+end
+
+
+
+
+"""
+    ll_gbm_b_ss(lλv ::Array{Float64,1},
+                lμv ::Array{Float64,1},
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                δt  ::Float64, 
+                fdt ::Float64,
+                srδt::Float64,
+                λev ::Bool,
+                μev ::Bool)
+
+Returns the log-likelihood for a branch according to `gbmbd`.
+"""
+@inline function ll_gbm_b_ss(lλv ::Array{Float64,1},
+                             lμv ::Array{Float64,1},
+                             α   ::Float64,
+                             σλ  ::Float64,
+                             σμ  ::Float64,
+                             δt  ::Float64, 
+                             fdt ::Float64,
+                             srδt::Float64,
+                             λev ::Bool,
+                             μev ::Bool)
+
+  @inbounds begin
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
+
+    llλ  = 0.0
+    llμ  = 0.0
+    llbd = 0.0
+    lλvi = lλv[1]
+    lμvi = lμv[1]
+    @simd for i in Base.OneTo(nI)
+      lλvi1 = lλv[i+1]
+      lμvi1 = lμv[i+1]
+      llλ  += (lλvi1 - lλvi - α*δt)^2
+      llμ  += (lμvi1 - lμvi)^2
+      llbd += exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)) 
+      lλvi  = lλvi1
+      lμvi  = lμvi1
+    end
+
+    # standardized sum of squares
+    ssλ = llλ/(2.0*δt)
+    ssμ = llμ/(2.0*δt)
+    nλ  = Float64(nI)
+
+    # add to global likelihood
+    ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) + 
+         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
+    # add to global likelihood
+    ll -= llbd*δt
+
+    lλvi1 = lλv[nI+2]
+    lμvi1 = lμv[nI+2]
+
+    dλ = lλvi1 - lλv[1]
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      srfdt = sqrt(fdt)
+      ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)
+      ll  += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
+      ll  -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
+      ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
+      ssμ += (lμvi1 - lμvi)^2/(2.0*fdt)
+    end
+
+    #if speciation
+    if λev
+      ll += lλvi1
+    end
+    #if extinction
+    if μev
+      ll += lμvi1
+    end
+  end
+
+  return ll, dλ, ssλ, ssμ, nλ
+end
+
+
+
+
+
+
+
+"""
     _sss_gbm(tree::iTgbmbd, 
              α   ::Float64, 
              ssλ ::Float64, 
@@ -245,186 +379,6 @@ end
 
 
 
-
-"""
-    llik_gbm_f(tree::iTgbmbd,
-               α   ::Float64,
-               σλ  ::Float64,
-               σμ  ::Float64,
-               δt  ::Float64,
-               srδt::Float64)
-
-Estimate `gbmbd` likelihood for the tree in a fix branch.
-"""
-function llik_gbm_f(tree::iTgbmbd,
-                    α   ::Float64,
-                    σλ  ::Float64,
-                    σμ  ::Float64,
-                    δt  ::Float64,
-                    srδt::Float64)
-
-  if istip(tree)
-    ll = ll_gbm_b(lλ(tree), lμ(tree), 
-           α, σλ, σμ, δt, fdt(tree), srδt, false, false)
-  else
-    ll = ll_gbm_b(lλ(tree), lμ(tree), 
-           α, σλ, σμ, δt, fdt(tree), srδt, true, false)
-
-    ifx1 = isfix(tree.d1)
-    if ifx1 && isfix(tree.d2)
-      return ll
-    elseif ifx1
-      ll += llik_gbm_f(tree.d1, α, σλ, σμ, δt, srδt) +
-            llik_gbm(  tree.d2, α, σλ, σμ, δt, srδt)
-    else
-      ll += llik_gbm(  tree.d1, α, σλ, σμ, δt, srδt) + 
-            llik_gbm_f(tree.d2, α, σλ, σμ, δt, srδt)
-    end
-  end
-
-  return ll
-end
-
-
-
-
-"""
-    br_ll_gbm(tree::iTgbmbd,
-              α   ::Float64,
-              σλ  ::Float64,
-              σμ  ::Float64,
-              δt  ::Float64,
-              srδt::Float64,
-              dri ::BitArray{1},
-              ldr ::Int64,
-              ix  ::Int64)
-
-Returns `gbmbd` likelihood for whole branch `br`.
-"""
-function br_ll_gbm(tree::iTgbmbd,
-                   α   ::Float64,
-                   σλ  ::Float64,
-                   σμ  ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64,
-                   dri ::BitArray{1},
-                   ldr ::Int64,
-                   ix  ::Int64)
-
-  if ix === ldr
-    return llik_gbm_f(tree, α, σλ, σμ, δt, srδt)
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1)
-    if ifx1 && isfix(tree.d2)
-      ix += 1
-      if dri[ix]
-        ll = br_ll_gbm(tree.d1, α, σλ, σμ, δt, srδt, dri, ldr, ix)
-      else
-        ll = br_ll_gbm(tree.d2, α, σλ, σμ, δt, srδt, dri, ldr, ix)
-      end
-    elseif ifx1
-      ll = br_ll_gbm(tree.d1, α, σλ, σμ, δt, srδt, dri, ldr, ix)
-    else
-      ll = br_ll_gbm(tree.d2, α, σλ, σμ, δt, srδt, dri, ldr, ix)
-    end
-  end
-
-  return ll
-end
-
-
-
-
-
-"""
-    llr_gbm_sep_f(treep::iTgbmbd,
-                  treec::iTgbmbd,
-                  α    ::Float64,
-                  σλ  ::Float64,
-                  σμ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
-
-Returns the log-likelihood for a branch according to `gbmbd` 
-separately (for gbm and bd).
-"""
-function llr_gbm_sep_f(treep::iTgbmbd,
-                       treec::iTgbmbd,
-                       α    ::Float64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
-
-  if istip(treec)
-    llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lμ(treep), lλ(treec), lμ(treec), α, σλ, σμ, δt, 
-        fdt(treec), srδt, false, isextinct(treec))
-  else
-    llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lμ(treep), lλ(treec), lμ(treec), α, σλ, σμ, δt, 
-        fdt(treec), srδt, true, false) 
-
-    ifx1 = isfix(treec.d1)
-    if ifx1 && isfix(treec.d2)
-      return llrbm, llrbd
-    elseif ifx1
-      llrbm0, llrbd0 = llr_gbm_sep_f(treep.d1, treec.d1, α, σλ, σμ, δt, srδt)
-      llrbm1, llrbd1 = llr_gbm_sep(  treep.d2, treec.d2, α, σλ, σμ, δt, srδt)
-      llrbm += llrbm0 + llrbm1
-      llrbd += llrbd0 + llrbd1
-    else
-      llrbm0, llrbd0 = llr_gbm_sep(  treep.d1, treec.d1, α, σλ, σμ, δt, srδt)
-      llrbm1, llrbd1 = llr_gbm_sep_f(treep.d2, treec.d2, α, σλ, σμ, δt, srδt)
-      llrbm += llrbm0 + llrbm1
-      llrbd += llrbd0 + llrbd1
-    end
-  end
-
-  return llrbm, llrbd
-end
-
-
-
-
-"""
-    llr_gbm_sep(treep::iTgbmbd, 
-                treec::iTgbmbd,
-                α    ::Float64,
-                σλ   ::Float64,
-                σμ   ::Float64,
-                δt   ::Float64,
-                srδt ::Float64)
-
-Returns the log-likelihood ratio for a tree according to `gbmbd` 
-separately (for gbm and bd).
-"""
-function llr_gbm_sep(treep::iTgbmbd, 
-                     treec::iTgbmbd,
-                     α    ::Float64,
-                     σλ   ::Float64,
-                     σμ   ::Float64,
-                     δt   ::Float64,
-                     srδt ::Float64)
-
-  if istip(treec) 
-    llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lμ(treep), lλ(treec), lμ(treec), α, σλ, σμ, δt, 
-        fdt(treec), srδt, false, isextinct(treec))
-  else
-    llrbm, llrbd = 
-      llr_gbm_b_sep(lλ(treep), lμ(treep), lλ(treec), lμ(treec), α, σλ, σμ, δt, 
-        fdt(treec), srδt, true, false) 
-
-    llrbm0, llrbd0 = llr_gbm_sep(treep.d1, treec.d1, α, σλ, σμ, δt, srδt) 
-    llrbm1, llrbd1 = llr_gbm_sep(treep.d2, treec.d2, α, σλ, σμ, δt, srδt)
-
-    llrbm += llrbm0 + llrbm1
-    llrbd += llrbd0 + llrbd1
-  end
-  
-  return llrbm, llrbd
-end
 
 
 
