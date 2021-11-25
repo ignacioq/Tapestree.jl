@@ -169,6 +169,58 @@ end
 
 
 """
+    iTgbmbd!(Ψ   ::Vector{iTgbmbd},
+             tree::sT_label,
+             δt  ::Float64, 
+             srδt::Float64, 
+             lλa ::Float64,
+             lμa ::Float64,
+             α   ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64)
+
+Make edge tree `Ψ` from the edge directory.
+"""
+function iTgbmbd!(Ψ   ::Vector{iTgbmbd},
+                  tree::sT_label,
+                  δt  ::Float64, 
+                  srδt::Float64, 
+                  lλa ::Float64,
+                  lμa ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  σμ  ::Float64)
+
+  et = e(tree)
+
+  if iszero(et)
+    lλv  = Float64[lλa, lλa]
+    lμv  = Float64[lμa, lμa]
+    fdti = 0.0
+    l    = 2
+  else
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
+
+    if iszero(fdti)
+      fdti = δt
+    end
+    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    lμv = sim_bm(lμa, α, σμ, δt, fdti, srδt, nt)
+    l   = nt + 2
+  end
+
+  push!(Ψ, iTgbmbd(et, δt, fdti, false, true, lλv, lμv))
+  if isdefined(tree, :d1)
+    iTgbmbd!(Ψ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
+    iTgbmbd!(Ψ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
+  end
+end
+
+
+
+
+"""
     couple(psi::Vector{T},
            idf::Vector{iBffs},
            ix ::Int64) where {T <: iTree}
@@ -279,6 +331,29 @@ function sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
 
   return ssλ, n
 end
+
+
+
+
+
+"""
+    sss_gbm(psi::Vector{iTgbmbd}, α::Float64)
+
+Returns the standardized sum of squares a `iTgbm` according 
+to GBM birth-death for a `σ` proposal.
+"""
+function sss_gbm(psi::Vector{iTgbmbd}, α::Float64)
+
+  n   = 0.0
+  ssλ = 0.0
+  ssμ = 0.0
+  for ψi in psi
+    ssλ, ssμ, n = _sss_gbm(ψi, α, ssλ, ssμ, n)
+  end
+
+  return ssλ, ssμ, n
+end
+
 
 
 

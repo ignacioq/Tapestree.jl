@@ -22,7 +22,7 @@ Created 27 05 2020
                        δt  ::Float64, 
                        srδt::Float64)
 
-Make a `gbmpb` proposal for daughters from forwards simulated branch.
+Make a `gbm-ct` proposal for daughters from forwards simulated branch.
 """
 function _daughters_update!(ψ1  ::iTgbmct,
                             ψ2  ::iTgbmct,
@@ -57,12 +57,12 @@ function _daughters_update!(ψ1  ::iTgbmct,
       duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1, Σrλ1 = 
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, isextinct(ψ1))
-    llrbm2, llrpb2, ssrλ2, Σrλ2 = 
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, isextinct(ψ2))
+    llrbm1, llrct1, ssrλ1, Σrλ1 = 
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
+    llrbm2, llrct2, ssrλ2, Σrλ2 = 
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrpb1 + llrpb2 + λf - λi
+    acr  = llrct1 + llrct2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
     acr += normprop
     drλ  = 2.0*(λi - λf)
@@ -202,12 +202,12 @@ function _crown_update!(ψi   ::iTgbmct,
     bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1, Σrλ1 = 
+    llrbm1, llrct1, ssrλ1, Σrλ1 = 
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
-    llrbm2, llrpb2, ssrλ2, Σrλ2 = 
+    llrbm2, llrct2, ssrλ2, Σrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr = llrpb1 + llrpb2
+    acr = llrct1 + llrct2
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr
@@ -462,17 +462,17 @@ function update_triad!(tree::iTgbmct,
     bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
 
-    llrbmp, llrpbp, ssrλp, Σrλp = 
+    llrbmp, llrctp, ssrλp, Σrλp = 
       llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, 
         true, false)
-    llrbm1, llrpb1, ssrλ1, Σrλ1 = 
+    llrbm1, llrct1, ssrλ1, Σrλ1 = 
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, 
         false, isextinct(tree.d1))
-    llrbm2, llrpb2, ssrλ2, Σrλ2 = 
+    llrbm2, llrct2, ssrλ2, Σrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, 
         false, isextinct(tree.d2))
 
-    acr = llrpbp + llrpb1 + llrpb2
+    acr = llrctp + llrct1 + llrct2
 
     if -randexp() < acr
       llc += llrbmp + llrbm1 + llrbm2 + acr
@@ -525,14 +525,14 @@ function llr_propr(λpp  ::Array{Float64,1},
                    srδt ::Float64)
 
   # log likelihood ratios
-  llrbmp, llrpbp, ssrλp, Σrλp = 
+  llrbmp, llrctp, ssrλp, Σrλp = 
     llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, true, false)
-  llrbm1, llrpb1, ssrλ1, Σrλ1 = 
+  llrbm1, llrct1, ssrλ1, Σrλ1 = 
     llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
-  llrbm2, llrpb2, ssrλ2, Σrλ2 = 
+  llrbm2, llrct2, ssrλ2, Σrλ2 = 
     llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-  acr  = llrpbp + llrpb1 + llrpb2
+  acr  = llrctp + llrct1 + llrct2
   llr  = llrbmp + llrbm1 + llrbm2 + acr
   ssrλ = ssrλp  + ssrλ1  + ssrλ2
   Σrλ  = Σrλp   + Σrλ1   + Σrλ2

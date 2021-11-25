@@ -14,11 +14,11 @@ Created 10 09 2020
 
 """
     bm!(tree::T,
-      λt  ::Float64,
-      α   ::Float64,
-      σλ  ::Float64,
-      δt  ::Float64,
-      srδt::Float64) where {T <: iTgbm}
+        λt  ::Float64,
+        α   ::Float64,
+        σλ  ::Float64,
+        δt  ::Float64,
+        srδt::Float64) where {T <: iTgbm}
 
 Simulate birth-death geometric Brownian motion in place.
 """
@@ -244,7 +244,7 @@ end
         α   ::Float64,
         σ   ::Float64,
         δt  ::Float64,
-        fdt::Float64,
+        fdt ::Float64,
         srδt::Float64)
 
 Brownian motion simulation function for updating a branch in place.
@@ -254,7 +254,7 @@ Brownian motion simulation function for updating a branch in place.
                      α   ::Float64,
                      σ   ::Float64,
                      δt  ::Float64,
-                     fdt::Float64,
+                     fdt ::Float64,
                      srδt::Float64)
 
   @inbounds begin
@@ -531,8 +531,8 @@ function trioldnorm(x  ::Float64,
                     xpr::Float64,
                     xd1::Float64,
                     xd2::Float64,
-                    tpr::Float64, 
-                    td1::Float64, 
+                    tpr::Float64,
+                    td1::Float64,
                     td2::Float64,
                     σ  ::Float64)
 
@@ -596,7 +596,6 @@ and `xc`, respectively.
 """
 lrdnorm_bm_x(xp::Float64, xc::Float64, μ::Float64, σsrt::Float64) =
   -0.5*((xp - μ)^2 - (xc - μ)^2)/σsrt^2
-
 
 
 

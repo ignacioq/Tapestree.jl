@@ -366,8 +366,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     end
 
     # standardized sum of squares
-    ssrλ  = llrbm/(2.0*δt)
-    Σrλ   = llrbd * δt
+    ssrλ = llrbm/(2.0*δt)
+    Σrλ  = llrbd * δt
 
     # overall
     llrbm *= (-0.5/((σλ*srδt)^2))

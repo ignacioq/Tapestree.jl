@@ -21,7 +21,7 @@ Created 03 09 2020
              srδt::Float64,
              scond::Function)
 
-Returns the log-likelihood for a `iTgbmce` according to `gbmce`.
+Returns the log-likelihood for a `iTgbmce` according to `gbm-ce`.
 """
 function llik_gbm(psi::Vector{iTgbmce}, 
                   idf::Vector{iBffs},

@@ -508,3 +508,126 @@ function sum_alone_stem_p(tree::iTgbmct,
     sum_alone_stem_p(tree.d2::iTgbmct, tna, exx, ll, ϵ)
   end
 end
+
+
+
+
+
+
+
+"""
+    sum_alone_stem(tree::iTgbmbd, 
+                   tna ::Float64,
+                   exx ::Bool, 
+                   ll  ::Float64)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function sum_alone_stem(tree::iTgbmbd, 
+                        tna ::Float64,
+                        exx ::Bool, 
+                        ll  ::Float64)
+
+  if istip(tree)
+    return ll
+  end
+
+  et = e(tree)
+  if isapprox(tna, et, atol = 1e-6)
+    if exx
+      λv  = lλ(tree)
+      l   = lastindex(λv)
+      λi  = λv[l]
+      μi  = lμ(tree)[l]
+      ll += log(exp(λi) + exp(μi)) - λi
+    end
+  elseif tna < et
+    λv  = lλ(tree)
+    l   = lastindex(λv)
+    λi  = λv[l]
+    μi  = lμ(tree)[l]
+    ll += log(exp(λi) + exp(μi)) - λi
+  end
+  tna -= et
+
+  if isfix(tree.d1::iTgbmbd)
+    tnx = treeheight(tree.d2::iTgbmbd)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d2)) && exx
+    elseif  tnx > tna
+      exx = iszero(ntipsalive(tree.d2))
+      tna = tnx
+    end
+    sum_alone_stem(tree.d1::iTgbmbd, tna, exx, ll)
+  else
+    tnx = treeheight(tree.d1::iTgbmbd)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d1)) && exx
+    elseif tnx > tna
+      exx = iszero(ntipsalive(tree.d1))
+      tna = tnx
+    end
+    sum_alone_stem(tree.d2::iTgbmbd, tna, exx, ll)
+  end
+end
+
+
+
+
+"""
+    sum_alone_stem_p(tree::iTgbmbd, 
+                     tna ::Float64, 
+                     exx ::Bool,
+                     ll  ::Float64)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function sum_alone_stem_p(tree::iTgbmbd, 
+                          tna ::Float64, 
+                          exx ::Bool,
+                          ll  ::Float64)
+
+  et = e(tree)
+  if isapprox(tna, et, atol = 1e-6)
+    if exx
+      λv  = lλ(tree)
+      l   = lastindex(λv)
+      λi  = λv[l]
+      μi  = lμ(tree)[l]
+      ll += log(exp(λi) + exp(μi)) - λi
+    end
+  elseif tna < et
+    λv  = lλ(tree)
+    l   = lastindex(λv)
+    λi  = λv[l]
+    μi  = lμ(tree)[l]
+    ll += log(exp(λi) + exp(μi)) - λi
+  end
+  tna -= et
+
+  if istip(tree)
+    return ll
+  end
+
+  if isfix(tree.d1::iTgbmbd)
+    tnx = treeheight(tree.d2::iTgbmbd)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d2)) && exx
+    elseif  tnx > tna
+      exx = iszero(ntipsalive(tree.d2))
+      tna = tnx
+    end
+    sum_alone_stem_p(tree.d1::iTgbmbd, tna, exx, ll)
+  else
+    tnx = treeheight(tree.d1::iTgbmbd)
+    if isapprox(tna, tnx, atol = 1e-6)
+      exx = iszero(ntipsalive(tree.d1)) && exx
+    elseif tnx > tna
+      exx = iszero(ntipsalive(tree.d1))
+      tna = tnx
+    end
+    sum_alone_stem_p(tree.d2::iTgbmbd, tna, exx, ll)
+  end
+end

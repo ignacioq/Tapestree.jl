@@ -36,7 +36,7 @@ Created 03 09 2020
                  prints  ::Int64             = 5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for GBM birth-death.
+Run insane for `gbm-ce`.
 """
 function insane_gbmce(tree    ::sT_label, 
                       out_file::String;
@@ -61,6 +61,7 @@ function insane_gbmce(tree    ::sT_label,
                       prints  ::Int64             = 5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
+  # `n` tips, `th` treeheight define δt
   n    = ntips(tree)
   th   = treeheight(tree)
   δt  *= max(0.1, round(th, RoundDown, digits = 2))

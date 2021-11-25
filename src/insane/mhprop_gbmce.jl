@@ -20,7 +20,7 @@ Created 27 05 2020
                        δt  ::Float64, 
                        srδt::Float64)
 
-Make a `gbmpb` proposal for daughters from forwards simulated branch.
+Make a `gbm-ce` proposal for daughters from forwards simulated branch.
 """
 function _daughters_update!(ψ1  ::iTgbmce,
                             ψ2  ::iTgbmce,
