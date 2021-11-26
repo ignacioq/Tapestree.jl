@@ -110,29 +110,23 @@ function insane_gbmbd(tree    ::sT_label,
 
   @info "running birth-death gbm"
 
-
-  """
-  here: first pass done, check everything including mcmc arguments
-  """
-
-
   # burn-in phase
-  Ψp, Ψc, llc, prc, αc, σλc, σμc =
-    mcmc_burn_gbmbd(Ψp, Ψc, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
-      nburn, αi, σλi, σμi, δt, srδt, idf, pup, nlim, prints, svf)
+  Ψ, idf, llc, prc, αc, σλc, σμc, sns  =
+    mcmc_burn_gbmbd(Ψ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
+      nburn, αi, σλi, σμi, sns, δt, srδt, inodes, pup, 
+      prints, snodes!, scond, scond0)
 
   # mcmc
   R, Ψv =
-    mcmc_gbmbd(Ψp, Ψc, llc, prc, αc, σλc, σμc,
+    mcmc_gbmbd(Ψ, idf, llc, prc, αc, σλc, σμc, sns,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, niter, nthin, δt, srδt, 
-      idf, pup, nlim, prints, svf)
+      inodes, pup, prints, snodes!, scond, scond0)
 
   pardic = Dict(("lambda_root"  => 1,
                  "mu_root"      => 2,
                  "alpha"        => 3,
                  "sigma_lambda" => 4,
-                 "sigma_mu"     => 5,
-                 "n_extinct"    => 6))
+                 "sigma_mu"     => 5))
 
   write_ssr(R, pardic, out_file)
 
@@ -143,8 +137,8 @@ end
 
 
 """
-    mcmc_burn_gbmbd(Ψp      ::iTgbmbd,
-                    Ψc      ::iTgbmbd,
+    mcmc_burn_gbmbd(Ψ       ::Vector{iTgbmbd},
+                    idf     ::Vector{iBffs},
                     λa_prior::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -154,13 +148,14 @@ end
                     αc     ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
+                    sns     ::NTuple{3,BitVector},
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idf     ::Array{iBffs,1},
                     pup     ::Array{Int64,1},
-                    nlim    ::Int64,
                     prints  ::Int64,
-                    svf     ::Function)
+                    snodes! ::Function,
+                    scond   ::Function,
+                    scond0  ::Function)
 
 MCMC burn-in chain for `gbmbd`.
 """
@@ -178,6 +173,7 @@ function mcmc_burn_gbmbd(Ψ       ::Vector{iTgbmbd},
                          sns     ::NTuple{3,BitVector},
                          δt      ::Float64,
                          srδt    ::Float64,
+                         inodes  ::Array{Int64,1},
                          pup     ::Array{Int64,1},
                          prints  ::Int64,
                          snodes! ::Function,
@@ -247,44 +243,47 @@ function mcmc_burn_gbmbd(Ψ       ::Vector{iTgbmbd},
     next!(pbar)
   end
 
-  return Ψp, Ψc, llc, prc, αc, σλc, σμc
+  return Ψ, idf, llc, prc, αc, σλc, σμc, sns
 end
 
 
 
 
 """
-    mcmc_gbmbd(Ψp      ::iTgbmbd,
-               Ψc      ::iTgbmbd,
+    mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
+               idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
                αc      ::Float64,
                σλc     ::Float64,
                σμc     ::Float64,
+               sns     ::NTuple{3,BitVector},
                λa_prior::NTuple{2,Float64},
-               α_prior ::NTuple{2,Float64},
                μa_prior::NTuple{2,Float64},
+               α_prior ::NTuple{2,Float64},
                σλ_prior::NTuple{2,Float64},
                σμ_prior::NTuple{2,Float64},
                niter   ::Int64,
                nthin   ::Int64,
                δt      ::Float64,
                srδt    ::Float64,
-               idf     ::Array{iBffs,1},
-               pup     ::Array{Int64,1},
-               nlim    ::Int64,
+               inodes  ::Array{Int64,1},
+               pup     ::Vector{Int64},
                prints  ::Int64,
-               svf     ::Function)
+               snodes! ::Function,
+               scond   ::Function,
+               scond0  ::Function)
 
 MCMC chain for `gbmbd`.
 """
-function mcmc_gbmbd(Ψp      ::iTgbmbd,
-                    Ψc      ::iTgbmbd,
+function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
+                    idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
                     αc      ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
+                    sns     ::NTuple{3,BitVector},
                     λa_prior::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -294,24 +293,29 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
                     nthin   ::Int64,
                     δt      ::Float64,
                     srδt    ::Float64,
-                    idf     ::Array{iBffs,1},
-                    pup     ::Array{Int64,1},
-                    nlim    ::Int64,
+                    inodes  ::Array{Int64,1},
+                    pup     ::Vector{Int64},
                     prints  ::Int64,
-                    svf     ::Function)
-
-  # crown or stem conditioning
-  icr = iszero(e(Ψc))
-
-  lλmxpr = log(λa_prior[2])
-  lμmxpr = log(μa_prior[2])
+                    snodes! ::Function,
+                    scond   ::Function,
+                    scond0  ::Function)
 
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
+  # crown or stem conditioning
+  lλxpr = log(λa_prior[2])
+  lμxpr = log(μa_prior[2])
+
+  L            = treelength(Ψ)     # tree length
+  dλ           = deltaλ(Ψ)         # delta change in λ
+  ssλ, ssμ, nλ = sss_gbm(Ψ, αc)    # sum squares in λ and μ
+  nin          = lastindex(inodes) # number of internal nodes
+  el           = lastindex(idf)    # number of branches
+
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 9)
+  R = Array{Float64,2}(undef, nlogs, 8)
 
   # make Ψ vector
   Ψv = iTgbmbd[]
@@ -338,7 +342,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + scond(Ψ, sns) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, pupi
+        #    @show ll0, llc, i, pupi, Ψ
         #    return 
         # end
 
@@ -350,7 +354,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + scond(Ψ, sns) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, pupi
+        #    @show ll0, llc, i, pupi, Ψ
         #    return 
         # end
 
@@ -366,7 +370,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + scond(Ψ, sns) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, pupi
+        #    @show ll0, llc, i, pupi, Ψ, bix
         #    return 
         # end
 
@@ -381,7 +385,7 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + scond(Ψ, sns) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, pupi
+        #    @show ll0, llc, i, pupi, Ψ, bix
         #    return 
         # end
       end
@@ -395,13 +399,12 @@ function mcmc_gbmbd(Ψp      ::iTgbmbd,
         R[lit,1] = Float64(lit)
         R[lit,2] = llc
         R[lit,3] = prc
-        R[lit,4] = exp(lλ(Ψc)[1])
-        R[lit,5] = exp(lμ(Ψc)[1])
+        R[lit,4] = exp(lλ(Ψ[1])[1])
+        R[lit,5] = exp(lμ(Ψ[1])[1])
         R[lit,6] = αc
         R[lit,7] = σλc
         R[lit,8] = σμc
-        R[lit,9] = ntipsextinct(Ψc)
-        push!(Ψv, deepcopy(Ψc))
+        push!(Ψv, couple(deepcopy(Ψ), idf, 1))
       end
       lthin = 0
     end
@@ -479,6 +482,7 @@ function update_fs!(bix    ::Int64,
       acr  = llr
       drλ  = 0.0
       ssrλ = 0.0
+      ssrμ = 0.0
     else
       np -= 1
       llr = log((1.0 - ρbi)^(np - nc))
@@ -768,7 +772,7 @@ function update_gbm!(bix  ::Int64,
       lψi = fixtip(ψi) 
 
       # make between decoupled trees node update
-      llc, dλ, ssλ, ssμ = update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), 
+      llc, dλ, ssλ, ssμ, λf = update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), 
         lμ(lψi), lμ(ψ1), lμ(ψ2), e(lψi), e(ψ1), e(ψ2), 
         fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, cn)
 

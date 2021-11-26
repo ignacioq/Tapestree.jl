@@ -1075,6 +1075,78 @@ end
 
 
 """
+    remove_extinct!(tree::iTgbmbd)
+
+Remove extinct tips from `iTgbmbd`.
+"""
+function remove_extinct!(tree::iTgbmbd)
+
+  if isdefined(tree, :d1)
+
+    tree.d1 = remove_extinct!(tree.d1)
+    tree.d2 = remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return iTgbmbd(e(tree), dt(tree), fdt(tree), 
+          true, isfix(tree), lλ(tree), lμ(tree))
+      else
+        ne = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lμ0 = lμ(tree)
+        lλ2 = lλ(tree.d2)
+        lμ2 = lμ(tree.d2)
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        pop!(lμ0)
+        if iszero(fdt2)
+          popfirst!(lλ2)
+          popfirst!(lμ2)
+        end
+        prepend!(lλ2, lλ0) 
+        prepend!(lμ2, lμ0)
+
+        fdt0 = fdt(tree) + fdt(tree.d2)
+        if fdt0 > dt(tree) 
+          fdt0 -= dt(tree) 
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0) 
+      end
+    elseif isextinct(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      lλ0 = lλ(tree)
+      lμ0 = lμ(tree)
+      lλ1 = lλ(tree.d1)
+      lμ1 = lμ(tree.d1)
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      pop!(lμ0)
+      if iszero(fdt1)
+        popfirst!(lλ1)
+        popfirst!(lμ1)
+      end
+      prepend!(lλ1, lλ0) 
+      prepend!(lμ1, lμ0)
+
+      fdt0 = fdt(tree) + fdt(tree.d1)
+      if fdt0 > dt(tree) 
+        fdt0 -= dt(tree) 
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
     remove_unsampled!(tree::iTgbmce)
 
 Remove extinct tips from `iTgbmce`.

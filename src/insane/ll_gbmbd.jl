@@ -270,6 +270,7 @@ Returns the log-likelihood for a branch according to `gbmbd`.
       ll  -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
       ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
       ssμ += (lμvi1 - lμvi)^2/(2.0*fdt)
+      nλ  += 1.0
     end
 
     #if speciation
@@ -392,7 +393,7 @@ end
                   σλ  ::Float64,
                   σμ  ::Float64,
                   δt  ::Float64, 
-                  fdt::Float64,
+                  fdt ::Float64,
                   srδt::Float64,
                   λev ::Bool,
                   μev ::Bool)
@@ -408,7 +409,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        σλ  ::Float64,
                        σμ  ::Float64,
                        δt  ::Float64, 
-                       fdt::Float64,
+                       fdt ::Float64,
                        srδt::Float64,
                        λev ::Bool,
                        μev ::Bool)
@@ -459,9 +460,9 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
     # add final non-standard `δt`
     if fdt > 0.0
-      srfdt = sqrt(fdt)
       ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
-      ssrμ  += ((lμpi1 - lμpi - α*fdt)^2 - (lμci1 - lμci - α*fdt)^2)/(2.0*fdt)
+      ssrμ  += ((lμpi1 - lμpi)^2 - (lμci1 - lμci)^2)/(2.0*fdt)
+      srfdt = sqrt(fdt)
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, srfdt*σλ) +
                lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)

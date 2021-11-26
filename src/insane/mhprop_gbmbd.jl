@@ -410,7 +410,8 @@ function update_tip!(tree::iTgbmbd,
     bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
 
     llrbm, llrbd, ssrλ, ssrμ = 
-      llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt, false, false)
+      llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt, 
+        false, isextinct(tree))
 
     acr = llrbd
 
@@ -530,7 +531,7 @@ function update_triad!(λpc ::Vector{Float64},
 
     if -randexp() < acr
       llc += llrbmp + llrbm1 + llrbm2 + acr
-      dλ  += (λ1c[1] - λn)
+      dλ  += (λi - λn)
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
@@ -539,10 +540,11 @@ function update_triad!(λpc ::Vector{Float64},
       unsafe_copyto!(μpc, 1, μpp, 1, lp)
       unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
       unsafe_copyto!(μ2c, 1, μ2p, 1, l2)
+      λi = λn
     end
   end
 
-  return llc, dλ, ssλ, ssμ
+  return llc, dλ, ssλ, ssμ, λi
 end
 
 
@@ -687,9 +689,11 @@ function update_triad_sc!(tree::iTgbmbd,
     μ1p  = Vector{Float64}(undef,l1)
     μ2p  = Vector{Float64}(undef,l2)
     λp   = λpc[1]
+    λi   = λ1c[1]
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
     μp   = μpc[1]
+    μi   = μ1c[1]
     μ1   = μ1c[l1]
     μ2   = μ2c[l2]
     ep   = e(tree)
