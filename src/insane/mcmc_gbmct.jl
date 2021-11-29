@@ -193,8 +193,8 @@ function mcmc_burn_gbmct(Ψ       ::Vector{iTgbmct},
   lup = 0.0
   lac = 0.0
 
-  llc = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + 
-        scond(Ψ, ϵc, sns) + prob_ρ(idf)
+  llc = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) #+ 
+        #scond(Ψ, ϵc, sns) + prob_ρ(idf)
 
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        + 
         logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2]) +
@@ -558,11 +558,11 @@ function update_fs!(bix    ::Int64,
       scn = (iszero(pa(bi)) && e(bi) > 0.0) || 
             (isone(pa(bi)) && iszero(e(Ψ[1])))
       if scn
-        llr += scond0(ψp, ϵ, itb) - scond0(ψc, ϵ, itb)
+        #llr += scond0(ψp, ϵ, itb) - scond0(ψc, ϵ, itb)
       end
 
       # update llr, ssλ, nλ, sns, ne, L,
-      llc += llr + ll1  - ll0
+      llc += llr  + ll1  - ll0
       dλ  += dλ1  - dλ0  + drλ
       ssλ += ssλ1 - ssλ0 + ssrλ
       Σλ  += Σλ1  - Σλ0  + Σrλ
@@ -586,9 +586,6 @@ function update_fs!(bix    ::Int64,
 
   return llc, dλ, ssλ, Σλ, nλ, ne, L
 end
-
-
-
 
 
 
@@ -632,7 +629,7 @@ function fsbi_ct(bi  ::iBffs,
     t0, na, nsp = _sim_gbmct(e(bi), lλ(ψc)[1], α, σλ, ϵ, δt, srδt, 
                     0, 1, 1_000)
 
-    if nsp >= 1_000
+    if nsp < 1 || nsp >= 1_000
       return iTgbmct(), 0, 0, 0.0, Inf, -Inf
     end
 
@@ -652,16 +649,15 @@ function fsbi_ct(bi  ::iBffs,
     t0, na, nsp = _sim_gbmct(e(bi), lλ(ψc)[1], α, σλ, ϵ, δt, srδt, 
                     0, 1, 1_000, λtsp)
 
-    nat = na
-
-    if nsp >= 1_000
+    if na < 1 || nsp >= 1_000
       return iTgbmct(), 0, 0, 0.0, Inf, -Inf
     end
+
+    nat = na
 
     # get tips -> daughters likelihoods for current
     λtsc = Float64[]
     _λat!(ψc, e(bi), λtsc, 0.0)
-
     push!(λtsc, λt(bi))
 
     # current MH `acr`
@@ -943,7 +939,7 @@ function update_ϵ!(psi  ::Vector{iTgbmct},
 
   # log likelihood and prior ratio
   ϵr  = log(ϵp/ϵc)
-  llr = ne*ϵr + Σλ*(ϵc - ϵp) + scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
+  llr = ne*ϵr + Σλ*(ϵc - ϵp) #+ scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
 
   # prior ratio
   prr = ϵp > ϵxpr ? -Inf : 0.0
@@ -988,7 +984,7 @@ function update_ϵ!(psi  ::Vector{iTgbmct},
 
   # log likelihood and prior ratio
   ϵr   = log(ϵp/ϵc)
-  llr = ne*ϵr + Σλ*(ϵc - ϵp) + scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
+  llr = ne*ϵr + Σλ*(ϵc - ϵp) #+ scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
 
   # prior ratio
   prr = ϵp > ϵxpr ? -Inf : 0.0

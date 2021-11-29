@@ -602,7 +602,7 @@ function fsbi_ce(bi  ::iBffs,
   # forward simulation during branch length
   t0, na, nsp = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
-  if nsp >= 1_000
+  if na < 1 || nsp >= 1_000
     return iTgbmce(), 0, 0, 0.0
   end
 

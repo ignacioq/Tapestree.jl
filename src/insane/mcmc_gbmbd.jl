@@ -575,7 +575,7 @@ function fsbi(bi  ::iBffs,
   # forward simulation during branch length
   t0, na, nsp = _sim_gbmbd(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, 0, 1, 1_000)
 
-  if nsp >= 1_000
+  if na < 1 || nsp >= 1_000
     return iTgbmbd(), 0, 0, 0.0, 0.0
   end
 

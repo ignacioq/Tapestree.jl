@@ -428,8 +428,8 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmct})
         sn3 = sns[3]
 
         cond_ll(psi[d1i], 0.0, ϵ, sn2, lastindex(sn2), 1) +
-        cond_ll(psi[d2i], 0.0, ϵ, sn3, lastindex(sn3), 1) - 
-        lλ(psi[1])[1]
+        cond_ll(psi[d2i], 0.0, ϵ, sn3, lastindex(sn3), 1) #- 
+        #lλ(psi[1])[1]
       end
     end
     # for new proposal
