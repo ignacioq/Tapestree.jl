@@ -1322,3 +1322,57 @@ function nlin_t(tree::T, t::Float64, tc::Float64) where {T <: iTree}
 end
 
 
+
+
+"""
+    _λat!(tree::T, 
+          c   ::Float64,
+          λs  ::Vector{Float64},
+          t   ::Float64) where {T <: iTgbm}
+
+Return speciation rates, `λs`, at time `c` for `tree`.
+"""
+function _λat!(tree::T, 
+               c   ::Float64,
+               λs  ::Vector{Float64},
+               t   ::Float64) where {T <: iTgbm}
+
+  et = e(tree)
+
+  if (t + et) >= c 
+    if !isfix(tree)
+
+      lλv = lλ(tree)
+      δt  = dt(tree)
+      fδt = fdt(tree)
+
+      # find final lλ
+      if isapprox(c - t, et)
+        Ix = lastindex(lλv) - 1
+        ix = Float64(Ix) - 1.0
+      else
+        ix  = fld(c - t, δt)
+        Ix  = Int64(ix) + 1
+      end
+      tii = ix*δt
+      tff = tii + δt
+      if tff > et
+        tff = tii + fδt
+      end
+      eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
+
+      push!(λs, eλ)
+
+      return nothing
+    end
+  elseif isdefined(tree, :d1)
+      _λat!(tree.d1, c, λs, t + et)
+      _λat!(tree.d2, c, λs, t + et)
+  end
+
+  return nothing
+end
+
+
+
+

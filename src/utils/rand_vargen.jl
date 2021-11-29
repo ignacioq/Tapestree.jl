@@ -10,6 +10,30 @@ Created 08 06 2021
 
 
 
+
+"""
+    sample(weights::Vector{Float64})
+
+Sample one from weights.
+"""
+function sample(weights::Vector{Float64})
+  U  = rand()
+  s  = sum(weights)
+  ss = 0.0
+  @inbounds begin
+    for i in Base.OneTo(lastindex(weights))
+      ss += weights[i]/s
+      if ss > U
+        return i
+      end
+    end
+  end
+  return 0
+end
+
+
+
+
 """
     sample(items::Vector{Int64}, weights::Vector{Float64})
 

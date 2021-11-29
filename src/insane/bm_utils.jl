@@ -491,6 +491,30 @@ end
 
 
 """
+    duodnorm(x  ::Float64,
+             xd1::Float64,
+             xd2::Float64,
+             td1::Float64, 
+             td2::Float64,
+             σ  ::Float64)
+Likelihood for a duo of Gaussians.
+"""
+function duodnorm(x  ::Float64,
+                  xd1::Float64,
+                  xd2::Float64,
+                  td1::Float64, 
+                  td2::Float64,
+                  σ  ::Float64)
+
+  invt = 1.0/(td1 + td2)
+  return dnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2, 
+    sqrt(td1 * td2 * invt)*σ)
+end
+
+
+
+
+"""
     duoldnorm(x  ::Float64,
               xd1::Float64,
               xd2::Float64,

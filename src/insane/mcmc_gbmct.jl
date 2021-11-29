@@ -502,10 +502,20 @@ function update_fs!(bix    ::Int64,
   if !itb
     ψ1  = Ψ[d1(bi)]
     ψ2  = Ψ[d2(bi)]
+    λ1 = lλ(ψ1)[end]
+    λ2 = lλ(ψ2)[end]
+    e1 = e(ψ1)
+    e2 = e(ψ2)
+  else
+    λ1 = 0.0
+    λ2 = 0.0
+    e1 = 0.0
+    e2 = 0.0
   end
 
   # forward simulate an internal branch
-  ψp, np, ntp, λf = fsbi_ct(bi, lλ(ψc)[1], α, σλ, ϵ, δt, srδt)
+  ψp, ntp, np, λf, lU, acr = 
+    fsbi_ct(bi, ψc, λ1, λ2, e1, e2, α, σλ, ϵ, δt, srδt)
 
   # check for survival or non-exploding simulation
   if np > 0
@@ -516,15 +526,15 @@ function update_fs!(bix    ::Int64,
 
     # if terminal branch
     if itb
-      llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr  = llr
-      drλ  = 0.0
-      ssrλ = 0.0
-      Σrλ  = 0.0
+      llr   = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr  += llr
+      drλ   = 0.0
+      ssrλ  = 0.0
+      Σrλ   = 0.0
     else
-      np -= 1
-      llr = log((1.0 - ρbi)^(np - nc))
-      acr = llr + log(Float64(ntp)/Float64(ntc))
+      np  -= 1
+      llr  = log((1.0 - ρbi)^(np - nc))
+      acr += llr + log(Float64(ntc)/Float64(ntp))
       # change daughters
       if isfinite(acr)
 
@@ -539,7 +549,7 @@ function update_fs!(bix    ::Int64,
     end
 
     # MH ratio
-    if -randexp() < acr
+    if lU < acr
 
       ll1, dλ1, ssλ1, Σλ1, nλ1 = llik_gbm_ssλ(ψp, α, σλ, ϵ, δt, srδt)
       ll0, dλ0, ssλ0, Σλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, ϵ, δt, srδt)
@@ -552,7 +562,7 @@ function update_fs!(bix    ::Int64,
       end
 
       # update llr, ssλ, nλ, sns, ne, L,
-      llr += ll1  - ll0
+      llc += llr + ll1  - ll0
       dλ  += dλ1  - dλ0  + drλ
       ssλ += ssλ1 - ssλ0 + ssrλ
       Σλ  += Σλ1  - Σλ0  + Σrλ
@@ -561,7 +571,6 @@ function update_fs!(bix    ::Int64,
       L   += treelength(ψp)   - treelength(ψc)
 
       Ψ[bix] = ψp          # set new tree
-      llc += llr           # set new likelihood
       if scn
         snodes!(Ψ, sns)    # set new sns
       end
@@ -581,19 +590,29 @@ end
 
 
 
+
+
+
 """
     fsbi_ct(bi  ::iBffs,
             λ0  ::Float64,
+            λ1  ::Float64,
+            λ2  ::Float64,
+            e1  ::Float64,
+            e2  ::Float64,
             α   ::Float64,
             σλ  ::Float64,
             ϵ   ::Float64,
             δt  ::Float64,
             srδt::Float64)
-
 Forward simulation for branch `bi`
 """
 function fsbi_ct(bi  ::iBffs,
-                 λ0  ::Float64,
+                 ψc  ::iTgbmct,
+                 λ1  ::Float64,
+                 λ2  ::Float64,
+                 e1  ::Float64,
+                 e2  ::Float64,
                  α   ::Float64,
                  σλ  ::Float64,
                  ϵ   ::Float64,
@@ -603,33 +622,147 @@ function fsbi_ct(bi  ::iBffs,
   # times
   tfb = tf(bi)
 
-  # forward simulation during branch length
-  t0, na, nsp = _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
+  # MH uniform
+  lU = -randexp()
 
-  if nsp >= 1_000
-    return iTgbmct(), 0, 0, 0.0
-  end
+  # if terminal branch
+  if it(bi)
 
-  nat = na
+    # forward simulation during branch length
+    t0, na, nsp = _sim_gbmct(e(bi), lλ(ψc)[1], α, σλ, ϵ, δt, srδt, 
+                    0, 1, 1_000)
 
-  if isone(na)
-    f, λf = fixalive!(t0, NaN)
-
-    return t0, na, nat, λf
-  elseif na > 1
-    # fix random tip
-    λf = fixrtip!(t0, na, NaN)
-
-    if !it(bi)
-      # add tips until the present
-      tx, na = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na)
+    if nsp >= 1_000
+      return iTgbmct(), 0, 0, 0.0, Inf, -Inf
     end
 
-    return t0, na, nat, λf
+    λf = fixrtip!(t0, na, NaN)
+
+    nat = na
+
+    return t0, nat, na, λf, lU, 0.0
+
+  # if internal branch
+  else
+
+    # tip rates
+    λtsp = Float64[]
+
+    # forward simulation during branch length
+    t0, na, nsp = _sim_gbmct(e(bi), lλ(ψc)[1], α, σλ, ϵ, δt, srδt, 
+                    0, 1, 1_000, λtsp)
+
+    nat = na
+
+    if nsp >= 1_000
+      return iTgbmct(), 0, 0, 0.0, Inf, -Inf
+    end
+
+    # get tips -> daughters likelihoods for current
+    λtsc = Float64[]
+    _λat!(ψc, e(bi), λtsc, 0.0)
+
+    push!(λtsc, λt(bi))
+
+    # current MH `acr`
+    acrc = 0.0
+    for λi in λtsc
+      acrc += exp(λi) * duodnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    end
+    acrc = log(acrc)
+
+    # proposal MH `acr`
+    wp   = Float64[]
+    acrp = 0.0
+    for λi in λtsp
+      wi    = exp(λi) * duodnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+      acrp += wi
+      push!(wp, wi)
+    end
+    acrp = log(acrp)
+
+    # continue simulation only if acr on sum of tip rates is accepted
+    acr = acrp - acrc
+
+    if lU < acr
+
+      # sample tip
+      wti = sample(wp)
+
+      # fix sampled tip
+      lw = lastindex(wp)
+
+      if wti <= div(lw,2)
+        fixtip1!(t0, wti, 0)
+      else
+        fixtip2!(t0, lw - wti + 1, 0)
+      end
+
+      # simulated remaining tips until the present
+      tx, na = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na)
+
+      return t0, nat, na, λtsp[wti], lU, acr
+    end
   end
 
-  return iTgbmct(), 0, 0, 0.0
+  return iTgbmct(), 0, 0, 0.0, Inf, -Inf
 end
+
+
+
+
+
+
+
+# """
+#     fsbi_ct(bi  ::iBffs,
+#             λ0  ::Float64,
+#             α   ::Float64,
+#             σλ  ::Float64,
+#             ϵ   ::Float64,
+#             δt  ::Float64,
+#             srδt::Float64)
+
+# Forward simulation for branch `bi`
+# """
+# function fsbi_ct(bi  ::iBffs,
+#                  λ0  ::Float64,
+#                  α   ::Float64,
+#                  σλ  ::Float64,
+#                  ϵ   ::Float64,
+#                  δt  ::Float64,
+#                  srδt::Float64)
+
+#   # times
+#   tfb = tf(bi)
+
+#   # forward simulation during branch length
+#   t0, na, nsp = _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
+
+#   if nsp >= 1_000
+#     return iTgbmct(), 0, 0, 0.0
+#   end
+
+#   nat = na
+
+#   if isone(na)
+#     f, λf = fixalive!(t0, NaN)
+
+#     return t0, na, nat, λf
+#   elseif na > 1
+#     # fix random tip
+#     λf = fixrtip!(t0, na, NaN)
+
+#     if !it(bi)
+#       # add tips until the present
+#       tx, na = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na)
+#     end
+
+#     return t0, na, nat, λf
+#   end
+
+#   return iTgbmct(), 0, 0, 0.0
+# end
 
 
 

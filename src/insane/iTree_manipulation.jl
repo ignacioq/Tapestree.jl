@@ -704,6 +704,72 @@ end
 
 
 """
+    fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
+  if istip(tree) 
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip1!(tree.d1, wi, ix)
+    if f 
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip1!(tree.d2, wi, ix)
+    if f 
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
+    fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
+  if istip(tree) 
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip2!(tree.d2, wi, ix)
+    if f 
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip2!(tree.d1, wi, ix)
+    if f 
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
     fixrtip!(tree::T) where T <: iTree
 
 Fixes the the path for a random non extinct tip.
