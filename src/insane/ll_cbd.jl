@@ -125,7 +125,7 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
   else
     # for whole likelihood
     f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
-          cond_ll(λ, μ, sns[2]) + cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
+          cond_ll(λ, μ, sns[2]) + cond_ll(λ, μ, sns[3]) - log(λ)
     # for new proposal
     f0 = function (psi::sTbd, λ::Float64, μ::Float64, ter::Bool)
       if ter

@@ -193,8 +193,8 @@ function mcmc_burn_gbmct(Ψ       ::Vector{iTgbmct},
   lup = 0.0
   lac = 0.0
 
-  llc = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) #+ 
-        #scond(Ψ, ϵc, sns) + prob_ρ(idf)
+  llc = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) + 
+        scond(Ψ, ϵc, sns) + prob_ρ(idf)
 
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        + 
         logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2]) +
@@ -279,7 +279,7 @@ end
 
 
 """
-     mcmc_gbmce(Ψ       ::Vector{iTgbmct},
+     mcmc_gbmct(Ψ       ::Vector{iTgbmct},
                 idf     ::Vector{iBffs},
                 llc     ::Float64,
                 prc     ::Float64,
@@ -474,7 +474,7 @@ end
                snodes!::Function, 
                scond0 ::Function)
 
-Forward simulation proposal function for `gbmce`.
+Forward simulation proposal function for `gbmct`.
 """
 function update_fs!(bix    ::Int64,
                     Ψ      ::Vector{iTgbmct},
@@ -534,7 +534,7 @@ function update_fs!(bix    ::Int64,
     else
       np  -= 1
       llr  = log((1.0 - ρbi)^(np - nc))
-      acr += llr + log(Float64(ntc)/Float64(ntp))
+      acr += llr #+ log(Float64(ntc)/Float64(ntp))
       # change daughters
       if isfinite(acr)
 
@@ -558,7 +558,7 @@ function update_fs!(bix    ::Int64,
       scn = (iszero(pa(bi)) && e(bi) > 0.0) || 
             (isone(pa(bi)) && iszero(e(Ψ[1])))
       if scn
-        #llr += scond0(ψp, ϵ, itb) - scond0(ψc, ϵ, itb)
+        llr += scond0(ψp, ϵ, itb) - scond0(ψc, ϵ, itb)
       end
 
       # update llr, ssλ, nλ, sns, ne, L,
@@ -939,7 +939,7 @@ function update_ϵ!(psi  ::Vector{iTgbmct},
 
   # log likelihood and prior ratio
   ϵr  = log(ϵp/ϵc)
-  llr = ne*ϵr + Σλ*(ϵc - ϵp) #+ scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
+  llr = ne*ϵr + Σλ*(ϵc - ϵp) + scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
 
   # prior ratio
   prr = ϵp > ϵxpr ? -Inf : 0.0
@@ -984,7 +984,7 @@ function update_ϵ!(psi  ::Vector{iTgbmct},
 
   # log likelihood and prior ratio
   ϵr   = log(ϵp/ϵc)
-  llr = ne*ϵr + Σλ*(ϵc - ϵp) #+ scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
+  llr = ne*ϵr + Σλ*(ϵc - ϵp) + scond(psi, ϵp, sns) - scond(psi, ϵc, sns)
 
   # prior ratio
   prr = ϵp > ϵxpr ? -Inf : 0.0

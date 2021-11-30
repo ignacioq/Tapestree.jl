@@ -23,18 +23,13 @@ to only be speciation events.
 """
 function sum_alone_stem!(tree::T, 
                          tna ::Float64, 
-                         exx ::Bool,
                          sn  ::BitVector) where {T <: iTree}
 
   if isdefined(tree, :d1)
 
     et = e(tree)
     if isapprox(tna, et, atol = 1e-6)
-      if exx
-        push!(sn, true)
-      else
-        push!(sn, false)
-      end
+      push!(sn, false)
     elseif tna < et
       push!(sn, true)
     else
@@ -44,22 +39,16 @@ function sum_alone_stem!(tree::T,
 
     if isfix(tree.d1::T)
       tnx = treeheight(tree.d2::T)
-      if isapprox(tna, tnx, atol = 1e-6)
-        exx = iszero(ntipsalive(tree.d2)) && exx
-      elseif  tnx > tna
-        exx = iszero(ntipsalive(tree.d2))
+      if tnx > tna
         tna = tnx
       end
-      sum_alone_stem!(tree.d1::T,tna, exx, sn)
+      sum_alone_stem!(tree.d1::T, tna, sn)
     else
       tnx = treeheight(tree.d1::T)
-      if isapprox(tna, tnx, atol = 1e-6)
-        exx = iszero(ntipsalive(tree.d1)) && exx
-      elseif tnx > tna
-        exx = iszero(ntipsalive(tree.d1))
+      if tnx > tna
         tna = tnx
       end
-      sum_alone_stem!(tree.d2::T,tna, exx, sn)
+      sum_alone_stem!(tree.d2::T, tna, sn)
     end
   end
 end
@@ -70,7 +59,6 @@ end
 """
     sum_alone_stem_p!(tree::T, 
                       tna ::Float64, 
-                      exx ::Bool,
                       sn  ::BitVector) where {T <: iTree}
 
 Condition events when there is only one alive lineage in the crown subtrees 
@@ -78,16 +66,11 @@ to only be speciation events.
 """
 function sum_alone_stem_p!(tree::T, 
                            tna ::Float64, 
-                           exx ::Bool,
                            sn  ::BitVector) where {T <: iTree}
 
   et = e(tree)
   if isapprox(tna, et, atol = 1e-6)
-    if exx
-      push!(sn, true)
-    else
-      push!(sn, false)
-    end
+    push!(sn, false)
   elseif tna < et
     push!(sn, true)
   else
@@ -98,22 +81,16 @@ function sum_alone_stem_p!(tree::T,
   if isdefined(tree, :d1)
     if isfix(tree.d1::T)
       tnx = treeheight(tree.d2::T)
-      if isapprox(tna, tnx, atol = 1e-6)
-        exx = iszero(ntipsalive(tree.d2)) && exx
-      elseif  tnx > tna
-        exx = iszero(ntipsalive(tree.d2))
+      if  tnx > tna
         tna = tnx
       end
-      sum_alone_stem_p!(tree.d1::T,tna, exx, sn)
+      sum_alone_stem_p!(tree.d1::T, tna, sn)
     else
       tnx = treeheight(tree.d1::T)
-      if isapprox(tna, tnx, atol = 1e-6)
-        exx = iszero(ntipsalive(tree.d1)) && exx
-      elseif tnx > tna
-        exx = iszero(ntipsalive(tree.d1))
+      if tnx > tna
         tna = tnx
       end
-      sum_alone_stem_p!(tree.d2::T,tna, exx, sn)
+      sum_alone_stem_p!(tree.d2::T, tna, sn)
     end
   end
 end
@@ -132,7 +109,7 @@ function make_snodes(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTre
   if stem
     function f(psi::Vector{T}, sns::NTuple{3,BitVector})
       empty!(sns[1])
-      sum_alone_stem_p!(psi[1], 0.0, false, sns[1])
+      sum_alone_stem_p!(psi[1], 0.0, sns[1])
     end
   else
     b1  = idf[1]
@@ -145,8 +122,8 @@ function make_snodes(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTre
           function (psi::Vector{T}, sns::NTuple{3,BitVector})
             empty!(sns[2])
             empty!(sns[3])
-            sum_alone_stem!(psi[d1i], 0.0, false, sns[2])
-            sum_alone_stem!(psi[d2i], 0.0, false, sns[3])
+            sum_alone_stem!(psi[d1i], 0.0, sns[2])
+            sum_alone_stem!(psi[d2i], 0.0, sns[3])
           end
         end
       else
@@ -154,8 +131,8 @@ function make_snodes(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTre
           function (psi::Vector{T}, sns::NTuple{3,BitVector})
             empty!(sns[2])
             empty!(sns[3])
-            sum_alone_stem!(  psi[d1i], 0.0, false, sns[2])
-            sum_alone_stem_p!(psi[d2i], 0.0, false, sns[3])
+            sum_alone_stem!(  psi[d1i], 0.0, sns[2])
+            sum_alone_stem_p!(psi[d2i], 0.0, sns[3])
           end
         end 
       end
@@ -164,8 +141,8 @@ function make_snodes(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTre
         function (psi::Vector{T}, sns::NTuple{3,BitVector})
           empty!(sns[2])
           empty!(sns[3])
-          sum_alone_stem_p!(psi[d1i], 0.0, false, sns[2]) 
-          sum_alone_stem!(  psi[d2i], 0.0, false, sns[3])
+          sum_alone_stem_p!(psi[d1i], 0.0, sns[2]) 
+          sum_alone_stem!(  psi[d2i], 0.0, sns[3])
         end
       end
     else
@@ -173,8 +150,8 @@ function make_snodes(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTre
         function (psi::Vector{T}, sns::NTuple{3,BitVector})
           empty!(sns[2])
           empty!(sns[3])
-          sum_alone_stem_p!(psi[d1i], 0.0, false, sns[2]) 
-          sum_alone_stem_p!(psi[d2i], 0.0, false, sns[3])
+          sum_alone_stem_p!(psi[d1i], 0.0, sns[2]) 
+          sum_alone_stem_p!(psi[d2i], 0.0, sns[3])
         end
       end
     end
@@ -304,7 +281,6 @@ to only be speciation events.
 """
 function sum_alone_stem(tree::iTgbmce, 
                         tna ::Float64,
-                        exx ::Bool, 
                         ll  ::Float64,
                         μ   ::Float64)
 
@@ -314,10 +290,6 @@ function sum_alone_stem(tree::iTgbmce,
 
   et = e(tree)
   if isapprox(tna, et, atol = 1e-6)
-    if exx
-      λi  = lλ(tree)[end]
-      ll += log(exp(λi) + μ) - λi
-    end
   elseif tna < et
     λi  = lλ(tree)[end]
     ll += log(exp(λi) + μ) - λi
@@ -326,22 +298,16 @@ function sum_alone_stem(tree::iTgbmce,
 
   if isfix(tree.d1::iTgbmce)
     tnx = treeheight(tree.d2::iTgbmce)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d2)) && exx
-    elseif  tnx > tna
-      exx = iszero(ntipsalive(tree.d2))
+    if  tnx > tna
       tna = tnx
     end
-    sum_alone_stem(tree.d1::iTgbmce, tna, exx, ll, μ)
+    sum_alone_stem(tree.d1::iTgbmce, tna, ll, μ)
   else
     tnx = treeheight(tree.d1::iTgbmce)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d1)) && exx
-    elseif tnx > tna
-      exx = iszero(ntipsalive(tree.d1))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem(tree.d2::iTgbmce, tna, exx, ll, μ)
+    sum_alone_stem(tree.d2::iTgbmce, tna, ll, μ)
   end
 end
 
@@ -360,16 +326,11 @@ to only be speciation events.
 """
 function sum_alone_stem_p(tree::iTgbmce, 
                           tna ::Float64, 
-                          exx ::Bool,
                           ll  ::Float64, 
                           μ   ::Float64)
 
   et = e(tree)
   if isapprox(tna, et, atol = 1e-6)
-    if exx
-      λi  = lλ(tree)[end]
-      ll += log(exp(λi) + μ) - λi
-    end
   elseif tna < et
     λi  = lλ(tree)[end]
     ll += log(exp(λi) + μ) - λi
@@ -382,22 +343,16 @@ function sum_alone_stem_p(tree::iTgbmce,
 
   if isfix(tree.d1::iTgbmce)
     tnx = treeheight(tree.d2::iTgbmce)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d2)) && exx
-    elseif  tnx > tna
-      exx = iszero(ntipsalive(tree.d2))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem_p(tree.d1::iTgbmce, tna, exx, ll, μ)
+    sum_alone_stem_p(tree.d1::iTgbmce, tna, ll, μ)
   else
     tnx = treeheight(tree.d1::iTgbmce)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d1)) && exx
-    elseif tnx > tna
-      exx = iszero(ntipsalive(tree.d1))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem_p(tree.d2::iTgbmce, tna, exx, ll, μ)
+    sum_alone_stem_p(tree.d2::iTgbmce, tna, ll, μ)
   end
 end
 
@@ -407,7 +362,6 @@ end
 """
     sum_alone_stem(tree::iTgbmct, 
                    tna ::Float64,
-                   exx ::Bool, 
                    ll  ::Float64,
                    ϵ   ::Float64)
 
@@ -416,7 +370,6 @@ to only be speciation events.
 """
 function sum_alone_stem(tree::iTgbmct, 
                         tna ::Float64,
-                        exx ::Bool, 
                         ll  ::Float64,
                         ϵ   ::Float64)
 
@@ -426,9 +379,6 @@ function sum_alone_stem(tree::iTgbmct,
 
   et = e(tree)
   if isapprox(tna, et, atol = 1e-6)
-    if exx
-      ll += log(1.0 + ϵ)
-    end
   elseif tna < et
     ll += log(1.0 + ϵ)
   end
@@ -436,22 +386,16 @@ function sum_alone_stem(tree::iTgbmct,
 
   if isfix(tree.d1::iTgbmct)
     tnx = treeheight(tree.d2::iTgbmct)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d2)) && exx
-    elseif  tnx > tna
-      exx = iszero(ntipsalive(tree.d2))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem(tree.d1::iTgbmct, tna, exx, ll, ϵ)
+    sum_alone_stem(tree.d1::iTgbmct, tna, ll, ϵ)
   else
     tnx = treeheight(tree.d1::iTgbmct)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d1)) && exx
-    elseif tnx > tna
-      exx = iszero(ntipsalive(tree.d1))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem(tree.d2::iTgbmct, tna, exx, ll, ϵ)
+    sum_alone_stem(tree.d2::iTgbmct, tna, ll, ϵ)
   end
 end
 
@@ -461,7 +405,6 @@ end
 """
     sum_alone_stem_p(tree::iTgbmct, 
                      tna ::Float64, 
-                     exx ::Bool,
                      ll  ::Float64, 
                      ϵ   ::Float64)
 
@@ -470,15 +413,11 @@ to only be speciation events.
 """
 function sum_alone_stem_p(tree::iTgbmct, 
                           tna ::Float64, 
-                          exx ::Bool,
                           ll  ::Float64, 
                           ϵ   ::Float64)
 
   et = e(tree)
   if isapprox(tna, et, atol = 1e-6)
-    if exx
-      ll += log(1.0 + ϵ)
-    end
   elseif tna < et
     ll += log(1.0 + ϵ)
   end
@@ -490,27 +429,18 @@ function sum_alone_stem_p(tree::iTgbmct,
 
   if isfix(tree.d1::iTgbmct)
     tnx = treeheight(tree.d2::iTgbmct)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d2)) && exx
-    elseif  tnx > tna
-      exx = iszero(ntipsalive(tree.d2))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem_p(tree.d1::iTgbmct, tna, exx, ll, ϵ)
+    sum_alone_stem_p(tree.d1::iTgbmct, tna, ll, ϵ)
   else
     tnx = treeheight(tree.d1::iTgbmct)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d1)) && exx
-    elseif tnx > tna
-      exx = iszero(ntipsalive(tree.d1))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem_p(tree.d2::iTgbmct, tna, exx, ll, ϵ)
+    sum_alone_stem_p(tree.d2::iTgbmct, tna, ll, ϵ)
   end
 end
-
-
-
 
 
 
@@ -526,7 +456,6 @@ to only be speciation events.
 """
 function sum_alone_stem(tree::iTgbmbd, 
                         tna ::Float64,
-                        exx ::Bool, 
                         ll  ::Float64)
 
   if istip(tree)
@@ -535,13 +464,6 @@ function sum_alone_stem(tree::iTgbmbd,
 
   et = e(tree)
   if isapprox(tna, et, atol = 1e-6)
-    if exx
-      λv  = lλ(tree)
-      l   = lastindex(λv)
-      λi  = λv[l]
-      μi  = lμ(tree)[l]
-      ll += log(exp(λi) + exp(μi)) - λi
-    end
   elseif tna < et
     λv  = lλ(tree)
     l   = lastindex(λv)
@@ -553,22 +475,16 @@ function sum_alone_stem(tree::iTgbmbd,
 
   if isfix(tree.d1::iTgbmbd)
     tnx = treeheight(tree.d2::iTgbmbd)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d2)) && exx
-    elseif  tnx > tna
-      exx = iszero(ntipsalive(tree.d2))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem(tree.d1::iTgbmbd, tna, exx, ll)
+    sum_alone_stem(tree.d1::iTgbmbd, tna, ll)
   else
     tnx = treeheight(tree.d1::iTgbmbd)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d1)) && exx
-    elseif tnx > tna
-      exx = iszero(ntipsalive(tree.d1))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem(tree.d2::iTgbmbd, tna, exx, ll)
+    sum_alone_stem(tree.d2::iTgbmbd, tna, ll)
   end
 end
 
@@ -578,7 +494,6 @@ end
 """
     sum_alone_stem_p(tree::iTgbmbd, 
                      tna ::Float64, 
-                     exx ::Bool,
                      ll  ::Float64)
 
 Condition events when there is only one alive lineage in the crown subtrees 
@@ -586,18 +501,10 @@ to only be speciation events.
 """
 function sum_alone_stem_p(tree::iTgbmbd, 
                           tna ::Float64, 
-                          exx ::Bool,
                           ll  ::Float64)
 
   et = e(tree)
   if isapprox(tna, et, atol = 1e-6)
-    if exx
-      λv  = lλ(tree)
-      l   = lastindex(λv)
-      λi  = λv[l]
-      μi  = lμ(tree)[l]
-      ll += log(exp(λi) + exp(μi)) - λi
-    end
   elseif tna < et
     λv  = lλ(tree)
     l   = lastindex(λv)
@@ -613,21 +520,16 @@ function sum_alone_stem_p(tree::iTgbmbd,
 
   if isfix(tree.d1::iTgbmbd)
     tnx = treeheight(tree.d2::iTgbmbd)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d2)) && exx
-    elseif  tnx > tna
-      exx = iszero(ntipsalive(tree.d2))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem_p(tree.d1::iTgbmbd, tna, exx, ll)
+    sum_alone_stem_p(tree.d1::iTgbmbd, tna, ll)
   else
     tnx = treeheight(tree.d1::iTgbmbd)
-    if isapprox(tna, tnx, atol = 1e-6)
-      exx = iszero(ntipsalive(tree.d1)) && exx
-    elseif tnx > tna
-      exx = iszero(ntipsalive(tree.d1))
+    if tnx > tna
       tna = tnx
     end
-    sum_alone_stem_p(tree.d2::iTgbmbd, tna, exx, ll)
+    sum_alone_stem_p(tree.d2::iTgbmbd, tna, ll)
   end
 end
+
