@@ -21,6 +21,10 @@ Created 25 08 2020
                   nthin   ::Int64,
                   nburn   ::Int64,
                   tune_int::Int64,
+                  logZ    ::Bool,
+                  nitPP   ::Int64, 
+                  nthPP   ::Int64,
+                  K       ::Int64,
                   ϵi      ::Float64,
                   λi      ::Float64,
                   μi      ::Float64,
@@ -28,7 +32,8 @@ Created 25 08 2020
                   μtni    ::Float64,
                   obj_ar  ::Float64,
                   pupdp   ::NTuple{3,Float64},
-                  prints  ::Int64)
+                  prints  ::Int64,
+                  tρ      ::Dict{String, Float64})
 
 Run insane for constant pure-birth.
 """
@@ -40,6 +45,10 @@ function insane_cbd_fs(tree    ::sT_label,
                        nthin   ::Int64,
                        nburn   ::Int64,
                        tune_int::Int64,
+                       logZ    ::Bool,
+                       nitPP   ::Int64, 
+                       nthPP   ::Int64,
+                       K       ::Int64,
                        ϵi      ::Float64,
                        λi      ::Float64,
                        μi      ::Float64,
@@ -99,12 +108,36 @@ function insane_cbd_fs(tree    ::sT_label,
   R, treev = mcmc_cbd(Ψ, llc, prc, λc, μc, λprior, μprior, niter, nthin, 
     λtn, μtn, idf, pup, prints, sns, snodes!, scond, scond0)
 
+  if logZ
+    # powers
+    βs = Vector{Float64}(undef, K-1)
+    for i in Base.OneTo(K-1)
+      βs[i] = (Float64(i)/Float64(K-1))^3.333333333333333
+    end
+    reverse!(βs)
+    push!(βs, 0.0)
+
+    # marginal likelihood
+    PP = power_posterior(Ψ, llc, prc, λc, μc, λprior, μprior, nitPP, nthPP, βs, 
+      λtn, μtn, idf, pup, sns, snodes!, scond, scond0)
+
+    PP[1] = R[:,2]
+    reverse!(PP)
+    reverse!(βs)
+
+    ps_ml = path_sampling(PP, βs)
+    ss_ml = stepping_stone(PP, βs)
+  else
+    ps_ml = NaN
+    ss_ml = NaN
+  end
+
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2))
 
   write_ssr(R, pardic, out_file)
 
-  return R, treev
+  return R, treev, ps_ml, ss_ml
 end
 
 
@@ -346,146 +379,106 @@ end
 
 
 """
-    marginal_likelihood(Ψ      ::Vector{sTbd},
-                        llc    ::Float64,
-                        prc    ::Float64,
-                        λc     ::Float64,
-                        μc     ::Float64,
-                        λprior ::Float64,
-                        μprior ::Float64,
-                        niter  ::Int64,
-                        nthin  ::Int64,
-                        λtn    ::Float64,
-                        μtn    ::Float64, 
-                        idf    ::Array{iBffs,1},
-                        pup    ::Array{Int64,1}, 
-                        prints ::Int64,
-                        sns    ::NTuple{3, BitVector},
-                        snodes!::Function,
-                        scond  ::Function,
-                        scond0 ::Function)
+    power_posterior(Ψ      ::Vector{sTbd},
+                    llc    ::Float64,
+                    prc    ::Float64,
+                    λc     ::Float64,
+                    μc     ::Float64,
+                    λprior ::Float64,
+                    μprior ::Float64,
+                    nitPP  ::Int64,
+                    nthPP  ::Int64,
+                    K      ::Int64,
+                    λtn    ::Float64,
+                    μtn    ::Float64, 
+                    idf    ::Array{iBffs,1},
+                    pup    ::Array{Int64,1}, 
+                    prints ::Int64,
+                    sns    ::NTuple{3, BitVector},
+                    snodes!::Function,
+                    scond  ::Function,
+                    scond0 ::Function)
 
 MCMC da chain for constant birth-death using forward simulation.
 """
-function marginal_likelihood(Ψ      ::Vector{sTbd},
-                             llc    ::Float64,
-                             prc    ::Float64,
-                             λc     ::Float64,
-                             μc     ::Float64,
-                             λprior ::Float64,
-                             μprior ::Float64,
-                             niter  ::Int64,
-                             nthin  ::Int64,
-                             λtn    ::Float64,
-                             μtn    ::Float64, 
-                             idf    ::Array{iBffs,1},
-                             pup    ::Array{Int64,1}, 
-                             prints ::Int64,
-                             sns    ::NTuple{3, BitVector},
-                             snodes!::Function,
-                             scond  ::Function,
-                             scond0 ::Function)
+function power_posterior(Ψ      ::Vector{sTbd},
+                         llc    ::Float64,
+                         prc    ::Float64,
+                         λc     ::Float64,
+                         μc     ::Float64,
+                         λprior ::Float64,
+                         μprior ::Float64,
+                         nitPP  ::Int64,
+                         nthPP  ::Int64,
+                         βs     ::Vector{Float64},
+                         λtn    ::Float64,
+                         μtn    ::Float64, 
+                         idf    ::Array{iBffs,1},
+                         pup    ::Array{Int64,1}, 
+                         sns    ::NTuple{3, BitVector},
+                         snodes!::Function,
+                         scond  ::Function,
+                         scond0 ::Function)
 
+  K = lastindex(βs)
 
-
-
-  # powers
-  K      = 10 # number of quantiles
-  β_dist = (0.3, 1.0)
-  β      = [0.0:0.1:0.9...]
-
-  # n per power
-  niter = 100
-  nthin = 10
-
-  #
-
-
-
+  # make log-likelihood table per power
+  nlg = fld(nitPP,nthPP)
+  PP  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
 
   el = lastindex(idf)
   ns = Float64(nnodesinternal(Ψ))
   ne = Float64(ntipsextinct(Ψ))
   L  = treelength(Ψ)
 
-  # logging
-  nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  for k in 2:K
 
-  # parameter results
-  R = Array{Float64,2}(undef, nlogs, 5)
+    βi  = βs[k]
+    llc = βi * (llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf))
 
-  # make tree vector
-  treev  = sTbd[]
+    # logging
+    lth, lit = 0, 0
 
-  pbar = Progress(niter, prints, "running mcmc...", 20)
+    for it in Base.OneTo(nitPP)
 
-  for it in Base.OneTo(niter)
+      shuffle!(pup)
 
-    shuffle!(pup)
+      for p in pup
 
-    for p in pup
+        # λ proposal
+        if p === 1
+          llc, prc, λc = 
+            update_λ!(Ψ, llc, prc, λc, λtn, μc, ns, L, sns, λprior, scond, βi)
+        end
 
-      # λ proposal
-      if p === 1
-        llc, prc, λc = 
-          update_λ!(Ψ, llc, prc, λc, λtn, μc, ns, L, sns, λprior, scond, 1.0)
+        # μ proposal
+        if p === 2
+          llc, prc, μc = 
+            update_μ!(Ψ, llc, prc, μc, μtn, λc, ne, L, sns, μprior, scond, βi)
+        end
 
-        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, i, p
-        #    return 
-        # end
+        # forward simulation proposal proposal
+        if p === 3
+          bix = ceil(Int64,rand()*el)
+          llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
+                             snodes!, scond0, βi)
+        end
       end
 
-      # μ proposal
-      if p === 2
-        llc, prc, μc = 
-          update_μ!(Ψ, llc, prc, μc, μtn, λc, ne, L, sns, μprior, scond, 1.0)
-
-        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, i, p
-        #    return 
-        # end
-      end
-
-      # forward simulation proposal proposal
-      if p === 3
-        bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
-                           snodes!, scond0, 1.0)
-
-        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, i, p
-        #    return 
-        # end
+      # log log-likelihood
+      lth += 1
+      if lth === nthPP
+        lit += 1
+        PP[k][lit] = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        lth = 0
       end
     end
 
-    # log parameters
-    lthin += 1
-    if lthin == nthin
-
-      lit += 1
-      @inbounds begin
-        R[lit,1] = Float64(lit)
-        R[lit,2] = llc
-        R[lit,3] = prc
-        R[lit,4] = λc
-        R[lit,5] = μc
-        push!(treev, couple(deepcopy(Ψ), idf, 1))
-      end
-      lthin = 0
-    end
-
-    next!(pbar)
+    @info string(βi," power done")
   end
 
-  return R, treev
+  return PP
 end
-
 
 
 
@@ -536,8 +529,8 @@ function update_fs!(bix    ::Int64,
 
     # if terminal branch
     if itb
-      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr = pow * llr
+      llr = pow * (log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc)))
+      acr = llr
     else
       np  -= 1
       llr = pow * log((1.0 - ρbi)^(np - nc))
@@ -684,10 +677,10 @@ function update_λ!(psi   ::Vector{sTbd},
     λp = mulupt(λc, λtn)::Float64
 
     λr  = log(λp/λc)
-    llr = ns*λr + L*(λc - λp) + scond(λp, μc, sns) - scond(λc, μc, sns)
+    llr = pow * (ns*λr + L*(λc - λp) + scond(λp, μc, sns) - scond(λc, μc, sns))
     prr = llrdexp_x(λp, λc, λprior)
 
-    if -randexp() < (pow * llr + prr + λr)
+    if -randexp() < (llr + prr + λr)
       llc    += llr
       prc    += prr
       λc      = λp
@@ -732,10 +725,10 @@ function update_λ!(psi   ::Vector{sTbd},
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
     λr  = log(λp/λc)
-    llr = ns*λr + L*(λc - λp) + scond(λp, μc, sns) - scond(λc, μc, sns)
+    llr = pow * (ns*λr + L*(λc - λp) + scond(λp, μc, sns) - scond(λc, μc, sns))
     prr = llrdexp_x(λp, λc, λprior)
 
-    if -randexp() < (pow * llr + prr + λr)
+    if -randexp() < (llr + prr + λr)
       llc += llr
       prc += prr
       λc   = λp
@@ -781,10 +774,10 @@ function update_μ!(psi   ::Vector{sTbd},
     μp = mulupt(μc, μtn)::Float64
 
     μr  = log(μp/μc)
-    llr = ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
+    llr = pow * (ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns))
     prr = llrdexp_x(μp, μc, μprior)
 
-    if -randexp() < (pow * llr + prr + μr)
+    if -randexp() < (llr + prr + μr)
       llc    += llr
       prc    += prr
       μc      = μp
@@ -829,10 +822,10 @@ function update_μ!(psi   ::Vector{sTbd},
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
     μr  = log(μp/μc)
-    llr = ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
+    llr = pow * (ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns))
     prr = llrdexp_x(μp, μc, μprior)
 
-    if -randexp() < (pow * llr + prr + μr)
+    if -randexp() < (llr + prr + μr)
       llc += llr
       prc += prr
       μc   = μp
