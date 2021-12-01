@@ -370,7 +370,7 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + scond(Ψ, sns) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ψ, bix
+        #    @show ll0, llc, i, pupi, Ψ
         #    return 
         # end
 
@@ -385,7 +385,7 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + scond(Ψ, sns) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ψ, bix
+        #    @show ll0, llc, i, pupi, Ψ
         #    return 
         # end
       end

@@ -235,7 +235,7 @@ function _crown_update!(ψi   ::iTgbmbd,
     llrbm2, llrbd2, ssrλ2, ssrμ2 = 
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
-    acr = llrbd1 + llrbd2
+    acr = llrbd1 + llrbd2 + log((exp(λr) + exp(μr))/(exp(λi) + exp(μi)))
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr

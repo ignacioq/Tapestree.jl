@@ -534,7 +534,7 @@ function update_fs!(bix    ::Int64,
     else
       np  -= 1
       llr  = log((1.0 - ρbi)^(np - nc))
-      acr += llr #+ log(Float64(ntc)/Float64(ntp))
+      acr += llr 
       # change daughters
       if isfinite(acr)
 

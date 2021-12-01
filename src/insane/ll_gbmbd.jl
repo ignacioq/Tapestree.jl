@@ -506,7 +506,7 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmbd})
     end
     # for new proposal
     f0 = (psi::iTgbmbd, ter::Bool) -> 
-            sum_alone_stem_p(psi, 0.0, false, 0.0)
+            sum_alone_stem_p(psi, 0.0, 0.0)
   else
     # for whole likelihood
     f = let d1i = d1i, d2i = d2i
@@ -514,17 +514,19 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmbd})
 
         sn2 = sns[2]
         sn3 = sns[3]
+        λi = exp(lλ(psi[1])[1])
 
         cond_ll(psi[d1i], 0.0, sn2, lastindex(sn2), 1) +
-        cond_ll(psi[d2i], 0.0, sn3, lastindex(sn3), 1) - lλ(psi[1])[1]
+        cond_ll(psi[d2i], 0.0, sn3, lastindex(sn3), 1) +
+        log((λi + exp(lμ(psi[1])[1]))/λi)
       end
     end
     # for new proposal
     f0 = function (psi::iTgbmbd, ter::Bool)
       if ter
-        sum_alone_stem(  psi, 0.0, false, 0.0)
+        sum_alone_stem(  psi, 0.0, 0.0)
       else
-        sum_alone_stem_p(psi, 0.0, false, 0.0)
+        sum_alone_stem_p(psi, 0.0, 0.0)
       end
     end
   end
