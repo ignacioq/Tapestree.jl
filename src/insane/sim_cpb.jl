@@ -36,8 +36,32 @@ function sim_cpb(t::Float64, λ::Float64)
     return sTpb(t)
   end
 
-  sTpb(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw)
+  sTpb(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw, false)
 end
+
+
+
+
+"""
+  sim_cpb(t::Float64, λ::Float64, na::Int64)
+
+Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`.
+"""
+function sim_cpb(t::Float64, λ::Float64, na::Int64)
+
+  tw = cpb_wait(λ)
+
+  if tw > t
+    na += 1
+    return sTpb(t), na
+  end
+  d1, na = sim_cpb(t - tw, λ, na)
+  d2, na = sim_cpb(t - tw, λ, na)
+
+  sTpb(d1, d2, tw, false), na
+end
+
+
 
 
 

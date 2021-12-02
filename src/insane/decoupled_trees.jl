@@ -13,6 +13,39 @@ Created 05 11 2020
 
 
 """
+    sTbd!(Ψ::Vector{sTpb}, tree::sT_label)
+
+Make edge tree `Ψ` from the edge directory.
+"""
+function sTpb!(Ψ::Vector{sTpb}, tree::sT_label)
+
+  push!(Ψ, sTpb(e(tree), true))
+  if isdefined(tree, :d1)
+    sTpb!(Ψ, tree.d2)
+    sTpb!(Ψ, tree.d1)
+  end
+end
+
+
+
+"""
+    sTbd!(Ψ::Vector{sTbd}, tree::sT_label)
+
+Make edge tree `Ψ` from the edge directory.
+"""
+function sTbd!(Ψ::Vector{sTbd}, tree::sT_label)
+
+  push!(Ψ, sTbd(e(tree), false, true))
+  if isdefined(tree, :d1)
+    sTbd!(Ψ, tree.d2)
+    sTbd!(Ψ, tree.d1)
+  end
+end
+
+
+
+
+"""
     make_Ψ(idf::Vector{iBffs})
 
 Make edge tree `Ψ` from the edge directory.

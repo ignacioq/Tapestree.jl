@@ -44,6 +44,7 @@ with the following fields:
   d1: daughter tree 1
   d2: daughter tree 2
   e:  edge
+  fx: if fix
 
     sTpb()
 
@@ -61,10 +62,12 @@ mutable struct sTpb <: sT
   d1::sTpb
   d2::sTpb
   e ::Float64
+  fx::Bool
 
   sTpb() = new()
-  sTpb(e::Float64) = (x = new(); x.e = e; x)
-  sTpb(d1::sTpb, d2::sTpb, e::Float64) = new(d1, d2, e)
+  sTpb(e::Float64) = (x = new(); x.e = e; x.fx = false; x)
+  sTpb(e::Float64, fx::Bool) = (x = new(); x.e = e; x.fx = fx; x)
+  sTpb(d1::sTpb, d2::sTpb, e::Float64, fx::Bool) = new(d1, d2, e, fx)
 end
 
 # pretty-printing

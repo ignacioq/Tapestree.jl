@@ -79,7 +79,8 @@ function insane_cbd_fs(tree    ::sT_label,
   end
 
   # make a decoupled tree and fix it
-  Ψ = make_Ψ(idf, sTbd)
+  Ψ = sTbd[]
+  sTbd!(Ψ, tree)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -100,7 +101,7 @@ function insane_cbd_fs(tree    ::sT_label,
   @info "Running constant birth-death with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, μc, λtn, μtn,= 
+  llc, prc, λc, μc, λtn, μtn = 
       mcmc_burn_cbd(Ψ, idf, λprior, μprior, nburn, tune_int, λc, μc, λtni, μtni, 
         scalef, pup, prints, sns, snodes!, scond, scond0)
 
@@ -118,8 +119,8 @@ function insane_cbd_fs(tree    ::sT_label,
     push!(βs, 0.0)
 
     # marginal likelihood
-    PP = power_posterior(Ψ, llc, prc, λc, μc, λprior, μprior, nitPP, nthPP, βs, 
-      λtn, μtn, idf, pup, sns, snodes!, scond, scond0)
+    PP = power_posterior(Ψ, idf, llc, prc, λc, μc, λprior, μprior, nitPP, nthPP, βs, 
+      λtn, μtn, pup, sns, snodes!, scond, scond0)
 
     PP[1] = R[:,2]
     reverse!(PP)
@@ -197,7 +198,7 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
   ne = 0.0               # number of extinction events
 
   # likelihood
-  llc = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+  llc = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -287,7 +288,6 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
                   nthin  ::Int64,
                   λtn    ::Float64,
                   μtn    ::Float64, 
-                  idf    ::Array{iBffs,1},
                   pup    ::Array{Int64,1}, 
                   prints ::Int64,
                   sns    ::NTuple{3, BitVector},
@@ -323,7 +323,7 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
         llc, prc, λc = 
           update_λ!(Ψ, llc, prc, λc, λtn, μc, ns, L, sns, λprior, scond, 1.0)
 
-        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -334,7 +334,7 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
         llc, prc, μc = 
           update_μ!(Ψ, llc, prc, μc, μtn, λc, ne, L, sns, μprior, scond, 1.0)
 
-        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -346,7 +346,7 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
         llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
                            snodes!, scond0, 1.0)
 
-        # llci = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -381,6 +381,7 @@ end
 
 """
     power_posterior(Ψ      ::Vector{sTbd},
+                    idf    ::Array{iBffs,1},
                     llc    ::Float64,
                     prc    ::Float64,
                     λc     ::Float64,
@@ -389,12 +390,10 @@ end
                     μprior ::Float64,
                     nitPP  ::Int64,
                     nthPP  ::Int64,
-                    K      ::Int64,
+                    βs     ::Vector{Float64},
                     λtn    ::Float64,
                     μtn    ::Float64, 
-                    idf    ::Array{iBffs,1},
                     pup    ::Array{Int64,1}, 
-                    prints ::Int64,
                     sns    ::NTuple{3, BitVector},
                     snodes!::Function,
                     scond  ::Function,
@@ -403,6 +402,7 @@ end
 MCMC da chain for constant birth-death using forward simulation.
 """
 function power_posterior(Ψ      ::Vector{sTbd},
+                         idf    ::Array{iBffs,1},
                          llc    ::Float64,
                          prc    ::Float64,
                          λc     ::Float64,
@@ -414,7 +414,6 @@ function power_posterior(Ψ      ::Vector{sTbd},
                          βs     ::Vector{Float64},
                          λtn    ::Float64,
                          μtn    ::Float64, 
-                         idf    ::Array{iBffs,1},
                          pup    ::Array{Int64,1}, 
                          sns    ::NTuple{3, BitVector},
                          snodes!::Function,
@@ -424,7 +423,7 @@ function power_posterior(Ψ      ::Vector{sTbd},
   K = lastindex(βs)
 
   # make log-likelihood table per power
-  nlg = fld(nitPP,nthPP)
+  nlg = fld(nitPP, nthPP)
   PP  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
 
   el = lastindex(idf)
@@ -435,7 +434,7 @@ function power_posterior(Ψ      ::Vector{sTbd},
   for k in 2:K
 
     βi  = βs[k]
-    llc = βi * (llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf))
+    llc = βi * (llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf))
 
     # logging
     lth, lit = 0, 0
@@ -458,9 +457,12 @@ function power_posterior(Ψ      ::Vector{sTbd},
 
         # forward simulation proposal proposal
         else 
-          bix = ceil(Int64,rand()*el)
-          llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
-                             snodes!, scond0, βi)
+
+          if k < K
+            bix = ceil(Int64,rand()*el)
+            llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
+                               snodes!, scond0, βi)
+          end
         end
       end
 
@@ -468,7 +470,7 @@ function power_posterior(Ψ      ::Vector{sTbd},
       lth += 1
       if lth === nthPP
         lit += 1
-        PP[k][lit] = llik_cbd(Ψ, idf, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        PP[k][lit] = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         lth = 0
       end
     end
@@ -514,7 +516,7 @@ function update_fs!(bix    ::Int64,
   bi = idf[bix]
 
   # forward simulate an internal branch
-  ψp, np, ntp = fsbi(bi, λ, μ, 5_000)
+  ψp, np, ntp = fsbi(bi, λ, μ, 1_000)
 
   itb = it(bi) # is it terminal
   ρbi = ρi(bi) # get branch sampling fraction

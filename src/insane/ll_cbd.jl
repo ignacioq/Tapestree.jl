@@ -79,15 +79,13 @@ end
 
 """
     llik_cbd(psi::Vector{sTbd}, 
-             idf::Vector{iBffs},
              λ   ::Float64, 
              μ   ::Float64)
 
 Log-likelihood up to a constant for constant birth-death 
-given a complete `iTree` for edge trees.
+given a complete `iTree` for decoupled trees.
 """
 function llik_cbd(psi ::Vector{sTbd}, 
-                  idf ::Vector{iBffs},
                   λ    ::Float64, 
                   μ    ::Float64)
 

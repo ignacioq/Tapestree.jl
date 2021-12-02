@@ -20,11 +20,34 @@ given a complete `iTree`.
 """
 function llik_cpb(tree::sTpb, λ::Float64)
 
-  if isdefined(tree, :d1)
-    llik_cpb(tree.d1::sTpb, λ) + llik_cpb(tree.d2::sTpb, λ) + log(λ) - e(tree)*λ
-  else
+  if istip(tree)
     - e(tree) * λ
+  else
+    log(λ) - e(tree) * λ       + 
+    llik_cpb(tree.d1::sTpb, λ) + 
+    llik_cpb(tree.d2::sTpb, λ)
   end
+end
+
+
+
+
+"""
+    llik_cpb(psi::Vector{sTpb}, λ::Float64)
+
+Log-likelihood up to a constant for constant pure-birth 
+given a complete `iTree` for decoupled trees.
+"""
+function llik_cpb(psi::Vector{sTpb}, λ::Float64)
+
+  ll = 0.0
+  for ψ in psi
+    ll += llik_cpb(ψ, λ)
+  end
+
+  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ)
+
+  return ll
 end
 
 
