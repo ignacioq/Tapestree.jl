@@ -64,7 +64,7 @@ function insane_cpb(tree    ::sT_label,
 
   # starting parameters
   if isnan(λi)
-    λc = Float64(n-1)/treelength(tree)
+    λc = Float64(n-2)/treelength(tree)
   else
     λc = λi
   end
@@ -118,7 +118,7 @@ function insane_cpb(tree    ::sT_label,
     ss_ml = NaN
   end
 
-  pardic = Dict(("lambda"      => 1))
+  pardic = Dict(("lambda" => 1))
 
   write_ssr(R, pardic, out_file)
 
@@ -161,7 +161,7 @@ function mcmc_burn_cpb(Ψ       ::Vector{sTpb},
 
   el = lastindex(idf)
   L  = treelength(Ψ)     # tree length
-  ns = Float64(el-1)/2.0 # number of speciation events
+  ns = Float64(el-1)*0.5 # number of speciation events
 
   #likelihood
   llc = llik_cpb(Ψ, λc)
@@ -264,7 +264,7 @@ function mcmc_cpb(Ψ      ::Vector{sTpb},
         # end
       # forward simulation proposal proposal
       else
-        
+
         bix = ceil(Int64,rand()*el)
         llc, ns, L = update_fs!(bix, Ψ, idf, llc, λc, ns, L, 1.0)
 
@@ -552,7 +552,7 @@ function update_λ!(psi   ::Vector{sTpb},
     λp = mulupt(λc, λtn)::Float64
 
     λr  = log(λp/λc)
-    llr = pow * (ns*λr + L*(λc - λp))
+    llr = pow * ((ns-1.0)*λr + L*(λc - λp))
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llr + prr + λr)
@@ -594,7 +594,7 @@ function update_λ!(psi   ::Vector{sTpb},
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
     λr  = log(λp/λc)
-    llr = pow * (ns*λr + L*(λc - λp))
+    llr = pow * ((ns-1.0)*λr + L*(λc - λp))
     prr = llrdexp_x(λp, λc, λprior)
 
     if -randexp() < (llr + prr + λr)

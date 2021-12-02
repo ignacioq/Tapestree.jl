@@ -45,7 +45,7 @@ function llik_cpb(psi::Vector{sTpb}, λ::Float64)
     ll += llik_cpb(ψ, λ)
   end
 
-  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ)
+  ll += ((Float64(lastindex(psi) - 1) * 0.5) - 1.0) * log(λ)
 
   return ll
 end
@@ -60,4 +60,4 @@ Returns the maximum likelihood estimate for `λ` according
 to a constant pure-birth process.
 """
 λmle_cpb(tree::T) where {T <: iTree} = 
-  Float64(ntips(tree)-1)/treelength(tree)
+  Float64(ntips(tree)-2)/treelength(tree)
