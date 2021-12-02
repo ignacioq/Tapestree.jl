@@ -28,9 +28,7 @@ function sum_alone_stem!(tree::T,
   if isdefined(tree, :d1)
 
     et = e(tree)
-    if isapprox(tna, et, atol = 1e-6)
-      push!(sn, false)
-    elseif tna < et
+    if tna < et
       push!(sn, true)
     else
       push!(sn, false)
@@ -39,15 +37,11 @@ function sum_alone_stem!(tree::T,
 
     if isfix(tree.d1::T)
       tnx = treeheight(tree.d2::T)
-      if tnx > tna
-        tna = tnx
-      end
+      tna = tnx > tna ? tnx : tna
       sum_alone_stem!(tree.d1::T, tna, sn)
     else
       tnx = treeheight(tree.d1::T)
-      if tnx > tna
-        tna = tnx
-      end
+      tna = tnx > tna ? tnx : tna
       sum_alone_stem!(tree.d2::T, tna, sn)
     end
   end
@@ -69,9 +63,7 @@ function sum_alone_stem_p!(tree::T,
                            sn  ::BitVector) where {T <: iTree}
 
   et = e(tree)
-  if isapprox(tna, et, atol = 1e-6)
-    push!(sn, false)
-  elseif tna < et
+  if tna < et
     push!(sn, true)
   else
     push!(sn, false)
@@ -81,15 +73,11 @@ function sum_alone_stem_p!(tree::T,
   if isdefined(tree, :d1)
     if isfix(tree.d1::T)
       tnx = treeheight(tree.d2::T)
-      if  tnx > tna
-        tna = tnx
-      end
+      tna = tnx > tna ? tnx : tna
       sum_alone_stem_p!(tree.d1::T, tna, sn)
     else
       tnx = treeheight(tree.d1::T)
-      if tnx > tna
-        tna = tnx
-      end
+      tna = tnx > tna ? tnx : tna
       sum_alone_stem_p!(tree.d2::T, tna, sn)
     end
   end
@@ -158,21 +146,6 @@ function make_snodes(idf::Vector{iBffs}, stem::Bool, ::Type{T}) where {T <: iTre
   end
 
   return f
-end
-
-
-
-
-"""
-    cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
-
-Log-probability of at least two lineage surviving for 
-birth-death process with `λ` and `μ` for crown age.
-"""
-function cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
-  n = sum_alone_stem(tree.d1::sTbd, 0.0, 0.0) +
-      sum_alone_stem(tree.d2::sTbd, 0.0, 0.0)
-  return n*log((λ + μ)/λ) - log(λ)
 end
 
 
@@ -289,8 +262,7 @@ function sum_alone_stem(tree::iTgbmce,
   end
 
   et = e(tree)
-  if isapprox(tna, et, atol = 1e-6)
-  elseif tna < et
+  if tna < et
     λi  = lλ(tree)[end]
     ll += log(exp(λi) + μ) - λi
   end
@@ -330,8 +302,7 @@ function sum_alone_stem_p(tree::iTgbmce,
                           μ   ::Float64)
 
   et = e(tree)
-  if isapprox(tna, et, atol = 1e-6)
-  elseif tna < et
+  if tna < et
     λi  = lλ(tree)[end]
     ll += log(exp(λi) + μ) - λi
   end
@@ -378,8 +349,7 @@ function sum_alone_stem(tree::iTgbmct,
   end
 
   et = e(tree)
-  if isapprox(tna, et, atol = 1e-6)
-  elseif tna < et
+  if tna < et
     ll += log(1.0 + ϵ)
   end
   tna -= et
@@ -417,8 +387,7 @@ function sum_alone_stem_p(tree::iTgbmct,
                           ϵ   ::Float64)
 
   et = e(tree)
-  if isapprox(tna, et, atol = 1e-6)
-  elseif tna < et
+  if tna < et
     ll += log(1.0 + ϵ)
   end
   tna -= et
@@ -463,8 +432,7 @@ function sum_alone_stem(tree::iTgbmbd,
   end
 
   et = e(tree)
-  if isapprox(tna, et, atol = 1e-6)
-  elseif tna < et
+  if tna < et
     λv  = lλ(tree)
     l   = lastindex(λv)
     λi  = λv[l]
@@ -504,8 +472,7 @@ function sum_alone_stem_p(tree::iTgbmbd,
                           ll  ::Float64)
 
   et = e(tree)
-  if isapprox(tna, et, atol = 1e-6)
-  elseif tna < et
+  if tna < et
     λv  = lλ(tree)
     l   = lastindex(λv)
     λi  = λv[l]

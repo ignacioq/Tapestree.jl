@@ -37,7 +37,7 @@ birth-death process with `λ` and `μ` from stem age.
 function stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
   @fastmath begin
     μ += λ === μ ? 1e-14 : 0.0
-    log((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))
+    - log((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))
   end
 end
 
@@ -52,7 +52,7 @@ birth-death process with `λ` and `μ` from stem age.
 """
 function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
     μ += λ === μ ? 1e-14 : 0.0
-    log(((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
+    - 2.0 * log((λ - μ)/(λ - μ*exp(-(λ - μ)*t))) - log(λ)
 end
 
 
@@ -125,7 +125,8 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
   else
     # for whole likelihood
     f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
-          cond_ll(λ, μ, sns[2]) + cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
+          cond_ll(λ, μ, sns[2]) + 
+          cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
     # for new proposal
     f0 = function (psi::sTbd, λ::Float64, μ::Float64, ter::Bool)
       if ter
