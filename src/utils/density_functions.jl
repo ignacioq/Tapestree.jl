@@ -290,6 +290,17 @@ logdgamma(x::Float64, α::Float64, β::Float64) =
 
 
 
+"""
+    llrdgamma(x::Float64, α::Float64, β::Float64)
+  
+Compute the logarithmic transformation of the 
+**Gamma** density with shape `α` and scale `β` for `x`.
+"""
+llrdgamma(xp::Float64, xc::Float64, α::Float64, β::Float64) =  
+  (α-1.0) * log(xp/xc) + β * (xc - xp)
+
+
+
 
 """
     logdinvgamma(x::Float64, α::Float64, β::Float64)

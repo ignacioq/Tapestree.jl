@@ -15,7 +15,7 @@ Created 06 07 2020
 """
     insane_cpb(tree    ::sT_label, 
                out_file::String;
-               λprior  ::Float64               = 0.1,
+               λprior  ::NTuple{2,Float64}     = (1.0, 1.0),
                niter   ::Int64                 = 1_000,
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
@@ -24,17 +24,16 @@ Created 06 07 2020
                nitPP   ::Int64                 = 100, 
                nthPP   ::Int64                 = 10,
                K       ::Int64                 = 10,
-               λtni    ::Float64               = 1.0,
-               pupdp   ::NTuple{2,Float64}     = (0.2,0.2),
+               λi      ::Float64               = NaN,
+               pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
                prints  ::Int64                 = 5,
-               obj_ar  ::Float64               = 0.4,
                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant pure-birth.
 """
 function insane_cpb(tree    ::sT_label, 
                     out_file::String;
-                    λprior  ::Float64               = 0.1,
+                    λprior  ::NTuple{2,Float64}     = (1.0, 1.0),
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
@@ -44,9 +43,7 @@ function insane_cpb(tree    ::sT_label,
                     nthPP   ::Int64                 = 10,
                     K       ::Int64                 = 10,
                     λi      ::Float64               = NaN,
-                    λtni    ::Float64               = 1.0,
-                    obj_ar  ::Float64               = 0.4,
-                    pupdp   ::NTuple{2,Float64}     = (0.2,0.2),
+                    pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
                     prints  ::Int64                 = 5,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -80,19 +77,14 @@ function insane_cpb(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  # make objecting scaling function for tuning
-  scalef = makescalef(obj_ar)
-
   @info "Running constant pure-birth with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, λtn = 
-      mcmc_burn_cpb(Ψ, idf, λprior, nburn, tune_int, λc, λtni, 
-        scalef, pup, prints)
+  llc, prc, λc = 
+      mcmc_burn_cpb(Ψ, idf, λprior, nburn, λc, pup, prints)
 
   # mcmc
-  R, treev = mcmc_cpb(Ψ, idf, llc, prc, λc, λprior, niter, nthin, 
-              λtn, pup, prints)
+  R, treev = mcmc_cpb(Ψ, idf, llc, prc, λc, λprior, niter, nthin, pup, prints)
 
   if logZ
     # powers
@@ -104,8 +96,7 @@ function insane_cpb(tree    ::sT_label,
     push!(βs, 0.0)
 
     # marginal likelihood
-    PP = power_posterior(Ψ, idf, llc, prc, λc, λprior, nitPP, nthPP, βs, 
-           λtn, pup)
+    PP = power_posterior(Ψ, idf, llc, prc, λc, λprior, nitPP, nthPP, βs, pup)
 
     PP[1] = R[:,2]
     reverse!(PP)
@@ -131,12 +122,9 @@ end
 """
     mcmc_burn_cpb(Ψ       ::Vector{sTpb}, 
                   idf     ::Array{iBffs,1},
-                  λprior  ::Float64,
+                  λprior  ::NTuple{2,Float64},
                   nburn   ::Int64,
-                  tune_int::Int64,
                   λc      ::Float64,
-                  λtni    ::Float64, 
-                  scalef  ::Function,
                   pup     ::Array{Int64,1}, 
                   prints  ::Int64)
 
@@ -144,20 +132,11 @@ MCMC chain for constant pure-birth.
 """
 function mcmc_burn_cpb(Ψ       ::Vector{sTpb}, 
                        idf     ::Array{iBffs,1},
-                       λprior  ::Float64,
+                       λprior  ::NTuple{2,Float64},
                        nburn   ::Int64,
-                       tune_int::Int64,
                        λc      ::Float64,
-                       λtni    ::Float64, 
-                       scalef  ::Function,
                        pup     ::Array{Int64,1}, 
                        prints  ::Int64)
-
-  # initialize acceptance log
-  ltn = 0
-  lup = 0.0
-  lac = 0.0
-  λtn = λtni
 
   el = lastindex(idf)
   L  = treelength(Ψ)     # tree length
@@ -165,7 +144,7 @@ function mcmc_burn_cpb(Ψ       ::Vector{sTpb},
 
   #likelihood
   llc = llik_cpb(Ψ, λc)
-  prc = logdexp(λc, λprior)
+  prc = logdgamma(λc, λprior[1], λprior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -177,10 +156,8 @@ function mcmc_burn_cpb(Ψ       ::Vector{sTpb},
 
       # λ proposal
       if p === 1
-        llc, prc, λc, lac = 
-          update_λ!(Ψ, llc, prc, λc, lac, λtn, ns, L, λprior, 1.0)
 
-        lup += 1.0
+        llc, prc, λc = update_λ!(llc, prc, λc, ns, L, λprior, 1.0)
 
       # forward simulation proposal proposal
       else
@@ -188,33 +165,28 @@ function mcmc_burn_cpb(Ψ       ::Vector{sTpb},
 
         llc, ns, L = update_fs!(bix, Ψ, idf, llc, λc, ns, L, 1.0)
       end
-
-      # log tuning parameters
-      ltn += 1
-      if ltn == tune_int
-        λtn = scalef(λtn,lac/lup)
-        ltn = 0
-      end
     end
 
     next!(pbar)
   end
 
-  return llc, prc, λc, λtn
+  return llc, prc, λc
 end
 
 
 
 
 """
-    mcmc_cpb(tree  ::sTpb,
-             llc   ::Float64,
-             prc   ::Float64,
-             λc    ::Float64,
-             λprior::Float64,
-             niter ::Int64,
-             nthin ::Int64,
-             λtn   ::Float64)
+    mcmc_cpb(Ψ      ::Vector{sTpb},
+             idf    ::Array{iBffs,1},
+             llc    ::Float64,
+             prc    ::Float64,
+             λc     ::Float64,
+             λprior ::NTuple{2,Float64},
+             niter  ::Int64,
+             nthin  ::Int64,
+             pup    ::Array{Int64,1}, 
+             prints ::Int64)
 
 MCMC chain for constant pure-birth.
 """
@@ -223,10 +195,9 @@ function mcmc_cpb(Ψ      ::Vector{sTpb},
                   llc    ::Float64,
                   prc    ::Float64,
                   λc     ::Float64,
-                  λprior ::Float64,
+                  λprior ::NTuple{2,Float64},
                   niter  ::Int64,
                   nthin  ::Int64,
-                  λtn    ::Float64,
                   pup    ::Array{Int64,1}, 
                   prints ::Int64)
 
@@ -253,9 +224,8 @@ function mcmc_cpb(Ψ      ::Vector{sTpb},
 
       # λ proposal
       if p === 1
-        
-        llc, prc, λc, = 
-          update_λ!(Ψ, llc, prc, λc, λtn, ns, L, λprior, 1.0)
+
+        llc, prc, λc = update_λ!(llc, prc, λc, ns, L, λprior, 1.0)
 
         # llci = llik_cpb(Ψ, λc)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -304,11 +274,10 @@ end
                     llc    ::Float64,
                     prc    ::Float64,
                     λc     ::Float64,
-                    λprior ::Float64,
+                    λprior ::NTuple{2,Float64},
                     nitPP  ::Int64,
                     nthPP  ::Int64,
                     βs     ::Vector{Float64},
-                    λtn    ::Float64,
                     pup    ::Array{Int64,1})
 
 MCMC da chain for constant birth-death using forward simulation.
@@ -318,11 +287,10 @@ function power_posterior(Ψ      ::Vector{sTpb},
                          llc    ::Float64,
                          prc    ::Float64,
                          λc     ::Float64,
-                         λprior ::Float64,
+                         λprior ::NTuple{2,Float64},
                          nitPP  ::Int64,
                          nthPP  ::Int64,
                          βs     ::Vector{Float64},
-                         λtn    ::Float64,
                          pup    ::Array{Int64,1})
 
   K = lastindex(βs)
@@ -351,8 +319,8 @@ function power_posterior(Ψ      ::Vector{sTpb},
 
         # λ proposal
         if p === 1
-          llc, prc, λc = 
-            update_λ!(Ψ, llc, prc, λc, λtn, ns, L, λprior, βi)
+
+          llc, prc, λc = update_λ!(llc, prc, λc, ns, L, λprior, βi)
 
         # forward simulation proposal proposal
         else 
@@ -538,72 +506,20 @@ end
 
 `λ` proposal function for constant pure-birth in adaptive phase.
 """
-function update_λ!(psi   ::Vector{sTpb},
-                   llc   ::Float64,
+function update_λ!(llc   ::Float64,
                    prc   ::Float64,
                    λc    ::Float64,
-                   lac   ::Float64,
-                   λtn   ::Float64,
                    ns    ::Float64,
                    L     ::Float64,
-                   λprior::Float64,
+                   λprior::NTuple{2,Float64},
                    pow   ::Float64)
 
-    λp = mulupt(λc, λtn)::Float64
+  λp   = randgamma(λprior[1] + pow * (ns-1.0), λprior[2] + pow * L)
 
-    λr  = log(λp/λc)
-    llr = pow * ((ns-1.0)*λr + L*(λc - λp))
-    prr = llrdexp_x(λp, λc, λprior)
+  llc += pow * ((ns-1.0)*log(λp/λc) + L*(λc - λp))
+  prc += llrdgamma(λp, λc, λprior[1], λprior[2])
 
-    if -randexp() < (llr + prr + λr)
-      llc += llr
-      prc += prr
-      λc   = λp
-      lac += 1.0
-    end
-
-    return llc, prc, λc, lac
-end
-
-
-
-
-"""
-    update_λ!(psi   ::Vector{sTpb},
-              llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              λtn   ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              λprior::Float64,
-              pow   ::Float64)
-
-`λ` proposal function for constant pure-birth.
-"""
-function update_λ!(psi   ::Vector{sTpb},
-                   llc   ::Float64,
-                   prc   ::Float64,
-                   λc    ::Float64,
-                   λtn   ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
-                   λprior::Float64,
-                   pow   ::Float64)
-
-    λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
-
-    λr  = log(λp/λc)
-    llr = pow * ((ns-1.0)*λr + L*(λc - λp))
-    prr = llrdexp_x(λp, λc, λprior)
-
-    if -randexp() < (llr + prr + λr)
-      llc += llr
-      prc += prr
-      λc   = λp
-    end
-
-    return llc, prc, λc 
+  return llc, prc, λp
 end
 
 
