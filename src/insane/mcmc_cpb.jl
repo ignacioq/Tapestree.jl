@@ -21,8 +21,8 @@ Created 06 07 2020
                nburn   ::Int64                 = 200,
                tune_int::Int64                 = 100,
                logZ    ::Bool                  = false,
-               nitPP   ::Int64                 = 100, 
-               nthPP   ::Int64                 = 10,
+               nitpp   ::Int64                 = 100, 
+               nthpp   ::Int64                 = 10,
                K       ::Int64                 = 10,
                λi      ::Float64               = NaN,
                pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
@@ -39,8 +39,8 @@ function insane_cpb(tree    ::sT_label,
                     nburn   ::Int64                 = 200,
                     tune_int::Int64                 = 100,
                     logZ    ::Bool                  = false,
-                    nitPP   ::Int64                 = 100, 
-                    nthPP   ::Int64                 = 10,
+                    nitpp   ::Int64                 = 100, 
+                    nthpp   ::Int64                 = 10,
                     K       ::Int64                 = 10,
                     λi      ::Float64               = NaN,
                     pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
@@ -84,36 +84,44 @@ function insane_cpb(tree    ::sT_label,
       mcmc_burn_cpb(Ψ, idf, λprior, nburn, λc, pup, prints)
 
   # mcmc
-  R, treev = mcmc_cpb(Ψ, idf, llc, prc, λc, λprior, niter, nthin, pup, prints)
+  r, treev = mcmc_cpb(Ψ, idf, llc, prc, λc, λprior, niter, nthin, pup, prints)
 
   if logZ
-    # powers
-    βs = Vector{Float64}(undef, K-1)
-    for i in Base.OneTo(K-1)
-      βs[i] = (Float64(i)/Float64(K-1))^3.333333333333333
-    end
+    # reference distribution
+    βs = [range(0.0, 1.0, K)...]
     reverse!(βs)
-    push!(βs, 0.0)
+
+    @views p = r[:,4]
+
+    # make reference posterior
+    m     = mean(p)
+    v     = var(p)
+    rdist = (m^2/v, m/v)
 
     # marginal likelihood
-    PP = power_posterior(Ψ, idf, llc, prc, λc, λprior, nitPP, nthPP, βs, pup)
+    pp = ref_posterior(Ψ, idf, llc, prc, λc, λprior, rdist, 
+      nitpp, nthpp, βs, pup)
 
-    PP[1] = R[:,2]
-    reverse!(PP)
+    # process with reference distribution the posterior
+    p1 = Vector{Float64}(undef, size(r,1))
+    for i in Base.OneTo(size(r,1))
+      p1[i] = r[i,2] + r[i,3] - logdgamma(r[i,4], rdist[1], rdist[2])
+    end
+    pp[1] = p1
+
+    reverse!(pp)
     reverse!(βs)
 
-    ps_ml = path_sampling(PP, βs)
-    ss_ml = stepping_stone(PP, βs)
+    ml = gss(pp, βs)
   else
-    ps_ml = NaN
-    ss_ml = NaN
+    ml = NaN
   end
 
   pardic = Dict(("lambda" => 1))
 
-  write_ssr(R, pardic, out_file)
+  write_ssr(r, pardic, out_file)
 
-  return R, treev, ps_ml, ss_ml
+  return r, treev, ml
 end
 
 
@@ -275,8 +283,8 @@ end
                     prc    ::Float64,
                     λc     ::Float64,
                     λprior ::NTuple{2,Float64},
-                    nitPP  ::Int64,
-                    nthPP  ::Int64,
+                    nitpp  ::Int64,
+                    nthpp  ::Int64,
                     βs     ::Vector{Float64},
                     pup    ::Array{Int64,1})
 
@@ -288,16 +296,16 @@ function power_posterior(Ψ      ::Vector{sTpb},
                          prc    ::Float64,
                          λc     ::Float64,
                          λprior ::NTuple{2,Float64},
-                         nitPP  ::Int64,
-                         nthPP  ::Int64,
+                         nitpp  ::Int64,
+                         nthpp  ::Int64,
                          βs     ::Vector{Float64},
                          pup    ::Array{Int64,1})
 
   K = lastindex(βs)
 
   # make log-likelihood table per power
-  nlg = fld(nitPP, nthPP)
-  PP  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+  nlg = fld(nitpp, nthpp)
+  pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
 
   el = lastindex(idf)
   ns = Float64(nnodesinternal(Ψ))
@@ -311,7 +319,7 @@ function power_posterior(Ψ      ::Vector{sTpb},
     # logging
     lth, lit = 0, 0
 
-    for it in Base.OneTo(nitPP)
+    for it in Base.OneTo(nitpp)
 
       shuffle!(pup)
 
@@ -333,9 +341,9 @@ function power_posterior(Ψ      ::Vector{sTpb},
 
       # log log-likelihood
       lth += 1
-      if lth === nthPP
+      if lth === nthpp
         lit += 1
-        PP[k][lit] = llik_cpb(Ψ, λc)
+        pp[k][lit] = llik_cpb(Ψ, λc)
         lth = 0
       end
     end
@@ -343,7 +351,92 @@ function power_posterior(Ψ      ::Vector{sTpb},
     @info string(βi," power done")
   end
 
-  return PP
+  return pp
+end
+
+
+
+"""
+    ref_posterior(Ψ      ::Vector{sTpb},
+                  idf    ::Array{iBffs,1},
+                  llc    ::Float64,
+                  prc    ::Float64,
+                  λc     ::Float64,
+                  λprior ::NTuple{2,Float64},
+                  nitpp  ::Int64,
+                  nthpp  ::Int64,
+                  βs     ::Vector{Float64},
+                  pup    ::Array{Int64,1})
+
+MCMC da chain for constant birth-death using forward simulation.
+"""
+function ref_posterior(Ψ      ::Vector{sTpb},
+                       idf    ::Array{iBffs,1},
+                       llc    ::Float64,
+                       prc    ::Float64,
+                       λc     ::Float64,
+                       λprior ::NTuple{2,Float64},
+                       rdist  ::NTuple{2,Float64},
+                       nitpp  ::Int64,
+                       nthpp  ::Int64,
+                       βs     ::Vector{Float64},
+                       pup    ::Array{Int64,1})
+
+  K = lastindex(βs)
+
+  # make log-likelihood table per power
+  nlg = fld(nitpp, nthpp)
+  pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+
+  el = lastindex(idf)
+  ns = Float64(nnodesinternal(Ψ))
+  L  = treelength(Ψ)
+
+  llc = llik_cpb(Ψ, λc)
+  prc = logdgamma(λc, λprior[1], λprior[2])
+
+  for k in 2:K
+
+    βi  = βs[k]
+    rdc = logdgamma(λc, rdist[1], rdist[2])
+
+    # logging
+    lth, lit = 0, 0
+
+    for it in Base.OneTo(nitpp)
+
+      shuffle!(pup)
+
+      for p in pup
+
+        # λ proposal
+        if p === 1
+
+          llc, prc, rdc, λc = 
+            update_λ!(llc, prc, rdc, λc, ns, L, λprior, rdist, βi)
+
+        # forward simulation proposal proposal
+        else 
+
+          bix = ceil(Int64,rand()*el)
+          llc, ns, L = update_fs!(bix, Ψ, idf, llc, λc, ns, L, βi)
+
+        end
+      end
+
+      # log log-likelihood
+      lth += 1
+      if lth === nthpp
+        lit += 1
+        pp[k][lit] = llc + prc - rdc
+        lth = 0
+      end
+    end
+
+    @info string(βi," power done")
+  end
+
+  return pp
 end
 
 
@@ -387,23 +480,23 @@ function update_fs!(bix    ::Int64,
 
     # if terminal branch
     if itb
-      llr = pow * (log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc)))
-      acr = llr
+      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr = 0.0
     else
       np  -= 1
-      llr = pow * log((1.0 - ρbi)^(np - nc))
-      acr = llr + log(Float64(ntp)/Float64(ntc))
+      llr = log((1.0 - ρbi)^(np - nc))
+      acr = log(Float64(ntp)/Float64(ntc))
     end
 
     # MH ratio
-    if -randexp() < acr
+    if -randexp() < (pow * llr) + acr
 
       # update ns, ne & L
       ns += Float64(nnodesinternal(ψp) - nnodesinternal(ψc))
       L  += treelength(ψp)             - treelength(ψc)
 
       # likelihood ratio
-      llr += pow * (llik_cpb(ψp, λ) - llik_cpb(ψc, λ))
+      llr += llik_cpb(ψp, λ) - llik_cpb(ψc, λ)
 
       Ψ[bix] = ψp     # set new decoupled tree
       llc += llr      # set new likelihood
@@ -504,7 +597,7 @@ end
               λprior::Float64,
               pow   ::Float64)
 
-`λ` proposal function for constant pure-birth in adaptive phase.
+Gibbs sampling of `λ` for constant pure-birth.
 """
 function update_λ!(llc   ::Float64,
                    prc   ::Float64,
@@ -516,11 +609,52 @@ function update_λ!(llc   ::Float64,
 
   λp   = randgamma(λprior[1] + pow * (ns-1.0), λprior[2] + pow * L)
 
-  llc += pow * ((ns-1.0)*log(λp/λc) + L*(λc - λp))
+  llc += (ns-1.0)*log(λp/λc) + L*(λc - λp)
   prc += llrdgamma(λp, λc, λprior[1], λprior[2])
 
   return llc, prc, λp
 end
+
+
+
+
+
+"""
+    update_λ!(psi   ::Vector{sTpb},
+              llc   ::Float64,
+              prc   ::Float64,
+              λc    ::Float64,
+              lac   ::Float64,
+              λtn   ::Float64,
+              ns    ::Float64,
+              L     ::Float64,
+              λprior::Float64,
+              pow   ::Float64)
+
+Gibbs sampling of `λ` for constant pure-birth with reference distribution.
+"""
+function update_λ!(llc   ::Float64,
+                   prc   ::Float64,
+                   rdc   ::Float64,
+                   λc    ::Float64,
+                   ns    ::Float64,
+                   L     ::Float64,
+                   λprior::NTuple{2,Float64},
+                   rdist ::NTuple{2,Float64},
+                   pow   ::Float64)
+
+  m1 = iszero(pow) ? 0.0 : - 1.0
+
+  λp   = randgamma(pow * (λprior[1] + ns - 1.0) + (1.0 - pow) * rdist[1] + m1,
+                   pow * (λprior[2] + L)        + (1.0 - pow) * rdist[2]) 
+
+  llc += (ns-1.0)*log(λp/λc) + L*(λc - λp)
+  prc += llrdgamma(λp, λc, λprior[1], λprior[2])
+  rdc += llrdgamma(λp, λc, rdist[1], rdist[2])
+
+  return llc, prc, rdc, λp
+end
+
 
 
 

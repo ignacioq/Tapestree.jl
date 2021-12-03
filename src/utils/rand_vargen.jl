@@ -60,7 +60,7 @@ end
   randinvgamma(α::Float64, β::Float64)
 
 Generate a random sample from an **Inverse Gamma** distribution with
-shape `α` and scale `β` based on Tanizaki, H. (2008) "A Simple 
+shape `α` and rate `β` based on Tanizaki, H. (2008) "A Simple 
 Gamma Random Number Generator for Arbitrary Shape Parameters".
 """
 randinvgamma(α::Float64, β::Float64) = β / randgamma(α)
@@ -72,7 +72,7 @@ randinvgamma(α::Float64, β::Float64) = β / randgamma(α)
   randgamma(α::Float64, β::Float64)
 
 Generate a random sample from a ** Gamma** distribution with
-shape `α` and scale `β` based on Tanizaki, H. (2008) "A Simple 
+shape `α` and rate `β` based on Tanizaki, H. (2008) "A Simple 
 Gamma Random Number Generator for Arbitrary Shape Parameters".
 """
 randgamma(α::Float64, β::Float64) = randgamma(α) * 1.0/β
@@ -84,7 +84,7 @@ randgamma(α::Float64, β::Float64) = randgamma(α) * 1.0/β
   randgamma(α::Float64)
 
 Generate a random sample from a ** Gamma** distribution with
-shape `α` and scale `1` based on Tanizaki, H. (2008) "A Simple 
+shape `α` and rate `1` based on Tanizaki, H. (2008) "A Simple 
 Gamma Random Number Generator for Arbitrary Shape Parameters".
 """
 function randgamma(α::Float64)
