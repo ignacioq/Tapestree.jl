@@ -28,7 +28,7 @@ function gss(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
     for i in Base.OneTo(lastindex(ppk))
       ei     = exp(ppk[i])
       ppk[i] = ei
-      mx     =  ei > mx ? ei : mx
+      mx     = ei > mx ? ei : mx
     end
     mxs[k] = mx
   end
