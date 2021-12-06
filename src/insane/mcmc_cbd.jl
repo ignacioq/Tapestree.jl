@@ -114,7 +114,12 @@ function insane_cbd(tree    ::sT_label,
     @views p = r[:,5]
     m     = mean(p)
     v     = var(p)
-    μrefd = (m^2/v, m/v)
+
+    if m^2/v < 1.0
+      μrefd = (m^2/v, m/v)
+    else
+      μrefd = (1.0, 1/m)
+    end
 
     # marginal likelihood
     pp = ref_posterior(Ψ, idf, λc, μc, λprior, μprior, λrefd, μrefd,

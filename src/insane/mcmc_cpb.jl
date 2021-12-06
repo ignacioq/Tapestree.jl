@@ -151,7 +151,7 @@ function mcmc_burn_cpb(Ψ       ::Vector{sTpb},
   ns = Float64(el-1)*0.5 # number of speciation events
 
   #likelihood
-  llc = llik_cpb(Ψ, λc)
+  llc = llik_cpb(Ψ, λc) + prob_ρ(idf)
   prc = logdgamma(λc, λprior[1], λprior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -312,7 +312,7 @@ function ref_posterior(Ψ      ::Vector{sTpb},
   ns = Float64(nnodesinternal(Ψ))
   L  = treelength(Ψ)
 
-  llc = llik_cpb(Ψ, λc)
+  llc = llik_cpb(Ψ, λc) + prob_ρ(idf)
   prc = logdgamma(λc, λprior[1], λprior[2])
 
   for k in 2:K
@@ -562,8 +562,7 @@ function update_λ!(llc   ::Float64,
                    λrefd ::NTuple{2,Float64},
                    pow   ::Float64)
 
-  m1 = iszero(pow) ? 0.0 : - 1.0
-
+  m1  = iszero(pow) ? 0.0 : - 1.0
   λp   = randgamma(pow * (λprior[1] + ns - 1.0) + (1.0 - pow) * λrefd[1] + m1,
                    pow * (λprior[2] + L)        + (1.0 - pow) * λrefd[2]) 
 
