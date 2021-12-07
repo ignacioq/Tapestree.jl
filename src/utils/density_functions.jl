@@ -123,6 +123,27 @@ stdnorm(x::Float64) = exp(-0.5*x^2)/sqrt(2.0π)
 
 
 """
+    logdtnorm(x::Float64, μ::Float64, σ::Float64)
+
+Compute the truncated **Normal** at 0.0 density in the lower tail.
+"""
+logdtnorm(x::Float64, μ::Float64, σ::Float64) = 
+  - log(σ) - 0.5*log(2.0π) - 0.5*((x - μ)/σ)^2 - log(1.0 - stpnorm(-μ/σ))
+
+
+
+"""
+llrdtnorm(xp::Float64, xc::Float64, μ::Float64, σ::Float64) = 
+
+Compute the truncated **Normal** likelihood ratio at 0.0 in the lower tail.
+"""
+llrdtnorm(xp::Float64, xc::Float64, μ::Float64, σ::Float64) = 
+  0.5/σ^2*((xc - μ)^2 - (xp - μ)^2)
+
+
+
+
+"""
     stpnorm(x::Float64)
   
 Compute the **Normal** cumulated probability for the standard Gaussian.
@@ -268,7 +289,6 @@ end
 
 
 
-
 """
     logdhcau(x::Float64, scl::Float64)
 
@@ -277,7 +297,6 @@ Compute the logarithmic transformation of the
 """
 logdhcau(x::Float64, scl::Float64) = 
   log(2.0 * scl/(π *(x * x + scl * scl)))
-
 
 
 

@@ -120,14 +120,20 @@ function insane_cbd(tree    ::sT_label,
     m     = mean(p)
     v     = var(p)
 
-    if m^2/v < 1.0
-      μrefd = (m^2/v, m/v)
+    if sum(x -> x < 0.2, p) > sum(x -> 0.2 < x < 0.4, p)
+      μ0 = 0.0
     else
-      μrefd = (1.0, 1.0/m)
+      μ0 = 1.0
     end
 
+    σ0 = v < 0.2 ? 0.5 : v
+
+    x1 = run_newton(μ0, σ0, m, v)
+
+    μrefd = (x1[1], x1[2])
+
     # marginal likelihood
-    pp = ref_posterior(Ψ, idf, λc, μc, λprior, μprior, λrefd, μrefd,
+    pp = ref_posterior(Ψ, idf, λc, μc, v, λprior, μprior, λrefd, μrefd,
       nitpp, nthpp, βs, pup, sns, snodes!, scond, scond0)
 
     # process with reference distribution the posterior
@@ -135,7 +141,7 @@ function insane_cbd(tree    ::sT_label,
     for i in Base.OneTo(size(r,1))
       p1[i] = r[i,2] + r[i,3] - 
               logdgamma(r[i,4], λrefd[1], λrefd[2]) -
-              logdgamma(r[i,5], μrefd[1], μrefd[2])
+              logdtnorm(r[i,5], μrefd[1], μrefd[2])
     end
     pp[1] = p1
 
@@ -381,6 +387,7 @@ function ref_posterior(Ψ      ::Vector{sTbd},
                        idf    ::Array{iBffs,1},
                        λc     ::Float64,
                        μc     ::Float64,
+                       μtn    ::Float64,
                        λprior ::NTuple{2,Float64},
                        μprior ::NTuple{2,Float64},
                        λrefd  ::NTuple{2,Float64},
@@ -413,7 +420,7 @@ function ref_posterior(Ψ      ::Vector{sTbd},
 
     βi  = βs[k]
     rdc = logdgamma(λc, λrefd[1], λrefd[2]) + 
-          logdgamma(μc, μrefd[1], μrefd[2])
+          logdtnorm(μc, μrefd[1], μrefd[2])
 
     # logging
     lth, lit = 0, 0
@@ -435,7 +442,7 @@ function ref_posterior(Ψ      ::Vector{sTbd},
         elseif p === 2 
 
           llc, prc, rdc, μc = 
-            update_μ!(llc, prc, rdc, μc, ne, L, λc, sns, μprior, μrefd, 
+            update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, sns, μprior, μrefd, 
               scond, βi)
 
         else
@@ -759,6 +766,7 @@ end
               μc    ::Float64,
               ne    ::Float64,
               L     ::Float64,
+              μtn   ::Float64,
               λc    ::Float64,
               sns   ::NTuple{3,BitVector},
               μprior::NTuple{2,Float64},
@@ -774,6 +782,7 @@ function update_μ!(llc   ::Float64,
                    μc    ::Float64,
                    ne    ::Float64,
                    L     ::Float64,
+                   μtn   ::Float64,
                    λc    ::Float64,
                    sns   ::NTuple{3,BitVector},
                    μprior::NTuple{2,Float64},
@@ -781,15 +790,17 @@ function update_μ!(llc   ::Float64,
                    scond ::Function,
                    pow   ::Float64)
 
-  m1  = iszero(pow) ? 0.0 : - 1.0
-  μp  = randgamma(pow * (μprior[1] + ne) + (1.0 - pow) * μrefd[1] + m1,
-                  pow * (μprior[2] + L)  + (1.0 - pow) * μrefd[2]) 
-  llr = scond(λc, μp, sns) - scond(λc, μc, sns)
+  μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
-  if -randexp() < (pow * llr)
-    llc += ne*log(μp/μc) + L*(μc - μp) + llr
-    prc += llrdgamma(μp, μc, μprior[1], μprior[2])
-    rdc += llrdgamma(μp, μc, μrefd[1],  μrefd[2])
+  μr  = log(μp/μc)
+  llr = ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
+  prr = llrdgamma(μp, μc, μprior[1], μprior[2])
+  rdr = llrdtnorm(μp, μc, μrefd[1],  μrefd[2])
+
+  if -randexp() < (pow * (llr + prr) + (1.0 - pow) * rdr + μr)
+    llc += llr
+    prc += prr
+    rdc += rdr
     μc   = μp
   end
 

@@ -179,39 +179,6 @@ end
 
 
 
-
-
-
-m = r[:,5]
-
-
-xm = mean(m)
-xv = var(m)
-
-if sum(x -> x < 0.2, m) > sum(x -> 0.2 < x < 0.4, m)
-  μ0 = 0.0
-else
-  μ0 = 1.0
-end
-
-if xv < 0.2
-  σ0 = 0.5
-else
-  σ0 = xv
-end
-
-x1 = run_newton(μ0, σ0, xm, xv)
-
-x = 0.0:0.01:6.0
-y = 1/x1[2] .* 
-    stdnorm.((x .- x1[1]) ./ x1[2]) ./ 
-    (1.0 - stpnorm(-x1[1]/x1[2]))
-
-histogram(m, bins = 100, normalize = true)
-plot!(x,y)
-
-
-
 """
     update_jacobian!(μ    ::Float64,
                      σ    ::Float64, 
@@ -221,8 +188,8 @@ plot!(x,y)
                      j    ::Matrix{Float64},
                      jf   ::Vector{Float64})
 
-Update jacobian for method of moments to estimating truncated **Gaussian**
-parameters. 
+Update jacobian for method of moments to estimating parameters of the
+truncated **Gaussian** at `0.0` for lower tail.
 """
 function update_jacobian!(μ    ::Float64,
                           σ    ::Float64, 
@@ -253,8 +220,8 @@ end
 """
     run_newton(μ0::Float64, σ0::Float64, xmean::Float64, xvar::Float64)
 
-Run Newton's method to estiamte the roots for truncated **Gaussian**
-parameter estimates. 
+Run Newton's method to estimate the roots (parameter estimates) for 
+truncated **Gaussian** with lower bound at `0.0`. 
 """
 function run_newton(μ0::Float64, σ0::Float64, xmean::Float64, xvar::Float64)
 
