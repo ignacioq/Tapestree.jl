@@ -98,6 +98,11 @@ function insane_cbd(tree    ::sT_label,
   r, treev = mcmc_cbd(Ψ, idf, llc, prc, λc, μc, λprior, μprior, niter, nthin, 
     pup, prints, sns, snodes!, scond, scond0)
 
+  pardic = Dict(("lambda"      => 1),
+                ("mu"          => 2))
+
+  write_ssr(r, pardic, out_file)
+
   if marginal
 
      # reference distribution
@@ -118,7 +123,7 @@ function insane_cbd(tree    ::sT_label,
     if m^2/v < 1.0
       μrefd = (m^2/v, m/v)
     else
-      μrefd = (1.0, 1/m)
+      μrefd = (1.0, 1.0/m)
     end
 
     # marginal likelihood
@@ -141,11 +146,6 @@ function insane_cbd(tree    ::sT_label,
   else
     ml = NaN
   end
-
-  pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2))
-
-  write_ssr(r, pardic, out_file)
 
   return r, treev, ml
 end
@@ -766,7 +766,7 @@ end
               scond ::Function,
               pow   ::Float64)
 
-Mixed HM-Gibbs of `λ` for constant birth-death with reference distribution.
+Mixed HM-Gibbs of `μ` for constant birth-death with reference distribution.
 """
 function update_μ!(llc   ::Float64,
                    prc   ::Float64,

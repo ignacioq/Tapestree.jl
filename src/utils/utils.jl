@@ -182,6 +182,113 @@ end
 
 
 
+m = r[:,5]
+
+
+xm = mean(m)
+xv = var(m)
+
+if sum(x -> x < 0.2, m) > sum(x -> 0.2 < x < 0.4, m)
+  μ0 = 0.0
+else
+  μ0 = 1.0
+end
+
+if xv < 0.2
+  σ0 = 0.5
+else
+  σ0 = xv
+end
+
+x1 = run_newton(μ0, σ0, xm, xv)
+
+x = 0.0:0.01:6.0
+y = 1/x1[2] .* 
+    stdnorm.((x .- x1[1]) ./ x1[2]) ./ 
+    (1.0 - stpnorm(-x1[1]/x1[2]))
+
+histogram(m, bins = 100, normalize = true)
+plot!(x,y)
+
+
+
+"""
+    update_jacobian!(μ    ::Float64,
+                     σ    ::Float64, 
+                     xmean::Float64, 
+                     xvar ::Float64,
+                     f    ::Vector{Float64},
+                     j    ::Matrix{Float64},
+                     jf   ::Vector{Float64})
+
+Update jacobian for method of moments to estimating truncated **Gaussian**
+parameters. 
+"""
+function update_jacobian!(μ    ::Float64,
+                          σ    ::Float64, 
+                          xmean::Float64, 
+                          xvar ::Float64,
+                          f    ::Vector{Float64},
+                          j    ::Matrix{Float64})
+
+
+  ϕ0 = stdnorm(-μ/σ)
+  Φ0 = 1.0 - stpnorm(-μ/σ)
+
+  f[1] = μ + σ * ϕ0 / Φ0 - xmean
+  f[2] = σ^2 - μ*σ*ϕ0 / Φ0 - (σ*ϕ0  / Φ0)^2 - xvar
+
+  j[1,1] = 1.0 + ϕ0*(-μ/σ * Φ0 - ϕ0)/Φ0^2
+  j[2,1] = -σ*ϕ0 * (((1.0 - (μ/σ)^2) * Φ0 - μ/σ*ϕ0 )/Φ0^2 +
+            2.0 * (-μ/σ * ϕ0 * Φ0 -  ϕ0^2)/Φ0^3)
+  j[1,2] = ϕ0*(((μ/σ)^2 + 1.0)*Φ0 + μ^2/σ*ϕ0)/Φ0^2
+  j[2,2] = 2.0*σ - μ*ϕ0*( ((μ/σ)^2 + 1.0) * Φ0 + μ^2/σ * ϕ0 )/ Φ0^2 - 
+           2.0*σ*ϕ0^2 * ( ((μ/σ)^2 + 1.0) * Φ0 + μ^2/σ* ϕ0 )/ Φ0^3
+
+end
+
+
+
+
+"""
+    run_newton(μ0::Float64, σ0::Float64, xmean::Float64, xvar::Float64)
+
+Run Newton's method to estiamte the roots for truncated **Gaussian**
+parameter estimates. 
+"""
+function run_newton(μ0::Float64, σ0::Float64, xmean::Float64, xvar::Float64)
+
+  @inbounds begin
+
+    f  = Vector{Float64}(undef,2)
+    j  = Matrix{Float64}(undef,2,2)
+    jf = Vector{Float64}(undef,2)
+    x0 = Vector{Float64}(undef,2)
+    x1 = Vector{Float64}(undef,2)
+
+    x0[1] = μ0
+    x0[2] = σ0
+
+    while true
+   
+      update_jacobian!(x0[1], x0[2], xmean, xvar, f, j)
+
+      mul!(jf, inv(j), f)
+
+      x1[1] = x0[1] - jf[1]
+      x1[2] = x0[2] - jf[2]
+
+      if (x0[1] - x1[1]) < 1e-2 && (x0[2] - x1[2]) < 1e-2
+        break
+      end
+
+      x0[1] = x1[1]
+      x0[2] = x1[2]
+    end
+  end
+
+  return x1
+end
 
 
 

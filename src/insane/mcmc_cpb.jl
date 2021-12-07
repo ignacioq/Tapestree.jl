@@ -86,6 +86,10 @@ function insane_cpb(tree    ::sT_label,
   # mcmc
   r, treev = mcmc_cpb(Ψ, idf, llc, prc, λc, λprior, niter, nthin, pup, prints)
 
+  pardic = Dict(("lambda" => 1))
+
+  write_ssr(r, pardic, out_file)
+
   if marginal
     # reference distribution
     βs = [range(0.0, 1.0, K)...]
@@ -116,10 +120,6 @@ function insane_cpb(tree    ::sT_label,
   else
     ml = NaN
   end
-
-  pardic = Dict(("lambda" => 1))
-
-  write_ssr(r, pardic, out_file)
 
   return r, treev, ml
 end
@@ -562,9 +562,9 @@ function update_λ!(llc   ::Float64,
                    λrefd ::NTuple{2,Float64},
                    pow   ::Float64)
 
-  m1  = iszero(pow) ? 0.0 : - 1.0
-  λp   = randgamma(pow * (λprior[1] + ns - 1.0) + (1.0 - pow) * λrefd[1] + m1,
-                   pow * (λprior[2] + L)        + (1.0 - pow) * λrefd[2]) 
+  m1 = iszero(pow) ? 0.0 : - 1.0
+  λp = randgamma(pow * (λprior[1] + ns - 1.0) + (1.0 - pow) * λrefd[1] + m1,
+                 pow * (λprior[2] + L)        + (1.0 - pow) * λrefd[2]) 
 
   llc += (ns-1.0)*log(λp/λc) + L*(λc - λp)
   prc += llrdgamma(λp, λc, λprior[1], λprior[2])

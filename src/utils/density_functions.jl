@@ -112,6 +112,25 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
 
 
 
+"""
+    stdnorm(x::Float64)
+  
+Compute the **Normal** density for the standard Gaussian.
+"""
+stdnorm(x::Float64) = exp(-0.5*x^2)/sqrt(2.0π)
+
+
+
+
+"""
+    stpnorm(x::Float64)
+  
+Compute the **Normal** cumulated probability for the standard Gaussian.
+"""
+stpnorm(x::Float64) = 0.5*(1.0 + erf_custom(x/(sqrt(2.0))))
+
+
+
 
 """
     logdnorm_tc(x::Float64, μ::Float64, σ²::Float64)
@@ -138,7 +157,6 @@ llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64)
 
 
 
-
 """
     llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64)
 
@@ -151,7 +169,6 @@ llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) =
 
 
 
-
 """
     llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64)
 
@@ -160,7 +177,6 @@ for `μ` updates
 """
 llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
   ((x - μc)^2 - (x - μp)^2)/(2.0σ²)
-
 
 
 
@@ -227,9 +243,8 @@ end
 
 
 
-
 """
-    erf(x::Float64)
+    erf_custom(x::Float64)
 
 Compute the error function
 """
