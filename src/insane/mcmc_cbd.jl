@@ -123,7 +123,7 @@ function insane_cbd(tree    ::sT_label,
     if sum(x -> x < 0.2, p) > sum(x -> 0.2 < x < 0.4, p)
       μ0 = 0.0
     else
-      μ0 = 1.0
+      μ0 = m
     end
 
     σ0 = v < 0.2 ? 0.5 : v
@@ -226,7 +226,7 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
         bix = ceil(Int64,rand()*el)
 
         llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
-                           snodes!, scond0, 1.0)
+                           snodes!, scond0)
       end
     end
 
@@ -328,7 +328,7 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
 
         bix = ceil(Int64,rand()*el)
         llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
-                           snodes!, scond0, 1.0)
+                           snodes!, scond0)
 
         # llci = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -449,7 +449,7 @@ function ref_posterior(Ψ      ::Vector{sTbd},
 
           bix = ceil(Int64,rand()*el)
           llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
-                             snodes!, scond0, βi)
+                             snodes!, scond0)
 
         end
       end
@@ -498,13 +498,12 @@ function update_fs!(bix    ::Int64,
                     L      ::Float64,
                     sns    ::NTuple{3, BitVector},
                     snodes!::Function,
-                    scond0 ::Function,
-                    pow    ::Float64)
+                    scond0 ::Function)
 
   bi = idf[bix]
 
   # forward simulate an internal branch
-  ψp, np, ntp = fsbi(bi, λ, μ, 1_000)
+  ψp, np, ntp = fsbi(bi, λ, μ, 100)
 
   itb = it(bi) # is it terminal
   ρbi = ρi(bi) # get branch sampling fraction
@@ -527,7 +526,7 @@ function update_fs!(bix    ::Int64,
     end
 
     # MH ratio
-    if -randexp() < (pow * llr) + acr
+    if -randexp() < llr + acr
 
       # if survival conditioned
       scn = ((iszero(pa(bi)) && e(bi) > 0.0)) || 
@@ -790,7 +789,7 @@ function update_μ!(llc   ::Float64,
                    scond ::Function,
                    pow   ::Float64)
 
-  μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
+  μp = mulupt(μc, μtn)::Float64
 
   μr  = log(μp/μc)
   llr = ne*μr + L*(μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
