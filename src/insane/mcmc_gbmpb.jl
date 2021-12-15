@@ -20,14 +20,16 @@ Created 14 09 2020
                  niter   ::Int64                 = 1_000,
                  nthin   ::Int64                 = 10,
                  nburn   ::Int64                 = 200,
-                 tune_int::Int64                 = 100,
+                 marginal::Bool                  = false,
+                 nitpp   ::Int64                 = 100, 
+                 nthpp   ::Int64                 = 10,
+                 K       ::Int64                 = 11,
                  σλi     ::Float64               = 0.1,
                  αi      ::Float64               = 0.0,
                  prints  ::Int64                 = 5,
                  pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.3, 0.3),
-                 λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
                  α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64}     = (0.05, 0.5),
+                 σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for GBM pure-birth.
@@ -38,14 +40,16 @@ function insane_gbmpb(tree    ::sT_label,
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
-                      tune_int::Int64                 = 100,
+                      marginal::Bool                  = false,
+                      nitpp   ::Int64                 = 100, 
+                      nthpp   ::Int64                 = 10,
+                      K       ::Int64                 = 11,
                       σλi     ::Float64               = 0.1,
                       αi      ::Float64               = 0.0,
                       prints  ::Int64                 = 5,
                       pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.3, 0.3),
-                      λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
                       α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                      σλ_prior::NTuple{2,Float64}     = (0.05, 0.5),
+                      σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
@@ -92,29 +96,68 @@ function insane_gbmpb(tree    ::sT_label,
 
   # burn-in phase
   llc, prc, αc, σλc =
-    mcmc_burn_gbmpb(Ψ, idf, λa_prior, α_prior, σλ_prior, nburn, αi, σλi, 
+    mcmc_burn_gbmpb(Ψ, idf, α_prior, σλ_prior, nburn, αi, σλi, 
       δt, srδt, inodes, pup, prints)
 
   # mcmc
-  R, Ψv = mcmc_gbmpb(Ψ, idf, llc, prc, αc, σλc, λa_prior, α_prior, σλ_prior, 
+  r, Ψv, αc, σλc = mcmc_gbmpb(Ψ, idf, llc, prc, αc, σλc, α_prior, σλ_prior, 
         niter, nthin, δt, srδt, inodes, pup, prints)
 
   pardic = Dict(("lambda_root"  => 1,
                  "alpha"        => 2,
                  "sigma_lambda" => 3))
 
-  write_ssr(R, pardic, out_file)
+  write_ssr(r, pardic, out_file)
 
-  return R, Ψv
+  if marginal
+
+     # reference distribution
+    βs = [range(0.0, 1.0, K)...]
+    reverse!(βs)
+
+    # make reference Gaussian posterior for `α`
+    @views p = r[:,5]
+    m      = median(p)
+    sd     = std(p)
+    α_rdist = (m, sd)
+
+    # make reference IGamma posterior for `σλ`
+    @views p = r[:,6]
+    m       = mean(p)
+    v       = var(p)
+    σλ_rdist = (m^2/v, m/v)
+
+    # marginal likelihood
+    pp = ref_posterior(Ψ, idf, llc, prc, αc, σλc,
+      α_prior, σλ_prior, α_rdist, σλ_rdist,
+      nitpp, nthpp, βs, δt, srδt, inodes, pup)
+
+    # process with reference distribution the posterior
+    p1 = Vector{Float64}(undef, size(r,1))
+    for i in Base.OneTo(size(r,1))
+      p1[i] = r[i,2] + r[i,3] - 
+              logdnorm(    r[i,5],    α_rdist[1], α_rdist[2]^2) +
+              logdinvgamma(r[i,6]^2, σλ_rdist[1], σλ_rdist[2])
+    end
+    pp[1] = p1
+
+    reverse!(pp)
+    reverse!(βs)
+
+    ml = gss(pp, βs)
+  else
+    ml = NaN
+  end
+
+  return r, Ψv, ml
 end
-
 
 
 
 """
     mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
                     idf     ::Vector{iBffs},
-                    λa_prior::NTuple{2,Float64},
+                    λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
@@ -132,7 +175,6 @@ MCMC burn-in chain for GBM pure-birth.
 """
 function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
                          idf     ::Vector{iBffs},
-                         λa_prior::NTuple{2,Float64},
                          α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
                          nburn   ::Int64,
@@ -146,12 +188,8 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
 
   # starting likelihood and prior
   llc = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        +
-        logdnorm(αc, α_prior[1], α_prior[2]^2)               +
-        logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2])
-
-  # maximum bound in log space for uniform
-  lλxpr = log(λa_prior[2])
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
+        logdnorm(αc, α_prior[1], α_prior[2]^2)
 
   L       = treelength(Ψ)      # tree length
   dλ      = deltaλ(Ψ)          # delta change in λ
@@ -188,7 +226,7 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
         bix = inodes[nix]
 
         llc, dλ, ssλ = 
-          update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt, lλxpr)
+          update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
 
       # forward simulation
       else
@@ -216,7 +254,7 @@ end
                prc     ::Float64,
                αc      ::Float64,
                σλc     ::Float64,
-               λa_prior::NTuple{2,Float64},
+               λ0_prior::NTuple{2,Float64},
                α_prior ::NTuple{2,Float64},
                σλ_prior::NTuple{2,Float64},
                niter   ::Int64,
@@ -235,7 +273,6 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
                     prc     ::Float64,
                     αc      ::Float64,
                     σλc     ::Float64,
-                    λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     niter   ::Int64,
@@ -250,13 +287,10 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  R = Array{Float64,2}(undef, nlogs, 6)
+  r = Array{Float64,2}(undef, nlogs, 6)
 
   # make Ψ vector
   Ψv = iTgbmpb[]
-
-  # prior
-  lλxpr = log(λa_prior[2])
 
   L       = treelength(Ψ)      # tree length
   dλ      = deltaλ(Ψ)          # delta change in λ
@@ -305,7 +339,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
         bix = inodes[nix]
 
         llc, dλ, ssλ = 
-          update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt, lλxpr)
+          update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
 
         # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
@@ -333,12 +367,12 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
     if lthin === nthin
       lit += 1
       @inbounds begin
-        R[lit,1] = Float64(lit)
-        R[lit,2] = llc
-        R[lit,3] = prc
-        R[lit,4] = exp(lλ(Ψ[1])[1])
-        R[lit,5] = αc
-        R[lit,6] = σλc
+        r[lit,1] = Float64(lit)
+        r[lit,2] = llc
+        r[lit,3] = prc
+        r[lit,4] = exp(lλ(Ψ[1])[1])
+        r[lit,5] = αc
+        r[lit,6] = σλc
         push!(Ψv, couple(deepcopy(Ψ), idf, 1))
       end
       lthin = 0
@@ -347,7 +381,135 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
     next!(pbar)
   end
 
-  return R, Ψv
+  return r, Ψv, αc, σλc
+end
+
+
+
+
+
+"""
+    ref_posterior(Ψ       ::Vector{iTgbmpb},
+                  idf     ::Vector{iBffs},
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  αc      ::Float64,
+                  σλc     ::Float64,
+                  λ0_prior::NTuple{2,Float64},
+                  α_prior ::NTuple{2,Float64},
+                  σλ_prior::NTuple{2,Float64},
+                  λ0rdist::NTuple{2,Float64},
+                  α_rdist ::NTuple{2,Float64},
+                  σλ_rdist::NTuple{2,Float64},
+                  nitpp   ::Int64,
+                  nthpp   ::Int64,
+                  βs      ::Vector{Float64},
+                  δt      ::Float64,
+                  srδt    ::Float64,
+                  inodes  ::Array{Int64,1},
+                  pup     ::Array{Int64,1},
+                  prints  ::Int64)
+
+MCMC chain for GBM pure-birth.
+"""
+function ref_posterior(Ψ       ::Vector{iTgbmpb},
+                       idf     ::Vector{iBffs},
+                       llc     ::Float64,
+                       prc     ::Float64,
+                       αc      ::Float64,
+                       σλc     ::Float64,
+                       α_prior ::NTuple{2,Float64},
+                       σλ_prior::NTuple{2,Float64},
+                       α_rdist ::NTuple{2,Float64},
+                       σλ_rdist::NTuple{2,Float64},
+                       nitpp   ::Int64,
+                       nthpp   ::Int64,
+                       βs      ::Vector{Float64},
+                       δt      ::Float64,
+                       srδt    ::Float64,
+                       inodes  ::Array{Int64,1},
+                       pup     ::Array{Int64,1})
+
+  # starting likelihood and prior
+  llc = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+  prc = logdnorm(αc,         α_prior[1], α_prior[2]^2) + 
+        logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])
+
+  K = lastindex(βs)
+
+  # make log-likelihood table per power
+  nlg = fld(nitpp, nthpp)
+  pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+
+  L       = treelength(Ψ)      # tree length
+  dλ      = deltaλ(Ψ)          # delta change in λ
+  ssλ, nλ = sss_gbm(Ψ, αc)     # sum squares in λ
+  nin     = lastindex(inodes)  # number of internal nodes
+  el      = lastindex(idf)     # number of branches
+
+  for k in 2:K
+
+    βi  = βs[k]
+    rdc = logdnorm(       αc,  α_rdist[1], α_rdist[2]^2) +
+          logdinvgamma(σλc^2, σλ_rdist[1], σλ_rdist[2])
+
+    # logging
+    lth, lit = 0, 0
+
+    for it in Base.OneTo(nitpp)
+
+      shuffle!(pup)
+
+      for pupi in pup
+
+        ## parameter updates
+        # update drift
+        if pupi === 1
+
+          llc, prc, rdc, αc = update_α!(αc, σλc, L, dλ, llc, prc, rdc, 
+            α_prior, α_rdist, βi)
+
+          # update ssλ with new drift `α`
+          ssλ, nλ = sss_gbm(Ψ, αc)
+
+        # update diffusion rate
+        elseif pupi === 2
+
+          llc, prc, rdc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, rdc,
+            σλ_prior, σλ_rdist, βi)
+
+        # update gbm
+        elseif pupi === 3
+
+          nix = ceil(Int64,rand()*nin)
+          bix = inodes[nix]
+
+          llc, dλ, ssλ = 
+            update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
+
+        # update by forward simulation
+        else
+          bix = ceil(Int64,rand()*el)
+
+          llc, dλ, ssλ, nλ, L = 
+            update_fs!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
+
+        end
+      end
+
+      # log log-likelihood
+      lth += 1
+      if lth === nthpp
+        lit += 1
+        pp[k][lit] = llc + prc - rdc
+        lth = 0
+      end
+    end
+
+    @info string(βi," power done")
+  end
+
+  return pp
 end
 
 
@@ -579,8 +741,7 @@ end
                 dλ   ::Float64,
                 ssλ  ::Float64,
                 δt   ::Float64,
-                srδt ::Float64,
-                lλxpr::Float64)
+                srδt ::Float64)
 
 Make a `gbm` update for an interna branch and its descendants.
 """
@@ -593,8 +754,7 @@ function update_gbm!(bix  ::Int64,
                      dλ   ::Float64,
                      ssλ  ::Float64,
                      δt   ::Float64,
-                     srδt ::Float64,
-                     lλxpr::Float64)
+                     srδt ::Float64)
 
   ψi   = Ψ[bix]
   bi   = idf[bix]
@@ -606,12 +766,12 @@ function update_gbm!(bix  ::Int64,
   # if crown root
   if iszero(pa(bi)) && iszero(e(ψi))
     llc, dλ, ssλ = 
-      _crown_update!(ψi, ψ1, ψ2, α, σλ, llc, dλ, ssλ, δt, srδt, lλxpr)
+      _crown_update!(ψi, ψ1, ψ2, α, σλ, llc, dλ, ssλ, δt, srδt)
     setλt!(bi, lλ(ψi)[1])
   else
     # if stem
     if iszero(pa(bi))
-     llc, dλ, ssλ = _stem_update!(ψi, α, σλ, llc, dλ, ssλ, δt, srδt, lλxpr)
+      llc, dλ, ssλ = _stem_update!(ψi, α, σλ, llc, dλ, ssλ, δt, srδt)
     end
 
     # updates within the parent branch
@@ -645,7 +805,7 @@ end
               dλ     ::Float64,
               llc    ::Float64,
               prc    ::Float64,
-              α_prior::NTuple{2,Float64}) where {T <: iTgbm}
+              α_prior::NTuple{2,Float64})
 
 Gibbs update for `α`.
 """
@@ -673,6 +833,59 @@ function update_α!(αc     ::Float64,
   llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*dλ*(αp - αc)/L)
 
   return llc, prc, αp
+end
+
+
+
+
+"""
+    update_α!(αc     ::Float64,
+              σλ     ::Float64,
+              L      ::Float64,
+              dλ     ::Float64,
+              llc    ::Float64,
+              prc    ::Float64,
+              rdc    ::Float64,
+              α_prior::NTuple{2,Float64},
+              α_rdist ::NTuple{2,Float64},
+              pow    ::Float64)
+
+
+Gibbs update for `α` given reference distribution.
+"""
+function update_α!(αc     ::Float64,
+                   σλ     ::Float64,
+                   L      ::Float64,
+                   dλ     ::Float64,
+                   llc    ::Float64,
+                   prc    ::Float64,
+                   rdc    ::Float64,
+                   α_prior::NTuple{2,Float64},
+                   α_rdist ::NTuple{2,Float64},
+                   pow    ::Float64)
+
+  # ratio 
+  ν   = α_prior[1]
+  τ2  = α_prior[2]^2
+  σλ2 = σλ^2
+  rs  = σλ2/τ2
+
+  cpow = (1.0 - pow)
+
+  # gibbs update for σ
+  m   = (dλ + rs*ν)/(rs + L)
+  s2  = σλ2/(rs + L)
+  m0  = α_rdist[1]
+  s02 = α_rdist[2]^2
+  αp  = rnorm((m0 * s2 * cpow + m * s02 * pow) / (pow * s02 + s2 * cpow),
+              sqrt( s2 * s02 /  (pow * s02 + s2 * cpow)) )
+
+  # update likelihood, prior and reference
+  llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*dλ*(αp - αc)/L)
+  prc += llrdnorm_x(αp, αc, ν, τ2)
+  rdc += llrdnorm_x(αp, αc, m0, s02)
+
+  return llc, prc, rdc, αp
 end
 
 
@@ -714,5 +927,45 @@ function update_σ!(σλc     ::Float64,
   return llc, prc, σλp
 end
 
+
+
+
+"""
+    update_σ!(σλc     ::Float64,
+              α       ::Float64,
+              ssλ     ::Float64,
+              n       ::Float64,
+              llc     ::Float64,
+              prc     ::Float64,
+              σλ_prior::NTuple{2,Float64}) 
+
+Gibbs update for `σλ` given reference distribution.
+"""
+function update_σ!(σλc     ::Float64,
+                   α       ::Float64,
+                   ssλ     ::Float64,
+                   n       ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   rdc     ::Float64,
+                   σλ_prior::NTuple{2,Float64},
+                   σλ_rdist ::NTuple{2,Float64},
+                   pow     ::Float64)
+
+  σλ_p1 = σλ_prior[1]
+  σλ_p2 = σλ_prior[2]
+
+  # Gibbs update for σ
+  σλp2 = randinvgamma((σλ_p1 + 0.5 * n) * pow + σλ_rdist[1] * (1.0 - pow), 
+                      (σλ_p2 + ssλ) * pow     + σλ_rdist[2] * (1.0 - pow)) 
+
+  # update likelihood, prior and reference
+  σλp = sqrt(σλp2)
+  llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc))
+  prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+  rdc += llrdinvgamma(σλp2, σλc^2, σλ_rdist[1], σλ_rdist[2])
+
+  return llc, prc, rdc, σλp
+end
 
 

@@ -178,7 +178,6 @@ end
 
 
 
-
 """
     update_jacobian!(μ    ::Float64,
                      σ    ::Float64, 
@@ -258,5 +257,41 @@ function run_newton(μ0::Float64, σ0::Float64, xmean::Float64, xvar::Float64)
 end
 
 
+
+"""
+  skewness(x::Vector{Float64}, mean::Float64, sd::Float64)
+
+Return sample skewness.
+"""
+@inline function skewness(x::Vector{Float64}, mean::Float64, sd::Float64)
+  isd = 1.0/sd
+  ss = 0.0
+  @simd for xi in x
+    ss += ((xi - mean)*isd)^3
+  end
+  ss /= Float64(lastindex(x))
+
+  return sign(ss)*min(0.99, abs(ss))
+end
+
+
+
+
+"""
+    mom_skewnormal(sk::Float64, mean::Float64, sd::Float64)
+
+Return parameters for the skew normal distribution given the 
+method of moments.
+"""
+function mom_skewnormal(sk::Float64, mean::Float64, sd::Float64)
+
+  d = sqrt(π*0.5 * abs(sk)^(2/3) / (abs(sk)^(2/3) + ((4.0-π)*0.5)^(2/3)))
+  d = sign(sk)*d
+  a = d/sqrt(1.0 - d^2)
+  o = sd/sqrt(1.0 - 2.0*d^2/π)
+  m = mean - o*d*sqrt(2.0/π)
+
+  return m, o, a
+end
 
 

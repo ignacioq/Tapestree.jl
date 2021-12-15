@@ -83,8 +83,7 @@ end
                   dλ   ::Float64,
                   ssλ  ::Float64,
                   δt   ::Float64,
-                  srδt ::Float64,
-                  lλxpr::Float64)
+                  srδt ::Float64)
 
 Do gbm update for crown root.
 """
@@ -95,8 +94,7 @@ function _stem_update!(ψi   ::iTgbmpb,
                        dλ   ::Float64,
                        ssλ  ::Float64,
                        δt   ::Float64,
-                       srδt ::Float64,
-                       lλxpr::Float64)
+                       srδt ::Float64)
 
   @inbounds begin
     λc   = lλ(ψi)
@@ -108,11 +106,6 @@ function _stem_update!(ψi   ::iTgbmpb,
 
     # node proposal
     λr = rnorm(λn - α*el, σλ*sqrt(el))
-
-    # prior ratio
-    if λr > lλxpr
-      return llc, ssλ
-    end
 
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdt, srδt)
@@ -145,8 +138,7 @@ end
                    dλ   ::Float64,
                    ssλ  ::Float64,
                    δt   ::Float64,
-                   srδt ::Float64,
-                   lλxpr::Float64)
+                   srδt ::Float64)
 
 Do gbm update for crown root.
 """
@@ -159,8 +151,7 @@ function _crown_update!(ψi   ::iTgbmpb,
                         dλ   ::Float64,
                         ssλ  ::Float64,
                         δt   ::Float64,
-                        srδt ::Float64,
-                        lλxpr::Float64)
+                        srδt ::Float64)
 
   @inbounds begin
     λpc  = lλ(ψi)
@@ -179,11 +170,6 @@ function _crown_update!(ψi   ::iTgbmpb,
 
     # node proposal
     λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
-    # prior ratio
-    if λr > lλxpr
-      return llc, dλ, ssλ
-    end
 
     # simulate fix tree vector
     bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)

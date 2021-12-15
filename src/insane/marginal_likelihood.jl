@@ -11,6 +11,7 @@ Created 01 12 2021
 
 
 
+
 """ 
     gss(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
 
@@ -26,24 +27,23 @@ function gss(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
     mx = -Inf
     ppk = pp[k]
     for i in Base.OneTo(lastindex(ppk))
-      ei     = exp(ppk[i])
-      ppk[i] = ei
-      mx     = ei > mx ? ei : mx
+      mx = max(ppk[i], mx)
     end
     mxs[k] = mx
   end
 
   ml = 0.0
   for k in Base.OneTo(K-1)
-    ml += (βs[k+1] - βs[k])*log(mxs[k])
-    ppk = pp[k]
-    n   = lastindex(ppk)
-    imxk = 1.0/mxs[k]
-    ssk = 0.0
+    ml  += (βs[k+1] - βs[k])*mxs[k]
+    ppk  = pp[k]
+    mxk  = mxs[k]
+    n    = lastindex(ppk)
+    ssk  = 0.0
+    dβk = (βs[k+1] - βs[k])
     for i in Base.OneTo(n)
-      ssk += (ppk[i] * imxk)^(βs[k+1] - βs[k]) 
+      ssk += exp(dβk * (ppk[i] - mxk))
     end
-    ml += log(ssk/n)
+    ml += log(ssk/Float64(n))
   end
 
   return ml

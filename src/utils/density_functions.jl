@@ -13,7 +13,6 @@ September 23 2017
 
 
 
-
 """
     logdexp(x::Float64, λ::Float64)
 
@@ -31,7 +30,6 @@ logdexp(x::Float64, λ::Float64) = (log(λ) - λ * x)::Float64
 Standard uniform distribution (`[0.0,1.0]`).
 """
 logdunifU(x::Float64) = 0.0
-
 
 
 
@@ -54,6 +52,7 @@ end
 
 
 
+
 """
     llrdexp_x(xp::Float64, xc::Float64, λ::Float64)
 
@@ -63,7 +62,6 @@ Compute the loglik ratio of the
 """
 llrdexp_x(xp::Float64, xc::Float64, λ::Float64) = 
   λ * (xc - xp)
-
 
 
 
@@ -78,7 +76,6 @@ logdbeta(x::Float64, α::Float64, β::Float64) =
   ((α-1.0) * log(x)                 +
   (β-1.0) * log(1.0 - x)           +
   log(gamma(α + β)/(gamma(α)*gamma(β))))
-
 
 
 
@@ -108,7 +105,8 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  -0.5*log(2.0π) - 0.5*log(σ²) - (x - μ)^2/(2.0*σ²)
+  -0.5*log(2.0*π*σ²) - (x - μ)^2/(2.0*σ²)
+
 
 
 
@@ -123,12 +121,23 @@ stdnorm(x::Float64) = exp(-0.5*x^2)/sqrt(2.0π)
 
 
 """
+    logstdnorm(x::Float64)
+  
+Compute the log **Normal** density for the standard Gaussian.
+"""
+logstdnorm(x::Float64) = - 0.5*log(2.0π) - 0.5*x^2 
+
+
+
+
+"""
     logdtnorm(x::Float64, μ::Float64, σ::Float64)
 
 Compute the truncated **Normal** at 0.0 density in the lower tail.
 """
 logdtnorm(x::Float64, μ::Float64, σ::Float64) = 
   - log(σ) - 0.5*log(2.0π) - 0.5*((x - μ)/σ)^2 - log(1.0 - stpnorm(-μ/σ))
+
 
 
 
@@ -139,6 +148,17 @@ Compute the truncated **Normal** likelihood ratio at 0.0 in the lower tail.
 """
 llrdtnorm(xp::Float64, xc::Float64, μ::Float64, σ::Float64) = 
   0.5/σ^2*((xc - μ)^2 - (xp - μ)^2)
+
+
+
+
+"""
+    logdsnorm(x::Float64, ξ::Float64, ω::Float64, α::Float64)
+
+Compute the skew **Normal** with location `ξ`, scale `ω` and shape `α`.
+"""
+logdsnorm(x::Float64, ξ::Float64, ω::Float64, α::Float64) = 
+  log(2.0/ω * stpnorm(α*(x - ξ)/ω)) + logstdnorm((x - ξ)/ω)
 
 
 
@@ -161,7 +181,6 @@ with mean `μ` and variance `σ²` for `x`, up to a constant.
 """
 logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
   -0.5*log(σ²) - (x - μ)^2/(2.0*σ²)
-
 
 
 
@@ -222,7 +241,6 @@ for `x` and `μ` updates
 """
 llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64) =
   ((xc - μc)^2 - (xp - μp)^2)/(2.0σ²)
-
 
 
 
