@@ -135,61 +135,7 @@ function insane_gbmce(tree    ::sT_label,
 
   write_ssr(R, pardic, out_file)
 
-  if marginal
-
-
-     # reference distribution
-    βs = [range(0.0, 1.0, K)...]
-    reverse!(βs)
-
-    """
-    here
-    """
-
-
-    # make reference posterior for `λ0`
-    @views p = r[:,4]
-    m     = mean(p)
-    v     = var(p)
-    λrefd = (m^2/v, m/v)
-
-    # make reference posterior for `α`
-    @views p = r[:,4]
-    m     = mean(p)
-    v     = var(p)
-    λrefd = (m^2/v, m/v)
-
-
-    # make reference posterior for `σλ`
-    @views p = r[:,4]
-    m     = mean(p)
-    v     = var(p)
-    λrefd = (m^2/v, m/v)
-
-    # make reference posterior for `μ`
-    @views p = r[:,5]
-    m     = mean(p)
-    v     = var(p)
-
-    if sum(x -> x < 0.2, p) > sum(x -> 0.2 < x < 0.4, p)
-      μ0 = 0.0
-    else
-      μ0 = m
-    end
-
-    σ0 = v < 0.2 ? 0.5 : v
-
-    x1 = run_newton(μ0, σ0, m, v)
-
-    μ_refd = (x1[1], x1[2])
-
-
-
-  else
-    ml = NaN
-  end
-
-  return R, Ψv, ml
+  return R, Ψv
 end
 
 
