@@ -25,7 +25,7 @@ Plots = "1.18, 1.19"
 RecipesBase = "1"
 ProgressMeter = "0.9, 1"
 RCall = "0.13"
-SpecialFunctions = "0.10"
+SpecialFunctions = "0, 1"
 julia = "1"
 
 [extras]
