@@ -1362,6 +1362,11 @@ function prunetree!(tree::sTfbd,
     else
       tree.d2 =
         prunetree!(tree.d2::sTfbd, dri, ldr, wpr, ix, px)
+    end
+  end
+
+  return tree
+end
 
 
 
