@@ -403,8 +403,8 @@ function swapbranch!(treep::sTfbd,
   if ix === ldr
     nbtrp = deepcopy(nbtr)
     if iψ 
-      maketipfossil!(nbtrp)
-      maketipfossil!(nbtr)
+      maketipsfossil!(nbtrp)
+      maketipsfossil!(nbtr)
     end
     if !it || iψ
       nbtrp = addtree(nbtrp, treep) 
@@ -521,7 +521,7 @@ function swapbranch!(tree::sTfbd,
 
   # branch reached
   if ix === ldr
-    if iψ maketipfossil!(nbtr) end
+    if iψ maketipsfossil!(nbtr) end
     if !it || iψ
       nbtr = addtree(nbtr, tree)
     end
@@ -686,18 +686,78 @@ end
 
 
 """
-    maketipfossil!(tree::sTfbd) 
+    maketipsfossil!(tree::sTfbd) 
 
-Change extant tip to fossil tip.
+Change all alive tips to fossil tips.
 """
-function maketipfossil!(tree::sTfbd)
+function maketipsfossil!(tree::sTfbd)
 
   if istip(tree::sTfbd) && isalive(tree::sTfbd)
     tree.iψ = true
   end
 
-  if isdefined(tree, :d1) maketipfossil!(tree.d1::sTfbd) end
-  if isdefined(tree, :d2) maketipfossil!(tree.d2::sTfbd) end
+  if isdefined(tree, :d1) maketipsfossil!(tree.d1::sTfbd) end
+  if isdefined(tree, :d2) maketipsfossil!(tree.d2::sTfbd) end
+end
+
+
+
+
+"""
+    makepasttipsfossil!(tree::sTfbd) 
+
+Change all past tips to fossil tips.
+"""
+makepasttipsfossil!(tree::sTfbd) = _makepasttipsfossil!(tree, treeheight(tree))
+
+
+
+
+"""
+    _makepasttipsfossil!(tree::sTfbd, th::Float64) 
+
+Change all past tips to fossil tips, initialized at tree height `th`.
+"""
+function _makepasttipsfossil!(tree::sTfbd, th::Float64)
+
+  th -= e(tree)
+
+  if istip(tree::sTfbd) && !isapprox(th, 0, atol=1e-8)
+    tree.iψ = true
+  end
+
+  if isdefined(tree, :d1) _makepasttipsfossil!(tree.d1::sTfbd, th) end
+  if isdefined(tree, :d2) _makepasttipsfossil!(tree.d2::sTfbd, th) end
+end
+
+
+
+
+"""
+    makepasttipsextinct!(tree::sTfbd) 
+
+Change all past tips to extinct tips.
+"""
+makepasttipsextinct!(tree::sTfbd) = _makepasttipsextinct!(tree, treeheight(tree))
+
+
+
+
+"""
+    _makepasttipsextinct!(tree::sTfbd, th::Float64) 
+
+Change all past tips to extinct tips, initialized at tree height `th`.
+"""
+function _makepasttipsextinct!(tree::sTfbd, th::Float64)
+
+  th -= e(tree)
+
+  if istip(tree::sTfbd) && !isapprox(th, 0, atol=1e-8)
+    tree.iμ = true
+  end
+
+  if isdefined(tree, :d1) _makepasttipsextinct!(tree.d1::sTfbd, th) end
+  if isdefined(tree, :d2) _makepasttipsextinct!(tree.d2::sTfbd, th) end
 end
 
 

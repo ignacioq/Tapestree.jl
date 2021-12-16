@@ -574,6 +574,8 @@ Return the number of fossil nodes for `tree`.
 nfossils(tree::T) where {T <: iTree} = _nfossils(tree, 0)
 
 
+
+
 """
     _nfossils(tree::T, n::Int64) where {T <: iTree}
 
@@ -590,6 +592,34 @@ function _nfossils(tree::T, n::Int64) where {T <: iTree}
   return n
 end
 
+
+
+
+"""
+    nsampledancestors(tree::T) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`.
+"""
+nsampledancestors(tree::T) where {T <: iTree} = _nsampledancestors(tree, 0)
+
+
+
+
+"""
+    _nsampledancestors(tree::T, n::Int64) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`, initialized at `n`.
+"""
+function _nsampledancestors(tree::T, n::Int64) where {T <: iTree}
+  if issampledancestor(tree)
+    n += 1
+  end
+  
+  if isdefined(tree, :d1) n = _nsampledancestors(tree.d1, n) end
+  if isdefined(tree, :d2) n = _nsampledancestors(tree.d2, n) end
+
+  return n
+end
 
 
 
@@ -1127,14 +1157,20 @@ function _survivaldr(tree::sTfbd, bit::BitArray{1})
 
   if isdefined(tree, :d1) && survives(tree.d1)
     if isdefined(tree, :d2) && survives(tree.d2)
+      # both daughters survive
       return bit
     else
+      # sampled ancestor or only d1 surviving
       push!(bit,true)
       _survivaldr(tree.d1, bit)
     end
-  else
+  elseif isdefined(tree, :d2) && survives(tree.d2)
+    # sampled ancestor or only d2 surviving
     push!(bit,false)
     _survivaldr(tree.d2, bit)
+  else
+    # the input tree had only one extant species, return this extant tip
+    return bit
   end
 end
 

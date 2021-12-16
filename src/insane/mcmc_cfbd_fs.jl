@@ -18,6 +18,7 @@ Created 07 10 2021
                    out_file::String,
                    λprior  ::Float64,
                    μprior  ::Float64,
+                   λmμprior  ::Float64,
                    ψprior  ::Float64,
                    niter   ::Int64,
                    nthin   ::Int64,
@@ -40,6 +41,7 @@ function insane_cfbd_fs(tree    ::sTfbd,
                         out_file::String,
                         λprior  ::Float64,
                         μprior  ::Float64,
+                        λmμprior::Float64,
                         ψprior  ::Float64,
                         niter   ::Int64,
                         nthin   ::Int64,
@@ -78,13 +80,13 @@ function insane_cfbd_fs(tree    ::sTfbd,
   makeiBf!(tree, idf, bit)
 
   if iszero(e(tree))
-     svf = cond_surv_crown
-     # svf = crown_prob_surv_cfbd
+     # svf = cond_surv_crown
+     svf = crown_prob_surv_cfbd
      # svf = cond_nothing
      cb = findall(x -> isone(sc(x)), idf)
   else
-     svf = cond_surv_stem
-     # svf = stem_prob_surv_cfbd
+     # svf = cond_surv_stem
+     svf = stem_prob_surv_cfbd
      # svf = cond_nothing
      cb = findall(x -> iszero(sc(x)), idf)
   end
@@ -94,13 +96,13 @@ function insane_cfbd_fs(tree    ::sTfbd,
 
   # adaptive phase
   llc, prc, tree, λc, μc, ψc, λtn, μtn, ψtn = 
-      mcmc_burn_cfbd(tree, n, th, tune_int, λprior, μprior, ψprior,nburn, ϵi, 
-              λi, μi, ψi, λtni, μtni, ψtni, scalef, idf, pup, prints, svf, cb)
+      mcmc_burn_cfbd(tree, n, th, tune_int, λprior, μprior, λmμprior, ψprior,
+      nburn, ϵi, λi, μi, ψi, λtni, μtni, ψtni, scalef, idf, pup, prints, svf, cb)
 
   @info "Final MCMC"
   # mcmc
-  R, tree = mcmc_cfbd(tree, llc, prc, λc, μc, ψc, λprior, μprior, ψprior, niter, 
-                      nthin, λtn, μtn, ψtn, idf, pup, prints, svf, cb)
+  R, tree = mcmc_cfbd(tree, llc, prc, λc, μc, ψc, λprior, μprior, λmμprior, 
+                 ψprior, niter, nthin, λtn, μtn, ψtn, idf, pup, prints, svf, cb)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2),
@@ -127,6 +129,7 @@ end
                    λprior  ::Float64,
                    μprior  ::Float64,
                    ψprior  ::Float64,
+                   λmμprior::Float64,
                    nburn   ::Int64,
                    ϵi      ::Float64,
                    λi      ::Float64,
@@ -150,6 +153,7 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
                         tune_int::Int64,
                         λprior  ::Float64,
                         μprior  ::Float64,
+                        λmμprior::Float64,
                         ψprior  ::Float64,
                         nburn   ::Int64,
                         ϵi      ::Float64,
@@ -176,8 +180,19 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
 
   # starting parameters
   if isnan(λi) && isnan(μi) && isnan(ψi)
-    λc, μc = moments(Float64(n), th, ϵi)
-    ψc = nfossils(tree)/treelength(tree)
+    # if only one tip
+    if isone(n)
+      λc = λprior
+      μc = isnan(μprior) ? λprior-λmμprior : μprior
+    else
+      λc, μc = moments(Float64(n), th, ϵi)
+    end
+    # if no sampled fossil
+    if iszero(nfossils(tree))
+      ψc = ψprior
+    else
+      ψc = nfossils(tree)/treelength(tree)
+    end
   else
     λc, μc, ψc = λi, μi, ψi
   end
@@ -198,9 +213,13 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
   end
 
   # likelihood
-  llc = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
-  # llc = llik_cfbd(tree, λc, μc, ψc) - svf(λc, μc, treeheight(tree))
-  prc = logdexp(λc, λprior) + logdexp(μc, μprior) + logdexp(ψc, ψprior)
+  # llc = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
+  llc = llik_cfbd(tree, λc, μc, ψc) - svf(λc, μc, treeheight(tree))
+  if isnan(λmμprior)
+    prc = logdexp(λc, λprior) + logdexp(μc, μprior) + logdexp(ψc, ψprior)
+  else
+    prc = logdexp(λc, λprior) + logdexp(λc-μc, λmμprior) + logdexp(ψc, ψprior)
+  end
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -212,25 +231,35 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
 
     for p in pup
 
-      # λ proposal
       if p === 1
-        llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, ψc, λprior, svf)
+        if isnan(λmμprior)
+          # λ proposal
+          llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, ψc, λprior, svf)
+        else
+          # parallel λ and μ proposal
+          llc, prc, λc, μc = λμp(tree, llc, prc, λc, μc, lac, λtn, ψc, λprior, svf)
+        end
         lup[1] += 1.0
       end
 
-      # μ proposal
       if p === 2
-        llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, ψc, μprior, svf)
+        if isnan(λmμprior)
+          # μ proposal
+          llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, ψc, μprior, svf)
+        else
+          # λ-μ proposal
+          llc, prc, μc = λmμp(tree, llc, prc, λc, μc, lac, μtn, ψc, λmμprior, svf)
+        end
         lup[2] += 1.0
       end
 
       # ψ proposal
       if p === 3
-        llc, prc, ψc = ψp(tree, llc, prc, ψc, lac, μtn, λc, μc, ψprior, svf)
+        llc, prc, ψc = ψp(tree, llc, prc, ψc, lac, ψtn, λc, μc, ψprior, svf)
         lup[3] += 1.0
       end
       
-      # forward simulation proposal proposal
+      # forward simulation proposal
       if p === 4
         bix = fIrand(lidf) + 1
         tree, llc = fsp(tree, idf[bix], llc, λc, μc, ψc, in(bix, cb))
@@ -252,6 +281,7 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
       λtn = scalef(λtn,lac[1]/lup[1])
       μtn = scalef(μtn,lac[2]/lup[2])
       ψtn = scalef(ψtn,lac[3]/lup[3])
+      @show (λtn, μtn, ψtn)
       lup = Float64[0.0,0.0,0.0]
       lac = Float64[0.0,0.0,0.0]
       ltn = 0
@@ -276,6 +306,7 @@ end
               ψc    ::Float64,
               λprior::Float64,
               μprior::Float64,
+              λmμprior::Float64,
               ψprior::Float64,
               niter ::Int64,
               nthin ::Int64,
@@ -297,6 +328,7 @@ function mcmc_cfbd(tree  ::sTfbd,
                    ψc    ::Float64,
                    λprior::Float64,
                    μprior::Float64,
+                   λmμprior::Float64,
                    ψprior::Float64,
                    niter ::Int64,
                    nthin ::Int64,
@@ -331,14 +363,24 @@ function mcmc_cfbd(tree  ::sTfbd,
 
     for p in pup
 
-      # λ proposal
       if p === 1
-        llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, ψc, λprior, svf)
+        if isnan(λmμprior)
+          # λ proposal
+          llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, ψc, λprior, svf)
+        else
+          # parallel λ and μ proposal
+          llc, prc, λc, μc = λμp(tree, llc, prc, λc, μc, λtn, ψc, λprior, svf)
+        end
       end
 
-      # μ proposal
       if p === 2
-        llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, ψc, μprior, svf)
+        if isnan(λmμprior)
+          # μ proposal
+          llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, ψc, μprior, svf)
+        else
+          # λ-μ proposal
+          llc, prc, μc = λmμp(tree, llc, prc, λc, μc, μtn, ψc, λmμprior, svf)
+        end
       end
 
       # ψ proposal
@@ -775,8 +817,8 @@ function λp(tree  ::sTfbd,
 
     λp = mulupt(λc, λtn)::Float64
 
-    llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
-    # llp = llik_cfbd(tree, λp, μc, ψc) - svf(λc, μc, treeheight(tree))
+    # llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
+    llp = llik_cfbd(tree, λp, μc, ψc) - svf(λc, μc, treeheight(tree))
 
     prr = llrdexp_x(λp, λc, λprior)
 
@@ -820,8 +862,8 @@ function λp(tree  ::sTfbd,
   
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
-    llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
-    # llp = llik_cfbd(tree, λp, μc, ψc) - svf(λc, μc, treeheight(tree))
+    # llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
+    llp = llik_cfbd(tree, λp, μc, ψc) - svf(λc, μc, treeheight(tree))
 
     prr = llrdexp_x(λp, λc, λprior)
 
@@ -867,8 +909,8 @@ function μp(tree  ::sTfbd,
     μp = mulupt(μc, μtn)::Float64
 
     # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μp)
-    # sc  = -svf(λc, μp, treeheight(tree))
+    # sc  = svf(tree, λc, μp)
+    sc  = -svf(λc, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
 
     prr = llrdexp_x(μp, μc, μprior)
@@ -912,11 +954,207 @@ function μp(tree  ::sTfbd,
     μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
 
     # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μp)
-    # sc  = -svf(λc, μp, treeheight(tree))
+    # sc  = svf(tree, λc, μp)
+    sc  = -svf(λc, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
 
     prr = llrdexp_x(μp, μc, μprior)
+
+    if -randexp() < (llp - llc + prr + log(μp/μc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+    end
+
+    return llc, prc, μc 
+end
+
+
+
+
+"""
+    λμp(tree  ::sTfbd,
+        llc   ::Float64,
+        prc   ::Float64,
+        λc    ::Float64,
+        μc    ::Float64,
+        lac   ::Array{Float64,1},
+        λtn   ::Float64,
+        ψc    ::Float64,
+        λprior::Float64,
+        svf   ::Function)
+
+Parallel `λ` and `μ` proposal function for constant fossilized birth-death in 
+adaptive phase.
+"""
+function λμp(tree  ::sTfbd,
+             llc   ::Float64,
+             prc   ::Float64,
+             λc    ::Float64,
+             μc    ::Float64,
+             lac   ::Array{Float64,1},
+             λtn   ::Float64,
+             ψc    ::Float64,
+             λprior::Float64,
+             svf   ::Function)
+
+    λp = mulupt(λc, λtn)::Float64
+    μp = mulupt(μc, λtn)::Float64
+    
+    # one could make a ratio likelihood function
+    # sc  = svf(tree, λp, μp)
+    sc  = -svf(λp, μp, treeheight(tree))
+    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λp, μp, ψc) + sc
+
+    prr = llrdexp_x(λp, λc, λprior)
+
+    if -randexp() < (llp - llc + prr + log(λp/λc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+      λc   = λp::Float64
+      lac[1] += 1.0
+    end
+
+    return llc, prc, λc, μc 
+end
+
+
+
+
+"""
+    λμp(tree  ::sTfbd,
+        llc   ::Float64,
+        prc   ::Float64,
+        λc    ::Float64,
+        μc    ::Float64,
+        λtn   ::Float64,
+        ψc    ::Float64,
+        λprior::Float64,
+        svf   ::Function)
+
+Parallel `λ` and `μ` proposal function for constant fossilized birth-death.
+"""
+function λμp(tree  ::sTfbd,
+             llc   ::Float64,
+             prc   ::Float64,
+             λc    ::Float64,
+             μc    ::Float64,
+             λtn   ::Float64,
+             ψc    ::Float64,
+             λprior::Float64,
+             svf   ::Function)
+  
+    tn = rand() < 0.3 ? λtn : 4.0*λtn
+    μp = mulupt(μc, tn)::Float64
+    λp = mulupt(λc, tn)::Float64
+
+    # one could make a ratio likelihood function
+    # sc  = svf(tree, λp, μp)
+    sc  = -svf(λp, μp, treeheight(tree))
+    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λp, μp, ψc) + sc
+
+    prr = llrdexp_x(λp, λc, λprior)
+
+    if -randexp() < (llp - llc + prr + log(λp/λc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+      λc   = λp::Float64
+    end
+
+    return llc, prc, λc, μc
+end
+
+
+
+
+"""
+    λmμp(tree  ::sTfbd,
+         llc   ::Float64,
+         prc   ::Float64,
+         λc    ::Float64,
+         μc    ::Float64,
+         lac   ::Array{Float64,1},
+         μtn   ::Float64,
+         ψc    ::Float64,
+         λmμprior::Float64,
+         svf   ::Function)
+
+`λ-μ` proposal function for constant fossilized birth-death in adaptive phase.
+"""
+function λmμp(tree  ::sTfbd,
+              llc   ::Float64,
+              prc   ::Float64,
+              λc    ::Float64,
+              μc    ::Float64,
+              lac   ::Array{Float64,1},
+              μtn   ::Float64,
+              ψc    ::Float64,
+              λmμprior::Float64,
+              svf   ::Function)
+
+    λmμc = λc-μc
+    λmμp = addupt(λmμc, μtn)::Float64
+    μp = λc-λmμp
+
+    μp>0 || return llc, prc, μc
+
+    # one could make a ratio likelihood function
+    # sc  = svf(tree, λc, μp)
+    sc  = -svf(λc, μp, treeheight(tree))
+    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
+
+    prr = llrdexp_x(λc-μp, λc-μc, λmμprior)
+
+    if -randexp() < (llp - llc + prr + log(μp/μc))
+      llc  = llp::Float64
+      prc += prr::Float64
+      μc   = μp::Float64
+      lac[2] += 1.0
+    end
+
+    return llc, prc, λc, μc 
+end
+
+
+
+
+"""
+    λmμp(tree  ::sTfbd,
+         llc   ::Float64,
+         prc   ::Float64,
+         λc    ::Float64,
+         μc    ::Float64,
+         μtn   ::Float64,
+         ψc    ::Float64,
+         λmμprior::Float64,
+         svf   ::Function)
+
+`λ-μ` proposal function for constant fossilized birth-death.
+"""
+function λmμp(tree  ::sTfbd,
+              llc   ::Float64,
+              prc   ::Float64,
+              λc    ::Float64,
+              μc    ::Float64,
+              μtn   ::Float64,
+              ψc    ::Float64,
+              λmμprior::Float64,
+              svf   ::Function)
+
+    λmμc = λc-μc
+    λmμp = addupt(λmμc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
+    μp = λc-λmμp
+
+    μp>0 || return llc, prc, μc
+
+    # one could make a ratio likelihood function
+    # sc  = svf(tree, λc, μp)
+    sc  = -svf(λc, μp, treeheight(tree))
+    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
+
+    prr = llrdexp_x(λc-μp, λc-μc, λmμprior)
 
     if -randexp() < (llp - llc + prr + log(μp/μc))
       llc  = llp::Float64
@@ -958,8 +1196,8 @@ function ψp(tree  ::sTfbd,
     ψp = mulupt(ψc, ψtn)::Float64
 
     # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μc)
-    # sc  = -svf(λc, μc, treeheight(tree))
+    # sc  = svf(tree, λc, μc)
+    sc  = -svf(λc, μc, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μc, ψp) + sc
 
     prr = llrdexp_x(ψp, ψc, ψprior)
@@ -1003,8 +1241,8 @@ function ψp(tree  ::sTfbd,
     ψp = mulupt(ψc, rand() < 0.3 ? ψtn : 4.0*ψtn)::Float64
 
     # one could make a ratio likelihood function
-    sc  = svf(tree, λc, μc)
-    # sc  = -svf(λc, μc, treeheight(tree))
+    # sc  = svf(tree, λc, μc)
+    sc  = -svf(λc, μc, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μc, ψp) + sc
 
     prr = llrdexp_x(ψp, ψc, ψprior)
