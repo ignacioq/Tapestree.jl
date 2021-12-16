@@ -330,19 +330,19 @@ function sim_gbmce(t   ::Float64;
 
   if init === :crown
     lλ0 = log(λ0)
-    d1, nsp = _sim_gbmce(t, lλ0, α, σλ, μ, δt, sqrt(δt), 1, nlim)
+    d1, nsp = _sim_gbmce(t, lλ0, α, σλ, μ, δt, sqrt(δt), 0, 1, nlim)
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nsp = _sim_gbmce(t, lλ0, α, σλ, μ, δt, sqrt(δt), 1, nlim)
+    d2, nsp = _sim_gbmce(t, lλ0, α, σλ, μ, δt, sqrt(δt), 0, 1, nlim)
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"
     end
 
     tree = iTgbmce(d1, d2, 0.0, δt, 0.0, false, false, Float64[lλ0, lλ0])
   elseif init === :stem
-    tree, nsp = _sim_gbmce(t, log(λ0), α, σλ, μ, δt, sqrt(δt), 1, nlim)
+    tree, nsp = _sim_gbmce(t, log(λ0), α, σλ, μ, δt, sqrt(δt), 0, 1, nlim)
 
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"

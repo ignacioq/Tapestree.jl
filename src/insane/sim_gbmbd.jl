@@ -352,12 +352,12 @@ function sim_gbmbd(t   ::Float64;
   if init === :crown
     lλ0 = log(λ0)
     lμ0 = log(μ0)
-    d1, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 1, nlim)
+    d1, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 1, nlim)
+    d2, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"
     end
@@ -366,7 +366,7 @@ function sim_gbmbd(t   ::Float64;
       Float64[lλ0, lλ0], Float64[lμ0, lμ0])
 
   elseif init === :stem
-    tree, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 1, nlim)
+    tree, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
 
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"

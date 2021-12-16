@@ -329,19 +329,19 @@ function sim_gbmct(t   ::Float64;
 
   if init === :crown
     lλ0 = log(λ0)
-    d1, nsp = _sim_gbmct(t, lλ0, α, σλ, ϵ, δt, sqrt(δt), 1, nlim)
+    d1, nsp = _sim_gbmct(t, lλ0, α, σλ, ϵ, δt, sqrt(δt), 0, 1, nlim)
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nsp = _sim_gbmct(t, lλ0, α, σλ, ϵ, δt, sqrt(δt), 1, nlim)
+    d2, nsp = _sim_gbmct(t, lλ0, α, σλ, ϵ, δt, sqrt(δt), 0, 1, nlim)
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"
     end
 
     tree = iTgbmct(d1, d2, 0.0, δt, 0.0, false, false, Float64[lλ0, lλ0])
   elseif init === :stem
-    tree, nsp = _sim_gbmct(t, log(λ0), α, σλ, ϵ, δt, sqrt(δt), 1, nlim)
+    tree, nsp = _sim_gbmct(t, log(λ0), α, σλ, ϵ, δt, sqrt(δt), 0, 1, nlim)
 
     if nsp >= nlim 
       @warn "maximum number of lineages surpassed"
