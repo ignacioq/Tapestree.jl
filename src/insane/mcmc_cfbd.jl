@@ -214,7 +214,7 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
 
   # likelihood
   # llc = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
-  llc = llik_cfbd(tree, λc, μc, ψc) - svf(λc, μc, treeheight(tree))
+  llc = llik_cfbd(tree, λc, μc, ψc) + svf(λc, μc, treeheight(tree))
   if isnan(λmμprior)
     prc = logdexp(λc, λprior) + logdexp(μc, μprior) + logdexp(ψc, ψprior)
   else
@@ -818,7 +818,7 @@ function λp(tree  ::sTfbd,
     λp = mulupt(λc, λtn)::Float64
 
     # llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
-    llp = llik_cfbd(tree, λp, μc, ψc) - svf(λc, μc, treeheight(tree))
+    llp = llik_cfbd(tree, λp, μc, ψc) + svf(λc, μc, treeheight(tree))
 
     prr = llrdexp_x(λp, λc, λprior)
 
@@ -863,7 +863,7 @@ function λp(tree  ::sTfbd,
     λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
 
     # llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
-    llp = llik_cfbd(tree, λp, μc, ψc) - svf(λc, μc, treeheight(tree))
+    llp = llik_cfbd(tree, λp, μc, ψc) + svf(λc, μc, treeheight(tree))
 
     prr = llrdexp_x(λp, λc, λprior)
 
@@ -910,7 +910,7 @@ function μp(tree  ::sTfbd,
 
     # one could make a ratio likelihood function
     # sc  = svf(tree, λc, μp)
-    sc  = -svf(λc, μp, treeheight(tree))
+    sc  = svf(λc, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
 
     prr = llrdexp_x(μp, μc, μprior)
@@ -955,7 +955,7 @@ function μp(tree  ::sTfbd,
 
     # one could make a ratio likelihood function
     # sc  = svf(tree, λc, μp)
-    sc  = -svf(λc, μp, treeheight(tree))
+    sc  = svf(λc, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
 
     prr = llrdexp_x(μp, μc, μprior)
@@ -1003,7 +1003,7 @@ function λμp(tree  ::sTfbd,
     
     # one could make a ratio likelihood function
     # sc  = svf(tree, λp, μp)
-    sc  = -svf(λp, μp, treeheight(tree))
+    sc  = svf(λp, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λp, μp, ψc) + sc
 
     prr = llrdexp_x(λp, λc, λprior)
@@ -1051,7 +1051,7 @@ function λμp(tree  ::sTfbd,
 
     # one could make a ratio likelihood function
     # sc  = svf(tree, λp, μp)
-    sc  = -svf(λp, μp, treeheight(tree))
+    sc  = svf(λp, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λp, μp, ψc) + sc
 
     prr = llrdexp_x(λp, λc, λprior)
@@ -1102,7 +1102,7 @@ function λmμp(tree  ::sTfbd,
 
     # one could make a ratio likelihood function
     # sc  = svf(tree, λc, μp)
-    sc  = -svf(λc, μp, treeheight(tree))
+    sc  = svf(λc, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
 
     prr = llrdexp_x(λc-μp, λc-μc, λmμprior)
@@ -1151,7 +1151,7 @@ function λmμp(tree  ::sTfbd,
 
     # one could make a ratio likelihood function
     # sc  = svf(tree, λc, μp)
-    sc  = -svf(λc, μp, treeheight(tree))
+    sc  = svf(λc, μp, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
 
     prr = llrdexp_x(λc-μp, λc-μc, λmμprior)
@@ -1197,7 +1197,7 @@ function ψp(tree  ::sTfbd,
 
     # one could make a ratio likelihood function
     # sc  = svf(tree, λc, μc)
-    sc  = -svf(λc, μc, treeheight(tree))
+    sc  = svf(λc, μc, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μc, ψp) + sc
 
     prr = llrdexp_x(ψp, ψc, ψprior)
@@ -1242,7 +1242,7 @@ function ψp(tree  ::sTfbd,
 
     # one could make a ratio likelihood function
     # sc  = svf(tree, λc, μc)
-    sc  = -svf(λc, μc, treeheight(tree))
+    sc  = svf(λc, μc, treeheight(tree))
     llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μc, ψp) + sc
 
     prr = llrdexp_x(ψp, ψc, ψprior)

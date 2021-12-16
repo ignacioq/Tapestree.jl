@@ -457,50 +457,6 @@ end
 
 
 """
-    swapbranch!(tree::T,
-                nbtr::T,
-                dri ::BitArray{1}, 
-                ldr ::Int64,
-                it  ::Bool,
-                ix  ::Int64) where {T <: iTree}
-
-Swap branch given by `dri` by `nbtr` and return the tree.
-"""
-function swapbranch!(tree::T,
-                     nbtr::T,
-                     dri ::BitArray{1}, 
-                     ldr ::Int64,
-                     it  ::Bool,
-                     ix  ::Int64) where {T <: iTree}
-
-  if ix === ldr
-    if !it
-      nbtr = addtree(nbtr, tree) 
-    end
-    return nbtr
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1::T)
-    if ifx1 && isfix(tree.d2::T)
-      ix += 1
-      if dri[ix]
-        tree.d1 = swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
-      else
-        tree.d2 = swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
-      end
-    elseif ifx1
-      tree.d1 = swapbranch!(tree.d1::T, nbtr::T, dri, ldr, it, ix)
-    else
-      tree.d2 = swapbranch!(tree.d2::T, nbtr::T, dri, ldr, it, ix)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-#="""
     swapbranch!(tree::sTfbd,
                 nbtr::sTfbd,
                 dri ::BitArray{1}, 
@@ -623,7 +579,7 @@ function swapfossil!(tree::sTfbd,
       swapfossil!(tree.d2::sTfbd, nttr::sTfbd, dri, ldr, ix)
     end
   end
-end=#
+end
 
 
 

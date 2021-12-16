@@ -703,7 +703,7 @@ function update_λ!(llc   ::Float64,
                    pow   ::Float64)
 
   λp  = randgamma((λ_prior[1] + ns)*pow + λ_rdist[1] * (1.0 - pow),
-                  (λ_prior[2] + L)*pow  + λ_rdist[2] * (1.0 - pow)) 
+                  (λ_prior[2] + L)*pow  + λ_rdist[2] * (1.0 - pow))
 
   llr = scond(λp, μc, sns) - scond(λc, μc, sns)
 

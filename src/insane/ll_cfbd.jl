@@ -119,7 +119,7 @@ fossilized birth-death process with `λ` and `μ` from stem age.
 function stem_prob_surv_cfbd(λ::Float64, μ::Float64, t::Float64)
   @fastmath begin
     μ += λ === μ ? 1e-14 : 0.0
-    log((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))
+    - log((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))
   end
 end
 
@@ -134,7 +134,7 @@ fossilized birth-death process with `λ` and `μ` from crown age.
 """
 function crown_prob_surv_cfbd(λ::Float64, μ::Float64, t::Float64)
     μ += λ === μ ? 1e-14 : 0.0
-    log(((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
+    - 2.0 * log((λ - μ)/(λ - μ*exp(-(λ - μ)*t))) - log(λ)
 end
 
 
