@@ -44,6 +44,7 @@ with the following fields:
   d1: daughter tree 1
   d2: daughter tree 2
   e:  edge
+  fx: if fix
 
     sTpb()
 
@@ -61,16 +62,109 @@ mutable struct sTpb <: sT
   d1::sTpb
   d2::sTpb
   e ::Float64
+  fx::Bool
 
   sTpb() = new()
-  sTpb(e::Float64) = (x = new(); x.e = e; x)
-  sTpb(d1::sTpb, d2::sTpb, e::Float64) = new(d1, d2, e)
+  sTpb(e::Float64) = (x = new(); x.e = e; x.fx = false; x)
+  sTpb(e::Float64, fx::Bool) = (x = new(); x.e = e; x.fx = fx; x)
+  sTpb(d1::sTpb, d2::sTpb, e::Float64, fx::Bool) = new(d1, d2, e, fx)
 end
 
 # pretty-printing
 Base.show(io::IO, t::sTpb) = 
   print(io, "insane simple pure-birth tree with ", ntips(t), " tips")
 
+
+
+
+"""
+    sT_label
+
+A composite recursive type of supertype `sT` 
+representing a labelled binary phylogenetic tree for `insane` use, 
+with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  l:  label
+
+    sT_label()
+
+Constructs an empty `sT_label` object.
+
+    sT_label(e::Float64)
+
+Constructs an empty `sT_label` object with edge `e`.
+
+    sT_label(d1::sT_label, d2::sT_label, e::Float64)
+
+Constructs an `sT_label` object with two `sT_label` daughters and edge `e`.
+"""
+mutable struct sT_label <: sT
+  d1::sT_label
+  d2::sT_label
+  e ::Float64
+  l ::String
+
+  sT_label() = new()
+  sT_label(e::Float64, l::String) = (x = new(); x.e = e; x.l = l; x)
+  sT_label(d1::sT_label, 
+           d2::sT_label, 
+           e ::Float64,
+           l ::String) = new(d1, d2, e, l)
+end
+
+# pretty-printing
+Base.show(io::IO, t::sT_label) = 
+  print(io, "insane simple labelled tree with ", ntips(t), " tips")
+
+
+
+
+"""
+    sT_label(tree::T) where {T <: iTree}
+
+Demotes a tree of type `iTgbmce` to `sT_label`.
+"""
+function sT_label(tree::T) where {T <: iTree}
+  _sT_label(tree::T, 0)[1]
+end
+
+
+
+"""
+    sT_label(tree::T) where {T <: iTree}
+
+Demotes a tree of type `iTgbmce` to `sT_label`.
+"""
+function _sT_label(tree::T, i::Int64) where {T <: iTree}
+  if isdefined(tree, :d1)
+    t1, i = _sT_label(tree.d1, i)
+    t2, i = _sT_label(tree.d2, i)
+    tree = sT_label(t1, t2, e(tree), "")
+  else
+    i += 1
+    tree = sT_label(e(tree), string("t",i))
+  end
+  return tree, i
+end
+
+
+
+
+"""
+    sTpb(tree::sT_label)
+
+Demotes a tree of type `iTgbmce` to `sTpb`.
+"""
+function sTpb(tree::sT_label)
+  if isdefined(tree, :d1)
+    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree))
+  else
+    sTpb(e(tree))
+  end
+end
 
 
 
@@ -123,6 +217,23 @@ end
 Base.show(io::IO, t::sTbd) = 
   print(io, "insane simple birth-death tree with ", ntips(t), " tips (", 
     ntipsextinct(t)," extinct)")
+
+
+
+
+
+"""
+    sTbd(tree::sT_label)
+
+Transforms a tree of type `sT_label` to `sTbd`.
+"""
+function sTbd(tree::sT_label)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), false, false)
+  else
+    sTbd(e(tree), false)
+  end
+end
 
 
 
@@ -216,6 +327,7 @@ with the following fields:
   d1:  daughter tree 1
   d2:  daughter tree 2
   e:   edge
+  fx:  if fix tree
   dt:  choice of time lag
   fdt: final `δt`
   lλ:  array of a Brownian motion evolution of `log(λ)`
@@ -236,18 +348,20 @@ mutable struct iTgbmpb <: iTgbm
   d1 ::iTgbmpb
   d2 ::iTgbmpb
   e  ::Float64
+  fx ::Bool
   dt ::Float64
   fdt::Float64
   lλ ::Array{Float64,1}
 
   iTgbmpb() = new()
 
-  iTgbmpb(e::Float64, dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
-    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
+  iTgbmpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64, 
+    lλ::Array{Float64,1}) = 
+      (x = new(); x.e = e; x.fx = fx; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
 
-  iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, 
+  iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, fx::Bool,
     dt::Float64, fdt::Float64, lλ::Array{Float64,1}) = 
-      new(d1, d2, e, dt, fdt, lλ)
+      new(d1, d2, e, fx, dt, fdt, lλ)
 end
 
 
@@ -280,9 +394,9 @@ function iTgbmpb(tree::sTpb,
     if isdefined(tree, :d1)
       iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, α, σλ), 
               iTgbmpb(tree.d2, δt, srδt, lλa, α, σλ),
-              et, δt, 0.0, Float64[lλa, lλa])
+              et, isfix(tree), δt, 0.0, Float64[lλa, lλa])
     else
-      iTgbmpb(et, δt, 0.0, Float64[lλa, lλa])
+      iTgbmpb(et, isfix(tree), δt, 0.0, Float64[lλa, lλa])
     end
   else
     nt, fdti = divrem(et, δt, RoundDown)
@@ -298,9 +412,9 @@ function iTgbmpb(tree::sTpb,
     if isdefined(tree, :d1)
       iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], α, σλ), 
               iTgbmpb(tree.d2, δt, srδt, lλv[l], α, σλ),
-              et, δt, fdti, lλv)
+              et, isfix(tree), δt, fdti, lλv)
     else
-      iTgbmpb(et, δt, fdti, lλv)
+      iTgbmpb(et, isfix(tree), δt, fdti, lλv)
     end
   end
 end
@@ -332,15 +446,13 @@ function iTgbmpb(e0::Array{Int64,1},
 
   # if tip
   if in(ei, ea)
-    return iTgbmpb(el[ei], δt, δt, λs[ei])
+    return iTgbmpb(el[ei], true, δt, δt, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
     return iTgbmpb(iTgbmpb(e0, e1, el, λs, ea, n1, ei1, δt), 
                    iTgbmpb(e0, e1, el, λs, ea, n2, ei2, δt), 
-                   el[ei], δt, 
-                   (el[ei] == 0.0 ? 0.0 : δt), 
-                   λs[ei])
+                   el[ei], true, δt, (el[ei] == 0.0 ? 0.0 : δt), λs[ei])
   end
 end
 

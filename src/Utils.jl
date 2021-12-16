@@ -24,6 +24,7 @@ export rtree, read_tree, make_ape_tree, maketriads, abs_time_branches,
   logdhcau, logdhcau1, uniupt, addupt, addupt_lims, addupt!, duoupd, trioupd,
   absaddupt, mulupt, makescalef, globalscalef, adaptiveupd!, makestepsize,
   makemvnproposal, randinvgamma, randgamma, logdinvgamma, llrdinvgamma,
-  logdgamma, fIrand
+  logdgamma, llrdgamma, logdtnorm, llrdtnorm_x, fIrand, sample,
+  run_newton, update_jacobian
 
 end # module Utils

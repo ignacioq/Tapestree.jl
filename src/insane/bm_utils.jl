@@ -14,62 +14,11 @@ Created 10 09 2020
 
 """
     bm!(tree::T,
-        bbiλ::Array{Float64,1},
-        ii  ::Int64,
-        tl  ::Int64,
+        λt  ::Float64,
         α   ::Float64,
         σλ  ::Float64,
         δt  ::Float64,
         srδt::Float64) where {T <: iTgbm}
-
-Fill fix with previously simulated geometric Brownian motion and simulate
-geometric Brownian motion in place for the unfixed trees.
-"""
-@inline function bm!(tree::T,
-                     bbiλ::Array{Float64,1},
-                     ii  ::Int64,
-                     tl  ::Int64,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64) where {T <: iTgbm}
-
-  @inbounds begin
-
-    λv  = lλ(tree)
-    l   = lastindex(λv)
-    fi  = ii + l - 1
-    cix = ii:fi
-
-    @simd for i in Base.OneTo(l)
-      λv[i] = bbiλ[cix[i]]
-    end
-
-    if fi < tl
-      if isfix(tree.d1)
-        bm!(tree.d1::T, bbiλ, fi, tl, α, σλ, δt, srδt)
-        bm!(tree.d2::T, λv[l], α, σλ, δt, srδt)
-      elseif isfix(tree.d2)
-        bm!(tree.d1::T, λv[l], α, σλ, δt, srδt)
-        bm!(tree.d2::T, bbiλ, fi, tl, α, σλ, δt, srδt)
-      end
-    end
-
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    bm!(tree::T,
-      λt  ::Float64,
-      α   ::Float64,
-      σλ  ::Float64,
-      δt  ::Float64,
-      srδt::Float64) where {T <: iTgbm}
 
 Simulate birth-death geometric Brownian motion in place.
 """
@@ -93,65 +42,6 @@ function bm!(tree::T,
 
   return nothing
 end
-
-
-
-
-
-"""
-    bm!(tree::iTgbmbd,
-        bbiλ::Array{Float64,1},
-        bbiμ::Array{Float64,1},
-        ii  ::Int64,
-        tl  ::Int64,
-        α   ::Float64,
-        σλ  ::Float64,
-        σμ  ::Float64,
-        δt  ::Float64,
-        srδt::Float64)
-
-Fill fix with previously simulated geometric Brownian motion and simulate
-geometric Brownian motion in place for the unfixed trees.
-"""
-@inline function bm!(tree::iTgbmbd,
-                     bbiλ::Array{Float64,1},
-                     bbiμ::Array{Float64,1},
-                     ii  ::Int64,
-                     tl  ::Int64,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     σμ  ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
-
-  @inbounds begin
-
-    λv  = lλ(tree)
-    μv  = lμ(tree)
-    l   = lastindex(λv)
-    fi  = ii + l - 1
-    cix = ii:fi
-
-    @simd for i in Base.OneTo(l)
-      λv[i] = bbiλ[cix[i]]
-      μv[i] = bbiμ[cix[i]]
-    end
-
-    if fi < tl
-      if isfix(tree.d1)
-        bm!(tree.d1, bbiλ, bbiμ, fi, tl, α, σλ, σμ, δt, srδt)
-        bm!(tree.d2, λv[l], μv[l], α, σλ, σμ, δt, srδt)
-      elseif isfix(tree.d2)
-        bm!(tree.d1, λv[l], μv[l], α, σλ, σμ, δt, srδt)
-        bm!(tree.d2, bbiλ, bbiμ, fi, tl, α, σλ, σμ, δt, srδt)
-      end
-    end
-
-  end
-
-  return nothing
-end
-
 
 
 
@@ -354,7 +244,7 @@ end
         α   ::Float64,
         σ   ::Float64,
         δt  ::Float64,
-        fdt::Float64,
+        fdt ::Float64,
         srδt::Float64)
 
 Brownian motion simulation function for updating a branch in place.
@@ -364,7 +254,7 @@ Brownian motion simulation function for updating a branch in place.
                      α   ::Float64,
                      σ   ::Float64,
                      δt  ::Float64,
-                     fdt::Float64,
+                     fdt ::Float64,
                      srδt::Float64)
 
   @inbounds begin
@@ -601,6 +491,30 @@ end
 
 
 """
+    duodnorm(x  ::Float64,
+             xd1::Float64,
+             xd2::Float64,
+             td1::Float64, 
+             td2::Float64,
+             σ  ::Float64)
+Likelihood for a duo of Gaussians.
+"""
+function duodnorm(x  ::Float64,
+                  xd1::Float64,
+                  xd2::Float64,
+                  td1::Float64, 
+                  td2::Float64,
+                  σ  ::Float64)
+
+  invt = 1.0/(td1 + td2)
+  return dnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2, 
+    sqrt(td1 * td2 * invt)*σ)
+end
+
+
+
+
+"""
     duoldnorm(x  ::Float64,
               xd1::Float64,
               xd2::Float64,
@@ -641,8 +555,8 @@ function trioldnorm(x  ::Float64,
                     xpr::Float64,
                     xd1::Float64,
                     xd2::Float64,
-                    tpr::Float64, 
-                    td1::Float64, 
+                    tpr::Float64,
+                    td1::Float64,
                     td2::Float64,
                     σ  ::Float64)
 
@@ -706,7 +620,6 @@ and `xc`, respectively.
 """
 lrdnorm_bm_x(xp::Float64, xc::Float64, μ::Float64, σsrt::Float64) =
   -0.5*((xp - μ)^2 - (xc - μ)^2)/σsrt^2
-
 
 
 

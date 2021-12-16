@@ -11,7 +11,7 @@ Created 06 07 2020
 
 
 
-"""
+#="""
     cond_surv_crown(tree::sTbd, λ::Float64, μ::Float64)
 
 Log-probability of at least two lineage surviving for 
@@ -125,7 +125,7 @@ function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
     tna = tnx > tna ? tnx : tna
     sum_alone_stem_p(tree.d2::sTbd, tna, n)
   end
-end
+end=#
 
 
 
@@ -155,7 +155,7 @@ birth-death process with `λ` and `μ` from stem age.
 function stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
   @fastmath begin
     μ += λ === μ ? 1e-14 : 0.0
-    log((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))
+    - log((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))
   end
 end
 
@@ -170,7 +170,7 @@ birth-death process with `λ` and `μ` from stem age.
 """
 function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
     μ += λ === μ ? 1e-14 : 0.0
-    log(((λ - μ)/(λ - μ*exp(-(λ - μ)*t)))^2)
+    - 2.0 * log((λ - μ)/(λ - μ*exp(-(λ - μ)*t))) - log(λ)
 end
 
 
@@ -187,7 +187,7 @@ function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
     - e(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
   else
     log(λ) - e(tree)*(λ + μ)      +
-    llik_cbd(tree.d1::sTbd, λ, μ) + 
+    llik_cbd(tree.d1::sTbd, λ, μ) +
     llik_cbd(tree.d2::sTbd, λ, μ)
   end
 end
@@ -196,68 +196,77 @@ end
 
 
 """
-     stree_ll_cbd(tree::sTbd,
-                  ll  ::Float64, 
-                  λc  ::Float64, 
-                  μc  ::Float64,
-                  dri ::BitArray{1}, 
-                  ldr ::Int64,
-                  wpr ::Int64,
-                  ix  ::Int64, 
-                  px  ::Int64)
+    llik_cbd(psi::Vector{sTbd}, 
+             λ   ::Float64, 
+             μ   ::Float64)
 
-Return the Log-likelihood under constant birth-death 
-of a grafted subtree determined by `dri`. 
+Log-likelihood up to a constant for constant birth-death 
+given a complete `iTree` for decoupled trees.
 """
-function stree_ll_cbd(tree::sTbd,
-                      ll  ::Float64, 
-                      λc  ::Float64, 
-                      μc  ::Float64,
-                      dri ::BitArray{1}, 
-                      ldr ::Int64,
-                      wpr ::Int64,
-                      ix  ::Int64, 
-                      px  ::Int64)
+function llik_cbd(psi ::Vector{sTbd}, 
+                  λ    ::Float64, 
+                  μ    ::Float64)
 
-  if ix === ldr
-    if px === wpr
-      if isfix(tree.d1::sTbd)
-        ll += llik_cbd(tree.d2::sTbd, λc, μc)
-      elseif isfix(tree.d2::sTbd)
-        ll += llik_cbd(tree.d1::sTbd, λc, μc)
-      end
-    else
-      px += 1
-      if isfix(tree.d1::sTbd)
-        ll += 
-          stree_ll_cbd(tree.d1::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-      else
-        ll +=
-          stree_ll_cbd(tree.d2::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-      end
-    end
-  elseif ix < ldr
-    ifx1 = isfix(tree.d1::sTbd)
-    if ifx1 && isfix(tree.d2::sTbd)
-      ix += 1
-      if dri[ix]
-        ll += 
-          stree_ll_cbd(tree.d1::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-      else
-        ll += 
-          stree_ll_cbd(tree.d2::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-      end
-    elseif ifx1
-      ll += 
-        stree_ll_cbd(tree.d1::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-    else
-      ll +=
-        stree_ll_cbd(tree.d2::sTbd, ll, λc, μc, dri, ldr, wpr, ix, px)
-    end
+  ll = 0.0
+  for ψ in psi
+    ll += llik_cbd(ψ, λ, μ)
   end
+
+  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ)
 
   return ll
 end
+
+
+
+
+"""
+    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
+
+Return closure for log-likelihood for conditioning
+"""
+function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
+
+  b1  = idf[1]
+  d1i = d1(b1)
+  d2i = d2(b1)
+
+  if stem
+    # for whole likelihood
+    f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
+          cond_ll(λ, μ, sns[1])
+    # for new proposal
+    f0 = (psi::sTbd, λ::Float64, μ::Float64, ter::Bool) -> 
+            cond_surv_stem_p(psi, λ, μ)
+  else
+    # for whole likelihood
+    f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
+          cond_ll(λ, μ, sns[2]) + 
+          cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
+    # for new proposal
+    f0 = function (psi::sTbd, λ::Float64, μ::Float64, ter::Bool)
+      if ter
+        cond_surv_stem(  psi, λ, μ)
+      else
+        cond_surv_stem_p(psi, λ, μ)
+      end
+    end
+  end
+
+  return f, f0
+end
+
+
+
+
+"""
+    cond_ll(λ::Float64, μ::Float64, sn::BitVector)
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+cond_ll(λ::Float64, μ::Float64, sn::BitVector) =
+  Float64(sum(sn)) * log((λ + μ)/λ)
 
 
 

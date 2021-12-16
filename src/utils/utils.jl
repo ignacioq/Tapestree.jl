@@ -178,11 +178,120 @@ end
 
 
 
+"""
+    update_jacobian!(μ    ::Float64,
+                     σ    ::Float64, 
+                     xmean::Float64, 
+                     xvar ::Float64,
+                     f    ::Vector{Float64},
+                     j    ::Matrix{Float64},
+                     jf   ::Vector{Float64})
+
+Update jacobian for method of moments to estimating parameters of the
+truncated **Gaussian** at `0.0` for lower tail.
+"""
+function update_jacobian!(μ    ::Float64,
+                          σ    ::Float64, 
+                          xmean::Float64, 
+                          xvar ::Float64,
+                          f    ::Vector{Float64},
+                          j    ::Matrix{Float64})
+
+
+  ϕ0 = stdnorm(-μ/σ)
+  Φ0 = 1.0 - stpnorm(-μ/σ)
+
+  f[1] = μ + σ * ϕ0 / Φ0 - xmean
+  f[2] = σ^2 - μ*σ*ϕ0 / Φ0 - (σ*ϕ0  / Φ0)^2 - xvar
+
+  j[1,1] = 1.0 + ϕ0*(-μ/σ * Φ0 - ϕ0)/Φ0^2
+  j[2,1] = -σ*ϕ0 * (((1.0 - (μ/σ)^2) * Φ0 - μ/σ*ϕ0 )/Φ0^2 +
+            2.0 * (-μ/σ * ϕ0 * Φ0 -  ϕ0^2)/Φ0^3)
+  j[1,2] = ϕ0*(((μ/σ)^2 + 1.0)*Φ0 + μ^2/σ*ϕ0)/Φ0^2
+  j[2,2] = 2.0*σ - μ*ϕ0*( ((μ/σ)^2 + 1.0) * Φ0 + μ^2/σ * ϕ0 )/ Φ0^2 - 
+           2.0*σ*ϕ0^2 * ( ((μ/σ)^2 + 1.0) * Φ0 + μ^2/σ* ϕ0 )/ Φ0^3
+
+end
 
 
 
 
+"""
+    run_newton(μ0::Float64, σ0::Float64, xmean::Float64, xvar::Float64)
+
+Run Newton's method to estimate the roots (parameter estimates) for 
+truncated **Gaussian** with lower bound at `0.0`. 
+"""
+function run_newton(μ0::Float64, σ0::Float64, xmean::Float64, xvar::Float64)
+
+  @inbounds begin
+
+    f  = Vector{Float64}(undef,2)
+    j  = Matrix{Float64}(undef,2,2)
+    jf = Vector{Float64}(undef,2)
+    x0 = Vector{Float64}(undef,2)
+    x1 = Vector{Float64}(undef,2)
+
+    x0[1] = μ0
+    x0[2] = σ0
+
+    while true
+   
+      update_jacobian!(x0[1], x0[2], xmean, xvar, f, j)
+
+      mul!(jf, inv(j), f)
+
+      x1[1] = x0[1] - jf[1]
+      x1[2] = x0[2] - jf[2]
+
+      if (x0[1] - x1[1]) < 1e-2 && (x0[2] - x1[2]) < 1e-2
+        break
+      end
+
+      x0[1] = x1[1]
+      x0[2] = x1[2]
+    end
+  end
+
+  return x1
+end
 
 
+
+"""
+  skewness(x::Vector{Float64}, mean::Float64, sd::Float64)
+
+Return sample skewness.
+"""
+@inline function skewness(x::Vector{Float64}, mean::Float64, sd::Float64)
+  isd = 1.0/sd
+  ss = 0.0
+  @simd for xi in x
+    ss += ((xi - mean)*isd)^3
+  end
+  ss /= Float64(lastindex(x))
+
+  return sign(ss)*min(0.99, abs(ss))
+end
+
+
+
+
+"""
+    mom_skewnormal(sk::Float64, mean::Float64, sd::Float64)
+
+Return parameters for the skew normal distribution given the 
+method of moments.
+"""
+function mom_skewnormal(sk::Float64, mean::Float64, sd::Float64)
+
+  d = sqrt(π*0.5 * abs(sk)^(2/3) / (abs(sk)^(2/3) + ((4.0-π)*0.5)^(2/3)))
+  d = sign(sk)*d
+  a = d/sqrt(1.0 - d^2)
+  o = sd/sqrt(1.0 - 2.0*d^2/π)
+  m = mean - o*d*sqrt(2.0/π)
+
+  return m, o, a
+end
 
 

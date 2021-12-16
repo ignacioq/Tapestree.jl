@@ -27,8 +27,6 @@ iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
 Return if is a fixed (i.e. observed) node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
-isfix(tree::sTpb) = true  # no fx property for pure-birth trees
-isfix(tree::iTgbmpb) = true  # no fx property for pure-birth trees
 
 
 
@@ -123,6 +121,45 @@ issampledancestor(tree::T) where {T <: iTree} = isfossil(tree) && !istip(tree)
 Return edge length.
 """
 e(tree::T) where {T <: iTree} = getproperty(tree, :e)
+
+
+
+
+
+"""
+    l(tree::sT_label)
+
+Return label.
+"""
+l(tree::sT_label) = getproperty(tree, :l)
+
+
+
+
+"""
+    tiplabels!(tree::sT_label)
+
+Returns tip labels for `sT_label`.
+"""
+tiplabels(tree::sT_label) = _tiplabels!(tree, String[])
+
+
+
+
+"""
+    _tiplabels!(tree::sT_label, labels::Array{String,1})
+
+Returns tip labels for `sT_label`.
+"""
+function _tiplabels!(tree::sT_label, labels::Array{String,1})
+
+  if !isdefined(tree, :d1)
+    push!(labels, l(tree))
+  else
+    _tiplabels!(tree.d1, labels)
+    _tiplabels!(tree.d2, labels)
+  end
+end
 
 
 
@@ -244,6 +281,7 @@ function treeheight(tree::T) where {T <: iTree}
   end
   return e(tree)
 end
+
 
 
 
@@ -924,6 +962,23 @@ end
 
 
 
+"""
+    fixtip(tree::T) where {T <: iTree}
+
+Return the first fixed tip.
+"""
+function fixtip(tree::T) where {T <: iTree}
+  if istip(tree)
+    return tree
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T)
+  else
+    fixtip(tree.d2::T)
+  end
+end
+
+
+
 
 """
     fixds(tree::T) where {T <: iTgbm}
@@ -931,7 +986,7 @@ end
 Return the first fixed daughters `d1` and `d2`. Works only for 
 internal branches.
 """
-function fixds(tree::T) where {T <: iTgbm}
+function fixds(tree::T) where {T <: iTree}
   ifx1 = isfix(tree.d1::T)
   if ifx1 && isfix(tree.d2::T)
     return tree.d1::T, tree.d2::T
@@ -967,6 +1022,7 @@ end
 
 """
     fixdstree(tree::T) where {T <: iTree}
+
 Returns the first tree with both daughters fixed.
 """
 function fixdstree(tree::T) where {T <: iTree}
@@ -1395,5 +1451,82 @@ function treeapply(tree::T, FUN::Function) where {T <: iTree}
 
   return FUN(tree)
 end
+
+
+
+
+"""
+    nlin_t(tree::T, t::Float64, tc::Float64) where {T <: iTree}
+
+Number of lineages at time t
+"""
+function nlin_t(tree::T, t::Float64, tc::Float64) where {T <: iTree}
+
+  el = e(tree)
+  if tc < t
+    if t - 1e-12 <= tc + el
+      return 1
+    elseif isdefined(tree, :d1)
+      return nlin_t(tree.d1, t, tc + el) +
+             nlin_t(tree.d2, t, tc + el)
+    else
+      return 0
+    end
+  end
+end
+
+
+
+
+"""
+    _λat!(tree::T, 
+          c   ::Float64,
+          λs  ::Vector{Float64},
+          t   ::Float64) where {T <: iTgbm}
+
+Return speciation rates, `λs`, at time `c` for `tree`.
+"""
+function _λat!(tree::T, 
+               c   ::Float64,
+               λs  ::Vector{Float64},
+               t   ::Float64) where {T <: iTgbm}
+
+  et = e(tree)
+
+  if (t + et) >= c 
+    if !isfix(tree)
+
+      lλv = lλ(tree)
+      δt  = dt(tree)
+      fδt = fdt(tree)
+
+      # find final lλ
+      if isapprox(c - t, et)
+        Ix = lastindex(lλv) - 1
+        ix = Float64(Ix) - 1.0
+      else
+        ix  = fld(c - t, δt)
+        Ix  = Int64(ix) + 1
+      end
+      tii = ix*δt
+      tff = tii + δt
+      if tff > et
+        tff = tii + fδt
+      end
+      eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
+
+      push!(λs, eλ)
+
+      return nothing
+    end
+  elseif isdefined(tree, :d1)
+      _λat!(tree.d1, c, λs, t + et)
+      _λat!(tree.d2, c, λs, t + et)
+  end
+
+  return nothing
+end
+
+
 
 
