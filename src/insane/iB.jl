@@ -290,7 +290,7 @@ struct iBffs <: iBf
 
   # constructors
   iBffs() = new(0., Ref(0), Ref(0), Ref(0), 
-                0., 0., false, 1., false, Ref(0), Ref(0.0). Ref(0.0))
+                0., 0., false, 1., false, Ref(0), Ref(0), Ref(0.0), Ref(0.0))
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
     it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64, 
     λt::Float64, μt::Float64) = 
@@ -413,6 +413,72 @@ end
 """
     iBfffs
 
+A Composite type representing node address for a **fixed** branch in `iTree` with fossils:
+
+  `t` : edge length.
+  `pa`: parent node
+  `d1`: daughter 1 node
+  `d2`: daughter 2 node
+  `ti`: initial absolute time.
+  `tf`: final absolute time.
+  `it`: `true` if a terminal branch.
+  `ρi`: branch specific sampling fraction.
+  `ie`: `true` if an extinct branch.
+  `iψ`: `true` if a fossil branch.
+  `ni`: current direct alive descendants.
+  `nt`: current alive descendants at time `t`.
+  `λt`: final speciation rate for fixed at time `t`.
+  `μt`: final extinction rate for fixed at time `t`.
+  `ψt`: final extinction rate for fixed at time `t`.
+
+    iBfffs()
+
+Constructs an empty `iBf` object.
+"""
+struct iBfffs <: iBf
+  t ::Float64
+  pa::Base.RefValue{Int64}
+  d1::Base.RefValue{Int64}
+  d2::Base.RefValue{Int64}
+  ti::Float64
+  tf::Float64
+  it::Bool
+  ρi::Float64
+  ie::Bool
+  iψ::Bool
+  ni::Base.RefValue{Int64}
+  nt::Base.RefValue{Int64}
+  λt::Base.RefValue{Float64}
+  μt::Base.RefValue{Float64}
+  ψt::Base.RefValue{Float64}
+
+  # constructors
+  iBfffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1., false, false, 
+                 Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0))
+  iBfffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
+    it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64, 
+    λt::Float64, μt::Float64, ψt::Float64) = 
+    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, 
+      Ref(ni), Ref(nt), Ref(λt), Ref(μt))
+end
+
+
+# pretty-printing
+Base.show(io::IO, id::iBfffs) = 
+  print(io, "fixed", 
+    it(id)         ? " terminal" : "", 
+    ifos(id)       ? " fossil" : "", 
+    iszero(pa(id)) ? " stem" : "", 
+    isone(pa(id))  ? " crown" : "", 
+    " ibranch (", ti(id), ", ", tf(id), 
+    "), p:", pa(id), ", d1:", d1(id), ", d2:", d2(id))
+
+
+
+
+#="""
+    iBfffs
+
 A Composite type representing node address for a **fixed** branch in `iTree`:
 
   `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
@@ -452,7 +518,7 @@ Base.show(io::IO, id::iBfffs) =
     ifos(id)     ? " fossil" : "", 
     iszero(sc(id)) ? " stem" : "", 
     isone(sc(id))  ? " crown" : "", 
-    " ibranch (", ti(id), ", ", tf(id), "), ", dr(id))
+    " ibranch (", ti(id), ", ", tf(id), "), ", dr(id))=#
 
 
 
@@ -607,30 +673,39 @@ fB(id::iBa) = getproperty(id, :fB)[]
 
 
 
+
 """
-    pa(id::iB)
+    pa(id::iBffs)
+    pa(id::iBfffs)
 
 Return parent edge.
 """
 pa(id::iBffs) = getproperty(id, :pa)[]
+pa(id::iBfffs) = getproperty(id, :pa)[]
+
 
 
 
 """
-    d1(id::iB)
+    d1(id::iBffs)
+    d1(id::iBfffs)
 
 Return daughter edge.
 """
 d1(id::iBffs) = getproperty(id, :d1)[]
+d1(id::iBfffs) = getproperty(id, :d1)[]
+
 
 
 
 """
-    d2(id::iB)
+    d2(id::iBffs)
+    d2(id::iBfffs)
 
 Return daughter edge.
 """
 d2(id::iBffs) = getproperty(id, :d2)[]
+d2(id::iBfffs) = getproperty(id, :d2)[]
 
 
 
@@ -700,50 +775,70 @@ ifos(id::iBfffs) = getproperty(id, :iψ)
 
 """
     ρi(id::iBffs)
+    ρi(id::iBfffs)
 
 Return the branch-specific sampling fraction. 
 """
 ρi(id::iBffs) = getproperty(id, :ρi)
+ρi(id::iBfffs) = getproperty(id, :ρi)
 
 
 
 
 """
     ni(id::iBffs)
+    ni(id::iBfffs)
 
 Return the current number of direct descendants alive at the present.
 """
 ni(id::iBffs) = getproperty(id, :ni)[]
+ni(id::iBfffs) = getproperty(id, :ni)[]
 
 
 
 
 """
     nt(id::iBffs)
+    nt(id::iBfffs)
 
 Return the current number of direct descendants alive at time `t`.
 """
 nt(id::iBffs) = getproperty(id, :nt)[]
+nt(id::iBfffs) = getproperty(id, :nt)[]
 
 
 
 
 """
     λt(id::iBffs)
+    λt(id::iBfffs)
 
 Return final speciation rate for fixed at time `t
 """
 λt(id::iBffs) = getproperty(id, :λt)[]
+λt(id::iBfffs) = getproperty(id, :λt)[]
 
 
 
 
 """
     μt(id::iBffs)
+    μt(id::iBfffs)
 
 Return final extinction rate for fixed at time `t`.
 """
 μt(id::iBffs) = getproperty(id, :μt)[]
+μt(id::iBfffs) = getproperty(id, :μt)[]
+
+
+
+
+"""
+    ψt(id::iBfffs)
+
+Return final fossil sampling rate for fixed at time `t`.
+"""
+ψt(id::iBfffs) = getproperty(id, :ψt)[]
 
 
 
