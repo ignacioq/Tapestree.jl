@@ -1354,7 +1354,7 @@ function remove_unsampled!(tree::iTgbmpb)
         if fdt0 > dt(tree) 
           fdt0 -= dt(tree) 
         end
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
@@ -1371,7 +1371,7 @@ function remove_unsampled!(tree::iTgbmpb)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
       setfdt!(tree, fdt0) 
     end
@@ -1411,7 +1411,7 @@ function remove_extinct!(tree::iTgbmce)
         if fdt0 > dt(tree) 
           fdt0 -= dt(tree) 
         end
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
@@ -1428,7 +1428,7 @@ function remove_extinct!(tree::iTgbmce)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
       setfdt!(tree, fdt0) 
     end
@@ -1468,7 +1468,7 @@ function remove_extinct!(tree::iTgbmct)
         if fdt0 > dt(tree) 
           fdt0 -= dt(tree) 
         end
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
@@ -1485,7 +1485,7 @@ function remove_extinct!(tree::iTgbmct)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
       setfdt!(tree, fdt0) 
     end
@@ -1532,7 +1532,7 @@ function remove_extinct!(tree::iTgbmbd)
         if fdt0 > dt(tree) 
           fdt0 -= dt(tree) 
         end
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
@@ -1556,7 +1556,7 @@ function remove_extinct!(tree::iTgbmbd)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
       setfdt!(tree, fdt0)
     end
@@ -1596,7 +1596,7 @@ function remove_unsampled!(tree::iTgbmce)
         if fdt0 > dt(tree) 
           fdt0 -= dt(tree) 
         end
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
@@ -1613,7 +1613,7 @@ function remove_unsampled!(tree::iTgbmce)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
       setfdt!(tree, fdt0) 
     end
@@ -1653,7 +1653,7 @@ function remove_unsampled!(tree::iTgbmct)
         if fdt0 > dt(tree) 
           fdt0 -= dt(tree) 
         end
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
@@ -1670,7 +1670,7 @@ function remove_unsampled!(tree::iTgbmct)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
       setfdt!(tree, fdt0) 
     end
@@ -1717,7 +1717,7 @@ function remove_unsampled!(tree::iTgbmbd)
         if fdt0 > dt(tree) 
           fdt0 -= dt(tree) 
         end
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
         setfdt!(tree, fdt0) 
       end
@@ -1741,7 +1741,7 @@ function remove_unsampled!(tree::iTgbmbd)
       if fdt0 > dt(tree) 
         fdt0 -= dt(tree) 
       end
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
       setfdt!(tree, fdt0)
     end
@@ -1785,12 +1785,12 @@ function remove_unsampled!(tree::sTbd)
         return sTbd(e(tree), true, isfix(tree))
       else
         ne  = e(tree) + e(tree.d2)
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
         sete!(tree, ne)
       end
     elseif isextinct(tree.d2)
       ne  = e(tree) + e(tree.d1)
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
       sete!(tree, ne)
     end
   end
@@ -1825,8 +1825,8 @@ function remove_unsampled!(tree::sTfbd)
   end
 
   # 1 extinct and 1 alive branch -> keep only the alive one
-  if extd1 ne = e(tree) + e(tree.d2) ; tree = tree.d2 ; sete!(tree, ne) end
-  if extd2 ne = e(tree) + e(tree.d1) ; tree = tree.d1 ; sete!(tree, ne) end
+  if extd1 ne = e(tree)+e(tree.d2); tree = deepcopy(tree.d2); sete!(tree,ne) end
+  if extd2 ne = e(tree)+e(tree.d1); tree = deepcopy(tree.d1); sete!(tree,ne) end
 
   return tree
 end
@@ -1840,16 +1840,9 @@ end
 Remove fossils from `sTfbd`.
 """
 function remove_fossils!(tree::sTfbd)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-
   while isfossil(tree)
-    if isdefined(tree, :d1)
-      tree.d1.e += tree.e
-      tree = tree.d1
-    elseif isdefined(tree, :d2)
-      tree.d2.e += tree.e
-      tree = tree.d2
+    if isdefined(tree, :d1)     tree.d1.e += tree.e; tree = deepcopy(tree.d1)
+    elseif isdefined(tree, :d2) tree.d2.e += tree.e; tree = deepcopy(tree.d2)
     else
       break
     end
@@ -1865,11 +1858,11 @@ function remove_fossils!(tree::sTfbd)
         return sTfbd(1.0, false, true, true)
       else
         tree.d2.e += tree.e
-        tree = tree.d2
+        tree = deepcopy(tree.d2)
       end
     elseif isfossil(tree.d2)
       tree.d1.e += tree.e
-      tree = tree.d1
+      tree = deepcopy(tree.d1)
     end
   end
   return tree
@@ -1884,21 +1877,13 @@ end
 Remove sampled ancestors (non-tip fossils) from `sTfbd`.
 """
 function remove_sampled_ancestors!(tree::sTfbd)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-
   while isfossil(tree)
-    if isdefined(tree, :d1)
-      tree.d1.e += tree.e
-      tree = tree.d1
-    elseif isdefined(tree, :d2)
-      tree.d2.e += tree.e
-      tree = tree.d2
+    if     isdefined(tree, :d1) tree.d1.e += tree.e; tree = deepcopy(tree.d1)
+    elseif isdefined(tree, :d2) tree.d2.e += tree.e; tree = deepcopy(tree.d2)
     else
       break
     end
   end
-
 
   if isdefined(tree, :d1) tree.d1 = remove_sampled_ancestors!(tree.d1) end
   if isdefined(tree, :d2) tree.d2 = remove_sampled_ancestors!(tree.d2) end
@@ -1910,7 +1895,7 @@ end
 
 
 """
-    reconstructed(tree::T) where {T <: iTree}
+    reconstructed!(tree::T) where {T <: iTree}
 
 Returns the reconstructed tree, i.e. the observed tree from sampled extant 
 tips and fossils.
@@ -1922,38 +1907,38 @@ reconstructed!(tree::T) where {T <: iTree} = remove_unsampled!(tree)
 
 
 """
-    reconstructed(tree::sTfbd)
+    reconstructed!(tree::sTfbd)
 
 Returns the reconstructed tree, i.e. the observed tree from sampled extant 
 tips and fossils.
 """
-function reconstructed(tree::sTfbd)
+function reconstructed!(tree::sTfbd)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  if defd1 tree.d1 = reconstructed(tree.d1) end
-  if defd2 tree.d2 = reconstructed(tree.d2) end
+  if defd1 tree.d1 = reconstructed!(tree.d1) end
+  if defd2 tree.d2 = reconstructed!(tree.d2) end
 
   if !defd1 && !defd2
     return tree
   end
 
-  extd1 = defd1 && isextinct(tree.d1) && !isfossil(tree.d1)
-  extd2 = defd2 && isextinct(tree.d2) && !isfossil(tree.d2)
+  extd1 = defd1 && isextinct(tree.d1)
+  extd2 = defd2 && isextinct(tree.d2)
 
-  # 2 extinct branches -> extinct tip
+  # 2 extinct daughters -> extinct tip
   if extd1 && extd2
     return sTfbd(e(tree), true, isfix(tree))
   end
 
-  # sampled ancestor -> fossil tip
+  # sampled ancestor with extinct daughter -> fossil tip
   if (extd1 && !defd2) || (!defd1 && extd2)
     return sTfbd(e(tree), false, true, isfix(tree))
   end
 
   # 1 extinct and 1 alive branch -> keep only the alive one
-  if extd1 ne = e(tree) + e(tree.d2) ; tree = tree.d2 ; sete!(tree, ne) end
-  if extd2 ne = e(tree) + e(tree.d1) ; tree = tree.d1 ; sete!(tree, ne) end
+  if extd1 ne = e(tree)+e(tree.d2); tree = deepcopy(tree.d2); sete!(tree,ne) end
+  if extd2 ne = e(tree)+e(tree.d1); tree = deepcopy(tree.d1); sete!(tree,ne) end
 
   return tree
 end

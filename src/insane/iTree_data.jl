@@ -454,6 +454,24 @@ end
 
 
 
+"""
+    _ntips(tree:sTfbd, n::Int64)
+
+Return the number of tip nodes for `tree`, initialized at `n`.
+"""
+function _ntips(tree::sT_label, n::Int64)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 n = _ntips(tree.d1, n) end
+  if defd2 n = _ntips(tree.d2, n) end
+  if !defd1 && !defd2 n += 1 end
+
+  return n
+end
+
+
+
 
 """
     ntipsalive(tree::T) where {T <: iTree}

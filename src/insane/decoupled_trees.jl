@@ -13,9 +13,9 @@ Created 05 11 2020
 
 
 """
-    sTbd!(Ψ::Vector{sTpb}, tree::sT_label)
+    sTpb!(Ψ::Vector{sTpb}, tree::sT_label)
 
-Make edge tree `Ψ` from the edge directory.
+Make edge tree `Ψ` from the recursive tree.
 """
 function sTpb!(Ψ::Vector{sTpb}, tree::sT_label)
 
@@ -31,7 +31,7 @@ end
 """
     sTbd!(Ψ::Vector{sTbd}, tree::sT_label)
 
-Make edge tree `Ψ` from the edge directory.
+Make edge tree `Ψ` from the recursive tree.
 """
 function sTbd!(Ψ::Vector{sTbd}, tree::sT_label)
 
@@ -44,9 +44,23 @@ end
 
 
 
+"""
+    sTfbd!(Ξ::Vector{sTfbd}, tree::sT_label)
+
+Make edge tree `Ξ` from the recursive tree.
+"""
+function sTfbd!(Ξ::Vector{sTfbd}, tree::sT_label)
+
+  push!(Ξ, sTfbd(e(tree), false, true))
+  if isdefined(tree, :d2) sTfbd!(Ξ, tree.d2) end
+  if isdefined(tree, :d1) sTfbd!(Ξ, tree.d1) end
+end
+
+
+
 
 """
-    make_Ψ(idf::Vector{iBffs})
+    make_Ψ(idf::Vector{iBffs}, ::Type{sTbd})
 
 Make edge tree `Ψ` from the edge directory.
 """
@@ -63,6 +77,23 @@ end
 
 
 """
+    make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
+  Ξ = sTfbd[]
+  for i in Base.OneTo(lastindex(idf))
+    ξ = sTfbd(e(idf[i]), false, true)
+    push!(Ξ, ξ)
+  end
+  return Ξ
+end
+
+
+
+
+"""
     iTgbmpb!(Ψ   ::Vector{iTgbmpb},
              tree::sT_label,
              δt  ::Float64, 
@@ -71,7 +102,7 @@ end
              α   ::Float64,
              σλ  ::Float64)
 
-Make edge tree `Ψ` from the edge directory.
+Make edge tree `Ψ` from the recursive tree.
 """
 function iTgbmpb!(Ψ   ::Vector{iTgbmpb},
                   tree::sT_label,
@@ -118,7 +149,7 @@ end
              α   ::Float64,
              σλ  ::Float64)
 
-Make edge tree `Ψ` from the edge directory.
+Make edge tree `Ψ` from the recursive tree.
 """
 function iTgbmce!(Ψ   ::Vector{iTgbmce},
                   tree::sT_label,
@@ -164,7 +195,7 @@ end
              α   ::Float64,
              σλ  ::Float64)
 
-Make edge tree `Ψ` from the edge directory.
+Make edge tree `Ψ` from the recursive tree.
 """
 function iTgbmct!(Ψ   ::Vector{iTgbmct},
                   tree::sT_label,
@@ -212,7 +243,7 @@ end
              σλ  ::Float64,
              σμ  ::Float64)
 
-Make edge tree `Ψ` from the edge directory.
+Make edge tree `Ψ` from the recursive tree.
 """
 function iTgbmbd!(Ψ   ::Vector{iTgbmbd},
                   tree::sT_label,

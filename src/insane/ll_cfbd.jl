@@ -151,7 +151,7 @@ function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
     - e(tree)*(λ + μ + ψ) + 
         (isextinct(tree) ? log(μ) : 0.0) + 
         (isfossil( tree) ? log(ψ) : 0.0)
-  
+
   elseif issampledancestor(tree)
     - e(tree)*(λ + μ + ψ) + log(ψ) +
         (isdefined(tree, :d1) ? llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) : 0.0) + 
@@ -168,29 +168,29 @@ end
 
 """
      stree_ll_cfbd(tree::sTfbd,
-                  ll  ::Float64, 
-                  λc  ::Float64, 
-                  μc  ::Float64,
-                  ψc  ::Float64,
-                  dri ::BitArray{1}, 
-                  ldr ::Int64,
-                  wpr ::Int64,
-                  ix  ::Int64, 
-                  px  ::Int64)
+                  ll   ::Float64, 
+                  λc   ::Float64, 
+                  μc   ::Float64,
+                  ψc   ::Float64,
+                  dri  ::BitArray{1}, 
+                  ldr  ::Int64,
+                  wpr  ::Int64,
+                  ix   ::Int64, 
+                  px   ::Int64)
 
 Return the Log-likelihood under constant fossilized birth-death 
 of a grafted subtree determined by `dri`. 
 """
 function stree_ll_cfbd(tree::sTfbd,
-                      ll  ::Float64, 
-                      λc  ::Float64, 
-                      μc  ::Float64,
-                      ψc  ::Float64,
-                      dri ::BitArray{1}, 
-                      ldr ::Int64,
-                      wpr ::Int64,
-                      ix  ::Int64, 
-                      px  ::Int64)
+                      ll   ::Float64, 
+                      λc   ::Float64, 
+                      μc   ::Float64,
+                      ψc   ::Float64,
+                      dri  ::BitArray{1}, 
+                      ldr  ::Int64,
+                      wpr  ::Int64,
+                      ix   ::Int64, 
+                      px   ::Int64)
 
   if ix === ldr
     if px === wpr

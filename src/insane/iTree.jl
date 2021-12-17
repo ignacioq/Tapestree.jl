@@ -110,6 +110,9 @@ mutable struct sT_label <: sT
   sT_label() = new()
   sT_label(e::Float64, l::String) = (x = new(); x.e = e; x.l = l; x)
   sT_label(d1::sT_label, 
+           e ::Float64,
+           l ::String) = (x = new(); x.d1 = d1; x.e = e; x.l = l; x)
+  sT_label(d1::sT_label, 
            d2::sT_label, 
            e ::Float64,
            l ::String) = new(d1, d2, e, l)
@@ -125,7 +128,7 @@ Base.show(io::IO, t::sT_label) =
 """
     sT_label(tree::T) where {T <: iTree}
 
-Demotes a tree of type `iTgbmce` to `sT_label`.
+Demotes a tree to `sT_label`.
 """
 function sT_label(tree::T) where {T <: iTree}
   _sT_label(tree::T, 0)[1]
@@ -133,10 +136,11 @@ end
 
 
 
+
 """
     sT_label(tree::T) where {T <: iTree}
 
-Demotes a tree of type `iTgbmce` to `sT_label`.
+Demotes a tree to `sT_label`.
 """
 function _sT_label(tree::T, i::Int64) where {T <: iTree}
   if isdefined(tree, :d1)
@@ -165,6 +169,7 @@ function sTpb(tree::sT_label)
     sTpb(e(tree))
   end
 end
+
 
 
 
@@ -217,7 +222,6 @@ end
 Base.show(io::IO, t::sTbd) = 
   print(io, "insane simple birth-death tree with ", ntips(t), " tips (", 
     ntipsextinct(t)," extinct)")
-
 
 
 
@@ -305,6 +309,58 @@ Base.show(io::IO, t::sTfbd) =
 
 
 """
+    sT_label(tree::sTfbd)
+
+Demotes a tree of type `sTfbd` to `sT_label`.
+"""
+function _sT_label(tree::sTfbd, i::Int64)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 & defd2
+    t1, i = _sT_label(tree.d1, i)
+    t2, i = _sT_label(tree.d2, i)
+    tree = sT_label(t1, t2, e(tree), "")
+  elseif defd1
+    t1, i = _sT_label(tree.d1, i)
+    tree = sT_label(t1, e(tree), "")
+  elseif defd2
+    t2, i = _sT_label(tree.d2, i)
+    tree = sT_label(t2, e(tree), "")
+  else
+    i += 1
+    tree = sT_label(e(tree), string("t",i))
+  end
+  return tree, i
+end
+
+
+
+
+"""
+    sTfbd(tree::sT_label)
+
+Transforms a tree of type `sT_label` to `sTfbd`.
+"""
+function sTfbd(tree::sT_label)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 & defd2
+    sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), false, false, false)
+  elseif defd1
+    sTfbd(sTfbd(tree.d1), e(tree), false, true, false)
+  elseif defd2
+    sTfbd(sTfbd(tree.d2), e(tree), false, true, false)
+  else
+    sTfbd(e(tree), false)
+  end
+end
+
+
+
+
+"""
     iTgbm
 
 An abstract type for all composite recursive types 
@@ -368,6 +424,7 @@ end
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
   print(io, "insane pb-gbm tree with ", ntips(t), " tips")
+
 
 
 
