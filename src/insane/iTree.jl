@@ -110,9 +110,6 @@ mutable struct sT_label <: sT
   sT_label() = new()
   sT_label(e::Float64, l::String) = (x = new(); x.e = e; x.l = l; x)
   sT_label(d1::sT_label, 
-           e ::Float64,
-           l ::String) = (x = new(); x.d1 = d1; x.e = e; x.l = l; x)
-  sT_label(d1::sT_label, 
            d2::sT_label, 
            e ::Float64,
            l ::String) = new(d1, d2, e, l)
@@ -158,9 +155,101 @@ end
 
 
 """
+    sTf_label
+
+A composite recursive type of supertype `sT` representing a labelled binary 
+phylogenetic tree with fossils for `insane` use, with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  l:  label
+
+    sTf_label()
+
+Constructs an empty `sTf_label` object.
+
+    sTf_label(e::Float64)
+
+Constructs an empty `sTf_label` object with edge `e`.
+
+    sTf_label(d1::sTf_label e::Float64)
+
+Constructs an `sTf_label` object with one `sTf_label` daughter and edge `e`.
+
+    sTf_label(d1::sTf_label, d2::sTf_label, e::Float64)
+
+Constructs an `sTf_label` object with two `sTf_label` daughters and edge `e`.
+"""
+mutable struct sTf_label <: sT
+  d1::sTf_label
+  d2::sTf_label
+  e ::Float64
+  l ::String
+
+  sTf_label() = new()
+  sTf_label(e::Float64, l::String) = (x = new(); x.e = e; x.l = l; x)
+  sTf_label(d1::sTf_label, 
+            e ::Float64,
+            l ::String) = (x = new(); x.d1 = d1; x.e = e; x.l = l; x)
+  sTf_label(d1::sTf_label, 
+            d2::sTf_label, 
+            e ::Float64,
+            l ::String) = new(d1, d2, e, l)
+end
+
+# pretty-printing
+Base.show(io::IO, t::sTf_label) = 
+  print(io, "insane simple labelled tree with ", ntips(t), " tips")
+
+
+
+
+"""
+    sTf_label(tree::T) where {T <: iTree}
+
+Demotes a tree to `sTf_label`.
+"""
+function sTf_label(tree::T) where {T <: iTree}
+  _sTf_label(tree::T, 0)[1]
+end
+
+
+
+
+"""
+    sTf_label(tree::T) where {T <: iTree}
+
+Demotes a tree to `sTf_label`.
+"""
+function _sTf_label(tree::T, i::Int64) where {T <: iTree}
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+    t1, i = _sTf_label(tree.d1, i)
+    t2, i = _sTf_label(tree.d2, i)
+    tree = sTf_label(t1, t2, e(tree), "")
+  elseif defd1
+    t1, i = _sTf_label(tree.d1, i)
+    tree = sTf_label(t1, e(tree), "")
+  elseif defd2
+    t2, i = _sTf_label(tree.d2, i)
+    tree = sTf_label(t2, e(tree), "")
+  else
+    i += 1
+    tree = sTf_label(e(tree), string("t",i))
+  end
+  return tree, i
+end
+
+
+
+
+"""
     sTpb(tree::sT_label)
 
-Demotes a tree of type `iTgbmce` to `sTpb`.
+Demotes a tree of type `sT_label` to `sTpb`.
 """
 function sTpb(tree::sT_label)
   if isdefined(tree, :d1)
@@ -169,7 +258,6 @@ function sTpb(tree::sT_label)
     sTpb(e(tree))
   end
 end
-
 
 
 
@@ -222,6 +310,7 @@ end
 Base.show(io::IO, t::sTbd) = 
   print(io, "insane simple birth-death tree with ", ntips(t), " tips (", 
     ntipsextinct(t)," extinct)")
+
 
 
 
@@ -308,45 +397,17 @@ Base.show(io::IO, t::sTfbd) =
 
 
 
-"""
-    sT_label(tree::sTfbd)
 
-Demotes a tree of type `sTfbd` to `sT_label`.
 """
-function _sT_label(tree::sTfbd, i::Int64)
+    sTfbd(tree::sTf_label)
+
+Transforms a tree of type `sTf_label` to `sTfbd`.
+"""
+function sTfbd(tree::sTf_label)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  if defd1 & defd2
-    t1, i = _sT_label(tree.d1, i)
-    t2, i = _sT_label(tree.d2, i)
-    tree = sT_label(t1, t2, e(tree), "")
-  elseif defd1
-    t1, i = _sT_label(tree.d1, i)
-    tree = sT_label(t1, e(tree), "")
-  elseif defd2
-    t2, i = _sT_label(tree.d2, i)
-    tree = sT_label(t2, e(tree), "")
-  else
-    i += 1
-    tree = sT_label(e(tree), string("t",i))
-  end
-  return tree, i
-end
-
-
-
-
-"""
-    sTfbd(tree::sT_label)
-
-Transforms a tree of type `sT_label` to `sTfbd`.
-"""
-function sTfbd(tree::sT_label)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-
-  if defd1 & defd2
+  if defd1 && defd2
     sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), false, false, false)
   elseif defd1
     sTfbd(sTfbd(tree.d1), e(tree), false, true, false)
@@ -424,7 +485,6 @@ end
 # pretty-printing
 Base.show(io::IO, t::iTgbmpb) = 
   print(io, "insane pb-gbm tree with ", ntips(t), " tips")
-
 
 
 

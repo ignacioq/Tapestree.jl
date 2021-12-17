@@ -456,10 +456,10 @@ struct iBfffs <: iBf
   iBfffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1., false, false, 
                  Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0))
   iBfffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
-    it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64, 
-    λt::Float64, μt::Float64, ψt::Float64) = 
-    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, 
-      Ref(ni), Ref(nt), Ref(λt), Ref(μt))
+         it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64, 
+         λt::Float64, μt::Float64, ψt::Float64) = 
+         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, iψ, 
+             Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(ψt))
 end
 
 
@@ -518,7 +518,7 @@ Base.show(io::IO, id::iBfffs) =
     ifos(id)     ? " fossil" : "", 
     iszero(sc(id)) ? " stem" : "", 
     isone(sc(id))  ? " crown" : "", 
-    " ibranch (", ti(id), ", ", tf(id), "), ", dr(id))=#
+    " ibranch (", ti(id), ", ", tf(id), "), ", dr(id))
 
 
 
@@ -580,6 +580,101 @@ function _makeiBf!(tree::sTfbd,
   end
 
   return nothing
+end=#
+
+
+
+
+"""
+    makeiBf!(tree::sTf_label, 
+             idv ::Array{iBfffs,1}, 
+             n1v ::Array{Int64,1}, 
+             n2v ::Array{Int64,1}, 
+             tρ  ::Dict{String, Float64})
+
+Make `iBf` vector for an `iTree` with fossils.
+"""
+function makeiBf!(tree::sTf_label, 
+                  idv ::Array{iBfffs,1}, 
+                  n1v ::Array{Int64,1}, 
+                  n2v ::Array{Int64,1}, 
+                  tρ  ::Dict{String, Float64})
+
+  th = treeheight(tree)
+  el = e(tree)
+
+  if istip(tree)
+    lab = l(tree)
+    ρi  = tρ[lab]
+    push!(idv, iBfffs(el, 0, 0, 0, th, th-el, true, ρi, 
+                      false, false, 1, 1, 0.0, 0.0, 0.0))
+    push!(n1v, 0)
+    push!(n2v, 0)
+    return ρi, 1
+  end
+
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  ρ1, n1 = defd1 ? makeiBf!(tree.d1, idv, n1v, n2v, tρ) : (1, 0)
+  ρ2, n2 = defd2 ? makeiBf!(tree.d2, idv, n1v, n2v, tρ) : (1, 0)
+
+  # 1 additional node if sampled ancestor
+  n1 += !defd2
+  n2 += !defd1
+
+  n  = n1 + n2
+  ρi = n / (n1/ρ1 + n2/ρ2)
+
+  push!(idv, iBfffs(el, 0, 1, 1, th, th-el, false, ρi, false, 
+                    !defd1 || !defd2, 0, 1, 0.0, 0.0, 0.0))
+  push!(n1v, n1)
+  push!(n2v, n2)
+
+  return ρi, n
+end
+
+
+
+
+"""
+    make_idf(tree::sTf_label, tρ::Dict{String, Float64})
+
+Make the edge dictionary.
+"""
+function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
+
+  idf = iBfffs[]
+  n1v = Int64[]
+  n2v = Int64[]
+  makeiBf!(tree, idf, n1v, n2v, tρ)
+
+  reverse!(idf)
+  reverse!(n1v)
+  reverse!(n2v)
+
+  for i in Base.OneTo(lastindex(idf))
+    bi = idf[i]
+    n1 = n1v[i]
+    n2 = n2v[i]
+
+    if n1>0 && n2>0 # bifurcation
+      setd1!(bi, n2 + i + 1)
+      setd2!(bi, i + 1)
+      setpa!(idf[d1(bi)], i)
+      setpa!(idf[d2(bi)], i)
+    elseif n1>0    # fossil sampled ancestor of d1
+      setd1!(bi, i + 1)
+      setd2!(bi, 0)
+      setpa!(idf[d1(bi)], i)
+    elseif n2>0    # fossil sampled ancestor of d2
+      setd1!(bi, 0)
+      setd2!(bi, i + 1)
+      setpa!(idf[d2(bi)], i)
+    end
+  end
+
+  return idf
 end
 
 

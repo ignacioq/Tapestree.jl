@@ -128,20 +128,24 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 """
     l(tree::sT_label)
+    l(tree::sTf_label)
 
 Return label.
 """
 l(tree::sT_label) = getproperty(tree, :l)
+l(tree::sTf_label) = getproperty(tree, :l)
 
 
 
 
 """
     tiplabels!(tree::sT_label)
+    tiplabels!(tree::sTf_label)
 
-Returns tip labels for `sT_label`.
+Returns tip labels for `sT_label` and `sTf_label`.
 """
 tiplabels(tree::sT_label) = _tiplabels!(tree, String[])
+tiplabels(tree::sTf_label) = _tiplabels!(tree, String[])
 
 
 
@@ -159,6 +163,27 @@ function _tiplabels!(tree::sT_label, labels::Array{String,1})
     _tiplabels!(tree.d1, labels)
     _tiplabels!(tree.d2, labels)
   end
+end
+
+
+
+
+"""
+    _tiplabels!(tree::sTf_label, labels::Array{String,1})
+
+Returns tip labels for `sTf_label`.
+"""
+function _tiplabels!(tree::sTf_label, labels::Array{String,1})
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+  
+  if !defd1 && !defd2
+    push!(labels, l(tree))
+  else
+    if defd1 _tiplabels!(tree.d1, labels) end
+    if defd2 _tiplabels!(tree.d2, labels) end
+  end
+  return labels
 end
 
 
@@ -285,13 +310,12 @@ end
 
 
 
-
 """
-    treeheight(tree::sTfbd)
+    treeheight(tree::T) where {T <: Union{sTfbd, sTf_label}}
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::sTfbd)
+function treeheight(tree::T) where {T <: Union{sTfbd, sTf_label}}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
@@ -301,13 +325,8 @@ function treeheight(tree::sTfbd)
     return max(th1,th2) + e(tree)
   end
 
-  if defd1
-    return treeheight(tree.d1) + e(tree)
-  end
-
-  if defd2
-    return treeheight(tree.d2) + e(tree)
-  end
+  if defd1 return treeheight(tree.d1) + e(tree) end
+  if defd2 return treeheight(tree.d2) + e(tree) end
 
   return e(tree)
 end
@@ -344,11 +363,11 @@ end
 
 
 """
-    _nnodes(tree::sTfbd, n::Int64)
+    _nnodes(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
 
 Return the number of descendant nodes for `tree`, initialized at `n`.
 """
-function _nnodes(tree::sTfbd, n::Int64)
+function _nnodes(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
   n += 1
   
   if isdefined(tree, :d1) n = _nnodes(tree.d1, n) end
@@ -437,29 +456,11 @@ end
 
 
 """
-    _ntips(tree:sTfbd, n::Int64)
+    _ntips(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
 
 Return the number of tip nodes for `tree`, initialized at `n`.
 """
-function _ntips(tree::sTfbd, n::Int64)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-
-  if defd1 n = _ntips(tree.d1, n) end
-  if defd2 n = _ntips(tree.d2, n) end
-  if !defd1 && !defd2 n += 1 end
-
-  return n
-end
-
-
-
-"""
-    _ntips(tree:sTfbd, n::Int64)
-
-Return the number of tip nodes for `tree`, initialized at `n`.
-"""
-function _ntips(tree::sT_label, n::Int64)
+function _ntips(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
