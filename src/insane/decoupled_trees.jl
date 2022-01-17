@@ -45,15 +45,18 @@ end
 
 
 """
-    sTfbd!(Ξ::Vector{sTfbd}, tree::sT_label)
+    sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
 
 Make edge tree `Ξ` from the recursive tree.
 """
-function sTfbd!(Ξ::Vector{sTfbd}, tree::sT_label)
-
-  push!(Ξ, sTfbd(e(tree), false, true))
-  if isdefined(tree, :d2) sTfbd!(Ξ, tree.d2) end
-  if isdefined(tree, :d1) sTfbd!(Ξ, tree.d1) end
+function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+  
+  push!(Ξ, sTfbd(e(tree), false, (defd1 && !defd2) || (!defd1 && defd2), true))
+  
+  if defd2 sTfbd!(Ξ, tree.d2) end
+  if defd1 sTfbd!(Ξ, tree.d1) end
 end
 
 
@@ -77,14 +80,15 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
+    make_Ξ(idf::Vector{iBfffs}, ::Type{sTfbd})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
+function make_Ξ(idf::Vector{iBfffs}, ::Type{sTfbd})
   Ξ = sTfbd[]
   for i in Base.OneTo(lastindex(idf))
-    ξ = sTfbd(e(idf[i]), false, true)
+    bi = idf[i]
+    ξ = sTfbd(e(bi), false, ifos(bi), true)
     push!(Ξ, ξ)
   end
   return Ξ

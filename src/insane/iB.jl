@@ -588,50 +588,55 @@ end=#
 """
     makeiBf!(tree::sTf_label, 
              idv ::Array{iBfffs,1}, 
+             ti::Float64,
              n1v ::Array{Int64,1}, 
              n2v ::Array{Int64,1}, 
+             sa2v ::Array{Int64,1}, 
              tρ  ::Dict{String, Float64})
 
 Make `iBf` vector for an `iTree` with fossils.
 """
 function makeiBf!(tree::sTf_label, 
                   idv ::Array{iBfffs,1}, 
+                  ti::Float64,
                   n1v ::Array{Int64,1}, 
                   n2v ::Array{Int64,1}, 
+                  sa2v ::Array{Int64,1}, 
                   tρ  ::Dict{String, Float64})
 
-  th = treeheight(tree)
+  #th = treeheight(tree)
   el = e(tree)
+  tf = ti - el
 
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBfffs(el, 0, 0, 0, th, th-el, true, ρi, 
-                      false, false, 1, 1, 0.0, 0.0, 0.0))
+    push!(idv, iBfffs(el, 0, 0, 0, ti, tf, true, ρi, false, 
+                      isfossil(tree), 1, 1, 0.0, 0.0, 0.0))
     push!(n1v, 0)
     push!(n2v, 0)
-    return ρi, 1
+    push!(sa2v, 0)
+    return ρi, 1, 0
   end
 
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  ρ1, n1 = defd1 ? makeiBf!(tree.d1, idv, n1v, n2v, tρ) : (1, 0)
-  ρ2, n2 = defd2 ? makeiBf!(tree.d2, idv, n1v, n2v, tρ) : (1, 0)
+  ρ1,n1,sa1 = defd1 ? makeiBf!(tree.d1, idv, tf, n1v, n2v, sa2v, tρ) : (1,0,0)
+  ρ2,n2,sa2 = defd2 ? makeiBf!(tree.d2, idv, tf, n1v, n2v, sa2v, tρ) : (1,0,0)
 
-  # 1 additional node if sampled ancestor
-  n1 += !defd2
-  n2 += !defd1
 
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
+  sa = sa1 + sa2 + isfossil(tree)
 
-  push!(idv, iBfffs(el, 0, 1, 1, th, th-el, false, ρi, false, 
-                    !defd1 || !defd2, 0, 1, 0.0, 0.0, 0.0))
+  push!(idv, iBfffs(el, 0, 1, 1, ti, tf, false, ρi, false, 
+                    isfossil(tree), 0, 1, 0.0, 0.0, 0.0))
   push!(n1v, n1)
   push!(n2v, n2)
+  push!(sa2v, sa2)
 
-  return ρi, n
+  return ρi, n, sa
 end
 
 
@@ -647,19 +652,23 @@ function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
   idf = iBfffs[]
   n1v = Int64[]
   n2v = Int64[]
-  makeiBf!(tree, idf, n1v, n2v, tρ)
+  sa2v = Int64[]
+  makeiBf!(tree, idf, treeheight(tree), n1v, n2v, sa2v, tρ)
 
   reverse!(idf)
   reverse!(n1v)
   reverse!(n2v)
+  reverse!(sa2v)
 
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
     n1 = n1v[i]
     n2 = n2v[i]
+    sa2 = sa2v[i]
+    #@show i; @show bi; @show n1; @show n2; @show sa2
 
     if n1>0 && n2>0 # bifurcation
-      setd1!(bi, n2 + i + 1)
+      setd1!(bi, n2*2 + sa2 + i)
       setd2!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
       setpa!(idf[d2(bi)], i)

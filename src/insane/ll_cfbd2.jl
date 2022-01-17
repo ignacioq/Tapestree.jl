@@ -70,25 +70,28 @@ end
 
 
 """
-    llik_cfbd(psi::Vector{sTfbd}, 
-              λ  ::Float64, 
-              μ  ::Float64,
-              ψ  ::Float64)
+    llik_cfbd(Ξ::Vector{sTfbd}, 
+              λ::Float64, 
+              μ::Float64,
+              ψ::Float64)
 
 Log-likelihood up to a constant for constant fossilized birth-death 
 given a complete `iTree` for decoupled trees.
 """
-function llik_cfbd(treeVec::Vector{sTfbd}, 
-                   λ  ::Float64, 
-                   μ  ::Float64,
-                   ψ  ::Float64)
+function llik_cfbd(Ξ::Vector{sTfbd}, 
+                   λ::Float64, 
+                   μ::Float64,
+                   ψ::Float64)
 
   ll = 0.0
-  for tree in treee
-    ll += llik_cbd(ψ, λ, μ)
+  for ξ in Ξ
+    ll += llik_cfbd(ξ, λ, μ, ψ)
   end
+
+  #nfos = sum(isfossil.(Ξ))
   
-  ll += Float64(lastindex(treeVec) - 1)/2.0 * log(λ)
+  #ll += Float64(lastindex(Ξ) - nfos - 1)/2.0 * log(λ)
+  #ll += Float64(nfos) * log(ψ)
 
   return ll
 end
@@ -97,52 +100,36 @@ end
 
 
 """
-    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
+    make_scond(idf::Vector{iBfffs}, stem::Bool, ::Type{sTfbd})
 
 Return closure for log-likelihood for conditioning
 """
-function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
-
-  b1  = idf[1]
-  d1i = d1(b1)
-  d2i = d2(b1)
+function make_scond(idf::Vector{iBfffs}, stem::Bool, ::Type{sTfbd})
 
   if stem
     # for whole likelihood
     f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
           cond_ll(λ, μ, sns[1])
     # for new proposal
-    f0 = (psi::sTbd, λ::Float64, μ::Float64, ter::Bool) -> 
-            cond_surv_stem_p(psi, λ, μ)
+    f0 = (tree::sTfbd, λ::Float64, μ::Float64, ter::Bool) -> 
+            cond_surv_stem_p(tree, λ, μ)
   else
     # for whole likelihood
     f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
           cond_ll(λ, μ, sns[2]) + 
           cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
     # for new proposal
-    f0 = function (psi::sTbd, λ::Float64, μ::Float64, ter::Bool)
+    f0 = function (tree::sTfbd, λ::Float64, μ::Float64, ter::Bool)
       if ter
-        cond_surv_stem(  psi, λ, μ)
+        cond_surv_stem(  tree, λ, μ)
       else
-        cond_surv_stem_p(psi, λ, μ)
+        cond_surv_stem_p(tree, λ, μ)
       end
     end
   end
 
   return f, f0
 end
-
-
-
-
-"""
-    cond_ll(λ::Float64, μ::Float64, sn::BitVector)
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-cond_ll(λ::Float64, μ::Float64, sn::BitVector) =
-  Float64(sum(sn)) * log((λ + μ)/λ)
 
 
 
