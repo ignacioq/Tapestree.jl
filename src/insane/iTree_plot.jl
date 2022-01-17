@@ -298,8 +298,9 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 == true`. True by default for `sTfbd` trees to make sampled ancestors visible.
 """
 @recipe function f(tree::T; 
-                   shownodes  = (T === sTfbd),
-                   showlabels = (T === sT_label)) where {T <: iTree}
+                   shownodes  = (T === sTfbd || T === sTf_label),
+                   showlabels = (T === sT_label || T === sTf_label)) where {
+                                                                    T <: iTree}
 
   x = Float64[]
   y = Float64[]
@@ -326,7 +327,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   if shownodes
     shape = Symbol[:circle]
     col   = Symbol[:pink]
-    alpha = Float64[0.5+0.5*isfix(tree)]
+    alpha = Float64[0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))]
     _nodeproperties!(tree, shape, col, alpha)
 
     markershape       --> shape
@@ -343,10 +344,11 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     @series begin
       seriestype  := :scatter
       primary     := false
+      markercolor := :black
+      markershape := :circle
       markersize  := 0
       markeralpha := fill(0.0,nt)
-      series_annotations := Plots.series_annotations(labels, 
-        Plots.font("Helvetica", 10))
+      series_annotations := series_annotations(labels, font("Helvetica", 8))
       fill(0.0 - 0.02*th, nt), 1:nt
     end
   end
@@ -370,6 +372,7 @@ function _nodeproperties!(tree ::T,
                           alpha::Vector{Float64}) where {T <: iTree}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
+  fx = !isdefined(tree, :fx) || isfix(tree)
 
   if defd1 || defd2
     # not a tip
@@ -378,7 +381,7 @@ function _nodeproperties!(tree ::T,
       # speciation event
       push!(shape, :circle, fill(:none,5)...)
       push!(col, :gray, fill(:white,5)...)
-      push!(alpha, 0.5+0.5*isfix(tree), 0, 0, 0, 0, 0)
+      push!(alpha, 0.5+0.5*fx, 0, 0, 0, 0, 0)
       _nodeproperties!(tree.d1, shape, col, alpha)
       push!(shape, :none, :none)
       push!(col, :white, :white)
@@ -388,21 +391,21 @@ function _nodeproperties!(tree ::T,
       # sampled ancestor
       push!(shape, :none, :none, :square)
       push!(col, :white, :white, :red)
-      push!(alpha, 0, 0, 0.5+0.5*isfix(tree))
+      push!(alpha, 0, 0, 0.5+0.5*fx)
       _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
     else
       # error
       @warn "Star node incorrectly defined (neither tip, speciation or fossil)"
       push!(shape, :none, :none, :star)
       push!(col, :white, :white, :yellow)
-      push!(alpha, 0, 0, 0.5+0.5*isfix(tree))
+      push!(alpha, 0, 0, 0.5+0.5*fx)
       _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
     end
   else
     # tip
     isfossil(tree) ? (push!(shape, :square); push!(col, :red)) : 
                      (push!(shape, :circle); push!(col, :blue))
-    push!(alpha, 0.5+0.5*isfix(tree))
+    push!(alpha, 0.5+0.5*fx)
   end
   
   return nothing

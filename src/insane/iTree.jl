@@ -225,9 +225,9 @@ end
 
 
 """
-    sTf_label(tree::T) where {T <: iTree}
+    _sTf_label(tree::T, i::Int64) where {T <: iTree}
 
-Demotes a tree to `sTf_label`.
+Demotes a tree to `sTf_label`, initialized with label i.
 """
 function _sTf_label(tree::T, i::Int64) where {T <: iTree}
   defd1 = isdefined(tree, :d1)
