@@ -41,13 +41,13 @@ using .INSANE: read_newick, write_newick,
   insane_cpb, insane_cbd, iscrowntree, rm_stem!,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, 
   iquantile, extract_vector!, mcmc_array, lλ, lμ, 
-  remove_extinct!, remove_unsampled!, ntipsalive, ntips
+  remove_extinct!, remove_unsampled!, ntipsalive, ntips, treeheight
 export read_newick, write_newick, 
   sTpb, sTbd, iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd,
   insane_cpb, insane_cbd, iscrowntree, rm_stem!,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, 
   iquantile, extract_vector!, mcmc_array, lλ, lμ, 
-  remove_extinct!, remove_unsampled!, ntipsalive, ntips
+  remove_extinct!, remove_unsampled!, ntipsalive, ntips, treeheight
 
 end # module Tapestree

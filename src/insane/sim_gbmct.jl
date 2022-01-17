@@ -722,7 +722,8 @@ end
 
 Return true if diversification event for `ϵ` parametization.
 """
-divevϵ(λ::Float64, ϵ::Float64, δt::Float64) = @fastmath rand() < (1.0 + ϵ)*λ*δt 
+divevϵ(λ::Float64, ϵ::Float64, δt::Float64) = 
+  @fastmath rand() < ((1.0 + ϵ)*λ*δt)
 
 
 
