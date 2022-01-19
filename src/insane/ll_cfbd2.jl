@@ -53,8 +53,7 @@ function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
   if istip(tree)
     - e(tree)*(λ + μ + ψ) + 
         (isextinct(tree) ? log(μ) : 0.0) + 
-        (isfossil( tree) ? log(ψ) : 0.0)
-  
+        (isfossil( tree) ? log(ψ) : 0.0)  
   elseif issampledancestor(tree)
     - e(tree)*(λ + μ + ψ) + log(ψ) +
         (isdefined(tree, :d1) ? llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) : 0.0) + 
@@ -84,14 +83,13 @@ function llik_cfbd(Ξ::Vector{sTfbd},
                    ψ::Float64)
 
   ll = 0.0
+  nfos = 0.0
   for ξ in Ξ
     ll += llik_cfbd(ξ, λ, μ, ψ)
+    nfos += isfossil(ξ)
   end
-
-  #nfos = sum(isfossil.(Ξ))
   
-  #ll += Float64(lastindex(Ξ) - nfos - 1)/2.0 * log(λ)
-  #ll += Float64(nfos) * log(ψ)
+  ll += Float64(lastindex(Ξ) - nfos - 1)/2.0 * log(λ)
 
   return ll
 end

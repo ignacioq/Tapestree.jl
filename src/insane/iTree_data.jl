@@ -555,10 +555,22 @@ end
 
 """
     _ntipsextinct(tree::sTfbd, n::Int64)
+    _ntipsextinct(tree::sTf_label, n::Int64)
 
 Return the number of extinct nodes for `tree`, initialized at `n`.
 """
 function _ntipsextinct(tree::sTfbd, n::Int64)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+  
+  if defd1 n = _ntipsextinct(tree.d1, n) end
+  if defd2 n = _ntipsextinct(tree.d2, n) end
+  if isextinct(tree) n += 1 end
+
+  return n
+end
+
+function _ntipsextinct(tree::sTf_label, n::Int64)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   

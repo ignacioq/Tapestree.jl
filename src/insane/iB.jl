@@ -611,7 +611,7 @@ function makeiBf!(tree::sTf_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBfffs(el, 0, 0, 0, ti, tf, true, ρi, false, 
+    push!(idv, iBfffs(el, 0, 0, 0, ti, tf, true, ρi, isextinct(tree), 
                       isfossil(tree), 1, 1, 0.0, 0.0, 0.0))
     push!(n1v, 0)
     push!(n2v, 0)
@@ -850,6 +850,16 @@ tf(id::iB) = getproperty(id, :tf)
 Return if is terminal.
 """
 it(id::iBf) = getproperty(id, :it)
+
+
+
+
+"""
+    it(id::iBf)
+
+Return if is extinct.
+"""
+ie(id::iBf) = getproperty(id, :ie)
 
 
 

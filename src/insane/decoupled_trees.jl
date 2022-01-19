@@ -53,7 +53,7 @@ function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
-  push!(Ξ, sTfbd(e(tree), false, (defd1 && !defd2) || (!defd1 && defd2), true))
+  push!(Ξ, sTfbd(e(tree), isextinct(tree), (defd1 && !defd2) || (!defd1 && defd2), true))
   
   if defd2 sTfbd!(Ξ, tree.d2) end
   if defd1 sTfbd!(Ξ, tree.d1) end
@@ -88,7 +88,7 @@ function make_Ξ(idf::Vector{iBfffs}, ::Type{sTfbd})
   Ξ = sTfbd[]
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
-    ξ = sTfbd(e(bi), false, ifos(bi), true)
+    ξ = sTfbd(e(bi), ie(bi), ifos(bi), true)
     push!(Ξ, ξ)
   end
   return Ξ
