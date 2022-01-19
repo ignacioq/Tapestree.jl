@@ -350,7 +350,7 @@ function mcmc_cfbd(tree  ::sTfbd,
   # parameter results
   R = Array{Float64,2}(undef, nlogs, 8)
 
-  # make Ψ vector
+  # make Ξ vector
   treev = sTfbd[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)

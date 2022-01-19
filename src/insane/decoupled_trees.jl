@@ -13,32 +13,32 @@ Created 05 11 2020
 
 
 """
-    sTpb!(Ψ::Vector{sTpb}, tree::sT_label)
+    sTpb!(Ξ::Vector{sTpb}, tree::sT_label)
 
-Make edge tree `Ψ` from the recursive tree.
+Make edge tree `Ξ` from the recursive tree.
 """
-function sTpb!(Ψ::Vector{sTpb}, tree::sT_label)
+function sTpb!(Ξ::Vector{sTpb}, tree::sT_label)
 
-  push!(Ψ, sTpb(e(tree), true))
+  push!(Ξ, sTpb(e(tree), true))
   if isdefined(tree, :d1)
-    sTpb!(Ψ, tree.d2)
-    sTpb!(Ψ, tree.d1)
+    sTpb!(Ξ, tree.d2)
+    sTpb!(Ξ, tree.d1)
   end
 end
 
 
 
 """
-    sTbd!(Ψ::Vector{sTbd}, tree::sT_label)
+    sTbd!(Ξ::Vector{sTbd}, tree::sT_label)
 
-Make edge tree `Ψ` from the recursive tree.
+Make edge tree `Ξ` from the recursive tree.
 """
-function sTbd!(Ψ::Vector{sTbd}, tree::sT_label)
+function sTbd!(Ξ::Vector{sTbd}, tree::sT_label)
 
-  push!(Ψ, sTbd(e(tree), false, true))
+  push!(Ξ, sTbd(e(tree), false, true))
   if isdefined(tree, :d1)
-    sTbd!(Ψ, tree.d2)
-    sTbd!(Ψ, tree.d1)
+    sTbd!(Ξ, tree.d2)
+    sTbd!(Ξ, tree.d1)
   end
 end
 
@@ -63,17 +63,17 @@ end
 
 
 """
-    make_Ψ(idf::Vector{iBffs}, ::Type{sTbd})
+    make_Ξ(idf::Vector{iBffs}, ::Type{sTbd})
 
-Make edge tree `Ψ` from the edge directory.
+Make edge tree `Ξ` from the edge directory.
 """
-function make_Ψ(idf::Vector{iBffs}, ::Type{sTbd})
-  Ψ = sTbd[]
+function make_Ξ(idf::Vector{iBffs}, ::Type{sTbd})
+  Ξ = sTbd[]
   for i in Base.OneTo(lastindex(idf))
-    ψ = sTbd(e(idf[i]), false, true)
-    push!(Ψ, ψ)
+    ξ = sTbd(e(idf[i]), false, true)
+    push!(Ξ, ξ)
   end
-  return Ψ
+  return Ξ
 end
 
 
@@ -98,7 +98,7 @@ end
 
 
 """
-    iTgbmpb!(Ψ   ::Vector{iTgbmpb},
+    iTgbmpb!(Ξ   ::Vector{iTgbmpb},
              tree::sT_label,
              δt  ::Float64, 
              srδt::Float64, 
@@ -106,9 +106,9 @@ end
              α   ::Float64,
              σλ  ::Float64)
 
-Make edge tree `Ψ` from the recursive tree.
+Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmpb!(Ψ   ::Vector{iTgbmpb},
+function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
                   tree::sT_label,
                   δt  ::Float64, 
                   srδt::Float64, 
@@ -133,10 +133,10 @@ function iTgbmpb!(Ψ   ::Vector{iTgbmpb},
     l   = lastindex(lλv)
   end
 
-  push!(Ψ, iTgbmpb(et, true, δt, fdti, lλv))
+  push!(Ξ, iTgbmpb(et, true, δt, fdti, lλv))
   if isdefined(tree, :d1)
-    iTgbmpb!(Ψ, tree.d2, δt, srδt, lλv[l], α, σλ) 
-    iTgbmpb!(Ψ, tree.d1, δt, srδt, lλv[l], α, σλ)
+    iTgbmpb!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmpb!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
 
@@ -145,7 +145,7 @@ end
 
 
 """
-    iTgbmce!(Ψ   ::Vector{iTgbmce},
+    iTgbmce!(Ξ   ::Vector{iTgbmce},
              tree::sT_label,
              δt  ::Float64, 
              srδt::Float64, 
@@ -153,9 +153,9 @@ end
              α   ::Float64,
              σλ  ::Float64)
 
-Make edge tree `Ψ` from the recursive tree.
+Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmce!(Ψ   ::Vector{iTgbmce},
+function iTgbmce!(Ξ   ::Vector{iTgbmce},
                   tree::sT_label,
                   δt  ::Float64, 
                   srδt::Float64, 
@@ -180,10 +180,10 @@ function iTgbmce!(Ψ   ::Vector{iTgbmce},
     l   = lastindex(lλv)
   end
 
-  push!(Ψ, iTgbmce(et, δt, fdti, false, true, lλv))
+  push!(Ξ, iTgbmce(et, δt, fdti, false, true, lλv))
   if isdefined(tree, :d1)
-    iTgbmce!(Ψ, tree.d2, δt, srδt, lλv[l], α, σλ) 
-    iTgbmce!(Ψ, tree.d1, δt, srδt, lλv[l], α, σλ)
+    iTgbmce!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmce!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
 
@@ -191,7 +191,7 @@ end
 
 
 """
-    iTgbmct!(Ψ   ::Vector{iTgbmct},
+    iTgbmct!(Ξ   ::Vector{iTgbmct},
              tree::sT_label,
              δt  ::Float64, 
              srδt::Float64, 
@@ -199,9 +199,9 @@ end
              α   ::Float64,
              σλ  ::Float64)
 
-Make edge tree `Ψ` from the recursive tree.
+Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmct!(Ψ   ::Vector{iTgbmct},
+function iTgbmct!(Ξ   ::Vector{iTgbmct},
                   tree::sT_label,
                   δt  ::Float64, 
                   srδt::Float64, 
@@ -226,10 +226,10 @@ function iTgbmct!(Ψ   ::Vector{iTgbmct},
     l   = lastindex(lλv)
   end
 
-  push!(Ψ, iTgbmct(et, δt, fdti, false, true, lλv))
+  push!(Ξ, iTgbmct(et, δt, fdti, false, true, lλv))
   if isdefined(tree, :d1)
-    iTgbmct!(Ψ, tree.d2, δt, srδt, lλv[l], α, σλ) 
-    iTgbmct!(Ψ, tree.d1, δt, srδt, lλv[l], α, σλ)
+    iTgbmct!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmct!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
 
@@ -237,7 +237,7 @@ end
 
 
 """
-    iTgbmbd!(Ψ   ::Vector{iTgbmbd},
+    iTgbmbd!(Ξ   ::Vector{iTgbmbd},
              tree::sT_label,
              δt  ::Float64, 
              srδt::Float64, 
@@ -247,9 +247,9 @@ end
              σλ  ::Float64,
              σμ  ::Float64)
 
-Make edge tree `Ψ` from the recursive tree.
+Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmbd!(Ψ   ::Vector{iTgbmbd},
+function iTgbmbd!(Ξ   ::Vector{iTgbmbd},
                   tree::sT_label,
                   δt  ::Float64, 
                   srδt::Float64, 
@@ -278,10 +278,10 @@ function iTgbmbd!(Ψ   ::Vector{iTgbmbd},
     l   = nt + 2
   end
 
-  push!(Ψ, iTgbmbd(et, δt, fdti, false, true, lλv, lμv))
+  push!(Ξ, iTgbmbd(et, δt, fdti, false, true, lλv, lμv))
   if isdefined(tree, :d1)
-    iTgbmbd!(Ψ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
-    iTgbmbd!(Ψ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
+    iTgbmbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
+    iTgbmbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
   end
 end
 
@@ -289,39 +289,39 @@ end
 
 
 """
-    couple(psi::Vector{T},
+    couple(xi::Vector{T},
            idf::Vector{iBffs},
            ix ::Int64) where {T <: iTree}
 
 Build tree from decoupled tree.
 """
-function couple(psi::Vector{T},
+function couple(xi::Vector{T},
                 idf::Vector{iBffs},
                 ix ::Int64) where {T <: iTree}
 
   bi = idf[ix]
-  ψi = psi[ix]
+  ξi = xi[ix]
   if !it(bi)
-    ψit = fixtip(ψi)
-    ψit.d1 = couple(psi, idf, d1(bi))
-    ψit.d2 = couple(psi, idf, d2(bi))
+    ξit = fixtip(ξi)
+    ξit.d1 = couple(xi, idf, d1(bi))
+    ξit.d2 = couple(xi, idf, d2(bi))
   end
 
-  return ψi
+  return ξi
 end
 
 
 
 
 """
-    treelength(psi::Vector{T}) where {T<: iTree}
+    treelength(xi::Vector{T}) where {T<: iTree}
 
-Return the branch length sum of `Ψ`.
+Return the branch length sum of `Ξ`.
 """
-function treelength(psi::Vector{T}) where {T<: iTree}
+function treelength(xi::Vector{T}) where {T<: iTree}
   L = 0.0
-  for ψ in psi
-    L += _treelength(ψ, 0.0)
+  for ξ in xi
+    L += _treelength(ξ, 0.0)
   end
   return L
 end
@@ -339,8 +339,8 @@ for debugging purposes.
 function _ctl(tree::Vector{T}) where {T <: iTgbm}
 
   L = 0.0
-  for ψ in psi
-    L += _ctl(ψ, 0.0)
+  for ξ in xi
+    L += _ctl(ξ, 0.0)
   end
   return L
 end
@@ -349,16 +349,16 @@ end
 
 
 """
-    nnodesinternal(psi::Vector{T}) where {T<: iTree}
+    nnodesinternal(xi::Vector{T}) where {T<: iTree}
 
-Return the internal nodes of `Ψ`.
+Return the internal nodes of `Ξ`.
 """
-function nnodesinternal(psi::Vector{T}) where {T<: iTree}
+function nnodesinternal(xi::Vector{T}) where {T<: iTree}
   n = 0
-  for ψ in psi
-    n += _nnodesinternal(ψ, 0)
+  for ξ in xi
+    n += _nnodesinternal(ξ, 0)
   end
-  n += Float64(lastindex(psi) - 1)/2.0
+  n += Float64(lastindex(xi) - 1)/2.0
 
   return n
 end
@@ -367,14 +367,14 @@ end
 
 
 """
-    ntipsextinct(psi::Vector{T}) where {T<: iTree}
+    ntipsextinct(xi::Vector{T}) where {T<: iTree}
 
-Return the internal nodes of `Ψ`.
+Return the internal nodes of `Ξ`.
 """
-function ntipsextinct(psi::Vector{T}) where {T<: iTree}
+function ntipsextinct(xi::Vector{T}) where {T<: iTree}
   n = 0
-  for ψ in psi
-    n += _ntipsextinct(ψ, 0)
+  for ξ in xi
+    n += _ntipsextinct(ξ, 0)
   end
   return n
 end
@@ -384,17 +384,17 @@ end
 
 
 """
-    sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
+    sss_gbm(xi::Vector{T}, α::Float64) where {T <: iTgbm}
 
 Returns the standardized sum of squares a `iTgbm` according 
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(psi::Vector{T}, α::Float64) where {T <: iTgbm}
+function sss_gbm(xi::Vector{T}, α::Float64) where {T <: iTgbm}
 
   n   = 0.0
   ssλ = 0.0
-  for ψi in psi
-    ssλ, n = _sss_gbm(ψi, α, ssλ, n)
+  for ξi in xi
+    ssλ, n = _sss_gbm(ξi, α, ssλ, n)
   end
 
   return ssλ, n
@@ -405,18 +405,18 @@ end
 
 
 """
-    sss_gbm(psi::Vector{iTgbmbd}, α::Float64)
+    sss_gbm(xi::Vector{iTgbmbd}, α::Float64)
 
 Returns the standardized sum of squares a `iTgbm` according 
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(psi::Vector{iTgbmbd}, α::Float64)
+function sss_gbm(xi::Vector{iTgbmbd}, α::Float64)
 
   n   = 0.0
   ssλ = 0.0
   ssμ = 0.0
-  for ψi in psi
-    ssλ, ssμ, n = _sss_gbm(ψi, α, ssλ, ssμ, n)
+  for ξi in xi
+    ssλ, ssμ, n = _sss_gbm(ξi, α, ssλ, ssμ, n)
   end
 
   return ssλ, ssμ, n
@@ -427,14 +427,14 @@ end
 
 
 """
-    Σλ_gbm(psi::Vector{T}) where {T<: iTgbm}
+    Σλ_gbm(xi::Vector{T}) where {T<: iTgbm}
 
-Return the internal nodes of `Ψ`.
+Return the internal nodes of `Ξ`.
 """
-function Σλ_gbm(psi::Vector{T}) where {T <: iTgbm}
+function Σλ_gbm(xi::Vector{T}) where {T <: iTgbm}
   Σλ = 0.0
-  for ψ in psi
-    Σλ += Σλ_gbm(ψ)
+  for ξ in xi
+    Σλ += Σλ_gbm(ξ)
   end
   return Σλ
 end

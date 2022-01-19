@@ -12,7 +12,7 @@ Created 03 09 2020
 
 
 """
-    llik_cbd(psi::Vector{iTgbmct}, 
+    llik_cbd(xi::Vector{iTgbmct}, 
              idf::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
@@ -22,7 +22,7 @@ Created 03 09 2020
 
 Returns the log-likelihood for a `iTgbmct` according to `gbmce`.
 """
-function llik_gbm(psi::Vector{iTgbmct}, 
+function llik_gbm(xi::Vector{iTgbmct}, 
                   idf::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -31,9 +31,9 @@ function llik_gbm(psi::Vector{iTgbmct},
                   srδt::Float64)
   @inbounds begin
     ll = 0.0
-    for i in Base.OneTo(lastindex(psi))
+    for i in Base.OneTo(lastindex(xi))
       bi  = idf[i]
-      ll += llik_gbm(psi[i], α, σλ, ϵ, δt, srδt)
+      ll += llik_gbm(xi[i], α, σλ, ϵ, δt, srδt)
       if !it(bi)
         ll += λt(bi)
       end
@@ -411,33 +411,33 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmct})
   if stem
     # for whole likelihood
     f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
+      function (xi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
         sn1 = sns[1]
-        cond_ll(psi[1], 0.0, ϵ, sn1, lastindex(sn1), 1)
+        cond_ll(xi[1], 0.0, ϵ, sn1, lastindex(sn1), 1)
       end
     end
     # for new proposal
-    f0 = (psi::iTgbmct, ϵ::Float64, ter::Bool) -> 
-            sum_alone_stem_p(psi, 0.0, 0.0, ϵ)
+    f0 = (xi::iTgbmct, ϵ::Float64, ter::Bool) -> 
+            sum_alone_stem_p(xi, 0.0, 0.0, ϵ)
   else
     # for whole likelihood
     f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
+      function (xi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
 
         sn2 = sns[2]
         sn3 = sns[3]
 
-        cond_ll(psi[d1i], 0.0, ϵ, sn2, lastindex(sn2), 1) +
-        cond_ll(psi[d2i], 0.0, ϵ, sn3, lastindex(sn3), 1) + 
+        cond_ll(xi[d1i], 0.0, ϵ, sn2, lastindex(sn2), 1) +
+        cond_ll(xi[d2i], 0.0, ϵ, sn3, lastindex(sn3), 1) + 
         (1.0 + ϵ)
       end
     end
     # for new proposal
-    f0 = function (psi::iTgbmct, ϵ::Float64, ter::Bool)
+    f0 = function (xi::iTgbmct, ϵ::Float64, ter::Bool)
       if ter
-        sum_alone_stem(  psi, 0.0, 0.0, ϵ)
+        sum_alone_stem(  xi, 0.0, 0.0, ϵ)
       else
-        sum_alone_stem_p(psi, 0.0, 0.0, ϵ)
+        sum_alone_stem_p(xi, 0.0, 0.0, ϵ)
       end
     end
   end

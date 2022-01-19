@@ -429,7 +429,7 @@ A Composite type representing node address for a **fixed** branch in `iTree` wit
   `nt`: current alive descendants at time `t`.
   `λt`: final speciation rate for fixed at time `t`.
   `μt`: final extinction rate for fixed at time `t`.
-  `ψt`: final extinction rate for fixed at time `t`.
+  `ψt`: final fossilization rate for fixed at time `t`.
 
     iBfffs()
 

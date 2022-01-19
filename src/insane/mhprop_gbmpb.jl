@@ -13,8 +13,8 @@ Created 14 11 2021
 
 
 """
-    _daughters_update!(ψ1  ::iTgbmpb,
-                       ψ2  ::iTgbmpb,
+    _daughters_update!(ξ1  ::iTgbmpb,
+                       ξ2  ::iTgbmpb,
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
@@ -23,8 +23,8 @@ Created 14 11 2021
 
 Make a `gbmpb` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ψ1  ::iTgbmpb,
-                            ψ2  ::iTgbmpb,
+function _daughters_update!(ξ1  ::iTgbmpb,
+                            ξ2  ::iTgbmpb,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
@@ -32,8 +32,8 @@ function _daughters_update!(ψ1  ::iTgbmpb,
                             srδt::Float64)
   @inbounds begin
 
-    λ1c  = lλ(ψ1)
-    λ2c  = lλ(ψ2)
+    λ1c  = lλ(ξ1)
+    λ2c  = lλ(ξ2)
     l1   = lastindex(λ1c)
     l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
@@ -41,10 +41,10 @@ function _daughters_update!(ψ1  ::iTgbmpb,
     λi   = λ1c[1]
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
-    e1   = e(ψ1)
-    e2   = e(ψ2)
-    fdt1 = fdt(ψ1)
-    fdt2 = fdt(ψ2)
+    e1   = e(ξ1)
+    e2   = e(ξ2)
+    fdt1 = fdt(ξ1)
+    fdt2 = fdt(ξ2)
 
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
@@ -76,7 +76,7 @@ end
 
 
 """
-    _stem_update!(ψi   ::iTgbmpb, 
+    _stem_update!(ξi   ::iTgbmpb, 
                   α    ::Float64,
                   σλ   ::Float64,
                   llc  ::Float64,
@@ -87,7 +87,7 @@ end
 
 Do gbm update for crown root.
 """
-function _stem_update!(ψi   ::iTgbmpb, 
+function _stem_update!(ξi   ::iTgbmpb, 
                        α    ::Float64,
                        σλ   ::Float64,
                        llc  ::Float64,
@@ -97,12 +97,12 @@ function _stem_update!(ψi   ::iTgbmpb,
                        srδt ::Float64)
 
   @inbounds begin
-    λc   = lλ(ψi)
+    λc   = lλ(ξi)
     l    = lastindex(λc)
     λp   = Vector{Float64}(undef,l)
     λn   = λc[l]
-    el   = e(ψi)
-    fdtp = fdt(ψi)
+    el   = e(ξi)
+    fdtp = fdt(ξi)
 
     # node proposal
     λr = rnorm(λn - α*el, σλ*sqrt(el))
@@ -129,9 +129,9 @@ end
 
 
 """
-    _crown_update!(ψi   ::iTgbmpb, 
-                   ψ1   ::iTgbmpb, 
-                   ψ2   ::iTgbmpb, 
+    _crown_update!(ξi   ::iTgbmpb, 
+                   ξ1   ::iTgbmpb, 
+                   ξ2   ::iTgbmpb, 
                    α    ::Float64,
                    σλ   ::Float64,
                    llc  ::Float64,
@@ -142,9 +142,9 @@ end
 
 Do gbm update for crown root.
 """
-function _crown_update!(ψi   ::iTgbmpb, 
-                        ψ1   ::iTgbmpb, 
-                        ψ2   ::iTgbmpb, 
+function _crown_update!(ξi   ::iTgbmpb, 
+                        ξ1   ::iTgbmpb, 
+                        ξ2   ::iTgbmpb, 
                         α    ::Float64,
                         σλ   ::Float64,
                         llc  ::Float64,
@@ -154,19 +154,19 @@ function _crown_update!(ψi   ::iTgbmpb,
                         srδt ::Float64)
 
   @inbounds begin
-    λpc  = lλ(ψi)
-    λ1c  = lλ(ψ1)
-    λ2c  = lλ(ψ2)
+    λpc  = lλ(ξi)
+    λ1c  = lλ(ξ1)
+    λ2c  = lλ(ξ2)
     l1   = lastindex(λ1c)
     l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
     λ2p  = Vector{Float64}(undef,l2)
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
-    e1   = e(ψ1)
-    e2   = e(ψ2)
-    fdt1 = fdt(ψ1)
-    fdt2 = fdt(ψ2)
+    e1   = e(ξ1)
+    e2   = e(ξ2)
+    fdt1 = fdt(ξ1)
+    fdt2 = fdt(ξ2)
 
     # node proposal
     λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)

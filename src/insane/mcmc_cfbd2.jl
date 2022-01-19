@@ -1,55 +1,62 @@
 #=
 
-constant birth-death MCMC using forward simulation
+constant fossilized birth-death MCMC using graft and prune
 
-Ignacio Quintero Mächler
+Jérémy Andréoletti
+Adapted from birth-death MCMC by Ignacio Quintero Mächler
 
-t(-_-t)
+v(°-°v)
 
-Created 25 08 2020
+Created 07 10 2021
 =#
 
 
 
 
 """
-    insane_cfbd(tree    ::sTf_label, 
-                out_file::String;
-                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                niter   ::Int64                 = 1_000,
-                nthin   ::Int64                 = 10,
-                nburn   ::Int64                 = 200,
-                logZ    ::Bool                  = false,
-                nitpp   ::Int64                 = 100, 
-                nthpp   ::Int64                 = 10,
-                K       ::Int64                 = 10,
-                ϵi      ::Float64               = 0.4,
-                λi      ::Float64               = NaN,
-                μi      ::Float64               = NaN,
-                pupdp   ::NTuple{3,Float64}     = (0.2,0.2,0.2),
-                prints  ::Int64                 = 5,
-                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+    insane_cfbd(tree     ::sTf_label, 
+                out_file ::String;
+                λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                λmμ_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                ψ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                niter    ::Int64                 = 1_000,
+                nthin    ::Int64                 = 10,
+                nburn    ::Int64                 = 200,
+                logZ     ::Bool                  = false,
+                nitpp    ::Int64                 = 100, 
+                nthpp    ::Int64                 = 10,
+                K        ::Int64                 = 10,
+                ϵi       ::Float64               = 0.4,
+                λi       ::Float64               = NaN,
+                μi       ::Float64               = NaN,
+                ψi       ::Float64               = NaN,
+                pupdp    ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+                prints   ::Int64                 = 5,
+                tρ       ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant birth-death.
 """
-function insane_cfbd(tree    ::sTf_label, 
-                     out_file::String;
-                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                     niter   ::Int64                 = 1_000,
-                     nthin   ::Int64                 = 10,
-                     nburn   ::Int64                 = 200,
-                     marginal::Bool                  = false,
-                     nitpp   ::Int64                 = 100, 
-                     nthpp   ::Int64                 = 10,
-                     K       ::Int64                 = 11,
-                     ϵi      ::Float64               = 0.4,
-                     λi      ::Float64               = NaN,
-                     μi      ::Float64               = NaN,
-                     pupdp   ::NTuple{3,Float64}     = (0.2,0.2,0.2),
-                     prints  ::Int64                 = 5,
-                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+function insane_cfbd(tree     ::sTf_label, 
+                     out_file ::String;
+                     λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                     μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                     λmμ_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                     ψ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                     niter    ::Int64                 = 1_000,
+                     nthin    ::Int64                 = 10,
+                     nburn    ::Int64                 = 200,
+                     marginal ::Bool                  = false,
+                     nitpp    ::Int64                 = 100, 
+                     nthpp    ::Int64                 = 10,
+                     K        ::Int64                 = 11,
+                     ϵi       ::Float64               = 0.4,
+                     λi       ::Float64               = NaN,
+                     μi       ::Float64               = NaN,
+                     ψi       ::Float64               = NaN,
+                     pupdp    ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+                     prints   ::Int64                 = 5,
+                     tρ       ::Dict{String, Float64} = Dict("" => 1.0))
 
   n  = ntips(tree)
 
@@ -64,10 +71,22 @@ function insane_cfbd(tree    ::sTf_label,
   idf = make_idf(tree, tρ)
 
   # starting parameters
-  if isnan(λi) && isnan(μi)
-    λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
+  if isnan(λi) && isnan(μi) && isnan(ψi)
+    # if only one tip
+    if isone(n)
+      λc = λ_prior
+      μc = isnan(μ_prior) ? λ_prior-λmμ_prior : μ_prior
+    else
+      λc, μc = moments(Float64(n), th, ϵi)
+    end
+    # if no sampled fossil
+    if iszero(nfossils(tree))
+      ψc = ψ_prior
+    else
+      ψc = nfossils(tree)/treelength(tree)
+    end
   else
-    λc, μc = λi, μi
+    λc, μc, ψc = λi, μi, ψi
   end
 
   # make a decoupled tree and fix it
@@ -77,7 +96,7 @@ function insane_cfbd(tree    ::sTf_label,
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(3) 
+  for i in Base.OneTo(4)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
@@ -90,16 +109,18 @@ function insane_cfbd(tree    ::sTf_label,
   @info "Running constant birth-death with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, μc = 
-      mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, nburn, λc, μc,
-        pup, prints, sns, snodes!, scond, scond0)
+  llc, prc, λc, μc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, λmμ_prior, 
+                                    ψ_prior, nburn, λc, μc, ψc, pup, prints, 
+                                    sns, snodes!, scond, scond0)
 
   # mcmc
-  r, treev, λc, μc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, λ_prior, μ_prior, 
-    niter, nthin, pup, prints, sns, snodes!, scond, scond0)
+  r, treev, λc, μc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior, 
+                               λmμ_prior, ψ_prior, niter, nthin, pup, prints, 
+                               sns, snodes!, scond, scond0)
 
   pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2))
+                ("mu"          => 2),
+                ("psi"         => 3))
 
   write_ssr(r, pardic, out_file)
 
@@ -160,36 +181,42 @@ end
 
 
 """
-    mcmc_burn_cfbd(Ξ       ::Vector{sTfbd},
-                  idf     ::Array{iBffs,1},
-                  λ_prior  ::NTuple{2,Float64},
-                  μ_prior  ::NTuple{2,Float64},
-                  nburn   ::Int64,
-                  λc      ::Float64,
-                  μc      ::Float64,
-                  pup     ::Array{Int64,1}, 
-                  prints  ::Int64,
-                  sns     ::NTuple{3, BitVector},
-                  snodes! ::Function,
-                  scond   ::Function,
-                  scond0  ::Function)
+    mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
+                   idf      ::Array{iBffs,1},
+                   λ_prior  ::NTuple{2,Float64},
+                   μ_prior  ::NTuple{2,Float64},
+                   λmμ_prior::NTuple{2,Float64},
+                   ψ_prior  ::NTuple{2,Float64},
+                   nburn    ::Int64,
+                   λc       ::Float64,
+                   μc       ::Float64,
+                   ψc      ::Float64,
+                   pup      ::Array{Int64,1}, 
+                   prints   ::Int64,
+                   sns      ::NTuple{3, BitVector},
+                   snodes!  ::Function,
+                   scond    ::Function,
+                   scond0   ::Function)
 
 Adaptive MCMC phase for da chain for constant birth-death using forward
 simulation.
 """
 function mcmc_burn_cfbd(Ξ       ::Vector{sTfbd},
-                       idf     ::Array{iBffs,1},
-                       λ_prior  ::NTuple{2,Float64},
-                       μ_prior  ::NTuple{2,Float64},
-                       nburn   ::Int64,
-                       λc      ::Float64,
-                       μc      ::Float64,
-                       pup     ::Array{Int64,1}, 
-                       prints  ::Int64,
-                       sns     ::NTuple{3, BitVector},
-                       snodes! ::Function,
-                       scond   ::Function,
-                       scond0  ::Function)
+                        idf     ::Array{iBffs,1},
+                        λ_prior  ::NTuple{2,Float64},
+                        μ_prior  ::NTuple{2,Float64},
+                        λmμ_prior::NTuple{2,Float64},
+                        ψ_prior  ::NTuple{2,Float64},
+                        nburn   ::Int64,
+                        λc      ::Float64,
+                        μc      ::Float64,
+                        ψc      ::Float64,
+                        pup     ::Array{Int64,1}, 
+                        prints  ::Int64,
+                        sns     ::NTuple{3, BitVector},
+                        snodes! ::Function,
+                        scond   ::Function,
+                        scond0  ::Function)
 
   el = lastindex(idf)
   L  = treelength(Ξ)     # tree length
@@ -503,7 +530,7 @@ function update_fs!(bix    ::Int64,
   bi = idf[bix]
 
   # forward simulate an internal branch
-  ψp, np, ntp = fsbi(bi, λ, μ, 100)
+  ξp, np, ntp = fsbi(bi, λ, μ, 100)
 
   itb = it(bi) # is it terminal
   ρbi = ρi(bi) # get branch sampling fraction
@@ -513,7 +540,7 @@ function update_fs!(bix    ::Int64,
   if ntp > 0
 
     # current tree
-    ψc  = Ξ[bix]
+    ξc  = Ξ[bix]
 
     # if terminal branch
     if itb
@@ -532,18 +559,18 @@ function update_fs!(bix    ::Int64,
       scn = ((iszero(pa(bi)) && e(bi) > 0.0)) || 
              (isone(pa(bi)) && iszero(e(Ξ[1])))
       if scn
-          llr += scond0(ψp, λ, μ, itb) - scond0(ψc, λ, μ, itb)
+          llr += scond0(ξp, λ, μ, itb) - scond0(ξc, λ, μ, itb)
       end
 
       # update ns, ne & L
-      ns += Float64(nnodesinternal(ψp) - nnodesinternal(ψc))
-      ne += Float64(ntipsextinct(ψp)   - ntipsextinct(ψc))
-      L  += treelength(ψp)             - treelength(ψc)
+      ns += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
+      ne += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
+      L  += treelength(ξp)             - treelength(ξc)
 
       # likelihood ratio
-      llr += llik_cfbd(ψp, λ, μ) - llik_cfbd(ψc, λ, μ)
+      llr += llik_cfbd(ξp, λ, μ) - llik_cfbd(ξc, λ, μ)
 
-      Ξ[bix] = ψp     # set new decoupled tree
+      Ξ[bix] = ξp     # set new decoupled tree
       llc += llr      # set new likelihood
       if scn
         snodes!(Ξ, sns) # set new sns

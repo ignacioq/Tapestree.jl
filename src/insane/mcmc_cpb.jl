@@ -67,8 +67,8 @@ function insane_cpb(tree    ::sT_label,
   end
 
   # make a decoupled tree and fix it
-  Ψ = sTpb[]
-  sTpb!(Ψ, tree)
+  Ξ = sTpb[]
+  sTpb!(Ξ, tree)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -81,11 +81,11 @@ function insane_cpb(tree    ::sT_label,
 
   # adaptive phase
   llc, prc, λc = 
-      mcmc_burn_cpb(Ψ, idf, λ_prior, nburn, λc, pup, prints)
+      mcmc_burn_cpb(Ξ, idf, λ_prior, nburn, λc, pup, prints)
 
   # mcmc
   r, treev, λc = 
-    mcmc_cpb(Ψ, idf, llc, prc, λc, λ_prior, niter, nthin, pup, prints)
+    mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda" => 1))
 
@@ -104,7 +104,7 @@ function insane_cpb(tree    ::sT_label,
     λ_refd = (m^2/v, m/v)
 
     # marginal likelihood
-    pp = ref_posterior(Ψ, idf, λc, λ_prior, λ_refd, 
+    pp = ref_posterior(Ξ, idf, λc, λ_prior, λ_refd, 
       nitpp, nthpp, βs, pup)
 
     # process with reference distribution the posterior
@@ -129,7 +129,7 @@ end
 
 
 """
-    mcmc_burn_cpb(Ψ       ::Vector{sTpb}, 
+    mcmc_burn_cpb(Ξ       ::Vector{sTpb}, 
                   idf     ::Array{iBffs,1},
                   λ_prior  ::NTuple{2,Float64},
                   nburn   ::Int64,
@@ -139,7 +139,7 @@ end
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_burn_cpb(Ψ       ::Vector{sTpb}, 
+function mcmc_burn_cpb(Ξ       ::Vector{sTpb}, 
                        idf     ::Array{iBffs,1},
                        λ_prior  ::NTuple{2,Float64},
                        nburn   ::Int64,
@@ -148,11 +148,11 @@ function mcmc_burn_cpb(Ψ       ::Vector{sTpb},
                        prints  ::Int64)
 
   el = lastindex(idf)
-  L  = treelength(Ψ)     # tree length
+  L  = treelength(Ξ)     # tree length
   ns = Float64(el-1)*0.5 # number of speciation events
 
   #likelihood
-  llc = llik_cpb(Ψ, λc) + prob_ρ(idf)
+  llc = llik_cpb(Ξ, λc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -172,7 +172,7 @@ function mcmc_burn_cpb(Ψ       ::Vector{sTpb},
       else
         bix = ceil(Int64,rand()*el)
 
-        llc, ns, L = update_fs!(bix, Ψ, idf, llc, λc, ns, L)
+        llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
       end
     end
 
@@ -186,7 +186,7 @@ end
 
 
 """
-    mcmc_cpb(Ψ      ::Vector{sTpb},
+    mcmc_cpb(Ξ      ::Vector{sTpb},
              idf    ::Array{iBffs,1},
              llc    ::Float64,
              prc    ::Float64,
@@ -199,7 +199,7 @@ end
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_cpb(Ψ      ::Vector{sTpb},
+function mcmc_cpb(Ξ      ::Vector{sTpb},
                   idf    ::Array{iBffs,1},
                   llc    ::Float64,
                   prc    ::Float64,
@@ -211,8 +211,8 @@ function mcmc_cpb(Ψ      ::Vector{sTpb},
                   prints ::Int64)
 
   el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ψ))
-  L  = treelength(Ψ)
+  ns = Float64(nnodesinternal(Ξ))
+  L  = treelength(Ξ)
 
   # logging
   nlogs = fld(niter,nthin)
@@ -236,7 +236,7 @@ function mcmc_cpb(Ψ      ::Vector{sTpb},
 
         llc, prc, λc = update_λ!(llc, prc, λc, ns, L, λ_prior)
 
-        # llci = llik_cpb(Ψ, λc)
+        # llci = llik_cpb(Ξ, λc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -245,9 +245,9 @@ function mcmc_cpb(Ψ      ::Vector{sTpb},
       else
 
         bix = ceil(Int64,rand()*el)
-        llc, ns, L = update_fs!(bix, Ψ, idf, llc, λc, ns, L)
+        llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
 
-        # llci = llik_cpb(Ψ, λc)
+        # llci = llik_cpb(Ξ, λc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -263,7 +263,7 @@ function mcmc_cpb(Ψ      ::Vector{sTpb},
         r[lit,2] = llc
         r[lit,3] = prc
         r[lit,4] = λc
-        push!(treev, couple(deepcopy(Ψ), idf, 1))
+        push!(treev, couple(deepcopy(Ξ), idf, 1))
       end
       lthin = 0
     end
@@ -278,7 +278,7 @@ end
 
 
 """
-    ref_posterior(Ψ      ::Vector{sTpb},
+    ref_posterior(Ξ      ::Vector{sTpb},
                   idf    ::Array{iBffs,1},
                   llc    ::Float64,
                   prc    ::Float64,
@@ -291,7 +291,7 @@ end
 
 MCMC da chain for constant birth-death using forward simulation.
 """
-function ref_posterior(Ψ      ::Vector{sTpb},
+function ref_posterior(Ξ      ::Vector{sTpb},
                        idf    ::Array{iBffs,1},
                        λc     ::Float64,
                        λ_prior ::NTuple{2,Float64},
@@ -308,10 +308,10 @@ function ref_posterior(Ψ      ::Vector{sTpb},
   pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
 
   el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ψ))
-  L  = treelength(Ψ)
+  ns = Float64(nnodesinternal(Ξ))
+  L  = treelength(Ξ)
 
-  llc = llik_cpb(Ψ, λc) + prob_ρ(idf)
+  llc = llik_cpb(Ξ, λc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
   for k in 2:K
@@ -338,7 +338,7 @@ function ref_posterior(Ψ      ::Vector{sTpb},
         else 
 
           bix = ceil(Int64,rand()*el)
-          llc, ns, L = update_fs!(bix, Ψ, idf, llc, λc, ns, L)
+          llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
 
         end
       end
@@ -363,7 +363,7 @@ end
 
 """
     update_fs!(bix    ::Int64,
-               Ψ      ::Vector{sTpb},
+               Ξ      ::Vector{sTpb},
                idf    ::Vector{iBffs},
                llc    ::Float64,
                λ      ::Float64, 
@@ -374,7 +374,7 @@ end
 Forward simulation proposal function for constant pure-birth.
 """
 function update_fs!(bix    ::Int64,
-                    Ψ      ::Vector{sTpb},
+                    Ξ      ::Vector{sTpb},
                     idf    ::Vector{iBffs},
                     llc    ::Float64,
                     λ      ::Float64, 
@@ -384,7 +384,7 @@ function update_fs!(bix    ::Int64,
   bi = idf[bix]
 
   # forward simulate an internal branch
-  ψp, np, ntp = fsbi(bi, λ, 1_000)
+  ξp, np, ntp = fsbi(bi, λ, 1_000)
 
   itb = it(bi) # is it terminal
   ρbi = ρi(bi) # get branch sampling fraction
@@ -394,7 +394,7 @@ function update_fs!(bix    ::Int64,
   if ntp > 0
 
     # current tree
-    ψc  = Ψ[bix]
+    ξc  = Ξ[bix]
 
     # if terminal branch
     if itb
@@ -410,13 +410,13 @@ function update_fs!(bix    ::Int64,
     if -randexp() < llr + acr
 
       # update ns, ne & L
-      ns += Float64(nnodesinternal(ψp) - nnodesinternal(ψc))
-      L  += treelength(ψp)             - treelength(ψc)
+      ns += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
+      L  += treelength(ξp)             - treelength(ξc)
 
       # likelihood ratio
-      llr += llik_cpb(ψp, λ) - llik_cpb(ψc, λ)
+      llr += llik_cpb(ξp, λ) - llik_cpb(ξc, λ)
 
-      Ψ[bix] = ψp     # set new decoupled tree
+      Ξ[bix] = ξp     # set new decoupled tree
       llc += llr      # set new likelihood
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
@@ -532,7 +532,7 @@ end
 
 
 """
-    update_λ!(psi   ::Vector{sTpb},
+    update_λ!(xi   ::Vector{sTpb},
               llc   ::Float64,
               prc   ::Float64,
               λc    ::Float64,

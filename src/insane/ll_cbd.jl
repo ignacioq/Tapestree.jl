@@ -78,23 +78,23 @@ end
 
 
 """
-    llik_cbd(psi::Vector{sTbd}, 
+    llik_cbd(xi::Vector{sTbd}, 
              λ  ::Float64, 
              μ  ::Float64)
 
 Log-likelihood up to a constant for constant birth-death 
 given a complete `iTree` for decoupled trees.
 """
-function llik_cbd(psi::Vector{sTbd}, 
+function llik_cbd(xi::Vector{sTbd}, 
                   λ  ::Float64, 
                   μ  ::Float64)
 
   ll = 0.0
-  for ψ in psi
-    ll += llik_cbd(ψ, λ, μ)
+  for ξ in xi
+    ll += llik_cbd(ξ, λ, μ)
   end
 
-  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ)
+  ll += Float64(lastindex(xi) - 1)/2.0 * log(λ)
 
   return ll
 end
@@ -118,19 +118,19 @@ function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
     f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
           cond_ll(λ, μ, sns[1])
     # for new proposal
-    f0 = (psi::sTbd, λ::Float64, μ::Float64, ter::Bool) -> 
-            cond_surv_stem_p(psi, λ, μ)
+    f0 = (xi::sTbd, λ::Float64, μ::Float64, ter::Bool) -> 
+            cond_surv_stem_p(xi, λ, μ)
   else
     # for whole likelihood
     f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
           cond_ll(λ, μ, sns[2]) + 
           cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
     # for new proposal
-    f0 = function (psi::sTbd, λ::Float64, μ::Float64, ter::Bool)
+    f0 = function (xi::sTbd, λ::Float64, μ::Float64, ter::Bool)
       if ter
-        cond_surv_stem(  psi, λ, μ)
+        cond_surv_stem(  xi, λ, μ)
       else
-        cond_surv_stem_p(psi, λ, μ)
+        cond_surv_stem_p(xi, λ, μ)
       end
     end
   end

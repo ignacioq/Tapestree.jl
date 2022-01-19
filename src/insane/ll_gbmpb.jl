@@ -39,7 +39,7 @@ end
 
 
 """
-    llik_gbm(psi ::Vector{iTgbmpb},
+    llik_gbm(xi ::Vector{iTgbmpb},
              idf ::Vector{iBffs}, 
              α   ::Float64,
              σλ  ::Float64,
@@ -48,7 +48,7 @@ end
 
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """
-function llik_gbm(psi ::Vector{iTgbmpb},
+function llik_gbm(xi ::Vector{iTgbmpb},
                   idf ::Vector{iBffs}, 
                   α   ::Float64,
                   σλ  ::Float64,
@@ -57,9 +57,9 @@ function llik_gbm(psi ::Vector{iTgbmpb},
 
   @inbounds begin
     ll = 0.0
-    for i in Base.OneTo(lastindex(psi))
+    for i in Base.OneTo(lastindex(xi))
       bi  = idf[i]
-      ll += llik_gbm(psi[i], α, σλ, δt, srδt)
+      ll += llik_gbm(xi[i], α, σλ, δt, srδt)
 
       if !it(bi)
         ll += λt(bi)
@@ -373,12 +373,12 @@ end
 Returns the log-likelihood ratio for according to GBM 
 for a drift `α` proposal.
 """
-function deltaλ(psi::Vector{T}) where {T <: iTgbm}
+function deltaλ(xi::Vector{T}) where {T <: iTgbm}
 
   dλ = 0.0
 
-  for ψi in psi
-    dλ += _deltaλ(ψi)
+  for ξi in xi
+    dλ += _deltaλ(ξi)
   end
 
   return dλ
