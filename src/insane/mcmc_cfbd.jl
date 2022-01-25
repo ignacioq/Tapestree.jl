@@ -1,6 +1,6 @@
 #=
 
-constant fossilized birth-death MCMC using forward simulation
+constant fossilized birth-death MCMC using graft and prune
 
 Jérémy Andréoletti
 Adapted from birth-death MCMC by Ignacio Quintero Mächler
@@ -14,58 +14,84 @@ Created 07 10 2021
 
 
 """
-    insane_cfbd(tree    ::sTfbd, 
-                out_file::String,
-                λprior  ::Float64,
-                μprior  ::Float64,
-                λmμprior  ::Float64,
-                ψprior  ::Float64,
-                niter   ::Int64,
-                nthin   ::Int64,
-                nburn   ::Int64,
-                tune_int::Int64,
-                ϵi      ::Float64,
-                λi      ::Float64,
-                μi      ::Float64,
-                ψi      ::Float64,
-                λtni    ::Float64,
-                μtni    ::Float64,
-                ψtni    ::Float64,
-                obj_ar  ::Float64,
-                pupdp   ::NTuple{4,Float64},
-                prints  ::Int64)
+    insane_cfbd(tree     ::sTf_label, 
+                out_file ::String;
+                λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                λmμ_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                ψ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                niter    ::Int64                 = 1_000,
+                nthin    ::Int64                 = 10,
+                nburn    ::Int64                 = 200,
+                logZ     ::Bool                  = false,
+                nitpp    ::Int64                 = 100, 
+                nthpp    ::Int64                 = 10,
+                K        ::Int64                 = 10,
+                ϵi       ::Float64               = 0.4,
+                λi       ::Float64               = NaN,
+                μi       ::Float64               = NaN,
+                ψi       ::Float64               = NaN,
+                pupdp    ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+                prints   ::Int64                 = 5,
+                tρ       ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for constant pure-birth.
+Run insane for constant fossilized birth-death.
 """
-function insane_cfbd(tree    ::sTfbd, 
-                     out_file::String,
-                     λprior  ::Float64,
-                     μprior  ::Float64,
-                     λmμprior::Float64,
-                     ψprior  ::Float64,
-                     niter   ::Int64,
-                     nthin   ::Int64,
-                     nburn   ::Int64,
-                     tune_int::Int64,
-                     ϵi      ::Float64,
-                     λi      ::Float64,
-                     μi      ::Float64,
-                     ψi      ::Float64,
-                     λtni    ::Float64,
-                     μtni    ::Float64,
-                     ψtni    ::Float64,
-                     obj_ar  ::Float64,
-                     pupdp   ::NTuple{4,Float64},
-                     prints  ::Int64)
+function insane_cfbd(tree     ::sTf_label, 
+                     out_file ::String;
+                     λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                     μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                     λmμ_prior::NTuple{2,Float64}     = (NaN, NaN),
+                     ψ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                     niter    ::Int64                 = 1_000,
+                     nthin    ::Int64                 = 10,
+                     nburn    ::Int64                 = 200,
+                     marginal ::Bool                  = false,
+                     nitpp    ::Int64                 = 100, 
+                     nthpp    ::Int64                 = 10,
+                     K        ::Int64                 = 11,
+                     ϵi       ::Float64               = 0.4,
+                     λi       ::Float64               = NaN,
+                     μi       ::Float64               = NaN,
+                     ψi       ::Float64               = NaN,
+                     pupdp    ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+                     prints   ::Int64                 = 5,
+                     tρ       ::Dict{String, Float64} = Dict("" => 1.0))
 
-  # tree characters
-  th = treeheight(tree)
   n  = ntips(tree)
 
-  fixtree!(tree)
+  # set tips sampling fraction
+  if isone(length(tρ))
+    tl = tiplabels(tree)
+    tρu = tρ[""]
+    tρ = Dict(tl[i] => tρu for i in 1:n)
+  end
 
-  # make objecting scaling function for tuning
-  scalef = makescalef(obj_ar)
+  # make fix tree directory
+  idf = make_idf(tree, tρ)
+
+  # starting parameters
+  if isnan(λi) && isnan(μi) && isnan(ψi)
+    # if only one tip
+    if isone(n)
+      λc = λ_prior
+      μc = isnan(μ_prior[1]) ? λ_prior-λmμ_prior : μ_prior
+    else
+      λc, μc = moments(Float64(n), th, ϵi)
+    end
+    # if no sampled fossil
+    if iszero(nfossils(tree))
+      ψc = ψ_prior
+    else
+      ψc = nfossils(tree)/treelength(tree)
+    end
+  else
+    λc, μc, ψc = λi, μi, ψi
+  end
+
+  # make a decoupled tree and fix it
+  Ξ = sTfbd[]
+  sTfbd!(Ξ, tree)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -74,134 +100,134 @@ function insane_cfbd(tree    ::sTfbd,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  # make fix tree directory
-  idf = iBfffs[]
-  bit = BitArray{1}()
-  makeiBf!(tree, idf, bit)
-
-  if iszero(e(tree))
-     # svf = cond_surv_crown
-     svf = crown_prob_surv_cfbd
-     # svf = cond_nothing
-     cb = findall(x -> isone(sc(x)), idf)
-  else
-     # svf = cond_surv_stem
-     svf = stem_prob_surv_cfbd
-     # svf = cond_nothing
-     cb = findall(x -> iszero(sc(x)), idf)
-  end
+  # conditioning functions
+  sns = (BitVector(), BitVector(), BitVector())
+  snodes! = make_snodes(idf, !iszero(e(tree)), sTfbd)
+  snodes!(Ξ, sns)
+  scond, scond0 = make_scond(idf, !iszero(e(tree)), sTfbd)
 
   @info "Running constant fossilized birth-death with forward simulation"
-  @info "Burnin adaptive phase"
 
   # adaptive phase
-  llc, prc, tree, λc, μc, ψc, λtn, μtn, ψtn = 
-      mcmc_burn_cfbd(tree, n, th, tune_int, λprior, μprior, λmμprior, ψprior,
-      nburn, ϵi, λi, μi, ψi, λtni, μtni, ψtni, scalef, idf, pup, prints, svf, cb)
+  @info "MCMC - Adaptive phase"
+  llc, prc, λc, μc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, λmμ_prior, 
+                                    ψ_prior, nburn, λc, μc, ψc, pup, prints, 
+                                    sns, snodes!, scond, scond0)
 
-  @info "Final MCMC"
   # mcmc
-  R, tree = mcmc_cfbd(tree, llc, prc, λc, μc, ψc, λprior, μprior, λmμprior, 
-                 ψprior, niter, nthin, λtn, μtn, ψtn, idf, pup, prints, svf, cb)
+  @info "MCMC - Sampling iterations"
+  r, treev, λc, μc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior, 
+                               λmμ_prior, ψ_prior, niter, nthin, pup, prints, 
+                               sns, snodes!, scond, scond0)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2),
-                ("psi"         => 3), 
-                ("n_extinct"   => 4),
-                ("tree_length" => 5))
+                ("psi"         => 3))
 
-  println("size(R)=$(size(R))")
+  write_ssr(r, pardic, out_file)
 
-  write_ssr(R, pardic, out_file)
+  if marginal
 
-  return R, tree
+    #= # reference distribution
+    βs = [range(0.0, 1.0, K)...]
+    reverse!(βs)
+
+    # make reference posterior for `λ`
+    @views p = r[:,4]
+    m     = mean(p)
+    v     = var(p)
+    λ_rdist = (m^2/v, m/v)
+
+    # make reference posterior for `μ`
+    @views p = r[:,5]
+    m  = mean(p)
+    sd = std(p)
+
+    if sum(x -> x < 0.2, p) > sum(x -> 0.2 < x < 0.4, p)
+      μ0 = 0.0
+    else
+      μ0 = m
+    end
+
+    σ0 = max(0.5, sd)
+
+    x1 = run_newton(μ0, σ0, m, sd)
+
+    μ_rdist = (x1[1], x1[2])
+
+    # marginal likelihood
+    pp = ref_posterior(Ξ, idf, λc, μc, v, λ_prior, μ_prior, λ_rdist, μ_rdist,
+      nitpp, nthpp, βs, pup, sns, snodes!, scond, scond0)
+
+    # process with reference distribution the posterior
+    p1 = Vector{Float64}(undef, size(r,1))
+    for i in Base.OneTo(size(r,1))
+      p1[i] = r[i,2] + r[i,3] - 
+              logdgamma(r[i,4], λ_rdist[1], λ_rdist[2]) -
+              logdtnorm(r[i,5], μ_rdist[1], μ_rdist[2])
+    end
+    pp[1] = p1
+
+    reverse!(pp)
+    reverse!(βs)
+
+    ml = gss(pp, βs)=#
+  else
+    ml = NaN
+  end
+
+  return r, treev, ml
 end
 
 
 
 
-
 """
-    mcmc_burn_cfbd(tree    ::sTfbd,
-                   n       ::Int64,
-                   th      ::Float64,
-                   tune_int::Int64,
-                   λprior  ::Float64,
-                   μprior  ::Float64,
-                   ψprior  ::Float64,
-                   λmμprior::Float64,
-                   nburn   ::Int64,
-                   ϵi      ::Float64,
-                   λi      ::Float64,
-                   μi      ::Float64,
-                   ψi      ::Float64,
-                   λtni    ::Float64, 
-                   μtni    ::Float64, 
-                   ψtni    ::Float64, 
-                   scalef  ::Function,
-                   idf     ::Array{iBfffs,1},
-                   pup     ::Array{Int64,1}, 
-                   prints  ::Int64,
-                   svf     ::Function)
+    mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
+                   idf      ::Array{iBfffs,1},
+                   λ_prior  ::NTuple{2,Float64},
+                   μ_prior  ::NTuple{2,Float64},
+                   λmμ_prior::NTuple{2,Float64},
+                   ψ_prior  ::NTuple{2,Float64},
+                   nburn    ::Int64,
+                   λc       ::Float64,
+                   μc       ::Float64,
+                   ψc       ::Float64,
+                   pup      ::Array{Int64,1}, 
+                   prints   ::Int64,
+                   sns      ::NTuple{3, BitVector},
+                   snodes!  ::Function,
+                   scond    ::Function,
+                   scond0   ::Function)
 
-Adaptive MCMC phase for da chain for constant fossilized birth-death using forward
-simulation.
+Adaptive MCMC phase for da chain for constant fossilized birth-death using 
+forward simulation.
 """
-function mcmc_burn_cfbd(tree    ::sTfbd,
-                        n       ::Int64,
-                        th      ::Float64,
-                        tune_int::Int64,
-                        λprior  ::Float64,
-                        μprior  ::Float64,
-                        λmμprior::Float64,
-                        ψprior  ::Float64,
-                        nburn   ::Int64,
-                        ϵi      ::Float64,
-                        λi      ::Float64,
-                        μi      ::Float64,
-                        ψi      ::Float64, 
-                        λtni    ::Float64, 
-                        μtni    ::Float64, 
-                        ψtni    ::Float64,
-                        scalef  ::Function,
-                        idf     ::Array{iBfffs,1},
-                        pup     ::Array{Int64,1}, 
-                        prints  ::Int64,
-                        svf     ::Function,
-                        cb      ::Array{Int64,1})
+function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
+                        idf      ::Array{iBfffs,1},
+                        λ_prior  ::NTuple{2,Float64},
+                        μ_prior  ::NTuple{2,Float64},
+                        λmμ_prior::NTuple{2,Float64},
+                        ψ_prior  ::NTuple{2,Float64},
+                        nburn    ::Int64,
+                        λc       ::Float64,
+                        μc       ::Float64,
+                        ψc       ::Float64,
+                        pup      ::Array{Int64,1}, 
+                        prints   ::Int64,
+                        sns      ::NTuple{3, BitVector},
+                        snodes!  ::Function,
+                        scond    ::Function,
+                        scond0   ::Function)
 
-  # initialize acceptance log
-  ltn = 0
-  lup = Float64[0.0,0.0,0.0]
-  lac = Float64[0.0,0.0,0.0]
-  λtn = λtni
-  μtn = μtni
-  ψtn = ψtni
-
-  # starting parameters
-  if isnan(λi) && isnan(μi) && isnan(ψi)
-    # if only one tip
-    if isone(n)
-      λc = λprior
-      μc = isnan(μprior) ? λprior-λmμprior : μprior
-    else
-      λc, μc = moments(Float64(n), th, ϵi)
-    end
-    # if no sampled fossil
-    if iszero(nfossils(tree))
-      ψc = ψprior
-    else
-      ψc = nfossils(tree)/treelength(tree)
-    end
-  else
-    λc, μc, ψc = λi, μi, ψi
-  end
-
-  # length idf
-  lidf = lastindex(idf)
+  el = lastindex(idf)
+  L  = treelength(Ξ)          # tree length
+  nfos = Float64(nfossils(Ξ)) # number of fossilization events
+  ns = (el-nfos-1)/2.0        # number of speciation events
+  ne = 0.0                    # number of extinction events
 
   # add simulated subtrees to all fossil tips
-  for bi in filter(x -> it(x) && ifos(x), idf)
+  #=for bi in filter(x -> it(x) && ifos(x), idf)
     dri = dr(bi)
     ldr = lastindex(dri)
     t0 = sTfbd()
@@ -210,20 +236,24 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
       t0, ret = fsψtip(bi, λc, μc, ψc)
     end
     swapfossil!(tree, t0, dri, ldr, 0)
-  end
+  end=#
 
   # likelihood
-  # llc = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
-  llc = llik_cfbd(tree, λc, μc, ψc) + svf(λc, μc, treeheight(tree))
-  if isnan(λmμprior)
-    prc = logdexp(λc, λprior) + logdexp(μc, μprior) + logdexp(ψc, ψprior)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) + scond(λc, μc, sns) + prob_ρ(idf)
+  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
+        logdgamma(μc, μ_prior[1], μ_prior[2])
+
+  if isnan(λmμ_prior[1])
+    prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
+          logdgamma(μc, μ_prior[1], μ_prior[2]) + 
+          logdgamma(ψc, ψ_prior[1], ψ_prior[2])
   else
-    prc = logdexp(λc, λprior) + logdexp(λc-μc, λmμprior) + logdexp(ψc, ψprior)
+    prc = logdgamma(λc,    λ_prior[1],   λ_prior[2]) + 
+          logdgamma(λc-μc, λmμ_prior[1], λmμ_prior[2]) + 
+          logdgamma(ψc,    ψ_prior[1],   ψ_prior[2])
   end
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
-
-  # i = 0
 
   for it in Base.OneTo(nburn)
 
@@ -232,130 +262,108 @@ function mcmc_burn_cfbd(tree    ::sTfbd,
     for p in pup
 
       if p === 1
-        if isnan(λmμprior)
+        if isnan(λmμ_prior[1])
           # λ proposal
-          llc, prc, λc = λp(tree, llc, prc, λc, lac, λtn, μc, ψc, λprior, svf)
+          llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, ψc, sns, 
+                                   λ_prior, scond)
         else
           # parallel λ and μ proposal
-          llc, prc, λc, μc = λμp(tree, llc, prc, λc, μc, lac, λtn, ψc, λprior, svf)
+          llc, prc, λc, μc = update_λμ!(llc, prc, λc, μc, ns, L, μc, ψc, sns, 
+                                        λ_prior, scond)
         end
-        lup[1] += 1.0
-      end
 
-      if p === 2
-        if isnan(λmμprior)
+      elseif p === 2
+        if isnan(λmμ_prior[1])
           # μ proposal
-          llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, ψc, μprior, svf)
+          llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+                                   μ_prior, scond)
         else
-          # λ-μ proposal
-          llc, prc, μc = λmμp(tree, llc, prc, λc, μc, lac, μtn, ψc, λmμprior, svf)
+          # λ-μ proposal (μ proposal with constant λ)
+          llc, prc, μc = update_λmμ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+                                     λmμ_prior, scond)
         end
-        lup[2] += 1.0
-      end
 
       # ψ proposal
-      if p === 3
-        llc, prc, ψc = ψp(tree, llc, prc, ψc, lac, ψtn, λc, μc, ψprior, svf)
-        lup[3] += 1.0
-      end
+      elseif p === 3
+        llc, prc, ψc = update_ψ!(llc, prc, ψc, nfos, L, ψ_prior)
       
-      # forward simulation proposal
-      if p === 4
-        bix = fIrand(lidf) + 1
-        tree, llc = fsp(tree, idf[bix], llc, λc, μc, ψc, in(bix, cb))
+      # forward simulation proposal proposal
+      else
+        bix = ceil(Int64,rand()*el)
+        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, nfos, 
+                                    L, sns, snodes!, scond0)
       end
-
-      # i += 1
-      # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
-      # if !isapprox(llci, llc, atol = 1e-6)
-      #    @show llci, llc, i, p
-      #    @show idf[bix]
-      #    @show λc, μc, ψc
-      #    return 
-      # end
-    end
-
-    # log tuning parameters
-    ltn += 1
-    if ltn == tune_int
-      λtn = scalef(λtn,lac[1]/lup[1])
-      μtn = scalef(μtn,lac[2]/lup[2])
-      ψtn = scalef(ψtn,lac[3]/lup[3])
-      @show (λtn, μtn, ψtn)
-      lup = Float64[0.0,0.0,0.0]
-      lac = Float64[0.0,0.0,0.0]
-      ltn = 0
     end
 
     next!(pbar)
   end
 
-  return llc, prc, tree, λc, μc, ψc, λtn, μtn, ψtn
+  return llc, prc, λc, μc, ψc
 end
 
 
 
 
-
 """
-    mcmc_cfbd(tree  ::sTfbd,
-              llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              μc    ::Float64,
-              ψc    ::Float64,
-              λprior::Float64,
-              μprior::Float64,
-              λmμprior::Float64,
-              ψprior::Float64,
-              niter ::Int64,
-              nthin ::Int64,
-              λtn   ::Float64,
-              μtn   ::Float64, 
-              ψtn   ::Float64,
-              idf   ::Array{iBfffs,1},
-              pup   ::Array{Int64,1}, 
-              prints::Int64,
-              svf   ::Function)
+    mcmc_cfbd(Ξ      ::Vector{sTfbd},
+             idf     ::Array{iBfffs,1},
+             llc     ::Float64,
+             prc     ::Float64,
+             λc      ::Float64,
+             μc      ::Float64,
+             ψc      ::Float64,
+             λ_prior ::NTuple{2,Float64},
+             μ_prior ::NTuple{2,Float64},
+             λmμ_prior::NTuple{2,Float64},
+             ψ_prior  ::NTuple{2,Float64},
+             niter   ::Int64,
+             nthin   ::Int64,
+             pup     ::Array{Int64,1}, 
+             prints  ::Int64,
+             sns     ::NTuple{3, BitVector},
+             snodes! ::Function,
+             scond   ::Function,
+             scond0  ::Function)
 
 MCMC da chain for constant fossilized birth-death using forward simulation.
 """
-function mcmc_cfbd(tree  ::sTfbd,
-                   llc   ::Float64,
-                   prc   ::Float64,
-                   λc    ::Float64,
-                   μc    ::Float64,
-                   ψc    ::Float64,
-                   λprior::Float64,
-                   μprior::Float64,
-                   λmμprior::Float64,
-                   ψprior::Float64,
-                   niter ::Int64,
-                   nthin ::Int64,
-                   λtn   ::Float64,
-                   μtn   ::Float64, 
-                   ψtn   ::Float64,
-                   idf   ::Array{iBfffs,1},
-                   pup   ::Array{Int64,1}, 
-                   prints::Int64,
-                   svf   ::Function,
-                   cb    ::Array{Int64,1})
+function mcmc_cfbd(Ξ      ::Vector{sTfbd},
+                  idf     ::Array{iBfffs,1},
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  λc      ::Float64,
+                  μc      ::Float64,
+                  ψc      ::Float64,
+                  λ_prior ::NTuple{2,Float64},
+                  μ_prior ::NTuple{2,Float64},
+                  λmμ_prior::NTuple{2,Float64},
+                  ψ_prior  ::NTuple{2,Float64},
+                  niter   ::Int64,
+                  nthin   ::Int64,
+                  pup     ::Array{Int64,1}, 
+                  prints  ::Int64,
+                  sns     ::NTuple{3, BitVector},
+                  snodes! ::Function,
+                  scond   ::Function,
+                  scond0  ::Function)
 
-  lidf = lastindex(idf)
+  el = lastindex(idf)
+  ns = Float64(nnodesbifurcation(Ξ))
+  ne = Float64(ntipsextinct(Ξ))
+  nfos = Float64(nfossils(Ξ))
+  L  = treelength(Ξ)
 
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 8)
+  R = Array{Float64,2}(undef, nlogs, 5)
 
-  # make Ξ vector
-  treev = sTfbd[]
+  # make tree vector
+  treev  = sTfbd[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
-
-  # i = 0
 
   for it in Base.OneTo(niter)
 
@@ -364,45 +372,60 @@ function mcmc_cfbd(tree  ::sTfbd,
     for p in pup
 
       if p === 1
-        if isnan(λmμprior)
+        if isnan(λmμ_prior[1])
           # λ proposal
-          llc, prc, λc = λp(tree, llc, prc, λc, λtn, μc, ψc, λprior, svf)
+          llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, ψc, sns, 
+                                   λ_prior, scond)
         else
           # parallel λ and μ proposal
-          llc, prc, λc, μc = λμp(tree, llc, prc, λc, μc, λtn, ψc, λprior, svf)
+          llc, prc, λc, μc = update_λμ!(llc, prc, λc, μc, ns, L, μc, ψc, sns, 
+                                        λ_prior, scond)
         end
-      end
 
-      if p === 2
-        if isnan(λmμprior)
+        llc, prc, λc = 
+          update_λ!(llc, prc, λc, ns, L, μc, sns, λ_prior, scond)
+
+        # llci = llik_cfbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return 
+        # end
+
+      elseif p === 2
+        if isnan(λmμ_prior[1])
           # μ proposal
-          llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, ψc, μprior, svf)
+          llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+                                   μ_prior, scond)
         else
-          # λ-μ proposal
-          llc, prc, μc = λmμp(tree, llc, prc, λc, μc, μtn, ψc, λmμprior, svf)
+          # λ-μ proposal (μ proposal with constant λ)
+          llc, prc, μc = update_λmμ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+                                     λmμ_prior, scond)
         end
-      end
+
+        # llci = llik_cfbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return 
+        # end
 
       # ψ proposal
-      if p === 3
-        llc, prc, ψc = ψp(tree, llc, prc, ψc, ψtn, λc, μc, ψprior, svf)
+      elseif p === 3
+        llc, prc, ψc = update_ψ!(llc, prc, ψc, nfos, L, ψ_prior)
+      
+      # forward simulation proposal proposal
+      else
+        bix = ceil(Int64,rand()*el)
+        llc, ns, ne, nfos, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, 
+                                          nfos, L, sns, snodes!, scond0)
+
+        # llci = llik_cfbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return 
+        # end
       end
-
-      # forward simulation proposal
-      if p === 4
-        bix = fIrand(lidf) + 1
-        tree, llc = fsp(tree, idf[bix], llc, λc, μc, ψc, in(bix, cb))
-      end
-
-      # i += 1
-      # llci = llik_cfbd(tree, λc, μc, ψc) + svf(tree, λc, μc)
-      # if !isapprox(llci, llc, atol = 1e-6)
-      #    @show llci, llc, i, p
-      #    @show idf[bix]
-      #    return 
-      # end
-
     end
+
     # log parameters
     lthin += 1
     if lthin == nthin
@@ -414,10 +437,8 @@ function mcmc_cfbd(tree  ::sTfbd,
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        R[lit,6] = ψc
-        R[lit,7] = Float64(ntipsextinct(tree))
-        R[lit,8] = treelength(tree)
-        push!(treev, deepcopy(tree))
+        R[lit,5] = ψc
+        push!(treev, couple(deepcopy(Ξ), idf, 1))
       end
       lthin = 0
     end
@@ -425,866 +446,340 @@ function mcmc_cfbd(tree  ::sTfbd,
     next!(pbar)
   end
 
-  return R, treev
+  return R, treev, λc, μc, ψc
 end
 
 
 
 
+#="""
+    ref_posterior(Ξ        ::Vector{sTfbd},
+                  idf      ::Array{iBfffs,1},
+                  λc       ::Float64,
+                  μc       ::Float64,
+                  μtn      ::Float64,
+                  ψtn      ::Float64,
+                  λ_prior  ::NTuple{2,Float64},
+                  μ_prior  ::NTuple{2,Float64},
+                  λmμ_prior::NTuple{2,Float64},
+                  ψ_prior  ::NTuple{2,Float64},
+                  λ_rdist  ::NTuple{2,Float64},
+                  μ_rdist  ::NTuple{2,Float64},
+                  λmμ_rdist::NTuple{2,Float64},
+                  ψ_rdist  ::NTuple{2,Float64},
+                  nitpp    ::Int64,
+                  nthpp    ::Int64,
+                  βs       ::Vector{Float64},
+                  pup      ::Array{Int64,1},
+                  sns      ::NTuple{3, BitVector},
+                  snodes!  ::Function,
+                  scond    ::Function,
+                  scond0   ::Function)
+
+MCMC da chain for constant fossilized birth-death using forward simulation.
 """
-    llik_cfbd_f(tree::sTfbd, λ::Float64, μ::Float64)
+function ref_posterior(Ξ        ::Vector{sTfbd},
+                       idf      ::Array{iBfffs,1},
+                       λc       ::Float64,
+                       μc       ::Float64,
+                       μtn      ::Float64,
+                       ψtn      ::Float64,
+                       λ_prior  ::NTuple{2,Float64},
+                       μ_prior  ::NTuple{2,Float64},
+                       λmμ_prior::NTuple{2,Float64},
+                       ψ_prior  ::NTuple{2,Float64},
+                       λ_rdist  ::NTuple{2,Float64},
+                       μ_rdist  ::NTuple{2,Float64},
+                       λmμ_rdist::NTuple{2,Float64},
+                       ψ_rdist  ::NTuple{2,Float64},
+                       nitpp    ::Int64,
+                       nthpp    ::Int64,
+                       βs       ::Vector{Float64},
+                       pup      ::Array{Int64,1},
+                       sns      ::NTuple{3, BitVector},
+                       snodes!  ::Function,
+                       scond    ::Function,
+                       scond0   ::Function)
 
-Estimate constant fossilized birth-death likelihood for the tree in a branch.
-"""
-function llik_cfbd_f(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
+  K = lastindex(βs)
 
-  ll = - e(tree)*(λ + μ + ψ)
+  # make log-likelihood table per power
+  nlg = fld(nitpp, nthpp)
+  pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
 
-  if issampledancestor(tree)
-    # end of the fixed branch
-    return ll + log(ψ)
-  end
+  el = lastindex(idf)
+  ns = Float64(nnodesinternal(Ξ))
+  ne = Float64(ntipsextinct(Ξ))
+  L  = treelength(Ξ)
 
-  # birth
-  if isdefined(tree, :d1) && isdefined(tree, :d2)
-    ll += log(λ)
-    ifx1 = isfix(tree.d1)
-    if ifx1 && isfix(tree.d2)
-      # end of the fixed branch
-      return ll
-    elseif ifx1
-      ll += llik_cfbd_f(tree.d1::sTfbd, λ, μ, ψ) +
-            llik_cfbd(  tree.d2::sTfbd, λ, μ, ψ)
-    else
-      ll += llik_cfbd(  tree.d1::sTfbd, λ, μ, ψ) + 
-            llik_cfbd_f(tree.d2::sTfbd, λ, μ, ψ)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) + scond(λc, μc, sns) + prob_ρ(idf)
+  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
+        logdgamma(μc, μ_prior[1], μ_prior[2]) + 
+        logdgamma(ψc, ψ_prior[1], ψ_prior[2])
+
+  for k in 2:K
+
+    βi  = βs[k]
+    rdc = logdgamma(λc, λ_rdist[1], λ_rdist[2]) + 
+          logdtnorm(μc, μ_rdist[1], μ_rdist[2]) + 
+          logdgamma(ψc, ψ_rdist[1], ψ_rdist[2])
+
+    # logging
+    lth, lit = 0, 0
+
+    for it in Base.OneTo(nitpp)
+
+      shuffle!(pup)
+
+      for p in pup
+
+        # λ proposal
+        if p === 1
+
+          llc, prc, rdc, λc = 
+            update_λ!(llc, prc, rdc, λc, ns, L, μc, sns, λ_prior, λ_rdist, 
+              scond, βi)
+
+        # forward simulation proposal proposal
+        elseif p === 2 
+
+          llc, prc, rdc, μc = 
+            update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, sns, μ_prior, μ_rdist, 
+              scond, βi)
+
+        else
+
+          bix = ceil(Int64,rand()*el)
+          llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L, sns,
+                             snodes!, scond0)
+
+        end
+      end
+
+      # log log-likelihood
+      lth += 1
+      if lth === nthpp
+        lit += 1
+        pp[k][lit] = llc + prc - rdc
+        lth = 0
+      end
     end
+
+    @info string(βi," power done")
   end
 
-  return ll
-end
+  return pp
+end=#
 
 
 
 
 """
-    br_ll_cfbd(tree::sTfbd,
-               λ   ::Float64, 
-               μ   ::Float64,
-               ψ   ::Float64,
-               dri ::BitArray{1}, 
-               ldr ::Int64,
-               ix  ::Int64)
-
-Returns constant fossilized birth-death likelihood for whole branch at `dri`.
-"""
-function br_ll_cfbd(tree::sTfbd,
-                    λ   ::Float64, 
-                    μ   ::Float64,
-                    ψ   ::Float64,
-                    dri ::BitArray{1}, 
-                    ldr ::Int64,
-                    ix  ::Int64)
-  if ix === ldr
-    return llik_cfbd_f(tree, λ, μ, ψ)
-  end
-  
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-  
-  # sampled ancestors
-  if !defd1 ⊻ !defd2 
-    ix += 1
-    return br_ll_cfbd(dri[ix] ? tree.d1 : tree.d2, λ, μ, ψ, dri, ldr, ix)
-  end
-
-  # birth
-  ifx1 = isfix(tree.d1::sTfbd)
-  if ifx1 && isfix(tree.d2::sTfbd)
-    ix += 1
-    return br_ll_cfbd(dri[ix] ? tree.d1 : tree.d2, λ, μ, ψ, dri, ldr, ix)
-  else
-    return br_ll_cfbd(ifx1 ? tree.d1 : tree.d2, λ, μ, ψ, dri, ldr, ix)
-  end
-end
-
-
-
-
-"""
-    tipψ_ll_cfbd(tree::sTfbd,
-                 λ   ::Float64, 
-                 μ   ::Float64,
-                 ψ   ::Float64,
-                 dri ::BitArray{1}, 
-                 ldr ::Int64,
-                 ix  ::Int64)
-
-Returns constant fossilized birth-death likelihood for augmented subtree 
-following the observed fossil tip at `dri`.
-"""
-function tipψ_ll_cfbd(tree::sTfbd,
-                      λ   ::Float64, 
-                      μ   ::Float64,
-                      ψ   ::Float64,
-                      dri ::BitArray{1}, 
-                      ldr ::Int64,
-                      ix  ::Int64)
-  # branch reached
-  if ix === ldr
-    # end of branch reached
-    if isfossil(tree)
-      return llik_cfbd(tree.d1, λ, μ, ψ)
-    else
-      return tipψ_ll_cfbd(isfix(tree.d1::sTfbd) ? tree.d1 : tree.d2, λ, μ, ψ, 
-                          dri, ldr, ix)
-    end
-  end
-  
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-  
-  # sampled ancestors
-  if !defd1 ⊻ !defd2 
-    ix += 1
-    return tipψ_ll_cfbd(dri[ix] ? tree.d1 : tree.d2, λ, μ, ψ, dri, ldr, ix)
-  end
-
-  # birth
-  ifx1 = isfix(tree.d1::sTfbd)
-  if ifx1 && isfix(tree.d2::sTfbd)
-    ix += 1
-    return tipψ_ll_cfbd(dri[ix] ? tree.d1 : tree.d2, λ, μ, ψ, dri, ldr, ix)
-  else
-    return tipψ_ll_cfbd(ifx1 ? tree.d1 : tree.d2, λ, μ, ψ, dri, ldr, ix)
-  end
-end
-
-
-
-
-"""
-    fsp(tree::sTfbd,
-        bi  ::iBfffs,
-        llc ::Float64,
-        λ   ::Float64, 
-        μ   ::Float64,
-        ψ   ::Float64,
-        scb ::Bool)
+    update_fs!(bix  ::Int64,
+               Ξ    ::Vector{sTfbd},
+               idf  ::Vector{iBfffs},
+               llc  ::Float64,
+               λ    ::Float64, 
+               μ    ::Float64,
+               ψ    ::Float64,
+               ns   ::Float64,
+               ne   ::Float64,
+               nfos ::Float64,
+               L    ::Float64,
+               scond::Function,
+               pow  ::Float64)
 
 Forward simulation proposal function for constant fossilized birth-death.
 """
-function fsp(tree::sTfbd,
-             bi  ::iBfffs,
-             llc ::Float64,
-             λ   ::Float64, 
-             μ   ::Float64,
-             ψ   ::Float64,
-             scb ::Bool)
+function update_fs!(bix    ::Int64,
+                    Ξ      ::Vector{sTfbd},
+                    idf    ::Vector{iBfffs},
+                    llc    ::Float64,
+                    λ      ::Float64, 
+                    μ      ::Float64,
+                    ψ      ::Float64,
+                    ns     ::Float64,
+                    ne     ::Float64,
+                    nfos   ::Float64,
+                    L      ::Float64,
+                    sns    ::NTuple{3, BitVector},
+                    snodes!::Function,
+                    scond0 ::Function)
+
+  bi = idf[bix]
 
   # forward simulate an internal branch
-  t0, ret = fsbi(bi, λ, μ, ψ)
-
-  # if retain simulation
-  if ret
-
-    dri = dr(bi)
-    ldr = lastindex(dri)
-    itb = it(bi)
-    iψb = ifos(bi)
-
-    # if speciation (if branch is internal)
-    iλ = itb||iψb ? 0.0 : log(λ)
-    # if fossil sampling (if branch is internal)
-    iψ = iψb ? log(ψ) : 0.0
-
-    ## likelihood ratio
-    # if conditioning branch
-    if scb 
-      llr = llik_cfbd(t0,    λ, μ, ψ) + iλ + iψ    -
-            br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0)
-
-      treep = deepcopy(tree)
-      treep = swapbranch!(treep, t0, dri, ldr, itb, iψb, 0)
-      
-      if isone(sc(bi))
-        # if one of crown branches
-        llr += cond_surv_stem(findsubtree(treep, dri), λ, μ) - 
-               cond_surv_stem(findsubtree(tree, dri), λ, μ)
-      else
-        # if stem branch
-        llr += cond_surv_stem(treep, λ, μ)            -
-               cond_surv_stem(tree, λ, μ)
-      end
-      return treep, llc + llr
-    else
-      llr = llik_cfbd(t0, λ, μ, ψ) + iλ + iψ - 
-            br_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0)
-    end
-
-    llc += llr
-
-    # swap branch
-    tree = swapbranch!(tree, t0, dri, ldr, itb, iψb, 0)
-  end
-
+  ξp, np, ntp = fsbi(bi, λ, μ, ψ, 100)
   
-  # if branch ending with fossil tip: proposal for following the simulation
-  if it(bi) && ifos(bi)
-    
-    # forward simulate the prolongation of a fossil tip
-    t0, ret = fsψtip(bi, λ, μ, ψ)
+  # retained conditional on survival
+  if ntp > 0
 
-    # if retain simulation
-    if ret
-      dri = dr(bi)
-      ldr = lastindex(dri)
-      llr = llik_cfbd(t0, λ, μ, ψ) - tipψ_ll_cfbd(tree, λ, μ, ψ, dri, ldr, 0)
+    itb = it(bi)   # is it terminal
+    iψb = ifos(bi) # is it a fossil
+    ρbi = ρi(bi)   # get branch sampling fraction
+    nc  = ni(bi)   # current ni
+    ntc = nt(bi)   # current nt
+
+    # current tree
+    ξc  = Ξ[bix]
+
+    # if terminal branch
+    if itb
+      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr = 0.0
+    else
+      np  -= 1
+      llr = log((1.0 - ρbi)^(np - nc))
+      acr = log(Float64(ntp)/Float64(ntc))
+    end
+
+    # MH ratio
+    if -randexp() < llr + acr
+
+      # if survival conditioned
+      scn = (iszero(pa(bi)) && e(bi)>0.0) || (isone(pa(bi)) && iszero(e(Ξ[1])))
+      if scn
+          llr += scond0(ξp, λ, μ, itb) - scond0(ξc, λ, μ, itb)
+      end
+
+      # update ns, ne, nfos & L
+      ns +=   Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
+      ne +=   Float64(ntipsextinct(ξp)      - ntipsextinct(ξc))
+      nfos += Float64(nfossils(ξp)          - nfossils(ξc))
+      L  +=   treelength(ξp)                - treelength(ξc)
+
+      # likelihood ratio
+      llr += llik_cfbd(ξp, λ, μ, ψ) - llik_cfbd(ξc, λ, μ, ψ)
+
+      Ξ[bix] = ξp     # set new decoupled tree
+      llc += llr      # set new likelihood
       
-      ## likelihood ratio
-      # if conditioning branch
-      if scb 
-        treep = deepcopy(tree)
-        swapfossil!(treep, t0, dri, ldr, 0)
-        
-        if isone(sc(bi))
-          # if one of crown branches
-          llr += cond_surv_stem(findsubtree(treep, dri), λ, μ) - 
-                 cond_surv_stem(findsubtree(tree, dri), λ, μ)
-        else
-          # if stem branch
-          llr += cond_surv_stem(treep, λ, μ)            -
-                 cond_surv_stem(tree, λ, μ)
-        end
-        return treep, llc + llr
+      if scn
+        snodes!(Ξ, sns) # set new sns
       end
       
-      # swap fossil tip
-      swapfossil!(tree, t0, dri, ldr, 0)
-
-      llc += llr
+      setni!(bi, np)  # set new ni
+      setnt!(bi, ntp) # set new nt
     end
   end
 
-  return tree, llc
+  return llc, ns, ne, nfos, L
 end
 
 
 
 
+
 """
-    fsbi(bi::iBfffs, λ::Float64, μ::Float64, ntry::Int64)
+    fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
 
 Forward simulation for branch `bi`
 """
-function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64)
-
-  # retain?
-  ret = true
+function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
 
   # times
   tfb = tf(bi)
 
-  # forward simulation during branch length
-  t0 = sim_cfbd(ti(bi) - tfb, λ, μ, ψ)
-  na = ntipsalive(t0)
+  ext = 0
+  # condition on non-extinction (helps in mixing)
+  while ext < ntry 
 
-  if iszero(na) || nfossils(t0)>0
-    ret = false
-  elseif isone(na)
-    fixalive!(t0)
-  elseif na > 1
-    if it(bi) && !ifos(bi)   # TODO : NOT FOR PAST SAMPLED TIPS
-      ret = false
-    else
-      # fix random tip
-      _fixrtip!(t0, na)
+    # forward simulation during branch length
+    t0, na, nfos = sim_cfbd(e(bi), λ, μ, ψ, 0)
 
-      for j in Base.OneTo(na - 1)
-        for i in Base.OneTo(2)
-          st0 = sim_cfbd(tfb, λ, μ, ψ)
-          # if there is any sampled fossil
-          if nfossils(st0)>0
-            ret = false
-            break
-          end
-          # if goes extinct before the present
-          if iszero(ntipsalive(st0))
-            #graft to tip
-            addtotip(t0, st0, false)
-            break
-          end
-          if i === 2
-            ret = false
+    if iszero(nfos) # Exclude if any fossil is sampled
+      nat = na
+      if isone(na)
+        fixalive!(t0)
+
+        return t0, na, nat
+      elseif na > 1
+        # fix random tip
+        fixrtip!(t0)
+
+        if !it(bi)
+          # add tips until the present
+          tx, na, nfos = tip_sims!(t0, tfb, λ, μ, ψ, na)
+          if !iszero(nfos)
+            ext += 1
+            continue
           end
         end
-        !ret && break
+
+        return t0, na, nat
       end
     end
+
+    ext += 1
   end
 
-  return t0, ret
+  return sTfbd(), 0, 0
 end
 
 
 
 
 """
-    fsψtip(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64)
+    tip_sims!(tree::sTfbd, t::Float64, λ::Float64, 
+              μ::Float64, ψ::Float64, na::Int64)
 
-Forward simulation for a fossil tip at branch `bi`
+Continue simulation until time `t` for unfixed tips in `tree`. 
 """
-function fsψtip(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64)
+function tip_sims!(tree::sTfbd, t::Float64, λ::Float64, 
+                   μ::Float64, ψ::Float64, na::Int64)
 
-  # retain?
-  ret = true
+  if istip(tree) 
+    if !isfix(tree) && isalive(tree)
 
-  # forward simulation during branch length
-  t0 = sim_cfbd(tf(bi), λ, μ, ψ)
+      # simulate
+      stree, na, nfos = sim_cfbd(t, λ, μ, ψ, na-1)
 
-  # do not retain if any extant or fossil sampling
-  if survives(t0) || nfossils(t0)>0
-    ret = false
-  end
-
-  return t0, ret
-end
-
-
-
-
-"""
-    addtotip(tree::sTfbd, stree::sTfbd, ix::Bool) 
-
-Add `stree` to tip in `tree` given by `it` in `tree.d1` order.
-"""
-function addtotip(tree::sTfbd, stree::sTfbd, ix::Bool) 
-
-  if istip(tree)
-    if isalive(tree) && !isfix(tree)
-
-      sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, isextinct(stree))
-
-      if isdefined(stree, :d1)
-        tree.d1 = stree.d1
-        tree.d2 = stree.d2
+      if iszero(nfos)
+        # merge to current tip
+        sete!(tree, e(tree) + e(stree))
+        setproperty!(tree, :iμ, isextinct(stree))
+        if isdefined(stree, :d1)
+          tree.d1 = stree.d1
+          tree.d2 = stree.d2
+        end
       end
-
-      ix = true
     end
-
-    return ix 
+  else
+    tree.d1, na, nfos = tip_sims!(tree.d1, t, λ, μ, na)
+    if !iszero(nfos) return tree, na, nfos end
+    tree.d2, na, nfos = tip_sims!(tree.d2, t, λ, μ, na)
   end
 
-  if !ix
-    ix = addtotip(tree.d1::sTfbd, stree, ix)
-  end
-  if !ix
-    ix = addtotip(tree.d2::sTfbd, stree, ix)
-  end
-
-  return ix
+  return tree, na, nfos
 end
 
 
 
 
 """
-    λp(tree  ::sTfbd,
-       llc   ::Float64,
-       prc   ::Float64,
-       λc    ::Float64,
-       lac   ::Array{Float64,1},
-       λtn   ::Float64,
-       μc    ::Float64,
-       ψc    ::Float64,
-       λprior::Float64,
-       svf   ::Function)
+    update_ψ!(llc    ::Float64,
+              prc    ::Float64,
+              ψc     ::Float64,
+              nfos   ::Float64,
+              L      ::Float64,
+              ψ_prior::NTuple{2,Float64})
 
-`λ` proposal function for constant fossilized birth-death in adaptive phase.
+Gibbs sampling of `ψ` for constant fossilized birth-death.
 """
-function λp(tree  ::sTfbd,
-            llc   ::Float64,
-            prc   ::Float64,
-            λc    ::Float64,
-            lac   ::Array{Float64,1},
-            λtn   ::Float64,
-            μc    ::Float64,
-            ψc    ::Float64,
-            λprior::Float64,
-            svf   ::Function)
+function update_ψ!(llc    ::Float64,
+                   prc    ::Float64,
+                   ψc     ::Float64,
+                   nfos   ::Float64,
+                   L      ::Float64,
+                   ψ_prior::NTuple{2,Float64})
 
-    λp = mulupt(λc, λtn)::Float64
+  ψp  = randgamma(ψ_prior[1] + nfos, ψ_prior[2] + L)
 
-    # llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
-    llp = llik_cfbd(tree, λp, μc, ψc) + svf(λc, μc, treeheight(tree))
+  llc += nfos * log(ψp/ψc) + L * (ψc - ψp)
+  prc += llrdgamma(ψp, ψc, ψ_prior[1], ψ_prior[2])
+  ψc   = ψp
 
-    prr = llrdexp_x(λp, λc, λprior)
-
-    #println("λc=$(round(λc; digits=2)), λtn=$(round(λtn; digits=2)), λp=$(round(λp; digits=2)), ll=$(round(llp - llc + prr + log(λp/λc)))")
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc     = llp::Float64
-      prc    += prr::Float64
-      λc      = λp::Float64
-      lac[1] += 1.0
-    end
-
-    return llc, prc, λc
+  return llc, prc, ψc 
 end
-
-
-
-
-"""
-    λp(tree  ::sTfbd,
-       llc   ::Float64,
-       prc   ::Float64,
-       λc    ::Float64,
-       λtn   ::Float64,
-       μc    ::Float64,
-       ψc    ::Float64,
-       λprior::Float64,
-       svf   ::Function)
-
-`λ` proposal function for constant fossilized birth-death.
-"""
-function λp(tree  ::sTfbd,
-            llc   ::Float64,
-            prc   ::Float64,
-            λc    ::Float64,
-            λtn   ::Float64,
-            μc    ::Float64,
-            ψc    ::Float64,
-            λprior::Float64,
-            svf   ::Function)
-  
-    λp = mulupt(λc, rand() < 0.3 ? λtn : 4.0*λtn)::Float64
-
-    # llp = llik_cfbd(tree, λp, μc, ψc) + svf(tree, λp, μc)
-    llp = llik_cfbd(tree, λp, μc, ψc) + svf(λc, μc, treeheight(tree))
-
-    prr = llrdexp_x(λp, λc, λprior)
-
-    #println("λc=$(round(λc; digits=2)), λtn=$(round(λtn; digits=2)), λp=$(round(λp; digits=2)), ll=$(round(llp - llc + prr + log(λp/λc)))")
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc     = llp::Float64
-      prc    += prr::Float64
-      λc      = λp::Float64
-    end
-
-    return llc, prc, λc 
-end
-
-
-
-
-"""
-    μp(tree  ::sTfbd,
-       llc   ::Float64,
-       prc   ::Float64,
-       μc    ::Float64,
-       lac   ::Array{Float64,1},
-       μtn   ::Float64,
-       λc    ::Float64,
-       ψc    ::Float64,
-       μprior::Float64,
-       svf   ::Function)
-
-`μ` proposal function for constant fossilized birth-death in adaptive phase.
-"""
-function μp(tree  ::sTfbd,
-            llc   ::Float64,
-            prc   ::Float64,
-            μc    ::Float64,
-            lac   ::Array{Float64,1},
-            μtn   ::Float64,
-            λc    ::Float64,
-            ψc    ::Float64,
-            μprior::Float64,
-            svf   ::Function)
-
-    μp = mulupt(μc, μtn)::Float64
-
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λc, μp)
-    sc  = svf(λc, μp, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
-
-    prr = llrdexp_x(μp, μc, μprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-      lac[2] += 1.0
-    end
-
-    return llc, prc, μc 
-end
-
-
-
-
-"""
-    μp(tree  ::sTfbd,
-       llc   ::Float64,
-       prc   ::Float64,
-       μc    ::Float64,
-       μtn   ::Float64,
-       λc    ::Float64,
-       ψc    ::Float64,
-       μprior::Float64,
-       svf   ::Function)
-
-`μ` proposal function for constant fossilized birth-death.
-"""
-function μp(tree  ::sTfbd,
-            llc   ::Float64,
-            prc   ::Float64,
-            μc    ::Float64,
-            μtn   ::Float64,
-            λc    ::Float64,
-            ψc    ::Float64,
-            μprior::Float64,
-            svf   ::Function)
-
-    μp = mulupt(μc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
-
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λc, μp)
-    sc  = svf(λc, μp, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
-
-    prr = llrdexp_x(μp, μc, μprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-    end
-
-    return llc, prc, μc 
-end
-
-
-
-
-"""
-    λμp(tree  ::sTfbd,
-        llc   ::Float64,
-        prc   ::Float64,
-        λc    ::Float64,
-        μc    ::Float64,
-        lac   ::Array{Float64,1},
-        λtn   ::Float64,
-        ψc    ::Float64,
-        λprior::Float64,
-        svf   ::Function)
-
-Parallel `λ` and `μ` proposal function for constant fossilized birth-death in 
-adaptive phase.
-"""
-function λμp(tree  ::sTfbd,
-             llc   ::Float64,
-             prc   ::Float64,
-             λc    ::Float64,
-             μc    ::Float64,
-             lac   ::Array{Float64,1},
-             λtn   ::Float64,
-             ψc    ::Float64,
-             λprior::Float64,
-             svf   ::Function)
-
-    λp = mulupt(λc, λtn)::Float64
-    μp = mulupt(μc, λtn)::Float64
-    
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λp, μp)
-    sc  = svf(λp, μp, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λp, μp, ψc) + sc
-
-    prr = llrdexp_x(λp, λc, λprior)
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-      λc   = λp::Float64
-      lac[1] += 1.0
-    end
-
-    return llc, prc, λc, μc 
-end
-
-
-
-
-"""
-    λμp(tree  ::sTfbd,
-        llc   ::Float64,
-        prc   ::Float64,
-        λc    ::Float64,
-        μc    ::Float64,
-        λtn   ::Float64,
-        ψc    ::Float64,
-        λprior::Float64,
-        svf   ::Function)
-
-Parallel `λ` and `μ` proposal function for constant fossilized birth-death.
-"""
-function λμp(tree  ::sTfbd,
-             llc   ::Float64,
-             prc   ::Float64,
-             λc    ::Float64,
-             μc    ::Float64,
-             λtn   ::Float64,
-             ψc    ::Float64,
-             λprior::Float64,
-             svf   ::Function)
-  
-    tn = rand() < 0.3 ? λtn : 4.0*λtn
-    μp = mulupt(μc, tn)::Float64
-    λp = mulupt(λc, tn)::Float64
-
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λp, μp)
-    sc  = svf(λp, μp, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λp, μp, ψc) + sc
-
-    prr = llrdexp_x(λp, λc, λprior)
-
-    if -randexp() < (llp - llc + prr + log(λp/λc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-      λc   = λp::Float64
-    end
-
-    return llc, prc, λc, μc
-end
-
-
-
-
-"""
-    λmμp(tree  ::sTfbd,
-         llc   ::Float64,
-         prc   ::Float64,
-         λc    ::Float64,
-         μc    ::Float64,
-         lac   ::Array{Float64,1},
-         μtn   ::Float64,
-         ψc    ::Float64,
-         λmμprior::Float64,
-         svf   ::Function)
-
-`λ-μ` proposal function for constant fossilized birth-death in adaptive phase.
-"""
-function λmμp(tree  ::sTfbd,
-              llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              μc    ::Float64,
-              lac   ::Array{Float64,1},
-              μtn   ::Float64,
-              ψc    ::Float64,
-              λmμprior::Float64,
-              svf   ::Function)
-
-    λmμc = λc-μc
-    λmμp = addupt(λmμc, μtn)::Float64
-    μp = λc-λmμp
-
-    μp>0 || return llc, prc, μc
-
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λc, μp)
-    sc  = svf(λc, μp, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
-
-    prr = llrdexp_x(λc-μp, λc-μc, λmμprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-      lac[2] += 1.0
-    end
-
-    return llc, prc, λc, μc 
-end
-
-
-
-
-"""
-    λmμp(tree  ::sTfbd,
-         llc   ::Float64,
-         prc   ::Float64,
-         λc    ::Float64,
-         μc    ::Float64,
-         μtn   ::Float64,
-         ψc    ::Float64,
-         λmμprior::Float64,
-         svf   ::Function)
-
-`λ-μ` proposal function for constant fossilized birth-death.
-"""
-function λmμp(tree  ::sTfbd,
-              llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              μc    ::Float64,
-              μtn   ::Float64,
-              ψc    ::Float64,
-              λmμprior::Float64,
-              svf   ::Function)
-
-    λmμc = λc-μc
-    λmμp = addupt(λmμc, rand() < 0.3 ? μtn : 4.0*μtn)::Float64
-    μp = λc-λmμp
-
-    μp>0 || return llc, prc, μc
-
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λc, μp)
-    sc  = svf(λc, μp, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μp, ψc) + sc
-
-    prr = llrdexp_x(λc-μp, λc-μc, λmμprior)
-
-    if -randexp() < (llp - llc + prr + log(μp/μc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      μc   = μp::Float64
-    end
-
-    return llc, prc, μc 
-end
-
-
-
-
-"""
-    ψp(tree  ::sTfbd,
-       llc   ::Float64,
-       prc   ::Float64,
-       ψc    ::Float64,
-       lac   ::Array{Float64,1},
-       ψtn   ::Float64,
-       λc    ::Float64,
-       μc    ::Float64,
-       ψprior::Float64,
-       svf   ::Function)
-
-`ψ` proposal function for constant fossilized birth-death in adaptive phase.
-"""
-function ψp(tree  ::sTfbd,
-            llc   ::Float64,
-            prc   ::Float64,
-            ψc    ::Float64,
-            lac   ::Array{Float64,1},
-            ψtn   ::Float64,
-            λc    ::Float64,
-            μc    ::Float64,
-            ψprior::Float64,
-            svf   ::Function)
-
-    ψp = mulupt(ψc, ψtn)::Float64
-
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λc, μc)
-    sc  = svf(λc, μc, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μc, ψp) + sc
-
-    prr = llrdexp_x(ψp, ψc, ψprior)
-
-    if -randexp() < (llp - llc + prr + log(ψp/ψc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      ψc   = ψp::Float64
-      lac[3] += 1.0
-    end
-
-    return llc, prc, ψc 
-end
-
-
-
-
-"""
-    ψp(tree  ::sTfbd,
-       llc   ::Float64,
-       prc   ::Float64,
-       ψc    ::Float64,
-       ψtn   ::Float64,
-       λc    ::Float64,
-       μc    ::Float64,
-       ψprior::Float64,
-       svf   ::Function)
-
-`ψ` proposal function for constant fossilized birth-death.
-"""
-function ψp(tree  ::sTfbd,
-            llc   ::Float64,
-            prc   ::Float64,
-            ψc    ::Float64,
-            ψtn   ::Float64,
-            λc    ::Float64,
-            μc    ::Float64,
-            ψprior::Float64,
-            svf   ::Function)
-
-    ψp = mulupt(ψc, rand() < 0.3 ? ψtn : 4.0*ψtn)::Float64
-
-    # one could make a ratio likelihood function
-    # sc  = svf(tree, λc, μc)
-    sc  = svf(λc, μc, treeheight(tree))
-    llp = isinf(sc) ? -Inf : llik_cfbd(tree, λc, μc, ψp) + sc
-
-    prr = llrdexp_x(ψp, ψc, ψprior)
-
-    if -randexp() < (llp - llc + prr + log(ψp/ψc))
-      llc  = llp::Float64
-      prc += prr::Float64
-      ψc   = ψp::Float64
-    end
-
-    return llc, prc, ψc 
-end
-
-
-
-
-"""
-    λμψprop()
-
-Generate proportional proposals for `λ`, `μ` and `ψ`
-using random samples from **LogNormal** distributions. 
-"""
-function λμψprop() 
-
-  lg = lnr()
-
-  return lg*exp(randn()*0.3 - 0.044),
-         lg*exp(randn()*0.3 - 0.044),
-         lg*exp(randn()*0.3 - 0.044)
-end
-
-
-
-
-"""
-    lnr()
-
-**LogNormal** random samples with median of `1`. 
-"""
-lnr() = @fastmath exp(randn())
-
-
-
 
 

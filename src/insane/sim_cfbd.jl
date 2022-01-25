@@ -88,6 +88,45 @@ end
 
 
 """
+    sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64, na::Int64)
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with speciation 
+rate `λ` and extinction rate `μ`. `na` initializes the number of alived tips.
+"""
+function sim_cfbd(t::Float64, 
+                  λ::Float64, 
+                  μ::Float64, 
+                  ψ::Float64,
+                  na::Int64)
+
+  tw = cfbd_wait(λ, μ, ψ)
+
+  if tw > t
+    na += 1
+    return sTfbd(t), na
+  end
+
+  if λevent(λ, μ, ψ)
+    # speciation
+    d1, na = sim_cfbd(t - tw, λ, μ, ψ, na)
+    d2, na = sim_cfbd(t - tw, λ, μ, ψ, na)
+    return sTfbd(d1, d2, tw), na
+
+  elseif μevent(μ, ψ)
+    # extinction
+    return sTfbd(tw, true), na
+
+  else
+    # fossil sampling
+    d1, na = sim_cfbd(t - tw, λ, μ, ψ, na)
+    return sTfbd(d1, tw, false, true, false), na
+  end
+end
+
+
+
+
+"""
    sim_cfbd_b(n::Int64, λ::Float64, μ::Float64, ψ::Float64)
 
 Simulate constant fossilized birth-death in backward time.
