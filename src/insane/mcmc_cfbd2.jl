@@ -221,9 +221,10 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
                         scond0   ::Function)
 
   el = lastindex(idf)
-  L  = treelength(Ξ)     # tree length
-  ns = Float64(el-1)/2.0 # number of speciation events
-  ne = 0.0               # number of extinction events
+  L  = treelength(Ξ)          # tree length
+  nfos = Float64(nfossils(Ξ)) # number of fossilization events
+  ns = (el-nfos-1)/2.0        # number of speciation events
+  ne = 0.0                    # number of extinction events
 
   # add simulated subtrees to all fossil tips
   #=for bi in filter(x -> it(x) && ifos(x), idf)
@@ -242,14 +243,14 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
-  if isnan(λmμprior[1])
+  if isnan(λmμ_prior[1])
     prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
           logdgamma(μc, μ_prior[1], μ_prior[2]) + 
-          logdgamma(ψc, ψprior[1],  ψprior[2])
+          logdgamma(ψc, ψ_prior[1], ψ_prior[2])
   else
-    prc = logdgamma(λc,    λ_prior[1],  λ_prior[2]) + 
-          logdgamma(λc-μc, λmμprior[1], λmμprior[2]) + 
-          logdgamma(ψc,    ψprior[1],   ψprior[2])
+    prc = logdgamma(λc,    λ_prior[1],   λ_prior[2]) + 
+          logdgamma(λc-μc, λmμ_prior[1], λmμ_prior[2]) + 
+          logdgamma(ψc,    ψ_prior[1],   ψ_prior[2])
   end
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -261,7 +262,7 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
     for p in pup
 
       if p === 1
-        if isnan(λmμprior[1])
+        if isnan(λmμ_prior[1])
           # λ proposal
           llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, ψc, sns, 
                                    λ_prior, scond)
@@ -272,7 +273,7 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
         end
 
       elseif p === 2
-        if isnan(λmμprior[1])
+        if isnan(λmμ_prior[1])
           # μ proposal
           llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, ψc, sns, 
                                    μ_prior, scond)
@@ -284,14 +285,13 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
 
       # ψ proposal
       elseif p === 3
-        llc, prc, ψc = update_μ!(llc, prc, ψc, ne, L, λc, μc, sns, 
-                                 ψ_prior, scond)
+        llc, prc, ψc = update_ψ!(llc, prc, ψc, nfos, L, ψ_prior)
       
       # forward simulation proposal proposal
       else
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, L, 
-                                    sns, snodes!, scond0)
+        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, nfos, 
+                                    L, sns, snodes!, scond0)
       end
     end
 
@@ -314,8 +314,8 @@ end
              ψc      ::Float64,
              λ_prior ::NTuple{2,Float64},
              μ_prior ::NTuple{2,Float64},
-             λmμprior::NTuple{2,Float64},
-             ψprior  ::NTuple{2,Float64},
+             λmμ_prior::NTuple{2,Float64},
+             ψ_prior  ::NTuple{2,Float64},
              niter   ::Int64,
              nthin   ::Int64,
              pup     ::Array{Int64,1}, 
@@ -336,8 +336,8 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                   ψc      ::Float64,
                   λ_prior ::NTuple{2,Float64},
                   μ_prior ::NTuple{2,Float64},
-                  λmμprior::NTuple{2,Float64},
-                  ψprior  ::NTuple{2,Float64},
+                  λmμ_prior::NTuple{2,Float64},
+                  ψ_prior  ::NTuple{2,Float64},
                   niter   ::Int64,
                   nthin   ::Int64,
                   pup     ::Array{Int64,1}, 
@@ -348,8 +348,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                   scond0  ::Function)
 
   el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ξ))
+  ns = Float64(nnodesbifurcation(Ξ))
   ne = Float64(ntipsextinct(Ξ))
+  nfos = Float64(nfossils(Ξ))
   L  = treelength(Ξ)
 
   # logging
@@ -371,7 +372,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
     for p in pup
 
       if p === 1
-        if isnan(λmμprior[1])
+        if isnan(λmμ_prior[1])
           # λ proposal
           llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, ψc, sns, 
                                    λ_prior, scond)
@@ -391,7 +392,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         # end
 
       elseif p === 2
-        if isnan(λmμprior[1])
+        if isnan(λmμ_prior[1])
           # μ proposal
           llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, ψc, sns, 
                                    μ_prior, scond)
@@ -409,14 +410,13 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
       # ψ proposal
       elseif p === 3
-        llc, prc, ψc = update_μ!(llc, prc, ψc, ne, L, λc, μc, sns, 
-                                 ψ_prior, scond)
+        llc, prc, ψc = update_ψ!(llc, prc, ψc, nfos, L, ψ_prior)
       
       # forward simulation proposal proposal
       else
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, L, 
-                                    sns, snodes!, scond0)
+        llc, ns, ne, nfos, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, 
+                                          nfos, L, sns, snodes!, scond0)
 
         # llci = llik_cfbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -581,9 +581,10 @@ end=#
                llc  ::Float64,
                λ    ::Float64, 
                μ    ::Float64,
-               ψ      ::Float64,
+               ψ    ::Float64,
                ns   ::Float64,
                ne   ::Float64,
+               nfos ::Float64,
                L    ::Float64,
                scond::Function,
                pow  ::Float64)
@@ -599,6 +600,7 @@ function update_fs!(bix    ::Int64,
                     ψ      ::Float64,
                     ns     ::Float64,
                     ne     ::Float64,
+                    nfos   ::Float64,
                     L      ::Float64,
                     sns    ::NTuple{3, BitVector},
                     snodes!::Function,
@@ -640,10 +642,11 @@ function update_fs!(bix    ::Int64,
           llr += scond0(ξp, λ, μ, itb) - scond0(ξc, λ, μ, itb)
       end
 
-      # update ns, ne & L
-      ns += Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
-      ne += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
-      L  += treelength(ξp)             - treelength(ξc)
+      # update ns, ne, nfos & L
+      ns +=   Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
+      ne +=   Float64(ntipsextinct(ξp)      - ntipsextinct(ξc))
+      nfos += Float64(nfossils(ξp)          - nfossils(ξc))
+      L  +=   treelength(ξp)                - treelength(ξc)
 
       # likelihood ratio
       llr += llik_cfbd(ξp, λ, μ, ψ) - llik_cfbd(ξc, λ, μ, ψ)
@@ -660,7 +663,7 @@ function update_fs!(bix    ::Int64,
     end
   end
 
-  return llc, ns, ne, L
+  return llc, ns, ne, nfos, L
 end
 
 
@@ -754,174 +757,29 @@ end
 
 
 """
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              μc    ::Float64,
-              sns   ::NTuple{3,BitVector},
-              λ_prior::NTuple{2,Float64},
-              scond ::Function)
+    update_ψ!(llc    ::Float64,
+              prc    ::Float64,
+              ψc     ::Float64,
+              nfos   ::Float64,
+              L      ::Float64,
+              ψ_prior::NTuple{2,Float64})
 
-Mixed HM-Gibbs sampling of `λ` for constant fossilized birth-death.
+Gibbs sampling of `ψ` for constant fossilized birth-death.
 """
-function update_λ!(llc   ::Float64,
-                   prc   ::Float64,
-                   λc    ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
-                   μc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
-                   λ_prior::NTuple{2,Float64},
-                   scond ::Function)
+function update_ψ!(llc    ::Float64,
+                   prc    ::Float64,
+                   ψc     ::Float64,
+                   nfos   ::Float64,
+                   L      ::Float64,
+                   ψ_prior::NTuple{2,Float64})
 
-  λp  = randgamma(λ_prior[1] + ns, λ_prior[2] + L)
-  llr = scond(λp, μc, sns) - scond(λc, μc, sns)
+  ψp  = randgamma(ψ_prior[1] + nfos, ψ_prior[2] + L)
 
-  if -randexp() < llr
-    llc += ns * log(λp/λc) + L * (λc - λp) + llr
-    prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-    λc   = λp
-  end
+  llc += nfos * log(ψp/ψc) + L * (ψc - ψp)
+  prc += llrdgamma(ψp, ψc, ψ_prior[1], ψ_prior[2])
+  ψc   = ψp
 
-  return llc, prc, λc
-end
-
-
-
-
-"""
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              μc    ::Float64,
-              sns   ::NTuple{3,BitVector},
-              λ_prior::NTuple{2,Float64},
-              λ_rdist ::NTuple{2,Float64},
-              scond ::Function,
-              pow   ::Float64)
-
-Mixed HM-Gibbs of `λ` for constant fossilized birth-death with reference distribution.
-"""
-function update_λ!(llc   ::Float64,
-                   prc   ::Float64,
-                   rdc   ::Float64,
-                   λc    ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
-                   μc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
-                   λ_prior::NTuple{2,Float64},
-                   λ_rdist ::NTuple{2,Float64},
-                   scond ::Function,
-                   pow   ::Float64)
-
-  λp  = randgamma((λ_prior[1] + ns)*pow + λ_rdist[1] * (1.0 - pow),
-                  (λ_prior[2] + L)*pow  + λ_rdist[2] * (1.0 - pow))
-
-  llr = scond(λp, μc, sns) - scond(λc, μc, sns)
-
-  if -randexp() < (pow * llr)
-    llc += ns * log(λp/λc) + L * (λc - λp) + llr
-    prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-    rdc += llrdgamma(λp, λc, λ_rdist[1],  λ_rdist[2])
-    λc   = λp
-  end
-
-  return llc, prc, rdc, λc
-end
-
-
-
-
-"""
-    update_μ!(llc   ::Float64,
-              prc   ::Float64,
-              μc    ::Float64,
-              ne    ::Float64,
-              L     ::Float64,
-              λc    ::Float64,
-              sns   ::NTuple{3,BitVector},
-              μ_prior::NTuple{2,Float64},
-              scond ::Function)
-
-Mixed HM-Gibbs of `μ` for constant fossilized birth-death.
-"""
-function update_μ!(llc   ::Float64,
-                   prc   ::Float64,
-                   μc    ::Float64,
-                   ne    ::Float64,
-                   L     ::Float64,
-                   λc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
-                   μ_prior::NTuple{2,Float64},
-                   scond ::Function)
-
-  μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
-  llr = scond(λc, μp, sns) - scond(λc, μc, sns)
-
-  if -randexp() < llr
-    llc += ne * log(μp/μc) + L * (μc - μp) + llr
-    prc += llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
-    μc   = μp
-  end
-
-  return llc, prc, μc 
-end
-
-
-
-
-"""
-    update_μ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              μc    ::Float64,
-              ne    ::Float64,
-              L     ::Float64,
-              μtn   ::Float64,
-              λc    ::Float64,
-              sns   ::NTuple{3,BitVector},
-              μ_prior::NTuple{2,Float64},
-              μ_rdist ::NTuple{2,Float64},
-              scond ::Function,
-              pow   ::Float64)
-
-Mixed HM-Gibbs of `μ` for constant fossilized birth-death with reference distribution.
-"""
-function update_μ!(llc   ::Float64,
-                   prc   ::Float64,
-                   rdc   ::Float64,
-                   μc    ::Float64,
-                   ne    ::Float64,
-                   L     ::Float64,
-                   μtn   ::Float64,
-                   λc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
-                   μ_prior::NTuple{2,Float64},
-                   μ_rdist::NTuple{2,Float64},
-                   scond ::Function,
-                   pow   ::Float64)
-
-  μp = mulupt(μc, μtn)::Float64
-
-  μr  = log(μp/μc)
-  llr = ne * μr + L * (μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
-  prr = llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
-  rdr = llrdtnorm(μp, μc, μ_rdist[1], μ_rdist[2])
-
-  if -randexp() < (pow * (llr + prr) + (1.0 - pow) * rdr + μr)
-    llc += llr
-    prc += prr
-    rdc += rdr
-    μc   = μp
-  end
-
-  return llc, prc, rdc, μc
+  return llc, prc, ψc 
 end
 
 

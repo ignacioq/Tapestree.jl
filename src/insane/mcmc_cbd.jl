@@ -637,27 +637,27 @@ end
 
 
 """
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              μc    ::Float64,
-              sns   ::NTuple{3,BitVector},
+    update_λ!(llc    ::Float64,
+              prc    ::Float64,
+              λc     ::Float64,
+              ns     ::Float64,
+              L      ::Float64,
+              μc     ::Float64,
+              sns    ::NTuple{3,BitVector},
               λ_prior::NTuple{2,Float64},
-              scond ::Function)
+              scond  ::Function)
 
-Mixed HM-Gibbs sampling of `λ` for constant birth-death.
+Mixed HM-Gibbs sampling of `λ` for constant fossilized birth-death.
 """
-function update_λ!(llc   ::Float64,
-                   prc   ::Float64,
-                   λc    ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
-                   μc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
+function update_λ!(llc    ::Float64,
+                   prc    ::Float64,
+                   λc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Float64,
+                   μc     ::Float64,
+                   sns    ::NTuple{3,BitVector},
                    λ_prior::NTuple{2,Float64},
-                   scond ::Function)
+                   scond  ::Function)
 
   λp  = randgamma(λ_prior[1] + ns, λ_prior[2] + L)
   llr = scond(λp, μc, sns) - scond(λc, μc, sns)
@@ -675,33 +675,33 @@ end
 
 
 """
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              μc    ::Float64,
-              sns   ::NTuple{3,BitVector},
+    update_λ!(llc    ::Float64,
+              prc    ::Float64,
+              rdc    ::Float64,
+              λc     ::Float64,
+              ns     ::Float64,
+              L      ::Float64,
+              μc     ::Float64,
+              sns    ::NTuple{3,BitVector},
               λ_prior::NTuple{2,Float64},
-              λ_rdist ::NTuple{2,Float64},
-              scond ::Function,
-              pow   ::Float64)
+              λ_rdist::NTuple{2,Float64},
+              scond  ::Function,
+              pow    ::Float64)
 
-Mixed HM-Gibbs of `λ` for constant birth-death with reference distribution.
+Mixed HM-Gibbs of `λ` for constant fossilized birth-death with reference distribution.
 """
-function update_λ!(llc   ::Float64,
-                   prc   ::Float64,
-                   rdc   ::Float64,
-                   λc    ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
-                   μc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
+function update_λ!(llc    ::Float64,
+                   prc    ::Float64,
+                   rdc    ::Float64,
+                   λc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Float64,
+                   μc     ::Float64,
+                   sns    ::NTuple{3,BitVector},
                    λ_prior::NTuple{2,Float64},
-                   λ_rdist ::NTuple{2,Float64},
-                   scond ::Function,
-                   pow   ::Float64)
+                   λ_rdist::NTuple{2,Float64},
+                   scond  ::Function,
+                   pow    ::Float64)
 
   λp  = randgamma((λ_prior[1] + ns)*pow + λ_rdist[1] * (1.0 - pow),
                   (λ_prior[2] + L)*pow  + λ_rdist[2] * (1.0 - pow))
@@ -722,27 +722,27 @@ end
 
 
 """
-    update_μ!(llc   ::Float64,
-              prc   ::Float64,
-              μc    ::Float64,
-              ne    ::Float64,
-              L     ::Float64,
-              λc    ::Float64,
-              sns   ::NTuple{3,BitVector},
+    update_μ!(llc    ::Float64,
+              prc    ::Float64,
+              μc     ::Float64,
+              ne     ::Float64,
+              L      ::Float64,
+              λc     ::Float64,
+              sns    ::NTuple{3,BitVector},
               μ_prior::NTuple{2,Float64},
-              scond ::Function)
+              scond  ::Function)
 
-Mixed HM-Gibbs of `μ` for constant birth-death.
+Mixed HM-Gibbs of `μ` for constant fossilized birth-death.
 """
-function update_μ!(llc   ::Float64,
-                   prc   ::Float64,
-                   μc    ::Float64,
-                   ne    ::Float64,
-                   L     ::Float64,
-                   λc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
+function update_μ!(llc    ::Float64,
+                   prc    ::Float64,
+                   μc     ::Float64,
+                   ne     ::Float64,
+                   L      ::Float64,
+                   λc     ::Float64,
+                   sns    ::NTuple{3,BitVector},
                    μ_prior::NTuple{2,Float64},
-                   scond ::Function)
+                   scond  ::Function)
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
   llr = scond(λc, μp, sns) - scond(λc, μc, sns)
@@ -760,35 +760,35 @@ end
 
 
 """
-    update_μ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              μc    ::Float64,
-              ne    ::Float64,
-              L     ::Float64,
-              μtn   ::Float64,
-              λc    ::Float64,
-              sns   ::NTuple{3,BitVector},
+    update_μ!(llc    ::Float64,
+              prc    ::Float64,
+              rdc    ::Float64,
+              μc     ::Float64,
+              ne     ::Float64,
+              L      ::Float64,
+              μtn    ::Float64,
+              λc     ::Float64,
+              sns    ::NTuple{3,BitVector},
               μ_prior::NTuple{2,Float64},
-              μ_rdist ::NTuple{2,Float64},
-              scond ::Function,
-              pow   ::Float64)
+              μ_rdist::NTuple{2,Float64},
+              scond  ::Function,
+              pow    ::Float64)
 
-Mixed HM-Gibbs of `μ` for constant birth-death with reference distribution.
+Mixed HM-Gibbs of `μ` for constant fossilized birth-death with reference distribution.
 """
-function update_μ!(llc   ::Float64,
-                   prc   ::Float64,
-                   rdc   ::Float64,
-                   μc    ::Float64,
-                   ne    ::Float64,
-                   L     ::Float64,
-                   μtn   ::Float64,
-                   λc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
+function update_μ!(llc    ::Float64,
+                   prc    ::Float64,
+                   rdc    ::Float64,
+                   μc     ::Float64,
+                   ne     ::Float64,
+                   L      ::Float64,
+                   μtn    ::Float64,
+                   λc     ::Float64,
+                   sns    ::NTuple{3,BitVector},
                    μ_prior::NTuple{2,Float64},
                    μ_rdist::NTuple{2,Float64},
-                   scond ::Function,
-                   pow   ::Float64)
+                   scond  ::Function,
+                   pow    ::Float64)
 
   μp = mulupt(μc, μtn)::Float64
 

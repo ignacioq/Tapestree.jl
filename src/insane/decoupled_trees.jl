@@ -351,7 +351,7 @@ end
 """
     nnodesinternal(xi::Vector{T}) where {T<: iTree}
 
-Return the internal nodes of `Ξ`.
+Return the number of internal nodes in `Ξ`.
 """
 function nnodesinternal(xi::Vector{T}) where {T<: iTree}
   n = 0
@@ -367,14 +367,50 @@ end
 
 
 """
+    nnodesbifurcation(xi::Vector{T}) where {T<: iTree}
+
+Return the number of bifurcating nodes in `Ξ`.
+"""
+function nnodesbifurcation(xi::Vector{T}) where {T<: iTree}
+  n = 0
+  nfos = 0
+  for ξ in xi
+    n += _nnodesbifurcation(ξ, 0)
+    if isone(_nfossils(ξ, 0)) nfos += 1 end
+  end
+  n += Float64(lastindex(xi) - nfos - 1)/2.0
+
+  return n
+end
+
+
+
+
+"""
     ntipsextinct(xi::Vector{T}) where {T<: iTree}
 
-Return the internal nodes of `Ξ`.
+Return the number of extinct nodes in `Ξ`.
 """
 function ntipsextinct(xi::Vector{T}) where {T<: iTree}
   n = 0
   for ξ in xi
     n += _ntipsextinct(ξ, 0)
+  end
+  return n
+end
+
+
+
+
+"""
+    nfossils(xi::Vector{T}) where {T<: iTree}
+
+Return the number of fossil nodes in `Ξ`.
+"""
+function nfossils(xi::Vector{T}) where {T<: iTree}
+  n = 0
+  for ξ in xi
+    n += _nfossils(ξ, 0)
   end
   return n
 end
