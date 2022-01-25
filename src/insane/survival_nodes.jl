@@ -15,7 +15,6 @@ Created 16 11 2021
 """
     sum_alone_stem!(tree::T, 
                     tna ::Float64, 
-                    exx ::Bool,
                     sn  ::BitVector) where {T <: iTree}
 
 Condition events when there is only one alive lineage in the crown subtrees 

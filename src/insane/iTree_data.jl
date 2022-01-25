@@ -427,6 +427,37 @@ end
 
 
 """
+    nnodesbifurcation(tree::T) where {T <: iTree}
+    nnodesbifurcation(tree::T) where {T <: sTf}
+
+Return the number of bifurcation nodes for `tree`.
+"""
+nnodesbifurcation(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
+nnodesbifurcation(tree::T) where {T <: sTf} = _nnodesbifurcation(tree, 0)
+
+
+
+
+"""
+    _nnodesbifurcation(tree::T, n::Int64) where {T <: sTf}
+
+Return the number of internal nodes for `tree`, initialized at `n`.
+"""
+function _nnodesbifurcation(tree::T, n::Int64) where {T <: sTf}
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+  
+  if defd1 n = _nnodesbifurcation(tree.d1, n) end
+  if defd2 n = _nnodesbifurcation(tree.d2, n) end
+  if defd1 && defd2 n += 1 end   # excludes sampled ancestors
+
+  return n
+end
+
+
+
+
+"""
     ntips(tree::T) where {T <: iTree}
 
 Return the number of tip nodes for `tree`.

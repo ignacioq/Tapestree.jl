@@ -15,8 +15,8 @@ Created 03 09 2020
 """
     iTree
 
-An abstract type for all composite recursive types 
-representing a binary phylogenetic tree for `insane` use
+An abstract type for all composite recursive types representing 
+a binary phylogenetic tree for `insane` use
 """
 abstract type iTree end
 
@@ -26,10 +26,21 @@ abstract type iTree end
 """
     sT
 
-An abstract type for all composite recursive types 
-representing a simple binary phylogenetic tree for `insane` use
+An abstract type for all composite recursive types representing 
+a simple binary phylogenetic tree for `insane` use
 """
 abstract type sT <: iTree end
+
+
+
+
+"""
+    sTf
+
+An abstract type for all composite recursive types representing 
+a simple binary phylogenetic tree with fossils for `insane` use
+"""
+abstract type sTf <: sT end
 
 
 
@@ -157,7 +168,7 @@ end
 """
     sTf_label
 
-A composite recursive type of supertype `sT` representing a labelled binary 
+A composite recursive type of supertype `sTf` representing a labelled binary 
 phylogenetic tree with fossils for `insane` use, with the following fields:
 
   d1: daughter tree 1
@@ -183,7 +194,7 @@ Constructs an `sTf_label` object with one `sTf_label` daughter and edge `e`.
 
 Constructs an `sTf_label` object with two `sTf_label` daughters and edge `e`.
 """
-mutable struct sTf_label <: sT
+mutable struct sTf_label <: sTf
   d1::sTf_label
   d2::sTf_label
   e ::Float64
@@ -346,7 +357,7 @@ end
 """
     sTfbd
 
-The simplest composite recursive type of supertype `sT` 
+The simplest composite recursive type of supertype `sTf` 
 representing a binary phylogenetic tree for `insane` use, 
 with the following fields:
 
@@ -374,7 +385,7 @@ Constructs an `sTfbd` object with two `sTfbd` daughters and edge `e`.
 Constructs an `sTfbd` object with one sampled ancestor, one `sTfbd` daughter and 
 edge `e`.
 """
-mutable struct sTfbd <: sT
+mutable struct sTfbd <: sTf
   d1::sTfbd
   d2::sTfbd
   e ::Float64

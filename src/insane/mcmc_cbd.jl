@@ -505,12 +505,13 @@ function update_fs!(bix    ::Int64,
   # forward simulate an internal branch
   ξp, np, ntp = fsbi(bi, λ, μ, 100)
 
-  itb = it(bi) # is it terminal
-  ρbi = ρi(bi) # get branch sampling fraction
-  nc  = ni(bi) # current ni
-  ntc = nt(bi) # current nt
-
+  # retained conditional on survival
   if ntp > 0
+
+    itb = it(bi) # is it terminal
+    ρbi = ρi(bi) # get branch sampling fraction
+    nc  = ni(bi) # current ni
+    ntc = nt(bi) # current nt
 
     # current tree
     ξc  = Ξ[bix]
