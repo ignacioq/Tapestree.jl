@@ -1114,7 +1114,7 @@ function λmμp(tree  ::sTfbd,
       lac[2] += 1.0
     end
 
-    return llc, prc, λc, μc 
+    return llc, prc, λc, μc
 end
 
 

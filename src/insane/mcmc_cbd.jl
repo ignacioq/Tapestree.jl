@@ -647,7 +647,7 @@ end
               λ_prior::NTuple{2,Float64},
               scond  ::Function)
 
-Mixed HM-Gibbs sampling of `λ` for constant fossilized birth-death.
+Mixed HM-Gibbs sampling of `λ` for constant birth-death.
 """
 function update_λ!(llc    ::Float64,
                    prc    ::Float64,
@@ -688,7 +688,7 @@ end
               scond  ::Function,
               pow    ::Float64)
 
-Mixed HM-Gibbs of `λ` for constant fossilized birth-death with reference distribution.
+Mixed HM-Gibbs of `λ` for constant birth-death with reference distribution.
 """
 function update_λ!(llc    ::Float64,
                    prc    ::Float64,
@@ -732,7 +732,7 @@ end
               μ_prior::NTuple{2,Float64},
               scond  ::Function)
 
-Mixed HM-Gibbs of `μ` for constant fossilized birth-death.
+Mixed HM-Gibbs of `μ` for constant birth-death.
 """
 function update_μ!(llc    ::Float64,
                    prc    ::Float64,
@@ -774,7 +774,7 @@ end
               scond  ::Function,
               pow    ::Float64)
 
-Mixed HM-Gibbs of `μ` for constant fossilized birth-death with reference distribution.
+Mixed HM-Gibbs of `μ` for constant birth-death with reference distribution.
 """
 function update_μ!(llc    ::Float64,
                    prc    ::Float64,

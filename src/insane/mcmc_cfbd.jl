@@ -31,7 +31,7 @@ Created 07 10 2021
                 λi       ::Float64               = NaN,
                 μi       ::Float64               = NaN,
                 ψi       ::Float64               = NaN,
-                pupdp    ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+                pupdp    ::NTuple{4,Float64}     = (0.2,0.2,0.2,0.2),
                 prints   ::Int64                 = 5,
                 tρ       ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -54,7 +54,7 @@ function insane_cfbd(tree     ::sTf_label,
                      λi       ::Float64               = NaN,
                      μi       ::Float64               = NaN,
                      ψi       ::Float64               = NaN,
-                     pupdp    ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+                     pupdp    ::NTuple{4,Float64}     = (0.2,0.2,0.2,0.2),
                      prints   ::Int64                 = 5,
                      tρ       ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -77,7 +77,7 @@ function insane_cfbd(tree     ::sTf_label,
       λc = λ_prior
       μc = isnan(μ_prior[1]) ? λ_prior-λmμ_prior : μ_prior
     else
-      λc, μc = moments(Float64(n), th, ϵi)
+      λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
     end
     # if no sampled fossil
     if iszero(nfossils(tree))
@@ -264,7 +264,7 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
       if p === 1
         if isnan(λmμ_prior[1])
           # λ proposal
-          llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, ψc, sns, 
+          llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, sns, 
                                    λ_prior, scond)
         else
           # parallel λ and μ proposal
@@ -275,11 +275,11 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
       elseif p === 2
         if isnan(λmμ_prior[1])
           # μ proposal
-          llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+          llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, sns, 
                                    μ_prior, scond)
         else
           # λ-μ proposal (μ proposal with constant λ)
-          llc, prc, μc = update_λmμ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+          llc, prc, μc = update_λmμ!(llc, prc, μc, ne, L, λc, sns, 
                                      λmμ_prior, scond)
         end
 
@@ -306,46 +306,46 @@ end
 
 """
     mcmc_cfbd(Ξ      ::Vector{sTfbd},
-             idf     ::Array{iBfffs,1},
-             llc     ::Float64,
-             prc     ::Float64,
-             λc      ::Float64,
-             μc      ::Float64,
-             ψc      ::Float64,
-             λ_prior ::NTuple{2,Float64},
-             μ_prior ::NTuple{2,Float64},
-             λmμ_prior::NTuple{2,Float64},
-             ψ_prior  ::NTuple{2,Float64},
-             niter   ::Int64,
-             nthin   ::Int64,
-             pup     ::Array{Int64,1}, 
-             prints  ::Int64,
-             sns     ::NTuple{3, BitVector},
-             snodes! ::Function,
-             scond   ::Function,
-             scond0  ::Function)
+              idf     ::Array{iBfffs,1},
+              llc     ::Float64,
+              prc     ::Float64,
+              λc      ::Float64,
+              μc      ::Float64,
+              ψc      ::Float64,
+              λ_prior ::NTuple{2,Float64},
+              μ_prior ::NTuple{2,Float64},
+              λmμ_prior::NTuple{2,Float64},
+              ψ_prior  ::NTuple{2,Float64},
+              niter   ::Int64,
+              nthin   ::Int64,
+              pup     ::Array{Int64,1}, 
+              prints  ::Int64,
+              sns     ::NTuple{3, BitVector},
+              snodes! ::Function,
+              scond   ::Function,
+              scond0  ::Function)
 
 MCMC da chain for constant fossilized birth-death using forward simulation.
 """
 function mcmc_cfbd(Ξ      ::Vector{sTfbd},
-                  idf     ::Array{iBfffs,1},
-                  llc     ::Float64,
-                  prc     ::Float64,
-                  λc      ::Float64,
-                  μc      ::Float64,
-                  ψc      ::Float64,
-                  λ_prior ::NTuple{2,Float64},
-                  μ_prior ::NTuple{2,Float64},
-                  λmμ_prior::NTuple{2,Float64},
-                  ψ_prior  ::NTuple{2,Float64},
-                  niter   ::Int64,
-                  nthin   ::Int64,
-                  pup     ::Array{Int64,1}, 
-                  prints  ::Int64,
-                  sns     ::NTuple{3, BitVector},
-                  snodes! ::Function,
-                  scond   ::Function,
-                  scond0  ::Function)
+                   idf     ::Array{iBfffs,1},
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   λc      ::Float64,
+                   μc      ::Float64,
+                   ψc      ::Float64,
+                   λ_prior ::NTuple{2,Float64},
+                   μ_prior ::NTuple{2,Float64},
+                   λmμ_prior::NTuple{2,Float64},
+                   ψ_prior  ::NTuple{2,Float64},
+                   niter   ::Int64,
+                   nthin   ::Int64,
+                   pup     ::Array{Int64,1}, 
+                   prints  ::Int64,
+                   sns     ::NTuple{3, BitVector},
+                   snodes! ::Function,
+                   scond   ::Function,
+                   scond0  ::Function)
 
   el = lastindex(idf)
   ns = Float64(nnodesbifurcation(Ξ))
@@ -374,10 +374,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       if p === 1
         if isnan(λmμ_prior[1])
           # λ proposal
-          llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, ψc, sns, 
+          @show llc, prc, λc, ns, L, μc, sns, λ_prior, scond
+          llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, sns, 
                                    λ_prior, scond)
         else
-          # parallel λ and μ proposal
+          # parallel λ and μ proposal : TODO
           llc, prc, λc, μc = update_λμ!(llc, prc, λc, μc, ns, L, μc, ψc, sns, 
                                         λ_prior, scond)
         end
@@ -394,11 +395,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       elseif p === 2
         if isnan(λmμ_prior[1])
           # μ proposal
-          llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+          llc, prc, μc = update_μ!(llc, prc, μc, ne, L, λc, sns, 
                                    μ_prior, scond)
         else
-          # λ-μ proposal (μ proposal with constant λ)
-          llc, prc, μc = update_λmμ!(llc, prc, μc, ne, L, λc, ψc, sns, 
+          # λ-μ proposal (μ proposal with constant λ) : TODO
+          llc, prc, μc = update_λmμ!(llc, prc, μc, ne, L, λc, sns, 
                                      λmμ_prior, scond)
         end
 
@@ -752,6 +753,54 @@ function tip_sims!(tree::sTfbd, t::Float64, λ::Float64,
 
   return tree, na, nfos
 end
+
+
+
+
+"""
+    update_λmμ!(llc      ::Float64,
+                prc      ::Float64,
+                λc       ::Float64,
+                μc       ::Float64,
+                ns       ::Float64,
+                ne       ::Float64,
+                L        ::Float64,
+                μc       ::Float64,
+                sns      ::NTuple{3,BitVector},
+                λmμ_prior::NTuple{2,Float64},
+                scond    ::Function)
+
+Gibbs sampling of `λ-μ` for constant fossilized birth-death.
+"""
+#=function update_λmμ!(llc      ::Float64,
+                     prc      ::Float64,
+                     λc       ::Float64,
+                     μc       ::Float64,
+                     ns       ::Float64,
+                     ne       ::Float64,
+                     L        ::Float64,
+                     μc       ::Float64,
+                     sns      ::NTuple{3,BitVector},
+                     λmμ_prior::NTuple{2,Float64},
+                     scond    ::Function)
+
+  λmμc = λc-μc
+  λmμp  = randgamma(λmμ_prior[1] + ns - ne, λmμ_prior[2] + L)
+  μp = λc-λmμp
+  llr = scond(λc, μp, sns) - scond(λc, μc, sns)
+
+  if -randexp() < llr
+    llc += (ns - ne) * log(λmμp/λmμc) + L * (λmμc - λmμp) + llr
+    prc += llrdgamma(λmμp, λmμc, λmμ_prior[1], λmμ_prior[2])
+    μc   = μp
+  end
+
+  return llc, prc, λc, μc
+end
+
+=> Probably doesn't work + change prior distribution
+
+=#
 
 
 

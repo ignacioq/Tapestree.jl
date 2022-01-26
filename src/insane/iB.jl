@@ -336,13 +336,8 @@ function makeiBf!(tree::sT_label,
     return ρi, 1
   end
 
-  if isdefined(tree, :d1)
-    ρ1, n1 = makeiBf!(tree.d1, idv, n2v, tρ)
-  end
-
-  if isdefined(tree, :d2)
-    ρ2, n2 = makeiBf!(tree.d2, idv, n2v, tρ)
-  end
+  ρ1, n1 = makeiBf!(tree.d1, idv, n2v, tρ)
+  ρ2, n2 = makeiBf!(tree.d2, idv, n2v, tρ)
 
   n  = n1 + n2 
   ρi = n / (n1/ρ1 + n2/ρ2)
@@ -611,20 +606,26 @@ function makeiBf!(tree::sTf_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBfffs(el, 0, 0, 0, ti, tf, true, ρi, isextinct(tree), 
-                      isfossil(tree), 1, 1, 0.0, 0.0, 0.0))
+    iμ = isextinct(tree)
+    push!(idv, iBfffs(el, 0, 0, 0, ti, tf, true, ρi, iμ, isfossil(tree), 
+                      Int64(!iμ), Int64(!iμ), 0.0, 0.0, 0.0))
     push!(n1v, 0)
     push!(n2v, 0)
     push!(sa2v, 0)
     return ρi, 1, 0
   end
 
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  if isdefined(tree, :d1)
+    ρ1,n1,sa1 = makeiBf!(tree.d1, idv, tf, n1v, n2v, sa2v, tρ)
+  else
+    ρ1,n1,sa1 = (1,0,0)  # cancels this term
+  end
 
-  ρ1,n1,sa1 = defd1 ? makeiBf!(tree.d1, idv, tf, n1v, n2v, sa2v, tρ) : (1,0,0)
-  ρ2,n2,sa2 = defd2 ? makeiBf!(tree.d2, idv, tf, n1v, n2v, sa2v, tρ) : (1,0,0)
-
+  if isdefined(tree, :d2)
+    ρ2,n2,sa2 = makeiBf!(tree.d2, idv, tf, n1v, n2v, sa2v, tρ)
+  else
+    ρ2,n2,sa2 = (1,0,0)  # cancels this term
+  end
 
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
@@ -684,6 +685,27 @@ function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
   end
 
   return idf
+end
+
+
+
+
+"""
+    prob_ρ(idv::Array{iBfffs,1})
+
+Estimate initial sampling fraction probability without augmented data.
+"""
+function prob_ρ(idv::Array{iBfffs,1})
+  ll = 0.0
+  for bi in idv
+    nbi = ni(bi)
+    if it(bi)
+      ll += log(Float64(nbi) * ρi(bi) * (1.0 - ρi(bi))^(nbi - 1))
+    else
+      ll += log((1.0 - ρi(bi))^(nbi))
+    end
+  end
+  return ll
 end
 
 
@@ -784,8 +806,7 @@ fB(id::iBa) = getproperty(id, :fB)[]
 
 Return parent edge.
 """
-pa(id::iBffs) = getproperty(id, :pa)[]
-pa(id::iBfffs) = getproperty(id, :pa)[]
+pa(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :pa)[]
 
 
 
@@ -796,8 +817,7 @@ pa(id::iBfffs) = getproperty(id, :pa)[]
 
 Return daughter edge.
 """
-d1(id::iBffs) = getproperty(id, :d1)[]
-d1(id::iBfffs) = getproperty(id, :d1)[]
+d1(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :d1)[]
 
 
 
@@ -808,8 +828,7 @@ d1(id::iBfffs) = getproperty(id, :d1)[]
 
 Return daughter edge.
 """
-d2(id::iBffs) = getproperty(id, :d2)[]
-d2(id::iBfffs) = getproperty(id, :d2)[]
+d2(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :d2)[]
 
 
 
@@ -871,8 +890,7 @@ ie(id::iBf) = getproperty(id, :ie)
 Return `0` if stem branch, `1` if either of the crown branches and `23` if 
 another plebeian branch.
 """
-sc(id::iBffs) = getproperty(id, :sc)
-sc(id::iBfffs) = getproperty(id, :sc)
+sc(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :sc)
 
 
 
@@ -893,8 +911,7 @@ ifos(id::iBfffs) = getproperty(id, :iψ)
 
 Return the branch-specific sampling fraction. 
 """
-ρi(id::iBffs) = getproperty(id, :ρi)
-ρi(id::iBfffs) = getproperty(id, :ρi)
+ρi(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :ρi)
 
 
 
@@ -905,8 +922,7 @@ Return the branch-specific sampling fraction.
 
 Return the current number of direct descendants alive at the present.
 """
-ni(id::iBffs) = getproperty(id, :ni)[]
-ni(id::iBfffs) = getproperty(id, :ni)[]
+ni(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :ni)[]
 
 
 
@@ -917,8 +933,7 @@ ni(id::iBfffs) = getproperty(id, :ni)[]
 
 Return the current number of direct descendants alive at time `t`.
 """
-nt(id::iBffs) = getproperty(id, :nt)[]
-nt(id::iBfffs) = getproperty(id, :nt)[]
+nt(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :nt)[]
 
 
 
@@ -929,8 +944,7 @@ nt(id::iBfffs) = getproperty(id, :nt)[]
 
 Return final speciation rate for fixed at time `t
 """
-λt(id::iBffs) = getproperty(id, :λt)[]
-λt(id::iBfffs) = getproperty(id, :λt)[]
+λt(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :λt)[]
 
 
 
@@ -941,8 +955,7 @@ Return final speciation rate for fixed at time `t
 
 Return final extinction rate for fixed at time `t`.
 """
-μt(id::iBffs) = getproperty(id, :μt)[]
-μt(id::iBfffs) = getproperty(id, :μt)[]
+μt(id::T) where {T <: Union{iBffs,iBfffs}} = getproperty(id, :μt)[]
 
 
 

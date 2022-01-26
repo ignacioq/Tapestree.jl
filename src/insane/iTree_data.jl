@@ -32,13 +32,13 @@ isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
 
 
 """
-    istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
-    istip(tree::sTfbd) = !isdefined(tree, :d1) && !isdefined(tree, :d2)
+    istip(tree::T) where {T <: iTree}
+    istip(tree::T) where {T <: sTf}
 
 Return if is either an extant or extinct tip node.
 """
 istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
-istip(tree::sTfbd) = !isdefined(tree, :d1) && !isdefined(tree, :d2)
+istip(tree::T) where {T <: sTf} = !isdefined(tree, :d1) && !isdefined(tree, :d2)
 
 
 
@@ -237,11 +237,11 @@ end
 
 
 """
-    _treelength(tree::sTfbd, l::Float64)
+    _treelength(tree::T, l::Float64) where {T <: sTf}
 
 Return the branch length sum of `tree`, initialized at `l`.
 """
-function _treelength(tree::sTfbd, l::Float64)
+function _treelength(tree::T, l::Float64) where {T <: sTf}
   l += e(tree)
   
   if isdefined(tree, :d1) l = _treelength(tree.d1, l)::Float64 end
@@ -275,12 +275,12 @@ end
 
 
 """
-    _ctl(tree::sTfbd, l::Float64)
+    _ctl(tree::T, l::Float64) where {T <: sTf}
 
 Return the branch length sum of `tree` based on `δt` and `fδt` 
 for debugging purposes.
 """
-function _ctl(tree::sTfbd, l::Float64)
+function _ctl(tree::T, l::Float64) where {T <: sTf}
 
   l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
 
@@ -315,7 +315,7 @@ end
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::T) where {T <: Union{sTfbd, sTf_label}}
+function treeheight(tree::T) where {T <: sTf}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
@@ -363,11 +363,11 @@ end
 
 
 """
-    _nnodes(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
+    _nnodes(tree::T, n::Int64) where {T <: sTf}
 
 Return the number of descendant nodes for `tree`, initialized at `n`.
 """
-function _nnodes(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
+function _nnodes(tree::T, n::Int64) where {T <: sTf}
   n += 1
   
   if isdefined(tree, :d1) n = _nnodes(tree.d1, n) end
@@ -408,11 +408,11 @@ end
 
 
 """
-    _nnodesinternal(tree::sTfbd, n::Int64)
+    _nnodesinternal(tree::T, n::Int64) where {T <: sTf}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesinternal(tree::sTfbd, n::Int64)
+function _nnodesinternal(tree::T, n::Int64) where {T <: sTf}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
@@ -487,11 +487,11 @@ end
 
 
 """
-    _ntips(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
+    _ntips(tree::T, n::Int64) where {T <: sTf}
 
 Return the number of tip nodes for `tree`, initialized at `n`.
 """
-function _ntips(tree::T, n::Int64) where {T <: Union{sTfbd, sTf_label}}
+function _ntips(tree::T, n::Int64) where {T <: sTf}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
@@ -534,11 +534,11 @@ end
 
 
 """
-    _ntipsalive(tree::sTfbd, n::Int64)
+    _ntipsalive(tree::T, n::Int64) where {T <: sTf}
 
 Return the number of alive nodes for `tree`, initialized at `n`.
 """
-function _ntipsalive(tree::sTfbd, n::Int64)
+function _ntipsalive(tree::T, n::Int64) where {T <: sTf}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
@@ -585,23 +585,11 @@ end
 
 
 """
-    _ntipsextinct(tree::sTfbd, n::Int64)
-    _ntipsextinct(tree::sTf_label, n::Int64)
+    _ntipsextinct(tree::T, n::Int64) where {T <: sTf}
 
 Return the number of extinct nodes for `tree`, initialized at `n`.
 """
-function _ntipsextinct(tree::sTfbd, n::Int64)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-  
-  if defd1 n = _ntipsextinct(tree.d1, n) end
-  if defd2 n = _ntipsextinct(tree.d2, n) end
-  if isextinct(tree) n += 1 end
-
-  return n
-end
-
-function _ntipsextinct(tree::sTf_label, n::Int64)
+function _ntipsextinct(tree::T, n::Int64) where {T <: sTf}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
@@ -648,11 +636,11 @@ end
 
 
 """
-    _ntipsextinctF(tree::sTfbd, n::Float64)
+    _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
 
 Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
-function _ntipsextinctF(tree::sTfbd, n::Float64)
+function _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
@@ -794,15 +782,15 @@ end
 
 
 """
-    treelength_ne(tree::sTfbd, 
+    treelength_ne(tree::T, 
                   l   ::Float64, 
-                  n   ::Float64)
+                  n   ::Float64) where {T <: sTf}
 
 Return the tree length and extinction events.
 """
-function treelength_ne(tree::sTfbd, 
+function treelength_ne(tree::T, 
                        l   ::Float64, 
-                       n   ::Float64)
+                       n   ::Float64) where {T <: sTf}
 
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
@@ -1063,19 +1051,19 @@ end
 
 
 """
-    fixds(tree::sTfbd)
+    fixds(tree::T) where {T <: sTf}
 
 Return the first fixed daughters `d1` and `d2`. Works only for 
 internal branches.
 """
-function fixds(tree::sTfbd)
-  ifx1 = isdefined(tree, :d1) && isfix(tree.d1::sTfbd)
-  if ifx1 && isdefined(tree, :d2) && isfix(tree.d2::sTfbd)
-    return tree.d1::sTfbd, tree.d2::sTfbd
+function fixds(tree::T) where {T <: sTf}
+  ifx1 = isdefined(tree, :d1) && isfix(tree.d1::T)
+  if ifx1 && isdefined(tree, :d2) && isfix(tree.d2::T)
+    return tree.d1::T, tree.d2::T
   elseif ifx1
-    fixds(tree.d1::sTfbd)
+    fixds(tree.d1::T)
   else
-    fixds(tree.d2::sTfbd)
+    fixds(tree.d2::T)
   end
 end
 
@@ -1105,22 +1093,22 @@ end
 
 
 """
-    fixdstree(tree::sTfbd)
+    fixdstree(tree::T) where {T <: sTf}
 
 Returns the first tree with every daughter fixed.
 """
-function fixdstree(tree::sTfbd)
+function fixdstree(tree::T) where {T <: sTf}
 
-  ifx1 = isdefined(tree, :d1) && isfix(tree.d1::sTfbd)
-  ifx2 = isdefined(tree, :d2) && isfix(tree.d2::sTfbd)
+  ifx1 = isdefined(tree, :d1) && isfix(tree.d1::T)
+  ifx2 = isdefined(tree, :d2) && isfix(tree.d2::T)
 
   if (ifx1 && ifx2) || isfossil(tree)
     # every defined daughter is fixed, or sampled ancestor
     return tree
   elseif ifx1
-    tree = fixdstree(tree.d1::sTfbd)
+    tree = fixdstree(tree.d1::T)
   else
-    tree = fixdstree(tree.d2::sTfbd)
+    tree = fixdstree(tree.d2::T)
   end
 end
 
@@ -1159,14 +1147,14 @@ end
 
 
 """
-    drtree(tree::sTfbd, dri::BitArray{1}, ldr::Int64, ix::Int64)
+    drtree(tree::T, dri::BitArray{1}, ldr::Int64, ix::Int64) where {T <: sTf}
 
 Returns the tree given by `dr`, circumventing unfix branches.
 """
-function drtree(tree::sTfbd, 
+function drtree(tree::T, 
                 dri ::BitArray{1}, 
                 ldr ::Int64, 
-                ix  ::Int64)
+                ix  ::Int64) where {T <: sTf}
   if ldr === ix
     return tree
   elseif ldr > ix
@@ -1174,14 +1162,14 @@ function drtree(tree::sTfbd,
     if ifx1 && isdefined(tree, :d2) && isfix(tree.d2)
       ix += 1
       if dri[ix]
-        drtree(tree.d1::sTfbd, dri, ldr, ix)
+        drtree(tree.d1::T, dri, ldr, ix)
       else
-        drtree(tree.d2::sTfbd, dri, ldr, ix)
+        drtree(tree.d2::T, dri, ldr, ix)
       end
     elseif ifx1
-      drtree(tree.d1::sTfbd, dri, ldr, ix)
+      drtree(tree.d1::T, dri, ldr, ix)
     else
-      drtree(tree.d2::sTfbd, dri, ldr, ix)
+      drtree(tree.d2::T, dri, ldr, ix)
     end
   end
 end
@@ -1223,15 +1211,19 @@ end
 
 
 """
-    drtree(treec::sTfbd, treep::sTfbd, dri::BitArray{1}, ldr::Int64, ix::Int64)
+    drtree(treec::T, 
+           treep::T, 
+           dri  ::BitArray{1}, 
+           ldr  ::Int64, 
+           ix   ::Int64) where {T <: sTf}
 
 Returns the trees given by `dr`, circumventing unfix branches.
 """
-function drtree(treec::sTfbd, 
-                treep::sTfbd, 
+function drtree(treec::T, 
+                treep::T, 
                 dri  ::BitArray{1}, 
                 ldr  ::Int64, 
-                ix   ::Int64)
+                ix   ::Int64) where {T <: sTf}
 
   if ldr === ix
     return treec, treep
@@ -1240,14 +1232,14 @@ function drtree(treec::sTfbd,
     if ifx1 && isdefined(tree, :d2) && isfix(tree.d2)
       ix += 1
       if dri[ix]
-        drtree(treec.d1::sTfbd, treep.d1::sTfbd, dri, ldr, ix)
+        drtree(treec.d1::T, treep.d1::T, dri, ldr, ix)
       else
-        drtree(treec.d2::sTfbd, treep.d2::sTfbd, dri, ldr, ix)
+        drtree(treec.d2::T, treep.d2::T, dri, ldr, ix)
       end
     elseif ifx1
-      drtree(treec.d1::sTfbd, treep.d1::sTfbd, dri, ldr, ix)
+      drtree(treec.d1::T, treep.d1::T, dri, ldr, ix)
     else
-      drtree(treec.d2::sTfbd, treep.d2::sTfbd, dri, ldr, ix)
+      drtree(treec.d2::T, treep.d2::T, dri, ldr, ix)
     end
   end
 end
@@ -1256,22 +1248,22 @@ end
 
 
 """
-    survivaldr(tree::sTfbd)
+    survivaldr(tree::T) where {T <: sTf}
 
 Returns the directory of the first node with 2 surviving daughters.
 """
-survivaldr(tree::sTfbd) = _survivaldr(tree, BitArray{1}())
+survivaldr(tree::T) where {T <: sTf} = _survivaldr(tree, BitArray{1}())
 
 
 
 
 """
-    _survivaldr(tree::sTfbd, bit::BitArray{1})
+    _survivaldr(tree::T, bit::BitArray{1}) where {T <: sTf}
 
 Returns the directory of the first node with 2 surviving daughters, initialized
 at `bit`.
 """
-function _survivaldr(tree::sTfbd, bit::BitArray{1})
+function _survivaldr(tree::T, bit::BitArray{1}) where {T <: sTf}
 
   if isdefined(tree, :d1) && survives(tree.d1)
     if isdefined(tree, :d2) && survives(tree.d2)
@@ -1396,17 +1388,17 @@ end
 
 
 """
-    _eventimes!(tree::sTfbd, 
+    _eventimes!(tree::T, 
                 t   ::Float64, 
                 se  ::Array{Float64,1}, 
-                ee  ::Array{Float64,1})
+                ee  ::Array{Float64,1}) where {T <: sTf}
 
 Recursive structure that returns speciation and extinction event times.
 """
-function _eventimes!(tree::sTfbd, 
+function _eventimes!(tree::T, 
                      t   ::Float64, 
                      se  ::Array{Float64,1}, 
-                     ee  ::Array{Float64,1})
+                     ee  ::Array{Float64,1}) where {T <: sTf}
 
   et = e(tree)
   if isextinct(tree)
