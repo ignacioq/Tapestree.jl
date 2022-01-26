@@ -374,7 +374,6 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       if p === 1
         if isnan(λmμ_prior[1])
           # λ proposal
-          @show llc, prc, λc, ns, L, μc, sns, λ_prior, scond
           llc, prc, λc = update_λ!(llc, prc, λc, ns, L, μc, sns, 
                                    λ_prior, scond)
         else
@@ -686,7 +685,7 @@ function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
   while ext < ntry 
 
     # forward simulation during branch length
-    t0, na, nfos = sim_cfbd(e(bi), λ, μ, ψ, 0)
+    t0, na, nfos = sim_cfbd(e(bi), λ, μ, ψ, 0, 0)
 
     if iszero(nfos) # Exclude if any fossil is sampled
       nat = na
@@ -700,7 +699,7 @@ function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
 
         if !it(bi)
           # add tips until the present
-          tx, na, nfos = tip_sims!(t0, tfb, λ, μ, ψ, na)
+          tx, na, nfos = tip_sims!(t0, tfb, λ, μ, ψ, na, nfos)
           if !iszero(nfos)
             ext += 1
             continue
@@ -721,19 +720,22 @@ end
 
 
 """
-    tip_sims!(tree::sTfbd, t::Float64, λ::Float64, 
-              μ::Float64, ψ::Float64, na::Int64)
+    tip_sims!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64, 
+              ψ::Float64, na::Int64, nfos::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
-function tip_sims!(tree::sTfbd, t::Float64, λ::Float64, 
-                   μ::Float64, ψ::Float64, na::Int64)
+function tip_sims!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64, 
+                   ψ::Float64, na::Int64, nfos::Int64)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
 
-  if istip(tree) 
+  if !defd1 && !defd2
+    # tips
     if !isfix(tree) && isalive(tree)
 
       # simulate
-      stree, na, nfos = sim_cfbd(t, λ, μ, ψ, na-1)
+      stree, na, nfos = sim_cfbd(t, λ, μ, ψ, na-1, 0)
 
       if iszero(nfos)
         # merge to current tip
@@ -746,9 +748,10 @@ function tip_sims!(tree::sTfbd, t::Float64, λ::Float64,
       end
     end
   else
-    tree.d1, na, nfos = tip_sims!(tree.d1, t, λ, μ, na)
+    # bifurcations and sampled fossil ancestors
+    if defd1 tree.d1, na, nfos = tip_sims!(tree.d1, t, λ, μ, ψ, na, nfos) end
     if !iszero(nfos) return tree, na, nfos end
-    tree.d2, na, nfos = tip_sims!(tree.d2, t, λ, μ, na)
+    if defd2 tree.d2, na, nfos = tip_sims!(tree.d2, t, λ, μ, ψ, na, nfos) end
   end
 
   return tree, na, nfos

@@ -289,22 +289,22 @@ end
 
 
 """
-    couple(xi::Vector{T},
-           idf::Vector{iBffs},
-           ix ::Int64) where {T <: iTree}
+    couple(Ξ::Vector{T},
+           idf::Vector{B},
+           ix ::Int64) where {T <: iTree, B <: Union{iBffs, iBfffs}}
 
 Build tree from decoupled tree.
 """
-function couple(xi::Vector{T},
-                idf::Vector{iBffs},
-                ix ::Int64) where {T <: iTree}
+function couple(Ξ::Vector{T},
+                idf::Vector{B},
+                ix ::Int64) where {T <: iTree, B <: Union{iBffs, iBfffs}}
 
   bi = idf[ix]
-  ξi = xi[ix]
+  ξi = Ξ[ix]
   if !it(bi)
     ξit = fixtip(ξi)
-    ξit.d1 = couple(xi, idf, d1(bi))
-    ξit.d2 = couple(xi, idf, d2(bi))
+    if !iszero(d1(bi)) ξit.d1 = couple(Ξ, idf, d1(bi)) end
+    if !iszero(d2(bi)) ξit.d2 = couple(Ξ, idf, d2(bi)) end
   end
 
   return ξi
@@ -314,13 +314,13 @@ end
 
 
 """
-    treelength(xi::Vector{T}) where {T<: iTree}
+    treelength(Ξ::Vector{T}) where {T<: iTree}
 
 Return the branch length sum of `Ξ`.
 """
-function treelength(xi::Vector{T}) where {T<: iTree}
+function treelength(Ξ::Vector{T}) where {T<: iTree}
   L = 0.0
-  for ξ in xi
+  for ξ in Ξ
     L += _treelength(ξ, 0.0)
   end
   return L
@@ -331,15 +331,14 @@ end
 
 
 """
-    _ctl(tree::Vector{T}) where {T <: iTgbm}
+    _ctl(Ξ::Vector{T}) where {T <: iTgbm}
 
-Return the branch length sum of `tree` based on `δt` and `fδt` 
+Return the branch length sum of `Ξ` based on `δt` and `fδt` 
 for debugging purposes.
 """
-function _ctl(tree::Vector{T}) where {T <: iTgbm}
-
+function _ctl(Ξ::Vector{T}) where {T <: iTgbm}
   L = 0.0
-  for ξ in xi
+  for ξ in Ξ
     L += _ctl(ξ, 0.0)
   end
   return L
@@ -349,16 +348,16 @@ end
 
 
 """
-    nnodesinternal(xi::Vector{T}) where {T<: iTree}
+    nnodesinternal(Ξ::Vector{T}) where {T<: iTree}
 
 Return the number of internal nodes in `Ξ`.
 """
-function nnodesinternal(xi::Vector{T}) where {T<: iTree}
+function nnodesinternal(Ξ::Vector{T}) where {T<: iTree}
   n = 0
-  for ξ in xi
+  for ξ in Ξ
     n += _nnodesinternal(ξ, 0)
   end
-  n += Float64(lastindex(xi) - 1)/2.0
+  n += Float64(lastindex(Ξ) - 1)/2.0
 
   return n
 end
@@ -367,18 +366,18 @@ end
 
 
 """
-    nnodesbifurcation(xi::Vector{T}) where {T<: iTree}
+    nnodesbifurcation(Ξ::Vector{T}) where {T<: iTree}
 
 Return the number of bifurcating nodes in `Ξ`.
 """
-function nnodesbifurcation(xi::Vector{T}) where {T<: iTree}
+function nnodesbifurcation(Ξ::Vector{T}) where {T<: iTree}
   n = 0
   nfos = 0
-  for ξ in xi
+  for ξ in Ξ
     n += _nnodesbifurcation(ξ, 0)
     if isone(_nfossils(ξ, 0)) nfos += 1 end
   end
-  n += Float64(lastindex(xi) - nfos - 1)/2.0
+  n += Float64(lastindex(Ξ) - nfos - 1)/2.0
 
   return n
 end
@@ -387,13 +386,13 @@ end
 
 
 """
-    ntipsextinct(xi::Vector{T}) where {T<: iTree}
+    ntipsextinct(Ξ::Vector{T}) where {T<: iTree}
 
 Return the number of extinct nodes in `Ξ`.
 """
-function ntipsextinct(xi::Vector{T}) where {T<: iTree}
+function ntipsextinct(Ξ::Vector{T}) where {T<: iTree}
   n = 0
-  for ξ in xi
+  for ξ in Ξ
     n += _ntipsextinct(ξ, 0)
   end
   return n
@@ -403,13 +402,13 @@ end
 
 
 """
-    nfossils(xi::Vector{T}) where {T<: iTree}
+    nfossils(Ξ::Vector{T}) where {T<: iTree}
 
 Return the number of fossil nodes in `Ξ`.
 """
-function nfossils(xi::Vector{T}) where {T<: iTree}
+function nfossils(Ξ::Vector{T}) where {T<: iTree}
   n = 0
-  for ξ in xi
+  for ξ in Ξ
     n += _nfossils(ξ, 0)
   end
   return n
@@ -420,16 +419,16 @@ end
 
 
 """
-    sss_gbm(xi::Vector{T}, α::Float64) where {T <: iTgbm}
+    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
 
 Returns the standardized sum of squares a `iTgbm` according 
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(xi::Vector{T}, α::Float64) where {T <: iTgbm}
+function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
 
   n   = 0.0
   ssλ = 0.0
-  for ξi in xi
+  for ξi in Ξ
     ssλ, n = _sss_gbm(ξi, α, ssλ, n)
   end
 
@@ -441,17 +440,17 @@ end
 
 
 """
-    sss_gbm(xi::Vector{iTgbmbd}, α::Float64)
+    sss_gbm(Ξ::Vector{iTgbmbd}, α::Float64)
 
 Returns the standardized sum of squares a `iTgbm` according 
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(xi::Vector{iTgbmbd}, α::Float64)
+function sss_gbm(Ξ::Vector{iTgbmbd}, α::Float64)
 
   n   = 0.0
   ssλ = 0.0
   ssμ = 0.0
-  for ξi in xi
+  for ξi in Ξ
     ssλ, ssμ, n = _sss_gbm(ξi, α, ssλ, ssμ, n)
   end
 
@@ -463,13 +462,13 @@ end
 
 
 """
-    Σλ_gbm(xi::Vector{T}) where {T<: iTgbm}
+    Σλ_gbm(Ξ::Vector{T}) where {T<: iTgbm}
 
 Return the internal nodes of `Ξ`.
 """
-function Σλ_gbm(xi::Vector{T}) where {T <: iTgbm}
+function Σλ_gbm(Ξ::Vector{T}) where {T <: iTgbm}
   Σλ = 0.0
-  for ξ in xi
+  for ξ in Ξ
     Σλ += Σλ_gbm(ξ)
   end
   return Σλ
