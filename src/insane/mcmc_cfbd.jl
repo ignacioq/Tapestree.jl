@@ -358,7 +358,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   lthin, lit = 0, 0
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 5)
+  R = Array{Float64,2}(undef, nlogs, 6)
 
   # make tree vector
   treev  = sTfbd[]
@@ -437,7 +437,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        R[lit,5] = ψc
+        R[lit,6] = ψc
         push!(treev, couple(deepcopy(Ξ), idf, 1))
       end
       lthin = 0
