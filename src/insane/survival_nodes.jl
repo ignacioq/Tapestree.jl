@@ -392,6 +392,46 @@ end
 
 
 """
+    sum_alone_stem_p(tree::sTfbd, tna::Float64, n::Float64)
+
+Count nodes in stem lineage when a diversification event could have 
+returned an overall extinction.
+"""
+function sum_alone_stem_p(tree::sTfbd, tna::Float64, n::Float64)
+
+  if tna < e(tree)
+    n += 1.0
+  end
+  tna -= e(tree)
+
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  # tip
+  if !defd1 && !defd2
+    return n
+  end
+
+  # sampled ancestors
+  if !defd1 return sum_alone_stem(tree.d2::sTfbd, tna-e(tree), n) end
+  if !defd2 return sum_alone_stem(tree.d1::sTfbd, tna-e(tree), n) end
+
+  # birth
+  if isfix(tree.d1::sTfbd)
+    tnx = treeheight(tree.d2::sTfbd)
+    tna = tnx > tna ? tnx : tna
+    return sum_alone_stem_p(tree.d1::sTfbd, tna, n)
+  else
+    tnx = treeheight(tree.d1::sTfbd)
+    tna = tnx > tna ? tnx : tna
+    return sum_alone_stem_p(tree.d2::sTfbd, tna, n)
+  end
+end
+
+
+
+
+"""
     sum_alone_stem_p(tree::sTfbd,
                      tna::Float64,
                      n::Float64, 
