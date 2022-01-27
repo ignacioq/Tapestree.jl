@@ -36,11 +36,58 @@ function sum_alone_stem!(tree::T,
 
     if isfix(tree.d1::T)
       tnx = treeheight(tree.d2::T)
-      tna = tnx > tna ? tnx : tna
+      tna = max(tnx, tna)
       sum_alone_stem!(tree.d1::T, tna, sn)
     else
       tnx = treeheight(tree.d1::T)
-      tna = tnx > tna ? tnx : tna
+      tna = max(tnx, tna)
+      sum_alone_stem!(tree.d2::T, tna, sn)
+    end
+  end
+end
+
+
+
+
+"""
+    sum_alone_stem!(tree::T, 
+                    tna ::Float64, 
+                    sn  ::BitVector) where {T <: sTf}
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function sum_alone_stem!(tree::T, 
+                         tna ::Float64, 
+                         sn  ::BitVector) where {T <: sTf}
+
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 || defd2
+
+    et = e(tree)
+    
+    # sampled ancestors (ignored)
+    if !defd1 return sum_alone_stem!(tree.d2::sTfbd, tna-et, sn) end
+    if !defd2 return sum_alone_stem!(tree.d1::sTfbd, tna-et, sn) end
+
+    # isolated stem branch
+    if tna < et
+      push!(sn, true)
+    else
+      push!(sn, false)
+    end
+    tna -= et
+
+    # birth
+    if isfix(tree.d1::T)
+      tnx = treeheight(tree.d2::T)
+      tna = max(tnx, tna)
+      sum_alone_stem!(tree.d1::T, tna, sn)
+    else
+      tnx = treeheight(tree.d1::T)
+      tna = max(tnx, tna)
       sum_alone_stem!(tree.d2::T, tna, sn)
     end
   end
@@ -72,11 +119,57 @@ function sum_alone_stem_p!(tree::T,
   if isdefined(tree, :d1)
     if isfix(tree.d1::T)
       tnx = treeheight(tree.d2::T)
-      tna = tnx > tna ? tnx : tna
+      tna = max(tnx, tna)
       sum_alone_stem_p!(tree.d1::T, tna, sn)
     else
       tnx = treeheight(tree.d1::T)
-      tna = tnx > tna ? tnx : tna
+      tna = max(tnx, tna)
+      sum_alone_stem_p!(tree.d2::T, tna, sn)
+    end
+  end
+end
+
+
+
+
+"""
+    sum_alone_stem_p!(tree::T, 
+                      tna ::Float64, 
+                      sn  ::BitVector) where {T <: sTf}
+
+Condition events when there is only one alive lineage in the crown subtrees 
+to only be speciation events.
+"""
+function sum_alone_stem_p!(tree::T, 
+                           tna ::Float64, 
+                           sn  ::BitVector) where {T <: sTf}
+
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  et = e(tree)
+  
+  # sampled ancestors (ignored)
+  if defd1 && !defd2 return sum_alone_stem_p!(tree.d1::sTfbd, tna-et, sn) end
+  if defd2 && !defd1 return sum_alone_stem_p!(tree.d2::sTfbd, tna-et, sn) end
+
+  # isolated stem branch
+  if tna < et
+    push!(sn, true)
+  else
+    push!(sn, false)
+  end
+  tna -= et
+
+  # birth
+  if defd1
+    if isfix(tree.d1::T)
+      tnx = treeheight(tree.d2::T)
+      tna = max(tnx, tna)
+      sum_alone_stem_p!(tree.d1::T, tna, sn)
+    else
+      tnx = treeheight(tree.d1::T)
+      tna = max(tnx, tna)
       sum_alone_stem_p!(tree.d2::T, tna, sn)
     end
   end
@@ -323,22 +416,12 @@ end
 
 
 """
-    sum_alone_stem(tree::sTfbd,
-                   tna::Float64,
-                   n::Float64, 
-                   survdr::BitArray{1},
-                   ldr ::Int64,
-                   ix  ::Int64)
+    sum_alone_stem(tree::sTfbd, tna::Float64, n::Float64)
 
 Count nodes in stem lineage when a diversification event could have 
 returned an overall extinction.
 """
-function sum_alone_stem(tree::sTfbd,
-                        tna::Float64,
-                        n::Float64, 
-                        survdr::BitArray{1},
-                        ldr ::Int64,
-                        ix  ::Int64)
+function sum_alone_stem(tree::sTfbd, tna::Float64, n::Float64)
 
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
@@ -349,11 +432,8 @@ function sum_alone_stem(tree::sTfbd,
   end
 
   # sampled ancestors
-  if (!defd1 || !defd2)
-    ix += 1
-    return sum_alone_stem(survdr[ix] ? tree.d1::sTfbd : tree.d2::sTfbd, 
-                          tna-e(tree), n, survdr, ldr, ix)
-  end
+  if !defd1 return sum_alone_stem(tree.d2::sTfbd, tna-e(tree), n) end
+  if !defd2 return sum_alone_stem(tree.d1::sTfbd, tna-e(tree), n) end
   
   # isolated stem branch
   if tna < e(tree)
@@ -361,17 +441,16 @@ function sum_alone_stem(tree::sTfbd,
   end
   tna -= e(tree)
 
-  # final birth node with 2 surviving daughters reached
-  if ix === ldr && isfix(tree.d1::sTfbd) && isfix(tree.d2::sTfbd) 
-    return n
-  end
-
   # birth
-  ix += 1
-  tnx = treeheight(survdr[ix] ? tree.d2::sTfbd : tree.d1::sTfbd)
-  tna = tnx > tna ? tnx : tna
-  sum_alone_stem(survdr[ix] ? tree.d1::sTfbd : tree.d2::sTfbd, 
-                 tna, n, survdr, ldr, ix)
+  if isfix(tree.d1::sTfbd)
+    tnx = treeheight(tree.d2::sTfbd)
+    tna = tnx > tna ? tnx : tna
+    return sum_alone_stem(tree.d1::sTfbd, tna, n)
+  else
+    tnx = treeheight(tree.d1::sTfbd)
+    tna = tnx > tna ? tnx : tna
+    return sum_alone_stem(tree.d2::sTfbd, tna, n)
+  end
 end
 
 
@@ -399,6 +478,7 @@ returned an overall extinction.
 """
 function sum_alone_stem_p(tree::sTfbd, tna::Float64, n::Float64)
 
+  # isolated stem branch
   if tna < e(tree)
     n += 1.0
   end
@@ -426,60 +506,6 @@ function sum_alone_stem_p(tree::sTfbd, tna::Float64, n::Float64)
     tna = tnx > tna ? tnx : tna
     return sum_alone_stem_p(tree.d2::sTfbd, tna, n)
   end
-end
-
-
-
-
-"""
-    sum_alone_stem_p(tree::sTfbd,
-                     tna::Float64,
-                     n::Float64, 
-                     survdr::BitArray{1},
-                     ldr ::Int64,
-                     ix  ::Int64)
-
-Count nodes in stem lineage when a diversification event could have 
-returned an overall extinction.
-"""
-function sum_alone_stem_p(tree::sTfbd,
-                          tna::Float64,
-                          n::Float64, 
-                          survdr::BitArray{1},
-                          ldr ::Int64,
-                          ix  ::Int64)
-  
-  if tna < e(tree)
-    n += 1.0
-  end
-  tna -= e(tree)
-
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
-
-  # tip
-  if !defd1 && !defd2
-    return n
-  end
-
-  # sampled ancestors
-  if (!defd1 || !defd2)
-    ix += 1
-    return sum_alone_stem(survdr[ix] ? tree.d1::sTfbd : tree.d2::sTfbd, 
-                          tna-e(tree), n, survdr, ldr, ix)
-  end
-
-  # final birth node with 2 surviving daughters reached
-  if ix === ldr && isfix(tree.d1::sTfbd) && isfix(tree.d2::sTfbd) 
-    return n
-  end
-
-  # birth
-  ix += 1
-  tnx = treeheight(survdr[ix] ? tree.d2::sTfbd : tree.d1::sTfbd)
-  tna = tnx > tna ? tnx : tna
-  sum_alone_stem(survdr[ix] ? tree.d1::sTfbd : tree.d2::sTfbd, 
-                 tna, n, survdr, ldr, ix)
 end
 
 

@@ -689,10 +689,12 @@ function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
 
     if iszero(nfos) # Exclude if any fossil is sampled
       nat = na
+      
       if isone(na)
         fixalive!(t0)
-
+        if ifos(bi) maketipsfossil!(t0) end
         return t0, na, nat
+      
       elseif na > 1
         # fix random tip
         fixrtip!(t0)
@@ -705,6 +707,8 @@ function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
             continue
           end
         end
+
+        if ifos(bi) maketipsfossil!(t0) end
 
         return t0, na, nat
       end
