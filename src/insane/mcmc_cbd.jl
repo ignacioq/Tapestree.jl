@@ -450,7 +450,6 @@ function ref_posterior(Ψ      ::Vector{sTbd},
           bix = ceil(Int64,rand()*el)
           llc, ns, ne, L = update_fs!(bix, Ψ, idf, llc, λc, μc, ns, ne, L, sns,
                              snodes!, scond0)
-
         end
       end
 
@@ -532,7 +531,7 @@ function update_fs!(bix    ::Int64,
       scn = ((iszero(pa(bi)) && e(bi) > 0.0)) || 
              (isone(pa(bi)) && iszero(e(Ψ[1])))
       if scn
-          llr += scond0(ψp, λ, μ, itb) - scond0(ψc, λ, μ, itb)
+        llr += scond0(ψp, λ, μ, itb) - scond0(ψc, λ, μ, itb)
       end
 
       # update ns, ne & L
@@ -689,28 +688,28 @@ end
 
 Mixed HM-Gibbs of `λ` for constant birth-death with reference distribution.
 """
-function update_λ!(llc   ::Float64,
-                   prc   ::Float64,
-                   rdc   ::Float64,
-                   λc    ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
-                   μc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
+function update_λ!(llc    ::Float64,
+                   prc    ::Float64,
+                   rdc    ::Float64,
+                   λc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Float64,
+                   μc     ::Float64,
+                   sns    ::NTuple{3,BitVector},
                    λ_prior::NTuple{2,Float64},
-                   λ_rdist ::NTuple{2,Float64},
-                   scond ::Function,
+                   λ_rdist::NTuple{2,Float64},
+                   scond  ::Function,
                    pow   ::Float64)
 
-  λp  = randgamma((λ_prior[1] + ns)*pow + λ_rdist[1] * (1.0 - pow),
-                  (λ_prior[2] + L)*pow  + λ_rdist[2] * (1.0 - pow)) 
+  λp  = randgamma((λ_prior[1] + ns)* pow + λ_rdist[1] * (1.0 - pow),
+                  (λ_prior[2] + L) * pow + λ_rdist[2] * (1.0 - pow)) 
 
   llr = scond(λp, μc, sns) - scond(λc, μc, sns)
 
   if -randexp() < (pow * llr)
     llc += ns * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-    rdc += llrdgamma(λp, λc, λ_rdist[1],  λ_rdist[2])
+    rdc += llrdgamma(λp, λc, λ_rdist[1], λ_rdist[2])
     λc   = λp
   end
 

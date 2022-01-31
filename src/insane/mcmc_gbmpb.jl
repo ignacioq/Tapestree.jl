@@ -872,7 +872,7 @@ function update_α!(αc     ::Float64,
 
   cpow = (1.0 - pow)
 
-  # gibbs update for σ
+  # gibbs update for α
   m   = (dλ + rs*ν)/(rs + L)
   s2  = σλ2/(rs + L)
   m0  = α_rdist[1]
