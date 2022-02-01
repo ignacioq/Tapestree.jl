@@ -94,7 +94,7 @@ function llik_cbd(psi ::Vector{sTbd},
     ll += llik_cbd(ψ, λ, μ)
   end
 
-  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ)
+  ll += (Float64(lastindex(psi) - 1)/2.0 - 1.0) * log(λ)
 
   return ll
 end

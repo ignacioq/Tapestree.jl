@@ -9,6 +9,30 @@ t(-_-t)
 Created 16 11 2021
 =#
 
+"""
+    surv_m(t::Float64, λ::Float64, μ::Float64, ntry::Int64)
+
+Sample the total number of `m` trials until both simulations survive.
+"""
+function surv_m(t::Float64, λ::Float64, μ::Float64, ntry::Int64)
+
+  ntries = 0
+  m      = 0.0
+  while true
+    m      += 1.0
+    ntries += 1
+
+    t1, s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
+    t2, s2, n2 = sim_cbd_surv(t, λ, μ, false, 1)
+
+    s1 && s2 && break
+
+  
+    ntries == ntry && break
+  end
+
+  return m
+end
 
 
 
