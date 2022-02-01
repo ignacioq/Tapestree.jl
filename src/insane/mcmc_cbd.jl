@@ -51,8 +51,9 @@ function insane_cbd(tree    ::sT_label,
                     prints  ::Int64                 = 5,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  n  = ntips(tree)
-  th = treeheight(tree)
+  n    = ntips(tree)
+  th   = treeheight(tree)
+  stem = !iszero(e(tree))
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -70,7 +71,8 @@ function insane_cbd(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  mc = surv_m(th, λc, μc, 1_000)
+  # M attempts of survival
+  mc = surv_m(th, λc, μc, 1_000, stem)
 
   # make a decoupled tree and fix it
   Ψ = sTbd[]
@@ -87,11 +89,11 @@ function insane_cbd(tree    ::sT_label,
 
   # adaptive phase
   llc, prc, λc, μc, mc = 
-      mcmc_burn_cbd(Ψ, idf, λ_prior, μ_prior, nburn, λc, μc, mc, th,
+      mcmc_burn_cbd(Ψ, idf, λ_prior, μ_prior, nburn, λc, μc, mc, th, stem,
         pup, prints)
 
   # mcmc
-  r, treev, λc, μc, mc = mcmc_cbd(Ψ, idf, llc, prc, λc, μc, mc, th,
+  r, treev, λc, μc, mc = mcmc_cbd(Ψ, idf, llc, prc, λc, μc, mc, th, stem,
     λ_prior, μ_prior, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda"      => 1),
@@ -156,34 +158,34 @@ end
 
 
 """
-    mcmc_burn_cbd(Ψ       ::Vector{sTbd},
-                  idf     ::Array{iBffs,1},
-                  λ_prior  ::NTuple{2,Float64},
-                  μ_prior  ::NTuple{2,Float64},
-                  nburn   ::Int64,
-                  λc      ::Float64,
-                  μc      ::Float64,
-                  pup     ::Array{Int64,1}, 
-                  prints  ::Int64,
-                  sns     ::NTuple{3, BitVector},
-                  snodes! ::Function,
-                  scond   ::Function,
-                  scond0  ::Function)
+    mcmc_burn_cbd(Ψ      ::Vector{sTbd},
+                  idf    ::Array{iBffs,1},
+                  λ_prior::NTuple{2,Float64},
+                  μ_prior::NTuple{2,Float64},
+                  nburn  ::Int64,
+                  λc     ::Float64,
+                  μc     ::Float64,
+                  mc     ::Float64,
+                  th     ::Float64,
+                  stem   ::Bool,
+                  pup    ::Array{Int64,1}, 
+                  prints ::Int64)
 
 Adaptive MCMC phase for da chain for constant birth-death using forward
 simulation.
 """
-function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
-                       idf     ::Array{iBffs,1},
-                       λ_prior  ::NTuple{2,Float64},
-                       μ_prior  ::NTuple{2,Float64},
-                       nburn   ::Int64,
-                       λc      ::Float64,
-                       μc      ::Float64,
-                       mc      ::Float64,
-                       th      ::Float64,
-                       pup     ::Array{Int64,1}, 
-                       prints  ::Int64)
+function mcmc_burn_cbd(Ψ      ::Vector{sTbd},
+                       idf    ::Array{iBffs,1},
+                       λ_prior::NTuple{2,Float64},
+                       μ_prior::NTuple{2,Float64},
+                       nburn  ::Int64,
+                       λc     ::Float64,
+                       μc     ::Float64,
+                       mc     ::Float64,
+                       th     ::Float64,
+                       stem   ::Bool,
+                       pup    ::Array{Int64,1}, 
+                       prints ::Int64)
 
   el = lastindex(idf)
   L  = treelength(Ψ)     # tree length
@@ -207,13 +209,13 @@ function mcmc_burn_cbd(Ψ       ::Vector{sTbd},
       if p === 1
 
         llc, prc, λc, mc = 
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, λ_prior)
+          update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
       # μ proposal
       elseif p === 2
 
         llc, prc, μc, mc = 
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, μ_prior)
+          update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
       # forward simulation proposal proposal
       else
@@ -239,16 +241,15 @@ end
              prc    ::Float64,
              λc     ::Float64,
              μc     ::Float64,
-             λ_prior ::NTuple{2,Float64},
-             μ_prior ::NTuple{2,Float64},
+             mc     ::Float64,
+             th     ::Float64,
+             stem   ::Bool,
+             λ_prior::NTuple{2,Float64},
+             μ_prior::NTuple{2,Float64},
              niter  ::Int64,
              nthin  ::Int64,
              pup    ::Array{Int64,1}, 
-             prints ::Int64,
-             sns    ::NTuple{3, BitVector},
-             snodes!::Function,
-             scond  ::Function,
-             scond0 ::Function)
+             prints ::Int64)
 
 MCMC da chain for constant birth-death using forward simulation.
 """
@@ -258,10 +259,11 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
                   prc    ::Float64,
                   λc     ::Float64,
                   μc     ::Float64,
-                  mc      ::Float64,
-                  th      ::Float64,
-                  λ_prior ::NTuple{2,Float64},
-                  μ_prior ::NTuple{2,Float64},
+                  mc     ::Float64,
+                  th     ::Float64,
+                  stem   ::Bool,
+                  λ_prior::NTuple{2,Float64},
+                  μ_prior::NTuple{2,Float64},
                   niter  ::Int64,
                   nthin  ::Int64,
                   pup    ::Array{Int64,1}, 
@@ -294,7 +296,7 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
       if p === 1
 
         llc, prc, λc, mc = 
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, λ_prior)
+          update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
         # llci = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -306,7 +308,7 @@ function mcmc_cbd(Ψ      ::Vector{sTbd},
       elseif p === 2
 
         llc, prc, μc, mc = 
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, μ_prior)
+          update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
         # llci = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -514,13 +516,6 @@ function update_fs!(bix    ::Int64,
     # MH ratio
     if -randexp() < llr + acr
 
-      # if survival conditioned
-      # scn = ((iszero(pa(bi)) && e(bi) > 0.0)) || 
-      #        (isone(pa(bi)) && iszero(e(Ψ[1])))
-      # if scn
-      #   llr += scond0(ψp, λ, μ, itb) - scond0(ψc, λ, μ, itb)
-      # end
-
       # update ns, ne & L
       ns += Float64(nnodesinternal(ψp) - nnodesinternal(ψc))
       ne += Float64(ntipsextinct(ψp)   - ntipsextinct(ψc))
@@ -531,9 +526,6 @@ function update_fs!(bix    ::Int64,
 
       Ψ[bix] = ψp     # set new decoupled tree
       llc += llr      # set new likelihood
-      # if scn
-      #   snodes!(Ψ, sns) # set new sns
-      # end
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
     end
@@ -642,11 +634,12 @@ function update_λ!(llc    ::Float64,
                    μc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
+                   stem   ::Bool,
                    λ_prior::NTuple{2,Float64})
 
   λp  = randgamma(λ_prior[1] + (ns-1.0), λ_prior[2] + L)
 
-  mp  = surv_m(th, λp, μc, 1_000) 
+  mp  = surv_m(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc) 
 
   if -randexp() < llr
@@ -730,11 +723,12 @@ function update_μ!(llc    ::Float64,
                    λc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
+                   stem   ::Bool,
                    μ_prior::NTuple{2,Float64})
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
-  mp  = surv_m(th, λc, μp, 1_000)
+  mp  = surv_m(th, λc, μp, 1_000, stem)
   llr = log(mp/mc) 
 
   if -randexp() < llr
