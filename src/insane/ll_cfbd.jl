@@ -51,17 +51,21 @@ given a complete `iTree` recursively.
 """
 function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
   if istip(tree)
-    - e(tree)*(λ + μ + ψ) + 
-        (isextinct(tree) ? log(μ) : 0.0) + 
-        (isfossil( tree) ? log(ψ) : 0.0)  
+    # fossil tips are labelled extinct despite no actual extinction event
+    if     isfossil(tree)  return - e(tree)*(λ + μ + ψ) + log(ψ)
+    elseif isextinct(tree) return - e(tree)*(λ + μ + ψ) + log(μ)
+    else                   return - e(tree)*(λ + μ + ψ) 
+    end
+  
   elseif issampledancestor(tree)
-    - e(tree)*(λ + μ + ψ) + log(ψ) +
-        (isdefined(tree, :d1) ? llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) : 0.0) + 
-        (isdefined(tree, :d2) ? llik_cfbd(tree.d2::sTfbd, λ, μ, ψ) : 0.0)
+    return - e(tree)*(λ + μ + ψ) + log(ψ) +
+             (isdefined(tree, :d1) ? llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) : 0.0) + 
+             (isdefined(tree, :d2) ? llik_cfbd(tree.d2::sTfbd, λ, μ, ψ) : 0.0)
+  
   else
-    - e(tree)*(λ + μ + ψ) + log(λ) +
-        llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) + 
-        llik_cfbd(tree.d2::sTfbd, λ, μ, ψ)
+    return - e(tree)*(λ + μ + ψ) + log(λ) +
+             llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) + 
+             llik_cfbd(tree.d2::sTfbd, λ, μ, ψ)
   end
 end
 
@@ -83,13 +87,16 @@ function llik_cfbd(Ξ::Vector{sTfbd},
                    ψ::Float64)
 
   ll = 0.0
-  nfos = 0.0
+  nsa = 0.0
   for ξ in Ξ
+    if !isextinct(ξ)
+      # number of sampled ancestors (fossils tips are labelled extinct)
+      nsa += isfossil(ξ)
+    end
     ll += llik_cfbd(ξ, λ, μ, ψ)
-    nfos += isfossil(ξ)
   end
   
-  ll += Float64(lastindex(Ξ) - nfos - 1)/2.0 * log(λ)
+  ll += Float64(lastindex(Ξ) - nsa - 1)/2.0 * log(λ)
 
   return ll
 end

@@ -28,6 +28,7 @@ end
 
 
 
+
 """
     sTbd!(Ξ::Vector{sTbd}, tree::sT_label)
 
@@ -44,6 +45,7 @@ end
 
 
 
+
 """
     sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
 
@@ -53,7 +55,8 @@ function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
-  push!(Ξ, sTfbd(e(tree), isextinct(tree), (defd1 && !defd2) || (!defd1 && defd2), true))
+  iμ = isextinct(tree) || (!defd1 && !defd2 && isfossil(tree))
+  push!(Ξ, sTfbd(e(tree), iμ, isfossil(tree), true))
   
   if defd2 sTfbd!(Ξ, tree.d2) end
   if defd1 sTfbd!(Ξ, tree.d1) end
@@ -139,7 +142,6 @@ function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
     iTgbmpb!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
-
 
 
 
@@ -417,7 +419,6 @@ end
 
 
 
-
 """
     sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
 
@@ -434,7 +435,6 @@ function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
 
   return ssλ, n
 end
-
 
 
 
@@ -456,7 +456,6 @@ function sss_gbm(Ξ::Vector{iTgbmbd}, α::Float64)
 
   return ssλ, ssμ, n
 end
-
 
 
 

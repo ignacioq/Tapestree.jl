@@ -528,7 +528,7 @@ function makeiBf!(tree::sTf_label,
   ft = ft1 + ft2                   # number of fossil tips
   sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
 
-  push!(idv, iBfffs(el, 0, 1, 1, ti, tf, false, ρi, n==0, 
+  push!(idv, iBfffs(el, 0, 1, 1, ti, tf, false, ρi, false, 
                     isfossil(tree), 0, 1, 0.0, 0.0, 0.0))
   push!(n1v, n1)
   push!(n2v, n2)

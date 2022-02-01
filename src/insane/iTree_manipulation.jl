@@ -912,6 +912,39 @@ Fixes the path from root to the only species alive.
 """
 function fixalive!(tree::T) where {T <: sTf}
 
+  if istip(tree::T) && isalive(tree::T)
+    fix!(tree::T)
+    return true
+  end
+
+  if isdefined(tree, :d2)
+    f = fixalive!(tree.d2::T)
+    if f
+      fix!(tree)
+      return true
+    end
+  end
+
+  if isdefined(tree, :d1)
+    f = fixalive!(tree.d1::T)
+    if f
+      fix!(tree)
+      return true
+    end
+  end
+
+  return false
+end
+
+
+
+#="""
+    fixalive!(tree::T) where {T <: sTf}
+
+Fixes the path from root to the only species alive (skipping fossils).
+"""
+function fixalive!(tree::T) where {T <: sTf}
+
   iψ = isfossil(tree::T)
 
   if istip(tree::T) && isalive(tree::T) && !iψ
@@ -936,7 +969,7 @@ function fixalive!(tree::T) where {T <: sTf}
   end
 
   return false
-end
+end=#
 
 
 

@@ -12,7 +12,7 @@ Created 11 10 2021
 
 
 
-"""
+#="""
     cond_surv_crown(tree::sTfbd, λ::Float64, μ::Float64)
 
 Log-probability of at least two lineage surviving for fossilized birth-death 
@@ -165,3 +165,4 @@ end
 
 
 
+=#
