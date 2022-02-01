@@ -35,8 +35,8 @@ Run insane for constant birth-death.
 """
 function insane_cbd(tree    ::sT_label, 
                     out_file::String;
-                    λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
-                    μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+                    λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                    μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
@@ -131,8 +131,8 @@ function insane_cbd(tree    ::sT_label,
     μ_rdist = (x1[1], x1[2])
 
     # marginal likelihood
-    pp = ref_posterior(Ψ, idf, λc, μc, v, λ_prior, μ_prior, λ_rdist, μ_rdist,
-      nitpp, nthpp, βs, pup)
+    pp = ref_posterior(Ψ, idf, λc, μc, v, mc, th, stem, 
+      λ_prior, μ_prior, λ_rdist, μ_rdist, nitpp, nthpp, βs, pup)
 
     # process with reference distribution the posterior
     p1 = Vector{Float64}(undef, size(r,1))
@@ -360,6 +360,10 @@ end
                   idf    ::Array{iBffs,1},
                   λc     ::Float64,
                   μc     ::Float64,
+                  μtn    ::Float64,
+                  mc     ::Float64,
+                  th     ::Float64,
+                  stem   ::Bool,
                   λ_prior ::NTuple{2,Float64},
                   μ_prior ::NTuple{2,Float64},
                   λ_rdist  ::NTuple{2,Float64},
@@ -367,11 +371,7 @@ end
                   nitpp  ::Int64,
                   nthpp  ::Int64,
                   βs     ::Vector{Float64},
-                  pup    ::Array{Int64,1},
-                  sns    ::NTuple{3, BitVector},
-                  snodes!::Function,
-                  scond  ::Function,
-                  scond0 ::Function)
+                  pup    ::Array{Int64,1})
 
 MCMC da chain for constant birth-death using forward simulation.
 """
@@ -380,6 +380,9 @@ function ref_posterior(Ψ      ::Vector{sTbd},
                        λc     ::Float64,
                        μc     ::Float64,
                        μtn    ::Float64,
+                       mc     ::Float64,
+                       th     ::Float64,
+                       stem   ::Bool,
                        λ_prior ::NTuple{2,Float64},
                        μ_prior ::NTuple{2,Float64},
                        λ_rdist  ::NTuple{2,Float64},
@@ -387,11 +390,7 @@ function ref_posterior(Ψ      ::Vector{sTbd},
                        nitpp  ::Int64,
                        nthpp  ::Int64,
                        βs     ::Vector{Float64},
-                       pup    ::Array{Int64,1},
-                       sns    ::NTuple{3, BitVector},
-                       snodes!::Function,
-                       scond  ::Function,
-                       scond0 ::Function)
+                       pup    ::Array{Int64,1})
 
   K = lastindex(βs)
 
@@ -404,7 +403,7 @@ function ref_posterior(Ψ      ::Vector{sTbd},
   ne = Float64(ntipsextinct(Ψ))
   L  = treelength(Ψ)
 
-  llc = llik_cbd(Ψ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+  llc = llik_cbd(Ψ, λc, μc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
@@ -426,16 +425,16 @@ function ref_posterior(Ψ      ::Vector{sTbd},
         # λ proposal
         if p === 1
 
-          llc, prc, rdc, λc = 
-            update_λ!(llc, prc, rdc, λc, ns, L, μc, sns, λ_prior, λ_rdist, 
-              scond, βi)
+          llc, prc, rdc, λc, mc = 
+            update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, stem, 
+              λ_prior, λ_rdist, βi)
 
         # forward simulation proposal proposal
         elseif p === 2 
 
-          llc, prc, rdc, μc = 
-            update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, sns, μ_prior, μ_rdist, 
-              scond, βi)
+          llc, prc, rdc, μc, mc = 
+            update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, stem, 
+              μ_prior, μ_rdist, βi)
 
         else
 
@@ -614,15 +613,16 @@ end
 
 
 """
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              μc    ::Float64,
-              sns   ::NTuple{3,BitVector},
-              λ_prior::NTuple{2,Float64},
-              scond ::Function)
+    update_λ!(llc    ::Float64,
+              prc    ::Float64,
+              λc     ::Float64,
+              ns     ::Float64,
+              L      ::Float64,
+              μc     ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              stem   ::Bool,
+              λ_prior::NTuple{2,Float64})
 
 Mixed HM-Gibbs sampling of `λ` for constant birth-death.
 """
@@ -637,13 +637,13 @@ function update_λ!(llc    ::Float64,
                    stem   ::Bool,
                    λ_prior::NTuple{2,Float64})
 
-  λp  = randgamma(λ_prior[1] + (ns-1.0), λ_prior[2] + L)
+  λp  = randgamma(λ_prior[1] + (ns - 1.0), λ_prior[2] + L)
 
   mp  = surv_m(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc) 
 
   if -randexp() < llr
-    llc += ns * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - 1.0) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     λc   = λp
     mc   = mp
@@ -656,17 +656,18 @@ end
 
 
 """
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              μc    ::Float64,
-              sns   ::NTuple{3,BitVector},
+    update_λ!(llc    ::Float64,
+              prc    ::Float64,
+              rdc    ::Float64,
+              λc     ::Float64,
+              ns     ::Float64,
+              L      ::Float64,
+              μc     ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              stem   ::Bool,
               λ_prior::NTuple{2,Float64},
-              λ_rdist ::NTuple{2,Float64},
-              scond ::Function,
+              λ_rdist::NTuple{2,Float64},
               pow   ::Float64)
 
 Mixed HM-Gibbs of `λ` for constant birth-death with reference distribution.
@@ -678,40 +679,43 @@ function update_λ!(llc    ::Float64,
                    ns     ::Float64,
                    L      ::Float64,
                    μc     ::Float64,
-                   sns    ::NTuple{3,BitVector},
+                   mc     ::Float64,
+                   th     ::Float64,
+                   stem   ::Bool,
                    λ_prior::NTuple{2,Float64},
                    λ_rdist::NTuple{2,Float64},
-                   scond  ::Function,
                    pow   ::Float64)
 
-  λp  = randgamma((λ_prior[1] + ns)* pow + λ_rdist[1] * (1.0 - pow),
-                  (λ_prior[2] + L) * pow + λ_rdist[2] * (1.0 - pow)) 
-
-  llr = scond(λp, μc, sns) - scond(λc, μc, sns)
+  λp  = randgamma((λ_prior[1] + (ns - 1.0)) * pow + λ_rdist[1] * (1.0 - pow),
+                  (λ_prior[2] + L) * pow          + λ_rdist[2] * (1.0 - pow)) 
+  mp  = surv_m(th, λp, μc, 1_000, stem) 
+  llr = log(mp/mc)
 
   if -randexp() < (pow * llr)
-    llc += ns * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - 1.0) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     rdc += llrdgamma(λp, λc, λ_rdist[1], λ_rdist[2])
     λc   = λp
+    mc   = mp
   end
 
-  return llc, prc, rdc, λc
+  return llc, prc, rdc, λc, mc
 end
 
 
 
 
 """
-    update_μ!(llc   ::Float64,
-              prc   ::Float64,
-              μc    ::Float64,
-              ne    ::Float64,
-              L     ::Float64,
-              λc    ::Float64,
-              sns   ::NTuple{3,BitVector},
-              μ_prior::NTuple{2,Float64},
-              scond ::Function)
+    update_μ!(llc    ::Float64,
+              prc    ::Float64,
+              μc     ::Float64,
+              ne     ::Float64,
+              L      ::Float64,
+              λc     ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              stem   ::Bool,
+              μ_prior::NTuple{2,Float64})
 
 Mixed HM-Gibbs of `μ` for constant birth-death.
 """
@@ -746,18 +750,19 @@ end
 
 """
     update_μ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              μc    ::Float64,
-              ne    ::Float64,
-              L     ::Float64,
-              μtn   ::Float64,
-              λc    ::Float64,
-              sns   ::NTuple{3,BitVector},
-              μ_prior::NTuple{2,Float64},
-              μ_rdist ::NTuple{2,Float64},
-              scond ::Function,
-              pow   ::Float64)
+               prc   ::Float64,
+               rdc   ::Float64,
+               μc    ::Float64,
+               ne    ::Float64,
+               L     ::Float64,
+               μtn   ::Float64,
+               λc    ::Float64,
+               mc     ::Float64,
+               th     ::Float64,
+               stem   ::Bool,
+               μ_prior::NTuple{2,Float64},
+               μ_rdist::NTuple{2,Float64},
+               pow   ::Float64)
 
 Mixed HM-Gibbs of `μ` for constant birth-death with reference distribution.
 """
@@ -769,16 +774,18 @@ function update_μ!(llc   ::Float64,
                    L     ::Float64,
                    μtn   ::Float64,
                    λc    ::Float64,
-                   sns   ::NTuple{3,BitVector},
+                   mc     ::Float64,
+                   th     ::Float64,
+                   stem   ::Bool,
                    μ_prior::NTuple{2,Float64},
                    μ_rdist::NTuple{2,Float64},
-                   scond ::Function,
                    pow   ::Float64)
 
-  μp = mulupt(μc, μtn)::Float64
+  μp  = mulupt(μc, μtn)::Float64
+  mp  = surv_m(th, λc, μp, 1_000, stem)
 
   μr  = log(μp/μc)
-  llr = ne * μr + L * (μc - μp) + scond(λc, μp, sns) - scond(λc, μc, sns)
+  llr = ne * μr + L * (μc - μp) + log(mp/mc)
   prr = llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
   rdr = llrdtnorm(μp, μc, μ_rdist[1], μ_rdist[2])
 
@@ -787,9 +794,10 @@ function update_μ!(llc   ::Float64,
     prc += prr
     rdc += rdr
     μc   = μp
+    mc   = mp
   end
 
-  return llc, prc, rdc, μc
+  return llc, prc, rdc, μc, mc
 end
 
 
