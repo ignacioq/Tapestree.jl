@@ -403,8 +403,8 @@ function swapbranch!(treep::sTfbd,
   if ix === ldr
     nbtrp = deepcopy(nbtr)
     if iψ 
-      maketipsfossil!(nbtrp)
-      maketipsfossil!(nbtr)
+      fossilizefixedtip!(nbtrp)
+      fossilizefixedtip!(nbtr)
     end
     if !it || iψ
       nbtrp = addtree(nbtrp, treep) 
@@ -477,7 +477,7 @@ function swapbranch!(tree::sTfbd,
 
   # branch reached
   if ix === ldr
-    if iψ maketipsfossil!(nbtr) end
+    if iψ fossilizefixedtip!(nbtr) end
     if !it || iψ
       nbtr = addtree(nbtr, tree)
     end
@@ -642,39 +642,39 @@ end
 
 
 """
-    maketipsfossil!(tree::T) where {T <: sTf}
+    fossilizefixedtip!(tree::T) where {T <: sTf}
 
 Change all alive tips to fossil tips.
 """
-function maketipsfossil!(tree::T) where {T <: sTf}
+function fossilizefixedtip!(tree::T) where {T <: sTf}
 
-  if istip(tree::T) && isalive(tree::T)
-    tree.iψ = true
+  if     isdefined(tree, :d1) && isfix(tree.d1) fossilizefixedtip!(tree.d1::T)
+  elseif isdefined(tree, :d2) && isfix(tree.d2) fossilizefixedtip!(tree.d2::T)
+  else tree.iψ = true
   end
-
-  if isdefined(tree, :d1) maketipsfossil!(tree.d1::T) end
-  if isdefined(tree, :d2) maketipsfossil!(tree.d2::T) end
+  
 end
 
 
 
 
 """
-    makepasttipsfossil!(tree::T) where {T <: sTf}
+    fossilizepasttips!(tree::T) where {T <: sTf}
 
 Change all past tips to fossil tips.
 """
-makepasttipsfossil!(tree::T) where {T <: sTf} = _makepasttipsfossil!(tree::T, treeheight(tree::T))
+fossilizepasttips!(tree::T) where {T <: sTf} = _fossilizepasttips!(tree::T, 
+                                                            treeheight(tree::T))
 
 
 
 
 """
-    _makepasttipsfossil!(tree::T, th::Float64) where {T <: sTf}
+    _fossilizepasttips!(tree::T, th::Float64) where {T <: sTf}
 
 Change all past tips to fossil tips, initialized at tree height `th`.
 """
-function _makepasttipsfossil!(tree::T, th::Float64) where {T <: sTf}
+function _fossilizepasttips!(tree::T, th::Float64) where {T <: sTf}
 
   th -= e(tree)
 
@@ -682,29 +682,29 @@ function _makepasttipsfossil!(tree::T, th::Float64) where {T <: sTf}
     tree.iψ = true
   end
 
-  if isdefined(tree, :d1) _makepasttipsfossil!(tree.d1::T, th) end
-  if isdefined(tree, :d2) _makepasttipsfossil!(tree.d2::T, th) end
+  if isdefined(tree, :d1) _fossilizepasttips!(tree.d1::T, th) end
+  if isdefined(tree, :d2) _fossilizepasttips!(tree.d2::T, th) end
 end
 
 
 
 
 """
-    makepasttipsextinct!(tree::T) where {T <: sTf}
+    extinguishpasttips!(tree::T) where {T <: sTf}
 
 Change all past tips to extinct tips.
 """
-makepasttipsextinct!(tree::T) where {T <: sTf} = _makepasttipsextinct!(tree::T, treeheight(tree::T))
+extinguishpasttips!(tree::T) where {T <: sTf} = _extinguishpasttips!(tree::T, treeheight(tree::T))
 
 
 
 
 """
-    _makepasttipsextinct!(tree::T, th::Float64) where {T <: sTf}
+    _extinguishpasttips!(tree::T, th::Float64) where {T <: sTf}
 
 Change all past tips to extinct tips, initialized at tree height `th`.
 """
-function _makepasttipsextinct!(tree::T, th::Float64) where {T <: sTf}
+function _extinguishpasttips!(tree::T, th::Float64) where {T <: sTf}
 
   th -= e(tree)
 
@@ -712,8 +712,8 @@ function _makepasttipsextinct!(tree::T, th::Float64) where {T <: sTf}
     tree.iμ = true
   end
 
-  if isdefined(tree, :d1) _makepasttipsextinct!(tree.d1::T, th) end
-  if isdefined(tree, :d2) _makepasttipsextinct!(tree.d2::T, th) end
+  if isdefined(tree, :d1) _extinguishpasttips!(tree.d1::T, th) end
+  if isdefined(tree, :d2) _extinguishpasttips!(tree.d2::T, th) end
 end
 
 

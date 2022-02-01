@@ -694,27 +694,32 @@ function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
       nat = na
       
       if isone(na)
+        # fix the only tip alive
         fixalive!(t0)
-        if ifos(bi) maketipsfossil!(t0) end
-        return t0, na, nat
       
       elseif na > 1
-        # fix random tip
+        # fix a random tip
         fixrtip!(t0)
 
-        if !it(bi)
+        if !it(bi) || ifos(bi)
           # add tips until the present
           tx, na, nfos = tip_sims!(t0, tfb, λ, μ, ψ, na, nfos)
-          if !iszero(nfos)
-            ext += 1
-            continue
-          end
+          if !iszero(nfos) ext += 1 ; continue end
         end
-
-        if ifos(bi) maketipsfossil!(t0) end
-
-        return t0, na, nat
       end
+
+      if ifos(bi)
+        # replace extant tip by a fossil
+        fossilizefixedtip!(t0)
+
+        # if the branch is a fossil tip, complete it with a simulated tree
+        if it(bi)
+          tx, na, nfos = fixedtip_sim!(t0, tfb, λ, μ, ψ, na, nfos)
+          if !iszero(nfos) ext += 1 ; continue end
+        end
+      end
+      
+      return t0, na, nat
     end
 
     ext += 1
@@ -759,6 +764,49 @@ function tip_sims!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64,
     if defd1 tree.d1, na, nfos = tip_sims!(tree.d1, t, λ, μ, ψ, na, nfos) end
     if !iszero(nfos) return tree, na, nfos end
     if defd2 tree.d2, na, nfos = tip_sims!(tree.d2, t, λ, μ, ψ, na, nfos) end
+  end
+
+  return tree, na, nfos
+end
+
+
+
+
+"""
+    fixedtip_sim!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64, 
+                  ψ::Float64, na::Int64, nfos::Int64)
+
+Continue simulation until time `t` for the fixed tip in `tree`. 
+"""
+function fixedtip_sim!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64, 
+                       ψ::Float64, na::Int64, nfos::Int64)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  # tips
+  if !defd1 && !defd2
+    # simulate
+    stree, na, nfos = sim_cfbd(t, λ, μ, ψ, na-1, 0)
+    if iszero(nfos)
+      tree.d1 = stree
+      # merge to current tip
+      #sete!(tree, e(tree) + e(stree))
+      #setproperty!(tree, :iμ, isextinct(stree))
+      #if isdefined(stree, :d1)
+      #  tree.d1 = stree.d1
+      #  tree.d2 = stree.d2
+      #end
+    end
+  
+  # bifurcations and sampled fossil ancestors
+  else
+    if defd1 && isfix(tree.d1)
+      tree.d1, na, nfos = fixedtip_sim!(tree.d1, t, λ, μ, ψ, na, nfos)
+      if !iszero(nfos) return tree, na, nfos end
+    end
+    if defd2 && isfix(tree.d2)
+      tree.d2, na, nfos = fixedtip_sim!(tree.d2, t, λ, μ, ψ, na, nfos)
+    end
   end
 
   return tree, na, nfos

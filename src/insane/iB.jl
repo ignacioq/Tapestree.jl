@@ -524,8 +524,12 @@ function makeiBf!(tree::sTf_label,
   end
 
   n  = n1 + n2                     # number of alive descendants
-  ρi = n / (n1/ρ1 + n2/ρ2)         # branch specific sampling fraction
   ft = ft1 + ft2                   # number of fossil tips
+  if n>0
+    ρi = n / (n1/ρ1 + n2/ρ2)       # branch specific sampling fraction
+  else
+    ρi = ft / (ft1/ρ1 + ft2/ρ2)
+  end
   sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
 
   push!(idv, iBfffs(el, 0, 1, 1, ti, tf, false, ρi, false, 
