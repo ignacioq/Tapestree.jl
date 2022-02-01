@@ -72,7 +72,7 @@ function insane_cbd(tree    ::sT_label,
     λc, μc = λi, μi
   end
   # M attempts of survival
-  mc = surv_m(th, λc, μc, 1_000, stem)
+  mc = m_surv_cbd(th, λc, μc, 1_000, stem)
 
   # make a decoupled tree and fix it
   Ψ = sTbd[]
@@ -639,7 +639,7 @@ function update_λ!(llc    ::Float64,
 
   λp  = randgamma(λ_prior[1] + (ns - 1.0), λ_prior[2] + L)
 
-  mp  = surv_m(th, λp, μc, 1_000, stem) 
+  mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc) 
 
   if -randexp() < llr
@@ -688,7 +688,7 @@ function update_λ!(llc    ::Float64,
 
   λp  = randgamma((λ_prior[1] + (ns - 1.0)) * pow + λ_rdist[1] * (1.0 - pow),
                   (λ_prior[2] + L) * pow          + λ_rdist[2] * (1.0 - pow)) 
-  mp  = surv_m(th, λp, μc, 1_000, stem) 
+  mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc)
 
   if -randexp() < (pow * llr)
@@ -732,7 +732,7 @@ function update_μ!(llc    ::Float64,
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
-  mp  = surv_m(th, λc, μp, 1_000, stem)
+  mp  = m_surv_cbd(th, λc, μp, 1_000, stem)
   llr = log(mp/mc) 
 
   if -randexp() < llr
@@ -782,7 +782,7 @@ function update_μ!(llc   ::Float64,
                    pow   ::Float64)
 
   μp  = mulupt(μc, μtn)::Float64
-  mp  = surv_m(th, λc, μp, 1_000, stem)
+  mp  = m_surv_cbd(th, λc, μp, 1_000, stem)
 
   μr  = log(μp/μc)
   llr = ne * μr + L * (μc - μp) + log(mp/mc)

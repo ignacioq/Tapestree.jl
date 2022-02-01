@@ -10,12 +10,12 @@ Created 16 11 2021
 =#
 
 """
-    surv_m(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem ::Bool)
+    m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Bool)
 
 Sample the total number of `m` trials until both simulations survive 
 for constant birth-death.
 """
-function surv_m(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem ::Bool)
+function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Bool)
 
   ntries = 0
   m      = 0.0
