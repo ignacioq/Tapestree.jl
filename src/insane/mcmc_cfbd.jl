@@ -626,8 +626,8 @@ function update_fs!(bix    ::Int64,
     # current tree
     ξc  = Ξ[bix]
 
-    # if terminal branch
-    if itb
+    # if terminal non-fossil branch
+    if itb && !iψb
       llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
       acr = 0.0
     else

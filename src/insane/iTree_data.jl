@@ -595,7 +595,7 @@ function _ntipsextinct(tree::T, n::Int64) where {T <: sTf}
   
   if defd1 n = _ntipsextinct(tree.d1, n) end
   if defd2 n = _ntipsextinct(tree.d2, n) end
-  if isextinct(tree) n += 1 end
+  if isextinct(tree) && !isfossil(tree) n += 1 end
 
   return n
 end
@@ -646,7 +646,7 @@ function _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
   
   if defd1 n = _ntipsextinctF(tree.d1, n) end
   if defd2 n = _ntipsextinctF(tree.d2, n) end
-  if isextinct(tree) n += 1.0 end
+  if isextinct(tree) && !isfossil(tree) n += 1.0 end
 
   return n
 end
