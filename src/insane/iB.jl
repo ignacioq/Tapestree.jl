@@ -408,7 +408,7 @@ end
 """
     iBfffs
 
-A Composite type representing node address for a **fixed** branch in `iTree` with fossils:
+A Composite type representing node address for a **fixed** branch in `sTf`:
 
   `t` : edge length.
   `pa`: parent node
@@ -418,9 +418,9 @@ A Composite type representing node address for a **fixed** branch in `iTree` wit
   `tf`: final absolute time.
   `it`: `true` if a terminal branch.
   `ρi`: branch specific sampling fraction.
-  `ie`: `true` if an extinct branch.
+  `ie`: `true` if in a lineage that goes extinct.
   `iψ`: `true` if a fossil branch.
-  `ni`: current direct alive descendants.
+  `ni`: current direct alive descendants (≠ fixed ones in daugnter branches).
   `nt`: current alive descendants at time `t`.
   `λt`: final speciation rate for fixed at time `t`.
   `μt`: final extinction rate for fixed at time `t`.
@@ -461,8 +461,9 @@ end
 # pretty-printing
 Base.show(io::IO, id::iBfffs) = 
   print(io, "fixed", 
-    it(id)         ? " terminal" : "", 
+    ie(id)         ? " extinct" : "", 
     ifos(id)       ? " fossil" : "", 
+    it(id)         ? " terminal" : "", 
     iszero(pa(id)) ? " stem" : "", 
     isone(pa(id))  ? " crown" : "", 
     " ibranch (", ti(id), ", ", tf(id), 
@@ -471,132 +472,27 @@ Base.show(io::IO, id::iBfffs) =
 
 
 
-#="""
-    iBfffs
-
-A Composite type representing node address for a **fixed** branch in `iTree`:
-
-  `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
-  `ti`: initial absolute time.
-  `tf`: final absolute time.
-  `it`: `true` if a terminal branch.
-  `ie`: `true` if an extinct branch.
-  `iψ`: `true` if a fossil branch.
-  `sc`: is `0` if stem branch, `1` if either of the crown branches and `23` if 
-        another plebeian branch.
-
-    iBfffs()
-
-Constructs an empty `iBf` object.
-"""
-struct iBfffs <: iBf
-  dr::BitArray{1}
-  ti::Float64
-  tf::Float64
-  it::Bool
-  ie::Bool
-  iψ::Bool
-  sc::Int64
-
-  # constructors
-  iBfffs() = new(BitArray{1}(), 0.0, 0.0, false, false, false, 23)
-  iBfffs(dr::BitArray{1}, ti::Float64, tf::Float64, it::Bool, ie::Bool, iψ::Bool, 
-    sc::Int64) = 
-    new(dr, ti, tf, it, ie, iψ, sc)
-end
-
-
-# pretty-printing
-Base.show(io::IO, id::iBfffs) = 
-  print(io, "fixed", 
-    it(id)     ? " terminal" : "",
-    ifos(id)     ? " fossil" : "", 
-    iszero(sc(id)) ? " stem" : "", 
-    isone(sc(id))  ? " crown" : "", 
-    " ibranch (", ti(id), ", ", tf(id), "), ", dr(id))
-
-
-
-
-"""
-    makeiBf!(tree::sTfbd, idv ::Array{iBf,1}, bit ::BitArray{1})
-
-Make `iBf` vector for an `iTree`.
-"""
-function makeiBf!(tree::sTfbd, 
-                  idv::Array{iBfffs,1}, 
-                  bit::BitArray{1}) where {T <: iTree}
-  
-  return _makeiBf!(tree, idv, bit, treeheight(tree), 0)
-end
-
-
-
-
-"""
-    _makeiBf!(tree::sTfbd, 
-              idv ::Array{iBf,1}, 
-              bit ::BitArray{1}, 
-              ti::Float64, 
-              sc::Int64)
-
-Make `iBf` vector for an `iTree`, initialized at time `ti` and status `sc`.
-"""
-function _makeiBf!(tree::sTfbd, 
-                   idv ::Array{iBfffs,1}, 
-                   bit ::BitArray{1},
-                   ti::Float64,
-                   sc::Int64) where {T <: iTree}
-
-  itb = istip(tree)
-  ieb = isextinct(tree)
-  iψb = isfossil(tree)
-
-  lb = lastindex(bit)
-
-
-  tf = ti-e(tree)
-
-  push!(idv, iBfffs(bit, ti, tf, itb, ieb, iψb, sc))
-
-  bit1 = copy(bit)
-  bit2 = copy(bit)
-
-  survd1 = isdefined(tree, :d1) && survives(tree.d1)
-  survd2 = isdefined(tree, :d2) && survives(tree.d2)
-  
-  if isdefined(tree, :d1)
-    push!(bit1, true)
-    _makeiBf!(tree.d1, idv, bit1, tf, sc + (survd1&&survd2))
-  end
-  if isdefined(tree, :d2)
-    push!(bit2, false)
-    _makeiBf!(tree.d2, idv, bit2, tf, sc + (survd1&&survd2))
-  end
-
-  return nothing
-end=#
-
-
-
-
 """
     makeiBf!(tree::sTf_label, 
              idv ::Array{iBfffs,1}, 
-             ti::Float64,
+             ti  ::Float64,
              n1v ::Array{Int64,1}, 
              n2v ::Array{Int64,1}, 
-             sa2v ::Array{Int64,1}, 
+             ft1v::Array{Int64,1}, 
+             ft2v::Array{Int64,1}, 
+             sa2v::Array{Int64,1}, 
              tρ  ::Dict{String, Float64})
 
 Make `iBf` vector for an `iTree` with fossils.
 """
 function makeiBf!(tree::sTf_label, 
                   idv ::Array{iBfffs,1}, 
-                  ti::Float64,
+                  ti  ::Float64,
                   n1v ::Array{Int64,1}, 
                   n2v ::Array{Int64,1}, 
-                  sa2v ::Array{Int64,1}, 
+                  ft1v::Array{Int64,1}, 
+                  ft2v::Array{Int64,1}, 
+                  sa2v::Array{Int64,1}, 
                   tρ  ::Dict{String, Float64})
 
   #th = treeheight(tree)
@@ -606,38 +502,41 @@ function makeiBf!(tree::sTf_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    iμ = isextinct(tree)
-    push!(idv, iBfffs(el, 0, 0, 0, ti, tf, true, ρi, iμ, isfossil(tree), 
-                      Int64(!iμ), Int64(!iμ), 0.0, 0.0, 0.0))
-    push!(n1v, 0)
-    push!(n2v, 0)
-    push!(sa2v, 0)
-    return ρi, 1, 0
+    ie = iψ = isfossil(tree)       # count fossil tips as extinct
+    push!(idv, iBfffs(el, 0, 0, 0, ti, tf, true, ρi, ie, iψ, 
+                      Int64(!iψ), 1, 0.0, 0.0, 0.0))
+    
+    push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
+    
+    return iψ ? (ρi, 0, 1, 0) : (ρi, 1, 0, 0)
   end
 
   if isdefined(tree, :d1)
-    ρ1,n1,sa1 = makeiBf!(tree.d1, idv, tf, n1v, n2v, sa2v, tρ)
+    ρ1,n1,ft1,sa1 = makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
   else
-    ρ1,n1,sa1 = (1,0,0)  # cancels this term
+    ρ1,n1,ft1,sa1 = (1,0,0,0)
   end
 
   if isdefined(tree, :d2)
-    ρ2,n2,sa2 = makeiBf!(tree.d2, idv, tf, n1v, n2v, sa2v, tρ)
+    ρ2,n2,ft2,sa2 = makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
   else
-    ρ2,n2,sa2 = (1,0,0)  # cancels this term
+    ρ2,n2,ft2,sa2 = (1,0,0,0)
   end
 
-  n  = n1 + n2
-  ρi = n / (n1/ρ1 + n2/ρ2)
-  sa = sa1 + sa2 + isfossil(tree)
+  n  = n1 + n2                     # number of alive descendants
+  ρi = n / (n1/ρ1 + n2/ρ2)         # branch specific sampling fraction
+  ft = ft1 + ft2                   # number of fossil tips
+  sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
 
-  push!(idv, iBfffs(el, 0, 1, 1, ti, tf, false, ρi, false, 
+  push!(idv, iBfffs(el, 0, 1, 1, ti, tf, false, ρi, n==0, 
                     isfossil(tree), 0, 1, 0.0, 0.0, 0.0))
   push!(n1v, n1)
   push!(n2v, n2)
+  push!(ft1v, ft1)
+  push!(ft2v, ft2)
   push!(sa2v, sa2)
 
-  return ρi, n, sa
+  return ρi, n, ft, sa
 end
 
 
@@ -651,33 +550,33 @@ Make the edge dictionary.
 function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
 
   idf = iBfffs[]
-  n1v = Int64[]
-  n2v = Int64[]
-  sa2v = Int64[]
-  makeiBf!(tree, idf, treeheight(tree), n1v, n2v, sa2v, tρ)
+  n1v = Int64[]; n2v = Int64[]    # vector of nb of alive descendants (d1 & d2)
+  ft1v = Int64[]; ft2v = Int64[]  # vector of nb of fossil tips (d1 & d2)
+  sa2v = Int64[]                  # vector of nb of sampled ancestors (d2)
+  makeiBf!(tree, idf, treeheight(tree), n1v, n2v, ft1v, ft2v, sa2v, tρ)
 
   reverse!(idf)
-  reverse!(n1v)
-  reverse!(n2v)
+  reverse!(n1v); reverse!(n2v)
+  reverse!(ft1v); reverse!(ft2v)
   reverse!(sa2v)
 
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
-    n1 = n1v[i]
-    n2 = n2v[i]
+    n1 = n1v[i]; n2 = n2v[i]
+    ft1 = ft1v[i]; ft2 = ft2v[i]
     sa2 = sa2v[i]
     #@show i; @show bi; @show n1; @show n2; @show sa2
 
-    if n1>0 && n2>0 # bifurcation
-      setd1!(bi, n2*2 + sa2 + i)
+    if n1+ft1>0 && n2+ft2>0 # bifurcation
+      setd1!(bi, (n2+ft2)*2 + sa2 + i)
       setd2!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
       setpa!(idf[d2(bi)], i)
-    elseif n1>0    # fossil sampled ancestor of d1
+    elseif n1+ft1>0    # fossil sampled ancestor of d1
       setd1!(bi, i + 1)
       setd2!(bi, 0)
       setpa!(idf[d1(bi)], i)
-    elseif n2>0    # fossil sampled ancestor of d2
+    elseif n2+ft2>0    # fossil sampled ancestor of d2
       setd1!(bi, 0)
       setd2!(bi, i + 1)
       setpa!(idf[d2(bi)], i)
