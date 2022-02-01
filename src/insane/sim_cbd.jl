@@ -117,6 +117,43 @@ end
 
 
 """
+    sim_cbd_surv(t::Float64, λ::Float64, μ::Float64, surv::Bool, ns::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` until it goes extinct or survives.
+"""
+function sim_cbd_surv(t   ::Float64, 
+                      λ   ::Float64, 
+                      μ   ::Float64,
+                      surv::Bool,
+                      ns  ::Int64)
+
+  if !surv && ns < 1_000
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      return sTbd(t), true, ns
+    end
+
+    if λorμ(λ, μ)
+      ns += 1
+      d1, surv, ns = sim_cbd_surv(t - tw, λ, μ, surv, ns)
+      d2, surv, ns = sim_cbd_surv(t - tw, λ, μ, surv, ns)
+
+      return sTbd(d1, d2, tw), surv, ns
+    else
+      return sTbd(tw, true), surv, ns
+    end
+  end
+
+  return sTbd(), true, ns
+end
+
+
+
+
+"""
    sim_cbd_b(n::Int64, λ::Float64, μ::Float64)
 
 Simulate constant birth-death in backward time.
