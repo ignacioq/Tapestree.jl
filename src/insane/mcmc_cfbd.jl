@@ -102,9 +102,12 @@ function insane_cfbd(tree     ::sTf_label,
 
   # conditioning functions
   sns = (BitVector(), BitVector(), BitVector())
-  snodes! = make_snodes(idf, !iszero(e(tree)), sTfbd)
+  stem = !iszero(e(tree))
+  ## counting the number of bifurcations with only one alive lineage
+  snodes! = make_snodes(idf, stem, sTfbd)
   snodes!(Ξ, sns)
-  scond, scond0 = make_scond(idf, !iszero(e(tree)), sTfbd)
+  ## conditionning on those events being speciations and not extinctions
+  scond, scond0 = make_scond(idf, stem, sTfbd)
 
   @info "Running constant fossilized birth-death with forward simulation"
 
@@ -610,7 +613,7 @@ function update_fs!(bix    ::Int64,
 
   # forward simulate an internal branch
   ξp, np, ntp = fsbi(bi, λ, μ, ψ, 100)
-  
+
   # retained conditional on survival
   if ntp > 0
 
@@ -636,7 +639,7 @@ function update_fs!(bix    ::Int64,
     # MH ratio
     if -randexp() < llr + acr
 
-      # if survival conditioned
+      # if survival conditioned (TODO : change the definition !)
       scn = (iszero(pa(bi)) && e(bi)>0.0) || (isone(pa(bi)) && iszero(e(Ξ[1])))
       if scn
           llr += scond0(ξp, λ, μ, itb) - scond0(ξc, λ, μ, itb)

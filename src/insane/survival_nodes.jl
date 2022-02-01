@@ -147,19 +147,21 @@ function sum_alone_stem_p!(tree::T,
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
-  et = e(tree)
-  
-  # sampled ancestors (ignored)
-  if defd1 && !defd2 return sum_alone_stem_p!(tree.d1::sTfbd, tna-et, sn) end
-  if defd2 && !defd1 return sum_alone_stem_p!(tree.d2::sTfbd, tna-et, sn) end
+  tna -= e(tree)
 
+  # sampled ancestors (ignored)
+  if defd1 && !defd2 sum_alone_stem_p!(tree.d1::sTfbd, tna, sn) ; return tna end
+  if defd2 && !defd1 sum_alone_stem_p!(tree.d2::sTfbd, tna, sn) ; return tna end
+
+  # terminal fossil (stop)
+  if isfossil(tree) return tna end
+  
   # isolated stem branch
-  if tna < et
+  if tna < 0
     push!(sn, true)
   else
     push!(sn, false)
   end
-  tna -= et
 
   # birth
   if defd1
@@ -173,6 +175,8 @@ function sum_alone_stem_p!(tree::T,
       sum_alone_stem_p!(tree.d2::T, tna, sn)
     end
   end
+
+  return tna
 end
 
 
@@ -254,7 +258,12 @@ function make_snodes(idf::Vector{iBfffs}, stem::Bool, ::Type{T}) where {T <: iTr
   if stem
     function f(Ξ::Vector{T}, sns::NTuple{3,BitVector})
       empty!(sns[1])
-      sum_alone_stem_p!(Ξ[1], 0.0, sns[1])
+      tna = sum_alone_stem_p!(Ξ[1], 0.0, sns[1])
+      i = 1
+      while ifos(idf[i])
+        i += 1
+        tna = sum_alone_stem_p!(Ξ[i], tna, sns[1])
+      end
     end
   else
     b1  = idf[1]
@@ -341,11 +350,11 @@ function sum_alone_stem(tree::sTbd, tna::Float64, n::Float64)
 
   if isfix(tree.d1::sTbd)
     tnx = treeheight(tree.d2::sTbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     sum_alone_stem(tree.d1::sTbd, tna, n)
   else
     tnx = treeheight(tree.d1::sTbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     sum_alone_stem(tree.d2::sTbd, tna, n)
   end
 
@@ -387,11 +396,11 @@ function sum_alone_stem_p(tree::sTbd, tna::Float64, n::Float64)
 
   if isfix(tree.d1::sTbd)
     tnx = treeheight(tree.d2::sTbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     sum_alone_stem_p(tree.d1::sTbd, tna, n)
   else
     tnx = treeheight(tree.d1::sTbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     sum_alone_stem_p(tree.d2::sTbd, tna, n)
   end
 end
@@ -444,11 +453,11 @@ function sum_alone_stem(tree::sTfbd, tna::Float64, n::Float64)
   # birth
   if isfix(tree.d1::sTfbd)
     tnx = treeheight(tree.d2::sTfbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     return sum_alone_stem(tree.d1::sTfbd, tna, n)
   else
     tnx = treeheight(tree.d1::sTfbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     return sum_alone_stem(tree.d2::sTfbd, tna, n)
   end
 end
@@ -478,32 +487,31 @@ returned an overall extinction.
 """
 function sum_alone_stem_p(tree::sTfbd, tna::Float64, n::Float64)
 
-  # isolated stem branch
-  if tna < e(tree)
-    n += 1.0
-  end
-  tna -= e(tree)
-
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
 
   # tip
-  if !defd1 && !defd2
-    return n
-  end
+  if !defd1 && !defd2 return n end
 
-  # sampled ancestors
-  if !defd1 return sum_alone_stem(tree.d2::sTfbd, tna-e(tree), n) end
-  if !defd2 return sum_alone_stem(tree.d1::sTfbd, tna-e(tree), n) end
+  tna -= e(tree)
+
+  # sampled ancestors (ignored)
+  if defd1 && !defd2 return sum_alone_stem_p(tree.d1::sTfbd, tna, n) end
+  if defd2 && !defd1 return sum_alone_stem_p(tree.d2::sTfbd, tna, n) end
+
+  # isolated stem branch
+  if tna < 0
+    n += 1.0
+  end
 
   # birth
   if isfix(tree.d1::sTfbd)
     tnx = treeheight(tree.d2::sTfbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     return sum_alone_stem_p(tree.d1::sTfbd, tna, n)
   else
     tnx = treeheight(tree.d1::sTfbd)
-    tna = tnx > tna ? tnx : tna
+    tna = max(tnx, tna)
     return sum_alone_stem_p(tree.d2::sTfbd, tna, n)
   end
 end

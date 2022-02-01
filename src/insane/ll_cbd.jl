@@ -109,10 +109,6 @@ Return closure for log-likelihood for conditioning
 """
 function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
 
-  b1  = idf[1]
-  d1i = d1(b1)
-  d2i = d2(b1)
-
   if stem
     # for whole likelihood
     f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
