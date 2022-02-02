@@ -74,14 +74,14 @@ function insane_cfbd(tree     ::sTf_label,
   if isnan(λi) && isnan(μi) && isnan(ψi)
     # if only one tip
     if isone(n)
-      λc = λ_prior
-      μc = isnan(μ_prior[1]) ? λ_prior-λmμ_prior : μ_prior
+      λc = prod(λ_prior)
+      μc = isnan(μ_prior[1]) ? prod(λ_prior)-prod(λmμ_prior) : prod(μ_prior)
     else
       λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
     end
     # if no sampled fossil
     if iszero(nfossils(tree))
-      ψc = ψ_prior
+      ψc = prod(ψ_prior)
     else
       ψc = nfossils(tree)/treelength(tree)
     end
@@ -366,7 +366,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   # make tree vector
   treev  = sTfbd[]
 
-  pbar = Progress(niter, prints, "running mcmc...", 20)
+  pbar = Progress(niter, prints, "running mcmc...", 0)
 
   for it in Base.OneTo(niter)
 

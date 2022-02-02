@@ -24,21 +24,31 @@ function read_newick(in_file::String)
 
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
-  np = 1
-  nnp = 0
+  np = 0     # number of parenthesis
+  nlp = 0    # number of left parenthesis yet to be closed
+  nlin = 1   # number of distinct lineages at the origin
+  nbif = 0   # number of bifurcations (= speciations)
   for (i,v) in enumerate(s)
     if v == '('
+      nlp += 1
       np += 1
     elseif v == ')'
-      np -= 1
-    end
-    if v == ',' && isone(np)
-      nnp += 1
+      nlp -= 1
+      np += 1
+    elseif v == ','
+      nbif += 1
+      if iszero(nlp) nlin += 1 end
     end
   end
 
-  # if no root
-  if isone(nnp)
+  # change the tree type if it has fossils (as sampled ancestors)
+  T = (2*(nbif-nlin+1) == np) ? sT_label : sTf_label
+
+  # if root (starts with one stem lineage)
+  if isone(nlin)
+    tree = from_string(s, T)
+  # if no root (starts with two crown lineage)
+  else
     nrp = 0
     nlp = 0
     ci  = 0
@@ -56,10 +66,7 @@ function read_newick(in_file::String)
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = sT_label(from_string(s1), from_string(s2), 0.0, "")
-  # if root
-  else
-    tree = from_string(s)
+    tree = T(from_string(s1, T), from_string(s2, T), 0.0, "")
   end
 
   return tree
@@ -69,61 +76,21 @@ end
 
 
 """
-    from_string(s::String)
+    from_string(s::String, ::Type{T}) where {T <: sT}
 
 Returns `iTree` from newick string.
 """
-function from_string(s::String)
+function from_string(s::String, ::Type{T}) where {T <: sT}
 
   # find pendant edge
   wd  = findlast(isequal(':'), s)
   pei = parse(Float64, s[(wd+1):end])
   lab = s[1:(wd-1)]
-  s   = s[2:(wd-2)]
-
-  # if tip
-  if !(occursin('(', s) || occursin(',', s))
-      return sT_label(pei, lab)
-  else
-    # estimate number of parentheses (when np returns to 1)
-    nrp = 0
-    nlp = 0
-    ci  = 0
-    for (i,v) in enumerate(s)
-      if v == '('
-        nlp += 1
-      elseif v == ')'
-        nrp += 1
-      elseif v == ',' && nlp == nrp
-        ci = i
-        break
-      end
-    end
-  end
-
-  s1 = s[1:(ci-1)]
-  s2 = s[(ci+1):end]
-
-  sT_label(from_string(s1), from_string(s2), pei, "")
-end
-
-
-
-
-"""
-    from_string(s::String, ::Type{T}) where {T <: sTfbd}
-
-Returns `sTfbd` from newick string.
-"""
-function from_string(s::String, ::Type{T}) where {T <: sTfbd}
-
-  # find pendant edge
-  wd = findlast(isequal(':'), s)
-  pei = parse(Float64, s[(wd+1):end])
+  #s   = s[2:(wd-2)]
 
   # if tip
   if isone(count(i->(i==':'), s))
-      return sTfbd(pei)
+      return T(pei, lab)
   else
     while s[wd-1] != ')'  wd -= 1  end
     s = s[2:(wd-2)]
@@ -148,11 +115,11 @@ function from_string(s::String, ::Type{T}) where {T <: sTfbd}
   s2 = s[(ci+1):end]
 
   if isempty(s1)
-    return sTfbd(from_string(s2, sTfbd), pei, false, true, false)
+    return T(from_string(s2, T), pei, "")
   elseif isempty(s2)
-    return sTfbd(from_string(s1, sTfbd), pei, false, true, false)
+    return T(from_string(s1, T), pei, "")
   else
-    return sTfbd(from_string(s1, sTfbd), from_string(s2, sTfbd), pei)
+    return T(from_string(s1, T), from_string(s2, T), pei, "")
   end
 end
 

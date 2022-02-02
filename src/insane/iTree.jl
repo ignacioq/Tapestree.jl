@@ -252,16 +252,17 @@ function _sTf_label(tree::T, i::Int64) where {T <: iTree}
   if defd1 && defd2
     t1, i = _sTf_label(tree.d1, i)
     t2, i = _sTf_label(tree.d2, i)
-    tree = sTf_label(t1, t2, e(tree), "")
+    tree = sTf_label(t1, t2, e(tree), l(tree))
   elseif defd1
     t1, i = _sTf_label(tree.d1, i)
-    tree = sTf_label(t1, e(tree), "")
+    tree = sTf_label(t1, e(tree), l(tree))
   elseif defd2
     t2, i = _sTf_label(tree.d2, i)
-    tree = sTf_label(t2, e(tree), "")
+    tree = sTf_label(t2, e(tree), l(tree))
   else
     i += 1
-    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), string("t",i))
+    lab = l(tree)
+    tree = sTf_label(e(tree), ifelse(isempty(lab),string("t",i),lab))
   end
   return tree, i
 end

@@ -127,11 +127,13 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 """
+    l(tree::T) where {T <: iTree}
     l(tree::sT_label)
     l(tree::sTf_label)
 
 Return label.
 """
+l(tree::T) where {T <: iTree} = ""
 l(tree::sT_label) = getproperty(tree, :l)
 l(tree::sTf_label) = getproperty(tree, :l)
 
