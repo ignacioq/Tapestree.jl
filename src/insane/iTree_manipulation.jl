@@ -1851,12 +1851,12 @@ function remove_unsampled!(tree::T) where {T <: sTf}
     return tree
   end
 
-  extd1 = defd1 && isextinct(tree.d1)
-  extd2 = defd2 && isextinct(tree.d2)
+  extd1 = defd1 && isextincttip(tree.d1)
+  extd2 = defd2 && isextincttip(tree.d2)
 
   # 2 extinct branches or sampled ancestor -> extinct tip
   if extd1 && extd2 || (extd1 && !defd2) || (!defd1 && extd2)
-    return T(e(tree), true, isfix(tree))
+    return T(e(tree), true, false)
   end
 
   # 1 extinct and 1 alive branch -> keep only the alive one
@@ -1957,17 +1957,23 @@ function reconstructed!(tree::T) where {T <: sTf}
     return tree
   end
 
-  extd1 = defd1 && isextinct(tree.d1)
-  extd2 = defd2 && isextinct(tree.d2)
+  extd1 = defd1 && isextincttip(tree.d1)
+  extd2 = defd2 && isextincttip(tree.d2)
 
   # 2 extinct daughters -> extinct tip
   if extd1 && extd2
-    return T(e(tree), true, isfix(tree))
+    return T(e(tree), true, false)
   end
 
-  # sampled ancestor with extinct daughter -> fossil tip
+  # sampled ancestor with extinct daughter -> fossil tip (labelled extinct)
   if (extd1 && !defd2) || (!defd1 && extd2)
-    return T(e(tree), false, true, isfix(tree))
+    lab = extd1 ? l(tree.d1) : l(tree.d2)
+    @show lab
+    if isempty(lab)
+      return T(e(tree), true, true)
+    else
+      return T(e(tree), true, true, lab)
+    end
   end
 
   # 1 extinct and 1 alive branch -> keep only the alive one

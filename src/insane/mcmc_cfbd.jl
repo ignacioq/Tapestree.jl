@@ -223,11 +223,11 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
                         scond    ::Function,
                         scond0   ::Function)
 
-  el = lastindex(idf)
-  L  = treelength(Ξ)          # tree length
-  nfos = Float64(nfossils(Ξ)) # number of fossilization events
-  ns = (el-nfos-1)/2.0        # number of speciation events
-  ne = 0.0                    # number of extinction events
+  el = lastindex(idf)                  # number of branches
+  L  = treelength(Ξ)                   # tree length
+  nfos = Float64(nfossils(Ξ))          # number of fossilization events
+  ns = Float64(nnodesbifurcation(Ξ))   # number of speciation events
+  ne = 0.0                             # number of extinction events
 
   # add simulated subtrees to all fossil tips
   #=for bi in filter(x -> it(x) && ifos(x), idf)
@@ -293,8 +293,8 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
       # forward simulation proposal proposal
       else
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, nfos, 
-                                    L, sns, snodes!, scond0)
+        llc, ns, ne, nfos, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, 
+                                          nfos, L, sns, snodes!, scond0)
       end
     end
 
@@ -788,14 +788,8 @@ function fixedtip_sim!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64,
     # simulate
     stree, na, nfos = sim_cfbd(t, λ, μ, ψ, na-1, 0)
     if iszero(nfos)
-      tree.d1 = stree
       # merge to current tip
-      #sete!(tree, e(tree) + e(stree))
-      #setproperty!(tree, :iμ, isextinct(stree))
-      #if isdefined(stree, :d1)
-      #  tree.d1 = stree.d1
-      #  tree.d2 = stree.d2
-      #end
+      tree.d1 = stree
     end
   
   # bifurcations and sampled fossil ancestors

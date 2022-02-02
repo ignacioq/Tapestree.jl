@@ -54,6 +54,16 @@ isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 
 
 """
+    isextincttip(tree::T) where {T <: iTree}
+
+Return if is an extinct tip (i.e. not a fossil tip).
+"""
+isextincttip(tree::T) where {T <: sTf} = isextinct(tree) && !isfossil(tree)
+
+
+
+
+"""
     isextinct(tree::sTpb)
     isextinct(tree::iTgbmpb)
 
@@ -110,7 +120,7 @@ isfossil(tree::iTgbmbd) = false
 
 Return if is a sampled ancestor, i.e. a fossil internal node.
 """
-issampledancestor(tree::T) where {T <: iTree} = isfossil(tree) && !istip(tree)
+issampledancestor(tree::T) where {T<:iTree} = isfossil(tree) && !isextinct(tree)
 
 
 
@@ -597,7 +607,7 @@ function _ntipsextinct(tree::T, n::Int64) where {T <: sTf}
   
   if defd1 n = _ntipsextinct(tree.d1, n) end
   if defd2 n = _ntipsextinct(tree.d2, n) end
-  if isextinct(tree) && !isfossil(tree) n += 1 end
+  if isextincttip(tree) n += 1 end
 
   return n
 end
@@ -648,7 +658,7 @@ function _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
   
   if defd1 n = _ntipsextinctF(tree.d1, n) end
   if defd2 n = _ntipsextinctF(tree.d2, n) end
-  if isextinct(tree) && !isfossil(tree) n += 1.0 end
+  if isextincttip(tree) n += 1.0 end
 
   return n
 end
@@ -802,7 +812,7 @@ function treelength_ne(tree::T,
   if defd1  l, n = treelength_ne(tree.d1, l, n) end
   if defd2  l, n = treelength_ne(tree.d2, l, n) end
 
-  if !defd1 && !defd2 && isextinct(tree)
+  if !defd1 && !defd2 && isextincttip(tree)
     n += 1.0
   end
 
@@ -1403,7 +1413,7 @@ function _eventimes!(tree::T,
                      ee  ::Array{Float64,1}) where {T <: sTf}
 
   et = e(tree)
-  if isextinct(tree)
+  if isextincttip(tree)
     push!(ee, t + et)
   else
     defd1 = isdefined(tree, :d1)

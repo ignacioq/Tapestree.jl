@@ -189,11 +189,11 @@ end
 
 
 """
-    to_string(tree::sTfbd; n::Int64=0, sa::Int64=0)
+    to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: iTree}
 
 Returns newick string.
 """
-function to_string(tree::sTfbd; n::Int64=0, sa::Int64=0)
+function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
 
   if istip(tree)
     return(string("t1:",e(tree)))

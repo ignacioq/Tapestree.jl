@@ -55,7 +55,7 @@ function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   
-  iμ = isextinct(tree) || (!defd1 && !defd2 && isfossil(tree))
+  iμ = isextinct(tree)   # fossil tips are also labelled as extinct
   push!(Ξ, sTfbd(e(tree), iμ, isfossil(tree), true))
   
   if defd2 sTfbd!(Ξ, tree.d2) end
@@ -377,7 +377,7 @@ function nnodesbifurcation(Ξ::Vector{T}) where {T<: iTree}
   nfos = 0
   for ξ in Ξ
     n += _nnodesbifurcation(ξ, 0)
-    if isone(_nfossils(ξ, 0)) nfos += 1 end
+    nfos += _nsampledancestors(ξ, 0)
   end
   n += Float64(lastindex(Ξ) - nfos - 1)/2.0
 

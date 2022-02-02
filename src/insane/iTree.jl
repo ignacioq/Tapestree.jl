@@ -182,7 +182,7 @@ phylogenetic tree with fossils for `insane` use, with the following fields:
 
 Constructs an empty `sTf_label` object.
 
-    sTf_label(e::Float64, (iμ::Bool), (iψ::Bool), l ::String)
+    sTf_label(e::Float64, (iμ::Bool), (iψ::Bool), (l ::String))
 
 Constructs an empty `sTf_label` object with edge `e` and label `l`.
 
@@ -203,27 +203,31 @@ mutable struct sTf_label <: sTf
   l ::String
 
   sTf_label() = new()
+  sTf_label(e::Float64) = (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=""; x)
   sTf_label(e::Float64, 
-            l::String) = (x = new(); x.e = e; x.iμ = false; x.iψ = false; x.l = l; x)
+            l::String)  = (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
+  sTf_label(e ::Float64, 
+            iμ::Bool,
+            iψ::Bool)   = (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
   sTf_label(e ::Float64, 
             iμ::Bool,
             iψ::Bool,
-            l ::String) = (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.l = l; x)
+            l ::String) = (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
   sTf_label(d1::sTf_label, 
             e ::Float64,
-            l ::String) = (x = new(); x.d1 = d1; x.e = e; 
-                           x.iμ = false; x.iψ = true; x.l = l; x)
+            l ::String) = (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; 
+                           x.l=l; x)
   sTf_label(d1::sTf_label, 
             d2::sTf_label, 
             e ::Float64,
-            l ::String) = (x = new(); x.d1 = d1; x.d2 = d2; x.e = e; 
-                           x.iμ = false; x.iψ = false; x.l = l; x)
+            l ::String) = (x=new(); x.d1=d1; x.d2=d2; x.e=e; x.iμ=false; 
+                           x.iψ=false; x.l=l; x)
 end
 
 # pretty-printing
 Base.show(io::IO, t::sTf_label) = 
   print(io, "insane simple labelled tree with ", ntips(t), " tips (", 
-            ntipsextinct(t)," extinct)")
+            ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
 
 
 
@@ -399,8 +403,8 @@ mutable struct sTfbd <: sTf
     (x = new(); x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = false; x)
-  sTfbd(e::Float64, iμ::Bool, fx::Bool) = 
-    (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = fx; x)
+  sTfbd(e::Float64, iμ::Bool, iψ::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
   sTfbd(d1::sTfbd, d2::sTfbd, e::Float64) = 

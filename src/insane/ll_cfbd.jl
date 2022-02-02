@@ -87,12 +87,9 @@ function llik_cfbd(Ξ::Vector{sTfbd},
                    ψ::Float64)
 
   ll = 0.0
-  nsa = 0.0
+  nsa = 0.0    # number of sampled ancestors
   for ξ in Ξ
-    if !isextinct(ξ)
-      # number of sampled ancestors (fossils tips are labelled extinct)
-      nsa += isfossil(ξ)
-    end
+    nsa += issampledancestor(ξ)
     ll += llik_cfbd(ξ, λ, μ, ψ)
   end
   
