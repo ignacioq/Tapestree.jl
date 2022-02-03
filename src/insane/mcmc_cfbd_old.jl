@@ -81,12 +81,12 @@ function insane_cfbd(tree    ::sTfbd,
 
   if iszero(e(tree))
      # svf = cond_surv_crown
-     svf = crown_prob_surv_cfbd
+     svf = crown_prob_surv_cbd
      # svf = cond_nothing
      cb = findall(x -> isone(sc(x)), idf)
   else
      # svf = cond_surv_stem
-     svf = stem_prob_surv_cfbd
+     svf = stem_prob_surv_cbd
      # svf = cond_nothing
      cb = findall(x -> iszero(sc(x)), idf)
   end

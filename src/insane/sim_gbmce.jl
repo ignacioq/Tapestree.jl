@@ -596,3 +596,92 @@ end
 
 
 
+
+
+
+"""
+    _sim_gbmce_surv(t   ::Float64,
+                    λt  ::Float64,
+                    α   ::Float64,
+                    σλ  ::Float64,
+                    μ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    surv::Bool,
+                    nsp ::Int64)
+
+Simulate `iTgbmce` according to a geometric Brownian motion for birth rates and 
+constant extinction, with a limit on the number lineages allowed to reach.
+"""
+function _sim_gbmce_surv(t   ::Float64,
+                         λt  ::Float64,
+                         α   ::Float64,
+                         σλ  ::Float64,
+                         μ   ::Float64,
+                         δt  ::Float64,
+                         srδt::Float64,
+                         surv::Bool,
+                         nsp ::Int64)
+
+  if !surv && nsp < 1_000
+
+    λv = Float64[λt]
+    bt = 0.0
+
+    while true
+
+      if t <= δt
+        bt  += t
+
+        t   = max(0.0,t)
+        srt = sqrt(t)
+        λt1 = rnorm(λt + α*t, srt*σλ)
+        λm  = exp(0.5*(λt + λt1))
+        push!(λv, λt1)
+
+        if divev(λm, μ, t)
+          # if speciation
+          if λorμ(λm, μ)
+            nsp += 1
+            return iTgbmce(
+                     iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                     iTgbmce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                     bt, δt, t, false, false, λv), true, nsp
+          # if extinction
+          else
+            return iTgbmce(bt, δt, t, true, false, λv), surv, nsp
+          end
+        end
+
+        return iTgbmce(bt, δt, t, false, false, λv), true, nsp
+      end
+
+      t  -= δt
+      bt += δt
+
+      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      λm  = exp(0.5*(λt + λt1))
+      push!(λv, λt1)
+
+      if divev(λm, μ, δt)
+        # if speciation
+        if λorμ(λm, μ)
+          nsp += 1
+          td1, surv, nsp = 
+            _sim_gbmce_surv(t, λt1, α, σλ, μ, δt, srδt, surv, nsp)
+          td2, surv, nsp = 
+            _sim_gbmce_surv(t, λt1, α, σλ, μ, δt, srδt, surv, nsp)
+
+          return iTgbmce(td1, td2, bt, δt, δt, false, false, λv), surv, nsp
+        # if extinction
+        else
+          return iTgbmce(bt, δt, δt, true, false, λv), surv, nsp
+        end
+      end
+
+      λt = λt1
+    end
+  end
+
+  return iTgbmce(), true, nsp
+end

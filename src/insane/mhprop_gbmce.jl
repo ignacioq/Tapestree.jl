@@ -77,9 +77,12 @@ end
     _stem_update!(ξi   ::iTgbmce, 
                   α    ::Float64,
                   σλ   ::Float64,
+                  μ    ::Float64,
                   llc  ::Float64,
                   dλ   ::Float64,
                   ssλ  ::Float64,
+                  mc   ::Float64,
+                  th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
                   lλxpr::Float64)
@@ -93,6 +96,8 @@ function _stem_update!(ξi   ::iTgbmce,
                        llc  ::Float64,
                        dλ   ::Float64,
                        ssλ  ::Float64,
+                       mc   ::Float64,
+                       th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
                        lλxpr::Float64)
@@ -110,7 +115,7 @@ function _stem_update!(ξi   ::iTgbmce,
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ
+      return llc, dλ, ssλ, mc
     end
 
     # simulate fix tree vector
@@ -118,17 +123,22 @@ function _stem_update!(ξi   ::iTgbmce,
 
     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
-    acr = llrbd
+    # survival 
+    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, true)
+    llr = log(mp/mc)
+
+    acr = llrbd + llr
 
     if -randexp() < acr
       llc += acr + llrbm
       dλ  += λc[1] - λr
       ssλ += ssrλ
+      mc   = mp
       unsafe_copyto!(λc, 1, λp, 1, l)
     end
   end
 
-  return llc, dλ, ssλ
+  return llc, dλ, ssλ, mc
 end
 
 
@@ -144,6 +154,8 @@ end
                    llc  ::Float64,
                    dλ   ::Float64,
                    ssλ  ::Float64,
+                   mc   ::Float64,
+                   th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
                    lλxpr::Float64)
@@ -159,6 +171,8 @@ function _crown_update!(ξi   ::iTgbmce,
                         llc  ::Float64,
                         dλ   ::Float64,
                         ssλ  ::Float64,
+                        mc   ::Float64,
+                        th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
                         lλxpr::Float64)
@@ -184,7 +198,7 @@ function _crown_update!(ξi   ::iTgbmce,
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ
+      return llc, dλ, ssλ, mc
     end
 
     # simulate fix tree vector
@@ -197,19 +211,24 @@ function _crown_update!(ξi   ::iTgbmce,
     llrbm2, llrpb2, ssrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr = llrpb1 + llrpb2 + log((exp(λr) + μ)/(exp(λi) + μ))
+    # survival 
+    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, false)
+    llr = log(mp/mc)
+
+    acr = llrpb1 + llrpb2 + llr
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       fill!(λpc, λr)
+      mc   = mp
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
     end
   end
 
-  return llc, dλ, ssλ
+  return llc, dλ, ssλ, mc
 end
 
 
@@ -255,68 +274,6 @@ function _update_gbm!(tree::iTgbmce,
 
   return llc, dλ, ssλ
 end
-
-
-
-
-"""
-    _update_gbm!(tree ::iTgbmce,
-                 α    ::Float64,
-                 σλ   ::Float64,
-                 μ    ::Float64,
-                 llc  ::Float64,
-                 dλ   ::Float64,
-                 ssλ  ::Float64,
-                 δt   ::Float64,
-                 srδt ::Float64,
-                 ter  ::Bool,
-                 sn   ::BitVector,
-                 ix   ::Int64)
-
-Do gbm updates on a decoupled tree recursively checking for events
-conditioned on non-extinction.
-"""
-function _update_gbm!(tree ::iTgbmce,
-                      α    ::Float64,
-                      σλ   ::Float64,
-                      μ    ::Float64,
-                      llc  ::Float64,
-                      dλ   ::Float64,
-                      ssλ  ::Float64,
-                      δt   ::Float64,
-                      srδt ::Float64,
-                      ter  ::Bool,
-                      sn   ::BitVector,
-                      ix   ::Int64)
-
-  if isdefined(tree, :d1)
-    # if should condition node
-    if sn[ix]
-      llc, dλ, ssλ = update_triad_sc!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
-    else
-      llc, dλ, ssλ = update_triad!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
-    end
-
-    if isfix(tree.d1)
-      llc, dλ, ssλ = 
-        _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter, sn, ix + 1)
-      llc, dλ, ssλ = 
-        _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
-    else
-      llc, dλ, ssλ = 
-        _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
-      llc, dλ, ssλ = 
-        _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter, sn, ix + 1)
-    end
-  else
-    if !isfix(tree) || ter
-      llc, dλ, ssλ = update_tip!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
 
 
 
@@ -387,8 +344,7 @@ end
                   dλ  ::Float64,
                   ssλ ::Float64,
                   δt  ::Float64,
-                  srδt::Float64,
-                  cn  ::Bool)
+                  srδt::Float64)
 
 Make a `gbm` trio proposal.
 """
@@ -408,8 +364,7 @@ function update_triad!(λpc ::Vector{Float64},
                        dλ  ::Float64,
                        ssλ ::Float64,
                        δt  ::Float64,
-                       srδt::Float64,
-                       cn  ::Bool)
+                       srδt::Float64)
 
   @inbounds begin
 
@@ -435,15 +390,8 @@ function update_triad!(λpc ::Vector{Float64},
     llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
-    lls = 0.0
-    if cn
-      eλi  = exp(λi)
-      eλn  = exp(λn)
-      lls += log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
-    end
-
-    if -randexp() < acr + lls
-      llc += llr + lls
+    if -randexp() < acr
+      llc += llr
       dλ  += (λ1c[1] - λn)
       ssλ += ssrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
@@ -525,84 +473,6 @@ function update_triad!(tree::iTgbmce,
 
   return llc, dλ, ssλ
 end
-
-
-
-
-"""
-    update_triad_sc!(tree::iTgbmce,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     μ   ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
-
-Make a `gbm` trio proposal.
-"""
-function update_triad_sc!(tree::iTgbmce,
-                          α   ::Float64,
-                          σλ  ::Float64,
-                          μ   ::Float64,
-                          llc ::Float64,
-                          dλ  ::Float64,
-                          ssλ ::Float64,
-                          δt  ::Float64,
-                          srδt::Float64)
-
-  @inbounds begin
-
-    λpc  = lλ(tree)
-    λ1c  = lλ(tree.d1)
-    λ2c  = lλ(tree.d2)
-    lp   = lastindex(λpc)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λpp  = Vector{Float64}(undef,lp)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λp   = λpc[1]
-    λi   = λ1c[1]
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    ep   = e(tree)
-    e1   = e(tree.d1)
-    e2   = e(tree.d2)
-    fdtp = fdt(tree)
-    fdt1 = fdt(tree.d1)
-    fdt2 = fdt(tree.d2)
-
-    # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
-
-    # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
-
-    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
-      α, σλ, δt, fdtp, fdt1, fdt2, srδt)
-
-    # add conditioning 
-    eλi = exp(λi)
-    eλn = exp(λn)
-    lls = log(eλi*(eλn + μ)/(eλn*(eλi + μ)))
-
-    if -randexp() < acr + lls
-      llc += llr + lls
-      dλ  += (λi - λn)
-      ssλ += ssrλ
-      unsafe_copyto!(λpc, 1, λpp, 1, lp)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
 
 
 

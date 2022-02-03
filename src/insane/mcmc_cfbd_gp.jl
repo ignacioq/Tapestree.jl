@@ -77,8 +77,8 @@ function insane_cfbd_gp(tree    ::sTfbd,
   dabr = Int64[]
 
   # make survival conditioning function (stem or crown)
-  svf = iszero(pe(tree)) ? crown_prob_surv_cfbd :
-                           stem_prob_surv_cfbd
+  svf = iszero(pe(tree)) ? crown_prob_surv_cbd :
+                           stem_prob_surv_cbd
 
   @info "Running constant birth-death with graft prune"
 

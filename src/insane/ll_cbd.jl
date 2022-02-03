@@ -28,7 +28,7 @@ end
 
 
 
-"""
+#="""
     stem_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
 
 Log-probability of at least one lineage surviving after time `t` for 
@@ -53,7 +53,7 @@ birth-death process with `λ` and `μ` from stem age.
 function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
     μ += λ === μ ? 1e-14 : 0.0
     - 2.0 * log((λ - μ)/(λ - μ*exp(-(λ - μ)*t))) - log(λ)
-end
+end=#
 
 
 
@@ -78,73 +78,26 @@ end
 
 
 """
-    llik_cbd(xi::Vector{sTbd}, 
+    llik_cbd(Ξ::Vector{sTbd}, 
              λ  ::Float64, 
              μ  ::Float64)
 
 Log-likelihood up to a constant for constant birth-death 
 given a complete `iTree` for decoupled trees.
 """
-function llik_cbd(xi::Vector{sTbd}, 
+function llik_cbd(Ξ::Vector{sTbd}, 
                   λ  ::Float64, 
                   μ  ::Float64)
 
   ll = 0.0
-  for ξ in xi
+  for ξ in Ξ
     ll += llik_cbd(ξ, λ, μ)
   end
 
-  ll += Float64(lastindex(xi) - 1)/2.0 * log(λ)
+  ll += (Float64(lastindex(Ξ) - 1)/2.0 - 1.0) * log(λ)
 
   return ll
 end
-
-
-
-
-"""
-    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
-
-Return closure for log-likelihood for conditioning
-"""
-function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{sTbd})
-
-  if stem
-    # for whole likelihood
-    f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
-          cond_ll(λ, μ, sns[1])
-    # for new proposal
-    f0 = (xi::sTbd, λ::Float64, μ::Float64, ter::Bool) -> 
-            cond_surv_stem_p(xi, λ, μ)
-  else
-    # for whole likelihood
-    f = (λ::Float64, μ::Float64, sns::NTuple{3,BitVector}) ->
-          cond_ll(λ, μ, sns[2]) + 
-          cond_ll(λ, μ, sns[3]) + log((λ + μ)/λ)
-    # for new proposal
-    f0 = function (xi::sTbd, λ::Float64, μ::Float64, ter::Bool)
-      if ter
-        cond_surv_stem(  xi, λ, μ)
-      else
-        cond_surv_stem_p(xi, λ, μ)
-      end
-    end
-  end
-
-  return f, f0
-end
-
-
-
-
-"""
-    cond_ll(λ::Float64, μ::Float64, sn::BitVector)
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-cond_ll(λ::Float64, μ::Float64, sn::BitVector) =
-  Float64(sum(sn)) * log((λ + μ)/λ)
 
 
 

@@ -265,8 +265,12 @@ function _sTf_label(tree::T, i::Int64) where {T <: iTree}
     tree = sTf_label(t2, e(tree), l(tree))
   else
     i += 1
-    lab = l(tree)
-    tree = sTf_label(e(tree), ifelse(isempty(lab),string("t",i),lab))
+    lab = ifelse(isempty(l(tree)),string("t",i),l(tree))
+    if isdefined(tree, :iμ)
+      tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), lab)
+    else
+      tree = sTf_label(e(tree), lab)
+    end
   end
   return tree, i
 end
