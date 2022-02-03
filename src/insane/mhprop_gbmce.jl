@@ -218,7 +218,7 @@ function _crown_update!(ψi   ::iTgbmce,
     acr = llrpb1 + llrpb2 + llr
 
     if -randexp() < acr
-      llc += llrbm1 + llrbm2 + acr
+      llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       fill!(λpc, λr)
@@ -274,6 +274,7 @@ function _update_gbm!(tree::iTgbmce,
 
   return llc, dλ, ssλ
 end
+
 
 
 
