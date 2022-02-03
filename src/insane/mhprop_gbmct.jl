@@ -79,6 +79,8 @@ end
                   dλ   ::Float64,
                   ssλ  ::Float64,
                   Σλ   ::Float64,
+                  mc   ::Float64, 
+                  th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
                   lλxpr::Float64)
@@ -93,6 +95,8 @@ function _stem_update!(ψi   ::iTgbmct,
                        dλ   ::Float64,
                        ssλ  ::Float64,
                        Σλ   ::Float64,
+                       mc   ::Float64, 
+                       th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
                        lλxpr::Float64)
@@ -110,7 +114,7 @@ function _stem_update!(ψi   ::iTgbmct,
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ, Σλ
+      return llc, dλ, ssλ, Σλ, mc
     end
 
     # simulate fix tree vector
@@ -119,18 +123,23 @@ function _stem_update!(ψi   ::iTgbmct,
     llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt, 
       false, false)
 
-    acr = llrbd
+    # survival
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 500, true)
+    llr = log(mp/mc)
+
+    acr = llrbd + llr
 
     if -randexp() < acr
-      llc += acr + llrbm
+      llc += acr + llrbm - λc[1] + λr
       dλ  += λc[1] - λr
       ssλ += ssrλ
       Σλ  += Σrλ
+      mc   = mp
       unsafe_copyto!(λc, 1, λp, 1, l)
     end
   end
 
-  return llc, dλ, ssλ, Σλ
+  return llc, dλ, ssλ, Σλ, mc
 end
 
 
@@ -147,6 +156,8 @@ end
                    dλ   ::Float64,
                    ssλ  ::Float64,
                    Σλ   ::Float64,
+                   mc   ::Float64, 
+                   th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
                    lλxpr::Float64)
@@ -163,6 +174,8 @@ function _crown_update!(ψi   ::iTgbmct,
                         dλ   ::Float64,
                         ssλ  ::Float64,
                         Σλ   ::Float64,
+                        mc   ::Float64, 
+                        th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
                         lλxpr::Float64)
@@ -188,7 +201,7 @@ function _crown_update!(ψi   ::iTgbmct,
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ, Σλ
+      return llc, dλ, ssλ, Σλ, mc
     end
 
     # simulate fix tree vector
@@ -201,20 +214,25 @@ function _crown_update!(ψi   ::iTgbmct,
     llrbm2, llrct2, ssrλ2, Σrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr = llrct1 + llrct2 + λr - λi
+    # survival
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 500, false)
+    llr = log(mp/mc)
+
+    acr = llrct1 + llrct2 + llr
 
     if -randexp() < acr
-      llc += llrbm1 + llrbm2 + acr
+      llc += acr + llrbm1 + llrbm2 - λi + λr
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       Σλ  += Σrλ1 + Σrλ2
+      mc   = mp
       fill!(λpc, λr)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
     end
   end
 
-  return llc, dλ, ssλ, Σλ
+  return llc, dλ, ssλ, Σλ, mc
 end
 
 

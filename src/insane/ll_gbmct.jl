@@ -20,7 +20,7 @@ Created 03 09 2020
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmct` according to `gbmce`.
+Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
 function llik_gbm(psi::Vector{iTgbmct}, 
                   idf::Vector{iBffs},
@@ -70,7 +70,6 @@ function llik_gbm(tree::iTgbmct,
     llik_gbm(tree.d1, α, σλ, ϵ, δt, srδt)                            +
     llik_gbm(tree.d2, α, σλ, ϵ, δt, srδt)
   end
-
 end
 
 
@@ -264,6 +263,7 @@ end
 
 """
     Σλ_gbm(tree::iTgbmct)
+
 Returns the sum of `λ` rates for a `iTgbmct` according 
 to `gbmct` for a `ϵ` proposal.
 """
@@ -393,98 +393,4 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
   return llrbm, llrbd, ssrλ, Σrλ
 end
- 
-
-
-
-"""
-    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmct})
-
-Return closure for log-likelihood for conditioning
-"""
-function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmct})
-
-  b1  = idf[1]
-  d1i = d1(b1)
-  d2i = d2(b1)
-
-  if stem
-    # for whole likelihood
-    f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
-        sn1 = sns[1]
-        cond_ll(psi[1], 0.0, ϵ, sn1, lastindex(sn1), 1)
-      end
-    end
-    # for new proposal
-    f0 = (psi::iTgbmct, ϵ::Float64, ter::Bool) -> 
-            sum_alone_stem_p(psi, 0.0, 0.0, ϵ)
-  else
-    # for whole likelihood
-    f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
-
-        sn2 = sns[2]
-        sn3 = sns[3]
-
-        cond_ll(psi[d1i], 0.0, ϵ, sn2, lastindex(sn2), 1) +
-        cond_ll(psi[d2i], 0.0, ϵ, sn3, lastindex(sn3), 1) + 
-        (1.0 + ϵ)
-      end
-    end
-    # for new proposal
-    f0 = function (psi::iTgbmct, ϵ::Float64, ter::Bool)
-      if ter
-        sum_alone_stem(  psi, 0.0, 0.0, ϵ)
-      else
-        sum_alone_stem_p(psi, 0.0, 0.0, ϵ)
-      end
-    end
-  end
-
-  return f, f0
-end
-
-
-
-
-"""
-    cond_ll(tree::iTgbmct,
-            ll  ::Float64, 
-            ϵ   ::Float64,
-            sn  ::BitVector,
-            lsn ::Int64,
-            ix  ::Int64)
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-function cond_ll(tree::iTgbmct,
-                 ll  ::Float64, 
-                 ϵ   ::Float64,
-                 sn  ::BitVector,
-                 lsn ::Int64,
-                 ix  ::Int64)
-
-  if lsn >= ix
-    if sn[ix]
-      ll += log(1.0 + ϵ)
-    end
-
-    if lsn === ix
-      return ll
-    else
-      ix += 1
-      if isfix(tree.d1::iTgbmct)
-        ll = cond_ll(tree.d1::iTgbmct, ll, ϵ, sn, lsn, ix)
-      else
-        ll = cond_ll(tree.d2::iTgbmct, ll, ϵ, sn, lsn, ix)
-      end
-    end
-  end
-
-  return ll
-end
-
-
 

@@ -86,7 +86,7 @@ function insane_gbmce(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  mc = m_surv_gbmce(th, log(λc), αi , σλi, μc, δt, srδt, 500, stem)
+  mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 500, stem)
 
   # make a decoupled tree
   Ψ = iTgbmce[]
@@ -178,9 +178,9 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
                          prints  ::Int64)
 
   llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) + 
-        logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2])   +
-        logdnorm(αc,  α_prior[1], α_prior[2]^2)        +
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        + 
+        logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2]) +
+        logdnorm(αc,  α_prior[1], α_prior[2]^2)              +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
   # maximum bounds according to unfiorm priors
@@ -479,7 +479,7 @@ function update_fs!(bix    ::Int64,
   end
 
   # forward simulate an internal branch
-  ψp, np, ntp, λf = fsbi_ce(bi, lλ(ψc)[1], α, σλ, μ, δt, srδt)
+  ψp, ntp, np, λf = fsbi_ce(bi, lλ(ψc)[1], α, σλ, μ, δt, srδt)
 
   # check for survival or non-exploding simulation
   if np > 0
@@ -569,7 +569,7 @@ function fsbi_ce(bi  ::iBffs,
   t0, na, nsp = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nsp >= 1_000
-    return iTgbmce(), 0, 0, 0.0
+    return iTgbmce(), 0, 0, NaN
   end
 
   nat = na
@@ -577,7 +577,7 @@ function fsbi_ce(bi  ::iBffs,
   if isone(na)
     f, λf = fixalive!(t0, NaN)
 
-    return t0, na, nat, λf
+    return t0, nat, na, λf
   elseif na > 1
     # fix random tip
     λf = fixrtip!(t0, na, NaN)
@@ -587,10 +587,10 @@ function fsbi_ce(bi  ::iBffs,
       tx, na = tip_sims!(t0, tfb, α, σλ, μ, δt, srδt, na)
     end
 
-    return t0, na, nat, λf
+    return t0, nat, na, λf
   end
 
-  return iTgbmce(), 0, 0, 0.0
+  return iTgbmce(), 0, 0, NaN
 end
 
 
@@ -710,17 +710,15 @@ function update_gbm!(bix  ::Int64,
     root = iszero(pa(bi))
     # if crown
     if root && !stem
-
       llc, dλ, ssλ, mc = 
         _crown_update!(ψi, ψ1, ψ2, α, σλ, μ, llc, dλ, ssλ, mc, th, 
           δt, srδt, lλxpr)
-
       setλt!(bi, lλ(ψi)[1])
     else
       # if stem
       if root
         llc, dλ, ssλ, mc = 
-          _stem_update!(ψi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, lλxpr)
+          _stem_update!(ψi, α, σλ, μ, llc, dλ, ssλ, mc, th, δt, srδt, lλxpr)
       end
 
       # parent branch update
@@ -731,8 +729,9 @@ function update_gbm!(bix  ::Int64,
       lψi = fixtip(ψi) 
 
       # make between decoupled trees node update
-      llc, dλ, ssλ = update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), e(lψi), e(ψ1), e(ψ2), 
-        fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+      llc, dλ, ssλ = 
+        update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), e(lψi), e(ψ1), e(ψ2), 
+          fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, μ, llc, dλ, ssλ, δt, srδt)
 
       # set fixed `λ(t)` in branch
       setλt!(bi, lλ(lψi)[end])
