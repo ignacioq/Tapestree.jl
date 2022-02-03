@@ -86,7 +86,7 @@ function insane_gbmce(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  mc = m_surv_gbmce(th, log(λc), αi , σλi, μc, δt, srδt, 1_000, stem)
+  mc = m_surv_gbmce(th, log(λc), αi , σλi, μc, δt, srδt, 500, stem)
 
   # make a decoupled tree
   Ψ = iTgbmce[]
@@ -177,11 +177,9 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
                          pup     ::Vector{Int64},
                          prints  ::Int64)
 
-  λ0  = lλ(Ψ[1])[1]
-  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - λ0 +
-        log(mc) + prob_ρ(idf)
+  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) + 
-        logdunif(exp(λ0), λa_prior[1], λa_prior[2])   +
+        logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2])   +
         logdnorm(αc,  α_prior[1], α_prior[2]^2)        +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
@@ -349,7 +347,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -361,7 +359,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_σ!(σλc, lλ(Ψ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem, 
             δt, srδt, σλ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -373,7 +371,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
             update_μ!(μc, lλ(Ψ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem, 
               δt, srδt, μ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -389,7 +387,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_gbm!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem, 
             δt, srδt, lλxpr)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -404,7 +402,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_fs!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
             δt, srδt)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -790,7 +788,7 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 500, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -846,7 +844,7 @@ function update_σ!(σλc     ::Float64,
   σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
   σλp  = sqrt(σλp2)
 
-  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 500, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -897,7 +895,7 @@ function update_μ!(μc     ::Float64,
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
-  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 500, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -913,54 +911,54 @@ end
 
 
 
-"""
-    update_μ!(psi   ::Vector{iTgbmce},
-              llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              μc    ::Float64,
-              μtn   ::Float64,
-              ne    ::Float64,
-              L     ::Float64,
-              sns   ::NTuple{3,BitVector},
-              μ_prior::Float64,
-              μ_refd ::NTuple{2,Float64},
-              scond ::Function,
-              pow   ::Float64)
+# """
+#     update_μ!(psi   ::Vector{iTgbmce},
+#               llc   ::Float64,
+#               prc   ::Float64,
+#               rdc   ::Float64,
+#               μc    ::Float64,
+#               μtn   ::Float64,
+#               ne    ::Float64,
+#               L     ::Float64,
+#               sns   ::NTuple{3,BitVector},
+#               μ_prior::Float64,
+#               μ_refd ::NTuple{2,Float64},
+#               scond ::Function,
+#               pow   ::Float64)
 
-MCMC update for `μ`.
-"""
-function update_μ!(psi   ::Vector{iTgbmce},
-                   llc   ::Float64,
-                   prc   ::Float64,
-                   rdc   ::Float64,
-                   μc    ::Float64,
-                   μtn   ::Float64,
-                   ne    ::Float64,
-                   L     ::Float64,
-                   sns   ::NTuple{3,BitVector},
-                   μ_prior::NTuple{2,Float64},
-                   μ_refd ::NTuple{2,Float64},
-                   scond ::Function,
-                   pow   ::Float64)
+# MCMC update for `μ`.
+# """
+# function update_μ!(psi   ::Vector{iTgbmce},
+#                    llc   ::Float64,
+#                    prc   ::Float64,
+#                    rdc   ::Float64,
+#                    μc    ::Float64,
+#                    μtn   ::Float64,
+#                    ne    ::Float64,
+#                    L     ::Float64,
+#                    sns   ::NTuple{3,BitVector},
+#                    μ_prior::NTuple{2,Float64},
+#                    μ_refd ::NTuple{2,Float64},
+#                    scond ::Function,
+#                    pow   ::Float64)
 
-  # parameter proposal
-  μp = mulupt(μc, μtn)::Float64
+#   # parameter proposal
+#   μp = mulupt(μc, μtn)::Float64
 
-  # log likelihood and prior ratio
-  μr   = log(μp/μc)
-  llr  = ne*μr + L*(μc - μp) + scond(psi, μp, sns) - scond(psi, μc, sns)
-  prr = llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
-  rdr = llrdtnorm(μp, μc, μ_refd[1],  μ_refd[2])
+#   # log likelihood and prior ratio
+#   μr   = log(μp/μc)
+#   llr  = ne*μr + L*(μc - μp) + scond(psi, μp, sns) - scond(psi, μc, sns)
+#   prr = llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
+#   rdr = llrdtnorm(μp, μc, μ_refd[1],  μ_refd[2])
 
 
-  if -randexp() < (pow * (llr + prr) + (1.0 - pow) * rdr + μr)
-    llc += llr
-    prc += prr
-    rdc += rdr
-    μc   = μp
-  end
+#   if -randexp() < (pow * (llr + prr) + (1.0 - pow) * rdr + μr)
+#     llc += llr
+#     prc += prr
+#     rdc += rdr
+#     μc   = μp
+#   end
 
-  return llc, prc, rdc, μc
-end
+#   return llc, prc, rdc, μc
+# end
 
