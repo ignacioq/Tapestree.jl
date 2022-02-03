@@ -1968,7 +1968,6 @@ function reconstructed!(tree::T) where {T <: sTf}
   # sampled ancestor with extinct daughter -> fossil tip (labelled extinct)
   if (extd1 && !defd2) || (!defd1 && extd2)
     lab = extd1 ? l(tree.d1) : l(tree.d2)
-    @show lab
     if isempty(lab)
       return T(e(tree), true, true)
     else
