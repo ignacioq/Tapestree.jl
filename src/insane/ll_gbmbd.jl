@@ -78,7 +78,6 @@ end
 
 
 
-
 """
     ll_gbm_b(lλv ::Array{Float64,1},
              lμv ::Array{Float64,1},
@@ -289,9 +288,6 @@ end
 
 
 
-
-
-
 """
     _sss_gbm(tree::iTgbmbd, 
              α   ::Float64, 
@@ -483,96 +479,3 @@ end
 
 
 
-
-
-"""
-    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmbd})
-
-Return closure for log-likelihood for conditioning
-"""
-function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmbd})
-
-  b1  = idf[1]
-  d1i = d1(b1)
-  d2i = d2(b1)
-
-  if stem
-    # for whole likelihood
-    f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{iTgbmbd}, sns::NTuple{3,BitVector})
-        sn1 = sns[1]
-        cond_ll(psi[1], 0.0, sn1, lastindex(sn1), 1)
-      end
-    end
-    # for new proposal
-    f0 = (psi::iTgbmbd, ter::Bool) -> 
-            sum_alone_stem_p(psi, 0.0, 0.0)
-  else
-    # for whole likelihood
-    f = let d1i = d1i, d2i = d2i
-      function (psi::Vector{iTgbmbd}, sns::NTuple{3,BitVector})
-
-        sn2 = sns[2]
-        sn3 = sns[3]
-        λi = exp(lλ(psi[1])[1])
-
-        cond_ll(psi[d1i], 0.0, sn2, lastindex(sn2), 1) +
-        cond_ll(psi[d2i], 0.0, sn3, lastindex(sn3), 1) +
-        log((λi + exp(lμ(psi[1])[1]))/λi)
-      end
-    end
-    # for new proposal
-    f0 = function (psi::iTgbmbd, ter::Bool)
-      if ter
-        sum_alone_stem(  psi, 0.0, 0.0)
-      else
-        sum_alone_stem_p(psi, 0.0, 0.0)
-      end
-    end
-  end
-
-  return f, f0
-end
-
-
-
-
-"""
-    cond_ll(tree::iTgbmbd,
-            ll  ::Float64, 
-            sn  ::BitVector,
-            lsn ::Int64,
-            ix  ::Int64)
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-function cond_ll(tree::iTgbmbd,
-                 ll  ::Float64, 
-                 sn  ::BitVector,
-                 lsn ::Int64,
-                 ix  ::Int64)
-
-  if lsn >= ix
-    if sn[ix]
-      λv  = lλ(tree)
-      l   = lastindex(λv)
-      λi  = λv[l]
-      μi  = lμ(tree)[l]
-      ll += log(exp(λi) + exp(μi)) - λi
-    end
-
-    if lsn === ix
-      return ll
-    else
-      ix += 1
-      if isfix(tree.d1::iTgbmbd)
-        ll = cond_ll(tree.d1::iTgbmbd, ll, sn, lsn, ix)
-      else
-        ll = cond_ll(tree.d2::iTgbmbd, ll, sn, lsn, ix)
-      end
-    end
-  end
-
-  return ll
-end

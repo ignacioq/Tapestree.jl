@@ -11,6 +11,7 @@ Created 03 09 2020
 
 
 
+
 """
     llik_cbd(psi::Vector{iTgbmce}, 
              idf::Vector{iBffs},
@@ -255,8 +256,6 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
 
   return ll, dλ, ssλ, nλ
 end
-
-
 
 
 

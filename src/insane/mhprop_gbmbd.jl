@@ -64,8 +64,8 @@ function _daughters_update!(ψ1  ::iTgbmbd,
     normprop = 
       duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
       duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
-      duoldnorm(μf, μ1 - α*e1, μ2 - α*e2, e1, e2, σμ) -
-      duoldnorm(μi, μ1 - α*e1, μ2 - α*e2, e1, e2, σμ)
+      duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
+      duoldnorm(μi, μ1, μ2, e1, e2, σμ)
 
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 = 
