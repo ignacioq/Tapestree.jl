@@ -55,12 +55,12 @@ function _daughters_update!(ψ1  ::iTgbmce,
       duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 = 
+    llrbm1, llrce1, ssrλ1 = 
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 = 
+    llrbm2, llrce2, ssrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr  = llrpb1 + llrpb2 + λf - λi
+    acr  = llrce1 + llrce2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
     acr += normprop
     drλ  = 2.0*(λi - λf)
@@ -206,16 +206,16 @@ function _crown_update!(ψi   ::iTgbmce,
     bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 = 
+    llrbm1, llrce1, ssrλ1 = 
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 = 
+    llrbm2, llrce2, ssrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
     # survival 
     mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 500, false)
     llr = log(mp/mc)
 
-    acr = llrpb1 + llrpb2 + llr
+    acr = llrce1 + llrce2 + llr
 
     if -randexp() < acr
       llc += acr + llrbm1 + llrbm2 - λi + λr

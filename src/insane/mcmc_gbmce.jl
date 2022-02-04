@@ -518,7 +518,7 @@ function update_fs!(bix    ::Int64,
       ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ψc, α, σλ, μ, δt, srδt)
 
       # update llr, ssλ, nλ, sns, ne, L,
-      llr += ll1  - ll0
+      llc += llr + ll1  - ll0
       dλ  += dλ1  - dλ0  + drλ
       ssλ += ssλ1 - ssλ0 + ssrλ
       nλ  += nλ1  - nλ0
@@ -526,7 +526,6 @@ function update_fs!(bix    ::Int64,
       L   += treelength(ψp)   - treelength(ψc)
 
       Ψ[bix] = ψp          # set new tree
-      llc += llr           # set new likelihood
       setni!(bi, np)       # set new ni
       setnt!(bi, ntp)      # set new nt
       setλt!(bi, λf)       # set new λt
