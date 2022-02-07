@@ -255,7 +255,7 @@ function _crown_update!(ψi   ::iTgbmbd,
     mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 500, false)
     llr = log(mp/mc)
 
-    acr = llrbd1 + llrbd2 + llr - λi + λr
+    acr = llrbd1 + llrbd2 + llr
 
     if -randexp() < acr
       llc += acr + llrbm1 + llrbm2

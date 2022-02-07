@@ -174,7 +174,10 @@ function mcmc_burn_gbmbd(Ψ       ::Vector{iTgbmbd},
                          pup     ::Array{Int64,1},
                          prints  ::Int64)
 
-  llc = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + log(mc) + prob_ρ(idf)
+  λ0  = lλ(Ψ[1])[1]
+  nsi = stem ? 0.0 : λ0
+
+  llc = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - nsi + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
         logdinvgamma(σμc^2, σμ_prior[1], σμ_prior[2])      + 
         logdnorm(αc, α_prior[1], α_prior[2]^2)             +
@@ -337,7 +340,7 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ψ, αc)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, i, pupi, Ψ
         #    return 
@@ -350,7 +353,7 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
           update_σ!(σλc, σμc, lλ(Ψ[1])[1], lμ(Ψ[1])[1], αc, ssλ, ssμ, nλ, 
             llc, prc, mc, th, stem, δt, srδt, σλ_prior, σμ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, i, pupi, Ψ
         #    return 
@@ -366,7 +369,7 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
           update_gbm!(bix, Ψ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th, 
             stem, δt, srδt, lλxpr, lμxpr)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, i, pupi, Ψ
         #    return 
@@ -381,7 +384,7 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
           update_fs!(bix, Ψ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, nλ, L,
             δt, srδt)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, i, pupi, Ψ
         #    return 

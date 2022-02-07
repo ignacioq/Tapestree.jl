@@ -177,9 +177,12 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
                          pup     ::Vector{Int64},
                          prints  ::Int64)
 
-  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
+  λ0  = lλ(Ψ[1])[1]
+  nsi = stem ? 0.0 : λ0
+
+  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - λ0 + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        + 
-        logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2]) +
+        logdunif(exp(λ0), λa_prior[1], λa_prior[2]) +
         logdnorm(αc,  α_prior[1], α_prior[2]^2)              +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
@@ -347,11 +350,11 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ψ
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1]+ log(mc) + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-5)
+           @show ll0, llc, pupi, i, Ψ
+           return 
+        end
 
       elseif pupi === 2
 
@@ -359,7 +362,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_σ!(σλc, lλ(Ψ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem, 
             δt, srδt, σλ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -371,7 +374,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
             update_μ!(μc, lλ(Ψ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem, 
               δt, srδt, μ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -387,7 +390,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_gbm!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem, 
             δt, srδt, lλxpr)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -402,7 +405,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_fs!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
             δt, srδt)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 

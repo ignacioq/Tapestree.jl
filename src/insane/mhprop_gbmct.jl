@@ -227,7 +227,7 @@ function _crown_update!(ψi   ::iTgbmct,
     acr = llrct1 + llrct2 + llr
 
     if -randexp() < acr
-      llc += acr + llrbm1 + llrbm2 - λi + λr
+      llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       Σλ  += Σrλ1 + Σrλ2
