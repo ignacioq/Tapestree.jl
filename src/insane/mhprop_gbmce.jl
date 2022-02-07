@@ -130,7 +130,7 @@ function _stem_update!(ψi   ::iTgbmce,
     acr = llrbd + llr
 
     if -randexp() < acr
-      llc += acr + llrbm - λi + λr
+      llc += acr + llrbm
       dλ  += λc[1] - λr
       ssλ += ssrλ
       mc   = mp
@@ -215,10 +215,10 @@ function _crown_update!(ψi   ::iTgbmce,
     mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 500, false)
     llr = log(mp/mc)
 
-    acr = llrce1 + llrce2 + llr
+    acr = llrce1 + llrce2 + llr - λi + λr
 
     if -randexp() < acr
-      llc += acr + llrbm1 + llrbm2 - λi + λr
+      llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       fill!(λpc, λr)

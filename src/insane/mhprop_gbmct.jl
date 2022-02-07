@@ -136,7 +136,7 @@ function _stem_update!(ψi   ::iTgbmct,
     acr = llrbd + llr
 
     if -randexp() < acr
-      llc += acr + llrbm - λc[1] + λr
+      llc += acr + llrbm
       dλ  += λc[1] - λr
       ssλ += ssrλ
       Σλ  += Σrλ
