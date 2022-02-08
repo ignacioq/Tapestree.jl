@@ -366,11 +366,11 @@ function mcmc_gbmct(Ψ       ::Vector{iTgbmct},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       elseif pupi === 2
 
@@ -378,11 +378,11 @@ function mcmc_gbmct(Ψ       ::Vector{iTgbmct},
           update_σ_ϵ!(σλc, lλ(Ψ[1])[1], αc, ϵc, ssλ, nλ, llc, prc, mc, th, stem, 
             δt, srδt, σλ_prior)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       elseif pupi === 3
 
@@ -390,11 +390,11 @@ function mcmc_gbmct(Ψ       ::Vector{iTgbmct},
           update_ϵ!(ϵc, lλ(Ψ[1])[1], αc, σλc, llc, mc, th, stem, ϵtn, 
             ne, Σλ, δt, srδt, ϵxpr)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       # gbm update
       elseif pupi === 4
@@ -406,11 +406,11 @@ function mcmc_gbmct(Ψ       ::Vector{iTgbmct},
           update_gbm!(bix, Ψ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
             δt, srδt, lλxpr)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       # forward simulation update
       else
@@ -421,11 +421,11 @@ function mcmc_gbmct(Ψ       ::Vector{iTgbmct},
           update_fs!(bix, Ψ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, nλ, ne, L, 
             δt, srδt)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       end
 
