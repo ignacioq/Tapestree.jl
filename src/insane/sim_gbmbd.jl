@@ -660,9 +660,9 @@ function _sim_gbmbd(nsδt::Float64,
       λt = λt1
       μt = μt1
     end
-  else
-    return iTgbmbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nsp
   end
+
+  return iTgbmbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nsp
 end
 
 
