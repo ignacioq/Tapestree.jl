@@ -124,7 +124,7 @@ function _stem_update!(ψi   ::iTgbmce,
     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
     # survival 
-    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 500, true)
+    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, true)
     llr = log(mp/mc)
 
     acr = llrbd + llr
@@ -212,12 +212,12 @@ function _crown_update!(ψi   ::iTgbmce,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
     # survival 
-    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 500, false)
+    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, false)
     llr = log(mp/mc)
 
     acr = llrce1 + llrce2 + llr
 
-    if -randexp() < acr
+    if -randexp() < acr - λi + λr 
       llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2

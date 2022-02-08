@@ -80,7 +80,7 @@ function insane_gbmbd(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 500, stem)
+  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, stem)
 
   # make a decoupled tree
   Ψ = iTgbmbd[]
@@ -173,15 +173,14 @@ function mcmc_burn_gbmbd(Ψ       ::Vector{iTgbmbd},
                          inodes  ::Array{Int64,1},
                          pup     ::Array{Int64,1},
                          prints  ::Int64)
-
   λ0  = lλ(Ψ[1])[1]
   nsi = stem ? 0.0 : λ0
 
   llc = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - nsi + log(mc) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])      + 
-        logdinvgamma(σμc^2, σμ_prior[1], σμ_prior[2])      + 
-        logdnorm(αc, α_prior[1], α_prior[2]^2)             +
-        logdunif(exp(lλ(Ψ[1])[1]), λa_prior[1], λa_prior[2]) +
+  prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2]) +
+        logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2]) +
+        logdnorm(αc,               α_prior[1], α_prior[2]^2) +
+        logdunif(exp(λ0),          λa_prior[1], λa_prior[2]) +
         logdunif(exp(lμ(Ψ[1])[1]), μa_prior[1], μa_prior[2])
 
   lλxpr = log(λa_prior[2])
@@ -340,11 +339,11 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ψ, αc)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ψ
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ψ
+           return 
+        end
 
       # σλ & σμ update
       elseif pupi === 2
@@ -353,11 +352,11 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
           update_σ!(σλc, σμc, lλ(Ψ[1])[1], lμ(Ψ[1])[1], αc, ssλ, ssμ, nλ, 
             llc, prc, mc, th, stem, δt, srδt, σλ_prior, σμ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ψ
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ψ
+           return 
+        end
 
       # gbm update
       elseif pupi === 3
@@ -369,11 +368,11 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
           update_gbm!(bix, Ψ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th, 
             stem, δt, srδt, lλxpr, lμxpr)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ψ
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ψ
+           return 
+        end
 
       # forward simulation update
       else
@@ -384,11 +383,11 @@ function mcmc_gbmbd(Ψ       ::Vector{iTgbmbd},
           update_fs!(bix, Ψ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, nλ, L,
             δt, srδt)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ψ
-        #    return 
-        # end
+        ll0 = llik_gbm(Ψ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ψ
+           return 
+        end
       end
     end
 
@@ -793,7 +792,7 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 500, stem)
+  mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -855,7 +854,7 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
   σμp = sqrt(σμp2)
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 500, stem)
+  mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr

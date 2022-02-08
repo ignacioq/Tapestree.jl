@@ -180,7 +180,7 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
   λ0  = lλ(Ψ[1])[1]
   nsi = stem ? 0.0 : λ0
 
-  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - λ0 + log(mc) + prob_ρ(idf)
+  llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - nsi + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        + 
         logdunif(exp(λ0), λa_prior[1], λa_prior[2]) +
         logdnorm(αc,  α_prior[1], α_prior[2]^2)              +
@@ -350,11 +350,11 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1]+ log(mc) + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-5)
-           @show ll0, llc, pupi, i, Ψ
-           return 
-        end
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-5)
+        #    @show ll0, llc, pupi, i, Ψ
+        #    return 
+        # end
 
       elseif pupi === 2
 
