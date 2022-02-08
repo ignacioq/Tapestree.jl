@@ -186,8 +186,11 @@ function mcmc_burn_gbmpb(Ψ       ::Vector{iTgbmpb},
                          pup     ::Array{Int64,1},
                          prints  ::Int64)
 
+  λ0  = lλ(Ψ[1])[1]
+  nsi = !iszero(e(tree)) ? 0.0 : λ0
+
   # starting likelihood and prior
-  llc = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+  llc = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) - nsi + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
         logdnorm(αc, α_prior[1], α_prior[2]^2)
 
@@ -315,7 +318,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) - lλ(Ψ[1])[1] + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, it, pupi
         #    return 
@@ -326,7 +329,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
 
         llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) - lλ(Ψ[1])[1] + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, it, pupi
         #    return 
@@ -341,7 +344,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
         llc, dλ, ssλ = 
           update_gbm!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) - lλ(Ψ[1])[1] + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, it, pupi
         #    return 
@@ -354,7 +357,7 @@ function mcmc_gbmpb(Ψ       ::Vector{iTgbmpb},
         llc, dλ, ssλ, nλ, L = 
           update_fs!(bix, Ψ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, δt, srδt) - lλ(Ψ[1])[1] + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
         #    @show ll0, llc, it, pupi
         #    return 
