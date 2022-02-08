@@ -576,6 +576,11 @@ function fsbi(bi  ::iBffs,
     if !it(bi)
       # add tips until the present
       tx, na, nsp = tip_sims!(t0, tfb, α, σλ, σμ, δt, srδt, na, nsp)
+
+      if na < 1 || nsp >= 1_000
+        return iTgbmbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), 
+          0, 0, NaN, NaN
+      end
     end
 
     return t0, na, nat, λf, μf

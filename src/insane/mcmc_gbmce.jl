@@ -587,6 +587,10 @@ function fsbi_ce(bi  ::iBffs,
     if !it(bi)
       # add tips until the present
       tx, na, nsp = tip_sims!(t0, tfb, α, σλ, μ, δt, srδt, na, nsp)
+
+      if na < 1 || nsp >= 1_000
+        return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+      end
     end
 
     return t0, nat, na, λf
