@@ -181,9 +181,9 @@ function mcmc_burn_gbmce(Ψ       ::Vector{iTgbmce},
   nsi = stem ? 0.0 : λ0
 
   llc = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - nsi + log(mc) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        + 
-        logdunif(exp(λ0), λa_prior[1], λa_prior[2]) +
-        logdnorm(αc,  α_prior[1], α_prior[2]^2)              +
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) + 
+        logdunif(exp(λ0), λa_prior[1], λa_prior[2])   +
+        logdnorm(αc,  α_prior[1], α_prior[2]^2)       +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
   # maximum bounds according to unfiorm priors
@@ -350,7 +350,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ψ, αc)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -362,7 +362,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_σ!(σλc, lλ(Ψ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem, 
             δt, srδt, σλ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -374,7 +374,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
             update_μ!(μc, lλ(Ψ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem, 
               δt, srδt, μ_prior)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -390,7 +390,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_gbm!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem, 
             δt, srδt, lλxpr)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -405,7 +405,7 @@ function mcmc_gbmce(Ψ       ::Vector{iTgbmce},
           update_fs!(bix, Ψ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
             δt, srδt)
 
-        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ψ, idf, αc, σλc, μc, δt, srδt) - lλ(Ψ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ψ
         #    return 
@@ -571,7 +571,7 @@ function fsbi_ce(bi  ::iBffs,
   t0, na, nsp = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nsp >= 1_000
-    return iTgbmce(), 0, 0, NaN
+    return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
   end
 
   nat = na
@@ -586,13 +586,13 @@ function fsbi_ce(bi  ::iBffs,
 
     if !it(bi)
       # add tips until the present
-      tx, na = tip_sims!(t0, tfb, α, σλ, μ, δt, srδt, na)
+      tx, na, nsp = tip_sims!(t0, tfb, α, σλ, μ, δt, srδt, na, nsp)
     end
 
     return t0, nat, na, λf
   end
 
-  return iTgbmce(), 0, 0, NaN
+  return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
 end
 
 
@@ -606,7 +606,8 @@ end
               μ   ::Float64,
               δt  ::Float64,
               srδt::Float64,
-              na  ::Int64)
+              na  ::Int64,
+              nsp ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
@@ -617,7 +618,8 @@ function tip_sims!(tree::iTgbmce,
                    μ   ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
-                   na  ::Int64)
+                   na  ::Int64,
+                   nsp ::Int64)
 
   if istip(tree) 
     if !isfix(tree) && isalive(tree)
@@ -628,10 +630,10 @@ function tip_sims!(tree::iTgbmce,
       # simulate
       stree, na, nsp = 
         _sim_gbmce(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt, 
-                   na - 1, 1, 1_000)
+                   na - 1, nsp, 1_000)
 
-      if !isdefined(stree, :lλ)
-        return tree, 1_000
+      if na < 1 || nsp >= 1_000
+        return tree, na, nsp
       end
 
       setproperty!(tree, :iμ, isextinct(stree))
@@ -655,13 +657,12 @@ function tip_sims!(tree::iTgbmce,
       end
     end
   else
-    tree.d1, na = tip_sims!(tree.d1, t, α, σλ, μ, δt, srδt, na)
-    tree.d2, na = tip_sims!(tree.d2, t, α, σλ, μ, δt, srδt, na)
+    tree.d1, na, nsp = tip_sims!(tree.d1, t, α, σλ, μ, δt, srδt, na, nsp)
+    tree.d2, na, nsp = tip_sims!(tree.d2, t, α, σλ, μ, δt, srδt, na, nsp)
   end
 
-  return tree, na
+  return tree, na, nsp
 end
-
 
 
 

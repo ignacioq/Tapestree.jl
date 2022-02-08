@@ -441,10 +441,9 @@ function _sim_gbmce(t   ::Float64,
 
       λt = λt1
     end
-
-  else
-    return iTgbmce(), na, nsp
   end
+
+  return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), na, nsp
 end
 
 
@@ -589,12 +588,10 @@ function _sim_gbmce(nsδt::Float64,
 
       λt = λt1
     end
-  else
-    return iTgbmce(), na, nsp
   end
+
+  return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), na, nsp
 end
-
-
 
 
 

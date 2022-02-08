@@ -442,10 +442,9 @@ function _sim_gbmct(t   ::Float64,
 
       λt = λt1
     end
-
-  else
-    return iTgbmct(), na, nsp
   end
+
+  return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), na, nsp
 end
 
 
@@ -601,9 +600,9 @@ function _sim_gbmct(nsδt::Float64,
 
       λt = λt1
     end
-  else
-    return iTgbmct(), na, nsp
   end
+
+  return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), na, nsp
 end
 
 

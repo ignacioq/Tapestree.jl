@@ -559,7 +559,8 @@ function fsbi(bi  ::iBffs,
   t0, na, nsp = _sim_gbmbd(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nsp >= 1_000
-    return iTgbmbd(), 0, 0, 0.0, 0.0
+    return iTgbmbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), 
+      0, 0, NaN, NaN
   end
 
   nat = na
@@ -574,13 +575,14 @@ function fsbi(bi  ::iBffs,
 
     if !it(bi)
       # add tips until the present
-      tx, na = tip_sims!(t0, tfb, α, σλ, σμ, δt, srδt, na)
+      tx, na, nsp = tip_sims!(t0, tfb, α, σλ, σμ, δt, srδt, na, nsp)
     end
 
     return t0, na, nat, λf, μf
   end
 
-  return iTgbmbd(), 0, 0, 0.0, 0.0
+  return iTgbmbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), 
+      0, 0, NaN, NaN
 end
 
 
@@ -594,7 +596,8 @@ end
               σμ  ::Float64,
               δt  ::Float64,
               srδt::Float64,
-              na  ::Int64)
+              na  ::Int64,
+              nsp ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
@@ -605,7 +608,8 @@ function tip_sims!(tree::iTgbmbd,
                    σμ  ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
-                   na  ::Int64)
+                   na  ::Int64,
+                   nsp ::Int64)
 
   if istip(tree) 
     if !isfix(tree) && isalive(tree)
@@ -618,10 +622,10 @@ function tip_sims!(tree::iTgbmbd,
       # simulate
       stree, na, nsp = 
         _sim_gbmbd(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], α, σλ, σμ, δt, srδt, 
-                   na - 1, 1, 1_000)
+                   na - 1, nsp, 1_000)
 
-      if !isdefined(stree, :lλ)
-        return tree, 1_000
+      if na < 1 || nsp >= 1_000
+        return tree, na, nsp
       end
 
       setproperty!(tree, :iμ, isextinct(stree))
@@ -649,11 +653,11 @@ function tip_sims!(tree::iTgbmbd,
       end
     end
   else
-    tree.d1, na = tip_sims!(tree.d1, t, α, σλ, σμ, δt, srδt, na)
-    tree.d2, na = tip_sims!(tree.d2, t, α, σλ, σμ, δt, srδt, na)
+    tree.d1, na, nsp = tip_sims!(tree.d1, t, α, σλ, σμ, δt, srδt, na, nsp)
+    tree.d2, na, nsp = tip_sims!(tree.d2, t, α, σλ, σμ, δt, srδt, na, nsp)
   end
 
-  return tree, na
+  return tree, na, nsp
 end
 
 

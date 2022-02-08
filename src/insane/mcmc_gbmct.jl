@@ -353,7 +353,6 @@ function mcmc_gbmct(Ψ       ::Vector{iTgbmct},
 
     shuffle!(pup)
 
-    ii = 0
     # parameter updates
     for pupi in pup
 
@@ -592,8 +591,8 @@ function fsbi_ct(bi  ::iBffs,
   # forward simulation during branch length
   t0, na, nsp = _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
 
-  if nsp < 1 || nsp >= 1_000
-    return iTgbmct(), 0, 0, NaN
+  if na < 1 || nsp >= 1_000
+    return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
   end
 
   nat = na
@@ -608,13 +607,13 @@ function fsbi_ct(bi  ::iBffs,
 
     if !it(bi)
       # add tips until the present
-      tx, na = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na)
+      tx, na, nsp = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na, nsp)
     end
 
     return t0, nat, na, λf
   end
 
-  return iTgbmct(), 0, 0, NaN
+  return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
 end
 
 
@@ -638,9 +637,10 @@ function tip_sims!(tree::iTgbmct,
                    ϵ   ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
-                   na  ::Int64)
+                   na  ::Int64,
+                   nsp ::Int64)
 
-  if istip(tree) 
+  if istip(tree)
     if !isfix(tree) && isalive(tree)
 
       fdti = fdt(tree)
@@ -649,10 +649,10 @@ function tip_sims!(tree::iTgbmct,
       # simulate
       stree, na, nsp = 
         _sim_gbmct(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, ϵ, δt, srδt, 
-                   na - 1, 1, 1_000)
+                   na - 1, nsp, 1_000)
 
-      if !isdefined(stree, :lλ)
-        return tree, 1_000
+      if na < 1 || nsp >= 1_000
+        return tree, na, nsp
       end
 
       setproperty!(tree, :iμ, isextinct(stree))
@@ -676,11 +676,11 @@ function tip_sims!(tree::iTgbmct,
       end
     end
   else
-    tree.d1, na = tip_sims!(tree.d1, t, α, σλ, ϵ, δt, srδt, na)
-    tree.d2, na = tip_sims!(tree.d2, t, α, σλ, ϵ, δt, srδt, na)
+    tree.d1, na, nsp = tip_sims!(tree.d1, t, α, σλ, ϵ, δt, srδt, na, nsp)
+    tree.d2, na, nsp = tip_sims!(tree.d2, t, α, σλ, ϵ, δt, srδt, na, nsp)
   end
 
-  return tree, na
+  return tree, na, nsp
 end
 
 
