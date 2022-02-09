@@ -485,7 +485,7 @@ function update_fs!(bix    ::Int64,
   ψp, ntp, np, λf = fsbi_ce(bi, lλ(ψc)[1], α, σλ, μ, δt, srδt)
 
   # check for survival or non-exploding simulation
-  if np > 0
+  if ntp > 0
 
     ρbi = ρi(bi) # get branch sampling fraction
     nc  = ni(bi) # current ni
