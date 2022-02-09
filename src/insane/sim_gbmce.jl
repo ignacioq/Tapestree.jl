@@ -512,8 +512,8 @@ function _sim_gbmce(nsδt::Float64,
   t  -= nsδt
   bt += nsδt
 
-  λt1    = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
-  λm     = exp(0.5*(λt + λt1))
+  λt1 = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
+  λm  = exp(0.5*(λt + λt1))
   push!(λv, λt1)
 
   if divev(λm, μ, nsδt)

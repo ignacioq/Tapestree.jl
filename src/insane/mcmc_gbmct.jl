@@ -752,7 +752,7 @@ function update_gbm!(bix  ::Int64,
       # get fixed tip 
       lψi = fixtip(ψi) 
 
-      # make between decoupled trees node update
+      # make node update between decoupled trees
       llc, dλ, ssλ, Σλ = 
         update_triad!(lλ(lψi), lλ(ψ1), lλ(ψ2), e(lψi), e(ψ1), e(ψ2), 
           fdt(lψi), fdt(ψ1), fdt(ψ2), α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
