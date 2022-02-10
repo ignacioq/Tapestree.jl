@@ -182,7 +182,7 @@ end
 
 """
     mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
-                   idf      ::Array{iBfffs,1},
+                   idf      ::Array{iBffs,1},
                    λ_prior  ::NTuple{2,Float64},
                    μ_prior  ::NTuple{2,Float64},
                    λmμ_prior::NTuple{2,Float64},
@@ -201,7 +201,7 @@ Adaptive MCMC phase for da chain for constant fossilized birth-death using
 forward simulation.
 """
 function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
-                        idf      ::Array{iBfffs,1},
+                        idf      ::Array{iBffs,1},
                         λ_prior  ::NTuple{2,Float64},
                         μ_prior  ::NTuple{2,Float64},
                         λmμ_prior::NTuple{2,Float64},
@@ -302,7 +302,7 @@ end
 
 """
     mcmc_cfbd(Ξ        ::Vector{sTfbd},
-              idf      ::Array{iBfffs,1},
+              idf      ::Array{iBffs,1},
               llc      ::Float64,
               prc      ::Float64,
               λc       ::Float64,
@@ -323,7 +323,7 @@ end
 MCMC da chain for constant fossilized birth-death using forward simulation.
 """
 function mcmc_cfbd(Ξ      ::Vector{sTfbd},
-                   idf     ::Array{iBfffs,1},
+                   idf     ::Array{iBffs,1},
                    llc     ::Float64,
                    prc     ::Float64,
                    λc      ::Float64,
@@ -427,7 +427,7 @@ end
 
 #="""
     ref_posterior(Ξ        ::Vector{sTfbd},
-                  idf      ::Array{iBfffs,1},
+                  idf      ::Array{iBffs,1},
                   λc       ::Float64,
                   μc       ::Float64,
                   μtn      ::Float64,
@@ -451,7 +451,7 @@ end
 MCMC da chain for constant fossilized birth-death using forward simulation.
 """
 function ref_posterior(Ξ        ::Vector{sTfbd},
-                       idf      ::Array{iBfffs,1},
+                       idf      ::Array{iBffs,1},
                        λc       ::Float64,
                        μc       ::Float64,
                        μtn      ::Float64,
@@ -549,7 +549,7 @@ end=#
 """
     update_fs!(bix  ::Int64,
                Ξ    ::Vector{sTfbd},
-               idf  ::Vector{iBfffs},
+               idf  ::Vector{iBffs},
                llc  ::Float64,
                λ    ::Float64, 
                μ    ::Float64,
@@ -563,7 +563,7 @@ Forward simulation proposal function for constant fossilized birth-death.
 """
 function update_fs!(bix    ::Int64,
                     Ξ      ::Vector{sTfbd},
-                    idf    ::Vector{iBfffs},
+                    idf    ::Vector{iBffs},
                     llc    ::Float64,
                     λ      ::Float64, 
                     μ      ::Float64,
@@ -628,11 +628,11 @@ end
 
 
 """
-    fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
+    fsbi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
 
 Forward simulation for branch `bi`
 """
-function fsbi(bi::iBfffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
+function fsbi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
 
   # times
   tfb = tf(bi)

@@ -83,11 +83,11 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBfffs}, ::Type{sTfbd})
+    make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBfffs}, ::Type{sTfbd})
+function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
   Ξ = sTfbd[]
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
@@ -292,14 +292,14 @@ end
 
 """
     couple(Ξ::Vector{T},
-           idf::Vector{B},
-           ix ::Int64) where {T <: iTree, B <: Union{iBffs, iBfffs}}
+           idf::Vector{iBffs},
+           ix ::Int64) where {T <: iTree}
 
 Build tree from decoupled tree.
 """
 function couple(Ξ::Vector{T},
-                idf::Vector{B},
-                ix ::Int64) where {T <: iTree, B <: Union{iBffs, iBfffs}}
+                idf::Vector{iBffs},
+                ix ::Int64) where {T <: iTree}
 
   bi = idf[ix]
   ξi = Ξ[ix]
