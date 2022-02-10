@@ -1,6 +1,6 @@
 #=
 
-constant fossilized birth-death MCMC using graft and prune
+constant fossilized birth-death MCMC using forward simulation
 
 Jérémy Andréoletti
 Adapted from birth-death MCMC by Ignacio Quintero Mächler
@@ -18,7 +18,6 @@ Created 07 10 2021
                 out_file ::String;
                 λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                 μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
-                λmμ_prior::NTuple{2,Float64}     = (1.0, 1.0),
                 ψ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                 niter    ::Int64                 = 1_000,
                 nthin    ::Int64                 = 10,
@@ -41,7 +40,6 @@ function insane_cfbd(tree     ::sTf_label,
                      out_file ::String;
                      λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                      μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
-                     λmμ_prior::NTuple{2,Float64}     = (NaN, NaN),
                      ψ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                      niter    ::Int64                 = 1_000,
                      nthin    ::Int64                 = 10,
@@ -77,7 +75,7 @@ function insane_cfbd(tree     ::sTf_label,
     # if only one tip
     if isone(n)
       λc = prod(λ_prior)
-      μc = isnan(μ_prior[1]) ? prod(λ_prior)-prod(λmμ_prior) : prod(μ_prior)
+      μc = prod(μ_prior)
     else
       λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
     end
@@ -107,16 +105,12 @@ function insane_cfbd(tree     ::sTf_label,
   @info "Running constant fossilized birth-death with forward simulation"
 
   # adaptive phase
-  @info "MCMC - Adaptive phase"
-  llc, prc, λc, μc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, λmμ_prior, 
-                                    ψ_prior, nburn, λc, μc, ψc, mc, th, stem, 
-                                    pup, prints)
+  llc, prc, λc, μc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn, 
+                                    λc, μc, ψc, mc, th, stem, pup, prints)
 
   # mcmc
-  @info "MCMC - Sampling iterations"
   r, treev, λc, μc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior, 
-                               λmμ_prior, ψ_prior, mc, th, stem, niter, nthin, 
-                               pup, prints)
+                               ψ_prior, mc, th, stem, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2),
@@ -185,7 +179,6 @@ end
                    idf      ::Array{iBffs,1},
                    λ_prior  ::NTuple{2,Float64},
                    μ_prior  ::NTuple{2,Float64},
-                   λmμ_prior::NTuple{2,Float64},
                    ψ_prior  ::NTuple{2,Float64},
                    nburn    ::Int64,
                    λc       ::Float64,
@@ -204,7 +197,6 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
                         idf      ::Array{iBffs,1},
                         λ_prior  ::NTuple{2,Float64},
                         μ_prior  ::NTuple{2,Float64},
-                        λmμ_prior::NTuple{2,Float64},
                         ψ_prior  ::NTuple{2,Float64},
                         nburn    ::Int64,
                         λc       ::Float64,
@@ -222,32 +214,11 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
   ns = Float64(nnodesbifurcation(Ξ))   # number of speciation events
   ne = 0.0                             # number of extinction events
 
-  # add simulated subtrees to all fossil tips
-  #=for bi in filter(x -> it(x) && ifos(x), idf)
-    dri = dr(bi)
-    ldr = lastindex(dri)
-    t0 = sTfbd()
-    ret = false
-    while !ret
-      t0, ret = fsψtip(bi, λc, μc, ψc)
-    end
-    swapfossil!(tree, t0, dri, ldr, 0)
-  end=#
-
   # likelihood
   llc = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
-        logdgamma(μc, μ_prior[1], μ_prior[2])
-
-  if isnan(λmμ_prior[1])
-    prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
-          logdgamma(μc, μ_prior[1], μ_prior[2]) + 
-          logdgamma(ψc, ψ_prior[1], ψ_prior[2])
-  else
-    prc = logdgamma(λc,    λ_prior[1],   λ_prior[2]) + 
-          logdgamma(λc-μc, λmμ_prior[1], λmμ_prior[2]) + 
-          logdgamma(ψc,    ψ_prior[1],   ψ_prior[2])
-  end
+        logdgamma(μc, μ_prior[1], μ_prior[2]) + 
+        logdgamma(ψc, ψ_prior[1], ψ_prior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -257,27 +228,15 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
 
     for p in pup
 
+      # λ proposal
       if p === 1
-        if isnan(λmμ_prior[1])
-          # λ proposal
-          llc, prc, λc, mc = 
-                  update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
-        else
-          # parallel λ and μ proposal
-          llc, prc, λc, μc, mc = 
-                  update_λμ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
-        end
-
-      elseif p === 2
-        if isnan(λmμ_prior[1])
-          # μ proposal
-          llc, prc, μc, mc = 
-                  update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
-        else
-          # λ-μ proposal (μ proposal with constant λ)
-          llc, prc, μc, mc = 
-                  update_λmμ!(llc, prc, μc, ne, L, λc, mc, th, stem, μmμ_prior)
-        end
+        llc, prc, λc, mc = 
+                update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
+  
+      # μ proposal
+      elseif p ===2  
+        llc, prc, μc, mc = 
+                update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
       # ψ proposal
       elseif p === 3
@@ -310,7 +269,6 @@ end
               ψc       ::Float64,
               λ_prior  ::NTuple{2,Float64},
               μ_prior  ::NTuple{2,Float64},
-              λmμ_prior::NTuple{2,Float64},
               ψ_prior  ::NTuple{2,Float64},
               mc       ::Float64,
               th       ::Float64,
@@ -331,7 +289,6 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    ψc      ::Float64,
                    λ_prior ::NTuple{2,Float64},
                    μ_prior ::NTuple{2,Float64},
-                   λmμ_prior::NTuple{2,Float64},
                    ψ_prior  ::NTuple{2,Float64},
                    mc     ::Float64,
                    th     ::Float64,
@@ -365,27 +322,15 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
     for p in pup
 
+      # λ proposal
       if p === 1
-        if isnan(λmμ_prior[1])
-          # λ proposal
-          llc, prc, λc, mc = 
-                  update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
-        else
-          # parallel λ and μ proposal
-          llc, prc, λc, μc, mc = 
-                  update_λμ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
-        end
+        llc, prc, λc, mc = 
+                update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
+      # μ proposal
       elseif p === 2
-        if isnan(λmμ_prior[1])
-          # μ proposal
-          llc, prc, μc, mc = 
-                  update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
-        else
-          # λ-μ proposal (μ proposal with constant λ) : TODO
-          llc, prc, μc, mc = 
-                  update_λmμ!(llc, prc, μc, ne, L, λc, mc, th, stem, μmμ_prior)
-        end
+        llc, prc, μc, mc = 
+                update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
       # ψ proposal
       elseif p === 3
@@ -437,11 +382,9 @@ end
                   stem     ::Bool,
                   λ_prior  ::NTuple{2,Float64},
                   μ_prior  ::NTuple{2,Float64},
-                  λmμ_prior::NTuple{2,Float64},
                   ψ_prior  ::NTuple{2,Float64},
                   λ_rdist  ::NTuple{2,Float64},
                   μ_rdist  ::NTuple{2,Float64},
-                  λmμ_rdist::NTuple{2,Float64},
                   ψ_rdist  ::NTuple{2,Float64},
                   nitpp    ::Int64,
                   nthpp    ::Int64,
@@ -461,11 +404,9 @@ function ref_posterior(Ξ        ::Vector{sTfbd},
                        stem     ::Bool,
                        λ_prior  ::NTuple{2,Float64},
                        μ_prior  ::NTuple{2,Float64},
-                       λmμ_prior::NTuple{2,Float64},
                        ψ_prior  ::NTuple{2,Float64},
                        λ_rdist  ::NTuple{2,Float64},
                        μ_rdist  ::NTuple{2,Float64},
-                       λmμ_rdist::NTuple{2,Float64},
                        ψ_rdist  ::NTuple{2,Float64},
                        nitpp    ::Int64,
                        nthpp    ::Int64,
