@@ -51,14 +51,20 @@ function _daughters_update!(ξ1  ::iTgbmct,
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
+    # acceptance rate
+    normprop = 
+      duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+      duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+
     # log likelihood ratios
     llrbm1, llrct1, ssrλ1, Σrλ1 = 
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
     llrbm2, llrct2, ssrλ2, Σrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrct1 + llrct2
-    llr  = λf - λi + llrbm1 + llrbm2 + acr
+    acr  = llrct1 + llrct2 + λf - λi
+    llr  = llrbm1 + llrbm2 + acr
+    acr += normprop
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     Σrλ  = Σrλ1 + Σrλ2
@@ -79,6 +85,8 @@ end
                   dλ   ::Float64,
                   ssλ  ::Float64,
                   Σλ   ::Float64,
+                  mc   ::Float64, 
+                  th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
                   lλxpr::Float64)
@@ -93,6 +101,8 @@ function _stem_update!(ξi   ::iTgbmct,
                        dλ   ::Float64,
                        ssλ  ::Float64,
                        Σλ   ::Float64,
+                       mc   ::Float64, 
+                       th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
                        lλxpr::Float64)
@@ -110,7 +120,7 @@ function _stem_update!(ξi   ::iTgbmct,
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ, Σλ
+      return llc, dλ, ssλ, Σλ, mc
     end
 
     # simulate fix tree vector
@@ -119,18 +129,23 @@ function _stem_update!(ξi   ::iTgbmct,
     llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt, 
       false, false)
 
-    acr = llrbd
+    # survival
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, true)
+    llr = log(mp/mc)
+
+    acr = llrbd + llr
 
     if -randexp() < acr
       llc += acr + llrbm
       dλ  += λc[1] - λr
       ssλ += ssrλ
       Σλ  += Σrλ
+      mc   = mp
       unsafe_copyto!(λc, 1, λp, 1, l)
     end
   end
 
-  return llc, dλ, ssλ, Σλ
+  return llc, dλ, ssλ, Σλ, mc
 end
 
 
@@ -147,6 +162,8 @@ end
                    dλ   ::Float64,
                    ssλ  ::Float64,
                    Σλ   ::Float64,
+                   mc   ::Float64, 
+                   th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
                    lλxpr::Float64)
@@ -163,6 +180,8 @@ function _crown_update!(ξi   ::iTgbmct,
                         dλ   ::Float64,
                         ssλ  ::Float64,
                         Σλ   ::Float64,
+                        mc   ::Float64, 
+                        th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
                         lλxpr::Float64)
@@ -188,7 +207,7 @@ function _crown_update!(ξi   ::iTgbmct,
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ, Σλ
+      return llc, dλ, ssλ, Σλ, mc
     end
 
     # simulate fix tree vector
@@ -201,20 +220,25 @@ function _crown_update!(ξi   ::iTgbmct,
     llrbm2, llrct2, ssrλ2, Σrλ2 = 
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr = llrct1 + llrct2 + λr - λi
+    # survival
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, false)
+    llr = log(mp/mc)
+
+    acr = llrct1 + llrct2 + llr
 
     if -randexp() < acr
-      llc += llrbm1 + llrbm2 + acr
+      llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       Σλ  += Σrλ1 + Σrλ2
+      mc   = mp
       fill!(λpc, λr)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
     end
   end
 
-  return llc, dλ, ssλ, Σλ
+  return llc, dλ, ssλ, Σλ, mc
 end
 
 

@@ -20,7 +20,7 @@ Created 03 09 2020
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmct` according to `gbmce`.
+Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
 function llik_gbm(xi::Vector{iTgbmct}, 
                   idf::Vector{iBffs},
@@ -70,7 +70,6 @@ function llik_gbm(tree::iTgbmct,
     llik_gbm(tree.d1, α, σλ, ϵ, δt, srδt)                            +
     llik_gbm(tree.d2, α, σλ, ϵ, δt, srδt)
   end
-
 end
 
 
@@ -105,18 +104,18 @@ Returns the log-likelihood for a branch according to `gbmct`.
     nI = lastindex(lλv)-2
 
     llλ  = 0.0
-    llbd = 0.0
+    llct = 0.0
     lλvi = lλv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
       llλ  += (lλvi1 - lλvi - α*δt)^2
-      llbd += exp(0.5*(lλvi + lλvi1))
+      llct += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
 
     # add to global likelihood
     ll  = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-    ll -= llbd*δt*(1.0 + ϵ)
+    ll -= llct*δt*(1.0 + ϵ)
 
     lλvi1 = lλv[nI+2]
 
@@ -214,12 +213,12 @@ Returns the log-likelihood for a branch according to `gbmct`.
     nI = lastindex(lλv)-2
 
     llbm = 0.0
-    llbd = 0.0
+    llct = 0.0
     lλvi = lλv[1]
     @simd for i in Base.OneTo(nI)
       lλvi1 = lλv[i+1]
       llbm += (lλvi1 - lλvi - α*δt)^2
-      llbd += exp(0.5*(lλvi + lλvi1))
+      llct += exp(0.5*(lλvi + lλvi1))
       lλvi  = lλvi1
     end
 
@@ -230,9 +229,9 @@ Returns the log-likelihood for a branch according to `gbmct`.
     # add to global likelihood
     ll    = llbm * 
             (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-    llbd *= δt
-    Σλ    = llbd
-    ll   -= llbd*(1.0 + ϵ)
+    llct *= δt
+    Σλ    = llct
+    ll   -= llct*(1.0 + ϵ)
 
     lλvi1 = lλv[nI+2]
 
@@ -264,6 +263,7 @@ end
 
 """
     Σλ_gbm(tree::iTgbmct)
+
 Returns the sum of `λ` rates for a `iTgbmct` according 
 to `gbmct` for a `ϵ` proposal.
 """
@@ -353,25 +353,25 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     nI = lastindex(lλc)-2
 
     llrbm = 0.0
-    llrbd = 0.0
+    llrct = 0.0
     lλpi = lλp[1]
     lλci = lλc[1]
     @simd for i in Base.OneTo(nI)
       lλpi1  = lλp[i+1]
       lλci1  = lλc[i+1]
       llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-      llrbd += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+      llrct += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
       lλpi   = lλpi1
       lλci   = lλci1
     end
 
     # standardized sum of squares
     ssrλ = llrbm/(2.0*δt)
-    Σrλ  = llrbd * δt
+    Σrλ  = llrct * δt
 
     # overall
     llrbm *= (-0.5/((σλ*srδt)^2))
-    llrbd *= -δt*(1.0 + ϵ)
+    llrct *= -δt*(1.0 + ϵ)
 
     lλpi1 = lλp[nI+2]
     lλci1 = lλc[nI+2]
@@ -383,108 +383,14 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
       Σrλ   += llri
       llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
                             lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-      llrbd -= (1.0 + ϵ) * llri
+      llrct -= (1.0 + ϵ) * llri
     end
     # if speciation or extinction
     if λev || μev
-      llrbd += lλpi1 - lλci1
+      llrct += lλpi1 - lλci1
     end
   end
 
-  return llrbm, llrbd, ssrλ, Σrλ
+  return llrbm, llrct, ssrλ, Σrλ
 end
- 
-
-
-
-"""
-    make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmct})
-
-Return closure for log-likelihood for conditioning
-"""
-function make_scond(idf::Vector{iBffs}, stem::Bool, ::Type{iTgbmct})
-
-  b1  = idf[1]
-  d1i = d1(b1)
-  d2i = d2(b1)
-
-  if stem
-    # for whole likelihood
-    f = let d1i = d1i, d2i = d2i
-      function (xi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
-        sn1 = sns[1]
-        cond_ll(xi[1], 0.0, ϵ, sn1, lastindex(sn1), 1)
-      end
-    end
-    # for new proposal
-    f0 = (xi::iTgbmct, ϵ::Float64, ter::Bool) -> 
-            sum_alone_stem_p(xi, 0.0, 0.0, ϵ)
-  else
-    # for whole likelihood
-    f = let d1i = d1i, d2i = d2i
-      function (xi::Vector{iTgbmct}, ϵ::Float64, sns::NTuple{3,BitVector})
-
-        sn2 = sns[2]
-        sn3 = sns[3]
-
-        cond_ll(xi[d1i], 0.0, ϵ, sn2, lastindex(sn2), 1) +
-        cond_ll(xi[d2i], 0.0, ϵ, sn3, lastindex(sn3), 1) + 
-        (1.0 + ϵ)
-      end
-    end
-    # for new proposal
-    f0 = function (xi::iTgbmct, ϵ::Float64, ter::Bool)
-      if ter
-        sum_alone_stem(  xi, 0.0, 0.0, ϵ)
-      else
-        sum_alone_stem_p(xi, 0.0, 0.0, ϵ)
-      end
-    end
-  end
-
-  return f, f0
-end
-
-
-
-
-"""
-    cond_ll(tree::iTgbmct,
-            ll  ::Float64, 
-            ϵ   ::Float64,
-            sn  ::BitVector,
-            lsn ::Int64,
-            ix  ::Int64)
-
-Condition events when there is only one alive lineage in the crown subtrees 
-to only be speciation events.
-"""
-function cond_ll(tree::iTgbmct,
-                 ll  ::Float64, 
-                 ϵ   ::Float64,
-                 sn  ::BitVector,
-                 lsn ::Int64,
-                 ix  ::Int64)
-
-  if lsn >= ix
-    if sn[ix]
-      ll += log(1.0 + ϵ)
-    end
-
-    if lsn === ix
-      return ll
-    else
-      ix += 1
-      if isfix(tree.d1::iTgbmct)
-        ll = cond_ll(tree.d1::iTgbmct, ll, ϵ, sn, lsn, ix)
-      else
-        ll = cond_ll(tree.d2::iTgbmct, ll, ϵ, sn, lsn, ix)
-      end
-    end
-  end
-
-  return ll
-end
-
-
 

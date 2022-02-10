@@ -15,8 +15,8 @@ Created 25 08 2020
 """
     insane_cbd(tree    ::sT_label, 
                out_file::String;
-               λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
-               μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
+               λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+               μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                niter   ::Int64                 = 1_000,
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
@@ -403,7 +403,9 @@ function ref_posterior(Ξ      ::Vector{sTbd},
   ne = Float64(ntipsextinct(Ξ))
   L  = treelength(Ξ)
 
-  llc = llik_cbd(Ξ, λc, μc) + log(mc) + prob_ρ(idf)
+  nsi = stem ? 0.0 : log(λc)
+
+  llc = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
@@ -636,13 +638,15 @@ function update_λ!(llc    ::Float64,
                    stem   ::Bool,
                    λ_prior::NTuple{2,Float64})
 
-  λp  = randgamma(λ_prior[1] + ns, λ_prior[2] + L)
+  nsi = stem ? 0.0 : 1.0
+
+  λp  = randgamma(λ_prior[1] + (ns - nsi), λ_prior[2] + L)
 
   mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc) 
 
   if -randexp() < llr
-    llc += ns * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - nsi) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     λc   = λp
     mc   = mp
@@ -667,7 +671,7 @@ end
               stem   ::Bool,
               λ_prior::NTuple{2,Float64},
               λ_rdist::NTuple{2,Float64},
-              pow   ::Float64)
+              pow    ::Float64)
 
 Mixed HM-Gibbs of `λ` for constant birth-death with reference distribution.
 """
@@ -683,15 +687,17 @@ function update_λ!(llc    ::Float64,
                    stem   ::Bool,
                    λ_prior::NTuple{2,Float64},
                    λ_rdist::NTuple{2,Float64},
-                   pow   ::Float64)
+                   pow    ::Float64)
 
-  λp  = randgamma((λ_prior[1] + ns) * pow + λ_rdist[1] * (1.0 - pow),
+  nsi = stem ? 0.0 : 1.0
+
+  λp  = randgamma((λ_prior[1] + (ns - nsi)) * pow + λ_rdist[1] * (1.0 - pow),
                   (λ_prior[2] + L) * pow          + λ_rdist[2] * (1.0 - pow)) 
   mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc)
 
   if -randexp() < (pow * llr)
-    llc += ns * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - nsi) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     rdc += llrdgamma(λp, λc, λ_rdist[1], λ_rdist[2])
     λc   = λp

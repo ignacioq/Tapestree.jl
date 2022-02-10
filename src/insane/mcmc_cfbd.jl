@@ -482,8 +482,10 @@ function ref_posterior(Ξ        ::Vector{sTfbd},
   ns = Float64(nnodesinternal(Ξ))
   ne = Float64(ntipsextinct(Ξ))
   L  = treelength(Ξ)
+  
+  nsi = stem ? 0.0 : log(λc)
 
-  llc = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) - nsi + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
         logdgamma(μc, μ_prior[1], μ_prior[2]) + 
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])

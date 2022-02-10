@@ -441,10 +441,9 @@ function _sim_gbmce(t   ::Float64,
 
       λt = λt1
     end
-
-  else
-    return iTgbmce(), na, nsp
   end
+
+  return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), na, nsp
 end
 
 
@@ -513,8 +512,8 @@ function _sim_gbmce(nsδt::Float64,
   t  -= nsδt
   bt += nsδt
 
-  λt1    = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
-  λm     = exp(0.5*(λt + λt1))
+  λt1 = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
+  λm  = exp(0.5*(λt + λt1))
   push!(λv, λt1)
 
   if divev(λm, μ, nsδt)
@@ -589,12 +588,10 @@ function _sim_gbmce(nsδt::Float64,
 
       λt = λt1
     end
-  else
-    return iTgbmce(), na, nsp
   end
+
+  return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), na, nsp
 end
-
-
 
 
 

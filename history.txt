@@ -1,0 +1,27 @@
+dnLognormal(1,1)
+X ~ dnLognormal(1,1)
+X
+sample(X)
+X ~ dnLognormal(1,1); X
+diversification_mean <- ln( ln(367.0/2.0) / 1.0 )
+diversification_mean
+diversification_sd <- 0.587405
+diversification ~ dnLognormal(mean=diversification_mean,sd=diversification_sd); diversification
+diversification_mean <- ln( ln(367.0/2.0) / 100.0 )
+diversification_mean
+diversification ~ dnLognormal(mean=diversification_mean,sd=diversification_sd); diversification
+diversification_mean
+diversification ~ dnLognormal(mean=diversification_mean,sd=diversification_sd); diversification
+?dnLognormal
+diversification_mean <- ln( ln(41.0/55.0) / 1.0 )
+diversification_mean <- ln( ln(41.0/2.0) / 55.0 )
+diversification_mean
+exp(diversification_mean)
+rnLognormal(n=10,mean=diversification_mean,sd=diversification_sd)
+rLognormal(n=10,mean=diversification_mean,sd=diversification_sd)
+rlognormal(n=10,mean=diversification_mean,sd=diversification_sd)
+diversification_mean
+diversification_sd
+rlognormal(n=10,mean=1,sd=1)
+mean(rlognormal(n=1000,mean=1,sd=1))
+mean(rlognormal(n=1000,mean=-1/2,sd=1))
