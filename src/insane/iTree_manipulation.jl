@@ -826,66 +826,6 @@ end
 
 
 """
-    graftree!(tree ::sTfbd,
-              stree::sTfbd,
-              dri  ::BitArray{1},
-              h    ::Float64,
-              ldr  ::Int64,
-              thc  ::Float64,
-              ix   ::Int64)
-
-Graft `stree` into `tree` given the address `idr`.
-"""
-function graftree!(tree ::sTfbd,
-                   stree::sTfbd,
-                   dri  ::BitArray{1},
-                   h    ::Float64,
-                   ldr  ::Int64,
-                   thc  ::Float64,
-                   ix   ::Int64)
-
-  if ix === ldr 
-    if thc > h > (thc - e(tree))
-      ne = thc - h
-      adde!(tree, -ne)
-      tree = rand() <= 0.5 ? sTfbd(tree, stree, ne, false, false, true) :
-                             sTfbd(stree, tree, ne, false, false, true)
-    else
-      if isfix(tree.d1)
-        tree.d1 = 
-          graftree!(tree.d1::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
-      else
-        tree.d2 =
-          graftree!(tree.d2::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
-      end
-    end
-  elseif ix < ldr
-    ifx1 = isdefined(stree, :d1) && isfix(tree.d1)
-    if ifx1 && isdefined(stree, :d2) && isfix(tree.d2)
-      ix += 1
-      if dri[ix]
-        tree.d1 = 
-          graftree!(tree.d1::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
-      else
-        tree.d2 = 
-          graftree!(tree.d2::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
-      end
-    elseif ifx1
-      tree.d1 = 
-        graftree!(tree.d1::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
-    else
-      tree.d2 =
-        graftree!(tree.d2::sTfbd, stree, dri, h, ldr, thc - e(tree), ix)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-"""
     prunetree!(tree::T, 
                dri ::BitArray{1}, 
                ldr ::Int64,
@@ -940,70 +880,6 @@ function prunetree!(tree::T,
     else
       tree.d2 =
         prunetree!(tree.d2::T, dri, ldr, wpr, ix, px)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-"""
-    prunetree!(tree::sTfbd, 
-               dri ::BitArray{1}, 
-               ldr ::Int64,
-               wpr ::Int64,
-               ix  ::Int64, 
-               px  ::Int64)
-
-Prune tree at branch given by `dri` and grafted `wpr`.
-"""
-function prunetree!(tree::sTfbd, 
-                    dri ::BitArray{1}, 
-                    ldr ::Int64,
-                    wpr ::Int64,
-                    ix  ::Int64, 
-                    px  ::Int64)
-
-  if ix === ldr
-    if px === wpr
-      if isfix(tree.d1::sTfbd)
-        ne  = e(tree) + e(tree.d1)
-        sete!(tree.d1, ne)
-        tree = tree.d1
-      elseif isfix(tree.d2::sTfbd)
-        ne  = e(tree) + e(tree.d2)
-        sete!(tree.d2, ne)
-        tree = tree.d2
-      end
-    else
-      px += 1
-      if isfix(tree.d1::sTfbd)
-        tree.d1 = 
-          prunetree!(tree.d1::sTfbd, dri, ldr, wpr, ix, px)
-      else
-        tree.d2 =
-          prunetree!(tree.d2::sTfbd, dri, ldr, wpr, ix, px)
-      end
-    end
-  elseif ix < ldr
-    ifx1 = isdefined(stree, :d1) && isfix(tree.d1::sTfbd)
-    if ifx1 && isdefined(stree, :d2) && isfix(tree.d2::sTfbd)
-      ix += 1
-      if dri[ix]
-        tree.d1 = 
-          prunetree!(tree.d1::sTfbd, dri, ldr, wpr, ix, px)
-      else
-        tree.d2 = 
-          prunetree!(tree.d2::sTfbd, dri, ldr, wpr, ix, px)
-      end
-    elseif ifx1
-      tree.d1 = 
-        prunetree!(tree.d1::sTfbd, dri, ldr, wpr, ix, px)
-    else
-      tree.d2 =
-        prunetree!(tree.d2::sTfbd, dri, ldr, wpr, ix, px)
     end
   end
 
