@@ -296,6 +296,11 @@ struct iBffs <: iBf
   iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1., false, false, 
                 Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0))
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
+        it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64, 
+        λt::Float64, μt::Float64,) = 
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, false, 
+            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0))
+  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
         it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64, 
         λt::Float64, μt::Float64, ψt::Float64) = 
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, iψ, 
@@ -336,8 +341,7 @@ function makeiBf!(tree::sT_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, 
-                     false, false, 1, 1, 0.0, 0.0, 0.0))
+    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, false, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     return ρi, 1
   end
@@ -348,8 +352,7 @@ function makeiBf!(tree::sT_label,
   n  = n1 + n2 
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi,
-                   false, false, 0, 1, 0.0, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   return ρi, n
