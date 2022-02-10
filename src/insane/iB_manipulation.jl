@@ -72,11 +72,21 @@ setλt!(id::iBffs, λt::Float64) = id.λt[] = λt
 
 
 """
-    setμt!(id::iBffs)
+    setμt!(id::iBffs, μt::Float64)
 
 Set number of alive lineages at time `t`. 
 """
 setμt!(id::iBffs, μt::Float64) = id.μt[] = μt
+
+
+
+
+"""
+    setψt!(id::iBffs, ψt::Float64)
+
+Set number of alive lineages at time `t`. 
+"""
+setψt!(id::iBffs, ψt::Float64) = id.μt[] = ψt
 
 
 

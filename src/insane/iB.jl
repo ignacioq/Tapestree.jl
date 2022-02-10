@@ -681,17 +681,6 @@ ie(id::iBf) = getproperty(id, :ie)
 
 
 """
-    sc(id::iBffs)
-
-Return `0` if stem branch, `1` if either of the crown branches and `23` if 
-another plebeian branch.
-"""
-sc(id::iBffs) = getproperty(id, :sc)
-
-
-
-
-"""
     ifos(id::iBffs)
 
 Return if is a fossil.
