@@ -13,19 +13,18 @@ Created 03 09 2020
 
 
 """
-    llik_cbd(xi::Vector{iTgbmce}, 
-             idf::Vector{iBffs},
+    llik_gbm(Ξ   ::Vector{iTgbmce}, 
+             idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
              μ   ::Float64, 
              δt  ::Float64,
-             srδt::Float64,
-             scond::Function)
+             srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmce` according to `gbm-ce`.
 """
-function llik_gbm(xi::Vector{iTgbmce}, 
-                  idf::Vector{iBffs},
+function llik_gbm(Ξ   ::Vector{iTgbmce}, 
+                  idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
                   μ   ::Float64, 
@@ -33,9 +32,9 @@ function llik_gbm(xi::Vector{iTgbmce},
                   srδt::Float64)
   @inbounds begin
     ll = 0.0
-    for i in Base.OneTo(lastindex(xi))
+    for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
-      ll += llik_gbm(xi[i], α, σλ, μ, δt, srδt)
+      ll += llik_gbm(Ξ[i], α, σλ, μ, δt, srδt)
       if !it(bi)
         ll += λt(bi)
       end

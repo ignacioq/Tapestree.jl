@@ -33,19 +33,19 @@ end
 
 
 """
-    llik_cpb(xi::Vector{sTpb}, λ::Float64)
+    llik_cpb(Ξ::Vector{sTpb}, λ::Float64)
 
 Log-likelihood up to a constant for constant pure-birth 
 given a complete `iTree` for decoupled trees.
 """
-function llik_cpb(xi::Vector{sTpb}, λ::Float64)
+function llik_cpb(Ξ::Vector{sTpb}, λ::Float64)
 
   ll = 0.0
-  for ξ in xi
+  for ξ in Ξ
     ll += llik_cpb(ξ, λ)
   end
 
-  ll += ((Float64(lastindex(xi) - 1) * 0.5) - 1.0) * log(λ)
+  ll += ((Float64(lastindex(Ξ) - 1) * 0.5) - 1.0) * log(λ)
 
   return ll
 end

@@ -298,7 +298,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 == true`. True by default for `sTfbd` trees to make sampled ancestors visible.
 """
 @recipe function f(tree::T; 
-                   shownodes  = (T === sTfbd || T === sTf_label),
+                   shownodes  = (T <: sTf),
                    showlabels = (T === sT_label || T === sTf_label)) where {
                                                                     T <: iTree}
 

@@ -736,7 +736,7 @@ end
 
 """
     update_gbm!(bix  ::Int64,
-                xi  ::Vector{iTgbmpb},
+                Ξ    ::Vector{iTgbmpb},
                 idf  ::Vector{iBffs},
                 α    ::Float64,
                 σλ   ::Float64,

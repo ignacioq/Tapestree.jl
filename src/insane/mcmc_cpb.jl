@@ -532,15 +532,14 @@ end
 
 
 """
-    update_λ!(xi   ::Vector{sTpb},
-              llc   ::Float64,
+    update_λ!(llc   ::Float64,
               prc   ::Float64,
+              rdc   ::Float64,
               λc    ::Float64,
-              lac   ::Float64,
-              λtn   ::Float64,
               ns    ::Float64,
               L     ::Float64,
-              λ_prior::Float64,
+              λ_prior::NTuple{2,Float64},
+              λ_refd ::NTuple{2,Float64},
               pow   ::Float64)
 
 Gibbs sampling of `λ` for constant pure-birth with reference distribution.
