@@ -13,6 +13,50 @@ Created 06 07 2020
 
 
 """
+    llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
+
+Log-likelihood up to a constant for constant birth-death 
+given a complete `iTree` recursively.
+"""
+function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
+  if istip(tree) 
+    - e(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
+  else
+    log(λ) - e(tree)*(λ + μ)      +
+    llik_cbd(tree.d1::sTbd, λ, μ) +
+    llik_cbd(tree.d2::sTbd, λ, μ)
+  end
+end
+
+
+
+
+"""
+    llik_cbd(Ξ::Vector{sTbd}, 
+             λ  ::Float64, 
+             μ  ::Float64)
+
+Log-likelihood up to a constant for constant birth-death 
+given a complete `iTree` for decoupled trees.
+"""
+function llik_cbd(Ξ::Vector{sTbd}, 
+                  λ  ::Float64, 
+                  μ  ::Float64)
+
+  ll = 0.0
+  for ξ in Ξ
+    ll += llik_cbd(ξ, λ, μ)
+  end
+
+  ll += Float64(lastindex(Ξ) - 1)/2.0 * log(λ)
+
+  return ll
+end
+
+
+
+
+"""
     moments(n::Float64, th::Float64, ϵ::Float64)
 
 Returns `λ` and `μ` under the method of moments given `n` surviving tips,
@@ -54,50 +98,5 @@ function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
   μ += λ === μ ? 1e-14 : 0.0
   - 2.0 * log((λ - μ)/(λ - μ*exp(-(λ - μ)*t))) - log(λ)
 end
-
-
-
-
-"""
-    llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
-
-Log-likelihood up to a constant for constant birth-death 
-given a complete `iTree` recursively.
-"""
-function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
-  if istip(tree) 
-    - e(tree)*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0)
-  else
-    log(λ) - e(tree)*(λ + μ)      +
-    llik_cbd(tree.d1::sTbd, λ, μ) +
-    llik_cbd(tree.d2::sTbd, λ, μ)
-  end
-end
-
-
-
-
-"""
-    llik_cbd(Ξ::Vector{sTbd}, 
-             λ  ::Float64, 
-             μ  ::Float64)
-
-Log-likelihood up to a constant for constant birth-death 
-given a complete `iTree` for decoupled trees.
-"""
-function llik_cbd(Ξ::Vector{sTbd}, 
-                  λ  ::Float64, 
-                  μ  ::Float64)
-
-  ll = 0.0
-  for ξ in Ξ
-    ll += llik_cbd(ξ, λ, μ)
-  end
-
-  ll += Float64(lastindex(Ξ) - 1)/2.0 * log(λ)
-
-  return ll
-end
-
 
 

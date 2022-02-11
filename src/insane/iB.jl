@@ -12,13 +12,13 @@ Created 03 07 2020
 
 
 
-
 """
     iB
 
 An abstract type for all branches in `iTree`.
 """
 abstract type iB end
+
 
 
 
@@ -119,11 +119,11 @@ end
 
 
 """
-    makeiBf!(tree::sTfbd, idv ::Array{iBfb,1}, bit ::BitArray{1})
+    makeiBf!(tree::sTfbd, idv::Array{iBfb,1}, bit::BitArray{1})
 
 Make `iBfb` vector for an `iTree`.
 """
-function makeiBf!(tree::sTfbd, idv ::Array{iBfb,1}, bit ::BitArray{1})
+function makeiBf!(tree::sTfbd, idv::Array{iBfb,1}, bit::BitArray{1})
 
   itb = istip(tree)
 
@@ -177,7 +177,6 @@ struct iBfgp <: iBf
     new(dr, Ref(da), ti, tf, it, ie)
 end
 
-
 # pretty-printing
 Base.show(io::IO, id::iBfgp) = 
   print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id), 
@@ -187,7 +186,9 @@ Base.show(io::IO, id::iBfgp) =
 
 
 """
-    makeiBf!(tree::iTree, idv ::Array{iBfgp,1}, bit ::BitArray{1})
+    makeiBf!(tree::T, 
+             idv ::Array{iBfgp,1}, 
+             bit ::BitArray{1}) where {T <: iTree} 
 
 Make `iBfgp` vector for an `iTree`.
 """
@@ -207,39 +208,6 @@ function makeiBf!(tree::T,
   if isdefined(tree, :d1)
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
-    push!(bit2, false)
-    makeiBf!(tree.d2, idv, bit2)
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    makeiBf!(tree::sTfbd, idv ::Array{iBfgp,1}, bit ::BitArray{1})
-
-Make `iBfgp` vector for an `iTree`.
-"""
-function makeiBf!(tree::sTfbd, 
-                  idv ::Array{iBfgp,1}, 
-                  bit ::BitArray{1}) where {T <: iTree} 
-
-  itb = istip(tree)
-  ieb = isextinct(tree)
-
-  push!(idv, 
-    iBfgp(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb, ieb))
-
-  bit1 = copy(bit)
-  bit2 = copy(bit)
-
-  if isdefined(tree, :d1)
-    push!(bit1, true)
-    makeiBf!(tree.d1, idv, bit1)
-  end
-  if isdefined(tree, :d2)
     push!(bit2, false)
     makeiBf!(tree.d2, idv, bit2)
   end
@@ -306,7 +274,6 @@ struct iBffs <: iBf
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, iψ, 
             Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(ψt))
 end
-
 
 # pretty-printing
 Base.show(io::IO, id::iBffs) = 
@@ -481,8 +448,10 @@ function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
   makeiBf!(tree, idf, treeheight(tree), n1v, n2v, ft1v, ft2v, sa2v, tρ)
 
   reverse!(idf)
-  reverse!(n1v); reverse!(n2v)
-  reverse!(ft1v); reverse!(ft2v)
+  reverse!(n1v)
+  reverse!(n2v)
+  reverse!(ft1v)
+  reverse!(ft2v)
   reverse!(sa2v)
 
   for i in Base.OneTo(lastindex(idf))

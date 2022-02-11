@@ -299,12 +299,18 @@ end
 
 
 """
-    sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64)
+    _sss_gbm(tree::T, 
+             α   ::Float64, 
+             ssλ ::Float64, 
+             n   ::Float64) where {T <: iTgbm}
 
 Returns the standardized sum of squares a `iTgbm` according 
 to GBM birth-death for a `σ` proposal.
 """
-function _sss_gbm(tree::T, α::Float64, ssλ::Float64, n::Float64) where {T <: iTgbm}
+function _sss_gbm(tree::T, 
+                  α   ::Float64, 
+                  ssλ ::Float64, 
+                  n   ::Float64) where {T <: iTgbm}
 
   ssλ0, n0 = _sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
 
@@ -368,7 +374,7 @@ end
 
 
 """
-    deltaλ(tree::T, dλ::Float64, l::Float64) where {T <: iTgbm}
+    deltaλ(Ξ::Vector{T}) where {T <: iTgbm}
 
 Returns the log-likelihood ratio for according to GBM 
 for a drift `α` proposal.

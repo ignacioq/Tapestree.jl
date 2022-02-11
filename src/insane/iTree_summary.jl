@@ -12,7 +12,6 @@ Created 03 09 2020
 
 
 
-
 """
     time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
 
@@ -26,7 +25,6 @@ function time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
   end
   return fx
 end
-
 
 
 
@@ -117,7 +115,6 @@ Extract values from `lv` function at times `ts` across the tree.
     _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
   end
 end
-
 
 
 
@@ -343,7 +340,6 @@ end
 
 
 
-
 """
     extractp(tree::iTgbmbd, nδt::Float64)
 
@@ -490,6 +486,7 @@ end
 
 
 
+
 """
     iquantile(treev::Array{iTgbmct,1}, p::Float64)
 
@@ -584,15 +581,12 @@ end
 
 
 """
-    iquantile(treev::Array{T,1}, 
-              p    ::Float64, 
-              lv   ::Function) where {T <: iTgbm}
+    iquantile(treev::Array{iTgbmbd,1}, p::Float64)
 
 Make an `iTgbmbd` with the quantile specified by `p` in data specified in 
 function `lv`.
 """
-function iquantile(treev::Array{iTgbmbd,1}, 
-                   p    ::Float64)
+function iquantile(treev::Array{iTgbmbd,1}, p::Float64)
 
   nt  = lastindex(treev)
 

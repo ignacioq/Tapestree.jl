@@ -208,7 +208,6 @@ end
 Sample one branch among those in `wba` that are `true` according to 
 randomly picked `rn`.
 """
-
 function getbranch(rn ::Int64, 
                    wba::BitArray{1}, 
                    ida::Array{iBa,1})::Tuple{iBa,Int64}
@@ -311,12 +310,8 @@ end
 
 
 
-
-
-
-
 """
-    make_inodes(idf::Array{iBf, 1})
+    make_inodes(idf::Array{B, 1}) where B <: iBf
 
 Return all the internal node indices for a given `iBf` vector and a vector
 that is true for which ever daughter is a tip.

@@ -13,6 +13,7 @@ using Plots: plot
 using RecipesBase: @recipe, @series
 using ProgressMeter: Progress, next!
 using Statistics: quantile
+using VectorizedLoop: @avx
 
 # other submodules dependencies
 using ..Utils

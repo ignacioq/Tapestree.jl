@@ -10,6 +10,8 @@ Created 17 08 2021
 =#
 
 
+
+
 """
     Ltt
 
@@ -45,8 +47,9 @@ end
 
 
 
+
 """
-    usample(t::Vector{Tuple{Float64, Float64}}, th::Float64, p::Float64)
+    usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
 
 Sample uniformly from a vector of start and end times given probability `p` of
 sampling over the sum of those times. 
@@ -76,11 +79,6 @@ function usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
 
   return 0.0
 end
-
-
-
-
-
 
 
 

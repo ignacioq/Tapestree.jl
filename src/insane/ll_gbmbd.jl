@@ -154,7 +154,6 @@ end
 
 
 
-
 """
     llik_gbm_ss(tree::iTgbmbd,
                 α   ::Float64, 
@@ -376,9 +375,6 @@ end
 
 
 
-
-
-
 """
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lμp ::Array{Float64,1},
@@ -475,3 +471,6 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
   return llrbm, llrbd, ssrλ, ssrμ
 end
+
+
+

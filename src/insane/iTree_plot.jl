@@ -10,7 +10,6 @@ Created 07 07 2020
 =#
 
 
-# make this into a recipe
 
 
 """
@@ -93,13 +92,13 @@ end
 
 
 """
-    _rplottree!(tree::iTgbm, 
+    _rplottree!(tree::T, 
                 xc  ::Float64, 
                 yr  ::UnitRange{Int64},
                 zfun::Function,
                 x   ::Array{Float64,1}, 
                 y   ::Array{Float64,1},
-                z   ::Array{Float64,1})
+                z   ::Array{Float64,1}) where {T <: iTgbm}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
@@ -162,7 +161,7 @@ end
 
 
 """
-    function f(tree::T, zfun::Function)
+    function f(tree::T, zfun::Function) where {T <: iTgbm}
 
 Recipe for plotting a Type `iTgbm`.
 """
@@ -200,9 +199,9 @@ end
 
 
 """
-    function f(tree::T, zfun::Function, ϵ::Float64)
+    function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
 
-Recipe for plotting a Type `iTgbmct` given `ϵ`.
+Recipe for plotting extinction on a `iTgbmct` given `ϵ`.
 """
 @recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
 
@@ -293,12 +292,14 @@ end
 
 
 """
-    function f(tree::T; shownodes=(T==sTfbd)) where {T <: iTree}
+    f(tree::T; shownodes  = (T <: sTf),
+               showlabels = (T === sT_label || T === sTf_label)) 
+               where {T <: iTree}
+
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
-== true`. True by default for `sTfbd` trees to make sampled ancestors visible.
+== true`. True by default for `sTf` trees to make sampled ancestors visible.
 """
-@recipe function f(tree::T; 
-                   shownodes  = (T <: sTf),
+@recipe function f(tree::T; shownodes  = (T <: sTf),
                    showlabels = (T === sT_label || T === sTf_label)) where {
                                                                     T <: iTree}
 
@@ -359,10 +360,12 @@ end
 
 
 
-
 """
-    function _nodeproperties!(tree::T, shape::Vector{Symbol}, col::Vector{Symbol}, 
-                              alpha::Vector{Float64}) where {T <: iTree}
+    _nodeproperties!(tree ::T, 
+                     shape::Vector{Symbol}, 
+                     col  ::Vector{Symbol}, 
+                     alpha::Vector{Float64}) where {T <: iTree}
+
 Completes the lists of node shapes, colors and alphas according to their 
 properties.
 """
@@ -370,6 +373,7 @@ function _nodeproperties!(tree ::T,
                           shape::Vector{Symbol}, 
                           col  ::Vector{Symbol}, 
                           alpha::Vector{Float64}) where {T <: iTree}
+
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
   fx = !isdefined(tree, :fx) || isfix(tree)

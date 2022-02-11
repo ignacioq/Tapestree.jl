@@ -349,8 +349,8 @@ end
 
 Change all past tips to fossil tips.
 """
-fossilizepasttips!(tree::T) where {T <: sTf} = _fossilizepasttips!(tree::T, 
-                                                            treeheight(tree::T))
+fossilizepasttips!(tree::T) where {T <: sTf} = 
+  _fossilizepasttips!(tree::T, treeheight(tree::T))
 
 
 
@@ -380,7 +380,8 @@ end
 
 Change all past tips to extinct tips.
 """
-extinguishpasttips!(tree::T) where {T <: sTf} = _extinguishpasttips!(tree::T, treeheight(tree::T))
+extinguishpasttips!(tree::T) where {T <: sTf} = 
+  _extinguishpasttips!(tree::T, treeheight(tree::T))
 
 
 
@@ -434,7 +435,6 @@ function fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
 
   return λf
 end
-
 
 
 

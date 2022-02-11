@@ -466,27 +466,27 @@ end
 
 
 """
-    update_fs!(bix  ::Int64,
-               Ξ    ::Vector{sTbd},
-               idf  ::Vector{iBffs},
-               llc  ::Float64,
-               λ    ::Float64, 
-               μ    ::Float64,
-               ns   ::Float64,
-               ne   ::Float64,
-               L    ::Float64)
+    update_fs!(bix::Int64,
+               Ξ  ::Vector{sTbd},
+               idf::Vector{iBffs},
+               llc::Float64,
+               λ  ::Float64, 
+               μ  ::Float64,
+               ns ::Float64,
+               ne ::Float64,
+               L  ::Float64)
 
 Forward simulation proposal function for constant birth-death.
 """
-function update_fs!(bix    ::Int64,
-                    Ξ      ::Vector{sTbd},
-                    idf    ::Vector{iBffs},
-                    llc    ::Float64,
-                    λ      ::Float64, 
-                    μ      ::Float64,
-                    ns     ::Float64,
-                    ne     ::Float64,
-                    L      ::Float64)
+function update_fs!(bix::Int64,
+                    Ξ  ::Vector{sTbd},
+                    idf::Vector{iBffs},
+                    llc::Float64,
+                    λ  ::Float64, 
+                    μ  ::Float64,
+                    ns ::Float64,
+                    ne ::Float64,
+                    L  ::Float64)
 
   bi = idf[bix]
 
@@ -538,7 +538,6 @@ end
 
 
 
-
 """
     fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
 
@@ -583,7 +582,7 @@ end
 
 
 """
-    tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
+    tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64, na::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
@@ -693,7 +692,7 @@ function update_λ!(llc    ::Float64,
   nsi = stem ? 0.0 : 1.0
 
   λp  = randgamma((λ_prior[1] + ns - nsi) * pow + λ_rdist[1] * (1.0 - pow),
-                  (λ_prior[2] + L) * pow          + λ_rdist[2] * (1.0 - pow)) 
+                  (λ_prior[2] + L) * pow        + λ_rdist[2] * (1.0 - pow)) 
   mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc)
 

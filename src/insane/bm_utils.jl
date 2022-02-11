@@ -99,33 +99,27 @@ end
 
 Returns the log-likelihood for Brownian motion with drift.
 """
-@inline function ll_bm(x  ::Array{Float64,1},
-                       α  ::Float64,
-                       σ  ::Float64,
-                       δt ::Float64,
-                       fdt::Float64,
-                       srδt::Float64)
+function ll_bm(x  ::Array{Float64,1},
+               α  ::Float64,
+               σ  ::Float64,
+               δt ::Float64,
+               fdt::Float64,
+               srδt::Float64)
 
-  @inbounds begin
+  # estimate standard `δt` likelihood
+  nI = lastindex(x)-2
 
-    # estimate standard `δt` likelihood
-    nI = lastindex(x)-2
-
-    ll = 0.0
-    xi = x[1]
-    @simd for i in Base.OneTo(nI)
-      xi1 = x[i+1]
-      ll += (xi1 - xi - α*δt)^2
-      xi  = xi1
-    end
-
-    # add to global likelihood
-    ll *= (-0.5/((σ*srδt)^2))
-    ll -= Float64(nI)*(log(σ*srδt) + 0.5*log(2.0π))
-
-    # add final non-standard `δt`
-    ll += ldnorm_bm(x[nI+2], x[nI+1] + α*fdt, sqrt(fdt)*σ)
+  ll = 0.0
+  @avx for i in Base.OneTo(nI)
+    ll += (x[i+1] - x[i] - α*δt)^2
   end
+
+  # add to global likelihood
+  ll *= (-0.5/((σ*srδt)^2))
+  ll -= Float64(nI)*(log(σ*srδt) + 0.5*log(2.0π))
+
+  # add final non-standard `δt`
+  ll += ldnorm_bm(x[nI+2], x[nI+1] + α*fdt, sqrt(fdt)*σ)
 
   return ll
 end
@@ -144,41 +138,32 @@ end
 
 Returns the log-likelihood ratio for Brownian motion.
 """
-@inline function llr_bm(xp  ::Array{Float64,1},
-                        xc  ::Array{Float64,1},
-                        α   ::Float64,
-                        σ   ::Float64,
-                        δt  ::Float64,
-                        fdt ::Float64,
-                        srδt::Float64)
+function llr_bm(xp  ::Array{Float64,1},
+                xc  ::Array{Float64,1},
+                α   ::Float64,
+                σ   ::Float64,
+                δt  ::Float64,
+                fdt ::Float64,
+                srδt::Float64)
 
-  @inbounds begin
+  # estimate standard `δt` likelihood
+  nI = lastindex(xp) - 2
 
-    # estimate standard `δt` likelihood
-    nI = lastindex(xp) - 2
-
-    llr = 0.0
-    xpi = xp[1]
-    xci = xc[1]
-    @simd for i in Base.OneTo(nI)
-      xpi1 = xp[i+1]
-      xci1 = xc[i+1]
-      llr += (xpi1 - xpi - α*δt)^2 - (xci1 - xci - α*δt)^2
-      xpi  = xpi1
-      xci  = xci1
-    end
-
-    # add to global likelihood
-    llr *= (-0.5/((σ*srδt)^2))
-
-    # add final non-standard `δt`
-    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1] + α*fdt, 
-                        xc[nI+2], xc[nI+1] + α*fdt, sqrt(fdt)*σ)
+  llr = 0.0
+  @avx for i in Base.OneTo(nI)
+    llr += (xp[i+1] - xp[i] - α*δt)^2 - 
+           (xc[i+1] - xc[i] - α*δt)^2
   end
+
+  # add to global likelihood
+  llr *= -0.5/((σ*srδt)^2)
+
+  # add final non-standard `δt`
+  llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1] + α*fdt, 
+                      xc[nI+2], xc[nI+1] + α*fdt, sqrt(fdt)*σ)
 
   return llr
 end
-
 
 
 
@@ -297,31 +282,29 @@ Brownian bridge simulation function for updating a branch in place.
                      fdt ::Float64,
                      srδt::Float64)
 
-  @inbounds begin
-    l = lastindex(x)
+  l = lastindex(x)
 
-    randn!(x)
+  randn!(x)
 
-    # for standard δt
-    x[1] = xi
-    @simd for i = Base.OneTo(l-2)
-      x[i+1] *= srδt*σ
-    end
-    x[l] *= sqrt(fdt)*σ
-    cumsum!(x, x)
-
-    # make bridge
-    if l > 2
-      ite = 1.0/(Float64(l-2) * δt + fdt)
-      xdf = (x[l] - xf)
-
-      @simd for i = Base.OneTo(l-1)
-        x[i] -= (Float64(i-1) * δt * ite * xdf)
-      end
-    end
-    # for last non-standard δt
-    x[l] = xf
+  # for standard δt
+  x[1] = xi
+  @avx for i = Base.OneTo(l-2)
+    x[i+1] *= srδt*σ
   end
+  x[l] *= sqrt(fdt)*σ
+  cumsum!(x, x)
+
+  # make bridge
+  if l > 2
+    ite = 1.0/(Float64(l-2) * δt + fdt)
+    xdf = (x[l] - xf)
+
+    @avx for i = Base.OneTo(l-1)
+      x[i] -= (Float64(i-1) * δt * ite * xdf)
+    end
+  end
+  # for last non-standard δt
+  x[l] = xf
 
   return nothing
 end
@@ -357,43 +340,40 @@ Brownian bridge simulation function for updating two vectors
                      fdt ::Float64,
                      srδt::Float64)
 
+  l = lastindex(x0)
 
-  @inbounds begin
-    l = lastindex(x0)
+  randn!(x0)
+  randn!(x1)
 
-    randn!(x0)
-    randn!(x1)
-
-    # for standard δt
-    x0[1] = x0i
-    x1[1] = x1i
-    @simd for i = Base.OneTo(l-2)
-      x0[i+1] *= srδt*σ0
-      x1[i+1] *= srδt*σ1
-    end
-    srlt  = sqrt(fdt)
-    x0[l] *= srlt*σ0
-    x1[l] *= srlt*σ1
-    cumsum!(x0, x0)
-    cumsum!(x1, x1)
-
-    # make bridge
-    if l > 2
-      ite = 1.0/(Float64(l-2) * δt + fdt)
-      x0df = (x0[l] - x0f)
-      x1df = (x1[l] - x1f)
-
-      @simd for i = Base.OneTo(l-1)
-        iti    = Float64(i-1) * δt * ite
-        x0[i] -= (iti * x0df)
-        x1[i] -= (iti * x1df)
-      end
-    end
-
-    # for last non-standard δt
-    x0[l] = x0f
-    x1[l] = x1f
+  # for standard δt
+  x0[1] = x0i
+  x1[1] = x1i
+  @avx for i = Base.OneTo(l-2)
+    x0[i+1] *= srδt*σ0
+    x1[i+1] *= srδt*σ1
   end
+  srlt  = sqrt(fdt)
+  x0[l] *= srlt*σ0
+  x1[l] *= srlt*σ1
+  cumsum!(x0, x0)
+  cumsum!(x1, x1)
+
+  # make bridge
+  if l > 2
+    ite = 1.0/(Float64(l-2) * δt + fdt)
+    x0df = (x0[l] - x0f)
+    x1df = (x1[l] - x1f)
+
+    @avx for i = Base.OneTo(l-1)
+      iti    = Float64(i-1) * δt * ite
+      x0[i] -= (iti * x0df)
+      x1[i] -= (iti * x1df)
+    end
+  end
+
+  # for last non-standard δt
+  x0[l] = x0f
+  x1[l] = x1f
 
   return nothing
 end
