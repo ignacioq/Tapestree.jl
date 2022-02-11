@@ -187,13 +187,14 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
                        pup    ::Array{Int64,1}, 
                        prints ::Int64)
 
-  el = lastindex(idf)
-  L  = treelength(Ξ)     # tree length
-  ns = Float64(el-1)/2.0 # number of speciation events
-  ne = 0.0               # number of extinction events
+  el  = lastindex(idf)
+  L   = treelength(Ξ)     # tree length
+  ns  = Float64(el-1)/2.0 # number of speciation events
+  ne  = 0.0               # number of extinction events
+  nsi = stem ? 0.0 : log(λc)
 
   # likelihood
-  llc = llik_cbd(Ξ, λc, μc) + log(mc) + prob_ρ(idf)
+  llc = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
@@ -640,7 +641,7 @@ function update_λ!(llc    ::Float64,
 
   nsi = stem ? 0.0 : 1.0
 
-  λp  = randgamma(λ_prior[1] + (ns - nsi), λ_prior[2] + L)
+  λp  = randgamma(λ_prior[1] + ns - nsi, λ_prior[2] + L)
 
   mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc) 
@@ -691,7 +692,7 @@ function update_λ!(llc    ::Float64,
 
   nsi = stem ? 0.0 : 1.0
 
-  λp  = randgamma((λ_prior[1] + (ns - nsi)) * pow + λ_rdist[1] * (1.0 - pow),
+  λp  = randgamma((λ_prior[1] + ns - nsi) * pow + λ_rdist[1] * (1.0 - pow),
                   (λ_prior[2] + L) * pow          + λ_rdist[2] * (1.0 - pow)) 
   mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
   llr = log(mp/mc)

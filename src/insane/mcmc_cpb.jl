@@ -47,7 +47,8 @@ function insane_cpb(tree    ::sT_label,
                     prints  ::Int64                 = 5,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  n  = ntips(tree)
+  n    = ntips(tree)
+  stem = !iszero(e(tree))
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -81,11 +82,11 @@ function insane_cpb(tree    ::sT_label,
 
   # adaptive phase
   llc, prc, λc = 
-      mcmc_burn_cpb(Ξ, idf, λ_prior, nburn, λc, pup, prints)
+      mcmc_burn_cpb(Ξ, idf, λ_prior, nburn, λc, pup, prints, stem)
 
   # mcmc
   r, treev, λc = 
-    mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, niter, nthin, pup, prints)
+    mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, niter, nthin, pup, prints, stem)
 
   pardic = Dict(("lambda" => 1))
 
@@ -104,8 +105,7 @@ function insane_cpb(tree    ::sT_label,
     λ_refd = (m^2/v, m/v)
 
     # marginal likelihood
-    pp = ref_posterior(Ξ, idf, λc, λ_prior, λ_refd, 
-      nitpp, nthpp, βs, pup)
+    pp = ref_posterior(Ξ, idf, λc, λ_prior, λ_refd, nitpp, nthpp, βs, pup, stem)
 
     # process with reference distribution the posterior
     p1 = Vector{Float64}(undef, size(r,1))
@@ -129,30 +129,33 @@ end
 
 
 """
-    mcmc_burn_cpb(Ξ       ::Vector{sTpb}, 
-                  idf     ::Array{iBffs,1},
-                  λ_prior  ::NTuple{2,Float64},
-                  nburn   ::Int64,
-                  λc      ::Float64,
-                  pup     ::Array{Int64,1}, 
-                  prints  ::Int64)
+    mcmc_burn_cpb(Ξ      ::Vector{sTpb}, 
+                  idf    ::Array{iBffs,1},
+                  λ_prior::NTuple{2,Float64},
+                  nburn  ::Int64,
+                  λc     ::Float64,
+                  pup    ::Array{Int64,1}, 
+                  prints ::Int64,
+                  stem   ::Bool)
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_burn_cpb(Ξ       ::Vector{sTpb}, 
-                       idf     ::Array{iBffs,1},
-                       λ_prior  ::NTuple{2,Float64},
-                       nburn   ::Int64,
-                       λc      ::Float64,
-                       pup     ::Array{Int64,1}, 
-                       prints  ::Int64)
+function mcmc_burn_cpb(Ξ      ::Vector{sTpb}, 
+                       idf    ::Array{iBffs,1},
+                       λ_prior::NTuple{2,Float64},
+                       nburn  ::Int64,
+                       λc     ::Float64,
+                       pup    ::Array{Int64,1}, 
+                       prints ::Int64,
+                       stem   ::Bool)
 
-  el = lastindex(idf)
-  L  = treelength(Ξ)     # tree length
-  ns = Float64(el-1)*0.5 # number of speciation events
+  el  = lastindex(idf)
+  L   = treelength(Ξ)     # tree length
+  ns  = Float64(el-1)*0.5 # number of speciation events
+  nsi = stem ? 0.0 : log(λc)
 
   #likelihood
-  llc = llik_cpb(Ξ, λc) + prob_ρ(idf)
+  llc = llik_cpb(Ξ, λc) - nsi + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -166,7 +169,7 @@ function mcmc_burn_cpb(Ξ       ::Vector{sTpb},
       # λ proposal
       if p === 1
 
-        llc, prc, λc = update_λ!(llc, prc, λc, ns, L, λ_prior)
+        llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
 
       # forward simulation proposal proposal
       else
@@ -191,11 +194,12 @@ end
              llc    ::Float64,
              prc    ::Float64,
              λc     ::Float64,
-             λ_prior ::NTuple{2,Float64},
+             λ_prior::NTuple{2,Float64},
              niter  ::Int64,
              nthin  ::Int64,
              pup    ::Array{Int64,1}, 
-             prints ::Int64)
+             prints ::Int64,
+             stem   ::Bool)
 
 MCMC chain for constant pure-birth.
 """
@@ -204,11 +208,12 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
                   llc    ::Float64,
                   prc    ::Float64,
                   λc     ::Float64,
-                  λ_prior ::NTuple{2,Float64},
+                  λ_prior::NTuple{2,Float64},
                   niter  ::Int64,
                   nthin  ::Int64,
                   pup    ::Array{Int64,1}, 
-                  prints ::Int64)
+                  prints ::Int64,
+                  stem   ::Bool)
 
   el = lastindex(idf)
   ns = Float64(nnodesinternal(Ξ))
@@ -234,7 +239,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
       # λ proposal
       if p === 1
 
-        llc, prc, λc = update_λ!(llc, prc, λc, ns, L, λ_prior)
+        llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
 
         # llci = llik_cpb(Ξ, λc)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -280,14 +285,14 @@ end
 """
     ref_posterior(Ξ      ::Vector{sTpb},
                   idf    ::Array{iBffs,1},
-                  llc    ::Float64,
-                  prc    ::Float64,
                   λc     ::Float64,
                   λ_prior ::NTuple{2,Float64},
+                  λ_refd  ::NTuple{2,Float64},
                   nitpp  ::Int64,
                   nthpp  ::Int64,
                   βs     ::Vector{Float64},
-                  pup    ::Array{Int64,1})
+                  pup    ::Array{Int64,1},
+                  stem   ::Bool)
 
 MCMC da chain for constant birth-death using forward simulation.
 """
@@ -299,7 +304,8 @@ function ref_posterior(Ξ      ::Vector{sTpb},
                        nitpp  ::Int64,
                        nthpp  ::Int64,
                        βs     ::Vector{Float64},
-                       pup    ::Array{Int64,1})
+                       pup    ::Array{Int64,1},
+                       stem   ::Bool)
 
   K = lastindex(βs)
 
@@ -311,7 +317,9 @@ function ref_posterior(Ξ      ::Vector{sTpb},
   ns = Float64(nnodesinternal(Ξ))
   L  = treelength(Ξ)
 
-  llc = llik_cpb(Ξ, λc) + prob_ρ(idf)
+  nsi = stem ? 0.0 : log(λc)
+
+  llc = llik_cpb(Ξ, λc) - nsi + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
   for k in 2:K
@@ -332,7 +340,7 @@ function ref_posterior(Ξ      ::Vector{sTpb},
         if p === 1
 
           llc, prc, rdc, λc = 
-            update_λ!(llc, prc, rdc, λc, ns, L, λ_prior, λ_refd, βi)
+            update_λ!(llc, prc, rdc, λc, ns, L, stem, λ_prior, λ_refd, βi)
 
         # forward simulation proposal proposal
         else 
@@ -417,7 +425,7 @@ function update_fs!(bix    ::Int64,
       llr += llik_cpb(ξp, λ) - llik_cpb(ξc, λ)
 
       Ξ[bix] = ξp     # set new decoupled tree
-      llc += llr      # set new likelihood
+      llc   += llr    # set new likelihood
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
     end
@@ -504,25 +512,29 @@ end
 
 
 """
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              λ_prior::NTuple{2,Float64})
+     update_λ!(llc    ::Float64,
+               prc    ::Float64,
+               λc     ::Float64,
+               ns     ::Float64,
+               L      ::Float64,
+               stem   ::Bool
+               λ_prior::NTuple{2,Float64})
 
 Gibbs sampling of `λ` for constant pure-birth.
 """
-function update_λ!(llc   ::Float64,
-                   prc   ::Float64,
-                   λc    ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
+function update_λ!(llc    ::Float64,
+                   prc    ::Float64,
+                   λc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Float64,
+                   stem   ::Bool,
                    λ_prior::NTuple{2,Float64})
 
-  λp   = randgamma(λ_prior[1] + ns - 1.0, λ_prior[2] + L)
+  nsi = stem ? 0.0 : 1.0
 
-  llc += (ns - 1.0) * log(λp/λc) + L * (λc - λp)
+  λp  = randgamma(λ_prior[1] + ns - nsi, λ_prior[2] + L)
+
+  llc += (ns - nsi) * log(λp/λc) + L * (λc - λp)
   prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
 
   return llc, prc, λp
@@ -544,20 +556,23 @@ end
 
 Gibbs sampling of `λ` for constant pure-birth with reference distribution.
 """
-function update_λ!(llc   ::Float64,
-                   prc   ::Float64,
-                   rdc   ::Float64,
-                   λc    ::Float64,
-                   ns    ::Float64,
-                   L     ::Float64,
+function update_λ!(llc    ::Float64,
+                   prc    ::Float64,
+                   rdc    ::Float64,
+                   λc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Float64,
+                   stem   ::Bool,
                    λ_prior::NTuple{2,Float64},
                    λ_refd ::NTuple{2,Float64},
-                   pow   ::Float64)
+                   pow    ::Float64)
 
-  λp = randgamma((λ_prior[1] + ns - 1.0)*pow + λ_refd[1] * (1.0 - pow),
+  nsi = stem ? 0.0 : 1.0
+
+  λp = randgamma((λ_prior[1] + ns - nsi)*pow + λ_refd[1] * (1.0 - pow),
                  (λ_prior[2] + L)*pow        + λ_refd[2] * (1.0 - pow)) 
 
-  llc += (ns-1.0)*log(λp/λc) + L*(λc - λp)
+  llc += (ns - nsi)*log(λp/λc) + L*(λc - λp)
   prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
   rdc += llrdgamma(λp, λc, λ_refd[1],  λ_refd[2])
 
