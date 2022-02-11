@@ -16,8 +16,8 @@ Created 07 10 2021
 """
     cfbd_wait(n::Float64, λ::Float64, μ::Float64, ψ::Float64)
 
-Sample a waiting time for constant fossilized birth-death when `n` species 
-are alive with speciation rate `λ` and extinction rate `μ`.
+Sample a waiting time for constant fossilized birth-death when `n` species are 
+alive with speciation rate `λ`, extinction rate `μ` and fossil sampling rate `ψ`.
 """
 cfbd_wait(n::Float64, λ::Float64, μ::Float64, ψ::Float64) = rexp(n*(λ + μ + ψ))
 
@@ -27,8 +27,8 @@ cfbd_wait(n::Float64, λ::Float64, μ::Float64, ψ::Float64) = rexp(n*(λ + μ +
 """
     cfbd_wait(λ::Float64, μ::Float64, ψ::Float64)
 
-Sample a per-lineage waiting time for constant fossilized birth-death 
-with speciation rate `λ` and extinction rate `μ`.
+Sample a per-lineage waiting time for constant fossilized birth-death with 
+speciation rate `λ`, extinction rate `μ` and fossil sampling rate `ψ`.
 """
 cfbd_wait(λ::Float64, μ::Float64, ψ::Float64) = rexp(λ + μ + ψ)
 
@@ -38,7 +38,7 @@ cfbd_wait(λ::Float64, μ::Float64, ψ::Float64) = rexp(λ + μ + ψ)
 """
     λevent(λ::Float64, μ::Float64, ψ::Float64)
 
-Return `true` if speciation event
+Return `true` if speciation event.
 """
 λevent(λ::Float64, μ::Float64, ψ::Float64) = (λ/(λ + μ + ψ)) > rand()
 
@@ -48,7 +48,7 @@ Return `true` if speciation event
 """
     λevent(μ::Float64, ψ::Float64)
 
-Return `true` if extinction event, conditionned on "not a speciation event"
+Return `true` if extinction event, conditionned on "not a speciation event".
 """
 μevent(μ::Float64, ψ::Float64) = (μ/(μ + ψ)) > rand()
 
@@ -59,7 +59,7 @@ Return `true` if extinction event, conditionned on "not a speciation event"
     sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
 
 Simulate a constant fossilized birth-death `iTree` of height `t` with speciation 
-rate `λ` and extinction rate `μ`.
+rate `λ`, extinction rate `μ` and fossil sampling rate `ψ`.
 """
 function sim_cfbd(t::Float64, 
                   λ::Float64, 
@@ -92,7 +92,8 @@ end
              na::Int64, nfos::Int64)
 
 Simulate a constant fossilized birth-death `iTree` of height `t` with speciation 
-rate `λ` and extinction rate `μ`. `na` initializes the number of alived tips.
+rate `λ`, extinction rate `μ` and fossil sampling rate `ψ`. `na` initializes the 
+number of alived tips.
 """
 function sim_cfbd(t::Float64, 
                   λ::Float64, 
