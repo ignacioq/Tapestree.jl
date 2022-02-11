@@ -94,7 +94,7 @@ function insane_cpb(tree    ::sT_label,
 
   if marginal
     # reference distribution
-    βs = [range(0.0, 1.0, K)...]
+    βs = [range(0.0, 1.0, K)...]::Vector{Float64}
     reverse!(βs)
 
     @views p = r[:,4]
@@ -268,7 +268,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
         r[lit,2] = llc
         r[lit,3] = prc
         r[lit,4] = λc
-        push!(treev, couple(deepcopy(Ξ), idf, 1))
+        push!(treev, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
     end

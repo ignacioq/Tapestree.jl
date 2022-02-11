@@ -425,7 +425,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
         R[lit,5] = αc
         R[lit,6] = σλc
         R[lit,7] = μc
-        push!(Ξv, couple(deepcopy(Ξ), idf, 1))
+        push!(Ξv, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
     end

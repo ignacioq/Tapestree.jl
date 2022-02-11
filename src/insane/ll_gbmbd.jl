@@ -129,8 +129,8 @@ function ll_gbm_b(lλv ::Array{Float64,1},
 
   # add final non-standard `δt`
   if fdt > 0.0
-    lλvi1 = lλv[nI+1]
-    lμvi1 = lμv[nI+1]
+    lλvi = lλv[nI+1]
+    lμvi = lμv[nI+1]
     srfdt = sqrt(fdt)
     ll += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)
     ll += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)

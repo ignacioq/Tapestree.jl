@@ -82,7 +82,7 @@ function insane_gbmct(tree    ::sT_label,
     λc = λi
   end
   ϵc = ϵi
-  mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 1_000, stem)
+  mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 500, stem)
 
   # make a decoupled tree
   Ξ = iTgbmct[]
@@ -118,7 +118,7 @@ function insane_gbmct(tree    ::sT_label,
        prints, scalef)
 
   # mcmc
-  R, Ψv = 
+  R, Ξv = 
     mcmc_gbmct(Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, th, stem,
       λa_prior, α_prior, σλ_prior, ϵ_prior, niter, nthin, δt, srδt, 
       inodes, pup, prints)
@@ -442,7 +442,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTgbmct},
         R[lit,5] = αc
         R[lit,6] = σλc
         R[lit,7] = ϵc
-        push!(Ξv, couple(deepcopy(Ξ), idf, 1))
+        push!(Ξv, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
     end
@@ -814,7 +814,7 @@ function update_α_ϵ!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 500, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -870,7 +870,7 @@ function update_σ_ϵ!(σλc     ::Float64,
   σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
   σλp  = sqrt(σλp2)
 
-  mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 500, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -922,7 +922,7 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = mulupt(ϵc, ϵtn)::Float64
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 500, stem)
   ϵr  = log(ϵp/ϵc)
   llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
 
@@ -975,7 +975,7 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = mulupt(ϵc, ϵtn)::Float64
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 500, stem)
   ϵr  = log(ϵp/ϵc)
   llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
 

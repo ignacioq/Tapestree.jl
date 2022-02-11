@@ -342,7 +342,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        push!(treev, couple(deepcopy(Ξ), idf, 1))
+        push!(treev, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
     end

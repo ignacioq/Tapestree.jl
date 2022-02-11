@@ -894,7 +894,7 @@ end
 Remove extinct tips from `iTgbmpb`.
 """
 function remove_unsampled(tree::T) where {T <: iTree}
-  return _remove_unsampled!(deepcopy(tree::T))
+  return _remove_unsampled!(T(tree::T))
 end
 
 
@@ -961,7 +961,7 @@ end
 Remove extinct tips from `iTgbmce`.
 """
 function remove_extinct(tree::T) where {T <: iTree}
-  return _remove_extinct!(deepcopy(tree::T))
+  return _remove_extinct!(T(tree::T))
 end
 
 
@@ -1424,7 +1424,7 @@ end
 Remove fossils.
 """
 function remove_fossils(tree::T) where {T <: sTf}
-  return _remove_fossils!(deepcopy(tree::T))
+  return _remove_fossils!(T(tree::T))
 end
 
 
@@ -1472,7 +1472,7 @@ end
 Remove sampled ancestors (non-tip fossils).
 """
 function remove_sampled_ancestors(tree::T) where {T <: sTf}
-  return _remove_sampled_ancestors!(deepcopy(tree::T))
+  return _remove_sampled_ancestors!(T(tree::T))
 end
 
 
@@ -1510,7 +1510,7 @@ tips and fossils.
 """
 # For all trees without fossils, it simply means removing extinct lineages
 reconstructed(tree::T) where {T <: iTree} = remove_unsampled(tree::T)
-reconstructed(tree::T) where {T <: sTf} = _reconstructed!(deepcopy(tree::T))
+reconstructed(tree::T) where {T <: sTf} = _reconstructed!(T(tree::T))
 
 
 

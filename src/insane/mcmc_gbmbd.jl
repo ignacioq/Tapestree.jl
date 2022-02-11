@@ -404,7 +404,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTgbmbd},
         R[lit,6] = αc
         R[lit,7] = σλc
         R[lit,8] = σμc
-        push!(Ξv, couple(deepcopy(Ξ), idf, 1))
+        push!(Ξv, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
     end

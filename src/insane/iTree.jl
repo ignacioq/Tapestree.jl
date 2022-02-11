@@ -279,15 +279,15 @@ end
 
 
 """
-    sTpb(tree::sT_label)
+    sTpb(tree::sTpb)
 
 Demotes a tree of type `sT_label` to `sTpb`.
 """
-function sTpb(tree::sT_label)
+function sTpb(tree::sTpb)
   if isdefined(tree, :d1)
-    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree))
+    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree), isfix(tree))
   else
-    sTpb(e(tree))
+    sTpb(e(tree), isfix(tree))
   end
 end
 
@@ -364,6 +364,22 @@ end
 
 
 """
+    sTbd(tree::sTbd)
+
+Produce a new copy of `sTbd`.
+"""
+function sTbd(tree::sTbd)
+  if isdefined(tree, :d1)
+    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), isfix(tree))
+  else
+    sTbd(e(tree), isextinct(tree), isfix(tree))
+  end
+end
+
+
+
+
+"""
     sTfbd
 
 The simplest composite recursive type of supertype `sTf` 
@@ -426,6 +442,21 @@ Base.show(io::IO, t::sTfbd) =
   print(io, "insane simple fossilized birth-death tree with ", ntips(t), 
     " tips (", ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
 
+
+
+"""
+    sTfbd(tree::sTfbd)
+
+Transforms a tree of type `sT_label` to `sTfbd`.
+"""
+function sTfbd(tree::sTfbd)
+  if isdefined(tree, :d1)
+    sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), 
+      isextinct(tree), isfossil(tree),  isfix(tree))
+  else
+    sTfbd(e(tree), isextinct(tree), isfossil(tree),  isfix(tree))
+  end
+end
 
 
 
@@ -609,15 +640,16 @@ end
 
 
 """
-    sTpb(tree::iTgbmpb)
+    iTgbmpb(tree::iTgbmpb)
 
-Demotes a tree of type `iTgbmce` to `sTpb`.
+Produce a new copy of `iTgbmpb`.
 """
-function sTpb(tree::iTgbmpb)
+function iTgbmpb(tree::iTgbmpb)
   if isdefined(tree, :d1)
-    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree))
+    iTgbmpb(iTgbmpb(tree.d1), iTgbmpb(tree.d2), 
+      e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
   else
-    sTpb(e(tree))
+    iTgbmpb(e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
   end
 end
 
@@ -690,6 +722,25 @@ Base.show(io::IO, t::iTgbmce) =
 
 
 """
+    iTgbmce(tree::iTgbmce)
+
+Produce a new copy of `iTgbmce`.
+"""
+function iTgbmce(tree::iTgbmce)
+  if isdefined(tree, :d1)
+    iTgbmce(iTgbmce(tree.d1), iTgbmce(tree.d2), 
+      e(tree), dt(tree), fdt(tree), isextinct(tree), 
+      isfix(tree), copy(lλ(tree)))
+  else
+    iTgbmce(e(tree), dt(tree), fdt(tree), isextinct(tree), 
+      isfix(tree), copy(lλ(tree)))
+  end
+end
+
+
+
+
+"""
     sTbd(tree::iTgbmce)
 
 Demotes a tree of type `iTgbmce` to `sTbd`.
@@ -701,6 +752,7 @@ function sTbd(tree::iTgbmce)
     sTbd(e(tree), isextinct(tree))
   end
 end
+
 
 
 
@@ -862,6 +914,25 @@ end
 # pretty-printing
 Base.show(io::IO, t::iTgbmct) = 
   print(io, "insane gbm-ct tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    iTgbmct(tree::iTgbmct)
+
+Produce a new copy of `iTgbmct`.
+"""
+function iTgbmct(tree::iTgbmct)
+  if isdefined(tree, :d1)
+    iTgbmct(iTgbmct(tree.d1), iTgbmct(tree.d2), 
+      e(tree), dt(tree), fdt(tree), isextinct(tree), 
+      isfix(tree), copy(lλ(tree)))
+  else
+    iTgbmct(e(tree), dt(tree), fdt(tree), isextinct(tree), 
+      isfix(tree), copy(lλ(tree)))
+  end
+end
 
 
 
@@ -1044,6 +1115,25 @@ end
 # pretty-printing
 Base.show(io::IO, t::iTgbmbd) = 
   print(io, "insane bd-gbm tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    iTgbmbd(tree::iTgbmbd)
+
+Produce a new copy of `iTgbmbd`.
+"""
+function iTgbmbd(tree::iTgbmbd)
+  if isdefined(tree, :d1)
+    iTgbmbd(iTgbmbd(tree.d1), iTgbmbd(tree.d2), 
+      e(tree), dt(tree), fdt(tree), isextinct(tree), 
+      isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+  else
+    iTgbmbd(e(tree), dt(tree), fdt(tree), isextinct(tree), 
+      isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+  end
+end
 
 
 

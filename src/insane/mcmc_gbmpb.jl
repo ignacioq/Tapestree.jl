@@ -376,7 +376,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTgbmpb},
         r[lit,4] = exp(lλ(Ξ[1])[1])
         r[lit,5] = αc
         r[lit,6] = σλc
-        push!(Ξv, couple(deepcopy(Ξ), idf, 1))
+        push!(Ξv, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
     end

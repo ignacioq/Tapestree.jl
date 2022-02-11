@@ -11,6 +11,22 @@ Created 05 11 2020
 
 
 
+"""
+    copy_Ξ(Ξ::Vector{T}) where {T <: iTree}
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function copy_Ξ(Ξ::Vector{T}) where {T <: iTree}
+  Ξc = T[]
+  for ξ in Ξ
+    push!(Ξc, T(ξ))
+  end
+  return Ξc
+end
+
+
+
+
 
 """
     sTpb!(Ξ::Vector{sTpb}, tree::sT_label)

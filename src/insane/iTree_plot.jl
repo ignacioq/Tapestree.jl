@@ -349,7 +349,8 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       markershape := :circle
       markersize  := 0
       markeralpha := fill(0.0,nt)
-      series_annotations := series_annotations(labels, font("Helvetica", 8))
+      series_annotations := Plots.series_annotations(labels, 
+        Plots.font("Helvetica", 8))
       fill(0.0 - 0.02*th, nt), 1:nt
     end
   end
