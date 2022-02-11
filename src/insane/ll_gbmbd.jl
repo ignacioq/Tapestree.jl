@@ -13,29 +13,28 @@ Created 03 09 2020
 
 
 """
-    llik_cbd(psi::Vector{iTgbmbd}, 
-             idf::Vector{iBffs},
+    llik_gbm(Ξ   ::Vector{iTgbmbd}, 
+             idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
-             μ   ::Float64, 
+             σμ  ::Float64, 
              δt  ::Float64,
-             srδt::Float64,
-             scond::Function)
+             srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmbd` according to `gbm-bd`.
 """
-function llik_gbm(psi::Vector{iTgbmbd}, 
-                  idf::Vector{iBffs},
+function llik_gbm(Ξ   ::Vector{iTgbmbd}, 
+                  idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
-                  σμ   ::Float64, 
+                  σμ  ::Float64, 
                   δt  ::Float64,
                   srδt::Float64)
   @inbounds begin
     ll = 0.0
-    for i in Base.OneTo(lastindex(psi))
+    for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
-      ll += llik_gbm(psi[i], α, σλ, σμ, δt, srδt)
+      ll += llik_gbm(Ξ[i], α, σλ, σμ, δt, srδt)
       if !it(bi)
         ll += λt(bi)
       end
@@ -476,6 +475,3 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
   return llrbm, llrbd, ssrλ, ssrμ
 end
-
-
-

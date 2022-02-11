@@ -15,8 +15,8 @@ Created 03 09 2020
 """
     iTree
 
-An abstract type for all composite recursive types 
-representing a binary phylogenetic tree for `insane` use
+An abstract type for all composite recursive types representing 
+a binary phylogenetic tree for `insane` use
 """
 abstract type iTree end
 
@@ -26,10 +26,21 @@ abstract type iTree end
 """
     sT
 
-An abstract type for all composite recursive types 
-representing a simple binary phylogenetic tree for `insane` use
+An abstract type for all composite recursive types representing 
+a simple binary phylogenetic tree for `insane` use
 """
 abstract type sT <: iTree end
+
+
+
+
+"""
+    sTf
+
+An abstract type for all composite recursive types representing 
+a simple binary phylogenetic tree with fossils for `insane` use
+"""
+abstract type sTf <: sT end
 
 
 
@@ -125,7 +136,7 @@ Base.show(io::IO, t::sT_label) =
 """
     sT_label(tree::T) where {T <: iTree}
 
-Demotes a tree of type `iTgbmce` to `sT_label`.
+Demotes a tree to `sT_label`.
 """
 function sT_label(tree::T) where {T <: iTree}
   _sT_label(tree::T, 0)[1]
@@ -133,10 +144,11 @@ end
 
 
 
+
 """
     sT_label(tree::T) where {T <: iTree}
 
-Demotes a tree of type `iTgbmce` to `sT_label`.
+Demotes a tree to `sT_label`.
 """
 function _sT_label(tree::T, i::Int64) where {T <: iTree}
   if isdefined(tree, :d1)
@@ -154,9 +166,122 @@ end
 
 
 """
+    sTf_label
+
+A composite recursive type of supertype `sTf` representing a labelled binary 
+phylogenetic tree with fossils for `insane` use, with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  iμ: if it is extinct
+  iψ: if it is a fossil
+  l:  label
+
+    sTf_label()
+
+Constructs an empty `sTf_label` object.
+
+    sTf_label(e::Float64, (iμ::Bool), (iψ::Bool), (l ::String))
+
+Constructs an empty `sTf_label` object with edge `e` and label `l`.
+
+    sTf_label(d1::sTf_label e::Float64, l ::String)
+
+Constructs an `sTf_label` object with one `sTf_label` daughter and edge `e`.
+
+    sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l ::String)
+
+Constructs an `sTf_label` object with two `sTf_label` daughters and edge `e`.
+"""
+mutable struct sTf_label <: sTf
+  d1::sTf_label
+  d2::sTf_label
+  e ::Float64
+  iμ::Bool
+  iψ::Bool
+  l ::String
+
+  sTf_label() = new()
+  sTf_label(e::Float64) = (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=""; x)
+  sTf_label(e::Float64, 
+            l::String)  = (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
+  sTf_label(e ::Float64, 
+            iμ::Bool,
+            iψ::Bool)   = (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
+  sTf_label(e ::Float64, 
+            iμ::Bool,
+            iψ::Bool,
+            l ::String) = (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
+  sTf_label(d1::sTf_label, 
+            e ::Float64,
+            l ::String) = (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; 
+                           x.l=l; x)
+  sTf_label(d1::sTf_label, 
+            d2::sTf_label, 
+            e ::Float64,
+            l ::String) = (x=new(); x.d1=d1; x.d2=d2; x.e=e; x.iμ=false; 
+                           x.iψ=false; x.l=l; x)
+end
+
+# pretty-printing
+Base.show(io::IO, t::sTf_label) = 
+  print(io, "insane simple labelled tree with ", ntips(t), " tips (", 
+            ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
+
+
+
+
+"""
+    sTf_label(tree::T) where {T <: iTree}
+
+Demotes a tree to `sTf_label`.
+"""
+function sTf_label(tree::T) where {T <: iTree}
+  _sTf_label(tree::T, 0)[1]
+end
+
+
+
+
+"""
+    _sTf_label(tree::T, i::Int64) where {T <: iTree}
+
+Demotes a tree to `sTf_label`, initialized with label i.
+"""
+function _sTf_label(tree::T, i::Int64) where {T <: iTree}
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+    t1, i = _sTf_label(tree.d1, i)
+    t2, i = _sTf_label(tree.d2, i)
+    tree = sTf_label(t1, t2, e(tree), l(tree))
+  elseif defd1
+    t1, i = _sTf_label(tree.d1, i)
+    tree = sTf_label(t1, e(tree), l(tree))
+  elseif defd2
+    t2, i = _sTf_label(tree.d2, i)
+    tree = sTf_label(t2, e(tree), l(tree))
+  else
+    i += 1
+    lab = ifelse(isempty(l(tree)),string("t",i),l(tree))
+    if isdefined(tree, :iμ)
+      tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), lab)
+    else
+      tree = sTf_label(e(tree), lab)
+    end
+  end
+  return tree, i
+end
+
+
+
+
+"""
     sTpb(tree::sT_label)
 
-Demotes a tree of type `iTgbmce` to `sTpb`.
+Demotes a tree of type `sT_label` to `sTpb`.
 """
 function sTpb(tree::sT_label)
   if isdefined(tree, :d1)
@@ -241,7 +366,7 @@ end
 """
     sTfbd
 
-The simplest composite recursive type of supertype `sT` 
+The simplest composite recursive type of supertype `sTf` 
 representing a binary phylogenetic tree for `insane` use, 
 with the following fields:
 
@@ -269,7 +394,7 @@ Constructs an `sTfbd` object with two `sTfbd` daughters and edge `e`.
 Constructs an `sTfbd` object with one sampled ancestor, one `sTfbd` daughter and 
 edge `e`.
 """
-mutable struct sTfbd <: sT
+mutable struct sTfbd <: sTf
   d1::sTfbd
   d2::sTfbd
   e ::Float64
@@ -282,8 +407,8 @@ mutable struct sTfbd <: sT
     (x = new(); x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = false; x)
-  sTfbd(e::Float64, iμ::Bool, fx::Bool) = 
-    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iμ && fx; x.fx = fx; x)
+  sTfbd(e::Float64, iμ::Bool, iψ::Bool) = 
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
   sTfbd(d1::sTfbd, d2::sTfbd, e::Float64) = 
@@ -300,6 +425,30 @@ end
 Base.show(io::IO, t::sTfbd) = 
   print(io, "insane simple fossilized birth-death tree with ", ntips(t), 
     " tips (", ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
+
+
+
+
+
+"""
+    sTfbd(tree::sTf_label)
+
+Transforms a tree of type `sTf_label` to `sTfbd`.
+"""
+function sTfbd(tree::sTf_label)
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+    sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), false, false, false)
+  elseif defd1
+    sTfbd(sTfbd(tree.d1), e(tree), false, true, false)
+  elseif defd2
+    sTfbd(sTfbd(tree.d2), e(tree), false, true, false)
+  else
+    sTfbd(e(tree), false)
+  end
+end
 
 
 

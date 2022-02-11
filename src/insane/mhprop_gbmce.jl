@@ -11,8 +11,8 @@ Created 27 05 2020
 
 
 """
-    _daughters_update!(ψ1  ::iTgbmce,
-                       ψ2  ::iTgbmce,
+    _daughters_update!(ξ1  ::iTgbmce,
+                       ξ2  ::iTgbmce,
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
@@ -22,8 +22,8 @@ Created 27 05 2020
 
 Make a `gbm-ce` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ψ1  ::iTgbmce,
-                            ψ2  ::iTgbmce,
+function _daughters_update!(ξ1  ::iTgbmce,
+                            ξ2  ::iTgbmce,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
@@ -32,8 +32,8 @@ function _daughters_update!(ψ1  ::iTgbmce,
                             srδt::Float64)
   @inbounds begin
 
-    λ1c  = lλ(ψ1)
-    λ2c  = lλ(ψ2)
+    λ1c  = lλ(ξ1)
+    λ2c  = lλ(ξ2)
     l1   = lastindex(λ1c)
     l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
@@ -41,10 +41,10 @@ function _daughters_update!(ψ1  ::iTgbmce,
     λi   = λ1c[1]
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
-    e1   = e(ψ1)
-    e2   = e(ψ2)
-    fdt1 = fdt(ψ1)
-    fdt2 = fdt(ψ2)
+    e1   = e(ξ1)
+    e2   = e(ξ2)
+    fdt1 = fdt(ξ1)
+    fdt2 = fdt(ξ2)
 
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
@@ -74,7 +74,7 @@ end
 
 
 """
-    _stem_update!(ψi   ::iTgbmce, 
+    _stem_update!(ξi   ::iTgbmce, 
                   α    ::Float64,
                   σλ   ::Float64,
                   μ    ::Float64,
@@ -89,7 +89,7 @@ end
 
 Do gbm update for stem root.
 """
-function _stem_update!(ψi   ::iTgbmce, 
+function _stem_update!(ξi   ::iTgbmce, 
                        α    ::Float64,
                        σλ   ::Float64,
                        μ    ::Float64,
@@ -103,12 +103,12 @@ function _stem_update!(ψi   ::iTgbmce,
                        lλxpr::Float64)
 
   @inbounds begin
-    λc   = lλ(ψi)
+    λc   = lλ(ξi)
     l    = lastindex(λc)
     λp   = Vector{Float64}(undef,l)
     λn   = λc[l]
-    el   = e(ψi)
-    fdtp = fdt(ψi)
+    el   = e(ξi)
+    fdtp = fdt(ξi)
 
     # node proposal
     λr = rnorm(λn - α*el, σλ*sqrt(el))
@@ -145,9 +145,9 @@ end
 
 
 """
-    _crown_update!(ψi   ::iTgbmce, 
-                   ψ1   ::iTgbmce, 
-                   ψ2   ::iTgbmce, 
+    _crown_update!(ξi   ::iTgbmce, 
+                   ξ1   ::iTgbmce, 
+                   ξ2   ::iTgbmce, 
                    α    ::Float64,
                    σλ   ::Float64,
                    μ    ::Float64,
@@ -162,9 +162,9 @@ end
 
 Do gbm update for crown root.
 """
-function _crown_update!(ψi   ::iTgbmce, 
-                        ψ1   ::iTgbmce, 
-                        ψ2   ::iTgbmce, 
+function _crown_update!(ξi   ::iTgbmce, 
+                        ξ1   ::iTgbmce, 
+                        ξ2   ::iTgbmce, 
                         α    ::Float64,
                         σλ   ::Float64,
                         μ    ::Float64,
@@ -178,20 +178,20 @@ function _crown_update!(ψi   ::iTgbmce,
                         lλxpr::Float64)
 
   @inbounds begin
-    λpc  = lλ(ψi)
+    λpc  = lλ(ξi)
     λi   = λpc[1]
-    λ1c  = lλ(ψ1)
-    λ2c  = lλ(ψ2)
+    λ1c  = lλ(ξ1)
+    λ2c  = lλ(ξ2)
     l1   = lastindex(λ1c)
     l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
     λ2p  = Vector{Float64}(undef,l2)
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
-    e1   = e(ψ1)
-    e2   = e(ψ2)
-    fdt1 = fdt(ψ1)
-    fdt2 = fdt(ψ2)
+    e1   = e(ξ1)
+    e2   = e(ξ2)
+    fdt1 = fdt(ξ1)
+    fdt2 = fdt(ξ2)
 
     # node proposal
     λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)

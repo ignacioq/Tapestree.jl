@@ -263,11 +263,13 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `tf`: final absolute time.
   `it`: `true` if a terminal branch.
   `ρi`: branch specific sampling fraction.
-  `ie`: `true` if an extinct branch.
-  `ni`: current direct alive descendants.
+  `ie`: `true` if in a lineage that goes extinct.
+  `iψ`: `true` if a fossil branch.
+  `ni`: current direct alive descendants (≠ fixed ones in daugnter branches).
   `nt`: current alive descendants at time `t`.
   `λt`: final speciation rate for fixed at time `t`.
   `μt`: final extinction rate for fixed at time `t`.
+  `ψt`: final fossilization rate for fixed at time `t`.
 
     iBffs()
 
@@ -283,25 +285,34 @@ struct iBffs <: iBf
   it::Bool
   ρi::Float64
   ie::Bool
+  iψ::Bool
   ni::Base.RefValue{Int64}
   nt::Base.RefValue{Int64}
   λt::Base.RefValue{Float64}
   μt::Base.RefValue{Float64}
+  ψt::Base.RefValue{Float64}
 
   # constructors
-  iBffs() = new(0., Ref(0), Ref(0), Ref(0), 
-                0., 0., false, 1., false, Ref(0), Ref(0.0). Ref(0.0))
+  iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1., false, false, 
+                Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0))
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
-    it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64, 
-    λt::Float64, μt::Float64) = 
-    new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, 
-      Ref(ni), Ref(nt), Ref(λt), Ref(μt))
+        it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64, 
+        λt::Float64, μt::Float64,) = 
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, false, 
+            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0))
+  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
+        it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64, 
+        λt::Float64, μt::Float64, ψt::Float64) = 
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, iψ, 
+            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(ψt))
 end
 
 
 # pretty-printing
 Base.show(io::IO, id::iBffs) = 
   print(io, "fixed", 
+    ie(id)         ? " extinct" : "", 
+    ifos(id)       ? " fossil" : "", 
     it(id)         ? " terminal" : "", 
     iszero(pa(id)) ? " stem" : "", 
     isone(pa(id))  ? " crown" : "", 
@@ -330,28 +341,95 @@ function makeiBf!(tree::sT_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, 
-      iBffs(el, 0, 0, 0, th, th - el, true, ρi, false, 1, 1, 0.0, 0.0))
+    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, false, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     return ρi, 1
   end
 
-  if isdefined(tree, :d1)
-    ρ1, n1 = makeiBf!(tree.d1, idv, n2v, tρ)
-  end
-
-  if isdefined(tree, :d2)
-    ρ2, n2 = makeiBf!(tree.d2, idv, n2v, tρ)
-  end
+  ρ1, n1 = makeiBf!(tree.d1, idv, n2v, tρ)
+  ρ2, n2 = makeiBf!(tree.d2, idv, n2v, tρ)
 
   n  = n1 + n2 
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, 
-    iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   return ρi, n
+end
+
+
+
+
+"""
+    makeiBf!(tree::sTf_label, 
+             idv ::Array{iBffs,1}, 
+             ti  ::Float64,
+             n1v ::Array{Int64,1}, 
+             n2v ::Array{Int64,1}, 
+             ft1v::Array{Int64,1}, 
+             ft2v::Array{Int64,1}, 
+             sa2v::Array{Int64,1}, 
+             tρ  ::Dict{String, Float64})
+
+Make `iBf` vector for an `iTree` with fossils.
+"""
+function makeiBf!(tree::sTf_label, 
+                  idv ::Array{iBffs,1}, 
+                  ti  ::Float64,
+                  n1v ::Array{Int64,1}, 
+                  n2v ::Array{Int64,1}, 
+                  ft1v::Array{Int64,1}, 
+                  ft2v::Array{Int64,1}, 
+                  sa2v::Array{Int64,1}, 
+                  tρ  ::Dict{String, Float64})
+
+  #th = treeheight(tree)
+  el = e(tree)
+  tf = ti - el
+
+  if istip(tree)
+    lab = l(tree)
+    ρi  = tρ[lab]
+    ie = iψ = isfossil(tree)       # count fossil tips as extinct
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, ie, iψ, 
+                     Int64(!iψ), 1, 0.0, 0.0, 0.0))
+    
+    push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
+    
+    return iψ ? (ρi, 0, 1, 0) : (ρi, 1, 0, 0)
+  end
+
+  if isdefined(tree, :d1)
+    ρ1,n1,ft1,sa1 = makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
+  else
+    ρ1,n1,ft1,sa1 = (1,0,0,0)
+  end
+
+  if isdefined(tree, :d2)
+    ρ2,n2,ft2,sa2 = makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
+  else
+    ρ2,n2,ft2,sa2 = (1,0,0,0)
+  end
+
+  n  = n1 + n2                     # number of alive descendants
+  ft = ft1 + ft2                   # number of fossil tips
+  if n>0
+    ρi = n / (n1/ρ1 + n2/ρ2)       # branch specific sampling fraction
+  else
+    ρi = ft / (ft1/ρ1 + ft2/ρ2)
+  end
+  sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
+
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, false, 
+                   isfossil(tree), 0, 1, 0.0, 0.0, 0.0))
+  push!(n1v, n1)
+  push!(n2v, n2)
+  push!(ft1v, ft1)
+  push!(ft2v, ft2)
+  push!(sa2v, sa2)
+
+  return ρi, n, ft, sa
 end
 
 
@@ -390,6 +468,53 @@ end
 
 
 """
+    make_idf(tree::sTf_label, tρ::Dict{String, Float64})
+
+Make the edge dictionary.
+"""
+function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
+
+  idf = iBffs[]
+  n1v = Int64[]; n2v = Int64[]    # vector of nb of alive descendants (d1 & d2)
+  ft1v = Int64[]; ft2v = Int64[]  # vector of nb of fossil tips (d1 & d2)
+  sa2v = Int64[]                  # vector of nb of sampled ancestors (d2)
+  makeiBf!(tree, idf, treeheight(tree), n1v, n2v, ft1v, ft2v, sa2v, tρ)
+
+  reverse!(idf)
+  reverse!(n1v); reverse!(n2v)
+  reverse!(ft1v); reverse!(ft2v)
+  reverse!(sa2v)
+
+  for i in Base.OneTo(lastindex(idf))
+    bi = idf[i]
+    n1 = n1v[i]; n2 = n2v[i]
+    ft1 = ft1v[i]; ft2 = ft2v[i]
+    sa2 = sa2v[i]
+    #@show i; @show bi; @show n1; @show n2; @show sa2
+
+    if n1+ft1>0 && n2+ft2>0 # bifurcation
+      setd1!(bi, (n2+ft2)*2 + sa2 + i)
+      setd2!(bi, i + 1)
+      setpa!(idf[d1(bi)], i)
+      setpa!(idf[d2(bi)], i)
+    elseif n1+ft1>0    # fossil sampled ancestor of d1
+      setd1!(bi, i + 1)
+      setd2!(bi, 0)
+      setpa!(idf[d1(bi)], i)
+    elseif n2+ft2>0    # fossil sampled ancestor of d2
+      setd1!(bi, 0)
+      setd2!(bi, i + 1)
+      setpa!(idf[d2(bi)], i)
+    end
+  end
+
+  return idf
+end
+
+
+
+
+"""
     prob_ρ(idv::Array{iBffs,1})
 
 Estimate initial sampling fraction probability without augmented data.
@@ -405,48 +530,6 @@ function prob_ρ(idv::Array{iBffs,1})
     end
   end
   return ll
-end
-
-
-
-
-"""
-    makeiBf!(tree::sTfbd, idv ::Array{iBf,1}, bit ::BitArray{1})
-
-Make `iBf` vector for an `iTree`.
-"""
-function makeiBf!(tree::sTfbd, 
-                  idv ::Array{iBffs,1}, 
-                  bit ::BitArray{1}) where {T <: iTree} 
-
-  itb = istip(tree)
-  ieb = isextinct(tree)
-
-  lb = lastindex(bit)
-
-  sc = 23
-  if iszero(lb)
-    sc = 0
-  elseif isone(lb)
-    sc = 1
-  end
-
-  push!(idv, 
-    iBffs(bit, treeheight(tree), treeheight(tree) - e(tree), itb, ieb, sc))
-
-  bit1 = copy(bit)
-  bit2 = copy(bit)
-
-  if isdefined(tree, :d1)
-    push!(bit1, true)
-    makeiBf!(tree.d1, idv, bit1)
-  end
-  if isdefined(tree, :d2)
-    push!(bit2, false)
-    makeiBf!(tree.d2, idv, bit2)
-  end
-
-  return nothing
 end
 
 
@@ -516,8 +599,9 @@ fB(id::iBa) = getproperty(id, :fB)[]
 
 
 
+
 """
-    pa(id::iB)
+    pa(id::iBffs)
 
 Return parent edge.
 """
@@ -525,8 +609,9 @@ pa(id::iBffs) = getproperty(id, :pa)[]
 
 
 
+
 """
-    d1(id::iB)
+    d1(id::iBffs)
 
 Return daughter edge.
 """
@@ -534,8 +619,9 @@ d1(id::iBffs) = getproperty(id, :d1)[]
 
 
 
+
 """
-    d2(id::iB)
+    d2(id::iBffs)
 
 Return daughter edge.
 """
@@ -585,12 +671,21 @@ it(id::iBf) = getproperty(id, :it)
 
 
 """
-    sc(id::iBffs)
+    it(id::iBf)
 
-Return `0` if stem branch, `1` if either of the crown branches and `23` if 
-another plebeian branch.
+Return if is extinct.
 """
-sc(id::iBffs) = getproperty(id, :sc)
+ie(id::iBf) = getproperty(id, :ie)
+
+
+
+
+"""
+    ifos(id::iBffs)
+
+Return if is a fossil.
+"""
+ifos(id::iBffs) = getproperty(id, :iψ)
 
 
 
@@ -641,6 +736,16 @@ Return final speciation rate for fixed at time `t
 Return final extinction rate for fixed at time `t`.
 """
 μt(id::iBffs) = getproperty(id, :μt)[]
+
+
+
+
+"""
+    ψt(id::iBffs)
+
+Return final fossil sampling rate for fixed at time `t`.
+"""
+ψt(id::iBffs) = getproperty(id, :ψt)[]
 
 
 

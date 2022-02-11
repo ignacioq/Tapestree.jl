@@ -45,14 +45,14 @@ end
 
 
 """
-    crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
+   crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
 
 Log-probability of at least one lineage surviving after time `t` for 
 birth-death process with `λ` and `μ` from stem age.
 """
 function crown_prob_surv_cbd(λ::Float64, μ::Float64, t::Float64)
-    μ += λ === μ ? 1e-14 : 0.0
-    - 2.0 * log((λ - μ)/(λ - μ*exp(-(λ - μ)*t))) - log(λ)
+  μ += λ === μ ? 1e-14 : 0.0
+  - 2.0 * log((λ - μ)/(λ - μ*exp(-(λ - μ)*t))) - log(λ)
 end
 
 
@@ -78,23 +78,23 @@ end
 
 
 """
-    llik_cbd(psi::Vector{sTbd}, 
-             λ   ::Float64, 
-             μ   ::Float64)
+    llik_cbd(Ξ::Vector{sTbd}, 
+             λ  ::Float64, 
+             μ  ::Float64)
 
 Log-likelihood up to a constant for constant birth-death 
 given a complete `iTree` for decoupled trees.
 """
-function llik_cbd(psi ::Vector{sTbd}, 
-                  λ    ::Float64, 
-                  μ    ::Float64)
+function llik_cbd(Ξ::Vector{sTbd}, 
+                  λ  ::Float64, 
+                  μ  ::Float64)
 
   ll = 0.0
-  for ψ in psi
-    ll += llik_cbd(ψ, λ, μ)
+  for ξ in Ξ
+    ll += llik_cbd(ξ, λ, μ)
   end
 
-  ll += Float64(lastindex(psi) - 1)/2.0 * log(λ)
+  ll += Float64(lastindex(Ξ) - 1)/2.0 * log(λ)
 
   return ll
 end

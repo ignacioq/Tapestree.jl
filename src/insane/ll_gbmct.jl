@@ -12,8 +12,8 @@ Created 03 09 2020
 
 
 """
-    llik_cbd(psi::Vector{iTgbmct}, 
-             idf::Vector{iBffs},
+    llik_gbm(Ξ   ::Vector{iTgbmct}, 
+             idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
              ϵ   ::Float64, 
@@ -22,8 +22,8 @@ Created 03 09 2020
 
 Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
-function llik_gbm(psi::Vector{iTgbmct}, 
-                  idf::Vector{iBffs},
+function llik_gbm(Ξ   ::Vector{iTgbmct}, 
+                  idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
                   ϵ   ::Float64, 
@@ -31,9 +31,9 @@ function llik_gbm(psi::Vector{iTgbmct},
                   srδt::Float64)
   @inbounds begin
     ll = 0.0
-    for i in Base.OneTo(lastindex(psi))
+    for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
-      ll += llik_gbm(psi[i], α, σλ, ϵ, δt, srδt)
+      ll += llik_gbm(Ξ[i], α, σλ, ϵ, δt, srδt)
       if !it(bi)
         ll += λt(bi)
       end
