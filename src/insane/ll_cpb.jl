@@ -45,7 +45,7 @@ function llik_cpb(Ξ::Vector{sTpb}, λ::Float64)
     ll += llik_cpb(ξ, λ)
   end
 
-  ll += ((Float64(lastindex(Ξ) - 1) * 0.5) - 1.0) * log(λ)
+  ll += (Float64(lastindex(Ξ) - 1) * 0.5) * log(λ)
 
   return ll
 end
