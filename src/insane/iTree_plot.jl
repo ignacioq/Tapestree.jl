@@ -293,11 +293,17 @@ end
 
 
 """
-    function f(tree::T; shownodes=(T==sTfbd)) where {T <: iTree}
+    function f(tree::T; 
+               torigin = treeheight(tree),
+               shownodes = (T <: sTf),
+               showlabels = (T===sT_label || T===sTf_label)) where {T <: iTree}
+
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
-== true`. True by default for `sTfbd` trees to make sampled ancestors visible.
+== true` (by default for `sTfbd` trees to make sampled ancestors visible). For
+extinct trees the time of origin `torigin` can be set manually.
 """
 @recipe function f(tree::T; 
+                   torigin = treeheight(tree),
                    shownodes  = (T <: sTf),
                    showlabels = (T === sT_label || T === sTf_label)) where {
                                                                     T <: iTree}
@@ -308,14 +314,14 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   th = treeheight(tree)
   nt = ntips(tree)
 
-  _rplottree!(tree, th, 1:nt, x, y)
+  _rplottree!(tree, torigin, 1:nt, x, y)
 
   # plot defaults
   legend          --> false
   xguide          --> "time"
   fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
-  xlims           --> (-th*0.05, th*1.05)
+  xlims           --> (-torigin*0.05, torigin*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
   xtickfont       --> font(8, "Helvetica")
@@ -349,7 +355,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       markersize  := 0
       markeralpha := fill(0.0,nt)
       series_annotations := series_annotations(labels, font("Helvetica", 8))
-      fill(0.0 - 0.02*th, nt), 1:nt
+      fill(0.0 - 0.02*torigin, nt), 1:nt
     end
   end
 
@@ -439,4 +445,33 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   end
 
   return  x, y
+end
+
+
+
+
+"""
+    plotω(tree::T, 
+          ωtimes::Vector{Float64}; 
+          torigin = treeheight(tree),
+          shownodes  = true,
+          showlabels = (T == sTf_label),
+          y = repeat([0.5],lastindex(ωtimes)),
+          bar_width = treeheight(tree)/5000) where {T <: sTf}
+
+Recipe for plotting a Type `sTf`. Displays type-specific nodes if `shownodes 
+== true` (by default to make sampled ancestors visible). For extinct trees the 
+time of origin `torigin` can be set manually.
+"""
+function plotω(tree::T, 
+               ωtimes::Vector{Float64}; 
+               torigin = treeheight(tree),
+               shownodes  = true,
+               showlabels = (T == sTf_label),
+               y = repeat([0.5],lastindex(ωtimes)),
+               bar_width = treeheight(tree)/5000) where {T <: sTf}
+
+  plot(tree, torigin = torigin, shownodes = shownodes, showlabels = showlabels)
+  bar!(ωtimes, y, bar_width = bar_width)
+
 end
