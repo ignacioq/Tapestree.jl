@@ -680,5 +680,5 @@ function _sim_gbmce_surv(t   ::Float64,
     end
   end
 
-  return iTgbmce(), true, nsp
+  return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), true, nsp
 end

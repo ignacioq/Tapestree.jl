@@ -692,7 +692,7 @@ function _sim_gbmct_surv(t   ::Float64,
     end
   end
 
-  return iTgbmct(), true, nsp
+  return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), true, nsp
 end
 
 

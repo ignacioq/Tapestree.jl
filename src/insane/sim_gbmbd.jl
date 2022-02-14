@@ -767,7 +767,7 @@ function _sim_gbmbd_surv(t   ::Float64,
     end
   end
 
-  return iTgbmbd(), true, nsp
+  return iTgbmbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), true, nsp
 end
 
 
