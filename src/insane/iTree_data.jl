@@ -1097,15 +1097,15 @@ end
 
 
 """
-    eventimes(tree::T) where {T <: iTree}
+    eventimes(tree::T, tor::Float64) where {T <: iTree}
 
 Return speciation and extinction event times.
 """
-function eventimes(tree::T) where {T <: iTree}
+function eventimes(tree::T, tor::Float64) where {T <: iTree}
   se = Float64[]
   ee = Float64[]
 
-  _eventimes!(tree, 0.0, se, ee)
+  _eventimes!(tree, tor, se, ee)
 
   return se, ee
 end
@@ -1128,12 +1128,12 @@ function _eventimes!(tree::T,
 
   et = e(tree)
   if isextinct(tree)
-    push!(ee, t + et)
+    push!(ee, t - et)
   elseif isdefined(tree, :d1)
-    push!(se, t + et)
+    push!(se, t - et)
 
-    _eventimes!(tree.d1, t + et, se, ee)
-    _eventimes!(tree.d2, t + et, se, ee)
+    _eventimes!(tree.d1, t - et, se, ee)
+    _eventimes!(tree.d2, t - et, se, ee)
   end
 
   return nothing
@@ -1157,14 +1157,14 @@ function _eventimes!(tree::T,
 
   et = e(tree)
   if isextincttip(tree)
-    push!(ee, t + et)
+    push!(ee, t - et)
   else
     defd1 = isdefined(tree, :d1)
     defd2 = isdefined(tree, :d2)
     
-    if defd1 && defd2 push!(se, t + et) end
-    if defd1  _eventimes!(tree.d1, t + et, se, ee)  end
-    if defd2  _eventimes!(tree.d2, t + et, se, ee)  end
+    if defd1 && defd2 push!(se, t - et) end
+    if defd1  _eventimes!(tree.d1, t - et, se, ee)  end
+    if defd2  _eventimes!(tree.d2, t - et, se, ee)  end
   end
 
   return nothing
@@ -1174,14 +1174,14 @@ end
 
 
 """
-    ltt(tree::T) where {T <: iTree}
+    ltt(tree::T; tor=treeheight(tree)) where {T <: iTree}
 
 Returns number of species through time.
 """
-@inline function ltt(tree::T) where {T <: iTree}
+@inline function ltt(tree::T; tor=treeheight(tree)) where {T <: iTree}
 
   # speciation and extinction events
-  se, ee = eventimes(tree)
+  se, ee = eventimes(tree::T, tor)
 
   # which ones are extinctions when appended
   ii = lastindex(se)
@@ -1189,8 +1189,8 @@ Returns number of species through time.
   append!(se, ee)
   l = lastindex(se)
 
-  sp = sortperm(se)
-  n  = ones(Int64, l+1)
+  sp = sortperm(se, rev=true)
+  n  = ones(Int64, l+2)
 
   @inbounds begin
     @simd for i in Base.OneTo(l)
@@ -1200,10 +1200,12 @@ Returns number of species through time.
         n[i+1] = n[i] + 1
       end
     end
+    n[l+2] = n[l+1]  # add a point at present
   end
 
-  push!(se, 0.0)
-  sort!(se)
+  # add points at the origin and present
+  push!(se, tor, 0.0)
+  sort!(se, rev=true)
 
   return Ltt(n, se)
 end
@@ -1212,26 +1214,34 @@ end
 
 
 """
-    ltt2(tree::T) where {T <: iTree}
+    ltt2(tree::T; tor=treeheight(tree)) where {T <: iTree}
 
 Returns number of species through time.
 """
-function ltt2(tree::T) where {T <: iTree}
+function ltt2(tree::T; tor=treeheight(tree)) where {T <: iTree}
   # speciation and extinction events
-  se, ee = eventimes(tree)
+  se, ee = eventimes(tree::T, tor)
   # start with 1 lineage
-  push!(se, 0.0)
+  push!(se, tor)
+  
   lse = lastindex(se)
   lee = lastindex(ee)
 
   events = append!(se, ee)
-  jumps_order = sortperm(events)
+  jumps_order = sortperm(events, rev=true)
   
   jumps = ones(Int64,lse)
   append!(jumps,  fill(-1,lee))
   jumps = jumps[jumps_order]
 
-  return Ltt(cumsum!(jumps,jumps), events[jumps_order])
+  LTTn = cumsum!(jumps,jumps)    # Number of lineages at each LTT step
+  LTTt = events[jumps_order]     # Time of each LTT step
+
+  # add a point at present
+  push!(LTTt, 0.0)
+  push!(LTTn, last(LTTn))
+
+  return Ltt(LTTn, LTTt)
 end
 
 

@@ -433,6 +433,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   # plot defaults
   legend          --> false
   xguide          --> "time"
+  xflip           --> true
   yguide          --> "N lineages"
   fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
