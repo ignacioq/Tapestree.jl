@@ -1,13 +1,12 @@
 #=
 
-constant fossilized birth-death MCMC using forward simulation
+constant occurrence birth-death MCMC using forward simulation
 
 Jérémy Andréoletti
-Adapted from birth-death MCMC by Ignacio Quintero Mächler
 
-v(°-°v)
+v(^-^v)
 
-Created 07 10 2021
+Created 11 02 2022
 =#
 
 

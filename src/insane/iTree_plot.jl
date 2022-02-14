@@ -468,7 +468,7 @@ function plotω(tree::T,
                torigin = treeheight(tree),
                shownodes  = true,
                showlabels = (T == sTf_label),
-               y = repeat([0.5],lastindex(ωtimes)),
+               y = fill(0.5, lastindex(ωtimes)),
                bar_width = treeheight(tree)/5000) where {T <: sTf}
 
   plot(tree, torigin = torigin, shownodes = shownodes, showlabels = showlabels)

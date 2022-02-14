@@ -3,11 +3,11 @@
 constant occurrence birth-death simulation
 
 Jérémy Andréoletti
-Adapted from constant birth-death simulation by Ignacio Quintero Mächler
 
-v(°-°v)
+v(^-^v)
 
-Created 07 10 2021
+Created 11 02 2022
+
 =#
 
 
