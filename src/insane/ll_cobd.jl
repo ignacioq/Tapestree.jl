@@ -179,8 +179,9 @@ function ω_llik(ll    ::Float64,
     if ωtime > LTT.t[i+1]
       kω += 1
     else
+      ni = LTT.n[i]
       # log-probability of observing kω occurrences (Poisson distribution)
-      ll += logpdf(Poisson(LTT.n[i]*ω*Δt[i]), kω)
+      ll += logpdf(Poisson(ni*ω*Δt[i]), kω)
       
       #= ### much slower method when kω>20 ###
       Eω = ni*ω*Δti  # expected number of occurrences during the LTT step i
@@ -206,7 +207,8 @@ end
               LTT   ::Ltt,
               λ     ::Float64, 
               μ     ::Float64,
-              ψ     ::Float64)
+              ψ     ::Float64,
+              ω     ::Float64)
 
 Log-likelihood up to a constant for constant occurrence birth-death 
 given a complete decoupled `iTree` and occurrence `ωtimes`.
@@ -216,13 +218,14 @@ function llik_cobd(Ξ     ::Vector{sTfbd},
                    LTT   ::Ltt,
                    λ     ::Float64, 
                    μ     ::Float64,
-                   ψ     ::Float64)
+                   ψ     ::Float64,
+                   ω     ::Float64)
 
   ll = 0.0
   nsa = 0.0    # number of sampled ancestors
   for ξ in Ξ
     nsa += issampledancestor(ξ)
-    ll += llik_cobd(ξ, λ, μ, ψ, ω)
+    ll += llik_cfbd(ξ, λ, μ, ψ)
   end
   
   ll += Float64(lastindex(Ξ) - nsa - 1)/2.0 * log(λ)
