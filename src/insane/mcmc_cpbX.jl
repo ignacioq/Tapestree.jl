@@ -47,7 +47,7 @@ function insane_cpb(tree    ::sT_label,
                     nthpp   ::Int64                 = 10,
                     K       ::Int64                 = 10,
                     λi      ::Float64               = NaN,
-                    pupdp   ::NTuple{2,Float64}     = (0.2, 0.2, 0.2),
+                    pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.3, 0.3),
                     prints  ::Int64                 = 5,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -90,14 +90,18 @@ function insane_cpb(tree    ::sT_label,
   @info "Running constant pure-birth with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, σxc = 
-    mcmc_burn_cpb(Ξ, idf, λ_prior, nburn, λc, pup, prints, stem)
+  llc, prc, λc, σxc, sdX, nX = 
+    mcmc_burn_cpb(Ξ, idf, λ_prior, σx_prior, x0_prior, 
+      nburn, λc, σxc, pup, inodes, prints, stem)
 
   # mcmc
   r, treev, λc, σxc = 
-    mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, niter, nthin, pup, prints, stem)
+    mcmc_cpb(Ξ, idf, llc, prc, λc, σxc, sdX, nX, λ_prior, σx_prior, x0_prior, 
+     niter, nthin, pup, inodes, prints, stem)
 
-  pardic = Dict(("lambda" => 1))
+  pardic = Dict(("lambda"  => 1,
+                 "x0"      => 2,
+                 "sigma_x" => 3))
 
   write_ssr(r, pardic, out_file)
 
@@ -138,7 +142,7 @@ end
 
 
 """
-    mcmc_burn_cpb(Ξ      ::Vector{sTpb}, 
+    mcmc_burn_cpb(Ξ      ::Vector{sTpbX}, 
                   idf    ::Array{iBffs,1},
                   λ_prior::NTuple{2,Float64},
                   nburn  ::Int64,
@@ -149,15 +153,18 @@ end
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_burn_cpb(Ξ      ::Vector{sTpbX}, 
-                       idf    ::Array{iBffs,1},
-                       λ_prior::NTuple{2,Float64},
-                       nburn  ::Int64,
-                       λc     ::Float64,
-                       σxc    ::Float64,
-                       pup    ::Array{Int64,1}, 
-                       prints ::Int64,
-                       stem   ::Bool)
+function mcmc_burn_cpb(Ξ       ::Vector{sTpbX}, 
+                       idf     ::Array{iBffs,1},
+                       λ_prior ::NTuple{2,Float64},
+                       σx_prior::NTuple{2,Float64},
+                       x0_prior::NTuple{2,Float64},
+                       nburn   ::Int64,
+                       λc      ::Float64,
+                       σxc     ::Float64,
+                       pup     ::Array{Int64,1}, 
+                       inodes  ::Array{Int64,1},
+                       prints  ::Int64,
+                       stem    ::Bool)
 
   el      = lastindex(idf)
   nin     = lastindex(inodes)
@@ -168,9 +175,9 @@ function mcmc_burn_cpb(Ξ      ::Vector{sTpbX},
 
   #likelihood
   llc = llik_cpb(Ξ, λc, σxc) - nsi + prob_ρ(idf)
-  prc = logdgamma(λc,       λ_prior[1], λ_prior[2])    + 
+  prc = logdgamma(λc,        λ_prior[1], λ_prior[2])    + 
         logdinvgamma(σxc^2, σx_prior[1], σx_prior[2])  +
-        logdnorm(xi(Ξ[1]), x0_prior[1], x0_prior[2]^2)
+        logdnorm(xi(Ξ[1]),  x0_prior[1], x0_prior[2]^2)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -190,25 +197,22 @@ function mcmc_burn_cpb(Ξ      ::Vector{sTpbX},
 
         llc, prc, σxc = update_σx!(σxc, sdX, nX, llc, prc, σx_prior)
 
-      # forward simulation proposal proposal
-      elseif p === 3
-
-
-        """
-        here: sims with traits
-        """
-
-        bix = ceil(Int64,rand()*el)
-
-        llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
-
       # X ancestors update
-      else
+      elseif p === 3
 
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, prc, sdX = update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem)
+        llc, prc, sdX =
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+
+      # forward simulation proposal proposal
+      else
+
+        bix = ceil(Int64,rand()*el)
+
+        llc, ns, L, sdX, nX = 
+          update_fs!(bix, Ξ, idf, llc, λc, σxc, ns, L, sdX, nX)
 
       end
     end
@@ -216,51 +220,63 @@ function mcmc_burn_cpb(Ξ      ::Vector{sTpbX},
     next!(pbar)
   end
 
-  return llc, prc, λc, σxc
+  return llc, prc, λc, σxc, sdX, nX
 end
 
 
 
 
 """
-    mcmc_cpb(Ξ      ::Vector{sTpb},
-             idf    ::Array{iBffs,1},
-             llc    ::Float64,
-             prc    ::Float64,
-             λc     ::Float64,
-             λ_prior::NTuple{2,Float64},
-             niter  ::Int64,
-             nthin  ::Int64,
-             pup    ::Array{Int64,1}, 
-             prints ::Int64,
-             stem   ::Bool)
+    mcmc_cpb(Ξ       ::Vector{sTpbX},
+             idf     ::Array{iBffs,1},
+             llc     ::Float64,
+             prc     ::Float64,
+             λc      ::Float64,
+             σxc     ::Float64,
+             sdX     ::Float64, 
+             nX      ::Float64,
+             λ_prior ::NTuple{2,Float64},
+             σx_prior::NTuple{2,Float64},
+             x0_prior::NTuple{2,Float64},
+             niter   ::Int64,
+             nthin   ::Int64,
+             pup     ::Array{Int64,1}, 
+             prints  ::Int64,
+             stem    ::Bool)
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_cpb(Ξ      ::Vector{sTpb},
-                  idf    ::Array{iBffs,1},
-                  llc    ::Float64,
-                  prc    ::Float64,
-                  λc     ::Float64,
-                  λ_prior::NTuple{2,Float64},
-                  niter  ::Int64,
-                  nthin  ::Int64,
-                  pup    ::Array{Int64,1}, 
-                  prints ::Int64,
-                  stem   ::Bool)
+function mcmc_cpb(Ξ       ::Vector{sTpbX},
+                  idf     ::Array{iBffs,1},
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  λc      ::Float64,
+                  σxc     ::Float64,
+                  sdX     ::Float64, 
+                  nX      ::Float64,
+                  λ_prior ::NTuple{2,Float64},
+                  σx_prior::NTuple{2,Float64},
+                  x0_prior::NTuple{2,Float64},
+                  niter   ::Int64,
+                  nthin   ::Int64,
+                  pup     ::Array{Int64,1}, 
+                  inodes  ::Array{Int64,1},
+                  prints  ::Int64,
+                  stem    ::Bool)
 
-  el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ξ))
-  L  = treelength(Ξ)
+  el  = lastindex(idf)
+  nin = lastindex(inodes)
+  ns  = Float64(nnodesinternal(Ξ))
+  L   = treelength(Ξ)
 
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  r = Array{Float64,2}(undef, nlogs, 4)
+  r = Array{Float64,2}(undef, nlogs, 6)
 
   # make tree vector
-  treev  = sTpb[]
+  treev  = sTpbX[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -275,22 +291,52 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
 
         llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
 
-        # llci = llik_cpb(Ξ, λc)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return 
-        # end
+        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return 
+        end
+
+      # sigma_x update
+      elseif p === 2
+
+        llc, prc, σxc = update_σx!(σxc, sdX, nX, llc, prc, σx_prior)
+
+        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return 
+        end
+
+      # X ancestors update
+      elseif p === 3
+
+        nix = ceil(Int64,rand()*nin)
+        bix = inodes[nix]
+
+        llc, prc, sdX = 
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+
+        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return 
+        end
+
       # forward simulation proposal proposal
       else
 
         bix = ceil(Int64,rand()*el)
-        llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
 
-        # llci = llik_cpb(Ξ, λc)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return 
-        # end
+        llc, ns, L, sdX, nX = 
+          update_fs!(bix, Ξ, idf, llc, λc, σxc, ns, L, sdX, nX)
+
+        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return 
+        end
+
       end
     end
 
@@ -302,6 +348,8 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
         r[lit,2] = llc
         r[lit,3] = prc
         r[lit,4] = λc
+        r[lit,5] = xi(Ξ[1])
+        r[lit,6] = σxc
         push!(treev, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
@@ -310,14 +358,14 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
     next!(pbar)
   end
 
-  return r, treev, λc
+  return r, treev, λc, σxc
 end
 
 
 
 
 """
-    ref_posterior(Ξ      ::Vector{sTpb},
+    ref_posterior(Ξ      ::Vector{sTpbX},
                   idf    ::Array{iBffs,1},
                   λc     ::Float64,
                   λ_prior ::NTuple{2,Float64},
@@ -330,7 +378,7 @@ end
 
 MCMC da chain for constant birth-death using forward simulation.
 """
-function ref_posterior(Ξ      ::Vector{sTpb},
+function ref_posterior(Ξ      ::Vector{sTpbX},
                        idf    ::Array{iBffs,1},
                        λc     ::Float64,
                        λ_prior ::NTuple{2,Float64},
@@ -404,29 +452,34 @@ end
 
 
 """
-    update_fs!(bix    ::Int64,
-               Ξ      ::Vector{sTpb},
-               idf    ::Vector{iBffs},
-               llc    ::Float64,
-               λ      ::Float64, 
-               ns     ::Float64,
-               L      ::Float64,
-               pow    ::Float64)
+    update_fs!(bix::Int64,
+               Ξ  ::Vector{sTpbX},
+               idf::Vector{iBffs},
+               llc::Float64,
+               λ  ::Float64,
+               σx ::Float64,
+               ns ::Float64,
+               L  ::Float64,
+               sdX::Float64,
+               nX ::Float64)
 
 Forward simulation proposal function for constant pure-birth.
 """
-function update_fs!(bix    ::Int64,
-                    Ξ      ::Vector{sTpb},
-                    idf    ::Vector{iBffs},
-                    llc    ::Float64,
-                    λ      ::Float64, 
-                    ns     ::Float64,
-                    L      ::Float64)
+function update_fs!(bix::Int64,
+                    Ξ  ::Vector{sTpbX},
+                    idf::Vector{iBffs},
+                    llc::Float64,
+                    λ  ::Float64,
+                    σx ::Float64,
+                    ns ::Float64,
+                    L  ::Float64,
+                    sdX::Float64,
+                    nX ::Float64)
 
   bi = idf[bix]
 
   # forward simulate an internal branch
-  ξp, np, ntp = fsbi(bi, λ, 1_000)
+  ξp, np, ntp, xt = fsbi_pbX(bi, λ, xi(Ξ[bix]), σx, 1_000)
 
   itb = it(bi) # is it terminal
   ρbi = ρi(bi) # get branch sampling fraction
@@ -440,43 +493,59 @@ function update_fs!(bix    ::Int64,
 
     # if terminal branch
     if itb
-      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr = 0.0
+      llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr  = 0.0
     else
-      np  -= 1
-      llr = log((1.0 - ρbi)^(np - nc))
+      np -= 1
+      ξ1  = Ξ[d1(bi)]
+      ξ2  = Ξ[d2(bi)]
+      llr = log((1.0 - ρbi)^(np - nc))                           +
+             duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
+             duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
       acr = log(Float64(ntp)/Float64(ntc))
     end
 
     # MH ratio
     if -randexp() < llr + acr
 
-      # update ns, ne & L
-      ns += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
-      L  += treelength(ξp)             - treelength(ξc)
+      # update ns, L & sdX
+      ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
+      L   += treelength(ξp)             - treelength(ξc)
+      sdXp, nXp = _sdeltaX(ξp, 0.0, 0.0) 
+      sdXc, nXc = _sdeltaX(ξc, 0.0, 0.0) 
+      sdX += sdXp - sdXc
+      nX  += nXp  - nXc
 
-      # likelihood ratio
-      llr += llik_cpb(ξp, λ) - llik_cpb(ξc, λ)
+      # add likelihood ratio
+      llr += llik_cpb(ξp, λ, σx) - llik_cpb(ξc, λ, σx)
 
       Ξ[bix] = ξp     # set new decoupled tree
       llc   += llr    # set new likelihood
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
+
+      if !it(bi)
+        sdX += ((xt - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
+               ((xt - xf(ξ2))^2 - (xi(ξ1) - xf(ξ2))^2)/(2.0*e(ξ2))
+        setxi!(ξ1, xt) # set new xt
+        setxi!(ξ2, xt) # set new xt
+      end
+
     end
   end
 
-  return llc, ns, L
+  return llc, ns, L, sdX, nX
 end
 
 
 
 
 """
-    fsbi(bi::iBffs, λ::Float64, ntry::Int64)
+    fsbi_pbX(bi::iBffs, λ::Float64, x0::Float64, σx::Float64, ntry::Int64)
 
 Forward simulation for branch `bi`
 """
-function fsbi(bi::iBffs, λ::Float64, ntry::Int64)
+function fsbi_pbX(bi::iBffs, λ::Float64, x0::Float64, σx::Float64, ntry::Int64)
 
   # times
   tfb = tf(bi)
@@ -487,56 +556,57 @@ function fsbi(bi::iBffs, λ::Float64, ntry::Int64)
     ext += 1
 
     # forward simulation during branch length
-    t0, na = sim_cpb(e(bi), λ, 0)
+    t0, na = sim_cpb(e(bi), λ, x0, σx, 0)
 
     nat = na
 
     if isone(na)
-      fixalive!(t0)
+      f, xt = fixalive!(t0, NaN)
 
-      return t0, na, nat
+      return t0, na, nat, xt
     elseif na > 1
       # fix random tip
-      fixrtip!(t0)
+      xt = fixrtip!(t0, 0, NaN)
 
       if !it(bi)
         # add tips until the present
-        tx, na = tip_sims!(t0, tfb, λ, na)
+        tx, na = tip_sims!(t0, tfb, λ, σx, na)
       end
 
-      return t0, na, nat
+      return t0, na, nat, xt
     end
   end
 
-  return sTpb(), 0, 0
+  return sTpbX(0.0, false, 0.0, 0.0), 0, 0, NaN
 end
 
 
 
 
 """
-    tip_sims!(tree::sTpb, t::Float64, λ::Float64, μ::Float64)
+    tip_sims!(tree::sTpbX, t::Float64, λ::Float64, σx::Float64, na::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`. 
 """
-function tip_sims!(tree::sTpb, t::Float64, λ::Float64, na::Int64)
+function tip_sims!(tree::sTpbX, t::Float64, λ::Float64, σx::Float64, na::Int64)
 
   if istip(tree) 
     if !isfix(tree)
 
       # simulate
-      stree, na = sim_cpb(t, λ, na-1)
+      stree, na = sim_cpb(t, λ, xf(tree), σx, na-1)
 
       # merge to current tip
-      sete!(tree, e(tree) + e(stree))
+      sete!( tree, e(tree) + e(stree))
+      setxf!(tree, xf(stree))
       if isdefined(stree, :d1)
         tree.d1 = stree.d1
         tree.d2 = stree.d2
       end
     end
   else
-    tree.d1, na = tip_sims!(tree.d1, t, λ, na)
-    tree.d2, na = tip_sims!(tree.d2, t, λ, na)
+    tree.d1, na = tip_sims!(tree.d1, t, λ, σx, na)
+    tree.d2, na = tip_sims!(tree.d2, t, λ, σx, na)
   end
 
   return tree, na
@@ -546,24 +616,27 @@ end
 
 
 """
-    update_x!(bix  ::Int64,
-              Ξ    ::Vector{sTpbX},
-              idf  ::Vector{iBffs},
-              σx   ::Float64,
-              llc  ::Float64,
-              prc  ::Float64,
-              sdX  ::Float64)
+    update_x!(bix     ::Int64,
+              Ξ       ::Vector{sTpbX},
+              idf     ::Vector{iBffs},
+              σx      ::Float64,
+              llc     ::Float64,
+              prc     ::Float64,
+              sdX     ::Float64,
+              stem    ::Bool,
+              x0_prior::NTuple{2, Float64})
 
 Make a `gbm` update for an internal branch and its descendants.
 """
-function update_x!(bix  ::Int64,
-                   Ξ    ::Vector{sTpbX},
-                   idf  ::Vector{iBffs},
-                   σx   ::Float64,
-                   llc  ::Float64,
-                   prc  ::Float64,
-                   sdX  ::Float64,
-                   stem ::Bool)
+function update_x!(bix     ::Int64,
+                   Ξ       ::Vector{sTpbX},
+                   idf     ::Vector{iBffs},
+                   σx      ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   sdX     ::Float64,
+                   stem    ::Bool,
+                   x0_prior::NTuple{2, Float64})
 
   ξi = Ξ[bix]
   bi = idf[bix]
@@ -788,7 +861,6 @@ function update_λ!(llc    ::Float64,
                    λ_prior::NTuple{2,Float64})
 
   nsi = stem ? 0.0 : 1.0
-
   λp  = randgamma(λ_prior[1] + ns - nsi, λ_prior[2] + L)
 
   llc += (ns - nsi) * log(λp/λc) + L * (λc - λp)

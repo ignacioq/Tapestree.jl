@@ -84,11 +84,13 @@ isextincttip(tree::T) where {T <: sTf} = isextinct(tree) && !isfossil(tree)
 
 """
     isextinct(tree::sTpb)
+    isextinct(tree::sTpbX) = false
     isextinct(tree::iTgbmpb)
 
 Return if is an extinction node.
 """
 isextinct(tree::sTpb) = false
+isextinct(tree::sTpbX) = false
 isextinct(tree::iTgbmpb) = false
 
 
