@@ -12,6 +12,25 @@ Created 25 06 2020
 
 
 """
+    xi(tree::T) where {T <: iTreeX}
+
+Return initial trait value.
+"""
+xi(tree::T) where {T <: iTreeX} = getproperty(tree, :xi)
+
+
+
+"""
+    xf(tree::T) where {T <: iTreeX}
+
+Return final trait value.
+"""
+xf(tree::T) where {T <: iTreeX} = getproperty(tree, :xf)
+
+
+
+
+"""
     iscrowntree(tree::T) where {T <: iTree}
 
 Return if the tree is a crown tree.

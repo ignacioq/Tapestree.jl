@@ -13,13 +13,12 @@ Created 03 09 2020
 
 
 """
-    iTree
+    iTreeX
 
 An abstract type for all composite recursive types representing 
-a binary phylogenetic tree for `insane` use
+a simple binary phylogenetic tree for `insane` use
 """
-abstract type iTree end
-
+abstract type iTreeX <: iTree end
 
 
 
@@ -29,7 +28,7 @@ abstract type iTree end
 An abstract type for all composite recursive types representing 
 a simple binary phylogenetic tree for `insane` use
 """
-abstract type sT <: iTree end
+abstract type sTX <: iTreeX end
 
 
 
@@ -40,7 +39,59 @@ abstract type sT <: iTree end
 An abstract type for all composite recursive types representing 
 a simple binary phylogenetic tree with fossils for `insane` use
 """
-abstract type sTf <: sT end
+abstract type sTfX <: sTX end
+
+
+
+
+"""
+    sTpbX
+
+The simplest composite recursive type of supertype `sT` 
+representing a binary phylogenetic tree for `insane` use, 
+with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  fx: if fix
+  xi: initial trait value
+  xf: final trait value
+
+    sTpbX()
+
+Constructs an empty `sTpbX` object.
+
+    sTpbX(e::Float64, fx::Bool, x::Float64)
+
+Constructs an `sTpbX` object with two `sTpbX` daughters and edge `e`, 
+fix information `fx`, initial node trait `xi` and final `xf`.
+"""
+mutable struct sTpbX <: sTX
+  d1::sTpbX
+  d2::sTpbX
+  e ::Float64
+  fx::Bool
+  xi::Float64
+  xf::Float64
+
+  sTpbX() = new()
+  sTpbX(e::Float64, fx::Bool, xi::Float64, xf::Float64) = 
+    (t = new(); t.e = e; t.fx = fx; t.xi = xi; t.xf = xf; t)
+  sTpbX(d1::sTpb, d2::sTpb, e::Float64, fx::Bool, x::Float64) = 
+    new(d1, d2, e, fx, xi, xf)
+end
+
+# pretty-printing
+Base.show(io::IO, t::sTpbX) = 
+  print(io, "insane pure-birth and trait tree with ", ntips(t), " tips")
+
+
+
+
+
+
+
 
 
 
@@ -236,52 +287,9 @@ end
 
 
 """
-    sTpb
-
-The simplest composite recursive type of supertype `sT` 
-representing a binary phylogenetic tree for `insane` use, 
-with the following fields:
-
-  d1: daughter tree 1
-  d2: daughter tree 2
-  e:  edge
-  fx: if fix
-
-    sTpb()
-
-Constructs an empty `sTpb` object.
-
-    sTpb(e::Float64)
-
-Constructs an empty `sTpb` object with edge `e`.
-
-    sTpb(d1::sTpb, d2::sTpb, e::Float64)
-
-Constructs an `sTpb` object with two `sTpb` daughters and edge `e`.
-"""
-mutable struct sTpb <: sT
-  d1::sTpb
-  d2::sTpb
-  e ::Float64
-  fx::Bool
-
-  sTpb() = new()
-  sTpb(e::Float64) = (x = new(); x.e = e; x.fx = false; x)
-  sTpb(e::Float64, fx::Bool) = (x = new(); x.e = e; x.fx = fx; x)
-  sTpb(d1::sTpb, d2::sTpb, e::Float64, fx::Bool) = new(d1, d2, e, fx)
-end
-
-# pretty-printing
-Base.show(io::IO, t::sTpb) = 
-  print(io, "insane simple pure-birth tree with ", ntips(t), " tips")
-
-
-
-
-"""
     sTpb(tree::sTpb)
 
-Creates a new `sTpb` copy.
+Demotes a tree of type `sT_label` to `sTpb`.
 """
 function sTpb(tree::sTpb)
   if isdefined(tree, :d1)
@@ -290,8 +298,6 @@ function sTpb(tree::sTpb)
     sTpb(e(tree), isfix(tree))
   end
 end
-
-
 
 
 

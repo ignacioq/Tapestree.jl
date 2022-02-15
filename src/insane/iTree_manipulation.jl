@@ -1683,3 +1683,25 @@ setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
 
 
 
+
+"""
+  setxi!(tree::T, x::Float64) where {T <: iTreeX}
+
+Set `x` as initial trait in tree.
+"""
+setxi!(tree::T, x::Float64) where {T <: iTreeX} = 
+  setproperty!(tree, :xi, x)
+
+
+
+
+"""
+  setxf!(tree::T, x::Float64) where {T <: iTreeX}
+
+Set `x` as final trait in tree.
+"""
+setxf!(tree::T, x::Float64) where {T <: iTreeX} = 
+  setproperty!(tree, :xf, x)
+
+
+

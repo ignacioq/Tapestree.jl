@@ -27,7 +27,6 @@ end
 
 
 
-
 """
     sTpb!(Ξ::Vector{sTpb}, tree::sT_label)
 
@@ -41,6 +40,30 @@ function sTpb!(Ξ::Vector{sTpb}, tree::sT_label)
     sTpb!(Ξ, tree.d1)
   end
 end
+
+
+
+
+"""
+    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
+  Ξ = sTpbX[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i] 
+    paix = pa(idfi)
+    paix = iszero(paix) ? 1 : paix
+    xii  = xr[paix]
+    xfi  = xr[i]
+    ξ = sTpbX(e(idfi), true, xii, xfi)
+    push!(Ξ, ξ)
+  end
+
+  return Ξ
+end
+
 
 
 

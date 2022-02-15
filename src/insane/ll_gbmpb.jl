@@ -344,7 +344,7 @@ function _sss_gbm_b(lλv::Array{Float64,1},
       ssλ  += (lλvi1 - lλvi - α*δt)^2
     end
 
-    # add to global likelihood
+    # standardize
     ssλ *= 1.0/(2.0*δt)
 
     # add final non-standard `δt`

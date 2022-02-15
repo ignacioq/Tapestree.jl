@@ -80,9 +80,7 @@ function insane_gbmpb(tree    ::sT_label,
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
     setλt!(bi, lλ(Ξ[i])[end])
-    if !it(bi)
-      push!(inodes, i)
-    end
+    !it(bi) && push!(inodes, i)
   end
 
   # parameter updates (1: α, 2: σ, 3: gbm, 4: fs)
@@ -220,7 +218,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTgbmpb},
       # update diffusion
       elseif pupi === 2
 
-        llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior)
+        llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
       # update gbm
       elseif pupi === 3
@@ -327,7 +325,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTgbmpb},
       # update diffusion rate
       elseif pupi === 2
 
-        llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior)
+        llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
@@ -478,7 +476,7 @@ function ref_posterior(Ξ       ::Vector{iTgbmpb},
         # update diffusion rate
         elseif pupi === 2
 
-          llc, prc, rdc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, rdc,
+          llc, prc, rdc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, rdc,
             σλ_prior, σλ_rdist, βi)
 
         # update gbm
@@ -897,7 +895,6 @@ end
 
 """
     update_σ!(σλc     ::Float64,
-              α       ::Float64,
               ssλ     ::Float64,
               n       ::Float64,
               llc     ::Float64,
@@ -907,7 +904,6 @@ end
 Gibbs update for `σλ`.
 """
 function update_σ!(σλc     ::Float64,
-                   α       ::Float64,
                    ssλ     ::Float64,
                    n       ::Float64,
                    llc     ::Float64,
@@ -936,7 +932,6 @@ end
 
 """
     update_σ!(σλc     ::Float64,
-              α       ::Float64,
               ssλ     ::Float64,
               n       ::Float64,
               llc     ::Float64,
@@ -946,7 +941,6 @@ end
 Gibbs update for `σλ` given reference distribution.
 """
 function update_σ!(σλc     ::Float64,
-                   α       ::Float64,
                    ssλ     ::Float64,
                    n       ::Float64,
                    llc     ::Float64,

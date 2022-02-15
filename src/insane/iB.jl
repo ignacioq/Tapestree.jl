@@ -277,13 +277,13 @@ end
 
 # pretty-printing
 Base.show(io::IO, id::iBffs) = 
-  print(io, "fixed", 
-    ie(id)         ? " extinct" : "", 
-    ifos(id)       ? " fossil" : "", 
-    it(id)         ? " terminal" : "", 
-    iszero(pa(id)) ? " stem" : "", 
-    isone(pa(id))  ? " crown" : "", 
-    " ibranch (", ti(id), ", ", tf(id), 
+  print(io, 
+    ie(id)         ? "extinct " : "", 
+    ifos(id)       ? "fossil " : "", 
+    it(id)         ? "terminal " : "", 
+    iszero(pa(id)) ? "stem " : "", 
+    isone(pa(id))  ? "crown " : "", 
+    "ibranch (", ti(id), ", ", tf(id), 
     "), p:", pa(id), ", d1:", d1(id), ", d2:", d2(id))
 
 
@@ -323,6 +323,64 @@ function makeiBf!(tree::sT_label,
   push!(n2v, n2)
 
   return ρi, n
+end
+
+
+
+
+
+"""
+    makeiBf!(tree::sT_label, 
+                  idv ::Array{iBffs,1}, 
+                  n2v ::Array{Int64,1}, 
+                  tρ  ::Dict{String, Float64},
+                  sc  ::Array{Float64,1},
+                  xr  ::Array{Float64,1},
+                  X   ::Dict{String, Float64})
+
+Make `iBf` vector for an `iTreeX` and estimate phylogenetic independent 
+contrasts `sc` and ancestors `xr` given `tree` and data `X`.
+"""
+function makeiBf!(tree::sT_label, 
+                  idv ::Array{iBffs,1}, 
+                  n2v ::Array{Int64,1}, 
+                  tρ  ::Dict{String, Float64},
+                  sc  ::Array{Float64,1},
+                  xr  ::Array{Float64,1},
+                  X   ::Dict{String, Float64})
+
+  th = treeheight(tree)
+  el = e(tree)
+
+  if istip(tree)
+    lab = l(tree)
+    ρi  = tρ[lab]
+    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, false, 1, 1, 0.0, 0.0))
+    push!(n2v, 0)
+    xi  = X[lab]
+    push!(xr, xi)
+    return ρi, 1, xi, el
+  end
+
+  ρ1, n1, x1, e1 = makeiBf!(tree.d1, idv, n2v, tρ, sc, xr, X)
+  ρ2, n2, x2, e2 = makeiBf!(tree.d2, idv, n2v, tρ, sc, xr, X)
+
+  # tree order
+  n  = n1 + n2 
+  ρi = n / (n1/ρ1 + n2/ρ2)
+
+  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
+  push!(n2v, n2)
+
+  # pic
+  scn = (x2 - x1)/(e1 + e2)
+  xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+  en = el + e1*e2/(e1 + e2)
+
+  push!(sc, scn)
+  push!(xr,  xn)
+
+  return ρi, n, xn, en
 end
 
 
@@ -435,14 +493,56 @@ end
 
 
 """
+    make_idf(tree::sT_label,
+             tρ  ::Dict{String, Float64},
+             X   ::Dict{String, Float64})
+
+Make the edge dictionary and estimate ancestors and evolutionary rates given X
+using phylogenetic independent contrasts.
+"""
+function make_idf(tree::sT_label,
+                  tρ  ::Dict{String, Float64},
+                  X   ::Dict{String, Float64})
+
+  idf = iBffs[]
+  n2v = Int64[]
+  sc  = Float64[]
+  xr  = Float64[]
+  makeiBf!(tree, idf, n2v, tρ, sc, xr, X)
+
+  σxi = sum(abs2, sc) / Float64(lastindex(sc)-1)
+
+  reverse!(idf)
+  reverse!(n2v)
+  reverse!(xr)
+
+  for i in Base.OneTo(lastindex(idf))
+    bi = idf[i]
+    n2 = n2v[i]
+
+    if n2 > 0
+      setd1!(bi, n2*2 + i)
+      setd2!(bi, i + 1)
+      setpa!(idf[d1(bi)], i)
+      setpa!(idf[d2(bi)], i)
+    end
+  end
+
+  return idf, xr, σxi
+end
+
+
+
+
+"""
     make_idf(tree::sTf_label, tρ::Dict{String, Float64})
 
 Make the edge dictionary.
 """
 function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
 
-  idf = iBffs[]
-  n1v = Int64[]; n2v = Int64[]    # vector of nb of alive descendants (d1 & d2)
+  idf  = iBffs[]
+  n1v  = Int64[]; n2v = Int64[]    # vector of nb of alive descendants (d1 & d2)
   ft1v = Int64[]; ft2v = Int64[]  # vector of nb of fossil tips (d1 & d2)
   sa2v = Int64[]                  # vector of nb of sampled ancestors (d2)
   makeiBf!(tree, idf, treeheight(tree), n1v, n2v, ft1v, ft2v, sa2v, tρ)
