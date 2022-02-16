@@ -318,8 +318,6 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
 
         llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
-        sdeltaX(Ξ)
-        Ξ
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return 
@@ -334,10 +332,6 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
           update_fs!(bix, Ξ, idf, llc, λc, σxc, ns, L, sdX, nX)
 
         llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
-        sdeltaX(Ξ)
-        Ξ
-
-
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return 
@@ -399,13 +393,6 @@ function update_fs!(bix::Int64,
 
   bi = idf[bix]
 
-  if it(bi)
-    return llc, ns, L, sdX, nX
-  end
-  """
-  here, if terminal, you cannot simulate... fuck!
-  """
-
   # forward simulate an internal branch
   ξp, np, ntp, xt = fsbi_pbX(bi, λ, xi(Ξ[bix]), σx, 1_000)
 
@@ -421,8 +408,9 @@ function update_fs!(bix::Int64,
 
     # if terminal branch
     if itb
-      llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr  = 0.0
+      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
+      acr = _match_tip_x!(ξp, xt, σx)
     else
       np -= 1
       ξ1  = Ξ[d1(bi)]
@@ -538,6 +526,39 @@ function tip_sims!(tree::sTpbX, t::Float64, λ::Float64, σx::Float64, na::Int64
   end
 
   return tree, na
+end
+
+
+
+
+"""
+    _match_tip_x!(tree::T,
+                 xt  ::Float64,
+                 σx  ::Float64) where {T <: iTreeX}
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function _match_tip_x!(tree::T,
+                       xt  ::Float64,
+                       σx  ::Float64) where {T <: iTreeX}
+
+  if istip(tree)
+    xa   = xi(tree)
+    xn   = xf(tree)
+    el   = e(tree)
+    σsrt = sqrt(el) * σx
+    # acceptance rate
+    acr  = ldnorm_bm(xt, xa, σsrt) - ldnorm_bm(xn, xa, σsrt)
+    setxf!(tree, xt)
+  else
+    if isfix(tree.d1)
+      acr = _match_tip_x!(tree.d1, xt, σx)
+    else
+      acr = _match_tip_x!(tree.d2, xt, σx)
+    end
+  end
+
+  return acr
 end
 
 
