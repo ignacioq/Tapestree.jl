@@ -291,22 +291,22 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
 
         llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
 
-        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return 
-        end
+        # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return 
+        # end
 
       # sigma_x update
       elseif p === 2
 
         llc, prc, σxc = update_σx!(σxc, sdX, nX, llc, prc, σx_prior)
 
-        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return 
-        end
+        # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return 
+        # end
 
       # X ancestors update
       elseif p === 3
@@ -317,11 +317,11 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
         llc, prc, sdX = 
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
 
-        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return 
-        end
+        # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return 
+        # end
 
       # forward simulation proposal proposal
       else
@@ -331,11 +331,11 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
         llc, ns, L, sdX, nX = 
           update_fs!(bix, Ξ, idf, llc, λc, σxc, ns, L, sdX, nX)
 
-        llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return 
-        end
+        # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return 
+        # end
 
       end
     end
