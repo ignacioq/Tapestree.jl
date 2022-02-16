@@ -19,6 +19,7 @@ module INSANE
 
   # files
   include("insane/iTree.jl")
+  include("insane/iTreeX.jl")
   include("insane/iTree_summary.jl")
   include("insane/iB.jl")
   include("insane/iB_manipulation.jl")
@@ -41,6 +42,7 @@ module INSANE
   include("insane/ll_gbmbd.jl")
   include("insane/ll_gbmce.jl")
   include("insane/ll_gbmct.jl")
+  include("insane/ll_cpbX.jl")
   include("insane/survival.jl")
   include("insane/mcmc_cpb.jl")
   include("insane/mcmc_cbd_gp.jl")
@@ -54,6 +56,7 @@ module INSANE
   include("insane/mhprop_gbmbd.jl")
   include("insane/mhprop_gbmce.jl")
   include("insane/mhprop_gbmct.jl")
+  include("insane/mcmc_cpbX.jl")
   include("insane/bm_utils.jl")
   include("insane/decoupled_trees.jl")
   include("insane/marginal_likelihood.jl")
