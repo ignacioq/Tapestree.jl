@@ -694,7 +694,7 @@ function _sim_gbmbd_surv(t   ::Float64,
                          surv::Bool,
                          nsp ::Int64)
 
-  if !surv && nsp < 1_000
+  if !surv && nsp > 1_000
 
     λv = Float64[λt]
     μv = Float64[μt]

@@ -632,7 +632,7 @@ function _sim_gbmct_surv(t   ::Float64,
                          surv::Bool,
                          nsp ::Int64)
 
-  if !surv && nsp < 1_000
+  if !surv && nsp > 1_000
 
     λv = Float64[λt]
     bt = 0.0
