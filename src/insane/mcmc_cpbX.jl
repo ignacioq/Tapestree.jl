@@ -87,7 +87,7 @@ function insane_cpb(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant pure-birth with forward simulation"
+  @info "Running constant pure-birth and BM trait evolution with forward simulation"
 
   # adaptive phase
   llc, prc, λc, σxc, sdX, nX = 
@@ -176,7 +176,7 @@ function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
   #likelihood
   llc = llik_cpb(Ξ, λc, σxc) - nsi + prob_ρ(idf)
   prc = logdgamma(λc,        λ_prior[1], λ_prior[2])    + 
-        logdinvgamma(σxc^2, σx_prior[1], σx_prior[2])  +
+        logdinvgamma(σxc^2, σx_prior[1], σx_prior[2])   +
         logdnorm(xi(Ξ[1]),  x0_prior[1], x0_prior[2]^2)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -318,6 +318,8 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
 
         llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        sdeltaX(Ξ)
+        Ξ
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return 
@@ -332,6 +334,10 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
           update_fs!(bix, Ξ, idf, llc, λc, σxc, ns, L, sdX, nX)
 
         llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
+        sdeltaX(Ξ)
+        Ξ
+
+
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return 
@@ -401,7 +407,6 @@ function update_fs!(bix::Int64,
   """
 
   # forward simulate an internal branch
-
   ξp, np, ntp, xt = fsbi_pbX(bi, λ, xi(Ξ[bix]), σx, 1_000)
 
   itb = it(bi) # is it terminal
@@ -860,6 +865,7 @@ function update_σx!(σxc     ::Float64,
 
   # update likelihood and prior
   llc += sdX*(1.0/σxc^2 - 1.0/σxp2) - nX*(log(σxp/σxc))
+
   prc += llrdinvgamma(σxp2, σxc^2, σx_p1, σx_p2)
 
   return llc, prc, σxp
