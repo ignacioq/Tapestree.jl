@@ -364,91 +364,6 @@ end
 
 
 
-"""
-    ref_posterior(Ξ      ::Vector{sTpbX},
-                  idf    ::Array{iBffs,1},
-                  λc     ::Float64,
-                  λ_prior ::NTuple{2,Float64},
-                  λ_refd  ::NTuple{2,Float64},
-                  nitpp  ::Int64,
-                  nthpp  ::Int64,
-                  βs     ::Vector{Float64},
-                  pup    ::Array{Int64,1},
-                  stem   ::Bool)
-
-MCMC da chain for constant birth-death using forward simulation.
-"""
-function ref_posterior(Ξ      ::Vector{sTpbX},
-                       idf    ::Array{iBffs,1},
-                       λc     ::Float64,
-                       λ_prior ::NTuple{2,Float64},
-                       λ_refd  ::NTuple{2,Float64},
-                       nitpp  ::Int64,
-                       nthpp  ::Int64,
-                       βs     ::Vector{Float64},
-                       pup    ::Array{Int64,1},
-                       stem   ::Bool)
-
-  K = lastindex(βs)
-
-  # make log-likelihood table per power
-  nlg = fld(nitpp, nthpp)
-  pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
-
-  el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ξ))
-  L  = treelength(Ξ)
-
-  nsi = stem ? 0.0 : log(λc)
-
-  llc = llik_cpb(Ξ, λc) - nsi + prob_ρ(idf)
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2])
-
-  for k in 2:K
-
-    βi  = βs[k]
-    rdc = logdgamma(λc, λ_refd[1], λ_refd[2])
-
-    # logging
-    lth, lit = 0, 0
-
-    for it in Base.OneTo(nitpp)
-
-      shuffle!(pup)
-
-      for p in pup
-
-        # λ proposal
-        if p === 1
-
-          llc, prc, rdc, λc = 
-            update_λ!(llc, prc, rdc, λc, ns, L, stem, λ_prior, λ_refd, βi)
-
-        # forward simulation proposal proposal
-        else 
-
-          bix = ceil(Int64,rand()*el)
-          llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
-
-        end
-      end
-
-      # log log-likelihood
-      lth += 1
-      if lth === nthpp
-        lit += 1
-        pp[k][lit] = llc + prc - rdc
-        lth = 0
-      end
-    end
-
-    @info string(βi," power done")
-  end
-
-  return pp
-end
-
-
 
 
 """
@@ -478,7 +393,15 @@ function update_fs!(bix::Int64,
 
   bi = idf[bix]
 
+  if it(bi)
+    return llc, ns, L, sdX, nX
+  end
+  """
+  here, if terminal, you cannot simulate... fuck!
+  """
+
   # forward simulate an internal branch
+
   ξp, np, ntp, xt = fsbi_pbX(bi, λ, xi(Ξ[bix]), σx, 1_000)
 
   itb = it(bi) # is it terminal
@@ -499,9 +422,9 @@ function update_fs!(bix::Int64,
       np -= 1
       ξ1  = Ξ[d1(bi)]
       ξ2  = Ξ[d2(bi)]
-      llr = log((1.0 - ρbi)^(np - nc))                           +
-             duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
-             duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
+      llr = log((1.0 - ρbi)^(np - nc))                          +
+            duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
+            duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
       acr = log(Float64(ntp)/Float64(ntc))
     end
 
@@ -786,7 +709,7 @@ function _update_x!(tree::T,
                     sdX ::Float64) where {T <: iTreeX}
 
   if isdefined(tree, :d1)
-    llc, sdX = _update_triad_x!(tree, σx, llc, sdX)
+    llc, sdX = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, sdX)
     llc, sdX = _update_x!(tree.d1, σx, llc, sdX)
     llc, sdX = _update_x!(tree.d2, σx, llc, sdX)
   end

@@ -42,7 +42,7 @@ end
 Simulate a constant pure-birth `iTree` with traits of height `t` 
 with speciation rate `λ` starting at trait `x0` with rate `σx`.
 """
-function sim_cpb(t::Float64, λ::Float64,  x0::Float64, σx::Float64, na::Int64)
+function sim_cpb(t::Float64, λ::Float64, x0::Float64, σx::Float64, na::Int64)
 
   tw = cpb_wait(λ)
 
@@ -54,8 +54,8 @@ function sim_cpb(t::Float64, λ::Float64,  x0::Float64, σx::Float64, na::Int64)
 
   x1 = rnorm(x0, sqrt(tw) * σx)
 
-  d1, na = sim_cpb(t - tw, λ, x0, σx, na)
-  d2, na = sim_cpb(t - tw, λ, x0, σx, na)
+  d1, na = sim_cpb(t - tw, λ, x1, σx, na)
+  d2, na = sim_cpb(t - tw, λ, x1, σx, na)
 
   sTpbX(d1, d2, tw, false, x0, x1), na
 end
