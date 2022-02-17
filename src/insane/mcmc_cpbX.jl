@@ -791,76 +791,6 @@ end
 
 
 """
-     update_λ!(llc    ::Float64,
-               prc    ::Float64,
-               λc     ::Float64,
-               ns     ::Float64,
-               L      ::Float64,
-               stem   ::Bool
-               λ_prior::NTuple{2,Float64})
-
-Gibbs sampling of `λ` for constant pure-birth.
-"""
-function update_λ!(llc    ::Float64,
-                   prc    ::Float64,
-                   λc     ::Float64,
-                   ns     ::Float64,
-                   L      ::Float64,
-                   stem   ::Bool,
-                   λ_prior::NTuple{2,Float64})
-
-  nsi = stem ? 0.0 : 1.0
-  λp  = randgamma(λ_prior[1] + ns - nsi, λ_prior[2] + L)
-
-  llc += (ns - nsi) * log(λp/λc) + L * (λc - λp)
-  prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-
-  return llc, prc, λp
-end
-
-
-
-
-"""
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              λ_prior::NTuple{2,Float64},
-              λ_refd ::NTuple{2,Float64},
-              pow   ::Float64)
-
-Gibbs sampling of `λ` for constant pure-birth with reference distribution.
-"""
-function update_λ!(llc    ::Float64,
-                   prc    ::Float64,
-                   rdc    ::Float64,
-                   λc     ::Float64,
-                   ns     ::Float64,
-                   L      ::Float64,
-                   stem   ::Bool,
-                   λ_prior::NTuple{2,Float64},
-                   λ_refd ::NTuple{2,Float64},
-                   pow    ::Float64)
-
-  nsi = stem ? 0.0 : 1.0
-
-  λp = randgamma((λ_prior[1] + ns - nsi)*pow + λ_refd[1] * (1.0 - pow),
-                 (λ_prior[2] + L)*pow        + λ_refd[2] * (1.0 - pow)) 
-
-  llc += (ns - nsi)*log(λp/λc) + L*(λc - λp)
-  prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-  rdc += llrdgamma(λp, λc, λ_refd[1],  λ_refd[2])
-
-  return llc, prc, rdc, λp
-end
-
-
-
-
-"""
     update_σx!(σxc     ::Float64,
                sdX     ::Float64,
                nX      ::Float64,
@@ -891,33 +821,4 @@ function update_σx!(σxc     ::Float64,
 
   return llc, prc, σxp
 end
-
-
-
-
-"""
-  write_ssr(R       ::Array{Float64,2}, 
-            pardic  ::Dict{String,Int64},
-            out_file::String)
-
-Write the samples from an MC sampler data frame 
-given a Dictionary of parameters.
-"""
-function write_ssr(R       ::Array{Float64,2}, 
-                   pardic  ::Dict{String,Int64},
-                   out_file::String)
-
-  # column names
-  col_nam = ["Iteration", "Likelihood", "Prior"]
-
-  for (k,v) in sort!(collect(pardic), by = x -> x[2])
-    push!(col_nam, k)
-  end
-
-  R = vcat(reshape(col_nam, 1, lastindex(col_nam)), R)
-
-  writedlm(out_file*".log", R)
-end
-
-
 

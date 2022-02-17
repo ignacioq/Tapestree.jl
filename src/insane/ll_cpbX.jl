@@ -55,19 +55,6 @@ end
 
 
 
-
-"""
-    λmle_cpb(tree::T)
-
-Returns the maximum likelihood estimate for `λ` according
-to a constant pure-birth process.
-"""
-λmle_cpb(tree::T) where {T <: iTree} = 
-  Float64(ntips(tree)-2)/treelength(tree)
-
-
-
-
 """
     sdX(Ξ::Vector{T}) where {T <: iTgbm}
 

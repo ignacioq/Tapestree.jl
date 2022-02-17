@@ -128,7 +128,7 @@ function sim_cbd_surv(t   ::Float64,
                       surv::Bool,
                       nsp ::Int64)
 
-  if !surv && nsp < 1_000
+  if !surv && nsp < 500
 
     tw = cbd_wait(λ, μ)
 
@@ -147,7 +147,7 @@ function sim_cbd_surv(t   ::Float64,
     end
   end
 
-  return sTbd(), true, nsp
+  return sTbd(0.0, false), true, nsp
 end
 
 
