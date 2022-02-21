@@ -387,10 +387,9 @@ function _sim_gbmpb(t   ::Float64,
 
       λt = λt1
     end
-  else
-    return iTgbmpb(), nsp
   end
 
+  return iTgbmpb(0.0, false, 0.0, 0.0, Float64[]), nsp
 end
 
 
@@ -499,10 +498,9 @@ function _sim_gbmpb(nsδt::Float64,
 
       λt = λt1
     end
-  else
-    return iTgbmpb(), nsp
   end
-
+  
+  return iTgbmpb(0.0, false, 0.0, 0.0, Float64[]), nsp
 end
 
 

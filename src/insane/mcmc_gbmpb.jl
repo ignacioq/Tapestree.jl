@@ -185,7 +185,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTgbmpb},
                          prints  ::Int64)
 
   λ0  = lλ(Ξ[1])[1]
-  nsi = !iszero(e(tree)) ? 0.0 : λ0
+  nsi = !iszero(e(Ξ[1])) ? 0.0 : λ0
 
   # starting likelihood and prior
   llc = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - nsi + prob_ρ(idf)
@@ -546,9 +546,6 @@ function update_fs!(bix  ::Int64,
                     srδt ::Float64)
 
   bi  = idf[bix]
-  ρbi = ρi(bi) # get branch sampling fraction
-  nc  = ni(bi) # current ni
-  ntc = nt(bi) # current nt
   itb = it(bi) # if terminal
 
   ξc  = Ξ[bix]
@@ -558,57 +555,60 @@ function update_fs!(bix  ::Int64,
   end
 
   # forward simulate an internal branch
-  ξp, np, ntp, λf = fsbi(bi, lλ(ξc)[1], α, σλ, δt, srδt)
+  ξp, ntp, np, λf = fsbi(bi, lλ(ξc)[1], α, σλ, δt, srδt)
 
   # check for non-exploding simulation
-  if np >= 1000
-    return llc, dλ, ssλ, nλ, L
-  end
+  if np > 0
 
-  # if terminal branch
-  if itb
-    llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-    acr  = llr
-    drλ  = 0.0
-    ssrλ = 0.0
-  else
-    np -= 1
-    llr = log((1.0 - ρbi)^(np - nc))
-    acr = llr + log(Float64(ntp)/Float64(ntc))
-    # change daughters
-    if isfinite(acr)
+    ρbi = ρi(bi) # get branch sampling fraction
+    nc  = ni(bi) # current ni
+    ntc = nt(bi) # current nt
 
-      llrd, acrd, drλ, ssrλ, λ1p, λ2p = 
-        _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
-
-      llr += llrd
-      acr += acrd
+    # if terminal branch
+    if itb
+      llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      acr  = llr
+      drλ  = 0.0
+      ssrλ = 0.0
     else
-      acr = -Inf
+      np -= 1
+      llr = log((1.0 - ρbi)^(np - nc))
+      acr = llr + log(Float64(ntp)/Float64(ntc))
+      # change daughters
+      if isfinite(acr)
+
+        llrd, acrd, drλ, ssrλ, λ1p, λ2p = 
+          _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
+
+        llr += llrd
+        acr += acrd
+      else
+        acr = -Inf
+      end
     end
-  end
 
-  # MH ratio
-  if -randexp() < acr
+    # MH ratio
+    if -randexp() < acr
 
-    ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ξp, α, σλ, δt, srδt)
-    ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ξc, α, σλ, δt, srδt)
+      ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ξp, α, σλ, δt, srδt)
+      ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ξc, α, σλ, δt, srδt)
 
-    # update llr, ssλ, nλ, L
-    llr += ll1  - ll0
-    dλ  += dλ1  - dλ0  + drλ
-    ssλ += ssλ1 - ssλ0 + ssrλ
-    nλ  += nλ1  - nλ0
-    L   += treelength(ξp) - treelength(ξc)
+      # update llr, ssλ, nλ, L
+      llr += ll1  - ll0
+      dλ  += dλ1  - dλ0  + drλ
+      ssλ += ssλ1 - ssλ0 + ssrλ
+      nλ  += nλ1  - nλ0
+      L   += treelength(ξp) - treelength(ξc)
 
-    Ξ[bix] = ξp          # set new tree
-    llc += llr           # set new likelihood
-    setni!(bi, np)       # set new ni
-    setnt!(bi, ntp)      # set new nt
-    setλt!(bi, λf)       # set new λt
-    if !itb
-      copyto!(lλ(ξ1), λ1p) # set new daughter 1 λ vector
-      copyto!(lλ(ξ2), λ2p) # set new daughter 2 λ vector
+      Ξ[bix] = ξp          # set new tree
+      llc += llr           # set new likelihood
+      setni!(bi, np)       # set new ni
+      setnt!(bi, ntp)      # set new nt
+      setλt!(bi, λf)       # set new λt
+      if !itb
+        copyto!(lλ(ξ1), λ1p) # set new daughter 1 λ vector
+        copyto!(lλ(ξ2), λ2p) # set new daughter 2 λ vector
+      end
     end
   end
 
@@ -642,7 +642,7 @@ function fsbi(bi  ::iBffs,
   t0, na = _sim_gbmpb(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
 
   if na >= 1_000
-    return iTgbmpb(), 1_000, 0, 0.0
+    return iTgbmpb(0.0, false, 0.0, 0.0, Float64[]), 0, 0, NaN
   end
 
   nat = na
@@ -650,7 +650,7 @@ function fsbi(bi  ::iBffs,
   if isone(na)
     f, λf = fixalive!(t0, NaN)
 
-    return t0, na, nat, λf
+    return t0, nat, na, λf
   elseif na > 1
     # fix random tip
     λf = fixrtip!(t0, na, NaN)
@@ -658,12 +658,16 @@ function fsbi(bi  ::iBffs,
     if !it(bi)
       # add tips until the present
       tx, na = tip_sims!(t0, tfb, α, σλ, δt, srδt, na)
+
+      if na >= 1_000
+        return iTgbmpb(0.0, false, 0.0, 0.0, Float64[]), 0, 0, NaN
+      end
     end
 
-    return t0, na, nat, λf
+    return t0, nat, na, λf
   end
 
-  return iTgbmpb(), 0, 0, 0.0
+  return iTgbmpb(0.0, false, 0.0, 0.0, Float64[]), 0, 0, NaN
 end
 
 
@@ -697,6 +701,10 @@ function tip_sims!(tree::iTgbmpb,
       # simulate
       stree, na = 
         _sim_gbmpb(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt, na, 1_000)
+
+      if na >= 1_000
+        return tree, na
+      end
 
       if !isdefined(stree, :lλ)
         return tree, 1_000
