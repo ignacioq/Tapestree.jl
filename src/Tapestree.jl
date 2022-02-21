@@ -6,7 +6,7 @@
 
 module Tapestree
 
-__precompile__(false)
+__precompile__(true)
 
 #=
  Submodules
