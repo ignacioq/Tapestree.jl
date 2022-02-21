@@ -327,7 +327,6 @@ mutable struct sTbd <: sT
   iμ::Bool
   fx::Bool
 
-  sTbd() = new()
   sTbd(e::Float64) = 
     (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
   sTbd(e::Float64, iμ::Bool) = 
@@ -535,8 +534,6 @@ mutable struct iTgbmpb <: iTgbm
   fdt::Float64
   lλ ::Array{Float64,1}
 
-  iTgbmpb() = new()
-
   iTgbmpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64, 
     lλ::Array{Float64,1}) = 
       (x = new(); x.e = e; x.fx = fx; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
@@ -693,8 +690,6 @@ mutable struct iTgbmce <: iTgbm
   iμ ::Bool
   fx ::Bool
   lλ ::Array{Float64,1}
-
-  iTgbmce() = new()
 
   iTgbmce(e  ::Float64, 
           dt ::Float64,
@@ -889,8 +884,6 @@ mutable struct iTgbmct <: iTgbm
   iμ ::Bool
   fx ::Bool
   lλ ::Array{Float64,1}
-
-  iTgbmct() = new()
 
   iTgbmct(e  ::Float64, 
           dt ::Float64,
@@ -1088,8 +1081,6 @@ mutable struct iTgbmbd <: iTgbm
   fx ::Bool
   lλ ::Array{Float64,1}
   lμ ::Array{Float64,1}
-
-  iTgbmbd() = new()
 
   iTgbmbd(e  ::Float64, 
           dt ::Float64,

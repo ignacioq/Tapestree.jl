@@ -170,7 +170,9 @@ function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
 
     if iszero(fdti)
       fdti = δt
+      nt  -= 1
     end
+
     lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
   end
@@ -216,7 +218,9 @@ function iTgbmce!(Ξ   ::Vector{iTgbmce},
 
     if iszero(fdti)
       fdti = δt
+      nt  -= 1
     end
+
     lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
   end
@@ -262,7 +266,9 @@ function iTgbmct!(Ξ   ::Vector{iTgbmct},
 
     if iszero(fdti)
       fdti = δt
+      nt  -= 1
     end
+
     lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
   end
@@ -313,7 +319,9 @@ function iTgbmbd!(Ξ   ::Vector{iTgbmbd},
 
     if iszero(fdti)
       fdti = δt
+      nt  -= 1
     end
+
     lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
     lμv = sim_bm(lμa, α, σμ, δt, fdti, srδt, nt)
     l   = nt + 2

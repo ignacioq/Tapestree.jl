@@ -9,10 +9,10 @@ module INSANE
   using Random: randexp, randn!, shuffle!
   using SpecialFunctions: erf
   using DelimitedFiles: writedlm
-  using RecipesBase: @recipe, @series
   using ProgressMeter: Progress, next!
   using Statistics: quantile
   using LoopVectorization: @avx
+  import RecipesBase
 
   # other submodules dependencies
   using ..Utils
