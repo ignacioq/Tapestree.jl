@@ -46,7 +46,7 @@ RecipesBase.@recipe function f(tree::T,
   fillcolor       --> plot_color(:orange, 0.3)
 
   # range shape
-  @series begin
+  Plots.@series begin
     seriestype := :shape
     linecolor  := nothing
 
@@ -62,7 +62,7 @@ RecipesBase.@recipe function f(tree::T,
   end
 
   # [0.25, 0.75] quantile range shape
-  @series begin
+  Plots.@series begin
     seriestype := :shape
     linecolor  := nothing
 
@@ -78,7 +78,7 @@ RecipesBase.@recipe function f(tree::T,
   end
 
   # midline
-  RecipesBase.@series begin
+  Plots.@series begin
     seriestype := :line
     linecolor --> "#00304999"
     linewidth --> 1.4
