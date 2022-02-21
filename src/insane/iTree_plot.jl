@@ -17,7 +17,7 @@ Created 07 07 2020
 
 Recipe for plotting values given by `lv` through time for a `iTgbm`.
 """
-RecipesBase.@recipe function f(tree::T, 
+@recipe function f(tree::T, 
                    lv  ::Function, 
                    dt  ::Float64,
                    e   ::Bool) where {T <: iTgbm}
@@ -37,16 +37,16 @@ RecipesBase.@recipe function f(tree::T,
   legend          --> :none
   xguide          --> "time"
   yguide          --> string(lv)[2:end]*"(t)"
-  fontfamily      --> Plots.font(2, "Helvetica")
+  fontfamily      --> font(2, "Helvetica")
   xflip           --> true
-  xtickfont       --> Plots.font(8, "Helvetica")
+  xtickfont       --> font(8, "Helvetica")
   grid            --> :off
   xtick_direction --> :out
   ytick_direction --> :out
   fillcolor       --> plot_color(:orange, 0.3)
 
   # range shape
-  Plots.@series begin
+  @series begin
     seriestype := :shape
     linecolor  := nothing
 
@@ -58,11 +58,11 @@ RecipesBase.@recipe function f(tree::T,
       push!(sh0, (ts[i], fx[i,5]))
     end
 
-    Plots.Shape(sh0)
+    Shape(sh0)
   end
 
   # [0.25, 0.75] quantile range shape
-  Plots.@series begin
+  @series begin
     seriestype := :shape
     linecolor  := nothing
 
@@ -74,11 +74,11 @@ RecipesBase.@recipe function f(tree::T,
       push!(sh1, (ts[i], fx[i,4]))
     end
 
-    Plots.Shape(sh1)
+    Shape(sh1)
   end
 
   # midline
-  Plots.@series begin
+  @series begin
     seriestype := :line
     linecolor --> "#00304999"
     linewidth --> 1.4
@@ -165,7 +165,7 @@ end
 
 Recipe for plotting a Type `iTgbm`.
 """
-RecipesBase.@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
+@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
 
   x = Float64[]
   y = Float64[]
@@ -182,11 +182,11 @@ RecipesBase.@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
   legend          --> :none
   colorbar        --> true
   xguide          --> "time"
-  fontfamily      --> Plots.font(2, "Helvetica")
+  fontfamily      --> font(2, "Helvetica")
   xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
-  xtickfont       --> Plots.font(8, "Helvetica")
+  xtickfont       --> font(8, "Helvetica")
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
@@ -203,7 +203,7 @@ end
 
 Recipe for plotting extinction on a `iTgbmct` given `ϵ`.
 """
-RecipesBase.@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
+@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
 
   x = Float64[]
   y = Float64[]
@@ -224,11 +224,11 @@ RecipesBase.@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
   legend          --> :none
   colorbar        --> true
   xguide          --> "time"
-  fontfamily      --> Plots.font(2, "Helvetica")
+  fontfamily      --> font(2, "Helvetica")
   xlims           --> (-th*0.05, th*1.1)
   ylims           --> (0, nt+1)
   xflip           --> true
-  xtickfont       --> Plots.font(8, "Helvetica")
+  xtickfont       --> font(8, "Helvetica")
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
@@ -299,7 +299,7 @@ end
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
 == true`. True by default for `sTf` trees to make sampled ancestors visible.
 """
-RecipesBase.@recipe function f(tree::T; shownodes  = (T <: sTf),
+@recipe function f(tree::T; shownodes  = (T <: sTf),
                    showlabels = (T === sT_label || T === sTf_label)) where {
                                                                     T <: iTree}
 
@@ -314,12 +314,12 @@ RecipesBase.@recipe function f(tree::T; shownodes  = (T <: sTf),
   # plot defaults
   legend          --> false
   xguide          --> "time"
-  fontfamily      --> Plots.font(2, "Helvetica")
+  fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
   xlims           --> (-th*0.05, th*1.05)
   ylims           --> (0, nt+1)
   xflip           --> true
-  xtickfont       --> Plots.font(8, "Helvetica")
+  xtickfont       --> font(8, "Helvetica")
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
@@ -342,15 +342,15 @@ RecipesBase.@recipe function f(tree::T; shownodes  = (T <: sTf),
 
     txt = [(0.0, i, labels[i]) for i in 1:nt]
 
-    RecipesBase.@series begin
+    @series begin
       seriestype  := :scatter
       primary     := false
       markercolor := :black
       markershape := :circle
       markersize  := 0
       markeralpha := fill(0.0,nt)
-      series_annotations := Plots.series_annotations(labels, 
-        Plots.font("Helvetica", 8))
+      series_annotations := series_annotations(labels, 
+        font("Helvetica", 8))
       fill(0.0 - 0.02*th, nt), 1:nt
     end
   end
@@ -424,7 +424,7 @@ end
 
 Recipe for plotting lineage through time plots of type `Ltt`.
 """
-RecipesBase.@recipe function f(nt::Ltt)
+@recipe function f(nt::Ltt)
 
   x = nt.t
   y = nt.n
@@ -433,9 +433,9 @@ RecipesBase.@recipe function f(nt::Ltt)
   legend          --> false
   xguide          --> "time"
   yguide          --> "N lineages"
-  fontfamily      --> Plots.font(2, "Helvetica")
+  fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
-  tickfont        --> Plots.font(8, "Helvetica")
+  tickfont        --> font(8, "Helvetica")
   grid            --> :off
   tick_direction  --> :out
   seriestype      --> :steppost
