@@ -12,7 +12,7 @@ module INSANE
   using ProgressMeter: Progress, next!
   using Statistics: quantile
   using LoopVectorization: @avx
-  using RecipesBase: @recipe, @series
+  using RecipesBase
 
   # other submodules dependencies
   using ..Utils

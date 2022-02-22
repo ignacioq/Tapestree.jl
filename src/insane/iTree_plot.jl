@@ -37,13 +37,15 @@ Recipe for plotting values given by `lv` through time for a `iTgbm`.
   legend          --> :none
   xguide          --> "time"
   yguide          --> string(lv)[2:end]*"(t)"
-  fontfamily      --> font(2, "Helvetica")
   xflip           --> true
-  xtickfont       --> font(8, "Helvetica")
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
   grid            --> :off
   xtick_direction --> :out
   ytick_direction --> :out
-  fillcolor       --> plot_color(:orange, 0.3)
+  fillcolor       --> :orange
+  fillalpha       --> 0.3
 
   # range shape
   @series begin
@@ -58,7 +60,8 @@ Recipe for plotting values given by `lv` through time for a `iTgbm`.
       push!(sh0, (ts[i], fx[i,5]))
     end
 
-    Shape(sh0)
+    # Shape(sh0)
+    sh0
   end
 
   # [0.25, 0.75] quantile range shape
@@ -74,7 +77,8 @@ Recipe for plotting values given by `lv` through time for a `iTgbm`.
       push!(sh1, (ts[i], fx[i,4]))
     end
 
-    Shape(sh1)
+    # Shape(sh1)
+    sh1
   end
 
   # midline
@@ -182,11 +186,12 @@ Recipe for plotting a Type `iTgbm`.
   legend          --> :none
   colorbar        --> true
   xguide          --> "time"
-  fontfamily      --> font(2, "Helvetica")
   xlims           --> (-th*0.05, th*1.05)
-  ylims           --> (0, nt+1)
+  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
   xflip           --> true
-  xtickfont       --> font(8, "Helvetica")
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
@@ -224,11 +229,12 @@ Recipe for plotting extinction on a `iTgbmct` given `ϵ`.
   legend          --> :none
   colorbar        --> true
   xguide          --> "time"
-  fontfamily      --> font(2, "Helvetica")
   xlims           --> (-th*0.05, th*1.1)
-  ylims           --> (0, nt+1)
+  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
   xflip           --> true
-  xtickfont       --> font(8, "Helvetica")
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
@@ -299,7 +305,8 @@ end
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
 == true`. True by default for `sTf` trees to make sampled ancestors visible.
 """
-@recipe function f(tree::T; shownodes  = (T <: sTf),
+@recipe function f(tree::T; 
+                   shownodes  = (T <: sTf),
                    showlabels = (T === sT_label || T === sTf_label)) where {
                                                                     T <: iTree}
 
@@ -314,12 +321,13 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   # plot defaults
   legend          --> false
   xguide          --> "time"
-  fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
   xlims           --> (-th*0.05, th*1.05)
-  ylims           --> (0, nt+1)
+  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
   xflip           --> true
-  xtickfont       --> font(8, "Helvetica")
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
   grid            --> :off
   xtick_direction --> :out
   yticks          --> (nothing)
@@ -343,14 +351,13 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     txt = [(0.0, i, labels[i]) for i in 1:nt]
 
     @series begin
-      seriestype  := :scatter
-      primary     := false
-      markercolor := :black
-      markershape := :circle
-      markersize  := 0
-      markeralpha := fill(0.0,nt)
-      series_annotations := series_annotations(labels, 
-        font("Helvetica", 8))
+      seriestype         := :scatter
+      primary            := false
+      markercolor        := :black
+      markershape        := :circle
+      markersize         := 0
+      markeralpha        := fill(0.0,nt)
+      series_annotations := map(x -> (x, :Helvetica, :left, 8, :black), labels)
       fill(0.0 - 0.02*th, nt), 1:nt
     end
   end
@@ -433,9 +440,10 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   legend          --> false
   xguide          --> "time"
   yguide          --> "N lineages"
-  fontfamily      --> font(2, "Helvetica")
   seriescolor     --> :black
-  tickfont        --> font(8, "Helvetica")
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
   grid            --> :off
   tick_direction  --> :out
   seriestype      --> :steppost
