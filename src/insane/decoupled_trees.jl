@@ -67,6 +67,28 @@ end
 
 
 
+"""
+    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbdX})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbdX})
+  Ξ = sTbdX[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i] 
+    paix = pa(idfi)
+    paix = iszero(paix) ? 1 : paix
+    xii  = xr[paix]
+    xfi  = xr[i]
+    ξ = sTbdX(e(idfi), false, true, xii, xfi)
+    push!(Ξ, ξ)
+  end
+
+  return Ξ
+end
+
+
+
 
 """
     sTbd!(Ξ::Vector{sTbd}, tree::sT_label)

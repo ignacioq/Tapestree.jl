@@ -1,6 +1,6 @@
 #=
 
-pure-birth likelihood
+pure-birth with traits likelihood
 
 Ignacio Quintero Mächler
 
@@ -48,7 +48,7 @@ function llik_cpb(Ξ::Vector{sTpbX}, λ::Float64, σx::Float64)
     ll += llik_cpb(ξ, λ, σx)
   end
 
-  ll += (Float64(lastindex(Ξ) - 1) * 0.5) * log(λ)
+  ll += Float64(lastindex(Ξ) - 1) * 0.5 * log(λ)
 
   return ll
 end

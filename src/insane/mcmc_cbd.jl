@@ -299,7 +299,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, λc, mc = 
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -311,7 +311,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, μc, mc = 
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -323,7 +323,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         bix = ceil(Int64,rand()*el)
         llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
-        # llci = llik_cbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -564,7 +564,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
       return t0, na, nat
     elseif na > 1
       # fix random tip
-      fixrtip!(t0)
+      _fixrtip!(t0, na)
 
       if !it(bi)
         # add tips until the present
@@ -575,7 +575,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
     end
   end
 
-  return sTbd(), 0, 0
+  return sTbd(0.0, false, false), 0, 0
 end
 
 

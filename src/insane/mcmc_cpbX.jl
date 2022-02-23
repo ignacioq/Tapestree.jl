@@ -87,7 +87,7 @@ function insane_cpb(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant pure-birth and BM trait evolution with forward simulation"
+  @info "Running constant pure-birth and trait evolution with forward simulation"
 
   # adaptive phase
   llc, prc, λc, σxc, sdX, nX = 
@@ -99,9 +99,9 @@ function insane_cpb(tree    ::sT_label,
     mcmc_cpb(Ξ, idf, llc, prc, λc, σxc, sdX, nX, λ_prior, σx_prior, x0_prior, 
      niter, nthin, pup, inodes, prints, stem)
 
-  pardic = Dict(("lambda"  => 1,
-                 "x0"      => 2,
-                 "sigma_x" => 3))
+  pardic = Dict("lambda"  => 1,
+                "x0"      => 2,
+                "sigma_x" => 3)
 
   write_ssr(r, pardic, out_file)
 
@@ -396,12 +396,12 @@ function update_fs!(bix::Int64,
   # forward simulate an internal branch
   ξp, np, ntp, xt = fsbi_pbX(bi, λ, xi(Ξ[bix]), σx, 1_000)
 
-  itb = it(bi) # is it terminal
-  ρbi = ρi(bi) # get branch sampling fraction
-  nc  = ni(bi) # current ni
-  ntc = nt(bi) # current nt
-
   if ntp > 0
+
+    itb = it(bi) # is it terminal
+    ρbi = ρi(bi) # get branch sampling fraction
+    nc  = ni(bi) # current ni
+    ntc = nt(bi) # current nt
 
     # current tree
     ξc  = Ξ[bix]
@@ -440,7 +440,7 @@ function update_fs!(bix::Int64,
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
 
-      if !it(bi)
+      if !itb
         sdX += ((xt - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
                ((xt - xf(ξ2))^2 - (xi(ξ1) - xf(ξ2))^2)/(2.0*e(ξ2))
         setxi!(ξ1, xt) # set new xt
@@ -482,7 +482,7 @@ function fsbi_pbX(bi::iBffs, λ::Float64, x0::Float64, σx::Float64, ntry::Int64
       return t0, na, nat, xt
     elseif na > 1
       # fix random tip
-      xt = fixrtip!(t0, 0, NaN)
+      xt = fixrtip!(t0, na, NaN)
 
       if !it(bi)
         # add tips until the present
@@ -566,26 +566,26 @@ end
 
 """
     update_x!(bix     ::Int64,
-              Ξ       ::Vector{sTpbX},
+              Ξ       ::Vector{T},
               idf     ::Vector{iBffs},
               σx      ::Float64,
               llc     ::Float64,
               prc     ::Float64,
               sdX     ::Float64,
               stem    ::Bool,
-              x0_prior::NTuple{2, Float64})
+              x0_prior::NTuple{2, Float64}) where {T <: iTreeX}
 
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_x!(bix     ::Int64,
-                   Ξ       ::Vector{sTpbX},
+                   Ξ       ::Vector{T},
                    idf     ::Vector{iBffs},
                    σx      ::Float64,
                    llc     ::Float64,
                    prc     ::Float64,
                    sdX     ::Float64,
                    stem    ::Bool,
-                   x0_prior::NTuple{2, Float64})
+                   x0_prior::NTuple{2, Float64}) where {T <: iTreeX}
 
   ξi = Ξ[bix]
   bi = idf[bix]

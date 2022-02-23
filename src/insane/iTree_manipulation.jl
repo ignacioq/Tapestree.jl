@@ -595,12 +595,12 @@ function fixalive!(tree::T, xt::Float64) where T <: iTreeX
       return true, xt
     end
   else
-    f = fixalive!(tree.d2::T, xt)
+    f, xt = fixalive!(tree.d2::T, xt)
     if f 
       fix!(tree)
       return true, xt
     end
-    f = fixalive!(tree.d1::T, xt)
+    f, xt = fixalive!(tree.d1::T, xt)
     if f 
       fix!(tree)
       return true, xt
@@ -1032,6 +1032,54 @@ end
 
 
 """
+    remove_extinct(treev::Vector{T}) where {T <: iTree}
+
+Remove extinct taxa for a vector of trees.
+"""
+function remove_extinct(treev::Vector{T}) where {T <: iTree}
+
+  treevne = T[]
+  for t in treev
+    push!(treevne, remove_extinct(t))
+  end
+
+  return treevne
+end
+
+
+
+"""
+    _remove_extinct!(tree::sTbd)
+
+Remove extinct tips (except fossil tips).
+"""
+function _remove_extinct!(tree::sTbd)
+
+  if isdefined(tree, :d1)
+    tree.d1 = _remove_extinct!(tree.d1)
+    tree.d2 = _remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return sTbd(e(tree), true, isfix(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        tree = tree.d2
+        sete!(tree, ne)
+      end
+    elseif isextinct(tree.d2)
+      ne  = e(tree) + e(tree.d1)
+      tree = tree.d1
+      sete!(tree, ne)
+    end
+  end
+
+  return tree
+end
+
+
+
+"""
     _remove_extinct!(tree::iTgbmce)
 Remove extinct tips from `iTgbmce`.
 """
@@ -1420,6 +1468,7 @@ end
 
 """
     _remove_unsampled!(tree::sTbd)
+
 Remove extinct tips (except fossil tips).
 """
 function _remove_unsampled!(tree::sTbd)
@@ -1428,15 +1477,15 @@ function _remove_unsampled!(tree::sTbd)
     tree.d1 = _remove_unsampled!(tree.d1)
     tree.d2 = _remove_unsampled!(tree.d2)
 
-    if isextinct(tree.d1)
-      if isextinct(tree.d2)
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
         return sTbd(e(tree), true, isfix(tree))
       else
         ne  = e(tree) + e(tree.d2)
         tree = tree.d2
         sete!(tree, ne)
       end
-    elseif isextinct(tree.d2)
+    elseif !isfix(tree.d2)
       ne  = e(tree) + e(tree.d1)
       tree = tree.d1
       sete!(tree, ne)

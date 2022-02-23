@@ -463,7 +463,7 @@ function fsbi(bi::iBffs, λ::Float64, ntry::Int64)
       return t0, na, nat
     elseif na > 1
       # fix random tip
-      fixrtip!(t0)
+      _fixrtip!(t0, na)
 
       if !it(bi)
         # add tips until the present
