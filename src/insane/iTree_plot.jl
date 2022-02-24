@@ -96,6 +96,45 @@ end
 
 
 """
+    function f(tree::T, zfun::Function) where {T <: iTgbm}
+
+Recipe for plotting a Type `iTgbm`.
+"""
+@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
+
+  x = Float64[]
+  y = Float64[]
+  z = Float64[]
+
+  th = treeheight(tree)
+  nt = ntips(tree)
+
+  _rplottree!(tree, th, 1:nt, zfun, x, y, z)
+
+  # plot defaults
+  line_z          --> z
+  linecolor       --> :inferno
+  legend          --> :none
+  colorbar        --> true
+  xguide          --> "time"
+  xlims           --> (-th*0.05, th*1.05)
+  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+  yticks          --> (nothing)
+  yshowaxis       --> false
+
+  return x, y
+end
+
+
+
+
+"""
     _rplottree!(tree::T, 
                 xc  ::Float64, 
                 yr  ::UnitRange{Int64},
@@ -159,45 +198,6 @@ function _rplottree!(tree::T,
   elseif defd2  _rplottree!(tree.d2, xc, yr, zfun, x, y, z)
   end
 
-end
-
-
-
-
-"""
-    function f(tree::T, zfun::Function) where {T <: iTgbm}
-
-Recipe for plotting a Type `iTgbm`.
-"""
-@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
-
-  x = Float64[]
-  y = Float64[]
-  z = Float64[]
-
-  th = treeheight(tree)
-  nt = ntips(tree)
-
-  _rplottree!(tree, th, 1:nt, zfun, x, y, z)
-
-  # plot defaults
-  line_z          --> z
-  linecolor       --> :inferno
-  legend          --> :none
-  colorbar        --> true
-  xguide          --> "time"
-  xlims           --> (-th*0.05, th*1.05)
-  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
-  xflip           --> true
-  fontfamily      --> :Helvetica
-  tickfontfamily  --> :Helvetica
-  tickfontsize    --> 8
-  grid            --> :off
-  xtick_direction --> :out
-  yticks          --> (nothing)
-  yshowaxis       --> false
-
-  return x, y
 end
 
 
@@ -453,3 +453,104 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 
   return  x, y
 end
+
+
+
+
+"""
+    function f(tree::T; type::Symbol = :trait)
+
+Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
+"""
+@recipe function f(tree::T; type = :trait) where {T <: iTreeX}
+
+  x = Float64[]
+  y = Float64[]
+
+  if type === :tree 
+
+    th = treeheight(tree)
+    nt = ntips(tree)
+
+    _rplottree!(tree, th, 1:nt, x, y)
+
+    # plot defaults
+    legend          --> false
+    xguide          --> "time"
+    seriescolor     --> :black
+    xlims           --> (-th*0.05, th*1.05)
+    ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
+    xflip           --> true
+    fontfamily      --> :Helvetica
+    tickfontfamily  --> :Helvetica
+    tickfontsize    --> 8
+    grid            --> :off
+    xtick_direction --> :out
+    yticks          --> (nothing)
+    yshowaxis       --> false
+
+  elseif type === :trait 
+
+    th = treeheight(tree)
+
+    _rplottrait!(tree, th, x, y)
+
+    yfilt = filter(x -> !isnan(x), y)
+
+    # plot defaults
+    legend          --> false
+    xguide          --> "time"
+    yguide          --> "trait"
+    seriescolor     --> :black
+    xlims           --> (-th*0.05, th*1.05)
+    ylims           --> (minimum(yfilt), maximum(yfilt))
+    xflip           --> true
+    fontfamily      --> :Helvetica
+    tickfontfamily  --> :Helvetica
+    tickfontsize    --> 8
+    grid            --> :off
+    xtick_direction --> :out
+  else
+
+    @warn "$type neither tree nor trait"
+  end
+
+  return x, y
+end
+
+
+
+
+"""
+    _rplottree!(tree::T, 
+                xc  ::Float64, 
+                x   ::Array{Float64,1}, 
+                y   ::Array{Float64,1}) where {T <: iTreeX}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function _rplottrait!(tree::T, 
+                      xc  ::Float64, 
+                      x   ::Array{Float64,1}, 
+                      y   ::Array{Float64,1}) where {T <: iTreeX} 
+
+  # add horizontal lines
+  push!(x, xc)
+  xc -= e(tree)
+  push!(x, xc, NaN)
+  push!(y, xi(tree), xf(tree), NaN)
+
+  defd1 = isdefined(tree, :d1)
+  defd2 = isdefined(tree, :d2)
+
+  if defd1 && defd2
+
+    _rplottrait!(tree.d1, xc, x, y)
+    _rplottrait!(tree.d2, xc, x, y)
+
+  elseif defd1  _rplottrait!(tree.d1, xc, x, y)
+  elseif defd2  _rplottrait!(tree.d2, xc, x, y)
+  end
+end
+
+
