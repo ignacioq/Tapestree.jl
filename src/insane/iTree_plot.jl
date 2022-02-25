@@ -501,7 +501,7 @@ Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
     legend          --> false
     xguide          --> "time"
     yguide          --> "trait"
-    seriescolor     --> :black
+    seriescolor     --> :purple
     xlims           --> (-th*0.05, th*1.05)
     ylims           --> (minimum(yfilt), maximum(yfilt))
     xflip           --> true
@@ -514,6 +514,47 @@ Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
 
     @warn "$type neither tree nor trait"
   end
+
+  return x, y
+end
+
+
+
+
+
+"""
+    function f(tree::T; type::Symbol = :trait)
+
+Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
+"""
+@recipe function f(trees::Vector{T}) where {T <: iTreeX}
+
+  x = Float64[]
+  y = Float64[]
+
+  th = treeheight(trees[1])
+  n  = lastindex(trees)
+
+  for t in trees
+    _rplottrait!(t, treeheight(t), x, y)
+  end
+
+  yfilt = filter(x -> !isnan(x), y)
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "trait"
+  seriescolor     --> :purple
+  seriesalpha     --> min(1.0, 10.0/Float64(n))
+  xlims           --> (-th*0.05, th*1.05)
+  ylims           --> (minimum(yfilt), maximum(yfilt))
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
 
   return x, y
 end
@@ -552,5 +593,6 @@ function _rplottrait!(tree::T,
   elseif defd2  _rplottrait!(tree.d2, xc, x, y)
   end
 end
+
 
 
