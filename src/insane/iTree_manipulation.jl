@@ -1021,7 +1021,8 @@ end
 
 
 """
-    remove_extinct(tree::iTgbmce)
+    remove_extinct(tree::T) where {T <: iTree}
+
 Remove extinct tips from `iTgbmce`.
 """
 function remove_extinct(tree::T) where {T <: iTree}
@@ -1081,6 +1082,7 @@ end
 
 """
     _remove_extinct!(tree::iTgbmce)
+
 Remove extinct tips from `iTgbmce`.
 """
 function _remove_extinct!(tree::iTgbmce)
@@ -1138,6 +1140,7 @@ end
 
 """
     _remove_extinct!(tree::iTgbmct)
+
 Remove extinct tips from `iTgbmct`.
 """
 function _remove_extinct!(tree::iTgbmct)
@@ -1195,6 +1198,7 @@ end
 
 """
     _remove_extinct!(tree::iTgbmbd)
+
 Remove extinct tips from `iTgbmbd`.
 """
 function _remove_extinct!(tree::iTgbmbd)
@@ -1266,6 +1270,7 @@ end
 
 """
     _remove_unsampled!(tree::iTgbmce)
+
 Remove unsampled tips from `iTgbmce`.
 """
 function _remove_unsampled!(tree::iTgbmce)
@@ -1380,6 +1385,7 @@ end
 
 """
     _remove_unsampled!(tree::iTgbmbd)
+
 Remove extinct tips from `iTgbmbd`.
 """
 function _remove_unsampled!(tree::iTgbmbd)
