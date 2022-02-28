@@ -72,7 +72,7 @@ function sim_gbmce(n       ::Int64;
 
   if iszero(c)
     warnings && @warn "tree not sampled, try increasing `p`"
-    return iTgbmce()
+    return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[])
   else
     # cut the tree
     t = cutbottom(t, c)

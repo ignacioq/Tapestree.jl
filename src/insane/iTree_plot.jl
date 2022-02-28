@@ -288,9 +288,10 @@ function _rplottree!(tree::T,
 
     _rplottree!(tree.d1, xc, yr1, x, y)
     _rplottree!(tree.d2, xc, yr2, x, y)
-  
-  elseif defd1  _rplottree!(tree.d1, xc, yr, x, y)
-  elseif defd2  _rplottree!(tree.d2, xc, yr, x, y)
+  elseif defd1
+    _rplottree!(tree.d1, xc, yr, x, y)
+  elseif defd2
+    _rplottree!(tree.d2, xc, yr, x, y)
   end
 end
 
@@ -585,12 +586,12 @@ function _rplottrait!(tree::T,
   defd2 = isdefined(tree, :d2)
 
   if defd1 && defd2
-
     _rplottrait!(tree.d1, xc, x, y)
     _rplottrait!(tree.d2, xc, x, y)
-
-  elseif defd1  _rplottrait!(tree.d1, xc, x, y)
-  elseif defd2  _rplottrait!(tree.d2, xc, x, y)
+  elseif defd1
+    _rplottrait!(tree.d1, xc, x, y)
+  elseif defd2
+    _rplottrait!(tree.d2, xc, x, y)
   end
 end
 

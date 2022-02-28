@@ -64,7 +64,7 @@ function sim_gbmpb(n       ::Int64;
 
   if iszero(c)
     warnings && @warn "tree not sampled, try increasing `p`"
-    return iTgbmpb()
+    return iTgbmpb(0.0, false, 0.0, 0.0, Float64[])
   else
     # cut the tree
     t = cutbottom(t, c)
