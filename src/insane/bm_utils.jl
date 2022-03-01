@@ -35,7 +35,7 @@ function bm!(tree::T,
 
   l = lastindex(λv)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     bm!(tree.d1::T, λv[l], α, σλ, δt, srδt)
     bm!(tree.d2::T, λv[l], α, σλ, δt, srδt)
   end
@@ -76,7 +76,7 @@ Simulate birth-death geometric Brownian motion in place.
 
     l = lastindex(λv)
 
-    if isdefined(tree, :d1)
+    if def1(tree)
       bm!(tree.d1, λv[l], μv[l], α, σλ, σμ, δt, srδt)
       bm!(tree.d2, λv[l], μv[l], α, σλ, σμ, δt, srδt)
     end

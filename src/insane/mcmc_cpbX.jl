@@ -734,7 +734,7 @@ function _update_x!(tree::T,
                     llc ::Float64,
                     sdX ::Float64) where {T <: iTreeX}
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     llc, sdX = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, sdX)
     llc, sdX = _update_x!(tree.d1, σx, llc, sdX)
     llc, sdX = _update_x!(tree.d2, σx, llc, sdX)

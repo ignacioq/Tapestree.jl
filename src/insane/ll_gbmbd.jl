@@ -303,7 +303,7 @@ function _sss_gbm(tree::iTgbmbd,
   ssμ += ssμ0
   n   += n0
 
-  if isdefined(tree, :d1) 
+  if def1(tree) 
     ssλ, ssμ, n = _sss_gbm(tree.d1, α, ssλ, ssμ, n)
     ssλ, ssμ, n = _sss_gbm(tree.d2, α, ssλ, ssμ, n)
   end

@@ -172,8 +172,8 @@ function _rplottree!(tree::T,
 
   xc -= e(tree)
   
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  defd1 = def1(tree)
+  defd2 = def2(tree)
 
   if defd1 && defd2
 
@@ -268,8 +268,8 @@ function _rplottree!(tree::T,
   yc = (yr[1] + yr[end])*0.5
   push!(y, yc, yc, NaN)
 
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  defd1 = def1(tree)
+  defd2 = def2(tree)
 
   if defd1 && defd2
 
@@ -383,8 +383,8 @@ function _nodeproperties!(tree ::T,
                           col  ::Vector{Symbol}, 
                           alpha::Vector{Float64}) where {T <: iTree}
 
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  defd1 = def1(tree)
+  defd2 = def2(tree)
   fx = !isdefined(tree, :fx) || isfix(tree)
 
   if defd1 || defd2
@@ -626,8 +626,8 @@ function _rplottrait!(tree::T,
   push!(x, xc, NaN)
   push!(y, xi(tree), xf(tree), NaN)
 
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  defd1 = def1(tree)
+  defd2 = def2(tree)
 
   if defd1 && defd2
     _rplottrait!(tree.d1, xc, x, y)

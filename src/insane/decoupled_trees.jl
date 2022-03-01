@@ -35,7 +35,7 @@ Make edge tree `Ξ` from the recursive tree.
 function sTpb!(Ξ::Vector{sTpb}, tree::sT_label)
 
   push!(Ξ, sTpb(e(tree), true))
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTpb!(Ξ, tree.d2)
     sTpb!(Ξ, tree.d1)
   end
@@ -98,7 +98,7 @@ Make edge tree `Ξ` from the recursive tree.
 function sTbd!(Ξ::Vector{sTbd}, tree::sT_label)
 
   push!(Ξ, sTbd(e(tree), false, true))
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTbd!(Ξ, tree.d2)
     sTbd!(Ξ, tree.d1)
   end
@@ -113,8 +113,8 @@ end
 Make edge tree `Ξ` from the recursive tree.
 """
 function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  defd1 = def1(tree)
+  defd2 = def2(tree)
   
   iμ = isextinct(tree)   # fossil tips are also labelled as extinct
   push!(Ξ, sTfbd(e(tree), iμ, isfossil(tree), true))
@@ -200,7 +200,7 @@ function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
   end
 
   push!(Ξ, iTgbmpb(et, true, δt, fdti, lλv))
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmpb!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
     iTgbmpb!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
@@ -248,7 +248,7 @@ function iTgbmce!(Ξ   ::Vector{iTgbmce},
   end
 
   push!(Ξ, iTgbmce(et, δt, fdti, false, true, lλv))
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmce!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
     iTgbmce!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
@@ -296,7 +296,7 @@ function iTgbmct!(Ξ   ::Vector{iTgbmct},
   end
 
   push!(Ξ, iTgbmct(et, δt, fdti, false, true, lλv))
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmct!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
     iTgbmct!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
@@ -350,7 +350,7 @@ function iTgbmbd!(Ξ   ::Vector{iTgbmbd},
   end
 
   push!(Ξ, iTgbmbd(et, δt, fdti, false, true, lλv, lμv))
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
     iTgbmbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
   end

@@ -94,7 +94,7 @@ Base.show(io::IO, t::sTpbX) =
 Creates a copy of `sTpbX`.
 """
 function sTpbX(tree::sTpbX)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTpbX(sTpbX(tree.d1), sTpbX(tree.d2), 
       e(tree), isfix(tree), xi(tree), xf(tree))
   else
@@ -156,7 +156,7 @@ Base.show(io::IO, t::sTbdX) =
 Creates a copy of `sTbdX`.
 """
 function sTbdX(tree::sTbdX)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTbdX(sTbdX(tree.d1), sTbdX(tree.d2), 
       e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
   else

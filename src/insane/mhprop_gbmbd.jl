@@ -305,7 +305,7 @@ function _update_gbm!(tree::iTgbmbd,
                       srδt::Float64,
                       ter ::Bool)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     llc, dλ, ssλ, ssμ = 
       update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 

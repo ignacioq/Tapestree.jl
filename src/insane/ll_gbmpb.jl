@@ -308,7 +308,7 @@ function _sss_gbm(tree::T,
   ssλ += ssλ0
   n   += n0
 
-  if isdefined(tree, :d1) 
+  if def1(tree) 
     ssλ, n = _sss_gbm(tree.d1, α, ssλ, n)
     ssλ, n = _sss_gbm(tree.d2, α, ssλ, n)
   end
@@ -391,7 +391,7 @@ function _deltaλ(tree::T) where {T <: iTgbm}
 
   lλv = lλ(tree)
 
-  if isdefined(tree, :d1) 
+  if def1(tree) 
     lλv[end] - lλv[1] + _deltaλ(tree.d1) + _deltaλ(tree.d2)
   else
     lλv[end] - lλv[1]

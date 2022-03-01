@@ -94,12 +94,12 @@ function makeiBf!(tree::sT_label,
   bitv1 = copy(bitv)
   bitv2 = copy(bitv)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     push!(bitv1, true)
     ρ1, n1, bitv1 = makeiBf!(tree.d1, idv, bitv1, tρ)
   end
 
-  if isdefined(tree, :d2)
+  if def2(tree)
     push!(bitv2, false)
     ρ2, n2, bitv2 = makeiBf!(tree.d2, idv, bitv2, tρ)
   end
@@ -133,11 +133,11 @@ function makeiBf!(tree::sTfbd, idv::Array{iBfb,1}, bit::BitArray{1})
   bit2 = copy(bit)
 
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
   end
-  if isdefined(tree, :d2)
+  if def2(tree)
     push!(bit2, false)
     makeiBf!(tree.d2, idv, bit2)
   end
@@ -205,7 +205,7 @@ function makeiBf!(tree::T,
   bit1 = copy(bit)
   bit2 = copy(bit)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     push!(bit1, true)
     makeiBf!(tree.d1, idv, bit1)
     push!(bit2, false)
@@ -425,13 +425,13 @@ function makeiBf!(tree::sTf_label,
     return iψ ? (ρi, 0, 1, 0) : (ρi, 1, 0, 0)
   end
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     ρ1,n1,ft1,sa1 = makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
   else
     ρ1,n1,ft1,sa1 = (1,0,0,0)
   end
 
-  if isdefined(tree, :d2)
+  if def2(tree)
     ρ2,n2,ft2,sa2 = makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
   else
     ρ2,n2,ft2,sa2 = (1,0,0,0)

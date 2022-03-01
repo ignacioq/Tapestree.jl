@@ -110,7 +110,7 @@ Extract values from `lv` function at times `ts` across the tree.
     push!(r[i], linpred(bt, tts, ttf, vt[Ix], vt[Ix+1]))
   end
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     _time_rate!(tree.d1, ts, tdt, r, tii + nts + 1, ct - et, lv)
     _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
   end
@@ -187,7 +187,7 @@ function extract_vector!(tree::T,
 
   append!(v, pv)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     extract_vector!(tree.d1::T, v, nδt, max(0.0, iti - et), lv)
     extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - et), lv)
   end
@@ -231,10 +231,10 @@ function extract_vector!(tree::sTfbd,
 
   append!(v, pv)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     extract_vector!(tree.d1::sTfbd, v, nδt, max(0.0, iti - et), lv)
   end
-  if isdefined(tree, :d2)
+  if def2(tree)
     extract_vector!(tree.d2::sTfbd, v, nδt, max(0.0, iti - et), lv)
   end
 end
@@ -269,7 +269,7 @@ function _linearize_gbm!(tree::T,
                          v   ::Array{Float64,1}) where {T <: iTgbm}
 
   append!(v, lv(tree))
-  if isdefined(tree, :d1)
+  if def1(tree)
     _linearize_gbm!(tree.d1::T, lv, v)
     _linearize_gbm!(tree.d2::T, lv, v)
   end
@@ -291,8 +291,8 @@ function _linearize_gbm!(tree::sTfbd,
                          v   ::Array{Float64,1}) where {T <: iTgbm}
 
   append!(v, lv(tree))
-  if isdefined(tree, :d1) _linearize_gbm!(tree.d1::T, lv, v) end
-  if isdefined(tree, :d2) _linearize_gbm!(tree.d2::T, lv, v) end
+  if def1(tree) _linearize_gbm!(tree.d1::T, lv, v) end
+  if def2(tree) _linearize_gbm!(tree.d2::T, lv, v) end
 end
 
 
@@ -329,7 +329,7 @@ function extract_tree(tree::iTgbmpb, nδt::Float64)
     nfdt = mod(et,nδt)
   end
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmpb(extract_tree(tree.d1, nδt), 
             extract_tree(tree.d2, nδt), et, nδt, nfdt, pv)
   else
@@ -375,7 +375,7 @@ function extract_tree(tree::iTgbmbd, nδt::Float64)
     nfdt = mod(et,nδt)
   end
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmbd(extract_tree(tree.d1, nδt), 
             extract_tree(tree.d2, nδt), et, nδt, nfdt, false, false, pλv, pμv)
   else

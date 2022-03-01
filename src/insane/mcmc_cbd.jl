@@ -57,9 +57,9 @@ function insane_cbd(tree    ::sT_label,
 
   # set tips sampling fraction
   if isone(length(tρ))
-    tl = tiplabels(tree)
+    tl  = tiplabels(tree)
     tρu = tρ[""]
-    tρ = Dict(tl[i] => tρu for i in 1:n)
+    tρ  = Dict(tl[i] => tρu for i in 1:n)
   end
 
   # make fix tree directory

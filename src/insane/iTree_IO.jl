@@ -199,7 +199,7 @@ function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
     return(string("t1:",e(tree)))
   end
 
-  if isdefined(tree, :d1) && isdefined(tree, :d2)
+  if def1(tree) && def2(tree)
     if istip(tree.d1)
       if istip(tree.d2)
         n += 1
@@ -224,7 +224,7 @@ function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
     end
   
   # sampled ancestors
-  elseif isdefined(tree, :d1)
+  elseif def1(tree)
     sa += 1
     if istip(tree.d1)
       n += 1

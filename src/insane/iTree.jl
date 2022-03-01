@@ -108,10 +108,10 @@ end
 Demotes a tree to `sT_label`.
 """
 function _sT_label(tree::T, i::Int64) where {T <: iTree}
-  if isdefined(tree, :d1)
+  if def1(tree)
     t1, i = _sT_label(tree.d1, i)
     t2, i = _sT_label(tree.d2, i)
-    tree = sT_label(t1, t2, e(tree), "")
+    tree  = sT_label(t1, t2, e(tree), "")
   else
     i += 1
     tree = sT_label(e(tree), string("t",i))
@@ -161,30 +161,22 @@ mutable struct sTf_label <: sTf
 
   sTf_label() = new()
   sTf_label(e::Float64) = (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=""; x)
-  sTf_label(e::Float64, 
-            l::String)  = (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
-  sTf_label(e ::Float64, 
-            iμ::Bool,
-            iψ::Bool)   = (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
-  sTf_label(e ::Float64, 
-            iμ::Bool,
-            iψ::Bool,
-            l ::String) = (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
-  sTf_label(d1::sTf_label, 
-            e ::Float64,
-            l ::String) = (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; 
-                           x.l=l; x)
-  sTf_label(d1::sTf_label, 
-            d2::sTf_label, 
-            e ::Float64,
-            l ::String) = (x=new(); x.d1=d1; x.d2=d2; x.e=e; x.iμ=false; 
-                           x.iψ=false; x.l=l; x)
+  sTf_label(e::Float64, l::String) = 
+    (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
+  sTf_label(e::Float64, iμ::Bool, iψ::Bool) = 
+    (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
+  sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::String) = 
+    (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
+  sTf_label(d1::sTf_label, e::Float64,l::String) = 
+    (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; x.l=l; x)
+  sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::String) = 
+    (x=new(); x.d1=d1; x.d2=d2; x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
 end
 
 # pretty-printing
 Base.show(io::IO, t::sTf_label) = 
-  print(io, "insane simple labelled tree with ", ntips(t), " tips (", 
-            ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
+  print(io, "insane simple fossilized labelled tree with ", ntips(t), 
+    " tips (", ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
 
 
 
@@ -207,28 +199,29 @@ end
 Demotes a tree to `sTf_label`, initialized with label i.
 """
 function _sTf_label(tree::T, i::Int64) where {T <: iTree}
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
 
-  if defd1 && defd2
-    t1, i = _sTf_label(tree.d1, i)
-    t2, i = _sTf_label(tree.d2, i)
-    tree = sTf_label(t1, t2, e(tree), l(tree))
-  elseif defd1
-    t1, i = _sTf_label(tree.d1, i)
-    tree = sTf_label(t1, e(tree), l(tree))
-  elseif defd2
+  if def1(tree)
+    if def2(tree)
+      t1, i = _sTf_label(tree.d1, i)
+      t2, i = _sTf_label(tree.d2, i)
+      tree  = sTf_label(t1, t2, e(tree), l(tree))
+    else
+      t1, i = _sTf_label(tree.d1, i)
+      tree = sTf_label(t1, e(tree), l(tree))
+    end
+  elseif def2(tree)
     t2, i = _sTf_label(tree.d2, i)
     tree = sTf_label(t2, e(tree), l(tree))
   else
     i += 1
-    lab = ifelse(isempty(l(tree)),string("t",i),l(tree))
+    lab = isempty(l(tree)) ? string("t",i) : l(tree)
     if isdefined(tree, :iμ)
       tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), lab)
     else
       tree = sTf_label(e(tree), lab)
     end
   end
+
   return tree, i
 end
 
@@ -247,10 +240,6 @@ with the following fields:
   e:  edge
   fx: if fix
 
-    sTpb()
-
-Constructs an empty `sTpb` object.
-
     sTpb(e::Float64)
 
 Constructs an empty `sTpb` object with edge `e`.
@@ -265,7 +254,6 @@ mutable struct sTpb <: sT
   e ::Float64
   fx::Bool
 
-  sTpb() = new()
   sTpb(e::Float64) = (x = new(); x.e = e; x.fx = false; x)
   sTpb(e::Float64, fx::Bool) = (x = new(); x.e = e; x.fx = fx; x)
   sTpb(d1::sTpb, d2::sTpb, e::Float64, fx::Bool) = new(d1, d2, e, fx)
@@ -284,7 +272,7 @@ Base.show(io::IO, t::sTpb) =
 Creates a new `sTpb` copy.
 """
 function sTpb(tree::sTpb)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree), isfix(tree))
   else
     sTpb(e(tree), isfix(tree))
@@ -308,9 +296,6 @@ with the following fields:
   iμ: is an extinction node
   fx: if it is fix
 
-    sTbd()
-
-Constructs an empty `sTbd` object.
 
     sTbd(e::Float64)
 
@@ -347,14 +332,13 @@ Base.show(io::IO, t::sTbd) =
 
 
 
-
 """
     sTbd(tree::sT_label)
 
 Transforms a tree of type `sT_label` to `sTbd`.
 """
 function sTbd(tree::sT_label)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), false, false)
   else
     sTbd(e(tree), false)
@@ -370,7 +354,7 @@ end
 Produce a new copy of `sTbd`.
 """
 function sTbd(tree::sTbd)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), isfix(tree))
   else
     sTbd(e(tree), isextinct(tree), isfix(tree))
@@ -419,7 +403,6 @@ mutable struct sTfbd <: sTf
   iψ::Bool
   fx::Bool
 
-  sTfbd() = new()
   sTfbd(e::Float64) = 
     (x = new(); x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool) = 
@@ -432,10 +415,10 @@ mutable struct sTfbd <: sTf
     new(d1, d2, e, false, false, false)
   sTfbd(d1::sTfbd, e::Float64) = 
     (x = new(); x.d1 = d1; x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
-  sTfbd(d1::sTfbd, d2::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
-    new(d1, d2, e, iμ, iψ, fx)
   sTfbd(d1::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
     (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
+  sTfbd(d1::sTfbd, d2::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) = 
+    new(d1, d2, e, iμ, iψ, fx)
 end
 
 # pretty-printing
@@ -451,7 +434,7 @@ Base.show(io::IO, t::sTfbd) =
 Transforms a tree of type `sT_label` to `sTfbd`.
 """
 function sTfbd(tree::sTfbd)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), 
       isextinct(tree), isfossil(tree),  isfix(tree))
   else
@@ -468,14 +451,14 @@ end
 Transforms a tree of type `sTf_label` to `sTfbd`.
 """
 function sTfbd(tree::sTf_label)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
 
-  if defd1 && defd2
-    sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), false, false, false)
-  elseif defd1
-    sTfbd(sTfbd(tree.d1), e(tree), false, true, false)
-  elseif defd2
+  if def1(tree) 
+    if def2(tree)
+      sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), false, false, false)
+    else
+      sTfbd(sTfbd(tree.d1), e(tree), false, true, false)
+    end
+  elseif def2(tree)
     sTfbd(sTfbd(tree.d2), e(tree), false, true, false)
   else
     sTfbd(e(tree), false)
@@ -570,7 +553,7 @@ function iTgbmpb(tree::sTpb,
   et = e(tree)
 
   if iszero(et)
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, α, σλ), 
               iTgbmpb(tree.d2, δt, srδt, lλa, α, σλ),
               et, isfix(tree), δt, 0.0, Float64[lλa, lλa])
@@ -588,7 +571,7 @@ function iTgbmpb(tree::sTpb,
     lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
 
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], α, σλ), 
               iTgbmpb(tree.d2, δt, srδt, lλv[l], α, σλ),
               et, isfix(tree), δt, fdti, lλv)
@@ -644,7 +627,7 @@ end
 Produce a new copy of `iTgbmpb`.
 """
 function iTgbmpb(tree::iTgbmpb)
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmpb(iTgbmpb(tree.d1), iTgbmpb(tree.d2), 
       e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
   else
@@ -724,7 +707,7 @@ Base.show(io::IO, t::iTgbmce) =
 Produce a new copy of `iTgbmce`.
 """
 function iTgbmce(tree::iTgbmce)
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmce(iTgbmce(tree.d1), iTgbmce(tree.d2), 
       e(tree), dt(tree), fdt(tree), isextinct(tree), 
       isfix(tree), copy(lλ(tree)))
@@ -743,7 +726,7 @@ end
 Demotes a tree of type `iTgbmce` to `sTbd`.
 """
 function sTbd(tree::iTgbmce)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
   else
     sTbd(e(tree), isextinct(tree))
@@ -775,7 +758,7 @@ function iTgbmce(tree::sTbd,
   et = e(tree)
 
   if iszero(et)
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, α, σλ), 
               iTgbmce(tree.d2, δt, srδt, lλa, α, σλ),
               et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
@@ -795,7 +778,7 @@ function iTgbmce(tree::sTbd,
 
     l = lastindex(lλv)
 
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], α, σλ), 
               iTgbmce(tree.d2, δt, srδt, lλv[l], α, σλ),
               et, δt, fdti, isextinct(tree), isfix(tree), lλv)
@@ -919,7 +902,7 @@ Base.show(io::IO, t::iTgbmct) =
 Produce a new copy of `iTgbmct`.
 """
 function iTgbmct(tree::iTgbmct)
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmct(iTgbmct(tree.d1), iTgbmct(tree.d2), 
       e(tree), dt(tree), fdt(tree), isextinct(tree), 
       isfix(tree), copy(lλ(tree)))
@@ -938,7 +921,7 @@ end
 Demotes a tree of type `iTgbmct` to `sTbd`.
 """
 function sTbd(tree::iTgbmct)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
   else
     sTbd(e(tree), isextinct(tree))
@@ -970,7 +953,7 @@ function iTgbmct(tree::sTbd,
 
   # if crown root
   if iszero(et)
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, α, σλ), 
               iTgbmct(tree.d2, δt, srδt, lλa, α, σλ),
               et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
@@ -989,7 +972,7 @@ function iTgbmct(tree::sTbd,
 
     l = lastindex(lλv)
 
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], α, σλ), 
               iTgbmct(tree.d2, δt, srδt, lλv[l], α, σλ),
               et, δt, fdti, isextinct(tree), isfix(tree), lλv)
@@ -1118,7 +1101,7 @@ Base.show(io::IO, t::iTgbmbd) =
 Produce a new copy of `iTgbmbd`.
 """
 function iTgbmbd(tree::iTgbmbd)
-  if isdefined(tree, :d1)
+  if def1(tree)
     iTgbmbd(iTgbmbd(tree.d1), iTgbmbd(tree.d2), 
       e(tree), dt(tree), fdt(tree), isextinct(tree), 
       isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
@@ -1137,7 +1120,7 @@ end
 Demotes a tree of type `iTgbmbd` to `sTbd`.
 """
 function sTbd(tree::iTgbmbd)
-  if isdefined(tree, :d1)
+  if def1(tree)
     sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
   else
     sTbd(e(tree), isextinct(tree), false)
@@ -1173,7 +1156,7 @@ function iTgbmbd(tree::sTbd,
 
   # if crown root
   if iszero(et)
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, α, σλ, σμ), 
               iTgbmbd(tree.d2, δt, srδt, lλa, lμa, α, σλ, σμ),
               e(tree), δt, 0.0, isextinct(tree), isfix(tree), 
@@ -1195,7 +1178,7 @@ function iTgbmbd(tree::sTbd,
 
     l = lastindex(lμv)
 
-    if isdefined(tree, :d1)
+    if def1(tree)
       iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ), 
               iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ),
               e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)

@@ -56,15 +56,15 @@ function insane_cfbd(tree    ::sTf_label,
                      prints  ::Int64                 = 5,
                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  n  = ntips(tree)
+  n    = ntips(tree)
   th   = treeheight(tree)
   stem = !iszero(e(tree))
 
   # set tips sampling fraction
   if isone(length(tρ))
-    tl = tiplabels(tree)
+    tl  = tiplabels(tree)
     tρu = tρ[""]
-    tρ = Dict(tl[i] => tρu for i in 1:n)
+    tρ  = Dict(tl[i] => tρu for i in 1:n)
   end
 
   # make fix tree directory
@@ -645,8 +645,8 @@ function tip_sims!(tree::sTfbd,
                    na  ::Int64, 
                    nfos::Int64)
 
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  defd1 = def1(tree)
+  defd2 = def2(tree)
 
   if !defd1 && !defd2
     # tips
@@ -686,8 +686,8 @@ Continue simulation until time `t` for the fixed tip in `tree`.
 """
 function fixedtip_sim!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64, 
                        ψ::Float64, na::Int64, nfos::Int64)
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
+  defd1 = def1(tree)
+  defd2 = def2(tree)
 
   # tips
   if !defd1 && !defd2
