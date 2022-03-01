@@ -1126,7 +1126,7 @@ function eventimes(tree::T) where {T <: iTree}
   se = Float64[]
   ee = Float64[]
 
-  _eventimes!(tree, 0.0, se, ee)
+  _eventimes!(tree, treeheight(tree), se, ee)
 
   return se, ee
 end
@@ -1149,12 +1149,12 @@ function _eventimes!(tree::T,
 
   et = e(tree)
   if isextinct(tree)
-    push!(ee, t + et)
+    push!(ee, t - et)
   elseif isdefined(tree, :d1)
-    push!(se, t + et)
+    push!(se, t - et)
 
-    _eventimes!(tree.d1, t + et, se, ee)
-    _eventimes!(tree.d2, t + et, se, ee)
+    _eventimes!(tree.d1, t - et, se, ee)
+    _eventimes!(tree.d2, t - et, se, ee)
   end
 
   return nothing
@@ -1178,14 +1178,20 @@ function _eventimes!(tree::T,
 
   et = e(tree)
   if isextincttip(tree)
-    push!(ee, t + et)
+    push!(ee, t - et)
   else
     defd1 = isdefined(tree, :d1)
     defd2 = isdefined(tree, :d2)
-    
-    if defd1 && defd2 push!(se, t + et) end
-    if defd1  _eventimes!(tree.d1, t + et, se, ee)  end
-    if defd2  _eventimes!(tree.d2, t + et, se, ee)  end
+
+    if defd1
+      if defd2
+        push!(se, t - et)
+      else
+        _eventimes!(tree.d1, t - et, se, ee)
+      end
+    elseif defd2
+      _eventimes!(tree.d2, t - et, se, ee)
+    end
   end
 
   return nothing
@@ -1208,13 +1214,13 @@ Returns number of species through time.
   ii = lastindex(se)
 
   append!(se, ee)
-  l = lastindex(se)
+  lse = lastindex(se)
 
-  sp = sortperm(se)
-  n  = ones(Int64, l+1)
+  sp = sortperm(se, rev = true)
+  n  = ones(Int64, lse+1)
 
   @inbounds begin
-    @simd for i in Base.OneTo(l)
+    @simd for i in Base.OneTo(lse)
       if sp[i] > ii
         n[i+1] = n[i] - 1
       else
@@ -1223,36 +1229,14 @@ Returns number of species through time.
     end
   end
 
+  sort!(se, rev = true)
+  pushfirst!(se, se[1])
+
+  # last no events
+  push!(n,  n[end])
   push!(se, 0.0)
-  sort!(se)
 
   return Ltt(n, se)
-end
-
-
-
-
-"""
-    ltt2(tree::T) where {T <: iTree}
-
-Returns number of species through time.
-"""
-function ltt2(tree::T) where {T <: iTree}
-  # speciation and extinction events
-  se, ee = eventimes(tree)
-  # start with 1 lineage
-  push!(se, 0.0)
-  lse = lastindex(se)
-  lee = lastindex(ee)
-
-  events = append!(se, ee)
-  jumps_order = sortperm(events)
-  
-  jumps = ones(Int64,lse)
-  append!(jumps,  fill(-1,lee))
-  jumps = jumps[jumps_order]
-
-  return Ltt(cumsum!(jumps,jumps), events[jumps_order])
 end
 
 
@@ -1266,16 +1250,14 @@ Returns a recursive vector structure with requested data for all tree nodes.
 function treeapply(tree::T, FUN::Function) where {T <: iTree}
   defd1 = isdefined(tree, :d1)
   defd2 = isdefined(tree, :d2)
-  
-  if defd1 && defd2
-    return [FUN(tree),treeapply(tree.d1,FUN),treeapply(tree.d2,FUN)]
-  end
-  
+
   if defd1
-    return [FUN(tree),treeapply(tree.d1,FUN)]
-  end
-  
-  if defd2
+    if defd2
+      return [FUN(tree),treeapply(tree.d1,FUN),treeapply(tree.d2,FUN)]
+    else
+      return [FUN(tree),treeapply(tree.d1,FUN)]
+    end
+  elseif defd2
     return [FUN(tree),treeapply(tree.d2,FUN)]
   end
 

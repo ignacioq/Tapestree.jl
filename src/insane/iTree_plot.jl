@@ -441,6 +441,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   legend          --> false
   xguide          --> "time"
   yguide          --> "N lineages"
+  xflip           --> true
   seriescolor     --> :black
   fontfamily      --> :Helvetica
   tickfontfamily  --> :Helvetica
@@ -490,6 +491,8 @@ Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
     yticks          --> (nothing)
     yshowaxis       --> false
 
+    return x, y
+
   elseif type === :trait 
 
     th = treeheight(tree)
@@ -511,12 +514,13 @@ Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
     tickfontsize    --> 8
     grid            --> :off
     xtick_direction --> :out
+
+    return x, y
   else
 
     @warn "$type neither tree nor trait"
   end
 
-  return x, y
 end
 
 
