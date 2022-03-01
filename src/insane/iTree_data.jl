@@ -1243,21 +1243,36 @@ end
 
 
 """
+    ltt(tree::Vector{T}) where {T <: iTree}
+
+Returns number of species through time for a tree vector.
+"""
+function ltt(trees::Vector{T}) where {T <: iTree}
+  ltv = Ltt[]
+  for t in trees
+    push!(ltv, ltt(t))
+  end
+
+  return ltv
+end
+
+
+
+
+"""
     treeapply(tree::T, FUN::Function) where {T <: iTree}
 
 Returns a recursive vector structure with requested data for all tree nodes.
 """
 function treeapply(tree::T, FUN::Function) where {T <: iTree}
-  defd1 = isdefined(tree, :d1)
-  defd2 = isdefined(tree, :d2)
 
-  if defd1
-    if defd2
+  if isdefined(tree, :d1)
+    if isdefined(tree, :d2)
       return [FUN(tree),treeapply(tree.d1,FUN),treeapply(tree.d2,FUN)]
     else
       return [FUN(tree),treeapply(tree.d1,FUN)]
     end
-  elseif defd2
+  elseif isdefined(tree, :d2)
     return [FUN(tree),treeapply(tree.d2,FUN)]
   end
 

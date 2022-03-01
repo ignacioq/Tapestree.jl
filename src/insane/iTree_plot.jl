@@ -460,6 +460,46 @@ end
 
 
 """
+    f(nts::Vector{Ltt})
+
+Recipe for plotting lineage through time plots of type `Ltt`.
+"""
+@recipe function f(nts::Vector{Ltt})
+
+  x = Float64[]
+  y = Float64[]
+
+  for nt in nts
+    append!(x, nt.t, NaN)
+    append!(y, nt.n, NaN)
+  end
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "N lineages"
+  xflip           --> true
+  seriescolor     --> :black
+  seriesalpha     --> min(1.0, 10.0/Float64(lastindex(nts)))
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  tick_direction  --> :out
+  seriestype      --> :steppost
+  if maximum(y)>=10
+    yaxis         --> :log
+  end
+
+  return  x, y
+end
+
+
+
+
+
+
+"""
     function f(tree::T; type::Symbol = :trait)
 
 Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
