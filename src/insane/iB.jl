@@ -231,7 +231,6 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `tf`: final absolute time.
   `it`: `true` if a terminal branch.
   `ρi`: branch specific sampling fraction.
-  `ie`: `true` if in a lineage that goes extinct.
   `iψ`: `true` if a fossil branch.
   `ni`: current direct alive descendants (≠ fixed ones in daugnter branches).
   `nt`: current alive descendants at time `t`.
@@ -252,7 +251,6 @@ struct iBffs <: iBf
   tf::Float64
   it::Bool
   ρi::Float64
-  ie::Bool
   iψ::Bool
   ni::Base.RefValue{Int64}
   nt::Base.RefValue{Int64}
@@ -261,24 +259,23 @@ struct iBffs <: iBf
   ψt::Base.RefValue{Float64}
 
   # constructors
-  iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1., false, false,
+  iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1.0, false,
                 Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0))
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
-        it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64,
+        it::Bool, ρi::Float64, ni::Int64, nt::Int64,
         λt::Float64, μt::Float64,) =
-        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, false,
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, false,
             Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0))
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
-        it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64,
+        it::Bool, ρi::Float64, iψ::Bool, ni::Int64, nt::Int64,
         λt::Float64, μt::Float64, ψt::Float64) =
-        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, iψ,
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, iψ,
             Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(ψt))
 end
 
 # pretty-printing
 Base.show(io::IO, id::iBffs) =
   print(io,
-    ie(id)         ? "extinct " : "",
     ifos(id)       ? "fossil " : "",
     it(id)         ? "terminal " : "",
     iszero(pa(id)) ? "stem " : "",
@@ -308,7 +305,7 @@ function makeiBf!(tree::sT_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, false, 1, 1, 0.0, 0.0))
+    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     return ρi, 1
   end
@@ -319,7 +316,7 @@ function makeiBf!(tree::sT_label,
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   return ρi, n
@@ -355,7 +352,7 @@ function makeiBf!(tree::sT_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, false, 1, 1, 0.0, 0.0))
+    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     xi  = X[lab]
     push!(xr, xi)
@@ -369,7 +366,7 @@ function makeiBf!(tree::sT_label,
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   # pic
@@ -416,9 +413,8 @@ function makeiBf!(tree::sTf_label,
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    ie = iψ = isfossil(tree)       # count fossil tips as extinct
-    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, ie, iψ,
-                     Int64(!iψ), 1, 0.0, 0.0, 0.0))
+    iψ = isfossil(tree)       # count fossil tips as extinct
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 0, 1, 0.0, 0.0, 0.0))
 
     push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
 
@@ -439,15 +435,15 @@ function makeiBf!(tree::sTf_label,
 
   n  = n1 + n2                     # number of alive descendants
   ft = ft1 + ft2                   # number of fossil tips
-  if n>0
+  if n > 0
     ρi = n / (n1/ρ1 + n2/ρ2)       # branch specific sampling fraction
   else
     ρi = ft / (ft1/ρ1 + ft2/ρ2)
   end
   sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
 
-  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, false,
-                   isfossil(tree), 0, 1, 0.0, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, isfossil(tree), 
+                  0, 1, 0.0, 0.0, 0.0))
   push!(n1v, n1)
   push!(n2v, n2)
   push!(ft1v, ft1)
@@ -744,21 +740,12 @@ it(id::iBf) = getproperty(id, :it)
 
 
 """
-    it(id::iBf)
-
-Return if is extinct.
-"""
-ie(id::iBf) = getproperty(id, :ie)
-
-
-
-
-"""
     ifos(id::iBffs)
 
 Return if is a fossil.
 """
 ifos(id::iBffs) = getproperty(id, :iψ)
+
 
 
 

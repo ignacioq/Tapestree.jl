@@ -21,7 +21,7 @@ given a complete `iTree` recursively.
 """
 function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
   if istip(tree)
-    # fossil tips are labelled extinct despite no actual extinction event
+
     if isfossil(tree)
       return - e(tree)*(λ + μ + ψ) + log(ψ)
     elseif isextinct(tree)
