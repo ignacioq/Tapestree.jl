@@ -491,14 +491,14 @@ function update_fs!(bix::Int64,
   bi = idf[bix]
 
   # forward simulate an internal branch
-  ξp, np, ntp = fsbi(bi, λ, μ, 100)
+  ξp, nap, ntp = fsbi(bi, λ, μ, 100)
 
   # retained conditional on survival
   if ntp > 0
 
     itb = it(bi) # is it terminal
     ρbi = ρi(bi) # get branch sampling fraction
-    nc  = ni(bi) # current ni
+    nac = ni(bi) # current ni
     ntc = nt(bi) # current nt
 
     # current tree
@@ -506,12 +506,12 @@ function update_fs!(bix::Int64,
 
     # if terminal branch
     if itb
-      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
+      llr = log(Float64(nap)/Float64(nac) * (1.0 - ρbi)^(nap - nac))
       acr = 0.0
     else
-      np  -= 1
-      llr = log((1.0 - ρbi)^(np - nc))
-      acr = log(Float64(ntp)/Float64(ntc))
+      nap -= 1
+      llr  = log((1.0 - ρbi)^(nap - nac))
+      acr  = log(Float64(ntp)/Float64(ntc))
     end
 
     # MH ratio
@@ -527,7 +527,7 @@ function update_fs!(bix::Int64,
 
       Ξ[bix] = ξp     # set new decoupled tree
       llc += llr      # set new likelihood
-      setni!(bi, np)  # set new ni
+      setni!(bi, nap) # set new ni
       setnt!(bi, ntp) # set new nt
     end
   end

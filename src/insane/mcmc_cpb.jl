@@ -409,7 +409,7 @@ function update_fs!(bix    ::Int64,
       llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
       acr = 0.0
     else
-      np  -= 1
+      np -= 1
       llr = log((1.0 - ρbi)^(np - nc))
       acr = log(Float64(ntp)/Float64(ntc))
     end
@@ -417,7 +417,7 @@ function update_fs!(bix    ::Int64,
     # MH ratio
     if -randexp() < llr + acr
 
-      # update ns, ne & L
+      # update ns & L
       ns += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
       L  += treelength(ξp)             - treelength(ξc)
 
