@@ -168,6 +168,41 @@ issampledancestor(tree::T) where {T <: iTree} =
 
 
 
+
+"""
+    issampledancestorfix(tree::T, f::Bool) where {T <: iTree}
+
+Return if the fix has a sampled ancestor, i.e. a fossil internal node.
+"""
+issampledancestorfix(tree::T) where {T <: iTree} = 
+  _issampledancestorfix(tree, false)
+
+
+
+
+"""
+    _issampledancestorfix(tree::T, f::Bool) where {T <: iTree}
+
+Return if the fix has a sampled ancestor, i.e. a fossil internal node.
+"""
+function _issampledancestorfix(tree::T, f::Bool) where {T <: iTree}
+
+  if isfix(tree) && isfossil(tree) && !isextinct(tree)
+    return true
+  elseif !istip(tree)
+    if isfix(tree.d1)
+      f = _issampledancestorfix(tree.d1, f)
+    else
+      f = _issampledancestorfix(tree.d2, f)
+    end
+  end
+
+  return f
+end
+
+
+
+
 """
     e(tree::T) where {T <: iTree}
 

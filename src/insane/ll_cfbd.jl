@@ -59,10 +59,7 @@ function llik_cfbd(Ξ::Vector{sTfbd},
   ll  = 0.0
   nsa = 0.0 # number of sampled ancestors
   for ξ in Ξ
-    nsa += issampledancestor(ξ) 
-"""
-here:    # this should be only for the fix...
-"""
+    nsa += issampledancestorfix(ξ)
     ll  += llik_cfbd(ξ, λ, μ, ψ)
   end
 
