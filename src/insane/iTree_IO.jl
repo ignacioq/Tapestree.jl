@@ -12,11 +12,12 @@ Created 07 07 2020
 
 
 """
-    read_newick(in_file::String)
+    read_newick(in_file::String; fossil = false)
 
-Reads a newick tree into `iTsimple` from `in_file`.
+Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
+is true from `in_file`.
 """
-function read_newick(in_file::String)
+function read_newick(in_file::String; fossil = false)
 
   io = open(in_file)
   s = readlines(io)[1]
@@ -41,12 +42,38 @@ function read_newick(in_file::String)
     end
   end
 
-  # change the tree type if it has fossils (as sampled ancestors)
-  T = (2*(nbif-nlin+1) == np) ? sT_label : sTf_label
+  if fossil
+    tree = from_string(s, np, nlp, nlin, nbif, sTf_label)
+  else
+    tree = from_string(s, np, nlp, nlin, nbif, sT_label)
+  end
+
+  return tree::Union{sT_label, sTf_label}
+end
+
+
+
+
+"""
+    from_string(s      ::String,
+                np     ::Int64,
+                nlp    ::Int64,
+                nlin   ::Int64,
+                nbif   ::Int64,
+                ::Type{sT_label})
+
+Takes a string and turns it into a `sT_label` tree.
+"""
+function from_string(s      ::String,
+                     np     ::Int64,
+                     nlp    ::Int64,
+                     nlin   ::Int64,
+                     nbif   ::Int64,
+                     ::Type{sT_label})
 
   # if root (starts with one stem lineage)
   if isone(nlin)
-    tree = from_string(s, T)
+    tree = _from_string(s, sT_label)
   # if no root (starts with two crown lineage)
   else
     nrp = 0
@@ -66,7 +93,9 @@ function read_newick(in_file::String)
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = T(from_string(s1, T), from_string(s2, T), 0.0, "")
+    tree = sT_label(_from_string(s1, sT_label),
+                    _from_string(s2, sT_label),
+                    0.0, "")
   end
 
   return tree
@@ -76,26 +105,80 @@ end
 
 
 """
-    from_string(s::String, ::Type{T}) where {T <: sT}
+    from_string(s   ::String,
+                np  ::Int64,
+                nlp ::Int64,
+                nlin::Int64,
+                nbif::Int64,
+                ::Type{sTf_label})
 
-Returns `iTree` from newick string.
+Takes a string and turns it into a `sTf_label` tree.
 """
-function from_string(s::String, ::Type{T}) where {T <: sT}
+function from_string(s   ::String,
+                     np  ::Int64,
+                     nlp ::Int64,
+                     nlin::Int64,
+                     nbif::Int64,
+                     ::Type{sTf_label})
+
+  # if root (starts with one stem lineage)
+  if isone(nlin)
+    tree = _from_string(s, sTf_label)
+  # if no root (starts with two crown lineage)
+  else
+    nrp = 0
+    nlp = 0
+    ci  = 0
+    for (i,v) in enumerate(s)
+      if v == '('
+        nlp += 1
+      elseif v == ')'
+        nrp += 1
+      elseif v == ',' && nlp == nrp
+        ci = i
+        break
+      end
+    end
+
+    s1 = s[1:(ci-1)]
+    s2 = s[(ci+1):end]
+
+    tree = sTf_label(_from_string(s1, sTf_label),
+                     _from_string(s2, sTf_label),
+                     0.0, "")
+  end
+
+  # fossilize tips
+  fossilizepasttips!(tree)
+
+  return tree
+end
+
+
+
+
+"""
+    _from_string(s::String, ::Type{T}) where {T <: sT}
+
+Returns a tree of type `T` from newick string.
+"""
+function _from_string(s::String, ::Type{T}) where {T <: sT}
 
   # find pendant edge
   wd  = findlast(isequal(':'), s)
   pei = parse(Float64, s[(wd+1):end])
   lab = s[1:(wd-1)]
-  #s   = s[2:(wd-2)]
 
   # if tip
-  if isone(count(i->(i==':'), s))
+  if isone(count(isequal(':'), s))
       return T(pei, lab)
   else
-    while s[wd-1] != ')'  wd -= 1  end
+    while s[wd-1] != ')'
+      wd -= 1
+    end
+
     s = s[2:(wd-2)]
 
-    # estimate number of parentheses (when np returns to 1)
     nrp = 0
     nlp = 0
     ci  = 0
@@ -115,13 +198,14 @@ function from_string(s::String, ::Type{T}) where {T <: sT}
   s2 = s[(ci+1):end]
 
   if isempty(s1)
-    return T(from_string(s2, T), pei, "")
+    return T(_from_string(s2, T), pei, "")
   elseif isempty(s2)
-    return T(from_string(s1, T), pei, "")
+    return T(_from_string(s1, T), pei, "")
   else
-    return T(from_string(s1, T), from_string(s2, T), pei, "")
+    return T(_from_string(s1, T), _from_string(s2, T), pei, "")
   end
 end
+
 
 
 
@@ -134,7 +218,7 @@ Writes `iTsimple` as a newick tree to `out_file`.
 function write_newick(tree::T, out_file::String) where {T <: iTree}
 
   s = to_string(tree)
-  
+
   # if no stem branch
   if last(s, 4) == ":0.0"
     s = s[1:(end-4)]*";"
@@ -170,14 +254,14 @@ function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
       n += 1
       s2 = string("t",n,":",e(tree.d2),"):",e(tree))
       return s1*s2
-    else 
+    else
       n += 1
       return string("(t",n,":",e(tree.d1), ",",
               to_string(tree.d2, n = n),"):", e(tree))
     end
   elseif istip(tree.d2)
     n += 1
-    return string("(", to_string(tree.d1, n = n), 
+    return string("(", to_string(tree.d1, n = n),
       ",t",n,":",e(tree.d2), "):", e(tree))
   else
     return string("(",to_string(tree.d1, n = n),",",
@@ -207,22 +291,22 @@ function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
         n += 1
         s2 = string("t",n,":",e(tree.d2),"):",e(tree))
         return s1*s2
-      else 
+      else
         n += 1
         return string("(t",n,":",e(tree.d1), ",",
                 to_string(tree.d2, n=n, sa=sa),"):", e(tree))
       end
     elseif istip(tree.d2)
       n += 1
-      return string("(", to_string(tree.d1, n=n, sa=sa), 
+      return string("(", to_string(tree.d1, n=n, sa=sa),
         ",t",n,":",e(tree.d2), "):", e(tree))
     else
       return string("(",to_string(tree.d1, n=n, sa=sa),",",
-                        to_string(tree.d2, n=ntips(tree.d1) + n, 
+                        to_string(tree.d2, n=ntips(tree.d1) + n,
                                   sa=nsampledancestors(tree.d1) + sa),"):",
                         e(tree))
     end
-  
+
   # sampled ancestors
   elseif def1(tree)
     sa += 1
@@ -242,8 +326,6 @@ function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
     end
   end
 end
-
-
 
 
 
