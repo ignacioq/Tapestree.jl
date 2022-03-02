@@ -241,7 +241,17 @@ end
 
 Returns newick string.
 """
-function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
+to_string(tree::T) where {T <: iTree} = _to_string(tree, 0)
+
+
+
+
+"""
+    _to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+
+Returns newick string.
+"""
+function _to_string(tree::T; n::Int64 = 0) where {T <: iTree}
 
   if istip(tree)
     return(string("t1:",e(tree)))
@@ -257,15 +267,15 @@ function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
     else
       n += 1
       return string("(t",n,":",e(tree.d1), ",",
-              to_string(tree.d2, n = n),"):", e(tree))
+              _to_string(tree.d2, n),"):", e(tree))
     end
   elseif istip(tree.d2)
     n += 1
-    return string("(", to_string(tree.d1, n = n),
+    return string("(", _to_string(tree.d1, n),
       ",t",n,":",e(tree.d2), "):", e(tree))
   else
-    return string("(",to_string(tree.d1, n = n),",",
-               to_string(tree.d2, n = ntips(tree.d1) + n),"):",e(tree))
+    return string("(",_to_string(tree.d1, n),",",
+               _to_string(tree.d2, ntips(tree.d1) + n),"):",e(tree))
   end
 end
 
@@ -273,11 +283,21 @@ end
 
 
 """
-    to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: iTree}
+    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
 
 Returns newick string.
 """
-function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
+to_string(tree::T) where {T <: sTf} = _to_string(tree, 0, 0)
+
+
+
+
+"""
+    _to_string(tree::T, n::Int64, sa::Int64) where {T <: sTf}
+
+Returns newick string.
+"""
+function _to_string(tree::T, n::Int64, sa::Int64) where {T <: sTf}
 
   if istip(tree)
     return(string("t1:",e(tree)))
@@ -294,16 +314,16 @@ function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
       else
         n += 1
         return string("(t",n,":",e(tree.d1), ",",
-                to_string(tree.d2, n=n, sa=sa),"):", e(tree))
+                _to_string(tree.d2, n, sa),"):", e(tree))
       end
     elseif istip(tree.d2)
       n += 1
-      return string("(", to_string(tree.d1, n=n, sa=sa),
+      return string("(", _to_string(tree.d1, n, sa),
         ",t",n,":",e(tree.d2), "):", e(tree))
     else
-      return string("(",to_string(tree.d1, n=n, sa=sa),",",
-                        to_string(tree.d2, n=ntips(tree.d1) + n,
-                                  sa=nsampledancestors(tree.d1) + sa),"):",
+      return string("(",_to_string(tree.d1, n, sa),",",
+                        _to_string(tree.d2, ntips(tree.d1) + n,
+                                  nsampledancestors(tree.d1) + sa),"):",
                         e(tree))
     end
 
@@ -314,7 +334,7 @@ function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
       n += 1
       return string("(t",n,":",e(tree.d1),")sa",sa,":", e(tree))
     else
-      return string("(",to_string(tree.d1, n=n, sa=sa),")sa",sa,":",e(tree))
+      return string("(",_to_string(tree.d1, n, sa),")sa",sa,":",e(tree))
     end
   else
     sa += 1
@@ -322,7 +342,7 @@ function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
       n += 1
       return string("(t",n,":",e(tree.d2),")sa",sa,":", e(tree))
     else
-      return string("(",to_string(tree.d2, n=n, sa=sa),")sa",sa,":",e(tree))
+      return string("(",_to_string(tree.d2, n, sa),")sa",sa,":",e(tree))
     end
   end
 end
