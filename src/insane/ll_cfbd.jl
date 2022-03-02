@@ -31,7 +31,7 @@ function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
     end
   elseif issampledancestor(tree)
     return - e(tree)*(λ + μ + ψ) + log(ψ) +
-             (def1(tree) ? llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) : 0.0)
+             llik_cfbd(tree.d1::sTfbd, λ, μ, ψ)
   else
     return - e(tree)*(λ + μ + ψ) + log(λ) +
              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) + 
