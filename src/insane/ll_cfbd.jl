@@ -55,14 +55,15 @@ function llik_cfbd(Ξ::Vector{sTfbd},
                    μ::Float64,
                    ψ::Float64)
 
-  ll  = 0.0
-  nsa = 0.0 # number of sampled ancestors
+
+  ll = 0.0
+  nf = 0 # number of sampled ancestors
   for ξ in Ξ
-    nsa += isfixfossil(ξ)
-    ll  += llik_cfbd(ξ, λ, μ, ψ)
+    nf += isfixfossiltip(ξ)
+    ll += llik_cfbd(ξ, λ, μ, ψ)
   end
 
-  ll += Float64(lastindex(Ξ) - nsa - 1) * 0.5 * log(λ)
+  ll += Float64(lastindex(Ξ) - nf - 1) * 0.5 * log(λ)
 
   return ll
 end

@@ -146,30 +146,30 @@ isfossil(tree::iTgbmbd) = false
 
 
 """
-    isfixfossiltip(tree::T, f::Bool) where {T <: iTree}
+    isfixfossiltiptip(tree::T, f::Bool) where {T <: iTree}
 
 Return if the fix has a sampled ancestor, i.e. a fossil internal node.
 """
-isfixfossil(tree::T) where {T <: iTree} =
-  _isfixfossil(tree, false)
+isfixfossiltip(tree::T) where {T <: iTree} =
+  _isfixfossiltip(tree, false)
 
 
 
 
 """
-    _isfixfossil(tree::T, f::Bool) where {T <: iTree}
+    _isfixfossiltip(tree::T, f::Bool) where {T <: iTree}
 
 Return if the fix has a sampled ancestor, i.e. a fossil internal node.
 """
-function _isfixfossil(tree::T, f::Bool) where {T <: iTree}
+function _isfixfossiltip(tree::T, f::Bool) where {T <: iTree}
 
-  if isfix(tree) && isfossil(tree)
+  if isfix(tree) && isfossil(tree) && istip(tree)
     return true
   elseif !istip(tree)
     if isfix(tree.d1)
-      f = _isfixfossil(tree.d1, f)
+      f = _isfixfossiltip(tree.d1, f)
     else
-      f = _isfixfossil(tree.d2, f)
+      f = _isfixfossiltip(tree.d2, f)
     end
   end
 
