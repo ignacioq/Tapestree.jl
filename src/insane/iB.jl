@@ -414,11 +414,15 @@ function makeiBf!(tree::sTf_label,
     lab = l(tree)
     ρi  = tρ[lab]
     iψ = isfossil(tree)       # count fossil tips as extinct
-    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 0, 1, 0.0, 0.0, 0.0))
-
     push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
 
-    return iψ ? (ρi, 0, 1, 0) : (ρi, 1, 0, 0)
+    if iψ
+      push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 0, 1, 0.0, 0.0, 0.0))
+      return ρi, 0, 1, 0
+    else
+      push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 1, 1, 0.0, 0.0, 0.0))
+      return ρi, 1, 0, 0
+    end
   end
 
   if def1(tree)
@@ -592,7 +596,7 @@ function prob_ρ(idv::Array{iBffs,1})
   ll = 0.0
   for bi in idv
     nbi = ni(bi)
-    if it(bi)
+    if it(bi) && !ifos(bi)
       ll += log(Float64(nbi) * ρi(bi) * (1.0 - ρi(bi))^(nbi - 1))
     else
       ll += log((1.0 - ρi(bi))^(nbi))

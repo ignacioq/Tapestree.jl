@@ -189,9 +189,9 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
 
   el  = lastindex(idf)
   L   = treelength(Ξ)     # tree length
-  ns  = Float64(el-1)/2.0 # number of speciation events
-  ne  = 0.0               # number of extinction events
   nsi = stem ? 0.0 : log(λc)
+  ns  = Float64(el-1)*0.5 # number of speciation events
+  ne  = 0.0               # number of extinction events
 
   # likelihood
   llc = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)

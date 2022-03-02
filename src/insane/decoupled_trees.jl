@@ -113,14 +113,19 @@ end
 Make edge tree `Ξ` from the recursive tree.
 """
 function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
-  defd1 = def1(tree)
-  defd2 = def2(tree)
 
-  iμ = isextinct(tree)   # fossil tips are also labelled as extinct
-  push!(Ξ, sTfbd(e(tree), iμ, isfossil(tree), true))
+  # no fossil can be a `true` tip nor extinct
+  if istip(tree) && isfossil(tree)
+    # add first daughter tree for tip fossil that is extinct with a 0 edge.
+    push!(Ξ, sTfbd(
+               sTfbd(0.0, true, false, true),
+               e(tree), false, true, true))
+  else
+    push!(Ξ, sTfbd(e(tree), false, isfossil(tree), true))
+  end
 
-  if defd2 sTfbd!(Ξ, tree.d2) end
-  if defd1 sTfbd!(Ξ, tree.d1) end
+  if def2(tree) sTfbd!(Ξ, tree.d2) end
+  if def1(tree) sTfbd!(Ξ, tree.d1) end
 end
 
 
@@ -441,13 +446,13 @@ end
 Return the number of bifurcating nodes in `Ξ`.
 """
 function nnodesbifurcation(Ξ::Vector{T}) where {T<: iTree}
-  n = 0
-  nfos = 0
+  ns = 0
+  nf = 0
   for ξ in Ξ
-    n += _nnodesbifurcation(ξ, 0)
-    nfos += _nsampledancestors(ξ, 0)
+    ns += _nnodesbifurcation(ξ, 0)
+    nf += isfixfossil(ξ)
   end
-  n += Float64(lastindex(Ξ) - nfos - 1)/2.0
+  ns += Float64(lastindex(Ξ) - nf - 1)*0.5
 
   return n
 end

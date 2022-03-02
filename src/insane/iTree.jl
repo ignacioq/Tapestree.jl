@@ -414,10 +414,15 @@ mutable struct sTfbd <: sTf
 end
 
 # pretty-printing
-Base.show(io::IO, t::sTfbd) =
-  print(io, "insane simple fossilized birth-death tree with ", ntips(t),
-    " tips (", ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
-
+function Base.show(io::IO, t::sTfbd)
+  nt = ntips(t)
+  nf = nfossils(t)
+      
+  print(io, "insane simple fossilized birth-death tree with ", 
+    nt , " tip",  (isone(nt) ? "" : "s" ), 
+    ", (", ntipsextinct(t)," extinct) and ", 
+    nf," fossil", (isone(nf) ? "" : "s" ))
+end
 
 
 """

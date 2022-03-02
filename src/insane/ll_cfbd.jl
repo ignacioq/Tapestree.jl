@@ -21,7 +21,6 @@ given a complete `iTree` recursively.
 """
 function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
   if istip(tree)
-
     if isfossil(tree)
       return - e(tree)*(λ + μ + ψ) + log(ψ)
     elseif isextinct(tree)
@@ -29,11 +28,11 @@ function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
     else
       return - e(tree)*(λ + μ + ψ)
     end
-  elseif issampledancestor(tree)
-    return - e(tree)*(λ + μ + ψ) + log(ψ) +
+  elseif isfossil(tree)
+    return - e(tree)*(λ + μ + ψ) + log(ψ)       +
              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ)
   else
-    return - e(tree)*(λ + μ + ψ) + log(λ) +
+    return - e(tree)*(λ + μ + ψ) + log(λ)       +
              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) +
              llik_cfbd(tree.d2::sTfbd, λ, μ, ψ)
   end
@@ -59,7 +58,7 @@ function llik_cfbd(Ξ::Vector{sTfbd},
   ll  = 0.0
   nsa = 0.0 # number of sampled ancestors
   for ξ in Ξ
-    nsa += issampledancestorfix(ξ)
+    nsa += isfixfossil(ξ)
     ll  += llik_cfbd(ξ, λ, μ, ψ)
   end
 

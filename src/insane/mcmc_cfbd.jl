@@ -83,7 +83,7 @@ function insane_cfbd(tree    ::sTf_label,
     if iszero(nfossils(tree))
       ψc = prod(ψ_prior)
     else
-      ψc = nfossils(tree)/treelength(tree)
+      ψc = Float64(nfossils(tree))/Float64(treelength(tree))
     end
   else
     λc, μc, ψc = λi, μi, ψi
@@ -105,12 +105,14 @@ function insane_cfbd(tree    ::sTf_label,
   @info "Running constant fossilized birth-death with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, μc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn,
-                                    λc, μc, ψc, mc, th, stem, pup, prints)
+  llc, prc, λc, μc, ψc =
+     mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn,
+        λc, μc, ψc, mc, th, stem, pup, prints)
 
   # mcmc
-  r, treev, λc, μc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior,
-                               ψ_prior, mc, th, stem, niter, nthin, pup, prints)
+  r, treev, λc, μc, ψc = 
+    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior,
+      ψ_prior, mc, th, stem, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2),
@@ -208,19 +210,26 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         pup    ::Array{Int64,1},
                         prints ::Int64)
 
-  el = lastindex(idf)                  # number of branches
-  L  = treelength(Ξ)                   # tree length
-  nfos = Float64(nfossils(Ξ))          # number of fossilization events
-  ns = Float64(nnodesbifurcation(Ξ))   # number of speciation events
-  ne = 0.0                             # number of extinction events
+  el = lastindex(idf)                # number of branches
+  L  = treelength(Ξ)                 # tree length
+  nf = Float64(nfossils(Ξ))          # number of fossilization events
+  ns = Float64(nnodesbifurcation(Ξ)) # number of speciation events
+  ne = Float64(ntipsextinct(Ξ))      # number of extinction events
+
+  nsi = stem ? 0.0 : log(λc)
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) - nsi + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2]) +
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
+
+
+  """
+  here
+  """
 
   for it in Base.OneTo(nburn)
 
