@@ -62,7 +62,7 @@ iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
 
 
 """
-    isfix(tree::T) where {T <: iTree} 
+    isfix(tree::T) where {T <: iTree}
 
 Return if is a fixed (i.e. observed) node.
 """
@@ -162,7 +162,7 @@ isfossil(tree::iTgbmbd) = false
 
 Return if is a sampled ancestor, i.e. a fossil internal node.
 """
-issampledancestor(tree::T) where {T <: iTree} = 
+issampledancestor(tree::T) where {T <: iTree} =
   isfossil(tree) && !isextinct(tree)
 
 
@@ -174,7 +174,7 @@ issampledancestor(tree::T) where {T <: iTree} =
 
 Return if the fix has a sampled ancestor, i.e. a fossil internal node.
 """
-issampledancestorfix(tree::T) where {T <: iTree} = 
+issampledancestorfix(tree::T) where {T <: iTree} =
   _issampledancestorfix(tree, false)
 
 
@@ -266,7 +266,7 @@ Returns tip labels for `sTf_label`.
 function _tiplabels!(tree::sTf_label, labels::Array{String,1})
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   if !defd1 && !defd2
     push!(labels, l(tree))
   else
@@ -333,10 +333,10 @@ Return the branch length sum of `tree`, initialized at `l`.
 """
 function _treelength(tree::T, l::Float64) where {T <: sTf}
   l += e(tree)
-  
+
   if def1(tree) l = _treelength(tree.d1, l)::Float64 end
   if def2(tree) l = _treelength(tree.d2, l)::Float64 end
-  
+
   return l
 end
 
@@ -345,7 +345,7 @@ end
 
 """
     _ctl(tree::T, l::Float64) where {T <: iTree}
-Return the branch length sum of `tree` based on `δt` and `fδt` 
+Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
 """
 function _ctl(tree::T, l::Float64) where {T <: iTgbm}
@@ -367,7 +367,7 @@ end
 """
     _ctl(tree::T, l::Float64) where {T <: sTf}
 
-Return the branch length sum of `tree` based on `δt` and `fδt` 
+Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
 """
 function _ctl(tree::T, l::Float64) where {T <: sTf}
@@ -408,7 +408,7 @@ Return the tree height of `tree`.
 function treeheight(tree::T) where {T <: sTf}
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   if defd1 && defd2
     th1 = treeheight(tree.d1)
     th2 = treeheight(tree.d2)
@@ -439,7 +439,7 @@ nnodes(tree::T) where {T <: iTree} = _nnodes(tree, 0)
 
 Return the number of descendant nodes for `tree`, initialized at `n`.
 """
-function _nnodes(tree::T, n::Int64) where {T <: iTree} 
+function _nnodes(tree::T, n::Int64) where {T <: iTree}
   n += 1
   if def1(tree)
     n = _nnodes(tree.d1, n)
@@ -459,10 +459,10 @@ Return the number of descendant nodes for `tree`, initialized at `n`.
 """
 function _nnodes(tree::T, n::Int64) where {T <: sTf}
   n += 1
-  
+
   if def1(tree) n = _nnodes(tree.d1, n) end
   if def2(tree) n = _nnodes(tree.d2, n) end
-  
+
   return n
 end
 
@@ -505,7 +505,7 @@ Return the number of internal nodes for `tree`, initialized at `n`.
 function _nnodesinternal(tree::T, n::Int64) where {T <: sTf}
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   if defd1 n = _nnodesinternal(tree.d1, n) end
   if defd2 n = _nnodesinternal(tree.d2, n) end
   if defd1 || defd2 n += 1 end   # considers sampled ancestors as internal nodes
@@ -536,7 +536,7 @@ Return the number of internal nodes for `tree`, initialized at `n`.
 function _nnodesbifurcation(tree::T, n::Int64) where {T <: sTf}
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   if defd1 n = _nnodesbifurcation(tree.d1, n) end
   if defd2 n = _nnodesbifurcation(tree.d2, n) end
   if defd1 && defd2 n += 1 end   # excludes sampled ancestors
@@ -564,7 +564,7 @@ Return the number of tip nodes for `tree`, initialized at `n`.
 """
 function _ntips(tree::T, n::Int64) where {T <: iTree}
 
-  if def1(tree) 
+  if def1(tree)
     n = _ntips(tree.d1, n)
     n = _ntips(tree.d2, n)
   else
@@ -631,7 +631,7 @@ Return the number of alive nodes for `tree`, initialized at `n`.
 function _ntipsalive(tree::T, n::Int64) where {T <: sTf}
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   if defd1 n = _ntipsalive(tree.d1, n) end
   if defd2 n = _ntipsalive(tree.d2, n) end
   if !defd1 && !defd2 && isalive(tree) n += 1 end
@@ -659,11 +659,11 @@ Return the number of extinct nodes for `tree`, initialized at `n`.
 """
 function _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
 
-  if def1(tree) 
-    n = _ntipsextinct(tree.d1, n) 
-    n = _ntipsextinct(tree.d2, n) 
+  if def1(tree)
+    n = _ntipsextinct(tree.d1, n)
+    n = _ntipsextinct(tree.d2, n)
   else
-    if isextinct(tree) 
+    if isextinct(tree)
       n += 1
     end
   end
@@ -682,7 +682,7 @@ Return the number of extinct nodes for `tree`, initialized at `n`.
 function _ntipsextinct(tree::T, n::Int64) where {T <: sTf}
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   if defd1 n = _ntipsextinct(tree.d1, n) end
   if defd2 n = _ntipsextinct(tree.d2, n) end
   if isextincttip(tree) n += 1 end
@@ -709,12 +709,12 @@ ntipsextinctF(tree::T) where {T <: iTree} = _ntipsextinctF(tree, 0.0)
 Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
 function _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
-  
-  if def1(tree) 
-    n = _ntipsextinctF(tree.d1, n) 
-    n = _ntipsextinctF(tree.d2, n) 
+
+  if def1(tree)
+    n = _ntipsextinctF(tree.d1, n)
+    n = _ntipsextinctF(tree.d2, n)
   else
-    if isextinct(tree) 
+    if isextinct(tree)
       n += 1.0
     end
   end
@@ -733,7 +733,7 @@ Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 function _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   if defd1 n = _ntipsextinctF(tree.d1, n) end
   if defd2 n = _ntipsextinctF(tree.d2, n) end
   if isextincttip(tree) n += 1.0 end
@@ -763,7 +763,7 @@ function _nfossils(tree::T, n::Int64) where {T <: iTree}
   if isfossil(tree)
     n += 1
   end
-  
+
   if def1(tree) n = _nfossils(tree.d1, n) end
   if def2(tree) n = _nfossils(tree.d2, n) end
 
@@ -792,7 +792,7 @@ function _nsampledancestors(tree::T, n::Int64) where {T <: iTree}
   if issampledancestor(tree)
     n += 1
   end
-  
+
   if def1(tree) n = _nsampledancestors(tree.d1, n) end
   if def2(tree) n = _nsampledancestors(tree.d2, n) end
 
@@ -803,14 +803,14 @@ end
 
 
 """
-    treelength_ns(tree::T, 
-                  l   ::Float64, 
+    treelength_ns(tree::T,
+                  l   ::Float64,
                   n   ::Float64) where {T <: iTree}
 
 Return the tree length and speciation events events.
 """
-function treelength_ns(tree::T, 
-                       l   ::Float64, 
+function treelength_ns(tree::T,
+                       l   ::Float64,
                        n   ::Float64) where {T <: iTree}
 
   l += e(tree)
@@ -845,14 +845,14 @@ end
 
 
 """
-    treelength_ne(tree::T, 
-                  l   ::Float64, 
+    treelength_ne(tree::T,
+                  l   ::Float64,
                   n   ::Float64) where {T <: iTree}
 
 Return the tree length and extinction events.
 """
-function treelength_ne(tree::T, 
-                       l   ::Float64, 
+function treelength_ne(tree::T,
+                       l   ::Float64,
                        n   ::Float64) where {T <: iTree}
 
   l += e(tree)
@@ -872,21 +872,21 @@ end
 
 
 """
-    treelength_ne(tree::T, 
-                  l   ::Float64, 
+    treelength_ne(tree::T,
+                  l   ::Float64,
                   n   ::Float64) where {T <: sTf}
 
 Return the tree length and extinction events.
 """
-function treelength_ne(tree::T, 
-                       l   ::Float64, 
+function treelength_ne(tree::T,
+                       l   ::Float64,
                        n   ::Float64) where {T <: sTf}
 
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   l += e(tree)
-  
+
   if defd1  l, n = treelength_ne(tree.d1, l, n) end
   if defd2  l, n = treelength_ne(tree.d2, l, n) end
 
@@ -922,23 +922,23 @@ lμ(tree::iTgbmbd) = getproperty(tree,:lμ)
 
 """
     streeheight(tree::T,
-                h   ::Float64, 
+                h   ::Float64,
                 th  ::Float64,
-                dri ::BitArray{1}, 
+                dri ::BitArray{1},
                 ldr ::Int64,
                 wpr ::Int64,
-                ix  ::Int64, 
+                ix  ::Int64,
                 px  ::Int64) where {T <: iTree}
 
-Return the height of a grafted subtree in `tree`. 
+Return the height of a grafted subtree in `tree`.
 """
 function streeheight(tree::T,
-                     h   ::Float64, 
+                     h   ::Float64,
                      th  ::Float64,
-                     dri ::BitArray{1}, 
+                     dri ::BitArray{1},
                      ldr ::Int64,
                      wpr ::Int64,
-                     ix  ::Int64, 
+                     ix  ::Int64,
                      px  ::Int64) where {T <: iTree}
 
   if ix === ldr
@@ -951,7 +951,7 @@ function streeheight(tree::T,
     else
       px += 1
       if isfix(tree.d1)
-        h, th = 
+        h, th =
           streeheight(tree.d1, h - e(tree), th, dri, ldr, wpr, ix, px)
       else
         h, th =
@@ -963,14 +963,14 @@ function streeheight(tree::T,
     if ifx1 && isfix(tree.d2)
       ix += 1
       if dri[ix]
-        h, th = 
+        h, th =
           streeheight(tree.d1, h - e(tree), th, dri, ldr, wpr, ix, px)
       else
-        h, th = 
+        h, th =
           streeheight(tree.d2, h - e(tree), th, dri, ldr, wpr, ix, px)
       end
     elseif ifx1
-      h, th = 
+      h, th =
         streeheight(tree.d1, h - e(tree), th, dri, ldr, wpr, ix, px)
     else
       h, th =
@@ -985,16 +985,16 @@ end
 
 """
     λμ01(tree::iTgbmbd,
-         dri ::BitArray{1}, 
+         dri ::BitArray{1},
          ldr ::Int64,
          ix  ::Int64,
          λ0  ::Float64,
          μ0  ::Float64)
 
-Return the `λ`,`μ` at the start `0` and end `1` of a fixed branch. 
+Return the `λ`,`μ` at the start `0` and end `1` of a fixed branch.
 """
 function λμ01(tree::iTgbmbd,
-              dri ::BitArray{1}, 
+              dri ::BitArray{1},
               ldr ::Int64,
               ix  ::Int64,
               λ0  ::Float64,
@@ -1047,20 +1047,20 @@ end
 
 """
     λμath(tree::iTgbmbd,
-          h    ::Float64, 
+          h    ::Float64,
           th   ::Float64,
-          dri  ::BitArray{1}, 
+          dri  ::BitArray{1},
           ldr  ::Int64,
           wpr  ::Int64,
-          ix   ::Int64, 
+          ix   ::Int64,
           px   ::Int64)
 
-Return the `λ`,`μ` and time of `tree` at closest to `h`. 
+Return the `λ`,`μ` and time of `tree` at closest to `h`.
 """
 function λμath(tree::iTgbmbd,
-               h   ::Float64, 
+               h   ::Float64,
                th  ::Float64,
-               dri ::BitArray{1}, 
+               dri ::BitArray{1},
                ldr ::Int64,
                ix  ::Int64)
 
@@ -1122,14 +1122,14 @@ end
 
 
 """
-    makebbv!(tree::T, 
-             bbλ ::Array{Array{Float64,1},1}, 
+    makebbv!(tree::T,
+             bbλ ::Array{Array{Float64,1},1},
              tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
-Make `bbv` vector with allocated `bb` (brownian bridges) and 
+Make `bbv` vector with allocated `bb` (brownian bridges) and
 with `tsv` vector of branches times `ts`.
 """
-function makebbv!(tree::T, 
-                  bbλ ::Array{Array{Float64,1},1}, 
+function makebbv!(tree::T,
+                  bbλ ::Array{Array{Float64,1},1},
                   tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
 
   push!(tsv, [e(tree), fdt(tree)])
@@ -1147,16 +1147,16 @@ end
 
 
 """
-    makebbv!(tree::iTgbmbd, 
-             bbλ ::Array{Array{Float64,1},1}, 
-             bbμ ::Array{Array{Float64,1},1}, 
+    makebbv!(tree::iTgbmbd,
+             bbλ ::Array{Array{Float64,1},1},
+             bbμ ::Array{Array{Float64,1},1},
              tsv ::Array{Array{Float64,1},1})
-Make `bbv` vector with allocated `bb` (brownian bridges) and 
+Make `bbv` vector with allocated `bb` (brownian bridges) and
 with `tsv` vector of branches times `ts`.
 """
-function makebbv!(tree::iTgbmbd, 
-                  bbλ ::Array{Array{Float64,1},1}, 
-                  bbμ ::Array{Array{Float64,1},1}, 
+function makebbv!(tree::iTgbmbd,
+                  bbλ ::Array{Array{Float64,1},1},
+                  bbμ ::Array{Array{Float64,1},1},
                   tsv ::Array{Array{Float64,1},1})
 
   push!(tsv, [e(tree), fdt(tree)])
@@ -1193,15 +1193,15 @@ end
 
 
 """
-    _eventimes!(tree::T, 
-                t   ::Float64, 
-                se  ::Array{Float64,1}, 
+    _eventimes!(tree::T,
+                t   ::Float64,
+                se  ::Array{Float64,1},
                 ee  ::Array{Float64,1}) where {T <: iTree}
 Recursive structure that returns speciation and extinction event times.
 """
-function _eventimes!(tree::T, 
-                     t   ::Float64, 
-                     se  ::Array{Float64,1}, 
+function _eventimes!(tree::T,
+                     t   ::Float64,
+                     se  ::Array{Float64,1},
                      ee  ::Array{Float64,1}) where {T <: iTree}
 
   et = e(tree)
@@ -1221,16 +1221,16 @@ end
 
 
 """
-    _eventimes!(tree::T, 
-                t   ::Float64, 
-                se  ::Array{Float64,1}, 
+    _eventimes!(tree::T,
+                t   ::Float64,
+                se  ::Array{Float64,1},
                 ee  ::Array{Float64,1}) where {T <: sTf}
 
 Recursive structure that returns speciation and extinction event times.
 """
-function _eventimes!(tree::T, 
-                     t   ::Float64, 
-                     se  ::Array{Float64,1}, 
+function _eventimes!(tree::T,
+                     t   ::Float64,
+                     se  ::Array{Float64,1},
                      ee  ::Array{Float64,1}) where {T <: sTf}
 
   et = e(tree)
@@ -1363,21 +1363,21 @@ end
 
 
 """
-    _λat!(tree::T, 
+    _λat!(tree::T,
           c   ::Float64,
           λs  ::Vector{Float64},
           t   ::Float64) where {T <: iTgbm}
 
 Return speciation rates, `λs`, at time `c` for `tree`.
 """
-function _λat!(tree::T, 
+function _λat!(tree::T,
                c   ::Float64,
                λs  ::Vector{Float64},
                t   ::Float64) where {T <: iTgbm}
 
   et = e(tree)
 
-  if (t + et) >= c 
+  if (t + et) >= c
     if !isfix(tree)
 
       lλv = lλ(tree)

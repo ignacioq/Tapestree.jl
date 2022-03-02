@@ -16,7 +16,7 @@ Created 07 10 2021
 """
     cfbd_wait(n::Float64, λ::Float64, μ::Float64, ψ::Float64)
 
-Sample a waiting time for constant fossilized birth-death when `n` species 
+Sample a waiting time for constant fossilized birth-death when `n` species
 are alive with speciation rate `λ` and extinction rate `μ`.
 """
 cfbd_wait(n::Float64, λ::Float64, μ::Float64, ψ::Float64) = rexp(n*(λ + μ + ψ))
@@ -27,7 +27,7 @@ cfbd_wait(n::Float64, λ::Float64, μ::Float64, ψ::Float64) = rexp(n*(λ + μ +
 """
     cfbd_wait(λ::Float64, μ::Float64, ψ::Float64)
 
-Sample a per-lineage waiting time for constant fossilized birth-death 
+Sample a per-lineage waiting time for constant fossilized birth-death
 with speciation rate `λ` and extinction rate `μ`.
 """
 cfbd_wait(λ::Float64, μ::Float64, ψ::Float64) = rexp(λ + μ + ψ)
@@ -58,12 +58,12 @@ Return `true` if extinction event, conditionned on "not a speciation event"
 """
     sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
 
-Simulate a constant fossilized birth-death `iTree` of height `t` with speciation 
+Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
 rate `λ` and extinction rate `μ`.
 """
-function sim_cfbd(t::Float64, 
-                  λ::Float64, 
-                  μ::Float64, 
+function sim_cfbd(t::Float64,
+                  λ::Float64,
+                  μ::Float64,
                   ψ::Float64)
 
   tw = cfbd_wait(λ, μ, ψ)
@@ -88,15 +88,15 @@ end
 
 
 """
-    sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64, 
+    sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64,
              na::Int64, nfos::Int64)
 
-Simulate a constant fossilized birth-death `iTree` of height `t` with speciation 
+Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
 rate `λ` and extinction rate `μ`. `na` initializes the number of alived tips.
 """
-function sim_cfbd(t::Float64, 
-                  λ::Float64, 
-                  μ::Float64, 
+function sim_cfbd(t::Float64,
+                  λ::Float64,
+                  μ::Float64,
                   ψ::Float64,
                   na::Int64,
                   nfos::Int64)
@@ -134,15 +134,15 @@ end
 
 Simulate constant fossilized birth-death in backward time.
 """
-function sim_cfbd_b(n::Int64, 
-                    λ::Float64, 
-                    μ::Float64, 
+function sim_cfbd_b(n::Int64,
+                    λ::Float64,
+                    μ::Float64,
                     ψ::Float64)
 
   nF = Float64(n)
   nI = n
 
-  # disjoint trees vector 
+  # disjoint trees vector
   tv = sTfbd[]
   for i in Base.OneTo(nI)
     push!(tv, sTfbd(0.0))
@@ -184,25 +184,25 @@ end
 
 
 """
-    sim_cfbd_b(λ::Float64, 
-               μ::Float64, 
-               ψ::Float64, 
-               mxth::Float64, 
+    sim_cfbd_b(λ::Float64,
+               μ::Float64,
+               ψ::Float64,
+               mxth::Float64,
                maxn::Int64)
 
-Simulate constant fossilized birth-death in backward time conditioned on 
+Simulate constant fossilized birth-death in backward time conditioned on
 1 survival and not having a greater tree height than `mxth`.
 """
-function sim_cfbd_b(λ::Float64, 
-                    μ::Float64, 
-                    ψ::Float64, 
-                    mxth::Float64, 
+function sim_cfbd_b(λ::Float64,
+                    μ::Float64,
+                    ψ::Float64,
+                    mxth::Float64,
                     maxn::Int64)
 
   nF = 1.0
   nI = 1
 
-  # disjoint trees vector 
+  # disjoint trees vector
   tv = [sTfbd(0.0, false)]
 
   th = 0.0
@@ -217,8 +217,8 @@ function sim_cfbd_b(λ::Float64,
     if nI > maxn
       return tv[nI], (mxth + 0.1)
     end
-    
-    if th > mxth 
+
+    if th > mxth
      return tv[nI], th
     end
 

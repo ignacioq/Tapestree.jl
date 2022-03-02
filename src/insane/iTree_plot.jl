@@ -17,8 +17,8 @@ Created 07 07 2020
 
 Recipe for plotting values given by `lv` through time for a `iTgbm`.
 """
-@recipe function f(tree::T, 
-                   lv  ::Function, 
+@recipe function f(tree::T,
+                   lv  ::Function,
                    dt  ::Float64,
                    e   ::Bool) where {T <: iTgbm}
 
@@ -135,21 +135,21 @@ end
 
 
 """
-    _rplottree!(tree::T, 
-                xc  ::Float64, 
+    _rplottree!(tree::T,
+                xc  ::Float64,
                 yr  ::UnitRange{Int64},
                 zfun::Function,
-                x   ::Array{Float64,1}, 
+                x   ::Array{Float64,1},
                 y   ::Array{Float64,1},
                 z   ::Array{Float64,1}) where {T <: iTgbm}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function _rplottree!(tree::T, 
-                     xc  ::Float64, 
+function _rplottree!(tree::T,
+                     xc  ::Float64,
                      yr  ::UnitRange{Int64},
                      zfun::Function,
-                     x   ::Array{Float64,1}, 
+                     x   ::Array{Float64,1},
                      y   ::Array{Float64,1},
                      z   ::Array{Float64,1}) where {T <: iTgbm}
 
@@ -171,7 +171,7 @@ function _rplottree!(tree::T,
   push!(z, zv[l], NaN)
 
   xc -= e(tree)
-  
+
   defd1 = def1(tree)
   defd2 = def2(tree)
 
@@ -193,7 +193,7 @@ function _rplottree!(tree::T,
 
     _rplottree!(tree.d1, xc, yr1, zfun, x, y, z)
     _rplottree!(tree.d2, xc, yr2, zfun, x, y, z)
-  
+
   elseif defd1  _rplottree!(tree.d1, xc, yr, zfun, x, y, z)
   elseif defd2  _rplottree!(tree.d2, xc, yr, zfun, x, y, z)
   end
@@ -247,18 +247,18 @@ end
 
 
 """
-    _rplottree!(tree::T, 
-                xc  ::Float64, 
+    _rplottree!(tree::T,
+                xc  ::Float64,
                 yr  ::UnitRange{Int64},
-                x   ::Array{Float64,1}, 
+                x   ::Array{Float64,1},
                 y   ::Array{Float64,1}) where {T <: iTree}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function _rplottree!(tree::T, 
-                     xc  ::Float64, 
+function _rplottree!(tree::T,
+                     xc  ::Float64,
                      yr  ::UnitRange{Int64},
-                     x   ::Array{Float64,1}, 
+                     x   ::Array{Float64,1},
                      y   ::Array{Float64,1}) where {T <: iTree}
 
   # add horizontal lines
@@ -282,7 +282,7 @@ function _rplottree!(tree::T,
     yr1 = yr[1:ntip1]
     yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
-    push!(y, Float64(yr1[1] + yr1[end])*0.5, 
+    push!(y, Float64(yr1[1] + yr1[end])*0.5,
              Float64(yr2[1] + yr2[end])*0.5,
              NaN)
 
@@ -300,13 +300,13 @@ end
 
 """
     f(tree::T; shownodes  = (T <: sTf),
-               showlabels = (T === sT_label || T === sTf_label)) 
+               showlabels = (T === sT_label || T === sTf_label))
                where {T <: iTree}
 
-Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes 
+Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 == true`. True by default for `sTf` trees to make sampled ancestors visible.
 """
-@recipe function f(tree::T; 
+@recipe function f(tree::T;
                    shownodes  = (T <: sTf),
                    showlabels = (T === sT_label || T === sTf_label)) where {
                                                                     T <: iTree}
@@ -370,17 +370,17 @@ end
 
 
 """
-    _nodeproperties!(tree ::T, 
-                     shape::Vector{Symbol}, 
-                     col  ::Vector{Symbol}, 
+    _nodeproperties!(tree ::T,
+                     shape::Vector{Symbol},
+                     col  ::Vector{Symbol},
                      alpha::Vector{Float64}) where {T <: iTree}
 
-Completes the lists of node shapes, colors and alphas according to their 
+Completes the lists of node shapes, colors and alphas according to their
 properties.
 """
-function _nodeproperties!(tree ::T, 
-                          shape::Vector{Symbol}, 
-                          col  ::Vector{Symbol}, 
+function _nodeproperties!(tree ::T,
+                          shape::Vector{Symbol},
+                          col  ::Vector{Symbol},
                           alpha::Vector{Float64}) where {T <: iTree}
 
   defd1 = def1(tree)
@@ -416,11 +416,11 @@ function _nodeproperties!(tree ::T,
     end
   else
     # tip
-    isfossil(tree) ? (push!(shape, :square); push!(col, :red)) : 
+    isfossil(tree) ? (push!(shape, :square); push!(col, :red)) :
                      (push!(shape, :circle); push!(col, :blue))
     push!(alpha, 0.5+0.5*fx)
   end
-  
+
   return nothing
 end
 
@@ -509,7 +509,7 @@ Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
   x = Float64[]
   y = Float64[]
 
-  if type === :tree 
+  if type === :tree
 
     th = treeheight(tree)
     nt = ntips(tree)
@@ -533,7 +533,7 @@ Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
 
     return x, y
 
-  elseif type === :trait 
+  elseif type === :trait
 
     th = treeheight(tree)
 
@@ -608,17 +608,17 @@ end
 
 
 """
-    _rplottree!(tree::T, 
-                xc  ::Float64, 
-                x   ::Array{Float64,1}, 
+    _rplottree!(tree::T,
+                xc  ::Float64,
+                x   ::Array{Float64,1},
                 y   ::Array{Float64,1}) where {T <: iTreeX}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function _rplottrait!(tree::T, 
-                      xc  ::Float64, 
-                      x   ::Array{Float64,1}, 
-                      y   ::Array{Float64,1}) where {T <: iTreeX} 
+function _rplottrait!(tree::T,
+                      xc  ::Float64,
+                      x   ::Array{Float64,1},
+                      y   ::Array{Float64,1}) where {T <: iTreeX}
 
   # add horizontal lines
   push!(x, xc)

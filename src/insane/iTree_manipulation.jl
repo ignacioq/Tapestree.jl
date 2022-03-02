@@ -17,7 +17,7 @@ Created 25 06 2020
 
 Removes stem branch.
 """
-rm_stem!(tree::T)  where {T <: iTree} = 
+rm_stem!(tree::T)  where {T <: iTree} =
   _rm_stem(tree)
 
 
@@ -82,13 +82,13 @@ cutbottom(tree::T, c::Float64) where {T <: iTree} = _cutbottom(tree, c, 0.0)
 
 
 """
-    _cutbottom(tree::sTpb, 
+    _cutbottom(tree::sTpb,
                c   ::Float64,
                t   ::Float64)
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
-function _cutbottom(tree::sTpb, 
+function _cutbottom(tree::sTpb,
                     c   ::Float64,
                     t   ::Float64)
 
@@ -110,13 +110,13 @@ end
 
 
 """
-    _cutbottom(tree::sTbd, 
+    _cutbottom(tree::sTbd,
                c   ::Float64,
                t   ::Float64)
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
-function _cutbottom(tree::sTbd, 
+function _cutbottom(tree::sTbd,
                     c   ::Float64,
                     t   ::Float64)
 
@@ -138,13 +138,13 @@ end
 
 
 """
-    _cutbottom(tree::sTfbd, 
+    _cutbottom(tree::sTfbd,
                c   ::Float64,
                t   ::Float64)
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
-function _cutbottom(tree::sTfbd, 
+function _cutbottom(tree::sTfbd,
                     c   ::Float64,
                     t   ::Float64)
 
@@ -164,13 +164,13 @@ end
 
 
 """
-    _cutbottom(tree::iTgbmpb, 
+    _cutbottom(tree::iTgbmpb,
                c   ::Float64,
                t   ::Float64)
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
-function _cutbottom(tree::iTgbmpb, 
+function _cutbottom(tree::iTgbmpb,
                     c   ::Float64,
                     t   ::Float64)
 
@@ -218,13 +218,13 @@ end
 
 
 """
-    _cutbottom(tree::T, 
+    _cutbottom(tree::T,
                c   ::Float64,
                t   ::Float64) where {T <: iTgbm}
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
-function _cutbottom(tree::T, 
+function _cutbottom(tree::T,
                     c   ::Float64,
                     t   ::Float64) where {T <: iTgbm}
 
@@ -338,7 +338,7 @@ function fossilizefixedtip!(tree::T) where {T <: sTf}
   elseif def2(tree) && isfix(tree.d2) fossilizefixedtip!(tree.d2::T)
   else tree.iψ = true
   end
-  
+
 end
 
 
@@ -349,7 +349,7 @@ end
 
 Change all past tips to fossil tips.
 """
-fossilizepasttips!(tree::T) where {T <: sTf} = 
+fossilizepasttips!(tree::T) where {T <: sTf} =
   _fossilizepasttips!(tree::T, treeheight(tree::T))
 
 
@@ -380,7 +380,7 @@ end
 
 Change all past tips to extinct tips.
 """
-extinguishpasttips!(tree::T) where {T <: sTf} = 
+extinguishpasttips!(tree::T) where {T <: sTf} =
   _extinguishpasttips!(tree::T, treeheight(tree::T))
 
 
@@ -473,35 +473,35 @@ end
 
 
 """
-    fixrtip!(tree::iTgbmbd, 
-             na  ::Int64, 
-             λf  ::Float64, 
-             μf  ::Float64) 
+    fixrtip!(tree::iTgbmbd,
+             na  ::Int64,
+             λf  ::Float64,
+             μf  ::Float64)
 
 Fixes the the path for a random non extinct tip.
 """
-function fixrtip!(tree::iTgbmbd, 
-                  na  ::Int64, 
-                  λf  ::Float64, 
-                  μf  ::Float64) 
+function fixrtip!(tree::iTgbmbd,
+                  na  ::Int64,
+                  λf  ::Float64,
+                  μf  ::Float64)
 
   fix!(tree)
 
   if def1(tree)
     if isextinct(tree.d1)
-      λf, μf = 
+      λf, μf =
         fixrtip!(tree.d2, na, λf, μf)
     elseif isextinct(tree.d2)
-      λf, μf = 
+      λf, μf =
         fixrtip!(tree.d1, na, λf, μf)
     else
       na1 = ntipsalive(tree.d1)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-        λf, μf = 
+        λf, μf =
           fixrtip!(tree.d2, na - na1, λf, μf)
       else
-        λf, μf = 
+        λf, μf =
           fixrtip!(tree.d1, na1, λf, μf)
       end
     end
@@ -520,13 +520,13 @@ end
 
 
 """
-    fixalive!(tree::T, λf::Float64) where {T <:iTgbm}  
+    fixalive!(tree::T, λf::Float64) where {T <:iTgbm}
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::T, λf::Float64) where {T <:iTgbm} 
+function fixalive!(tree::T, λf::Float64) where {T <:iTgbm}
 
-  if istip(tree) 
+  if istip(tree)
     if isalive(tree)
       fix!(tree)
       λf   = lλ(tree)[end]
@@ -534,12 +534,12 @@ function fixalive!(tree::T, λf::Float64) where {T <:iTgbm}
     end
   else
     f, λf = fixalive!(tree.d2, λf)
-    if f 
+    if f
       fix!(tree)
       return true, λf
     end
     f, λf = fixalive!(tree.d1, λf)
-    if f 
+    if f
       fix!(tree)
       return true, λf
     end
@@ -557,19 +557,19 @@ Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::T) where T <: iTree
 
-  if istip(tree::T) 
+  if istip(tree::T)
     if isalive(tree::T)
       fix!(tree::T)
       return true
     end
   else
     f = fixalive!(tree.d2::T)
-    if f 
+    if f
       fix!(tree)
       return true
     end
     f = fixalive!(tree.d1::T)
-    if f 
+    if f
       fix!(tree)
       return true
     end
@@ -588,7 +588,7 @@ Fixes the the path from root to the only species alive.
 """
 function fixalive!(tree::T, xt::Float64) where T <: iTreeX
 
-  if istip(tree::T) 
+  if istip(tree::T)
     if isalive(tree::T)
       fix!(tree::T)
       xt = xf(tree)
@@ -596,12 +596,12 @@ function fixalive!(tree::T, xt::Float64) where T <: iTreeX
     end
   else
     f, xt = fixalive!(tree.d2::T, xt)
-    if f 
+    if f
       fix!(tree)
       return true, xt
     end
     f, xt = fixalive!(tree.d1::T, xt)
-    if f 
+    if f
       fix!(tree)
       return true, xt
     end
@@ -624,7 +624,7 @@ function fixalive!(tree::iTgbmbd,
                    λf  ::Float64,
                    μf  ::Float64)
 
-  if istip(tree) 
+  if istip(tree)
     if isalive(tree)
       fix!(tree)
       λv   = lλ(tree)
@@ -636,15 +636,15 @@ function fixalive!(tree::iTgbmbd,
       return true, λf, μf
     end
   else
-    f, λf, μf = 
+    f, λf, μf =
       fixalive!(tree.d2, λf, μf)
-    if f 
+    if f
       fix!(tree)
       return true, λf, μf
     end
-    f, λf, μf = 
+    f, λf, μf =
       fixalive!(tree.d1, λf, μf)
-    if f 
+    if f
       fix!(tree)
       return true, λf, μf
     end
@@ -695,7 +695,7 @@ Fixes the the path to tip `wi` in d1 order.
 """
 function fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
 
-  if istip(tree) 
+  if istip(tree)
     if isalive(tree)
       ix += 1
       if ix === wi
@@ -705,12 +705,12 @@ function fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
     end
   else
     f, ix = fixtip1!(tree.d1, wi, ix)
-    if f 
+    if f
       fix!(tree)
       return true, ix
     end
     f, ix = fixtip1!(tree.d2, wi, ix)
-    if f 
+    if f
       fix!(tree)
       return true, ix
     end
@@ -728,7 +728,7 @@ Fixes the the path to tip `wi` in d2 order.
 """
 function fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
 
-  if istip(tree) 
+  if istip(tree)
     if isalive(tree)
       ix += 1
       if ix === wi
@@ -738,12 +738,12 @@ function fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
     end
   else
     f, ix = fixtip2!(tree.d2, wi, ix)
-    if f 
+    if f
       fix!(tree)
       return true, ix
     end
     f, ix = fixtip2!(tree.d1, wi, ix)
-    if f 
+    if f
       fix!(tree)
       return true, ix
     end
@@ -820,7 +820,7 @@ function _fixrtip!(tree::T, na::Int64) where {T <: sTf}
     else
       _fixrtip!(tree.d1::T, na)
     end
-  
+
   elseif def2(tree) && isalive(tree.d2::T)
     _fixrtip!(tree.d2::T, na)
   end
@@ -848,7 +848,7 @@ function graftree!(tree ::T,
                    thc  ::Float64,
                    ix   ::Int64) where {T <: iTree}
 
-  if ix === ldr 
+  if ix === ldr
     if thc > h > (thc - e(tree))
       ne = thc - h
       adde!(tree, -ne)
@@ -856,7 +856,7 @@ function graftree!(tree ::T,
                              T(stree, tree, ne, false, true)
     else
       if isfix(tree.d1)
-        tree.d1 = 
+        tree.d1 =
           graftree!(tree.d1::T, stree, dri, h, ldr, thc - e(tree), ix)
       else
         tree.d2 =
@@ -868,14 +868,14 @@ function graftree!(tree ::T,
     if ifx1 && isfix(tree.d2)
       ix += 1
       if dri[ix]
-        tree.d1 = 
+        tree.d1 =
           graftree!(tree.d1::T, stree, dri, h, ldr, thc - e(tree), ix)
       else
-        tree.d2 = 
+        tree.d2 =
           graftree!(tree.d2::T, stree, dri, h, ldr, thc - e(tree), ix)
       end
     elseif ifx1
-      tree.d1 = 
+      tree.d1 =
         graftree!(tree.d1::T, stree, dri, h, ldr, thc - e(tree), ix)
     else
       tree.d2 =
@@ -890,20 +890,20 @@ end
 
 
 """
-    prunetree!(tree::T, 
-               dri ::BitArray{1}, 
+    prunetree!(tree::T,
+               dri ::BitArray{1},
                ldr ::Int64,
                wpr ::Int64,
-               ix  ::Int64, 
+               ix  ::Int64,
                px  ::Int64) where {T <: iTree}
 
 Prune tree at branch given by `dri` and grafted `wpr`.
 """
-function prunetree!(tree::T, 
-                    dri ::BitArray{1}, 
+function prunetree!(tree::T,
+                    dri ::BitArray{1},
                     ldr ::Int64,
                     wpr ::Int64,
-                    ix  ::Int64, 
+                    ix  ::Int64,
                     px  ::Int64) where {T <: iTree}
 
   if ix === ldr
@@ -920,7 +920,7 @@ function prunetree!(tree::T,
     else
       px += 1
       if isfix(tree.d1::T)
-        tree.d1 = 
+        tree.d1 =
           prunetree!(tree.d1::T, dri, ldr, wpr, ix, px)
       else
         tree.d2 =
@@ -932,14 +932,14 @@ function prunetree!(tree::T,
     if ifx1 && isfix(tree.d2::T)
       ix += 1
       if dri[ix]
-        tree.d1 = 
+        tree.d1 =
           prunetree!(tree.d1::T, dri, ldr, wpr, ix, px)
       else
-        tree.d2 = 
+        tree.d2 =
           prunetree!(tree.d2::T, dri, ldr, wpr, ix, px)
       end
     elseif ifx1
-      tree.d1 = 
+      tree.d1 =
         prunetree!(tree.d1::T, dri, ldr, wpr, ix, px)
     else
       tree.d2 =
@@ -986,14 +986,14 @@ function _remove_unsampled!(tree::iTgbmpb)
         fdt2 = fdt(tree.d2)
         pop!(lλ0)
         iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0) 
+        prepend!(lλ2, lλ0)
         fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree) 
-          fdt0 -= dt(tree) 
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
         end
         tree = tree.d2
         sete!(tree, ne)
-        setfdt!(tree, fdt0) 
+        setfdt!(tree, fdt0)
       end
     elseif !isfix(tree.d2)
       ne  = e(tree) + e(tree.d1)
@@ -1003,14 +1003,14 @@ function _remove_unsampled!(tree::iTgbmpb)
       fdt1 = fdt(tree.d1)
       pop!(lλ0)
       iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0) 
+      prepend!(lλ1, lλ0)
       fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree) 
-        fdt0 -= dt(tree) 
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
       end
       tree = tree.d1
       sete!(tree, ne)
-      setfdt!(tree, fdt0) 
+      setfdt!(tree, fdt0)
     end
   end
 
@@ -1094,7 +1094,7 @@ function _remove_extinct!(tree::iTgbmce)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTgbmce(e(tree), dt(tree), fdt(tree), 
+        return iTgbmce(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1104,14 +1104,14 @@ function _remove_extinct!(tree::iTgbmce)
         fdt2 = fdt(tree.d2)
         pop!(lλ0)
         iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0) 
+        prepend!(lλ2, lλ0)
         fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree) 
-          fdt0 -= dt(tree) 
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
         end
         tree = tree.d2
         sete!(tree, ne)
-        setfdt!(tree, fdt0) 
+        setfdt!(tree, fdt0)
       end
     elseif isextinct(tree.d2)
       ne  = e(tree) + e(tree.d1)
@@ -1121,14 +1121,14 @@ function _remove_extinct!(tree::iTgbmce)
       fdt1 = fdt(tree.d1)
       pop!(lλ0)
       iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0) 
+      prepend!(lλ1, lλ0)
       fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree) 
-        fdt0 -= dt(tree) 
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
       end
       tree = tree.d1
       sete!(tree, ne)
-      setfdt!(tree, fdt0) 
+      setfdt!(tree, fdt0)
     end
   end
 
@@ -1152,7 +1152,7 @@ function _remove_extinct!(tree::iTgbmct)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTgbmct(e(tree), dt(tree), fdt(tree), 
+        return iTgbmct(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1162,14 +1162,14 @@ function _remove_extinct!(tree::iTgbmct)
         fdt2 = fdt(tree.d2)
         pop!(lλ0)
         iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0) 
+        prepend!(lλ2, lλ0)
         fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree) 
-          fdt0 -= dt(tree) 
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
         end
         tree = tree.d2
         sete!(tree, ne)
-        setfdt!(tree, fdt0) 
+        setfdt!(tree, fdt0)
       end
     elseif isextinct(tree.d2)
       ne  = e(tree) + e(tree.d1)
@@ -1179,14 +1179,14 @@ function _remove_extinct!(tree::iTgbmct)
       fdt1 = fdt(tree.d1)
       pop!(lλ0)
       iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0) 
+      prepend!(lλ1, lλ0)
       fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree) 
-        fdt0 -= dt(tree) 
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
       end
       tree = tree.d1
       sete!(tree, ne)
-      setfdt!(tree, fdt0) 
+      setfdt!(tree, fdt0)
     end
   end
 
@@ -1210,7 +1210,7 @@ function _remove_extinct!(tree::iTgbmbd)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTgbmbd(e(tree), dt(tree), fdt(tree), 
+        return iTgbmbd(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree), lμ(tree))
       else
         ne = e(tree) + e(tree.d2)
@@ -1225,16 +1225,16 @@ function _remove_extinct!(tree::iTgbmbd)
           popfirst!(lλ2)
           popfirst!(lμ2)
         end
-        prepend!(lλ2, lλ0) 
+        prepend!(lλ2, lλ0)
         prepend!(lμ2, lμ0)
 
         fdt0 = fdt(tree) + fdt(tree.d2)
-        if fdt0 > dt(tree) 
-          fdt0 -= dt(tree) 
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
         end
         tree = tree.d2
         sete!(tree, ne)
-        setfdt!(tree, fdt0) 
+        setfdt!(tree, fdt0)
       end
     elseif isextinct(tree.d2)
       ne = e(tree) + e(tree.d1)
@@ -1249,12 +1249,12 @@ function _remove_extinct!(tree::iTgbmbd)
         popfirst!(lλ1)
         popfirst!(lμ1)
       end
-      prepend!(lλ1, lλ0) 
+      prepend!(lλ1, lλ0)
       prepend!(lμ1, lμ0)
 
       fdt0 = fdt(tree) + fdt(tree.d1)
-      if fdt0 > dt(tree) 
-        fdt0 -= dt(tree) 
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
       end
       tree = tree.d1
       sete!(tree, ne)
@@ -1282,7 +1282,7 @@ function _remove_unsampled!(tree::iTgbmce)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTgbmce(e(tree), dt(tree), fdt(tree), 
+        return iTgbmce(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1292,14 +1292,14 @@ function _remove_unsampled!(tree::iTgbmce)
         fdt2 = fdt(tree.d2)
         pop!(lλ0)
         iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0) 
+        prepend!(lλ2, lλ0)
         fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree) 
-          fdt0 -= dt(tree) 
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
         end
         tree = tree.d2
         sete!(tree, ne)
-        setfdt!(tree, fdt0) 
+        setfdt!(tree, fdt0)
       end
     elseif !isfix(tree.d2)
       ne  = e(tree) + e(tree.d1)
@@ -1309,14 +1309,14 @@ function _remove_unsampled!(tree::iTgbmce)
       fdt1 = fdt(tree.d1)
       pop!(lλ0)
       iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0) 
+      prepend!(lλ1, lλ0)
       fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree) 
-        fdt0 -= dt(tree) 
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
       end
       tree = tree.d1
       sete!(tree, ne)
-      setfdt!(tree, fdt0) 
+      setfdt!(tree, fdt0)
     end
   end
 
@@ -1339,7 +1339,7 @@ function _remove_unsampled!(tree::iTgbmct)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTgbmct(e(tree), dt(tree), fdt(tree), 
+        return iTgbmct(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1349,14 +1349,14 @@ function _remove_unsampled!(tree::iTgbmct)
         fdt2 = fdt(tree.d2)
         pop!(lλ0)
         iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0) 
+        prepend!(lλ2, lλ0)
         fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree) 
-          fdt0 -= dt(tree) 
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
         end
         tree = tree.d2
         sete!(tree, ne)
-        setfdt!(tree, fdt0) 
+        setfdt!(tree, fdt0)
       end
     elseif !isfix(tree.d2)
       ne  = e(tree) + e(tree.d1)
@@ -1366,14 +1366,14 @@ function _remove_unsampled!(tree::iTgbmct)
       fdt1 = fdt(tree.d1)
       pop!(lλ0)
       iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0) 
+      prepend!(lλ1, lλ0)
       fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree) 
-        fdt0 -= dt(tree) 
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
       end
       tree = tree.d1
       sete!(tree, ne)
-      setfdt!(tree, fdt0) 
+      setfdt!(tree, fdt0)
     end
   end
 
@@ -1397,7 +1397,7 @@ function _remove_unsampled!(tree::iTgbmbd)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTgbmbd(e(tree), dt(tree), fdt(tree), 
+        return iTgbmbd(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree), lμ(tree))
       else
         ne = e(tree) + e(tree.d2)
@@ -1412,16 +1412,16 @@ function _remove_unsampled!(tree::iTgbmbd)
           popfirst!(lλ2)
           popfirst!(lμ2)
         end
-        prepend!(lλ2, lλ0) 
+        prepend!(lλ2, lλ0)
         prepend!(lμ2, lμ0)
 
         fdt0 = fdt(tree) + fdt(tree.d2)
-        if fdt0 > dt(tree) 
-          fdt0 -= dt(tree) 
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
         end
         tree = tree.d2
         sete!(tree, ne)
-        setfdt!(tree, fdt0) 
+        setfdt!(tree, fdt0)
       end
     elseif !isfix(tree.d2)
       ne = e(tree) + e(tree.d1)
@@ -1436,12 +1436,12 @@ function _remove_unsampled!(tree::iTgbmbd)
         popfirst!(lλ1)
         popfirst!(lμ1)
       end
-      prepend!(lλ1, lλ0) 
+      prepend!(lλ1, lλ0)
       prepend!(lμ1, lμ0)
 
       fdt0 = fdt(tree) + fdt(tree.d1)
-      if fdt0 > dt(tree) 
-        fdt0 -= dt(tree) 
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
       end
       tree = tree.d1
       sete!(tree, ne)
@@ -1624,7 +1624,7 @@ end
     reconstructed(tree::T) where {T <: iTree}
     reconstructed(tree::T) where {T <: sTf}
 
-Returns the reconstructed tree, i.e. the observed tree from sampled extant 
+Returns the reconstructed tree, i.e. the observed tree from sampled extant
 tips and fossils.
 """
 # For all trees without fossils, it simply means removing extinct lineages
@@ -1637,7 +1637,7 @@ reconstructed(tree::T) where {T <: sTf} = _reconstructed!(T(tree::T))
 """
     _reconstructed!(tree::T) where {T <: sTf}
 
-Returns the reconstructed tree, i.e. the observed tree from sampled extant 
+Returns the reconstructed tree, i.e. the observed tree from sampled extant
 tips and fossils.
 """
 function _reconstructed!(tree::T) where {T <: sTf}
@@ -1724,7 +1724,7 @@ fix!(tree::T) where {T <: iTree} = setproperty!(tree, :fx, true)
 
 Set number of `δt` for `tree`.
 """
-setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iTgbm} = 
+setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iTgbm} =
   setproperty!(tree, :lλ, lλ)
 
 
@@ -1735,7 +1735,7 @@ setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iTgbm} =
 
 Set number of `δt` for `tree`.
 """
-setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTgbmbd} = 
+setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTgbmbd} =
   setproperty!(tree, :lμ, lμ)
 
 
@@ -1746,7 +1746,7 @@ setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTgbmbd} =
 
 Set number of `δt` for `tree`.
 """
-setfdt!(tree::T, fdt::Float64) where {T <: iTgbm} = 
+setfdt!(tree::T, fdt::Float64) where {T <: iTgbm} =
   setproperty!(tree, :fdt, fdt)
 
 
@@ -1757,7 +1757,7 @@ setfdt!(tree::T, fdt::Float64) where {T <: iTgbm} =
 
 Set number of `δt` for `tree`.
 """
-setdt!(tree::T, dt::Float64) where {T <: iTgbm} = 
+setdt!(tree::T, dt::Float64) where {T <: iTgbm} =
   setproperty!(tree, :dt, dt)
 
 
@@ -1808,7 +1808,7 @@ setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
 
 Set `x` as initial trait in tree.
 """
-setxi!(tree::T, x::Float64) where {T <: iTreeX} = 
+setxi!(tree::T, x::Float64) where {T <: iTreeX} =
   setproperty!(tree, :xi, x)
 
 
@@ -1819,7 +1819,7 @@ setxi!(tree::T, x::Float64) where {T <: iTreeX} =
 
 Set `x` as final trait in tree.
 """
-setxf!(tree::T, x::Float64) where {T <: iTreeX} = 
+setxf!(tree::T, x::Float64) where {T <: iTreeX} =
   setproperty!(tree, :xf, x)
 
 

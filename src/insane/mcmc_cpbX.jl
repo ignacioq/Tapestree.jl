@@ -13,7 +13,7 @@ Created 06 07 2020
 
 
 """
-    insane_cpb(tree    ::sT_label, 
+    insane_cpb(tree    ::sT_label,
                X       ::Dict{String, Float64},
                out_file::String;
                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -22,7 +22,7 @@ Created 06 07 2020
                nburn   ::Int64                 = 200,
                tune_int::Int64                 = 100,
                marginal::Bool                  = false,
-               nitpp   ::Int64                 = 100, 
+               nitpp   ::Int64                 = 100,
                nthpp   ::Int64                 = 10,
                K       ::Int64                 = 10,
                λi      ::Float64               = NaN,
@@ -32,7 +32,7 @@ Created 06 07 2020
 
 Run insane for constant pure-birth with Brownian motion trait evolution.
 """
-function insane_cpb(tree    ::sT_label, 
+function insane_cpb(tree    ::sT_label,
                     X       ::Dict{String, Float64},
                     out_file::String;
                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -43,7 +43,7 @@ function insane_cpb(tree    ::sT_label,
                     nburn   ::Int64                 = 200,
                     tune_int::Int64                 = 100,
                     marginal::Bool                  = false,
-                    nitpp   ::Int64                 = 100, 
+                    nitpp   ::Int64                 = 100,
                     nthpp   ::Int64                 = 10,
                     K       ::Int64                 = 10,
                     λi      ::Float64               = NaN,
@@ -83,20 +83,20 @@ function insane_cpb(tree    ::sT_label,
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(4) 
+  for i in Base.OneTo(4)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
   @info "Running constant pure-birth and trait evolution with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, σxc, sdX, nX = 
-    mcmc_burn_cpb(Ξ, idf, λ_prior, σx_prior, x0_prior, 
+  llc, prc, λc, σxc, sdX, nX =
+    mcmc_burn_cpb(Ξ, idf, λ_prior, σx_prior, x0_prior,
       nburn, λc, σxc, pup, inodes, prints, stem)
 
   # mcmc
-  r, treev, λc, σxc = 
-    mcmc_cpb(Ξ, idf, llc, prc, λc, σxc, sdX, nX, λ_prior, σx_prior, x0_prior, 
+  r, treev, λc, σxc =
+    mcmc_cpb(Ξ, idf, llc, prc, λc, σxc, sdX, nX, λ_prior, σx_prior, x0_prior,
      niter, nthin, pup, inodes, prints, stem)
 
   pardic = Dict("lambda"  => 1,
@@ -142,18 +142,18 @@ end
 
 
 """
-    mcmc_burn_cpb(Ξ      ::Vector{sTpbX}, 
+    mcmc_burn_cpb(Ξ      ::Vector{sTpbX},
                   idf    ::Array{iBffs,1},
                   λ_prior::NTuple{2,Float64},
                   nburn  ::Int64,
                   λc     ::Float64,
-                  pup    ::Array{Int64,1}, 
+                  pup    ::Array{Int64,1},
                   prints ::Int64,
                   stem   ::Bool)
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_burn_cpb(Ξ       ::Vector{sTpbX}, 
+function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
                        idf     ::Array{iBffs,1},
                        λ_prior ::NTuple{2,Float64},
                        σx_prior::NTuple{2,Float64},
@@ -161,7 +161,7 @@ function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
                        nburn   ::Int64,
                        λc      ::Float64,
                        σxc     ::Float64,
-                       pup     ::Array{Int64,1}, 
+                       pup     ::Array{Int64,1},
                        inodes  ::Array{Int64,1},
                        prints  ::Int64,
                        stem    ::Bool)
@@ -175,7 +175,7 @@ function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
 
   #likelihood
   llc = llik_cpb(Ξ, λc, σxc) - nsi + prob_ρ(idf)
-  prc = logdgamma(λc,        λ_prior[1], λ_prior[2])    + 
+  prc = logdgamma(λc,        λ_prior[1], λ_prior[2])    +
         logdinvgamma(σxc^2, σx_prior[1], σx_prior[2])   +
         logdnorm(xi(Ξ[1]),  x0_prior[1], x0_prior[2]^2)
 
@@ -211,7 +211,7 @@ function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
 
         bix = ceil(Int64,rand()*el)
 
-        llc, ns, L, sdX, nX = 
+        llc, ns, L, sdX, nX =
           update_fs!(bix, Ξ, idf, llc, λc, σxc, ns, L, sdX, nX)
 
       end
@@ -233,14 +233,14 @@ end
              prc     ::Float64,
              λc      ::Float64,
              σxc     ::Float64,
-             sdX     ::Float64, 
+             sdX     ::Float64,
              nX      ::Float64,
              λ_prior ::NTuple{2,Float64},
              σx_prior::NTuple{2,Float64},
              x0_prior::NTuple{2,Float64},
              niter   ::Int64,
              nthin   ::Int64,
-             pup     ::Array{Int64,1}, 
+             pup     ::Array{Int64,1},
              prints  ::Int64,
              stem    ::Bool)
 
@@ -252,14 +252,14 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
                   prc     ::Float64,
                   λc      ::Float64,
                   σxc     ::Float64,
-                  sdX     ::Float64, 
+                  sdX     ::Float64,
                   nX      ::Float64,
                   λ_prior ::NTuple{2,Float64},
                   σx_prior::NTuple{2,Float64},
                   x0_prior::NTuple{2,Float64},
                   niter   ::Int64,
                   nthin   ::Int64,
-                  pup     ::Array{Int64,1}, 
+                  pup     ::Array{Int64,1},
                   inodes  ::Array{Int64,1},
                   prints  ::Int64,
                   stem    ::Bool)
@@ -294,7 +294,7 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
         # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       # sigma_x update
@@ -305,7 +305,7 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
         # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       # X ancestors update
@@ -314,13 +314,13 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, prc, sdX = 
+        llc, prc, sdX =
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
 
         # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       # forward simulation proposal proposal
@@ -328,13 +328,13 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
 
         bix = ceil(Int64,rand()*el)
 
-        llc, ns, L, sdX, nX = 
+        llc, ns, L, sdX, nX =
           update_fs!(bix, Ξ, idf, llc, λc, σxc, ns, L, sdX, nX)
 
         # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       end
@@ -427,8 +427,8 @@ function update_fs!(bix::Int64,
       # update ns, L & sdX
       ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
       L   += treelength(ξp)             - treelength(ξc)
-      sdXp, nXp = _sdeltaX(ξp, 0.0, 0.0) 
-      sdXc, nXc = _sdeltaX(ξc, 0.0, 0.0) 
+      sdXp, nXp = _sdeltaX(ξp, 0.0, 0.0)
+      sdXc, nXc = _sdeltaX(ξc, 0.0, 0.0)
       sdX += sdXp - sdXc
       nX  += nXp  - nXc
 
@@ -468,7 +468,7 @@ function fsbi_pbX(bi::iBffs, λ::Float64, x0::Float64, σx::Float64, ntry::Int64
 
   ext = 0
   # condition on non-extinction (helps in mixing)
-  while ext < ntry 
+  while ext < ntry
     ext += 1
 
     # forward simulation during branch length
@@ -502,11 +502,11 @@ end
 """
     tip_sims!(tree::sTpbX, t::Float64, λ::Float64, σx::Float64, na::Int64)
 
-Continue simulation until time `t` for unfixed tips in `tree`. 
+Continue simulation until time `t` for unfixed tips in `tree`.
 """
 function tip_sims!(tree::sTpbX, t::Float64, λ::Float64, σx::Float64, na::Int64)
 
-  if istip(tree) 
+  if istip(tree)
     if !isfix(tree)
 
       # simulate
@@ -595,7 +595,7 @@ function update_x!(bix     ::Int64,
   root = iszero(pa(bi))
   # if crown root
   if root && !stem
-    llc, prc, sdX = 
+    llc, prc, sdX =
        _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)
   else
     # if stem
@@ -606,8 +606,8 @@ function update_x!(bix     ::Int64,
     # updates within the parent branch
     llc, sdX = _update_x!(ξi, σx, llc, sdX)
 
-    # get fixed tip 
-    lξi = fixtip(ξi) 
+    # get fixed tip
+    lξi = fixtip(ξi)
 
     # make between decoupled trees node update
     llc, sdX = _update_triad_x!(lξi, ξ1, ξ2, σx, llc, sdX)
@@ -707,8 +707,8 @@ function _crown_update_x!(ξi      ::T,
   setxi!(ξ2, xn)
 
   # update llc, prc and sdX
-  llc += duoldnorm(xn, x1, x2, e1, e2, σx) - 
-         duoldnorm(xo, x1, x2, e1, e2, σx) 
+  llc += duoldnorm(xn, x1, x2, e1, e2, σx) -
+         duoldnorm(xo, x1, x2, e1, e2, σx)
 
   prc += llrdnorm_x(xn, xo, m0, σx02)
 
@@ -777,8 +777,8 @@ function _update_triad_x!(tree::T,
   setxi!(tre2, xn)
 
   # update llc, prc and sdX
-  llc += trioldnorm(xn, xa, x1, x2, ea, e1, e2, σx) - 
-         trioldnorm(xo, xa, x1, x2, ea, e1, e2, σx) 
+  llc += trioldnorm(xn, xa, x1, x2, ea, e1, e2, σx) -
+         trioldnorm(xo, xa, x1, x2, ea, e1, e2, σx)
 
   sdX += ((xa - xn)^2 - (xa - xo)^2)/(2.0*ea) +
          ((xn - x1)^2 - (xo - x1)^2)/(2.0*e1) +

@@ -151,7 +151,7 @@ function llr_bm(xp  ::Array{Float64,1},
 
   llr = 0.0
   @avx for i in Base.OneTo(nI)
-    llr += (xp[i+1] - xp[i] - α*δt)^2 - 
+    llr += (xp[i+1] - xp[i] - α*δt)^2 -
            (xc[i+1] - xc[i] - α*δt)^2
   end
 
@@ -159,7 +159,7 @@ function llr_bm(xp  ::Array{Float64,1},
   llr *= -0.5/((σ*srδt)^2)
 
   # add final non-standard `δt`
-  llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1] + α*fdt, 
+  llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1] + α*fdt,
                       xc[nI+2], xc[nI+1] + α*fdt, sqrt(fdt)*σ)
 
   return llr
@@ -180,7 +180,7 @@ end
         fdt ::Float64,
         srδt::Float64)
 
-Brownian motion simulation function for updating a branch for two 
+Brownian motion simulation function for updating a branch for two
 vectors that share times and x0 follows drift α.
 """
 @inline function bm!(x0  ::Array{Float64,1},
@@ -325,7 +325,7 @@ end
         fdt ::Float64,
         srδt::Float64)
 
-Brownian bridge simulation function for updating two vectors 
+Brownian bridge simulation function for updating two vectors
 (`0` & `1`) with shared times in place.
 """
 @inline function bb!(x0  ::Array{Float64,1},
@@ -382,23 +382,23 @@ end
 
 
 """
-    sim_bm(xa  ::Float64, 
+    sim_bm(xa  ::Float64,
            α   ::Float64,
-           σ   ::Float64, 
-           δt  ::Float64, 
+           σ   ::Float64,
+           δt  ::Float64,
            fdt ::Float64,
-           srδt::Float64, 
+           srδt::Float64,
            nt  ::Int64)
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
-`σ` and times `t`. 
+`σ` and times `t`.
 """
-@inline function sim_bm(xa  ::Float64, 
+@inline function sim_bm(xa  ::Float64,
                         α   ::Float64,
-                        σ   ::Float64, 
-                        δt  ::Float64, 
+                        σ   ::Float64,
+                        δt  ::Float64,
                         fdt ::Float64,
-                        srδt::Float64, 
+                        srδt::Float64,
                         nt  ::Int64)
   @inbounds begin
     l = nt + 2
@@ -423,7 +423,7 @@ end
 """
     duoprop(xd1::Float64,
             xd2::Float64,
-            td1::Float64, 
+            td1::Float64,
             td2::Float64,
             σ  ::Float64)
 
@@ -431,7 +431,7 @@ Proposal for a duo of Gaussians.
 """
 function duoprop(xd1::Float64,
                  xd2::Float64,
-                 td1::Float64, 
+                 td1::Float64,
                  td2::Float64,
                  σ  ::Float64)
 
@@ -447,8 +447,8 @@ end
     trioprop(xpr::Float64,
              xd1::Float64,
              xd2::Float64,
-             tpr::Float64, 
-             td1::Float64, 
+             tpr::Float64,
+             td1::Float64,
              td2::Float64,
              σ  ::Float64)
 
@@ -457,8 +457,8 @@ Proposal for a trio of Gaussians.
 function trioprop(xpr::Float64,
                   xd1::Float64,
                   xd2::Float64,
-                  tpr::Float64, 
-                  td1::Float64, 
+                  tpr::Float64,
+                  td1::Float64,
                   td2::Float64,
                   σ  ::Float64)
 
@@ -474,7 +474,7 @@ end
     duodnorm(x  ::Float64,
              xd1::Float64,
              xd2::Float64,
-             td1::Float64, 
+             td1::Float64,
              td2::Float64,
              σ  ::Float64)
 Likelihood for a duo of Gaussians.
@@ -482,12 +482,12 @@ Likelihood for a duo of Gaussians.
 function duodnorm(x  ::Float64,
                   xd1::Float64,
                   xd2::Float64,
-                  td1::Float64, 
+                  td1::Float64,
                   td2::Float64,
                   σ  ::Float64)
 
   invt = 1.0/(td1 + td2)
-  return dnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2, 
+  return dnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2,
     sqrt(td1 * td2 * invt)*σ)
 end
 
@@ -498,7 +498,7 @@ end
     duoldnorm(x  ::Float64,
               xd1::Float64,
               xd2::Float64,
-              td1::Float64, 
+              td1::Float64,
               td2::Float64,
               σ  ::Float64)
 
@@ -507,12 +507,12 @@ Likelihood for a duo of Gaussians.
 function duoldnorm(x  ::Float64,
                    xd1::Float64,
                    xd2::Float64,
-                   td1::Float64, 
+                   td1::Float64,
                    td2::Float64,
                    σ  ::Float64)
 
   invt = 1.0/(td1 + td2)
-  return ldnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2, 
+  return ldnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2,
     sqrt(td1 * td2 * invt)*σ)
 end
 
@@ -524,8 +524,8 @@ end
                xpr::Float64,
                xd1::Float64,
                xd2::Float64,
-               tpr::Float64, 
-               td1::Float64, 
+               tpr::Float64,
+               td1::Float64,
                td2::Float64,
                σ  ::Float64)
 
@@ -550,7 +550,7 @@ end
 """
     ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64)
 
-Compute the **Normal** density in logarithmic scale with 
+Compute the **Normal** density in logarithmic scale with
 mean `μ` and standard density `σsrt` for `x`.
 """
 ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
@@ -562,7 +562,7 @@ ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
 """
     ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64)
 
-Compute the **Normal** density in with 
+Compute the **Normal** density in with
 mean `μ` and standard density `σsrt` for `x`.
 """
 dnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
@@ -572,13 +572,13 @@ dnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
 
 
 """
-    lrdnorm_bm_x(xp::Float64, 
-                 μp::Float64, 
-                 xc::Float64, 
-                 μc::Float64, 
+    lrdnorm_bm_x(xp::Float64,
+                 μp::Float64,
+                 xc::Float64,
+                 μc::Float64,
                  σsrt::Float64)
 
-Compute the **Normal** density ratio in logarithmic scale with 
+Compute the **Normal** density ratio in logarithmic scale with
 standard density `σ,` proposal mean `μp` and current mean `μc` for `xp`
 and `xc`, respectively.
 """
@@ -589,12 +589,12 @@ lrdnorm_bm_x(xp::Float64, μp::Float64, xc::Float64, μc::Float64, σsrt::Float6
 
 
 """
-    lrdnorm_bm_x(xp::Float64, 
-                 xc::Float64, 
-                 μ ::Float64, 
+    lrdnorm_bm_x(xp::Float64,
+                 xc::Float64,
+                 μ ::Float64,
                  σsrt::Float64)
 
-Compute the **Normal** density ratio in logarithmic scale with 
+Compute the **Normal** density ratio in logarithmic scale with
 standard density `σ` and mean `μ` for `xp`
 and `xc`, respectively.
 """
@@ -607,7 +607,7 @@ lrdnorm_bm_x(xp::Float64, xc::Float64, μ::Float64, σsrt::Float64) =
 """
     pnorm(x::Float64, y::Float64, μ::Float64, σ::Float64)
 
-Cumulative probability between `x` and `y`, with `x < y` for a 
+Cumulative probability between `x` and `y`, with `x < y` for a
 **Normal** Distribution with mean `μ` and standard deviation `σ`.
 """
 function pnorm(x::Float64, y::Float64, μ::Float64, σ::Float64)
@@ -619,17 +619,17 @@ end
 
 
 """
-    ncrep!(xp::Array{Float64,1}, 
-           xc::Array{Float64,1}, 
-           t ::Array{Float64,1}, 
+    ncrep!(xp::Array{Float64,1},
+           xc::Array{Float64,1},
+           t ::Array{Float64,1},
            σ ::Float64)
 
-Non-centered reparametization of data augmentation for `σ`, based on 
+Non-centered reparametization of data augmentation for `σ`, based on
 Roberts and Stramer (2001).
 """
-function ncrep!(xp::Array{Float64,1}, 
-                xc::Array{Float64,1}, 
-                t ::Array{Float64,1}, 
+function ncrep!(xp::Array{Float64,1},
+                xc::Array{Float64,1},
+                t ::Array{Float64,1},
                 σ ::Float64)
 
   @inbounds begin

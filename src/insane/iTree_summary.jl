@@ -18,7 +18,7 @@ Created 03 09 2020
 Return quantiles given by probabilities `p` vector.
 """
 function time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
-  
+
   fx = Array{Float64,2}(undef, lastindex(r), lastindex(p))
   for (i, ri) in enumerate(r)
     fx[i,:] = quantile(ri, p)
@@ -32,7 +32,7 @@ end
 """
     time_fun(f::Function, r::Array{Array{Float64,1},1})
 
-Apply function `f` to each vector in `r` and return the value. 
+Apply function `f` to each vector in `r` and return the value.
 """
 function time_fun(f::Function, r::Array{Array{Float64,1},1})
   lr = lastindex(r)
@@ -62,7 +62,7 @@ function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
   # make vector of vector to push rates
   r = [Float64[] for i in Base.OneTo(lastindex(ts))]
 
-  # do recursive 
+  # do recursive
   _time_rate!(tree, ts, tdt, r, 1, th, lv)
   pop!(r)
   pop!(ts)
@@ -74,20 +74,20 @@ end
 
 
 """
-    _time_rate!(tree::T, 
+    _time_rate!(tree::T,
                ts  ::Array{Float64,1},
-               tdt ::Float64, 
-               r   ::Array{Array{Float64,1},1}, 
+               tdt ::Float64,
+               r   ::Array{Array{Float64,1},1},
                tii ::Int64,
                ct  ::Float64,
                lv  ::Function) where {T <: iTgbm}
 
 Extract values from `lv` function at times `ts` across the tree.
 """
-@inline function _time_rate!(tree::T, 
+@inline function _time_rate!(tree::T,
                              ts  ::Array{Float64,1},
-                             tdt ::Float64, 
-                             r   ::Array{Array{Float64,1},1}, 
+                             tdt ::Float64,
+                             r   ::Array{Array{Float64,1},1},
                              tii ::Int64,
                              ct  ::Float64,
                              lv  ::Function) where {T <: iTgbm}
@@ -153,18 +153,18 @@ end
 
 
 """
-    extract_vector!(tree::T, 
-                    v   ::Array{Float64,1}, 
-                    nδt ::Float64, 
+    extract_vector!(tree::T,
+                    v   ::Array{Float64,1},
+                    nδt ::Float64,
                     ct  ::Float64,
                     lv  ::Function) where {T <: iTgbm}
 
 Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
 and return a vector.
 """
-function extract_vector!(tree::T, 
-                         v   ::Array{Float64,1}, 
-                         nδt ::Float64, 
+function extract_vector!(tree::T,
+                         v   ::Array{Float64,1},
+                         nδt ::Float64,
                          ct  ::Float64,
                          lv  ::Function) where {T <: iTgbm}
 
@@ -197,18 +197,18 @@ end
 
 
 """
-    extract_vector!(tree::sTfbd, 
-                    v   ::Array{Float64,1}, 
-                    nδt ::Float64, 
+    extract_vector!(tree::sTfbd,
+                    v   ::Array{Float64,1},
+                    nδt ::Float64,
                     ct  ::Float64,
                     lv  ::Function) where {T <: iTgbm}
 
 Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
 and return a vector.
 """
-function extract_vector!(tree::sTfbd, 
-                         v   ::Array{Float64,1}, 
-                         nδt ::Float64, 
+function extract_vector!(tree::sTfbd,
+                         v   ::Array{Float64,1},
+                         nδt ::Float64,
                          ct  ::Float64,
                          lv  ::Function) where {T <: iTgbm}
 
@@ -257,14 +257,14 @@ end
 
 
 """
-    _linearize_gbm!(tree::T, 
+    _linearize_gbm!(tree::T,
                     lv  ::Function,
                     v   ::Array{Float64,1}) where {T <: iTgbm}
 
 Extract the parameters given by `lv` into a linear Array, initialized with an
 array `v`.
 """
-function _linearize_gbm!(tree::T, 
+function _linearize_gbm!(tree::T,
                          lv  ::Function,
                          v   ::Array{Float64,1}) where {T <: iTgbm}
 
@@ -279,14 +279,14 @@ end
 
 
 """
-    _linearize_gbm!(tree::sTfbd, 
+    _linearize_gbm!(tree::sTfbd,
                     lv  ::Function,
                     v   ::Array{Float64,1}) where {T <: iTgbm}
 
 Extract the parameters given by `lv` into a linear Array, initialized with an
 array `v`.
 """
-function _linearize_gbm!(tree::sTfbd, 
+function _linearize_gbm!(tree::sTfbd,
                          lv  ::Function,
                          v   ::Array{Float64,1}) where {T <: iTgbm}
 
@@ -330,7 +330,7 @@ function extract_tree(tree::iTgbmpb, nδt::Float64)
   end
 
   if def1(tree)
-    iTgbmpb(extract_tree(tree.d1, nδt), 
+    iTgbmpb(extract_tree(tree.d1, nδt),
             extract_tree(tree.d2, nδt), et, nδt, nfdt, pv)
   else
     iTgbmpb(et, nδt, nfdt, pv)
@@ -343,7 +343,7 @@ end
 """
     extractp(tree::iTgbmbd, nδt::Float64)
 
-Log-linearly predict Geometric Brownian motion for `lλ` and `lμ` 
+Log-linearly predict Geometric Brownian motion for `lλ` and `lμ`
 at times given by `nδt`.
 """
 function extract_tree(tree::iTgbmbd, nδt::Float64)
@@ -376,7 +376,7 @@ function extract_tree(tree::iTgbmbd, nδt::Float64)
   end
 
   if def1(tree)
-    iTgbmbd(extract_tree(tree.d1, nδt), 
+    iTgbmbd(extract_tree(tree.d1, nδt),
             extract_tree(tree.d2, nδt), et, nδt, nfdt, false, false, pλv, pμv)
   else
     iTgbmbd(et, nδt, nfdt, false, false, pλv, pμv)
@@ -391,7 +391,7 @@ end
 
 Estimate `y` at `x = val` according to linear interpolation for a range.
 """
-linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) = 
+linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) =
   (y1 + (val - x1)*(y2 - y1)/(x2 - x1))::Float64
 
 
@@ -400,11 +400,11 @@ linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) =
 """
     idxrange(x::Array{Float64,1}, val::Float64)
 
-Get indexes in sorted vector `x` corresponding to the range in which 
+Get indexes in sorted vector `x` corresponding to the range in which
 `val` is in using a sort of uniroot algorithm.
 """
 function idxrange(x::Array{Float64,1}, val::Float64)
-  
+
   @inbounds begin
 
     a::Int64 = 1
@@ -414,7 +414,7 @@ function idxrange(x::Array{Float64,1}, val::Float64)
     end
 
     b::Int64 = lastindex(x)
-  
+
     if x[b] < val
       return b, false
     end
@@ -426,7 +426,7 @@ function idxrange(x::Array{Float64,1}, val::Float64)
       mid = div(b + a, 2)
     end
 
-    if x[a] == val 
+    if x[a] == val
       return a, false
     elseif x[b] == val
       return b, false
@@ -435,7 +435,7 @@ function idxrange(x::Array{Float64,1}, val::Float64)
     end
 
   end
-end 
+end
 
 
 
@@ -443,7 +443,7 @@ end
 """
     iquantile(treev::Array{iTgbmce,1}, p::Float64)
 
-Make an `iTgbmce` with the quantile specified by `p` in data specified in 
+Make an `iTgbmce` with the quantile specified by `p` in data specified in
 function `lv`.
 """
 function iquantile(treev::Array{iTgbmce,1}, p::Float64)
@@ -454,7 +454,7 @@ function iquantile(treev::Array{iTgbmce,1}, p::Float64)
   # make vector of lambdas
   vs = Array{Float64,1}[]
   for t in treev
-    push!(vs, lλ(t)) 
+    push!(vs, lλ(t))
   end
 
   sv = Float64[]
@@ -471,11 +471,11 @@ function iquantile(treev::Array{iTgbmce,1}, p::Float64)
     treev1 = iTgbmce[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
-    end 
+    end
     treev2 = iTgbmce[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
-    end 
+    end
 
     iTgbmce(iquantile(treev1, p), iquantile(treev2, p),
       e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
@@ -490,7 +490,7 @@ end
 """
     iquantile(treev::Array{iTgbmct,1}, p::Float64)
 
-Make an `iTgbmct` with the quantile specified by `p` in data specified in 
+Make an `iTgbmct` with the quantile specified by `p` in data specified in
 function `lv`.
 """
 function iquantile(treev::Array{iTgbmct,1}, p::Float64)
@@ -501,7 +501,7 @@ function iquantile(treev::Array{iTgbmct,1}, p::Float64)
   # make vector of lambdas
   vs = Array{Float64,1}[]
   for t in treev
-    push!(vs, lλ(t)) 
+    push!(vs, lλ(t))
   end
 
   sv = Float64[]
@@ -518,11 +518,11 @@ function iquantile(treev::Array{iTgbmct,1}, p::Float64)
     treev1 = iTgbmct[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
-    end 
+    end
     treev2 = iTgbmct[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
-    end 
+    end
 
     iTgbmct(iquantile(treev1, p), iquantile(treev2, p),
       e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
@@ -548,7 +548,7 @@ function iquantile(treev::Vector{iTgbmpb}, p::Float64)
   # make vector of lambdas
   vs = Array{Float64,1}[]
   for t in treev
-    push!(vs, lλ(t)) 
+    push!(vs, lλ(t))
   end
 
   sv = Float64[]
@@ -565,11 +565,11 @@ function iquantile(treev::Vector{iTgbmpb}, p::Float64)
     treev1 = iTgbmpb[]
     for t in Base.OneTo(nts)
         push!(treev1, treev[t].d1)
-    end 
+    end
     treev2 = iTgbmpb[]
     for t in Base.OneTo(nts)
         push!(treev2, treev[t].d2)
-    end 
+    end
     iTgbmpb(iquantile(treev1, p), iquantile(treev2, p),
       e(t1), true, dt(t1), fdt(t1), sv)
   else
@@ -583,7 +583,7 @@ end
 """
     iquantile(treev::Array{iTgbmbd,1}, p::Float64)
 
-Make an `iTgbmbd` with the quantile specified by `p` in data specified in 
+Make an `iTgbmbd` with the quantile specified by `p` in data specified in
 function `lv`.
 """
 function iquantile(treev::Array{iTgbmbd,1}, p::Float64)
@@ -596,8 +596,8 @@ function iquantile(treev::Array{iTgbmbd,1}, p::Float64)
   vsλ = Array{Float64,1}[]
   vsμ = Array{Float64,1}[]
   for t in treev
-    push!(vsλ, lλ(t)) 
-    push!(vsμ, lμ(t)) 
+    push!(vsλ, lλ(t))
+    push!(vsμ, lμ(t))
   end
 
   svλ = Float64[]
@@ -618,14 +618,14 @@ function iquantile(treev::Array{iTgbmbd,1}, p::Float64)
     treev1 = iTgbmbd[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
-    end 
+    end
     treev2 = iTgbmbd[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
-    end 
+    end
 
-    iTgbmbd(iquantile(treev1, p), 
-            iquantile(treev2, p), 
+    iTgbmbd(iquantile(treev1, p),
+            iquantile(treev2, p),
             e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
   else
     iTgbmbd(e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)

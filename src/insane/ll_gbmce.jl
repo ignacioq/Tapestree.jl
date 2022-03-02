@@ -13,21 +13,21 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTgbmce}, 
+    llik_gbm(Ξ   ::Vector{iTgbmce},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
-             μ   ::Float64, 
+             μ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmce` according to `gbm-ce`.
 """
-function llik_gbm(Ξ   ::Vector{iTgbmce}, 
+function llik_gbm(Ξ   ::Vector{iTgbmce},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
-                  μ   ::Float64, 
+                  μ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
   @inbounds begin
@@ -48,18 +48,18 @@ end
 
 
 """
-    llik_gbm(tree::iTgbmce, 
+    llik_gbm(tree::iTgbmce,
              α   ::Float64,
-             σλ  ::Float64, 
+             σλ  ::Float64,
              μ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmce` according to `gbmce`.
 """
-function llik_gbm(tree::iTgbmce, 
+function llik_gbm(tree::iTgbmce,
                   α   ::Float64,
-                  σλ  ::Float64, 
+                  σλ  ::Float64,
                   μ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
@@ -80,7 +80,7 @@ end
              α   ::Float64,
              σλ  ::Float64,
              μ   ::Float64,
-             δt  ::Float64, 
+             δt  ::Float64,
              fdt ::Float64,
              srδt::Float64,
              λev ::Bool,
@@ -92,7 +92,7 @@ Returns the log-likelihood for a branch according to `gbmce`.
                           α   ::Float64,
                           σλ  ::Float64,
                           μ   ::Float64,
-                          δt  ::Float64, 
+                          δt  ::Float64,
                           fdt ::Float64,
                           srδt::Float64,
                           λev ::Bool,
@@ -141,7 +141,7 @@ end
 
 
 """
-    llik_gbm_ssλ(tree::iTgbmce, 
+    llik_gbm_ssλ(tree::iTgbmce,
                  α   ::Float64,
                  σλ  ::Float64,
                  μ   ::Float64,
@@ -150,27 +150,27 @@ end
 
 Returns the log-likelihood for a `iTgbmce` according to GBM birth-death.
 """
-function llik_gbm_ssλ(tree::iTgbmce, 
+function llik_gbm_ssλ(tree::iTgbmce,
                       α   ::Float64,
                       σλ  ::Float64,
                       μ   ::Float64,
                       δt  ::Float64,
                       srδt::Float64)
 
-  if istip(tree) 
-    ll, dλ, ssλ, nλ = 
-      ll_gbm_b_ssλ(lλ(tree), α, σλ, μ, δt, fdt(tree), srδt, 
+  if istip(tree)
+    ll, dλ, ssλ, nλ =
+      ll_gbm_b_ssλ(lλ(tree), α, σλ, μ, δt, fdt(tree), srδt,
         false, isextinct(tree))
   else
-    ll, dλ, ssλ, nλ = 
-      ll_gbm_b_ssλ(lλ(tree), α, σλ, μ, δt, fdt(tree), srδt, 
+    ll, dλ, ssλ, nλ =
+      ll_gbm_b_ssλ(lλ(tree), α, σλ, μ, δt, fdt(tree), srδt,
         true, false)
 
-    ll1, dλ1, ssλ1, nλ1 = 
+    ll1, dλ1, ssλ1, nλ1 =
       llik_gbm_ssλ(tree.d1::iTgbmce, α, σλ, μ, δt, srδt)
-    ll2, dλ2, ssλ2, nλ2 = 
+    ll2, dλ2, ssλ2, nλ2 =
       llik_gbm_ssλ(tree.d2::iTgbmce, α, σλ, μ, δt, srδt)
-  
+
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
     ssλ += ssλ1 + ssλ2
@@ -223,7 +223,7 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   nλ   = Float64(nI)
 
   # add to global likelihood
-  ll    = llbm * 
+  ll    = llbm *
           (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
   llbd += Float64(nI)*μ
   ll   -= llbd*δt

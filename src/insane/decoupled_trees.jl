@@ -52,7 +52,7 @@ Make edge tree `Ξ` from the edge directory.
 function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
   Ξ = sTpbX[]
   for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i] 
+    idfi = idf[i]
     paix = pa(idfi)
     paix = iszero(paix) ? 1 : paix
     xii  = xr[paix]
@@ -75,7 +75,7 @@ Make edge tree `Ξ` from the edge directory.
 function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbdX})
   Ξ = sTbdX[]
   for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i] 
+    idfi = idf[i]
     paix = pa(idfi)
     paix = iszero(paix) ? 1 : paix
     xii  = xr[paix]
@@ -115,10 +115,10 @@ Make edge tree `Ξ` from the recursive tree.
 function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
   defd1 = def1(tree)
   defd2 = def2(tree)
-  
+
   iμ = isextinct(tree)   # fossil tips are also labelled as extinct
   push!(Ξ, sTfbd(e(tree), iμ, isfossil(tree), true))
-  
+
   if defd2 sTfbd!(Ξ, tree.d2) end
   if defd1 sTfbd!(Ξ, tree.d1) end
 end
@@ -164,8 +164,8 @@ end
 """
     iTgbmpb!(Ξ   ::Vector{iTgbmpb},
              tree::sT_label,
-             δt  ::Float64, 
-             srδt::Float64, 
+             δt  ::Float64,
+             srδt::Float64,
              lλa ::Float64,
              α   ::Float64,
              σλ  ::Float64)
@@ -174,8 +174,8 @@ Make edge tree `Ξ` from the recursive tree.
 """
 function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
                   tree::sT_label,
-                  δt  ::Float64, 
-                  srδt::Float64, 
+                  δt  ::Float64,
+                  srδt::Float64,
                   lλa ::Float64,
                   α   ::Float64,
                   σλ  ::Float64)
@@ -201,7 +201,7 @@ function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
 
   push!(Ξ, iTgbmpb(et, true, δt, fdti, lλv))
   if def1(tree)
-    iTgbmpb!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmpb!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
     iTgbmpb!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
@@ -212,8 +212,8 @@ end
 """
     iTgbmce!(Ξ   ::Vector{iTgbmce},
              tree::sT_label,
-             δt  ::Float64, 
-             srδt::Float64, 
+             δt  ::Float64,
+             srδt::Float64,
              lλa ::Float64,
              α   ::Float64,
              σλ  ::Float64)
@@ -222,8 +222,8 @@ Make edge tree `Ξ` from the recursive tree.
 """
 function iTgbmce!(Ξ   ::Vector{iTgbmce},
                   tree::sT_label,
-                  δt  ::Float64, 
-                  srδt::Float64, 
+                  δt  ::Float64,
+                  srδt::Float64,
                   lλa ::Float64,
                   α   ::Float64,
                   σλ  ::Float64)
@@ -249,7 +249,7 @@ function iTgbmce!(Ξ   ::Vector{iTgbmce},
 
   push!(Ξ, iTgbmce(et, δt, fdti, false, true, lλv))
   if def1(tree)
-    iTgbmce!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmce!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
     iTgbmce!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
@@ -260,8 +260,8 @@ end
 """
     iTgbmct!(Ξ   ::Vector{iTgbmct},
              tree::sT_label,
-             δt  ::Float64, 
-             srδt::Float64, 
+             δt  ::Float64,
+             srδt::Float64,
              lλa ::Float64,
              α   ::Float64,
              σλ  ::Float64)
@@ -270,8 +270,8 @@ Make edge tree `Ξ` from the recursive tree.
 """
 function iTgbmct!(Ξ   ::Vector{iTgbmct},
                   tree::sT_label,
-                  δt  ::Float64, 
-                  srδt::Float64, 
+                  δt  ::Float64,
+                  srδt::Float64,
                   lλa ::Float64,
                   α   ::Float64,
                   σλ  ::Float64)
@@ -297,7 +297,7 @@ function iTgbmct!(Ξ   ::Vector{iTgbmct},
 
   push!(Ξ, iTgbmct(et, δt, fdti, false, true, lλv))
   if def1(tree)
-    iTgbmct!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ) 
+    iTgbmct!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
     iTgbmct!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
@@ -308,8 +308,8 @@ end
 """
     iTgbmbd!(Ξ   ::Vector{iTgbmbd},
              tree::sT_label,
-             δt  ::Float64, 
-             srδt::Float64, 
+             δt  ::Float64,
+             srδt::Float64,
              lλa ::Float64,
              lμa ::Float64,
              α   ::Float64,
@@ -320,8 +320,8 @@ Make edge tree `Ξ` from the recursive tree.
 """
 function iTgbmbd!(Ξ   ::Vector{iTgbmbd},
                   tree::sT_label,
-                  δt  ::Float64, 
-                  srδt::Float64, 
+                  δt  ::Float64,
+                  srδt::Float64,
                   lλa ::Float64,
                   lμa ::Float64,
                   α   ::Float64,
@@ -403,7 +403,7 @@ end
 """
     _ctl(Ξ::Vector{T}) where {T <: iTgbm}
 
-Return the branch length sum of `Ξ` based on `δt` and `fδt` 
+Return the branch length sum of `Ξ` based on `δt` and `fδt`
 for debugging purposes.
 """
 function _ctl(Ξ::Vector{T}) where {T <: iTgbm}
@@ -490,7 +490,7 @@ end
 """
     sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
 
-Returns the standardized sum of squares a `iTgbm` according 
+Returns the standardized sum of squares a `iTgbm` according
 to GBM birth-death for a `σ` proposal.
 """
 function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
@@ -510,7 +510,7 @@ end
 """
     sss_gbm(Ξ::Vector{iTgbmbd}, α::Float64)
 
-Returns the standardized sum of squares a `iTgbm` according 
+Returns the standardized sum of squares a `iTgbm` according
 to GBM birth-death for a `σ` proposal.
 """
 function sss_gbm(Ξ::Vector{iTgbmbd}, α::Float64)

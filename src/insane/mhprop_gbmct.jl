@@ -19,7 +19,7 @@ Created 27 05 2020
                        α   ::Float64,
                        σλ  ::Float64,
                        ϵ   ::Float64,
-                       δt  ::Float64, 
+                       δt  ::Float64,
                        srδt::Float64)
 
 Make a `gbm-ct` proposal for daughters from forwards simulated branch.
@@ -30,7 +30,7 @@ function _daughters_update!(ξ1  ::iTgbmct,
                             α   ::Float64,
                             σλ  ::Float64,
                             ϵ   ::Float64,
-                            δt  ::Float64, 
+                            δt  ::Float64,
                             srδt::Float64)
   @inbounds begin
 
@@ -52,14 +52,14 @@ function _daughters_update!(ξ1  ::iTgbmct,
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
     # acceptance rate
-    normprop = 
+    normprop =
       duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
       duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
 
     # log likelihood ratios
-    llrbm1, llrct1, ssrλ1, Σrλ1 = 
+    llrbm1, llrct1, ssrλ1, Σrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
-    llrbm2, llrct2, ssrλ2, Σrλ2 = 
+    llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
     acr  = llrct1 + llrct2 + λf - λi
@@ -77,7 +77,7 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTgbmct, 
+    _stem_update!(ξi   ::iTgbmct,
                   α    ::Float64,
                   σλ   ::Float64,
                   ϵ    ::Float64,
@@ -85,7 +85,7 @@ end
                   dλ   ::Float64,
                   ssλ  ::Float64,
                   Σλ   ::Float64,
-                  mc   ::Float64, 
+                  mc   ::Float64,
                   th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
@@ -93,7 +93,7 @@ end
 
 Do gbm update for stem root.
 """
-function _stem_update!(ξi   ::iTgbmct, 
+function _stem_update!(ξi   ::iTgbmct,
                        α    ::Float64,
                        σλ   ::Float64,
                        ϵ    ::Float64,
@@ -101,7 +101,7 @@ function _stem_update!(ξi   ::iTgbmct,
                        dλ   ::Float64,
                        ssλ  ::Float64,
                        Σλ   ::Float64,
-                       mc   ::Float64, 
+                       mc   ::Float64,
                        th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
@@ -126,7 +126,7 @@ function _stem_update!(ξi   ::iTgbmct,
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt, 
+    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
       false, false)
 
     # survival
@@ -152,9 +152,9 @@ end
 
 
 """
-    _crown_update!(ξi   ::iTgbmct, 
-                   ξ1   ::iTgbmct, 
-                   ξ2   ::iTgbmct, 
+    _crown_update!(ξi   ::iTgbmct,
+                   ξ1   ::iTgbmct,
+                   ξ2   ::iTgbmct,
                    α    ::Float64,
                    σλ   ::Float64,
                    ϵ    ::Float64,
@@ -162,7 +162,7 @@ end
                    dλ   ::Float64,
                    ssλ  ::Float64,
                    Σλ   ::Float64,
-                   mc   ::Float64, 
+                   mc   ::Float64,
                    th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
@@ -170,9 +170,9 @@ end
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi   ::iTgbmct, 
-                        ξ1   ::iTgbmct, 
-                        ξ2   ::iTgbmct, 
+function _crown_update!(ξi   ::iTgbmct,
+                        ξ1   ::iTgbmct,
+                        ξ2   ::iTgbmct,
                         α    ::Float64,
                         σλ   ::Float64,
                         ϵ    ::Float64,
@@ -180,7 +180,7 @@ function _crown_update!(ξi   ::iTgbmct,
                         dλ   ::Float64,
                         ssλ  ::Float64,
                         Σλ   ::Float64,
-                        mc   ::Float64, 
+                        mc   ::Float64,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
@@ -215,9 +215,9 @@ function _crown_update!(ξi   ::iTgbmct,
     bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrct1, ssrλ1, Σrλ1 = 
+    llrbm1, llrct1, ssrλ1, Σrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
-    llrbm2, llrct2, ssrλ2, Σrλ2 = 
+    llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
     # survival
@@ -274,9 +274,9 @@ function _update_gbm!(tree::iTgbmct,
   if def1(tree)
     llc, dλ, ssλ, Σλ = update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
 
-    llc, dλ, ssλ, Σλ = 
+    llc, dλ, ssλ, Σλ =
       _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter)
-    llc, dλ, ssλ, Σλ = 
+    llc, dλ, ssλ, Σλ =
       _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter)
   else
     if !isfix(tree) || ter
@@ -324,7 +324,7 @@ function update_tip!(tree::iTgbmct,
 
     bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt, 
+    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
       false, isextinct(tree))
 
     acr = llrbd
@@ -335,7 +335,7 @@ function update_tip!(tree::iTgbmct,
       ssλ += ssrλ
       Σλ  += Σrλ
       unsafe_copyto!(λc, 1, λp, 1, l)
-    end 
+    end
   end
 
   return llc, dλ, ssλ, Σλ
@@ -406,7 +406,7 @@ function update_triad!(λpc ::Vector{Float64},
     bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
 
-    llr, acr, ssrλ, Σrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
+    llr, acr, ssrλ, Σrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
       α, σλ, ϵ, δt, fdtp, fdt1, fdt2, srδt)
 
     if -randexp() < acr
@@ -480,14 +480,14 @@ function update_triad!(tree::iTgbmct,
     bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
 
-    llrbmp, llrctp, ssrλp, Σrλp = 
-      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, 
+    llrbmp, llrctp, ssrλp, Σrλp =
+      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt,
         true, false)
-    llrbm1, llrct1, ssrλ1, Σrλ1 = 
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, 
+    llrbm1, llrct1, ssrλ1, Σrλ1 =
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt,
         false, isextinct(tree.d1))
-    llrbm2, llrct2, ssrλ2, Σrλ2 = 
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, 
+    llrbm2, llrct2, ssrλ2, Σrλ2 =
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt,
         false, isextinct(tree.d2))
 
     acr = llrctp + llrct1 + llrct2
@@ -543,11 +543,11 @@ function llr_propr(λpp  ::Array{Float64,1},
                    srδt ::Float64)
 
   # log likelihood ratios
-  llrbmp, llrctp, ssrλp, Σrλp = 
+  llrbmp, llrctp, ssrλp, Σrλp =
     llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt, true, false)
-  llrbm1, llrct1, ssrλ1, Σrλ1 = 
+  llrbm1, llrct1, ssrλ1, Σrλ1 =
     llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
-  llrbm2, llrct2, ssrλ2, Σrλ2 = 
+  llrbm2, llrct2, ssrλ2, Σrλ2 =
     llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
   acr  = llrctp + llrct1 + llrct2

@@ -12,7 +12,7 @@ Created 01 12 2021
 
 
 
-""" 
+"""
     gss(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
 
 Return marginal likelihood estimate using generalized stepping stone.
@@ -52,10 +52,10 @@ end
 
 
 
-""" 
+"""
     path_sampling(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
 
-Return marginal likelihood estimate using path sampling based on the 
+Return marginal likelihood estimate using path sampling based on the
 power posterior.
 """
 function path_sampling(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
@@ -78,10 +78,10 @@ end
 
 
 
-""" 
+"""
     stepping_stone(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
 
-Return marginal likelihood estimate using path sampling based on the 
+Return marginal likelihood estimate using path sampling based on the
 power posterior.
 """
 function stepping_stone(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
@@ -100,7 +100,7 @@ function stepping_stone(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
       ss += exp((ppk[i] - mxs) * dβ)
     end
     ss /= n
-    
+
     ml += log(ss) + dβ * mxs
   end
 

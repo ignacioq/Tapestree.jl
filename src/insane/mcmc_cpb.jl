@@ -13,7 +13,7 @@ Created 06 07 2020
 
 
 """
-    insane_cpb(tree    ::sT_label, 
+    insane_cpb(tree    ::sT_label,
                out_file::String;
                λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                niter   ::Int64                 = 1_000,
@@ -21,7 +21,7 @@ Created 06 07 2020
                nburn   ::Int64                 = 200,
                tune_int::Int64                 = 100,
                marginal    ::Bool                  = false,
-               nitpp   ::Int64                 = 100, 
+               nitpp   ::Int64                 = 100,
                nthpp   ::Int64                 = 10,
                K       ::Int64                 = 10,
                λi      ::Float64               = NaN,
@@ -31,7 +31,7 @@ Created 06 07 2020
 
 Run insane for constant pure-birth.
 """
-function insane_cpb(tree    ::sT_label, 
+function insane_cpb(tree    ::sT_label,
                     out_file::String;
                     λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                     niter   ::Int64                 = 1_000,
@@ -39,7 +39,7 @@ function insane_cpb(tree    ::sT_label,
                     nburn   ::Int64                 = 200,
                     tune_int::Int64                 = 100,
                     marginal ::Bool                  = false,
-                    nitpp   ::Int64                 = 100, 
+                    nitpp   ::Int64                 = 100,
                     nthpp   ::Int64                 = 10,
                     K       ::Int64                 = 10,
                     λi      ::Float64               = NaN,
@@ -74,18 +74,18 @@ function insane_cpb(tree    ::sT_label,
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(2) 
+  for i in Base.OneTo(2)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
   @info "Running constant pure-birth with forward simulation"
 
   # adaptive phase
-  llc, prc, λc = 
+  llc, prc, λc =
     mcmc_burn_cpb(Ξ, idf, λ_prior, nburn, λc, pup, prints, stem)
 
   # mcmc
-  r, treev, λc = 
+  r, treev, λc =
     mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, niter, nthin, pup, prints, stem)
 
   pardic = Dict(("lambda" => 1))
@@ -129,23 +129,23 @@ end
 
 
 """
-    mcmc_burn_cpb(Ξ      ::Vector{sTpb}, 
+    mcmc_burn_cpb(Ξ      ::Vector{sTpb},
                   idf    ::Array{iBffs,1},
                   λ_prior::NTuple{2,Float64},
                   nburn  ::Int64,
                   λc     ::Float64,
-                  pup    ::Array{Int64,1}, 
+                  pup    ::Array{Int64,1},
                   prints ::Int64,
                   stem   ::Bool)
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_burn_cpb(Ξ      ::Vector{sTpb}, 
+function mcmc_burn_cpb(Ξ      ::Vector{sTpb},
                        idf    ::Array{iBffs,1},
                        λ_prior::NTuple{2,Float64},
                        nburn  ::Int64,
                        λc     ::Float64,
-                       pup    ::Array{Int64,1}, 
+                       pup    ::Array{Int64,1},
                        prints ::Int64,
                        stem   ::Bool)
 
@@ -197,7 +197,7 @@ end
              λ_prior::NTuple{2,Float64},
              niter  ::Int64,
              nthin  ::Int64,
-             pup    ::Array{Int64,1}, 
+             pup    ::Array{Int64,1},
              prints ::Int64,
              stem   ::Bool)
 
@@ -211,7 +211,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
                   λ_prior::NTuple{2,Float64},
                   niter  ::Int64,
                   nthin  ::Int64,
-                  pup    ::Array{Int64,1}, 
+                  pup    ::Array{Int64,1},
                   prints ::Int64,
                   stem   ::Bool)
 
@@ -244,7 +244,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
         # llci = llik_cpb(Ξ, λc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
       # forward simulation proposal proposal
       else
@@ -255,7 +255,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
         # llci = llik_cpb(Ξ, λc)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
       end
     end
@@ -339,11 +339,11 @@ function ref_posterior(Ξ      ::Vector{sTpb},
         # λ proposal
         if p === 1
 
-          llc, prc, rdc, λc = 
+          llc, prc, rdc, λc =
             update_λ!(llc, prc, rdc, λc, ns, L, stem, λ_prior, λ_refd, βi)
 
         # forward simulation proposal proposal
-        else 
+        else
 
           bix = ceil(Int64,rand()*el)
           llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
@@ -374,7 +374,7 @@ end
                Ξ      ::Vector{sTpb},
                idf    ::Vector{iBffs},
                llc    ::Float64,
-               λ      ::Float64, 
+               λ      ::Float64,
                ns     ::Float64,
                L      ::Float64,
                pow    ::Float64)
@@ -385,7 +385,7 @@ function update_fs!(bix    ::Int64,
                     Ξ      ::Vector{sTpb},
                     idf    ::Vector{iBffs},
                     llc    ::Float64,
-                    λ      ::Float64, 
+                    λ      ::Float64,
                     ns     ::Float64,
                     L      ::Float64)
 
@@ -449,7 +449,7 @@ function fsbi(bi::iBffs, λ::Float64, ntry::Int64)
 
   ext = 0
   # condition on non-extinction (helps in mixing)
-  while ext < ntry 
+  while ext < ntry
     ext += 1
 
     # forward simulation during branch length
@@ -483,11 +483,11 @@ end
 """
     tip_sims!(tree::sTpb, t::Float64, λ::Float64, μ::Float64)
 
-Continue simulation until time `t` for unfixed tips in `tree`. 
+Continue simulation until time `t` for unfixed tips in `tree`.
 """
 function tip_sims!(tree::sTpb, t::Float64, λ::Float64, na::Int64)
 
-  if istip(tree) 
+  if istip(tree)
     if !isfix(tree)
 
       # simulate
@@ -570,7 +570,7 @@ function update_λ!(llc    ::Float64,
   nsi = stem ? 0.0 : 1.0
 
   λp = randgamma((λ_prior[1] + ns - nsi)*pow + λ_refd[1] * (1.0 - pow),
-                 (λ_prior[2] + L)*pow        + λ_refd[2] * (1.0 - pow)) 
+                 (λ_prior[2] + L)*pow        + λ_refd[2] * (1.0 - pow))
 
   llc += (ns - nsi)*log(λp/λc) + L*(λc - λp)
   prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
@@ -583,14 +583,14 @@ end
 
 
 """
-  write_ssr(R       ::Array{Float64,2}, 
+  write_ssr(R       ::Array{Float64,2},
             pardic  ::Dict{String,Int64},
             out_file::String)
 
-Write the samples from an MC sampler data frame 
+Write the samples from an MC sampler data frame
 given a Dictionary of parameters.
 """
-function write_ssr(R       ::Array{Float64,2}, 
+function write_ssr(R       ::Array{Float64,2},
                    pardic  ::Dict{String,Int64},
                    out_file::String)
 

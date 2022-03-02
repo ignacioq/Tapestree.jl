@@ -18,7 +18,7 @@ Created 14 11 2021
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
-                       δt  ::Float64, 
+                       δt  ::Float64,
                        srδt::Float64)
 
 Make a `gbmpb` proposal for daughters from forwards simulated branch.
@@ -28,7 +28,7 @@ function _daughters_update!(ξ1  ::iTgbmpb,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
-                            δt  ::Float64, 
+                            δt  ::Float64,
                             srδt::Float64)
   @inbounds begin
 
@@ -50,14 +50,14 @@ function _daughters_update!(ξ1  ::iTgbmpb,
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
     # acceptance rate
-    normprop = 
+    normprop =
       duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
       duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 = 
+    llrbm1, llrpb1, ssrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 = 
+    llrbm2, llrpb2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
     acr  = llrpb1 + llrpb2 + λf - λi
@@ -76,7 +76,7 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTgbmpb, 
+    _stem_update!(ξi   ::iTgbmpb,
                   α    ::Float64,
                   σλ   ::Float64,
                   llc  ::Float64,
@@ -87,7 +87,7 @@ end
 
 Do gbm update for crown root.
 """
-function _stem_update!(ξi   ::iTgbmpb, 
+function _stem_update!(ξi   ::iTgbmpb,
                        α    ::Float64,
                        σλ   ::Float64,
                        llc  ::Float64,
@@ -129,9 +129,9 @@ end
 
 
 """
-    _crown_update!(ξi   ::iTgbmpb, 
-                   ξ1   ::iTgbmpb, 
-                   ξ2   ::iTgbmpb, 
+    _crown_update!(ξi   ::iTgbmpb,
+                   ξ1   ::iTgbmpb,
+                   ξ2   ::iTgbmpb,
                    α    ::Float64,
                    σλ   ::Float64,
                    llc  ::Float64,
@@ -142,9 +142,9 @@ end
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi   ::iTgbmpb, 
-                        ξ1   ::iTgbmpb, 
-                        ξ2   ::iTgbmpb, 
+function _crown_update!(ξi   ::iTgbmpb,
+                        ξ1   ::iTgbmpb,
+                        ξ2   ::iTgbmpb,
                         α    ::Float64,
                         σλ   ::Float64,
                         llc  ::Float64,
@@ -176,9 +176,9 @@ function _crown_update!(ξi   ::iTgbmpb,
     bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 = 
+    llrbm1, llrpb1, ssrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 = 
+    llrbm2, llrpb2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
     acr  = llrpb1 + llrpb2
@@ -225,9 +225,9 @@ function _update_gbm!(tree::iTgbmpb,
   if def1(tree)
     llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
 
-    llc, dλ, ssλ = 
+    llc, dλ, ssλ =
       _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-    llc, dλ, ssλ = 
+    llc, dλ, ssλ =
       _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
   else
     if !isfix(tree) || ter
@@ -280,7 +280,7 @@ function update_tip!(tree::iTgbmpb,
       dλ  += λp[l] - λc[l]
       ssλ += ssrλ
       unsafe_copyto!(λc, 1, λp, 1, l)
-    end 
+    end
   end
 
   return llc, dλ, ssλ
@@ -346,7 +346,7 @@ function update_triad!(λpc ::Vector{Float64},
     bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
 
-    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
+    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
     if -randexp() < acr
@@ -414,7 +414,7 @@ function update_triad!(tree::iTgbmpb,
     bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
 
-    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c, 
+    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
     if -randexp() < acr

@@ -25,9 +25,9 @@ Sample conditional on number of species
 
 """
     sim_gbmct(n    ::Int64;
-              λ0   ::Float64    = 1.0, 
-              α    ::Float64    = 0.0, 
-              σλ   ::Float64    = 0.1, 
+              λ0   ::Float64    = 1.0,
+              α    ::Float64    = 0.0,
+              σλ   ::Float64    = 0.1,
               ϵ    ::Float64    = 0.0,
               δt   ::Float64    = 1e-3,
               start   ::Symbol  = :stem,
@@ -35,13 +35,13 @@ Sample conditional on number of species
               p       ::Float64 = 5.0,
               warnings::Bool    = true)
 
-Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and 
+Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and
 constant turnover.
 """
 function sim_gbmct(n    ::Int64;
-                   λ0   ::Float64    = 1.0, 
-                   α    ::Float64    = 0.0, 
-                   σλ   ::Float64    = 0.1, 
+                   λ0   ::Float64    = 1.0,
+                   α    ::Float64    = 0.0,
+                   σλ   ::Float64    = 0.1,
                    ϵ    ::Float64    = 0.0,
                    δt   ::Float64    = 1e-3,
                    start   ::Symbol  = :stem,
@@ -51,7 +51,7 @@ function sim_gbmct(n    ::Int64;
                    maxt    ::Float64 = δt*1e6)
 
   # simulate in non-recursive manner
-  e0, e1, el, λs, ea, ee, na, simt = 
+  e0, e1, el, λs, ea, ee, na, simt =
     _sedges_gbmct(nstar, log(λ0), α, σλ, ϵ, δt, sqrt(δt), start, maxt)
 
   if simt >= maxt
@@ -86,22 +86,22 @@ end
 
 
 """
-    _sedges_gbmct(n    ::Int64, 
-                  λ0   ::Float64, 
-                  α    ::Float64, 
-                  σλ   ::Float64, 
+    _sedges_gbmct(n    ::Int64,
+                  λ0   ::Float64,
+                  α    ::Float64,
+                  σλ   ::Float64,
                   ϵ    ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
                   start::Symbol)
 
-Simulate `gbmct` just until hitting `n` alive species. Note that this is 
+Simulate `gbmct` just until hitting `n` alive species. Note that this is
 a biased sample for a tree conditional on `n` species.
 """
-function _sedges_gbmct(n    ::Int64, 
-                       λ0   ::Float64, 
-                       α    ::Float64, 
-                       σλ   ::Float64, 
+function _sedges_gbmct(n    ::Int64,
+                       λ0   ::Float64,
+                       α    ::Float64,
+                       σλ   ::Float64,
                        ϵ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
@@ -126,7 +126,7 @@ function _sedges_gbmct(n    ::Int64,
     el = [0.0]
     # lambda vector for each edge
     λs = [Float64[]]
-    # starting speciation rate 
+    # starting speciation rate
     push!(λs[1], λ0)
     # lastindex for each edge
     li = [1]
@@ -146,7 +146,7 @@ function _sedges_gbmct(n    ::Int64,
     el = [0.0, 0.0, 0.0]
     # lambda vector for each edge
     λs = [Float64[], Float64[], Float64[]]
-    # starting speciation rate 
+    # starting speciation rate
     push!(λs[1], λ0, λ0)
     push!(λs[2], λ0)
     push!(λs[3], λ0)
@@ -198,7 +198,7 @@ function _sedges_gbmct(n    ::Int64,
         # if diversification event
         if divevϵ(λm, ϵ, δt)
 
-          #if speciation 
+          #if speciation
           if λorμ(λm, ϵ*λm)
 
             # if reached `n` species
@@ -315,7 +315,7 @@ Sample conditional on time
               nlim::Int64   = 10_000,
               init::Symbol  = :crown)
 
-Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and 
+Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and
 constant turnover.
 """
 function sim_gbmct(t   ::Float64;
@@ -330,12 +330,12 @@ function sim_gbmct(t   ::Float64;
   if init === :crown
     lλ0 = log(λ0)
     d1, nsp = _sim_gbmct(t, lλ0, α, σλ, ϵ, δt, sqrt(δt), 0, 1, nlim)
-    if nsp >= nlim 
+    if nsp >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
     d2, nsp = _sim_gbmct(t, lλ0, α, σλ, ϵ, δt, sqrt(δt), 0, 1, nlim)
-    if nsp >= nlim 
+    if nsp >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
@@ -343,7 +343,7 @@ function sim_gbmct(t   ::Float64;
   elseif init === :stem
     tree, nsp = _sim_gbmct(t, log(λ0), α, σλ, ϵ, δt, sqrt(δt), 0, 1, nlim)
 
-    if nsp >= nlim 
+    if nsp >= nlim
       @warn "maximum number of lineages surpassed"
     end
   else
@@ -368,7 +368,7 @@ end
                nsp ::Int64,
                nlim::Int64)
 
-Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and 
+Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and
 constant turnover, with a limit on the number lineages allowed to reach.
 """
 function _sim_gbmct(t   ::Float64,
@@ -458,13 +458,13 @@ end
                σλ  ::Float64,
                ϵ   ::Float64,
                δt  ::Float64,
-               srδt::Float64, 
+               srδt::Float64,
                na  ::Int64,
                nsp ::Int64,
                nlim::Int64)
 
-Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and 
-constant turnover, starting with a non-standard δt with a limit in the number 
+Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and
+constant turnover, starting with a non-standard δt with a limit in the number
 of species.
 """
 function _sim_gbmct(nsδt::Float64,
@@ -474,7 +474,7 @@ function _sim_gbmct(nsδt::Float64,
                     σλ  ::Float64,
                     ϵ   ::Float64,
                     δt  ::Float64,
-                    srδt::Float64, 
+                    srδt::Float64,
                     na  ::Int64,
                     nsp ::Int64,
                     nlim::Int64)
@@ -563,7 +563,7 @@ function _sim_gbmct(nsδt::Float64,
             na  += 2
             return iTgbmct(
                       iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                      iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]), 
+                      iTgbmct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                            bt, δt, t, false, false, λv), na, nsp
           # if extinction
           else
@@ -619,7 +619,7 @@ end
                     surv::Bool,
                     nsp ::Int64)
 
-Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and 
+Simulate `iTgbmct` according to a geometric Brownian motion for birth rates and
 constant turnover, with a limit on the number lineages allowed to reach.
 """
 function _sim_gbmct_surv(t   ::Float64,
@@ -676,9 +676,9 @@ function _sim_gbmct_surv(t   ::Float64,
         # if speciation
         if λorμ(λm, ϵ*λm)
           nsp += 1
-          td1, surv, nsp = 
+          td1, surv, nsp =
             _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nsp)
-          td2, surv, nsp = 
+          td2, surv, nsp =
             _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nsp)
 
           return iTgbmct(td1, td2, bt, δt, δt, false, false, λv), surv, nsp
@@ -703,7 +703,7 @@ end
 
 Return true if diversification event for `ϵ` parametization.
 """
-divevϵ(λ::Float64, ϵ::Float64, δt::Float64) = 
+divevϵ(λ::Float64, ϵ::Float64, δt::Float64) =
   @fastmath rand() < ((1.0 + ϵ)*λ*δt)
 
 

@@ -12,7 +12,7 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(tree::iTgbmpb, 
+    llik_gbm(tree::iTgbmpb,
              α   ::Float64,
              σλ  ::Float64,
              δt  ::Float64,
@@ -20,13 +20,13 @@ Created 03 09 2020
 
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """
-function llik_gbm(tree::iTgbmpb, 
+function llik_gbm(tree::iTgbmpb,
                   α   ::Float64,
                   σλ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
 
-  if istip(tree) 
+  if istip(tree)
     ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
   else
     ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
@@ -40,7 +40,7 @@ end
 
 """
     llik_gbm(Ξ   ::Vector{iTgbmpb},
-             idf ::Vector{iBffs}, 
+             idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
              δt  ::Float64,
@@ -49,7 +49,7 @@ end
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """
 function llik_gbm(Ξ   ::Vector{iTgbmpb},
-                  idf ::Vector{iBffs}, 
+                  idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
                   δt  ::Float64,
@@ -76,7 +76,7 @@ end
 """
     ll_gbm_b(lλv ::Array{Float64,1},
              α   ::Float64,
-             σλ  ::Float64, 
+             σλ  ::Float64,
              δt  ::Float64,
              fdt ::Float64,
              srδt::Float64,
@@ -86,7 +86,7 @@ Returns the log-likelihood for a branch according to GBM pure-birth.
 """
 function ll_gbm_b(lλv ::Array{Float64,1},
                   α   ::Float64,
-                  σλ  ::Float64, 
+                  σλ  ::Float64,
                   δt  ::Float64,
                   fdt ::Float64,
                   srδt::Float64,
@@ -127,7 +127,7 @@ end
 
 
 """
-    llik_gbm_ssλ(tree::iTgbmpb, 
+    llik_gbm_ssλ(tree::iTgbmpb,
                  α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
@@ -135,20 +135,20 @@ end
 
 Returns the log-likelihood for a `iTgbmpb` according to GBM birth-death.
 """
-function llik_gbm_ssλ(tree::iTgbmpb, 
+function llik_gbm_ssλ(tree::iTgbmpb,
                       α   ::Float64,
                       σλ  ::Float64,
                       δt  ::Float64,
                       srδt::Float64)
 
-  if istip(tree) 
+  if istip(tree)
     ll, dλ, ssλ, nλ = ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
   else
     ll, dλ, ssλ, nλ = ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
 
     ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(tree.d1::iTgbmpb, α, σλ, δt, srδt)
     ll2, dλ2, ssλ2, nλ2 = llik_gbm_ssλ(tree.d2::iTgbmpb, α, σλ, δt, srδt)
-  
+
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
     ssλ += ssλ1 + ssλ2
@@ -164,7 +164,7 @@ end
 """
     ll_gbm_b_ssλ(lλv ::Array{Float64,1},
                  α   ::Float64,
-                 σλ  ::Float64, 
+                 σλ  ::Float64,
                  δt  ::Float64,
                  fdt ::Float64,
                  srδt::Float64,
@@ -174,7 +174,7 @@ Returns the log-likelihood for a branch according to GBM pure-birth.
 """
 function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
                       α   ::Float64,
-                      σλ  ::Float64, 
+                      σλ  ::Float64,
                       δt  ::Float64,
                       fdt ::Float64,
                       srδt::Float64,
@@ -228,19 +228,19 @@ end
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
                   α   ::Float64,
-                  σλ  ::Float64, 
+                  σλ  ::Float64,
                   δt  ::Float64,
                   fdt ::Float64,
                   srδt::Float64,
                   λev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM pure-birth 
+Returns the log-likelihood for a branch according to GBM pure-birth
 separately for the Brownian motion and the pure-birth
 """
 function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        α   ::Float64,
-                       σλ  ::Float64, 
+                       σλ  ::Float64,
                        δt  ::Float64,
                        fdt ::Float64,
                        srδt::Float64,
@@ -273,8 +273,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   if fdt > 0.0
     lλpi   = lλp[nI+1]
     lλci   = lλc[nI+1]
-    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt) 
-    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
+    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
+    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
     llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
   end
@@ -290,17 +290,17 @@ end
 
 
 """
-    _sss_gbm(tree::T, 
-             α   ::Float64, 
-             ssλ ::Float64, 
+    _sss_gbm(tree::T,
+             α   ::Float64,
+             ssλ ::Float64,
              n   ::Float64) where {T <: iTgbm}
 
-Returns the standardized sum of squares a `iTgbm` according 
+Returns the standardized sum of squares a `iTgbm` according
 to GBM birth-death for a `σ` proposal.
 """
-function _sss_gbm(tree::T, 
-                  α   ::Float64, 
-                  ssλ ::Float64, 
+function _sss_gbm(tree::T,
+                  α   ::Float64,
+                  ssλ ::Float64,
                   n   ::Float64) where {T <: iTgbm}
 
   ssλ0, n0 = _sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
@@ -308,7 +308,7 @@ function _sss_gbm(tree::T,
   ssλ += ssλ0
   n   += n0
 
-  if def1(tree) 
+  if def1(tree)
     ssλ, n = _sss_gbm(tree.d1, α, ssλ, n)
     ssλ, n = _sss_gbm(tree.d2, α, ssλ, n)
   end
@@ -322,15 +322,15 @@ end
 """
     sss_gbm_b(lλv::Array{Float64,1},
               α  ::Float64,
-              δt ::Float64, 
+              δt ::Float64,
               fdt::Float64)
 
-Returns the standardized sum of squares for the stochastic GBM part of a branch 
+Returns the standardized sum of squares for the stochastic GBM part of a branch
 for GBM birth-death.
 """
 function _sss_gbm_b(lλv::Array{Float64,1},
                     α  ::Float64,
-                    δt ::Float64, 
+                    δt ::Float64,
                     fdt::Float64)
 
 
@@ -364,7 +364,7 @@ end
 """
     deltaλ(Ξ::Vector{T}) where {T <: iTgbm}
 
-Returns the log-likelihood ratio for according to GBM 
+Returns the log-likelihood ratio for according to GBM
 for a drift `α` proposal.
 """
 function deltaλ(Ξ::Vector{T}) where {T <: iTgbm}
@@ -384,14 +384,14 @@ end
 """
     _deltaλ(tree::T) where {T <: iTgbm}
 
-Returns the log-likelihood ratio for a `iTgbmpb` according 
+Returns the log-likelihood ratio for a `iTgbmpb` according
 to GBM birth-death for a `α` proposal.
 """
 function _deltaλ(tree::T) where {T <: iTgbm}
 
   lλv = lλ(tree)
 
-  if def1(tree) 
+  if def1(tree)
     lλv[end] - lλv[1] + _deltaλ(tree.d1) + _deltaλ(tree.d2)
   else
     lλv[end] - lλv[1]

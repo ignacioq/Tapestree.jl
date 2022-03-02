@@ -15,7 +15,7 @@ Created 06 07 2020
 """
     cpb_wait(λ::Float64)
 
-Sample a per-lineage waiting time for pure-birth species 
+Sample a per-lineage waiting time for pure-birth species
 with speciation rate `λ`.
 """
 cpb_wait(λ::Float64) = rexp(λ)

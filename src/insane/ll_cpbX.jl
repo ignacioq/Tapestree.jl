@@ -87,7 +87,7 @@ function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: iTreeX}
     nX  += 1.0
   end
 
-  if def1(tree) 
+  if def1(tree)
     sdX, nX = _sdeltaX(tree.d1, sdX, nX)
     sdX, nX = _sdeltaX(tree.d2, sdX, nX)
   end

@@ -12,21 +12,21 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTgbmct}, 
+    llik_gbm(Ξ   ::Vector{iTgbmct},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
-             ϵ   ::Float64, 
+             ϵ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
 Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
-function llik_gbm(Ξ   ::Vector{iTgbmct}, 
+function llik_gbm(Ξ   ::Vector{iTgbmct},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
-                  ϵ   ::Float64, 
+                  ϵ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
   @inbounds begin
@@ -48,8 +48,8 @@ end
 
 """
     llik_gbm(tree::iTgbmct,
-             α   ::Float64, 
-             σλ  ::Float64, 
+             α   ::Float64,
+             σλ  ::Float64,
              ϵ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
@@ -57,8 +57,8 @@ end
 Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
 function llik_gbm(tree::iTgbmct,
-                  α   ::Float64, 
-                  σλ  ::Float64, 
+                  α   ::Float64,
+                  σλ  ::Float64,
                   ϵ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
@@ -80,7 +80,7 @@ end
                α   ::Float64,
                σλ  ::Float64,
                ϵ   ::Float64,
-               δt  ::Float64, 
+               δt  ::Float64,
                fdt ::Float64,
                srδt::Float64,
                λev ::Bool,
@@ -92,7 +92,7 @@ function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
                     α   ::Float64,
                     σλ  ::Float64,
                     ϵ   ::Float64,
-                    δt  ::Float64, 
+                    δt  ::Float64,
                     fdt ::Float64,
                     srδt::Float64,
                     λev ::Bool,
@@ -139,8 +139,8 @@ end
 
 """
     llik_gbm_ssλ(tree::iTgbmct,
-                 α   ::Float64, 
-                 σλ  ::Float64, 
+                 α   ::Float64,
+                 σλ  ::Float64,
                  ϵ   ::Float64,
                  δt  ::Float64,
                  srδt::Float64)
@@ -148,24 +148,24 @@ end
 Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
 """
 function llik_gbm_ssλ(tree::iTgbmct,
-                      α   ::Float64, 
-                      σλ  ::Float64, 
+                      α   ::Float64,
+                      σλ  ::Float64,
                       ϵ   ::Float64,
                       δt  ::Float64,
                       srδt::Float64)
 
   if istip(tree)
-    ll, dλ, ssλ, Σλ, nλ = 
-      ll_gbm_b_ϵ_ssλ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, 
+    ll, dλ, ssλ, Σλ, nλ =
+      ll_gbm_b_ϵ_ssλ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt,
         false, isextinct(tree))
   else
-    ll, dλ, ssλ, Σλ, nλ = 
-      ll_gbm_b_ϵ_ssλ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, 
+    ll, dλ, ssλ, Σλ, nλ =
+      ll_gbm_b_ϵ_ssλ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt,
         true, false)
 
-    ll1, dλ1, ssλ1, Σλ1, nλ1 = 
+    ll1, dλ1, ssλ1, Σλ1, nλ1 =
       llik_gbm_ssλ(tree.d1, α, σλ, ϵ, δt, srδt)
-    ll2, dλ2, ssλ2, Σλ2, nλ2 = 
+    ll2, dλ2, ssλ2, Σλ2, nλ2 =
       llik_gbm_ssλ(tree.d2, α, σλ, ϵ, δt, srδt)
 
     ll  += ll1  + ll2
@@ -186,7 +186,7 @@ end
                    α   ::Float64,
                    σλ  ::Float64,
                    ϵ   ::Float64,
-                   δt  ::Float64, 
+                   δt  ::Float64,
                    fdt ::Float64,
                    srδt::Float64,
                    λev ::Bool,
@@ -198,7 +198,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
                         α   ::Float64,
                         σλ  ::Float64,
                         ϵ   ::Float64,
-                        δt  ::Float64, 
+                        δt  ::Float64,
                         fdt ::Float64,
                         srδt::Float64,
                         λev ::Bool,
@@ -221,7 +221,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
   nλ  = Float64(nI)
 
   # add to global likelihood
-  ll    = llbm * 
+  ll    = llbm *
           (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
   llct *= δt
   Σλ    = llct
@@ -249,7 +249,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
     ll += lλvi1 + log(ϵ)
   end
 
-  return ll, dλ, ssλ, Σλ, nλ 
+  return ll, dλ, ssλ, Σλ, nλ
 end
 
 
@@ -258,7 +258,7 @@ end
 """
     Σλ_gbm(tree::iTgbmct)
 
-Returns the sum of `λ` rates for a `iTgbmct` according 
+Returns the sum of `λ` rates for a `iTgbmct` according
 to `gbmct` for a `ϵ` proposal.
 """
 function Σλ_gbm(tree::iTgbmct)
@@ -267,7 +267,7 @@ function Σλ_gbm(tree::iTgbmct)
     Σλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
   else
     Σλ_gbm_b(lλ(tree), dt(tree), fdt(tree)) +
-    Σλ_gbm(tree.d1::iTgbmct) + 
+    Σλ_gbm(tree.d1::iTgbmct) +
     Σλ_gbm(tree.d2::iTgbmct)
   end
 end
@@ -277,14 +277,14 @@ end
 
 """
     Σλ_gbm_b(lλv::Array{Float64,1},
-             δt ::Float64, 
+             δt ::Float64,
              fdt::Float64)
 
-Returns the sum of `λ` rates for a `iTgbmct` branch according 
+Returns the sum of `λ` rates for a `iTgbmct` branch according
 to `gbmct` for a `ϵ` proposal.
 """
 function Σλ_gbm_b(lλv::Array{Float64,1},
-                  δt ::Float64, 
+                  δt ::Float64,
                   fdt::Float64)
 
   # estimate standard `δt` likelihood
@@ -317,13 +317,13 @@ end
                   α   ::Float64,
                   σλ  ::Float64,
                   ϵ   ::Float64,
-                  δt  ::Float64, 
+                  δt  ::Float64,
                   fdt::Float64,
                   srδt::Float64,
                   λev ::Bool,
                   μev ::Bool)
 
-Returns the log-likelihood for a branch according to `gbmct` 
+Returns the log-likelihood for a branch according to `gbmct`
 separately (for gbm and bd).
 """
 function llr_gbm_b_sep(lλp ::Array{Float64,1},
@@ -331,7 +331,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,
                        ϵ   ::Float64,
-                       δt  ::Float64, 
+                       δt  ::Float64,
                        fdt ::Float64,
                        srδt::Float64,
                        λev ::Bool,
@@ -366,10 +366,10 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   if fdt > 0.0
     lλpi  = lλp[nI+1]
     lλci  = lλc[nI+1]
-    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt) 
+    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
     llri   = fdt * (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
     Σrλ   += llri
-    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt, 
+    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
     llrct -= (1.0 + ϵ) * llri
   end

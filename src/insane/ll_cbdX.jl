@@ -23,7 +23,7 @@ function llik_cbd(tree::sTbdX, λ::Float64, μ::Float64, σx::Float64)
   el  = e(tree)
   bml = iszero(el) ? 0.0 : ldnorm_bm(xf(tree), xi(tree), sqrt(el)*σx)
 
-  if istip(tree) 
+  if istip(tree)
     - el*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0) + bml
   else
     log(λ) - el*(λ + μ) + bml         +

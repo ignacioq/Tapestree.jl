@@ -15,7 +15,7 @@ Created 06 07 2020
 """
     cbd_wait(n::Float64, λ::Float64, μ::Float64)
 
-Sample a waiting time for constant birth-death when `n` species 
+Sample a waiting time for constant birth-death when `n` species
 are alive with speciation rate `λ` and extinction rate `μ`.
 """
 cbd_wait(n::Float64, λ::Float64, μ::Float64) = rexp(n*(λ + μ))
@@ -26,7 +26,7 @@ cbd_wait(n::Float64, λ::Float64, μ::Float64) = rexp(n*(λ + μ))
 """
     cbd_wait(λ::Float64, μ::Float64)
 
-Sample a per-lineage waiting time for constant birth-death species 
+Sample a per-lineage waiting time for constant birth-death species
 with speciation rate `λ` and extinction rate `μ`.
 """
 cbd_wait(λ::Float64, μ::Float64) = rexp(λ + μ)
@@ -61,8 +61,8 @@ Return `true` if speciation event
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
 and extinction rate `μ`.
 """
-function sim_cbd(t::Float64, 
-                 λ::Float64, 
+function sim_cbd(t::Float64,
+                 λ::Float64,
                  μ::Float64)
 
   tw = cbd_wait(λ, μ)
@@ -83,16 +83,16 @@ end
 
 
 """
-    sim_cbd(t ::Float64, 
-            λ ::Float64, 
+    sim_cbd(t ::Float64,
+            λ ::Float64,
             μ ::Float64,
             na::Int64)
 
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
 and extinction rate `μ`.
 """
-function sim_cbd(t ::Float64, 
-                 λ ::Float64, 
+function sim_cbd(t ::Float64,
+                 λ ::Float64,
                  μ ::Float64,
                  na::Int64)
 
@@ -122,8 +122,8 @@ end
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
 and extinction rate `μ` until it goes extinct or survives.
 """
-function sim_cbd_surv(t   ::Float64, 
-                      λ   ::Float64, 
+function sim_cbd_surv(t   ::Float64,
+                      λ   ::Float64,
                       μ   ::Float64,
                       surv::Bool,
                       nsp ::Int64)
@@ -158,14 +158,14 @@ end
 
 Simulate constant birth-death in backward time.
 """
-function sim_cbd_b(n::Int64, 
-                   λ::Float64, 
+function sim_cbd_b(n::Int64,
+                   λ::Float64,
                    μ::Float64)
 
   nF = Float64(n)
   nI = n
 
-  # disjoint trees vector 
+  # disjoint trees vector
   tv = sTbd[]
   for i in Base.OneTo(nI)
     push!(tv, sTbd(0.0))
@@ -203,23 +203,23 @@ end
 
 
 """
-    sim_cbd_b(λ::Float64, 
-              μ::Float64, 
-              mxth::Float64, 
+    sim_cbd_b(λ::Float64,
+              μ::Float64,
+              mxth::Float64,
               maxn::Int64)
 
-Simulate constant birth-death in backward time conditioned on 1 survival 
+Simulate constant birth-death in backward time conditioned on 1 survival
 and not having a greater tree height than `mxth`.
 """
-function sim_cbd_b(λ::Float64, 
-                   μ::Float64, 
-                   mxth::Float64, 
+function sim_cbd_b(λ::Float64,
+                   μ::Float64,
+                   mxth::Float64,
                    maxn::Int64)
 
   nF = 1.0
   nI = 1
 
-  # disjoint trees vector 
+  # disjoint trees vector
   tv = [sTbd(0.0, false)]
 
   th = 0.0
@@ -234,8 +234,8 @@ function sim_cbd_b(λ::Float64,
     if nI > maxn
       return tv[nI], (mxth + 0.1)
     end
-    
-    if th > mxth 
+
+    if th > mxth
      return tv[nI], th
     end
 

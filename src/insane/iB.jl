@@ -56,37 +56,37 @@ struct iBfb <: iBf
 
   # constructors
   iBfb() = new(BitArray{1}(), 0.0, 0.0, 1.0, false)
-  iBfb(dr::BitArray{1}, ti::Float64, tf::Float64, ρi::Float64, it::Bool) = 
+  iBfb(dr::BitArray{1}, ti::Float64, tf::Float64, ρi::Float64, it::Bool) =
     new(dr, ρi, ti, tf, it)
 end
 
 
 # pretty-printing
-Base.show(io::IO, id::iBfb) = 
-  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", 
+Base.show(io::IO, id::iBfb) =
+  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (",
     ti(id), ", ", tf(id), "), ", dr(id))
 
 
 
 
 """
-    tree::sT_label, 
-    idv ::Array{iBfb,1}, 
+    tree::sT_label,
+    idv ::Array{iBfb,1},
     bitv::BitArray{1},
     tρ  ::Dict{String, Float64}
 
-Make `iBfb` vector for an `iTree` taking into account 
+Make `iBfb` vector for an `iTree` taking into account
 species-specific sampling fraction `ρ`.
 """
-function makeiBf!(tree::sT_label, 
-                  idv ::Array{iBfb,1}, 
+function makeiBf!(tree::sT_label,
+                  idv ::Array{iBfb,1},
                   bitv::BitArray{1},
                   tρ  ::Dict{String, Float64})
 
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, 
+    push!(idv,
       iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, true))
     return ρi, 1, bitv
   end
@@ -107,9 +107,9 @@ function makeiBf!(tree::sT_label,
   bitv = copy(bitv1)
   pop!(bitv)
 
-  n  = n1 + n2 
+  n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
-  push!(idv, 
+  push!(idv,
     iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, false))
 
   return ρi, n, bitv
@@ -173,33 +173,33 @@ struct iBfgp <: iBf
 
   # constructors
   iBfgp() = new(BitArray{1}(), Ref(0), 0.0, 0.0, false, false)
-  iBfgp(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64, it::Bool, ie::Bool) = 
+  iBfgp(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64, it::Bool, ie::Bool) =
     new(dr, Ref(da), ti, tf, it, ie)
 end
 
 # pretty-printing
-Base.show(io::IO, id::iBfgp) = 
-  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id), 
+Base.show(io::IO, id::iBfgp) =
+  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id),
     " with ", da(id), " graft", isone(da(id)) ? "" : "s")
 
 
 
 
 """
-    makeiBf!(tree::T, 
-             idv ::Array{iBfgp,1}, 
-             bit ::BitArray{1}) where {T <: iTree} 
+    makeiBf!(tree::T,
+             idv ::Array{iBfgp,1},
+             bit ::BitArray{1}) where {T <: iTree}
 
 Make `iBfgp` vector for an `iTree`.
 """
-function makeiBf!(tree::T, 
-                  idv ::Array{iBfgp,1}, 
-                  bit ::BitArray{1}) where {T <: iTree} 
+function makeiBf!(tree::T,
+                  idv ::Array{iBfgp,1},
+                  bit ::BitArray{1}) where {T <: iTree}
 
   itb = istip(tree)
   ieb = isextinct(tree)
 
-  push!(idv, 
+  push!(idv,
     iBfgp(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb, ieb))
 
   bit1 = copy(bit)
@@ -261,45 +261,45 @@ struct iBffs <: iBf
   ψt::Base.RefValue{Float64}
 
   # constructors
-  iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1., false, false, 
+  iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1., false, false,
                 Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0))
-  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
-        it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64, 
-        λt::Float64, μt::Float64,) = 
-        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, false, 
+  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
+        it::Bool, ρi::Float64, ie::Bool, ni::Int64, nt::Int64,
+        λt::Float64, μt::Float64,) =
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, false,
             Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0))
-  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64, 
-        it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64, 
-        λt::Float64, μt::Float64, ψt::Float64) = 
-        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, iψ, 
+  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
+        it::Bool, ρi::Float64, ie::Bool, iψ::Bool, ni::Int64, nt::Int64,
+        λt::Float64, μt::Float64, ψt::Float64) =
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, ie, iψ,
             Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(ψt))
 end
 
 # pretty-printing
-Base.show(io::IO, id::iBffs) = 
-  print(io, 
-    ie(id)         ? "extinct " : "", 
-    ifos(id)       ? "fossil " : "", 
-    it(id)         ? "terminal " : "", 
-    iszero(pa(id)) ? "stem " : "", 
-    isone(pa(id))  ? "crown " : "", 
-    "ibranch (", ti(id), ", ", tf(id), 
+Base.show(io::IO, id::iBffs) =
+  print(io,
+    ie(id)         ? "extinct " : "",
+    ifos(id)       ? "fossil " : "",
+    it(id)         ? "terminal " : "",
+    iszero(pa(id)) ? "stem " : "",
+    isone(pa(id))  ? "crown " : "",
+    "ibranch (", ti(id), ", ", tf(id),
     "), p:", pa(id), ", d1:", d1(id), ", d2:", d2(id))
 
 
 
 
 """
-    makeiBf!(tree::sT_label, 
-             idv ::Array{iBffs,1}, 
-             n2v ::Array{Int64,1}, 
+    makeiBf!(tree::sT_label,
+             idv ::Array{iBffs,1},
+             n2v ::Array{Int64,1},
              tρ  ::Dict{String, Float64})
 
 Make `iBf` vector for an `iTree`.
 """
-function makeiBf!(tree::sT_label, 
-                  idv ::Array{iBffs,1}, 
-                  n2v ::Array{Int64,1}, 
+function makeiBf!(tree::sT_label,
+                  idv ::Array{iBffs,1},
+                  n2v ::Array{Int64,1},
                   tρ  ::Dict{String, Float64})
 
   th = treeheight(tree)
@@ -316,7 +316,7 @@ function makeiBf!(tree::sT_label,
   ρ1, n1 = makeiBf!(tree.d1, idv, n2v, tρ)
   ρ2, n2 = makeiBf!(tree.d2, idv, n2v, tρ)
 
-  n  = n1 + n2 
+  n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
   push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
@@ -330,20 +330,20 @@ end
 
 
 """
-    makeiBf!(tree::sT_label, 
-                  idv ::Array{iBffs,1}, 
-                  n2v ::Array{Int64,1}, 
+    makeiBf!(tree::sT_label,
+                  idv ::Array{iBffs,1},
+                  n2v ::Array{Int64,1},
                   tρ  ::Dict{String, Float64},
                   sc  ::Array{Float64,1},
                   xr  ::Array{Float64,1},
                   X   ::Dict{String, Float64})
 
-Make `iBf` vector for an `iTreeX` and estimate phylogenetic independent 
+Make `iBf` vector for an `iTreeX` and estimate phylogenetic independent
 contrasts `sc` and ancestors `xr` given `tree` and data `X`.
 """
-function makeiBf!(tree::sT_label, 
-                  idv ::Array{iBffs,1}, 
-                  n2v ::Array{Int64,1}, 
+function makeiBf!(tree::sT_label,
+                  idv ::Array{iBffs,1},
+                  n2v ::Array{Int64,1},
                   tρ  ::Dict{String, Float64},
                   sc  ::Array{Float64,1},
                   xr  ::Array{Float64,1},
@@ -366,7 +366,7 @@ function makeiBf!(tree::sT_label,
   ρ2, n2, x2, e2 = makeiBf!(tree.d2, idv, n2v, tρ, sc, xr, X)
 
   # tree order
-  n  = n1 + n2 
+  n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
   push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, false, 0, 1, 0.0, 0.0))
@@ -387,26 +387,26 @@ end
 
 
 """
-    makeiBf!(tree::sTf_label, 
-             idv ::Array{iBffs,1}, 
+    makeiBf!(tree::sTf_label,
+             idv ::Array{iBffs,1},
              ti  ::Float64,
-             n1v ::Array{Int64,1}, 
-             n2v ::Array{Int64,1}, 
-             ft1v::Array{Int64,1}, 
-             ft2v::Array{Int64,1}, 
-             sa2v::Array{Int64,1}, 
+             n1v ::Array{Int64,1},
+             n2v ::Array{Int64,1},
+             ft1v::Array{Int64,1},
+             ft2v::Array{Int64,1},
+             sa2v::Array{Int64,1},
              tρ  ::Dict{String, Float64})
 
 Make `iBf` vector for an `iTree` with fossils.
 """
-function makeiBf!(tree::sTf_label, 
-                  idv ::Array{iBffs,1}, 
+function makeiBf!(tree::sTf_label,
+                  idv ::Array{iBffs,1},
                   ti  ::Float64,
-                  n1v ::Array{Int64,1}, 
-                  n2v ::Array{Int64,1}, 
-                  ft1v::Array{Int64,1}, 
-                  ft2v::Array{Int64,1}, 
-                  sa2v::Array{Int64,1}, 
+                  n1v ::Array{Int64,1},
+                  n2v ::Array{Int64,1},
+                  ft1v::Array{Int64,1},
+                  ft2v::Array{Int64,1},
+                  sa2v::Array{Int64,1},
                   tρ  ::Dict{String, Float64})
 
   #th = treeheight(tree)
@@ -417,11 +417,11 @@ function makeiBf!(tree::sTf_label,
     lab = l(tree)
     ρi  = tρ[lab]
     ie = iψ = isfossil(tree)       # count fossil tips as extinct
-    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, ie, iψ, 
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, ie, iψ,
                      Int64(!iψ), 1, 0.0, 0.0, 0.0))
-    
+
     push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
-    
+
     return iψ ? (ρi, 0, 1, 0) : (ρi, 1, 0, 0)
   end
 
@@ -446,7 +446,7 @@ function makeiBf!(tree::sTf_label,
   end
   sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
 
-  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, false, 
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, false,
                    isfossil(tree), 0, 1, 0.0, 0.0, 0.0))
   push!(n1v, n1)
   push!(n2v, n2)
@@ -542,9 +542,12 @@ Make the edge dictionary.
 function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
 
   idf  = iBffs[]
-  n1v  = Int64[]; n2v = Int64[]    # vector of nb of alive descendants (d1 & d2)
-  ft1v = Int64[]; ft2v = Int64[]  # vector of nb of fossil tips (d1 & d2)
-  sa2v = Int64[]                  # vector of nb of sampled ancestors (d2)
+  n1v  = Int64[]
+  n2v  = Int64[] # vector of nb of alive descendants (d1 & d2)
+  ft1v = Int64[]
+  ft2v = Int64[] # vector of nb of fossil tips (d1 & d2)
+  sa2v = Int64[] # vector of nb of sampled ancestors (d2)
+
   makeiBf!(tree, idf, treeheight(tree), n1v, n2v, ft1v, ft2v, sa2v, tρ)
 
   reverse!(idf)
@@ -555,22 +558,23 @@ function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
   reverse!(sa2v)
 
   for i in Base.OneTo(lastindex(idf))
-    bi = idf[i]
-    n1 = n1v[i]; n2 = n2v[i]
-    ft1 = ft1v[i]; ft2 = ft2v[i]
+    bi  = idf[i]
+    n1  = n1v[i]
+    n2  = n2v[i]
+    ft1 = ft1v[i]
+    ft2 = ft2v[i]
     sa2 = sa2v[i]
-    #@show i; @show bi; @show n1; @show n2; @show sa2
 
-    if n1+ft1>0 && n2+ft2>0 # bifurcation
+    if (n1 + ft1) > 0 && (n2 + ft2) > 0 # bifurcation
       setd1!(bi, (n2+ft2)*2 + sa2 + i)
       setd2!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
       setpa!(idf[d2(bi)], i)
-    elseif n1+ft1>0    # fossil sampled ancestor of d1
+    elseif (n1 + ft1) > 0    # fossil sampled ancestor of d1
       setd1!(bi, i + 1)
       setd2!(bi, 0)
       setpa!(idf[d1(bi)], i)
-    elseif n2+ft2>0    # fossil sampled ancestor of d2
+    elseif (n2 + ft2) > 0    # fossil sampled ancestor of d2
       setd1!(bi, 0)
       setd2!(bi, i + 1)
       setpa!(idf[d2(bi)], i)
@@ -626,14 +630,14 @@ struct iBa <: iB
 
   # constructors
   iBa() = new(BitArray{1}(), 0, 0.0, 0.0)
-  iBa(dr::BitArray{1}, fB::Int64, ti::Float64, tf::Float64) = 
+  iBa(dr::BitArray{1}, fB::Int64, ti::Float64, tf::Float64) =
     new(dr, fB, ti, tf)
 end
 
 
 # pretty-printing
-Base.show(io::IO, id::iBa) = 
-  print(io, "augmented ibranch (", ti(id), ", ", tf(id), "), ", dr(id), 
+Base.show(io::IO, id::iBa) =
+  print(io, "augmented ibranch (", ti(id), ", ", tf(id), "), ", dr(id),
     " attached to ", fB(id))
 
 
@@ -762,7 +766,7 @@ ifos(id::iBffs) = getproperty(id, :iψ)
 """
     ρi(id::iBffs)
 
-Return the branch-specific sampling fraction. 
+Return the branch-specific sampling fraction.
 """
 ρi(id::iBffs) = getproperty(id, :ρi)
 

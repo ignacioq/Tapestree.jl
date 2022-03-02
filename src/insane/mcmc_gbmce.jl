@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    insane_gbmce(tree    ::sT_label, 
+    insane_gbmce(tree    ::sT_label,
                  out_file::String;
                  λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                  α_prior ::NTuple{2,Float64} = (0.0, 10.0),
@@ -23,7 +23,7 @@ Created 03 09 2020
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
                  marginal::Bool              = false,
-                 nitpp   ::Int64             = 100, 
+                 nitpp   ::Int64             = 100,
                  nthpp   ::Int64             = 10,
                  K       ::Int64             = 11,
                  λi      ::Float64           = NaN,
@@ -39,7 +39,7 @@ Created 03 09 2020
 
 Run insane for `gbm-ce`.
 """
-function insane_gbmce(tree    ::sT_label, 
+function insane_gbmce(tree    ::sT_label,
                       out_file::String;
                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                       α_prior ::NTuple{2,Float64} = (0.0, 10.0),
@@ -49,7 +49,7 @@ function insane_gbmce(tree    ::sT_label,
                       nthin   ::Int64             = 10,
                       nburn   ::Int64             = 200,
                       marginal::Bool              = false,
-                      nitpp   ::Int64             = 100, 
+                      nitpp   ::Int64             = 100,
                       nthpp   ::Int64             = 10,
                       K       ::Int64             = 11,
                       λi      ::Float64           = NaN,
@@ -106,7 +106,7 @@ function insane_gbmce(tree    ::sT_label,
   # parameter updates (1: α, 2: σλ, 3: μ, 4: gbm, 5: forward simulation)
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(5) 
+  for i in Base.OneTo(5)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
@@ -114,13 +114,13 @@ function insane_gbmce(tree    ::sT_label,
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, μc, mc =
-    mcmc_burn_gbmce(Ξ, idf, λa_prior, α_prior, σλ_prior, μ_prior, 
+    mcmc_burn_gbmce(Ξ, idf, λa_prior, α_prior, σλ_prior, μ_prior,
       nburn, αi, σλi, μc, mc, th, stem, δt, srδt, inodes, pup, prints)
 
   # mcmc
   R, Ξv =
     mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, th, stem,
-      λa_prior, α_prior, σλ_prior, μ_prior, niter, nthin, δt, srδt, 
+      λa_prior, α_prior, σλ_prior, μ_prior, niter, nthin, δt, srδt,
       inodes, pup, prints)
 
   pardic = Dict(("lambda_root"  => 1,
@@ -181,7 +181,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTgbmce},
   nsi = stem ? 0.0 : λ0
 
   llc = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - nsi + log(mc) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) + 
+  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
         logdunif(exp(λ0), λa_prior[1], λa_prior[2])   +
         logdnorm(αc,  α_prior[1], α_prior[2]^2)       +
         logdgamma(μc, μ_prior[1], μ_prior[2])
@@ -208,8 +208,8 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTgbmce},
       # update drift
       if pupi === 1
 
-        llc, prc, αc, mc = 
-          update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, dλ, llc, prc, mc, th, stem, 
+        llc, prc, αc, mc =
+          update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, dλ, llc, prc, mc, th, stem,
             δt, srδt, α_prior)
 
         # update ssλ with new drift `α`
@@ -218,15 +218,15 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTgbmce},
       # update sigma
       elseif pupi === 2
 
-        llc, prc, σλc, mc = 
-          update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem, 
+        llc, prc, σλc, mc =
+          update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem,
             δt, srδt, σλ_prior)
 
       # update extinction
       elseif pupi === 3
 
-        llc, prc, μc, mc = 
-          update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem, 
+        llc, prc, μc, mc =
+          update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem,
             δt, srδt, μ_prior)
 
       # gbm update
@@ -235,8 +235,8 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTgbmce},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, dλ, ssλ, mc = 
-          update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem, 
+        llc, dλ, ssλ, mc =
+          update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem,
             δt, srδt, lλxpr)
 
       # forward simulation update
@@ -244,8 +244,8 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTgbmce},
 
         bix = ceil(Int64,rand()*el)
 
-        llc, dλ, ssλ, nλ, ne, L = 
-          update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
+        llc, dλ, ssλ, nλ, ne, L =
+          update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L,
             δt, srδt)
       end
     end
@@ -343,8 +343,8 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
       # update σλ or σμ
       if pupi === 1
 
-        llc, prc, αc, mc = 
-          update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, dλ, llc, prc, mc, th, stem, 
+        llc, prc, αc, mc =
+          update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, dλ, llc, prc, mc, th, stem,
             δt, srδt, α_prior)
 
         # update ssλ with new drift `α`
@@ -353,31 +353,31 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
-        #    return 
+        #    return
         # end
 
       elseif pupi === 2
 
-        llc, prc, σλc, mc = 
-          update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem, 
+        llc, prc, σλc, mc =
+          update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem,
             δt, srδt, σλ_prior)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
-        #    return 
+        #    return
         # end
 
       elseif pupi === 3
 
-         llc, prc, μc, mc = 
-            update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem, 
+         llc, prc, μc, mc =
+            update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem,
               δt, srδt, μ_prior)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
-        #    return 
+        #    return
         # end
 
       # gbm update
@@ -386,14 +386,14 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, dλ, ssλ, mc = 
-          update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem, 
+        llc, dλ, ssλ, mc =
+          update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem,
             δt, srδt, lλxpr)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
-        #    return 
+        #    return
         # end
 
       # forward simulation update
@@ -401,14 +401,14 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
 
         bix = ceil(Int64,rand()*el)
 
-        llc, dλ, ssλ, nλ, ne, L = 
-          update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L, 
+        llc, dλ, ssλ, nλ, ne, L =
+          update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L,
             δt, srδt)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
-        #    return 
+        #    return
         # end
       end
     end
@@ -504,7 +504,7 @@ function update_fs!(bix    ::Int64,
       # change daughters
       if isfinite(acr)
 
-        llrd, acrd, drλ, ssrλ, λ1p, λ2p = 
+        llrd, acrd, drλ, ssrλ, λ1p, λ2p =
           _daughters_update!(ξ1, ξ2, λf, α, σλ, μ, δt, srδt)
 
         llr += llrd
@@ -613,7 +613,7 @@ end
               na  ::Int64,
               nsp ::Int64)
 
-Continue simulation until time `t` for unfixed tips in `tree`. 
+Continue simulation until time `t` for unfixed tips in `tree`.
 """
 function tip_sims!(tree::iTgbmce,
                    t   ::Float64,
@@ -625,15 +625,15 @@ function tip_sims!(tree::iTgbmce,
                    na  ::Int64,
                    nsp ::Int64)
 
-  if istip(tree) 
+  if istip(tree)
     if !isfix(tree) && isalive(tree)
 
       fdti = fdt(tree)
       lλ0  = lλ(tree)
 
       # simulate
-      stree, na, nsp = 
-        _sim_gbmce(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt, 
+      stree, na, nsp =
+        _sim_gbmce(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt,
                    na - 1, nsp, 1_000)
 
       if na < 1 || nsp >= 1_000
@@ -711,34 +711,34 @@ function update_gbm!(bix  ::Int64,
     bi   = idf[bix]
     ξ1   = Ξ[d1(bi)]
     ξ2   = Ξ[d2(bi)]
-    ter1 = it(idf[d1(bi)]) 
+    ter1 = it(idf[d1(bi)])
     ter2 = it(idf[d2(bi)])
 
 
     root = iszero(pa(bi))
     # if crown
     if root && !stem
-      llc, dλ, ssλ, mc = 
-        _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, dλ, ssλ, mc, th, 
+      llc, dλ, ssλ, mc =
+        _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, dλ, ssλ, mc, th,
           δt, srδt, lλxpr)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
-        llc, dλ, ssλ, mc = 
+        llc, dλ, ssλ, mc =
           _stem_update!(ξi, α, σλ, μ, llc, dλ, ssλ, mc, th, δt, srδt, lλxpr)
       end
 
       # parent branch update
-      llc, dλ, ssλ = 
+      llc, dλ, ssλ =
         _update_gbm!(ξi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, false)
 
-      # get fixed tip 
-      lξi = fixtip(ξi) 
+      # get fixed tip
+      lξi = fixtip(ξi)
 
       # make between decoupled trees node update
-      llc, dλ, ssλ = 
-        update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2), 
+      llc, dλ, ssλ =
+        update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
           fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, dλ, ssλ, δt, srδt)
 
       # set fixed `λ(t)` in branch
