@@ -450,11 +450,11 @@ function nnodesbifurcation(Ξ::Vector{T}) where {T<: iTree}
   nf = 0
   for ξ in Ξ
     ns += _nnodesbifurcation(ξ, 0)
-    nf += isfixfossil(ξ)
+    nf += isinternalfossil(ξ)
   end
   ns += Float64(lastindex(Ξ) - nf - 1)*0.5
 
-  return n
+  return ns
 end
 
 

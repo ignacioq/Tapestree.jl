@@ -146,30 +146,30 @@ isfossil(tree::iTgbmbd) = false
 
 
 """
-    isfixfossiltiptip(tree::T, f::Bool) where {T <: iTree}
+    isinternalfossiltip(tree::T, f::Bool) where {T <: iTree}
 
 Return if the fix has a sampled ancestor, i.e. a fossil internal node.
 """
-isfixfossiltip(tree::T) where {T <: iTree} =
-  _isfixfossiltip(tree, false)
+isinternalfossil(tree::T) where {T <: iTree} =
+  _isinternalfossil(tree, false)
 
 
 
 
 """
-    _isfixfossiltip(tree::T, f::Bool) where {T <: iTree}
+    _isinternalfossil(tree::T, f::Bool) where {T <: iTree}
 
 Return if the fix has a sampled ancestor, i.e. a fossil internal node.
 """
-function _isfixfossiltip(tree::T, f::Bool) where {T <: iTree}
+function _isinternalfossil(tree::T, f::Bool) where {T <: iTree}
 
   if isfix(tree) && isfossil(tree) && istip(tree)
     return true
   elseif !istip(tree)
-    if isfix(tree.d1)
-      f = _isfixfossiltip(tree.d1, f)
-    else
-      f = _isfixfossiltip(tree.d2, f)
+    if isfix(tree.d1) && def1(tree)
+      f = _isinternalfossil(tree.d1, f)
+    elseif def2(tree)
+      f = _isinternalfossil(tree.d2, f)
     end
   end
 
@@ -621,13 +621,13 @@ Return the number of alive nodes for `tree`, initialized at `n`.
 """
 function _ntipsalive(tree::T, n::Int64) where {T <: sTf}
 
-  if !def1(tree) && alive(tree)
-     n += 1
-  else
-    n = _ntips(tree.d1, n)
+  if def1(tree)
+    n = _ntipsalive(tree.d1, n)
     if def2(tree)
-      n = _ntips(tree.d2, n)
+      n = _ntipsalive(tree.d2, n)
     end
+  elseif isalive(tree)
+    n += 1
   end
 
   return n

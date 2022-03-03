@@ -67,7 +67,7 @@ function insane_cbd(tree    ::sT_label,
 
   # starting parameters
   if isnan(λi) && isnan(μi)
-    λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
+    λc, μc = moments(Float64(n), th, ϵi)
   else
     λc, μc = λi, μi
   end
@@ -299,7 +299,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, λc, mc = 
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -311,7 +311,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, μc, mc = 
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 
@@ -323,7 +323,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         bix = ceil(Int64,rand()*el)
         llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
-        # llci = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return 

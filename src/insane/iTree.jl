@@ -425,6 +425,9 @@ function Base.show(io::IO, t::sTfbd)
 end
 
 
+
+
+
 """
     sTfbd(tree::sTfbd)
 
@@ -432,10 +435,16 @@ Transforms a tree of type `sT_label` to `sTfbd`.
 """
 function sTfbd(tree::sTfbd)
   if def1(tree)
-    sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree),
-      isextinct(tree), isfossil(tree),  isfix(tree))
+    d1 = sTfbd(tree.d1)
+    if def2(tree)
+      sTfbd(d1, sTfbd(tree.d2), e(tree),
+        isextinct(tree), isfossil(tree), isfix(tree))
+    else
+      sTfbd(d1, e(tree),
+        isextinct(tree), isfossil(tree), isfix(tree))
+    end
   else
-    sTfbd(e(tree), isextinct(tree), isfossil(tree),  isfix(tree))
+    sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
   end
 end
 

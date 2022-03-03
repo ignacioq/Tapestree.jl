@@ -59,7 +59,7 @@ function llik_cfbd(Ξ::Vector{sTfbd},
   ll = 0.0
   nf = 0 # number of sampled ancestors
   for ξ in Ξ
-    nf += isfixfossiltip(ξ)
+    nf += isinternalfossil(ξ)
     ll += llik_cfbd(ξ, λ, μ, ψ)
   end
 

@@ -334,11 +334,13 @@ Change all alive tips to fossil tips.
 """
 function fossilizefixedtip!(tree::T) where {T <: sTf}
 
-  if     def1(tree) && isfix(tree.d1) fossilizefixedtip!(tree.d1::T)
-  elseif def2(tree) && isfix(tree.d2) fossilizefixedtip!(tree.d2::T)
-  else tree.iψ = true
+  if istip(tree)
+    tree.iψ = true
+  elseif isfix(tree.d1)
+    fossilizefixedtip!(tree.d1::T)
+  else
+    fossilizefixedtip!(tree.d2::T)
   end
-
 end
 
 
@@ -773,7 +775,7 @@ function _fixrtip!(tree::T, na::Int64) where T <: iTree
 
   fix!(tree)
 
-  if def1(tree)
+  if def2(tree)
     if isextinct(tree.d1)
       _fixrtip!(tree.d2, na)
     elseif isextinct(tree.d2)
@@ -782,47 +784,11 @@ function _fixrtip!(tree::T, na::Int64) where T <: iTree
       na1 = ntipsalive(tree.d1)
       # probability proportional to number of lineages
       if (fIrand(na) + 1) > na1
-      # if rand() < 0.5
         _fixrtip!(tree.d2, na - na1)
       else
         _fixrtip!(tree.d1, na1)
       end
     end
-  end
-end
-
-
-
-"""
-    _fixrtip!(tree::T, na::Int64) where {T <: sTf}
-
-Fixes the the path for a random non extinct tip among `na`.
-"""
-function _fixrtip!(tree::T, na::Int64) where {T <: sTf}
-
-  fix!(tree)
-
-  if def1(tree)
-    if def2(tree)
-      if isextinct(tree.d1::T)
-        _fixrtip!(tree.d2::T, na)
-      elseif isextinct(tree.d2::T)
-        _fixrtip!(tree.d1::T, na)
-      else
-        na1 = ntipsalive(tree.d1::T)
-        # probability proportional to number of lineages
-        if (fIrand(na) + 1) > na1
-          _fixrtip!(tree.d2::T, na - na1)
-        else
-          _fixrtip!(tree.d1::T, na1)
-        end
-      end
-    else
-      _fixrtip!(tree.d1::T, na)
-    end
-
-  elseif def2(tree) && isalive(tree.d2::T)
-    _fixrtip!(tree.d2::T, na)
   end
 end
 
