@@ -731,8 +731,10 @@ Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
 function _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
 
-  if !def1(tree) && isextinct(tree)
-     n += 1.0
+  if istip(tree)
+    if isextinct(tree)
+      n += 1
+    end
   else
     n = _ntipsextinctF(tree.d1, n)
     if def2(tree)
