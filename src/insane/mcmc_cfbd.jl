@@ -340,7 +340,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         # llci = llik_cfbd(Ξ, λc, μc, ψc) - !stem * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       # μ proposal
@@ -352,7 +352,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         # llci = llik_cfbd(Ξ, λc, μc, ψc) - !stem * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       # ψ proposal
@@ -363,9 +363,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         # llci = llik_cfbd(Ξ, λc, μc, ψc) - !stem * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
-      
+
       # forward simulation proposal proposal
       else
 
@@ -376,7 +376,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         # llci = llik_cfbd(Ξ, λc, μc, ψc) - !stem * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
       end
     end
@@ -759,7 +759,7 @@ end
     update_ψ!(llc    ::Float64,
               prc    ::Float64,
               ψc     ::Float64,
-              nfos   ::Float64,
+              nf     ::Float64,
               L      ::Float64,
               ψ_prior::NTuple{2,Float64})
 
@@ -768,13 +768,13 @@ Gibbs sampling of `ψ` for constant fossilized birth-death.
 function update_ψ!(llc    ::Float64,
                    prc    ::Float64,
                    ψc     ::Float64,
-                   nfos   ::Float64,
+                   nf     ::Float64,
                    L      ::Float64,
                    ψ_prior::NTuple{2,Float64})
 
-  ψp  = randgamma(ψ_prior[1] + nfos, ψ_prior[2] + L)
+  ψp  = randgamma(ψ_prior[1] + nf, ψ_prior[2] + L)
 
-  llc += nfos * log(ψp/ψc) + L * (ψc - ψp)
+  llc += nf * log(ψp/ψc) + L * (ψc - ψp)
   prc += llrdgamma(ψp, ψc, ψ_prior[1], ψ_prior[2])
   ψc   = ψp
 
