@@ -13,7 +13,7 @@ Created 06 07 2020
 
 
 """
-    llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
+    llik_cbd(tree::sTbdX, λ::Float64, μ::Float64, σx::Float64)
 
 Log-likelihood up to a constant for constant birth-death and trait evolution
 given a complete `iTree` recursively.

@@ -23,7 +23,7 @@ abstract type iTreeX <: iTree end
 
 
 """
-    sT
+    sTX
 
 An abstract type for all composite recursive types representing
 a simple binary phylogenetic tree for `insane` use
@@ -34,7 +34,7 @@ abstract type sTX <: iTreeX end
 
 
 """
-    sTf
+    sTfX
 
 An abstract type for all composite recursive types representing
 a simple binary phylogenetic tree with fossils for `insane` use
@@ -163,5 +163,93 @@ function sTbdX(tree::sTbdX)
     sTbdX(e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
   end
 end
+
+
+
+
+
+
+"""
+    sTfbdX
+
+The simplest composite recursive type of supertype `sTf`
+representing a binary phylogenetic tree for `insane` use,
+with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  iμ: is an extinction node
+  iψ: is a fossil node
+  fx: if it is fix
+  xi: initial trait value
+  xf: final trait value
+
+    sTfbdXX(e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
+
+    sTfbdXX(d1::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
+
+    sTfbdXX(d1::sTfbdX, d2::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
+
+Constructs an `sTfbdX` object with one sampled ancestor, one `sTfbdX` daughter and
+edge `e`.
+"""
+mutable struct sTfbdX <: sTfX
+  d1::sTfbdX
+  d2::sTfbdX
+  e ::Float64
+  iμ::Bool
+  iψ::Bool
+  fx::Bool
+  xi::Float64
+  xf::Float64
+
+  sTfbdX(e::Float64, iμ::Bool, iψ::Bool, fx::Bool, xi::Float64, xf::Float64) =
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.xi = xi; x.xf = xf;
+      x)
+  sTfbdX(d1::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool,
+    xi::Float64, xf::Float64) =
+    (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx;
+      x.xi = xi; x.xf = xf; x)
+  sTfbdX(d1::sTfbdX, d2::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool,
+    xi::Float64, xf::Float64) = new(d1, d2, e, iμ, iψ, fx, xi, xf)
+end
+
+# pretty-printing
+function Base.show(io::IO, t::sTfbdX)
+  nt = ntips(t)
+  nf = nfossils(t)
+
+  print(io, "insane simple fossil tree with traits",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
+    nf," fossil", (isone(nf) ? "" : "s" ))
+end
+
+
+
+
+"""
+    sTfbdX(tree::sTfbdX)
+
+Produces a copy of `sTfbdX`.
+"""
+function sTfbdX(tree::sTfbdX)
+  if def1(tree)
+    d1 = sTfbdX(tree.d1)
+    if def2(tree)
+      sTfbdX(d1, sTfbdX(tree.d2), e(tree),
+        isextinct(tree), isfossil(tree), isfix(tree), xi(tree), xf(tree))
+    else
+      sTfbdX(d1, e(tree),
+        isextinct(tree), isfossil(tree), isfix(tree), xi(tree), xf(tree))
+    end
+  else
+    sTfbdX(e(tree), isextinct(tree), isfossil(tree), isfix(tree),
+      xi(tree), xf(tree))
+  end
+end
+
+
 
 

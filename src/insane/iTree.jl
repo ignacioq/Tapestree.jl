@@ -75,18 +75,17 @@ mutable struct sT_label <: sT
   e ::Float64
   l ::String
 
-  sT_label() = new()
   sT_label(e::Float64, l::String) = (x = new(); x.e = e; x.l = l; x)
-  sT_label(d1::sT_label,
-           d2::sT_label,
-           e ::Float64,
-           l ::String) = new(d1, d2, e, l)
+  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) = 
+    new(d1, d2, e, l)
 end
 
 # pretty-printing
-Base.show(io::IO, t::sT_label) =
-  print(io, "insane simple labelled tree with ", ntips(t), " tips")
-
+function Base.show(io::IO, t::sT_label)
+  nt = ntips(t)
+  print(io, "insane simple labelled tree with ", nt, " tip", 
+    (isone(nt) ? "" : "s"))
+end
 
 
 
@@ -406,7 +405,7 @@ mutable struct sTfbd <: sTf
   sTfbd(d1::sTfbd, d2::sTfbd, e::Float64) =
     new(d1, d2, e, false, false, false)
   sTfbd(d1::sTfbd, e::Float64) =
-    (x = new(); x.d1 = d1; x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
+    (x = new(); x.d1 = d1; x.e = e; x.iμ = false; x.iψ = true; x.fx = false; x)
   sTfbd(d1::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
     (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
   sTfbd(d1::sTfbd, d2::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
@@ -418,7 +417,7 @@ function Base.show(io::IO, t::sTfbd)
   nt = ntips(t)
   nf = nfossils(t)
       
-  print(io, "insane simple fossilized birth-death tree with ", 
+  print(io, "insane simple fossil tree with ", 
     nt , " tip",  (isone(nt) ? "" : "s" ), 
     ", (", ntipsextinct(t)," extinct) and ", 
     nf," fossil", (isone(nf) ? "" : "s" ))
@@ -427,11 +426,10 @@ end
 
 
 
-
 """
     sTfbd(tree::sTfbd)
 
-Transforms a tree of type `sT_label` to `sTfbd`.
+Creates a copy of a `sTfbd` tree.
 """
 function sTfbd(tree::sTfbd)
   if def1(tree)

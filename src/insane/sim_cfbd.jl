@@ -107,21 +107,20 @@ function sim_cfbd(t::Float64,
 
   if tw > t
     na += 1
-    return sTfbd(t), na, nf
+    return sTfbd(t, false, false, false), na, nf
   end
 
+  # speciation
   if λevent(λ, μ, ψ)
-    # speciation
     d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, na, nf)
     d2, na, nf = sim_cfbd(t - tw, λ, μ, ψ, na, nf)
 
     return sTfbd(d1, d2, tw, false, false, false), na, nf
+  # extinction
   elseif μevent(μ, ψ)
-
-    # extinction
     return sTfbd(tw, true, false, false), na, nf
+  # fossil sampling
   else
-    # fossil sampling
     nf += 1
     d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, na, nf)
     return sTfbd(d1, tw, false, true, false), na, nf
