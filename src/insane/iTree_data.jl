@@ -76,7 +76,7 @@ isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
 
 Return if is either an extant or extinct tip node.
 """
-istip(tree::T) where {T <: iTree} = !def1(tree)
+istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 
 
 
@@ -93,7 +93,7 @@ isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 
 """
     isextinct(tree::sTpb)
-    isextinct(tree::sTpbX) = false
+    isextinct(tree::sTpbX)
     isextinct(tree::iTgbmpb)
 
 Return if is an extinction node.
