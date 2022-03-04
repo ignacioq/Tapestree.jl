@@ -58,7 +58,7 @@ function usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
 
   tt = 0.0
   for (tii, tff) in t
-    tt += tff - tii
+    tt += tii - tff
   end
 
   # sample
@@ -69,10 +69,10 @@ function usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
     # find true t
     tt = 0.0
     for (tii, tff) in t
-      tt += tff - tii
+      tt += tii - tff
 
       if s < tt
-        return tii + tt - s
+        return tii - s
       end
     end
   end

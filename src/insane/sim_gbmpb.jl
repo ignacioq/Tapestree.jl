@@ -67,7 +67,7 @@ function sim_gbmpb(n       ::Int64;
     return iTgbmpb(0.0, false, 0.0, 0.0, Float64[])
   else
     # cut the tree
-    t = cutbottom(t, c)
+    t = cutbottom(t, simt - c)
     return t
   end
 end

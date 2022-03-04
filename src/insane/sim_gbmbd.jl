@@ -79,7 +79,7 @@ function sim_gbmbd(n       ::Int64;
     return iTgbmbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[])
   else
     # cut the tree
-    t = cutbottom(t, c)
+    t = cutbottom(t, simt - c)
     return t
   end
 end
@@ -694,7 +694,7 @@ function _sim_gbmbd_surv(t   ::Float64,
                          surv::Bool,
                          nsp ::Int64)
 
-  if !surv && nsp < 500
+  if !surv && nsp < 200
 
     λv = Float64[λt]
     μv = Float64[μt]

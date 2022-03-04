@@ -350,7 +350,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - !stem*lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -362,7 +362,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
           update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, stem,
             δt, srδt, σλ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - !stem*lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -374,7 +374,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
             update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, stem,
               δt, srδt, μ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - !stem*lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -390,7 +390,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
           update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem,
             δt, srδt, lλxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - !stem*lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -405,7 +405,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
           update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L,
             δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - !stem*lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return

@@ -66,8 +66,8 @@ function sim_gbmce(n       ::Int64;
   end
 
   # sample a time when species(t) == `n`
-  nt = ltt(t)
-  tn = times_n(n, nt)
+  nl = ltt(t)
+  tn = times_n(n, nl)
   c  = usample(tn, p)
 
   if iszero(c)
@@ -75,7 +75,7 @@ function sim_gbmce(n       ::Int64;
     return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[])
   else
     # cut the tree
-    t = cutbottom(t, c)
+    t = cutbottom(t, simt - c)
     return t
   end
 end
@@ -620,7 +620,7 @@ function _sim_gbmce_surv(t   ::Float64,
                          surv::Bool,
                          nsp ::Int64)
 
-  if !surv && nsp < 500
+  if !surv && nsp < 200
 
     λv = Float64[λt]
     bt = 0.0

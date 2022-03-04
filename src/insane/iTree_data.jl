@@ -571,13 +571,13 @@ Return the number of tip nodes for `tree`, initialized at `n`.
 """
 function _ntips(tree::T, n::Int64) where {T <: sTf}
 
-  if !def1(tree)
-     n += 1
-  else
+  if def1(tree)
     n = _ntips(tree.d1, n)
     if def2(tree)
       n = _ntips(tree.d2, n)
     end
+  else
+    n += 1
   end
 
   return n

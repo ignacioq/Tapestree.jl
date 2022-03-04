@@ -76,7 +76,7 @@ function sim_gbmct(n    ::Int64;
     return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[])
   else
     # cut the tree
-    t = cutbottom(t, c)
+    t = cutbottom(t, simt - c)
     return t
   end
 end
@@ -632,7 +632,7 @@ function _sim_gbmct_surv(t   ::Float64,
                          surv::Bool,
                          nsp ::Int64)
 
-  if !surv && nsp < 500
+  if !surv && nsp < 200
 
     λv = Float64[λt]
     bt = 0.0
