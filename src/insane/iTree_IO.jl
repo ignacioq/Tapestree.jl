@@ -241,7 +241,7 @@ end
 
 Returns newick string.
 """
-to_string(tree::T) where {T <: iTree} = _to_string(tree, 0)
+to_string(tree::T) where {T <: iTree} = _to_string(tree, 0)[1]
 
 
 
@@ -253,29 +253,15 @@ Returns newick string.
 """
 function _to_string(tree::T, n::Int64) where {T <: iTree}
 
-  if istip(tree)
-    return(string("t1:",e(tree)))
-  end
+  if def1(tree)
+    s1, n = _to_string(tree.d1, n)
+    s2, n = _to_string(tree.d2, n)
 
-  if istip(tree.d1)
-    if istip(tree.d2)
-      n += 1
-      s1 = string("(t",n,":",e(tree.d1),",")
-      n += 1
-      s2 = string("t",n,":",e(tree.d2),"):",e(tree))
-      return s1*s2
-    else
-      n += 1
-      return string("(t",n,":",e(tree.d1), ",",
-              _to_string(tree.d2, n),"):", e(tree))
-    end
-  elseif istip(tree.d2)
-    n += 1
-    return string("(", _to_string(tree.d1, n),
-      ",t",n,":",e(tree.d2), "):", e(tree))
+    return string("(",s1,",", s2,"):",e(tree)), n
   else
-    return string("(",_to_string(tree.d1, n),",",
-               _to_string(tree.d2, ntips(tree.d1) + n),"):",e(tree))
+    n += 1
+
+    return string("t",n,":",e(tree)), n 
   end
 end
 
@@ -287,62 +273,37 @@ end
 
 Returns newick string.
 """
-to_string(tree::T) where {T <: sTf} = _to_string(tree, 0, 0)
+to_string(tree::T) where {T <: sTf} = _to_string(tree, 0, 0)[1]
 
 
 
 
 """
-    _to_string(tree::T, n::Int64, sa::Int64) where {T <: sTf}
+    _to_string(tree::T, n::Int64, nf::Int64) where {T <: sTf}
 
 Returns newick string.
 """
-function _to_string(tree::T, n::Int64, sa::Int64) where {T <: sTf}
+function _to_string(tree::T, n::Int64, nf::Int64) where {T <: sTf}
 
-  if istip(tree)
-    return(string("t1:",e(tree)))
-  end
+  if def1(tree)
+    s1, n, nf = _to_string(tree.d1, n, nf)
 
-  if def1(tree) && def2(tree)
-    if istip(tree.d1)
-      if istip(tree.d2)
-        n += 1
-        s1 = string("(t",n,":",e(tree.d1),",")
-        n += 1
-        s2 = string("t",n,":",e(tree.d2),"):",e(tree))
-        return s1*s2
-      else
-        n += 1
-        return string("(t",n,":",e(tree.d1), ",",
-                _to_string(tree.d2, n, sa),"):", e(tree))
-      end
-    elseif istip(tree.d2)
-      n += 1
-      return string("(", _to_string(tree.d1, n, sa),
-        ",t",n,":",e(tree.d2), "):", e(tree))
+    if def2(tree)
+      s2, n, nf = _to_string(tree.d2, n, nf)
+      s = string("(",s1,",", s2,"):",e(tree))
     else
-      return string("(",_to_string(tree.d1, n, sa),",",
-                        _to_string(tree.d2, ntips(tree.d1) + n,
-                                  nfossils(tree.d1) + sa),"):",
-                        e(tree))
+      nf += 1
+      s = string("(",s1,")f",nf,":", e(tree))
     end
 
-  # sampled ancestors
-  elseif def1(tree)
-    sa += 1
-    if istip(tree.d1)
-      n += 1
-      return string("(t",n,":",e(tree.d1),")sa",sa,":", e(tree))
-    else
-      return string("(",_to_string(tree.d1, n, sa),")sa",sa,":",e(tree))
-    end
+    return s, n, nf
   else
-    sa += 1
-    if istip(tree.d2)
-      n += 1
-      return string("(t",n,":",e(tree.d2),")sa",sa,":", e(tree))
+    if isfossil(tree)
+      nf += 1
+      return string("f",nf,":",e(tree)), n, nf
     else
-      return string("(",_to_string(tree.d2, n, sa),")sa",sa,":",e(tree))
+      n += 1
+      return string("t",n,":",e(tree)), n, nf
     end
   end
 end
