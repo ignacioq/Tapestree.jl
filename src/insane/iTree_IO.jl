@@ -25,27 +25,24 @@ function read_newick(in_file::String; fossil = false)
 
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
-  np = 0     # number of parenthesis
-  nlp = 0    # number of left parenthesis yet to be closed
-  nlin = 1   # number of distinct lineages at the origin
-  nbif = 0   # number of bifurcations (= speciations)
+  nop  = 0    # number of open parenthesis yet to be closed
+  stem = true # if stem tree
   for (i,v) in enumerate(s)
-    if v == '('
-      nlp += 1
-      np += 1
-    elseif v == ')'
-      nlp -= 1
-      np += 1
-    elseif v == ','
-      nbif += 1
-      if iszero(nlp) nlin += 1 end
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ','
+      if iszero(nop) 
+        stem = false 
+      end
     end
   end
 
   if fossil
-    tree = from_string(s, np, nlp, nlin, nbif, sTf_label)
+    tree = from_string(s, stem, sTf_label)
   else
-    tree = from_string(s, np, nlp, nlin, nbif, sT_label)
+    tree = from_string(s, stem, sT_label)
   end
 
   return tree::Union{sT_label, sTf_label}
@@ -55,36 +52,25 @@ end
 
 
 """
-    from_string(s      ::String,
-                np     ::Int64,
-                nlp    ::Int64,
-                nlin   ::Int64,
-                nbif   ::Int64,
-                ::Type{sT_label})
+    from_string(s::String, stem::Bool, ::Type{sT_label})
 
 Takes a string and turns it into a `sT_label` tree.
 """
-function from_string(s      ::String,
-                     np     ::Int64,
-                     nlp    ::Int64,
-                     nlin   ::Int64,
-                     nbif   ::Int64,
-                     ::Type{sT_label})
+function from_string(s::String, stem::Bool, ::Type{sT_label})
 
   # if root (starts with one stem lineage)
-  if isone(nlin)
+  if stem
     tree = _from_string(s, sT_label)
   # if no root (starts with two crown lineage)
   else
-    nrp = 0
-    nlp = 0
+    nop = 0
     ci  = 0
     for (i,v) in enumerate(s)
       if v == '('
-        nlp += 1
+        nop += 1
       elseif v == ')'
-        nrp += 1
-      elseif v == ',' && nlp == nrp
+        nop -= 1
+      elseif v == ',' && iszero(nop)
         ci = i
         break
       end
@@ -105,36 +91,25 @@ end
 
 
 """
-    from_string(s   ::String,
-                np  ::Int64,
-                nlp ::Int64,
-                nlin::Int64,
-                nbif::Int64,
-                ::Type{sTf_label})
+    from_string(s::String, stem::Bool, ::Type{sTf_label})
 
 Takes a string and turns it into a `sTf_label` tree.
 """
-function from_string(s   ::String,
-                     np  ::Int64,
-                     nlp ::Int64,
-                     nlin::Int64,
-                     nbif::Int64,
-                     ::Type{sTf_label})
+function from_string(s::String, stem::Bool, ::Type{sTf_label})
 
   # if root (starts with one stem lineage)
-  if isone(nlin)
+  if stem
     tree = _from_string(s, sTf_label)
   # if no root (starts with two crown lineage)
   else
-    nrp = 0
-    nlp = 0
+    nop = 0
     ci  = 0
     for (i,v) in enumerate(s)
-      if v == '('
-        nlp += 1
-      elseif v == ')'
-        nrp += 1
-      elseif v == ',' && nlp == nrp
+      if v === '('
+        nop += 1
+      elseif v === ')'
+        nop -= 1
+      elseif v === ',' && iszero(nop)
         ci = i
         break
       end
@@ -166,28 +141,25 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
 
   # find pendant edge
   wd  = findlast(isequal(':'), s)
-  pei = parse(Float64, s[(wd+1):end])
-  lab = s[1:(wd-1)]
+  ei  = parse(Float64, s[(wd+1):end])
+  lp  = findlast(isequal(')'), s)
 
   # if tip
-  if isone(count(isequal(':'), s))
-      return T(pei, lab)
+  if isnothing(lp)
+    return T(ei, s[1:(wd-1)])
   else
-    while s[wd-1] != ')'
-      wd -= 1
-    end
 
-    s = s[2:(wd-2)]
+    lab = s[(lp+1):(wd-1)]
+    s   = s[2:(lp-1)]
 
-    nrp = 0
-    nlp = 0
+    nop = 0
     ci  = 0
     for (i,v) in enumerate(s)
-      if v == '('
-        nlp += 1
-      elseif v == ')'
-        nrp += 1
-      elseif v == ',' && nlp == nrp
+      if v === '('
+        nop += 1
+      elseif v === ')'
+        nop -= 1
+      elseif v === ',' && iszero(nop)
         ci = i
         break
       end
@@ -198,14 +170,34 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
   s2 = s[(ci+1):end]
 
   if isempty(s1)
-    return T(_from_string(s2, T), pei, "")
+    return T(_from_string(s2, T), ei, lab)
   elseif isempty(s2)
-    return T(_from_string(s1, T), pei, "")
+    return T(_from_string(s1, T), ei, lab)
   else
-    return T(_from_string(s1, T), _from_string(s2, T), pei, "")
+    return T(_from_string(s1, T), _from_string(s2, T), ei, lab)
   end
 end
 
+
+
+"""
+    onlyone(s::String, c::Char)
+
+Returns true if there is only one of 'c' in string `s`.
+"""
+function onlyone(s::String, c::Char)
+  n = 0
+  for i in s
+    if i === c
+      n += 1
+      if n > 1
+        return false
+      end
+    end
+  end
+
+  return true
+end
 
 
 
