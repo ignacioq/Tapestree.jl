@@ -251,7 +251,7 @@ to_string(tree::T) where {T <: iTree} = _to_string(tree, 0)
 
 Returns newick string.
 """
-function _to_string(tree::T; n::Int64 = 0) where {T <: iTree}
+function _to_string(tree::T, n::Int64) where {T <: iTree}
 
   if istip(tree)
     return(string("t1:",e(tree)))
@@ -323,7 +323,7 @@ function _to_string(tree::T, n::Int64, sa::Int64) where {T <: sTf}
     else
       return string("(",_to_string(tree.d1, n, sa),",",
                         _to_string(tree.d2, ntips(tree.d1) + n,
-                                  nsampledancestors(tree.d1) + sa),"):",
+                                  nfossils(tree.d1) + sa),"):",
                         e(tree))
     end
 

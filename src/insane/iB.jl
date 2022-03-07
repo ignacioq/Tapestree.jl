@@ -461,7 +461,6 @@ end
 
 
 
-
 """
     makeiBf!(tree::sTf_label,
              idv ::Array{iBffs,1},
@@ -511,21 +510,17 @@ function makeiBf!(tree::sTf_label,
     end
   end
 
-  """
-  here
-  """
+  df2 = def2(tree)
 
   if def1(tree)
     ρ1, n1, ft1, sa1, x1, e1 = 
       makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ, sc, xr, X)
-  else
-    ρ1, n1, ft1, sa1 = (1,0,0,0)
-  end
-
-  if def2(tree)
-    ρ2,n2,ft2,sa2 = makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
-  else
-    ρ2,n2,ft2,sa2 = (1,0,0,0)
+    if df2
+      ρ2, n2, ft2, sa2, x2, e2 = 
+        makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ, sc, xr, X)
+    else
+      ρ2, n2, ft2, sa2, x2, e2 = (1.0, 0, 0, 0, x1, 0.0)
+    end
   end
 
   n  = n1 + n2                     # number of alive descendants
@@ -545,11 +540,20 @@ function makeiBf!(tree::sTf_label,
   push!(ft2v, ft2)
   push!(sa2v, sa2)
 
-  return ρi, n, ft, sa
+  # pic
+  scn = (x2 - x1)/(e1 + e2)
+  if df2
+    xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+  else
+    xn = x1
+  end
+  en = el + e1*e2/(e1 + e2)
+
+  push!(sc, scn)
+  push!(xr,  xn)
+
+  return ρi, n, ft, sa, xn, en
 end
-
-
-
 
 
 

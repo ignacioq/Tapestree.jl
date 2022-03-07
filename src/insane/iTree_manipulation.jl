@@ -921,7 +921,8 @@ end
 
 """
     remove_unsampled(tree::T) where {T <: iTree}
-Remove extinct tips from `iTgbmpb`.
+
+Remove unsampled tips from `iTgbmpb`.
 """
 function remove_unsampled(tree::T) where {T <: iTree}
   return _remove_unsampled!(T(tree::T))
@@ -931,7 +932,98 @@ end
 
 
 """
+    remove_unsampled(treev::Vector{T}) where {T <: iTree}
+
+Remove unsampled taxa for a vector of trees.
+"""
+function remove_unsampled(treev::Vector{T}) where {T <: iTree}
+
+  treevne = T[]
+  for t in treev
+    push!(treevne, remove_unsampled(t))
+  end
+
+  return treevne
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::sTbd)
+
+Remove unsampled tips (extinct and extant not sampled).
+"""
+function _remove_unsampled!(tree::sTbd)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return sTbd(e(tree), isextinct(tree), isfix(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        tree = tree.d2
+        sete!(tree, ne)
+      end
+    elseif !isfix(tree.d2)
+      ne  = e(tree) + e(tree.d1)
+      tree = tree.d1
+      sete!(tree, ne)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::T) where {T <: sTf}
+
+Remove unsampled tips.
+"""
+function _remove_unsampled!(tree::T) where {T <: sTf}
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    if def2(tree)
+      tree.d2 = _remove_unsampled!(tree.d2)
+
+      if !isfix(tree.d1)
+        if !isfix(tree.d2)
+          return T(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
+        else
+          ne  = e(tree) + e(tree.d2)
+          tree = tree.d2
+          sete!(tree, ne)
+        end
+      elseif !isfix(tree.d2)
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+      end
+      return tree
+    end
+
+    if !isfix(tree.d1)
+      return T(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
+    end
+  end
+
+  return tree
+end
+
+
+
+
+
+"""
     _remove_unsampled!(tree::iTgbmpb)
+
 Remove extinct tips from `iTgbmpb`.
 """
 function _remove_unsampled!(tree::iTgbmpb)
@@ -987,6 +1079,193 @@ end
 
 
 """
+    _remove_unsampled!(tree::iTgbmce)
+
+Remove unsampled tips from `iTgbmce`.
+"""
+function _remove_unsampled!(tree::iTgbmce)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return iTgbmce(e(tree), dt(tree), fdt(tree),
+          isextinct(tree), isfix(tree), lλ(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lλ2 = lλ(tree.d2)
+
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        iszero(fdt2) && popfirst!(lλ2)
+        prepend!(lλ2, lλ0)
+        fdt0 = fdt(tree) + fdt2
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0)
+      end
+    elseif !isfix(tree.d2)
+      ne  = e(tree) + e(tree.d1)
+      lλ0 = lλ(tree)
+      lλ1 = lλ(tree.d1)
+
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      iszero(fdt1) && popfirst!(lλ1)
+      prepend!(lλ1, lλ0)
+      fdt0 = fdt(tree) + fdt1
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::iTgbmct)
+Remove extinct tips from `iTgbmct`.
+"""
+function _remove_unsampled!(tree::iTgbmct)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return iTgbmct(e(tree), dt(tree), fdt(tree),
+          isextinct(tree), isfix(tree), lλ(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lλ2 = lλ(tree.d2)
+
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        iszero(fdt2) && popfirst!(lλ2)
+        prepend!(lλ2, lλ0)
+        fdt0 = fdt(tree) + fdt2
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0)
+      end
+    elseif !isfix(tree.d2)
+      ne  = e(tree) + e(tree.d1)
+      lλ0 = lλ(tree)
+      lλ1 = lλ(tree.d1)
+
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      iszero(fdt1) && popfirst!(lλ1)
+      prepend!(lλ1, lλ0)
+      fdt0 = fdt(tree) + fdt1
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::iTgbmbd)
+
+Remove extinct tips from `iTgbmbd`.
+"""
+function _remove_unsampled!(tree::iTgbmbd)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return iTgbmbd(e(tree), dt(tree), fdt(tree),
+          isextinct(tree), isfix(tree), lλ(tree), lμ(tree))
+      else
+        ne = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lμ0 = lμ(tree)
+        lλ2 = lλ(tree.d2)
+        lμ2 = lμ(tree.d2)
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        pop!(lμ0)
+        if iszero(fdt2)
+          popfirst!(lλ2)
+          popfirst!(lμ2)
+        end
+        prepend!(lλ2, lλ0)
+        prepend!(lμ2, lμ0)
+
+        fdt0 = fdt(tree) + fdt(tree.d2)
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0)
+      end
+    elseif !isfix(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      lλ0 = lλ(tree)
+      lμ0 = lμ(tree)
+      lλ1 = lλ(tree.d1)
+      lμ1 = lμ(tree.d1)
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      pop!(lμ0)
+      if iszero(fdt1)
+        popfirst!(lλ1)
+        popfirst!(lμ1)
+      end
+      prepend!(lλ1, lλ0)
+      prepend!(lμ1, lμ0)
+
+      fdt0 = fdt(tree) + fdt(tree.d1)
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
     remove_extinct(tree::T) where {T <: iTree}
 
 Remove extinct tips from `iTgbmce`.
@@ -1012,6 +1291,7 @@ function remove_extinct(treev::Vector{T}) where {T <: iTree}
 
   return treevne
 end
+
 
 
 
@@ -1043,6 +1323,47 @@ function _remove_extinct!(tree::sTbd)
 
   return tree
 end
+
+
+
+
+
+"""
+    _remove_extinct!(tree::T) where {T <: sTf}
+
+Remove unsampled tips.
+"""
+function _remove_extinct!(tree::T) where {T <: sTf}
+
+  if def1(tree)
+    tree.d1 = _remove_extinct!(tree.d1)
+    if def2(tree)
+      tree.d2 = _remove_extinct!(tree.d2)
+
+      if isextinct(tree.d1)
+        if isextinct(tree.d2)
+          return T(e(tree), true, isfossil(tree), isfix(tree))
+        else
+          ne  = e(tree) + e(tree.d2)
+          tree = tree.d2
+          sete!(tree, ne)
+        end
+      elseif isextinct(tree.d2)
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+      end
+      return tree
+    end
+
+    if isextinct(tree.d1)
+      return T(e(tree), isextinct(tree), isfossil(tree), isfix(tree)) 
+    end
+  end
+
+  return tree
+end
+
 
 
 
@@ -1234,271 +1555,6 @@ end
 
 
 
-"""
-    _remove_unsampled!(tree::iTgbmce)
-
-Remove unsampled tips from `iTgbmce`.
-"""
-function _remove_unsampled!(tree::iTgbmce)
-
-  if def1(tree)
-
-    tree.d1 = _remove_unsampled!(tree.d1)
-    tree.d2 = _remove_unsampled!(tree.d2)
-
-    if !isfix(tree.d1)
-      if !isfix(tree.d2)
-        return iTgbmce(e(tree), dt(tree), fdt(tree),
-          true, isfix(tree), lλ(tree))
-      else
-        ne  = e(tree) + e(tree.d2)
-        lλ0 = lλ(tree)
-        lλ2 = lλ(tree.d2)
-
-        fdt2 = fdt(tree.d2)
-        pop!(lλ0)
-        iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0)
-        fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree)
-          fdt0 -= dt(tree)
-        end
-        tree = tree.d2
-        sete!(tree, ne)
-        setfdt!(tree, fdt0)
-      end
-    elseif !isfix(tree.d2)
-      ne  = e(tree) + e(tree.d1)
-      lλ0 = lλ(tree)
-      lλ1 = lλ(tree.d1)
-
-      fdt1 = fdt(tree.d1)
-      pop!(lλ0)
-      iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0)
-      fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree)
-        fdt0 -= dt(tree)
-      end
-      tree = tree.d1
-      sete!(tree, ne)
-      setfdt!(tree, fdt0)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-"""
-    _remove_unsampled!(tree::iTgbmct)
-Remove extinct tips from `iTgbmct`.
-"""
-function _remove_unsampled!(tree::iTgbmct)
-
-  if def1(tree)
-
-    tree.d1 = _remove_unsampled!(tree.d1)
-    tree.d2 = _remove_unsampled!(tree.d2)
-
-    if !isfix(tree.d1)
-      if !isfix(tree.d2)
-        return iTgbmct(e(tree), dt(tree), fdt(tree),
-          true, isfix(tree), lλ(tree))
-      else
-        ne  = e(tree) + e(tree.d2)
-        lλ0 = lλ(tree)
-        lλ2 = lλ(tree.d2)
-
-        fdt2 = fdt(tree.d2)
-        pop!(lλ0)
-        iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0)
-        fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree)
-          fdt0 -= dt(tree)
-        end
-        tree = tree.d2
-        sete!(tree, ne)
-        setfdt!(tree, fdt0)
-      end
-    elseif !isfix(tree.d2)
-      ne  = e(tree) + e(tree.d1)
-      lλ0 = lλ(tree)
-      lλ1 = lλ(tree.d1)
-
-      fdt1 = fdt(tree.d1)
-      pop!(lλ0)
-      iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0)
-      fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree)
-        fdt0 -= dt(tree)
-      end
-      tree = tree.d1
-      sete!(tree, ne)
-      setfdt!(tree, fdt0)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-"""
-    _remove_unsampled!(tree::iTgbmbd)
-
-Remove extinct tips from `iTgbmbd`.
-"""
-function _remove_unsampled!(tree::iTgbmbd)
-
-  if def1(tree)
-
-    tree.d1 = _remove_unsampled!(tree.d1)
-    tree.d2 = _remove_unsampled!(tree.d2)
-
-    if !isfix(tree.d1)
-      if !isfix(tree.d2)
-        return iTgbmbd(e(tree), dt(tree), fdt(tree),
-          true, isfix(tree), lλ(tree), lμ(tree))
-      else
-        ne = e(tree) + e(tree.d2)
-        lλ0 = lλ(tree)
-        lμ0 = lμ(tree)
-        lλ2 = lλ(tree.d2)
-        lμ2 = lμ(tree.d2)
-        fdt2 = fdt(tree.d2)
-        pop!(lλ0)
-        pop!(lμ0)
-        if iszero(fdt2)
-          popfirst!(lλ2)
-          popfirst!(lμ2)
-        end
-        prepend!(lλ2, lλ0)
-        prepend!(lμ2, lμ0)
-
-        fdt0 = fdt(tree) + fdt(tree.d2)
-        if fdt0 > dt(tree)
-          fdt0 -= dt(tree)
-        end
-        tree = tree.d2
-        sete!(tree, ne)
-        setfdt!(tree, fdt0)
-      end
-    elseif !isfix(tree.d2)
-      ne = e(tree) + e(tree.d1)
-      lλ0 = lλ(tree)
-      lμ0 = lμ(tree)
-      lλ1 = lλ(tree.d1)
-      lμ1 = lμ(tree.d1)
-      fdt1 = fdt(tree.d1)
-      pop!(lλ0)
-      pop!(lμ0)
-      if iszero(fdt1)
-        popfirst!(lλ1)
-        popfirst!(lμ1)
-      end
-      prepend!(lλ1, lλ0)
-      prepend!(lμ1, lμ0)
-
-      fdt0 = fdt(tree) + fdt(tree.d1)
-      if fdt0 > dt(tree)
-        fdt0 -= dt(tree)
-      end
-      tree = tree.d1
-      sete!(tree, ne)
-      setfdt!(tree, fdt0)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-"""
-    remove_unsampled(treev::Vector{T}) where {T <: iTree}
-Remove extinct taxa for a vector of trees.
-"""
-function remove_unsampled(treev::Vector{T}) where {T <: iTree}
-
-  treevne = T[]
-  for t in treev
-    push!(treevne, remove_unsampled(t))
-  end
-
-  return treevne
-end
-
-
-
-
-"""
-    _remove_unsampled!(tree::sTbd)
-
-Remove extinct tips (except fossil tips).
-"""
-function _remove_unsampled!(tree::sTbd)
-
-  if def1(tree)
-    tree.d1 = _remove_unsampled!(tree.d1)
-    tree.d2 = _remove_unsampled!(tree.d2)
-
-    if !isfix(tree.d1)
-      if !isfix(tree.d2)
-        return sTbd(e(tree), true, isfix(tree))
-      else
-        ne  = e(tree) + e(tree.d2)
-        tree = tree.d2
-        sete!(tree, ne)
-      end
-    elseif !isfix(tree.d2)
-      ne  = e(tree) + e(tree.d1)
-      tree = tree.d1
-      sete!(tree, ne)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-"""
-    _remove_unsampled!(tree::T) where {T <: sTf}
-Remove extinct tips.
-"""
-function _remove_unsampled!(tree::T) where {T <: sTf}
-  defd1 = def1(tree)
-  defd2 = def2(tree)
-
-  if defd1 tree.d1 = _remove_unsampled!(tree.d1) end
-  if defd2 tree.d2 = _remove_unsampled!(tree.d2) end
-
-  if !defd1 && !defd2
-    return tree
-  end
-
-  extd1 = defd1 && isextincttip(tree.d1)
-  extd2 = defd2 && isextincttip(tree.d2)
-
-  # 2 extinct branches or sampled ancestor -> extinct tip
-  if extd1 && extd2 || (extd1 && !defd2) || (!defd1 && extd2)
-    return T(e(tree), true, false)
-  end
-
-  # 1 extinct and 1 alive branch -> keep only the alive one
-  if extd1 ne = e(tree)+e(tree.d2); tree = tree.d2; sete!(tree,ne) end
-  if extd2 ne = e(tree)+e(tree.d1); tree = tree.d1; sete!(tree,ne) end
-
-  return tree
-end
 
 
 
