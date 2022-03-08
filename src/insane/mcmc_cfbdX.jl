@@ -73,17 +73,33 @@ function insane_cfbd(tree    ::sTf_label,
   # make fix tree directory
   idf, xr, σxc = make_idf(tree, tρ, X)
 
-  # starting parameters
-  if isnan(λi) && isnan(μi)
-    λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
+  # other starting parameters
+  if isnan(λi) && isnan(μi) && isnan(ψi)
+    # if only one tip
+    if isone(n)
+      λc = prod(λ_prior)
+      μc = prod(μ_prior)
+    else
+      λc, μc = moments(Float64(n), th, ϵi)
+    end
+    # if no sampled fossil
+    if iszero(nfossils(tree))
+      ψc = prod(ψ_prior)
+    else
+      ψc = Float64(nfossils(tree))/Float64(treelength(tree))
+    end
   else
-    λc, μc = λi, μi
+    λc, μc, ψc = λi, μi, ψi
   end
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 1_000, stem)
+  mc = m_surv_cbd(th, λc, μc, 500, stem)
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, xr, sTbdX)
+  Ξ = make_Ξ(idf, xr, sTfbdX)
+
+
+
+
 
   # get vector of internal branches
   inodes = Int64[]

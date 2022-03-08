@@ -13,38 +13,6 @@ Created 03 09 2020
 
 
 """
-    iTreeX
-
-An abstract type for all composite recursive types representing
-a simple binary phylogenetic tree for `insane` use
-"""
-abstract type iTreeX <: iTree end
-
-
-
-"""
-    sTX
-
-An abstract type for all composite recursive types representing
-a simple binary phylogenetic tree for `insane` use
-"""
-abstract type sTX <: iTreeX end
-
-
-
-
-"""
-    sTfX
-
-An abstract type for all composite recursive types representing
-a simple binary phylogenetic tree with fossils for `insane` use
-"""
-abstract type sTfX <: sTX end
-
-
-
-
-"""
     sTpbX
 
 The simplest composite recursive type of supertype `sT`
@@ -67,7 +35,7 @@ Constructs an empty `sTpbX` object.
 Constructs an `sTpbX` object with two `sTpbX` daughters and edge `e`,
 fix information `fx`, initial node trait `xi` and final `xf`.
 """
-mutable struct sTpbX <: sTX
+mutable struct sTpbX <: sT
   d1::sTpbX
   d2::sTpbX
   e ::Float64
@@ -126,7 +94,7 @@ with the following fields:
 Constructs an `sTbdX` object with two `sTbdX` daughters and edge `e`,
 fix information `fx`, initial node trait `xi` and final `xf`.
 """
-mutable struct sTbdX <: sTX
+mutable struct sTbdX <: sT
   d1::sTbdX
   d2::sTbdX
   e ::Float64
@@ -194,7 +162,7 @@ with the following fields:
 Constructs an `sTfbdX` object with one sampled ancestor, one `sTfbdX` daughter and
 edge `e`.
 """
-mutable struct sTfbdX <: sTfX
+mutable struct sTfbdX <: sTf
   d1::sTfbdX
   d2::sTfbdX
   e ::Float64
@@ -220,7 +188,7 @@ function Base.show(io::IO, t::sTfbdX)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane simple fossil tree with traits",
+  print(io, "insane simple fossil tree with traits with ",
     nt , " tip",  (isone(nt) ? "" : "s" ),
     ", (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))
@@ -252,4 +220,11 @@ end
 
 
 
+
+
+
+"""
+Union type for trait data
+"""
+sTX = Union{sTpbX, sTbdX, sTfbdX}
 

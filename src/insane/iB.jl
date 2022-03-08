@@ -232,11 +232,12 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `it`: `true` if a terminal branch.
   `ρi`: branch specific sampling fraction.
   `iψ`: `true` if a fossil branch.
-  `ni`: current direct alive descendants (≠ fixed ones in daugnter branches).
+  `ni`: current direct alive descendants (≠ fixed ones in daughter branches).
   `nt`: current alive descendants at time `t`.
   `λt`: final speciation rate for fixed at time `t`.
   `μt`: final extinction rate for fixed at time `t`.
   `ψt`: final fossilization rate for fixed at time `t`.
+  `fx`: fixed terminal tip
 
     iBffs()
 
@@ -257,20 +258,21 @@ struct iBffs <: iBf
   λt::Base.RefValue{Float64}
   μt::Base.RefValue{Float64}
   ψt::Base.RefValue{Float64}
+  fx::Bool
 
   # constructors
   iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1.0, false,
-                Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0))
+                Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0), false)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, ni::Int64, nt::Int64,
-        λt::Float64, μt::Float64,) =
+        λt::Float64, μt::Float64) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, false,
-            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0))
+            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0), false)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, iψ::Bool, ni::Int64, nt::Int64,
-        λt::Float64, μt::Float64, ψt::Float64) =
+        λt::Float64, μt::Float64, ψt::Float64, fx::Bool) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, iψ,
-            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(ψt))
+            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(ψt), fx)
 end
 
 # pretty-printing
@@ -296,27 +298,29 @@ Make `iBf` vector for an `iTree`.
 """
 function makeiBf!(tree::sT_label,
                   idv ::Array{iBffs,1},
+                  ti  ::Float64,
                   n2v ::Array{Int64,1},
                   tρ  ::Dict{String, Float64})
 
-  th = treeheight(tree)
   el = e(tree)
+  tf = ti - el
 
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, 1, 1, 0.0, 0.0))
+    tf  = isapprox(tf, 0.0) ? tf : 0.0
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     return ρi, 1
   end
 
-  ρ1, n1 = makeiBf!(tree.d1, idv, n2v, tρ)
-  ρ2, n2 = makeiBf!(tree.d2, idv, n2v, tρ)
+  ρ1, n1 = makeiBf!(tree.d1, idv, tf, n2v, tρ)
+  ρ2, n2 = makeiBf!(tree.d2, idv, tf, n2v, tρ)
 
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, 0, 1, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   return ρi, n
@@ -335,38 +339,39 @@ end
                   xr  ::Array{Float64,1},
                   X   ::Dict{String, Float64})
 
-Make `iBf` vector for an `iTreeX` and estimate phylogenetic independent
+Make `iBf` vector for an `sTX` and estimate phylogenetic independent
 contrasts `sc` and ancestors `xr` given `tree` and data `X`.
 """
 function makeiBf!(tree::sT_label,
                   idv ::Array{iBffs,1},
+                  ti  ::Float64,
                   n2v ::Array{Int64,1},
                   tρ  ::Dict{String, Float64},
                   sc  ::Array{Float64,1},
                   xr  ::Array{Float64,1},
                   X   ::Dict{String, Float64})
 
-  th = treeheight(tree)
   el = e(tree)
+  tf = ti - el
 
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBffs(el, 0, 0, 0, th, th - el, true, ρi, 1, 1, 0.0, 0.0))
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, 0.0))
     push!(n2v, 0)
     xi  = X[lab]
     push!(xr, xi)
     return ρi, 1, xi, el
   end
 
-  ρ1, n1, x1, e1 = makeiBf!(tree.d1, idv, n2v, tρ, sc, xr, X)
-  ρ2, n2, x2, e2 = makeiBf!(tree.d2, idv, n2v, tρ, sc, xr, X)
+  ρ1, n1, x1, e1 = makeiBf!(tree.d1, idv, tf, n2v, tρ, sc, xr, X)
+  ρ2, n2, x2, e2 = makeiBf!(tree.d2, idv, tf, n2v, tρ, sc, xr, X)
 
   # tree order
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, iBffs(el, 0, 1, 1, th, th - el, false, ρi, 0, 1, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, 0.0))
   push!(n2v, n2)
 
   # pic
@@ -406,48 +411,45 @@ function makeiBf!(tree::sTf_label,
                   sa2v::Array{Int64,1},
                   tρ  ::Dict{String, Float64})
 
-  #th = treeheight(tree)
   el = e(tree)
   tf = ti - el
+  iψ = isfossil(tree)
 
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    iψ = isfossil(tree)       # count fossil tips as extinct
     push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
-
-    if iψ
-      push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 0, 1, 0.0, 0.0, 0.0))
-      return ρi, 0, 1, 0
-    else
-      push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 1, 1, 0.0, 0.0, 0.0))
-      return ρi, 1, 0, 0
-    end
+    i01 = Int64(!iψ)
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, i01, 1, 
+                     0.0, 0.0, 0.0, false))
+    return ρi, i01, 1-i01, 0
   end
 
   if def1(tree)
-    ρ1,n1,ft1,sa1 = makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
-  else
-    ρ1,n1,ft1,sa1 = (1,0,0,0)
+    ρ1, n1, ft1, sa1 =
+      makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
+
+    if def2(tree)
+      ρ2, n2, ft2, sa2 = 
+        makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
+
+      # rho
+      n  = n1 + n2                     # number of alive descendants
+      ft = ft1 + ft2                   # number of fossil tips
+      ρi = (n+ft) / ( (n1+ft1)/ρ1 + (n2+ft2)/ρ2 ) 
+      sa = sa1 + sa2 + iψ  # number of sampled ancestors
+    else
+      # rho
+      n2, ft2, sa2 = 0, 0, 0
+      n  = n1                     # number of alive descendants
+      ft = ft1                   # number of fossil tips
+      ρi = ρ1
+      sa = sa1 + iψ  # number of sampled ancestors
+    end
   end
 
-  if def2(tree)
-    ρ2,n2,ft2,sa2 = makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
-  else
-    ρ2,n2,ft2,sa2 = (1,0,0,0)
-  end
-
-  n  = n1 + n2                     # number of alive descendants
-  ft = ft1 + ft2                   # number of fossil tips
-  if n > 0
-    ρi = n / (n1/ρ1 + n2/ρ2)       # branch specific sampling fraction
-  else
-    ρi = ft / (ft1/ρ1 + ft2/ρ2)
-  end
-  sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
-
-  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, isfossil(tree), 
-                  0, 1, 0.0, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 0, 0, ti, tf, false, ρi, iψ, 0, 1, 
+                   0.0, 0.0, 0.0, false))
   push!(n1v, n1)
   push!(n2v, n2)
   push!(ft1v, ft1)
@@ -456,7 +458,6 @@ function makeiBf!(tree::sTf_label,
 
   return ρi, n, ft, sa
 end
-
 
 
 
@@ -490,71 +491,80 @@ function makeiBf!(tree::sTf_label,
                   xr  ::Array{Float64,1},
                   X   ::Dict{String, Float64})
 
-  #th = treeheight(tree)
   el = e(tree)
   tf = ti - el
+  iψ = isfossil(tree)
 
   if istip(tree)
     lab = l(tree)
     ρi  = tρ[lab]
-    iψ = isfossil(tree)       # count fossil tips as extinct
     push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
-    xi  = X[lab]
-    push!(xr, xi)
-    if iψ
-      push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 0, 1, 0.0, 0.0, 0.0))
-      return ρi, 0, 1, 0, xi, el
-    else
-      push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, 1, 1, 0.0, 0.0, 0.0))
-      return ρi, 1, 0, 0, xi, el
+    i01 = Int64(!iψ)
+    xi  = get(X, lab, NaN)
+    ifx = !isnan(xi)
+    if !ifx
+      mn = !isempty(xr) ? mean(xr) : 0.0
+      xi = randn() + mn
     end
+    push!(xr, xi)
+    push!(idv, 
+      iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, i01, 1, 0.0, 0.0, 0.0, ifx))
+    return ρi, i01, 1-i01, 0, xi, el
   end
 
-  df2 = def2(tree)
+  ifx = false
 
   if def1(tree)
     ρ1, n1, ft1, sa1, x1, e1 = 
       makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ, sc, xr, X)
-    if df2
+    if def2(tree)
       ρ2, n2, ft2, sa2, x2, e2 = 
         makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ, sc, xr, X)
+
+      # pic
+      scn = (x2 - x1)/(e1 + e2)
+      xn  = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+      en  = el + e1*e2/(e1 + e2)
+
+      # rho
+      n  = n1 + n2
+      ft = ft1 + ft2
+      ρi = (n+ft) / ( (n1+ft1)/ρ1 + (n2+ft2)/ρ2 ) 
+      sa = sa1 + sa2 + iψ
     else
-      ρ2, n2, ft2, sa2, x2, e2 = (1.0, 0, 0, 0, x1, 0.0)
+      lab = l(tree)
+      xn  = get(X, lab, NaN)
+      ifx = !isnan(xn)
+      if !ifx
+        xn = randn() + x1
+      end
+
+      # pic
+      scn = (xn - x1)/e1
+      en  = el
+
+      # rho
+      n2, ft2, sa2 = 0, 0, 0
+      n  = n1                     # number of alive descendants
+      ft = ft1                   # number of fossil tips
+      ρi = ρ1
+      sa = sa1 + iψ  # number of sampled ancestors
     end
   end
 
-  n  = n1 + n2                     # number of alive descendants
-  ft = ft1 + ft2                   # number of fossil tips
-  if n > 0
-    ρi = n / (n1/ρ1 + n2/ρ2)       # branch specific sampling fraction
-  else
-    ρi = ft / (ft1/ρ1 + ft2/ρ2)
-  end
-  sa = sa1 + sa2 + isfossil(tree)  # number of sampled ancestors
-
-  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, isfossil(tree), 
-                  0, 1, 0.0, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 0, 0, ti, tf, false, ρi, iψ, 0, 1,
+                   0.0, 0.0, 0.0, ifx))
   push!(n1v, n1)
   push!(n2v, n2)
   push!(ft1v, ft1)
   push!(ft2v, ft2)
   push!(sa2v, sa2)
 
-  # pic
-  scn = (x2 - x1)/(e1 + e2)
-  if df2
-    xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
-  else
-    xn = x1
-  end
-  en = el + e1*e2/(e1 + e2)
-
   push!(sc, scn)
   push!(xr,  xn)
 
   return ρi, n, ft, sa, xn, en
 end
-
 
 
 
@@ -568,7 +578,7 @@ function make_idf(tree::sT_label, tρ::Dict{String, Float64})
 
   idf = iBffs[]
   n2v = Int64[]
-  makeiBf!(tree, idf, n2v, tρ)
+  makeiBf!(tree, idf, treeheight(tree), n2v, tρ)
 
   reverse!(idf)
   reverse!(n2v)
@@ -607,7 +617,7 @@ function make_idf(tree::sT_label,
   n2v = Int64[]
   sc  = Float64[]
   xr  = Float64[]
-  makeiBf!(tree, idf, n2v, tρ, sc, xr, X)
+  makeiBf!(tree, idf, treeheight(tree), n2v, tρ, sc, xr, X)
 
   σxi = sum(abs2, sc) / Float64(lastindex(sc)-1)
 
@@ -639,6 +649,58 @@ end
 Make the edge dictionary.
 """
 function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
+
+  idf  = iBffs[]
+  n1v  = Int64[]
+  n2v  = Int64[] # vector of nb of alive descendants (d1 & d2)
+  ft1v = Int64[]
+  ft2v = Int64[] # vector of nb of fossil tips (d1 & d2)
+  sa2v = Int64[] # vector of nb of sampled ancestors (d2)
+
+  makeiBf!(tree, idf, treeheight(tree), n1v, n2v, ft1v, ft2v, sa2v, tρ)
+
+  reverse!(idf)
+  reverse!(n1v)
+  reverse!(n2v)
+  reverse!(ft1v)
+  reverse!(ft2v)
+  reverse!(sa2v)
+
+  for i in Base.OneTo(lastindex(idf))
+    bi  = idf[i]
+    n1  = n1v[i]
+    n2  = n2v[i]
+    ft1 = ft1v[i]
+    ft2 = ft2v[i]
+    sa2 = sa2v[i]
+
+    if (n2 + ft2) > 0 # bifurcation
+      setd1!(bi, (n2+ft2)*2 + sa2 + i)
+      setd2!(bi, i + 1)
+      setpa!(idf[d1(bi)], i)
+      setpa!(idf[d2(bi)], i)
+    elseif (n1 + ft1) > 0    # fossil sampled ancestor of d1
+      setd1!(bi, i + 1)
+      setpa!(idf[d1(bi)], i)
+    end
+  end
+
+  return idf
+end
+
+
+
+
+"""
+    make_idf(tree::sTf_label, 
+             tρ  ::Dict{String, Float64},
+             X   ::Dict{String, Float64})
+
+Make the edge dictionary.
+"""
+function make_idf(tree::sTf_label, 
+                  tρ  ::Dict{String, Float64},
+                  X   ::Dict{String, Float64})
 
   idf  = iBffs[]
   n1v  = Int64[]
@@ -678,10 +740,6 @@ function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
       setd1!(bi, i + 1)
       setd2!(bi, 0)
       setpa!(idf[d1(bi)], i)
-    elseif (n2 + ft2) > 0    # fossil sampled ancestor of d2
-      setd1!(bi, 0)
-      setd2!(bi, i + 1)
-      setpa!(idf[d2(bi)], i)
     end
   end
 
@@ -689,62 +747,6 @@ function make_idf(tree::sTf_label, tρ::Dict{String, Float64})
 end
 
 
-
-
-
-"""
-    make_idf(tree::sTf_label, 
-             tρ  ::Dict{String, Float64},
-             X   ::Dict{String, Float64})
-
-Make the edge dictionary.
-"""
-function make_idf(tree::sTf_label, 
-                  tρ  ::Dict{String, Float64},
-                  X   ::Dict{String, Float64})
-
-  idf  = iBffs[]
-  n1v  = Int64[]
-  n2v  = Int64[] # vector of nb of alive descendants (d1 & d2)
-  ft1v = Int64[]
-  ft2v = Int64[] # vector of nb of fossil tips (d1 & d2)
-  sa2v = Int64[] # vector of nb of sampled ancestors (d2)
-
-  makeiBf!(tree, idf, treeheight(tree), n1v, n2v, ft1v, ft2v, sa2v, tρ)
-
-  reverse!(idf)
-  reverse!(n1v)
-  reverse!(n2v)
-  reverse!(ft1v)
-  reverse!(ft2v)
-  reverse!(sa2v)
-
-  for i in Base.OneTo(lastindex(idf))
-    bi  = idf[i]
-    n1  = n1v[i]
-    n2  = n2v[i]
-    ft1 = ft1v[i]
-    ft2 = ft2v[i]
-    sa2 = sa2v[i]
-
-    if (n1 + ft1) > 0 && (n2 + ft2) > 0 # bifurcation
-      setd1!(bi, (n2+ft2)*2 + sa2 + i)
-      setd2!(bi, i + 1)
-      setpa!(idf[d1(bi)], i)
-      setpa!(idf[d2(bi)], i)
-    elseif (n1 + ft1) > 0    # fossil sampled ancestor of d1
-      setd1!(bi, i + 1)
-      setd2!(bi, 0)
-      setpa!(idf[d1(bi)], i)
-    elseif (n2 + ft2) > 0    # fossil sampled ancestor of d2
-      setd1!(bi, 0)
-      setd2!(bi, i + 1)
-      setpa!(idf[d2(bi)], i)
-    end
-  end
-
-  return idf
-end
 
 
 
@@ -974,5 +976,13 @@ Return final fossil sampling rate for fixed at time `t`.
 ψt(id::iBffs) = getproperty(id, :ψt)[]
 
 
+
+
+"""
+    fx(id::iBffs)
+
+Return if the data for a node is fixed.
+"""
+fx(id::iBffs) = getproperty(id, :fx)[]
 
 

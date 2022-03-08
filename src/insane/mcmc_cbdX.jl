@@ -156,7 +156,7 @@ function mcmc_burn_cbd(Ξ       ::Vector{sTbdX},
                        prints  ::Int64)
 
   el      = lastindex(idf)
-  nin = lastindex(inodes)
+  nin     = lastindex(inodes)
   L       = treelength(Ξ)        # tree length
   ns      = Float64(el-1)/2.0    # number of speciation events
   ne      = 0.0                  # number of extinction events

@@ -534,13 +534,13 @@ end
 """
     _match_tip_x!(tree::T,
                  xt  ::Float64,
-                 σx  ::Float64) where {T <: iTreeX}
+                 σx  ::Float64) where {T <: sTX}
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
 function _match_tip_x!(tree::T,
                        xt  ::Float64,
-                       σx  ::Float64) where {T <: iTreeX}
+                       σx  ::Float64) where {T <: sTX}
 
   if istip(tree)
     xa   = xi(tree)
@@ -573,7 +573,7 @@ end
               prc     ::Float64,
               sdX     ::Float64,
               stem    ::Bool,
-              x0_prior::NTuple{2, Float64}) where {T <: iTreeX}
+              x0_prior::NTuple{2, Float64}) where {T <: sTX}
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -585,7 +585,7 @@ function update_x!(bix     ::Int64,
                    prc     ::Float64,
                    sdX     ::Float64,
                    stem    ::Bool,
-                   x0_prior::NTuple{2, Float64}) where {T <: iTreeX}
+                   x0_prior::NTuple{2, Float64}) where {T <: sTX}
 
   ξi = Ξ[bix]
   bi = idf[bix]
@@ -629,7 +629,7 @@ end
                     llc     ::Float64,
                     prc     ::Float64,
                     sdX     ::Float64,
-                    x0_prior::NTuple{2,Float64}) where {T <: iTreeX}
+                    x0_prior::NTuple{2,Float64}) where {T <: sTX}
 
 Make crown update for trait.
 """
@@ -638,7 +638,7 @@ function _stem_update_x!(ξi      ::T,
                          llc     ::Float64,
                          prc     ::Float64,
                          sdX     ::Float64,
-                         x0_prior::NTuple{2,Float64}) where {T <: iTreeX}
+                         x0_prior::NTuple{2,Float64}) where {T <: sTX}
 
   m0, σx0 = x0_prior
   σx02    = σx0^2
@@ -672,7 +672,7 @@ end
                      llc     ::Float64,
                      prc     ::Float64,
                      sdX     ::Float64,
-                     x0_prior::NTuple{2,Float64}) where {T <: iTreeX}
+                     x0_prior::NTuple{2,Float64}) where {T <: sTX}
 
 Make crown update for trait.
 """
@@ -683,7 +683,7 @@ function _crown_update_x!(ξi      ::T,
                           llc     ::Float64,
                           prc     ::Float64,
                           sdX     ::Float64,
-                          x0_prior::NTuple{2,Float64}) where {T <: iTreeX}
+                          x0_prior::NTuple{2,Float64}) where {T <: sTX}
 
   m0, σx0 = x0_prior
   σx02    = σx0^2
@@ -732,7 +732,7 @@ Do gbm updates on a decoupled tree recursively.
 function _update_x!(tree::T,
                     σx  ::Float64,
                     llc ::Float64,
-                    sdX ::Float64) where {T <: iTreeX}
+                    sdX ::Float64) where {T <: sTX}
 
   if def1(tree)
     llc, sdX = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, sdX)
@@ -750,7 +750,7 @@ end
     _update_triad_x!(tree::T,
                      σx  ::Float64,
                      llc ::Float64,
-                     sdX ::Float64) where {T <: iTreeX}
+                     sdX ::Float64) where {T <: sTX}
 
 Make gibbs node update for trait.
 """
@@ -759,7 +759,7 @@ function _update_triad_x!(tree::T,
                           tre2::T,
                           σx  ::Float64,
                           llc ::Float64,
-                          sdX ::Float64) where {T <: iTreeX}
+                          sdX ::Float64) where {T <: sTX}
 
   xa = xi(tree)
   xo = xf(tree)

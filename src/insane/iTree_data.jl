@@ -33,20 +33,20 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 
 """
-    xi(tree::T) where {T <: iTreeX}
+    xi(tree::T) where {T <: sTX}
 
 Return initial trait value.
 """
-xi(tree::T) where {T <: iTreeX} = getproperty(tree, :xi)
+xi(tree::T) where {T <: sTX} = getproperty(tree, :xi)
 
 
 
 """
-    xf(tree::T) where {T <: iTreeX}
+    xf(tree::T) where {T <: sTX}
 
 Return final trait value.
 """
-xf(tree::T) where {T <: iTreeX} = getproperty(tree, :xf)
+xf(tree::T) where {T <: sTX} = getproperty(tree, :xf)
 
 
 
@@ -1370,11 +1370,11 @@ end
 
 
 """
-    fixed_xt(tree::T)  where {T <: iTreeX}
+    fixed_xt(tree::T)  where {T <: sTX}
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fixed_xt(tree::T)  where {T <: iTreeX}
+function fixed_xt(tree::T)  where {T <: sTX}
 
   if istip(tree)
     return xf(tree)

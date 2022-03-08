@@ -60,7 +60,7 @@ end
 
 Returns the time standardized trait difference.
 """
-function sdeltaX(Ξ::Vector{T}) where {T <: iTreeX}
+function sdeltaX(Ξ::Vector{T}) where {T <: sTX}
 
   sdX = 0.0
   nX  = 0.0
@@ -75,11 +75,11 @@ end
 
 
 """
-    _sdX(tree::T, sdX::Float64, nX::Int64) where {T <: iTreeX}
+    _sdX(tree::T, sdX::Float64, nX::Int64) where {T <: sTX}
 
 Returns time standardized trait differences.
 """
-function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: iTreeX}
+function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: sTX}
 
   el = e(tree)
   if !iszero(el)

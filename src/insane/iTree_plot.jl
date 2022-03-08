@@ -502,9 +502,9 @@ end
 """
     function f(tree::T; type::Symbol = :trait)
 
-Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
+Recipe for plotting with the tree or the trait evolutions for `sTX`.
 """
-@recipe function f(tree::T; type = :trait) where {T <: iTreeX}
+@recipe function f(tree::T; type = :trait) where {T <: sTX}
 
   x = Float64[]
   y = Float64[]
@@ -570,9 +570,9 @@ end
 """
     function f(tree::T; type::Symbol = :trait)
 
-Recipe for plotting with the tree or the trait evolutions for `iTreeX`.
+Recipe for plotting with the tree or the trait evolutions for `sTX`.
 """
-@recipe function f(trees::Vector{T}) where {T <: iTreeX}
+@recipe function f(trees::Vector{T}) where {T <: sTX}
 
   x = Float64[]
   y = Float64[]
@@ -611,14 +611,14 @@ end
     _rplottree!(tree::T,
                 xc  ::Float64,
                 x   ::Array{Float64,1},
-                y   ::Array{Float64,1}) where {T <: iTreeX}
+                y   ::Array{Float64,1}) where {T <: sTX}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
 function _rplottrait!(tree::T,
                       xc  ::Float64,
                       x   ::Array{Float64,1},
-                      y   ::Array{Float64,1}) where {T <: iTreeX}
+                      y   ::Array{Float64,1}) where {T <: sTX}
 
   # add horizontal lines
   push!(x, xc)

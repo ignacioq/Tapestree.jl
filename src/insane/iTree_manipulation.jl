@@ -442,11 +442,11 @@ end
 
 
 """
-    fixrtip!(tree::T, na::Int64, xt::Float64) where T <: iTreeX
+    fixrtip!(tree::T, na::Int64, xt::Float64) where T <: sTX
 
 Fixes the the path for a random non extinct tip and returns final `λ(t)`.
 """
-function fixrtip!(tree::T, na::Int64, xt::Float64) where T <: iTreeX
+function fixrtip!(tree::T, na::Int64, xt::Float64) where T <: sTX
 
   fix!(tree)
 
@@ -588,7 +588,7 @@ end
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::T, xt::Float64) where T <: iTreeX
+function fixalive!(tree::T, xt::Float64) where T <: sTX
 
   if istip(tree::T)
     if isalive(tree::T)
@@ -1826,22 +1826,22 @@ setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
 
 
 """
-  setxi!(tree::T, x::Float64) where {T <: iTreeX}
+  setxi!(tree::T, x::Float64) where {T <: sTX}
 
 Set `x` as initial trait in tree.
 """
-setxi!(tree::T, x::Float64) where {T <: iTreeX} =
+setxi!(tree::T, x::Float64) where {T <: sTX} =
   setproperty!(tree, :xi, x)
 
 
 
 
 """
-  setxf!(tree::T, x::Float64) where {T <: iTreeX}
+  setxf!(tree::T, x::Float64) where {T <: sTX}
 
 Set `x` as final trait in tree.
 """
-setxf!(tree::T, x::Float64) where {T <: iTreeX} =
+setxf!(tree::T, x::Float64) where {T <: sTX} =
   setproperty!(tree, :xf, x)
 
 
