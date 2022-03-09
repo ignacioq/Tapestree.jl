@@ -96,7 +96,7 @@ function insane_cbd(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant birth-death and trait evolution with forward simulation"
+  @info "Running constant birth-death and trait evolution"
 
   # adaptive phase
   llc, prc, λc, μc, σxc, mc =
@@ -425,11 +425,20 @@ function update_fs!(bix::Int64,
     # current tree
     ξc  = Ξ[bix]
 
+    """
+    here: allow match if fix and non match if not fixed
+    """
+
+
     # if terminal branch
     if itb
       llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
       xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
-      acr = _match_tip_x!(ξp, xt, σx)
+      if !fxi
+        acr = _match_tip_x!(ξp, xt, σx)
+      else
+        acr = 0.0
+      end
     else
       np -= 1
       ξ1  = Ξ[d1(bi)]
@@ -463,8 +472,8 @@ function update_fs!(bix::Int64,
       if !itb
         sdX += ((xt - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
                ((xt - xf(ξ2))^2 - (xi(ξ1) - xf(ξ2))^2)/(2.0*e(ξ2))
-        setxi!(ξ1, xt) # set new xt
-        setxi!(ξ2, xt) # set new xt
+        setxi!(ξ1, xt) # set new xt for initial x
+        setxi!(ξ2, xt) # set new xt for initial x
       end
 
     end

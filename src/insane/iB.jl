@@ -261,13 +261,11 @@ struct iBffs <: iBf
   fx::Bool
 
   # constructors
-  iBffs() = new(0., Ref(0), Ref(0), Ref(0), 0., 0., false, 1.0, false,
-                Ref(0), Ref(0), Ref(0.0), Ref(0.0), Ref(0.0), false)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, ni::Int64, nt::Int64,
-        λt::Float64, μt::Float64) =
+        λt::Float64, μt::Float64, fx::Bool) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, false,
-            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0), false)
+            Ref(ni), Ref(nt), Ref(λt), Ref(μt), Ref(0.0), fx)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, iψ::Bool, ni::Int64, nt::Int64,
         λt::Float64, μt::Float64, ψt::Float64, fx::Bool) =
@@ -309,7 +307,7 @@ function makeiBf!(tree::sT_label,
     lab = l(tree)
     ρi  = tρ[lab]
     tf  = isapprox(tf, 0.0) ? tf : 0.0
-    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, 0.0))
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, 0.0, false))
     push!(n2v, 0)
     return ρi, 1
   end
@@ -320,7 +318,7 @@ function makeiBf!(tree::sT_label,
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, 0.0))
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, 0.0, false))
   push!(n2v, n2)
 
   return ρi, n
@@ -353,34 +351,46 @@ function makeiBf!(tree::sT_label,
 
   el = e(tree)
   tf = ti - el
+  lab = l(tree)
 
   if istip(tree)
-    lab = l(tree)
     ρi  = tρ[lab]
-    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, 0.0))
-    push!(n2v, 0)
-    xi  = X[lab]
+    xi  = get(X, lab, NaN)
+    ifx = !isnan(xi)
+    if !ifx
+      mn = !isempty(xr) ? mean(xr) : 0.0
+      xi = randn() + mn
+    end
     push!(xr, xi)
+    tf  = isapprox(tf, 0.0) ? tf : 0.0
+    push!(n2v, 0)
+    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, 0.0, ifx))
     return ρi, 1, xi, el
   end
 
   ρ1, n1, x1, e1 = makeiBf!(tree.d1, idv, tf, n2v, tρ, sc, xr, X)
   ρ2, n2, x2, e2 = makeiBf!(tree.d2, idv, tf, n2v, tρ, sc, xr, X)
 
-  # tree order
-  n  = n1 + n2
-  ρi = n / (n1/ρ1 + n2/ρ2)
-
-  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, 0.0))
-  push!(n2v, n2)
-
-  # pic
-  scn = (x2 - x1)/(e1 + e2)
-  xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+  xn  = get(X, lab, NaN)
+  ifx = !isnan(xn)
+  # if constrained node
+  if !ifx
+    scn = (x2 - x1)/(e1 + e2)
+    xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+  else
+    scn = (xn - x1)/e1 + (xn - x2)/e2
+  end
   en = el + e1*e2/(e1 + e2)
 
   push!(sc, scn)
   push!(xr,  xn)
+
+  # tree order
+  n  = n1 + n2
+  ρi = n / (n1/ρ1 + n2/ρ2)
+
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, 0.0, ifx))
+  push!(n2v, n2)
 
   return ρi, n, xn, en
 end

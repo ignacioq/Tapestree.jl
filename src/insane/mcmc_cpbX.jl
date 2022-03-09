@@ -587,35 +587,44 @@ function update_x!(bix     ::Int64,
                    stem    ::Bool,
                    x0_prior::NTuple{2, Float64}) where {T <: sTX}
 
-  ξi = Ξ[bix]
-  bi = idf[bix]
-  ξ1 = Ξ[d1(bi)]
-  ξ2 = Ξ[d2(bi)]
+  ξi  = Ξ[bix]
+  bi  = idf[bix]
+  ξ1  = Ξ[d1(bi)]
+  ξ2  = Ξ[d2(bi)]
+  fxi = fx(ξi)
+  fx1 = fx(ξ1)
+  fx2 = fx(ξ2)
 
   root = iszero(pa(bi))
   # if crown root
   if root && !stem
-    llc, prc, sdX =
-       _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)
+    if !fx(ξi)
+      llc, prc, sdX =
+         _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)
+    end
   else
     # if stem
     if root
-      llc, prc, sdX = _stem_update_x!(ξi, σx, llc, prc, sdX, x0_prior)
+      if !fx(ξi)
+        llc, prc, sdX = _stem_update_x!(ξi, σx, llc, prc, sdX, x0_prior)
+      end
     end
 
     # updates within the parent branch
-    llc, sdX = _update_x!(ξi, σx, llc, sdX)
+    llc, sdX = _update_x!(ξi, σx, llc, sdX, true)
 
     # get fixed tip
     lξi = fixtip(ξi)
 
     # make between decoupled trees node update
-    llc, sdX = _update_triad_x!(lξi, ξ1, ξ2, σx, llc, sdX)
+    if !fx(ξi)
+      llc, sdX = _update_triad_x!(lξi, ξ1, ξ2, σx, llc, sdX)
+    end
   end
 
   # carry on updates in the daughters
-  llc, sdX = _update_x!(ξ1, σx, llc, sdX)
-  llc, sdX = _update_x!(ξ2, σx, llc, sdX)
+  llc, sdX = _update_x!(ξ1, σx, llc, sdX, fx(ξ1) && it(d1(bi)))
+  llc, sdX = _update_x!(ξ2, σx, llc, sdX, fx(ξ2) && it(d2(bi)))
 
   return llc, prc, sdX
 end
@@ -732,12 +741,15 @@ Do gbm updates on a decoupled tree recursively.
 function _update_x!(tree::T,
                     σx  ::Float64,
                     llc ::Float64,
-                    sdX ::Float64) where {T <: sTX}
+                    sdX ::Float64, 
+                    ufx ::Bool) where {T <: sTX}
 
   if def1(tree)
     llc, sdX = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, sdX)
-    llc, sdX = _update_x!(tree.d1, σx, llc, sdX)
-    llc, sdX = _update_x!(tree.d2, σx, llc, sdX)
+    llc, sdX = _update_x!(tree.d1, σx, llc, sdX, ufx)
+    llc, sdX = _update_x!(tree.d2, σx, llc, sdX, ufx)
+  elseif ufx
+    llc, sdX = _update_tip_x!(tree, σx, llc, sdX)
   end
 
   return llc, sdX
@@ -783,6 +795,38 @@ function _update_triad_x!(tree::T,
   sdX += ((xa - xn)^2 - (xa - xo)^2)/(2.0*ea) +
          ((xn - x1)^2 - (xo - x1)^2)/(2.0*e1) +
          ((xn - x2)^2 - (xo - x2)^2)/(2.0*e2)
+
+  return llc, sdX
+end
+
+
+
+
+"""
+    _update_tip_x!(tree::T,
+                   σx  ::Float64,
+                   llc ::Float64,
+                   sdX ::Float64) where {T <: sTX}
+
+Make gibbs node update for trait.
+"""
+function _update_tip_x!(tree::T,
+                        σx  ::Float64,
+                        llc ::Float64,
+                        sdX ::Float64) where {T <: sTX}
+
+  xa = xi(tree)
+  xo = xf(tree)
+  ea = e(tree)
+
+  # gibbs sampling
+  s2 = sqrt(ea)*σx
+  xn = rnorm(xa, s2)
+  setxf!(tree, xn)
+
+  # update llc and sdX
+  llc += llrdnorm_x(xn, xo, xa, s2)
+  sdX += ((xn - xa)^2 - (xo - xa)^2)/(2.0*ea)
 
   return llc, sdX
 end
