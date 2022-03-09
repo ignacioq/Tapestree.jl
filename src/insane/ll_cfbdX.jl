@@ -33,17 +33,17 @@ function llik_cfbd(tree::sTfbdX,
 
   if istip(tree)
     if isfossil(tree)
-      return - e(tree)*(λ + μ + ψ) + log(ψ) + bml
+      return - el*(λ + μ + ψ) + log(ψ) + bml
     elseif isextinct(tree)
-      return - e(tree)*(λ + μ + ψ) + log(μ) + bml
+      return - el*(λ + μ + ψ) + log(μ) + bml
     else
-      return - e(tree)*(λ + μ + ψ) + bml
+      return - el*(λ + μ + ψ) + bml
     end
   elseif isfossil(tree)
-    return - e(tree)*(λ + μ + ψ) + log(ψ) + bml     +
+    return - el*(λ + μ + ψ) + log(ψ) + bml     +
              llik_cfbd(tree.d1::sTfbdX, λ, μ, ψ, σx)
   else
-    return - e(tree)*(λ + μ + ψ) + log(λ) + bml      +
+    return - el*(λ + μ + ψ) + log(λ) + bml      +
              llik_cfbd(tree.d1::sTfbdX, λ, μ, ψ, σx) +
              llik_cfbd(tree.d2::sTfbdX, λ, μ, ψ, σx)
   end
@@ -69,14 +69,40 @@ function llik_cfbd(Ξ ::Vector{sTfbdX},
                    σx::Float64)
 
   ll = 0.0
+  nf = 0
   for ξ in Ξ
+    nf += isinternalfossil(ξ)
     ll += llik_cfbd(ξ, λ, μ, ψ, σx)
   end
-
-  ll += Float64(lastindex(Ξ) - 1) * 0.5 * log(λ)
+  ll += Float64(lastindex(Ξ) - nf - 1) * 0.5 * log(λ)
 
   return ll
 end
 
+
+
+
+"""
+    _sdeltaX(tree::T, sdX::Float64, nX::Int64) where {T <: sTX}
+
+Returns time standardized trait differences.
+"""
+function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: sTfbdX}
+
+  el = e(tree)
+  if !iszero(el)
+    sdX += (xf(tree) - xi(tree))^2 / (2.0*el)
+    nX  += 1.0
+  end
+
+  if def1(tree)
+    sdX, nX = _sdeltaX(tree.d1, sdX, nX)
+    if def2(tree)
+      sdX, nX = _sdeltaX(tree.d2, sdX, nX)
+    end
+  end
+
+  return sdX, nX
+end
 
 

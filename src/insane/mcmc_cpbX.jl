@@ -402,6 +402,7 @@ function update_fs!(bix::Int64,
     ρbi = ρi(bi) # get branch sampling fraction
     nc  = ni(bi) # current ni
     ntc = nt(bi) # current nt
+    fxi = fx(bi) # is an unfix X node
 
     # current tree
     ξc  = Ξ[bix]
@@ -410,15 +411,23 @@ function update_fs!(bix::Int64,
     if itb
       llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
       xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
-      acr = _match_tip_x!(ξp, xt, σx)
+      if !fxi
+        acr = _match_tip_x!(ξp, xt, σx)
+      else
+        acr = 0.0
+      end
     else
       np -= 1
       ξ1  = Ξ[d1(bi)]
       ξ2  = Ξ[d2(bi)]
-      llr = log((1.0 - ρbi)^(np - nc))                          +
-            duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
-            duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
+      llr = log((1.0 - ρbi)^(np - nc))
       acr = log(Float64(ntp)/Float64(ntc))
+      if fxi 
+        acr += _match_tip_x!(ξp, xt, σx)
+      else
+        llr += duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
+               duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
+      end
     end
 
     # MH ratio
@@ -440,11 +449,11 @@ function update_fs!(bix::Int64,
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
 
-      if !itb
+      if !fxi && !itb
         sdX += ((xt - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
-               ((xt - xf(ξ2))^2 - (xi(ξ1) - xf(ξ2))^2)/(2.0*e(ξ2))
-        setxi!(ξ1, xt) # set new xt
-        setxi!(ξ2, xt) # set new xt
+               ((xt - xf(ξ2))^2 - (xi(ξ2) - xf(ξ2))^2)/(2.0*e(ξ2))
+        setxi!(ξ1, xt) # set new xt for initial x
+        setxi!(ξ2, xt) # set new xt for initial x
       end
 
     end
@@ -550,6 +559,8 @@ function _match_tip_x!(tree::T,
     # acceptance rate
     acr  = ldnorm_bm(xt, xa, σsrt) - ldnorm_bm(xn, xa, σsrt)
     setxf!(tree, xt)
+
+    return acr
   else
     if isfix(tree.d1)
       acr = _match_tip_x!(tree.d1, xt, σx)

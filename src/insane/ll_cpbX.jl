@@ -56,7 +56,7 @@ end
 
 
 """
-    sdX(Ξ::Vector{T}) where {T <: iTgbm}
+    sdeltaX(Ξ::Vector{T}) where {T <: iTgbm}
 
 Returns the time standardized trait difference.
 """
@@ -75,7 +75,7 @@ end
 
 
 """
-    _sdX(tree::T, sdX::Float64, nX::Int64) where {T <: sTX}
+    _sdeltaX(tree::T, sdX::Float64, nX::Int64) where {T <: sTX}
 
 Returns time standardized trait differences.
 """

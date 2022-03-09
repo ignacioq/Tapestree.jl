@@ -629,13 +629,11 @@ function _rplottrait!(tree::T,
   defd1 = def1(tree)
   defd2 = def2(tree)
 
-  if defd1 && defd2
+  if defd1 
     _rplottrait!(tree.d1, xc, x, y)
-    _rplottrait!(tree.d2, xc, x, y)
-  elseif defd1
-    _rplottrait!(tree.d1, xc, x, y)
-  elseif defd2
-    _rplottrait!(tree.d2, xc, x, y)
+    if defd2
+      _rplottrait!(tree.d2, xc, x, y)
+    end
   end
 end
 

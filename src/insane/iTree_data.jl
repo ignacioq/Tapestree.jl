@@ -1078,6 +1078,23 @@ end
 
 
 
+"""
+    fixtip(tree::T) where {T <: iTree}
+
+Return the first fixed tip.
+"""
+function fixtip(tree::T) where {T <: sTf}
+  if istip(tree)
+    return tree
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T)
+  else
+    fixtip(tree.d2::T)
+  end
+end
+
+
+
 
 """
     makebbv!(tree::T,
@@ -1388,5 +1405,29 @@ function fixed_xt(tree::T)  where {T <: sTX}
 
   return xt
 end
+
+
+
+
+"""
+    fossil_xt(tree::T)
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function fossil_xt(tree::sTfbdX)
+
+  if isfossil(tree)
+    return xf(tree)
+  elseif isfix(tree.d1)
+    xt = fossil_xt(tree.d1)
+  else
+    xt = fossil_xt(tree.d2)
+  end
+
+  return xt
+end
+
+
+
 
 

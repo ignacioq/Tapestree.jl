@@ -276,7 +276,7 @@ end
 # pretty-printing
 Base.show(io::IO, id::iBffs) =
   print(io,
-    ifos(id)       ? "fossil " : "",
+    isfossil(id)       ? "fossil " : "",
     it(id)         ? "terminal " : "",
     iszero(pa(id)) ? "stem " : "",
     isone(pa(id))  ? "crown " : "",
@@ -770,7 +770,7 @@ function prob_ρ(idv::Array{iBffs,1})
   ll = 0.0
   for bi in idv
     nbi = ni(bi)
-    if it(bi) && !ifos(bi)
+    if it(bi) && !isfossil(bi)
       ll += log(Float64(nbi) * ρi(bi) * (1.0 - ρi(bi))^(nbi - 1))
     else
       ll += log((1.0 - ρi(bi))^(nbi))
@@ -918,11 +918,11 @@ it(id::iBf) = getproperty(id, :it)
 
 
 """
-    ifos(id::iBffs)
+    isfossil(id::iBffs)
 
 Return if is a fossil.
 """
-ifos(id::iBffs) = getproperty(id, :iψ)
+isfossil(id::iBffs) = getproperty(id, :iψ)
 
 
 

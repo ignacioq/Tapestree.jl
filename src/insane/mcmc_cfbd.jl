@@ -216,10 +216,8 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
   ns = Float64(nnodesbifurcation(Ξ)) # number of speciation events
   ne = Float64(ntipsextinct(Ξ))      # number of extinction events
 
-  nsi = stem ? 0.0 : log(λc)
-
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc) - nsi + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2]) +
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])
@@ -558,7 +556,7 @@ function update_fs!(bix::Int64,
   if ntp > 0
 
     itb = it(bi)   # is it terminal
-    iψb = ifos(bi) # is it a fossil
+    iψb = isfossil(bi) # is it a fossil
     ρbi = ρi(bi)   # get branch sampling fraction
     nc  = ni(bi)   # current ni
     ntc = nt(bi)   # current nt
@@ -631,7 +629,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
         # fix a random tip
         _fixrtip!(t0, na)
 
-        if !it(bi) || ifos(bi)
+        if !it(bi) || isfossil(bi)
           # add tips until the present
           tx, na, nf = tip_sims!(t0, tfb, λ, μ, ψ, na, nf)
           if !iszero(nf)
@@ -641,7 +639,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
         end
       end
 
-      if ifos(bi)
+      if isfossil(bi)
         # replace extant tip by a fossil
         fossilizefixedtip!(t0)
 
@@ -689,13 +687,13 @@ function tip_sims!(tree::sTfbd,
       if !isfix(tree) && isalive(tree)
 
         # simulate
-        stree, na, nf = sim_cfbd(t, λ, μ, ψ, na-1, 0)
+        stree, na, nf = sim_cfbd(t, λ, μ, ψ, na-1, nf)
 
         if iszero(nf)
           # merge to current tip
           sete!(tree, e(tree) + e(stree))
           setproperty!(tree, :iμ, isextinct(stree))
-          if isdefined(stree, :d1)
+          if def1(stree)
             tree.d1 = stree.d1
             tree.d2 = stree.d2
           end

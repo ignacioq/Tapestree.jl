@@ -103,10 +103,10 @@ function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTfbdX})
     paix = iszero(paix) ? 1 : paix
     xii  = xr[paix]
     xfi  = xr[i]
-    iψ = ifos(idfi)
+    iψ = isfossil(idfi)
     if iψ && it(idfi)
       ξ = sTfbdX(
-               sTfbdX(0.0, true, false, true, xfi, xfi),
+               sTfbdX(1e-10, true, false, true, xfi, xfi),
                e(idfi), false, true, true, xii, xfi)
     else
       ξ = sTfbdX(e(idfi), false, iψ, true, xii, xfi)
@@ -188,7 +188,7 @@ function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
   Ξ = sTfbd[]
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
-    ξ = sTfbd(e(bi), ie(bi), ifos(bi), true)
+    ξ = sTfbd(e(bi), ie(bi), isfossil(bi), true)
     push!(Ξ, ξ)
   end
   return Ξ

@@ -76,7 +76,8 @@ function sim_cfbd(t ::Float64,
                   ψ ::Float64,
                   x0::Float64,
                   σx::Float64,
-                  na::Int64)
+                  na::Int64,
+                  nf::Int64)
 
   tw = cfbd_wait(λ, μ, ψ)
 
@@ -90,8 +91,8 @@ function sim_cfbd(t ::Float64,
 
   # speciation
   if λevent(λ, μ, ψ)
-    d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx)
-    d2, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx)
+    d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx, na, nf)
+    d2, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx, na, nf)
 
     return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nf
   # extinction
@@ -100,7 +101,7 @@ function sim_cfbd(t ::Float64,
   # fossil sampling
   else
     nf += 1
-    d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx)
+    d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx, na, nf)
     return sTfbdX(d1, tw, false, true, false, x0, x1), na, nf
   end
 end
