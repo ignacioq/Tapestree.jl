@@ -589,42 +589,41 @@ function update_x!(bix     ::Int64,
 
   ξi  = Ξ[bix]
   bi  = idf[bix]
-  ξ1  = Ξ[d1(bi)]
-  ξ2  = Ξ[d2(bi)]
-  fxi = fx(ξi)
-  fx1 = fx(ξ1)
-  fx2 = fx(ξ2)
+  id1 = d1(bi)
+  id2 = d2(bi)
+  ξ1  = Ξ[id1]
+  ξ2  = Ξ[id2]
 
   root = iszero(pa(bi))
   # if crown root
   if root && !stem
-    if !fx(ξi)
+    if !fx(bi)
       llc, prc, sdX =
          _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)
     end
   else
     # if stem
     if root
-      if !fx(ξi)
+      if !fx(bi)
         llc, prc, sdX = _stem_update_x!(ξi, σx, llc, prc, sdX, x0_prior)
       end
     end
 
     # updates within the parent branch
-    llc, sdX = _update_x!(ξi, σx, llc, sdX, true)
+    llc, sdX = _update_x!(ξi, σx, llc, sdX, false)
 
     # get fixed tip
     lξi = fixtip(ξi)
 
     # make between decoupled trees node update
-    if !fx(ξi)
+    if !fx(bi)
       llc, sdX = _update_triad_x!(lξi, ξ1, ξ2, σx, llc, sdX)
     end
   end
 
   # carry on updates in the daughters
-  llc, sdX = _update_x!(ξ1, σx, llc, sdX, fx(ξ1) && it(d1(bi)))
-  llc, sdX = _update_x!(ξ2, σx, llc, sdX, fx(ξ2) && it(d2(bi)))
+  llc, sdX = _update_x!(ξ1, σx, llc, sdX, !fx(idf[id1]) && it(idf[id1]))
+  llc, sdX = _update_x!(ξ2, σx, llc, sdX, !fx(idf[id2]) && it(idf[id2]))
 
   return llc, prc, sdX
 end
@@ -734,7 +733,8 @@ end
     _update_x!(tree::T,
                σx  ::Float64,
                llc ::Float64,
-               sdX ::Float64) where {T <:i TreeX}
+               sdX ::Float64, 
+               ufx ::Bool) where {T <: sTX}
 
 Do gbm updates on a decoupled tree recursively.
 """
@@ -748,7 +748,11 @@ function _update_x!(tree::T,
     llc, sdX = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, sdX)
     llc, sdX = _update_x!(tree.d1, σx, llc, sdX, ufx)
     llc, sdX = _update_x!(tree.d2, σx, llc, sdX, ufx)
-  elseif ufx
+  elseif isfix(tree)
+    if ufx
+      llc, sdX = _update_tip_x!(tree, σx, llc, sdX)
+    end
+  else
     llc, sdX = _update_tip_x!(tree, σx, llc, sdX)
   end
 
@@ -820,12 +824,12 @@ function _update_tip_x!(tree::T,
   ea = e(tree)
 
   # gibbs sampling
-  s2 = sqrt(ea)*σx
-  xn = rnorm(xa, s2)
+  s = sqrt(ea)*σx
+  xn = rnorm(xa, s)
   setxf!(tree, xn)
 
   # update llc and sdX
-  llc += llrdnorm_x(xn, xo, xa, s2)
+  llc += llrdnorm_x(xn, xo, xa, s^2)
   sdX += ((xn - xa)^2 - (xo - xa)^2)/(2.0*ea)
 
   return llc, sdX

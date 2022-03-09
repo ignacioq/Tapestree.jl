@@ -294,11 +294,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # μ proposal
       elseif p === 2
@@ -306,22 +306,22 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
        # sigma_x update
       elseif p === 3
 
         llc, prc, σxc = update_σx!(σxc, sdX, nX, llc, prc, σx_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # X ancestors update
       elseif p === 4
@@ -332,12 +332,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, sdX =
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
-
+        llci = llik_cbd(Ξ, λc, μc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # forward simulation proposal proposal
       else
@@ -347,11 +346,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, ns, ne, L, sdX, nX =
           update_fs!(bix, Ξ, idf, llc, λc, μc, σxc, ns, ne, L, sdX, nX)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       end
     end
@@ -421,14 +420,10 @@ function update_fs!(bix::Int64,
     ρbi = ρi(bi) # get branch sampling fraction
     nc  = ni(bi) # current ni
     ntc = nt(bi) # current nt
+    fxi = fx(bi) # is an unfix X node
 
     # current tree
     ξc  = Ξ[bix]
-
-    """
-    here: allow match if fix and non match if not fixed
-    """
-
 
     # if terminal branch
     if itb
@@ -443,10 +438,14 @@ function update_fs!(bix::Int64,
       np -= 1
       ξ1  = Ξ[d1(bi)]
       ξ2  = Ξ[d2(bi)]
-      llr = log((1.0 - ρbi)^(np - nc))                          +
-            duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
-            duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
+      llr = log((1.0 - ρbi)^(np - nc))
       acr = log(Float64(ntp)/Float64(ntc))
+      if fxi 
+        acr += _match_tip_x!(ξp, xt, σx)
+      else
+        llr += duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
+               duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
+      end
     end
 
     # MH ratio
@@ -469,13 +468,13 @@ function update_fs!(bix::Int64,
       setni!(bi, np)  # set new ni
       setnt!(bi, ntp) # set new nt
 
-      if !itb
+
+      if !fxi && !itb
         sdX += ((xt - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
                ((xt - xf(ξ2))^2 - (xi(ξ1) - xf(ξ2))^2)/(2.0*e(ξ2))
         setxi!(ξ1, xt) # set new xt for initial x
         setxi!(ξ2, xt) # set new xt for initial x
       end
-
     end
   end
 
