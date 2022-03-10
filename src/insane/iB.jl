@@ -358,8 +358,9 @@ function makeiBf!(tree::sT_label,
     xi  = get(X, lab, NaN)
     ifx = !isnan(xi)
     if !ifx
-      mn = !isempty(xr) ? mean(xr) : 0.0
-      xi = randn() + mn
+      mn = isempty(xr) ? 0.0 : mean(xr)
+      s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
+      xi = randn()*s + mn
     end
     push!(xr, xi)
     tf  = isapprox(tf, 0.0) ? tf : 0.0
@@ -374,11 +375,11 @@ function makeiBf!(tree::sT_label,
   xn  = get(X, lab, NaN)
   ifx = !isnan(xn)
   # if constrained node
-  if !ifx
+  if ifx
+    scn = (xn - x1)/e1 + (xn - x2)/e2
+  else
     scn = (x2 - x1)/(e1 + e2)
     xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
-  else
-    scn = (xn - x1)/e1 + (xn - x2)/e2
   end
   en = el + e1*e2/(e1 + e2)
 
@@ -513,8 +514,9 @@ function makeiBf!(tree::sTf_label,
     xi  = get(X, lab, NaN)
     ifx = !isnan(xi)
     if !ifx
-      mn = !isempty(xr) ? mean(xr) : 0.0
-      xi = randn() + mn
+      mn = isempty(xr) ? 0.0 : mean(xr)
+      s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
+      xi = randn()*s + mn
     end
     push!(xr, xi)
     push!(idv, 
@@ -545,9 +547,12 @@ function makeiBf!(tree::sTf_label,
       lab = l(tree)
       xn  = get(X, lab, NaN)
       ifx = !isnan(xn)
+
       if !ifx
-        xn = randn() + x1
+        s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
+        xn = randn()*s + x1
       end
+
 
       # pic
       scn = (xn - x1)/e1
