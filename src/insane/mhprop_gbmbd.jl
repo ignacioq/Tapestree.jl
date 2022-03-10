@@ -105,7 +105,7 @@ end
 
 Do gbm update for stem root.
 """
-function _stem_update!(ξi   ::iTbd,
+function _stem_update!(ξi   ::T,
                        α    ::Float64,
                        σλ   ::Float64,
                        σμ   ::Float64,
@@ -118,7 +118,7 @@ function _stem_update!(ξi   ::iTbd,
                        δt   ::Float64,
                        srδt ::Float64,
                        lλxpr::Float64,
-                       lμxpr::Float64)
+                       lμxpr::Float64) where {T <: iTbdU}
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -191,9 +191,9 @@ end
 
 Do `gbm-bd` update for crown root.
 """
-function _crown_update!(ξi   ::iTbd,
-                        ξ1   ::iTbd,
-                        ξ2   ::iTbd,
+function _crown_update!(ξi   ::T,
+                        ξ1   ::T,
+                        ξ2   ::T,
                         α    ::Float64,
                         σλ   ::Float64,
                         σμ   ::Float64,
@@ -206,7 +206,7 @@ function _crown_update!(ξi   ::iTbd,
                         δt   ::Float64,
                         srδt ::Float64,
                         lλxpr::Float64,
-                        lμxpr::Float64)
+                        lμxpr::Float64) where {T <: iTbdU}
 
   @inbounds begin
     λpc  = lλ(ξi)
