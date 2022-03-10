@@ -113,7 +113,7 @@ function insane_cfbd(tree    ::sTf_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant birth-death and trait evolution with forward simulation"
+  @info "Running constant birth-death and trait evolution"
 
   # adaptive phase
   llc, prc, λc, μc, ψc, σxc, mc =
@@ -186,6 +186,7 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
   llc = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc,       λ_prior[1],  λ_prior[2])    +
         logdgamma(μc,       μ_prior[1],  μ_prior[2])    +
+        logdgamma(ψc,        ψ_prior[1], ψ_prior[2])    +
         logdinvgamma(σxc^2, σx_prior[1], σx_prior[2])   +
         logdnorm(xi(Ξ[1]),  x0_prior[1], x0_prior[2]^2)
 
@@ -228,7 +229,7 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
         llc, prc, sdX =
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
 
-      # forward simulation proposal proposal
+      # forward simulation proposal update
       else
 
         bix = ceil(Int64,rand()*el)

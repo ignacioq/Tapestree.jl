@@ -1007,8 +1007,8 @@ mutable struct iTfbd <: iT
         dt ::Float64,
         fdt::Float64,
         iμ ::Bool,
-        fx ::Bool,
         iψ ::Bool,
+        fx ::Bool,
         lλ ::Array{Float64,1},
         lμ ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
@@ -1019,8 +1019,8 @@ mutable struct iTfbd <: iT
         dt ::Float64,
         fdt::Float64,
         iμ ::Bool,
-        fx ::Bool,
         iψ ::Bool,
+        fx ::Bool,
         lλ ::Array{Float64,1},
         lμ ::Array{Float64,1}) =
     (x = new(); x.d1 = d1; x.e = e; x.dt = dt; x.fdt = fdt;

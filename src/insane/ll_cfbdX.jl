@@ -87,7 +87,7 @@ end
 
 Returns time standardized trait differences.
 """
-function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: iTfbdX}
+function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: sTfbdX}
 
   el = e(tree)
   if !iszero(el)

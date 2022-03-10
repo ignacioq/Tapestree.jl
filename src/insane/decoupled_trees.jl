@@ -180,24 +180,6 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
-
-Make edge tree `Ξ` from the edge directory.
-"""
-function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
-  Ξ = sTfbd[]
-  for i in Base.OneTo(lastindex(idf))
-    bi = idf[i]
-    ξ = sTfbd(e(bi), ie(bi), isfossil(bi), true)
-    push!(Ξ, ξ)
-  end
-  return Ξ
-end
-
-
-
-
-"""
     iTpb!(Ξ   ::Vector{iTpb},
              tree::sT_label,
              δt  ::Float64,
@@ -209,12 +191,12 @@ end
 Make edge tree `Ξ` from the recursive tree.
 """
 function iTpb!(Ξ   ::Vector{iTpb},
-                  tree::sT_label,
-                  δt  ::Float64,
-                  srδt::Float64,
-                  lλa ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64)
+               tree::sT_label,
+               δt  ::Float64,
+               srδt::Float64,
+               lλa ::Float64,
+               α   ::Float64,
+               σλ  ::Float64)
 
   et = e(tree)
 
@@ -380,8 +362,8 @@ function iTbd!(Ξ   ::Vector{iTbd},
       nt  -= 1
     end
 
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
-    lμv = sim_bm(lμa, α, σμ, δt, fdti, srδt, nt)
+    lλv = sim_bm(lλa,   α, σλ, δt, fdti, srδt, nt)
+    lμv = sim_bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
     l   = nt + 2
   end
 
@@ -390,6 +372,68 @@ function iTbd!(Ξ   ::Vector{iTbd},
     iTbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
     iTbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
   end
+end
+
+
+
+
+"""
+    iTfbd!(Ξ   ::Vector{iTfbd},
+             tree::sTf_label,
+             δt  ::Float64,
+             srδt::Float64,
+             lλa ::Float64,
+             lμa ::Float64,
+             α   ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64)
+
+Make edge tree `Ξ` from the recursive tree.
+"""
+function iTfbd!(Ξ   ::Vector{iTfbd},
+                tree::sTf_label,
+                δt  ::Float64,
+                srδt::Float64,
+                lλa ::Float64,
+                lμa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64)
+
+  et = e(tree)
+
+  if iszero(et)
+    lλv  = Float64[lλa, lλa]
+    lμv  = Float64[lμa, lμa]
+    fdti = 0.0
+    l    = 2
+  else
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
+
+    if iszero(fdti)
+      fdti = δt
+      nt  -= 1
+    end
+
+    lλv = sim_bm(lλa, α,   σλ, δt, fdti, srδt, nt)
+    lμv = sim_bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
+    l   = nt + 2
+  end
+
+  if istip(tree) && isfossil(tree)
+    lλl = lλv[l]
+    lμl = lμv[l]
+    push!(Ξ, iTfbd(
+               iTfbd(0.0, δt, δt, true, false, true, 
+                 Float64[lλl, lλl], Float64[lμl, lμl]),
+               et, δt, fdti, false, true, true, lλv, lμv))
+  else
+    push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(tree), true, lλv, lμv))
+  end
+
+  if def2(tree) iTfbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ) end
+  if def1(tree) iTfbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ) end
 end
 
 
@@ -544,12 +588,12 @@ end
 
 
 """
-    sss_gbm(Ξ::Vector{iTbd}, α::Float64)
+    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(Ξ::Vector{iTbd}, α::Float64)
+function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
 
   n   = 0.0
   ssλ = 0.0
@@ -567,7 +611,7 @@ end
 """
     Σλ_gbm(Ξ::Vector{T}) where {T<: iT}
 
-Return the internal nodes of `Ξ`.
+Return the sum over `λ` gbm.
 """
 function Σλ_gbm(Ξ::Vector{T}) where {T <: iT}
   Σλ = 0.0

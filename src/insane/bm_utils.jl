@@ -248,7 +248,7 @@ Brownian motion simulation function for updating a branch in place.
 
     # for standard δt
     x[1] = xi
-    @simd for i = Base.OneTo(l-2)
+    @avx for i = Base.OneTo(l-2)
       x[i+1] *= srδt*σ
       x[i+1] += α*δt
     end

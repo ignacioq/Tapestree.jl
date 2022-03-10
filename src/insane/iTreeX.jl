@@ -220,6 +220,11 @@ end
 
 
 
+#=
+Union Types
+=#
+
+
 
 """
     Union type for trait data
@@ -236,3 +241,14 @@ sTX = Union{sTpbX, sTbdX, sTfbdX}
 iTf = Union{sTfbd, sTfbdX, iTfbd}
 """
 iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd}
+
+
+
+"""
+    Union type for gbm-bd data
+
+iTbdU = Union{iTbd, iTfbd}
+"""
+iTbdU = Union{iTbd, iTfbd}
+
+

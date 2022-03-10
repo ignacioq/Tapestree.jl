@@ -98,9 +98,9 @@ isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 
 Return if is an extinction node.
 """
-isextinct(tree::sTpb) = false
+isextinct(tree::sTpb)  = false
 isextinct(tree::sTpbX) = false
-isextinct(tree::iTpb) = false
+isextinct(tree::iTpb)  = false
 
 
 
@@ -135,8 +135,8 @@ isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
 
 Return if is a fossil tip node : false because not allowed for those tree types.
 """
-isfossil(tree::sTpb)    = false
-isfossil(tree::sTbd)    = false
+isfossil(tree::sTpb) = false
+isfossil(tree::sTbd) = false
 isfossil(tree::iTpb) = false
 isfossil(tree::iTce) = false
 isfossil(tree::iTct) = false
@@ -384,7 +384,7 @@ end
 
 
 """
-    treeheight(tree::T) where {T <: Union{sTfbd, sTf_label}}
+    treeheight(tree::T) where {T <: iTf}
 
 Return the tree height of `tree`.
 """
@@ -561,6 +561,7 @@ function _ntips(tree::T, n::Int64) where {T <: iTree}
 
   return n
 end
+
 
 
 
@@ -869,11 +870,11 @@ lλ(tree::T) where {T <: iT} = getproperty(tree, :lλ)
 
 
 """
-    lμ(tree::iT)
+    lμ(tree::iTbdU)
 
 Return pendant edge.
 """
-lμ(tree::iTbd) = getproperty(tree,:lμ)
+lμ(tree::iTbdU) = getproperty(tree,:lμ)
 
 
 

@@ -20,21 +20,17 @@ Log-likelihood up to a constant for constant fossilized birth-death
 given a complete `iTree` recursively.
 """
 function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
-  if istip(tree)
-    if isfossil(tree)
-      return - e(tree)*(λ + μ + ψ) + log(ψ)
-    elseif isextinct(tree)
-      return - e(tree)*(λ + μ + ψ) + log(μ)
+  if def1(tree)
+    if def2(tree)
+      - e(tree)*(λ + μ + ψ) + log(λ)       +
+        llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) +
+        llik_cfbd(tree.d2::sTfbd, λ, μ, ψ)
     else
-      return - e(tree)*(λ + μ + ψ)
+      - e(tree)*(λ + μ + ψ) + log(ψ)       +
+        llik_cfbd(tree.d1::sTfbd, λ, μ, ψ)
     end
-  elseif isfossil(tree)
-    return - e(tree)*(λ + μ + ψ) + log(ψ)       +
-             llik_cfbd(tree.d1::sTfbd, λ, μ, ψ)
   else
-    return - e(tree)*(λ + μ + ψ) + log(λ)       +
-             llik_cfbd(tree.d1::sTfbd, λ, μ, ψ) +
-             llik_cfbd(tree.d2::sTfbd, λ, μ, ψ)
+    - e(tree)*(λ + μ + ψ) + (isextinct(tree) ? log(μ) : 0.0)
   end
 end
 

@@ -80,13 +80,13 @@ function insane_gbmbd(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, stem)
+  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 500, stem)
 
   # make a decoupled tree
   Ξ = iTbd[]
   iTbd!(Ξ, tree, δt, srδt, log(λc), log(μc), αi, σλi, σμi)
 
- # set end of fix branch speciation times and
+  # set end of fix branch speciation times and
   # get vector of internal branches
   inodes = Int64[]
   for i in Base.OneTo(lastindex(idf))
