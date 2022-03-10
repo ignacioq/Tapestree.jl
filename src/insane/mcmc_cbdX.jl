@@ -429,7 +429,7 @@ function update_fs!(bix::Int64,
     if itb
       llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
       xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
-      if !fxi
+      if fxi
         acr = _match_tip_x!(ξp, xt, σx)
       else
         acr = 0.0
