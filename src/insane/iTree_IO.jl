@@ -265,17 +265,17 @@ end
 
 Returns newick string.
 """
-to_string(tree::T) where {T <: sTf} = _to_string(tree, 0, 0)[1]
+to_string(tree::T) where {T <: iTf} = _to_string(tree, 0, 0)[1]
 
 
 
 
 """
-    _to_string(tree::T, n::Int64, nf::Int64) where {T <: sTf}
+    _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
 
 Returns newick string.
 """
-function _to_string(tree::T, n::Int64, nf::Int64) where {T <: sTf}
+function _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
 
   if def1(tree)
     s1, n, nf = _to_string(tree.d1, n, nf)

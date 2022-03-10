@@ -85,8 +85,8 @@ function insane_gbmct(tree    ::sT_label,
   mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 500, stem)
 
   # make a decoupled tree
-  Ξ = iTgbmct[]
-  iTgbmct!(Ξ, tree, δt, srδt, log(λc), αi, σλi)
+  Ξ = iTct[]
+  iTct!(Ξ, tree, δt, srδt, log(λc), αi, σλi)
 
   # set end of fix branch speciation times and
   # get vector of internal branches
@@ -137,7 +137,7 @@ end
 
 
 """
-    mcmc_burn_gbmct(Ξ       ::Vector{iTgbmct},
+    mcmc_burn_gbmct(Ξ       ::Vector{iTct},
                     idf     ::Vector{iBffs},
                     λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -161,7 +161,7 @@ end
 
 MCMC burn-in chain for `gbmct`.
 """
-function mcmc_burn_gbmct(Ξ       ::Vector{iTgbmct},
+function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
                          idf     ::Vector{iBffs},
                          λa_prior::NTuple{2,Float64},
                          α_prior ::NTuple{2,Float64},
@@ -280,7 +280,7 @@ end
 
 
 """
-     mcmc_gbmct(Ξ       ::Vector{iTgbmct},
+     mcmc_gbmct(Ξ       ::Vector{iTct},
                 idf     ::Vector{iBffs},
                 llc     ::Float64,
                 prc     ::Float64,
@@ -302,7 +302,7 @@ end
 
 MCMC chain for `gbmct`.
 """
-function mcmc_gbmct(Ξ       ::Vector{iTgbmct},
+function mcmc_gbmct(Ξ       ::Vector{iTct},
                     idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
@@ -345,7 +345,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTgbmct},
   R = Array{Float64,2}(undef, nlogs, 7)
 
   # make Ξ vector
-  Ξv = iTgbmct[]
+  Ξv = iTct[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -458,7 +458,7 @@ end
 
 """
     update_fs!(bix    ::Int64,
-               Ξ      ::Vector{iTgbmct},
+               Ξ      ::Vector{iTct},
                idf    ::Vector{iBffs},
                α      ::Float64,
                σλ     ::Float64,
@@ -476,7 +476,7 @@ end
 Forward simulation proposal function for `gbmct`.
 """
 function update_fs!(bix    ::Int64,
-                    Ξ      ::Vector{iTgbmct},
+                    Ξ      ::Vector{iTct},
                     idf    ::Vector{iBffs},
                     α      ::Float64,
                     σλ     ::Float64,
@@ -568,7 +568,7 @@ end
 
 """
     fsbi_ct(bi  ::iBffs,
-            ξc  ::iTgbmct,
+            ξc  ::iTct,
             λ0  ::Float64,
             α   ::Float64,
             σλ  ::Float64,
@@ -593,7 +593,7 @@ function fsbi_ct(bi  ::iBffs,
   t0, na, nsp = _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nsp >= 1_000
-    return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+    return iTct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
   end
 
   nat = na
@@ -611,20 +611,20 @@ function fsbi_ct(bi  ::iBffs,
       tx, na, nsp = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na, nsp)
 
       if na < 1 || nsp >= 1_000
-        return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+        return iTct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
       end
     end
 
     return t0, nat, na, λf
   end
 
-  return iTgbmct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+  return iTct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
 end
 
 
 
 """
-    tip_sims!(tree::iTgbmct,
+    tip_sims!(tree::iTct,
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
@@ -635,7 +635,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::iTgbmct,
+function tip_sims!(tree::iTct,
                    t   ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
@@ -693,7 +693,7 @@ end
 
 """
     update_gbm!(bix  ::Int64,
-                Ξ    ::Vector{iTgbmct},
+                Ξ    ::Vector{iTct},
                 idf  ::Vector{iBffs},
                 α    ::Float64,
                 σλ   ::Float64,
@@ -708,7 +708,7 @@ end
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_gbm!(bix  ::Int64,
-                     Ξ    ::Vector{iTgbmct},
+                     Ξ    ::Vector{iTct},
                      idf  ::Vector{iBffs},
                      α    ::Float64,
                      σλ   ::Float64,

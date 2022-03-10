@@ -12,7 +12,7 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTgbmct},
+    llik_gbm(Ξ   ::Vector{iTct},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
@@ -20,9 +20,9 @@ Created 03 09 2020
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
+Returns the log-likelihood for a `iTct` according to `gbmct`.
 """
-function llik_gbm(Ξ   ::Vector{iTgbmct},
+function llik_gbm(Ξ   ::Vector{iTct},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -47,16 +47,16 @@ end
 
 
 """
-    llik_gbm(tree::iTgbmct,
+    llik_gbm(tree::iTct,
              α   ::Float64,
              σλ  ::Float64,
              ϵ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
+Returns the log-likelihood for a `iTct` according to `gbmct`.
 """
-function llik_gbm(tree::iTgbmct,
+function llik_gbm(tree::iTct,
                   α   ::Float64,
                   σλ  ::Float64,
                   ϵ   ::Float64,
@@ -138,16 +138,16 @@ end
 
 
 """
-    llik_gbm_ssλ(tree::iTgbmct,
+    llik_gbm_ssλ(tree::iTct,
                  α   ::Float64,
                  σλ  ::Float64,
                  ϵ   ::Float64,
                  δt  ::Float64,
                  srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmct` according to `gbmct`.
+Returns the log-likelihood for a `iTct` according to `gbmct`.
 """
-function llik_gbm_ssλ(tree::iTgbmct,
+function llik_gbm_ssλ(tree::iTct,
                       α   ::Float64,
                       σλ  ::Float64,
                       ϵ   ::Float64,
@@ -256,19 +256,19 @@ end
 
 
 """
-    Σλ_gbm(tree::iTgbmct)
+    Σλ_gbm(tree::iTct)
 
-Returns the sum of `λ` rates for a `iTgbmct` according
+Returns the sum of `λ` rates for a `iTct` according
 to `gbmct` for a `ϵ` proposal.
 """
-function Σλ_gbm(tree::iTgbmct)
+function Σλ_gbm(tree::iTct)
 
   if istip(tree)
     Σλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
   else
     Σλ_gbm_b(lλ(tree), dt(tree), fdt(tree)) +
-    Σλ_gbm(tree.d1::iTgbmct) +
-    Σλ_gbm(tree.d2::iTgbmct)
+    Σλ_gbm(tree.d1::iTct) +
+    Σλ_gbm(tree.d2::iTct)
   end
 end
 
@@ -280,7 +280,7 @@ end
              δt ::Float64,
              fdt::Float64)
 
-Returns the sum of `λ` rates for a `iTgbmct` branch according
+Returns the sum of `λ` rates for a `iTct` branch according
 to `gbmct` for a `ϵ` proposal.
 """
 function Σλ_gbm_b(lλv::Array{Float64,1},

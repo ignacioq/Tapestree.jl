@@ -56,7 +56,7 @@ end
 
 
 """
-    sdeltaX(Ξ::Vector{T}) where {T <: iTgbm}
+    sdeltaX(Ξ::Vector{T}) where {T <: iT}
 
 Returns the time standardized trait difference.
 """

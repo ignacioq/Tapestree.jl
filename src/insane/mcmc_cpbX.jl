@@ -422,7 +422,7 @@ function update_fs!(bix::Int64,
       ξ2  = Ξ[d2(bi)]
       llr = log((1.0 - ρbi)^(np - nc))
       acr = log(Float64(ntp)/Float64(ntc))
-      if fxi 
+      if fxi
         acr += _match_tip_x!(ξp, xt, σx)
       else
         llr += duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
@@ -744,7 +744,7 @@ end
     _update_x!(tree::T,
                σx  ::Float64,
                llc ::Float64,
-               sdX ::Float64, 
+               sdX ::Float64,
                ufx ::Bool) where {T <: sTX}
 
 Do gbm updates on a decoupled tree recursively.
@@ -752,7 +752,7 @@ Do gbm updates on a decoupled tree recursively.
 function _update_x!(tree::T,
                     σx  ::Float64,
                     llc ::Float64,
-                    sdX ::Float64, 
+                    sdX ::Float64,
                     ufx ::Bool) where {T <: sTX}
 
   if def1(tree)

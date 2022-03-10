@@ -94,13 +94,13 @@ isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 """
     isextinct(tree::sTpb)
     isextinct(tree::sTpbX)
-    isextinct(tree::iTgbmpb)
+    isextinct(tree::iTpb)
 
 Return if is an extinction node.
 """
 isextinct(tree::sTpb) = false
 isextinct(tree::sTpbX) = false
-isextinct(tree::iTgbmpb) = false
+isextinct(tree::iTpb) = false
 
 
 
@@ -128,19 +128,19 @@ isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
 """
     isfossil(tree::sTpb)
     isfossil(tree::sTbd)
-    isfossil(tree::iTgbmpb)
-    isfossil(tree::iTgbmce)
-    isfossil(tree::iTgbmct)
-    isfossil(tree::iTgbmbd)
+    isfossil(tree::iTpb)
+    isfossil(tree::iTce)
+    isfossil(tree::iTct)
+    isfossil(tree::iTbd)
 
 Return if is a fossil tip node : false because not allowed for those tree types.
 """
 isfossil(tree::sTpb)    = false
 isfossil(tree::sTbd)    = false
-isfossil(tree::iTgbmpb) = false
-isfossil(tree::iTgbmce) = false
-isfossil(tree::iTgbmct) = false
-isfossil(tree::iTgbmbd) = false
+isfossil(tree::iTpb) = false
+isfossil(tree::iTce) = false
+isfossil(tree::iTct) = false
+isfossil(tree::iTbd) = false
 
 
 
@@ -303,11 +303,11 @@ end
 
 
 """
-    _treelength(tree::T, l::Float64) where {T <: sTf}
+    _treelength(tree::T, l::Float64) where {T <: iTf}
 
 Return the branch length sum of `tree`, initialized at `l`.
 """
-function _treelength(tree::T, l::Float64) where {T <: sTf}
+function _treelength(tree::T, l::Float64) where {T <: iTf}
   l += e(tree)
 
   if def1(tree)
@@ -328,7 +328,7 @@ end
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
 """
-function _ctl(tree::T, l::Float64) where {T <: iTgbm}
+function _ctl(tree::T, l::Float64) where {T <: iT}
 
   l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
 
@@ -344,12 +344,12 @@ end
 
 
 """
-    _ctl(tree::T, l::Float64) where {T <: sTf}
+    _ctl(tree::T, l::Float64) where {T <: iTf}
 
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
 """
-function _ctl(tree::T, l::Float64) where {T <: sTf}
+function _ctl(tree::T, l::Float64) where {T <: iTf}
 
   l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
 
@@ -388,7 +388,7 @@ end
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::T) where {T <: sTf}
+function treeheight(tree::T) where {T <: iTf}
 
   if def2(tree)
     th1 = treeheight(tree.d1)
@@ -433,11 +433,11 @@ end
 
 
 """
-    _nnodes(tree::T, n::Int64) where {T <: sTf}
+    _nnodes(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of descendant nodes for `tree`, initialized at `n`.
 """
-function _nnodes(tree::T, n::Int64) where {T <: sTf}
+function _nnodes(tree::T, n::Int64) where {T <: iTf}
   n += 1
 
   if def1(tree)
@@ -482,11 +482,11 @@ end
 
 
 """
-    _nnodesinternal(tree::T, n::Int64) where {T <: sTf}
+    _nnodesinternal(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesinternal(tree::T, n::Int64) where {T <: sTf}
+function _nnodesinternal(tree::T, n::Int64) where {T <: iTf}
 
   if def1(tree)
     n += 1
@@ -504,22 +504,22 @@ end
 
 """
     nnodesbifurcation(tree::T) where {T <: iTree}
-    nnodesbifurcation(tree::T) where {T <: sTf}
+    nnodesbifurcation(tree::T) where {T <: iTf}
 
 Return the number of bifurcation nodes for `tree`.
 """
 nnodesbifurcation(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
-nnodesbifurcation(tree::T) where {T <: sTf}   = _nnodesbifurcation(tree, 0)
+nnodesbifurcation(tree::T) where {T <: iTf}   = _nnodesbifurcation(tree, 0)
 
 
 
 
 """
-    _nnodesbifurcation(tree::T, n::Int64) where {T <: sTf}
+    _nnodesbifurcation(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesbifurcation(tree::T, n::Int64) where {T <: sTf}
+function _nnodesbifurcation(tree::T, n::Int64) where {T <: iTf}
 
   if def1(tree)
     n = _nnodesbifurcation(tree.d1, n)
@@ -565,11 +565,11 @@ end
 
 
 """
-    _ntips(tree::T, n::Int64) where {T <: sTf}
+    _ntips(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of tip nodes for `tree`, initialized at `n`.
 """
-function _ntips(tree::T, n::Int64) where {T <: sTf}
+function _ntips(tree::T, n::Int64) where {T <: iTf}
 
   if def1(tree)
     n = _ntips(tree.d1, n)
@@ -615,11 +615,11 @@ end
 
 
 """
-    _ntipsalive(tree::T, n::Int64) where {T <: sTf}
+    _ntipsalive(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of alive nodes for `tree`, initialized at `n`.
 """
-function _ntipsalive(tree::T, n::Int64) where {T <: sTf}
+function _ntipsalive(tree::T, n::Int64) where {T <: iTf}
 
   if def1(tree)
     n = _ntipsalive(tree.d1, n)
@@ -669,11 +669,11 @@ end
 
 
 """
-    _ntipsextinct(tree::T, n::Int64) where {T <: sTf}
+    _ntipsextinct(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of extinct nodes for `tree`, initialized at `n`.
 """
-function _ntipsextinct(tree::T, n::Int64) where {T <: sTf}
+function _ntipsextinct(tree::T, n::Int64) where {T <: iTf}
 
   if istip(tree)
     if isextinct(tree)
@@ -725,11 +725,11 @@ end
 
 
 """
-    _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
+    _ntipsextinctF(tree::T, n::Float64) where {T <: iTf}
 
 Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
-function _ntipsextinctF(tree::T, n::Float64) where {T <: sTf}
+function _ntipsextinctF(tree::T, n::Float64) where {T <: iTf}
 
   if istip(tree)
     if isextinct(tree)
@@ -834,13 +834,13 @@ end
 """
     treelength_ne(tree::T,
                   l   ::Float64,
-                  n   ::Float64) where {T <: sTf}
+                  n   ::Float64) where {T <: iTf}
 
 Return the tree length and extinction events.
 """
 function treelength_ne(tree::T,
                        l   ::Float64,
-                       n   ::Float64) where {T <: sTf}
+                       n   ::Float64) where {T <: iTf}
 
   l += e(tree)
   if def1(tree)
@@ -859,21 +859,21 @@ end
 
 
 """
-    lλ(tree::T) where {T <: iTgbm}
+    lλ(tree::T) where {T <: iT}
 
 Return pendant edge.
 """
-lλ(tree::T) where {T <: iTgbm} = getproperty(tree, :lλ)
+lλ(tree::T) where {T <: iT} = getproperty(tree, :lλ)
 
 
 
 
 """
-    lμ(tree::iTgbm)
+    lμ(tree::iT)
 
 Return pendant edge.
 """
-lμ(tree::iTgbmbd) = getproperty(tree,:lμ)
+lμ(tree::iTbd) = getproperty(tree,:lμ)
 
 
 
@@ -942,7 +942,7 @@ end
 
 
 """
-    λμ01(tree::iTgbmbd,
+    λμ01(tree::iTbd,
          dri ::BitArray{1},
          ldr ::Int64,
          ix  ::Int64,
@@ -951,7 +951,7 @@ end
 
 Return the `λ`,`μ` at the start `0` and end `1` of a fixed branch.
 """
-function λμ01(tree::iTgbmbd,
+function λμ01(tree::iTbd,
               dri ::BitArray{1},
               ldr ::Int64,
               ix  ::Int64,
@@ -970,31 +970,31 @@ function λμ01(tree::iTgbmbd,
 
       return λ0, μ0, λ1, μ1
     else
-      ifx1 = isfix(tree.d1::iTgbmbd)
-      if ifx1 && isfix(tree.d2::iTgbmbd)
+      ifx1 = isfix(tree.d1::iTbd)
+      if ifx1 && isfix(tree.d2::iTbd)
         λ1 = lλ(tree)[end]
         μ1 = lμ(tree)[end]
 
         return λ0, μ0, λ1, μ1
       elseif ifx1
-        λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
+        λμ01(tree.d1::iTbd, dri, ldr, ix, λ0, μ0)
       else
-        λμ01(tree.d2::iTgbmbd, dri, ldr, ix, λ0, μ0)
+        λμ01(tree.d2::iTbd, dri, ldr, ix, λ0, μ0)
       end
     end
   elseif ix < ldr
-    ifx1 = isfix(tree.d1::iTgbmbd)
-    if ifx1 && isfix(tree.d2::iTgbmbd)
+    ifx1 = isfix(tree.d1::iTbd)
+    if ifx1 && isfix(tree.d2::iTbd)
       ix += 1
       if dri[ix]
-        λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
+        λμ01(tree.d1::iTbd, dri, ldr, ix, λ0, μ0)
       else
-        λμ01(tree.d2::iTgbmbd, dri, ldr, ix, λ0, μ0)
+        λμ01(tree.d2::iTbd, dri, ldr, ix, λ0, μ0)
       end
     elseif ifx1
-      λμ01(tree.d1::iTgbmbd, dri, ldr, ix, λ0, μ0)
+      λμ01(tree.d1::iTbd, dri, ldr, ix, λ0, μ0)
     else
-      λμ01(tree.d2::iTgbmbd, dri, ldr, ix, λ0, μ0)
+      λμ01(tree.d2::iTbd, dri, ldr, ix, λ0, μ0)
     end
   end
 end
@@ -1004,7 +1004,7 @@ end
 
 
 """
-    λμath(tree::iTgbmbd,
+    λμath(tree::iTbd,
           h    ::Float64,
           th   ::Float64,
           dri  ::BitArray{1},
@@ -1015,7 +1015,7 @@ end
 
 Return the `λ`,`μ` and time of `tree` at closest to `h`.
 """
-function λμath(tree::iTgbmbd,
+function λμath(tree::iTbd,
                h   ::Float64,
                th  ::Float64,
                dri ::BitArray{1},
@@ -1035,25 +1035,25 @@ function λμath(tree::iTgbmbd,
 
       return λh, μh, nh, hi
     else
-      if isfix(tree.d1::iTgbmbd)
-        λμath(tree.d1::iTgbmbd, h, th - pei, dri, ldr, ix)
+      if isfix(tree.d1::iTbd)
+        λμath(tree.d1::iTbd, h, th - pei, dri, ldr, ix)
       else
-        λμath(tree.d2::iTgbmbd, h, th - pei, dri, ldr, ix)
+        λμath(tree.d2::iTbd, h, th - pei, dri, ldr, ix)
       end
     end
   elseif ix < ldr
-    ifx1 = isfix(tree.d1::iTgbmbd)
-    if ifx1 && isfix(tree.d2::iTgbmbd)
+    ifx1 = isfix(tree.d1::iTbd)
+    if ifx1 && isfix(tree.d2::iTbd)
       ix += 1
       if dri[ix]
-        λμath(tree.d1::iTgbmbd, h, th - e(tree), dri, ldr, ix)
+        λμath(tree.d1::iTbd, h, th - e(tree), dri, ldr, ix)
       else
-        λμath(tree.d2::iTgbmbd, h, th - e(tree), dri, ldr, ix)
+        λμath(tree.d2::iTbd, h, th - e(tree), dri, ldr, ix)
       end
     elseif ifx1
-      λμath(tree.d1::iTgbmbd, h, th - e(tree), dri, ldr, ix)
+      λμath(tree.d1::iTbd, h, th - e(tree), dri, ldr, ix)
     else
-      λμath(tree.d2::iTgbmbd, h, th - e(tree), dri, ldr, ix)
+      λμath(tree.d2::iTbd, h, th - e(tree), dri, ldr, ix)
     end
   end
 end
@@ -1083,7 +1083,7 @@ end
 
 Return the first fixed tip.
 """
-function fixtip(tree::T) where {T <: sTf}
+function fixtip(tree::T) where {T <: iTf}
   if istip(tree)
     return tree
   elseif isfix(tree.d1::T)
@@ -1099,13 +1099,13 @@ end
 """
     makebbv!(tree::T,
              bbλ ::Array{Array{Float64,1},1},
-             tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
+             tsv ::Array{Array{Float64,1},1}) where {T <: iT}
 Make `bbv` vector with allocated `bb` (brownian bridges) and
 with `tsv` vector of branches times `ts`.
 """
 function makebbv!(tree::T,
                   bbλ ::Array{Array{Float64,1},1},
-                  tsv ::Array{Array{Float64,1},1}) where {T <: iTgbm}
+                  tsv ::Array{Array{Float64,1},1}) where {T <: iT}
 
   push!(tsv, [e(tree), fdt(tree)])
   push!(bbλ, copy(lλ(tree)))
@@ -1122,14 +1122,14 @@ end
 
 
 """
-    makebbv!(tree::iTgbmbd,
+    makebbv!(tree::iTbd,
              bbλ ::Array{Array{Float64,1},1},
              bbμ ::Array{Array{Float64,1},1},
              tsv ::Array{Array{Float64,1},1})
 Make `bbv` vector with allocated `bb` (brownian bridges) and
 with `tsv` vector of branches times `ts`.
 """
-function makebbv!(tree::iTgbmbd,
+function makebbv!(tree::iTbd,
                   bbλ ::Array{Array{Float64,1},1},
                   bbμ ::Array{Array{Float64,1},1},
                   tsv ::Array{Array{Float64,1},1})
@@ -1199,14 +1199,14 @@ end
     _eventimes!(tree::T,
                 t   ::Float64,
                 se  ::Array{Float64,1},
-                ee  ::Array{Float64,1}) where {T <: sTf}
+                ee  ::Array{Float64,1}) where {T <: iTf}
 
 Recursive structure that returns speciation and extinction event times.
 """
 function _eventimes!(tree::T,
                      t   ::Float64,
                      se  ::Array{Float64,1},
-                     ee  ::Array{Float64,1}) where {T <: sTf}
+                     ee  ::Array{Float64,1}) where {T <: iTf}
 
   et = e(tree)
   if isextincttip(tree)
@@ -1338,14 +1338,14 @@ end
     _λat!(tree::T,
           c   ::Float64,
           λs  ::Vector{Float64},
-          t   ::Float64) where {T <: iTgbm}
+          t   ::Float64) where {T <: iT}
 
 Return speciation rates, `λs`, at time `c` for `tree`.
 """
 function _λat!(tree::T,
                c   ::Float64,
                λs  ::Vector{Float64},
-               t   ::Float64) where {T <: iTgbm}
+               t   ::Float64) where {T <: iT}
 
   et = e(tree)
 

@@ -89,8 +89,8 @@ function insane_gbmce(tree    ::sT_label,
   mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 500, stem)
 
   # make a decoupled tree
-  Ξ = iTgbmce[]
-  iTgbmce!(Ξ, tree, δt, srδt, log(λc), αi, σλi)
+  Ξ = iTce[]
+  iTce!(Ξ, tree, δt, srδt, log(λc), αi, σλi)
 
   # set end of fix branch speciation times and
   # get vector of internal branches
@@ -137,7 +137,7 @@ end
 
 
 """
-    mcmc_burn_gbmce(Ξ       ::Vector{iTgbmce},
+    mcmc_burn_gbmce(Ξ       ::Vector{iTce},
                     idf     ::Vector{iBffs},
                     λa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -158,7 +158,7 @@ end
 
 MCMC burn-in chain for `gbmce`.
 """
-function mcmc_burn_gbmce(Ξ       ::Vector{iTgbmce},
+function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
                          idf     ::Vector{iBffs},
                          λa_prior::NTuple{2,Float64},
                          α_prior ::NTuple{2,Float64},
@@ -263,7 +263,7 @@ end
 
 
 """
-    mcmc_gbmce(Ξ       ::Vector{iTgbmce},
+    mcmc_gbmce(Ξ       ::Vector{iTce},
                idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
@@ -287,7 +287,7 @@ end
 
 MCMC chain for `gbmce`.
 """
-function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
+function mcmc_gbmce(Ξ       ::Vector{iTce},
                     idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
@@ -327,7 +327,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTgbmce},
   R = Array{Float64,2}(undef, nlogs, 7)
 
   # make Ξ vector
-  Ξv = iTgbmce[]
+  Ξv = iTce[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -441,7 +441,7 @@ end
 
 """
     update_fs!(bix    ::Int64,
-               Ξ      ::Vector{iTgbmce},
+               Ξ      ::Vector{iTce},
                idf    ::Vector{iBffs},
                α      ::Float64,
                σλ     ::Float64,
@@ -458,7 +458,7 @@ end
 Forward simulation proposal function for `gbmce`.
 """
 function update_fs!(bix    ::Int64,
-                    Ξ      ::Vector{iTgbmce},
+                    Ξ      ::Vector{iTce},
                     idf    ::Vector{iBffs},
                     α      ::Float64,
                     σλ     ::Float64,
@@ -571,7 +571,7 @@ function fsbi_ce(bi  ::iBffs,
   t0, na, nsp = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nsp >= 1_000
-    return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+    return iTce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
   end
 
   nat = na
@@ -589,21 +589,21 @@ function fsbi_ce(bi  ::iBffs,
       tx, na, nsp = tip_sims!(t0, tfb, α, σλ, μ, δt, srδt, na, nsp)
 
       if na < 1 || nsp >= 1_000
-        return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+        return iTce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
       end
     end
 
     return t0, nat, na, λf
   end
 
-  return iTgbmce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+  return iTce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
 end
 
 
 
 
 """
-    tip_sims!(tree::iTgbmce,
+    tip_sims!(tree::iTce,
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
@@ -615,7 +615,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::iTgbmce,
+function tip_sims!(tree::iTce,
                    t   ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
@@ -673,7 +673,7 @@ end
 
 """
     update_gbm!(bix  ::Int64,
-                Ξ    ::Vector{iTgbmce},
+                Ξ    ::Vector{iTce},
                 idf  ::Vector{iBffs},
                 α    ::Float64,
                 σλ   ::Float64,
@@ -691,7 +691,7 @@ end
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_gbm!(bix  ::Int64,
-                     Ξ    ::Vector{iTgbmce},
+                     Ξ    ::Vector{iTce},
                      idf  ::Vector{iBffs},
                      α    ::Float64,
                      σλ   ::Float64,
@@ -920,7 +920,7 @@ end
 
 
 # """
-#     update_μ!(psi   ::Vector{iTgbmce},
+#     update_μ!(psi   ::Vector{iTce},
 #               llc   ::Float64,
 #               prc   ::Float64,
 #               rdc   ::Float64,
@@ -936,7 +936,7 @@ end
 
 # MCMC update for `μ`.
 # """
-# function update_μ!(psi   ::Vector{iTgbmce},
+# function update_μ!(psi   ::Vector{iTce},
 #                    llc   ::Float64,
 #                    prc   ::Float64,
 #                    rdc   ::Float64,

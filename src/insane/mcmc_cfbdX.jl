@@ -486,7 +486,7 @@ function update_fs!(bix::Int64,
       if itb
         if fxi
           xt   = fossil_xt(ξc)       # get previous `x` of fixed tip
-          acr += _match_fossil_x!(ξp, xt, σx) 
+          acr += _match_fossil_x!(ξp, xt, σx)
         end
       else
         if fxi

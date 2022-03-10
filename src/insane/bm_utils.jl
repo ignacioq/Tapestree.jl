@@ -18,7 +18,7 @@ Created 10 09 2020
         α   ::Float64,
         σλ  ::Float64,
         δt  ::Float64,
-        srδt::Float64) where {T <: iTgbm}
+        srδt::Float64) where {T <: iT}
 
 Simulate birth-death geometric Brownian motion in place.
 """
@@ -27,7 +27,7 @@ function bm!(tree::T,
              α   ::Float64,
              σλ  ::Float64,
              δt  ::Float64,
-             srδt::Float64) where {T <: iTgbm}
+             srδt::Float64) where {T <: iT}
 
   λv  = lλ(tree)
 
@@ -47,7 +47,7 @@ end
 
 
 """
-    bm!(tree::iTgbmbd,
+    bm!(tree::iTbd,
         λt  ::Float64,
         μt  ::Float64,
         α   ::Float64,
@@ -58,7 +58,7 @@ end
 
 Simulate birth-death geometric Brownian motion in place.
 """
-@inline function bm!(tree::iTgbmbd,
+@inline function bm!(tree::iTbd,
                      λt  ::Float64,
                      μt  ::Float64,
                      α   ::Float64,

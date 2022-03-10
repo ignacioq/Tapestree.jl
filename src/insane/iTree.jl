@@ -34,16 +34,6 @@ abstract type sT <: iTree end
 
 
 
-"""
-    sTf
-
-An abstract type for all composite recursive types representing
-a simple binary phylogenetic tree with fossils for `insane` use
-"""
-abstract type sTf <: sT end
-
-
-
 
 """
     sT_label
@@ -89,6 +79,7 @@ end
 
 
 
+
 """
     sT_label(tree::T) where {T <: iTree}
 
@@ -124,7 +115,7 @@ end
 """
     sTf_label
 
-A composite recursive type of supertype `sTf` representing a labelled binary
+A composite recursive type of supertype `sT` representing a labelled binary
 phylogenetic tree with fossils for `insane` use, with the following fields:
 
   d1: daughter tree 1
@@ -146,7 +137,7 @@ Constructs an `sTf_label` object with one `sTf_label` daughter and edge `e`.
 
 Constructs an `sTf_label` object with two `sTf_label` daughters and edge `e`.
 """
-mutable struct sTf_label <: sTf
+mutable struct sTf_label <: sT
   d1::sTf_label
   d2::sTf_label
   e ::Float64
@@ -386,7 +377,7 @@ Constructs an `sTfbd` object with two `sTfbd` daughters and edge `e`.
 Constructs an `sTfbd` object with one sampled ancestor, one `sTfbd` daughter and
 edge `e`.
 """
-mutable struct sTfbd <: sTf
+mutable struct sTfbd <: sT
   d1::sTfbd
   d2::sTfbd
   e ::Float64
@@ -473,21 +464,21 @@ end
 
 
 """
-    iTgbm
+    iT
 
 An abstract type for all composite recursive types
 representing a binary phylogenetic tree with Geometric
 Brownian motion rates for `insane` use
 """
-abstract type iTgbm <: iTree end
+abstract type iT <: iTree end
 
 
 
 
 """
-    iTgbmpb
+    iTpb
 
-A composite recursive type of supertype `iTgbm`
+A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with no extinction
 and `λ` evolving as a Geometric Brownian motion  for `insane` use,
 with the following fields:
@@ -500,97 +491,46 @@ with the following fields:
   fdt: final `δt`
   lλ:  array of a Brownian motion evolution of `log(λ)`
 
-    iTgbmpb()
+    iTpb()
 
-Constructs an empty `iTgbmpb` object.
+Constructs an empty `iTpb` object.
 
-    iTgbmpb(e::Float64)
+    iTpb(e::Float64)
 
-Constructs an empty `iTgbmpb` object with pendant edge `pe`.
+Constructs an empty `iTpb` object with pendant edge `pe`.
 
-    iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64)
+    iTpb(d1::iTpb, d2::iTpb, e::Float64)
 
-Constructs an `iTgbmpb` object with two `iTgbmpb` daughters and pendant edge `pe`.
+Constructs an `iTpb` object with two `iTpb` daughters and pendant edge `pe`.
 """
-mutable struct iTgbmpb <: iTgbm
-  d1 ::iTgbmpb
-  d2 ::iTgbmpb
+mutable struct iTpb <: iT
+  d1 ::iTpb
+  d2 ::iTpb
   e  ::Float64
   fx ::Bool
   dt ::Float64
   fdt::Float64
   lλ ::Array{Float64,1}
 
-  iTgbmpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64,
+  iTpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64,
     lλ::Array{Float64,1}) =
       (x = new(); x.e = e; x.fx = fx; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
 
-  iTgbmpb(d1::iTgbmpb, d2::iTgbmpb, e::Float64, fx::Bool,
+  iTpb(d1::iTpb, d2::iTpb, e::Float64, fx::Bool,
     dt::Float64, fdt::Float64, lλ::Array{Float64,1}) =
       new(d1, d2, e, fx, dt, fdt, lλ)
 end
 
 
 # pretty-printing
-Base.show(io::IO, t::iTgbmpb) =
+Base.show(io::IO, t::iTpb) =
   print(io, "insane pb-gbm tree with ", ntips(t), " tips")
 
 
 
-"""
-    iTgbmpb(tree::sTpb,
-            δt  ::Float64,
-            srδt::Float64,
-            lλa ::Float64,
-            α   ::Float64,
-            σλ  ::Float64)
-
-Promotes an `sTpb` to `iTgbmpb` according to some values for `λ` diffusion.
-"""
-function iTgbmpb(tree::sTpb,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lλa ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64)
-
-  et = e(tree)
-
-  if iszero(et)
-    if def1(tree)
-      iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλa, α, σλ),
-              iTgbmpb(tree.d2, δt, srδt, lλa, α, σλ),
-              et, isfix(tree), δt, 0.0, Float64[lλa, lλa])
-    else
-      iTgbmpb(et, isfix(tree), δt, 0.0, Float64[lλa, lλa])
-    end
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    if iszero(fdti)
-      fdti = δt
-    end
-
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
-    l   = lastindex(lλv)
-
-    if def1(tree)
-      iTgbmpb(iTgbmpb(tree.d1, δt, srδt, lλv[l], α, σλ),
-              iTgbmpb(tree.d2, δt, srδt, lλv[l], α, σλ),
-              et, isfix(tree), δt, fdti, lλv)
-    else
-      iTgbmpb(et, isfix(tree), δt, fdti, lλv)
-    end
-  end
-end
-
-
-
-
 
 """
-    iTgbmpb(e0::Array{Int64,1},
+    iTpb(e0::Array{Int64,1},
             e1::Array{Int64,1},
             el::Array{Float64,1},
             λs::Array{Array{Float64,1},1},
@@ -599,9 +539,9 @@ end
             ei::Int64,
             δt::Float64)
 
-Transform edge structure to `iTgbmpb`.
+Transform edge structure to `iTpb`.
 """
-function iTgbmpb(e0::Array{Int64,1},
+function iTpb(e0::Array{Int64,1},
                  e1::Array{Int64,1},
                  el::Array{Float64,1},
                  λs::Array{Array{Float64,1},1},
@@ -612,12 +552,12 @@ function iTgbmpb(e0::Array{Int64,1},
 
   # if tip
   if in(ei, ea)
-    return iTgbmpb(el[ei], true, δt, δt, λs[ei])
+    return iTpb(el[ei], true, δt, δt, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
-    return iTgbmpb(iTgbmpb(e0, e1, el, λs, ea, n1, ei1, δt),
-                   iTgbmpb(e0, e1, el, λs, ea, n2, ei2, δt),
+    return iTpb(iTpb(e0, e1, el, λs, ea, n1, ei1, δt),
+                   iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
                    el[ei], true, δt, (el[ei] == 0.0 ? 0.0 : δt), λs[ei])
   end
 end
@@ -626,16 +566,16 @@ end
 
 
 """
-    iTgbmpb(tree::iTgbmpb)
+    iTpb(tree::iTpb)
 
-Produce a new copy of `iTgbmpb`.
+Produce a new copy of `iTpb`.
 """
-function iTgbmpb(tree::iTgbmpb)
+function iTpb(tree::iTpb)
   if def1(tree)
-    iTgbmpb(iTgbmpb(tree.d1), iTgbmpb(tree.d2),
+    iTpb(iTpb(tree.d1), iTpb(tree.d2),
       e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
   else
-    iTgbmpb(e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
+    iTpb(e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
   end
 end
 
@@ -643,9 +583,9 @@ end
 
 
 """
-    iTgbmce
+    iTce
 
-A composite recursive type of supertype `iTgbm`
+A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with  `λ` evolving as a
 Geometric Brownian motion and constant `μ` for `insane` use,
 with the following fields:
@@ -659,8 +599,8 @@ with the following fields:
   fdt:  final `dt`
   lλ:   array of a Brownian motion evolution of `log(λ)`
 
-  iTgbmce(d1 ::iTgbmce,
-          d2 ::iTgbmce,
+  iTce(d1 ::iTce,
+          d2 ::iTce,
           e  ::Float64,
           dt ::Float64,
           fdt::Float64,
@@ -668,9 +608,9 @@ with the following fields:
           fx ::Bool,
           lλ ::Array{Float64,1})
 """
-mutable struct iTgbmce <: iTgbm
-  d1 ::iTgbmce
-  d2 ::iTgbmce
+mutable struct iTce <: iT
+  d1 ::iTce
+  d2 ::iTce
   e  ::Float64
   dt ::Float64
   fdt::Float64
@@ -678,45 +618,45 @@ mutable struct iTgbmce <: iTgbm
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  iTgbmce(e  ::Float64,
-          dt ::Float64,
-          fdt::Float64,
-          iμ ::Bool,
-          fx ::Bool,
-          lλ ::Array{Float64,1}) =
+  iTce(e  ::Float64,
+       dt ::Float64,
+       fdt::Float64,
+       iμ ::Bool,
+       fx ::Bool,
+       lλ ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
 
-  iTgbmce(d1 ::iTgbmce,
-          d2 ::iTgbmce,
-          e  ::Float64,
-          dt ::Float64,
-          fdt::Float64,
-          iμ ::Bool,
-          fx ::Bool,
-          lλ ::Array{Float64,1}) =
+  iTce(d1 ::iTce,
+       d2 ::iTce,
+       e  ::Float64,
+       dt ::Float64,
+       fdt::Float64,
+       iμ ::Bool,
+       fx ::Bool,
+       lλ ::Array{Float64,1}) =
     new(d1, d2, e, dt, fdt, iμ, fx, lλ)
 end
 
 # pretty-printing
-Base.show(io::IO, t::iTgbmce) =
+Base.show(io::IO, t::iTce) =
   print(io, "insane gbm-ce tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
 
 """
-    iTgbmce(tree::iTgbmce)
+    iTce(tree::iTce)
 
-Produce a new copy of `iTgbmce`.
+Produce a new copy of `iTce`.
 """
-function iTgbmce(tree::iTgbmce)
+function iTce(tree::iTce)
   if def1(tree)
-    iTgbmce(iTgbmce(tree.d1), iTgbmce(tree.d2),
+    iTce(iTce(tree.d1), iTce(tree.d2),
       e(tree), dt(tree), fdt(tree), isextinct(tree),
       isfix(tree), copy(lλ(tree)))
   else
-    iTgbmce(e(tree), dt(tree), fdt(tree), isextinct(tree),
+    iTce(e(tree), dt(tree), fdt(tree), isextinct(tree),
       isfix(tree), copy(lλ(tree)))
   end
 end
@@ -725,78 +665,7 @@ end
 
 
 """
-    sTbd(tree::iTgbmce)
-
-Demotes a tree of type `iTgbmce` to `sTbd`.
-"""
-function sTbd(tree::iTgbmce)
-  if def1(tree)
-    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
-  else
-    sTbd(e(tree), isextinct(tree))
-  end
-end
-
-
-
-
-
-"""
-    iTgbmce(tree::sTbd,
-            δt  ::Float64,
-            srδt::Float64,
-            lλa ::Float64,
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmce` according to some values for `λ` and `μ`
-diffusion.
-"""
-function iTgbmce(tree::sTbd,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lλa ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64)
-
-  et = e(tree)
-
-  if iszero(et)
-    if def1(tree)
-      iTgbmce(iTgbmce(tree.d1, δt, srδt, lλa, α, σλ),
-              iTgbmce(tree.d2, δt, srδt, lλa, α, σλ),
-              et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
-    else
-      iTgbmce(et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
-    end
-
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
-
-    if iszero(fdti)
-      fdti = δt
-    end
-
-    l = lastindex(lλv)
-
-    if def1(tree)
-      iTgbmce(iTgbmce(tree.d1, δt, srδt, lλv[l], α, σλ),
-              iTgbmce(tree.d2, δt, srδt, lλv[l], α, σλ),
-              et, δt, fdti, isextinct(tree), isfix(tree), lλv)
-    else
-      iTgbmce(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
-    end
-  end
-end
-
-
-
-
-"""
-    iTgbmce(e0::Array{Int64,1},
+    iTce(e0::Array{Int64,1},
             e1::Array{Int64,1},
             el::Array{Float64,1},
             λs::Array{Array{Float64,1},1},
@@ -806,29 +675,29 @@ end
             ei::Int64,
             δt::Float64)
 
-Transform edge structure to `iTgbmce`.
+Transform edge structure to `iTce`.
 """
-function iTgbmce(e0::Array{Int64,1},
-                 e1::Array{Int64,1},
-                 el::Array{Float64,1},
-                 λs::Array{Array{Float64,1},1},
-                 ea::Array{Int64,1},
-                 ee::Array{Int64,1},
-                 ni::Int64,
-                 ei::Int64,
-                 δt::Float64)
+function iTce(e0::Array{Int64,1},
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Array{Float64,1},1},
+              ea::Array{Int64,1},
+              ee::Array{Int64,1},
+              ni::Int64,
+              ei::Int64,
+              δt::Float64)
 
   # if tip
   if in(ei, ea)
-    return iTgbmce(el[ei], δt, δt, false, false, λs[ei])
+    return iTce(el[ei], δt, δt, false, false, λs[ei])
   # if extinct
   elseif in(ei, ee)
-    return iTgbmce(el[ei], δt, δt, true, false, λs[ei])
+    return iTce(el[ei], δt, δt, true, false, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
-    return iTgbmce(iTgbmce(e0, e1, el, λs, ea, ee, n1, ei1, δt),
-                   iTgbmce(e0, e1, el, λs, ea, ee, n2, ei2, δt),
+    return iTce(iTce(e0, e1, el, λs, ea, ee, n1, ei1, δt),
+                   iTce(e0, e1, el, λs, ea, ee, n2, ei2, δt),
                    el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), false, false, λs[ei])
   end
 end
@@ -837,9 +706,9 @@ end
 
 
 """
-    iTgbmct
+    iTct
 
-A composite recursive type of supertype `iTgbm`
+A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with  `λ` evolving as a
 Geometric Brownian motion and constant `μ` for `insane` use,
 with the following fields:
@@ -853,8 +722,8 @@ with the following fields:
   fdt:  final `dt`
   lλ:   array of a Brownian motion evolution of `log(λ)`
 
-  iTgbmct(d1 ::iTgbmct,
-          d2 ::iTgbmct,
+  iTct(d1 ::iTct,
+          d2 ::iTct,
           e  ::Float64,
           dt ::Float64,
           fdt::Float64,
@@ -862,9 +731,9 @@ with the following fields:
           fx ::Bool,
           lλ ::Array{Float64,1})
 """
-mutable struct iTgbmct <: iTgbm
-  d1 ::iTgbmct
-  d2 ::iTgbmct
+mutable struct iTct <: iT
+  d1 ::iTct
+  d2 ::iTct
   e  ::Float64
   dt ::Float64
   fdt::Float64
@@ -872,7 +741,7 @@ mutable struct iTgbmct <: iTgbm
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  iTgbmct(e  ::Float64,
+  iTct(e  ::Float64,
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool,
@@ -881,8 +750,8 @@ mutable struct iTgbmct <: iTgbm
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
 
-  iTgbmct(d1 ::iTgbmct,
-          d2 ::iTgbmct,
+  iTct(d1 ::iTct,
+          d2 ::iTct,
           e  ::Float64,
           dt ::Float64,
           fdt::Float64,
@@ -894,24 +763,24 @@ end
 
 
 # pretty-printing
-Base.show(io::IO, t::iTgbmct) =
+Base.show(io::IO, t::iTct) =
   print(io, "insane gbm-ct tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
 
 """
-    iTgbmct(tree::iTgbmct)
+    iTct(tree::iTct)
 
-Produce a new copy of `iTgbmct`.
+Produce a new copy of `iTct`.
 """
-function iTgbmct(tree::iTgbmct)
+function iTct(tree::iTct)
   if def1(tree)
-    iTgbmct(iTgbmct(tree.d1), iTgbmct(tree.d2),
+    iTct(iTct(tree.d1), iTct(tree.d2),
       e(tree), dt(tree), fdt(tree), isextinct(tree),
       isfix(tree), copy(lλ(tree)))
   else
-    iTgbmct(e(tree), dt(tree), fdt(tree), isextinct(tree),
+    iTct(e(tree), dt(tree), fdt(tree), isextinct(tree),
       isfix(tree), copy(lλ(tree)))
   end
 end
@@ -920,77 +789,7 @@ end
 
 
 """
-    sTbd(tree::iTgbmct)
-
-Demotes a tree of type `iTgbmct` to `sTbd`.
-"""
-function sTbd(tree::iTgbmct)
-  if def1(tree)
-    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
-  else
-    sTbd(e(tree), isextinct(tree))
-  end
-end
-
-
-
-
-"""
-    iTgbmct(tree::sTbd,
-            δt  ::Float64,
-            srδt::Float64,
-            lλa ::Float64,
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmct` according to some values for `λ` and `μ`
-diffusion.
-"""
-function iTgbmct(tree::sTbd,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lλa ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64)
-
-  et = e(tree)
-
-  # if crown root
-  if iszero(et)
-    if def1(tree)
-      iTgbmct(iTgbmct(tree.d1, δt, srδt, lλa, α, σλ),
-              iTgbmct(tree.d2, δt, srδt, lλa, α, σλ),
-              et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
-    else
-      iTgbmct(et, δt, 0.0, isextinct(tree), isfix(tree), Float64[lλa, lλa])
-    end
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
-
-    if iszero(fdti)
-      fdti = δt
-    end
-
-    l = lastindex(lλv)
-
-    if def1(tree)
-      iTgbmct(iTgbmct(tree.d1, δt, srδt, lλv[l], α, σλ),
-              iTgbmct(tree.d2, δt, srδt, lλv[l], α, σλ),
-              et, δt, fdti, isextinct(tree), isfix(tree), lλv)
-    else
-      iTgbmct(et, δt, fdti, isextinct(tree), isfix(tree), lλv)
-    end
-  end
-end
-
-
-
-
-"""
-    iTgbmct(e0::Array{Int64,1},
+    iTct(e0::Array{Int64,1},
             e1::Array{Int64,1},
             el::Array{Float64,1},
             λs::Array{Array{Float64,1},1},
@@ -1000,9 +799,9 @@ end
             ei::Int64,
             δt::Float64)
 
-Transform edge structure to `iTgbmct`.
+Transform edge structure to `iTct`.
 """
-function iTgbmct(e0::Array{Int64,1},
+function iTct(e0::Array{Int64,1},
                  e1::Array{Int64,1},
                  el::Array{Float64,1},
                  λs::Array{Array{Float64,1},1},
@@ -1014,15 +813,15 @@ function iTgbmct(e0::Array{Int64,1},
 
   # if tip
   if in(ei, ea)
-    return iTgbmct(el[ei], δt, δt, false, false, λs[ei])
+    return iTct(el[ei], δt, δt, false, false, λs[ei])
   # if extinct
   elseif in(ei, ee)
-    return iTgbmct(el[ei], δt, δt, true, false, λs[ei])
+    return iTct(el[ei], δt, δt, true, false, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
-    return iTgbmct(iTgbmct(e0, e1, el, λs, ea, ee, n1, ei1, δt),
-                   iTgbmct(e0, e1, el, λs, ea, ee, n2, ei2, δt),
+    return iTct(iTct(e0, e1, el, λs, ea, ee, n1, ei1, δt),
+                   iTct(e0, e1, el, λs, ea, ee, n2, ei2, δt),
                    el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), false, false, λs[ei])
   end
 end
@@ -1031,9 +830,9 @@ end
 
 
 """
-    iTgbmbd
+    iTbd
 
-A composite recursive type of supertype `iTgbm`
+A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with  `λ` and `μ`
 evolving as a Geometric Brownian motion  for `insane` use,
 with the following fields:
@@ -1048,8 +847,8 @@ with the following fields:
   lλ:   array of a Brownian motion evolution of `log(λ)`
   lμ:   array of a Brownian motion evolution of `log(μ)`
 
-  iTgbmbd(d1 ::iTgbmbd,
-          d2 ::iTgbmbd,
+  iTbd(d1 ::iTbd,
+          d2 ::iTbd,
           e  ::Float64,
           dt ::Float64,
           fdt::Float64,
@@ -1058,9 +857,9 @@ with the following fields:
           lλ ::Array{Float64,1},
           lμ ::Array{Float64,1})
 """
-mutable struct iTgbmbd <: iTgbm
-  d1 ::iTgbmbd
-  d2 ::iTgbmbd
+mutable struct iTbd <: iT
+  d1 ::iTbd
+  d2 ::iTbd
   e  ::Float64
   dt ::Float64
   fdt::Float64
@@ -1069,7 +868,7 @@ mutable struct iTgbmbd <: iTgbm
   lλ ::Array{Float64,1}
   lμ ::Array{Float64,1}
 
-  iTgbmbd(e  ::Float64,
+  iTbd(e  ::Float64,
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool,
@@ -1079,8 +878,8 @@ mutable struct iTgbmbd <: iTgbm
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
 
-  iTgbmbd(d1 ::iTgbmbd,
-          d2 ::iTgbmbd,
+  iTbd(d1 ::iTbd,
+          d2 ::iTbd,
           e  ::Float64,
           dt ::Float64,
           fdt::Float64,
@@ -1093,24 +892,24 @@ end
 
 
 # pretty-printing
-Base.show(io::IO, t::iTgbmbd) =
-  print(io, "insane bd-gbm tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+Base.show(io::IO, t::iTbd) =
+  print(io, "insane gbm-bd tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
 
 """
-    iTgbmbd(tree::iTgbmbd)
+    iTbd(tree::iTbd)
 
-Produce a new copy of `iTgbmbd`.
+Produce a new copy of `iTbd`.
 """
-function iTgbmbd(tree::iTgbmbd)
+function iTbd(tree::iTbd)
   if def1(tree)
-    iTgbmbd(iTgbmbd(tree.d1), iTgbmbd(tree.d2),
+    iTbd(iTbd(tree.d1), iTbd(tree.d2),
       e(tree), dt(tree), fdt(tree), isextinct(tree),
       isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
   else
-    iTgbmbd(e(tree), dt(tree), fdt(tree), isextinct(tree),
+    iTbd(e(tree), dt(tree), fdt(tree), isextinct(tree),
       isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
   end
 end
@@ -1119,119 +918,207 @@ end
 
 
 """
-    sTbd(tree::iTgbmbd)
+    iTbd(e0::Array{Int64,1},
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         μs::Array{Array{Float64,1},1},
+         ea::Array{Int64,1},
+         ee::Array{Int64,1},
+         ni::Int64,
+         ei::Int64,
+         δt::Float64)
 
-Demotes a tree of type `iTgbmbd` to `sTbd`.
+Transform edge structure to `iTbd`.
 """
-function sTbd(tree::iTgbmbd)
-  if def1(tree)
-    sTbd(sTbd(tree.d1), sTbd(tree.d2), e(tree), isextinct(tree), false)
-  else
-    sTbd(e(tree), isextinct(tree), false)
-  end
-end
-
-
-
-
-"""
-    iTgbmbd(tree::sTbd,
-            δt  ::Float64,
-            srδt::Float64,
-            lλa ::Float64,
-            lμa ::Float64,
-            α   ::Float64,
-            σλ  ::Float64,
-            σμ  ::Float64)
-
-Promotes an `sTbd` to `iTgbmbd` according to some values for `λ` and `μ`
-diffusion.
-"""
-function iTgbmbd(tree::sTbd,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lλa ::Float64,
-                 lμa ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 σμ  ::Float64)
-
-  et  = e(tree)
-
-  # if crown root
-  if iszero(et)
-    if def1(tree)
-      iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλa, lμa, α, σλ, σμ),
-              iTgbmbd(tree.d2, δt, srδt, lλa, lμa, α, σλ, σμ),
-              e(tree), δt, 0.0, isextinct(tree), isfix(tree),
-              Float64[lλa, lλa], Float64[lμa, lμa])
-    else
-      iTgbmbd(e(tree), δt, 0.0, isextinct(tree), isfix(tree),
-              Float64[lλa, lλa], Float64[lμa, lμa])
-    end
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    lλv = sim_bm(lλa, α,   σλ, δt, fdti, srδt, nt)
-    lμv = sim_bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
-
-    if iszero(fdti)
-      fdti = δt
-    end
-
-    l = lastindex(lμv)
-
-    if def1(tree)
-      iTgbmbd(iTgbmbd(tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ),
-              iTgbmbd(tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ),
-              e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
-    else
-      iTgbmbd(e(tree), δt, fdti, isextinct(tree), isfix(tree), lλv, lμv)
-    end
-  end
-end
-
-
-
-
-"""
-    iTgbmbd(e0::Array{Int64,1},
-            e1::Array{Int64,1},
-            el::Array{Float64,1},
-            λs::Array{Array{Float64,1},1},
-            μs::Array{Array{Float64,1},1},
-            ea::Array{Int64,1},
-            ee::Array{Int64,1},
-            ni::Int64,
-            ei::Int64,
-            δt::Float64)
-
-Transform edge structure to `iTgbmbd`.
-"""
-function iTgbmbd(e0::Array{Int64,1},
-                 e1::Array{Int64,1},
-                 el::Array{Float64,1},
-                 λs::Array{Array{Float64,1},1},
-                 μs::Array{Array{Float64,1},1},
-                 ea::Array{Int64,1},
-                 ee::Array{Int64,1},
-                 ni::Int64,
-                 ei::Int64,
-                 δt::Float64)
+function iTbd(e0::Array{Int64,1},
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Array{Float64,1},1},
+              μs::Array{Array{Float64,1},1},
+              ea::Array{Int64,1},
+              ee::Array{Int64,1},
+              ni::Int64,
+              ei::Int64,
+              δt::Float64)
 
   # if tip
   if in(ei, ea)
-    return iTgbmbd(el[ei], δt, δt, false, false, λs[ei], μs[ei])
+    return iTbd(el[ei], δt, δt, false, false, λs[ei], μs[ei])
   # if extinct
   elseif in(ei, ee)
-    return iTgbmbd(el[ei], δt, δt, true, false, λs[ei], μs[ei])
+    return iTbd(el[ei], δt, δt, true, false, λs[ei], μs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
-    return iTgbmbd(iTgbmbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt),
-                   iTgbmbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
+    return iTbd(iTbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt),
+                   iTbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
                    el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
                    false, false, λs[ei], μs[ei])
   end
 end
+
+
+
+
+"""
+    iTfbd
+
+A composite recursive type of supertype `iT`
+representing a binary phylogenetic tree with  `λ` and `μ`
+evolving as a Geometric Brownian motion with fossils for `insane` use,
+with the following fields:
+
+  d1:   daughter tree 1
+  d2:   daughter tree 2
+  e:    pendant edge
+  iμ:   if extinct node
+  iψ:   if is fossil
+  fx:   if fix (observed) node
+  dt:   choice of time lag
+  fdt:  final `dt`
+  lλ:   array of a Brownian motion evolution of `log(λ)`
+  lμ:   array of a Brownian motion evolution of `log(μ)`
+
+  iTfbd(d1 ::iTfbd,
+        d2 ::iTfbd,
+        e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        iψ ::Bool,
+        fx ::Bool,
+        lλ ::Array{Float64,1},
+        lμ ::Array{Float64,1})
+"""
+mutable struct iTfbd <: iT
+  d1 ::iTfbd
+  d2 ::iTfbd
+  e  ::Float64
+  dt ::Float64
+  fdt::Float64
+  iμ ::Bool
+  iψ ::Bool
+  fx ::Bool
+  lλ ::Array{Float64,1}
+  lμ ::Array{Float64,1}
+
+  iTfbd(e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        fx ::Bool,
+        iψ ::Bool,
+        lλ ::Array{Float64,1},
+        lμ ::Array{Float64,1}) =
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
+      x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+
+  iTfbd(d1 ::iTfbd,
+        e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        fx ::Bool,
+        iψ ::Bool,
+        lλ ::Array{Float64,1},
+        lμ ::Array{Float64,1}) =
+    (x = new(); x.d1 = d1; x.e = e; x.dt = dt; x.fdt = fdt;
+      x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+
+  iTfbd(d1 ::iTfbd,
+        d2 ::iTfbd,
+        e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        iψ ::Bool,
+        fx ::Bool,
+        lλ ::Array{Float64,1},
+        lμ ::Array{Float64,1}) =
+    new(d1, d2, e, dt, fdt, iμ, iψ, fx, lλ, lμ)
+end
+
+
+# pretty-printing
+function Base.show(io::IO, t::iTfbd)
+  nt = ntips(t)
+  nf = nfossils(t)
+
+  print(io, "insane gbm-bd fossil tree with ", 
+    nt , " tip",  (isone(nt) ? "" : "s" ), 
+    ", (", ntipsextinct(t)," extinct) and ", 
+    nf," fossil", (isone(nf) ? "" : "s" ))
+end
+
+
+
+
+"""
+    iTfbd(tree::iTfbd)
+
+Produce a new copy of `iTfbd`.
+"""
+function iTfbd(tree::iTfbd)
+  if def1(tree)
+    if def2(tree)
+      iTfbd(iTfbd(tree.d1), iTfbd(tree.d2),
+        e(tree), dt(tree), fdt(tree), isextinct(tree), isfossil(tree),
+        isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+    else
+      iTfbd(iTfbd(tree.d1),
+        e(tree), dt(tree), fdt(tree), isextinct(tree), isfossil(tree),
+        isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+    end
+  else
+    iTfbd(e(tree), dt(tree), fdt(tree), isextinct(tree), isfossil(tree),
+      isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+  end
+end
+
+
+
+
+# """
+#     iTfbd(e0::Array{Int64,1},
+#           e1::Array{Int64,1},
+#           el::Array{Float64,1},
+#           λs::Array{Array{Float64,1},1},
+#           μs::Array{Array{Float64,1},1},
+#           ea::Array{Int64,1},
+#           ee::Array{Int64,1},
+#           ni::Int64,
+#           ei::Int64,
+#           δt::Float64)
+
+# Transform edge structure to `iTfbd`.
+# """
+# function iTfbd(e0::Array{Int64,1},
+#                e1::Array{Int64,1},
+#                el::Array{Float64,1},
+#                λs::Array{Array{Float64,1},1},
+#                μs::Array{Array{Float64,1},1},
+#                ea::Array{Int64,1},
+#                ee::Array{Int64,1},
+#                ni::Int64,
+#                ei::Int64,
+#                δt::Float64)
+
+#   # if tip
+#   if in(ei, ea)
+#     return iTfbd(el[ei], δt, δt, false, false, λs[ei], μs[ei])
+#   # if extinct
+#   elseif in(ei, ee)
+#     return iTfbd(el[ei], δt, δt, true, false, λs[ei], μs[ei])
+#   else
+#     ei1, ei2 = findall(isequal(ni), e0)
+#     n1, n2   = e1[ei1:ei2]
+#     return iTfbd(iTfbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt),
+#                  iTfbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
+#                  el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
+#                  false, false, λs[ei], μs[ei])
+#   end
+# end
+
+
+

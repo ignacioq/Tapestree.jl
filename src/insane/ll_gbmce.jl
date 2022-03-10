@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTgbmce},
+    llik_gbm(Ξ   ::Vector{iTce},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
@@ -21,9 +21,9 @@ Created 03 09 2020
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmce` according to `gbm-ce`.
+Returns the log-likelihood for a `iTce` according to `gbm-ce`.
 """
-function llik_gbm(Ξ   ::Vector{iTgbmce},
+function llik_gbm(Ξ   ::Vector{iTce},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -48,16 +48,16 @@ end
 
 
 """
-    llik_gbm(tree::iTgbmce,
+    llik_gbm(tree::iTce,
              α   ::Float64,
              σλ  ::Float64,
              μ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmce` according to `gbmce`.
+Returns the log-likelihood for a `iTce` according to `gbmce`.
 """
-function llik_gbm(tree::iTgbmce,
+function llik_gbm(tree::iTce,
                   α   ::Float64,
                   σλ  ::Float64,
                   μ   ::Float64,
@@ -141,16 +141,16 @@ end
 
 
 """
-    llik_gbm_ssλ(tree::iTgbmce,
+    llik_gbm_ssλ(tree::iTce,
                  α   ::Float64,
                  σλ  ::Float64,
                  μ   ::Float64,
                  δt  ::Float64,
                  srδt::Float64)
 
-Returns the log-likelihood for a `iTgbmce` according to GBM birth-death.
+Returns the log-likelihood for a `iTce` according to GBM birth-death.
 """
-function llik_gbm_ssλ(tree::iTgbmce,
+function llik_gbm_ssλ(tree::iTce,
                       α   ::Float64,
                       σλ  ::Float64,
                       μ   ::Float64,
@@ -167,9 +167,9 @@ function llik_gbm_ssλ(tree::iTgbmce,
         true, false)
 
     ll1, dλ1, ssλ1, nλ1 =
-      llik_gbm_ssλ(tree.d1::iTgbmce, α, σλ, μ, δt, srδt)
+      llik_gbm_ssλ(tree.d1::iTce, α, σλ, μ, δt, srδt)
     ll2, dλ2, ssλ2, nλ2 =
-      llik_gbm_ssλ(tree.d2::iTgbmce, α, σλ, μ, δt, srδt)
+      llik_gbm_ssλ(tree.d2::iTce, α, σλ, μ, δt, srδt)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2

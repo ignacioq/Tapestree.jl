@@ -13,8 +13,8 @@ Created 27 05 2020
 
 
 """
-    _daughters_update!(ξ1  ::iTgbmbd,
-                       ξ2  ::iTgbmbd,
+    _daughters_update!(ξ1  ::iTbd,
+                       ξ2  ::iTbd,
                        λf  ::Float64,
                        μf  ::Float64,
                        α   ::Float64,
@@ -25,8 +25,8 @@ Created 27 05 2020
 
 Make a `gbm-bd` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTgbmbd,
-                            ξ2  ::iTgbmbd,
+function _daughters_update!(ξ1  ::iTbd,
+                            ξ2  ::iTbd,
                             λf  ::Float64,
                             μf  ::Float64,
                             α   ::Float64,
@@ -88,7 +88,7 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTgbmbd,
+    _stem_update!(ξi   ::iTbd,
                   α    ::Float64,
                   σλ   ::Float64,
                   σμ   ::Float64,
@@ -105,7 +105,7 @@ end
 
 Do gbm update for stem root.
 """
-function _stem_update!(ξi   ::iTgbmbd,
+function _stem_update!(ξi   ::iTbd,
                        α    ::Float64,
                        σλ   ::Float64,
                        σμ   ::Float64,
@@ -172,9 +172,9 @@ end
 
 
 """
-    _crown_update!(ξi   ::iTgbmbd,
-                   ξ1   ::iTgbmbd,
-                   ξ2   ::iTgbmbd,
+    _crown_update!(ξi   ::iTbd,
+                   ξ1   ::iTbd,
+                   ξ2   ::iTbd,
                    α    ::Float64,
                    σλ   ::Float64,
                    σμ   ::Float64,
@@ -191,9 +191,9 @@ end
 
 Do `gbm-bd` update for crown root.
 """
-function _crown_update!(ξi   ::iTgbmbd,
-                        ξ1   ::iTgbmbd,
-                        ξ2   ::iTgbmbd,
+function _crown_update!(ξi   ::iTbd,
+                        ξ1   ::iTbd,
+                        ξ2   ::iTbd,
                         α    ::Float64,
                         σλ   ::Float64,
                         σμ   ::Float64,
@@ -279,7 +279,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTgbmbd,
+    _update_gbm!(tree::iTbd,
                  α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64,
@@ -293,7 +293,7 @@ end
 
 Do `gbm-bd` updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTgbmbd,
+function _update_gbm!(tree::iTbd,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -327,7 +327,7 @@ end
 
 
 """
-    update_tip!(tree::iTgbmbd,
+    update_tip!(tree::iTbd,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -340,7 +340,7 @@ end
 
 Make a `gbm` tip proposal.
 """
-function update_tip!(tree::iTgbmbd,
+function update_tip!(tree::iTbd,
                      α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
@@ -495,7 +495,7 @@ end
 
 
 """
-    update_triad!(tree::iTgbmbd,
+    update_triad!(tree::iTbd,
                   α   ::Float64,
                   σλ  ::Float64,
                   σμ  ::Float64,
@@ -508,7 +508,7 @@ end
 
 Make a `gbm` trio proposal.
 """
-function update_triad!(tree::iTgbmbd,
+function update_triad!(tree::iTbd,
                        α   ::Float64,
                        σλ  ::Float64,
                        σμ  ::Float64,

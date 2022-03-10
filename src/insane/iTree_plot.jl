@@ -13,14 +13,14 @@ Created 07 07 2020
 
 
 """
-    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iTgbm}
+    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iT}
 
-Recipe for plotting values given by `lv` through time for a `iTgbm`.
+Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    lv  ::Function,
                    dt  ::Float64,
-                   e   ::Bool) where {T <: iTgbm}
+                   e   ::Bool) where {T <: iT}
 
   # prepare data
   ts, r = time_rate(tree, dt, lv)
@@ -96,11 +96,11 @@ end
 
 
 """
-    function f(tree::T, zfun::Function) where {T <: iTgbm}
+    function f(tree::T, zfun::Function) where {T <: iT}
 
-Recipe for plotting a Type `iTgbm`.
+Recipe for plotting a Type `iT`.
 """
-@recipe function f(tree::T, zfun::Function) where {T <: iTgbm}
+@recipe function f(tree::T, zfun::Function) where {T <: iT}
 
   x = Float64[]
   y = Float64[]
@@ -141,7 +141,7 @@ end
                 zfun::Function,
                 x   ::Array{Float64,1},
                 y   ::Array{Float64,1},
-                z   ::Array{Float64,1}) where {T <: iTgbm}
+                z   ::Array{Float64,1}) where {T <: iT}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
@@ -151,7 +151,7 @@ function _rplottree!(tree::T,
                      zfun::Function,
                      x   ::Array{Float64,1},
                      y   ::Array{Float64,1},
-                     z   ::Array{Float64,1}) where {T <: iTgbm}
+                     z   ::Array{Float64,1}) where {T <: iT}
 
   # tree δt and nsδt
   δt = dt(tree)
@@ -204,11 +204,11 @@ end
 
 
 """
-    function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
+    function f(tree::iTct, zfun::Function, ϵ::Float64)
 
-Recipe for plotting extinction on a `iTgbmct` given `ϵ`.
+Recipe for plotting extinction on a `iTct` given `ϵ`.
 """
-@recipe function f(tree::iTgbmct, zfun::Function, ϵ::Float64)
+@recipe function f(tree::iTct, zfun::Function, ϵ::Float64)
 
   x = Float64[]
   y = Float64[]
@@ -299,7 +299,7 @@ end
 
 
 """
-    f(tree::T; shownodes  = (T <: sTf),
+    f(tree::T; shownodes  = (T <: iTf),
                showlabels = (T === sT_label || T === sTf_label))
                where {T <: iTree}
 
@@ -307,7 +307,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 == true`. True by default for `sTf` trees to make sampled ancestors visible.
 """
 @recipe function f(tree::T;
-                   shownodes  = (T <: sTf),
+                   shownodes  = (T <: iTf),
                    showlabels = (T === sT_label || T === sTf_label)) where {
                                                                     T <: iTree}
 

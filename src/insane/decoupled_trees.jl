@@ -198,7 +198,7 @@ end
 
 
 """
-    iTgbmpb!(Ξ   ::Vector{iTgbmpb},
+    iTpb!(Ξ   ::Vector{iTpb},
              tree::sT_label,
              δt  ::Float64,
              srδt::Float64,
@@ -208,7 +208,7 @@ end
 
 Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
+function iTpb!(Ξ   ::Vector{iTpb},
                   tree::sT_label,
                   δt  ::Float64,
                   srδt::Float64,
@@ -235,10 +235,10 @@ function iTgbmpb!(Ξ   ::Vector{iTgbmpb},
     l   = lastindex(lλv)
   end
 
-  push!(Ξ, iTgbmpb(et, true, δt, fdti, lλv))
+  push!(Ξ, iTpb(et, true, δt, fdti, lλv))
   if def1(tree)
-    iTgbmpb!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
-    iTgbmpb!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
+    iTpb!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
+    iTpb!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
 
@@ -246,7 +246,7 @@ end
 
 
 """
-    iTgbmce!(Ξ   ::Vector{iTgbmce},
+    iTce!(Ξ   ::Vector{iTce},
              tree::sT_label,
              δt  ::Float64,
              srδt::Float64,
@@ -256,7 +256,7 @@ end
 
 Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmce!(Ξ   ::Vector{iTgbmce},
+function iTce!(Ξ   ::Vector{iTce},
                   tree::sT_label,
                   δt  ::Float64,
                   srδt::Float64,
@@ -283,10 +283,10 @@ function iTgbmce!(Ξ   ::Vector{iTgbmce},
     l   = lastindex(lλv)
   end
 
-  push!(Ξ, iTgbmce(et, δt, fdti, false, true, lλv))
+  push!(Ξ, iTce(et, δt, fdti, false, true, lλv))
   if def1(tree)
-    iTgbmce!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
-    iTgbmce!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
+    iTce!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
+    iTce!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
 
@@ -294,7 +294,7 @@ end
 
 
 """
-    iTgbmct!(Ξ   ::Vector{iTgbmct},
+    iTct!(Ξ   ::Vector{iTct},
              tree::sT_label,
              δt  ::Float64,
              srδt::Float64,
@@ -304,7 +304,7 @@ end
 
 Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmct!(Ξ   ::Vector{iTgbmct},
+function iTct!(Ξ   ::Vector{iTct},
                   tree::sT_label,
                   δt  ::Float64,
                   srδt::Float64,
@@ -331,10 +331,10 @@ function iTgbmct!(Ξ   ::Vector{iTgbmct},
     l   = lastindex(lλv)
   end
 
-  push!(Ξ, iTgbmct(et, δt, fdti, false, true, lλv))
+  push!(Ξ, iTct(et, δt, fdti, false, true, lλv))
   if def1(tree)
-    iTgbmct!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
-    iTgbmct!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
+    iTct!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
+    iTct!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
   end
 end
 
@@ -342,7 +342,7 @@ end
 
 
 """
-    iTgbmbd!(Ξ   ::Vector{iTgbmbd},
+    iTbd!(Ξ   ::Vector{iTbd},
              tree::sT_label,
              δt  ::Float64,
              srδt::Float64,
@@ -354,7 +354,7 @@ end
 
 Make edge tree `Ξ` from the recursive tree.
 """
-function iTgbmbd!(Ξ   ::Vector{iTgbmbd},
+function iTbd!(Ξ   ::Vector{iTbd},
                   tree::sT_label,
                   δt  ::Float64,
                   srδt::Float64,
@@ -385,10 +385,10 @@ function iTgbmbd!(Ξ   ::Vector{iTgbmbd},
     l   = nt + 2
   end
 
-  push!(Ξ, iTgbmbd(et, δt, fdti, false, true, lλv, lμv))
+  push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
   if def1(tree)
-    iTgbmbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
-    iTgbmbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
+    iTbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
+    iTbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
   end
 end
 
@@ -437,12 +437,12 @@ end
 
 
 """
-    _ctl(Ξ::Vector{T}) where {T <: iTgbm}
+    _ctl(Ξ::Vector{T}) where {T <: iT}
 
 Return the branch length sum of `Ξ` based on `δt` and `fδt`
 for debugging purposes.
 """
-function _ctl(Ξ::Vector{T}) where {T <: iTgbm}
+function _ctl(Ξ::Vector{T}) where {T <: iT}
   L = 0.0
   for ξ in Ξ
     L += _ctl(ξ, 0.0)
@@ -524,12 +524,12 @@ end
 
 
 """
-    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
+    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
-Returns the standardized sum of squares a `iTgbm` according
+Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTgbm}
+function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
   n   = 0.0
   ssλ = 0.0
@@ -544,12 +544,12 @@ end
 
 
 """
-    sss_gbm(Ξ::Vector{iTgbmbd}, α::Float64)
+    sss_gbm(Ξ::Vector{iTbd}, α::Float64)
 
-Returns the standardized sum of squares a `iTgbm` according
+Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(Ξ::Vector{iTgbmbd}, α::Float64)
+function sss_gbm(Ξ::Vector{iTbd}, α::Float64)
 
   n   = 0.0
   ssλ = 0.0
@@ -565,11 +565,11 @@ end
 
 
 """
-    Σλ_gbm(Ξ::Vector{T}) where {T<: iTgbm}
+    Σλ_gbm(Ξ::Vector{T}) where {T<: iT}
 
 Return the internal nodes of `Ξ`.
 """
-function Σλ_gbm(Ξ::Vector{T}) where {T <: iTgbm}
+function Σλ_gbm(Ξ::Vector{T}) where {T <: iT}
   Σλ = 0.0
   for ξ in Ξ
     Σλ += Σλ_gbm(ξ)

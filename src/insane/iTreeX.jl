@@ -162,7 +162,7 @@ with the following fields:
 Constructs an `sTfbdX` object with one sampled ancestor, one `sTfbdX` daughter and
 edge `e`.
 """
-mutable struct sTfbdX <: sTf
+mutable struct sTfbdX <: sT
   d1::sTfbdX
   d2::sTfbdX
   e ::Float64
@@ -221,10 +221,18 @@ end
 
 
 
-
-
 """
-Union type for trait data
+    Union type for trait data
+
+sTX = Union{sTpbX, sTbdX, sTfbdX}
 """
 sTX = Union{sTpbX, sTbdX, sTfbdX}
 
+
+
+"""
+    Union type for fossil data
+
+iTf = Union{sTfbd, sTfbdX, iTfbd}
+"""
+iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd}

@@ -34,11 +34,11 @@ _rm_stem(tree::T) where {T <: sT} = sete!(tree, 0.0)
 
 
 """
-    _rm_stem(tree::T) where {T <: iTgbm}
+    _rm_stem(tree::T) where {T <: iT}
 
 Remove stem branch.
 """
-function _rm_stem(tree::T) where {T <: iTgbm}
+function _rm_stem(tree::T) where {T <: iT}
 
   sete!(  tree, 0.0)
   setfdt!(tree, 0.0)
@@ -52,11 +52,11 @@ end
 
 
 """
-    _rm_stem(tree::iTgbmbd)
+    _rm_stem(tree::iTbd)
 
 Remove stem branch.
 """
-function _rm_stem(tree::iTgbmbd)
+function _rm_stem(tree::iTbd)
 
   sete!(  tree, 0.0)
   setfdt!(tree, 0.0)
@@ -164,13 +164,13 @@ end
 
 
 """
-    _cutbottom(tree::iTgbmpb,
+    _cutbottom(tree::iTpb,
                c   ::Float64,
                t   ::Float64)
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
-function _cutbottom(tree::iTgbmpb,
+function _cutbottom(tree::iTpb,
                     c   ::Float64,
                     t   ::Float64)
 
@@ -202,7 +202,7 @@ function _cutbottom(tree::iTgbmpb,
 
     push!(lλv, eλ)
 
-    tree = iTgbmpb(c - t, true, δt, c - t - tii, lλv)
+    tree = iTpb(c - t, true, δt, c - t - tii, lλv)
 
   else
     if def1(tree)
@@ -220,13 +220,13 @@ end
 """
     _cutbottom(tree::T,
                c   ::Float64,
-               t   ::Float64) where {T <: iTgbm}
+               t   ::Float64) where {T <: iT}
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
 function _cutbottom(tree::T,
                     c   ::Float64,
-                    t   ::Float64) where {T <: iTgbm}
+                    t   ::Float64) where {T <: iT}
 
   et = e(tree)
 
@@ -271,13 +271,13 @@ end
 
 
 """
-    _cutbottom(tree::iTgbmbd,
+    _cutbottom(tree::iTbd,
                c   ::Float64,
                t   ::Float64)
 
 Cut the bottom part of the tree after `c`, starting at time `t`.
 """
-function _cutbottom(tree::iTgbmbd,
+function _cutbottom(tree::iTbd,
                     c   ::Float64,
                     t   ::Float64)
 
@@ -312,7 +312,7 @@ function _cutbottom(tree::iTgbmbd,
     push!(lλv, eλ)
     push!(lμv, eμ)
 
-    tree = iTgbmbd(c - t, δt, c - t - tii, false, isfix(tree), lλv, lμv)
+    tree = iTbd(c - t, δt, c - t - tii, false, isfix(tree), lλv, lμv)
 
   else
     if def1(tree)
@@ -328,11 +328,11 @@ end
 
 
 """
-    fossilizefixedtip!(tree::T) where {T <: sTf}
+    fossilizefixedtip!(tree::T) where {T <: iTf}
 
 Change all alive tips to fossil tips.
 """
-function fossilizefixedtip!(tree::T) where {T <: sTf}
+function fossilizefixedtip!(tree::T) where {T <: iTf}
 
   if istip(tree)
     tree.iψ = true
@@ -347,22 +347,22 @@ end
 
 
 """
-    fossilizepasttips!(tree::T) where {T <: sTf}
+    fossilizepasttips!(tree::T) where {T <: iTf}
 
 Change all past tips to fossil tips.
 """
-fossilizepasttips!(tree::T) where {T <: sTf} =
+fossilizepasttips!(tree::T) where {T <: iTf} =
   _fossilizepasttips!(tree::T, treeheight(tree::T))
 
 
 
 
 """
-    _fossilizepasttips!(tree::T, th::Float64) where {T <: sTf}
+    _fossilizepasttips!(tree::T, th::Float64) where {T <: iTf}
 
 Change all past tips to fossil tips, initialized at tree height `th`.
 """
-function _fossilizepasttips!(tree::T, th::Float64) where {T <: sTf}
+function _fossilizepasttips!(tree::T, th::Float64) where {T <: iTf}
 
   th -= e(tree)
 
@@ -378,22 +378,22 @@ end
 
 
 """
-    extinguishpasttips!(tree::T) where {T <: sTf}
+    extinguishpasttips!(tree::T) where {T <: iTf}
 
 Change all past tips to extinct tips.
 """
-extinguishpasttips!(tree::T) where {T <: sTf} =
+extinguishpasttips!(tree::T) where {T <: iTf} =
   _extinguishpasttips!(tree::T, treeheight(tree::T))
 
 
 
 
 """
-    _extinguishpasttips!(tree::T, th::Float64) where {T <: sTf}
+    _extinguishpasttips!(tree::T, th::Float64) where {T <: iTf}
 
 Change all past tips to extinct tips, initialized at tree height `th`.
 """
-function _extinguishpasttips!(tree::T, th::Float64) where {T <: sTf}
+function _extinguishpasttips!(tree::T, th::Float64) where {T <: iTf}
 
   th -= e(tree)
 
@@ -409,11 +409,11 @@ end
 
 
 """
-    fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
+    fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iT}
 
 Fixes the the path for a random non extinct tip and returns final `λ(t)`.
 """
-function fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iTgbm}
+function fixrtip!(tree::T, na::Int64, λf::Float64) where {T <: iT}
 
   fix!(tree)
 
@@ -475,14 +475,14 @@ end
 
 
 """
-    fixrtip!(tree::iTgbmbd,
+    fixrtip!(tree::iTbd,
              na  ::Int64,
              λf  ::Float64,
              μf  ::Float64)
 
 Fixes the the path for a random non extinct tip.
 """
-function fixrtip!(tree::iTgbmbd,
+function fixrtip!(tree::iTbd,
                   na  ::Int64,
                   λf  ::Float64,
                   μf  ::Float64)
@@ -522,11 +522,11 @@ end
 
 
 """
-    fixalive!(tree::T, λf::Float64) where {T <:iTgbm}
+    fixalive!(tree::T, λf::Float64) where {T <:iT}
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::T, λf::Float64) where {T <:iTgbm}
+function fixalive!(tree::T, λf::Float64) where {T <:iT}
 
   if istip(tree)
     if isalive(tree)
@@ -616,13 +616,13 @@ end
 
 
 """
-    fixalive!(tree::iTgbmbd,
+    fixalive!(tree::iTbd,
               λf  ::Float64,
               μf  ::Float64)
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::iTgbmbd,
+function fixalive!(tree::iTbd,
                    λf  ::Float64,
                    μf  ::Float64)
 
@@ -658,11 +658,11 @@ end
 
 
 """
-    fixalive!(tree::T) where {T <: sTf}
+    fixalive!(tree::T) where {T <: iTf}
 
 Fixes the path from root to the only species alive.
 """
-function fixalive!(tree::T) where {T <: sTf}
+function fixalive!(tree::T) where {T <: iTf}
 
   if istip(tree::T) && isalive(tree::T)
     fix!(tree::T)
@@ -767,7 +767,7 @@ fixrtip!(tree::T) where T <: iTree = _fixrtip!(tree, ntipsalive(tree))
 
 
 """
-    _fixrtip!(tree::T, na::Int64) where {T <: iTgbm}
+    _fixrtip!(tree::T, na::Int64) where {T <: iT}
 
 Fixes the the path for a random non extinct tip among `na`.
 """
@@ -922,7 +922,7 @@ end
 """
     remove_unsampled(tree::T) where {T <: iTree}
 
-Remove unsampled tips from `iTgbmpb`.
+Remove unsampled tips from `iTpb`.
 """
 function remove_unsampled(tree::T) where {T <: iTree}
   return _remove_unsampled!(T(tree::T))
@@ -982,11 +982,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::T) where {T <: sTf}
+    _remove_unsampled!(tree::T) where {T <: iTf}
 
 Remove unsampled tips.
 """
-function _remove_unsampled!(tree::T) where {T <: sTf}
+function _remove_unsampled!(tree::T) where {T <: iTf}
 
   if def1(tree)
     tree.d1 = _remove_unsampled!(tree.d1)
@@ -1022,11 +1022,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::iTgbmpb)
+    _remove_unsampled!(tree::iTpb)
 
-Remove extinct tips from `iTgbmpb`.
+Remove extinct tips from `iTpb`.
 """
-function _remove_unsampled!(tree::iTgbmpb)
+function _remove_unsampled!(tree::iTpb)
 
   if def1(tree)
 
@@ -1035,7 +1035,7 @@ function _remove_unsampled!(tree::iTgbmpb)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTgbmpb(e(tree), isfix(tree), dt(tree), fdt(tree), lλ(tree))
+        return iTpb(e(tree), isfix(tree), dt(tree), fdt(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
         lλ0 = lλ(tree)
@@ -1079,11 +1079,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::iTgbmce)
+    _remove_unsampled!(tree::iTce)
 
-Remove unsampled tips from `iTgbmce`.
+Remove unsampled tips from `iTce`.
 """
-function _remove_unsampled!(tree::iTgbmce)
+function _remove_unsampled!(tree::iTce)
 
   if def1(tree)
 
@@ -1092,7 +1092,7 @@ function _remove_unsampled!(tree::iTgbmce)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTgbmce(e(tree), dt(tree), fdt(tree),
+        return iTce(e(tree), dt(tree), fdt(tree),
           isextinct(tree), isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1137,10 +1137,10 @@ end
 
 
 """
-    _remove_unsampled!(tree::iTgbmct)
-Remove extinct tips from `iTgbmct`.
+    _remove_unsampled!(tree::iTct)
+Remove extinct tips from `iTct`.
 """
-function _remove_unsampled!(tree::iTgbmct)
+function _remove_unsampled!(tree::iTct)
 
   if def1(tree)
 
@@ -1149,7 +1149,7 @@ function _remove_unsampled!(tree::iTgbmct)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTgbmct(e(tree), dt(tree), fdt(tree),
+        return iTct(e(tree), dt(tree), fdt(tree),
           isextinct(tree), isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1194,11 +1194,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::iTgbmbd)
+    _remove_unsampled!(tree::iTbd)
 
-Remove extinct tips from `iTgbmbd`.
+Remove extinct tips from `iTbd`.
 """
-function _remove_unsampled!(tree::iTgbmbd)
+function _remove_unsampled!(tree::iTbd)
 
   if def1(tree)
 
@@ -1207,7 +1207,7 @@ function _remove_unsampled!(tree::iTgbmbd)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTgbmbd(e(tree), dt(tree), fdt(tree),
+        return iTbd(e(tree), dt(tree), fdt(tree),
           isextinct(tree), isfix(tree), lλ(tree), lμ(tree))
       else
         ne = e(tree) + e(tree.d2)
@@ -1268,7 +1268,7 @@ end
 """
     remove_extinct(tree::T) where {T <: iTree}
 
-Remove extinct tips from `iTgbmce`.
+Remove extinct tips from `iTce`.
 """
 function remove_extinct(tree::T) where {T <: iTree}
   return _remove_extinct!(T(tree::T))
@@ -1329,11 +1329,11 @@ end
 
 
 """
-    _remove_extinct!(tree::T) where {T <: sTf}
+    _remove_extinct!(tree::T) where {T <: iTf}
 
 Remove unsampled tips.
 """
-function _remove_extinct!(tree::T) where {T <: sTf}
+function _remove_extinct!(tree::T) where {T <: iTf}
 
   if def1(tree)
     tree.d1 = _remove_extinct!(tree.d1)
@@ -1368,11 +1368,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTgbmce)
+    _remove_extinct!(tree::iTce)
 
-Remove extinct tips from `iTgbmce`.
+Remove extinct tips from `iTce`.
 """
-function _remove_extinct!(tree::iTgbmce)
+function _remove_extinct!(tree::iTce)
 
   if def1(tree)
 
@@ -1381,7 +1381,7 @@ function _remove_extinct!(tree::iTgbmce)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTgbmce(e(tree), dt(tree), fdt(tree),
+        return iTce(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1426,11 +1426,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTgbmct)
+    _remove_extinct!(tree::iTct)
 
-Remove extinct tips from `iTgbmct`.
+Remove extinct tips from `iTct`.
 """
-function _remove_extinct!(tree::iTgbmct)
+function _remove_extinct!(tree::iTct)
 
   if def1(tree)
 
@@ -1439,7 +1439,7 @@ function _remove_extinct!(tree::iTgbmct)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTgbmct(e(tree), dt(tree), fdt(tree),
+        return iTct(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -1484,11 +1484,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTgbmbd)
+    _remove_extinct!(tree::iTbd)
 
-Remove extinct tips from `iTgbmbd`.
+Remove extinct tips from `iTbd`.
 """
-function _remove_extinct!(tree::iTgbmbd)
+function _remove_extinct!(tree::iTbd)
 
   if def1(tree)
 
@@ -1497,7 +1497,7 @@ function _remove_extinct!(tree::iTgbmbd)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTgbmbd(e(tree), dt(tree), fdt(tree),
+        return iTbd(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree), lμ(tree))
       else
         ne = e(tree) + e(tree.d2)
@@ -1560,11 +1560,11 @@ end
 
 
 """
-    remove_fossils(tree::T) where {T <: sTf}
+    remove_fossils(tree::T) where {T <: iTf}
 
 Remove fossils.
 """
-function remove_fossils(tree::T) where {T <: sTf}
+function remove_fossils(tree::T) where {T <: iTf}
   return _remove_fossils!(T(tree::T))
 end
 
@@ -1572,11 +1572,11 @@ end
 
 
 """
-    _remove_fossils!(tree::T) where {T <: sTf}
+    _remove_fossils!(tree::T) where {T <: iTf}
 
 Remove fossils.
 """
-function _remove_fossils!(tree::T) where {T <: sTf}
+function _remove_fossils!(tree::T) where {T <: iTf}
   while isfossil(tree)
     if def1(tree)     tree.d1.e += tree.e; tree = tree.d1
     elseif def2(tree) tree.d2.e += tree.e; tree = tree.d2
@@ -1608,11 +1608,11 @@ end
 
 
 """
-    remove_sampled_ancestors(tree::T) where {T <: sTf}
+    remove_sampled_ancestors(tree::T) where {T <: iTf}
 
 Remove sampled ancestors (non-tip fossils).
 """
-function remove_sampled_ancestors(tree::T) where {T <: sTf}
+function remove_sampled_ancestors(tree::T) where {T <: iTf}
   return _remove_sampled_ancestors!(T(tree::T))
 end
 
@@ -1620,11 +1620,11 @@ end
 
 
 """
-    _remove_sampled_ancestors!(tree::T) where {T <: sTf}
+    _remove_sampled_ancestors!(tree::T) where {T <: iTf}
 
 Remove sampled ancestors (non-tip fossils).
 """
-function _remove_sampled_ancestors!(tree::T) where {T <: sTf}
+function _remove_sampled_ancestors!(tree::T) where {T <: iTf}
   while isfossil(tree)
     if     def1(tree) tree.d1.e += tree.e; tree = tree.d1
     elseif def2(tree) tree.d2.e += tree.e; tree = tree.d2
@@ -1644,25 +1644,25 @@ end
 
 """
     reconstructed(tree::T) where {T <: iTree}
-    reconstructed(tree::T) where {T <: sTf}
+    reconstructed(tree::T) where {T <: iTf}
 
 Returns the reconstructed tree, i.e. the observed tree from sampled extant
 tips and fossils.
 """
 # For all trees without fossils, it simply means removing extinct lineages
 reconstructed(tree::T) where {T <: iTree} = remove_unsampled(tree::T)
-reconstructed(tree::T) where {T <: sTf} = _reconstructed!(T(tree::T))
+reconstructed(tree::T) where {T <: iTf} = _reconstructed!(T(tree::T))
 
 
 
 
 """
-    _reconstructed!(tree::T) where {T <: sTf}
+    _reconstructed!(tree::T) where {T <: iTf}
 
 Returns the reconstructed tree, i.e. the observed tree from sampled extant
 tips and fossils.
 """
-function _reconstructed!(tree::T) where {T <: sTf}
+function _reconstructed!(tree::T) where {T <: iTf}
   defd1 = def1(tree)
   defd2 = def2(tree)
 
@@ -1718,11 +1718,11 @@ end
 
 
 """
-    fixtree!(tree::T) where {T <: sTf}
+    fixtree!(tree::T) where {T <: iTf}
 
 Fix all `tree`.
 """
-function fixtree!(tree::T) where {T <: sTf}
+function fixtree!(tree::T) where {T <: iTf}
   fix!(tree)
   if def1(tree) fixtree!(tree.d1) end
   if def2(tree) fixtree!(tree.d2) end
@@ -1742,44 +1742,44 @@ fix!(tree::T) where {T <: iTree} = setproperty!(tree, :fx, true)
 
 
 """
-    setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iTgbm}
+    setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT}
 
 Set number of `δt` for `tree`.
 """
-setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iTgbm} =
+setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT} =
   setproperty!(tree, :lλ, lλ)
 
 
 
 
 """
-    setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTgbmbd}
+    setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTbd}
 
 Set number of `δt` for `tree`.
 """
-setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTgbmbd} =
+setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTbd} =
   setproperty!(tree, :lμ, lμ)
 
 
 
 
 """
-  setfdt!(tree::T, fdt::Float64) where {T <: iTgbm}
+  setfdt!(tree::T, fdt::Float64) where {T <: iT}
 
 Set number of `δt` for `tree`.
 """
-setfdt!(tree::T, fdt::Float64) where {T <: iTgbm} =
+setfdt!(tree::T, fdt::Float64) where {T <: iT} =
   setproperty!(tree, :fdt, fdt)
 
 
 
 
 """
-  setdt!(tree::T, dt::Float64) where {T <: iTgbm}
+  setdt!(tree::T, dt::Float64) where {T <: iT}
 
 Set number of `δt` for `tree`.
 """
-setdt!(tree::T, dt::Float64) where {T <: iTgbm} =
+setdt!(tree::T, dt::Float64) where {T <: iT} =
   setproperty!(tree, :dt, dt)
 
 
