@@ -482,10 +482,10 @@ end
 
 Fixes the the path for a random non extinct tip.
 """
-function fixrtip!(tree::iTbd,
+function fixrtip!(tree::T,
                   na  ::Int64,
                   λf  ::Float64,
-                  μf  ::Float64)
+                  μf  ::Float64) where {T <: iTbdU}
 
   fix!(tree)
 
@@ -622,9 +622,9 @@ end
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::iTbd,
+function fixalive!(tree::T,
                    λf  ::Float64,
-                   μf  ::Float64)
+                   μf  ::Float64) where {T <: iTbdU}
 
   if istip(tree)
     if isalive(tree)

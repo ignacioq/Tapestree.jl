@@ -64,7 +64,7 @@ function _daughter_update!(ξ1  ::iTfbd,
     acr  = llrbd1 + λf - λi
     llr  = llrbm1 + acr
     acr += normprop
-    drλ  = 2.0*(λi - λf)
+    drλ  = λi - λf
     ssrλ = ssrλ1
     ssrμ = ssrμ1
   end
@@ -111,8 +111,8 @@ function _update_gbm!(tree::iTfbd,
       llc, dλ, ssλ, ssμ =
         _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
     else
-      llc, dλ, ssλ, ssμ =
-        update_duo!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+      llc, ssλ, ssμ =
+        update_duo!(tree, α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
       llc, dλ, ssλ, ssμ =
         _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
     end
@@ -120,64 +120,6 @@ function _update_gbm!(tree::iTfbd,
     if !isfix(tree) || ter
       llc, dλ, ssλ, ssμ =
         update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-    end
-  end
-
-  return llc, dλ, ssλ, ssμ
-end
-
-
-
-
-"""
-    update_tip!(tree::iTfbd,
-                α   ::Float64,
-                σλ  ::Float64,
-                σμ  ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                ssμ ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
-
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::iTfbd,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     σμ  ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     ssμ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
-
-  @inbounds begin
-
-    λc   = lλ(tree)
-    μc   = lμ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
-    μp   = Vector{Float64}(undef, l)
-
-    bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
-
-    llrbm, llrbd, ssrλ, ssrμ =
-      llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
-        false, isextinct(tree))
-
-    acr = llrbd
-
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      ssμ += ssrμ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-      unsafe_copyto!(μc, 1, μp, 1, l)
     end
   end
 
@@ -220,7 +162,6 @@ function update_duo!(λpc ::Vector{Float64},
                      σλ  ::Float64,
                      σμ  ::Float64,
                      llc ::Float64,
-                     dλ  ::Float64,
                      ssλ ::Float64,
                      ssμ ::Float64,
                      δt  ::Float64,
@@ -252,7 +193,7 @@ function update_duo!(λpc ::Vector{Float64},
     # log likelihood ratios
     llrbmp, llrbdp, ssrλp, ssrμp =
       llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
-        true, false)
+        false, false)
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
         false, false)
@@ -261,7 +202,6 @@ function update_duo!(λpc ::Vector{Float64},
 
     if -randexp() < acr
       llc += llrbmp + llrbm1 + acr
-      dλ  += λi - λn
       ssλ += ssrλp + ssrλ1
       ssμ += ssrμp + ssrμ1
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
@@ -272,7 +212,7 @@ function update_duo!(λpc ::Vector{Float64},
     end
   end
 
-  return llc, dλ, ssλ, ssμ, λi
+  return llc, ssλ, ssμ, λi
 end
 
 
@@ -297,7 +237,6 @@ function update_duo!(tree::iTfbd,
                      σλ  ::Float64,
                      σμ  ::Float64,
                      llc ::Float64,
-                     dλ  ::Float64,
                      ssλ ::Float64,
                      ssμ ::Float64,
                      δt  ::Float64,
@@ -325,8 +264,8 @@ function update_duo!(tree::iTfbd,
     fdt1 = fdt(tree.d1)
 
     # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, ep, e1, σλ)
-    μn = trioprop(μp, μ1, ep, e1, σμ)
+    λn = duoprop(λp + α*ep, λ1 - α*e1, ep, e1, σλ)
+    μn = duoprop(μp, μ1, ep, e1, σμ)
 
     # simulate fix tree vector
     bb!(λpp, λp, λn, μpp, μp, μn, σλ, σμ, δt, fdtp, srδt)
@@ -334,7 +273,7 @@ function update_duo!(tree::iTfbd,
 
     llrbmp, llrbdp, ssrλp, ssrμp =
       llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
-        true, false)
+        false, false)
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
         false, isextinct(tree.d1))
@@ -343,7 +282,6 @@ function update_duo!(tree::iTfbd,
 
     if -randexp() < acr
       llc += llrbmp + llrbm1 + acr
-      dλ  += (λ1c[1] - λn)
       ssλ += ssrλp + ssrλ1
       ssμ += ssrμp + ssrμ1
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
@@ -353,7 +291,7 @@ function update_duo!(tree::iTfbd,
     end
   end
 
-  return llc, dλ, ssλ, ssμ
+  return llc, ssλ, ssμ
 end
 
 

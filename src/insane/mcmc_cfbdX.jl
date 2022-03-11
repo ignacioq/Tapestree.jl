@@ -480,7 +480,7 @@ function update_fs!(bix::Int64,
         acr = 0.0
       end
     else
-      np -= !iψb
+      np -= !itb
       llr = log((1.0 - ρbi)^(np - nc))
       acr = log(Float64(ntp)/Float64(ntc))
 

@@ -42,7 +42,7 @@ function llik_gbm(tree::iTfbd,
     end
   else
     ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
-        false, isextinct(tree), false)
+      false, isextinct(tree), false)
   end
 end
 
@@ -329,11 +329,6 @@ function _deltaλ(tree::iTfbd)
     lλv[end] - lλv[1]
   end
 end
-
-
-
-
-
 
 
 

@@ -63,7 +63,9 @@ Recipe for plotting a Type `iT`.
 
     shape = Symbol[:circle]
     col   = Symbol[:pink]
-    alpha = Float64[0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))]
+    alpha = 
+      Float64[(0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))) *
+              Float64(speciation)]
     _nodeproperties!(tree, shape, col, alpha, 
       Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
 
@@ -292,8 +294,9 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   if shownodes
     shape = Symbol[:circle]
     col   = Symbol[:pink]
-    alpha = Float64[0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))]
-
+    alpha = 
+      Float64[(0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))) *
+              Float64(speciation)]
     _nodeproperties!(tree, shape, col, alpha, 
       Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
 
@@ -349,7 +352,7 @@ function _nodeproperties!(tree      ::T,
                           extinct   ::Float64,
                           fossil    ::Float64) where {T <: iTree}
 
-  fx = isfix(tree)
+  fx = !isdefined(tree, :fx) || isfix(tree)
 
   if def1(tree)
     if def2(tree)

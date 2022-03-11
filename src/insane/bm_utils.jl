@@ -340,40 +340,42 @@ Brownian bridge simulation function for updating two vectors
                      fdt ::Float64,
                      srδt::Float64)
 
-  l = lastindex(x0)
+  @inbounds begin
+    l = lastindex(x0)
 
-  randn!(x0)
-  randn!(x1)
+    randn!(x0)
+    randn!(x1)
 
-  # for standard δt
-  x0[1] = x0i
-  x1[1] = x1i
-  @avx for i = Base.OneTo(l-2)
-    x0[i+1] *= srδt*σ0
-    x1[i+1] *= srδt*σ1
-  end
-  srlt  = sqrt(fdt)
-  x0[l] *= srlt*σ0
-  x1[l] *= srlt*σ1
-  cumsum!(x0, x0)
-  cumsum!(x1, x1)
-
-  # make bridge
-  if l > 2
-    ite = 1.0/(Float64(l-2) * δt + fdt)
-    x0df = (x0[l] - x0f)
-    x1df = (x1[l] - x1f)
-
-    @avx for i = Base.OneTo(l-1)
-      iti    = Float64(i-1) * δt * ite
-      x0[i] -= (iti * x0df)
-      x1[i] -= (iti * x1df)
+    # for standard δt
+    x0[1] = x0i
+    x1[1] = x1i
+    @avx for i = Base.OneTo(l-2)
+      x0[i+1] *= srδt*σ0
+      x1[i+1] *= srδt*σ1
     end
-  end
+    srlt  = sqrt(fdt)
+    x0[l] *= srlt*σ0
+    x1[l] *= srlt*σ1
+    cumsum!(x0, x0)
+    cumsum!(x1, x1)
 
-  # for last non-standard δt
-  x0[l] = x0f
-  x1[l] = x1f
+    # make bridge
+    if l > 2
+      ite = 1.0/(Float64(l-2) * δt + fdt)
+      x0df = (x0[l] - x0f)
+      x1df = (x1[l] - x1f)
+
+      @avx for i = Base.OneTo(l-1)
+        iti    = Float64(i-1) * δt * ite
+        x0[i] -= (iti * x0df)
+        x1[i] -= (iti * x1df)
+      end
+    end
+
+    # for last non-standard δt
+    x0[l] = x0f
+    x1[l] = x1f
+  end
 
   return nothing
 end

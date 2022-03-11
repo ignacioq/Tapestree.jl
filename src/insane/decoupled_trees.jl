@@ -325,26 +325,26 @@ end
 
 """
     iTbd!(Ξ   ::Vector{iTbd},
-             tree::sT_label,
-             δt  ::Float64,
-             srδt::Float64,
-             lλa ::Float64,
-             lμa ::Float64,
-             α   ::Float64,
-             σλ  ::Float64,
-             σμ  ::Float64)
+          tree::sT_label,
+          δt  ::Float64,
+          srδt::Float64,
+          lλa ::Float64,
+          lμa ::Float64,
+          α   ::Float64,
+          σλ  ::Float64,
+          σμ  ::Float64)
 
 Make edge tree `Ξ` from the recursive tree.
 """
 function iTbd!(Ξ   ::Vector{iTbd},
-                  tree::sT_label,
-                  δt  ::Float64,
-                  srδt::Float64,
-                  lλa ::Float64,
-                  lμa ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  σμ  ::Float64)
+               tree::sT_label,
+               δt  ::Float64,
+               srδt::Float64,
+               lλa ::Float64,
+               lμa ::Float64,
+               α   ::Float64,
+               σλ  ::Float64,
+               σμ  ::Float64)
 
   et = e(tree)
 
@@ -379,14 +379,14 @@ end
 
 """
     iTfbd!(Ξ   ::Vector{iTfbd},
-             tree::sTf_label,
-             δt  ::Float64,
-             srδt::Float64,
-             lλa ::Float64,
-             lμa ::Float64,
-             α   ::Float64,
-             σλ  ::Float64,
-             σμ  ::Float64)
+           tree::sTf_label,
+           δt  ::Float64,
+           srδt::Float64,
+           lλa ::Float64,
+           lμa ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           σμ  ::Float64)
 
 Make edge tree `Ξ` from the recursive tree.
 """
@@ -425,8 +425,9 @@ function iTfbd!(Ξ   ::Vector{iTfbd},
     lλl = lλv[l]
     lμl = lμv[l]
     push!(Ξ, iTfbd(
-               iTfbd(0.0, δt, δt, true, false, true, 
-                 Float64[lλl, lλl], Float64[lμl, lμl]),
+               iTfbd(1e-6, δt, 1e-6, true, false, true, 
+                 Float64[lλl, rnorm(lλl + α*1e-6, 1e-3*σλ)], 
+                 Float64[lμl, rnorm(lμl,          1e-3*σμ)]),
                et, δt, fdti, false, true, true, lλv, lμv))
   else
     push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(tree), true, lλv, lμv))

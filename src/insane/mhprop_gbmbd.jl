@@ -340,7 +340,7 @@ end
 
 Make a `gbm` tip proposal.
 """
-function update_tip!(tree::iTbd,
+function update_tip!(tree::T,
                      α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
@@ -349,7 +349,7 @@ function update_tip!(tree::iTbd,
                      ssλ ::Float64,
                      ssμ ::Float64,
                      δt  ::Float64,
-                     srδt::Float64)
+                     srδt::Float64) where {T <: iTbdU}
 
   @inbounds begin
 
