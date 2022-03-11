@@ -644,7 +644,7 @@ function _sim_gbmfbd(nsδt::Float64,
         λm = exp(0.5*(λt + λt1))
         μm = exp(0.5*(μt + μt1))
 
-        if event(λm, μm, ψ, δt)
+        if event(λm, μm, ψ, t)
           # if speciation
           if λevent(λm, μm, ψ)
             nsp += 1
@@ -683,7 +683,7 @@ function _sim_gbmfbd(nsδt::Float64,
       λm = exp(0.5*(λt + λt1))
       μm = exp(0.5*(μt + μt1))
 
-      if event(λm, μm, ψ, t)
+      if event(λm, μm, ψ, δt)
         # if speciation
         if λevent(λm, μm, ψ)
           nsp += 1
