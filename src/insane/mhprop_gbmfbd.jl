@@ -14,7 +14,6 @@ Created 27 05 2020
 
 """
     _daughters_update!(ξ1  ::iTfbd,
-                       ξ2  ::iTfbd,
                        λf  ::Float64,
                        μf  ::Float64,
                        α   ::Float64,
@@ -25,63 +24,52 @@ Created 27 05 2020
 
 Make a `gbm-bd` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTfbd,
-                            ξ2  ::iTfbd,
-                            λf  ::Float64,
-                            μf  ::Float64,
-                            α   ::Float64,
-                            σλ  ::Float64,
-                            σμ  ::Float64,
-                            δt  ::Float64,
-                            srδt::Float64)
+function _daughter_update!(ξ1  ::iTfbd,
+                           λf  ::Float64,
+                           μf  ::Float64,
+                           α   ::Float64,
+                           σλ  ::Float64,
+                           σμ  ::Float64,
+                           δt  ::Float64,
+                           srδt::Float64)
   @inbounds begin
 
     λ1c  = lλ(ξ1)
-    λ2c  = lλ(ξ2)
     μ1c  = lμ(ξ1)
-    μ2c  = lμ(ξ2)
     l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
     μ1p  = Vector{Float64}(undef,l1)
-    μ2p  = Vector{Float64}(undef,l2)
     λi   = λ1c[1]
     λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
     μi   = μ1c[1]
     μ1   = μ1c[l1]
-    μ2   = μ2c[l2]
     e1   = e(ξ1)
-    e2   = e(ξ2)
     fdt1 = fdt(ξ1)
-    fdt2 = fdt(ξ2)
 
     bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
-    bb!(λ2p, λf, λ2, μ2p, μf, μ2, σλ, σμ, δt, fdt2, srδt)
+
+    sre = sqrt(e1)
 
     # acceptance rate
     normprop =
-      duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-      duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
-      duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
-      duoldnorm(μi, μ1, μ2, e1, e2, σμ)
+      ldnorm_bm(λf, λ1 - α*e1, sre*σλ) -
+      ldnorm_bm(λi, λ1 - α*e1, sre*σλ) +
+      ldnorm_bm(μf, μ1,        sre*σμ) -
+      ldnorm_bm(μi, μ1,        sre*σμ)
 
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
-    llrbm2, llrbd2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
-    acr  = llrbd1 + llrbd2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
+    acr  = llrbd1 + λf - λi
+    llr  = llrbm1 + acr
     acr += normprop
     drλ  = 2.0*(λi - λf)
-    ssrλ = ssrλ1 + ssrλ2
-    ssrμ = ssrμ1 + ssrμ2
+    ssrλ = ssrλ1
+    ssrμ = ssrμ1
   end
 
-  return llr, acr, drλ, ssrλ, ssrμ, λ1p, λ2p, μ1p, μ2p
+  return llr, acr, drλ, ssrλ, ssrμ, λ1p, μ1p
 end
 
 
