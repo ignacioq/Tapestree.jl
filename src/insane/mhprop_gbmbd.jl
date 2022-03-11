@@ -495,7 +495,7 @@ end
 
 
 """
-    update_triad!(tree::iTbd,
+    update_triad!(tree::T,
                   α   ::Float64,
                   σλ  ::Float64,
                   σμ  ::Float64,
@@ -504,11 +504,11 @@ end
                   ssλ ::Float64,
                   ssμ ::Float64,
                   δt  ::Float64,
-                  srδt::Float64)
+                  srδt::Float64) where {T <: iTbdU}
 
 Make a `gbm` trio proposal.
 """
-function update_triad!(tree::iTbd,
+function update_triad!(tree::T,
                        α   ::Float64,
                        σλ  ::Float64,
                        σμ  ::Float64,
@@ -517,7 +517,8 @@ function update_triad!(tree::iTbd,
                        ssλ ::Float64,
                        ssμ ::Float64,
                        δt  ::Float64,
-                       srδt::Float64)
+                       srδt::Float64) where {T <: iTbdU}
+
 
   @inbounds begin
 

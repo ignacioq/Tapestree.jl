@@ -191,30 +191,35 @@ function llik_gbm_ss(tree::iTfbd,
                      srδt::Float64)
 
   if def1(tree)
-    ll, dλ, ssλ, ssμ, nλ =
-      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
-        false, false, true)
-    ll1, dλ1, ssλ1, ssμ1, nλ1 =
-      llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, δt, srδt)
-    ll  += ll1
-    dλ  += dλ1
-    ssλ += ssλ1
-    ssμ += ssμ1
-    nλ  += nλ1
-
     if def2(tree)
+      ll, dλ, ssλ, ssμ, nλ =
+        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
+          true, false, false)
+      ll1, dλ1, ssλ1, ssμ1, nλ1 =
+        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, δt, srδt)
       ll2, dλ2, ssλ2, ssμ2, nλ2 =
         llik_gbm_ss(tree.d2, α, σλ, σμ, ψ, δt, srδt)
-      ll  += ll2
-      dλ  += dλ2
-      ssλ += ssλ2
-      ssμ += ssμ2
-      nλ  += nλ2
+      ll  += ll1  + ll2
+      dλ  += dλ1  + dλ2
+      ssλ += ssλ1 + ssλ2
+      ssμ += ssμ1 + ssμ2
+      nλ  += nλ1  + nλ2
+    else
+      ll, dλ, ssλ, ssμ, nλ =
+        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
+          false, false, true)
+      ll1, dλ1, ssλ1, ssμ1, nλ1 =
+        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, δt, srδt)
+      ll  += ll1 
+      dλ  += dλ1 
+      ssλ += ssλ1
+      ssμ += ssμ1
+      nλ  += nλ1 
     end
   else
     ll, dλ, ssλ, ssμ, nλ =
       ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
-          false, isextinct(tree), false)
+          false, isextinct(tree), isfossil(tree))
   end
 
   return ll, dλ, ssλ, ssμ, nλ

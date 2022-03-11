@@ -123,7 +123,7 @@ function insane_gbmfbd(tree    ::sTf_label,
   @info "running fossilized birth-death gbm"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, σμc, mc  =
+  Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc  =
     mcmc_burn_gbmbd(Ξ, idf,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, ψ_prior,
       nburn, αi, σλi, σμi, ψc, mc, th, stem, δt, srδt, inodes, pup, prints)
@@ -139,7 +139,7 @@ function insane_gbmfbd(tree    ::sTf_label,
                  "alpha"        => 3,
                  "sigma_lambda" => 4,
                  "sigma_mu"     => 5,
-                 "psi"     => 5))
+                 "psi"          => 6))
 
   write_ssr(R, pardic, out_file)
 
@@ -260,8 +260,9 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbd},
         bix = ceil(Int64,rand()*el)
 
         llc, dλ, ssλ, ssμ, nλ, L =
-          update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, nλ, L,
+          update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, llc, dλ, ssλ, ssμ, nλ, L,
             δt, srδt)
+
       end
     end
 
@@ -307,6 +308,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
                     αc      ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
+                    ψc      ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
                     stem    ::Bool,
@@ -315,6 +317,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
+                    ψ_prior ::NTuple{2,Float64},
                     niter   ::Int64,
                     nthin   ::Int64,
                     δt      ::Float64,
@@ -372,6 +375,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            return
         end
 
+        if isnan(dλ) @show pupi end 
+
       # σλ & σμ update
       elseif pupi === 2
 
@@ -385,6 +390,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            return
         end
 
+        if isnan(dλ) @show pupi end
+
       # psi update
       elseif pupi === 3
 
@@ -395,6 +402,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            @show ll0, llc, i, pupi, Ξ
            return
         end
+
+        if isnan(dλ) @show pupi end
 
       # gbm update
       elseif pupi === 4
@@ -412,6 +421,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            return
         end
 
+        if isnan(dλ) @show pupi end
+
       # forward simulation update
       else
 
@@ -423,9 +434,12 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
 
         ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
          if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
+           @show ll0, llc, i, pupi, Ξ, bix
            return
         end
+
+        if isnan(dλ) @show pupi, bix end
+
       end
     end
 
@@ -547,7 +561,7 @@ function update_fs!(bix    ::Int64,
       ll1, dλ1, ssλ1, ssμ1, nλ1 = llik_gbm_ss(ξp, α, σλ, σμ, ψ, δt, srδt)
       ll0, dλ0, ssλ0, ssμ0, nλ0 = llik_gbm_ss(ξc, α, σλ, σμ, ψ, δt, srδt)
 
-      # update llr, ssλ, nλ, sns, ne, L,
+      # update llr, ssλ, ssμ, nλ, sns, L
       llc += ll1  - ll0 + llr
       dλ  += dλ1  - dλ0  + drλ
       ssλ += ssλ1 - ssλ0 + ssrλ
@@ -631,7 +645,7 @@ function fsbi_ifbd(bi  ::iBffs,
         tx, na, nsp, nf =
           tip_sims!(t0, tfb, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
 
-        if iszero(na) || !iszero(nf) || nsp === 1_000
+        if iszero(na) || !iszero(nf) || nsp >= 1_000
           return iTfbd(0.0, 0.0, 0.0, false, false, false,
                    Float64[], Float64[]),
             0, 0, NaN, NaN
@@ -648,7 +662,7 @@ function fsbi_ifbd(bi  ::iBffs,
         tx, na, nsp, nf =
           fossiltip_sim!(t0, tfb, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
 
-        if iszero(na) || !iszero(nf) || nsp === 1_000
+        if iszero(na) || !iszero(nf) || nsp >= 1_000
           return iTfbd(0.0, 0.0, 0.0, false, false, false,
                    Float64[], Float64[]),
             0, 0, NaN, NaN
@@ -706,7 +720,7 @@ function tip_sims!(tree::iTfbd,
           _sim_gbmfbd(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], α, σλ, σμ, ψ,
             δt, srδt, na - 1, nsp, 1_000, nf)
 
-        if iszero(na) || !iszero(nf) || nsp === 1_000
+        if iszero(na) || !iszero(nf) || nsp >= 1_000
           return tree, na, nsp, nf
         end
 
