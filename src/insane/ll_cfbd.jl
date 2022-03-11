@@ -30,7 +30,9 @@ function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
         llik_cfbd(tree.d1::sTfbd, λ, μ, ψ)
     end
   else
-    - e(tree)*(λ + μ + ψ) + (isextinct(tree) ? log(μ) : 0.0)
+    - e(tree)*(λ + μ + ψ)              + 
+      (isextinct(tree) ? log(μ) : 0.0) +
+      (isfossil(tree)  ? log(ψ) : 0.0)
   end
 end
 

@@ -42,7 +42,7 @@ function llik_gbm(tree::iTfbd,
     end
   else
     ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
-      false, isextinct(tree), false)
+      false, isextinct(tree), isfossil(tree))
   end
 end
 
@@ -135,8 +135,10 @@ function ll_gbm_b(lλv ::Array{Float64,1},
     # add to global likelihood
     ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
          llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
+
     # add to global likelihood
-    ll -= llbd*δt
+    llbd += Float64(nI) * ψ
+    ll   -= llbd*δt
 
     lλvi1 = lλv[nI+2]
     lμvi1 = lμv[nI+2]
@@ -148,7 +150,7 @@ function ll_gbm_b(lλv ::Array{Float64,1},
       srfdt = sqrt(fdt)
       ll += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)
       ll += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
-      ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
+      ll -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)) + ψ)
     end
 
     #if speciation
@@ -274,7 +276,9 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
     ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
          llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
     # add to global likelihood
-    ll -= llbd*δt
+    # add to global likelihood
+    llbd += Float64(nI) * ψ
+    ll   -= llbd*δt
 
     lλvi1 = lλv[nI+2]
     lμvi1 = lμv[nI+2]
@@ -288,7 +292,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
       srfdt = sqrt(fdt)
       ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)
       ll  += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
-      ll  -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
+      ll  -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)) + ψ)
       ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
       ssμ += (lμvi1 - lμvi)^2/(2.0*fdt)
       nλ  += 1.0

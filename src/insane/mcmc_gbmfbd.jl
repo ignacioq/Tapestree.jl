@@ -388,10 +388,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
       # psi update
       elseif pupi === 3
 
-        """
-        error here
-        """
-
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
         ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)

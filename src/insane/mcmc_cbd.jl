@@ -638,7 +638,7 @@ function update_λ!(llc    ::Float64,
                    stem   ::Bool,
                    λ_prior::NTuple{2,Float64})
 
-  nsi = stem ? 0.0 : 1.0
+  nsi = Float64(!stem)
 
   λp  = randgamma(λ_prior[1] + ns - nsi, λ_prior[2] + L)
 

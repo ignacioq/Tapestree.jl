@@ -774,9 +774,8 @@ function update_ψ!(llc    ::Float64,
 
   llc += nf * log(ψp/ψc) + L * (ψc - ψp)
   prc += llrdgamma(ψp, ψc, ψ_prior[1], ψ_prior[2])
-  ψc   = ψp
 
-  return llc, prc, ψc
+  return llc, prc, ψp
 end
 
 

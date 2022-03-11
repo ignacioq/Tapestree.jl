@@ -114,7 +114,7 @@ Returns the log-likelihood for a branch according to `gbmce`.
   ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
 
   # add to global likelihood
-  llbd += Float64(nI)*μ
+  llbd += Float64(nI) * μ
   ll   -= llbd*δt
 
   lλvi1 = lλv[nI+2]
@@ -128,9 +128,8 @@ Returns the log-likelihood for a branch according to `gbmce`.
   # if speciation
   if λev
     ll += lλvi1
-  end
   # if extinction
-  if μev
+  elseif μev
     ll += log(μ)
   end
 
