@@ -13,94 +13,17 @@ Created 07 07 2020
 
 
 """
-    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iT}
-
-Recipe for plotting values given by `lv` through time for a `iT`.
-"""
-@recipe function f(tree::T,
-                   lv  ::Function,
-                   dt  ::Float64,
-                   e   ::Bool) where {T <: iT}
-
-  # prepare data
-  ts, r = time_rate(tree, dt, lv)
-
-  if e
-    fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
-  else
-    fx = time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0])
-  end
-
-  lf = size(fx,1)
-
-  # common shape plot defaults
-  legend          --> :none
-  xguide          --> "time"
-  yguide          --> string(lv)[2:end]*"(t)"
-  xflip           --> true
-  fontfamily      --> :Helvetica
-  tickfontfamily  --> :Helvetica
-  tickfontsize    --> 8
-  grid            --> :off
-  xtick_direction --> :out
-  ytick_direction --> :out
-  fillcolor       --> :orange
-  fillalpha       --> 0.3
-
-  # range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
-
-    sh0 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lf)
-      push!(sh0, (ts[i], fx[i,1]))
-    end
-    for i in lf:-1:1
-      push!(sh0, (ts[i], fx[i,5]))
-    end
-
-    # Shape(sh0)
-    sh0
-  end
-
-  # [0.25, 0.75] quantile range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
-
-    sh1 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lf)
-      push!(sh1, (ts[i], fx[i,2]))
-    end
-    for i in lf:-1:1
-      push!(sh1, (ts[i], fx[i,4]))
-    end
-
-    # Shape(sh1)
-    sh1
-  end
-
-  # midline
-  @series begin
-    seriestype := :line
-    linecolor --> "#00304999"
-    linewidth --> 1.4
-
-    ts, fx[:,3]
-  end
-
-end
-
-
-
-
-"""
     function f(tree::T, zfun::Function) where {T <: iT}
 
 Recipe for plotting a Type `iT`.
 """
-@recipe function f(tree::T, zfun::Function) where {T <: iT}
+@recipe function f(tree     ::T, 
+                   zfun     ::Function; 
+                   shownodes = (T <: iTf),
+                   tip        = false,
+                   speciation = false,
+                   extinct    = false,
+                   fossil     = true) where {T <: iT}
 
   x = Float64[]
   y = Float64[]
@@ -127,6 +50,31 @@ Recipe for plotting a Type `iT`.
   xtick_direction --> :out
   yticks          --> (nothing)
   yshowaxis       --> false
+
+  if shownodes
+
+    xN = Float64[]
+    yN = Float64[]
+
+    th = treeheight(tree)
+    nt = ntips(tree)
+
+    _rplottree!(tree, th, 1:nt, xN, yN)
+
+    shape = Symbol[:circle]
+    col   = Symbol[:pink]
+    alpha = Float64[0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))]
+    _nodeproperties!(tree, shape, col, alpha, 
+      Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
+
+    @series begin
+      markershape --> shape
+      markercolor --> col
+      markeralpha --> alpha
+      markersize  --> 2.0
+      xN, yN
+    end
+  end
 
   return x, y
 end
@@ -299,17 +247,24 @@ end
 
 
 """
-    f(tree::T; shownodes  = (T <: iTf),
-               showlabels = (T === sT_label || T === sTf_label))
-               where {T <: iTree}
+    f(tree::T;
+     shownodes  = (T <: iTf),
+     showlabels = (T <: Tlabel),
+     tip        = false,
+     speciation = false,
+     extinct    = false,
+     fossil     = true) where {T <: iTree}
 
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 == true`. True by default for `sTf` trees to make sampled ancestors visible.
 """
 @recipe function f(tree::T;
                    shownodes  = (T <: iTf),
-                   showlabels = (T === sT_label || T === sTf_label)) where {
-                                                                    T <: iTree}
+                   showlabels = (T <: Tlabel),
+                   tip        = false,
+                   speciation = false,
+                   extinct    = false,
+                   fossil     = true) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
@@ -338,11 +293,14 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     shape = Symbol[:circle]
     col   = Symbol[:pink]
     alpha = Float64[0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))]
-    _nodeproperties!(tree, shape, col, alpha)
 
-    markershape       --> shape
-    markercolor       --> col
-    markeralpha       --> alpha
+    _nodeproperties!(tree, shape, col, alpha, 
+      Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
+
+    markershape --> shape
+    markercolor --> col
+    markeralpha --> alpha
+    markersize  --> 2.0
   end
 
   if showlabels
@@ -370,55 +328,61 @@ end
 
 
 """
-    _nodeproperties!(tree ::T,
-                     shape::Vector{Symbol},
-                     col  ::Vector{Symbol},
-                     alpha::Vector{Float64}) where {T <: iTree}
+    _nodeproperties!(tree      ::T,
+                     shape     ::Vector{Symbol},
+                     col       ::Vector{Symbol},
+                     alpha     ::Vector{Float64},
+                     tip       ::Float64,
+                     speciation::Float64,
+                     extinct   ::Float64,
+                     fossil    ::Float64) where {T <: iTree}
 
 Completes the lists of node shapes, colors and alphas according to their
 properties.
 """
-function _nodeproperties!(tree ::T,
-                          shape::Vector{Symbol},
-                          col  ::Vector{Symbol},
-                          alpha::Vector{Float64}) where {T <: iTree}
+function _nodeproperties!(tree      ::T,
+                          shape     ::Vector{Symbol},
+                          col       ::Vector{Symbol},
+                          alpha     ::Vector{Float64},
+                          tip       ::Float64,
+                          speciation::Float64,
+                          extinct   ::Float64,
+                          fossil    ::Float64) where {T <: iTree}
 
-  defd1 = def1(tree)
-  defd2 = def2(tree)
-  fx = !isdefined(tree, :fx) || isfix(tree)
+  fx = isfix(tree)
 
-  if defd1 || defd2
-    # not a tip
-
-    if defd1 && defd2
+  if def1(tree)
+    if def2(tree)
       # speciation event
       push!(shape, :circle, fill(:none,5)...)
       push!(col, :gray, fill(:white,5)...)
-      push!(alpha, 0.5+0.5*fx, 0, 0, 0, 0, 0)
-      _nodeproperties!(tree.d1, shape, col, alpha)
+      push!(alpha, (0.5+0.5*fx)*speciation, 0, 0, 0, 0, 0)
+      _nodeproperties!(tree.d1, shape, col, alpha, 
+        tip, speciation, extinct, fossil)
       push!(shape, :none, :none)
       push!(col, :white, :white)
       push!(alpha, 0, 0)
-      _nodeproperties!(tree.d2, shape, col, alpha)
-    elseif isfossil(tree)
-      # sampled ancestor
+      _nodeproperties!(tree.d2, shape, col, alpha,
+        tip, speciation, extinct, fossil)
+    else
       push!(shape, :none, :none, :square)
       push!(col, :white, :white, :red)
-      push!(alpha, 0, 0, 0.5+0.5*fx)
-      _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
-    else
-      # error
-      @warn "Star node incorrectly defined (neither tip, speciation or fossil)"
-      push!(shape, :none, :none, :star)
-      push!(col, :white, :white, :yellow)
-      push!(alpha, 0, 0, 0.5+0.5*fx)
-      _nodeproperties!(defd1 ? tree.d1 : tree.d2, shape, col, alpha)
+      push!(alpha, 0, 0, (0.5+0.5*fx)*fossil)
+      _nodeproperties!(tree.d1, shape, col, alpha,
+        tip, speciation, extinct, fossil)
     end
   else
     # tip
-    isfossil(tree) ? (push!(shape, :square); push!(col, :red)) :
-                     (push!(shape, :circle); push!(col, :blue))
-    push!(alpha, 0.5+0.5*fx)
+    if isfossil(tree)
+      push!(shape, :square); push!(col, :red)
+      push!(alpha, (0.5+0.5*fx)*fossil)
+    elseif isextinct(tree)
+      push!(shape, :circle); push!(col, :blue)
+      push!(alpha, (0.5+0.5*fx)*extinct)
+    else
+      push!(shape, :circle); push!(col, :blue)
+      push!(alpha, (0.5+0.5*fx)*tip)
+    end
   end
 
   return nothing
@@ -494,6 +458,90 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   return  x, y
 end
 
+
+
+
+
+
+"""
+    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iT}
+
+Recipe for plotting values given by `lv` through time for a `iT`.
+"""
+@recipe function f(tree::T,
+                   lv  ::Function,
+                   dt  ::Float64,
+                   e   ::Bool) where {T <: iT}
+
+  # prepare data
+  ts, r = time_rate(tree, dt, lv)
+
+  if e
+    fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
+  else
+    fx = time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0])
+  end
+
+  lf = size(fx,1)
+
+  # common shape plot defaults
+  legend          --> :none
+  xguide          --> "time"
+  yguide          --> string(lv)[2:end]*"(t)"
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+  ytick_direction --> :out
+  fillcolor       --> :orange
+  fillalpha       --> 0.3
+
+  # range shape
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh0 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lf)
+      push!(sh0, (ts[i], fx[i,1]))
+    end
+    for i in lf:-1:1
+      push!(sh0, (ts[i], fx[i,5]))
+    end
+
+    # Shape(sh0)
+    sh0
+  end
+
+  # [0.25, 0.75] quantile range shape
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh1 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lf)
+      push!(sh1, (ts[i], fx[i,2]))
+    end
+    for i in lf:-1:1
+      push!(sh1, (ts[i], fx[i,4]))
+    end
+
+    # Shape(sh1)
+    sh1
+  end
+
+  # midline
+  @series begin
+    seriestype := :line
+    linecolor --> "#00304999"
+    linewidth --> 1.4
+
+    ts, fx[:,3]
+  end
+
+end
 
 
 
@@ -636,6 +684,5 @@ function _rplottrait!(tree::T,
     end
   end
 end
-
 
 

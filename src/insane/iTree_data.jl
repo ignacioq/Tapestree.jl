@@ -205,13 +205,11 @@ l(tree::sTf_label) = getproperty(tree, :l)
 
 
 """
-    tiplabels!(tree::sT_label)
-    tiplabels!(tree::sTf_label)
+    tiplabels(tree::T) where {T <: Tlabel}
 
 Returns tip labels for `sT_label` and `sTf_label`.
 """
-tiplabels(tree::sT_label)  = _tiplabels!(tree, String[])
-tiplabels(tree::sTf_label) = _tiplabels!(tree, String[])
+tiplabels(tree::T) where {T <: Tlabel} = _tiplabels!(tree, String[])
 
 
 

@@ -226,6 +226,17 @@ Union Types
 
 
 
+
+"""
+    Union type for label trees
+
+Tlabel = Union{sT_label, sTf_label}
+"""
+Tlabel = Union{sT_label, sTf_label}
+
+
+
+
 """
     Union type for trait data
 
