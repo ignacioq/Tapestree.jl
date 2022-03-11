@@ -74,7 +74,7 @@ function llik_gbm(Ξ   ::Vector{iTfbd},
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, σμ, ψ, δt, srδt)
-      if !it(bi) && !isfossil(bi)
+      if !(it(bi) || isfossil(bi))
         ll += λt(bi)
       end
     end

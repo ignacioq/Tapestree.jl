@@ -419,12 +419,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
       # forward simulation update
       else
 
-        """
-        error here
-        """
-
-
-
         bix = ceil(Int64,rand()*el)
 
         llc, dλ, ssλ, ssμ, nλ, L =
@@ -574,7 +568,7 @@ function update_fs!(bix    ::Int64,
         if iψb
           λ1c = lλ(ξ1)
           l1  = lastindex(λ1c)
-          unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
+          unsafe_copyto!(λ1c,    1, λ1p, 1, l1) # set new daughter 1 λ vector
           unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
         else
           λ1c = lλ(ξ1)

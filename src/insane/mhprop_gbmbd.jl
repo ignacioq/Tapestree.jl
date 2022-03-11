@@ -25,15 +25,15 @@ Created 27 05 2020
 
 Make a `gbm-bd` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTbd,
-                            ξ2  ::iTbd,
+function _daughters_update!(ξ1  ::T,
+                            ξ2  ::T,
                             λf  ::Float64,
                             μf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
                             σμ  ::Float64,
                             δt  ::Float64,
-                            srδt::Float64)
+                            srδt::Float64) where {T <: iTbdU}
   @inbounds begin
 
     λ1c  = lλ(ξ1)
