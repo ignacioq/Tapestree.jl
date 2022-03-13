@@ -588,7 +588,7 @@ function fsbi_ce(bi  ::iBffs,
       # add tips until the present
       tx, na, nsp = tip_sims!(t0, tfb, α, σλ, μ, δt, srδt, na, nsp)
 
-      if na < 1 || nsp >= 1_000
+      if nsp >= 1_000
         return iTce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
       end
     end
@@ -636,7 +636,7 @@ function tip_sims!(tree::iTce,
         _sim_gbmce(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt,
                    na - 1, nsp, 1_000)
 
-      if na < 1 || nsp >= 1_000
+      if nsp >= 1_000
         return tree, na, nsp
       end
 

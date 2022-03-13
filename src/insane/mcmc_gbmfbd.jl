@@ -375,8 +375,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            return
         end
 
-        if isnan(dλ) @show pupi end 
-
       # σλ & σμ update
       elseif pupi === 2
 
@@ -390,8 +388,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            return
         end
 
-        if isnan(dλ) @show pupi end
-
       # psi update
       elseif pupi === 3
 
@@ -402,8 +398,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            @show ll0, llc, i, pupi, Ξ
            return
         end
-
-        if isnan(dλ) @show pupi end
 
       # gbm update
       elseif pupi === 4
@@ -421,8 +415,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            return
         end
 
-        if isnan(dλ) @show pupi end
-
       # forward simulation update
       else
 
@@ -437,8 +429,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
            @show ll0, llc, i, pupi, Ξ, bix
            return
         end
-
-        if isnan(dλ) @show pupi, bix end
 
       end
     end
@@ -509,7 +499,7 @@ function update_fs!(bix    ::Int64,
   bi  = idf[bix]
 
   # current tree
-  ξc  = Ξ[bix]
+  ξc = Ξ[bix]
 
   # forward simulate an internal branch
   ξp, np, ntp, λf, μf =
@@ -538,7 +528,7 @@ function update_fs!(bix    ::Int64,
       if isfinite(acr)
         if !itb
           ξ1  = Ξ[d1(bi)]
-          # if terminal fossil
+          # if fossil
           if iψb
             llrd, acrd, drλ, ssrλ, ssrμ, λ1p, μ1p, =
               _daughter_update!(ξ1, λf, μf, α, σλ, σμ, δt, srδt)
@@ -549,6 +539,10 @@ function update_fs!(bix    ::Int64,
           end
           llr += llrd
           acr += acrd
+        else
+          drλ  = 0.0
+          ssrλ = 0.0
+          ssrμ = 0.0
         end
       else
         return llc, dλ, ssλ, ssμ, nλ, L
@@ -662,7 +656,7 @@ function fsbi_ifbd(bi  ::iBffs,
         tx, na, nsp, nf =
           fossiltip_sim!(t0, tfb, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
 
-        if iszero(na) || !iszero(nf) || nsp >= 1_000
+        if !iszero(nf) || nsp >= 1_000
           return iTfbd(0.0, 0.0, 0.0, false, false, false,
                    Float64[], Float64[]),
             0, 0, NaN, NaN
@@ -720,7 +714,7 @@ function tip_sims!(tree::iTfbd,
           _sim_gbmfbd(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], α, σλ, σμ, ψ,
             δt, srδt, na - 1, nsp, 1_000, nf)
 
-        if iszero(na) || !iszero(nf) || nsp >= 1_000
+        if !iszero(nf) || nsp >= 1_000
           return tree, na, nsp, nf
         end
 
@@ -797,7 +791,7 @@ function fossiltip_sim!(tree::iTfbd,
       stree, na, nsp, nf =
         _sim_gbmfbd(t, lλ(tree)[end], lμ(tree)[end], α, σλ, σμ, ψ,
           δt, srδt, na-1, nsp, 1_000, nf)
-      if iszero(na) || !iszero(nf) || nsp === 1_000
+      if !iszero(nf) || nsp >= 1_000
         return tree, na, nsp, nf
       end
       # merge to current tip
@@ -893,9 +887,11 @@ function update_gbm!(bix  ::Int64,
 
       # make between decoupled trees node update
       if isfossil(bi)
+
         llc, ssλ, ssμ, λf =
           update_duo!(lλ(lξi), lλ(ξ1), lμ(lξi), lμ(ξ1), e(lξi), e(ξ1),
             fdt(lξi), fdt(ξ1), α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
+
       else
         llc, dλ, ssλ, ssμ, λf =
           update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), lμ(lξi), lμ(ξ1), lμ(ξ2),

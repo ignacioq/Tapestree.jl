@@ -610,7 +610,7 @@ function fsbi_ct(bi  ::iBffs,
       # add tips until the present
       tx, na, nsp = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na, nsp)
 
-      if na < 1 || nsp >= 1_000
+      if nsp >= 1_000
         return iTct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
       end
     end
@@ -656,7 +656,7 @@ function tip_sims!(tree::iTct,
         _sim_gbmct(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, ϵ, δt, srδt,
                    na - 1, nsp, 1_000)
 
-      if na < 1 || nsp >= 1_000
+      if nsp >= 1_000
         return tree, na, nsp
       end
 

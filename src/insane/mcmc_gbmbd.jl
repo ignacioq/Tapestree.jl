@@ -577,7 +577,7 @@ function fsbi(bi  ::iBffs,
       # add tips until the present
       tx, na, nsp = tip_sims!(t0, tfb, α, σλ, σμ, δt, srδt, na, nsp)
 
-      if na < 1 || nsp >= 1_000
+      if nsp >= 1_000
         return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]),
           0, 0, NaN, NaN
       end
@@ -629,7 +629,7 @@ function tip_sims!(tree::iTbd,
         _sim_gbmbd(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], α, σλ, σμ, δt, srδt,
                    na - 1, nsp, 1_000)
 
-      if na < 1 || nsp >= 1_000
+      if nsp >= 1_000
         return tree, na, nsp
       end
 

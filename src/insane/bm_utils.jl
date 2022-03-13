@@ -248,7 +248,7 @@ Brownian motion simulation function for updating a branch in place.
 
     # for standard δt
     x[1] = xi
-    @avx for i = Base.OneTo(l-2)
+    @simd for i = Base.OneTo(l-2)
       x[i+1] *= srδt*σ
       x[i+1] += α*δt
     end
@@ -282,29 +282,32 @@ Brownian bridge simulation function for updating a branch in place.
                      fdt ::Float64,
                      srδt::Float64)
 
-  l = lastindex(x)
+  @inbounds begin
 
-  randn!(x)
+    l = lastindex(x)
 
-  # for standard δt
-  x[1] = xi
-  @avx for i = Base.OneTo(l-2)
-    x[i+1] *= srδt*σ
-  end
-  x[l] *= sqrt(fdt)*σ
-  cumsum!(x, x)
+    randn!(x)
 
-  # make bridge
-  if l > 2
-    ite = 1.0/(Float64(l-2) * δt + fdt)
-    xdf = (x[l] - xf)
-
-    @avx for i = Base.OneTo(l-1)
-      x[i] -= (Float64(i-1) * δt * ite * xdf)
+    # for standard δt
+    x[1] = xi
+    @simd for i = Base.OneTo(l-2)
+      x[i+1] *= srδt*σ
     end
+    x[l] *= sqrt(fdt)*σ
+    cumsum!(x, x)
+
+    # make bridge
+    if l > 2
+      ite = 1.0/(Float64(l-2) * δt + fdt)
+      xdf = (x[l] - xf)
+
+      @avx for i = Base.OneTo(l-1)
+        x[i] -= (Float64(i-1) * δt * ite * xdf)
+      end
+    end
+    # for last non-standard δt
+    x[l] = xf
   end
-  # for last non-standard δt
-  x[l] = xf
 
   return nothing
 end
@@ -349,7 +352,7 @@ Brownian bridge simulation function for updating two vectors
     # for standard δt
     x0[1] = x0i
     x1[1] = x1i
-    @avx for i = Base.OneTo(l-2)
+    @simd for i = Base.OneTo(l-2)
       x0[i+1] *= srδt*σ0
       x1[i+1] *= srδt*σ1
     end
