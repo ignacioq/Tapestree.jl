@@ -133,21 +133,21 @@ function sim_cbd_surv(t   ::Float64,
     tw = cbd_wait(λ, μ)
 
     if tw > t
-      return sTbd(t), true, nsp
+      return true, nsp
     end
 
     if λorμ(λ, μ)
       nsp += 1
-      d1, surv, nsp = sim_cbd_surv(t - tw, λ, μ, surv, nsp)
-      d2, surv, nsp = sim_cbd_surv(t - tw, λ, μ, surv, nsp)
+      surv, nsp = sim_cbd_surv(t - tw, λ, μ, surv, nsp)
+      surv, nsp = sim_cbd_surv(t - tw, λ, μ, surv, nsp)
 
-      return sTbd(d1, d2, tw), surv, nsp
+      return surv, nsp
     else
-      return sTbd(tw, true), surv, nsp
+      return surv, nsp
     end
   end
 
-  return sTbd(0.0, false), true, nsp
+  return true, nsp
 end
 
 

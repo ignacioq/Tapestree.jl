@@ -696,8 +696,6 @@ function _sim_gbmbd_surv(t   ::Float64,
 
   if !surv && nsp < 200
 
-    λv = Float64[λt]
-    μv = Float64[μt]
     bt = 0.0
 
     while true
@@ -710,9 +708,6 @@ function _sim_gbmbd_surv(t   ::Float64,
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
 
-        push!(λv, λt1)
-        push!(μv, μt1)
-
         λm = exp(0.5*(λt + λt1))
         μm = exp(0.5*(μt + μt1))
 
@@ -720,18 +715,14 @@ function _sim_gbmbd_surv(t   ::Float64,
           # if speciation
           if λorμ(λm, μm)
             nsp += 1
-            return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                           iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                           bt, δt, t, false, false, λv, μv), true, nsp
+            return true, nsp
           # if extinction
           else
-            return iTbd(bt, δt, t, true, false, λv, μv), surv, nsp
+            return surv, nsp
           end
         end
 
-        return iTbd(bt, δt, t, false, false, λv, μv), true, nsp
+        return true, nsp
       end
 
       t  -= δt
@@ -740,9 +731,6 @@ function _sim_gbmbd_surv(t   ::Float64,
       λt1 = rnorm(λt + α*δt, srδt*σλ)
       μt1 = rnorm(μt, srδt*σμ)
 
-      push!(λv, λt1)
-      push!(μv, μt1)
-
       λm = exp(0.5*(λt + λt1))
       μm = exp(0.5*(μt + μt1))
 
@@ -750,15 +738,15 @@ function _sim_gbmbd_surv(t   ::Float64,
         # if speciation
         if λorμ(λm, μm)
           nsp += 1
-          td1, surv, nsp =
+          surv, nsp =
             _sim_gbmbd_surv(t, λt1, μt1, α, σλ, σμ, δt, srδt, surv, nsp)
-          td2, surv, nsp =
+          surv, nsp =
             _sim_gbmbd_surv(t, λt1, μt1, α, σλ, σμ, δt, srδt, surv, nsp)
 
-          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), surv, nsp
+          return surv, nsp
         # if extinction
         else
-          return iTbd(bt, δt, δt, true, false, λv, μv), surv, nsp
+          return surv, nsp
         end
       end
 
@@ -767,7 +755,7 @@ function _sim_gbmbd_surv(t   ::Float64,
     end
   end
 
-  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), true, nsp
+  return true, nsp
 end
 
 

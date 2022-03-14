@@ -29,7 +29,7 @@ function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Boo
     while true
       m      += 1.0
       ntries += 1
-      t1, s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
+      s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
 
       s1 && break
       ntries === ntry && break
@@ -44,10 +44,10 @@ function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Boo
       m      += 1.0
       ntries += 1
 
-      t1, s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
+      s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
 
       if s1
-        t2, s2, n2 = sim_cbd_surv(t, λ, μ, false, 1)
+        s2, n2 = sim_cbd_surv(t, λ, μ, false, 1)
         s2 && break
       end
       ntries === ntry && break
@@ -92,7 +92,7 @@ function m_surv_gbmce(t   ::Float64,
     while true
       m      += 1.0
       ntries += 1
-      t1, s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
 
       s1 && break
       ntries === ntry && break
@@ -105,10 +105,10 @@ function m_surv_gbmce(t   ::Float64,
       m      += 1.0
       ntries += 1
 
-      t1, s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
 
       if s1
-        t2, s2, n2 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
+        s2, n2 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
         s2 && break
       end
       ntries === ntry && break
@@ -153,7 +153,7 @@ function m_surv_gbmct(t   ::Float64,
     while true
       m      += 1.0
       ntries += 1
-      t1, s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
 
       s1 && break
       ntries === ntry && break
@@ -166,10 +166,10 @@ function m_surv_gbmct(t   ::Float64,
       m      += 1.0
       ntries += 1
 
-      t1, s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
 
       if s1
-        t2, s2, n2 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
+        s2, n2 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
         s2 && break
       end
       ntries === ntry && break
@@ -216,7 +216,7 @@ function m_surv_gbmbd(t   ::Float64,
     while true
       m      += 1.0
       ntries += 1
-      t1, s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
 
       s1 && break
       ntries === ntry && break
@@ -229,10 +229,10 @@ function m_surv_gbmbd(t   ::Float64,
       m      += 1.0
       ntries += 1
 
-      t1, s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
 
       if s1
-        t2, s2, n2 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
+        s2, n2 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
         s2 && break
       end
       ntries === ntry && break

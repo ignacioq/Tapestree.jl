@@ -634,7 +634,6 @@ function _sim_gbmct_surv(t   ::Float64,
 
   if !surv && nsp < 200
 
-    λv = Float64[λt]
     bt = 0.0
 
     while true
@@ -646,23 +645,19 @@ function _sim_gbmct_surv(t   ::Float64,
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         λm  = exp(0.5*(λt + λt1))
-        push!(λv, λt1)
 
         if divevϵ(λm, ϵ, t)
           # if speciation
           if λorμ(λm, ϵ*λm)
             nsp += 1
-            return iTct(
-                    iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                    iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                    bt, δt, t, false, false, λv), true, nsp
+            return true, nsp
           # if extinction
           else
-            return iTct(bt, δt, t, true, false, λv), surv, nsp
+            return surv, nsp
           end
         end
 
-        return iTct(bt, δt, t, false, false, λv), true, nsp
+        return true, nsp
       end
 
       t  -= δt
@@ -670,21 +665,18 @@ function _sim_gbmct_surv(t   ::Float64,
 
       λt1 = rnorm(λt + α*δt, srδt*σλ)
       λm  = exp(0.5*(λt + λt1))
-      push!(λv, λt1)
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
         if λorμ(λm, ϵ*λm)
           nsp += 1
-          td1, surv, nsp =
-            _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nsp)
-          td2, surv, nsp =
-            _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nsp)
+          surv, nsp = _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nsp)
+          surv, nsp = _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nsp)
 
-          return iTct(td1, td2, bt, δt, δt, false, false, λv), surv, nsp
+          return surv, nsp
         # if extinction
         else
-          return iTct(bt, δt, δt, true, false, λv), surv, nsp
+          return surv, nsp
         end
       end
 
@@ -692,7 +684,7 @@ function _sim_gbmct_surv(t   ::Float64,
     end
   end
 
-  return iTct(0.0, 0.0, 0.0, false, false, Float64[]), true, nsp
+  return true, nsp
 end
 
 
