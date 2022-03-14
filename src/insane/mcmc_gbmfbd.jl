@@ -369,11 +369,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # σλ & σμ update
       elseif pupi === 2
@@ -382,22 +382,22 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
             llc, prc, mc, th, stem, δt, srδt, σλ_prior, σμ_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # psi update
       elseif pupi === 3
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # gbm update
       elseif pupi === 4
@@ -409,11 +409,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
             stem, δt, srδt, lλxpr, lμxpr)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # forward simulation update
       else
@@ -424,11 +424,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, llc, dλ, ssλ, ssμ, nλ, L,
             δt, srδt)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ, bix
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - !stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       end
     end

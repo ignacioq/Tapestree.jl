@@ -145,6 +145,8 @@ mutable struct sTf_label <: sT
   iψ::Bool
   l ::String
 
+  sTf_label(e::Float64, l::String) =
+    (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::String) =
