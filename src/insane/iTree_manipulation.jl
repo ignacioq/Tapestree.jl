@@ -358,51 +358,24 @@ fossilizepasttips!(tree::T) where {T <: iTf} =
 
 
 """
-    _fossilizepasttips!(tree::T, th::Float64) where {T <: iTf}
+    _fossilizepasttips!(tree::T, t::Float64) where {T <: iTf}
 
-Change all past tips to fossil tips, initialized at tree height `th`.
+Change all past tips to fossil tips, initialized at tree height `t`.
 """
-function _fossilizepasttips!(tree::T, th::Float64) where {T <: iTf}
+function _fossilizepasttips!(tree::T, t::Float64) where {T <: iTf}
 
-  th -= e(tree)
+  t -= e(tree)
 
-  if istip(tree::T) && !isapprox(th, 0, atol=1e-8)
-    tree.iψ = true
+  if def1(tree)
+    _fossilizepasttips!(tree.d1::T, t)
+    if def2(tree)
+      _fossilizepasttips!(tree.d2::T, t)
+    end
+  else
+    if istip(tree::T) && !isapprox(t, 0, atol=1e-6)
+      tree.iψ = true
+    end
   end
-
-  if def1(tree) _fossilizepasttips!(tree.d1::T, th) end
-  if def2(tree) _fossilizepasttips!(tree.d2::T, th) end
-end
-
-
-
-
-"""
-    extinguishpasttips!(tree::T) where {T <: iTf}
-
-Change all past tips to extinct tips.
-"""
-extinguishpasttips!(tree::T) where {T <: iTf} =
-  _extinguishpasttips!(tree::T, treeheight(tree::T))
-
-
-
-
-"""
-    _extinguishpasttips!(tree::T, th::Float64) where {T <: iTf}
-
-Change all past tips to extinct tips, initialized at tree height `th`.
-"""
-function _extinguishpasttips!(tree::T, th::Float64) where {T <: iTf}
-
-  th -= e(tree)
-
-  if istip(tree::T) && !isapprox(th, 0, atol=1e-8)
-    tree.iμ = true
-  end
-
-  if def1(tree) _extinguishpasttips!(tree.d1::T, th) end
-  if def2(tree) _extinguishpasttips!(tree.d2::T, th) end
 end
 
 

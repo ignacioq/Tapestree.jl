@@ -266,7 +266,8 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    tip        = false,
                    speciation = false,
                    extinct    = false,
-                   fossil     = true) where {T <: iTree}
+                   fossil     = true,
+                   textsize   = 8) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
@@ -319,7 +320,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       markershape        := :circle
       markersize         := 0
       markeralpha        := fill(0.0,nt)
-      series_annotations := map(x -> (x, :Helvetica, :left, 8, :black), labels)
+      series_annotations := map(x -> (x, :Helvetica, :left, textsize, :black), labels)
       fill(0.0 - 0.02*th, nt), 1:nt
     end
   end

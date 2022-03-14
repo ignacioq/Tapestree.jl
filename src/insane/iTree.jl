@@ -145,15 +145,11 @@ mutable struct sTf_label <: sT
   iψ::Bool
   l ::String
 
-  sTf_label(e::Float64) =
-    (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=""; x)
-  sTf_label(e::Float64, l::String) =
-    (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::String) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
-  sTf_label(d1::sTf_label, e::Float64,l::String) =
+  sTf_label(d1::sTf_label, e::Float64, l::String) =
     (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; x.l=l; x)
   sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::String) =
     new(d1, d2, e, false, false, l)
@@ -161,7 +157,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::sTf_label) =
-  print(io, "insane simple fossilized labelled tree with ", ntips(t),
+  print(io, "insane simple fossil labelled tree with ", ntips(t),
     " tips (", ntipsextinct(t)," extinct) and ", nfossils(t)," fossils")
 
 

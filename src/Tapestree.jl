@@ -36,20 +36,22 @@ using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe
 
 using .INSANE: read_newick, write_newick, 
-  sTpb, sTbd, iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
+  sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd,
-  insane_cpb, insane_cbd, iscrowntree, rm_stem!,
-  insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, 
+  iscrowntree, rm_stem!,
+  insane_cpb, insane_cbd, insane_cfbd, 
+  insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, extract_vector!, mcmc_array, lλ, lμ, 
-  remove_extinct, reconstructed, remove_unsampled, remove_fossils, 
-  remove_sampled_ancestors, ntipsalive, ntips, treeheight
+  remove_extinct, remove_unsampled, remove_fossils, 
+  ntipsalive, ntips, treeheight
 export read_newick, write_newick, 
-  sTpb, sTbd, iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
+  sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd,
-  insane_cpb, insane_cbd, iscrowntree, rm_stem!,
-  insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, 
+  iscrowntree, rm_stem!,
+  insane_cpb, insane_cbd, insane_cfbd, 
+  insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, extract_vector!, mcmc_array, lλ, lμ, 
-  remove_extinct, reconstructed, remove_unsampled, remove_fossils, 
-  remove_sampled_ancestors, ntipsalive, ntips, treeheight
+  remove_extinct, remove_unsampled, remove_fossils, 
+  ntipsalive, ntips, treeheight
 
 end # module Tapestree

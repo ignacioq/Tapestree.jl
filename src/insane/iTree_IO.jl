@@ -33,19 +33,17 @@ function read_newick(in_file::String; fossil = false)
     elseif v === ')'
       nop -= 1
     elseif v === ','
-      if iszero(nop) 
-        stem = false 
+      if iszero(nop)
+        stem = false
       end
     end
   end
 
   if fossil
-    tree = from_string(s, stem, sTf_label)
+    return from_string(s, stem, sTf_label)
   else
-    tree = from_string(s, stem, sT_label)
+    return from_string(s, stem, sT_label)
   end
-
-  return tree::Union{sT_label, sTf_label}
 end
 
 
@@ -97,10 +95,10 @@ Takes a string and turns it into a `sTf_label` tree.
 """
 function from_string(s::String, stem::Bool, ::Type{sTf_label})
 
-  # if root (starts with one stem lineage)
+  # if root
   if stem
     tree = _from_string(s, sTf_label)
-  # if no root (starts with two crown lineage)
+  # if crown
   else
     nop = 0
     ci  = 0
@@ -169,7 +167,14 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
   s1 = s[1:(ci-1)]
   s2 = s[(ci+1):end]
 
-  if isempty(s1)
+  # if fossils are coded as 0 edge tip
+  if last(s1, 4) == ":0.0" && onlyone(s1, ':')
+    wd = findlast(isequal(':'), s1)
+    return T(_from_string(s2, T), ei, s1[1:(wd-1)])
+  elseif last(s2, 4) == ":0.0" && onlyone(s2, ':')
+    wd = findlast(isequal(':'), s2)
+    return T(_from_string(s1, T), ei, s2[1:(wd-1)])
+  elseif isempty(s1)
     return T(_from_string(s2, T), ei, lab)
   elseif isempty(s2)
     return T(_from_string(s1, T), ei, lab)
@@ -177,6 +182,7 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
     return T(_from_string(s1, T), _from_string(s2, T), ei, lab)
   end
 end
+
 
 
 
@@ -253,7 +259,7 @@ function _to_string(tree::T, n::Int64) where {T <: iTree}
   else
     n += 1
 
-    return string("t",n,":",e(tree)), n 
+    return string("t",n,":",e(tree)), n
   end
 end
 
