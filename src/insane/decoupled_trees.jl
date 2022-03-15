@@ -425,9 +425,9 @@ function iTfbd!(Ξ   ::Vector{iTfbd},
     lλl = lλv[l]
     lμl = lμv[l]
     push!(Ξ, iTfbd(
-               iTfbd(1e-6, δt, 1e-6, true, false, true, 
-                 Float64[lλl, rnorm(lλl + α*1e-6, 1e-3*σλ)], 
-                 Float64[lμl, rnorm(lμl,          1e-3*σμ)]),
+               iTfbd(1e-10, δt, 1e-10, true, false, false, 
+                 Float64[lλl, rnorm(lλl + α*1e-10, 1e-5*σλ)], 
+                 Float64[lμl, rnorm(lμl,           1e-5*σμ)]),
                et, δt, fdti, false, true, true, lλv, lμv))
   else
     push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(tree), true, lλv, lμv))

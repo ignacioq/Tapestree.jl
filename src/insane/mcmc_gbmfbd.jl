@@ -756,8 +756,6 @@ end
 
 
 
-
-
 """
     fossiltip_sim!(tree::iTfbd,
                    t   ::Float64,
@@ -791,9 +789,11 @@ function fossiltip_sim!(tree::iTfbd,
       stree, na, nsp, nf =
         _sim_gbmfbd(t, lλ(tree)[end], lμ(tree)[end], α, σλ, σμ, ψ,
           δt, srδt, na-1, nsp, 1_000, nf)
+
       if !iszero(nf) || nsp >= 1_000
         return tree, na, nsp, nf
       end
+
       # merge to current tip
       tree.d1 = stree
     elseif isfix(tree.d1)

@@ -665,72 +665,6 @@ end
 
 
 """
-    fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
-Fixes the the path to tip `wi` in d1 order.
-"""
-function fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
-
-  if istip(tree)
-    if isalive(tree)
-      ix += 1
-      if ix === wi
-        fix!(tree)
-        return true, ix
-      end
-    end
-  else
-    f, ix = fixtip1!(tree.d1, wi, ix)
-    if f
-      fix!(tree)
-      return true, ix
-    end
-    f, ix = fixtip1!(tree.d2, wi, ix)
-    if f
-      fix!(tree)
-      return true, ix
-    end
-  end
-
-  return false, ix
-end
-
-
-
-
-"""
-    fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
-Fixes the the path to tip `wi` in d2 order.
-"""
-function fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
-
-  if istip(tree)
-    if isalive(tree)
-      ix += 1
-      if ix === wi
-        fix!(tree)
-        return true, ix
-      end
-    end
-  else
-    f, ix = fixtip2!(tree.d2, wi, ix)
-    if f
-      fix!(tree)
-      return true, ix
-    end
-    f, ix = fixtip2!(tree.d1, wi, ix)
-    if f
-      fix!(tree)
-      return true, ix
-    end
-  end
-
-  return false, ix
-end
-
-
-
-
-"""
     fixrtip!(tree::T) where T <: iTree
 
 Fixes the the path for a random non extinct tip.
@@ -1406,8 +1340,8 @@ function _remove_extinct!(tree::T) where {T <: iTf}
       end
       return tree
     else
-      if isextinct(tree.d1)
-        return T(e(tree), isextinct(tree), isfossil(tree), isfix(tree)) 
+      if isextinct(tree.d1) 
+        return T(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
       end
     end
   end
@@ -1675,7 +1609,7 @@ function _remove_extinct!(tree::iTfbd)
     else
       if isextinct(tree.d1)
         return iTfbd(e(tree), dt(tree), fdt(tree),
-            true, isfossil(tree), isfix(tree), lλ(tree), lμ(tree))
+            isextinct(tree), isfossil(tree), isfix(tree), lλ(tree), lμ(tree))
       end
     end
   end
@@ -1718,7 +1652,7 @@ function _remove_fossils!(tree::T) where {T <: iTf}
   if def1(tree)
     if isfossil(tree.d1)
       if isfossil(tree.d2)
-        return typeof(tree)(1.0, false, true, true)
+        return T(1.0, false, true, true)
       else
         tree.d2.e += tree.e
         tree = tree.d2
