@@ -112,7 +112,9 @@ Extract values from `lv` function at times `ts` across the tree.
 
   if def1(tree)
     _time_rate!(tree.d1, ts, tdt, r, tii + nts + 1, ct - et, lv)
-    _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
+    if def2(tree)
+      _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
+    end
   end
 end
 

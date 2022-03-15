@@ -17,8 +17,8 @@ Created 07 07 2020
 
 Recipe for plotting a Type `iT`.
 """
-@recipe function f(tree     ::T, 
-                   zfun     ::Function; 
+@recipe function f(tree     ::T,
+                   zfun     ::Function;
                    shownodes = (T <: iTf),
                    tip        = false,
                    speciation = false,
@@ -63,10 +63,10 @@ Recipe for plotting a Type `iT`.
 
     shape = Symbol[:circle]
     col   = Symbol[:pink]
-    alpha = 
+    alpha =
       Float64[(0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))) *
               Float64(speciation)]
-    _nodeproperties!(tree, shape, col, alpha, 
+    _nodeproperties!(tree, shape, col, alpha,
       Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
 
     @series begin
@@ -250,12 +250,14 @@ end
 
 """
     f(tree::T;
-     shownodes  = (T <: iTf),
-     showlabels = (T <: Tlabel),
-     tip        = false,
-     speciation = false,
-     extinct    = false,
-     fossil     = true) where {T <: iTree}
+      shownodes  = (T <: iTf),
+      showlabels = (T <: Tlabel),
+      tip        = false,
+      speciation = false,
+      extinct    = false,
+      fossil     = true,
+      textsize   = 8,
+      type       = :phylogram) where {T <: iTree}
 
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 == true`. True by default for `sTf` trees to make sampled ancestors visible.
@@ -267,38 +269,57 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    speciation = false,
                    extinct    = false,
                    fossil     = true,
-                   textsize   = 8) where {T <: iTree}
+                   textsize   = 8,
+                   type       = :phylogram) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
 
-  th = treeheight(tree)
-  nt = ntips(tree)
+  th  = treeheight(tree)
+  nts = ntips(tree)
 
-  _rplottree!(tree, th, 1:nt, x, y)
+  _rplottree!(tree, th, 1:nts, x, y)
+
+  ntF = Float64(nts)
+
+  if type === :phylogram
+
+    xlims           --> (-th*0.05, th*1.05)
+    ylims           --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
+    xguide          --> "time"
+    xflip           --> true
+    fontfamily      --> :Helvetica
+    tickfontfamily  --> :Helvetica
+    tickfontsize    --> 8
+    xtick_direction --> :out
+
+ elseif type === :radial
+
+    x, y = append_forradial(x, y, 50)
+    polar_coords!(x, y, 360.0/ntF, th)
+
+    xlims           --> (-th*1.05, th*1.05)
+    ylims           --> (-th*1.05, th*1.05)
+    xticks          --> (nothing)
+    xshowaxis       --> false
+  else
+    @error "$type must be either phylogram of radial"
+  end
 
   # plot defaults
   legend          --> false
-  xguide          --> "time"
   seriescolor     --> :black
-  xlims           --> (-th*0.05, th*1.05)
-  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
-  xflip           --> true
-  fontfamily      --> :Helvetica
-  tickfontfamily  --> :Helvetica
-  tickfontsize    --> 8
   grid            --> :off
-  xtick_direction --> :out
   yticks          --> (nothing)
   yshowaxis       --> false
 
   if shownodes
     shape = Symbol[:circle]
     col   = Symbol[:pink]
-    alpha = 
+    alpha =
       Float64[(0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))) *
               Float64(speciation)]
-    _nodeproperties!(tree, shape, col, alpha, 
+    _nodeproperties!(tree, shape, col, alpha,
       Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
 
     markershape --> shape
@@ -311,7 +332,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     labels = String[]
     _tiplabels!(tree, labels)
 
-    txt = [(0.0, i, labels[i]) for i in 1:nt]
+    txt = [(0.0, i, labels[i]) for i in 1:nts]
 
     @series begin
       seriestype         := :scatter
@@ -319,13 +340,79 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       markercolor        := :black
       markershape        := :circle
       markersize         := 0
-      markeralpha        := fill(0.0,nt)
+      markeralpha        := fill(0.0,nts)
       series_annotations := map(x -> (x, :Helvetica, :left, textsize, :black), labels)
-      fill(0.0 - 0.02*th, nt), 1:nt
+
+      xa = fill(0.0 - 0.02*th, nts)
+      ya = collect(1.0:1.0:ntF)
+
+      if type === :phylogram
+        xa, ya
+      elseif type === :radial
+        polar_coords!(xa, ya, 360.0/ntF, th)
+        xa, ya
+      end
     end
   end
 
   return x, y
+end
+
+
+
+
+"""
+    append_forradial(x::Vector{Float64}, y::Vector{Float64}, n::Int64)
+
+Appends `n` new data for making circle into `x` and `y`.
+"""
+function append_forradial(x::Vector{Float64}, y::Vector{Float64}, n::Int64)
+
+  nnan = div(lastindex(y),3)
+  nani = 1
+  i1   = 1
+  i2   = 2
+
+  while nani != nnan
+    y1 = y[i1]
+    y2 = y[i2]
+
+    if y1 === y2
+      i1   += 3
+      i2   += 3
+      nani += 1
+      continue
+    else
+      lr = collect(LinRange(y1, y2, n))
+      y = append!(y[1:(i1-1)], lr,          y[(i2+1):end])
+      x = append!(x[1:i1], fill(x[i1], n-2), x[i2:end])
+      i1   += n+1
+      i2   += n+1
+      nani += 1
+    end
+  end
+  return x, y
+end
+
+
+
+
+"""
+    polar_coords!(x::Vector{Float64}, y::Vector{Float64}, α::Float64)
+
+Transform `x` and `y` cartesian coordinates into polar coordinates.
+"""
+function polar_coords!(x ::Vector{Float64},
+                       y ::Vector{Float64},
+                       α ::Float64,
+                       th::Float64)
+  @simd for i in Base.OneTo(lastindex(x))
+    x[i]  = th - x[i]
+    r     = x[i]
+    a     = α * y[i]
+    x[i] *= cos(a*π/180.0)
+    y[i]  = r * sin(a*π/180.0)
+  end
 end
 
 
@@ -361,7 +448,7 @@ function _nodeproperties!(tree      ::T,
       push!(shape, :circle, fill(:none,5)...)
       push!(col, :gray, fill(:white,5)...)
       push!(alpha, (0.5+0.5*fx)*speciation, 0, 0, 0, 0, 0)
-      _nodeproperties!(tree.d1, shape, col, alpha, 
+      _nodeproperties!(tree.d1, shape, col, alpha,
         tip, speciation, extinct, fossil)
       push!(shape, :none, :none)
       push!(col, :white, :white)
@@ -417,8 +504,8 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   grid            --> :off
   tick_direction  --> :out
   seriestype      --> :steppost
-  if maximum(y)>=10
-    yaxis         --> :log
+  if maximum(y) >= 10.0
+    yscale         --> :log
   end
 
   return  x, y
@@ -455,8 +542,8 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   grid            --> :off
   tick_direction  --> :out
   seriestype      --> :steppost
-  if maximum(y)>=10
-    yaxis         --> :log
+  if maximum(x -> isnan(x) ? 1.0 : x, y) >= 10.0
+    yscale         --> :log
   end
 
   return  x, y
@@ -474,13 +561,13 @@ Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    lv  ::Function,
-                   dt  ::Float64,
-                   e   ::Bool) where {T <: iT}
+                   dt  ::Float64;
+                   iexp = true) where {T <: iT}
 
   # prepare data
   ts, r = time_rate(tree, dt, lv)
 
-  if e
+  if iexp
     fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
   else
     fx = time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0])
@@ -681,7 +768,7 @@ function _rplottrait!(tree::T,
   defd1 = def1(tree)
   defd2 = def2(tree)
 
-  if defd1 
+  if defd1
     _rplottrait!(tree.d1, xc, x, y)
     if defd2
       _rplottrait!(tree.d2, xc, x, y)

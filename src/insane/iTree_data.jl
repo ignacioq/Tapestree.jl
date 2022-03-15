@@ -1208,17 +1208,15 @@ function _eventimes!(tree::T,
                      ee  ::Array{Float64,1}) where {T <: iTf}
 
   et = e(tree)
-  if isextincttip(tree)
+  if isextinct(tree)
     push!(ee, t - et)
-  else
-    if def1(tree)
-      if def2(tree)
-        push!(se, t - et)
-      else
-        _eventimes!(tree.d1, t - et, se, ee)
-      end
-    elseif def2(tree)
+  elseif def1(tree)
+    if def2(tree)
+      push!(se, t - et)
+      _eventimes!(tree.d1, t - et, se, ee)
       _eventimes!(tree.d2, t - et, se, ee)
+    else
+      _eventimes!(tree.d1, t - et, se, ee)
     end
   end
 
