@@ -263,3 +263,19 @@ iTbdU = Union{iTbd, iTfbd}
 iTbdU = Union{iTbd, iTfbd}
 
 
+
+
+
+
+#=
+Type aliases (for compatibility with older versions)
+=#
+
+
+const iTgbmpb = iTpb
+
+const iTgbmce = iTce
+
+const iTgbmct = iTct
+
+const iTgbmbd = iTbd

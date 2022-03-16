@@ -37,21 +37,23 @@ export tribe, simulate_tribe
 
 using .INSANE: read_newick, write_newick, 
   sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd,
+  iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd,
   iscrowntree, rm_stem!,
   insane_cpb, insane_cbd, insane_cfbd, 
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, 
-  ntipsalive, ntips, treeheight
+  ntipsalive, ntips, treeheight, ltt
 export read_newick, write_newick, 
   sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd,
+  iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd,
   iscrowntree, rm_stem!,
   insane_cpb, insane_cbd, insane_cfbd, 
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, 
-  ntipsalive, ntips, treeheight
+  ntipsalive, ntips, treeheight, ltt
 
 end # module Tapestree

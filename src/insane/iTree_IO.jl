@@ -23,7 +23,7 @@ function read_newick(in_file::String; fossil::Bool = false)
 
   # if 1 tree
   if onlyone(s, ';')
-    return _read_newick(s, fossil)
+    return _parse_newick(s, fossil)
   # if more than 1 tree
   else
     allsc = findall(';', s)

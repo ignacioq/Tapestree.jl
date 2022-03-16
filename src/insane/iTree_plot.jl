@@ -23,33 +23,43 @@ Recipe for plotting a Type `iT`.
                    tip        = false,
                    speciation = false,
                    extinct    = false,
-                   fossil     = true) where {T <: iT}
+                   fossil     = true,
+                   type       = :phylogram) where {T <: iT}
 
   x = Float64[]
   y = Float64[]
   z = Float64[]
 
   th = treeheight(tree)
-  nt = ntips(tree)
+  nts = ntips(tree)
 
-  _rplottree!(tree, th, 1:nt, zfun, x, y, z)
+  _rplottree!(tree, th, 1:nts, zfun, x, y, z)
 
-  # plot defaults
-  line_z          --> z
-  linecolor       --> :inferno
-  legend          --> :none
-  colorbar        --> true
-  xguide          --> "time"
-  xlims           --> (-th*0.05, th*1.05)
-  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
-  xflip           --> true
-  fontfamily      --> :Helvetica
-  tickfontfamily  --> :Helvetica
-  tickfontsize    --> 8
-  grid            --> :off
-  xtick_direction --> :out
-  yticks          --> (nothing)
-  yshowaxis       --> false
+  ntF = Float64(nts)
+
+  if type === :phylogram
+
+    xlims           --> (-th*0.05, th*1.05)
+    ylims           --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
+    xguide          --> "time"
+    xflip           --> true
+    fontfamily      --> :Helvetica
+    tickfontfamily  --> :Helvetica
+    tickfontsize    --> 8
+    xtick_direction --> :out
+
+ elseif type === :radial
+
+    x, y, z = append_forradial(x, y, z, 50)
+    polar_coords!(x, y, 360.0/ntF, th)
+
+    xlims           --> (-th*1.05, th*1.05)
+    ylims           --> (-th*1.05, th*1.05)
+    xticks          --> (nothing)
+    xshowaxis       --> false
+  else
+    @error "$type must be either phylogram of radial"
+  end
 
   if shownodes
 
@@ -74,9 +84,24 @@ Recipe for plotting a Type `iT`.
       markercolor --> col
       markeralpha --> alpha
       markersize  --> 2.0
-      xN, yN
+      if type === :phylogram
+        xN, yN
+      elseif type === :radial
+        polar_coords!(xN, yN, 360.0/ntF, th)
+        xN, yN
+      end
     end
   end
+
+  # plot defaults
+  line_z          --> z
+  linecolor       --> :inferno
+  legend          --> :none
+  colorbar        --> true
+  yshowaxis       --> false
+  grid            --> :off
+  yticks          --> (nothing)
+  yshowaxis       --> false
 
   return x, y
 end
@@ -314,6 +339,15 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   yshowaxis       --> false
 
   if shownodes
+
+    xN = Float64[]
+    yN = Float64[]
+
+    th = treeheight(tree)
+    nt = ntips(tree)
+
+    _rplottree!(tree, th, 1:nt, xN, yN)
+
     shape = Symbol[:circle]
     col   = Symbol[:pink]
     alpha =
@@ -322,10 +356,18 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     _nodeproperties!(tree, shape, col, alpha,
       Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
 
-    markershape --> shape
-    markercolor --> col
-    markeralpha --> alpha
-    markersize  --> 2.0
+    @series begin
+      markershape --> shape
+      markercolor --> col
+      markeralpha --> alpha
+      markersize  --> 2.0
+      if type === :phylogram
+        xN, yN
+      elseif type === :radial
+        polar_coords!(xN, yN, 360.0/ntF, th)
+        xN, yN
+      end
+    end
   end
 
   if showlabels
@@ -366,7 +408,8 @@ end
 
 Appends `n` new data for making circle into `x` and `y`.
 """
-function append_forradial(x::Vector{Float64}, y::Vector{Float64}, n::Int64)
+function append_forradial(x::Vector{Float64}, 
+                          y::Vector{Float64}, n::Int64)
 
   nnan = div(lastindex(y),3)
   nani = 1
@@ -398,6 +441,52 @@ end
 
 
 """
+    append_forradial(x::Vector{Float64},
+                     y::Vector{Float64}, 
+                     z::Vector{Float64},
+                     n::Int64)
+
+Appends `n` new data for making circle into `x` and `y`.
+"""
+function append_forradial(x::Vector{Float64},
+                          y::Vector{Float64}, 
+                          z::Vector{Float64},
+                          n::Int64)
+
+  nnan = count(isnan, y)
+  nani = 1
+  i1   = 1
+  i2   = 2
+
+  while nani != nnan
+    y1 = y[i1]
+    y2 = y[i2]
+
+    if y1 === y2
+      i1    = findnext(isnan, y, i2+1) + 1
+      i2    = findnext(isnan, y, i1+2) - 1
+      nani += 1
+      continue
+    else
+      n = ceil(Int64, 2.0*abs(y1 - y2))
+      lr = collect(LinRange(y1, y2, n))
+      y = append!(y[1:(i1-1)], lr,          y[(i2+1):end])
+      x = append!(x[1:i1], fill(x[i1], n-2), x[i2:end])
+      z = append!(z[1:i1], fill(z[i1], n-2), z[i2:end])
+
+      i1   += n+1
+      i2   += n+1
+      nani += 1
+    end
+  end
+
+  return x, y, z
+end
+
+
+
+
+"""
     polar_coords!(x::Vector{Float64}, y::Vector{Float64}, α::Float64)
 
 Transform `x` and `y` cartesian coordinates into polar coordinates.
@@ -406,6 +495,7 @@ function polar_coords!(x ::Vector{Float64},
                        y ::Vector{Float64},
                        α ::Float64,
                        th::Float64)
+
   @simd for i in Base.OneTo(lastindex(x))
     x[i]  = th - x[i]
     r     = x[i]
@@ -505,7 +595,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   tick_direction  --> :out
   seriestype      --> :steppost
   if maximum(y) >= 10.0
-    yscale         --> :log
+    yscale         --> :log10
   end
 
   return  x, y
@@ -543,7 +633,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   tick_direction  --> :out
   seriestype      --> :steppost
   if maximum(x -> isnan(x) ? 1.0 : x, y) >= 10.0
-    yscale         --> :log
+    yscale         --> :log10
   end
 
   return  x, y
