@@ -9,19 +9,46 @@ t(-_-t)
 Created 07 07 2020
 =#
 
-
-
 """
     read_newick(in_file::String; fossil = false)
 
 Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
 is true from `in_file`.
 """
-function read_newick(in_file::String; fossil = false)
+function read_newick(in_file::String; fossil::Bool = false)
 
   io = open(in_file)
   s = readlines(io)[1]
   close(io)
+
+  # if 1 tree
+  if onlyone(s, ';')
+    return _read_newick(s, fossil)
+  # if more than 1 tree
+  else
+    allsc = findall(';', s)
+
+    t1 = _parse_newick(s[1:allsc[1]], fossil)
+    tv = typeof(t1)[t1]
+
+    for i in 2:lastindex(allsc)
+      push!(tv, _parse_newick(s[(allsc[i-1] + 1):(allsc[i])], fossil))
+    end
+
+    return tv
+  end
+end
+
+
+
+
+"""
+    _parse_newick(in_file::String; fossil = false)
+
+Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
+is true from `in_file`.
+"""
+function _parse_newick(s::String, fossil::Bool)
 
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
