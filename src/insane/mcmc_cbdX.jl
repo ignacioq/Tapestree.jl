@@ -59,7 +59,7 @@ function insane_cbd(tree    ::sT_label,
 
   n    = ntips(tree)
   th   = treeheight(tree)
-  stem = !iszero(e(tree))
+  stem = Int64(iszero(e(tree)))
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -150,7 +150,7 @@ function mcmc_burn_cbd(Ξ       ::Vector{sTbdX},
                        σxc     ::Float64,
                        mc      ::Float64,
                        th      ::Float64,
-                       stem    ::Bool,
+                       stem    ::Int64,
                        inodes  ::Array{Int64,1},
                        pup     ::Array{Int64,1},
                        prints  ::Int64)
@@ -252,7 +252,7 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
                   σxc     ::Float64,
                   mc      ::Float64,
                   th      ::Float64,
-                  stem    ::Bool,
+                  stem    ::Int64,
                   λ_prior ::NTuple{2,Float64},
                   μ_prior ::NTuple{2,Float64},
                   σx_prior::NTuple{2,Float64},

@@ -625,7 +625,7 @@ function _ntipsalive(tree::T, n::Int64) where {T <: iTf}
     if def2(tree)
       n = _ntipsalive(tree.d2, n)
     end
-  elseif isalive(tree)
+  elseif isalive(tree) && !isfossil(tree)
     n += 1
   end
 

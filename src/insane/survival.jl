@@ -13,18 +13,18 @@ Created 16 11 2021
 
 
 """
-    m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Bool)
+    m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, c::Int64)
 
 Sample the total number of `m` trials until both simulations survive
 for constant birth-death.
 """
-function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Bool)
+function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, c::Int64)
 
   ntries = 0
   m      = 0.0
 
   # if stem conditioning
-  if stem
+  if iszero(c)
 
     while true
       m      += 1.0
@@ -35,10 +35,8 @@ function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Boo
       ntries === ntry && break
     end
 
-    return m
-
   # if crown conditioning
-  else
+  elseif isone(c)
 
     while true
       m      += 1.0
@@ -53,8 +51,13 @@ function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, stem::Boo
       ntries === ntry && break
     end
 
-    return m
+  # no conditioning
+  else
+
+    return 1.0
   end
+
+  return m
 end
 
 
@@ -206,12 +209,12 @@ function m_surv_gbmbd(t   ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
                       ntry::Int64,
-                      stem::Bool)
+                      c   ::Int64)
   ntries = 0
   m      = 0.0
 
   # if stem conditioning
-  if stem
+  if iszero(c)
 
     while true
       m      += 1.0
@@ -223,7 +226,7 @@ function m_surv_gbmbd(t   ::Float64,
     end
 
   # if crown conditioning
-  else
+  elseif isone(c)
 
     while true
       m      += 1.0
@@ -237,6 +240,11 @@ function m_surv_gbmbd(t   ::Float64,
       end
       ntries === ntry && break
     end
+
+  # no conditioning
+  else
+
+    return 1.0
   end
 
   return m

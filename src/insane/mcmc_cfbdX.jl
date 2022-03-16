@@ -62,7 +62,6 @@ function insane_cfbd(tree    ::sTf_label,
 
   n    = ntips(tree)
   th   = treeheight(tree)
-  stem = !iszero(e(tree))
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -91,6 +90,21 @@ function insane_cfbd(tree    ::sTf_label,
     end
   else
     λc, μc, ψc = λi, μi, ψi
+  end
+
+  # define conditioning
+  if ntipsalive(tree) > 0
+    # if crown conditioning
+    if def1(tree) && def2(tree) && 
+       ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
+      stem = 1
+    # if stem conditioning
+    else
+      stem = 0
+    end
+  # no survival
+  else
+    stem = 2
   end
   # M attempts of survival
   mc = m_surv_cbd(th, λc, μc, 500, stem)
@@ -169,7 +183,7 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
                         σxc     ::Float64,
                         mc      ::Float64,
                         th      ::Float64,
-                        stem    ::Bool,
+                        stem    ::Int64,
                         inodes  ::Array{Int64,1},
                         pup     ::Array{Int64,1},
                         prints  ::Int64)
@@ -227,7 +241,7 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
         bix = inodes[nix]
 
         llc, prc, sdX =
-          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
       # forward simulation proposal update
       else
@@ -278,7 +292,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
                    σxc     ::Float64,
                    mc      ::Float64,
                    th      ::Float64,
-                   stem    ::Bool,
+                   stem    ::Int64,
                    λ_prior ::NTuple{2,Float64},
                    μ_prior ::NTuple{2,Float64},
                    ψ_prior ::NTuple{2,Float64},
@@ -369,7 +383,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
         bix = inodes[nix]
 
         llc, prc, sdX =
-          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
         # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -755,7 +769,6 @@ end
               llc     ::Float64,
               prc     ::Float64,
               sdX     ::Float64,
-              stem    ::Bool,
               x0_prior::NTuple{2, Float64})
 
 Make a `gbm` update for an internal branch and its descendants.
@@ -767,7 +780,6 @@ function update_x!(bix     ::Int64,
                    llc     ::Float64,
                    prc     ::Float64,
                    sdX     ::Float64,
-                   stem    ::Bool,
                    x0_prior::NTuple{2, Float64})
 
   ξi  = Ξ[bix]
@@ -784,7 +796,7 @@ function update_x!(bix     ::Int64,
 
   root = iszero(pa(bi))
   # if crown root
-  if root && !stem
+  if root && iszero(e(bi))
     if !fx(bi)
       llc, prc, sdX =
          _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)

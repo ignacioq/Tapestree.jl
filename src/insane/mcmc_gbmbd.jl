@@ -62,7 +62,7 @@ function insane_gbmbd(tree    ::sT_label,
   th   = treeheight(tree)
   δt  *= max(0.1,round(th, RoundDown, digits = 2))
   srδt = sqrt(δt)
-  stem = !iszero(e(tree))
+  stem = Int64(iszero(e(tree)))
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -167,16 +167,15 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          σμc     ::Float64,
                          mc      ::Float64,
                          th      ::Float64,
-                         stem    ::Bool,
+                         stem    ::Int64,
                          δt      ::Float64,
                          srδt    ::Float64,
                          inodes  ::Array{Int64,1},
                          pup     ::Array{Int64,1},
                          prints  ::Int64)
   λ0  = lλ(Ξ[1])[1]
-  nsi = stem ? 0.0 : λ0
-
-  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - nsi + log(mc) + prob_ρ(idf)
+  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(stem) * λ0 + 
+        log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2]) +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2]) +
         logdnorm(αc,               α_prior[1], α_prior[2]^2) +
@@ -283,7 +282,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     σμc     ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
-                    stem    ::Bool,
+                    stem    ::Int64,
                     λa_prior::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -701,7 +700,7 @@ function update_gbm!(bix  ::Int64,
                      ssμ  ::Float64,
                      mc   ::Float64,
                      th   ::Float64,
-                     stem ::Bool,
+                     stem ::Int64,
                      δt   ::Float64,
                      srδt ::Float64,
                      lλxpr::Float64,
@@ -716,10 +715,10 @@ function update_gbm!(bix  ::Int64,
     ter2 = it(idf[d2(bi)])
     root = iszero(pa(bi))
     # if crown
-    if root && !stem
+    if root && iszero(e(bi))
       llc, dλ, ssλ, ssμ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th,
-          δt, srδt, lλxpr, lμxpr)
+          δt, srδt, lλxpr, lμxpr, 1)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
@@ -789,7 +788,7 @@ function update_α!(αc     ::Float64,
                    prc    ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   stem   ::Bool,
+                   stem   ::Int64,
                    δt     ::Float64,
                    srδt   ::Float64,
                    α_prior::NTuple{2,Float64})
@@ -849,7 +848,7 @@ function update_σ!(σλc     ::Float64,
                    prc     ::Float64,
                    mc      ::Float64,
                    th      ::Float64,
-                   stem    ::Bool,
+                   stem    ::Int64,
                    δt      ::Float64,
                    srδt    ::Float64,
                    σλ_prior::NTuple{2,Float64},
