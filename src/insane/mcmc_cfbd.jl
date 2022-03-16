@@ -336,7 +336,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   # make tree vector
   treev  = sTfbd[]
 
-  pbar = Progress(niter, prints, "running mcmc...", 0)
+  pbar = Progress(niter, prints, "running mcmc...", 20)
 
   for it in Base.OneTo(niter)
 
