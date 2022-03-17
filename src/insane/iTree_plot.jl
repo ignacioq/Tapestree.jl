@@ -94,14 +94,15 @@ Recipe for plotting a Type `iT`.
   end
 
   # plot defaults
-  line_z          --> z
-  linecolor       --> :inferno
-  legend          --> :none
-  colorbar        --> true
-  yshowaxis       --> false
-  grid            --> :off
-  yticks          --> (nothing)
-  yshowaxis       --> false
+  line_z              --> z
+  linecolor           --> :inferno
+  legend              --> :none
+  colorbar            --> true
+  colorbar_fontfamily --> :Helvetica
+  yshowaxis           --> false
+  grid                --> :off
+  yticks              --> (nothing)
+  yshowaxis           --> false
 
   return x, y
 end
