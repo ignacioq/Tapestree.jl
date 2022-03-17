@@ -96,14 +96,19 @@ Extract values from `lv` function at times `ts` across the tree.
   δt = dt(tree)
   vt = lv(tree)
 
-  nts = Int64(fld(et - (ct - ts[tii]), tdt))
+  if isapprox(ct, 0.0, atol = 1e-10)
+    return nothing
+  end
+
+  nts, re = divrem(et - (ct - ts[tii]), tdt, RoundDown)
+  nts = convert(Int64,nts) - (iszero(re) ? 1 : 0)
   tsr = tii:(tii + nts)
 
   # have to match ts times to lv vector
   @simd for i in tsr
     tsi = ts[i]
     bt  = ct - tsi
-    ix  = fld(bt, δt)
+    ix  = div(bt, δt, RoundDown)
     tts = δt *  ix
     ttf = δt * (ix + 1.0)
     Ix  = Int64(ix) + 1
@@ -116,6 +121,8 @@ Extract values from `lv` function at times `ts` across the tree.
       _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
     end
   end
+
+  return nothing
 end
 
 

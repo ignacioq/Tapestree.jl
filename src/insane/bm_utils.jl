@@ -517,8 +517,7 @@ function duoldnorm(x  ::Float64,
                    σ  ::Float64)
 
   invt = 1.0/(td1 + td2)
-  return ldnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2,
-    sqrt(td1 * td2 * invt)*σ)
+  return ldnorm_bm(x, invt * (td2 * xd1 + td1 * xd2), sqrt(td1 * td2 * invt)*σ)
 end
 
 

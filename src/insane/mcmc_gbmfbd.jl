@@ -869,9 +869,9 @@ function update_gbm!(bix  ::Int64,
   bi  = idf[bix]
   if !it(bi)
     id1 = d1(bi)
-    id2 = d2(bi)
     ξ1  = Ξ[id1]
     if !isfossil(bi)
+      id2 = d2(bi)
       ξ2  = Ξ[id2]
     end
   end
@@ -901,20 +901,18 @@ function update_gbm!(bix  ::Int64,
 
       # make between decoupled trees node update
       if isfossil(bi)
-
         llc, ssλ, ssμ, λf =
           update_duo!(lλ(lξi), lλ(ξ1), lμ(lξi), lμ(ξ1), e(lξi), e(ξ1),
             fdt(lξi), fdt(ξ1), α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
-
       else
         llc, dλ, ssλ, ssμ, λf =
           update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), lμ(lξi), lμ(ξ1), lμ(ξ2),
             e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
             α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-
-        # set fixed `λ(t)` in branch
-        setλt!(bi, lλ(lξi)[end])
       end
+
+      # set fixed `λ(t)` in branch
+      setλt!(bi, lλ(lξi)[end])
     end
   end
 

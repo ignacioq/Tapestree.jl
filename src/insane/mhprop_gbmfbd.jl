@@ -276,7 +276,7 @@ function update_duo!(tree::iTfbd,
         false, false)
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
-        false, isextinct(tree.d1))
+        false, false)
 
     acr = llrbdp + llrbd1
 
