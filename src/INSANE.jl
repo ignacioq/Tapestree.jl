@@ -10,7 +10,7 @@ module INSANE
   using SpecialFunctions: erf
   using DelimitedFiles: writedlm
   using ProgressMeter: Progress, next!
-  using Statistics: quantile
+  using Statistics: quantile, mean
   using LoopVectorization: @avx
   using RecipesBase
 

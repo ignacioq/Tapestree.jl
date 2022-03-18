@@ -25,6 +25,11 @@ struct Ltt
   t::Array{Float64,1}
 end
 
+# pretty-printing
+Base.show(io::IO, x::Ltt) =
+  print(io, "LTT plot starting at ", maximum(x.t), 
+            " with ", x.n[end], " extant tips")
+
 
 
 
