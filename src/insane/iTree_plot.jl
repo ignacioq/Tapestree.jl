@@ -409,7 +409,7 @@ end
 
 Appends `n` new data for making circle into `x` and `y`.
 """
-function append_forradial(x::Vector{Float64}, 
+function append_forradial(x::Vector{Float64},
                           y::Vector{Float64}, n::Int64)
 
   nnan = div(lastindex(y),3)
@@ -443,14 +443,14 @@ end
 
 """
     append_forradial(x::Vector{Float64},
-                     y::Vector{Float64}, 
+                     y::Vector{Float64},
                      z::Vector{Float64},
                      n::Int64)
 
 Appends `n` new data for making circle into `x` and `y`.
 """
 function append_forradial(x::Vector{Float64},
-                          y::Vector{Float64}, 
+                          y::Vector{Float64},
                           z::Vector{Float64},
                           n::Int64)
 
@@ -573,6 +573,17 @@ end
 
 
 
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# DIVERSITY THROUGH TIME
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+
+
 """
     f(nt::Ltt)
 
@@ -623,7 +634,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   # plot defaults
   legend          --> false
   xguide          --> "time"
-  yguide          --> "N lineages"
+  yguide          --> "Diversity"
   xflip           --> true
   seriescolor     --> :black
   seriesalpha     --> min(1.0, 10.0/Float64(lastindex(nts)))
@@ -641,6 +652,116 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 end
 
 
+
+
+"""
+    f(nts::Vector{Ltt}, tdt::Float64)
+
+Recipe for plotting lineage through time plots of type `Ltt`.
+"""
+@recipe function f(nts::Vector{Ltt}, tdt::Float64)
+
+  n  = lastindex(nts)
+  th = maximum(map(x -> maximum(x.t), nts))
+
+  # make time vector (present = 0.0)
+  ts  = [0.0:tdt:th...]
+  lts = length(ts)
+
+  q = zeros(Int64, lts, n)
+  for j in Base.OneTo(n), i in Base.OneTo(lts)
+    q[i,j] = nsppt(nts[j], ts[i])
+  end
+
+  Q = Array{Float64}(undef, lts, 6)
+  for i in Base.OneTo(lts)
+    qi = q[i,:]
+    filter!(!isnan, qi)
+    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.75, 0.975, 1.0])
+  end
+
+  # estimate mean of means
+  m = mean(q, dims=2)
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "Diversity"
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  tick_direction  --> :out
+  fillcolor       --> :orange
+  fillalpha       --> 0.3
+
+  if maximum(x -> isnan(x) ? 1.0 : x, m) >= 10.0
+    yscale         --> :log10
+  end
+
+   # range shape
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh0 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lts)
+      push!(sh0, (ts[i], Q[i,2]))
+    end
+    for i in lts:-1:1
+      push!(sh0, (ts[i], Q[i,5]))
+    end
+
+    # Shape(sh0)
+    sh0
+  end
+
+  # [0.25, 0.75] quantile range shape
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh1 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lts)
+      push!(sh1, (ts[i], Q[i,3]))
+    end
+    for i in lts:-1:1
+      push!(sh1, (ts[i], Q[i,4]))
+    end
+
+    # Shape(sh1)
+    sh1
+  end
+
+  # midline
+  @series begin
+    seriestype := :line
+    linecolor --> "#00213a99"
+    linewidth --> 1.4
+
+    ts, m
+  end
+
+  # range
+  @series begin
+    seriestype := :line
+    linecolor  --> "#426c7999"
+    linewidth  --> 1.4
+    linestyle  --> :dashdot
+    ts, Q[:,[1,6]]
+  end
+end
+
+
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# RATE THROUGH TIME
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
 
@@ -725,6 +846,137 @@ Recipe for plotting values given by `lv` through time for a `iT`.
 
 end
 
+
+
+
+"""
+    function f(tree::Vector{T},
+               lv  ::Function,
+               dt  ::Float64;
+               iexp = true) where {T <: iT}
+
+Recipe for plotting values given by `lv` through time for a `iT`.
+"""
+@recipe function f(trees::Vector{T},
+                   lv   ::Function,
+                   tdt  ::Float64;
+                   fn   = exp) where {T <: iT}
+
+  ntrees = lastindex(trees)
+  riv = Vector{Float64}[]
+
+  lts = 0
+  ts  = Float64[]
+  for t in trees
+    tsi, ri = time_rate(t, tdt, lv)
+    ri     = map(x -> mean(fn, x), ri)
+
+    if lastindex(tsi) > lts
+      ts  = tsi
+      reverse!(ts)
+      lts = lastindex(tsi)
+    end
+
+    reverse!(ri)
+    push!(riv, ri)
+  end
+
+  # estimate quantiles
+  q = fill(NaN, lts, ntrees)
+  # estimate quantiles
+  for i in Base.OneTo(ntrees)
+    ri = riv[i]
+    lr = lastindex(ri)
+    q[1:lr,i] = ri
+  end
+
+  Q = Array{Float64}(undef, lts, 6)
+  for i in Base.OneTo(lts)
+    qi = q[i,:]
+    filter!(!isnan, qi)
+    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.75, 0.975, 1.0])
+  end
+
+  # estimate mean of means
+  m = mean(q, dims=2)
+
+  # common shape plot defaults
+  legend          --> :none
+  xguide          --> "time"
+  yguide          --> string(lv)[2:end]*"(t)"
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+  ytick_direction --> :out
+  fillcolor       --> :orange
+  fillalpha       --> 0.3
+
+  # range shape
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh0 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lts)
+      push!(sh0, (ts[i], Q[i,2]))
+    end
+    for i in lts:-1:1
+      push!(sh0, (ts[i], Q[i,5]))
+    end
+
+    # Shape(sh0)
+    sh0
+  end
+
+  # [0.25, 0.75] quantile range shape
+  @series begin
+    seriestype := :shape
+    linecolor  := nothing
+
+    sh1 = Tuple{Float64,Float64}[]
+    for i in Base.OneTo(lts)
+      push!(sh1, (ts[i], Q[i,3]))
+    end
+    for i in lts:-1:1
+      push!(sh1, (ts[i], Q[i,4]))
+    end
+
+    # Shape(sh1)
+    sh1
+  end
+
+  # midline
+  @series begin
+    seriestype := :line
+    linecolor --> "#00213a99"
+    linewidth --> 1.4
+
+    ts, m
+  end
+
+  # range
+  @series begin
+    seriestype := :line
+    linecolor  --> "#426c7999"
+    linewidth  --> 1.4
+    linestyle  --> :dashdot
+    ts, Q[:,[1,6]]
+  end
+end
+
+
+
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# TRAITS
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
 
