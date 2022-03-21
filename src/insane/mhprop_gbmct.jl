@@ -62,7 +62,7 @@ function _daughters_update!(ξ1  ::iTct,
     llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrct1 + llrct2 + λf - λi
+    acr  = llrct1 + llrct2 + λf - λi 
     llr  = llrbm1 + llrbm2 + acr
     acr += normprop
     drλ  = 2.0*(λi - λf)
