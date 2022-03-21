@@ -355,11 +355,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
         llc, dλ, ssλ, nλ, L =
           update_fs!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, it, pupi
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, it, pupi
+        #    return
+        # end
       end
     end
 
@@ -604,7 +604,7 @@ function fsbi_t(bi  ::iBffs,
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc  = -log(Float64(nac)) - Float64(nac - 1) * log(Iρi)
+  lc = - log(Float64(nac)) - Float64(nac - 1) * log(Iρi)
 
   # forward simulation during branch length
   t0, nsp, na, llr = 
@@ -771,7 +771,7 @@ function tip_sims!(tree::iTpb,
                    Iρi ::Float64,
                    na  ::Int64)
 
- if na < nlim && lU < lr
+ if na < 1_000 && lU < lr
 
     if istip(tree)
       if !isfix(tree)
