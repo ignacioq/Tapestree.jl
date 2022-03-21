@@ -359,14 +359,14 @@ end
 
 
 """
-    _fossilizepasttips!(tree::T, 
-                        t   ::Float64, 
+    _fossilizepasttips!(tree::T,
+                        t   ::Float64,
                         rerr::Float64) where {T <: iTf}
 
 Change all past tips to fossil tips, initialized at tree height `t`.
 """
-function _fossilizepasttips!(tree::T, 
-                             t   ::Float64, 
+function _fossilizepasttips!(tree::T,
+                             t   ::Float64,
                              rerr::Float64) where {T <: iTf}
 
   t -= e(tree)
@@ -703,6 +703,73 @@ function _fixrtip!(tree::T, na::Int64) where T <: iTree
     end
   end
 end
+
+
+
+
+"""
+    fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip1!(tree.d1, wi, ix)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip1!(tree.d2, wi, ix)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
+    fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip2!(tree.d2, wi, ix)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip2!(tree.d1, wi, ix)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
 
 
 
@@ -1345,7 +1412,7 @@ function _remove_extinct!(tree::T) where {T <: iTf}
       end
       return tree
     else
-      if isextinct(tree.d1) 
+      if isextinct(tree.d1)
         return T(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
       end
     end
