@@ -564,7 +564,7 @@ ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
 
 
 """
-    ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64)
+    dnorm_bm(x::Float64, μ::Float64, σsrt::Float64)
 
 Compute the **Normal** density in with
 mean `μ` and standard density `σsrt` for `x`.
