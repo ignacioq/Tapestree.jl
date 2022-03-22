@@ -580,8 +580,6 @@ end
 
 
 
-
-
 """
     fsbi_t(bi  ::iBffs,
          λ0  ::Float64,
@@ -607,14 +605,14 @@ function fsbi_t(bi  ::iBffs,
   lc = - log(Float64(nac)) - Float64(nac - 1) * log(Iρi)
 
   # forward simulation during branch length
-  t0, na, nsp, llr = 
+  t0, nap, nsp, llr = 
     _sim_gbmpb_t(e(bi), λ0, α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
 
-  if isinf(llr) || nsp >= 1_000
+  if isnan(llr) || nsp >= 1_000
     return t0, -Inf
   else
-    _fixrtip!(t0, na)
-    setni!(bi, na)  # set new ni
+    _fixrtip!(t0, nap) # fix random tip
+    setni!(bi, nap)    # set new ni
 
     return t0, llr
   end
@@ -672,7 +670,7 @@ function fsbi_i(bi  ::iBffs,
     t0, na, acr = 
       tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
 
-    if isinf(acr)
+    if isnan(acr)
       return t0, -Inf, NaN, NaN
     end
 
@@ -741,7 +739,7 @@ function tip_sims!(tree::iTpb,
             lr, lU, Iρi, na, 1_000)
 
         if lU >= lr || na >= 1_000
-          return tree, na, -Inf
+          return tree, na, NaN
         end
 
         sete!(tree, e(tree) + e(stree))
@@ -771,7 +769,7 @@ function tip_sims!(tree::iTpb,
     return tree, na, lr
   end
 
-  return tree, na, -Inf
+  return tree, na, NaN
 end
 
 

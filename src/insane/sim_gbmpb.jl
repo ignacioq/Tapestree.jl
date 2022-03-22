@@ -426,7 +426,7 @@ function _sim_gbmpb_t(t   ::Float64,
                       nsp ::Int64,
                       nlim::Int64)
 
-  if nsp < nlim && lU < lr
+  if !isnan(lr) && nsp < nlim
 
     λv = Float64[λt]
     bt = 0.0
@@ -445,20 +445,34 @@ function _sim_gbmpb_t(t   ::Float64,
           nsp += 1
           na  += 2
           if na === 2
-            lr += log(Iρi * Float64(na)/Float64(na-1))
+            nlr = lr + log(Iρi*2.0)
           else
-            lr += log(Iρi * Iρi * Float64(na)/Float64(na-2))
+            nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
           end
-
-          return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      bt, false, δt, t, λv), na, nsp, lr
+          if nlr >= lr
+            return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                        iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                        bt, false, δt, t, λv), na, nsp, nlr
+          elseif lU < nlr
+            return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                        iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                        bt, false, δt, t, λv), na, nsp, nlr
+          else
+            return iTpb(0.0, false, 0.0, 0.0, Float64[]), na, nsp, NaN
+          end
         else
           na += 1
+          nlr = lr
           if na > 1
-            lr += log(Iρi * Float64(na)/Float64(na-1))
+            nlr += log(Iρi * Float64(na)/Float64(na-1))
           end
-          return iTpb(bt, false, δt, t, λv), na, nsp, lr
+          if nlr >= lr 
+            return iTpb(bt, false, δt, t, λv), na, nsp, nlr
+          elseif lU < nlr
+            return iTpb(bt, false, δt, t, λv), na, nsp, nlr
+          else
+            return iTpb(0.0, false, 0.0, 0.0, Float64[]), na, nsp, NaN
+          end
         end
       end
 
@@ -485,7 +499,7 @@ function _sim_gbmpb_t(t   ::Float64,
     end
   end
 
-  return iTpb(0.0, false, 0.0, 0.0, Float64[]), na, nsp, -Inf
+  return iTpb(0.0, false, 0.0, 0.0, Float64[]), na, nsp, NaN
 end
 
 
@@ -538,10 +552,10 @@ function _sim_gbmpb_it(nsδt::Float64,
       return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                   iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                   bt, false, δt, t, λv), nsp, lr
-    else
-      lr += log(Iρi)
-      return iTpb(bt, false, δt, t, λv), nsp, lr
     end
+
+    nlr = log(Iρi)
+    return iTpb(bt, false, δt, t, λv), nsp, lr
   end
 
   t  -= nsδt
@@ -559,58 +573,9 @@ function _sim_gbmpb_it(nsδt::Float64,
       _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
 
     return iTpb(td1, td2, bt, false, δt, nsδt, λv), nsp, lr
+  else
+    return _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
   end
-
-  λt = λt1
-
-  if nsp < nlim && lU < lr
-
-    while true
-
-      if t <= δt
-        t   = max(0.0, t)
-        bt += t
-        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-        push!(λv, λt1)
-
-        λm = exp(0.5*(λt + λt1))
-
-        if divev(λm, t)
-          nsp += 1
-          lr  += 2.0*log(Iρi)
-          return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      bt, false, δt, t, λv), nsp, lr
-        else
-          lr += log(Iρi)
-          return iTpb(bt, false, δt, t, λv), nsp, lr
-        end
-      end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
-
-      push!(λv, λt1)
-
-      λm = exp(0.5*(λt + λt1))
-
-      if divev(λm, δt)
-        nsp += 1
-        td1, nsp, lr = 
-          _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
-        td2, nsp, lr = 
-          _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
-
-        return iTpb(td1, td2, bt, false, δt, δt, λv), nsp, lr
-      end
-
-      λt = λt1
-    end
-  end
-
-  return iTpb(0.0, false, 0.0, 0.0, Float64[]), nsp, -Inf
 end
 
 
@@ -645,7 +610,7 @@ function _sim_gbmpb_it(t   ::Float64,
                        nsp ::Int64,
                        nlim::Int64)
 
-  if nsp < nlim && lU < lr
+  if lU < lr && nsp < nlim
 
     λv = Float64[λt]
     bt = 0.0
@@ -666,10 +631,10 @@ function _sim_gbmpb_it(t   ::Float64,
           return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       bt, false, δt, t, λv), nsp, lr
-        else
-          lr += log(Iρi)
-          return iTpb(bt, false, δt, t, λv), nsp, lr
         end
+
+        lr += log(Iρi)
+        return iTpb(bt, false, δt, t, λv), nsp, lr
       end
 
       t  -= δt
@@ -695,7 +660,7 @@ function _sim_gbmpb_it(t   ::Float64,
     end
   end
 
-  return iTpb(0.0, false, 0.0, 0.0, Float64[]), nsp, -Inf
+  return iTpb(0.0, false, 0.0, 0.0, Float64[]), nsp, NaN
 end
 
 
@@ -744,9 +709,9 @@ function _sim_gbmpb_i(t   ::Float64,
           return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       bt, false, δt, t, λv), nsp
-        else
-          return iTpb(bt, false, δt, t, λv), nsp
         end
+
+        return iTpb(bt, false, δt, t, λv), nsp
       end
 
       t  -= δt
