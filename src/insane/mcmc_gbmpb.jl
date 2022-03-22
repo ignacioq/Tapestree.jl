@@ -655,16 +655,16 @@ function fsbi_i(bi  ::iBffs,
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr = log(Float64(ntp)/Float64(nt(bi)))
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * log(Iρi)
 
   if lU < acr
 
     λf  = fixrtip!(t0, na, NaN) # fix random tip
-    nac = ni(bi)                # current ni
-    Iρi = (1.0 - ρi(bi))        # branch sampling fraction
-
-    # add sampling fraction
-    acr -= Float64(nac) * log(Iρi)
 
     # simulated remaining tips until the present
     t0, na, acr = 
