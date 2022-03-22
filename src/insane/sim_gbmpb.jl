@@ -466,7 +466,7 @@ function _sim_gbmpb_t(t   ::Float64,
           if na > 1
             nlr += log(Iρi * Float64(na)/Float64(na-1))
           end
-          if nlr >= lr 
+          if nlr >= lr
             return iTpb(bt, false, δt, t, λv), na, nsp, nlr
           elseif lU < nlr
             return iTpb(bt, false, δt, t, λv), na, nsp, nlr
@@ -487,9 +487,9 @@ function _sim_gbmpb_t(t   ::Float64,
 
       if divev(λm, δt)
         nsp += 1
-        td1, na, nsp, lr = 
+        td1, na, nsp, lr =
           _sim_gbmpb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, na, nsp, nlim)
-        td2, na, nsp, lr = 
+        td2, na, nsp, lr =
           _sim_gbmpb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, na, nsp, nlim)
 
         return iTpb(td1, td2, bt, false, δt, δt, λv), na, nsp, lr
@@ -566,9 +566,9 @@ function _sim_gbmpb_it(nsδt::Float64,
 
   if divev(λm, nsδt)
     nsp += 1
-    td1, nsp, lr = 
+    td1, nsp, lr =
       _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
-    td2, nsp, lr = 
+    td2, nsp, lr =
       _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
 
     return iTpb(td1, td2, bt, false, δt, nsδt, λv), nsp, lr
@@ -611,9 +611,9 @@ function _sim_gbmpb_it(nsδt::Float64,
 
       if divev(λm, δt)
         nsp += 1
-        td1, nsp, lr = 
+        td1, nsp, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
-        td2, nsp, lr = 
+        td2, nsp, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
 
         return iTpb(td1, td2, bt, false, δt, δt, λv), nsp, lr
@@ -696,9 +696,9 @@ function _sim_gbmpb_it(t   ::Float64,
 
       if divev(λm, δt)
         nsp += 1
-        td1, nsp, lr = 
+        td1, nsp, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
-        td2, nsp, lr = 
+        td2, nsp, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
 
         return iTpb(td1, td2, bt, false, δt, δt, λv), nsp, lr
@@ -773,9 +773,9 @@ function _sim_gbmpb_i(t   ::Float64,
 
       if divev(λm, δt)
         nsp += 1
-        td1, nsp = 
+        td1, nsp =
           _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nsp, nlim)
-        td2, nsp = 
+        td2, nsp =
           _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nsp, nlim)
 
         return iTpb(td1, td2, bt, false, δt, δt, λv), nsp

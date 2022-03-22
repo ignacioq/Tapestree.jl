@@ -72,8 +72,6 @@ end
 
 
 
-
-
 """
     _stem_update!(ξi   ::iTpb,
                   α    ::Float64,
