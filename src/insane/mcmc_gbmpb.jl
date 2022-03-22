@@ -315,22 +315,22 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, it, pupi
+           return
+        end
 
       # update diffusion rate
       elseif pupi === 2
 
         llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, it, pupi
+           return
+        end
 
       # update gbm
       elseif pupi === 3
@@ -341,11 +341,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, it, pupi
+           return
+        end
 
       # update by forward simulation
       else
@@ -355,11 +355,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
         llc, dλ, ssλ, nλ, L =
           update_fs!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, it, pupi
+           return
+        end
       end
     end
 
@@ -607,15 +607,15 @@ function fsbi_t(bi  ::iBffs,
   lc = - log(Float64(nac)) - Float64(nac - 1) * log(Iρi)
 
   # forward simulation during branch length
-  t0, nsp, na, llr = 
+  t0, na, nsp, llr = 
     _sim_gbmpb_t(e(bi), λ0, α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
 
   if isinf(llr) || nsp >= 1_000
     return iTpb(0.0, false, 0.0, 0.0, Float64[]), -Inf
   else
     λf = fixrtip!(t0, na, NaN)
-    setni!(bi, na)       # set new ni
-    setλt!(bi, λf)       # set new λt
+    setni!(bi, na)  # set new ni
+    setλt!(bi, λf)  # set new λt
 
     return t0, llr
   end
@@ -673,7 +673,7 @@ function fsbi_i(bi  ::iBffs,
 
   # current acceptance ratio
   ac = 0.0
-  for λi in λsc
+  @simd for λi in λsc
     ac += exp(λi) * duodnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
   end
   ac = log(ac)
@@ -681,7 +681,7 @@ function fsbi_i(bi  ::iBffs,
   # proposed acceptance ratio
   wp = Float64[]
   ap = 0.0
-  for λi in λsp
+  @simd for λi in λsp
     wi  = exp(λi) * duodnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
     ap += wi
     push!(wp, wi)
@@ -729,6 +729,7 @@ function fsbi_i(bi  ::iBffs,
     acr += acrd
 
     if lU < acr
+
       setni!(bi, na - 1)       # set new ni
       setλt!(bi, λf) # set new λt
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector

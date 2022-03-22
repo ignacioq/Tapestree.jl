@@ -444,16 +444,19 @@ function _sim_gbmpb_t(t   ::Float64,
         if divev(λm, t)
           nsp += 1
           na  += 2
-          if na > 2
-            lr += log(Iρi^2 * (Float64(na)/Float64(na-2)))
+          if na === 2
+            lr += log(Iρi * Float64(na)/Float64(na-1))
+          else
+            lr += log(Iρi * Iρi * Float64(na)/Float64(na-2))
           end
+
           return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       bt, false, δt, t, λv), na, nsp, lr
         else
           na += 1
           if na > 1
-            lr += log(Iρi * (Float64(na)/Float64(na-1)))
+            lr += log(Iρi * Float64(na)/Float64(na-1))
           end
           return iTpb(bt, false, δt, t, λv), na, nsp, lr
         end
@@ -551,7 +554,7 @@ function _sim_gbmpb_t(nsδt::Float64,
   if divev(λm, nsδt)
     nsp += 1
     td1, nsp, lr = 
-      _sim_gbmpb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim) 
+      _sim_gbmpb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
     td2, nsp, lr = 
       _sim_gbmpb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
 

@@ -62,7 +62,7 @@ function _daughters_update!(ξ1  ::iTpb,
 
     acr  = llrpb1 + llrpb2
     llr  = llrbm1 + llrbm2 + λf - λi + acr
-    acr += normprop
+    #acr += normprop
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
   end
