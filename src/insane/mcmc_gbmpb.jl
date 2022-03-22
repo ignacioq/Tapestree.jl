@@ -645,91 +645,25 @@ function fsbi_i(bi  ::iBffs,
                 δt  ::Float64,
                 srδt::Float64)
 
-  # tip rates
-  λsp = Float64[]
-
   # forward simulation during branch length
-  t0, na = _sim_gbmpb_i(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000, λsp)
-  nat = na
+  t0, na = _sim_gbmpb_i(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
 
   if na >= 1_000
     return t0, -Inf, NaN, NaN
   end
 
-  # get current speciation rates at branch time
-  λsc = Float64[]
-  _λat!(ξc, e(bi), λsc, 0.0)
-  push!(λsc, λt(bi))
-
-  # if lastindex(λsc) != nt(bi)
-  #   @show "still"
-  # end
-
-  # i = 50
-
-  # i -= 1
-  # bix = inodes[i]
-  # bi = idf[bix]
-  # ξc = Ξ[bix]
-  # plot(ξc)
-
-  # λsc = Float64[]
-  # _λat!(ξc, e(bi), λsc, 0.0)
-  # push!(λsc, λt(bi))
-  # λsc
-  # nt(bi)
-
-
-  e1  = e(ξ1)
-  e2  = e(ξ2)
-  λ1c = lλ(ξ1)
-  λ2c = lλ(ξ2)
-  l1  = lastindex(λ1c)
-  l2  = lastindex(λ2c)
-  λ1  = λ1c[l1]
-  λ2  = λ2c[l2]
-
-  # current acceptance ratio
-  ac = 0.0
-  for λi in λsc
-    ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sqrt(e1)*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sqrt(e2)*σλ)
-  end
-  ac = log(ac)
-
-  # proposed acceptance ratio
-  wp = Float64[]
-  ap = 0.0
-  for λi in λsp
-    wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sqrt(e1)*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sqrt(e2)*σλ)
-    ap += wi
-    push!(wp, wi)
-  end
-  ap = log(ap)
+  ntp = na
 
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr = ap - ac
+  acr = log(Float64(ntp)/Float64(nt(bi)))
 
   if lU < acr
 
-    # sample tip
-    wti = sample(wp)
-    λf  = λsp[wti]
-
-    # fix sampled tip
-    lw = lastindex(wp)
-
-    if wti <= div(lw,2)
-      fixtip1!(t0, wti, 0)
-    else
-      fixtip2!(t0, lw - wti + 1, 0)
-    end
-
-    nac = ni(bi)         # current ni
-    Iρi = (1.0 - ρi(bi)) # branch sampling fraction
+    λf  = fixrtip!(t0, na, NaN) # fix random tip
+    nac = ni(bi)                # current ni
+    Iρi = (1.0 - ρi(bi))        # branch sampling fraction
 
     # add sampling fraction
     acr -= Float64(nac) * log(Iρi)
@@ -749,12 +683,13 @@ function fsbi_i(bi  ::iBffs,
     acr += acrd
 
     if lU < acr
-
-      setnt!(bi, nat)                    # set new nt
+      l1 = lastindex(λ1p)
+      l2 = lastindex(λ2p)
+      setnt!(bi, ntp)                    # set new nt
       setni!(bi, na - 1)                 # set new ni
       setλt!(bi, λf)                     # set new λt
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
 
       return t0, llr, drλ, ssrλ
     else

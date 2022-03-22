@@ -50,8 +50,8 @@ function _daughters_update!(ξ1  ::iTpb,
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
     # acceptance rate
-    normprop = duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-               duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    normprop = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+               duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
 
     # log likelihood ratios
     llrbm1, llrpb1, ssrλ1 =
@@ -59,8 +59,8 @@ function _daughters_update!(ξ1  ::iTpb,
     llrbm2, llrpb2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr  = llrpb1 + llrpb2
-    llr  = llrbm1 + llrbm2 + λf - λi + acr
+    acr  = llrpb1 + llrpb2 + λf - λi
+    llr  = llrbm1 + llrbm2 + acr
     acr += normprop
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2

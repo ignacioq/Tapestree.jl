@@ -709,9 +709,6 @@ end
                  σλ  ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
-                 lr  ::Float64,
-                 lU  ::Float64,
-                 Iρi ::Float64,
                  nsp ::Int64,
                  nlim::Int64)
 
@@ -725,8 +722,7 @@ function _sim_gbmpb_i(t   ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
                       nsp ::Int64,
-                      nlim::Int64,
-                      λs  ::Vector{Float64})
+                      nlim::Int64)
 
   if nsp < nlim
 
@@ -745,12 +741,10 @@ function _sim_gbmpb_i(t   ::Float64,
 
         if divev(λm, t)
           nsp += 1
-          push!(λs, λt1, λt1)
           return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                       bt, false, δt, t, λv), nsp
         else
-          push!(λs, λt1)
           return iTpb(bt, false, δt, t, λv), nsp
         end
       end
@@ -767,9 +761,9 @@ function _sim_gbmpb_i(t   ::Float64,
       if divev(λm, δt)
         nsp += 1
         td1, nsp = 
-          _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nsp, nlim, λs)
+          _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nsp, nlim)
         td2, nsp = 
-          _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nsp, nlim, λs)
+          _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nsp, nlim)
 
         return iTpb(td1, td2, bt, false, δt, δt, λv), nsp
       end
