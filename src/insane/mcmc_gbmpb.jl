@@ -647,7 +647,7 @@ function fsbi_i(bi  ::iBffs,
   t0, na = _sim_gbmpb_i(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
 
   if na >= 1_000
-    return t0, -Inf, NaN, NaN
+    return t0, NaN, NaN, NaN
   end
 
   ntp = na
@@ -671,7 +671,7 @@ function fsbi_i(bi  ::iBffs,
       tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
 
     if isnan(acr)
-      return t0, -Inf, NaN, NaN
+      return t0, NaN, NaN, NaN
     end
 
     llrd, acrd, drλ, ssrλ, λ1p, λ2p =
@@ -691,11 +691,11 @@ function fsbi_i(bi  ::iBffs,
 
       return t0, llr, drλ, ssrλ
     else
-      return t0, -Inf, NaN, NaN
+      return t0, NaN, NaN, NaN
     end
   end
 
-  return t0, -Inf, NaN, NaN
+  return t0, NaN, NaN, NaN
 end
 
 
@@ -738,7 +738,7 @@ function tip_sims!(tree::iTpb,
           _sim_gbmpb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt, 
             lr, lU, Iρi, na, 1_000)
 
-        if lU >= lr || na >= 1_000
+        if isnan(lr) || na >= 1_000
           return tree, na, NaN
         end
 

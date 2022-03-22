@@ -519,7 +519,6 @@ end
                   na  ::Int64,
                   nsp ::Int64,
                   nlim::Int64)
-
 Simulate `iTpb` according to a pure-birth geometric Brownian motion,
 starting with a non-standard δt with a limit in the number of species.
 """
@@ -552,10 +551,10 @@ function _sim_gbmpb_it(nsδt::Float64,
       return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                   iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
                   bt, false, δt, t, λv), nsp, lr
+    else
+      lr += log(Iρi)
+      return iTpb(bt, false, δt, t, λv), nsp, lr
     end
-
-    nlr = log(Iρi)
-    return iTpb(bt, false, δt, t, λv), nsp, lr
   end
 
   t  -= nsδt
@@ -573,9 +572,58 @@ function _sim_gbmpb_it(nsδt::Float64,
       _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
 
     return iTpb(td1, td2, bt, false, δt, nsδt, λv), nsp, lr
-  else
-    return _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
   end
+
+  λt = λt1
+
+  if lU < lr && nsp < nlim
+
+    while true
+
+      if t <= δt
+        t   = max(0.0, t)
+        bt += t
+        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
+        push!(λv, λt1)
+
+        λm = exp(0.5*(λt + λt1))
+
+        if divev(λm, t)
+          nsp += 1
+          lr  += 2.0*log(Iρi)
+          return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                      iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                      bt, false, δt, t, λv), nsp, lr
+        else
+          lr += log(Iρi)
+          return iTpb(bt, false, δt, t, λv), nsp, lr
+        end
+      end
+
+      t  -= δt
+      bt += δt
+
+      λt1 = rnorm(λt + α*δt, srδt*σλ)
+
+      push!(λv, λt1)
+
+      λm = exp(0.5*(λt + λt1))
+
+      if divev(λm, δt)
+        nsp += 1
+        td1, nsp, lr = 
+          _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
+        td2, nsp, lr = 
+          _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nsp, nlim)
+
+        return iTpb(td1, td2, bt, false, δt, δt, λv), nsp, lr
+      end
+
+      λt = λt1
+    end
+  end
+
+  return iTpb(0.0, false, 0.0, 0.0, Float64[]), nsp, NaN
 end
 
 
