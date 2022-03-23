@@ -677,12 +677,12 @@ function fsbi_i(bi  ::iBffs,
     llrd, acrd, drλ, ssrλ, λ1p, λ2p =
       _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
 
-    llr  = llrd + (na - 1 - nac)*log(Iρi)
     acr += acrd
 
     if lU < acr
-      l1 = lastindex(λ1p)
-      l2 = lastindex(λ2p)
+      llr = llrd + (na - 1 - nac)*log(Iρi)
+      l1  = lastindex(λ1p)
+      l2  = lastindex(λ2p)
       setnt!(bi, ntp)                    # set new nt
       setni!(bi, na - 1)                 # set new ni
       setλt!(bi, λf)                     # set new λt
