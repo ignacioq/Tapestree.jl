@@ -86,7 +86,7 @@ function _sim_cpb_t(t   ::Float64,
                     nsp ::Int64,
                     nlim::Int64)
 
-  if !isnan(lr) && nsp < nlim
+  if isfinite(lr) && nsp < nlim
 
     tw = cpb_wait(λ)
 
@@ -112,7 +112,7 @@ function _sim_cpb_t(t   ::Float64,
     end
   end
 
-    return sTpb(0.0, false), na, nsp, NaN
+  return sTpb(0.0, false), na, nsp, NaN
 end
 
 
@@ -193,7 +193,7 @@ function _sim_cpb_it(t   ::Float64,
     end
   end
 
-    return sTpb(0.0, false), nsp, NaN
+  return sTpb(0.0, false), nsp, NaN
 end
 
 

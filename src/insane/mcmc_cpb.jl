@@ -246,6 +246,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
         #    @show llci, llc, it, p
         #    return
         # end
+
       # forward simulation proposal proposal
       else
 
@@ -299,8 +300,8 @@ MCMC da chain for constant birth-death using forward simulation.
 function ref_posterior(Ξ      ::Vector{sTpb},
                        idf    ::Array{iBffs,1},
                        λc     ::Float64,
-                       λ_prior ::NTuple{2,Float64},
-                       λ_refd  ::NTuple{2,Float64},
+                       λ_prior::NTuple{2,Float64},
+                       λ_refd ::NTuple{2,Float64},
                        nitpp  ::Int64,
                        nthpp  ::Int64,
                        βs     ::Vector{Float64},
@@ -400,12 +401,10 @@ function update_fs!(bix    ::Int64,
   if isfinite(llr)
     ξc  = Ξ[bix]
 
-    # update ns & L
-    ns += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
-    L  += treelength(ξp)             - treelength(ξc)
-
-    # likelihood ratio
+    # update llc, ns & L
     llc += llik_cpb(ξp, λ) - llik_cpb(ξc, λ) + llr
+    ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
+    L   += treelength(ξp)             - treelength(ξc)
 
     # set new tree
     Ξ[bix] = ξp
@@ -429,13 +428,14 @@ function fsbi_t(bi::iBffs, λ::Float64)
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * log(Iρi)
+  lc = - log(Float64(nac)) - 
+       Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   # forward simulation during branch length
   t0, nap, nsp, llr =
-    _sim_cpb_t(e(bi), λ, lc, lU, Iρi, 0, 1, 1_000)
+    _sim_cpb_t(e(bi), λ, lc, lU, Iρi, 0, 1, 500)
 
-  if isnan(llr) || nsp >= 1_000
+  if isnan(llr) || nsp >= 500
     return t0, -Inf
   else
 
@@ -472,7 +472,7 @@ function fsbi_i(bi::iBffs, λ::Float64)
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * log(Iρi)
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
 
@@ -486,7 +486,7 @@ function fsbi_i(bi::iBffs, λ::Float64)
     end
 
     if lU < acr
-      llr = (na - 1 - nac)*log(Iρi)
+      llr = (na - 1 - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       setnt!(bi, ntp)                    # set new nt
       setni!(bi, na - 1)                 # set new ni
 
@@ -503,9 +503,9 @@ end
 
 
 """
-    tip_sims!(tree::sTpb, 
-              t   ::Float64, 
-              λ   ::Float64, 
+    tip_sims!(tree::sTpb,
+              t   ::Float64,
+              λ   ::Float64,
               lr  ::Float64,
               lU  ::Float64,
               Iρi ::Float64,
@@ -513,9 +513,9 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::sTpb, 
-                   t   ::Float64, 
-                   λ   ::Float64, 
+function tip_sims!(tree::sTpb,
+                   t   ::Float64,
+                   λ   ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
                    Iρi ::Float64,
@@ -547,7 +547,7 @@ function tip_sims!(tree::sTpb,
 
     return tree, na, lr
   end
-  
+
   return tree, na, NaN
 end
 

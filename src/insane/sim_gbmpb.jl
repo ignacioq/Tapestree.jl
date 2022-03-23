@@ -426,7 +426,7 @@ function _sim_gbmpb_t(t   ::Float64,
                       nsp ::Int64,
                       nlim::Int64)
 
-  if !isnan(lr) && nsp < nlim
+  if isfinite(lr) && nsp < nlim
 
     λv = Float64[λt]
     bt = 0.0

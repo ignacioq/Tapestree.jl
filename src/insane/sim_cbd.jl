@@ -13,49 +13,6 @@ Created 06 07 2020
 
 
 """
-    cbd_wait(n::Float64, λ::Float64, μ::Float64)
-
-Sample a waiting time for constant birth-death when `n` species
-are alive with speciation rate `λ` and extinction rate `μ`.
-"""
-cbd_wait(n::Float64, λ::Float64, μ::Float64) = rexp(n*(λ + μ))
-
-
-
-
-"""
-    cbd_wait(λ::Float64, μ::Float64)
-
-Sample a per-lineage waiting time for constant birth-death species
-with speciation rate `λ` and extinction rate `μ`.
-"""
-cbd_wait(λ::Float64, μ::Float64) = rexp(λ + μ)
-
-
-
-
-
-"""
-    rexp(r::Float64)
-
-Generate an exponential sample with rate `r`.
-"""
-rexp(r::Float64) = @fastmath randexp()/r
-
-
-
-
-"""
-    λorμ(λ::Float64, μ::Float64)
-
-Return `true` if speciation event
-"""
-λorμ(λ::Float64, μ::Float64) = (λ/(λ + μ)) > rand()
-
-
-
-
-"""
     sim_cbd(t::Float64, λ::Float64, μ::Float64)
 
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
@@ -77,7 +34,6 @@ function sim_cbd(t::Float64,
     return sTbd(tw, true)
   end
 end
-
 
 
 
@@ -111,6 +67,161 @@ function sim_cbd(t ::Float64,
   else
     return sTbd(tw, true), na
   end
+end
+
+
+
+
+"""
+    _sim_cbd_t(t   ::Float64,
+               λ   ::Float64,
+               μ   ::Float64,
+               lr  ::Float64,
+               lU  ::Float64,
+               Iρi ::Float64,
+               na  ::Int64,
+               nsp ::Int64,
+               nlim::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` for terminal branches.
+"""
+function _sim_cbd_t(t   ::Float64,
+                    λ   ::Float64,
+                    μ   ::Float64,
+                    lr  ::Float64,
+                    lU  ::Float64,
+                    Iρi ::Float64,
+                    na  ::Int64,
+                    nsp ::Int64,
+                    nlim::Int64)
+
+  if isfinite(lr) && nsp < nlim
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      na += 1
+      nlr = lr
+      if na > 1
+        nlr += log(Iρi * Float64(na)/Float64(na-1))
+      end
+      if nlr >= lr
+        return sTbd(t, false, false), na, nsp, nlr
+      elseif lU < nlr
+        return sTbd(t, false, false), na, nsp, nlr
+      else
+        return sTbd(0.0, false, false), na, nsp, NaN
+      end
+    else
+      if λorμ(λ, μ)
+        nsp += 1
+        d1, na, nsp, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
+        d2, na, nsp, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
+
+        return sTbd(d1, d2, tw, false, false), na, nsp, lr
+      else
+        return sTbd(tw, true, false), na, nsp, lr
+      end
+    end
+  end
+
+  return sTbd(0.0, false, false), na, nsp, NaN
+end
+
+
+
+
+"""
+    _sim_cbd_i(t   ::Float64,
+               λ   ::Float64,
+               μ   ::Float64,
+               na  ::Int64,
+               nsp ::Int64,
+               nlim::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` for internal branches.
+"""
+function _sim_cbd_i(t   ::Float64,
+                    λ   ::Float64,
+                    μ   ::Float64,
+                    na  ::Int64,
+                    nsp ::Int64,
+                    nlim::Int64)
+
+  if nsp < nlim
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      na += 1
+      return sTbd(t, false, false), na, nsp
+    end
+
+    if λorμ(λ, μ)
+      nsp += 1
+      d1, na, nsp = _sim_cbd_i(t - tw, λ, μ, na, nsp, nlim)
+      d2, na, nsp = _sim_cbd_i(t - tw, λ, μ, na, nsp, nlim)
+
+      return sTbd(d1, d2, tw, false, false), na, nsp
+    else
+      return sTbd(tw, true, false), na, nsp
+    end
+  end
+
+  return sTbd(0.0, false, false), na, nsp
+end
+
+
+
+
+"""
+    _sim_cbd_it(t   ::Float64,
+                λ   ::Float64,
+                μ   ::Float64,
+                lr  ::Float64,
+                lU  ::Float64,
+                Iρi ::Float64,
+                nsp ::Int64,
+                nlim::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` for continuing internal branches.
+"""
+function _sim_cbd_it(t   ::Float64,
+                     λ   ::Float64,
+                     μ   ::Float64,
+                     lr  ::Float64,
+                     lU  ::Float64,
+                     Iρi ::Float64,
+                     na  ::Int64,
+                     nsp ::Int64,
+                     nlim::Int64)
+
+  if lU < lr && nsp < nlim
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      na += 1
+      lr += log(Iρi)
+      return sTbd(t, false, false), na, nsp, lr
+    end
+
+    if λorμ(λ, μ)
+      nsp += 1
+      d1, na, nsp, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
+      d2, na, nsp, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
+
+      return sTbd(d1, d2, tw, false, false), na, nsp, lr
+    else
+      return sTbd(tw, true, false), na, nsp, lr
+    end
+
+  end
+
+  return sTbd(0.0, false, false), na, nsp, NaN
 end
 
 
@@ -284,4 +395,44 @@ end
 
 
 
+
+"""
+    cbd_wait(n::Float64, λ::Float64, μ::Float64)
+
+Sample a waiting time for constant birth-death when `n` species
+are alive with speciation rate `λ` and extinction rate `μ`.
+"""
+cbd_wait(n::Float64, λ::Float64, μ::Float64) = rexp(n*(λ + μ))
+
+
+
+
+"""
+    cbd_wait(λ::Float64, μ::Float64)
+
+Sample a per-lineage waiting time for constant birth-death species
+with speciation rate `λ` and extinction rate `μ`.
+"""
+cbd_wait(λ::Float64, μ::Float64) = rexp(λ + μ)
+
+
+
+
+
+"""
+    rexp(r::Float64)
+
+Generate an exponential sample with rate `r`.
+"""
+rexp(r::Float64) = @fastmath randexp()/r
+
+
+
+
+"""
+    λorμ(λ::Float64, μ::Float64)
+
+Return `true` if speciation event
+"""
+λorμ(λ::Float64, μ::Float64) = (λ/(λ + μ)) > rand()
 

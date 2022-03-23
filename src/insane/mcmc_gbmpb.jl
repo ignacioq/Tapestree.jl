@@ -602,7 +602,7 @@ function fsbi_t(bi  ::iBffs,
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * log(Iρi)
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   # forward simulation during branch length
   t0, nap, nsp, llr =
@@ -660,7 +660,7 @@ function fsbi_i(bi  ::iBffs,
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * log(Iρi)
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
 
@@ -680,7 +680,7 @@ function fsbi_i(bi  ::iBffs,
     acr += acrd
 
     if lU < acr
-      llr = llrd + (na - 1 - nac)*log(Iρi)
+      llr = llrd + (na - 1 - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       l1  = lastindex(λ1p)
       l2  = lastindex(λ2p)
       setnt!(bi, ntp)                    # set new nt
