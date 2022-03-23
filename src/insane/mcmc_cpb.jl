@@ -486,9 +486,10 @@ function fsbi_i(bi::iBffs, λ::Float64)
     end
 
     if lU < acr
-      llr = (na - 1 - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      na -= 1
+      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       setnt!(bi, ntp)                    # set new nt
-      setni!(bi, na - 1)                 # set new ni
+      setni!(bi, na)                 # set new ni
 
       return t0, llr
     else
