@@ -27,7 +27,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, x::Ltt) =
-  print(io, "LTT plot starting at ", maximum(x.t), 
+  print(io, "LTT plot starting at ", round(maximum(x.t), digits = 3), 
             " with ", x.n[end], " extant tips")
 
 
