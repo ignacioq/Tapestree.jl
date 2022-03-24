@@ -106,7 +106,7 @@ function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTfbdX})
     iψ = isfossil(idfi)
     if iψ && it(idfi)
       ξ = sTfbdX(
-               sTfbdX(1e-10, true, false, true, xfi, xfi),
+               sTfbdX(1e-10, true, false, false, xfi, xfi),
                e(idfi), false, true, true, xii, xfi)
     else
       ξ = sTfbdX(e(idfi), false, iψ, true, xii, xfi)
@@ -147,9 +147,9 @@ function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
 
   # no fossil can be a `true` tip nor extinct
   if istip(tree) && isfossil(tree)
-    # add first daughter tree for tip fossil that is extinct with a 0 edge.
+    # add first daughter tree for tip fossil that is extinct with a 1e-10 edge.
     push!(Ξ, sTfbd(
-               sTfbd(0.0, true, false, true),
+               sTfbd(1e-10, true, false, false),
                e(tree), false, true, true))
   else
     push!(Ξ, sTfbd(e(tree), false, isfossil(tree), true))
