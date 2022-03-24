@@ -605,10 +605,10 @@ function fsbi_t(bi  ::iBffs,
   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   # forward simulation during branch length
-  t0, nap, nsp, llr =
+  t0, nap, nn, llr =
     _sim_gbmpb_t(e(bi), λ0, α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
 
-  if isnan(llr) || nsp >= 1_000
+  if isnan(llr) || nn >= 1_000
     return t0, -Inf
   else
     _fixrtip!(t0, nap) # fix random tip

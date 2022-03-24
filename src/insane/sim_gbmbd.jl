@@ -352,13 +352,13 @@ function sim_gbmbd(t   ::Float64;
   if init === :crown
     lλ0 = log(λ0)
     lμ0 = log(μ0)
-    d1, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
-    if nsp >= nlim
+    d1, nn = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
+    if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
-    if nsp >= nlim
+    d2, nn = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
+    if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
@@ -366,9 +366,9 @@ function sim_gbmbd(t   ::Float64;
       Float64[lλ0, lλ0], Float64[lμ0, lμ0])
 
   elseif init === :stem
-    tree, nsp = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
+    tree, nn = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
 
-    if nsp >= nlim
+    if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
   else
@@ -391,7 +391,7 @@ end
                δt  ::Float64,
                srδt::Float64,
                na  ::Int64,
-               nsp ::Int64,
+               nn ::Int64,
                nlim::Int64)
 
 Simulate `iTbd` according to geometric Brownian motions for birth and death
@@ -406,10 +406,10 @@ function _sim_gbmbd(t   ::Float64,
                     δt  ::Float64,
                     srδt::Float64,
                     na  ::Int64,
-                    nsp ::Int64,
+                    nn ::Int64,
                     nlim::Int64)
 
-  if nsp < nlim
+  if nn < nlim
 
     λv = Float64[λt]
     μv = Float64[μt]
@@ -434,21 +434,21 @@ function _sim_gbmbd(t   ::Float64,
         if divev(λm, μm, t)
           # if speciation
           if λorμ(λm, μm)
-            nsp += 1
+            nn += 1
             na  += 2
             return iTbd(iTbd(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1]),
                            iTbd(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1]),
-                           bt, δt, t, false, false, λv, μv), na, nsp
+                           bt, δt, t, false, false, λv, μv), na, nn
           # if extinction
           else
-            return iTbd(bt, δt, t, true, false, λv, μv), na, nsp
+            return iTbd(bt, δt, t, true, false, λv, μv), na, nn
           end
         end
 
         na += 1
-        return iTbd(bt, δt, t, false, false, λv, μv), na, nsp
+        return iTbd(bt, δt, t, false, false, λv, μv), na, nn
       end
 
       t  -= δt
@@ -466,16 +466,16 @@ function _sim_gbmbd(t   ::Float64,
       if divev(λm, μm, δt)
         # if speciation
         if λorμ(λm, μm)
-          nsp += 1
-          td1, na, nsp =
-            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nsp, nlim)
-          td2, na, nsp =
-            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nsp, nlim)
+          nn += 1
+          td1, na, nn =
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nn, nlim)
+          td2, na, nn =
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nn, nlim)
 
-          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nsp
+          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
         # if extinction
         else
-          return iTbd(bt, δt, δt, true, false, λv, μv), na, nsp
+          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
         end
       end
 
@@ -484,7 +484,7 @@ function _sim_gbmbd(t   ::Float64,
     end
   end
 
-  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nsp
+  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nn
 end
 
 
@@ -501,7 +501,7 @@ end
                δt  ::Float64,
                srδt::Float64,
                na  ::Int64,
-               nsp ::Int64,
+               nn ::Int64,
                nlim::Int64)
 
 Simulate `iTbd` according to geometric Brownian motions for birth and death
@@ -517,7 +517,7 @@ function _sim_gbmbd(nsδt::Float64,
                     δt  ::Float64,
                     srδt::Float64,
                     na  ::Int64,
-                    nsp ::Int64,
+                    nn ::Int64,
                     nlim::Int64)
 
   λv = Float64[λt]
@@ -542,21 +542,21 @@ function _sim_gbmbd(nsδt::Float64,
     if divev(λm, μm, t)
       # if speciation
       if λorμ(λm, μm)
-        nsp += 1
+        nn += 1
         na  += 2
         return iTbd(iTbd(0.0, δt, 0.0, false, false,
                          Float64[λt1, λt1], Float64[μt1, μt1]),
                        iTbd(0.0, δt, 0.0, false, false,
                          Float64[λt1, λt1], Float64[μt1, μt1]),
-                       bt, δt, t, false, false, λv, μv), na, nsp
+                       bt, δt, t, false, false, λv, μv), na, nn
       # if extinction
       else
-        return iTbd(bt, δt, t, true, false, λv, μv), na, nsp
+        return iTbd(bt, δt, t, true, false, λv, μv), na, nn
       end
     end
 
     na += 1
-    return iTbd(bt, δt, t, false, false, λv, μv), na, nsp
+    return iTbd(bt, δt, t, false, false, λv, μv), na, nn
   end
 
   t  -= nsδt
@@ -576,21 +576,21 @@ function _sim_gbmbd(nsδt::Float64,
   if divev(λm, μm, nsδt)
     # if speciation
     if λorμ(λm, μm)
-      nsp += 1
-      td1, na, nsp = _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nsp, nlim)
-      td2, na, nsp = _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nsp, nlim)
+      nn += 1
+      td1, na, nn = _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nn, nlim)
+      td2, na, nn = _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nn, nlim)
 
-      return iTbd(td1, td2, bt, δt, nsδt, false, false, λv, μv), na, nsp
+      return iTbd(td1, td2, bt, δt, nsδt, false, false, λv, μv), na, nn
     else
     # if extinction
-      return iTbd(bt, δt, nsδt, true, false, λv, μv), na, nsp
+      return iTbd(bt, δt, nsδt, true, false, λv, μv), na, nn
     end
   end
 
   λt = λt1
   μt = μt1
 
-  if nsp < nlim
+  if nn < nlim
 
     ## second: standard δt
     while true
@@ -612,21 +612,21 @@ function _sim_gbmbd(nsδt::Float64,
         if divev(λm, μm, t)
           # if speciation
           if λorμ(λm, μm)
-            nsp += 1
+            nn += 1
             na  += 2
             return iTbd(iTbd(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1]),
                            iTbd(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1]),
-                           bt, δt, t, false, false, λv, μv), na, nsp
+                           bt, δt, t, false, false, λv, μv), na, nn
           # if extinction
           else
-            return iTbd(bt, δt, t, true, false, λv, μv), na, nsp
+            return iTbd(bt, δt, t, true, false, λv, μv), na, nn
           end
         end
 
         na += 1
-        return iTbd(bt, δt, t, false, false, λv, μv), na, nsp
+        return iTbd(bt, δt, t, false, false, λv, μv), na, nn
       end
 
       t  -= δt
@@ -644,16 +644,16 @@ function _sim_gbmbd(nsδt::Float64,
       if divev(λm, μm, δt)
         # if speciation
         if λorμ(λm, μm)
-          nsp += 1
-          td1, na, nsp =
-            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nsp, nlim)
-          td2, na, nsp =
-            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nsp, nlim)
+          nn += 1
+          td1, na, nn =
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nn, nlim)
+          td2, na, nn =
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, δt, srδt, na, nn, nlim)
 
-          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nsp
+          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
         # if extinction
         else
-          return iTbd(bt, δt, δt, true, false, λv, μv), na, nsp
+          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
         end
       end
 
@@ -662,7 +662,7 @@ function _sim_gbmbd(nsδt::Float64,
     end
   end
 
-  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nsp
+  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nn
 end
 
 
@@ -678,7 +678,7 @@ end
                     δt  ::Float64,
                     srδt::Float64,
                     surv::Bool,
-                    nsp ::Int64)
+                    nn ::Int64)
 
 Simulate `iTbd` according to geometric Brownian motions for birth and death
 rates, with a limit on the number lineages allowed to reach.
@@ -692,9 +692,9 @@ function _sim_gbmbd_surv(t   ::Float64,
                          δt  ::Float64,
                          srδt::Float64,
                          surv::Bool,
-                         nsp ::Int64)
+                         nn ::Int64)
 
-  if !surv && nsp < 200
+  if !surv && nn < 200
 
     bt = 0.0
 
@@ -714,15 +714,15 @@ function _sim_gbmbd_surv(t   ::Float64,
         if divev(λm, μm, t)
           # if speciation
           if λorμ(λm, μm)
-            nsp += 1
-            return true, nsp
+            nn += 1
+            return true, nn
           # if extinction
           else
-            return surv, nsp
+            return surv, nn
           end
         end
 
-        return true, nsp
+        return true, nn
       end
 
       t  -= δt
@@ -737,16 +737,16 @@ function _sim_gbmbd_surv(t   ::Float64,
       if divev(λm, μm, δt)
         # if speciation
         if λorμ(λm, μm)
-          nsp += 1
-          surv, nsp =
-            _sim_gbmbd_surv(t, λt1, μt1, α, σλ, σμ, δt, srδt, surv, nsp)
-          surv, nsp =
-            _sim_gbmbd_surv(t, λt1, μt1, α, σλ, σμ, δt, srδt, surv, nsp)
+          nn += 1
+          surv, nn =
+            _sim_gbmbd_surv(t, λt1, μt1, α, σλ, σμ, δt, srδt, surv, nn)
+          surv, nn =
+            _sim_gbmbd_surv(t, λt1, μt1, α, σλ, σμ, δt, srδt, surv, nn)
 
-          return surv, nsp
+          return surv, nn
         # if extinction
         else
-          return surv, nsp
+          return surv, nn
         end
       end
 
@@ -755,7 +755,7 @@ function _sim_gbmbd_surv(t   ::Float64,
     end
   end
 
-  return true, nsp
+  return true, nn
 end
 
 

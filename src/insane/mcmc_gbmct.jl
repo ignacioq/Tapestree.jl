@@ -590,9 +590,9 @@ function fsbi_ct(bi  ::iBffs,
   tfb = tf(bi)
 
   # forward simulation during branch length
-  t0, na, nsp = _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
+  t0, na, nn = _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
 
-  if na < 1 || nsp >= 1_000
+  if na < 1 || nn >= 1_000
     return iTct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
   end
 
@@ -608,9 +608,9 @@ function fsbi_ct(bi  ::iBffs,
 
     if !it(bi)
       # add tips until the present
-      tx, na, nsp = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na, nsp)
+      tx, na, nn = tip_sims!(t0, tfb, α, σλ, ϵ, δt, srδt, na, nn)
 
-      if nsp >= 1_000
+      if nn >= 1_000
         return iTct(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
       end
     end
@@ -643,7 +643,7 @@ function tip_sims!(tree::iTct,
                    δt  ::Float64,
                    srδt::Float64,
                    na  ::Int64,
-                   nsp ::Int64)
+                   nn ::Int64)
 
   if istip(tree)
     if !isfix(tree) && isalive(tree)
@@ -652,12 +652,12 @@ function tip_sims!(tree::iTct,
       lλ0  = lλ(tree)
 
       # simulate
-      stree, na, nsp =
+      stree, na, nn =
         _sim_gbmct(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, ϵ, δt, srδt,
-                   na - 1, nsp, 1_000)
+                   na - 1, nn, 1_000)
 
-      if nsp >= 1_000
-        return tree, na, nsp
+      if nn >= 1_000
+        return tree, na, nn
       end
 
       setproperty!(tree, :iμ, isextinct(stree))
@@ -681,11 +681,11 @@ function tip_sims!(tree::iTct,
       end
     end
   else
-    tree.d1, na, nsp = tip_sims!(tree.d1, t, α, σλ, ϵ, δt, srδt, na, nsp)
-    tree.d2, na, nsp = tip_sims!(tree.d2, t, α, σλ, ϵ, δt, srδt, na, nsp)
+    tree.d1, na, nn = tip_sims!(tree.d1, t, α, σλ, ϵ, δt, srδt, na, nn)
+    tree.d2, na, nn = tip_sims!(tree.d2, t, α, σλ, ϵ, δt, srδt, na, nn)
   end
 
-  return tree, na, nsp
+  return tree, na, nn
 end
 
 

@@ -489,7 +489,8 @@ function update_fs!(bix::Int64,
 
   bi = idf[bix]
 
-  if it(bi) # is it terminal
+   # if terminal
+  if it(bi)
     ξp, llr = fsbi_t(bi, λ, μ)
   else
     ξp, llr = fsbi_i(bi, λ, μ)
@@ -504,7 +505,7 @@ function update_fs!(bix::Int64,
     ne  += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
     L   += treelength(ξp)             - treelength(ξc)
 
-    # set new tree
+    # set new decoupled tree
     Ξ[bix] = ξp
   end
 
@@ -529,16 +530,16 @@ function fsbi_t(bi::iBffs, λ::Float64, μ::Float64)
   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   # forward simulation during branch length
-  t0, na, nsp, llr =
+  t0, na, nn, llr =
     _sim_cbd_t(e(bi), λ, μ, lc, lU, Iρi, 0, 1, 500)
 
-  if na < 1 || !isfinite(llr)
-    return t0, -Inf
-  else
+  if na > 0 && isfinite(llr)
     _fixrtip!(t0, na) # fix random tip
     setni!(bi, na)    # set new ni
 
     return t0, llr
+  else
+    return t0, -Inf
   end
 end
 
@@ -552,9 +553,9 @@ Forward simulation for internal branch.
 """
 function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
 
-  t0, na, nsp = _sim_cbd_i(e(bi), λ, μ, 0, 1, 500)
+  t0, na, nn = _sim_cbd_i(e(bi), λ, μ, 0, 1, 500)
 
-  if na < 1 || nsp >= 500
+  if na < 1 || nn >= 500
     return t0, NaN
   end
 
@@ -575,9 +576,9 @@ function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
 
     _fixrtip!(t0, na) # fix random tip
 
-    # simulated remaining tips until the present
+    # simulate remaining tips until the present
     if na > 1
-      tx, na, nsp, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, Iρi, na, nsp)
+      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, Iρi, na, nn)
     end
 
     if lU < acr
@@ -616,19 +617,19 @@ function tip_sims!(tree::sTbd,
                    lU  ::Float64,
                    Iρi ::Float64,
                    na  ::Int64,
-                   nsp ::Int64)
+                   nn ::Int64)
 
-  if lU < lr && nsp < 500
+  if lU < lr && nn < 500
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
 
         # simulate
-        stree, na, nsp, lr = 
-          _sim_cbd_it(t, λ, μ, lr, lU, Iρi, na-1, nsp, 500)
+        stree, na, nn, lr = 
+          _sim_cbd_it(t, λ, μ, lr, lU, Iρi, na-1, nn, 500)
 
-        if isnan(lr) || nsp >= 500
-          return tree, na, nsp, NaN
+        if isnan(lr) || nn >= 500
+          return tree, na, nn, NaN
         end
 
         # merge to current tip
@@ -640,14 +641,14 @@ function tip_sims!(tree::sTbd,
         end
       end
     else
-      tree.d1, na, nsp, lr = tip_sims!(tree.d1, t, λ, μ, lr, lU, Iρi, na, nsp)
-      tree.d2, na, nsp, lr = tip_sims!(tree.d2, t, λ, μ, lr, lU, Iρi, na, nsp)
+      tree.d1, na, nn, lr = tip_sims!(tree.d1, t, λ, μ, lr, lU, Iρi, na, nn)
+      tree.d2, na, nn, lr = tip_sims!(tree.d2, t, λ, μ, lr, lU, Iρi, na, nn)
     end
 
-    return tree, na, nsp, lr
+    return tree, na, nn, lr
   end
 
-  return tree, na, nsp, NaN
+  return tree, na, nn, NaN
 end
 
 

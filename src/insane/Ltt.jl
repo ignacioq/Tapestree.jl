@@ -89,11 +89,11 @@ end
 
 
 """
-    nsppt(x::Ltt, t::Float64) = x.n[searchsortedlast(x.t, t, rev = true)]
+    nspt(x::Ltt, t::Float64) = x.n[searchsortedlast(x.t, t, rev = true)]
 
 Return the number of species at time t
 """
-function nsppt(x::Ltt, t::Float64)
+function nspt(x::Ltt, t::Float64)
   ix = searchsortedlast(x.t, t, rev = true)
   if iszero(ix)
     return 0

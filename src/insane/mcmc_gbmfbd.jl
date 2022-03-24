@@ -635,10 +635,10 @@ function fsbi_ifbd(bi  ::iBffs,
   tfb = tf(bi)
 
   # forward simulation during branch length
-  t0, na, nsp, nf =
+  t0, na, nn, nf =
     _sim_gbmfbd(e(bi), λ0, μ0, α, σλ, σμ, ψ, δt, srδt, 0, 1, 1_000, 0)
 
-  if na > 0 && iszero(nf) && nsp < 1_000
+  if na > 0 && iszero(nf) && nn < 1_000
     nat = na
 
     if isone(na)
@@ -650,10 +650,10 @@ function fsbi_ifbd(bi  ::iBffs,
 
       if !it(bi) || isfossil(bi)
         # add tips until the present
-        tx, na, nsp, nf =
-          tip_sims!(t0, tfb, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
+        tx, na, nn, nf =
+          tip_sims!(t0, tfb, α, σλ, σμ, ψ, δt, srδt, na, nn, nf)
 
-        if iszero(na) || !iszero(nf) || nsp >= 1_000
+        if iszero(na) || !iszero(nf) || nn >= 1_000
           return iTfbd(0.0, 0.0, 0.0, false, false, false,
                    Float64[], Float64[]),
             0, 0, NaN, NaN
@@ -667,10 +667,10 @@ function fsbi_ifbd(bi  ::iBffs,
 
       # if terminal fossil branch
       if it(bi)
-        tx, na, nsp, nf =
-          fossiltip_sim!(t0, tfb, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
+        tx, na, nn, nf =
+          fossiltip_sim!(t0, tfb, α, σλ, σμ, ψ, δt, srδt, na, nn, nf)
 
-        if !iszero(nf) || nsp >= 1_000
+        if !iszero(nf) || nn >= 1_000
           return iTfbd(0.0, 0.0, 0.0, false, false, false,
                    Float64[], Float64[]),
             0, 0, NaN, NaN
@@ -698,7 +698,7 @@ end
               δt  ::Float64,
               srδt::Float64,
               na  ::Int64,
-              nsp ::Int64,
+              nn ::Int64,
               nf  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
@@ -712,7 +712,7 @@ function tip_sims!(tree::iTfbd,
                    δt  ::Float64,
                    srδt::Float64,
                    na  ::Int64,
-                   nsp ::Int64,
+                   nn ::Int64,
                    nf  ::Int64)
 
   if iszero(nf)
@@ -724,12 +724,12 @@ function tip_sims!(tree::iTfbd,
         l    = lastindex(lλ0)
 
         # simulate
-        stree, na, nsp, nf =
+        stree, na, nn, nf =
           _sim_gbmfbd(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], α, σλ, σμ, ψ,
-            δt, srδt, na - 1, nsp, 1_000, nf)
+            δt, srδt, na - 1, nn, 1_000, nf)
 
-        if !iszero(nf) || nsp >= 1_000
-          return tree, na, nsp, nf
+        if !iszero(nf) || nn >= 1_000
+          return tree, na, nn, nf
         end
 
         setproperty!(tree, :iμ, isextinct(stree))
@@ -757,14 +757,14 @@ function tip_sims!(tree::iTfbd,
         end
       end
     else
-      tree.d1, na, nsp, nf =
-        tip_sims!(tree.d1, t, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
-      tree.d2, na, nsp, nf =
-        tip_sims!(tree.d2, t, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
+      tree.d1, na, nn, nf =
+        tip_sims!(tree.d1, t, α, σλ, σμ, ψ, δt, srδt, na, nn, nf)
+      tree.d2, na, nn, nf =
+        tip_sims!(tree.d2, t, α, σλ, σμ, ψ, δt, srδt, na, nn, nf)
     end
   end
 
-  return tree, na, nsp, nf
+  return tree, na, nn, nf
 end
 
 
@@ -780,7 +780,7 @@ end
                    δt  ::Float64,
                    srδt::Float64,
                    na  ::Int64,
-                   nsp ::Int64,
+                   nn ::Int64,
                    nf  ::Int64)
 
 Continue simulation until time `t` for the fixed tip in `tree`.
@@ -794,32 +794,32 @@ function fossiltip_sim!(tree::iTfbd,
                         δt  ::Float64,
                         srδt::Float64,
                         na  ::Int64,
-                        nsp ::Int64,
+                        nn ::Int64,
                         nf  ::Int64)
 
   if iszero(nf)
     if istip(tree)
       # simulate
-      stree, na, nsp, nf =
+      stree, na, nn, nf =
         _sim_gbmfbd(t, lλ(tree)[end], lμ(tree)[end], α, σλ, σμ, ψ,
-          δt, srδt, na-1, nsp, 1_000, nf)
+          δt, srδt, na-1, nn, 1_000, nf)
 
-      if !iszero(nf) || nsp >= 1_000
-        return tree, na, nsp, nf
+      if !iszero(nf) || nn >= 1_000
+        return tree, na, nn, nf
       end
 
       # merge to current tip
       tree.d1 = stree
     elseif isfix(tree.d1)
-      tree.d1, na, nsp, nf =
-        fossiltip_sim!(tree.d1, t, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
+      tree.d1, na, nn, nf =
+        fossiltip_sim!(tree.d1, t, α, σλ, σμ, ψ, δt, srδt, na, nn, nf)
     else
-      tree.d2, na, nsp, nf =
-        fossiltip_sim!(tree.d2, t, α, σλ, σμ, ψ, δt, srδt, na, nsp, nf)
+      tree.d2, na, nn, nf =
+        fossiltip_sim!(tree.d2, t, α, σλ, σμ, ψ, δt, srδt, na, nn, nf)
     end
   end
 
-  return tree, na, nsp, nf
+  return tree, na, nn, nf
 end
 
 

@@ -432,10 +432,10 @@ function fsbi_t(bi::iBffs, λ::Float64)
        Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   # forward simulation during branch length
-  t0, nap, nsp, llr =
+  t0, nap, nn, llr =
     _sim_cpb_t(e(bi), λ, lc, lU, Iρi, 0, 1, 500)
 
-  if isnan(llr) || nsp >= 500
+  if isnan(llr) || nn >= 500
     return t0, -Inf
   else
 

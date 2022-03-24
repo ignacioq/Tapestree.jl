@@ -670,7 +670,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 
   q = zeros(Int64, lts, n)
   for j in Base.OneTo(n), i in Base.OneTo(lts)
-    q[i,j] = nsppt(nts[j], ts[i])
+    q[i,j] = nspt(nts[j], ts[i])
   end
 
   Q = Array{Float64}(undef, lts, 6)

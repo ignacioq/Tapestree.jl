@@ -80,7 +80,7 @@ end
                lU  ::Float64,
                Iρi ::Float64,
                na  ::Int64,
-               nsp ::Int64,
+               nn ::Int64,
                nlim::Int64)
 
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
@@ -93,10 +93,10 @@ function _sim_cbd_t(t   ::Float64,
                     lU  ::Float64,
                     Iρi ::Float64,
                     na  ::Int64,
-                    nsp ::Int64,
+                    nn ::Int64,
                     nlim::Int64)
 
-  if isfinite(lr) && nsp < nlim
+  if isfinite(lr) && nn < nlim
 
     tw = cbd_wait(λ, μ)
 
@@ -107,26 +107,26 @@ function _sim_cbd_t(t   ::Float64,
         nlr += log(Iρi * Float64(na)/Float64(na-1))
       end
       if nlr >= lr
-        return sTbd(t, false, false), na, nsp, nlr
+        return sTbd(t, false, false), na, nn, nlr
       elseif lU < nlr
-        return sTbd(t, false, false), na, nsp, nlr
+        return sTbd(t, false, false), na, nn, nlr
       else
-        return sTbd(0.0, false, false), na, nsp, NaN
+        return sTbd(0.0, false, false), na, nn, NaN
       end
     else
       if λorμ(λ, μ)
-        nsp += 1
-        d1, na, nsp, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
-        d2, na, nsp, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
+        nn += 1
+        d1, na, nn, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
+        d2, na, nn, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
 
-        return sTbd(d1, d2, tw, false, false), na, nsp, lr
+        return sTbd(d1, d2, tw, false, false), na, nn, lr
       else
-        return sTbd(tw, true, false), na, nsp, lr
+        return sTbd(tw, true, false), na, nn, lr
       end
     end
   end
 
-  return sTbd(0.0, false, false), na, nsp, NaN
+  return sTbd(0.0, false, false), na, nn, NaN
 end
 
 
@@ -137,7 +137,7 @@ end
                λ   ::Float64,
                μ   ::Float64,
                na  ::Int64,
-               nsp ::Int64,
+               nn  ::Int64,
                nlim::Int64)
 
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
@@ -147,30 +147,30 @@ function _sim_cbd_i(t   ::Float64,
                     λ   ::Float64,
                     μ   ::Float64,
                     na  ::Int64,
-                    nsp ::Int64,
+                    nn  ::Int64,
                     nlim::Int64)
 
-  if nsp < nlim
+  if nn < nlim
 
     tw = cbd_wait(λ, μ)
 
     if tw > t
       na += 1
-      return sTbd(t, false, false), na, nsp
+      return sTbd(t, false, false), na, nn
     end
 
     if λorμ(λ, μ)
-      nsp += 1
-      d1, na, nsp = _sim_cbd_i(t - tw, λ, μ, na, nsp, nlim)
-      d2, na, nsp = _sim_cbd_i(t - tw, λ, μ, na, nsp, nlim)
+      nn += 1
+      d1, na, nn = _sim_cbd_i(t - tw, λ, μ, na, nn, nlim)
+      d2, na, nn = _sim_cbd_i(t - tw, λ, μ, na, nn, nlim)
 
-      return sTbd(d1, d2, tw, false, false), na, nsp
+      return sTbd(d1, d2, tw, false, false), na, nn
     else
-      return sTbd(tw, true, false), na, nsp
+      return sTbd(tw, true, false), na, nn
     end
   end
 
-  return sTbd(0.0, false, false), na, nsp
+  return sTbd(0.0, false, false), na, nn
 end
 
 
@@ -183,7 +183,7 @@ end
                 lr  ::Float64,
                 lU  ::Float64,
                 Iρi ::Float64,
-                nsp ::Int64,
+                nn ::Int64,
                 nlim::Int64)
 
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
@@ -196,39 +196,39 @@ function _sim_cbd_it(t   ::Float64,
                      lU  ::Float64,
                      Iρi ::Float64,
                      na  ::Int64,
-                     nsp ::Int64,
+                     nn ::Int64,
                      nlim::Int64)
 
-  if lU < lr && nsp < nlim
+  if lU < lr && nn < nlim
 
     tw = cbd_wait(λ, μ)
 
     if tw > t
       na += 1
       lr += log(Iρi)
-      return sTbd(t, false, false), na, nsp, lr
+      return sTbd(t, false, false), na, nn, lr
     end
 
     if λorμ(λ, μ)
-      nsp += 1
-      d1, na, nsp, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
-      d2, na, nsp, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nsp, nlim)
+      nn += 1
+      d1, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
+      d2, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
 
-      return sTbd(d1, d2, tw, false, false), na, nsp, lr
+      return sTbd(d1, d2, tw, false, false), na, nn, lr
     else
-      return sTbd(tw, true, false), na, nsp, lr
+      return sTbd(tw, true, false), na, nn, lr
     end
 
   end
 
-  return sTbd(0.0, false, false), na, nsp, NaN
+  return sTbd(0.0, false, false), na, nn, NaN
 end
 
 
 
 
 """
-    sim_cbd_surv(t::Float64, λ::Float64, μ::Float64, surv::Bool, nsp::Int64)
+    sim_cbd_surv(t::Float64, λ::Float64, μ::Float64, surv::Bool, nn::Int64)
 
 Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
 and extinction rate `μ` until it goes extinct or survives.
@@ -237,28 +237,28 @@ function sim_cbd_surv(t   ::Float64,
                       λ   ::Float64,
                       μ   ::Float64,
                       surv::Bool,
-                      nsp ::Int64)
+                      nn ::Int64)
 
-  if !surv && nsp < 500
+  if !surv && nn < 500
 
     tw = cbd_wait(λ, μ)
 
     if tw > t
-      return true, nsp
+      return true, nn
     end
 
     if λorμ(λ, μ)
-      nsp += 1
-      surv, nsp = sim_cbd_surv(t - tw, λ, μ, surv, nsp)
-      surv, nsp = sim_cbd_surv(t - tw, λ, μ, surv, nsp)
+      nn += 1
+      surv, nn = sim_cbd_surv(t - tw, λ, μ, surv, nn)
+      surv, nn = sim_cbd_surv(t - tw, λ, μ, surv, nn)
 
-      return surv, nsp
+      return surv, nn
     else
-      return surv, nsp
+      return surv, nn
     end
   end
 
-  return true, nsp
+  return true, nn
 end
 
 
@@ -394,8 +394,6 @@ end
 
 
 
-
-
 """
     cbd_wait(n::Float64, λ::Float64, μ::Float64)
 
@@ -435,4 +433,6 @@ rexp(r::Float64) = @fastmath randexp()/r
 Return `true` if speciation event
 """
 λorμ(λ::Float64, μ::Float64) = (λ/(λ + μ)) > rand()
+
+
 
