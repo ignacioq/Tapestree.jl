@@ -643,9 +643,9 @@ function _sim_gbmce_it(nsδt::Float64,
     # if speciation
     if λorμ(λm, μ)
       nn += 1
-      td1, na, nn, lr = 
+      td1, na, nn, lr =
         _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
-      td2, na, nn, lr = 
+      td2, na, nn, lr =
         _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
 
       return iTce(td1, td2, bt, δt, nsδt, false, false, λv), na, nn, lr
@@ -851,35 +851,22 @@ function _sim_gbmce_surv(t   ::Float64,
 
   if !surv && nn < 200
 
-    bt = 0.0
-
     while true
 
       if t <= δt
-        bt  += t
-
         t   = max(0.0,t)
-        srt = sqrt(t)
-        λt1 = rnorm(λt + α*t, srt*σλ)
-        λm  = exp(0.5*(λt + λt1))
 
-        if divev(λm, μ, t)
-          # if speciation
-          if λorμ(λm, μ)
-            nn += 1
-            return true, nn
-          # if extinction
-          else
-            return surv, nn
-          end
+        # if extinction
+        if rand() < μ*t
+          return surv, nn
+        else
+          return true, nn
         end
 
         return true, nn
       end
 
       t  -= δt
-      bt += δt
-
       λt1 = rnorm(λt + α*δt, srδt*σλ)
       λm  = exp(0.5*(λt + λt1))
 

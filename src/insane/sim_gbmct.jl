@@ -853,22 +853,17 @@ function _sim_gbmct_surv(t   ::Float64,
 
   if !surv && nn < 200
 
-    bt = 0.0
-
     while true
 
       if t <= δt
-        bt  += t
 
         t   = max(0.0,t)
-        srt = sqrt(t)
-        λt1 = rnorm(λt + α*t, srt*σλ)
+        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         λm  = exp(0.5*(λt + λt1))
 
-        if divevϵ(λm, ϵ, t)
+        if rand() < ϵ*λm*t
           # if speciation
           if λorμ(λm, ϵ*λm)
-            nn += 1
             return true, nn
           # if extinction
           else
@@ -880,7 +875,6 @@ function _sim_gbmct_surv(t   ::Float64,
       end
 
       t  -= δt
-      bt += δt
 
       λt1 = rnorm(λt + α*δt, srδt*σλ)
       λm  = exp(0.5*(λt + λt1))

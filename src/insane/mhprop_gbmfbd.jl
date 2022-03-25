@@ -51,11 +51,10 @@ function _daughter_update!(ξ1  ::iTfbd,
     sre = sqrt(e1)
 
     # acceptance rate
-    normprop =
-      ldnorm_bm(λf, λ1 - α*e1, sre*σλ) -
-      ldnorm_bm(λi, λ1 - α*e1, sre*σλ) +
-      ldnorm_bm(μf, μ1,        sre*σμ) -
-      ldnorm_bm(μi, μ1,        sre*σμ)
+    gp = ldnorm_bm(λf, λ1 - α*e1, sre*σλ) -
+         ldnorm_bm(λi, λ1 - α*e1, sre*σλ) +
+         ldnorm_bm(μf, μ1,        sre*σμ) -
+         ldnorm_bm(μi, μ1,        sre*σμ)
 
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
@@ -63,7 +62,7 @@ function _daughter_update!(ξ1  ::iTfbd,
 
     acr  = llrbd1
     llr  = llrbm1 + acr
-    acr += normprop
+    acr += gp
     drλ  = λi - λf
     ssrλ = ssrλ1
     ssrμ = ssrμ1
