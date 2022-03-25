@@ -574,7 +574,7 @@ function _sim_gbmbd_t(t   ::Float64,
             end
           # if extinction
           else
-            return iTbd(bt, δt, t, true, false, λv, μv), na, nn
+            return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
           end
         end
 
@@ -644,6 +644,9 @@ end
                   σμ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
                   na  ::Int64,
                   nn  ::Int64,
                   nlim::Int64)
@@ -660,6 +663,9 @@ function _sim_gbmbd_it(nsδt::Float64,
                        σμ  ::Float64,
                        δt  ::Float64,
                        srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
                        na  ::Int64,
                        nn  ::Int64,
                        nlim::Int64)
@@ -746,8 +752,7 @@ function _sim_gbmbd_it(nsδt::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
+        bt += t
         t   = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -831,6 +836,9 @@ end
                   σμ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
                   na  ::Int64,
                   nn  ::Int64,
                   nlim::Int64)
@@ -846,6 +854,9 @@ function _sim_gbmbd_it(t   ::Float64,
                        σμ  ::Float64,
                        δt  ::Float64,
                        srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
                        na  ::Int64,
                        nn  ::Int64,
                        nlim::Int64)
@@ -860,8 +871,7 @@ function _sim_gbmbd_it(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
+        bt += t
         t   = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)

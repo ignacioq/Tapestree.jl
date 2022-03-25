@@ -764,8 +764,7 @@ function _sim_gbmce_it(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
+        bt += t
         t   = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)

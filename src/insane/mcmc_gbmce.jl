@@ -617,9 +617,9 @@ function fsbi_i(bi  ::iBffs,
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       l1  = lastindex(λ1p)
       l2  = lastindex(λ2p)
-      setnt!(bi, ntp)                    # set new nt
-      setni!(bi, na)                     # set new ni
-      setλt!(bi, λf)                     # set new λt
+      setnt!(bi, ntp)                       # set new nt
+      setni!(bi, na)                        # set new ni
+      setλt!(bi, λf)                        # set new λt
       unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
       unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
 
@@ -662,7 +662,7 @@ function tip_sims!(tree::iTce,
                    lU  ::Float64,
                    Iρi ::Float64,
                    na  ::Int64,
-                   nn ::Int64)
+                   nn  ::Int64)
 
   if lU < lr && nn < 1_000
 
