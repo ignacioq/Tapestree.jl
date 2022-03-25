@@ -554,6 +554,9 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
+           ξc  ::iTce,
+           ξ1  ::iTce,
+           ξ2  ::iTce,
            λ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
@@ -596,7 +599,7 @@ function fsbi_i(bi  ::iBffs,
   λf = fixrtip!(t0, na, NaN) # fix random tip
 
   llrd, acrd, drλ, ssrλ, λ1p, λ2p =
-      _daughters_update!(ξ1, ξ2, λf, α, σλ, μ, δt, srδt)
+    _daughters_update!(ξ1, ξ2, λf, α, σλ, μ, δt, srδt)
 
   acr += acrd
 

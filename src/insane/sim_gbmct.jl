@@ -390,11 +390,9 @@ function _sim_gbmct(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
-        t = max(0.0,t)
-        srt = sqrt(t)
-        λt1 = rnorm(λt + α*t, srt*σλ)
+        bt += t
+        t   = max(0.0,t)
+        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
 
         push!(λv, λt1)
 
@@ -451,107 +449,48 @@ end
 
 
 """
-    _sim_gbmct(nsδt::Float64,
-               t   ::Float64,
-               λt  ::Float64,
-               α   ::Float64,
-               σλ  ::Float64,
-               ϵ   ::Float64,
-               δt  ::Float64,
-               srδt::Float64,
-               na  ::Int64,
-               nn ::Int64,
-               nlim::Int64)
+    _sim_gbmct_t(t   ::Float64,
+                 λt  ::Float64,
+                 α   ::Float64,
+                 σλ  ::Float64,
+                 ϵ   ::Float64,
+                 δt  ::Float64,
+                 srδt::Float64,
+                 lr  ::Float64,
+                 lU  ::Float64,
+                 Iρi ::Float64,
+                 na  ::Int64,
+                 nn  ::Int64,
+                 nlim::Int64)
 
 Simulate `iTct` according to a geometric Brownian motion for birth rates and
-constant turnover, starting with a non-standard δt with a limit in the number
-of species.
+constant turnover, with a limit on the number lineages allowed to reach.
 """
-function _sim_gbmct(nsδt::Float64,
-                    t   ::Float64,
-                    λt  ::Float64,
-                    α   ::Float64,
-                    σλ  ::Float64,
-                    ϵ   ::Float64,
-                    δt  ::Float64,
-                    srδt::Float64,
-                    na  ::Int64,
-                    nn ::Int64,
-                    nlim::Int64)
+function _sim_gbmct_t(t   ::Float64,
+                      λt  ::Float64,
+                      α   ::Float64,
+                      σλ  ::Float64,
+                      ϵ   ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64,
+                      lr  ::Float64,
+                      lU  ::Float64,
+                      Iρi ::Float64,
+                      na  ::Int64,
+                      nn  ::Int64,
+                      nlim::Int64)
 
-  λv = Float64[λt]
-  bt = 0.0
+  if isfinite(lr) && nn < nlim
 
-  ## first: non-standard δt
-  if t <= nsδt
-    bt  += t
+    λv = Float64[λt]
+    bt = 0.0
 
-    t   = max(0.0, t)
-    srt = sqrt(t)
-    λt1 = rnorm(λt + α*t, srt*σλ)
-
-    push!(λv, λt1)
-
-    λm = exp(0.5*(λt + λt1))
-
-    if divevϵ(λm, ϵ, t)
-      # if speciation
-      if λorμ(λm, ϵ*λm)
-        nn += 1
-        na  += 2
-        return iTct(
-                 iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                 iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                 bt, δt, t, false, false, λv), na, nn
-      # if extinction
-      else
-        return iTct(bt, δt, t, true, false, λv), na, nn
-      end
-    end
-
-    na += 1
-    return iTct(bt, δt, t, false, false, λv), na, nn
-  end
-
-  t  -= nsδt
-  bt += nsδt
-
-  srnsδt = sqrt(nsδt)
-
-  λt1 = rnorm(λt + α*nsδt, srnsδt*σλ)
-
-  push!(λv, λt1)
-
-  λm = exp(0.5*(λt + λt1))
-
-  if divevϵ(λm, ϵ, nsδt)
-    # if speciation
-    if λorμ(λm, ϵ*λm)
-      nn += 1
-      td1, na, nn = _sim_gbmct(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
-      td2, na, nn = _sim_gbmct(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
-
-      return iTct(td1, td2, bt, δt, nsδt, false, false, λv), na, nn
-    else
-    # if extinction
-      return iTct(bt, δt, nsδt, true, false, λv), na, nn
-    end
-  end
-
-  λt = λt1
-
-  if nn < nlim
-
-    ## second: standard δt
     while true
 
       if t <= δt
-        bt  += t
-
+        bt += t
         t   = max(0.0,t)
-        srt = sqrt(t)
-        λt1 = rnorm(λt + α*t, srt*σλ)
-
+        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
 
         λm = exp(0.5*(λt + λt1))
@@ -560,41 +499,63 @@ function _sim_gbmct(nsδt::Float64,
           # if speciation
           if λorμ(λm, ϵ*λm)
             nn += 1
-            na  += 2
-            return iTct(
-                      iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                      iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                           bt, δt, t, false, false, λv), na, nn
+            na += 2
+            if na === 2
+              nlr = lr + log(Iρi*2.0)
+            else
+              nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
+            end
+            if nlr >= lr
+              return iTct(iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          bt, δt, t, false, false, λv), na, nn, nlr
+            elseif lU < nlr
+              return iTct(iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          bt, δt, t, false, false, λv), na, nn, nlr
+            else
+              return iTct(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+            end
           # if extinction
           else
-            return iTct(bt, δt, t, true, false, λv), na, nn
+            return iTct(bt, δt, t, true, false, λv), na, nn, lr
           end
         end
 
         na += 1
-        return iTct(bt, δt, t, false, false, λv), na, nn
+        nlr = lr
+        if na > 1
+          nlr += log(Iρi * Float64(na)/Float64(na-1))
+        end
+        if nlr >= lr
+          return iTct(bt, δt, t, false, false, λv), na, nn, nlr
+        elseif lU < nlr
+          return iTct(bt, δt, t, false, false, λv), na, nn, nlr
+        else
+          return iTct(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+        end
       end
 
       t  -= δt
       bt += δt
 
       λt1 = rnorm(λt + α*δt, srδt*σλ)
-
       push!(λv, λt1)
-
-      λm = exp(0.5*(λt + λt1))
+      λm  = exp(0.5*(λt + λt1))
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
         if λorμ(λm, ϵ*λm)
           nn += 1
-          td1, na, nn = _sim_gbmct(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
-          td2, na, nn = _sim_gbmct(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
+          td1, na, nn, lr = 
+            _sim_gbmct_t(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          td2, na, nn, lr = 
+            _sim_gbmct_t(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
 
-          return iTct(td1, td2, bt, δt, δt, false, false, λv), na, nn
+          return iTct(td1, td2, bt, δt, δt, false, false, λv), na, nn, lr
         # if extinction
         else
-          return iTct(bt, δt, δt, true, false, λv), na, nn
+          return iTct(bt, δt, δt, true, false, λv), na, nn, lr
         end
       end
 
@@ -602,7 +563,265 @@ function _sim_gbmct(nsδt::Float64,
     end
   end
 
-  return iTct(0.0, 0.0, 0.0, false, false, Float64[]), na, nn
+  return iTct(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_gbmct_it(nsδt::Float64,
+                  t   ::Float64,
+                  λt  ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  ϵ   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
+                  na  ::Int64,
+                  nn  ::Int64,
+                  nlim::Int64)
+
+Simulate `iTct` according to a geometric Brownian motion for birth rates and
+constant turnover, starting with a non-standard δt with a limit in the number
+of species.
+"""
+function _sim_gbmct_it(nsδt::Float64,
+                       t   ::Float64,
+                       λt  ::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       ϵ   ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
+                       na  ::Int64,
+                       nn  ::Int64,
+                       nlim::Int64)
+
+  λv = Float64[λt]
+  bt = 0.0
+
+  ## first: non-standard δt
+  if t <= nsδt
+    bt += t
+    t   = max(0.0, t)
+    λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
+    push!(λv, λt1)
+
+    λm = exp(0.5*(λt + λt1))
+
+    if divevϵ(λm, ϵ, t)
+      # if speciation
+      if λorμ(λm, ϵ*λm)
+        nn += 1
+        na += 2
+        lr += 2.0*log(Iρi)
+        return iTct(iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                    iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                    bt, δt, t, false, false, λv), na, nn, lr
+      # if extinction
+      else
+        return iTct(bt, δt, t, true, false, λv), na, nn, lr
+      end
+    end
+
+    na += 1
+    lr += log(Iρi)
+   return iTct(bt, δt, t, false, false, λv), na, nn, lr
+  end
+
+  t  -= nsδt
+  bt += nsδt
+
+  λt1 = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
+  λm  = exp(0.5*(λt + λt1))
+  push!(λv, λt1)
+
+  if divevϵ(λm, ϵ, nsδt)
+    # if speciation
+    if λorμ(λm, ϵ*λm)
+      nn += 1
+      td1, na, nn, lr = 
+        _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+      td2, na, nn, lr = 
+        _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+
+      return iTct(td1, td2, bt, δt, nsδt, false, false, λv), na, nn, lr
+    else
+    # if extinction
+      return iTct(bt, δt, nsδt, true, false, λv), na, nn, lr
+    end
+  end
+
+  λt = λt1
+
+  if lU < lr && nn < nlim
+
+    ## second: standard δt
+    while true
+
+      if t <= δt
+        bt += t
+        t   = max(0.0,t)
+        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
+        λm  = exp(0.5*(λt + λt1))
+        push!(λv, λt1)
+
+        if divevϵ(λm, ϵ, t)
+          # if speciation
+          if λorμ(λm, ϵ*λm)
+            nn += 1
+            na += 2
+            lr += 2.0*log(Iρi)
+            return iTct(
+                      iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                      iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                           bt, δt, t, false, false, λv), na, nn, lr
+          # if extinction
+          else
+            return iTct(bt, δt, t, true, false, λv), na, nn, lr
+          end
+        end
+        na += 1
+        lr += log(Iρi)
+        return iTct(bt, δt, t, false, false, λv), na, nn, lr
+      end
+
+      t  -= δt
+      bt += δt
+
+      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      λm  = exp(0.5*(λt + λt1))
+      push!(λv, λt1)
+
+      if divevϵ(λm, ϵ, δt)
+        # if speciation
+        if λorμ(λm, ϵ*λm)
+          nn += 1
+          td1, na, nn, lr = 
+            _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          td2, na, nn, lr = 
+            _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+
+          return iTct(td1, td2, bt, δt, δt, false, false, λv), na, nn, lr
+        # if extinction
+        else
+          return iTct(bt, δt, δt, true, false, λv), na, nn, lr
+        end
+      end
+
+      λt = λt1
+    end
+  end
+
+  return iTct(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_gbmct_it(t   ::Float64,
+                  λt  ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  ϵ   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
+                  na  ::Int64,
+                  nn  ::Int64,
+                  nlim::Int64)
+
+Simulate `iTct` according to a geometric Brownian motion for birth rates and
+constant turnover, starting with a non-standard δt with a limit in the number
+of species.
+"""
+function _sim_gbmct_it(t   ::Float64,
+                       λt  ::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       ϵ   ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
+                       na  ::Int64,
+                       nn  ::Int64,
+                       nlim::Int64)
+
+  if lU < lr && nn < nlim
+
+    λv = Float64[λt]
+    bt = 0.0
+
+    ## second: standard δt
+    while true
+
+      if t <= δt
+        bt += t
+        t   = max(0.0,t)
+        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
+        λm  = exp(0.5*(λt + λt1))
+        push!(λv, λt1)
+
+        if divevϵ(λm, ϵ, t)
+          # if speciation
+          if λorμ(λm, ϵ*λm)
+            nn += 1
+            na += 2
+            lr += 2.0*log(Iρi)
+            return iTct(
+                      iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                      iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                           bt, δt, t, false, false, λv), na, nn, lr
+          # if extinction
+          else
+            return iTct(bt, δt, t, true, false, λv), na, nn, lr
+          end
+        end
+        na += 1
+        lr += log(Iρi)
+        return iTct(bt, δt, t, false, false, λv), na, nn, lr
+      end
+
+      t  -= δt
+      bt += δt
+
+      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      λm  = exp(0.5*(λt + λt1))
+      push!(λv, λt1)
+
+      if divevϵ(λm, ϵ, δt)
+        # if speciation
+        if λorμ(λm, ϵ*λm)
+          nn += 1
+          td1, na, nn, lr = 
+            _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          td2, na, nn, lr = 
+            _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+
+          return iTct(td1, td2, bt, δt, δt, false, false, λv), na, nn, lr
+        # if extinction
+        else
+          return iTct(bt, δt, δt, true, false, λv), na, nn, lr
+        end
+      end
+
+      λt = λt1
+    end
+  end
+
+  return iTct(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
 end
 
 

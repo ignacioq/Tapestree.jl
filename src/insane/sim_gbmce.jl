@@ -664,10 +664,8 @@ function _sim_gbmce_it(nsδt::Float64,
 
       if t <= δt
         bt  += t
-
         t   = max(0.0,t)
-        srt = sqrt(t)
-        λt1 = rnorm(λt + α*t, srt*σλ)
+        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         λm  = exp(0.5*(λt + λt1))
         push!(λv, λt1)
 
