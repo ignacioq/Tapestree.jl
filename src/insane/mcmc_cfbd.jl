@@ -513,7 +513,6 @@ Forward simulation for branch `bi`
 """
 function fsbi_i(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
-
   # forward simulation during branch length
   t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 500)
 

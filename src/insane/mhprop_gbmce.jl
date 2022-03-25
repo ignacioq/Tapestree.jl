@@ -10,6 +10,8 @@ Created 27 05 2020
 =#
 
 
+
+
 """
     _daughters_update!(ξ1  ::iTce,
                        ξ2  ::iTce,
@@ -50,9 +52,8 @@ function _daughters_update!(ξ1  ::iTce,
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
     # acceptance rate
-    normprop =
-      duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-      duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
 
     # log likelihood ratios
     llrbm1, llrce1, ssrλ1 =
@@ -62,7 +63,7 @@ function _daughters_update!(ξ1  ::iTce,
 
     acr  = llrce1 + llrce2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
-    acr += normprop
+    acr += gp
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
   end

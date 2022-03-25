@@ -473,70 +473,34 @@ function update_fs!(bix    ::Int64,
                     srδt   ::Float64)
 
   bi  = idf[bix]
-  itb = it(bi) # if is terminal
-
   ξc  = Ξ[bix]
-  if !itb
-    ξ1  = Ξ[d1(bi)]
-    ξ2  = Ξ[d2(bi)]
+
+  # if terminal
+  if it(bi)
+    ξp, llr = fsbi_t(bi, lλ(ξc)[1], α, σλ, μ, δt, srδt)
+    drλ  = 0.0
+    ssrλ = 0.0
+  # if internal
+  else
+    ξp, llr, drλ, ssrλ =
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], lλ(ξc)[1], α, σλ, μ, δt, srδt)
   end
 
-  # forward simulate an internal branch
-  ξp, ntp, np, λf = fsbi_ce(bi, lλ(ξc)[1], α, σλ, μ, δt, srδt)
+  # if accepted
+  if isfinite(llr)
+    ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ξp, α, σλ, μ, δt, srδt)
+    ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ξc, α, σλ, μ, δt, srδt)
 
-  # check for survival or non-exploding simulation
-  if ntp > 0
+    # update llr, ssλ, nλ, ne, L
+    llc += llr  + ll1  - ll0
+    dλ  += dλ1  - dλ0  + drλ
+    ssλ += ssλ1 - ssλ0 + ssrλ
+    nλ  += nλ1  - nλ0
+    ne  += ntipsextinct(ξp) - ntipsextinct(ξc)
+    L   += treelength(ξp)   - treelength(ξc)
 
-    ρbi = ρi(bi) # get branch sampling fraction
-    nc  = ni(bi) # current ni
-    ntc = nt(bi) # current nt
-
-    # if terminal branch
-    if itb
-      llr  = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr  = llr
-      drλ  = 0.0
-      ssrλ = 0.0
-    else
-      np -= 1
-      llr = log((1.0 - ρbi)^(np - nc))
-      acr = llr + log(Float64(ntp)/Float64(ntc))
-      # change daughters
-      if isfinite(acr)
-
-        llrd, acrd, drλ, ssrλ, λ1p, λ2p =
-          _daughters_update!(ξ1, ξ2, λf, α, σλ, μ, δt, srδt)
-
-        llr += llrd
-        acr += acrd
-      else
-        return llc, dλ, ssλ, nλ, ne, L
-      end
-    end
-
-    # MH ratio
-    if -randexp() < acr
-
-      ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(ξp, α, σλ, μ, δt, srδt)
-      ll0, dλ0, ssλ0, nλ0 = llik_gbm_ssλ(ξc, α, σλ, μ, δt, srδt)
-
-      # update llr, ssλ, nλ, sns, ne, L,
-      llc += llr  + ll1  - ll0
-      dλ  += dλ1  - dλ0  + drλ
-      ssλ += ssλ1 - ssλ0 + ssrλ
-      nλ  += nλ1  - nλ0
-      ne  += ntipsextinct(ξp) - ntipsextinct(ξc)
-      L   += treelength(ξp)   - treelength(ξc)
-
-      Ξ[bix] = ξp          # set new tree
-      setni!(bi, np)       # set new ni
-      setnt!(bi, ntp)      # set new nt
-      setλt!(bi, λf)       # set new λt
-      if !itb
-        copyto!(lλ(ξ1), λ1p) # set new daughter 1 λ vector
-        copyto!(lλ(ξ2), λ2p) # set new daughter 2 λ vector
-      end
-    end
+    # set new tree
+    Ξ[bix] = ξp
   end
 
   return llc, dλ, ssλ, nλ, ne, L
@@ -546,57 +510,123 @@ end
 
 
 """
-    fsbi_ce(bi  ::iBffs,
-            λ0  ::Float64,
-            α   ::Float64,
-            σλ  ::Float64,
-            μ   ::Float64,
-            δt  ::Float64,
-            srδt::Float64)
+    fsbi_t(bi  ::iBffs,
+           λ0  ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           μ   ::Float64,
+           δt  ::Float64,
+           srδt::Float64)
 
 Forward simulation for branch `bi`
 """
-function fsbi_ce(bi  ::iBffs,
-                 λ0  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 μ   ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64)
+function fsbi_t(bi  ::iBffs,
+                λ0  ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                μ   ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
 
-  # times
-  tfb = tf(bi)
+  nac = ni(bi)         # current ni
+  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  lU  = -randexp()     # log-probability
+
+  # current ll
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   # forward simulation during branch length
-  t0, na, nn = _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
+  t0, na, nn, llr =
+    _sim_gbmce_t(e(bi), λ0, α, σλ, μ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
+
+  if na > 0 && isfinite(llr)
+    _fixrtip!(t0, na) # fix random tip
+    setni!(bi, na)    # set new ni
+
+    return t0, llr
+  else
+    return t0, -Inf
+  end
+end
+
+
+
+
+"""
+    fsbi_i(bi  ::iBffs,
+           λ0  ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           μ   ::Float64,
+           δt  ::Float64,
+           srδt::Float64)
+
+Forward simulation for branch `bi`
+"""
+function fsbi_i(bi  ::iBffs,
+                ξc  ::iTce,
+                ξ1  ::iTce,
+                ξ2  ::iTce,
+                λ0  ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                μ   ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
+
+  t0, na, nn =
+    _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nn >= 1_000
-    return iTce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+    return t0, NaN, NaN, NaN
   end
 
-  nat = na
+  ntp = na
 
-  if isone(na)
-    f, λf = fixalive!(t0, NaN)
+  lU = -randexp() #log-probability
 
-    return t0, nat, na, λf
-  elseif na > 1
-    # fix random tip
-    λf = fixrtip!(t0, na, NaN)
+  # continue simulation only if acr on sum of tip rates is accepted
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
 
-    if !it(bi)
-      # add tips until the present
-      tx, na, nn = tip_sims!(t0, tfb, α, σλ, μ, δt, srδt, na, nn)
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-      if nn >= 1_000
-        return iTce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
-      end
+  λf = fixrtip!(t0, na, NaN) # fix random tip
+
+  llrd, acrd, drλ, ssrλ, λ1p, λ2p =
+      _daughters_update!(ξ1, ξ2, λf, α, σλ, μ, δt, srδt)
+
+  acr += acrd
+
+  if lU < acr
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr = 
+        tip_sims!(t0, tf(bi), α, σλ, μ, δt, srδt, acr, lU, Iρi, na, nn)
     end
 
-    return t0, nat, na, λf
+    if lU < acr
+      na -= 1
+
+      llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      l1  = lastindex(λ1p)
+      l2  = lastindex(λ2p)
+      setnt!(bi, ntp)                    # set new nt
+      setni!(bi, na)                     # set new ni
+      setλt!(bi, λf)                     # set new λt
+      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
+
+      return t0, llr, drλ, ssrλ
+    else
+      return t0, NaN, NaN, NaN
+    end
   end
 
-  return iTce(0.0, 0.0, 0.0, false, false, Float64[]), 0, 0, NaN
+  return t0, NaN, NaN, NaN
 end
 
 
@@ -610,8 +640,11 @@ end
               μ   ::Float64,
               δt  ::Float64,
               srδt::Float64,
+              lr  ::Float64,
+              lU  ::Float64,
+              Iρi ::Float64,
               na  ::Int64,
-              nn ::Int64)
+              nn  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
@@ -622,50 +655,60 @@ function tip_sims!(tree::iTce,
                    μ   ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
+                   lr  ::Float64,
+                   lU  ::Float64,
+                   Iρi ::Float64,
                    na  ::Int64,
                    nn ::Int64)
 
-  if istip(tree)
-    if !isfix(tree) && isalive(tree)
+  if lU < lr && nn < 1_000
 
-      fdti = fdt(tree)
-      lλ0  = lλ(tree)
+    if istip(tree)
+      if !isfix(tree) && isalive(tree)
 
-      # simulate
-      stree, na, nn =
-        _sim_gbmce(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt,
-                   na - 1, nn, 1_000)
+        fdti = fdt(tree)
+        lλ0  = lλ(tree)
 
-      if nn >= 1_000
-        return tree, na, nn
+        # simulate
+        stree, na, nn, lr =
+          _sim_gbmce_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt,
+                     lr, lU, Iρi, na-1, nn, 1_000)
+
+        if isnan(lr) || nn >= 1_000
+          return tree, na, nn, NaN
+        end
+
+        setproperty!(tree, :iμ, isextinct(stree))
+        sete!(tree, e(tree) + e(stree))
+
+        lλs = lλ(stree)
+
+        if lastindex(lλs) === 2
+          setfdt!(tree, fdt(tree) + fdt(stree))
+        else
+          setfdt!(tree, fdt(stree))
+        end
+
+        pop!(lλ0)
+        popfirst!(lλs)
+        append!(lλ0, lλs)
+
+        if isdefined(stree, :d1)
+          tree.d1 = stree.d1
+          tree.d2 = stree.d2
+        end
       end
-
-      setproperty!(tree, :iμ, isextinct(stree))
-      sete!(tree, e(tree) + e(stree))
-
-      lλs = lλ(stree)
-
-      if lastindex(lλs) === 2
-        setfdt!(tree, fdt(tree) + fdt(stree))
-      else
-        setfdt!(tree, fdt(stree))
-      end
-
-      pop!(lλ0)
-      popfirst!(lλs)
-      append!(lλ0, lλs)
-
-      if isdefined(stree, :d1)
-        tree.d1 = stree.d1
-        tree.d2 = stree.d2
-      end
+    else
+      tree.d1, na, nn, lr = 
+        tip_sims!(tree.d1, t, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn)
+      tree.d2, na, nn, lr = 
+        tip_sims!(tree.d2, t, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn)
     end
-  else
-    tree.d1, na, nn = tip_sims!(tree.d1, t, α, σλ, μ, δt, srδt, na, nn)
-    tree.d2, na, nn = tip_sims!(tree.d2, t, α, σλ, μ, δt, srδt, na, nn)
+
+    return tree, na, nn, lr
   end
 
-  return tree, na, nn
+  return tree, na, nn, NaN
 end
 
 

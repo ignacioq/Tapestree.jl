@@ -608,13 +608,13 @@ function fsbi_t(bi  ::iBffs,
   t0, nap, nn, llr =
     _sim_gbmpb_t(e(bi), λ0, α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
 
-  if isnan(llr) || nn >= 1_000
-    return t0, -Inf
-  else
+  if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
     setni!(bi, nap)    # set new ni
 
     return t0, llr
+  else
+    return t0, -Inf
   end
 end
 
@@ -644,7 +644,7 @@ function fsbi_i(bi  ::iBffs,
                 srδt::Float64)
 
   # forward simulation during branch length
-  t0, na = _sim_gbmpb_i(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
+  t0, na = _sim_gbmpb(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
 
   if na >= 1_000
     return t0, NaN, NaN, NaN
@@ -662,29 +662,25 @@ function fsbi_i(bi  ::iBffs,
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-  if lU < acr
+  λf = fixrtip!(t0, na, NaN) # fix random tip
+  llrd, acrd, drλ, ssrλ, λ1p, λ2p =
+    _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
 
-    λf  = fixrtip!(t0, na, NaN) # fix random tip
+  acr += acrd
+
+  if lU < acr
 
     # simulated remaining tips until the present
     t0, na, acr =
       tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
 
-    if isnan(acr)
-      return t0, NaN, NaN, NaN
-    end
-
-    llrd, acrd, drλ, ssrλ, λ1p, λ2p =
-      _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
-
-    acr += acrd
-
     if lU < acr
-      llr = llrd + (na - 1 - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      na -= 1
+      llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       l1  = lastindex(λ1p)
       l2  = lastindex(λ2p)
       setnt!(bi, ntp)                    # set new nt
-      setni!(bi, na - 1)                 # set new ni
+      setni!(bi, na)                     # set new ni
       setλt!(bi, λf)                     # set new λt
       unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
       unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
@@ -725,7 +721,7 @@ function tip_sims!(tree::iTpb,
                    Iρi ::Float64,
                    na  ::Int64)
 
- if na < 1_000 && lU < lr
+ if lU < lr && na < 1_000
 
     if istip(tree)
       if !isfix(tree)

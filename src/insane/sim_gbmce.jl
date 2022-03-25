@@ -380,7 +380,7 @@ function _sim_gbmce(t   ::Float64,
                     δt  ::Float64,
                     srδt::Float64,
                     na  ::Int64,
-                    nn ::Int64,
+                    nn  ::Int64,
                     nlim::Int64)
 
   if nn < nlim
@@ -451,33 +451,156 @@ end
 
 
 """
-    _sim_gbmce(nsδt::Float64,
-               t   ::Float64,
-               λt  ::Float64,
-               α   ::Float64,
-               σλ  ::Float64,
-               μ   ::Float64,
-               δt  ::Float64,
-               srδt::Float64,
-               na  ::Int64,
-               nn ::Int64,
-               nlim::Int64)
+    _sim_gbmce_t(t   ::Float64,
+                 λt  ::Float64,
+                 α   ::Float64,
+                 σλ  ::Float64,
+                 μ   ::Float64,
+                 δt  ::Float64,
+                 srδt::Float64,
+                 na  ::Int64,
+                 nn  ::Int64,
+                 nlim::Int64)
+
+Simulate `iTce` according to a geometric Brownian motion for birth rates and
+constant extinction, with a limit on the number lineages allowed to reach.
+"""
+function _sim_gbmce_t(t   ::Float64,
+                      λt  ::Float64,
+                      α   ::Float64,
+                      σλ  ::Float64,
+                      μ   ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64,
+                      lr  ::Float64,
+                      lU  ::Float64,
+                      Iρi ::Float64,
+                      na  ::Int64,
+                      nn  ::Int64,
+                      nlim::Int64)
+
+  if isfinite(lr) && nn < nlim
+
+    λv = Float64[λt]
+    bt = 0.0
+
+    while true
+
+      if t <= δt
+        bt += t
+        t   = max(0.0,t)
+        srt = sqrt(t)
+        λt1 = rnorm(λt + α*t, srt*σλ)
+        push!(λv, λt1)
+
+        λm  = exp(0.5*(λt + λt1))
+
+        if divev(λm, μ, t)
+          # if speciation
+          if λorμ(λm, μ)
+            nn += 1
+            na += 2
+            if na === 2
+              nlr = lr + log(Iρi*2.0)
+            else
+              nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
+            end
+            if nlr >= lr
+              return iTce(iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          bt, δt, t, false, false, λv), na, nn, nlr
+            elseif lU < nlr
+              return iTce(iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          bt, δt, t, false, false, λv), na, nn, nlr
+            else
+              return iTce(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+            end
+          # if extinction
+          else
+            return iTce(bt, δt, t, true, false, λv), na, nn, lr
+          end
+        end
+        na += 1
+        nlr = lr
+        if na > 1
+          nlr += log(Iρi * Float64(na)/Float64(na-1))
+        end
+        if nlr >= lr
+          return iTce(bt, δt, t, false, false, λv), na, nn, nlr
+        elseif lU < nlr
+          return iTce(bt, δt, t, false, false, λv), na, nn, nlr
+        else
+          return iTce(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+        end
+      end
+
+      t  -= δt
+      bt += δt
+
+      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      λm  = exp(0.5*(λt + λt1))
+      push!(λv, λt1)
+
+      if divev(λm, μ, δt)
+        # if speciation
+        if λorμ(λm, μ)
+          nn += 1
+          td1, na, nn, lr =
+            _sim_gbmce_t(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          td2, na, nn, lr =
+            _sim_gbmce_t(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+
+          return iTce(td1, td2, bt, δt, δt, false, false, λv), na, nn, lr
+        # if extinction
+        else
+          return iTce(bt, δt, δt, true, false, λv), na, nn, lr
+        end
+      end
+
+      λt = λt1
+    end
+  end
+
+  return iTce(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_gbmce_it(nsδt::Float64,
+                  t   ::Float64,
+                  λt  ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  μ   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
+                  nn  ::Int64,
+                  nlim::Int64)
 
 Simulate `iTce` according to a geometric Brownian motion for birth rates and
 constant extinction, starting with a non-standard δt with a limit in the number
 of species.
 """
-function _sim_gbmce(nsδt::Float64,
-                    t   ::Float64,
-                    λt  ::Float64,
-                    α   ::Float64,
-                    σλ  ::Float64,
-                    μ   ::Float64,
-                    δt  ::Float64,
-                    srδt::Float64,
-                    na  ::Int64,
-                    nn ::Int64,
-                    nlim::Int64)
+function _sim_gbmce_it(nsδt::Float64,
+                       t   ::Float64,
+                       λt  ::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       μ   ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
+                       na  ::Int64,
+                       nn  ::Int64,
+                       nlim::Int64)
 
   λv = Float64[λt]
   bt = 0.0
@@ -494,19 +617,19 @@ function _sim_gbmce(nsδt::Float64,
       # if speciation
       if λorμ(λm, μ)
         nn += 1
-        na  += 2
-        return iTce(
-                 iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                 iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                 bt, δt, t, false, false, λv), na, nn
+        na += 2
+        lr += 2.0*log(Iρi)
+        return iTce(iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                    iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                    bt, δt, t, false, false, λv), na, nn, lr
       # if extinction
       else
-        return iTce(bt, δt, t, true, false, λv), na, nn
+        return iTce(bt, δt, t, true, false, λv), na, nn, lr
       end
     end
-
     na += 1
-    return iTce(bt, δt, t, false, false, λv), na, nn
+    lr += log(Iρi)
+    return iTce(bt, δt, t, false, false, λv), na, nn, lr
   end
 
   t  -= nsδt
@@ -520,19 +643,21 @@ function _sim_gbmce(nsδt::Float64,
     # if speciation
     if λorμ(λm, μ)
       nn += 1
-      td1, na, nn = _sim_gbmce(t, λt1, α, σλ, μ, δt, srδt, na, nn, nlim)
-      td2, na, nn = _sim_gbmce(t, λt1, α, σλ, μ, δt, srδt, na, nn, nlim)
+      td1, na, nn, lr = 
+        _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+      td2, na, nn, lr = 
+        _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
 
-      return iTce(td1, td2, bt, δt, nsδt, false, false, λv), na, nn
+      return iTce(td1, td2, bt, δt, nsδt, false, false, λv), na, nn, lr
     else
     # if extinction
-      return iTce(bt, δt, nsδt, true, false, λv), na, nn
+      return iTce(bt, δt, nsδt, true, false, λv), na, nn, lr
     end
   end
 
   λt = λt1
 
-  if nn < nlim
+  if lU < lr && nn < nlim
 
     ## second: standard δt
     while true
@@ -550,19 +675,20 @@ function _sim_gbmce(nsδt::Float64,
           # if speciation
           if λorμ(λm, μ)
             nn += 1
-            na  += 2
+            na += 2
+            lr += 2.0*log(Iρi)
             return iTce(
                      iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                      iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                     bt, δt, t, false, false, λv), na, nn
+                     bt, δt, t, false, false, λv), na, nn, lr
           # if extinction
           else
-            return iTce(bt, δt, t, true, false, λv), na, nn
+            return iTce(bt, δt, t, true, false, λv), na, nn, lr
           end
         end
-
-        na  += 1
-        return iTce(bt, δt, t, false, false, λv), na, nn
+        na += 1
+        lr += log(Iρi)
+        return iTce(bt, δt, t, false, false, λv), na, nn, lr
       end
 
       t  -= δt
@@ -576,13 +702,15 @@ function _sim_gbmce(nsδt::Float64,
         # if speciation
         if λorμ(λm, μ)
           nn += 1
-          td1, na, nn = _sim_gbmce(t, λt1, α, σλ, μ, δt, srδt, na, nn, nlim)
-          td2, na, nn = _sim_gbmce(t, λt1, α, σλ, μ, δt, srδt, na, nn, nlim)
+          td1, na, nn, lr =
+            _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          td2, na, nn, lr =
+            _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
 
-          return iTce(td1, td2, bt, δt, δt, false, false, λv), na, nn
+          return iTce(td1, td2, bt, δt, δt, false, false, λv), na, nn, lr
         # if extinction
         else
-          return iTce(bt, δt, δt, true, false, λv), na, nn
+          return iTce(bt, δt, δt, true, false, λv), na, nn, lr
         end
       end
 
@@ -590,7 +718,110 @@ function _sim_gbmce(nsδt::Float64,
     end
   end
 
-  return iTce(0.0, 0.0, 0.0, false, false, Float64[]), na, nn
+  return iTce(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_gbmce_it(t   ::Float64,
+                  λt  ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  μ   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
+                  na  ::Int64,
+                  nn  ::Int64,
+                  nlim::Int64)
+
+Simulate `iTce` according to a geometric Brownian motion for birth rates and
+constant extinction, starting with a non-standard δt with a limit in the number
+of species.
+"""
+function _sim_gbmce_it(t   ::Float64,
+                       λt  ::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       μ   ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
+                       na  ::Int64,
+                       nn  ::Int64,
+                       nlim::Int64)
+
+  if lU < lr && nn < nlim
+
+    λv = Float64[λt]
+    bt = 0.0
+
+    ## second: standard δt
+    while true
+
+      if t <= δt
+        bt  += t
+
+        t   = max(0.0,t)
+        srt = sqrt(t)
+        λt1 = rnorm(λt + α*t, srt*σλ)
+        λm  = exp(0.5*(λt + λt1))
+        push!(λv, λt1)
+
+        if divev(λm, μ, t)
+          # if speciation
+          if λorμ(λm, μ)
+            nn += 1
+            na += 2
+            lr += 2.0*log(Iρi)
+            return iTce(iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                        iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                     bt, δt, t, false, false, λv), na, nn, lr
+          # if extinction
+          else
+            return iTce(bt, δt, t, true, false, λv), na, nn, lr
+          end
+        end
+
+        na += 1
+        lr += log(Iρi)
+        return iTce(bt, δt, t, false, false, λv), na, nn, lr
+      end
+
+      t  -= δt
+      bt += δt
+
+      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      λm  = exp(0.5*(λt + λt1))
+      push!(λv, λt1)
+
+      if divev(λm, μ, δt)
+        # if speciation
+        if λorμ(λm, μ)
+          nn += 1
+          td1, na, nn, lr =
+            _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          td2, na, nn, lr =
+            _sim_gbmce_it(t, λt1, α, σλ, μ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+
+          return iTce(td1, td2, bt, δt, δt, false, false, λv), na, nn, lr
+        # if extinction
+        else
+          return iTce(bt, δt, δt, true, false, λv), na, nn, lr
+        end
+      end
+
+      λt = λt1
+    end
+  end
+
+  return iTce(0.0, 0.0, 0.0, false, false, Float64[]), na, nn, NaN
 end
 
 
