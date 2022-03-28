@@ -610,8 +610,6 @@ function fsbi_i(bi  ::iBffs,
       unsafe_copyto!(lμ(ξ2), 1, μ2p, 1, l2) # set new daughter 2 μ vector
 
       return t0, llr, drλ, ssrλ, ssrμ
-    else
-      return t0, NaN, NaN, NaN, NaN
     end
   end
 

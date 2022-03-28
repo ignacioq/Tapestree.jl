@@ -179,7 +179,6 @@ function _sim_cfbd_i(t   ::Float64,
                      μ   ::Float64,
                      ψ   ::Float64,
                      na  ::Int64,
-                     nf  ::Int64,
                      nn  ::Int64,
                      nlim::Int64)
 

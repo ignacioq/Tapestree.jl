@@ -533,9 +533,8 @@ function _sim_gbmbd_t(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
-        t = max(0.0,t)
+        bt += t
+        t   = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
