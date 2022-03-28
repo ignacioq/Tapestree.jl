@@ -514,21 +514,26 @@ function update_fs!(bix ::Int64,
   bi = idf[bix]
   ξc = Ξ[bix]
 
-  # if terminal alive branch
-  if it(bi) && !isfossil(bi)
-    ξp, llr =
-      fsbi_i(bi, lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, ψ, δt, srδt)
-    drλ  = 0.0
-    ssrλ = 0.0
-    ssrμ = 0.0
+  if it(bi) 
+    if isfossil(bi)
+      ξp, llr = fsbi_t(bi, ξc, α, σλ, σμ, ψ, δt, srδt)
+      drλ  = 0.0
+      ssrλ = 0.0
+      ssrμ = 0.0
+    else
+      ξp, llr = fsbi_t(bi, lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, ψ, δt, srδt)
+      drλ  = 0.0
+      ssrλ = 0.0
+      ssrμ = 0.0
+    end
   else
     if isfossil(bi)
       ξp, llr, drλ, ssrλ, ssrμ =
-        fsbi_t(bi, ξc, Ξ[d1(bi)], lλ(ξc)[1], lμ(ξc)[1], 
+        fsbi_i(bi, ξc, Ξ[d1(bi)], lλ(ξc)[1], lμ(ξc)[1], 
           α, σλ, σμ, ψ, δt, srδt)
     else
       ξp, llr, drλ, ssrλ, ssrμ =
-        fsbi_t(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], lλ(ξc)[1], lμ(ξc)[1], 
+        fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], lλ(ξc)[1], lμ(ξc)[1], 
           α, σλ, σμ, ψ, δt, srδt)
     end
   end
@@ -538,12 +543,12 @@ function update_fs!(bix ::Int64,
     ll0, dλ0, ssλ0, ssμ0, nλ0 = llik_gbm_ss(ξc, α, σλ, σμ, ψ, δt, srδt)
 
     # update llr, ssλ, ssμ, nλ, sns, L
-    llc += ll1  - ll0 + llr
+    llc += ll1  - ll0  + llr
     dλ  += dλ1  - dλ0  + drλ
     ssλ += ssλ1 - ssλ0 + ssrλ
     ssμ += ssμ1 - ssμ0 + ssrμ
     nλ  += nλ1  - nλ0
-    L   += treelength(ξp)   - treelength(ξc)
+    L   += treelength(ξp) - treelength(ξc)
 
     # set new decoupled tree
     Ξ[bix] = ξp
@@ -605,6 +610,175 @@ end
 
 
 """
+    fsbi_t(bi  ::iBffs,
+           ξc  ::iTfbd,
+           ξ1  ::iTfbd,
+           λ0  ::Float64,
+           μ0  ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           σμ  ::Float64,
+           ψ   ::Float64,
+           δt  ::Float64,
+           srδt::Float64)
+
+Forward simulation for branch `bi`.
+"""
+function fsbi_t(bi  ::iBffs,
+                ξc  ::iTfbd,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                ψ   ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
+
+  # forward simulation during branch length
+  t0, na, nf, nn =
+    _sim_gbmfbd_i(e(bi), lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, ψ, δt, srδt, 
+      0, 0, 1, 500)
+
+  if na < 1 || nf > 0 || nn >= 500
+    return t0, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() # log-probability
+
+  # acceptance probability
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  if lU < acr
+
+    λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), α, σλ, σμ, ψ, δt, srδt, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr
+
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
+
+      # if terminal fossil branch
+      tx, na, nn, acr = 
+        fossiltip_sim!(t0, tf(bi), α, σλ, σμ, ψ, δt, srδt, acr, lU, Iρi, 
+          na, nn)
+
+      if lU < acr
+
+        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+        setni!(bi, na)       # set new ni
+        setnt!(bi, ntp)      # set new nt
+        setλt!(bi, λf)       # set new λt
+
+        return t0, llr
+      end
+    end
+  end
+
+  return t0, NaN
+end
+
+
+
+
+"""
+    fsbi_i(bi  ::iBffs,
+           ξc  ::iTfbd,
+           ξ1  ::iTfbd,
+           λ0  ::Float64,
+           μ0  ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           σμ  ::Float64,
+           ψ   ::Float64,
+           δt  ::Float64,
+           srδt::Float64)
+
+Forward simulation for branch `bi`.
+"""
+function fsbi_i(bi  ::iBffs,
+                ξc  ::iTfbd,
+                ξ1  ::iTfbd,
+                λ0  ::Float64,
+                μ0  ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                ψ   ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
+
+  # forward simulation during branch length
+  t0, na, nf, nn =
+    _sim_gbmfbd_i(e(bi), λ0, μ0, α, σλ, σμ, ψ, δt, srδt, 0, 0, 1, 500)
+
+  if na < 1 || nf > 0 || nn >= 500
+    return t0, NaN, NaN, NaN, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() # log-probability
+
+  # acceptance probability
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
+
+  llrd, acrd, drλ, ssrλ, ssrμ, λ1p, μ1p, =
+    _daughter_update!(ξ1, λf, μf, α, σλ, σμ, δt, srδt)
+
+  acr += acrd
+
+  if lU < acr
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), α, σλ, σμ, ψ, δt, srδt, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
+
+      l1  = lastindex(λ1p)
+      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
+      na -= 1
+
+      llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      setni!(bi, na)       # set new ni
+      setnt!(bi, ntp)      # set new nt
+      setλt!(bi, λf)       # set new λt
+
+      return t0, llr, drλ, ssrλ, ssrμ
+    end
+  end
+
+  return t0, NaN, NaN, NaN, NaN
+end
+
+
+
+
+"""
     fsbi_i(bi  ::iBffs,
            ξc  ::iTfbd,
            ξ1  ::iTfbd,
@@ -635,7 +809,7 @@ function fsbi_i(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, na, nf, nn =
-    _sim_gbmbd_i(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, 0, 0, 1, 500)
+    _sim_gbmfbd_i(e(bi), λ0, μ0, α, σλ, σμ, ψ, δt, srδt, 0, 0, 1, 500)
 
   if na < 1 || nf > 0 || nn >= 500
     return t0, NaN, NaN, NaN, NaN
@@ -689,105 +863,6 @@ function fsbi_i(bi  ::iBffs,
   return t0, NaN, NaN, NaN, NaN
 end
 
-
-
-
-"""
-    fsbi_i(bi  ::iBffs,
-           ξc  ::iTfbd,
-           ξ1  ::iTfbd,
-           λ0  ::Float64,
-           μ0  ::Float64,
-           α   ::Float64,
-           σλ  ::Float64,
-           σμ  ::Float64,
-           ψ   ::Float64,
-           δt  ::Float64,
-           srδt::Float64)
-
-Forward simulation for branch `bi`.
-"""
-function fsbi_i(bi  ::iBffs,
-                ξc  ::iTfbd,
-                ξ1  ::iTfbd,
-                λ0  ::Float64,
-                μ0  ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                σμ  ::Float64,
-                ψ   ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
-
-  # forward simulation during branch length
-  t0, na, nf, nn =
-    _sim_gbmbd_i(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, 0, 0, 1, 500)
-
-  if na < 1 || nf > 0 || nn >= 500
-    return t0, NaN, NaN, NaN, NaN
-  end
-
-  ntp = na
-
-  lU = -randexp() # log-probability
-
-  # acceptance probability
-  acr  = log(Float64(ntp)/Float64(nt(bi)))
-
-  # add sampling fraction
-  nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
-
-  λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
-
-  llrd, acrd, drλ, ssrλ, ssrμ, λ1p, μ1p, =
-    _daughter_update!(ξ1, λf, μf, α, σλ, σμ, δt, srδt)
-
-  acr += acrd
-
-  if lU < acr
-
-    # simulate remaining tips until the present
-    if na > 1
-      tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), α, σλ, σμ, ψ, δt, srδt, acr, lU, Iρi, na, nn)
-    end
-
-
-    if lU < acr
-
-      # fossilize extant tip
-      fossilizefixedtip!(t0)
-
-      # if terminal fossil branch
-      if it(bi)
-        tx, na, nn, acr = 
-          fossiltip_sim!(t0, tf(bi), α, σλ, σμ, ψ, δt, srδt, acr, lU, Iρi, 
-            na, nn)
-      end
-
-      if lU < acr
-
-        if !it(bi)
-          l1  = lastindex(λ1p)
-          unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
-          unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
-          na -= 1
-        end
-
-        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-        setni!(bi, na)       # set new ni
-        setnt!(bi, ntp)      # set new nt
-        setλt!(bi, λf)       # set new λt
-
-        return t0, llr, drλ, ssrλ, ssrμ
-      end
-    end
-  end
-
-  return t0, NaN, NaN, NaN, NaN
-end
 
 
 
@@ -917,7 +992,7 @@ function fossiltip_sim!(tree::iTfbd,
   if lU < lr && nn < 500
     if istip(tree)
       stree, na, nn, lr = 
-        _sim_cfbd_it(t, lλ(tree)[end], lμ(tree)[end], α, σλ, σμ, ψ, δt, srδt, 
+        _sim_gbmfbd_it(t, lλ(tree)[end], lμ(tree)[end], α, σλ, σμ, ψ, δt, srδt, 
           lr, lU, Iρi, na-1, nn, 500)
 
       if isnan(lr) || nn >= 500

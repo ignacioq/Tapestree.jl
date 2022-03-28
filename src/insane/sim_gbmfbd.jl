@@ -408,7 +408,7 @@ function _sim_gbmfbd(t   ::Float64,
                      δt  ::Float64,
                      srδt::Float64,
                      na  ::Int64,
-                     nf  ::Int64
+                     nf  ::Int64,
                      nn  ::Int64,
                      nlim::Int64)
 
@@ -593,7 +593,7 @@ function _sim_gbmfbd_t(t   ::Float64,
 
           # if extinction
           elseif μevent(μm, ψ)
-            return iTfbd(bt, δt, t, true, false, false, λv, μv), na, nn, nlr
+            return iTfbd(bt, δt, t, true, false, false, λv, μv), na, nn, lr
           # fossil sampling
           else
             return iTfbd(0.0, 0.0, 0.0, false, false, false, 
@@ -690,7 +690,7 @@ function _sim_gbmfbd_i(t   ::Float64,
                        δt  ::Float64,
                        srδt::Float64,
                        na  ::Int64,
-                       nf  ::Int64
+                       nf  ::Int64,
                        nn  ::Int64,
                        nlim::Int64)
 
