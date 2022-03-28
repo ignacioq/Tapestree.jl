@@ -10,12 +10,12 @@ Created 07 07 2020
 =#
 
 """
-    read_newick(in_file::String; fossil = false)
+    read_newick(in_file::String; fossil::Bool = false, ndigits::Int64 = 0)
 
 Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
 is true from `in_file`.
 """
-function read_newick(in_file::String; fossil::Bool = false)
+function read_newick(in_file::String; fossil::Bool = false, ndigits::Int64 = 0)
 
   io = open(in_file)
   s = readlines(io)[1]
@@ -23,16 +23,16 @@ function read_newick(in_file::String; fossil::Bool = false)
 
   # if 1 tree
   if onlyone(s, ';')
-    return _parse_newick(s, fossil)
+    return _parse_newick(s, fossil, ndigits)
   # if more than 1 tree
   else
     allsc = findall(';', s)
 
-    t1 = _parse_newick(s[1:allsc[1]], fossil)
+    t1 = _parse_newick(s[1:allsc[1]], fossil, ndigits)
     tv = typeof(t1)[t1]
 
     for i in 2:lastindex(allsc)
-      push!(tv, _parse_newick(s[(allsc[i-1] + 1):(allsc[i])], fossil))
+      push!(tv, _parse_newick(s[(allsc[i-1] + 1):(allsc[i])], fossil, ndigits))
     end
 
     return tv
@@ -48,7 +48,7 @@ end
 Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
 is true from `in_file`.
 """
-function _parse_newick(s::String, fossil::Bool)
+function _parse_newick(s::String, fossil::Bool, ndigits::Int64)
 
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
@@ -67,7 +67,7 @@ function _parse_newick(s::String, fossil::Bool)
   end
 
   if fossil
-    return from_string(s, stem, sTf_label)
+    return from_string(s, stem, sTf_label, ndigits)
   else
     return from_string(s, stem, sT_label)
   end
@@ -85,7 +85,7 @@ function from_string(s::String, stem::Bool, ::Type{sT_label})
 
   # if root (starts with one stem lineage)
   if stem
-    tree = _from_string(s, sT_label)
+    tree, ns = _from_string(s, sT_label, 0)
   # if no root (starts with two crown lineage)
   else
     nop = 0
@@ -104,9 +104,10 @@ function from_string(s::String, stem::Bool, ::Type{sT_label})
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = sT_label(_from_string(s1, sT_label),
-                    _from_string(s2, sT_label),
-                    0.0, "")
+    _fs1, ns =_from_string(s1, sT_label, 0)
+    _fs2, ns =_from_string(s2, sT_label, ns)
+
+    tree = sT_label(_fs1, _fs2, 0.0, "")
   end
 
   return tree
@@ -120,11 +121,11 @@ end
 
 Takes a string and turns it into a `sTf_label` tree.
 """
-function from_string(s::String, stem::Bool, ::Type{sTf_label})
+function from_string(s::String, stem::Bool, ::Type{sTf_label}, ndigits::Int64)
 
   # if root
   if stem
-    tree = _from_string(s, sTf_label)
+    tree, ns = _from_string(s, sTf_label, ns)
   # if crown
   else
     nop = 0
@@ -143,9 +144,10 @@ function from_string(s::String, stem::Bool, ::Type{sTf_label})
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = sTf_label(_from_string(s1, sTf_label),
-                     _from_string(s2, sTf_label),
-                     0.0, "")
+    _fs1, ns = _from_string(s1, sTf_label, 0)
+    _fs2, ns = _from_string(s2, sTf_label, ns)
+
+    tree = sTf_label(_fs1, _fs2, 0.0, "")
   end
 
   # fossilize tips
@@ -162,16 +164,21 @@ end
 
 Returns a tree of type `T` from newick string.
 """
-function _from_string(s::String, ::Type{T}) where {T <: sT}
+function _from_string(s::String, ::Type{T}, ns::Int64) where {T <: sT}
 
   # find pendant edge
-  wd  = findlast(isequal(':'), s)
-  ei  = parse(Float64, s[(wd+1):end])
-  lp  = findlast(isequal(')'), s)
+  wd = findlast(isequal(':'), s)
+  es = s[(wd+1):end]
+  nsi = nsignif(es)
+  if nsi > ns
+    ns = nsi
+  end
+  ei = parse(Float64, es)
+  lp = findlast(isequal(')'), s)
 
   # if tip
   if isnothing(lp)
-    return T(ei, s[1:(wd-1)])
+    return T(ei, s[1:(wd-1)]), ns
   else
 
     lab = s[(lp+1):(wd-1)]
@@ -197,16 +204,23 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
   # if fossils are coded as 0 edge tip
   if last(s1, 4) == ":0.0" && onlyone(s1, ':')
     wd = findlast(isequal(':'), s1)
-    return T(_from_string(s2, T), ei, s1[1:(wd-1)])
+    _fs2, ns = _from_string(s2, T, ns)
+    return T(_fs2, ei, s1[1:(wd-1)]), ns
   elseif last(s2, 4) == ":0.0" && onlyone(s2, ':')
     wd = findlast(isequal(':'), s2)
-    return T(_from_string(s1, T), ei, s2[1:(wd-1)])
+    _fs1, ns = _from_string(s1, T, ns)
+    return T(_fs1, ei, s2[1:(wd-1)]), ns
   elseif isempty(s1)
-    return T(_from_string(s2, T), ei, lab)
+    _fs2, ns = _from_string(s2, T, ns)
+    return T(_fs2, ei, lab), ns
   elseif isempty(s2)
-    return T(_from_string(s1, T), ei, lab)
+    _fs1, ns = _from_string(s1, T, ns)
+    return T(_fs1, ei, lab), ns
   else
-    return T(_from_string(s1, T), _from_string(s2, T), ei, lab)
+    _fs1, ns = _from_string(s1, T, ns)
+    _fs2, ns = _from_string(s2, T, ns)
+
+    return T(_fs1, _fs2, ei, lab), ns
   end
 end
 
@@ -334,4 +348,33 @@ function _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
 end
 
 
+
+
+
+"""
+    nsignif(x::String)
+
+Return the number of significant digits in `x`, a string representing a number.
+"""
+function nsignif(x::String)
+
+  pix = findfirst('.', x)
+
+  if isnothing(pix)
+    return lastindex(x)
+  else
+    bp  = parse(Float64,x[1:(pix-1)])
+    # if less than 1
+    if iszero(bp)
+      l0 = findfirst(x -> x !== '0', x[(pix+1):end])
+      if isnothing(l0)
+        return 1
+      else
+        return lastindex(x[(pix+l0):end])
+      end
+    else
+      return lastindex(x) - 1
+    end
+  end
+end
 

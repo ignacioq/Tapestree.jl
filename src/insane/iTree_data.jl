@@ -402,6 +402,45 @@ end
 
 
 
+
+"""
+    treeheight(tree::T, nd::Int64) where {T <: iTree}
+
+Return the tree height of `tree`.
+"""
+function treeheight(tree::T, nd::Int64) where {T <: iTree}
+  if def1(tree)
+    th1 = treeheight(tree.d1)
+    th2 = treeheight(tree.d2)
+    return round(max(th1,th2) + e(tree), digits = nd)
+  end
+  return e(tree)
+end
+
+
+
+
+"""
+    treeheight(tree::T, nd::Int64) where {T <: iTf}
+
+Return the tree height of `tree`.
+"""
+function treeheight(tree::T, nd::Int64) where {T <: iTf}
+
+  if def2(tree)
+    th1 = treeheight(tree.d1)
+    th2 = treeheight(tree.d2)
+    return round(max(th1,th2) + e(tree), digits = nd)
+  elseif def1(tree)
+    return round(treeheight(tree.d1) + e(tree), digits = nd)
+  end
+
+  return e(tree)
+end
+
+
+
+
 """
     nnodes(tree::T) where {T <: iTree}
 

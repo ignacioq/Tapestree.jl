@@ -346,6 +346,7 @@ end
 
 
 
+
 """
     fossilizepasttips!(tree::T) where {T <: iTf}
 
@@ -353,8 +354,9 @@ Change all past tips to fossil tips.
 """
 function fossilizepasttips!(tree::T) where {T <: iTf}
   th = treeheight(tree::T)
-  _fossilizepasttips!(tree::T, th, eps(th)/1e-9)
+  _fossilizepasttips!(tree::T, th, eps(th)*1e9)
 end
+
 
 
 
@@ -382,6 +384,7 @@ function _fossilizepasttips!(tree::T,
     end
   end
 end
+
 
 
 
