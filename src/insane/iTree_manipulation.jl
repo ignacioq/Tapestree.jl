@@ -346,7 +346,6 @@ end
 
 
 
-
 """
     fossilizepasttips!(tree::T) where {T <: iTf}
 

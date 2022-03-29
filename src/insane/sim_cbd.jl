@@ -111,7 +111,7 @@ function _sim_cbd_t(t   ::Float64,
       elseif lU < nlr
         return sTbd(t, false, false), na, nn, nlr
       else
-        return sTbd(0.0, false, false), na, nn, NaN
+        return sTbd(), na, nn, NaN
       end
     else
       if λorμ(λ, μ)
@@ -126,7 +126,7 @@ function _sim_cbd_t(t   ::Float64,
     end
   end
 
-  return sTbd(0.0, false, false), na, nn, NaN
+  return sTbd(), na, nn, NaN
 end
 
 
@@ -170,7 +170,7 @@ function _sim_cbd_i(t   ::Float64,
     end
   end
 
-  return sTbd(0.0, false, false), na, nn
+  return sTbd(), na, nn
 end
 
 
@@ -221,7 +221,7 @@ function _sim_cbd_it(t   ::Float64,
 
   end
 
-  return sTbd(0.0, false, false), na, nn, NaN
+  return sTbd(), na, nn, NaN
 end
 
 

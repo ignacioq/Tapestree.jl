@@ -65,7 +65,8 @@ mutable struct sT_label <: sT
   e ::Float64
   l ::String
 
-  sT_label(e::Float64, l::String) = (x = new(); x.e = e; x.l = l; x)
+  sT_label(e::Float64, l::String) = 
+    (x = new(); x.e = e; x.l = l; x)
   sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) = 
     new(d1, d2, e, l)
 end
@@ -238,6 +239,7 @@ mutable struct sTpb <: sT
   e ::Float64
   fx::Bool
 
+  sTpb() = new()
   sTpb(e::Float64) = (x = new(); x.e = e; x.fx = false; x)
   sTpb(e::Float64, fx::Bool) = (x = new(); x.e = e; x.fx = fx; x)
   sTpb(d1::sTpb, d2::sTpb, e::Float64, fx::Bool) = new(d1, d2, e, fx)
@@ -296,6 +298,7 @@ mutable struct sTbd <: sT
   iμ::Bool
   fx::Bool
 
+  sTbd() = new()
   sTbd(e::Float64) =
     (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
   sTbd(e::Float64, iμ::Bool) =
@@ -383,8 +386,7 @@ mutable struct sTfbd <: sT
   iψ::Bool
   fx::Bool
 
-  sTfbd(e::Float64) =
-    (x = new(); x.e = e; x.iμ = false; x.iψ = false; x.fx = false; x)
+  sTfbd() = new()
   sTfbd(e::Float64, iμ::Bool) =
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool, iψ::Bool) =
@@ -510,10 +512,11 @@ mutable struct iTpb <: iT
   fdt::Float64
   lλ ::Array{Float64,1}
 
+
+  iTpb() = new()
   iTpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64,
     lλ::Array{Float64,1}) =
       (x = new(); x.e = e; x.fx = fx; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
-
   iTpb(d1::iTpb, d2::iTpb, e::Float64, fx::Bool,
     dt::Float64, fdt::Float64, lλ::Array{Float64,1}) =
       new(d1, d2, e, fx, dt, fdt, lλ)
@@ -616,6 +619,7 @@ mutable struct iTce <: iT
   fx ::Bool
   lλ ::Array{Float64,1}
 
+  iTce() = new()
   iTce(e  ::Float64,
        dt ::Float64,
        fdt::Float64,
@@ -624,7 +628,6 @@ mutable struct iTce <: iT
        lλ ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
-
   iTce(d1 ::iTce,
        d2 ::iTce,
        e  ::Float64,
@@ -739,23 +742,23 @@ mutable struct iTct <: iT
   fx ::Bool
   lλ ::Array{Float64,1}
 
+  iTct() = new()
   iTct(e  ::Float64,
-          dt ::Float64,
-          fdt::Float64,
-          iμ ::Bool,
-          fx ::Bool,
-          lλ ::Array{Float64,1}) =
+       dt ::Float64,
+       fdt::Float64,
+       iμ ::Bool,
+       fx ::Bool,
+       lλ ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
-
   iTct(d1 ::iTct,
-          d2 ::iTct,
-          e  ::Float64,
-          dt ::Float64,
-          fdt::Float64,
-          iμ ::Bool,
-          fx ::Bool,
-          lλ ::Array{Float64,1}) =
+       d2 ::iTct,
+       e  ::Float64,
+       dt ::Float64,
+       fdt::Float64,
+       iμ ::Bool,
+       fx ::Bool,
+       lλ ::Array{Float64,1}) =
     new(d1, d2, e, dt, fdt, iμ, fx, lλ)
 end
 
@@ -788,26 +791,26 @@ end
 
 """
     iTct(e0::Array{Int64,1},
-            e1::Array{Int64,1},
-            el::Array{Float64,1},
-            λs::Array{Array{Float64,1},1},
-            ea::Array{Int64,1},
-            ee::Array{Int64,1},
-            ni::Int64,
-            ei::Int64,
-            δt::Float64)
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         ea::Array{Int64,1},
+         ee::Array{Int64,1},
+         ni::Int64,
+         ei::Int64,
+         δt::Float64)
 
 Transform edge structure to `iTct`.
 """
 function iTct(e0::Array{Int64,1},
-                 e1::Array{Int64,1},
-                 el::Array{Float64,1},
-                 λs::Array{Array{Float64,1},1},
-                 ea::Array{Int64,1},
-                 ee::Array{Int64,1},
-                 ni::Int64,
-                 ei::Int64,
-                 δt::Float64)
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Array{Float64,1},1},
+              ea::Array{Int64,1},
+              ee::Array{Int64,1},
+              ni::Int64,
+              ei::Int64,
+              δt::Float64)
 
   # if tip
   if in(ei, ea)
@@ -866,25 +869,25 @@ mutable struct iTbd <: iT
   lλ ::Array{Float64,1}
   lμ ::Array{Float64,1}
 
+  iTbd() = new()
   iTbd(e  ::Float64,
-          dt ::Float64,
-          fdt::Float64,
-          iμ ::Bool,
-          fx ::Bool,
-          lλ ::Array{Float64,1},
-          lμ ::Array{Float64,1}) =
+       dt ::Float64,
+       fdt::Float64,
+       iμ ::Bool,
+       fx ::Bool,
+       lλ ::Array{Float64,1},
+       lμ ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
-
   iTbd(d1 ::iTbd,
-          d2 ::iTbd,
-          e  ::Float64,
-          dt ::Float64,
-          fdt::Float64,
-          iμ ::Bool,
-          fx ::Bool,
-          lλ ::Array{Float64,1},
-          lμ ::Array{Float64,1}) =
+       d2 ::iTbd,
+       e  ::Float64,
+       dt ::Float64,
+       fdt::Float64,
+       iμ ::Bool,
+       fx ::Bool,
+       lλ ::Array{Float64,1},
+       lμ ::Array{Float64,1}) =
     new(d1, d2, e, dt, fdt, iμ, fx, lλ, lμ)
 end
 
@@ -1001,6 +1004,8 @@ mutable struct iTfbd <: iT
   lλ ::Array{Float64,1}
   lμ ::Array{Float64,1}
 
+
+  iTfbd() = new()
   iTfbd(e  ::Float64,
         dt ::Float64,
         fdt::Float64,
@@ -1011,7 +1016,6 @@ mutable struct iTfbd <: iT
         lμ ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
-
   iTfbd(d1 ::iTfbd,
         e  ::Float64,
         dt ::Float64,
@@ -1023,7 +1027,6 @@ mutable struct iTfbd <: iT
         lμ ::Array{Float64,1}) =
     (x = new(); x.d1 = d1; x.e = e; x.dt = dt; x.fdt = fdt;
       x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
-
   iTfbd(d1 ::iTfbd,
         d2 ::iTfbd,
         e  ::Float64,

@@ -154,7 +154,7 @@ function _sim_cfbd_t(t   ::Float64,
     end
   end
 
-  return sTfbd(0.0, false, false, false), na, nn, NaN
+  return sTfbd(), na, nn, NaN
 end
 
 
@@ -179,6 +179,7 @@ function _sim_cfbd_i(t   ::Float64,
                      μ   ::Float64,
                      ψ   ::Float64,
                      na  ::Int64,
+                     nf  ::Int64,
                      nn  ::Int64,
                      nlim::Int64)
 
@@ -209,7 +210,7 @@ function _sim_cfbd_i(t   ::Float64,
     end
   end
 
-  return sTfbd(0.0, false, false, false), na, nf, nn
+  return sTfbd(), na, nf, nn
 end
 
 
@@ -272,7 +273,7 @@ function _sim_cfbd_it(t   ::Float64,
     end
   end
 
-  return sTfbd(0.0, false, false, false), na, nn, NaN
+  return sTfbd(), na, nn, NaN
 end
 
 

@@ -43,6 +43,7 @@ mutable struct sTpbX <: sT
   xi::Float64
   xf::Float64
 
+  sTpbX() = new()
   sTpbX(e::Float64, fx::Bool, xi::Float64, xf::Float64) =
     (t = new(); t.e = e; t.fx = fx; t.xi = xi; t.xf = xf; t)
   sTpbX(d1::sTpbX, d2::sTpbX, e::Float64, fx::Bool, xi::Float64, xf::Float64) =
@@ -103,6 +104,7 @@ mutable struct sTbdX <: sT
   xi::Float64
   xf::Float64
 
+  sTbdX() = new()
   sTbdX(e::Float64, iμ::Bool, fx::Bool,  xi::Float64, xf::Float64) =
     (t = new(); t.e = e; t.iμ = iμ;t.fx = fx; t.xi = xi; t.xf = xf; t)
   sTbdX(d1::sTbdX, d2::sTbdX, e::Float64, iμ::Bool, fx::Bool,
@@ -131,8 +133,6 @@ function sTbdX(tree::sTbdX)
     sTbdX(e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
   end
 end
-
-
 
 
 
@@ -172,6 +172,7 @@ mutable struct sTfbdX <: sT
   xi::Float64
   xf::Float64
 
+  sTfbdX() = new()
   sTfbdX(e::Float64, iμ::Bool, iψ::Bool, fx::Bool, xi::Float64, xf::Float64) =
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.xi = xi; x.xf = xf;
       x)
@@ -220,6 +221,180 @@ end
 
 
 
+
+
+"""
+    iTpbX
+
+A composite recursive type of supertype `iT`
+representing a binary phylogenetic tree with  `λ` evolving as a
+Geometric Brownian motion and no extinction,
+with the following fields:
+
+  d1:   daughter tree 1
+  d2:   daughter tree 2
+  e:    edge
+  fx:   if fix (observed) node
+  dt:   choice of time lag
+  fdt:  final `dt`
+  lλ:   array of a Brownian motion evolution of `log(λ)`
+  xv:   array of a Brownian motion evolution of `X`.
+
+  iTpbX(d1 ::iTpbX,
+          d2 ::iTpbX,
+          e  ::Float64,
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool,
+          fx ::Bool,
+          lλ ::Array{Float64,1})
+"""
+mutable struct iTpbX <: iT
+  d1 ::iTpbX
+  d2 ::iTpbX
+  e  ::Float64
+  dt ::Float64
+  fdt::Float64
+  fx ::Bool
+  lλ ::Array{Float64,1}
+  xv ::Array{Float64,1}
+
+  iTpbX() = new()
+  iTpbX(e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        fx ::Bool,
+        lλ ::Array{Float64,1},
+        xv ::Array{Float64,1}) =
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
+      x.fx = fx; x.lλ = lλ; x.xv = xv; x)
+  iTpbX(d1 ::iTpbX,
+        d2 ::iTpbX,
+        e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        fx ::Bool,
+        lλ ::Array{Float64,1},
+        xv ::Array{Float64,1}) =
+    new(d1, d2, e, dt, fdt, fx, lλ, xv)
+end
+
+# pretty-printing
+Base.show(io::IO, t::iTpbX) =
+  print(io, "insane gbm-pb tree with traits with", ntips(t), 
+    " tips (", ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    iTpbX(tree::iTpbX)
+
+Produce a new copy of `iTpbX`.
+"""
+function iTpbX(tree::iTpbX)
+  if def1(tree)
+    iTpbX(iTpbX(tree.d1), iTpbX(tree.d2),
+      e(tree), dt(tree), fdt(tree),
+      isfix(tree), copy(lλ(tree)), copy(xv(tree)))
+  else
+    iTpbX(e(tree), dt(tree), fdt(tree),
+      isfix(tree), copy(lλ(tree)), copy(xv(tree)))
+  end
+end
+
+
+
+
+
+"""
+    iTceX
+
+A composite recursive type of supertype `iT`
+representing a binary phylogenetic tree with  `λ` evolving as a
+Geometric Brownian motion and constant `μ` for `insane` use,
+with the following fields:
+
+  d1:   daughter tree 1
+  d2:   daughter tree 2
+  e:    edge
+  iμ:   if extinct node
+  fx:   if fix (observed) node
+  dt:   choice of time lag
+  fdt:  final `dt`
+  lλ:   array of a Brownian motion evolution of `log(λ)`
+  xv:   array of a Brownian motion evolution of `X`.
+
+  iTceX(d1 ::iTceX,
+          d2 ::iTceX,
+          e  ::Float64,
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool,
+          fx ::Bool,
+          lλ ::Array{Float64,1})
+"""
+mutable struct iTceX <: iT
+  d1 ::iTceX
+  d2 ::iTceX
+  e  ::Float64
+  dt ::Float64
+  fdt::Float64
+  iμ ::Bool
+  fx ::Bool
+  lλ ::Array{Float64,1}
+  xv ::Array{Float64,1}
+
+  iTceX() = new()
+  iTceX(e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        fx ::Bool,
+        lλ ::Array{Float64,1},
+        xv ::Array{Float64,1}) =
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.xv = xv; x)
+  iTceX(d1 ::iTceX,
+        d2 ::iTceX,
+        e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        fx ::Bool,
+        lλ ::Array{Float64,1},
+        xv ::Array{Float64,1}) =
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ, xv)
+end
+
+# pretty-printing
+Base.show(io::IO, t::iTceX) =
+  print(io, "insane gbm-ce tree with traits with ", ntips(t), 
+    " tips (", ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    iTceX(tree::iTceX)
+
+Produce a new copy of `iTceX`.
+"""
+function iTceX(tree::iTceX)
+  if def1(tree)
+    iTceX(iTceX(tree.d1), iTceX(tree.d2),
+      e(tree), dt(tree), fdt(tree), isextinct(tree),
+      isfix(tree), copy(lλ(tree)), copy(xv(tree)))
+  else
+    iTceX(e(tree), dt(tree), fdt(tree), isextinct(tree),
+      isfix(tree), copy(lλ(tree)), copy(xv(tree)))
+  end
+end
+
+
+
+
+
 #=
 Union Types
 =#
@@ -243,6 +418,16 @@ Tlabel = Union{sT_label, sTf_label}
 sTX = Union{sTpbX, sTbdX, sTfbdX}
 """
 sTX = Union{sTpbX, sTbdX, sTfbdX}
+
+
+
+"""
+    Union type for trait data
+
+iTX = Union{iTpbX, iTceX}
+"""
+iTX = Union{iTpbX, iTceX}
+
 
 
 

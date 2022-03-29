@@ -500,8 +500,7 @@ function _sim_gbmfbd(t   ::Float64,
     end
   end
 
-  return iTfbd(0.0, 0.0, 0.0, false, false, false, Float64[], Float64[]), 
-         na, nf, nn
+  return iTfbd(), na, nf, nn
 end
 
 
@@ -587,8 +586,7 @@ function _sim_gbmfbd_t(t   ::Float64,
                                Float64[λt1, λt1], Float64[μt1, μt1]),
                            bt, δt, t, false, false, false, λv, μv), na, nn, nlr
             else
-              return iTfbd(0.0, 0.0, 0.0, false, false, false, 
-                     Float64[], Float64[]), na, nn, NaN
+              return iTfbd(), na, nn, NaN
             end
 
           # if extinction
@@ -611,8 +609,7 @@ function _sim_gbmfbd_t(t   ::Float64,
         elseif lU < nlr
           return iTfbd(bt, δt, t, false, false, false, λv, μv), na, nn, nlr
         else
-          return iTfbd(0.0, 0.0, 0.0, false, false, false, 
-                     Float64[], Float64[]), na, nn, NaN
+          return iTfbd(), na, nn, NaN
         end
       end
 
@@ -645,8 +642,7 @@ function _sim_gbmfbd_t(t   ::Float64,
         elseif μevent(μm, ψ)
           return iTfbd(bt, δt, δt, true, false, false, λv, μv), na, nn, lr
         else
-          return iTfbd(0.0, 0.0, 0.0, false, false, false, 
-                     Float64[], Float64[]), na, nn, NaN
+          return iTfbd(), na, nn, NaN
         end
       end
 
@@ -655,8 +651,7 @@ function _sim_gbmfbd_t(t   ::Float64,
     end
   end
 
-  return iTfbd(0.0, 0.0, 0.0, false, false, false, Float64[], Float64[]), 
-         na, nn, NaN
+  return iTfbd(), na, nn, NaN
 end
 
 
@@ -781,8 +776,7 @@ function _sim_gbmfbd_i(t   ::Float64,
     end
   end
 
-  return iTfbd(0.0, 0.0, 0.0, false, false, false, Float64[], Float64[]), 
-         na, nf, nn
+  return iTfbd(), na, nf, nn
 end
 
 
@@ -862,8 +856,7 @@ function _sim_gbmfbd_it(nsδt::Float64,
         return iTfbd(bt, δt, t, true, false, false, λv, μv), na, nn, lr
       # if fossil sampling
       else
-        return iTfbd(0.0, 0.0, 0.0, false, false, false, Float64[], Float64[]), 
-               na, nn, NaN
+        return iTfbd(), na, nn, NaN
       end
     end
 
@@ -904,8 +897,7 @@ function _sim_gbmfbd_it(nsδt::Float64,
       return iTfbd(bt, δt, nsδt, true, false, false, λv, μv), na, nn, lr
     # if fossil sampling
     else
-      return iTfbd(0.0, 0.0, 0.0, false, false, false, Float64[], Float64[]), 
-             na, nn, NaN
+      return iTfbd(), na, nn, NaN
     end
   end
 
@@ -946,8 +938,7 @@ function _sim_gbmfbd_it(nsδt::Float64,
             return iTfbd(bt, δt, t, true, false, false, λv, μv), na, nn, lr
           # if fossil sampling
           else
-            return iTfbd(0.0, 0.0, 0.0, false, false, false, 
-                         Float64[], Float64[]), na, nn, NaN
+            return iTfbd(), na, nn, NaN
           end
         end
 
@@ -985,8 +976,7 @@ function _sim_gbmfbd_it(nsδt::Float64,
         elseif μevent(μm, ψ)
           return iTfbd(bt, δt, δt, true, false, false, λv, μv), na, nn, lr
         else
-          return iTfbd(0.0, 0.0, 0.0, false, false, false, 
-                       Float64[], Float64[]), na, nn, NaN
+          return iTfbd(), na, nn, NaN
         end
       end
 
@@ -995,7 +985,7 @@ function _sim_gbmfbd_it(nsδt::Float64,
     end
   end
 
-  return iTfbd(0.0, 0.0, 0.0, false, false, false, Float64[], Float64[]), 
+  return iTfbd(), 
          na, nn, NaN
 end
 
@@ -1077,8 +1067,7 @@ function _sim_gbmfbd_it(t   ::Float64,
             return iTfbd(bt, δt, t, true, false, false, λv, μv), na, nn, lr
           # if fossil sampling
           else
-            return iTfbd(0.0, 0.0, 0.0, false, false, false, 
-                         Float64[], Float64[]), na, nn, NaN
+            return iTfbd(), na, nn, NaN
           end
         end
 
@@ -1116,8 +1105,7 @@ function _sim_gbmfbd_it(t   ::Float64,
         elseif μevent(μm, ψ)
           return iTfbd(bt, δt, δt, true, false, false, λv, μv), na, nn, lr
         else
-          return iTfbd(0.0, 0.0, 0.0, false, false, false, 
-                       Float64[], Float64[]), na, nn, NaN
+          return iTfbd(), na, nn, NaN
         end
       end
 
@@ -1126,7 +1114,7 @@ function _sim_gbmfbd_it(t   ::Float64,
     end
   end
 
-  return iTfbd(0.0, 0.0, 0.0, false, false, false, Float64[], Float64[]), 
+  return iTfbd(), 
          na, nn, NaN
 end
 

@@ -101,7 +101,7 @@ function _sim_cpb_t(t   ::Float64,
       elseif lU < nlr
         return sTpb(t, false), na, nn, nlr
       else
-        return sTpb(0.0, false), na, nn, NaN
+        return sTpb(), na, nn, NaN
       end
     else
       nn += 1
@@ -112,7 +112,7 @@ function _sim_cpb_t(t   ::Float64,
     end
   end
 
-  return sTpb(0.0, false), na, nn, NaN
+  return sTpb(), na, nn, NaN
 end
 
 
@@ -151,7 +151,7 @@ function _sim_cpb_i(t   ::Float64,
     end
   end
 
-  return sTpb(0.0, false), nn
+  return sTpb(), nn
 end
 
 
@@ -193,7 +193,7 @@ function _sim_cpb_it(t   ::Float64,
     end
   end
 
-  return sTpb(0.0, false), nn, NaN
+  return sTpb(), nn, NaN
 end
 
 
