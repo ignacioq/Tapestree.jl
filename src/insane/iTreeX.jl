@@ -261,9 +261,9 @@ mutable struct iTpbX <: iT
 
   iTpbX() = new()
   iTpbX(e  ::Float64,
+        fx ::Bool,
         dt ::Float64,
         fdt::Float64,
-        fx ::Bool,
         lλ ::Array{Float64,1},
         xv ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
@@ -271,9 +271,9 @@ mutable struct iTpbX <: iT
   iTpbX(d1 ::iTpbX,
         d2 ::iTpbX,
         e  ::Float64,
+        fx ::Bool,
         dt ::Float64,
         fdt::Float64,
-        fx ::Bool,
         lλ ::Array{Float64,1},
         xv ::Array{Float64,1}) =
     new(d1, d2, e, dt, fdt, fx, lλ, xv)
@@ -281,8 +281,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTpbX) =
-  print(io, "insane gbm-pb tree with traits with", ntips(t), 
-    " tips (", ntipsextinct(t)," extinct)")
+  print(io, "insane gbm-pb tree with traits with ", ntips(t), " tips")
 
 
 

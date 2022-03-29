@@ -1515,3 +1515,10 @@ end
 
 
 
+"""
+    xv(tree::T) where {T <: iTX}
+
+Return pendant edge.
+"""
+xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
+

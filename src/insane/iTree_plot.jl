@@ -1108,15 +1108,126 @@ function _rplottrait!(tree::T,
   push!(x, xc, NaN)
   push!(y, xi(tree), xf(tree), NaN)
 
-  defd1 = def1(tree)
-  defd2 = def2(tree)
-
-  if defd1
+  if def1(tree)
     _rplottrait!(tree.d1, xc, x, y)
-    if defd2
+    if def2(tree)
       _rplottrait!(tree.d2, xc, x, y)
     end
   end
 end
 
+
+
+
+"""
+    function f(tree::T; type::Symbol = :trait)
+
+Recipe for plotting with the tree or the trait evolutions for `sTX`.
+"""
+@recipe function f(tree::T) where {T <: iTX}
+
+  x = Float64[]
+  y = Float64[]
+
+  th = treeheight(tree)
+
+  _rplottrait!(tree, th, x, y)
+
+  yfilt = filter(x -> !isnan(x), y)
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "trait"
+  seriescolor     --> :purple
+  xlims           --> (-th*0.05, th*1.05)
+  ylims           --> (minimum(yfilt), maximum(yfilt))
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+
+  return x, y
+end
+
+
+
+
+"""
+    function f(tree::T; type::Symbol = :trait)
+
+Recipe for plotting with the tree or the trait evolutions for `sTX`.
+"""
+@recipe function f(tree::Vector{T}) where {T <: iTX}
+
+  x = Float64[]
+  y = Float64[]
+
+  th = treeheight(trees[1])
+  n  = lastindex(trees)
+
+  for t in trees
+    _rplottrait!(t, treeheight(t), x, y)
+  end
+
+  yfilt = filter(x -> !isnan(x), y)
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "trait"
+  seriescolor     --> :purple
+  seriesalpha     --> min(1.0, 10.0/Float64(n))
+  xlims           --> (-th*0.05, th*1.05)
+  ylims           --> (minimum(yfilt), maximum(yfilt))
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+
+  return x, y
+end
+
+
+
+"""
+    _rplottree!(tree::T,
+                xc  ::Float64,
+                x   ::Array{Float64,1},
+                y   ::Array{Float64,1}) where {T <: iTX}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function _rplottrait!(tree::T,
+                      xc  ::Float64,
+                      x   ::Array{Float64,1},
+                      y   ::Array{Float64,1}) where {T <: iTX}
+
+  # tree δt and nsδt
+  δt = dt(tree)
+
+  # add horizontal lines
+  xvi = xv(tree)
+  l   = lastindex(xvi)
+  @simd for i in Base.OneTo(l-1)
+    push!(x, xc - Float64(i-1)*δt)
+    push!(y, xvi[i])
+  end
+
+  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
+  push!(y, xvi[l], NaN)
+
+  xc -= e(tree)
+
+  if def1(tree)
+    _rplottrait!(tree.d1, xc, x, y)
+    if def1(tree)
+      _rplottrait!(tree.d2, xc, x, y)
+    end
+  end
+end
 
