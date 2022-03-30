@@ -35,6 +35,7 @@ Created 14 09 2020
 Run insane for GBM pure-birth.
 """
 function insane_gbmpb(tree    ::sT_label,
+                      X       ::Dict{String, Float64},
                       out_file::String;
                       δt      ::Float64               = 1e-2,
                       niter   ::Int64                 = 1_000,
@@ -46,10 +47,14 @@ function insane_gbmpb(tree    ::sT_label,
                       K       ::Int64                 = 11,
                       σλi     ::Float64               = 0.1,
                       αi      ::Float64               = 0.0,
+                      βλi     ::Float64               = 0.0,
                       prints  ::Int64                 = 5,
                       pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.3, 0.3),
-                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
+                      α_prior ::NTuple{2,Float64}     = (0.0,  10.0),
                       σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                      x0_prior::NTuple{2,Float64}     = (0.0,  10.0),
+                      βλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                      σx_prior::NTuple{2,Float64}     = (0.05, 0.05),
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
@@ -68,11 +73,14 @@ function insane_gbmpb(tree    ::sT_label,
   lλa = log(λmle_cpb(tree))
 
   # make fix tree directory
-  idf = make_idf(tree, tρ)
+  idf, xr, σxc = make_idf(tree, tρ, X)
 
   # make a decoupled tree
-  Ξ = iTpb[]
-  iTpb!(Ξ, tree, δt, srδt, lλa, αi, σλi)
+  Ξ = make_Ξ(idf, xr, lλa, αi, σλi, σxc, δt, srδt, iTpbX)
+
+  """
+  here!
+  """
 
   # set end of fix branch speciation times and
   # get vector of internal branches
@@ -153,7 +161,7 @@ end
 
 
 """
-    mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
+    mcmc_burn_gbmpb(Ξ       ::Vector{iTpbX},
                     idf     ::Vector{iBffs},
                     λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -171,7 +179,7 @@ end
 
 MCMC burn-in chain for GBM pure-birth.
 """
-function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
+function mcmc_burn_gbmpb(Ξ       ::Vector{iTpbX},
                          idf     ::Vector{iBffs},
                          α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
@@ -248,7 +256,7 @@ end
 
 
 """
-    mcmc_gbmpb(Ξ       ::Vector{iTpb},
+    mcmc_gbmpb(Ξ       ::Vector{iTpbX},
                idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
@@ -267,7 +275,7 @@ end
 
 MCMC chain for GBM pure-birth.
 """
-function mcmc_gbmpb(Ξ       ::Vector{iTpb},
+function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
                     idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
@@ -290,7 +298,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
   r = Array{Float64,2}(undef, nlogs, 6)
 
   # make Ξ vector
-  Ξv = iTpb[]
+  Ξv = iTpbX[]
 
   L       = treelength(Ξ)      # tree length
   dλ      = deltaλ(Ξ)          # delta change in λ
@@ -389,7 +397,7 @@ end
 
 
 # """
-#     ref_posterior(Ξ       ::Vector{iTpb},
+#     ref_posterior(Ξ       ::Vector{iTpbX},
 #                   idf     ::Vector{iBffs},
 #                   llc     ::Float64,
 #                   prc     ::Float64,
@@ -412,7 +420,7 @@ end
 
 # MCMC chain for GBM pure-birth.
 # """
-# function ref_posterior(Ξ       ::Vector{iTpb},
+# function ref_posterior(Ξ       ::Vector{iTpbX},
 #                        idf     ::Vector{iBffs},
 #                        llc     ::Float64,
 #                        prc     ::Float64,
@@ -517,7 +525,7 @@ end
 
 """
     update_fs!(bix  ::Int64,
-               Ξ    ::Vector{iTpb},
+               Ξ    ::Vector{iTpbX},
                idf  ::Vector{iBffs},
                α    ::Float64,
                σλ   ::Float64,
@@ -532,7 +540,7 @@ end
 Forward simulation proposal function for constant birth-death.
 """
 function update_fs!(bix  ::Int64,
-                    Ξ    ::Vector{iTpb},
+                    Ξ    ::Vector{iTpbX},
                     idf  ::Vector{iBffs},
                     α    ::Float64,
                     σλ   ::Float64,
@@ -623,8 +631,8 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
-           ξ1  ::iTpb,
-           ξ2  ::iTpb,
+           ξ1  ::iTpbX,
+           ξ2  ::iTpbX,
            λ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
@@ -634,9 +642,9 @@ end
 Forward simulation for branch `bi`
 """
 function fsbi_i(bi  ::iBffs,
-                ξc  ::iTpb,
-                ξ1  ::iTpb,
-                ξ2  ::iTpb,
+                ξc  ::iTpbX,
+                ξ1  ::iTpbX,
+                ξ2  ::iTpbX,
                 λ0  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
@@ -697,7 +705,7 @@ end
 
 
 """
-    tip_sims!(tree::iTpb,
+    tip_sims!(tree::iTpbX,
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
@@ -710,7 +718,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::iTpb,
+function tip_sims!(tree::iTpbX,
                    t   ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
@@ -773,7 +781,7 @@ end
 
 """
     update_gbm!(bix  ::Int64,
-                Ξ    ::Vector{iTpb},
+                Ξ    ::Vector{iTpbX},
                 idf  ::Vector{iBffs},
                 α    ::Float64,
                 σλ   ::Float64,
@@ -786,7 +794,7 @@ end
 Make a `gbm` update for an interna branch and its descendants.
 """
 function update_gbm!(bix  ::Int64,
-                     Ξ    ::Vector{iTpb},
+                     Ξ    ::Vector{iTpbX},
                      idf  ::Vector{iBffs},
                      α    ::Float64,
                      σλ   ::Float64,

@@ -13,8 +13,8 @@ Created 14 11 2021
 
 
 """
-    _daughters_update!(ξ1  ::iTpb,
-                       ξ2  ::iTpb,
+    _daughters_update!(ξ1  ::iTpbX,
+                       ξ2  ::iTpbX,
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
@@ -23,8 +23,8 @@ Created 14 11 2021
 
 Make a `gbmpb` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTpb,
-                            ξ2  ::iTpb,
+function _daughters_update!(ξ1  ::iTpbX,
+                            ξ2  ::iTpbX,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
@@ -73,7 +73,7 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTpb,
+    _stem_update!(ξi   ::iTpbX,
                   α    ::Float64,
                   σλ   ::Float64,
                   llc  ::Float64,
@@ -84,7 +84,7 @@ end
 
 Do gbm update for crown root.
 """
-function _stem_update!(ξi   ::iTpb,
+function _stem_update!(ξi   ::iTpbX,
                        α    ::Float64,
                        σλ   ::Float64,
                        llc  ::Float64,
@@ -126,9 +126,9 @@ end
 
 
 """
-    _crown_update!(ξi   ::iTpb,
-                   ξ1   ::iTpb,
-                   ξ2   ::iTpb,
+    _crown_update!(ξi   ::iTpbX,
+                   ξ1   ::iTpbX,
+                   ξ2   ::iTpbX,
                    α    ::Float64,
                    σλ   ::Float64,
                    llc  ::Float64,
@@ -139,9 +139,9 @@ end
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi   ::iTpb,
-                        ξ1   ::iTpb,
-                        ξ2   ::iTpb,
+function _crown_update!(ξi   ::iTpbX,
+                        ξ1   ::iTpbX,
+                        ξ2   ::iTpbX,
                         α    ::Float64,
                         σλ   ::Float64,
                         llc  ::Float64,
@@ -197,7 +197,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTpb,
+    _update_gbm!(tree::iTpbX,
                  α   ::Float64,
                  σλ  ::Float64,
                  llc ::Float64,
@@ -209,7 +209,7 @@ end
 
 Do gbm updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTpb,
+function _update_gbm!(tree::iTpbX,
                       α   ::Float64,
                       σλ  ::Float64,
                       llc ::Float64,
@@ -239,7 +239,7 @@ end
 
 
 """
-    update_tip!(tree::iTpb,
+    update_tip!(tree::iTpbX,
                 α   ::Float64,
                 σλ  ::Float64,
                 llc ::Float64,
@@ -250,7 +250,7 @@ end
 
 Make a `gbm` tip proposal.
 """
-function update_tip!(tree::iTpb,
+function update_tip!(tree::iTpbX,
                      α   ::Float64,
                      σλ  ::Float64,
                      llc ::Float64,
@@ -363,7 +363,7 @@ end
 
 
 """
-    update_triad!(tree::iTpb,
+    update_triad!(tree::iTpbX,
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
@@ -373,7 +373,7 @@ end
 
 Make a `gbm` trio proposal.
 """
-function update_triad!(tree::iTpb,
+function update_triad!(tree::iTpbX,
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,

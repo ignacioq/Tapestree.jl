@@ -12,26 +12,30 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(tree::iTpb,
+    llik_gbm(tree::iTpbX,
              α   ::Float64,
              σλ  ::Float64,
+             βλ  ::Float64,
+             σx  ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
 """
-function llik_gbm(tree::iTpb,
+function llik_gbm(tree::iTpbX,
                   α   ::Float64,
                   σλ  ::Float64,
+                  βλ  ::Float64,
+                  σx  ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
 
   if istip(tree)
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+    ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
   else
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTpb, α, σλ, δt, srδt)          +
-    llik_gbm(tree.d2::iTpb, α, σλ, δt, srδt)
+    ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true) +
+    llik_gbm(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)                      +
+    llik_gbm(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
   end
 end
 
@@ -39,19 +43,23 @@ end
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTpb},
+    llik_gbm(Ξ   ::Vector{iTpbX},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
+             βλ  ::Float64,
+             σx  ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
 """
-function llik_gbm(Ξ   ::Vector{iTpb},
+function llik_gbm(Ξ   ::Vector{iTpbX},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
+                  βλ  ::Float64,
+                  σx  ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
 
@@ -59,7 +67,7 @@ function llik_gbm(Ξ   ::Vector{iTpb},
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
-      ll += llik_gbm(Ξ[i], α, σλ, δt, srδt)
+      ll += llik_gbm(Ξ[i], α, σλ, βλ, σx, δt, srδt)
 
       if !it(bi)
         ll += λt(bi)
@@ -75,8 +83,10 @@ end
 
 """
     ll_gbm_b(lλv ::Array{Float64,1},
+             xv  ::Array{Float64,1},
              α   ::Float64,
              σλ  ::Float64,
+             σx  ::Float64,
              δt  ::Float64,
              fdt ::Float64,
              srδt::Float64,
@@ -85,8 +95,11 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
 function ll_gbm_b(lλv ::Array{Float64,1},
+                  xv  ::Array{Float64,1},
                   α   ::Float64,
                   σλ  ::Float64,
+                  βλ  ::Float64,
+                  σx  ::Float64,
                   δt  ::Float64,
                   fdt ::Float64,
                   srδt::Float64,
@@ -95,26 +108,32 @@ function ll_gbm_b(lλv ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
+  llx  = 0.0
   llbm = 0.0
   llpb = 0.0
   @avx for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
-    llbm += (lλvi1 - lλvi - α*δt)^2
+    xvi   = xv[i]
+    llx  += (xv[i+1] - xvi)^2
+    llbm += (lλvi1 - lλvi - (α + βλ*xvi)*δt)^2
     llpb += exp(0.5*(lλvi + lλvi1))
   end
 
   # add to global likelihood
   ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
   ll -= llpb*δt
+  ll += llx *(-0.5/((σx*srδt)^2)) - Float64(nI)*(log(σx*srδt) + 0.5*log(2.0π))
 
   lλvi1 = lλv[nI+2]
 
   # add final non-standard `δt`
   if fdt > 0.0
     lλvi = lλv[nI+1]
-    ll   += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-            fdt*exp(0.5*(lλvi + lλvi1))
+    xvi  = xv[nI+1]
+    ll  += ldnorm_bm(lλvi1, lλvi + (α + βλ*xvi)*fdt, sqrt(fdt)*σλ) -
+           fdt*exp(0.5*(lλvi + lλvi1))                             +
+           ldnorm_bm(xv[nI+2], xvi,  sqrt(fdt)*σx)
   end
   if λev
     ll += lλvi1
@@ -127,79 +146,96 @@ end
 
 
 """
-    llik_gbm_ssλ(tree::iTpb,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64)
+    llik_gbm_ss(tree::iTpbX,
+                α   ::Float64,
+                σλ  ::Float64,
+                βλ  ::Float64,
+                σx  ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
 """
-function llik_gbm_ssλ(tree::iTpb,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64)
+function llik_gbm_ss(tree::iTpbX,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     βλ  ::Float64,
+                     σx  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
 
   if istip(tree)
-    ll, dλ, ssλ, nλ = ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+    ll, dλ, ssλ, ssx, nd =
+      ll_gbm_b_ss(lλ(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
   else
-    ll, dλ, ssλ, nλ = ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
+    ll, dλ, ssλ, ssx, nd =
+      ll_gbm_b_ss(lλ(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true)
 
-    ll1, dλ1, ssλ1, nλ1 = llik_gbm_ssλ(tree.d1::iTpb, α, σλ, δt, srδt)
-    ll2, dλ2, ssλ2, nλ2 = llik_gbm_ssλ(tree.d2::iTpb, α, σλ, δt, srδt)
+    ll1, dλ1, ssλ1, ssx1, nd1 =
+      llik_gbm_ss(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)
+    ll2, dλ2, ssλ2, ssx2, nd2 =
+      llik_gbm_ss(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
     ssλ += ssλ1 + ssλ2
-    nλ  += nλ1  + nλ2
+    ssx += ssx1 + ssx2
+    nd  += nd1  + nd2
   end
 
-  return ll, dλ, ssλ, nλ
+  return ll, dλ, ssλ, ssx, nd
 end
 
 
 
 
 """
-    ll_gbm_b_ssλ(lλv ::Array{Float64,1},
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 fdt ::Float64,
-                 srδt::Float64,
-                 λev ::Bool)
+    ll_gbm_b_ss(lλv ::Array{Float64,1},
+                α   ::Float64,
+                σλ  ::Float64,
+                βλ  ::Float64,
+                σx  ::Float64,
+                δt  ::Float64,
+                fdt ::Float64,
+                srδt::Float64,
+                λev ::Bool)
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
-function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      δt  ::Float64,
-                      fdt ::Float64,
-                      srδt::Float64,
-                      λev ::Bool)
+function ll_gbm_b_ss(lλv ::Array{Float64,1},
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     βλ  ::Float64,
+                     σx  ::Float64,
+                     δt  ::Float64,
+                     fdt ::Float64,
+                     srδt::Float64,
+                     λev ::Bool)
 
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
-  nλ = Float64(nI)
+  nd = Float64(nI)
 
   llbm = 0.0
   llpb = 0.0
-  ssλ  = 0.0
+  llx  = 0.0
   @avx for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
-    llbm += (lλvi1 - lλvi - α*δt)^2
+    xvi   = xv[i]
+    llx  += (xv[i+1] - xvi)^2
+    llbm += (lλvi1 - lλvi - (α + βλ*xvi)*δt)^2
     llpb += exp(0.5*(lλvi + lλvi1))
   end
 
   # standardized sum of squares
-  ssλ  = llbm/(2.0*δt)
+  ssλ = llbm/(2.0*δt)
+  ssx = llx /(2.0*δt)
 
   # add to global likelihood
   ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
   ll -= llpb*δt
+  ll += llx *(-0.5/((σx*srδt)^2)) - Float64(nI)*(log(σx*srδt) + 0.5*log(2.0π))
 
   lλvi1 = lλv[nI+2]
 
@@ -208,83 +244,87 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   # add final non-standard `δt`
   if fdt > 0.0
     lλvi = lλv[nI+1]
-    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-           fdt*exp(0.5*(lλvi + lλvi1))
+    xvi  = xv[nI+1]
+    xvi1 = xv[nI+2]
+    ll  += ldnorm_bm(lλvi1, lλvi + (α + βλ*xvi)*fdt, sqrt(fdt)*σλ) -
+           fdt*exp(0.5*(lλvi + lλvi1))                             +
+           ldnorm_bm(xvi1, xvi, sqrt(fdt)*σx)
     ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
-    nλ  += 1.0
+    ssx += (xvi1 - xvi)^2/(2.0*fdt)
+    nd  += 1.0
   end
   if λev
     ll += lλvi1
   end
 
-  return ll, dλ, ssλ, nλ
+  return ll, dλ, ssλ, ssx, nd
 end
 
 
 
 
 
-"""
-    llr_gbm_b_sep(lλp ::Array{Float64,1},
-                  lλc ::Array{Float64,1},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  fdt ::Float64,
-                  srδt::Float64,
-                  λev ::Bool)
+# """
+#     llr_gbm_b_sep(lλp ::Array{Float64,1},
+#                   lλc ::Array{Float64,1},
+#                   α   ::Float64,
+#                   σλ  ::Float64,
+#                   δt  ::Float64,
+#                   fdt ::Float64,
+#                   srδt::Float64,
+#                   λev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM pure-birth
-separately for the Brownian motion and the pure-birth
-"""
-function llr_gbm_b_sep(lλp ::Array{Float64,1},
-                       lλc ::Array{Float64,1},
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       δt  ::Float64,
-                       fdt ::Float64,
-                       srδt::Float64,
-                       λev ::Bool)
+# Returns the log-likelihood ratio for a branch according to GBM pure-birth
+# separately for the Brownian motion and the pure-birth
+# """
+# function llr_gbm_b_sep(lλp ::Array{Float64,1},
+#                        lλc ::Array{Float64,1},
+#                        α   ::Float64,
+#                        σλ  ::Float64,
+#                        δt  ::Float64,
+#                        fdt ::Float64,
+#                        srδt::Float64,
+#                        λev ::Bool)
 
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλp)-2
+#   # estimate standard `δt` likelihood
+#   nI = lastindex(lλp)-2
 
-  llrbm = 0.0
-  llrpb = 0.0
-  @avx for i in Base.OneTo(nI)
-    lλpi   = lλp[i]
-    lλci   = lλc[i]
-    lλpi1  = lλp[i+1]
-    lλci1  = lλc[i+1]
-    llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-    llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-  end
+#   llrbm = 0.0
+#   llrpb = 0.0
+#   @avx for i in Base.OneTo(nI)
+#     lλpi   = lλp[i]
+#     lλci   = lλc[i]
+#     lλpi1  = lλp[i+1]
+#     lλci1  = lλc[i+1]
+#     llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+#     llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+#   end
 
-  # standardized sum of squares
-  ssrλ  = llrbm/(2.0*δt)
-  # add to global likelihood
-  llrbm *= (-0.5/((σλ*srδt)^2))
-  llrpb *= (-δt)
+#   # standardized sum of squares
+#   ssrλ  = llrbm/(2.0*δt)
+#   # add to global likelihood
+#   llrbm *= (-0.5/((σλ*srδt)^2))
+#   llrpb *= (-δt)
 
-  lλpi1 = lλp[nI+2]
-  lλci1 = lλc[nI+2]
+#   lλpi1 = lλp[nI+2]
+#   lλci1 = lλc[nI+2]
 
- # add final non-standard `δt`
-  if fdt > 0.0
-    lλpi   = lλp[nI+1]
-    lλci   = lλc[nI+1]
-    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
-    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
-                          lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-    llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-  end
-  #if speciation
-  if λev
-    llrpb += lλpi1 - lλci1
-  end
+#  # add final non-standard `δt`
+#   if fdt > 0.0
+#     lλpi   = lλp[nI+1]
+#     lλci   = lλc[nI+1]
+#     ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
+#     llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
+#                           lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
+#     llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+#   end
+#   #if speciation
+#   if λev
+#     llrpb += lλpi1 - lλci1
+#   end
 
-  return llrbm, llrpb, ssrλ
-end
+#   return llrbm, llrpb, ssrλ
+# end
 
 
 
@@ -292,110 +332,80 @@ end
 """
     _sss_gbm(tree::T,
              α   ::Float64,
+             βλ  ::Float64,
              ssλ ::Float64,
-             n   ::Float64) where {T <: iT}
+             ssx ::Float64,
+             n   ::Float64)
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
 function _sss_gbm(tree::T,
                   α   ::Float64,
+                  βλ  ::Float64,
                   ssλ ::Float64,
+                  ssx ::Float64,
                   n   ::Float64) where {T <: iT}
 
-  ssλ0, n0 = _sss_gbm_b(lλ(tree), α, dt(tree), fdt(tree))
+  ssλ0, ssx0, n0 = _sss_gbm_b(lλ(tree), xv(tree), α, βλ, dt(tree), fdt(tree))
 
   ssλ += ssλ0
+  ssx += ssx0
   n   += n0
 
   if def1(tree)
-    ssλ, n = _sss_gbm(tree.d1, α, ssλ, n)
-    ssλ, n = _sss_gbm(tree.d2, α, ssλ, n)
+    ssλ, ssx, n = _sss_gbm(tree.d1, α, βλ, ssλ, ssx, n)
+    ssλ, ssx, n = _sss_gbm(tree.d2, α, βλ, ssλ, ssx, n)
   end
 
-  return ssλ, n
+  return ssλ, ssx, n
 end
 
 
 
 
 """
-    sss_gbm_b(lλv::Array{Float64,1},
-              α  ::Float64,
-              δt ::Float64,
-              fdt::Float64)
+    _sss_gbm_b(lλv::Array{Float64,1},
+               xv ::Array{Float64,1},
+               α  ::Float64,
+               βλ ::Float64,
+               δt ::Float64,
+               fdt::Float64)
 
 Returns the standardized sum of squares for the stochastic GBM part of a branch
 for GBM birth-death.
 """
 function _sss_gbm_b(lλv::Array{Float64,1},
+                    xv ::Array{Float64,1},
                     α  ::Float64,
+                    βλ ::Float64,
                     δt ::Float64,
                     fdt::Float64)
-
 
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    ssλ  = 0.0
     @avx for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lλvi1 = lλv[i+1]
-      ssλ  += (lλvi1 - lλvi - α*δt)^2
+      ssλ  += (lλvi1 - lλvi - (α + βλ*xvi)*δt)^2
+      ssx  += (xv[i+1] - xv[i])^2
     end
 
     # standardize
     ssλ *= 1.0/(2.0*δt)
+    ssx *= 1.0/(2.0*δt)
 
     # add final non-standard `δt`
     if fdt > 0.0
-      ssλ += (lλv[nI+2] - lλv[nI+1] - α*fdt)^2/(2.0*fdt)
+      ssλ += (lλv[nI+2] - lλv[nI+1] - (α + βλ*xvi)*fdt)^2/(2.0*fdt)
+      ssx += (xv[nI+2] - xv[nI+1])^2/(2.0*fdt)
       n = Float64(nI + 1)
     else
       n = Float64(nI)
     end
 
-  return ssλ, n
-end
-
-
-
-
-"""
-    deltaλ(Ξ::Vector{T}) where {T <: iT}
-
-Returns the log-likelihood ratio for according to GBM
-for a drift `α` proposal.
-"""
-function deltaλ(Ξ::Vector{T}) where {T <: iT}
-
-  dλ = 0.0
-
-  for ξi in Ξ
-    dλ += _deltaλ(ξi)
-  end
-
-  return dλ
-end
-
-
-
-
-"""
-    _deltaλ(tree::T) where {T <: iT}
-
-Returns the log-likelihood ratio for a `iTpb` according
-to GBM birth-death for a `α` proposal.
-"""
-function _deltaλ(tree::T) where {T <: iT}
-
-  lλv = lλ(tree)
-
-  if def1(tree)
-    lλv[end] - lλv[1] + _deltaλ(tree.d1) + _deltaλ(tree.d2)
-  else
-    lλv[end] - lλv[1]
-  end
+  return ssλ, ssx, n
 end
 
 

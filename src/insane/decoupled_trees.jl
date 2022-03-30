@@ -120,6 +120,74 @@ end
 
 
 
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           xr  ::Vector{Float64},
+           lλa ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           σx  ::Float64,
+           δt  ::Float64,
+           srδt::Float64,
+           ::Type{iTpbX})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                xr  ::Vector{Float64},
+                lλa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                σx  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTpbX})
+
+  lλi = lλa
+  Ξ   = iTpbX[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    paix = iszero(paix) ? 1 : paix
+    xii  = xr[paix]
+    xfi  = xr[i]
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+    end
+
+    @show lλi 
+    if iszero(et)
+      lλv = Float64[lλi, lλi]
+      xv  = Float64[xii, xfi]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλi, α,   σλ, δt, fdti, srδt, nt)
+      xv  = bb(xii, xfi, σx, δt, fdti, srδt, nt)
+      l   = lastindex(lλv)
+    end
+    setλt!(idfi, lλv[l])
+
+    ξ = iTpbX(et, true, δt, fdti, lλv, xv)
+
+    push!(Ξ, ξ)
+  end
+
+  return Ξ
+end
+
+
+
+
 
 """
     sTbd!(Ξ::Vector{sTbd}, tree::sT_label)
@@ -213,7 +281,7 @@ function iTpb!(Ξ   ::Vector{iTpb},
       nt  -= 1
     end
 
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    lλv = bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
   end
 
@@ -261,7 +329,7 @@ function iTce!(Ξ   ::Vector{iTce},
       nt  -= 1
     end
 
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    lλv = bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
   end
 
@@ -309,7 +377,7 @@ function iTct!(Ξ   ::Vector{iTct},
       nt  -= 1
     end
 
-    lλv = sim_bm(lλa, α, σλ, δt, fdti, srδt, nt)
+    lλv = bm(lλa, α, σλ, δt, fdti, srδt, nt)
     l   = lastindex(lλv)
   end
 
@@ -362,8 +430,8 @@ function iTbd!(Ξ   ::Vector{iTbd},
       nt  -= 1
     end
 
-    lλv = sim_bm(lλa,   α, σλ, δt, fdti, srδt, nt)
-    lμv = sim_bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
+    lλv = bm(lλa,   α, σλ, δt, fdti, srδt, nt)
+    lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
     l   = nt + 2
   end
 
@@ -416,8 +484,8 @@ function iTfbd!(Ξ   ::Vector{iTfbd},
       nt  -= 1
     end
 
-    lλv = sim_bm(lλa, α,   σλ, δt, fdti, srδt, nt)
-    lμv = sim_bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
+    lλv = bm(lλa, α,   σλ, δt, fdti, srδt, nt)
+    lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
     l   = nt + 2
   end
 

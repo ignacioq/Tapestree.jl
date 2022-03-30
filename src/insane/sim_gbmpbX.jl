@@ -328,6 +328,7 @@ Sample conditional on number of species
                 α   ::Float64,
                 σλ  ::Float64,
                 xt  ::Float64,
+                βλ  ::Float64,
                 σx  ::Float64,
                 δt  ::Float64,
                 srδt::Float64,
@@ -341,6 +342,7 @@ function _sim_gbmpbX(t   ::Float64,
                      α   ::Float64,
                      σλ  ::Float64,
                      xt  ::Float64,
+                     βλ  ::Float64,
                      σx  ::Float64,
                      δt  ::Float64,
                      srδt::Float64,
@@ -359,8 +361,8 @@ function _sim_gbmpbX(t   ::Float64,
         t   = max(0.0, t)
         bt += t
         srt = sqrt(t)
-        xt1 = rnorm(xt,       srt*σx)
-        λt1 = rnorm(λt + α*t, srt*σλ)
+        xt1 = rnorm(xt, srt*σx)
+        λt1 = rnorm(λt + (α + βλ*xt)*t, srt*σλ)
         push!(λv, λt1)
         push!(xv, xt1)
 
@@ -380,8 +382,8 @@ function _sim_gbmpbX(t   ::Float64,
 
       t  -= δt
       bt += δt
-      xt1 = rnorm(xt,       srδt*σx)
-      λt1 = rnorm(λt + α*t, srδt*σλ)
+      xt1 = rnorm(xt, srδt*σx)
+      λt1 = rnorm(λt + (α + βλ*xt)*δt, srδt*σλ)
       push!(λv, λt1)
       push!(xv, xt1)
 
@@ -389,8 +391,8 @@ function _sim_gbmpbX(t   ::Float64,
 
       if divev(λm, δt)
         nn += 1
-        td1, nn = _sim_gbmpbX(t, λt1, α, σλ, xt1, σx, δt, srδt, nn, nlim)
-        td2, nn = _sim_gbmpbX(t, λt1, α, σλ, xt1, σx, δt, srδt, nn, nlim)
+        td1, nn = _sim_gbmpbX(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, nn, nlim)
+        td2, nn = _sim_gbmpbX(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, nn, nlim)
 
         return iTpbX(td1, td2, bt, false, δt, δt, λv, xv), nn
       end
@@ -408,17 +410,20 @@ end
 
 """
     _sim_gbmpbX_t(t   ::Float64,
-                 λt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lr  ::Float64,
-                 lU  ::Float64,
-                 Iρi ::Float64,
-                 na  ::Int64,
-                 nn ::Int64,
-                 nlim::Int64)
+                  λt  ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  xt  ::Float64,
+                  βλ  ::Float64,
+                  σx  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
+                  na  ::Int64,
+                  nn ::Int64,
+                  nlim::Int64)
 
 Simulate `iTpbX` according to a pure-birth geometric Brownian motion for
 terminal branches.
@@ -428,6 +433,7 @@ function _sim_gbmpbX_t(t   ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
                        xt  ::Float64,
+                       βλ  ::Float64,
                        σx  ::Float64,
                        δt  ::Float64,
                        srδt::Float64,
@@ -450,8 +456,8 @@ function _sim_gbmpbX_t(t   ::Float64,
         t   = max(0.0, t)
         bt += t
         srt = sqrt(t)
-        xt1 = rnorm(xt,       srt*σx)
-        λt1 = rnorm(λt + α*t, srt*σλ)
+        xt1 = rnorm(xt, srt*σx)
+        λt1 = rnorm(λt + (α + βλ*xt)t, srt*σλ)
         push!(λv, λt1)
         push!(xv, xt1)
 
@@ -498,8 +504,8 @@ function _sim_gbmpbX_t(t   ::Float64,
 
       t  -= δt
       bt += δt
-      xt1 = rnorm(xt,        srδt*σx)
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      xt1 = rnorm(xt, srδt*σx)
+      λt1 = rnorm(λt + (α + βλ*xt)*δt, srδt*σλ)
       push!(λv, λt1)
       push!(xv, xt1)
 
@@ -508,10 +514,10 @@ function _sim_gbmpbX_t(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, na, nn, lr =
-          _sim_gbmpbX_t(t, λt1, α, σλ, xt1, σx, δt, srδt, 
+          _sim_gbmpbX_t(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
             lr, lU, Iρi, na, nn, nlim)
         td2, na, nn, lr =
-          _sim_gbmpbX_t(t, λt1, α, σλ, xt1, σx, δt, srδt, 
+          _sim_gbmpbX_t(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
             lr, lU, Iρi, na, nn, nlim)
 
         return iTpbX(td1, td2, bt, false, δt, δt, λv, xv), na, nn, lr
@@ -553,6 +559,7 @@ function _sim_gbmpbX_it(nsδt::Float64,
                         α   ::Float64,
                         σλ  ::Float64,
                         xt  ::Float64,
+                        βλ  ::Float64,
                         σx  ::Float64,
                         δt  ::Float64,
                         srδt::Float64,
@@ -570,8 +577,8 @@ function _sim_gbmpbX_it(nsδt::Float64,
     t   = max(0.0, t)
     bt += t
     srt = sqrt(t)
-    xt1 = rnorm(xt,       srt*σx)
-    λt1 = rnorm(λt + α*t, srt*σλ)
+    xt1 = rnorm(xt, srt*σx)
+    λt1 = rnorm(λt + (α + βλ*xt)*t, srt*σλ)
     push!(λv, λt1)
     push!(xv, xt1)
 
@@ -595,8 +602,8 @@ function _sim_gbmpbX_it(nsδt::Float64,
   bt += nsδt
 
   srnsδt = sqrt(nsδt)
-  xt1 = rnorm(xt,          srnsδt*σx)
-  λt1 = rnorm(λt + α*nsδt, srnsδt*σλ)
+  xt1 = rnorm(xt, srnsδt*σx)
+  λt1 = rnorm(λt + (α + βλ*xt)*nsδt, srnsδt*σλ)
   push!(λv, λt1)
   push!(xv, xt1)
   λm  = exp(0.5*(λt + λt1))
@@ -604,9 +611,9 @@ function _sim_gbmpbX_it(nsδt::Float64,
   if divev(λm, nsδt)
     nn += 1
     td1, nn, lr =
-      _sim_gbmpbX_it(t, λt1, α, σλ, xt1, σv, δt, srδt, lr, lU, Iρi, nn, nlim)
+      _sim_gbmpbX_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, lr, lU, Iρi, nn, nlim)
     td2, nn, lr =
-      _sim_gbmpbX_it(t, λt1, α, σλ, xt1, σv, δt, srδt, lr, lU, Iρi, nn, nlim)
+      _sim_gbmpbX_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, lr, lU, Iρi, nn, nlim)
 
     return iTpbX(td1, td2, bt, false, δt, nsδt, λv), nn, lr
   end
@@ -621,8 +628,11 @@ function _sim_gbmpbX_it(nsδt::Float64,
       if t <= δt
         t   = max(0.0, t)
         bt += t
-        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
+        srt = sqrt(t)
+        xt1 = rnorm(xt, srt*σx)
+        λt1 = rnorm(λt + (α + βλ*xt)*t, srt*σλ)
         push!(λv, λt1)
+        push!(xv, xt1)
 
         λm = exp(0.5*(λt + λt1))
 
@@ -630,8 +640,8 @@ function _sim_gbmpbX_it(nsδt::Float64,
           nn += 1
           lr  += 2.0*log(Iρi)
           return iTpbX(iTpbX(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      iTpbX(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      bt, false, δt, t, λv), nn, lr
+                       iTpbX(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                       bt, false, δt, t, λv), nn, lr
         else
           lr += log(Iρi)
           return iTpbX(bt, false, δt, t, λv), nn, lr
@@ -640,8 +650,8 @@ function _sim_gbmpbX_it(nsδt::Float64,
 
       t  -= δt
       bt += δt
-      xt1 = rnorm(xt,        srδt*σx)
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      xt1 = rnorm(xt, srδt*σx)
+      λt1 = rnorm(λt + (α + βλ*xt)*δt, srδt*σλ)
       push!(λv, λt1)
       push!(xv, xt1)
 
@@ -650,9 +660,11 @@ function _sim_gbmpbX_it(nsδt::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, σv, δt, srδt, lr, lU, Iρi, nn, nlim)
+          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
+            lr, lU, Iρi, nn, nlim)
         td2, nn, lr =
-          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, σv, δt, srδt, lr, lU, Iρi, nn, nlim)
+          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
+            lr, lU, Iρi, nn, nlim)
 
         return iTpbX(td1, td2, bt, false, δt, δt, λv), nn, lr
       end
@@ -670,35 +682,37 @@ end
 
 """
     _sim_gbmpbX_it(t   ::Float64,
-                 λt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 xt  ::Float64,
-                 σx  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lr  ::Float64,
-                 lU  ::Float64,
-                 Iρi ::Float64,
-                 nn ::Int64,
-                 nlim::Int64)
+                  λt  ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  xt  ::Float64,
+                  βλ  ::Float64,
+                  σx  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  lr  ::Float64,
+                  lU  ::Float64,
+                  Iρi ::Float64,
+                  nn ::Int64,
+                  nlim::Int64)
 
 Simulate `iTpbX` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
 function _sim_gbmpbX_it(t   ::Float64,
-                       λt  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       xt  ::Float64,
-                       σx  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64,
-                       lr  ::Float64,
-                       lU  ::Float64,
-                       Iρi ::Float64,
-                       nn ::Int64,
-                       nlim::Int64)
+                        λt  ::Float64,
+                        α   ::Float64,
+                        σλ  ::Float64,
+                        xt  ::Float64,
+                        βλ  ::Float64,
+                        σx  ::Float64,
+                        δt  ::Float64,
+                        srδt::Float64,
+                        lr  ::Float64,
+                        lU  ::Float64,
+                        Iρi ::Float64,
+                        nn ::Int64,
+                        nlim::Int64)
 
   if lU < lr && nn < nlim
 
@@ -711,8 +725,8 @@ function _sim_gbmpbX_it(t   ::Float64,
         t   = max(0.0, t)
         bt += t
         srt = sqrt(t)
-        xt1 = rnorm(xt,       srt*σx)
-        λt1 = rnorm(λt + α*t, srt*σλ)
+        xt1 = rnorm(xt, srt*σx)
+        λt1 = rnorm(λt + (α + βλ*xt)*t, srt*σλ)
         push!(λv, λt1)
         push!(xv, xt1)
 
@@ -735,7 +749,7 @@ function _sim_gbmpbX_it(t   ::Float64,
       t  -= δt
       bt += δt
 
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      λt1 = rnorm(λt + (α + βλ*xt)*δt, srδt*σλ)
 
       push!(λv, λt1)
 
@@ -744,10 +758,10 @@ function _sim_gbmpbX_it(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, σx, δt, srδt, 
+          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
             lr, lU, Iρi, nn, nlim)
         td2, nn, lr =
-          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, σx, δt, srδt, 
+          _sim_gbmpbX_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
             lr, lU, Iρi, nn, nlim)
 
         return iTpbX(td1, td2, bt, false, δt, δt, λv, xv), nn, lr
