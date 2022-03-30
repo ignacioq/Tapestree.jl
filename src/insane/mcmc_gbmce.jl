@@ -89,8 +89,7 @@ function insane_gbmce(tree    ::sT_label,
   mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 500, stem)
 
   # make a decoupled tree
-  Ξ = iTce[]
-  iTce!(Ξ, tree, δt, srδt, log(λc), αi, σλi)
+  Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTce)
 
   # set end of fix branch speciation times and
   # get vector of internal branches

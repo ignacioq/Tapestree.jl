@@ -57,8 +57,7 @@ function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
     paix = iszero(paix) ? 1 : paix
     xii  = xr[paix]
     xfi  = xr[i]
-    ξ = sTpbX(e(idfi), true, xii, xfi)
-    push!(Ξ, ξ)
+    push!(Ξ, sTpbX(e(idfi), true, xii, xfi))
   end
 
   return Ξ
@@ -80,8 +79,7 @@ function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbdX})
     paix = iszero(paix) ? 1 : paix
     xii  = xr[paix]
     xfi  = xr[i]
-    ξ = sTbdX(e(idfi), false, true, xii, xfi)
-    push!(Ξ, ξ)
+    push!(Ξ, sTbdX(e(idfi), false, true, xii, xfi))
   end
 
   return Ξ
@@ -105,13 +103,12 @@ function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTfbdX})
     xfi  = xr[i]
     iψ = isfossil(idfi)
     if iψ && it(idfi)
-      ξ = sTfbdX(
-               sTfbdX(1e-10, true, false, false, xfi, xfi),
-               e(idfi), false, true, true, xii, xfi)
+      push!(Ξ, sTfbdX(
+                 sTfbdX(1e-10, true, false, false, xfi, xfi),
+                 e(idfi), false, true, true, xii, xfi))
     else
-      ξ = sTfbdX(e(idfi), false, iψ, true, xii, xfi)
+      push!(Ξ, sTfbdX(e(idfi), false, iψ, true, xii, xfi))
     end
-    push!(Ξ, ξ)
   end
 
   return Ξ
@@ -156,7 +153,6 @@ function make_Ξ(idf ::Vector{iBffs},
       lλi = λt(idf[paix])
     end
 
-    @show lλi 
     if iszero(et)
       lλv = Float64[lλi, lλi]
       xv  = Float64[xii, xfi]
@@ -173,13 +169,10 @@ function make_Ξ(idf ::Vector{iBffs},
 
       lλv = bm(lλi, α,   σλ, δt, fdti, srδt, nt)
       xv  = bb(xii, xfi, σx, δt, fdti, srδt, nt)
-      l   = lastindex(lλv)
+      l   = nt + 2
     end
     setλt!(idfi, lλv[l])
-
-    ξ = iTpbX(et, true, δt, fdti, lλv, xv)
-
-    push!(Ξ, ξ)
+    push!(Ξ, iTpbX(et, true, δt, fdti, lλv, xv))
   end
 
   return Ξ
@@ -248,261 +241,298 @@ end
 
 
 """
-    iTpb!(Ξ   ::Vector{iTpb},
-             tree::sT_label,
-             δt  ::Float64,
-             srδt::Float64,
-             lλa ::Float64,
-             α   ::Float64,
-             σλ  ::Float64)
-
-Make edge tree `Ξ` from the recursive tree.
-"""
-function iTpb!(Ξ   ::Vector{iTpb},
-               tree::sT_label,
-               δt  ::Float64,
-               srδt::Float64,
-               lλa ::Float64,
-               α   ::Float64,
-               σλ  ::Float64)
-
-  et = e(tree)
-
-  if iszero(et)
-    lλv  = Float64[lλa, lλa]
-    fdti = 0.0
-    l    = 2
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    if iszero(fdti)
-      fdti = δt
-      nt  -= 1
-    end
-
-    lλv = bm(lλa, α, σλ, δt, fdti, srδt, nt)
-    l   = lastindex(lλv)
-  end
-
-  push!(Ξ, iTpb(et, true, δt, fdti, lλv))
-  if def1(tree)
-    iTpb!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
-    iTpb!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
-  end
-end
-
-
-
-
-"""
-    iTce!(Ξ   ::Vector{iTce},
-             tree::sT_label,
-             δt  ::Float64,
-             srδt::Float64,
-             lλa ::Float64,
-             α   ::Float64,
-             σλ  ::Float64)
-
-Make edge tree `Ξ` from the recursive tree.
-"""
-function iTce!(Ξ   ::Vector{iTce},
-                  tree::sT_label,
-                  δt  ::Float64,
-                  srδt::Float64,
-                  lλa ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64)
-
-  et = e(tree)
-
-  if iszero(et)
-    lλv  = Float64[lλa, lλa]
-    fdti = 0.0
-    l    = 2
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    if iszero(fdti)
-      fdti = δt
-      nt  -= 1
-    end
-
-    lλv = bm(lλa, α, σλ, δt, fdti, srδt, nt)
-    l   = lastindex(lλv)
-  end
-
-  push!(Ξ, iTce(et, δt, fdti, false, true, lλv))
-  if def1(tree)
-    iTce!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
-    iTce!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
-  end
-end
-
-
-
-
-"""
-    iTct!(Ξ   ::Vector{iTct},
-             tree::sT_label,
-             δt  ::Float64,
-             srδt::Float64,
-             lλa ::Float64,
-             α   ::Float64,
-             σλ  ::Float64)
-
-Make edge tree `Ξ` from the recursive tree.
-"""
-function iTct!(Ξ   ::Vector{iTct},
-                  tree::sT_label,
-                  δt  ::Float64,
-                  srδt::Float64,
-                  lλa ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64)
-
-  et = e(tree)
-
-  if iszero(et)
-    lλv  = Float64[lλa, lλa]
-    fdti = 0.0
-    l    = 2
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    if iszero(fdti)
-      fdti = δt
-      nt  -= 1
-    end
-
-    lλv = bm(lλa, α, σλ, δt, fdti, srδt, nt)
-    l   = lastindex(lλv)
-  end
-
-  push!(Ξ, iTct(et, δt, fdti, false, true, lλv))
-  if def1(tree)
-    iTct!(Ξ, tree.d2, δt, srδt, lλv[l], α, σλ)
-    iTct!(Ξ, tree.d1, δt, srδt, lλv[l], α, σλ)
-  end
-end
-
-
-
-
-"""
-    iTbd!(Ξ   ::Vector{iTbd},
-          tree::sT_label,
-          δt  ::Float64,
-          srδt::Float64,
-          lλa ::Float64,
-          lμa ::Float64,
-          α   ::Float64,
-          σλ  ::Float64,
-          σμ  ::Float64)
-
-Make edge tree `Ξ` from the recursive tree.
-"""
-function iTbd!(Ξ   ::Vector{iTbd},
-               tree::sT_label,
-               δt  ::Float64,
-               srδt::Float64,
-               lλa ::Float64,
-               lμa ::Float64,
-               α   ::Float64,
-               σλ  ::Float64,
-               σμ  ::Float64)
-
-  et = e(tree)
-
-  if iszero(et)
-    lλv  = Float64[lλa, lλa]
-    lμv  = Float64[lμa, lμa]
-    fdti = 0.0
-    l    = 2
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    if iszero(fdti)
-      fdti = δt
-      nt  -= 1
-    end
-
-    lλv = bm(lλa,   α, σλ, δt, fdti, srδt, nt)
-    lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
-    l   = nt + 2
-  end
-
-  push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
-  if def1(tree)
-    iTbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
-    iTbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ)
-  end
-end
-
-
-
-
-"""
-    iTfbd!(Ξ   ::Vector{iTfbd},
-           tree::sTf_label,
+    make_Ξ(idf ::Vector{iBffs},
+           lλa ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
            δt  ::Float64,
            srδt::Float64,
+           ::Type{iTpb})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                lλa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTpb})
+
+  lλi = lλa
+  Ξ   = iTpb[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+    end
+
+    if iszero(et)
+      lλv = Float64[lλi, lλi]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλi, α, σλ, δt, fdti, srδt, nt)
+      l   = nt + 2
+    end
+    setλt!(idfi, lλv[l])
+    push!(Ξ, iTpb(et, true, δt, fdti, lλv))
+  end
+
+  return Ξ
+end
+
+
+
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           lλa ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           δt  ::Float64,
+           srδt::Float64,
+           ::Type{iTce})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                lλa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTce})
+
+  lλi = lλa
+  Ξ   = iTce[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+    end
+
+    if iszero(et)
+      lλv = Float64[lλi, lλi]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλi, α, σλ, δt, fdti, srδt, nt)
+      l   = nt + 2
+    end
+    setλt!(idfi, lλv[l])
+    push!(Ξ, iTce(et, δt, fdti, false, true, lλv))
+  end
+
+  return Ξ
+end
+
+
+
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           lλa ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           δt  ::Float64,
+           srδt::Float64,
+           ::Type{iTct})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                lλa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTct})
+
+  lλi = lλa
+  Ξ   = iTct[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+    end
+
+    if iszero(et)
+      lλv = Float64[lλi, lλi]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλi, α, σλ, δt, fdti, srδt, nt)
+      l   = nt + 2
+    end
+    setλt!(idfi, lλv[l])
+    push!(Ξ, iTct(et, δt, fdti, false, true, lλv))
+  end
+
+  return Ξ
+end
+
+
+
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
            lλa ::Float64,
            lμa ::Float64,
            α   ::Float64,
            σλ  ::Float64,
-           σμ  ::Float64)
+           σμ  ::Float64,
+           δt  ::Float64,
+           srδt::Float64,
+           ::Type{iTbd})
 
-Make edge tree `Ξ` from the recursive tree.
+Make edge tree `Ξ` from the edge directory.
 """
-function iTfbd!(Ξ   ::Vector{iTfbd},
-                tree::sTf_label,
-                δt  ::Float64,
-                srδt::Float64,
+function make_Ξ(idf ::Vector{iBffs},
                 lλa ::Float64,
                 lμa ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
-                σμ  ::Float64)
+                σμ  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTbd})
 
-  et = e(tree)
-
-  if iszero(et)
-    lλv  = Float64[lλa, lλa]
-    lμv  = Float64[lμa, lμa]
-    fdti = 0.0
-    l    = 2
-  else
-    nt, fdti = divrem(et, δt, RoundDown)
-    nt = Int64(nt)
-
-    if iszero(fdti)
-      fdti = δt
-      nt  -= 1
+  lλi = lλa
+  Ξ   = iTbd[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
     end
 
-    lλv = bm(lλa, α,   σλ, δt, fdti, srδt, nt)
-    lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
-    l   = nt + 2
+    if iszero(et)
+      lλv  = Float64[lλa, lλa]
+      lμv  = Float64[lμa, lμa]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλa,   α, σλ, δt, fdti, srδt, nt)
+      lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
+      l   = nt + 2
+    end
+    setλt!(idfi, lλv[l])
+    push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
   end
 
-  if istip(tree) && isfossil(tree)
-    lλl = lλv[l]
-    lμl = lμv[l]
-    push!(Ξ, iTfbd(
-               iTfbd(1e-10, δt, 1e-10, true, false, false, 
-                 Float64[lλl, rnorm(lλl + α*1e-10, 1e-5*σλ)], 
-                 Float64[lμl, rnorm(lμl,           1e-5*σμ)]),
-               et, δt, fdti, false, true, true, lλv, lμv))
-  else
-    push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(tree), true, lλv, lμv))
+  return Ξ
+end
+
+
+
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           lλa ::Float64,
+           lμa ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           σμ  ::Float64,
+           δt  ::Float64,
+           srδt::Float64,
+           ::Type{iTfbd})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                lλa ::Float64,
+                lμa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTfbd})
+
+  lλi = lλa
+  Ξ   = iTfbd[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+    end
+
+    if iszero(et)
+      lλv  = Float64[lλa, lλa]
+      lμv  = Float64[lμa, lμa]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλa, α,   σλ, δt, fdti, srδt, nt)
+      lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
+      l   = nt + 2
+    end
+
+    if it(idfi) && isfossil(idfi)
+      lλl = lλv[l]
+      lμl = lμv[l]
+      push!(Ξ, iTfbd(
+                 iTfbd(1e-10, δt, 1e-10, true, false, false, 
+                   Float64[lλl, rnorm(lλl + α*1e-10, 1e-5*σλ)], 
+                   Float64[lμl, rnorm(lμl,           1e-5*σμ)]),
+                 et, δt, fdti, false, true, true, lλv, lμv))
+    else
+      push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(idfi), true, lλv, lμv))
+    end
+    setλt!(idfi, lλv[l])
   end
 
-  if def2(tree) iTfbd!(Ξ, tree.d2, δt, srδt, lλv[l], lμv[l], α, σλ, σμ) end
-  if def1(tree) iTfbd!(Ξ, tree.d1, δt, srδt, lλv[l], lμv[l], α, σλ, σμ) end
+  return Ξ
 end
 
 

@@ -446,27 +446,28 @@ Brownian bridge simulation.
 
   @inbounds begin
 
-    x = randn(n)
+    l = n + 2
+    x = randn(l)
 
     # for standard δt
     x[1] = xi
-    @simd for i = Base.OneTo(n-2)
+    @simd for i = Base.OneTo(n+1)
       x[i+1] *= srδt*σ
     end
-    x[n] *= sqrt(fdt)*σ
+    x[l] *= sqrt(fdt)*σ
     cumsum!(x, x)
 
     # make bridge
-    if n > 2
-      ite = 1.0/(Float64(n-2) * δt + fdt)
-      xdf = (x[n] - xf)
+    if l > 2
+      ite = 1.0/(Float64(l-2) * δt + fdt)
+      xdf = (x[l] - xf)
 
-      @avx for i = Base.OneTo(n-1)
+      @avx for i = Base.OneTo(l-1)
         x[i] -= (Float64(i-1) * δt * ite * xdf)
       end
     end
     # for last non-standard δt
-    x[n] = xf
+    x[l] = xf
   end
 
   return x

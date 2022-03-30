@@ -71,8 +71,7 @@ function insane_gbmpb(tree    ::sT_label,
   idf = make_idf(tree, tρ)
 
   # make a decoupled tree
-  Ξ = iTpb[]
-  iTpb!(Ξ, tree, δt, srδt, lλa, αi, σλi)
+  Ξ = make_Ξ(idf, lλa, αi, σλi, δt, srδt, iTpb)
 
   # set end of fix branch speciation times and
   # get vector of internal branches

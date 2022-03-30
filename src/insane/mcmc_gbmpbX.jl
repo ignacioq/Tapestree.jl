@@ -82,6 +82,8 @@ function insane_gbmpb(tree    ::sT_label,
   here!
   """
 
+  couple(Ξ)
+
   # set end of fix branch speciation times and
   # get vector of internal branches
   inodes = Int64[]

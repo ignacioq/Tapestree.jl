@@ -113,8 +113,7 @@ function insane_gbmfbd(tree    ::sTf_label,
   mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 500, stem)
 
   # make a decoupled tree
-  Ξ = iTfbd[]
-  iTfbd!(Ξ, tree, δt, srδt, log(λc), log(μc), αi, σλi, σμi)
+  Ξ = make_Ξ(idf, log(λc), log(μc), αi, σλi, σμi, δt, srδt, iTfbd)
 
   # set end of fix branch speciation times and
   # get vector of internal branches

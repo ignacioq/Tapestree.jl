@@ -294,11 +294,11 @@ Produce a new copy of `iTpbX`.
 function iTpbX(tree::iTpbX)
   if def1(tree)
     iTpbX(iTpbX(tree.d1), iTpbX(tree.d2),
-      e(tree), dt(tree), fdt(tree),
-      isfix(tree), copy(lλ(tree)), copy(xv(tree)))
+      e(tree), isfix(tree), dt(tree), fdt(tree),
+      copy(lλ(tree)), copy(xv(tree)))
   else
-    iTpbX(e(tree), dt(tree), fdt(tree),
-      isfix(tree), copy(lλ(tree)), copy(xv(tree)))
+    iTpbX(e(tree), isfix(tree), dt(tree), fdt(tree),
+      copy(lλ(tree)), copy(xv(tree)))
   end
 end
 
