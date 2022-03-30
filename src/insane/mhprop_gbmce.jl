@@ -443,6 +443,7 @@ function update_triad!(tree::iTce,
     λ1p  = Vector{Float64}(undef,l1)
     λ2p  = Vector{Float64}(undef,l2)
     λp   = λpc[1]
+    λi   = λ1c[1]
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
     ep   = e(tree)
@@ -465,7 +466,7 @@ function update_triad!(tree::iTce,
 
     if -randexp() < acr
       llc += llr
-      dλ  += (λ1c[1] - λn)
+      dλ  += (λi - λn)
       ssλ += ssrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)

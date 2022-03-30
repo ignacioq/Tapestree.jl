@@ -244,8 +244,9 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
       # gbm update
       elseif pupi === 4
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        # nix = ceil(Int64,rand()*nin)
+        # bix = inodes[nix]
+        bix = 1
 
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
@@ -397,8 +398,9 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
       # gbm update
       elseif pupi === 4
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        # nix = ceil(Int64,rand()*nin)
+        # bix = inodes[nix]
+        bix = 1
 
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
