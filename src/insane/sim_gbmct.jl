@@ -505,16 +505,12 @@ function _sim_gbmct_t(t   ::Float64,
             else
               nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
             end
-            if nlr >= lr
-              return iTct(iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                          iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                          bt, δt, t, false, false, λv), na, nn, nlr
-            elseif lU < nlr
-              return iTct(iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                          iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                          bt, δt, t, false, false, λv), na, nn, nlr
-            else
+            if nlr < lr && lU >= nlr
               return iTct(), na, nn, NaN
+            else
+              return iTct(iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
+                          bt, δt, t, false, false, λv), na, nn, nlr
             end
           # if extinction
           else
@@ -527,12 +523,10 @@ function _sim_gbmct_t(t   ::Float64,
         if na > 1
           nlr += log(Iρi * Float64(na)/Float64(na-1))
         end
-        if nlr >= lr
-          return iTct(bt, δt, t, false, false, λv), na, nn, nlr
-        elseif lU < nlr
-          return iTct(bt, δt, t, false, false, λv), na, nn, nlr
-        else
+        if nlr < lr && lU >= nlr
           return iTct(), na, nn, NaN
+        else
+          return iTct(bt, δt, t, false, false, λv), na, nn, nlr
         end
       end
 
@@ -616,19 +610,18 @@ function _sim_gbmct_i(t   ::Float64,
           # if speciation
           if λorμ(λm, ϵ*λm)
             nn += 1
-            na += 2
+            push!(λsp, λt1, λt1)
             return iTct(
                     iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                     iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                    bt, δt, t, false, false, λv), na, nn
+                    bt, δt, t, false, false, λv), nn
           # if extinction
           else
-            return iTct(bt, δt, t, true, false, λv), na, nn
+            return iTct(bt, δt, t, true, false, λv), nn
           end
         end
-
-        na  += 1
-        return iTct(bt, δt, t, false, false, λv), na, nn
+        push!(λsp, λt1)
+        return iTct(bt, δt, t, false, false, λv), nn
       end
 
       t  -= δt
@@ -642,13 +635,13 @@ function _sim_gbmct_i(t   ::Float64,
         # if speciation
         if λorμ(λm, ϵ*λm)
           nn += 1
-          td1, na, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
-          td2, na, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
+          td1, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, nn, nlim, λsp)
+          td2, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, nn, nlim, λsp)
 
-          return iTct(td1, td2, bt, δt, δt, false, false, λv), na, nn
+          return iTct(td1, td2, bt, δt, δt, false, false, λv), nn
         # if extinction
         else
-          return iTct(bt, δt, δt, true, false, λv), na, nn
+          return iTct(bt, δt, δt, true, false, λv), nn
         end
       end
 
@@ -656,7 +649,7 @@ function _sim_gbmct_i(t   ::Float64,
     end
   end
 
-  return iTct(), na, nn
+  return iTct(), nn
 end
 
 

@@ -403,7 +403,7 @@ function _sim_gbmce(t   ::Float64,
           # if speciation
           if λorμ(λm, μ)
             nn += 1
-            na  += 2
+            na += 2
             return iTce(
                      iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                      iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
