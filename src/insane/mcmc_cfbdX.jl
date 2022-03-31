@@ -197,7 +197,7 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
   sdX, nX = sdeltaX(Ξ)           # standardized trait differences
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(stem)*log(λc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc,       λ_prior[1],  λ_prior[2])    +
         logdgamma(μc,       μ_prior[1],  μ_prior[2])    +
         logdgamma(ψc,        ψ_prior[1], ψ_prior[2])    +
