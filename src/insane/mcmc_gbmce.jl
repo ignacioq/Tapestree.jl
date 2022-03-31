@@ -580,10 +580,11 @@ function fsbi_i(bi  ::iBffs,
 
   λsp = Float64[]
 
-  t0, na, nn =
-    _sim_gbmce_i(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000, λsp)
+  t0, nn = _sim_gbmce_i(e(bi), λ0, α, σλ, μ, δt, srδt, 1, 500, λsp)
 
-  if na < 1 || nn >= 1_000
+  na = lastindex(λsp)
+
+  if na < 1 || nn >= 500
     return t0, NaN, NaN, NaN
   end
 
