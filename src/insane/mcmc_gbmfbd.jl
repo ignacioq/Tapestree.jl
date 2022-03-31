@@ -383,11 +383,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # σλ & σμ update
       elseif pupi === 2
@@ -396,22 +396,22 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
             llc, prc, mc, th, stem, δt, srδt, σλ_prior, σμ_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # psi update
       elseif pupi === 3
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # gbm update
       elseif pupi === 4
@@ -424,11 +424,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
             stem, δt, srδt, lλxpr, lμxpr)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, pupi, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - stem*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, pupi, Ξ
+        #    return
+        # end
 
       # forward simulation update
       else
@@ -751,9 +751,7 @@ function fsbi_i(bi  ::iBffs,
   wp = Float64[]
   ap = 0.0
   @simd for i in Base.OneTo(lastindex(λsp))
-    λi = λsp[i]
-    μi = μsp[i]
-    wi  = dnorm_bm(λi, λ1 - α*e1, sr1*σλ) * dnorm_bm(μi, μ1, sr1*σμ)
+    wi  = dnorm_bm(λsp[i], λ1 - α*e1, sr1*σλ) * dnorm_bm(μsp[i], μ1, sr1*σμ)
     ap += wi
     push!(wp, wi)
   end
@@ -766,9 +764,7 @@ function fsbi_i(bi  ::iBffs,
   # current acceptance ratio
   ac = 0.0
   @simd for i in Base.OneTo(lastindex(λsc))
-    λi = λsc[i]
-    μi = μsc[i]
-    ac += dnorm_bm(λi, λ1 - α*e1, sr1*σλ) * dnorm_bm(μi, μ1, sr1*σμ)
+    ac += dnorm_bm(λsc[i], λ1 - α*e1, sr1*σλ) * dnorm_bm(μsc[i], μ1, sr1*σμ)
   end
   ac = log(ac)
 
@@ -793,6 +789,15 @@ function fsbi_i(bi  ::iBffs,
   acr += acrd
 
   if lU < acr
+
+     # fix sampled tip
+    lw = lastindex(wp)
+
+    if wti <= div(lw,2)
+      fixtip1!(t0, wti, 0)
+    else
+      fixtip2!(t0, lw - wti + 1, 0)
+    end
 
     # simulate remaining tips until the present
     if na > 1
@@ -938,6 +943,15 @@ function fsbi_i(bi  ::iBffs,
   acr += acrd
 
   if lU < acr
+
+     # fix sampled tip
+    lw = lastindex(wp)
+
+    if wti <= div(lw,2)
+      fixtip1!(t0, wti, 0)
+    else
+      fixtip2!(t0, lw - wti + 1, 0)
+    end
 
     # simulate remaining tips until the present
     if na > 1
