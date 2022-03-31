@@ -273,7 +273,7 @@ struct iBffs <: iBf
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, iψ::Bool, ni::Int64, nt::Int64,
         λt::Float64, λst::Vector{Float64}, 
-        μt::Float64, μst::Float64, ψt::Float64, fx::Bool) =
+        μt::Float64, μst::Vector{Float64}, ψt::Float64, fx::Bool) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, iψ,
             Ref(ni), Ref(nt), Ref(λt), λst, Ref(μt), μst, Ref(ψt), fx)
 end

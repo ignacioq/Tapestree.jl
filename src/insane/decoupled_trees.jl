@@ -499,6 +499,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTfbd})
 
   lλi = lλa
+  lμi = lμa
   Ξ   = iTfbd[]
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
