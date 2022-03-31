@@ -921,34 +921,4 @@ end
 
 
 
-"""
-    _update_tip_x!(tree::T,
-                   σx  ::Float64,
-                   llc ::Float64,
-                   sdX ::Float64) where {T <: sTX}
-
-Make gibbs node update for trait.
-"""
-function _update_tip_x!(tree::T,
-                        σx  ::Float64,
-                        llc ::Float64,
-                        sdX ::Float64) where {T <: sTX}
-
-  xa = xi(tree)
-  xo = xf(tree)
-  ea = e(tree)
-
-  # gibbs sampling
-  s = sqrt(ea)*σx
-  xn = rnorm(xa, s)
-  setxf!(tree, xn)
-
-  # update llc and sdX
-  llc += llrdnorm_x(xn, xo, xa, s^2)
-  sdX += ((xn - xa)^2 - (xo - xa)^2)/(2.0*ea)
-
-  return llc, sdX
-end
-
-
 
