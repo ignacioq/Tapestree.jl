@@ -72,6 +72,34 @@ setλt!(id::iBffs, λt::Float64) = id.λt[] = λt
 
 
 """
+    setλst!(id::iBffs, λst::Vector{Float64})
+
+Set number of alive lineages at time `t`.
+"""
+function setλst!(id::iBffs, λs::Vector{Float64})
+  λi = λst(id)
+
+  li = lastindex(λi)
+  ln = lastindex(λs)
+  lm = min(li, ln)
+
+  # fill
+  @simd for i in Base.OneTo(lm)
+    λi[i] = λs[i]
+  end
+
+  if li === ln
+  elseif li < ln
+    append!(λi, λs[(li+1):ln])
+  else
+    deleteat!(λi, (ln+1):li)
+  end
+end
+
+
+
+
+"""
     setμt!(id::iBffs, μt::Float64)
 
 Set number of alive lineages at time `t`.
