@@ -610,7 +610,9 @@ function fsbi_i(bi  ::iBffs,
   λsc = λst(bi)
 
   e1  = e(ξ1)
+  sr1 = sqrt(e1)
   e2  = e(ξ2)
+  sr2 = sqrt(e2)
   λ1c = lλ(ξ1)
   λ2c = lλ(ξ2)
   l1  = lastindex(λ1c)
@@ -621,8 +623,8 @@ function fsbi_i(bi  ::iBffs,
   # current acceptance ratio
   ac = 0.0
   for λi in λsc
-    ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sqrt(e1)*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sqrt(e2)*σλ)
+    ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
+                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
   end
   ac = log(ac)
 
@@ -630,8 +632,8 @@ function fsbi_i(bi  ::iBffs,
   wp = Float64[]
   ap = 0.0
   for λi in λsp
-    wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sqrt(e1)*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sqrt(e2)*σλ)
+    wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
+                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
     ap += wi
     push!(wp, wi)
   end

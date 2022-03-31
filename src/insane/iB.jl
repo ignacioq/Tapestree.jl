@@ -235,8 +235,9 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `ni` : current direct alive descendants (≠ fixed ones in daughter branches).
   `nt` : current alive descendants at time `t`.
   `λt` : final speciation rate for fixed at time `t`.
-  `λst`: final speciation rate for fixed at time `t`.
+  `λst`: final speciation rates for fixed at time `t`.
   `μt` : final extinction rate for fixed at time `t`.
+  `μst`: final extinction rates for fixed at time `t`.
   `ψt` : final fossilization rate for fixed at time `t`.
   `fx` : fixed terminal tip
 
@@ -259,20 +260,22 @@ struct iBffs <: iBf
   λt ::Base.RefValue{Float64}
   λst::Vector{Float64}
   μt ::Base.RefValue{Float64}
+  μst::Vector{Float64}
   ψt ::Base.RefValue{Float64}
   fx ::Bool
 
   # constructors
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
-        it::Bool, ρi::Float64, ni::Int64, nt::Int64,
-        λt::Float64, λst::Vector{Float64}, μt::Float64, fx::Bool) =
+        it::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64, 
+        λst::Vector{Float64}, μt::Float64, μst::Vector{Float64}, fx::Bool) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, false,
-            Ref(ni), Ref(nt), Ref(λt), λst, Ref(μt), Ref(0.0), fx)
+            Ref(ni), Ref(nt), Ref(λt), λst, Ref(μt), μst, Ref(0.0), fx)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, iψ::Bool, ni::Int64, nt::Int64,
-        λt::Float64, λst::Vector{Float64}, μt::Float64, ψt::Float64, fx::Bool) =
+        λt::Float64, λst::Vector{Float64}, 
+        μt::Float64, μst::Float64, ψt::Float64, fx::Bool) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, iψ,
-            Ref(ni), Ref(nt), Ref(λt), λst, Ref(μt), Ref(ψt), fx)
+            Ref(ni), Ref(nt), Ref(λt), λst, Ref(μt), μst, Ref(ψt), fx)
 end
 
 # pretty-printing
@@ -310,7 +313,8 @@ function makeiBf!(tree::sT_label,
     ρi  = tρ[lab]
     tf  = isapprox(tf, 0.0) ? tf : 0.0
     push!(idv, 
-      iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, Float64[], 0.0, false))
+      iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, 
+            Float64[], 0.0, Float64[], false))
     push!(n2v, 0)
     return ρi, 1
   end
@@ -321,7 +325,8 @@ function makeiBf!(tree::sT_label,
   n  = n1 + n2
   ρi = n / (n1/ρ1 + n2/ρ2)
 
-  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, Float64[], 0.0, false))
+  push!(idv, iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, 
+                   Float64[], 0.0, Float64[], false))
   push!(n2v, n2)
 
   return ρi, n
@@ -437,7 +442,7 @@ function makeiBf!(tree::sTf_label,
     push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
     i01 = Int64(!iψ)
     push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, i01, 1, 
-                     0.0, Float64[], 0.0, 0.0, false))
+                     0.0, Float64[], 0.0,  Float64[], 0.0, false))
     return ρi, i01, 1-i01, 0
   end
 
@@ -465,7 +470,7 @@ function makeiBf!(tree::sTf_label,
   end
 
   push!(idv, iBffs(el, 0, 0, 0, ti, tf, false, ρi, iψ, 0, 1, 
-                   0.0, Float64[], 0.0, 0.0, false))
+                   0.0, Float64[], 0.0, Float64[], 0.0, false))
   push!(n1v, n1)
   push!(n2v, n2)
   push!(ft1v, ft1)
@@ -526,7 +531,7 @@ function makeiBf!(tree::sTf_label,
     push!(xr, xi)
     push!(idv, 
       iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, i01, 1, 0.0, Float64[], 
-            0.0, 0.0, ifx))
+            0.0,  Float64[], 0.0, ifx))
     return ρi, i01, 1-i01, 0, xi, el
   end
 
@@ -559,7 +564,6 @@ function makeiBf!(tree::sTf_label,
         xn = randn()*s + x1
       end
 
-
       # pic
       scn = (xn - x1)/e1
       en  = el
@@ -574,7 +578,7 @@ function makeiBf!(tree::sTf_label,
   end
 
   push!(idv, iBffs(el, 0, 0, 0, ti, tf, false, ρi, iψ, 0, 1,
-                   0.0, Float64[], 0.0, 0.0, ifx))
+                   0.0, Float64[], 0.0, Float64[], 0.0, ifx))
   push!(n1v, n1)
   push!(n2v, n2)
   push!(ft1v, ft1)
@@ -995,6 +999,16 @@ Return final speciation rate for fixed at time `t
 Return final extinction rate for fixed at time `t`.
 """
 μt(id::iBffs) = getproperty(id, :μt)[]
+
+
+
+
+"""
+    μst(id::iBffs)
+
+Return final extinction rates for fixed at time `t`.
+"""
+μst(id::iBffs) = getproperty(id, :μst)
 
 
 

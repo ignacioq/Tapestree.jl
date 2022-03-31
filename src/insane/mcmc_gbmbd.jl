@@ -338,11 +338,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       # σλ & σμ update
       elseif pupi === 2
@@ -351,11 +351,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
             llc, prc, mc, th, stem, δt, srδt, σλ_prior, σμ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       # gbm update
       elseif pupi === 3
@@ -368,11 +368,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
             stem, δt, srδt, lλxpr, lμxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       # forward simulation update
       else
@@ -383,11 +383,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, nλ, L,
             δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ, bix
+           return
+        end
       end
     end
 
@@ -521,7 +521,7 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_gbmbd_t(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
+    _sim_gbmbd_t(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, lc, lU, Iρi, 0, 1, 500)
 
   if na > 0 && isfinite(llr)
     _fixrtip!(t0, na) # fix random tip
@@ -562,26 +562,81 @@ function fsbi_i(bi  ::iBffs,
                 δt  ::Float64,
                 srδt::Float64)
 
-  t0, na, nn =
-    _sim_gbmbd(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, 0, 1, 1_000)
+  λsp = Float64[]
+  μsp = Float64[]
 
-  if na < 1 || nn >= 1_000
+  t0, nn = _sim_gbmbd_i(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, 1, 500, λsp, μsp)
+
+  na = lastindex(λsp)
+
+  if na < 1 || nn >= 500
     return t0, NaN, NaN, NaN, NaN
   end
 
-  ntp = na
+  # get current speciation rates at branch time
+  λsc = λst(bi)
+  μsc = μst(bi)
+
+  e1  = e(ξ1)
+  sr1 = sqrt(e1)
+  e2  = e(ξ2)
+  sr2 = sqrt(e2)
+  λ1c = lλ(ξ1)
+  λ2c = lλ(ξ2)
+  μ1c = lμ(ξ1)
+  μ2c = lμ(ξ2)
+  l1  = lastindex(λ1c)
+  l2  = lastindex(λ2c)
+  λ1  = λ1c[l1]
+  λ2  = λ2c[l2]
+  μ1  = μ1c[l1]
+  μ2  = μ2c[l2]
+
+  # proposed acceptance ratio
+  wp = Float64[]
+  ap = 0.0
+  @simd for i in Base.OneTo(lastindex(λsp))
+    λi = λsp[i]
+    μi = μsp[i]
+    wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
+                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ) *
+                    dnorm_bm(μi, μ1, sr1*σμ)        *
+                    dnorm_bm(μi, μ2, sr2*σμ)
+    ap += wi
+    push!(wp, wi)
+  end
+  ap = log(ap)
+
+  if isinf(ap)
+    return t0, NaN, NaN, NaN, NaN
+  end
+
+  # current acceptance ratio
+  ac = 0.0
+  @simd for i in Base.OneTo(lastindex(λsc))
+    λi = λsc[i]
+    μi = μsc[i]
+    ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
+                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ) *
+                    dnorm_bm(μi, μ1, sr1*σμ)        *
+                    dnorm_bm(μi, μ2, sr2*σμ)
+  end
+  ac = log(ac)
 
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(Float64(ntp)/Float64(nt(bi)))
+  acr  = ap - ac
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-  λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
+  # sample tip
+  wti = sample(wp)
+  λf  = λsp[wti]
+  μf  = μsp[wti]
 
   llrd, acrd, drλ, ssrλ, ssrμ, λ1p, λ2p, μ1p, μ2p =
     _daughters_update!(ξ1, ξ2, λf, μf, α, σλ, σμ, δt, srδt)
@@ -589,6 +644,15 @@ function fsbi_i(bi  ::iBffs,
   acr += acrd
 
   if lU < acr
+
+     # fix sampled tip
+    lw = lastindex(wp)
+
+    if wti <= div(lw,2)
+      fixtip1!(t0, wti, 0)
+    else
+      fixtip2!(t0, lw - wti + 1, 0)
+    end
 
     # simulate remaining tips until the present
     if na > 1
@@ -600,11 +664,10 @@ function fsbi_i(bi  ::iBffs,
       na -= 1
 
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-      l1  = lastindex(λ1p)
-      l2  = lastindex(λ2p)
-      setnt!(bi, ntp)                       # set new nt
-      setni!(bi, na)                        # set new ni
-      setλt!(bi, λf)                        # set new λt
+      setni!(bi,  na)                       # set new ni
+      setλt!(bi,  λf)                       # set new λt
+      setλst!(bi, λsp)                      # set new λst
+      setμst!(bi, μsp)                      # set new μst
       unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
       unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
       unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector

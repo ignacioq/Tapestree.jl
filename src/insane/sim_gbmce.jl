@@ -571,9 +571,9 @@ end
                  μ   ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
-                 na  ::Int64,
-                 nn ::Int64,
-                 nlim::Int64)
+                 nn  ::Int64,
+                 nlim::Int64,
+                 λsp ::Vector{Float64})
 
 Simulate `iTce` according to a geometric Brownian motion for birth rates and
 constant extinction, with a limit on the number lineages allowed to reach.
