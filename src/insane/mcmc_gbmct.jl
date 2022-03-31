@@ -596,26 +596,66 @@ function fsbi_i(bi  ::iBffs,
                 δt  ::Float64,
                 srδt::Float64)
 
-  t0, na, nn =
-    _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
+  λsp = Float64[]
 
-  if na < 1 || nn >= 1_000
+  t0, nn =_sim_gbmct_i(e(bi), λ0, α, σλ, ϵ, δt, srδt, 1, 500, λsp)
+
+  na = lastindex(λsp)
+
+  if na < 1 || nn >= 500
     return t0, NaN, NaN, NaN, NaN
   end
 
-  ntp = na
+  # get current speciation rates at branch time
+  λsc = λst(bi)
+
+  e1  = e(ξ1)
+  sr1 = sqrt(e1)
+  e2  = e(ξ2)
+  sr2 = sqrt(e2)
+  λ1c = lλ(ξ1)
+  λ2c = lλ(ξ2)
+  l1  = lastindex(λ1c)
+  l2  = lastindex(λ2c)
+  λ1  = λ1c[l1]
+  λ2  = λ2c[l2]
+
+  # current acceptance ratio
+  ac = 0.0
+  for λi in λsc
+    ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
+                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
+  end
+  ac = log(ac)
+
+  # proposed acceptance ratio
+  wp = Float64[]
+  ap = 0.0
+  for λi in λsp
+    wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
+                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
+    ap += wi
+    push!(wp, wi)
+  end
+  ap = log(ap)
+
+  if isinf(ap)
+    return t0, NaN, NaN, NaN, NaN
+  end
 
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(Float64(ntp)/Float64(nt(bi)))
+  acr  = ap - ac
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-  λf = fixrtip!(t0, na, NaN) # fix random tip
+  # sample tip
+  wti = sample(wp)
+  λf  = λsp[wti]
 
   llrd, acrd, drλ, ssrλ, Σrλ, λ1p, λ2p =
     _daughters_update!(ξ1, ξ2, λf, α, σλ, ϵ, δt, srδt)
@@ -623,6 +663,15 @@ function fsbi_i(bi  ::iBffs,
   acr += acrd
 
   if lU < acr
+
+     # fix sampled tip
+    lw = lastindex(wp)
+
+    if wti <= div(lw,2)
+      fixtip1!(t0, wti, 0)
+    else
+      fixtip2!(t0, lw - wti + 1, 0)
+    end
 
     # simulate remaining tips until the present
     if na > 1
@@ -634,11 +683,9 @@ function fsbi_i(bi  ::iBffs,
       na -= 1
 
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-      l1  = lastindex(λ1p)
-      l2  = lastindex(λ2p)
-      setnt!(bi, ntp)                    # set new nt
-      setni!(bi, na)                     # set new ni
-      setλt!(bi, λf)                     # set new λt
+      setni!(bi,  na)                       # set new ni
+      setλt!(bi,  λf)                       # set new λt
+      setλst!(bi, λsp)                      # set new λst
       unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
       unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
 

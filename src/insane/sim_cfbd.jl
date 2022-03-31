@@ -131,7 +131,7 @@ function _sim_cfbd_t(t   ::Float64,
       elseif lU < nlr
         return sTfbd(t, false, false, false), na, nn, nlr
       else
-        return sTfbd(t, false, false, false), na, nn, NaN
+        return sTfbd(), na, nn, NaN
       end
     end
 
@@ -150,7 +150,7 @@ function _sim_cfbd_t(t   ::Float64,
       return sTfbd(tw, true, false, false), na, nn, lr
     # fossil sampling
     else
-      return sTfbd(0.0, false, true, false), na, nn, NaN
+      return sTfbd(), na, nn, NaN
     end
   end
 
@@ -206,7 +206,7 @@ function _sim_cfbd_i(t   ::Float64,
     # fossil sampling
     else
       nf += 1
-      return sTfbd(0.0, false, true, false), na, nf, nn
+      return sTfbd(), na, nf, nn
     end
   end
 
@@ -269,7 +269,7 @@ function _sim_cfbd_it(t   ::Float64,
       return sTfbd(tw, true, false, false), na, nn, lr
     # fossil sampling
     else
-      return sTfbd(0.0, false, true, false), na, nn, NaN
+      return sTfbd(), na, nn, NaN
     end
   end
 

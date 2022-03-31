@@ -60,21 +60,14 @@ function _daughters_update!(ξ1  ::T,
     bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, μ2p, μf, μ2, σλ, σμ, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
-         duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
-         duoldnorm(μi, μ1, μ2, e1, e2, σμ)
-
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
     llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
-    acr  = llrbd1 + llrbd2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr  = llrbd1 + llrbd2
+    llr  = llrbm1 + llrbm2 + λf - λi + acr
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     ssrμ = ssrμ1 + ssrμ2
