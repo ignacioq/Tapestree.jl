@@ -429,6 +429,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTbd})
 
   lλi = lλa
+  lμi = lμa
   Ξ   = iTbd[]
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
@@ -436,6 +437,7 @@ function make_Ξ(idf ::Vector{iBffs},
     et   = e(idfi)
     if i > 1 
       lλi = λt(idf[paix])
+      lμi = μt(idf[paix])
     end
 
     if iszero(et)
@@ -452,11 +454,12 @@ function make_Ξ(idf ::Vector{iBffs},
         nt  -= 1
       end
 
-      lλv = bm(lλa,   α, σλ, δt, fdti, srδt, nt)
-      lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
+      lλv = bm(lλi,   α, σλ, δt, fdti, srδt, nt)
+      lμv = bm(lμi, 0.0, σμ, δt, fdti, srδt, nt)
       l   = nt + 2
     end
     setλt!(idfi, lλv[l])
+    setμt!(idfi, lμv[l])
     push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
   end
 
@@ -490,6 +493,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTfbd})
 
   lλi = lλa
+  lμi = lμa
   Ξ   = iTfbd[]
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
@@ -497,11 +501,12 @@ function make_Ξ(idf ::Vector{iBffs},
     et   = e(idfi)
     if i > 1 
       lλi = λt(idf[paix])
+      lμi = μt(idf[paix])
     end
 
     if iszero(et)
-      lλv  = Float64[lλa, lλa]
-      lμv  = Float64[lμa, lμa]
+      lλv  = Float64[lλi, lλi]
+      lμv  = Float64[lμi, lμi]
       fdti = 0.0
       l    = 2
     else
@@ -513,8 +518,8 @@ function make_Ξ(idf ::Vector{iBffs},
         nt  -= 1
       end
 
-      lλv = bm(lλa, α,   σλ, δt, fdti, srδt, nt)
-      lμv = bm(lμa, 0.0, σμ, δt, fdti, srδt, nt)
+      lλv = bm(lλi, α,   σλ, δt, fdti, srδt, nt)
+      lμv = bm(lμi, 0.0, σμ, δt, fdti, srδt, nt)
       l   = nt + 2
     end
 
@@ -530,6 +535,7 @@ function make_Ξ(idf ::Vector{iBffs},
       push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(idfi), true, lλv, lμv))
     end
     setλt!(idfi, lλv[l])
+    setμt!(idfi, lμv[l])
   end
 
   return Ξ
