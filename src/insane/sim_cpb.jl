@@ -71,7 +71,7 @@ end
                lU  ::Float64,
                Iρi ::Float64,
                na  ::Int64,
-               nn ::Int64,
+               nn  ::Int64,
                nlim::Int64)
 
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`
@@ -83,7 +83,7 @@ function _sim_cpb_t(t   ::Float64,
                     lU  ::Float64,
                     Iρi ::Float64,
                     na  ::Int64,
-                    nn ::Int64,
+                    nn  ::Int64,
                     nlim::Int64)
 
   if isfinite(lr) && nn < nlim
@@ -96,12 +96,10 @@ function _sim_cpb_t(t   ::Float64,
       if na > 1
         nlr += log(Iρi * Float64(na)/Float64(na-1))
       end
-      if nlr >= lr
-        return sTpb(t, false), na, nn, nlr
-      elseif lU < nlr
-        return sTpb(t, false), na, nn, nlr
-      else
+      if nlr < lr && lU >= nlr
         return sTpb(), na, nn, NaN
+      else
+        return sTpb(t, false), na, nn, nlr
       end
     else
       nn += 1

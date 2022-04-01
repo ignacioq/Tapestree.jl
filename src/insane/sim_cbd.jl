@@ -106,12 +106,11 @@ function _sim_cbd_t(t   ::Float64,
       if na > 1
         nlr += log(Iρi * Float64(na)/Float64(na-1))
       end
-      if nlr >= lr
-        return sTbd(t, false, false), na, nn, nlr
-      elseif lU < nlr
-        return sTbd(t, false, false), na, nn, nlr
-      else
+      
+      if nlr < lr && lU >= nlr
         return sTbd(), na, nn, NaN
+      else
+        return sTbd(t, false, false), na, nn, nlr
       end
     else
       if λorμ(λ, μ)
