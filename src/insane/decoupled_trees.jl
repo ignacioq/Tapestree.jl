@@ -201,25 +201,26 @@ end
 
 
 """
-    sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
+    make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
 
-Make edge tree `Ξ` from the recursive tree.
+Make edge tree `Ξ` from the edge directory.
 """
-function sTfbd!(Ξ::Vector{sTfbd}, tree::sTf_label)
-
-  # no fossil can be a `true` tip nor extinct
-  if istip(tree) && isfossil(tree)
-    # add first daughter tree for tip fossil that is extinct with a 1e-10 edge.
-    push!(Ξ, sTfbd(
-               sTfbd(1e-10, true, false, false),
-               e(tree), false, true, true))
-  else
-    push!(Ξ, sTfbd(e(tree), false, isfossil(tree), true))
+function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
+  Ξ = sTfbd[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    iψ = isfossil(idfi)
+    if iψ && it(idfi)
+      push!(Ξ, sTfbd(sTfbd(1e-10, true, false, false),
+                     e(idfi), false, true, true))
+    else
+      push!(Ξ, sTfbd(e(idfi), false, iψ, true))
+    end
   end
 
-  if def2(tree) sTfbd!(Ξ, tree.d2) end
-  if def1(tree) sTfbd!(Ξ, tree.d1) end
+  return Ξ
 end
+
 
 
 
@@ -232,8 +233,7 @@ Make edge tree `Ξ` from the edge directory.
 function make_Ξ(idf::Vector{iBffs}, ::Type{sTbd})
   Ξ = sTbd[]
   for i in Base.OneTo(lastindex(idf))
-    ξ = sTbd(e(idf[i]), false, true)
-    push!(Ξ, ξ)
+    push!(Ξ, sTbd(e(idf[i]), false, true))
   end
   return Ξ
 end

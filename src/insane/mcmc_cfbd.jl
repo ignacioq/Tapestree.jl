@@ -107,8 +107,7 @@ function insane_cfbd(tree    ::sTf_label,
   mc = m_surv_cbd(th, λc, μc, 500, stem)
 
   # make a decoupled tree and fix it
-  Ξ = sTfbd[]
-  sTfbd!(Ξ, tree)
+  Ξ = make_Ξ(idf, sTfbd)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -232,7 +231,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
   ne = Float64(ntipsextinct(Ξ))      # number of extinction events
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc) - stem*log(λc) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) - Float64(stem)*log(λc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2]) +
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])
@@ -447,11 +446,18 @@ function update_fs!(bix::Int64,
 
   bi = idf[bix]
 
-  # if terminal alive
-  if it(bi) && !isfossil(bi)
-    ξp, llr = fsbi_t(bi, λ, μ, ψ)
+  if it(bi) 
+    if isfossil(bi)
+      ξp, llr = fsbi_ft(bi, λ, μ, ψ)
+    else
+      ξp, llr = fsbi_t(bi, λ, μ, ψ)
+    end
   else
-    ξp, llr = fsbi_i(bi, λ, μ, ψ)
+    if isfossil(bi)
+      ξp, llr = fsbi_fi(bi, λ, μ, ψ)
+    else
+      ξp, llr = fsbi_i(bi, λ, μ, ψ)
+    end
   end
 
   if isfinite(llr)
@@ -469,7 +475,6 @@ function update_fs!(bix::Int64,
 
   return llc, ns, ne, L
 end
-
 
 
 
@@ -502,6 +507,125 @@ function fsbi_t(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
     return t0, -Inf
   end
 end
+
+
+
+
+"""
+    fsbi_ft(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
+
+Forward simulation for fossil terminal branch.
+"""
+function fsbi_ft(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
+
+  # forward simulation during branch length
+  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 500)
+
+  if na < 1 || nf > 0 || nn >= 500
+    return t0, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() # log-probability
+
+  # acceptance probability
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  if lU < acr
+
+    _fixrtip!(t0, na)
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr
+
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
+
+      tx, na, nn, acr = 
+        fossiltip_sim!(t0, tf(bi), λ, μ, ψ, acr, lU, Iρi, na, nn)
+
+      if lU < acr
+        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+        setnt!(bi, ntp)                # set new nt
+        setni!(bi, na)                 # set new ni
+
+        return t0, llr
+      end
+    end
+  end
+
+  return t0, NaN
+end
+
+
+
+
+"""
+    fsbi_i(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
+
+Forward simulation for fossil internal branch `bi`
+"""
+function fsbi_fi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
+
+  # forward simulation during branch length
+  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 500)
+
+  if na < 1 || nf > 0 || nn >= 500
+    return t0, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() # log-probability
+
+  # acceptance probability
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  if lU < acr
+
+    _fixrtip!(t0, na)
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr
+
+      fossilizefixedtip!(t0)
+
+      if lU < acr
+        na -= 1
+
+        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+        setnt!(bi, ntp)                # set new nt
+        setni!(bi, na)                 # set new ni
+
+        return t0, llr
+      end
+    end
+  end
+
+  return t0, NaN
+end
+
 
 
 
@@ -544,25 +668,12 @@ function fsbi_i(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
     if lU < acr
 
-      if isfossil(bi)
-        # fossilize extant tip
-        fossilizefixedtip!(t0)
+      na -= 1
+      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      setnt!(bi, ntp)                # set new nt
+      setni!(bi, na)                 # set new ni
 
-        # if terminal fossil branch
-        if it(bi)
-          tx, na, nn, acr = 
-            fossiltip_sim!(t0, tf(bi), λ, μ, ψ, acr, lU, Iρi, na, nn)
-        end
-      end
-
-      if lU < acr
-        na -= !it(bi)
-        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-        setnt!(bi, ntp)                # set new nt
-        setni!(bi, na)                 # set new ni
-
-        return t0, llr
-      end
+      return t0, llr
     end
   end
 

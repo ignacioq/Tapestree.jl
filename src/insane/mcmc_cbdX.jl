@@ -161,10 +161,9 @@ function mcmc_burn_cbd(Ξ       ::Vector{sTbdX},
   ns      = Float64(el-1)/2.0    # number of speciation events
   ne      = 0.0                  # number of extinction events
   sdX, nX = sdeltaX(Ξ)           # standardized trait differences
-  nsi     = stem ? 0.0 : log(λc) # if stem or crown
 
   # likelihood
-  llc = llik_cbd(Ξ, λc, μc, σxc) - nsi + log(mc) + prob_ρ(idf)
+  llc = llik_cbd(Ξ, λc, μc, σxc) - Float64(stem) * log(λc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])           +
         logdgamma(μc, μ_prior[1], μ_prior[2])           +
         logdinvgamma(σxc^2, σx_prior[1], σx_prior[2])   +

@@ -681,7 +681,7 @@ function update_λ!(llc    ::Float64,
 
   λp  = randgamma(λ_prior[1] + ns - Float64(stem), λ_prior[2] + L)
 
-  mp  = m_surv_cbd(th, λp, μc, 1_000, stem)
+  mp  = m_surv_cbd(th, λp, μc, 500, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -730,7 +730,7 @@ function update_λ!(llc    ::Float64,
 
   λp  = randgamma((λ_prior[1] + ns - Float64(stem)) * pow + λ_rdist[1] * (1.0 - pow),
                   (λ_prior[2] + L) * pow         + λ_rdist[2] * (1.0 - pow))
-  mp  = m_surv_cbd(th, λp, μc, 1_000, stem)
+  mp  = m_surv_cbd(th, λp, μc, 500, stem)
   llr = log(mp/mc)
 
   if -randexp() < (pow * llr)

@@ -979,8 +979,7 @@ function _sim_gbmfbd_it(nsδt::Float64,
     end
   end
 
-  return iTfbd(), 
-         na, nn, NaN
+  return iTfbd(), na, nn, NaN
 end
 
 
@@ -1108,8 +1107,7 @@ function _sim_gbmfbd_it(t   ::Float64,
     end
   end
 
-  return iTfbd(), 
-         na, nn, NaN
+  return iTfbd(), na, nn, NaN
 end
 
 

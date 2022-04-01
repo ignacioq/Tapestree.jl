@@ -583,7 +583,7 @@ end
               llc     ::Float64,
               prc     ::Float64,
               sdX     ::Float64,
-              stem    ::Bool,
+              stem    ::Int64,
               x0_prior::NTuple{2, Float64}) where {T <: sTX}
 
 Make a `gbm` update for an internal branch and its descendants.
@@ -595,7 +595,7 @@ function update_x!(bix     ::Int64,
                    llc     ::Float64,
                    prc     ::Float64,
                    sdX     ::Float64,
-                   stem    ::Bool,
+                   stem    ::Int64,
                    x0_prior::NTuple{2, Float64}) where {T <: sTX}
 
   ξi  = Ξ[bix]
@@ -607,7 +607,7 @@ function update_x!(bix     ::Int64,
 
   root = iszero(pa(bi))
   # if crown root
-  if root && !stem
+  if root && isone(stem)
     if !fx(bi)
       llc, prc, sdX =
          _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)

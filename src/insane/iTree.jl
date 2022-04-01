@@ -299,10 +299,6 @@ mutable struct sTbd <: sT
   fx::Bool
 
   sTbd() = new()
-  sTbd(e::Float64) =
-    (x = new(); x.e = e; x.iμ = false; x.fx = false; x)
-  sTbd(e::Float64, iμ::Bool) =
-    (x = new(); x.e = e; x.iμ = iμ; x.fx = false; x)
   sTbd(e::Float64, iμ::Bool, fx::Bool) =
     (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x)
   sTbd(d1::sTbd, d2::sTbd, e::Float64) =
@@ -387,16 +383,8 @@ mutable struct sTfbd <: sT
   fx::Bool
 
   sTfbd() = new()
-  sTfbd(e::Float64, iμ::Bool) =
-    (x = new(); x.e = e; x.iμ = iμ; x.iψ = false; x.fx = false; x)
-  sTfbd(e::Float64, iμ::Bool, iψ::Bool) =
-    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = false; x)
   sTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
     (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
-  sTfbd(d1::sTfbd, d2::sTfbd, e::Float64) =
-    new(d1, d2, e, false, false, false)
-  sTfbd(d1::sTfbd, e::Float64) =
-    (x = new(); x.d1 = d1; x.e = e; x.iμ = false; x.iψ = true; x.fx = false; x)
   sTfbd(d1::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
     (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
   sTfbd(d1::sTfbd, d2::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
@@ -407,7 +395,7 @@ end
 function Base.show(io::IO, t::sTfbd)
   nt = ntips(t)
   nf = nfossils(t)
-      
+
   print(io, "insane simple fossil tree with ", 
     nt , " tip",  (isone(nt) ? "" : "s" ), 
     ", (", ntipsextinct(t)," extinct) and ", 
