@@ -93,18 +93,18 @@ function insane_cfbd(tree    ::sTf_label,
     # if crown conditioning
     if def1(tree) && def2(tree) &&
        ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
-      stem = 1
+      crown = 1
     # if stem conditioning
     else
-      stem = 0
+      crown = 0
     end
   # no survival
   else
-    stem = 2
+    crown = 2
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 500, stem)
+  mc = m_surv_cbd(th, λc, μc, 500, crown)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTfbd)
@@ -121,12 +121,12 @@ function insane_cfbd(tree    ::sTf_label,
   # adaptive phase
   llc, prc, λc, μc, ψc, mc =
      mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn,
-        λc, μc, ψc, mc, th, stem, pup, prints)
+        λc, μc, ψc, mc, th, crown, pup, prints)
 
   # mcmc
   r, treev, λc, μc, ψc =
     mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior,
-      ψ_prior, mc, th, stem, niter, nthin, pup, prints)
+      ψ_prior, mc, th, crown, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2),
@@ -164,7 +164,7 @@ function insane_cfbd(tree    ::sTf_label,
     μ_rdist = (x1[1], x1[2])
 
     # marginal likelihood
-    pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, stem, λ_prior, μ_prior,
+    pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, crown, λ_prior, μ_prior,
                        λ_rdist, μ_rdist, nitpp, nthpp, βs, pup)
 
     # process with reference distribution the posterior
@@ -202,7 +202,7 @@ end
                    ψc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   stem   ::Bool,
+                   crown   ::Bool,
                    pup    ::Array{Int64,1},
                    prints ::Int64)
 
@@ -220,7 +220,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         ψc     ::Float64,
                         mc     ::Float64,
                         th     ::Float64,
-                        stem   ::Int64,
+                        crown   ::Int64,
                         pup    ::Array{Int64,1},
                         prints ::Int64)
 
@@ -231,7 +231,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
   ne = Float64(ntipsextinct(Ξ))      # number of extinction events
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc) - Float64(stem)*log(λc) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2]) +
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])
@@ -248,13 +248,13 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
+          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
       # μ proposal
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
+          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
       # ψ proposal
       elseif p === 3
@@ -293,7 +293,7 @@ end
               ψ_prior::NTuple{2,Float64},
               mc     ::Float64,
               th     ::Float64,
-              stem   ::Bool,
+              crown   ::Bool,
               niter  ::Int64,
               nthin  ::Int64,
               pup    ::Array{Int64,1},
@@ -313,7 +313,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    ψ_prior::NTuple{2,Float64},
                    mc     ::Float64,
                    th     ::Float64,
-                   stem   ::Int64,
+                   crown   ::Int64,
                    niter  ::Int64,
                    nthin  ::Int64,
                    pup    ::Array{Int64,1},
@@ -347,9 +347,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
+          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - stem * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -359,9 +359,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
+          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - stem * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -372,7 +372,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - stem * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -385,7 +385,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         llc, ns, ne, L =
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, L)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - stem * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return

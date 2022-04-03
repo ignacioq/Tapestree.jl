@@ -45,7 +45,7 @@ mutable struct sTpbX <: sT
 
   sTpbX() = new()
   sTpbX(e::Float64, fx::Bool, xi::Float64, xf::Float64) =
-    (t = new(); t.e = e; t.fx = fx; t.xi = xi; t.xf = xf; t)
+    (x = new(); x.e = e; x.fx = fx; x.xi = xi; x.xf = xf; x)
   sTpbX(d1::sTpbX, d2::sTpbX, e::Float64, fx::Bool, xi::Float64, xf::Float64) =
     new(d1, d2, e, fx, xi, xf)
 end

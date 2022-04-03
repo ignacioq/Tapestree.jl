@@ -479,10 +479,8 @@ function fsbi_i(bi::iBffs, λ::Float64)
     _fixrtip!(t0, na) # fix random tip
 
     # simulated remaining tips until the present
-    t0, na, acr = tip_sims!(t0, tf(bi), λ, acr, lU, Iρi, na)
-
-    if isnan(acr)
-      return t0, NaN
+    if na > 1
+      t0, na, acr = tip_sims!(t0, tf(bi), λ, acr, lU, Iρi, na)
     end
 
     if lU < acr
@@ -492,8 +490,6 @@ function fsbi_i(bi::iBffs, λ::Float64)
       setni!(bi, na)                 # set new ni
 
       return t0, llr
-    else
-      return t0, -Inf
     end
   end
 

@@ -118,13 +118,10 @@ end
 
 """
     _sim_cpb_i(t   ::Float64,
-              λ   ::Float64,
-              lr  ::Float64,
-              lU  ::Float64,
-              Iρi ::Float64,
-              na  ::Int64,
-              nn ::Int64,
-              nlim::Int64)
+               λ   ::Float64,
+               nn ::Int64,
+               nlim::Int64,
+               rej ::Bool)
 
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`
 for interal branches.

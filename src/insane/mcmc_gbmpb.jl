@@ -643,9 +643,9 @@ function fsbi_i(bi  ::iBffs,
                 srδt::Float64)
 
   # forward simulation during branch length
-  t0, na = _sim_gbmpb(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
+  t0, na = _sim_gbmpb(e(bi), λ0, α, σλ, δt, srδt, 1, 500)
 
-  if na >= 1_000
+  if na >= 500
     return t0, NaN, NaN, NaN
   end
 
@@ -670,8 +670,10 @@ function fsbi_i(bi  ::iBffs,
   if lU < acr
 
     # simulated remaining tips until the present
-    t0, na, acr =
-      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
+    if na > 1
+      t0, na, acr =
+        tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
+    end
 
     if lU < acr
       na -= 1

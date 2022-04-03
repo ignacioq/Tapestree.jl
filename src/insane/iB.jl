@@ -223,59 +223,59 @@ end
 
 A Composite type representing node address for a **fixed** branch in `iTree`:
 
-  `t`  : edge length.
-  `pa` : parent node
-  `d1` : daughter 1 node
-  `d2` : daughter 2 node
-  `ti` : initial absolute time.
-  `tf` : final absolute time.
-  `it` : `true` if a terminal branch.
-  `ρi` : branch specific sampling fraction.
-  `iψ` : `true` if a fossil branch.
-  `ni` : current direct alive descendants (≠ fixed ones in daughter branches).
-  `nt` : current alive descendants at time `t`.
-  `λt` : final speciation rate for fixed at time `t`.
-  `λst`: final speciation rates for fixed at time `t`.
-  `μt` : final extinction rate for fixed at time `t`.
-  `μst`: final extinction rates for fixed at time `t`.
-  `ψt` : final fossilization rate for fixed at time `t`.
-  `fx` : fixed terminal tip
+  `t`   : edge length.
+  `pa`  : parent node
+  `d1`  : daughter 1 node
+  `d2`  : daughter 2 node
+  `ti`  : initial absolute time.
+  `tf`  : final absolute time.
+  `it`  : `true` if a terminal branch.
+  `ρi`  : branch specific sampling fraction.
+  `iψ`  : `true` if a fossil branch.
+  `ni`  : current direct alive descendants (≠ fixed ones in daughter branches).
+  `nt`  : current alive descendants at time `t`.
+  `λt`  : final speciation rate for fixed at time `t`.
+  `λst` : final speciation rates at time `t`.
+  `μt`  : final extinction rate for fixed at time `t`.
+  `μst` : final extinction rates at time `t`.
+  `ψt`  : final fossilization rate for fixed at time `t`.
+  `fx`  : fixed terminal tip
 
     iBffs()
 
 Constructs an empty `iBf` object.
 """
 struct iBffs <: iBf
-  t  ::Float64
-  pa ::Base.RefValue{Int64}
-  d1 ::Base.RefValue{Int64}
-  d2 ::Base.RefValue{Int64}
-  ti ::Float64
-  tf ::Float64
-  it ::Bool
-  ρi ::Float64
-  iψ ::Bool
-  ni ::Base.RefValue{Int64}
-  nt ::Base.RefValue{Int64}
-  λt ::Base.RefValue{Float64}
-  λst::Vector{Float64}
-  μt ::Base.RefValue{Float64}
-  μst::Vector{Float64}
-  ψt ::Base.RefValue{Float64}
-  fx ::Bool
+  t   ::Float64
+  pa  ::Base.RefValue{Int64}
+  d1  ::Base.RefValue{Int64}
+  d2  ::Base.RefValue{Int64}
+  ti  ::Float64
+  tf  ::Float64
+  it  ::Bool
+  ρi  ::Float64
+  iψ  ::Bool
+  ni  ::Base.RefValue{Int64}
+  nt  ::Base.RefValue{Int64}
+  λt  ::Base.RefValue{Float64}
+  λst ::Vector{Float64}
+  μt  ::Base.RefValue{Float64}
+  μst ::Vector{Float64}
+  ψt  ::Base.RefValue{Float64}
+  fx  ::Bool
 
   # constructors
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64, 
-        λst::Vector{Float64}, μt::Float64, μst::Vector{Float64}, fx::Bool) =
-        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, false,
-            Ref(ni), Ref(nt), Ref(λt), λst, Ref(μt), μst, Ref(0.0), fx)
+        λst::Vector{Float64}, μt::Float64, μst::Vector{Float64}, fx::Bool) = 
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, false, Ref(ni), 
+          Ref(nt), Ref(λt), λst, Ref(μt), μst, Ref(0.0), fx)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         it::Bool, ρi::Float64, iψ::Bool, ni::Int64, nt::Int64,
-        λt::Float64, λst::Vector{Float64}, 
-        μt::Float64, μst::Vector{Float64}, ψt::Float64, fx::Bool) =
-        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, iψ,
-            Ref(ni), Ref(nt), Ref(λt), λst, Ref(μt), μst, Ref(ψt), fx)
+        λt::Float64, λst::Vector{Float64}, μt::Float64, μst::Vector{Float64}, 
+        ψt::Float64, fx::Bool) =
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, it, ρi, iψ, Ref(ni), Ref(nt), 
+          Ref(λt), λst, Ref(μt), μst, Ref(ψt), fx)
 end
 
 # pretty-printing
@@ -374,7 +374,8 @@ function makeiBf!(tree::sT_label,
     tf  = isapprox(tf, 0.0) ? tf : 0.0
     push!(n2v, 0)
     push!(idv, 
-      iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 0.0, Float64[], 0.0, Float64[], ifx))
+      iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 
+        0.0, Float64[], 0.0, Float64[], ifx))
     return ρi, 1, xi, el
   end
 
@@ -400,7 +401,8 @@ function makeiBf!(tree::sT_label,
   ρi = n / (n1/ρ1 + n2/ρ2)
 
   push!(idv, 
-    iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 0.0, Float64[], 0.0, Float64[], ifx))
+    iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 
+      0.0, Float64[], 0.0, Float64[], ifx))
   push!(n2v, n2)
 
   return ρi, n, xn, en
@@ -986,7 +988,7 @@ Return final speciation rate for fixed at time `t
 """
     λst(id::iBffs)
 
-Return final speciation rate for fixed at time `t
+Return final speciation rate at time `t
 """
 λst(id::iBffs) = getproperty(id, :λst)
 
@@ -1006,7 +1008,7 @@ Return final extinction rate for fixed at time `t`.
 """
     μst(id::iBffs)
 
-Return final extinction rates for fixed at time `t`.
+Return final extinction rates at time `t`.
 """
 μst(id::iBffs) = getproperty(id, :μst)
 
@@ -1029,5 +1031,6 @@ Return final fossil sampling rate for fixed at time `t`.
 Return if the data for a node is fixed.
 """
 fx(id::iBffs) = getproperty(id, :fx)[]
+
 
 

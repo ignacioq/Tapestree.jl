@@ -201,7 +201,7 @@ function mcmc_burn_cbd(Ξ       ::Vector{sTbdX},
         bix = inodes[nix]
 
         llc, prc, sdX =
-          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
       # forward simulation proposal proposal
       else
@@ -329,7 +329,7 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         bix = inodes[nix]
 
         llc, prc, sdX =
-          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
         # llci = llik_cbd(Ξ, λc, μc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)

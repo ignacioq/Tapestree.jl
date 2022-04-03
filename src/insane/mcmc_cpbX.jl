@@ -87,7 +87,7 @@ function insane_cpb(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant pure-birth and trait evolution with forward simulation"
+  @info "Running constant pure-birth and trait evolution"
 
   # adaptive phase
   llc, prc, λc, σxc, sdX, nX =
@@ -171,7 +171,7 @@ function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
   L       = treelength(Ξ)        # tree length
   ns      = Float64(el-1)*0.5    # number of speciation events
   sdX, nX = sdeltaX(Ξ)           # standardized trait differences
-  nsi     = stem ? 0.0 : log(λc) # if stem or crown
+  nsi     = stem ? 0.0 : log(λc) # if stem or stem
 
   #likelihood
   llc = llik_cpb(Ξ, λc, σxc) - nsi + prob_ρ(idf)
@@ -204,7 +204,7 @@ function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
         bix = inodes[nix]
 
         llc, prc, sdX =
-          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
       # forward simulation proposal proposal
       else
@@ -315,7 +315,7 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
         bix = inodes[nix]
 
         llc, prc, sdX =
-          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, stem, x0_prior)
+          update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
         # llci = llik_cpb(Ξ, λc, σxc) - log(λc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
@@ -364,159 +364,6 @@ end
 
 
 
-# """
-#     update_fs!(bix::Int64,
-#                Ξ  ::Vector{sTpbX},
-#                idf::Vector{iBffs},
-#                llc::Float64,
-#                λ  ::Float64,
-#                σx ::Float64,
-#                ns ::Float64,
-#                L  ::Float64,
-#                sdX::Float64,
-#                nX ::Float64)
-
-# Forward simulation proposal function for constant pure-birth.
-# """
-# function update_fs!(bix::Int64,
-#                     Ξ  ::Vector{sTpbX},
-#                     idf::Vector{iBffs},
-#                     llc::Float64,
-#                     λ  ::Float64,
-#                     σx ::Float64,
-#                     ns ::Float64,
-#                     L  ::Float64,
-#                     sdX::Float64,
-#                     nX ::Float64)
-
-#   bi = idf[bix]
-
-#   if it(bi) # is it terminal
-#     ξp, llr = fsbi_pbX(bi, λ, xi(Ξ[bix]), σx, 500)
-#     sdXr = 0.0
-#     nXr  = 0.0
-#   else
-#     ξp, llr, sdXr, nXr = 
-#       fsbi_pbX(bi, Ξ[d1(bi)], Ξ[d2(bi)], λ, xi(Ξ[bix]), σx, 500)
-#   end
-
-#   if isfinite(llr)
-#     ξc  = Ξ[bix]
-
-#     # update llc, ns & L
-#     llc += llik_cpb(ξp, λ, σx) - llik_cpb(ξc, λ, σx)
-#     ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
-#     L   += treelength(ξp)             - treelength(ξc)
-#     sdX += sdXr
-#     nX  += nXr
-
-#     # set new tree
-#     Ξ[bix] = ξp
-#   end
-
-#   return llc, ns, L, sdX, nX
-# end
-
-
-
-
-# """
-#     fsbi_pbX(bi::iBffs, λ::Float64, x0::Float64, σx::Float64, ntry::Int64)
-
-# Forward simulation for terminal branch `bi`
-# """
-# function fsbi(bi::iBffs, 
-#               ξc::iTpbX, 
-#               λ ::Float64, 
-#               x0::Float64, 
-#               σx::Float64)
-
-
-#   nac = ni(bi)         # current ni
-#   Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
-#   lU  = -randexp()     # log-probability
-
-#   # current ll
-#   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
-
-#   t0, na, nn, llr =
-#     _sim_cpb_t(e(bi), λ, x0, σx, lc, lU, Iρi, 0, 1, 500)
-
-#   if isnan(llr) || nn >= 500
-#     return t0, -Inf
-#   else
-
-#   # if fix node
-#   if fxi
-
-#     """
-#     here, fix the one with the best trait
-#     """
-#     # current acceptance ratio
-#     ac = 0.0
-#     for λi in λsc
-#       ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
-#                       dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
-#     end
-#     ac = log(ac)
-
-#     # proposed acceptance ratio
-#     wp = Float64[]
-#     ap = 0.0
-#     for λi in λsp
-#       wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
-#                       dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
-#       ap += wi
-#       push!(wp, wi)
-#     end
-#     ap = log(ap)
-
-#     if isinf(ap)
-#       return t0, NaN, NaN, NaN
-#     end
-
-#     lU = -randexp() #log-probability
-
-#     # continue simulation only if acr on sum of tip rates is accepted
-#     acr  = ap - ac
-
-
-
-
-#     xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
-#     acr = _match_tip_x!(ξp, xt, σx)
-#   else
-#     acr = 0.0
-#   end
-
-
-
-
-
-#   xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
-#   if fxi
-#     acr = _match_tip_x!(ξp, xt, σx)
-#   else
-#     acr = 0.0
-#   end
-
-#   if na > 0 && isfinite(llr)
-#     _fixrtip!(t0, na) # fix random tip
-#     setni!(bi, na)    # set new ni
-
-#     return t0, llr
-#   else
-#     return t0, -Inf
-#   end
-
-
-
-#   return sTpbX(), 0, 0, NaN
-# end
-
-
-
-
 """
     update_fs!(bix::Int64,
                Ξ  ::Vector{sTpbX},
@@ -543,71 +390,30 @@ function update_fs!(bix::Int64,
                     nX ::Float64)
 
   bi = idf[bix]
+  ξc  = Ξ[bix]
 
-  # forward simulate an internal branch
-  ξp, np, ntp, xt = fsbi_pbX(bi, λ, xi(Ξ[bix]), σx, 1_000)
+  if it(bi) # is it terminal
+    ξp, llr = fsbi_t(bi, ξc, λ, σx)
+    sdXr = 0.0
+  else
+    ξp, llr, sdXr = 
+      fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, σx)
+  end
 
-  if ntp > 0
+  if isfinite(llr)
 
-    itb = it(bi) # is it terminal
-    ρbi = ρi(bi) # get branch sampling fraction
-    nc  = ni(bi) # current ni
-    ntc = nt(bi) # current nt
-    fxi = fx(bi) # is an unfix X node
+    # update llc, ns & L
+    llc += llr + llik_cpb(ξp, λ, σx) - llik_cpb(ξc, λ, σx)
+    ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
+    L   += treelength(ξp)             - treelength(ξc)
+    sdXp, nXp = _sdeltaX(ξp, 0.0, 0.0)
+    sdXc, nXc = _sdeltaX(ξc, 0.0, 0.0)
 
-    # current tree
-    ξc  = Ξ[bix]
+    sdX += sdXp - sdXc + sdXr
+    nX  += nXp  - nXc
 
-    # if terminal branch
-    if itb
-      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
-      if fxi
-        acr = _match_tip_x!(ξp, xt, σx)
-      else
-        acr = 0.0
-      end
-    else
-      np -= 1
-      ξ1  = Ξ[d1(bi)]
-      ξ2  = Ξ[d2(bi)]
-      llr = log((1.0 - ρbi)^(np - nc))
-      acr = log(Float64(ntp)/Float64(ntc))
-      if fxi
-        acr += _match_tip_x!(ξp, xt, σx)
-      else
-        llr += duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
-               duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
-      end
-    end
-
-    # MH ratio
-    if -randexp() < llr + acr
-
-      # update ns, L & sdX
-      ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
-      L   += treelength(ξp)             - treelength(ξc)
-      sdXp, nXp = _sdeltaX(ξp, 0.0, 0.0)
-      sdXc, nXc = _sdeltaX(ξc, 0.0, 0.0)
-      sdX += sdXp - sdXc
-      nX  += nXp  - nXc
-
-      # add likelihood ratio
-      llr += llik_cpb(ξp, λ, σx) - llik_cpb(ξc, λ, σx)
-
-      Ξ[bix] = ξp     # set new decoupled tree
-      llc   += llr    # set new likelihood
-      setni!(bi, np)  # set new ni
-      setnt!(bi, ntp) # set new nt
-
-      if !fxi && !itb
-        sdX += ((xt - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
-               ((xt - xf(ξ2))^2 - (xi(ξ2) - xf(ξ2))^2)/(2.0*e(ξ2))
-        setxi!(ξ1, xt) # set new xt for initial x
-        setxi!(ξ2, xt) # set new xt for initial x
-      end
-
-    end
+    # set new tree
+    Ξ[bix] = ξp
   end
 
   return llc, ns, L, sdX, nX
@@ -616,77 +422,171 @@ end
 
 
 
-
-
 """
-    fsbi_pbX(bi::iBffs, λ::Float64, x0::Float64, σx::Float64, ntry::Int64)
+    fsbi_t(bi::iBffs,
+           ξc::sTpbX,
+           λ ::Float64,
+           σx::Float64)
 
-Forward simulation for branch `bi`
+Forward simulation for terminal branch `bi`.
 """
-function fsbi_pbX(bi::iBffs, λ::Float64, x0::Float64, σx::Float64, ntry::Int64)
+function fsbi_t(bi::iBffs,
+                ξc::sTpbX,
+                λ ::Float64,
+                σx::Float64)
 
-  # times
-  tfb = tf(bi)
+  nac = ni(bi)         # current ni
+  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  lU  = -randexp()     # log-probability
 
-  ext = 0
-  # condition on non-extinction (helps in mixing)
-  while ext < ntry
-    ext += 1
+  # current ll
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-    # forward simulation during branch length
-    t0, na = sim_cpb(e(bi), λ, x0, σx, 0)
+  t0, na, nn, llr =
+    _sim_cpb_t(e(bi), λ, xi(ξc), σx, lc, lU, Iρi, 0, 1, 500)
 
-    nat = na
+  if isnan(llr) || nn >= 500
+    return t0, NaN
+  end
 
-    if isone(na)
-      f, xt = fixalive!(t0, NaN)
+  # if fix node
+  if fx(bi)
+    #get fix `x` and edge
+    xc  = fixed_xt(ξc)
+    _fixrtip!(t0, na)
+    acr = _match_tip_x!(t0, xc, σx)
 
-      return t0, na, nat, xt
-    elseif na > 1
-      # fix random tip
-      xt = fixrtip!(t0, na, NaN)
-
-      if !it(bi)
-        # add tips until the present
-        tx, na = tip_sims!(t0, tfb, λ, σx, na)
-      end
-
-      return t0, na, nat, xt
+    if lU <  acr + llr
+      setni!(bi, na)    # set new ni
+      return t0, llr
     end
   end
 
-  return sTpbX(0.0, false, 0.0, 0.0), 0, 0, NaN
+  return t0, NaN
 end
 
 
 
+
 """
-    tip_sims!(tree::sTpbX, t::Float64, λ::Float64, σx::Float64, na::Int64)
+    fsbi_i(bi::iBffs,
+           ξc::sTpbX,
+           λ ::Float64,
+           σx::Float64)
+
+Forward simulation for terminal branch `bi`.
+"""
+function fsbi_i(bi::iBffs,
+                ξ1::sTpbX,
+                ξ2::sTpbX,
+                x0::Float64,
+                λ ::Float64,
+                σx::Float64)
+
+  t0, na = _sim_cpb_i(e(bi), λ, x0, σx, 1, 500)
+
+  if na >= 500
+    return t0, NaN, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() #log-probability
+
+  # continue simulation only if acr on sum of tip rates is accepted
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  # get fix `x`
+  xp = fixrtip!(t0, na, NaN)
+
+  # acceptance ration with respect to daughters
+  llr = duoldnorm(xp,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
+        duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
+
+  if lU < acr + llr
+
+    if na > 1
+      # simulated remaining tips until the present
+      tx, na, acr = tip_sims!(t0, tf(bi), λ, σx, acr, lU, Iρi, na)
+    end
+
+    if lU < acr + llr
+      na -= 1
+      llr += (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      setni!(bi, na)  # set new ni
+      setnt!(bi, ntp) # set new nt
+
+      sdX = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
+            ((xp - xf(ξ2))^2 - (xi(ξ2) - xf(ξ2))^2)/(2.0*e(ξ2))
+      setxi!(ξ1, xp) # set new xp for initial x
+      setxi!(ξ2, xp) # set new xp for initial x
+
+      return t0, llr, sdX
+    end
+
+  end
+
+  return t0, NaN, NaN
+end
+
+
+
+
+"""
+    tip_sims!(tree::sTpbX,
+              t   ::Float64,
+              λ   ::Float64,
+              σx  ::Float64,
+              lr  ::Float64,
+              lU  ::Float64,
+              Iρi ::Float64,
+              na  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::sTpbX, t::Float64, λ::Float64, σx::Float64, na::Int64)
+function tip_sims!(tree::sTpbX,
+                   t   ::Float64,
+                   λ   ::Float64,
+                   σx  ::Float64,
+                   lr  ::Float64,
+                   lU  ::Float64,
+                   Iρi ::Float64,
+                   na  ::Int64)
 
-  if istip(tree)
-    if !isfix(tree)
+  if na < 500 && lU < lr
 
-      # simulate
-      stree, na = sim_cpb(t, λ, xf(tree), σx, na-1)
+    if istip(tree)
+      if !isfix(tree)
 
-      # merge to current tip
-      sete!( tree, e(tree) + e(stree))
-      setxf!(tree, xf(stree))
-      if isdefined(stree, :d1)
-        tree.d1 = stree.d1
-        tree.d2 = stree.d2
+        # simulate
+        stree, na, lr = _sim_cpb_it(t, λ, xf(tree), σx, lr, lU, Iρi, na, 500)
+
+        if isnan(lr) || na >= 500
+          return tree, na, NaN
+        end
+
+        # merge to current tip
+        sete!( tree, e(tree) + e(stree))
+        setxf!(tree, xf(stree))
+        if isdefined(stree, :d1)
+          tree.d1 = stree.d1
+          tree.d2 = stree.d2
+        end
       end
+    else
+      tree.d1, na, lr = tip_sims!(tree.d1, t, λ, σx, lr, lU, Iρi, na)
+      tree.d2, na, lr = tip_sims!(tree.d2, t, λ, σx, lr, lU, Iρi, na)
     end
-  else
-    tree.d1, na = tip_sims!(tree.d1, t, λ, σx, na)
-    tree.d2, na = tip_sims!(tree.d2, t, λ, σx, na)
+
+    return tree, na, lr
   end
 
-  return tree, na
+  return tree, na, NaN
 end
 
 
@@ -694,30 +594,29 @@ end
 
 """
     _match_tip_x!(tree::T,
-                 xt  ::Float64,
-                 σx  ::Float64) where {T <: sTX}
+                  xc  ::Float64,
+                  σx  ::Float64) where {T <: sTX}
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
 function _match_tip_x!(tree::T,
-                       xt  ::Float64,
+                       xc  ::Float64,
                        σx  ::Float64) where {T <: sTX}
 
   if istip(tree)
     xa   = xi(tree)
-    xn   = xf(tree)
-    el   = e(tree)
-    σsrt = sqrt(el) * σx
+    xp   = xf(tree)
+    σsrt = sqrt(e(tree)) * σx
     # acceptance rate
-    acr  = ldnorm_bm(xt, xa, σsrt) - ldnorm_bm(xn, xa, σsrt)
-    setxf!(tree, xt)
+    acr  = ldnorm_bm(xp, xa, σsrt) - ldnorm_bm(xc, xa, σsrt)
+    setxf!(tree, xc)
 
     return acr
   else
     if isfix(tree.d1)
-      acr = _match_tip_x!(tree.d1, xt, σx)
+      acr = _match_tip_x!(tree.d1, xc, σx)
     else
-      acr = _match_tip_x!(tree.d2, xt, σx)
+      acr = _match_tip_x!(tree.d2, xc, σx)
     end
   end
 
@@ -735,7 +634,6 @@ end
               llc     ::Float64,
               prc     ::Float64,
               sdX     ::Float64,
-              stem    ::Int64,
               x0_prior::NTuple{2, Float64}) where {T <: sTX}
 
 Make a `gbm` update for an internal branch and its descendants.
@@ -747,7 +645,6 @@ function update_x!(bix     ::Int64,
                    llc     ::Float64,
                    prc     ::Float64,
                    sdX     ::Float64,
-                   stem    ::Int64,
                    x0_prior::NTuple{2, Float64}) where {T <: sTX}
 
   ξi  = Ξ[bix]
@@ -758,8 +655,8 @@ function update_x!(bix     ::Int64,
   ξ2  = Ξ[id2]
 
   root = iszero(pa(bi))
-  # if crown root
-  if root && isone(stem)
+  # if cron root
+  if root && iszero(e(bi))
     if !fx(bi)
       llc, prc, sdX =
          _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)
@@ -802,7 +699,7 @@ end
                     sdX     ::Float64,
                     x0_prior::NTuple{2,Float64}) where {T <: sTX}
 
-Make crown update for trait.
+Make stem update for trait.
 """
 function _stem_update_x!(ξi      ::T,
                          σx      ::Float64,
@@ -845,7 +742,7 @@ end
                      sdX     ::Float64,
                      x0_prior::NTuple{2,Float64}) where {T <: sTX}
 
-Make crown update for trait.
+Make stem update for trait.
 """
 function _crown_update_x!(ξi      ::T,
                           ξ1      ::T,
