@@ -775,6 +775,75 @@ end
 
 
 
+"""
+    fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T, wi::Int64, ix::Int64, xc::Float64) where {T <: iTree}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setxf!(tree, xc)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip1!(tree.d1, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip1!(tree.d2, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
+    fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T, wi::Int64, ix::Int64, xc::Float64) where {T <: iTree}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setxf!(tree, xc)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip2!(tree.d2, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip2!(tree.d1, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+
 
 """
     graftree!(tree ::T,

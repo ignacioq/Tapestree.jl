@@ -88,3 +88,175 @@ end
 
 
 
+
+"""
+    _sim_cbd_t(t   ::Float64,
+               λ   ::Float64,
+               μ   ::Float64,
+               x0  ::Float64,
+               σx  ::Float64,
+               lr  ::Float64,
+               lU  ::Float64,
+               Iρi ::Float64,
+               na  ::Int64,
+               nn  ::Int64,
+               nlim::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` for terminal branches.
+"""
+function _sim_cbd_t(t   ::Float64,
+                    λ   ::Float64,
+                    μ   ::Float64,
+                    x0  ::Float64,
+                    σx  ::Float64,
+                    lr  ::Float64,
+                    lU  ::Float64,
+                    Iρi ::Float64,
+                    na  ::Int64,
+                    nn  ::Int64,
+                    nlim::Int64)
+
+  if isfinite(lr) && nn < nlim
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      na += 1
+      nlr = lr
+      if na > 1
+        nlr += log(Iρi * Float64(na)/Float64(na-1))
+      end
+      
+      if nlr < lr && lU >= nlr
+        return sTbdX(), na, nn, NaN
+      else
+        return sTbdX(t, false, false, x0, rnorm(x0, sqrt(t) * σx)), na, nn, nlr
+      end
+    else
+      if λorμ(λ, μ)
+        nn += 1
+        x1 = rnorm(x0, sqrt(tw) * σx)
+
+        d1, na, nn, lr = 
+          _sim_cbd_t(t - tw, λ, μ, x1, σx, lr, lU, Iρi, na, nn, nlim)
+        d2, na, nn, lr = 
+          _sim_cbd_t(t - tw, λ, μ, x1, σx, lr, lU, Iρi, na, nn, nlim)
+
+        return sTbdX(d1, d2, tw, false, false, x0, x1), na, nn, lr
+      else
+        return sTbdX(tw, true, false, x0, rnorm(x0, sqrt(tw) * σx)), na, nn, lr
+      end
+    end
+  end
+
+  return sTbdX(), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_cbd_i(t   ::Float64,
+               λ   ::Float64,
+               μ   ::Float64,
+               x0  ::Float64,
+               σx  ::Float64,
+               na  ::Int64,
+               nn  ::Int64,
+               nlim::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` for internal branches.
+"""
+function _sim_cbd_i(t   ::Float64,
+                    λ   ::Float64,
+                    μ   ::Float64,
+                    x0  ::Float64,
+                    σx  ::Float64,
+                    na  ::Int64,
+                    nn  ::Int64,
+                    nlim::Int64)
+
+  if nn < nlim
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      na += 1
+      return sTbdX(t, false, false, x0, rnorm(x0, sqrt(t) * σx)), na, nn, nlr
+    end
+
+    if λorμ(λ, μ)
+      nn += 1
+      x1 = rnorm(x0, sqrt(tw) * σx)
+      d1, na, nn = _sim_cbd_i(t - tw, λ, μ, x1, σx, na, nn, nlim)
+      d2, na, nn = _sim_cbd_i(t - tw, λ, μ, x1, σx, na, nn, nlim)
+
+      return sTbdX(d1, d2, tw, false, false, x0, x1), na, nn
+    else
+      return sTbdX(tw, true, false, x0, rnorm(x0, sqrt(tw) * σx)), na, nn
+    end
+  end
+
+  return sTbdX(), na, nn
+end
+
+
+
+"""
+here
+"""
+
+
+"""
+    _sim_cbd_it(t   ::Float64,
+                λ   ::Float64,
+                μ   ::Float64,
+                lr  ::Float64,
+                lU  ::Float64,
+                Iρi ::Float64,
+                nn ::Int64,
+                nlim::Int64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` for continuing internal branches.
+"""
+function _sim_cbd_it(t   ::Float64,
+                     λ   ::Float64,
+                     μ   ::Float64,
+                     x0::Float64,
+                     σx::Float64,
+                     lr  ::Float64,
+                     lU  ::Float64,
+                     Iρi ::Float64,
+                     na  ::Int64,
+                     nn ::Int64,
+                     nlim::Int64)
+
+  if lU < lr && nn < nlim
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      na += 1
+      lr += log(Iρi)
+      return sTbdX(t, false, false), na, nn, lr
+    end
+
+    if λorμ(λ, μ)
+      nn += 1
+      d1, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
+      d2, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
+
+      return sTbdX(d1, d2, tw, false, false), na, nn, lr
+    else
+      return sTbdX(tw, true, false), na, nn, lr
+    end
+
+  end
+
+  return sTbdX(), na, nn, NaN
+end
+
+

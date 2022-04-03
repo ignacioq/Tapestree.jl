@@ -442,8 +442,12 @@ function fsbi_t(bi::iBffs,
   # current ll
   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
+  xist = Float64[]
+  xfst = Float64[]
+  est  = Float64[]
+
   t0, na, nn, llr =
-    _sim_cpb_t(e(bi), λ, xi(ξc), σx, lc, lU, Iρi, 0, 1, 500)
+    _sim_cpb_t(e(bi), λ, xi(ξc), σx, lc, lU, Iρi, 0, 1, 500, xist, xfst, est)
 
   if isnan(llr) || nn >= 500
     return t0, NaN
@@ -453,10 +457,32 @@ function fsbi_t(bi::iBffs,
   if fx(bi)
     #get fix `x` and edge
     xc  = fixed_xt(ξc)
-    _fixrtip!(t0, na)
-    acr = _match_tip_x!(t0, xc, σx)
+
+    # sample tip according to fix `x` value
+    acr = 0.0
+    wp = Float64[]
+    @simd for i in Base.OneTo(na)
+      srt = sqrt(est[i])
+      wi  = dnorm_bm(xfst[i], xist[i], srt*σx)/dnorm_bm(xc, xist[i], srt*σx)
+      push!(wp, wi)
+      acr += wi
+    end
+    acr = log(acr)
+
+    if isinf(acr)
+      return t0, NaN
+    end
 
     if lU <  acr + llr
+      # sample tip
+      wti = sample(wp)
+
+      if wti <= div(na,2)
+        fixtip1!(t0, wti, 0, xc)
+      else
+        fixtip2!(t0, na - wti + 1, 0, xc)
+      end
+
       setni!(bi, na)    # set new ni
       return t0, llr
     end
