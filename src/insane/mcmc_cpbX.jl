@@ -469,10 +469,6 @@ function fsbi_t(bi::iBffs,
     end
     acr = log(acr)
 
-    if isinf(acr)
-      return t0, NaN
-    end
-
     if lU <  acr + llr
       # sample tip
       wti = sample(wp)
