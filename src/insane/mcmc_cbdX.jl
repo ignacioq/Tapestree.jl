@@ -293,11 +293,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
       # μ proposal
       elseif p === 2
@@ -305,22 +305,22 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
        # sigma_x update
       elseif p === 3
 
         llc, prc, σxc = update_σx!(σxc, sdX, nX, llc, prc, σx_prior)
 
-        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
       # X ancestors update
       elseif p === 4
@@ -331,11 +331,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, sdX =
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
-        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
       # forward simulation proposal proposal
       else
@@ -345,11 +345,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, ns, ne, L, sdX, nX =
           update_fs!(bix, Ξ, idf, llc, λc, μc, σxc, ns, ne, L, sdX, nX)
 
-        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
       end
     end
@@ -493,7 +493,7 @@ function fsbi_t(bi::iBffs,
     end
     acr = log(acr)
 
-    if lU <  acr + llr
+    if isfinite(acr) && lU <  acr + llr
       # sample tip
       wti = sample(wp)
 

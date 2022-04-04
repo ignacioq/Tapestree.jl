@@ -469,7 +469,7 @@ function fsbi_t(bi::iBffs,
     end
     acr = log(acr)
 
-    if lU <  acr + llr
+    if isfinite(acr) && lU <  acr + llr
       # sample tip
       wti = sample(wp)
 
@@ -479,7 +479,7 @@ function fsbi_t(bi::iBffs,
         fixtip2!(t0, na - wti + 1, 0, xc)
       end
 
-      setni!(bi, na)    # set new ni
+      setni!(bi, na) # set new ni
       return t0, llr
     end
   end

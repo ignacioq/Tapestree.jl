@@ -777,6 +777,7 @@ end
 
 """
     fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
 Fixes the the path to tip `wi` in d1 order.
 """
 function fixtip1!(tree::T, wi::Int64, ix::Int64, xc::Float64) where {T <: iTree}
@@ -1022,6 +1023,78 @@ function _remove_unsampled!(tree::sTbd)
       ne  = e(tree) + e(tree.d1)
       tree = tree.d1
       sete!(tree, ne)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::sTpbX)
+
+Remove unsampled tips (extinct and extant not sampled).
+"""
+function _remove_unsampled!(tree::sTpbX)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return sTpbX(e(tree),isfix(tree), xi(tree), xf(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        nx = xi(tree)
+        tree = tree.d2
+        sete!(tree, ne)
+        setxi!(tree, nx)
+      end
+    elseif !isfix(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      nx = xi(tree)
+      tree = tree.d1
+      sete!(tree, ne)
+      setxi!(tree, nx)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::sTbdX)
+
+Remove unsampled tips (extinct and extant not sampled).
+"""
+function _remove_unsampled!(tree::sTbdX)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return sTbdX(e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        nx = xi(tree)
+        tree = tree.d2
+        sete!(tree, ne)
+        setxi!(tree, nx)
+      end
+    elseif !isfix(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      nx = xi(tree)
+      tree = tree.d1
+      sete!(tree, ne)
+      setxi!(tree, nx)
     end
   end
 
