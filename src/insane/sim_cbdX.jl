@@ -245,17 +245,20 @@ function _sim_cbd_it(t   ::Float64,
     if tw > t
       na += 1
       lr += log(Iρi)
-      return sTbdX(t, false, false), na, nn, lr
+      return sTbdX(t, false, false, x0, rnorm(x0, sqrt(t) * σx)), na, nn, lr
     end
 
     if λorμ(λ, μ)
       nn += 1
-      d1, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
-      d2, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
+      x1 = rnorm(x0, sqrt(tw) * σx)
+      d1, na, nn, lr = 
+        _sim_cbd_it(t - tw, λ, μ, x1, σx, lr, lU, Iρi, na, nn, nlim)
+      d2, na, nn, lr = 
+        _sim_cbd_it(t - tw, λ, μ, x1, σx, lr, lU, Iρi, na, nn, nlim)
 
-      return sTbdX(d1, d2, tw, false, false), na, nn, lr
+      return sTbdX(d1, d2, tw, false, false, x0, x1), na, nn, lr
     else
-      return sTbdX(tw, true, false), na, nn, lr
+      return sTbdX(tw, true, false, x0, rnorm(x0, sqrt(tw) * σx)), na, nn, lr
     end
   end
 

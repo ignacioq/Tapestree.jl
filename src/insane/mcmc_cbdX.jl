@@ -293,11 +293,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # μ proposal
       elseif p === 2
@@ -305,22 +305,22 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
        # sigma_x update
       elseif p === 3
 
         llc, prc, σxc = update_σx!(σxc, sdX, nX, llc, prc, σx_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # X ancestors update
       elseif p === 4
@@ -331,11 +331,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, prc, sdX =
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # forward simulation proposal proposal
       else
@@ -345,11 +345,11 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
         llc, ns, ne, L, sdX, nX =
           update_fs!(bix, Ξ, idf, llc, λc, μc, σxc, ns, ne, L, sdX, nX)
 
-        # llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cbd(Ξ, λc, μc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       end
     end
@@ -381,6 +381,7 @@ end
 
 
 
+
 """
     update_fs!(bix::Int64,
                Ξ  ::Vector{sTbdX},
@@ -389,6 +390,8 @@ end
                λ  ::Float64,
                σx ::Float64,
                ns ::Float64,
+               μ  ::Float64,
+               ne ::Float64,
                L  ::Float64,
                sdX::Float64,
                nX ::Float64)
@@ -403,6 +406,7 @@ function update_fs!(bix::Int64,
                     μ  ::Float64,
                     σx ::Float64,
                     ns ::Float64,
+                    ne ::Float64,
                     L  ::Float64,
                     sdX::Float64,
                     nX ::Float64)
@@ -469,7 +473,7 @@ function fsbi_t(bi::iBffs,
   t0, na, nn, llr =
     _sim_cbd_t(e(bi), λ, μ, xi(ξc), σx, lc, lU, Iρi, 0, 1, 500, xist, xfst, est)
 
-  if isnan(llr) || nn >= 500
+  if na < 1 || isnan(llr) || nn >= 500
     return t0, NaN
   end
 
@@ -523,11 +527,12 @@ function fsbi_i(bi::iBffs,
                 ξ2::sTbdX,
                 x0::Float64,
                 λ ::Float64,
+                μ ::Float64,
                 σx::Float64)
 
   t0, na, nn = _sim_cbd_i(e(bi), λ, μ, x0, σx, 0, 1, 500)
 
-  if na >= 500
+  if na < 1 || nn >= 500
     return t0, NaN, NaN
   end
 
@@ -554,7 +559,7 @@ function fsbi_i(bi::iBffs,
 
     if na > 1
       # simulated remaining tips until the present
-      tx, na, acr = tip_sims!(t0, tf(bi), λ, μ, σx, acr, lU, Iρi, na, nn)
+      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, σx, acr, lU, Iρi, na, nn)
     end
 
     if lU < acr + llr
@@ -588,7 +593,8 @@ end
               lr  ::Float64,
               lU  ::Float64,
               Iρi ::Float64,
-              na  ::Int64)
+              na  ::Int64,
+              nn  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
@@ -600,12 +606,13 @@ function tip_sims!(tree::sTbdX,
                    lr  ::Float64,
                    lU  ::Float64,
                    Iρi ::Float64,
-                   na  ::Int64)
+                   na  ::Int64,
+                   nn  ::Int64)
 
   if na < 500 && lU < lr
 
     if istip(tree)
-      if !isfix(tree)
+      if !isfix(tree) && isalive(tree)
 
         # simulate
         stree, na, nn, lr = 
@@ -617,6 +624,7 @@ function tip_sims!(tree::sTbdX,
 
         # merge to current tip
         sete!( tree, e(tree) + e(stree))
+        setproperty!(tree, :iμ, isextinct(stree))
         setxf!(tree, xf(stree))
         if isdefined(stree, :d1)
           tree.d1 = stree.d1
