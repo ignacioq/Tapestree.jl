@@ -1257,6 +1257,8 @@ function _eventimes!(tree::T,
     else
       _eventimes!(tree.d1, t - et, se, ee)
     end
+  elseif isfossil(tree)
+    push!(ee, t - et)
   end
 
   return nothing
