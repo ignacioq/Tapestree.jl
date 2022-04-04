@@ -1423,54 +1423,6 @@ end
 
 
 
-# function _λat!(tree::T,
-#                c   ::Float64,
-#                λs  ::Vector{Float64},
-#                t   ::Float64,
-#                nλ  ::Int64) where {T <: iT}
-
-#   et = e(tree)
-
-
-
-#   if (t + et) > c || isapprox(t + et, c, atol = 1e-10) && istip(tree)
-
-
-#     if !isfix(tree)
-
-#       lλv = lλ(tree)
-#       δt  = dt(tree)
-#       fδt = fdt(tree)
-
-#       # find final lλ
-#       if isapprox(c - t, et)
-#         Ix = lastindex(lλv) - 1
-#         ix = Float64(Ix) - 1.0
-#       else
-#         ix  = fld(c - t, δt)
-#         Ix  = Int64(ix) + 1
-#       end
-#       tii = ix*δt
-#       tff = tii + δt
-#       if tff > et
-#         tff = tii + fδt
-#       end
-#       eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
-
-#       push!(λs, eλ)
-
-#       return nothing
-#     end
-#   elseif def1(tree)
-#       _λat!(tree.d1, c, λs, t + et)
-#       _λat!(tree.d2, c, λs, t + et)
-#   end
-
-#   return nothing
-# end
-
-
-
 
 """
     fixed_xt(tree::T)  where {T <: sTX}
@@ -1512,8 +1464,6 @@ function fossil_xt(tree::sTfbdX)
 
   return xt
 end
-
-
 
 
 

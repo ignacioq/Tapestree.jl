@@ -412,14 +412,13 @@ function update_fs!(bix::Int64,
                     nX ::Float64)
 
   bi = idf[bix]
-  ξc  = Ξ[bix]
+  ξc = Ξ[bix]
 
   if it(bi) # is it terminal
     ξp, llr = fsbi_t(bi, ξc, λ, μ, σx)
     sdXr = 0.0
   else
-    ξp, llr, sdXr = 
-      fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, σx)
+    ξp, llr, sdXr = fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, σx)
   end
 
   if isfinite(llr)
@@ -502,6 +501,13 @@ function fsbi_t(bi::iBffs,
       else
         fixtip2!(t0, na - wti + 1, 0, xc)
       end
+
+      setni!(bi, na)    # set new ni
+      return t0, llr
+    end
+  else
+    if lU < llr
+      _fixrtip!(t0, na)
 
       setni!(bi, na)    # set new ni
       return t0, llr

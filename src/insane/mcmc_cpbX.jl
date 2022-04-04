@@ -482,6 +482,13 @@ function fsbi_t(bi::iBffs,
       setni!(bi, na) # set new ni
       return t0, llr
     end
+  else
+    if lU < llr
+      _fixrtip!(t0, na)
+
+      setni!(bi, na)    # set new ni
+      return t0, llr
+    end
   end
 
   return t0, NaN

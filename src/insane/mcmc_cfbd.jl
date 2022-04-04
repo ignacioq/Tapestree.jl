@@ -602,18 +602,15 @@ function fsbi_fi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
     end
 
     if lU < acr
-
+      # fossilize extant tip
       fossilizefixedtip!(t0)
+      na -= 1
 
-      if lU < acr
-        na -= 1
+      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      setnt!(bi, ntp)                # set new nt
+      setni!(bi, na)                 # set new ni
 
-        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-        setnt!(bi, ntp)                # set new nt
-        setni!(bi, na)                 # set new ni
-
-        return t0, llr
-      end
+      return t0, llr
     end
   end
 
