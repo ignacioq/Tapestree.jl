@@ -93,21 +93,21 @@ function insane_gbmpb(tree    ::sT_label,
   @info "running pure-birth gbm and trait evolution"
 
   # burn-in phase
-  llc, prc, αc, σλc =
+  llc, prc, αc, σλc, βλc, σxc =
     mcmc_burn_gbmpb(Ξ, idf, α_prior, σλ_prior, x0_prior, βλ_prior, σx_prior, 
       nburn, αi, σλi, βλi, σxc, δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, Ξv, αc, σλc = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, 
+  r, Ξv, αc, σλc, βλc, σxc = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, βλc, σxc,
     α_prior, σλ_prior, x0_prior, βλ_prior, σx_prior, niter, nthin, δt, srδt, 
     inodes, pup, prints)
 
   pardic = Dict(("lambda_root"  => 1,
                  "alpha"        => 2,
                  "sigma_lambda" => 3,
-                 "x0"           => 3,
-                 "beta_lambda"  => 3,
-                 "sigma_x"      => 3))
+                 "x0"           => 4,
+                 "beta_lambda"  => 5,
+                 "sigma_x"      => 6))
 
   write_ssr(r, pardic, out_file)
 
@@ -215,8 +215,9 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpbX},
       # update gbm
       elseif p === 6
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        # nix = ceil(Int64,rand()*nin)
+        # bix = inodes[nix]
+        bix = 1
 
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
@@ -225,8 +226,10 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpbX},
       else
         bix = ceil(Int64,rand()*el)
 
-        llc, dλ, ssλ, nx, L =
-          update_fs!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, nx, L, δt, srδt)
+        llc, dλ, ssλ, ssx, nx, L =
+          update_fs!(bix, Ξ, idf, αc, σλc, βλc, σxc, llc, dλ, 
+            ssλ, ssx, nx, L, δt, srδt)
+
       end
 
     end
@@ -234,7 +237,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpbX},
     next!(pbar)
   end
 
-  return llc, prc, αc, σλc
+  return llc, prc, αc, σλc, βλc, σxc
 end
 
 
@@ -266,8 +269,13 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
                     prc     ::Float64,
                     αc      ::Float64,
                     σλc     ::Float64,
+                    βλc     ::Float64,
+                    σxc     ::Float64,
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
+                    x0_prior::NTuple{2,Float64},
+                    βλ_prior::NTuple{2,Float64},
+                    σx_prior::NTuple{2,Float64},
                     niter   ::Int64,
                     nthin   ::Int64,
                     δt      ::Float64,
@@ -280,7 +288,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  r = Array{Float64,2}(undef, nlogs, 6)
+  r = Array{Float64,2}(undef, nlogs, 9)
 
   # make Ξ vector
   Ξv = iTpbX[]
@@ -307,8 +315,6 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
 
         # update ssλ with new drift `α`
         ssλ, nx = sss_gbm(Ξ, αc)
-
-
 
         ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-4)
@@ -361,8 +367,9 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
       # update gbm
       elseif p === 6
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        # nix = ceil(Int64,rand()*nin)
+        # bix = inodes[nix]
+        bix = 1
 
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
@@ -403,6 +410,9 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
         r[lit,4] = exp(lλ(Ξ[1])[1])
         r[lit,5] = αc
         r[lit,6] = σλc
+        r[lit,7] = xv(Ξ[1])[1]
+        r[lit,8] = βλc
+        r[lit,9] = σxc
         push!(Ξv, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
@@ -411,7 +421,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
     next!(pbar)
   end
 
-  return r, Ξv, αc, σλc
+  return r, Ξv, αc, σλc, βλc, σxc
 end
 
 
@@ -556,9 +566,14 @@ function fsbi_t(bi  ::iBffs,
     end
   else
     _fixrtip!(t0, na)
+    acr = 0.0
   end
 
   if isfinite(acr) && lU <  acr + llr
+    if na < 1
+        @show "ter"
+    end
+
     setni!(bi, na) # set new ni
     return t0, llr
   end
@@ -600,7 +615,7 @@ function fsbi_i(bi  ::iBffs,
       1, 500, λsp, xsp)
 
   if na >= 500
-    return t0, NaN, NaN, NaN
+    return t0, NaN, NaN, NaN, NaN
   end
 
   # get current speciation rates at branch time
@@ -676,6 +691,11 @@ function fsbi_i(bi  ::iBffs,
 
     if lU < acr
       na -= 1
+
+      if na < 0
+        @show "int"
+      end
+
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       setni!( bi, na)                       # set new ni
       setλt!( bi, λf)                       # set new λt
@@ -1071,8 +1091,8 @@ function _update_x!(tree::T,
 
   if def1(tree)
     llc, ssx = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, ssx, δt, srδt)
-    llc, ssx = _update_x!(tree.d1, σx, llc, ssx, ufx, δt, srδt)
-    llc, ssx = _update_x!(tree.d2, σx, llc, ssx, ufx, δt, srδt)
+    llc, ssx = _update_x!(tree.d1, σx, llc, ssx, δt, srδt, ufx)
+    llc, ssx = _update_x!(tree.d2, σx, llc, ssx, δt, srδt, ufx)
   elseif isfix(tree)
     llc, ssx = _update_tip_x!(tree, σx, llc, ssx, δt, srδt, ufx)
   else

@@ -480,9 +480,9 @@ function _sim_gbmpb_t(t   ::Float64,
           if nlr < lr && lU >= nlr
             return iTpbX(), na, nn, NaN
           else
-            push!(xist, xv[1])
-            push!(xfst, xt1)
-            push!(est, bt)
+            push!(xist, xv[1], xv[1])
+            push!(xfst, xt1, xt1)
+            push!(est,  bt, xt1)
 
             return iTpbX(iTpbX(0.0, false, δt, 0.0, 
                                Float64[λt1, λt1], Float64[xt1, xt1]),
@@ -658,20 +658,20 @@ Simulate `iTpbX` according to a pure-birth geometric Brownian motion,
 starting with a non-standard δt with a limit in the number of species.
 """
 function _sim_gbmpb_it(nsδt::Float64,
-                        t   ::Float64,
-                        λt  ::Float64,
-                        α   ::Float64,
-                        σλ  ::Float64,
-                        xt  ::Float64,
-                        βλ  ::Float64,
-                        σx  ::Float64,
-                        δt  ::Float64,
-                        srδt::Float64,
-                        lr  ::Float64,
-                        lU  ::Float64,
-                        Iρi ::Float64,
-                        nn  ::Int64,
-                        nlim::Int64)
+                       t   ::Float64,
+                       λt  ::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       xt  ::Float64,
+                       βλ  ::Float64,
+                       σx  ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
+                       nn  ::Int64,
+                       nlim::Int64)
 
   λv = Float64[λt]
   xv = Float64[xt]
@@ -808,23 +808,24 @@ Simulate `iTpbX` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
 function _sim_gbmpb_it(t   ::Float64,
-                        λt  ::Float64,
-                        α   ::Float64,
-                        σλ  ::Float64,
-                        xt  ::Float64,
-                        βλ  ::Float64,
-                        σx  ::Float64,
-                        δt  ::Float64,
-                        srδt::Float64,
-                        lr  ::Float64,
-                        lU  ::Float64,
-                        Iρi ::Float64,
-                        nn ::Int64,
-                        nlim::Int64)
+                       λt  ::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       xt  ::Float64,
+                       βλ  ::Float64,
+                       σx  ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       lr  ::Float64,
+                       lU  ::Float64,
+                       Iρi ::Float64,
+                       nn ::Int64,
+                       nlim::Int64)
 
   if lU < lr && nn < nlim
 
     λv = Float64[λt]
+    xv = Float64[xt]
     bt = 0.0
 
     while true

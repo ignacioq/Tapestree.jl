@@ -1160,7 +1160,7 @@ end
 
 Recipe for plotting with the tree or the trait evolutions for `sTX`.
 """
-@recipe function f(tree::Vector{T}) where {T <: iTX}
+@recipe function f(trees::Vector{T}) where {T <: iTX}
 
   x = Float64[]
   y = Float64[]
