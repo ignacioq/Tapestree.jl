@@ -899,7 +899,8 @@ function fixtip1!(tree::T,
       ix += 1
       if ix === wi
         fix!(tree)
-        bb!(xv(tree), xi(tree), xc, σx, δt, fdt(tree), srδt)
+        xvi = xv(tree)
+        bb!(xvi, xvi[1], xc, σx, δt, fdt(tree), srδt)
 
         return true, ix
       end
@@ -949,9 +950,10 @@ function fixtip2!(tree::T,
       ix += 1
       if ix === wi
         fix!(tree)
-        bb!(xv(tree), xi(tree), xc, σx, δt, fdt(tree), srδt)
+        xvi = xv(tree)
+        bb!(xvi, xvi[1], xc, σx, δt, fdt(tree), srδt)
 
-        return true, ix, llr, ssrx
+        return true, ix
       end
     end
   else

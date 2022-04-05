@@ -285,11 +285,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
   # make Ξ vector
   Ξv = iTpbX[]
 
-  L       = treelength(Ξ)      # tree length
-  dλ      = deltaλ(Ξ)          # delta change in λ
-  ssλ, nx = sss_gbm(Ξ, αc)     # sum squares in λ
-  nin     = lastindex(inodes)  # number of internal nodes
-  el      = lastindex(idf)     # number of branches
+  L            = treelength(Ξ)       # tree length
+  dλ           = deltaλ(Ξ)           # delta change in λ
+  ssλ, ssx, nx = sss_gbm(Ξ, αc, βλc) # sum squares in λ
+  nin          = lastindex(inodes)   # number of internal nodes
+  el           = lastindex(idf)      # number of branches
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -351,9 +351,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
 
         llc, prc, ssx =
           update_x!(bix, Ξ, idf, σxc, llc, prc, ssx, δt, srδt, x0_prior)
-        sss_gbm(Ξ, 0.0, 1.0)
-        plot(couple(copy_Ξ(Ξ), idf, 1))
-        
+
         ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-4)
            @show ll0, llc, it, p
@@ -379,8 +377,12 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
       else
         bix = ceil(Int64,rand()*el)
 
-        llc, dλ, ssλ, nx, L =
-          update_fs!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, nx, L, δt, srδt)
+        llc, dλ, ssλ, ssx, nx, L =
+          update_fs!(bix, Ξ, idf, αc, σλc, βλc, σxc, llc, dλ, 
+            ssλ, ssx, nx, L, δt, srδt)
+
+        sss_gbm(Ξ, αc, βλc)
+        plot(couple(copy_Ξ(Ξ), idf, 1))
 
         ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
         if !isapprox(ll0, llc, atol = 1e-4)
@@ -443,6 +445,7 @@ function update_fs!(bix  ::Int64,
                     llc  ::Float64,
                     dλ   ::Float64,
                     ssλ  ::Float64,
+                    ssx  ::Float64,
                     nx   ::Float64,
                     L    ::Float64,
                     δt   ::Float64,
@@ -453,20 +456,20 @@ function update_fs!(bix  ::Int64,
 
   # if terminal
   if it(bi)
-    ξp, llr = fsbi_t(bi, lλ(ξc)[1], α, σλ, xv(ξc)[1], βλ, σx, δt, srδt)
+    ξp, llr = fsbi_t(bi, ξc, α, σλ, βλ, σx, δt, srδt)
     drλ  = 0.0
     ssrλ = 0.0
     ssrx = 0.0
   # if internal
   else
-    ξp, llr, drλ, ssrλ =
+    ξp, llr, drλ, ssrλ, ssrx =
       fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, βλ, σx, δt, srδt)
   end
 
   # if accepted
   if isfinite(llr)
-    ll1, dλ1, ssλ1, ssx1, nx1 = llik_gbm_ssλ(ξp, α, σλ, δt, srδt)
-    ll0, dλ0, ssλ0, ssx0, nx0 = llik_gbm_ssλ(ξc, α, σλ, δt, srδt)
+    ll1, dλ1, ssλ1, ssx1, nx1 = llik_gbm_ss(ξp, α, σλ, βλ, σx, δt, srδt)
+    ll0, dλ0, ssλ0, ssx0, nx0 = llik_gbm_ss(ξc, α, σλ, βλ, σx, δt, srδt)
 
     # update llr, ssλ, nx, L
     llc += ll1  - ll0 + llr
@@ -480,7 +483,7 @@ function update_fs!(bix  ::Int64,
     Ξ[bix] = ξp
   end
 
-  return llc, dλ, ssλ, nx, L
+  return llc, dλ, ssλ, ssx, nx, L
 end
 
 
@@ -499,10 +502,9 @@ end
 Forward simulation for branch `bi`
 """
 function fsbi_t(bi  ::iBffs,
-                λ0  ::Float64,
+                ξc  ::iTpbX,
                 α   ::Float64,
                 σλ  ::Float64,
-                x0  ::Float64,
                 βλ  ::Float64,
                 σx  ::Float64,
                 δt  ::Float64,
@@ -521,8 +523,8 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_gbmpb_t(e(bi), λ0, α, σλ, x0, σx, δt, srδt, lc, lU, Iρi, 0, 1, 500, 
-      xist, xfst, est)
+    _sim_gbmpb_t(e(bi), lλ(ξc)[1], α, σλ, xv(ξc)[1], βλ, σx, δt, srδt, lc, lU, Iρi, 
+      0, 1, 500, xist, xfst, est)
 
   if isnan(llr) || nn >= 500
     return t0, NaN

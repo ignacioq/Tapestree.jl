@@ -57,13 +57,13 @@ function _daughters_update!(ξ1  ::iTpbX,
 
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
-    bb!(xp1, xp, x1c[l1], σx, δt, fdt1, srδt)
-    bb!(xp2, xp, x2c[l2], σx, δt, fdt2, srδt)
+    bb!(x1p, xp, x1c[l1], σx, δt, fdt1, srδt)
+    bb!(x2p, xp, x2c[l2], σx, δt, fdt2, srδt)
 
     # log likelihood ratios (llrbm contains both λ and x llr)
     llrbm1, llrpb1, ssrλ1, ssrx1 =
       llr_gbm_b_sep(λ1p, λ1c, x1p, x1c, α, σλ, βλ, σx, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2, ssrx1 =
+    llrbm2, llrpb2, ssrλ2, ssrx2 =
       llr_gbm_b_sep(λ2p, λ2c, x2p, x2c, α, σλ, βλ, σx, δt, fdt2, srδt, false)
 
     acr  = llrpb1 + llrpb2

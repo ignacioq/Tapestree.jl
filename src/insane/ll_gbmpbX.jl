@@ -166,10 +166,10 @@ function llik_gbm_ss(tree::iTpbX,
 
   if istip(tree)
     ll, dλ, ssλ, ssx, nd =
-      ll_gbm_b_ss(lλ(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
+      ll_gbm_b_ss(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
   else
     ll, dλ, ssλ, ssx, nd =
-      ll_gbm_b_ss(lλ(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true)
+      ll_gbm_b_ss(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true)
 
     ll1, dλ1, ssλ1, ssx1, nd1 =
       llik_gbm_ss(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)
@@ -203,6 +203,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
 function ll_gbm_b_ss(lλv ::Array{Float64,1},
+                     x   ::Array{Float64,1},
                      α   ::Float64,
                      σλ  ::Float64,
                      βλ  ::Float64,
@@ -222,8 +223,8 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
   @avx for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
-    xvi   = xv[i]
-    llx  += (xv[i+1] - xvi)^2
+    xvi   = x[i]
+    llx  += (x[i+1] - xvi)^2
     llbm += (lλvi1 - lλvi - (α + βλ*xvi)*δt)^2
     llpb += exp(0.5*(lλvi + lλvi1))
   end
@@ -244,8 +245,8 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
   # add final non-standard `δt`
   if fdt > 0.0
     lλvi = lλv[nI+1]
-    xvi  = xv[nI+1]
-    xvi1 = xv[nI+2]
+    xvi  = x[nI+1]
+    xvi1 = x[nI+2]
     ll  += ldnorm_bm(lλvi1, lλvi + (α + βλ*xvi)*fdt, sqrt(fdt)*σλ) -
            fdt*exp(0.5*(lλvi + lλvi1))                             +
            ldnorm_bm(xvi1, xvi, sqrt(fdt)*σx)
@@ -374,12 +375,12 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   if fdt > 0.0
     lλpi   = lλp[nI+1]
     lλci   = lλc[nI+1]
-    xci    = xv[nI+1]
-    xpi    = xv[nI+1]
+    xpi    = xp[nI+1]
     xpi1   = xp[nI+2]
+    xci    = xc[nI+1]
     xci1   = xc[nI+2]
     srfdt  = sqrt(fdt)
-    λd    += (lλpi1 - lλpi - (α + βλ*xpi)*fdt)^2 - 
+    λd     = (lλpi1 - lλpi - (α + βλ*xpi)*fdt)^2 - 
              (lλci1 - lλci - (α + βλ*xci)*fdt)^2
     xd     = ((xpi1 - xpi)^2 - (xci1 - xci)^2)
     ssrλ  += λd/(2.0*fdt)

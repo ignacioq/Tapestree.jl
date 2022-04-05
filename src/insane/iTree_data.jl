@@ -101,6 +101,7 @@ Return if is an extinction node.
 isextinct(tree::sTpb)  = false
 isextinct(tree::sTpbX) = false
 isextinct(tree::iTpb)  = false
+isextinct(tree::iTpbX) = false
 
 
 
@@ -111,7 +112,6 @@ isextinct(tree::iTpb)  = false
 Return if is an alive node.
 """
 isalive(tree::T) where {T <: iTree} = !isextinct(tree)
-
 
 
 
@@ -1433,6 +1433,29 @@ function fixed_xt(tree::T)  where {T <: sTX}
 
   if istip(tree)
     return xf(tree)
+  else
+    if isfix(tree.d1)
+      xt = fixed_xt(tree.d1)
+    else
+      xt = fixed_xt(tree.d2)
+    end
+  end
+
+  return xt
+end
+
+
+
+
+"""
+    fixed_xt(tree::T)  where {T <: sTX}
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function fixed_xt(tree::T)  where {T <: iTX}
+
+  if istip(tree)
+    return xv(tree)[end]
   else
     if isfix(tree.d1)
       xt = fixed_xt(tree.d1)
