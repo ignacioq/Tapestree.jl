@@ -221,8 +221,9 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
       # update gbm
       elseif pupi === 3
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        # nix = ceil(Int64,rand()*nin)
+        # bix = inodes[nix]
+        bix = 1
 
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)

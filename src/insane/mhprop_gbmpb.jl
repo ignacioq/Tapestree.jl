@@ -215,6 +215,7 @@ function _update_gbm!(tree::iTpb,
                       ter ::Bool)
 
   if def1(tree)
+
     llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
 
     llc, dλ, ssλ =
