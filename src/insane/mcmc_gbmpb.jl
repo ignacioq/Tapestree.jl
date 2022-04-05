@@ -555,7 +555,7 @@ function update_fs!(bix  ::Int64,
   # if internal
   else
     ξp, llr, drλ, ssrλ =
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], lλ(ξc)[1], α, σλ, δt, srδt)
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, δt, srδt)
   end
 
   # if accepted
@@ -637,7 +637,6 @@ function fsbi_i(bi  ::iBffs,
                 ξc  ::iTpb,
                 ξ1  ::iTpb,
                 ξ2  ::iTpb,
-                λ0  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 δt  ::Float64,
@@ -646,7 +645,7 @@ function fsbi_i(bi  ::iBffs,
   λsp = Float64[]
 
   # forward simulation during branch length
-  t0, na = _sim_gbmpb_i(e(bi), λ0, α, σλ, δt, srδt, 1, 500, λsp)
+  t0, na = _sim_gbmpb_i(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 500, λsp)
 
   if na >= 500
     return t0, NaN, NaN, NaN
@@ -778,9 +777,9 @@ function tip_sims!(tree::iTpb,
         # simulate
         stree, na, lr =
           _sim_gbmpb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
-            lr, lU, Iρi, na, 1_000)
+            lr, lU, Iρi, na, 500)
 
-        if isnan(lr) || na >= 1_000
+        if isnan(lr) || na >= 500
           return tree, na, NaN
         end
 

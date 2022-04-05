@@ -722,6 +722,27 @@ end
 
 
 """
+    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+
+Returns the standardized sum of squares for a `iTX` according
+to GBM lambda and X.
+"""
+function sss_gbm(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTX}
+
+  n   = 0.0
+  ssλ = 0.0
+  ssx = 0.0
+  for ξi in Ξ
+    ssλ, ssx, n = _sss_gbm(ξi, α, βλ, ssλ, ssx, n)
+  end
+
+  return ssλ, ssx, n
+end
+
+
+
+
+"""
     Σλ_gbm(Ξ::Vector{T}) where {T<: iT}
 
 Return the sum over `λ` gbm.

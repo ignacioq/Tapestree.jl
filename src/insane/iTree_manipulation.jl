@@ -842,6 +842,7 @@ end
 
 """
     fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
 Fixes the the path to tip `wi` in d2 order.
 """
 function fixtip2!(tree::T, wi::Int64, ix::Int64, xc::Float64) where {T <: iTree}
@@ -872,6 +873,102 @@ function fixtip2!(tree::T, wi::Int64, ix::Int64, xc::Float64) where {T <: iTree}
 end
 
 
+
+
+"""
+    fixtip1!(tree::T,
+             wi  ::Int64,
+             ix  ::Int64,
+             xc  ::Float64,
+             σx  ::Float64,
+             δt  ::Float64,
+             srδt::Float64) where {T <: iTX}
+
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T,
+                  wi  ::Int64,
+                  ix  ::Int64,
+                  xc  ::Float64,
+                  σx  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64) where {T <: iTX}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        bb!(xv(tree), xi(tree), xc, σx, δt, fdt(tree), srδt)
+
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip1!(tree.d1, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip1!(tree.d2, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
+    fixtip2!(tree::T,
+             wi  ::Int64,
+             ix  ::Int64,
+             xc  ::Float64,
+             σx  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             llr ::Float64,
+             ssrx::Float64) where {T <: iTX}
+
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T,
+                  wi  ::Int64,
+                  ix  ::Int64,
+                  xc  ::Float64,
+                  σx  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64) where {T <: iTX}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        bb!(xv(tree), xi(tree), xc, σx, δt, fdt(tree), srδt)
+
+        return true, ix, llr, ssrx
+      end
+    end
+  else
+    f, ix = fixtip2!(tree.d2, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip2!(tree.d1, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
 
 
 

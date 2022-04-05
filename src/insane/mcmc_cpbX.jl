@@ -390,7 +390,7 @@ function update_fs!(bix::Int64,
                     nX ::Float64)
 
   bi = idf[bix]
-  ξc  = Ξ[bix]
+  ξc = Ξ[bix]
 
   if it(bi) # is it terminal
     ξp, llr = fsbi_t(bi, ξc, λ, σx)
@@ -616,40 +616,6 @@ function tip_sims!(tree::sTpbX,
   end
 
   return tree, na, NaN
-end
-
-
-
-
-"""
-    _match_tip_x!(tree::T,
-                  xc  ::Float64,
-                  σx  ::Float64) where {T <: sTX}
-
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function _match_tip_x!(tree::T,
-                       xc  ::Float64,
-                       σx  ::Float64) where {T <: sTX}
-
-  if istip(tree)
-    xa   = xi(tree)
-    xp   = xf(tree)
-    σsrt = sqrt(e(tree)) * σx
-    # acceptance rate
-    acr  = ldnorm_bm(xp, xa, σsrt) - ldnorm_bm(xc, xa, σsrt)
-    setxf!(tree, xc)
-
-    return acr
-  else
-    if isfix(tree.d1)
-      acr = _match_tip_x!(tree.d1, xc, σx)
-    else
-      acr = _match_tip_x!(tree.d2, xc, σx)
-    end
-  end
-
-  return acr
 end
 
 

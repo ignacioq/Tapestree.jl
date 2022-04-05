@@ -18,26 +18,35 @@ Created 14 11 2021
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
+                       xp  ::Float64,
+                       σx  ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
 
-Make a `gbmpb` proposal for daughters from forwards simulated branch.
+Make a `gbmpbX` proposal for daughters from forwards simulated branch.
 """
 function _daughters_update!(ξ1  ::iTpbX,
                             ξ2  ::iTpbX,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
+                            xp  ::Float64,
+                            βλ  ::Float64,
+                            σx  ::Float64,
                             δt  ::Float64,
                             srδt::Float64)
   @inbounds begin
 
     λ1c  = lλ(ξ1)
     λ2c  = lλ(ξ2)
+    x1c  = xv(ξ1)
+    x2c  = xv(ξ2)
     l1   = lastindex(λ1c)
     l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
     λ2p  = Vector{Float64}(undef,l2)
+    x1p  = Vector{Float64}(undef,l1)
+    x2p  = Vector{Float64}(undef,l2)
     λi   = λ1c[1]
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
@@ -48,25 +57,23 @@ function _daughters_update!(ξ1  ::iTpbX,
 
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
+    bb!(xp1, xp, x1c[l1], σx, δt, fdt1, srδt)
+    bb!(xp2, xp, x2c[l2], σx, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    # log likelihood ratios (llrbm contains both λ and x llr)
+    llrbm1, llrpb1, ssrλ1, ssrx1 =
+      llr_gbm_b_sep(λ1p, λ1c, x1p, x1c, α, σλ, βλ, σx, δt, fdt1, srδt, false)
+    llrbm2, llrpb2, ssrλ2, ssrx1 =
+      llr_gbm_b_sep(λ2p, λ2c, x2p, x2c, α, σλ, βλ, σx, δt, fdt2, srδt, false)
 
-    # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
-
-    acr  = llrpb1 + llrpb2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr  = llrpb1 + llrpb2
+    llr  = llrbm1 + llrbm2 + acr  + λf - λi
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
+    ssrx = ssrx1 + ssrx2
   end
 
-  return llr, acr, drλ, ssrλ, λ1p, λ2p
+  return llr, acr, drλ, ssrλ, ssrx, λ1p, λ2p, x1p, x2p
 end
 
 
