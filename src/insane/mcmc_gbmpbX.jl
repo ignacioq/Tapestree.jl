@@ -316,22 +316,22 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
         # update ssλ with new drift `α`
         ssλ, nx = sss_gbm(Ξ, αc)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, it, p
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, it, p
+        #    return
+        # end
 
       # update diffusion rate
       elseif p === 2
 
         llc, prc, σλc = update_σ!(σλc, ssλ, nx, llc, prc, σλ_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, it, p
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, it, p
+        #    return
+        # end
 
       # update beta
       elseif p === 3
@@ -343,11 +343,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
 
         llc, prc, σxc = update_σx!(σxc, ssx, nx, llc, prc, σx_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, it, p
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, it, p
+        #    return
+        # end
 
       # update `x` bm
       elseif p === 5
@@ -358,11 +358,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
         llc, prc, ssx =
           update_x!(bix, Ξ, idf, σxc, llc, prc, ssx, δt, srδt, x0_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, it, p
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, it, p
+        #    return
+        # end
 
       # update gbm
       elseif p === 6
@@ -374,11 +374,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, it, p
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, it, p
+        #    return
+        # end
 
       # update by forward simulation
       else
@@ -391,11 +391,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
         sss_gbm(Ξ, αc, βλc)
         plot(couple(copy_Ξ(Ξ), idf, 1))
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
-        if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, it, p
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
+        # if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, it, p
+        #    return
+        # end
       end
     end
 
@@ -536,11 +536,11 @@ function fsbi_t(bi  ::iBffs,
     _sim_gbmpb_t(e(bi), lλ(ξc)[1], α, σλ, xv(ξc)[1], βλ, σx, δt, srδt, lc, lU, Iρi, 
       0, 1, 500, xist, xfst, est)
 
-  if isnan(llr) || nn >= 500
+  if isnan(llr)
     return t0, NaN
   end
 
-  # if fix node
+  # if fix `x` node
   if fx(bi)
     #get fix `x` and edge
     xc  = fixed_xt(ξc)
@@ -564,16 +564,13 @@ function fsbi_t(bi  ::iBffs,
     else
       fixtip2!(t0, na-wti+1, 0, xc, σx, δt, srδt)
     end
+  # if unfix `x` node
   else
     _fixrtip!(t0, na)
     acr = 0.0
   end
 
   if isfinite(acr) && lU <  acr + llr
-    if na < 1
-        @show "ter"
-    end
-
     setni!(bi, na) # set new ni
     return t0, llr
   end
@@ -1023,7 +1020,6 @@ function _crown_update_x!(ξi      ::T,
   m0, σx0 = x0_prior
   σx02    = σx0^2
 
-
   xc1     = xv(ξ1)
   xc2     = xv(ξ2)
   l1      = lastindex(xc1)
@@ -1147,7 +1143,11 @@ function _update_triad_x!(ξi  ::T,
   e2   = e(ξ2)
 
   # gibbs sampling
-  xn = trioprop(xa, x1, x2, ea, e1, e2, σx)
+  if iszero(ea) || iszero(e1) || iszero(e2)
+    xn = xc1[1]
+  else
+    xn = trioprop(xa, x1, x2, ea, e1, e2, σx)
+  end
 
   bb!(xpa, xa, xn, σx, δt, fdta, srδt)
   bb!(xp1, xn, x1, σx, δt, fdt1, srδt)

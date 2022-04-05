@@ -323,31 +323,31 @@ Sample conditional on number of species
 
 
 """
-    _sim_gbmpbX(t   ::Float64,
-                λt  ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                xt  ::Float64,
-                βλ  ::Float64,
-                σx  ::Float64,
-                δt  ::Float64,
-                srδt::Float64,
-                nn ::Int64,
-                nlim::Int64)
+    _sim_gbmpb(t   ::Float64,
+               λt  ::Float64,
+               α   ::Float64,
+               σλ  ::Float64,
+               xt  ::Float64,
+               βλ  ::Float64,
+               σx  ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               nn ::Int64,
+               nlim::Int64)
 
 Simulate `iTpbX` according to a pure-birth geometric Brownian motion.
 """
-function _sim_gbmpbX(t   ::Float64,
-                     λt  ::Float64,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     xt  ::Float64,
-                     βλ  ::Float64,
-                     σx  ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64,
-                     nn ::Int64,
-                     nlim::Int64)
+function _sim_gbmpb(t   ::Float64,
+                    λt  ::Float64,
+                    α   ::Float64,
+                    σλ  ::Float64,
+                    xt  ::Float64,
+                    βλ  ::Float64,
+                    σx  ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    nn ::Int64,
+                    nlim::Int64)
 
   if nn < nlim
 
@@ -481,8 +481,8 @@ function _sim_gbmpb_t(t   ::Float64,
             return iTpbX(), na, nn, NaN
           else
             push!(xist, xv[1], xv[1])
-            push!(xfst, xt1, xt1)
-            push!(est,  bt, xt1)
+            push!(xfst, xt1,   xt1)
+            push!(est,  bt,    bt)
 
             return iTpbX(iTpbX(0.0, false, δt, 0.0, 
                                Float64[λt1, λt1], Float64[xt1, xt1]),
@@ -501,7 +501,7 @@ function _sim_gbmpb_t(t   ::Float64,
           else
             push!(xist, xv[1])
             push!(xfst, xt1)
-            push!(est, bt)
+            push!(est,  bt)
 
             return iTpbX(bt, false, δt, t, λv, xv), na, nn, nlr
           end
@@ -886,13 +886,5 @@ function _sim_gbmpb_it(t   ::Float64,
 end
 
 
-
-
-"""
-    divev(λ::Float64, δt::Float64)
-
-Return true if diversification event.
-"""
-divev(λ::Float64, δt::Float64) = @fastmath rand() < λ*δt
 
 

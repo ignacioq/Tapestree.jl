@@ -449,16 +449,12 @@ function _sim_gbmpb_t(t   ::Float64,
           else
             nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
           end
-          if nlr >= lr
-            return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                        iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                        bt, false, δt, t, λv), na, nn, nlr
-          elseif lU < nlr
-            return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                        iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                        bt, false, δt, t, λv), na, nn, nlr
-          else
+          if nlr < lr && lU >= nlr
             return iTpb(), na, nn, NaN
+          else
+            return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                        iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
+                        bt, false, δt, t, λv), na, nn, nlr
           end
         else
           na += 1
