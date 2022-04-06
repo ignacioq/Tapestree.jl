@@ -409,24 +409,24 @@ end
 
 
 """
-    _sim_gbmpbX_t(t   ::Float64,
-                  λt  ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  xt  ::Float64,
-                  βλ  ::Float64,
-                  σx  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64,
-                  lr  ::Float64,
-                  lU  ::Float64,
-                  Iρi ::Float64,
-                  na  ::Int64,
-                  nn  ::Int64,
-                  nlim::Int64,
-                  xist::Vector{Float64},
-                  xfst::Vector{Float64},
-                  est ::Vector{Float64})
+    _sim_gbmpb_t(t   ::Float64,
+                 λt  ::Float64,
+                 α   ::Float64,
+                 σλ  ::Float64,
+                 xt  ::Float64,
+                 βλ  ::Float64,
+                 σx  ::Float64,
+                 δt  ::Float64,
+                 srδt::Float64,
+                 lr  ::Float64,
+                 lU  ::Float64,
+                 Iρi ::Float64,
+                 na  ::Int64,
+                 nn  ::Int64,
+                 nlim::Int64,
+                 xist::Vector{Float64},
+                 xfst::Vector{Float64},
+                 est ::Vector{Float64})
 
 Simulate `iTpbX` according to a pure-birth geometric Brownian motion for
 terminal branches.
@@ -673,8 +673,8 @@ function _sim_gbmpb_it(nsδt::Float64,
                        nn  ::Int64,
                        nlim::Int64)
 
-  λv = Float64[λt]
   xv = Float64[xt]
+  λv = Float64[λt]
   bt = 0.0
 
   if t <= nsδt
@@ -704,12 +704,12 @@ function _sim_gbmpb_it(nsδt::Float64,
 
   t  -= nsδt
   bt += nsδt
-
   srnsδt = sqrt(nsδt)
   xt1 = rnorm(xt, srnsδt*σx)
   λt1 = rnorm(λt + (α + βλ*xt)*nsδt, srnsδt*σλ)
   push!(λv, λt1)
   push!(xv, xt1)
+
   λm  = exp(0.5*(λt + λt1))
 
   if divev(λm, nsδt)

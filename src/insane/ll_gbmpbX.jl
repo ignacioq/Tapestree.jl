@@ -11,36 +11,6 @@ Created 03 09 2020
 
 
 
-"""
-    llik_gbm(tree::iTpbX,
-             α   ::Float64,
-             σλ  ::Float64,
-             βλ  ::Float64,
-             σx  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
-
-Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
-"""
-function llik_gbm(tree::iTpbX,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  βλ  ::Float64,
-                  σx  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
-
-  if istip(tree)
-    ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
-  else
-    ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)                      +
-    llik_gbm(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
-  end
-end
-
-
-
 
 """
     llik_gbm(Ξ   ::Vector{iTpbX},
@@ -76,6 +46,38 @@ function llik_gbm(Ξ   ::Vector{iTpbX},
   end
 
   return ll
+end
+
+
+
+
+
+"""
+    llik_gbm(tree::iTpbX,
+             α   ::Float64,
+             σλ  ::Float64,
+             βλ  ::Float64,
+             σx  ::Float64,
+             δt  ::Float64,
+             srδt::Float64)
+
+Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
+"""
+function llik_gbm(tree::iTpbX,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  βλ  ::Float64,
+                  σx  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64)
+
+  if istip(tree)
+    ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
+  else
+    ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true) +
+    llik_gbm(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)                      +
+    llik_gbm(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
+  end
 end
 
 
