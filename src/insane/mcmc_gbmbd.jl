@@ -792,7 +792,7 @@ end
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_gbm!(bix  ::Int64,
-                     Ξ    ::Vector{iTbd},
+                     Ξ    ::Vector{T},
                      idf  ::Vector{iBffs},
                      α    ::Float64,
                      σλ   ::Float64,
@@ -806,7 +806,7 @@ function update_gbm!(bix  ::Int64,
                      δt   ::Float64,
                      srδt ::Float64,
                      lλxpr::Float64,
-                     lμxpr::Float64)
+                     lμxpr::Float64) where {T <: iTbdU}
 
   @inbounds begin
     ξi   = Ξ[bix]

@@ -286,7 +286,7 @@ end
 
 Do `gbm-bd` updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTbd,
+function _update_gbm!(tree::T,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -296,7 +296,7 @@ function _update_gbm!(tree::iTbd,
                       ssμ ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
-                      ter ::Bool)
+                      ter ::Bool) where {T <: iTbdU}
 
   if def1(tree)
     llc, dλ, ssλ, ssμ =

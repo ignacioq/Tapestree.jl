@@ -305,7 +305,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
              ldnorm_bm(lμvi1, lμvi, srfdt*σμ)                        -
              fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1))) +
              ldnorm_bm(xvi1, xvi, srfdt*σx)
-      ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
+      ssλ += (lλvi1 - lλvi - (α + βλ*xvi)*fdt)^2/(2.0*fdt)
       ssμ += (lμvi1 - lμvi)^2/(2.0*fdt)
       ssx += (xvi1 - xvi)^2/(2.0*fdt)
       nx  += 1.0
@@ -398,8 +398,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     # overall
     llrλ  *= (-0.5/((σλ*srδt)^2))
     llrμ  *= (-0.5/((σμ*srδt)^2))
-    llrbm  = llrλ + llrμ
-    llrbm += llrx * (-0.5/((σx*srδt)^2))
+    llrbm  = llrλ + llrμ + llrx * (-0.5/((σx*srδt)^2))
     llrbd *= (-δt)
 
     lλpi1 = lλp[nI+2]
