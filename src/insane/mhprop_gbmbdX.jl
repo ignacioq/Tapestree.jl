@@ -46,12 +46,16 @@ function _daughters_update!(ξ1  ::T,
     λ2c  = lλ(ξ2)
     μ1c  = lμ(ξ1)
     μ2c  = lμ(ξ2)
+    x1c  = xv(ξ1)
+    x2c  = xv(ξ2)
     l1   = lastindex(λ1c)
     l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
     λ2p  = Vector{Float64}(undef,l2)
     μ1p  = Vector{Float64}(undef,l1)
     μ2p  = Vector{Float64}(undef,l2)
+    x1p  = Vector{Float64}(undef,l1)
+    x2p  = Vector{Float64}(undef,l2)
     λi   = λ1c[1]
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
@@ -70,10 +74,10 @@ function _daughters_update!(ξ1  ::T,
 
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1, ssrx1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, βλ, σx, 
+      llr_gbm_b_sep(λ1p, μ1p, x1p, λ1c, μ1c, x1c, α, σλ, σμ, βλ, σx, 
         δt, fdt1, srδt, false, false)
     llrbm2, llrbd2, ssrλ2, ssrμ2, ssrx2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, βλ, σx, 
+      llr_gbm_b_sep(λ1p, μ1p, x1p, λ1c, μ1c, x1c, α, σλ, σμ, βλ, σx, 
         δt, fdt2, srδt, false, false)
 
     acr  = llrbd1 + llrbd2

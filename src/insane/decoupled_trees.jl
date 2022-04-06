@@ -184,6 +184,82 @@ end
 
 
 """
+     make_Ξ(idf ::Vector{iBffs},
+            xr  ::Vector{Float64},
+            lλa ::Float64,
+            lμa ::Float64,
+            α   ::Float64,
+            σλ  ::Float64,
+            σμ  ::Float64,
+            σx  ::Float64,
+            δt  ::Float64,
+            srδt::Float64,
+            ::Type{iTbdX})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                xr  ::Vector{Float64},
+                lλa ::Float64,
+                lμa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                σx  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTbdX})
+
+  lλi = lλa
+  lμi = lμa
+  Ξ   = iTbdX[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    paix = iszero(paix) ? 1 : paix
+    xii  = xr[paix]
+    xfi  = xr[i]
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+      lμi = μt(idf[paix])
+    end
+
+    if iszero(et)
+      lλv  = Float64[lλi, lλi]
+      lμv  = Float64[lμi, lμi]
+      xv   = Float64[xii, xfi]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλi,   α, σλ, δt, fdti, srδt, nt)
+      lμv = bm(lμi, 0.0, σμ, δt, fdti, srδt, nt)
+      xv  = bb(xii, xfi, σx, δt, fdti, srδt, nt)
+      l   = nt + 2
+    end
+    setλt!(idfi, lλv[l])
+    setμt!(idfi, lμv[l])
+    push!(λst(idfi), lλv[l])
+    push!(μst(idfi), lμv[l])
+    push!(Ξ, iTbdX(et, δt, fdti, false, true, lλv, lμv, xv))
+  end
+
+  return Ξ
+end
+
+
+
+
+
+"""
     sTbd!(Ξ::Vector{sTbd}, tree::sT_label)
 
 Make edge tree `Ξ` from the recursive tree.
@@ -737,6 +813,28 @@ function sss_gbm(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTX}
   end
 
   return ssλ, ssx, n
+end
+
+
+
+
+"""
+    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+
+Returns the standardized sum of squares for a `iTX` according
+to GBM lambda and X.
+"""
+function sss_gbm(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTbdX}
+
+  n   = 0.0
+  ssλ = 0.0
+  ssμ = 0.0
+  ssx = 0.0
+  for ξi in Ξ
+    ssλ, ssμ, ssx, n = _sss_gbm(ξi, α, βλ, ssλ, ssμ, ssx, n)
+  end
+
+  return ssλ, ssμ, ssx, n
 end
 
 

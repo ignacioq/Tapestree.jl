@@ -440,25 +440,23 @@ mutable struct iTbdX <: iT
         dt ::Float64,
         fdt::Float64,
         iμ ::Bool,
-        iψ ::Bool,
         fx ::Bool,
         lλ ::Array{Float64,1},
         lμ ::Array{Float64,1},
         xv ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
-      x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x.xv = xv; x)
+      x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x.xv = xv; x)
   iTbdX(d1 ::iTbdX,
         d2 ::iTbdX,
         e  ::Float64,
         dt ::Float64,
         fdt::Float64,
         iμ ::Bool,
-        iψ ::Bool,
         fx ::Bool,
         lλ ::Array{Float64,1},
         lμ ::Array{Float64,1},
         xv ::Array{Float64,1}) =
-    new(d1, d2, e, dt, fdt, iμ, iψ, fx, lλ, lμ, xv)
+    new(d1, d2, e, dt, fdt, iμ, fx, lλ, lμ, xv)
 end
 
 
@@ -466,9 +464,9 @@ end
 function Base.show(io::IO, t::iTbdX)
   nt = ntips(t)
 
-  print(io, "insane trait gbm-bd tree with", 
+  print(io, "insane trait gbm-bd tree with ", 
     nt , " tip",  (isone(nt) ? "" : "s" ), 
-    ", (", ntipsextinct(t)," extinct)")
+    " (", ntipsextinct(t)," extinct)")
 end
 
 

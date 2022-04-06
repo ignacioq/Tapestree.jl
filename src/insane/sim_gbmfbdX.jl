@@ -461,8 +461,8 @@ function _sim_gbmfbd(t   ::Float64,
             nf += 1
             return iTfbdX(iTfbdX(0.0, δt, 0.0, false, false, false,
                                Float64[λt1, λt1], Float64[μt1, μt1],
-                               Float64[xt1, xt1])
-                         bt, δt, t, false, true, false, λv, μv, xv), na, nf, nn
+                               Float64[xt1, xt1]),
+                          bt, δt, t, false, true, false, λv, μv, xv), na, nf, nn
           end
         end
 

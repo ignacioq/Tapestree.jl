@@ -417,7 +417,7 @@ function _sss_gbm(tree::T,
                   βλ  ::Float64,
                   ssλ ::Float64,
                   ssx ::Float64,
-                  n   ::Float64) where {T <: iT}
+                  n   ::Float64) where {T <: iTX}
 
   ssλ0, ssx0, n0 = _sss_gbm_b(lλ(tree), xv(tree), α, βλ, dt(tree), fdt(tree))
 

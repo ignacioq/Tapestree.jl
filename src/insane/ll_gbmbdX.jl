@@ -197,11 +197,11 @@ function llik_gbm_ss(tree::iTbdX,
                      srδt::Float64)
 
   if istip(tree)
-    ll, dλ, ssλ, ssμ, nx =
+    ll, dλ, ssλ, ssμ, ssx, nx =
       ll_gbm_b_ss(lλ(tree), lμ(tree), xv(tree), α, σλ, σμ, βλ, σx, 
         δt, fdt(tree), srδt, false, isextinct(tree))
   else
-    ll, dλ, ssλ, ssμ, nx =
+    ll, dλ, ssλ, ssμ, ssx, nx =
       ll_gbm_b_ss(lλ(tree), lμ(tree), xv(tree), α, σλ, σμ, βλ, σx, 
         δt, fdt(tree), srδt, true, false)
 
@@ -319,7 +319,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
       ll += lμvi1
     end
   end
-  return ll, dλ, ssλ, ssμ, ssx nx
+  return ll, dλ, ssλ, ssμ, ssx, nx
 end
 
 
@@ -328,9 +328,9 @@ end
 """
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lμp ::Array{Float64,1},
+                  xp  ::Array{Float64,1},
                   lλc ::Array{Float64,1},
                   lμc ::Array{Float64,1},
-                  xp  ::Array{Float64,1},
                   xc  ::Array{Float64,1},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -348,9 +348,9 @@ separately (for gbm and bd).
 """
 function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        lμp ::Array{Float64,1},
+                       xp  ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        lμc ::Array{Float64,1},
-                       xp  ::Array{Float64,1},
                        xc  ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,
@@ -445,38 +445,42 @@ end
 
 
 
-
-
 """
-    _sss_gbm(tree::iTbdX,
+    _sss_gbm(tree::T,
              α   ::Float64,
+             βλ  ::Float64,
              ssλ ::Float64,
              ssμ ::Float64,
-             n   ::Float64)
+             ssx ::Float64,
+             n   ::Float64) where {T <: iTX}
 
 Returns the standardized sum of squares a `iT` according
 to `gbm-bd` for a `σ` proposal.
 """
 function _sss_gbm(tree::T,
                   α   ::Float64,
+                  βλ  ::Float64,
                   ssλ ::Float64,
                   ssμ ::Float64,
-                  n   ::Float64) where {T <: iTbdXU}
+                  ssx ::Float64,
+                  n   ::Float64) where {T <: iTX}
 
-  ssλ0, ssμ0, n0 = _sss_gbm_b(lλ(tree), lμ(tree), α, dt(tree), fdt(tree))
+  ssλ0, ssμ0, ssx0, n0 = _sss_gbm_b(lλ(tree), lμ(tree), xv(tree), α, βλ, 
+    dt(tree), fdt(tree))
 
   ssλ += ssλ0
   ssμ += ssμ0
+  ssx += ssx0
   n   += n0
 
   if def1(tree)
-    ssλ, ssμ, n = _sss_gbm(tree.d1, α, ssλ, ssμ, n)
+    ssλ, ssμ, ssx, n = _sss_gbm(tree.d1, α, βλ, ssλ, ssμ, ssx, n)
     if def2(tree)
-      ssλ, ssμ, n = _sss_gbm(tree.d2, α, ssλ, ssμ, n)
+      ssλ, ssμ, ssx, n = _sss_gbm(tree.d2, α, βλ, ssλ, ssμ, ssx, n)
     end
   end
 
-  return ssλ, ssμ, n
+  return ssλ, ssμ, ssx, n
 end
 
 
@@ -485,7 +489,9 @@ end
 """
     _sss_gbm_b(lλv::Array{Float64,1},
                lμv::Array{Float64,1},
+               xv ::Array{Float64,1},
                α  ::Float64,
+               βλ ::Float64,
                δt ::Float64,
                fdt::Float64)
 
@@ -494,7 +500,9 @@ for `gbmbd`.
 """
 function _sss_gbm_b(lλv::Array{Float64,1},
                     lμv::Array{Float64,1},
+                    xv ::Array{Float64,1},
                     α  ::Float64,
+                    βλ ::Float64,
                     δt ::Float64,
                     fdt::Float64)
 
@@ -504,31 +512,37 @@ function _sss_gbm_b(lλv::Array{Float64,1},
 
     ssλ  = 0.0
     ssμ  = 0.0
+    ssx = 0.0
     @avx for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lμvi  = lμv[i]
       lλvi1 = lλv[i+1]
       lμvi1 = lμv[i+1]
-      ssλ  += (lλvi1 - lλvi - α*δt)^2
+      xvi   = xv[i]
+      ssλ  += (lλvi1 - lλvi - (α + βλ*xvi)*δt)^2
       ssμ  += (lμvi1 - lμvi)^2
+      ssx  += (xv[i+1] - xvi)^2
     end
 
     # add to global likelihood
     invt = 1.0/(2.0*δt)
     ssλ *= invt
     ssμ *= invt
+    ssx *= invt
 
     # add final non-standard `δt`
     if fdt > 0.0
       invt = 1.0/(2.0*fdt)
-      ssλ += invt * (lλv[nI+2] - lλv[nI+1] - α*fdt)^2
+      xvi  = xv[nI+1]
+      ssλ += invt * (lλv[nI+2] - lλv[nI+1] - (α + βλ*xvi)*fdt)^2
       ssμ += invt * (lμv[nI+2] - lμv[nI+1])^2
+      ssx += (xv[nI+2] - xvi)^2/(2.0*fdt)
       n = Float64(nI + 1)
     else
       n = Float64(nI)
     end
   end
-  return ssλ, ssμ, n
+  return ssλ, ssμ, ssx, n
 end
 
 

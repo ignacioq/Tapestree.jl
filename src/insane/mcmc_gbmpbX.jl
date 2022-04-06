@@ -162,7 +162,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpbX},
         prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
         logdnorm(αc,  α_prior[1], α_prior[2]^2)       +
-        logdnorm(βλc, α_prior[1], α_prior[2]^2)       +
+        logdnorm(βλc, βλ_prior[1], βλ_prior[2]^2)       +
         logdinvgamma(σxc^2, σx_prior[1], σx_prior[2])
 
   L            = treelength(Ξ)       # tree length
@@ -231,7 +231,6 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpbX},
             ssλ, ssx, nx, L, δt, srδt)
 
       end
-
     end
 
     next!(pbar)
@@ -318,7 +317,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, p
+        #    t ll0, llc, it, p
         #    return
         # end
 
@@ -387,9 +386,6 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpbX},
         llc, dλ, ssλ, ssx, nx, L =
           update_fs!(bix, Ξ, idf, αc, σλc, βλc, σxc, llc, dλ, 
             ssλ, ssx, nx, L, δt, srδt)
-
-        sss_gbm(Ξ, αc, βλc)
-        plot(couple(copy_Ξ(Ξ), idf, 1))
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, βλc, σxc, δt, srδt) - lλ(Ξ[1])[1] + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-4)
@@ -501,7 +497,7 @@ end
 
 """
     fsbi_t(bi  ::iBffs,
-           λ0  ::Float64,
+           ξc  ::iTpbX,
            α   ::Float64,
            σλ  ::Float64,
            βλ  ::Float64,
@@ -583,10 +579,13 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
+           ξc  ::iTpbX,
            ξ1  ::iTpbX,
            ξ2  ::iTpbX,
            α   ::Float64,
            σλ  ::Float64,
+           βλ  ::Float64,
+           σx  ::Float64,
            δt  ::Float64,
            srδt::Float64)
 
@@ -689,16 +688,12 @@ function fsbi_i(bi  ::iBffs,
     if lU < acr
       na -= 1
 
-      if na < 0
-        @show "int"
-      end
-
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       setni!( bi, na)                       # set new ni
       setλt!( bi, λf)                       # set new λt
       setλst!(bi, λsp)                      # set new λst
-      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(λ1c, 1, λ2p, 1, l2) # set new daughter 2 λ vector
       unsafe_copyto!(xv(ξ1), 1, x1p, 1, l1) # set new daughter 1 x vector
       unsafe_copyto!(xv(ξ2), 1, x2p, 1, l2) # set new daughter 2 x vector
 

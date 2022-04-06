@@ -686,8 +686,8 @@ function fsbi_i(bi  ::iBffs,
       setni!(bi,  na)                       # set new ni
       setλt!(bi,  λf)                       # set new λt
       setλst!(bi, λsp)                      # set new λst
-      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(λ2c, 1, λ2p, 1, l2) # set new daughter 2 λ vector
 
       return t0, llr, drλ, ssrλ, Σrλ
     else

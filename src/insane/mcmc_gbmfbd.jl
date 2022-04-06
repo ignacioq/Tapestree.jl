@@ -815,8 +815,8 @@ function fsbi_i(bi  ::iBffs,
       setλt!(bi, λf)                        # set new λt
       setλst!(bi, λsp)                      # set new λst
       setμst!(bi, μsp)                      # set new μst
-      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
+      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(μ1c, 1, μ1p, 1, l1) # set new daughter 1 μ vector
 
       return t0, llr, drλ, ssrλ, ssrμ
     end
@@ -966,10 +966,10 @@ function fsbi_i(bi  ::iBffs,
       setλt!(bi,  λf)                        # set new λt
       setλst!(bi, λsp)                      # set new λst
       setμst!(bi, μsp)                      # set new μst
-      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
-      unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
-      unsafe_copyto!(lμ(ξ2), 1, μ2p, 1, l2) # set new daughter 2 μ vector
+      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(λ2c, 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      unsafe_copyto!(μ1c, 1, μ1p, 1, l1) # set new daughter 1 μ vector
+      unsafe_copyto!(μ2c, 1, μ2p, 1, l2) # set new daughter 2 μ vector
 
       return t0, llr, drλ, ssrλ, ssrμ
     end
