@@ -351,8 +351,8 @@ function _sim_gbmpb(t   ::Float64,
 
   if nn < nlim
 
-    λv = Float64[λt]
     xv = Float64[xt]
+    λv = Float64[λt]
     bt = 0.0
 
     while true
