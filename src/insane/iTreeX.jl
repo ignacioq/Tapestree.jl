@@ -580,7 +580,7 @@ function Base.show(io::IO, t::iTfbdX)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane trait gbm-bd fossil tree with", 
+  print(io, "insane trait gbm-bd fossil tree with ", 
     nt , " tip",  (isone(nt) ? "" : "s" ), 
     ", (", ntipsextinct(t)," extinct) and ", 
     nf," fossil", (isone(nf) ? "" : "s" ))
@@ -656,7 +656,7 @@ iTX = Union{iTpbX, iTceX, iTbdX, iTfbdX}
 
 iTf = Union{sTfbd, sTfbdX, iTfbd}
 """
-iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd}
+iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd, iTfbdX}
 
 
 

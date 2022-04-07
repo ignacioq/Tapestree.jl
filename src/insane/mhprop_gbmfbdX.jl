@@ -13,32 +13,40 @@ Created 27 05 2020
 
 
 """
-    _daughters_update!(ξ1  ::iTfbd,
-                       λf  ::Float64,
-                       μf  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+    _daughter_update!(ξ1  ::iTfbdX,
+                      λf  ::Float64,
+                      μf  ::Float64,
+                      α   ::Float64,
+                      σλ  ::Float64,
+                      σμ  ::Float64,
+                      xp  ::Float64,
+                      βλ  ::Float64,
+                      σx  ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64)
 
 Make a `gbm-bd` proposal for daughters from forwards simulated branch.
 """
-function _daughter_update!(ξ1  ::iTfbd,
+function _daughter_update!(ξ1  ::iTfbdX,
                            λf  ::Float64,
                            μf  ::Float64,
                            α   ::Float64,
                            σλ  ::Float64,
                            σμ  ::Float64,
+                           xp  ::Float64,
+                           βλ  ::Float64,
+                           σx  ::Float64,
                            δt  ::Float64,
                            srδt::Float64)
   @inbounds begin
 
     λ1c  = lλ(ξ1)
     μ1c  = lμ(ξ1)
+    x1c  = xv(ξ1)
     l1   = lastindex(λ1c)
     λ1p  = Vector{Float64}(undef,l1)
     μ1p  = Vector{Float64}(undef,l1)
+    x1p  = Vector{Float64}(undef,l1)
     λi   = λ1c[1]
     λ1   = λ1c[l1]
     μi   = μ1c[1]
@@ -47,10 +55,12 @@ function _daughter_update!(ξ1  ::iTfbd,
     fdt1 = fdt(ξ1)
 
     bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
+    bb!(x1p, xp, x1c[l1], σx, δt, fdt1, srδt)
 
     # log likelihood ratios
     llrbm, llrbd, ssrλ, ssrμ, ssrx =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
+      llr_gbm_b_sep(λ1p, μ1p, x1p, λ1c, μ1c, x1c, α, σλ, σμ, βλ, σx, 
+        δt, fdt1, srδt, false, false)
 
     acr  = llrbd
     llr  = llrbm + acr
@@ -64,7 +74,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTfbd,
+    _update_gbm!(tree::iTfbdX,
                  α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64,
@@ -78,7 +88,7 @@ end
 
 Do `gbm-bd` updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTfbd,
+function _update_gbm!(tree::iTfbdX,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -207,7 +217,7 @@ end
 
 
 """
-    update_duo!(tree::iTfbd,
+    update_duo!(tree::iTfbdX,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -220,7 +230,7 @@ end
 
 Make a `gbm` trio proposal.
 """
-function update_duo!(tree::iTfbd,
+function update_duo!(tree::iTfbdX,
                      α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,

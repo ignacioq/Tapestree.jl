@@ -258,6 +258,94 @@ end
 
 
 
+"""
+     make_Ξ(idf ::Vector{iBffs},
+            xr  ::Vector{Float64},
+            lλa ::Float64,
+            lμa ::Float64,
+            α   ::Float64,
+            σλ  ::Float64,
+            σμ  ::Float64,
+            σx  ::Float64,
+            δt  ::Float64,
+            srδt::Float64,
+            ::Type{iTfbdX})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                xr  ::Vector{Float64},
+                lλa ::Float64,
+                lμa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                σx  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTfbdX})
+
+  lλi = lλa
+  lμi = lμa
+  Ξ   = iTfbdX[]
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    paix = iszero(paix) ? 1 : paix
+    xii  = xr[paix]
+    xfi  = xr[i]
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+      lμi = μt(idf[paix])
+    end
+
+    if iszero(et)
+      lλv  = Float64[lλi, lλi]
+      lμv  = Float64[lμi, lμi]
+      xv   = Float64[xii, xfi]
+      fdti = 0.0
+      l    = 2
+    else
+      nt, fdti = divrem(et, δt, RoundDown)
+      nt = Int64(nt)
+
+      if iszero(fdti)
+        fdti = δt
+        nt  -= 1
+      end
+
+      lλv = bm(lλi,   α, σλ, δt, fdti, srδt, nt)
+      lμv = bm(lμi, 0.0, σμ, δt, fdti, srδt, nt)
+      xv  = bb(xii, xfi, σx, δt, fdti, srδt, nt)
+      l   = nt + 2
+    end
+
+    if it(idfi) && isfossil(idfi)
+      lλl = lλv[l]
+      lμl = lμv[l]
+      xvl = xv[l]
+      push!(Ξ, iTfbdX(
+                 iTfbdX(1e-10, δt, 1e-10, true, false, false, 
+                   Float64[lλl, rnorm(lλl + α*1e-10, 1e-5*σλ)], 
+                   Float64[lμl, rnorm(lμl,           1e-5*σμ)],
+                   Float64[xvl, rnorm(xvl,           1e-5*σx)]),
+                 et, δt, fdti, false, true, true, lλv, lμv, xv))
+    else
+      push!(Ξ, iTfbdX(et, δt, fdti, false, isfossil(idfi), true, lλv, lμv, xv))
+    end
+
+    setλt!(idfi, lλv[l])
+    setμt!(idfi, lμv[l])
+    push!(λst(idfi), lλv[l])
+    push!(μst(idfi), lμv[l])
+  end
+
+  return Ξ
+end
+
+
+
 
 """
     sTbd!(Ξ::Vector{sTbd}, tree::sT_label)

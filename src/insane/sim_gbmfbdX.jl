@@ -446,11 +446,11 @@ function _sim_gbmfbd(t   ::Float64,
             nn += 1
             na += 2
             return iTfbdX(iTfbdX(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1],
-                               Float64[xt1, xt1]),
-                         iTfbdX(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1],
-                               Float64[xt1, xt1]),
+                                 Float64[λt1, λt1], Float64[μt1, μt1],
+                                 Float64[xt1, xt1]),
+                          iTfbdX(0.0, δt, 0.0, false, false, false,
+                                 Float64[λt1, λt1], Float64[μt1, μt1],
+                                 Float64[xt1, xt1]),
                          bt, δt, t, false, false, false, λv, μv, xv), na, nf, nn
           # if extinction
           elseif μevent(μm, ψ)
@@ -460,8 +460,8 @@ function _sim_gbmfbd(t   ::Float64,
             na += 1
             nf += 1
             return iTfbdX(iTfbdX(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1],
-                               Float64[xt1, xt1]),
+                                 Float64[λt1, λt1], Float64[μt1, μt1],
+                                 Float64[xt1, xt1]),
                           bt, δt, t, false, true, false, λv, μv, xv), na, nf, nn
           end
         end
@@ -610,12 +610,12 @@ function _sim_gbmfbd_t(t   ::Float64,
               return iTfbdX(iTfbdX(0.0, δt, 0.0, false, false, false,
                                    Float64[λt1, λt1], Float64[μt1, μt1],
                                    Float64[xt1, xt1]),
-                           iTfbdX(0.0, δt, 0.0, false, false, false,
-                                  Float64[λt1, λt1], Float64[μt1, μt1],
-                                  Float64[xt1, xt1]),
-                           bt, δt, t, false, false, false, λv, μv, xv), na, nn, nlr
+                            iTfbdX(0.0, δt, 0.0, false, false, false,
+                                   Float64[λt1, λt1], Float64[μt1, μt1],
+                                   Float64[xt1, xt1]),
+                            bt, δt, t, false, false, false, λv, μv, xv), 
+                     na, nn, nlr
             end
-
           # if extinction
           elseif μevent(μm, ψ)
             return iTfbdX(bt, δt, t, true, false, false, λv, μv, xv), na, nn, lr
@@ -1172,6 +1172,7 @@ function _sim_gbmfbd_it(t   ::Float64,
         end
       end
 
+      xt = xt1
       λt = λt1
       μt = μt1
     end
