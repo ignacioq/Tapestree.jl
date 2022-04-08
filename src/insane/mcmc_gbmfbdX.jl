@@ -423,11 +423,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
         # update ssλ with new drift `α`
         ssλ, ssμ, nx = sss_gbm(Ξ, αc)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, p, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, p, Ξ
+        #    return
+        # end
 
       # σλ & σμ update
       elseif p === 2
@@ -436,22 +436,22 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nx,
             llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, p, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, p, Ξ
+        #    return
+        # end
 
       # psi update
       elseif p === 3
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, p, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, p, Ξ
+        #    return
+        # end
 
       # update beta
       elseif p === 4
@@ -463,11 +463,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
 
         llc, prc, σxc = update_σx!(σxc, ssx, nx, llc, prc, σx_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, p, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, p, Ξ
+        #    return
+        # end
 
       # update `x` bm
       elseif p === 6
@@ -478,11 +478,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
         llc, prc, ssx =
           update_x!(bix, Ξ, idf, σxc, llc, prc, ssx, δt, srδt, x0_prior)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, p, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, p, Ξ
+        #    return
+        # end
 
       # gbm update
       elseif p === 7
@@ -495,11 +495,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
             crown, δt, srδt, lλxpr, lμxpr)
 
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, p, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, p, Ξ
+        #    return
+        # end
 
       # forward simulation update
       else
@@ -510,13 +510,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, llc, dλ, 
             ssλ, ssμ, ssx, nx, L, δt, srδt)
 
-        sss_gbm(Ξ, αc, βλc)  #sum squares in λ and μ and X
-
-        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-         if !isapprox(ll0, llc, atol = 1e-4)
-           @show ll0, llc, i, p, Ξ
-           return
-        end
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        #  if !isapprox(ll0, llc, atol = 1e-4)
+        #    @show ll0, llc, i, p, Ξ
+        #    return
+        # end
 
       end
     end
