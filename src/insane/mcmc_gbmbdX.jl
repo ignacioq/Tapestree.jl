@@ -152,13 +152,18 @@ end
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
+                    x0_prior::NTuple{2,Float64},
+                    βλ_prior::NTuple{2,Float64},
+                    σx_prior::NTuple{2,Float64},
                     nburn   ::Int64,
-                    αc     ::Float64,
+                    αc      ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
+                    βλc     ::Float64,
+                    σxc     ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
-                    crown    ::Bool,
+                    crown    ::Int64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
@@ -644,24 +649,26 @@ function fsbi_t(bi  ::iBffs,
     end
     acr = log(acr)
 
-    # sample tip
-    wti = sample(wp)
+    if isfinite(acr) && lU <  acr + llr
 
-    if wti <= div(na,2)
-      fixtip1!(t0, wti,      0, xc, σx, δt, srδt)
-    else
-      fixtip2!(t0, na-wti+1, 0, xc, σx, δt, srδt)
+      # sample tip
+      wti = sample(wp)
+      if wti <= div(na,2)
+        fixtip1!(t0, wti,      0, xc, σx, δt, srδt)
+      else
+        fixtip2!(t0, na-wti+1, 0, xc, σx, δt, srδt)
+      end
+
+      setni!(bi, na) # set new ni
+      return t0, llr
     end
   # if unfix `x` node
   else
-    _fixrtip!(t0, na)
-    acr = 0.0
-  end
-
-
-  if isfinite(acr) && lU <  acr + llr
-    setni!(bi, na) # set new ni
-    return t0, llr
+    if lU < llr
+      _fixrtip!(t0, na)
+      setni!(bi, na) # set new ni
+      return t0, llr
+    end
   end
 
   return t0, NaN
@@ -785,9 +792,7 @@ function fsbi_i(bi  ::iBffs,
   if lU < acr
 
      # fix sampled tip
-    lw = lastindex(wp)
-
-    if wti <= div(lw,2)
+    if wti <= div(na,2)
       fixtip1!(t0, wti, 0)
     else
       fixtip2!(t0, lw - wti + 1, 0)
@@ -871,7 +876,7 @@ function tip_sims!(tree::iTbdX,
         # simulate
         stree, na, nn, lr =
           _sim_gbmbd_it(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], α, σλ, σμ,
-            βλ, xv0[l], σx, δt, srδt, lr, lU, Iρi, na-1, nn, 500)
+            xv0[l], βλ, σx, δt, srδt, lr, lU, Iρi, na-1, nn, 500)
 
         if isnan(lr) || nn >= 500
           return tree, na, nn, NaN

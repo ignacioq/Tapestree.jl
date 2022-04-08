@@ -606,6 +606,13 @@ function fsbi_ft(bi::iBffs,
 
   lU = -randexp() # log-probability
 
+  ntp = na
+
+  # add sampling fraction
+  nac = ni(bi)                # current ni
+  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
   if fx(bi)
 
     xist = Float64[]
@@ -656,12 +663,6 @@ function fsbi_ft(bi::iBffs,
     _fixrtip!(t0, na)
   end
 
-  ntp = na
-
-  # add sampling fraction
-  nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr += Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
 
@@ -714,8 +715,6 @@ function fsbi_fi(bi::iBffs,
                  ψ ::Float64,
                  σx::Float64)
 
-  lU = -randexp() # log-probability
-
   if fx(bi)
 
     xist = Float64[]
@@ -743,7 +742,7 @@ function fsbi_fi(bi::iBffs,
     end
     acr = log(ap)
 
-    if isfinite(acr) && lU < acr
+    if isfinite(acr)
       wti = sample(wp)
 
       if wti <= div(na,2)
@@ -754,7 +753,8 @@ function fsbi_fi(bi::iBffs,
     else
       return t0, NaN, NaN
     end
-    xp = xc
+    xp  = xc
+    llr = 0.0
   # if not a fix node
   else
     t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, xi(ξc), σx, 0, 0, 1, 500)
@@ -762,20 +762,19 @@ function fsbi_fi(bi::iBffs,
     if na < 1 || nf > 0 || nn >= 500
       return t0, NaN, NaN
     end
+    xp = fixrtip!(t0, na, NaN)
+    # acceptance ration with respect to daughter
+    llr = lrdnorm_bm_x(xp, xi(ξ1), xf(ξ1), sqrt(e(ξ1))*σx)
 
     acr = 0.0
-    xp = fixrtip!(t0, na, NaN)
   end
 
-  # acceptance ration with respect to daughter
-  llr = lrdnorm_bm_x(xp, xi(ξ1), xf(ξ1), sqrt(e(ξ1))*σx)
-
-  ntp = na
+  lU = -randexp() # log-probability
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr += Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr + llr
 

@@ -530,9 +530,9 @@ function fsbi_ft(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
   lU = -randexp() # log-probability
 
   # add sampling fraction
-  nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr = Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  nac = ni(bi)                # current ni
+  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
 
@@ -587,9 +587,9 @@ function fsbi_fi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
   lU = -randexp() # log-probability
 
   # add sampling fraction
-  nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr = Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  nac = ni(bi)                # current ni
+  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
 

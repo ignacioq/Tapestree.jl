@@ -214,7 +214,8 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbd},
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
         logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
         logdunif(exp(λ0),          λa_prior[1], λa_prior[2])  +
-        logdunif(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])
+        logdunif(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])  +
+        logdgamma(ψc, ψ_prior[1], ψ_prior[2])
 
   lλxpr = log(λa_prior[2])
   lμxpr = log(μa_prior[2])
@@ -530,12 +531,10 @@ function update_fs!(bix ::Int64,
   else
     if isfossil(bi)
       ξp, llr, drλ, ssrλ, ssrμ =
-        fsbi_i(bi, ξc, Ξ[d1(bi)], lλ(ξc)[1], lμ(ξc)[1], 
-          α, σλ, σμ, ψ, δt, srδt)
+        fsbi_i(bi, ξc, Ξ[d1(bi)], α, σλ, σμ, ψ, δt, srδt)
     else
       ξp, llr, drλ, ssrλ, ssrμ =
-        fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], lλ(ξc)[1], lμ(ξc)[1], 
-          α, σλ, σμ, ψ, δt, srδt)
+        fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, σμ, ψ, δt, srδt)
     end
   end
 
@@ -648,17 +647,14 @@ function fsbi_t(bi  ::iBffs,
 
   lU = -randexp() # log-probability
 
-  # acceptance probability
-  acr  = log(Float64(ntp)/Float64(nt(bi)))
-
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  acr  = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
 
-    λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
+    _fixrtip!(t0, na) # fix random tip
 
     # simulate remaining tips until the present
     if na > 1
@@ -681,7 +677,6 @@ function fsbi_t(bi  ::iBffs,
         llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
         setni!(bi, na)       # set new ni
         setnt!(bi, ntp)      # set new nt
-        setλt!(bi, λf)       # set new λt
 
         return t0, llr
       end
@@ -698,8 +693,6 @@ end
     fsbi_i(bi  ::iBffs,
            ξc  ::iTfbd,
            ξ1  ::iTfbd,
-           λ0  ::Float64,
-           μ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
            σμ  ::Float64,
@@ -712,8 +705,6 @@ Forward simulation for fossil internal branch `bi`.
 function fsbi_i(bi  ::iBffs,
                 ξc  ::iTfbd,
                 ξ1  ::iTfbd,
-                λ0  ::Float64,
-                μ0  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -833,8 +824,6 @@ end
            ξc  ::iTfbd,
            ξ1  ::iTfbd,
            ξ2  ::iTfbd,
-           λ0  ::Float64,
-           μ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
            σμ  ::Float64,
@@ -848,8 +837,6 @@ function fsbi_i(bi  ::iBffs,
                 ξc  ::iTfbd,
                 ξ1  ::iTfbd,
                 ξ2  ::iTfbd,
-                λ0  ::Float64,
-                μ0  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
