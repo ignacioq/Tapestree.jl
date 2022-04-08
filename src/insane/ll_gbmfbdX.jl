@@ -217,7 +217,7 @@ function llik_gbm_ss(tree::iTfbdX,
   if def1(tree)
     if def2(tree)
       ll, dλ, ssλ, ssμ, ssx, nx =
-        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, βλ, σx, 
+        ll_gbm_b_ss(lλ(tree), lμ(tree), xv(tree), α, σλ, σμ, ψ, βλ, σx, 
           δt, fdt(tree), srδt, true, false, false)
       ll1, dλ1, ssλ1, ssμ1, ssx1, nx1 =
         llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, βλ, σx, δt, srδt)
@@ -231,7 +231,7 @@ function llik_gbm_ss(tree::iTfbdX,
       nx  += nx1  + nx2
     else
       ll, dλ, ssλ, ssμ, ssx, nx =
-        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, βλ, σx, 
+        ll_gbm_b_ss(lλ(tree), lμ(tree), xv(tree), α, σλ, σμ, ψ, βλ, σx, 
           δt, fdt(tree), srδt, false, false, true)
       ll1, dλ1, ssλ1, ssμ1, ssx1, nx1 =
         llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, βλ, σx, δt, srδt)
@@ -244,7 +244,7 @@ function llik_gbm_ss(tree::iTfbdX,
     end
   else
     ll, dλ, ssλ, ssμ, ssx, nx =
-      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, βλ, σx, 
+      ll_gbm_b_ss(lλ(tree), lμ(tree), xv(tree), α, σλ, σμ, ψ, βλ, σx, 
         δt, fdt(tree), srδt, false, isextinct(tree), isfossil(tree))
   end
 
@@ -335,6 +335,8 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
     if fdt > 0.0
       lλvi  = lλv[nI+1]
       lμvi  = lμv[nI+1]
+      xvi   = x[nI+1]
+      xvi1  = x[nI+2]
       srfdt = sqrt(fdt)
       ll  += ldnorm_bm(lλvi1, lλvi + (α + βλ*xvi)*fdt, srfdt*σλ)        +
              ldnorm_bm(lμvi1, lμvi, srfdt*σμ)                           -

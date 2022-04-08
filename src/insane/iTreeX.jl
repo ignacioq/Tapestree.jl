@@ -670,6 +670,13 @@ iTbdU = Union{iTbd, iTfbd, iTbdX, iTfbdX}
 
 
 
+"""
+    Union type for gbm-bd data
+
+iTbdU = Union{iTbd, iTfbd}
+"""
+iTbdUX = Union{iTbdX, iTfbdX}
+
 
 
 #=

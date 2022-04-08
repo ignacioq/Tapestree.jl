@@ -1490,6 +1490,28 @@ end
 
 
 
+
+"""
+    fossil_xt(tree::T)
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function fossil_xt(tree::iTfbdX)
+
+  if isfossil(tree)
+    return xv(tree)[end]
+  elseif isfix(tree.d1)
+    xt = fossil_xt(tree.d1)
+  else
+    xt = fossil_xt(tree.d2)
+  end
+
+  return xt
+end
+
+
+
+
 """
     xv(tree::T) where {T <: iTX}
 

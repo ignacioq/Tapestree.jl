@@ -912,7 +912,7 @@ end
 Returns the standardized sum of squares for a `iTX` according
 to GBM lambda and X.
 """
-function sss_gbm(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTbdX}
+function sss_gbm(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTbdUX}
 
   n   = 0.0
   ssλ = 0.0

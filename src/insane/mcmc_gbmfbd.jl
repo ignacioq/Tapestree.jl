@@ -1224,3 +1224,193 @@ function update_gbm!(bix  ::Int64,
 end
 
 
+
+
+
+"""
+    update_x!(bix     ::Int64,
+              Ξ       ::Vector{iTfbdX},
+              idf     ::Vector{iBffs},
+              σx      ::Float64,
+              llc     ::Float64,
+              prc     ::Float64,
+              ssx     ::Float64,
+              δt      ::Float64,
+              srδt    ::Float64,
+              x0_prior::NTuple{2, Float64})
+
+Make a `gbm` update for an internal branch and its descendants.
+"""
+function update_x!(bix     ::Int64,
+                   Ξ       ::Vector{iTfbdX},
+                   idf     ::Vector{iBffs},
+                   σx      ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   ssx     ::Float64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   x0_prior::NTuple{2, Float64})
+
+  ξi  = Ξ[bix]
+  bi  = idf[bix]
+  if !it(bi)
+    id1 = d1(bi)
+    id2 = d2(bi)
+    ξ1  = Ξ[id1]
+    if !isfossil(bi)
+      ξ2  = Ξ[id2]
+    end
+  end
+
+  root = iszero(pa(bi))
+  # if cron root
+  if root && iszero(e(bi))
+    if !fx(bi)
+      llc, prc, ssx =
+         _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, ssx, δt, srδt, x0_prior)
+    end
+  else
+    # if stem
+    if root
+      if !fx(bi)
+        llc, prc, ssx = 
+          _stem_update_x!(ξi, σx, llc, prc, ssx, δt, srδt, x0_prior)
+      end
+    end
+
+    # updates within the parent branch
+    llc, ssx = _update_x!(ξi, σx, llc, ssx, δt, srδt, false)
+
+    if !it(bi)
+    # get fixed tip
+      lξi = fixtip(ξi)
+
+      # make between decoupled trees node update
+      if !fx(bi)
+        if isfossil(bi)
+          llc, ssx = _update_duo_x!(lξi, ξ1, σx, llc, ssx, δt, srδt)
+        else
+          llc, ssx = _update_triad_x!(lξi, ξ1, ξ2, σx, llc, ssx, δt, srδt)
+        end
+      end
+    end
+  end
+
+  if !it(bi)
+    # carry on updates in the daughters
+    _update_x!(ξ1, σx, llc, ssx, δt, srδt, !fx(idf[id1]) && it(idf[id1]))
+    if !isfossil(bi)
+      _update_x!(ξ2, σx, llc, ssx, δt, srδt, !fx(idf[id2]) && it(idf[id2]))
+    end
+  end
+
+  return llc, prc, ssx
+end
+
+
+
+
+
+"""
+    _update_x!(tree::iTfbdX,
+               σx  ::Float64,
+               llc ::Float64,
+               ssx ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               ufx ::Bool)
+
+Do gbm updates on a decoupled tree recursively.
+"""
+function _update_x!(tree::iTfbdX,
+                    σx  ::Float64,
+                    llc ::Float64,
+                    ssx ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    ufx ::Bool)
+
+  if def1(tree)
+    if def2(tree)
+      llc, ssx = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, ssx, δt, srδt)
+      llc, ssx = _update_x!(tree.d1, σx, llc, ssx, δt, srδt, ufx)
+      llc, ssx = _update_x!(tree.d2, σx, llc, ssx, δt, srδt, ufx)
+    else
+      if ufx
+          llc, ssx = _update_duo_x!(tree, tree.d1, σx, llc, ssx, δt, srδt)
+      end
+      llc, ssx = _update_x!(tree.d1, σx, llc, ssx, δt, srδt, ufx)
+    end
+  elseif isfix(tree)
+    llc, ssx = _update_tip_x!(tree, σx, llc, ssx, δt, srδt, ufx)
+  else
+    llc, ssx = _update_tip_x!(tree, σx, llc, ssx, δt, srδt, true)
+  end
+
+  return llc, ssx
+end
+
+
+
+
+"""
+    _update_duo_x!(ξi  ::iTfbdX,
+                   ξ1  ::iTfbdX,
+                   σx  ::Float64,
+                   llc ::Float64,
+                   ssx ::Float64
+                   δt  ::Float64,
+                   srδt::Float64)
+
+Make gibbs node update for trait.
+"""
+function _update_duo_x!(ξi  ::iTfbdX,
+                        ξ1  ::iTfbdX,
+                        σx  ::Float64,
+                        llc ::Float64,
+                        ssx ::Float64,
+                        δt  ::Float64,
+                        srδt::Float64)
+
+  xca  = xv(ξi)
+  xc1  = xv(ξ1)
+  la   = lastindex(xca)
+  l1   = lastindex(xc1)
+  xa   = xca[1]
+  xo   = xc1[1]
+  x1   = xc1[l1]
+  xpa  = Vector{Float64}(undef, la)
+  xp1  = Vector{Float64}(undef, l1)
+  fdta = fdt(ξi)
+  fdt1 = fdt(ξ1)
+  ea   = e(ξi)
+  e1   = e(ξ1)
+
+  # gibbs sampling
+  if iszero(ea) || iszero(e1)
+    xn = xc1[1]
+  else
+    xn = duoprop(xa, x1, ea, e1, σx)
+  end
+
+  bb!(xpa, xa, xn, σx, δt, fdta, srδt)
+  bb!(xp1, xn, x1, σx, δt, fdt1, srδt)
+
+  llra, ssrxa = llr_ssx(xpa, xca, σx, δt, fdta, srδt)
+  llr1, ssrx1 = llr_ssx(xp1, xc1, σx, δt, fdt1, srδt)
+
+  unsafe_copyto!(xca, 1, xpa, 1, la)
+  unsafe_copyto!(xc1, 1, xp1, 1, l1)
+
+  # update llc, prc and ssx
+  llc += llra + llr1
+  ssx += ssrxa + ssrx1
+
+  return llc, ssx
+end
+
+
+
+
+

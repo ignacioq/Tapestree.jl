@@ -67,7 +67,7 @@ function _daughter_update!(ξ1  ::iTfbdX,
     drλ  = λi - λf
   end
 
-  return llr, acr, drλ, ssrλ, ssrμ, ssrx, λ1p, μ1p
+  return llr, acr, drλ, ssrλ, ssrμ, ssrx, λ1p, μ1p, x1p
 end
 
 
