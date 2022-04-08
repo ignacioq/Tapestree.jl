@@ -795,7 +795,7 @@ function fsbi_i(bi  ::iBffs,
     if wti <= div(na,2)
       fixtip1!(t0, wti, 0)
     else
-      fixtip2!(t0, lw - wti + 1, 0)
+      fixtip2!(t0, na-wti+1, 0)
     end
 
     # simulate remaining tips until the present

@@ -143,8 +143,8 @@ function insane_gbmfbd(tree    ::sTf_label,
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, ψc, βλc, σxc, mc  =
     mcmc_burn_gbmbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
-      ψ_prior, x0_prior, βλ_prior, σx_prior, nburn, αi, σλi, σμi, ψc, mc, th, 
-      crown, δt, srδt, inodes, pup, prints)
+      ψ_prior, x0_prior, βλ_prior, σx_prior, nburn, αi, σλi, σμi, ψc, βλi, σxc,
+      mc, th, crown, δt, srδt, inodes, pup, prints)
 
   # mcmc
   R, Ξv =
@@ -249,10 +249,10 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbdX},
     shuffle!(pup)
 
     # parameter updates
-    for pupi in pup
+    for p in pup
 
       # update α
-      if pupi === 1
+      if p === 1
 
         llc, prc, αc, mc  =
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, dλ, llc, prc,
@@ -262,14 +262,14 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbdX},
         ssλ, ssμ, nx = sss_gbm(Ξ, αc)
 
       # σλ & σμ update
-      elseif pupi === 2
+      elseif p === 2
 
         llc, prc, σλc, σμc, mc =
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nx,
             llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
       # psi update
-      elseif pupi === 3
+      elseif p === 3
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
@@ -293,7 +293,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbdX},
           update_x!(bix, Ξ, idf, σxc, llc, prc, ssx, δt, srδt, x0_prior)
 
       # gbm update
-      elseif pupi === 7
+      elseif p === 7
 
         # nix = ceil(Int64,rand()*nin)
         # bix = inodes[nix]
@@ -388,12 +388,12 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
   lλxpr = log(λa_prior[2])
   lμxpr = log(μa_prior[2])
 
-  L            = treelength(Ξ)        # tree length
-  nf           = Float64(nfossils(Ξ)) # number of fossilization events
-  dλ           = deltaλ(Ξ)            # delta change in λ
-  ssλ, ssμ, nx = sss_gbm(Ξ, αc)       # sum squares in λ and μ
-  nin          = lastindex(inodes)    # number of internal nodes
-  el           = lastindex(idf)       # number of branches
+  L                 = treelength(Ξ)      # tree length
+  nf                = Float64(nfossils(Ξ)) # number of fossilization events
+  dλ                = deltaλ(Ξ)         # delta change in λ
+  ssλ, ssμ, ssx, nx = sss_gbm(Ξ, αc, βλc)  #sum squares in λ and μ and X
+  nin               = lastindex(inodes) # number of internal nodes
+  el                = lastindex(idf)    # number of branches
 
   # parameter results
   R = Array{Float64,2}(undef, nlogs, 12)
@@ -411,10 +411,10 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
     shuffle!(pup)
 
     # parameter updates
-    for pupi in pup
+    for p in pup
 
       # update α
-      if pupi === 1
+      if p === 1
 
         llc, prc, αc, mc  =
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, dλ, llc, prc,
@@ -423,38 +423,69 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
         # update ssλ with new drift `α`
         ssλ, ssμ, nx = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, p, Ξ
+           return
+        end
 
       # σλ & σμ update
-      elseif pupi === 2
+      elseif p === 2
 
         llc, prc, σλc, σμc, mc =
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nx,
             llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, p, Ξ
+           return
+        end
 
       # psi update
-      elseif pupi === 3
+      elseif p === 3
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, p, Ξ
+           return
+        end
+
+      # update beta
+      elseif p === 4
+
+        # to do!
+
+      # update `x` diffusion rate
+      elseif p === 5
+
+        llc, prc, σxc = update_σx!(σxc, ssx, nx, llc, prc, σx_prior)
+
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, p, Ξ
+           return
+        end
+
+      # update `x` bm
+      elseif p === 6
+
+        nix = ceil(Int64,rand()*nin)
+        bix = inodes[nix]
+
+        llc, prc, ssx =
+          update_x!(bix, Ξ, idf, σxc, llc, prc, ssx, δt, srδt, x0_prior)
+
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, p, Ξ
+           return
+        end
 
       # gbm update
-      elseif pupi === 4
+      elseif p === 7
 
         # nix = ceil(Int64,rand()*nin)
         # bix = inodes[nix]
@@ -464,26 +495,28 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbdX},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
             crown, δt, srδt, lλxpr, lμxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, p, Ξ
+           return
+        end
 
       # forward simulation update
       else
 
         bix = ceil(Int64,rand()*el)
 
-        llc, dλ, ssλ, ssμ, nx, L =
-          update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, llc, dλ, ssλ, ssμ, nx, L,
-            δt, srδt)
+        llc, dλ, ssλ, ssμ, ssx, nx, L =
+          update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, llc, dλ, 
+            ssλ, ssμ, ssx, nx, L, δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        sss_gbm(Ξ, αc, βλc)  #sum squares in λ and μ and X
+
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, βλc, σxc, δt, srδt) - crown*lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, p, Ξ
+           return
+        end
 
       end
     end
@@ -769,8 +802,6 @@ function fsbi_ft(bi  ::iBffs,
       else
         fixtip2!(t0, na-wti+1, 0, xc, σx, δt, srδt)
       end
-
-      setni!(bi, na) # set new ni
     else
       return t0, NaN
     end
@@ -808,7 +839,6 @@ function fsbi_ft(bi  ::iBffs,
 
       llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       setni!(bi, na)       # set new ni
-      setnt!(bi, ntp)      # set new nt
 
       return t0, llr
     end
@@ -1050,9 +1080,9 @@ function fsbi_i(bi  ::iBffs,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
+                ψ   ::Float64,
                 βλ  ::Float64,
                 σx  ::Float64,
-                ψ   ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
@@ -1152,21 +1182,21 @@ function fsbi_i(bi  ::iBffs,
     # simulate remaining tips until the present
     if na > 1
       tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), α, σλ, σμ, ψ, βλ, σx,δt, srδt, acr, lU, Iρi, na, nn)
+        tip_sims!(t0, tf(bi), α, σλ, σμ, ψ, βλ, σx, δt, srδt, acr, lU, Iρi, na, nn)
     end
 
     if lU < acr
       na -= 1
 
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-      setni!(bi,  na)                        # set new ni
-      setλt!(bi,  λf)                        # set new λt
+      setni!(bi,  na)                       # set new ni
+      setλt!(bi,  λf)                       # set new λt
       setλst!(bi, λsp)                      # set new λst
       setμst!(bi, μsp)                      # set new μst
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2) # set new daughter 2 λ vector
-      unsafe_copyto!(μ1c, 1, μ1p, 1, l1) # set new daughter 1 μ vector
-      unsafe_copyto!(μ2c, 1, μ2p, 1, l2) # set new daughter 2 μ vector
+      unsafe_copyto!(λ1c,    1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(λ2c,    1, λ2p, 1, l2) # set new daughter 2 λ vector
+      unsafe_copyto!(μ1c,    1, μ1p, 1, l1) # set new daughter 1 μ vector
+      unsafe_copyto!(μ2c,    1, μ2p, 1, l2) # set new daughter 2 μ vector
       unsafe_copyto!(xv(ξ1), 1, x1p, 1, l1) # set new daughter 1 x vector
       unsafe_copyto!(xv(ξ2), 1, x2p, 1, l2) # set new daughter 2 x vector
 
@@ -1202,9 +1232,9 @@ function tip_sims!(tree::iTfbdX,
                    α   ::Float64,
                    σλ  ::Float64,
                    σμ  ::Float64,
+                   ψ   ::Float64,
                    βλ  ::Float64,
                    σx  ::Float64,
-                   ψ   ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
                    lr  ::Float64,
@@ -1446,5 +1476,193 @@ function update_gbm!(bix  ::Int64,
 
   return llc, dλ, ssλ, ssμ, mc
 end
+
+
+
+
+
+"""
+    update_x!(bix     ::Int64,
+              Ξ       ::Vector{iTfbdX},
+              idf     ::Vector{iBffs},
+              σx      ::Float64,
+              llc     ::Float64,
+              prc     ::Float64,
+              ssx     ::Float64,
+              δt      ::Float64,
+              srδt    ::Float64,
+              x0_prior::NTuple{2, Float64})
+
+Make a `gbm` update for an internal branch and its descendants.
+"""
+function update_x!(bix     ::Int64,
+                   Ξ       ::Vector{iTfbdX},
+                   idf     ::Vector{iBffs},
+                   σx      ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   ssx     ::Float64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   x0_prior::NTuple{2, Float64})
+
+  ξi  = Ξ[bix]
+  bi  = idf[bix]
+  if !it(bi)
+    id1 = d1(bi)
+    id2 = d2(bi)
+    ξ1  = Ξ[id1]
+    if !isfossil(bi)
+      ξ2  = Ξ[id2]
+    end
+  end
+
+  root = iszero(pa(bi))
+  # if cron root
+  if root && iszero(e(bi))
+    if !fx(bi)
+      llc, prc, ssx =
+         _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, ssx, δt, srδt, x0_prior)
+    end
+  else
+    # if stem
+    if root
+      if !fx(bi)
+        llc, prc, ssx = 
+          _stem_update_x!(ξi, σx, llc, prc, ssx, δt, srδt, x0_prior)
+      end
+    end
+
+    # updates within the parent branch
+    llc, ssx = _update_x!(ξi, σx, llc, ssx, δt, srδt, !fx(bi))
+
+    if !it(bi)
+    # get fixed tip
+      lξi = fixtip(ξi)
+
+      # make between decoupled trees node update
+      if isfossil(bi)
+        llc, ssx = _update_duo_x!(lξi, ξ1, σx, llc, ssx, δt, srδt, !fx(bi))
+      else
+        llc, ssx = _update_triad_x!(lξi, ξ1, ξ2, σx, llc, ssx, δt, srδt)
+      end
+    end
+  end
+
+  if !it(bi)
+    # carry on updates in the daughters
+    llc, ssx = 
+      _update_x!(ξ1, σx, llc, ssx, δt, srδt, !fx(idf[id1]) && it(idf[id1]))
+    if !isfossil(bi)
+    llc, ssx = 
+      _update_x!(ξ2, σx, llc, ssx, δt, srδt, !fx(idf[id2]) && it(idf[id2]))
+    end
+  end
+
+  return llc, prc, ssx
+end
+
+
+
+
+
+"""
+    _update_x!(tree::iTfbdX,
+               σx  ::Float64,
+               llc ::Float64,
+               ssx ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               ufx ::Bool)
+
+Do gbm updates on a decoupled tree recursively.
+"""
+function _update_x!(tree::iTfbdX,
+                    σx  ::Float64,
+                    llc ::Float64,
+                    ssx ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    ufx ::Bool)
+
+  if def1(tree)
+    if def2(tree)
+      llc, ssx = 
+        _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, ssx, δt, srδt)
+      llc, ssx = _update_x!(tree.d1, σx, llc, ssx, δt, srδt, ufx)
+      llc, ssx = _update_x!(tree.d2, σx, llc, ssx, δt, srδt, ufx)
+    else
+      llc, ssx = _update_duo_x!(tree, tree.d1, σx, llc, ssx, δt, srδt, ufx)
+      llc, ssx = _update_x!(tree.d1, σx, llc, ssx, δt, srδt, ufx)
+    end
+  elseif isfix(tree)
+    llc, ssx = _update_tip_x!(tree, σx, llc, ssx, δt, srδt, ufx)
+  else
+    llc, ssx = _update_tip_x!(tree, σx, llc, ssx, δt, srδt, true)
+  end
+
+  return llc, ssx
+end
+
+
+
+
+"""
+    _update_duo_x!(ξi  ::iTfbdX,
+                   ξ1  ::iTfbdX,
+                   σx  ::Float64,
+                   llc ::Float64,
+                   ssx ::Float64
+                   δt  ::Float64,
+                   srδt::Float64,
+                   ufx ::Bool)
+
+Make gibbs node update for trait.
+"""
+function _update_duo_x!(ξi  ::iTfbdX,
+                        ξ1  ::iTfbdX,
+                        σx  ::Float64,
+                        llc ::Float64,
+                        ssx ::Float64,
+                        δt  ::Float64,
+                        srδt::Float64,
+                        ufx ::Bool)
+
+  xca  = xv(ξi)
+  xc1  = xv(ξ1)
+  la   = lastindex(xca)
+  l1   = lastindex(xc1)
+  xa   = xca[1]
+  x1   = xc1[l1]
+  xpa  = Vector{Float64}(undef, la)
+  xp1  = Vector{Float64}(undef, l1)
+  fdta = fdt(ξi)
+  fdt1 = fdt(ξ1)
+  ea   = e(ξi)
+  e1   = e(ξ1)
+
+  # gibbs sampling
+  if !ufx || iszero(ea) || iszero(e1)
+    xn = xc1[1]
+  else
+    xn = duoprop(xa, x1, ea, e1, σx)
+  end
+
+  bb!(xpa, xa, xn, σx, δt, fdta, srδt)
+  bb!(xp1, xn, x1, σx, δt, fdt1, srδt)
+
+  llra, ssrxa = llr_ssx(xpa, xca, σx, δt, fdta, srδt)
+  llr1, ssrx1 = llr_ssx(xp1, xc1, σx, δt, fdt1, srδt)
+
+  unsafe_copyto!(xca, 1, xpa, 1, la)
+  unsafe_copyto!(xc1, 1, xp1, 1, l1)
+
+  # update llc, prc and ssx
+  llc += llra + llr1
+  ssx += ssrxa + ssrx1
+
+  return llc, ssx
+end
+
 
 

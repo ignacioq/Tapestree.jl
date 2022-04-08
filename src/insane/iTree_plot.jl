@@ -1225,7 +1225,7 @@ function _rplottrait!(tree::T,
 
   if def1(tree)
     _rplottrait!(tree.d1, xc, x, y)
-    if def1(tree)
+    if def2(tree)
       _rplottrait!(tree.d2, xc, x, y)
     end
   end

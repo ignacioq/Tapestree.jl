@@ -338,11 +338,11 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
       xvi   = x[nI+1]
       xvi1  = x[nI+2]
       srfdt = sqrt(fdt)
-      ll  += ldnorm_bm(lλvi1, lλvi + (α + βλ*xvi)*fdt, srfdt*σλ)        +
-             ldnorm_bm(lμvi1, lμvi, srfdt*σμ)                           -
-             fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1))+ ψ) +
+      ll  += ldnorm_bm(lλvi1, lλvi + (α + βλ*xvi)*fdt, srfdt*σλ)         +
+             ldnorm_bm(lμvi1, lμvi, srfdt*σμ)                            -
+             fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)) + ψ) +
              ldnorm_bm(xvi1, xvi, srfdt*σx)
-      ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
+      ssλ += (lλvi1 - lλvi - (α + βλ*xvi)*fdt)^2/(2.0*fdt)
       ssμ += (lμvi1 - lμvi)^2/(2.0*fdt)
       ssx += (xvi1 - xvi)^2/(2.0*fdt)
       nx  += 1.0
