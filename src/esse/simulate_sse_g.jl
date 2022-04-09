@@ -36,12 +36,12 @@ function simulate_sse(λ          ::Array{Float64,1},
                       δt         ::Float64 = 1e-4,
                       ast        ::Int64   = 0,
                       nspp_max   ::Int64   = 200_000,
-                      retry_ext  ::Bool   = true,
-                      rejectel0  ::Bool   = true,
-                      verbose    ::Bool   = true,
-                      rm_ext     ::Bool   = true,
-                      states_only::Bool   = false, 
-                      start      ::Symbol = :crown)
+                      retry_ext  ::Bool    = true,
+                      rejectel0  ::Bool    = true,
+                      verbose    ::Bool    = true,
+                      rm_ext     ::Bool    = true,
+                      states_only::Bool    = false, 
+                      start      ::Symbol  = :crown)
 
   # make simulation
   ed, el, st, ea, ee, n, S, k = 
@@ -128,8 +128,12 @@ function simulate_sse(λ          ::Array{Float64,1},
 
   # remove extinct
   if rm_ext 
-    ed, el = remove_extinct(ed, el, ee)
-    nt = n
+    if n === 1
+      return Dict{Int64, Vector{Float64}}(), ed, el, false
+    else
+      ed, el = remove_extinct(ed, el, ee)
+      nt = n
+    end
   else
     nt = n + ne
   end
