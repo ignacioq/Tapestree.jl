@@ -273,9 +273,9 @@ function _update_gbm!(tree::iTct,
     llc, dλ, ssλ, Σλ =
       _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter)
   else
-    if !isfix(tree) || ter
-      llc, dλ, ssλ, Σλ = update_tip!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
-    end
+    # if !isfix(tree) || ter
+    #   llc, dλ, ssλ, Σλ = update_tip!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
+    # end
   end
 
   return llc, dλ, ssλ, Σλ

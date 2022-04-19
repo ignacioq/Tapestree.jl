@@ -307,10 +307,10 @@ function _update_gbm!(tree::T,
     llc, dλ, ssλ, ssμ =
       _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
   else
-    if !isfix(tree) || ter
-      llc, dλ, ssλ, ssμ =
-        update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-    end
+    # if !isfix(tree) || ter
+    #   llc, dλ, ssλ, ssμ =
+    #     update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+    # end
   end
 
   return llc, dλ, ssλ, ssμ
