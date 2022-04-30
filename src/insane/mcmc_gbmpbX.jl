@@ -838,23 +838,23 @@ function update_gbm!(bix  ::Int64,
       llc, dλ, ssλ = _stem_update!(ξi, α, σλ, llc, dλ, ssλ, δt, srδt)
     end
 
-    # updates within the parent branch
-    llc, dλ, ssλ = _update_gbm!(ξi, α, σλ, llc, dλ, ssλ, δt, srδt, false)
+    # # updates within the parent branch
+    # llc, dλ, ssλ = _update_gbm!(ξi, α, σλ, llc, dλ, ssλ, δt, srδt, false)
 
-    # get fixed tip
-    lξi = fixtip(ξi)
+    # # get fixed tip
+    # lξi = fixtip(ξi)
 
-    # make between decoupled trees node update
-    llc, dλ, ssλ = update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-      fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, llc, dλ, ssλ, δt, srδt)
+    # # make between decoupled trees node update
+    # llc, dλ, ssλ = update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
+    #   fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, llc, dλ, ssλ, δt, srδt)
 
-    # set fixed `λ(t)` in branch
-    setλt!(bi, lλ(lξi)[end])
+    # # set fixed `λ(t)` in branch
+    # setλt!(bi, lλ(lξi)[end])
   end
 
-  # carry on updates in the daughters
-  llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1)
-  llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
+  # # carry on updates in the daughters
+  # llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1)
+  # llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
 
   return llc, dλ, ssλ
 end

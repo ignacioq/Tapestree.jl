@@ -1437,40 +1437,40 @@ function update_gbm!(bix  ::Int64,
           lλxpr, lμxpr)
     end
 
-    # updates within the parent branch
-    llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(bi))
+    # # updates within the parent branch
+    # llc, dλ, ssλ, ssμ =
+    #   _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(bi))
 
-    if !it(bi)
-      # get fixed tip
-      lξi = fixtip(ξi)
+    # if !it(bi)
+    #   # get fixed tip
+    #   lξi = fixtip(ξi)
 
-      # make between decoupled trees node update
-      if isfossil(bi)
-        llc, ssλ, ssμ, λf =
-          update_duo!(lλ(lξi), lλ(ξ1), lμ(lξi), lμ(ξ1), e(lξi), e(ξ1),
-            fdt(lξi), fdt(ξ1), α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
-      else
-        llc, dλ, ssλ, ssμ, λf =
-          update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), lμ(lξi), lμ(ξ1), lμ(ξ2),
-            e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
-            α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-      end
+    #   # make between decoupled trees node update
+    #   if isfossil(bi)
+    #     llc, ssλ, ssμ, λf =
+    #       update_duo!(lλ(lξi), lλ(ξ1), lμ(lξi), lμ(ξ1), e(lξi), e(ξ1),
+    #         fdt(lξi), fdt(ξ1), α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
+    #   else
+    #     llc, dλ, ssλ, ssμ, λf =
+    #       update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), lμ(lξi), lμ(ξ1), lμ(ξ2),
+    #         e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
+    #         α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+    #   end
 
-      # set fixed `λ(t)` in branch
-      setλt!(bi, lλ(lξi)[end])
-    end
+    #   # set fixed `λ(t)` in branch
+    #   setλt!(bi, lλ(lξi)[end])
+    # end
   end
 
-  if !it(bi)
-    # carry on updates in the daughters
-    llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(idf[id1]))
-    if !isfossil(bi)
-      llc, dλ, ssλ, ssμ =
-        _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(idf[id2]))
-    end
-  end
+  # if !it(bi)
+  #   # carry on updates in the daughters
+  #   llc, dλ, ssλ, ssμ =
+  #     _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(idf[id1]))
+  #   if !isfossil(bi)
+  #     llc, dλ, ssλ, ssμ =
+  #       _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(idf[id2]))
+  #   end
+  # end
 
   return llc, dλ, ssλ, ssμ, mc
 end
