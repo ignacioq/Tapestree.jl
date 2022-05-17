@@ -773,17 +773,12 @@ Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    lv  ::Function,
-                   dt  ::Float64;
-                   iexp = true) where {T <: iT}
+                   dt  ::Float64) where {T <: iT}
 
   # prepare data
   ts, r = time_rate(tree, dt, lv)
 
-  if iexp
-    fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
-  else
-    fx = time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0])
-  end
+  fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
 
   lf = size(fx,1)
 
@@ -852,15 +847,13 @@ end
 """
     function f(tree::Vector{T},
                lv  ::Function,
-               dt  ::Float64;
-               iexp = true) where {T <: iT}
+               dt  ::Float64) where {T <: iT}
 
 Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
                    lv   ::Function,
-                   tdt  ::Float64;
-                   fn   = exp) where {T <: iT}
+                   tdt  ::Float64) where {T <: iT}
 
   ntrees = lastindex(trees)
   riv = Vector{Float64}[]
@@ -869,7 +862,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   ts  = Float64[]
   for t in trees
     tsi, ri = time_rate(t, tdt, lv)
-    ri     = map(x -> mean(fn, x), ri)
+    ri     = exp.(map(x -> mean(x), ri))
 
     if lastindex(tsi) > lts
       ts  = tsi
