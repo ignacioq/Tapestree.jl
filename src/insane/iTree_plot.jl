@@ -180,11 +180,11 @@ end
 
 
 """
-    function f(tree::iTct, zfun::Function, ϵ::Float64)
+    function f(tree::iTct, ϵ::Float64)
 
 Recipe for plotting extinction on a `iTct` given `ϵ`.
 """
-@recipe function f(tree::iTct, zfun::Function, ϵ::Float64)
+@recipe function f(tree::iTct, ϵ::Float64)
 
   x = Float64[]
   y = Float64[]
@@ -193,7 +193,7 @@ Recipe for plotting extinction on a `iTct` given `ϵ`.
   th = treeheight(tree)
   nt = ntips(tree)
 
-  _rplottree!(tree, th, 1:nt, zfun, x, y, z)
+  _rplottree!(tree, th, 1:nt, lλ, x, y, z)
 
   @simd for i in Base.OneTo(lastindex(z))
     z[i] *= ϵ
