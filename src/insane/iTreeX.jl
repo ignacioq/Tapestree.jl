@@ -153,11 +153,11 @@ with the following fields:
   xi: initial trait value
   xf: final trait value
 
-    sTfbdXX(e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
+    sTfbdX(e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
 
-    sTfbdXX(d1::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
+    sTfbdX(d1::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
 
-    sTfbdXX(d1::sTfbdX, d2::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
+    sTfbdX(d1::sTfbdX, d2::sTfbdX, e::Float64, iμ::Bool, iψ::Bool, fx::Bool)
 
 Constructs an `sTfbdX` object with one sampled ancestor, one `sTfbdX` daughter and
 edge `e`.
