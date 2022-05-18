@@ -56,7 +56,7 @@ function insane_cfbd(tree     ::sTf_label,
                      prints   ::Int64                 = 5,
                      tρ       ::Dict{String, Float64} = Dict("" => 1.0))
 
-  n  = ntips(tree)
+  n    = ntips(tree)
   th   = treeheight(tree)
   stem = !iszero(e(tree))
 
@@ -105,12 +105,13 @@ function insane_cfbd(tree     ::sTf_label,
   @info "Running constant fossilized birth-death with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, μc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn, 
+  llc, prc, λc, μc, ψc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn, 
                                     λc, μc, ψc, mc, th, stem, pup, prints)
 
   # mcmc
-  r, treev, λc, μc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior, 
-                               ψ_prior, mc, th, stem, niter, nthin, pup, prints)
+  r, treev, λc, μc, ψc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, 
+                                   λ_prior, μ_prior, ψ_prior, mc, th, 
+                                   stem, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2),
@@ -245,8 +246,7 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
       # forward simulation proposal proposal
       else
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, nfos, L = 
-                  update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, nfos, L)
+        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, L)
       end
     end
 
@@ -339,8 +339,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       # forward simulation proposal proposal
       else
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, nfos, L = 
-                  update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, nfos, L)
+        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, L)
       end
     end
 
@@ -497,7 +496,6 @@ end=#
                ψ    ::Float64,
                ns   ::Float64,
                ne   ::Float64,
-               nfos ::Float64,
                L    ::Float64)
 
 Forward simulation proposal function for constant fossilized birth-death.
@@ -511,7 +509,6 @@ function update_fs!(bix    ::Int64,
                     ψ      ::Float64,
                     ns     ::Float64,
                     ne     ::Float64,
-                    nfos   ::Float64,
                     L      ::Float64)
 
   bi = idf[bix]
@@ -544,10 +541,9 @@ function update_fs!(bix    ::Int64,
     # MH ratio
     if -randexp() < llr + acr
 
-      # update ns, ne, nfos & L
+      # update ns, ne & L
       ns +=   Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
       ne +=   Float64(ntipsextinct(ξp)      - ntipsextinct(ξc))
-      nfos += Float64(nfossils(ξp)          - nfossils(ξc))
       L  +=   treelength(ξp)                - treelength(ξc)
 
       # likelihood ratio
@@ -561,7 +557,7 @@ function update_fs!(bix    ::Int64,
     end
   end
 
-  return llc, ns, ne, nfos, L
+  return llc, ns, ne, L
 end
 
 
