@@ -85,7 +85,7 @@ function make_mhr_upd_X(X        ::Array{Float64,2},
 
         llr = Rupd_llr(xpi, Xc, σ²c)::Float64
 
-        if -Random.randexp() < llr
+        if -randexp() < llr
           llc    += llr::Float64
           Xc[1,:] = xpi::Array{Float64,1}
         end
@@ -125,7 +125,7 @@ function make_mhr_upd_X(X        ::Array{Float64,2},
                          ωxc, ω1c, ω0c, λ1c, λ0c, σ²c)::Float64
         end
 
-        if -Random.randexp() < llr
+        if -randexp() < llr
           llc        += llr::Float64
           Xc[xi,:]    = xpi::Array{Float64,1}
           δXc[:,:,xi] = δxi::Array{Float64,2}
@@ -202,7 +202,7 @@ function make_mhr_upd_Xbr(wcol               ::Array{Array{Int64,1},1},
                       stemevc, stemevc, brs, brs, σ²c)
     end
 
-    if -Random.randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
+    if -randexp() < (llr + llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
       llc += llr::Float64
       copyto!(Xc,   Xp)
       copyto!(δXc,  δXp)
@@ -279,7 +279,7 @@ function make_mhr_upd_Xtrio(wcol               ::Array{Array{Int64,1},1},
                       stemevc, stemevc, brs, brs, σ²c)
     end
 
-    if -Random.randexp() < (llr + 
+    if -randexp() < (llr + 
                      ((pr != nedge) ? 
                       llr_bm(Xc, Xp, bridx[pr], brδt[pr], σ²ϕ) : 0.0) +
                       llr_bm(Xc, Xp, bridx[d1], brδt[d1], σ²ϕ) +
@@ -368,7 +368,7 @@ function make_mhr_upd_Ybr(narea              ::Int64,
                   stemevc, stemevp, brs, brs, σ²c)
       end
 
-      if -Random.randexp() < (llr + 
+      if -randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs, br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevp, brs, br, λϕ1, λϕ0))
         llc += llr::Float64
@@ -474,7 +474,7 @@ function make_mhr_upd_Ytrio(narea    ::Int64,
                         stemevc, stemevp, brs, brsp, σ²c)
       end
 
-      if -Random.randexp() < (llr + 
+      if -randexp() < (llr + 
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
                        bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0))
 
@@ -572,7 +572,7 @@ function make_mhr_upd_XYbr(narea    ::Int64,
                   stemevc, stemevc, brs, brs, σ²c)
       end
 
-      if -Random.randexp() < (llr + 
+      if -randexp() < (llr + 
                        bgiid_br(Yc, stemevc, brs, br, λϕ1, λϕ0) - 
                        bgiid_br(Yp, stemevc, brs, br, λϕ1, λϕ0) +
                        llr_bm(Xc, Xp, bridx[br], brδt[br], σ²ϕ))::Float64
@@ -688,7 +688,7 @@ function make_mhr_upd_XYtrio(narea    ::Int64,
                   stemevc, stemevp, brs, brsp, σ²c)
       end
 
-      if -Random.randexp() < (llr + 
+      if -randexp() < (llr + 
                        bgiid(Yc, stemevc, brs,  triad, λϕ1, λϕ0) - 
                        bgiid(Yp, stemevp, brsp, triad, λϕ1, λϕ0) +
                        ((pr != nedge) ? 
@@ -754,7 +754,7 @@ function make_mhr_upd_Ystem(stbrl::Float64,
       llr = stem_llr(λ1c, λ0c, brs, brsp, stemevc, stemevp, narea, nedge)
 
       # likelihood ratio
-      if -Random.randexp() < (llr + stemiid_propr(λϕ1, λϕ0, brs, brsp, 
+      if -randexp() < (llr + stemiid_propr(λϕ1, λϕ0, brs, brsp, 
                                            stemevc, stemevp, narea, nedge))
         llc += llr::Float64
         copyto!(brs, brsp)
@@ -811,7 +811,7 @@ function mhr_upd_σ²(σ²c      ::Float64,
   # prior ratio
   prr = llrdexp_x(σ²p, σ²c, σ²prior)
 
-  if -Random.randexp() < (llr + prr + log(σ²p/σ²c))
+  if -randexp() < (llr + prr + log(σ²p/σ²c))
     llc += llr::Float64
     prc += prr::Float64
     σ²c  = σ²p::Float64
@@ -847,7 +847,7 @@ function mhr_upd_ωx(ωxc      ::Float64,
   # prior ratio
   prr = llrdnorm_x(ωxp, ωxc, ωxprior[1], ωxprior[2])
 
-  if -Random.randexp() < (llr + prr)
+  if -randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ωxc  = ωxp::Float64
@@ -883,7 +883,7 @@ function mhr_upd_ω1(ω1c       ::Float64,
   # prior ratio
   prr = llrdnorm_x(ω1p, ω1c, ω1prior[1], ω1prior[2])
 
-  if -Random.randexp() < (llr + prr)
+  if -randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ω1c  = ω1p::Float64
@@ -919,7 +919,7 @@ function mhr_upd_ω0(ω0c      ::Float64,
   # prior ratio
   prr = llrdnorm_x(ω0p, ω0c, ω0prior[1], ω0prior[2])
 
-  if -Random.randexp() < (llr + prr)
+  if -randexp() < (llr + prr)
     llc += llr::Float64
     prc += prr::Float64
     ω0c  = ω0p::Float64
@@ -958,7 +958,7 @@ function mhr_upd_λ1(λ1c      ::Float64,
 
   prr = llrdexp_x(λ1p, λ1c, λprior)
 
-  if -Random.randexp() < (llr + prr + log(λ1p/λ1c))
+  if -randexp() < (llr + prr + log(λ1p/λ1c))
     llc += llr::Float64
     prc += prr::Float64
     λ1c  = λ1p::Float64
@@ -997,7 +997,7 @@ function mhr_upd_λ0(λ0c      ::Float64,
 
   prr = llrdexp_x(λ0p, λ0c, λprior)
 
-  if -Random.randexp() < (llr + prr + log(λ0p/λ0c))
+  if -randexp() < (llr + prr + log(λ0p/λ0c))
     llc += llr::Float64
     prc += prr::Float64
     λ0c  = λ0p::Float64

@@ -221,7 +221,7 @@ function initialize_X!(tip_values::Dict{Int64,Float64},
 
   # brownian motion
   bm_ll = make_bm_ll(tip_values, tree)
-  op    = optimize(bm_ll, rand(nc), Optim.Options(
+  op    = optimize(bm_ll, rand(nc), Options(
                                     g_tol = 1e-6,
                                     iterations = 100_000,
                                     store_trace = false))
