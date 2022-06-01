@@ -212,7 +212,7 @@ function _crown_update!(ξi   ::iTce,
     mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 400, false)
     llr = log(mp/mc)
 
-    acr = llrce1 + llrce2 + llr
+    acr = llrce1 + llrce2 + llr 
 
     if -randexp() < acr
       llc += acr + llrbm1 + llrbm2
