@@ -51,15 +51,19 @@ function _daughters_update!(ξ1  ::iTce,
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
+    # acceptance rate
+    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+
     # log likelihood ratios
     llrbm1, llrce1, ssrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
     llrbm2, llrce2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    # acceptance rate
-    acr  = llrce1 + llrce2 
-    llr  = llrbm1 + llrbm2 + acr + λf - λi
+    acr  = llrce1 + llrce2 + λf - λi
+    llr  = llrbm1 + llrbm2 + acr
+    acr += gp
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
   end
@@ -214,7 +218,7 @@ function _crown_update!(ξi   ::iTce,
 
     acr = llrce1 + llrce2 + llr 
 
-    if -randexp() < acr
+    if -randexp() < acr + λi - λr
       llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
@@ -275,52 +279,52 @@ end
 
 
 
-"""
-    update_tip!(tree::iTce,
-                α   ::Float64,
-                σλ  ::Float64,
-                μ   ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+# """
+#     update_tip!(tree::iTce,
+#                 α   ::Float64,
+#                 σλ  ::Float64,
+#                 μ   ::Float64,
+#                 llc ::Float64,
+#                 dλ  ::Float64,
+#                 ssλ ::Float64,
+#                 δt  ::Float64,
+#                 srδt::Float64)
 
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::iTce,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     μ   ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
+# Make a `gbm` tip proposal.
+# """
+# function update_tip!(tree::iTce,
+#                      α   ::Float64,
+#                      σλ  ::Float64,
+#                      μ   ::Float64,
+#                      llc ::Float64,
+#                      dλ  ::Float64,
+#                      ssλ ::Float64,
+#                      δt  ::Float64,
+#                      srδt::Float64)
 
-  @inbounds begin
+#   @inbounds begin
 
-    λc   = lλ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
+#     λc   = lλ(tree)
+#     l    = lastindex(λc)
+#     fdtp = fdt(tree)
+#     λp   = Vector{Float64}(undef, l)
 
-    bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
+#     bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+#     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
-    acr = llrbd
+#     acr = llrbd
 
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-    end
-  end
+#     if -randexp() < acr
+#       llc += llrbm + acr
+#       dλ  += λp[l] - λc[l]
+#       ssλ += ssrλ
+#       unsafe_copyto!(λc, 1, λp, 1, l)
+#     end
+#   end
 
-  return llc, dλ, ssλ
-end
+#   return llc, dλ, ssλ
+# end
 
 
 
