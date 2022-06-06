@@ -114,6 +114,7 @@ function m_surv_gbmce(t   ::Float64,
         s2, n2 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
         s2 && break
       end
+
       ntries === ntry && break
     end
   end

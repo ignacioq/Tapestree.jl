@@ -213,7 +213,7 @@ function _crown_update!(ξi   ::iTce,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
     # survival
-    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1000, false)
+    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 5_000, false)
     llr = log(mp/mc)
 
     acr = llrce1 + llrce2 + llr 
