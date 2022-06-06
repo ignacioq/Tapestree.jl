@@ -51,14 +51,19 @@ function _daughters_update!(ξ1  ::iTct,
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
+    # acceptance rate
+    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+
     # log likelihood ratios
     llrbm1, llrct1, ssrλ1, Σrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
     llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrct1 + llrct2
-    llr  = llrbm1 + llrbm2 + acr + λf - λi 
+    acr  = llrct1 + llrct2 + λf - λi 
+    llr  = llrbm1 + llrbm2 + acr
+    acr += gp
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     Σrλ  = Σrλ1 + Σrλ2
@@ -215,12 +220,12 @@ function _crown_update!(ξi   ::iTct,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 400, false)
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
     llr = log(mp/mc)
 
     acr = llrct1 + llrct2 + llr
 
-    if -randexp() < acr
+    if -randexp() < acr + λi - λr
       llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
@@ -284,56 +289,56 @@ end
 
 
 
-"""
-    update_tip!(tree::iTct,
-                α   ::Float64,
-                σλ  ::Float64,
-                ϵ   ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                Σλ  ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+# """
+#     update_tip!(tree::iTct,
+#                 α   ::Float64,
+#                 σλ  ::Float64,
+#                 ϵ   ::Float64,
+#                 llc ::Float64,
+#                 dλ  ::Float64,
+#                 ssλ ::Float64,
+#                 Σλ  ::Float64,
+#                 δt  ::Float64,
+#                 srδt::Float64)
 
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::iTct,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     ϵ   ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     Σλ  ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
+# Make a `gbm` tip proposal.
+# """
+# function update_tip!(tree::iTct,
+#                      α   ::Float64,
+#                      σλ  ::Float64,
+#                      ϵ   ::Float64,
+#                      llc ::Float64,
+#                      dλ  ::Float64,
+#                      ssλ ::Float64,
+#                      Σλ  ::Float64,
+#                      δt  ::Float64,
+#                      srδt::Float64)
 
-  @inbounds begin
+#   @inbounds begin
 
-    λc   = lλ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
+#     λc   = lλ(tree)
+#     l    = lastindex(λc)
+#     fdtp = fdt(tree)
+#     λp   = Vector{Float64}(undef, l)
 
-    bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
+#     bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
-      false, isextinct(tree))
+#     llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
+#       false, isextinct(tree))
 
-    acr = llrbd
+#     acr = llrbd
 
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      Σλ  += Σrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-    end
-  end
+#     if -randexp() < acr
+#       llc += llrbm + acr
+#       dλ  += λp[l] - λc[l]
+#       ssλ += ssrλ
+#       Σλ  += Σrλ
+#       unsafe_copyto!(λc, 1, λp, 1, l)
+#     end
+#   end
 
-  return llc, dλ, ssλ, Σλ
-end
+#   return llc, dλ, ssλ, Σλ
+# end
 
 
 

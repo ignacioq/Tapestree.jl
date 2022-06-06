@@ -580,7 +580,7 @@ function fsbi_i(bi  ::iBffs,
   t0, na, nn =
     _sim_gbmce(e(bi), λ0, α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
-  if na < 1 || nn >= 500
+  if na < 1 || nn >= 1_000
     return t0, NaN, NaN, NaN
   end
 
@@ -659,7 +659,7 @@ function tip_sims!(tree::iTce,
                    na  ::Int64,
                    nn  ::Int64)
 
-  if lU < lr && nn < 500
+  if lU < lr && nn < 1_000
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
@@ -670,9 +670,9 @@ function tip_sims!(tree::iTce,
         # simulate
         stree, na, nn, lr =
           _sim_gbmce_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, μ, δt, srδt,
-                     lr, lU, Iρi, na-1, nn, 500)
+                     lr, lU, Iρi, na-1, nn, 1_000)
 
-        if isnan(lr) || nn >= 500
+        if isnan(lr) || nn >= 1_000
           return tree, na, nn, NaN
         end
 
@@ -836,7 +836,7 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, stem)
+  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 5_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr

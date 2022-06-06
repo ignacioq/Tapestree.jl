@@ -221,9 +221,8 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
       # update gbm
       elseif pupi === 3
 
-        # nix = ceil(Int64,rand()*nin)
-        # bix = inodes[nix]
-        bix = 1
+        nix = ceil(Int64,rand()*nin)
+        bix = inodes[nix]
 
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
@@ -335,9 +334,8 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
       # update gbm
       elseif pupi === 3
 
-        # nix = ceil(Int64,rand()*nin)
-        # bix = inodes[nix]
-        bix = 1
+        nix = ceil(Int64,rand()*nin)
+        bix = inodes[nix]
 
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
@@ -643,65 +641,27 @@ function fsbi_i(bi  ::iBffs,
                 δt  ::Float64,
                 srδt::Float64)
 
-  λsp = Float64[]
-
   # forward simulation during branch length
-  t0, na = _sim_gbmpb_i(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 500, λsp)
+  t0, na = _sim_gbmpb(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
 
-  if na >= 500
+  if na >= 1_000
     return t0, NaN, NaN, NaN
   end
 
-  # get current speciation rates at branch time
-  λsc = λst(bi)
-
-  e1  = e(ξ1)
-  sr1 = sqrt(e1)
-  e2  = e(ξ2)
-  sr2 = sqrt(e2)
-  λ1c = lλ(ξ1)
-  λ2c = lλ(ξ2)
-  l1  = lastindex(λ1c)
-  l2  = lastindex(λ2c)
-  λ1  = λ1c[l1]
-  λ2  = λ2c[l2]
-
-  # current acceptance ratio
-  ac = 0.0
-  for λi in λsc
-    ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
-  end
-  ac = log(ac)
-
-  # proposed acceptance ratio
-  wp = Float64[]
-  ap = 0.0
-  for λi in λsp
-    wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
-    ap += wi
-    push!(wp, wi)
-  end
-  ap = log(ap)
-
-  if isinf(ap)
-    return t0, NaN, NaN, NaN
-  end
+  ntp = na
 
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr  = ap - ac
+  acr  = log(ntp/nt(bi))
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-  # sample tip
-  wti = sample(wp)
-  λf  = λsp[wti]
+ # fix random tip
+  λf = fixrtip!(t0, na, NaN)
 
   llrd, acrd, drλ, ssrλ, λ1p, λ2p =
     _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
@@ -710,26 +670,21 @@ function fsbi_i(bi  ::iBffs,
 
   if lU < acr
 
-    if wti <= div(na,2)
-      fixtip1!(t0, wti, 0)
-    else
-      fixtip2!(t0, na - wti + 1, 0)
-    end
-
     # simulated remaining tips until the present
-    if na > 1
-      t0, na, acr =
-        tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
-    end
+    t0, na, acr =
+      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
 
     if lU < acr
       na -= 1
+
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-      setni!( bi, na)                       # set new ni
-      setλt!( bi, λf)                       # set new λt
-      setλst!(bi, λsp)                      # set new λst
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      l1  = lastindex(λ1p)
+      l2  = lastindex(λ2p)
+      setnt!(bi, ntp)                    # set new nt
+      setni!(bi, na)                     # set new ni
+      setλt!(bi, λf)                     # set new λt
+      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
 
       return t0, llr, drλ, ssrλ
     else
@@ -778,9 +733,9 @@ function tip_sims!(tree::iTpb,
         # simulate
         stree, na, lr =
           _sim_gbmpb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
-            lr, lU, Iρi, na, 500)
+            lr, lU, Iρi, na, 1_000)
 
-        if isnan(lr) || na >= 500
+        if isnan(lr) || na >= 1_000
           return tree, na, NaN
         end
 
@@ -860,23 +815,23 @@ function update_gbm!(bix  ::Int64,
       llc, dλ, ssλ = _stem_update!(ξi, α, σλ, llc, dλ, ssλ, δt, srδt)
     end
 
-    # # updates within the parent branch
-    # llc, dλ, ssλ = _update_gbm!(ξi, α, σλ, llc, dλ, ssλ, δt, srδt, false)
+    # updates within the parent branch
+    llc, dλ, ssλ = _update_gbm!(ξi, α, σλ, llc, dλ, ssλ, δt, srδt, false)
 
-    # # get fixed tip
-    # lξi = fixtip(ξi)
+    # get fixed tip
+    lξi = fixtip(ξi)
 
-    # # make between decoupled trees node update
-    # llc, dλ, ssλ = update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-    #   fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, llc, dλ, ssλ, δt, srδt)
+    # make between decoupled trees node update
+    llc, dλ, ssλ = update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
+      fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, llc, dλ, ssλ, δt, srδt)
 
-    # # set fixed `λ(t)` in branch
-    # setλt!(bi, lλ(lξi)[end])
+    # set fixed `λ(t)` in branch
+    setλt!(bi, lλ(lξi)[end])
   end
 
   # # carry on updates in the daughters
-  # llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1)
-  # llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
+  llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1)
+  llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
 
   return llc, dλ, ssλ
 end

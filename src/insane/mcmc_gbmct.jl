@@ -244,9 +244,8 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
       # gbm update
       elseif pupi === 4
 
-        # nix = ceil(Int64,rand()*nin)
-        # bix = inodes[nix]
-        bix = 1
+        nix = ceil(Int64,rand()*nin)
+        bix = inodes[nix]
 
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
@@ -398,9 +397,8 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
       # gbm update
       elseif pupi === 4
 
-        # nix = ceil(Int64,rand()*nin)
-        # bix = inodes[nix]
-        bix = 1
+        nix = ceil(Int64,rand()*nin)
+        bix = inodes[nix]
 
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
@@ -596,66 +594,27 @@ function fsbi_i(bi  ::iBffs,
                 δt  ::Float64,
                 srδt::Float64)
 
-  λsp = Float64[]
+  t0, na, nn =
+    _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
 
-  t0, nn =_sim_gbmct_i(e(bi), λ0, α, σλ, ϵ, δt, srδt, 1, 500, λsp)
-
-  na = lastindex(λsp)
-
-  if na < 1 || nn >= 500
+  if na < 1 || nn >= 1_000
     return t0, NaN, NaN, NaN, NaN
   end
 
-  # get current speciation rates at branch time
-  λsc = λst(bi)
-
-  e1  = e(ξ1)
-  sr1 = sqrt(e1)
-  e2  = e(ξ2)
-  sr2 = sqrt(e2)
-  λ1c = lλ(ξ1)
-  λ2c = lλ(ξ2)
-  l1  = lastindex(λ1c)
-  l2  = lastindex(λ2c)
-  λ1  = λ1c[l1]
-  λ2  = λ2c[l2]
-
-  # current acceptance ratio
-  ac = 0.0
-  for λi in λsc
-    ac += exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
-  end
-  ac = log(ac)
-
-  # proposed acceptance ratio
-  wp = Float64[]
-  ap = 0.0
-  for λi in λsp
-    wi  = exp(λi) * dnorm_bm(λi, λ1 - α*e1, sr1*σλ) *
-                    dnorm_bm(λi, λ2 - α*e2, sr2*σλ)
-    ap += wi
-    push!(wp, wi)
-  end
-  ap = log(ap)
-
-  if isinf(ap)
-    return t0, NaN, NaN, NaN, NaN
-  end
+  ntp = na
 
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr  = ap - ac
+  acr  = log(ntp/nt(bi))
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-  # sample tip
-  wti = sample(wp)
-  λf  = λsp[wti]
+  # fix random tip
+  λf = fixrtip!(t0, na, NaN)
 
   llrd, acrd, drλ, ssrλ, Σrλ, λ1p, λ2p =
     _daughters_update!(ξ1, ξ2, λf, α, σλ, ϵ, δt, srδt)
@@ -663,15 +622,6 @@ function fsbi_i(bi  ::iBffs,
   acr += acrd
 
   if lU < acr
-
-     # fix sampled tip
-    lw = lastindex(wp)
-
-    if wti <= div(lw,2)
-      fixtip1!(t0, wti, 0)
-    else
-      fixtip2!(t0, lw - wti + 1, 0)
-    end
 
     # simulate remaining tips until the present
     if na > 1
@@ -683,11 +633,13 @@ function fsbi_i(bi  ::iBffs,
       na -= 1
 
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-      setni!(bi,  na)                       # set new ni
-      setλt!(bi,  λf)                       # set new λt
-      setλst!(bi, λsp)                      # set new λst
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      l1  = lastindex(λ1p)
+      l2  = lastindex(λ2p)
+      setnt!(bi, ntp)                    # set new nt
+      setni!(bi, na)                     # set new ni
+      setλt!(bi, λf)                     # set new λt
+      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
 
       return t0, llr, drλ, ssrλ, Σrλ
     else
@@ -784,74 +736,6 @@ end
 
 
 """
-    tip_sims!(tree::iTct,
-              t   ::Float64,
-              α   ::Float64,
-              σλ  ::Float64,
-              ϵ   ::Float64,
-              δt  ::Float64,
-              srδt::Float64,
-              na  ::Int64)
-
-Continue simulation until time `t` for unfixed tips in `tree`.
-"""
-function tip_sims!(tree::iTct,
-                   t   ::Float64,
-                   α   ::Float64,
-                   σλ  ::Float64,
-                   ϵ   ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64,
-                   na  ::Int64,
-                   nn ::Int64)
-
-  if istip(tree)
-    if !isfix(tree) && isalive(tree)
-
-      fdti = fdt(tree)
-      lλ0  = lλ(tree)
-
-      # simulate
-      stree, na, nn =
-        _sim_gbmct(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, ϵ, δt, srδt,
-                   na - 1, nn, 1_000)
-
-      if nn >= 1_000
-        return tree, na, nn
-      end
-
-      setproperty!(tree, :iμ, isextinct(stree))
-      sete!(tree, e(tree) + e(stree))
-
-      lλs = lλ(stree)
-
-      if lastindex(lλs) === 2
-        setfdt!(tree, fdt(tree) + fdt(stree))
-      else
-        setfdt!(tree, fdt(stree))
-      end
-
-      pop!(lλ0)
-      popfirst!(lλs)
-      append!(lλ0, lλs)
-
-      if isdefined(stree, :d1)
-        tree.d1 = stree.d1
-        tree.d2 = stree.d2
-      end
-    end
-  else
-    tree.d1, na, nn = tip_sims!(tree.d1, t, α, σλ, ϵ, δt, srδt, na, nn)
-    tree.d2, na, nn = tip_sims!(tree.d2, t, α, σλ, ϵ, δt, srδt, na, nn)
-  end
-
-  return tree, na, nn
-end
-
-
-
-
-"""
     update_gbm!(bix  ::Int64,
                 Ξ    ::Vector{iTct},
                 idf  ::Vector{iBffs},
@@ -906,27 +790,27 @@ function update_gbm!(bix  ::Int64,
           _stem_update!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, mc, th, δt, srδt, lλxpr)
       end
 
-      # # updates within the stem branch in stem conditioning
-      # llc, dλ, ssλ, Σλ =
-      #   _update_gbm!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, false)
+      # updates within the stem branch in stem conditioning
+      llc, dλ, ssλ, Σλ =
+        _update_gbm!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, false)
 
-      # # get fixed tip
-      # lξi = fixtip(ξi)
+      # get fixed tip
+      lξi = fixtip(ξi)
 
-      # # make node update between decoupled trees
-      # llc, dλ, ssλ, Σλ =
-      #   update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-      #     fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
+      # make node update between decoupled trees
+      llc, dλ, ssλ, Σλ =
+        update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
+          fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
 
-      # # set fixed `λ(t)` in branch
-      # setλt!(bi, lλ(lξi)[end])
+      # set fixed `λ(t)` in branch
+      setλt!(bi, lλ(lξi)[end])
     end
 
-    # # carry on updates in the daughters
-    # llc, dλ, ssλ, Σλ =
-    #   _update_gbm!(ξ1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter1)
-    # llc, dλ, ssλ, Σλ =
-    #   _update_gbm!(ξ2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter2)
+    # carry on updates in the daughters
+    llc, dλ, ssλ, Σλ =
+      _update_gbm!(ξ1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter1)
+    llc, dλ, ssλ, Σλ =
+      _update_gbm!(ξ2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter2)
   end
 
   return llc, dλ, ssλ, Σλ, mc
@@ -974,7 +858,7 @@ function update_α_ϵ!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 500, stem)
+  mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 5_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -1030,7 +914,7 @@ function update_σ_ϵ!(σλc     ::Float64,
   σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
   σλp  = sqrt(σλp2)
 
-  mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 500, stem)
+  mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 5_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -1082,7 +966,7 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = mulupt(ϵc, ϵtn)::Float64
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 500, stem)
+  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 5_000, stem)
   ϵr  = log(ϵp/ϵc)
   llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
 
@@ -1135,7 +1019,7 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = mulupt(ϵc, ϵtn)::Float64
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 500, stem)
+  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 5_000, stem)
   ϵr  = log(ϵp/ϵc)
   llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
 
