@@ -86,7 +86,7 @@ function insane_gbmce(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 15_000, stem)
+  mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 1_000, stem)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTce)
@@ -835,7 +835,7 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 15_000, stem)
+  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -892,7 +892,7 @@ function update_σ!(σλc     ::Float64,
   σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
   σλp  = sqrt(σλp2)
 
-  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 15_000, stem)
+  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -943,7 +943,7 @@ function update_μ!(μc     ::Float64,
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
-  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 15_000, stem)
+  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
