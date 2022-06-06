@@ -60,14 +60,21 @@ function _daughters_update!(ξ1  ::T,
     bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, μ2p, μf, μ2, σλ, σμ, δt, fdt2, srδt)
 
+    # acceptance rate
+    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
+         duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
+         duoldnorm(μi, μ1, μ2, e1, e2, σμ)
+
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
     llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
-    acr  = llrbd1 + llrbd2
-    llr  = llrbm1 + llrbm2 + λf - λi + acr
+    acr  = llrbd1 + llrbd2 + λf - λi
+    llr  = llrbm1 + llrbm2 + acr
+    acr += gp
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     ssrμ = ssrμ1 + ssrμ2
@@ -245,12 +252,12 @@ function _crown_update!(ξi   ::T,
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
     #survival
-    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 400, stem)
+    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, stem)
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
     acr = llrbd1 + llrbd2 + llr
 
-    if -randexp() < acr
+    if -randexp() < acr + λi - λr
       llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
@@ -319,60 +326,60 @@ end
 
 
 
-"""
-    update_tip!(tree::iTbd,
-                α   ::Float64,
-                σλ  ::Float64,
-                σμ  ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                ssμ ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+# """
+#     update_tip!(tree::iTbd,
+#                 α   ::Float64,
+#                 σλ  ::Float64,
+#                 σμ  ::Float64,
+#                 llc ::Float64,
+#                 dλ  ::Float64,
+#                 ssλ ::Float64,
+#                 ssμ ::Float64,
+#                 δt  ::Float64,
+#                 srδt::Float64)
 
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::T,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     σμ  ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     ssμ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64) where {T <: iTbdU}
+# Make a `gbm` tip proposal.
+# """
+# function update_tip!(tree::T,
+#                      α   ::Float64,
+#                      σλ  ::Float64,
+#                      σμ  ::Float64,
+#                      llc ::Float64,
+#                      dλ  ::Float64,
+#                      ssλ ::Float64,
+#                      ssμ ::Float64,
+#                      δt  ::Float64,
+#                      srδt::Float64) where {T <: iTbdU}
 
-  @inbounds begin
+#   @inbounds begin
 
-    λc   = lλ(tree)
-    μc   = lμ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
-    μp   = Vector{Float64}(undef, l)
+#     λc   = lλ(tree)
+#     μc   = lμ(tree)
+#     l    = lastindex(λc)
+#     fdtp = fdt(tree)
+#     λp   = Vector{Float64}(undef, l)
+#     μp   = Vector{Float64}(undef, l)
 
-    bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
+#     bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, ssrμ =
-      llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
-        false, isextinct(tree))
+#     llrbm, llrbd, ssrλ, ssrμ =
+#       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
+#         false, isextinct(tree))
 
-    acr = llrbd
+#     acr = llrbd
 
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      ssμ += ssrμ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-      unsafe_copyto!(μc, 1, μp, 1, l)
-    end
-  end
+#     if -randexp() < acr
+#       llc += llrbm + acr
+#       dλ  += λp[l] - λc[l]
+#       ssλ += ssrλ
+#       ssμ += ssrμ
+#       unsafe_copyto!(λc, 1, λp, 1, l)
+#       unsafe_copyto!(μc, 1, μp, 1, l)
+#     end
+#   end
 
-  return llc, dλ, ssλ, ssμ
-end
+#   return llc, dλ, ssλ, ssμ
+# end
 
 
 

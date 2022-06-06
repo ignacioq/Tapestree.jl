@@ -451,7 +451,6 @@ function make_Ξ(idf ::Vector{iBffs},
       l   = nt + 2
     end
     setλt!(idfi, lλv[l])
-    push!(λst(idfi), lλv[l])
     push!(Ξ, iTpb(et, true, δt, fdti, lλv))
   end
 
@@ -562,7 +561,6 @@ function make_Ξ(idf ::Vector{iBffs},
       l   = nt + 2
     end
     setλt!(idfi, lλv[l])
-    push!(λst(idfi), lλv[l])
     push!(Ξ, iTct(et, δt, fdti, false, true, lλv))
   end
 
@@ -627,8 +625,6 @@ function make_Ξ(idf ::Vector{iBffs},
     end
     setλt!(idfi, lλv[l])
     setμt!(idfi, lμv[l])
-    push!(λst(idfi), lλv[l])
-    push!(μst(idfi), lμv[l])
     push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
   end
 
