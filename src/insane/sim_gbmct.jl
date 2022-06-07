@@ -402,7 +402,7 @@ function _sim_gbmct(t   ::Float64,
           # if speciation
           if λorμ(λm, ϵ*λm)
             nn += 1
-            na  += 2
+            na += 2
             return iTct(
                     iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
                     iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
