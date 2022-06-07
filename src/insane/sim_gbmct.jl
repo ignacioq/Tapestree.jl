@@ -945,10 +945,9 @@ function _sim_gbmct_surv(t   ::Float64,
 
         t   = max(0.0,t)
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-        λm  = exp(0.5*(λt + λt1))
 
         # if extinction
-        if rand() < ϵ*λm*t
+        if rand() < ϵ*exp(0.5*(λt + λt1))*t
           return surv, nn
         else
           return true, nn
