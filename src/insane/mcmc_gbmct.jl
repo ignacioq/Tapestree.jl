@@ -82,7 +82,7 @@ function insane_gbmct(tree    ::sT_label,
     λc = λi
   end
   ϵc = ϵi
-  mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 11_000, stem)
+  mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 1_000, stem)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTct)
