@@ -310,7 +310,6 @@ end
 
 
 
-
 """
     llr_gbm_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
@@ -322,7 +321,6 @@ end
                   srδt::Float64,
                   λev ::Bool,
                   μev ::Bool)
-
 Returns the log-likelihood for a branch according to `gbmct`
 separately (for gbm and bd).
 """
@@ -379,6 +377,87 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   end
 
   return llrbm, llrct, ssrλ, Σrλ
+end
+
+
+
+
+"""
+    llr_gbm_b_sep(lλp ::Array{Float64,1},
+                  lλc ::Array{Float64,1},
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  σS  ::Float64,
+                  ϵ   ::Float64,
+                  δt  ::Float64,
+                  fdt::Float64,
+                  srδt::Float64,
+                  λev ::Bool,
+                  μev ::Bool)
+
+Returns the log-likelihood for a branch according to `gbmct`
+separately (for GBM proposal and log-likelihood ratio).
+"""
+function llr_gbm_b_sep(lλp ::Array{Float64,1},
+                       lλc ::Array{Float64,1},
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       ϵ   ::Float64,
+                       σS  ::Float64,
+                       δt  ::Float64,
+                       fdt ::Float64,
+                       srδt::Float64,
+                       λev ::Bool,
+                       μev ::Bool)
+
+  # estimate standard `δt` likelihood
+  nI = lastindex(lλc)-2
+
+  llrbm = 0.0
+  llrct = 0.0
+  llpr   = 0.0
+  @avx for i in Base.OneTo(nI)
+    lλpi   = lλp[i]
+    lλci   = lλc[i]
+    lλpi1  = lλp[i+1]
+    lλci1  = lλc[i+1]
+    llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+    llrct += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+    llpr  += (lλci1 - lλci)^2 - (lλpi1 - lλpi)^2
+  end
+
+  # standardized sum of squares
+  ssrλ = llrbm/(2.0*δt)
+  Σrλ  = llrct * δt
+
+  # overall
+  llrbm *= -0.5/((σλ*srδt)^2)
+  llrct *= -δt*(1.0 + ϵ)
+  llpr  *= -0.5/((σS*srδt)^2)
+
+  lλpi1 = lλp[nI+2]
+  lλci1 = lλc[nI+2]
+
+  # add final non-standard `δt`
+  if fdt > 0.0
+    lλpi  = lλp[nI+1]
+    lλci  = lλc[nI+1]
+    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
+    llri   = fdt * (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+    Σrλ   += llri
+    srfdt = sqrt(fdt)
+    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
+                          lλci1, lλci + α*fdt, srfdt*σλ)
+    llrct -= (1.0 + ϵ) * llri
+    llpr  += lrdnorm_bm_x(lλci1, lλci,
+                          lλpi1, lλpi, srfdt*σS)
+  end
+  # if speciation or extinction
+  if λev || μev
+    llrct += lλpi1 - lλci1
+  end
+
+  return (llrbm + llrct), llpr, ssrλ, Σrλ
 end
 
 
