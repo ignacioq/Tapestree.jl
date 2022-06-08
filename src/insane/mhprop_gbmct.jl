@@ -225,7 +225,7 @@ function _crown_update!(ξi   ::iTct,
     mp = 1.0
     llr = log(mp/mc)
 
-    llr += llr1 + llr2# + λr - λi
+    llr += llr1 + llr2
 
     if -randexp() < llr + prr1 + prr2
       llc += llr
