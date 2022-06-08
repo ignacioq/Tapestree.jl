@@ -562,8 +562,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
       llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
                     exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
-      llpr  += lrdnorm_bm_x(lλci1, lλci, lλpi1, lλpi, srfdt*σλ) +
-               lrdnorm_bm_x(lμci1, lμci, lμpi1, lμpi, srfdt*σμ)
+      llpr  += lrdnorm_bm_x(lλci1, lλci, lλpi1, lλpi, srfdt*σS) +
+               lrdnorm_bm_x(lμci1, lμci, lμpi1, lμpi, srfdt*σE)
     end
 
     if λev
