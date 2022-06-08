@@ -125,7 +125,8 @@ function _stem_update!(ξi   ::iTce,
     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
     # survival
-    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, true)
+    # mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, true)
+    mp = 1.0
     llr = log(mp/mc)
 
     acr = llrbd + llr

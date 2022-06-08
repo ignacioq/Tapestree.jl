@@ -752,9 +752,6 @@ function update_gbm!(bix  ::Int64,
     bi   = idf[bix]
     ξ1   = Ξ[d1(bi)]
     ξ2   = Ξ[d2(bi)]
-    ter1 = it(idf[d1(bi)])
-    ter2 = it(idf[d2(bi)])
-
 
     root = iszero(pa(bi))
     # if crown

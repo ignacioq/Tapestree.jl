@@ -252,7 +252,8 @@ function _crown_update!(ξi   ::T,
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
     #survival
-    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, stem)
+    # mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, stem)
+    mp  = 1.0
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
     acr = llrbd1 + llrbd2 + llr
@@ -302,22 +303,16 @@ function _update_gbm!(tree::T,
                       ssλ ::Float64,
                       ssμ ::Float64,
                       δt  ::Float64,
-                      srδt::Float64,
-                      ter ::Bool) where {T <: iTbdU}
+                      srδt::Float64) where {T <: iTbdU}
 
   if def1(tree)
     llc, dλ, ssλ, ssμ =
       update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
+      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
-  else
-    # if !isfix(tree) || ter
-    #   llc, dλ, ssλ, ssμ =
-    #     update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-    # end
+      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
   end
 
   return llc, dλ, ssλ, ssμ
@@ -451,30 +446,33 @@ function update_triad!(λpc ::Vector{Float64},
     μ1  = μ1c[l1]
     μ2  = μ2c[l2]
 
+    σS = exp(randn())
+    σE = exp(randn())
+
     # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
-    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σμ)
+    λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
+    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σE)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, μpp, μp, μn, σλ, σμ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σλ, σμ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σλ, σμ, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, μpp, μp, μn, σS, σE, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σS, σE, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σS, σE, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbmp, llrbdp, ssrλp, ssrμp =
-      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
+    llrp, prrp, ssrλp, ssrμp =
+      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, σS, σE, δt, fdtp, srδt,
         true, false)
-    llrbm1, llrbd1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
+    llr1, prr1, ssrλ1, ssrμ1 =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
         false, false)
-    llrbm2, llrbd2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt,
+    llr2, prr2, ssrλ2, ssrμ2 =
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
         false, false)
 
-    acr = llrbdp + llrbd1 + llrbd2
+    llr = llrp + llr1 + llr2 
 
-    if -randexp() < acr
-      llc += llrbmp + llrbm1 + llrbm2 + acr
+    if -randexp() < llr + prrp + prr1 + prr2
+      llc += llr
       dλ  += λi - λn
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2
@@ -549,29 +547,34 @@ function update_triad!(tree::T,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
+
+    σS = exp(randn())
+    σE = exp(randn())
+
     # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
-    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σμ)
+    λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
+    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σE)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, μpp, μp, μn, σλ, σμ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σλ, σμ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σλ, σμ, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, μpp, μp, μn, σS, σE, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σS, σE, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σS, σE, δt, fdt2, srδt)
 
-    llrbmp, llrbdp, ssrλp, ssrμp =
-      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
+    # log likelihood ratios
+    llrp, prrp, ssrλp, ssrμp =
+      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, σS, σE, δt, fdtp, srδt,
         true, false)
-    llrbm1, llrbd1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
+    llr1, prr1, ssrλ1, ssrμ1 =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
         false, isextinct(tree.d1))
-    llrbm2, llrbd2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt,
+    llr2, prr2, ssrλ2, ssrμ2 =
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
         false, isextinct(tree.d2))
 
-    acr = llrbdp + llrbd1 + llrbd2
+    llr = llrp + llr1 + llr2 
 
-    if -randexp() < acr
-      llc += llrbmp + llrbm1 + llrbm2 + acr
+    if -randexp() < llr + prrp + prr1 + prr2
+      llc += llr
       dλ  += (λ1c[1] - λn)
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2

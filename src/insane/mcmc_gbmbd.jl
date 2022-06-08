@@ -80,7 +80,8 @@ function insane_gbmbd(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)
+  # mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)
+  mc = 1.0
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, log(λc), log(μc), αi, σλi, σμi, δt, srδt, iTbd)
@@ -749,9 +750,8 @@ function update_gbm!(bix  ::Int64,
     bi   = idf[bix]
     ξ1   = Ξ[d1(bi)]
     ξ2   = Ξ[d2(bi)]
-    ter1 = it(idf[d1(bi)])
-    ter2 = it(idf[d2(bi)])
     root = iszero(pa(bi))
+
     # if crown
     if root && iszero(e(bi))
       llc, dλ, ssλ, ssμ, mc =
@@ -785,9 +785,9 @@ function update_gbm!(bix  ::Int64,
 
     # carry on updates in the daughters
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter1)
+      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter2)
+      _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
   end
 
   return llc, dλ, ssλ, ssμ, mc
@@ -837,7 +837,8 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 1_000, crown)
+  # mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 1_000, crown)
+  mp = 1.0
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -899,7 +900,8 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
   σμp = sqrt(σμp2)
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 1_000, crown)
+  # mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 1_000, crown)
+  mp = 1.0
   llr = log(mp/mc)
 
   if -randexp() < llr

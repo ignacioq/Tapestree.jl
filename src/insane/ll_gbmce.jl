@@ -311,8 +311,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, srfdt*σλ)
     llrce -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-    llpr  += lrdnorm_bm_x(lλci1, lλci,
-                          lλpi1, lλpi, srfdt*σS)
+    llpr  += lrdnorm_bm_x(lλci1, lλci, lλpi1, lλpi, srfdt*σS)
   end
   #if speciation
   if λev
