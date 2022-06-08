@@ -201,8 +201,10 @@ function _crown_update!(ξi   ::iTct,
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
+    ss = exp(randn())
+
     # node proposal
-    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    λr = duoprop(λ1, λ2, e1, e2, ss)
 
     # prior ratio
     if λr > lλxpr
@@ -210,8 +212,24 @@ function _crown_update!(ξi   ::iTct,
     end
 
     # simulate fix tree vector
-    bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
+    bb!(λ1p, λr, λ1, ss, δt, fdt1, srδt)
+    bb!(λ2p, λr, λ2, ss, δt, fdt2, srδt)
+
+    prr = llr_bm(λ1c, λ1p, 0.0, ss, δt, fdt1, srδt) + 
+          llr_bm(λ2c, λ2p, 0.0, ss, δt, fdt2, srδt)
+
+
+    # # node proposal
+    # λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+
+    # # prior ratio
+    # if λr > lλxpr
+    #   return llc, dλ, ssλ, Σλ, mc
+    # end
+
+    # # simulate fix tree vector
+    # bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
+    # bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
     llrbm1, llrct1, ssrλ1, Σrλ1 =
@@ -220,13 +238,14 @@ function _crown_update!(ξi   ::iTct,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, false)
+    # mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, false)
+    mp = 1.0
     llr = log(mp/mc)
 
-    acr = llrct1 + llrct2 + llr
+    acr = llrct1 + llrct2 + llr + llrbm1 + llrbm2 + λr - λi
 
-    if -randexp() < acr
-      llc += acr + llrbm1 + llrbm2
+    if -randexp() < acr + prr
+      llc += acr
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       Σλ  += Σrλ1 + Σrλ2
@@ -267,20 +286,15 @@ function _update_gbm!(tree::iTct,
                       ssλ ::Float64,
                       Σλ  ::Float64,
                       δt  ::Float64,
-                      srδt::Float64,
-                      ter ::Bool)
+                      srδt::Float64)
 
   if def1(tree)
     llc, dλ, ssλ, Σλ = update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
 
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter)
+      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter)
-  else
-    # if !isfix(tree) || ter
-    #   llc, dλ, ssλ, Σλ = update_tip!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
-    # end
+      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
   end
 
   return llc, dλ, ssλ, Σλ
@@ -393,22 +407,34 @@ function update_triad!(λpc ::Vector{Float64},
     λ1p = Vector{Float64}(undef,l1)
     λ2p = Vector{Float64}(undef,l2)
     λp  = λpc[1]
-    λi  = λ1c[1]
     λ1  = λ1c[l1]
     λ2  = λ2c[l2]
 
-    # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
+    # # node proposal
+    # λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
+
+    # # simulate fix tree vector
+    # bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
+    # bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
+    # bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
+
+    ss = exp(randn())
+
+    λn = trioprop(λp, λ1, λ2, ep, e1, e2, ss)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, ss, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, ss, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, ss, δt, fdt2, srδt)
+
+    prr = llr_bm(λpc,λpp,0.0,ss,δt,fdtp,srδt) + 
+          llr_bm(λ1c,λ1p,0.0,ss,δt,fdt1,srδt) + 
+          llr_bm(λ2c,λ2p,0.0,ss,δt,fdt2,srδt)
 
     llr, acr, ssrλ, Σrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
       α, σλ, ϵ, δt, fdtp, fdt1, fdt2, srδt)
 
-    if -randexp() < acr
+    if -randexp() < llr + prr
       llc += llr
       dλ  += (λ1c[1] - λn)
       ssλ += ssrλ
@@ -471,31 +497,35 @@ function update_triad!(tree::iTct,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
-    # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
+    ss = exp(randn())
+
+    λn = trioprop(λp, λ1, λ2, ep, e1, e2, ss)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, ss, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, ss, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, ss, δt, fdt2, srδt)
 
-    llrbmp, llrctp, ssrλp, Σrλp =
-      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, δt, fdtp, srδt,
-        true, false)
-    llrbm1, llrct1, ssrλ1, Σrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt,
-        false, isextinct(tree.d1))
-    llrbm2, llrct2, ssrλ2, Σrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt,
-        false, isextinct(tree.d2))
+    prr = llr_bm(λpc, λpp, 0.0, ss, δt, fdtp, srδt) + 
+          llr_bm(λ1c, λ1p, 0.0, ss, δt, fdt1, srδt) + 
+          llr_bm(λ2c, λ2p, 0.0, ss, δt, fdt2, srδt)
 
-    acr = llrctp + llrct1 + llrct2
+    # node proposal
+    # λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
 
-    if -randexp() < acr
-      llc += llrbmp + llrbm1 + llrbm2 + acr
+    # # simulate fix tree vector
+    # bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
+    # bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
+    # bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
+
+    llr, acr, ssrλ, Σrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
+      α, σλ, ϵ, δt, fdtp, fdt1, fdt2, srδt)
+
+    if -randexp() < llr + prr
+      llc += llr
       dλ  += (λ1c[1] - λn)
-      ssλ += ssrλp + ssrλ1 + ssrλ2
-      Σλ  += Σrλp + Σrλ1 + Σrλ2
+      ssλ += ssrλ
+      Σλ  += Σrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
@@ -556,7 +586,3 @@ function llr_propr(λpp  ::Array{Float64,1},
 
   return llr, acr, ssrλ, Σrλ
 end
-
-
-
-

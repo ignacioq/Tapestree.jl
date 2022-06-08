@@ -82,7 +82,8 @@ function insane_gbmct(tree    ::sT_label,
     λc = λi
   end
   ϵc = ϵi
-  mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 1_000, stem)
+  # mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 1_000, stem)
+  mc = 1.0
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTct)
@@ -189,7 +190,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   λ0  = lλ(Ξ[1])[1]
   nsi = stem ? 0.0 : λ0
 
-  llc = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - nsi + log(mc) + prob_ρ(idf)
+  llc = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - nsi
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])        +
         logdunif(exp(λ0), λa_prior[1], λa_prior[2]) +
         logdnorm(αc, α_prior[1], α_prior[2]^2)               +
@@ -364,7 +365,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - lλ(Ξ[1])[1]
         #  if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -376,7 +377,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           update_σ_ϵ!(σλc, lλ(Ξ[1])[1], αc, ϵc, ssλ, nλ, llc, prc, mc, th, stem,
             δt, srδt, σλ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - lλ(Ξ[1])[1]
         #  if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -388,7 +389,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           update_ϵ!(ϵc, lλ(Ξ[1])[1], αc, σλc, llc, mc, th, stem, ϵtn,
             ne, Σλ, δt, srδt, ϵxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - lλ(Ξ[1])[1]
         #  if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -400,11 +401,13 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
+        # bix = 1
+
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
             δt, srδt, lλxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - lλ(Ξ[1])[1]
         #  if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -419,7 +422,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, nλ, ne, L,
             δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - lλ(Ξ[1])[1]
         #  if !isapprox(ll0, llc, atol = 1e-5)
         #    @show ll0, llc, pupi, i, Ξ
         #    return
@@ -790,9 +793,9 @@ function update_gbm!(bix  ::Int64,
           _stem_update!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, mc, th, δt, srδt, lλxpr)
       end
 
-      # updates within the stem branch in stem conditioning
+      # updates within the parent branch
       llc, dλ, ssλ, Σλ =
-        _update_gbm!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, false)
+        _update_gbm!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
 
       # get fixed tip
       lξi = fixtip(ξi)
@@ -806,11 +809,11 @@ function update_gbm!(bix  ::Int64,
       setλt!(bi, lλ(lξi)[end])
     end
 
-    # carry on updates in the daughters
+    # # carry on updates in the daughters
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(ξ1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter1)
+      _update_gbm!(ξ1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(ξ2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter2)
+      _update_gbm!(ξ2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
   end
 
   return llc, dλ, ssλ, Σλ, mc
@@ -858,7 +861,9 @@ function update_α_ϵ!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 1_000, stem)
+  # mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 1_000, stem)
+  mp = 1.0
+
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -914,7 +919,9 @@ function update_σ_ϵ!(σλc     ::Float64,
   σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
   σλp  = sqrt(σλp2)
 
-  mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 1_000, stem)
+  # mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 1_000, stem)
+  mp = 1.0
+
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -966,7 +973,9 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = mulupt(ϵc, ϵtn)::Float64
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+  # mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+  mp = 1.0
+
   ϵr  = log(ϵp/ϵc)
   llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
 
@@ -1019,7 +1028,9 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = mulupt(ϵc, ϵtn)::Float64
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+  # mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+  mp = 1.0
+
   ϵr  = log(ϵp/ϵc)
   llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
 

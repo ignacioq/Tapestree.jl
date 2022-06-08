@@ -1081,7 +1081,6 @@ function _sim_gbmbd_surv(t   ::Float64,
 
         t   = max(0.0,t)
         μt1 = rnorm(μt, sqrt(t)*σμ)
-        μm  = exp(0.5*(μt + μt1))
 
         # if extinction
         if rand() < exp(0.5*(μt + μt1))*t
