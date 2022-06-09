@@ -195,7 +195,7 @@ function _crown_update!(ξi   ::iTce,
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
-    σS = exp(randn())
+    σS = exp(randn() - 0.5)
 
     # node proposal
     λr = duoprop(λ1, λ2, e1, e2, σS)
@@ -379,7 +379,7 @@ function update_triad!(λpc ::Vector{Float64},
     λ1  = λ1c[l1]
     λ2  = λ2c[l2]
 
-    σS = exp(randn())
+    σS = exp(randn() - 0.5)
 
     λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
 
@@ -451,7 +451,7 @@ function update_triad!(tree::iTce,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
-    σS = exp(randn())
+    σS = exp(randn() - 0.5)
 
     λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
 
