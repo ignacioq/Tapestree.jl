@@ -256,8 +256,7 @@ function _crown_update!(ξi   ::T,
         false, false)
 
     #survival
-    # mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, stem)
-    mp  = 1.0
+    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, stem)
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
     llr += llr1 + llr2 + llr
