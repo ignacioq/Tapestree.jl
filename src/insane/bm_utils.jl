@@ -544,7 +544,7 @@ function duodnorm(x  ::Float64,
                   σ  ::Float64)
 
   invt = 1.0/(td1 + td2)
-  return dnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2,
+  return dnorm_bm(x, (td2 * xd1 + td1 * xd2) * invt,
     sqrt(td1 * td2 * invt)*σ)
 end
 
