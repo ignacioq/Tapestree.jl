@@ -195,7 +195,7 @@ function _crown_update!(ξi   ::iTce,
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
-    σS = exp(randn() - 0.5)
+    σS = exp(randn() - 1.0)
 
     # node proposal
     λr = duoprop(λ1, λ2, e1, e2, σS)
@@ -216,8 +216,7 @@ function _crown_update!(ξi   ::iTce,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, σS, δt, fdt2, srδt, false)
 
     # survival
-    # mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, false)
-    mp = 1.0
+    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, false)
     llr = log(mp/mc)
 
     llr += llr1 + llr2
@@ -379,7 +378,7 @@ function update_triad!(λpc ::Vector{Float64},
     λ1  = λ1c[l1]
     λ2  = λ2c[l2]
 
-    σS = exp(randn() - 0.5)
+    σS = exp(randn() - 1.0)
 
     λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
 
@@ -451,7 +450,7 @@ function update_triad!(tree::iTce,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
-    σS = exp(randn() - 0.5)
+    σS = exp(randn() - 1.0)
 
     λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
 
