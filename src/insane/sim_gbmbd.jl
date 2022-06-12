@@ -51,7 +51,7 @@ function sim_gbmbd(n       ::Int64;
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
-                   maxt    ::Float64 = δt*1e6)
+                   maxt    ::Float64 = δt*1e8)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, μs, ea, ee, na, simt =
@@ -187,7 +187,7 @@ function _sedges_gbmbd(n    ::Int64,
 
       # time guard
       if simt > maxt
-        return e0, e1, el, λs, ea, ee, na, simt
+        return e0, e1, el, λs, μs, ea, ee, na, simt
       end
 
       # one time step for all edges alive `ea`

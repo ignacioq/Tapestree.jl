@@ -236,7 +236,7 @@ function _crown_update!(ξi   ::T,
     σE = randexp()*0.5
 
     # node proposal
-    λr = duoprop(λ1, λ2, e1, e2, σS)
+    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σS)
     μr = duoprop(μ1, μ2, e1, e2, σE)
 
     # prior ratio
@@ -248,22 +248,34 @@ function _crown_update!(ξi   ::T,
     bb!(λ1p, λr, λ1, μ1p, μr, μ1, σS, σE, δt, fdt1, srδt)
     bb!(λ2p, λr, λ2, μ2p, μr, μ2, σS, σE, δt, fdt2, srδt)
 
-    llr1, prr1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
-        false, false)
-    llr2, prr2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
-        false, false)
+    # acceptance rate
+    gp = duoldnorm(λr, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
+         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σS) -
+         duoldnorm(λr, λ1 - α*e1, λ2 - α*e2, e1, e2, σS) +
+         duoldnorm(μr, μ1, μ2, e1, e2, σμ)               -
+         duoldnorm(μi, μ1, μ2, e1, e2, σμ)               +
+         duoldnorm(μi, μ1, μ2, e1, e2, σE)               -
+         duoldnorm(μr, μ1, μ2, e1, e2, σE)
+
+    # log likelihood ratios
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
+
+    acr  = llrbd1 + llrbd2 + λf - λi
+    llr  = llrbm1 + llrbm2 + acr
 
     #survival
     # mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, stem)
     mp = 1.0
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
-    llr += llr1 + llr2 + llr
+    acr = llrbd1 + llrbd2 + llr
 
-    if -randexp() < llr + prr1 + prr2
-      llc += llr
+    if -randexp() < gp + acr
+      llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       ssμ += ssrμ1 + ssrμ2
