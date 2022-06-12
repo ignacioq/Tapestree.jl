@@ -211,9 +211,9 @@ function _crown_update!(ξi   ::iTce,
 
     # log likelihood ratios
     llr1, prr1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, α, σS, δt, fdt1, srδt, false)
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, σS, δt, fdt1, srδt, false)
     llr2, prr2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, α, σS, δt, fdt2, srδt, false)
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, σS, δt, fdt2, srδt, false)
 
     # survival
     # mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 5_000, false)
@@ -453,7 +453,6 @@ function update_triad!(tree::iTce,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
- 
     σS = randexp()*0.5
 
     λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
@@ -465,7 +464,6 @@ function update_triad!(tree::iTce,
 
     llr, prr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
       α, σλ, σS, δt, fdtp, fdt1, fdt2, srδt)
-
 
     if -randexp() < llr + prr
       llc += llr
@@ -516,11 +514,11 @@ function llr_propr(λpp  ::Array{Float64,1},
 
   # log likelihood ratios
   llrp, prrp, ssrλp = 
-    llr_gbm_b_sep(λpp, λpc, α, σλ, α, σS, δt, fdtp, srδt, true)
+    llr_gbm_b_sep(λpp, λpc, α, σλ, σS, δt, fdtp, srδt, true)
   llr1, prr1, ssrλ1 = 
-    llr_gbm_b_sep(λ1p, λ1c, α, σλ, α, σS, δt, fdt1, srδt, false)
+    llr_gbm_b_sep(λ1p, λ1c, α, σλ, σS, δt, fdt1, srδt, false)
   llr2, prr2, ssrλ2 = 
-    llr_gbm_b_sep(λ2p, λ2c, α, σλ, α, σS, δt, fdt2, srδt, false)
+    llr_gbm_b_sep(λ2p, λ2c, α, σλ, σS, δt, fdt2, srδt, false)
 
   llr  = llrp + llr1 + llr2
   prr  = prrp + prr1 + prr2

@@ -421,9 +421,10 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     lλci   = lλc[i]
     lλpi1  = lλp[i+1]
     lλci1  = lλc[i+1]
-    llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+    ssλi   = (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+    llrbm += ssλi
     llrct += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-    llpr  += (lλci1 - lλci)^2 - (lλpi1 - lλpi)^2
+    llpr  -= ssλi
   end
 
   # standardized sum of squares
@@ -449,8 +450,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, srfdt*σλ)
     llrct -= (1.0 + ϵ) * llri
-    llpr  += lrdnorm_bm_x(lλci1, lλci,
-                          lλpi1, lλpi, srfdt*σS)
+    llpr  += lrdnorm_bm_x(lλci1, lλci + α*fdt,
+                          lλpi1, lλpi + α*fdt, srfdt*σS)
   end
   # if speciation or extinction
   if λev || μev

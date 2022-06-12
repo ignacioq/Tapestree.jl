@@ -495,7 +495,6 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,
                        σμ  ::Float64,
-                       αS  ::Float64,
                        σS  ::Float64,
                        σE  ::Float64,
                        δt  ::Float64,
@@ -522,12 +521,13 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
       lλci1   = lλc[i+1]
       lμpi1   = lμp[i+1]
       lμci1   = lμc[i+1]
-      llrbmλ += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+      ssλi    = (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+      llrbmλ += ssλi
       ssμi    = (lμpi1 - lμpi)^2 - (lμci1 - lμci)^2
       llrbmμ += ssμi
       llrbd  += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
                 exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1))
-      llprS  += (lλci1 - lλci - αS*δt)^2 - (lλpi1 - lλpi - αS*δt)^2
+      llprS  -= ssλi
       llprE  -= ssμi
     end
 
@@ -564,8 +564,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                lrdnorm_bm_x(lμpi1, lμpi, lμci1, lμci, srfdt*σμ)
       llrbd -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)) +
                     exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
-      llpr  += lrdnorm_bm_x(lλci1, lλci + αS*fdt, 
-                            lλpi1, lλpi + αS*fdt, srfdt*σS) +
+      llpr  += lrdnorm_bm_x(lλci1, lλci + α*fdt, 
+                            lλpi1, lλpi + α*fdt, srfdt*σS) +
                lrdnorm_bm_x(lμci1, lμci, lμpi1, lμpi, srfdt*σE)
     end
 

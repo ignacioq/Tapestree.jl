@@ -258,7 +258,6 @@ end
                   lλc ::Array{Float64,1},
                   α   ::Float64,
                   σλ  ::Float64,
-                  αS  ::Float64,
                   σS  ::Float64,
                   δt  ::Float64,
                   fdt ::Float64,
@@ -272,7 +271,6 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,
-                       αS  ::Float64,
                        σS  ::Float64,
                        δt  ::Float64,
                        fdt ::Float64,
@@ -290,9 +288,10 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     lλci   = lλc[i]
     lλpi1  = lλp[i+1]
     lλci1  = lλc[i+1]
-    llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+    ssλi   = (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+    llrbm += ssλi
     llrce += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-    llpr  += (lλci1 - lλci - αS*δt)^2 - (lλpi1 - lλpi - αS*δt)^2
+    llpr  -= ssλi
   end
 
   # standardized sum of squares
@@ -300,7 +299,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   # add to global likelihood
   llrbm *= (-0.5/((σλ*srδt)^2))
   llrce *= (-δt)
-  llpr  *= -0.5/((σS*srδt)^2)
+  llpr  *= (-0.5/((σS*srδt)^2))
 
   lλpi1 = lλp[nI+2]
   lλci1 = lλc[nI+2]
@@ -314,8 +313,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, srfdt*σλ)
     llrce -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-    llpr  += lrdnorm_bm_x(lλci1, lλci + αS*fdt, 
-                          lλpi1, lλpi + αS*fdt, srfdt*σS)
+    llpr  += lrdnorm_bm_x(lλci1, lλci + α*fdt, 
+                          lλpi1, lλpi + α*fdt, srfdt*σS)
   end
   #if speciation
   if λev

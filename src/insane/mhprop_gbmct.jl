@@ -209,7 +209,7 @@ function _crown_update!(ξi   ::iTct,
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ, mc
+      return llc, dλ, ssλ, Σλ, mc
     end
 
     # simulate fix tree vector
@@ -217,9 +217,9 @@ function _crown_update!(ξi   ::iTct,
     bb!(λ2p, λr, λ2, σS, δt, fdt2, srδt)
 
     llr1, prr1, ssrλ1, Σrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, α, σS, δt, fdt1, srδt, false, false)
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt, false, false)
     llr2, prr2, ssrλ2, Σrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, α, σS, δt, fdt2, srδt, false, false)
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, false, false)
 
     # survival
     # mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
@@ -478,14 +478,23 @@ function update_triad!(tree::iTct,
     bb!(λ1p, λn, λ1, σS, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σS, δt, fdt2, srδt)
 
-    llr, prr, ssrλ, Σrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
-      α, σλ, ϵ, σS, δt, fdtp, fdt1, fdt2, srδt)
+    # log likelihood ratios
+    llrp, prrp, ssrλp, Σrλp =
+      llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, σS, δt, fdtp, srδt, true, false)
+    llr1, prr1, ssrλ1, Σrλ1 =
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt, 
+        false, isextinct(tree.d1))
+    llr2, prr2, ssrλ2, Σrλ2 =
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, 
+        false, isextinct(tree.d2))
 
-    if -randexp() < llr + prr
+    llr  = llrp + llr1 + llr2
+
+    if -randexp() < llr + prrp + prr1 + prr2
       llc += llr
       dλ  += (λ1c[1] - λn)
-      ssλ += ssrλ
-      Σλ  += Σrλ
+      ssλ += ssrλp  + ssrλ1  + ssrλ2
+      Σλ  += Σrλp   + Σrλ1   + Σrλ2
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
@@ -534,11 +543,11 @@ function llr_propr(λpp  ::Array{Float64,1},
 
   # log likelihood ratios
   llrp, prrp, ssrλp, Σrλp =
-    llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, α, σS, δt, fdtp, srδt, true, false)
+    llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, σS, δt, fdtp, srδt, true, false)
   llr1, prr1, ssrλ1, Σrλ1 =
-    llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, α, σS, δt, fdt1, srδt, false, false)
+    llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt, false, false)
   llr2, prr2, ssrλ2, Σrλ2 =
-    llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, α, σS, δt, fdt2, srδt, false, false)
+    llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, false, false)
 
   llr  = llrp + llr1 + llr2
   prr  = prrp + prr1 + prr2
