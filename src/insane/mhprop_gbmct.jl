@@ -205,11 +205,11 @@ function _crown_update!(ξi   ::iTct,
     σS = randexp()*0.5
 
     # node proposal
-    λr = duoprop(λ1, λ2, e1, e2, σS)
+    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σS)
 
     # prior ratio
     if λr > lλxpr
-      return llc, dλ, ssλ, Σλ, mc
+      return llc, dλ, ssλ, mc
     end
 
     # simulate fix tree vector
@@ -217,9 +217,9 @@ function _crown_update!(ξi   ::iTct,
     bb!(λ2p, λr, λ2, σS, δt, fdt2, srδt)
 
     llr1, prr1, ssrλ1, Σrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt, false, false)
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, α, σS, δt, fdt1, srδt, false, false)
     llr2, prr2, ssrλ2, Σrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, false, false)
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, α, σS, δt, fdt2, srδt, false, false)
 
     # survival
     # mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
@@ -396,7 +396,7 @@ function update_triad!(λpc ::Vector{Float64},
 
     σS = randexp()*0.5
 
-    λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
+    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
 
     # simulate fix tree vector
     bb!(λpp, λp, λn, σS, δt, fdtp, srδt)
@@ -471,7 +471,7 @@ function update_triad!(tree::iTct,
 
     σS = randexp()*0.5
 
-    λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
+    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
 
     # simulate fix tree vector
     bb!(λpp, λp, λn, σS, δt, fdtp, srδt)
@@ -534,11 +534,11 @@ function llr_propr(λpp  ::Array{Float64,1},
 
   # log likelihood ratios
   llrp, prrp, ssrλp, Σrλp =
-    llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, σS, δt, fdtp, srδt, true, false)
+    llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, α, σS, δt, fdtp, srδt, true, false)
   llr1, prr1, ssrλ1, Σrλ1 =
-    llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt, false, false)
+    llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, α, σS, δt, fdt1, srδt, false, false)
   llr2, prr2, ssrλ2, Σrλ2 =
-    llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, false, false)
+    llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, α, σS, δt, fdt2, srδt, false, false)
 
   llr  = llrp + llr1 + llr2
   prr  = prrp + prr1 + prr2

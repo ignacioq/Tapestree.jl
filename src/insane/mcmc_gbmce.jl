@@ -783,7 +783,7 @@ function update_gbm!(bix  ::Int64,
       setλt!(bi, lλ(lξi)[end])
     end
 
-    # carry on updates in the daughters
+    # # carry on updates in the daughters
     # llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
     # llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
   end

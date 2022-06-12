@@ -205,31 +205,25 @@ function _crown_update!(ξi   ::iTce,
       return llc, dλ, ssλ, mc
     end
 
-    # acceptance rate
-    gp = duoldnorm(λr, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σS) -
-         duoldnorm(λr, λ1 - α*e1, λ2 - α*e2, e1, e2, σS)
-
     # simulate fix tree vector
-    bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
+    bb!(λ1p, λr, λ1, σS, δt, fdt1, srδt)
+    bb!(λ2p, λr, λ2, σS, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrce1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrce2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+    llr1, prr1, ssrλ1 =
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, α, σS, δt, fdt1, srδt, false)
+    llr2, prr2, ssrλ2 =
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, α, σS, δt, fdt2, srδt, false)
 
     # survival
     # mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 5_000, false)
     mp = 1.0
     llr = log(mp/mc)
 
-    acr = llrce1 + llrce2 + llr
+    llr += llr1 + llr2
 
-    if -randexp() < acr + gp
-      llc += acr + llrbm1 + llrbm2
+    if -randexp() < llr + prr1 + prr2
+      llc += llr
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       fill!(λpc, λr)
@@ -388,33 +382,20 @@ function update_triad!(λpc ::Vector{Float64},
 
     σS = randexp()*0.5
 
-    λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
-
-    # acceptance rate
-    gp = trioldnorm(λn, λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ) -
-         trioldnorm(λi, λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ) +
-         trioldnorm(λi, λp, λ1, λ2, ep, e1, e2, σS) -
-         trioldnorm(λn, λp, λ1, λ2, ep, e1, e2, σS)
+    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, σS, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, σS, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, σS, δt, fdt2, srδt)
 
-    # log likelihood ratios
-    llrbmp, llrcep, ssrλp =
-      llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
-    llrbm1, llrce1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrce2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+    llr, prr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
+      α, σλ, σS, δt, fdtp, fdt1, fdt2, srδt)
 
-    acr = llrcep + llrce1 + llrce2
-
-    if -randexp() < acr + gp
-      llc += acr + llrbmp + llrbm1 + llrbm2
+    if -randexp() < llr + prr
+      llc += llr
       dλ  += (λi - λn)
-      ssλ += ssrλp + ssrλ1 + ssrλ2
+      ssλ += ssrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
@@ -472,35 +453,24 @@ function update_triad!(tree::iTce,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
+ 
     σS = randexp()*0.5
 
-    λn = trioprop(λp, λ1, λ2, ep, e1, e2, σS)
-
-    # acceptance rate
-    gp = trioldnorm(λn, λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ) -
-         trioldnorm(λi, λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ) +
-         trioldnorm(λi, λp, λ1, λ2, ep, e1, e2, σS) -
-         trioldnorm(λn, λp, λ1, λ2, ep, e1, e2, σS)
+    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, σS, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, σS, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, σS, δt, fdt2, srδt)
 
-    # log likelihood ratios
-    llrbmp, llrcep, ssrλp =
-      llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
-    llrbm1, llrce1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrce2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+    llr, prr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
+      α, σλ, σS, δt, fdtp, fdt1, fdt2, srδt)
 
-    acr = llrcep + llrce1 + llrce2
 
-    if -randexp() < acr + gp
-      llc += acr + llrbmp + llrbm1 + llrbm2
+    if -randexp() < llr + prr
+      llc += llr
       dλ  += (λi - λn)
-      ssλ += ssrλp + ssrλ1 + ssrλ2
+      ssλ += ssrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
@@ -510,3 +480,51 @@ function update_triad!(tree::iTce,
   return llc, dλ, ssλ
 end
 
+
+
+"""
+    llr_propr(λpp  ::Array{Float64,1},
+              λ1p  ::Array{Float64,1},
+              λ2p  ::Array{Float64,1},
+              λpc  ::Array{Float64,1},
+              λ1c  ::Array{Float64,1},
+              λ2c  ::Array{Float64,1},
+              α    ::Float64,
+              σλ   ::Float64,
+              σS   ::Float64,
+              δt   ::Float64,
+              fdtp::Float64,
+              fdt1::Float64,
+              fdt2::Float64,
+              srδt ::Float64)
+Return the likelihood and proposal ratio for ice.
+"""
+function llr_propr(λpp  ::Array{Float64,1},
+                   λ1p  ::Array{Float64,1},
+                   λ2p  ::Array{Float64,1},
+                   λpc  ::Array{Float64,1},
+                   λ1c  ::Array{Float64,1},
+                   λ2c  ::Array{Float64,1},
+                   α    ::Float64,
+                   σλ   ::Float64,
+                   σS   ::Float64,
+                   δt   ::Float64,
+                   fdtp::Float64,
+                   fdt1::Float64,
+                   fdt2::Float64,
+                   srδt ::Float64)
+
+  # log likelihood ratios
+  llrp, prrp, ssrλp = 
+    llr_gbm_b_sep(λpp, λpc, α, σλ, α, σS, δt, fdtp, srδt, true)
+  llr1, prr1, ssrλ1 = 
+    llr_gbm_b_sep(λ1p, λ1c, α, σλ, α, σS, δt, fdt1, srδt, false)
+  llr2, prr2, ssrλ2 = 
+    llr_gbm_b_sep(λ2p, λ2c, α, σλ, α, σS, δt, fdt2, srδt, false)
+
+  llr  = llrp + llr1 + llr2
+  prr  = prrp + prr1 + prr2
+  ssrλ = ssrλp + ssrλ1 + ssrλ2
+
+  return llr, prr, ssrλ
+end

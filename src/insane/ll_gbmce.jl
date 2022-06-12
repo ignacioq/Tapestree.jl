@@ -258,6 +258,8 @@ end
                   lλc ::Array{Float64,1},
                   α   ::Float64,
                   σλ  ::Float64,
+                  αS  ::Float64,
+                  σS  ::Float64,
                   δt  ::Float64,
                   fdt ::Float64,
                   srδt::Float64,
@@ -270,6 +272,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,
+                       αS  ::Float64,
                        σS  ::Float64,
                        δt  ::Float64,
                        fdt ::Float64,
@@ -289,7 +292,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     lλci1  = lλc[i+1]
     llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
     llrce += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-    llpr  += (lλci1 - lλci)^2 - (lλpi1 - lλpi)^2
+    llpr  += (lλci1 - lλci - αS*δt)^2 - (lλpi1 - lλpi - αS*δt)^2
   end
 
   # standardized sum of squares
@@ -311,7 +314,8 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, srfdt*σλ)
     llrce -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-    llpr  += lrdnorm_bm_x(lλci1, lλci, lλpi1, lλpi, srfdt*σS)
+    llpr  += lrdnorm_bm_x(lλci1, lλci + αS*fdt, 
+                          lλpi1, lλpi + αS*fdt, srfdt*σS)
   end
   #if speciation
   if λev

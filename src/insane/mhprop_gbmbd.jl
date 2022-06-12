@@ -248,31 +248,22 @@ function _crown_update!(ξi   ::T,
     bb!(λ1p, λr, λ1, μ1p, μr, μ1, σS, σE, δt, fdt1, srδt)
     bb!(λ2p, λr, λ2, μ2p, μr, μ2, σS, σE, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λr, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σS) -
-         duoldnorm(λr, λ1 - α*e1, λ2 - α*e2, e1, e2, σS) +
-         duoldnorm(μr, μ1, μ2, e1, e2, σμ)               -
-         duoldnorm(μi, μ1, μ2, e1, e2, σμ)               +
-         duoldnorm(μi, μ1, μ2, e1, e2, σE)               -
-         duoldnorm(μr, μ1, μ2, e1, e2, σE)
-
-    # log likelihood ratios
-    llrbm1, llrbd1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
-    llrbm2, llrbd2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
+    llr1, prr1, ssrλ1, ssrμ1 =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, α, σS, σE, δt, fdt1, srδt,
+        false, false)
+    llr2, prr2, ssrλ2, ssrμ2 =
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, α, σS, σE, δt, fdt2, srδt,
+        false, false)
 
     #survival
     # mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, stem)
     mp = 1.0
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
-    acr = llrbd1 + llrbd2 + llr
+    llr += llr1 + llr2
 
-    if -randexp() < gp + acr
-      llc += acr + llrbm1 + llrbm2
+    if -randexp() < llr + prr1 + prr2
+      llc += llr
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       ssμ += ssrμ1 + ssrμ2
@@ -473,13 +464,13 @@ function update_triad!(λpc ::Vector{Float64},
 
     # log likelihood ratios
     llrp, prrp, ssrλp, ssrμp =
-      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, σS, σE, δt, fdtp, srδt,
+      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, 0.0, σS, σE, δt, fdtp, srδt,
         true, false)
     llr1, prr1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, 0.0, σS, σE, δt, fdt1, srδt,
         false, false)
     llr2, prr2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, 0.0, σS, σE, δt, fdt2, srδt,
         false, false)
 
     llr = llrp + llr1 + llr2 
@@ -575,13 +566,13 @@ function update_triad!(tree::T,
 
     # log likelihood ratios
     llrp, prrp, ssrλp, ssrμp =
-      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, σS, σE, δt, fdtp, srδt,
+      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, 0.0, σS, σE, δt, fdtp, srδt,
         true, false)
     llr1, prr1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, 0.0, σS, σE, δt, fdt1, srδt,
         false, isextinct(tree.d1))
     llr2, prr2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, 0.0, σS, σE, δt, fdt2, srδt,
         false, isextinct(tree.d2))
 
     llr = llrp + llr1 + llr2 
