@@ -264,9 +264,6 @@ function _crown_update!(ξi   ::T,
     llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
-    acr  = llrbd1 + llrbd2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
-
     #survival
     # mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, stem)
     mp = 1.0
