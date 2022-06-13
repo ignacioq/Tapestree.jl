@@ -107,13 +107,13 @@ function insane_gbmbd(tree    ::sT_label,
   @info "running birth-death gbm"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, σμc, mc  =
+  Ξ, idf, llc, prc, αc, σλc, σμc, mc, mσλ, mσμ  =
     mcmc_burn_gbmbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
       nburn, αi, σλi, σμi, mc, th, crown, δt, srδt, inodes, pup, prints)
 
   # mcmc
   R, Ξv =
-    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, crown,
+    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, mσλ, mσμ, th, crown,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, niter, nthin, δt, srδt,
       inodes, pup, prints)
 
@@ -191,6 +191,11 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   nin          = lastindex(inodes) # number of internal nodes
   el           = lastindex(idf)    # number of branches
 
+  # sum for estimating sigma proposals 
+  sσλ = 0.0
+  sσμ = 0.0
+  ntu = nburn - div(nburn,3)
+
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for i in Base.OneTo(nburn)
@@ -225,7 +230,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
  
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            δt, srδt, lλxpr, lμxpr)
+            δt, srδt, 0.5, 0.5, lλxpr, lμxpr)
 
       # forward simulation update
       else
@@ -238,10 +243,18 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       end
     end
 
+    if i > ntu
+      sσλ += σλc
+      sσμ += σμc
+    end
+
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, σμc, mc
+  mσλ = sσλ/Float64(ntu)
+  mσμ = sσμ/Float64(ntu)
+
+  return Ξ, idf, llc, prc, αc, σλc, σμc, mc, mσλ, mσμ
 end
 
 
@@ -281,6 +294,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     σλc     ::Float64,
                     σμc     ::Float64,
                     mc      ::Float64,
+                    mσλ     ::Float64, 
+                    mσμ     ::Float64,
                     th      ::Float64,
                     crown    ::Int64,
                     λa_prior::NTuple{2,Float64},
@@ -365,7 +380,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            δt, srδt, lλxpr, lμxpr)
+            δt, srδt, mσλ, mσμ, lλxpr, lμxpr)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -742,6 +757,8 @@ function update_gbm!(bix  ::Int64,
                      th   ::Float64,
                      δt   ::Float64,
                      srδt ::Float64,
+                     mσλ  ::Float64,
+                     mσμ  ::Float64,
                      lλxpr::Float64,
                      lμxpr::Float64) where {T <: iTbdU}
   @inbounds begin
@@ -756,19 +773,19 @@ function update_gbm!(bix  ::Int64,
     if root && iszero(e(bi))
       llc, dλ, ssλ, ssμ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th,
-          δt, srδt, lλxpr, lμxpr, 1)
+          δt, srδt, mσλ, mσμ, lλxpr, lμxpr, 1)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dλ, ssλ, ssμ, mc =
-          _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt,
+          _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt,  mσλ, mσμ,
             lλxpr, lμxpr)
       end
 
       # updates within the parent branch
       llc, dλ, ssλ, ssμ = 
-        _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+        _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, mσλ, mσμ)
 
       # get fixed tip
       lξi = fixtip(ξi)
@@ -777,7 +794,7 @@ function update_gbm!(bix  ::Int64,
       llc, dλ, ssλ, ssμ, λf =
         update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), lμ(lξi), lμ(ξ1), lμ(ξ2),
           e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
-          α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+          α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, mσλ, mσμ)
 
       # set fixed `λ(t)` in branch
       setλt!(bi, lλ(lξi)[end])
@@ -785,9 +802,9 @@ function update_gbm!(bix  ::Int64,
 
     # # carry on updates in the daughters
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, mσλ, mσμ)
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+      _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, mσλ, mσμ)
   end
 
   return llc, dλ, ssλ, ssμ, mc

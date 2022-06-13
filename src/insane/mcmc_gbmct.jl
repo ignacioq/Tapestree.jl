@@ -112,14 +112,14 @@ function insane_gbmct(tree    ::sT_label,
   @info "running birth-death gbm with constant ϵ"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc =
+  Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, mσλ =
     mcmc_burn_gbmct(Ξ, idf, λa_prior, α_prior, σλ_prior, ϵ_prior,
       nburn, tune_int, αi, σλi, ϵc, ϵtni, mc, th, stem, δt, srδt, inodes, pup,
        prints, scalef)
 
   # mcmc
   R, Ξv =
-    mcmc_gbmct(Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, th, stem,
+    mcmc_gbmct(Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, mσλ, th, stem,
       λa_prior, α_prior, σλ_prior, ϵ_prior, niter, nthin, δt, srδt,
       inodes, pup, prints)
 
@@ -210,6 +210,10 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   # number of branches
   nbr  = lastindex(idf)
 
+  # sum for estimating sigma proposals 
+  sσλ = 0.0
+  ntu = nburn - div(nburn,3)
+
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for i in Base.OneTo(nburn)
@@ -250,7 +254,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
 
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
-            δt, srδt, lλxpr)
+            δt, srδt, 0.5, lλxpr)
 
       # forward simulation update
       else
@@ -263,6 +267,10 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
       end
     end
 
+    if i > ntu
+      sσλ += σλc
+    end
+
     # log tuning parameters
     ltn += 1
     if ltn === tune_int
@@ -273,7 +281,9 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc
+  mσλ = sσλ/Float64(ntu)
+
+  return Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, mσλ
 end
 
 
@@ -311,6 +321,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
                     ϵc      ::Float64,
                     ϵtn     ::Float64,
                     mc      ::Float64,
+                    mσλ     ::Float64,
                     th      ::Float64,
                     stem    ::Bool,
                     λa_prior::NTuple{2,Float64},
@@ -405,7 +416,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
 
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
-            δt, srδt, lλxpr)
+            δt, srδt, mσλ, lλxpr)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - lλ(Ξ[1])[1]
         #  if !isapprox(ll0, llc, atol = 1e-5)
@@ -769,6 +780,7 @@ function update_gbm!(bix  ::Int64,
                      stem ::Bool,
                      δt   ::Float64,
                      srδt ::Float64,
+                     mσλ  ::Float64,
                      lλxpr::Float64)
   @inbounds begin
 
@@ -784,13 +796,14 @@ function update_gbm!(bix  ::Int64,
     if root && !stem
       llc, dλ, ssλ, Σλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, mc, th,
-          δt, srδt, lλxpr)
+          δt, srδt, mσλ, lλxpr)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem branch
       if root
         llc, dλ, ssλ, Σλ, mc =
-          _stem_update!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, mc, th, δt, srδt, lλxpr)
+          _stem_update!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, mc, th, 
+            δt, srδt, mσλ, lλxpr)
       end
 
       # updates within the parent branch
@@ -803,7 +816,7 @@ function update_gbm!(bix  ::Int64,
       # make node update between decoupled trees
       llc, dλ, ssλ, Σλ =
         update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-          fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
+          fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
 
       # set fixed `λ(t)` in branch
       setλt!(bi, lλ(lξi)[end])

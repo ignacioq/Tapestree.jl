@@ -113,13 +113,13 @@ function insane_gbmce(tree    ::sT_label,
   @info "running birth-death gbm with constant μ"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, μc, mc =
+  Ξ, idf, llc, prc, αc, σλc, μc, mc, mσλ =
     mcmc_burn_gbmce(Ξ, idf, λa_prior, α_prior, σλ_prior, μ_prior,
       nburn, αi, σλi, μc, mc, th, stem, δt, srδt, inodes, pup, prints)
 
   # mcmc
   R, Ξv =
-    mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, th, stem,
+    mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, mσλ, th, stem,
       λa_prior, α_prior, σλ_prior, μ_prior, niter, nthin, δt, srδt,
       inodes, pup, prints)
 
@@ -196,6 +196,10 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
 
+  # sum for estimating sigma proposals 
+  sσλ = 0.0
+  ntu = nburn - div(nburn,3)
+
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for i in Base.OneTo(nburn)
@@ -237,7 +241,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
 
         llc, dλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem,
-            δt, srδt, lλxpr)
+            δt, srδt, 0.5, lλxpr)
 
       # forward simulation update
       else
@@ -250,14 +254,17 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
       end
     end
 
+    if i > ntu
+      sσλ += σλc
+    end
+
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, μc, mc
+  mσλ = sσλ/Float64(ntu)
+
+  return Ξ, idf, llc, prc, αc, σλc, μc, mc, mσλ
 end
-
-
-
 
 
 
@@ -295,6 +302,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
                     σλc     ::Float64,
                     μc      ::Float64,
                     mc      ::Float64,
+                    mσλ    ::Float64,
                     th      ::Float64,
                     stem    ::Bool,
                     λa_prior::NTuple{2,Float64},
@@ -387,7 +395,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         llc, dλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th, stem,
-            δt, srδt, lλxpr)
+            δt, srδt, mσλ, lλxpr)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - !stem*lλ(Ξ[1])[1]  + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
@@ -745,6 +753,7 @@ function update_gbm!(bix  ::Int64,
                      stem ::Bool,
                      δt   ::Float64,
                      srδt ::Float64,
+                     mσλ ::Float64,
                      lλxpr::Float64)
   @inbounds begin
 
@@ -758,18 +767,19 @@ function update_gbm!(bix  ::Int64,
     if root && !stem
       llc, dλ, ssλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, dλ, ssλ, mc, th,
-          δt, srδt, lλxpr)
+          δt, srδt, mσλ, lλxpr)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dλ, ssλ, mc =
-          _stem_update!(ξi, α, σλ, μ, llc, dλ, ssλ, mc, th, δt, srδt, lλxpr)
+          _stem_update!(ξi, α, σλ, μ, llc, dλ, ssλ, mc, th, 
+            δt, srδt, mσλ, lλxpr)
       end
 
       # parent branch update
       # llc, dλ, ssλ =
-      #   _update_gbm!(ξi, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+      #   _update_gbm!(ξi, α, σλ, μ, llc, dλ, ssλ, δt, srδt, mσλ)
 
       # get fixed tip
       lξi = fixtip(ξi)
@@ -777,15 +787,15 @@ function update_gbm!(bix  ::Int64,
       # make between decoupled trees node update
       llc, dλ, ssλ =
         update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-          fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+          fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, dλ, ssλ, δt, srδt, mσλ)
 
       # set fixed `λ(t)` in branch
       setλt!(bi, lλ(lξi)[end])
     end
 
     # # carry on updates in the daughters
-    # llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
-    # llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+    # llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, mσλ)
+    # llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, mσλ)
   end
 
   return llc, dλ, ssλ, mc

@@ -104,6 +104,7 @@ function _stem_update!(ξi   ::iTct,
                        th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
+                       mσλ  ::Float64,
                        lλxpr::Float64)
 
   @inbounds begin
@@ -184,6 +185,7 @@ function _crown_update!(ξi   ::iTct,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
+                        mσλ  ::Float64,
                         lλxpr::Float64)
 
   @inbounds begin
@@ -202,7 +204,7 @@ function _crown_update!(ξi   ::iTct,
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
-    σS = randexp()*0.5
+    σS = randexp()*mσλ
 
     # node proposal
     λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σS)
@@ -270,15 +272,18 @@ function _update_gbm!(tree::iTct,
                       ssλ ::Float64,
                       Σλ  ::Float64,
                       δt  ::Float64,
-                      srδt::Float64)
+                      srδt::Float64,
+                      mσλ ::Float64)
+
 
   if def1(tree)
-    llc, dλ, ssλ, Σλ = update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
+    llc, dλ, ssλ, Σλ = 
+      update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
 
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
+      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
+      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
   end
 
   return llc, dλ, ssλ, Σλ
@@ -359,7 +364,8 @@ end
                   ssλ ::Float64,
                   Σλ  ::Float64,
                   δt  ::Float64,
-                  srδt::Float64)
+                  srδt::Float64,
+                  mσλ ::Float64)
 
 Make a `gbm` trio proposal for observed speciation event.
 """
@@ -380,7 +386,8 @@ function update_triad!(λpc ::Vector{Float64},
                        ssλ ::Float64,
                        Σλ  ::Float64,
                        δt  ::Float64,
-                       srδt::Float64)
+                       srδt::Float64,
+                       mσλ ::Float64)
 
   @inbounds begin
 
@@ -394,7 +401,7 @@ function update_triad!(λpc ::Vector{Float64},
     λ1  = λ1c[l1]
     λ2  = λ2c[l2]
 
-    σS = randexp()*0.5
+    σS = randexp()*mσλ
 
     λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
 
@@ -446,7 +453,8 @@ function update_triad!(tree::iTct,
                        ssλ ::Float64,
                        Σλ  ::Float64,
                        δt  ::Float64,
-                       srδt::Float64)
+                       srδt::Float64,
+                       mσλ ::Float64)
 
   @inbounds begin
 
@@ -469,7 +477,7 @@ function update_triad!(tree::iTct,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
-    σS = randexp()*0.5
+    σS = randexp()*mσλ
 
     λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
 
