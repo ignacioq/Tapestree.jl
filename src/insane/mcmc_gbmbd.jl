@@ -194,7 +194,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   # sum for estimating sigma proposals 
   sσλ = 0.0
   sσμ = 0.0
-  ntu = nburn - div(nburn,3)
+  ntu = nburn - div(nburn,2)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
