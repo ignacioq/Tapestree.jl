@@ -771,7 +771,7 @@ function _ntipsextinctF(tree::T, n::Float64) where {T <: iTf}
 
   if istip(tree)
     if isextinct(tree)
-      n += 1
+      n += 1.0
     end
   else
     n = _ntipsextinctF(tree.d1, n)

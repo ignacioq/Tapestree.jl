@@ -72,7 +72,7 @@ function insane_cbd(tree    ::sT_label,
     λc, μc = λi, μi
   end
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 500, crown)
+  mc = m_surv_cbd(th, λc, μc, 1_000, crown)
 
   # make a decoupled tree and fix it
   Ξ = sTbd[]
@@ -531,7 +531,7 @@ function fsbi_t(bi::iBffs, λ::Float64, μ::Float64)
 
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_cbd_t(e(bi), λ, μ, lc, lU, Iρi, 0, 1, 500)
+    _sim_cbd_t(e(bi), λ, μ, lc, lU, Iρi, 0, 1, 1_000)
 
   if na > 0 && isfinite(llr)
     _fixrtip!(t0, na) # fix random tip
@@ -553,9 +553,9 @@ Forward simulation for internal branch.
 """
 function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
 
-  t0, na, nn = _sim_cbd_i(e(bi), λ, μ, 0, 1, 500)
+  t0, na, nn = _sim_cbd_i(e(bi), λ, μ, 0, 1, 1_000)
 
-  if na < 1 || nn >= 500
+  if na < 1 || nn > 999
     return t0, NaN
   end
 
@@ -569,7 +569,6 @@ function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
@@ -619,16 +618,16 @@ function tip_sims!(tree::sTbd,
                    na  ::Int64,
                    nn ::Int64)
 
-  if lU < lr && nn < 500
+  if lU < lr && nn < 1_000
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
 
         # simulate
         stree, na, nn, lr = 
-          _sim_cbd_it(t, λ, μ, lr, lU, Iρi, na-1, nn, 500)
+          _sim_cbd_it(t, λ, μ, lr, lU, Iρi, na-1, nn, 1_000)
 
-        if isnan(lr) || nn >= 500
+        if isnan(lr) || nn > 999
           return tree, na, nn, NaN
         end
 
@@ -681,7 +680,7 @@ function update_λ!(llc    ::Float64,
 
   λp  = randgamma(λ_prior[1] + ns - Float64(crown), λ_prior[2] + L)
 
-  mp  = m_surv_cbd(th, λp, μc, 500, crown)
+  mp  = m_surv_cbd(th, λp, μc, 1_000, crown)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -730,7 +729,7 @@ function update_λ!(llc    ::Float64,
 
   λp  = randgamma((λ_prior[1] + ns - Float64(crown)) * pow + λ_rdist[1] * (1.0 - pow),
                   (λ_prior[2] + L) * pow         + λ_rdist[2] * (1.0 - pow))
-  mp  = m_surv_cbd(th, λp, μc, 500, crown)
+  mp  = m_surv_cbd(th, λp, μc, 1_000, crown)
   llr = log(mp/mc)
 
   if -randexp() < (pow * llr)

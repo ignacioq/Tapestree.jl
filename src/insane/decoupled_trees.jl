@@ -774,7 +774,7 @@ end
 
 Return the number of internal nodes in `Ξ`.
 """
-function nnodesinternal(Ξ::Vector{T}) where {T<: iTree}
+function nnodesinternal(Ξ::Vector{T}) where {T <: iTree}
   n = 0
   for ξ in Ξ
     n += _nnodesinternal(ξ, 0)
@@ -792,14 +792,14 @@ end
 
 Return the number of bifurcating nodes in `Ξ`.
 """
-function nnodesbifurcation(Ξ::Vector{T}) where {T<: iTree}
+function nnodesbifurcation(Ξ::Vector{T}) where {T <: iTf}
   ns = 0
   nf = 0
   for ξ in Ξ
     ns += _nnodesbifurcation(ξ, 0)
     nf += isinternalfossil(ξ)
   end
-  ns += Float64(lastindex(Ξ) - nf - 1)*0.5
+  ns += 0.5 * Float64(lastindex(Ξ) - nf - 1)
 
   return ns
 end
@@ -812,7 +812,7 @@ end
 
 Return the number of extinct nodes in `Ξ`.
 """
-function ntipsextinct(Ξ::Vector{T}) where {T<: iTree}
+function ntipsextinct(Ξ::Vector{T}) where {T <: iTree}
   n = 0
   for ξ in Ξ
     n += _ntipsextinct(ξ, 0)

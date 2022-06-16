@@ -22,10 +22,6 @@ Created 07 10 2021
                 niter   ::Int64                 = 1_000,
                 nthin   ::Int64                 = 10,
                 nburn   ::Int64                 = 200,
-                marginal::Bool                  = false,
-                nitpp   ::Int64                 = 100,
-                nthpp   ::Int64                 = 10,
-                K       ::Int64                 = 10,
                 ϵi      ::Float64               = 0.4,
                 λi      ::Float64               = NaN,
                 μi      ::Float64               = NaN,
@@ -44,10 +40,6 @@ function insane_cfbd(tree    ::sTf_label,
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
-                     marginal::Bool                  = false,
-                     nitpp   ::Int64                 = 100,
-                     nthpp   ::Int64                 = 10,
-                     K       ::Int64                 = 11,
                      ϵi      ::Float64               = 0.4,
                      λi      ::Float64               = NaN,
                      μi      ::Float64               = NaN,
@@ -70,7 +62,7 @@ function insane_cfbd(tree    ::sTf_label,
   idf = make_idf(tree, tρ)
 
   # starting parameters
-  if isnan(λi) && isnan(μi) && isnan(ψi)
+  if isnan(λi) || isnan(μi) || isnan(ψi)
     # if only one tip
     if isone(n)
       λc = prod(λ_prior)
@@ -82,7 +74,7 @@ function insane_cfbd(tree    ::sTf_label,
     if iszero(nfossils(tree))
       ψc = prod(ψ_prior)
     else
-      ψc = Float64(nfossils(tree))/Float64(treelength(tree))
+      ψc = Float64(nfossils(tree))/treelength(tree)
     end
   else
     λc, μc, ψc = λi, μi, ψi
@@ -104,7 +96,7 @@ function insane_cfbd(tree    ::sTf_label,
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 500, crown)
+  mc = m_surv_cbd(th, λc, μc, 1_000, crown)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTfbd)
@@ -125,8 +117,8 @@ function insane_cfbd(tree    ::sTf_label,
 
   # mcmc
   r, treev, λc, μc, ψc =
-    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior,
-      ψ_prior, mc, th, crown, niter, nthin, pup, prints)
+    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, λ_prior, μ_prior,
+      ψ_prior, th, crown, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2),
@@ -134,57 +126,7 @@ function insane_cfbd(tree    ::sTf_label,
 
   write_ssr(r, pardic, out_file)
 
-  if marginal
-
-    #= # reference distribution
-    βs = [range(0.0, 1.0, K)...]
-    reverse!(βs)
-
-    # make reference posterior for `λ`
-    @views p = r[:,4]
-    m     = mean(p)
-    v     = var(p)
-    λ_rdist = (m^2/v, m/v)
-
-    # make reference posterior for `μ`
-    @views p = r[:,5]
-    m  = mean(p)
-    sd = std(p)
-
-    if sum(x -> x < 0.2, p) > sum(x -> 0.2 < x < 0.4, p)
-      μ0 = 0.0
-    else
-      μ0 = m
-    end
-
-    σ0 = max(0.5, sd)
-
-    x1 = run_newton(μ0, σ0, m, sd)
-
-    μ_rdist = (x1[1], x1[2])
-
-    # marginal likelihood
-    pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, crown, λ_prior, μ_prior,
-                       λ_rdist, μ_rdist, nitpp, nthpp, βs, pup)
-
-    # process with reference distribution the posterior
-    p1 = Vector{Float64}(undef, size(r,1))
-    for i in Base.OneTo(size(r,1))
-      p1[i] = r[i,2] + r[i,3] -
-              logdgamma(r[i,4], λ_rdist[1], λ_rdist[2]) -
-              logdtnorm(r[i,5], μ_rdist[1], μ_rdist[2])
-    end
-    pp[1] = p1
-
-    reverse!(pp)
-    reverse!(βs)
-
-    ml = gss(pp, βs)=#
-  else
-    ml = NaN
-  end
-
-  return r, treev, ml
+  return r, treev
 end
 
 
@@ -220,18 +162,18 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         ψc     ::Float64,
                         mc     ::Float64,
                         th     ::Float64,
-                        crown   ::Int64,
+                        crown  ::Int64,
                         pup    ::Array{Int64,1},
                         prints ::Int64)
 
-  el = lastindex(idf)                # number of branches
-  L  = treelength(Ξ)                 # tree length
-  nf = Float64(nfossils(Ξ))          # number of fossilization events
-  ns = Float64(nnodesbifurcation(Ξ)) # number of speciation events
-  ne = Float64(ntipsextinct(Ξ))      # number of extinction events
+  el = lastindex(idf)                        # number of branches
+  L  = treelength(Ξ)                         # tree length
+  nf = Float64(nfossils(Ξ))                  # number of fossilization events
+  ns = nnodesbifurcation(Ξ) + Float64(crown) # number of speciation events
+  ne = Float64(ntipsextinct(Ξ))              # number of extinction events
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2]) +
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])
@@ -308,10 +250,10 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    λc     ::Float64,
                    μc     ::Float64,
                    ψc     ::Float64,
+                   mc     ::Float64,
                    λ_prior::NTuple{2,Float64},
                    μ_prior::NTuple{2,Float64},
                    ψ_prior::NTuple{2,Float64},
-                   mc     ::Float64,
                    th     ::Float64,
                    crown   ::Int64,
                    niter  ::Int64,
@@ -320,7 +262,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    prints ::Int64)
 
   el = lastindex(idf)
-  ns = Float64(nnodesbifurcation(Ξ))
+  ns = nnodesbifurcation(Ξ) + Float64(crown)
   ne = Float64(ntipsextinct(Ξ))
   nf = Float64(nfossils(Ξ))
   L  = treelength(Ξ)
@@ -349,11 +291,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # μ proposal
       elseif p === 2
@@ -361,35 +303,36 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # ψ proposal
       elseif p === 3
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
 
       # forward simulation proposal proposal
       else
 
         bix = ceil(Int64,rand()*el)
+
         llc, ns, ne, L =
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, L)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc) - crown * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        if !isapprox(llci, llc, atol = 1e-6)
+           @show llci, llc, it, p
+           return
+        end
       end
     end
 
@@ -446,15 +389,11 @@ function update_fs!(bix::Int64,
 
   bi = idf[bix]
 
-  if it(bi) 
-    if isfossil(bi)
-      ξp, llr = fsbi_ft(bi, λ, μ, ψ)
-    else
-      ξp, llr = fsbi_t(bi, λ, μ, ψ)
-    end
+  if isfossil(bi)
+      ξp, llr = fsbi_f(bi, λ, μ, ψ)
   else
-    if isfossil(bi)
-      ξp, llr = fsbi_fi(bi, λ, μ, ψ)
+    if it(bi)
+      ξp, llr = fsbi_t(bi, λ, μ, ψ)
     else
       ξp, llr = fsbi_i(bi, λ, μ, ψ)
     end
@@ -495,9 +434,9 @@ function fsbi_t(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_cfbd_t(e(bi), λ, μ, ψ, lc, lU, Iρi, 0, 1, 500)
+    _sim_cfbd_t(e(bi), λ, μ, ψ, lc, lU, Iρi, 0, 1, 1_000)
 
-  if na > 0 && isfinite(llr) 
+  if na > 0 && isfinite(llr)
 
     _fixrtip!(t0, na) # fix random tip
     setni!(bi, na)    # set new ni
@@ -512,16 +451,16 @@ end
 
 
 """
-    fsbi_ft(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
+    fsbi_f(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
-Forward simulation for fossil terminal branch.
+Forward simulation for fossil branch `bi`.
 """
-function fsbi_ft(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
+function fsbi_f(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
   # forward simulation during branch length
-  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 500)
+  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 1_000)
 
-  if na < 1 || nf > 0 || nn >= 500
+  if na < 1 || nf > 0 || nn > 999
     return t0, NaN
   end
 
@@ -529,10 +468,13 @@ function fsbi_ft(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
   lU = -randexp() # log-probability
 
+  # acceptance probability
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
   # add sampling fraction
-  nac = ni(bi)                # current ni
-  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
-  acr = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   if lU < acr
 
@@ -545,14 +487,18 @@ function fsbi_ft(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
     end
 
     if lU < acr
-
       # fossilize extant tip
       fossilizefixedtip!(t0)
 
-      tx, na, nn, acr = 
-        fossiltip_sim!(t0, tf(bi), λ, μ, ψ, acr, lU, Iρi, na, nn)
+      if it(bi)
+        tx, na, nn, acr =
+          fossiltip_sim!(t0, tf(bi), λ, μ, ψ, acr, lU, Iρi, na, nn)
+      else
+        na -= 1
+      end
 
       if lU < acr
+
         llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
         setnt!(bi, ntp)                # set new nt
         setni!(bi, na)                 # set new ni
@@ -568,70 +514,18 @@ end
 
 
 
-"""
-    fsbi_i(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
-
-Forward simulation for fossil internal branch `bi`
-"""
-function fsbi_fi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
-
-  # forward simulation during branch length
-  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 500)
-
-  if na < 1 || nf > 0 || nn >= 500
-    return t0, NaN
-  end
-
-  ntp = na
-
-  lU = -randexp() # log-probability
-
-  # add sampling fraction
-  nac = ni(bi)                # current ni
-  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
-  acr = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
-
-  if lU < acr
-
-    _fixrtip!(t0, na)
-
-    # simulate remaining tips until the present
-    if na > 1
-      tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), λ, μ, ψ, acr, lU, Iρi, na, nn)
-    end
-
-    if lU < acr
-      # fossilize extant tip
-      fossilizefixedtip!(t0)
-      na -= 1
-
-      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
-      setnt!(bi, ntp)                # set new nt
-      setni!(bi, na)                 # set new ni
-
-      return t0, llr
-    end
-  end
-
-  return t0, NaN
-end
-
-
-
-
 
 """
     fsbi_i(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
-Forward simulation for branch `bi`
+Forward simulation for internal branch `bi`.
 """
 function fsbi_i(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
 
   # forward simulation during branch length
-  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 500)
+  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, 0, 0, 1, 1_000)
 
-  if na < 1 || nf > 0 || nn >= 500
+  if na < 1 || nf > 0 || nn > 999
     return t0, NaN
   end
 
@@ -700,16 +594,16 @@ function tip_sims!(tree::sTfbd,
                    na  ::Int64,
                    nn  ::Int64)
 
-  if lU < lr && nn < 500
+  if lU < lr && nn < 1_000
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
 
         # simulate
-        stree, na, nn, lr = 
-          _sim_cfbd_it(t, λ, μ, ψ, lr, lU, Iρi, na-1, nn, 500)
+        stree, na, nn, lr =
+          _sim_cfbd_it(t, λ, μ, ψ, lr, lU, Iρi, na-1, nn, 1_000)
 
-        if isnan(lr) || nn >= 500
+        if isnan(lr) || nn > 999
           return tree, na, nn, NaN
         end
 
@@ -722,9 +616,9 @@ function tip_sims!(tree::sTfbd,
         end
       end
     else
-      tree.d1, na, nn, lr = 
+      tree.d1, na, nn, lr =
         tip_sims!(tree.d1, t, λ, μ, ψ, lr, lU, Iρi, na, nn)
-      tree.d2, na, nn, lr = 
+      tree.d2, na, nn, lr =
         tip_sims!(tree.d2, t, λ, μ, ψ, lr, lU, Iρi, na, nn)
     end
 
@@ -762,22 +656,23 @@ function fossiltip_sim!(tree::sTfbd,
                         na  ::Int64,
                         nn  ::Int64)
 
-  if lU < lr && nn < 500
-    if istip(tree)
-      stree, na, nn, lr = 
-        _sim_cfbd_it(t, λ, μ, ψ, lr, lU, Iρi, na-1, nn, 500)
+  if lU < lr && nn < 1_000
 
-      if isnan(lr) || nn >= 500
+    if istip(tree)
+      stree, na, nn, lr =
+        _sim_cfbd_it(t, λ, μ, ψ, lr, lU, Iρi, na-1, nn, 1_000)
+
+      if isnan(lr) || nn > 999
         return tree, na, nn, NaN
       end
 
       # merge to current tip
       tree.d1 = stree
     elseif isfix(tree.d1)
-      tree.d1, na, nn, lr = 
+      tree.d1, na, nn, lr =
         fossiltip_sim!(tree.d1, t, λ, μ, ψ, lr, lU, Iρi, na, nn)
     else
-      tree.d2, na, nn, lr = 
+      tree.d2, na, nn, lr =
         fossiltip_sim!(tree.d2, t, λ, μ, ψ, lr, lU, Iρi, na, nn)
     end
 
