@@ -12,7 +12,6 @@ Created 07 10 2021
 
 
 
-
 """
     sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
 
@@ -27,17 +26,73 @@ function sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
     return sTfbd(t, false, false, false)
   end
 
+  # speciation
   if λevent(λ, μ, ψ)
-    # speciation
-    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ), 
-                 sim_cfbd(t - tw, λ, μ, ψ), 
+    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ),
+                 sim_cfbd(t - tw, λ, μ, ψ),
                  tw, false, false, false)
+  # extinction
   elseif μevent(μ, ψ)
-    # extinction
     return sTfbd(tw, true, false, false)
+  # fossil sampling
   else
-    # fossil sampling
     return sTfbd(sim_cfbd(t - tw, λ, μ, ψ), tw, false, true, false)
+  end
+end
+
+
+
+
+"""
+    sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
+rate `λ`, extinction rate `μ` and fossilization rate `ψ`.
+"""
+function sim_cfbd(t  ::Float64,
+                  λ  ::Float64,
+                  μ  ::Float64,
+                  ψ  ::Vector{Float64},
+                  ψts::Vector{Float64},
+                  ix ::Int64,
+                  nep::Int64)
+
+  @inbounds begin
+
+    ψi  = ψ[ix]
+    ψti = ψts[ix]
+
+    tw = cfbd_wait(λ, μ, ψi)
+
+    # ψ epoch change
+    if ix < nep
+      if t - tw < ψti
+        e0 = t - ψti
+        t0 = sim_cfbd(ψti, λ, μ, ψ, ψts, ix + 1, nep)
+        sete!(t0, e(t0) + e0)
+        return t0
+      end
+    end
+
+    # if reached the present
+    if tw > t
+      return sTfbd(t, false, false, false)
+    end
+
+    # speciation
+    if λevent(λ, μ, ψi)
+      return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
+                   sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
+                   tw, false, false, false)
+    # extinction
+    elseif μevent(μ, ψi)
+      return sTfbd(tw, true, false, false)
+    # fossil sampling
+    else
+      return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep), 
+               tw, false, true, false)
+    end
+
   end
 end
 
@@ -102,7 +157,7 @@ end
                 nlim::Int64)
 
 Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
-rate `λ`, extinction rate `μ` and fossilization rate `ψ` for terminal branches, 
+rate `λ`, extinction rate `μ` and fossilization rate `ψ` for terminal branches,
 conditioned on no fossilizations.
 """
 function _sim_cfbd_t(t   ::Float64,
@@ -136,9 +191,9 @@ function _sim_cfbd_t(t   ::Float64,
     # speciation
     if λevent(λ, μ, ψ)
       nn += 1
-      d1, na, nn, lr = 
+      d1, na, nn, lr =
         _sim_cfbd_t(t - tw, λ, μ, ψ, lr, lU, Iρi, na, nn, nlim)
-      d2, na, nn, lr = 
+      d2, na, nn, lr =
         _sim_cfbd_t(t - tw, λ, μ, ψ, lr, lU, Iρi, na, nn, nlim)
 
       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
@@ -168,8 +223,8 @@ end
                 nn  ::Int64,
                 nlim::Int64)
 
-Simulate a constant fossilized birth-death `iTree` of height `t` with 
-speciation rate `λ`, extinction rate `μ` and fossilization rate `ψ` 
+Simulate a constant fossilized birth-death `iTree` of height `t` with
+speciation rate `λ`, extinction rate `μ` and fossilization rate `ψ`
 for internal branches, conditioned on no fossilizations.
 """
 function _sim_cfbd_i(t   ::Float64,
@@ -226,8 +281,8 @@ end
                  nn  ::Int64,
                  nlim::Int64)
 
-Simulate a constant fossilized birth-death `iTree` of height `t` with 
-speciation rate `λ`, extinction rate `μ` and fossilization rate `ψ` 
+Simulate a constant fossilized birth-death `iTree` of height `t` with
+speciation rate `λ`, extinction rate `μ` and fossilization rate `ψ`
 for continuing internal branches, conditioned on no fossilizations.
 """
 function _sim_cfbd_it(t   ::Float64,
@@ -254,9 +309,9 @@ function _sim_cfbd_it(t   ::Float64,
     # speciation
     if λevent(λ, μ, ψ)
       nn += 1
-      d1, na, nn, lr = 
+      d1, na, nn, lr =
         _sim_cfbd_it(t - tw, λ, μ, ψ, lr, lU, Iρi, na, nn, nlim)
-      d2, na, nn, lr = 
+      d2, na, nn, lr =
         _sim_cfbd_it(t - tw, λ, μ, ψ, lr, lU, Iρi, na, nn, nlim)
 
       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
