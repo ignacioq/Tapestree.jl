@@ -548,7 +548,7 @@ function _nodeproperties!(tree      ::T,
         tip, speciation, extinct, fossil)
     else
       push!(shape, :none, :none, :square)
-      push!(col, :white, :white, :red)
+      push!(col, :white, :white, :purple)
       push!(alpha, 0, 0, (0.5+0.5*fx)*fossil)
       _nodeproperties!(tree.d1, shape, col, alpha,
         tip, speciation, extinct, fossil)
@@ -556,7 +556,7 @@ function _nodeproperties!(tree      ::T,
   else
     # tip
     if isfossil(tree)
-      push!(shape, :square); push!(col, :red)
+      push!(shape, :square); push!(col, :purple)
       push!(alpha, (0.5+0.5*fx)*fossil)
     elseif isextinct(tree)
       push!(shape, :circle); push!(col, :blue)

@@ -37,6 +37,7 @@ function insane_cfbd(tree    ::sTf_label,
                      λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     ψ_epoch ::Vector{Float64}       = Float64[],
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
@@ -44,12 +45,13 @@ function insane_cfbd(tree    ::sTf_label,
                      λi      ::Float64               = NaN,
                      μi      ::Float64               = NaN,
                      ψi      ::Float64               = NaN,
-                     pupdp   ::NTuple{4,Float64}     = (0.2,0.2,0.2,0.2),
+                     pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
                      prints  ::Int64                 = 5,
                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  n    = ntips(tree)
-  th   = treeheight(tree)
+  n   = ntips(tree)
+  th  = treeheight(tree)
+  nep = lastindex(ψ_epoch) + 1
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -80,6 +82,9 @@ function insane_cfbd(tree    ::sTf_label,
     λc, μc, ψc = λi, μi, ψi
   end
 
+  # make ψ vector
+  ψc = fill(ψc, nep)
+
   # define conditioning
   if ntipsalive(tree) > 0
     # if crown conditioning
@@ -101,6 +106,17 @@ function insane_cfbd(tree    ::sTf_label,
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTfbd)
 
+  # make epoch start vectors for each `ξ`
+  eix = Int64[]
+  bst = Float64[]
+  for bi in idf
+    tib = ti(bi)
+    ei  = findfirst(x -> x < tib, ψ_epoch)
+    ei  = isnothing(ei) ? nep : ei
+    push!(bst, tib)
+    push!(eix, ei)
+  end
+
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
   pup  = Int64[]
@@ -112,8 +128,8 @@ function insane_cfbd(tree    ::sTf_label,
 
   # adaptive phase
   llc, prc, λc, μc, ψc, mc =
-     mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn,
-        λc, μc, ψc, mc, th, crown, pup, prints)
+     mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, ψ_epoch, nburn,
+        λc, μc, ψc, mc, th, crown, eix, bst, pup, prints)
 
   # mcmc
   r, treev, λc, μc, ψc =
@@ -156,6 +172,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         λ_prior::NTuple{2,Float64},
                         μ_prior::NTuple{2,Float64},
                         ψ_prior::NTuple{2,Float64},
+                        ψ_epoch::Vector{Float64},
                         nburn  ::Int64,
                         λc     ::Float64,
                         μc     ::Float64,
@@ -163,10 +180,18 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         mc     ::Float64,
                         th     ::Float64,
                         crown  ::Int64,
+                        eix    ::Vector{Int64}, 
+                        bst    ::Vector{Float64},
                         pup    ::Array{Int64,1},
                         prints ::Int64)
 
+
   el = lastindex(idf)                        # number of branches
+
+  """
+  make tree length for epochs
+  """
+
   L  = treelength(Ξ)                         # tree length
   nf = Float64(nfossils(Ξ))                  # number of fossilization events
   ns = nnodesbifurcation(Ξ) + Float64(crown) # number of speciation events

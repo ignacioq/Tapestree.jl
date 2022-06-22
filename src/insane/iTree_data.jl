@@ -322,6 +322,70 @@ end
 
 
 """
+    treelength(tree::T, ets::Vector{Float64})  where {T <: iTf}
+
+Return the branch length sum of `tree` at different epochs, initialized at `l`.
+"""
+function treelength(tree::T, ets::Vector{Float64}) where {T <: iTf}
+  nep = lastindex(ets) + 1
+  ls  = zeros(nep)
+  _treelength!(tree, treeheight(tree), ls, ets, 1, nep)
+
+  return ls
+end
+
+
+
+
+"""
+    _treelength(tree::T,
+                t   ::Float64,
+                ls  ::Vector{Float64},
+                ets ::Vector{Float64},
+                ix  ::Int64,
+                nep ::Int64) where {T <: iTf}
+
+Return the branch length sum of `tree` at different epochs, initialized at `l`.
+"""
+function _treelength!(tree::T,
+                      t   ::Float64,
+                      ls  ::Vector{Float64},
+                      ets ::Vector{Float64},
+                      ix  ::Int64,
+                      nep ::Int64) where {T <: iTf}
+  @inbounds begin
+
+    ei  = e(tree)
+    eti = ets[ix]
+
+    # if epoch change
+    while ix < nep && t - ei < eti
+      li      = t - eti
+      ls[ix] += li
+      ei     -= li
+      t       = eti
+      ix     += 1
+      eti     = ets[ix]
+    end
+
+    ls[ix] += ei
+    t      -= ei
+
+    if def1(tree)
+      _treelength!(tree.d1, t, ls, ets, ix, nep)
+      if def2(tree)
+        _treelength!(tree.d2, t, ls, ets, ix, nep)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
     _ctl(tree::T, l::Float64) where {T <: iTree}
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.

@@ -3,9 +3,10 @@
 constant fossilized birth-death simulation
 
 Jérémy Andréoletti
-Adapted from constant birth-death simulation by Ignacio Quintero Mächler
+Ignacio Quintero Mächler
 
 v(°-°v)
+t(-_-t)
 
 Created 07 10 2021
 =#
