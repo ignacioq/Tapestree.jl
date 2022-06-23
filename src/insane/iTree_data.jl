@@ -356,16 +356,14 @@ function _treelength!(tree::T,
   @inbounds begin
 
     ei  = e(tree)
-    eti = ets[ix]
 
     # if epoch change
-    while ix < nep && t - ei < eti
-      li      = t - eti
+    while ix < nep && t - ei < ets[ix]
+      li      = t - ets[ix]
       ls[ix] += li
       ei     -= li
-      t       = eti
+      t       = ets[ix]
       ix     += 1
-      eti     = ets[ix]
     end
 
     ls[ix] += ei

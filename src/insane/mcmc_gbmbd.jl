@@ -80,8 +80,8 @@ function insane_gbmbd(tree    ::sT_label,
   else
     λc, μc = λi, μi
   end
-  # mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 5_000, crown)
-  mc = 1.0
+  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)
+  # mc = 1.0
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, log(λc), log(μc), αi, σλi, σμi, δt, srδt, iTbd)
@@ -535,7 +535,7 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_gbmbd_t(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, lc, lU, Iρi, 0, 1, 500)
+    _sim_gbmbd_t(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
 
   if na > 0 && isfinite(llr)
     _fixrtip!(t0, na) # fix random tip
@@ -854,8 +854,8 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  # mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 5_000, crown)
-  mp = 1.0
+  mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 1_000, crown)
+  # mp = 1.0
 
   llr = log(mp/mc)
 
@@ -918,8 +918,8 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
   σμp = sqrt(σμp2)
 
-  # mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 5_000, crown)
-  mp = 1.0
+  mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 1_000, crown)
+  # mp = 1.0
 
   llr = log(mp/mc)
 

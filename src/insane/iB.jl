@@ -791,6 +791,29 @@ end
 
 
 """
+    nfossils(idf::Vector{iBffs}, ets::Vector{Float64})
+
+Return the number of fossil nodes in the tree given different epochs.
+"""
+function nfossils(idf::Vector{iBffs}, ets::Vector{Float64})
+
+  nep = lastindex(ets) + 1
+  fs  = zeros(nep)
+  for bi in idf
+    if isfossil(bi)
+      eix = findfirst(x -> x < tf(bi), ets)
+      eix = isnothing(eix) ? nep : eix
+      fs[eix] += 1.0
+    end
+  end
+
+  return fs
+end
+
+
+
+
+"""
     iBa
 
 A Composite type representing node address for an **augmented** branch in `iTree`:

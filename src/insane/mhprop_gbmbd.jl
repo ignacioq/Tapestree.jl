@@ -87,7 +87,7 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTbd,
+    _stem_update!(ξi   ::T,
                   α    ::Float64,
                   σλ   ::Float64,
                   σμ   ::Float64,
@@ -102,7 +102,7 @@ end
                   mσλ  ::Float64,
                   mσμ  ::Float64,
                   lλxpr::Float64,
-                  lμxpr::Float64)
+                  lμxpr::Float64) where {T <: iTbdU}
 
 Do gbm update for stem root.
 """
@@ -175,9 +175,9 @@ end
 
 
 """
-    _crown_update!(ξi   ::iTbd,
-                   ξ1   ::iTbd,
-                   ξ2   ::iTbd,
+    _crown_update!(ξi   ::T,
+                   ξ1   ::T,
+                   ξ2   ::T,
                    α    ::Float64,
                    σλ   ::Float64,
                    σμ   ::Float64,
@@ -189,8 +189,11 @@ end
                    th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
+                   mσλ  ::Float64,
+                   mσμ  ::Float64,
                    lλxpr::Float64,
-                   lμxpr::Float64)
+                   lμxpr::Float64,
+                   stem ::Int64) where {T <: iTbdU}
 
 Do `gbm-bd` update for crown root.
 """
@@ -262,8 +265,8 @@ function _crown_update!(ξi   ::T,
         false, false)
 
     #survival
-    # mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, stem)
-    mp = 1.0
+    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, stem)
+    # mp = 1.0
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
     llr += llr1 + llr2
@@ -290,7 +293,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTbd,
+    _update_gbm!(tree::T,
                  α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64,
@@ -300,7 +303,8 @@ end
                  ssμ ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
-                 ter ::Bool)
+                 mσλ ::Float64,
+                 mσμ ::Float64) where {T <: iTbdU}
 
 Do `gbm-bd` updates on a decoupled tree recursively.
 """
@@ -412,7 +416,9 @@ end
                   ssλ ::Float64,
                   ssμ ::Float64,
                   δt  ::Float64,
-                  srδt::Float64)
+                  srδt::Float64,
+                  mσλ ::Float64,
+                  mσμ ::Float64)
 
 Make a `gbm` trio proposal.
 """
@@ -516,7 +522,9 @@ end
                   ssλ ::Float64,
                   ssμ ::Float64,
                   δt  ::Float64,
-                  srδt::Float64) where {T <: iTbdU}
+                  srδt::Float64,
+                  mσλ ::Float64,
+                  mσμ ::Float64) where {T <: iTbdU}
 
 Make a `gbm` trio proposal.
 """

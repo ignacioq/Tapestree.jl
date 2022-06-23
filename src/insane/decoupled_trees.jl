@@ -737,16 +737,41 @@ end
 
 
 """
-    treelength(Ξ::Vector{T}) where {T<: iTree}
+    treelength(Ξ::Vector{T}) where {T <: iTree}
 
 Return the branch length sum of `Ξ`.
 """
-function treelength(Ξ::Vector{T}) where {T<: iTree}
+function treelength(Ξ::Vector{T}, ) where {T <: iTree}
   L = 0.0
   for ξ in Ξ
     L += _treelength(ξ, 0.0)
   end
   return L
+end
+
+
+
+
+"""
+    treelength(Ξ  ::Vector{T},
+               ets::Vector{Float64},
+               bst::Vector{Float64},
+               eix::Vector{Int64})  where {T <: iTf}
+
+Return the branch length sum of `tree` at different epochs, initialized at `l`.
+"""
+function treelength(Ξ  ::Vector{T},
+                    ets::Vector{Float64},
+                    bst::Vector{Float64},
+                    eix::Vector{Int64}) where {T <: iTf}
+
+  nep = lastindex(ets) + 1
+  ls  = zeros(nep)
+  for i in Base.OneTo(lastindex(Ξ))
+    _treelength!(Ξ[i], bst[i], ls, ets, eix[i], nep)
+  end
+
+  return ls
 end
 
 
@@ -770,7 +795,7 @@ end
 
 
 """
-    nnodesinternal(Ξ::Vector{T}) where {T<: iTree}
+    nnodesinternal(Ξ::Vector{T}) where {T <: iTree}
 
 Return the number of internal nodes in `Ξ`.
 """
@@ -788,7 +813,7 @@ end
 
 
 """
-    nnodesbifurcation(Ξ::Vector{T}) where {T<: iTree}
+    nnodesbifurcation(Ξ::Vector{T}) where {T <: iTree}
 
 Return the number of bifurcating nodes in `Ξ`.
 """
@@ -808,7 +833,7 @@ end
 
 
 """
-    ntipsextinct(Ξ::Vector{T}) where {T<: iTree}
+    ntipsextinct(Ξ::Vector{T}) where {T <: iTree}
 
 Return the number of extinct nodes in `Ξ`.
 """
@@ -824,11 +849,11 @@ end
 
 
 """
-    nfossils(Ξ::Vector{T}) where {T<: iTree}
+    nfossils(Ξ::Vector{T}) where {T <: iTree}
 
 Return the number of fossil nodes in `Ξ`.
 """
-function nfossils(Ξ::Vector{T}) where {T<: iTree}
+function nfossils(Ξ::Vector{T}) where {T <: iTree}
   n = 0
   for ξ in Ξ
     n += _nfossils(ξ, 0)

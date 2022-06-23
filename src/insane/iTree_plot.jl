@@ -862,7 +862,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   ts  = Float64[]
   for t in trees
     tsi, ri = time_rate(t, tdt, lv)
-    ri     = exp.(map(x -> mean(x), ri))
+    ri      = exp.(map(x -> mean(x), ri))
 
     if lastindex(tsi) > lts
       ts  = tsi
@@ -891,7 +891,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   end
 
   # estimate mean of means
-  m = mean(q, dims=2)
+  m = median(q, dims=2)
 
   # common shape plot defaults
   legend          --> :none

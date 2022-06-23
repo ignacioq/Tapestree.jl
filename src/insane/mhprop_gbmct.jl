@@ -130,8 +130,8 @@ function _stem_update!(ξi   ::iTct,
       false, false)
 
     # survival
-    # mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, true)
-    mp = 1.0
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, true)
+    # mp = 1.0
     llr = log(mp/mc)
 
     acr = llrbd + llr
@@ -224,8 +224,8 @@ function _crown_update!(ξi   ::iTct,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, false, false)
 
     # survival
-    # mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
-    mp = 1.0
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, false)
+    # mp = 1.0
     llr = log(mp/mc)
 
     llr += llr1 + llr2
@@ -347,47 +347,47 @@ end
 
 
 """
-    update_triad!(λpc ::Vector{Float64},
-                  λ1c ::Vector{Float64},
-                  λ2c ::Vector{Float64},
-                  ep  ::Float64,
-                  e1  ::Float64,
-                  e2  ::Float64,
-                  fdtp::Float64,
-                  fdt1::Float64,
-                  fdt2::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  ϵ   ::Float64,
-                  llc ::Float64,
-                  dλ  ::Float64,
-                  ssλ ::Float64,
-                  Σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64,
-                  mσλ ::Float64)
+    update_triad_ϵ!(λpc ::Vector{Float64},
+                    λ1c ::Vector{Float64},
+                    λ2c ::Vector{Float64},
+                    ep  ::Float64,
+                    e1  ::Float64,
+                    e2  ::Float64,
+                    fdtp::Float64,
+                    fdt1::Float64,
+                    fdt2::Float64,
+                    α   ::Float64,
+                    σλ  ::Float64,
+                    ϵ   ::Float64,
+                    llc ::Float64,
+                    dλ  ::Float64,
+                    ssλ ::Float64,
+                    Σλ  ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    mσλ ::Float64)
 
 Make a `gbm` trio proposal for observed speciation event.
 """
-function update_triad!(λpc ::Vector{Float64},
-                       λ1c ::Vector{Float64},
-                       λ2c ::Vector{Float64},
-                       ep  ::Float64,
-                       e1  ::Float64,
-                       e2  ::Float64,
-                       fdtp::Float64,
-                       fdt1::Float64,
-                       fdt2::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       ϵ   ::Float64,
-                       llc ::Float64,
-                       dλ  ::Float64,
-                       ssλ ::Float64,
-                       Σλ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64,
-                       mσλ ::Float64)
+function update_triad_ϵ!(λpc ::Vector{Float64},
+                         λ1c ::Vector{Float64},
+                         λ2c ::Vector{Float64},
+                         ep  ::Float64,
+                         e1  ::Float64,
+                         e2  ::Float64,
+                         fdtp::Float64,
+                         fdt1::Float64,
+                         fdt2::Float64,
+                         α   ::Float64,
+                         σλ  ::Float64,
+                         ϵ   ::Float64,
+                         llc ::Float64,
+                         dλ  ::Float64,
+                         ssλ ::Float64,
+                         Σλ  ::Float64,
+                         δt  ::Float64,
+                         srδt::Float64,
+                         mσλ ::Float64)
 
   @inbounds begin
 
