@@ -130,7 +130,7 @@ function _stem_update!(ξi   ::iTct,
       false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, true)
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, true)
     # mp = 1.0
     llr = log(mp/mc)
 
@@ -224,7 +224,7 @@ function _crown_update!(ξi   ::iTct,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, false)
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
     # mp = 1.0
     llr = log(mp/mc)
 
