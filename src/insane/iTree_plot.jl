@@ -883,15 +883,12 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     q[1:lr,i] = ri
   end
 
-  Q = Array{Float64}(undef, lts, 6)
+  Q = Array{Float64}(undef, lts, 7)
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
-    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.75, 0.975, 1.0])
+    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.5, 0.75, 0.975, 1.0])
   end
-
-  # estimate mean of means
-  m = median(q, dims=2)
 
   # common shape plot defaults
   legend          --> :none
@@ -917,7 +914,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
       push!(sh0, (ts[i], Q[i,2]))
     end
     for i in lts:-1:1
-      push!(sh0, (ts[i], Q[i,5]))
+      push!(sh0, (ts[i], Q[i,6]))
     end
 
     # Shape(sh0)
@@ -934,7 +931,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
       push!(sh1, (ts[i], Q[i,3]))
     end
     for i in lts:-1:1
-      push!(sh1, (ts[i], Q[i,4]))
+      push!(sh1, (ts[i], Q[i,5]))
     end
 
     # Shape(sh1)
@@ -947,7 +944,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor --> "#00213a99"
     linewidth --> 1.4
 
-    ts, m
+    ts, Q[:,4]
   end
 
   # range
@@ -956,7 +953,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor  --> "#426c7999"
     linewidth  --> 1.4
     linestyle  --> :dashdot
-    ts, Q[:,[1,6]]
+    ts, Q[:,[1,7]]
   end
 end
 

@@ -118,9 +118,9 @@ function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
 
   # add final non-standard `δt`
   if fdt > 0.0
-    lλvi  = lλv[nI+1]
-    ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-          fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
+    lλvi = lλv[nI+1]
+    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+           fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
   end
   # if speciation
   if λev

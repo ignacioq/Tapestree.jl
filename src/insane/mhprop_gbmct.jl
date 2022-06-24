@@ -61,7 +61,7 @@ function _daughters_update!(ξ1  ::iTct,
     llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrct1 + llrct2 + λf - λi 
+    acr  = llrct1 + llrct2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
     acr += gp
     drλ  = 2.0*(λi - λf)
@@ -115,8 +115,10 @@ function _stem_update!(ξi   ::iTct,
     el   = e(ξi)
     fdtp = fdt(ξi)
 
+    σS = randexp()*mσλ
+
     # node proposal
-    λr = rnorm(λn - α*el, σλ*sqrt(el))
+    λr = rnorm(λn - α*el, σS*sqrt(el))
 
     # prior ratio
     if λr > lλxpr
@@ -124,20 +126,18 @@ function _stem_update!(ξi   ::iTct,
     end
 
     # simulate fix tree vector
-    bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
+    bb!(λp, λr, λn, σS, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
-      false, false)
+    llr, prr, ssrλ, Σrλ =
+      llr_gbm_b_sep(λp, λc, α, σλ, ϵ, σS, δt, fdt1, srδt, false, false)
 
     # survival
     mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, true)
     # mp = 1.0
-    llr = log(mp/mc)
+    llr += log(mp/mc)
 
-    acr = llrbd + llr
-
-    if -randexp() < acr
-      llc += acr + llrbm
+    if -randexp() < llr + prr
+      llc += llr
       dλ  += λc[1] - λr
       ssλ += ssrλ
       Σλ  += Σrλ
@@ -277,7 +277,7 @@ function _update_gbm!(tree::iTct,
 
 
   if def1(tree)
-    llc, dλ, ssλ, Σλ = 
+    llc, dλ, ssλ, Σλ =
       update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
 
     llc, dλ, ssλ, Σλ =
@@ -490,10 +490,10 @@ function update_triad!(tree::iTct,
     llrp, prrp, ssrλp, Σrλp =
       llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, σS, δt, fdtp, srδt, true, false)
     llr1, prr1, ssrλ1, Σrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt, 
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt,
         false, isextinct(tree.d1))
     llr2, prr2, ssrλ2, Σrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, 
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt,
         false, isextinct(tree.d2))
 
     llr  = llrp + llr1 + llr2
