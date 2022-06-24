@@ -61,8 +61,8 @@ function _daughters_update!(ξ1  ::iTct,
     llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrct1 + llrct2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
+    acr  = llrct1 + llrct2 + λf - λi 
+    llr  = llrbm1 + llrbm2 + acr 
     acr += gp
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
@@ -277,7 +277,7 @@ function _update_gbm!(tree::iTct,
 
 
   if def1(tree)
-    llc, dλ, ssλ, Σλ =
+    llc, dλ, ssλ, Σλ = 
       update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
 
     llc, dλ, ssλ, Σλ =
@@ -490,10 +490,10 @@ function update_triad!(tree::iTct,
     llrp, prrp, ssrλp, Σrλp =
       llr_gbm_b_sep(λpp, λpc, α, σλ, ϵ, σS, δt, fdtp, srδt, true, false)
     llr1, prr1, ssrλ1, Σrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt,
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, σS, δt, fdt1, srδt, 
         false, isextinct(tree.d1))
     llr2, prr2, ssrλ2, Σrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt,
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, σS, δt, fdt2, srδt, 
         false, isextinct(tree.d2))
 
     llr  = llrp + llr1 + llr2

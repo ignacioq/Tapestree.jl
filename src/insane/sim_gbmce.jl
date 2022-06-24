@@ -32,7 +32,8 @@ Sample conditional on number of species
               start   ::Symbol  = :stem,
               nstar   ::Int64   = 2*n,
               p       ::Float64 = 5.0,
-              warnings::Bool    = true)
+              warnings::Bool    = true,
+              maxt    ::Float64 = δt*1e7)
 
 Simulate `iTce` according to a geometric Brownian motion for birth rates and
 constant extinction.
@@ -47,7 +48,7 @@ function sim_gbmce(n       ::Int64;
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
-                   maxt    ::Float64 = δt*1e8)
+                   maxt    ::Float64 = δt*1e7)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, ee, na, simt =

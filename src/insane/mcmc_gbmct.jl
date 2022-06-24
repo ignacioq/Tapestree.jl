@@ -585,9 +585,11 @@ end
 
 
 
-
 """
     fsbi_i(bi  ::iBffs,
+           ξc  ::iTct,
+           ξ1  ::iTct,
+           ξ2  ::iTct,
            λ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
@@ -611,7 +613,7 @@ function fsbi_i(bi  ::iBffs,
   t0, na, nn =
     _sim_gbmct(e(bi), λ0, α, σλ, ϵ, δt, srδt, 0, 1, 1_000)
 
-  if na < 1 || nn >= 1_000
+  if na < 1 || nn > 999
     return t0, NaN, NaN, NaN, NaN
   end
 
@@ -709,7 +711,7 @@ function tip_sims!(tree::iTct,
           _sim_gbmct_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, ϵ, δt, srδt,
                      lr, lU, Iρi, na-1, nn, 1_000)
 
-        if isnan(lr) || nn >= 1_000
+        if isnan(lr) || nn > 999
           return tree, na, nn, NaN
         end
 

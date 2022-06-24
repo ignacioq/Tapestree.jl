@@ -31,7 +31,8 @@ Sample conditional on number of species
               start   ::Symbol  = :stem,
               nstar   ::Int64   = n + 2,
               p       ::Float64 = 5.0,
-              warnings::Bool    = true)
+              warnings::Bool    = true,
+              maxt    ::Float64 = δt*1e7)
 
 Simulate `iTpb` according to a pure-birth geometric Brownian motion.
 """
@@ -44,7 +45,7 @@ function sim_gbmpb(n       ::Int64;
                    nstar   ::Int64   = n + 2,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
-                   maxt    ::Float64 = δt*1e8)
+                   maxt    ::Float64 = δt*1e7)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, na, simt =

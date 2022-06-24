@@ -24,16 +24,17 @@ Sample conditional on number of species
 
 
 """
-    sim_gbmct(n    ::Int64;
-              λ0   ::Float64    = 1.0,
-              α    ::Float64    = 0.0,
-              σλ   ::Float64    = 0.1,
-              ϵ    ::Float64    = 0.0,
-              δt   ::Float64    = 1e-3,
+    sim_gbmct(n       ::Int64;
+              λ0      ::Float64 = 1.0,
+              α       ::Float64 = 0.0,
+              σλ      ::Float64 = 0.1,
+              ϵ       ::Float64 = 0.0,
+              δt      ::Float64 = 1e-3,
               start   ::Symbol  = :stem,
-              nstar::Int64      = 2*n,
+              nstar   ::Int64   = 2*n,
               p       ::Float64 = 5.0,
-              warnings::Bool    = true)
+              warnings::Bool    = true,
+              maxt    ::Float64 = δt*1e7)
 
 Simulate `iTct` according to a geometric Brownian motion for birth rates and
 constant turnover.
@@ -48,11 +49,13 @@ function sim_gbmct(n       ::Int64;
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
-                   maxt    ::Float64 = δt*1e8)
+                   maxt    ::Float64 = δt*1e7)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, ee, na, simt =
     _sedges_gbmct(nstar, log(λ0), α, σλ, ϵ, δt, sqrt(δt), start, maxt)
+
+  @show "1"
 
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
@@ -61,15 +64,20 @@ function sim_gbmct(n       ::Int64;
   # transform to iTree
   t = iTct(e0, e1, el, λs, ea, ee, e1[1], 1, δt)
 
+  @show "2"
+
   if iszero(ntipsalive(t))
     warnings && @warn "tree went extinct"
     return t
   end
 
   # sample a time when species(t) == `n`
-  nt = ltt(t)
-  tn = times_n(n, nt)
+  nts = ltt(t)
+  @show "3"
+  tn = times_n(n, nts)
+  @show "4"
   c  = usample(tn, p)
+  @show "5"
 
   if iszero(c)
     warnings && @warn "tree not sampled, try increasing `p`"
@@ -77,6 +85,8 @@ function sim_gbmct(n       ::Int64;
   else
     # cut the tree
     t = cutbottom(t, simt - c)
+      @show "6"
+
     return t
   end
 end
