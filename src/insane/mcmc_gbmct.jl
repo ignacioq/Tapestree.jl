@@ -32,7 +32,7 @@ Created 03 09 2020
                  pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
                  ntry    ::Int64             = 2,
                  nlim    ::Int64             = 500,
-                 δt      ::Float64           = 1e-2,
+                 δt      ::Float64           = 5e-3,
                  prints  ::Int64             = 5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -57,7 +57,7 @@ function insane_gbmct(tree    ::sT_label,
                       pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
                       ntry    ::Int64             = 2,
                       nlim    ::Int64             = 500,
-                      δt      ::Float64           = 1e-2,
+                      δt      ::Float64           = 5e-3,
                       prints  ::Int64             = 5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 

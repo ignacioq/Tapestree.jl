@@ -29,8 +29,8 @@ Created 03 09 2020
                  αi      ::Float64           = 0.0,
                  σλi     ::Float64           = 0.01,
                  σμi     ::Float64           = 0.01,
-                 pupdp   ::NTuple{4,Float64} = (0.1, 0.1, 0.2, 0.2),
-                 δt      ::Float64           = 1e-2,
+                 pupdp   ::NTuple{4,Float64} = (0.0, 0.1, 0.2, 0.2),
+                 δt      ::Float64           = 5e-3,
                  prints  ::Int64             = 5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -53,7 +53,7 @@ function insane_gbmbd(tree    ::sT_label,
                       σλi     ::Float64           = 0.01,
                       σμi     ::Float64           = 0.01,
                       pupdp   ::NTuple{4,Float64} = (0.0, 0.1, 0.2, 0.2),
-                      δt      ::Float64           = 1e-2,
+                      δt      ::Float64           = 5e-3,
                       prints  ::Int64             = 5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
