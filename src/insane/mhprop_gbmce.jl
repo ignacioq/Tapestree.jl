@@ -57,13 +57,10 @@ function _daughters_update!(ξ1  ::iTce,
     llrbm2, llrce2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
     acr  = llrce1 + llrce2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr += duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+           duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
   end
