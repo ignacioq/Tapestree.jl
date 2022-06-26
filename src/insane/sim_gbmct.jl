@@ -55,29 +55,23 @@ function sim_gbmct(n       ::Int64;
   e0, e1, el, λs, ea, ee, na, simt =
     _sedges_gbmct(nstar, log(λ0), α, σλ, ϵ, δt, sqrt(δt), start, maxt)
 
-  @show "1"
-
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
+    return iTct(0.0, 0.0, 0.0, false, false, Float64[])
   end
 
   # transform to iTree
   t = iTct(e0, e1, el, λs, ea, ee, e1[1], 1, δt)
 
-  @show "2"
-
-  if iszero(ntipsalive(t))
+  if ntipsalive(t) < 2
     warnings && @warn "tree went extinct"
     return t
   end
 
   # sample a time when species(t) == `n`
   nts = ltt(t)
-  @show "3"
   tn = times_n(n, nts)
-  @show "4"
   c  = usample(tn, p)
-  @show "5"
 
   if iszero(c)
     warnings && @warn "tree not sampled, try increasing `p`"
@@ -85,8 +79,6 @@ function sim_gbmct(n       ::Int64;
   else
     # cut the tree
     t = cutbottom(t, simt - c)
-      @show "6"
-
     return t
   end
 end

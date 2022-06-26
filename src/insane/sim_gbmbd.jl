@@ -59,6 +59,7 @@ function sim_gbmbd(n       ::Int64;
 
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
+    return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[])
   end
 
   # transform to iTree
