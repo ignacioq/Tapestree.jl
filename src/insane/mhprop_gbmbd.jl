@@ -60,12 +60,6 @@ function _daughters_update!(ξ1  ::T,
     bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, μ2p, μf, μ2, σλ, σμ, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
-         duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
-         duoldnorm(μi, μ1, μ2, e1, e2, σμ)
-
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
@@ -74,7 +68,10 @@ function _daughters_update!(ξ1  ::T,
 
     acr  = llrbd1 + llrbd2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr += duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+           duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
+           duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
+           duoldnorm(μi, μ1, μ2, e1, e2, σμ)
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     ssrμ = ssrμ1 + ssrμ2
@@ -99,8 +96,6 @@ end
                   th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
-                  mσλ  ::Float64,
-                  mσμ  ::Float64,
                   lλxpr::Float64,
                   lμxpr::Float64) where {T <: iTbdU}
 
@@ -118,8 +113,6 @@ function _stem_update!(ξi   ::T,
                        th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       mσλ  ::Float64,
-                       mσμ  ::Float64,
                        lλxpr::Float64,
                        lμxpr::Float64) where {T <: iTbdU}
 
@@ -189,8 +182,6 @@ end
                    th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
-                   mσλ  ::Float64,
-                   mσμ  ::Float64,
                    lλxpr::Float64,
                    lμxpr::Float64,
                    stem ::Int64) where {T <: iTbdU}
@@ -211,8 +202,6 @@ function _crown_update!(ξi   ::T,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
-                        mσλ  ::Float64,
-                        mσμ  ::Float64,
                         lλxpr::Float64,
                         lμxpr::Float64,
                         stem ::Int64) where {T <: iTbdU}
@@ -241,38 +230,34 @@ function _crown_update!(ξi   ::T,
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
-    σS = randexp()*mσλ
-    σE = randexp()*mσμ
-
-    # node proposal
-    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σS)
-    μr = duoprop(μ1, μ2, e1, e2, σE)
+# node proposal
+    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    μr = duoprop(μ1, μ2, e1, e2, σμ)
 
     # prior ratio
-    if λr > lλxpr || μr > lμxpr
+    if λr > lλxpr || μr > lμxpr 
       return llc, dλ, ssλ, ssμ, mc
     end
 
     # simulate fix tree vector
-    bb!(λ1p, λr, λ1, μ1p, μr, μ1, σS, σE, δt, fdt1, srδt)
-    bb!(λ2p, λr, λ2, μ2p, μr, μ2, σS, σE, δt, fdt2, srδt)
+    bb!(λ1p, λr, λ1, μ1p, μr, μ1, σλ, σμ, δt, fdt1, srδt)
+    bb!(λ2p, λr, λ2, μ2p, μr, μ2, σλ, σμ, δt, fdt2, srδt)
 
-    llr1, prr1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
-        false, false)
-    llr2, prr2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
-        false, false)
+    # log likelihood ratios
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
     #survival
     mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, stem)
-    # mp = 1.0
+    mp = 1.0
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
-    llr += llr1 + llr2
+    acr = llrbd1 + llrbd2 + llr
 
-    if -randexp() < llr + prr1 + prr2
-      llc += llr
+    if -randexp() < acr
+      llc += acr + llrbm1 + llrbm2
       dλ  += 2.0*(λi - λr)
       ssλ += ssrλ1 + ssrλ2
       ssμ += ssrμ1 + ssrμ2
@@ -317,18 +302,16 @@ function _update_gbm!(tree::T,
                       ssλ ::Float64,
                       ssμ ::Float64,
                       δt  ::Float64,
-                      srδt::Float64,
-                      mσλ ::Float64,
-                      mσμ ::Float64) where {T <: iTbdU}
+                      srδt::Float64) where {T <: iTbdU}
 
   if def1(tree)
     llc, dλ, ssλ, ssμ =
-      update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, mσλ, mσμ)
+      update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, mσλ, mσμ)
+      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, mσλ, mσμ)
+      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
   end
 
   return llc, dλ, ssλ, ssμ
@@ -416,9 +399,7 @@ end
                   ssλ ::Float64,
                   ssμ ::Float64,
                   δt  ::Float64,
-                  srδt::Float64,
-                  mσλ ::Float64,
-                  mσμ ::Float64)
+                  srδt::Float64)
 
 Make a `gbm` trio proposal.
 """
@@ -442,9 +423,7 @@ function update_triad!(λpc ::Vector{Float64},
                        ssλ ::Float64,
                        ssμ ::Float64,
                        δt  ::Float64,
-                       srδt::Float64,
-                       mσλ ::Float64,
-                       mσμ ::Float64)
+                       srδt::Float64)
 
   @inbounds begin
 
@@ -466,33 +445,30 @@ function update_triad!(λpc ::Vector{Float64},
     μ1  = μ1c[l1]
     μ2  = μ2c[l2]
 
-    σS = randexp()*mσλ
-    σE = randexp()*mσμ
-
     # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
-    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σE)
+    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
+    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σμ)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, μpp, μp, μn, σS, σE, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σS, σE, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σS, σE, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, μpp, μp, μn, σλ, σμ, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σλ, σμ, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σλ, σμ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrp, prrp, ssrλp, ssrμp =
-      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, σS, σE, δt, fdtp, srδt,
+    llrbmp, llrbdp, ssrλp, ssrμp =
+      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
         true, false)
-    llr1, prr1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
         false, false)
-    llr2, prr2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt,
         false, false)
 
-    llr = llrp + llr1 + llr2 
+    acr = llrbdp + llrbd1 + llrbd2
 
-    if -randexp() < llr + prrp + prr1 + prr2
-      llc += llr
+    if -randexp() < acr
+      llc += llrbmp + llrbm1 + llrbm2 + acr
       dλ  += λi - λn
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2
@@ -522,9 +498,7 @@ end
                   ssλ ::Float64,
                   ssμ ::Float64,
                   δt  ::Float64,
-                  srδt::Float64,
-                  mσλ ::Float64,
-                  mσμ ::Float64) where {T <: iTbdU}
+                  srδt::Float64) where {T <: iTbdU}
 
 Make a `gbm` trio proposal.
 """
@@ -537,9 +511,7 @@ function update_triad!(tree::T,
                        ssλ ::Float64,
                        ssμ ::Float64,
                        δt  ::Float64,
-                       srδt::Float64,
-                       mσλ ::Float64,
-                       mσμ ::Float64) where {T <: iTbdU}
+                       srδt::Float64) where {T <: iTbdU}
 
   @inbounds begin
 
@@ -571,33 +543,29 @@ function update_triad!(tree::T,
     fdt1 = fdt(tree.d1)
     fdt2 = fdt(tree.d2)
 
-    σS = randexp()*mσλ
-    σE = randexp()*mσμ
-
     # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σS)
-    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σE)
+    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
+    μn = trioprop(μp, μ1, μ2, ep, e1, e2, σμ)
 
     # simulate fix tree vector
-    bb!(λpp, λp, λn, μpp, μp, μn, σS, σE, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σS, σE, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σS, σE, δt, fdt2, srδt)
+    bb!(λpp, λp, λn, μpp, μp, μn, σλ, σμ, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, μ1p, μn, μ1, σλ, σμ, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, μ2p, μn, μ2, σλ, σμ, δt, fdt2, srδt)
 
-    # log likelihood ratios
-    llrp, prrp, ssrλp, ssrμp =
-      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, σS, σE, δt, fdtp, srδt,
+    llrbmp, llrbdp, ssrλp, ssrμp =
+      llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
         true, false)
-    llr1, prr1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, σS, σE, δt, fdt1, srδt,
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
         false, isextinct(tree.d1))
-    llr2, prr2, ssrλ2, ssrμ2 =
-      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, σS, σE, δt, fdt2, srδt,
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
+      llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt,
         false, isextinct(tree.d2))
 
-    llr = llrp + llr1 + llr2 
+    acr = llrbdp + llrbd1 + llrbd2
 
-    if -randexp() < llr + prrp + prr1 + prr2
-      llc += llr
+    if -randexp() < acr
+      llc += llrbmp + llrbm1 + llrbm2 + acr
       dλ  += (λ1c[1] - λn)
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2

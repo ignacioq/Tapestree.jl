@@ -481,7 +481,7 @@ function _sim_gbmce_t(t   ::Float64,
                       nn  ::Int64,
                       nlim::Int64)
 
-  if isfinite(lr) && nn < nlim
+  if lU < lr && nn < nlim
 
     λv = Float64[λt]
     bt = 0.0
