@@ -41,8 +41,8 @@ Run insane for GBM birth-death.
 function insane_gbmct(tree    ::sT_label,
                       out_file::String;
                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      α_prior ::NTuple{2,Float64} = (0.0, 10.0),
-                      σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
+                      α_prior ::NTuple{2,Float64} = (0.0, 0.5),
+                      σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                       ϵ_prior ::NTuple{2,Float64} = (0.0, 100.0),
                       niter   ::Int64             = 1_000,
                       nthin   ::Int64             = 10,
@@ -54,10 +54,10 @@ function insane_gbmct(tree    ::sT_label,
                       ϵi      ::Float64           = 0.2,
                       ϵtni    ::Float64           = 1.0,
                       obj_ar  ::Float64           = 0.234,
-                      pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
+                      pupdp   ::NTuple{5,Float64} = (0.01, 0.01, 0.01, 0.1, 0.2),
                       ntry    ::Int64             = 2,
                       nlim    ::Int64             = 500,
-                      δt      ::Float64           = 5e-3,
+                      δt      ::Float64           = 1e-3,
                       prints  ::Int64             = 5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 

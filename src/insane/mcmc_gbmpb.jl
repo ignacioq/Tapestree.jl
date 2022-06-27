@@ -36,7 +36,7 @@ Run insane for GBM pure-birth.
 """
 function insane_gbmpb(tree    ::sT_label,
                       out_file::String;
-                      δt      ::Float64               = 1e-2,
+                      δt      ::Float64               = 1e-3,
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
@@ -47,9 +47,9 @@ function insane_gbmpb(tree    ::sT_label,
                       σλi     ::Float64               = 0.1,
                       αi      ::Float64               = 0.0,
                       prints  ::Int64                 = 5,
-                      pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.3, 0.3),
-                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                      σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                      pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.1, 0.2),
+                      α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
+                      σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
