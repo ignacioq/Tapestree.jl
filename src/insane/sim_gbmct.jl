@@ -199,7 +199,7 @@ function _sedges_gbmct(n    ::Int64,
         if divevϵ(λm, ϵ, δt)
 
           #if speciation
-          if λorμ(λm, ϵ*λm)
+          if λorμ(ϵ)
 
             # if reached `n` species
             if n === na
@@ -400,7 +400,7 @@ function _sim_gbmct(t   ::Float64,
 
         if divevϵ(λm, ϵ, t)
           # if speciation
-          if λorμ(λm, ϵ*λm)
+          if λorμ(ϵ)
             nn += 1
             na += 2
             return iTct(
@@ -426,7 +426,7 @@ function _sim_gbmct(t   ::Float64,
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
-        if λorμ(λm, ϵ*λm)
+        if λorμ(ϵ)
           nn += 1
           td1, na, nn = _sim_gbmct(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
           td2, na, nn = _sim_gbmct(t, λt1, α, σλ, ϵ, δt, srδt, na, nn, nlim)
@@ -497,7 +497,7 @@ function _sim_gbmct_t(t   ::Float64,
 
         if divevϵ(λm, ϵ, t)
           # if speciation
-          if λorμ(λm, ϵ*λm)
+          if λorμ(ϵ)
             nn += 1
             na += 2
             if na === 2
@@ -539,7 +539,7 @@ function _sim_gbmct_t(t   ::Float64,
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
-        if λorμ(λm, ϵ*λm)
+        if λorμ(ϵ)
           nn += 1
           td1, na, nn, lr = 
             _sim_gbmct_t(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
@@ -608,7 +608,7 @@ function _sim_gbmct_i(t   ::Float64,
 
         if divevϵ(λm, ϵ, t)
           # if speciation
-          if λorμ(λm, ϵ*λm)
+          if λorμ(ϵ)
             nn += 1
             push!(λsp, λt1, λt1)
             return iTct(
@@ -633,7 +633,7 @@ function _sim_gbmct_i(t   ::Float64,
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
-        if λorμ(λm, ϵ*λm)
+        if λorμ(ϵ)
           nn += 1
           td1, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, nn, nlim, λsp)
           td2, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, nn, nlim, λsp)
@@ -704,7 +704,7 @@ function _sim_gbmct_it(nsδt::Float64,
 
     if divevϵ(λm, ϵ, t)
       # if speciation
-      if λorμ(λm, ϵ*λm)
+      if λorμ(ϵ)
         nn += 1
         na += 2
         lr += 2.0*log(Iρi)
@@ -731,7 +731,7 @@ function _sim_gbmct_it(nsδt::Float64,
 
   if divevϵ(λm, ϵ, nsδt)
     # if speciation
-    if λorμ(λm, ϵ*λm)
+    if λorμ(ϵ)
       nn += 1
       td1, na, nn, lr = 
         _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
@@ -761,7 +761,7 @@ function _sim_gbmct_it(nsδt::Float64,
 
         if divevϵ(λm, ϵ, t)
           # if speciation
-          if λorμ(λm, ϵ*λm)
+          if λorμ(ϵ)
             nn += 1
             na += 2
             lr += 2.0*log(Iρi)
@@ -788,7 +788,7 @@ function _sim_gbmct_it(nsδt::Float64,
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
-        if λorμ(λm, ϵ*λm)
+        if λorμ(ϵ)
           nn += 1
           td1, na, nn, lr = 
             _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
@@ -862,7 +862,7 @@ function _sim_gbmct_it(t   ::Float64,
 
         if divevϵ(λm, ϵ, t)
           # if speciation
-          if λorμ(λm, ϵ*λm)
+          if λorμ(ϵ)
             nn += 1
             na += 2
             lr += 2.0*log(Iρi)
@@ -889,7 +889,7 @@ function _sim_gbmct_it(t   ::Float64,
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
-        if λorμ(λm, ϵ*λm)
+        if λorμ(ϵ)
           nn += 1
           td1, na, nn, lr = 
             _sim_gbmct_it(t, λt1, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
@@ -949,8 +949,6 @@ function _sim_gbmct_surv(t   ::Float64,
         # if extinction
         if rand() < ϵ*exp(0.5*(λt + λt1))*t
           return surv, nn
-        else
-          return true, nn
         end
 
         return true, nn
@@ -963,7 +961,7 @@ function _sim_gbmct_surv(t   ::Float64,
 
       if divevϵ(λm, ϵ, δt)
         # if speciation
-        if λorμ(λm, ϵ*λm)
+        if λorμ(ϵ)
           nn += 1
           surv, nn = _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nn)
           surv, nn = _sim_gbmct_surv(t, λt1, α, σλ, ϵ, δt, srδt, surv, nn)
@@ -992,6 +990,16 @@ Return true if diversification event for `ϵ` parametization.
 """
 divevϵ(λ::Float64, ϵ::Float64, δt::Float64) =
   @fastmath rand() < ((1.0 + ϵ)*λ*δt)
+
+
+
+
+"""
+    λorμ(ϵ::Float64)
+
+Return true if speciation event for `ϵ` parametization.
+"""
+λorμ(ϵ::Float64) = @fastmath rand() < (1.0/(1.0 + ϵ))
 
 
 

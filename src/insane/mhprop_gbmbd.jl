@@ -235,7 +235,7 @@ function _crown_update!(ξi   ::T,
     μr = duoprop(μ1, μ2, e1, e2, σμ)
 
     # prior ratio
-    if λr > lλxpr
+    if λr > lλxpr || μr > lμxpr 
       return llc, dλ, ssλ, ssμ, mc
     end
 
@@ -251,6 +251,7 @@ function _crown_update!(ξi   ::T,
 
     #survival
     mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, stem)
+    mp = 1.0
     llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
 
     acr = llrbd1 + llrbd2 + llr
