@@ -51,19 +51,16 @@ function _daughters_update!(ξ1  ::iTct,
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
     # log likelihood ratios
     llrbm1, llrct1, ssrλ1, Σrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
     llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrct1 + llrct2 + λf - λi 
+    acr  = llrct1 + llrct2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr += duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+           duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     Σrλ  = Σrλ1 + Σrλ2
@@ -104,7 +101,6 @@ function _stem_update!(ξi   ::iTct,
                        th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       mσλ  ::Float64,
                        lλxpr::Float64)
 
   @inbounds begin
@@ -126,11 +122,11 @@ function _stem_update!(ξi   ::iTct,
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
-      false, false)
+    llrbm, llrbd, ssrλ, Σrλ = 
+      llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt, false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, true)
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, true)
     # mp = 1.0
     llr = log(mp/mc)
 
@@ -185,7 +181,6 @@ function _crown_update!(ξi   ::iTct,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
-                        mσλ  ::Float64,
                         lλxpr::Float64)
 
   @inbounds begin
@@ -223,7 +218,7 @@ function _crown_update!(ξi   ::iTct,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 400, false)
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
     llr = log(mp/mc)
 
     acr = llrct1 + llrct2 + llr
@@ -270,18 +265,17 @@ function _update_gbm!(tree::iTct,
                       ssλ ::Float64,
                       Σλ  ::Float64,
                       δt  ::Float64,
-                      srδt::Float64,
-                      mσλ ::Float64)
+                      srδt::Float64)
 
 
   if def1(tree)
-    llc, dλ, ssλ, Σλ = 
-      update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
+    llc, dλ, ssλ, Σλ =
+      update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
 
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
+      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, mσλ)
+      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
   end
 
   return llc, dλ, ssλ, Σλ
@@ -384,8 +378,7 @@ function update_triad_ϵ!(λpc ::Vector{Float64},
                          ssλ ::Float64,
                          Σλ  ::Float64,
                          δt  ::Float64,
-                         srδt::Float64,
-                         mσλ ::Float64)
+                         srδt::Float64)
 
   @inbounds begin
 
@@ -450,8 +443,7 @@ function update_triad!(tree::iTct,
                        ssλ ::Float64,
                        Σλ  ::Float64,
                        δt  ::Float64,
-                       srδt::Float64,
-                       mσλ ::Float64)
+                       srδt::Float64)
 
   @inbounds begin
 
