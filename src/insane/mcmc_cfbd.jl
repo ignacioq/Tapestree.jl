@@ -137,12 +137,12 @@ function insane_cfbd(tree    ::sTf_label,
 
   # mcmc
   r, treev, λc, μc, ψc =
-    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, λ_prior, μ_prior,
-      ψ_prior, th, crown, niter, nthin, pup, prints)
+    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, λ_prior, μ_prior, ψ_prior, 
+      ψ_epoch, th, crown, bst, eixi, eixf, niter, nthin,  pup, prints)
 
   pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2),
-                ("psi"         => 3))
+                ("mu"          => 2))
+  merge!(pardic, Dict("psi_$i" => 2+i for i in Base.OneTo(nep)))
 
   write_ssr(r, pardic, out_file)
 
@@ -180,7 +180,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         nburn  ::Int64,
                         λc     ::Float64,
                         μc     ::Float64,
-                        ψc     ::Float64,
+                        ψc     ::Vector{Float64},
                         mc     ::Float64,
                         th     ::Float64,
                         crown  ::Int64,
@@ -191,14 +191,13 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         prints ::Int64)
 
   el = lastindex(idf)                        # number of branches
-  L  = treelength(Ξ, ψ_epoch, bst, eixi)      # tree length
+  L  = treelength(Ξ, ψ_epoch, bst, eixi)     # tree length
   nf = nfossils(idf, ψ_epoch)                # number of fossilization events per epoch
   ns = nnodesbifurcation(Ξ) + Float64(crown) # number of speciation events
   ne = Float64(ntipsextinct(Ξ))              # number of extinction events
 
-
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc, ets, bst, eixi) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
 
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])       +
         logdgamma(μc, μ_prior[1], μ_prior[2])       +
@@ -216,13 +215,13 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
+          update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, crown, λ_prior)
 
       # μ proposal
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
+          update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, crown, μ_prior)
 
       # ψ proposal
       elseif p === 3
@@ -233,11 +232,10 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
       else
 
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L =
-          update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, 
-            ψ_epoch, ns, ne, L, eixi, eixf)
 
-          plot(Ξ[bix])
+        llc, ns, ne, L =
+          update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
+            eixi, eixf)
 
       end
     end
@@ -278,30 +276,36 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    prc    ::Float64,
                    λc     ::Float64,
                    μc     ::Float64,
-                   ψc     ::Float64,
+                   ψc     ::Vector{Float64},
                    mc     ::Float64,
                    λ_prior::NTuple{2,Float64},
                    μ_prior::NTuple{2,Float64},
                    ψ_prior::NTuple{2,Float64},
+                   ψ_epoch::Vector{Float64},
                    th     ::Float64,
-                   crown   ::Int64,
+                   crown  ::Int64,
+                   bst    ::Vector{Float64},
+                   eixi   ::Vector{Int64},
+                   eixf   ::Vector{Int64},
                    niter  ::Int64,
                    nthin  ::Int64,
                    pup    ::Array{Int64,1},
                    prints ::Int64)
 
-  el = lastindex(idf)
-  ns = nnodesbifurcation(Ξ) + Float64(crown)
-  ne = Float64(ntipsextinct(Ξ))
-  nf = Float64(nfossils(Ξ))
-  L  = treelength(Ξ)
+  el  = lastindex(idf)                        # number of branches
+  L   = treelength(Ξ, ψ_epoch, bst, eixi)     # tree length
+  nf  = nfossils(idf, ψ_epoch)                # number of fossilization events per epoch
+  ns  = nnodesbifurcation(Ξ) + Float64(crown) # number of speciation events
+  ne  = Float64(ntipsextinct(Ξ))              # number of extinction events
+  nep = lastindex(ψc)
 
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 6)
+  lastindex(ψc)
+  R = Array{Float64,2}(undef, nlogs, 5 + nep)
 
   # make tree vector
   treev  = sTfbd[]
@@ -318,9 +322,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
+          update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, crown, λ_prior)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return
@@ -330,9 +334,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
+          update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, crown, μ_prior)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return
@@ -343,7 +347,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
         llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return
@@ -355,9 +359,10 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         bix = ceil(Int64,rand()*el)
 
         llc, ns, ne, L =
-          update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ns, ne, L)
+          update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
+            eixi, eixf)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
         if !isapprox(llci, llc, atol = 1e-6)
            @show llci, llc, it, p
            return
@@ -376,7 +381,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        R[lit,6] = ψc
+        @avx for i in Base.OneTo(nep)
+          R[lit,5 + i] = ψc[i]
+        end
         push!(treev, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
@@ -432,24 +439,23 @@ function update_fs!(bix ::Int64,
     end
   end
 
-  plot(ξp)
-
   if isfinite(llr)
     ξc  = Ξ[bix]
+    tii = ti(bi)
 
     nep = lastindex(ets) + 1
     # update llc, ns, ne & L
-    llc += llik_cfbd(ξp, λ, μ, ψ, 0.0, ti(bi), ets, ixi, nep) - 
-           llik_cfbd(ξc, λ, μ, ψ, 0.0, ti(bi), ets, ixi, nep) + llr
+    llc += llik_cfbd(ξp, λ, μ, ψ, tii, ets, ixi, nep) - 
+           llik_cfbd(ξc, λ, μ, ψ, tii, ets, ixi, nep) + llr
 
     ns  += Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
     ne  += Float64(ntipsextinct(ξp)      - ntipsextinct(ξc))
 
     # update tree lengths
     Lc = zeros(nep)
-    _treelength!(ξc, ti(bi), Lc, ets, ixi, nep)
-    _treelength!(ξp, ti(bi), L,  ets, ixi, nep)
-    for i in Base.OneTo(nep)
+    _treelength!(ξc, tii, Lc, ets, ixi, nep)
+    _treelength!(ξp, tii, L,  ets, ixi, nep)
+    @avx for i in Base.OneTo(nep)
       L[i] -= Lc[i]
     end
 

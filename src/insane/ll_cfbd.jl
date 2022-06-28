@@ -1,11 +1,11 @@
 #=
 
-fossilized birth-death likelihoods
+fossilized birth-death likelihoods with epochs
 
-Jérémy Andréoletti
-Adapted from birth-death likelihoods by Ignacio Quintero Mächler
+Jérémy Andréoletti and Ignacio Quintero Mächler
 
 v(^-^v)
+t(-_-t)
 
 Created 16 12 2021
 =#
@@ -24,7 +24,6 @@ function llik_cfbd(tree::sTfbd,
                    λ   ::Float64, 
                    μ   ::Float64, 
                    ψ   ::Vector{Float64}, 
-                   ll  ::Float64,
                    t   ::Float64,
                    ets ::Vector{Float64},
                    ix  ::Int64,
@@ -32,7 +31,7 @@ function llik_cfbd(tree::sTfbd,
   @inbounds begin
 
     ei  = e(tree)
-
+    ll = 0.0
     # if epoch change
     while ix < nep && t - ei < ets[ix]
       li   = t - ets[ix]
@@ -47,12 +46,12 @@ function llik_cfbd(tree::sTfbd,
 
     if def1(tree)
       if def2(tree)
-        ll = log(λ)                                                  +
-              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, ll, t, ets, ix, nep) +
-              llik_cfbd(tree.d2::sTfbd, λ, μ, ψ, ll, t, ets, ix, nep)
+        ll += log(λ)                                              +
+              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, t, ets, ix, nep) +
+              llik_cfbd(tree.d2::sTfbd, λ, μ, ψ, t, ets, ix, nep)
       else
-        ll = log(ψ[ix])                                              +
-              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, ll, t, ets, ix, nep)
+        ll += log(ψ[ix])                                          +
+              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, t, ets, ix, nep)
       end
     else
       ll += (isextinct(tree) ? log(μ)     : 0.0) +
@@ -91,9 +90,9 @@ function llik_cfbd(Ξ  ::Vector{sTfbd},
   ll  = 0.0
   nf  = 0 # number of sampled ancestors
   for i in Base.OneTo(lastindex(Ξ))
-    ξ = Ξ[i]
+    ξ  = Ξ[i]
     nf += isinternalfossil(ξ)
-    ll = llik_cfbd(ξ, λ, μ, ψ, ll, bst[i], ets, eix[i], nep)
+    ll += llik_cfbd(ξ, λ, μ, ψ, bst[i], ets, eix[i], nep)
   end
 
   ll += Float64(lastindex(Ξ) - nf - 1) * 0.5 * log(λ)
