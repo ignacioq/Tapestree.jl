@@ -324,11 +324,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, crown, λ_prior)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
       # μ proposal
       elseif p === 2
@@ -336,22 +336,22 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, crown, μ_prior)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
       # ψ proposal
       elseif p === 3
 
         llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
 
       # forward simulation proposal proposal
       else
@@ -362,11 +362,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
             eixi, eixf)
 
-        llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
-        if !isapprox(llci, llc, atol = 1e-6)
-           @show llci, llc, it, p
-           return
-        end
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # if !isapprox(llci, llc, atol = 1e-6)
+        #    @show llci, llc, it, p
+        #    return
+        # end
       end
     end
 
