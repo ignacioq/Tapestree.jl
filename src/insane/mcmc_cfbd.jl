@@ -142,7 +142,9 @@ function insane_cfbd(tree    ::sTf_label,
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2))
-  merge!(pardic, Dict("psi_$i" => 2+i for i in Base.OneTo(nep)))
+  merge!(pardic, 
+    Dict("psi"*(iszero(nep) ? "" : string("_",i)), 
+          => 2+i for i in Base.OneTo(nep)))
 
   write_ssr(r, pardic, out_file)
 
