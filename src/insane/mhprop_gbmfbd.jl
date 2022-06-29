@@ -96,6 +96,7 @@ function _update_gbm!(tree::iTfbd,
     if def2(tree)
       llc, dλ, ssλ, ssμ =
         update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+
       llc, dλ, ssλ, ssμ =
         _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
       llc, dλ, ssλ, ssμ =
@@ -106,11 +107,6 @@ function _update_gbm!(tree::iTfbd,
       llc, dλ, ssλ, ssμ =
         _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
     end
-  else
-    # if !isfix(tree) || ter
-    #   llc, dλ, ssλ, ssμ =
-    #     update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-    # end
   end
 
   return llc, dλ, ssλ, ssμ
