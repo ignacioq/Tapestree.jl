@@ -191,11 +191,6 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   nin          = lastindex(inodes) # number of internal nodes
   el           = lastindex(idf)    # number of branches
 
-  # sum for estimating sigma proposals
-  sσλ = 0.0
-  sσμ = 0.0
-  ntu = nburn - div(nburn,2)
-
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for i in Base.OneTo(nburn)

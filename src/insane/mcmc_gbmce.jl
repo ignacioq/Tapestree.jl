@@ -196,10 +196,6 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
 
-  # sum for estimating sigma proposals 
-  sσλ = 0.0
-  ntu = nburn - div(nburn,3)
-
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for i in Base.OneTo(nburn)

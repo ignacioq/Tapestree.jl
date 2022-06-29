@@ -106,10 +106,10 @@ function insane_cfbd(tree    ::sTf_label,
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTfbd)
 
-  # make epoch start vectors for each `ξ`
-  bst  = Float64[]
+  # make epoch start vectors and indices for each `ξ`
   eixi = Int64[]
   eixf = Int64[]
+  bst  = Float64[]
   for bi in idf
     tib = ti(bi)
     ei  = findfirst(x -> x < tib, ψ_epoch)
@@ -121,14 +121,14 @@ function insane_cfbd(tree    ::sTf_label,
     push!(eixf, ef)
   end
 
-  # make parameter updates scaling function for tuning
+  # parameter updates (1: λ, 2: μ, 3: ψ, 4: forward simulation)
   spup = sum(pupdp)
   pup  = Int64[]
   for i in Base.OneTo(4)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant fossilized birth-death"
+  @info "running constant fossilized birth-death"
 
   # adaptive phase
   llc, prc, λc, μc, ψc, mc =
@@ -143,8 +143,8 @@ function insane_cfbd(tree    ::sTf_label,
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2))
   merge!(pardic, 
-    Dict("psi"*(iszero(nep) ? "" : string("_",i)), 
-          => 2+i for i in Base.OneTo(nep)))
+    Dict("psi"*(iszero(nep) ? "" : string("_",i)) => 2+i 
+           for i in Base.OneTo(nep)))
 
   write_ssr(r, pardic, out_file)
 

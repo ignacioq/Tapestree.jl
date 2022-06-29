@@ -210,10 +210,6 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   # number of branches
   nbr  = lastindex(idf)
 
-  # sum for estimating sigma proposals 
-  sσλ = 0.0
-  ntu = nburn - div(nburn,3)
-
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for i in Base.OneTo(nburn)
