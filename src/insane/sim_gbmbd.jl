@@ -419,9 +419,8 @@ function _sim_gbmbd(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
-        t = max(0.0,t)
+        t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -534,8 +533,8 @@ function _sim_gbmbd_t(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -663,9 +662,8 @@ function _sim_gbmbd_i(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
-        t = max(0.0,t)
+        t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -778,9 +776,8 @@ function _sim_gbmbd_it(nsδt::Float64,
 
   ## first: non-standard δt
   if t <= nsδt
-    bt  += t
-
     t   = max(0.0,t)
+    bt += t
     srt = sqrt(t)
     λt1 = rnorm(λt + α*t, srt*σλ)
     μt1 = rnorm(μt, srt*σμ)
@@ -854,8 +851,8 @@ function _sim_gbmbd_it(nsδt::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -973,8 +970,8 @@ function _sim_gbmbd_it(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)

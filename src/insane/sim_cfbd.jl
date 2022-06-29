@@ -54,7 +54,7 @@ function sim_cfbd(t  ::Float64,
                   λ  ::Float64,
                   μ  ::Float64,
                   ψ  ::Vector{Float64},
-                  ψts::Vector{Float64},
+                  ψep::Vector{Float64},
                   ix ::Int64,
                   nep::Int64)
 
@@ -64,10 +64,10 @@ function sim_cfbd(t  ::Float64,
 
   # ψ epoch change
   if ix < nep
-    @inbounds ψti = ψts[ix]
+    @inbounds ψti = ψep[ix]
     if t - tw < ψti
       e0 = t - ψti
-      t0 = sim_cfbd(ψti, λ, μ, ψ, ψts, ix + 1, nep)
+      t0 = sim_cfbd(ψti, λ, μ, ψ, ψep, ix + 1, nep)
       sete!(t0, e(t0) + e0)
       return t0
     end
@@ -80,15 +80,15 @@ function sim_cfbd(t  ::Float64,
 
   # speciation
   if λevent(λ, μ, ψi)
-    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
-                 sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
+    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψep, ix, nep),
+                 sim_cfbd(t - tw, λ, μ, ψ, ψep, ix, nep),
                  tw, false, false, false)
   # extinction
   elseif μevent(μ, ψi)
     return sTfbd(tw, true, false, false)
   # fossil sampling
   else
-    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep), 
+    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψep, ix, nep), 
              tw, false, true, false)
   end
 end
@@ -146,7 +146,7 @@ end
                 λ   ::Float64,
                 μ   ::Float64,
                 ψ   ::Vector{Float64},
-                ψts ::Vector{Float64},
+                ψep ::Vector{Float64},
                 ix  ::Int64,
                 nep ::Int64,
                 lr  ::Float64,
@@ -164,7 +164,7 @@ function _sim_cfbd_t(t   ::Float64,
                      λ   ::Float64,
                      μ   ::Float64,
                      ψ   ::Vector{Float64},
-                     ψts ::Vector{Float64},
+                     ψep ::Vector{Float64},
                      ix  ::Int64,
                      nep ::Int64,
                      lr  ::Float64,
@@ -182,11 +182,11 @@ function _sim_cfbd_t(t   ::Float64,
 
     # ψ epoch change
     if ix < nep
-      ψti = ψts[ix]
+      ψti = ψep[ix]
       if t - tw < ψti
         e0 = t - ψti
         t0, na, nn, lr = 
-          _sim_cfbd_t(ψti, λ, μ, ψ, ψts, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
+          _sim_cfbd_t(ψti, λ, μ, ψ, ψep, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
         sete!(t0, e(t0) + e0)
         return t0, na, nn, lr
       end
@@ -209,9 +209,9 @@ function _sim_cfbd_t(t   ::Float64,
     if λevent(λ, μ, ψi)
       nn += 1
       d1, na, nn, lr =
-        _sim_cfbd_t(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_t(t - tw, λ, μ, ψ, ψep, ix, nep, lr, lU, Iρi, na, nn, nlim)
       d2, na, nn, lr =
-        _sim_cfbd_t(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_t(t - tw, λ, μ, ψ, ψep, ix, nep, lr, lU, Iρi, na, nn, nlim)
 
       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
     # extinction
@@ -236,7 +236,7 @@ end
                 λ   ::Float64,
                 μ   ::Float64,
                 ψ   ::Vector{Float64},
-                ψts ::Vector{Float64},
+                ψep ::Vector{Float64},
                 ix  ::Int64,
                 nep ::Int64,
                 na  ::Int64,
@@ -253,7 +253,7 @@ function _sim_cfbd_i(t   ::Float64,
                      λ   ::Float64,
                      μ   ::Float64,
                      ψ   ::Vector{Float64},
-                     ψts ::Vector{Float64},
+                     ψep ::Vector{Float64},
                      ix  ::Int64,
                      nep ::Int64,
                      na  ::Int64,
@@ -269,11 +269,11 @@ function _sim_cfbd_i(t   ::Float64,
 
     # ψ epoch change
     if ix < nep
-      ψti = ψts[ix]
+      ψti = ψep[ix]
       if t - tw < ψti > te
         e0 = t - ψti
         t0, na, nf, nn  = 
-          _sim_cfbd_i(ψti, te, λ, μ, ψ, ψts, ix + 1, nep, na, nf, nn, nlim)
+          _sim_cfbd_i(ψti, te, λ, μ, ψ, ψep, ix + 1, nep, na, nf, nn, nlim)
         sete!(t0, e(t0) + e0)
         return t0, na, nf, nn
       end
@@ -288,9 +288,9 @@ function _sim_cfbd_i(t   ::Float64,
     if λevent(λ, μ, ψi)
       nn += 1
       d1, na, nf, nn = 
-        _sim_cfbd_i(t - tw, te, λ, μ, ψ, ψts, ix + 1, nep, na, nf, nn, nlim)
+        _sim_cfbd_i(t - tw, te, λ, μ, ψ, ψep, ix + 1, nep, na, nf, nn, nlim)
       d2, na, nf, nn = 
-        _sim_cfbd_i(t - tw, te, λ, μ, ψ, ψts, ix + 1, nep, na, nf, nn, nlim)
+        _sim_cfbd_i(t - tw, te, λ, μ, ψ, ψep, ix + 1, nep, na, nf, nn, nlim)
 
       return sTfbd(d1, d2, tw, false, false, false), na, nf, nn
     # extinction
@@ -330,7 +330,7 @@ function _sim_cfbd_it(t   ::Float64,
                       λ   ::Float64,
                       μ   ::Float64,
                       ψ   ::Vector{Float64},
-                      ψts ::Vector{Float64},
+                      ψep ::Vector{Float64},
                       ix  ::Int64,
                       nep ::Int64,
                       lr  ::Float64,
@@ -348,11 +348,11 @@ function _sim_cfbd_it(t   ::Float64,
 
     # ψ epoch change
     if ix < nep
-      ψti = ψts[ix]
+      ψti = ψep[ix]
       if t - tw < ψti
         e0 = t - ψti
         t0, na, nn, lr = 
-          _sim_cfbd_it(ψti, λ, μ, ψ, ψts, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
+          _sim_cfbd_it(ψti, λ, μ, ψ, ψep, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
         sete!(t0, e(t0) + e0)
         return t0, na, nn, lr
       end
@@ -368,9 +368,9 @@ function _sim_cfbd_it(t   ::Float64,
     if λevent(λ, μ, ψi)
       nn += 1
       d1, na, nn, lr =
-        _sim_cfbd_it(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_it(t - tw, λ, μ, ψ, ψep, ix, nep, lr, lU, Iρi, na, nn, nlim)
       d2, na, nn, lr =
-        _sim_cfbd_it(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_it(t - tw, λ, μ, ψ, ψep, ix, nep, lr, lU, Iρi, na, nn, nlim)
 
       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
     # extinction

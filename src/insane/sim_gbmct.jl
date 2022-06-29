@@ -392,8 +392,8 @@ function _sim_gbmct(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
 
         push!(λv, λt1)
@@ -490,8 +490,8 @@ function _sim_gbmct_t(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
 
@@ -600,8 +600,8 @@ function _sim_gbmct_i(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
 
         push!(λv, λt1)
@@ -697,8 +697,8 @@ function _sim_gbmct_it(nsδt::Float64,
 
   ## first: non-standard δt
   if t <= nsδt
-    bt += t
     t   = max(0.0, t)
+    bt += t
     λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
     push!(λv, λt1)
 
@@ -755,8 +755,8 @@ function _sim_gbmct_it(nsδt::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         λm  = exp(0.5*(λt + λt1))
         push!(λv, λt1)
@@ -856,8 +856,8 @@ function _sim_gbmct_it(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         λm  = exp(0.5*(λt + λt1))
         push!(λv, λt1)

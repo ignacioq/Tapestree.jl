@@ -421,9 +421,8 @@ function _sim_gbmfbd(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
-        t = max(0.0,t)
+        t  = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -507,6 +506,140 @@ end
 
 
 """
+    _sim_gbmfbd(t   ::Float64,
+                λt  ::Float64,
+                μt  ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                ψ   ::Vector{Float64},
+                ψep ::Vector{Float64},
+                ix  ::Int64,
+                nep ::Int64,
+                δt  ::Float64,
+                srδt::Float64,
+                nn  ::Int64,
+                nlim::Int64)
+
+Simulate `iTfbd` according to geometric Brownian motions for birth and death
+rates, with a limit on the number lineages allowed to reach.
+"""
+function _sim_gbmfbd(t   ::Float64,
+                     λt  ::Float64,
+                     μt  ::Float64,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     ψ   ::Vector{Float64},
+                     ψep ::Vector{Float64},
+                     ix  ::Int64,
+                     nep ::Int64,
+                     δt  ::Float64,
+                     srδt::Float64,
+                     nn  ::Int64,
+                     nlim::Int64)
+
+  if nn < nlim
+
+    @inbounds ψi = ψ[ix]
+    @inbounds et = ψep[ix]
+
+    λv = Float64[λt]
+    μv = Float64[μt]
+    bt = 0.0
+
+    while true
+
+      if t <= δt
+        t   = max(0.0,t)
+        bt += t
+        srt = sqrt(t)
+        λt1 = rnorm(λt + α*t, srt*σλ)
+        μt1 = rnorm(μt, srt*σμ)
+
+        push!(λv, λt1)
+        push!(μv, μt1)
+
+        λm = exp(0.5*(λt + λt1))
+        μm = exp(0.5*(μt + μt1))
+
+        if event(λm, μm, ψi, t)
+          # if speciation
+          if λevent(λm, μm, ψi)
+            nn += 1
+            return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         iTfbd(0.0, δt, 0.0, false, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         bt, δt, t, false, false, false, λv, μv), nn
+          # if extinction
+          elseif μevent(μm, ψi)
+            return iTfbd(bt, δt, t, true, false, false, λv, μv), nn
+          # fossil sampling
+          else
+            return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         bt, δt, t, false, true, false, λv, μv), nn
+          end
+        end
+
+        return iTfbd(bt, δt, t, false, false, false, λv, μv), nn
+      end
+
+      if t - δt <= et <= t
+        ix += 1
+        @inbounds ψi = ψ[ix]
+        if ix < nep @inbounds et = ψep[ix] end
+      end
+
+      t  -= δt
+      bt += δt
+
+      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      μt1 = rnorm(μt, srδt*σμ)
+
+      push!(λv, λt1)
+      push!(μv, μt1)
+
+      λm = exp(0.5*(λt + λt1))
+      μm = exp(0.5*(μt + μt1))
+
+      if event(λm, μm, ψi, δt)
+        # if speciation
+        if λevent(λm, μm, ψi)
+          nn += 1
+          td1, nn =
+            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt, 
+              na, nf, nn, nlim)
+          td2, nn =
+            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt, 
+              na, nf, nn, nlim)
+
+          return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv), nn
+        # if extinction
+        elseif μevent(μm, ψi)
+          return iTfbd(bt, δt, δt, true, false, false, λv, μv), nn
+        else
+          td1, nn =
+            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt, 
+              na, nf, nn, nlim)
+
+          return iTfbd(td1, bt, δt, δt, false, true, false, λv, μv), nn
+        end
+      end
+
+      λt = λt1
+      μt = μt1
+    end
+  end
+
+  return iTfbd(), nn
+end
+
+
+
+
+"""
     _sim_gbmfbd_t(t   ::Float64,
                   λt  ::Float64,
                   μt  ::Float64,
@@ -551,8 +684,8 @@ function _sim_gbmfbd_t(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
