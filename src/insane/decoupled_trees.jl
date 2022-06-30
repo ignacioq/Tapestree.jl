@@ -291,13 +291,13 @@ end
 
 
 """
-    couple(Ξ::Vector{T},
+    couple(Ξ  ::Vector{T},
            idf::Vector{iBffs},
            ix ::Int64) where {T <: iTree}
 
 Build tree from decoupled tree.
 """
-function couple(Ξ::Vector{T},
+function couple(Ξ  ::Vector{T},
                 idf::Vector{iBffs},
                 ix ::Int64) where {T <: iTree}
 
@@ -311,6 +311,38 @@ function couple(Ξ::Vector{T},
 
   return ξi
 end
+
+
+
+
+"""
+    decouple!(Ωtimes::Vector{Vector{Float64}},
+              idf   ::Vector{iBffs},
+              ix    ::Int64)
+
+Build a decoupled occurrence record from an occurrence record.
+"""
+function decouple!(Ωtimes::Vector{Vector{Float64}},
+                   ωtimes::Vector{Float64},
+                   idf   ::Vector{iBffs})
+
+  for ix in Base.OneTo(lastindex(idf))
+    bi = idf[ix]
+    tii = ti(bi)
+    tfi = tf(bi)
+    push!(Ωtimes, filter(ωtime -> tii.>ωtime, ωtimes))
+  end
+end
+
+
+
+
+"""
+    couple(Ωtimes::Vector{Vector{Float64}})
+
+Build an occurrence record from a decoupled occurrence record.
+"""
+couple(Ωtimes::Vector{Vector{Float64}}) = unique(vcat(Ωtimes...))
 
 
 
