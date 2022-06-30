@@ -387,131 +387,6 @@ Sample conditional on number of species
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
-                ψ   ::Float64,
-                δt  ::Float64,
-                srδt::Float64,
-                na  ::Int64,
-                nn ::Int64,
-                nlim::Int64,
-                nf  ::Int64)
-
-Simulate `iTfbd` according to geometric Brownian motions for birth and death
-rates, with a limit on the number lineages allowed to reach.
-"""
-function _sim_gbmfbd(t   ::Float64,
-                     λt  ::Float64,
-                     μt  ::Float64,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     σμ  ::Float64,
-                     ψ   ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64,
-                     na  ::Int64,
-                     nf  ::Int64,
-                     nn  ::Int64,
-                     nlim::Int64)
-
-  if nn < nlim
-
-    λv = Float64[λt]
-    μv = Float64[μt]
-    bt = 0.0
-
-    while true
-
-      if t <= δt
-        t  = max(0.0,t)
-        bt += t
-        srt = sqrt(t)
-        λt1 = rnorm(λt + α*t, srt*σλ)
-        μt1 = rnorm(μt, srt*σμ)
-
-        push!(λv, λt1)
-        push!(μv, μt1)
-
-        λm = exp(0.5*(λt + λt1))
-        μm = exp(0.5*(μt + μt1))
-
-        if event(λm, μm, ψ, t)
-          # if speciation
-          if λevent(λm, μm, ψ)
-            nn += 1
-            na  += 2
-            return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                         iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                         bt, δt, t, false, false, false, λv, μv), na, nf, nn
-          # if extinction
-          elseif μevent(μm, ψ)
-            return iTfbd(bt, δt, t, true, false, false, λv, μv), na, nf, nn
-          # fossil sampling
-          else
-            na += 1
-            nf += 1
-            return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                         bt, δt, t, false, true, false, λv, μv), na, nf, nn
-          end
-        end
-
-        na += 1
-        return iTfbd(bt, δt, t, false, false, false, λv, μv), na, nf, nn
-      end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
-      μt1 = rnorm(μt, srδt*σμ)
-
-      push!(λv, λt1)
-      push!(μv, μt1)
-
-      λm = exp(0.5*(λt + λt1))
-      μm = exp(0.5*(μt + μt1))
-
-      if event(λm, μm, ψ, δt)
-        # if speciation
-        if λevent(λm, μm, ψ)
-          nn += 1
-          td1, na, nf, nn =
-            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, na, nf, nn, nlim)
-          td2, na, nf, nn =
-            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, na, nf, nn, nlim)
-
-          return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv),
-                 na, nf, nn
-        # if extinction
-        elseif μevent(μm, ψ)
-          return iTfbd(bt, δt, δt, true, false, false, λv, μv), na, nf, nn
-        else
-          nf += 1
-          td1, na, nf, nn =
-            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, na, nf, nn, nlim)
-          return iTfbd(td1, bt, δt, δt, false, true, false, λv, μv), na, nf, nn
-        end
-      end
-
-      λt = λt1
-      μt = μt1
-    end
-  end
-
-  return iTfbd(), na, nf, nn
-end
-
-
-
-
-"""
-    _sim_gbmfbd(t   ::Float64,
-                λt  ::Float64,
-                μt  ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                σμ  ::Float64,
                 ψ   ::Vector{Float64},
                 ψep ::Vector{Float64},
                 ix  ::Int64,
@@ -609,20 +484,22 @@ function _sim_gbmfbd(t   ::Float64,
         if λevent(λm, μm, ψi)
           nn += 1
           td1, nn =
-            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt, 
-              na, nf, nn, nlim)
+            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt,
+              nn, nlim)
           td2, nn =
-            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt, 
-              na, nf, nn, nlim)
+            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt,
+              nn, nlim)
 
-          return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv), nn
+          return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv),
+                 nn
         # if extinction
         elseif μevent(μm, ψi)
+
           return iTfbd(bt, δt, δt, true, false, false, λv, μv), nn
         else
           td1, nn =
-            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt, 
-              na, nf, nn, nlim)
+            _sim_gbmfbd(t, λt1, μt1, α, σλ, σμ, ψ, ψep, ix, nep, δt, srδt,
+              nn, nlim)
 
           return iTfbd(td1, bt, δt, δt, false, true, false, λv, μv), nn
         end
@@ -684,8 +561,8 @@ function _sim_gbmfbd_t(t   ::Float64,
     while true
 
       if t <= δt
-        t   = max(0.0,t)
         bt += t
+        t   = max(0.0,t)
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -754,10 +631,10 @@ function _sim_gbmfbd_t(t   ::Float64,
         if λevent(λm, μm, ψ)
           nn += 1
           td1, na, nn, lr =
-            _sim_gbmfbd_t(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+            _sim_gbmfbd_t(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
           td2, na, nn, lr =
-            _sim_gbmfbd_t(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+            _sim_gbmfbd_t(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
 
           return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv),
@@ -879,7 +756,7 @@ function _sim_gbmfbd_i(t   ::Float64,
         if λevent(λm, μm, ψ)
           nn += 1
           td1, nf, nn =
-            _sim_gbmfbd_i(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, nf, nn, nlim, 
+            _sim_gbmfbd_i(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, nf, nn, nlim,
               λsp, μsp)
           td2, nf, nn =
             _sim_gbmfbd_i(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, nf, nn, nlim,
@@ -1009,14 +886,14 @@ function _sim_gbmfbd_it(nsδt::Float64,
     # if speciation
     if λevent(λm, μm, ψ)
       nn += 1
-      td1, na, nn, lr = 
-        _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+      td1, na, nn, lr =
+        _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
           lr, lU, Iρi, na, nn, nlim)
-      td2, na, nn, lr = 
-        _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+      td2, na, nn, lr =
+        _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
           lr, lU, Iρi, na, nn, nlim)
 
-      return iTfbd(td1, td2, bt, δt, nsδt, false, false, false, λv, μv), 
+      return iTfbd(td1, td2, bt, δt, nsδt, false, false, false, λv, μv),
              na, nn, lr
     # if extinction
     elseif μevent(μm, ψ)
@@ -1090,10 +967,10 @@ function _sim_gbmfbd_it(nsδt::Float64,
         if λevent(λm, μm, ψ)
           nn += 1
           td1, na, nn, lr =
-            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
           td2, na, nn, lr =
-            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
 
           return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv),
@@ -1218,10 +1095,10 @@ function _sim_gbmfbd_it(t   ::Float64,
         if λevent(λm, μm, ψ)
           nn += 1
           td1, na, nn, lr =
-            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
           td2, na, nn, lr =
-            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt, 
+            _sim_gbmfbd_it(t, λt1, μt1, α, σλ, σμ, ψ, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
 
           return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv),

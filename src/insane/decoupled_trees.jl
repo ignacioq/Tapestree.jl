@@ -701,8 +701,6 @@ function make_Ξ(idf ::Vector{iBffs},
     end
     setλt!(idfi, lλv[l])
     setμt!(idfi, lμv[l])
-    push!(λst(idfi), lλv[l])
-    push!(μst(idfi), lμv[l])
   end
 
   return Ξ

@@ -46,6 +46,7 @@ function insane_cfbd(tree    ::sTf_label,
                      μi      ::Float64               = NaN,
                      ψi      ::Float64               = NaN,
                      pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
+                     survival::Bool                  = true,
                      prints  ::Int64                 = 5,
                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -85,17 +86,16 @@ function insane_cfbd(tree    ::sTf_label,
   # make ψ vector
   ψc = fill(ψc, nep)
 
-  # define conditioning
-  if ntipsalive(tree) > 0
+  # survival conditioning
+  if survival && ntipsalive(tree) > 0
     # if crown conditioning
     if def1(tree) && def2(tree) &&
        ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
       crown = 1
-    # if stem conditioning
+    # if crown conditioning
     else
       crown = 0
     end
-  # no survival
   else
     crown = 2
   end

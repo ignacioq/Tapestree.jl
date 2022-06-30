@@ -18,9 +18,10 @@ Created 03 09 2020
                   λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                   μa_prior::NTuple{2,Float64} = (0.0, 100.0),
                   α_prior ::NTuple{2,Float64} = (0.0, 10.0),
-                  σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
-                  σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
+                  σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
+                  σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
+                  ψ_epoch ::Vector{Float64}   = Float64[],
                   niter   ::Int64             = 1_000,
                   nthin   ::Int64             = 10,
                   nburn   ::Int64             = 200,
@@ -31,12 +32,12 @@ Created 03 09 2020
                   αi      ::Float64           = 0.0,
                   σλi     ::Float64           = 0.01,
                   σμi     ::Float64           = 0.01,
-                  pupdp   ::NTuple{5,Float64} = (0.0, 0.1, 0.1, 0.2, 0.2),
+                  pupdp   ::NTuple{5,Float64} = (0.01, 0.01, 0.01, 0.1, 0.2),
                   δt      ::Float64           = 1e-2,
                   prints  ::Int64             = 5,
                   tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for `gbm-bd`.
+Run insane for fossilized birth-death diffusion `fbdd`.
 """
 function insane_gbmfbd(tree    ::sTf_label,
                        out_file::String;
@@ -46,6 +47,7 @@ function insane_gbmfbd(tree    ::sTf_label,
                        σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
+                       ψ_epoch ::Vector{Float64}   = Float64[],
                        niter   ::Int64             = 1_000,
                        nthin   ::Int64             = 10,
                        nburn   ::Int64             = 200,
@@ -56,8 +58,9 @@ function insane_gbmfbd(tree    ::sTf_label,
                        αi      ::Float64           = 0.0,
                        σλi     ::Float64           = 0.01,
                        σμi     ::Float64           = 0.01,
-                       pupdp   ::NTuple{5,Float64} = (0.0, 0.1, 0.1, 0.2, 0.2),
+                       pupdp   ::NTuple{5,Float64} = (0.01, 0.01, 0.01, 0.1, 0.2),
                        δt      ::Float64           = 1e-2,
+                       survival::Bool              = true,
                        prints  ::Int64             = 5,
                        tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
@@ -96,8 +99,11 @@ function insane_gbmfbd(tree    ::sTf_label,
     λc, μc, ψc = λi, μi, ψi
   end
 
-  # define conditioning
-  if ntipsalive(tree) > 0
+  # make ψ vector
+  ψc = fill(ψc, nep)
+
+  # survival conditioning
+  if survival && ntipsalive(tree) > 0
     # if crown conditioning
     if def1(tree) && def2(tree) &&
        ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
@@ -106,7 +112,6 @@ function insane_gbmfbd(tree    ::sTf_label,
     else
       crown = 0
     end
-  # no survival
   else
     crown = 2
   end
@@ -146,7 +151,7 @@ function insane_gbmfbd(tree    ::sTf_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running insane fossilized birth-death"
+  @info "running fossilized birth-death diffusion"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc  =
@@ -158,7 +163,7 @@ function insane_gbmfbd(tree    ::sTf_label,
   # mcmc
   R, Ξv =
     mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, th, crown,
-      λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, ψ_prior,
+      λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, ψ_prior, ψ_epoch,
       niter, nthin, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   pardic = Dict(("lambda_root"  => 1,
@@ -186,20 +191,26 @@ end
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
+                    ψ_prior ::NTuple{2,Float64},
+                    ψ_epoch ::Vector{Float64},
                     nburn   ::Int64,
-                    αc     ::Float64,
+                    αc      ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
+                    ψc      ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
-                    crown    ::Bool,
+                    crown   ::Int64,
                     δt      ::Float64,
                     srδt    ::Float64,
+                    bst     ::Vector{Float64},
+                    eixi    ::Vector{Int64},
+                    eixf    ::Vector{Int64},
                     inodes  ::Array{Int64,1},
                     pup     ::Array{Int64,1},
                     prints  ::Int64)
 
-MCMC burn-in chain for `gbmbd`.
+MCMC burn-in chain for `fbdd`.
 """
 function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbd},
                          idf     ::Vector{iBffs},
@@ -209,6 +220,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbd},
                          σλ_prior::NTuple{2,Float64},
                          σμ_prior::NTuple{2,Float64},
                          ψ_prior ::NTuple{2,Float64},
+                         ψ_epoch ::Vector{Float64},
                          nburn   ::Int64,
                          αc      ::Float64,
                          σλc     ::Float64,
@@ -216,16 +228,26 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbd},
                          ψc      ::Float64,
                          mc      ::Float64,
                          th      ::Float64,
-                         crown    ::Int64,
+                         crown   ::Int64,
                          δt      ::Float64,
                          srδt    ::Float64,
+                         bst     ::Vector{Float64},
+                         eixi    ::Vector{Int64},
+                         eixf    ::Vector{Int64},
                          inodes  ::Array{Int64,1},
                          pup     ::Array{Int64,1},
                          prints  ::Int64)
 
   λ0  = lλ(Ξ[1])[1]
-  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, δt, srδt) - Float64(crown) * λ0 +
-        log(mc) + prob_ρ(idf)
+
+
+
+
+
+
+
+  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - 
+        Float64(crown) * λ0 + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
         logdnorm(αc,               α_prior[1],  α_prior[2]^2) +

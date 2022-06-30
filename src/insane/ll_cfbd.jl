@@ -25,7 +25,7 @@ function llik_cfbd(tree::sTfbd,
                    μ   ::Float64, 
                    ψ   ::Vector{Float64}, 
                    t   ::Float64,
-                   ets ::Vector{Float64},
+                   ψts ::Vector{Float64},
                    ix  ::Int64,
                    nep ::Int64)
   @inbounds begin
@@ -33,11 +33,11 @@ function llik_cfbd(tree::sTfbd,
     ei  = e(tree)
     ll = 0.0
     # if epoch change
-    while ix < nep && t - ei < ets[ix]
-      li   = t - ets[ix]
+    while ix < nep && t - ei < ψts[ix]
+      li   = t - ψts[ix]
       ll  -= li*(λ + μ + ψ[ix])
       ei  -= li
-      t    = ets[ix]
+      t    = ψts[ix]
       ix  += 1
     end
 
@@ -47,11 +47,11 @@ function llik_cfbd(tree::sTfbd,
     if def1(tree)
       if def2(tree)
         ll += log(λ)                                              +
-              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, t, ets, ix, nep) +
-              llik_cfbd(tree.d2::sTfbd, λ, μ, ψ, t, ets, ix, nep)
+              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, t, ψts, ix, nep) +
+              llik_cfbd(tree.d2::sTfbd, λ, μ, ψ, t, ψts, ix, nep)
       else
         ll += log(ψ[ix])                                          +
-              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, t, ets, ix, nep)
+              llik_cfbd(tree.d1::sTfbd, λ, μ, ψ, t, ψts, ix, nep)
       end
     else
       ll += (isextinct(tree) ? log(μ)     : 0.0) +
@@ -70,32 +70,33 @@ end
               λ  ::Float64,
               μ  ::Float64,
               ψ  ::Vector{Float64},
-              ets::Vector{Float64},
+              ψts::Vector{Float64},
               bst::Vector{Float64},
               eix::Vector{Int64})
 
 Log-likelihood up to a constant for constant fossilized birth-death
-given a complete `iTree` for decoupled trees with epochs `ets`.
+given a complete `iTree` for decoupled trees with epochs `ψts`.
 """
 function llik_cfbd(Ξ  ::Vector{sTfbd},
                    λ  ::Float64,
                    μ  ::Float64,
                    ψ  ::Vector{Float64},
-                   ets::Vector{Float64},
+                   ψts::Vector{Float64},
                    bst::Vector{Float64},
                    eix::Vector{Int64})
+  @inbounds begin
 
-  nep = lastindex(ets) + 1
-  ls  = zeros(nep)
-  ll  = 0.0
-  nf  = 0 # number of sampled ancestors
-  for i in Base.OneTo(lastindex(Ξ))
-    ξ  = Ξ[i]
-    nf += isinternalfossil(ξ)
-    ll += llik_cfbd(ξ, λ, μ, ψ, bst[i], ets, eix[i], nep)
+    nep = lastindex(ψts) + 1
+    ll  = 0.0
+    nf  = 0 # number of sampled ancestors
+    for i in Base.OneTo(lastindex(Ξ))
+      ξ   = Ξ[i]
+      nf += isinternalfossil(ξ)
+      ll += llik_cfbd(ξ, λ, μ, ψ, bst[i], ψts, eix[i], nep)
+    end
+
+    ll += Float64(lastindex(Ξ) - nf - 1) * 0.5 * log(λ)
   end
-
-  ll += Float64(lastindex(Ξ) - nf - 1) * 0.5 * log(λ)
 
   return ll
 end

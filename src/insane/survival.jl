@@ -21,25 +21,24 @@ for constant birth-death.
 function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, c::Int64)
 
   ntries = 0
-  m      = 0.0
+  m      = 1.0
 
   # if stem conditioning
   if iszero(c)
 
     while true
-      m      += 1.0
       ntries += 1
       s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
 
       s1 && break
       ntries === ntry && break
+      m      += 1.0
     end
 
   # if crown conditioning
   elseif isone(c)
 
     while true
-      m      += 1.0
       ntries += 1
 
       s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
@@ -49,12 +48,8 @@ function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, c::Int64)
         s2 && break
       end
       ntries === ntry && break
+      m      += 1.0
     end
-
-  # no conditioning
-  else
-
-    return 1.0
   end
 
   return m
@@ -212,25 +207,25 @@ function m_surv_gbmbd(t   ::Float64,
                       ntry::Int64,
                       c   ::Int64)
   ntries = 0
-  m      = 0.0
+  m      = 1.0
 
   # if stem conditioning
   if iszero(c)
 
     while true
-      m      += 1.0
       ntries += 1
       s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
 
       s1 && break
       ntries === ntry && break
+
+      m      += 1.0
     end
 
   # if crown conditioning
   elseif isone(c)
 
     while true
-      m      += 1.0
       ntries += 1
 
       s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
@@ -240,12 +235,10 @@ function m_surv_gbmbd(t   ::Float64,
         s2 && break
       end
       ntries === ntry && break
+      m      += 1.0
     end
 
   # no conditioning
-  else
-
-    return 1.0
   end
 
   return m
