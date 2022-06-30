@@ -20,10 +20,10 @@ Created 16 12 2021
 Log-likelihood up to a constant for constant fossilized birth-death
 given a complete `iTree` recursively.
 """
-function llik_cfbd(tree::sTfbd, 
-                   λ   ::Float64, 
-                   μ   ::Float64, 
-                   ψ   ::Vector{Float64}, 
+function llik_cfbd(tree::sTfbd,
+                   λ   ::Float64,
+                   μ   ::Float64,
+                   ψ   ::Vector{Float64},
                    t   ::Float64,
                    ψts ::Vector{Float64},
                    ix  ::Int64,
@@ -121,7 +121,7 @@ function llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
         llik_cfbd(tree.d1::sTfbd, λ, μ, ψ)
     end
   else
-    - e(tree)*(λ + μ + ψ)              + 
+    - e(tree)*(λ + μ + ψ)              +
       (isextinct(tree) ? log(μ) : 0.0) +
       (isfossil(tree)  ? log(ψ) : 0.0)
   end

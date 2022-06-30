@@ -22,7 +22,7 @@ Created 27 05 2020
                        δt  ::Float64,
                        srδt::Float64)
 
-Make a `gbm-bd` proposal for daughters from forwards simulated branch.
+Make a `fbdd` proposal for daughter for forward simulated fossil branch.
 """
 function _daughter_update!(ξ1  ::iTfbd,
                            λf  ::Float64,
@@ -52,8 +52,11 @@ function _daughter_update!(ξ1  ::iTfbd,
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
 
-    acr  = llrbd1
-    llr  = llrbm1 + acr
+    acr = llrbd1
+    llr = llrbm1 + acr
+    srt = σλ * sqrt(e1)
+    acr += lrdnorm_bm_x(λf, λi, λ1 - α*e1, σλ * srt) + 
+           lrdnorm_bm_x(μf, μi, μ1,        σμ * srt)
     drλ  = λi - λf
     ssrλ = ssrλ1
     ssrμ = ssrμ1
@@ -216,7 +219,7 @@ end
                 δt  ::Float64,
                 srδt::Float64)
 
-Make a `gbm` trio proposal.
+Make a `gbm` duo proposal.
 """
 function update_duo!(tree::iTfbd,
                      α   ::Float64,

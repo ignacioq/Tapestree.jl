@@ -23,7 +23,7 @@ Created 27 05 2020
                        δt  ::Float64,
                        srδt::Float64)
 
-Make a `gbm-bd` proposal for daughters from forwards simulated branch.
+Make a `gbm-bd` proposal for daughters from forward simulated branch.
 """
 function _daughters_update!(ξ1  ::T,
                             ξ2  ::T,

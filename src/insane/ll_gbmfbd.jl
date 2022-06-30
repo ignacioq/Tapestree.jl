@@ -37,19 +37,28 @@ function llik_gbm(tree::iTfbd,
   if def1(tree)
     if def2(tree)
       ei = e(tree)
-      ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
-        δt, fdt(tree), srδt, true, false, false)                      +
-      llik_gbm(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep) +
-      llik_gbm(tree.d2, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
+      ll, ix = 
+        ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
+          δt, fdt(tree), srδt, true, false, false)
+
+      ll1, ix = llik_gbm(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
+      ll2, ix = llik_gbm(tree.d2, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
+
+      ll += ll1 + ll2
     else
-      ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
-        δt, fdt(tree), srδt,false, false, true)                            +
-      llik_gbm(tree.d1, α, σλ, σμ, ψ, t - e(tree), ψts, ix, δt, srδt, nep)
+      ll, ix = ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
+        δt, fdt(tree), srδt, false, false, true)
+      ll1, ix = 
+        llik_gbm(tree.d1, α, σλ, σμ, ψ, t - e(tree), ψts, ix, δt, srδt, nep)
+
+      ll += ll1
     end
   else
-    ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
-      δt, fdt(tree), srδt, false, isextinct(tree), isfossil(tree))
+    ll, ix = ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
+               δt, fdt(tree), srδt, false, isextinct(tree), isfossil(tree))
   end
+
+  return ll, ix
 end
 
 
@@ -87,7 +96,8 @@ function llik_gbm(Ξ   ::Vector{iTfbd},
     ll  = 0.0
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
-      ll += llik_gbm(Ξ[i], α, σλ, σμ, ψ, bst[i], ψts, eix[i], δt, srδt, nep)
+      lli, ix = llik_gbm(Ξ[i], α, σλ, σμ, ψ, bst[i], ψts, eix[i], δt, srδt, nep)
+      ll += lli
       if !(it(bi) || isfossil(bi))
         ll += λt(bi)
       end
@@ -154,27 +164,23 @@ function ll_gbm_b(lλv ::Array{Float64,1},
       llbd += exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1))
     end
 
-    # add to global likelihood
+    # global likelihood
     ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
-         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
+         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π)) -
+         δt*llbd
 
     # ψ likelihood
-    llψ = 0.0
     ψi  = ψ[ix]
     et  = ix < nep ? ψts[ix] : -Inf
     te  = max(t - nI*δt - fdt, 0.0)
     while t > et > te
-      llψ -= ψi*(t - et)
-      t    = et
-      ix  += 1
-      ψi   = ψ[ix]
-      et   = ix < nep ? ψts[ix] : -Inf
+      ll -= ψi*(t - et)
+      t   = et
+      ix += 1
+      ψi  = ψ[ix]
+      et  = ix < nep ? ψts[ix] : -Inf
     end
-    llψ -= ψi*(t - te)
-
-    # add to global likelihood
-    llbd *= -δt
-    ll   += llbd + llψ
+    ll -= ψi*(t - te)
 
     lλvi1 = lλv[nI+2]
     lμvi1 = lμv[nI+2]
@@ -201,7 +207,7 @@ function ll_gbm_b(lλv ::Array{Float64,1},
     end
   end
 
-  return ll
+  return ll, ix
 end
 
 
@@ -213,8 +219,12 @@ end
                 σλ  ::Float64,
                 σμ  ::Float64,
                 ψ   ::Vector{Float64},
+                t   ::Float64,
+                ψts ::Vector{Float64},
+                ix  ::Int64,
                 δt  ::Float64,
-                srδt::Float64)
+                srδt::Float64,
+                nep ::Int64)
 
 Returns the log-likelihood for a `iTfbd` according to `fbdd`.
 """
@@ -223,29 +233,38 @@ function llik_gbm_ss(tree::iTfbd,
                      σλ  ::Float64,
                      σμ  ::Float64,
                      ψ   ::Vector{Float64},
+                     t   ::Float64,
+                     ψts ::Vector{Float64},
+                     ix  ::Int64,
                      δt  ::Float64,
-                     srδt::Float64)
+                     srδt::Float64,
+                     nep ::Int64)
 
   if def1(tree)
     if def2(tree)
-      ll, dλ, ssλ, ssμ, nλ =
-        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
-          true, false, false)
-      ll1, dλ1, ssλ1, ssμ1, nλ1 =
-        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, δt, srδt)
-      ll2, dλ2, ssλ2, ssμ2, nλ2 =
-        llik_gbm_ss(tree.d2, α, σλ, σμ, ψ, δt, srδt)
+      ei = e(tree)
+      ll, ix, dλ, ssλ, ssμ, nλ =
+        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
+          δt, fdt(tree), srδt, true, false, false)
+
+      ll1, ix, dλ1, ssλ1, ssμ1, nλ1 =
+        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt. nep)
+      ll2, ix, dλ2, ssλ2, ssμ2, nλ2 =
+        llik_gbm_ss(tree.d2, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
+
       ll  += ll1  + ll2
       dλ  += dλ1  + dλ2
       ssλ += ssλ1 + ssλ2
       ssμ += ssμ1 + ssμ2
       nλ  += nλ1  + nλ2
     else
-      ll, dλ, ssλ, ssμ, nλ =
-        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
-          false, false, true)
-      ll1, dλ1, ssλ1, ssμ1, nλ1 =
-        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, δt, srδt)
+      ll, ix, dλ, ssλ, ssμ, nλ =
+        ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
+          δt, fdt(tree), srδt, false, false, true)
+
+      ll1, ix, dλ1, ssλ1, ssμ1, nλ1 =
+        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, t - e(tree), ψts, ix, δt, srδt, nep)
+
       ll  += ll1
       dλ  += dλ1
       ssλ += ssλ1
@@ -253,9 +272,9 @@ function llik_gbm_ss(tree::iTfbd,
       nλ  += nλ1
     end
   else
-    ll, dλ, ssλ, ssμ, nλ =
-      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, δt, fdt(tree), srδt,
-          false, isextinct(tree), isfossil(tree))
+    ll, ix, dλ, ssλ, ssμ, nλ =
+      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
+        δt, fdt(tree), srδt, false, isextinct(tree), isfossil(tree))
   end
 
   return ll, dλ, ssλ, ssμ, nλ
@@ -284,6 +303,10 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
                      σλ  ::Float64,
                      σμ  ::Float64,
                      ψ   ::Vector{Float64},
+                     t   ::Float64,
+                     ψts ::Vector{Float64},
+                     ix  ::Int64,
+                     nep ::Int64,
                      δt  ::Float64,
                      fdt ::Float64,
                      srδt::Float64,
@@ -315,11 +338,21 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
 
     # add to global likelihood
     ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
-         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
-    # add to global likelihood
-    # add to global likelihood
-    llbd += Float64(nI) * ψ
-    ll   -= llbd*δt
+         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π)) -
+         δt*llbd
+
+    # ψ likelihood
+    ψi  = ψ[ix]
+    et  = ix < nep ? ψts[ix] : -Inf
+    te  = max(t - nI*δt - fdt, 0.0)
+    while t > et > te
+      ll -= ψi*(t - et)
+      t   = et
+      ix += 1
+      ψi  = ψ[ix]
+      et  = ix < nep ? ψts[ix] : -Inf
+    end
+    ll -= ψi*(t - te)
 
     lλvi1 = lλv[nI+2]
     lμvi1 = lμv[nI+2]
@@ -331,9 +364,9 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
       lλvi  = lλv[nI+1]
       lμvi  = lμv[nI+1]
       srfdt = sqrt(fdt)
-      ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)
-      ll  += ldnorm_bm(lμvi1, lμvi, srfdt*σμ)
-      ll  -= fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)) + ψ)
+      ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, srfdt*σλ)                +
+             ldnorm_bm(lμvi1, lμvi, srfdt*σμ)                        -
+             fdt*(exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1)))
       ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
       ssμ += (lμvi1 - lμvi)^2/(2.0*fdt)
       nλ  += 1.0
@@ -351,7 +384,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
     end
   end
 
-  return ll, dλ, ssλ, ssμ, nλ
+  return ll, ix, dλ, ssλ, ssμ, nλ
 end
 
 
