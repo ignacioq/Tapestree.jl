@@ -618,8 +618,6 @@ function fsbi_i(bi::iBffs,
 
   # acceptance probability
   acr  = log(Float64(ntp)/Float64(nt(bi)))
-
-  # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))

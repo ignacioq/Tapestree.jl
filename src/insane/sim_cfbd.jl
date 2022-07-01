@@ -182,7 +182,7 @@ function _sim_cfbd_t(t   ::Float64,
 
     # ψ epoch change
     if ix < nep
-      ψti = ψts[ix]
+      @inbounds ψti = ψts[ix]
       if t - tw < ψti
         e0 = t - ψti
         t0, na, nn, lr = 
@@ -269,7 +269,7 @@ function _sim_cfbd_i(t   ::Float64,
 
     # ψ epoch change
     if ix < nep
-      ψti = ψts[ix]
+      @inbounds ψti = ψts[ix]
       if t - tw < ψti > te
         e0 = t - ψti
         t0, na, nf, nn  = 
