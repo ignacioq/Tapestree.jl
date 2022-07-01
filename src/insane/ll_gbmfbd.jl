@@ -248,7 +248,7 @@ function llik_gbm_ss(tree::iTfbd,
           δt, fdt(tree), srδt, true, false, false)
 
       ll1, ix, dλ1, ssλ1, ssμ1, nλ1 =
-        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt. nep)
+        llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
       ll2, ix, dλ2, ssλ2, ssμ2, nλ2 =
         llik_gbm_ss(tree.d2, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
 
@@ -277,7 +277,7 @@ function llik_gbm_ss(tree::iTfbd,
         δt, fdt(tree), srδt, false, isextinct(tree), isfossil(tree))
   end
 
-  return ll, dλ, ssλ, ssμ, nλ
+  return ll, ix, dλ, ssλ, ssμ, nλ
 end
 
 
@@ -380,7 +380,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
       ll += lμvi1
     # if fossilization
     elseif ψev
-      ll += log(ψ)
+      ll += log(ψi)
     end
   end
 
