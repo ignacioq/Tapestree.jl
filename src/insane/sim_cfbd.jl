@@ -13,36 +13,6 @@ Created 07 10 2021
 
 
 
-"""
-    sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
-
-Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
-rate `λ`, extinction rate `μ` and fossilization rate `ψ`.
-"""
-function sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
-
-  tw = cfbd_wait(λ, μ, ψ)
-
-  if tw > t
-    return sTfbd(t, false, false, false)
-  end
-
-  # speciation
-  if λevent(λ, μ, ψ)
-    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ),
-                 sim_cfbd(t - tw, λ, μ, ψ),
-                 tw, false, false, false)
-  # extinction
-  elseif μevent(μ, ψ)
-    return sTfbd(tw, true, false, false)
-  # fossil sampling
-  else
-    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ), tw, false, true, false)
-  end
-end
-
-
-
 
 """
     sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
@@ -90,51 +60,6 @@ function sim_cfbd(t  ::Float64,
   else
     return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep), 
              tw, false, true, false)
-  end
-end
-
-
-
-
-"""
-    sim_cfbd(t::Float64,
-             λ::Float64,
-             μ::Float64,
-             ψ::Float64,
-             na::Int64,
-             nf::Int64)
-
-Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
-rate `λ`, extinction rate `μ` and fossilization rate `ψ`.
-"""
-function sim_cfbd(t::Float64,
-                  λ::Float64,
-                  μ::Float64,
-                  ψ::Float64,
-                  na::Int64,
-                  nf::Int64)
-
-  tw = cfbd_wait(λ, μ, ψ)
-
-  if tw > t
-    na += 1
-    return sTfbd(t, false, false, false), na, nf
-  end
-
-  # speciation
-  if λevent(λ, μ, ψ)
-    d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, na, nf)
-    d2, na, nf = sim_cfbd(t - tw, λ, μ, ψ, na, nf)
-
-    return sTfbd(d1, d2, tw, false, false, false), na, nf
-  # extinction
-  elseif μevent(μ, ψ)
-    return sTfbd(tw, true, false, false), na, nf
-  # fossil sampling
-  else
-    nf += 1
-    d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, na, nf)
-    return sTfbd(d1, tw, false, true, false), na, nf
   end
 end
 
