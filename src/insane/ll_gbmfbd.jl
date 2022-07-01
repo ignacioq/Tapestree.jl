@@ -17,8 +17,13 @@ Created 10 03 2022
              α   ::Float64,
              σλ  ::Float64,
              σμ  ::Float64,
+             ψ   ::Vector{Float64},
+             t   ::Float64,
+             ψts ::Vector{Float64},
+             ix  ::Int64,
              δt  ::Float64,
-             srδt::Float64)
+             srδt::Float64,
+             nep ::Int64)
 
 Returns the log-likelihood for a `iTfbd` according to `fbdd`.
 """
@@ -41,8 +46,8 @@ function llik_gbm(tree::iTfbd,
         ll_gbm_b(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
           δt, fdt(tree), srδt, true, false, false)
 
-      ll1, ix = llik_gbm(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
-      ll2, ix = llik_gbm(tree.d2, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
+      ll1, ix1 = llik_gbm(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
+      ll2, ix1 = llik_gbm(tree.d2, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
 
       ll += ll1 + ll2
     else
@@ -173,7 +178,7 @@ function ll_gbm_b(lλv ::Array{Float64,1},
     ψi  = ψ[ix]
     et  = ix < nep ? ψts[ix] : -Inf
     te  = max(t - nI*δt - fdt, 0.0)
-    while t > et > te
+    while t >= et > te
       ll -= ψi*(t - et)
       t   = et
       ix += 1
@@ -247,9 +252,9 @@ function llik_gbm_ss(tree::iTfbd,
         ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, ψ, t, ψts, ix, nep,
           δt, fdt(tree), srδt, true, false, false)
 
-      ll1, ix, dλ1, ssλ1, ssμ1, nλ1 =
+      ll1, ix1, dλ1, ssλ1, ssμ1, nλ1 =
         llik_gbm_ss(tree.d1, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
-      ll2, ix, dλ2, ssλ2, ssμ2, nλ2 =
+      ll2, ix1, dλ2, ssλ2, ssμ2, nλ2 =
         llik_gbm_ss(tree.d2, α, σλ, σμ, ψ, t - ei, ψts, ix, δt, srδt, nep)
 
       ll  += ll1  + ll2
@@ -345,7 +350,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
     ψi  = ψ[ix]
     et  = ix < nep ? ψts[ix] : -Inf
     te  = max(t - nI*δt - fdt, 0.0)
-    while t > et > te
+    while t >= et > te
       ll -= ψi*(t - et)
       t   = et
       ix += 1

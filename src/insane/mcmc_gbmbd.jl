@@ -780,7 +780,7 @@ function update_gbm!(bix  ::Int64,
           α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
       # set fixed `λ(t)` in branch
-      setλt!(bi, lλ(lξi)[end])
+      setλt!(bi, λf)
     end
 
     # # carry on updates in the daughters

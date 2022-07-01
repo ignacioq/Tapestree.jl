@@ -828,7 +828,7 @@ function _sim_gbmfbd_i(t   ::Float64,
     end
   end
 
-  return iTfbd(), na, nf, nn
+  return iTfbd(), na, 1, nn
 end
 
 
