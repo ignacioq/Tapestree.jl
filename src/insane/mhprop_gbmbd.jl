@@ -230,7 +230,7 @@ function _crown_update!(ξi   ::T,
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
-# node proposal
+    # node proposal
     λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
     μr = duoprop(μ1, μ2, e1, e2, σμ)
 
@@ -251,8 +251,7 @@ function _crown_update!(ξi   ::T,
 
     #survival
     mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
-    mp = 1.0
-    llr = log(mp/mc) + (iszero(crown) ? (λr - λi) : 0.0)
+    llr = log(mp/mc) + (crown === 2 ? (λr - λi) : 0.0)
 
     acr = llrbd1 + llrbd2 + llr
 
