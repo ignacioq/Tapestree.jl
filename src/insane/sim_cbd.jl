@@ -106,12 +106,11 @@ function _sim_cbd_t(t   ::Float64,
       if na > 1
         nlr += log(Iρi * Float64(na)/Float64(na-1))
       end
-      if nlr >= lr
-        return sTbd(t, false, false), na, nn, nlr
-      elseif lU < nlr
-        return sTbd(t, false, false), na, nn, nlr
+      
+      if nlr < lr && lU >= nlr
+        return sTbd(), na, nn, NaN
       else
-        return sTbd(0.0, false, false), na, nn, NaN
+        return sTbd(t, false, false), na, nn, nlr
       end
     else
       if λorμ(λ, μ)
@@ -126,7 +125,7 @@ function _sim_cbd_t(t   ::Float64,
     end
   end
 
-  return sTbd(0.0, false, false), na, nn, NaN
+  return sTbd(), na, nn, NaN
 end
 
 
@@ -170,7 +169,7 @@ function _sim_cbd_i(t   ::Float64,
     end
   end
 
-  return sTbd(0.0, false, false), na, nn
+  return sTbd(), na, nn
 end
 
 
@@ -221,7 +220,7 @@ function _sim_cbd_it(t   ::Float64,
 
   end
 
-  return sTbd(0.0, false, false), na, nn, NaN
+  return sTbd(), na, nn, NaN
 end
 
 
@@ -432,7 +431,7 @@ rexp(r::Float64) = @fastmath randexp()/r
 
 Return `true` if speciation event
 """
-λorμ(λ::Float64, μ::Float64) = (λ/(λ + μ)) > rand()
+λorμ(λ::Float64, μ::Float64) = rand() < (λ/(λ + μ))
 
 
 

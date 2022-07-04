@@ -51,19 +51,16 @@ function _daughters_update!(ξ1  ::iTct,
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
     # log likelihood ratios
     llrbm1, llrct1, ssrλ1, Σrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, ϵ, δt, fdt1, srδt, false, false)
     llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    acr  = llrct1 + llrct2 + λf - λi 
+    acr  = llrct1 + llrct2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr += duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+           duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     Σrλ  = Σrλ1 + Σrλ2
@@ -125,14 +122,15 @@ function _stem_update!(ξi   ::iTct,
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
-      false, false)
+    llrbm, llrct, ssrλ, Σrλ = 
+      llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt, false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 400, true)
-    llr = log(mp/mc)
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, true)
+    # mp = 1.0
+    llr += log(mp/mc)
 
-    acr = llrbd + llr
+    acr = llrct + llr
 
     if -randexp() < acr
       llc += acr + llrbm
@@ -220,7 +218,8 @@ function _crown_update!(ξi   ::iTct,
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
     # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 400, false)
+    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
+    # mp = 1.0
     llr = log(mp/mc)
 
     acr = llrct1 + llrct2 + llr
@@ -267,20 +266,17 @@ function _update_gbm!(tree::iTct,
                       ssλ ::Float64,
                       Σλ  ::Float64,
                       δt  ::Float64,
-                      srδt::Float64,
-                      ter ::Bool)
+                      srδt::Float64)
+
 
   if def1(tree)
-    llc, dλ, ssλ, Σλ = update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
+    llc, dλ, ssλ, Σλ =
+      update_triad!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
 
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter)
+      _update_gbm!(tree.d1, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
     llc, dλ, ssλ, Σλ =
-      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt, ter)
-  else
-    if !isfix(tree) || ter
-      llc, dλ, ssλ, Σλ = update_tip!(tree, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
-    end
+      _update_gbm!(tree.d2, α, σλ, ϵ, llc, dλ, ssλ, Σλ, δt, srδt)
   end
 
   return llc, dλ, ssλ, Σλ
@@ -289,100 +285,101 @@ end
 
 
 
+# """
+#     update_tip!(tree::iTct,
+#                 α   ::Float64,
+#                 σλ  ::Float64,
+#                 ϵ   ::Float64,
+#                 llc ::Float64,
+#                 dλ  ::Float64,
+#                 ssλ ::Float64,
+#                 Σλ  ::Float64,
+#                 δt  ::Float64,
+#                 srδt::Float64)
+
+# Make a `gbm` tip proposal.
+# """
+# function update_tip!(tree::iTct,
+#                      α   ::Float64,
+#                      σλ  ::Float64,
+#                      ϵ   ::Float64,
+#                      llc ::Float64,
+#                      dλ  ::Float64,
+#                      ssλ ::Float64,
+#                      Σλ  ::Float64,
+#                      δt  ::Float64,
+#                      srδt::Float64)
+
+#   @inbounds begin
+
+#     λc   = lλ(tree)
+#     l    = lastindex(λc)
+#     fdtp = fdt(tree)
+#     λp   = Vector{Float64}(undef, l)
+
+#     bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
+
+#     llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
+#       false, isextinct(tree))
+
+#     acr = llrbd
+
+#     if -randexp() < acr
+#       llc += llrbm + acr
+#       dλ  += λp[l] - λc[l]
+#       ssλ += ssrλ
+#       Σλ  += Σrλ
+#       unsafe_copyto!(λc, 1, λp, 1, l)
+#     end
+#   end
+
+#   return llc, dλ, ssλ, Σλ
+# end
+
+
+
+
 """
-    update_tip!(tree::iTct,
-                α   ::Float64,
-                σλ  ::Float64,
-                ϵ   ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                Σλ  ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
-
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::iTct,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     ϵ   ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     Σλ  ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
-
-  @inbounds begin
-
-    λc   = lλ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
-
-    bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
-
-    llrbm, llrbd, ssrλ, Σrλ = llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt,
-      false, isextinct(tree))
-
-    acr = llrbd
-
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      Σλ  += Σrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-    end
-  end
-
-  return llc, dλ, ssλ, Σλ
-end
-
-
-
-
-"""
-    update_triad!(λpc ::Vector{Float64},
-                  λ1c ::Vector{Float64},
-                  λ2c ::Vector{Float64},
-                  ep  ::Float64,
-                  e1  ::Float64,
-                  e2  ::Float64,
-                  fdtp::Float64,
-                  fdt1::Float64,
-                  fdt2::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  ϵ   ::Float64,
-                  llc ::Float64,
-                  dλ  ::Float64,
-                  ssλ ::Float64,
-                  Σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+    update_triad_ϵ!(λpc ::Vector{Float64},
+                    λ1c ::Vector{Float64},
+                    λ2c ::Vector{Float64},
+                    ep  ::Float64,
+                    e1  ::Float64,
+                    e2  ::Float64,
+                    fdtp::Float64,
+                    fdt1::Float64,
+                    fdt2::Float64,
+                    α   ::Float64,
+                    σλ  ::Float64,
+                    ϵ   ::Float64,
+                    llc ::Float64,
+                    dλ  ::Float64,
+                    ssλ ::Float64,
+                    Σλ  ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    mσλ ::Float64)
 
 Make a `gbm` trio proposal for observed speciation event.
 """
-function update_triad!(λpc ::Vector{Float64},
-                       λ1c ::Vector{Float64},
-                       λ2c ::Vector{Float64},
-                       ep  ::Float64,
-                       e1  ::Float64,
-                       e2  ::Float64,
-                       fdtp::Float64,
-                       fdt1::Float64,
-                       fdt2::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       ϵ   ::Float64,
-                       llc ::Float64,
-                       dλ  ::Float64,
-                       ssλ ::Float64,
-                       Σλ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+function update_triad_ϵ!(λpc ::Vector{Float64},
+                         λ1c ::Vector{Float64},
+                         λ2c ::Vector{Float64},
+                         ep  ::Float64,
+                         e1  ::Float64,
+                         e2  ::Float64,
+                         fdtp::Float64,
+                         fdt1::Float64,
+                         fdt2::Float64,
+                         α   ::Float64,
+                         σλ  ::Float64,
+                         ϵ   ::Float64,
+                         llc ::Float64,
+                         dλ  ::Float64,
+                         ssλ ::Float64,
+                         Σλ  ::Float64,
+                         δt  ::Float64,
+                         srδt::Float64)
 
   @inbounds begin
 
@@ -393,7 +390,6 @@ function update_triad!(λpc ::Vector{Float64},
     λ1p = Vector{Float64}(undef,l1)
     λ2p = Vector{Float64}(undef,l2)
     λp  = λpc[1]
-    λi  = λ1c[1]
     λ1  = λ1c[l1]
     λ2  = λ2c[l2]
 
@@ -494,8 +490,8 @@ function update_triad!(tree::iTct,
     if -randexp() < acr
       llc += llrbmp + llrbm1 + llrbm2 + acr
       dλ  += (λ1c[1] - λn)
-      ssλ += ssrλp + ssrλ1 + ssrλ2
-      Σλ  += Σrλp + Σrλ1 + Σrλ2
+      ssλ += ssrλp  + ssrλ1  + ssrλ2
+      Σλ  += Σrλp   + Σrλ1   + Σrλ2
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
@@ -523,7 +519,6 @@ end
               fdt1::Float64,
               fdt2::Float64,
               srδt ::Float64)
-
 Return the likelihood and proposal ratio for gbm-ct.
 """
 function llr_propr(λpp  ::Array{Float64,1},
@@ -556,7 +551,4 @@ function llr_propr(λpp  ::Array{Float64,1},
 
   return llr, acr, ssrλ, Σrλ
 end
-
-
-
 

@@ -70,7 +70,6 @@ setλt!(id::iBffs, λt::Float64) = id.λt[] = λt
 
 
 
-
 """
     setμt!(id::iBffs, μt::Float64)
 

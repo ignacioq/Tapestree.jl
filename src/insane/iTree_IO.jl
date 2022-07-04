@@ -9,6 +9,9 @@ t(-_-t)
 Created 07 07 2020
 =#
 
+
+
+
 """
     read_newick(in_file::String; fossil = false)
 
@@ -78,7 +81,6 @@ end
 
 """
     from_string(s::String, stem::Bool, ::Type{sT_label})
-
 Takes a string and turns it into a `sT_label` tree.
 """
 function from_string(s::String, stem::Bool, ::Type{sT_label})
@@ -117,7 +119,6 @@ end
 
 """
     from_string(s::String, stem::Bool, ::Type{sTf_label})
-
 Takes a string and turns it into a `sTf_label` tree.
 """
 function from_string(s::String, stem::Bool, ::Type{sTf_label})
@@ -159,7 +160,6 @@ end
 
 """
     _from_string(s::String, ::Type{T}) where {T <: sT}
-
 Returns a tree of type `T` from newick string.
 """
 function _from_string(s::String, ::Type{T}) where {T <: sT}
@@ -209,6 +209,7 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
     return T(_from_string(s1, T), _from_string(s2, T), ei, lab)
   end
 end
+
 
 
 
@@ -334,4 +335,33 @@ function _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
 end
 
 
+
+
+
+"""
+    nsignif(x::String)
+
+Return the number of significant digits in `x`, a string representing a number.
+"""
+function nsignif(x::String)
+
+  pix = findfirst('.', x)
+
+  if isnothing(pix)
+    return lastindex(x)
+  else
+    bp  = parse(Float64,x[1:(pix-1)])
+    # if less than 1
+    if iszero(bp)
+      l0 = findfirst(x -> x !== '0', x[(pix+1):end])
+      if isnothing(l0)
+        return 1
+      else
+        return lastindex(x[(pix+l0):end])
+      end
+    else
+      return lastindex(x) - 1
+    end
+  end
+end
 

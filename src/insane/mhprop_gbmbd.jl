@@ -23,7 +23,7 @@ Created 27 05 2020
                        δt  ::Float64,
                        srδt::Float64)
 
-Make a `gbm-bd` proposal for daughters from forwards simulated branch.
+Make a `gbm-bd` proposal for daughters from forward simulated branch.
 """
 function _daughters_update!(ξ1  ::T,
                             ξ2  ::T,
@@ -60,12 +60,6 @@ function _daughters_update!(ξ1  ::T,
     bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, μ2p, μf, μ2, σλ, σμ, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
-         duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
-         duoldnorm(μi, μ1, μ2, e1, e2, σμ)
-
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
@@ -74,7 +68,10 @@ function _daughters_update!(ξ1  ::T,
 
     acr  = llrbd1 + llrbd2 + λf - λi
     llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr += duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
+           duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) +
+           duoldnorm(μf, μ1, μ2, e1, e2, σμ)               -
+           duoldnorm(μi, μ1, μ2, e1, e2, σμ)
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     ssrμ = ssrμ1 + ssrμ2
@@ -87,7 +84,7 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTbd,
+    _stem_update!(ξi   ::T,
                   α    ::Float64,
                   σλ   ::Float64,
                   σμ   ::Float64,
@@ -100,7 +97,7 @@ end
                   δt   ::Float64,
                   srδt ::Float64,
                   lλxpr::Float64,
-                  lμxpr::Float64)
+                  lμxpr::Float64) where {T <: iTbdU}
 
 Do gbm update for stem root.
 """
@@ -148,7 +145,7 @@ function _stem_update!(ξi   ::T,
       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt, false, false)
 
     #survival
-    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 400, 0)
+    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, 0)
     llr = log(mp/mc)
 
     acr = llrbd + llr
@@ -171,9 +168,9 @@ end
 
 
 """
-    _crown_update!(ξi   ::iTbd,
-                   ξ1   ::iTbd,
-                   ξ2   ::iTbd,
+    _crown_update!(ξi   ::T,
+                   ξ1   ::T,
+                   ξ2   ::T,
                    α    ::Float64,
                    σλ   ::Float64,
                    σμ   ::Float64,
@@ -186,7 +183,8 @@ end
                    δt   ::Float64,
                    srδt ::Float64,
                    lλxpr::Float64,
-                   lμxpr::Float64)
+                   lμxpr::Float64,
+                   crown ::Int64) where {T <: iTbdU}
 
 Do `gbm-bd` update for crown root.
 """
@@ -206,7 +204,7 @@ function _crown_update!(ξi   ::T,
                         srδt ::Float64,
                         lλxpr::Float64,
                         lμxpr::Float64,
-                        stem ::Int64) where {T <: iTbdU}
+                        crown ::Int64) where {T <: iTbdU}
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -237,7 +235,7 @@ function _crown_update!(ξi   ::T,
     μr = duoprop(μ1, μ2, e1, e2, σμ)
 
     # prior ratio
-    if λr > lλxpr
+    if λr > lλxpr || μr > lμxpr 
       return llc, dλ, ssλ, ssμ, mc
     end
 
@@ -252,8 +250,8 @@ function _crown_update!(ξi   ::T,
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
     #survival
-    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 400, stem)
-    llr = log(mp/mc) + (iszero(stem) ? (λr - λi) : 0.0)
+    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+    llr = log(mp/mc) + (crown === 2 ? (λr - λi) : 0.0)
 
     acr = llrbd1 + llrbd2 + llr
 
@@ -279,7 +277,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTbd,
+    _update_gbm!(tree::T,
                  α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64,
@@ -289,11 +287,12 @@ end
                  ssμ ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
-                 ter ::Bool)
+                 mσλ ::Float64,
+                 mσμ ::Float64) where {T <: iTbdU}
 
 Do `gbm-bd` updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTbd,
+function _update_gbm!(tree::T,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -302,22 +301,16 @@ function _update_gbm!(tree::iTbd,
                       ssλ ::Float64,
                       ssμ ::Float64,
                       δt  ::Float64,
-                      srδt::Float64,
-                      ter ::Bool)
+                      srδt::Float64) where {T <: iTbdU}
 
   if def1(tree)
     llc, dλ, ssλ, ssμ =
       update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
+      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
-  else
-    if !isfix(tree) || ter
-      llc, dλ, ssλ, ssμ =
-        update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-    end
+      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
   end
 
   return llc, dλ, ssλ, ssμ
@@ -326,60 +319,60 @@ end
 
 
 
-"""
-    update_tip!(tree::iTbd,
-                α   ::Float64,
-                σλ  ::Float64,
-                σμ  ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                ssμ ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+# """
+#     update_tip!(tree::iTbd,
+#                 α   ::Float64,
+#                 σλ  ::Float64,
+#                 σμ  ::Float64,
+#                 llc ::Float64,
+#                 dλ  ::Float64,
+#                 ssλ ::Float64,
+#                 ssμ ::Float64,
+#                 δt  ::Float64,
+#                 srδt::Float64)
 
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::T,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     σμ  ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     ssμ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64) where {T <: iTbdU}
+# Make a `gbm` tip proposal.
+# """
+# function update_tip!(tree::T,
+#                      α   ::Float64,
+#                      σλ  ::Float64,
+#                      σμ  ::Float64,
+#                      llc ::Float64,
+#                      dλ  ::Float64,
+#                      ssλ ::Float64,
+#                      ssμ ::Float64,
+#                      δt  ::Float64,
+#                      srδt::Float64) where {T <: iTbdU}
 
-  @inbounds begin
+#   @inbounds begin
 
-    λc   = lλ(tree)
-    μc   = lμ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
-    μp   = Vector{Float64}(undef, l)
+#     λc   = lλ(tree)
+#     μc   = lμ(tree)
+#     l    = lastindex(λc)
+#     fdtp = fdt(tree)
+#     λp   = Vector{Float64}(undef, l)
+#     μp   = Vector{Float64}(undef, l)
 
-    bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
+#     bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, ssrμ =
-      llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
-        false, isextinct(tree))
+#     llrbm, llrbd, ssrλ, ssrμ =
+#       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
+#         false, isextinct(tree))
 
-    acr = llrbd
+#     acr = llrbd
 
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      ssμ += ssrμ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-      unsafe_copyto!(μc, 1, μp, 1, l)
-    end
-  end
+#     if -randexp() < acr
+#       llc += llrbm + acr
+#       dλ  += λp[l] - λc[l]
+#       ssλ += ssrλ
+#       ssμ += ssrμ
+#       unsafe_copyto!(λc, 1, λp, 1, l)
+#       unsafe_copyto!(μc, 1, μp, 1, l)
+#     end
+#   end
 
-  return llc, dλ, ssλ, ssμ
-end
+#   return llc, dλ, ssλ, ssμ
+# end
 
 
 

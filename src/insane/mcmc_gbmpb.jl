@@ -36,7 +36,7 @@ Run insane for GBM pure-birth.
 """
 function insane_gbmpb(tree    ::sT_label,
                       out_file::String;
-                      δt      ::Float64               = 1e-2,
+                      δt      ::Float64               = 1e-3,
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
@@ -47,9 +47,9 @@ function insane_gbmpb(tree    ::sT_label,
                       σλi     ::Float64               = 0.1,
                       αi      ::Float64               = 0.0,
                       prints  ::Int64                 = 5,
-                      pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.3, 0.3),
-                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                      σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                      pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.1, 0.2),
+                      α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
+                      σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
@@ -71,8 +71,7 @@ function insane_gbmpb(tree    ::sT_label,
   idf = make_idf(tree, tρ)
 
   # make a decoupled tree
-  Ξ = iTpb[]
-  iTpb!(Ξ, tree, δt, srδt, lλa, αi, σλi)
+  Ξ = make_Ξ(idf, lλa, αi, σλi, δt, srδt, iTpb)
 
   # set end of fix branch speciation times and
   # get vector of internal branches
@@ -555,7 +554,7 @@ function update_fs!(bix  ::Int64,
   # if internal
   else
     ξp, llr, drλ, ssrλ =
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], lλ(ξc)[1], α, σλ, δt, srδt)
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, δt, srδt)
   end
 
   # if accepted
@@ -606,7 +605,7 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_gbmpb_t(e(bi), λ0, α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
+    _sim_gbmpb_t(e(bi), λ0, α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -614,7 +613,7 @@ function fsbi_t(bi  ::iBffs,
 
     return t0, llr
   else
-    return t0, -Inf
+    return t0, NaN
   end
 end
 
@@ -637,14 +636,13 @@ function fsbi_i(bi  ::iBffs,
                 ξc  ::iTpb,
                 ξ1  ::iTpb,
                 ξ2  ::iTpb,
-                λ0  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
   # forward simulation during branch length
-  t0, na = _sim_gbmpb(e(bi), λ0, α, σλ, δt, srδt, 1, 1_000)
+  t0, na = _sim_gbmpb(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
 
   if na >= 1_000
     return t0, NaN, NaN, NaN
@@ -655,14 +653,16 @@ function fsbi_i(bi  ::iBffs,
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(Float64(ntp)/Float64(nt(bi)))
+  acr  = log(ntp/nt(bi))
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-  λf = fixrtip!(t0, na, NaN) # fix random tip
+ # fix random tip
+  λf = fixrtip!(t0, na, NaN)
+
   llrd, acrd, drλ, ssrλ, λ1p, λ2p =
     _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
 
@@ -676,6 +676,7 @@ function fsbi_i(bi  ::iBffs,
 
     if lU < acr
       na -= 1
+
       llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
       l1  = lastindex(λ1p)
       l2  = lastindex(λ2p)
@@ -828,7 +829,7 @@ function update_gbm!(bix  ::Int64,
     setλt!(bi, lλ(lξi)[end])
   end
 
-  # carry on updates in the daughters
+  # # carry on updates in the daughters
   llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, llc, dλ, ssλ, δt, srδt, ter1)
   llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, llc, dλ, ssλ, δt, srδt, ter2)
 

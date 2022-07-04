@@ -51,7 +51,7 @@ function sim_gbmbd(n       ::Int64;
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
-                   maxt    ::Float64 = δt*1e6)
+                   maxt    ::Float64 = δt*1e7)
 
   # simulate in non-recursive manner
   e0, e1, el, λs, μs, ea, ee, na, simt =
@@ -59,6 +59,7 @@ function sim_gbmbd(n       ::Int64;
 
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
+    return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[])
   end
 
   # transform to iTree
@@ -187,7 +188,7 @@ function _sedges_gbmbd(n    ::Int64,
 
       # time guard
       if simt > maxt
-        return e0, e1, el, λs, ea, ee, na, simt
+        return e0, e1, el, λs, μs, ea, ee, na, simt
       end
 
       # one time step for all edges alive `ea`
@@ -418,9 +419,8 @@ function _sim_gbmbd(t   ::Float64,
     while true
 
       if t <= δt
-        bt  += t
-
-        t = max(0.0,t)
+        t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -484,7 +484,7 @@ function _sim_gbmbd(t   ::Float64,
     end
   end
 
-  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nn
+  return iTbd(), na, nn
 end
 
 
@@ -533,8 +533,8 @@ function _sim_gbmbd_t(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -555,21 +555,14 @@ function _sim_gbmbd_t(t   ::Float64,
             else
               nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
             end
-            if nlr >= lr
-              return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                          iTbd(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                          bt, δt, t, false, false, λv, μv), na, nn, nlr
-            elseif lU < nlr
-              return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                          iTbd(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                          bt, δt, t, false, false, λv, μv), na, nn, nlr
+            if nlr < lr && lU >= nlr
+              return iTbd(), na, nn, NaN
             else
-              return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]),
-                     na, nn, NaN
+              return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                          iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                          bt, δt, t, false, false, λv, μv), na, nn, nlr
             end
           # if extinction
           else
@@ -582,13 +575,10 @@ function _sim_gbmbd_t(t   ::Float64,
         if na > 1
           nlr += log(Iρi * Float64(na)/Float64(na-1))
         end
-        if nlr >= lr
-          return iTbd(bt, δt, t, false, false, λv, μv), na, nn, nlr
-        elseif lU < nlr
-          return iTbd(bt, δt, t, false, false, λv, μv), na, nn, nlr
+        if nlr < lr && lU >= nlr
+          return iTbd(), na, nn, NaN
         else
-          return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]),
-                     na, nn, NaN
+          return iTbd(bt, δt, t, false, false, λv, μv), na, nn, nlr
         end
       end
 
@@ -627,7 +617,7 @@ function _sim_gbmbd_t(t   ::Float64,
     end
   end
 
-  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nn, NaN
+  return iTbd(), na, nn, NaN
 end
 
 
@@ -675,9 +665,8 @@ function _sim_gbmbd_it(nsδt::Float64,
 
   ## first: non-standard δt
   if t <= nsδt
-    bt  += t
-
     t   = max(0.0,t)
+    bt += t
     srt = sqrt(t)
     λt1 = rnorm(λt + α*t, srt*σλ)
     μt1 = rnorm(μt, srt*σμ)
@@ -751,8 +740,8 @@ function _sim_gbmbd_it(nsδt::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -820,7 +809,7 @@ function _sim_gbmbd_it(nsδt::Float64,
     end
   end
 
-  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nn, NaN
+  return iTbd(), na, nn, NaN
 end
 
 
@@ -870,8 +859,8 @@ function _sim_gbmbd_it(t   ::Float64,
     while true
 
       if t <= δt
-        bt += t
         t   = max(0.0,t)
+        bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
@@ -939,7 +928,7 @@ function _sim_gbmbd_it(t   ::Float64,
     end
   end
 
-  return iTbd(0.0, 0.0, 0.0, false, false, Float64[], Float64[]), na, nn, NaN
+  return iTbd(), na, nn, NaN
 end
 
 
@@ -979,7 +968,6 @@ function _sim_gbmbd_surv(t   ::Float64,
 
         t   = max(0.0,t)
         μt1 = rnorm(μt, sqrt(t)*σμ)
-        μm  = exp(0.5*(μt + μt1))
 
         # if extinction
         if rand() < exp(0.5*(μt + μt1))*t

@@ -186,7 +186,6 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
 
   llbm = 0.0
   llpb = 0.0
-  ssλ  = 0.0
   @avx for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]

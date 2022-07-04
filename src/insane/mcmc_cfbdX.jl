@@ -95,19 +95,19 @@ function insane_cfbd(tree    ::sTf_label,
   # define conditioning
   if ntipsalive(tree) > 0
     # if crown conditioning
-    if def1(tree) && def2(tree) && 
+    if def1(tree) && def2(tree) &&
        ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
-      stem = 1
+      crown = 1
     # if stem conditioning
     else
-      stem = 0
+      crown = 0
     end
   # no survival
   else
-    stem = 2
+    crown = 2
   end
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 500, stem)
+  mc = m_surv_cbd(th, λc, μc, 500, crown)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, xr, sTfbdX)
@@ -132,11 +132,11 @@ function insane_cfbd(tree    ::sTf_label,
   # adaptive phase
   llc, prc, λc, μc, ψc, σxc, mc =
       mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, σx_prior, x0_prior, nburn,
-        λc, μc, ψc, σxc, mc, th, stem, inodes, pup, prints)
+        λc, μc, ψc, σxc, mc, th, crown, inodes, pup, prints)
 
   # mcmc
   r, treev =
-    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, σxc, mc, th, stem,
+    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, σxc, mc, th, crown,
       λ_prior, μ_prior, ψ_prior, σx_prior, x0_prior, niter, nthin, inodes, pup, prints)
 
   pardic = Dict("lambda"  => 1,
@@ -162,7 +162,7 @@ end
                   μc     ::Float64,
                   mc     ::Float64,
                   th     ::Float64,
-                  stem   ::Bool,
+                  crown   ::Bool,
                   pup    ::Array{Int64,1},
                   prints ::Int64)
 
@@ -183,7 +183,7 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
                         σxc     ::Float64,
                         mc      ::Float64,
                         th      ::Float64,
-                        stem    ::Int64,
+                        crown    ::Int64,
                         inodes  ::Array{Int64,1},
                         pup     ::Array{Int64,1},
                         prints  ::Int64)
@@ -197,7 +197,7 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
   sdX, nX = sdeltaX(Ξ)           # standardized trait differences
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+  llc = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc,       λ_prior[1],  λ_prior[2])    +
         logdgamma(μc,       μ_prior[1],  μ_prior[2])    +
         logdgamma(ψc,        ψ_prior[1], ψ_prior[2])    +
@@ -216,13 +216,13 @@ function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
+          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
       # μ proposal
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
+          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
        # psi update
       elseif p === 3
@@ -272,7 +272,7 @@ end
              μc     ::Float64,
              mc     ::Float64,
              th     ::Float64,
-             stem   ::Bool,
+             crown   ::Bool,
              λ_prior::NTuple{2,Float64},
              μ_prior::NTuple{2,Float64},
              niter  ::Int64,
@@ -292,7 +292,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
                    σxc     ::Float64,
                    mc      ::Float64,
                    th      ::Float64,
-                   stem    ::Int64,
+                   crown    ::Int64,
                    λ_prior ::NTuple{2,Float64},
                    μ_prior ::NTuple{2,Float64},
                    ψ_prior ::NTuple{2,Float64},
@@ -334,9 +334,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
+          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -346,9 +346,9 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
+          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -359,7 +359,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
 
         llc, prc, ψc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -370,7 +370,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
 
         llc, prc, σxc = update_σx!(σxc, sdX, nX, llc, prc, σx_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -385,7 +385,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
         llc, prc, sdX =
           update_x!(bix, Ξ, idf, σxc, llc, prc, sdX, x0_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -399,7 +399,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
         llc, ns, ne, L, sdX, nX =
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, σxc, ns, ne, L, sdX, nX)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - !stem*log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, σxc) - Float64(crown)*log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -450,7 +450,7 @@ end
                sdX::Float64,
                nX ::Float64)
 
-Forward simulation proposal function for constant birth-death.
+Forward simulation proposal function for constant fossilized birth-death.
 """
 function update_fs!(bix::Int64,
                     Ξ  ::Vector{sTfbdX},
@@ -467,87 +467,37 @@ function update_fs!(bix::Int64,
                     nX ::Float64)
 
   bi = idf[bix]
+  ξc = Ξ[bix]
 
-  # forward simulate an internal branch
-  ξp, np, ntp, xt = fsbi_cfbdX(bi, λ, μ, ψ, xi(Ξ[bix]), σx, 100)
-
-  # retained conditional on survival
-  if ntp > 0
-
-    itb = it(bi) # is it terminal
-    iψb = isfossil(bi) # is it a fossil
-    ρbi = ρi(bi) # get branch sampling fraction
-    nc  = ni(bi) # current ni
-    ntc = nt(bi) # current nt
-    fxi = fx(bi) # is a fix X node
-
-    # current tree
-    ξc  = Ξ[bix]
-
-    # if terminal non-fossil branch
-    if itb && !iψb
-      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      xt  = fixed_xt(ξc)       # get previous `x` of fixed tip
-      if fxi
-        acr = _match_tip_x!(ξp, xt, σx)
-      else
-        acr = 0.0
-      end
+  if it(bi)
+    if isfossil(bi)
+      ξp, llr = fsbi_ft(bi, ξc, λ, μ, ψ, σx)
     else
-      np -= !itb
-      llr = log((1.0 - ρbi)^(np - nc))
-      acr = log(Float64(ntp)/Float64(ntc))
-
-      if itb
-        if fxi
-          xt   = fossil_xt(ξc)       # get previous `x` of fixed tip
-          acr += _match_fossil_x!(ξp, xt, σx)
-        end
-      else
-        if fxi
-          acr += _match_tip_x!(ξp, xt, σx)
-        else
-          ξ1  = Ξ[d1(bi)]
-          if iψb
-            llr += lrdnorm_bm_x(xt, xi(ξ1), xf(ξ1), sqrt(e(ξ1))*σx)
-          else
-            ξ2  = Ξ[d2(bi)]
-            llr += duoldnorm(xt,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
-                   duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
-          end
-        end
-      end
+      ξp, llr = fsbi_t( bi, ξc, λ, μ, ψ, σx)
     end
-
-    # MH ratio
-    if -randexp() < llr + acr
-
-      # update ns, ne & L
-      ns += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
-      ne += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
-      L  += treelength(ξp)             - treelength(ξc)
-      sdXp, nXp = _sdeltaX(ξp, 0.0, 0.0)
-      sdXc, nXc = _sdeltaX(ξc, 0.0, 0.0)
-      sdX += sdXp - sdXc
-      nX  += nXp  - nXc
-
-      # likelihood ratio
-      llr += llik_cfbd(ξp, λ, μ, ψ, σx) - llik_cfbd(ξc, λ, μ, ψ, σx)
-
-      Ξ[bix] = ξp     # set new decoupled tree
-      llc += llr      # set new likelihood
-      setni!(bi, np)  # set new ni
-      setnt!(bi, ntp) # set new nt
-
-      if !fxi && !itb
-        sdX += ((xt - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1))
-        setxi!(ξ1, xt) # set new xt for initial x
-        if !iψb
-          sdX += ((xt - xf(ξ2))^2 - (xi(ξ2) - xf(ξ2))^2)/(2.0*e(ξ2))
-          setxi!(ξ2, xt) # set new xt for initial x
-        end
-      end
+    sdXr = 0.0
+  else
+    if isfossil(bi)
+      ξp, llr, sdXr = fsbi_fi(bi, ξc, Ξ[d1(bi)], λ, μ, ψ, σx)
+    else
+      ξp, llr, sdXr = fsbi_i( bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, ψ, σx)
     end
+  end
+
+  if isfinite(llr)
+
+    # update llc, ns, ne & L
+    llc += llik_cfbd(ξp, λ, μ, ψ, σx)    - llik_cfbd(ξc, λ, μ, ψ, σx) + llr
+    ns  += Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
+    ne  += Float64(ntipsextinct(ξp)      - ntipsextinct(ξc))
+    L   += treelength(ξp)                - treelength(ξc)
+    sdXp, nXp = _sdeltaX(ξp, 0.0, 0.0)
+    sdXc, nXc = _sdeltaX(ξc, 0.0, 0.0)
+    sdX += sdXp - sdXc + sdXr
+    nX  += nXp  - nXc
+
+    # set new decoupled tree
+    Ξ[bix] = ξp
   end
 
   return llc, ns, ne, L, sdX, nX
@@ -557,77 +507,376 @@ end
 
 
 """
-    fsbi_cfbdX(bi  ::iBffs,
-               λ   ::Float64,
-               μ   ::Float64,
-               ψ   ::Float64,
-               x0  ::Float64,
-               σx  ::Float64,
-               ntry::Int64)
+    fsbi_t(bi::iBffs,
+           ξc::sTfbdX,
+           λ ::Float64,
+           μ ::Float64,
+           ψ ::Float64,
+           σx::Float64)
 
-Forward simulation for branch `bi`
+Forward simulation for terminal branch.
 """
-function fsbi_cfbdX(bi  ::iBffs,
-                    λ   ::Float64,
-                    μ   ::Float64,
-                    ψ   ::Float64,
-                    x0  ::Float64,
-                    σx  ::Float64,
-                    ntry::Int64)
+function fsbi_t(bi::iBffs,
+                ξc::sTfbdX,
+                λ ::Float64,
+                μ ::Float64,
+                ψ ::Float64,
+                σx::Float64)
 
-  # times
-  tfb = tf(bi)
+  nac = ni(bi)         # current ni
+  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  lU  = -randexp()     # log-probability
 
-  ext = 0
-  # condition on non-extinction (helps in mixing)
-  while ext < ntry
-    ext += 1
+  # current ll
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-    # forward simulation during branch length
-    t0, na, nf = sim_cfbd(e(bi), λ, μ, ψ, x0, σx, 0, 0)
+  xist = Float64[]
+  xfst = Float64[]
+  est  = Float64[]
 
-    if na > 0 && iszero(nf) # exclude if any fossil is sampled
-      nat = na
+  # forward simulation during branch length
+  t0, na, nn, llr =
+    _sim_cfbd_t(e(bi), λ, μ, ψ, xi(ξc), σx, lc, lU, Iρi, 0, 1, 500,
+      xist, xfst, est)
 
-      if isone(na)
-        # fix the only tip alive
-        f, xt = fixalive!(t0, NaN)
+  if na < 1 || isnan(llr) || nn >= 500
+    return t0, NaN
+  end
 
-      elseif na > 1
-        # fix random tip
-        xt = fixrtip!(t0, na, NaN)
+  # if fix node
+  if fx(bi)
+    #get fix `x` and edge
+    xc  = fixed_xt(ξc)
 
-        if !it(bi) || isfossil(bi)
-          # add tips until the present
-          tx, na, nf = tip_sims!(t0, tfb, λ, μ, ψ, σx, na, nf)
-          if !iszero(nf)
-            ext += 1
-            continue
-          end
-        end
+    # sample tip according to fix `x` value
+    acr = 0.0
+    wp = Float64[]
+    @simd for i in Base.OneTo(na)
+      srt = sqrt(est[i])
+      wi  = dnorm_bm(xfst[i], xist[i], srt*σx)/dnorm_bm(xc, xist[i], srt*σx)
+      push!(wp, wi)
+      acr += wi
+    end
+    acr = log(acr)
+
+    if isfinite(acr) && lU <  acr + llr
+      # sample tip
+      wti = sample(wp)
+
+      if wti <= div(na,2)
+        fixtip1!(t0, wti, 0, xc)
+      else
+        fixtip2!(t0, na - wti + 1, 0, xc)
       end
 
-      if isfossil(bi)
-        # replace extant tip by a fossil
-        fossilizefixedtip!(t0)
+      setni!(bi, na)    # set new ni
+      return t0, llr
+    end
+  else
+    if lU < llr
+      _fixrtip!(t0, na)
 
-        # if terminal fossil branch
-        if it(bi)
-          tx, na, nf = fossiltip_sim!(t0, tfb, λ, μ, ψ, σx, na, nf)
-          if !iszero(nf)
-            ext += 1
-            continue
-          end
-        end
-      end
-
-      return t0, na, nat, xt
+      setni!(bi, na)    # set new ni
+      return t0, llr
     end
   end
 
-  return sTfbdX(0.0, false, false, false, 0.0, 0.0), 0, 0, NaN
+  return t0, NaN
 end
 
+
+
+
+"""
+    fsbi_ft(bi::iBffs,
+            ξc::sTfbdX,
+            λ ::Float64,
+            μ ::Float64,
+            ψ ::Float64,
+            σx::Float64)
+
+Forward simulation for fossil terminal branch.
+"""
+function fsbi_ft(bi::iBffs,
+                 ξc::sTfbdX,
+                 λ ::Float64,
+                 μ ::Float64,
+                 ψ ::Float64,
+                 σx::Float64)
+
+  lU = -randexp() # log-probability
+
+  ntp = na
+
+  # add sampling fraction
+  nac = ni(bi)                # current ni
+  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  if fx(bi)
+
+    xist = Float64[]
+    xfst = Float64[]
+    est  = Float64[]
+
+    # forward simulation during branch length
+    t0, na, nf, nn  =
+      _sim_cfbd_i(e(bi), λ, μ, ψ, xi(ξc), σx, 0, 0, 1, 500, xist, xfst, est)
+
+    if na < 1 || nf > 0 || nn >= 500
+      return t0, NaN
+    end
+
+    xc = fossil_xt(ξc)
+
+    # sample tip according to fix `x` value
+    wp = Float64[]
+    ap = 0.0
+    @simd for i in Base.OneTo(na)
+      srt = sqrt(est[i])
+      wi  = dnorm_bm(xfst[i], xist[i], srt*σx)/dnorm_bm(xc, xist[i], srt*σx)
+      push!(wp, wi)
+      ap += wi
+    end
+    acr = log(ap)
+
+    if isfinite(acr) && lU < acr
+      wti = sample(wp)
+
+      if wti <= div(na,2)
+        fixtip1!(t0, wti, 0, xc)
+      else
+        fixtip2!(t0, na - wti + 1, 0, xc)
+      end
+    else
+      return t0, NaN
+    end
+  # if not a fix node
+  else
+    t0, na, nf, nn  = _sim_cfbd_i(e(bi), λ, μ, ψ, xi(ξc), σx, 0, 0, 1, 500)
+
+    if na < 1 || nf > 0 || nn >= 500
+      return t0, NaN
+    end
+
+    acr = 0.0
+    _fixrtip!(t0, na)
+  end
+
+
+  if lU < acr
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr
+
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
+
+      tx, na, nn, acr =
+        fossiltip_sim!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+
+      if lU < acr
+        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+        setnt!(bi, ntp)                # set new nt
+        setni!(bi, na)                 # set new ni
+
+        return t0, llr
+      end
+    end
+  end
+
+  return t0, NaN
+end
+
+
+
+
+"""
+    fsbi_fi(bi::iBffs,
+            ξ1::sTfbdX,
+            x0::Float64,
+            λ ::Float64,
+            μ ::Float64,
+            ψ ::Float64,
+            σx::Float64)
+
+Forward simulation for fossil internal branch.
+"""
+function fsbi_fi(bi::iBffs,
+                 ξc::sTfbdX,
+                 ξ1::sTfbdX,
+                 λ ::Float64,
+                 μ ::Float64,
+                 ψ ::Float64,
+                 σx::Float64)
+
+  if fx(bi)
+
+    xist = Float64[]
+    xfst = Float64[]
+    est  = Float64[]
+
+    # forward simulation during branch length
+    t0, na, nf, nn  =
+      _sim_cfbd_i(e(bi), λ, μ, ψ, xi(ξc), σx, 0, 0, 1, 500, xist, xfst, est)
+
+    if na < 1 || nf > 0 || nn >= 500
+      return t0, NaN, NaN
+    end
+
+    xc = fossil_xt(ξc)
+
+    # sample tip according to fix `x` value
+    wp = Float64[]
+    ap = 0.0
+    @simd for i in Base.OneTo(na)
+      srt = sqrt(est[i])
+      wi  = dnorm_bm(xfst[i], xist[i], srt*σx)/dnorm_bm(xc, xist[i], srt*σx)
+      push!(wp, wi)
+      ap += wi
+    end
+    acr = log(ap)
+
+    if isfinite(acr)
+      wti = sample(wp)
+
+      if wti <= div(na,2)
+        fixtip1!(t0, wti, 0, xc)
+      else
+        fixtip2!(t0, na - wti + 1, 0, xc)
+      end
+    else
+      return t0, NaN, NaN
+    end
+    xp  = xc
+    llr = 0.0
+  # if not a fix node
+  else
+    t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, xi(ξc), σx, 0, 0, 1, 500)
+
+    if na < 1 || nf > 0 || nn >= 500
+      return t0, NaN, NaN
+    end
+    xp = fixrtip!(t0, na, NaN)
+    # acceptance ration with respect to daughter
+    llr = lrdnorm_bm_x(xp, xi(ξ1), xf(ξ1), sqrt(e(ξ1))*σx)
+
+    acr = 0.0
+  end
+
+  lU = -randexp() # log-probability
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  if lU < acr + llr
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr + llr
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
+      na -= 1
+
+      llr += (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      sdX = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1))
+      setnt!(bi, ntp)                # set new nt
+      setni!(bi, na)                 # set new ni
+      setxi!(ξ1, xp)                 # set new xp for initial x
+
+      return t0, llr, sdX
+    end
+  end
+
+  return t0, NaN, NaN
+end
+
+
+
+
+"""
+    fsbi_i(bi::iBffs,
+           ξ1::sTfbdX,
+           ξ2::sTfbdX,
+           x0::Float64,
+           λ ::Float64,
+           μ ::Float64,
+           ψ ::Float64,
+           σx::Float64)
+
+Forward simulation for branch `bi`
+"""
+function fsbi_i(bi::iBffs,
+                ξ1::sTfbdX,
+                ξ2::sTfbdX,
+                x0::Float64,
+                λ ::Float64,
+                μ ::Float64,
+                ψ ::Float64,
+                σx::Float64)
+
+  # forward simulation during branch length
+  t0, na, nf, nn = _sim_cfbd_i(e(bi), λ, μ, ψ, x0, σx, 0, 0, 1, 500)
+
+  if na < 1 || nf > 0 || nn >= 500
+    return t0, NaN, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() # log-probability
+
+  # acceptance probability
+  acr = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  # get fix `x`
+  xp = fixrtip!(t0, na, NaN)
+
+  # acceptance ration with respect to daughters
+  llr = duoldnorm(xp,     xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx) -
+        duoldnorm(xi(ξ1), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σx)
+
+  if lU < acr + llr
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr + llr
+      na  -= 1
+
+      llr += (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      sdX = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
+            ((xp - xf(ξ2))^2 - (xi(ξ2) - xf(ξ2))^2)/(2.0*e(ξ2))
+      setnt!(bi, ntp)                # set new nt
+      setni!(bi, na)                 # set new ni
+      setxi!(ξ1, xp)                 # set new xp for initial x
+      setxi!(ξ2, xp)                 # set new xp for initial x
+
+      return t0, llr, sdX
+    end
+  end
+
+  return t0, NaN, NaN
+end
 
 
 
@@ -639,7 +888,11 @@ end
               μ   ::Float64,
               ψ   ::Float64,
               σx  ::Float64,
-              na  ::Int64)
+              lr  ::Float64,
+              lU  ::Float64,
+              Iρi ::Float64,
+              na  ::Int64,
+              nn  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
@@ -649,34 +902,45 @@ function tip_sims!(tree::sTfbdX,
                    μ   ::Float64,
                    ψ   ::Float64,
                    σx  ::Float64,
+                   lr  ::Float64,
+                   lU  ::Float64,
+                   Iρi ::Float64,
                    na  ::Int64,
-                   nf  ::Int64)
+                   nn  ::Int64)
 
-  if iszero(nf)
+  if lU < lr && nn < 500
+
     if istip(tree)
       if !isfix(tree) && isalive(tree)
 
         # simulate
-        stree, na, nf = sim_cfbd(t, λ, μ, ψ, xf(tree), σx, na-1, nf)
+        stree, na, nn, lr =
+          _sim_cfbd_it(t, λ, μ, ψ, xf(tree), σx, lr, lU, Iρi, na-1, nn, 500)
 
-        if iszero(nf)
-          # merge to current tip
-          sete!(tree, e(tree) + e(stree))
-          setproperty!(tree, :iμ, isextinct(stree))
-          setxf!(tree, xf(stree))
-          if def1(stree)
-            tree.d1 = stree.d1
-            tree.d2 = stree.d2
-          end
+        if isnan(lr) || nn >= 500
+          return tree, na, nn, NaN
+        end
+
+        # merge to current tip
+        sete!(tree, e(tree) + e(stree))
+        setproperty!(tree, :iμ, isextinct(stree))
+        setxf!(tree, xf(stree))
+        if def1(stree)
+          tree.d1 = stree.d1
+          tree.d2 = stree.d2
         end
       end
     else
-      tree.d1, na, nf = tip_sims!(tree.d1, t, λ, μ, ψ, σx, na, nf)
-      tree.d2, na, nf = tip_sims!(tree.d2, t, λ, μ, ψ, σx, na, nf)
+      tree.d1, na, nn, lr =
+        tip_sims!(tree.d1, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
+      tree.d2, na, nn, lr =
+        tip_sims!(tree.d2, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
     end
+
+    return tree, na, nn, lr
   end
 
-  return tree, na, nf
+  return tree, na, nn, NaN
 end
 
 
@@ -689,8 +953,11 @@ end
                    μ   ::Float64,
                    ψ   ::Float64,
                    σx  ::Float64,
+                   lr  ::Float64,
+                   lU  ::Float64,
+                   Iρi ::Float64,
                    na  ::Int64,
-                   nf  ::Int64)
+                   nn  ::Int64)
 
 Continue simulation until time `t` for the fixed tip in `tree`.
 """
@@ -700,62 +967,36 @@ function fossiltip_sim!(tree::sTfbdX,
                         μ   ::Float64,
                         ψ   ::Float64,
                         σx  ::Float64,
+                        lr  ::Float64,
+                        lU  ::Float64,
+                        Iρi ::Float64,
                         na  ::Int64,
-                        nf  ::Int64)
+                        nn  ::Int64)
 
-  if iszero(nf)
+  if lU < lr && nn < 500
     if istip(tree)
-      stree, na, nf = sim_cfbd(t, λ, μ, ψ, xf(tree), σx, na-1, 0)
-      if iszero(nf)
-        # merge to current tip
-        tree.d1 = stree
+
+      stree, na, nn, lr =
+        _sim_cfbd_it(t, λ, μ, ψ, xf(tree), σx, lr, lU, Iρi, na-1, nn, 500)
+
+      if isnan(lr) || nn >= 500
+        return tree, na, nn, NaN
       end
+
+      # merge to current tip
+      tree.d1 = stree
     elseif isfix(tree.d1)
-      tree.d1, na, nf = fossiltip_sim!(tree.d1, t, λ, μ, ψ, σx, na, nf)
+      tree.d1, na, nn, lr =
+        fossiltip_sim!(tree.d1, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
     else
-      tree.d2, na, nf = fossiltip_sim!(tree.d2, t, λ, μ, ψ, σx, na, nf)
+      tree.d2, na, nn, lr =
+        fossiltip_sim!(tree.d2, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
     end
+
+    return tree, na, nn, lr
   end
 
-  return tree, na, nf
-end
-
-
-
-
-"""
-    _match_fossil_x!(tree::T,
-                     xt  ::Float64,
-                     σx  ::Float64) where {T <: sTX}
-
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function _match_fossil_x!(tree::T,
-                          xt  ::Float64,
-                          σx  ::Float64) where {T <: sTX}
-
-  if isfossil(tree)
-
-    xa = xi(tree)
-    xn = xf(tree)
-    x1 = xf(tree.d1)
-    ea = e(tree)
-    e1 = e(tree.d1)
-    acr = duoldnorm(xt, xa, x1, ea, e1, σx) -
-          duoldnorm(xn, xa, x1, ea, e1, σx)
-    setxf!(tree,    xt)
-    setxi!(tree.d1, xt)
-
-    return acr
-  else
-    if isfix(tree.d1)
-      acr = _match_fossil_x!(tree.d1, xt, σx)
-    else
-      acr = _match_fossil_x!(tree.d2, xt, σx)
-    end
-  end
-
-  return acr
+  return tree, na, nn, NaN
 end
 
 
@@ -802,7 +1043,7 @@ function update_x!(bix     ::Int64,
          _crown_update_x!(ξi, ξ1, ξ2, σx, llc, prc, sdX, x0_prior)
     end
   else
-    # if stem
+    # if crown
     if root
       if !fx(bi)
         llc, prc, sdX = _stem_update_x!(ξi, σx, llc, prc, sdX, x0_prior)
@@ -919,36 +1160,6 @@ function _update_duo_x!(tree::T,
 end
 
 
-
-
-"""
-    _update_tip_x!(tree::T,
-                   σx  ::Float64,
-                   llc ::Float64,
-                   sdX ::Float64) where {T <: sTX}
-
-Make gibbs node update for trait.
-"""
-function _update_tip_x!(tree::T,
-                        σx  ::Float64,
-                        llc ::Float64,
-                        sdX ::Float64) where {T <: sTX}
-
-  xa = xi(tree)
-  xo = xf(tree)
-  ea = e(tree)
-
-  # gibbs sampling
-  s = sqrt(ea)*σx
-  xn = rnorm(xa, s)
-  setxf!(tree, xn)
-
-  # update llc and sdX
-  llc += llrdnorm_x(xn, xo, xa, s^2)
-  sdX += ((xn - xa)^2 - (xo - xa)^2)/(2.0*ea)
-
-  return llc, sdX
-end
 
 
 

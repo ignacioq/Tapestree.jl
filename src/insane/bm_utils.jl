@@ -387,30 +387,30 @@ end
 
 
 """
-    sim_bm(xa  ::Float64,
-           α   ::Float64,
-           σ   ::Float64,
-           δt  ::Float64,
-           fdt ::Float64,
-           srδt::Float64,
-           nt  ::Int64)
+    bm(xa  ::Float64,
+       α   ::Float64,
+       σ   ::Float64,
+       δt  ::Float64,
+       fdt ::Float64,
+       srδt::Float64,
+       nt  ::Int64)
 
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
 `σ` and times `t`.
 """
-@inline function sim_bm(xa  ::Float64,
-                        α   ::Float64,
-                        σ   ::Float64,
-                        δt  ::Float64,
-                        fdt ::Float64,
-                        srδt::Float64,
-                        nt  ::Int64)
+@inline function bm(xa  ::Float64,
+                    α   ::Float64,
+                    σ   ::Float64,
+                    δt  ::Float64,
+                    fdt ::Float64,
+                    srδt::Float64,
+                    n   ::Int64)
   @inbounds begin
-    l = nt + 2
+    l = n + 2
     x = randn(l)
     # for standard δt
     x[1] = xa
-    @simd for i in Base.OneTo(nt)
+    @simd for i in Base.OneTo(n)
       x[i+1] *= srδt*σ
       x[i+1] += α*δt
     end
@@ -421,6 +421,58 @@ Returns a Brownian motion vector starting in `xa`, with diffusion rate
 
   return x
 end
+
+
+
+
+"""
+    bb(xi  ::Float64,
+       xf  ::Float64,
+       σ   ::Float64,
+       δt  ::Float64,
+       fdt ::Float64,
+       srδt::Float64,
+       n   ::Int64)
+
+Brownian bridge simulation.
+"""
+@inline function bb(xi  ::Float64,
+                    xf  ::Float64,
+                    σ   ::Float64,
+                    δt  ::Float64,
+                    fdt ::Float64,
+                    srδt::Float64,
+                    n   ::Int64)
+
+  @inbounds begin
+
+    l = n + 2
+    x = randn(l)
+
+    # for standard δt
+    x[1] = xi
+    @simd for i = Base.OneTo(n+1)
+      x[i+1] *= srδt*σ
+    end
+    x[l] *= sqrt(fdt)*σ
+    cumsum!(x, x)
+
+    # make bridge
+    if l > 2
+      ite = 1.0/(Float64(l-2) * δt + fdt)
+      xdf = (x[l] - xf)
+
+      @avx for i = Base.OneTo(l-1)
+        x[i] -= (Float64(i-1) * δt * ite * xdf)
+      end
+    end
+    # for last non-standard δt
+    x[l] = xf
+  end
+
+  return x
+end
+
 
 
 
@@ -492,7 +544,7 @@ function duodnorm(x  ::Float64,
                   σ  ::Float64)
 
   invt = 1.0/(td1 + td2)
-  return dnorm_bm(x, td2 * invt * xd1 + td1 * invt * xd2,
+  return dnorm_bm(x, (td2 * xd1 + td1 * xd2) * invt,
     sqrt(td1 * td2 * invt)*σ)
 end
 

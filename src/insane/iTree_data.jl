@@ -101,6 +101,7 @@ Return if is an extinction node.
 isextinct(tree::sTpb)  = false
 isextinct(tree::sTpbX) = false
 isextinct(tree::iTpb)  = false
+isextinct(tree::iTpbX) = false
 
 
 
@@ -111,7 +112,6 @@ isextinct(tree::iTpb)  = false
 Return if is an alive node.
 """
 isalive(tree::T) where {T <: iTree} = !isextinct(tree)
-
 
 
 
@@ -322,6 +322,68 @@ end
 
 
 """
+    treelength(tree::T, ets::Vector{Float64})  where {T <: iTf}
+
+Return the branch length sum of `tree` at different epochs, initialized at `l`.
+"""
+function treelength(tree::T, ets::Vector{Float64}) where {T <: iTf}
+  nep = lastindex(ets) + 1
+  ls  = zeros(nep)
+  _treelength!(tree, treeheight(tree), ls, ets, 1, nep)
+
+  return ls
+end
+
+
+
+
+"""
+    _treelength(tree::T,
+                t   ::Float64,
+                ls  ::Vector{Float64},
+                ets ::Vector{Float64},
+                ix  ::Int64,
+                nep ::Int64) where {T <: iTf}
+
+Return the branch length sum of `tree` at different epochs, initialized at `l`.
+"""
+function _treelength!(tree::T,
+                      t   ::Float64,
+                      ls  ::Vector{Float64},
+                      ets ::Vector{Float64},
+                      ix  ::Int64,
+                      nep ::Int64) where {T <: iTf}
+  @inbounds begin
+
+    ei  = e(tree)
+
+    # if epoch change
+    while ix < nep && t - ei < ets[ix]
+      li      = t - ets[ix]
+      ls[ix] += li
+      ei     -= li
+      t       = ets[ix]
+      ix     += 1
+    end
+
+    ls[ix] += ei
+    t      -= ei
+
+    if def1(tree)
+      _treelength!(tree.d1, t, ls, ets, ix, nep)
+      if def2(tree)
+        _treelength!(tree.d2, t, ls, ets, ix, nep)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
     _ctl(tree::T, l::Float64) where {T <: iTree}
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
@@ -394,6 +456,45 @@ function treeheight(tree::T) where {T <: iTf}
     return max(th1,th2) + e(tree)
   elseif def1(tree)
     return treeheight(tree.d1) + e(tree)
+  end
+
+  return e(tree)
+end
+
+
+
+
+
+"""
+    treeheight(tree::T, nd::Int64) where {T <: iTree}
+
+Return the tree height of `tree`.
+"""
+function treeheight(tree::T, nd::Int64) where {T <: iTree}
+  if def1(tree)
+    th1 = treeheight(tree.d1)
+    th2 = treeheight(tree.d2)
+    return round(max(th1,th2) + e(tree), digits = nd)
+  end
+  return e(tree)
+end
+
+
+
+
+"""
+    treeheight(tree::T, nd::Int64) where {T <: iTf}
+
+Return the tree height of `tree`.
+"""
+function treeheight(tree::T, nd::Int64) where {T <: iTf}
+
+  if def2(tree)
+    th1 = treeheight(tree.d1)
+    th2 = treeheight(tree.d2)
+    return round(max(th1,th2) + e(tree), digits = nd)
+  elseif def1(tree)
+    return round(treeheight(tree.d1) + e(tree), digits = nd)
   end
 
   return e(tree)
@@ -732,7 +833,7 @@ function _ntipsextinctF(tree::T, n::Float64) where {T <: iTf}
 
   if istip(tree)
     if isextinct(tree)
-      n += 1
+      n += 1.0
     end
   else
     n = _ntipsextinctF(tree.d1, n)
@@ -1218,6 +1319,8 @@ function _eventimes!(tree::T,
     else
       _eventimes!(tree.d1, t - et, se, ee)
     end
+  elseif isfossil(tree)
+    push!(ee, t - et)
   end
 
   return nothing
@@ -1382,54 +1485,6 @@ end
 
 
 
-# function _λat!(tree::T,
-#                c   ::Float64,
-#                λs  ::Vector{Float64},
-#                t   ::Float64,
-#                nλ  ::Int64) where {T <: iT}
-
-#   et = e(tree)
-
-
-
-#   if (t + et) > c || isapprox(t + et, c, atol = 1e-10) && istip(tree)
-
-
-#     if !isfix(tree)
-
-#       lλv = lλ(tree)
-#       δt  = dt(tree)
-#       fδt = fdt(tree)
-
-#       # find final lλ
-#       if isapprox(c - t, et)
-#         Ix = lastindex(lλv) - 1
-#         ix = Float64(Ix) - 1.0
-#       else
-#         ix  = fld(c - t, δt)
-#         Ix  = Int64(ix) + 1
-#       end
-#       tii = ix*δt
-#       tff = tii + δt
-#       if tff > et
-#         tff = tii + fδt
-#       end
-#       eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
-
-#       push!(λs, eλ)
-
-#       return nothing
-#     end
-#   elseif def1(tree)
-#       _λat!(tree.d1, c, λs, t + et)
-#       _λat!(tree.d2, c, λs, t + et)
-#   end
-
-#   return nothing
-# end
-
-
-
 
 """
     fixed_xt(tree::T)  where {T <: sTX}
@@ -1440,6 +1495,29 @@ function fixed_xt(tree::T)  where {T <: sTX}
 
   if istip(tree)
     return xf(tree)
+  else
+    if isfix(tree.d1)
+      xt = fixed_xt(tree.d1)
+    else
+      xt = fixed_xt(tree.d2)
+    end
+  end
+
+  return xt
+end
+
+
+
+
+"""
+    fixed_xt(tree::T)  where {T <: sTX}
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function fixed_xt(tree::T)  where {T <: iTX}
+
+  if istip(tree)
+    return xv(tree)[end]
   else
     if isfix(tree.d1)
       xt = fixed_xt(tree.d1)
@@ -1475,4 +1553,31 @@ end
 
 
 
+"""
+    fossil_xt(tree::T)
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function fossil_xt(tree::iTfbdX)
+
+  if isfossil(tree)
+    return xv(tree)[end]
+  elseif isfix(tree.d1)
+    xt = fossil_xt(tree.d1)
+  else
+    xt = fossil_xt(tree.d2)
+  end
+
+  return xt
+end
+
+
+
+
+"""
+    xv(tree::T) where {T <: iTX}
+
+Return pendant edge.
+"""
+xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
 

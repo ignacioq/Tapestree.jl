@@ -353,8 +353,9 @@ Change all past tips to fossil tips.
 """
 function fossilizepasttips!(tree::T) where {T <: iTf}
   th = treeheight(tree::T)
-  _fossilizepasttips!(tree::T, th, eps(th)/1e-9)
+  _fossilizepasttips!(tree::T, th, eps(th)*1e9)
 end
+
 
 
 
@@ -382,6 +383,7 @@ function _fossilizepasttips!(tree::T,
     end
   end
 end
+
 
 
 
@@ -706,6 +708,36 @@ end
 
 
 
+"""
+    _fixrtip!(tree::T, na::Int64) where {T <: iT}
+
+Fixes the the path for a random non extinct tip among `na`.
+"""
+function _fixfossrtip!(tree::T, na::Int64) where T <: iTf
+
+  fix!(tree)
+
+  if def2(tree)
+    if isextinct(tree.d1)
+      _fixfossrtip!(tree.d2, na)
+    elseif isextinct(tree.d2)
+      _fixfossrtip!(tree.d1, na)
+    else
+      na1 = ntipsalive(tree.d1)
+      # probability proportional to number of lineages
+      if (fIrand(na) + 1) > na1
+        _fixfossrtip!(tree.d2, na - na1)
+      else
+        _fixfossrtip!(tree.d1, na1)
+      end
+    end
+  else
+    tree.iψ = true
+  end
+end
+
+
+
 
 """
     fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
@@ -770,6 +802,175 @@ function fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
   return false, ix
 end
 
+
+
+
+"""
+    fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T, wi::Int64, ix::Int64, xc::Float64) where {T <: iTree}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setxf!(tree, xc)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip1!(tree.d1, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip1!(tree.d2, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
+    fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T, wi::Int64, ix::Int64, xc::Float64) where {T <: iTree}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setxf!(tree, xc)
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip2!(tree.d2, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip2!(tree.d1, wi, ix, xc)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
+    fixtip1!(tree::T,
+             wi  ::Int64,
+             ix  ::Int64,
+             xc  ::Float64,
+             σx  ::Float64,
+             δt  ::Float64,
+             srδt::Float64) where {T <: iTX}
+
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T,
+                  wi  ::Int64,
+                  ix  ::Int64,
+                  xc  ::Float64,
+                  σx  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64) where {T <: iTX}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        xvi = xv(tree)
+        bb!(xvi, xvi[1], xc, σx, δt, fdt(tree), srδt)
+
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip1!(tree.d1, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip1!(tree.d2, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
+
+
+
+
+"""
+    fixtip2!(tree::T,
+             wi  ::Int64,
+             ix  ::Int64,
+             xc  ::Float64,
+             σx  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             llr ::Float64,
+             ssrx::Float64) where {T <: iTX}
+
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T,
+                  wi  ::Int64,
+                  ix  ::Int64,
+                  xc  ::Float64,
+                  σx  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64) where {T <: iTX}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        xvi = xv(tree)
+        bb!(xvi, xvi[1], xc, σx, δt, fdt(tree), srδt)
+
+        return true, ix
+      end
+    end
+  else
+    f, ix = fixtip2!(tree.d2, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+    f, ix = fixtip2!(tree.d1, wi, ix, xc, σx, δt, srδt)
+    if f
+      fix!(tree)
+      return true, ix
+    end
+  end
+
+  return false, ix
+end
 
 
 
@@ -951,6 +1152,78 @@ function _remove_unsampled!(tree::sTbd)
       ne  = e(tree) + e(tree.d1)
       tree = tree.d1
       sete!(tree, ne)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::sTpbX)
+
+Remove unsampled tips (extinct and extant not sampled).
+"""
+function _remove_unsampled!(tree::sTpbX)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return sTpbX(e(tree),isfix(tree), xi(tree), xf(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        nx = xi(tree)
+        tree = tree.d2
+        sete!(tree, ne)
+        setxi!(tree, nx)
+      end
+    elseif !isfix(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      nx = xi(tree)
+      tree = tree.d1
+      sete!(tree, ne)
+      setxi!(tree, nx)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::sTbdX)
+
+Remove unsampled tips (extinct and extant not sampled).
+"""
+function _remove_unsampled!(tree::sTbdX)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return sTbdX(e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        nx = xi(tree)
+        tree = tree.d2
+        sete!(tree, ne)
+        setxi!(tree, nx)
+      end
+    elseif !isfix(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      nx = xi(tree)
+      tree = tree.d1
+      sete!(tree, ne)
+      setxi!(tree, nx)
     end
   end
 
@@ -1683,6 +1956,88 @@ function _remove_extinct!(tree::iTfbd)
         return iTfbd(e(tree), dt(tree), fdt(tree),
             isextinct(tree), isfossil(tree), isfix(tree), lλ(tree), lμ(tree))
       end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_extinct!(tree::iTbdX)
+
+Remove extinct tips from `iTbdX`.
+"""
+function _remove_extinct!(tree::iTbdX)
+
+  if def1(tree)
+
+    tree.d1 = _remove_extinct!(tree.d1)
+    tree.d2 = _remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return iTbdX(e(tree), dt(tree), fdt(tree),
+          true, isfix(tree), lλ(tree), lμ(tree), xv(tree))
+      else
+        ne  = e(tree) + e(tree.d2)
+        lλ0 = lλ(tree)
+        lμ0 = lμ(tree)
+        xv0 = xv(tree)
+        lλ2 = lλ(tree.d2)
+        lμ2 = lμ(tree.d2)
+        xv2 = xv(tree.d2)
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        pop!(lμ0)
+        pop!(xv0)
+        if iszero(fdt2)
+          popfirst!(lλ2)
+          popfirst!(lμ2)
+          popfirst!(xv2)
+        end
+        prepend!(lλ2, lλ0)
+        prepend!(lμ2, lμ0)
+        prepend!(xv2, xv0)
+
+        fdt0 = fdt(tree) + fdt(tree.d2)
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0)
+      end
+    elseif isextinct(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      lλ0 = lλ(tree)
+      lμ0 = lμ(tree)
+      xv0 = xv(tree)
+      lλ1 = lλ(tree.d1)
+      lμ1 = lμ(tree.d1)
+      xv1 = xv(tree.d1)
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      pop!(lμ0)
+      pop!(xv0)
+      if iszero(fdt1)
+        popfirst!(lλ1)
+        popfirst!(lμ1)
+        popfirst!(xv1)
+      end
+      prepend!(lλ1, lλ0)
+      prepend!(lμ1, lμ0)
+      prepend!(xv1, xv0)
+
+      fdt0 = fdt(tree) + fdt(tree.d1)
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0)
     end
   end
 

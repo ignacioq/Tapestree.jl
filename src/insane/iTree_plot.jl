@@ -180,11 +180,11 @@ end
 
 
 """
-    function f(tree::iTct, zfun::Function, ϵ::Float64)
+    function f(tree::iTct, ϵ::Float64)
 
 Recipe for plotting extinction on a `iTct` given `ϵ`.
 """
-@recipe function f(tree::iTct, zfun::Function, ϵ::Float64)
+@recipe function f(tree::iTct, ϵ::Float64)
 
   x = Float64[]
   y = Float64[]
@@ -193,7 +193,7 @@ Recipe for plotting extinction on a `iTct` given `ϵ`.
   th = treeheight(tree)
   nt = ntips(tree)
 
-  _rplottree!(tree, th, 1:nt, zfun, x, y, z)
+  _rplottree!(tree, th, 1:nt, lλ, x, y, z)
 
   @simd for i in Base.OneTo(lastindex(z))
     z[i] *= ϵ
@@ -547,7 +547,7 @@ function _nodeproperties!(tree      ::T,
         tip, speciation, extinct, fossil)
     else
       push!(shape, :none, :none, :square)
-      push!(col, :white, :white, :red)
+      push!(col, :white, :white, :purple)
       push!(alpha, 0, 0, (0.5+0.5*fx)*fossil)
       _nodeproperties!(tree.d1, shape, col, alpha,
         tip, speciation, extinct, fossil)
@@ -555,7 +555,7 @@ function _nodeproperties!(tree      ::T,
   else
     # tip
     if isfossil(tree)
-      push!(shape, :square); push!(col, :red)
+      push!(shape, :square); push!(col, :purple)
       push!(alpha, (0.5+0.5*fx)*fossil)
     elseif isextinct(tree)
       push!(shape, :circle); push!(col, :blue)
@@ -802,17 +802,12 @@ Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    lv  ::Function,
-                   dt  ::Float64;
-                   iexp = true) where {T <: iT}
+                   dt  ::Float64) where {T <: iT}
 
   # prepare data
   ts, r = time_rate(tree, dt, lv)
 
-  if iexp
-    fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
-  else
-    fx = time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0])
-  end
+  fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
 
   lf = size(fx,1)
 
@@ -881,15 +876,13 @@ end
 """
     function f(tree::Vector{T},
                lv  ::Function,
-               dt  ::Float64;
-               iexp = true) where {T <: iT}
+               dt  ::Float64) where {T <: iT}
 
 Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
                    lv   ::Function,
-                   tdt  ::Float64;
-                   fn   = exp) where {T <: iT}
+                   tdt  ::Float64) where {T <: iT}
 
   ntrees = lastindex(trees)
   riv = Vector{Float64}[]
@@ -898,7 +891,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   ts  = Float64[]
   for t in trees
     tsi, ri = time_rate(t, tdt, lv)
-    ri     = map(x -> mean(fn, x), ri)
+    ri      = exp.(map(x -> mean(x), ri))
 
     if lastindex(tsi) > lts
       ts  = tsi
@@ -919,15 +912,12 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     q[1:lr,i] = ri
   end
 
-  Q = Array{Float64}(undef, lts, 6)
+  Q = Array{Float64}(undef, lts, 7)
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
-    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.75, 0.975, 1.0])
+    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.5, 0.75, 0.975, 1.0])
   end
-
-  # estimate mean of means
-  m = mean(q, dims=2)
 
   # common shape plot defaults
   legend          --> :none
@@ -953,7 +943,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
       push!(sh0, (ts[i], Q[i,2]))
     end
     for i in lts:-1:1
-      push!(sh0, (ts[i], Q[i,5]))
+      push!(sh0, (ts[i], Q[i,6]))
     end
 
     # Shape(sh0)
@@ -970,7 +960,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
       push!(sh1, (ts[i], Q[i,3]))
     end
     for i in lts:-1:1
-      push!(sh1, (ts[i], Q[i,4]))
+      push!(sh1, (ts[i], Q[i,5]))
     end
 
     # Shape(sh1)
@@ -983,7 +973,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor --> "#00213a99"
     linewidth --> 1.4
 
-    ts, m
+    ts, Q[:,4]
   end
 
   # range
@@ -992,7 +982,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor  --> "#426c7999"
     linewidth  --> 1.4
     linestyle  --> :dashdot
-    ts, Q[:,[1,6]]
+    ts, Q[:,[1,7]]
   end
 end
 
@@ -1137,15 +1127,126 @@ function _rplottrait!(tree::T,
   push!(x, xc, NaN)
   push!(y, xi(tree), xf(tree), NaN)
 
-  defd1 = def1(tree)
-  defd2 = def2(tree)
-
-  if defd1
+  if def1(tree)
     _rplottrait!(tree.d1, xc, x, y)
-    if defd2
+    if def2(tree)
       _rplottrait!(tree.d2, xc, x, y)
     end
   end
 end
 
+
+
+
+"""
+    function f(tree::T; type::Symbol = :trait)
+
+Recipe for plotting with the tree or the trait evolutions for `sTX`.
+"""
+@recipe function f(tree::T) where {T <: iTX}
+
+  x = Float64[]
+  y = Float64[]
+
+  th = treeheight(tree)
+
+  _rplottrait!(tree, th, x, y)
+
+  yfilt = filter(x -> !isnan(x), y)
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "trait"
+  seriescolor     --> :purple
+  xlims           --> (-th*0.05, th*1.05)
+  ylims           --> (minimum(yfilt), maximum(yfilt))
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+
+  return x, y
+end
+
+
+
+
+"""
+    function f(tree::T; type::Symbol = :trait)
+
+Recipe for plotting with the tree or the trait evolutions for `sTX`.
+"""
+@recipe function f(trees::Vector{T}) where {T <: iTX}
+
+  x = Float64[]
+  y = Float64[]
+
+  th = treeheight(trees[1])
+  n  = lastindex(trees)
+
+  for t in trees
+    _rplottrait!(t, treeheight(t), x, y)
+  end
+
+  yfilt = filter(x -> !isnan(x), y)
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "trait"
+  seriescolor     --> :purple
+  seriesalpha     --> min(1.0, 10.0/Float64(n))
+  xlims           --> (-th*0.05, th*1.05)
+  ylims           --> (minimum(yfilt), maximum(yfilt))
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+
+  return x, y
+end
+
+
+
+"""
+    _rplottree!(tree::T,
+                xc  ::Float64,
+                x   ::Array{Float64,1},
+                y   ::Array{Float64,1}) where {T <: iTX}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function _rplottrait!(tree::T,
+                      xc  ::Float64,
+                      x   ::Array{Float64,1},
+                      y   ::Array{Float64,1}) where {T <: iTX}
+
+  # tree δt and nsδt
+  δt = dt(tree)
+
+  # add horizontal lines
+  xvi = xv(tree)
+  l   = lastindex(xvi)
+  @simd for i in Base.OneTo(l-1)
+    push!(x, xc - Float64(i-1)*δt)
+    push!(y, xvi[i])
+  end
+
+  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
+  push!(y, xvi[l], NaN)
+
+  xc -= e(tree)
+
+  if def1(tree)
+    _rplottrait!(tree.d1, xc, x, y)
+    if def2(tree)
+      _rplottrait!(tree.d2, xc, x, y)
+    end
+  end
+end
 

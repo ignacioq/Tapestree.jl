@@ -13,32 +13,40 @@ Created 27 05 2020
 
 
 """
-    _daughters_update!(ξ1  ::iTfbd,
-                       λf  ::Float64,
-                       μf  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+    _daughter_update!(ξ1  ::iTfbdX,
+                      λf  ::Float64,
+                      μf  ::Float64,
+                      α   ::Float64,
+                      σλ  ::Float64,
+                      σμ  ::Float64,
+                      xp  ::Float64,
+                      βλ  ::Float64,
+                      σx  ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64)
 
-Make a `fbdd` proposal for daughter for forward simulated fossil branch.
+Make a `gbm-bd` proposal for daughters from forwards simulated branch.
 """
-function _daughter_update!(ξ1  ::iTfbd,
+function _daughter_update!(ξ1  ::iTfbdX,
                            λf  ::Float64,
                            μf  ::Float64,
                            α   ::Float64,
                            σλ  ::Float64,
                            σμ  ::Float64,
+                           xp  ::Float64,
+                           βλ  ::Float64,
+                           σx  ::Float64,
                            δt  ::Float64,
                            srδt::Float64)
   @inbounds begin
 
     λ1c  = lλ(ξ1)
     μ1c  = lμ(ξ1)
+    x1c  = xv(ξ1)
     l1   = lastindex(λ1c)
     λ1p  = Vector{Float64}(undef,l1)
     μ1p  = Vector{Float64}(undef,l1)
+    x1p  = Vector{Float64}(undef,l1)
     λi   = λ1c[1]
     λ1   = λ1c[l1]
     μi   = μ1c[1]
@@ -47,29 +55,26 @@ function _daughter_update!(ξ1  ::iTfbd,
     fdt1 = fdt(ξ1)
 
     bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
+    bb!(x1p, xp, x1c[l1], σx, δt, fdt1, srδt)
 
     # log likelihood ratios
-    llrbm1, llrbd1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
+    llrbm, llrbd, ssrλ, ssrμ, ssrx =
+      llr_gbm_b_sep(λ1p, μ1p, x1p, λ1c, μ1c, x1c, α, σλ, σμ, βλ, σx, 
+        δt, fdt1, srδt, false, false)
 
-    acr = llrbd1
-    llr = llrbm1 + acr
-    srt = σλ * sqrt(e1)
-    acr += lrdnorm_bm_x(λf, λi, λ1 - α*e1, σλ * srt) + 
-           lrdnorm_bm_x(μf, μi, μ1,        σμ * srt)
+    acr  = llrbd
+    llr  = llrbm + acr
     drλ  = λi - λf
-    ssrλ = ssrλ1
-    ssrμ = ssrμ1
   end
 
-  return llr, acr, drλ, ssrλ, ssrμ, λ1p, μ1p
+  return llr, acr, drλ, ssrλ, ssrμ, ssrx, λ1p, μ1p, x1p
 end
 
 
 
 
 """
-    _update_gbm!(tree::iTfbd,
+    _update_gbm!(tree::iTfbdX,
                  α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64,
@@ -83,7 +88,7 @@ end
 
 Do `gbm-bd` updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTfbd,
+function _update_gbm!(tree::iTfbdX,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -99,7 +104,6 @@ function _update_gbm!(tree::iTfbd,
     if def2(tree)
       llc, dλ, ssλ, ssμ =
         update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-
       llc, dλ, ssλ, ssμ =
         _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
       llc, dλ, ssλ, ssμ =
@@ -109,6 +113,11 @@ function _update_gbm!(tree::iTfbd,
         update_duo!(tree, α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
       llc, dλ, ssλ, ssμ =
         _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
+    end
+  else
+    if !isfix(tree) || ter
+      llc, dλ, ssλ, ssμ =
+        update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     end
   end
 
@@ -208,7 +217,7 @@ end
 
 
 """
-    update_duo!(tree::iTfbd,
+    update_duo!(tree::iTfbdX,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -219,9 +228,9 @@ end
                 δt  ::Float64,
                 srδt::Float64)
 
-Make a `gbm` duo proposal.
+Make a `gbm` trio proposal.
 """
-function update_duo!(tree::iTfbd,
+function update_duo!(tree::iTfbdX,
                      α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,

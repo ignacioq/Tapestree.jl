@@ -220,16 +220,13 @@ function _update_gbm!(tree::iTpb,
                       ter ::Bool)
 
   if def1(tree)
+
     llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
 
     llc, dλ, ssλ =
       _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
     llc, dλ, ssλ =
       _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-  else
-    if !isfix(tree) || ter
-      llc, dλ, ssλ = update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
-    end
   end
 
   return llc, dλ, ssλ
@@ -238,50 +235,50 @@ end
 
 
 
-"""
-    update_tip!(tree::iTpb,
-                α   ::Float64,
-                σλ  ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+# """
+#     update_tip!(tree::iTpb,
+#                 α   ::Float64,
+#                 σλ  ::Float64,
+#                 llc ::Float64,
+#                 dλ  ::Float64,
+#                 ssλ ::Float64,
+#                 δt  ::Float64,
+#                 srδt::Float64)
 
-Make a `gbm` tip proposal.
-"""
-function update_tip!(tree::iTpb,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
+# Make a `gbm` tip proposal.
+# """
+# function update_tip!(tree::iTpb,
+#                      α   ::Float64,
+#                      σλ  ::Float64,
+#                      llc ::Float64,
+#                      dλ  ::Float64,
+#                      ssλ ::Float64,
+#                      δt  ::Float64,
+#                      srδt::Float64)
 
-  @inbounds begin
+#   @inbounds begin
 
-    λc   = lλ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
+#     λc   = lλ(tree)
+#     l    = lastindex(λc)
+#     fdtp = fdt(tree)
+#     λp   = Vector{Float64}(undef, l)
 
-    bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
+#     bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+#     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
-    acr = llrbd
+#     acr = llrbd
 
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-    end
-  end
+#     if -randexp() < acr
+#       llc += llrbm + acr
+#       dλ  += λp[l] - λc[l]
+#       ssλ += ssrλ
+#       unsafe_copyto!(λc, 1, λp, 1, l)
+#     end
+#   end
 
-  return llc, dλ, ssλ
-end
+#   return llc, dλ, ssλ
+# end
 
 
 

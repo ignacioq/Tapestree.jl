@@ -109,3 +109,298 @@ end
 
 
 
+"""
+     _sim_cfbd_t(t   ::Float64,
+                 λ   ::Float64,
+                 μ   ::Float64,
+                 ψ   ::Float64,
+                 x0  ::Float64,
+                 σx  ::Float64,
+                 lr  ::Float64,
+                 lU  ::Float64,
+                 Iρi ::Float64,
+                 na  ::Int64,
+                 nn  ::Int64,
+                 nlim::Int64,
+                 xist::Vector{Float64},
+                 xfst::Vector{Float64},
+                 est ::Vector{Float64})
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
+rate `λ`, extinction rate `μ` and fossilization rate `ψ` for terminal branches, 
+conditioned on no fossilizations.
+"""
+function _sim_cfbd_t(t   ::Float64,
+                     λ   ::Float64,
+                     μ   ::Float64,
+                     ψ   ::Float64,
+                     x0  ::Float64,
+                     σx  ::Float64,
+                     lr  ::Float64,
+                     lU  ::Float64,
+                     Iρi ::Float64,
+                     na  ::Int64,
+                     nn  ::Int64,
+                     nlim::Int64,
+                     xist::Vector{Float64},
+                     xfst::Vector{Float64},
+                     est ::Vector{Float64})
+
+  if isfinite(lr) && nn < nlim
+
+    tw = cfbd_wait(λ, μ, ψ)
+
+    if tw > t
+      na += 1
+      nlr = lr
+      if na > 1
+        nlr += log(Iρi * Float64(na)/Float64(na-1))
+      end
+      if nlr < lr && lU >= nlr
+        return sTfbdX(), na, nn, NaN
+      else
+        x1 = rnorm(x0, sqrt(t) * σx)
+        push!(xist, x0)
+        push!(xfst, x1)
+        push!(est, t)
+        return sTfbdX(t, false, false, false, x0, x1), na, nn, nlr
+      end
+    end
+
+    # speciation
+    if λevent(λ, μ, ψ)
+      nn += 1
+      x1 = rnorm(x0, sqrt(tw) * σx)
+
+      d1, na, nn, lr = 
+        _sim_cfbd_t(t - tw, λ, μ, ψ, x1, σx, lr, lU, Iρi, na, nn, nlim, 
+          xist, xfst, est)
+      d2, na, nn, lr = 
+        _sim_cfbd_t(t - tw, λ, μ, ψ, x1, σx, lr, lU, Iρi, na, nn, nlim, 
+          xist, xfst, est)
+
+      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nn, lr
+    # extinction
+    elseif μevent(μ, ψ)
+
+      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+             na, nn, lr
+    # fossil sampling
+    else
+      return sTfbdX(), na, nn, NaN
+    end
+  end
+
+  return sTfbdX(), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_cfbd_i(t   ::Float64,
+                λ   ::Float64,
+                μ   ::Float64,
+                ψ   ::Float64,
+                x0  ::Float64,
+                σx  ::Float64,
+                na  ::Int64,
+                nf  ::Int64,
+                nn  ::Int64,
+                nlim::Int64,
+                xist::Vector{Float64},
+                xfst::Vector{Float64},
+                est ::Vector{Float64})
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with 
+speciation rate `λ`, extinction rate `μ` and fossilization rate `ψ` 
+for internal branches, conditioned on no fossilizations.
+"""
+function _sim_cfbd_i(t   ::Float64,
+                     λ   ::Float64,
+                     μ   ::Float64,
+                     ψ   ::Float64,
+                     x0  ::Float64,
+                     σx  ::Float64,
+                     na  ::Int64,
+                     nf  ::Int64,
+                     nn  ::Int64,
+                     nlim::Int64,
+                     xist::Vector{Float64},
+                     xfst::Vector{Float64},
+                     est ::Vector{Float64})
+
+
+  if iszero(nf) && nn < nlim
+
+    tw = cfbd_wait(λ, μ, ψ)
+
+    if tw > t
+      na += 1
+      x1 = rnorm(x0, sqrt(t) * σx)
+      push!(xist, x0)
+      push!(xfst, x1)
+      push!(est, t)
+      return sTfbdX(t, false, false, false, x0, x1), na, nf, nn
+    end
+
+    # speciation
+    if λevent(λ, μ, ψ)
+      nn += 1
+      x1 = rnorm(x0, sqrt(tw) * σx)
+      d1, na, nf, nn = 
+        _sim_cfbd_i(t - tw, λ, μ, ψ, x1, σx, na, nf, nn, nlim, xist, xfst, est)
+      d2, na, nf, nn = 
+        _sim_cfbd_i(t - tw, λ, μ, ψ, x1, σx, na, nf, nn, nlim, xist, xfst, est)
+
+      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nf, nn
+    # extinction
+    elseif μevent(μ, ψ)
+
+      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+             na, nf, nn
+    # fossil sampling
+    else
+      nf += 1
+      return sTfbdX(), na, nf, nn
+    end
+  end
+
+  return sTfbdX(), na, nf, nn
+end
+
+
+
+
+"""
+    _sim_cfbd_i(t   ::Float64,
+                λ   ::Float64,
+                μ   ::Float64,
+                ψ   ::Float64,
+                x0  ::Float64,
+                σx  ::Float64,
+                na  ::Int64,
+                nf  ::Int64,
+                nn  ::Int64,
+                nlim::Int64,
+                xist::Vector{Float64},
+                xfst::Vector{Float64},
+                est ::Vector{Float64})
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with 
+speciation rate `λ`, extinction rate `μ` and fossilization rate `ψ` 
+for internal branches, conditioned on no fossilizations.
+"""
+function _sim_cfbd_i(t   ::Float64,
+                     λ   ::Float64,
+                     μ   ::Float64,
+                     ψ   ::Float64,
+                     x0  ::Float64,
+                     σx  ::Float64,
+                     na  ::Int64,
+                     nf  ::Int64,
+                     nn  ::Int64,
+                     nlim::Int64)
+
+  if iszero(nf) && nn < nlim
+
+    tw = cfbd_wait(λ, μ, ψ)
+
+    if tw > t
+      na += 1
+      return sTfbdX(t, false, false, false, x0, rnorm(x0, sqrt(t) * σx)), 
+             na, nf, nn
+    end
+
+    # speciation
+    if λevent(λ, μ, ψ)
+      nn += 1
+      x1 = rnorm(x0, sqrt(tw) * σx)
+      d1, na, nf, nn = _sim_cfbd_i(t - tw, λ, μ, ψ, x1, σx, na, nf, nn, nlim)
+      d2, na, nf, nn = _sim_cfbd_i(t - tw, λ, μ, ψ, x1, σx, na, nf, nn, nlim)
+
+      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nf, nn
+    # extinction
+    elseif μevent(μ, ψ)
+
+      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+             na, nf, nn
+    # fossil sampling
+    else
+      nf += 1
+      return sTfbdX(), na, nf, nn
+    end
+  end
+
+  return sTfbdX(), na, nf, nn
+end
+
+
+
+
+
+"""
+    _sim_cfbd_it(t   ::Float64,
+                 λ   ::Float64,
+                 μ   ::Float64,
+                 ψ   ::Float64,
+                 lr  ::Float64,
+                 lU  ::Float64,
+                 Iρi ::Float64,
+                 na  ::Int64,
+                 nf  ::Int64,
+                 nn  ::Int64,
+                 nlim::Int64)
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with 
+speciation rate `λ`, extinction rate `μ` and fossilization rate `ψ` 
+for continuing internal branches, conditioned on no fossilizations.
+"""
+function _sim_cfbd_it(t   ::Float64,
+                      λ   ::Float64,
+                      μ   ::Float64,
+                      ψ   ::Float64,
+                      x0  ::Float64,
+                      σx  ::Float64,
+                      lr  ::Float64,
+                      lU  ::Float64,
+                      Iρi ::Float64,
+                      na  ::Int64,
+                      nn  ::Int64,
+                      nlim::Int64)
+
+  if lU < lr && nn < nlim
+
+    tw = cfbd_wait(λ, μ, ψ)
+
+    if tw > t
+      na += 1
+      lr += log(Iρi)
+      return sTfbdX(t, false, false, false, x0, rnorm(x0, sqrt(t) * σx)), 
+             na, nn, lr
+    end
+
+    # speciation
+    if λevent(λ, μ, ψ)
+      nn += 1
+      x1 = rnorm(x0, sqrt(tw) * σx)
+      d1, na, nn, lr = 
+        _sim_cfbd_it(t - tw, λ, μ, ψ, x1, σx, lr, lU, Iρi, na, nn, nlim)
+      d2, na, nn, lr = 
+        _sim_cfbd_it(t - tw, λ, μ, ψ, x1, σx, lr, lU, Iρi, na, nn, nlim)
+
+      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nn, lr
+    # extinction
+    elseif μevent(μ, ψ)
+
+      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+             na, nn, lr
+    # fossil sampling
+    else
+      return sTfbdX(), na, nn, NaN
+    end
+  end
+
+  return sTfbdX(), na, nn, NaN
+end
+
