@@ -9,55 +9,93 @@ t(-_-t)
 Created 07 07 2020
 =#
 
-
-
 """
-    read_newick(in_file::String)
+    read_newick(in_file::String; fossil = false)
 
-Reads a newick tree into `iTsimple` from `in_file`.
+Reads a newick tree into `sT_label` if fossil is false and `sTf_label` if fossil
+is true from `in_file`.
 """
-function read_newick(in_file::String)
+function read_newick(in_file::String; fossil::Bool = false)
 
   io = open(in_file)
   s = readlines(io)[1]
   close(io)
 
+  # if 1 tree
+  if onlyone(s, ';')
+    return _parse_newick(s, fossil)
+  # if more than 1 tree
+  else
+    allsc = findall(';', s)
+
+    t1 = _parse_newick(s[1:allsc[1]], fossil)
+    tv = typeof(t1)[t1]
+
+    for i in 2:lastindex(allsc)
+      push!(tv, _parse_newick(s[(allsc[i-1] + 1):(allsc[i])], fossil))
+    end
+
+    return tv
+  end
+end
+
+
+
+
+"""
+    _parse_newick(in_file::String; fossil = false)
+
+Reads a newick tree into `sT_label` if fossil is false and `sTf_label` if fossil
+is true from `in_file`.
+"""
+function _parse_newick(s::String, fossil::Bool)
+
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
-  np = 0     # number of parenthesis
-  nlp = 0    # number of left parenthesis yet to be closed
-  nlin = 1   # number of distinct lineages at the origin
-  nbif = 0   # number of bifurcations (= speciations)
+  nop  = 0    # number of open parenthesis yet to be closed
+  stem = true # if stem tree
   for (i,v) in enumerate(s)
-    if v == '('
-      nlp += 1
-      np += 1
-    elseif v == ')'
-      nlp -= 1
-      np += 1
-    elseif v == ','
-      nbif += 1
-      if iszero(nlp) nlin += 1 end
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ','
+      if iszero(nop)
+        stem = false
+      end
     end
   end
 
-  # change the tree type if it has fossils (as sampled ancestors)
-  T = (2*(nbif-nlin+1) == np) ? sT_label : sTf_label
+  if fossil
+    return from_string(s, stem, sTf_label)
+  else
+    return from_string(s, stem, sT_label)
+  end
+end
+
+
+
+
+"""
+    from_string(s::String, stem::Bool, ::Type{sT_label})
+
+Takes a string and turns it into a `sT_label` tree.
+"""
+function from_string(s::String, stem::Bool, ::Type{sT_label})
 
   # if root (starts with one stem lineage)
-  if isone(nlin)
-    tree = from_string(s, T)
+  if stem
+    tree = _from_string(s, sT_label)
   # if no root (starts with two crown lineage)
   else
-    nrp = 0
-    nlp = 0
+    nop = 0
     ci  = 0
     for (i,v) in enumerate(s)
       if v == '('
-        nlp += 1
+        nop += 1
       elseif v == ')'
-        nrp += 1
-      elseif v == ',' && nlp == nrp
+        nop -= 1
+      elseif v == ',' && iszero(nop)
         ci = i
         break
       end
@@ -66,7 +104,9 @@ function read_newick(in_file::String)
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
 
-    tree = T(from_string(s1, T), from_string(s2, T), 0.0, "")
+    tree = sT_label(_from_string(s1, sT_label),
+                    _from_string(s2, sT_label),
+                    0.0, "")
   end
 
   return tree
@@ -76,35 +116,75 @@ end
 
 
 """
-    from_string(s::String, ::Type{T}) where {T <: sT}
+    from_string(s::String, stem::Bool, ::Type{sTf_label})
 
-Returns `iTree` from newick string.
+Takes a string and turns it into a `sTf_label` tree.
 """
-function from_string(s::String, ::Type{T}) where {T <: sT}
+function from_string(s::String, stem::Bool, ::Type{sTf_label})
+
+  # if root
+  if stem
+    tree = _from_string(s, sTf_label)
+  # if crown
+  else
+    nop = 0
+    ci  = 0
+    for (i,v) in enumerate(s)
+      if v === '('
+        nop += 1
+      elseif v === ')'
+        nop -= 1
+      elseif v === ',' && iszero(nop)
+        ci = i
+        break
+      end
+    end
+
+    s1 = s[1:(ci-1)]
+    s2 = s[(ci+1):end]
+
+    tree = sTf_label(_from_string(s1, sTf_label),
+                     _from_string(s2, sTf_label),
+                     0.0, "")
+  end
+
+  # fossilize tips
+  fossilizepasttips!(tree)
+
+  return tree
+end
+
+
+
+
+"""
+    _from_string(s::String, ::Type{T}) where {T <: sT}
+
+Returns a tree of type `T` from newick string.
+"""
+function _from_string(s::String, ::Type{T}) where {T <: sT}
 
   # find pendant edge
   wd  = findlast(isequal(':'), s)
-  pei = parse(Float64, s[(wd+1):end])
-  lab = s[1:(wd-1)]
-  #s   = s[2:(wd-2)]
+  ei  = parse(Float64, s[(wd+1):end])
+  lp  = findlast(isequal(')'), s)
 
   # if tip
-  if isone(count(i->(i==':'), s))
-      return T(pei, lab)
+  if isnothing(lp)
+    return T(ei, s[1:(wd-1)])
   else
-    while s[wd-1] != ')'  wd -= 1  end
-    s = s[2:(wd-2)]
 
-    # estimate number of parentheses (when np returns to 1)
-    nrp = 0
-    nlp = 0
+    lab = s[(lp+1):(wd-1)]
+    s   = s[2:(lp-1)]
+
+    nop = 0
     ci  = 0
     for (i,v) in enumerate(s)
-      if v == '('
-        nlp += 1
-      elseif v == ')'
-        nrp += 1
-      elseif v == ',' && nlp == nrp
+      if v === '('
+        nop += 1
+      elseif v === ')'
+        nop -= 1
+      elseif v === ',' && iszero(nop)
         ci = i
         break
       end
@@ -114,13 +194,42 @@ function from_string(s::String, ::Type{T}) where {T <: sT}
   s1 = s[1:(ci-1)]
   s2 = s[(ci+1):end]
 
-  if isempty(s1)
-    return T(from_string(s2, T), pei, "")
+  # if fossils are coded as 0 edge tip
+  if last(s1, 4) == ":0.0" && onlyone(s1, ':')
+    wd = findlast(isequal(':'), s1)
+    return T(_from_string(s2, T), ei, s1[1:(wd-1)])
+  elseif last(s2, 4) == ":0.0" && onlyone(s2, ':')
+    wd = findlast(isequal(':'), s2)
+    return T(_from_string(s1, T), ei, s2[1:(wd-1)])
+  elseif isempty(s1)
+    return T(_from_string(s2, T), ei, lab)
   elseif isempty(s2)
-    return T(from_string(s1, T), pei, "")
+    return T(_from_string(s1, T), ei, lab)
   else
-    return T(from_string(s1, T), from_string(s2, T), pei, "")
+    return T(_from_string(s1, T), _from_string(s2, T), ei, lab)
   end
+end
+
+
+
+
+"""
+    onlyone(s::String, c::Char)
+
+Returns true if there is only one of 'c' in string `s`.
+"""
+function onlyone(s::String, c::Char)
+  n = 0
+  for i in s
+    if i === c
+      n += 1
+      if n > 1
+        return false
+      end
+    end
+  end
+
+  return true
 end
 
 
@@ -134,7 +243,7 @@ Writes `iTsimple` as a newick tree to `out_file`.
 function write_newick(tree::T, out_file::String) where {T <: iTree}
 
   s = to_string(tree)
-  
+
   # if no stem branch
   if last(s, 4) == ":0.0"
     s = s[1:(end-4)]*";"
@@ -157,93 +266,72 @@ end
 
 Returns newick string.
 """
-function to_string(tree::T; n::Int64 = 0) where {T <: iTree}
-
-  if istip(tree)
-    return(string("t1:",e(tree)))
-  end
-
-  if istip(tree.d1)
-    if istip(tree.d2)
-      n += 1
-      s1 = string("(t",n,":",e(tree.d1),",")
-      n += 1
-      s2 = string("t",n,":",e(tree.d2),"):",e(tree))
-      return s1*s2
-    else 
-      n += 1
-      return string("(t",n,":",e(tree.d1), ",",
-              to_string(tree.d2, n = n),"):", e(tree))
-    end
-  elseif istip(tree.d2)
-    n += 1
-    return string("(", to_string(tree.d1, n = n), 
-      ",t",n,":",e(tree.d2), "):", e(tree))
-  else
-    return string("(",to_string(tree.d1, n = n),",",
-               to_string(tree.d2, n = ntips(tree.d1) + n),"):",e(tree))
-  end
-end
+to_string(tree::T) where {T <: iTree} = _to_string(tree, 0)[1]
 
 
 
 
 """
-    to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: iTree}
+    _to_string(tree::T; n::Int64 = 0) where {T <: iTree})
 
 Returns newick string.
 """
-function to_string(tree::T; n::Int64=0, sa::Int64=0) where {T <: sTf}
+function _to_string(tree::T, n::Int64) where {T <: iTree}
 
-  if istip(tree)
-    return(string("t1:",e(tree)))
-  end
+  if def1(tree)
+    s1, n = _to_string(tree.d1, n)
+    s2, n = _to_string(tree.d2, n)
 
-  if isdefined(tree, :d1) && isdefined(tree, :d2)
-    if istip(tree.d1)
-      if istip(tree.d2)
-        n += 1
-        s1 = string("(t",n,":",e(tree.d1),",")
-        n += 1
-        s2 = string("t",n,":",e(tree.d2),"):",e(tree))
-        return s1*s2
-      else 
-        n += 1
-        return string("(t",n,":",e(tree.d1), ",",
-                to_string(tree.d2, n=n, sa=sa),"):", e(tree))
-      end
-    elseif istip(tree.d2)
-      n += 1
-      return string("(", to_string(tree.d1, n=n, sa=sa), 
-        ",t",n,":",e(tree.d2), "):", e(tree))
-    else
-      return string("(",to_string(tree.d1, n=n, sa=sa),",",
-                        to_string(tree.d2, n=ntips(tree.d1) + n, 
-                                  sa=nsampledancestors(tree.d1) + sa),"):",
-                        e(tree))
-    end
-  
-  # sampled ancestors
-  elseif isdefined(tree, :d1)
-    sa += 1
-    if istip(tree.d1)
-      n += 1
-      return string("(t",n,":",e(tree.d1),")sa",sa,":", e(tree))
-    else
-      return string("(",to_string(tree.d1, n=n, sa=sa),")sa",sa,":",e(tree))
-    end
+    return string("(",s1,",", s2,"):",e(tree)), n
   else
-    sa += 1
-    if istip(tree.d2)
-      n += 1
-      return string("(t",n,":",e(tree.d2),")sa",sa,":", e(tree))
-    else
-      return string("(",to_string(tree.d2, n=n, sa=sa),")sa",sa,":",e(tree))
-    end
+    n += 1
+
+    return string("t",n,":",e(tree)), n
   end
 end
 
 
+
+
+"""
+    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+
+Returns newick string.
+"""
+to_string(tree::T) where {T <: iTf} = _to_string(tree, 0, 0)[1]
+
+
+
+
+"""
+    _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
+
+Returns newick string.
+"""
+function _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
+
+  if def1(tree)
+    s1, n, nf = _to_string(tree.d1, n, nf)
+
+    if def2(tree)
+      s2, n, nf = _to_string(tree.d2, n, nf)
+      s = string("(",s1,",", s2,"):",e(tree))
+    else
+      nf += 1
+      s = string("(",s1,")f",nf,":", e(tree))
+    end
+
+    return s, n, nf
+  else
+    if isfossil(tree)
+      nf += 1
+      return string("f",nf,":",e(tree)), n, nf
+    else
+      n += 1
+      return string("t",n,":",e(tree)), n, nf
+    end
+  end
+end
 
 
 

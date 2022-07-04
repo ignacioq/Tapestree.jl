@@ -13,7 +13,7 @@ Created 25 08 2020
 
 
 """
-    insane_cbd(tree    ::sT_label, 
+    insane_cbd(tree    ::sT_label,
                out_file::String;
                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -21,7 +21,7 @@ Created 25 08 2020
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
                marginal::Bool                  = false,
-               nitpp   ::Int64                 = 100, 
+               nitpp   ::Int64                 = 100,
                nthpp   ::Int64                 = 10,
                K       ::Int64                 = 10,
                ϵi      ::Float64               = 0.4,
@@ -33,7 +33,7 @@ Created 25 08 2020
 
 Run insane for constant birth-death.
 """
-function insane_cbd(tree    ::sT_label, 
+function insane_cbd(tree    ::sT_label,
                     out_file::String;
                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -41,7 +41,7 @@ function insane_cbd(tree    ::sT_label,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
                     marginal::Bool                  = false,
-                    nitpp   ::Int64                 = 100, 
+                    nitpp   ::Int64                 = 100,
                     nthpp   ::Int64                 = 10,
                     K       ::Int64                 = 11,
                     ϵi      ::Float64               = 0.4,
@@ -53,13 +53,13 @@ function insane_cbd(tree    ::sT_label,
 
   n    = ntips(tree)
   th   = treeheight(tree)
-  stem = !iszero(e(tree))
+  stem = Int64(iszero(e(tree)))
 
   # set tips sampling fraction
   if isone(length(tρ))
-    tl = tiplabels(tree)
+    tl  = tiplabels(tree)
     tρu = tρ[""]
-    tρ = Dict(tl[i] => tρu for i in 1:n)
+    tρ  = Dict(tl[i] => tρu for i in 1:n)
   end
 
   # make fix tree directory
@@ -67,7 +67,7 @@ function insane_cbd(tree    ::sT_label,
 
   # starting parameters
   if isnan(λi) && isnan(μi)
-    λc, μc = moments(Float64(n), ti(idf[1]), ϵi)
+    λc, μc = moments(Float64(n), th, ϵi)
   else
     λc, μc = λi, μi
   end
@@ -81,14 +81,14 @@ function insane_cbd(tree    ::sT_label,
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(3) 
+  for i in Base.OneTo(3)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant birth-death with forward simulation"
+  @info "Running constant birth-death"
 
   # adaptive phase
-  llc, prc, λc, μc, mc = 
+  llc, prc, λc, μc, mc =
       mcmc_burn_cbd(Ξ, idf, λ_prior, μ_prior, nburn, λc, μc, mc, th, stem,
         pup, prints)
 
@@ -131,13 +131,13 @@ function insane_cbd(tree    ::sT_label,
     μ_rdist = (x1[1], x1[2])
 
     # marginal likelihood
-    pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, stem, 
+    pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, stem,
       λ_prior, μ_prior, λ_rdist, μ_rdist, nitpp, nthpp, βs, pup)
 
     # process with reference distribution the posterior
     p1 = Vector{Float64}(undef, size(r,1))
     for i in Base.OneTo(size(r,1))
-      p1[i] = r[i,2] + r[i,3] - 
+      p1[i] = r[i,2] + r[i,3] -
               logdgamma(r[i,4], λ_rdist[1], λ_rdist[2]) -
               logdtnorm(r[i,5], μ_rdist[1], μ_rdist[2])
     end
@@ -168,7 +168,7 @@ end
                   mc     ::Float64,
                   th     ::Float64,
                   stem   ::Bool,
-                  pup    ::Array{Int64,1}, 
+                  pup    ::Array{Int64,1},
                   prints ::Int64)
 
 Adaptive MCMC phase for da chain for constant birth-death using forward
@@ -183,19 +183,18 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
                        μc     ::Float64,
                        mc     ::Float64,
                        th     ::Float64,
-                       stem   ::Bool,
-                       pup    ::Array{Int64,1}, 
+                       stem   ::Int64,
+                       pup    ::Array{Int64,1},
                        prints ::Int64)
 
   el  = lastindex(idf)
   L   = treelength(Ξ)     # tree length
-  ns  = Float64(el-1)/2.0 # number of speciation events
+  ns  = Float64(el-1)*0.5 # number of speciation events
   ne  = 0.0               # number of extinction events
-  nsi = stem ? 0.0 : log(λc)
 
   # likelihood
-  llc = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
+  llc = llik_cbd(Ξ, λc, μc) - Float64(stem) * log(λc) + log(mc) + prob_ρ(idf)
+  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -209,13 +208,13 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
       # λ proposal
       if p === 1
 
-        llc, prc, λc, mc = 
+        llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
       # μ proposal
       elseif p === 2
 
-        llc, prc, μc, mc = 
+        llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
       # forward simulation proposal proposal
@@ -249,7 +248,7 @@ end
              μ_prior::NTuple{2,Float64},
              niter  ::Int64,
              nthin  ::Int64,
-             pup    ::Array{Int64,1}, 
+             pup    ::Array{Int64,1},
              prints ::Int64)
 
 MCMC da chain for constant birth-death using forward simulation.
@@ -262,12 +261,12 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
                   μc     ::Float64,
                   mc     ::Float64,
                   th     ::Float64,
-                  stem   ::Bool,
+                  stem   ::Int64,
                   λ_prior::NTuple{2,Float64},
                   μ_prior::NTuple{2,Float64},
                   niter  ::Int64,
                   nthin  ::Int64,
-                  pup    ::Array{Int64,1}, 
+                  pup    ::Array{Int64,1},
                   prints ::Int64)
 
   el = lastindex(idf)
@@ -296,25 +295,25 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
       # λ proposal
       if p === 1
 
-        llc, prc, λc, mc = 
+        llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, stem, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - stem * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       # μ proposal
       elseif p === 2
 
-        llc, prc, μc, mc = 
+        llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, stem, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - stem * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
 
       # forward simulation proposal proposal
@@ -323,10 +322,10 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         bix = ceil(Int64,rand()*el)
         llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
-        # llci = llik_cbd(Ξ, λc, μc) + scond(λc, μc, sns) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - stem * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
-        #    return 
+        #    return
         # end
       end
     end
@@ -342,7 +341,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        push!(treev, couple(deepcopy(Ξ), idf, 1))
+        push!(treev, couple(copy_Ξ(Ξ), idf, 1))
       end
       lthin = 0
     end
@@ -407,13 +406,13 @@ function ref_posterior(Ξ      ::Vector{sTbd},
   nsi = stem ? 0.0 : log(λc)
 
   llc = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
+  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
   for k in 2:K
 
     βi  = βs[k]
-    rdc = logdgamma(λc, λ_rdist[1], λ_rdist[2]) + 
+    rdc = logdgamma(λc, λ_rdist[1], λ_rdist[2]) +
           logdtnorm(μc, μ_rdist[1], μ_rdist[2])
 
     # logging
@@ -428,15 +427,15 @@ function ref_posterior(Ξ      ::Vector{sTbd},
         # λ proposal
         if p === 1
 
-          llc, prc, rdc, λc, mc = 
-            update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, stem, 
+          llc, prc, rdc, λc, mc =
+            update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, stem,
               λ_prior, λ_rdist, βi)
 
         # forward simulation proposal proposal
-        elseif p === 2 
+        elseif p === 2
 
-          llc, prc, rdc, μc, mc = 
-            update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, stem, 
+          llc, prc, rdc, μc, mc =
+            update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, stem,
               μ_prior, μ_rdist, βi)
 
         else
@@ -466,70 +465,48 @@ end
 
 
 """
-    update_fs!(bix  ::Int64,
-               Ξ    ::Vector{sTbd},
-               idf  ::Vector{iBffs},
-               llc  ::Float64,
-               λ    ::Float64, 
-               μ    ::Float64,
-               ns   ::Float64,
-               ne   ::Float64,
-               L    ::Float64)
+    update_fs!(bix::Int64,
+               Ξ  ::Vector{sTbd},
+               idf::Vector{iBffs},
+               llc::Float64,
+               λ  ::Float64,
+               μ  ::Float64,
+               ns ::Float64,
+               ne ::Float64,
+               L  ::Float64)
 
 Forward simulation proposal function for constant birth-death.
 """
-function update_fs!(bix    ::Int64,
-                    Ξ      ::Vector{sTbd},
-                    idf    ::Vector{iBffs},
-                    llc    ::Float64,
-                    λ      ::Float64, 
-                    μ      ::Float64,
-                    ns     ::Float64,
-                    ne     ::Float64,
-                    L      ::Float64)
+function update_fs!(bix::Int64,
+                    Ξ  ::Vector{sTbd},
+                    idf::Vector{iBffs},
+                    llc::Float64,
+                    λ  ::Float64,
+                    μ  ::Float64,
+                    ns ::Float64,
+                    ne ::Float64,
+                    L  ::Float64)
 
   bi = idf[bix]
 
-  # forward simulate an internal branch
-  ξp, np, ntp = fsbi(bi, λ, μ, 100)
+   # if terminal
+  if it(bi)
+    ξp, llr = fsbi_t(bi, λ, μ)
+  else
+    ξp, llr = fsbi_i(bi, λ, μ)
+  end
 
-  # retained conditional on survival
-  if ntp > 0
-
-    itb = it(bi) # is it terminal
-    ρbi = ρi(bi) # get branch sampling fraction
-    nc  = ni(bi) # current ni
-    ntc = nt(bi) # current nt
-
-    # current tree
+  if isfinite(llr)
     ξc  = Ξ[bix]
 
-    # if terminal branch
-    if itb
-      llr = log(Float64(np)/Float64(nc) * (1.0 - ρbi)^(np - nc))
-      acr = 0.0
-    else
-      np  -= 1
-      llr = log((1.0 - ρbi)^(np - nc))
-      acr = log(Float64(ntp)/Float64(ntc))
-    end
+    # update llc, ns, ne & L
+    llc += llik_cbd(ξp, λ, μ) - llik_cbd(ξc, λ, μ) + llr
+    ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
+    ne  += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
+    L   += treelength(ξp)             - treelength(ξc)
 
-    # MH ratio
-    if -randexp() < llr + acr
-
-      # update ns, ne & L
-      ns += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
-      ne += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
-      L  += treelength(ξp)             - treelength(ξc)
-
-      # likelihood ratio
-      llr += llik_cbd(ξp, λ, μ) - llik_cbd(ξc, λ, μ)
-
-      Ξ[bix] = ξp     # set new decoupled tree
-      llc += llr      # set new likelihood
-      setni!(bi, np)  # set new ni
-      setnt!(bi, ntp) # set new nt
-    end
+    # set new decoupled tree
+    Ξ[bix] = ξp
   end
 
   return llc, ns, ne, L
@@ -538,77 +515,140 @@ end
 
 
 
-
 """
-    fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
+    fsbi(bi::iBffs, λ::Float64, μ::Float64)
 
-Forward simulation for branch `bi`
+Forward simulation for terminal branch.
 """
-function fsbi(bi::iBffs, λ::Float64, μ::Float64, ntry::Int64)
+function fsbi_t(bi::iBffs, λ::Float64, μ::Float64)
 
-  # times
-  tfb = tf(bi)
+  nac = ni(bi)         # current ni
+  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  lU  = -randexp()     # log-probability
 
-  ext = 0
-  # condition on non-extinction (helps in mixing)
-  while ext < ntry 
-    ext += 1
+  # current ll
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
-    # forward simulation during branch length
-    t0, na = sim_cbd(e(bi), λ, μ, 0)
+  # forward simulation during branch length
+  t0, na, nn, llr =
+    _sim_cbd_t(e(bi), λ, μ, lc, lU, Iρi, 0, 1, 500)
 
-    nat = na
+  if na > 0 && isfinite(llr)
+    _fixrtip!(t0, na) # fix random tip
+    setni!(bi, na)    # set new ni
 
-    if isone(na)
-      fixalive!(t0)
-
-      return t0, na, nat
-    elseif na > 1
-      # fix random tip
-      fixrtip!(t0)
-
-      if !it(bi)
-        # add tips until the present
-        tx, na = tip_sims!(t0, tfb, λ, μ, na)
-      end
-
-      return t0, na, nat
-    end
+    return t0, llr
+  else
+    return t0, -Inf
   end
-
-  return sTbd(), 0, 0
 end
 
 
 
 
 """
-    tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64)
+    fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
 
-Continue simulation until time `t` for unfixed tips in `tree`. 
+Forward simulation for internal branch.
 """
-function tip_sims!(tree::sTbd, t::Float64, λ::Float64, μ::Float64, na::Int64)
+function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
 
-  if istip(tree) 
-    if !isfix(tree) && isalive(tree)
+  t0, na, nn = _sim_cbd_i(e(bi), λ, μ, 0, 1, 500)
 
-      # simulate
-      stree, na = sim_cbd(t, λ, μ, na-1)
-
-      # merge to current tip
-      sete!(tree, e(tree) + e(stree))
-      setproperty!(tree, :iμ, isextinct(stree))
-      if isdefined(stree, :d1)
-        tree.d1 = stree.d1
-        tree.d2 = stree.d2
-      end
-    end
-  else
-    tree.d1, na = tip_sims!(tree.d1, t, λ, μ, na)
-    tree.d2, na = tip_sims!(tree.d2, t, λ, μ, na)
+  if na < 1 || nn >= 500
+    return t0, NaN
   end
 
-  return tree, na
+  ntp = na
+
+  lU = -randexp() #log-probability
+
+  # continue simulation only if acr on sum of tip rates is accepted
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  if lU < acr
+
+    _fixrtip!(t0, na) # fix random tip
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr
+      na -= 1
+      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      setnt!(bi, ntp)                    # set new nt
+      setni!(bi, na)                 # set new ni
+
+      return t0, llr
+    end
+  end
+
+  return t0, NaN
+end
+
+
+
+
+"""
+    tip_sims!(tree::sTbd,
+              t   ::Float64,
+              λ   ::Float64,
+              μ   ::Float64,
+              lr  ::Float64,
+              lU  ::Float64,
+              Iρi ::Float64,
+              na  ::Int64)
+
+Continue simulation until time `t` for unfixed tips in `tree`.
+"""
+function tip_sims!(tree::sTbd,
+                   t   ::Float64,
+                   λ   ::Float64,
+                   μ   ::Float64,
+                   lr  ::Float64,
+                   lU  ::Float64,
+                   Iρi ::Float64,
+                   na  ::Int64,
+                   nn ::Int64)
+
+  if lU < lr && nn < 500
+
+    if istip(tree)
+      if !isfix(tree) && isalive(tree)
+
+        # simulate
+        stree, na, nn, lr = 
+          _sim_cbd_it(t, λ, μ, lr, lU, Iρi, na-1, nn, 500)
+
+        if isnan(lr) || nn >= 500
+          return tree, na, nn, NaN
+        end
+
+        # merge to current tip
+        sete!(tree, e(tree) + e(stree))
+        setproperty!(tree, :iμ, isextinct(stree))
+        if isdefined(stree, :d1)
+          tree.d1 = stree.d1
+          tree.d2 = stree.d2
+        end
+      end
+    else
+      tree.d1, na, nn, lr = tip_sims!(tree.d1, t, λ, μ, lr, lU, Iρi, na, nn)
+      tree.d2, na, nn, lr = tip_sims!(tree.d2, t, λ, μ, lr, lU, Iρi, na, nn)
+    end
+
+    return tree, na, nn, lr
+  end
+
+  return tree, na, nn, NaN
 end
 
 
@@ -636,18 +676,16 @@ function update_λ!(llc    ::Float64,
                    μc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   stem   ::Bool,
+                   stem   ::Int64,
                    λ_prior::NTuple{2,Float64})
 
-  nsi = stem ? 0.0 : 1.0
+  λp  = randgamma(λ_prior[1] + ns - Float64(stem), λ_prior[2] + L)
 
-  λp  = randgamma(λ_prior[1] + ns - nsi, λ_prior[2] + L)
-
-  mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
-  llr = log(mp/mc) 
+  mp  = m_surv_cbd(th, λp, μc, 1_000, stem)
+  llr = log(mp/mc)
 
   if -randexp() < llr
-    llc += (ns - nsi) * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - Float64(stem)) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     λc   = λp
     mc   = mp
@@ -685,20 +723,18 @@ function update_λ!(llc    ::Float64,
                    μc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   stem   ::Bool,
+                   stem   ::Int64,
                    λ_prior::NTuple{2,Float64},
                    λ_rdist::NTuple{2,Float64},
                    pow    ::Float64)
 
-  nsi = stem ? 0.0 : 1.0
-
-  λp  = randgamma((λ_prior[1] + ns - nsi) * pow + λ_rdist[1] * (1.0 - pow),
-                  (λ_prior[2] + L) * pow          + λ_rdist[2] * (1.0 - pow)) 
-  mp  = m_surv_cbd(th, λp, μc, 1_000, stem) 
+  λp  = randgamma((λ_prior[1] + ns - Float64(stem)) * pow + λ_rdist[1] * (1.0 - pow),
+                  (λ_prior[2] + L) * pow         + λ_rdist[2] * (1.0 - pow))
+  mp  = m_surv_cbd(th, λp, μc, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < (pow * llr)
-    llc += (ns - nsi) * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - Float64(stem)) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     rdc += llrdgamma(λp, λc, λ_rdist[1], λ_rdist[2])
     λc   = λp
@@ -733,13 +769,13 @@ function update_μ!(llc    ::Float64,
                    λc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   stem   ::Bool,
+                   stem   ::Int64,
                    μ_prior::NTuple{2,Float64})
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
   mp  = m_surv_cbd(th, λc, μp, 1_000, stem)
-  llr = log(mp/mc) 
+  llr = log(mp/mc)
 
   if -randexp() < llr
     llc += ne * log(μp/μc) + L * (μc - μp) + llr
@@ -782,7 +818,7 @@ function update_μ!(llc    ::Float64,
                    λc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   stem   ::Bool,
+                   stem   ::Int64,
                    μ_prior::NTuple{2,Float64},
                    μ_rdist::NTuple{2,Float64},
                    pow    ::Float64)

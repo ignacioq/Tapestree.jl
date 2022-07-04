@@ -12,14 +12,13 @@ Created 03 09 2020
 
 
 
-
 """
     time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
 
 Return quantiles given by probabilities `p` vector.
 """
 function time_quantile(r::Array{Array{Float64,1},1}, p::Array{Float64,1})
-  
+
   fx = Array{Float64,2}(undef, lastindex(r), lastindex(p))
   for (i, ri) in enumerate(r)
     fx[i,:] = quantile(ri, p)
@@ -30,11 +29,10 @@ end
 
 
 
-
 """
     time_fun(f::Function, r::Array{Array{Float64,1},1})
 
-Apply function `f` to each vector in `r` and return the value. 
+Apply function `f` to each vector in `r` and return the value.
 """
 function time_fun(f::Function, r::Array{Array{Float64,1},1})
   lr = lastindex(r)
@@ -49,11 +47,11 @@ end
 
 
 """
-    time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
+    time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iT}
 
 Extract values from `lv` function at times sampled every `tdt` across the tree.
 """
-function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
+function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iT}
 
   th = treeheight(tree)
 
@@ -64,7 +62,7 @@ function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iTgbm}
   # make vector of vector to push rates
   r = [Float64[] for i in Base.OneTo(lastindex(ts))]
 
-  # do recursive 
+  # do recursive
   _time_rate!(tree, ts, tdt, r, 1, th, lv)
   pop!(r)
   pop!(ts)
@@ -76,48 +74,56 @@ end
 
 
 """
-    _time_rate!(tree::T, 
+    _time_rate!(tree::T,
                ts  ::Array{Float64,1},
-               tdt ::Float64, 
-               r   ::Array{Array{Float64,1},1}, 
+               tdt ::Float64,
+               r   ::Array{Array{Float64,1},1},
                tii ::Int64,
                ct  ::Float64,
-               lv  ::Function) where {T <: iTgbm}
+               lv  ::Function) where {T <: iT}
 
 Extract values from `lv` function at times `ts` across the tree.
 """
-@inline function _time_rate!(tree::T, 
+@inline function _time_rate!(tree::T,
                              ts  ::Array{Float64,1},
-                             tdt ::Float64, 
-                             r   ::Array{Array{Float64,1},1}, 
+                             tdt ::Float64,
+                             r   ::Array{Array{Float64,1},1},
                              tii ::Int64,
                              ct  ::Float64,
-                             lv  ::Function) where {T <: iTgbm}
+                             lv  ::Function) where {T <: iT}
 
   et = e(tree)
   δt = dt(tree)
   vt = lv(tree)
 
-  nts = Int64(fld(et - (ct - ts[tii]), tdt))
+  if isapprox(ct, 0.0, atol = 1e-10)
+    return nothing
+  end
+
+  nts, re = divrem(et - (ct - ts[tii]), tdt, RoundDown)
+  nts = convert(Int64,nts) - (iszero(re) ? 1 : 0)
   tsr = tii:(tii + nts)
 
   # have to match ts times to lv vector
   @simd for i in tsr
     tsi = ts[i]
     bt  = ct - tsi
-    ix  = fld(bt, δt)
+    ix  = div(bt, δt, RoundDown)
     tts = δt *  ix
     ttf = δt * (ix + 1.0)
     Ix  = Int64(ix) + 1
     push!(r[i], linpred(bt, tts, ttf, vt[Ix], vt[Ix+1]))
   end
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     _time_rate!(tree.d1, ts, tdt, r, tii + nts + 1, ct - et, lv)
-    _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
+    if def2(tree)
+      _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
+    end
   end
-end
 
+  return nothing
+end
 
 
 
@@ -125,14 +131,14 @@ end
 """
     mcmc_array(treev::Array{T,1},
                δt   ::Float64,
-               lv   ::Function) where {T <: iTgbm}
+               lv   ::Function) where {T <: iT}
 
 Return an Array with a row for each sampled tree for interpolated
 parameters accessed by `lv` at times determined by `δt`.
 """
 function mcmc_array(treev::Array{T,1},
                     δt   ::Float64,
-                    lv   ::Function) where {T <: iTgbm}
+                    lv   ::Function) where {T <: iT}
 
   @inbounds begin
 
@@ -156,20 +162,20 @@ end
 
 
 """
-    extract_vector!(tree::T, 
-                    v   ::Array{Float64,1}, 
-                    nδt ::Float64, 
+    extract_vector!(tree::T,
+                    v   ::Array{Float64,1},
+                    nδt ::Float64,
                     ct  ::Float64,
-                    lv  ::Function) where {T <: iTgbm}
+                    lv  ::Function) where {T <: iT}
 
 Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
 and return a vector.
 """
-function extract_vector!(tree::T, 
-                         v   ::Array{Float64,1}, 
-                         nδt ::Float64, 
+function extract_vector!(tree::T,
+                         v   ::Array{Float64,1},
+                         nδt ::Float64,
                          ct  ::Float64,
-                         lv  ::Function) where {T <: iTgbm}
+                         lv  ::Function) where {T <: iT}
 
   et = e(tree)
   δt = dt(tree)
@@ -190,7 +196,7 @@ function extract_vector!(tree::T,
 
   append!(v, pv)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     extract_vector!(tree.d1::T, v, nδt, max(0.0, iti - et), lv)
     extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - et), lv)
   end
@@ -200,20 +206,20 @@ end
 
 
 """
-    extract_vector!(tree::sTfbd, 
-                    v   ::Array{Float64,1}, 
-                    nδt ::Float64, 
+    extract_vector!(tree::sTfbd,
+                    v   ::Array{Float64,1},
+                    nδt ::Float64,
                     ct  ::Float64,
-                    lv  ::Function) where {T <: iTgbm}
+                    lv  ::Function) where {T <: iT}
 
 Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
 and return a vector.
 """
-function extract_vector!(tree::sTfbd, 
-                         v   ::Array{Float64,1}, 
-                         nδt ::Float64, 
+function extract_vector!(tree::sTfbd,
+                         v   ::Array{Float64,1},
+                         nδt ::Float64,
                          ct  ::Float64,
-                         lv  ::Function) where {T <: iTgbm}
+                         lv  ::Function) where {T <: iT}
 
   et = e(tree)
   δt = dt(tree)
@@ -234,10 +240,10 @@ function extract_vector!(tree::sTfbd,
 
   append!(v, pv)
 
-  if isdefined(tree, :d1)
+  if def1(tree)
     extract_vector!(tree.d1::sTfbd, v, nδt, max(0.0, iti - et), lv)
   end
-  if isdefined(tree, :d2)
+  if def2(tree)
     extract_vector!(tree.d2::sTfbd, v, nδt, max(0.0, iti - et), lv)
   end
 end
@@ -246,11 +252,11 @@ end
 
 
 """
-    linearize_gbm(tree::T, lv::Function) where {T <: iTgbm}
+    linearize_gbm(tree::T, lv::Function) where {T <: iT}
 
 Extract the parameters given by `lv` into a linear Array.
 """
-function linearize_gbm(tree::T, lv::Function) where {T <: iTgbm}
+function linearize_gbm(tree::T, lv::Function) where {T <: iT}
   v = Float64[]
   _linearize_gbm!(tree, lv, v)
   return v
@@ -260,19 +266,19 @@ end
 
 
 """
-    _linearize_gbm!(tree::T, 
+    _linearize_gbm!(tree::T,
                     lv  ::Function,
-                    v   ::Array{Float64,1}) where {T <: iTgbm}
+                    v   ::Array{Float64,1}) where {T <: iT}
 
 Extract the parameters given by `lv` into a linear Array, initialized with an
 array `v`.
 """
-function _linearize_gbm!(tree::T, 
+function _linearize_gbm!(tree::T,
                          lv  ::Function,
-                         v   ::Array{Float64,1}) where {T <: iTgbm}
+                         v   ::Array{Float64,1}) where {T <: iT}
 
   append!(v, lv(tree))
-  if isdefined(tree, :d1)
+  if def1(tree)
     _linearize_gbm!(tree.d1::T, lv, v)
     _linearize_gbm!(tree.d2::T, lv, v)
   end
@@ -282,32 +288,32 @@ end
 
 
 """
-    _linearize_gbm!(tree::sTfbd, 
+    _linearize_gbm!(tree::sTfbd,
                     lv  ::Function,
-                    v   ::Array{Float64,1}) where {T <: iTgbm}
+                    v   ::Array{Float64,1}) where {T <: iT}
 
 Extract the parameters given by `lv` into a linear Array, initialized with an
 array `v`.
 """
-function _linearize_gbm!(tree::sTfbd, 
+function _linearize_gbm!(tree::sTfbd,
                          lv  ::Function,
-                         v   ::Array{Float64,1}) where {T <: iTgbm}
+                         v   ::Array{Float64,1}) where {T <: iT}
 
   append!(v, lv(tree))
-  if isdefined(tree, :d1) _linearize_gbm!(tree.d1::T, lv, v) end
-  if isdefined(tree, :d2) _linearize_gbm!(tree.d2::T, lv, v) end
+  if def1(tree) _linearize_gbm!(tree.d1::T, lv, v) end
+  if def2(tree) _linearize_gbm!(tree.d2::T, lv, v) end
 end
 
 
 
 
 """
-    extract_tree(tree::iTgbmpb, nδt::Float64)
+    extract_tree(tree::iTpb, nδt::Float64)
 
 Log-linearly predict Geometric Brownian motion for `lv` at times given by `nδt`,
 and return a tree.
 """
-function extract_tree(tree::iTgbmpb, nδt::Float64)
+function extract_tree(tree::iTpb, nδt::Float64)
 
   et = e(tree)
   δt = dt(tree)
@@ -332,25 +338,24 @@ function extract_tree(tree::iTgbmpb, nδt::Float64)
     nfdt = mod(et,nδt)
   end
 
-  if isdefined(tree, :d1)
-    iTgbmpb(extract_tree(tree.d1, nδt), 
+  if def1(tree)
+    iTpb(extract_tree(tree.d1, nδt),
             extract_tree(tree.d2, nδt), et, nδt, nfdt, pv)
   else
-    iTgbmpb(et, nδt, nfdt, pv)
+    iTpb(et, nδt, nfdt, pv)
   end
 end
 
 
 
 
-
 """
-    extractp(tree::iTgbmbd, nδt::Float64)
+    extractp(tree::iTbd, nδt::Float64)
 
-Log-linearly predict Geometric Brownian motion for `lλ` and `lμ` 
+Log-linearly predict Geometric Brownian motion for `lλ` and `lμ`
 at times given by `nδt`.
 """
-function extract_tree(tree::iTgbmbd, nδt::Float64)
+function extract_tree(tree::iTbd, nδt::Float64)
 
   et = e(tree)
   δt = dt(tree)
@@ -379,11 +384,11 @@ function extract_tree(tree::iTgbmbd, nδt::Float64)
     nfdt = mod(et,nδt)
   end
 
-  if isdefined(tree, :d1)
-    iTgbmbd(extract_tree(tree.d1, nδt), 
+  if def1(tree)
+    iTbd(extract_tree(tree.d1, nδt),
             extract_tree(tree.d2, nδt), et, nδt, nfdt, false, false, pλv, pμv)
   else
-    iTgbmbd(et, nδt, nfdt, false, false, pλv, pμv)
+    iTbd(et, nδt, nfdt, false, false, pλv, pμv)
   end
 end
 
@@ -395,7 +400,7 @@ end
 
 Estimate `y` at `x = val` according to linear interpolation for a range.
 """
-linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) = 
+linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) =
   (y1 + (val - x1)*(y2 - y1)/(x2 - x1))::Float64
 
 
@@ -404,11 +409,11 @@ linpred(val::Float64, x1::Float64, x2::Float64, y1::Float64, y2::Float64) =
 """
     idxrange(x::Array{Float64,1}, val::Float64)
 
-Get indexes in sorted vector `x` corresponding to the range in which 
+Get indexes in sorted vector `x` corresponding to the range in which
 `val` is in using a sort of uniroot algorithm.
 """
 function idxrange(x::Array{Float64,1}, val::Float64)
-  
+
   @inbounds begin
 
     a::Int64 = 1
@@ -418,7 +423,7 @@ function idxrange(x::Array{Float64,1}, val::Float64)
     end
 
     b::Int64 = lastindex(x)
-  
+
     if x[b] < val
       return b, false
     end
@@ -430,7 +435,7 @@ function idxrange(x::Array{Float64,1}, val::Float64)
       mid = div(b + a, 2)
     end
 
-    if x[a] == val 
+    if x[a] == val
       return a, false
     elseif x[b] == val
       return b, false
@@ -439,18 +444,18 @@ function idxrange(x::Array{Float64,1}, val::Float64)
     end
 
   end
-end 
+end
 
 
 
 
 """
-    iquantile(treev::Array{iTgbmce,1}, p::Float64)
+    iquantile(treev::Array{iTce,1}, p::Float64)
 
-Make an `iTgbmce` with the quantile specified by `p` in data specified in 
+Make an `iTce` with the quantile specified by `p` in data specified in
 function `lv`.
 """
-function iquantile(treev::Array{iTgbmce,1}, p::Float64)
+function iquantile(treev::Array{iTce,1}, p::Float64)
 
   nt = lastindex(treev)
   t1 = treev[1]
@@ -458,7 +463,7 @@ function iquantile(treev::Array{iTgbmce,1}, p::Float64)
   # make vector of lambdas
   vs = Array{Float64,1}[]
   for t in treev
-    push!(vs, lλ(t)) 
+    push!(vs, lλ(t))
   end
 
   sv = Float64[]
@@ -472,31 +477,32 @@ function iquantile(treev::Array{iTgbmce,1}, p::Float64)
   end
 
   if isdefined(t1, :d1)
-    treev1 = iTgbmce[]
+    treev1 = iTce[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
-    end 
-    treev2 = iTgbmce[]
+    end
+    treev2 = iTce[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
-    end 
+    end
 
-    iTgbmce(iquantile(treev1, p), iquantile(treev2, p),
+    iTce(iquantile(treev1, p), iquantile(treev2, p),
       e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
   else
-    iTgbmce(e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
+    iTce(e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
   end
 end
 
 
 
-"""
-    iquantile(treev::Array{iTgbmct,1}, p::Float64)
 
-Make an `iTgbmct` with the quantile specified by `p` in data specified in 
+"""
+    iquantile(treev::Array{iTct,1}, p::Float64)
+
+Make an `iTct` with the quantile specified by `p` in data specified in
 function `lv`.
 """
-function iquantile(treev::Array{iTgbmct,1}, p::Float64)
+function iquantile(treev::Vector{iTct}, p::Float64)
 
   nt = lastindex(treev)
   t1 = treev[1]
@@ -504,7 +510,7 @@ function iquantile(treev::Array{iTgbmct,1}, p::Float64)
   # make vector of lambdas
   vs = Array{Float64,1}[]
   for t in treev
-    push!(vs, lλ(t)) 
+    push!(vs, lλ(t))
   end
 
   sv = Float64[]
@@ -518,19 +524,19 @@ function iquantile(treev::Array{iTgbmct,1}, p::Float64)
   end
 
   if isdefined(t1,:d1)
-    treev1 = iTgbmct[]
+    treev1 = iTct[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
-    end 
-    treev2 = iTgbmct[]
+    end
+    treev2 = iTct[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
-    end 
+    end
 
-    iTgbmct(iquantile(treev1, p), iquantile(treev2, p),
+    iTct(iquantile(treev1, p), iquantile(treev2, p),
       e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
   else
-    iTgbmct(e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
+    iTct(e(t1), dt(t1), fdt(t1), isextinct(t1), true, sv)
   end
 
 end
@@ -539,11 +545,11 @@ end
 
 
 """
-    iquantile(reev::Vector{iTgbmpb}, p::Float64)
+    iquantile(reev::Vector{iTpb}, p::Float64)
 
-Make an `iTgbmpb` with the quantile specified by `p`.
+Make an `iTpb` with the quantile specified by `p`.
 """
-function iquantile(treev::Vector{iTgbmpb}, p::Float64)
+function iquantile(treev::Vector{iTpb}, p::Float64)
 
   nts = lastindex(treev)
   t1  = treev[1]
@@ -551,7 +557,7 @@ function iquantile(treev::Vector{iTgbmpb}, p::Float64)
   # make vector of lambdas
   vs = Array{Float64,1}[]
   for t in treev
-    push!(vs, lλ(t)) 
+    push!(vs, lλ(t))
   end
 
   sv = Float64[]
@@ -565,18 +571,18 @@ function iquantile(treev::Vector{iTgbmpb}, p::Float64)
   end
 
   if isdefined(t1, :d1)
-    treev1 = iTgbmpb[]
+    treev1 = iTpb[]
     for t in Base.OneTo(nts)
         push!(treev1, treev[t].d1)
-    end 
-    treev2 = iTgbmpb[]
+    end
+    treev2 = iTpb[]
     for t in Base.OneTo(nts)
         push!(treev2, treev[t].d2)
-    end 
-    iTgbmpb(iquantile(treev1, p), iquantile(treev2, p),
+    end
+    iTpb(iquantile(treev1, p), iquantile(treev2, p),
       e(t1), true, dt(t1), fdt(t1), sv)
   else
-    iTgbmpb(e(t1), true, dt(t1), fdt(t1), sv)
+    iTpb(e(t1), true, dt(t1), fdt(t1), sv)
   end
 end
 
@@ -584,15 +590,12 @@ end
 
 
 """
-    iquantile(treev::Array{T,1}, 
-              p    ::Float64, 
-              lv   ::Function) where {T <: iTgbm}
+    iquantile(treev::Vector{iTbd}, p::Float64)
 
-Make an `iTgbmbd` with the quantile specified by `p` in data specified in 
+Make an `iTbd` with the quantile specified by `p` in data specified in
 function `lv`.
 """
-function iquantile(treev::Array{iTgbmbd,1}, 
-                   p    ::Float64)
+function iquantile(treev::Vector{iTbd}, p::Float64)
 
   nt  = lastindex(treev)
 
@@ -602,8 +605,8 @@ function iquantile(treev::Array{iTgbmbd,1},
   vsλ = Array{Float64,1}[]
   vsμ = Array{Float64,1}[]
   for t in treev
-    push!(vsλ, lλ(t)) 
-    push!(vsμ, lμ(t)) 
+    push!(vsλ, lλ(t))
+    push!(vsμ, lμ(t))
   end
 
   svλ = Float64[]
@@ -621,23 +624,84 @@ function iquantile(treev::Array{iTgbmbd,1},
   end
 
   if isdefined(t1, :d1)
-    treev1 = iTgbmbd[]
+    treev1 = iTbd[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
-    end 
-    treev2 = iTgbmbd[]
+    end
+    treev2 = iTbd[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
-    end 
+    end
 
-    iTgbmbd(iquantile(treev1, p), 
-            iquantile(treev2, p), 
+    iTbd(iquantile(treev1, p),
+            iquantile(treev2, p),
             e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
   else
-    iTgbmbd(e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
+    iTbd(e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
   end
 end
 
+
+
+
+
+"""
+    iquantile(treev::Vector{iTfbd}, p::Float64)
+
+Make an `iTfbd` with the quantile specified by `p` in data specified in
+function `lv`.
+"""
+function iquantile(treev::Vector{iTfbd}, p::Float64)
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas and mus
+  vsλ = Array{Float64,1}[]
+  vsμ = Array{Float64,1}[]
+  for t in treev
+    push!(vsλ, lλ(t))
+    push!(vsμ, lμ(t))
+  end
+
+  svλ = Float64[]
+  svμ = Float64[]
+  # make fill vector to estimate statistics
+  vλ = Array{Float64,1}(undef, nt)
+  vμ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsλ[1]))
+    for t in Base.OneTo(nt)
+      vλ[t] = vsλ[t][i]
+      vμ[t] = vsμ[t][i]
+    end
+    push!(svλ, quantile(vλ, p))
+    push!(svμ, quantile(vμ, p))
+  end
+
+  if def1(t1)
+    treev1 = iTfbd[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+
+    if def2(t1)
+      treev2 = iTfbd[]
+      for t in Base.OneTo(nt)
+          push!(treev2, treev[t].d2)
+      end
+
+      iTfbd(iquantile(treev1, p),
+            iquantile(treev2, p),
+            e(t1), dt(t1), fdt(t1), false, false, false, svλ, svμ)
+    else
+      iTfbd(iquantile(treev1, p),
+            e(t1), dt(t1), fdt(t1), false, true, false, svλ, svμ)
+    end
+  else
+    iTfbd(e(t1), dt(t1), fdt(t1), false, isfossil(t1), false, svλ, svμ)
+  end
+end
 
 
 

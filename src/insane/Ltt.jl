@@ -10,6 +10,8 @@ Created 17 08 2021
 =#
 
 
+
+
 """
     Ltt
 
@@ -22,6 +24,11 @@ struct Ltt
   n::Array{Int64,1}
   t::Array{Float64,1}
 end
+
+# pretty-printing
+Base.show(io::IO, x::Ltt) =
+  print(io, "LTT plot starting at ", round(maximum(x.t), digits = 3), 
+            " with ", x.n[end], " extant tips")
 
 
 
@@ -45,17 +52,18 @@ end
 
 
 
+
 """
-    usample(t::Vector{Tuple{Float64, Float64}}, th::Float64, p::Float64)
+    usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
 
 Sample uniformly from a vector of start and end times given probability `p` of
-sampling over the sum of those times. 
+sampling over the sum of those times.
 """
 function usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
 
   tt = 0.0
   for (tii, tff) in t
-    tt += tff - tii
+    tt += tii - tff
   end
 
   # sample
@@ -66,10 +74,10 @@ function usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
     # find true t
     tt = 0.0
     for (tii, tff) in t
-      tt += tff - tii
+      tt += tii - tff
 
       if s < tt
-        return tii + tt - s
+        return tii - s
       end
     end
   end
@@ -80,7 +88,17 @@ end
 
 
 
+"""
+    nspt(x::Ltt, t::Float64) = x.n[searchsortedlast(x.t, t, rev = true)]
 
-
-
+Return the number of species at time t
+"""
+function nspt(x::Ltt, t::Float64)
+  ix = searchsortedlast(x.t, t, rev = true)
+  if iszero(ix)
+    return 0
+  else
+    return x.n[searchsortedlast(x.t, t, rev = true)]
+  end
+end
 

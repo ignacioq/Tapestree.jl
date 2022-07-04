@@ -42,9 +42,9 @@ setd2!(id::iBffs, d2::Int64) = id.d2[] = d2
 
 
 """
-    setni!(id::iBffs, ni::Int64) 
+    setni!(id::iBffs, ni::Int64)
 
-Set number of alive lineages at present. 
+Set number of alive lineages at present.
 """
 setni!(id::iBffs, ni::Int64) = id.ni[] = ni
 
@@ -54,7 +54,7 @@ setni!(id::iBffs, ni::Int64) = id.ni[] = ni
 """
     setnt!(id::iBffs, nt::Int64)
 
-Set number of alive lineages at time `t`. 
+Set number of alive lineages at time `t`.
 """
 setnt!(id::iBffs, nt::Int64) = id.nt[] = nt
 
@@ -62,9 +62,9 @@ setnt!(id::iBffs, nt::Int64) = id.nt[] = nt
 
 
 """
-    setλt!(id::iBffs, λt::Float64) 
+    setλt!(id::iBffs, λt::Float64)
 
-Set number of alive lineages at time `t`. 
+Set number of alive lineages at time `t`.
 """
 setλt!(id::iBffs, λt::Float64) = id.λt[] = λt
 
@@ -74,7 +74,7 @@ setλt!(id::iBffs, λt::Float64) = id.λt[] = λt
 """
     setμt!(id::iBffs, μt::Float64)
 
-Set number of alive lineages at time `t`. 
+Set number of alive lineages at time `t`.
 """
 setμt!(id::iBffs, μt::Float64) = id.μt[] = μt
 
@@ -84,7 +84,7 @@ setμt!(id::iBffs, μt::Float64) = id.μt[] = μt
 """
     setψt!(id::iBffs, ψt::Float64)
 
-Set number of alive lineages at time `t`. 
+Set number of alive lineages at time `t`.
 """
 setψt!(id::iBffs, ψt::Float64) = id.μt[] = ψt
 
@@ -94,7 +94,7 @@ setψt!(id::iBffs, ψt::Float64) = id.μt[] = ψt
 """
     addda!(id::iBf)
 
-Add `1` to number of data augmented branches. 
+Add `1` to number of data augmented branches.
 """
 addda!(id::iBf) = id.da[] += 1
 
@@ -104,7 +104,7 @@ addda!(id::iBf) = id.da[] += 1
 """
     rmda!(id::iBf)
 
-Substract `1` to number of data augmented branches. 
+Substract `1` to number of data augmented branches.
 """
 rmda!(id::iBf) = id.da[] -= 1
 
@@ -117,7 +117,7 @@ rmda!(id::iBf) = id.da[] -= 1
                idf  ::Array{iB,1},
                wbr  ::BitArray{1})
 
-Randomly select branch to graft a subtree with height `sth` onto tree 
+Randomly select branch to graft a subtree with height `sth` onto tree
 with height `th`.
 """
 function randbranch(th   ::Float64,
@@ -148,7 +148,7 @@ end
                idf::Array{iBf,1},
                ida::Array{iBa,1})
 
-Randomly select branch to graft a subtree with height `sth` onto tree 
+Randomly select branch to graft a subtree with height `sth` onto tree
 with height `th`.
 """
 function randbranch(th ::Float64,
@@ -173,15 +173,15 @@ end
 
 
 """
-    getbranch(rn ::Int64, 
-              wbf::BitArray{1}, 
+    getbranch(rn ::Int64,
+              wbf::BitArray{1},
               idf::Array{iBf,1})::Tuple{iBf,Int64}
 
-Sample one branch among those in `wbf` that are `true` according to 
+Sample one branch among those in `wbf` that are `true` according to
 randomly picked `rn`.
 """
-function getbranch(rn ::Int64, 
-                   wbf::BitArray{1}, 
+function getbranch(rn ::Int64,
+                   wbf::BitArray{1},
                    idf::Array{iBf,1})::Tuple{iBf,Int64}
 
   i::Int64 = 0
@@ -201,16 +201,15 @@ end
 
 
 """
-    getbranch(rn ::Int64, 
-              wba::BitArray{1}, 
+    getbranch(rn ::Int64,
+              wba::BitArray{1},
               idf::Array{iBa,1})::Tuple{iBa,Int64}
 
-Sample one branch among those in `wba` that are `true` according to 
+Sample one branch among those in `wba` that are `true` according to
 randomly picked `rn`.
 """
-
-function getbranch(rn ::Int64, 
-                   wba::BitArray{1}, 
+function getbranch(rn ::Int64,
+                   wba::BitArray{1},
                    ida::Array{iBa,1})::Tuple{iBa,Int64}
 
   i::Int64 = 0
@@ -230,13 +229,13 @@ end
 
 
 """
-    branchescut!(h  ::Float64, 
+    branchescut!(h  ::Float64,
                  wbf::BitArray{1},
                  idf::Array{iBf,1})::Int64
 
 Fill the bit array with branches that are cut by  `h`.
 """
-function branchescut!(h  ::Float64, 
+function branchescut!(h  ::Float64,
                       wbf::BitArray{1},
                       idf::Array{iBf,1})::Int64
 
@@ -263,16 +262,16 @@ end
 
 """
     branchescut!(h  ::Float64,
-                 wbf::BitArray{1}, 
+                 wbf::BitArray{1},
                  wba::BitArray{1},
                  idf::Array{iBf,1},
                  ida::Array{iBa,1})::Int64
 
-Fill the bit arrays with both fixed and augmented branches 
+Fill the bit arrays with both fixed and augmented branches
 that are cut by  `h`.
 """
 function branchescut!(h  ::Float64,
-                      wbf::BitArray{1}, 
+                      wbf::BitArray{1},
                       wba::BitArray{1},
                       idf::Array{iBf,1},
                       ida::Array{iBa,1})
@@ -311,12 +310,8 @@ end
 
 
 
-
-
-
-
 """
-    make_inodes(idf::Array{iBf, 1})
+    make_inodes(idf::Array{B, 1}) where B <: iBf
 
 Return all the internal node indices for a given `iBf` vector and a vector
 that is true for which ever daughter is a tip.
@@ -335,7 +330,7 @@ function make_inodes(idf::Array{B, 1}) where B <: iBf
     # d1
     d1 = findfirst(x -> dr(x) == drd1, idf)
     # d2
-    d2 = findfirst(x -> dr(x) == drd2, idf) 
+    d2 = findfirst(x -> dr(x) == drd2, idf)
 
     if !isnothing(d1) && !isnothing(d2)
       push!(inodes, pr)
@@ -348,9 +343,9 @@ function make_inodes(idf::Array{B, 1}) where B <: iBf
       # d1
       d11 = findfirst(x -> dr(x) == drd11, idf)
       # d2
-      d12 = findfirst(x -> dr(x) == drd12, idf) 
+      d12 = findfirst(x -> dr(x) == drd12, idf)
 
-      if isnothing(d11) && isnothing(d12) 
+      if isnothing(d11) && isnothing(d12)
         bit[1] = true
       end
 
@@ -359,9 +354,9 @@ function make_inodes(idf::Array{B, 1}) where B <: iBf
       # d1
       d21 = findfirst(x -> dr(x) == drd21, idf)
       # d2
-      d22 = findfirst(x -> dr(x) == drd22, idf) 
+      d22 = findfirst(x -> dr(x) == drd22, idf)
 
-      if isnothing(d21) && isnothing(d22) 
+      if isnothing(d21) && isnothing(d22)
         bit[2] = true
       end
       push!(terminus, bit)
@@ -395,7 +390,7 @@ function make_triads(idf::Array{iBffs, 1})
     drd2 = push!(copy(drpr), false)
 
     d1 = findfirst(x -> dr(x) == drd1, idf)
-    d2 = findfirst(x -> dr(x) == drd2, idf) 
+    d2 = findfirst(x -> dr(x) == drd2, idf)
 
     if !isnothing(d1) && !isnothing(d2)
       # push to triads

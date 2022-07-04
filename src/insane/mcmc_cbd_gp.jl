@@ -13,7 +13,7 @@ Created 25 08 2020
 
 
 """
-    insane_cbd_gp(tree    ::sTbd, 
+    insane_cbd_gp(tree    ::sTbd,
                   out_file::String;
                   λprior  ::Float64           = 0.1,
                   μprior  ::Float64           = 0.1,
@@ -32,7 +32,7 @@ Created 25 08 2020
 
 Run insane for constant pure-birth.
 """
-function insane_cbd_gp(tree    ::sTbd, 
+function insane_cbd_gp(tree    ::sTbd,
                        out_file::String;
                        λprior  ::Float64,
                        μprior  ::Float64,
@@ -60,7 +60,7 @@ function insane_cbd_gp(tree    ::sTbd,
 
   # make parameter updates scaling function for tuning
   pup = Int64[]
-  for i in Base.OneTo(4) 
+  for i in Base.OneTo(4)
     append!(pup, fill(i, Int64(100.0 * pupdp[i])))
   end
 
@@ -82,9 +82,9 @@ function insane_cbd_gp(tree    ::sTbd,
   @info "Running constant birth-death with graft prune"
 
   # adaptive phase
-  llc, prc, tree, λc, μc, λtn, μtn, idf, dabr = 
-      mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior, 
-        nburn, ϵi, λi, μi, λtni, μtni, scalef, idf, wbf, dabr, pup, pupdp, 
+  llc, prc, tree, λc, μc, λtn, μtn, idf, dabr =
+      mcmc_burn_cbd(tree, n, th, tune_int, λprior, μprior,
+        nburn, ϵi, λi, μi, λtni, μtni, scalef, idf, wbf, dabr, pup, pupdp,
         prints, svf)
 
   # mcmc
@@ -92,7 +92,7 @@ function insane_cbd_gp(tree    ::sTbd,
         niter, nthin, λtn, μtn, th, idf, wbf, dabr, pup, pupdp, prints, svf)
 
   pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2), 
+                ("mu"          => 2),
                 ("n_extinct"   => 3),
                 ("tree_length" => 4))
 
@@ -113,8 +113,8 @@ end
                   λprior  ::Float64,
                   μprior  ::Float64,
                   nburn   ::Int64,
-                  λtni    ::Float64, 
-                  μtni    ::Float64, 
+                  λtni    ::Float64,
+                  μtni    ::Float64,
                   scalef  ::Function,
                   λprior  ::Float64,
                   μprior  ::Float64,
@@ -134,13 +134,13 @@ function mcmc_burn_cbd(tree    ::sTbd,
                        ϵi      ::Float64,
                        λi      ::Float64,
                        μi      ::Float64,
-                       λtni    ::Float64, 
-                       μtni    ::Float64, 
+                       λtni    ::Float64,
+                       μtni    ::Float64,
                        scalef  ::Function,
                        idf     ::Array{iBf,1},
                        wbf     ::BitArray{1},
                        dabr    ::Array{Int64,1},
-                       pup     ::Array{Int64,1}, 
+                       pup     ::Array{Int64,1},
                        pupdp   ::NTuple{4,Float64},
                        prints  ::Int64,
                        svf     ::Function)
@@ -181,12 +181,12 @@ function mcmc_burn_cbd(tree    ::sTbd,
         llc, prc, μc = μp(tree, llc, prc, μc, lac, μtn, λc, μprior, th, svf)
         lup[2] += 1.0
       end
-      
+
       # graft proposal
       if p == 3
         tree, llc = graftp(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
       end
-      
+
       # prune proposal
       if p == 4
         tree, llc = prunep(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
@@ -222,7 +222,7 @@ end
              niter ::Int64,
              nthin ::Int64,
              λtn   ::Float64,
-             μtn   ::Float64, 
+             μtn   ::Float64,
              th    ::Float64,
              idf   ::Array{iBf,1},
              wbf   ::BitArray{1},
@@ -240,12 +240,12 @@ function mcmc_cbd(tree  ::sTbd,
                   niter ::Int64,
                   nthin ::Int64,
                   λtn   ::Float64,
-                  μtn   ::Float64, 
+                  μtn   ::Float64,
                   th    ::Float64,
                   idf   ::Array{iBf,1},
                   wbf   ::BitArray{1},
                   dabr  ::Array{Int64,1},
-                  pup   ::Array{Int64,1}, 
+                  pup   ::Array{Int64,1},
                   pupdp ::NTuple{4,Float64},
                   prints::Int64,
                   svf   ::Function)
@@ -273,12 +273,12 @@ function mcmc_cbd(tree  ::sTbd,
       if p == 2
         llc, prc, μc = μp(tree, llc, prc, μc, μtn, λc, μprior, th, svf)
       end
-      
+
       # graft proposal
       if p == 3
         tree, llc = graftp(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
       end
-      
+
       # prune proposal
       if p == 4
         tree, llc = prunep(tree, llc, λc, μc, th, idf, wbf, dabr, pupdp)
@@ -316,7 +316,7 @@ end
            λc  ::Float64,
            μc  ::Float64,
            th  ::Float64,
-           idf ::Array{iBf,1}, 
+           idf ::Array{iBf,1},
            wbf ::BitArray{1},
            dabr::Array{Int64,1},
            pupdp::NTuple{4,Float64})
@@ -328,12 +328,12 @@ function graftp(tree::sTbd,
                 λc  ::Float64,
                 μc  ::Float64,
                 th  ::Float64,
-                idf ::Array{iBf,1}, 
+                idf ::Array{iBf,1},
                 wbf ::BitArray{1},
                 dabr::Array{Int64,1},
                 pupdp::NTuple{4,Float64})
 
-  #λn, μn = λμprop() 
+  #λn, μn = λμprop()
 
   #simulate extinct lineage
   t0, t0h = sim_cbd_b(λc, μc, th, 100)
@@ -345,11 +345,11 @@ function graftp(tree::sTbd,
     h, br, bri, nbh  = randbranch(th, t0h, idf, wbf)
 
     # proposal ratio
-    lpr = log(2.0 * μc * (th - t0h) * Float64(nbh) * pupdp[4]) - 
+    lpr = log(2.0 * μc * (th - t0h) * Float64(nbh) * pupdp[4]) -
           log((Float64(lastindex(dabr)) + 1.0) * pupdp[3])
 
     # likelihood ratio
-    llr = llik_cbd(t0, λc, μc) + log(2.0*λc) 
+    llr = llik_cbd(t0, λc, μc) + log(2.0*λc)
 
     if -randexp() < lpr #+ llr
       llc += llr
@@ -375,7 +375,7 @@ end
            λc  ::Float64,
            μc  ::Float64,
            th  ::Float64,
-           idf ::Array{iBf,1}, 
+           idf ::Array{iBf,1},
            wbf ::BitArray{1},
            dabr::Array{Int64,1},
            pupdp::NTuple{4,Float64})
@@ -387,7 +387,7 @@ function prunep(tree::sTbd,
                 λc  ::Float64,
                 μc  ::Float64,
                 th  ::Float64,
-                idf ::Array{iBf,1}, 
+                idf ::Array{iBf,1},
                 wbf ::BitArray{1},
                 dabr::Array{Int64,1},
                 pupdp::NTuple{4,Float64})
@@ -412,7 +412,7 @@ function prunep(tree::sTbd,
           log(2.0 * μc * (th - th0) * Float64(nbh) * pupdp[4])
 
     # likelihood ratio
-    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) - 
+    llr = - stree_ll_cbd(tree, 0.0, λc, μc, dri, ldr, wpr, 0, 1) -
             log(2.0 * λc)
 
     if -randexp() < lpr #+ llr
