@@ -13,7 +13,7 @@ Created 11 02 2022
 
 
 """
-    insane_cfbd(tree     ::sTf_label, 
+    insane_cobd(tree     ::sTf_label, 
                 out_file ::String;
                 λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                 μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -35,7 +35,7 @@ Created 11 02 2022
 
 Run insane for constant fossilized birth-death.
 """
-function insane_cfbd(tree     ::sTf_label, 
+function insane_cobd(tree     ::sTf_label, 
                      out_file ::String;
                      λ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
                      μ_prior  ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -104,11 +104,11 @@ function insane_cfbd(tree     ::sTf_label,
   @info "Running constant fossilized birth-death with forward simulation"
 
   # adaptive phase
-  llc, prc, λc, μc = mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn, 
+  llc, prc, λc, μc = mcmc_burn_cobd(Ξ, idf, λ_prior, μ_prior, ψ_prior, nburn, 
                                     λc, μc, ψc, mc, th, stem, pup, prints)
 
   # mcmc
-  r, treev, λc, μc = mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior, 
+  r, treev, λc, μc = mcmc_cobd(Ξ, idf, llc, prc, λc, μc, ψc, λ_prior, μ_prior, 
                                ψ_prior, mc, th, stem, niter, nthin, pup, prints)
 
   pardic = Dict(("lambda"      => 1),
@@ -174,7 +174,7 @@ end
 
 
 """
-    mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
+    mcmc_burn_cobd(Ξ        ::Vector{sTfbd},
                    idf      ::Array{iBffs,1},
                    λ_prior  ::NTuple{2,Float64},
                    μ_prior  ::NTuple{2,Float64},
@@ -192,7 +192,7 @@ end
 Adaptive MCMC phase for da chain for constant fossilized birth-death using 
 forward simulation.
 """
-function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
+function mcmc_burn_cobd(Ξ        ::Vector{sTfbd},
                         idf      ::Array{iBffs,1},
                         λ_prior  ::NTuple{2,Float64},
                         μ_prior  ::NTuple{2,Float64},
@@ -214,7 +214,7 @@ function mcmc_burn_cfbd(Ξ        ::Vector{sTfbd},
   ne = 0.0                             # number of extinction events
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
+  llc = llik_cobd(Ξ, λc, μc, ψc) + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
         logdgamma(μc, μ_prior[1], μ_prior[2]) + 
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])
@@ -259,7 +259,7 @@ end
 
 
 """
-    mcmc_cfbd(Ξ        ::Vector{sTfbd},
+    mcmc_cobd(Ξ        ::Vector{sTfbd},
               idf      ::Array{iBffs,1},
               llc      ::Float64,
               prc      ::Float64,
@@ -279,7 +279,7 @@ end
 
 MCMC da chain for constant fossilized birth-death using forward simulation.
 """
-function mcmc_cfbd(Ξ      ::Vector{sTfbd},
+function mcmc_cobd(Ξ      ::Vector{sTfbd},
                    idf     ::Array{iBffs,1},
                    llc     ::Float64,
                    prc     ::Float64,
@@ -425,7 +425,7 @@ function ref_posterior(Ξ        ::Vector{sTfbd},
   
   nsi = stem ? 0.0 : log(λc)
 
-  llc = llik_cfbd(Ξ, λc, μc, ψc) - nsi + log(mc) + prob_ρ(idf)
+  llc = llik_cobd(Ξ, λc, μc, ψc) - nsi + log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) + 
         logdgamma(μc, μ_prior[1], μ_prior[2]) + 
         logdgamma(ψc, ψ_prior[1], ψ_prior[2])
@@ -550,7 +550,7 @@ function update_fs!(bix    ::Int64,
       L  +=   treelength(ξp)                - treelength(ξc)
 
       # likelihood ratio
-      llr += llik_cfbd(ξp, λ, μ, ψ) - llik_cfbd(ξc, λ, μ, ψ)
+      llr += llik_cobd(ξp, λ, μ, ψ) - llik_cobd(ξc, λ, μ, ψ)
 
       Ξ[bix] = ξp     # set new decoupled tree
       llc += llr      # set new likelihood
@@ -582,7 +582,7 @@ function fsbi(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64, ntry::Int64)
   while ext < ntry
 
     # forward simulation during branch length
-    t0, na, nfos = sim_cfbd(e(bi), λ, μ, ψ, 0, 0)
+    t0, na, nfos = sim_cobd(e(bi), λ, μ, ψ, 0, 0)
 
     if iszero(nfos) # Exclude if any fossil is sampled
       nat = na
@@ -641,7 +641,7 @@ function tip_sims!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64,
     if !isfix(tree) && isalive(tree)
 
       # simulate
-      stree, na, nfos = sim_cfbd(t, λ, μ, ψ, na-1, 0)
+      stree, na, nfos = sim_cobd(t, λ, μ, ψ, na-1, 0)
 
       if iszero(nfos)
         # merge to current tip
@@ -680,7 +680,7 @@ function fixedtip_sim!(tree::sTfbd, t::Float64, λ::Float64, μ::Float64,
   # tips
   if !defd1 && !defd2
     # simulate
-    stree, na, nfos = sim_cfbd(t, λ, μ, ψ, na-1, 0)
+    stree, na, nfos = sim_cobd(t, λ, μ, ψ, na-1, 0)
     if iszero(nfos)
       # merge to current tip
       tree.d1 = stree

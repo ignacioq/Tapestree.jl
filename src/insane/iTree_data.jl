@@ -1356,7 +1356,6 @@ Returns number of species through time.
         n[i+1] = n[i] + 1
       end
     end
-    n[l+2] = n[l+1]  # add a point at present
   end
 
   sort!(se, rev = true)
