@@ -87,7 +87,6 @@ function insane_gbmce(tree    ::sT_label,
     λc, μc = λi, μi
   end
   mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 5_000, stem)
-  # mc = 1.0
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTce)
@@ -832,7 +831,6 @@ function update_α!(αc     ::Float64,
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
   mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 5_000, stem)
-  # mp = 1.0
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -890,7 +888,6 @@ function update_σ!(σλc     ::Float64,
   σλp  = sqrt(σλp2)
 
   mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 5_000, stem)
-  # mp = 1.0
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -942,7 +939,6 @@ function update_μ!(μc     ::Float64,
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
   mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 5_000, stem)
-  # mp = 1.0
   llr = log(mp/mc)
 
   if -randexp() < llr
