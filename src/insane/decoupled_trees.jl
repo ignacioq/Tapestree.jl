@@ -104,7 +104,7 @@ function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTfbdX})
     iψ = isfossil(idfi)
     if iψ && it(idfi)
       push!(Ξ, sTfbdX(
-                 sTfbdX(1e-10, true, false, false, xfi, xfi),
+                 sTfbdX(1.0e-10, true, false, false, xfi, xfi),
                  e(idfi), false, true, true, xii, xfi))
     else
       push!(Ξ, sTfbdX(e(idfi), false, iψ, true, xii, xfi))
@@ -326,10 +326,10 @@ function make_Ξ(idf ::Vector{iBffs},
       lμl = lμv[l]
       xvl = xv[l]
       push!(Ξ, iTfbdX(
-                 iTfbdX(1e-10, δt, 1e-10, true, false, false, 
-                   Float64[lλl, rnorm(lλl + α*1e-10, 1e-5*σλ)], 
-                   Float64[lμl, rnorm(lμl,           1e-5*σμ)],
-                   Float64[xvl, rnorm(xvl,           1e-5*σx)]),
+                 iTfbdX(1.0e-10, δt, 1.0e-10, true, false, false, 
+                   Float64[lλl, rnorm(lλl + α*1.0e-10, 1.0e-5*σλ)], 
+                   Float64[lμl, rnorm(lμl,             1.0e-5*σμ)],
+                   Float64[xvl, rnorm(xvl,             1.0e-5*σx)]),
                  et, δt, fdti, false, true, true, lλv, lμv, xv))
     else
       push!(Ξ, iTfbdX(et, δt, fdti, false, isfossil(idfi), true, lλv, lμv, xv))
@@ -375,7 +375,7 @@ function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
     idfi = idf[i]
     iψ = isfossil(idfi)
     if iψ && it(idfi)
-      push!(Ξ, sTfbd(sTfbd(1e-10, true, false, false),
+      push!(Ξ, sTfbd(sTfbd(1.0e-10, true, false, false),
                      e(idfi), false, true, true))
     else
       push!(Ξ, sTfbd(e(idfi), false, iψ, true))
@@ -692,9 +692,9 @@ function make_Ξ(idf ::Vector{iBffs},
       lλl = lλv[l]
       lμl = lμv[l]
       push!(Ξ, iTfbd(
-                 iTfbd(1e-10, δt, 1e-10, true, false, false, 
-                   Float64[lλl, rnorm(lλl + α*1e-10, 1e-5*σλ)], 
-                   Float64[lμl, rnorm(lμl,           1e-5*σμ)]),
+                 iTfbd(1.0e-10, δt, 1.0e-10, true, false, false, 
+                   Float64[lλl, rnorm(lλl + α*1.0e-10, 1.0e-5*σλ)], 
+                   Float64[lμl, rnorm(lμl,             1.0e-5*σμ)]),
                  et, δt, fdti, false, true, true, lλv, lμv))
     else
       push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(idfi), true, lλv, lμv))
