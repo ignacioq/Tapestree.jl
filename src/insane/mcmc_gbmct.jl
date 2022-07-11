@@ -401,8 +401,6 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        # bix = 1
-
         llc, dλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dλ, ssλ, Σλ, mc, th, stem,
             δt, srδt, lλxpr)
