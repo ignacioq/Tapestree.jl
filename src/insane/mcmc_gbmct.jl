@@ -52,7 +52,7 @@ function insane_gbmct(tree    ::sT_label,
                       λi      ::Float64           = NaN,
                       σλi     ::Float64           = 0.01,
                       ϵi      ::Float64           = 0.2,
-                      ϵtni    ::Float64           = 1.0,
+                      ϵtni    ::Float64           = 0.1,
                       obj_ar  ::Float64           = 0.234,
                       pupdp   ::NTuple{5,Float64} = (0.01, 0.01, 0.01, 0.1, 0.2),
                       ntry    ::Int64             = 2,
@@ -972,7 +972,8 @@ function update_ϵ!(ϵc   ::Float64,
                    srδt ::Float64,
                    ϵxpr ::Float64)
 
-  ϵp  = mulupt(ϵc, ϵtn)::Float64
+  ϵp  = abs(addupt(ϵc, ϵtn))::Float64
+
   mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 5_000, stem)
 
   ϵr  = log(ϵp/ϵc)
@@ -980,7 +981,7 @@ function update_ϵ!(ϵc   ::Float64,
 
   prr = ϵp > ϵxpr ? -Inf : 0.0
 
-  if -randexp() < (llr + prr + ϵr)
+  if -randexp() < (llr + prr)
     llc += llr
     ϵc   = ϵp
     mc   = mp
@@ -1026,7 +1027,8 @@ function update_ϵ!(ϵc   ::Float64,
                    srδt ::Float64,
                    ϵxpr ::Float64)
 
-  ϵp  = mulupt(ϵc, rand() < 0.2 ? 4.0*ϵtn : ϵtn)::Float64
+  ϵp  = abs(addupt(ϵc, ϵtn))::Float64
+
   mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 5_000, stem)
 
   ϵr  = log(ϵp/ϵc)
@@ -1034,7 +1036,7 @@ function update_ϵ!(ϵc   ::Float64,
 
   prr = ϵp > ϵxpr ? -Inf : 0.0
 
-  if -randexp() < (llr + prr + ϵr)
+  if -randexp() < (llr + prr)
     llc += llr
     ϵc   = ϵp
     mc   = mp
