@@ -132,7 +132,7 @@ function insane_gbmfbd(tree    ::sTf_label,
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
     setλt!(bi, lλ(Ξ[i])[end])
-    if !it(idf[i]) || isfossil(idf[i])
+    if it(idf[i]) && !isfossil(idf[i])
       push!(inodes, i)
     end
     tib = ti(bi)
