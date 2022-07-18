@@ -837,7 +837,6 @@ function update_α!(αc     ::Float64,
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
   mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 5_000, crown)
-
   llr = log(mp/mc)
 
   if -randexp() < llr
