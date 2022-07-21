@@ -101,7 +101,7 @@ function insane_cfbd(tree    ::sTf_label,
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 1_000, crown)
+  mc = m_surv_cbd(th, λc, μc, 5_000, crown)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTfbd)
@@ -143,7 +143,7 @@ function insane_cfbd(tree    ::sTf_label,
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2))
   merge!(pardic, 
-    Dict("psi"*(iszero(nep) ? "" : string("_",i)) => 2+i 
+    Dict("psi"*(isone(nep) ? "" : string("_",i)) => 2+i 
            for i in Base.OneTo(nep)))
 
   write_ssr(r, pardic, out_file)
@@ -432,7 +432,13 @@ function update_fs!(bix ::Int64,
   ixi = eixi[bix]
 
   if isfossil(bi)
-    ξp, llr = fsbi_f(bi, λ, μ, ψ, ψts, ixi, eixf[bix])
+    ixf = eixf[bix]
+    ξp, llr = fsbi_f(bi, λ, μ, ψ, ψts, ixi, ixf)
+
+    # if terminal but not successful proposal, update extinct
+    if it(bi) && !isfinite(llr)
+      ξp, llr = fsbi_et(sTfbd_wofe(Ξ[bix]), bi, λ, μ, ψ, ψts, ixf)
+    end
   else
     if it(bi)
       ξp, llr = fsbi_t(bi, λ, μ, ψ, ψts, ixi)
@@ -515,11 +521,17 @@ end
 
 
 """
-    fsbi_f(bi::iBffs, λ::Float64, μ::Float64, ψ::Float64)
+    fsbi_f(bi ::iBffs,
+           λ  ::Float64,
+           μ  ::Float64,
+           ψ  ::Vector{Float64},
+           ψts::Vector{Float64},
+           ixi::Int64,
+           ixf::Int64)
 
 Forward simulation for fossil branch `bi`.
 """
-function fsbi_f(bi::iBffs,
+function fsbi_f(bi ::iBffs,
                 λ  ::Float64,
                 μ  ::Float64,
                 ψ  ::Vector{Float64},
@@ -576,6 +588,48 @@ function fsbi_f(bi::iBffs,
         return t0, llr
       end
     end
+  end
+
+  return t0, NaN
+end
+
+
+
+
+
+"""
+    fsbi_et(t0 ::sTfbd,
+            bi ::iBffs,
+            λ  ::Float64,
+            μ  ::Float64,
+            ψ  ::Vector{Float64},
+            ψts::Vector{Float64},
+            ixf::Int64)
+
+Forward simulation for extinct tip in terminal fossil branch.
+"""
+function fsbi_et(t0 ::sTfbd,
+                 bi ::iBffs,
+                 λ  ::Float64,
+                 μ  ::Float64,
+                 ψ  ::Vector{Float64},
+                 ψts::Vector{Float64},
+                 ixf::Int64)
+
+  lU  = -randexp()            # sampled probability
+  nac = ni(bi)                # current ni
+  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  tx, na, nn, acr =
+    fossiltip_sim!(t0, tf(bi), λ, μ, ψ, ψts, ixf, acr, lU, Iρi, 1, 1)
+
+  if lU < acr
+
+    llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+    setni!(bi, na)                 # set new ni
+
+    return t0, llr
   end
 
   return t0, NaN

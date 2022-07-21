@@ -412,13 +412,33 @@ Creates a copy of a `sTfbd` tree.
 """
 function sTfbd(tree::sTfbd)
   if def1(tree)
-    d1 = sTfbd(tree.d1)
     if def2(tree)
-      sTfbd(d1, sTfbd(tree.d2), e(tree),
+      sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree),
         isextinct(tree), isfossil(tree), isfix(tree))
     else
-      sTfbd(d1, e(tree),
+      sTfbd(sTfbd(tree.d1), e(tree),
         isextinct(tree), isfossil(tree), isfix(tree))
+    end
+  else
+    sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
+  end
+end
+
+
+
+
+"""
+    sTfbd_wofe(tree::sTfbd)
+
+Creates a copy of a `sTfbd` tree without fossils extinct tips.
+"""
+function sTfbd_wofe(tree::sTfbd)
+  if def1(tree)
+    if def2(tree)
+      sTfbd(sTfbd_wofe(tree.d1), sTfbd_wofe(tree.d2), e(tree),
+        isextinct(tree), isfossil(tree), isfix(tree))
+    else
+      sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
     end
   else
     sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))

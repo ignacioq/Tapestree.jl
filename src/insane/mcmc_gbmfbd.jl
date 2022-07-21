@@ -173,7 +173,7 @@ function insane_gbmfbd(tree    ::sTf_label,
                  "sigma_lambda" => 4,
                  "sigma_mu"     => 5))
   merge!(pardic,
-    Dict("psi"*(iszero(nep) ? "" : string("_",i)) => 5+i
+    Dict("psi"*(isone(nep) ? "" : string("_",i)) => 5+i
            for i in Base.OneTo(nep)))
 
   write_ssr(R, pardic, out_file)
