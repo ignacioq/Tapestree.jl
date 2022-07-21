@@ -65,16 +65,16 @@ mutable struct sT_label <: sT
   e ::Float64
   l ::String
 
-  sT_label(e::Float64, l::String) = 
+  sT_label(e::Float64, l::String) =
     (x = new(); x.e = e; x.l = l; x)
-  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) = 
+  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) =
     new(d1, d2, e, l)
 end
 
 # pretty-printing
 function Base.show(io::IO, t::sT_label)
   nt = ntips(t)
-  print(io, "insane simple labelled tree with ", nt, " tip", 
+  print(io, "insane simple labelled tree with ", nt, " tip",
     (isone(nt) ? "" : "s"))
 end
 
@@ -396,9 +396,9 @@ function Base.show(io::IO, t::sTfbd)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane simple fossil tree with ", 
-    nt , " tip",  (isone(nt) ? "" : "s" ), 
-    ", (", ntipsextinct(t)," extinct) and ", 
+  print(io, "insane simple fossil tree with ",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))
 end
 
@@ -433,13 +433,9 @@ end
 Creates a copy of a `sTfbd` tree without fossils extinct tips.
 """
 function sTfbd_wofe(tree::sTfbd)
-  if def1(tree)
-    if def2(tree)
+  if def1(tree) && def2(tree)
       sTfbd(sTfbd_wofe(tree.d1), sTfbd_wofe(tree.d2), e(tree),
         isextinct(tree), isfossil(tree), isfix(tree))
-    else
-      sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
-    end
   else
     sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
   end
@@ -1054,9 +1050,9 @@ function Base.show(io::IO, t::iTfbd)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane gbm-bd fossil tree with ", 
-    nt , " tip",  (isone(nt) ? "" : "s" ), 
-    ", (", ntipsextinct(t)," extinct) and ", 
+  print(io, "insane gbm-bd fossil tree with ",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))
 end
 
@@ -1084,6 +1080,27 @@ function iTfbd(tree::iTfbd)
       isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
   end
 end
+
+
+
+
+
+"""
+    iTfbd_wofe(tree::iTfbd)
+
+Creates a copy of a `iTfbd` tree without fossils extinct tips.
+"""
+function iTfbd_wofe(tree::iTfbd)
+  if def1(tree) && def2(tree)
+    iTfbd(iTfbd_wofe(tree.d1), iTfbd_wofe(tree.d2),
+      e(tree), dt(tree), fdt(tree), isextinct(tree), isfossil(tree),
+      isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+  else
+    iTfbd(e(tree), dt(tree), fdt(tree), isextinct(tree), isfossil(tree),
+      isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+  end
+end
+
 
 
 

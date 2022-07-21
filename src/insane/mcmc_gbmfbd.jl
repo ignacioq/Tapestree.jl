@@ -565,7 +565,15 @@ function update_fs!(bix ::Int64,
 
   if it(bi)
     if isfossil(bi)
-      ξp, llr = fsbi_t(bi, ξc, α, σλ, σμ, ψ, ψts, ixi, eixf[bix], δt, srδt)
+      ixf = eixf[bix]
+
+      ξp, llr = fsbi_t(bi, ξc, α, σλ, σμ, ψ, ψts, ixi, ixf, δt, srδt)
+
+      # if terminal but not successful proposal, update extinct
+      if !isfinite(llr)
+        ξp, llr = fsbi_et(iTfbd_wofe(ξc), bi, α, σλ, σμ, ψ, ψts, ixf,
+          δt, srδt)
+      end
     else
       ξp, llr = fsbi_t(bi, lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, ψ, ψts, ixi,
         δt, srδt)
@@ -752,6 +760,55 @@ function fsbi_t(bi  ::iBffs,
   return t0, NaN
 end
 
+
+
+
+"""
+    fsbi_et(t0  ::iTfbd,
+            bi  ::iBffs,
+            α   ::Float64,
+            σλ  ::Float64,
+            σμ  ::Float64,
+            ψ   ::Vector{Float64},
+            ψts ::Vector{Float64},
+            ixf ::Int64,
+            δt  ::Float64,
+            srδt::Float64)
+
+Forward simulation for fossil terminal branch `bi`.
+"""
+function fsbi_et(t0  ::iTfbd,
+                 bi  ::iBffs,
+                 α   ::Float64,
+                 σλ  ::Float64,
+                 σμ  ::Float64,
+                 ψ   ::Vector{Float64},
+                 ψts ::Vector{Float64},
+                 ixf ::Int64,
+                 δt  ::Float64,
+                 srδt::Float64)
+
+  nep = lastindex(ψts) + 1
+  lU  = -randexp()            # log-probability
+  nac = ni(bi)                # current ni
+  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  # if terminal fossil branch
+  tx, na, nn, acr =
+    fossiltip_sim!(t0, tf(bi), α, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
+      acr, lU, Iρi, 1, 1)
+
+  if lU < acr
+
+    llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+    setni!(bi, na)       # set new ni
+
+    return t0, llr
+  end
+
+  return t0, NaN
+end
 
 
 

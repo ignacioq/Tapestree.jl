@@ -596,7 +596,6 @@ end
 
 
 
-
 """
     fsbi_et(t0 ::sTfbd,
             bi ::iBffs,
@@ -616,7 +615,7 @@ function fsbi_et(t0 ::sTfbd,
                  ψts::Vector{Float64},
                  ixf::Int64)
 
-  lU  = -randexp()            # sampled probability
+  lU  = -randexp()            # log-probability
   nac = ni(bi)                # current ni
   Iρi = (1.0 - ρi(bi))        # branch sampling fraction
   acr = Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
