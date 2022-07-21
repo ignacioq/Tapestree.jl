@@ -55,14 +55,15 @@ function insane_gbmbd(tree    ::sT_label,
                       pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
                       δt      ::Float64           = 1e-3,
                       prints  ::Int64             = 5,
+                      survival::Bool              = true,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
-  n    = ntips(tree)
-  th   = treeheight(tree)
-  δt  *= max(0.1,round(th, RoundDown, digits = 2))
-  srδt = sqrt(δt)
-  crown = Int64(iszero(e(tree)))
+  n     = ntips(tree)
+  th    = treeheight(tree)
+  δt   *= max(0.1,round(th, RoundDown, digits = 2))
+  srδt  = sqrt(δt)
+  crown = survival ? Int64(iszero(e(tree))) : 2
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -106,7 +107,7 @@ function insane_gbmbd(tree    ::sT_label,
   @info "running birth-death gbm"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, σμc, mc  =
+  Ξ, idf, llc, prc, αc, σλc, σμc, mc =
     mcmc_burn_gbmbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
       nburn, αi, σλi, σμi, mc, th, crown, δt, srδt, inodes, pup, prints)
 
