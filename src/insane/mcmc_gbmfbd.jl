@@ -109,7 +109,7 @@ function insane_gbmfbd(tree    ::sTf_label,
     if def1(tree) && def2(tree) &&
        ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
       crown = 1
-    # if crown conditioning
+    # if stem conditioning
     else
       crown = 0
     end
@@ -1193,7 +1193,7 @@ function update_gbm!(bix  ::Int64,
                      ssμ  ::Float64,
                      mc   ::Float64,
                      th   ::Float64,
-                     crown ::Int64,
+                     crown::Int64,
                      δt   ::Float64,
                      srδt ::Float64,
                      lλxpr::Float64,
@@ -1221,8 +1221,8 @@ function update_gbm!(bix  ::Int64,
     # if crown
     if root
       llc, dλ, ssλ, ssμ, mc =
-        _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt,
-          lλxpr, lμxpr)
+        _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
+          δt, srδt, lλxpr, lμxpr, crown)
     end
 
     # updates within the parent branch

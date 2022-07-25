@@ -225,7 +225,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            δt, srδt, lλxpr, lμxpr)
+            crown, δt, srδt, lλxpr, lμxpr)
 
       # forward simulation update
       else
@@ -365,7 +365,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            δt, srδt, lλxpr, lμxpr)
+            crown, δt, srδt, lλxpr, lμxpr)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -710,7 +710,7 @@ end
 
 """
     update_gbm!(bix  ::Int64,
-                Ξ    ::Vector{iTbd},
+                Ξ    ::Vector{T},
                 idf  ::Vector{iBffs},
                 α    ::Float64,
                 σλ   ::Float64,
@@ -721,6 +721,7 @@ end
                 ssμ  ::Float64,
                 mc   ::Float64,
                 th   ::Float64,
+                crown::Int64
                 δt   ::Float64,
                 srδt ::Float64,
                 lλxpr::Float64,
@@ -740,6 +741,7 @@ function update_gbm!(bix  ::Int64,
                      ssμ  ::Float64,
                      mc   ::Float64,
                      th   ::Float64,
+                     crown::Int64,
                      δt   ::Float64,
                      srδt ::Float64,
                      lλxpr::Float64,
@@ -756,14 +758,14 @@ function update_gbm!(bix  ::Int64,
     if root && iszero(e(bi))
       llc, dλ, ssλ, ssμ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th,
-          δt, srδt, lλxpr, lμxpr, 1)
+          δt, srδt, lλxpr, lμxpr, crown)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dλ, ssλ, ssμ, mc =
-          _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt,
-            lλxpr, lμxpr)
+          _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
+            δt, srδt, lλxpr, lμxpr, crown)
       end
 
       # updates within the parent branch
