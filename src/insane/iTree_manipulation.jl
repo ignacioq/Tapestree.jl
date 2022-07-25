@@ -56,7 +56,7 @@ end
 
 Remove stem branch.
 """
-function _rm_stem(tree::iTbd)
+function _rm_stem(tree::iTbdU)
 
   sete!(  tree, 0.0)
   setfdt!(tree, 0.0)
@@ -2245,7 +2245,7 @@ setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT} =
 
 Set number of `δt` for `tree`.
 """
-setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTbd} =
+setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iT} =
   setproperty!(tree, :lμ, lμ)
 
 
