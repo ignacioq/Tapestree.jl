@@ -122,18 +122,24 @@ function _stem_update!(ξi   ::iTce,
 
     llrbm, llrce, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
-    # survival
-    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 5_000, true)
-    llr = log(mp/mc)
+    # log probability
+    lU = -randexp()
 
-    acr = llrce + llr
+    llr = llrce
 
-    if -randexp() < acr
-      llc += acr + llrbm
-      dλ  += λc[1] - λr
-      ssλ += ssrλ
-      mc   = mp
-      unsafe_copyto!(λc, 1, λp, 1, l)
+    if lU < llr + log(1000.0/mc)
+
+      # survival
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, true)
+      llr += log(mp/mc)
+
+      if lU < llr
+        llc += llrbm + llr
+        dλ  += λc[1] - λr
+        ssλ += ssrλ
+        mc   = mp
+        unsafe_copyto!(λc, 1, λp, 1, l)
+      end
     end
   end
 
@@ -211,20 +217,26 @@ function _crown_update!(ξi   ::iTce,
     llrbm2, llrce2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    # survival
-    mp  = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 5_000, false)
-    llr = log(mp/mc)
+    # log probability
+    lU = -randexp()
 
-    acr = llrce1 + llrce2 + llr
+    llr = llrce1 + llrce2
 
-    if -randexp() < acr
-      llc += acr + llrbm1 + llrbm2
-      dλ  += 2.0*(λi - λr)
-      ssλ += ssrλ1 + ssrλ2
-      fill!(λpc, λr)
-      mc   = mp
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
+    if lU < llr + log(1000.0/mc)
+
+      # survival
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, false)
+      llr += log(mp/mc)
+
+      if lU < llr
+        llc += llrbm1 + llrbm2 + llr
+        dλ  += 2.0*(λi - λr)
+        ssλ += ssrλ1 + ssrλ2
+        fill!(λpc, λr)
+        mc   = mp
+        unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
+        unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
+      end
     end
   end
 

@@ -125,19 +125,25 @@ function _stem_update!(ξi   ::iTct,
     llrbm, llrct, ssrλ, Σrλ = 
       llr_gbm_b_sep(λp, λc, α, σλ, ϵ, δt, fdtp, srδt, false, false)
 
-    # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, true)
-    llr += log(mp/mc)
+    # log probability
+    lU = -randexp()
 
-    acr = llrct + llr
+    llr = llrct
 
-    if -randexp() < acr
-      llc += acr + llrbm
-      dλ  += λc[1] - λr
-      ssλ += ssrλ
-      Σλ  += Σrλ
-      mc   = mp
-      unsafe_copyto!(λc, 1, λp, 1, l)
+    if lU < llr + log(1000.0/mc)
+
+      # survival
+      mp   = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, true)
+      llr += log(mp/mc)
+
+      if lU < llr
+        llc += llrbm + llr
+        dλ  += λc[1] - λr
+        ssλ += ssrλ
+        Σλ  += Σrλ
+        mc   = mp
+        unsafe_copyto!(λc, 1, λp, 1, l)
+      end
     end
   end
 
@@ -216,21 +222,27 @@ function _crown_update!(ξi   ::iTct,
     llrbm2, llrct2, ssrλ2, Σrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, ϵ, δt, fdt2, srδt, false, false)
 
-    # survival
-    mp  = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 5_000, false)
-    llr = log(mp/mc)
+    # log probability
+    lU = -randexp()
 
-    acr = llrct1 + llrct2 + llr
+    llr = llrct1 + llrct2
 
-    if -randexp() < acr
-      llc += acr + llrbm1 + llrbm2
-      dλ  += 2.0*(λi - λr)
-      ssλ += ssrλ1 + ssrλ2
-      Σλ  += Σrλ1 + Σrλ2
-      mc   = mp
-      fill!(λpc, λr)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
+    if lU < llr + log(1000.0/mc)
+
+      # survival
+      mp   = m_surv_gbmct(th, λr, α, σλ, ϵ, δt, srδt, 1_000, false)
+      llr += log(mp/mc)
+
+      if lU < llr
+        llc += llrbm1 + llrbm2 + llr
+        dλ  += 2.0*(λi - λr)
+        ssλ += ssrλ1 + ssrλ2
+        Σλ  += Σrλ1 + Σrλ2
+        mc   = mp
+        fill!(λpc, λr)
+        unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
+        unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
+      end
     end
   end
 

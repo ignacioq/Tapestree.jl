@@ -146,20 +146,26 @@ function _stem_update!(ξi   ::T,
     llrbm, llrbd, ssrλ, ssrμ =
       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt, false, false)
 
-    #survival
-    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, crown)
-    llr = log(mp/mc)
+    # log probability
+    lU = -randexp()
 
-    acr = llrbd + llr
+    llr = llrbd
 
-    if -randexp() < acr
-      llc += acr + llrbm
-      dλ  += λc[1] - λr
-      ssλ += ssrλ
-      ssμ += ssrμ
-      mc   = mp
-      unsafe_copyto!(λc, 1, λp, 1, l)
-      unsafe_copyto!(μc, 1, μp, 1, l)
+    if lU < llr + log(1000.0/mc)
+
+      #survival
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      llr += log(mp/mc)
+
+      if lU < llr
+        llc += llrbm + llr
+        dλ  += λc[1] - λr
+        ssλ += ssrλ
+        ssμ += ssrμ
+        mc   = mp
+        unsafe_copyto!(λc, 1, λp, 1, l)
+        unsafe_copyto!(μc, 1, μp, 1, l)
+      end
     end
   end
 
@@ -251,24 +257,30 @@ function _crown_update!(ξi   ::T,
     llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
-    #survival
-    mp  = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, crown)
-    llr = log(mp/mc)
+    # log probability
+    lU = -randexp()
 
-    acr = llrbd1 + llrbd2 + llr
+    llr = llrbd1 + llrbd2
 
-    if -randexp() < acr
-      llc += acr + llrbm1 + llrbm2
-      dλ  += 2.0*(λi - λr)
-      ssλ += ssrλ1 + ssrλ2
-      ssμ += ssrμ1 + ssrμ2
-      mc   = mp
-      fill!(λpc, λr)
-      fill!(μpc, μr)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-      unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
-      unsafe_copyto!(μ2c, 1, μ2p, 1, l2)
+    if lU < llr + log(1000.0/mc)
+
+      #survival
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      llr += log(mp/mc)
+
+      if lU < llr
+        llc += llrbm1 + llrbm2 + llr
+        dλ  += 2.0*(λi - λr)
+        ssλ += ssrλ1 + ssrλ2
+        ssμ += ssrμ1 + ssrμ2
+        mc   = mp
+        fill!(λpc, λr)
+        fill!(μpc, μr)
+        unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
+        unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
+        unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
+        unsafe_copyto!(μ2c, 1, μ2p, 1, l2)
+      end
     end
   end
 

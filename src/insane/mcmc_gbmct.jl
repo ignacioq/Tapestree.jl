@@ -82,7 +82,7 @@ function insane_gbmct(tree    ::sT_label,
     λc = λi
   end
   ϵc = ϵi
-  mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 5_000, stem)
+  mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 1_000, stem)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTct)
@@ -627,7 +627,7 @@ function fsbi_i(bi  ::iBffs,
 
     # simulate remaining tips until the present
     if na > 1
-      tx, na, nn, acr = 
+      tx, na, nn, acr =
         tip_sims!(t0, tf(bi), α, σλ, ϵ, δt, srδt, acr, lU, Iρi, na, nn)
     end
 
@@ -722,9 +722,9 @@ function tip_sims!(tree::iTct,
         end
       end
     else
-      tree.d1, na, nn, lr = 
+      tree.d1, na, nn, lr =
         tip_sims!(tree.d1, t, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn)
-      tree.d2, na, nn, lr = 
+      tree.d2, na, nn, lr =
         tip_sims!(tree.d2, t, α, σλ, ϵ, δt, srδt, lr, lU, Iρi, na, nn)
     end
 
@@ -793,7 +793,7 @@ function update_gbm!(bix  ::Int64,
       # if stem branch
       if root
         llc, dλ, ssλ, Σλ, mc =
-          _stem_update!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, mc, th, 
+          _stem_update!(ξi, α, σλ, ϵ, llc, dλ, ssλ, Σλ, mc, th,
             δt, srδt, lλxpr)
       end
 
@@ -863,8 +863,7 @@ function update_α_ϵ!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 5_000, stem)
-
+  mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -920,8 +919,7 @@ function update_σ_ϵ!(σλc     ::Float64,
   σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
   σλp  = sqrt(σλp2)
 
-  mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 5_000, stem)
-
+  mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 1_000, stem)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -973,19 +971,24 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = abs(addupt(ϵc, ϵtn))::Float64
-
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 5_000, stem)
-
-  ϵr  = log(ϵp/ϵc)
-  llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
-
+  llr = ne*log(ϵp/ϵc) + Σλ*(ϵc - ϵp)
   prr = ϵp > ϵxpr ? -Inf : 0.0
 
-  if -randexp() < (llr + prr)
-    llc += llr
-    ϵc   = ϵp
-    mc   = mp
-    lac += 1.0
+  # log probability
+  lU = -randexp()
+
+  # check if valid proposal before doing survival conditioning simulation
+  if lU < llr + prr + log(1000.0/mc)
+
+    mp   = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+    llr += log(mp/mc)
+
+    if lU < llr
+      llc += llr
+      ϵc   = ϵp
+      mc   = mp
+      lac += 1.0
+    end
   end
 
   return llc, ϵc, mc, lac
@@ -1028,20 +1031,28 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = abs(addupt(ϵc, ϵtn))::Float64
-
-  mp  = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 5_000, stem)
-
-  ϵr  = log(ϵp/ϵc)
-  llr = ne*ϵr + Σλ*(ϵc - ϵp) + log(mp/mc)
-
+  llr = ne*log(ϵp/ϵc) + Σλ*(ϵc - ϵp)
   prr = ϵp > ϵxpr ? -Inf : 0.0
 
-  if -randexp() < (llr + prr)
-    llc += llr
-    ϵc   = ϵp
-    mc   = mp
+  # log probability
+  lU = -randexp()
+
+  # check if valid proposal before doing survival conditioning simulation
+  if lU < llr + prr + log(1000.0/mc)
+
+    mp   = m_surv_gbmct(th, λ0, α, σλ, ϵp, δt, srδt, 1_000, stem)
+    llr += log(mp/mc)
+
+    if lU < llr
+      llc += llr
+      ϵc   = ϵp
+      mc   = mp
+    end
   end
 
   return llc, ϵc, mc
 end
+
+
+
 
