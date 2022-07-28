@@ -106,8 +106,7 @@ function insane_gbmfbd(tree    ::sTf_label,
   # survival conditioning
   if survival && ntipsalive(tree) > 0
     # if crown conditioning
-    if def1(tree) && def2(tree) &&
-       ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
+    if iszero(e(tree)) && ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
       crown = 1
     # if stem conditioning
     else
@@ -241,7 +240,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTfbd},
 
   λ0  = lλ(Ξ[1])[1]
   llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
-        (crown < 2 ? λ0 : 0.0) + log(mc) + prob_ρ(idf)
+        (crown > 0 ? λ0 : 0.0) + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
         logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
@@ -377,7 +376,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
                     pup     ::Vector{Int64},
                     prints  ::Int64)
 
-
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
@@ -423,11 +421,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown < 2 ? crown*lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown > 0 ? lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       # σλ & σμ update
       elseif pupi === 2
@@ -436,22 +434,22 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
             llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown < 2 ? crown*lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown > 0 ? lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       # psi update
       elseif pupi === 3
 
         llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown < 2 ? crown*lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown > 0 ? lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       # gbm update
       elseif pupi === 4
@@ -463,11 +461,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
             crown, δt, srδt, lλxpr, lμxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown < 2 ? crown*lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown > 0 ? lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       # forward simulation update
       else
@@ -478,11 +476,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, llc, dλ, ssλ, ssμ, nλ, L,
             ψ_epoch, δt, srδt, eixi, eixf)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown < 2 ? crown*lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
-        #  if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, i, pupi, Ξ
-        #    return
-        # end
+        ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (crown > 0 ? lλ(Ξ[1])[1] : 0.0) + log(mc) + prob_ρ(idf)
+         if !isapprox(ll0, llc, atol = 1e-4)
+           @show ll0, llc, i, pupi, Ξ
+           return
+        end
 
       end
     end
@@ -513,7 +511,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTfbd},
 
   return R, Ξv
 end
-
 
 
 
@@ -1218,7 +1215,7 @@ function update_gbm!(bix  ::Int64,
         δt, srδt, lλxpr, lμxpr, crown)
     setλt!(bi, lλ(ξi)[1])
   else
-    # if crown
+    # if stem
     if root
       llc, dλ, ssλ, ssμ, mc =
         _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
@@ -1227,7 +1224,7 @@ function update_gbm!(bix  ::Int64,
 
     # updates within the parent branch
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(bi))
+      _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
     if !it(bi)
       # get fixed tip
@@ -1235,28 +1232,28 @@ function update_gbm!(bix  ::Int64,
 
       # make between decoupled trees node update
       if isfossil(bi)
-        llc, ssλ, ssμ, λf =
+        llc, ssλ, ssμ =
           update_duo!(lλ(lξi), lλ(ξ1), lμ(lξi), lμ(ξ1), e(lξi), e(ξ1),
             fdt(lξi), fdt(ξ1), α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
       else
+
         llc, dλ, ssλ, ssμ, λf =
           update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), lμ(lξi), lμ(ξ1), lμ(ξ2),
             e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
             α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
-      end
 
-      # set fixed `λ(t)` in branch
-      setλt!(bi, λf)
+        setλt!(bi, λf)
+      end
     end
   end
 
   if !it(bi)
     # carry on updates in the daughters
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(idf[id1]))
+      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     if !isfossil(bi)
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(idf[id2]))
+        _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     end
   end
 

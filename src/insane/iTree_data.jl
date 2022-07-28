@@ -390,7 +390,7 @@ for debugging purposes.
 """
 function _ctl(tree::T, l::Float64) where {T <: iT}
 
-  l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
+  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
 
   if def1(tree)
     l = _ctl(tree.d1, l)
@@ -411,7 +411,7 @@ for debugging purposes.
 """
 function _ctl(tree::T, l::Float64) where {T <: iTf}
 
-  l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
+  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
 
   if def1(tree)
     l = _ctl(tree.d1, l)

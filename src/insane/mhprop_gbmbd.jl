@@ -140,8 +140,7 @@ function _stem_update!(ξi   ::T,
     end
 
     # simulate fix tree vector
-    bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
-    bb!(μp, μr, μn, σμ, δt, fdtp, srδt)
+    bb!(λp, λr, λn, μp, μr, μn, σλ, σμ, δt, fdtp, srδt)
 
     llrbm, llrbd, ssrλ, ssrμ =
       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt, false, false)

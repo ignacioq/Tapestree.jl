@@ -92,8 +92,7 @@ function _update_gbm!(tree::iTfbd,
                       ssλ ::Float64,
                       ssμ ::Float64,
                       δt  ::Float64,
-                      srδt::Float64,
-                      ter ::Bool)
+                      srδt::Float64)
 
   if def1(tree)
     if def2(tree)
@@ -101,14 +100,14 @@ function _update_gbm!(tree::iTfbd,
         update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
+        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
+        _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     else
       llc, ssλ, ssμ =
         update_duo!(tree, α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
+        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
     end
   end
 
@@ -165,10 +164,8 @@ function update_duo!(λpc ::Vector{Float64},
     μpp = Vector{Float64}(undef,lp)
     μ1p = Vector{Float64}(undef,l1)
     λp  = λpc[1]
-    λi  = λ1c[1]
     λ1  = λ1c[l1]
     μp  = μpc[1]
-    μi  = μ1c[1]
     μ1  = μ1c[l1]
 
     # node proposal
@@ -197,11 +194,10 @@ function update_duo!(λpc ::Vector{Float64},
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(μpc, 1, μpp, 1, lp)
       unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
-      λi = λn
     end
   end
 
-  return llc, ssλ, ssμ, λi
+  return llc, ssλ, ssμ
 end
 
 

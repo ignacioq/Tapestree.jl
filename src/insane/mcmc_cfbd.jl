@@ -89,10 +89,9 @@ function insane_cfbd(tree    ::sTf_label,
   # survival conditioning
   if survival && ntipsalive(tree) > 0
     # if crown conditioning
-    if def1(tree) && def2(tree) &&
-       ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
+    if iszero(e(tree)) && ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
       crown = 1
-    # if crown conditioning
+    # if stem conditioning
     else
       crown = 0
     end

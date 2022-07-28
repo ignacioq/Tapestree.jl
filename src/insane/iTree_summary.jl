@@ -579,7 +579,7 @@ function iquantile(treev::Vector{iTbd}, p::Float64)
     push!(svμ, quantile(vμ, p))
   end
 
-  if isdefined(t1, :d1)
+  if def1(t1)
     treev1 = iTbd[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
@@ -590,8 +590,8 @@ function iquantile(treev::Vector{iTbd}, p::Float64)
     end
 
     iTbd(iquantile(treev1, p),
-            iquantile(treev2, p),
-            e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
+         iquantile(treev2, p),
+         e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
   else
     iTbd(e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
   end
@@ -609,9 +609,8 @@ function `lv`.
 """
 function iquantile(treev::Vector{iTfbd}, p::Float64)
 
-  nt  = lastindex(treev)
-
-  t1 = treev[1]
+  nts = lastindex(treev)
+  t1  = treev[1]
 
   # make vector of lambdas and mus
   vsλ = Array{Float64,1}[]
@@ -624,10 +623,17 @@ function iquantile(treev::Vector{iTfbd}, p::Float64)
   svλ = Float64[]
   svμ = Float64[]
   # make fill vector to estimate statistics
-  vλ = Array{Float64,1}(undef, nt)
-  vμ = Array{Float64,1}(undef, nt)
+  vλ = Array{Float64,1}(undef, nts)
+  vμ = Array{Float64,1}(undef, nts)
   for i in Base.OneTo(lastindex(vsλ[1]))
-    for t in Base.OneTo(nt)
+    for t in Base.OneTo(nts)
+      if lastindex(vsλ[t]) != lastindex(vsλ[1])
+        t2 = treev[t]
+        @show lastindex(vsλ[1]), lastindex(vsλ[t])
+        @show t1, t2, dt(t1), dt(t2), fdt(t1), fdt(t2), e(t1), e(t2)
+        @show vsλ[t], vsλ[1]
+      end
+
       vλ[t] = vsλ[t][i]
       vμ[t] = vsμ[t][i]
     end
@@ -637,13 +643,13 @@ function iquantile(treev::Vector{iTfbd}, p::Float64)
 
   if def1(t1)
     treev1 = iTfbd[]
-    for t in Base.OneTo(nt)
+    for t in Base.OneTo(nts)
         push!(treev1, treev[t].d1)
     end
 
     if def2(t1)
       treev2 = iTfbd[]
-      for t in Base.OneTo(nt)
+      for t in Base.OneTo(nts)
           push!(treev2, treev[t].d2)
       end
 
