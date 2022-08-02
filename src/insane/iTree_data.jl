@@ -254,6 +254,145 @@ end
 
 
 """
+    subclade(tree::iTree, ltree::sT_label, tips::Vector{String})
+
+Return the minimum subclade that includes tip labels in `tips`.
+"""
+function subclade(tree::iTree, ltree::sT_label, tips::Vector{String})
+
+  ls, n2v = labels(ltree)
+
+  return subclade(tree, 1:lastindex(ls), tips, ls, n2v)
+end
+
+
+
+
+"""
+    subclade(tree::sT_label, tips::Vector{String})
+
+Return the minimum subclade that includes tip labels in `tips`.
+"""
+function subclade(tree::sT_label, tips::Vector{String})
+
+  ls, n2v = labels(tree)
+
+  return subclade(tree, 1:lastindex(ls), tips, ls, n2v)
+end
+
+
+
+
+"""
+    subclade(tree::iTree,
+             ixs ::UnitRange,
+             tips::Vector{String},
+             ls  ::Vector{String},
+             n2v ::Vector{Int64})
+
+Return the minimum subclade that includes tip labels 
+in `tips` (recursive function).
+"""
+function subclade(tree::iTree,
+                  ixs ::UnitRange,
+                  tips ::Vector{String},
+                  ls  ::Vector{String},
+                  n2v ::Vector{Int64})
+
+  @inbounds begin
+    ln = lastindex(ixs)
+
+    n2i = n2v[ixs[1]]
+    ix1 = ixs[n2i*2 + 1:ln]
+    ix2 = ixs[2:n2i*2]
+
+    it1 = false
+    for si in tips
+      for i in ix1
+        if si == ls[i]
+          it1 = true
+          break
+        end
+      end
+    end
+
+    it2 = false
+    for si in tips
+      for i in ix2
+        if si == ls[i]
+          it2 = true
+          break
+        end
+      end
+    end
+
+    if ln > lastindex(tips)
+      if it1
+        if !it2
+          tree = subclade(tree.d1, ix1, tips, ls, n2v)
+        end
+      elseif it2
+        tree = subclade(tree.d2, ix2, tips, ls, n2v)
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    labels(tree::sT_label)
+
+Return labels and left node order.
+"""
+function labels(tree::sT_label)
+
+  ls  = String[]
+  n2v = Int64[]
+  make_ls!(tree, ls, n2v)
+
+  reverse!(ls)
+  reverse!(n2v)
+
+  return ls, n2v
+end
+
+
+
+
+"""
+    make_ls!(tree::sT_label,
+             ls  ::Array{String,1},
+             n2v ::Array{Int64,1})
+
+Return labels and left node order (recursive function).
+"""
+function make_ls!(tree::sT_label,
+                  ls  ::Array{String,1},
+                  n2v ::Array{Int64,1})
+
+  if istip(tree)
+    push!(ls, l(tree))
+    push!(n2v, 0)
+    return 1
+  end
+
+  n1 = make_ls!(tree.d1, ls, n2v)
+  n2 = make_ls!(tree.d2, ls, n2v)
+
+  push!(ls, l(tree))
+  push!(n2v, n2)
+
+  return n1 + n2
+end
+
+
+
+
+"""
     dt(tree::T) where {T <: iTree}
 
 Return `δt`.
