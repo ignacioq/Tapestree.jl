@@ -659,7 +659,11 @@ end
 
 Recipe for plotting lineage through time plots of type `Ltt`.
 """
-@recipe function f(nts::Vector{Ltt}, tdt::Float64)
+@recipe function f(nts::Vector{Ltt}, 
+                   tdt::Float64, 
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[])
 
   n  = lastindex(nts)
   th = maximum(map(x -> maximum(x.t), nts))
@@ -673,15 +677,31 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     q[i,j] = nspt(nts[j], ts[i])
   end
 
-  Q = Array{Float64}(undef, lts, 6)
+  if !isempty(q0) 
+    Q0 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q1) 
+    Q1 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q2) 
+    Q2 = Array{Float64}(undef, lts, 2)
+  end
+
+  M = Array{Float64}(undef, lts)
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
-    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.75, 0.975, 1.0])
+    if !isempty(q0) 
+      Q0[i,:] = quantile(qi, q0)
+    end
+    if !isempty(q1) 
+      Q1[i,:] = quantile(qi, q1)
+    end
+    if !isempty(q2) 
+      Q2[i,:] = quantile(qi, q2)
+    end
+    M[i] = exp.(mean(log, qi))
   end
-
-  # estimate mean of means
-  m = mean(q, dims=2)
 
   # plot defaults
   legend          --> false
@@ -700,38 +720,58 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     yscale         --> :log10
   end
 
-   # range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q0)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh0 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh0, (ts[i], Q[i,2]))
-    end
-    for i in lts:-1:1
-      push!(sh0, (ts[i], Q[i,5]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], Q0[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], Q0[i,2]))
+      end
 
-    # Shape(sh0)
-    sh0
+      # Shape(sh0)
+      sh0
+    end
   end
 
-  # [0.25, 0.75] quantile range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q1)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh1 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh1, (ts[i], Q[i,3]))
-    end
-    for i in lts:-1:1
-      push!(sh1, (ts[i], Q[i,4]))
-    end
+      sh1 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh1, (ts[i], Q1[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh1, (ts[i], Q1[i,2]))
+      end
 
-    # Shape(sh1)
-    sh1
+      # Shape(sh1)
+      sh1
+    end
+  end
+
+  if !isempty(q2)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      sh2 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh2, (ts[i], Q2[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh2, (ts[i], Q2[i,2]))
+      end
+
+      # Shape(sh2)
+      sh2
+    end
   end
 
   # midline
@@ -740,16 +780,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     linecolor --> "#00213a99"
     linewidth --> 1.4
 
-    ts, m
-  end
-
-  # range
-  @series begin
-    seriestype := :line
-    linecolor  --> "#426c7999"
-    linewidth  --> 1.4
-    linestyle  --> :dashdot
-    ts, Q[:,[1,6]]
+    ts, M
   end
 end
 
@@ -767,20 +798,26 @@ end
 
 
 """
-    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iT}
+    f(tree::T,
+      lv  ::Function,
+      dt  ::Float64;
+      q0 = [0.025, 0.975],
+      q1 = [0.25,  0.75],
+      q2 = Float64[])  where {T <: iT}
 
 Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    lv  ::Function,
-                   dt  ::Float64) where {T <: iT}
+                   dt  ::Float64;
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[]) where {T <: iT}
 
   # prepare data
   ts, r = time_rate(tree, dt, lv)
-
-  fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
-
-  lf = size(fx,1)
+  lts = lastindex(ts)
+  m   = exp.(map(x -> mean(x), r))
 
   # common shape plot defaults
   legend          --> :none
@@ -796,38 +833,61 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   fillcolor       --> :orange
   fillalpha       --> 0.3
 
-  # range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q0)
+    qr0 = exp.(time_quantile(r, q0))
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh0 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lf)
-      push!(sh0, (ts[i], fx[i,1]))
-    end
-    for i in lf:-1:1
-      push!(sh0, (ts[i], fx[i,5]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], qr0[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], qr0[i,2]))
+      end
 
-    # Shape(sh0)
-    sh0
+      # Shape(sh0)
+      sh0
+    end
   end
 
-  # [0.25, 0.75] quantile range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q1)
+    qr1 = exp.(time_quantile(r, q1))
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh1 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lf)
-      push!(sh1, (ts[i], fx[i,2]))
-    end
-    for i in lf:-1:1
-      push!(sh1, (ts[i], fx[i,4]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], qr1[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], qr1[i,2]))
+      end
 
-    # Shape(sh1)
-    sh1
+      # Shape(sh0)
+      sh0
+    end
+  end
+
+  if !isempty(q2)
+    qr2 = exp.(time_quantile(r, q2))
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], qr2[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], qr2[i,2]))
+      end
+
+      # Shape(sh0)
+      sh0
+    end
   end
 
   # midline
@@ -836,24 +896,29 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor --> "#00304999"
     linewidth --> 1.4
 
-    ts, fx[:,3]
+    ts, m
   end
-
 end
 
 
 
 
 """
-    function f(tree::Vector{T},
-               lv  ::Function,
-               dt  ::Float64) where {T <: iT}
+    function f(trees::Vector{T},
+               lv   ::Function,
+               tdt  ::Float64;
+               q0 = [0.025, 0.975],
+               q1 = [0.25,  0.75],
+               q2 = Float64[]) where {T <: iT}
 
 Recipe for plotting values given by `lv` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
                    lv   ::Function,
-                   tdt  ::Float64) where {T <: iT}
+                   tdt  ::Float64;
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[]) where {T <: iT}
 
   ntrees = lastindex(trees)
   riv = Vector{Float64}[]
@@ -883,12 +948,32 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     q[1:lr,i] = ri
   end
 
-  Q = Array{Float64}(undef, lts, 7)
+  if !isempty(q0) 
+    Q0 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q1) 
+    Q1 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q2) 
+    Q2 = Array{Float64}(undef, lts, 2)
+  end
+
+  M = Array{Float64}(undef, lts)
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
-    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.5, 0.75, 0.975, 1.0])
+    if !isempty(q0) 
+      Q0[i,:] = quantile(qi, q0)
+    end
+    if !isempty(q1) 
+      Q1[i,:] = quantile(qi, q1)
+    end
+    if !isempty(q2) 
+      Q2[i,:] = quantile(qi, q2)
+    end
+    M[i] = exp.(mean(log, qi))
   end
+
 
   # common shape plot defaults
   legend          --> :none
@@ -904,39 +989,60 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   fillcolor       --> :orange
   fillalpha       --> 0.3
 
-  # range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q0)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh0 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh0, (ts[i], Q[i,2]))
-    end
-    for i in lts:-1:1
-      push!(sh0, (ts[i], Q[i,6]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], Q0[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], Q0[i,2]))
+      end
 
-    # Shape(sh0)
-    sh0
+      # Shape(sh0)
+      sh0
+    end
   end
 
-  # [0.25, 0.75] quantile range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q1)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh1 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh1, (ts[i], Q[i,3]))
-    end
-    for i in lts:-1:1
-      push!(sh1, (ts[i], Q[i,5]))
-    end
+      sh1 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh1, (ts[i], Q1[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh1, (ts[i], Q1[i,2]))
+      end
 
-    # Shape(sh1)
-    sh1
+      # Shape(sh1)
+      sh1
+    end
   end
+
+  if !isempty(q2)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      sh2 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh2, (ts[i], Q2[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh2, (ts[i], Q2[i,2]))
+      end
+
+      # Shape(sh2)
+      sh2
+    end
+  end
+
 
   # midline
   @series begin
@@ -944,16 +1050,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor --> "#00213a99"
     linewidth --> 1.4
 
-    ts, Q[:,4]
-  end
-
-  # range
-  @series begin
-    seriestype := :line
-    linecolor  --> "#426c7999"
-    linewidth  --> 1.4
-    linestyle  --> :dashdot
-    ts, Q[:,[1,7]]
+    ts, M
   end
 end
 

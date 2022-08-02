@@ -254,6 +254,31 @@ end
 
 
 """
+    subclade(trees::Vector{T}, 
+             ltree::sT_label, 
+             tips ::Vector{String}) where {T <: iTree}
+
+Return the minimum subclade that includes tip labels in `tips`.
+"""
+function subclade(trees::Vector{T}, 
+                  ltree::sT_label, 
+                  tips ::Vector{String}) where {T <: iTree}
+
+  ls, n2v = labels(ltree)
+  ur      = 1:lastindex(ls)
+
+  vT = T[]
+  for t in trees
+    push!(vT, subcladef(t, ur, tips, ls, n2v))
+  end
+
+  return vT
+end
+
+
+
+
+"""
     subclade(tree::iTree, ltree::sT_label, tips::Vector{String})
 
 Return the minimum subclade that includes tip labels in `tips`.
@@ -262,7 +287,7 @@ function subclade(tree::iTree, ltree::sT_label, tips::Vector{String})
 
   ls, n2v = labels(ltree)
 
-  return subclade(tree, 1:lastindex(ls), tips, ls, n2v)
+  return subcladef(tree, 1:lastindex(ls), tips, ls, n2v)
 end
 
 
@@ -276,7 +301,6 @@ Return the minimum subclade that includes tip labels in `tips`.
 function subclade(tree::sT_label, tips::Vector{String})
 
   ls, n2v = labels(tree)
-
   return subclade(tree, 1:lastindex(ls), tips, ls, n2v)
 end
 
@@ -290,16 +314,17 @@ end
              ls  ::Vector{String},
              n2v ::Vector{Int64})
 
-Return the minimum subclade that includes tip labels 
+Return the minimum subclade that includes tip labels
 in `tips` (recursive function).
 """
 function subclade(tree::iTree,
                   ixs ::UnitRange,
-                  tips ::Vector{String},
+                  tips::Vector{String},
                   ls  ::Vector{String},
                   n2v ::Vector{Int64})
 
   @inbounds begin
+
     ln = lastindex(ixs)
 
     n2i = n2v[ixs[1]]
@@ -334,6 +359,74 @@ function subclade(tree::iTree,
       elseif it2
         tree = subclade(tree.d2, ix2, tips, ls, n2v)
       end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    subcladef(tree::iTree,
+              ixs ::UnitRange,
+              tips::Vector{String},
+              ls  ::Vector{String},
+              n2v ::Vector{Int64})
+
+Return the minimum subclade that includes tip labels
+in `tips` (recursive function).
+"""
+function subcladef(tree::iTree,
+                   ixs ::UnitRange,
+                   tips::Vector{String},
+                   ls  ::Vector{String},
+                   n2v ::Vector{Int64})
+
+  @inbounds begin
+    if isfix(tree.d1)
+      if isfix(tree.d2)
+        ln = lastindex(ixs)
+
+        n2i = n2v[ixs[1]]
+        ix1 = ixs[n2i*2 + 1:ln]
+        ix2 = ixs[2:n2i*2]
+
+        it1 = false
+        for si in tips
+          for i in ix1
+            if si == ls[i]
+              it1 = true
+              break
+            end
+          end
+        end
+
+        it2 = false
+        for si in tips
+          for i in ix2
+            if si == ls[i]
+              it2 = true
+              break
+            end
+          end
+        end
+
+        if ln > lastindex(tips)
+          if it1
+            if !it2
+              tree = subcladef(tree.d1, ix1, tips, ls, n2v)
+            end
+          elseif it2
+            tree = subcladef(tree.d2, ix2, tips, ls, n2v)
+          end
+        end
+      else
+        tree = subcladef(tree.d1, ixs, tips, ls, n2v)
+      end
+    else
+      tree = subcladef(tree.d2, ixs, tips, ls, n2v)
     end
   end
 

@@ -591,9 +591,9 @@ function iquantile(treev::Vector{iTbd}, p::Float64)
 
     iTbd(iquantile(treev1, p),
          iquantile(treev2, p),
-         e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
+         e(t1), dt(t1), fdt(t1), isextinct(t1), true, svλ, svμ)
   else
-    iTbd(e(t1), dt(t1), fdt(t1), false, false, svλ, svμ)
+    iTbd(e(t1), dt(t1), fdt(t1), isextinct(t1), true, svλ, svμ)
   end
 end
 
