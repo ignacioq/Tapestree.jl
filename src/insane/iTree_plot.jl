@@ -375,8 +375,6 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     labels = String[]
     _tiplabels!(tree, labels)
 
-    txt = [(0.0, i, labels[i]) for i in 1:nts]
-
     @series begin
       seriestype         := :scatter
       primary            := false
@@ -716,7 +714,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   fillcolor       --> :orange
   fillalpha       --> 0.3
 
-  if maximum(x -> isnan(x) ? 1.0 : x, m) >= 10.0
+  if maximum(x -> isnan(x) ? 1.0 : x, M) >= 10.0
     yscale         --> :log10
   end
 
@@ -817,7 +815,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   # prepare data
   ts, r = time_rate(tree, dt, lv)
   lts = lastindex(ts)
-  m   = exp.(map(x -> mean(x), r))
+  m   = exp.(time_quantile(r, [0.5]))
 
   # common shape plot defaults
   legend          --> :none
