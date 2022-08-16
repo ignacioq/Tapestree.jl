@@ -67,9 +67,16 @@ function insane_gbmfbd(tree    ::sTf_label,
   # `n` tips, `th` treeheight define δt
   n    = ntips(tree)
   th   = treeheight(tree)
-  nep  = lastindex(ψ_epoch) + 1
   δt  *= max(0.1,round(th, RoundDown, digits = 2))
   srδt = sqrt(δt)
+
+  # only include epochs where the tree occurs
+  tix = findfirst(x -> x < th, ψ_epoch)
+  if !isnothing(tix)
+    ψ_epoch = ψ_epoch[tix:end]
+  end
+
+  nep  = lastindex(ψ_epoch) + 1
 
   # set tips sampling fraction
   if isone(length(tρ))

@@ -52,6 +52,13 @@ function insane_cfbd(tree    ::sTf_label,
 
   n   = ntips(tree)
   th  = treeheight(tree)
+
+  # only include epochs where the tree occurs
+  tix = findfirst(x -> x < th, ψ_epoch)
+  if !isnothing(tix)
+    ψ_epoch = ψ_epoch[tix:end]
+  end
+
   nep = lastindex(ψ_epoch) + 1
 
   # set tips sampling fraction
