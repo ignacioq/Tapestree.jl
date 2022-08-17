@@ -325,57 +325,68 @@ Sample conditional on number of species
 
 
 
-# """
-#     sim_gbmfbd(t   ::Float64;
-#               λ0  ::Float64 = 1.0,
-#               α   ::Float64 = 0.0,
-#               σλ  ::Float64 = 0.1,
-#               μ   ::Float64 = 0.2,
-#               δt  ::Float64 = 1e-3,
-#               nlim::Int64   = 10_000,
-#               init::Symbol  = :crown)
+"""
+    sim_gbmfbd(t   ::Float64;
+               λ0  ::Float64         = 1.0,
+               μ0  ::Float64         = 0.2,
+               α   ::Float64         = 0.0,
+               σλ  ::Float64         = 0.1,
+               σμ  ::Float64         = 0.1,
+               ψ   ::Vector{Float64} = [0.1],
+               ψts ::Vector{Float64} = Float64[],
+               δt  ::Float64         = 1e-3,
+               nlim::Int64           = 10_000,
+               init::Symbol          = :crown)
 
-# Simulate `iTfbd` according to geometric Brownian motions for birth and death
-# rates.
-# """
-# function sim_gbmfbd(t   ::Float64;
-#                    λ0  ::Float64 = 1.0,
-#                    μ0  ::Float64 = 0.2,
-#                    α   ::Float64 = 0.0,
-#                    σλ  ::Float64 = 0.1,
-#                    σμ  ::Float64 = 0.1,
-#                    δt  ::Float64 = 1e-3,
-#                    nlim::Int64   = 10_000,
-#                    init::Symbol  = :crown)
+Simulate `iTfbd` according to geometric Brownian motions for birth and death
+rates.
+"""
+function sim_gbmfbd(t   ::Float64;
+                    λ0  ::Float64         = 1.0,
+                    μ0  ::Float64         = 0.2,
+                    α   ::Float64         = 0.0,
+                    σλ  ::Float64         = 0.1,
+                    σμ  ::Float64         = 0.1,
+                    ψ   ::Vector{Float64} = [0.1],
+                    ψts ::Vector{Float64} = Float64[],
+                    δt  ::Float64         = 1e-3,
+                    nlim::Int64           = 10_000,
+                    init::Symbol          = :crown)
 
-#   if init === :crown
-#     lλ0 = log(λ0)
-#     lμ0 = log(μ0)
-#     d1, nn = _sim_gbmfbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
-#     if nn >= nlim
-#       @warn "maximum number of lineages surpassed"
-#     end
+  # only include epochs where the tree occurs
+  tix = findfirst(x -> x < t, ψts)
+  if !isnothing(tix)
+    ψ   = ψ[tix:end]
+    ψts = ψts[tix:end]
+  end
+  nep  = lastindex(ψts) + 1
 
-#     d2, nn = _sim_gbmfbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
-#     if nn >= nlim
-#       @warn "maximum number of lineages surpassed"
-#     end
+  lλ0 = log(λ0)
+  lμ0 = log(μ0)
 
-#     tree = iTfbd(d1, d2, 0.0, δt, 0.0, false, false,
-#       Float64[lλ0, lλ0], Float64[lμ0, lμ0])
+  if init === :crown
+    d1, nn = _sim_gbmfbd(t, lλ0, lμ0, α, σλ, σμ, ψ, ψts, 1, nep, 
+               δt, sqrt(δt), 1, nlim)
+    nn >= nlim && @warn "maximum number of lineages surpassed"
 
-#   elseif init === :stem
-#     tree, nn = _sim_gbmfbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
+    d2, nn = _sim_gbmfbd(t, lλ0, lμ0, α, σλ, σμ, ψ, ψts, 1, nep, 
+               δt, sqrt(δt), nn + 1, nlim)
+    nn >= nlim && @warn "maximum number of lineages surpassed"
 
-#     if nn >= nlim
-#       @warn "maximum number of lineages surpassed"
-#     end
-#   else
-#     @error string(init, " does not match either crown or stem")
-#   end
+    tree = iTfbd(d1, d2, 0.0, δt, 0.0, false, false, false,
+      Float64[lλ0, lλ0], Float64[lμ0, lμ0])
 
-#   return tree
-# end
+  elseif init === :stem
+    tree, nn = _sim_gbmfbd(t, lλ0, lμ0, α, σλ, σμ, ψ, ψts, 1, nep, 
+                 δt, sqrt(δt), 1, nlim)
+    nn >= nlim && @warn "maximum number of lineages surpassed"
+
+  else
+    @error string(init, " does not match either crown or stem")
+  end
+
+  return tree
+end
 
 
 

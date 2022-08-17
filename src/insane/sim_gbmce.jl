@@ -337,7 +337,7 @@ function sim_gbmce(t   ::Float64;
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_gbmce(t, lλ0, α, σλ, μ, δt, sqrt(δt), 0, 1, nlim)
+    d2, nn = _sim_gbmce(t, lλ0, α, σλ, μ, δt, sqrt(δt), 0, nn + 1, nlim)
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end

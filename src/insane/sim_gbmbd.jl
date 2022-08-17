@@ -358,7 +358,7 @@ function sim_gbmbd(t   ::Float64;
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
+    d2, nn = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, nn + 1, nlim)
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end

@@ -308,7 +308,7 @@ function sim_gbmpb(t   ::Float64;
 
     tree = iTpb(d1, d2, 0.0, false, δt, 0.0, Float64[lλ0, lλ0])
   elseif init === :stem
-    tree, nn = _sim_gbmpb(t, log(λ0), α, σλ, δt, sqrt(δt), 1, nlim)
+    tree, nn = _sim_gbmpb(t, log(λ0), α, σλ, δt, sqrt(δt), nn + 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
