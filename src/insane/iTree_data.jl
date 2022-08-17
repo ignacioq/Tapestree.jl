@@ -1115,6 +1115,38 @@ end
 
 
 """
+    ntipfossils(tree::T) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`.
+"""
+ntipfossils(tree::T) where {T <: iTree} = _ntipfossils(tree, 0)
+
+
+
+
+"""
+    _ntipfossils(tree::T, n::Int64) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`, initialized at `n`.
+"""
+function _ntipfossils(tree::T, n::Int64) where {T <: iTree}
+
+  if def1(tree)
+    n = _ntipfossils(tree.d1, n)
+    if def2(tree)
+      n = _ntipfossils(tree.d2, n)
+    end
+  elseif isfossil(tree)
+    n += 1
+  end
+
+  return n
+end
+
+
+
+
+"""
     treelength_ns(tree::T,
                   l   ::Float64,
                   n   ::Float64) where {T <: iTree}
