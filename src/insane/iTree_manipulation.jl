@@ -328,6 +328,64 @@ end
 
 
 """
+    _cutbottom(tree::iTfbd,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::iTfbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+
+    lλv = lλ(tree)
+    lμv = lμ(tree)
+    δt  = dt(tree)
+    fδt = fdt(tree)
+
+    # find final lλ & lμ
+    if isapprox(c - t, et)
+      Ix = lastindex(lλv) - 1
+      ix = Float64(Ix) - 1.0
+    else
+      ix  = fld(c - t, δt)
+      Ix  = Int64(ix) + 1
+    end
+    tii = ix*δt
+    tff = tii + δt
+    if tff > et
+      tff = tii + fδt
+    end
+    eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
+    eμ = linpred(c - t, tii, tff, lμv[Ix], lμv[Ix+1])
+
+    lλv = lλv[1:Ix]
+    lμv = lμv[1:Ix]
+
+    push!(lλv, eλ)
+    push!(lμv, eμ)
+
+    tree = iTfbd(c - t, δt, c - t - tii, false, false, isfix(tree), lλv, lμv)
+
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      if def2(tree)
+        tree.d2 = _cutbottom(tree.d2, c, t + et)
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+"""
     fossilizefixedtip!(tree::T) where {T <: iTf}
 
 Change all alive tips to fossil tips.

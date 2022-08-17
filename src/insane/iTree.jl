@@ -536,24 +536,24 @@ Base.show(io::IO, t::iTpb) =
 
 """
     iTpb(e0::Array{Int64,1},
-            e1::Array{Int64,1},
-            el::Array{Float64,1},
-            λs::Array{Array{Float64,1},1},
-            ea::Array{Int64,1},
-            ni::Int64,
-            ei::Int64,
-            δt::Float64)
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         ea::Array{Int64,1},
+         ni::Int64,
+         ei::Int64,
+         δt::Float64)
 
 Transform edge structure to `iTpb`.
 """
 function iTpb(e0::Array{Int64,1},
-                 e1::Array{Int64,1},
-                 el::Array{Float64,1},
-                 λs::Array{Array{Float64,1},1},
-                 ea::Array{Int64,1},
-                 ni::Int64,
-                 ei::Int64,
-                 δt::Float64)
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Array{Float64,1},1},
+              ea::Array{Int64,1},
+              ni::Int64,
+              ei::Int64,
+              δt::Float64)
 
   # if tip
   if in(ei, ea)
@@ -562,8 +562,8 @@ function iTpb(e0::Array{Int64,1},
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
     return iTpb(iTpb(e0, e1, el, λs, ea, n1, ei1, δt),
-                   iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
-                   el[ei], true, δt, (el[ei] == 0.0 ? 0.0 : δt), λs[ei])
+                iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
+                el[ei], true, δt, (el[ei] == 0.0 ? 0.0 : δt), λs[ei])
   end
 end
 
@@ -1084,7 +1084,6 @@ end
 
 
 
-
 """
     iTfbd_wofe(tree::iTfbd)
 
@@ -1104,47 +1103,58 @@ end
 
 
 
+"""
+    iTfbd(e0::Array{Int64,1},
+          e1::Array{Int64,1},
+          el::Array{Float64,1},
+          λs::Array{Array{Float64,1},1},
+          μs::Array{Array{Float64,1},1},
+          ea::Array{Int64,1},
+          ee::Array{Int64,1},
+          ef::Array{Int64,1},
+          ni::Int64,
+          ei::Int64,
+          δt::Float64)
 
-# """
-#     iTfbd(e0::Array{Int64,1},
-#           e1::Array{Int64,1},
-#           el::Array{Float64,1},
-#           λs::Array{Array{Float64,1},1},
-#           μs::Array{Array{Float64,1},1},
-#           ea::Array{Int64,1},
-#           ee::Array{Int64,1},
-#           ni::Int64,
-#           ei::Int64,
-#           δt::Float64)
+Transform edge structure to `iTfbd`.
+"""
+function iTfbd(e0::Array{Int64,1},
+               e1::Array{Int64,1},
+               el::Array{Float64,1},
+               λs::Array{Array{Float64,1},1},
+               μs::Array{Array{Float64,1},1},
+               ea::Array{Int64,1},
+               ee::Array{Int64,1},
+               ef::Array{Int64,1},
+               ni::Int64,
+               ei::Int64,
+               δt::Float64)
 
-# Transform edge structure to `iTfbd`.
-# """
-# function iTfbd(e0::Array{Int64,1},
-#                e1::Array{Int64,1},
-#                el::Array{Float64,1},
-#                λs::Array{Array{Float64,1},1},
-#                μs::Array{Array{Float64,1},1},
-#                ea::Array{Int64,1},
-#                ee::Array{Int64,1},
-#                ni::Int64,
-#                ei::Int64,
-#                δt::Float64)
+  # if tip
+  if in(ei, ea)
+    return iTfbd(el[ei], δt, δt, false, false, false, λs[ei], μs[ei])
+  
+  # if extinct
+  elseif in(ei, ee)
+    return iTfbd(el[ei], δt, δt, true, false, false, λs[ei], μs[ei])
 
-#   # if tip
-#   if in(ei, ea)
-#     return iTfbd(el[ei], δt, δt, false, false, λs[ei], μs[ei])
-#   # if extinct
-#   elseif in(ei, ee)
-#     return iTfbd(el[ei], δt, δt, true, false, λs[ei], μs[ei])
-#   else
-#     ei1, ei2 = findall(isequal(ni), e0)
-#     n1, n2   = e1[ei1:ei2]
-#     return iTfbd(iTfbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt),
-#                  iTfbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
-#                  el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
-#                  false, false, λs[ei], μs[ei])
-#   end
-# end
+  # if fossil
+  elseif in(ei, ef)
+    ei1 = findfirst(isequal(ni), e0)
+    n1  = e1[ei1]
+    return iTfbd(iTfbd(e0, e1, el, λs, μs, ea, ee, ef, n1, ei1, δt),
+                 el[ei], δt, δt, false, true, false, λs[ei], μs[ei])
+
+  # if internal
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    n1, n2   = e1[ei1:ei2]
+    return iTfbd(iTfbd(e0, e1, el, λs, μs, ea, ee, ef, n1, ei1, δt),
+                 iTfbd(e0, e1, el, λs, μs, ea, ee, ef, n2, ei2, δt),
+                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
+                 false, false, false, λs[ei], μs[ei])
+  end
+end
 
 
 
