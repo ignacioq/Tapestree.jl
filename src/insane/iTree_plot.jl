@@ -13,13 +13,47 @@ Created 07 07 2020
 
 
 """
-    function f(tree::T, zfun::Function) where {T <: iT}
+    b(tree::T)  where {T <: iT}
+    d(tree::T)  where {T <: iT}
+    lb(tree::T) where {T <: iT}
+    ld(tree::T) where {T <: iT}
+    t(tree::T)  where {T <: iT}
+    nd(tree::T) where {T <: iT}
+
+Predefined functions for plotting: 
+  `b`  speciation rates
+  `d`  extinction rates
+  `lb` log speciation rates
+  `lb` log speciation rates
+  `t`  turnover
+  `nd` net diversification
+"""
+b(tree::T)  where {T <: iT} = exp.(lλ(tree))
+d(tree::T)  where {T <: iT} = exp.(lμ(tree))
+lb(tree::T) where {T <: iT} = lλ(tree)
+ld(tree::T) where {T <: iT} = lμ(tree)
+t(tree::T)  where {T <: iT} = exp.(lμ(tree)) ./ exp.(lλ(tree))
+nd(tree::T) where {T <: iT} = exp.(lλ(tree)) .- exp.(lμ(tree))
+
+
+
+
+
+"""
+    function f(tree::T;
+               zf         = x -> exp.(lλ(x)),
+               shownodes  = (T <: iTf),
+               tip        = false,
+               speciation = false,
+               extinct    = false,
+               fossil     = true,
+               type       = :phylogram) where {T <: iT}
 
 Recipe for plotting a Type `iT`.
 """
-@recipe function f(tree     ::T,
-                   zfun     ::Function;
-                   shownodes = (T <: iTf),
+@recipe function f(tree::T;
+                   zf         = x -> exp.(lλ(x)),
+                   shownodes  = (T <: iTf),
                    tip        = false,
                    speciation = false,
                    extinct    = false,
@@ -33,7 +67,7 @@ Recipe for plotting a Type `iT`.
   th = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 1:nts, zfun, x, y, z)
+  _rplottree!(tree, th, 1:nts, zf, x, y, z)
 
   ntF = Float64(nts)
 
@@ -58,7 +92,7 @@ Recipe for plotting a Type `iT`.
     xticks          --> (nothing)
     xshowaxis       --> false
   else
-    @error "$type must be either phylogram of radial"
+    @error string(type, "must be either phylogram of radial")
   end
 
   if shownodes
@@ -114,7 +148,7 @@ end
     _rplottree!(tree::T,
                 xc  ::Float64,
                 yr  ::UnitRange{Int64},
-                zfun::Function,
+                zf::Function,
                 x   ::Array{Float64,1},
                 y   ::Array{Float64,1},
                 z   ::Array{Float64,1}) where {T <: iT}
@@ -124,7 +158,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 function _rplottree!(tree::T,
                      xc  ::Float64,
                      yr  ::UnitRange{Int64},
-                     zfun::Function,
+                     zf::Function,
                      x   ::Array{Float64,1},
                      y   ::Array{Float64,1},
                      z   ::Array{Float64,1}) where {T <: iT}
@@ -134,7 +168,10 @@ function _rplottree!(tree::T,
 
   # add horizontal lines
   yc = Float64(yr[1] + yr[end])*0.5
-  zv = exp.(zfun(tree))
+
+  # plot function
+  zv = zf(tree)
+
   l  = lastindex(zv)
   @simd for i in Base.OneTo(l-1)
     push!(x, xc - Float64(i-1)*δt)
@@ -167,11 +204,11 @@ function _rplottree!(tree::T,
 
     push!(z, z[end-1], z[end-1], NaN)
 
-    _rplottree!(tree.d1, xc, yr1, zfun, x, y, z)
-    _rplottree!(tree.d2, xc, yr2, zfun, x, y, z)
+    _rplottree!(tree.d1, xc, yr1, zf, x, y, z)
+    _rplottree!(tree.d2, xc, yr2, zf, x, y, z)
 
-  elseif defd1  _rplottree!(tree.d1, xc, yr, zfun, x, y, z)
-  elseif defd2  _rplottree!(tree.d2, xc, yr, zfun, x, y, z)
+  elseif defd1  _rplottree!(tree.d1, xc, yr, zf, x, y, z)
+  elseif defd2  _rplottree!(tree.d2, xc, yr, zf, x, y, z)
   end
 
 end
