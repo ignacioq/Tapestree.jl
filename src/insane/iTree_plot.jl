@@ -52,7 +52,7 @@ nd(tree::T) where {T <: iT} = exp.(lλ(tree)) .- exp.(lμ(tree))
 Recipe for plotting a Type `iT`.
 """
 @recipe function f(tree::T;
-                   zf         = x -> exp.(lλ(x)),
+                   zf  ::Function,
                    shownodes  = (T <: iTf),
                    tip        = false,
                    speciation = false,
@@ -129,14 +129,13 @@ Recipe for plotting a Type `iT`.
 
   # plot defaults
   line_z              --> z
-  linecolor           --> :inferno
+  linecolor           --> cgrad(:roma, rev = true)
   legend              --> :none
   colorbar            --> true
   colorbar_fontfamily --> :Helvetica
   yshowaxis           --> false
   grid                --> :off
-  yticks              --> (nothing)
-  yshowaxis           --> false
+  yticks              --> nothing
 
   return x, y
 end
