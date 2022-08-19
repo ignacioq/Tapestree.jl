@@ -51,8 +51,8 @@ nd(tree::T) where {T <: iT} = exp.(lλ(tree)) .- exp.(lμ(tree))
 
 Recipe for plotting a Type `iT`.
 """
-@recipe function f(tree::T;
-                   zf  ::Function,
+@recipe function f(tree::T,
+                   zf  ::Function;
                    shownodes  = (T <: iTf),
                    tip        = false,
                    speciation = false,

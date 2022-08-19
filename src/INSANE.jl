@@ -12,6 +12,7 @@ module INSANE
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean
   using LoopVectorization: @avx
+  using PlotUtils: cgrad
   using RecipesBase
 
   # other submodules dependencies
