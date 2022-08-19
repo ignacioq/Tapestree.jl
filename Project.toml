@@ -26,6 +26,7 @@ Optim = "0, 1"
 ProgressMeter = "0.9, 1"
 RCall = "0.13"
 RecipesBase = "1"
+PlotUtils = "1"
 SpecialFunctions = "0, 1"
 julia = "1"
 
