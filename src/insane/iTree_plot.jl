@@ -185,75 +185,28 @@ function _rplottree!(tree::T,
 
   xc -= e(tree)
 
-  defd1 = def1(tree)
-  defd2 = def2(tree)
+  if def1(tree)
+    if def2(tree)
+      ntip1 = ntips(tree.d1)
+      ntip2 = ntips(tree.d2)
 
-  if defd1 && defd2
+      # add vertical lines
+      push!(x, xc, xc, NaN)
 
-    ntip1 = ntips(tree.d1)
-    ntip2 = ntips(tree.d2)
+      yr1 = yr[1:ntip1]
+      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+      push!(y, Float64(yr1[1] + yr1[end])*0.5,
+               Float64(yr2[1] + yr2[end])*0.5,
+               NaN)
 
-    # add vertical lines
-    push!(x, xc, xc, NaN)
+      push!(z, z[end-1], z[end-1], NaN)
 
-    yr1 = yr[1:ntip1]
-    yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-    push!(y, Float64(yr1[1] + yr1[end])*0.5,
-             Float64(yr2[1] + yr2[end])*0.5,
-             NaN)
-
-    push!(z, z[end-1], z[end-1], NaN)
-
-    _rplottree!(tree.d1, xc, yr1, zf, x, y, z)
-    _rplottree!(tree.d2, xc, yr2, zf, x, y, z)
-
-  elseif defd1  _rplottree!(tree.d1, xc, yr, zf, x, y, z)
-  elseif defd2  _rplottree!(tree.d2, xc, yr, zf, x, y, z)
+      _rplottree!(tree.d1, xc, yr1, zf, x, y, z)
+      _rplottree!(tree.d2, xc, yr2, zf, x, y, z)
+    else
+      _rplottree!(tree.d1, xc, yr, zf, x, y, z)
+    end
   end
-
-end
-
-
-
-
-"""
-    function f(tree::iTct, ϵ::Float64)
-
-Recipe for plotting extinction on a `iTct` given `ϵ`.
-"""
-@recipe function f(tree::iTct, ϵ::Float64)
-
-  x = Float64[]
-  y = Float64[]
-  z = Float64[]
-
-  th = treeheight(tree)
-  nt = ntips(tree)
-
-  _rplottree!(tree, th, 1:nt, lλ, x, y, z)
-
-  @simd for i in Base.OneTo(lastindex(z))
-    z[i] *= ϵ
-  end
-
-  # plot defaults
-  line_z          --> z
-  linecolor       --> :inferno
-  legend          --> :none
-  colorbar        --> true
-  xguide          --> "time"
-  xlims           --> (-th*0.05, th*1.1)
-  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
-  xflip           --> true
-  fontfamily      --> :Helvetica
-  tickfontfamily  --> :Helvetica
-  tickfontsize    --> 8
-  grid            --> :off
-  xtick_direction --> :out
-  yticks          --> (nothing)
-  yshowaxis       --> false
-
-  return x, y
 end
 
 
@@ -281,30 +234,25 @@ function _rplottree!(tree::T,
   yc = (yr[1] + yr[end])*0.5
   push!(y, yc, yc, NaN)
 
-  defd1 = def1(tree)
-  defd2 = def2(tree)
+  if def1(tree)
+    if def2(tree)
+      ntip1 = ntips(tree.d1)
+      ntip2 = ntips(tree.d2)
 
-  if defd1 && defd2
+      # add vertical lines
+      push!(x, xc, xc, NaN)
 
-    ntip1 = ntips(tree.d1)
-    ntip2 = ntips(tree.d2)
+      yr1 = yr[1:ntip1]
+      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
-    # add vertical lines
-    push!(x, xc, xc, NaN)
-
-    yr1 = yr[1:ntip1]
-    yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-
-    push!(y, Float64(yr1[1] + yr1[end])*0.5,
-             Float64(yr2[1] + yr2[end])*0.5,
-             NaN)
-
-    _rplottree!(tree.d1, xc, yr1, x, y)
-    _rplottree!(tree.d2, xc, yr2, x, y)
-  elseif defd1
-    _rplottree!(tree.d1, xc, yr, x, y)
-  elseif defd2
-    _rplottree!(tree.d2, xc, yr, x, y)
+      push!(y, Float64(yr1[1] + yr1[end])*0.5,
+               Float64(yr2[1] + yr2[end])*0.5,
+               NaN)
+      _rplottree!(tree.d1, xc, yr1, x, y)
+      _rplottree!(tree.d2, xc, yr2, x, y)
+    else
+      _rplottree!(tree.d1, xc, yr, x, y)
+    end
   end
 end
 
@@ -611,7 +559,7 @@ end
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# DIVERSITY THROUGH TIME
+# diversity through time
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -824,7 +772,7 @@ end
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# RATE THROUGH TIME
+# rates through time
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -834,30 +782,30 @@ end
 
 """
     f(tree::T,
-      lv  ::Function,
+      f  ::Function,
       dt  ::Float64;
       q0 = [0.025, 0.975],
       q1 = [0.25,  0.75],
       q2 = Float64[])  where {T <: iT}
 
-Recipe for plotting values given by `lv` through time for a `iT`.
+Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(tree::T,
-                   lv  ::Function,
+                   f   ::Function,
                    dt  ::Float64;
                    q0 = [0.025, 0.975],
                    q1 = [0.25,  0.75],
                    q2 = Float64[]) where {T <: iT}
 
   # prepare data
-  ts, r = time_rate(tree, dt, lv)
+  ts, r = time_rate(tree, dt, f)
   lts = lastindex(ts)
-  m   = exp.(time_quantile(r, [0.5]))
+  m   = time_quantile(r, [0.5])
 
   # common shape plot defaults
   legend          --> :none
   xguide          --> "time"
-  yguide          --> string(lv)[2:end]*"(t)"
+  yguide          --> string(f)[2:end]*"(t)"
   xflip           --> true
   fontfamily      --> :Helvetica
   tickfontfamily  --> :Helvetica
@@ -869,7 +817,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   fillalpha       --> 0.3
 
   if !isempty(q0)
-    qr0 = exp.(time_quantile(r, q0))
+    qr0 = time_quantile(r, q0)
     @series begin
       seriestype := :shape
       linecolor  := nothing
@@ -888,7 +836,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   end
 
   if !isempty(q1)
-    qr1 = exp.(time_quantile(r, q1))
+    qr1 = time_quantile(r, q1)
     @series begin
       seriestype := :shape
       linecolor  := nothing
@@ -907,7 +855,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   end
 
   if !isempty(q2)
-    qr2 = exp.(time_quantile(r, q2))
+    qr2 = time_quantile(r, q2)
     @series begin
       seriestype := :shape
       linecolor  := nothing
@@ -940,17 +888,19 @@ end
 
 """
     function f(trees::Vector{T},
-               lv   ::Function,
+               f    ::Function,
                tdt  ::Float64;
+               af = x -> quantile(x, 0.5),
                q0 = [0.025, 0.975],
                q1 = [0.25,  0.75],
                q2 = Float64[]) where {T <: iT}
 
-Recipe for plotting values given by `lv` through time for a `iT`.
+Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
-                   lv   ::Function,
+                   f    ::Function,
                    tdt  ::Float64;
+                   af = x -> quantile(x, 0.5),
                    q0 = [0.025, 0.975],
                    q1 = [0.25,  0.75],
                    q2 = Float64[]) where {T <: iT}
@@ -961,8 +911,12 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   lts = 0
   ts  = Float64[]
   for t in trees
-    tsi, ri = time_rate(t, tdt, lv)
-    ri      = exp.(map(x -> mean(x), ri))
+
+    # tree extracting function
+    tsi, ri = time_rate(t, tdt, f)
+
+    # aggregating function
+    ri = map(af, ri)
 
     if lastindex(tsi) > lts
       ts  = tsi
@@ -1006,14 +960,13 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     if !isempty(q2) 
       Q2[i,:] = quantile(qi, q2)
     end
-    M[i] = exp.(mean(log, qi))
+    M[i] = quantile(qi, 0.5)
   end
-
 
   # common shape plot defaults
   legend          --> :none
   xguide          --> "time"
-  yguide          --> string(lv)[2:end]*"(t)"
+  yguide          --> string(f)[2:end]*"(t)"
   xflip           --> true
   fontfamily      --> :Helvetica
   tickfontfamily  --> :Helvetica
@@ -1095,7 +1048,7 @@ end
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# TRAITS
+# traits
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

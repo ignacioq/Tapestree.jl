@@ -47,11 +47,11 @@ end
 
 
 """
-    time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iT}
+    time_rate(tree::T, tdt::Float64, f::Function) where {T <: iT}
 
-Extract values from `lv` function at times sampled every `tdt` across the tree.
+Extract values from `f` function at times sampled every `tdt` across the tree.
 """
-function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iT}
+function time_rate(tree::T, tdt::Float64, f::Function) where {T <: iT}
 
   th = treeheight(tree)
 
@@ -63,7 +63,7 @@ function time_rate(tree::T, tdt::Float64, lv::Function) where {T <: iT}
   r = [Float64[] for i in Base.OneTo(lastindex(ts))]
 
   # do recursive
-  _time_rate!(tree, ts, tdt, r, 1, th, lv)
+  _time_rate!(tree, ts, tdt, r, 1, th, f)
   pop!(r)
   pop!(ts)
 
@@ -80,9 +80,9 @@ end
                r   ::Array{Array{Float64,1},1},
                tii ::Int64,
                ct  ::Float64,
-               lv  ::Function) where {T <: iT}
+               f  ::Function) where {T <: iT}
 
-Extract values from `lv` function at times `ts` across the tree.
+Extract values from `f` function at times `ts` across the tree.
 """
 @inline function _time_rate!(tree::T,
                              ts  ::Array{Float64,1},
@@ -90,11 +90,11 @@ Extract values from `lv` function at times `ts` across the tree.
                              r   ::Array{Array{Float64,1},1},
                              tii ::Int64,
                              ct  ::Float64,
-                             lv  ::Function) where {T <: iT}
+                             f   ::Function) where {T <: iT}
 
   et = e(tree)
   δt = dt(tree)
-  vt = lv(tree)
+  vt = f(tree)
 
   if isapprox(ct, 0.0, atol = 1e-10)
     return nothing
@@ -104,7 +104,7 @@ Extract values from `lv` function at times `ts` across the tree.
   nts = convert(Int64,nts) - (iszero(re) ? 1 : 0)
   tsr = tii:(tii + nts)
 
-  # have to match ts times to lv vector
+  # have to match ts times to f vector
   @simd for i in tsr
     tsi = ts[i]
     bt  = ct - tsi
@@ -116,9 +116,9 @@ Extract values from `lv` function at times `ts` across the tree.
   end
 
   if def1(tree)
-    _time_rate!(tree.d1, ts, tdt, r, tii + nts + 1, ct - et, lv)
+    _time_rate!(tree.d1, ts, tdt, r, tii + nts + 1, ct - et, f)
     if def2(tree)
-      _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, lv)
+      _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, f)
     end
   end
 
@@ -131,26 +131,26 @@ end
 """
     mcmc_array(treev::Array{T,1},
                δt   ::Float64,
-               lv   ::Function) where {T <: iT}
+               f   ::Function) where {T <: iT}
 
 Return an Array with a row for each sampled tree for interpolated
-parameters accessed by `lv` at times determined by `δt`.
+parameters accessed by `f` at times determined by `δt`.
 """
 function mcmc_array(treev::Array{T,1},
                     δt   ::Float64,
-                    lv   ::Function) where {T <: iT}
+                    f   ::Function) where {T <: iT}
 
   @inbounds begin
 
     vi = Float64[]
-    extract_vector!(treev[1], vi, δt, 0.0, lv)
+    extract_vector!(treev[1], vi, δt, 0.0, f)
 
     ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vi))
     ra[1,:] = vi
 
     for i in 2:lastindex(treev)
       vi = Float64[]
-      extract_vector!(treev[i], vi, δt, 0.0, lv)
+      extract_vector!(treev[i], vi, δt, 0.0, f)
       ra[i, :] = vi
     end
   end
@@ -166,7 +166,7 @@ end
                     v   ::Array{Float64,1},
                     nδt ::Float64,
                     ct  ::Float64,
-                    lv  ::Function) where {T <: iT}
+                    f  ::Function) where {T <: iT}
 
 Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
 and return a vector.
@@ -175,11 +175,11 @@ function extract_vector!(tree::T,
                          v   ::Array{Float64,1},
                          nδt ::Float64,
                          ct  ::Float64,
-                         lv  ::Function) where {T <: iT}
+                         f  ::Function) where {T <: iT}
 
   et = e(tree)
   δt = dt(tree)
-  vt = lv(tree)
+  vt = f(tree)
   n  = floor(Int64, (et - ct)/nδt)
   i1 = isapprox(et - ct, Float64(n)*nδt, atol = 1e-11) ? 0 : 1
 
@@ -197,9 +197,9 @@ function extract_vector!(tree::T,
   append!(v, pv)
 
   if def1(tree)
-    extract_vector!(tree.d1::T, v, nδt, max(0.0, iti - et), lv)
+    extract_vector!(tree.d1::T, v, nδt, max(0.0, iti - et), f)
     if def2(tree)
-      extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - et), lv)
+      extract_vector!(tree.d2::T, v, nδt, max(0.0, iti - et), f)
     end
   end
 end
@@ -208,13 +208,13 @@ end
 
 
 """
-    linearize_gbm(tree::T, lv::Function) where {T <: iT}
+    linearize_gbm(tree::T, f::Function) where {T <: iT}
 
-Extract the parameters given by `lv` into a linear Array.
+Extract the parameters given by `f` into a linear Array.
 """
-function linearize_gbm(tree::T, lv::Function) where {T <: iT}
+function linearize_gbm(tree::T, f::Function) where {T <: iT}
   v = Float64[]
-  _linearize_gbm!(tree, lv, v)
+  _linearize_gbm!(tree, f, v)
   return v
 end
 
@@ -223,20 +223,20 @@ end
 
 """
     _linearize_gbm!(tree::T,
-                    lv  ::Function,
+                    f  ::Function,
                     v   ::Array{Float64,1}) where {T <: iT}
 
-Extract the parameters given by `lv` into a linear Array, initialized with an
+Extract the parameters given by `f` into a linear Array, initialized with an
 array `v`.
 """
 function _linearize_gbm!(tree::T,
-                         lv  ::Function,
+                         f  ::Function,
                          v   ::Array{Float64,1}) where {T <: iT}
 
-  append!(v, lv(tree))
+  append!(v, f(tree))
   if def1(tree)
-    _linearize_gbm!(tree.d1::T, lv, v)
-    _linearize_gbm!(tree.d2::T, lv, v)
+    _linearize_gbm!(tree.d1::T, f, v)
+    _linearize_gbm!(tree.d2::T, f, v)
   end
 end
 
@@ -245,19 +245,19 @@ end
 
 """
     _linearize_gbm!(tree::sTfbd,
-                    lv  ::Function,
+                    f  ::Function,
                     v   ::Array{Float64,1}) where {T <: iT}
 
-Extract the parameters given by `lv` into a linear Array, initialized with an
+Extract the parameters given by `f` into a linear Array, initialized with an
 array `v`.
 """
 function _linearize_gbm!(tree::sTfbd,
-                         lv  ::Function,
+                         f  ::Function,
                          v   ::Array{Float64,1}) where {T <: iT}
 
-  append!(v, lv(tree))
-  if def1(tree) _linearize_gbm!(tree.d1::T, lv, v) end
-  if def2(tree) _linearize_gbm!(tree.d2::T, lv, v) end
+  append!(v, f(tree))
+  if def1(tree) _linearize_gbm!(tree.d1::T, f, v) end
+  if def2(tree) _linearize_gbm!(tree.d2::T, f, v) end
 end
 
 
@@ -266,7 +266,7 @@ end
 """
     extract_tree(tree::iTpb, nδt::Float64)
 
-Log-linearly predict Geometric Brownian motion for `lv` at times given by `nδt`,
+Log-linearly predict Geometric Brownian motion for `f` at times given by `nδt`,
 and return a tree.
 """
 function extract_tree(tree::iTpb, nδt::Float64)
@@ -409,7 +409,7 @@ end
     iquantile(treev::Array{iTce,1}, p::Float64)
 
 Make an `iTce` with the quantile specified by `p` in data specified in
-function `lv`.
+function `f`.
 """
 function iquantile(treev::Array{iTce,1}, p::Float64)
 
@@ -456,7 +456,7 @@ end
     iquantile(treev::Array{iTct,1}, p::Float64)
 
 Make an `iTct` with the quantile specified by `p` in data specified in
-function `lv`.
+function `f`.
 """
 function iquantile(treev::Vector{iTct}, p::Float64)
 
@@ -549,7 +549,7 @@ end
     iquantile(treev::Vector{iTbd}, p::Float64)
 
 Make an `iTbd` with the quantile specified by `p` in data specified in
-function `lv`.
+function `f`.
 """
 function iquantile(treev::Vector{iTbd}, p::Float64)
 
@@ -605,7 +605,7 @@ end
     iquantile(treev::Vector{iTfbd}, p::Float64)
 
 Make an `iTfbd` with the quantile specified by `p` in data specified in
-function `lv`.
+function `f`.
 """
 function iquantile(treev::Vector{iTfbd}, p::Float64)
 
