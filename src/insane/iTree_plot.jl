@@ -33,6 +33,7 @@ d(tree::T)  where {T <: iT} = exp.(lμ(tree))
 lb(tree::T) where {T <: iT} = lλ(tree)
 ld(tree::T) where {T <: iT} = lμ(tree)
 t(tree::T)  where {T <: iT} = exp.(lμ(tree)) ./ exp.(lλ(tree))
+lt(tree::T) where {T <: iT} = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
 nd(tree::T) where {T <: iT} = exp.(lλ(tree)) .- exp.(lμ(tree))
 
 
@@ -71,6 +72,11 @@ Recipe for plotting a Type `iT`.
 
   ntF = Float64(nts)
 
+  # plot defaults
+  legend              --> :none
+  colorbar_fontfamily --> :Helvetica
+  grid                --> :off
+
   if type === :radial
     x, y, z = append_forradial(x, y, z, 50)
     polar_coords!(x, y, 360.0/ntF, th)
@@ -84,7 +90,7 @@ Recipe for plotting a Type `iT`.
     yticks          --> nothing
 
   else
-    xlims               --> (-th*0.05, th*1.05)
+    xlims           --> (-th*0.05, th*1.05)
     xguide          --> "time"
     xflip           --> true
     fontfamily      --> :Helvetica
@@ -136,12 +142,8 @@ Recipe for plotting a Type `iT`.
     end
   end
 
-  # plot defaults
-  line_z              --> z
-  linecolor           --> cgrad(:roma, rev = true)
-  legend              --> :none
-  colorbar_fontfamily --> :Helvetica
-  grid                --> :off
+  line_z    --> z
+  linecolor --> cgrad(:roma, rev = true)
 
   if type === :rates
     return x, z

@@ -616,6 +616,34 @@ end
 
 
 """
+    irange(tree::T, f::Function) where {T <: iTf}
+
+Return the branch length sum of `tree` based on `δt` and `fδt`
+for debugging purposes.
+"""
+function irange(tree::T, f::Function) where {T <: iT}
+
+  mn, mx = extrema(f(tree))
+
+  if def1(tree)
+    mnd, mxd = irange(tree.d1, f)
+    mn = min(mn, mnd)
+    mx = max(mx, mxd)
+
+    if def2(tree)
+      mnd, mxd = irange(tree.d2, f)
+      mn = min(mn, mnd)
+      mx = max(mx, mxd)
+    end
+  end
+
+  return mn, mx
+end
+
+
+
+
+"""
     _ctl(tree::T, l::Float64) where {T <: iTree}
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
