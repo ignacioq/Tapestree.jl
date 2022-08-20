@@ -71,10 +71,20 @@ Recipe for plotting a Type `iT`.
 
   ntF = Float64(nts)
 
-  if type === :phylogram
+  if type === :radial
+    x, y, z = append_forradial(x, y, z, 50)
+    polar_coords!(x, y, 360.0/ntF, th)
 
-    xlims           --> (-th*0.05, th*1.05)
-    ylims           --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
+    ylims           --> (-th*1.05, th*1.05)
+    xlims           --> (-th*1.05, th*1.05)
+    xticks          --> (nothing)
+    xshowaxis       --> false
+    colorbar        --> true
+    yshowaxis       --> false
+    yticks          --> nothing
+
+  else
+    xlims               --> (-th*0.05, th*1.05)
     xguide          --> "time"
     xflip           --> true
     fontfamily      --> :Helvetica
@@ -82,17 +92,16 @@ Recipe for plotting a Type `iT`.
     tickfontsize    --> 8
     xtick_direction --> :out
 
- elseif type === :radial
+    if type === :phylogram
+      ylims         --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
+      colorbar      --> true
+      yshowaxis     --> false
+      yticks        --> nothing
 
-    x, y, z = append_forradial(x, y, z, 50)
-    polar_coords!(x, y, 360.0/ntF, th)
-
-    xlims           --> (-th*1.05, th*1.05)
-    ylims           --> (-th*1.05, th*1.05)
-    xticks          --> (nothing)
-    xshowaxis       --> false
-  else
-    @error string(type, "must be either phylogram of radial")
+    else
+      colorbar  --> false
+      yshowaxis --> true
+    end
   end
 
   if shownodes
@@ -131,13 +140,14 @@ Recipe for plotting a Type `iT`.
   line_z              --> z
   linecolor           --> cgrad(:roma, rev = true)
   legend              --> :none
-  colorbar            --> true
   colorbar_fontfamily --> :Helvetica
-  yshowaxis           --> false
   grid                --> :off
-  yticks              --> nothing
 
-  return x, y
+  if type === :rates
+    return x, z
+  else
+    return x, y
+  end
 end
 
 
