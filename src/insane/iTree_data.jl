@@ -347,6 +347,7 @@ function _subclade_stem(tree::iTree,
       elseif !(lsi === "" || lsi === "tda")
         od1 = false
       end
+      it1 && !od1 && break
     end
 
     it2 = false
@@ -358,6 +359,7 @@ function _subclade_stem(tree::iTree,
       elseif !(lsi === "" || lsi === "tda")
         od2 = false
       end
+      it2 && !od2 && break
     end
 
     if it1
@@ -555,6 +557,48 @@ function make_ls!(tree ::T,
   return n1 + n2
 end
 
+
+
+
+"""
+    fixedpos(tree::T)
+
+Returns vector of the position of fixed tips across all tips 
+of a data augmented tree.
+"""
+function fixedpos(tree::T) where {T <: iTree}
+
+  fp = Int64[]
+  _fixedpos!(tree, 1, fp)
+
+  return fp
+end
+
+
+
+"""
+    _fixedpos!(tree::T, i::Int64, fp::Vector{Int64}) where {T <: iTree}
+
+Returns vector of the position of fixed tips across all tips 
+of a data augmented tree.
+"""
+
+function _fixedpos!(tree::T, i::Int64, fp::Vector{Int64}) where {T <: iTree}
+
+  if istip(tree) 
+    i += 1
+    if isfix(tree)
+      push!(fp, i)
+    end
+  else
+    i = _fixedpos!(tree.d1, i, fp)
+    if def2(tree)
+      i = _fixedpos!(tree.d2, i, fp)
+    end
+  end
+
+  return i
+end
 
 
 
