@@ -255,39 +255,23 @@ end
 
 """
     subclade(trees::Vector{T}, 
-             ltree::sT_label, 
-             tips ::Vector{String}) where {T <: iTree}
+                  ltree::sT_label, 
+                  tips ::Vector{String},
+                  stem ::Bool) where {T <: iTree}
 
 Return the minimum subclade that includes tip labels in `tips`.
 """
 function subclade(trees::Vector{T}, 
                   ltree::sT_label, 
-                  tips ::Vector{String}) where {T <: iTree}
-
-  ls, n2v = labels(ltree)
-  ur      = 1:lastindex(ls)
+                  tips ::Vector{String},
+                  stem ::Bool) where {T <: iTree}
 
   vT = T[]
   for t in trees
-    push!(vT, subcladef(t, ur, tips, ls, n2v))
+    push!(vT, subclade(t, ltree, tips, stem))
   end
 
   return vT
-end
-
-
-
-
-"""
-    subclade(tree::iTree, ltree::sT_label, tips::Vector{String})
-
-Return the minimum subclade that includes tip labels in `tips`.
-"""
-function subclade(tree::iTree, ltree::sT_label, tips::Vector{String})
-
-  ls, n2v = labels(ltree)
-
-  return subcladef(tree, 1:lastindex(ls), tips, ls, n2v)
 end
 
 
@@ -301,63 +285,93 @@ Return the minimum subclade that includes tip labels in `tips`.
 function subclade(tree::sT_label, tips::Vector{String})
 
   ls, n2v = labels(tree)
-  return subclade(tree, 1:lastindex(ls), tips, ls, n2v)
+  return _subclade_crown(tree, 1:lastindex(ls), tips, ls, n2v)
 end
 
 
 
 
 """
-    subclade(tree::iTree,
-             ixs ::UnitRange,
-             tips::Vector{String},
-             ls  ::Vector{String},
-             n2v ::Vector{Int64})
+    subclade(tree::iTree, 
+             ltree::sT_label, 
+             tips ::Vector{String}, 
+             stem ::Bool)
+
+Return the minimum subclade that includes tip labels in `tips`.
+"""
+function subclade(tree::iTree, 
+                  ltree::sT_label, 
+                  tips ::Vector{String}, 
+                  stem ::Bool)
+
+  ls, n2v = labels(tree, ltree)
+  if stem
+    return _subclade_stem(tree,  1:lastindex(ls), tips, ls, n2v)
+  else
+    return _subclade_crown(tree, 1:lastindex(ls), tips, ls, n2v)
+  end
+end
+
+
+
+
+
+"""
+    _subclade_stem(tree::iTree,
+                   ixs ::UnitRange,
+                   tips::Vector{String},
+                   ls  ::Vector{String},
+                   n2v ::Vector{Int64})
 
 Return the minimum subclade that includes tip labels
 in `tips` (recursive function).
 """
-function subclade(tree::iTree,
-                  ixs ::UnitRange,
-                  tips::Vector{String},
-                  ls  ::Vector{String},
-                  n2v ::Vector{Int64})
+function _subclade_stem(tree::iTree,
+                        ixs ::UnitRange,
+                        tips::Vector{String},
+                        ls  ::Vector{String},
+                        n2v ::Vector{Int64})
 
   @inbounds begin
 
-    ln = lastindex(ixs)
-
     n2i = n2v[ixs[1]]
-    ix1 = ixs[n2i*2 + 1:ln]
+    ix1 = ixs[n2i*2 + 1:lastindex(ixs)]
     ix2 = ixs[2:n2i*2]
 
     it1 = false
-    for si in tips
-      for i in ix1
-        if si == ls[i]
-          it1 = true
-          break
-        end
+    od1 = true
+    for i in ix1
+      lsi = ls[i]
+      if in(lsi, tips)
+        it1 = true
+      elseif !(lsi === "" || lsi === "tda")
+        od1 = false
       end
     end
 
     it2 = false
-    for si in tips
-      for i in ix2
-        if si == ls[i]
-          it2 = true
-          break
-        end
+    od2 = true
+    for i in ix2
+      lsi = ls[i]
+      if in(lsi, tips)
+        it2 = true
+      elseif !(lsi === "" || lsi === "tda")
+        od2 = false
       end
     end
 
-    if ln > lastindex(tips)
-      if it1
-        if !it2
-          tree = subclade(tree.d1, ix1, tips, ls, n2v)
-        end
-      elseif it2
-        tree = subclade(tree.d2, ix2, tips, ls, n2v)
+    if it1
+      if !it2
+        if od1
+          return tree.d1
+        end 
+        tree = _subclade_stem(tree.d1, ix1, tips, ls, n2v)
+      end
+    elseif it2
+      if od2
+        return tree.d2
+      else
+        tree = _subclade_stem(tree.d2, ix2, tips, ls, n2v)
       end
     end
   end
@@ -368,8 +382,9 @@ end
 
 
 
+
 """
-    subcladef(tree::iTree,
+    _subclade(tree::iTree,
               ixs ::UnitRange,
               tips::Vector{String},
               ls  ::Vector{String},
@@ -378,55 +393,48 @@ end
 Return the minimum subclade that includes tip labels
 in `tips` (recursive function).
 """
-function subcladef(tree::iTree,
-                   ixs ::UnitRange,
-                   tips::Vector{String},
-                   ls  ::Vector{String},
-                   n2v ::Vector{Int64})
+function _subclade_crown(tree::iTree,
+                         ixs ::UnitRange,
+                         tips::Vector{String},
+                         ls  ::Vector{String},
+                         n2v ::Vector{Int64})
 
   @inbounds begin
-    if isfix(tree.d1)
-      if isfix(tree.d2)
-        ln = lastindex(ixs)
 
-        n2i = n2v[ixs[1]]
-        ix1 = ixs[n2i*2 + 1:ln]
-        ix2 = ixs[2:n2i*2]
+    n2i = n2v[ixs[1]]
+    ix1 = ixs[n2i*2 + 1:lastindex(ixs)]
+    ix2 = ixs[2:n2i*2]
 
-        it1 = false
-        for si in tips
-          for i in ix1
-            if si == ls[i]
-              it1 = true
-              break
-            end
-          end
+    it1 = false
+    for si in tips
+      for i in ix1
+        if si === ls[i]
+          it1 = true
+          break
         end
-
-        it2 = false
-        for si in tips
-          for i in ix2
-            if si == ls[i]
-              it2 = true
-              break
-            end
-          end
-        end
-
-        if ln > lastindex(tips)
-          if it1
-            if !it2
-              tree = subcladef(tree.d1, ix1, tips, ls, n2v)
-            end
-          elseif it2
-            tree = subcladef(tree.d2, ix2, tips, ls, n2v)
-          end
-        end
-      else
-        tree = subcladef(tree.d1, ixs, tips, ls, n2v)
+        it1 && break
       end
-    else
-      tree = subcladef(tree.d2, ixs, tips, ls, n2v)
+      it1 && break
+    end
+
+    it2 = false
+    for si in tips
+      for i in ix2
+        if si === ls[i]
+          it2 = true
+          break
+        end
+        it2 && break
+      end
+      it2 && break
+    end
+
+    if it1
+      if !it2
+        tree = _subclade_crown(tree.d1, ix1, tips, ls, n2v)
+      end
+    elseif it2
+      tree = _subclade_crown(tree.d2, ix2, tips, ls, n2v)
     end
   end
 
@@ -481,6 +489,72 @@ function make_ls!(tree::sT_label,
 
   return n1 + n2
 end
+
+
+
+
+"""
+    labels(tree::T, ltree::sT_label) where {T <: iTree}
+
+Return labels and left node order.
+"""
+function labels(tree::T, ltree::sT_label) where {T <: iTree}
+
+  ls  = String[]
+  n2v = Int64[]
+  make_ls!(tree, ltree, ls, n2v)
+
+  reverse!(ls)
+  reverse!(n2v)
+
+  return ls, n2v
+end
+
+
+
+
+"""
+    make_ls!(tree ::T,
+             ltree::sT_label,
+             ls   ::Array{String,1},
+             n2v  ::Array{Int64,1}) where {T <: iTree}
+
+Return labels and left node order (recursive function) for data augmented
+tree.
+"""
+function make_ls!(tree ::T,
+                  ltree::sT_label,
+                  ls   ::Array{String,1},
+                  n2v  ::Array{Int64,1}) where {T <: iTree}
+
+  if istip(tree)
+    if isfix(tree)
+      push!(ls, l(ltree))
+    else
+      push!(ls, "tda")
+    end
+
+    push!(n2v, 0)
+    return 1
+  end
+
+  if isfix(tree.d1) && isfix(tree.d2)
+    n1 = make_ls!(tree.d1, ltree.d1, ls, n2v)
+    n2 = make_ls!(tree.d2, ltree.d2, ls, n2v)
+    push!(ls, l(ltree))
+
+  else
+    n1 = make_ls!(tree.d1, ltree, ls, n2v)
+    n2 = make_ls!(tree.d2, ltree, ls, n2v)
+
+    push!(ls, "")
+  end
+
+  push!(n2v, n2)
+
+  return n1 + n2
+end
+
 
 
 
