@@ -42,7 +42,7 @@ nd(tree::T) where {T <: iT} = exp.(lλ(tree)) .- exp.(lμ(tree))
 
 """
     function f(tree::T;
-               zf         = x -> exp.(lλ(x)),
+               zf  ::Function,
                shownodes  = (T <: iTf),
                tip        = false,
                speciation = false,
@@ -65,10 +65,14 @@ Recipe for plotting a Type `iT`.
   y = Float64[]
   z = Float64[]
 
-  th = treeheight(tree)
+  th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 1:nts, zf, x, y, z)
+  if type === :lengthrates
+    _rplottree_lr!(tree, 0.0, 1:nts, zf, x, y, z)
+  else
+    _rplottree!(tree,     th, 1:nts, zf, x, y, z)
+  end
 
   ntF = Float64(nts)
 
@@ -76,6 +80,7 @@ Recipe for plotting a Type `iT`.
   legend              --> :none
   colorbar_fontfamily --> :Helvetica
   grid                --> :off
+  fontfamily          --> :Helvetica
 
   if type === :radial
     x, y, z = append_forradial(x, y, z, 50)
@@ -89,11 +94,16 @@ Recipe for plotting a Type `iT`.
     yshowaxis       --> false
     yticks          --> nothing
 
+  elseif type === :lengthrates
+    xguide          --> "cumulative rates"
+    colorbar        --> true
+    yshowaxis       --> false
+    yticks        --> nothing
+
   else
     xlims           --> (-th*0.05, th*1.05)
     xguide          --> "time"
     xflip           --> true
-    fontfamily      --> :Helvetica
     tickfontfamily  --> :Helvetica
     tickfontsize    --> 8
     xtick_direction --> :out
@@ -115,10 +125,7 @@ Recipe for plotting a Type `iT`.
     xN = Float64[]
     yN = Float64[]
 
-    th = treeheight(tree)
-    nt = ntips(tree)
-
-    _rplottree!(tree, th, 1:nt, xN, yN)
+    _rplottree!(tree, th, 1:nts, xN, yN)
 
     shape = Symbol[:circle]
     col   = Symbol[:pink]
@@ -142,8 +149,8 @@ Recipe for plotting a Type `iT`.
     end
   end
 
-  line_z    --> z
-  linecolor --> cgrad(:roma, rev = true)
+  line_z     --> z
+  linecolor  --> cgrad(:roma, rev = true)
 
   if type === :rates
     return x, z
@@ -151,6 +158,7 @@ Recipe for plotting a Type `iT`.
     return x, y
   end
 end
+
 
 
 
@@ -169,7 +177,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 function _rplottree!(tree::T,
                      xc  ::Float64,
                      yr  ::UnitRange{Int64},
-                     zf::Function,
+                     zf  ::Function,
                      x   ::Array{Float64,1},
                      y   ::Array{Float64,1},
                      z   ::Array{Float64,1}) where {T <: iT}
@@ -181,8 +189,8 @@ function _rplottree!(tree::T,
   yc = Float64(yr[1] + yr[end])*0.5
 
   # plot function
-  zv = zf(tree)
-
+  zv = copy(zf(tree))
+  zc = last(zv)
   l  = lastindex(zv)
   @simd for i in Base.OneTo(l-1)
     push!(x, xc - Float64(i-1)*δt)
@@ -192,7 +200,7 @@ function _rplottree!(tree::T,
 
   push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
   push!(y, yc, NaN)
-  push!(z, zv[l], NaN)
+  push!(z, zc, NaN)
 
   xc -= e(tree)
 
@@ -210,7 +218,7 @@ function _rplottree!(tree::T,
                Float64(yr2[1] + yr2[end])*0.5,
                NaN)
 
-      push!(z, z[end-1], z[end-1], NaN)
+      push!(z, zc, zc, NaN)
 
       _rplottree!(tree.d1, xc, yr1, zf, x, y, z)
       _rplottree!(tree.d2, xc, yr2, zf, x, y, z)
@@ -219,6 +227,75 @@ function _rplottree!(tree::T,
     end
   end
 end
+
+
+
+
+"""
+    _rplottree!(tree::T,
+                zc  ::Float64,
+                yr  ::UnitRange{Int64},
+                zf  ::Function,
+                y   ::Array{Float64,1},
+                z   ::Array{Float64,1}) where {T <: iT}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iT`
+where branch lengths reflect the cumulative from function `zf`.
+"""
+function _rplottree_lr!(tree::T,
+                        xc  ::Float64,
+                        yr  ::UnitRange{Int64},
+                        zf  ::Function,
+                        x   ::Array{Float64,1},
+                        y   ::Array{Float64,1},
+                        z   ::Array{Float64,1}) where {T <: iT}
+
+  # tree δt and nsδt
+  δt = dt(tree)
+
+  # add horizontal lines
+  yc = Float64(yr[1] + yr[end])*0.5
+
+  # plot function
+  zv = copy(zf(tree))
+
+  # append
+  append!(y, fill(yc, lastindex(zv)))
+  append!(z, zv)
+  zc     = last(zv)
+  zv[1] += xc
+  append!(x, cumsum!(zv, zv))
+  xc = last(x)
+
+  push!(x, NaN)
+  push!(y, NaN)
+  push!(z, NaN)
+
+  if def1(tree)
+    if def2(tree)
+      ntip1 = ntips(tree.d1)
+      ntip2 = ntips(tree.d2)
+
+      # add vertical lines
+      push!(x, xc, xc, NaN)
+
+      yr1 = yr[1:ntip1]
+      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+      push!(y, Float64(yr1[1] + yr1[end])*0.5,
+               Float64(yr2[1] + yr2[end])*0.5,
+               NaN)
+
+      push!(z, zc, zc, NaN)
+
+      _rplottree_lr!(tree.d1, xc, yr1, zf, x, y, z)
+      _rplottree_lr!(tree.d2, xc, yr2, zf, x, y, z)
+    else
+      _rplottree_lr!(tree.d1, xc, yr, zf, x, y, z)
+    end
+  end
+end
+
+
 
 
 
