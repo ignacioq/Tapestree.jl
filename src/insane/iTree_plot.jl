@@ -13,12 +13,13 @@ Created 07 07 2020
 
 
 """
-    b(tree::T)  where {T <: iT}
-    d(tree::T)  where {T <: iT}
-    lb(tree::T) where {T <: iT}
-    ld(tree::T) where {T <: iT}
-    t(tree::T)  where {T <: iT}
-    nd(tree::T) where {T <: iT}
+    b(tree::T) 
+    d(tree::T) 
+    lb(tree::T)
+    ld(tree::T)
+    t(tree::T) 
+    nd(tree::T)
+    dλ(tree::iT)
 
 Predefined functions for plotting: 
   `b`  speciation rates
@@ -27,16 +28,36 @@ Predefined functions for plotting:
   `lb` log speciation rates
   `t`  turnover
   `nd` net diversification
+  `dλ` change in speciation rates
 """
-b(tree::T)  where {T <: iT} = exp.(lλ(tree))
-d(tree::T)  where {T <: iT} = exp.(lμ(tree))
-lb(tree::T) where {T <: iT} = lλ(tree)
-ld(tree::T) where {T <: iT} = lμ(tree)
-t(tree::T)  where {T <: iT} = exp.(lμ(tree)) ./ exp.(lλ(tree))
-lt(tree::T) where {T <: iT} = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
-nd(tree::T) where {T <: iT} = exp.(lλ(tree)) .- exp.(lμ(tree))
+b(tree::iT)  = exp.(lλ(tree))
+d(tree::iT)  = exp.(lμ(tree))
+lb(tree::iT) = lλ(tree)
+ld(tree::iT) = lμ(tree)
+t(tree::iT)  = exp.(lμ(tree)) ./ exp.(lλ(tree))
+lt(tree::iT) = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
+nd(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+function dλ(tree::iT)
+  dd = diff(exp.(lλ(tree)))
+  return append!(dd, dd[end])
+end
+function dμ(tree::iT)
+  dd = diff(exp.(lμ(tree)))
+  return append!(dd, dd[end])
+end
 
 
+function dλc(tree::iT)
+  lv = lλ(tree)
+  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
+end
+
+
+
+function dλc(x)
+  lv = lλ(x)
+  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
+end
 
 
 
@@ -232,12 +253,13 @@ end
 
 
 """
-    _rplottree!(tree::T,
-                zc  ::Float64,
-                yr  ::UnitRange{Int64},
-                zf  ::Function,
-                y   ::Array{Float64,1},
-                z   ::Array{Float64,1}) where {T <: iT}
+    _rplottree_lr!(tree::T,
+                   xc  ::Float64,
+                   yr  ::UnitRange{Int64},
+                   zf  ::Function,
+                   x   ::Array{Float64,1},
+                   y   ::Array{Float64,1},
+                   z   ::Array{Float64,1}) where {T <: iT}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iT`
 where branch lengths reflect the cumulative from function `zf`.
@@ -263,7 +285,7 @@ function _rplottree_lr!(tree::T,
   append!(y, fill(yc, lastindex(zv)))
   append!(z, zv)
   zc     = last(zv)
-  zv[1] += xc
+  zv[1]  = xc
   append!(x, cumsum!(zv, zv))
   xc = last(x)
 

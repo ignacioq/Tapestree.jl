@@ -719,3 +719,101 @@ function imean(treev::Vector{iTbd})
 end
 
 
+
+
+
+"""
+    sustainedcount!(tree::iT, 
+                    zf  ::Function,
+                    iod ::Function)
+
+Counts times that branch changes of `zf` continue being higher or lower, 
+as set by `iod`.
+"""
+function sustainedcount(tree::iT, 
+                        zf  ::Function,
+                        iod ::Function)
+
+  c1 = Int64[]
+  c2 = Int64[]
+  if iszero(e(tree))
+    _sustainedcount!(tree.d1, 0, 0, c1, c2, zf, iod)
+    _sustainedcount!(tree.d2, 0, 0, c1, c2, zf, iod)
+  else
+    _sustainedcount!(tree,    0, 0, c1, c2, zf, iod)
+  end
+
+  @inbounds begin
+    ix = Int64[]
+    for i in Base.OneTo(lastindex(c1))
+      if iszero(c1[i])
+        push!(ix, i)
+      end
+    end
+    n0 = lastindex(ix)
+    deleteat!(c1, ix)
+  end
+
+  return zeros(Int64, n0), c1, c2
+end
+
+
+
+
+"""
+    _sustainedcount!(tree::iT, 
+                     psc1::Int64, 
+                     psc2::Int64, 
+                     c1  ::Vector{Int64}, 
+                     c2  ::Vector{Int64},
+                     zf  ::Function,
+                     iod ::Function)
+
+Counts times that branch changes of `zf` continue being higher or lower, 
+as set by `iod`.
+"""
+function _sustainedcount!(tree::iT, 
+                          psc1::Int64, 
+                          psc2::Int64, 
+                          c1  ::Vector{Int64}, 
+                          c2  ::Vector{Int64},
+                          zf  ::Function,
+                          iod ::Function)
+
+
+  if def1(tree)
+    if def2(tree)
+
+      it1 = istip(tree.d1)
+      it2 = istip(tree.d2)
+
+      lv   = zf(tree)
+      lv1  = zf(tree.d1)
+      lv2  = zf(tree.d2)
+      cinc = iod(lv[end]  - lv[1],  0.0)
+      d1nc = iod(lv1[end] - lv1[1], 0.0)
+      d2nc = iod(lv2[end] - lv2[1], 0.0)
+
+      ic1 = ((cinc && d1nc) || (cinc && d2nc)) && !(cinc && d1nc && d2nc)
+      ic2 = cinc && d1nc && d2nc
+
+      if ic1
+        psc1 += 1
+        if it1 || it2 push!(c1, psc1) end
+      elseif ic2
+        psc1 += 1
+        psc2 += 1
+        if it1 || it2 push!(c1, psc1); push!(c2, psc2) end
+      else
+        psc1 = 0
+        psc2 = 0
+        push!(c1, psc1)
+      end
+
+      _sustainedcount!(tree.d1, psc1, psc2, c1, c2, zf, iod)
+      _sustainedcount!(tree.d2, psc1, psc2, c1, c2, zf, iod)
+    else
+      _sustainedcount!(tree.d1, psc1, psc2, c1, c2, zf, iod)
+    end
+  end
+end

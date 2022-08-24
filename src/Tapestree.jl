@@ -44,8 +44,8 @@ using .INSANE: read_newick, write_newick,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
-  b, d, ld, lb, nd, t, lt,
-  ntipsalive, ntips, ntipsextinct, 
+  b, d, ld, lb, nd, t, lt, dλ, dμ,
+  ntipsalive, ntips, ntipsextinct, sustainedcount,
   treeheight, treelength, _ctl, ltt, subclade, tiplabels
 export read_newick, write_newick, 
   sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
@@ -56,8 +56,8 @@ export read_newick, write_newick,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
-  b, d, ld, lb, nd, t, lt,
-  ntipsalive, ntips, ntipsextinct, 
+  b, d, ld, lb, nd, t, lt, dλ, dμ,
+  ntipsalive, ntips, ntipsextinct, sustainedcount,
   treeheight, treelength, _ctl, ltt, subclade, tiplabels
 
 end # module Tapestree
