@@ -794,26 +794,43 @@ function _sustainedcount!(tree::iT,
       d1nc = iod(lv1[end] - lv1[1], 0.0)
       d2nc = iod(lv2[end] - lv2[1], 0.0)
 
-      ic1 = ((cinc && d1nc) || (cinc && d2nc)) && !(cinc && d1nc && d2nc)
       ic2 = cinc && d1nc && d2nc
+      i11 = cinc && d1nc && !ic2
+      i12 = cinc && d2nc && !ic2
 
-      if ic1
-        psc1 += 1
-        if it1 || it2 push!(c1, psc1) end
+      ps11 = ps12 = psc1
+
+      if i11
+        ps11 += 1
+        if it1 push!(c1, ps11) end
+        ps12 = 0
+        if psc2 > 0 push!(c2, psc2); psc2 = 0 end
+      elseif i12
+        ps12 += 1
+        if it2 push!(c1, ps12) end
+        ps11 = 0
+        if psc2 > 0 push!(c2, psc2); psc2 = 0 end
       elseif ic2
-        psc1 += 1
+        ps11 += 1
+        ps12 += 1
         psc2 += 1
-        if it1 || it2 push!(c1, psc1); push!(c2, psc2) end
+        if it1 push!(c1, ps11) end
+        if it2 push!(c1, ps12) end
+        if it1 && it2 push!(c2, psc2) end
       else
-        psc1 = 0
-        psc2 = 0
-        push!(c1, psc1)
+        if psc1 > 0 push!(c1, psc1); ps11 = ps12 = 0 end
+        if psc2 > 0 push!(c2, psc2); psc2 = 0 end
+        push!(c1, 0)
       end
 
-      _sustainedcount!(tree.d1, psc1, psc2, c1, c2, zf, iod)
-      _sustainedcount!(tree.d2, psc1, psc2, c1, c2, zf, iod)
+      _sustainedcount!(tree.d1, ps11, psc2, c1, c2, zf, iod)
+      _sustainedcount!(tree.d2, ps12, psc2, c1, c2, zf, iod)
     else
-      _sustainedcount!(tree.d1, psc1, psc2, c1, c2, zf, iod)
+      _sustainedcount!(tree.d1, ps11, psc2, c1, c2, zf, iod)
     end
   end
 end
+
+
+
+

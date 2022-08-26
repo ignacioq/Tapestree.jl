@@ -46,7 +46,7 @@ using .INSANE: read_newick, write_newick,
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
   b, d, ld, lb, nd, t, lt, dλ, dμ,
   ntipsalive, ntips, ntipsextinct, sustainedcount,
-  treeheight, treelength, _ctl, ltt, subclade, tiplabels
+  treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 export read_newick, write_newick, 
   sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
@@ -58,6 +58,6 @@ export read_newick, write_newick,
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
   b, d, ld, lb, nd, t, lt, dλ, dμ,
   ntipsalive, ntips, ntipsextinct, sustainedcount,
-  treeheight, treelength, _ctl, ltt, subclade, tiplabels
+  treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 
 end # module Tapestree
