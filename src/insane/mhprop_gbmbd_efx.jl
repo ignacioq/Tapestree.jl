@@ -65,7 +65,7 @@ function _daughters_update!(ξ1  ::T,
     ssrλ = ssrλ1 + ssrλ2
   end
 
-  return llr, acr, drλ, ssrλ, 0.0, λ1p, λ2p
+  return llr, acr, drλ, ssrλ, λ1p, λ2p
 end
 
 

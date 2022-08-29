@@ -462,8 +462,7 @@ function update_fs!(bix    ::Int64,
   # if internal
   else
     ξp, llr, drλ, ssrλ, ssrμ =
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], lλ(ξc)[1], lμ(ξc)[1],
-        α, σλ, σμ, δt, srδt)
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, σμ, δt, srδt)
   end
 
   # if accepted
@@ -553,8 +552,6 @@ function fsbi_i(bi  ::iBffs,
                 ξc  ::iTbd,
                 ξ1  ::iTbd,
                 ξ2  ::iTbd,
-                λ0  ::Float64,
-                μ0  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -562,7 +559,7 @@ function fsbi_i(bi  ::iBffs,
                 srδt::Float64)
 
   t0, na, nn =
-    _sim_gbmbd(e(bi), λ0, μ0, α, σλ, σμ, δt, srδt, 0, 1, 1_000)
+    _sim_gbmbd(e(bi), lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nn > 999
     return t0, NaN, NaN, NaN, NaN

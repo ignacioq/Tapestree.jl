@@ -765,8 +765,8 @@ function update_gbm!(bix  ::Int64,
       end
 
       # parent branch update
-      # llc, dλ, ssλ =
-      #   _update_gbm!(ξi, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+      llc, dλ, ssλ =
+        _update_gbm!(ξi, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
 
       # get fixed tip
       lξi = fixtip(ξi)
@@ -777,12 +777,12 @@ function update_gbm!(bix  ::Int64,
           fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, dλ, ssλ, δt, srδt)
 
       # set fixed `λ(t)` in branch
-      setλt!(bi, lλ(lξi)[end])
+      setλt!(bi, lλ(ξ1)[1])
     end
 
     # carry on updates in the daughters
-    # llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
-    # llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+    llc, dλ, ssλ = _update_gbm!(ξ1, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+    llc, dλ, ssλ = _update_gbm!(ξ2, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
   end
 
   return llc, dλ, ssλ, mc

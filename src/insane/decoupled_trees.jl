@@ -660,7 +660,8 @@ function make_Ξ(idf ::Vector{iBffs},
 
   lλi = lλa
   Ξ   = iTbd[]
-  ixv = Int64[] # start point for fixed branches
+  ixiv = Int64[] # start point for fixed branches
+  ixfv = Int64[] # end point for fixed branches
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
     paix = pa(idfi)
@@ -676,7 +677,8 @@ function make_Ξ(idf ::Vector{iBffs},
       lμv  = Float64[lμi, lμi]
       fdti = 0.0
       l    = 2
-      push!(ixv, 1)
+      push!(ixiv, 1)
+      push!(ixfv, 1)
     else
       nts, fdti = divrem(et, δt, RoundDown)
       nts = Int64(nts)
@@ -692,7 +694,7 @@ function make_Ξ(idf ::Vector{iBffs},
       tii = ti(idfi)
       tif = tf(idfi)
       ix  = findfirst(x -> x < tii, tv) - 1
-      push!(ixv, ix)
+      push!(ixiv, ix)
       tc  = tii
       lμv = Float64[]
       push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
@@ -705,6 +707,14 @@ function make_Ξ(idf ::Vector{iBffs},
       ix = findnext(x -> x < abs(tc - fdti), tv, ix) - 1
       push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
       l   = nts + 2
+
+      # final ix
+      ix  = findfirst(x -> x <= tif, tv)
+      if isnothing(ix) && it(bi)
+        ix = lastindex(tv)
+      end
+
+      push!(ixfv, ix-1)
     end
 
     setλt!(idfi, lλv[l])
@@ -712,7 +722,7 @@ function make_Ξ(idf ::Vector{iBffs},
     push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
   end
 
-  return Ξ, ixv
+  return Ξ, ixiv, ixfv
 end
 
 
