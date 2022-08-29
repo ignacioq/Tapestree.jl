@@ -733,39 +733,6 @@ end
 
 
 
-
-"""
-    branchingtimes(tree::T) where {T <: iTree}
-
-Return the branch length sum of `tree`.
-"""
-treelength(tree::T) where {T <: iTree} = _treelength(tree, 0.0)
-
-
-
-
-"""
-    _treelength(tree::T, l::Float64) where {T <: iTf}
-
-Return the branch length sum of `tree`, initialized at `l`.
-"""
-function _treelength(tree::T, l::Float64) where {T <: iTf}
-  l += e(tree)
-
-  if def1(tree)
-    l = _treelength(tree.d1, l)::Float64
-    if def2(tree)
-      l = _treelength(tree.d2, l)::Float64
-    end
-  end
-
-  return l
-end
-
-
-
-
-
 """
     irange(tree::T, f::Function) where {T <: iTf}
 
