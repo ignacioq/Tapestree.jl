@@ -634,6 +634,90 @@ end
 
 
 
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           lλa ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           tv  ::Vector{Float64},
+           ev  ::Vector{Float64},
+           δt  ::Float64,
+           srδt::Float64,
+           ::Type{iTbd})
+
+Make edge tree `Ξ` from the edge directory for fixed extinction.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                lλa ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                tv  ::Vector{Float64},
+                le  ::Vector{Float64},
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTbd})
+
+  lλi = lλa
+  Ξ   = iTbd[]
+  ixv = Int64[] # start point for fixed branches
+  for i in Base.OneTo(lastindex(idf))
+    idfi = idf[i]
+    paix = pa(idfi)
+    et   = e(idfi)
+    if i > 1 
+      lλi = λt(idf[paix])
+      lμi = μt(idf[paix])
+    end
+
+    if iszero(et)
+      lλv  = Float64[lλi, lλi]
+      lμi  = linpred(th, tv[1], tv[2], le[1], le[2])
+      lμv  = Float64[lμi, lμi]
+      fdti = 0.0
+      l    = 2
+      push!(ixv, 1)
+    else
+      nts, fdti = divrem(et, δt, RoundDown)
+      nts = Int64(nts)
+
+      if iszero(fdti)
+        fdti = δt
+        nts  -= 1
+      end
+      # speciation 
+      lλv = bm(lλi, α, σλ, δt, fdti, srδt, nts)
+
+      # extinction
+      tii = ti(idfi)
+      tif = tf(idfi)
+      ix  = findfirst(x -> x < tii, tv) - 1
+      push!(ixv, ix)
+      tc  = tii
+      lμv = Float64[]
+      push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+      for i in Base.OneTo(nts)
+        tc -= δt
+        ix = findnext(x -> x < tc, tv, ix) - 1
+        push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+        ix += 1
+      end
+      ix = findnext(x -> x < abs(tc - fdti), tv, ix) - 1
+      push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+      l   = nts + 2
+    end
+
+    setλt!(idfi, lλv[l])
+    setμt!(idfi, lμv[l])
+    push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
+  end
+
+  return Ξ, ixv
+end
+
+
+
+
 """
     make_Ξ(idf ::Vector{iBffs},
            lλa ::Float64,

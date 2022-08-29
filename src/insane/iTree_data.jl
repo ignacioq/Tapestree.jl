@@ -733,6 +733,39 @@ end
 
 
 
+
+"""
+    branchingtimes(tree::T) where {T <: iTree}
+
+Return the branch length sum of `tree`.
+"""
+treelength(tree::T) where {T <: iTree} = _treelength(tree, 0.0)
+
+
+
+
+"""
+    _treelength(tree::T, l::Float64) where {T <: iTf}
+
+Return the branch length sum of `tree`, initialized at `l`.
+"""
+function _treelength(tree::T, l::Float64) where {T <: iTf}
+  l += e(tree)
+
+  if def1(tree)
+    l = _treelength(tree.d1, l)::Float64
+    if def2(tree)
+      l = _treelength(tree.d2, l)::Float64
+    end
+  end
+
+  return l
+end
+
+
+
+
+
 """
     irange(tree::T, f::Function) where {T <: iTf}
 
@@ -1671,6 +1704,33 @@ function eventimes(tree::T) where {T <: iTree}
   _eventimes!(tree, treeheight(tree), se, ee)
 
   return se, ee
+end
+
+
+
+
+
+"""
+    _eventimes!(tree::T,
+                t   ::Float64,
+                se  ::Array{Float64,1},
+                ee  ::Array{Float64,1}) where {T <: iTree}
+Recursive structure that returns speciation and extinction event times.
+"""
+function _eventimes!(tree::T,
+                     t   ::Float64,
+                     se  ::Array{Float64,1},
+                     ee  ::Array{Float64,1}) where {T <: sT}
+
+  et = e(tree)
+  if def1(tree)
+    push!(se, t - et)
+
+    _eventimes!(tree.d1, t - et, se, ee)
+    _eventimes!(tree.d2, t - et, se, ee)
+  end
+
+  return nothing
 end
 
 
