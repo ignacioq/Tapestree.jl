@@ -438,6 +438,7 @@ function _sim_gbmbd_t(t   ::Float64,
         while t < tv[ix]
           ix += 1
         end
+        ix -= 1
         μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
@@ -490,6 +491,7 @@ function _sim_gbmbd_t(t   ::Float64,
       while t < tv[ix]
         ix += 1
       end
+      ix -= 1
       μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
       push!(λv, λt1)
@@ -576,6 +578,7 @@ function _sim_gbmbd_i(t   ::Float64,
         while abs(t - dtf) < tv[ix]
           ix += 1
         end
+        ix -= 1
         μt1 = linpred(t - dtf, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
@@ -611,6 +614,7 @@ function _sim_gbmbd_i(t   ::Float64,
       while t < tv[ix]
         ix += 1
       end
+      ix -= 1
       μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
       push!(λv, λt1)
@@ -699,7 +703,8 @@ function _sim_gbmbd_it(nsδt::Float64,
     while t < tv[ix]
       ix += 1
     end
-    μt1 = linpred(t - dtf, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+    ix -= 1
+    μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
     push!(λv, λt1)
     push!(μv, μt1)
@@ -738,6 +743,7 @@ function _sim_gbmbd_it(nsδt::Float64,
   while t < tv[ix]
     ix += 1
   end
+  ix -= 1
   μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
   push!(λv, λt1)
@@ -780,6 +786,7 @@ function _sim_gbmbd_it(nsδt::Float64,
         while t < tv[ix]
           ix += 1
         end
+        ix -= 1
         μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
@@ -817,6 +824,7 @@ function _sim_gbmbd_it(nsδt::Float64,
       while t < tv[ix]
         ix += 1
       end
+      ix -= 1
       μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
       push!(λv, λt1)
@@ -908,6 +916,7 @@ function _sim_gbmbd_it(t   ::Float64,
         while t < tv[ix]
           ix += 1
         end
+        ix -= 1
         μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
@@ -943,9 +952,10 @@ function _sim_gbmbd_it(t   ::Float64,
 
       λt1 = rnorm(λt0 + α*δt, srδt*σλ)
       while t < tv[ix]
-          ix += 1
-        end
-        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+        ix += 1
+      end
+      ix -= 1
+      μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
       push!(λv, λt1)
       push!(μv, μt1)

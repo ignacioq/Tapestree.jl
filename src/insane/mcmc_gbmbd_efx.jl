@@ -79,6 +79,10 @@ function insane_gbmbd(tree    ::sT_label,
   idf = make_idf(tree, tρ)
 
   # extinction at speciation times and transform extinction to log space
+  io = sortperm(tv, rev= true)
+  tv = tv[io]
+  ev = ev[io]
+
   ix = findfirst(x -> x < th, tv) - 1
   tv = tv[ix:end]
   ev = log.(ev[ix:end])
@@ -330,7 +334,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   lμxpr = log(μa_prior[2])
 
   L            = treelength(Ξ)     # tree length
-  dlλ           = deltaλ(Ξ)         # delta change in λ
+  dlλ          = deltaλ(Ξ)         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)    # sum squares in λ and μ
   nin          = lastindex(inodes) # number of internal nodes
   el           = lastindex(idf)    # number of branches
