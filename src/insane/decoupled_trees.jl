@@ -673,7 +673,7 @@ function make_Ξ(idf ::Vector{iBffs},
 
     if iszero(et)
       lλv  = Float64[lλi, lλi]
-      lμi  = linpred(th, tv[1], tv[2], le[1], le[2])
+      lμi  = linpred(ti(idfi), tv[1], tv[2], le[1], le[2])
       lμv  = Float64[lμi, lμi]
       fdti = 0.0
       l    = 2
