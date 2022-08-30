@@ -435,11 +435,11 @@ function _sim_gbmbd_t(t   ::Float64,
         srt = sqrt(t)
         λt1 = rnorm(λt0 + α*t, srt*σλ)
 
-        while t < tv[ix]
+        while 0.0 < tv[ix]
           ix += 1
         end
         ix -= 1
-        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+        μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
         push!(μv, μt1)
@@ -575,7 +575,7 @@ function _sim_gbmbd_i(t   ::Float64,
         bt += dtf
         srt = sqrt(dtf)
         λt1 = rnorm(λt0 + α*dtf, srt*σλ)
-        while abs(t - dtf) < tv[ix]
+        while (t - dtf) < tv[ix]
           ix += 1
         end
         ix -= 1
@@ -700,11 +700,11 @@ function _sim_gbmbd_it(nsδt::Float64,
     bt += t
     srt = sqrt(t)
     λt1 = rnorm(λt0 + α*t, srt*σλ)
-    while t < tv[ix]
+    while 0.0 < tv[ix]
       ix += 1
     end
     ix -= 1
-    μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+    μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
     push!(λv, λt1)
     push!(μv, μt1)
@@ -783,11 +783,11 @@ function _sim_gbmbd_it(nsδt::Float64,
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt0 + α*t, srt*σλ)
-        while t < tv[ix]
+        while 0.0 < tv[ix]
           ix += 1
         end
         ix -= 1
-        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+        μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
         push!(μv, μt1)
@@ -913,11 +913,11 @@ function _sim_gbmbd_it(t   ::Float64,
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt0 + α*t, srt*σλ)
-        while t < tv[ix]
+        while 0.0 < tv[ix]
           ix += 1
         end
         ix -= 1
-        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+        μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
         push!(μv, μt1)
