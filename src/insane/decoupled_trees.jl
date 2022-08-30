@@ -697,24 +697,17 @@ function make_Ξ(idf ::Vector{iBffs},
       push!(ixiv, ix)
       tc  = tii
       lμv = Float64[]
-      push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+      push!(lμv, linpred(tii, tv[ix], tv[ix+1], le[ix], le[ix+1]))
       for i in Base.OneTo(nts)
         tc -= δt
         ix = findnext(x -> x < tc, tv, ix) - 1
         push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
         ix += 1
       end
-      ix = findnext(x -> x < abs(tc - fdti), tv, ix) - 1
-      push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+      ix = findnext(x -> x <= tif, tv, ix) - 1
+      push!(lμv, linpred(tif, tv[ix], tv[ix+1], le[ix], le[ix+1]))
       l   = nts + 2
-
-      # final ix
-      ix  = findfirst(x -> x <= tif, tv)
-      if isnothing(ix) && it(bi)
-        ix = lastindex(tv)
-      end
-
-      push!(ixfv, ix-1)
+      push!(ixfv, ix)
     end
 
     setλt!(idfi, lλv[l])
