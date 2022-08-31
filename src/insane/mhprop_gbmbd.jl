@@ -314,16 +314,20 @@ function _update_gbm!(tree::T,
                       ssλ ::Float64,
                       ssμ ::Float64,
                       δt  ::Float64,
-                      srδt::Float64) where {T <: iTbdU}
+                      srδt::Float64,
+                      ter ::Bool) where {T <: iTbdU}
 
   if def1(tree)
     llc, dλ, ssλ, ssμ =
       update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+      _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+      _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
+  elseif ter
+    llc, dλ, ssλ, ssμ = 
+      update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
   end
 
   return llc, dλ, ssλ, ssμ
@@ -332,60 +336,58 @@ end
 
 
 
-# """
-#     update_tip!(tree::iTbd,
-#                 α   ::Float64,
-#                 σλ  ::Float64,
-#                 σμ  ::Float64,
-#                 llc ::Float64,
-#                 dλ  ::Float64,
-#                 ssλ ::Float64,
-#                 ssμ ::Float64,
-#                 δt  ::Float64,
-#                 srδt::Float64)
+"""
+    update_tip!(tree::T,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                llc ::Float64,
+                dλ  ::Float64,
+                ssλ ::Float64,
+                ssμ ::Float64,
+                δt  ::Float64,
+                srδt::Float64) where {T <: iTbdU}
 
-# Make a `gbm` tip proposal.
-# """
-# function update_tip!(tree::T,
-#                      α   ::Float64,
-#                      σλ  ::Float64,
-#                      σμ  ::Float64,
-#                      llc ::Float64,
-#                      dλ  ::Float64,
-#                      ssλ ::Float64,
-#                      ssμ ::Float64,
-#                      δt  ::Float64,
-#                      srδt::Float64) where {T <: iTbdU}
+Make a `gbm` tip proposal.
+"""
+function update_tip!(tree::T,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     llc ::Float64,
+                     dλ  ::Float64,
+                     ssλ ::Float64,
+                     ssμ ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64) where {T <: iTbdU}
 
-#   @inbounds begin
+  @inbounds begin
 
-#     λc   = lλ(tree)
-#     μc   = lμ(tree)
-#     l    = lastindex(λc)
-#     fdtp = fdt(tree)
-#     λp   = Vector{Float64}(undef, l)
-#     μp   = Vector{Float64}(undef, l)
+    λc   = lλ(tree)
+    μc   = lμ(tree)
+    l    = lastindex(λc)
+    fdtp = fdt(tree)
+    λp   = Vector{Float64}(undef, l)
+    μp   = Vector{Float64}(undef, l)
 
-#     bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
+    bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
 
-#     llrbm, llrbd, ssrλ, ssrμ =
-#       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
-#         false, isextinct(tree))
+    llrbm, llrbd, ssrλ, ssrμ =
+      llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
+        false, isextinct(tree))
 
-#     acr = llrbd
+    if -randexp() < llrbd
+      llc += llrbm + llrbd
+      dλ  += λp[l] - λc[l]
+      ssλ += ssrλ
+      ssμ += ssrμ
+      unsafe_copyto!(λc, 1, λp, 1, l)
+      unsafe_copyto!(μc, 1, μp, 1, l)
+    end
+  end
 
-#     if -randexp() < acr
-#       llc += llrbm + acr
-#       dλ  += λp[l] - λc[l]
-#       ssλ += ssrλ
-#       ssμ += ssrμ
-#       unsafe_copyto!(λc, 1, λp, 1, l)
-#       unsafe_copyto!(μc, 1, μp, 1, l)
-#     end
-#   end
-
-#   return llc, dλ, ssλ, ssμ
-# end
+  return llc, dλ, ssλ, ssμ
+end
 
 
 

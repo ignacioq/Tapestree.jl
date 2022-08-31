@@ -750,6 +750,7 @@ function update_gbm!(bix  ::Int64,
     ξ1   = Ξ[d1(bi)]
     ξ2   = Ξ[d2(bi)]
     root = iszero(pa(bi))
+    ter  = it(bi)
 
     # if crown
     if root && iszero(e(bi))
@@ -767,7 +768,7 @@ function update_gbm!(bix  ::Int64,
 
       # updates within the parent branch
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+        _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
 
       # get fixed tip
       lξi = fixtip(ξi)
@@ -784,9 +785,9 @@ function update_gbm!(bix  ::Int64,
 
     # # carry on updates in the daughters
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+      _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
     llc, dλ, ssλ, ssμ =
-      _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+      _update_gbm!(ξ2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
   end
 
   return llc, dλ, ssλ, ssμ, mc
