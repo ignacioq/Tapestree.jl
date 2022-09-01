@@ -674,22 +674,21 @@ end
 
 
 
-
 """
     make_Ξ(idf ::Vector{iBffs},
-           lλa ::Float64,
+           λ   ::Float64,
            α   ::Float64,
            σλ  ::Float64,
            tv  ::Vector{Float64},
-           ev  ::Vector{Float64},
+           le  ::Vector{Float64},
            δt  ::Float64,
            srδt::Float64,
            ::Type{iTbd})
 
-Make edge tree `Ξ` from the edge directory for fixed extinction.
+Make edge tree `Ξ` from the edge directory.
 """
 function make_Ξ(idf ::Vector{iBffs},
-                lλa ::Float64,
+                λ   ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 tv  ::Vector{Float64},
@@ -698,64 +697,108 @@ function make_Ξ(idf ::Vector{iBffs},
                 srδt::Float64,
                 ::Type{iTbd})
 
-  lλi = lλa
-  Ξ   = iTbd[]
+  Ξ    = iTbd[]
   ixiv = Int64[] # start point for fixed branches
   ixfv = Int64[] # end point for fixed branches
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    et   = e(idfi)
-    if i > 1 
-      lλi = λt(idf[paix])
-      lμi = μt(idf[paix])
-    end
-
-    if iszero(et)
-      lλv  = Float64[lλi, lλi]
-      lμi  = linpred(ti(idfi), tv[1], tv[2], le[1], le[2])
-      lμv  = Float64[lμi, lμi]
-      fdti = 0.0
-      l    = 2
-      push!(ixiv, 1)
-      push!(ixfv, 1)
-    else
-      nts, fdti = divrem(et, δt, RoundDown)
-      nts = Int64(nts)
-
-      if iszero(fdti)
-        fdti = δt
-        nts  -= 1
-      end
-      # speciation 
-      lλv = bm(lλi, α, σλ, δt, fdti, srδt, nts)
-
-      # extinction
-      tii = ti(idfi)
-      tif = tf(idfi)
-      ix  = findfirst(x -> x < tii, tv) - 1
-      push!(ixiv, ix)
-      tc  = tii
-      lμv = Float64[]
-      push!(lμv, linpred(tii, tv[ix], tv[ix+1], le[ix], le[ix+1]))
-      for i in Base.OneTo(nts)
-        tc -= δt
-        ix = findnext(x -> x < tc, tv, ix) - 1
-        push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
-        ix += 1
-      end
-      ix = findnext(x -> x <= tif, tv, ix) - 1
-      push!(lμv, linpred(tif, tv[ix], tv[ix+1], le[ix], le[ix+1]))
-      l   = nts + 2
-      push!(ixfv, ix)
-    end
-
-    setλt!(idfi, lλv[l])
-    setμt!(idfi, lμv[l])
-    push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
-  end
+  _make_Ξ!(Ξ, ixiv, ixfv, 1, log(λ), α, σλ, tv, le, δt, srδt, idf, iTbd)
 
   return Ξ, ixiv, ixfv
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ   ::Vector{iTbd},
+             ixiv::Vector{Int64},
+             ixfv::Vector{Int64},
+             i   ::Int64,
+             lλ0 ::Float64,
+             α   ::Float64,
+             σλ  ::Float64,
+             tv  ::Vector{Float64},
+             le  ::Vector{Float64},
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs},
+             ::Type{iTbd})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{iTbd},
+                  ixiv::Vector{Int64},
+                  ixfv::Vector{Int64},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  tv  ::Vector{Float64},
+                  le  ::Vector{Float64},
+                  δt  ::Float64,
+                  srδt::Float64,
+                  idf ::Vector{iBffs},
+                  ::Type{iTbd})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+  et = e(bi)
+
+  if iszero(et)
+    lλv  = [lλ0, lλ0]
+    lμi  = linpred(ti(bi), tv[1], tv[2], le[1], le[2])
+    lμv  = Float64[lμi, lμi]
+    fdti = 0.0
+    nts  = 0
+    push!(ixiv, 1)
+    push!(ixfv, 1)
+  else
+    ntF, fdti = divrem(et, δt, RoundDown)
+    nts = Int64(ntF)
+
+    if iszero(fdti) || (i1 > 0 && iszero(i2)) 
+      fdti  = δt
+      nts  -= 1
+    end
+
+    # speciation
+    lλv = bm(lλ0,α, σλ, δt, fdti, srδt, nts)
+
+    # extinction
+    tii = ti(bi)
+    tif = tf(bi)
+    ix  = findfirst(x -> x < tii, tv) - 1
+    push!(ixiv, ix)
+    tc  = tii
+    lμv = Float64[]
+    push!(lμv, linpred(tii, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+    for i in Base.OneTo(nts)
+      tc -= δt
+      ix = findnext(x -> x < tc, tv, ix) - 1
+      push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+      ix += 1
+    end
+    ix = findnext(x -> x <= tif, tv, ix) - 1
+    push!(lμv, linpred(tif, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+    l   = nts + 2
+    push!(ixfv, ix)
+  end
+
+  l = nts + 2
+
+  setλt!(bi, lλv[l])
+  push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
+
+  if i1 > 0 
+    if i2 > 0 
+      _make_Ξ!(Ξ, ixiv, ixfv, i2, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
+      _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
+    else
+      _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
+    end
+  end
+
+  return nothing
 end
 
 

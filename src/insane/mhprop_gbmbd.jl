@@ -13,14 +13,14 @@ Created 27 05 2020
 
 
 """
-    _daughters_update!(ξ1  ::iTfbd,
-                       λf  ::Float64,
-                       μf  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+    _daughter_update!(ξ1  ::T,
+                      λf  ::Float64,
+                      μf  ::Float64,
+                      α   ::Float64,
+                      σλ  ::Float64,
+                      σμ  ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64) where {T <: iTbdU}
 
 Make a `fbdd` proposal for daughter for forward simulated fossil branch.
 """
@@ -382,8 +382,8 @@ function _update_gbm!(tree::T,
     llc, dλ, ssλ, ssμ =
       _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
   elseif ter
-    # llc, dλ, ssλ, ssμ = 
-    #   update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+    llc, dλ, ssλ, ssμ = 
+      update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
   end
 
   return llc, dλ, ssλ, ssμ

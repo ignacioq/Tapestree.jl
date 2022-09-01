@@ -73,6 +73,7 @@ function insane_gbmbd(tree    ::sT_label,
     tρ = Dict(tl[i] => tρu for i in 1:n)
   end
 
+  # estimate branch split (multiple of δt)
   ndts = floor(th * mxthf/δt)
   maxt = δt * ndts
 

@@ -429,8 +429,8 @@ function _sim_gbmbd_t(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt0 + α*t, srt*σλ)
@@ -570,8 +570,8 @@ function _sim_gbmbd_i(t   ::Float64,
 
     while true
 
-      if t - te <= δt
-        dtf = max(0.0, t - te)
+      if t - te <= δt + √eps()
+        dtf = isapprox(t - te, 0.0) ? 0.0 : isapprox(t - te, δt) ? δt : (t - te)
         bt += dtf
         srt = sqrt(dtf)
         λt1 = rnorm(λt0 + α*dtf, srt*σλ)
@@ -695,8 +695,8 @@ function _sim_gbmbd_it(nsδt::Float64,
   bt  = 0.0
 
   ## first: non-standard δt
-  if t <= nsδt
-    t   = max(0.0,t)
+  if t <= nsδt + √eps()
+    t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     srt = sqrt(t)
     λt1 = rnorm(λt0 + α*t, srt*σλ)
@@ -778,8 +778,8 @@ function _sim_gbmbd_it(nsδt::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt0 + α*t, srt*σλ)
@@ -908,8 +908,8 @@ function _sim_gbmbd_it(t   ::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt0 + α*t, srt*σλ)

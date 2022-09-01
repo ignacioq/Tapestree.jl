@@ -59,6 +59,7 @@ function insane_gbmbd(tree    ::sT_label,
                       δt      ::Float64           = 1e-3,
                       prints  ::Int64             = 5,
                       survival::Bool              = true,
+                      mxthf   ::Float64           = Inf,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
@@ -75,8 +76,12 @@ function insane_gbmbd(tree    ::sT_label,
     tρ = Dict(tl[i] => tρu for i in 1:n)
   end
 
+  # estimate branch split (multiple of δt)
+  ndts = floor(th * mxthf/δt)
+  maxt = δt * ndts
+
   # make fix tree directory
-  idf = make_idf(tree, tρ)
+  idf = make_idf(tree, tρ, maxt)
 
   # extinction at speciation times and transform extinction to log space
   io = sortperm(tv, rev= true)
@@ -96,22 +101,14 @@ function insane_gbmbd(tree    ::sT_label,
     λc, μc = λi, μi
   end
 
-  # survival
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)
-
   # make a decoupled tree
   Ξ, ixiv, ixfv = make_Ξ(idf, log(λc), αi, σλi, tv, ev, δt, srδt, iTbd)
 
-  # set end of fix branch speciation times and
+  # survival
+  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)
+
   # get vector of internal branches
-  inodes = Int64[]
-  for i in Base.OneTo(lastindex(idf))
-    bi = idf[i]
-    setλt!(bi, lλ(Ξ[i])[end])
-    if !iszero(d1(bi))
-      push!(inodes, i)
-    end
-  end
+  inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
 
   # parameter updates (1: α, 2: σλ, 3: σμ, 4: gbm, 5: forward simulation)
   spup = sum(pupdp)
@@ -496,9 +493,14 @@ function update_fs!(bix    ::Int64,
 
   # if terminal
   if iszero(d1(bi))
-    ξp, llr = fsbi_t(bi, ixi, lλ(ξc)[1], α, σλ, tv, ev, δt, srδt)
-    drλ  = 0.0
-    ssrλ = 0.0
+    ξp, llr = fsbi_t(bi, ixi, ξc, α, σλ, tv, ev, δt, srδt)
+    drλ = ssrλ = 0.0
+
+  # if mid
+  elseif iszero(d2(bi))
+    ξp, llr, drλ, ssrλ =
+      fsbi_m(bi, ixi, ixf, ξc, Ξ[d1(bi)], α, σλ, tv, ev, δt, srδt)
+
   # if internal
   else
     ξp, llr, drλ, ssrλ  =
@@ -531,7 +533,7 @@ end
 """
     fsbi_t(bi  ::iBffs,
            ix  ::Int64,
-           λ0  ::Float64,
+           ξc  ::iTbd,
            α   ::Float64,
            σλ  ::Float64,
            tv  ::Vector{Float64},
@@ -543,7 +545,7 @@ Forward simulation for branch `bi`
 """
 function fsbi_t(bi  ::iBffs,
                 ix  ::Int64,
-                λt0 ::Float64,
+                ξc  ::iTbd,
                 α   ::Float64,
                 σλ  ::Float64,
                 tv  ::Vector{Float64},
@@ -560,7 +562,7 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_gbmbd_t(e(bi), λt0, α, σλ, ix, tv, ev, δt, srδt, 
+    _sim_gbmbd_t(e(bi), lλ(ξc)[1], α, σλ, ix, tv, ev, δt, srδt, 
       lc, lU, Iρi, 0, 1, 1_000)
 
   if na > 0 && isfinite(llr)
@@ -572,6 +574,89 @@ function fsbi_t(bi  ::iBffs,
     return t0, -Inf
   end
 end
+
+
+
+"""
+    fsbi_m(bi  ::iBffs,
+           ix  ::Int64,
+           ξc  ::iTbd,
+           ξ1  ::iTbd,
+           α   ::Float64,
+           σλ  ::Float64,
+           tv  ::Vector{Float64},
+           ev  ::Vector{Float64},
+           δt  ::Float64,
+           srδt::Float64)
+
+Forward simulation for branch `bi`
+"""
+function fsbi_m(bi  ::iBffs,
+                ixi ::Int64,
+                ixf ::Int64,
+                ξc  ::iTbd,
+                ξ1  ::iTbd,
+                α   ::Float64,
+                σλ  ::Float64,
+                tv  ::Vector{Float64},
+                ev  ::Vector{Float64},
+                δt  ::Float64,
+                srδt::Float64)
+
+  t0, na, nn =
+    _sim_gbmbd_i(ti(bi), tf(bi), lλ(ξc)[1], α, σλ, ixi, tv, ev, 
+      δt, srδt, 0, 1, 1_000)
+
+  if na < 1 || nn > 999
+    return t0, NaN, NaN, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() #log-probability
+
+  # continue simulation only if acr on sum of tip rates is accepted
+  acr = log(ntp/nt(bi))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+
+  # sample and fix random  tip
+  λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
+
+  llrd, acrd, drλ, ssrλ, λ1p =
+    _daughter_update!(ξ1, λf, α, σλ, δt, srδt)
+
+  acr += acrd
+
+  if lU < acr
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), α, σλ, ixf, tv, ev, 
+          δt, srδt, acr, lU, Iρi, na, nn)
+    end
+
+    if lU < acr
+      na -= 1
+
+      llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      l1  = lastindex(λ1p)
+      setnt!(bi, ntp)                       # set new nt
+      setni!(bi, na)                        # set new ni
+      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
+
+      return t0, llr, drλ, ssrλ
+    end
+  end
+
+  return t0, NaN, NaN, NaN
+end
+
+
 
 
 
@@ -792,12 +877,14 @@ function update_gbm!(bix  ::Int64,
 
     ξi   = Ξ[bix]
     bi   = idf[bix]
-    ξ1   = Ξ[d1(bi)]
-    ξ2   = Ξ[d2(bi)]
+    i1   = d1(bi)
+    i2   = d2(bi)
+    ξ1   = Ξ[i1]
     root = iszero(pa(bi))
 
     # if crown
     if root && iszero(e(bi))
+      ξ2 = Ξ[i2]
       llc, dlλ, ssλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dlλ, ssλ, mc, th,
           δt, srδt, lλxpr, crown)
@@ -812,31 +899,43 @@ function update_gbm!(bix  ::Int64,
 
       # updates within the parent branch
       llc, dlλ, ssλ =
-        _update_gbm!(ξi, α, σλ, llc, dlλ, ssλ, δt, srδt)
+        _update_gbm!(ξi, α, σλ, llc, dlλ, ssλ, δt, srδt, false)
 
       # get fixed tip
       lξi = fixtip(ξi)
 
-      # make between decoupled trees node update
-      llc, dlλ, ssλ =
-        update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2),
-          e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
-          α, σλ, llc, dlλ, ssλ, δt, srδt)
+      if iszero(i2)
 
-      # set fixed `λ(t)` in branch
-      setλt!(bi, lλ(ξ1)[1])
+        llc, ssλ =
+          update_duo!(lλ(lξi), lλ(ξ1), e(lξi), e(ξ1),
+            fdt(lξi), fdt(ξ1), α, σλ, llc, ssλ, δt, srδt)
+
+      # if internal branch
+      else
+        ξ2 = Ξ[i2]
+        # make between decoupled trees node update
+        llc, dlλ, ssλ =
+          update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2),
+            e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
+            α, σλ, llc, dlλ, ssλ, δt, srδt)
+
+        # set fixed `λ(t)` in branch
+        setλt!(bi, lλ(ξ1)[1])
+      end
     end
 
     # # carry on updates in the daughters
     llc, dlλ, ssλ =
-      _update_gbm!(ξ1, α, σλ, llc, dlλ, ssλ, δt, srδt)
-    llc, dlλ, ssλ =
-      _update_gbm!(ξ2, α, σλ, llc, dlλ, ssλ, δt, srδt)
+      _update_gbm!(ξ1, α, σλ, llc, dlλ, ssλ, δt, srδt, iszero(d1(idf[i1])))
+    if i2 > 0
+      ξ2 = Ξ[i2]
+      llc, dlλ, ssλ =
+        _update_gbm!(ξ2, α, σλ, llc, dlλ, ssλ, δt, srδt, iszero(d1(idf[i2])))
+    end
   end
 
   return llc, dlλ, ssλ, mc
 end
-
 
 
 
