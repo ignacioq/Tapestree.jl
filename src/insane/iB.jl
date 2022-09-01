@@ -648,11 +648,13 @@ function make_idf(tree::sT_label, tρ::Dict{String, Float64}, maxt::Float64)
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
     n2 = n2v[i]
+    i1 = d1(bi)
+    i2 = d2(bi)
 
-    if iszero(d1(bi))
+    if i1 > 0 && iszero(i2)
       setd1!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
-    elseif n2 > 0
+    elseif i2 > 0
       setd1!(bi, n2 + i)
       setd2!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
@@ -1030,7 +1032,7 @@ nt(id::iBffs) = getproperty(id, :nt)[]
 
 Return final speciation rate at time `t.
 """
-λt(id::iBffs) = getproperty(id, :λt)
+λt(id::iBffs) = getproperty(id, :λt)[]
 
 
 

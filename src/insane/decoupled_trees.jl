@@ -594,7 +594,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 srδt::Float64,
                 ::Type{iTbd})
 
-  Ξ   = iTbd[]
+  Ξ = iTbd[]
   _make_Ξ!(Ξ, 1, log(λ), log(μ), α, σλ, σμ, δt, srδt, idf, iTbd)
 
   return Ξ
@@ -633,7 +633,6 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
   bi = idf[i]
   i1 = d1(bi)
   i2 = d2(bi)
-  io = dn(bi)
   et = e(bi)
 
   if iszero(et)
@@ -645,7 +644,7 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     ntF, fdti = divrem(et, δt, RoundDown)
     nts = Int64(ntF)
 
-    if iszero(fdti) || isone(io)
+    if iszero(fdti) || (i1 > 0 && iszero(i2)) 
       fdti  = δt
       nts  -= 1
     end
@@ -851,11 +850,14 @@ function couple(Ξ  ::Vector{T},
   bi  = idf[ix]
   ξi  = Ξ[ix]
   dni = dn(bi)
-  if dni > 0
+  i1  = d1(bi)
+  i2  = d2(bi)
+
+  if i1 > 0
     ξit = fixtip(ξi)
-    ξit.d1 = couple(Ξ, idf, d1(bi))
-    if dni > 1 
-      ξit.d2 = couple(Ξ, idf, d2(bi))
+    ξit.d1 = couple(Ξ, idf, i1)
+    if i2 > 1 
+      ξit.d2 = couple(Ξ, idf, i2)
     end
   end
 
@@ -882,7 +884,7 @@ function couple(Ξ  ::Vector{iTbd},
   i2 = d2(bi)
 
   if i1 > 0
-    ξit    = fixtip(ξi)
+    ξit = fixtip(ξi)
     if i2 > 0
       ξit.d1 = couple(Ξ, idf, i1)
       ξit.d2 = couple(Ξ, idf, i2)
@@ -906,10 +908,6 @@ function couple(Ξ  ::Vector{iTbd},
 
   return ξi
 end
-
-
-T = couple(Ξ, idf, 1)
-
 
 
 
