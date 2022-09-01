@@ -97,7 +97,7 @@ function insane_gbmce(tree    ::sT_label,
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
     setλt!(bi, lλ(Ξ[i])[end])
-    if !it(bi)
+    if !iszero(d1(bi))
       push!(inodes, i)
     end
   end
@@ -471,7 +471,7 @@ function update_fs!(bix    ::Int64,
   ξc  = Ξ[bix]
 
   # if terminal
-  if it(bi)
+  if iszero(d1(bi))
     ξp, llr = fsbi_t(bi, lλ(ξc)[1], α, σλ, μ, δt, srδt)
     drλ  = 0.0
     ssrλ = 0.0

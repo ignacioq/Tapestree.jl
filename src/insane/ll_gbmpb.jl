@@ -61,7 +61,7 @@ function llik_gbm(Ξ   ::Vector{iTpb},
       bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, δt, srδt)
 
-      if !it(bi)
+      if !iszero(d1(bi))
         ll += λt(bi)
       end
     end

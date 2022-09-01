@@ -442,11 +442,11 @@ function update_fs!(bix ::Int64,
     ξp, llr = fsbi_f(bi, λ, μ, ψ, ψts, ixi, ixf)
 
     # if terminal but not successful proposal, update extinct
-    if it(bi) && !isfinite(llr)
+    if iszero(d1(bi)) && !isfinite(llr)
       ξp, llr = fsbi_et(sTfbd_wofe(Ξ[bix]), bi, λ, μ, ψ, ψts, ixf)
     end
   else
-    if it(bi)
+    if iszero(d1(bi))
       ξp, llr = fsbi_t(bi, λ, μ, ψ, ψts, ixi)
     else
       ξp, llr = fsbi_i(bi, λ, μ, ψ, ψts, ixi, eixf[bix])
@@ -578,7 +578,7 @@ function fsbi_f(bi ::iBffs,
       # fossilize extant tip
       fossilizefixedtip!(t0)
 
-      if it(bi)
+      if iszero(d1(bi))
         tx, na, nn, acr =
           fossiltip_sim!(t0, tf(bi), λ, μ, ψ, ψts, ixf, acr, lU, Iρi, na, nn)
       else

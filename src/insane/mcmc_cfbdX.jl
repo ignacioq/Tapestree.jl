@@ -469,7 +469,7 @@ function update_fs!(bix::Int64,
   bi = idf[bix]
   ξc = Ξ[bix]
 
-  if it(bi)
+  if iszero(d1(bi))
     if isfossil(bi)
       ξp, llr = fsbi_ft(bi, ξc, λ, μ, ψ, σx)
     else
@@ -1026,7 +1026,7 @@ function update_x!(bix     ::Int64,
   ξi  = Ξ[bix]
   bi  = idf[bix]
 
-  if !it(bi)
+  if !iszero(d1(bi))
     id1 = d1(bi)
     id2 = d2(bi)
     ξ1  = Ξ[id1]
@@ -1051,9 +1051,9 @@ function update_x!(bix     ::Int64,
     end
 
     # updates within the parent branch
-    llc, sdX = _update_x!(ξi, σx, llc, sdX, !fx(bi) && it(bi))
+    llc, sdX = _update_x!(ξi, σx, llc, sdX, !fx(bi) && iszero(d1(bi)))
 
-    if !it(bi)
+    if !iszero(d1(bi))
     # get fixed tip
       lξi = fixtip(ξi)
 
@@ -1068,7 +1068,7 @@ function update_x!(bix     ::Int64,
     end
   end
 
-  if !it(bi)
+  if !iszero(d1(bi))
     # carry on updates in the daughters
     llc, sdX = _update_x!(ξ1, σx, llc, sdX, !fx(idf[id1]) && it(idf[id1]))
     if !isfossil(bi)

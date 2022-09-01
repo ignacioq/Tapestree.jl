@@ -392,7 +392,7 @@ function update_fs!(bix    ::Int64,
 
   bi = idf[bix]
 
-  if it(bi) # is it terminal
+  if iszero(d1(bi)) # is it terminal
     ξp, llr = fsbi_t(bi, λ)
   else
     ξp, llr = fsbi_i(bi, λ)

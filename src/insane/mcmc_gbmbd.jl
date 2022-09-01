@@ -56,6 +56,7 @@ function insane_gbmbd(tree    ::sT_label,
                       δt      ::Float64           = 1e-3,
                       prints  ::Int64             = 5,
                       survival::Bool              = true,
+                      mxthf   ::Float64           = Inf,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
@@ -72,8 +73,11 @@ function insane_gbmbd(tree    ::sT_label,
     tρ = Dict(tl[i] => tρu for i in 1:n)
   end
 
+  ndts = floor(th * mxthf/δt)
+  maxt = δt * ndts
+
   # make fix tree directory
-  idf = make_idf(tree, tρ)
+  idf = make_idf(tree, tρ, maxt)
 
    # starting parameters (using method of moments)
   if isnan(λi) && isnan(μi)
@@ -84,18 +88,15 @@ function insane_gbmbd(tree    ::sT_label,
   mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, log(λc), log(μc), αi, σλi, σμi, δt, srδt, iTbd)
+  Ξ = make_Ξ(idf, λc, μc, αi, σλi, σμi, δt, srδt, iTbd)
+
+  """
+  make couple
+  """
 
   # set end of fix branch speciation times and
   # get vector of internal branches
-  inodes = Int64[]
-  for i in Base.OneTo(lastindex(idf))
-    bi = idf[i]
-    setλt!(bi, lλ(Ξ[i])[end])
-    if !it(bi)
-      push!(inodes, i)
-    end
-  end
+  inodes = [i for i in Base.OneTo(lastindex(idf))  if dn(idf[i]) > 0]
 
   # parameter updates (1: α, 2: σλ, 3: σμ, 4: gbm, 5: forward simulation)
   spup = sum(pupdp)
@@ -454,7 +455,7 @@ function update_fs!(bix    ::Int64,
   ξc  = Ξ[bix]
 
   # if terminal
-  if it(bi)
+  if iszero(d1(bi))
     ξp, llr = fsbi_t(bi, lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, δt, srδt)
     drλ  = 0.0
     ssrλ = 0.0
@@ -747,10 +748,11 @@ function update_gbm!(bix  ::Int64,
 
     ξi   = Ξ[bix]
     bi   = idf[bix]
-    ξ1   = Ξ[d1(bi)]
+    i1   = d1(bi)
+    ξ1   = Ξ[i1]
     ξ2   = Ξ[d2(bi)]
     root = iszero(pa(bi))
-    ter  = it(bi)
+    ter  = iszero(i1)
 
     # if crown
     if root && iszero(e(bi))

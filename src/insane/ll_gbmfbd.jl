@@ -103,7 +103,7 @@ function llik_gbm(Ξ   ::Vector{iTfbd},
       bi  = idf[i]
       lli, ix = llik_gbm(Ξ[i], α, σλ, σμ, ψ, bst[i], ψts, eix[i], δt, srδt, nep)
       ll += lli
-      if !(it(bi) || isfossil(bi))
+      if !(iszero(d1(bi)) || isfossil(bi))
         ll += λt(bi)
       end
     end

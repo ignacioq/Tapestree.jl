@@ -570,6 +570,7 @@ end
 
 
 
+
 """
     make_Ξ(idf ::Vector{iBffs},
            lλa ::Float64,
@@ -584,8 +585,8 @@ end
 Make edge tree `Ξ` from the edge directory.
 """
 function make_Ξ(idf ::Vector{iBffs},
-                lλa ::Float64,
-                lμa ::Float64,
+                λ   ::Float64,
+                μ   ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -593,43 +594,83 @@ function make_Ξ(idf ::Vector{iBffs},
                 srδt::Float64,
                 ::Type{iTbd})
 
-  lλi = lλa
-  lμi = lμa
   Ξ   = iTbd[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    et   = e(idfi)
-    if i > 1 
-      lλi = λt(idf[paix])
-      lμi = μt(idf[paix])
-    end
-
-    if iszero(et)
-      lλv  = Float64[lλi, lλi]
-      lμv  = Float64[lμi, lμi]
-      fdti = 0.0
-      l    = 2
-    else
-      nt, fdti = divrem(et, δt, RoundDown)
-      nt = Int64(nt)
-
-      if iszero(fdti)
-        fdti = δt
-        nt  -= 1
-      end
-
-      lλv = bm(lλi,   α, σλ, δt, fdti, srδt, nt)
-      lμv = bm(lμi, 0.0, σμ, δt, fdti, srδt, nt)
-      l   = nt + 2
-    end
-    setλt!(idfi, lλv[l])
-    setμt!(idfi, lμv[l])
-    push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
-  end
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), α, σλ, σμ, δt, srδt, idf, iTbd)
 
   return Ξ
 end
+
+
+
+
+
+"""
+    _make_Ξ!(idf ::Vector{iBffs},
+             i   ::Int64,
+             lλ0 ::Float64,
+             lμ0 ::Float64,
+             α   ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             ::Type{iTbd})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{iTbd},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  lμ0 ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  σμ  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  idf ::Vector{iBffs},
+                  ::Type{iTbd})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+  io = dn(bi)
+  et = e(bi)
+
+  if iszero(et)
+    lλv  = [lλ0, lλ0]
+    lμv  = [lμ0, lμ0]
+    fdti = 0.0
+    nts  = 0
+  else
+    ntF, fdti = divrem(et, δt, RoundDown)
+    nts = Int64(ntF)
+
+    if iszero(fdti) || isone(io)
+      fdti  = δt
+      nts  -= 1
+    end
+
+    lλv = bm(lλ0,   α, σλ, δt, fdti, srδt, nts)
+    lμv = bm(lμ0, 0.0, σμ, δt, fdti, srδt, nts)
+  end
+
+  l = nts + 2
+
+  setλt!(bi, lλv[l])
+  push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
+
+  if i1 > 0 
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTbd)
+      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTbd)
+    else
+      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTbd)
+    end
+  end
+
+  return nothing
+end
+
 
 
 
@@ -803,20 +844,72 @@ end
 
 Build tree from decoupled tree.
 """
-function couple(Ξ::Vector{T},
+function couple(Ξ  ::Vector{T},
                 idf::Vector{iBffs},
                 ix ::Int64) where {T <: iTree}
 
-  bi = idf[ix]
-  ξi = Ξ[ix]
-  if !it(bi)
+  bi  = idf[ix]
+  ξi  = Ξ[ix]
+  dni = dn(bi)
+  if dni > 0
     ξit = fixtip(ξi)
-    if !iszero(d1(bi)) ξit.d1 = couple(Ξ, idf, d1(bi)) end
-    if !iszero(d2(bi)) ξit.d2 = couple(Ξ, idf, d2(bi)) end
+    ξit.d1 = couple(Ξ, idf, d1(bi))
+    if dni > 1 
+      ξit.d2 = couple(Ξ, idf, d2(bi))
+    end
   end
 
   return ξi
 end
+
+
+
+
+"""
+    couple(Ξ  ::Vector{iTbd},
+           idf::Vector{iBffs},
+           ix ::Int64)
+
+Build tree from decoupled tree.
+"""
+function couple(Ξ  ::Vector{iTbd},
+                idf::Vector{iBffs},
+                ix ::Int64)
+
+  bi = idf[ix]
+  ξi = iTbd(Ξ[ix])
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  if i1 > 0
+    ξit    = fixtip(ξi)
+    if i2 > 0
+      ξit.d1 = couple(Ξ, idf, i1)
+      ξit.d2 = couple(Ξ, idf, i2)
+    else
+      ξd1 = couple(Ξ, idf, i1)
+      sete!(ξit, e(ξit) + e(ξd1))
+      setfdt!(ξit, fdt(ξd1))
+      lλv = lλ(ξit)
+      lμv = lμ(ξit)
+      pop!(lλv)
+      pop!(lμv)
+      append!(lλv, lλ(ξd1))
+      append!(lμv, lμ(ξd1))
+
+      if def1(ξd1)
+        ξit.d1 = ξd1.d1
+        ξit.d2 = ξd1.d2
+      end
+    end
+  end
+
+  return ξi
+end
+
+
+T = couple(Ξ, idf, 1)
+
 
 
 

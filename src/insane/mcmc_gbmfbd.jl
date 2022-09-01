@@ -567,7 +567,7 @@ function update_fs!(bix ::Int64,
   ξc  = Ξ[bix]
   ixi = eixi[bix]
 
-  if it(bi)
+  if iszero(d1(bi))
     if isfossil(bi)
       ixf = eixf[bix]
 
@@ -1205,7 +1205,7 @@ function update_gbm!(bix  ::Int64,
 
   ξi  = Ξ[bix]
   bi  = idf[bix]
-  if !it(bi)
+  if !iszero(d1(bi))
     id1 = d1(bi)
     ξ1  = Ξ[id1]
     if !isfossil(bi)
@@ -1233,7 +1233,7 @@ function update_gbm!(bix  ::Int64,
     llc, dλ, ssλ, ssμ =
       _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
-    if !it(bi)
+    if !iszero(d1(bi))
       # get fixed tip
       lξi = fixtip(ξi)
 
@@ -1254,7 +1254,7 @@ function update_gbm!(bix  ::Int64,
     end
   end
 
-  if !it(bi)
+  if !iszero(d1(bi))
     # carry on updates in the daughters
     llc, dλ, ssλ, ssμ =
       _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)

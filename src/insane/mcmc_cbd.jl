@@ -490,7 +490,7 @@ function update_fs!(bix::Int64,
   bi = idf[bix]
 
    # if terminal
-  if it(bi)
+  if iszero(d1(bi))
     ξp, llr = fsbi_t(bi, λ, μ)
   else
     ξp, llr = fsbi_i(bi, λ, μ)

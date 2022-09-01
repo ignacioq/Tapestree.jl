@@ -229,7 +229,6 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `d2`  : daughter 2 node
   `ti`  : initial absolute time.
   `tf`  : final absolute time.
-  `dn`  : fixed descendants number : `0` = terminal, `1` = one descendant, `2` = two descendants
   `iψ`  : `true` if a fossil branch.
   `fx`  : fixed terminal tip
   `ρi`  : branch specific sampling fraction.
@@ -248,7 +247,6 @@ struct iBffs <: iBf
   d2  ::Base.RefValue{Int64}
   ti  ::Float64
   tf  ::Float64
-  dn  ::Int64
   iψ  ::Bool
   fx  ::Bool
   ρi  ::Float64
@@ -258,9 +256,8 @@ struct iBffs <: iBf
 
   # constructors
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
-        nd::Int64, iψ::Bool, fx::Bool, ρi::Float64, 
-        ni::Int64, nt::Int64, λt::Float64) =
-        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, nd, iψ, fx, ρi,
+        iψ::Bool, fx::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64) =
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, iψ, fx, ρi,
          Ref(ni), Ref(nt), Ref(λt))
 end
 
@@ -268,7 +265,7 @@ end
 Base.show(io::IO, id::iBffs) =
   print(io,
     isfossil(id)       ? "fossil " : "",
-    iszero(dn(id))     ? "terminal " : isone(dn(id)) ? "mid " : "",
+    iszero(d1(id))     ? "terminal " : iszero(d2(id)) ? "mid " : "",
     iszero(pa(id)) ? "stem " : "",
     isone(pa(id))  ? "crown " : "",
     "ibranch (", ti(id), ", ", tf(id),
@@ -305,7 +302,7 @@ function makeiBf!(tree::sT_label,
     ρi, n, nm = makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt)
 
     push!(idv,
-      iBffs(mxt, 0, 1, 0, ts, te, 1, false, false, ρi, 0, 1, NaN))
+      iBffs(mxt, 0, 1, 0, ts, te, false, false, ρi, 0, 1, NaN))
     push!(n2v, 2*n + nm)
 
     return ρi, n, nm + 1
@@ -318,7 +315,7 @@ function makeiBf!(tree::sT_label,
     te  = ts - el
     te  = isapprox(te, 0.0) ? te : 0.0
     push!(idv, 
-      iBffs(el, 0, 0, 0, ts, te, 0, false, false, ρi, 1, 1, NaN))
+      iBffs(el, 0, 0, 0, ts, te, false, false, ρi, 1, 1, NaN))
     push!(n2v, 0)
 
     return ρi, 1, 0
@@ -332,19 +329,12 @@ function makeiBf!(tree::sT_label,
     ρi = n / (n1/ρ1 + n2/ρ2)
     nm = nm1 + nm2
 
-    push!(idv, iBffs(el, 0, 1, 1, ts, te, 2, false, false, ρi, 0, 1, NaN))
+    push!(idv, iBffs(el, 0, 1, 1, ts, te, false, false, ρi, 0, 1, NaN))
     push!(n2v, 2*n2 + nm2)
 
     return ρi, n, nm
   end
 end
-
-
-
-
-
-
-
 
 
 
@@ -608,7 +598,6 @@ end
 
 
 
-
 """
     make_idf(tree::sT_label, tρ::Dict{String, Float64})
 
@@ -618,7 +607,7 @@ function make_idf(tree::sT_label, tρ::Dict{String, Float64})
 
   idf = iBffs[]
   n2v = Int64[]
-  makeiBf!(tree, idf, treeheight(tree), n2v, tρ)
+  makeiBf!(tree, e(tree), idf, treeheight(tree), n2v, tρ, Inf)
 
   reverse!(idf)
   reverse!(n2v)
@@ -642,11 +631,11 @@ end
 
 
 """
-    make_idf(tree::sT_label, tρ::Dict{String, Float64})
+    make_idf(tree::sT_label, tρ::Dict{String, Float64}, maxt::Float64)
 
 Make the edge dictionary.
 """
-function make_idf(tree::sT_label, tρ::Dict{String, Float64}; maxt = Inf)
+function make_idf(tree::sT_label, tρ::Dict{String, Float64}, maxt::Float64)
 
   idf = iBffs[]
   n2v = Int64[]
@@ -660,7 +649,7 @@ function make_idf(tree::sT_label, tρ::Dict{String, Float64}; maxt = Inf)
     bi = idf[i]
     n2 = n2v[i]
 
-    if isone(dn(bi))
+    if iszero(d1(bi))
       setd1!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
     elseif n2 > 0
@@ -836,7 +825,7 @@ function prob_ρ(idv::Array{iBffs,1})
   ll = 0.0
   for bi in idv
     nbi = ni(bi)
-    if it(bi) && !isfossil(bi)
+    if iszero(d1(bi)) && !isfossil(bi)
       ll += log(Float64(nbi) * ρi(bi) * (1.0 - ρi(bi))^(nbi - 1))
     else
       ll += log((1.0 - ρi(bi))^(nbi))
@@ -997,22 +986,11 @@ tf(id::iB) = getproperty(id, :tf)
 
 
 """
-    it(id::iBf)
-
-Return if is terminal.
-"""
-it(id::iBf) = getproperty(id, :it)
-
-
-
-
-"""
     isfossil(id::iBffs)
 
 Return if is a fossil.
 """
 isfossil(id::iBffs) = getproperty(id, :iψ)
-
 
 
 
@@ -1048,21 +1026,11 @@ nt(id::iBffs) = getproperty(id, :nt)[]
 
 
 """
-    λst(id::iBffs)
+    λt(id::iBffs)
 
-Return final speciation rate at time `t
+Return final speciation rate at time `t.
 """
-λst(id::iBffs) = getproperty(id, :λst)
-
-
-
-
-"""
-    dn(id::iBffs)
-
-Return fixed descendant number.
-"""
-dn(id::iBffs) = getproperty(id, :dn)[]
+λt(id::iBffs) = getproperty(id, :λt)
 
 
 

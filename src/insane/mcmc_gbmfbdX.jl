@@ -593,7 +593,7 @@ function update_fs!(bix ::Int64,
   bi = idf[bix]
   ξc = Ξ[bix]
 
-  if it(bi)
+  if iszero(d1(bi))
     if isfossil(bi)
       ξp, llr = fsbi_ft(bi, ξc, α, σλ, σμ, ψ, βλ, σx, δt, srδt)
     else
@@ -1413,7 +1413,7 @@ function update_gbm!(bix  ::Int64,
 
   ξi  = Ξ[bix]
   bi  = idf[bix]
-  if !it(bi)
+  if !iszero(d1(bi))
     id1 = d1(bi)
     ξ1  = Ξ[id1]
     if !isfossil(bi)
@@ -1439,9 +1439,9 @@ function update_gbm!(bix  ::Int64,
 
     # # updates within the parent branch
     # llc, dλ, ssλ, ssμ =
-    #   _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(bi))
+    #   _update_gbm!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, iszero(d1(bi)))
 
-    # if !it(bi)
+    # if !iszero(d1(bi))
     #   # get fixed tip
     #   lξi = fixtip(ξi)
 
@@ -1462,7 +1462,7 @@ function update_gbm!(bix  ::Int64,
     # end
   end
 
-  # if !it(bi)
+  # if !iszero(d1(bi))
   #   # carry on updates in the daughters
   #   llc, dλ, ssλ, ssμ =
   #     _update_gbm!(ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, it(idf[id1]))
@@ -1506,7 +1506,7 @@ function update_x!(bix     ::Int64,
 
   ξi  = Ξ[bix]
   bi  = idf[bix]
-  if !it(bi)
+  if !iszero(d1(bi))
     id1 = d1(bi)
     id2 = d2(bi)
     ξ1  = Ξ[id1]
@@ -1534,7 +1534,7 @@ function update_x!(bix     ::Int64,
     # updates within the parent branch
     llc, ssx = _update_x!(ξi, σx, llc, ssx, δt, srδt, !fx(bi))
 
-    if !it(bi)
+    if !iszero(d1(bi))
     # get fixed tip
       lξi = fixtip(ξi)
 
@@ -1547,7 +1547,7 @@ function update_x!(bix     ::Int64,
     end
   end
 
-  if !it(bi)
+  if !iszero(d1(bi))
     # carry on updates in the daughters
     llc, ssx = 
       _update_x!(ξ1, σx, llc, ssx, δt, srδt, !fx(idf[id1]) && it(idf[id1]))
