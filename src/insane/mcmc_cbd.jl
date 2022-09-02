@@ -193,7 +193,8 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
   ne  = 0.0               # number of extinction events
 
   # likelihood
-  llc = llik_cbd(Ξ, λc, μc) - Float64(crown) * log(λc) + log(mc) + prob_ρ(idf)
+  llc = llik_cbd(Ξ, λc, μc) - Float64(crown > 0) * log(λc) + 
+        log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 

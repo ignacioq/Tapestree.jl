@@ -175,7 +175,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          prints  ::Int64)
 
   λ0  = lλ(Ξ[1])[1]
-  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown) * λ0 +
+  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 0) * λ0 +
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2]) +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2]) +
@@ -226,7 +226,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, ssμ, mc, th,
-            crown, δt, srδt, lλxpr, lμxpr)
+            δt, srδt, lλxpr, lμxpr)
 
       # forward simulation update
       else
@@ -366,7 +366,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, ssμ, mc, th,
-            crown, δt, srδt, lλxpr, lμxpr)
+            δt, srδt, lλxpr, lμxpr)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
@@ -582,7 +582,7 @@ function fsbi_m(bi  ::iBffs,
   # sample and fix random  tip
   λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
 
-  llrd, acrd, drλ, ssrλ, ssrμ, λ1p, μ1p, =
+  llrd, acrd, drλ, ssrλ, ssrμ, λ1p, μ1p =
     _daughter_update!(ξ1, λf, μf, α, σλ, σμ, δt, srδt)
 
   acr += acrd
@@ -819,7 +819,6 @@ function update_gbm!(bix  ::Int64,
                      ssμ  ::Float64,
                      mc   ::Float64,
                      th   ::Float64,
-                     crown::Int64,
                      δt   ::Float64,
                      srδt ::Float64,
                      lλxpr::Float64,
@@ -838,14 +837,14 @@ function update_gbm!(bix  ::Int64,
       ξ2 = Ξ[i2]
       llc, dlλ, ssλ, ssμ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dlλ, ssλ, ssμ, mc, th,
-          δt, srδt, lλxpr, lμxpr, crown)
+          δt, srδt, lλxpr, lμxpr)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dlλ, ssλ, ssμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, dlλ, ssλ, ssμ, mc, th, 
-            δt, srδt, lλxpr, lμxpr, crown)
+            δt, srδt, lλxpr, lμxpr)
       end
 
       # updates within the parent branch

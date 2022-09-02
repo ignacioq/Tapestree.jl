@@ -391,8 +391,8 @@ function _sim_gbmct(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
 
@@ -489,8 +489,8 @@ function _sim_gbmct_t(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
@@ -566,98 +566,6 @@ end
 
 
 """
-    _sim_gbmct_i(t   ::Float64,
-                 λt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 ϵ   ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 na  ::Int64,
-                 nn  ::Int64,
-                 nlim::Int64,
-                 λsp ::Vector{Float64})
-
-Simulate `iTct` according to a geometric Brownian motion for birth rates and
-constant turnover, with a limit on the number lineages allowed to reach.
-"""
-function _sim_gbmct_i(t   ::Float64,
-                      λt  ::Float64,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      ϵ   ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      nn  ::Int64,
-                      nlim::Int64,
-                      λsp ::Vector{Float64})
-
-  if nn < nlim
-
-    λv = Float64[λt]
-    bt = 0.0
-
-    while true
-
-      if t <= δt
-        t   = max(0.0,t)
-        bt += t
-        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-
-        push!(λv, λt1)
-
-        λm = exp(0.5*(λt + λt1))
-
-        if divevϵ(λm, ϵ, t)
-          # if speciation
-          if λorμ(ϵ)
-            nn += 1
-            push!(λsp, λt1, λt1)
-            return iTct(
-                    iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                    iTct(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                    bt, δt, t, false, false, λv), nn
-          # if extinction
-          else
-            return iTct(bt, δt, t, true, false, λv), nn
-          end
-        end
-        push!(λsp, λt1)
-        return iTct(bt, δt, t, false, false, λv), nn
-      end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
-      push!(λv, λt1)
-      λm  = exp(0.5*(λt + λt1))
-
-      if divevϵ(λm, ϵ, δt)
-        # if speciation
-        if λorμ(ϵ)
-          nn += 1
-          td1, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, nn, nlim, λsp)
-          td2, nn = _sim_gbmct_i(t, λt1, α, σλ, ϵ, δt, srδt, nn, nlim, λsp)
-
-          return iTct(td1, td2, bt, δt, δt, false, false, λv), nn
-        # if extinction
-        else
-          return iTct(bt, δt, δt, true, false, λv), nn
-        end
-      end
-
-      λt = λt1
-    end
-  end
-
-  return iTct(), nn
-end
-
-
-
-
-"""
     _sim_gbmct_it(nsδt::Float64,
                   t   ::Float64,
                   λt  ::Float64,
@@ -696,8 +604,8 @@ function _sim_gbmct_it(nsδt::Float64,
   bt = 0.0
 
   ## first: non-standard δt
-  if t <= nsδt
-    t   = max(0.0, t)
+  if t <= nsδt + √eps()
+    t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
     push!(λv, λt1)
@@ -754,8 +662,8 @@ function _sim_gbmct_it(nsδt::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         λm  = exp(0.5*(λt + λt1))
@@ -855,8 +763,8 @@ function _sim_gbmct_it(t   ::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         λm  = exp(0.5*(λt + λt1))

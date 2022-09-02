@@ -68,7 +68,7 @@ end
                  δt  ::Float64,
                  srδt::Float64,
                  ntry::Int64,
-                 stem::Bool)
+                 c   ::Int64)
 
 Sample the total number of `m` trials until both simulations survive
 for `gbmce`.
@@ -81,12 +81,12 @@ function m_surv_gbmce(t   ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
                       ntry::Int64,
-                      stem::Bool)
+                      c   ::Int64)
   ntries = 1
   m      = 1.0
 
   # if stem conditioning
-  if stem
+  if iszero(c)
 
     while true
       s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
@@ -99,7 +99,7 @@ function m_surv_gbmce(t   ::Float64,
     end
 
   # if crown conditioning
-  else
+  elseif isone(c)
 
     while true
       s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
@@ -130,7 +130,7 @@ end
                  δt  ::Float64,
                  srδt::Float64,
                  ntry::Int64,
-                 stem::Bool)
+                 c   ::Int64)
 
 Sample the total number of `m` trials until both simulations survive
 for `gbmct`.
@@ -143,12 +143,12 @@ function m_surv_gbmct(t   ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
                       ntry::Int64,
-                      stem::Bool)
+                      c   ::Int64)
   ntries = 1
   m      = 1.0
 
   # if stem conditioning
-  if stem
+  if iszero(c)
 
     while true
       s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
@@ -161,7 +161,7 @@ function m_surv_gbmct(t   ::Float64,
     end
 
   # if crown conditioning
-  else
+  elseif isone(c)
 
     while true
 

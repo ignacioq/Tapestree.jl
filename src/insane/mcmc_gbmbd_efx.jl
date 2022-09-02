@@ -195,7 +195,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          prints  ::Int64)
 
   λ0  = lλ(Ξ[1])[1]
-  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown) * λ0 +
+  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 0) * λ0 +
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2]) +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2]) +
@@ -246,7 +246,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, mc, th,
-            crown, δt, srδt, lλxpr)
+            δt, srδt, lλxpr)
 
       # forward simulation update
       else
@@ -391,7 +391,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, mc, th,
-            crown, δt, srδt, lλxpr)
+            δt, srδt, lλxpr)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -429,7 +429,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
         R[lit,6] = αc
         R[lit,7] = σλc
         R[lit,8] = σμc
-        push!(Ξv, couple(copy_Ξ(Ξ), idf, 1))
+        push!(Ξv, couple(Ξ, idf, 1))
       end
       lthin = 0
     end
@@ -851,7 +851,6 @@ end
                 ssλ  ::Float64,
                 mc   ::Float64,
                 th   ::Float64,
-                crown::Int64,
                 δt   ::Float64,
                 srδt ::Float64,
                 lλxpr::Float64) where {T <: iTbdU}
@@ -869,7 +868,6 @@ function update_gbm!(bix  ::Int64,
                      ssλ  ::Float64,
                      mc   ::Float64,
                      th   ::Float64,
-                     crown::Int64,
                      δt   ::Float64,
                      srδt ::Float64,
                      lλxpr::Float64) where {T <: iTbdU}
@@ -887,14 +885,14 @@ function update_gbm!(bix  ::Int64,
       ξ2 = Ξ[i2]
       llc, dlλ, ssλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dlλ, ssλ, mc, th,
-          δt, srδt, lλxpr, crown)
+          δt, srδt, lλxpr)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dlλ, ssλ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, dlλ, ssλ, mc, th, 
-            δt, srδt, lλxpr, crown)
+            δt, srδt, lλxpr)
       end
 
       # updates within the parent branch

@@ -129,8 +129,7 @@ end
                   δt   ::Float64,
                   srδt ::Float64,
                   lλxpr::Float64,
-                  lμxpr::Float64,
-                  crown::Int64)  where {T <: iTbdU}
+                  lμxpr::Float64)  where {T <: iTbdU}
 
 Do gbm update for stem root.
 """
@@ -145,8 +144,7 @@ function _stem_update!(ξi   ::T,
                        th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       lλxpr::Float64,
-                       crown::Int64) where {T <: iTbdU}
+                       lλxpr::Float64) where {T <: iTbdU}
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -180,7 +178,7 @@ function _stem_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, 0)
       llr += log(mp/mc)
 
       if lU < llr
@@ -215,8 +213,7 @@ end
                    δt   ::Float64,
                    srδt ::Float64,
                    lλxpr::Float64,
-                   lμxpr::Float64,
-                   crown ::Int64) where {T <: iTbdU}
+                   lμxpr::Float64) where {T <: iTbdU}
 
 Do `gbm-bd` update for crown root.
 """
@@ -233,8 +230,7 @@ function _crown_update!(ξi   ::T,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
-                        lλxpr::Float64,
-                        crown ::Int64) where {T <: iTbdU}
+                        lλxpr::Float64) where {T <: iTbdU}
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -279,7 +275,7 @@ function _crown_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, 1)
       llr += log(mp/mc)
 
       if lU < llr
@@ -333,7 +329,7 @@ function _update_gbm!(tree::T,
       _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
     llc, dλ, ssλ =
       _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-  elseif ter
+  elseif !isfix(tree) || ter
     llc, dλ, ssλ = 
       update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
   end
