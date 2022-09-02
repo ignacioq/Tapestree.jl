@@ -93,7 +93,6 @@ function insane_gbmbd(tree    ::sT_label,
   # survival
   mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)
 
-  # set end of fix branch speciation times and
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
 
@@ -339,7 +338,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
         #    @show ll0, llc, i, pupi, Ξ
         #    return
@@ -352,7 +351,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
             llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
         #    @show ll0, llc, i, pupi, Ξ
         #    return
@@ -368,7 +367,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, ssμ, mc, th,
             δt, srδt, lλxpr, lμxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
         #    @show ll0, llc, i, pupi, Ξ
         #    return
@@ -383,7 +382,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, ssμ, nλ, L,
             δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+        # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
         #    @show ll0, llc, i, pupi, Ξ
         #    return

@@ -462,69 +462,12 @@ end
 
 """
     make_Ξ(idf ::Vector{iBffs},
-           lλa ::Float64,
+           λ   ::Float64,
            α   ::Float64,
            σλ  ::Float64,
            δt  ::Float64,
            srδt::Float64,
-           ::Type{iTce})
-
-Make edge tree `Ξ` from the edge directory.
-"""
-function make_Ξ(idf ::Vector{iBffs},
-                lλa ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                δt  ::Float64,
-                srδt::Float64,
-                ::Type{iTce})
-
-  lλi = lλa
-  Ξ   = iTce[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    et   = e(idfi)
-    if i > 1 
-      lλi = λt(idf[paix])
-    end
-
-    if iszero(et)
-      lλv = Float64[lλi, lλi]
-      fdti = 0.0
-      l    = 2
-    else
-      nt, fdti = divrem(et, δt, RoundDown)
-      nt = Int64(nt)
-
-      if iszero(fdti)
-        fdti = δt
-        nt  -= 1
-      end
-
-      lλv = bm(lλi, α, σλ, δt, fdti, srδt, nt)
-      l   = nt + 2
-    end
-    setλt!(idfi, lλv[l])
-    push!(Ξ, iTce(et, δt, fdti, false, true, lλv))
-  end
-
-  return Ξ
-end
-
-
-
-
-"""
-    make_Ξ(idf ::Vector{iBffs},
-           lλa ::Float64,
-           lμa ::Float64,
-           α   ::Float64,
-           σλ  ::Float64,
-           σμ  ::Float64,
-           δt  ::Float64,
-           srδt::Float64,
-           ::Type{iTct})
+           ::Type{T}) where {T <: iT}
 
 Make edge tree `Ξ` from the edge directory.
 """
@@ -534,10 +477,10 @@ function make_Ξ(idf ::Vector{iBffs},
                 σλ  ::Float64,
                 δt  ::Float64,
                 srδt::Float64,
-                ::Type{iTct})
+                ::Type{T}) where {T <: iT}
 
-  Ξ = iTct[]
-  _make_Ξ!(Ξ, 1, log(λ), α, σλ, δt, srδt, idf, iTct)
+  Ξ = T[]
+  _make_Ξ!(Ξ, 1, log(λ), α, σλ, δt, srδt, idf, T)
 
   return Ξ
 end
@@ -545,22 +488,20 @@ end
 
 
 
-
 """
-    _make_Ξ!(idf ::Vector{iBffs},
+    _make_Ξ!(Ξ   ::Vector{T},
              i   ::Int64,
              lλ0 ::Float64,
-             lμ0 ::Float64,
              α   ::Float64,
              σλ  ::Float64,
-             σμ  ::Float64,
              δt  ::Float64,
              srδt::Float64,
-             ::Type{iTct})
+             idf ::Vector{iBffs},
+             ::Type{T}) where {T <: iT}
 
 Make edge tree `Ξ` from the edge directory.
 """
-function _make_Ξ!(Ξ   ::Vector{iTct},
+function _make_Ξ!(Ξ   ::Vector{T},
                   i   ::Int64,
                   lλ0 ::Float64,
                   α   ::Float64,
@@ -568,7 +509,7 @@ function _make_Ξ!(Ξ   ::Vector{iTct},
                   δt  ::Float64,
                   srδt::Float64,
                   idf ::Vector{iBffs},
-                  ::Type{iTct})
+                  ::Type{T}) where {T <: iT}
 
   bi = idf[i]
   i1 = d1(bi)
@@ -594,14 +535,14 @@ function _make_Ξ!(Ξ   ::Vector{iTct},
   l = nts + 2
 
   setλt!(bi, lλv[l])
-  push!(Ξ, iTct(et, δt, fdti, false, true, lλv))
+  push!(Ξ, T(et, δt, fdti, false, true, lλv))
 
   if i1 > 0 
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλv[l], α, σλ, δt, srδt, idf, iTct)
-      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf, iTct)
+      _make_Ξ!(Ξ, i2, lλv[l], α, σλ, δt, srδt, idf, T)
+      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf, T)
     else
-      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf, iTct)
+      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf, T)
     end
   end
 
@@ -643,9 +584,8 @@ end
 
 
 
-
 """
-    _make_Ξ!(idf ::Vector{iBffs},
+    _make_Ξ!(Ξ   ::Vector{iTbd},
              i   ::Int64,
              lλ0 ::Float64,
              lμ0 ::Float64,
@@ -654,6 +594,7 @@ end
              σμ  ::Float64,
              δt  ::Float64,
              srδt::Float64,
+             idf ::Vector{iBffs},
              ::Type{iTbd})
 
 Make edge tree `Ξ` from the edge directory.

@@ -10,6 +10,51 @@ Created 27 05 2020
 =#
 
 
+"""
+    _daughter_update!(ξ1  ::iTce,
+                      λf  ::Float64,
+                      α   ::Float64,
+                      σλ  ::Float64,
+                      μ   ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64)
+
+Make a `gbm-ce` proposal for daughters from forwards simulated branch.
+"""
+function _daughter_update!(ξ1  ::iTce,
+                           λf  ::Float64,
+                           α   ::Float64,
+                           σλ  ::Float64,
+                           μ   ::Float64,
+                           δt  ::Float64,
+                           srδt::Float64)
+  @inbounds begin
+
+    λ1c  = lλ(ξ1)
+    l1   = lastindex(λ1c)
+    λ1p  = Vector{Float64}(undef,l1)
+    λi   = λ1c[1]
+    λ1   = λ1c[l1]
+    e1   = e(ξ1)
+    fdt1 = fdt(ξ1)
+
+    bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
+
+    # log likelihood ratios
+    llrbm1, llrce1, ssrλ1 =
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+
+    # acceptance rate
+    acr  = llrce1
+    llr  = llrbm1 + acr
+    acr += lrdnorm_bm_x(λf, λi, λ1 - α*e1, σλ * sqrt(e1))
+    drλ  = λi - λf
+  end
+
+  return llr, acr, drλ, ssrλ1, λ1p
+end
+
+
 
 
 """
@@ -130,7 +175,7 @@ function _stem_update!(ξi   ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, true)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, 0)
       llr += log(mp/mc)
 
       if lU < llr
@@ -225,7 +270,7 @@ function _crown_update!(ξi   ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, false)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, 1)
       llr += log(mp/mc)
 
       if lU < llr
@@ -268,15 +313,20 @@ function _update_gbm!(tree::iTce,
                       dλ  ::Float64,
                       ssλ ::Float64,
                       δt  ::Float64,
-                      srδt::Float64)
+                      srδt::Float64,
+                      ter ::Bool)
 
   if def1(tree)
     llc, dλ, ssλ = update_triad!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
 
     llc, dλ, ssλ =
-      _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+      _update_gbm!(tree.d1, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
     llc, dλ, ssλ =
-      _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
+      _update_gbm!(tree.d2, α, σλ, μ, llc, dλ, ssλ, δt, srδt, ter)
+  elseif !isfix(tree) || ter
+
+    llc, dλ, ssλ = 
+      update_tip!(tree, α, σλ, μ, llc, dλ, ssλ, δt, srδt)
   end
 
   return llc, dλ, ssλ
@@ -285,52 +335,126 @@ end
 
 
 
-# """
-#     update_tip!(tree::iTce,
-#                 α   ::Float64,
-#                 σλ  ::Float64,
-#                 μ   ::Float64,
-#                 llc ::Float64,
-#                 dλ  ::Float64,
-#                 ssλ ::Float64,
-#                 δt  ::Float64,
-#                 srδt::Float64)
+"""
+    update_tip!(tree::iTce,
+                α   ::Float64,
+                σλ  ::Float64,
+                μ   ::Float64,
+                llc ::Float64,
+                dλ  ::Float64,
+                ssλ ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
 
-# Make a `gbm` tip proposal.
-# """
-# function update_tip!(tree::iTce,
-#                      α   ::Float64,
-#                      σλ  ::Float64,
-#                      μ   ::Float64,
-#                      llc ::Float64,
-#                      dλ  ::Float64,
-#                      ssλ ::Float64,
-#                      δt  ::Float64,
-#                      srδt::Float64)
+Make a `gbm` tip proposal.
+"""
+function update_tip!(tree::iTce,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     μ   ::Float64,
+                     llc ::Float64,
+                     dλ  ::Float64,
+                     ssλ ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
 
-#   @inbounds begin
+  @inbounds begin
 
-#     λc   = lλ(tree)
-#     l    = lastindex(λc)
-#     fdtp = fdt(tree)
-#     λp   = Vector{Float64}(undef, l)
+    λc   = lλ(tree)
+    l    = lastindex(λc)
+    fdtp = fdt(tree)
+    λp   = Vector{Float64}(undef, l)
 
-#     bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
+    bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
 
-#     llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
-#     acr = llrbd
+    acr = llrbd
 
-#     if -randexp() < acr
-#       llc += llrbm + acr
-#       dλ  += λp[l] - λc[l]
-#       ssλ += ssrλ
-#       unsafe_copyto!(λc, 1, λp, 1, l)
-#     end
-#   end
+    if -randexp() < acr
+      llc += llrbm + acr
+      dλ  += λp[l] - λc[l]
+      ssλ += ssrλ
+      unsafe_copyto!(λc, 1, λp, 1, l)
+    end
+  end
 
-#   return llc, dλ, ssλ
-# end
+  return llc, dλ, ssλ
+end
+
+
+
+
+"""
+    update_duo!(λpc ::Vector{Float64},
+                  λ1c ::Vector{Float64},
+                  λ2c ::Vector{Float64},
+                  ep  ::Float64,
+                  e1  ::Float64,
+                  e2  ::Float64,
+                  fdtp::Float64,
+                  fdt1::Float64,
+                  fdt2::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  μ   ::Float64,
+                  llc ::Float64,
+                  dλ  ::Float64,
+                  ssλ ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  mσλ::Float64)
+
+Make a `gbm` trio proposal.
+"""
+function update_duo!(λpc ::Vector{Float64},
+                       λ1c ::Vector{Float64},
+                       ep  ::Float64,
+                       e1  ::Float64,
+                       fdtp::Float64,
+                       fdt1::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       μ   ::Float64,
+                       llc ::Float64,
+                       ssλ ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64)
+
+  @inbounds begin
+
+    lp  = lastindex(λpc)
+    l1  = lastindex(λ1c)
+    λpp = Vector{Float64}(undef,lp)
+    λ1p = Vector{Float64}(undef,l1)
+    λp  = λpc[1]
+    λi  = λ1c[1]
+    λ1  = λ1c[l1]
+
+   # node proposal
+    λn = duoprop(λp + α*ep, λ1 - α*e1, ep, e1, σλ)
+
+    # simulate fix tree vector
+    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
+
+    llrbmp, llrcep, ssrλp =
+      llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, false)
+    llrbm1, llrce1, ssrλ1 =
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+
+    acr = llrcep + llrce1
+
+    if -randexp() < acr
+      llc += llrbmp + llrbm1 + acr
+      ssλ += ssrλp + ssrλ1
+      unsafe_copyto!(λpc, 1, λpp, 1, lp)
+      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
+    end
+  end
+
+  return llc, ssλ
+end
 
 
 

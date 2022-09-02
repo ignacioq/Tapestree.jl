@@ -392,8 +392,8 @@ function _sim_gbmce(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -487,8 +487,8 @@ function _sim_gbmce_t(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -563,100 +563,6 @@ end
 
 
 
-
-"""
-    _sim_gbmce_i(t   ::Float64,
-                 λt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 μ   ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 nn  ::Int64,
-                 nlim::Int64,
-                 λsp ::Vector{Float64})
-
-Simulate `iTce` according to a geometric Brownian motion for birth rates and
-constant extinction, with a limit on the number lineages allowed to reach.
-"""
-function _sim_gbmce_i(t   ::Float64,
-                      λt  ::Float64,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      μ   ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      nn  ::Int64,
-                      nlim::Int64, 
-                      λsp ::Vector{Float64})
-
-  if nn < nlim
-
-    λv = Float64[λt]
-    bt = 0.0
-
-    while true
-
-      if t <= δt
-        t   = max(0.0,t)
-        bt += t
-        srt = sqrt(t)
-        λt1 = rnorm(λt + α*t, srt*σλ)
-        λm  = exp(0.5*(λt + λt1))
-        push!(λv, λt1)
-
-        if divev(λm, μ, t)
-          # if speciation
-          if λorμ(λm, μ)
-            nn += 1
-            push!(λsp, λt1, λt1)
-            return iTce(
-                     iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                     iTce(0.0, δt, 0.0, false, false, Float64[λt1, λt1]),
-                     bt, δt, t, false, false, λv), nn
-          # if extinction
-          else
-            return iTce(bt, δt, t, true, false, λv), nn
-          end
-        end
-
-        push!(λsp, λt1)
-        return iTce(bt, δt, t, false, false, λv), nn
-      end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
-      λm  = exp(0.5*(λt + λt1))
-      push!(λv, λt1)
-
-      if divev(λm, μ, δt)
-        # if speciation
-        if λorμ(λm, μ)
-          nn += 1
-          td1, nn = 
-            _sim_gbmce_i(t, λt1, α, σλ, μ, δt, srδt, nn, nlim, λsp)
-          td2, nn = 
-            _sim_gbmce_i(t, λt1, α, σλ, μ, δt, srδt, nn, nlim, λsp)
-
-          return iTce(td1, td2, bt, δt, δt, false, false, λv), nn
-        # if extinction
-        else
-          return iTce(bt, δt, δt, true, false, λv), nn
-        end
-      end
-
-      λt = λt1
-    end
-  end
-
-  return iTce(), nn
-end
-
-
-
-
 """
     _sim_gbmce_it(nsδt::Float64,
                   t   ::Float64,
@@ -695,8 +601,8 @@ function _sim_gbmce_it(nsδt::Float64,
   bt = 0.0
 
   ## first: non-standard δt
-  if t <= nsδt
-    t   = max(0.0, t)
+  if t <= nsδt + √eps()
+    t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
     λm  = exp(0.5*(λt + λt1))
@@ -751,8 +657,8 @@ function _sim_gbmce_it(nsδt::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt  += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         λm  = exp(0.5*(λt + λt1))
@@ -852,8 +758,8 @@ function _sim_gbmce_it(t   ::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -922,7 +828,7 @@ end
                     δt  ::Float64,
                     srδt::Float64,
                     surv::Bool,
-                    nn ::Int64)
+                    nn  ::Int64)
 
 Simulate `iTce` according to a geometric Brownian motion for birth rates and
 constant extinction, with a limit on the number lineages allowed to reach.
@@ -935,7 +841,7 @@ function _sim_gbmce_surv(t   ::Float64,
                          δt  ::Float64,
                          srδt::Float64,
                          surv::Bool,
-                         nn ::Int64)
+                         nn  ::Int64)
 
   if !surv && nn < 200
 

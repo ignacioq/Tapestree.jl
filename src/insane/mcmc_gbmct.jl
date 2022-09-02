@@ -914,7 +914,7 @@ function update_gbm!(bix  ::Int64,
       ξ2 = Ξ[i2]
       llc, dlλ, ssλ, Σλ = 
         _update_gbm!(ξ2, α, σλ, ϵ, llc, dlλ, ssλ, Σλ, δt, srδt, 
-          iszero(d1(idf[i1])))
+          iszero(d1(idf[i2])))
     end
   end
 
