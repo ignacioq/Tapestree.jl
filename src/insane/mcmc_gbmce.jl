@@ -16,53 +16,45 @@ Created 03 09 2020
     insane_gbmce(tree    ::sT_label,
                  out_file::String;
                  λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
+                 α_prior ::NTuple{2,Float64} = (0.0, 0.5),
+                 σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                  μ_prior ::NTuple{2,Float64} = (1.0, 1.0),
                  niter   ::Int64             = 1_000,
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
-                 marginal::Bool              = false,
-                 nitpp   ::Int64             = 100,
-                 nthpp   ::Int64             = 10,
-                 K       ::Int64             = 11,
                  λi      ::Float64           = NaN,
                  αi      ::Float64           = 0.0,
                  σλi     ::Float64           = 0.01,
                  μi      ::Float64           = NaN,
                  ϵi      ::Float64           = 0.2,
-                 pupdp   ::NTuple{5,Float64} = (0.1,0.1,0.1,0.2,0.2),
-                 nlim    ::Int64             = 500,
-                 δt      ::Float64           = 5e-3,
+                 pupdp   ::NTuple{5,Float64} = (0.01, 0.01, 0.01, 0.1, 0.2),
+                 δt      ::Float64           = 1e-3,
                  prints  ::Int64             = 5,
+                 survival::Bool              = true,
+                 mxthf   ::Float64           = Inf,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for `gbm-ce`.
 """
 function insane_gbmce(tree    ::sT_label,
                       out_file::String;
-                      λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      α_prior ::NTuple{2,Float64} = (0.0, 0.5),
-                      σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                      μ_prior ::NTuple{2,Float64} = (1.0, 1.0),
-                      niter   ::Int64             = 1_000,
-                      nthin   ::Int64             = 10,
-                      nburn   ::Int64             = 200,
-                      marginal::Bool              = false,
-                      nitpp   ::Int64             = 100,
-                      nthpp   ::Int64             = 10,
-                      K       ::Int64             = 11,
-                      λi      ::Float64           = NaN,
-                      αi      ::Float64           = 0.0,
-                      σλi     ::Float64           = 0.01,
-                      μi      ::Float64           = NaN,
-                      ϵi      ::Float64           = 0.2,
-                      pupdp   ::NTuple{5,Float64} = (0.01, 0.01, 0.01, 0.1, 0.2),
-                      nlim    ::Int64             = 500,
-                      δt      ::Float64           = 1e-3,
-                      prints  ::Int64             = 5,
-                      survival::Bool              = true,
-                      mxthf   ::Float64           = Inf,
+                      λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
+                      α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
+                      σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                      μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                      niter   ::Int64                 = 1_000,
+                      nthin   ::Int64                 = 10,
+                      nburn   ::Int64                 = 200,
+                      λi      ::Float64               = NaN,
+                      αi      ::Float64               = 0.0,
+                      σλi     ::Float64               = 0.01,
+                      μi      ::Float64               = NaN,
+                      ϵi      ::Float64               = 0.2,
+                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
+                      δt      ::Float64               = 1e-3,
+                      prints  ::Int64                 = 5,
+                      survival::Bool                  = true,
+                      mxthf   ::Float64               = Inf,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
@@ -117,7 +109,7 @@ function insane_gbmce(tree    ::sT_label,
       nburn, αi, σλi, μc, mc, th, crown, δt, srδt, inodes, pup, prints)
 
   # mcmc
-  R, Ξv =
+  r, Ξv =
     mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, th, crown,
       λa_prior, α_prior, σλ_prior, μ_prior, niter, nthin, δt, srδt,
       inodes, pup, prints)
@@ -127,9 +119,9 @@ function insane_gbmce(tree    ::sT_label,
                  "sigma_lambda" => 3,
                  "mu"           => 4))
 
-  write_ssr(R, pardic, out_file)
+  write_ssr(r, pardic, out_file)
 
-  return R, Ξv
+  return r, Ξv
 end
 
 

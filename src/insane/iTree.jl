@@ -511,19 +511,17 @@ mutable struct iTpb <: iT
   d1 ::iTpb
   d2 ::iTpb
   e  ::Float64
-  fx ::Bool
   dt ::Float64
   fdt::Float64
+  fx ::Bool
   lλ ::Array{Float64,1}
 
-
   iTpb() = new()
-  iTpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64,
-    lλ::Array{Float64,1}) =
-      (x = new(); x.e = e; x.fx = fx; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
-  iTpb(d1::iTpb, d2::iTpb, e::Float64, fx::Bool,
-    dt::Float64, fdt::Float64, lλ::Array{Float64,1}) =
-      new(d1, d2, e, fx, dt, fdt, lλ)
+  iTpb(e::Float64, dt::Float64, fdt::Float64, fx::Bool, lλ::Array{Float64,1}) =
+      (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.fx = fx; x.lλ = lλ; x)
+  iTpb(d1::iTpb, d2::iTpb, e::Float64, dt::Float64, fdt::Float64, 
+    fx::Bool, lλ::Array{Float64,1}) =
+      new(d1, d2, e, dt, fdt, fx, lλ)
 end
 
 
@@ -557,13 +555,13 @@ function iTpb(e0::Array{Int64,1},
 
   # if tip
   if in(ei, ea)
-    return iTpb(el[ei], true, δt, δt, λs[ei])
+    return iTpb(el[ei], δt, δt, true, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
     return iTpb(iTpb(e0, e1, el, λs, ea, n1, ei1, δt),
                 iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
-                el[ei], true, δt, (el[ei] == 0.0 ? 0.0 : δt), λs[ei])
+                el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
   end
 end
 
@@ -578,9 +576,9 @@ Produce a new copy of `iTpb`.
 function iTpb(tree::iTpb)
   if def1(tree)
     iTpb(iTpb(tree.d1), iTpb(tree.d2),
-      e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
+      e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   else
-    iTpb(e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
+    iTpb(e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   end
 end
 
@@ -957,9 +955,9 @@ function iTbd(e0::Array{Int64,1},
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
     return iTbd(iTbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt),
-                   iTbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
-                   el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
-                   false, false, λs[ei], μs[ei])
+                iTbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
+              el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
+              false, false, λs[ei], μs[ei])
   end
 end
 

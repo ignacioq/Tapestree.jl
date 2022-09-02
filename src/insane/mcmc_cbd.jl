@@ -23,12 +23,14 @@ Created 25 08 2020
                marginal::Bool                  = false,
                nitpp   ::Int64                 = 100,
                nthpp   ::Int64                 = 10,
-               K       ::Int64                 = 10,
+               K       ::Int64                 = 11,
                ϵi      ::Float64               = 0.4,
                λi      ::Float64               = NaN,
                μi      ::Float64               = NaN,
                pupdp   ::NTuple{3,Float64}     = (0.2,0.2,0.2),
                prints  ::Int64                 = 5,
+               survival::Bool              = true,
+               mxthf   ::Float64           = Inf,
                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant birth-death.
@@ -40,20 +42,22 @@ function insane_cbd(tree    ::sT_label,
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
-                    marginal::Bool                  = false,
-                    nitpp   ::Int64                 = 100,
-                    nthpp   ::Int64                 = 10,
-                    K       ::Int64                 = 11,
+                    # marginal::Bool                  = false,
+                    # nitpp   ::Int64                 = 100,
+                    # nthpp   ::Int64                 = 10,
+                    # K       ::Int64                 = 11,
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
                     pupdp   ::NTuple{3,Float64}     = (0.2,0.2,0.2),
                     prints  ::Int64                 = 5,
+                    survival::Bool                  = true,
+                    mxthf   ::Float64               = Inf,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n     = ntips(tree)
   th    = treeheight(tree)
-  crown = Int64(iszero(e(tree)))
+  crown = survival ? Int64(iszero(e(tree))) : 2
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -63,7 +67,7 @@ function insane_cbd(tree    ::sT_label,
   end
 
   # make fix tree directory
-  idf = make_idf(tree, tρ)
+  idf = make_idf(tree, tρ, th * mxthf)
 
   # starting parameters
   if isnan(λi) && isnan(μi)
@@ -75,8 +79,7 @@ function insane_cbd(tree    ::sT_label,
   mc = m_surv_cbd(th, λc, μc, 5_000, crown)
 
   # make a decoupled tree and fix it
-  Ξ = sTbd[]
-  sTbd!(Ξ, tree)
+  Ξ = make_Ξ(idf, sTbd)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -101,57 +104,57 @@ function insane_cbd(tree    ::sT_label,
 
   write_ssr(r, pardic, out_file)
 
-  if marginal
+  # if marginal
 
-     # reference distribution
-    βs = [range(0.0, 1.0, K)...]
-    reverse!(βs)
+  #    # reference distribution
+  #   βs = [range(0.0, 1.0, K)...]
+  #   reverse!(βs)
 
-    # make reference posterior for `λ`
-    @views p = r[:,4]
-    m     = mean(p)
-    v     = var(p)
-    λ_rdist = (m^2/v, m/v)
+  #   # make reference posterior for `λ`
+  #   @views p = r[:,4]
+  #   m     = mean(p)
+  #   v     = var(p)
+  #   λ_rdist = (m^2/v, m/v)
 
-    # make reference posterior for `μ`
-    @views p = r[:,5]
-    m  = mean(p)
-    sd = std(p)
+  #   # make reference posterior for `μ`
+  #   @views p = r[:,5]
+  #   m  = mean(p)
+  #   sd = std(p)
 
-    if sum(x -> x < 0.2, p) > sum(x -> 0.2 < x < 0.4, p)
-      μ0 = 0.0
-    else
-      μ0 = m
-    end
+  #   if sum(x -> x < 0.2, p) > sum(x -> 0.2 < x < 0.4, p)
+  #     μ0 = 0.0
+  #   else
+  #     μ0 = m
+  #   end
 
-    σ0 = max(0.5, sd)
+  #   σ0 = max(0.5, sd)
 
-    x1 = run_newton(μ0, σ0, m, sd)
+  #   x1 = run_newton(μ0, σ0, m, sd)
 
-    μ_rdist = (x1[1], x1[2])
+  #   μ_rdist = (x1[1], x1[2])
 
-    # marginal likelihood
-    pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, crown,
-      λ_prior, μ_prior, λ_rdist, μ_rdist, nitpp, nthpp, βs, pup)
+  #   # marginal likelihood
+  #   pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, crown,
+  #     λ_prior, μ_prior, λ_rdist, μ_rdist, nitpp, nthpp, βs, pup)
 
-    # process with reference distribution the posterior
-    p1 = Vector{Float64}(undef, size(r,1))
-    for i in Base.OneTo(size(r,1))
-      p1[i] = r[i,2] + r[i,3] -
-              logdgamma(r[i,4], λ_rdist[1], λ_rdist[2]) -
-              logdtnorm(r[i,5], μ_rdist[1], μ_rdist[2])
-    end
-    pp[1] = p1
+  #   # process with reference distribution the posterior
+  #   p1 = Vector{Float64}(undef, size(r,1))
+  #   for i in Base.OneTo(size(r,1))
+  #     p1[i] = r[i,2] + r[i,3] -
+  #             logdgamma(r[i,4], λ_rdist[1], λ_rdist[2]) -
+  #             logdtnorm(r[i,5], μ_rdist[1], μ_rdist[2])
+  #   end
+  #   pp[1] = p1
 
-    reverse!(pp)
-    reverse!(βs)
+  #   reverse!(pp)
+  #   reverse!(βs)
 
-    ml = gss(pp, βs)
-  else
-    ml = NaN
-  end
+  #   ml = gss(pp, βs)
+  # else
+  #   ml = NaN
+  # end
 
-  return r, treev, ml
+  return r, treev
 end
 
 
@@ -167,7 +170,7 @@ end
                   μc     ::Float64,
                   mc     ::Float64,
                   th     ::Float64,
-                  crown   ::Bool,
+                  crown  ::Int64,
                   pup    ::Array{Int64,1},
                   prints ::Int64)
 
@@ -183,7 +186,7 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
                        μc     ::Float64,
                        mc     ::Float64,
                        th     ::Float64,
-                       crown   ::Int64,
+                       crown  ::Int64,
                        pup    ::Array{Int64,1},
                        prints ::Int64)
 
@@ -237,20 +240,20 @@ end
 
 """
     mcmc_cbd(Ξ      ::Vector{sTbd},
-             idf    ::Array{iBffs,1},
-             llc    ::Float64,
-             prc    ::Float64,
-             λc     ::Float64,
-             μc     ::Float64,
-             mc     ::Float64,
-             th     ::Float64,
-             crown   ::Bool,
-             λ_prior::NTuple{2,Float64},
-             μ_prior::NTuple{2,Float64},
-             niter  ::Int64,
-             nthin  ::Int64,
-             pup    ::Array{Int64,1},
-             prints ::Int64)
+            idf    ::Array{iBffs,1},
+            llc    ::Float64,
+            prc    ::Float64,
+            λc     ::Float64,
+            μc     ::Float64,
+            mc     ::Float64,
+            th     ::Float64,
+            crown  ::Int64,
+            λ_prior::NTuple{2,Float64},
+            μ_prior::NTuple{2,Float64},
+            niter  ::Int64,
+            nthin  ::Int64,
+            pup    ::Array{Int64,1},
+            prints ::Int64)
 
 MCMC da chain for constant birth-death using forward simulation.
 """
@@ -262,7 +265,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
                   μc     ::Float64,
                   mc     ::Float64,
                   th     ::Float64,
-                  crown   ::Int64,
+                  crown  ::Int64,
                   λ_prior::NTuple{2,Float64},
                   μ_prior::NTuple{2,Float64},
                   niter  ::Int64,
@@ -299,7 +302,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) - crown * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -311,7 +314,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc) - crown * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -323,7 +326,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         bix = ceil(Int64,rand()*el)
         llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
-        # llci = llik_cbd(Ξ, λc, μc) - crown * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -342,7 +345,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         R[lit,3] = prc
         R[lit,4] = λc
         R[lit,5] = μc
-        push!(treev, couple(copy_Ξ(Ξ), idf, 1))
+        push!(treev, couple(Ξ, idf, 1))
       end
       lthin = 0
     end
@@ -356,111 +359,111 @@ end
 
 
 
-"""
-    ref_posterior(Ξ      ::Vector{sTbd},
-                  idf    ::Array{iBffs,1},
-                  λc     ::Float64,
-                  μc     ::Float64,
-                  μtn    ::Float64,
-                  mc     ::Float64,
-                  th     ::Float64,
-                  crown   ::Bool,
-                  λ_prior::NTuple{2,Float64},
-                  μ_prior::NTuple{2,Float64},
-                  λ_rdist::NTuple{2,Float64},
-                  μ_rdist::NTuple{2,Float64},
-                  nitpp  ::Int64,
-                  nthpp  ::Int64,
-                  βs     ::Vector{Float64},
-                  pup    ::Array{Int64,1})
+# """
+#     ref_posterior(Ξ      ::Vector{sTbd},
+#                   idf    ::Array{iBffs,1},
+#                   λc     ::Float64,
+#                   μc     ::Float64,
+#                   μtn    ::Float64,
+#                   mc     ::Float64,
+#                   th     ::Float64,
+#                   crown   ::Bool,
+#                   λ_prior::NTuple{2,Float64},
+#                   μ_prior::NTuple{2,Float64},
+#                   λ_rdist::NTuple{2,Float64},
+#                   μ_rdist::NTuple{2,Float64},
+#                   nitpp  ::Int64,
+#                   nthpp  ::Int64,
+#                   βs     ::Vector{Float64},
+#                   pup    ::Array{Int64,1})
 
-MCMC da chain for constant birth-death using forward simulation.
-"""
-function ref_posterior(Ξ      ::Vector{sTbd},
-                       idf    ::Array{iBffs,1},
-                       λc     ::Float64,
-                       μc     ::Float64,
-                       μtn    ::Float64,
-                       mc     ::Float64,
-                       th     ::Float64,
-                       crown   ::Bool,
-                       λ_prior::NTuple{2,Float64},
-                       μ_prior::NTuple{2,Float64},
-                       λ_rdist::NTuple{2,Float64},
-                       μ_rdist::NTuple{2,Float64},
-                       nitpp  ::Int64,
-                       nthpp  ::Int64,
-                       βs     ::Vector{Float64},
-                       pup    ::Array{Int64,1})
+# MCMC da chain for constant birth-death using forward simulation.
+# """
+# function ref_posterior(Ξ      ::Vector{sTbd},
+#                        idf    ::Array{iBffs,1},
+#                        λc     ::Float64,
+#                        μc     ::Float64,
+#                        μtn    ::Float64,
+#                        mc     ::Float64,
+#                        th     ::Float64,
+#                        crown   ::Bool,
+#                        λ_prior::NTuple{2,Float64},
+#                        μ_prior::NTuple{2,Float64},
+#                        λ_rdist::NTuple{2,Float64},
+#                        μ_rdist::NTuple{2,Float64},
+#                        nitpp  ::Int64,
+#                        nthpp  ::Int64,
+#                        βs     ::Vector{Float64},
+#                        pup    ::Array{Int64,1})
 
-  K = lastindex(βs)
+#   K = lastindex(βs)
 
-  # make log-likelihood table per power
-  nlg = fld(nitpp, nthpp)
-  pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+#   # make log-likelihood table per power
+#   nlg = fld(nitpp, nthpp)
+#   pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
 
-  el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ξ))
-  ne = Float64(ntipsextinct(Ξ))
-  L  = treelength(Ξ)
+#   el = lastindex(idf)
+#   ns = Float64(nnodesinternal(Ξ))
+#   ne = Float64(ntipsextinct(Ξ))
+#   L  = treelength(Ξ)
 
-  nsi = crown ? 0.0 : log(λc)
+#   nsi = crown ? 0.0 : log(λc)
 
-  llc = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
-        logdgamma(μc, μ_prior[1], μ_prior[2])
+#   llc = llik_cbd(Ξ, λc, μc) - nsi + log(mc) + prob_ρ(idf)
+#   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
+#         logdgamma(μc, μ_prior[1], μ_prior[2])
 
-  for k in 2:K
+#   for k in 2:K
 
-    βi  = βs[k]
-    rdc = logdgamma(λc, λ_rdist[1], λ_rdist[2]) +
-          logdtnorm(μc, μ_rdist[1], μ_rdist[2])
+#     βi  = βs[k]
+#     rdc = logdgamma(λc, λ_rdist[1], λ_rdist[2]) +
+#           logdtnorm(μc, μ_rdist[1], μ_rdist[2])
 
-    # logging
-    lth, lit = 0, 0
+#     # logging
+#     lth, lit = 0, 0
 
-    for it in Base.OneTo(nitpp)
+#     for it in Base.OneTo(nitpp)
 
-      shuffle!(pup)
+#       shuffle!(pup)
 
-      for p in pup
+#       for p in pup
 
-        # λ proposal
-        if p === 1
+#         # λ proposal
+#         if p === 1
 
-          llc, prc, rdc, λc, mc =
-            update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, crown,
-              λ_prior, λ_rdist, βi)
+#           llc, prc, rdc, λc, mc =
+#             update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, crown,
+#               λ_prior, λ_rdist, βi)
 
-        # forward simulation proposal proposal
-        elseif p === 2
+#         # forward simulation proposal proposal
+#         elseif p === 2
 
-          llc, prc, rdc, μc, mc =
-            update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, crown,
-              μ_prior, μ_rdist, βi)
+#           llc, prc, rdc, μc, mc =
+#             update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, crown,
+#               μ_prior, μ_rdist, βi)
 
-        else
+#         else
 
-          bix = ceil(Int64,rand()*el)
-          llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
+#           bix = ceil(Int64,rand()*el)
+#           llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
-        end
-      end
+#         end
+#       end
 
-      # log log-likelihood
-      lth += 1
-      if lth === nthpp
-        lit += 1
-        pp[k][lit] = llc + prc - rdc
-        lth = 0
-      end
-    end
+#       # log log-likelihood
+#       lth += 1
+#       if lth === nthpp
+#         lit += 1
+#         pp[k][lit] = llc + prc - rdc
+#         lth = 0
+#       end
+#     end
 
-    @info string(βi," power done")
-  end
+#     @info string(βi," power done")
+#   end
 
-  return pp
-end
+#   return pp
+# end
 
 
 
@@ -493,6 +496,8 @@ function update_fs!(bix::Int64,
    # if terminal
   if iszero(d1(bi))
     ξp, llr = fsbi_t(bi, λ, μ)
+
+  # if mid or internal
   else
     ξp, llr = fsbi_i(bi, λ, μ)
   end
@@ -756,7 +761,7 @@ end
               λc     ::Float64,
               mc     ::Float64,
               th     ::Float64,
-              crown   ::Bool,
+              crown  ::Int64,
               μ_prior::NTuple{2,Float64})
 
 Mixed HM-Gibbs of `μ` for constant birth-death.
@@ -769,7 +774,7 @@ function update_μ!(llc    ::Float64,
                    λc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   crown   ::Int64,
+                   crown  ::Int64,
                    μ_prior::NTuple{2,Float64})
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
@@ -801,7 +806,7 @@ end
               λc     ::Float64,
               mc     ::Float64,
               th     ::Float64,
-              crown   ::Bool,
+              crown  ::Int64,
               μ_prior::NTuple{2,Float64},
               μ_rdist::NTuple{2,Float64},
               pow    ::Float64)
@@ -818,7 +823,7 @@ function update_μ!(llc    ::Float64,
                    λc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   crown   ::Int64,
+                   crown  ::Int64,
                    μ_prior::NTuple{2,Float64},
                    μ_rdist::NTuple{2,Float64},
                    pow    ::Float64)

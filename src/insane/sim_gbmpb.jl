@@ -306,8 +306,8 @@ function sim_gbmpb(t   ::Float64;
       @warn "maximum number of lineages surpassed"
     end
 
-    tree = iTpb(d1, d2, 0.0, false, δt, 0.0, Float64[lλ0, lλ0])
-  elseif init === :stem
+    tree = iTpb(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0])
+   elseif init === :stem
     tree, nn = _sim_gbmpb(t, log(λ0), α, σλ, δt, sqrt(δt), nn + 1, nlim)
 
     if nn >= nlim
@@ -352,8 +352,8 @@ function _sim_gbmpb(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
@@ -362,12 +362,12 @@ function _sim_gbmpb(t   ::Float64,
 
         if divev(λm, t)
           nn += 1
-          return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      bt, false, δt, t, λv), nn
+          return iTpb(iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                      iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                      bt, δt, t, false, λv), nn
         end
 
-        return iTpb(bt, false, δt, t, λv), nn
+        return iTpb(bt, δt, t, false, λv), nn
       end
 
       t  -= δt
@@ -384,7 +384,7 @@ function _sim_gbmpb(t   ::Float64,
         td1, nn = _sim_gbmpb(t, λt1, α, σλ, δt, srδt, nn, nlim)
         td2, nn = _sim_gbmpb(t, λt1, α, σλ, δt, srδt, nn, nlim)
 
-        return iTpb(td1, td2, bt, false, δt, δt, λv), nn
+        return iTpb(td1, td2, bt, δt, δt, false, λv), nn
       end
 
       λt = λt1
@@ -435,8 +435,8 @@ function _sim_gbmpb_t(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
@@ -454,9 +454,9 @@ function _sim_gbmpb_t(t   ::Float64,
           if nlr < lr && lU >= nlr
             return iTpb(), na, nn, NaN
           else
-            return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                        iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                        bt, false, δt, t, λv), na, nn, nlr
+            return iTpb(iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                        iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                        bt, δt, t, false, λv), na, nn, nlr
           end
         else
           na += 1
@@ -465,9 +465,9 @@ function _sim_gbmpb_t(t   ::Float64,
             nlr += log(Iρi * Float64(na)/Float64(na-1))
           end
           if nlr >= lr
-            return iTpb(bt, false, δt, t, λv), na, nn, nlr
+            return iTpb(bt, δt, t, false, λv), na, nn, nlr
           elseif lU < nlr
-            return iTpb(bt, false, δt, t, λv), na, nn, nlr
+            return iTpb(bt, δt, t, false, λv), na, nn, nlr
           else
             return iTpb(), na, nn, NaN
           end
@@ -490,7 +490,7 @@ function _sim_gbmpb_t(t   ::Float64,
         td2, na, nn, lr =
           _sim_gbmpb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
 
-        return iTpb(td1, td2, bt, false, δt, δt, λv), na, nn, lr
+        return iTpb(td1, td2, bt, δt, δt, false, λv), na, nn, lr
       end
 
       λt = λt1
@@ -499,85 +499,6 @@ function _sim_gbmpb_t(t   ::Float64,
 
   return iTpb(), na, nn, NaN
 end
-
-
-
-
-"""
-    _sim_gbmpb_i(t   ::Float64,
-               λt  ::Float64,
-               α   ::Float64,
-               σλ  ::Float64,
-               δt  ::Float64,
-               srδt::Float64,
-               nn  ::Int64,
-               nlim::Int64,
-               λsp ::Vector{Float64})
-
-Simulate `iTpb` according to a pure-birth geometric Brownian motion.
-"""
-function _sim_gbmpb_i(t   ::Float64,
-                      λt  ::Float64,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      nn  ::Int64,
-                      nlim::Int64, 
-                      λsp ::Vector{Float64})
-
-  if nn < nlim
-
-    λv = Float64[λt]
-    bt = 0.0
-
-    while true
-
-      if t <= δt
-        t   = max(0.0, t)
-        bt += t
-        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-        push!(λv, λt1)
-
-        λm = exp(0.5*(λt + λt1))
-
-        if divev(λm, t)
-          nn += 1
-          push!(λsp, λt1, λt1)
-
-          return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      bt, false, δt, t, λv), nn
-        end
-
-        push!(λsp, λt1)
-        return iTpb(bt, false, δt, t, λv), nn
-      end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
-
-      push!(λv, λt1)
-
-      λm = exp(0.5*(λt + λt1))
-
-      if divev(λm, δt)
-        nn += 1
-        td1, nn = _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nn, nlim, λsp)
-        td2, nn = _sim_gbmpb_i(t, λt1, α, σλ, δt, srδt, nn, nlim, λsp)
-
-        return iTpb(td1, td2, bt, false, δt, δt, λv), nn
-      end
-
-      λt = λt1
-    end
-  end
-
-  return iTpb(), nn
-end
-
 
 
 
@@ -615,8 +536,9 @@ function _sim_gbmpb_it(nsδt::Float64,
   λv = Float64[λt]
   bt = 0.0
 
-  if t <= nsδt
-    t   = max(0.0, t)
+  ## first: non-standard δt
+  if t <= nsδt + √eps()
+    t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
     λm  = exp(0.5*(λt + λt1))
@@ -625,12 +547,12 @@ function _sim_gbmpb_it(nsδt::Float64,
     if divev(λm, t)
       nn += 1
       lr += 2.0*log(Iρi)
-      return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                  iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                  bt, false, δt, t, λv), nn, lr
+      return iTpb(iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                  iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                  bt, δt, t, false, λv), nn, lr
     else
       lr += log(Iρi)
-      return iTpb(bt, false, δt, t, λv), nn, lr
+      return iTpb(bt, δt, t, false, λv), nn, lr
     end
   end
 
@@ -648,7 +570,7 @@ function _sim_gbmpb_it(nsδt::Float64,
     td2, nn, lr =
       _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
 
-    return iTpb(td1, td2, bt, false, δt, nsδt, λv), nn, lr
+    return iTpb(td1, td2, bt, δt, nsδt, false, λv), nn, lr
   end
 
   λt = λt1
@@ -657,8 +579,8 @@ function _sim_gbmpb_it(nsδt::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
@@ -668,12 +590,12 @@ function _sim_gbmpb_it(nsδt::Float64,
         if divev(λm, t)
           nn += 1
           lr  += 2.0*log(Iρi)
-          return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      bt, false, δt, t, λv), nn, lr
+          return iTpb(iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                      iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                      bt, δt, t, false, λv), nn, lr
         else
           lr += log(Iρi)
-          return iTpb(bt, false, δt, t, λv), nn, lr
+          return iTpb(bt, δt, t, false, λv), nn, lr
         end
       end
 
@@ -693,7 +615,7 @@ function _sim_gbmpb_it(nsδt::Float64,
         td2, nn, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
 
-        return iTpb(td1, td2, bt, false, δt, δt, λv), nn, lr
+        return iTpb(td1, td2, bt, δt, δt, false, λv), nn, lr
       end
 
       λt = λt1
@@ -741,8 +663,8 @@ function _sim_gbmpb_it(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
         push!(λv, λt1)
@@ -752,13 +674,13 @@ function _sim_gbmpb_it(t   ::Float64,
         if divev(λm, t)
           nn += 1
           lr  += 2.0*log(Iρi)
-          return iTpb(iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      iTpb(0.0, false, δt, 0.0, Float64[λt1, λt1]),
-                      bt, false, δt, t, λv), nn, lr
+          return iTpb(iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                      iTpb(0.0, δt, 0.0, false, [λt1, λt1]),
+                      bt, δt, t, false, λv), nn, lr
         end
 
         lr += log(Iρi)
-        return iTpb(bt, false, δt, t, λv), nn, lr
+        return iTpb(bt, δt, t, false, λv), nn, lr
       end
 
       t  -= δt
@@ -777,7 +699,7 @@ function _sim_gbmpb_it(t   ::Float64,
         td2, nn, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
 
-        return iTpb(td1, td2, bt, false, δt, δt, λv), nn, lr
+        return iTpb(td1, td2, bt, δt, δt, false, λv), nn, lr
       end
 
       λt = λt1
