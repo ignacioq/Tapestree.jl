@@ -337,7 +337,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
+        #    @show ll0, llc, pupi, i
         #    return
         # end
 
@@ -350,19 +350,19 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
+        #    @show ll0, llc, pupi, i
         #    return
         # end
 
       elseif pupi === 3
 
-         llc, prc, μc, mc =
-            update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, crown,
-              δt, srδt, μ_prior)
+        llc, prc, μc, mc =
+          update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, crown,
+            δt, srδt, μ_prior)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
+        #    @show ll0, llc, pupi, i
         #    return
         # end
 
@@ -378,7 +378,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
+        #    @show ll0, llc, pupi, i
         #    return
         # end
 
@@ -393,7 +393,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
+        #    @show ll0, llc, pupi, i
         #    return
         # end
       end

@@ -151,6 +151,12 @@ function _make_Ξ!(Ξ   ::Vector{T},
     nts  = 0
   else
     ntF, fdti = divrem(et, δt, RoundDown)
+
+    if isapprox(fdti, δt)
+      ntF += 1.0
+      fdti = δt
+    end
+
     nts = Int64(ntF)
 
     if iszero(fdti) || (i1 > 0 && iszero(i2)) 
@@ -256,6 +262,12 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     nts  = 0
   else
     ntF, fdti = divrem(et, δt, RoundDown)
+
+    if isapprox(fdti, δt)
+      ntF += 1.0
+      fdti = δt
+    end
+
     nts = Int64(ntF)
 
     if iszero(fdti) || (i1 > 0 && iszero(i2)) 

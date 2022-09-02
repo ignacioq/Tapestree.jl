@@ -296,7 +296,7 @@ function extract_tree(tree::iTpb, nδt::Float64)
 
   if def1(tree)
     iTpb(extract_tree(tree.d1, nδt),
-            extract_tree(tree.d2, nδt), et, nδt, nfdt, pv)
+         extract_tree(tree.d2, nδt), et, nδt, nfdt, pv)
   else
     iTpb(et, nδt, nfdt, pv)
   end
@@ -536,9 +536,9 @@ function iquantile(treev::Vector{iTpb}, p::Float64)
         push!(treev2, treev[t].d2)
     end
     iTpb(iquantile(treev1, p), iquantile(treev2, p),
-      e(t1), true, dt(t1), fdt(t1), sv)
+         e(t1), dt(t1), fdt(t1), true, sv)
   else
-    iTpb(e(t1), true, dt(t1), fdt(t1), sv)
+    iTpb(e(t1), dt(t1), fdt(t1), true, sv)
   end
 end
 
