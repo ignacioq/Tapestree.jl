@@ -57,14 +57,11 @@ function insane_gbmpb(tree    ::sT_label,
     tρ = Dict(tl[i] => tρu for i in 1:n)
   end
 
-  # lλ root node
-  lλa = log(λmle_cpb(tree))
-
   # make fix tree directory
   idf = make_idf(tree, tρ, Inf)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, lλa, αi, σλi, δt, srδt, iTpb)
+  Ξ = make_Ξ(idf, λmle_cpb(tree), αi, σλi, δt, srδt, iTpb)
 
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]

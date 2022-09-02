@@ -91,7 +91,7 @@ function insane_gbmct(tree    ::sT_label,
   ϵc = ϵi
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTct)
+  Ξ = make_Ξ(idf, λc, αi, σλi, δt, srδt, iTct)
 
   # survival
   mc = m_surv_gbmct(th, log(λc), αi, σλi, ϵc, δt, srδt, 1_000, crown)

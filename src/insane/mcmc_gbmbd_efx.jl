@@ -102,7 +102,7 @@ function insane_gbmbd(tree    ::sT_label,
   end
 
   # make a decoupled tree
-  Ξ, ixiv, ixfv = make_Ξ(idf, log(λc), αi, σλi, tv, ev, δt, srδt, iTbd)
+  Ξ, ixiv, ixfv = make_Ξ(idf, λc, αi, σλi, tv, ev, δt, srδt, iTbd)
 
   # survival
   mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, crown)

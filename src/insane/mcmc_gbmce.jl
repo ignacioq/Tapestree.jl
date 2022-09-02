@@ -86,7 +86,7 @@ function insane_gbmce(tree    ::sT_label,
   end
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, log(λc), αi, σλi, δt, srδt, iTce)
+  Ξ = make_Ξ(idf, λc, αi, σλi, δt, srδt, iTce)
 
   #survival
   mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 1_000, crown)
