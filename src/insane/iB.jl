@@ -295,7 +295,7 @@ function makeiBf!(tree::sT_label,
   el = e(tree)
   el = ec < el ? ec : el
 
-  # internal branch
+  # mid branch
   if el > mxt
 
     te = ts - mxt
@@ -307,7 +307,7 @@ function makeiBf!(tree::sT_label,
 
     return ρi, n, nm + 1
 
-  # internal branch
+  # terminal branch
   elseif istip(tree)
 
     lab = l(tree)
@@ -319,6 +319,8 @@ function makeiBf!(tree::sT_label,
     push!(n2v, 0)
 
     return ρi, 1, 0
+
+  # internal branch
   else
     te  = ts - el
 
@@ -335,6 +337,7 @@ function makeiBf!(tree::sT_label,
     return ρi, n, nm
   end
 end
+
 
 
 
@@ -413,76 +416,81 @@ end
 
 
 
-
 """
-    makeiBf!(tree::sTf_label,
+    makeiBf!(tree::sfT_label,
              idv ::Array{iBffs,1},
-             ti  ::Float64,
-             n1v ::Array{Int64,1},
+             ts  ::Float64,
              n2v ::Array{Int64,1},
-             ft1v::Array{Int64,1},
-             ft2v::Array{Int64,1},
-             sa2v::Array{Int64,1},
-             tρ  ::Dict{String, Float64})
+             tρ  ::Dict{String, Float64},
+             thp ::Float64)
 
-Make `iBf` vector for an `iTree` with fossils.
+Make `iBf` vector for an `iTree`.
 """
 function makeiBf!(tree::sTf_label,
+                  ec  ::Float64,
                   idv ::Array{iBffs,1},
-                  ti  ::Float64,
-                  n1v ::Array{Int64,1},
+                  ts  ::Float64,
                   n2v ::Array{Int64,1},
-                  ft1v::Array{Int64,1},
-                  ft2v::Array{Int64,1},
-                  sa2v::Array{Int64,1},
-                  tρ  ::Dict{String, Float64})
+                  tρ  ::Dict{String, Float64},
+                  mxt ::Float64)
 
   el = e(tree)
-  tf = ti - el
-  iψ = isfossil(tree)
+  el = ec < el ? ec : el
 
-  if istip(tree)
+  # mid branch
+  if el > mxt
+
+    te = ts - mxt
+    ρi, n, nm = makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt)
+
+    push!(idv,
+      iBffs(mxt, 0, 1, 0, ts, te, false, false, ρi, 0, 1, NaN))
+    push!(n2v, 2*n + nm)
+
+    return ρi, n, nm + 1
+
+  # terminal branch
+  elseif istip(tree)
+
     lab = l(tree)
     ρi  = tρ[lab]
-    push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
-    i01 = Int64(!iψ)
-    push!(idv, iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, i01, 1, 
-                     0.0, 0.0, 0.0, false))
-    return ρi, i01, 1-i01, 0
+    te  = ts - el
+    te  = isapprox(te, 0.0) ? te : 0.0
+    iψ  = isfossil(tree)
+    push!(idv, 
+      iBffs(el, 0, 0, 0, ts, te, iψ, false, ρi, Int64(!iψ), 1, NaN))
+    push!(n2v, 0)
+
+    return ρi, 1, 0
+
+  # internal fossil branch
+  elseif !def2(tree)
+
+    te = ts - el
+    ρi, n, nm = makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt)
+
+    push!(idv,
+      iBffs(el, 0, 1, 0, ts, te, true, false, ρi, 0, 1, NaN))
+    push!(n2v, 2*n + nm)
+
+    return ρi, n, nm + 1
+
+  # internal branch
+  else
+    te  = ts - el
+
+    ρ1, n1, nm1 = makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt)
+    ρ2, n2, nm2 = makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt)
+
+    n  = n1 + n2
+    ρi = n / (n1/ρ1 + n2/ρ2)
+    nm = nm1 + nm2
+
+    push!(idv, iBffs(el, 0, 1, 1, ts, te, false, false, ρi, 0, 1, NaN))
+    push!(n2v, 2*n2 + nm2)
+
+    return ρi, n, nm
   end
-
-  if def1(tree)
-    ρ1, n1, ft1, sa1 =
-      makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
-
-    if def2(tree)
-      ρ2, n2, ft2, sa2 = 
-        makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ)
-
-      # rho
-      n  = n1 + n2                     # number of alive descendants
-      ft = ft1 + ft2                   # number of fossil tips
-      ρi = (n+ft) / ( (n1+ft1)/ρ1 + (n2+ft2)/ρ2 ) 
-      sa = sa1 + sa2 + iψ  # number of sampled ancestors
-    else
-      # rho
-      n2, ft2, sa2 = 0, 0, 0
-      n  = n1                     # number of alive descendants
-      ft = ft1                   # number of fossil tips
-      ρi = ρ1
-      sa = sa1 + iψ  # number of sampled ancestors
-    end
-  end
-
-  push!(idv, iBffs(el, 0, 0, 0, ti, tf, false, ρi, iψ, 0, 1, 
-                   0.0, 0.0, 0.0, false))
-  push!(n1v, n1)
-  push!(n2v, n2)
-  push!(ft1v, ft1)
-  push!(ft2v, ft2)
-  push!(sa2v, sa2)
-
-  return ρi, n, ft, sa
 end
 
 
@@ -597,45 +605,12 @@ end
 
 
 
-
 """
-    make_idf(tree::sT_label, tρ::Dict{String, Float64})
+    make_idf(tree::sT, tρ::Dict{String, Float64}, maxt::Float64)
 
 Make the edge dictionary.
 """
-function make_idf(tree::sT_label, tρ::Dict{String, Float64})
-
-  idf = iBffs[]
-  n2v = Int64[]
-  makeiBf!(tree, e(tree), idf, treeheight(tree), n2v, tρ, Inf)
-
-  reverse!(idf)
-  reverse!(n2v)
-
-  for i in Base.OneTo(lastindex(idf))
-    bi = idf[i]
-    n2 = n2v[i]
-
-    if n2 > 0
-      setd1!(bi, n2*2 + i)
-      setd2!(bi, i + 1)
-      setpa!(idf[d1(bi)], i)
-      setpa!(idf[d2(bi)], i)
-    end
-  end
-
-  return idf
-end
-
-
-
-
-"""
-    make_idf(tree::sT_label, tρ::Dict{String, Float64}, maxt::Float64)
-
-Make the edge dictionary.
-"""
-function make_idf(tree::sT_label, tρ::Dict{String, Float64}, maxt::Float64)
+function make_idf(tree::sT, tρ::Dict{String, Float64}, maxt::Float64)
 
   idf = iBffs[]
   n2v = Int64[]
@@ -664,6 +639,7 @@ function make_idf(tree::sT_label, tρ::Dict{String, Float64}, maxt::Float64)
 
   return idf
 end
+
 
 
 

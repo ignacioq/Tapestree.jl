@@ -135,12 +135,13 @@ isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
 
 Return if is a fossil tip node : false because not allowed for those tree types.
 """
-isfossil(tree::sTpb) = false
-isfossil(tree::sTbd) = false
-isfossil(tree::iTpb) = false
-isfossil(tree::iTce) = false
-isfossil(tree::iTct) = false
-isfossil(tree::iTbd) = false
+isfossil(tree::sT_label) = false
+isfossil(tree::sTpb)     = false
+isfossil(tree::sTbd)     = false
+isfossil(tree::iTpb)     = false
+isfossil(tree::iTce)     = false
+isfossil(tree::iTct)     = false
+isfossil(tree::iTbd)     = false
 
 
 
@@ -970,6 +971,25 @@ function _nnodesinternal(tree::T, n::Int64) where {T <: iTf}
     n = _nnodesinternal(tree.d1, n)
     if def2(tree)
       n = _nnodesinternal(tree.d2, n)
+    end
+  end
+
+  return n
+end
+
+
+
+"""
+    nnodesbifurcation(idf::Vector{iBffs})
+
+Return the number of internal nodes for `tree`, initialized at `n`.
+"""
+function nnodesbifurcation(idf::Vector{iBffs})
+
+  n = 0.0
+  for bi in idf
+    if d2(bi) > 0
+      n += 1.0
     end
   end
 

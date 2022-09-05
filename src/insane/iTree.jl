@@ -445,29 +445,6 @@ end
 
 
 """
-    sTfbd(tree::sTf_label)
-
-Transforms a tree of type `sTf_label` to `sTfbd`.
-"""
-function sTfbd(tree::sTf_label)
-
-  if def1(tree)
-    if def2(tree)
-      sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), false, false, false)
-    else
-      sTfbd(sTfbd(tree.d1), e(tree), false, true, false)
-    end
-  elseif def2(tree)
-    sTfbd(sTfbd(tree.d2), e(tree), false, true, false)
-  else
-    sTfbd(e(tree), false)
-  end
-end
-
-
-
-
-"""
     iT
 
 An abstract type for all composite recursive types

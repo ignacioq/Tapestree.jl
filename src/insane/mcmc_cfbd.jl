@@ -48,6 +48,7 @@ function insane_cfbd(tree    ::sTf_label,
                      pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
                      survival::Bool                  = true,
                      prints  ::Int64                 = 5,
+                     mxthf   ::Float64               = Inf,
                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n   = ntips(tree)
@@ -58,7 +59,6 @@ function insane_cfbd(tree    ::sTf_label,
   if !isnothing(tix)
     ψ_epoch = ψ_epoch[tix:end]
   end
-
   nep = lastindex(ψ_epoch) + 1
 
   # set tips sampling fraction
@@ -69,7 +69,7 @@ function insane_cfbd(tree    ::sTf_label,
   end
 
   # make fix tree directory
-  idf = make_idf(tree, tρ)
+  idf = make_idf(tree, tρ, th * mxthf)
 
   # starting parameters
   if isnan(λi) || isnan(μi) || isnan(ψi)
@@ -81,10 +81,11 @@ function insane_cfbd(tree    ::sTf_label,
       λc, μc = moments(Float64(n), th, ϵi)
     end
     # if no sampled fossil
-    if iszero(nfossils(tree))
+    nf = nfossils(tree)
+    if iszero(nf)
       ψc = prod(ψ_prior)
     else
-      ψc = Float64(nfossils(tree))/treelength(tree)
+      ψc = Float64(nf)/treelength(tree)
     end
   else
     λc, μc, ψc = λi, μi, ψi
@@ -198,17 +199,17 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         pup    ::Array{Int64,1},
                         prints ::Int64)
 
-  el = lastindex(idf)                        # number of branches
-  L  = treelength(Ξ, ψ_epoch, bst, eixi)     # tree length
-  nf = nfossils(idf, ψ_epoch)                # number of fossilization events per epoch
-  ns = nnodesbifurcation(Ξ) + Float64(crown) # number of speciation events
-  ne = Float64(ntipsextinct(Ξ))              # number of extinction events
+  el = lastindex(idf)                    # number of branches
+  L  = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
+  nf = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
+  ns = nnodesbifurcation(idf)            # number of speciation events
+  ne = Float64(ntipsextinct(Ξ))          # number of extinction events
 
   # likelihood
-  llc = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
-
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2])       +
-        logdgamma(μc, μ_prior[1], μ_prior[2])       +
+  llc = llik_cfbd(Ξ, λc, μc, ψc, ns, ψ_epoch, bst, eixi) - 
+        Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+  prc = logdgamma(λc,      λ_prior[1], λ_prior[2])  +
+        logdgamma(μc,      μ_prior[1], μ_prior[2])  +
         sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -300,11 +301,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    pup    ::Array{Int64,1},
                    prints ::Int64)
 
-  el  = lastindex(idf)                        # number of branches
-  L   = treelength(Ξ, ψ_epoch, bst, eixi)     # tree length
-  nf  = nfossils(idf, ψ_epoch)                # number of fossilization events per epoch
-  ns  = nnodesbifurcation(Ξ) + Float64(crown) # number of speciation events
-  ne  = Float64(ntipsextinct(Ξ))              # number of extinction events
+  el  = lastindex(idf)                    # number of branches
+  L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
+  nf  = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
+  ns  = nnodesbifurcation(idf)            # number of speciation events
+  ne  = Float64(ntipsextinct(Ξ))          # number of extinction events
   nep = lastindex(ψc)
 
   # logging
@@ -392,7 +393,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         @avx for i in Base.OneTo(nep)
           R[lit,5 + i] = ψc[i]
         end
-        push!(treev, couple(copy_Ξ(Ξ), idf, 1))
+        push!(treev, couple(Ξ, idf, 1))
       end
       lthin = 0
     end

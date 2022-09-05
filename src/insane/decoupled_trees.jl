@@ -65,6 +65,7 @@ end
 
 
 
+
 """
     make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
 
@@ -72,14 +73,12 @@ Make edge tree `Ξ` from the edge directory.
 """
 function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
   Ξ = sTfbd[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    iψ = isfossil(idfi)
-    if iψ && it(idfi)
+  for bi in idf
+    if isfossil(bi) && iszero(d1(bi))
       push!(Ξ, sTfbd(sTfbd(1.0e-10, true, false, false),
-                     e(idfi), false, true, true))
+                     e(bi), false, true, true))
     else
-      push!(Ξ, sTfbd(e(idfi), false, iψ, true))
+      push!(Ξ, sTfbd(e(bi), false, isfossil(bi), true))
     end
   end
 
@@ -790,7 +789,7 @@ end
 """
     couple(Ξ::Vector{T},
            idf::Vector{iBffs},
-           ix ::Int64) where {T <: iTree}
+           ix ::Int64) where {T <: sT}
 
 Build tree from decoupled tree.
 """
@@ -808,12 +807,16 @@ function couple(Ξ  ::Vector{T},
     if i2 > 0 
       ξit.d1 = couple(Ξ, idf, i1)
       ξit.d2 = couple(Ξ, idf, i2)
+    elseif isfossil(bi)
+      ξit.d1 = couple(Ξ, idf, i1)
     else
       ξd1 = couple(Ξ, idf, i1)
       sete!(ξit, e(ξit) + e(ξd1))
       if def1(ξd1)
         ξit.d1 = ξd1.d1
-        ξit.d2 = ξd1.d2
+        if def2(ξd1)
+          ξit.d2 = ξd1.d2
+        end
       end
     end
   end
@@ -833,7 +836,7 @@ Build tree from decoupled tree.
 """
 function couple(Ξ  ::Vector{T},
                 idf::Vector{iBffs},
-                ix ::Int64) where {T <: iTree}
+                ix ::Int64) where {T <: iT}
 
   bi  = idf[ix]
   ξi  = T(Ξ[ix])

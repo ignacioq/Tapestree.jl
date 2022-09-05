@@ -68,7 +68,7 @@ function insane_cpb(tree    ::sT_label,
   end
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, sTpb)
+  Ξ = make_Ξ(idf, sTpb, Inf)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)

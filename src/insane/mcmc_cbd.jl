@@ -191,12 +191,12 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
                        prints ::Int64)
 
   el  = lastindex(idf)
-  L   = treelength(Ξ)     # tree length
-  ns  = Float64(el-1)*0.5 # number of speciation events
-  ne  = 0.0               # number of extinction events
+  L   = treelength(Ξ)          # tree length
+  ns  = nnodesbifurcation(idf) # number of speciation events
+  ne  = 0.0                    # number of extinction events
 
   # likelihood
-  llc = llik_cbd(Ξ, λc, μc) - Float64(crown > 0) * log(λc) + 
+  llc = llik_cbd(Ξ, λc, μc, ns) - Float64(crown > 0) * log(λc) + 
         log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
@@ -274,7 +274,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
                   prints ::Int64)
 
   el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ξ))
+  ns = nnodesbifurcation(idf)
   ne = Float64(ntipsextinct(Ξ))
   L  = treelength(Ξ)
 
@@ -684,13 +684,13 @@ function update_λ!(llc    ::Float64,
                    crown  ::Int64,
                    λ_prior::NTuple{2,Float64})
 
-  λp  = randgamma(λ_prior[1] + ns - Float64(crown), λ_prior[2] + L)
+  λp  = randgamma(λ_prior[1] + ns - Float64(crown > 0), λ_prior[2] + L)
 
   mp  = m_surv_cbd(th, λp, μc, 5_000, crown)
   llr = log(mp/mc)
 
   if -randexp() < llr
-    llc += (ns - Float64(crown)) * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - Float64(crown > 0)) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     λc   = λp
     mc   = mp
@@ -733,13 +733,13 @@ function update_λ!(llc    ::Float64,
                    λ_rdist::NTuple{2,Float64},
                    pow    ::Float64)
 
-  λp  = randgamma((λ_prior[1] + ns - Float64(crown)) * pow + λ_rdist[1] * (1.0 - pow),
+  λp  = randgamma((λ_prior[1] + ns - Float64(crown > 0)) * pow + λ_rdist[1] * (1.0 - pow),
                   (λ_prior[2] + L) * pow         + λ_rdist[2] * (1.0 - pow))
   mp  = m_surv_cbd(th, λp, μc, 5_000, crown)
   llr = log(mp/mc)
 
   if -randexp() < (pow * llr)
-    llc += (ns - Float64(crown)) * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - Float64(crown > 0)) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     rdc += llrdgamma(λp, λc, λ_rdist[1], λ_rdist[2])
     λc   = λp

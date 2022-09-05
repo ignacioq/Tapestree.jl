@@ -393,7 +393,7 @@ Change all alive tips to fossil tips.
 function fossilizefixedtip!(tree::T) where {T <: iTf}
 
   if istip(tree)
-    tree.iψ = true
+    fossilize!(tree)
   elseif isfix(tree.d1)
     fossilizefixedtip!(tree.d1::T)
   else
@@ -437,7 +437,7 @@ function _fossilizepasttips!(tree::T,
     end
   else
     if istip(tree::T) && !isapprox(t, 0.0, atol = rerr)
-      tree.iψ = true
+      fossilize!(tree)
     end
   end
 end
@@ -2367,6 +2367,16 @@ setd1!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d1, stree)
 Set `d2` to `stree` in `tree`.
 """
 setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
+
+
+
+
+"""
+  fossilize!(tree::T,  stree::T) where {T <: iTree}
+
+Set `d2` to `stree` in `tree`.
+"""
+fossilize!(tree::iTf) = setproperty!(tree, :iψ, true)
 
 
 
