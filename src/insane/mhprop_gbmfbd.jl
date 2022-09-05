@@ -35,7 +35,8 @@ function _update_gbm!(tree::iTfbd,
                       ssλ ::Float64,
                       ssμ ::Float64,
                       δt  ::Float64,
-                      srδt::Float64)
+                      srδt::Float64,
+                      ter ::Bool)
 
   if def1(tree)
     if def2(tree)
@@ -43,15 +44,19 @@ function _update_gbm!(tree::iTfbd,
         update_triad!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
 
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+        _update_gbm!(tree.d2, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
     else
       llc, ssλ, ssμ =
         update_duo!(tree, α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
       llc, dλ, ssλ, ssμ =
-        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
+        _update_gbm!(tree.d1, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt, ter)
     end
+  elseif !isfix(tree) || ter
+
+    llc, dλ, ssλ, ssμ = 
+      update_tip!(tree, α, σλ, σμ, llc, dλ, ssλ, ssμ, δt, srδt)
   end
 
   return llc, dλ, ssλ, ssμ

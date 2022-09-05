@@ -419,27 +419,81 @@ function _sim_gbmbd_t(t   ::Float64,
                       na  ::Int64,
                       nn  ::Int64,
                       nlim::Int64)
+  @inbounds begin
 
-  if isfinite(lr) && nn < nlim
+    if isfinite(lr) && nn < nlim
 
-    λv  = Float64[λt0]
-    μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-    μv  = Float64[μt0]
-    bt  = 0.0
+      λv  = [λt0]
+      μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+      μv  = [μt0]
+      bt  = 0.0
 
-    while true
+      while true
 
-      if t <= δt + √eps()
-        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
-        bt += t
-        srt = sqrt(t)
-        λt1 = rnorm(λt0 + α*t, srt*σλ)
+        if t <= δt + √eps()
+          t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
+          bt += t
+          srt = sqrt(t)
+          λt1 = rnorm(λt0 + α*t, srt*σλ)
 
-        while 0.0 < tv[ix]
+          while 0.0 < tv[ix]
+            ix += 1
+          end
+          ix -= 1
+          μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+
+          push!(λv, λt1)
+          push!(μv, μt1)
+
+          λm = exp(0.5*(λt0 + λt1))
+          μm = exp(0.5*(μt0 + μt1))
+
+          if divev(λm, μm, t)
+            # if speciation
+            if λorμ(λm, μm)
+              nn += 1
+              na += 2
+              if na === 2
+                nlr = lr + log(Iρi*2.0)
+              else
+                nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
+              end
+              if nlr < lr && lU >= nlr
+                return iTbd(), na, nn, NaN
+              else
+                return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                                 [λt1, λt1], [μt1, μt1]),
+                            iTbd(0.0, δt, 0.0, false, false,
+                                 [λt1, λt1], [μt1, μt1]),
+                            bt, δt, t, false, false, λv, μv), na, nn, nlr
+              end
+            # if extinction
+            else
+              return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
+            end
+          end
+
+          na += 1
+          nlr = lr
+          if na > 1
+            nlr += log(Iρi * Float64(na)/Float64(na-1))
+          end
+          if nlr < lr && lU >= nlr
+            return iTbd(), na, nn, NaN
+          else
+            return iTbd(bt, δt, t, false, false, λv, μv), na, nn, nlr
+          end
+        end
+
+        t  -= δt
+        bt += δt
+
+        λt1 = rnorm(λt0 + α*δt, srδt*σλ)
+        while t < tv[ix]
           ix += 1
         end
         ix -= 1
-        μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
         push!(μv, μt1)
@@ -447,79 +501,27 @@ function _sim_gbmbd_t(t   ::Float64,
         λm = exp(0.5*(λt0 + λt1))
         μm = exp(0.5*(μt0 + μt1))
 
-        if divev(λm, μm, t)
+        if divev(λm, μm, δt)
           # if speciation
           if λorμ(λm, μm)
             nn += 1
-            na += 2
-            if na === 2
-              nlr = lr + log(Iρi*2.0)
-            else
-              nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
-            end
-            if nlr < lr && lU >= nlr
-              return iTbd(), na, nn, NaN
-            else
-              return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                          iTbd(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
-                          bt, δt, t, false, false, λv, μv), na, nn, nlr
-            end
+            td1, na, nn, lr =
+              _sim_gbmbd_t(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+                lr, lU, Iρi, na, nn, nlim)
+            td2, na, nn, lr =
+              _sim_gbmbd_t(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+                lr, lU, Iρi, na, nn, nlim)
+
+            return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
           # if extinction
           else
-            return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
+            return iTbd(bt, δt, δt, true, false, λv, μv), na, nn, lr
           end
         end
 
-        na += 1
-        nlr = lr
-        if na > 1
-          nlr += log(Iρi * Float64(na)/Float64(na-1))
-        end
-        if nlr < lr && lU >= nlr
-          return iTbd(), na, nn, NaN
-        else
-          return iTbd(bt, δt, t, false, false, λv, μv), na, nn, nlr
-        end
+        λt0 = λt1
+        μt0 = μt1
       end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt0 + α*δt, srδt*σλ)
-      while t < tv[ix]
-        ix += 1
-      end
-      ix -= 1
-      μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-
-      push!(λv, λt1)
-      push!(μv, μt1)
-
-      λm = exp(0.5*(λt0 + λt1))
-      μm = exp(0.5*(μt0 + μt1))
-
-      if divev(λm, μm, δt)
-        # if speciation
-        if λorμ(λm, μm)
-          nn += 1
-          td1, na, nn, lr =
-            _sim_gbmbd_t(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-              lr, lU, Iρi, na, nn, nlim)
-          td2, na, nn, lr =
-            _sim_gbmbd_t(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-              lr, lU, Iρi, na, nn, nlim)
-
-          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
-        # if extinction
-        else
-          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn, lr
-        end
-      end
-
-      λt0 = λt1
-      μt0 = μt1
     end
   end
 
@@ -560,26 +562,63 @@ function _sim_gbmbd_i(t   ::Float64,
                       na  ::Int64,
                       nn ::Int64,
                       nlim::Int64)
+  @inbounds begin
 
-  if nn < nlim
+    if nn < nlim
 
-    λv  = Float64[λt0]
-    μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-    μv  = Float64[μt0]
-    bt  = 0.0
+      λv  = [λt0]
+      μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+      μv  = [μt0]
+      bt  = 0.0
 
-    while true
+      while true
 
-      if t - te <= δt + √eps()
-        dtf = isapprox(t - te, 0.0) ? 0.0 : isapprox(t - te, δt) ? δt : (t - te)
-        bt += dtf
-        srt = sqrt(dtf)
-        λt1 = rnorm(λt0 + α*dtf, srt*σλ)
-        while (t - dtf) < tv[ix]
+        if t - te <= δt + √eps()
+          dtf = isapprox(t - te, 0.0) ? 0.0 : isapprox(t - te, δt) ? δt : (t - te)
+          bt += dtf
+          srt = sqrt(dtf)
+          λt1 = rnorm(λt0 + α*dtf, srt*σλ)
+          while (t - dtf) < tv[ix]
+            ix += 1
+          end
+          ix -= 1
+          μt1 = linpred(t - dtf, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+
+          push!(λv, λt1)
+          push!(μv, μt1)
+
+          λm = exp(0.5*(λt0 + λt1))
+          μm = exp(0.5*(μt0 + μt1))
+
+          if divev(λm, μm, dtf)
+            # if speciation
+            if λorμ(λm, μm)
+              nn += 1
+              na += 2
+              return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                             iTbd(0.0, δt, 0.0, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                             bt, δt, dtf, false, false, λv, μv), na, nn
+            # if extinction
+            else
+              return iTbd(bt, δt, dtf, true, false, λv, μv), na, nn
+            end
+          end
+
+          na += 1
+          return iTbd(bt, δt, dtf, false, false, λv, μv), na, nn
+        end
+
+        t  -= δt
+        bt += δt
+
+        λt1 = rnorm(λt0 + α*δt, srδt*σλ)
+        while t < tv[ix]
           ix += 1
         end
         ix -= 1
-        μt1 = linpred(t - dtf, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
         push!(μv, μt1)
@@ -587,61 +626,26 @@ function _sim_gbmbd_i(t   ::Float64,
         λm = exp(0.5*(λt0 + λt1))
         μm = exp(0.5*(μt0 + μt1))
 
-        if divev(λm, μm, dtf)
+        if divev(λm, μm, δt)
           # if speciation
           if λorμ(λm, μm)
             nn += 1
-            na += 2
-            return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                           iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                           bt, δt, dtf, false, false, λv, μv), na, nn
+
+            td1, na, nn =
+              _sim_gbmbd_i(t, te, λt1, α, σλ, ix, tv, ev, δt, srδt, na, nn, nlim)
+            td2, na, nn =
+              _sim_gbmbd_i(t, te, λt1, α, σλ, ix, tv, ev, δt, srδt, na, nn, nlim)
+
+            return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
           # if extinction
           else
-            return iTbd(bt, δt, dtf, true, false, λv, μv), na, nn
+            return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
           end
         end
 
-        na += 1
-        return iTbd(bt, δt, dtf, false, false, λv, μv), na, nn
+        λt0 = λt1
+        μt0 = μt1
       end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt0 + α*δt, srδt*σλ)
-      while t < tv[ix]
-        ix += 1
-      end
-      ix -= 1
-      μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-
-      push!(λv, λt1)
-      push!(μv, μt1)
-
-      λm = exp(0.5*(λt0 + λt1))
-      μm = exp(0.5*(μt0 + μt1))
-
-      if divev(λm, μm, δt)
-        # if speciation
-        if λorμ(λm, μm)
-          nn += 1
-
-          td1, na, nn =
-            _sim_gbmbd_i(t, te, λt1, α, σλ, ix, tv, ev, δt, srδt, na, nn, nlim)
-          td2, na, nn =
-            _sim_gbmbd_i(t, te, λt1, α, σλ, ix, tv, ev, δt, srδt, na, nn, nlim)
-
-          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
-        # if extinction
-        else
-          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
-        end
-      end
-
-      λt0 = λt1
-      μt0 = μt1
     end
   end
 
@@ -688,144 +692,24 @@ function _sim_gbmbd_it(nsδt::Float64,
                        na  ::Int64,
                        nn  ::Int64,
                        nlim::Int64)
+  @inbounds begin
 
-  λv  = Float64[λt0]
-  μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-  μv  = Float64[μt0]
-  bt  = 0.0
+    λv  = [λt0]
+    μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+    μv  = [μt0]
+    bt  = 0.0
 
-  ## first: non-standard δt
-  if t <= nsδt + √eps()
-    t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
-    bt += t
-    srt = sqrt(t)
-    λt1 = rnorm(λt0 + α*t, srt*σλ)
-    while 0.0 < tv[ix]
-      ix += 1
-    end
-    ix -= 1
-    μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-
-    push!(λv, λt1)
-    push!(μv, μt1)
-
-    λm = exp(0.5*(λt0 + λt1))
-    μm = exp(0.5*(μt0 + μt1))
-
-    if divev(λm, μm, t)
-      # if speciation
-      if λorμ(λm, μm)
-        nn += 1
-        na += 2
-        lr += 2.0*log(Iρi)
-        return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                         Float64[λt1, λt1], Float64[μt1, μt1]),
-                    iTbd(0.0, δt, 0.0, false, false,
-                         Float64[λt1, λt1], Float64[μt1, μt1]),
-                    bt, δt, t, false, false, λv, μv), na, nn, lr
-      # if extinction
-      else
-        return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
-      end
-    end
-
-    na += 1
-    lr += log(Iρi)
-    return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
-  end
-
-  t  -= nsδt
-  bt += nsδt
-
-  srnsδt = sqrt(nsδt)
-
-  λt1 = rnorm(λt0 + α*nsδt, srnsδt*σλ)
-  while t < tv[ix]
-    ix += 1
-  end
-  ix -= 1
-  μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-
-  push!(λv, λt1)
-  push!(μv, μt1)
-
-  λm = exp(0.5*(λt0 + λt1))
-  μm = exp(0.5*(μt0 + μt1))
-
-  if divev(λm, μm, nsδt)
-    # if speciation
-    if λorμ(λm, μm)
-      nn += 1
-      td1, na, nn, lr =
-        _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-          lr, lU, Iρi, na, nn, nlim)
-      td2, na, nn, lr =
-        _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-          lr, lU, Iρi, na, nn, nlim)
-
-      return iTbd(td1, td2, bt, δt, nsδt, false, false, λv, μv), na, nn, lr
-    else
-    # if extinction
-      return iTbd(bt, δt, nsδt, true, false, λv, μv), na, nn, lr
-    end
-  end
-
-  λt0 = λt1
-  μt0 = μt1
-
-  if lU < lr && nn < nlim
-
-    ## second: standard δt
-    while true
-
-      if t <= δt + √eps()
-        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
-        bt += t
-        srt = sqrt(t)
-        λt1 = rnorm(λt0 + α*t, srt*σλ)
-        while 0.0 < tv[ix]
-          ix += 1
-        end
-        ix -= 1
-        μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-
-        push!(λv, λt1)
-        push!(μv, μt1)
-
-        λm = exp(0.5*(λt0 + λt1))
-        μm = exp(0.5*(μt0 + μt1))
-
-        if divev(λm, μm, t)
-          # if speciation
-          if λorμ(λm, μm)
-            nn += 1
-            na += 2
-            lr += 2.0*log(Iρi)
-            return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                        iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                        bt, δt, t, false, false, λv, μv), na, nn, lr
-          # if extinction
-          else
-            return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
-          end
-        end
-
-        na += 1
-        lr += log(Iρi)
-        return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
-      end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt0 + α*δt, srδt*σλ)
-      while t < tv[ix]
+    ## first: non-standard δt
+    if t <= nsδt + √eps()
+      t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
+      bt += t
+      srt = sqrt(t)
+      λt1 = rnorm(λt0 + α*t, srt*σλ)
+      while 0.0 < tv[ix]
         ix += 1
       end
       ix -= 1
-      μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+      μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
       push!(λv, λt1)
       push!(μv, μt1)
@@ -833,29 +717,151 @@ function _sim_gbmbd_it(nsδt::Float64,
       λm = exp(0.5*(λt0 + λt1))
       μm = exp(0.5*(μt0 + μt1))
 
-      if divev(λm, μm, δt)
+      if divev(λm, μm, t)
         # if speciation
         if λorμ(λm, μm)
           nn += 1
-          td1, na, nn, lr =
-            _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-              lr, lU, Iρi, na, nn, nlim)
-          td2, na, nn, lr =
-            _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-              lr, lU, Iρi, na, nn, nlim)
-
-          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
+          na += 2
+          lr += 2.0*log(Iρi)
+          return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                           [λt1, λt1], [μt1, μt1]),
+                      iTbd(0.0, δt, 0.0, false, false,
+                           [λt1, λt1], [μt1, μt1]),
+                      bt, δt, t, false, false, λv, μv), na, nn, lr
         # if extinction
         else
-          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn, lr
+          return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
         end
       end
 
-      λt0 = λt1
-      μt0 = μt1
+      na += 1
+      lr += log(Iρi)
+      return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
     end
-  end
 
+    t  -= nsδt
+    bt += nsδt
+
+    srnsδt = sqrt(nsδt)
+
+    λt1 = rnorm(λt0 + α*nsδt, srnsδt*σλ)
+    while t < tv[ix]
+      ix += 1
+    end
+    ix -= 1
+    μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+
+    push!(λv, λt1)
+    push!(μv, μt1)
+
+    λm = exp(0.5*(λt0 + λt1))
+    μm = exp(0.5*(μt0 + μt1))
+
+    if divev(λm, μm, nsδt)
+      # if speciation
+      if λorμ(λm, μm)
+        nn += 1
+        td1, na, nn, lr =
+          _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+            lr, lU, Iρi, na, nn, nlim)
+        td2, na, nn, lr =
+          _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+            lr, lU, Iρi, na, nn, nlim)
+
+        return iTbd(td1, td2, bt, δt, nsδt, false, false, λv, μv), na, nn, lr
+      else
+      # if extinction
+        return iTbd(bt, δt, nsδt, true, false, λv, μv), na, nn, lr
+      end
+    end
+
+    λt0 = λt1
+    μt0 = μt1
+
+    if lU < lr && nn < nlim
+
+      ## second: standard δt
+      while true
+
+        if t <= δt + √eps()
+          t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
+          bt += t
+          srt = sqrt(t)
+          λt1 = rnorm(λt0 + α*t, srt*σλ)
+          while 0.0 < tv[ix]
+            ix += 1
+          end
+          ix -= 1
+          μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+
+          push!(λv, λt1)
+          push!(μv, μt1)
+
+          λm = exp(0.5*(λt0 + λt1))
+          μm = exp(0.5*(μt0 + μt1))
+
+          if divev(λm, μm, t)
+            # if speciation
+            if λorμ(λm, μm)
+              nn += 1
+              na += 2
+              lr += 2.0*log(Iρi)
+              return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                          iTbd(0.0, δt, 0.0, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                          bt, δt, t, false, false, λv, μv), na, nn, lr
+            # if extinction
+            else
+              return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
+            end
+          end
+
+          na += 1
+          lr += log(Iρi)
+          return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
+        end
+
+        t  -= δt
+        bt += δt
+
+        λt1 = rnorm(λt0 + α*δt, srδt*σλ)
+        while t < tv[ix]
+          ix += 1
+        end
+        ix -= 1
+        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+
+        push!(λv, λt1)
+        push!(μv, μt1)
+
+        λm = exp(0.5*(λt0 + λt1))
+        μm = exp(0.5*(μt0 + μt1))
+
+        if divev(λm, μm, δt)
+          # if speciation
+          if λorμ(λm, μm)
+            nn += 1
+            td1, na, nn, lr =
+              _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+                lr, lU, Iρi, na, nn, nlim)
+            td2, na, nn, lr =
+              _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+                lr, lU, Iρi, na, nn, nlim)
+
+            return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
+          # if extinction
+          else
+            return iTbd(bt, δt, δt, true, false, λv, μv), na, nn, lr
+          end
+        end
+
+        λt0 = λt1
+        μt0 = μt1
+      end
+    end
+
+  end
   return iTbd(), na, nn, NaN
 end
 
@@ -897,27 +903,66 @@ function _sim_gbmbd_it(t   ::Float64,
                        na  ::Int64,
                        nn  ::Int64,
                        nlim::Int64)
+  @inbounds begin
 
-  if lU < lr && nn < nlim
+    if lU < lr && nn < nlim
 
-    λv  = Float64[λt0]
-    μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-    μv  = Float64[μt0]
-    bt  = 0.0
+      λv  = [λt0]
+      μt0 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+      μv  = [μt0]
+      bt  = 0.0
 
-    ## second: standard δt
-    while true
+      ## second: standard δt
+      while true
 
-      if t <= δt + √eps()
-        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
-        bt += t
-        srt = sqrt(t)
-        λt1 = rnorm(λt0 + α*t, srt*σλ)
-        while 0.0 < tv[ix]
+        if t <= δt + √eps()
+          t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
+          bt += t
+          srt = sqrt(t)
+          λt1 = rnorm(λt0 + α*t, srt*σλ)
+          while 0.0 < tv[ix]
+            ix += 1
+          end
+          ix -= 1
+          μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+
+          push!(λv, λt1)
+          push!(μv, μt1)
+
+          λm = exp(0.5*(λt0 + λt1))
+          μm = exp(0.5*(μt0 + μt1))
+
+          if divev(λm, μm, t)
+            # if speciation
+            if λorμ(λm, μm)
+              nn += 1
+              na += 2
+              lr += 2.0*log(Iρi)
+              return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                          iTbd(0.0, δt, 0.0, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                          bt, δt, t, false, false, λv, μv), na, nn, lr
+            # if extinction
+            else
+              return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
+            end
+          end
+
+          na += 1
+          lr += log(Iρi)
+          return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
+        end
+
+        t  -= δt
+        bt += δt
+
+        λt1 = rnorm(λt0 + α*δt, srδt*σλ)
+        while t < tv[ix]
           ix += 1
         end
         ix -= 1
-        μt1 = linpred(0.0, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
+        μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
 
         push!(λv, λt1)
         push!(μv, μt1)
@@ -925,65 +970,29 @@ function _sim_gbmbd_it(t   ::Float64,
         λm = exp(0.5*(λt0 + λt1))
         μm = exp(0.5*(μt0 + μt1))
 
-        if divev(λm, μm, t)
+        if divev(λm, μm, δt)
           # if speciation
           if λorμ(λm, μm)
             nn += 1
-            na += 2
-            lr += 2.0*log(Iρi)
-            return iTbd(iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                        iTbd(0.0, δt, 0.0, false, false,
-                             Float64[λt1, λt1], Float64[μt1, μt1]),
-                        bt, δt, t, false, false, λv, μv), na, nn, lr
+            td1, na, nn, lr =
+              _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+                lr, lU, Iρi, na, nn, nlim)
+            td2, na, nn, lr =
+              _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
+                lr, lU, Iρi, na, nn, nlim)
+
+            return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
           # if extinction
           else
-            return iTbd(bt, δt, t, true, false, λv, μv), na, nn, lr
+            return iTbd(bt, δt, δt, true, false, λv, μv), na, nn, lr
           end
         end
 
-        na += 1
-        lr += log(Iρi)
-        return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
+        λt0 = λt1
+        μt0 = μt1
       end
-
-      t  -= δt
-      bt += δt
-
-      λt1 = rnorm(λt0 + α*δt, srδt*σλ)
-      while t < tv[ix]
-        ix += 1
-      end
-      ix -= 1
-      μt1 = linpred(t, tv[ix], tv[ix+1], ev[ix], ev[ix+1])
-
-      push!(λv, λt1)
-      push!(μv, μt1)
-
-      λm = exp(0.5*(λt0 + λt1))
-      μm = exp(0.5*(μt0 + μt1))
-
-      if divev(λm, μm, δt)
-        # if speciation
-        if λorμ(λm, μm)
-          nn += 1
-          td1, na, nn, lr =
-            _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-              lr, lU, Iρi, na, nn, nlim)
-          td2, na, nn, lr =
-            _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-              lr, lU, Iρi, na, nn, nlim)
-
-          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
-        # if extinction
-        else
-          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn, lr
-        end
-      end
-
-      λt0 = λt1
-      μt0 = μt1
     end
+
   end
 
   return iTbd(), na, nn, NaN

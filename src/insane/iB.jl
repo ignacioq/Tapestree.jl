@@ -454,9 +454,9 @@ function makeiBf!(tree::sTf_label,
 
     lab = l(tree)
     ρi  = tρ[lab]
-    te  = ts - el
-    te  = isapprox(te, 0.0) ? te : 0.0
     iψ  = isfossil(tree)
+    te  = ts - el
+    te  = isapprox(te, 0.0) ? 0.0 : te
     push!(idv, 
       iBffs(el, 0, 0, 0, ts, te, iψ, false, ρi, Int64(!iψ), 1, NaN))
     push!(n2v, 0)

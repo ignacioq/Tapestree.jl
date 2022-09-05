@@ -54,9 +54,9 @@ function insane_gbmbd(tree    ::sT_label,
                       σμi     ::Float64           = 0.01,
                       pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
                       δt      ::Float64           = 1e-3,
-                      prints  ::Int64             = 5,
                       survival::Bool              = true,
                       mxthf   ::Float64           = Inf,
+                      prints  ::Int64             = 5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
@@ -571,9 +571,7 @@ function fsbi_m(bi  ::iBffs,
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(ntp/nt(bi))
-
-  # add sampling fraction
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
   nac  = ni(bi)                # current ni
   Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
@@ -833,9 +831,8 @@ function update_gbm!(bix  ::Int64,
 
     # if crown
     if root && iszero(e(bi))
-      ξ2 = Ξ[i2]
       llc, dlλ, ssλ, ssμ, mc =
-        _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dlλ, ssλ, ssμ, mc, th,
+        _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, dlλ, ssλ, ssμ, mc, th,
           δt, srδt, lλxpr, lμxpr)
       setλt!(bi, lλ(ξi)[1])
     else
@@ -880,9 +877,8 @@ function update_gbm!(bix  ::Int64,
         iszero(d1(idf[i1])))
 
     if i2 > 0
-      ξ2 = Ξ[i2]
       llc, dlλ, ssλ, ssμ =
-        _update_gbm!(ξ2, α, σλ, σμ, llc, dlλ, ssλ, ssμ, δt, srδt, 
+        _update_gbm!(Ξ[i2], α, σλ, σμ, llc, dlλ, ssλ, ssμ, δt, srδt, 
           iszero(d1(idf[i2])))
     end
   end

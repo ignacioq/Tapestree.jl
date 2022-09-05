@@ -480,14 +480,14 @@ function _sim_gbmfbd(t   ::Float64,
       et = ix < nep ? ψts[ix] : -Inf
     end
 
-    λv = Float64[λt]
-    μv = Float64[μt]
+    λv = [λt]
+    μv = [μt]
     bt = 0.0
 
     while true
 
-      if t <= δt
-        t   = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -508,9 +508,9 @@ function _sim_gbmfbd(t   ::Float64,
           if λevent(λm, μm, ψi)
             nn += 1
             return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          bt, δt, t, false, false, false, λv, μv), nn
           # if extinction
           elseif μevent(μm, ψi)
@@ -518,7 +518,7 @@ function _sim_gbmfbd(t   ::Float64,
           # fossil sampling
           else
             return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          bt, δt, t, false, true, false, λv, μv), nn
           end
         end
@@ -632,14 +632,14 @@ function _sim_gbmfbd_t(t   ::Float64,
       et = ix < nep ? ψts[ix] : -Inf
     end
 
-    λv = Float64[λt]
-    μv = Float64[μt]
+    λv = [λt]
+    μv = [μt]
     bt = 0.0
 
     while true
 
-      if t <= δt
-        t = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -669,9 +669,9 @@ function _sim_gbmfbd_t(t   ::Float64,
               return iTfbd(), na, nn, NaN
             else
               return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                            iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                            bt, δt, t, false, false, false, λv, μv), na, nn, nlr
             end
           # if extinction
@@ -794,14 +794,14 @@ function _sim_gbmfbd_i(t   ::Float64,
       et = ix < nep ? ψts[ix] : -Inf
     end
 
-    λv = Float64[λt]
-    μv = Float64[μt]
+    λv = [λt]
+    μv = [μt]
     bt = 0.0
 
     while true
 
-      if t - te <= δt
-        dtf = max(0.0, t - te)
+      if t - te <= δt + √eps()
+        dtf = isapprox(t - te, 0.0) ? 0.0 : isapprox(t - te, δt) ? δt : (t - te)
         bt += dtf
         srt = sqrt(dtf)
         λt1 = rnorm(λt + α*dtf, srt*σλ)
@@ -823,9 +823,9 @@ function _sim_gbmfbd_i(t   ::Float64,
             na += 2
             nn += 1
             return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          bt, δt, dtf, false, false, false, λv, μv), na, nf, nn
           # if extinction
           elseif μevent(μm, ψi)
@@ -937,8 +937,8 @@ function _sim_gbmfbd_it(nsδt::Float64,
                         nn  ::Int64,
                         nlim::Int64)
 
-  λv = Float64[λt]
-  μv = Float64[μt]
+  λv = [λt]
+  μv = [μt]
   bt = 0.0
 
   @inbounds begin
@@ -946,9 +946,9 @@ function _sim_gbmfbd_it(nsδt::Float64,
     et = ix < nep ? ψts[ix] : -Inf
   end
 
-  ## first: non-standard δt
-  if t <= nsδt
-    t = max(t, 0.0)
+ ## first: non-standard δt
+  if t <= nsδt + √eps()
+    t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     srt = sqrt(t)
     λt1 = rnorm(λt + α*t, srt*σλ)
@@ -971,9 +971,9 @@ function _sim_gbmfbd_it(nsδt::Float64,
         na += 2
         lr += 2.0*log(Iρi)
         return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                           Float64[λt1, λt1], Float64[μt1, μt1]),
+                           [λt1, λt1], [μt1, μt1]),
                      iTfbd(0.0, δt, 0.0, false, false, false,
-                           Float64[λt1, λt1], Float64[μt1, μt1]),
+                           [λt1, λt1], [μt1, μt1]),
                      bt, δt, t, false, false, false, λv, μv), na, nn, lr
       # if extinction
       elseif μevent(μm, ψi)
@@ -1041,8 +1041,8 @@ function _sim_gbmfbd_it(nsδt::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -1065,9 +1065,9 @@ function _sim_gbmfbd_it(nsδt::Float64,
             na += 2
             lr += 2.0*log(Iρi)
             return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          bt, δt, t, false, false, false, λv, μv), na, nn, lr
           # if extinction
           elseif μevent(μm, ψi)
@@ -1184,15 +1184,15 @@ function _sim_gbmfbd_it(t   ::Float64,
       et = ix < nep ? ψts[ix] : -Inf
     end
 
-    λv = Float64[λt]
-    μv = Float64[μt]
+    λv = [λt]
+    μv = [μt]
     bt = 0.0
 
     ## second: standard δt
     while true
 
-      if t <= δt
-        t = max(0.0, t)
+      if t <= δt + √eps()
+        t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, δt) ? δt : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -1211,9 +1211,9 @@ function _sim_gbmfbd_it(t   ::Float64,
             na += 2
             lr += 2.0*log(Iρi)
             return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          iTfbd(0.0, δt, 0.0, false, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                               [λt1, λt1], [μt1, μt1]),
                          bt, δt, t, false, false, false, λv, μv), na, nn, lr
           # if extinction
           elseif μevent(μm, ψi)

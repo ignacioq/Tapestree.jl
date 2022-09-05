@@ -138,14 +138,15 @@ function insane_cfbd(tree    ::sTf_label,
   @info "running constant fossilized birth-death"
 
   # adaptive phase
-  llc, prc, λc, μc, ψc, mc =
+  llc, prc, λc, μc, ψc, mc, ns, L =
      mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, ψ_epoch, nburn,
         λc, μc, ψc, mc, th, crown, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev, λc, μc, ψc =
-    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, λ_prior, μ_prior, ψ_prior, 
-      ψ_epoch, th, crown, bst, eixi, eixf, niter, nthin,  pup, prints)
+    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, ns, L, 
+      λ_prior, μ_prior, ψ_prior, ψ_epoch, th, crown, bst, eixi, eixf, 
+      niter, nthin,  pup, prints)
 
   pardic = Dict(("lambda"      => 1),
                 ("mu"          => 2))
@@ -252,7 +253,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
     next!(pbar)
   end
 
-  return llc, prc, λc, μc, ψc, mc
+  return llc, prc, λc, μc, ψc, mc, ns, L
 end
 
 
@@ -287,6 +288,8 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    μc     ::Float64,
                    ψc     ::Vector{Float64},
                    mc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Vector{Float64},
                    λ_prior::NTuple{2,Float64},
                    μ_prior::NTuple{2,Float64},
                    ψ_prior::NTuple{2,Float64},
@@ -304,7 +307,6 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   el  = lastindex(idf)                    # number of branches
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
-  ns  = nnodesbifurcation(idf)            # number of speciation events
   ne  = Float64(ntipsextinct(Ξ))          # number of extinction events
   nep = lastindex(ψc)
 
@@ -333,7 +335,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -345,7 +347,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -356,7 +358,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
         llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -371,7 +373,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
             eixi, eixf)
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, ψ_epoch, bst, eixi) + log(mc) + prob_ρ(idf)
+        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return

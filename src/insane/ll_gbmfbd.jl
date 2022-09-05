@@ -12,6 +12,54 @@ Created 10 03 2022
 
 
 
+
+"""
+    llik_gbm(Ξ   ::Vector{iTfbd},
+             idf ::Vector{iBffs},
+             α   ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             ψ   ::Vector{Float64},
+             ψts ::Vector{Float64},
+             bst ::Vector{Float64},
+             eix ::Vector{Int64},
+             δt  ::Float64,
+             srδt::Float64)
+
+Returns the log-likelihood for a `iTfbd` according to `fbdd`.
+"""
+function llik_gbm(Ξ   ::Vector{iTfbd},
+                  idf ::Vector{iBffs},
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  σμ  ::Float64,
+                  ψ   ::Vector{Float64},
+                  ψts ::Vector{Float64},
+                  bst ::Vector{Float64},
+                  eix ::Vector{Int64},
+                  δt  ::Float64,
+                  srδt::Float64)
+  @inbounds begin
+
+    nep = lastindex(ψts) + 1
+    ll  = 0.0
+    for i in Base.OneTo(lastindex(Ξ))
+      bi  = idf[i]
+      lli, ix = llik_gbm(Ξ[i], α, σλ, σμ, ψ, bst[i], ψts, eix[i], δt, srδt, nep)
+      ll += lli
+      if d2(bi) > 0
+        ll += λt(bi)
+      end
+    end
+  end
+
+  return ll
+end
+
+
+
+
+
 """
     llik_gbm(tree::iTfbd,
              α   ::Float64,
@@ -66,51 +114,6 @@ function llik_gbm(tree::iTfbd,
   return ll, ix
 end
 
-
-
-
-"""
-    llik_gbm(Ξ   ::Vector{iTfbd},
-             idf ::Vector{iBffs},
-             α   ::Float64,
-             σλ  ::Float64,
-             σμ  ::Float64,
-             ψ   ::Vector{Float64},
-             ψts ::Vector{Float64},
-             bst ::Vector{Float64},
-             eix ::Vector{Int64},
-             δt  ::Float64,
-             srδt::Float64)
-
-Returns the log-likelihood for a `iTfbd` according to `fbdd`.
-"""
-function llik_gbm(Ξ   ::Vector{iTfbd},
-                  idf ::Vector{iBffs},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  σμ  ::Float64,
-                  ψ   ::Vector{Float64},
-                  ψts ::Vector{Float64},
-                  bst ::Vector{Float64},
-                  eix ::Vector{Int64},
-                  δt  ::Float64,
-                  srδt::Float64)
-  @inbounds begin
-
-    nep = lastindex(ψts) + 1
-    ll  = 0.0
-    for i in Base.OneTo(lastindex(Ξ))
-      bi  = idf[i]
-      lli, ix = llik_gbm(Ξ[i], α, σλ, σμ, ψ, bst[i], ψts, eix[i], δt, srδt, nep)
-      ll += lli
-      if !(iszero(d1(bi)) || isfossil(bi))
-        ll += λt(bi)
-      end
-    end
-  end
-
-  return ll
-end
 
 
 
