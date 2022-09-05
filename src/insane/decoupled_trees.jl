@@ -894,11 +894,17 @@ function couple(Ξ  ::Vector{T},
       ξit.d2 = couple(Ξ, idf, i2)
     else
       ξd1 = couple(Ξ, idf, i1)
-      sete!(ξit, e(ξit) + e(ξd1))
-      setfdt!(ξit, fdt(ξd1))
       lλv = lλ(ξit)
-      pop!(lλv)
+      ei  = e(ξit)
+      if iszero(ei)
+        empty!(lλv)
+      else
+        pop!(lλv)
+      end
       append!(lλv, lλ(ξd1))
+
+      sete!(ξit, ei + e(ξd1))
+      setfdt!(ξit, fdt(ξd1))
 
       if def1(ξd1)
         ξit.d1 = ξd1.d1
@@ -938,18 +944,24 @@ function couple(Ξ  ::Vector{T},
       ξit.d1 = couple(Ξ, idf, i1)
     else
       ξd1 = couple(Ξ, idf, i1)
-      sete!(ξit, e(ξit) + e(ξd1))
-      setfdt!(ξit, fdt(ξd1))
       if isfossil(ξd1)
         fossilize!(ξit)
       end
       lλv = lλ(ξit)
       lμv = lμ(ξit)
-      pop!(lλv)
-      pop!(lμv)
+      ei  = e(ξit)
+      if iszero(ei)
+        empty!(lλv)
+        empty!(lμv) 
+      else
+        pop!(lλv)
+        pop!(lμv)
+      end
       append!(lλv, lλ(ξd1))
       append!(lμv, lμ(ξd1))
 
+      sete!(ξit, ei + e(ξd1))
+      setfdt!(ξit, fdt(ξd1))
       if def1(ξd1)
         ξit.d1 = ξd1.d1
         if def2(ξd1)
@@ -961,7 +973,6 @@ function couple(Ξ  ::Vector{T},
 
   return ξi
 end
-
 
 
 

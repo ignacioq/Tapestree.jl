@@ -801,40 +801,44 @@ function _sim_gbmfbd_i(t   ::Float64,
     while true
 
       if t - te <= δt + √eps()
-        dtf = isapprox(t - te, 0.0) ? 0.0 : isapprox(t - te, δt) ? δt : (t - te)
-        bt += dtf
-        srt = sqrt(dtf)
-        λt1 = rnorm(λt + α*dtf, srt*σλ)
-        μt1 = rnorm(μt, srt*σμ)
+        dtf = t - te
+        dtf = isapprox(dtf, 0.0) ? 0.0 : isapprox(dtf, δt) ? δt : dtf
 
-        push!(λv, λt1)
-        push!(μv, μt1)
 
-        λm = exp(0.5*(λt + λt1))
-        μm = exp(0.5*(μt + μt1))
+          bt += dtf
+          srt = sqrt(dtf)
+          λt1 = rnorm(λt + α*dtf, srt*σλ)
+          μt1 = rnorm(μt, srt*σμ)
 
-        if t - dtf < et <= t
-          @inbounds ψi = ψ[ix+1]
-        end
+          push!(λv, λt1)
+          push!(μv, μt1)
 
-        if event(λm, μm, ψi, dtf)
-          # if speciation
-          if λevent(λm, μm, ψi)
-            na += 2
-            nn += 1
-            return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
-                               [λt1, λt1], [μt1, μt1]),
-                         iTfbd(0.0, δt, 0.0, false, false, false,
-                               [λt1, λt1], [μt1, μt1]),
-                         bt, δt, dtf, false, false, false, λv, μv), na, nf, nn
-          # if extinction
-          elseif μevent(μm, ψi)
-            return iTfbd(bt, δt, dtf, true, false, false, λv, μv), na, nf, nn
-          # fossil sampling
-          else
-            return iTfbd(), na, 1, nn
+          λm = exp(0.5*(λt + λt1))
+          μm = exp(0.5*(μt + μt1))
+
+          if t - dtf < et <= t
+            @inbounds ψi = ψ[ix+1]
           end
-        end
+
+          if event(λm, μm, ψi, dtf)
+            # if speciation
+            if λevent(λm, μm, ψi)
+              na += 2
+              nn += 1
+              return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
+                                 [λt1, λt1], [μt1, μt1]),
+                           iTfbd(0.0, δt, 0.0, false, false, false,
+                                 [λt1, λt1], [μt1, μt1]),
+                           bt, δt, dtf, false, false, false, λv, μv), na, nf, nn
+            # if extinction
+            elseif μevent(μm, ψi)
+              return iTfbd(bt, δt, dtf, true, false, false, λv, μv), na, nf, nn
+            # fossil sampling
+            else
+              return iTfbd(), na, 1, nn
+            end
+          end
+
 
         na += 1
         return iTfbd(bt, δt, dtf, false, false, false, λv, μv), na, nf, nn
