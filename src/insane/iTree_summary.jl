@@ -723,6 +723,66 @@ end
 
 
 """
+    imean(treev::Vector{iTfbd})
+
+Make an `iTfbd` with the geometric mean.
+"""
+function imean(treev::Vector{iTfbd})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas and mus
+  vsλ = Array{Float64,1}[]
+  vsμ = Array{Float64,1}[]
+  for t in treev
+    push!(vsλ, lλ(t))
+    push!(vsμ, lμ(t))
+  end
+
+  svλ = Float64[]
+  svμ = Float64[]
+  # make fill vector to estimate statistics
+  vλ = Array{Float64,1}(undef, nt)
+  vμ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsλ[1]))
+    for t in Base.OneTo(nt)
+      vλ[t] = vsλ[t][i]
+      vμ[t] = vsμ[t][i]
+    end
+    push!(svλ, mean(vλ))
+    push!(svμ, mean(vμ))
+  end
+
+  if def1(t1)
+    treev1 = iTfbd[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+
+    if def2(t1)
+      treev2 = iTfbd[]
+      for t in Base.OneTo(nt)
+          push!(treev2, treev[t].d2)
+      end
+
+      iTfbd(imean(treev1),
+            imean(treev2),
+            e(t1), dt(t1), fdt(t1), isextinct(t1), isfossil(t1), true, svλ, svμ)
+    else
+      iTfbd(imean(treev1),
+            e(t1), dt(t1), fdt(t1), isextinct(t1), isfossil(t1), true, svλ, svμ)
+    end
+  else
+    iTfbd(e(t1), dt(t1), fdt(t1), isextinct(t1), isfossil(t1), true, svλ, svμ)
+  end
+end
+
+
+
+
+"""
     sustainedcount!(tree::iT, 
                     zf  ::Function,
                     iod ::Function)

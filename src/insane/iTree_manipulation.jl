@@ -2124,8 +2124,12 @@ Remove fossils.
 """
 function _remove_fossils!(tree::T) where {T <: iTf}
   while isfossil(tree)
-    if def1(tree)     tree.d1.e += tree.e; tree = tree.d1
-    elseif def2(tree) tree.d2.e += tree.e; tree = tree.d2
+    if def1(tree)
+      tree.d1.e += tree.e
+      tree       = tree.d1
+    elseif def2(tree) 
+      tree.d2.e += tree.e
+      tree       = tree.d2
     else
       break
     end

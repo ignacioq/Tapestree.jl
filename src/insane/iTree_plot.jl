@@ -19,7 +19,7 @@ Created 07 07 2020
     ld(tree::T)
     t(tree::T) 
     nd(tree::T)
-    dλ(tree::iT)
+    dμ(tree::iT)
 
 Predefined functions for plotting: 
   `b`  speciation rates
@@ -28,7 +28,7 @@ Predefined functions for plotting:
   `lb` log speciation rates
   `t`  turnover
   `nd` net diversification
-  `dλ` change in speciation rates
+  `dμ` change in speciation rates
 """
 b(tree::iT)  = exp.(lλ(tree))
 d(tree::iT)  = exp.(lμ(tree))
@@ -45,17 +45,12 @@ function dμ(tree::iT)
   dd = diff(exp.(lμ(tree)))
   return append!(dd, dd[end])
 end
-
-
 function dλc(tree::iT)
   lv = lλ(tree)
   fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
 end
-
-
-
-function dλc(x)
-  lv = lλ(x)
+function dμc(x)
+  lv = lμ(x)
   fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
 end
 
