@@ -42,9 +42,11 @@ using .INSANE: read_newick, write_newick,
   iscrowntree, rm_stem!,
   insane_cpb, insane_cbd, insane_cfbd, 
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
-  iquantile, extract_vector!, mcmc_array, lλ, lμ, 
-  remove_extinct, remove_unsampled, remove_fossils, 
-  ntipsalive, ntips, treeheight, treelength, _ctl, ltt
+  iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
+  remove_extinct, remove_unsampled, remove_fossils, fixedpos,
+  b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc,
+  ntipsalive, ntips, ntipsextinct, sustainedcount,
+  treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 export read_newick, write_newick, 
   sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
@@ -52,8 +54,10 @@ export read_newick, write_newick,
   iscrowntree, rm_stem!,
   insane_cpb, insane_cbd, insane_cfbd, 
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
-  iquantile, extract_vector!, mcmc_array, lλ, lμ, 
-  remove_extinct, remove_unsampled, remove_fossils, 
-  ntipsalive, ntips, treeheight, treelength, _ctl, ltt
+  iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
+  remove_extinct, remove_unsampled, remove_fossils, fixedpos,
+  b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc,
+  ntipsalive, ntips, ntipsextinct, sustainedcount,
+  treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 
 end # module Tapestree

@@ -13,13 +13,69 @@ Created 07 07 2020
 
 
 """
-    function f(tree::T, zfun::Function) where {T <: iT}
+    b(tree::T) 
+    d(tree::T) 
+    lb(tree::T)
+    ld(tree::T)
+    t(tree::T) 
+    nd(tree::T)
+    dλ(tree::iT)
+
+Predefined functions for plotting: 
+  `b`  speciation rates
+  `d`  extinction rates
+  `lb` log speciation rates
+  `lb` log speciation rates
+  `t`  turnover
+  `nd` net diversification
+  `dλ` change in speciation rates
+"""
+b(tree::iT)  = exp.(lλ(tree))
+d(tree::iT)  = exp.(lμ(tree))
+lb(tree::iT) = lλ(tree)
+ld(tree::iT) = lμ(tree)
+t(tree::iT)  = exp.(lμ(tree)) ./ exp.(lλ(tree))
+lt(tree::iT) = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
+nd(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+function dλ(tree::iT)
+  dd = diff(exp.(lλ(tree)))
+  return append!(dd, dd[end])
+end
+function dμ(tree::iT)
+  dd = diff(exp.(lμ(tree)))
+  return append!(dd, dd[end])
+end
+
+
+function dλc(tree::iT)
+  lv = lλ(tree)
+  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
+end
+
+
+
+function dλc(x)
+  lv = lλ(x)
+  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
+end
+
+
+
+"""
+    function f(tree::T;
+               zf  ::Function,
+               shownodes  = (T <: iTf),
+               tip        = false,
+               speciation = false,
+               extinct    = false,
+               fossil     = true,
+               type       = :phylogram) where {T <: iT}
 
 Recipe for plotting a Type `iT`.
 """
-@recipe function f(tree     ::T,
-                   zfun     ::Function;
-                   shownodes = (T <: iTf),
+@recipe function f(tree::T,
+                   zf  ::Function;
+                   shownodes  = (T <: iTf),
                    tip        = false,
                    speciation = false,
                    extinct    = false,
@@ -30,35 +86,59 @@ Recipe for plotting a Type `iT`.
   y = Float64[]
   z = Float64[]
 
-  th = treeheight(tree)
+  th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 1:nts, zfun, x, y, z)
+  if type === :lengthrates
+    _rplottree_lr!(tree, 0.0, 1:nts, zf, x, y, z)
+  else
+    _rplottree!(tree,     th, 1:nts, zf, x, y, z)
+  end
 
   ntF = Float64(nts)
 
-  if type === :phylogram
+  # plot defaults
+  legend              --> :none
+  colorbar_fontfamily --> :Helvetica
+  grid                --> :off
+  fontfamily          --> :Helvetica
 
+  if type === :radial
+    x, y, z = append_forradial(x, y, z, 50)
+    polar_coords!(x, y, 360.0/ntF, th)
+
+    ylims           --> (-th*1.05, th*1.05)
+    xlims           --> (-th*1.05, th*1.05)
+    xticks          --> (nothing)
+    xshowaxis       --> false
+    colorbar        --> true
+    yshowaxis       --> false
+    yticks          --> nothing
+
+  elseif type === :lengthrates
+    xguide          --> "cumulative rates"
+    colorbar        --> true
+    yshowaxis       --> false
+    yticks        --> nothing
+
+  else
     xlims           --> (-th*0.05, th*1.05)
-    ylims           --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
     xguide          --> "time"
     xflip           --> true
-    fontfamily      --> :Helvetica
     tickfontfamily  --> :Helvetica
     tickfontsize    --> 8
     xtick_direction --> :out
 
- elseif type === :radial
+    if type === :phylogram
+      ylims         --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
+      colorbar      --> true
+      yshowaxis     --> false
+      yticks        --> nothing
 
-    x, y, z = append_forradial(x, y, z, 50)
-    polar_coords!(x, y, 360.0/ntF, th)
-
-    xlims           --> (-th*1.05, th*1.05)
-    ylims           --> (-th*1.05, th*1.05)
-    xticks          --> (nothing)
-    xshowaxis       --> false
-  else
-    @error "$type must be either phylogram of radial"
+    else
+      colorbar  --> false
+      yshowaxis --> true
+    end
   end
 
   if shownodes
@@ -66,10 +146,7 @@ Recipe for plotting a Type `iT`.
     xN = Float64[]
     yN = Float64[]
 
-    th = treeheight(tree)
-    nt = ntips(tree)
-
-    _rplottree!(tree, th, 1:nt, xN, yN)
+    _rplottree!(tree, th, 1:nts, xN, yN)
 
     shape = Symbol[:circle]
     col   = Symbol[:pink]
@@ -93,19 +170,16 @@ Recipe for plotting a Type `iT`.
     end
   end
 
-  # plot defaults
-  line_z              --> z
-  linecolor           --> :inferno
-  legend              --> :none
-  colorbar            --> true
-  colorbar_fontfamily --> :Helvetica
-  yshowaxis           --> false
-  grid                --> :off
-  yticks              --> (nothing)
-  yshowaxis           --> false
+  line_z     --> z
+  linecolor  --> cgrad(:roma, rev = true)
 
-  return x, y
+  if type === :rates
+    return x, z
+  else
+    return x, y
+  end
 end
+
 
 
 
@@ -114,7 +188,7 @@ end
     _rplottree!(tree::T,
                 xc  ::Float64,
                 yr  ::UnitRange{Int64},
-                zfun::Function,
+                zf::Function,
                 x   ::Array{Float64,1},
                 y   ::Array{Float64,1},
                 z   ::Array{Float64,1}) where {T <: iT}
@@ -124,7 +198,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 function _rplottree!(tree::T,
                      xc  ::Float64,
                      yr  ::UnitRange{Int64},
-                     zfun::Function,
+                     zf  ::Function,
                      x   ::Array{Float64,1},
                      y   ::Array{Float64,1},
                      z   ::Array{Float64,1}) where {T <: iT}
@@ -134,7 +208,10 @@ function _rplottree!(tree::T,
 
   # add horizontal lines
   yc = Float64(yr[1] + yr[end])*0.5
-  zv = exp.(zfun(tree))
+
+  # plot function
+  zv = copy(zf(tree))
+  zc = last(zv)
   l  = lastindex(zv)
   @simd for i in Base.OneTo(l-1)
     push!(x, xc - Float64(i-1)*δt)
@@ -144,80 +221,103 @@ function _rplottree!(tree::T,
 
   push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
   push!(y, yc, NaN)
-  push!(z, zv[l], NaN)
+  push!(z, zc, NaN)
 
   xc -= e(tree)
 
-  defd1 = def1(tree)
-  defd2 = def2(tree)
+  if def1(tree)
+    if def2(tree)
+      ntip1 = ntips(tree.d1)
+      ntip2 = ntips(tree.d2)
 
-  if defd1 && defd2
+      # add vertical lines
+      push!(x, xc, xc, NaN)
 
-    ntip1 = ntips(tree.d1)
-    ntip2 = ntips(tree.d2)
+      yr1 = yr[1:ntip1]
+      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+      push!(y, Float64(yr1[1] + yr1[end])*0.5,
+               Float64(yr2[1] + yr2[end])*0.5,
+               NaN)
 
-    # add vertical lines
-    push!(x, xc, xc, NaN)
+      push!(z, zc, zc, NaN)
 
-    yr1 = yr[1:ntip1]
-    yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-    push!(y, Float64(yr1[1] + yr1[end])*0.5,
-             Float64(yr2[1] + yr2[end])*0.5,
-             NaN)
-
-    push!(z, z[end-1], z[end-1], NaN)
-
-    _rplottree!(tree.d1, xc, yr1, zfun, x, y, z)
-    _rplottree!(tree.d2, xc, yr2, zfun, x, y, z)
-
-  elseif defd1  _rplottree!(tree.d1, xc, yr, zfun, x, y, z)
-  elseif defd2  _rplottree!(tree.d2, xc, yr, zfun, x, y, z)
+      _rplottree!(tree.d1, xc, yr1, zf, x, y, z)
+      _rplottree!(tree.d2, xc, yr2, zf, x, y, z)
+    else
+      _rplottree!(tree.d1, xc, yr, zf, x, y, z)
+    end
   end
-
 end
 
 
 
 
 """
-    function f(tree::iTct, ϵ::Float64)
+    _rplottree_lr!(tree::T,
+                   xc  ::Float64,
+                   yr  ::UnitRange{Int64},
+                   zf  ::Function,
+                   x   ::Array{Float64,1},
+                   y   ::Array{Float64,1},
+                   z   ::Array{Float64,1}) where {T <: iT}
 
-Recipe for plotting extinction on a `iTct` given `ϵ`.
+Returns `x` and `y` coordinates in order to plot a tree of type `iT`
+where branch lengths reflect the cumulative from function `zf`.
 """
-@recipe function f(tree::iTct, ϵ::Float64)
+function _rplottree_lr!(tree::T,
+                        xc  ::Float64,
+                        yr  ::UnitRange{Int64},
+                        zf  ::Function,
+                        x   ::Array{Float64,1},
+                        y   ::Array{Float64,1},
+                        z   ::Array{Float64,1}) where {T <: iT}
 
-  x = Float64[]
-  y = Float64[]
-  z = Float64[]
+  # tree δt and nsδt
+  δt = dt(tree)
 
-  th = treeheight(tree)
-  nt = ntips(tree)
+  # add horizontal lines
+  yc = Float64(yr[1] + yr[end])*0.5
 
-  _rplottree!(tree, th, 1:nt, lλ, x, y, z)
+  # plot function
+  zv = copy(zf(tree))
 
-  @simd for i in Base.OneTo(lastindex(z))
-    z[i] *= ϵ
+  # append
+  append!(y, fill(yc, lastindex(zv)))
+  append!(z, zv)
+  zc     = last(zv)
+  zv[1]  = xc
+  append!(x, cumsum!(zv, zv))
+  xc = last(x)
+
+  push!(x, NaN)
+  push!(y, NaN)
+  push!(z, NaN)
+
+  if def1(tree)
+    if def2(tree)
+      ntip1 = ntips(tree.d1)
+      ntip2 = ntips(tree.d2)
+
+      # add vertical lines
+      push!(x, xc, xc, NaN)
+
+      yr1 = yr[1:ntip1]
+      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+      push!(y, Float64(yr1[1] + yr1[end])*0.5,
+               Float64(yr2[1] + yr2[end])*0.5,
+               NaN)
+
+      push!(z, zc, zc, NaN)
+
+      _rplottree_lr!(tree.d1, xc, yr1, zf, x, y, z)
+      _rplottree_lr!(tree.d2, xc, yr2, zf, x, y, z)
+    else
+      _rplottree_lr!(tree.d1, xc, yr, zf, x, y, z)
+    end
   end
-
-  # plot defaults
-  line_z          --> z
-  linecolor       --> :inferno
-  legend          --> :none
-  colorbar        --> true
-  xguide          --> "time"
-  xlims           --> (-th*0.05, th*1.1)
-  ylims           --> (1.0-(0.05*Float64(nt)), nt+(0.05*Float64(nt)))
-  xflip           --> true
-  fontfamily      --> :Helvetica
-  tickfontfamily  --> :Helvetica
-  tickfontsize    --> 8
-  grid            --> :off
-  xtick_direction --> :out
-  yticks          --> (nothing)
-  yshowaxis       --> false
-
-  return x, y
 end
+
+
 
 
 
@@ -244,30 +344,25 @@ function _rplottree!(tree::T,
   yc = (yr[1] + yr[end])*0.5
   push!(y, yc, yc, NaN)
 
-  defd1 = def1(tree)
-  defd2 = def2(tree)
+  if def1(tree)
+    if def2(tree)
+      ntip1 = ntips(tree.d1)
+      ntip2 = ntips(tree.d2)
 
-  if defd1 && defd2
+      # add vertical lines
+      push!(x, xc, xc, NaN)
 
-    ntip1 = ntips(tree.d1)
-    ntip2 = ntips(tree.d2)
+      yr1 = yr[1:ntip1]
+      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
 
-    # add vertical lines
-    push!(x, xc, xc, NaN)
-
-    yr1 = yr[1:ntip1]
-    yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-
-    push!(y, Float64(yr1[1] + yr1[end])*0.5,
-             Float64(yr2[1] + yr2[end])*0.5,
-             NaN)
-
-    _rplottree!(tree.d1, xc, yr1, x, y)
-    _rplottree!(tree.d2, xc, yr2, x, y)
-  elseif defd1
-    _rplottree!(tree.d1, xc, yr, x, y)
-  elseif defd2
-    _rplottree!(tree.d2, xc, yr, x, y)
+      push!(y, Float64(yr1[1] + yr1[end])*0.5,
+               Float64(yr2[1] + yr2[end])*0.5,
+               NaN)
+      _rplottree!(tree.d1, xc, yr1, x, y)
+      _rplottree!(tree.d2, xc, yr2, x, y)
+    else
+      _rplottree!(tree.d1, xc, yr, x, y)
+    end
   end
 end
 
@@ -373,8 +468,6 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   if showlabels
     labels = String[]
     _tiplabels!(tree, labels)
-
-    txt = [(0.0, i, labels[i]) for i in 1:nts]
 
     @series begin
       seriestype         := :scatter
@@ -575,7 +668,7 @@ end
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# DIVERSITY THROUGH TIME
+# diversity through time
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -688,7 +781,11 @@ end
 
 Recipe for plotting lineage through time plots of type `Ltt`.
 """
-@recipe function f(nts::Vector{Ltt}, tdt::Float64)
+@recipe function f(nts::Vector{Ltt}, 
+                   tdt::Float64, 
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[])
 
   n  = lastindex(nts)
   th = maximum(map(x -> maximum(x.t), nts))
@@ -702,15 +799,31 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     q[i,j] = nspt(nts[j], ts[i])
   end
 
-  Q = Array{Float64}(undef, lts, 6)
+  if !isempty(q0) 
+    Q0 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q1) 
+    Q1 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q2) 
+    Q2 = Array{Float64}(undef, lts, 2)
+  end
+
+  M = Array{Float64}(undef, lts)
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
-    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.75, 0.975, 1.0])
+    if !isempty(q0) 
+      Q0[i,:] = quantile(qi, q0)
+    end
+    if !isempty(q1) 
+      Q1[i,:] = quantile(qi, q1)
+    end
+    if !isempty(q2) 
+      Q2[i,:] = quantile(qi, q2)
+    end
+    M[i] = exp.(mean(log, qi))
   end
-
-  # estimate mean of means
-  m = mean(q, dims=2)
 
   # plot defaults
   legend          --> false
@@ -725,42 +838,62 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   fillcolor       --> :orange
   fillalpha       --> 0.3
 
-  if maximum(x -> isnan(x) ? 1.0 : x, m) >= 10.0
+  if maximum(x -> isnan(x) ? 1.0 : x, M) >= 10.0
     yscale         --> :log10
   end
 
-   # range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q0)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh0 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh0, (ts[i], Q[i,2]))
-    end
-    for i in lts:-1:1
-      push!(sh0, (ts[i], Q[i,5]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], Q0[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], Q0[i,2]))
+      end
 
-    # Shape(sh0)
-    sh0
+      # Shape(sh0)
+      sh0
+    end
   end
 
-  # [0.25, 0.75] quantile range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q1)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh1 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh1, (ts[i], Q[i,3]))
-    end
-    for i in lts:-1:1
-      push!(sh1, (ts[i], Q[i,4]))
-    end
+      sh1 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh1, (ts[i], Q1[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh1, (ts[i], Q1[i,2]))
+      end
 
-    # Shape(sh1)
-    sh1
+      # Shape(sh1)
+      sh1
+    end
+  end
+
+  if !isempty(q2)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      sh2 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh2, (ts[i], Q2[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh2, (ts[i], Q2[i,2]))
+      end
+
+      # Shape(sh2)
+      sh2
+    end
   end
 
   # midline
@@ -769,16 +902,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     linecolor --> "#00213a99"
     linewidth --> 1.4
 
-    ts, m
-  end
-
-  # range
-  @series begin
-    seriestype := :line
-    linecolor  --> "#426c7999"
-    linewidth  --> 1.4
-    linestyle  --> :dashdot
-    ts, Q[:,[1,6]]
+    ts, M
   end
 end
 
@@ -787,7 +911,7 @@ end
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# RATE THROUGH TIME
+# rates through time
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -796,25 +920,31 @@ end
 
 
 """
-    f(tree::T, lv::Function, dt::Float64, e::Bool) where {T <: iT}
+    f(tree::T,
+      f  ::Function,
+      dt  ::Float64;
+      q0 = [0.025, 0.975],
+      q1 = [0.25,  0.75],
+      q2 = Float64[])  where {T <: iT}
 
-Recipe for plotting values given by `lv` through time for a `iT`.
+Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(tree::T,
-                   lv  ::Function,
-                   dt  ::Float64) where {T <: iT}
+                   f   ::Function,
+                   dt  ::Float64;
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[]) where {T <: iT}
 
   # prepare data
-  ts, r = time_rate(tree, dt, lv)
-
-  fx = exp.(time_quantile(r, [0.0, 0.25, 0.5, 0.75, 1.0]))
-
-  lf = size(fx,1)
+  ts, r = time_rate(tree, dt, f)
+  lts = lastindex(ts)
+  m   = time_quantile(r, [0.5])
 
   # common shape plot defaults
   legend          --> :none
   xguide          --> "time"
-  yguide          --> string(lv)[2:end]*"(t)"
+  yguide          --> string(f)[2:end]*"(t)"
   xflip           --> true
   fontfamily      --> :Helvetica
   tickfontfamily  --> :Helvetica
@@ -825,38 +955,61 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   fillcolor       --> :orange
   fillalpha       --> 0.3
 
-  # range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q0)
+    qr0 = time_quantile(r, q0)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh0 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lf)
-      push!(sh0, (ts[i], fx[i,1]))
-    end
-    for i in lf:-1:1
-      push!(sh0, (ts[i], fx[i,5]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], qr0[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], qr0[i,2]))
+      end
 
-    # Shape(sh0)
-    sh0
+      # Shape(sh0)
+      sh0
+    end
   end
 
-  # [0.25, 0.75] quantile range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q1)
+    qr1 = time_quantile(r, q1)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh1 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lf)
-      push!(sh1, (ts[i], fx[i,2]))
-    end
-    for i in lf:-1:1
-      push!(sh1, (ts[i], fx[i,4]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], qr1[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], qr1[i,2]))
+      end
 
-    # Shape(sh1)
-    sh1
+      # Shape(sh0)
+      sh0
+    end
+  end
+
+  if !isempty(q2)
+    qr2 = time_quantile(r, q2)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], qr2[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], qr2[i,2]))
+      end
+
+      # Shape(sh0)
+      sh0
+    end
   end
 
   # midline
@@ -865,24 +1018,31 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor --> "#00304999"
     linewidth --> 1.4
 
-    ts, fx[:,3]
+    ts, m
   end
-
 end
 
 
 
 
 """
-    function f(tree::Vector{T},
-               lv  ::Function,
-               dt  ::Float64) where {T <: iT}
+    function f(trees::Vector{T},
+               f    ::Function,
+               tdt  ::Float64;
+               af = x -> quantile(x, 0.5),
+               q0 = [0.025, 0.975],
+               q1 = [0.25,  0.75],
+               q2 = Float64[]) where {T <: iT}
 
-Recipe for plotting values given by `lv` through time for a `iT`.
+Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
-                   lv   ::Function,
-                   tdt  ::Float64) where {T <: iT}
+                   f    ::Function,
+                   tdt  ::Float64;
+                   af = x -> quantile(x, 0.5),
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[]) where {T <: iT}
 
   ntrees = lastindex(trees)
   riv = Vector{Float64}[]
@@ -890,8 +1050,12 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   lts = 0
   ts  = Float64[]
   for t in trees
-    tsi, ri = time_rate(t, tdt, lv)
-    ri      = exp.(map(x -> mean(x), ri))
+
+    # tree extracting function
+    tsi, ri = time_rate(t, tdt, f)
+
+    # aggregating function
+    ri = map(af, ri)
 
     if lastindex(tsi) > lts
       ts  = tsi
@@ -912,17 +1076,36 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     q[1:lr,i] = ri
   end
 
-  Q = Array{Float64}(undef, lts, 7)
+  if !isempty(q0) 
+    Q0 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q1) 
+    Q1 = Array{Float64}(undef, lts, 2)
+  end
+  if !isempty(q2) 
+    Q2 = Array{Float64}(undef, lts, 2)
+  end
+
+  M = Array{Float64}(undef, lts)
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
-    Q[i,:] = quantile(qi, [0.0, 0.025, 0.25, 0.5, 0.75, 0.975, 1.0])
+    if !isempty(q0) 
+      Q0[i,:] = quantile(qi, q0)
+    end
+    if !isempty(q1) 
+      Q1[i,:] = quantile(qi, q1)
+    end
+    if !isempty(q2) 
+      Q2[i,:] = quantile(qi, q2)
+    end
+    M[i] = quantile(qi, 0.5)
   end
 
   # common shape plot defaults
   legend          --> :none
   xguide          --> "time"
-  yguide          --> string(lv)[2:end]*"(t)"
+  yguide          --> string(f)[2:end]*"(t)"
   xflip           --> true
   fontfamily      --> :Helvetica
   tickfontfamily  --> :Helvetica
@@ -933,39 +1116,60 @@ Recipe for plotting values given by `lv` through time for a `iT`.
   fillcolor       --> :orange
   fillalpha       --> 0.3
 
-  # range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q0)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh0 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh0, (ts[i], Q[i,2]))
-    end
-    for i in lts:-1:1
-      push!(sh0, (ts[i], Q[i,6]))
-    end
+      sh0 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh0, (ts[i], Q0[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh0, (ts[i], Q0[i,2]))
+      end
 
-    # Shape(sh0)
-    sh0
+      # Shape(sh0)
+      sh0
+    end
   end
 
-  # [0.25, 0.75] quantile range shape
-  @series begin
-    seriestype := :shape
-    linecolor  := nothing
+  if !isempty(q1)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
 
-    sh1 = Tuple{Float64,Float64}[]
-    for i in Base.OneTo(lts)
-      push!(sh1, (ts[i], Q[i,3]))
-    end
-    for i in lts:-1:1
-      push!(sh1, (ts[i], Q[i,5]))
-    end
+      sh1 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh1, (ts[i], Q1[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh1, (ts[i], Q1[i,2]))
+      end
 
-    # Shape(sh1)
-    sh1
+      # Shape(sh1)
+      sh1
+    end
   end
+
+  if !isempty(q2)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      sh2 = Tuple{Float64,Float64}[]
+      for i in Base.OneTo(lts)
+        push!(sh2, (ts[i], Q2[i,1]))
+      end
+      for i in lts:-1:1
+        push!(sh2, (ts[i], Q2[i,2]))
+      end
+
+      # Shape(sh2)
+      sh2
+    end
+  end
+
 
   # midline
   @series begin
@@ -973,16 +1177,7 @@ Recipe for plotting values given by `lv` through time for a `iT`.
     linecolor --> "#00213a99"
     linewidth --> 1.4
 
-    ts, Q[:,4]
-  end
-
-  # range
-  @series begin
-    seriestype := :line
-    linecolor  --> "#426c7999"
-    linewidth  --> 1.4
-    linestyle  --> :dashdot
-    ts, Q[:,[1,7]]
+    ts, M
   end
 end
 
@@ -992,7 +1187,7 @@ end
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# TRAITS
+# traits
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

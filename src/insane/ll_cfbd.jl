@@ -13,6 +13,44 @@ Created 16 12 2021
 
 
 
+"""
+    llik_cfbd(Ξ  ::Vector{sTfbd},
+              λ  ::Float64,
+              μ  ::Float64,
+              ψ  ::Vector{Float64},
+              nλ ::Float64,
+              ψts::Vector{Float64},
+              bst::Vector{Float64},
+              eix::Vector{Int64})
+
+Log-likelihood up to a constant for constant fossilized birth-death
+given a complete `iTree` for decoupled trees with epochs `ψts`.
+"""
+function llik_cfbd(Ξ  ::Vector{sTfbd},
+                   λ  ::Float64,
+                   μ  ::Float64,
+                   ψ  ::Vector{Float64},
+                   nλ ::Float64,
+                   ψts::Vector{Float64},
+                   bst::Vector{Float64},
+                   eix::Vector{Int64})
+  @inbounds begin
+
+    nep = lastindex(ψts) + 1
+    ll  = 0.0
+    for i in Base.OneTo(lastindex(Ξ))
+      ξ   = Ξ[i]
+      ll += llik_cfbd(ξ, λ, μ, ψ, bst[i], ψts, eix[i], nep)
+    end
+
+    ll += nλ * log(λ)
+  end
+
+  return ll
+end
+
+
+
 
 """
     llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
@@ -61,47 +99,6 @@ function llik_cfbd(tree::sTfbd,
 
   return ll
 end
-
-
-
-
-"""
-    llik_cfbd(Ξ  ::Vector{sTfbd},
-              λ  ::Float64,
-              μ  ::Float64,
-              ψ  ::Vector{Float64},
-              ψts::Vector{Float64},
-              bst::Vector{Float64},
-              eix::Vector{Int64})
-
-Log-likelihood up to a constant for constant fossilized birth-death
-given a complete `iTree` for decoupled trees with epochs `ψts`.
-"""
-function llik_cfbd(Ξ  ::Vector{sTfbd},
-                   λ  ::Float64,
-                   μ  ::Float64,
-                   ψ  ::Vector{Float64},
-                   ψts::Vector{Float64},
-                   bst::Vector{Float64},
-                   eix::Vector{Int64})
-  @inbounds begin
-
-    nep = lastindex(ψts) + 1
-    ll  = 0.0
-    nf  = 0 # number of sampled ancestors
-    for i in Base.OneTo(lastindex(Ξ))
-      ξ   = Ξ[i]
-      nf += isinternalfossil(ξ)
-      ll += llik_cfbd(ξ, λ, μ, ψ, bst[i], ψts, eix[i], nep)
-    end
-
-    ll += Float64(lastindex(Ξ) - nf - 1) * 0.5 * log(λ)
-  end
-
-  return ll
-end
-
-
 
 
 

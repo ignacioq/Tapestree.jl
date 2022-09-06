@@ -11,32 +11,6 @@ Created 03 09 2020
 
 
 
-"""
-    llik_gbm(tree::iTpb,
-             α   ::Float64,
-             σλ  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
-
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
-"""
-function llik_gbm(tree::iTpb,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
-
-  if istip(tree)
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
-  else
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTpb, α, σλ, δt, srδt)          +
-    llik_gbm(tree.d2::iTpb, α, σλ, δt, srδt)
-  end
-end
-
-
-
 
 """
     llik_gbm(Ξ   ::Vector{iTpb},
@@ -60,14 +34,40 @@ function llik_gbm(Ξ   ::Vector{iTpb},
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, δt, srδt)
-
-      if !it(bi)
+      if d2(bi) > 0
         ll += λt(bi)
       end
     end
   end
 
   return ll
+end
+
+
+
+
+"""
+    llik_gbm(tree::iTpb,
+             α   ::Float64,
+             σλ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64)
+
+Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+"""
+function llik_gbm(tree::iTpb,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64)
+
+  if istip(tree)
+    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+  else
+    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
+    llik_gbm(tree.d1::iTpb, α, σλ, δt, srδt)          +
+    llik_gbm(tree.d2::iTpb, α, σλ, δt, srδt)
+  end
 end
 
 

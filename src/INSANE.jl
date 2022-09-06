@@ -12,6 +12,7 @@ module INSANE
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean
   using LoopVectorization: @avx
+  using PlotUtils: cgrad
   using RecipesBase
 
   # other submodules dependencies
@@ -33,6 +34,7 @@ module INSANE
   include("insane/sim_cfbd.jl")
   include("insane/sim_gbmpb.jl")
   include("insane/sim_gbmbd.jl")
+  include("insane/sim_gbmbd_efx.jl")
   include("insane/sim_gbmce.jl")
   include("insane/sim_gbmct.jl")
   include("insane/sim_gbmfbd.jl")
@@ -57,6 +59,7 @@ module INSANE
   include("insane/mcmc_cfbd.jl")
   include("insane/mcmc_gbmpb.jl")
   include("insane/mcmc_gbmbd.jl")
+  include("insane/mcmc_gbmbd_efx.jl")
   include("insane/mcmc_gbmce.jl")
   include("insane/mcmc_gbmct.jl")
   include("insane/mcmc_gbmfbd.jl")
@@ -65,6 +68,7 @@ module INSANE
   include("insane/mcmc_cfbdX.jl")
   include("insane/mhprop_gbmpb.jl")
   include("insane/mhprop_gbmbd.jl")
+  include("insane/mhprop_gbmbd_efx.jl")
   include("insane/mhprop_gbmce.jl")
   include("insane/mhprop_gbmct.jl")
   include("insane/mhprop_gbmfbd.jl")

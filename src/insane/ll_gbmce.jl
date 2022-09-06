@@ -35,7 +35,7 @@ function llik_gbm(Ξ   ::Vector{iTce},
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, μ, δt, srδt)
-      if !it(bi)
+      if d2(bi) > 0
         ll += λt(bi)
       end
     end
@@ -249,79 +249,5 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   return ll, dλ, ssλ, nλ
 end
 
-
-
-
-
-"""
-    llr_gbm_b_sep(lλp ::Array{Float64,1},
-                  lλc ::Array{Float64,1},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  σS  ::Float64,
-                  δt  ::Float64,
-                  fdt ::Float64,
-                  srδt::Float64,
-                  λev ::Bool)
-
-Returns the log-likelihood for a branch according to GBM pure-birth
-separately for the Brownian motion and the pure-birth
-"""
-function llr_gbm_b_sep(lλp ::Array{Float64,1},
-                       lλc ::Array{Float64,1},
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       σS  ::Float64,
-                       δt  ::Float64,
-                       fdt ::Float64,
-                       srδt::Float64,
-                       λev ::Bool)
-
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλp)-2
-
-  llrbm = 0.0
-  llrce = 0.0
-  llpr  = 0.0
-  @avx for i in Base.OneTo(nI)
-    lλpi   = lλp[i]
-    lλci   = lλc[i]
-    lλpi1  = lλp[i+1]
-    lλci1  = lλc[i+1]
-    ssλi   = (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-    llrbm += ssλi
-    llrce += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-    llpr  -= ssλi
-  end
-
-  # standardized sum of squares
-  ssrλ  = llrbm/(2.0*δt)
-  # add to global likelihood
-  llrbm *= (-0.5/((σλ*srδt)^2))
-  llrce *= (-δt)
-  llpr  *= (-0.5/((σS*srδt)^2))
-
-  lλpi1 = lλp[nI+2]
-  lλci1 = lλc[nI+2]
-
- # add final non-standard `δt`
-  if fdt > 0.0
-    lλpi   = lλp[nI+1]
-    lλci   = lλc[nI+1]
-    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
-    srfdt = sqrt(fdt)
-    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
-                          lλci1, lλci + α*fdt, srfdt*σλ)
-    llrce -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-    llpr  += lrdnorm_bm_x(lλci1, lλci + α*fdt, 
-                          lλpi1, lλpi + α*fdt, srfdt*σS)
-  end
-  #if speciation
-  if λev
-    llrce += lλpi1 - lλci1
-  end
-
-  return (llrbm + llrce), llpr, ssrλ
-end
 
 

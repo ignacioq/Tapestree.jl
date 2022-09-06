@@ -13,6 +13,27 @@ Created 06 07 2020
 
 
 """
+    llik_cbd(Ξ::Vector{sTbd}, λ::Float64, μ::Float64, nλ::Float64)
+
+Log-likelihood up to a constant for constant birth-death
+given a complete `iTree` for decoupled trees.
+"""
+function llik_cbd(Ξ::Vector{sTbd}, λ::Float64, μ::Float64, nλ::Float64)
+
+  ll = 0.0
+  for ξ in Ξ
+    ll += llik_cbd(ξ, λ, μ)
+  end
+
+  ll += nλ * log(λ)
+
+  return ll
+end
+
+
+
+
+"""
     llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
 
 Log-likelihood up to a constant for constant birth-death
@@ -26,28 +47,6 @@ function llik_cbd(tree::sTbd, λ::Float64, μ::Float64)
     llik_cbd(tree.d1::sTbd, λ, μ) +
     llik_cbd(tree.d2::sTbd, λ, μ)
   end
-end
-
-
-
-
-"""
-    llik_cbd(Ξ::Vector{sTbd}, λ::Float64, μ::Float64)
-
-Log-likelihood up to a constant for constant birth-death
-given a complete `iTree` for decoupled trees.
-"""
-function llik_cbd(Ξ::Vector{sTbd}, λ::Float64, μ::Float64)
-
-
-  ll = 0.0
-  for ξ in Ξ
-    ll += llik_cbd(ξ, λ, μ)
-  end
-
-  ll += Float64(lastindex(Ξ) - 1) * 0.5 * log(λ)
-
-  return ll
 end
 
 

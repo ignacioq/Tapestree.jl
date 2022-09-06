@@ -56,7 +56,7 @@ end
 
 Remove stem branch.
 """
-function _rm_stem(tree::iTbd)
+function _rm_stem(tree::iTbdU)
 
   sete!(  tree, 0.0)
   setfdt!(tree, 0.0)
@@ -328,6 +328,64 @@ end
 
 
 """
+    _cutbottom(tree::iTfbd,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::iTfbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+
+    lλv = lλ(tree)
+    lμv = lμ(tree)
+    δt  = dt(tree)
+    fδt = fdt(tree)
+
+    # find final lλ & lμ
+    if isapprox(c - t, et)
+      Ix = lastindex(lλv) - 1
+      ix = Float64(Ix) - 1.0
+    else
+      ix  = fld(c - t, δt)
+      Ix  = Int64(ix) + 1
+    end
+    tii = ix*δt
+    tff = tii + δt
+    if tff > et
+      tff = tii + fδt
+    end
+    eλ = linpred(c - t, tii, tff, lλv[Ix], lλv[Ix+1])
+    eμ = linpred(c - t, tii, tff, lμv[Ix], lμv[Ix+1])
+
+    lλv = lλv[1:Ix]
+    lμv = lμv[1:Ix]
+
+    push!(lλv, eλ)
+    push!(lμv, eμ)
+
+    tree = iTfbd(c - t, δt, c - t - tii, false, false, isfix(tree), lλv, lμv)
+
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      if def2(tree)
+        tree.d2 = _cutbottom(tree.d2, c, t + et)
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+"""
     fossilizefixedtip!(tree::T) where {T <: iTf}
 
 Change all alive tips to fossil tips.
@@ -335,7 +393,7 @@ Change all alive tips to fossil tips.
 function fossilizefixedtip!(tree::T) where {T <: iTf}
 
   if istip(tree)
-    tree.iψ = true
+    fossilize!(tree)
   elseif isfix(tree.d1)
     fossilizefixedtip!(tree.d1::T)
   else
@@ -379,7 +437,7 @@ function _fossilizepasttips!(tree::T,
     end
   else
     if istip(tree::T) && !isapprox(t, 0.0, atol = rerr)
-      tree.iψ = true
+      fossilize!(tree)
     end
   end
 end
@@ -2245,7 +2303,7 @@ setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT} =
 
 Set number of `δt` for `tree`.
 """
-setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTbd} =
+setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iT} =
   setproperty!(tree, :lμ, lμ)
 
 
@@ -2309,6 +2367,16 @@ setd1!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d1, stree)
 Set `d2` to `stree` in `tree`.
 """
 setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
+
+
+
+
+"""
+  fossilize!(tree::T,  stree::T) where {T <: iTree}
+
+Set `d2` to `stree` in `tree`.
+"""
+fossilize!(tree::iTf) = setproperty!(tree, :iψ, true)
 
 
 

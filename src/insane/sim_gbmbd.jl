@@ -358,7 +358,7 @@ function sim_gbmbd(t   ::Float64;
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, 1, nlim)
+    d2, nn = _sim_gbmbd(t, lλ0, lμ0, α, σλ, σμ, δt, sqrt(δt), 0, nn + 1, nlim)
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
@@ -418,8 +418,8 @@ function _sim_gbmbd(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -532,8 +532,8 @@ function _sim_gbmbd_t(t   ::Float64,
 
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -664,8 +664,8 @@ function _sim_gbmbd_it(nsδt::Float64,
   bt = 0.0
 
   ## first: non-standard δt
-  if t <= nsδt
-    t   = max(0.0,t)
+  if t <= nsδt + √eps()
+    t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     srt = sqrt(t)
     λt1 = rnorm(λt + α*t, srt*σλ)
@@ -739,8 +739,8 @@ function _sim_gbmbd_it(nsδt::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -858,8 +858,8 @@ function _sim_gbmbd_it(t   ::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt
-        t   = max(0.0,t)
+      if t <= δt + √eps()
+        t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)
         λt1 = rnorm(λt + α*t, srt*σλ)
@@ -965,8 +965,7 @@ function _sim_gbmbd_surv(t   ::Float64,
     while true
 
       if t <= δt
-
-        t   = max(0.0,t)
+        t   = max(0.0, t)
         μt1 = rnorm(μt, sqrt(t)*σμ)
 
         # if extinction

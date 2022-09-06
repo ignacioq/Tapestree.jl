@@ -135,12 +135,13 @@ isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
 
 Return if is a fossil tip node : false because not allowed for those tree types.
 """
-isfossil(tree::sTpb) = false
-isfossil(tree::sTbd) = false
-isfossil(tree::iTpb) = false
-isfossil(tree::iTce) = false
-isfossil(tree::iTct) = false
-isfossil(tree::iTbd) = false
+isfossil(tree::sT_label) = false
+isfossil(tree::sTpb)     = false
+isfossil(tree::sTbd)     = false
+isfossil(tree::iTpb)     = false
+isfossil(tree::iTce)     = false
+isfossil(tree::iTct)     = false
+isfossil(tree::iTbd)     = false
 
 
 
@@ -248,6 +249,356 @@ function _tiplabels!(tree::sTf_label, labels::Array{String,1})
     end
   end
   return labels
+end
+
+
+
+
+"""
+    subclade(trees::Vector{T}, 
+                  ltree::sT_label, 
+                  tips ::Vector{String},
+                  stem ::Bool) where {T <: iTree}
+
+Return the minimum subclade that includes tip labels in `tips`.
+"""
+function subclade(trees::Vector{T}, 
+                  ltree::sT_label, 
+                  tips ::Vector{String},
+                  stem ::Bool) where {T <: iTree}
+
+  vT = T[]
+  for t in trees
+    push!(vT, subclade(t, ltree, tips, stem))
+  end
+
+  return vT
+end
+
+
+
+
+"""
+    subclade(tree::sT_label, tips::Vector{String})
+
+Return the minimum subclade that includes tip labels in `tips`.
+"""
+function subclade(tree::sT_label, tips::Vector{String})
+
+  ls, n2v = labels(tree)
+  return _subclade_crown(tree, 1:lastindex(ls), tips, ls, n2v)
+end
+
+
+
+
+"""
+    subclade(tree::iTree, 
+             ltree::sT_label, 
+             tips ::Vector{String}, 
+             stem ::Bool)
+
+Return the minimum subclade that includes tip labels in `tips`.
+"""
+function subclade(tree::iTree, 
+                  ltree::sT_label, 
+                  tips ::Vector{String}, 
+                  stem ::Bool)
+
+  ls, n2v = labels(tree, ltree)
+  if stem
+    return _subclade_stem(tree,  1:lastindex(ls), tips, ls, n2v)
+  else
+    return _subclade_crown(tree, 1:lastindex(ls), tips, ls, n2v)
+  end
+end
+
+
+
+
+
+"""
+    _subclade_stem(tree::iTree,
+                   ixs ::UnitRange,
+                   tips::Vector{String},
+                   ls  ::Vector{String},
+                   n2v ::Vector{Int64})
+
+Return the minimum subclade that includes tip labels
+in `tips` (recursive function).
+"""
+function _subclade_stem(tree::iTree,
+                        ixs ::UnitRange,
+                        tips::Vector{String},
+                        ls  ::Vector{String},
+                        n2v ::Vector{Int64})
+
+  @inbounds begin
+
+    n2i = n2v[ixs[1]]
+    ix1 = ixs[n2i*2 + 1:lastindex(ixs)]
+    ix2 = ixs[2:n2i*2]
+
+    it1 = false
+    od1 = true
+    for i in ix1
+      lsi = ls[i]
+      if in(lsi, tips)
+        it1 = true
+      elseif !(lsi === "" || lsi === "tda")
+        od1 = false
+      end
+      it1 && !od1 && break
+    end
+
+    it2 = false
+    od2 = true
+    for i in ix2
+      lsi = ls[i]
+      if in(lsi, tips)
+        it2 = true
+      elseif !(lsi === "" || lsi === "tda")
+        od2 = false
+      end
+      it2 && !od2 && break
+    end
+
+    if it1
+      if !it2
+        if od1
+          return tree.d1
+        end 
+        tree = _subclade_stem(tree.d1, ix1, tips, ls, n2v)
+      end
+    elseif it2
+      if od2
+        return tree.d2
+      else
+        tree = _subclade_stem(tree.d2, ix2, tips, ls, n2v)
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+
+"""
+    _subclade(tree::iTree,
+              ixs ::UnitRange,
+              tips::Vector{String},
+              ls  ::Vector{String},
+              n2v ::Vector{Int64})
+
+Return the minimum subclade that includes tip labels
+in `tips` (recursive function).
+"""
+function _subclade_crown(tree::iTree,
+                         ixs ::UnitRange,
+                         tips::Vector{String},
+                         ls  ::Vector{String},
+                         n2v ::Vector{Int64})
+
+  @inbounds begin
+
+    n2i = n2v[ixs[1]]
+    ix1 = ixs[n2i*2 + 1:lastindex(ixs)]
+    ix2 = ixs[2:n2i*2]
+
+    it1 = false
+    for si in tips
+      for i in ix1
+        if si === ls[i]
+          it1 = true
+          break
+        end
+        it1 && break
+      end
+      it1 && break
+    end
+
+    it2 = false
+    for si in tips
+      for i in ix2
+        if si === ls[i]
+          it2 = true
+          break
+        end
+        it2 && break
+      end
+      it2 && break
+    end
+
+    if it1
+      if !it2
+        tree = _subclade_crown(tree.d1, ix1, tips, ls, n2v)
+      end
+    elseif it2
+      tree = _subclade_crown(tree.d2, ix2, tips, ls, n2v)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    labels(tree::sT_label)
+
+Return labels and left node order.
+"""
+function labels(tree::sT_label)
+
+  ls  = String[]
+  n2v = Int64[]
+  make_ls!(tree, ls, n2v)
+
+  reverse!(ls)
+  reverse!(n2v)
+
+  return ls, n2v
+end
+
+
+
+
+"""
+    make_ls!(tree::sT_label,
+             ls  ::Array{String,1},
+             n2v ::Array{Int64,1})
+
+Return labels and left node order (recursive function).
+"""
+function make_ls!(tree::sT_label,
+                  ls  ::Array{String,1},
+                  n2v ::Array{Int64,1})
+
+  if istip(tree)
+    push!(ls, l(tree))
+    push!(n2v, 0)
+    return 1
+  end
+
+  n1 = make_ls!(tree.d1, ls, n2v)
+  n2 = make_ls!(tree.d2, ls, n2v)
+
+  push!(ls, l(tree))
+  push!(n2v, n2)
+
+  return n1 + n2
+end
+
+
+
+
+"""
+    labels(tree::T, ltree::sT_label) where {T <: iTree}
+
+Return labels and left node order.
+"""
+function labels(tree::T, ltree::sT_label) where {T <: iTree}
+
+  ls  = String[]
+  n2v = Int64[]
+  make_ls!(tree, ltree, ls, n2v)
+
+  reverse!(ls)
+  reverse!(n2v)
+
+  return ls, n2v
+end
+
+
+
+
+"""
+    make_ls!(tree ::T,
+             ltree::sT_label,
+             ls   ::Array{String,1},
+             n2v  ::Array{Int64,1}) where {T <: iTree}
+
+Return labels and left node order (recursive function) for data augmented
+tree.
+"""
+function make_ls!(tree ::T,
+                  ltree::sT_label,
+                  ls   ::Array{String,1},
+                  n2v  ::Array{Int64,1}) where {T <: iTree}
+
+  if istip(tree)
+    if isfix(tree)
+      push!(ls, l(ltree))
+    else
+      push!(ls, "tda")
+    end
+
+    push!(n2v, 0)
+    return 1
+  end
+
+  if isfix(tree.d1) && isfix(tree.d2)
+    n1 = make_ls!(tree.d1, ltree.d1, ls, n2v)
+    n2 = make_ls!(tree.d2, ltree.d2, ls, n2v)
+    push!(ls, l(ltree))
+
+  else
+    n1 = make_ls!(tree.d1, ltree, ls, n2v)
+    n2 = make_ls!(tree.d2, ltree, ls, n2v)
+
+    push!(ls, "")
+  end
+
+  push!(n2v, n2)
+
+  return n1 + n2
+end
+
+
+
+
+"""
+    fixedpos(tree::T)
+
+Returns vector of the position of fixed tips across all tips 
+of a data augmented tree.
+"""
+function fixedpos(tree::T) where {T <: iTree}
+
+  fp = Int64[]
+  _fixedpos!(tree, 1, fp)
+
+  return fp
+end
+
+
+
+"""
+    _fixedpos!(tree::T, i::Int64, fp::Vector{Int64}) where {T <: iTree}
+
+Returns vector of the position of fixed tips across all tips 
+of a data augmented tree.
+"""
+
+function _fixedpos!(tree::T, i::Int64, fp::Vector{Int64}) where {T <: iTree}
+
+  if istip(tree) 
+    i += 1
+    if isfix(tree)
+      push!(fp, i)
+    end
+  else
+    i = _fixedpos!(tree.d1, i, fp)
+    if def2(tree)
+      i = _fixedpos!(tree.d2, i, fp)
+    end
+  end
+
+  return i
 end
 
 
@@ -384,13 +735,41 @@ end
 
 
 """
+    irange(tree::T, f::Function) where {T <: iTf}
+
+Return the branch length sum of `tree` based on `δt` and `fδt`
+for debugging purposes.
+"""
+function irange(tree::T, f::Function) where {T <: iT}
+
+  mn, mx = extrema(f(tree))
+
+  if def1(tree)
+    mnd, mxd = irange(tree.d1, f)
+    mn = min(mn, mnd)
+    mx = max(mx, mxd)
+
+    if def2(tree)
+      mnd, mxd = irange(tree.d2, f)
+      mn = min(mn, mnd)
+      mx = max(mx, mxd)
+    end
+  end
+
+  return mn, mx
+end
+
+
+
+
+"""
     _ctl(tree::T, l::Float64) where {T <: iTree}
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
 """
 function _ctl(tree::T, l::Float64) where {T <: iT}
 
-  l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
+  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
 
   if def1(tree)
     l = _ctl(tree.d1, l)
@@ -411,7 +790,7 @@ for debugging purposes.
 """
 function _ctl(tree::T, l::Float64) where {T <: iTf}
 
-  l += Float64(lastindex(lλ(tree)) - 2)*dt(tree) + fdt(tree)
+  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
 
   if def1(tree)
     l = _ctl(tree.d1, l)
@@ -592,6 +971,25 @@ function _nnodesinternal(tree::T, n::Int64) where {T <: iTf}
     n = _nnodesinternal(tree.d1, n)
     if def2(tree)
       n = _nnodesinternal(tree.d2, n)
+    end
+  end
+
+  return n
+end
+
+
+
+"""
+    nnodesbifurcation(idf::Vector{iBffs})
+
+Return the number of internal nodes for `tree`, initialized at `n`.
+"""
+function nnodesbifurcation(idf::Vector{iBffs})
+
+  n = 0.0
+  for bi in idf
+    if d2(bi) > 0
+      n += 1.0
     end
   end
 
@@ -874,6 +1272,38 @@ function _nfossils(tree::T, n::Int64) where {T <: iTree}
     if def2(tree)
       n = _nfossils(tree.d2, n)
     end
+  end
+
+  return n
+end
+
+
+
+
+"""
+    ntipfossils(tree::T) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`.
+"""
+ntipfossils(tree::T) where {T <: iTree} = _ntipfossils(tree, 0)
+
+
+
+
+"""
+    _ntipfossils(tree::T, n::Int64) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`, initialized at `n`.
+"""
+function _ntipfossils(tree::T, n::Int64) where {T <: iTree}
+
+  if def1(tree)
+    n = _ntipfossils(tree.d1, n)
+    if def2(tree)
+      n = _ntipfossils(tree.d2, n)
+    end
+  elseif isfossil(tree)
+    n += 1
   end
 
   return n
@@ -1261,6 +1691,33 @@ function eventimes(tree::T) where {T <: iTree}
   _eventimes!(tree, treeheight(tree), se, ee)
 
   return se, ee
+end
+
+
+
+
+
+"""
+    _eventimes!(tree::T,
+                t   ::Float64,
+                se  ::Array{Float64,1},
+                ee  ::Array{Float64,1}) where {T <: iTree}
+Recursive structure that returns speciation and extinction event times.
+"""
+function _eventimes!(tree::T,
+                     t   ::Float64,
+                     se  ::Array{Float64,1},
+                     ee  ::Array{Float64,1}) where {T <: sT}
+
+  et = e(tree)
+  if def1(tree)
+    push!(se, t - et)
+
+    _eventimes!(tree.d1, t - et, se, ee)
+    _eventimes!(tree.d2, t - et, se, ee)
+  end
+
+  return nothing
 end
 
 

@@ -38,10 +38,10 @@ function insane_cpb(tree    ::sT_label,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
                     tune_int::Int64                 = 100,
-                    marginal ::Bool                 = false,
-                    nitpp   ::Int64                 = 100,
-                    nthpp   ::Int64                 = 10,
-                    K       ::Int64                 = 10,
+                    # marginal ::Bool                 = false,
+                    # nitpp   ::Int64                 = 100,
+                    # nthpp   ::Int64                 = 10,
+                    # K       ::Int64                 = 10,
                     λi      ::Float64               = NaN,
                     pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
                     prints  ::Int64                 = 5,
@@ -58,7 +58,7 @@ function insane_cpb(tree    ::sT_label,
   end
 
   # make fix tree directory
-  idf = make_idf(tree, tρ)
+  idf = make_idf(tree, tρ, Inf)
 
   # starting parameters
   if isnan(λi)
@@ -68,8 +68,7 @@ function insane_cpb(tree    ::sT_label,
   end
 
   # make a decoupled tree and fix it
-  Ξ = sTpb[]
-  sTpb!(Ξ, tree)
+  Ξ = make_Ξ(idf, sTpb, Inf)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -92,37 +91,37 @@ function insane_cpb(tree    ::sT_label,
 
   write_ssr(r, pardic, out_file)
 
-  if marginal
-    # reference distribution
-    βs = [range(0.0, 1.0, K)...]::Vector{Float64}
-    reverse!(βs)
+  # if marginal
+  #   # reference distribution
+  #   βs = [range(0.0, 1.0, K)...]::Vector{Float64}
+  #   reverse!(βs)
 
-    @views p = r[:,4]
+  #   @views p = r[:,4]
 
-    # make reference posterior
-    m     = mean(p)
-    v     = var(p)
-    λ_refd = (m^2/v, m/v)
+  #   # make reference posterior
+  #   m     = mean(p)
+  #   v     = var(p)
+  #   λ_refd = (m^2/v, m/v)
 
-    # marginal likelihood
-    pp = ref_posterior(Ξ, idf, λc, λ_prior, λ_refd, nitpp, nthpp, βs, pup, stem)
+  #   # marginal likelihood
+  #   pp = ref_posterior(Ξ, idf, λc, λ_prior, λ_refd, nitpp, nthpp, βs, pup, stem)
 
-    # process with reference distribution the posterior
-    p1 = Vector{Float64}(undef, size(r,1))
-    for i in Base.OneTo(size(r,1))
-      p1[i] = r[i,2] + r[i,3] - logdgamma(r[i,4], λ_refd[1], λ_refd[2])
-    end
-    pp[1] = p1
+  #   # process with reference distribution the posterior
+  #   p1 = Vector{Float64}(undef, size(r,1))
+  #   for i in Base.OneTo(size(r,1))
+  #     p1[i] = r[i,2] + r[i,3] - logdgamma(r[i,4], λ_refd[1], λ_refd[2])
+  #   end
+  #   pp[1] = p1
 
-    reverse!(pp)
-    reverse!(βs)
+  #   reverse!(pp)
+  #   reverse!(βs)
 
-    ml = gss(pp, βs)
-  else
-    ml = NaN
-  end
+  #   ml = gss(pp, βs)
+  # else
+  #   ml = NaN
+  # end
 
-  return r, treev, ml
+  return r, treev
 end
 
 
@@ -269,7 +268,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
         r[lit,2] = llc
         r[lit,3] = prc
         r[lit,4] = λc
-        push!(treev, couple(copy_Ξ(Ξ), idf, 1))
+        push!(treev, couple(Ξ, idf, 1))
       end
       lthin = 0
     end
@@ -392,7 +391,7 @@ function update_fs!(bix    ::Int64,
 
   bi = idf[bix]
 
-  if it(bi) # is it terminal
+  if iszero(d1(bi)) # is it terminal
     ξp, llr = fsbi_t(bi, λ)
   else
     ξp, llr = fsbi_i(bi, λ)

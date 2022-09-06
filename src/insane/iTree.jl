@@ -65,16 +65,16 @@ mutable struct sT_label <: sT
   e ::Float64
   l ::String
 
-  sT_label(e::Float64, l::String) = 
+  sT_label(e::Float64, l::String) =
     (x = new(); x.e = e; x.l = l; x)
-  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) = 
+  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) =
     new(d1, d2, e, l)
 end
 
 # pretty-printing
 function Base.show(io::IO, t::sT_label)
   nt = ntips(t)
-  print(io, "insane simple labelled tree with ", nt, " tip", 
+  print(io, "insane simple labelled tree with ", nt, " tip",
     (isone(nt) ? "" : "s"))
 end
 
@@ -396,9 +396,9 @@ function Base.show(io::IO, t::sTfbd)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane simple fossil tree with ", 
-    nt , " tip",  (isone(nt) ? "" : "s" ), 
-    ", (", ntipsextinct(t)," extinct) and ", 
+  print(io, "insane simple fossil tree with ",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))
 end
 
@@ -412,12 +412,11 @@ Creates a copy of a `sTfbd` tree.
 """
 function sTfbd(tree::sTfbd)
   if def1(tree)
-    d1 = sTfbd(tree.d1)
     if def2(tree)
-      sTfbd(d1, sTfbd(tree.d2), e(tree),
+      sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree),
         isextinct(tree), isfossil(tree), isfix(tree))
     else
-      sTfbd(d1, e(tree),
+      sTfbd(sTfbd(tree.d1), e(tree),
         isextinct(tree), isfossil(tree), isfix(tree))
     end
   else
@@ -429,22 +428,16 @@ end
 
 
 """
-    sTfbd(tree::sTf_label)
+    sTfbd_wofe(tree::sTfbd)
 
-Transforms a tree of type `sTf_label` to `sTfbd`.
+Creates a copy of a `sTfbd` tree without fossils extinct tips.
 """
-function sTfbd(tree::sTf_label)
-
-  if def1(tree)
-    if def2(tree)
-      sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree), false, false, false)
-    else
-      sTfbd(sTfbd(tree.d1), e(tree), false, true, false)
-    end
-  elseif def2(tree)
-    sTfbd(sTfbd(tree.d2), e(tree), false, true, false)
+function sTfbd_wofe(tree::sTfbd)
+  if def1(tree) && def2(tree)
+      sTfbd(sTfbd_wofe(tree.d1), sTfbd_wofe(tree.d2), e(tree),
+        isextinct(tree), isfossil(tree), isfix(tree))
   else
-    sTfbd(e(tree), false)
+    sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
   end
 end
 
@@ -495,19 +488,17 @@ mutable struct iTpb <: iT
   d1 ::iTpb
   d2 ::iTpb
   e  ::Float64
-  fx ::Bool
   dt ::Float64
   fdt::Float64
+  fx ::Bool
   lλ ::Array{Float64,1}
 
-
   iTpb() = new()
-  iTpb(e::Float64, fx::Bool, dt::Float64, fdt::Float64,
-    lλ::Array{Float64,1}) =
-      (x = new(); x.e = e; x.fx = fx; x.dt = dt; x.fdt = fdt; x.lλ = lλ; x)
-  iTpb(d1::iTpb, d2::iTpb, e::Float64, fx::Bool,
-    dt::Float64, fdt::Float64, lλ::Array{Float64,1}) =
-      new(d1, d2, e, fx, dt, fdt, lλ)
+  iTpb(e::Float64, dt::Float64, fdt::Float64, fx::Bool, lλ::Array{Float64,1}) =
+      (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.fx = fx; x.lλ = lλ; x)
+  iTpb(d1::iTpb, d2::iTpb, e::Float64, dt::Float64, fdt::Float64, 
+    fx::Bool, lλ::Array{Float64,1}) =
+      new(d1, d2, e, dt, fdt, fx, lλ)
 end
 
 
@@ -520,34 +511,34 @@ Base.show(io::IO, t::iTpb) =
 
 """
     iTpb(e0::Array{Int64,1},
-            e1::Array{Int64,1},
-            el::Array{Float64,1},
-            λs::Array{Array{Float64,1},1},
-            ea::Array{Int64,1},
-            ni::Int64,
-            ei::Int64,
-            δt::Float64)
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         ea::Array{Int64,1},
+         ni::Int64,
+         ei::Int64,
+         δt::Float64)
 
 Transform edge structure to `iTpb`.
 """
 function iTpb(e0::Array{Int64,1},
-                 e1::Array{Int64,1},
-                 el::Array{Float64,1},
-                 λs::Array{Array{Float64,1},1},
-                 ea::Array{Int64,1},
-                 ni::Int64,
-                 ei::Int64,
-                 δt::Float64)
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Array{Float64,1},1},
+              ea::Array{Int64,1},
+              ni::Int64,
+              ei::Int64,
+              δt::Float64)
 
   # if tip
   if in(ei, ea)
-    return iTpb(el[ei], true, δt, δt, λs[ei])
+    return iTpb(el[ei], δt, δt, true, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
     return iTpb(iTpb(e0, e1, el, λs, ea, n1, ei1, δt),
-                   iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
-                   el[ei], true, δt, (el[ei] == 0.0 ? 0.0 : δt), λs[ei])
+                iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
+                el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
   end
 end
 
@@ -562,9 +553,9 @@ Produce a new copy of `iTpb`.
 function iTpb(tree::iTpb)
   if def1(tree)
     iTpb(iTpb(tree.d1), iTpb(tree.d2),
-      e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
+      e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   else
-    iTpb(e(tree), isfix(tree), dt(tree), fdt(tree), copy(lλ(tree)))
+    iTpb(e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   end
 end
 
@@ -941,9 +932,9 @@ function iTbd(e0::Array{Int64,1},
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
     return iTbd(iTbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt),
-                   iTbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
-                   el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
-                   false, false, λs[ei], μs[ei])
+                iTbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
+              el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
+              false, false, λs[ei], μs[ei])
   end
 end
 
@@ -1034,9 +1025,9 @@ function Base.show(io::IO, t::iTfbd)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane gbm-bd fossil tree with ", 
-    nt , " tip",  (isone(nt) ? "" : "s" ), 
-    ", (", ntipsextinct(t)," extinct) and ", 
+  print(io, "insane gbm-bd fossil tree with ",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))
 end
 
@@ -1068,46 +1059,77 @@ end
 
 
 
-# """
-#     iTfbd(e0::Array{Int64,1},
-#           e1::Array{Int64,1},
-#           el::Array{Float64,1},
-#           λs::Array{Array{Float64,1},1},
-#           μs::Array{Array{Float64,1},1},
-#           ea::Array{Int64,1},
-#           ee::Array{Int64,1},
-#           ni::Int64,
-#           ei::Int64,
-#           δt::Float64)
+"""
+    iTfbd_wofe(tree::iTfbd)
 
-# Transform edge structure to `iTfbd`.
-# """
-# function iTfbd(e0::Array{Int64,1},
-#                e1::Array{Int64,1},
-#                el::Array{Float64,1},
-#                λs::Array{Array{Float64,1},1},
-#                μs::Array{Array{Float64,1},1},
-#                ea::Array{Int64,1},
-#                ee::Array{Int64,1},
-#                ni::Int64,
-#                ei::Int64,
-#                δt::Float64)
+Creates a copy of a `iTfbd` tree without fossils extinct tips.
+"""
+function iTfbd_wofe(tree::iTfbd)
+  if def1(tree) && def2(tree)
+    iTfbd(iTfbd_wofe(tree.d1), iTfbd_wofe(tree.d2),
+      e(tree), dt(tree), fdt(tree), isextinct(tree), isfossil(tree),
+      isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+  else
+    iTfbd(e(tree), dt(tree), fdt(tree), isextinct(tree), isfossil(tree),
+      isfix(tree), copy(lλ(tree)), copy(lμ(tree)))
+  end
+end
 
-#   # if tip
-#   if in(ei, ea)
-#     return iTfbd(el[ei], δt, δt, false, false, λs[ei], μs[ei])
-#   # if extinct
-#   elseif in(ei, ee)
-#     return iTfbd(el[ei], δt, δt, true, false, λs[ei], μs[ei])
-#   else
-#     ei1, ei2 = findall(isequal(ni), e0)
-#     n1, n2   = e1[ei1:ei2]
-#     return iTfbd(iTfbd(e0, e1, el, λs, μs, ea, ee, n1, ei1, δt),
-#                  iTfbd(e0, e1, el, λs, μs, ea, ee, n2, ei2, δt),
-#                  el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
-#                  false, false, λs[ei], μs[ei])
-#   end
-# end
+
+
+
+"""
+    iTfbd(e0::Array{Int64,1},
+          e1::Array{Int64,1},
+          el::Array{Float64,1},
+          λs::Array{Array{Float64,1},1},
+          μs::Array{Array{Float64,1},1},
+          ea::Array{Int64,1},
+          ee::Array{Int64,1},
+          ef::Array{Int64,1},
+          ni::Int64,
+          ei::Int64,
+          δt::Float64)
+
+Transform edge structure to `iTfbd`.
+"""
+function iTfbd(e0::Array{Int64,1},
+               e1::Array{Int64,1},
+               el::Array{Float64,1},
+               λs::Array{Array{Float64,1},1},
+               μs::Array{Array{Float64,1},1},
+               ea::Array{Int64,1},
+               ee::Array{Int64,1},
+               ef::Array{Int64,1},
+               ni::Int64,
+               ei::Int64,
+               δt::Float64)
+
+  # if tip
+  if in(ei, ea)
+    return iTfbd(el[ei], δt, δt, false, false, false, λs[ei], μs[ei])
+  
+  # if extinct
+  elseif in(ei, ee)
+    return iTfbd(el[ei], δt, δt, true, false, false, λs[ei], μs[ei])
+
+  # if fossil
+  elseif in(ei, ef)
+    ei1 = findfirst(isequal(ni), e0)
+    n1  = e1[ei1]
+    return iTfbd(iTfbd(e0, e1, el, λs, μs, ea, ee, ef, n1, ei1, δt),
+                 el[ei], δt, δt, false, true, false, λs[ei], μs[ei])
+
+  # if internal
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    n1, n2   = e1[ei1:ei2]
+    return iTfbd(iTfbd(e0, e1, el, λs, μs, ea, ee, ef, n1, ei1, δt),
+                 iTfbd(e0, e1, el, λs, μs, ea, ee, ef, n2, ei2, δt),
+                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
+                 false, false, false, λs[ei], μs[ei])
+  end
+end
 
 
 
