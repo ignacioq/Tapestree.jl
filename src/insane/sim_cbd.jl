@@ -278,7 +278,7 @@ function sim_cbd_b(n::Int64,
   # disjoint trees vector
   tv = sTbd[]
   for i in Base.OneTo(nI)
-    push!(tv, sTbd(0.0))
+    push!(tv, sTbd(0.0, false, false))
   end
 
   # start simulation
@@ -304,7 +304,7 @@ function sim_cbd_b(n::Int64,
     else
       nI += 1
       nF += 1.0
-      push!(tv, sTbd(0.0, true))
+      push!(tv, sTbd(0.0, true, false))
     end
   end
 end
@@ -330,7 +330,7 @@ function sim_cbd_b(λ::Float64,
   nI = 1
 
   # disjoint trees vector
-  tv = [sTbd(0.0, false)]
+  tv = [sTbd(0.0, false, false)]
 
   th = 0.0
 
@@ -368,7 +368,7 @@ function sim_cbd_b(λ::Float64,
     else
       nI += 1
       nF += 1.0
-      push!(tv, sTbd(0.0, true))
+      push!(tv, sTbd(0.0, true, false))
     end
   end
 end

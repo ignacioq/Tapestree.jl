@@ -202,7 +202,7 @@ function _cutbottom(tree::iTpb,
 
     push!(lλv, eλ)
 
-    tree = iTpb(c - t, true, δt, c - t - tii, lλv)
+    tree = iTpb(c - t, δt, 0.0, true, lλv)
 
   else
     if def1(tree)
@@ -1345,7 +1345,7 @@ function _remove_unsampled!(tree::iTpb)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTpb(e(tree), isfix(tree), dt(tree), fdt(tree), lλ(tree))
+        return iTpb(e(tree), dt(tree), fdt(tree), isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
         lλ0 = lλ(tree)
