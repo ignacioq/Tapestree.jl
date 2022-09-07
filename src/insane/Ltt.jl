@@ -77,7 +77,7 @@ function usample(t::Vector{Tuple{Float64, Float64}}, p::Float64)
       tt += tii - tff
 
       if s < tt
-        return tii - s
+        return tii - (tt - s)
       end
     end
   end
