@@ -185,21 +185,21 @@ Demotes a tree to `sTf_label`, initialized with label i.
 """
 function _sTf_label(tree::T, i::Int64) where {T <: iTree}
 
+  lab = isnothing(l(tree)) ? string("t",i) : l(tree)
   if def1(tree)
     if def2(tree)
       t1, i = _sTf_label(tree.d1, i)
       t2, i = _sTf_label(tree.d2, i)
-      tree  = sTf_label(t1, t2, e(tree), l(tree))
+      tree  = sTf_label(t1, t2, e(tree), lab)
     else
       t1, i = _sTf_label(tree.d1, i)
-      tree = sTf_label(t1, e(tree), l(tree))
+      tree = sTf_label(t1, e(tree), lab)
     end
   elseif def2(tree)
     t2, i = _sTf_label(tree.d2, i)
-    tree = sTf_label(t2, e(tree), l(tree))
+    tree = sTf_label(t2, e(tree), lab)
   else
     i += 1
-    lab = isempty(l(tree)) ? string("t",i) : l(tree)
     if isdefined(tree, :iμ)
       tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), lab)
     else
