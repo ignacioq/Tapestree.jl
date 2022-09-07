@@ -2219,21 +2219,21 @@ function _reconstructed!(tree::T) where {T <: iTf}
     return tree
   end
 
-  extd1 = defd1 && isextincttip(tree.d1)
-  extd2 = defd2 && isextincttip(tree.d2)
+  extd1 = defd1 && isextinct(tree.d1)
+  extd2 = defd2 && isextinct(tree.d2)
 
   # 2 extinct daughters -> extinct tip
   if extd1 && extd2
-    return T(e(tree), true, false)
+    return T(e(tree), true, false, isfix(tree))
   end
 
   # sampled ancestor with extinct daughter -> fossil tip (labelled extinct)
-  if (extd1 && !defd2) || (!defd1 && extd2)
+  if extd1 && !defd2
     lab = extd1 ? l(tree.d1) : l(tree.d2)
-    if isempty(lab)
-      return T(e(tree), true, true)
+    if isnothing(lab)
+      return T(e(tree), false, true, isfix(tree))
     else
-      return T(e(tree), true, true, lab)
+      return T(e(tree), false, true, isfix(tree), lab)
     end
   end
 
