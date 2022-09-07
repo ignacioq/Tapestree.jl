@@ -23,7 +23,7 @@ Created 16 12 2021
               bst::Vector{Float64},
               eix::Vector{Int64})
 
-Log-likelihood up to a constant for constant fossilized birth-death
+Log-likelihood up to a constant for piecewise-constant fossilized birth-death
 given a complete `iTree` for decoupled trees with epochs `ψts`.
 """
 function llik_cfbd(Ξ  ::Vector{sTfbd},
@@ -55,7 +55,26 @@ end
 """
     llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
 
-Log-likelihood up to a constant for constant fossilized birth-death
+Log-likelihood up to a constant for constant fossilized birth-death given a 
+complete `iTree` recursively.
+"""
+llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64) =
+  llik_cfbd(tree, λ, μ, [ψ], treeheight(tree), Float64[], 1, 1)
+
+
+
+
+"""
+    llik_cfbd(tree::sTfbd,
+              λ   ::Float64,
+              μ   ::Float64,
+              ψ   ::Vector{Float64},
+              t   ::Float64,
+              ψts ::Vector{Float64},
+              ix  ::Int64,
+              nep ::Int64)
+
+Log-likelihood up to a constant for piecewise-constant fossilized birth-death
 given a complete `iTree` recursively.
 """
 function llik_cfbd(tree::sTfbd,
