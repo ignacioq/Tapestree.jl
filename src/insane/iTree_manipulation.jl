@@ -2123,34 +2123,81 @@ end
 Remove fossils.
 """
 function _remove_fossils!(tree::T) where {T <: iTf}
-  while isfossil(tree)
-    if def1(tree)
-      tree.d1.e += tree.e
-      tree       = tree.d1
-    elseif def2(tree) 
-      tree.d2.e += tree.e
-      tree       = tree.d2
-    else
-      break
-    end
-  end
-
-  if def1(tree) tree.d1 = _remove_fossils!(tree.d1) end
-  if def2(tree) tree.d2 = _remove_fossils!(tree.d2) end
 
   if def1(tree)
-    if isfossil(tree.d1)
-      if isfossil(tree.d2)
-        return T(1.0, false, true, true)
-      else
-        tree.d2.e += tree.e
-        tree = tree.d2
-      end
-    elseif isfossil(tree.d2)
-      tree.d1.e += tree.e
-      tree = tree.d1
+    if def2(tree)
+      tree.d1 = _remove_fossils!(tree.d1)
+      tree.d2 = _remove_fossils!(tree.d2)
+    else
+      t1 = _remove_fossils!(tree.d1)
+      defossilize!(t1)
+      adde!(t1, e(tree))
+      return t1
     end
+  else
+    isfossil(tree) && defossilize!(tree)
   end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_fossils!(tree::iTfbd)
+
+Remove fossils.
+"""
+function _remove_fossils!(tree::iTfbd)
+
+  if def1(tree)
+    if def2(tree)
+      tree.d1 = _remove_fossils!(tree.d1)
+      tree.d2 = _remove_fossils!(tree.d2)
+    else
+      t1 = _remove_fossils!(tree.d1)
+      defossilize!(t1)
+      lλ1 = lλ(t1)
+      lμ1 = lμ(t1)
+      dti = dt(tree)
+      e1  = e(t1)
+      t0  = 0.0
+      tn  = dti - fdt(tree)
+      i   = 1
+      while e1 > tn + dti + √eps()
+        lλ1[i] = linpred(tn, t0, t0 + dti, lλ1[i], lλ1[i+1])
+        lμ1[i] = linpred(tn, t0, t0 + dti, lμ1[i], lμ1[i+1])
+        tn += dti
+        t0 += dti
+        i  += 1
+      end
+      if fdt(tree) < dti
+        lλ1[i] = lλ1[i+1]
+        lμ1[i] = lμ1[i+1]
+        if (e1 - t0) > dti + √eps() || e1 < dti
+          pop!(lλ1)
+          pop!(lμ1)
+        end
+      end
+      lλv = lλ(tree)
+      lμv = lμ(tree)
+      pop!(lλv)
+      pop!(lμv)
+      prepend!(lλ1, lλv)
+      prepend!(lμ1, lμv)
+      adde!(t1, e(tree))
+      if tn < e1
+        setfdt!(t1, e1 - tn)
+      else
+        setfdt!(t1, e1 + fdt(tree))
+      end
+      return t1
+    end
+  else
+    isfossil(tree) && defossilize!(tree)
+  end
+
   return tree
 end
 
@@ -2378,9 +2425,18 @@ setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
 """
   fossilize!(tree::T,  stree::T) where {T <: iTree}
 
-Set `d2` to `stree` in `tree`.
+Make tree a fossil.
 """
 fossilize!(tree::iTf) = setproperty!(tree, :iψ, true)
+
+
+
+"""
+  defossilize!(tree::T,  stree::T) where {T <: iTree}
+
+Make tree a non fossil.
+"""
+defossilize!(tree::iTf) = setproperty!(tree, :iψ, false)
 
 
 
@@ -2403,6 +2459,7 @@ Set `x` as final trait in tree.
 """
 setxf!(tree::T, x::Float64) where {T <: sTX} =
   setproperty!(tree, :xf, x)
+
 
 
 
