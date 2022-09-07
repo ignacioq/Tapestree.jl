@@ -20,6 +20,25 @@ Created 07 10 2021
 Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
 rate `λ`, extinction rate `μ` and fossilization rate `ψ`.
 """
+sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64) =
+  sim_cfbd(t,λ,μ,[ψ],Float64[],1,1)
+
+
+
+
+"""
+    sim_cfbd(t  ::Float64,
+             λ  ::Float64,
+             μ  ::Float64,
+             ψ  ::Vector{Float64},
+             ψts::Vector{Float64},
+             ix ::Int64,
+             nep::Int64)
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
+rate `λ`, extinction rate `μ` and piecewise-constant fossilization rate `ψ` with
+`nep` epochs at times `ψts`, starting at index `ix`.
+"""
 function sim_cfbd(t  ::Float64,
                   λ  ::Float64,
                   μ  ::Float64,
