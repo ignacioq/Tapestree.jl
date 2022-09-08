@@ -2175,7 +2175,7 @@ function _remove_fossils!(tree::iTfbd)
       if fdt(tree) < dti
         lλ1[i] = lλ1[i+1]
         lμ1[i] = lμ1[i+1]
-        if (e1 - t0) > dti + √eps() || e1 < dti
+        if (e1 - t0) > dti + √eps() || e1 < tn
           pop!(lλ1)
           pop!(lμ1)
         end
@@ -2192,6 +2192,7 @@ function _remove_fossils!(tree::iTfbd)
       else
         setfdt!(t1, e1 + fdt(tree))
       end
+
       return t1
     end
   else
