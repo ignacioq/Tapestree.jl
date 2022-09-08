@@ -379,13 +379,17 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
   else
 
     ntF, fdti = divrem(et, δt, RoundDown)
+
+    if isapprox(fdti, δt)
+      ntF += 1.0
+      fdti = δt
+    end
+
     nts = Int64(ntF)
 
     if iszero(fdti) || (i1 > 0 && iszero(i2)) 
-      if !isapprox(fdti, δt)
-        nts  -= 1
-      end
       fdti  = δt
+      nts  -= 1
     end
 
     # speciation
