@@ -377,12 +377,15 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     push!(ixiv, 1)
     push!(ixfv, 1)
   else
+
     ntF, fdti = divrem(et, δt, RoundDown)
     nts = Int64(ntF)
 
     if iszero(fdti) || (i1 > 0 && iszero(i2)) 
+      if !isapprox(fdti, δt)
+        nts  -= 1
+      end
       fdti  = δt
-      nts  -= 1
     end
 
     # speciation
@@ -404,7 +407,6 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     end
     ix = findnext(x -> x <= tif, tv, ix) - 1
     push!(lμv, linpred(tif, tv[ix], tv[ix+1], le[ix], le[ix+1]))
-    l   = nts + 2
     push!(ixfv, ix)
   end
 
