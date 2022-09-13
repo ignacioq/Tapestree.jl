@@ -2037,3 +2037,73 @@ Return pendant edge.
 """
 xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
 
+
+
+
+"""
+    branchlengths(tree::T)
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function branchlengths(tree::iTree)
+  bls = Float64[]
+  _branchlengths!(bls, tree)
+  return bls
+end
+
+
+"""
+    _branchlengths!(bls::Vector{Float64}, tree::iTree)
+
+Extract all branch lengths.
+"""
+function _branchlengths!(bls::Vector{Float64}, tree::iTree)
+
+  push!(bls, e(tree))
+
+  if def1(tree)
+    _branchlengths!(bls, tree.d1)
+    if def2(tree)
+      _branchlengths!(bls, tree.d2)
+    end
+  end
+end
+
+ 
+
+
+"""
+    trextract(tree::T)
+
+Make joint proposal to match simulation with tip fixed `x` value.
+"""
+function trextract(tree::iTree, f::Function)
+  tvs = typeof(f(tree))[]
+  _trextract!(tvs, tree, f)
+  return tvs
+end
+
+
+"""
+    _trextract!(bls::Vector{Float64}, tree::iTree)
+
+Extract all branch lengths.
+"""
+function _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
+
+  push!(tvs, f(tree))
+
+  if def1(tree)
+    _trextract!(tvs, tree.d1, f)
+    if def2(tree)
+      _trextract!(tvs, tree.d2, f)
+    end
+  end
+end
+
+
+
+
+
+
+
