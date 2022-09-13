@@ -515,7 +515,7 @@ end
                   lU  ::Float64,
                   Iρi ::Float64,
                   na  ::Int64,
-                  nn ::Int64,
+                  nn  ::Int64,
                   nlim::Int64)
 Simulate `iTpb` according to a pure-birth geometric Brownian motion,
 starting with a non-standard δt with a limit in the number of species.

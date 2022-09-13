@@ -18,7 +18,7 @@ Created 07 07 2020
 Reads a newick tree into `sT_label` if fossil is false and `sTf_label` if fossil
 is true from `in_file`.
 """
-function read_newick(in_file::String; fossil::Bool = false)
+function read_newick(in_file::String; fossil::Bool=false, reconstructed::Bool=true)
 
   io = open(in_file)
   s = readlines(io)[1]
@@ -26,16 +26,16 @@ function read_newick(in_file::String; fossil::Bool = false)
 
   # if 1 tree
   if onlyone(s, ';')
-    return _parse_newick(s, fossil)
+    return _parse_newick(s, fossil, reconstructed)
   # if more than 1 tree
   else
     allsc = findall(';', s)
 
-    t1 = _parse_newick(s[1:allsc[1]], fossil)
+    t1 = _parse_newick(s[1:allsc[1]], fossil, reconstructed)
     tv = typeof(t1)[t1]
 
     for i in 2:lastindex(allsc)
-      push!(tv, _parse_newick(s[(allsc[i-1] + 1):(allsc[i])], fossil))
+      push!(tv, _parse_newick(s[(allsc[i-1] + 1):(allsc[i])], fossil, reconstructed))
     end
 
     return tv
@@ -51,7 +51,7 @@ end
 Reads a newick tree into `sT_label` if fossil is false and `sTf_label` if fossil
 is true from `in_file`.
 """
-function _parse_newick(s::String, fossil::Bool)
+function _parse_newick(s::String, fossil::Bool, reconstructed::Bool)
 
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
@@ -70,7 +70,7 @@ function _parse_newick(s::String, fossil::Bool)
   end
 
   if fossil
-    return from_string(s, stem, sTf_label)
+    return from_string(s, stem, reconstructed, sTf_label)
   else
     return from_string(s, stem, sT_label)
   end
@@ -121,7 +121,7 @@ end
     from_string(s::String, stem::Bool, ::Type{sTf_label})
 Takes a string and turns it into a `sTf_label` tree.
 """
-function from_string(s::String, stem::Bool, ::Type{sTf_label})
+function from_string(s::String, stem::Bool, reconstructed::Bool, ::Type{sTf_label})
 
   # if root
   if stem
@@ -149,8 +149,10 @@ function from_string(s::String, stem::Bool, ::Type{sTf_label})
                      0.0, "")
   end
 
-  # fossilize tips
-  fossilizepasttips!(tree)
+  # fossilize tips for reconstructed trees
+  if reconstructed
+    fossilizepasttips!(tree)
+  end
 
   return tree
 end
