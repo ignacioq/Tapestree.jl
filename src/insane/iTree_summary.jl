@@ -91,24 +91,23 @@ Extract values from `f` function at times `ts` across the tree.
                              tii ::Int64,
                              ct  ::Float64,
                              f   ::Function) where {T <: iT}
+  if ct < √eps()
+    return nothing
+  end
 
   et = e(tree)
   δt = dt(tree)
   vt = f(tree)
 
-  if isapprox(ct, 0.0, atol = 1e-10)
-    return nothing
-  end
-
   nts, re = divrem(et - (ct - ts[tii]), tdt, RoundDown)
-  nts = convert(Int64,nts) - (iszero(re) ? 1 : 0)
+  nts = max(-1, Int64(nts) - Int64(re < √eps()))
   tsr = tii:(tii + nts)
 
   # have to match ts times to f vector
   @simd for i in tsr
     tsi = ts[i]
     bt  = ct - tsi
-    ix  = div(bt, δt, RoundDown)
+    ix  = max(0.0, div(bt, δt, RoundDown))
     tts = δt *  ix
     ttf = δt * (ix + 1.0)
     Ix  = Int64(ix) + 1

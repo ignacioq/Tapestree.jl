@@ -13,11 +13,54 @@ Created 25 06 2020
 
 
 """
-    rm_stem(tree::T)  where {T <: iTree}
+  reorder(tree::T) where {T <: iTree}
+
+Reorder order of daughter branches according to number of tips, with daughter
+1 always having more than daughter 2.
+"""
+function reorder!(tree::T) where {T <: iTree}
+  tree, n = _reorder!(tree)
+  return tree
+end
+
+
+
+
+"""
+  _reorder!(tree::T) where {T <: iTree}
+
+Reorder order of daughter branches according to number of tips, with daughter
+1 always having more than daughter 2.
+"""
+function _reorder!(tree::T) where {T <: iTree}
+
+  if istip(tree)
+    n = 1
+  else
+    t1, n1 = _reorder!(tree.d1)
+
+    if def2(tree)
+      t2, n2 = _reorder!(tree.d2)
+      if n1 < n2
+        tree.d1 = t2
+        tree.d2 = t1
+      end
+      n = n1 + n2
+    else
+      n = n1
+    end
+  end
+  return tree, n
+end
+
+
+
+"""
+    rm_stem(tree::T) where {T <: iTree}
 
 Removes stem branch.
 """
-rm_stem!(tree::T)  where {T <: iTree} =
+rm_stem!(tree::T) where {T <: iTree} =
   _rm_stem(tree)
 
 
