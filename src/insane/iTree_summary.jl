@@ -665,6 +665,101 @@ end
 
 
 
+"""
+    imean(treev::Vector{iTpb})
+
+Make an `iT` with the geometric mean.
+"""
+function imean(treev::Vector{iTpb})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas and mus
+  vsλ = Array{Float64,1}[]
+  for t in treev
+    push!(vsλ, lλ(t))
+  end
+
+  svλ = Float64[]
+  # make fill vector to estimate statistics
+  vλ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsλ[1]))
+    for t in Base.OneTo(nt)
+      vλ[t] = vsλ[t][i]
+    end
+    push!(svλ, mean(vλ))
+  end
+
+  if def1(t1)
+    treev1 = iTpb[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = iTpb[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    iTpb(imean(treev1),
+         imean(treev2),
+         e(t1), dt(t1), fdt(t1), true, svλ)
+  else
+    iTpb(e(t1), dt(t1), fdt(t1), true, svλ)
+  end
+end
+
+
+
+
+
+"""
+    imean(treev::Vector{T})
+
+Make an `iT` with the geometric mean.
+"""
+function imean(treev::Vector{T}) where {T <: iT}
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas and mus
+  vsλ = Array{Float64,1}[]
+  for t in treev
+    push!(vsλ, lλ(t))
+  end
+
+  svλ = Float64[]
+  # make fill vector to estimate statistics
+  vλ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsλ[1]))
+    for t in Base.OneTo(nt)
+      vλ[t] = vsλ[t][i]
+    end
+    push!(svλ, mean(vλ))
+  end
+
+  if def1(t1)
+    treev1 = T[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = T[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    T(imean(treev1),
+      imean(treev2),
+      e(t1), dt(t1), fdt(t1), isextinct(t1), true, svλ)
+  else
+    T(e(t1), dt(t1), fdt(t1), isextinct(t1), true, svλ)
+  end
+end
+
+
 
 """
     imean(treev::Vector{iTbd})
