@@ -235,28 +235,10 @@ function _linearize_gbm!(tree::T,
   append!(v, f(tree))
   if def1(tree)
     _linearize_gbm!(tree.d1::T, f, v)
-    _linearize_gbm!(tree.d2::T, f, v)
+    if def2(tree)
+      _linearize_gbm!(tree.d2::T, f, v)
+    end
   end
-end
-
-
-
-
-"""
-    _linearize_gbm!(tree::sTfbd,
-                    f  ::Function,
-                    v   ::Array{Float64,1}) where {T <: iT}
-
-Extract the parameters given by `f` into a linear Array, initialized with an
-array `v`.
-"""
-function _linearize_gbm!(tree::sTfbd,
-                         f  ::Function,
-                         v   ::Array{Float64,1}) where {T <: iT}
-
-  append!(v, f(tree))
-  if def1(tree) _linearize_gbm!(tree.d1::T, f, v) end
-  if def2(tree) _linearize_gbm!(tree.d2::T, f, v) end
 end
 
 
