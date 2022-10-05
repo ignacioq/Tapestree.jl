@@ -2248,13 +2248,16 @@ end
 
 
 
-"""
-    remove_sampled_ancestors(tree::T) where {T <: iTf}
 
-Remove sampled ancestors (non-tip fossils).
 """
-function remove_sampled_ancestors(tree::T) where {T <: iTf}
-  return _remove_sampled_ancestors!(T(tree::T))
+    remove_sampled_ancestors(tree::T, p::Float64) where {T <: iTf}
+
+Remove fossils.
+"""
+function remove_sampled_ancestors(tree::T, p::Float64) where {T <: iTf}
+  t, i = _remove_sampled_ancestors!(T(tree::T),  p, false)
+
+  return t
 end
 
 
@@ -2263,21 +2266,28 @@ end
 """
     _remove_sampled_ancestors!(tree::T) where {T <: iTf}
 
-Remove sampled ancestors (non-tip fossils).
+Remove fossils.
 """
-function _remove_sampled_ancestors!(tree::T) where {T <: iTf}
-  while isfossil(tree)
-    if     def1(tree) tree.d1.e += tree.e; tree = tree.d1
-    elseif def2(tree) tree.d2.e += tree.e; tree = tree.d2
+function _remove_sampled_ancestors!(tree::T,  p::Float64, i::Bool) where {T <: iTf}
+
+  if def1(tree)
+    if def2(tree)
+      tree.d1, i = _remove_sampled_ancestors!(tree.d1, p, i)
+      tree.d2, i = _remove_sampled_ancestors!(tree.d2, p, i)
     else
-      break
+      t1, i = _remove_sampled_ancestors!(tree.d1, p, i)
+
+      if i || rand() < p
+        adde!(t1, e(tree))
+        return t1, false
+      else
+        tree.d1 = t1
+        return tree, true
+      end
     end
   end
 
-  if def1(tree) tree.d1 = _remove_sampled_ancestors!(tree.d1) end
-  if def2(tree) tree.d2 = _remove_sampled_ancestors!(tree.d2) end
-
-  return tree
+  return tree, i
 end
 
 
