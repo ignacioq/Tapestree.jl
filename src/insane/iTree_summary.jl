@@ -107,8 +107,15 @@ Extract values from `f` function at times `ts` across the tree.
   # have to match ts times to f vector
   @simd for i in tsr
     tsi = ts[i]
-    bt  = ct - tsi
+    if isapprox(ct, tsi)
+      bt = 0.0
+    else
+      bt  = ct - tsi
+    end
     ix  = div(bt, δt, RoundDown)
+    if (ix+2>length(vt))
+      ix = ix - 1
+    end
     tts = δt *  ix
     ttf = δt * (ix + 1.0)
     Ix  = Int64(ix) + 1
