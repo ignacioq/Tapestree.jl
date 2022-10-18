@@ -91,31 +91,23 @@ Extract values from `f` function at times `ts` across the tree.
                              tii ::Int64,
                              ct  ::Float64,
                              f   ::Function) where {T <: iT}
+  if ct < √eps()
+    return nothing
+  end
 
   et = e(tree)
   δt = dt(tree)
   vt = f(tree)
 
-  if isapprox(ct, 0.0, atol = 1e-10)
-    return nothing
-  end
-
   nts, re = divrem(et - (ct - ts[tii]), tdt, RoundDown)
-  nts = convert(Int64,nts) - (iszero(re) ? 1 : 0)
+  nts = max(-1, Int64(nts) - Int64(re < √eps()))
   tsr = tii:(tii + nts)
 
   # have to match ts times to f vector
   @simd for i in tsr
     tsi = ts[i]
-    if isapprox(ct, tsi)
-      bt = 0.0
-    else
-      bt  = ct - tsi
-    end
-    ix  = div(bt, δt, RoundDown)
-    if (ix+2>length(vt))
-      ix = ix - 1
-    end
+    bt  = ct - tsi
+    ix  = max(0.0, div(bt, δt, RoundDown))
     tts = δt *  ix
     ttf = δt * (ix + 1.0)
     Ix  = Int64(ix) + 1
@@ -243,28 +235,10 @@ function _linearize_gbm!(tree::T,
   append!(v, f(tree))
   if def1(tree)
     _linearize_gbm!(tree.d1::T, f, v)
-    _linearize_gbm!(tree.d2::T, f, v)
+    if def2(tree)
+      _linearize_gbm!(tree.d2::T, f, v)
+    end
   end
-end
-
-
-
-
-"""
-    _linearize_gbm!(tree::sTfbd,
-                    f  ::Function,
-                    v   ::Array{Float64,1}) where {T <: iT}
-
-Extract the parameters given by `f` into a linear Array, initialized with an
-array `v`.
-"""
-function _linearize_gbm!(tree::sTfbd,
-                         f  ::Function,
-                         v   ::Array{Float64,1}) where {T <: iT}
-
-  append!(v, f(tree))
-  if def1(tree) _linearize_gbm!(tree.d1::T, f, v) end
-  if def2(tree) _linearize_gbm!(tree.d2::T, f, v) end
 end
 
 
@@ -671,6 +645,101 @@ function iquantile(treev::Vector{iTfbd}, p::Float64)
   end
 end
 
+
+
+"""
+    imean(treev::Vector{iTpb})
+
+Make an `iT` with the geometric mean.
+"""
+function imean(treev::Vector{iTpb})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas and mus
+  vsλ = Array{Float64,1}[]
+  for t in treev
+    push!(vsλ, lλ(t))
+  end
+
+  svλ = Float64[]
+  # make fill vector to estimate statistics
+  vλ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsλ[1]))
+    for t in Base.OneTo(nt)
+      vλ[t] = vsλ[t][i]
+    end
+    push!(svλ, mean(vλ))
+  end
+
+  if def1(t1)
+    treev1 = iTpb[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = iTpb[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    iTpb(imean(treev1),
+         imean(treev2),
+         e(t1), dt(t1), fdt(t1), true, svλ)
+  else
+    iTpb(e(t1), dt(t1), fdt(t1), true, svλ)
+  end
+end
+
+
+
+
+
+"""
+    imean(treev::Vector{T})
+
+Make an `iT` with the geometric mean.
+"""
+function imean(treev::Vector{T}) where {T <: iT}
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas and mus
+  vsλ = Array{Float64,1}[]
+  for t in treev
+    push!(vsλ, lλ(t))
+  end
+
+  svλ = Float64[]
+  # make fill vector to estimate statistics
+  vλ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsλ[1]))
+    for t in Base.OneTo(nt)
+      vλ[t] = vsλ[t][i]
+    end
+    push!(svλ, mean(vλ))
+  end
+
+  if def1(t1)
+    treev1 = T[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = T[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    T(imean(treev1),
+      imean(treev2),
+      e(t1), dt(t1), fdt(t1), isextinct(t1), true, svλ)
+  else
+    T(e(t1), dt(t1), fdt(t1), isextinct(t1), true, svλ)
+  end
+end
 
 
 
