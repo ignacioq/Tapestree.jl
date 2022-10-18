@@ -302,7 +302,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, λc, mc =
           update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, ns) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -314,7 +314,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         llc, prc, μc, mc =
           update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, ns) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
@@ -326,7 +326,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         bix = ceil(Int64,rand()*el)
         llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
-        # llci = llik_cbd(Ξ, λc, μc, ns) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+        # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
         # if !isapprox(llci, llc, atol = 1e-6)
         #    @show llci, llc, it, p
         #    return
