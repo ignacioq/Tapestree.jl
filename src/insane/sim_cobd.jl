@@ -71,44 +71,83 @@ Return `true` if the sampled fossil is included in the tree.
 """
     sim_cobd(t::Float64, λ::Float64, μ::Float64, ψ::Float64, ω::Float64)
 
-Simulate a constant occurrence birth-death `iTree` of height `t` with speciation 
+Simulate a constant occurrence birth-death `iTree` of height `t` with speciation
 rate `λ`, extinction rate `μ`, fossil sampling rates `ψ` (fossils included in 
 the tree) and `ω`(fossil occurrences).
+"""
+sim_cobd(t::Float64, λ::Float64, μ::Float64, ψ::Float64, ω::Float64) =
+  sim_cobd(t,λ,μ,[ψ],[ω],Float64[],1,1)
+
+
+
+
+"""
+    sim_cobd(t::Float64, 
+             λ::Float64, 
+             μ::Float64, 
+             ψ::Float64,
+             ω::Float64,
+             tep::Vector{Float64},
+             ix ::Int64,
+             nep::Int64)
+
+Simulate a constant occurrence birth-death `iTree` of height `t` with speciation 
+rate `λ`, extinction rate `μ`, piecewise-constant fossil sampling rates `ψ`
+(fossils included in the tree) and `ω`(fossil occurrences), with `nep` epochs 
+at times `tep`, starting at index `ix`.
 """
 function sim_cobd(t::Float64, 
                   λ::Float64, 
                   μ::Float64, 
-                  ψ::Float64,
-                  ω::Float64)
+                  ψ::Vector{Float64},
+                  ω::Vector{Float64},
+                  tep::Vector{Float64},
+                  ix ::Int64,
+                  nep::Int64)
 
-  tw = cobd_wait(λ, μ, ψ, ω)
-  ωtimes = Float64[]
+  @inbounds ψi = ψ[ix]
+  @inbounds ωi = ω[ix]
 
-  if tw > t
-    return sTfbd(t), ωtimes
+  tw = cobd_wait(λ, μ, ψi, ωi)
+  @show tw
+  @show t-tw
+
+  # ψ/ω epoch change
+  if ix < nep
+    @inbounds tepi = tep[ix]
+    if t - tw < tepi
+      t0, ωtimes = sim_cobd(tepi, λ, μ, ψ, ω, tep, ix + 1, nep)
+      adde!(t0, t-tepi)
+      return t0, ωtimes
+    end
   end
 
-  if λevent(λ, μ, ψ, ω)
-    # speciation
-    d1, ωtimes1 = sim_cobd(t - tw, λ, μ, ψ, ω)
-    d2, ωtimes2 = sim_cobd(t - tw, λ, μ, ψ, ω)
-    append!(ωtimes1, ωtimes2)
-    return sTfbd(d1, d2, tw), ωtimes1
-  elseif μevent(μ, ψ, ω)
-    # extinction
-    return sTfbd(tw, true), ωtimes
+  if tw > t
+    return sTfbd(t, false, false, false), Float64[]
+  end
+
+  # speciation
+  if λevent(λ, μ, ψi, ωi)
+    d1, ωtimes  = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
+    d2, ωtimes2 = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
+    append!(ωtimes, ωtimes2)
+    return sTfbd(d1, d2, tw, false, false, false), ωtimes
   
-  elseif ψevent(ψ, ω)
-    # fossil sampling (included in the tree)
-    d, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω)
-    return sTfbd(d, tw, false, true, false), ωtimes
+  # extinction
+  elseif μevent(μ, ψi, ωi)
+    return sTfbd(tw, true, false, false), Float64[]
   
+  # fossil sampling (included in the tree)
+  elseif ψevent(ψi, ωi)
+    t0, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
+    return sTfbd(t0, tw, false, true, false), ωtimes
+  
+  # fossil occurrence sampling (not included in the tree)
   else
-    # fossil occurrence sampling (not included in the tree)
-    d, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω)
+    t0, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
     push!(ωtimes, t - tw)
-    adde!(d, tw)
-    return d, ωtimes
+    adde!(t0, tw)
+    return t0, ωtimes
   end
 end
 

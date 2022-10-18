@@ -26,8 +26,10 @@ Created 07 10 2021
                 λi      ::Float64               = NaN,
                 μi      ::Float64               = NaN,
                 ψi      ::Float64               = NaN,
-                pupdp   ::NTuple{4,Float64}     = (0.2,0.2,0.2,0.2),
+                pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
+                survival::Bool                  = true,
                 prints  ::Int64                 = 5,
+                mxthf   ::Float64               = Inf,
                 tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant fossilized birth-death.

@@ -25,8 +25,6 @@ Created 14 09 2020
                  pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.1, 0.2),
                  δt      ::Float64               = 1e-3,
                  prints  ::Int64                 = 5,
-                 survival::Bool                  = true,
-                 mxthf   ::Float64               = Inf,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for `gbm-pb`.
