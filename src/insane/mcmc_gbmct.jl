@@ -192,12 +192,11 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
         logdgamma(exp(λ0),   λa_prior[1], λa_prior[2])  +
-        logdnorm(αc,        α_prior[1],  α_prior[2]^2) +
+        logdnorm(αc,        α_prior[1],  σλc^2) +
         logdunif(ϵc,        ϵ_prior[1],  ϵ_prior[2])
 
   # maximum bounds according to uniform priors
   ϵxpr  = ϵ_prior[2]
-
 
   L       = treelength(Ξ)      # tree length
   dlλ     = deltaλ(Ξ)          # delta change in λ
@@ -956,10 +955,11 @@ function update_α_ϵ!(αc     ::Float64,
                      α_prior::NTuple{2,Float64})
 
   ν   = α_prior[1]
-  τ2  = α_prior[2]^2
+  τ2  = σλ2^2
   σλ2 = σλ^2
-  rs  = σλ2/τ2
-  αp  = rnorm((dlλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  #rs  = σλ2/τ2
+  #αp  = rnorm((dlλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  αp  = rnorm((dlλ + ν)/(1 + L), sqrt(σλ2/(1 + L)))
 
   mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 1_000, crown)
   llr = log(mp/mc)
