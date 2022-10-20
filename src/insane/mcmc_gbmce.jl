@@ -15,7 +15,7 @@ Created 03 09 2020
 """
     insane_gbmce(tree    ::sT_label,
                  out_file::String;
-                 λa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                 λa_prior::NTuple{2,Float64} = (1.0, 1.0),
                  α_prior ::NTuple{2,Float64} = (0.0, 0.5),
                  σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                  μ_prior ::NTuple{2,Float64} = (1.0, 1.0),
@@ -38,7 +38,7 @@ Run insane for `gbm-ce`.
 """
 function insane_gbmce(tree    ::sT_label,
                       out_file::String;
-                      λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
+                      λa_prior::NTuple{2,Float64}     = (1.0, 0.5),
                       α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                       μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -172,13 +172,12 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   llc = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(crown > 0) * λ0 + 
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
-        logdunif(exp(λ0),   λa_prior[1], λa_prior[2])  +
-        logdnorm(αc,        α_prior[1],  α_prior[2]^2) +
+        logdgamma(exp(λ0),   λa_prior[1], λa_prior[2])  +
+        #logdnorm(αc,        α_prior[1],  α_prior[2]^2) +
+        logdnorm(αc,        α_prior[1],  σλc^2) +
         logdgamma(μc,       μ_prior[1],  μ_prior[2])
 
   # maximum bounds according to unfiorm priors
-  lλxpr = log(λa_prior[2])
-
   L       = treelength(Ξ)      # tree length
   dλ      = deltaλ(Ξ)          # delta change in λ
   ssλ, nλ = sss_gbm(Ξ, αc)     # sum squares in λ
@@ -227,7 +226,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
 
         llc, dλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt)
 
       # forward simulation update
       else
@@ -300,9 +299,6 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  # maximum bounds according to uniform priors
-  lλxpr = log(λa_prior[2])
-
   L       = treelength(Ξ)            # tree length
   dλ      = deltaλ(Ξ)                # delta change in λ
   ssλ, nλ = sss_gbm(Ξ, αc)           # sum squares in λ
@@ -374,7 +370,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         llc, dλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         # if !isapprox(ll0, llc, atol = 1e-5)
@@ -790,8 +786,7 @@ end
                 mc   ::Float64,
                 th   ::Float64,
                 δt   ::Float64,
-                srδt ::Float64,
-                lλxpr::Float64)
+                srδt ::Float64)
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -807,8 +802,7 @@ function update_gbm!(bix  ::Int64,
                      mc   ::Float64,
                      th   ::Float64,
                      δt   ::Float64,
-                     srδt ::Float64,
-                     lλxpr::Float64)
+                     srδt ::Float64)
   @inbounds begin
 
     ξi   = Ξ[bix]
@@ -823,13 +817,13 @@ function update_gbm!(bix  ::Int64,
       ξ2 = Ξ[i2]
       llc, dλ, ssλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, dλ, ssλ, mc, th, 
-          δt, srδt, lλxpr)
+          δt, srδt)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dλ, ssλ, mc =
-          _stem_update!(ξi, α, σλ, μ, llc, dλ, ssλ, mc, th,  δt, srδt, lλxpr)
+          _stem_update!(ξi, α, σλ, μ, llc, dλ, ssλ, mc, th,  δt, srδt)
       end
 
       # parent branch update
@@ -907,10 +901,12 @@ function update_α!(αc     ::Float64,
                    α_prior::NTuple{2,Float64})
 
   ν   = α_prior[1]
-  τ2  = α_prior[2]^2
+  #τ2  = α_prior[2]^2
+  τ2  = σλ^2
   σλ2 = σλ^2
-  rs  = σλ2/τ2
-  αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  #rs  = σλ2/τ2
+  #αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  αp  = rnorm((dλ + ν)/(1 + L), sqrt(σλ2/(1 + L)))
 
   mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, crown)
   llr = log(mp/mc)

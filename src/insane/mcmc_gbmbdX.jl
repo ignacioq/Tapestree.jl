@@ -16,8 +16,8 @@ Created 03 09 2020
     insane_gbmbd(tree    ::sT_label,
                  X       ::Dict{String, Float64},
                  out_file::String;
-                 λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                 μa_prior::NTuple{2,Float64}     = (0.0, 100.0),
+                 λa_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                 μa_prior::NTuple{2,Float64}     = (1.0, 0.5),
                  α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                  σμ_prior::NTuple{2,Float64}     = (0.05, 0.05),
@@ -44,8 +44,8 @@ Run insane for `gbm-bd`.
 function insane_gbmbd(tree    ::sT_label,
                       X       ::Dict{String, Float64},
                       out_file::String;
-                      λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                      μa_prior::NTuple{2,Float64}     = (0.0, 100.0),
+                      λa_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                      μa_prior::NTuple{2,Float64}     = (1.0, 0.5),
                       α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                       σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                       σμ_prior::NTuple{2,Float64}     = (0.05, 0.05),
@@ -208,9 +208,6 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbdX},
         logdnorm(βλc,              βλ_prior[1], βλ_prior[2]^2) +
         logdinvgamma(σxc^2,        σx_prior[1], σx_prior[2])
 
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
-
   L                 = treelength(Ξ)      # tree length
   dλ                = deltaλ(Ξ)         # delta change in λ
   ssλ, ssμ, ssx, nx = sss_gbm(Ξ, αc, βλc)  #sum squares in λ and μ and X
@@ -271,7 +268,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbdX},
 
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            δt, srδt, lλxpr, lμxpr)
+            δt, srδt)
 
       # forward simulation update
       else
@@ -355,10 +352,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbdX},
   # logging
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
-
-  # crown or crown conditioning
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
 
   L                 = treelength(Ξ)      # tree length
   dλ                = deltaλ(Ξ)         # delta change in λ
@@ -453,7 +446,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbdX},
 
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            δt, srδt, lλxpr, lμxpr)
+            δt, srδt)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, βλc, σxc, δt, srδt) - Float64(crown) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)

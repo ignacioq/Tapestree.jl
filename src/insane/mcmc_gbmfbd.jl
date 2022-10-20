@@ -15,8 +15,8 @@ Created 03 09 2020
 """
     insane_gbmfbd(tree    ::sTf_label,
                   out_file::String;
-                  λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                  μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                  λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                  μa_prior::NTuple{2,Float64} = (1.0, 0.5),
                   α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                   σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
@@ -43,8 +43,8 @@ Run insane for fossilized birth-death diffusion `fbdd`.
 """
 function insane_gbmfbd(tree    ::sTf_label,
                        out_file::String;
-                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                       μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                       λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                       μa_prior::NTuple{2,Float64} = (1.0, 0.5),
                        α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                        σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
@@ -257,12 +257,9 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
         logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
-        logdunif(exp(λ0),          λa_prior[1], λa_prior[2])  +
-        logdunif(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])  +
+        logdgamma(exp(λ0),          λa_prior[1], λa_prior[2]) +
+        logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2]) +
         sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))
-
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
 
   L            = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf           = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
@@ -311,7 +308,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            crown, δt, srδt, lλxpr, lμxpr)
+            crown, δt, srδt)
 
       # forward simulation update
       else
@@ -399,10 +396,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  # crown or crown conditioning
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
-
   L            = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf           = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
   dλ           = deltaλ(Ξ)                         # delta change in λ
@@ -478,7 +471,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
         llc, dλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            crown, δt, srδt, lλxpr, lμxpr)
+            crown, δt, srδt)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -1194,9 +1187,7 @@ end
                 th   ::Float64,
                 crown ::Int64,
                 δt   ::Float64,
-                srδt ::Float64,
-                lλxpr::Float64,
-                lμxpr::Float64)
+                srδt ::Float64)
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -1214,9 +1205,7 @@ function update_gbm!(bix  ::Int64,
                      th   ::Float64,
                      crown::Int64,
                      δt   ::Float64,
-                     srδt ::Float64,
-                     lλxpr::Float64,
-                     lμxpr::Float64)
+                     srδt ::Float64)
   @inbounds begin
 
 
@@ -1231,14 +1220,14 @@ function update_gbm!(bix  ::Int64,
     if root && iszero(e(bi))
       llc, dλ, ssλ, ssμ, mc =
         _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th,
-          δt, srδt, lλxpr, lμxpr)
+          δt, srδt)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dλ, ssλ, ssμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
-            δt, srδt, lλxpr, lμxpr)
+            δt, srδt)
       end
 
       # updates within the parent branch

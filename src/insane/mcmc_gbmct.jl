@@ -15,10 +15,10 @@ Created 03 09 2020
 """
     insane_gbmct(tree    ::sT_label,
                  out_file::String;
-                 λa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                 λa_prior::NTuple{2,Float64} = (1.0, 1.0),
                  α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
-                 ϵ_prior ::NTuple{2,Float64} = (0.0, 100.0),
+                 ϵ_prior ::NTuple{2,Float64} = (0.0, 10.0),
                  niter   ::Int64             = 1_000,
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
@@ -40,10 +40,10 @@ Run insane for GBM birth-death.
 """
 function insane_gbmct(tree    ::sT_label,
                       out_file::String;
-                      λa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                      λa_prior::NTuple{2,Float64} = (1.0, 1.0),
                       α_prior ::NTuple{2,Float64} = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                      ϵ_prior ::NTuple{2,Float64} = (0.0, 100.0),
+                      ϵ_prior ::NTuple{2,Float64} = (0.0, 10.0),
                       niter   ::Int64             = 1_000,
                       nthin   ::Int64             = 10,
                       nburn   ::Int64             = 200,
@@ -191,12 +191,9 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   llc = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - Float64(crown > 0) * λ0 + 
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
-        logdunif(exp(λ0),   λa_prior[1], λa_prior[2])  +
+        logdgamma(exp(λ0),   λa_prior[1], λa_prior[2])  +
         logdnorm(αc,        α_prior[1],  α_prior[2]^2) +
         logdunif(ϵc,        ϵ_prior[1],  ϵ_prior[2])
-
-  lλxpr = log(λa_prior[2])
-  ϵxpr  = ϵ_prior[2]
 
   L       = treelength(Ξ)      # tree length
   dlλ     = deltaλ(Ξ)          # delta change in λ
@@ -249,7 +246,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
 
         llc, dlλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt)
 
       # forward simulation update
       else
@@ -332,7 +329,6 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
   lthin, lit = 0, 0
 
   # maximum bounds according to uniform priors
-  lλxpr = log(λa_prior[2])
   ϵxpr  = ϵ_prior[2]
 
   L       = treelength(Ξ)            # tree length
@@ -405,7 +401,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
 
         llc, dlλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
         #  if !isapprox(ll0, llc, atol = 1e-5)
@@ -834,8 +830,7 @@ end
                 mc   ::Float64,
                 th   ::Float64,
                 δt   ::Float64,
-                srδt ::Float64,
-                lλxpr::Float64)
+                srδt ::Float64)
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -852,8 +847,7 @@ function update_gbm!(bix  ::Int64,
                      mc   ::Float64,
                      th   ::Float64,
                      δt   ::Float64,
-                     srδt ::Float64,
-                     lλxpr::Float64)
+                     srδt ::Float64)
   @inbounds begin
 
     ξi   = Ξ[bix]
@@ -868,14 +862,14 @@ function update_gbm!(bix  ::Int64,
       ξ2 = Ξ[i2]
       llc, dlλ, ssλ, Σλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, ϵ, llc, dlλ, ssλ, Σλ, mc, th,
-          δt, srδt, lλxpr)
+          δt, srδt)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem branch
       if root
         llc, dlλ, ssλ, Σλ, mc =
           _stem_update!(ξi, α, σλ, ϵ, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt)
       end
 
       # updates within the parent branch

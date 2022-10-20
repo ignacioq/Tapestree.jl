@@ -17,8 +17,8 @@ Created 03 09 2020
                  out_file::String,
                  tv       ::Vector{Float64},
                  μv       ::Vector{Float64};
-                 λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                 μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                 λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                 μa_prior::NTuple{2,Float64} = (1.0, 0.5),
                  α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
                  σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
@@ -42,8 +42,8 @@ function insane_gbmbd(tree    ::sT_label,
                       out_file::String,
                       tv       ::Vector{Float64},
                       ev       ::Vector{Float64};
-                      λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      μa_prior::NTuple{2,Float64} = (0.0, 100.0),
+                      λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                      μa_prior::NTuple{2,Float64} = (1.0, 0.5),
                       α_prior ::NTuple{2,Float64} = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                       σμ_prior::NTuple{2,Float64} = (5.0, 0.5),
@@ -203,9 +203,6 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
         logdunif(exp(λ0),          λa_prior[1], λa_prior[2]) +
         logdunif(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])
 
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
-
   L            = treelength(Ξ)      # tree length
   dlλ          = deltaλ(Ξ)         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)    # sum squares in λ and μ
@@ -246,7 +243,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt)
 
       # forward simulation update
       else
@@ -326,10 +323,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  # crown or crown conditioning
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
-
   L            = treelength(Ξ)     # tree length
   dlλ          = deltaλ(Ξ)         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)    # sum squares in λ and μ
@@ -391,7 +384,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -852,8 +845,7 @@ end
                 mc   ::Float64,
                 th   ::Float64,
                 δt   ::Float64,
-                srδt ::Float64,
-                lλxpr::Float64) where {T <: iTbdU}
+                srδt ::Float64) where {T <: iTbdU}
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -869,8 +861,7 @@ function update_gbm!(bix  ::Int64,
                      mc   ::Float64,
                      th   ::Float64,
                      δt   ::Float64,
-                     srδt ::Float64,
-                     lλxpr::Float64) where {T <: iTbdU}
+                     srδt ::Float64) where {T <: iTbdU}
   @inbounds begin
 
     ξi   = Ξ[bix]
@@ -885,14 +876,14 @@ function update_gbm!(bix  ::Int64,
       ξ2 = Ξ[i2]
       llc, dlλ, ssλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, σμ, llc, dlλ, ssλ, mc, th,
-          δt, srδt, lλxpr)
+          δt, srδt)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dlλ, ssλ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, dlλ, ssλ, mc, th, 
-            δt, srδt, lλxpr)
+            δt, srδt)
       end
 
       # updates within the parent branch
