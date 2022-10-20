@@ -195,6 +195,10 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
         logdnorm(αc,        α_prior[1],  α_prior[2]^2) +
         logdunif(ϵc,        ϵ_prior[1],  ϵ_prior[2])
 
+  # maximum bounds according to uniform priors
+  ϵxpr  = ϵ_prior[2]
+
+
   L       = treelength(Ξ)      # tree length
   dlλ     = deltaλ(Ξ)          # delta change in λ
   ssλ, nλ = sss_gbm(Ξ, αc)     # sum squares in λ
