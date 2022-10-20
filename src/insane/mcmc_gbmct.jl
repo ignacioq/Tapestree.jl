@@ -955,7 +955,7 @@ function update_α_ϵ!(αc     ::Float64,
                      α_prior::NTuple{2,Float64})
 
   ν   = α_prior[1]
-  τ2  = σλ2^2
+  τ2  = σλ^2
   σλ2 = σλ^2
   #rs  = σλ2/τ2
   #αp  = rnorm((dlλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
