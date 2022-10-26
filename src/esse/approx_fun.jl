@@ -74,13 +74,14 @@ end
                                      x ::Array{Float64,1}, 
                                      y ::Array{Float64,N},
                                      ::Val{nc}) where {N, nc}
+
 Returns the values of `y` at `t` using an approximation function.
 """
 @generated function approxf_full(t ::Float64,
                                  r ::Array{Float64,1},
                                  x ::Array{Float64,1}, 
                                  y ::Array{Float64,N},
-                                 ::Type{Val{nc}}) where {N, nc}
+                                 ::Val{nc}) where {N, nc}
 
   lex1 = quote end
   pop!(lex1.args)
@@ -143,18 +144,21 @@ end
 
 
 """
-  make_af(x::Array{Float64,1}, y::Array{Float64,N}, ::Val{ny})
+  make_af(x::Array{Float64,1}, y::Array{Float64,N}, ::Val(ny::Int64))
 
 make approximate function closure
 """
-function make_af(x::Array{Float64,1}, y::Array{Float64,N}, ::Type{Val{ny}}) where {N, ny}
+function make_af(x::Array{Float64,1}, y::Array{Float64,N}, ::Val{ny}) where {N, ny}
 
   af! = (t::Float64, r::Array{Float64,1}) -> 
     begin
-      approxf_full(t::Float64, r::Array{Float64,1}, x::Array{Float64,1}, y::Array{Float64,N}, Val{ny})
+      approxf_full(t::Float64, r::Array{Float64,1}, x::Array{Float64,1}, y::Array{Float64,N}, Val(ny::Int64))
       return nothing
     end
 
   return af!
 end
+
+
+
 

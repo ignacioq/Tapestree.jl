@@ -61,7 +61,7 @@ function simulate_sse(λ          ::Array{Float64,1},
   if verbose
     @info "Tree with $n extant and $ne extinct species successfully simulated"
 
-    if n < 1
+    if n < 2
       @warn "\n
       What would you do if an endangered animal is eating an endangered plant? \n 
       Sometimes nature is too cruel..."
@@ -82,7 +82,7 @@ function simulate_sse(λ          ::Array{Float64,1},
   end
 
   if retry_ext 
-    while n < 1 || (rejectel0 && in(0.0, el))
+    while n < 2 || (rejectel0 && in(0.0, el))
 
       ed, el, st, ea, ee, n, S, k = 
         simulate_edges(λ, μ, l, g, q, β, x, y, ast, t, δt, cov_mod, nspp_max, start)
@@ -92,7 +92,7 @@ function simulate_sse(λ          ::Array{Float64,1},
       if verbose
         @info "Tree with $n extant and $ne extinct species successfully simulated"
 
-        if n < 1
+        if n < 2
           @warn "\n
           What would you do if an endangered animal is eating an endangered plant? \n 
           Sometimes nature is too cruel..."
@@ -117,7 +117,7 @@ function simulate_sse(λ          ::Array{Float64,1},
       end
     end
   else 
-    if n < 1
+    if n < 2
       return Dict{Int64, Vector{Float64}}(), ed, el, false
     end
   end
@@ -200,7 +200,7 @@ function simulate_edges(λ       ::Array{Float64,1},
   model = id_mod(cov_mod, k, h, ny, λ, μ, l, g, q, β)
 
   # make approximate time function
-  af! = make_af(x, y, Val{size(y,2)})
+  af! = make_af(x, y, Val(size(y,2)))
 
   # preallocate af! result vector 
   r = Array{Float64,1}(undef, size(y,2))

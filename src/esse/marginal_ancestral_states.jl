@@ -344,10 +344,10 @@ end
                    λts ::Array{Float64,1},
                    r   ::Array{Float64,1},
                    af! ::Function,
-                   ::Type{Val{k}},
-                   ::Type{Val{h}},
-                   ::Type{Val{ny}},
-                   ::Type{Val{model}})::Float64 where {k, h, ny, model}
+                   ::Val{k},
+                   ::Val{h},
+                   ::Val{ny},
+                   ::Val{model})::Float64 where {k, h, ny, model}
 
 Generated function for full tree likelihood at the root for 
 **pruning** likelihoods that returns a vector for each state.
@@ -360,10 +360,10 @@ Generated function for full tree likelihood at the root for
                                    λts ::Array{Float64,1},
                                    r   ::Array{Float64,1},
                                    af! ::Function,
-                                   ::Type{Val{k}},
-                                   ::Type{Val{h}},
-                                   ::Type{Val{ny}},
-                                   ::Type{Val{model}})::Float64 where {k, h, ny, model}
+                                   ::Val{k},
+                                   ::Val{h},
+                                   ::Val{ny},
+                                   ::Val{model})::Float64 where {k, h, ny, model}
 
   S = create_states(k, h)
 
@@ -504,18 +504,18 @@ end
 
 
 """
-    make_rootll_nj(::Type{Val{h}}, 
-                   ::Type{Val{k}}, 
-                   ::Type{Val{ny}}, 
-                   ::Type{Val{model}},
+    make_rootll_nj(::Val{h}, 
+                   ::Val{k}, 
+                   ::Val{ny}, 
+                   ::Val{model},
                    af!  ::Function) where {h, k, ny, model}
 
 Make root conditioning likelihood function.
 """
-function make_rootll_nj(::Type{Val{h}}, 
-                        ::Type{Val{k}}, 
-                        ::Type{Val{ny}}, 
-                        ::Type{Val{model}},
+function make_rootll_nj(::Val{h}, 
+                        ::Val{k}, 
+                        ::Val{ny}, 
+                        ::Val{model},
                         af!  ::Function) where {h, k, ny, model}
 
   λts = Array{Float64,1}(undef,h*k)
@@ -529,7 +529,7 @@ function make_rootll_nj(::Type{Val{h}},
               p   ::Array{Float64,1}) -> 
       begin
         rootll_full_nj(t, llik, extp, w, p, λts, r, af!,
-          Val{k}, Val{h}, Val{ny}, Val{model})::Float64
+          Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))::Float64
       end
   end
   

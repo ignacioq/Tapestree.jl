@@ -874,7 +874,7 @@ end
                   af! ::Function,
                   ::Val{k},
                   ::Val{h},
-                  ::Val{ny},
+                  ::Val(ny::Int64),
                   ::Val{model}) where {k, h, ny, model}
 
 Creates Covariate GeoHiSSE ODE equation function for `k` areas, 
@@ -887,10 +887,10 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
                                   r   ::Array{Float64,1},
                                   eaft::Array{Float64,1},
                                   af! ::Function,
-                                  ::Type{Val{k}},
-                                  ::Type{Val{h}},
-                                  ::Type{Val{ny}},
-                                  ::Type{Val{model}}) where {k, h, ny, model}
+                                  ::Val{k},
+                                  ::Val{h},
+                                  ::Val{ny},
+                                  ::Val{model}) where {k, h, ny, model}
 
   # n states
   ns = (2^k - 1)*h
@@ -1040,17 +1040,17 @@ end
 """
     make_egeohisse(::Val{k},
                    ::Val{h},
-                   ::Val{ny},
+                   ::Val(ny::Int64),
                    ::Val{model},
                    ::Val{power},
                    af!::Function) where {k, h, ny, model, power}
 
 Make closure for EGeoHiSSE.
 """
-function make_egeohisse(::Type{Val{k}},
-                        ::Type{Val{h}},
-                        ::Type{Val{ny}},
-                        ::Type{Val{model}},
+function make_egeohisse(::Val{k},
+                        ::Val{h},
+                        ::Val{ny},
+                        ::Val{model},
                         af!::Function) where {k, h, ny, model}
 
   r    = Array{Float64,1}(undef, ny)
@@ -1068,7 +1068,7 @@ function make_egeohisse(::Type{Val{k}},
                     u ::Array{Float64,1},
                     p ::Array{Float64,1},
                     t ::Float64,
-                    r,eaft,af!,Val{k},Val{h},Val{ny},Val{model})
+                    r,eaft,af!,Val(k::Int64),Val(h::Int64),Val(ny::Int64),Val(model::NTuple{3, Bool}))
       return nothing
     end
   end
@@ -1091,7 +1091,7 @@ end
                af! ::Function,
                ::Val{k},
                ::Val{h},
-               ::Val{ny},
+               ::Val(ny::Int64),
                ::Val{model}) where {k, h, ny, model}
 
 Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas, 
@@ -1104,10 +1104,10 @@ Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas,
                                r   ::Array{Float64,1},
                                eaft::Array{Float64,1},
                                af! ::Function,
-                               ::Type{Val{k}},
-                               ::Type{Val{h}},
-                               ::Type{Val{ny}},
-                               ::Type{Val{model}}) where {k, h, ny, model}
+                               ::Val{k},
+                               ::Val{h},
+                               ::Val{ny},
+                               ::Val{model}) where {k, h, ny, model}
 
   # n states
   ns = (2^k - 1)*h
@@ -1194,16 +1194,16 @@ end
 """
     make_egeohisse_E(::Val{k},
                      ::Val{h},
-                     ::Val{ny},
+                     ::Val(ny::Int64),
                      ::Val{model},
                      af!::Function) where {k, h, ny, model}
 
 Make closure for Extinction function of EGeoHiSSE.
 """
-function make_egeohisse_E(::Type{Val{k}},
-                          ::Type{Val{h}},
-                          ::Type{Val{ny}},
-                          ::Type{Val{model}},
+function make_egeohisse_E(::Val{k},
+                          ::Val{h},
+                          ::Val{ny},
+                          ::Val{model},
                           af!::Function) where {k, h, ny, model}
 
   r    = Array{Float64,1}(undef, ny)
@@ -1220,7 +1220,7 @@ function make_egeohisse_E(::Type{Val{k}},
                  u ::Array{Float64,1}, 
                  p ::Array{Float64,1}, 
                  t ::Float64,
-                 r, eaft, af!, Val(k), Val(h), Val(ny), Val(model))
+                 r, eaft, af!, Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))
       return nothing
     end
 
@@ -1257,10 +1257,10 @@ Creates Covariate GeoHiSSE Likelihood ODE equation function for `k` areas,
                                af! ::Function,
                                afE!::Function,
                                idxl::Int64,
-                               ::Type{Val{k}},
-                               ::Type{Val{h}},
-                               ::Type{Val{ny}},
-                               ::Type{Val{model}}) where {k, h, ny, model}
+                               ::Val{k},
+                               ::Val{h},
+                               ::Val{ny},
+                               ::Val{model}) where {k, h, ny, model}
 
   # n states
   ns = (2^k - 1)*h
@@ -1357,16 +1357,16 @@ end
 """
     make_egeohisse_M(::Val{k},
                      ::Val{h},
-                     ::Val{ny},
+                     ::Val(ny::Int64),
                      ::Val{model},
                      af!::Function) where {k, h, ny, model}
 
 Make closure for EGeoHiSSE given `E(t)` and in matrix form.
 """
-function make_egeohisse_M(::Type{Val{k}},
-                          ::Type{Val{h}},
-                          ::Type{Val{ny}},
-                          ::Type{Val{model}},
+function make_egeohisse_M(::Val{k},
+                          ::Val{h},
+                          ::Val{ny},
+                          ::Val{model},
                           af! ::Function,
                           afE!::Function,
                           idxl::Int64) where {k, h, ny, model}
@@ -1389,7 +1389,7 @@ function make_egeohisse_M(::Type{Val{k}},
                  pp::Array{Array{Float64,1},1}, 
                  t ::Float64,
                  r, eaft, rE, af!, afE!, idxl,
-                 Val{k}, Val{h}, Val{ny}, Val{model})
+                 Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))
       return nothing
     end
 

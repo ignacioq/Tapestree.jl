@@ -190,7 +190,7 @@ function prepare_data(tv         ::Dict{Int64,Array{Float64,1}},
           phid  = $phid"
 
   # make hidden factors assigning 
-  assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h})
+  assign_hidfacs! = make_assign_hidfacs(Val(k::Int64), Val(h::Int64))
 
   # force same parameter values for constraints
   for c in Base.OneTo(ncch)
@@ -321,7 +321,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
   ned = size(ed,1)
 
   # make z(t) approximation from discrete data `af!()`
-  af! = make_af(x, y, Val{ny})
+  af! = make_af(x, y, Val(ny::Int64))
 
   # define model
   model = define_mod(cov_mod, k, h, ny)
@@ -459,7 +459,7 @@ function prepare_data(cov_mod    ::NTuple{M,String},
           phid  = $phid"
 
   # make hidden factors assigning 
-  assign_hidfacs! = make_assign_hidfacs(Val{k}, Val{h})
+  assign_hidfacs! = make_assign_hidfacs(Val(k::Int64), Val(h::Int64))
 
   # force same parameter values for constraints
   for c in Base.OneTo(ncch)
