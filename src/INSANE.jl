@@ -18,6 +18,8 @@ module INSANE
   # other submodules dependencies
   using ..Utils
 
+  const err = √eps()
+
   # files
   include("insane/iTree.jl")
   include("insane/iTreeX.jl")
