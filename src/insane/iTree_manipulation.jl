@@ -463,23 +463,23 @@ end
 """
     _fossilizepasttips!(tree::T,
                         t   ::Float64,
-                        rerr::Float64) where {T <: iTf}
+                        raccerr::Float64) where {T <: iTf}
 
 Change all past tips to fossil tips, initialized at tree height `t`.
 """
 function _fossilizepasttips!(tree::T,
                              t   ::Float64,
-                             rerr::Float64) where {T <: iTf}
+                             raccerr::Float64) where {T <: iTf}
 
   t -= e(tree)
 
   if def1(tree)
-    _fossilizepasttips!(tree.d1::T, t, rerr)
+    _fossilizepasttips!(tree.d1::T, t, raccerr)
     if def2(tree)
-      _fossilizepasttips!(tree.d2::T, t, rerr)
+      _fossilizepasttips!(tree.d2::T, t, raccerr)
     end
   else
-    if istip(tree::T) && !isapprox(t, 0.0, atol = rerr)
+    if istip(tree::T) && !isapprox(t, 0.0, atol = raccerr)
       fossilize!(tree)
     end
   end
@@ -2208,7 +2208,7 @@ function _remove_fossils!(tree::iTfbd)
       t0  = 0.0
       tn  = dti - fdt(tree)
       i   = 1
-      while e1 > tn + dti + √eps()
+      while e1 > tn + dti + accerr
         lλ1[i] = linpred(tn, t0, t0 + dti, lλ1[i], lλ1[i+1])
         lμ1[i] = linpred(tn, t0, t0 + dti, lμ1[i], lμ1[i+1])
         tn += dti
@@ -2218,7 +2218,7 @@ function _remove_fossils!(tree::iTfbd)
       if fdt(tree) < dti
         lλ1[i] = lλ1[i+1]
         lμ1[i] = lμ1[i+1]
-        if (e1 - t0) > dti + √eps() || e1 < tn
+        if (e1 - t0) > dti + accerr || e1 < tn
           pop!(lλ1)
           pop!(lμ1)
         end

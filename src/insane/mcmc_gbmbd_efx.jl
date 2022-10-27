@@ -15,33 +15,35 @@ Created 03 09 2020
 """
     insane_gbmbd(tree    ::sT_label,
                  out_file::String,
-                 tv       ::Vector{Float64},
-                 μv       ::Vector{Float64};
+                 tv       ::Array{Vector{Float64}},
+                 ev       ::Array{Vector{Float64}};
                  λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                  μa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
-                 σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
+                 α_prior ::NTuple{2,Float64} = (0.0, 0.5),
+                 σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
+                 σμ_prior::NTuple{2,Float64} = (5.0, 0.5),
                  niter   ::Int64             = 1_000,
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
                  ϵi      ::Float64           = 0.2,
                  λi      ::Float64           = NaN,
-                 μi      ::Float64           = NaN,
                  αi      ::Float64           = 0.0,
                  σλi     ::Float64           = 0.01,
                  σμi     ::Float64           = 0.01,
-                 pupdp   ::NTuple{4,Float64} = (0.0, 0.1, 0.2, 0.2),
-                 δt      ::Float64           = 5e-3,
+                 pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
+                 δt      ::Float64           = 1e-3,
                  prints  ::Int64             = 5,
+                 survival::Bool              = true,
+                 mxthf   ::Float64           = Inf,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+
 
 Run insane for `gbm-bd` with fixed extinction.
 """
 function insane_gbmbd(tree    ::sT_label,
                       out_file::String,
-                      tv       ::Vector{Float64},
-                      ev       ::Vector{Float64};
+                      tv       ::Vector{Vector{Float64}},
+                      ev       ::Vector{Vector{Float64}};
                       λa_prior::NTuple{2,Float64} = (0.0, 100.0),
                       μa_prior::NTuple{2,Float64} = (0.0, 100.0),
                       α_prior ::NTuple{2,Float64} = (0.0, 0.5),
@@ -76,6 +78,15 @@ function insane_gbmbd(tree    ::sT_label,
     tρ = Dict(tl[i] => tρu for i in 1:n)
   end
 
+  # sort extinction vectors 
+  ev = deepcopy(ev)
+  tv = deepcopy(tv)
+  for i in Base.OneTo(lastindex(tv))
+    io = sortperm(tv[i], rev = true)
+    tv[i] = tv[i][io]
+    ev[i] = log.(ev[i][io])
+  end
+
   # estimate branch split (multiple of δt)
   ndts = floor(th * mxthf/δt)
   maxt = δt * ndts
@@ -83,16 +94,23 @@ function insane_gbmbd(tree    ::sT_label,
   # make fix tree directory
   idf = make_idf(tree, tρ, maxt)
 
-  # extinction at speciation times and transform extinction to log space
-  io = sortperm(tv, rev= true)
-  tv = tv[io]
-  ev = ev[io]
+  # make one per unit in `idf`
+  ixi = nnodesinternal(tre)*2 + 2
+  ixs = Int64[]
+  for bi in reverse(idf)
+    ixi -= ismid(bi) ? 0 : 1 
+    push!(ixs, ixi)
+  end
+  reverse!(ixs)
 
-  ix = findfirst(x -> x < th, tv) - 1
-  tv = tv[ix:end]
-  ev = log.(ev[ix:end])
+  tv = tv[ixs]
+  ev = ev[ixs]
+
+  # find initial extinction rate
+  ix = findfirst(x -> x < th, tv[1]) - 1
+  tv[1] = tv[1][ix:end]
   ix = 1
-  μi = exp(linpred(th, tv[ix], tv[ix+1], ev[ix], ev[ix+1]))
+  μi = exp(linpred(th, tv[1][ix], tv[1][ix+1], ev[1][ix], ev[1][ix+1]))
 
   # starting parameters (using method of moments)
   if isnan(λi)
@@ -145,8 +163,6 @@ end
 
 
 
-
-
 """
     mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                     idf     ::Vector{iBffs},
@@ -156,12 +172,16 @@ end
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
-                    αc     ::Float64,
+                    αc      ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
                     mc      ::Float64,
+                    tv      ::Vector{Vector{Float64}},
+                    ev      ::Vector{Vector{Float64}},
+                    ixiv    ::Array{Int64,1},
+                    ixfv    ::Array{Int64,1},
                     th      ::Float64,
-                    crown    ::Bool,
+                    crown   ::Int64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
@@ -182,8 +202,8 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          σλc     ::Float64,
                          σμc     ::Float64,
                          mc      ::Float64,
-                         tv      ::Vector{Float64},
-                         ev      ::Vector{Float64},
+                         tv      ::Vector{Vector{Float64}},
+                         ev      ::Vector{Vector{Float64}},
                          ixiv    ::Array{Int64,1},
                          ixfv    ::Array{Int64,1},
                          th      ::Float64,
@@ -255,7 +275,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, ssμ, nλ, L =
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, ssμ, nλ, L,
-            ixiv, ixfv, tv, ev, δt, srδt)
+            ixiv, ixfv, tv[bix], ev[bix], δt, srδt)
 
       end
     end
@@ -303,8 +323,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     σλc     ::Float64,
                     σμc     ::Float64,
                     mc      ::Float64,
-                    tv      ::Vector{Float64},
-                    ev      ::Vector{Float64},
+                    tv      ::Vector{Vector{Float64}},
+                    ev      ::Vector{Vector{Float64}},
                     ixiv    ::Array{Int64,1},
                     ixfv    ::Array{Int64,1},
                     th      ::Float64,
@@ -406,7 +426,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         llc, dlλ, ssλ, ssμ, nλ, L =
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, dlλ, ssλ, ssμ, nλ, L,
-            ixiv, ixfv, tv, ev, δt, srδt)
+            ixiv, ixfv, tv[bix], ev[bix], δt, srδt)
 
         # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
         #  if !isapprox(ll0, llc, atol = 1e-4)

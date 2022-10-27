@@ -18,7 +18,7 @@ module INSANE
   # other submodules dependencies
   using ..Utils
 
-  const err = √eps()
+  const accerr = √eps()
 
   # files
   include("insane/iTree.jl")

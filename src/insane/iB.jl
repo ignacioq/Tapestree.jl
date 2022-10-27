@@ -1012,3 +1012,12 @@ Return final speciation rate at time `t.
 
 
 
+
+"""
+    ismid(id::iBffs)
+
+Return final speciation rate at time `t.
+"""
+ismid(id::iBffs) = d1(id) > 0 && iszero(d2(id)) && !isfossil(id)
+
+
