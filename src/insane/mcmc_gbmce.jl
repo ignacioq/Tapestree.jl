@@ -351,9 +351,6 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
  
-        #check_pr(pupi, i)
-        #check_ll(pupi, i)
-
       # update σλ
       elseif pupi === 2
 
@@ -361,9 +358,6 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
           update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, crown,
             δt, srδt, σλ_prior, α_prior)
  
-        #check_pr(pupi, i)
-        #check_ll(pupi, i)
-
       # update μ
       elseif pupi === 3
 
@@ -371,9 +365,6 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
           update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, crown,
             δt, srδt, μ_prior)
  
-        #check_pr(pupi, i)
-        #check_ll(pupi, i)
-
       # gbm update
       elseif pupi === 4
 
@@ -383,9 +374,6 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
         llc, prc, dλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, prc, dλ, ssλ, mc, th,
             δt, srδt, λa_prior)
- 
-        #check_pr(pupi, i)
-        #check_ll(pupi, i)
 
       # forward simulation update
       else
@@ -395,10 +383,11 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
         llc, dλ, ssλ, nλ, ne, L =
           update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L,
             δt, srδt)
- 
-        #check_pr(pupi, i)
-        #check_ll(pupi, i)
       end
+    
+    # check_pr(pupi, i)
+    # check_ll(pupi, i)
+
     end
 
     # log parameters

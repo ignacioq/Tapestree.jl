@@ -386,9 +386,6 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
-        check_pr(pupi, i)
-        check_ll(pupi, i)
-
       # update σ
       elseif pupi === 2
 
@@ -396,18 +393,12 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           update_σ_ϵ!(σλc, lλ(Ξ[1])[1], αc, ϵc, ssλ, nλ, llc, prc, mc, th, crown,
             δt, srδt, σλ_prior, α_prior)
 
-        check_pr(pupi, i)
-        check_ll(pupi, i)
-
       # update ϵ
       elseif pupi === 3
 
         llc, ϵc, mc =
           update_ϵ!(ϵc, lλ(Ξ[1])[1], αc, σλc, llc, mc, th, crown, ϵtn,
             ne, Σλ, δt, srδt, ϵxpr)
-
-        check_pr(pupi, i)
-        check_ll(pupi, i)
 
       # gbm update
       elseif pupi === 4
@@ -419,9 +410,6 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, prc, dlλ, ssλ, Σλ, mc, th,
             δt, srδt, λa_prior)
 
-        check_pr(pupi, i)
-        check_ll(pupi, i)
-
       # forward simulation update
       else
 
@@ -430,10 +418,10 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
         llc, dlλ, ssλ, Σλ, nλ, ne, L =
           update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, nλ, ne, L,
             δt, srδt)
-
-        check_pr(pupi, i)
-        check_ll(pupi, i)
       end
+    
+    # check_pr(pupi, i)
+    # check_ll(pupi, i)
 
     end
 

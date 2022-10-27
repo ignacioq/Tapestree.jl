@@ -130,7 +130,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
   # starting likelihood and prior
   llc = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - nsi*lλ(Ξ[1])[1] + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
-        logdnorm(αc,        α_prior[1], α_prior[2]^2)
+        logdnorm(αc,        α_prior[1], σλc^2)
 
   L       = treelength(Ξ)      # tree length
   dλ      = deltaλ(Ξ)          # delta change in λ
@@ -158,7 +158,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
       # update diffusion
       elseif pupi === 2
 
-        llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
+        llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
 
       # update gbm
       elseif pupi === 3
@@ -241,6 +241,23 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
+  function check_pr(pupi::Int64, it::Int64)
+   pr0 = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
+         logdnorm(αc,        α_prior[1], σλc^2)
+   if !isapprox(pr0, prc, atol = 1e-5)
+      error(string("Wrong prior computation during the ", ["α","σλ","gbm","forward simulation"][pupi], 
+                   " update, at iteration ", it, ": pr0=", pr0, " and prc=", prc))
+   end
+  end
+
+  function check_ll(pupi::Int64, it::Int64)
+   ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+   if !isapprox(ll0, llc, atol = 1e-5)
+      error(string("Wrong likelihood computation during the ", ["α","σλ","gbm","forward simulation"][pupi], 
+                   " update, at iteration ", it, ": ll0=", ll0, " and llc=", llc))
+   end
+  end
+
   for it in Base.OneTo(niter)
 
     shuffle!(pup)
@@ -256,23 +273,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
-
       # update diffusion rate
       elseif pupi === 2
 
-        llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
-
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
-
+        llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
+        
       # update gbm
       elseif pupi === 3
 
@@ -282,25 +287,17 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
         llc, dλ, ssλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
-
       # update by forward simulation
       else
         bix = ceil(Int64,rand()*el)
 
         llc, dλ, ssλ, nλ, L =
           update_fs!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, nλ, L, δt, srδt)
-
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-        # if !isapprox(ll0, llc, atol = 1e-4)
-        #    @show ll0, llc, it, pupi
-        #    return
-        # end
       end
+    
+    # check_pr(pupi, it)
+    # check_ll(pupi, it)
+
     end
 
     # log parameters
@@ -806,12 +803,13 @@ function update_α!(αc     ::Float64,
 
   # ratio
   ν   = α_prior[1]
-  τ2  = α_prior[2]^2
+  τ2  = σλ^2
   σλ2 = σλ^2
-  rs  = σλ2/τ2
+  #rs  = σλ2/τ2
 
   # gibbs update for σ
-  αp = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  #αp = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  αp = rnorm((dλ + ν)/(1 + L), sqrt(σλ2/(1 + L)))
 
   # update prior
   prc += llrdnorm_x(αp, αc, ν, τ2)
@@ -853,15 +851,15 @@ function update_α!(αc     ::Float64,
 
   # ratio
   ν   = α_prior[1]
-  τ2  = α_prior[2]^2
+  τ2  = σλ^2
   σλ2 = σλ^2
-  rs  = σλ2/τ2
+  #rs  = σλ2/τ2
 
   cpow = (1.0 - pow)
 
   # gibbs update for α
-  m   = (dλ + rs*ν)/(rs + L)
-  s2  = σλ2/(rs + L)
+  m   = (dλ + ν)/(1 + L)
+  s2  = σλ2/(1 + L)
   m0  = α_rdist[1]
   s02 = α_rdist[2]^2
   αp  = rnorm((m0 * s2 * cpow + m * s02 * pow) / (pow * s02 + s2 * cpow),
@@ -880,20 +878,24 @@ end
 
 """
     update_σ!(σλc     ::Float64,
+              α       ::Float64,
               ssλ     ::Float64,
               n       ::Float64,
               llc     ::Float64,
               prc     ::Float64,
-              σλ_prior::NTuple{2,Float64})
+              σλ_prior::NTuple{2,Float64},
+              α_prior ::NTuple{2,Float64})
 
 Gibbs update for `σλ`.
 """
 function update_σ!(σλc     ::Float64,
+                   α       ::Float64,
                    ssλ     ::Float64,
                    n       ::Float64,
                    llc     ::Float64,
                    prc     ::Float64,
-                   σλ_prior::NTuple{2,Float64})
+                   σλ_prior::NTuple{2,Float64},
+                   α_prior ::NTuple{2,Float64})
 
   σλ_p1 = σλ_prior[1]
   σλ_p2 = σλ_prior[2]
@@ -903,6 +905,7 @@ function update_σ!(σλc     ::Float64,
 
   # update prior
   prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+  prc += llrdnorm_σ²(α, α_prior[1], σλp2, σλc^2)
 
   σλp = sqrt(σλp2)
 
