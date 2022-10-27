@@ -38,6 +38,7 @@ module INSANE
   include("insane/sim_gbmce.jl")
   include("insane/sim_gbmct.jl")
   include("insane/sim_gbmfbd.jl")
+  include("insane/sim_shift.jl")
   include("insane/sim_cpbX.jl")
   include("insane/sim_cbdX.jl")
   include("insane/sim_cfbdX.jl")
