@@ -231,7 +231,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
 
         llc, prc, σλc, mc =
           update_σ_ϵ!(σλc, lλ(Ξ[1])[1], αc, ϵc, ssλ, nλ, llc, prc, mc, th, 
-            crown, δt, srδt, σλ_prior)
+            crown, δt, srδt, σλ_prior, α_prior)
 
       elseif pupi === 3
 
@@ -247,9 +247,9 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, dlλ, ssλ, Σλ, mc =
-          update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt)
+        llc, prc, dlλ, ssλ, Σλ, mc =
+          update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, prc, dlλ, ssλ, Σλ, mc, th,
+            δt, srδt, λa_prior)
 
       # forward simulation update
       else
@@ -349,6 +349,25 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
   Ξv = iTct[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
+  
+  function check_pr(pupi::Int64, i::Int64)
+    pr0 = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
+          logdgamma(exp(lλ(Ξ[1])[1]),   λa_prior[1], λa_prior[2])  +
+          logdnorm(αc,        α_prior[1],  σλc^2) +
+          logdunif(ϵc,        ϵ_prior[1],  ϵ_prior[2])
+    if !isapprox(pr0, prc, atol = 1e-5)
+       error(string("Wrong prior computation during the ", ["α","σλ","ϵ","gbm","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": pr0=", pr0, " and prc=", prc))
+    end
+  end
+
+  function check_ll(pupi::Int64, i::Int64)
+    ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
+    if !isapprox(ll0, llc, atol = 1e-5)
+       error(string("Wrong likelihood computation during the ", ["α","σλ","ϵ","gbm","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": ll0=", ll0, " and llc=", llc))
+    end
+  end
 
   for i in Base.OneTo(niter)
 
@@ -357,6 +376,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
     # parameter updates
     for pupi in pup
 
+      # update α
       if pupi === 1
 
         llc, prc, αc, mc =
@@ -366,35 +386,28 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
-        #    return
-        # end
+        check_pr(pupi, i)
+        check_ll(pupi, i)
 
+      # update σ
       elseif pupi === 2
 
         llc, prc, σλc, mc =
           update_σ_ϵ!(σλc, lλ(Ξ[1])[1], αc, ϵc, ssλ, nλ, llc, prc, mc, th, crown,
-            δt, srδt, σλ_prior)
+            δt, srδt, σλ_prior, α_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
-        #    return
-        # end
+        check_pr(pupi, i)
+        check_ll(pupi, i)
 
+      # update ϵ
       elseif pupi === 3
 
         llc, ϵc, mc =
           update_ϵ!(ϵc, lλ(Ξ[1])[1], αc, σλc, llc, mc, th, crown, ϵtn,
             ne, Σλ, δt, srδt, ϵxpr)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
-        #    return
-        # end
+        check_pr(pupi, i)
+        check_ll(pupi, i)
 
       # gbm update
       elseif pupi === 4
@@ -402,15 +415,12 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, dlλ, ssλ, Σλ, mc =
-          update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt)
+        llc, prc, dlλ, ssλ, Σλ, mc =
+          update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, prc, dlλ, ssλ, Σλ, mc, th,
+            δt, srδt, λa_prior)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
-        #    return
-        # end
+        check_pr(pupi, i)
+        check_ll(pupi, i)
 
       # forward simulation update
       else
@@ -421,11 +431,8 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, nλ, ne, L,
             δt, srδt)
 
-        # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
-        #  if !isapprox(ll0, llc, atol = 1e-5)
-        #    @show ll0, llc, pupi, i, Ξ
-        #    return
-        # end
+        check_pr(pupi, i)
+        check_ll(pupi, i)
       end
 
     end
@@ -820,37 +827,41 @@ end
 
 
 """
-    update_gbm!(bix  ::Int64,
-                Ξ    ::Vector{iTct},
-                idf  ::Vector{iBffs},
-                α    ::Float64,
-                σλ   ::Float64,
-                ϵ    ::Float64,
-                llc  ::Float64,
-                dlλ   ::Float64,
-                ssλ  ::Float64,
-                Σλ   ::Float64,
-                mc   ::Float64,
-                th   ::Float64,
-                δt   ::Float64,
-                srδt ::Float64)
+    update_gbm!(bix     ::Int64,
+                Ξ       ::Vector{iTct},
+                idf     ::Vector{iBffs},
+                α       ::Float64,
+                σλ      ::Float64,
+                ϵ       ::Float64,
+                llc     ::Float64,
+                prc     ::Float64,
+                dlλ     ::Float64,
+                ssλ     ::Float64,
+                Σλ      ::Float64,
+                mc      ::Float64,
+                th      ::Float64,
+                δt      ::Float64,
+                srδt    ::Float64,
+                λa_prior::NTuple{2,Float64})
 
 Make a `gbm` update for an internal branch and its descendants.
 """
-function update_gbm!(bix  ::Int64,
-                     Ξ    ::Vector{iTct},
-                     idf  ::Vector{iBffs},
-                     α    ::Float64,
-                     σλ   ::Float64,
-                     ϵ    ::Float64,
-                     llc  ::Float64,
-                     dlλ   ::Float64,
-                     ssλ  ::Float64,
-                     Σλ   ::Float64,
-                     mc   ::Float64,
-                     th   ::Float64,
-                     δt   ::Float64,
-                     srδt ::Float64)
+function update_gbm!(bix     ::Int64,
+                     Ξ       ::Vector{iTct},
+                     idf     ::Vector{iBffs},
+                     α       ::Float64,
+                     σλ      ::Float64,
+                     ϵ       ::Float64,
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     dlλ     ::Float64,
+                     ssλ     ::Float64,
+                     Σλ      ::Float64,
+                     mc      ::Float64,
+                     th      ::Float64,
+                     δt      ::Float64,
+                     srδt    ::Float64,
+                     λa_prior::NTuple{2,Float64})
   @inbounds begin
 
     ξi   = Ξ[bix]
@@ -863,16 +874,16 @@ function update_gbm!(bix  ::Int64,
     # if crown root
     if root && iszero(e(bi))
       ξ2 = Ξ[i2]
-      llc, dlλ, ssλ, Σλ, mc =
-        _crown_update!(ξi, ξ1, ξ2, α, σλ, ϵ, llc, dlλ, ssλ, Σλ, mc, th,
-          δt, srδt)
+      llc, prc, dlλ, ssλ, Σλ, mc =
+        _crown_update!(ξi, ξ1, ξ2, α, σλ, ϵ, llc, prc, dlλ, ssλ, Σλ, mc, th,
+          δt, srδt, λa_prior)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem branch
       if root
-        llc, dlλ, ssλ, Σλ, mc =
-          _stem_update!(ξi, α, σλ, ϵ, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt)
+        llc, prc, dlλ, ssλ, Σλ, mc =
+          _stem_update!(ξi, α, σλ, ϵ, llc, prc, dlλ, ssλ, Σλ, mc, th,
+            δt, srδt, λa_prior)
       end
 
       # updates within the parent branch
@@ -915,7 +926,7 @@ function update_gbm!(bix  ::Int64,
     end
   end
 
-  return llc, dlλ, ssλ, Σλ, mc
+  return llc, prc, dlλ, ssλ, Σλ, mc
 end
 
 
@@ -991,7 +1002,8 @@ end
                 crown   ::Int64,
                 δt      ::Float64,
                 srδt    ::Float64,
-                σλ_prior::NTuple{2,Float64})
+                σλ_prior::NTuple{2,Float64},
+                α_prior ::NTuple{2,Float64})
 
 Gibbs update for `σλ`.
 """
@@ -1008,7 +1020,8 @@ function update_σ_ϵ!(σλc     ::Float64,
                      crown   ::Int64,
                      δt      ::Float64,
                      srδt    ::Float64,
-                     σλ_prior::NTuple{2,Float64})
+                     σλ_prior::NTuple{2,Float64},
+                     α_prior ::NTuple{2,Float64})
 
   σλ_p1 = σλ_prior[1]
   σλ_p2 = σλ_prior[2]
@@ -1023,6 +1036,7 @@ function update_σ_ϵ!(σλc     ::Float64,
   if -randexp() < llr
     llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) + llr
     prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+    prc += llrdnorm_σ²(α, α_prior[1], σλp2, σλc^2)
     σλc  = σλp
     mc   = mp
   end

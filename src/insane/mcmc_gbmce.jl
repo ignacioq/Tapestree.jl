@@ -208,7 +208,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
       elseif pupi === 2
 
         llc, prc, σλc, mc =
-          update_σ!(σλc, αc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, crown,
+          update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, crown,
             δt, srδt, σλ_prior, α_prior)
 
       # update extinction
@@ -313,7 +313,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
   Ξv = iTce[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
-  
+
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
           logdgamma(exp(lλ(Ξ[1])[1]),   λa_prior[1], λa_prior[2])  +
@@ -358,12 +358,13 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
       elseif pupi === 2
 
         llc, prc, σλc, mc =
-          update_σ!(σλc, αc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, crown,
+          update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, crown,
             δt, srδt, σλ_prior, α_prior)
  
         #check_pr(pupi, i)
         #check_ll(pupi, i)
 
+      # update μ
       elseif pupi === 3
 
         llc, prc, μc, mc =
@@ -936,7 +937,6 @@ end
 """
 
     update_σ!(σλc     ::Float64,
-              αc      ::Float64,
               λ0      ::Float64,
               α       ::Float64,
               μ       ::Float64,
@@ -955,7 +955,6 @@ end
 Gibbs update for `σλ`.
 """
 function update_σ!(σλc     ::Float64,
-                   αc      ::Float64,
                    λ0      ::Float64,
                    α       ::Float64,
                    μ       ::Float64,
@@ -984,7 +983,7 @@ function update_σ!(σλc     ::Float64,
   if -randexp() < llr
     llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) + llr
     prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
-    prc += llrdnorm_σ²(αc, α_prior[1], σλp2, σλc^2)
+    prc += llrdnorm_σ²(α, α_prior[1], σλp2, σλc^2)
     σλc  = σλp
     mc   = mp
   end

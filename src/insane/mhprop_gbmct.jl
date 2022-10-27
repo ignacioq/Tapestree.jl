@@ -124,13 +124,15 @@ end
                   σλ   ::Float64,
                   ϵ    ::Float64,
                   llc  ::Float64,
+                  prc  ::Float64,
                   dλ   ::Float64,
                   ssλ  ::Float64,
                   Σλ   ::Float64,
                   mc   ::Float64,
                   th   ::Float64,
                   δt   ::Float64,
-                  srδt ::Float64)
+                  srδt ::Float64,
+                  λa_prior::NTuple{2,Float64})
 
 Do gbm update for stem root.
 """
@@ -139,13 +141,15 @@ function _stem_update!(ξi   ::iTct,
                        σλ   ::Float64,
                        ϵ    ::Float64,
                        llc  ::Float64,
+                       prc  ::Float64,
                        dλ   ::Float64,
                        ssλ  ::Float64,
                        Σλ   ::Float64,
                        mc   ::Float64,
                        th   ::Float64,
                        δt   ::Float64,
-                       srδt ::Float64)
+                       srδt ::Float64,
+                       λa_prior::NTuple{2,Float64})
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -177,6 +181,7 @@ function _stem_update!(ξi   ::iTct,
 
       if lU < llr
         llc += llrbm + llr
+        prc += llrdgamma(exp(λp[1]), exp(λc[1]), λa_prior[1], λa_prior[2])
         dλ  += λc[1] - λr
         ssλ += ssrλ
         Σλ  += Σrλ
@@ -186,7 +191,7 @@ function _stem_update!(ξi   ::iTct,
     end
   end
 
-  return llc, dλ, ssλ, Σλ, mc
+  return llc, prc, dλ, ssλ, Σλ, mc
 end
 
 
@@ -200,13 +205,15 @@ end
                    σλ   ::Float64,
                    ϵ    ::Float64,
                    llc  ::Float64,
+                   prc  ::Float64,
                    dλ   ::Float64,
                    ssλ  ::Float64,
                    Σλ   ::Float64,
                    mc   ::Float64,
                    th   ::Float64,
                    δt   ::Float64,
-                   srδt ::Float64)
+                   srδt ::Float64,
+                   λa_prior::NTuple{2,Float64})
 
 Do gbm update for crown root.
 """
@@ -217,13 +224,15 @@ function _crown_update!(ξi   ::iTct,
                         σλ   ::Float64,
                         ϵ    ::Float64,
                         llc  ::Float64,
+                        prc  ::Float64,
                         dλ   ::Float64,
                         ssλ  ::Float64,
                         Σλ   ::Float64,
                         mc   ::Float64,
                         th   ::Float64,
                         δt   ::Float64,
-                        srδt ::Float64)
+                        srδt ::Float64,
+                        λa_prior::NTuple{2,Float64})
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -267,6 +276,7 @@ function _crown_update!(ξi   ::iTct,
 
       if lU < llr
         llc += llrbm1 + llrbm2 + llr
+        prc += llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2])
         dλ  += 2.0*(λi - λr)
         ssλ += ssrλ1 + ssrλ2
         Σλ  += Σrλ1 + Σrλ2
@@ -278,7 +288,7 @@ function _crown_update!(ξi   ::iTct,
     end
   end
 
-  return llc, dλ, ssλ, Σλ, mc
+  return llc, prc, dλ, ssλ, Σλ, mc
 end
 
 
