@@ -95,7 +95,7 @@ function insane_gbmbd(tree    ::sT_label,
   idf = make_idf(tree, tρ, maxt)
 
   # make one per unit in `idf`
-  ixi = nnodesinternal(tre)*2 + 2
+  ixi = nnodesinternal(tree)*2 + 2
   ixs = Int64[]
   for bi in reverse(idf)
     ixi -= ismid(bi) ? 0 : 1 
