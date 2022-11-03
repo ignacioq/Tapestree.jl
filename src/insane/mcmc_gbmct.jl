@@ -463,7 +463,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
 
         # flush parameters
         sthin += 1
-        if sthin === nthin
+        if sthin === nflush
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t",  αc, "\t", σλc, "\t", ϵc,"\n"))

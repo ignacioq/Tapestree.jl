@@ -364,7 +364,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
         # flush parameters
         sthin += 1
-        if sthin === nthin
+        if sthin === nflush
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\n"))
           flush(of)

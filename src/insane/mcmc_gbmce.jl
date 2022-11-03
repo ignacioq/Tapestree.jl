@@ -317,7 +317,6 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
   treev = iTce[]
 
   # flush to file
-  nsave = fld(niter,nflush)
   sthin = 0
 
   open(ofile*".log", "w") do of
@@ -429,7 +428,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         # flush parameters
         sthin += 1
-        if sthin === nthin
+        if sthin === nflush
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t",  αc, "\t", σλc, "\t", μc,"\n"))

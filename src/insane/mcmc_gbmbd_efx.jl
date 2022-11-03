@@ -367,7 +367,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   # number of branches and of triads
   nbr  = lastindex(idf)
   # flush to file
-  nsave = fld(niter,nflush)
   sthin = 0
 
   open(ofile*".log", "w") do of
@@ -469,7 +468,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         # flush parameters
         sthin += 1
-        if sthin === nthin
+        if sthin === nflush
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
