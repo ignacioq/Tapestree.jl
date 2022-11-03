@@ -1388,7 +1388,7 @@ function _remove_unsampled!(tree::iTpb)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return iTpb(e(tree), isfix(tree), dt(tree), fdt(tree), lλ(tree))
+        return iTpb(e(tree), dt(tree), fdt(tree), isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
         lλ0 = lλ(tree)
