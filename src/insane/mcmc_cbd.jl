@@ -14,7 +14,7 @@ Created 25 08 2020
 
 """
     insane_cbd(tree    ::sT_label,
-               out_file::String;
+               ofile   ::String;
                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                niter   ::Int64                 = 1_000,
@@ -35,13 +35,14 @@ Created 25 08 2020
 
 Run insane for constant birth-death.
 """
-function insane_cbd(tree    ::sT_label,
-                    out_file::String;
+function insane_cbd(tree    ::sT_label;
                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
+                    nflush  ::Int64                 = nthin,
+                    ofile   ::String                = homedir(),
                     # marginal::Bool                  = false,
                     # nitpp   ::Int64                 = 100,
                     # nthpp   ::Int64                 = 10,
@@ -97,12 +98,7 @@ function insane_cbd(tree    ::sT_label,
 
   # mcmc
   r, treev, λc, μc, mc = mcmc_cbd(Ξ, idf, llc, prc, λc, μc, mc, ns, L, 
-    th, crown, λ_prior, μ_prior, niter, nthin, pup, prints)
-
-  pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2))
-
-  write_ssr(r, pardic, out_file)
+    th, crown, λ_prior, μ_prior, pup, niter, nthin, nflush, ofile, prints)
 
   # if marginal
 
@@ -240,20 +236,24 @@ end
 
 """
     mcmc_cbd(Ξ      ::Vector{sTbd},
-            idf    ::Array{iBffs,1},
-            llc    ::Float64,
-            prc    ::Float64,
-            λc     ::Float64,
-            μc     ::Float64,
-            mc     ::Float64,
-            th     ::Float64,
-            crown  ::Int64,
-            λ_prior::NTuple{2,Float64},
-            μ_prior::NTuple{2,Float64},
-            niter  ::Int64,
-            nthin  ::Int64,
-            pup    ::Array{Int64,1},
-            prints ::Int64)
+             idf    ::Array{iBffs,1},
+             llc    ::Float64,
+             prc    ::Float64,
+             λc     ::Float64,
+             μc     ::Float64,
+             mc     ::Float64,
+             ns     ::Float64,
+             L      ::Float64,
+             th     ::Float64,
+             crown  ::Int64,
+             λ_prior::NTuple{2,Float64},
+             μ_prior::NTuple{2,Float64},
+             pup    ::Array{Int64,1},
+             niter  ::Int64,
+             nthin  ::Int64,
+             nflush ::Int64,
+             ofile  ::String,
+             prints ::Int64)
 
 MCMC da chain for constant birth-death using forward simulation.
 """
@@ -270,9 +270,11 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
                   crown  ::Int64,
                   λ_prior::NTuple{2,Float64},
                   μ_prior::NTuple{2,Float64},
+                  pup    ::Array{Int64,1},
                   niter  ::Int64,
                   nthin  ::Int64,
-                  pup    ::Array{Int64,1},
+                  nflush ::Int64,
+                  ofile  ::String,
                   prints ::Int64)
 
   el = lastindex(idf)
@@ -283,77 +285,101 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
   lthin, lit = 0, 0
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 5)
+  r = Array{Float64,2}(undef, nlogs, 5)
 
   # make tree vector
   treev  = sTbd[]
 
-  pbar = Progress(niter, prints, "running mcmc...", 20)
+  # flush to file
+  nsave = fld(niter,nflush)
+  sthin = 0
 
-  for it in Base.OneTo(niter)
+  open(ofile*".log", "w") do of
+    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\n")
+    flush(of)
 
-    shuffle!(pup)
+    open(ofile*".txt", "w") do tf
 
-    for p in pup
+      pbar = Progress(niter, prints, "running mcmc...", 20)
 
-      # λ proposal
-      if p === 1
+      for it in Base.OneTo(niter)
 
-        llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
+        shuffle!(pup)
 
-        # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        for p in pup
 
-      # μ proposal
-      elseif p === 2
+          # λ proposal
+          if p === 1
 
-        llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
+            llc, prc, λc, mc =
+              update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
 
-      # forward simulation proposal proposal
-      else
+          # μ proposal
+          elseif p === 2
 
-        bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
+            llc, prc, μc, mc =
+              update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
 
-        # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
+
+          # forward simulation proposal proposal
+          else
+
+            bix = ceil(Int64,rand()*el)
+            llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
+
+            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
+          end
+        end
+
+        # log parameters
+        lthin += 1
+        if lthin === nthin
+
+          lit += 1
+          @inbounds begin
+            r[lit,1] = Float64(it)
+            r[lit,2] = llc
+            r[lit,3] = prc
+            r[lit,4] = λc
+            r[lit,5] = μc
+            push!(treev, couple(Ξ, idf, 1))
+          end
+          lthin = 0
+        end
+
+        # flush parameters
+        sthin += 1
+        if sthin === nthin
+          write(of, 
+            string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\n"))
+          flush(of)
+          write(tf, 
+            string(istring(couple(Ξ, idf, 1)), "\n"))
+          flush(tf)
+          sthin = 0
+        end
+
+        next!(pbar)
       end
     end
-
-    # log parameters
-    lthin += 1
-    if lthin == nthin
-
-      lit += 1
-      @inbounds begin
-        R[lit,1] = Float64(lit)
-        R[lit,2] = llc
-        R[lit,3] = prc
-        R[lit,4] = λc
-        R[lit,5] = μc
-        push!(treev, couple(Ξ, idf, 1))
-      end
-      lthin = 0
-    end
-
-    next!(pbar)
   end
 
-  return R, treev, λc, μc, mc
+  return r, treev, λc, μc, mc
 end
 
 

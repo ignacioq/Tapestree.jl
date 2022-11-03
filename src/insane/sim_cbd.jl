@@ -25,16 +25,15 @@ function sim_cbd(t::Float64,
   tw = cbd_wait(λ, μ)
 
   if tw > t
-    return sTbd(t)
+    return sTbd(t, false, false)
   end
 
   if λorμ(λ, μ)
-    return sTbd(sim_cbd(t - tw, λ, μ), sim_cbd(t - tw, λ, μ), tw)
+    return sTbd(sim_cbd(t - tw, λ, μ), sim_cbd(t - tw, λ, μ), tw, false, false)
   else
-    return sTbd(tw, true)
+    return sTbd(tw, true, false)
   end
 end
-
 
 
 

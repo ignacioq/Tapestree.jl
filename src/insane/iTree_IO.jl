@@ -335,7 +335,6 @@ end
 
 
 
-
 """
     nsignif(x::String)
 
@@ -363,3 +362,349 @@ function nsignif(x::String)
   end
 end
 
+
+
+
+"""
+    istring(tree::T)
+
+`sTbd` to istring.
+"""
+function istring(tree::T) where {T <: iTree}
+  return string(T, '-', _istring(tree))
+end
+
+
+
+
+"""
+    _istring(tree::sTbd)
+
+`sTbd` to istring.
+"""
+function _istring(tree::sTbd)
+  if def1(tree)
+    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+        e(tree), ',', 
+        short(isextinct(tree)), ',', 
+        short(isfix(tree)), ')')
+  else
+    return string('(', 
+        e(tree), ',', 
+        short(isextinct(tree)), ',', 
+        short(isfix(tree)), ')')
+  end
+end
+
+
+
+
+"""
+    _istring(tree::iT)
+
+`iT` to istring.
+"""
+function _istring(tree::iT)
+  if def1(tree)
+    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isextinct(tree)), ',', 
+             short(isfix(tree)), ',', 
+             lλ(tree), ')')
+  else
+    return string('(', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isextinct(tree)), ',', 
+             short(isfix(tree)), ',', 
+             lλ(tree), ')')
+  end
+end
+
+
+
+
+"""
+    _istring(tree::iTbd)
+
+`iTbd` to istring.
+"""
+function _istring(tree::iTbd)
+  if def1(tree)
+    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isextinct(tree)), ',', 
+             short(isfix(tree)), ',', 
+             lλ(tree), ',', 
+             lμ(tree), ')')
+  else
+    return string('(', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isextinct(tree)), ',', 
+             short(isfix(tree)), ',', 
+             lλ(tree), ',', 
+             lμ(tree), ')')
+  end
+end
+
+
+
+
+
+"""
+    iread(in_file::String)
+
+Read a tree file exported by insane
+"""
+function iread(file::String)
+  s  = readlines(file)
+  ls = lastindex(s)
+  t0 = iparse(s[1])
+  tv = typeof(t0)[t0]
+
+  if ls > 1
+    for i in 2:ls
+      push!(tv, iparse(s[i]))
+    end
+  end
+
+  return tv
+end
+
+
+
+
+"""
+    iparse(s::String)
+
+from istring to `iTree`.
+"""
+function iparse(s::String)
+  i = findfirst('-', s)
+  T = iTd[s[1:(i-1)]]
+
+  return _iparse(s[(i+2):end-1], T)
+end
+
+
+
+
+"""
+    _istring(tree::sTbd)
+
+parse istring to `sTbd`.
+"""
+function _iparse(s::String, ::Type{sTbd})
+
+  lp = findlast(')', s)
+
+  # if tip
+  if isnothing(lp)
+    ci = findfirst(',', s)
+    return sTbd(parse(Float64, s[1:(ci-1)]), long(s[ci+1]), long(s[ci+3]))
+  end
+
+  si = s[(lp+2):end]
+  s  = s[1:lp]
+
+  nop = 0
+  ci  = 0
+  for (i,v) in enumerate(s)
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
+    end
+  end
+
+  s1 = s[2:(ci-2)]
+  s2 = s[(ci+2):(end-1)]
+
+  ci = findfirst(',', si)
+
+  return sTbd(_iparse(s1, sTbd),
+              _iparse(s2, sTbd),
+    parse(Float64, si[1:(ci-1)]), long(si[ci+1]), long(si[ci+3]))
+end
+
+
+
+
+"""
+    _iparse(s::String, ::Type{T}) where {T <: iT}
+
+parse istring to `iT`.
+"""
+function _iparse(s::String, ::Type{T}) where {T <: iT}
+
+  lp = findlast(')', s)
+
+  # if tip
+  if isnothing(lp)
+    c1 = findfirst(',', s)
+    c2 = findnext(',', s, c1 + 1)
+    c3 = findnext(',', s, c2 + 1)
+    c4 = findnext(',', s, c3 + 1)
+    c5 = findnext(',', s, c4 + 1)
+
+    return T(parse(Float64, s[1:c1-1]), 
+             parse(Float64, s[c1+1:c2-1]),
+             parse(Float64, s[c2+1:c3-1]),
+             long(s[c3+1]), 
+             long(s[c4+1]),
+             _iparse_v(s[c5+1:end]))
+  end
+
+  si = s[(lp+2):end]
+  s  = s[1:lp]
+
+  nop = 0
+  ci  = 0
+  for (i,v) in enumerate(s)
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
+    end
+  end
+
+  s1 = s[2:(ci-2)]
+  s2 = s[(ci+2):(end-1)]
+
+  c1 = findfirst(',', si)
+  c2 = findnext(',', si, c1 + 1)
+  c3 = findnext(',', si, c2 + 1)
+  c4 = findnext(',', si, c3 + 1)
+  c5 = findnext(',', si, c4 + 1)
+
+  return T(_iparse(s1, T),
+           _iparse(s2, T),
+           parse(Float64, si[1:c1-1]), 
+           parse(Float64, si[c1+1:c2-1]),
+           parse(Float64, si[c2+1:c3-1]),
+           long(si[c3+1]), 
+           long(si[c4+1]),
+           _iparse_v(si[c5+1:end]))
+end
+
+
+
+
+"""
+    _iparse(s::String, ::Type{iTbd})
+
+parse istring to `iTbd`.
+"""
+function _iparse(s::String, ::Type{iTbd})
+
+  lp = findlast(')', s)
+
+  # if tip
+  if isnothing(lp)
+    c1 = findfirst(',', s)
+    c2 = findnext(',', s, c1 + 1)
+    c3 = findnext(',', s, c2 + 1)
+    c4 = findnext(',', s, c3 + 1)
+    c5 = findnext(',', s, c4 + 1)
+    c6 = findnext(']', s, c5 + 1)
+
+    return iTbd(parse(Float64, s[1:c1-1]), 
+                parse(Float64, s[c1+1:c2-1]),
+                parse(Float64, s[c2+1:c3-1]),
+                long(s[c3+1]), 
+                long(s[c4+1]),
+                _iparse_v(s[c5+1:c6]),
+                _iparse_v(s[c6+2:end]))
+  end
+
+  si = s[(lp+2):end]
+  s  = s[1:lp]
+
+  nop = 0
+  ci  = 0
+  for (i,v) in enumerate(s)
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
+    end
+  end
+
+  s1 = s[2:(ci-2)]
+  s2 = s[(ci+2):(end-1)]
+
+  c1 = findfirst(',', si)
+  c2 = findnext(',', si, c1 + 1)
+  c3 = findnext(',', si, c2 + 1)
+  c4 = findnext(',', si, c3 + 1)
+  c5 = findnext(',', si, c4 + 1)
+  c6 = findnext(']', si, c5 + 1)
+
+  return iTbd(_iparse(s1, iTbd),
+              _iparse(s2, iTbd),
+              parse(Float64, si[1:c1-1]), 
+              parse(Float64, si[c1+1:c2-1]),
+              parse(Float64, si[c2+1:c3-1]),
+              long(si[c3+1]), 
+              long(si[c4+1]),
+              _iparse_v(si[c5+1:c6]),
+              _iparse_v(si[c6+2:end]))
+end
+
+
+
+
+"""
+    _iparse_v(s::String)
+
+Parse a string into a Float64 vector.
+"""
+function _iparse_v(s::String)
+  v  = Float64[]
+  ci = findfirst(',', s)
+  i  = 1
+  while !isnothing(ci)
+    push!(v, 
+      parse(Float64, s[(i+1):(ci-1)]))
+    i  = ci + 1
+    ci = findnext(',', s, ci + 1)
+  end
+  push!(v, 
+    parse(Float64, s[(i+1):(end-1)]))
+end
+
+
+
+
+"""
+    short(x::Bool)
+
+Return 0 or 1 for false or true
+"""
+short(x::Bool) = x ? '1' : '0'
+
+
+
+
+"""
+    long(x::Char)
+
+Return 0 or 1 for false or true
+"""
+long(x::Char) = x === '1' ? true : false
