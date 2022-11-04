@@ -14,6 +14,7 @@ Created 07 07 2020
 
 """
     read_newick(in_file::String; fossil = false)
+
 Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
 is true from `in_file`.
 """
@@ -46,6 +47,7 @@ end
 
 """
     _parse_newick(in_file::String; fossil = false)
+
 Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
 is true from `in_file`.
 """
@@ -79,6 +81,7 @@ end
 
 """
     from_string(s::String, stem::Bool, ::Type{sT_label})
+
 Takes a string and turns it into a `sT_label` tree.
 """
 function from_string(s::String, stem::Bool, ::Type{sT_label})
@@ -117,6 +120,7 @@ end
 
 """
     from_string(s::String, stem::Bool, ::Type{sTf_label})
+
 Takes a string and turns it into a `sTf_label` tree.
 """
 function from_string(s::String, stem::Bool, ::Type{sTf_label})
@@ -158,6 +162,7 @@ end
 
 """
     _from_string(s::String, ::Type{T}) where {T <: sT}
+
 Returns a tree of type `T` from newick string.
 """
 function _from_string(s::String, ::Type{T}) where {T <: sT}
@@ -378,6 +383,26 @@ end
 
 
 """
+    _istring(tree::sTpb)
+
+`sTpb` to istring.
+"""
+function _istring(tree::sTpb)
+  if def1(tree)
+    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+        e(tree), ',', 
+        short(isfix(tree)), ')')
+  else
+    return string('(', 
+        e(tree), ',', 
+        short(isfix(tree)), ')')
+  end
+end
+
+
+
+
+"""
     _istring(tree::sTbd)
 
 `sTbd` to istring.
@@ -393,6 +418,64 @@ function _istring(tree::sTbd)
         e(tree), ',', 
         short(isextinct(tree)), ',', 
         short(isfix(tree)), ')')
+  end
+end
+
+
+
+
+"""
+    _istring(tree::sTfbd)
+
+`sTfbd` to istring.
+"""
+function _istring(tree::sTfbd)
+  if def1(tree)
+    if def2(tree)
+      return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+          e(tree), ',', 
+          short(isextinct(tree)), ',', 
+          "0,", 
+          short(isfix(tree)), ')')
+    else
+      return string('(', _istring(tree.d1), ',', 
+          e(tree), ',', 
+          short(isextinct(tree)), ',', 
+          "1,", 
+          short(isfix(tree)), ')')
+    end
+  else
+    return string('(', 
+        e(tree), ',', 
+        short(isextinct(tree)), ',', 
+        short(isfossil(tree)), ',', 
+        short(isfix(tree)), ')')
+  end
+end
+
+
+
+
+"""
+    _istring(tree::iTpb)
+
+`iTpb` to istring.
+"""
+function _istring(tree::iTpb)
+  if def1(tree)
+    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isfix(tree)), ',', 
+             lλ(tree), ')')
+  else
+    return string('(', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isfix(tree)), ',', 
+             lλ(tree), ')')
   end
 end
 
@@ -466,12 +549,12 @@ Read a tree file exported by insane
 function iread(file::String)
   s  = readlines(file)
   ls = lastindex(s)
-  t0 = iparse(s[1])
-  tv = typeof(t0)[t0]
+  t0::iTree = iparse(s[1])::iTree
+  tv::Vector{iTree} = typeof(t0)[t0]::Vector{iTree}
 
   if ls > 1
     for i in 2:ls
-      push!(tv, iparse(s[i]))
+      push!(tv, iparse(s[i])::iTree)
     end
   end
 
@@ -486,11 +569,11 @@ end
 
 from istring to `iTree`.
 """
-function iparse(s::String)
+function iparse(s::String)::iTree
   i = findfirst('-', s)
   T = iTd[s[1:(i-1)]]
 
-  return _iparse(s[(i+2):end-1], T)
+  return _iparse(s[(i+2):end-1], T)::iTree
 end
 
 
@@ -535,6 +618,109 @@ function _iparse(s::String, ::Type{sTbd})
   return sTbd(_iparse(s1, sTbd),
               _iparse(s2, sTbd),
     parse(Float64, si[1:(ci-1)]), long(si[ci+1]), long(si[ci+3]))
+end
+
+
+
+
+"""
+    _istring(tree::sTfbd)
+
+parse istring to `sTfbd`.
+"""
+function _iparse(s::String, ::Type{sTfbd})
+
+  lp = findlast(')', s)
+
+  # if tip
+  if isnothing(lp)
+    ci = findfirst(',', s)
+    return sTfbd(parse(Float64, s[1:(ci-1)]), long(s[ci+1]), long(s[ci+3]))
+  end
+
+  si = s[(lp+2):end]
+  s  = s[1:lp]
+
+  nop = 0
+  ci  = 0
+  for (i,v) in enumerate(s)
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
+    end
+  end
+
+  s1 = s[2:(ci-2)]
+  s2 = s[(ci+2):(end-1)]
+
+  ci = findfirst(',', si)
+
+  return sTfbd(_iparse(s1, sTfbd),
+               _iparse(s2, sTfbd),
+    parse(Float64, si[1:(ci-1)]), long(si[ci+1]), long(si[ci+3]))
+end
+
+
+
+
+"""
+    _iparse(s::String, ::Type{iTpb})
+
+parse istring to `iTpb`.
+"""
+function _iparse(s::String, ::Type{iTpb})
+
+  lp = findlast(')', s)
+
+  # if tip
+  if isnothing(lp)
+    c1 = findfirst(',', s)
+    c2 = findnext(',', s, c1 + 1)
+    c3 = findnext(',', s, c2 + 1)
+    c4 = findnext(',', s, c3 + 1)
+
+    return iTpb(parse(Float64, s[1:c1-1]), 
+                parse(Float64, s[c1+1:c2-1]),
+                parse(Float64, s[c2+1:c3-1]),
+                long(s[c3+1]), 
+                _iparse_v(s[c4+1:end]))
+  end
+
+  si = s[(lp+2):end]
+  s  = s[1:lp]
+
+  nop = 0
+  ci  = 0
+  for (i,v) in enumerate(s)
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
+    end
+  end
+
+  s1 = s[2:(ci-2)]
+  s2 = s[(ci+2):(end-1)]
+
+  c1 = findfirst(',', si)
+  c2 = findnext(',', si, c1 + 1)
+  c3 = findnext(',', si, c2 + 1)
+  c4 = findnext(',', si, c3 + 1)
+
+  return iTpb(_iparse(s1, iTpb),
+              _iparse(s2, iTpb),
+              parse(Float64, si[1:c1-1]), 
+              parse(Float64, si[c1+1:c2-1]),
+              parse(Float64, si[c2+1:c3-1]),
+              long(si[c3+1]), 
+              _iparse_v(si[c4+1:end]))
 end
 
 

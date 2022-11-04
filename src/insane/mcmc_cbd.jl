@@ -291,7 +291,6 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
   treev  = sTbd[]
 
   # flush to file
-  nsave = fld(niter,nflush)
   sthin = 0
 
   open(ofile*".log", "w") do of

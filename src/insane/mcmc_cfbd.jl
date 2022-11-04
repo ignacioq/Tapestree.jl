@@ -14,26 +14,29 @@ Created 07 10 2021
 
 
 """
-    insane_cfbd(tree    ::sTf_label,
-                out_file::String;
+    insane_cfbd(tree    ::sTf_label;
                 λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                ψ_epoch ::Vector{Float64}       = Float64[],
                 niter   ::Int64                 = 1_000,
                 nthin   ::Int64                 = 10,
                 nburn   ::Int64                 = 200,
+                nflush  ::Int64                 = nthin,
+                ofile   ::String                = homedir(),
                 ϵi      ::Float64               = 0.4,
                 λi      ::Float64               = NaN,
                 μi      ::Float64               = NaN,
                 ψi      ::Float64               = NaN,
-                pupdp   ::NTuple{4,Float64}     = (0.2,0.2,0.2,0.2),
+                pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
+                survival::Bool                  = true,
                 prints  ::Int64                 = 5,
+                mxthf   ::Float64               = Inf,
                 tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant fossilized birth-death.
 """
-function insane_cfbd(tree    ::sTf_label,
-                     out_file::String;
+function insane_cfbd(tree    ::sTf_label;
                      λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -41,6 +44,8 @@ function insane_cfbd(tree    ::sTf_label,
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
+                     nflush  ::Int64                 = nthin,
+                     ofile   ::String                = homedir(),
                      ϵi      ::Float64               = 0.4,
                      λi      ::Float64               = NaN,
                      μi      ::Float64               = NaN,
@@ -143,18 +148,10 @@ function insane_cfbd(tree    ::sTf_label,
         λc, μc, ψc, mc, th, crown, bst, eixi, eixf, pup, prints)
 
   # mcmc
-  r, treev, λc, μc, ψc =
+  r, treev =
     mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, ns, L, 
       λ_prior, μ_prior, ψ_prior, ψ_epoch, th, crown, bst, eixi, eixf, 
-      niter, nthin,  pup, prints)
-
-  pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2))
-  merge!(pardic, 
-    Dict("psi"*(isone(nep) ? "" : string("_",i)) => 2+i 
-           for i in Base.OneTo(nep)))
-
-  write_ssr(r, pardic, out_file)
+      pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -266,16 +263,24 @@ end
               prc    ::Float64,
               λc     ::Float64,
               μc     ::Float64,
-              ψc     ::Float64,
+              ψc     ::Vector{Float64},
+              mc     ::Float64,
+              ns     ::Float64,
+              L      ::Vector{Float64},
               λ_prior::NTuple{2,Float64},
               μ_prior::NTuple{2,Float64},
               ψ_prior::NTuple{2,Float64},
-              mc     ::Float64,
+              ψ_epoch::Vector{Float64},
               th     ::Float64,
-              crown   ::Bool,
+              crown  ::Int64,
+              bst    ::Vector{Float64},
+              eixi   ::Vector{Int64},
+              eixf   ::Vector{Int64},
+              pup    ::Array{Int64,1},
               niter  ::Int64,
               nthin  ::Int64,
-              pup    ::Array{Int64,1},
+              nflush ::Int64,
+              ofile  ::String,
               prints ::Int64)
 
 MCMC da chain for constant fossilized birth-death using forward simulation.
@@ -299,9 +304,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    bst    ::Vector{Float64},
                    eixi   ::Vector{Int64},
                    eixf   ::Vector{Int64},
+                   pup    ::Array{Int64,1},
                    niter  ::Int64,
                    nthin  ::Int64,
-                   pup    ::Array{Int64,1},
+                   nflush ::Int64,
+                   ofile  ::String,
                    prints ::Int64)
 
   el  = lastindex(idf)                    # number of branches
@@ -316,10 +323,21 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
   # parameter results
   lastindex(ψc)
-  R = Array{Float64,2}(undef, nlogs, 5 + nep)
+  r = Array{Float64,2}(undef, nlogs, 5 + nep)
 
   # make tree vector
   treev  = sTfbd[]
+
+  pardic = Dict(("lambda"      => 1),
+                ("mu"          => 2))
+  merge!(pardic, 
+    Dict("psi"*(isone(nep) ? "" : string("_",i)) => 2+i 
+           for i in Base.OneTo(nep)))
+
+  write_ssr(r, pardic, out_file)
+
+
+
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -387,13 +405,13 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
       lit += 1
       @inbounds begin
-        R[lit,1] = Float64(lit)
-        R[lit,2] = llc
-        R[lit,3] = prc
-        R[lit,4] = λc
-        R[lit,5] = μc
+        r[lit,1] = Float64(it)
+        r[lit,2] = llc
+        r[lit,3] = prc
+        r[lit,4] = λc
+        r[lit,5] = μc
         @avx for i in Base.OneTo(nep)
-          R[lit,5 + i] = ψc[i]
+          r[lit,5 + i] = ψc[i]
         end
         push!(treev, couple(Ξ, idf, 1))
       end
@@ -403,7 +421,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
     next!(pbar)
   end
 
-  return R, treev, λc, μc, ψc
+  return r, treev
 end
 
 
