@@ -91,18 +91,7 @@ function from_string(s::String, stem::Bool, ::Type{sT_label})
     tree = _from_string(s, sT_label)
   # if no root (starts with two crown lineage)
   else
-    nop = 0
-    ci  = 0
-    for (i,v) in enumerate(s)
-      if v == '('
-        nop += 1
-      elseif v == ')'
-        nop -= 1
-      elseif v == ',' && iszero(nop)
-        ci = i
-        break
-      end
-    end
+    ci = find_ci(s)
 
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
@@ -130,18 +119,7 @@ function from_string(s::String, stem::Bool, ::Type{sTf_label})
     tree = _from_string(s, sTf_label)
   # if crown
   else
-    nop = 0
-    ci  = 0
-    for (i,v) in enumerate(s)
-      if v === '('
-        nop += 1
-      elseif v === ')'
-        nop -= 1
-      elseif v === ',' && iszero(nop)
-        ci = i
-        break
-      end
-    end
+    ci = find_ci(s)
 
     s1 = s[1:(ci-1)]
     s2 = s[(ci+1):end]
@@ -180,18 +158,7 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
     lab = s[(lp+1):(wd-1)]
     s   = s[2:(lp-1)]
 
-    nop = 0
-    ci  = 0
-    for (i,v) in enumerate(s)
-      if v === '('
-        nop += 1
-      elseif v === ')'
-        nop -= 1
-      elseif v === ',' && iszero(nop)
-        ci = i
-        break
-      end
-    end
+    ci = find_ci(s)
   end
 
   s1 = s[1:(ci-1)]
@@ -213,6 +180,30 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
   end
 end
 
+
+
+
+"""
+    find_ci(s::String)
+
+Find comma index in string within parentheses.
+"""
+function find_ci(s::String)
+  nop = 0
+  ci  = 0
+  for (i,v) in enumerate(s)
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
+    end
+  end
+
+  return ci
+end
 
 
 
@@ -540,6 +531,49 @@ end
 
 
 
+"""
+    _istring(tree::iTfbd)
+
+`iTfbd` to istring.
+"""
+function _istring(tree::iTfbd)
+  if def1(tree)
+    if def2(tree)
+      return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+               e(tree), ',',
+               dt(tree), ',',
+               fdt(tree), ',',
+               short(isextinct(tree)), ',', 
+               "0,", 
+               short(isfix(tree)), ',', 
+               lλ(tree), ',', 
+               lμ(tree), ')')
+    else
+      return string('(', _istring(tree.d1), ',', 
+               e(tree), ',',
+               dt(tree), ',',
+               fdt(tree), ',',
+               short(isextinct(tree)), ',', 
+               "1,", 
+               short(isfix(tree)), ',', 
+               lλ(tree), ',', 
+               lμ(tree), ')')
+    end
+  else
+    return string('(', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isextinct(tree)), ',', 
+             short(isfossil(tree)), ',', 
+             short(isfix(tree)), ',', 
+             lλ(tree), ',', 
+             lμ(tree), ')')
+  end
+end
+
+
+
 
 """
     iread(in_file::String)
@@ -597,18 +631,7 @@ function _iparse(s::String, ::Type{sTbd})
   si = s[(lp+2):end]
   s  = s[1:lp]
 
-  nop = 0
-  ci  = 0
-  for (i,v) in enumerate(s)
-    if v === '('
-      nop += 1
-    elseif v === ')'
-      nop -= 1
-    elseif v === ',' && iszero(nop)
-      ci = i
-      break
-    end
-  end
+  ci = find_ci(s)
 
   s1 = s[2:(ci-2)]
   s2 = s[(ci+2):(end-1)]
@@ -642,18 +665,7 @@ function _iparse(s::String, ::Type{sTfbd})
   si = s[(lp+2):end]
   s  = s[1:lp]
 
-  nop = 0
-  ci  = 0
-  for (i,v) in enumerate(s)
-    if v === '('
-      nop += 1
-    elseif v === ')'
-      nop -= 1
-    elseif v === ',' && iszero(nop)
-      ci = i
-      break
-    end
-  end
+  ci = find_ci(s)
 
   s1 = s[2:(ci-2)]
   s2 = s[(ci+2):(end-1)]
@@ -662,10 +674,6 @@ function _iparse(s::String, ::Type{sTfbd})
 
   if isempty(s1)
     return sTfbd(_iparse(s2, sTfbd),
-                 parse(Float64, si[1:(ci-1)]), 
-                 long(si[ci+1]), long(si[ci+3]), long(si[ci+5]))
-  elseif isempty(s2)
-    return sTfbd(_iparse(s1, sTfbd),
                  parse(Float64, si[1:(ci-1)]), 
                  long(si[ci+1]), long(si[ci+3]), long(si[ci+5]))
   else
@@ -705,18 +713,7 @@ function _iparse(s::String, ::Type{iTpb})
   si = s[(lp+2):end]
   s  = s[1:lp]
 
-  nop = 0
-  ci  = 0
-  for (i,v) in enumerate(s)
-    if v === '('
-      nop += 1
-    elseif v === ')'
-      nop -= 1
-    elseif v === ',' && iszero(nop)
-      ci = i
-      break
-    end
-  end
+  ci = find_ci(s)
 
   s1 = s[2:(ci-2)]
   s2 = s[(ci+2):(end-1)]
@@ -766,18 +763,7 @@ function _iparse(s::String, ::Type{T}) where {T <: iT}
   si = s[(lp+2):end]
   s  = s[1:lp]
 
-  nop = 0
-  ci  = 0
-  for (i,v) in enumerate(s)
-    if v === '('
-      nop += 1
-    elseif v === ')'
-      nop -= 1
-    elseif v === ',' && iszero(nop)
-      ci = i
-      break
-    end
-  end
+  ci = find_ci(s)
 
   s1 = s[2:(ci-2)]
   s2 = s[(ci+2):(end-1)]
@@ -831,18 +817,7 @@ function _iparse(s::String, ::Type{iTbd})
   si = s[(lp+2):end]
   s  = s[1:lp]
 
-  nop = 0
-  ci  = 0
-  for (i,v) in enumerate(s)
-    if v === '('
-      nop += 1
-    elseif v === ')'
-      nop -= 1
-    elseif v === ',' && iszero(nop)
-      ci = i
-      break
-    end
-  end
+  ci = find_ci(s)
 
   s1 = s[2:(ci-2)]
   s2 = s[(ci+2):(end-1)]
@@ -863,6 +838,78 @@ function _iparse(s::String, ::Type{iTbd})
               long(si[c4+1]),
               _iparse_v(si[c5+1:c6]),
               _iparse_v(si[c6+2:end]))
+end
+
+
+
+
+"""
+    _iparse(s::String, ::Type{iTfbd})
+
+parse istring to `iTfbd`.
+"""
+function _iparse(s::String, ::Type{iTfbd})
+
+  lp = findlast(')', s)
+
+  # if tip
+  if isnothing(lp)
+    c1 = findfirst(',', s)
+    c2 = findnext(',', s, c1 + 1)
+    c3 = findnext(',', s, c2 + 1)
+    c4 = findnext(',', s, c3 + 1)
+    c5 = findnext(',', s, c4 + 1)
+    c6 = findnext(',', s, c5 + 1)
+    c7 = findnext(']', s, c6 + 1)
+
+    return iTfbd(parse(Float64, s[1:c1-1]), 
+                 parse(Float64, s[c1+1:c2-1]),
+                 parse(Float64, s[c2+1:c3-1]),
+                 long(s[c3+1]), 
+                 long(s[c4+1]),
+                 long(s[c5+1]),
+                 _iparse_v(s[c6+1:c7]),
+                 _iparse_v(s[c7+2:end]))
+  end
+
+  si = s[(lp+2):end]
+  s  = s[1:lp]
+
+  ci = find_ci(s)
+
+  s1 = s[2:(ci-2)]
+  s2 = s[(ci+2):(end-1)]
+
+  c1 = findfirst(',', si)
+  c2 = findnext(',', si, c1 + 1)
+  c3 = findnext(',', si, c2 + 1)
+  c4 = findnext(',', si, c3 + 1)
+  c5 = findnext(',', si, c4 + 1)
+  c6 = findnext(',', si, c5 + 1)
+  c7 = findnext(']', si, c6 + 1)
+
+  if isempty(s1)
+    return iTfbd(_iparse(s2, iTfbd),
+                 parse(Float64, si[1:c1-1]), 
+                 parse(Float64, si[c1+1:c2-1]),
+                 parse(Float64, si[c2+1:c3-1]),
+                 long(si[c3+1]), 
+                 long(si[c4+1]),
+                 long(si[c5+1]),
+                 _iparse_v(si[c6+1:c7]),
+                 _iparse_v(si[c7+2:end]))
+  else
+    return iTfbd(_iparse(s1, iTfbd),
+                 _iparse(s2, iTfbd),
+                 parse(Float64, si[1:c1-1]), 
+                 parse(Float64, si[c1+1:c2-1]),
+                 parse(Float64, si[c2+1:c3-1]),
+                 long(si[c3+1]), 
+                 long(si[c4+1]),
+                 long(si[c5+1]),
+                 _iparse_v(si[c6+1:c7]),
+                 _iparse_v(si[c7+2:end]))
+  end
 end
 
 
