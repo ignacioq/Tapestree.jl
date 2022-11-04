@@ -614,6 +614,39 @@ end
 
 
 """
+    _istring(tree::sTpb)
+
+parse istring to `sTpb`.
+"""
+function _iparse(s::String, ::Type{sTpb})
+
+  lp = findlast(')', s)
+
+  # if tip
+  if isnothing(lp)
+    ci = findfirst(',', s)
+    return sTpb(parse(Float64, s[1:(ci-1)]), long(s[ci+1]))
+  end
+
+  si = s[(lp+2):end]
+  s  = s[1:lp]
+
+  ci = find_ci(s)
+
+  s1 = s[2:(ci-2)]
+  s2 = s[(ci+2):(end-1)]
+
+  ci = findfirst(',', si)
+
+  return sTpb(_iparse(s1, sTpb),
+              _iparse(s2, sTpb),
+              parse(Float64, si[1:(ci-1)]), long(si[ci+1]))
+end
+
+
+
+
+"""
     _istring(tree::sTbd)
 
 parse istring to `sTbd`.
