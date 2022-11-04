@@ -986,3 +986,6 @@ short(x::Bool) = x ? '1' : '0'
 Return 0 or 1 for false or true
 """
 long(x::Char) = x === '1' ? true : false
+
+
+
