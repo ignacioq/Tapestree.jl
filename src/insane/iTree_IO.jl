@@ -549,12 +549,12 @@ Read a tree file exported by insane
 function iread(file::String)
   s  = readlines(file)
   ls = lastindex(s)
-  t0::iTree = iparse(s[1])::iTree
-  tv::Vector{iTree} = typeof(t0)[t0]::Vector{iTree}
+  t0 = iparse(s[1])
+  tv::Vector{typeof(t0)} = typeof(t0)[t0]
 
   if ls > 1
     for i in 2:ls
-      push!(tv, iparse(s[i])::iTree)
+      push!(tv, iparse(s[i])::typeof(t0))
     end
   end
 
@@ -569,11 +569,11 @@ end
 
 from istring to `iTree`.
 """
-function iparse(s::String)::iTree
+function iparse(s::String)
   i = findfirst('-', s)
   T = iTd[s[1:(i-1)]]
 
-  return _iparse(s[(i+2):end-1], T)::iTree
+  return _iparse(s[(i+2):end-1], T)
 end
 
 
@@ -617,7 +617,7 @@ function _iparse(s::String, ::Type{sTbd})
 
   return sTbd(_iparse(s1, sTbd),
               _iparse(s2, sTbd),
-    parse(Float64, si[1:(ci-1)]), long(si[ci+1]), long(si[ci+3]))
+              parse(Float64, si[1:(ci-1)]), long(si[ci+1]), long(si[ci+3]))
 end
 
 
@@ -635,7 +635,8 @@ function _iparse(s::String, ::Type{sTfbd})
   # if tip
   if isnothing(lp)
     ci = findfirst(',', s)
-    return sTfbd(parse(Float64, s[1:(ci-1)]), long(s[ci+1]), long(s[ci+3]))
+    return sTfbd(parse(Float64, s[1:(ci-1)]), 
+             long(s[ci+1]), long(s[ci+3]), long(s[ci+5]))
   end
 
   si = s[(lp+2):end]
@@ -659,9 +660,20 @@ function _iparse(s::String, ::Type{sTfbd})
 
   ci = findfirst(',', si)
 
-  return sTfbd(_iparse(s1, sTfbd),
-               _iparse(s2, sTfbd),
-    parse(Float64, si[1:(ci-1)]), long(si[ci+1]), long(si[ci+3]))
+  if isempty(s1)
+    return sTfbd(_iparse(s2, sTfbd),
+                 parse(Float64, si[1:(ci-1)]), 
+                 long(si[ci+1]), long(si[ci+3]), long(si[ci+5]))
+  elseif isempty(s2)
+    return sTfbd(_iparse(s1, sTfbd),
+                 parse(Float64, si[1:(ci-1)]), 
+                 long(si[ci+1]), long(si[ci+3]), long(si[ci+5]))
+  else
+    return sTfbd(_iparse(s1, sTfbd),
+                 _iparse(s2, sTfbd),
+                 parse(Float64, si[1:(ci-1)]), 
+                 long(si[ci+1]), long(si[ci+3]), long(si[ci+5]))
+  end
 end
 
 

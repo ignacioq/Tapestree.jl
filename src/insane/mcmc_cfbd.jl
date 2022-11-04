@@ -322,103 +322,116 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   lthin, lit = 0, 0
 
   # parameter results
-  lastindex(ψc)
   r = Array{Float64,2}(undef, nlogs, 5 + nep)
 
   # make tree vector
   treev  = sTfbd[]
 
-  pardic = Dict(("lambda"      => 1),
-                ("mu"          => 2))
-  merge!(pardic, 
-    Dict("psi"*(isone(nep) ? "" : string("_",i)) => 2+i 
-           for i in Base.OneTo(nep)))
+  # flush to file
+  sthin = 0
 
-  write_ssr(r, pardic, out_file)
+  open(ofile*".log", "w") do of
+
+    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
+    flush(of)
+
+    open(ofile*".txt", "w") do tf
 
 
+      pbar = Progress(niter, prints, "running mcmc...", 20)
 
+      for it in Base.OneTo(niter)
 
-  pbar = Progress(niter, prints, "running mcmc...", 20)
+        shuffle!(pup)
 
-  for it in Base.OneTo(niter)
+        for p in pup
 
-    shuffle!(pup)
+          # λ proposal
+          if p === 1
 
-    for p in pup
+            llc, prc, λc, mc =
+              update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, crown, λ_prior)
 
-      # λ proposal
-      if p === 1
+            # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
 
-        llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, crown, λ_prior)
+          # μ proposal
+          elseif p === 2
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+            llc, prc, μc, mc =
+              update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, crown, μ_prior)
 
-      # μ proposal
-      elseif p === 2
+            # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
 
-        llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, crown, μ_prior)
+          # ψ proposal
+          elseif p === 3
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+            llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-      # ψ proposal
-      elseif p === 3
+            # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
 
-        llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
+          # forward simulation proposal proposal
+          else
 
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+            bix = ceil(Int64,rand()*el)
 
-      # forward simulation proposal proposal
-      else
+            llc, ns, ne, L =
+              update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
+                eixi, eixf)
 
-        bix = ceil(Int64,rand()*el)
-
-        llc, ns, ne, L =
-          update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
-            eixi, eixf)
-
-        # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
-      end
-    end
-
-    # log parameters
-    lthin += 1
-    if lthin == nthin
-
-      lit += 1
-      @inbounds begin
-        r[lit,1] = Float64(it)
-        r[lit,2] = llc
-        r[lit,3] = prc
-        r[lit,4] = λc
-        r[lit,5] = μc
-        @avx for i in Base.OneTo(nep)
-          r[lit,5 + i] = ψc[i]
+            # llci = llik_cfbd(Ξ, λc, μc, ψc, nnodesbifurcation(idf), ψ_epoch, bst, eixi) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
+          end
         end
-        push!(treev, couple(Ξ, idf, 1))
-      end
-      lthin = 0
-    end
 
-    next!(pbar)
+        # log parameters
+        lthin += 1
+        if lthin == nthin
+
+          lit += 1
+          @inbounds begin
+            r[lit,1] = Float64(it)
+            r[lit,2] = llc
+            r[lit,3] = prc
+            r[lit,4] = λc
+            r[lit,5] = μc
+            @avx for i in Base.OneTo(nep)
+              r[lit,5 + i] = ψc[i]
+            end
+            push!(treev, couple(Ξ, idf, 1))
+          end
+          lthin = 0
+        end
+
+        # flush parameters
+        sthin += 1
+        if sthin === nflush
+          write(of, 
+            string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\t", join(ψc, "\t"), "\n"))
+          flush(of)
+          write(tf, 
+            string(istring(couple(Ξ, idf, 1)), "\n"))
+          flush(tf)
+          sthin = 0
+        end
+
+        next!(pbar)
+      end
+    end
   end
 
   return r, treev
