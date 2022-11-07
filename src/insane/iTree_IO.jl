@@ -576,9 +576,10 @@ end
 
 
 """
-    iread(in_file::String)
+    iread(file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
 
-Read a tree file exported by insane
+Read a tree file exported by insane in `file` and with optional OrdinalRange
+specifying which trees to sample.
 """
 function iread(file::String;
                ix::OrdinalRange{Int64,Int64} = 0:0)
