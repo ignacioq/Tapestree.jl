@@ -580,8 +580,42 @@ end
 
 Read a tree file exported by insane
 """
-function iread(file::String)
-  s  = readlines(file)
+function iread(file::String;
+               ix::OrdinalRange{Int64,Int64} = 0:0)
+
+  # read all
+  if iszero(ix[1])
+    s  = readlines(file)
+  # read according to ix
+  else
+    iix = first(ix)
+    lix = last(ix)
+    six = step(ix)
+
+    s = String[]
+
+    ii = 1
+    it = six
+    for line in eachline(file)
+      if ii < iix
+        continue
+      end
+
+      # read trees
+      if it === six
+        push!(s, line)
+        it = 0
+      end
+
+      if ii >= lix
+        break
+      end
+
+      ii += 1
+      it += 1
+    end
+  end
+
   ls = lastindex(s)
   t0 = iparse(s[1])
   tv::Vector{typeof(t0)} = typeof(t0)[t0]
