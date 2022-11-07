@@ -705,7 +705,7 @@ parse istring to `sTbd`.
 """
 function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTbd})
 
- @inbounds begin
+  @inbounds begin
 
     inode = false
 
@@ -792,7 +792,7 @@ parse istring to `iTpb`.
 """
 function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
 
- @inbounds begin
+  @inbounds begin
 
     inode = false
 
@@ -808,8 +808,7 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
     i1 = findnext(',', s, i  + 1)
     i2 = findnext(',', s, i1 + 1)
     i3 = findnext(',', s, i2 + 1)
-    i4 = findnext(',', s, i3 + 1)
-    i5 = findnext(']', s, i4 + 1)
+    i4 = findnext(']', s, i3 + 1)
 
     if inode
       tree = iTpb(sd1, sd2,
@@ -817,16 +816,16 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
                   Parsers.parse(Float64, s[i1+1:i2-1]),
                   Parsers.parse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
-                  _iparse_v(s[i4+1:i5]))
+                  _iparse_v(s[i3+3:i4]))
     else
       tree = iTpb(Parsers.parse(Float64, s[i:i1-1]),
                   Parsers.parse(Float64, s[i1+1:i2-1]),
                   Parsers.parse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
-                  _iparse_v(s[i4+1:i5]))
+                  _iparse_v(s[i3+3:i4]))
     end
 
-    i = i5 + 1
+    i = i4 + 1
 
     if i < ls
       while s[i] === ')'
@@ -841,57 +840,118 @@ end
 
 
 
-
-
-
-
 """
-    _iparse(s::String, ::Type{T}) where {T <: iT}
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{T}) where {T <: iT}
 
 parse istring to `iT`.
 """
-function _iparse(s::String, ::Type{T}) where {T <: iT}
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{T}) where {T <: iT}
 
-  lp = findlast(')', s)
+  @inbounds begin
 
-  # if tip
-  if isnothing(lp)
-    c1 = findfirst(',', s)
-    c2 = findnext(',', s, c1 + 1)
-    c3 = findnext(',', s, c2 + 1)
-    c4 = findnext(',', s, c3 + 1)
-    c5 = findnext(',', s, c4 + 1)
+    inode = false
 
-    return T(Parsers.parse(Float64, s[1:c1-1]), 
-             Parsers.parse(Float64, s[c1+1:c2-1]),
-             Parsers.parse(Float64, s[c2+1:c3-1]),
-             long(s[c3+1]), 
-             long(s[c4+1]),
-             _iparse_v(s[c5+1:end]))
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, T)
+      inode = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, T)
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(',', s, i1 + 1)
+    i3 = findnext(',', s, i2 + 1)
+    i4 = findnext(']', s, i3 + 1)
+
+    if inode
+      tree = T(sd1, sd2,
+               Parsers.parse(Float64, s[i:i1-1]),
+               Parsers.parse(Float64, s[i1+1:i2-1]),
+               Parsers.parse(Float64, s[i2+1:i3-1]),
+               long(s[i3+1]), 
+               long(s[i3+3]), 
+               _iparse_v(s[i3+5:i4]))
+    else
+      tree = T(Parsers.parse(Float64, s[i:i1-1]),
+               Parsers.parse(Float64, s[i1+1:i2-1]),
+               Parsers.parse(Float64, s[i2+1:i3-1]),
+               long(s[i3+1]), 
+               long(s[i3+3]), 
+               _iparse_v(s[i3+5:i4]))
+    end
+
+    i = i4 + 1
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
   end
 
-  si = s[(lp+2):end]
-  s  = s[1:lp]
+  return tree, i + 1
+end
 
-  ci = find_ci(s)
 
-  s1 = s[2:(ci-2)]
-  s2 = s[(ci+2):(end-1)]
 
-  c1 = findfirst(',', si)
-  c2 = findnext(',', si, c1 + 1)
-  c3 = findnext(',', si, c2 + 1)
-  c4 = findnext(',', si, c3 + 1)
-  c5 = findnext(',', si, c4 + 1)
 
-  return T(_iparse(s1, T),
-           _iparse(s2, T),
-           Parsers.parse(Float64, si[1:c1-1]), 
-           Parsers.parse(Float64, si[c1+1:c2-1]),
-           Parsers.parse(Float64, si[c2+1:c3-1]),
-           long(si[c3+1]), 
-           long(si[c4+1]),
-           _iparse_v(si[c5+1:end]))
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{iTbd})
+
+parse istring to `iT`.
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTbd})
+
+  @inbounds begin
+
+    inode = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, iTbd)
+      inode = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, iTbd)
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(',', s, i1 + 1)
+    i3 = findnext(',', s, i2 + 1)
+    i4 = findnext(']', s, i3 + 1)
+    i5 = findnext(']', s, i4 + 1)
+
+    if inode
+      tree = iTbd(sd1, sd2,
+                  Parsers.parse(Float64, s[i:i1-1]),
+                  Parsers.parse(Float64, s[i1+1:i2-1]),
+                  Parsers.parse(Float64, s[i2+1:i3-1]),
+                  long(s[i3+1]), 
+                  long(s[i3+3]), 
+                  _iparse_v(s[i3+5:i4]),
+                  _iparse_v(s[i4+2:i5]))
+    else
+      tree = iTbd(Parsers.parse(Float64, s[i:i1-1]),
+                  Parsers.parse(Float64, s[i1+1:i2-1]),
+                  Parsers.parse(Float64, s[i2+1:i3-1]),
+                  long(s[i3+1]), 
+                  long(s[i3+3]), 
+                  _iparse_v(s[i3+5:i4]),
+                  _iparse_v(s[i4+2:i5]))
+    end
+
+    i = i5 + 1
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
 end
 
 
