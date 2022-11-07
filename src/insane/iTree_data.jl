@@ -255,6 +255,43 @@ end
 
 
 """
+    subclade(tree::iTree, ix::Int64)
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+subclade(tree::T, ix::Int64) where {T <: iTree} = 
+  _subclade(tree, 0, ix, T())[2]
+
+"""
+    _subclade(tree::iTree, i::Int64,  ix::Int64)
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+function _subclade(tree::T, i::Int64,  ix::Int64, t0::T) where {T <: iTree}
+
+  i += 1
+
+  if i <= ix
+
+    if i === ix
+      return i, T(tree)
+    else
+      if def1(tree)
+        i, t0 = _subclade(tree.d1, i, ix, t0)
+        if def2(tree)
+          i, t0 = _subclade(tree.d2, i, ix, t0)
+        end
+      end
+    end
+  end
+
+  return i, t0
+end
+
+
+
+
+"""
     subclade(trees::Vector{T}, 
                   ltree::sT_label, 
                   tips ::Vector{String},
@@ -570,7 +607,7 @@ of a data augmented tree.
 function fixedpos(tree::T) where {T <: iTree}
 
   fp = Int64[]
-  _fixedpos!(tree, 1, fp)
+  _fixedpos!(tree, 0, fp)
 
   return fp
 end
@@ -1846,29 +1883,6 @@ end
 
 
 """
-    treeapply(tree::T, FUN::Function) where {T <: iTree}
-
-Returns a recursive vector structure with requested data for all tree nodes.
-"""
-function treeapply(tree::T, FUN::Function) where {T <: iTree}
-
-  if def1(tree)
-    if def2(tree)
-      return [FUN(tree),treeapply(tree.d1,FUN),treeapply(tree.d2,FUN)]
-    else
-      return [FUN(tree),treeapply(tree.d1,FUN)]
-    end
-  elseif def2(tree)
-    return [FUN(tree),treeapply(tree.d2,FUN)]
-  end
-
-  return FUN(tree)
-end
-
-
-
-
-"""
     nlin_t(tree::T, t::Float64, tc::Float64) where {T <: iTree}
 
 Number of lineages at time t
@@ -2044,7 +2058,7 @@ xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
 """
     branchlengths(tree::T)
 
-Make joint proposal to match simulation with tip fixed `x` value.
+Extract all branch lengths.
 """
 function branchlengths(tree::iTree)
   bls = Float64[]

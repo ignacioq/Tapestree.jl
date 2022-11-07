@@ -14,6 +14,7 @@ module INSANE
   using LoopVectorization: @avx
   using PlotUtils: cgrad
   using RecipesBase
+  using Parsers: parse
 
   # other submodules dependencies
   using ..Utils
