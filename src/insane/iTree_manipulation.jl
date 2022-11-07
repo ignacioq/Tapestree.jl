@@ -841,6 +841,35 @@ end
 
 
 """
+    fixtipsρ!(tree::T, ρ::Float64) where {T <: iTree}
+Fixes the the path to each extant tip with probability `ρ`.
+"""
+function fixtipsρ!(tree::T, ρ::Float64) where {T <: iTree}
+
+  if istip(tree)
+    if isalive(tree)
+      if rand()<ρ
+        fix!(tree)
+        return true
+      end
+    end
+  
+  else
+    f1 = fixtipsρ!(tree.d1, ρ)
+    f2 = fixtipsρ!(tree.d2, ρ)
+    if f1 || f2
+      fix!(tree)
+      return true
+    end
+  end
+
+  return false
+end
+
+
+
+
+"""
     fixtip1!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
 Fixes the the path to tip `wi` in d1 order.
 """
@@ -1203,7 +1232,7 @@ end
 """
     remove_unsampled(tree::T) where {T <: iTree}
 
-Remove unsampled tips from `iTpb`.
+Remove unsampled tips from `iTree`.
 """
 function remove_unsampled(tree::T) where {T <: iTree}
   return _remove_unsampled!(T(tree::T))
