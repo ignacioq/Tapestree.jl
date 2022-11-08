@@ -147,7 +147,7 @@ function _from_string(s::String, ::Type{T}) where {T <: sT}
 
   # find pendant edge
   wd  = findlast(isequal(':'), s)
-  ei  = Parsers.parse(Float64, s[(wd+1):end])
+  ei  = Pparse(Float64, s[(wd+1):end])
   lp  = findlast(isequal(')'), s)
 
   # if tip
@@ -343,7 +343,7 @@ function nsignif(x::String)
   if isnothing(pix)
     return lastindex(x)
   else
-    bp  = Parsers.parse(Float64,x[1:(pix-1)])
+    bp  = Pparse(Float64,x[1:(pix-1)])
     # if less than 1
     if iszero(bp)
       l0 = findfirst(x -> x !== '0', x[(pix+1):end])
@@ -677,10 +677,10 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTpb})
 
     if inode
       tree = sTpb(sd1, sd2, 
-                  Parsers.parse(Float64, s[i:i1-1]), 
+                  Pparse(Float64, s[i:i1-1]), 
                   long(s[i1+1]))
     else
-      tree = sTpb(Parsers.parse(Float64, s[i:i1-1]), 
+      tree = sTpb(Pparse(Float64, s[i:i1-1]), 
                   long(s[i1+1]))
     end
 
@@ -723,10 +723,10 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTbd})
 
     if inode
       tree = sTbd(sd1, sd2, 
-                  Parsers.parse(Float64, s[i:i1-1]), 
+                  Pparse(Float64, s[i:i1-1]), 
                   long(s[i1+1]), long(s[i1+3]))
     else
-      tree = sTbd(Parsers.parse(Float64, s[i:i1-1]), 
+      tree = sTbd(Pparse(Float64, s[i:i1-1]), 
                   long(s[i1+1]), long(s[i1+3]))
     end
 
@@ -772,14 +772,14 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTfbd})
     if in1
       if in2
         tree = sTfbd(sd1, sd2, 
-                    Parsers.parse(Float64, s[i:i1-1]), 
+                    Pparse(Float64, s[i:i1-1]), 
                     long(s[i1+1]), long(s[i1+3]), long(s[i1+5]))
       else
-        tree = sTfbd(sd1, Parsers.parse(Float64, s[i:i1-1]), 
+        tree = sTfbd(sd1, Pparse(Float64, s[i:i1-1]), 
                     long(s[i1+1]), long(s[i1+3]), long(s[i1+5]))
       end
     else
-      tree = sTfbd(Parsers.parse(Float64, s[i:i1-1]), 
+      tree = sTfbd(Pparse(Float64, s[i:i1-1]), 
                   long(s[i1+1]), long(s[i1+3]), long(s[i1+5]))
     end
 
@@ -825,15 +825,15 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
 
     if inode
       tree = iTpb(sd1, sd2,
-                  Parsers.parse(Float64, s[i:i1-1]),
-                  Parsers.parse(Float64, s[i1+1:i2-1]),
-                  Parsers.parse(Float64, s[i2+1:i3-1]),
+                  Pparse(Float64, s[i:i1-1]),
+                  Pparse(Float64, s[i1+1:i2-1]),
+                  Pparse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
                   _iparse_v(s[i3+4:i4-1]))
     else
-      tree = iTpb(Parsers.parse(Float64, s[i:i1-1]),
-                  Parsers.parse(Float64, s[i1+1:i2-1]),
-                  Parsers.parse(Float64, s[i2+1:i3-1]),
+      tree = iTpb(Pparse(Float64, s[i:i1-1]),
+                  Pparse(Float64, s[i1+1:i2-1]),
+                  Pparse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
                   _iparse_v(s[i3+4:i4-1]))
     end
@@ -880,16 +880,16 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{T}) where {T <: iT}
 
     if inode
       tree = T(sd1, sd2,
-               Parsers.parse(Float64, s[i:i1-1]),
-               Parsers.parse(Float64, s[i1+1:i2-1]),
-               Parsers.parse(Float64, s[i2+1:i3-1]),
+               Pparse(Float64, s[i:i1-1]),
+               Pparse(Float64, s[i1+1:i2-1]),
+               Pparse(Float64, s[i2+1:i3-1]),
                long(s[i3+1]), 
                long(s[i3+3]), 
                _iparse_v(s[i3+6:i4-1]))
     else
-      tree = T(Parsers.parse(Float64, s[i:i1-1]),
-               Parsers.parse(Float64, s[i1+1:i2-1]),
-               Parsers.parse(Float64, s[i2+1:i3-1]),
+      tree = T(Pparse(Float64, s[i:i1-1]),
+               Pparse(Float64, s[i1+1:i2-1]),
+               Pparse(Float64, s[i2+1:i3-1]),
                long(s[i3+1]), 
                long(s[i3+3]), 
                _iparse_v(s[i3+6:i4-1]))
@@ -938,17 +938,17 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTbd})
 
     if inode
       tree = iTbd(sd1, sd2,
-                  Parsers.parse(Float64, s[i:i1-1]),
-                  Parsers.parse(Float64, s[i1+1:i2-1]),
-                  Parsers.parse(Float64, s[i2+1:i3-1]),
+                  Pparse(Float64, s[i:i1-1]),
+                  Pparse(Float64, s[i1+1:i2-1]),
+                  Pparse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
                   long(s[i3+3]), 
                   _iparse_v(s[i3+6:i4-1]),
                   _iparse_v(s[i4+3:i5-1]))
     else
-      tree = iTbd(Parsers.parse(Float64, s[i:i1-1]),
-                  Parsers.parse(Float64, s[i1+1:i2-1]),
-                  Parsers.parse(Float64, s[i2+1:i3-1]),
+      tree = iTbd(Pparse(Float64, s[i:i1-1]),
+                  Pparse(Float64, s[i1+1:i2-1]),
+                  Pparse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
                   long(s[i3+3]), 
                   _iparse_v(s[i3+6:i4-1]),
@@ -1001,9 +1001,9 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
     if in1
       if in2
         tree = iTfbd(sd1, sd2,
-                     Parsers.parse(Float64, s[i:i1-1]),
-                     Parsers.parse(Float64, s[i1+1:i2-1]),
-                     Parsers.parse(Float64, s[i2+1:i3-1]),
+                     Pparse(Float64, s[i:i1-1]),
+                     Pparse(Float64, s[i1+1:i2-1]),
+                     Pparse(Float64, s[i2+1:i3-1]),
                      long(s[i3+1]), 
                      long(s[i3+3]), 
                      long(s[i3+5]), 
@@ -1011,9 +1011,9 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
                      _iparse_v(s[i4+3:i5-1]))
       else
         tree = iTfbd(sd1,
-                     Parsers.parse(Float64, s[i:i1-1]),
-                     Parsers.parse(Float64, s[i1+1:i2-1]),
-                     Parsers.parse(Float64, s[i2+1:i3-1]),
+                     Pparse(Float64, s[i:i1-1]),
+                     Pparse(Float64, s[i1+1:i2-1]),
+                     Pparse(Float64, s[i2+1:i3-1]),
                      long(s[i3+1]), 
                      long(s[i3+3]), 
                      long(s[i3+5]), 
@@ -1021,9 +1021,9 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
                      _iparse_v(s[i4+3:i5-1]))
       end
     else
-      tree = iTfbd(Parsers.parse(Float64, s[i:i1-1]),
-                   Parsers.parse(Float64, s[i1+1:i2-1]),
-                   Parsers.parse(Float64, s[i2+1:i3-1]),
+      tree = iTfbd(Pparse(Float64, s[i:i1-1]),
+                   Pparse(Float64, s[i1+1:i2-1]),
+                   Pparse(Float64, s[i2+1:i3-1]),
                    long(s[i3+1]), 
                    long(s[i3+3]), 
                    long(s[i3+5]), 
