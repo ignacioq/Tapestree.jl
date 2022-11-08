@@ -55,25 +55,28 @@ function _parse_newick(s::String, fossil::Bool)
 
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
-  nop  = 0    # number of open parenthesis yet to be closed
-  stem = true # if stem tree
+  # find break if crown tree
+  nop = 0
+  ci  = 0
   for (i,v) in enumerate(s)
     if v === '('
       nop += 1
     elseif v === ')'
       nop -= 1
-    elseif v === ','
-      if iszero(nop)
-        stem = false
-      end
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
     end
   end
 
   if fossil
-    return from_string(s, stem, sTf_label)
+    tree = from_string(s, ci, sTf_label)
+    fossilizepasttips!(tree)
   else
-    return from_string(s, stem, sT_label)
+    tree = from_string(s, ci, sT_label)
   end
+
+  return tree
 end
 
 
@@ -84,57 +87,22 @@ end
 
 Takes a string and turns it into a `sT_label` tree.
 """
-function from_string(s::String, stem::Bool, ::Type{sT_label})
+function from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
 
   # if root (starts with one stem lineage)
-  if stem
-    tree = _from_string(s, sT_label)
+  if iszero(ci)
+    tree, i = _from_string(s, 1, T)
   # if no root (starts with two crown lineage)
   else
-    ci = find_ci(s)
 
-    s1 = s[1:(ci-1)]
-    s2 = s[(ci+1):end]
+    sd1, i = _from_string(s[1:(ci-1)],   1, T)
+    sd2, i = _from_string(s[(ci+1):end], 1, T)
 
-    tree = sT_label(_from_string(s1, sT_label),
-                    _from_string(s2, sT_label),
-                    0.0, "")
+    tree = T(sd1, sd2, 0.0, "")
   end
 
   return tree
 end
-
-
-
-
-"""
-    from_string(s::String, stem::Bool, ::Type{sTf_label})
-
-Takes a string and turns it into a `sTf_label` tree.
-"""
-function from_string(s::String, stem::Bool, ::Type{sTf_label})
-
-  # if root
-  if stem
-    tree = _from_string(s, sTf_label)
-  # if crown
-  else
-    ci = find_ci(s)
-
-    s1 = s[1:(ci-1)]
-    s2 = s[(ci+1):end]
-
-    tree = sTf_label(_from_string(s1, sTf_label),
-                     _from_string(s2, sTf_label),
-                     0.0, "")
-  end
-
-  # fossilize tips
-  fossilizepasttips!(tree)
-
-  return tree
-end
-
 
 
 
@@ -143,40 +111,76 @@ end
 
 Returns a tree of type `T` from newick string.
 """
-function _from_string(s::String, ::Type{T}) where {T <: sT}
+function _from_string(s::String, i::Int64, ::Type{T}) where {T <: sT}
 
-  # find pendant edge
-  wd  = findlast(isequal(':'), s)
-  ei  = Pparse(Float64, s[(wd+1):end])
-  lp  = findlast(isequal(')'), s)
+  @inbounds begin
 
-  # if tip
-  if isnothing(lp)
-    return T(ei, s[1:(wd-1)])
-  else
+    in1 = false
+    in2 = false
 
-    lab = s[(lp+1):(wd-1)]
-    s   = s[2:(lp-1)]
+    if s[i] === '('
+      sd1, i = _from_string(s, i + 1, T)
+      in1 = true
+    end
 
-    ci = find_ci(s)
+    if s[i] === ','
+      sd2, i = _from_string(s, i + 1, T)
+      in2 = true
+    end
+
+    i1 = findnext(':', s, i)
+    i2 = find_cp(s, i1 + 1)
+
+
+    if in1
+      if in2
+        if e(sd1) === 0.0
+          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+        elseif e(sd2) === 0.0
+          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+        else
+          tree = T(sd1, sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+        end
+      else
+        tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+      end
+    else
+      tree = T(Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+    end
+
+    i = i2
+
+    while s[i] === ')'
+      i += 1
+    end
   end
 
-  s1 = s[1:(ci-1)]
-  s2 = s[(ci+1):end]
+  return tree, i
+end
 
-  # if fossils are coded as 0 edge tip
-  if last(s1, 4) == ":0.0" && onlyone(s1, ':')
-    wd = findlast(isequal(':'), s1)
-    return T(_from_string(s2, T), ei, s1[1:(wd-1)])
-  elseif last(s2, 4) == ":0.0" && onlyone(s2, ':')
-    wd = findlast(isequal(':'), s2)
-    return T(_from_string(s1, T), ei, s2[1:(wd-1)])
-  elseif isempty(s1)
-    return T(_from_string(s2, T), ei, lab)
-  elseif isempty(s2)
-    return T(_from_string(s1, T), ei, lab)
+
+
+
+"""
+    find_cp(s::String, i::Int64)
+
+Find next ',' or ')' after index `i`.
+"""
+function find_cp(s::String, i::Int64)
+
+  f1 = findnext(',', s, i)
+  f2 = findnext(')', s, i)
+
+  if isnothing(f1)
+    if isnothing(f2)
+      return lastindex(s)
+    else 
+      return f2
+    end
+  elseif isnothing(f2)
+    return f1
   else
-    return T(_from_string(s1, T), _from_string(s2, T), ei, lab)
+    return min(f1, f2)
   end
 end
 
