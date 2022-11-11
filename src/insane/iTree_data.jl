@@ -272,9 +272,8 @@ function _subclade(tree::T, i::Int64,  ix::Int64, t0::T) where {T <: iTree}
   i += 1
 
   if i <= ix
-
     if i === ix
-      return i, T(tree)
+      return i + 1, T(tree)
     else
       if def1(tree)
         i, t0 = _subclade(tree.d1, i, ix, t0)
@@ -288,6 +287,44 @@ function _subclade(tree::T, i::Int64,  ix::Int64, t0::T) where {T <: iTree}
   return i, t0
 end
 
+
+
+"""
+    subclade_fx(tree::iTree, ix::Int64)
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+subclade_fx(tree::T, ix::Int64) where {T <: iTree} = 
+  _subclade_fx(tree, 0, ix, T(), true)[2]
+
+"""
+    _subclade_fx(tree::T, i::Int64, ix::Int64, t0::T, sis::Bool) where {T <: iTree}
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+function _subclade_fx(tree::T, i::Int64, ix::Int64, t0::T, sis::Bool) where {T <: iTree}
+
+  if isfix(tree) && sis
+    i += 1
+  end
+
+  if i <= ix
+    if i === ix
+      return i + 1, T(tree)
+    else
+      if def1(tree)
+        if def2(tree)
+          i, t0 = _subclade_fx(tree.d1, i, ix, t0, isfix(tree.d2))
+          i, t0 = _subclade_fx(tree.d2, i, ix, t0, isfix(tree.d1))
+        else
+          i, t0 = _subclade_fx(tree.d1, i, ix, t0, true)
+        end
+      end
+    end
+  end
+
+  return i, t0
+end
 
 
 
