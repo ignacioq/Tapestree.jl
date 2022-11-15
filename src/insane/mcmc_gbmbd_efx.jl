@@ -110,8 +110,6 @@ function insane_gbmbd(tree    ::sT_label,
 
   # find initial extinction rate
   ix = findfirst(x -> x < th, tv[1]) - 1
-  tv[1] = tv[1][ix:end]
-  ix = 1
   μi = exp(linpred(th, tv[1][ix], tv[1][ix+1], ev[1][ix], ev[1][ix+1]))
 
   # starting parameters (using method of moments)
