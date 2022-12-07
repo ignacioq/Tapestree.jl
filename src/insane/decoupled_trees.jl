@@ -372,12 +372,15 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
 
   if iszero(et)
     lλv  = [lλ0, lλ0]
-    lμi  = linpred(ti(bi), tvi[1], tvi[2], lei[1], lei[2])
+    tii  = ti(bi)
+    ix   = findfirst(x -> x < tii, tvi) - 1
+    lμi  = linpred(tii, tvi[ix], tvi[ix+1], lei[ix], lei[ix+1])
     lμv  = Float64[lμi, lμi]
     fdti = 0.0
     nts  = 0
-    push!(ixiv, 1)
-    push!(ixfv, 1)
+    push!(ixiv, ix)
+    ix = findnext(x -> x <= tf(bi), tvi, ix) - 1
+    push!(ixfv, ix)
   else
 
     ntF, fdti = divrem(et, δt, RoundDown)
