@@ -55,6 +55,89 @@ end
 
 
 
+
+"""
+    reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+
+  reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+
+Reorder order of daughter branches for both trees, following tree first,
+according to number of tips, with daughter1 always having more than daughter 2.
+"""
+function reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+  tree, treeda, n, nda = _reorder!(tree, treeda, 0)
+  return tree, treeda
+end
+
+
+
+
+"""
+  _reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+
+Reorder order of daughter branches according to number of tips, with daughter
+1 always having more than daughter 2.
+"""
+function _reorder!(tree::T, treeda::D, n::Int64) where {T <: iTree, D <: iTree}
+
+  if isfix(treeda)
+    if istip(treeda)
+      nda = 1
+      n  += 1
+    else
+      if isfix(treeda.d1) && isfix(treeda.d2)
+        t1, t1da, n1, n1da = _reorder!(tree.d1, treeda.d1, n)
+        if def2(treeda)
+          t2, t2da, n2, n2da = _reorder!(tree.d2, treeda.d2, n)
+          if n1 < n2
+            tree.d1   = t2
+            tree.d2   = t1
+            treeda.d1 = t2da
+            treeda.d2 = t1da
+          end
+          n   = n1 + n2
+          nda = n1da + n2da
+        else
+          nda = n1da
+        end
+      else
+        tree, t1da, n, n1da = _reorder!(tree, treeda.d1, n)
+        if def2(treeda)
+          tree, t2da, n, n2da = _reorder!(tree, treeda.d2, n)
+          if n1da < n2da
+            treeda.d1 = t2da
+            treeda.d2 = t1da
+          end
+          nda = n1da + n2da
+        else
+          nda = n1da
+        end
+      end
+    end
+  else
+    if istip(treeda)
+      nda = 1
+    else
+      tree, t1da, n, n1da = _reorder!(tree, treeda.d1, n)
+      if def2(treeda)
+        tree, t2da, n, n2da = _reorder!(tree, treeda.d2, n)
+        if n1da < n2da
+          treeda.d1 = t2da
+          treeda.d2 = t1da
+        end
+        nda = n1da + n2da
+      else
+        nda = n1da
+      end
+    end
+  end
+
+  return tree, treeda, n, nda
+end
+
+
+
+
 """
     rm_stem(tree::T) where {T <: iTree}
 
