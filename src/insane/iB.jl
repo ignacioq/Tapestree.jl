@@ -453,8 +453,8 @@ function makeiBf!(tree::sTf_label,
   elseif istip(tree)
 
     lab = l(tree)
-    ρi  = tρ[lab]
     iψ  = isfossil(tree)
+    ρi  = iψ ? 1.0 : tρ[lab]
     te  = ts - el
     te  = isapprox(te, 0.0) ? 0.0 : te
     push!(idv, 
@@ -493,114 +493,6 @@ function makeiBf!(tree::sTf_label,
   end
 end
 
-
-
-
-"""
-    makeiBf!(tree::sTf_label,
-             idv ::Array{iBffs,1},
-             ti  ::Float64,
-             n1v ::Array{Int64,1},
-             n2v ::Array{Int64,1},
-             ft1v::Array{Int64,1},
-             ft2v::Array{Int64,1},
-             sa2v::Array{Int64,1},
-             tρ  ::Dict{String, Float64},
-             sc  ::Array{Float64,1},
-             xr  ::Array{Float64,1},
-             X   ::Dict{String, Float64})
-
-Make `iBf` vector for an `iTree` with fossils.
-"""
-function makeiBf!(tree::sTf_label,
-                  idv ::Array{iBffs,1},
-                  ti  ::Float64,
-                  n1v ::Array{Int64,1},
-                  n2v ::Array{Int64,1},
-                  ft1v::Array{Int64,1},
-                  ft2v::Array{Int64,1},
-                  sa2v::Array{Int64,1},
-                  tρ  ::Dict{String, Float64},
-                  sc  ::Array{Float64,1},
-                  xr  ::Array{Float64,1},
-                  X   ::Dict{String, Float64})
-
-  el = e(tree)
-  tf = ti - el
-  iψ = isfossil(tree)
-
-  if istip(tree)
-    lab = l(tree)
-    ρi  = tρ[lab]
-    push!(n1v, 0); push!(n2v, 0); push!(ft1v, 0); push!(ft2v, 0); push!(sa2v, 0)
-    i01 = Int64(!iψ)
-    xi  = get(X, lab, NaN)
-    ifx = !isnan(xi)
-    if !ifx
-      mn = isempty(xr) ? 0.0 : mean(xr)
-      s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
-      xi = randn()*s + mn
-    end
-    push!(xr, xi)
-    push!(idv, 
-      iBffs(el, 0, 0, 0, ti, tf, true, ρi, iψ, i01, 1, 0.0, 0.0, 0.0, ifx))
-    return ρi, i01, 1-i01, 0, xi, el
-  end
-
-  ifx = false
-
-  if def1(tree)
-    ρ1, n1, ft1, sa1, x1, e1 = 
-      makeiBf!(tree.d1, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ, sc, xr, X)
-    if def2(tree)
-      ρ2, n2, ft2, sa2, x2, e2 = 
-        makeiBf!(tree.d2, idv, tf, n1v, n2v, ft1v, ft2v, sa2v, tρ, sc, xr, X)
-
-      # pic
-      scn = (x2 - x1)/(e1 + e2)
-      xn  = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
-      en  = el + e1*e2/(e1 + e2)
-
-      # rho
-      n  = n1 + n2
-      ft = ft1 + ft2
-      ρi = (n+ft) / ( (n1+ft1)/ρ1 + (n2+ft2)/ρ2 ) 
-      sa = sa1 + sa2 + iψ
-    else
-      lab = l(tree)
-      xn  = get(X, lab, NaN)
-      ifx = !isnan(xn)
-
-      if !ifx
-        s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
-        xn = randn()*s + x1
-      end
-
-      # pic
-      scn = (xn - x1)/e1
-      en  = el
-
-      # rho
-      n2, ft2, sa2 = 0, 0, 0
-      n  = n1                     # number of alive descendants
-      ft = ft1                   # number of fossil tips
-      ρi = ρ1
-      sa = sa1 + iψ  # number of sampled ancestors
-    end
-  end
-
-  push!(idv, iBffs(el, 0, 0, 0, ti, tf, false, ρi, iψ, 0, 1, 0.0, 0.0, 0.0, ifx))
-  push!(n1v, n1)
-  push!(n2v, n2)
-  push!(ft1v, ft1)
-  push!(ft2v, ft2)
-  push!(sa2v, sa2)
-
-  push!(sc, scn)
-  push!(xr,  xn)
-
-  return ρi, n, ft, sa, xn, en
-end
 
 
 
