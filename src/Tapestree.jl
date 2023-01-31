@@ -45,7 +45,7 @@ using .INSANE: read_newick, write_newick, iread,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
-  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc,
+  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs,
   ntipsalive, ntips, ntipsextinct, sustainedcount, trextract, reorder!,
   treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 export read_newick, write_newick, iread,
@@ -58,7 +58,7 @@ export read_newick, write_newick, iread,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
-  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc,
+  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs,
   ntipsalive, ntips, ntipsextinct, sustainedcount, trextract, reorder!,
   treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 
