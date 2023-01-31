@@ -13,31 +13,48 @@ Created 07 07 2020
 
 
 """
-    read_newick(in_file::String; fossil = false)
+    read_newick(in_file::String;
+                ix::OrdinalRange{Int64,Int64} = 0:0)
 
-Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
-is true from `in_file`.
+Reads a newick tree into `sT` from `in_file` at lines `ix`.
 """
-function read_newick(in_file::String; fossil::Bool = false)
+function read_newick(in_file::String;
+                     ix::OrdinalRange{Int64,Int64} = 0:0)
 
   io = open(in_file)
-  s = readlines(io)[1]
-  close(io)
 
-  # if 1 tree
-  if onlyone(s, ';')
-    return _parse_newick(s, fossil)
-  # if more than 1 tree
-  else
-    allsc = findall(';', s)
+  iix = first(ix)
+  lix = iszero(ix[1]) ? typemax(Int64) : last(ix)
+  six = step(ix)
 
-    t1 = _parse_newick(s[1:allsc[1]], fossil)
-    tv = typeof(t1)[t1]
+  tv = sT_label[]
 
-    for i in 2:lastindex(allsc)
-      push!(tv, _parse_newick(s[(allsc[i-1] + 1):(allsc[i])], fossil))
+  ii = 0
+  it = six
+  for line in eachline(io)
+    ii += 1
+
+    if ii < iix
+      continue
     end
 
+    # read trees
+    if it === six
+      push!(tv, _parse_newick(line))
+      it = 0
+    end
+
+    if ii >= lix
+      break
+    end
+    it += 1
+  end
+
+  close(io)
+
+  if isone(lastindex(tv))
+    return tv[1]
+  else
     return tv
   end
 end
@@ -46,12 +63,11 @@ end
 
 
 """
-    _parse_newick(in_file::String; fossil = false)
+    _parse_newick(in_file::String)
 
-Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
-is true from `in_file`.
+Reads a newick tree into `sT` from `in_file`.
 """
-function _parse_newick(s::String, fossil::Bool)
+function _parse_newick(s::String)
 
   s = s[2:(findfirst(isequal(';'), s)-2)]
 
@@ -69,12 +85,94 @@ function _parse_newick(s::String, fossil::Bool)
     end
   end
 
-  if fossil
-    tree = from_string(s, ci, sTf_label)
-    fossilizepasttips!(tree)
-  else
-    tree = from_string(s, ci, sT_label)
+  tree = from_string(s, ci, sT_label)
+
+  return tree
+end
+
+
+
+
+"""
+    read_newick(in_file::String,
+                fossil ::Bool;
+                ix     ::OrdinalRange{Int64,Int64} = 0:0,
+                ne     ::Float64                   = accer)
+
+Reads a newick tree into `sTf` from `in_file` at lines `ix`.
+"""
+function read_newick(in_file::String,
+                     fossil ::Bool;
+                     ix     ::OrdinalRange{Int64,Int64} = 0:0,
+                     ne     ::Float64                   = accerr)
+
+  io = open(in_file)
+
+  iix = first(ix)
+  lix = iszero(ix[1]) ? typemax(Int64) : last(ix)
+  six = step(ix)
+
+  tv = sTf_label[]
+
+  ii = 0
+  it = six
+  for line in eachline(io)
+    ii += 1
+
+    if ii < iix
+      continue
+    end
+
+    # read trees
+    if it === six
+      push!(tv, _parse_newick(line, ne))
+      it = 0
+    end
+
+    if ii >= lix
+      break
+    end
+    it += 1
   end
+
+  close(io)
+
+  if isone(lastindex(tv))
+    return tv[1]
+  else
+    return tv
+  end
+end
+
+
+
+
+"""
+    _parse_newick(in_file::String; fossil = false)
+
+Reads a newick tree into `sT` if fossil is false and `sTf` if fossil
+is true from `in_file`.
+"""
+function _parse_newick(s::String, ne::Float64)
+
+  s = s[2:(findfirst(isequal(';'), s)-2)]
+
+  # find break if crown tree
+  nop = 0
+  ci  = 0
+  for (i,v) in enumerate(s)
+    if v === '('
+      nop += 1
+    elseif v === ')'
+      nop -= 1
+    elseif v === ',' && iszero(nop)
+      ci = i
+      break
+    end
+  end
+
+  tree = from_string(s, ci, sTf_label)
+  fossilizepasttips!(tree, ne)
 
   return tree
 end

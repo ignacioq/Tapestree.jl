@@ -535,8 +535,8 @@ end
 
 Change all past tips to fossil tips.
 """
-fossilizepasttips!(tree::T) where {T <: iTf} = 
-  _fossilizepasttips!(tree::T, treeheight(tree::T))
+fossilizepasttips!(tree::T, ne::Float64) where {T <: iTf} = 
+  _fossilizepasttips!(tree::T, treeheight(tree), ne)
 
 
 
@@ -544,22 +544,23 @@ fossilizepasttips!(tree::T) where {T <: iTf} =
 """
     _fossilizepasttips!(tree::T,
                         t   ::Float64,
-                        raccerr::Float64) where {T <: iTf}
+                        ne  ::Float64) where {T <: iTf}
 
 Change all past tips to fossil tips, initialized at tree height `t`.
 """
 function _fossilizepasttips!(tree::T,
-                             t   ::Float64) where {T <: iTf}
+                             t   ::Float64,
+                             ne  ::Float64) where {T <: iTf}
 
   t -= e(tree)
 
   if def1(tree)
-    _fossilizepasttips!(tree.d1::T, t)
+    _fossilizepasttips!(tree.d1::T, t, ne)
     if def2(tree)
-      _fossilizepasttips!(tree.d2::T, t)
+      _fossilizepasttips!(tree.d2::T, t, ne)
     end
   else
-    if t > accerr
+    if t > ne
       fossilize!(tree)
     end
   end
