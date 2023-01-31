@@ -559,9 +559,48 @@ function _fossilizepasttips!(tree::T,
       _fossilizepasttips!(tree.d2::T, t)
     end
   else
-    if istip(tree::T) && t > 0.0 + accerr
+    if t > accerr
       fossilize!(tree)
     end
+  end
+end
+
+
+
+"""
+    fossilize!(tree::T, label::String) where {T <: iTf}
+
+Fossilize a given tree given its name.
+"""
+function fossilize!(tree::T, label::String) where {T <: sTf_label}
+
+  if def1(tree)
+    fossilize!(tree.d1::T, label)
+    if def2(tree)
+      fossilize!(tree.d2::T, label)
+    end
+  elseif l(tree) == label 
+    fossilize!(tree)
+  end
+end
+
+
+
+
+"""
+    defossilize!(tree::T, label::String) where {T <: iTf}
+
+Fossilize a given tree given its name.
+"""
+function defossilize!(tree::T, label::String) where {T <: sTf_label}
+
+  if def1(tree)
+    defossilize!(tree.d1::T, label)
+    if def2(tree)
+      defossilize!(tree.d2::T, label)
+    end
+  elseif l(tree) == label 
+    defossilize!(tree)
   end
 end
 
