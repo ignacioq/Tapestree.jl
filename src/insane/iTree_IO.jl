@@ -40,7 +40,15 @@ function read_newick(in_file::String;
 
     # read trees
     if it === six
-      push!(tv, _parse_newick(line))
+      if onlyone(line, ';')
+        push!(tv, _parse_newick(line))
+      else
+        allsc = findall(';', line)
+        for i in Base.OneTo(lastindex(allsc)-1)
+          push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])]))
+        end
+      end
+
       it = 0
     end
 
@@ -125,7 +133,14 @@ function read_newick(in_file::String,
 
     # read trees
     if it === six
-      push!(tv, _parse_newick(line, ne))
+      if onlyone(line, ';')
+        push!(tv, _parse_newick(line, ne))
+      else
+        allsc = findall(';', line)
+        for i in Base.OneTo(lastindex(allsc)-1)
+          push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])], ne))
+        end
+      end
       it = 0
     end
 
