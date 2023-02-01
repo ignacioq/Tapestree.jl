@@ -32,6 +32,9 @@ function read_newick(in_file::String;
   ii = 0
   it = six
   for line in eachline(io)
+
+    iszero(lastindex(line)) && continue
+
     ii += 1
 
     if ii < iix
@@ -125,6 +128,9 @@ function read_newick(in_file::String,
   ii = 0
   it = six
   for line in eachline(io)
+
+    iszero(lastindex(line)) && continue
+
     ii += 1
 
     if ii < iix
@@ -170,7 +176,7 @@ is true from `in_file`.
 """
 function _parse_newick(s::String, ne::Float64)
 
-  s = s[2:(findfirst(isequal(';'), s)-2)]
+  s = s[2:(findfirst(isequal(';'), s)-1)]
 
   # find break if crown tree
   nop = 0
@@ -243,7 +249,6 @@ function _from_string(s::String, i::Int64, ::Type{T}) where {T <: sT}
 
     i1 = findnext(':', s, i)
     i2 = find_cp(s, i1 + 1)
-
 
     if in1
       if in2
