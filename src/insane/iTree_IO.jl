@@ -80,7 +80,7 @@ Reads a newick tree into `sT` from `in_file`.
 """
 function _parse_newick(s::String)
 
-  s = s[2:(findfirst(isequal(';'), s)-2)]
+  s = s[2:(findlast(isequal(';'), s)-1)]
 
   # find break if crown tree
   nop = 0
@@ -176,7 +176,7 @@ is true from `in_file`.
 """
 function _parse_newick(s::String, ne::Float64)
 
-  s = s[2:(findfirst(isequal(';'), s)-1)]
+  s = s[2:(findlast(isequal(';'), s)-1)]
 
   # find break if crown tree
   nop = 0
