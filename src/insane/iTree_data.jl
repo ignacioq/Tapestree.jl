@@ -214,38 +214,84 @@ tiplabels(tree::T) where {T <: Tlabel} = _tiplabels!(tree, String[])
 
 
 
-
 """
-    _tiplabels!(tree::sT_label, labels::Array{String,1})
+    _tiplabels!(tree::sTf_label, labels::Array{String,1})
 
-Returns tip labels for `sT_label`.
+Returns tip labels for `sTf_label`.
 """
-function _tiplabels!(tree::sT_label, labels::Array{String,1})
+function _tiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
-  if !def1(tree)
+  if istip(tree)
     push!(labels, l(tree))
   else
     _tiplabels!(tree.d1, labels)
-    _tiplabels!(tree.d2, labels)
+    if def2(tree)
+      _tiplabels!(tree.d2, labels)
+    end
   end
+  return labels
 end
 
 
 
 
 """
-    _tiplabels!(tree::sTf_label, labels::Array{String,1})
+    alivetiplabels(tree::T) where {T <: Tlabel}
+
+Returns tip labels for `sT_label` and `sTf_label`.
+"""
+alivetiplabels(tree::T) where {T <: Tlabel} = _alivetiplabels!(tree, String[])
+
+
+
+
+"""
+    _alivetiplabels!(tree::sTf_label, labels::Array{String,1})
 
 Returns tip labels for `sTf_label`.
 """
-function _tiplabels!(tree::sTf_label, labels::Array{String,1})
+function _alivetiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
-  if !def1(tree)
-    push!(labels, l(tree))
+  if istip(tree)
+    if !isfossil(tree)
+      push!(labels, l(tree))
+    end
   else
-    _tiplabels!(tree.d1, labels)
+    _alivetiplabels!(tree.d1, labels)
     if def2(tree)
-      _tiplabels!(tree.d2, labels)
+      _alivetiplabels!(tree.d2, labels)
+    end
+  end
+  return labels
+end
+
+
+
+
+"""
+    fossiltiplabels(tree::T) where {T <: Tlabel}
+
+Returns tip labels for `sT_label` and `sTf_label`.
+"""
+fossiltiplabels(tree::T) where {T <: Tlabel} = _fossiltiplabels!(tree, String[])
+
+
+
+"""
+    _fossiltiplabels!(tree::sTf_label, labels::Array{String,1})
+
+Returns tip labels for `sTf_label`.
+"""
+function _fossiltiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
+
+  if istip(tree)
+    if isfossil(tree)
+      push!(labels, l(tree))
+    end
+  else
+    _fossiltiplabels!(tree.d1, labels)
+    if def2(tree)
+      _fossiltiplabels!(tree.d2, labels)
     end
   end
   return labels
