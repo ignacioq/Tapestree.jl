@@ -661,6 +661,15 @@ iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd, iTfbdX}
 
 
 """
+    Union type for unlabelled fossil data
+
+uTf = Union{sTfbd, sTfbdX, iTfbd}
+"""
+uTf = Union{sTfbd, sTfbdX, iTfbd, iTfbdX}
+
+
+
+"""
     Union type for gbm-bd data
 
 iTbdU = Union{iTbd, iTfbd}

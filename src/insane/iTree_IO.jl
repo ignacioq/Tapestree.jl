@@ -353,6 +353,38 @@ end
 
 
 """
+    write_newick(treev::Vector{T}, out_file::String)
+
+Writes `iTsimple` as a newick tree to `out_file`.
+"""
+function write_newick(treev::Vector{T}, out_file::String) where {T <: iTree}
+
+  io = open(out_file*".trees", "w")
+
+  for t in treev
+
+    s = to_string(t)
+
+    # if no stem branch
+    if last(s, 4) == ":0.0"
+      s = s[1:(end-4)]*";\n"
+    else
+      s = string("(", s, ");\n")
+    end
+
+    write(io, s)
+  end
+
+  close(io)
+
+  return nothing
+end
+
+
+
+
+
+"""
     write_newick(tree::T, out_file::String)
 
 Writes `iTsimple` as a newick tree to `out_file`.
@@ -374,6 +406,8 @@ function write_newick(tree::T, out_file::String) where {T <: iTree}
 
   return nothing
 end
+
+
 
 
 
@@ -415,7 +449,7 @@ end
 
 Returns newick string.
 """
-to_string(tree::T) where {T <: iTf} = _to_string(tree, 0, 0)[1]
+to_string(tree::T) where {T <: uTf} = _to_string(tree, 0, 0)[1]
 
 
 
@@ -425,7 +459,7 @@ to_string(tree::T) where {T <: iTf} = _to_string(tree, 0, 0)[1]
 
 Returns newick string.
 """
-function _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
+function _to_string(tree::T, n::Int64, nf::Int64) where {T <: uTf}
 
   if def1(tree)
     s1, n, nf = _to_string(tree.d1, n, nf)
@@ -447,6 +481,38 @@ function _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
       n += 1
       return string("t",n,":",e(tree)), n, nf
     end
+  end
+end
+
+
+
+"""
+    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+
+Returns newick string.
+"""
+to_string(tree::T) where {T <: Tlabel} = _to_string(tree)
+
+
+"""
+    _to_string(tree::T) where {T <: Tlabel}
+
+Returns newick string.
+"""
+function _to_string(tree::T) where {T <: Tlabel}
+
+  if def1(tree)
+    s1 = _to_string(tree.d1)
+    if def2(tree)
+      s2 = _to_string(tree.d2)
+      s = string("(",s1,",", s2,"):",e(tree))
+    else
+      s = string("(",s1,")",l(tree),":", e(tree))
+    end
+
+    return s
+  else
+    return string(l(tree),":",e(tree))
   end
 end
 

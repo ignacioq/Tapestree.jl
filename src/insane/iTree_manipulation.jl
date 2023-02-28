@@ -2288,8 +2288,8 @@ Remove fossils.
 function _remove_fossils!(tree::T) where {T <: iTf}
 
   if def1(tree)
+    tree.d1 = _remove_fossils!(tree.d1)
     if def2(tree)
-      tree.d1 = _remove_fossils!(tree.d1)
       tree.d2 = _remove_fossils!(tree.d2)
     else
       t1 = _remove_fossils!(tree.d1)
@@ -2303,7 +2303,6 @@ function _remove_fossils!(tree::T) where {T <: iTf}
 
   return tree
 end
-
 
 
 
@@ -2367,16 +2366,81 @@ end
 
 
 
+"""
+    prune_fossils(treev::Vector{sTf_label})
+
+Prune fossils.
+"""
+function prune_fossils(treev::Vector{sTf_label})
+
+  treevne = sTf_label[]
+  for t in treev
+    push!(treevne, prune_fossils(t))
+  end
+
+  return treevne
+end
+
+
+
+
+"""
+    prune_fossils(tree::sTf_label)
+
+Prune fossils.
+"""
+function prune_fossils(tree::sTf_label)
+  return _prune_fossils!(sTf_label(tree::sTf_label))
+end
+
+
+
+"""
+    _prune_fossils!(tree::sTf_label)
+
+Prune fossils.
+"""
+function _prune_fossils!(tree::sTf_label)
+
+  if def1(tree)
+    tree.d1 = _prune_fossils!(tree.d1)
+    if def2(tree)
+      tree.d2 = _prune_fossils!(tree.d2)
+
+      if isfossil(tree.d1)
+        if isfossil(tree.d2)
+          return sTf_label(e(tree), isextinct(tree), true, l(tree))
+        else
+          ne  = e(tree) + e(tree.d2)
+          tree = tree.d2
+          sete!(tree, ne)
+        end
+      elseif isfossil(tree.d2)
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+      end
+      return tree
+    else
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+    end
+  end
+
+  return tree
+end
+
+
 
 
 """
     remove_sampled_ancestors(tree::T, p::Float64) where {T <: iTf}
 
-Remove fossils.
+Remove sampled ancestor fossils with a certain probability `p`.
 """
 function remove_sampled_ancestors(tree::T, p::Float64) where {T <: iTf}
   t, i = _remove_sampled_ancestors!(T(tree::T),  p, false)
-
   return t
 end
 
@@ -2386,7 +2450,7 @@ end
 """
     _remove_sampled_ancestors!(tree::T) where {T <: iTf}
 
-Remove fossils.
+Remove sampled ancestor fossils with a certain probability `p`.
 """
 function _remove_sampled_ancestors!(tree::T,  p::Float64, i::Bool) where {T <: iTf}
 
@@ -2408,65 +2472,6 @@ function _remove_sampled_ancestors!(tree::T,  p::Float64, i::Bool) where {T <: i
   end
 
   return tree, i
-end
-
-
-
-
-"""
-    reconstructed(tree::T) where {T <: iTree}
-    reconstructed(tree::T) where {T <: iTf}
-
-Returns the reconstructed tree, i.e. the observed tree from sampled extant
-tips and fossils.
-"""
-# For all trees without fossils, it simply means removing extinct lineages
-reconstructed(tree::T) where {T <: iTree} = remove_unsampled(tree::T)
-reconstructed(tree::T) where {T <: iTf} = _reconstructed!(T(tree::T))
-
-
-
-
-"""
-    _reconstructed!(tree::T) where {T <: iTf}
-
-Returns the reconstructed tree, i.e. the observed tree from sampled extant
-tips and fossils.
-"""
-function _reconstructed!(tree::T) where {T <: iTf}
-  defd1 = def1(tree)
-  defd2 = def2(tree)
-
-  if defd1 tree.d1 = _reconstructed!(tree.d1) end
-  if defd2 tree.d2 = _reconstructed!(tree.d2) end
-
-  if !defd1 && !defd2
-    return tree
-  end
-
-  extd1 = defd1 && isextincttip(tree.d1)
-  extd2 = defd2 && isextincttip(tree.d2)
-
-  # 2 extinct daughters -> extinct tip
-  if extd1 && extd2
-    return T(e(tree), true, false)
-  end
-
-  # sampled ancestor with extinct daughter -> fossil tip (labelled extinct)
-  if (extd1 && !defd2) || (!defd1 && extd2)
-    lab = extd1 ? l(tree.d1) : l(tree.d2)
-    if isempty(lab)
-      return T(e(tree), true, true)
-    else
-      return T(e(tree), true, true, lab)
-    end
-  end
-
-  # 1 extinct and 1 alive branch -> keep only the alive one
-  if extd1 ne = e(tree)+e(tree.d2); tree = tree.d2; sete!(tree,ne) end
-  if extd2 ne = e(tree)+e(tree.d1); tree = tree.d1; sete!(tree,ne) end
-
-  return tree
 end
 
 
