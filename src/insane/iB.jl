@@ -706,13 +706,12 @@ end
 
 
 
-
 """
-    nfossils(idf::Vector{iBffs}, ets::Vector{Float64})
+    nfossils(idf::Vector{iBffs}, ets::Vector{Float64}, nf0::Vector{Int64})
 
 Return the number of fossil nodes in the tree given different epochs.
 """
-function nfossils(idf::Vector{iBffs}, ets::Vector{Float64})
+function nfossils(idf::Vector{iBffs}, ets::Vector{Float64}, nf0::Vector{Int64})
 
   nep = lastindex(ets) + 1
   fs  = zeros(nep)
@@ -722,6 +721,10 @@ function nfossils(idf::Vector{iBffs}, ets::Vector{Float64})
       eix = isnothing(eix) ? nep : eix
       fs[eix] += 1.0
     end
+  end
+
+  for i in Base.OneTo(nep) 
+    fs[i] += Float64(nf0[i])
   end
 
   return fs

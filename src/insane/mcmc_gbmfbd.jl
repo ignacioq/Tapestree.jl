@@ -21,6 +21,7 @@ Created 03 09 2020
                   σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
                   ψ_epoch ::Vector{Float64}   = Float64[],
+                  f_epoch ::Vector{Int64}     = Int64[],
                   niter   ::Int64             = 1_000,
                   nthin   ::Int64             = 10,
                   nburn   ::Int64             = 200,
@@ -50,6 +51,7 @@ function insane_gbmfbd(tree    ::sTf_label;
                        σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
                        ψ_epoch ::Vector{Float64}   = Float64[],
+                       f_epoch ::Vector{Int64}     = Int64[0],
                        niter   ::Int64             = 1_000,
                        nthin   ::Int64             = 10,
                        nburn   ::Int64             = 200,
@@ -76,11 +78,17 @@ function insane_gbmfbd(tree    ::sTf_label;
   srδt = sqrt(δt)
 
   # only include epochs where the tree occurs
+  sort!(ψ_epoch, rev = true)
   tix = findfirst(x -> x < th, ψ_epoch)
   if !isnothing(tix)
     ψ_epoch = ψ_epoch[tix:end]
   end
   nep  = lastindex(ψ_epoch) + 1
+
+  # make initial fossils per epoch vector
+  if lastindex(f_epoch) !== nep
+    f_epoch = fill(0, nep)
+  end
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -170,17 +178,16 @@ function insane_gbmfbd(tree    ::sTf_label;
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc  =
-    mcmc_burn_gbmfbd(Ξ, idf,
-      λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, ψ_prior, ψ_epoch,
-      nburn, αi, σλi, σμi, ψc, mc, th, crown, δt, srδt, bst, eixi, eixf,
-      inodes, pup, prints)
+    mcmc_burn_gbmfbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
+      ψ_prior, ψ_epoch, f_epoch, nburn, αi, σλi, σμi, ψc, mc, th, crown, 
+      δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   # mcmc
   r, treev =
     mcmc_gbmfbd(Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, th, crown,
-      λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, ψ_prior, ψ_epoch,
-      δt, srδt, bst, eixi, eixf, inodes, pup, niter, nthin, 
-      nflush, ofile, prints)
+      λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
+      ψ_prior, ψ_epoch, f_epoch, δt, srδt, bst, eixi, eixf, inodes, pup, 
+      niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -190,30 +197,31 @@ end
 
 """
     mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
-                    idf     ::Vector{iBffs},
-                    λa_prior::NTuple{2,Float64},
-                    μa_prior::NTuple{2,Float64},
-                    α_prior ::NTuple{2,Float64},
-                    σλ_prior::NTuple{2,Float64},
-                    σμ_prior::NTuple{2,Float64},
-                    ψ_prior ::NTuple{2,Float64},
-                    ψ_epoch ::Vector{Float64},
-                    nburn   ::Int64,
-                    αc      ::Float64,
-                    σλc     ::Float64,
-                    σμc     ::Float64,
-                    ψc      ::Float64,
-                    mc      ::Float64,
-                    th      ::Float64,
-                    crown   ::Int64,
-                    δt      ::Float64,
-                    srδt    ::Float64,
-                    bst     ::Vector{Float64},
-                    eixi    ::Vector{Int64},
-                    eixf    ::Vector{Int64},
-                    inodes  ::Array{Int64,1},
-                    pup     ::Array{Int64,1},
-                    prints  ::Int64)
+                     idf     ::Vector{iBffs},
+                     λa_prior::NTuple{2,Float64},
+                     μa_prior::NTuple{2,Float64},
+                     α_prior ::NTuple{2,Float64},
+                     σλ_prior::NTuple{2,Float64},
+                     σμ_prior::NTuple{2,Float64},
+                     ψ_prior ::NTuple{2,Float64},
+                     ψ_epoch ::Vector{Float64},
+                     f_epoch ::Vector{Int64},
+                     nburn   ::Int64,
+                     αc      ::Float64,
+                     σλc     ::Float64,
+                     σμc     ::Float64,
+                     ψc      ::Vector{Float64},
+                     mc      ::Float64,
+                     th      ::Float64,
+                     crown   ::Int64,
+                     δt      ::Float64,
+                     srδt    ::Float64,
+                     bst     ::Vector{Float64},
+                     eixi    ::Vector{Int64},
+                     eixf    ::Vector{Int64},
+                     inodes  ::Array{Int64,1},
+                     pup     ::Array{Int64,1},
+                     prints  ::Int64)
 
 MCMC burn-in chain for `fbdd`.
 """
@@ -226,6 +234,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                          σμ_prior::NTuple{2,Float64},
                          ψ_prior ::NTuple{2,Float64},
                          ψ_epoch ::Vector{Float64},
+                         f_epoch ::Vector{Int64},
                          nburn   ::Int64,
                          αc      ::Float64,
                          σλc     ::Float64,
@@ -257,7 +266,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   lμxpr = log(μa_prior[2])
 
   L            = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
-  nf           = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
+  nf           = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
   dλ           = deltaλ(Ξ)                         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)                    # sum squares in λ and μ
   nin          = lastindex(inodes)                 # number of internal nodes
@@ -345,8 +354,7 @@ end
                 σμ_prior::NTuple{2,Float64},
                 ψ_prior ::NTuple{2,Float64},
                 ψ_epoch ::Vector{Float64},
-                niter   ::Int64,
-                nthin   ::Int64,
+                f_epoch ::Vector{Int64},
                 δt      ::Float64,
                 srδt    ::Float64,
                 bst     ::Vector{Float64},
@@ -354,6 +362,10 @@ end
                 eixf    ::Vector{Int64},
                 inodes  ::Array{Int64,1},
                 pup     ::Vector{Int64},
+                niter   ::Int64,
+                nthin   ::Int64,
+                nflush  ::Int64,
+                ofile   ::String,
                 prints  ::Int64)
 
 MCMC chain for `gbmbd`.
@@ -376,6 +388,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      σμ_prior::NTuple{2,Float64},
                      ψ_prior ::NTuple{2,Float64},
                      ψ_epoch ::Vector{Float64},
+                     f_epoch ::Vector{Int64},
                      δt      ::Float64,
                      srδt    ::Float64,
                      bst     ::Vector{Float64},
@@ -398,7 +411,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   lμxpr = log(μa_prior[2])
 
   L            = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
-  nf           = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
+  nf           = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
   dλ           = deltaλ(Ξ)                         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)                    # sum squares in λ and μ
   nin          = lastindex(inodes)                 # number of internal nodes

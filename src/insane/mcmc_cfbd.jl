@@ -19,6 +19,7 @@ Created 07 10 2021
                 μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 ψ_epoch ::Vector{Float64}       = Float64[],
+                f_epoch ::Vector{Int64}         = Int64[0],
                 niter   ::Int64                 = 1_000,
                 nthin   ::Int64                 = 10,
                 nburn   ::Int64                 = 200,
@@ -41,6 +42,7 @@ function insane_cfbd(tree    ::sTf_label;
                      μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_epoch ::Vector{Float64}       = Float64[],
+                     f_epoch ::Vector{Int64}       = Int64[0],
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
@@ -65,6 +67,11 @@ function insane_cfbd(tree    ::sTf_label;
     ψ_epoch = ψ_epoch[tix:end]
   end
   nep = lastindex(ψ_epoch) + 1
+
+  # make initial fossils per epoch vector
+  if lastindex(f_epoch) !== nep
+    f_epoch = fill(0, nep)
+  end
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -144,13 +151,13 @@ function insane_cfbd(tree    ::sTf_label;
 
   # adaptive phase
   llc, prc, λc, μc, ψc, mc, ns, L =
-     mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, ψ_epoch, nburn,
+     mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, ψ_epoch, f_epoch, nburn,
         λc, μc, ψc, mc, th, crown, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev =
     mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, ns, L, 
-      λ_prior, μ_prior, ψ_prior, ψ_epoch, th, crown, bst, eixi, eixf, 
+      λ_prior, μ_prior, ψ_prior, ψ_epoch, f_epoch, th, crown, bst, eixi, eixf, 
       pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -165,13 +172,18 @@ end
                    λ_prior::NTuple{2,Float64},
                    μ_prior::NTuple{2,Float64},
                    ψ_prior::NTuple{2,Float64},
+                   ψ_epoch::Vector{Float64},
+                   f_epoch::Vector{Int64},
                    nburn  ::Int64,
                    λc     ::Float64,
                    μc     ::Float64,
-                   ψc     ::Float64,
+                   ψc     ::Vector{Float64},
                    mc     ::Float64,
                    th     ::Float64,
-                   crown   ::Bool,
+                   crown  ::Int64,
+                   bst    ::Vector{Float64},
+                   eixi   ::Vector{Int64},
+                   eixf   ::Vector{Int64},
                    pup    ::Array{Int64,1},
                    prints ::Int64)
 
@@ -184,6 +196,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
                         μ_prior::NTuple{2,Float64},
                         ψ_prior::NTuple{2,Float64},
                         ψ_epoch::Vector{Float64},
+                        f_epoch::Vector{Int64},
                         nburn  ::Int64,
                         λc     ::Float64,
                         μc     ::Float64,
@@ -199,7 +212,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
 
   el = lastindex(idf)                    # number of branches
   L  = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
-  nf = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
+  nf = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
   ns = nnodesbifurcation(idf)            # number of speciation events
   ne = Float64(ntipsextinct(Ξ))          # number of extinction events
 
@@ -258,30 +271,31 @@ end
 
 """
     mcmc_cfbd(Ξ      ::Vector{sTfbd},
-              idf    ::Array{iBffs,1},
-              llc    ::Float64,
-              prc    ::Float64,
-              λc     ::Float64,
-              μc     ::Float64,
-              ψc     ::Vector{Float64},
-              mc     ::Float64,
-              ns     ::Float64,
-              L      ::Vector{Float64},
-              λ_prior::NTuple{2,Float64},
-              μ_prior::NTuple{2,Float64},
-              ψ_prior::NTuple{2,Float64},
-              ψ_epoch::Vector{Float64},
-              th     ::Float64,
-              crown  ::Int64,
-              bst    ::Vector{Float64},
-              eixi   ::Vector{Int64},
-              eixf   ::Vector{Int64},
-              pup    ::Array{Int64,1},
-              niter  ::Int64,
-              nthin  ::Int64,
-              nflush ::Int64,
-              ofile  ::String,
-              prints ::Int64)
+             idf    ::Array{iBffs,1},
+             llc    ::Float64,
+             prc    ::Float64,
+             λc     ::Float64,
+             μc     ::Float64,
+             ψc     ::Vector{Float64},
+             mc     ::Float64,
+             ns     ::Float64,
+             L      ::Vector{Float64},
+             λ_prior::NTuple{2,Float64},
+             μ_prior::NTuple{2,Float64},
+             ψ_prior::NTuple{2,Float64},
+             ψ_epoch::Vector{Float64},
+             f_epoch::Vector{Int64},
+             th     ::Float64,
+             crown  ::Int64,
+             bst    ::Vector{Float64},
+             eixi   ::Vector{Int64},
+             eixf   ::Vector{Int64},
+             pup    ::Array{Int64,1},
+             niter  ::Int64,
+             nthin  ::Int64,
+             nflush ::Int64,
+             ofile  ::String,
+             prints ::Int64)
 
 MCMC da chain for constant fossilized birth-death using forward simulation.
 """
@@ -299,6 +313,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    μ_prior::NTuple{2,Float64},
                    ψ_prior::NTuple{2,Float64},
                    ψ_epoch::Vector{Float64},
+                   f_epoch::Vector{Int64},
                    th     ::Float64,
                    crown  ::Int64,
                    bst    ::Vector{Float64},
@@ -313,7 +328,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
   el  = lastindex(idf)                    # number of branches
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
-  nf  = nfossils(idf, ψ_epoch)            # number of fossilization events per epoch
+  nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
   ne  = Float64(ntipsextinct(Ξ))          # number of extinction events
   nep = lastindex(ψc)
 
