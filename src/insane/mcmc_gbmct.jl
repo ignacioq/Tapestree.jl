@@ -15,7 +15,7 @@ Created 03 09 2020
 """
     insane_gbmct(tree    ::sT_label,
                  out_file::String;
-                 λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                 λa_prior::NTuple{2,Float64} = (1.5, 0.5),
                  α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
                  ϵ_prior ::NTuple{2,Float64} = (0.0, 10.0),
@@ -40,7 +40,7 @@ Run insane for GBM birth-death.
 """
 function insane_gbmct(tree    ::sT_label,
                       out_file::String;
-                      λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                      λa_prior::NTuple{2,Float64} = (1.5, 0.5),
                       α_prior ::NTuple{2,Float64} = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                       ϵ_prior ::NTuple{2,Float64} = (0.0, 10.0),
@@ -956,9 +956,8 @@ function update_α_ϵ!(αc     ::Float64,
   ν   = α_prior[1]
   τ2  = σλ^2
   σλ2 = σλ^2
-  #rs  = σλ2/τ2
-  #αp  = rnorm((dlλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
-  αp  = rnorm((dlλ + ν)/(1 + L), sqrt(σλ2/(1 + L)))
+  rs  = σλ2/τ2
+  αp  = rnorm((dlλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
   mp  = m_surv_gbmct(th, λ0, αp, σλ, ϵ, δt, srδt, 1_000, crown)
   llr = log(mp/mc)

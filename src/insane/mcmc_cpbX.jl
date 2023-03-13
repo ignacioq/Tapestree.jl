@@ -16,7 +16,7 @@ Created 06 07 2020
     insane_cpb(tree    ::sT_label,
                X       ::Dict{String, Float64},
                out_file::String;
-               λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+               λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
                niter   ::Int64                 = 1_000,
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
@@ -35,7 +35,7 @@ Run insane for constant pure-birth with Brownian motion trait evolution.
 function insane_cpb(tree    ::sT_label,
                     X       ::Dict{String, Float64},
                     out_file::String;
-                    λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                    λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
                     σx_prior::NTuple{2,Float64}     = (0.05, 0.05),
                     x0_prior::NTuple{2,Float64}     = (0.0, 10.0),
                     niter   ::Int64                 = 1_000,

@@ -15,10 +15,10 @@ Created 03 09 2020
 """
     insane_gbmce(tree    ::sT_label,
                  out_file::String;
-                 λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                 λa_prior::NTuple{2,Float64} = (1.5, 0.5),
                  α_prior ::NTuple{2,Float64} = (0.0, 0.5),
                  σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                 μ_prior ::NTuple{2,Float64} = (1.0, 1.0),
+                 μ_prior ::NTuple{2,Float64} = (1.5, 1.0),
                  niter   ::Int64             = 1_000,
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
@@ -38,10 +38,10 @@ Run insane for `gbm-ce`.
 """
 function insane_gbmce(tree    ::sT_label,
                       out_file::String;
-                      λa_prior::NTuple{2,Float64}     = (1.0, 0.5),
+                      λa_prior::NTuple{2,Float64}     = (1.5, 0.5),
                       α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                      μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                      μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
@@ -903,9 +903,8 @@ function update_α!(αc     ::Float64,
   #τ2  = α_prior[2]^2
   τ2  = σλ^2
   σλ2 = σλ^2
-  #rs  = σλ2/τ2
-  #αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
-  αp  = rnorm((dλ + ν)/(1 + L), sqrt(σλ2/(1 + L)))
+  rs  = σλ2/τ2
+  αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
   mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, crown)
   llr = log(mp/mc)

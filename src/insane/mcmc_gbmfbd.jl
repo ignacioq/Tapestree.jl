@@ -15,8 +15,8 @@ Created 03 09 2020
 """
     insane_gbmfbd(tree    ::sTf_label,
                   out_file::String;
-                  λa_prior::NTuple{2,Float64} = (1.0, 1.0),
-                  μa_prior::NTuple{2,Float64} = (1.0, 0.5),
+                  λa_prior::NTuple{2,Float64} = (1.5, 0.5),
+                  μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                   α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                   σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
@@ -43,8 +43,8 @@ Run insane for fossilized birth-death diffusion `fbdd`.
 """
 function insane_gbmfbd(tree    ::sTf_label,
                        out_file::String;
-                       λa_prior::NTuple{2,Float64} = (1.0, 1.0),
-                       μa_prior::NTuple{2,Float64} = (1.0, 0.5),
+                       λa_prior::NTuple{2,Float64} = (1.5, 0.5),
+                       μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                        α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                        σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64} = (3.0, 0.5),

@@ -15,8 +15,8 @@ Created 03 09 2020
 """
     insane_gbmbd(tree    ::sT_label,
                  out_file::String;
-                 λa_prior::NTuple{2,Float64} = (1.0, 1.0),
-                 μa_prior::NTuple{2,Float64} = (1.0, 0.5),
+                 λa_prior::NTuple{2,Float64} = (1.5, 0.5),
+                 μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                  α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
                  σμ_prior::NTuple{2,Float64} = (0.05, 0.05),
@@ -38,8 +38,8 @@ Run insane for `gbm-bd`.
 """
 function insane_gbmbd(tree    ::sT_label,
                       out_file::String;
-                      λa_prior::NTuple{2,Float64} = (1.0, 1.0),
-                      μa_prior::NTuple{2,Float64} = (1.0, 0.5),
+                      λa_prior::NTuple{2,Float64} = (1.5, 0.5),
+                      μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                       α_prior ::NTuple{2,Float64} = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                       σμ_prior::NTuple{2,Float64} = (5.0, 0.5),
@@ -178,7 +178,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,         σλ_prior[1], σλ_prior[2]) +
         logdinvgamma(σμc^2,         σμ_prior[1], σμ_prior[2]) +
-        logdnorm(αc,                α_prior[1], α_prior[2]^2) +
+        logdnorm(αc,                α_prior[1], σλc^2) +
         logdgamma(exp(λ0),          λa_prior[1], λa_prior[2]) +
         logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])
 
@@ -914,7 +914,8 @@ function update_α!(αc     ::Float64,
                    α_prior::NTuple{2,Float64})
 
   ν   = α_prior[1]
-  τ2  = α_prior[2]^2
+  #τ2  = α_prior[2]^2
+  τ2  = σλ^2
   σλ2 = σλ^2
   rs  = σλ2/τ2
   αp  = rnorm((dlλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))

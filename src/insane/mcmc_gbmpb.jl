@@ -803,13 +803,13 @@ function update_α!(αc     ::Float64,
 
   # ratio
   ν   = α_prior[1]
+  #τ2  = α_prior[2]^2
   τ2  = σλ^2
   σλ2 = σλ^2
-  #rs  = σλ2/τ2
+  rs  = σλ2/τ2
 
   # gibbs update for σ
-  #αp = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
-  αp = rnorm((dλ + ν)/(1 + L), sqrt(σλ2/(1 + L)))
+  αp = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
   # update prior
   prc += llrdnorm_x(αp, αc, ν, τ2)
@@ -851,15 +851,16 @@ function update_α!(αc     ::Float64,
 
   # ratio
   ν   = α_prior[1]
+  #τ2  = α_prior[2]^2
   τ2  = σλ^2
   σλ2 = σλ^2
-  #rs  = σλ2/τ2
+  rs  = σλ2/τ2
 
   cpow = (1.0 - pow)
 
   # gibbs update for α
-  m   = (dλ + ν)/(1 + L)
-  s2  = σλ2/(1 + L)
+  m   = (dλ + rs*ν)/(rs + L)
+  s2  = σλ2/(rs + L)
   m0  = α_rdist[1]
   s02 = α_rdist[2]^2
   αp  = rnorm((m0 * s2 * cpow + m * s02 * pow) / (pow * s02 + s2 * cpow),
@@ -878,7 +879,7 @@ end
 
 """
     update_σ!(σλc     ::Float64,
-              α       ::Float64,
+              αc       ::Float64,
               ssλ     ::Float64,
               n       ::Float64,
               llc     ::Float64,
@@ -889,7 +890,7 @@ end
 Gibbs update for `σλ`.
 """
 function update_σ!(σλc     ::Float64,
-                   α       ::Float64,
+                   αc       ::Float64,
                    ssλ     ::Float64,
                    n       ::Float64,
                    llc     ::Float64,
@@ -905,7 +906,7 @@ function update_σ!(σλc     ::Float64,
 
   # update prior
   prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
-  prc += llrdnorm_σ²(α, α_prior[1], σλp2, σλc^2)
+  prc += llrdnorm_σ²(αc, α_prior[1], σλp2, σλc^2)
 
   σλp = sqrt(σλp2)
 

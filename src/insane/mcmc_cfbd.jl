@@ -16,8 +16,8 @@ Created 07 10 2021
 """
     insane_cfbd(tree    ::sTf_label,
                 out_file::String;
-                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
+                μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                 ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 niter   ::Int64                 = 1_000,
                 nthin   ::Int64                 = 10,
@@ -36,8 +36,8 @@ Run insane for constant fossilized birth-death.
 """
 function insane_cfbd(tree    ::sTf_label,
                      out_file::String;
-                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
+                     μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_epoch ::Vector{Float64}       = Float64[],
                      niter   ::Int64                 = 1_000,
