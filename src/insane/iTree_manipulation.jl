@@ -55,6 +55,89 @@ end
 
 
 
+
+"""
+    reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+
+  reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+
+Reorder order of daughter branches for both trees, following tree first,
+according to number of tips, with daughter1 always having more than daughter 2.
+"""
+function reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+  tree, treeda, n, nda = _reorder!(tree, treeda, 0)
+  return tree, treeda
+end
+
+
+
+
+"""
+  _reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
+
+Reorder order of daughter branches according to number of tips, with daughter
+1 always having more than daughter 2.
+"""
+function _reorder!(tree::T, treeda::D, n::Int64) where {T <: iTree, D <: iTree}
+
+  if isfix(treeda)
+    if istip(treeda)
+      nda = 1
+      n  += 1
+    else
+      if isfix(treeda.d1) && isfix(treeda.d2)
+        t1, t1da, n1, n1da = _reorder!(tree.d1, treeda.d1, n)
+        if def2(treeda)
+          t2, t2da, n2, n2da = _reorder!(tree.d2, treeda.d2, n)
+          if n1 < n2
+            tree.d1   = t2
+            tree.d2   = t1
+            treeda.d1 = t2da
+            treeda.d2 = t1da
+          end
+          n   = n1 + n2
+          nda = n1da + n2da
+        else
+          nda = n1da
+        end
+      else
+        tree, t1da, n, n1da = _reorder!(tree, treeda.d1, n)
+        if def2(treeda)
+          tree, t2da, n, n2da = _reorder!(tree, treeda.d2, n)
+          if n1da < n2da
+            treeda.d1 = t2da
+            treeda.d2 = t1da
+          end
+          nda = n1da + n2da
+        else
+          nda = n1da
+        end
+      end
+    end
+  else
+    if istip(treeda)
+      nda = 1
+    else
+      tree, t1da, n, n1da = _reorder!(tree, treeda.d1, n)
+      if def2(treeda)
+        tree, t2da, n, n2da = _reorder!(tree, treeda.d2, n)
+        if n1da < n2da
+          treeda.d1 = t2da
+          treeda.d2 = t1da
+        end
+        nda = n1da + n2da
+      else
+        nda = n1da
+      end
+    end
+  end
+
+  return tree, treeda, n, nda
+end
+
+
+
+
 """
     rm_stem(tree::T) where {T <: iTree}
 
@@ -452,10 +535,8 @@ end
 
 Change all past tips to fossil tips.
 """
-function fossilizepasttips!(tree::T) where {T <: iTf}
-  th = treeheight(tree::T)
-  _fossilizepasttips!(tree::T, th, eps(th)*1e9)
-end
+fossilizepasttips!(tree::T, ne::Float64) where {T <: iTf} = 
+  _fossilizepasttips!(tree::T, treeheight(tree), ne)
 
 
 
@@ -463,25 +544,64 @@ end
 """
     _fossilizepasttips!(tree::T,
                         t   ::Float64,
-                        rerr::Float64) where {T <: iTf}
+                        ne  ::Float64) where {T <: iTf}
 
 Change all past tips to fossil tips, initialized at tree height `t`.
 """
 function _fossilizepasttips!(tree::T,
                              t   ::Float64,
-                             rerr::Float64) where {T <: iTf}
+                             ne  ::Float64) where {T <: iTf}
 
   t -= e(tree)
 
   if def1(tree)
-    _fossilizepasttips!(tree.d1::T, t, rerr)
+    _fossilizepasttips!(tree.d1::T, t, ne)
     if def2(tree)
-      _fossilizepasttips!(tree.d2::T, t, rerr)
+      _fossilizepasttips!(tree.d2::T, t, ne)
     end
   else
-    if istip(tree::T) && !isapprox(t, 0.0, atol = rerr)
+    if t > ne
       fossilize!(tree)
     end
+  end
+end
+
+
+
+"""
+    fossilize!(tree::T, label::String) where {T <: iTf}
+
+Fossilize a given tree given its name.
+"""
+function fossilize!(tree::T, label::String) where {T <: sTf_label}
+
+  if def1(tree)
+    fossilize!(tree.d1::T, label)
+    if def2(tree)
+      fossilize!(tree.d2::T, label)
+    end
+  elseif l(tree) == label 
+    fossilize!(tree)
+  end
+end
+
+
+
+
+"""
+    defossilize!(tree::T, label::String) where {T <: iTf}
+
+Fossilize a given tree given its name.
+"""
+function defossilize!(tree::T, label::String) where {T <: sTf_label}
+
+  if def1(tree)
+    defossilize!(tree.d1::T, label)
+    if def2(tree)
+      defossilize!(tree.d2::T, label)
+    end
+  elseif l(tree) == label 
+    defossilize!(tree)
   end
 end
 
@@ -2197,8 +2317,8 @@ Remove fossils.
 function _remove_fossils!(tree::T) where {T <: iTf}
 
   if def1(tree)
+    tree.d1 = _remove_fossils!(tree.d1)
     if def2(tree)
-      tree.d1 = _remove_fossils!(tree.d1)
       tree.d2 = _remove_fossils!(tree.d2)
       if isfossil(tree.d2)
         adde!(tree.d1, e(tree))
@@ -2219,7 +2339,6 @@ function _remove_fossils!(tree::T) where {T <: iTf}
 
   return tree
 end
-
 
 
 
@@ -2244,7 +2363,7 @@ function _remove_fossils!(tree::iTfbd)
       t0  = 0.0
       tn  = dti - fdt(tree)
       i   = 1
-      while e1 > tn + dti + √eps()
+      while e1 > tn + dti + accerr
         lλ1[i] = linpred(tn, t0, t0 + dti, lλ1[i], lλ1[i+1])
         lμ1[i] = linpred(tn, t0, t0 + dti, lμ1[i], lμ1[i+1])
         tn += dti
@@ -2254,7 +2373,7 @@ function _remove_fossils!(tree::iTfbd)
       if fdt(tree) < dti
         lλ1[i] = lλ1[i+1]
         lμ1[i] = lμ1[i+1]
-        if (e1 - t0) > dti + √eps() || e1 < tn
+        if (e1 - t0) > dti + accerr || e1 < tn
           pop!(lλ1)
           pop!(lμ1)
         end
@@ -2283,16 +2402,81 @@ end
 
 
 
+"""
+    prune_fossils(treev::Vector{sTf_label})
+
+Prune fossils.
+"""
+function prune_fossils(treev::Vector{sTf_label})
+
+  treevne = sTf_label[]
+  for t in treev
+    push!(treevne, prune_fossils(t))
+  end
+
+  return treevne
+end
+
+
+
+
+"""
+    prune_fossils(tree::sTf_label)
+
+Prune fossils.
+"""
+function prune_fossils(tree::sTf_label)
+  return _prune_fossils!(sTf_label(tree::sTf_label))
+end
+
+
+
+"""
+    _prune_fossils!(tree::sTf_label)
+
+Prune fossils.
+"""
+function _prune_fossils!(tree::sTf_label)
+
+  if def1(tree)
+    tree.d1 = _prune_fossils!(tree.d1)
+    if def2(tree)
+      tree.d2 = _prune_fossils!(tree.d2)
+
+      if isfossil(tree.d1)
+        if isfossil(tree.d2)
+          return sTf_label(e(tree), isextinct(tree), true, l(tree))
+        else
+          ne  = e(tree) + e(tree.d2)
+          tree = tree.d2
+          sete!(tree, ne)
+        end
+      elseif isfossil(tree.d2)
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+      end
+      return tree
+    else
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+    end
+  end
+
+  return tree
+end
+
+
 
 
 """
     remove_sampled_ancestors(tree::T, p::Float64) where {T <: iTf}
 
-Remove fossils.
+Remove sampled ancestor fossils with a certain probability `p`.
 """
 function remove_sampled_ancestors(tree::T, p::Float64) where {T <: iTf}
   t, i = _remove_sampled_ancestors!(T(tree::T),  p, false)
-
   return t
 end
 
@@ -2301,8 +2485,7 @@ end
 
 """
     _remove_sampled_ancestors!(tree::T) where {T <: iTf}
-
-Remove fossils.
+Remove sampled ancestor fossils with a certain probability `p`.
 """
 function _remove_sampled_ancestors!(tree::T,  p::Float64, i::Bool) where {T <: iTf}
 
@@ -2332,7 +2515,6 @@ end
 """
     reconstructed(tree::T) where {T <: iTree}
     reconstructed(tree::T) where {T <: iTf}
-
 Returns the reconstructed tree, i.e. the observed tree from sampled extant
 tips and fossils.
 """
@@ -2345,7 +2527,6 @@ reconstructed(tree::T) where {T <: iTf} = _reconstructed!(T(tree::T))
 
 """
     _reconstructed!(tree::T) where {T <: iTf}
-
 Returns the reconstructed tree, i.e. the observed tree from sampled extant
 tips and fossils.
 """

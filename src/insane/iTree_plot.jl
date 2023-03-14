@@ -94,10 +94,10 @@ Recipe for plotting a Type `iT`.
   ntF = Float64(nts)
 
   # plot defaults
-  legend              --> :none
-  colorbar_fontfamily --> :Helvetica
-  grid                --> :off
-  fontfamily          --> :Helvetica
+  fontfamily              --> :Helvetica
+  legend                  --> :none
+  colorbar_tickfontfamily --> :Helvetica
+  grid                    --> :off
 
   if type === :radial
     x, y, z = append_forradial(x, y, z, 50)

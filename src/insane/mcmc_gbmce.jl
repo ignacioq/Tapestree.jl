@@ -13,8 +13,7 @@ Created 03 09 2020
 
 
 """
-    insane_gbmce(tree    ::sT_label,
-                 out_file::String;
+    insane_gbmce(tree    ::sT_label;
                  λa_prior::NTuple{2,Float64} = (1.5, 0.5),
                  α_prior ::NTuple{2,Float64} = (0.0, 0.5),
                  σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
@@ -22,6 +21,8 @@ Created 03 09 2020
                  niter   ::Int64             = 1_000,
                  nthin   ::Int64             = 10,
                  nburn   ::Int64             = 200,
+                 nflush  ::Int64             = nthin,
+                 ofile   ::String            = homedir(),
                  λi      ::Float64           = NaN,
                  αi      ::Float64           = 0.0,
                  σλi     ::Float64           = 0.01,
@@ -36,8 +37,7 @@ Created 03 09 2020
 
 Run insane for `gbm-ce`.
 """
-function insane_gbmce(tree    ::sT_label,
-                      out_file::String;
+function insane_gbmce(tree    ::sT_label;
                       λa_prior::NTuple{2,Float64}     = (1.5, 0.5),
                       α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
@@ -45,6 +45,8 @@ function insane_gbmce(tree    ::sT_label,
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
+                      nflush  ::Int64                 = nthin,
+                      ofile   ::String                = homedir(),
                       λi      ::Float64               = NaN,
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.01,
@@ -109,19 +111,12 @@ function insane_gbmce(tree    ::sT_label,
       nburn, αi, σλi, μc, mc, th, crown, δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, Ξv =
+  r, treev =
     mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, th, crown,
-      λa_prior, α_prior, σλ_prior, μ_prior, niter, nthin, δt, srδt,
-      inodes, pup, prints)
+      λa_prior, α_prior, σλ_prior, μ_prior, δt, srδt, inodes, pup, 
+      niter, nthin, nflush, ofile, prints)
 
-  pardic = Dict(("lambda_root"  => 1,
-                 "alpha"        => 2,
-                 "sigma_lambda" => 3,
-                 "mu"           => 4))
-
-  write_ssr(r, pardic, out_file)
-
-  return r, Ξv
+  return r, treev
 end
 
 
@@ -263,12 +258,14 @@ end
                α_prior ::NTuple{2,Float64},
                σλ_prior::NTuple{2,Float64},
                μ_prior ::NTuple{2,Float64},
-               niter   ::Int64,
-               nthin   ::Int64,
                δt      ::Float64,
                srδt    ::Float64,
                inodes  ::Array{Int64,1},
-               pup     ::Array{Int64,1},
+               pup     ::Vector{Int64},
+               niter   ::Int64,
+               nthin   ::Int64,
+               nflush  ::Int64,
+               ofile   ::String,
                prints  ::Int64)
 
 MCMC chain for `gbmce`.
@@ -287,12 +284,14 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     μ_prior ::NTuple{2,Float64},
-                    niter   ::Int64,
-                    nthin   ::Int64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
-                    pup     ::Array{Int64,1},
+                    pup     ::Vector{Int64},
+                    niter   ::Int64,
+                    nthin   ::Int64,
+                    nflush  ::Int64,
+                    ofile   ::String,
                     prints  ::Int64)
 
   # logging
@@ -307,12 +306,13 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
   el      = lastindex(idf)           # number of branches
 
   # parameter results
-  R = Array{Float64,2}(undef, nlogs, 7)
+  r = Array{Float64,2}(undef, nlogs, 7)
 
   # make Ξ vector
-  Ξv = iTce[]
+  treev = iTce[]
 
-  pbar = Progress(niter, prints, "running mcmc...", 20)
+  # flush to file
+  sthin = 0
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
@@ -334,83 +334,104 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
     end
   end
 
-  for i in Base.OneTo(niter)
+  open(ofile*".log", "w") do of
 
-    shuffle!(pup)
+    write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\tmu\n")
+    flush(of)
 
-    # parameter updates
-    for pupi in pup
+    open(ofile*".txt", "w") do tf
 
-      # update α
-      if pupi === 1
+      pbar = Progress(niter, prints, "running mcmc...", 20)
 
-        llc, prc, αc, mc =
-          update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, dλ, llc, prc, mc, th, crown,
-            δt, srδt, α_prior)
+      for it in Base.OneTo(niter)
 
-        # update ssλ with new drift `α`
-        ssλ, nλ = sss_gbm(Ξ, αc)
- 
-      # update σλ
-      elseif pupi === 2
+        shuffle!(pup)
 
-        llc, prc, σλc, mc =
-          update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, crown,
-            δt, srδt, σλ_prior, α_prior)
- 
-      # update μ
-      elseif pupi === 3
+        # parameter updates
+        for pupi in pup
 
-        llc, prc, μc, mc =
-          update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, crown,
-            δt, srδt, μ_prior)
- 
-      # gbm update
-      elseif pupi === 4
+          # update α
+          if pupi === 1
+            llc, prc, αc, mc =
+              update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, dλ, llc, prc, mc, th, crown,
+                δt, srδt, α_prior)
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+            # update ssλ with new drift `α`
+            ssλ, nλ = sss_gbm(Ξ, αc)
+          
+          # update σλ
+          elseif pupi === 2
+            llc, prc, σλc, mc =
+              update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, crown,
+                δt, srδt, σλ_prior, α_prior)
 
-        llc, prc, dλ, ssλ, mc =
-          update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, prc, dλ, ssλ, mc, th,
-            δt, srδt, λa_prior)
+          # update μ
+          elseif pupi === 3
+            llc, prc, μc, mc =
+              update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, crown,
+                δt, srδt, μ_prior)
 
-      # forward simulation update
-      else
+          # gbm update
+          elseif pupi === 4
 
-        bix = ceil(Int64,rand()*el)
+            nix = ceil(Int64,rand()*nin)
+            bix = inodes[nix]
+            
+            llc, prc, dλ, ssλ, mc =
+              update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, prc, dλ, ssλ, mc, th,
+                δt, srδt, λa_prior)
 
-        llc, dλ, ssλ, nλ, ne, L =
-          update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L,
-            δt, srδt)
-      end
+          # forward simulation update
+          else
+
+            bix = ceil(Int64,rand()*el)
+
+            llc, dλ, ssλ, nλ, ne, L =
+              update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L,
+                δt, srδt)
+
+          end
+        end
     
-    # check_pr(pupi, i)
-    # check_ll(pupi, i)
+        # check_pr(pupi, it)
+        # check_ll(pupi, it)
 
-    end
+        # log parameters
+        lthin += 1
+        if lthin === nthin
+          lit += 1
+          @inbounds begin
+            r[lit,1] = Float64(it)
+            r[lit,2] = llc
+            r[lit,3] = prc
+            r[lit,4] = exp(lλ(Ξ[1])[1])
+            r[lit,5] = αc
+            r[lit,6] = σλc
+            r[lit,7] = μc
+            push!(treev, couple(Ξ, idf, 1))
+          end
+          lthin = 0
+        end
 
-    # log parameters
-    lthin += 1
-    if lthin === nthin
-      lit += 1
-      @inbounds begin
-        R[lit,1] = Float64(lit)
-        R[lit,2] = llc
-        R[lit,3] = prc
-        R[lit,4] = exp(lλ(Ξ[1])[1])
-        R[lit,5] = αc
-        R[lit,6] = σλc
-        R[lit,7] = μc
-        push!(Ξv, couple(Ξ, idf, 1))
+        # flush parameters
+        sthin += 1
+        if sthin === nflush
+          write(of, 
+            string(Float64(it), "\t", llc, "\t", prc, "\t", 
+              exp(lλ(Ξ[1])[1]),"\t",  αc, "\t", σλc, "\t", μc,"\n"))
+          flush(of)
+          write(tf, 
+            string(istring(couple(Ξ, idf, 1)), "\n"))
+          flush(tf)
+          sthin = 0
+        end
+
+        next!(pbar)
       end
-      lthin = 0
     end
-
-    next!(pbar)
   end
-
-  return R, Ξv
+  
+  return r, treev
 end
 
 

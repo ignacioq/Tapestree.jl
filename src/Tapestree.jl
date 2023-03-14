@@ -24,10 +24,10 @@ include("TRIBE.jl")
 # INSANE: joINt Speciation And Niche Evolution
 include("INSANE.jl")
 
-
 #=
  Exported functions 
 =#
+
 
 using .ESSE: esse, simulate_sse
 export esse, simulate_sse
@@ -35,7 +35,7 @@ export esse, simulate_sse
 using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe
 
-using .INSANE: read_newick, write_newick, 
+using .INSANE: read_newick, write_newick, iread, 
   sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, sim_gbmfbd, 
@@ -45,10 +45,10 @@ using .INSANE: read_newick, write_newick,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
-  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc,
+  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs,
   ntipsalive, ntips, ntipsextinct, sustainedcount, trextract, reorder!,
   treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
-export read_newick, write_newick, 
+export read_newick, write_newick, iread,
   sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, sim_gbmfbd, 
@@ -58,7 +58,7 @@ export read_newick, write_newick,
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos,
-  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc,
+  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs,
   ntipsalive, ntips, ntipsextinct, sustainedcount, trextract, reorder!,
   treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 

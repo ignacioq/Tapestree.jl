@@ -65,6 +65,7 @@ mutable struct sT_label <: sT
   e ::Float64
   l ::String
 
+  sT_label() = new()
   sT_label(e::Float64, l::String) =
     (x = new(); x.e = e; x.l = l; x)
   sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) =
@@ -92,9 +93,27 @@ end
 
 
 
+"""
+    _sT_label(tree::sT_label, i::Int64)
+
+Demotes a tree to `sT_label`.
+"""
+function _sT_label(tree::sT_label, i::Int64)
+  if def1(tree)
+    t1, i = _sT_label(tree.d1, i)
+    t2, i = _sT_label(tree.d2, i)
+    tree  = sT_label(t1, t2, e(tree), l(tree))
+  else
+    i += 1
+    tree = sT_label(e(tree), l(tree))
+  end
+  return tree, i
+end
+
+
 
 """
-    sT_label(tree::T) where {T <: iTree}
+    _sT_label(tree::T, i::Int64) where {T <: iTree}
 
 Demotes a tree to `sT_label`.
 """
@@ -146,6 +165,7 @@ mutable struct sTf_label <: sT
   iψ::Bool
   l ::String
 
+  sTf_label() = new()
   sTf_label(e::Float64, l::String) =
     (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool) =

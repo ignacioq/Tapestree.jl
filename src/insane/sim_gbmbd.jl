@@ -418,7 +418,7 @@ function _sim_gbmbd(t   ::Float64,
 
     while true
 
-      if t <= δt + √eps()
+      if t <= δt + accerr
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)
@@ -532,7 +532,7 @@ function _sim_gbmbd_t(t   ::Float64,
 
     while true
 
-      if t <= δt + √eps()
+      if t <= δt + accerr
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)
@@ -664,7 +664,7 @@ function _sim_gbmbd_it(nsδt::Float64,
   bt = 0.0
 
   ## first: non-standard δt
-  if t <= nsδt + √eps()
+  if t <= nsδt + accerr
     t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     srt = sqrt(t)
@@ -739,7 +739,7 @@ function _sim_gbmbd_it(nsδt::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt + √eps()
+      if t <= δt + accerr
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)
@@ -858,7 +858,7 @@ function _sim_gbmbd_it(t   ::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt + √eps()
+      if t <= δt + accerr
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         srt = sqrt(t)

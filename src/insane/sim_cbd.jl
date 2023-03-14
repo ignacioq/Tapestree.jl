@@ -29,12 +29,11 @@ function sim_cbd(t::Float64,
   end
 
   if λorμ(λ, μ)
-    return sTbd(sim_cbd(t - tw, λ, μ), sim_cbd(t - tw, λ, μ), tw)
+    return sTbd(sim_cbd(t - tw, λ, μ), sim_cbd(t - tw, λ, μ), tw, false, false)
   else
     return sTbd(tw, true, false)
   end
 end
-
 
 
 

@@ -15,15 +15,16 @@ Created 06 07 2020
 """
     insane_cpb(tree    ::sT_label,
                out_file::String;
-               λ_prior  ::NTuple{2,Float64}     = (1.5, 0.5),
+               λ_prior  ::NTuple{2,Float64}    = (1.5, 0.5),
                niter   ::Int64                 = 1_000,
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
-               tune_int::Int64                 = 100,
-               marginal    ::Bool                  = false,
-               nitpp   ::Int64                 = 100,
-               nthpp   ::Int64                 = 10,
-               K       ::Int64                 = 10,
+               nflush  ::Int64                 = nthin,
+               ofile   ::String                = homedir(),
+               # marginal ::Bool                 = false,
+               # nitpp   ::Int64                 = 100,
+               # nthpp   ::Int64                 = 10,
+               # K       ::Int64                 = 10,
                λi      ::Float64               = NaN,
                pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
                prints  ::Int64                 = 5,
@@ -31,13 +32,13 @@ Created 06 07 2020
 
 Run insane for constant pure-birth.
 """
-function insane_cpb(tree    ::sT_label,
-                    out_file::String;
+function insane_cpb(tree    ::sT_label;
                     λ_prior  ::NTuple{2,Float64}    = (1.5, 0.5),
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
-                    tune_int::Int64                 = 100,
+                    nflush  ::Int64                 = nthin,
+                    ofile   ::String                = homedir(),
                     # marginal ::Bool                 = false,
                     # nitpp   ::Int64                 = 100,
                     # nthpp   ::Int64                 = 10,
@@ -68,7 +69,7 @@ function insane_cpb(tree    ::sT_label,
   end
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, sTpb, Inf)
+  Ξ = make_Ξ(idf, sTpb)
 
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
@@ -85,11 +86,8 @@ function insane_cpb(tree    ::sT_label,
 
   # mcmc
   r, treev, λc =
-    mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, niter, nthin, pup, prints, stem)
-
-  pardic = Dict(("lambda" => 1))
-
-  write_ssr(r, pardic, out_file)
+    mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, pup, niter, nthin, nflush, ofile, 
+      prints, stem)
 
   # if marginal
   #   # reference distribution
@@ -186,7 +184,6 @@ end
 
 
 
-
 """
     mcmc_cpb(Ξ      ::Vector{sTpb},
              idf    ::Array{iBffs,1},
@@ -208,9 +205,11 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
                   prc    ::Float64,
                   λc     ::Float64,
                   λ_prior::NTuple{2,Float64},
+                  pup    ::Array{Int64,1},
                   niter  ::Int64,
                   nthin  ::Int64,
-                  pup    ::Array{Int64,1},
+                  nflush ::Int64,
+                  ofile  ::String,
                   prints ::Int64,
                   stem   ::Bool)
 
@@ -227,53 +226,77 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
   # make tree vector
   treev  = sTpb[]
 
-  pbar = Progress(niter, prints, "running mcmc...", 20)
+  # flush to file
+  sthin = 0
 
-  for it in Base.OneTo(niter)
+  open(ofile*".log", "w") do of
+    write(of, "iteration\tlikelihood\tprior\tlambda\n")
+    flush(of)
 
-    shuffle!(pup)
+    open(ofile*".txt", "w") do tf
 
-    for p in pup
 
-      # λ proposal
-      if p === 1
+      pbar = Progress(niter, prints, "running mcmc...", 20)
 
-        llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
+      for it in Base.OneTo(niter)
 
-        # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+        shuffle!(pup)
 
-      # forward simulation proposal proposal
-      else
+        for p in pup
 
-        bix = ceil(Int64,rand()*el)
-        llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
+          # λ proposal
+          if p === 1
 
-        # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
-        # if !isapprox(llci, llc, atol = 1e-6)
-        #    @show llci, llc, it, p
-        #    return
-        # end
+            llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
+
+            # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
+
+          # forward simulation proposal proposal
+          else
+
+            bix = ceil(Int64,rand()*el)
+            llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
+
+            # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
+            # if !isapprox(llci, llc, atol = 1e-6)
+            #    @show llci, llc, it, p
+            #    return
+            # end
+          end
+        end
+
+        lthin += 1
+        if lthin === nthin
+          lit += 1
+          @inbounds begin
+            r[lit,1] = Float64(lit)
+            r[lit,2] = llc
+            r[lit,3] = prc
+            r[lit,4] = λc
+            push!(treev, couple(Ξ, idf, 1))
+          end
+          lthin = 0
+        end
+
+        # flush parameters
+        sthin += 1
+        if sthin === nflush
+          write(of, 
+            string(Float64(it), "\t", llc, "\t", prc, "\t", λc, "\n"))
+          flush(of)
+          write(tf, 
+            string(istring(couple(Ξ, idf, 1)), "\n"))
+          flush(tf)
+          sthin = 0
+        end
+
+        next!(pbar)
       end
     end
-
-    lthin += 1
-    if lthin == nthin
-      lit += 1
-      @inbounds begin
-        r[lit,1] = Float64(lit)
-        r[lit,2] = llc
-        r[lit,3] = prc
-        r[lit,4] = λc
-        push!(treev, couple(Ξ, idf, 1))
-      end
-      lthin = 0
-    end
-
-    next!(pbar)
   end
 
   return r, treev, λc

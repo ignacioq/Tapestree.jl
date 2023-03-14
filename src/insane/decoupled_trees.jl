@@ -315,8 +315,8 @@ function make_Ξ(idf ::Vector{iBffs},
                 λ   ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
-                tv  ::Vector{Float64},
-                le  ::Vector{Float64},
+                tv  ::Vector{Vector{Float64}},
+                le  ::Vector{Vector{Float64}},
                 δt  ::Float64,
                 srδt::Float64,
                 ::Type{iTbd})
@@ -356,26 +356,31 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
                   lλ0 ::Float64,
                   α   ::Float64,
                   σλ  ::Float64,
-                  tv  ::Vector{Float64},
-                  le  ::Vector{Float64},
+                  tv  ::Vector{Vector{Float64}},
+                  le  ::Vector{Vector{Float64}},
                   δt  ::Float64,
                   srδt::Float64,
                   idf ::Vector{iBffs},
                   ::Type{iTbd})
 
-  bi = idf[i]
-  i1 = d1(bi)
-  i2 = d2(bi)
-  et = e(bi)
+  bi  = idf[i]
+  tvi = tv[i]
+  lei = le[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  et  = e(bi)
 
   if iszero(et)
     lλv  = [lλ0, lλ0]
-    lμi  = linpred(ti(bi), tv[1], tv[2], le[1], le[2])
+    tii  = ti(bi)
+    ix   = findfirst(x -> x < tii, tvi) - 1
+    lμi  = linpred(tii, tvi[ix], tvi[ix+1], lei[ix], lei[ix+1])
     lμv  = Float64[lμi, lμi]
     fdti = 0.0
     nts  = 0
-    push!(ixiv, 1)
-    push!(ixfv, 1)
+    push!(ixiv, ix)
+    ix = findnext(x -> x <= tf(bi), tvi, ix) - 1
+    push!(ixfv, ix)
   else
 
     ntF, fdti = divrem(et, δt, RoundDown)
@@ -398,19 +403,19 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     # extinction
     tii = ti(bi)
     tif = tf(bi)
-    ix  = findfirst(x -> x < tii, tv) - 1
+    ix  = findfirst(x -> x < tii, tvi) - 1
     push!(ixiv, ix)
     tc  = tii
     lμv = Float64[]
-    push!(lμv, linpred(tii, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+    push!(lμv, linpred(tii, tvi[ix], tvi[ix+1], lei[ix], lei[ix+1]))
     for i in Base.OneTo(nts)
       tc -= δt
-      ix = findnext(x -> x < tc, tv, ix) - 1
-      push!(lμv, linpred(tc, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+      ix = findnext(x -> x < tc, tvi, ix) - 1
+      push!(lμv, linpred(tc, tvi[ix], tvi[ix+1], lei[ix], lei[ix+1]))
       ix += 1
     end
-    ix = findnext(x -> x <= tif, tv, ix) - 1
-    push!(lμv, linpred(tif, tv[ix], tv[ix+1], le[ix], le[ix+1]))
+    ix = findnext(x -> x <= tif, tvi, ix) - 1
+    push!(lμv, linpred(tif, tvi[ix], tvi[ix+1], lei[ix], lei[ix+1]))
     push!(ixfv, ix)
   end
 

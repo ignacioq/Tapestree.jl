@@ -214,33 +214,14 @@ tiplabels(tree::T) where {T <: Tlabel} = _tiplabels!(tree, String[])
 
 
 
-
-"""
-    _tiplabels!(tree::sT_label, labels::Array{String,1})
-
-Returns tip labels for `sT_label`.
-"""
-function _tiplabels!(tree::sT_label, labels::Array{String,1})
-
-  if !def1(tree)
-    push!(labels, l(tree))
-  else
-    _tiplabels!(tree.d1, labels)
-    _tiplabels!(tree.d2, labels)
-  end
-end
-
-
-
-
 """
     _tiplabels!(tree::sTf_label, labels::Array{String,1})
 
 Returns tip labels for `sTf_label`.
 """
-function _tiplabels!(tree::sTf_label, labels::Array{String,1})
+function _tiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
-  if !def1(tree)
+  if istip(tree)
     push!(labels, l(tree))
   else
     _tiplabels!(tree.d1, labels)
@@ -251,6 +232,145 @@ function _tiplabels!(tree::sTf_label, labels::Array{String,1})
   return labels
 end
 
+
+
+
+"""
+    alivetiplabels(tree::T) where {T <: Tlabel}
+
+Returns tip labels for `sT_label` and `sTf_label`.
+"""
+alivetiplabels(tree::T) where {T <: Tlabel} = _alivetiplabels!(tree, String[])
+
+
+
+
+"""
+    _alivetiplabels!(tree::sTf_label, labels::Array{String,1})
+
+Returns tip labels for `sTf_label`.
+"""
+function _alivetiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
+
+  if istip(tree)
+    if !isfossil(tree)
+      push!(labels, l(tree))
+    end
+  else
+    _alivetiplabels!(tree.d1, labels)
+    if def2(tree)
+      _alivetiplabels!(tree.d2, labels)
+    end
+  end
+  return labels
+end
+
+
+
+
+"""
+    fossiltiplabels(tree::T) where {T <: Tlabel}
+
+Returns tip labels for `sT_label` and `sTf_label`.
+"""
+fossiltiplabels(tree::T) where {T <: Tlabel} = _fossiltiplabels!(tree, String[])
+
+
+
+"""
+    _fossiltiplabels!(tree::sTf_label, labels::Array{String,1})
+
+Returns tip labels for `sTf_label`.
+"""
+function _fossiltiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
+
+  if istip(tree)
+    if isfossil(tree)
+      push!(labels, l(tree))
+    end
+  else
+    _fossiltiplabels!(tree.d1, labels)
+    if def2(tree)
+      _fossiltiplabels!(tree.d2, labels)
+    end
+  end
+  return labels
+end
+
+
+
+
+"""
+    subclade(tree::iTree, ix::Int64)
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+subclade(tree::T, ix::Int64) where {T <: iTree} = 
+  _subclade(tree, 0, ix, T())[2]
+
+"""
+    _subclade(tree::iTree, i::Int64,  ix::Int64)
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+function _subclade(tree::T, i::Int64,  ix::Int64, t0::T) where {T <: iTree}
+
+  i += 1
+
+  if i <= ix
+    if i === ix
+      return i + 1, T(tree)
+    else
+      if def1(tree)
+        i, t0 = _subclade(tree.d1, i, ix, t0)
+        if def2(tree)
+          i, t0 = _subclade(tree.d2, i, ix, t0)
+        end
+      end
+    end
+  end
+
+  return i, t0
+end
+
+
+
+"""
+    subclade_fx(tree::iTree, ix::Int64)
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+subclade_fx(tree::T, ix::Int64) where {T <: iTree} = 
+  _subclade_fx(tree, 0, ix, T(), true)[2]
+
+"""
+    _subclade_fx(tree::T, i::Int64, ix::Int64, t0::T, sis::Bool) where {T <: iTree}
+
+Return the minimum stem subclade according to recursive position `ix`.
+"""
+function _subclade_fx(tree::T, i::Int64, ix::Int64, t0::T, sis::Bool) where {T <: iTree}
+
+  if isfix(tree) && sis
+    i += 1
+  end
+
+  if i <= ix
+    if i === ix
+      return i + 1, T(tree)
+    else
+      if def1(tree)
+        if def2(tree)
+          i, t0 = _subclade_fx(tree.d1, i, ix, t0, isfix(tree.d2))
+          i, t0 = _subclade_fx(tree.d2, i, ix, t0, isfix(tree.d1))
+        else
+          i, t0 = _subclade_fx(tree.d1, i, ix, t0, true)
+        end
+      end
+    end
+  end
+
+  return i, t0
+end
 
 
 
@@ -570,7 +690,7 @@ of a data augmented tree.
 function fixedpos(tree::T) where {T <: iTree}
 
   fp = Int64[]
-  _fixedpos!(tree, 1, fp)
+  _fixedpos!(tree, 0, fp)
 
   return fp
 end
@@ -1845,29 +1965,6 @@ end
 
 
 """
-    treeapply(tree::T, FUN::Function) where {T <: iTree}
-
-Returns a recursive vector structure with requested data for all tree nodes.
-"""
-function treeapply(tree::T, FUN::Function) where {T <: iTree}
-
-  if def1(tree)
-    if def2(tree)
-      return [FUN(tree),treeapply(tree.d1,FUN),treeapply(tree.d2,FUN)]
-    else
-      return [FUN(tree),treeapply(tree.d1,FUN)]
-    end
-  elseif def2(tree)
-    return [FUN(tree),treeapply(tree.d2,FUN)]
-  end
-
-  return FUN(tree)
-end
-
-
-
-
-"""
     nlin_t(tree::T, t::Float64, tc::Float64) where {T <: iTree}
 
 Number of lineages at time t
@@ -2043,7 +2140,7 @@ xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
 """
     branchlengths(tree::T)
 
-Make joint proposal to match simulation with tip fixed `x` value.
+Extract all branch lengths.
 """
 function branchlengths(tree::iTree)
   bls = Float64[]
