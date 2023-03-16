@@ -859,14 +859,14 @@ function update_gbm!(bix  ::Int64,
     if root && iszero(e(bi))
       llc, dlλ, ssλ, ssμ, mc =
         _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, dlλ, ssλ, ssμ, mc, th,
-          δt, srδt, lλxpr, lμxpr)
+          δt, srδt, lλxpr, lμxpr, 1)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, dlλ, ssλ, ssμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, dlλ, ssλ, ssμ, mc, th, 
-            δt, srδt, lλxpr, lμxpr)
+            δt, srδt, lλxpr, lμxpr, 0)
       end
 
       # updates within the parent branch

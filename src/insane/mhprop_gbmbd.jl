@@ -169,7 +169,8 @@ function _stem_update!(ξi   ::T,
                        δt   ::Float64,
                        srδt ::Float64,
                        lλxpr::Float64,
-                       lμxpr::Float64) where {T <: iTbdU}
+                       lμxpr::Float64,
+                       crown::Int64) where {T <: iTbdU}
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -206,7 +207,7 @@ function _stem_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, 0)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
       llr += log(mp/mc)
 
       if lU < llr
@@ -262,7 +263,8 @@ function _crown_update!(ξi   ::T,
                         δt   ::Float64,
                         srδt ::Float64,
                         lλxpr::Float64,
-                        lμxpr::Float64) where {T <: iTbdU}
+                        lμxpr::Float64,
+                        crown::Int64) where {T <: iTbdU}
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -315,7 +317,7 @@ function _crown_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, 1)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
       llr += log(mp/mc)
 
       if lU < llr

@@ -217,7 +217,13 @@ function from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
     sd1, i = _from_string(s[1:(ci-1)],   1, T)
     sd2, i = _from_string(s[(ci+1):end], 1, T)
 
-    tree = T(sd1, sd2, 0.0, "")
+    if e(sd1) === 0.0
+      tree = T(sd2, 0.0, l(sd1))
+    elseif e(sd2) === 0.0
+      tree = T(sd1, 0.0, l(sd2))
+    else
+      tree = T(sd1, sd2, 0.0, "")
+    end
   end
 
   return tree
