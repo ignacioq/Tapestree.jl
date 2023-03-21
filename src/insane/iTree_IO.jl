@@ -556,9 +556,41 @@ end
 
 
 """
+    iwrite(tree::T, ofile::String) where {T <: iTree}
+
+Tree to istring.
+"""
+function iwrite(tree::T, ofile::String) where {T <: iTree}
+  open(ofile*".txt", "w") do tf
+    write(tf, istring(tree))
+    flush(tf)
+  end
+end
+
+
+
+
+"""
+    iwrite(tree::Vector{T}, ofile::String) where {T <: iTree}
+
+Tree to istring.
+"""
+function iwrite(tree::Vector{T}, ofile::String) where {T <: iTree}
+  open(ofile*".txt", "w") do tf
+    for tri in tree
+      write(tf, string(istring(tri), "\n"))
+      flush(tf)
+    end
+  end
+end
+
+
+
+
+"""
     istring(tree::T)
 
-`sTbd` to istring.
+Tree to istring.
 """
 function istring(tree::T) where {T <: iTree}
   return string(T, '-', _istring(tree))
