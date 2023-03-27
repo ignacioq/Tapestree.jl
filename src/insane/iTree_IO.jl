@@ -213,7 +213,13 @@ function from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
     sd1, i = _from_string(s[1:(ci-1)],   1, T)
     sd2, i = _from_string(s[(ci+1):end], 1, T)
 
-    tree = T(sd1, sd2, 0.0, "")
+    if e(sd1) === 0.0
+      tree = T(sd2, 0.0, l(sd1))
+    elseif e(sd2) === 0.0
+      tree = T(sd1, 0.0, l(sd2))
+    else
+      tree = T(sd1, sd2, 0.0, "")
+    end
   end
 
   return tree
@@ -533,8 +539,40 @@ end
 
 
 """
+    iwrite(tree::T, ofile::String) where {T <: iTree}
+
+Tree to istring.
+"""
+function iwrite(tree::T, ofile::String) where {T <: iTree}
+  open(ofile*".txt", "w") do tf
+    write(tf, istring(tree))
+    flush(tf)
+  end
+end
+
+
+
+
+"""
+    iwrite(tree::Vector{T}, ofile::String) where {T <: iTree}
+
+Tree to istring.
+"""
+function iwrite(tree::Vector{T}, ofile::String) where {T <: iTree}
+  open(ofile*".txt", "w") do tf
+    for tri in tree
+      write(tf, string(istring(tri), "\n"))
+      flush(tf)
+    end
+  end
+end
+
+
+
+
+"""
     istring(tree::T)
-`sTbd` to istring.
+Tree to istring.
 """
 function istring(tree::T) where {T <: iTree}
   return string(T, '-', _istring(tree))

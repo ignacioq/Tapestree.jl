@@ -130,7 +130,8 @@ function insane_gbmfbd(tree    ::sTf_label;
   # survival conditioning
   if survival && ntipsalive(tree) > 0
     # if crown conditioning
-    if iszero(e(tree)) && ntipsalive(tree.d1) > 0 && ntipsalive(tree.d2) > 0
+    if iszero(e(tree)) && !isfossil(tree) && 
+       ntipsalive(tree.d1) > 0  && ntipsalive(tree.d2) > 0
       crown = 1
     # if stem conditioning
     else
@@ -1241,26 +1242,32 @@ function update_gbm!(bix  ::Int64,
                      srδt ::Float64)
   @inbounds begin
 
-
-    ξi  = Ξ[bix]
-    bi  = idf[bix]
+    ξi   = Ξ[bix]
+    bi   = idf[bix]
     i1   = d1(bi)
     i2   = d2(bi)
     ξ1   = Ξ[i1]
     root = iszero(pa(bi))
 
-    # if crown
     if root && iszero(e(bi))
-      llc, dλ, ssλ, ssμ, mc =
-        _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th,
-          δt, srδt)
-      setλt!(bi, lλ(ξi)[1])
+      # if stem fossil
+      if isfossil(bi)
+        llc, dλ, ssλ, ssμ, mc =
+          _fstem_update!(ξi, ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
+            δt, srδt, lλxpr, lμxpr, crown)
+      # if crown
+      else
+        llc, dλ, ssλ, ssμ, mc =
+          _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th,
+            δt, srδt, lλxpr, lμxpr, crown)
+        setλt!(bi, lλ(ξi)[1])
+      end
     else
       # if stem
       if root
         llc, dλ, ssλ, ssμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
-            δt, srδt)
+            δt, srδt, lλxpr, lμxpr, crown)
       end
 
       # updates within the parent branch

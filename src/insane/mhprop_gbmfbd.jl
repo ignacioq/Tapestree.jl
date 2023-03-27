@@ -11,6 +11,106 @@ Created 27 05 2020
 
 
 
+
+"""
+    _fstem_update!(ξi   ::T,
+                   ξ1   ::T,
+                   α    ::Float64,
+                   σλ   ::Float64,
+                   σμ   ::Float64,
+                   llc  ::Float64,
+                   dλ   ::Float64,
+                   ssλ  ::Float64,
+                   ssμ  ::Float64,
+                   mc   ::Float64,
+                   th   ::Float64,
+                   δt   ::Float64,
+                   srδt ::Float64,
+                   lλxpr::Float64,
+                   lμxpr::Float64) where {T <: iTbdU}
+
+Do `gbm-bd` update for crown root.
+"""
+function _fstem_update!(ξi   ::T,
+                        ξ1   ::T,
+                        α    ::Float64,
+                        σλ   ::Float64,
+                        σμ   ::Float64,
+                        llc  ::Float64,
+                        dλ   ::Float64,
+                        ssλ  ::Float64,
+                        ssμ  ::Float64,
+                        mc   ::Float64,
+                        th   ::Float64,
+                        δt   ::Float64,
+                        srδt ::Float64,
+                        lλxpr::Float64,
+                        lμxpr::Float64,
+                        crown::Int64) where {T <: iTbdU}
+
+  @inbounds begin
+    λpc  = lλ(ξi)
+    μpc  = lμ(ξi)
+    λi   = λpc[1]
+    μi   = μpc[1]
+    λ1c  = lλ(ξ1)
+    μ1c  = lμ(ξ1)
+    l1   = lastindex(λ1c)
+    λ1p  = Vector{Float64}(undef,l1)
+    μ1p  = Vector{Float64}(undef,l1)
+    λ1   = λ1c[l1]
+    μ1   = μ1c[l1]
+    el   = e(ξ1)    
+    sqre = sqrt(el)
+    fdt1 = fdt(ξ1)
+
+    # node proposal
+    λr = rnorm(λ1 - α*el, σλ*sqre)
+    μr = rnorm(μ1, σμ*sqre)
+
+    # prior ratio
+    if λr > lλxpr || μr > lμxpr 
+      return llc, dλ, ssλ, ssμ, mc
+    end
+
+    # simulate fix tree vector
+    bb!(λ1p, λr, λ1, μ1p, μr, μ1, σλ, σμ, δt, fdt1, srδt)
+
+    # log likelihood ratios
+    llrbm, llrbd, ssrλ, ssrμ =
+      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
+
+    # log probability
+    lU = -randexp()
+
+    llr = llrbd
+
+    if lU < llr + log(1000.0/mc)
+
+      #survival
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      llr += log(mp/mc)
+
+      if lU < llr
+        llc += llrbm + llr
+        dλ  += λ1c[1] - λr
+        ssλ += ssrλ
+        ssμ += ssrμ
+        mc   = mp
+        fill!(λpc, λr)
+        fill!(μpc, μr)
+        unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
+        unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
+      end
+    end
+  end
+
+  return llc, dλ, ssλ, ssμ, mc
+end
+
+
+
+
 """
     _update_gbm!(tree::iTfbd,
                  α   ::Float64,

@@ -75,7 +75,7 @@ function make_Ξ(idf::Vector{iBffs}, ::Type{sTfbd})
   Ξ = sTfbd[]
   for bi in idf
     if isfossil(bi) && iszero(d1(bi))
-      push!(Ξ, sTfbd(sTfbd(1.0e-10, true, false, false),
+      push!(Ξ, sTfbd(sTfbd(0.0, true, false, false),
                      e(bi), false, true, true))
     else
       push!(Ξ, sTfbd(e(bi), false, isfossil(bi), true))
@@ -534,9 +534,9 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
     lμl = lμv[l]
 
     push!(Ξ, iTfbd(
-               iTfbd(1.0e-10, δt, 1.0e-10, true, false, false, 
-                 [lλl, rnorm(lλl + α*1.0e-10, 1.0e-5*σλ)], 
-                 [lμl, rnorm(lμl,             1.0e-5*σμ)]),
+               iTfbd(0.0, δt, 0.0, true, false, false, 
+                 [lλl, rnorm(lλl + α*0.0, 0.0*σλ)], 
+                 [lμl, rnorm(lμl,         0.0*σμ)]),
                et, δt, fdti, false, true, true, lλv, lμv))
   else
     push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(bi), true, lλv, lμv))
