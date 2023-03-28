@@ -129,7 +129,8 @@ end
                   th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
-                  lλxpr::Float64)
+                  lλxpr::Float64,
+                  crown::Int64)
 
 Do gbm update for stem root.
 """
@@ -144,7 +145,8 @@ function _stem_update!(ξi   ::iTce,
                        th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       lλxpr::Float64)
+                       lλxpr::Float64,
+                       crown::Int64)
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -175,7 +177,7 @@ function _stem_update!(ξi   ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, 0)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, crown)
       llr += log(mp/mc)
 
       if lU < llr
@@ -208,8 +210,8 @@ end
                    th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
-                   mσλ  ::Float64,
-                   lλxpr::Float64)
+                   lλxpr::Float64,
+                   crown::Int64)
 
 Do gbm update for crown root.
 """
@@ -226,7 +228,8 @@ function _crown_update!(ξi   ::iTce,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
-                        lλxpr::Float64)
+                        lλxpr::Float64,
+                        crown::Int64)
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -270,7 +273,7 @@ function _crown_update!(ξi   ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, 1)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, crown)
       llr += log(mp/mc)
 
       if lU < llr

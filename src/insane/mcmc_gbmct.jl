@@ -247,7 +247,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
 
         llc, dlλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt, lλxpr, crown)
 
       # forward simulation update
       else
@@ -418,7 +418,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
 
             llc, dlλ, ssλ, Σλ, mc =
               update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, mc, th,
-                δt, srδt, lλxpr)
+                δt, srδt, lλxpr, crown)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(crown > 0) * lλ(Ξ[1])[1]
             #  if !isapprox(ll0, llc, atol = 1e-5)
@@ -863,7 +863,8 @@ end
                 th   ::Float64,
                 δt   ::Float64,
                 srδt ::Float64,
-                lλxpr::Float64)
+                lλxpr::Float64,
+                crown::Int64)
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -881,7 +882,8 @@ function update_gbm!(bix  ::Int64,
                      th   ::Float64,
                      δt   ::Float64,
                      srδt ::Float64,
-                     lλxpr::Float64)
+                     lλxpr::Float64,
+                     crown::Int64)
   @inbounds begin
 
     ξi   = Ξ[bix]
@@ -896,14 +898,14 @@ function update_gbm!(bix  ::Int64,
       ξ2 = Ξ[i2]
       llc, dlλ, ssλ, Σλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, ϵ, llc, dlλ, ssλ, Σλ, mc, th,
-          δt, srδt, lλxpr)
+          δt, srδt, lλxpr, crown)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem branch
       if root
         llc, dlλ, ssλ, Σλ, mc =
           _stem_update!(ξi, α, σλ, ϵ, llc, dlλ, ssλ, Σλ, mc, th,
-            δt, srδt, lλxpr)
+            δt, srδt, lλxpr, crown)
       end
 
       # updates within the parent branch
