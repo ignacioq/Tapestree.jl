@@ -909,6 +909,24 @@ Return final speciation rate at time `t.
 
 
 """
+    λt(tree::T) where {T <: iT}
+
+Return final speciation rate at time `t.
+"""
+function λt(tree::T) where {T <: iT}
+  if istip(tree)
+    return lλ(tree)[end]
+  elseif isfix(tree.d1::T)
+    λt(tree.d1::T)
+  else
+    λt(tree.d2::T)
+  end
+end
+
+
+
+
+"""
     ismid(id::iBffs)
 
 Return final speciation rate at time `t.

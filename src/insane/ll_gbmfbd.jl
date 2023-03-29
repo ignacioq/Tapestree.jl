@@ -44,11 +44,10 @@ function llik_gbm(Ξ   ::Vector{iTfbd},
     nep = lastindex(ψts) + 1
     ll  = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      bi  = idf[i]
       lli, ix = llik_gbm(Ξ[i], α, σλ, σμ, ψ, bst[i], ψts, eix[i], δt, srδt, nep)
       ll += lli
-      if d2(bi) > 0
-        ll += λt(bi)
+      if d2(idf[i]) > 0
+        ll += λt(Ξ[i])
       end
     end
   end

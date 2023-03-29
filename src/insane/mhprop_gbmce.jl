@@ -128,6 +128,7 @@ end
                   ssλ     ::Float64,
                   mc      ::Float64,
                   th      ::Float64,
+                  crown   ::Int64,
                   δt      ::Float64,
                   srδt    ::Float64,
                   λa_prior::NTuple{2,Float64})
@@ -144,44 +145,46 @@ function _stem_update!(ξi      ::iTce,
                        ssλ     ::Float64,
                        mc      ::Float64,
                        th      ::Float64,
+                       crown   ::Int64,
                        δt      ::Float64,
                        srδt    ::Float64,
                        λa_prior::NTuple{2,Float64})
 
   @inbounds begin
-    λc   = lλ(ξi)
-    l    = lastindex(λc)
-    λp   = Vector{Float64}(undef,l)
-    λn   = λc[l]
+    lλc   = lλ(ξi)
+    l    = lastindex(lλc)
+    lλp   = Vector{Float64}(undef,l)
+    lλn   = lλc[l]
     el   = e(ξi)
     fdtp = fdt(ξi)
 
     # node proposal
-    λr = rnorm(λn - α*el, σλ*sqrt(el))
+    lλr = rnorm(lλn - α*el, σλ*sqrt(el))
 
     # simulate fix tree vector
-    bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
+    bb!(lλp, lλr, lλn, σλ, δt, fdtp, srδt)
 
-    llrbm, llrce, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+    llrbm, llrce, ssrλ = llr_gbm_b_sep(lλp, lλc, α, σλ, δt, fdtp, srδt, false)
 
     # log probability
     lU = -randexp()
 
     llr = llrce
+    prr = llrdgamma(exp(lλp[1]), exp(lλc[1]), λa_prior[1], λa_prior[2])
 
-    if lU < llr + log(1000.0/mc)
+    if lU < llr + log(5_000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, 0)
+      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, crown)
       llr += log(mp/mc)
 
-      if lU < llr
+      if lU < llr + prr
         llc += llrbm + llr
-        prc += llrdgamma(exp(λp[1]), exp(λc[1]), λa_prior[1], λa_prior[2])
-        dλ  += λc[1] - λr
+        prc += prr
+        dλ  += lλc[1] - lλr
         ssλ += ssrλ
         mc   = mp
-        unsafe_copyto!(λc, 1, λp, 1, l)
+        unsafe_copyto!(lλc, 1, lλp, 1, l)
       end
     end
   end
@@ -205,6 +208,7 @@ end
                    ssλ     ::Float64,
                    mc      ::Float64,
                    th      ::Float64,
+                   crown   ::Int64,
                    δt      ::Float64,
                    srδt    ::Float64,
                    λa_prior::NTuple{2,Float64})
@@ -223,59 +227,61 @@ function _crown_update!(ξi      ::iTce,
                         ssλ     ::Float64,
                         mc      ::Float64,
                         th      ::Float64,
+                        crown   ::Int64,
                         δt      ::Float64,
                         srδt    ::Float64,
                         λa_prior::NTuple{2,Float64})
 
   @inbounds begin
-    λpc  = lλ(ξi)
-    λi   = λpc[1]
-    λ1c  = lλ(ξ1)
-    λ2c  = lλ(ξ2)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    e1   = e(ξ1)
-    e2   = e(ξ2)
-    fdt1 = fdt(ξ1)
-    fdt2 = fdt(ξ2)
+    lλpc  = lλ(ξi)
+    lλi   = lλpc[1]
+    lλ1c  = lλ(ξ1)
+    lλ2c  = lλ(ξ2)
+    l1    = lastindex(lλ1c)
+    l2    = lastindex(lλ2c)
+    lλ1p  = Vector{Float64}(undef,l1)
+    lλ2p  = Vector{Float64}(undef,l2)
+    lλ1   = lλ1c[l1]
+    lλ2   = lλ2c[l2]
+    e1    = e(ξ1)
+    e2    = e(ξ2)
+    fdt1  = fdt(ξ1)
+    fdt2  = fdt(ξ2)
 
     # node proposal
-    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    lλr = duoprop(lλ1 - α*e1, lλ2 - α*e2, e1, e2, σλ)
 
     # simulate fix tree vector
-    bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
+    bb!(lλ1p, lλr, lλ1, σλ, δt, fdt1, srδt)
+    bb!(lλ2p, lλr, lλ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
     llrbm1, llrce1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+      llr_gbm_b_sep(lλ1p, lλ1c, α, σλ, δt, fdt1, srδt, false)
     llrbm2, llrce2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+      llr_gbm_b_sep(lλ2p, lλ2c, α, σλ, δt, fdt2, srδt, false)
 
     # log probability
     lU = -randexp()
 
     llr = llrce1 + llrce2
+    prr = llrdgamma(exp(lλr), exp(lλi), λa_prior[1], λa_prior[2])
 
-    if lU < llr + log(1000.0/mc)
+    if lU < llr + log(5_000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, 1)
+      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, crown)
       llr += log(mp/mc)
 
-      if lU < llr
+      if lU < llr + prr
         llc += llrbm1 + llrbm2 + llr
-        prc += llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2])
-        dλ  += 2.0*(λi - λr)
+        prc += prr
+        dλ  += 2.0*(lλi - lλr)
         ssλ += ssrλ1 + ssrλ2
-        fill!(λpc, λr)
+        fill!(lλpc, lλr)
         mc   = mp
-        unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-        unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
+        unsafe_copyto!(lλ1c, 1, lλ1p, 1, l1)
+        unsafe_copyto!(lλ2c, 1, lλ2p, 1, l2)
       end
     end
   end

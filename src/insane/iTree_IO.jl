@@ -1242,7 +1242,7 @@ end
     _iparse_v(s::String)
 Parse a string into a `Float64` vector.
 """
-_iparse_v(s::String) = Parsers.parse.(Float64, split(s, ','))
+_iparse_v(s::String) = Pparse.(Float64, split(s, ','))
 
 
 

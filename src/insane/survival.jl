@@ -61,7 +61,7 @@ end
 
 """
     m_surv_gbmce(t   ::Float64,
-                 λ0  ::Float64,
+                 lλ0 ::Float64,
                  α   ::Float64,
                  σλ  ::Float64,
                  μ   ::Float64,
@@ -74,7 +74,7 @@ Sample the total number of `m` trials until both simulations survive
 for `gbmce`.
 """
 function m_surv_gbmce(t   ::Float64,
-                      λ0  ::Float64,
+                      lλ0 ::Float64,
                       α   ::Float64,
                       σλ  ::Float64,
                       μ   ::Float64,
@@ -89,7 +89,7 @@ function m_surv_gbmce(t   ::Float64,
   if iszero(c)
 
     while true
-      s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmce_surv(t, lλ0, α, σλ, μ, δt, srδt, false, 1)
 
       s1 && break
       ntries === ntry && break
@@ -97,15 +97,13 @@ function m_surv_gbmce(t   ::Float64,
       m      += 1.0
       ntries += 1
     end
-
   # if crown conditioning
   elseif isone(c)
 
     while true
-      s1, n1 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
-
+      s1, n1 = _sim_gbmce_surv(t, lλ0, α, σλ, μ, δt, srδt, false, 1)
       if s1
-        s2, n2 = _sim_gbmce_surv(t, λ0, α, σλ, μ, δt, srδt, false, 1)
+        s2, n2 = _sim_gbmce_surv(t, lλ0, α, σλ, μ, δt, srδt, false, 1)
         s2 && break
       end
       ntries === ntry && break
@@ -114,7 +112,6 @@ function m_surv_gbmce(t   ::Float64,
       ntries += 1
     end
   end
-
   return m
 end
 
