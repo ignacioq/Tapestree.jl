@@ -42,7 +42,7 @@ function insane_cfbd(tree    ::sTf_label;
                      μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_epoch ::Vector{Float64}       = Float64[],
-                     f_epoch ::Vector{Int64}       = Int64[0],
+                     f_epoch ::Vector{Int64}         = Int64[0],
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
