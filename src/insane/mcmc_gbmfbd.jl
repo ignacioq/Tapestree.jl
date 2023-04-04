@@ -255,7 +255,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
   λ0  = lλ(Ξ[1])[1]
   llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
-        Float64(crown > 0) * λ0 + log(mc) + prob_ρ(idf)
+        iszero(e(Ξ[1])) * λ0 + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
         logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
@@ -459,9 +459,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             # update ssλ with new drift `α`
             ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - iszero(e(Ξ[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, i, pupi, Ξ
+            #    @show ll0, llc, it, pupi, Ξ
+            #    @show bix
             #    return
             # end
 
@@ -472,9 +473,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
               update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
                 llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - iszero(e(Ξ[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, i, pupi, Ξ
+            #    @show ll0, llc, it, pupi, Ξ
+            #    @show bix
             #    return
             # end
 
@@ -483,9 +485,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
             llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - iszero(e(Ξ[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, i, pupi, Ξ
+            #    @show ll0, llc, it, pupi, Ξ
+            #    @show bix
             #    return
             # end
 
@@ -499,9 +502,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
               update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
                 crown, δt, srδt, lλxpr, lμxpr)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - iszero(e(Ξ[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, i, pupi, Ξ
+            #    @show ll0, llc, it, pupi, Ξ
+            #    @show bix
             #    return
             # end
 
@@ -514,9 +518,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
               update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, llc, dλ, ssλ, ssμ, nλ, L,
                 ψ_epoch, δt, srδt, eixi, eixf)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - iszero(e(Ξ[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, i, pupi, Ξ
+            #    @show ll0, llc, it, pupi, Ξ
+            #    @show bix
             #    return
             # end
 
