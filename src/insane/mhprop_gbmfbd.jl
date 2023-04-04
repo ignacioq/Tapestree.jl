@@ -27,7 +27,8 @@ Created 27 05 2020
                    δt   ::Float64,
                    srδt ::Float64,
                    lλxpr::Float64,
-                   lμxpr::Float64) where {T <: iTbdU}
+                   lμxpr::Float64,
+                   surv ::Int64) where {T <: iTbdU}
 
 Do `gbm-bd` update for fossil stem root.
 """
@@ -46,7 +47,7 @@ function _fstem_update!(ξi   ::T,
                         srδt ::Float64,
                         lλxpr::Float64,
                         lμxpr::Float64,
-                        crown::Int64) where {T <: iTbdU}
+                        surv ::Int64) where {T <: iTbdU}
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -88,7 +89,7 @@ function _fstem_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr

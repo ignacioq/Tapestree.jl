@@ -58,7 +58,17 @@ function insane_cbd(tree    ::sT_label;
 
   n     = ntips(tree)
   th    = treeheight(tree)
-  crown = survival ? Int64(iszero(e(tree))) : 2
+
+  surv = 0   # condition on survival of 0, 1, or 2 starting lineages
+  rmλ  = 0.0 # condition on first speciation event
+  if survival 
+    if iszero(e(tree)) 
+      surv += 2
+      rmλ  += 1.0
+    else
+      surv += 1
+    end
+  end
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -77,7 +87,7 @@ function insane_cbd(tree    ::sT_label;
     λc, μc = λi, μi
   end
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 5_000, crown)
+  mc = m_surv_cbd(th, λc, μc, 5_000, surv)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTbd)
@@ -93,12 +103,12 @@ function insane_cbd(tree    ::sT_label;
 
   # adaptive phase
   llc, prc, λc, μc, mc, ns, L =
-      mcmc_burn_cbd(Ξ, idf, λ_prior, μ_prior, nburn, λc, μc, mc, th, crown,
+      mcmc_burn_cbd(Ξ, idf, λ_prior, μ_prior, nburn, λc, μc, mc, th, rmλ, surv,
         pup, prints)
 
   # mcmc
   r, treev, λc, μc, mc = mcmc_cbd(Ξ, idf, llc, prc, λc, μc, mc, ns, L, 
-    th, crown, λ_prior, μ_prior, pup, niter, nthin, nflush, ofile, prints)
+    th, rmλ, surv, λ_prior, μ_prior, pup, niter, nthin, nflush, ofile, prints)
 
   # if marginal
 
@@ -166,7 +176,8 @@ end
                   μc     ::Float64,
                   mc     ::Float64,
                   th     ::Float64,
-                  crown  ::Int64,
+                  rmλ    ::Float64,
+                  surv   ::Int64,
                   pup    ::Array{Int64,1},
                   prints ::Int64)
 
@@ -182,7 +193,8 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
                        μc     ::Float64,
                        mc     ::Float64,
                        th     ::Float64,
-                       crown  ::Int64,
+                       rmλ    ::Float64,
+                       surv   ::Int64,
                        pup    ::Array{Int64,1},
                        prints ::Int64)
 
@@ -192,7 +204,7 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
   ne  = 0.0                    # number of extinction events
 
   # likelihood
-  llc = llik_cbd(Ξ, λc, μc, ns) - Float64(crown > 0) * log(λc) + 
+  llc = llik_cbd(Ξ, λc, μc, ns) - rmλ * log(λc) + 
         log(mc) + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
@@ -209,13 +221,13 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
+          update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
 
       # μ proposal
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
+          update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
 
       # forward simulation proposal proposal
       else
@@ -245,7 +257,8 @@ end
              ns     ::Float64,
              L      ::Float64,
              th     ::Float64,
-             crown  ::Int64,
+             rmλ    ::Float64,
+             surv   ::Int64,
              λ_prior::NTuple{2,Float64},
              μ_prior::NTuple{2,Float64},
              pup    ::Array{Int64,1},
@@ -267,7 +280,8 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
                   ns     ::Float64,
                   L      ::Float64,
                   th     ::Float64,
-                  crown  ::Int64,
+                  rmλ    ::Float64,
+                  surv   ::Int64,
                   λ_prior::NTuple{2,Float64},
                   μ_prior::NTuple{2,Float64},
                   pup    ::Array{Int64,1},
@@ -311,9 +325,9 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
           if p === 1
 
             llc, prc, λc, mc =
-              update_λ!(llc, prc, λc, ns, L, μc, mc, th, crown, λ_prior)
+              update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
 
-            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
             # if !isapprox(llci, llc, atol = 1e-6)
             #    @show llci, llc, it, p
             #    return
@@ -323,9 +337,9 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
           elseif p === 2
 
             llc, prc, μc, mc =
-              update_μ!(llc, prc, μc, ne, L, λc, mc, th, crown, μ_prior)
+              update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
 
-            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
             # if !isapprox(llci, llc, atol = 1e-6)
             #    @show llci, llc, it, p
             #    return
@@ -337,7 +351,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
             bix = ceil(Int64,rand()*el)
             llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
-            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - Float64(crown > 0) * log(λc) + log(mc) + prob_ρ(idf)
+            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
             # if !isapprox(llci, llc, atol = 1e-6)
             #    @show llci, llc, it, p
             #    return
@@ -693,7 +707,8 @@ end
               μc     ::Float64,
               mc     ::Float64,
               th     ::Float64,
-              crown   ::Bool,
+              rmλ    ::Float64,
+              surv   ::Int64,
               λ_prior::NTuple{2,Float64})
 
 Mixed HM-Gibbs sampling of `λ` for constant birth-death.
@@ -706,16 +721,17 @@ function update_λ!(llc    ::Float64,
                    μc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   crown  ::Int64,
+                   rmλ    ::Float64,
+                   surv   ::Int64,
                    λ_prior::NTuple{2,Float64})
 
-  λp  = randgamma(λ_prior[1] + ns - Float64(crown > 0), λ_prior[2] + L)
+  λp  = randgamma(λ_prior[1] + ns - rmλ, λ_prior[2] + L)
 
-  mp  = m_surv_cbd(th, λp, μc, 5_000, crown)
+  mp  = m_surv_cbd(th, λp, μc, 5_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
-    llc += (ns - Float64(crown > 0)) * log(λp/λc) + L * (λc - λp) + llr
+    llc += (ns - rmλ) * log(λp/λc) + L * (λc - λp) + llr
     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
     λc   = λp
     mc   = mp
@@ -758,13 +774,13 @@ end
 #                    λ_rdist::NTuple{2,Float64},
 #                    pow    ::Float64)
 
-#   λp  = randgamma((λ_prior[1] + ns - Float64(crown > 0)) * pow + λ_rdist[1] * (1.0 - pow),
+#   λp  = randgamma((λ_prior[1] + ns - rmλ) * pow + λ_rdist[1] * (1.0 - pow),
 #                   (λ_prior[2] + L) * pow         + λ_rdist[2] * (1.0 - pow))
 #   mp  = m_surv_cbd(th, λp, μc, 5_000, crown)
 #   llr = log(mp/mc)
 
 #   if -randexp() < (pow * llr)
-#     llc += (ns - Float64(crown > 0)) * log(λp/λc) + L * (λc - λp) + llr
+#     llc += (ns - rmλ) * log(λp/λc) + L * (λc - λp) + llr
 #     prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
 #     rdc += llrdgamma(λp, λc, λ_rdist[1], λ_rdist[2])
 #     λc   = λp
@@ -799,12 +815,12 @@ function update_μ!(llc    ::Float64,
                    λc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   crown  ::Int64,
+                   surv  ::Int64,
                    μ_prior::NTuple{2,Float64})
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
-  mp  = m_surv_cbd(th, λc, μp, 5_000, crown)
+  mp  = m_surv_cbd(th, λc, μp, 5_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr

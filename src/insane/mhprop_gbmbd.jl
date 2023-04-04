@@ -152,7 +152,7 @@ end
                   srδt ::Float64,
                   lλxpr::Float64,
                   lμxpr::Float64,
-                  crown::Int64)  where {T <: iTbdU}
+                  surv::Int64)  where {T <: iTbdU}
 
 Do gbm update for stem root.
 """
@@ -170,7 +170,7 @@ function _stem_update!(ξi   ::T,
                        srδt ::Float64,
                        lλxpr::Float64,
                        lμxpr::Float64,
-                       crown::Int64) where {T <: iTbdU}
+                       surv ::Int64) where {T <: iTbdU}
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -207,7 +207,7 @@ function _stem_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
@@ -244,7 +244,8 @@ end
                    δt   ::Float64,
                    srδt ::Float64,
                    lλxpr::Float64,
-                   lμxpr::Float64) where {T <: iTbdU}
+                   lμxpr::Float64,
+                   surv ::Int64) where {T <: iTbdU}
 
 Do `gbm-bd` update for crown root.
 """
@@ -264,7 +265,7 @@ function _crown_update!(ξi   ::T,
                         srδt ::Float64,
                         lλxpr::Float64,
                         lμxpr::Float64,
-                        crown::Int64) where {T <: iTbdU}
+                        surv ::Int64) where {T <: iTbdU}
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -317,7 +318,7 @@ function _crown_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
