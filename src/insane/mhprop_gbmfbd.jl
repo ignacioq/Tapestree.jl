@@ -29,7 +29,7 @@ Created 27 05 2020
                    lλxpr::Float64,
                    lμxpr::Float64) where {T <: iTbdU}
 
-Do `gbm-bd` update for crown root.
+Do `gbm-bd` update for fossil stem root.
 """
 function _fstem_update!(ξi   ::T,
                         ξ1   ::T,
