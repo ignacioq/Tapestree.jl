@@ -23,8 +23,8 @@ function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, c::Int64)
   ntries = 1
   m      = 1.0
 
-  # if stem conditioning
-  if iszero(c)
+  # if survival of process with 1 lineage
+  if isone(c)
 
     while true
       s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
@@ -36,8 +36,8 @@ function m_surv_cbd(t::Float64, λ::Float64, μ::Float64, ntry::Int64, c::Int64)
       ntries += 1
     end
 
-  # if crown conditioning
-  elseif isone(c)
+  # if survival of process with 2 lineages
+  elseif c === 2
 
     while true
       s1, n1 = sim_cbd_surv(t, λ, μ, false, 1)
@@ -85,8 +85,8 @@ function m_surv_gbmce(t   ::Float64,
   ntries = 1
   m      = 1.0
 
-  # if stem conditioning
-  if iszero(c)
+  # if survival of process with 1 lineage
+  if isone(c)
 
     while true
       s1, n1 = _sim_gbmce_surv(t, lλ0, α, σλ, μ, δt, srδt, false, 1)
@@ -97,8 +97,9 @@ function m_surv_gbmce(t   ::Float64,
       m      += 1.0
       ntries += 1
     end
-  # if crown conditioning
-  elseif isone(c)
+
+  # if survival of process with 2 lineages
+  elseif c === 2
 
     while true
       s1, n1 = _sim_gbmce_surv(t, lλ0, α, σλ, μ, δt, srδt, false, 1)
@@ -144,8 +145,8 @@ function m_surv_gbmct(t   ::Float64,
   ntries = 1
   m      = 1.0
 
-  # if stem conditioning
-  if iszero(c)
+  # if survival of process with 1 lineage
+  if isone(c)
 
     while true
       s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
@@ -157,8 +158,8 @@ function m_surv_gbmct(t   ::Float64,
       ntries += 1
     end
 
-  # if crown conditioning
-  elseif isone(c)
+  # if survival of process with 2 lineages
+  elseif c === 2
 
     while true
 
@@ -209,8 +210,8 @@ function m_surv_gbmbd(t   ::Float64,
   ntries = 1
   m      = 1.0
 
-  # if stem conditioning
-  if iszero(c)
+  # if survival of process with 1 lineage
+  if isone(c)
 
     while true
       s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
@@ -222,8 +223,8 @@ function m_surv_gbmbd(t   ::Float64,
       ntries += 1
     end
 
-  # if crown conditioning
-  elseif isone(c)
+  # if survival of process with 2 lineages
+  elseif c === 2
 
     while true
       s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)

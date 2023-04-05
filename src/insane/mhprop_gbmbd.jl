@@ -14,8 +14,8 @@ Created 27 05 2020
 
 """
     _daughter_update!(ξ1  ::T,
-                      λf  ::Float64,
-                      μf  ::Float64,
+                      lλf ::Float64,
+                      lμf ::Float64,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -25,8 +25,8 @@ Created 27 05 2020
 Make a `fbdd` proposal for daughter for forward simulated fossil branch.
 """
 function _daughter_update!(ξ1  ::T,
-                           λf  ::Float64,
-                           μf  ::Float64,
+                           lλf ::Float64,
+                           lμf ::Float64,
                            α   ::Float64,
                            σλ  ::Float64,
                            σμ  ::Float64,
@@ -34,33 +34,33 @@ function _daughter_update!(ξ1  ::T,
                            srδt::Float64) where {T <: iTbdU}
   @inbounds begin
 
-    λ1c  = lλ(ξ1)
-    μ1c  = lμ(ξ1)
-    l1   = lastindex(λ1c)
-    λ1p  = Vector{Float64}(undef,l1)
-    μ1p  = Vector{Float64}(undef,l1)
-    λi   = λ1c[1]
-    λ1   = λ1c[l1]
-    μi   = μ1c[1]
-    μ1   = μ1c[l1]
+    lλ1c  = lλ(ξ1)
+    lμ1c  = lμ(ξ1)
+    l1   = lastindex(lλ1c)
+    lλ1p  = Vector{Float64}(undef,l1)
+    lμ1p  = Vector{Float64}(undef,l1)
+    lλi   = lλ1c[1]
+    lλ1   = lλ1c[l1]
+    lμi   = lμ1c[1]
+    lμ1   = lμ1c[l1]
     e1   = e(ξ1)
     fdt1 = fdt(ξ1)
 
-    bb!(λ1p, λf, λ1, μ1p, μf, μ1, σλ, σμ, δt, fdt1, srδt)
+    bb!(lλ1p, lλf, lλ1, lμ1p, lμf, lμ1, σλ, σμ, δt, fdt1, srδt)
 
     # log likelihood ratios
     llrbm1, llrbd1, ssrλ1, ssrμ1 =
-      llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
+      llr_gbm_b_sep(lλ1p, lμ1p, lλ1c, lμ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
 
     acr = llrbd1
     llr = llrbm1 + acr
     srt = sqrt(e1)
-    acr += lrdnorm_bm_x(λf, λi, λ1 - α*e1, σλ * srt) + 
-           lrdnorm_bm_x(μf, μi, μ1,        σμ * srt)
-    drλ  = λi - λf
+    acr += lrdnorm_bm_x(lλf, lλi, lλ1 - α*e1, σλ * srt) + 
+           lrdnorm_bm_x(lμf, lμi, lμ1,        σμ * srt)
+    drλ  = lλi - lλf
   end
 
-  return llr, acr, drλ, ssrλ1, ssrμ1, λ1p, μ1p
+  return llr, acr, drλ, ssrλ1, ssrμ1, lλ1p, lμ1p
 end
 
 
@@ -149,11 +149,11 @@ end
                   ssμ     ::Float64,
                   mc      ::Float64,
                   th      ::Float64,
+                  surv    ::Int64,
                   δt      ::Float64,
                   srδt    ::Float64,
                   λa_prior::NTuple{2,Float64},
-                  μa_prior::NTuple{2,Float64},
-                  crown   ::Int64) where {T <: iTbdU}
+                  μa_prior::NTuple{2,Float64}) where {T <: iTbdU}
 
 Do gbm update for stem root.
 """
@@ -168,11 +168,11 @@ function _stem_update!(ξi      ::T,
                        ssμ     ::Float64,
                        mc      ::Float64,
                        th      ::Float64,
+                       surv    ::Int64,
                        δt      ::Float64,
                        srδt    ::Float64,
                        λa_prior::NTuple{2,Float64},
-                       μa_prior::NTuple{2,Float64},
-                       crown   ::Int64) where {T <: iTbdU}
+                       μa_prior::NTuple{2,Float64}) where {T <: iTbdU}
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -201,10 +201,10 @@ function _stem_update!(ξi      ::T,
 
     llr = llrbd
 
-    if lU < llr + log(1000.0/mc)
+    if lU < llr + log(5_000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
@@ -241,11 +241,11 @@ end
                    ssμ     ::Float64,
                    mc      ::Float64,
                    th      ::Float64,
+                   surv    ::Int64,
                    δt      ::Float64,
                    srδt    ::Float64,
                    λa_prior::NTuple{2,Float64},
-                   μa_prior::NTuple{2,Float64},
-                   crown   ::Int64) where {T <: iTbdU}
+                   μa_prior::NTuple{2,Float64}) where {T <: iTbdU}
 
 Do `gbm-bd` update for crown root.
 """
@@ -262,11 +262,12 @@ function _crown_update!(ξi      ::T,
                         ssμ     ::Float64,
                         mc      ::Float64,
                         th      ::Float64,
+                        surv    ::Int64,
                         δt      ::Float64,
                         srδt    ::Float64,
                         λa_prior::NTuple{2,Float64},
-                        μa_prior::NTuple{2,Float64},
-                        crown   ::Int64) where {T <: iTbdU}
+                        μa_prior::NTuple{2,Float64}) where {T <: iTbdU}
+
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -311,10 +312,10 @@ function _crown_update!(ξi      ::T,
 
     llr = llrbd1 + llrbd2
 
-    if lU < llr + log(1000.0/mc)
+    if lU < llr + log(5_000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, surv)
       llr += log(mp/mc)
 
       if lU < llr

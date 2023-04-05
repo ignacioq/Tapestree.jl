@@ -70,7 +70,7 @@ Recipe for plotting a Type `iT`.
 """
 @recipe function f(tree::T,
                    zf  ::Function;
-                   shownodes  = (T <: iTf),
+                   shownodes  = false,
                    tip        = false,
                    speciation = false,
                    extinct    = false,

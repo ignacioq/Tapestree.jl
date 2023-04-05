@@ -128,7 +128,7 @@ end
                   ssλ     ::Float64,
                   mc      ::Float64,
                   th      ::Float64,
-                  crown   ::Int64,
+                  surv    ::Int64,
                   δt      ::Float64,
                   srδt    ::Float64,
                   λa_prior::NTuple{2,Float64})
@@ -145,7 +145,7 @@ function _stem_update!(ξi      ::iTce,
                        ssλ     ::Float64,
                        mc      ::Float64,
                        th      ::Float64,
-                       crown   ::Int64,
+                       surv    ::Int64,
                        δt      ::Float64,
                        srδt    ::Float64,
                        λa_prior::NTuple{2,Float64})
@@ -175,7 +175,7 @@ function _stem_update!(ξi      ::iTce,
     if lU < llr + log(5_000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, crown)
+      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, surv)
       llr += log(mp/mc)
 
       if lU < llr + prr
@@ -208,7 +208,7 @@ end
                    ssλ     ::Float64,
                    mc      ::Float64,
                    th      ::Float64,
-                   crown   ::Int64,
+                   surv    ::Int64,
                    δt      ::Float64,
                    srδt    ::Float64,
                    λa_prior::NTuple{2,Float64})
@@ -227,7 +227,7 @@ function _crown_update!(ξi      ::iTce,
                         ssλ     ::Float64,
                         mc      ::Float64,
                         th      ::Float64,
-                        crown   ::Int64,
+                        surv    ::Int64,
                         δt      ::Float64,
                         srδt    ::Float64,
                         λa_prior::NTuple{2,Float64})
@@ -270,7 +270,7 @@ function _crown_update!(ξi      ::iTce,
     if lU < llr + log(5_000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, crown)
+      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, surv)
       llr += log(mp/mc)
 
       if lU < llr + prr

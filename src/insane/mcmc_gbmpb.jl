@@ -150,17 +150,20 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
 
       ## parameter updates
       # update drift
-      if pupi === 1
+      #if pupi === 1
+      # update drift and diffusion
+      if pupi === 1 || pupi === 2
 
-        llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
+        #llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
+        llc, prc, αc, σλc = update_α_σ!(αc, σλc, L, dλ, ssλ, nλ, llc, prc, α_prior, σλ_prior)
 
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
-      # update diffusion
-      elseif pupi === 2
+      # # update diffusion
+      # elseif pupi === 2
 
-        llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
+      #   llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
 
       # update all speciation rates through time simultaneously
       elseif pupi === 3
@@ -293,16 +296,19 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
 
           ## parameter updates
           # update drift
-          if pupi === 1
+          #if pupi === 1
+          # update drift and diffusion
+          if pupi === 1 || pupi === 2
 
-            llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
+            #llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
+            llc, prc, αc, σλc = update_α_σ!(αc, σλc, L, dλ, ssλ, nλ, llc, prc, α_prior, σλ_prior)
 
             # update ssλ with new drift `α`
             ssλ, nλ = sss_gbm(Ξ, αc)
 
-          # update diffusion rate
-          elseif pupi === 2
-            llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
+          # # update diffusion rate
+          # elseif pupi === 2
+          #   llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
 
           # update all speciation rates through time simultaneously
           elseif pupi === 3
@@ -972,22 +978,29 @@ end
 
 """
     update_σ!(σλc     ::Float64,
+              αc      ::Float64,
               ssλ     ::Float64,
               n       ::Float64,
               llc     ::Float64,
               prc     ::Float64,
-              σλ_prior::NTuple{2,Float64})
+              rdc     ::Float64,
+              σλ_prior::NTuple{2,Float64},
+              σλ_rdist::NTuple{2,Float64},
+              α_prior ::NTuple{2,Float64},
+              pow     ::Float64)
 
 Gibbs update for `σλ` given reference distribution.
 """
 function update_σ!(σλc     ::Float64,
+                   αc      ::Float64,
                    ssλ     ::Float64,
                    n       ::Float64,
                    llc     ::Float64,
                    prc     ::Float64,
                    rdc     ::Float64,
                    σλ_prior::NTuple{2,Float64},
-                   σλ_rdist ::NTuple{2,Float64},
+                   σλ_rdist::NTuple{2,Float64},
+                   α_prior ::NTuple{2,Float64},
                    pow     ::Float64)
 
   σλ_p1 = σλ_prior[1]
@@ -1001,9 +1014,68 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
   llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc))
   prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+  prc += llrdnorm_σ²(αc, α_prior[1], σλp2, σλc^2)
   rdc += llrdinvgamma(σλp2, σλc^2, σλ_rdist[1], σλ_rdist[2])
 
   return llc, prc, rdc, σλp
+end
+
+
+
+
+
+"""
+    update_α_σ!(αc      ::Float64,
+                σλc     ::Float64,
+                L       ::Float64,
+                dλ      ::Float64,
+                ssλ     ::Float64,
+                n       ::Float64,
+                llc     ::Float64,
+                prc     ::Float64,
+                α_prior ::NTuple{2,Float64},
+                σλ_prior::NTuple{2,Float64})
+
+Gibbs update for `α`.
+"""
+function update_α_σ!(αc      ::Float64,
+                     σλc     ::Float64,
+                     L       ::Float64,
+                     dλ      ::Float64,
+                     ssλ     ::Float64,
+                     n       ::Float64,
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     α_prior ::NTuple{2,Float64},
+                     σλ_prior::NTuple{2,Float64})
+
+  # ratio
+  ν   = α_prior[1]
+  σλ2c = σλc^2
+  rs  = 1.0
+
+  σλ_p1 = σλ_prior[1]
+  σλ_p2 = σλ_prior[2]
+  ν     = α_prior[1]
+
+  # gibbs update for α and σ
+  αp, σλ2p = randnorminvgamma((dλ + rs*ν)/(rs + L), 
+                              rs + L,
+                              σλ_p1 + 0.5 * n,
+                              σλ_p2 + ssλ + rs*L/(rs + L)*(ν-dλ/n)^2)
+
+  # update prior for α
+  prc += llrdnorm_σ²(αc, α_prior[1], σλ2p, σλ2c) + llrdnorm_x(αp, αc, ν, σλ2p)
+  # update prior for σ
+  prc += llrdinvgamma(σλ2p, σλ2c, σλ_p1, σλ_p2)
+
+  # update likelihood for α
+  llc += 0.5*L/σλ2p*(αc^2 - αp^2 + 2.0*dλ*(αp - αc)/L)
+  # update likelihood for σ
+  σλp = sqrt(σλ2p)
+  llc += ssλ*(1.0/σλ2c - 1.0/σλ2p) - n*(log(σλp/σλc))
+
+  return llc, prc, αp, σλp
 end
 
 

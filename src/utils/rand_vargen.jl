@@ -57,6 +57,19 @@ end
 
 
 """
+  randnorminvgamma(α::Float64, β::Float64)
+
+Generate a random sample from a **Normal Inverse Gamma** distribution with
+location `m`, variance scaling `r`, shape `α` and scale `β`.
+"""
+function randnorminvgamma(m::Float64, r::Float64, α::Float64, β::Float64)
+  σ2=randinvgamma(α, β)
+  return (rnorm(m, sqrt(σ2/r)), σ2)
+end
+
+
+
+"""
   randinvgamma(α::Float64, β::Float64)
 
 Generate a random sample from an **Inverse Gamma** distribution with
