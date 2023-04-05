@@ -149,8 +149,20 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
     for pupi in pup
 
       ## parameter updates
-      # update drift
-      #if pupi === 1
+      
+      # # update drift
+      # if pupi === 1
+
+      #   #llc, prc, αc = update_α!(αc, σλc, L, dλ, llc, prc, α_prior)
+
+      #   # update ssλ with new drift `α`
+      #   ssλ, nλ = sss_gbm(Ξ, αc)
+
+      # # update diffusion
+      # elseif pupi === 2
+
+      #   llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
+
       # update drift and diffusion
       if pupi === 1 || pupi === 2
 
@@ -159,11 +171,6 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
 
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
-
-      # # update diffusion
-      # elseif pupi === 2
-
-      #   llc, prc, σλc = update_σ!(σλc, αc, ssλ, nλ, llc, prc, σλ_prior, α_prior)
 
       # update all speciation rates through time simultaneously
       elseif pupi === 3
@@ -1130,8 +1137,8 @@ end
 
 Propagate a shift in log-speciation across all GBM rates.
 """
-function propagate_lλshift!(tree   ::iTpb,
-                            lλshift::Float64)
+function propagate_lλshift!(tree   ::T,
+                            lλshift::Float64) where {T <: iT}
   setlλ!(tree, lλ(tree) .+ lλshift)
   if !istip(tree)
     propagate_lλshift!(tree.d1, lλshift)

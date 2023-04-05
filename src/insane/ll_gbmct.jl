@@ -61,7 +61,6 @@ function llik_gbm(tree::iTct,
                   ϵ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
-
   if istip(tree)
     ll_gbm_b_ϵ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, false, isextinct(tree))
   else
@@ -100,17 +99,19 @@ function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
-  llλ  = 0.0
+  llbm = 0.0
   llct = 0.0
   @avx for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
-    llλ  += (lλvi1 - lλvi - α*δt)^2
+    llbm += (lλvi1 - lλvi - α*δt)^2
     llct += exp(0.5*(lλvi + lλvi1))
   end
 
   # add to global likelihood
-  ll  = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+  ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+ 
+  # birth-death likelihood
   ll -= llct*δt*(1.0 + ϵ)
 
   lλvi1 = lλv[nI+2]
@@ -121,12 +122,12 @@ function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
     ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
            fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
   end
+
   # if speciation
   if λev
     ll += lλvi1
-  end
   # if extinction
-  if μev
+  elseif μev
     ll += lλvi1 + log(ϵ)
   end
 
@@ -376,6 +377,76 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   end
 
   return llrbm, llrct, ssrλ, Σrλ
+end
+
+
+
+
+"""
+    llik_gbm_lλshift(Ξ      ::Vector{iTct},
+                     δt     ::Float64,
+                     lλshift::Float64,
+                     ϵ      ::Float64)
+
+Returns the exponential term of the birth-death log-likelihood ratio 
+for a lλshift on a `iTct`.
+"""
+function llr_gbm_lλshift(Ξ      ::Vector{iTct},
+                         δt     ::Float64,
+                         lλshift::Float64,
+                         ϵ      ::Float64)
+  @inbounds begin
+    explλshiftm1 = exp(lλshift)-1
+    llr = 0.0
+    for i in Base.OneTo(lastindex(Ξ))
+      llr += _llr_gbm_lλshift(Ξ[i], δt, lλshift, explλshiftm1, ϵ)
+    end
+  end
+
+  return llr
+end
+
+
+
+
+"""
+    _llr_gbm_lλshift(tree        ::iTct,
+                     δt          ::Float64,
+                     lλshift     ::Float64,
+                     explλshiftm1::Float64,
+                     ϵ           ::Float64)
+
+Returns the exponential term of the birth-death log-likelihood ratio 
+for a lλshift on a `iTct`.
+"""
+function _llr_gbm_lλshift(tree        ::iTct,
+                          δt          ::Float64,
+                          lλshift     ::Float64,
+                          explλshiftm1::Float64,
+                          ϵ           ::Float64)
+  @inbounds begin
+    llr = 0.0
+    lλtree = lλ(tree)
+    nI = lastindex(lλtree)-2
+    fdti = fdt(tree)
+
+    for i in Base.OneTo(nI)
+      llr -= exp(0.5*(lλtree[i] + lλtree[i+1]))
+    end
+    llr *= explλshiftm1*δt*(1.0 + ϵ)
+
+    # add final non-standard `δt`
+    if fdti > 0.0
+      llr -= (exp(0.5*(lλtree[nI+1] + lλtree[nI+2])))*explλshiftm1*fdti*(1.0 + ϵ)
+    end
+
+    if !istip(tree)
+      llr += _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1)
+      llr += _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1)
+    end
+  end
+
+  return llr
 end
 
 

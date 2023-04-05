@@ -86,10 +86,10 @@ function _fstem_update!(ξi   ::T,
 
     llr = llrbd
 
-    if lU < llr + log(1000.0/mc)
+    if lU < llr + log(5_000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, surv)
       llr += log(mp/mc)
 
       if lU < llr

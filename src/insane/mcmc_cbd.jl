@@ -407,7 +407,7 @@ end
 #                   μtn    ::Float64,
 #                   mc     ::Float64,
 #                   th     ::Float64,
-#                   crown   ::Bool,
+#                   surv   ::Int64,
 #                   λ_prior::NTuple{2,Float64},
 #                   μ_prior::NTuple{2,Float64},
 #                   λ_rdist::NTuple{2,Float64},
@@ -426,7 +426,7 @@ end
 #                        μtn    ::Float64,
 #                        mc     ::Float64,
 #                        th     ::Float64,
-#                        crown   ::Bool,
+#                        surv   ::Int64,
 #                        λ_prior::NTuple{2,Float64},
 #                        μ_prior::NTuple{2,Float64},
 #                        λ_rdist::NTuple{2,Float64},
@@ -447,7 +447,7 @@ end
 #   ne = Float64(ntipsextinct(Ξ))
 #   L  = treelength(Ξ)
 
-#   nsi = crown ? 0.0 : log(λc)
+#   nsi = surv ? 0.0 : log(λc)
 
 #   llc = llik_cbd(Ξ, λc, μc, ns) - nsi + log(mc) + prob_ρ(idf)
 #   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
@@ -472,14 +472,14 @@ end
 #         if p === 1
 
 #           llc, prc, rdc, λc, mc =
-#             update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, crown,
+#             update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, surv,
 #               λ_prior, λ_rdist, βi)
 
 #         # forward simulation proposal proposal
 #         elseif p === 2
 
 #           llc, prc, rdc, μc, mc =
-#             update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, crown,
+#             update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, surv,
 #               μ_prior, μ_rdist, βi)
 
 #         else
