@@ -845,7 +845,7 @@ function _sim_gbmct_surv(t   ::Float64,
                          δt  ::Float64,
                          srδt::Float64,
                          surv::Bool,
-                         nn ::Int64)
+                         nn  ::Int64)
 
   if !surv && nn < 200
 

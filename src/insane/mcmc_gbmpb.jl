@@ -22,8 +22,11 @@ Created 14 09 2020
                  nburn   ::Int64                 = 200,
                  nflush  ::Int64                 = nthin,
                  ofile   ::String                = homedir(),
+                 tune_int::Int64                 = 100,
                  αi      ::Float64               = 0.0,
                  σλi     ::Float64               = 0.1,
+                 λtni    ::Float64               = 0.1,
+                 obj_ar  ::Float64               = 0.234,
                  pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.1, 0.2),
                  δt      ::Float64               = 1e-3,
                  prints  ::Int64                 = 5,
@@ -40,8 +43,11 @@ function insane_gbmpb(tree    ::sT_label;
                       nburn   ::Int64                 = 200,
                       nflush  ::Int64                 = nthin,
                       ofile   ::String                = homedir(),
+                      tune_int::Int64                 = 100,
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.1,
+                      λtni    ::Float64               = 0.1,
+                      obj_ar  ::Float64               = 0.234,
                       pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       prints  ::Int64                 = 5,
@@ -75,15 +81,18 @@ function insane_gbmpb(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
+  # make objecting scaling function for tuning
+  scalef = makescalef(obj_ar)
+
   @info "running pure-birth gbm"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, ns =
-    mcmc_burn_gbmpb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi,
-      δt, srδt, inodes, pup, prints)
+  Ξ, idf, llc, prc, αc, σλc, λtn, ns =
+    mcmc_burn_gbmpb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, tune_int, αi, σλi, λtni,
+      δt, srδt, inodes, pup, prints, scalef)
 
   # mcmc
-  r, treev = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, ns, λ0_prior, α_prior, σλ_prior,
+  r, treev = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, ns, λ0_prior, α_prior, σλ_prior, λtn,
       δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -98,14 +107,17 @@ end
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
+                    tune_int::Int64,
                     αc      ::Float64,
                     σλc     ::Float64,
+                    λtn     ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
                     terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},
-                    prints  ::Int64)
+                    prints  ::Int64,
+                    scalef  ::Function)
 
 
 MCMC burn-in chain for GBM pure-birth.
@@ -116,13 +128,19 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
                          α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
                          nburn   ::Int64,
+                         tune_int::Int64,
                          αc      ::Float64,
                          σλc     ::Float64,
+                         λtn     ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
                          inodes  ::Array{Int64,1},
                          pup     ::Array{Int64,1},
-                         prints  ::Int64)
+                         prints  ::Int64,
+                         scalef  ::Function)
+
+  ltn = 0
+  λlup = λlac = 0.0
 
   nsi = Float64(iszero(e(Ξ[1])))
 
@@ -175,7 +193,9 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
       # update all speciation rates through time simultaneously
       elseif pupi === 3
 
-        llc, prc, Ξ = update_lλ!(Ξ, llc, prc, ns, nsi, δt, λ0_prior)
+        llc, prc, Ξ, λlac = update_lλ!(Ξ, llc, prc, ns, nsi, λtn, λlac, δt, λ0_prior)
+
+        λlup += 1.0 
 
       # update gbm
       elseif pupi === 4
@@ -193,13 +213,19 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
         llc, dλ, ssλ, nλ, ns, L =
           update_fs!(bix, Ξ, idf, αc, σλc, llc, dλ, ssλ, nλ, ns, L, δt, srδt)
       end
+    end
 
+    # log tuning parameters
+    ltn += 1
+    if ltn === tune_int
+      λtn = scalef(λtn, λlac/λlup)
+      ltn = 0
     end
 
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, ns
+  return Ξ, idf, llc, prc, αc, σλc, λtn, ns
 end
 
 
@@ -216,6 +242,7 @@ end
                λ0_prior::NTuple{2,Float64},
                α_prior ::NTuple{2,Float64},
                σλ_prior::NTuple{2,Float64},
+               λtn     ::Float64,
                δt      ::Float64,
                srδt    ::Float64,
                inodes  ::Array{Int64,1},
@@ -238,6 +265,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
                     λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
+                    λtn     ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
@@ -319,7 +347,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
 
           # update all speciation rates through time simultaneously
           elseif pupi === 3
-            llc, prc, Ξ = update_lλ!(Ξ, llc, prc, ns, nsi, δt, λ0_prior)
+            llc, prc, Ξ = update_lλ!(Ξ, llc, prc, ns, nsi, λtn, δt, λ0_prior)
 
           # update gbm
           elseif pupi === 4
@@ -1094,6 +1122,7 @@ end
                 prc     ::Float64,
                 ns      ::Float64,
                 nsi     ::Float64,
+                λtn     ::Float64,
                 δt      ::Float64,
                 λ0_prior::NTuple{2,Float64})
 
@@ -1104,12 +1133,13 @@ function update_lλ!(Ξc      ::Vector{iTpb},
                     prc     ::Float64,
                     ns      ::Float64,
                     nsi     ::Float64,
+                    λtn     ::Float64,
                     δt      ::Float64,
                     λ0_prior::NTuple{2,Float64})
   
   lλ0c = lλ(Ξc[1])[1]
   λ0c  = exp(lλ0c)
-  lλ0p = rnorm(lλ0c, 0.05)
+  lλ0p = rnorm(lλ0c, λtn)
   λ0p  = exp(lλ0p)
     
   lλshift = lλ0p-lλ0c
@@ -1126,6 +1156,54 @@ function update_lλ!(Ξc      ::Vector{iTpb},
   end
 
   return llc, prc, Ξc
+end
+
+
+
+
+"""
+     update_lλ!(Ξ       ::Vector{iTpb},
+                llc     ::Float64,
+                prc     ::Float64,
+                ns      ::Float64,
+                nsi     ::Float64,
+                λtn     ::Float64,
+                lac     ::Float64,
+                δt      ::Float64,
+                λ0_prior::NTuple{2,Float64})
+
+Mixed HM-Gibbs sampling, shifting all log-`λ` GBM rates simultaneously.
+"""
+function update_lλ!(Ξc      ::Vector{iTpb},
+                    llc     ::Float64,
+                    prc     ::Float64,
+                    ns      ::Float64,
+                    nsi     ::Float64,
+                    λtn     ::Float64,
+                    lac     ::Float64,
+                    δt      ::Float64,
+                    λ0_prior::NTuple{2,Float64})
+  
+  lλ0c = lλ(Ξc[1])[1]
+  λ0c  = exp(lλ0c)
+  lλ0p = rnorm(lλ0c, λtn)
+  λ0p  = exp(lλ0p)
+    
+  lλshift = lλ0p-lλ0c
+
+  llr = llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-nsi)*lλshift
+  prr = llrdgamma(λ0p, λ0c, λ0_prior[1], λ0_prior[2])
+    
+  if -randexp() < llr + prr
+    llc += llr
+    prc += prr
+    for i in Base.OneTo(lastindex(Ξc))
+      propagate_lλshift!(Ξc[i], lλshift)
+    end
+    lac += 1.0
+  end
+
+  return llc, prc, Ξc, lac
 end
 
 

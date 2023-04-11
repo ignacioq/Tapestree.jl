@@ -28,6 +28,7 @@ Created 03 09 2020
                  λi      ::Float64               = NaN,
                  σλi     ::Float64               = 0.01,
                  ϵi      ::Float64               = 0.2,
+                 λtni    ::Float64               = 0.1,
                  ϵtni    ::Float64               = 0.1,
                  obj_ar  ::Float64               = 0.234,
                  pupdp   ::NTuple{6,Float64}     = (0.02, 0.01, 0.02, 0.01, 0.1, 0.2),
@@ -56,6 +57,7 @@ function insane_gbmct(tree    ::sT_label;
                       λi      ::Float64               = NaN,
                       σλi     ::Float64               = 0.01,
                       ϵi      ::Float64               = 0.2,
+                      λtni    ::Float64               = 0.1,
                       ϵtni    ::Float64               = 0.1,
                       obj_ar  ::Float64               = 0.234,
                       pupdp   ::NTuple{6,Float64}     = (0.02, 0.01, 0.02, 0.01, 0.1, 0.2),
@@ -126,14 +128,14 @@ function insane_gbmct(tree    ::sT_label;
   @info "running birth-death gbm with constant ϵ"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, ns =
+  Ξ, idf, llc, prc, αc, σλc, ϵc, λtn, ϵtn, mc, ns =
     mcmc_burn_gbmct(Ξ, idf, λa_prior, α_prior, σλ_prior, ϵ_prior,
-      nburn, tune_int, αi, σλi, ϵc, ϵtni, mc, th, rmλ, surv, δt, srδt, inodes, pup,
+      nburn, tune_int, αi, σλi, ϵc, λtni, ϵtni, mc, th, rmλ, surv, δt, srδt, inodes, pup,
        prints, scalef)
 
   # mcmc
   r, treev =
-    mcmc_gbmct(Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, ns, th, rmλ, surv,
+    mcmc_gbmct(Ξ, idf, llc, prc, αc, σλc, ϵc, λtn, ϵtn, mc, ns, th, rmλ, surv,
       λa_prior, α_prior, σλ_prior, ϵ_prior, δt, srδt, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -155,6 +157,7 @@ end
                     αc      ::Float64,
                     σλc     ::Float64,
                     ϵc      ::Float64,
+                    λtn     ::Float64,
                     ϵtn     ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
@@ -180,6 +183,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
                          αc      ::Float64,
                          σλc     ::Float64,
                          ϵc      ::Float64,
+                         λtn     ::Float64,
                          ϵtn     ::Float64,
                          mc      ::Float64,
                          th      ::Float64,
@@ -193,8 +197,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
                          scalef  ::Function)
 
   ltn = 0
-  lup = 0.0
-  lac = 0.0
+  λlup = λlac = ϵlup = ϵlac = 0.0
 
   lλ0 = lλ(Ξ[1])[1]
   llc = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - rmλ * lλ0 + 
@@ -216,12 +219,9 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   nin     = lastindex(inodes)      # number of internal nodes
   el      = lastindex(idf)         # number of branches
 
-  # number of branches
-  nbr  = lastindex(idf)
-
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
-
-  for i in Base.OneTo(nburn)
+  
+  for it in Base.OneTo(nburn)
 
     shuffle!(pup)
 
@@ -252,23 +252,24 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
         # update ssλ with new drift `α`
         ssλ, nλ = sss_gbm(Ξ, αc)
 
+      # update turnover
       elseif pupi === 3
-
-        llc, ϵc, mc, lac =
+        llc, ϵc, mc, ϵlac =
           update_ϵ!(ϵc, lλ(Ξ[1])[1], αc, σλc, llc, mc, th, surv, ϵtn,
-            lac, ne, Σλ, δt, srδt, ϵxpr)
+            ϵlac, ne, Σλ, δt, srδt, ϵxpr)
 
-        lup += 1.0
+        ϵlup += 1.0
 
       # update all speciation rates through time simultaneously
       elseif pupi === 4
 
-        llc, prc, Ξ, mc, Σλ =
-          update_lλ_ϵ!(Ξ, αc, σλc, ϵc, llc, prc, ns, ne, mc, th, rmλ, surv, Σλ, δt, srδt, λa_prior)
+        llc, prc, Ξ, mc, Σλ, λlac =
+          update_lλ_ϵ!(Ξ, αc, σλc, ϵc, llc, prc, ns, ne, mc, th, rmλ, surv, λtn, λlac, Σλ, δt, srδt, λa_prior)
+
+        λlup += 1.0
 
       # gbm update
       elseif pupi === 5
-
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
@@ -278,7 +279,6 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
 
       # forward simulation update
       else
-
         bix = ceil(Int64,rand()*el)
 
         llc, dλ, ssλ, Σλ, nλ, ns, ne, L =
@@ -290,14 +290,15 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
     # log tuning parameters
     ltn += 1
     if ltn === tune_int
-      ϵtn = scalef(ϵtn, lac/lup)
+      λtn = scalef(λtn, λlac/λlup)
+      ϵtn = scalef(ϵtn, ϵlac/ϵlup)
       ltn = 0
     end
 
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, ϵc, ϵtn, mc, ns
+  return Ξ, idf, llc, prc, αc, σλc, ϵc, λtn, ϵtn, mc, ns
 end
 
 
@@ -311,6 +312,7 @@ end
               αc      ::Float64,
               σλc     ::Float64,
               ϵc      ::Float64,
+              λtn     ::Float64,
               ϵtn     ::Float64,
               mc      ::Float64,
               ns      ::Float64,
@@ -340,6 +342,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
                     αc      ::Float64,
                     σλc     ::Float64,
                     ϵc      ::Float64,
+                    λtn     ::Float64,
                     ϵtn     ::Float64,
                     mc      ::Float64,
                     ns      ::Float64,
@@ -387,16 +390,16 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           logdnorm(αc,        α_prior[1],  σλc^2) +
           logdunif(ϵc,        ϵ_prior[1],  ϵ_prior[2])
     if !isapprox(pr0, prc, atol = 1e-5)
-       error(string("Wrong prior computation during the ", ["α","σλ","ϵ","λ0","gbm","forward simulation"][pupi], 
-                    " update, at iteration ", i, ": pr0=", pr0, " and prc=", prc))
+      error(string("Wrong prior computation during the ", ["α","σλ","ϵ","λ0","gbm","forward simulation"][pupi], 
+                   " update, at iteration ", i, ": pr0=", pr0, " and prc-pr0=", prc-pr0))
     end
   end
 
   function check_ll(pupi::Int64, i::Int64)
     ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - rmλ * lλ(Ξ[1])[1]
     if !isapprox(ll0, llc, atol = 1e-5)
-       error(string("Wrong likelihood computation during the ", ["α","σλ","ϵ","λ0","gbm","forward simulation"][pupi], 
-                    " update, at iteration ", i, ": ll0=", ll0, " and llc=", llc))
+      error(string("Wrong likelihood computation during the ", ["α","σλ","ϵ","λ0","gbm","forward simulation"][pupi], 
+                   " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0))
     end
   end
 
@@ -455,7 +458,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
           elseif pupi === 4
 
             llc, prc, Ξ, mc, Σλ =
-              update_lλ_ϵ!(Ξ, αc, σλc, ϵc, llc, prc, ns, ne, mc, th, rmλ, surv, Σλ, δt, srδt, λa_prior)
+              update_lλ_ϵ!(Ξ, αc, σλc, ϵc, llc, prc, ns, ne, mc, th, rmλ, surv, λtn, Σλ, δt, srδt, λa_prior)
 
           # gbm update
           elseif pupi === 5
@@ -1193,7 +1196,7 @@ end
               llc  ::Float64,
               mc   ::Float64,
               th   ::Float64,
-              surv::Int64,
+              surv ::Int64,
               ϵtn  ::Float64,
               lac  ::Float64,
               ne   ::Float64,
@@ -1211,7 +1214,7 @@ function update_ϵ!(ϵc   ::Float64,
                    llc  ::Float64,
                    mc   ::Float64,
                    th   ::Float64,
-                   surv::Int64,
+                   surv ::Int64,
                    ϵtn  ::Float64,
                    lac  ::Float64,
                    ne   ::Float64,
@@ -1221,23 +1224,25 @@ function update_ϵ!(ϵc   ::Float64,
                    ϵxpr ::Float64)
 
   ϵp  = abs(addupt(ϵc, ϵtn))::Float64
-  llr = ne*log(ϵp/ϵc) + Σλ*(ϵc - ϵp)
-  prr = ϵp > ϵxpr ? -Inf : 0.0
+  
+  if ϵp < ϵxpr
+    llr = ne*log(ϵp/ϵc) + Σλ*(ϵc - ϵp)
 
-  # log probability
-  lU = -randexp()
+    # log probability
+    lU = -randexp()
 
-  # check if valid proposal before doing survival conditioning simulation
-  if lU < llr + prr + log(5_000.0/mc)
+    # check if valid proposal before doing survival conditioning simulation
+    if lU < llr + log(5_000.0/mc)
 
-    mp   = m_surv_gbmct(th, lλ0, α, σλ, ϵp, δt, srδt, 5_000, surv)
-    llr += log(mp/mc)
+      mp   = m_surv_gbmct(th, lλ0, α, σλ, ϵp, δt, srδt, 5_000, surv)
+      llr += log(mp/mc)
 
-    if lU < llr
-      llc += llr
-      ϵc   = ϵp
-      mc   = mp
-      lac += 1.0
+      if lU < llr
+        llc += llr
+        ϵc   = ϵp
+        mc   = mp
+        lac += 1.0
+      end
     end
   end
 
@@ -1255,7 +1260,7 @@ end
               llc  ::Float64,
               mc   ::Float64,
               th   ::Float64,
-              surv::Int64,
+              surv ::Int64,
               ϵtn  ::Float64,
               ne   ::Float64,
               Σλ   ::Float64,
@@ -1272,7 +1277,7 @@ function update_ϵ!(ϵc   ::Float64,
                    llc  ::Float64,
                    mc   ::Float64,
                    th   ::Float64,
-                   surv::Int64,
+                   surv ::Int64,
                    ϵtn  ::Float64,
                    ne   ::Float64,
                    Σλ   ::Float64,
@@ -1315,12 +1320,14 @@ end
                   ϵ       ::Float64,
                   llc     ::Float64,
                   prc     ::Float64,
-                  ne      ::Float64,
                   ns      ::Float64,
+                  ne      ::Float64,
                   mc      ::Float64,
                   th      ::Float64,
                   rmλ     ::Float64,
                   surv    ::Int64,
+                  λtn     ::Float64,
+                  lac     ::Float64,
                   Σλc     ::Float64,
                   δt      ::Float64,
                   srδt    ::Float64,
@@ -1334,12 +1341,14 @@ function update_lλ_ϵ!(Ξc      ::Vector{iTct},
                       ϵ       ::Float64,
                       llc     ::Float64,
                       prc     ::Float64,
-                      ne      ::Float64,
                       ns      ::Float64,
+                      ne      ::Float64,
                       mc      ::Float64,
                       th      ::Float64,
                       rmλ     ::Float64,
                       surv    ::Int64,
+                      λtn     ::Float64,
+                      lac     ::Float64,
                       Σλc     ::Float64,
                       δt      ::Float64,
                       srδt    ::Float64,
@@ -1347,7 +1356,7 @@ function update_lλ_ϵ!(Ξc      ::Vector{iTct},
   
   lλ0c = lλ(Ξc[1])[1]
   λ0c  = exp(lλ0c)
-  lλ0p = rnorm(lλ0c, 0.05)
+  lλ0p = rnorm(lλ0c, λtn)
   λ0p  = exp(lλ0p)
   
   mp  = m_surv_gbmct(th, lλ0p, α, σλ, ϵ, δt, srδt, 5_000, surv)
@@ -1356,7 +1365,75 @@ function update_lλ_ϵ!(Ξc      ::Vector{iTct},
 
   llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift, ϵ) + (ne+ns-rmλ)*lλshift
   prr = llrdgamma(λ0p, λ0c, λa_prior[1], λa_prior[2])
-    
+  
+  if -randexp() < llr + prr
+    llc += llr
+    prc += prr
+    for i in Base.OneTo(lastindex(Ξc))
+      propagate_lλshift!(Ξc[i], lλshift)
+    end
+    mc   = mp
+    Σλc *= exp(lλshift)
+    lac += 1.0
+  end
+
+  return llc, prc, Ξc, mc, Σλc, lac
+end
+
+
+
+
+"""
+     update_lλ_ϵ!(Ξ       ::Vector{iTct},
+                  α       ::Float64,
+                  σλ      ::Float64,
+                  ϵ       ::Float64,
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  ns      ::Float64,
+                  ne      ::Float64,
+                  mc      ::Float64,
+                  th      ::Float64,
+                  rmλ     ::Float64,
+                  surv    ::Int64,
+                  λtn     ::Float64,
+                  Σλc     ::Float64,
+                  δt      ::Float64,
+                  srδt    ::Float64,
+                  λa_prior::NTuple{2,Float64})
+
+HM sampling, shifting all log-`λ` GBM rates simultaneously.
+"""
+function update_lλ_ϵ!(Ξc      ::Vector{iTct},
+                      α       ::Float64,
+                      σλ      ::Float64,
+                      ϵ       ::Float64,
+                      llc     ::Float64,
+                      prc     ::Float64,
+                      ns      ::Float64,
+                      ne      ::Float64,
+                      mc      ::Float64,
+                      th      ::Float64,
+                      rmλ     ::Float64,
+                      surv    ::Int64,
+                      λtn     ::Float64,
+                      Σλc     ::Float64,
+                      δt      ::Float64,
+                      srδt    ::Float64,
+                      λa_prior::NTuple{2,Float64})
+  
+  lλ0c = lλ(Ξc[1])[1]
+  λ0c  = exp(lλ0c)
+  lλ0p = rnorm(lλ0c, λtn)
+  λ0p  = exp(lλ0p)
+  
+  mp  = m_surv_gbmct(th, lλ0p, α, σλ, ϵ, δt, srδt, 5_000, surv)
+  
+  lλshift = lλ0p-lλ0c
+
+  llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift, ϵ) + (ne+ns-rmλ)*lλshift
+  prr = llrdgamma(λ0p, λ0c, λa_prior[1], λa_prior[2])
+  
   if -randexp() < llr + prr
     llc += llr
     prc += prr

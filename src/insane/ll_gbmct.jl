@@ -441,8 +441,8 @@ function _llr_gbm_lλshift(tree        ::iTct,
     end
 
     if !istip(tree)
-      llr += _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1)
-      llr += _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1)
+      llr += _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1, ϵ)
+      llr += _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1, ϵ)
     end
   end
 

@@ -23,11 +23,14 @@ Created 03 09 2020
                  nburn   ::Int64             = 200,
                  nflush  ::Int64             = nthin,
                  ofile   ::String            = homedir(),
+                 tune_int::Int64             = 100,
                  λi      ::Float64           = NaN,
                  αi      ::Float64           = 0.0,
                  σλi     ::Float64           = 0.01,
                  μi      ::Float64           = NaN,
                  ϵi      ::Float64           = 0.2,
+                 λtni    ::Float64           = 0.1,
+                 obj_ar  ::Float64           = 0.234,
                  pupdp   ::NTuple{6,Float64} = (0.01, 0.01, 0.01, 0.01, 0.1, 0.2),
                  δt      ::Float64           = 1e-3,
                  prints  ::Int64             = 5,
@@ -47,11 +50,14 @@ function insane_gbmce(tree    ::sT_label;
                       nburn   ::Int64                 = 200,
                       nflush  ::Int64                 = nthin,
                       ofile   ::String                = homedir(),
+                      tune_int::Int64                 = 100,
                       λi      ::Float64               = NaN,
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.01,
                       μi      ::Float64               = NaN,
                       ϵi      ::Float64               = 0.2,
+                      λtni    ::Float64               = 0.1,
+                      obj_ar  ::Float64               = 0.234,
                       pupdp   ::NTuple{6,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       prints  ::Int64                 = 5,
@@ -113,16 +119,19 @@ function insane_gbmce(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
+  # make objecting scaling function for tuning
+  scalef = makescalef(obj_ar)
+
   @info "running birth-death gbm with constant μ"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, μc, mc, ns =
-    mcmc_burn_gbmce(Ξ, idf, λa_prior, α_prior, σλ_prior, μ_prior,
-      nburn, αi, σλi, μc, mc, th, rmλ, surv, δt, srδt, inodes, pup, prints)
+  Ξ, idf, llc, prc, αc, σλc, μc, λtn, mc, ns =
+    mcmc_burn_gbmce(Ξ, idf, λa_prior, α_prior, σλ_prior, μ_prior, nburn, tune_int, 
+      αi, σλi, μc, λtni, mc, th, rmλ, surv, δt, srδt, inodes, pup, prints, scalef)
 
   # mcmc
   r, treev =
-    mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, ns, th, rmλ, surv,
+    mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, λtn, mc, ns, th, rmλ, surv,
       λa_prior, α_prior, σλ_prior, μ_prior, δt, srδt, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -140,9 +149,11 @@ end
                     σλ_prior::NTuple{2,Float64},
                     μ_prior ::NTuple{2,Float64},
                     nburn   ::Int64,
+                    tune_int::Int64,
                     αc      ::Float64,
                     σλc     ::Float64,
                     μc      ::Float64,
+                    λtn     ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
                     rmλ     ::Float64,
@@ -151,7 +162,8 @@ end
                     srδt    ::Float64,
                     inodes  ::Vector{Int64},
                     pup     ::Vector{Int64},
-                    prints  ::Int64)
+                    prints  ::Int64,
+                    scalef  ::Function)
 
 MCMC burn-in chain for `gbmce`.
 """
@@ -162,9 +174,11 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
                          σλ_prior::NTuple{2,Float64},
                          μ_prior ::NTuple{2,Float64},
                          nburn   ::Int64,
+                         tune_int::Int64,
                          αc      ::Float64,
                          σλc     ::Float64,
                          μc      ::Float64,
+                         λtn     ::Float64,
                          mc      ::Float64,
                          th      ::Float64,
                          rmλ     ::Float64,
@@ -173,7 +187,11 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
                          srδt    ::Float64,
                          inodes  ::Vector{Int64},
                          pup     ::Vector{Int64},
-                         prints  ::Int64)
+                         prints  ::Int64,
+                         scalef  ::Function)
+
+  ltn = 0
+  λlup = λlac = 0.0
 
   lλ0 = lλ(Ξ[1])[1]
   llc = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - rmλ * lλ0 + 
@@ -238,8 +256,10 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
       # update all speciation rates through time simultaneously
       elseif pupi === 4
 
-        llc, prc, Ξ, mc =
-          update_lλ!(Ξ, αc, σλc, μc, llc, prc, ns, mc, th, rmλ, surv, δt, srδt, λa_prior)
+        llc, prc, Ξ, mc, λlac =
+          update_lλ!(Ξ, αc, σλc, μc, llc, prc, ns, mc, th, rmλ, surv, λtn, λlac, δt, srδt, λa_prior)
+
+          λlup += 1.0
 
       # gbm update
       elseif pupi === 5
@@ -262,10 +282,17 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
       end
     end
 
+    # log tuning parameters
+    ltn += 1
+    if ltn === tune_int
+      λtn = scalef(λtn, λlac/λlup)
+      ltn = 0
+    end
+
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, μc, mc, ns
+  return Ξ, idf, llc, prc, αc, σλc, μc, λtn, mc, ns
 end
 
 
@@ -279,6 +306,7 @@ end
                αc      ::Float64,
                σλc     ::Float64,
                μc      ::Float64,
+               λtn     ::Float64,
                mc      ::Float64,
                ns      ::Float64,
                th      ::Float64,
@@ -307,6 +335,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
                     αc      ::Float64,
                     σλc     ::Float64,
                     μc      ::Float64,
+                    λtn     ::Float64,
                     mc      ::Float64,
                     ns      ::Float64,
                     th      ::Float64,
@@ -418,7 +447,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
           # update all speciation rates through time simultaneously
           elseif pupi === 4
             llc, prc, Ξ, mc =
-              update_lλ!(Ξ, αc, σλc, μc, llc, prc, ns, mc, th, rmλ, surv, δt, srδt, λa_prior)
+              update_lλ!(Ξ, αc, σλc, μc, llc, prc, ns, mc, th, rmλ, surv, λtn, δt, srδt, λa_prior)
 
           # gbm update
           elseif pupi === 5
@@ -1197,6 +1226,7 @@ end
                 th      ::Float64,
                 rmλ     ::Float64,
                 surv    ::Int64,
+                λtn     ::Float64,
                 δt      ::Float64,
                 srδt    ::Float64,
                 λa_prior::NTuple{2,Float64})
@@ -1214,13 +1244,14 @@ function update_lλ!(Ξc      ::Vector{iTce},
                     th      ::Float64,
                     rmλ     ::Float64,
                     surv    ::Int64,
+                    λtn     ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     λa_prior::NTuple{2,Float64})
   
   lλ0c = lλ(Ξc[1])[1]
   λ0c  = exp(lλ0c)
-  lλ0p = rnorm(lλ0c, 0.05)
+  lλ0p = rnorm(lλ0c, λtn)
   λ0p  = exp(lλ0p)
   
   mp   = m_surv_gbmce(th, lλ0p, α, σλ, μ, δt, srδt, 5_000, surv)
@@ -1240,6 +1271,71 @@ function update_lλ!(Ξc      ::Vector{iTce},
   end
 
   return llc, prc, Ξc, mc
+end
+
+
+
+
+"""
+     update_lλ!(Ξ       ::Vector{iTce},
+                α       ::Float64,
+                σλ      ::Float64,
+                μ       ::Float64,
+                llc     ::Float64,
+                prc     ::Float64,
+                ns      ::Float64,
+                mc      ::Float64,
+                th      ::Float64,
+                rmλ     ::Float64,
+                surv    ::Int64,
+                λtn     ::Float64,
+                lac     ::Float64,
+                δt      ::Float64,
+                srδt    ::Float64,
+                λa_prior::NTuple{2,Float64})
+
+HM sampling, shifting all log-`λ` GBM rates simultaneously.
+"""
+function update_lλ!(Ξc      ::Vector{iTce},
+                    α       ::Float64,
+                    σλ      ::Float64,
+                    μ       ::Float64,
+                    llc     ::Float64,
+                    prc     ::Float64,
+                    ns      ::Float64,
+                    mc      ::Float64,
+                    th      ::Float64,
+                    rmλ     ::Float64,
+                    surv    ::Int64,
+                    λtn     ::Float64,
+                    lac     ::Float64,
+                    δt      ::Float64,
+                    srδt    ::Float64,
+                    λa_prior::NTuple{2,Float64})
+  
+  lλ0c = lλ(Ξc[1])[1]
+  λ0c  = exp(lλ0c)
+  lλ0p = rnorm(lλ0c, λtn)
+  λ0p  = exp(lλ0p)
+  
+  mp   = m_surv_gbmce(th, lλ0p, α, σλ, μ, δt, srδt, 5_000, surv)
+  
+  lλshift = lλ0p-lλ0c
+
+  llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-rmλ)*lλshift
+  prr = llrdgamma(λ0p, λ0c, λa_prior[1], λa_prior[2])
+    
+  if -randexp() < llr + prr
+    llc += llr
+    prc += prr
+    for i in Base.OneTo(lastindex(Ξc))
+      propagate_lλshift!(Ξc[i], lλshift)
+    end
+    mc   = mp
+    lac += 1.0
+  end
+
+  return llc, prc, Ξc, mc, lac
 end
 
 
