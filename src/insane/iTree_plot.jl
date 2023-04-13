@@ -59,7 +59,7 @@ end
 """
     function f(tree::T;
                zf  ::Function,
-               shownodes  = (T <: iTf),
+               shownodes  = false,
                tip        = false,
                speciation = false,
                extinct    = false,
@@ -383,6 +383,7 @@ end
       speciation = false,
       extinct    = false,
       fossil     = true,
+      tor        = treeheight(tree),
       textsize   = 8,
       type       = :phylogram) where {T <: iTree}
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
@@ -395,22 +396,23 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    speciation = false,
                    extinct    = false,
                    fossil     = true,
+                   tor        = treeheight(tree),
                    textsize   = 8,
                    type       = :phylogram) where {T <: iTree}
 
   x = Float64[]
   y = Float64[]
 
-  th  = treeheight(tree)
+  #th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 1:nts, x, y)
+  _rplottree!(tree, tor, 1:nts, x, y)
 
   ntF = Float64(nts)
 
   if type === :phylogram
 
-    xlims           --> (-th*0.05, th*1.05)
+    xlims           --> (-tor*0.05, tor*1.05)
     ylims           --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
     xguide          --> "time"
     xflip           --> true
@@ -422,10 +424,10 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
  elseif type === :radial
 
     x, y = append_forradial(x, y, 50)
-    polar_coords!(x, y, 360.0/ntF, th)
+    polar_coords!(x, y, 360.0/ntF, tor)
 
-    xlims           --> (-th*1.05, th*1.05)
-    ylims           --> (-th*1.05, th*1.05)
+    xlims           --> (-tor*1.05, tor*1.05)
+    ylims           --> (-tor*1.05, tor*1.05)
     xticks          --> (nothing)
     xshowaxis       --> false
   else
@@ -444,10 +446,10 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     xN = Float64[]
     yN = Float64[]
 
-    th = treeheight(tree)
+    #th = treeheight(tree)
     nt = ntips(tree)
 
-    _rplottree!(tree, th, 1:nt, xN, yN)
+    _rplottree!(tree, tor, 1:nt, xN, yN)
 
     shape = Symbol[:circle]
     col   = Symbol[:pink]
@@ -465,7 +467,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       if type === :phylogram
         xN, yN
       elseif type === :radial
-        polar_coords!(xN, yN, 360.0/ntF, th)
+        polar_coords!(xN, yN, 360.0/ntF, tor)
         xN, yN
       end
     end
@@ -484,13 +486,13 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       markeralpha        := fill(0.0,nts)
       series_annotations := map(x -> (x, :Helvetica, :left, textsize, :black), labels)
 
-      xa = fill(0.0 - 0.02*th, nts)
+      xa = fill(0.0 - 0.02*tor, nts)
       ya = collect(1.0:1.0:ntF)
 
       if type === :phylogram
         xa, ya
       elseif type === :radial
-        polar_coords!(xa, ya, 360.0/ntF, th)
+        polar_coords!(xa, ya, 360.0/ntF, tor)
         xa, ya
       end
     end
@@ -590,13 +592,13 @@ end
 
 Transform `x` and `y` cartesian coordinates into polar coordinates.
 """
-function polar_coords!(x ::Vector{Float64},
-                       y ::Vector{Float64},
-                       α ::Float64,
-                       th::Float64)
+function polar_coords!(x  ::Vector{Float64},
+                       y  ::Vector{Float64},
+                       α  ::Float64,
+                       tor::Float64)
 
   @simd for i in Base.OneTo(lastindex(x))
-    x[i]  = th - x[i]
+    x[i]  = tor - x[i]
     r     = x[i]
     a     = α * y[i]
     x[i] *= cos(a*π/180.0)
@@ -716,28 +718,28 @@ end
 
 
 """
-    plotω(tree::T, 
-          ωtimes::Vector{Float64}; 
-          torigin = treeheight(tree),
+    plotω(tree       ::T, 
+          ωtimes     ::Vector{Float64}; 
+          tor        = treeheight(tree),
           shownodes  = true,
           showlabels = (T == sTf_label),
-          y = repeat([0.5],lastindex(ωtimes)),
-          bar_width = treeheight(tree)/5000) where {T <: sTfbd}
+          y          = fill(0.5, lastindex(ωtimes)),
+          bar_width  = treeheight(tree)/5000) where {T <: sTfbd}
 
 Recipe for plotting a Type `sTfbd`. Displays type-specific nodes if `shownodes 
 == true` (by default to make sampled ancestors visible). For extinct trees the 
-time of origin `torigin` can be set manually.
+time of origin `tor` can be set manually.
 """
-function plotω(tree::T, 
-               ωtimes::Vector{Float64}; 
-               torigin = treeheight(tree),
+function plotω(tree       ::T, 
+               ωtimes     ::Vector{Float64}; 
+               tor        = treeheight(tree),
                shownodes  = true,
                showlabels = (T == sTf_label),
-               y = fill(0.5, lastindex(ωtimes)),
-               bar_width = treeheight(tree)/5000) where {T <: sTfbd}
+               y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: sTfbd}
 
-  plot(tree, torigin = torigin, shownodes = shownodes, showlabels = showlabels)
-  bar!(ωtimes, y, bar_width = bar_width)
+  plot(tree, tor=tor, shownodes=shownodes, showlabels=showlabels)
+  y_min = 1.0-0.05*ntips(tree)
+  scatter!(ωtimes, [max(rnorm(y_ω, (y_ω-y_min)/5), y_min) for ωt in ωtimes], label="occurrences", mc=:grey, ms=2, ma=0.5)
 
 end
 
@@ -1315,7 +1317,7 @@ end
                 x   ::Array{Float64,1},
                 y   ::Array{Float64,1}) where {T <: sTX}
 
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+Returns `x` and `y` coordinates in order to plot a tree of type `sTX`.
 """
 function _rplottrait!(tree::T,
                       xc  ::Float64,
@@ -1420,7 +1422,7 @@ end
                 x   ::Array{Float64,1},
                 y   ::Array{Float64,1}) where {T <: iTX}
 
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+Returns `x` and `y` coordinates in order to plot a tree of type `sTX`.
 """
 function _rplottrait!(tree::T,
                       xc  ::Float64,
