@@ -568,6 +568,68 @@ end
 
 
 """
+    subclades_n(tree::T, 
+                n_min::Int64,
+                n_max::Int64) where {T <: iTree}
+
+Return all the subclades with less than `n_max` and more than `n_min` species.
+"""
+function subclades_n(tree::T, 
+                     n_min::Int64,
+                     n_max::Int64) where {T <: iTree}
+
+  strees = T[]
+  _subclades_n!(strees,  tree, ntips(tree), n_min, n_max)
+
+  return strees
+end
+
+
+
+
+"""
+    _subclades_n!(strees::Vector{T},
+                  tree  ::T,
+                  n_min ::Int64,
+                  n_max ::Int64) where {T <: iTree}
+
+Return the minimum subclades_n that includes tip labels
+in `tips` (recursive function).
+"""
+function _subclades_n!(strees::Vector{T},
+                       tree  ::T,
+                       n     ::Int64,
+                       n_min ::Int64,
+                       n_max ::Int64) where {T <: iTree}
+  if def1(tree)
+    n1 = ntips(tree.d1)
+
+    if n_min < n1 < n_max
+      push!(strees, T(tree.d1))
+    else
+      _subclades_n!(strees, tree.d1, n1, n_min, n_max)
+    end
+
+    if def2(tree)
+      n2 = n - n1
+      if n_min < n2 < n_max
+        push!(strees, T(tree.d2))
+      else
+        _subclades_n!(strees, tree.d2, n2, n_min, n_max)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
+
+
+"""
     labels(tree::sT_label)
 
 Return labels and left node order.
