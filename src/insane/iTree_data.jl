@@ -1936,7 +1936,7 @@ Returns number of species through time.
   end
 
   sort!(se, rev = true)
-  pushfirst!(se, se[1])
+  pushfirst!(se, treeheight(tree))
 
   # last no events
   push!(n,  n[end])
@@ -1959,6 +1959,21 @@ function ltt(trees::Vector{T}) where {T <: iTree}
     push!(ltv, ltt(t))
   end
   return ltv
+end
+
+
+
+
+"""
+    ltt(tree::Vector{T}) where {T <: iTree}
+
+Returns number of species through time for a tree vector.
+"""
+function ltt(tree::T, tor::Float64) where {T <: iTree}
+  LTT = ltt(tree)
+  LTT.t .+= tor-LTT.t[1]
+  LTT.t[end] = max(LTT.t[end], 0.0)
+  return LTT
 end
 
 
