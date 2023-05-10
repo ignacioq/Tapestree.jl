@@ -87,15 +87,15 @@ function insane_cfbd(tree    ::sTf_label;
   if isnan(λi) || isnan(μi) || isnan(ψi)
     # if only one tip
     if isone(n)
-      λc = prod(λ_prior)
-      μc = prod(μ_prior)
+      λc = λ_prior[1]/λ_prior[2]
+      μc = μ_prior[1]/μ_prior[2]
     else
       λc, μc = moments(Float64(n), th, ϵi)
     end
     # if no sampled fossil
     nf = nfossils(tree)
     if iszero(nf)
-      ψc = prod(ψ_prior)
+      ψc = ψ_prior[1]/ψ_prior[2]
     else
       ψc = Float64(nf)/treelength(tree)
     end
