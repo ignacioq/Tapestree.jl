@@ -25,8 +25,8 @@ include("TRIBE.jl")
  Exported functions 
 =#
 
-using .ESSE: esse, simulate_sse
-export esse, simulate_sse
+using .ESSE: esse, simulate_sse, save_esse_sim
+export esse, simulate_sse, save_esse_sim
 
 using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe

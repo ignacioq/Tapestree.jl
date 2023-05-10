@@ -9,8 +9,15 @@ Tapestree implements phylogenetic analyses of diversification, trait and biogeog
 
 ## References
 
+For the TRIBE model:
 1. "Trait and Range Interspecific Biogeographic Evolution" (TRIBE): which implements a joint model of trait evolution and biogeographic history as described in 
 Quintero, I., & Landis, M. J. (2020). Interdependent phenotypic and biogeographic evolution driven by biotic interactions. Systematic biology, 69(4), 739-755. https://doi.org/10.1093/sysbio/syz082
+
+
+For the ESSE model:
+2. "Environmental and State dependent Speciation and Extinction" (ESSE): which implements a joint geographic and environmental model of diversification as described in 
+Quintero, I., Landis, M. J., Jetz, W., & Morlon, H. (2022). The build-up of the present-day tropical diversity of tetrapods. Proceedings of the National Academy of Sciences, 2023. 120 (20) e2220672120. https://doi.org/10.1073/pnas.2220672120
+
 
 ## Usage
 
@@ -20,8 +27,9 @@ Quintero, I., & Landis, M. J. (2020). Interdependent phenotypic and biogeographi
   * R installed
   * R `ape` package installed.
 
-### Inference
 
+
+### TRIBE
 
 1. Open Julia v1.1.x
 
@@ -113,4 +121,5 @@ tribe(tip_values, tip_areas, tree, bts, out_file)
 ```
 
 
+### ESSE
 
