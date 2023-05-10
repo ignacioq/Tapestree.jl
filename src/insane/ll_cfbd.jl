@@ -39,8 +39,7 @@ function llik_cfbd(Ξ  ::Vector{sTfbd},
     nep = lastindex(ψts) + 1
     ll  = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      ξ   = Ξ[i]
-      ll += llik_cfbd(ξ, λ, μ, ψ, bst[i], ψts, eix[i], nep)
+      ll += llik_cfbd(Ξ[i], λ, μ, ψ, bst[i], ψts, eix[i], nep)
     end
 
     ll += nλ * log(λ)
@@ -54,12 +53,15 @@ end
 
 """
     llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64)
+    llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Vector{Float64}, ψts::Vector{Float64})
 
 Log-likelihood up to a constant for constant fossilized birth-death given a 
 complete `iTree` recursively.
 """
 llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Float64) =
   llik_cfbd(tree, λ, μ, [ψ], treeheight(tree), Float64[], 1, 1)
+llik_cfbd(tree::sTfbd, λ::Float64, μ::Float64, ψ::Vector{Float64}, ψts::Vector{Float64}) =
+  llik_cfbd(tree, λ, μ, ψ, treeheight(tree), ψts, 1, lastindex(ψts)+1)
 
 
 
