@@ -25,5 +25,6 @@ Pages = [
 Depth = 3
 ```
 
-```@index
-```
+## Contact
+
+[Contact Me](mailto:ignacioquinterom@gmail.com)
