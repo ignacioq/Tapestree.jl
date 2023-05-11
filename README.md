@@ -3,8 +3,7 @@
 **Unravelling the evolutionary tapestry**:
 Tapestree implements phylogenetic analyses of diversification, trait and biogeographic dynamics. 
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://ignacioq.github.io/Tapestree.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ignacioq.github.io/Tapestree.jl/dev)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://ignacioq.github.io/Tapestree.jl/)
 [![Travis](https://travis-ci.org/ignacioq/Tapestree.jl.svg?branch=master)](https://travis-ci.org/ignacioq/Tapestree.jl)
 [![AppVeyor](https://ci.appveyor.com/api/projects/status/ks4wkrv6d4qw5wn1?svg=true)](https://ci.appveyor.com/project/ignacioq/tapestree-jl)
 [![Coverage Status](https://coveralls.io/repos/ignacioq/Tapestree.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/ignacioq/Tapestry.jl?branch=master)
