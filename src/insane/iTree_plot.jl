@@ -799,7 +799,8 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     if !isempty(q2) 
       Q2[i,:] = quantile(qi, q2)
     end
-    M[i] = exp.(mean(log, qi))
+    # M[i] = exp.(mean(log, qi))
+    M[i] = median(qi)
   end
 
   # plot defaults
