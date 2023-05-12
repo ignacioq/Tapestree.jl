@@ -11,6 +11,8 @@ diversification, trait and biogeographic dynamics.
 [![Coverage Status](https://coveralls.io/repos/ignacioq/Tapestree.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/ignacioq/Tapestry.jl?branch=master)
 [![codecov.io](http://codecov.io/github/ignacioq/Tapestree.jl/coverage.svg?branch=master)](http://codecov.io/github/ignacioq/Tapestry.jl?branch=master)
 
+See the [Documentation](https://ignacioq.github.io/Tapestree.jl/) for examples and manual.
+
 ## References
 
 For the TRIBE model:
