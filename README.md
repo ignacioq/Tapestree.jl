@@ -1,7 +1,7 @@
 # Tapestree.jl
 
 **Unravelling the evolutionary tapestry**:
-[Tapestree] (https://github.com/ignacioq/Tapestree.jl) is a 
+[Tapestree](https://github.com/ignacioq/Tapestree.jl) is a 
 [Julia](http://julialang.org) package of phylogenetic analyses of 
 diversification, trait and biogeographic dynamics.
 
