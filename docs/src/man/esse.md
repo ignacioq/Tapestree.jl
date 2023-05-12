@@ -1,5 +1,10 @@
 # ESSE
 
+## Reference
+
+Quintero, I., Landis, M. J., Jetz, W., & Morlon, H. (2022). The build-up of the present-day tropical diversity of tetrapods. Proceedings of the National Academy of Sciences, 2023. 120 (20) e2220672120. [https://doi.org/10.1073/pnas.2220672120](https://doi.org/10.1073/pnas.2220672120)
+
+
 ## Example
 
 In this example we run some random data for 50 species across 2 areas, where
@@ -13,7 +18,7 @@ using Tapestree
 
 Specify the path to the phylogenetic tree (in a format that `ape::read.tree()` can read):
 ```julia
-tree_file    = joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_50.tre")
+tree_file = joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_50.tre")
 ```
 
 Specify state data. Data should be a `.txt` file where each row is a species, 
@@ -41,13 +46,13 @@ states_file = joinpath(dirname(pathof(Tapestree)), "..", "data", "st2_data.txt")
 
 Specify output MCMC file (`homedir()` is an alias to your home folder)
 ```julia
-out_file  = *(homedir(),"...")
+out_file = *(homedir(),"...")
 ```
 
 Specify the (optional) output file (`homedir()` is an alias to your home 
 folder) for the node marginal probabilities. 
 ```julia
-out_states  = *(homedir(),"...")
+out_states = *(homedir(),"...")
 ```
 
 
@@ -57,6 +62,12 @@ Extinction) model, with covariates affecting speciation rates:
 esse(tree_file, out_file, 2, envdata_file = envdata_file, 
   states_file = states_file, out_states = out_states, cov_mod = ("s",))
 ```
+
+If one would like to make the covariates affect other rates, such as dispersal,
+in addition to speciation rates, one would specify the following covariate
+model `cov_mod = ("s","g")`. Note however that this has not been validated. 
+Moreover, covariate effect on extinction is non retrievable from extant-only
+phylogenetic trees.
 
 ### Parallel MC3 
 

@@ -1,5 +1,9 @@
 # TRIBE
 
+## Reference
+
+Quintero, I., & Landis, M. J. (2020). Interdependent phenotypic and biogeographic evolution driven by biotic interactions. Systematic biology, 69(4), 739-755. [https://doi.org/10.1093/sysbio/syz082](https://doi.org/10.1093/sysbio/syz082)
+
 ## Example
 
 Open Julia and load the Tapestree package: 
@@ -22,7 +26,7 @@ finches_data_file = joinpath(dirname(pathof(Tapestree)), "..", "data", "finches_
 
 Specify output file (`homedir()` is an alias to your home folder)
 ```julia
-out_file  = *(homedir(),"...")
+out_file = *(homedir(),"...")
 ```
 
 Run the `tribe()` (TRIBE: Trait and Range Interspecific Biogeographic Evolution) model:

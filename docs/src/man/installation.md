@@ -2,14 +2,16 @@
 
 ## Installation of Julia
 
-Download and follow the instructions here [https://julialang.org/downloads/](https://julialang.org/downloads/)
+Download and install: [https://julialang.org/downloads/](https://julialang.org/downloads/).
 
 ## Installation of Tapestree
 
 ### Requirements:
   * Julia v1.x
-  * R installed
+  * [R](https://www.r-project.org) installed
   * R `ape` package installed.
+
+### Installation:
 
 Open julia and type the following
 ```julia
