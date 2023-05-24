@@ -56,6 +56,7 @@ end
 
 
 
+
 """
     function f(tree::T;
                zf  ::Function,
@@ -328,84 +329,43 @@ end
 
 
 
-"""
-    _rplottree!(tree::T,
-                xc  ::Float64,
-                yr  ::UnitRange{Int64},
-                x   ::Array{Float64,1},
-                y   ::Array{Float64,1}) where {T <: iTree}
-
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
-"""
-function _rplottree!(tree::T,
-                     xc  ::Float64,
-                     yr  ::UnitRange{Int64},
-                     x   ::Array{Float64,1},
-                     y   ::Array{Float64,1}) where {T <: iTree}
-
-  # add horizontal lines
-  push!(x, xc)
-  xc -= e(tree)
-  push!(x, xc, NaN)
-  yc = (yr[1] + yr[end])*0.5
-  push!(y, yc, yc, NaN)
-
-  if def1(tree)
-    if def2(tree)
-      ntip1 = ntips(tree.d1)
-      ntip2 = ntips(tree.d2)
-
-      # add vertical lines
-      push!(x, xc, xc, NaN)
-
-      yr1 = yr[1:ntip1]
-      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-
-      push!(y, Float64(yr1[1] + yr1[end])*0.5,
-               Float64(yr2[1] + yr2[end])*0.5,
-               NaN)
-      _rplottree!(tree.d1, xc, yr1, x, y)
-      _rplottree!(tree.d2, xc, yr2, x, y)
-    else
-      _rplottree!(tree.d1, xc, yr, x, y)
-    end
-  end
-end
-
-
-
 
 """
     f(tree::T;
-      shownodes  = (T <: iTf),
-      showlabels = (T <: Tlabel),
-      tip        = false,
-      speciation = false,
-      extinct    = false,
-      fossil     = true,
-      textsize   = 8,
-      type       = :phylogram) where {T <: iTree}
+    textsize  = 8,
+    type       = :phylogram,
+    showlabels = (T <: Tlabel),
+    shownodes  = (T <: iTf),
+    diff_da    = false,
+    shapes     = [:circle, :circle, :circle],
+    colors     = [:blue, :blue, :blue],
+    sizes      = [0.0, 0.0, 1.0]) where {T <: iTree}
 
 Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
-== true`. True by default for `sTf` trees to make sampled ancestors visible.
+= true`. True by default for `sTf` trees to make sampled ancestors visible.
 """
 @recipe function f(tree::T;
-                   shownodes  = (T <: iTf),
+                   textsize  = 8,
+                   type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   tip        = false,
-                   speciation = false,
-                   extinct    = false,
-                   fossil     = true,
-                   textsize   = 8,
-                   type       = :phylogram) where {T <: iTree}
+                   shownodes  = (T <: iTf),
+                   shapes     = [:circle, :circle, :square],
+                   colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+                   shsizes    = [0.0, 0.0, 2.0],
+                   showda     = false,
+                   col_da     = ["#a9a9a9", :black]) where {T <: iTree}
 
-  x = Float64[]
-  y = Float64[]
+  x  = Float64[]
+  y  = Float64[]
+  nodet = Int64[]   # 0 = speciation, 1 = extinction, 2 = fossilization
+  xnode = Float64[]
+  ynode = Float64[]
 
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 1:nts, x, y)
+  z = Float64[]
+  _rplottree!(tree, th, 1, nts, x, y, z, nodet, xnode, ynode)
 
   ntF = Float64(nts)
 
@@ -440,34 +400,30 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   yticks          --> (nothing)
   yshowaxis       --> false
 
+  @series begin
+    seriestype  := :path
+
+    if showda
+      line_z     --> z
+      linecolor  --> palette(col_da, 2)
+      return x, y, z
+    end
+
+    return x, y
+  end
+
   if shownodes
 
-    xN = Float64[]
-    yN = Float64[]
-
-    th = treeheight(tree)
-    nt = ntips(tree)
-
-    _rplottree!(tree, th, 1:nt, xN, yN)
-
-    shape = Symbol[:circle]
-    col   = Symbol[:pink]
-    alpha =
-      Float64[(0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))) *
-              Float64(speciation)]
-    _nodeproperties!(tree, shape, col, alpha,
-      Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
-
     @series begin
-      markershape --> shape
-      markercolor --> col
-      markeralpha --> alpha
-      markersize  --> 2.0
+      seriestype  := :scatter
+      markershape --> shapes[nodet]
+      markercolor --> colors[nodet]
+      markersize  --> shsizes[nodet]
       if type === :phylogram
-        xN, yN
+        xnode, ynode
       elseif type === :radial
-        polar_coords!(xN, yN, 360.0/ntF, th)
-        xN, yN
+        polar_coords!(xnode, ynode, 360.0/ntF, th)
+        xnode, ynode
       end
     end
   end
@@ -496,8 +452,85 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       end
     end
   end
+end
 
-  return x, y
+
+
+
+"""
+    _rplottree!(tree::T,
+                xc  ::Float64,
+                nn  ::Int64,
+                nx  ::Int64,
+                x   ::Array{Float64,1},
+                y   ::Array{Float64,1},
+                z   ::Array{Float64,1}) where {T <: iTree}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree` and 
+`z` vector differentiating fixed `1` from data augmented `0` components.
+"""
+function _rplottree!(tree ::T,
+                     xc   ::Float64,
+                     nn   ::Int64,
+                     nx   ::Int64,
+                     x    ::Array{Float64,1},
+                     y    ::Array{Float64,1},
+                     z    ::Array{Float64,1},
+                     nodet::Array{Int64,1},
+                     xnode::Array{Float64,1},
+                     ynode::Array{Float64,1}) where {T <: iTree}
+
+  # add horizontal lines
+  push!(x, xc)
+  xc -= e(tree)
+  push!(x, xc, NaN)
+
+  yc = (nn + nx)*0.5
+  push!(y, yc, yc, NaN)
+
+  zc = Float64(isfix(tree))
+  push!(z, zc, zc, NaN)
+
+  if istip(tree)
+    if isextinct(tree)
+      push!(nodet, 2)
+      push!(xnode, xc)
+      push!(ynode, yc)
+    end
+  else
+    if def2(tree)
+      n1  = ntips(tree.d1)
+      nn1 = nn
+      nx1 = nn + n1 - 1
+      nn2 = nx1 + 1
+      nx2 = nx
+
+      y1 = (nn1 + nx1)*0.5 
+      y2 = (nn2 + nx2)*0.5
+
+      # add vertical lines
+      push!(x, xc, xc, NaN, xc, xc, NaN)
+      push!(y, y1, yc, NaN, yc, y2, NaN)
+
+      z1 = Float64(isfix(tree.d1))
+      z2 = Float64(isfix(tree.d2))
+      push!(z, z1, z1, NaN, z2, z2, NaN)
+
+      # nodes
+      push!(nodet, 1)
+      push!(xnode, xc)
+      push!(ynode, yc)
+
+      _rplottree!(tree.d1, xc, nn1, nx1, x, y, z, nodet, xnode, ynode)
+      _rplottree!(tree.d2, xc, nn2, nx2, x, y, z, nodet, xnode, ynode)
+    else
+      push!(nodet, 3)
+      push!(xnode, xc)
+      push!(ynode, yc)
+
+      _rplottree!(tree.d1, xc, nn, nx, x, y, z, nodet, xnode, ynode)
+    end
+  end
 end
 
 
@@ -509,7 +542,8 @@ end
 Appends `n` new data for making circle into `x` and `y`.
 """
 function append_forradial(x::Vector{Float64},
-                          y::Vector{Float64}, n::Int64)
+                          y::Vector{Float64}, 
+                          n::Int64)
 
   nnan = div(lastindex(y),3)
   nani = 1
@@ -603,70 +637,6 @@ function polar_coords!(x ::Vector{Float64},
     x[i] *= cos(a*π/180.0)
     y[i]  = r * sin(a*π/180.0)
   end
-end
-
-
-
-
-"""
-    _nodeproperties!(tree      ::T,
-                     shape     ::Vector{Symbol},
-                     col       ::Vector{Symbol},
-                     alpha     ::Vector{Float64},
-                     tip       ::Float64,
-                     speciation::Float64,
-                     extinct   ::Float64,
-                     fossil    ::Float64) where {T <: iTree}
-
-Completes the lists of node shapes, colors and alphas according to their
-properties.
-"""
-function _nodeproperties!(tree      ::T,
-                          shape     ::Vector{Symbol},
-                          col       ::Vector{Symbol},
-                          alpha     ::Vector{Float64},
-                          tip       ::Float64,
-                          speciation::Float64,
-                          extinct   ::Float64,
-                          fossil    ::Float64) where {T <: iTree}
-
-  fx = !isdefined(tree, :fx) || isfix(tree)
-
-  if def1(tree)
-    if def2(tree)
-      # speciation event
-      push!(shape, :circle, fill(:none,5)...)
-      push!(col, :gray, fill(:white,5)...)
-      push!(alpha, (0.5+0.5*fx)*speciation, 0, 0, 0, 0, 0)
-      _nodeproperties!(tree.d1, shape, col, alpha,
-        tip, speciation, extinct, fossil)
-      push!(shape, :none, :none)
-      push!(col, :white, :white)
-      push!(alpha, 0, 0)
-      _nodeproperties!(tree.d2, shape, col, alpha,
-        tip, speciation, extinct, fossil)
-    else
-      push!(shape, :none, :none, :square)
-      push!(col, :white, :white, :purple)
-      push!(alpha, 0, 0, (0.5+0.5*fx)*fossil)
-      _nodeproperties!(tree.d1, shape, col, alpha,
-        tip, speciation, extinct, fossil)
-    end
-  else
-    # tip
-    if isfossil(tree)
-      push!(shape, :square); push!(col, :purple)
-      push!(alpha, (0.5+0.5*fx)*fossil)
-    elseif isextinct(tree)
-      push!(shape, :circle); push!(col, :blue)
-      push!(alpha, (0.5+0.5*fx)*extinct)
-    else
-      push!(shape, :circle); push!(col, :blue)
-      push!(alpha, (0.5+0.5*fx)*tip)
-    end
-  end
-
-  return nothing
 end
 
 
