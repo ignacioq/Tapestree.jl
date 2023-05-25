@@ -93,7 +93,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 1, nts, x, y, z, nodet, xnode, ynode)
+  _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode)
 
   ntF = Float64(nts)
 
@@ -203,8 +203,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree` and
 """
 function _rplottree!(tree ::T,
                      xc   ::Float64,
-                     nn   ::Int64,
-                     nx   ::Int64,
+                     i    ::Int64,
                      x    ::Array{Float64,1},
                      y    ::Array{Float64,1},
                      z    ::Array{Float64,1},
@@ -212,40 +211,18 @@ function _rplottree!(tree ::T,
                      xnode::Array{Float64,1},
                      ynode::Array{Float64,1}) where {T <: iTree}
 
-  # add horizontal lines
-  push!(x, xc)
-  xc -= e(tree)
-  push!(x, xc, NaN)
+  xe = xc - e(tree)
 
-  yc = (nn + nx)*0.5
-  push!(y, yc, yc, NaN)
-
-  zc = Float64(isfix(tree))
-  push!(z, zc, zc, NaN)
-
-  if istip(tree)
-    if isextinct(tree)
-      push!(nodet, 2)
-      push!(xnode, xc)
-      push!(ynode, yc)
-    elseif isfossil(tree)
-      push!(nodet, 3)
-      push!(xnode, xc)
-      push!(ynode, yc)
-    end
-  else
+  if def1(tree)
     if def2(tree)
-      n1  = ntips(tree.d1)
-      nn1 = nn
-      nx1 = nn + n1 - 1
-      nn2 = nx1 + 1
-      nx2 = nx
 
-      y1 = (nn1 + nx1)*0.5 
-      y2 = (nn2 + nx2)*0.5
+      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode)
+      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, nodet, xnode, ynode)
+
+      yc = (y1 + y2)*0.5
 
       # add vertical lines
-      push!(x, xc, xc, NaN, xc, xc, NaN)
+      push!(x, xe, xe, NaN, xe, xe, NaN)
       push!(y, y1, yc, NaN, yc, y2, NaN)
 
       z1 = Float64(isfix(tree.d1))
@@ -254,19 +231,37 @@ function _rplottree!(tree ::T,
 
       # nodes
       push!(nodet, 1)
-      push!(xnode, xc)
+      push!(xnode, xe)
       push!(ynode, yc)
 
-      _rplottree!(tree.d1, xc, nn1, nx1, x, y, z, nodet, xnode, ynode)
-      _rplottree!(tree.d2, xc, nn2, nx2, x, y, z, nodet, xnode, ynode)
     else
-      push!(nodet, 3)
-      push!(xnode, xc)
-      push!(ynode, yc)
+      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode)
 
-      _rplottree!(tree.d1, xc, nn, nx, x, y, z, nodet, xnode, ynode)
+      push!(nodet, 3)
+      push!(xnode, xe)
+      push!(ynode, yc)
+    end
+  else
+    i += 1
+    yc = Float64(i)
+    if isextinct(tree)
+      push!(nodet, 2)
+      push!(xnode, xe)
+      push!(ynode, yc)
+    elseif isfossil(tree)
+      push!(nodet, 3)
+      push!(xnode, xe)
+      push!(ynode, yc)
     end
   end
+
+  # add horizontal lines
+  push!(x, xc, xe, NaN)
+  push!(y, yc, yc, NaN)
+  zc = Float64(isfix(tree))
+  push!(z, zc, zc, NaN)
+
+  return yc, i
 end
 
 
@@ -343,7 +338,7 @@ Recipe for plotting a Type `iT`.
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, zf, th, 1, nts, x, y, z, nodet, xnode, ynode, simple)
+  _rplottree!(tree, zf, th, 0, x, y, z, nodet, xnode, ynode, simple)
 
   ntF = Float64(nts)
 
@@ -418,19 +413,17 @@ end
 
 
 
-
 """
     _rplottree!(tree  ::T,
                 zf    ::Function,
                 xc    ::Float64,
-                nn    ::Int64,
-                nx    ::Int64,
+                i     ::Int64,
                 x     ::Array{Float64,1},
                 y     ::Array{Float64,1},
                 z     ::Array{Float64,1},
                 nodet::Array{Int64,1},
                 xnode::Array{Float64,1},
-                ynode::Array{Float64,1}
+                ynode::Array{Float64,1},
                 simple::Bool) where {T <: iT}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
@@ -438,8 +431,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 function _rplottree!(tree  ::T,
                      zf    ::Function,
                      xc    ::Float64,
-                     nn    ::Int64,
-                     nx    ::Int64,
+                     i     ::Int64,
                      x     ::Array{Float64,1},
                      y     ::Array{Float64,1},
                      z     ::Array{Float64,1},
@@ -448,12 +440,54 @@ function _rplottree!(tree  ::T,
                      ynode::Array{Float64,1},
                      simple::Bool) where {T <: iT}
 
+  xe = xc - e(tree)
+
+  if def1(tree)
+     if def2(tree)
+
+      y1, i = _rplottree!(tree.d1, zf, xe, i, x, y, z, nodet, xnode, ynode, 
+        simple)
+      y2, i = _rplottree!(tree.d2, zf, xe, i, x, y, z, nodet, xnode, ynode,
+        simple)
+
+      yc = (y1 + y2)*0.5
+      zc = last(zf(tree))
+
+      # add vertical lines
+      push!(x, xe, xe, NaN)
+      push!(y, y1, y2, NaN)
+      push!(z, zc, zc, NaN)
+
+      # nodes
+      push!(nodet, 1)
+      push!(xnode, xc)
+      push!(ynode, yc)
+    else
+
+      yc, i = _rplottree!(tree.d1, zf, xe, i, x, y, z, nodet, xnode, ynode, 
+        simple)
+      push!(nodet, 3)
+      push!(xnode, xc)
+      push!(ynode, yc)
+    end
+  else
+    i += 1
+    yc = Float64(i)
+    if isextinct(tree)
+      push!(nodet, 2)
+      push!(xnode, xe)
+      push!(ynode, yc)
+    elseif isfossil(tree)
+      push!(nodet, 3)
+      push!(xnode, xe)
+      push!(ynode, yc)
+    end
+  end
+
   # tree δt and nsδt
   δt = dt(tree)
 
   # add horizontal lines
-  yc = (nn + nx)*0.5
-
   if simple
     zv = zf(tree)
     l  = lastindex(zv)
@@ -476,52 +510,7 @@ function _rplottree!(tree  ::T,
   push!(y, yc, NaN)
   push!(z, zc, NaN)
 
-  xc -= e(tree)
-
-  if istip(tree)
-    if isextinct(tree)
-      push!(nodet, 2)
-      push!(xnode, xc)
-      push!(ynode, yc)
-    elseif isfossil(tree)
-      push!(nodet, 3)
-      push!(xnode, xc)
-      push!(ynode, yc)
-    end
-  else
-    if def2(tree)
-      n1  = ntips(tree.d1)
-      nn1 = nn
-      nx1 = nn + n1 - 1
-      nn2 = nx1 + 1
-      nx2 = nx
-
-      y1 = (nn1 + nx1)*0.5 
-      y2 = (nn2 + nx2)*0.5
-
-      # add vertical lines
-      push!(x, xc, xc, NaN)
-      push!(y, y1, y2, NaN)
-      push!(z, zc, zc, NaN)
-
-      # nodes
-      push!(nodet, 1)
-      push!(xnode, xc)
-      push!(ynode, yc)
-
-      _rplottree!(tree.d1, zf, xc, nn1, nx1, x, y, z, nodet, xnode, ynode, 
-        simple)
-      _rplottree!(tree.d2, zf, xc, nn2, nx2, x, y, z, nodet, xnode, ynode, 
-        simple)
-    else
-      push!(nodet, 3)
-      push!(xnode, xc)
-      push!(ynode, yc)
-
-      _rplottree!(tree.d1, zf, xc, nn, nx, x, y, z, nodet, xnode, ynode, 
-        simple)
-    end
-  end
+  return yc, i
 end
 
 
