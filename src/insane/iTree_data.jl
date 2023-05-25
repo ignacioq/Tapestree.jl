@@ -67,6 +67,7 @@ iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
 Return if is a fixed (i.e. observed) node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
+isfix(tree::Tlabel) = true
 
 
 
@@ -87,6 +88,7 @@ istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 Return if is an extinction node.
 """
 isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
+isextinct(tree::Tlabel) = false
 
 
 
