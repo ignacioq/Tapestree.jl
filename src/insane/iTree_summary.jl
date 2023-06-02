@@ -126,6 +126,127 @@ end
 
 
 
+"""
+    aggr_rates(tree::T,
+               f   ::Function,
+               tdt ::Float64;
+               af = x -> quantile(x, 0.5)) where {T <: iT}
+
+Return the aggregated rates from function `f` by `af`.
+"""
+function aggr_rates(tree::T,
+                    f   ::Function,
+                    tdt ::Float64;
+                    af = x -> quantile(x, 0.5)) where {T <: iT}
+
+  # prepare data
+  ts, r = time_rate(tree, tdt, f)
+  lts = lastindex(ts)
+  
+  m = Array{Float64,1}(undef, lts)
+  for (i, ri) in enumerate(r)
+    m[i] = af(ri)
+  end
+
+  return ts, m
+end
+
+
+
+
+"""
+    aggr_rates(trees::Vector{T},
+               f    ::Function,
+               tdt  ::Float64;
+               af = x -> quantile(x, 0.5)) where {T <: iT}
+
+Return the aggregated rates from function `f` by `af`.
+"""
+function aggr_rates(trees::Vector{T},
+                    f    ::Function,
+                    tdt  ::Float64;
+                    af = x -> quantile(x, 0.5)) where {T <: iT}
+
+  ntrees = lastindex(trees)
+  riv = Vector{Float64}[]
+
+  lts = 0
+  ts  = Float64[]
+  for t in trees
+
+    # tree extracting function
+    tsi, ri = time_rate(t, tdt, f)
+
+    # aggregating function
+    ri = map(af, ri)
+
+    if lastindex(tsi) > lts
+      ts  = tsi
+      reverse!(ts)
+      lts = lastindex(tsi)
+    end
+
+    reverse!(ri)
+    push!(riv, ri)
+  end
+
+  # estimate quantiles
+  q = fill(NaN, lts, ntrees)
+  # estimate quantiles
+  for i in Base.OneTo(ntrees)
+    ri = riv[i]
+    lr = lastindex(ri)
+    q[1:lr,i] = ri
+  end
+
+  m = Array{Float64}(undef, lts)
+  for i in Base.OneTo(lts)
+    qi = q[i,:]
+    filter!(!isnan, qi)
+    m[i] = quantile(qi, 0.5)
+  end
+
+  return ts, m
+end
+
+
+
+
+"""
+    aggr_ltt(nts::Vector{Ltt}, 
+                  tdt::Float64;
+                  af = x -> quantile(x, 0.5))
+
+Return the aggregated ltt by `af`.
+"""
+function aggr_ltt(nts::Vector{Ltt}, 
+                  tdt::Float64;
+                  af = x -> quantile(x, 0.5))
+
+  n  = lastindex(nts)
+  th = maximum(map(x -> maximum(x.t), nts))
+
+  # make time vector (present = 0.0)
+  ts  = [0.0:tdt:th...]
+  lts = length(ts)
+
+  q = zeros(Int64, lts, n)
+  for j in Base.OneTo(n), i in Base.OneTo(lts)
+    q[i,j] = nspt(nts[j], ts[i])
+  end
+
+  m = Array{Float64}(undef, lts)
+  for i in Base.OneTo(lts)
+    qi = q[i,:]
+    filter!(!isnan, qi)
+    m[i] = af(qi)
+  end
+
+  return ts, m
+end
+
+
+
 
 """
     mcmc_array(treev::Array{T,1},

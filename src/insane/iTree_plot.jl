@@ -621,7 +621,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     yscale         --> :log10
   end
 
-  return  x, y
+  return x, y
 end
 
 

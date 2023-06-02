@@ -70,8 +70,6 @@ end
 
 
 
-
-
 """
     indmindif_sorted(x::Array{Float64,1}, val::Float64)
 

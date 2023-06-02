@@ -25,10 +25,10 @@ module INSANE
   # files
   include("insane/iTree.jl")
   include("insane/iTreeX.jl")
-  include("insane/iTree_summary.jl")
   include("insane/iB.jl")
-  include("insane/iB_manipulation.jl")
   include("insane/Ltt.jl")
+  include("insane/iTree_summary.jl")
+  include("insane/iB_manipulation.jl")
   include("insane/iTree_data.jl")
   include("insane/iTree_manipulation.jl")
   include("insane/iTree_plot.jl")
