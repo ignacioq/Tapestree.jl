@@ -393,7 +393,7 @@ Recipe for plotting a Type `iT`.
     end
   end
 
-  if shownodes
+  if type != :rates && shownodes
     @series begin
       seriestype  := :scatter
       markershape -->       shapes[nodet]
