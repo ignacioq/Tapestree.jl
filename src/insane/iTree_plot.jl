@@ -62,7 +62,7 @@ end
       labsize    = 8,
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (T <: iTf),
+      shownodes  = (false, false, (T <: iTf)),
       shapes     = [:circle, :circle, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
       shsizes    = [0.0, 0.0, 2.0],
@@ -76,8 +76,8 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    labsize    = 8,
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (T <: iTf),
-                   shapes     = [:circle, :circle, :square],
+                   shownodes  = (false, false, (T <: iTf)),
+                   shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [0.0, 0.0, 3.0],
                    showda     = false,
@@ -93,7 +93,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode)
+  _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode, shownodes)
 
   ntF = Float64(nts)
 
@@ -196,7 +196,8 @@ end
                 z    ::Array{Float64,1},
                 nodet::Array{Int64,1},
                 xnode::Array{Float64,1},
-                ynode::Array{Float64,1}) where {T <: iTree}
+                ynode::Array{Float64,1},
+                show ::NTuple{3,Bool}) where {T <: iTree}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree` and 
 `z` vector differentiating fixed `1` from data augmented `0` components.
@@ -209,15 +210,16 @@ function _rplottree!(tree ::T,
                      z    ::Array{Float64,1},
                      nodet::Array{Int64,1},
                      xnode::Array{Float64,1},
-                     ynode::Array{Float64,1}) where {T <: iTree}
+                     ynode::Array{Float64,1},
+                     show ::NTuple{3,Bool}) where {T <: iTree}
 
   xe = xc - e(tree)
 
   if def1(tree)
     if def2(tree)
 
-      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode)
-      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, nodet, xnode, ynode)
+      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
+      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, nodet, xnode, ynode, show)
 
       yc = (y1 + y2)*0.5
 
@@ -230,28 +232,35 @@ function _rplottree!(tree ::T,
       push!(z, z1, z1, NaN, z2, z2, NaN)
 
       # nodes
-      push!(nodet, 1)
-      push!(xnode, xe)
-      push!(ynode, yc)
-
+      if show[1]
+        push!(nodet, 1)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     else
-      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode)
+      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
 
-      push!(nodet, 3)
-      push!(xnode, xe)
-      push!(ynode, yc)
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     end
   else
     i += 1
     yc = Float64(i)
     if isextinct(tree)
-      push!(nodet, 2)
-      push!(xnode, xe)
-      push!(ynode, yc)
+      if show[2]
+        push!(nodet, 2)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     elseif isfossil(tree)
-      push!(nodet, 3)
-      push!(xnode, xe)
-      push!(ynode, yc)
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     end
   end
 
@@ -310,7 +319,7 @@ end
       zf  ::Function;
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (T <: iTf),
+      shownodes  = (false, false, (T <: iTf)),
       shapes     = [:circle, :circle, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
       shsizes    = [0.0, 0.0, 3.0],
@@ -322,8 +331,8 @@ Recipe for plotting a Type `iT`.
                    zf  ::Function;
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (T <: iTf),
-                   shapes     = [:circle, :circle, :square],
+                   shownodes  = (false, false, (T <: iTf)),
+                   shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [0.0, 0.0, 3.0],
                    simple     = false) where {T <: iT}
@@ -338,7 +347,7 @@ Recipe for plotting a Type `iT`.
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, zf, th, 0, x, y, z, nodet, xnode, ynode, simple)
+  _rplottree!(tree, zf, th, 0, x, y, z, nodet, xnode, ynode, shownodes, simple)
 
   ntF = Float64(nts)
 
@@ -393,7 +402,7 @@ Recipe for plotting a Type `iT`.
     end
   end
 
-  if type != :rates && shownodes
+  if type != :rates && any(shownodes)
     @series begin
       seriestype  := :scatter
       markershape -->       shapes[nodet]
@@ -421,9 +430,10 @@ end
                 x     ::Array{Float64,1},
                 y     ::Array{Float64,1},
                 z     ::Array{Float64,1},
-                nodet::Array{Int64,1},
-                xnode::Array{Float64,1},
-                ynode::Array{Float64,1},
+                nodet ::Array{Int64,1},
+                xnode ::Array{Float64,1},
+                ynode ::Array{Float64,1},
+                show  ::NTuple{3,Bool},
                 simple::Bool) where {T <: iT}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
@@ -435,9 +445,10 @@ function _rplottree!(tree  ::T,
                      x     ::Array{Float64,1},
                      y     ::Array{Float64,1},
                      z     ::Array{Float64,1},
-                     nodet::Array{Int64,1},
-                     xnode::Array{Float64,1},
-                     ynode::Array{Float64,1},
+                     nodet ::Array{Int64,1},
+                     xnode ::Array{Float64,1},
+                     ynode ::Array{Float64,1},
+                     show  ::NTuple{3,Bool},
                      simple::Bool) where {T <: iT}
 
   xe = xc - e(tree)
@@ -446,9 +457,9 @@ function _rplottree!(tree  ::T,
      if def2(tree)
 
       y1, i = _rplottree!(tree.d1, zf, xe, i, x, y, z, nodet, xnode, ynode, 
-        simple)
+        show, simple)
       y2, i = _rplottree!(tree.d2, zf, xe, i, x, y, z, nodet, xnode, ynode,
-        simple)
+        show, simple)
 
       yc = (y1 + y2)*0.5
       zc = last(zf(tree))
@@ -459,28 +470,37 @@ function _rplottree!(tree  ::T,
       push!(z, zc, zc, NaN)
 
       # nodes
-      push!(nodet, 1)
-      push!(xnode, xc)
-      push!(ynode, yc)
+      if show[1]
+        push!(nodet, 1)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     else
 
       yc, i = _rplottree!(tree.d1, zf, xe, i, x, y, z, nodet, xnode, ynode, 
-        simple)
-      push!(nodet, 3)
-      push!(xnode, xc)
-      push!(ynode, yc)
+        show, simple)
+
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     end
   else
     i += 1
     yc = Float64(i)
     if isextinct(tree)
-      push!(nodet, 2)
-      push!(xnode, xe)
-      push!(ynode, yc)
+      if show[2]
+        push!(nodet, 2)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     elseif isfossil(tree)
-      push!(nodet, 3)
-      push!(xnode, xe)
-      push!(ynode, yc)
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     end
   end
 
