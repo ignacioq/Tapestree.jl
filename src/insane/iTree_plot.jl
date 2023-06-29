@@ -76,7 +76,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    labsize    = 8,
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, (T <: iTf)),
+                   shownodes  = (false, false, T <: iTf),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [0.0, 0.0, 3.0],
@@ -140,7 +140,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     return x, y
   end
 
-  if shownodes
+  if any(shownodes)
 
     @series begin
       seriestype  := :scatter
@@ -331,7 +331,7 @@ Recipe for plotting a Type `iT`.
                    zf  ::Function;
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, (T <: iTf)),
+                   shownodes  = (false, false, T <: iTf),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [0.0, 0.0, 3.0],
