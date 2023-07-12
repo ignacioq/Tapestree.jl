@@ -1880,34 +1880,6 @@ end
 
 
 
-
-"""
-    _eventimes!(tree::T,
-                t   ::Float64,
-                se  ::Array{Float64,1},
-                ee  ::Array{Float64,1}) where {T <: iTree}
-Recursive structure that returns speciation and extinction event times.
-"""
-function _eventimes!(tree::T,
-                     t   ::Float64,
-                     se  ::Array{Float64,1},
-                     ee  ::Array{Float64,1}) where {T <: sT}
-
-  et = e(tree)
-  if def1(tree)
-    push!(se, t - et)
-
-    _eventimes!(tree.d1, t - et, se, ee)
-    _eventimes!(tree.d2, t - et, se, ee)
-  end
-
-  return nothing
-end
-
-
-
-
-
 """
     _eventimes!(tree::T,
                 t   ::Float64,
