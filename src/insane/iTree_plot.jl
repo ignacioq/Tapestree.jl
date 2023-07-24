@@ -831,25 +831,27 @@ end
 
 """
     f(tree::T,
-      f  ::Function,
+      f   ::Function,
       dt  ::Float64;
-      q0 = [0.025, 0.975],
-      q1 = [0.25,  0.75],
-      q2 = Float64[])  where {T <: iT}
+      t_af = mean,
+      q0   = [0.025, 0.975],
+      q1   = [0.25,  0.75],
+      q2   = Float64[]) where {T <: iT}
 
 Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    f   ::Function,
                    dt  ::Float64;
-                   q0 = [0.025, 0.975],
-                   q1 = [0.25,  0.75],
-                   q2 = Float64[]) where {T <: iT}
+                   t_af = mean,
+                   q0   = [0.025, 0.975],
+                   q1   = [0.25,  0.75],
+                   q2   = Float64[]) where {T <: iT}
 
   # prepare data
   ts, r = time_rate(tree, dt, f)
   lts = lastindex(ts)
-  m   = time_quantile(r, [0.5])
+  m   = map(t_af, r)
 
   # common shape plot defaults
   legend          --> :none
@@ -939,20 +941,22 @@ end
     function f(trees::Vector{T},
                f    ::Function,
                tdt  ::Float64;
-               af = x -> quantile(x, 0.5),
-               q0 = [0.025, 0.975],
-               q1 = [0.25,  0.75],
-               q2 = Float64[]) where {T <: iT}
+               t_af  = mean,
+               tv_af = x -> quantile(x, 0.5),
+               q0    = [0.025, 0.975],
+               q1    = [0.25,  0.75],
+               q2    = Float64[]) where {T <: iT}
 
 Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
                    f    ::Function,
                    tdt  ::Float64;
-                   af = x -> quantile(x, 0.5),
-                   q0 = [0.025, 0.975],
-                   q1 = [0.25,  0.75],
-                   q2 = Float64[]) where {T <: iT}
+                   t_af  = mean,
+                   tv_af = x -> quantile(x, 0.5),
+                   q0    = [0.025, 0.975],
+                   q1    = [0.25,  0.75],
+                   q2    = Float64[]) where {T <: iT}
 
   ntrees = lastindex(trees)
   riv = Vector{Float64}[]
@@ -965,7 +969,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
     tsi, ri = time_rate(t, tdt, f)
 
     # aggregating function
-    ri = map(af, ri)
+    ri = map(t_af, ri)
 
     if lastindex(tsi) > lts
       ts  = tsi
@@ -1009,7 +1013,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
     if !isempty(q2) 
       Q2[i,:] = quantile(qi, q2)
     end
-    M[i] = quantile(qi, 0.5)
+    M[i] = tv_af(qi)
   end
 
   # common shape plot defaults
