@@ -1941,6 +1941,30 @@ end
 
 
 
+"""
+    _time1_λ!(tree::T,
+              t   ::Float64) where {T <: iTree}
+
+Returns time to first speciation
+"""
+function _time1_λ!(tree ::T,
+                   tstem::Float64) where {T <: iTree}
+
+  tstem += e(tree)
+
+  if def1(tree)
+    if def2(tree)
+      return tstem
+    else
+      tstem = _time1_λ!(tree.d1, tstem)
+    end
+  end
+
+  return tstem
+end
+
+
+
 
 """
     ltt(tree::T) where {T <: iTree}
@@ -1973,7 +1997,7 @@ Returns number of species through time.
 
   sort!(se, rev = true)
   # if crown or stem
-  pushfirst!(se, se[1] + e(tree))
+  pushfirst!(se, se[1] + _time1_λ!(tree, 0.0))
 
   # last no events
   push!(n,  n[end])
