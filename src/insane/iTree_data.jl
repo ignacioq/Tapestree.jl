@@ -1972,7 +1972,8 @@ Returns number of species through time.
   end
 
   sort!(se, rev = true)
-  pushfirst!(se, se[1])
+  # if crown or stem
+  pushfirst!(se, se[1] + e(tree))
 
   # last no events
   push!(n,  n[end])
