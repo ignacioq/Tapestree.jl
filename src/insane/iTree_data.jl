@@ -606,7 +606,7 @@ function _subclades_n!(strees::Vector{T},
   if def1(tree)
     n1 = ntips(tree.d1)
 
-    if n_min < n1 < n_max
+    if n_min <= n1 <= n_max
       push!(strees, T(tree.d1))
     else
       _subclades_n!(strees, tree.d1, n1, n_min, n_max)
@@ -614,7 +614,7 @@ function _subclades_n!(strees::Vector{T},
 
     if def2(tree)
       n2 = n - n1
-      if n_min < n2 < n_max
+      if n_min <= n2 <= n_max
         push!(strees, T(tree.d2))
       else
         _subclades_n!(strees, tree.d2, n2, n_min, n_max)
@@ -624,9 +624,6 @@ function _subclades_n!(strees::Vector{T},
 
   return nothing
 end
-
-
-
 
 
 
@@ -1999,7 +1996,7 @@ Returns number of species through time.
   # if crown or stem
   pushfirst!(se, se[1] + _time1_λ!(tree, 0.0))
 
-  # last no events
+  # last no events if alive
   push!(n,  n[end])
   push!(se, 0.0)
 
