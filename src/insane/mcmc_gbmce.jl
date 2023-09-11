@@ -383,7 +383,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
           logdgamma(μc,       μ_prior[1],  μ_prior[2])
     if !isapprox(pr0, prc, atol = 1e-5)
        error(string("Wrong prior computation during the ", ["α","σλ","μ","λ","gbm","forward simulation"][pupi], 
-                    " update, at iteration ", i, ": pr0=", pr0, " and prc=", prc))
+                    " update, at iteration ", i, ": pr0=", pr0, " and prc-prc0=", prc-prc0))
     end
   end
 
@@ -391,7 +391,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
     ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
     if !isapprox(ll0, llc, atol = 1e-5)
        error(string("Wrong likelihood computation during the ", ["α","σλ","μ","λ","gbm","forward simulation"][pupi], 
-                    " update, at iteration ", i, ": ll0=", ll0, " and llc=", llc))
+                    " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0))
     end
   end
 
