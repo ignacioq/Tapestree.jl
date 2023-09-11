@@ -117,8 +117,12 @@ function sim_cobd(t  ::Float64,
   if ix < nep
     @inbounds tepi = tep[ix]
     if t - tw < tepi
-      t0, ωtimes = sim_cobd(tepi, λ, μ, ψ, ω, tep, ix + 1, nep)
-      adde!(t0, t-tepi)
+      if tepi < t
+        t0, ωtimes = sim_cobd(tepi, λ, μ, ψ, ω, tep, ix + 1, nep)
+        adde!(t0, t-tepi)
+      else
+        t0, ωtimes = sim_cobd(t, λ, μ, ψ, ω, tep, ix + 1, nep)
+      end
       return t0, ωtimes
     end
   end
