@@ -673,6 +673,35 @@ end
 
 
 
+"""
+    plotω(tree       ::T, 
+          ωtimes     ::Vector{Float64}; 
+          tor        = treeheight(tree),
+          shownodes  = true,
+          showlabels = (T == sTf_label),
+          y          = fill(0.5, lastindex(ωtimes)),
+          bar_width  = treeheight(tree)/5000) where {T <: sTfbd}
+
+Recipe for plotting a Type `sTfbd`. Displays type-specific nodes if `shownodes 
+== true` (by default to make sampled ancestors visible). For extinct trees the 
+time of origin `tor` can be set manually.
+"""
+function plotω(tree       ::T, 
+               ωtimes     ::Vector{Float64}; 
+               tor        = treeheight(tree),
+               shownodes  = true,
+               showlabels = (T == sTf_label),
+               y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: sTfbd}
+
+  plot(tree, tor=tor, shownodes=shownodes, showlabels=showlabels)
+  y_min = 1.0-0.05*ntips(tree)
+  scatter!(ωtimes, [max(rnorm(y_ω, (y_ω-y_min)/5), y_min) for ωt in ωtimes], label="occurrences", mc=:grey, ms=2, ma=0.5)
+
+end
+
+
+
+
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -712,35 +741,6 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   end
 
   return  x, y
-end
-
-
-
-
-"""
-    plotω(tree       ::T, 
-          ωtimes     ::Vector{Float64}; 
-          tor        = treeheight(tree),
-          shownodes  = true,
-          showlabels = (T == sTf_label),
-          y          = fill(0.5, lastindex(ωtimes)),
-          bar_width  = treeheight(tree)/5000) where {T <: sTfbd}
-
-Recipe for plotting a Type `sTfbd`. Displays type-specific nodes if `shownodes 
-== true` (by default to make sampled ancestors visible). For extinct trees the 
-time of origin `tor` can be set manually.
-"""
-function plotω(tree       ::T, 
-               ωtimes     ::Vector{Float64}; 
-               tor        = treeheight(tree),
-               shownodes  = true,
-               showlabels = (T == sTf_label),
-               y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: sTfbd}
-
-  plot(tree, tor=tor, shownodes=shownodes, showlabels=showlabels)
-  y_min = 1.0-0.05*ntips(tree)
-  scatter!(ωtimes, [max(rnorm(y_ω, (y_ω-y_min)/5), y_min) for ωt in ωtimes], label="occurrences", mc=:grey, ms=2, ma=0.5)
-
 end
 
 
@@ -912,6 +912,53 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 
     ts, M
   end
+end
+
+
+
+
+"""
+    plotω(LTT        ::Ltt,
+          ωtimes     ::Vector{Float64})
+
+    plotω(LTT        ::Vector{Ltt},
+          ωtimes     ::Vector{Float64})
+    
+    plotω(LTT        ::Vector{Ltt},
+          ωtimes     ::Vector{Float64}, 
+          tdt        ::Float64, 
+          q0         = [0.025, 0.975],
+          q1         = [0.25,  0.75],
+          q2         = Float64[])
+
+Recipe for plotting lineage through time plots of type `Ltt`, together with fossil occurrences.
+"""
+function plotω(LTT        ::Ltt,
+               ωtimes     ::Vector{Float64})
+
+  plot(LTT)
+  scatter!(ωtimes, [1+abs(rnorm(0.0, maximum(LTT.n)/500)) for ωt in ωtimes], label="occurrences", mc=:grey, ms=1.5, ma=0.5)
+
+end
+
+function plotω(LTT        ::Vector{Ltt},
+               ωtimes     ::Vector{Float64})
+
+  plot(LTT)
+  scatter!(ωtimes, [1+abs(rnorm(0.0, maximum([maximum(LTTi.n) for LTTi in LTT])/500)) for ωt in ωtimes], label="occurrences", mc=:grey, ms=1.5, ma=0.5)
+
+end
+
+function plotω(LTT        ::Vector{Ltt},
+               ωtimes     ::Vector{Float64}, 
+               tdt        ::Float64, 
+               q0         = [0.025, 0.975],
+               q1         = [0.25,  0.75],
+               q2         = Float64[])
+
+  plot(LTT, tdt, q0, q1, q2)
+  scatter!(ωtimes, [1+abs(rnorm(0.0, maximum([maximum(LTTi.n) for LTTi in LTT])/500)) for ωt in ωtimes], label="occurrences", mc=:grey, ms=1.5, ma=0.5)
+
 end
 
 
