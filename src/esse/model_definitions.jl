@@ -15,7 +15,75 @@ t(-_-t)
 
 
 """
-    define_mod(esse_mod::String, x::Array{Float64,1}, y::Array{Float64,1}, k::Int64)
+    define_mod(k::Int64, h::Int64)
+
+Defines ESSE model for `k` areas, `h` hidden states and no covariates.
+"""
+function define_mod(k::Int64, h::Int64)
+
+  printstyled("running `sse_g` model with:
+    $k single area$(k>1 ? "s" : "") 
+    $h hidden state$(h>1 ? "s" : "")
+    no covariates \n", color=:green)
+
+  return (false, false, false)
+end
+
+
+
+
+
+"""
+    define_mod(cov_mod::NTuple{N,String},
+               k      ::Int64,
+               h      ::Int64,
+               ny     ::Int64) where {N}
+
+Defines ESSE model for `k` areas, `h` hidden states and `ny` covariates.
+"""
+function define_mod(cov_mod::NTuple{N,String},
+                    k      ::Int64,
+                    h      ::Int64,
+                    ny     ::Int64) where {N}
+
+  model = [false, false, false]
+
+  for m in cov_mod
+    # if speciation
+    if occursin(r"^[s|S][A-za-z]*", m) 
+      model[1] = true
+    end
+    # if extinction
+    if occursin(r"^[e|E][A-za-z]*", m) 
+      model[2] = true
+    end
+    # if dispersal
+    if occursin(r"^[t|T|r|R|q|Q][A-za-z]*", m)
+      model[3] = true
+    end
+  end
+
+  mexp = "$(model[1] ? "speciation," : "")$(model[2] ? "extinction," : "")$(model[3] ? "transition," : "")"
+  mexp = replace(mexp, "," => ", ")
+  mexp = mexp[1:(end-2)]
+
+  printstyled("running $mexp `esse_g` model with:
+    $k single area$(k>1 ? "s" : "") 
+    $h hidden state$(h>1 ? "s" : "")
+    $ny covariate$(ny>1 ? "s" : "") \n", color=:green)
+
+  return tuple(model...)
+end
+
+
+
+
+
+"""
+    define_mod(esse_mod::String,
+               k       ::Int64,
+               af      ::Function,
+               md      ::Bool)
 
 Defines ESSE model.
 """
@@ -54,52 +122,6 @@ function define_mod(esse_mod::String,
 
   return mod_ode, npars, pardic, md, ws
 
-end
-
-
-
-
-
-"""
-    define_mod(cov_mod::String,
-               k            ::Int64,
-               h            ::Int64,
-               ny           ::Int64)
-
-Defines EGeoHiSSE model for `k` areas, `h` hidden states and `ny` covariates.
-"""
-function define_mod(cov_mod::NTuple{N,String},
-                    k      ::Int64,
-                    h      ::Int64,
-                    ny     ::Int64) where {N}
-
-  model = [false, false, false]
-
-  for m in cov_mod
-    # if speciation
-    if occursin(r"^[s|S][A-za-z]*", m) 
-      model[1] = true
-    end
-    # if extinction
-    if occursin(r"^[e|E][A-za-z]*", m) 
-      model[2] = true
-    end
-    # if dispersal
-    if occursin(r"^[t|T|r|R|q|Q][A-za-z]*", m)
-      model[3] = true
-    end
-  end
-
-  mexp = "$(model[1] ? "speciation," : "")$(model[2] ? "extinction," : "")$(model[3] ? "transition," : "")"
-  mexp = replace(mexp, "," => ", ")
-  mexp = mexp[1:(end-2)]
-
-  printstyled("running $mexp EGeoHiSSE model with:
-    $k single areas 
-    $h hidden states 
-    $ny covariates \n", color=:green)
-
-  return tuple(model...)
 end
 
 

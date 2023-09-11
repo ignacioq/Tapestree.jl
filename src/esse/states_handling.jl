@@ -181,7 +181,7 @@ end
 """
     build_par_names(k::Int64, h::Int64, ny::Int64, model::Array{Int64,1})
 
-Build dictionary for parameter names and indexes for EGeoHiSSE for
+Build dictionary for parameter names and indexes for `ESSE.g` for
 `k` areas, `h` hidden states and `ny` covariates.
 """
 function build_par_names(k    ::Int64, 
@@ -221,7 +221,7 @@ function build_par_names(k    ::Int64,
   # add area looses `l`
   # transitions can only through **one area** transition
   for i = 0:(h-1), a = ia
-    push!(par_nams, "loss_"*string(a)*"_"*string(i))
+    lastindex(ia) > 1 && push!(par_nams, "loss_"*string(a)*"_"*string(i))
   end
 
   # add q between hidden states
@@ -230,34 +230,36 @@ function build_par_names(k    ::Int64,
     push!(par_nams, "q_"*string(j)*string(i))
   end
 
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
+  if any(model)
 
-  # add betas
-  if model[1]
-    for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
-      push!(par_nams, 
-        "beta_lambda_"*string(l)*"_"*string(a)*"_"*string(i))
+    yppar = ny == 1 ? 1 : ceil(Int64,ny/
+      (model[1]*k + 
+       model[2]*k + 
+       model[3]*k*(k-1)))
+
+    # add betas
+    if model[1]
+      for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
+        push!(par_nams, 
+          "beta_lambda_"*string(l)*"_"*string(a)*"_"*string(i))
+      end
     end
-  end
-  if model[2]
-    for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
-      push!(par_nams, 
-        "beta_mu_"*string(l)*"_"*string(a)*"_"*string(i))
+    if model[2]
+      for i = 0:(h-1), a = ia, l = Base.OneTo(yppar)
+        push!(par_nams, 
+          "beta_mu_"*string(l)*"_"*string(a)*"_"*string(i))
+      end
     end
-  end
-  if model[3]
-    for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(yppar)
-      a == b && continue
-      push!(par_nams, 
-        "beta_q_"*string(l)*"_"*string(a)*string(b)*"_"*string(i))
+    if model[3]
+      for i = 0:(h-1), a = ia, b = ia, l = Base.OneTo(yppar)
+        a == b && continue
+        push!(par_nams, 
+          "beta_q_"*string(l)*"_"*string(a)*string(b)*"_"*string(i))
+      end
     end
   end
 
-  pardic::Dict{String, Int64} = Dict(par_nams[i]::String => i::Int64
-    for i = Base.OneTo(lastindex(par_nams)))
+  pardic = Dict(v => i for (i,v) = enumerate(par_nams))
 
   return pardic::Dict{String, Int64}
 end
@@ -269,7 +271,7 @@ end
 """
     build_par_names(k::Int64, T::Bool)
 
-Build dictionary for parameter names and indexes for EHiSSE.
+Build dictionary for parameter names and indexes for `ESSE.d`.
 """
 function build_par_names(k::Int64, T::Bool)
 
@@ -333,23 +335,26 @@ function set_constraints(constraints::NTuple{N,String},
   # Dict of hidden state correspondence
   hsc = dict_hscor(k, h, ny, model)
 
-  dcp0  = Dict{Int64,Int64}()  # constrains dictionary for base hidden state 0
-  dcfp0 = Dict{Int64,Int64}()  # constrains dictionary for other hidden states
-  zp    = Set(Int64[])         # zeros for base hidden state 0
-  zfp   = Set(Int64[])         # zeros for other hidden states
+  dcp0  = Dict{Int64,Int64}()  # constrains dictionary for parameters
+  zp    = Set(Int64[])         # zeros for parameters
+  zfp   = Set(Int64[])         # zeros for λ hidden states
 
   for c in constraints
 
     spl = map(x -> strip(x), split(c, '='))
 
-    if occursin("q", spl[1])
-      dcp0[pardic[spl[2]]] = pardic[spl[1]]
+    # if no equality
+    if length(spl) < 2
+      @warn "No equality found in $c, no constraints applied for this expression"
       continue
     end
 
-    # if no equality
-    if length(spl) < 2
-      @warn "No equality found in $c"
+    # if hidden state rates `q_ij`
+    if occursin("q", spl[1])
+      for i in Base.OneTo(length(spl)-1) 
+        dcp0[pardic[spl[i+1]]] = pardic[spl[i]]
+      end
+
       continue
     end
 
@@ -357,10 +362,10 @@ function set_constraints(constraints::NTuple{N,String},
     if isequal(spl[end], "0")
       for i in Base.OneTo(length(spl)-1)
         hsi  = split(spl[i], "_")[end]
-        if hsi == "0" 
-          push!(zp, pardic[spl[i]])
-        else
+        if hsi != "0" && occursin(r"^lambda_.*", spl[i])
           push!(zfp, pardic[spl[i]])
+        else
+          push!(zp, pardic[spl[i]])
         end
       end
 
@@ -371,44 +376,38 @@ function set_constraints(constraints::NTuple{N,String},
         sp1 = spl[i]
         sp2 = spl[i+1]
 
-        # divide
-        spl1 = split(sp1, "_")
-        spl2 = split(sp2, "_")
+        # if not λ
+        if !occursin(r"^lambda_.*", sp1) && !occursin(r"^lambda_.*", sp2)
+          dcp0[pardic[sp1]] = pardic[sp2]
 
-        # concatenate without hidden state
-        spc1 = spc2 = ""
-        for s in Base.OneTo(lastindex(spl1)-1)
-          spc1 *= spl1[s]*"_"
-        end
-        for s in Base.OneTo(lastindex(spl2)-1)
-          spc2 *= spl2[s]*"_"
-        end
+        else
+          spl1 = split(sp1, "_")
+          spl2 = split(sp2, "_")
 
-        # convert to hidden states
-        hs1 = parse(Int64, spl1[end])
-        hs2 = parse(Int64, spl2[end])
+          # concatenate without hidden state
+          spc1 = spc2 = ""
+          for s in Base.OneTo(lastindex(spl1)-1)
+            spc1 *= spl1[s]*"_"
+          end
+          for s in Base.OneTo(lastindex(spl2)-1)
+            spc2 *= spl2[s]*"_"
+          end
 
-        # minmax for hidden states
-        mnh, mxh = minmax(hs1, hs2)
-        
-        # which the maximum
-        spmn, spmx = hs1 < hs2 ? (sp1, sp2) : (sp2, sp1)
+          # convert to hidden states
+          hs1 = parse(Int64, spl1[end])
+          hs2 = parse(Int64, spl2[end])
 
-        # set non-shared hidden states to 0
-        wp = pardic[spmx]
-        for j in (mnh+1):mxh
-          push!(zfp, wp)
-          wp = hsc[wp]
-        end
+          # minmax for hidden states
+          mnh, mxh = minmax(hs1, hs2)
 
-        if spc1 != spc2
-          # set shared hidden states equal
-          for j in 0:mnh
-            if iszero(j)
-              dcp0[pardic[spc2*"0"]] = pardic[spc1*"0"]
-            else
-              dcfp0[pardic[spc2*"$j"]] = pardic[spc1*"$j"]
-            end
+          # which the maximum
+          spmn, spmx = hs1 < hs2 ? (sp1, sp2) : (sp2, sp1)
+
+          # set non-shared hidden states to 0
+          wp = pardic[spmx]
+          for j in (mnh+1):mxh
+            push!(zfp, wp)
+            wp = hsc[wp]
           end
         end
       end
@@ -424,15 +423,32 @@ function set_constraints(constraints::NTuple{N,String},
     dcp[key] = value
   end
 
-  dcfp = Dict{Int64,Int64}()
-  for (key, value) in dcfp0
-    if in(value, keys(dcfp)) && key == dcfp[value]
-      continue
+  pnv = collect(values(pardic))
+  pnk = collect(keys(pardic))
+  pnk = pnk[sortperm(pnv)]
+
+  if length(dcp) > 0
+    ss = "Enforced parameter equalities: \n"
+    for (k,v) in dcp
+      ss *= "$(pnk[k]) = $(pnk[v]) \n"
     end
-    dcfp[key] = value
+    @info ss
   end
 
-  return dcp, dcfp, zp, zfp
+  if length(zp) > 0 || length(zfp) > 0
+    ss = "Parameters set to 0: \n"
+    for k in zp
+      ss *= "$(pnk[k]) \n"
+    end
+    for k in zfp
+      ss *= "$(pnk[k]) \n"
+    end
+
+    @info ss
+  end
+
+
+  return dcp, zp, zfp
 end
 
 
@@ -442,66 +458,32 @@ end
 """
     dict_hscor(k::Int64, h::Int64, ny::Int64)
 
-Create dictionary of hidden states correspondence.
+Create dictionary of hidden states correspondence for λ.
 """
 function dict_hscor(k::Int64, h::Int64, ny::Int64, model::NTuple{3, Bool})
 
- # number of covariates
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
-
-  # starting indices for models 2 and 3
-  m2s = model[1]*k*h*yppar
-  m3s = m2s + model[2]*k*h*yppar
-
   hsc = Dict{Int64,Int64}()
 
-  for j in 1:(h-1)
-    for i in 1:k
+  if isone(k)
 
+    for j in 1:(h-1)
       # speciation
-      hsc[(k+1)*j + i] = (k+1)*(j-1) + i
-
-      # extinction
-      s = (k+1)*h 
-      hsc[s + k*j + i] = s + k*(j-1) + i
-
-      # gain
-      s = (2k+1)*h
-      for a in 1:(k-1)
-        hsc[s + k*(k-1)*j + a + (k-1)*(i-1)] = s + k*(k-1)*(j-1) + a + (k-1)*(i-1)
-      end
-
-      # loss 
-      s = (2k+1 + k*(k-1))*h
-      hsc[s + k*j + i] = s + k*(j-1) + i
-
-      # betas
-      s = (3k+1+k*(k-1))*h + h*(h-1)
-
-      if model[1]
-        for l = Base.OneTo(yppar)
-          hsc[s + k*j + i + (l-1)*(i-1)] = s + k*(j-1) + i + (l-1)*(i-1)
-        end
-      end
-      if model[2]
-        for l = Base.OneTo(yppar)
-          hsc[s + k*j + m2s + i + (l-1)*(i-1)] = s + k*(j-1) + m2s + i + (l-1)*(i-1)
-        end
-      end
-
-      if model[3]
-        for a = 1:(k-1), l = Base.OneTo(yppar)
-          hsc[s + k*(k-1)*j + m3s + a + (a-1)*yypar + (i-1)*(k-1)] = 
-            s + k*(k-1)*(j-1) + m3s + a + (a-1)*yypar + (i-1)*(k-1)
-        end
-      end
+      s = 0
+      hsc[s + j + 1] = s + j
     end
 
-    # between-region speciation
-    hsc[(k+1)*j + (k+1)] = (k+1)*(j-1) + (k+1)
+  else
+
+    for j in 1:(h-1)
+      for i in 1:k
+        # within-region speciation
+        hsc[(k+1)*j + i] = (k+1)*(j-1) + i
+      end
+
+      # between-region speciation
+      hsc[(k+1)*j + (k+1)] = (k+1)*(j-1) + (k+1)
+    end
+
   end
 
   return hsc
@@ -560,11 +542,13 @@ end
 
 
 """
-    states_to_values(tipst::Dict{Int64,Int64}, S::Array{Sgh,1}, k::Int64, h::Int64)
+    states_to_values(tipst::Dict{Int64,Int64}, S::Array{Sgh,1}, k::Int64)
     
 Transform numbered tip_values to array with 1s and 0s
 """
-function states_to_values(tipst::Dict{Int64,Int64}, S::Array{Sgh,1}, k::Int64)
+function states_to_values(tipst::Dict{Int64,Int64}, 
+                          S    ::Array{Sgh,1}, 
+                          k    ::Int64)
 
   tip_val = Dict{Int64,Array{Float64,1}}()
   for (key, val) in tipst
