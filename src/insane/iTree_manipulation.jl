@@ -568,6 +568,7 @@ end
 
 
 
+
 """
     fossilize!(tree::T, label::String) where {T <: iTf}
 
@@ -602,6 +603,65 @@ function defossilize!(tree::T, label::String) where {T <: sTf_label}
     end
   elseif l(tree) == label 
     defossilize!(tree)
+  end
+end
+
+
+
+
+"""
+    extinguishpasttips!(tree::T) where {T <: iTf}
+
+Change all past tips to extinct tips.
+"""
+extinguishpasttips!(tree::T, ne::Float64) where {T <: iTf} = 
+  _extinguishpasttips!(tree::T, treeheight(tree), ne)
+
+
+
+
+"""
+    _extinguishpasttips!(tree::T,
+                         t   ::Float64,
+                         ne  ::Float64) where {T <: iTf}
+
+Change all past tips to extinct tips, initialized at tree height `t`.
+"""
+function _extinguishpasttips!(tree::T,
+                              t   ::Float64,
+                              ne  ::Float64) where {T <: iTf}
+
+  t -= e(tree)
+
+  if def1(tree)
+    _extinguishpasttips!(tree.d1::T, t, ne)
+    if def2(tree)
+      _extinguishpasttips!(tree.d2::T, t, ne)
+    end
+  else
+    if t > ne
+      extinguish!(tree)
+    end
+  end
+end
+
+
+
+
+"""
+    extinguish!(tree::T, label::String) where {T <: iTf}
+
+Extinguish a given tree given its name.
+"""
+function extinguish!(tree::T, label::String) where {T <: sTf_label}
+
+  if def1(tree)
+    extinguish!(tree.d1::T, label)
+    if def2(tree)
+      extinguish!(tree.d2::T, label)
+    end
+  elseif l(tree) == label 
+    extinguish!(tree)
   end
 end
 
@@ -2694,7 +2754,7 @@ setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
 
 
 """
-  fossilize!(tree::T,  stree::T) where {T <: iTree}
+  fossilize!(tree::iTf)
 
 Make tree a fossil.
 """
@@ -2702,12 +2762,22 @@ fossilize!(tree::iTf) = setproperty!(tree, :iψ, true)
 
 
 
+
 """
-  defossilize!(tree::T,  stree::T) where {T <: iTree}
+  defossilize!(tree::iTf)
 
 Make tree a non fossil.
 """
 defossilize!(tree::iTf) = setproperty!(tree, :iψ, false)
+
+
+
+"""
+  extinguish!(tree::T,  stree::T) where {T <: iTree}
+
+Make tree a non fossil.
+"""
+extinguish!(tree::iTf) = setproperty!(tree, :iμ, true)
 
 
 
