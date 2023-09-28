@@ -327,33 +327,33 @@ end
 
 
 """
-    llrLTT(ξc    ::sTfbd,
-           ξp    ::sTfbd,
+    llrLTT(ξc    ::T,
+           ξp    ::T,
            bi    ::iBffs,
            ωtimes::Vector{Float64},
            ω     ::Vector{Float64},
            tep   ::Vector{Float64},
            LTTc  ::Ltt,
-           ixi   ::Int64)
+           ixi   ::Int64) where {T <: iTree}
 
 Calculates the difference in log-likelihood between two subtrees `ξc` and `ξp`,
 given a record of occurrences `ωtimes` and a current global `LTTc` trajectory.
 """
-function llrLTT(ξc    ::sTfbd,
-                ξp    ::sTfbd,
+function llrLTT(ξc    ::T,
+                ξp    ::T,
                 bi    ::iBffs,
                 ωtimes::Vector{Float64},
                 ω     ::Vector{Float64},
                 tep   ::Vector{Float64},
                 LTTc  ::Ltt,
-                ixi   ::Int64)
+                ixi   ::Int64) where {T <: iTree}
     
   # @show ξc, ξp
   nep = lastindex(tep) + 1
   # Get LTT values for ξc and ξp
   tiξ   = ti(bi)
-  LTTξc = ltt(ξc, tiξ)
-  LTTξp = ltt(ξp, tiξ)
+  LTTξc = ltt_rm_artefacts(ξc, tiξ)
+  LTTξp = ltt_rm_artefacts(ξp, tiξ)
 
   tfξ = min(LTTξc.t[end], LTTξp.t[end])
   @assert tiξ-tfξ > treeheight(ξp) || tiξ-tfξ ≈ treeheight(ξp) "LTTξp.t, tiξ-tfξ, treeheight(ξp) =", LTTξp.t, tiξ-tfξ, treeheight(ξp)
@@ -435,6 +435,8 @@ function sum_LTTs(LTT1::Ltt, LTT2::Ltt)
   # Prepare the time and lineage vectors for each LTT
   t1, n1 = isapprox(ti1, ti; atol=1e-12) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
   t2, n2 = isapprox(ti2, ti; atol=1e-12) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
+  # @show [n1, t1]
+  # @show [n2, t2]
 
   lt1, lt2 = lastindex(t1), lastindex(t2)
 
@@ -448,6 +450,7 @@ function sum_LTTs(LTT1::Ltt, LTT2::Ltt)
 
   # Iterate through both LTTs and add them
   while i1 < lt1 || i2 < lt2
+    # @show i1, i2
 
     # Move to the next time point in one or both LTTs
     if isapprox(tii1, tii2; atol=1e-12)
@@ -506,6 +509,8 @@ function diff_LTTs(LTT1::Ltt, LTT2::Ltt)
   # Prepare the time and lineage vectors for each LTT
   t1, n1 = isapprox(ti1, ti; atol=1e-12) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
   t2, n2 = isapprox(ti2, ti; atol=1e-12) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
+  # @show [n1, t1]
+  # @show [n2, t2]
 
   lt1, lt2 = lastindex(t1), lastindex(t2)
 
@@ -519,6 +524,7 @@ function diff_LTTs(LTT1::Ltt, LTT2::Ltt)
 
   # Iterate through both LTTs and substract them
   while i1 < lt1 || i2 < lt2
+    # @show i1, i2
 
     # Move to the next time point in one or both LTTs
     if isapprox(tii1, tii2; atol=1e-12)
