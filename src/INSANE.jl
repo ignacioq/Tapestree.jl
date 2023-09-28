@@ -15,6 +15,7 @@ module INSANE
   using PlotUtils: cgrad
   using RecipesBase
   using Parsers: parse as Pparse
+  using Distributions: Poisson, Uniform
 
   # other submodules dependencies
   using ..Utils
