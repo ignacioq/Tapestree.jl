@@ -895,8 +895,8 @@ function update_α!(αc     ::Float64,
 
   # ratio
   ν   = α_prior[1]
-  #τ2  = α_prior[2]^2
-  τ2  = σλ^2
+  τ2  = α_prior[2]^2
+  # τ2  = σλ^2
   σλ2 = σλ^2
   rs  = σλ2/τ2
 
