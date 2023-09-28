@@ -680,18 +680,18 @@ end
           shownodes  = true,
           showlabels = (T == sTf_label),
           y          = fill(0.5, lastindex(ωtimes)),
-          bar_width  = treeheight(tree)/5000) where {T <: sTfbd}
+          bar_width  = treeheight(tree)/5000) where {T <: iTree}
 
-Recipe for plotting a Type `sTfbd`. Displays type-specific nodes if `shownodes 
-== true` (by default to make sampled ancestors visible). For extinct trees the 
-time of origin `tor` can be set manually.
+Recipe for plotting a tree with fossil occurrences. Displays type-specific nodes if 
+`shownodes == true` (by default to make sampled ancestors visible). For extinct trees 
+the time of origin `tor` can be set manually.
 """
 function plotω(tree       ::T, 
                ωtimes     ::Vector{Float64}; 
                tor        = treeheight(tree),
                shownodes  = true,
                showlabels = (T == sTf_label),
-               y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: sTfbd}
+               y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
 
   plot(tree, tor=tor, shownodes=shownodes, showlabels=showlabels)
   y_min = 1.0-0.05*ntips(tree)
