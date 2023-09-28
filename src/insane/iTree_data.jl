@@ -1949,6 +1949,66 @@ end
 
 
 """
+    ltt_rm_artefacts(tree::T) where {T <: iTree}
+
+Returns number of species through time, without simultaneous events.
+"""
+@inline function ltt_rm_artefacts(tree::T) where {T <: iTree}
+
+  # speciation and extinction events
+  se, ee = eventimes(tree::T)
+
+  # remove pairs of simultaneous speciation and extinction events
+  for elem in [ts for ts in se if any(ts .≈ ee)]
+    for _ in 1:min(count(≈(elem), se), count(≈(elem), ee))
+      deleteat!(se, findfirst(≈(elem), se))
+      deleteat!(ee, findfirst(≈(elem), ee))
+    end
+  end
+
+  # which ones are extinctions when appended
+  ii = lastindex(se)
+
+  append!(se, ee)
+  lse = lastindex(se)
+
+  sp = sortperm(se, rev = true)
+  n  = ones(Int64, lse+1)
+
+  @inbounds begin
+    @simd for i in Base.OneTo(lse)
+      if sp[i] > ii
+        n[i+1] = n[i] - 1
+      else
+        n[i+1] = n[i] + 1
+      end
+    end
+  end
+
+  sort!(se, rev = true)
+  pushfirst!(se, treeheight(tree))
+
+  # last no events
+  push!(n,  n[end])
+  push!(se, 0.0)
+
+  i = 2
+  while i < lastindex(se)
+    if isapprox(se[i], se[i+1], atol=1e-12)
+      deleteat!(n, i)
+      deleteat!(se, i)
+    else
+      i += 1
+    end
+  end
+
+  return Ltt(n, se)
+end
+
+
+
+
+"""
     ltt(tree::Vector{T}) where {T <: iTree}
 
 Returns number of species through time for a tree vector.
@@ -1965,12 +2025,27 @@ end
 
 
 """
-    ltt(tree::Vector{T}) where {T <: iTree}
+    ltt(tree::T, tor::Float64) where {T <: iTree}
 
 Returns number of species through time for a tree vector.
 """
 function ltt(tree::T, tor::Float64) where {T <: iTree}
   LTT = ltt(tree)
+  LTT.t .+= tor-LTT.t[1]
+  LTT.t[end] = max(LTT.t[end], 0.0)
+  return LTT
+end
+
+
+
+
+"""
+    ltt_rm_artefacts(tree::T, tor::Float64) where {T <: iTree}
+
+Returns number of species through time, without simultaneous events, for a tree vector.
+"""
+function ltt_rm_artefacts(tree::T, tor::Float64) where {T <: iTree}
+  LTT = ltt_rm_artefacts(tree)
   LTT.t .+= tor-LTT.t[1]
   LTT.t[end] = max(LTT.t[end], 0.0)
   return LTT
