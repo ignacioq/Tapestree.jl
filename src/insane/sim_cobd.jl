@@ -78,8 +78,8 @@ the tree) and `ω`(fossil occurrences).
 """
 sim_cobd(t::Float64, λ::Float64, μ::Float64, ψ::Float64, ω::Float64) =
   sim_cobd(t,λ,μ,[ψ],[ω],Float64[],1,1)
-sim_cobd(t::Float64, λ::Float64, μ::Float64, ψ::Vector{Float64}, ω::Vector{Float64}, tep::Vector{Float64}) =
-  sim_cobd(t,λ,μ,ψ,ω,tep,1,lastindex(tep)+1)
+sim_cobd(t::Float64, λ::Float64, μ::Float64, ψ::Vector{Float64}, ω::Vector{Float64}, ψts::Vector{Float64}) =
+  sim_cobd(t,λ,μ,ψ,ω,ψts,1,lastindex(ψts)+1)
 
 
 
@@ -90,21 +90,21 @@ sim_cobd(t::Float64, λ::Float64, μ::Float64, ψ::Vector{Float64}, ω::Vector{F
              μ  ::Float64, 
              ψ  ::Vector{Float64},
              ω  ::Vector{Float64},
-             tep::Vector{Float64},
+             ψts::Vector{Float64},
              ix ::Int64,
              nep::Int64)
 
 Simulate a constant occurrence birth-death `iTree` of height `t` with speciation 
 rate `λ`, extinction rate `μ`, piecewise-constant fossil sampling rates `ψ`
 (fossils included in the tree) and `ω`(fossil occurrences), with `nep` epochs 
-at times `tep`, starting at index `ix`.
+at times `ψts`, starting at index `ix`.
 """
 function sim_cobd(t  ::Float64, 
                   λ  ::Float64, 
                   μ  ::Float64, 
                   ψ  ::Vector{Float64},
                   ω  ::Vector{Float64},
-                  tep::Vector{Float64},
+                  ψts::Vector{Float64},
                   ix ::Int64,
                   nep::Int64)
 
@@ -115,13 +115,13 @@ function sim_cobd(t  ::Float64,
 
   # ψ/ω epoch change
   if ix < nep
-    @inbounds tepi = tep[ix]
-    if t - tw < tepi
-      if tepi < t
-        t0, ωtimes = sim_cobd(tepi, λ, μ, ψ, ω, tep, ix + 1, nep)
-        adde!(t0, t-tepi)
+    @inbounds ψtsi = ψts[ix]
+    if t - tw < ψtsi
+      if ψtsi <t
+        t0, ωtimes = sim_cobd(ψtsi, λ, μ, ψ, ω, ψts, ix + 1, nep)
+        adde!(t0, t-ψtsi)
       else
-        t0, ωtimes = sim_cobd(t, λ, μ, ψ, ω, tep, ix + 1, nep)
+        t0, ωtimes = sim_cobd(t, λ, μ, ψ, ω, ψts, ix + 1, nep)
       end
       return t0, ωtimes
     end
@@ -133,8 +133,8 @@ function sim_cobd(t  ::Float64,
 
   # speciation
   if λevent(λ, μ, ψi, ωi)
-    d1, ωtimes  = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
-    d2, ωtimes2 = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
+    d1, ωtimes  = sim_cobd(t - tw, λ, μ, ψ, ω, ψts, ix, nep)
+    d2, ωtimes2 = sim_cobd(t - tw, λ, μ, ψ, ω, ψts, ix, nep)
     append!(ωtimes, ωtimes2)
     return sTfbd(d1, d2, tw, false, false, false), ωtimes
   
@@ -144,12 +144,12 @@ function sim_cobd(t  ::Float64,
   
   # fossil sampling (included in the tree)
   elseif ψevent(ψi, ωi)
-    t0, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
+    t0, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω, ψts, ix, nep)
     return sTfbd(t0, tw, false, true, false), ωtimes
   
   # fossil occurrence sampling (not included in the tree)
   else
-    t0, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω, tep, ix, nep)
+    t0, ωtimes = sim_cobd(t - tw, λ, μ, ψ, ω, ψts, ix, nep)
     push!(ωtimes, t - tw)
     adde!(t0, tw)
     return t0, ωtimes
@@ -165,7 +165,7 @@ end
 #                 μ     ::Float64,
 #                 ψ     ::Vector{Float64},
 #                 ω     ::Vector{Float64},
-#                 tep   ::Vector{Float64},
+#                 ψts   ::Vector{Float64},
 #                 ωtimes::Vector{Float64},
 #                 ix    ::Int64,
 #                 nep   ::Int64,
@@ -185,7 +185,7 @@ end
 #                      μ     ::Float64,
 #                      ψ     ::Vector{Float64},
 #                      ω     ::Vector{Float64},
-#                      tep   ::Vector{Float64},
+#                      ψts   ::Vector{Float64},
 #                      ωtimes::Vector{Float64},
 #                      ix    ::Int64,
 #                      nep   ::Int64,
@@ -205,11 +205,11 @@ end
 
 #     # ψ epoch change
 #     if ix < nep
-#       @inbounds tepi = tep[ix]
-#       if t - tw < tepi
-#         e0 = t - tepi
+#       @inbounds ψtsi = ψts[ix]
+#       if t - tw < ψtsi
+#         e0 = t - ψtsi
 #         t0, na, nn, lr = 
-#           _sim_cobd_t(tepi, λ, μ, ψ, ω, tep, ωtimes, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
+#           _sim_cobd_t(ψtsi, λ, μ, ψ, ω, ψts, ωtimes, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
 #         sete!(t0, e(t0) + e0)
 #         return t0, na, nn, lr
 #       end
@@ -232,9 +232,9 @@ end
 #     if λevent(λ, μ, ψi, ωi)
 #       nn += 1
 #       d1, na, nn, lr =
-#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, tep, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
+#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
 #       d2, na, nn, lr =
-#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, tep, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
+#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
 
 #       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
     
@@ -249,7 +249,7 @@ end
 #     # fossil occurrence sampling (not included in the tree)
 #     else
 #       t0, na, nn, lr =
-#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, tep, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
+#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
 #       push!(ωtimes, t - tw)
 #       adde!(t0, tw)
 #       return t0, na, nn, lr
@@ -269,7 +269,7 @@ end
 #                 μ     ::Float64,
 #                 ψ     ::Vector{Float64},
 #                 ω     ::Vector{Float64},
-#                 tep   ::Vector{Float64},
+#                 ψts   ::Vector{Float64},
 #                 ωtimes::Vector{Float64},
 #                 ix    ::Int64,
 #                 nep   ::Int64,
@@ -288,7 +288,7 @@ end
 #                      μ     ::Float64,
 #                      ψ     ::Vector{Float64},
 #                      ω     ::Vector{Float64},
-#                      tep   ::Vector{Float64},
+#                      ψts   ::Vector{Float64},
 #                      ωtimes::Vector{Float64},
 #                      ix    ::Int64,
 #                      nep   ::Int64,
@@ -306,11 +306,11 @@ end
 
 #     # ψ epoch change
 #     if ix < nep
-#       @inbounds tepi = tep[ix]
-#       if t - tw < tepi > te
-#         e0 = t - tepi
+#       @inbounds ψtsi = ψts[ix]
+#       if t - tw < ψtsi > te
+#         e0 = t - ψtsi
 #         t0, na, nf, nn  = 
-#           _sim_cobd_i(tepi, te, λ, μ, ψ, ω, tep, ωtimes, ix + 1, nep, na, nf, nn, nlim)
+#           _sim_cobd_i(ψtsi, te, λ, μ, ψ, ω, ψts, ωtimes, ix + 1, nep, na, nf, nn, nlim)
 #         sete!(t0, e(t0) + e0)
 #         return t0, na, nf, nn
 #       end
@@ -325,9 +325,9 @@ end
 #     if λevent(λ, μ, ψi, ωi)
 #       nn += 1
 #       d1, na, nf, nn = 
-#         _sim_cobd_i(t - tw, te, λ, μ, ψ, ω, tep, ωtimes, ix, nep, na, nf, nn, nlim)
+#         _sim_cobd_i(t - tw, te, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, na, nf, nn, nlim)
 #       d2, na, nf, nn = 
-#         _sim_cobd_i(t - tw, te, λ, μ, ψ, ω, tep, ωtimes, ix, nep, na, nf, nn, nlim)
+#         _sim_cobd_i(t - tw, te, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, na, nf, nn, nlim)
 
 #       return sTfbd(d1, d2, tw, false, false, false), na, nf, nn
     
@@ -342,7 +342,7 @@ end
 #     # fossil occurrence sampling (not included in the tree)
 #     else
 #       t0, na, nf, nn =
-#         _sim_cobd_i(t - tw, te, λ, μ, ψ, ω, tep, ωtimes, ix, nep, na, nf, nn, nlim)
+#         _sim_cobd_i(t - tw, te, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, na, nf, nn, nlim)
 #       push!(ωtimes, t - tw)
 #       adde!(t0, tw)
 #       return t0, na, nf, nn
@@ -361,7 +361,7 @@ end
 #                  μ     ::Float64,
 #                  ψ     ::Vector{Float64},
 #                  ω     ::Vector{Float64},
-#                  tep   ::Vector{Float64},
+#                  ψts   ::Vector{Float64},
 #                  ωtimes::Vector{Float64},
 #                  ix    ::Int64,
 #                  nep   ::Int64,
@@ -380,7 +380,7 @@ end
 #                       μ     ::Float64,
 #                       ψ     ::Vector{Float64},
 #                       ω     ::Vector{Float64},
-#                       tep   ::Vector{Float64},
+#                       ψts   ::Vector{Float64},
 #                       ωtimes::Vector{Float64},
 #                       ix    ::Int64,
 #                       nep   ::Int64,
@@ -399,11 +399,11 @@ end
 
 #     # ψ epoch change
 #     if ix < nep
-#       @inbounds tepi = tep[ix]
-#       if t - tw < tepi
-#         e0 = t - tepi
+#       @inbounds ψtsi = ψts[ix]
+#       if t - tw < ψtsi
+#         e0 = t - ψtsi
 #         t0, na, nn, lr = 
-#           _sim_cobd_it(tepi, λ, μ, ψ, ω, tep, ωtimes, ix + 1, nep, lr, Iρi, na, nn, nlim)
+#           _sim_cobd_it(ψtsi, λ, μ, ψ, ω, ψts, ωtimes, ix + 1, nep, lr, Iρi, na, nn, nlim)
 #         sete!(t0, e(t0) + e0)
 #         return t0, na, nn, lr
 #       end
@@ -419,9 +419,9 @@ end
 #     if λevent(λ, μ, ψi, ωi)
 #       nn += 1
 #       d1, na, nn, lr =
-#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, tep, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
+#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
 #       d2, na, nn, lr =
-#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, tep, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
+#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
 
 #       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
    
@@ -436,7 +436,7 @@ end
 #     # fossil occurrence sampling (not included in the tree)
 #     else
 #       t0, na, nn, lr =
-#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, tep, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
+#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
 #       push!(ωtimes, t - tw)
 #       adde!(t0, tw)
 #       return t0, na, nn, lr
