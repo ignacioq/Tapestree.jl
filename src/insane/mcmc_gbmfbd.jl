@@ -310,9 +310,9 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, dλ, ssλ, ssμ, mc =
-          update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-            surv, δt, srδt, lλxpr, lμxpr)
+        llc, prc, dλ, ssλ, ssμ, mc =
+          update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, dλ, ssλ, ssμ, mc, th,
+            surv, δt, srδt, λa_prior, μa_prior)
 
       # forward simulation update
       else
@@ -493,9 +493,9 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             nix = ceil(Int64,rand()*nin)
             bix = inodes[nix]
 
-            llc, dλ, ssλ, ssμ, mc =
-              update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, mc, th,
-                surv, δt, srδt, lλxpr, lμxpr)
+            llc, prc, dλ, ssλ, ssμ, mc =
+              update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, dλ, ssλ, ssμ, mc, th,
+                surv, δt, srδt, λa_prior, μa_prior)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -1214,39 +1214,45 @@ end
 
 
 """
-    update_gbm!(bix  ::Int64,
-                Ξ    ::Vector{iTfbd},
-                idf  ::Vector{iBffs},
-                α    ::Float64,
-                σλ   ::Float64,
-                σμ   ::Float64,
-                llc  ::Float64,
-                dλ   ::Float64,
-                ssλ  ::Float64,
-                ssμ  ::Float64,
-                mc   ::Float64,
-                th   ::Float64,
-                surv   ::Int64,
-                δt   ::Float64,
-                srδt ::Float64)
+    update_gbm!(bix     ::Int64,
+                Ξ       ::Vector{iTfbd},
+                idf     ::Vector{iBffs},
+                α       ::Float64,
+                σλ      ::Float64,
+                σμ      ::Float64,
+                llc     ::Float64,
+                prc     ::Float64,
+                dλ      ::Float64,
+                ssλ     ::Float64,
+                ssμ     ::Float64,
+                mc      ::Float64,
+                th      ::Float64,
+                surv    ::Int64,
+                δt      ::Float64,
+                srδt    ::Float64,
+                λa_prior::NTuple{2,Float64},
+                μa_prior::NTuple{2,Float64})
 
 Make a `gbm` update for an internal branch and its descendants.
 """
-function update_gbm!(bix  ::Int64,
-                     Ξ    ::Vector{iTfbd},
-                     idf  ::Vector{iBffs},
-                     α    ::Float64,
-                     σλ   ::Float64,
-                     σμ   ::Float64,
-                     llc  ::Float64,
-                     dλ   ::Float64,
-                     ssλ  ::Float64,
-                     ssμ  ::Float64,
-                     mc   ::Float64,
-                     th   ::Float64,
-                     surv ::Int64,
-                     δt   ::Float64,
-                     srδt ::Float64)
+function update_gbm!(bix     ::Int64,
+                     Ξ       ::Vector{iTfbd},
+                     idf     ::Vector{iBffs},
+                     α       ::Float64,
+                     σλ      ::Float64,
+                     σμ      ::Float64,
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     dλ      ::Float64,
+                     ssλ     ::Float64,
+                     ssμ     ::Float64,
+                     mc      ::Float64,
+                     th      ::Float64,
+                     surv    ::Int64,
+                     δt      ::Float64,
+                     srδt    ::Float64,
+                     λa_prior::NTuple{2,Float64},
+                     μa_prior::NTuple{2,Float64})
   @inbounds begin
 
     ξi   = Ξ[bix]
@@ -1259,14 +1265,14 @@ function update_gbm!(bix  ::Int64,
     if root && iszero(e(bi))
       # if stem fossil
       if isfossil(bi)
-        llc, dλ, ssλ, ssμ, mc =
-          _fstem_update!(ξi, ξ1, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
-            δt, srδt, lλxpr, lμxpr, surv)
+        llc, prc, dλ, ssλ, ssμ, mc =
+          _fstem_update!(ξi, ξ1, α, σλ, σμ, llc, prc, dλ, ssλ, ssμ, mc, th, 
+            δt, srδt, λa_prior, μa_prior, surv)
       # if crown
       else
-        llc, dλ, ssλ, ssμ, mc =
-          _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th,
-            δt, srδt, lλxpr, lμxpr, surv)
+        llc, prc, dλ, ssλ, ssμ, mc =
+          _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, prc, dλ, ssλ, ssμ, mc, th,
+            surv, δt, srδt, λa_prior, μa_prior)
         setλt!(bi, lλ(ξi)[1])
       end
     else
@@ -1274,7 +1280,7 @@ function update_gbm!(bix  ::Int64,
       if root
         llc, dλ, ssλ, ssμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
-            δt, srδt, lλxpr, lμxpr, surv)
+            surv, δt, srδt, λa_prior, μa_prior)
       end
 
       # updates within the parent branch
@@ -1317,7 +1323,7 @@ function update_gbm!(bix  ::Int64,
     end
   end
 
-  return llc, dλ, ssλ, ssμ, mc
+  return llc, prc, dλ, ssλ, ssμ, mc
 end
 
 
