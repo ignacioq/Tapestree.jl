@@ -47,7 +47,7 @@ function insane_cobd(tree    ::sTf_label,
                      λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
                      μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                     ω_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     ω_prior ::NTuple{2,Float64}     = (1.0, 0.2),
                      ψω_epoch::Vector{Float64}       = Float64[],
                      f_epoch ::Vector{Int64}         = Int64[0],
                      niter   ::Int64                 = 1_000,
@@ -435,7 +435,6 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
                    prints  ::Int64)
 
   el  = lastindex(idf)                     # number of branches
-  L   = treelength(Ξ, ψω_epoch, bst, eixi) # tree length
   nψ  = nfossils(idf, ψω_epoch, f_epoch)   # number of fossilization events (in the tree) per epoch
   ne  = Float64(ntipsextinct(Ξ))           # number of extinction events
   nep = lastindex(ψc)
@@ -588,7 +587,7 @@ end
                μ     ::Float64,
                ψ     ::Vector{Float64},
                ω     ::Vector{Float64},
-               tep   ::Vector{Float64},
+               ψωts  ::Vector{Float64},
                ns    ::Float64,
                ne    ::Float64,
                L     ::Vector{Float64},
@@ -607,7 +606,7 @@ function update_fs!(bix   ::Int64,
                     μ     ::Float64,
                     ψ     ::Vector{Float64},
                     ω     ::Vector{Float64},
-                    tep   ::Vector{Float64},
+                    ψωts  ::Vector{Float64},
                     ns    ::Float64,
                     ne    ::Float64,
                     L     ::Vector{Float64},
@@ -621,35 +620,35 @@ function update_fs!(bix   ::Int64,
   if isfossil(bi)
     ixf = eixf[bix]
     # @show "fsbi_f"
-    ξp, LTTp, llr = fsbi_f(ξc, bi, λ, μ, ψ, ω, tep, ωtimes, LTT, ixi, ixf)
+    ξp, LTTp, llr = fsbi_f(ξc, bi, λ, μ, ψ, ω, ψωts, ωtimes, LTT, ixi, ixf)
 
     # if terminal but not successful proposal, update extinct
     if iszero(d1(bi)) && !isfinite(llr)
       # @show "fsbi_et"
-      ξp, LTTp, llr = fsbi_et(sTfbd_wofe(ξc), bi, λ, μ, ψ, ω, tep, ωtimes, LTT, ixi, ixf)
+      ξp, LTTp, llr = fsbi_et(sTfbd_wofe(ξc), bi, λ, μ, ψ, ω, ψωts, ωtimes, LTT, ixi, ixf)
     end
   else
     if iszero(d1(bi))
       # @show "fsbi_t"
-      ξp, LTTp, llr = fsbi_t(ξc, bi, λ, μ, ψ, ω, tep, ωtimes, LTT, ixi)
+      ξp, LTTp, llr = fsbi_t(ξc, bi, λ, μ, ψ, ω, ψωts, ωtimes, LTT, ixi)
     else
       # @show "fsbi_i"
-      ξp, LTTp, llr = fsbi_i(ξc, bi, λ, μ, ψ, ω, tep, ωtimes, LTT, ixi, eixf[bix])
+      ξp, LTTp, llr = fsbi_i(ξc, bi, λ, μ, ψ, ω, ψωts, ωtimes, LTT, ixi, eixf[bix])
     end
   end
 
   if isfinite(llr)
     # @show bix
     # @show llr
-    # llik_cfbdc = llik_cfbd(Ξ, λ, μ, ψ, nnodesbifurcation(idf), tep, bst, eixi)
-    # ω_llikc = ω_llik(ωtimes, ω, tep, LTT)
+    # llik_cfbdc = llik_cfbd(Ξ, λ, μ, ψ, nnodesbifurcation(idf), ψωts, bst, eixi)
+    # ω_llikc = ω_llik(ωtimes, ω, ψωts, LTT)
 
     tii = ti(bi)
 
-    nep = lastindex(tep) + 1
+    nep = lastindex(ψωts) + 1
     # update llc, ns, ne & L
-    # @show llrLTT(ξc, ξp, bi, ωtimes, ω, tep, LTT)
-    # @show ω_llik(ωtimes, ω, tep, LTTp) - ω_llik(ωtimes, ω, tep, LTT)
+    # @show llrLTT(ξc, ξp, bi, ωtimes, ω, ψωts, LTT)
+    # @show ω_llik(ωtimes, ω, ψωts, LTTp) - ω_llik(ωtimes, ω, ψωts, LTT)
     # @show ξc, ξp
     # @show e(ξc)
     # @show e(ξp)
@@ -663,8 +662,8 @@ function update_fs!(bix   ::Int64,
     #   end
     # end
 
-    llr_cfbd = llik_cfbd(ξp, λ, μ, ψ, tii, tep, ixi, nep) - 
-               llik_cfbd(ξc, λ, μ, ψ, tii, tep, ixi, nep)
+    llr_cfbd = llik_cfbd(ξp, λ, μ, ψ, tii, ψωts, ixi, nep) - 
+               llik_cfbd(ξc, λ, μ, ψ, tii, ψωts, ixi, nep)
     llc += llr_cfbd + llr
 
     ns  += Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
@@ -672,8 +671,8 @@ function update_fs!(bix   ::Int64,
 
     # update tree lengths
     Lc = zeros(nep)
-    _treelength!(ξc, tii, Lc, tep, ixi, nep)
-    _treelength!(ξp, tii, L,  tep, ixi, nep)
+    _treelength!(ξc, tii, Lc, ψωts, ixi, nep)
+    _treelength!(ξp, tii, L,  ψωts, ixi, nep)
     @avx for i in Base.OneTo(nep)
       L[i] -= Lc[i]
     end
@@ -685,8 +684,8 @@ function update_fs!(bix   ::Int64,
     @assert ltt(couple(Ξ, idf, 1)).n == LTTp.n "[[ltt(couple(Ξ, idf, 1)).n, ltt(couple(Ξ, idf, 1)).t], [LTTp.n, LTTp.t]] = ", [[ltt(couple(Ξ, idf, 1)).n, ltt(couple(Ξ, idf, 1)).t], [LTTp.n, LTTp.t]]
     LTT = LTTp
  
-    # llik_cfbdp = llik_cfbd(Ξ, λ, μ, ψ, nnodesbifurcation(idf), tep, bst, eixi)
-    # ω_llikp = ω_llik(ωtimes, ω, tep, LTT)
+    # llik_cfbdp = llik_cfbd(Ξ, λ, μ, ψ, nnodesbifurcation(idf), ψωts, bst, eixi)
+    # ω_llikp = ω_llik(ωtimes, ω, ψωts, LTT)
     # @show llik_cfbdp
     # @show ω_llikp
     # @show llr_cfbd, llik_cfbdp - llik_cfbdc
@@ -706,7 +705,7 @@ end
            μ     ::Float64,
            ψ     ::Vector{Float64},
            ω     ::Vector{Float64},
-           tep   ::Vector{Float64},
+           ψωts  ::Vector{Float64},
            ωtimes::Vector{Float64},
            LTT   ::Ltt,
            ix    ::Int64)
@@ -719,7 +718,7 @@ function fsbi_t(ξc    ::sTfbd,
                 μ     ::Float64,
                 ψ     ::Vector{Float64},
                 ω     ::Vector{Float64},
-                tep   ::Vector{Float64},
+                ψωts  ::Vector{Float64},
                 ωtimes::Vector{Float64},
                 LTT   ::Ltt,
                 ix    ::Int64)
@@ -732,20 +731,21 @@ function fsbi_t(ξc    ::sTfbd,
   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   # forward simulation during branch length
-  nep = lastindex(tep) + 1
+  nep = lastindex(ψωts) + 1
   ξp, na, nn, llr =
-    _sim_cfbd_t(e(bi), λ, μ, ψ, tep, ix, nep, lc, lU, Iρi, 0, 1, 1_000)
+    _sim_cfbd_t(e(bi), λ, μ, ψ, ψωts, ix, nep, lc, lU, Iρi, 0, 1, 1_000)
 
-  if na > 0 && isfinite(llr) && lU < llr && (treelength(ξc)!=treelength(ξp))
+  if na > 0 && isfinite(llr) && (treelength(ξc)!=treelength(ξp))
         
-    llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, tep, LTT, ix)
+    llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, ψωts, LTT, ix)
+    llr += llrLTTp
 
-    if lU < llr + llrLTTp != 0.0
+    if lU < llr != 0.0
 
       _fixrtip!(ξp, na) # fix random tip
       setni!(bi, na)    # set new ni
 
-      return ξp, LTTp, llr + llrLTTp
+      return ξp, LTTp, llr
     end    
   end
 
@@ -762,7 +762,7 @@ end
            μ     ::Float64,
            ψ     ::Vector{Float64},
            ω     ::Vector{Float64},
-           tep   ::Vector{Float64},
+           ψωts  ::Vector{Float64},
            ωtimes::Vector{Float64},
            LTT   ::Ltt,
            ixi   ::Int64,
@@ -776,16 +776,16 @@ function fsbi_f(ξc    ::sTfbd,
                 μ     ::Float64,
                 ψ     ::Vector{Float64},
                 ω     ::Vector{Float64},
-                tep   ::Vector{Float64},
+                ψωts  ::Vector{Float64},
                 ωtimes::Vector{Float64},
                 LTT   ::Ltt,
                 ixi   ::Int64,
                 ixf   ::Int64)
 
   # forward simulation during branch length
-  nep = lastindex(tep) + 1
+  nep = lastindex(ψωts) + 1
   ξp, na, nf, nn = 
-    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, tep, ixi, nep, 0, 0, 1, 1_000)
+    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, ψωts, ixi, nep, 0, 0, 1, 1_000)
 
   if na < 1 || nf > 0 || nn > 999
     return ξp, LTT, NaN
@@ -808,7 +808,7 @@ function fsbi_f(ξc    ::sTfbd,
     # simulate remaining tips until the present
     if na > 1
       tx, na, nn, acr =
-        tip_sims!(ξp, tf(bi), λ, μ, ψ, tep, ixf, acr, lU, Iρi, na, nn)
+        tip_sims!(ξp, tf(bi), λ, μ, ψ, ψωts, ixf, acr, lU, Iρi, na, nn)
     end
 
     if lU < acr
@@ -817,14 +817,14 @@ function fsbi_f(ξc    ::sTfbd,
 
       if iszero(d1(bi))
         tx, na, nn, acr =
-          fossiltip_sim!(ξp, tf(bi), λ, μ, ψ, tep, ixf, acr, lU, Iρi, na, nn)
+          fossiltip_sim!(ξp, tf(bi), λ, μ, ψ, ψωts, ixf, acr, lU, Iρi, na, nn)
       else
         na -= 1
       end
 
       if lU < acr
         
-        llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, tep, LTT, ixi)
+        llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, ψωts, LTT, ixi)
         
         if lU < acr + llrLTTp != 0.0
 
@@ -852,7 +852,7 @@ end
             μ     ::Float64,
             ψ     ::Vector{Float64},
             ω     ::Vector{Float64},
-            tep   ::Vector{Float64},
+            ψωts  ::Vector{Float64},
             ωtimes::Vector{Float64},
             LTT   ::Ltt,
             ixi   ::Int64,
@@ -866,7 +866,7 @@ function fsbi_et(ξc    ::sTfbd,
                  μ     ::Float64,
                  ψ     ::Vector{Float64},
                  ω     ::Vector{Float64},
-                 tep   ::Vector{Float64},
+                 ψωts  ::Vector{Float64},
                  ωtimes::Vector{Float64},
                  LTT   ::Ltt,
                  ixi   ::Int64,
@@ -878,11 +878,11 @@ function fsbi_et(ξc    ::sTfbd,
   acr = Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
 
   ξp, na, nn, acr =
-    fossiltip_sim!(ξc, tf(bi), λ, μ, ψ, tep, ixf, acr, lU, Iρi, 1, 1)
+    fossiltip_sim!(ξc, tf(bi), λ, μ, ψ, ψωts, ixf, acr, lU, Iρi, 1, 1)
 
   if lU < acr && (treelength(ξc)!=treelength(ξp))
     
-    llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, tep, LTT, ixi)
+    llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, ψωts, LTT, ixi)
 
     if lU < acr + llrLTTp != 0.0
       llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi)) + llrLTTp
@@ -905,7 +905,7 @@ end
            μ     ::Float64,
            ψ     ::Vector{Float64},
            ω     ::Vector{Float64},
-           tep   ::Vector{Float64},
+           ψωts  ::Vector{Float64},
            ωtimes::Vector{Float64},
            LTT   ::Ltt,
            ixi   ::Int64,
@@ -919,16 +919,16 @@ function fsbi_i(ξc    ::sTfbd,
                 μ     ::Float64,
                 ψ     ::Vector{Float64},
                 ω     ::Vector{Float64},
-                tep   ::Vector{Float64},
+                ψωts  ::Vector{Float64},
                 ωtimes::Vector{Float64},
                 LTT   ::Ltt,
                 ixi   ::Int64,
                 ixf   ::Int64)
 
   # forward simulation during branch length
-  nep = lastindex(tep) + 1
+  nep = lastindex(ψωts) + 1
   ξp, na, nf, nn = 
-    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, tep, ixi, nep, 0, 0, 1, 1_000)
+    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, ψωts, ixi, nep, 0, 0, 1, 1_000)
 
   if na < 1 || nf > 0 || nn > 999
     return ξp, LTT, NaN
@@ -951,12 +951,12 @@ function fsbi_i(ξc    ::sTfbd,
     # simulate remaining tips until the present
     if na > 1
       tx, na, nn, acr =
-        tip_sims!(ξp, tf(bi), λ, μ, ψ, tep, ixf, acr, lU, Iρi, na, nn)
+        tip_sims!(ξp, tf(bi), λ, μ, ψ, ψωts, ixf, acr, lU, Iρi, na, nn)
     end
 
     if lU < acr
       
-      llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, tep, LTT, ixi)
+      llrLTTp, LTTp = llrLTT(ξc, ξp, bi, ωtimes, ω, ψωts, LTT, ixi)
 
       if lU < acr + llrLTTp != 0.0
 
@@ -977,41 +977,10 @@ end
 
 
 """
-    update_ψ!(llc    ::Float64,
-              prc    ::Float64,
-              ψc     ::Float64,
-              nψ     ::Float64,
-              L      ::Float64,
-              ψ_prior::NTuple{2,Float64})
-
-Gibbs sampling of `ψ` for constant occurrence birth-death.
-"""
-function update_ψ!(llc    ::Float64,
-                   prc    ::Float64,
-                   ψc     ::Vector{Float64},
-                   nψ     ::Vector{Float64},
-                   L      ::Vector{Float64},
-                   ψ_prior::NTuple{2,Float64})
-
-  for i in Base.OneTo(lastindex(ψc))
-    ψci   = ψc[i]
-    ψp    = randgamma(ψ_prior[1] + nψ[i], ψ_prior[2] + L[i])
-    llc  += nψ[i] * log(ψp/ψci) + L[i] * (ψci - ψp)
-    prc  += llrdgamma(ψp, ψci, ψ_prior[1], ψ_prior[2])
-    ψc[i] = ψp
-  end
-
-  return llc, prc
-end
-
-
-
-
-"""
     update_ω!(llc    ::Float64,
               prc    ::Float64,
               ωc     ::Vector{Float64},
-              tep    ::Vector{Float64},
+              ψωts   ::Vector{Float64},
               ωtimes ::Vector{Float64},
               LTT    ::Ltt,
               nω     ::Vector{Int64},
@@ -1024,7 +993,7 @@ Gibbs sampling of `ω` for constant occurrence birth-death.
 function update_ω!(llc    ::Float64,
                    prc    ::Float64,
                    ωc     ::Vector{Float64},
-                   tep    ::Vector{Float64},
+                   ψωts   ::Vector{Float64},
                    ωtimes ::Vector{Float64},
                    LTT    ::Ltt,
                    nω     ::Vector{Int64},
@@ -1033,14 +1002,14 @@ function update_ω!(llc    ::Float64,
                    ω_prior::NTuple{2,Float64})
 
   ωp  = mulupt.(ωc, ωtn)
-  # llr = ω_llr(ωtimes, ωc, ωp, tep, LTT)
+  # llr = ω_llr(ωtimes, ωc, ωp, ψωts, LTT)
   llr = nω.*log.(ωp./ωc) .- L.*(ωp.-ωc)
 
   #@show llr
-  #@show ω_llik(ωtimes, [ωp[1], ωc[2]], tep, LTT) - ω_llik(ωtimes, ωc, tep, LTT)
-  #@show ω_llik(ωtimes, [ωc[1], ωp[2]], tep, LTT) - ω_llik(ωtimes, ωc, tep, LTT)
+  #@show ω_llik(ωtimes, [ωp[1], ωc[2]], ψωts, LTT) - ω_llik(ωtimes, ωc, ψωts, LTT)
+  #@show ω_llik(ωtimes, [ωc[1], ωp[2]], ψωts, LTT) - ω_llik(ωtimes, ωc, ψωts, LTT)
 
-  # MH step for each epoch
+  # MH sψωts for each epoch
   for ep in Base.OneTo(lastindex(ωc))
     
     prr = llrdgamma(ωp[ep], ωc[ep], ω_prior[1], ω_prior[2])
@@ -1062,7 +1031,7 @@ end
     update_ω!(llc    ::Float64,
               prc    ::Float64,
               ωc     ::Vector{Float64},
-              tep    ::Vector{Float64},
+              ψωts   ::Vector{Float64},
               ωtimes ::Vector{Float64},
               LTT    ::Ltt,
               nω     ::Vector{Int64},
@@ -1077,7 +1046,7 @@ Gibbs sampling of `ω` for constant occurrence birth-death.
 function update_ω!(llc    ::Float64,
                    prc    ::Float64,
                    ωc     ::Vector{Float64},
-                   tep    ::Vector{Float64},
+                   ψωts   ::Vector{Float64},
                    ωtimes ::Vector{Float64},
                    LTT    ::Ltt,
                    nω     ::Vector{Int64},
@@ -1088,10 +1057,10 @@ function update_ω!(llc    ::Float64,
                    ω_prior::NTuple{2,Float64})
 
   ωp  = mulupt.(ωc, ωtn)
-  # llr = ω_llr(ωtimes, ωc, ωp, tep, LTT)
+  # llr = ω_llr(ωtimes, ωc, ωp, ψωts, LTT)
   llr = nω.*log.(ωp./ωc) .- L.*(ωp.-ωc)
 
-  # MH step for each epoch
+  # MH sψωts for each epoch
   for ep in Base.OneTo(lastindex(ωc))
     
     prr = llrdgamma(ωp[ep], ωc[ep], ω_prior[1], ω_prior[2])
