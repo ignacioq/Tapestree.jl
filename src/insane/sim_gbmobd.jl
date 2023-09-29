@@ -173,7 +173,12 @@ function sim_gbmobd(t   ::Float64;
   @assert issorted(ψts, rev=true) "ψts should be sorted in decreasing order"
 
   tree   = sim_gbmfbd(t, λ0=λ0, μ0=μ0, α=α, σλ=σλ, σμ=σμ, ψ=ψ, ψts=ψts, δt=δt, nlim=nlim, init=init)
-  ωtimes = sim_occurrences(tree, ω, ψts)
+  if (ntips(tree) < nlim)
+    ωtimes = sim_occurrences(tree, ω, ψts)
+  else
+    @warn "Fossil occurrences are not simulated when the gbmfbd tree has reached nlim."
+    ωtimes = NaN
+  end
 
   return tree, ωtimes
 end

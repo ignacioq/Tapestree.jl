@@ -47,7 +47,7 @@ Created 20 09 2023
                   prints  ::Int64             = 5,
                   tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for fossilized birth-death diffusion `fbdd`.
+Run insane for occurrence birth-death diffusion `fbdd`.
 """
 function insane_gbmobd(tree    ::sTf_label,
                        ωtimes  ::Vector{Float64};
@@ -219,7 +219,7 @@ function insane_gbmobd(tree    ::sTf_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running fossilized birth-death diffusion"
+  @info "running occurrence birth-death diffusion"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, ψc, ωc, ωtn, mc, L, LTT  =
