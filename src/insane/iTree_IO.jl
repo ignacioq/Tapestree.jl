@@ -291,7 +291,7 @@ function find_cp(s::String, i::Int64)
 
   if isnothing(f1)
     if isnothing(f2)
-      return lastindex(s)
+      return lastindex(s)+1
     else 
       return f2
     end
