@@ -108,8 +108,8 @@ function insane_gbmfbd(tree    ::sTf_label;
   if isnan(λi) && isnan(μi) && isnan(ψi)
     # if only one tip
     if isone(n)
-      λc = prod(λ_prior)
-      μc = prod(μ_prior)
+      λc = prod(λa_prior)
+      μc = prod(μa_prior)
     else
       λc, μc = moments(Float64(n), th, ϵi)
     end
@@ -1278,8 +1278,8 @@ function update_gbm!(bix     ::Int64,
     else
       # if stem
       if root
-        llc, dλ, ssλ, ssμ, mc =
-          _stem_update!(ξi, α, σλ, σμ, llc, dλ, ssλ, ssμ, mc, th, 
+        llc, prc, dλ, ssλ, ssμ, mc =
+          _stem_update!(ξi, α, σλ, σμ, llc, prc, dλ, ssλ, ssμ, mc, th, 
             surv, δt, srδt, λa_prior, μa_prior)
       end
 

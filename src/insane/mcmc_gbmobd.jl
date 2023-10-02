@@ -124,8 +124,8 @@ function insane_gbmobd(tree    ::sTf_label,
   if isnan(λi) && isnan(μi) && isnan(ψi)
     # if only one tip
     if isone(n)
-      λc = prod(λ_prior)
-      μc = prod(μ_prior)
+      λc = prod(λa_prior)
+      μc = prod(μa_prior)
     else
       λc, μc = moments(Float64(n), th, ϵi)
     end
@@ -351,6 +351,7 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
 
     # parameter updates
     for pupi in pup
+      # print("\n", ["α","σλ & σμ","ψ","ω","gbm update","forward simulation"][pupi], "\n")
 
       # update α
       if pupi === 1
