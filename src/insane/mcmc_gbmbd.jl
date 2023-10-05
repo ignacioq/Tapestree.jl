@@ -350,7 +350,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
             llc, prc, αc, mc  =
               update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, dλ, llc, prc,
-                mc, th, sur, δt, srδt, α_prior) 
+                mc, th, surv, δt, srδt, α_prior) 
 
             # update ssλ with new drift `α`
             ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
@@ -869,14 +869,14 @@ function update_gbm!(bix     ::Int64,
     if root && iszero(e(bi))
       llc, prc, dλ, ssλ, ssμ, mc =
         _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, prc, dλ, ssλ, ssμ, mc, th,
-          surv, δt, srδt, λa_prior, μa_prior, 1)
+          surv, δt, srδt, λa_prior, μa_prior)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, prc, dλ, ssλ, ssμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, prc, dλ, ssλ, ssμ, mc, th, 
-            surv, δt, srδt, λa_prior, μa_prior, 0)
+            surv, δt, srδt, λa_prior, μa_prior)
       end
 
       # updates within the parent branch
