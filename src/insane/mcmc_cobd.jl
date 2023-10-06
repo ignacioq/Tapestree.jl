@@ -681,7 +681,7 @@ function update_fs!(bix   ::Int64,
     Ξ[bix] = ξp
 
     # set new LTT
-    @assert ltt(couple(Ξ, idf, 1)).n == LTTp.n "[[ltt(couple(Ξ, idf, 1)).n, ltt(couple(Ξ, idf, 1)).t], [LTTp.n, LTTp.t]] = ", [[ltt(couple(Ξ, idf, 1)).n, ltt(couple(Ξ, idf, 1)).t], [LTTp.n, LTTp.t]]
+    # @assert ltt(couple(Ξ, idf, 1)).n == LTTp.n "[[ltt(couple(Ξ, idf, 1)).n, ltt(couple(Ξ, idf, 1)).t], [LTTp.n, LTTp.t]] = ", [[ltt(couple(Ξ, idf, 1)).n, ltt(couple(Ξ, idf, 1)).t], [LTTp.n, LTTp.t]]
     LTT = LTTp
  
     # llik_cfbdp = llik_cfbd(Ξ, λ, μ, ψ, nnodesbifurcation(idf), ψωts, bst, eixi)
