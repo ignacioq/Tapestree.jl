@@ -340,69 +340,125 @@ Calculates the difference in log-likelihood between two subtrees `ξc` and `ξp`
 given a record of occurrences `ωtimes` and a current global `LTTc` trajectory.
 """
 function llrLTT(ξc    ::T,
-                ξp    ::T,
-                bi    ::iBffs,
-                ωtimes::Vector{Float64},
-                ω     ::Vector{Float64},
-                tep   ::Vector{Float64},
-                LTTc  ::Ltt,
-                ixi   ::Int64) where {T <: iTree}
+                    ξp    ::T,
+                    bi    ::iBffs,
+                    ωtimes::Vector{Float64},
+                    ω     ::Vector{Float64},
+                    tep   ::Vector{Float64},
+                    LTTc  ::Ltt,
+                    ixi   ::Int64) where {T <: iTree}
     
   # @show ξc, ξp
   nep = lastindex(tep) + 1
-  # Get LTT values for ξc and ξp
+  
+  # Calculate the Lineage-Through-Time (LTT) for the current and proposed subtree
   tiξ   = ti(bi)
   LTTξc = ltt_rm_artefacts(ξc, tiξ)
   LTTξp = ltt_rm_artefacts(ξp, tiξ)
 
+  # Find the most recent ending time of the LTTs
   tfξ = min(LTTξc.t[end], LTTξp.t[end])
   @assert tiξ-tfξ > treeheight(ξp) || tiξ-tfξ ≈ treeheight(ξp) "LTTξp.t, tiξ-tfξ, treeheight(ξp) =", LTTξp.t, tiξ-tfξ, treeheight(ξp)
 
+  # Calculate the difference between the two LTTs
   ΔLTT  = diff_LTTs(LTTξp, LTTξc)
-
   # @show ΔLTT.n, ΔLTT.t
-  if any(ΔLTT.n .!= 0)
-    idx_min = searchsortedlast(LTTc.t, tiξ-1e-12, rev=true)
-    idx_max = searchsortedfirst(LTTc.t, tfξ+1e-12, rev=true)
+  
+  # If there are any differences in the number of lineages between the LTTs
+  if all(ΔLTT.n .== 0)
+    llr_kω = llr_L = 0.0
+  else
+    # Narrow down the time range for LTTc to match ΔLTT
+    idx_min = searchsortedlast( LTTc.t, tiξ-accerr, rev=true)
+    idx_max = searchsortedfirst(LTTc.t, tfξ+accerr, rev=true)
     LTTct = LTTc.t[idx_min:idx_max]
     LTTcn = LTTc.n[idx_min:idx_max]
     
-    ΔLTT.t[1] = LTTct[1]
-    steps = copy(ΔLTT.t)
-    # @show LTTcn, LTTct
-    append!(steps, LTTct[2:end])
-    sort!(steps, rev=true)
-    # @show steps
+    # Vector lengths
+    lΔLTT   = lastindex(ΔLTT.t)
+    lLTTc   = lastindex(LTTct)
+    lωtimes = lastindex(ωtimes)
 
-    # Match the time indices
-    ΔLTTidx = [searchsortedlast(ΔLTT.t, t-1e-12, rev=true) for t in steps]
-    LTTcidx = [searchsortedlast(LTTct, t-1e-12, rev=true) for t in steps]
-    # @show ΔLTTidx
-    # @show LTTcidx
+    # Initialize log-likelihood ratios
+    llr_kω = llr_L = 0.0
 
-    i = searchsortedfirst(ωtimes, steps[1], rev=true)
-    if i <= lastindex(ωtimes)
-      nsteps  = lastindex(steps)
-      kω_ΔLTT = zeros(Int, nsteps)
-      step    = 1
-      while i <= lastindex(ωtimes) && ωtimes[i]>steps[end]
-        # @show ωtimes[i], ΔLTT.t[step]
-        while step < nsteps && ωtimes[i] < steps[step+1]
-          step += 1
-          # @show step, ΔLTT.t[step]
+    # Initialize indices for iterating through ΔLTT and LTTc
+    idxΔ = idxc = 1
+    tΔ   = ΔLTT.t[2]
+    nΔ   = ΔLTT.n[1]
+    tc   = LTTct[2]
+    nc   = LTTcn[1]
+
+    # Initialize the counter and index of occurrences
+    kω = 0
+    i  = 1
+
+    while idxΔ < lΔLTT
+
+      # Iterate to the closest LTT step
+      if isapprox(tΔ, tc, atol=accerr)
+        # Count occurrences in the interval
+        while i <= lωtimes && ωtimes[i] >= tΔ
+          kω += 1
+          i += 1
         end
-        kω_ΔLTT[step] += 1
-        i += 1
+        
+        # Update the likelihood ratio
+        llr_kω += kω * log(1 + nΔ / nc)
+        
+        # Update indexes and values
+        idxΔ += 1
+        idxc += 1
+        if idxΔ < lΔLTT
+          nΔ = ΔLTT.n[idxΔ]
+          tΔ = ΔLTT.t[idxΔ+1]
+        end
+        if idxc < lLTTc
+          nc = LTTcn[idxc]
+          tc = LTTct[idxc+1]
+        end
+      
+      
+      elseif tΔ > tc
+        # Count occurrences in the interval
+        while i <= lωtimes && ωtimes[i] >= tΔ
+          kω += 1
+          i += 1
+        end
+        
+        # Update the likelihood ratio
+        llr_kω += kω * log(1 + nΔ / nc)
+        
+        # Update indexes and values
+        idxΔ += 1
+        if idxΔ < lΔLTT
+          nΔ = ΔLTT.n[idxΔ]
+          tΔ = ΔLTT.t[idxΔ+1]
+        end
+      
+      
+      else # tc > tΔ
+        # Count occurrences in the interval
+        while i <= lωtimes && ωtimes[i] >= tc
+          kω += 1
+          i += 1
+        end
+        
+        # Update the likelihood ratio
+        llr_kω += kω * log(1 + nΔ / nc)
+        
+        # Update indexes and values
+        idxc += 1
+        if idxc < lLTTc
+          nc = LTTcn[idxc]
+          tc = LTTct[idxc+1]
+        end
       end
 
-      llr_kω = sum(kω_ΔLTT .* log.(1 .+ ΔLTT.n[ΔLTTidx] ./ LTTcn[LTTcidx]))
-    else
-      llr_kω = 0
+      kω = 0
     end
-    # @show kω_ΔLTT
-    # @show ΔLTT.n[ΔLTTidx], ΔLTT.t[ΔLTTidx]
-    # @show LTTcn[LTTcidx], LTTct[LTTcidx]
 
+    # Calculate the part of likelihood ratio for the branches without occurrences
     Lc = zeros(nep)
     Lp = zeros(nep)
     _treelength!(ξc, tiξ, Lc, tep, ixi, nep)
@@ -410,9 +466,8 @@ function llrLTT(ξc    ::T,
 
     llr_L = sum((Lc .- Lp) .* ω)
     
+    # Update the current LTT by adding ΔLTT
     LTTc  = sum_LTTs(LTTc, ΔLTT)
-  else
-    llr_kω = llr_L = 0.0
   end
 
   return llr_kω + llr_L, LTTc
@@ -433,8 +488,8 @@ function sum_LTTs(LTT1::Ltt, LTT2::Ltt)
   ti = max(ti1, ti2)
   
   # Prepare the time and lineage vectors for each LTT
-  t1, n1 = isapprox(ti1, ti; atol=1e-12) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
-  t2, n2 = isapprox(ti2, ti; atol=1e-12) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
+  t1, n1 = isapprox(ti1, ti; atol=accerr) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
+  t2, n2 = isapprox(ti2, ti; atol=accerr) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
   # @show [n1, t1]
   # @show [n2, t2]
 
@@ -453,7 +508,7 @@ function sum_LTTs(LTT1::Ltt, LTT2::Ltt)
     # @show i1, i2
 
     # Move to the next time point in one or both LTTs
-    if isapprox(tii1, tii2; atol=1e-12)
+    if isapprox(tii1, tii2; atol=accerr)
       ti  = tii1
       i1 += 1
       i2 += 1
@@ -507,8 +562,8 @@ function diff_LTTs(LTT1::Ltt, LTT2::Ltt)
   ti = max(ti1, ti2)
   
   # Prepare the time and lineage vectors for each LTT
-  t1, n1 = isapprox(ti1, ti; atol=1e-12) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
-  t2, n2 = isapprox(ti2, ti; atol=1e-12) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
+  t1, n1 = isapprox(ti1, ti; atol=accerr) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
+  t2, n2 = isapprox(ti2, ti; atol=accerr) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
   # @show [n1, t1]
   # @show [n2, t2]
 
@@ -527,7 +582,7 @@ function diff_LTTs(LTT1::Ltt, LTT2::Ltt)
     # @show i1, i2
 
     # Move to the next time point in one or both LTTs
-    if isapprox(tii1, tii2; atol=1e-12)
+    if isapprox(tii1, tii2; atol=accerr)
       ti  = tii1
       i1 += 1
       i2 += 1
@@ -713,14 +768,14 @@ end
 #   @assert all(LTTp.n .> 0)
 
 #   # Compute Δt intervals
-#   idx_min = findlast( x -> ( x >= tiξ-1e-12 ), LTTp.t)
-#   idx_max = findfirst(x -> ( x <= tfξ+1e-12 ), LTTp.t)
+#   idx_min = findlast( x -> ( x >= tiξ-accerr ), LTTp.t)
+#   idx_max = findfirst(x -> ( x <= tfξ+accerr ), LTTp.t)
 #   LTTpt = LTTp.t[idx_min:idx_max]
 #   # @show LTTpt
 
 #   # Match the time indices
-#   ΔLTTidx = [findlast(x -> (x >= t-1e-12), ΔLTT.t) for t in LTTpt]
-#   LTTcidx = [findlast(x -> (x >= t-1e-12), LTTc.t) for t in LTTpt]
+#   ΔLTTidx = [findlast(x -> (x >= t-accerr), ΔLTT.t) for t in LTTpt]
+#   LTTcidx = [findlast(x -> (x >= t-accerr), LTTc.t) for t in LTTpt]
 #   # @show ΔLTTidx
 #   # @show LTTcidx
 
@@ -885,7 +940,7 @@ end
 #   idx_LTT = 1
 
 #   for (i, t) in enumerate(times_union)
-#       while idx_LTT < ltv && (t <= tv[idx_LTT + 1] || isapprox(t, tv[idx_LTT + 1]; atol=1e-12))
+#       while idx_LTT < ltv && (t <= tv[idx_LTT + 1] || isapprox(t, tv[idx_LTT + 1]; atol=accerr))
 #           idx_LTT += 1
 #       end
 
