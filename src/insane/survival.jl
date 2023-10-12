@@ -121,7 +121,7 @@ end
 
 """
     m_surv_gbmct(t   ::Float64,
-                 λ0  ::Float64,
+                 lλ0 ::Float64,
                  α   ::Float64,
                  σλ  ::Float64,
                  ϵ   ::Float64,
@@ -134,7 +134,7 @@ Sample the total number of `m` trials until both simulations survive
 for `gbmct`.
 """
 function m_surv_gbmct(t   ::Float64,
-                      λ0  ::Float64,
+                      lλ0 ::Float64,
                       α   ::Float64,
                       σλ  ::Float64,
                       ϵ   ::Float64,
@@ -149,7 +149,7 @@ function m_surv_gbmct(t   ::Float64,
   if isone(surv)
 
     while true
-      s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmct_surv(t, lλ0, α, σλ, ϵ, δt, srδt, false, 1)
 
       s1 && break
       ntries === ntry && break
@@ -163,10 +163,10 @@ function m_surv_gbmct(t   ::Float64,
 
     while true
 
-      s1, n1 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmct_surv(t, lλ0, α, σλ, ϵ, δt, srδt, false, 1)
 
       if s1
-        s2, n2 = _sim_gbmct_surv(t, λ0, α, σλ, ϵ, δt, srδt, false, 1)
+        s2, n2 = _sim_gbmct_surv(t, lλ0, α, σλ, ϵ, δt, srδt, false, 1)
         s2 && break
       end
       ntries === ntry && break
@@ -184,8 +184,8 @@ end
 
 """
     m_surv_gbmbd(t   ::Float64,
-                 λ0  ::Float64,
-                 μ0  ::Float64,
+                 lλ0 ::Float64,
+                 lμ0 ::Float64,
                  α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64,
@@ -198,8 +198,8 @@ Sample the total number of `m` trials until both simulations survive
 for `gbmbd`.
 """
 function m_surv_gbmbd(t   ::Float64,
-                      λ0  ::Float64,
-                      μ0  ::Float64,
+                      lλ0 ::Float64,
+                      lμ0 ::Float64,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -214,7 +214,7 @@ function m_surv_gbmbd(t   ::Float64,
   if isone(surv)
 
     while true
-      s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmbd_surv(t, lλ0, lμ0, α, σλ, σμ, δt, srδt, false, 1)
 
       s1 && break
       ntries === ntry && break
@@ -227,10 +227,10 @@ function m_surv_gbmbd(t   ::Float64,
   elseif surv === 2
 
     while true
-      s1, n1 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
+      s1, n1 = _sim_gbmbd_surv(t, lλ0, lμ0, α, σλ, σμ, δt, srδt, false, 1)
 
       if s1
-        s2, n2 = _sim_gbmbd_surv(t, λ0, μ0, α, σλ, σμ, δt, srδt, false, 1)
+        s2, n2 = _sim_gbmbd_surv(t, lλ0, lμ0, α, σλ, σμ, δt, srδt, false, 1)
         s2 && break
       end
       ntries === ntry && break
