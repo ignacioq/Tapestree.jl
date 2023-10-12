@@ -338,7 +338,7 @@ Compute the logarithmic transformation of the
 **Gamma** density with shape `α` and rate `β` for `x`.
 """
 logdgamma(x::Float64, α::Float64, β::Float64) = 
-  α*log(β) - loggamma(α) + (α-1.0) * log(x) - β * x
+  isone(α) ? log(β) - β * x : α*log(β) - loggamma(α) + (α-1.0) * log(x) - β * x
 
 
 
