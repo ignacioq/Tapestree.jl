@@ -99,7 +99,7 @@ function insane_cobd(tree    ::sTf_label,
   idf = make_idf(tree, tρ, th * mxthf)
 
   # starting parameters
-  if isnan(λi) || isnan(μi) || isnan(ψi)
+  if isnan(λi) || isnan(μi)
     # if only one tip
     if isone(n)
       λc = λ_prior[1]/λ_prior[2]
@@ -107,7 +107,11 @@ function insane_cobd(tree    ::sTf_label,
     else
       λc, μc = moments(Float64(n), th, ϵi)
     end
-    
+  else
+    λc, μc = λi, μi
+  end
+  
+  if isnan(ψi)
     nψ = nfossils(tree)
     # if no sampled fossil
     if iszero(nψ)
@@ -115,7 +119,11 @@ function insane_cobd(tree    ::sTf_label,
     else
       ψc = Float64(nψ)/treelength(tree)
     end
-    
+  else
+    ψc = ψi
+  end
+  
+  if isnan(ωi)
     nω = lastindex(ωtimes)
     # if no fossil occurrences
     if iszero(nω)
@@ -126,7 +134,7 @@ function insane_cobd(tree    ::sTf_label,
       ωc = Float64(nω)/treelength(tree)
     end
   else
-    λc, μc, ψc, ωc = λi, μi, ψi, ωi
+    ωc = ωi
   end
 
   # make ψ and ω vectors for each epoch
