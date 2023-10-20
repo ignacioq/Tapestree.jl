@@ -502,12 +502,6 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
         for p in pup
           # @show ["λ","μ","ψ","ω","forward simulation"][p]
 
-          # combined λ proposal
-          if p === 1
-
-            llc, prc, λc, mc =
-              update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
-
           # λ proposal
           if p === 1
 
