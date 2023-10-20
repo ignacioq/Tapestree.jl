@@ -505,36 +505,14 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
           # combined λ proposal
           if p === 1
 
-            λold = λc
-            μold = μc
             llc, prc, λc, mc =
               update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
 
-            if abs(λc - λold)/λold > 0.1
-              # @show λc - λold
-              # @show ne
-              # ψc_old, ωc_old = copy(ψc), copy(ωc)
-              for i in Base.OneTo(5)
-                llc, prc, μc, mc =
-                  update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, surv, μ_prior)
-                for bix in Base.OneTo(el)
-                  llc, ns, ne, L, LTT =
-                    update_fs!(bix, Ξ, idf, ωtimes, LTT, llc, λc, μc, ψc, ωc, 
-                      ψω_epoch, ns, ne, L, eixi, eixf)
-                end
-                llc, prc = update_ψ!(llc, prc, ψc, nψ, L, ψ_prior)
-                llc, prc = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, ωtn, ω_prior)
-              end
-              # @show ne
-              # @show round(mean(ψc.-ψc_old), digits=2), round(mean(ωc.-ωc_old), digits=2)
-              # print("\n")
-            end
+          # λ proposal
+          if p === 1
 
-          # # λ proposal
-          # if p === 1
-
-          #   llc, prc, λc, mc =
-          #     update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
+            llc, prc, λc, mc =
+              update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
 
           # μ proposal
           elseif p === 2
