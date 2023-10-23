@@ -390,17 +390,19 @@ Sample conditional on number of species
                σλ  ::Float64,
                σμ  ::Float64,
                βλ  ::Float64,
+               βμ  ::Float64,
                δt  ::Float64,
                srδt::Float64,
                ix  ::Int64,
-               z   ::Vector{Float64},
                tz  ::Vector{Float64},
+               zλ  ::Vector{Float64},
+               zμ  ::Vector{Float64},
                na  ::Int64,
                nn  ::Int64,
                nlim::Int64)
 
-Simulate `iTbdX` for environmental variable z following a Brownian motions 
-for birth and death rates, with a limit on the number lineages allowed to reach.
+Simulate `iTbd` where `λ(t)` & `μ(t)` follow  environmental variables `zλ` and 
+`zμ` as regulated by `βλ` & `βμ`.
 """
 function _sim_gbmbd(t   ::Float64,
                     λt  ::Float64,
@@ -409,22 +411,24 @@ function _sim_gbmbd(t   ::Float64,
                     σλ  ::Float64,
                     σμ  ::Float64,
                     βλ  ::Float64,
+                    βμ  ::Float64,
                     δt  ::Float64,
                     srδt::Float64,
                     ix  ::Int64,
-                    z   ::Vector{Float64},
                     tz  ::Vector{Float64},
+                    zλ  ::Vector{Float64},
+                    zμ  ::Vector{Float64},
                     na  ::Int64,
                     nn  ::Int64,
                     nlim::Int64)
 
   if nn < nlim
 
-    zt = linpred(t, tz[ix], tz[ix+1], z[ix], z[ix+1])
-    zv = Float64[zt]
-    λv = Float64[λt]
-    μv = Float64[μt]
-    bt = 0.0
+    zλt = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+    zμt = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+    λv  = Float64[λt]
+    μv  = Float64[μt]
+    bt  = 0.0
 
     while true
 
@@ -432,12 +436,10 @@ function _sim_gbmbd(t   ::Float64,
         bt += t
         t   = max(0.0,t)
         srt = sqrt(t)
-        λt1 = rnorm(λt + (α + βλ*zt)*t, srt*σλ)
-        μt1 = rnorm(μt, srt*σμ)
+        λt1 = rnorm(λt + (α + βλ*zλt)*t, srt*σλ)
+        μt1 = rnorm(μt +     (βμ*zμt)*t, srt*σμ)
 
         ix += Int64(tz[ix+1] >= t)
-        zt  = linpred(t, tz[ix], tz[ix+1], z[ix], z[ix+1])
-        push!(zv, zt)
         push!(λv, λt1)
         push!(μv, μt1)
 
@@ -448,34 +450,32 @@ function _sim_gbmbd(t   ::Float64,
           # if speciation
           if λorμ(λm, μm)
             nn += 1
-            na  += 2
-            return iTbdX(iTbdX(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1],
-                               Float64[zt, zt]),
-                         iTbdX(0.0, δt, 0.0, false, false,
-                               Float64[λt1, λt1], Float64[μt1, μt1],
-                               Float64[zt, zt]),
-                         bt, δt, t, false, false, λv, μv, zv), na, nn
+            na += 2
+            return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         bt, δt, t, false, false, λv, μv), na, nn
           # if extinction
           else
-            return iTbdX(bt, δt, t, true, false, λv, μv, zv), na, nn
+            return iTbd(bt, δt, t, true, false, λv, μv), na, nn
           end
         end
 
         na += 1
-        return iTbdX(bt, δt, t, false, false, λv, μv, zv), na, nn
+        return iTbd(bt, δt, t, false, false, λv, μv), na, nn
       end
 
       t  -= δt
       bt += δt
 
       ix += Int64(tz[ix+1] >= t)
-      zt  = linpred(t, tz[ix], tz[ix+1], z[ix], z[ix+1])
-      λt1 = rnorm(λt + (α + βλ*zt)*δt, srδt*σλ)
-      μt1 = rnorm(μt, srδt*σμ)
+      zλt = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+      zμt = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+      λt1 = rnorm(λt + (α + βλ*zλt)*δt, srδt*σλ)
+      μt1 = rnorm(μt +     (βμ*zμt)*δt, srδt*σμ)
       push!(λv, λt1)
       push!(μv, μt1)
-      push!(zv, zt)
 
       λm = exp(0.5*(λt + λt1))
       μm = exp(0.5*(μt + μt1))
@@ -485,16 +485,16 @@ function _sim_gbmbd(t   ::Float64,
         if λorμ(λm, μm)
           nn += 1
           td1, na, nn =
-            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, βλ, δt, srδt, ix, z, tz, 
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, βλ, βμ, δt, srδt, ix, tz, zλ, zμ,
               na, nn, nlim)
           td2, na, nn =
-            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, βλ, δt, srδt, ix, z, tz, 
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, βλ, βμ, δt, srδt, ix, tz, zλ, zμ,
               na, nn, nlim)
 
-          return iTbdX(td1, td2, bt, δt, δt, false, false, λv, μv, zv), na, nn
-        # if eztinction
+          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
+        # if extinction
         else
-          return iTbdX(bt, δt, δt, true, false, λv, μv, zv), na, nn
+          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
         end
       end
 
@@ -503,9 +503,128 @@ function _sim_gbmbd(t   ::Float64,
     end
   end
 
-  return iTbdX(), na, nn
+  return iTbd(), na, nn
 end
 
+
+
+
+
+
+
+
+"""
+    _sim_gbmbd_fx(t   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  ix  ::Int64,
+                  tz  ::Vector{Float64},
+                  zλ  ::Vector{Float64},
+                  zμ  ::Vector{Float64},
+                  na  ::Int64,
+                  nn  ::Int64,
+                  nlim::Int64)
+
+Simulate `iTbd` where `λ(t)` & `μ(t)` follow `zλ` and `zμ`.
+"""
+function _sim_gbmbd_fx(t   ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       ix  ::Int64,
+                       tz  ::Vector{Float64},
+                       zλ  ::Vector{Float64},
+                       zμ  ::Vector{Float64},
+                       na  ::Int64,
+                       nn  ::Int64,
+                       nlim::Int64)
+
+  if nn < nlim
+
+    λt = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+    μt = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+    λv = Float64[λt]
+    μv = Float64[μt]
+    bt = 0.0
+
+    while true
+
+      if t <= δt
+        bt += t
+        t   = max(0.0,t)
+        srt = sqrt(t)
+
+        while 0.0 < tz[ix]
+          ix += 1
+        end
+        ix -= 1
+        λt1 = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+        μt1 = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+
+        push!(λv, λt1)
+        push!(μv, μt1)
+
+        λm = exp(0.5*(λt + λt1))
+        μm = exp(0.5*(μt + μt1))
+
+        if divev(λm, μm, t)
+          # if speciation
+          if λorμ(λm, μm)
+            nn += 1
+            na += 2
+            return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         bt, δt, t, false, false, λv, μv), na, nn
+          # if extinction
+          else
+            return iTbd(bt, δt, t, true, false, λv, μv), na, nn
+          end
+        end
+
+        na += 1
+        return iTbd(bt, δt, t, false, false, λv, μv), na, nn
+      end
+
+      t  -= δt
+      bt += δt
+
+      while t < tz[ix]
+        ix += 1
+      end
+      ix -= 1
+      λt1 = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+      μt1 = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+
+      push!(λv, λt1)
+      push!(μv, μt1)
+
+      λm = exp(0.5*(λt + λt1))
+      μm = exp(0.5*(μt + μt1))
+
+      if divev(λm, μm, δt)
+        # if speciation
+        if λorμ(λm, μm)
+          nn += 1
+          td1, na, nn =
+            _sim_gbmbd_fx(t, δt, srδt, ix, tz, zλ, zμ, na, nn, nlim)
+          td2, na, nn =
+            _sim_gbmbd_fx(t, δt, srδt, ix, tz, zλ, zμ, na, nn, nlim)
+
+          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
+        # if extinction
+        else
+          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
+        end
+      end
+
+      λt = λt1
+      μt = μt1
+    end
+  end
+
+  return iTbd(), na, nn
+end
 
 
 
