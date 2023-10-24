@@ -375,6 +375,66 @@ end
 
 
 
+
+
+"""
+    _rplottree!(tree::T,
+                xc  ::Float64,
+                yr  ::UnitRange{Int64},
+                x   ::Array{Float64,1},
+                y   ::Array{Float64,1},
+                isf ::Array{Bool,1}) where {T <: iTree}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function _rplottree!(tree::T,
+                     xc  ::Float64,
+                     yr  ::UnitRange{Int64},
+                     x   ::Array{Float64,1},
+                     y   ::Array{Float64,1},
+                     isf ::Array{Bool,1}) where {T <: iTree}
+
+  # add horizontal lines
+  push!(x, xc)
+  xc -= e(tree)
+  push!(x, xc, NaN)
+  yc = (yr[1] + yr[end])*0.5
+  push!(y, yc, yc, NaN)
+
+  # add whether the branch is fixed
+  ift = isfix(tree)
+  push!(isf, ift, ift, ift)
+
+  if def1(tree)
+    if def2(tree)
+      ntip1 = ntips(tree.d1)
+      ntip2 = ntips(tree.d2)
+
+      # add vertical lines
+      push!(x, xc, xc, NaN)
+
+      yr1 = yr[1:ntip1]
+      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
+
+      push!(y, Float64(yr1[1] + yr1[end])*0.5,
+               Float64(yr2[1] + yr2[end])*0.5,
+               NaN)
+
+      # push!(isf, ift, ift, ift)
+      iftd = isfix(tree.d1) && isfix(tree.d2)
+      push!(isf, iftd, iftd, iftd)
+
+      _rplottree!(tree.d1, xc, yr1, x, y, isf)
+      _rplottree!(tree.d2, xc, yr2, x, y, isf)
+    else
+      _rplottree!(tree.d1, xc, yr, x, y, isf)
+    end
+  end
+end
+
+
+
+
 """
     f(tree::T;
       shownodes  = (T <: iTf),
@@ -383,6 +443,7 @@ end
       speciation = false,
       extinct    = false,
       fossil     = true,
+      alphaDA    = 1.0,
       tor        = treeheight(tree),
       textsize   = 8,
       type       = :phylogram) where {T <: iTree}
@@ -396,6 +457,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    speciation = false,
                    extinct    = false,
                    fossil     = true,
+                   alphaDA    = 1.0,
                    tor        = treeheight(tree),
                    textsize   = 8,
                    type       = :phylogram) where {T <: iTree}
@@ -406,7 +468,13 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   #th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, tor, 1:nts, x, y)
+  if isone(alphaDA)
+    _rplottree!(tree, tor, 1:nts, x, y)
+  else
+    isfixed = Bool[]
+    _rplottree!(tree, tor, 1:nts, x, y, isfixed)
+    linealphas      --> alphaDA .+ isfixed[1:(end-1)]*(1-alphaDA)
+  end
 
   ntF = Float64(nts)
 
