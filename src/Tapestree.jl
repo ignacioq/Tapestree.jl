@@ -36,7 +36,7 @@ using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe
 
 using .INSANE: read_newick, write_newick, iread, iwrite,
-  sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
+  sT_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, sim_gbmfbd, 
   sim_shift,
@@ -49,7 +49,7 @@ using .INSANE: read_newick, write_newick, iread, iwrite,
   ntipsalive, ntips, ntipsextinct, sustainedcount, trextract, reorder!,
   treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
 export read_newick, write_newick, iread, iwrite,
-  sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
+  sT_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, sim_gbmfbd, 
   sim_shift,
