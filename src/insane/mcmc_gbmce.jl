@@ -13,8 +13,7 @@ Created 03 09 2020
 
 
 """
-    insane_gbmce(tree    ::sT_label,
-                 out_file::String;
+    insane_gbmce(tree    ::sT_label;
                  λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
                  α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                  σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
@@ -165,7 +164,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
                          prints  ::Int64)
 
   λ0  = lλ(Ξ[1])[1]
-  llc = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(iszero(e(Ξ))) * λ0 + 
+  llc = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(surv > 0) * λ0 + 
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
         logdunif(exp(λ0),   λa_prior[1], λa_prior[2])  +
@@ -345,7 +344,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
             # update ssλ with new drift `α`
             ssλ, nλ = sss_gbm(Ξ, αc)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) -Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             # if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i
             #    return
@@ -358,7 +357,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
               update_σ!(σλc, lλ(Ξ[1])[1], αc, μc, ssλ, nλ, llc, prc, mc, th, surv,
                 δt, srδt, σλ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) -Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             # if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i
             #    return
@@ -370,7 +369,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
               update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, surv,
                 δt, srδt, μ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) -Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             # if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i
             #    return
@@ -386,7 +385,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
               update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, mc, th,
                 δt, srδt, lλxpr, surv)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) -Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             # if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i
             #    return
@@ -401,7 +400,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
               update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, dλ, ssλ, nλ, ne, L,
                 δt, srδt)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) -Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             # if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i
             #    return

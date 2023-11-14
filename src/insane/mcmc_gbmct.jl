@@ -186,7 +186,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   lac = 0.0
 
   λ0  = lλ(Ξ[1])[1]
-  llc = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - Float64(iszero(e(Ξ))) * λ0 + 
+  llc = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) - Float64(surv > 0) * λ0 + 
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])  +
         logdunif(exp(λ0),   λa_prior[1], λa_prior[2])  +
@@ -380,7 +380,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
             # update ssλ with new drift `α`
             ssλ, nλ = sss_gbm(Ξ, αc)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1]
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(surv > 0) * lλ(Ξ[1])[1]
             #  if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i, Ξ
             #    return
@@ -392,7 +392,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
               update_σ_ϵ!(σλc, lλ(Ξ[1])[1], αc, ϵc, ssλ, nλ, llc, prc, mc, th, surv,
                 δt, srδt, σλ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1]
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(surv > 0) * lλ(Ξ[1])[1]
             #  if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i, Ξ
             #    return
@@ -404,7 +404,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
               update_ϵ!(ϵc, lλ(Ξ[1])[1], αc, σλc, llc, mc, th, surv, ϵtn,
                 ne, Σλ, δt, srδt, ϵxpr)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1]
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(surv > 0) * lλ(Ξ[1])[1]
             #  if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i, Ξ
             #    return
@@ -420,7 +420,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
               update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, mc, th,
                 δt, srδt, lλxpr, surv)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1]
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(surv > 0) * lλ(Ξ[1])[1]
             #  if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i, Ξ
             #    return
@@ -435,7 +435,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
               update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, dlλ, ssλ, Σλ, nλ, ne, L,
                 δt, srδt)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(iszero(e(Ξ))) * lλ(Ξ[1])[1]
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, ϵc, δt, srδt) + log(mc) + prob_ρ(idf) - Float64(surv > 0) * lλ(Ξ[1])[1]
             #  if !isapprox(ll0, llc, atol = 1e-5)
             #    @show ll0, llc, pupi, i, Ξ
             #    return
