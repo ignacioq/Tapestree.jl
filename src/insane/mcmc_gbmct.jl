@@ -13,17 +13,16 @@ Created 03 09 2020
 
 
 """
-    insane_gbmct(tree    ::sT_label,
-                 out_file::String;
+    insane_gbmct(tree    ::sT_label;
                  λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                 α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
+                 α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                  ϵ_prior ::NTuple{2,Float64}     = (0.0, 100.0),
                  niter   ::Int64                 = 1_000,
                  nthin   ::Int64                 = 10,
                  nburn   ::Int64                 = 200,
                  nflush  ::Int64                 = nthin,
-                 ofile   ::String                = homedir(),
+                 ofile   ::String                = string(homedir(), "/ict"),
                  tune_int::Int64                 = 100,
                  αi      ::Float64               = 0.0,
                  λi      ::Float64               = NaN,
@@ -44,14 +43,14 @@ Run insane for GBM birth-death.
 """
 function insane_gbmct(tree    ::sT_label;
                       λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                      α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
+                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                       ϵ_prior ::NTuple{2,Float64}     = (0.0, 100.0),
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
                       nflush  ::Int64                 = nthin,
-                      ofile   ::String                = homedir(),
+                      ofile   ::String                = string(homedir(), "/ict"),
                       tune_int::Int64                 = 100,
                       αi      ::Float64               = 0.0,
                       λi      ::Float64               = NaN,

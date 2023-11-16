@@ -11,7 +11,7 @@ module INSANE
   using DelimitedFiles: writedlm
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean, median
-  using LoopVectorization: @avx
+  using LoopVectorization: @turbo
   using PlotUtils: cgrad
   using RecipesBase
   using Parsers: parse as Pparse

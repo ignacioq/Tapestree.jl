@@ -15,14 +15,14 @@ Created 03 09 2020
 """
     insane_gbmce(tree    ::sT_label;
                  λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                 α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
+                 α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                  μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                  niter   ::Int64                 = 1_000,
                  nthin   ::Int64                 = 10,
                  nburn   ::Int64                 = 200,
                  nflush  ::Int64                 = nthin,
-                 ofile   ::String                = homedir(),
+                 ofile   ::String                = string(homedir(), "/ice"),
                  λi      ::Float64               = NaN,
                  αi      ::Float64               = 0.0,
                  σλi     ::Float64               = 0.01,
@@ -39,14 +39,14 @@ Run insane for `gbm-ce`.
 """
 function insane_gbmce(tree    ::sT_label;
                       λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                      α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
+                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                       μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
                       nflush  ::Int64                 = nthin,
-                      ofile   ::String                = homedir(),
+                      ofile   ::String                = string(homedir(), "/ice"),
                       λi      ::Float64               = NaN,
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.01,

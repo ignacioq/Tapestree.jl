@@ -137,7 +137,7 @@ function ll_gbm_b(lλv ::Array{Float64,1},
     llμ  = 0.0
     llx  = 0.0
     llbd = 0.0
-    @avx for i in Base.OneTo(nI)
+    @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lμvi  = lμv[i]
       lλvi1 = lλv[i+1]
@@ -297,7 +297,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
     llμ  = 0.0
     llx  = 0.0
     llbd = 0.0
-    @avx for i in Base.OneTo(nI)
+    @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lμvi  = lμv[i]
       lλvi1 = lλv[i+1]
