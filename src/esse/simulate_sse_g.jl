@@ -32,7 +32,7 @@ Simulate tree according to the geographic **esse** model. The number of areas
 and hidden states is inferred from the parameter vectors, but they must be 
 consistent between them and with the covariates. See tutorial for an example.
 
-...
+
 # Arguments
 - `λ::Array{Float64,1}`: rates for within-area and between-area speciation.
 - `μ::Array{Float64,1}`: per-area extinction rates when it leads to global 
@@ -57,15 +57,12 @@ length.
 - `states_only::Bool = false`: if only return tip states (faster).
 - `start::Symbol  = :crown`: if `crown`, starts after a speciation event with 
 two lineages, if `stem`, starts with one lineage.
-...
 
-...
 # Returned values
 - Dictionary with tip number and corresponding state.
 - Array with parent -> daughter edges.
 - Array with edge lengths.
 - Number of maximum species.
-...
 """
 function simulate_sse(λ          ::Array{Float64,1},
                       μ          ::Array{Float64,1},
