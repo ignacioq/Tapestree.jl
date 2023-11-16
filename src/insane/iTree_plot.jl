@@ -79,7 +79,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    shownodes  = (false, false, T <: iTf),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
-                   shsizes    = [0.0, 0.0, 3.0],
+                   shsizes    = [3.0, 3.0, 3.0],
                    showda     = false,
                    col_da     = ["#a9a9a9", :black]) where {T <: iTree}
 
