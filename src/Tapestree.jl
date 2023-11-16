@@ -46,8 +46,9 @@ using .INSANE: read_newick, write_newick, iread, iwrite,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos, fossilize!,
   e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs,
-  ntips, ntipsalive, ntipsextinct, nfossils, sustainedcount, trextract, 
-  reorder!, treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
+  ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, sustainedcount, 
+  trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, tiplabels, 
+  time_rate
 export read_newick, write_newick, iread, iwrite,
   sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
@@ -59,7 +60,8 @@ export read_newick, write_newick, iread, iwrite,
   iquantile, imean, irange, extract_vector!, mcmc_array, lλ, lμ, 
   remove_extinct, remove_unsampled, remove_fossils, fixedpos, fossilize!,
   e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs,
-  ntips, ntipsalive, ntipsextinct, nfossils, sustainedcount, trextract, 
-  reorder!, treeheight, treelength, _ctl, ltt, subclade, tiplabels, time_rate
+  ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, sustainedcount, 
+  trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, tiplabels, 
+  time_rate
 
 end # module Tapestree
