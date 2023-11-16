@@ -12,7 +12,7 @@ module INSANE
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean, median
   using LoopVectorization: @turbo
-  using PlotUtils: cgrad
+  using PlotUtils: cgrad, palette
   using RecipesBase
   using Parsers: parse as Pparse
 
