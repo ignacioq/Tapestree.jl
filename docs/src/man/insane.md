@@ -9,15 +9,22 @@ Quintero, I., Lartillot, N., Morlon, H. (in prep). Imbalanced speciation pulses 
 
 INSANE uses Bayesian data augmentation (DA) to perform inference on a number of evolutionary models on phylogenetic trees. As such, performing inference will output posterior samples for the governing parameters as well as _complete_ or _data augmented_ trees, that is, trees that include probable configurations of unobserved variables such as the lineages that went extinct in the past or the underlying (latent) speciation rate. 
 
-<!-- 
 ## Insane tree and model input/output
 
 
 ### Reading and saving newick trees
 
 Tapestree can read files in the simple newick format using the `read_newick` function:
-```julia
+```jldoctest
+using Tapestree
 tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_50.tre"))
+ntips(tree)
+
+# output
+
+50
+```
+
 ```
 
 Note that the tree has type `sT_label`, which stands for simple labelled tree. YOu can check this using
@@ -162,7 +169,8 @@ Tapestree holds many recipes to plot phylogenetic trees, model results and aggre
 using Plots
 ```
 
-## Insane tree functions -->
+## Insane tree functions
+
 <!-- 
 
 3. How many tips does the tree have? (use the `ntips` function)

@@ -12,7 +12,8 @@ makedocs(
                     "ESSE" => "man/esse.md",
                     ]
                ],
-        authors="Ignacio Quintero")
+        authors   = "Ignacio Quintero",
+        checkdocs = :none)
 
 deploydocs(;
     repo="github.com/ignacioq/Tapestree.jl",
