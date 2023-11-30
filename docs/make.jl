@@ -7,6 +7,7 @@ makedocs(
                 "Home" => "index.md"
                 "Manual" => [
                     "Installation" => "man/installation.md",
+                    "INSANE" => "man/insane.md",
                     "TRIBE" => "man/tribe.md",
                     "ESSE" => "man/esse.md",
                     ]
