@@ -9,11 +9,11 @@ Quintero, I., Lartillot, N., Morlon, H. (in prep). Imbalanced speciation pulses 
 
 INSANE uses Bayesian data augmentation (DA) to perform inference on a number of evolutionary models on phylogenetic trees. As such, performing inference will output posterior samples for the governing parameters as well as _complete_ or _data augmented_ trees, that is, trees that include probable configurations of unobserved variables such as the lineages that went extinct in the past or the underlying (latent) speciation rate. 
 
-
+<!-- 
 ## Insane tree and model input/output
 
 
-### reading and saving newick trees
+### Reading and saving newick trees
 
 Tapestree can read files in the simple newick format using the `read_newick` function:
 ```julia
@@ -30,7 +30,7 @@ Similarly, it can also write trees using `write_newick`
 write_newick(tree, "<directory>")
 ```
 
-### reading and saving model output
+### Reading and saving model output
 
 All models can return and/or save the output by writing directly to a file on the fly and in julia when the model stops. There are two outputs:
 
@@ -52,13 +52,13 @@ All inference functions require a phylogenetic tree of type `sT_label`, that is,
 ### Common (keyword) arguments across all insane inference models
 
 
-1. `nburn`: specifies the number of iterations to discard as burn-in.
-2. `niter`: specifies the number of MCMC iterations. 
-3. `nthin`: specifies the iteration frequency at which to save the parameters **in the julia session** (_i.e._,`nthin = 2` specifies saving every 2 iterations), 
-4. `nflush`: specifies the frequency at which to save **to file**. 
-5. `ofile`: specifies the directory where the results will be written. 
-6. `tρ`: controls the sampling fraction and receives a `Dictionary` as input, with a `String` key pointing to a `Float64` number (_i.e._, `Dict{String, Float64}`). If the dictionary is of length 1 with an empty string, then the insane sets this as a the global sampling fraction. For example, to set a sampling fraction of `0.6`, one show input `tρ = Dict("" => 0.6)`. Most times, however, sampling fraction is not uniform across the tree, but rather some part so the tree is more heavily sampled than others, to accomodate these variability, you can input a dictionary of the same length as the number of tips in the tree, where the dictionary key string is the tip label pointing to the specific sampling fraction value. For example, for two tips, named `tip_1` and `tip_2`, one could input `tρ = Dict("tip_1" => 0.5, "tip_2" => 0.3)`.
-7. `prints`: specifies the number of seconds to refresh the progress meter.
+* `nburn`: specifies the number of iterations to discard as burn-in.
+* `niter`: specifies the number of MCMC iterations. 
+* `nthin`: specifies the iteration frequency at which to save the parameters **in the julia session** (_i.e._,`nthin = 2` specifies saving every 2 iterations), 
+* `nflush`: specifies the frequency at which to save **to file**. 
+* `ofile`: specifies the directory where the results will be written. 
+* `tρ`: controls the sampling fraction and receives a `Dictionary` as input, with a `String` key pointing to a `Float64` number (_i.e._, `Dict{String, Float64}`). If the dictionary is of length 1 with an empty string, then the insane sets this as a the global sampling fraction. For example, to set a sampling fraction of `0.6`, one show input `tρ = Dict("" => 0.6)`. Most times, however, sampling fraction is not uniform across the tree, but rather some part so the tree is more heavily sampled than others, to accomodate these variability, you can input a dictionary of the same length as the number of tips in the tree, where the dictionary key string is the tip label pointing to the specific sampling fraction value. For example, for two tips, named `tip_1` and `tip_2`, one could input `tρ = Dict("tip_1" => 0.5, "tip_2" => 0.3)`.
+* `prints`: specifies the number of seconds to refresh the progress meter.
 
 
 ### Constant rates
@@ -101,6 +101,12 @@ This time, the DA trees are different from one another since they have data augm
 ```julia
 plot(tv[1])
 ```
+
+##### Full documentation
+```@docs
+insane_cpb
+```
+
 
 #### Constant birth-death process (CBD)
 
@@ -156,8 +162,8 @@ Tapestree holds many recipes to plot phylogenetic trees, model results and aggre
 using Plots
 ```
 
-## Insane tree functions
-
+## Insane tree functions -->
+<!-- 
 
 3. How many tips does the tree have? (use the `ntips` function)
 
@@ -439,3 +445,4 @@ tr0 = remove_extinct(tr)
 
 write_newick(tr0, homedir()*"/repos/tscience_pcm/qmd/simtree")
 ```
+ -->
