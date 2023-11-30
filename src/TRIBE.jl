@@ -6,7 +6,7 @@
 
 module TRIBE
 
-using Random: randexp
+using Random: randexp, shuffle!
 using DelimitedFiles: readdlm, writedlm
 using ProgressMeter: Progress, next!
 using Optim: minimizer, optimize, Options

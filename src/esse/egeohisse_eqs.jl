@@ -12,89 +12,6 @@ Created 18 03 2019
 
 
 
-
-"""
-    power_expr(k    ::Int64,
-               h    ::Int64,
-               ny   ::Int64,
-               model::NTuple{3,Bool})
-
-Return exponential expression for one time evaluation of covariates.
-"""
-function power_expr(k    ::Int64,
-                    h    ::Int64,
-                    ny   ::Int64,
-                    model::NTuple{3,Bool})
-
-  # last non β parameters
-  bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
-
-  # ncov
-  ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
-
-  # y per parameter
-  yppar = isone(ny) ? 1 : div(ny,ncov)
-
-  # starting indices for models 2 and 3
-  m2s = model[1]*k*h
-  m3s = m2s + model[2]*k*h
-
-  y2s = model[1]*yppar*k
-  y3s = y2s + model[2]*yppar*k
-
-  # start expression 
-  ex = quote end
-  pop!(ex.args)
-
-  isone(ny) && push!(ex.args, :(r1 = r[1]))
-
-  # speciation 
-  if model[1]
-    for j = Base.OneTo(h), i = Base.OneTo(k)
-      coex = Expr(:call, :*)
-      for yi in Base.OneTo(yppar)
-        rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
-        push!(coex.args, :($rex^p[$(bbase + yi + yppar*((i-1) + k*(j-1)))]))
-      end
-      push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*$coex))
-    end
-  end
-
-  # extinction 
-  if model[2]
-    for j = Base.OneTo(h), i = Base.OneTo(k)
-      coex = Expr(:call, :*)
-      for yi in Base.OneTo(yppar)
-        rex = isone(ny) ? :(r1) : :(r[$(y2s + yi+yppar*(i-1))])
-        push!(coex.args, 
-          :($rex^p[$(bbase + yi + m2s*yppar + yppar*((i-1) + k*(k-1)*(j-1)))]))
-      end
-      push!(ex.args, :(eaft[$(i + k*(j-1) + m2s)] = 
-        p[$((k+1)*h + i + k*(j-1))]*$coex))
-    end
-  end
-
-  # transition 
-  if model[3]
-    for j = Base.OneTo(h), i = Base.OneTo(k*(k-1))
-      coex = Expr(:call, :+)
-      for yi in Base.OneTo(yppar)
-        rex = isone(ny) ? :(r1) : :(r[$(y3s + yi+yppar*(i-1))])
-        push!(coex.args, 
-          :($rex^p[$(bbase + yi + m3s*yppar + yppar*((i-1) + k*(k-1)*(j-1)))]))
-      end
-      push!(ex.args, :(eaft[$(i + k*(j-1) + m3s)] = 
-        p[$(h*(2k+1) + i + k*(k-1)*(j-1))]*$coex))
-    end
-  end
-
-  return ex
-end
-
-
-
-
-
 """
     exp_expr(k    ::Int64,
              h    ::Int64,
@@ -109,20 +26,30 @@ function exp_expr(k    ::Int64,
                   model::NTuple{3,Bool})
 
   # last non β parameters
-  bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+  bbase = 
+    if isone(k)
+      2*h + h*(h-1)
+    else
+      h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1) 
+    end
 
   # ncov
   ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
   # y per parameter
-  yppar = isone(ny) ? 1 : div(ny,ncov)
+  yppar = isone(ny) ? 1 : ceil(Int64, ny/ncov)
 
   # starting indices for models 2 and 3
   m2s = model[1]*k*h
   m3s = m2s + model[2]*k*h
 
-  y2s = model[1]*yppar*k
-  y3s = y2s + model[2]*yppar*k
+  if ny < ncov
+    y2s = 0
+    y3s = 0
+  else
+    y2s = model[1]*yppar*k
+    y3s = y2s + model[2]*yppar*k
+  end
 
   # start expression 
   ex = quote end
@@ -138,7 +65,11 @@ function exp_expr(k    ::Int64,
         rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
         push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      if isone(k)
+        push!(ex.args, :(eaft[$(i + (j-1))] = p[$(i + k*(j-1))]*exp($coex)))
+      else
+        push!(ex.args, :(eaft[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      end
     end
   end 
   # extinction 
@@ -217,14 +148,22 @@ function noevents_expr(si   ::Int64,
     if model[1]
       push!(ex.args, :(eaft[$(v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + s.h)]))
+      else
+        push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      end
     end
 
     # extinction 
     if model[2] 
       push!(ex.args, :(eaft[$(m2s + v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + h + s.h + ts)]))
+      else
+        push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      end
     end
 
     # dispersal
@@ -246,8 +185,13 @@ function noevents_expr(si   ::Int64,
   # add hidden state shifts
   for hi in setdiff(0:(h-1), s.h)
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    if isone(k)
+      push!(ex.args, :(p[$(2h + s.h*(h-1) + hi)]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    end
   end
+
 
   # multiply by u
   ex = :(-1.0 * $ex * u[$(si + wu)])
@@ -300,14 +244,22 @@ function noevents_expr(si     ::Int64,
     if model[1]
       push!(ex.args, :(eaft[$(v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + s.h)]))
+      else
+        push!(ex.args, :(p[$(v + s.h*(k+1))]))
+      end
     end
 
     # extinction 
     if model[2] 
       push!(ex.args, :(eaft[$(m2s + v + s.h*k)]))
     else
-      push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      if isone(k)
+        push!(ex.args, :(p[$(v + h + s.h + ts)]))
+      else
+        push!(ex.args, :(p[$(v + (k+1)*h + s.h*k + ts)]))
+      end
     end
 
     # dispersal
@@ -329,7 +281,11 @@ function noevents_expr(si     ::Int64,
   # add hidden state shifts
   for hi in setdiff(0:(h-1), s.h)
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    if isone(k)
+      push!(ex.args, :(p[$(h*3k + s.h*(h-1) + hi)]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)]))
+    end
   end
 
   # multiply by u
@@ -554,8 +510,13 @@ function hidtran_expr(s  ::Sgh,
   for j in hs
     hi = S[j].h
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
-                     u[$j, $i]))
+    if isone(k)
+      push!(ex.args, :(p[$(2h + s.h*(h-1) + hi)] * 
+                       u[$j, $i]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
+                       u[$j, $i]))
+    end
   end
   return ex
 end
@@ -590,8 +551,13 @@ function hidtran_expr(s  ::Sgh,
   for i in hs
     hi = S[i].h
     hi -= s.h <= hi ? 0 : -1
-    push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
-                     u[$(i + wu)]))
+     if isone(k)
+      push!(ex.args, :(p[$(2h + s.h*(h-1) + hi)] * 
+                       u[$(i + wu)]))
+    else
+      push!(ex.args, :(p[$(h*(3k + 1 + k*(k-1)) + s.h*(h-1) + hi)] * 
+                       u[$(i + wu)]))
+    end
   end
   return ex
 end
@@ -815,7 +781,11 @@ function ext_expr(s    ::Sgh,
       for i in s.g push!(ex.args, :(eaft[$(m2s + k*s.h + i)])) end
     else
       ex = Expr(:call, :+)
-      for i in s.g push!(ex.args, :(p[$((k+1)*h + k*s.h + i)])) end
+      if isone(k)
+        for i in s.g push!(ex.args, :(p[$(h + s.h + i)])) end
+      else
+        for i in s.g push!(ex.args, :(p[$((k+1)*h + k*s.h + i)])) end
+      end
     end
   else
     if model[2]
@@ -904,7 +874,7 @@ end
                   af! ::Function,
                   ::Val{k},
                   ::Val{h},
-                  ::Val{ny},
+                  ::Val(ny::Int64),
                   ::Val{model}) where {k, h, ny, model}
 
 Creates Covariate GeoHiSSE ODE equation function for `k` areas, 
@@ -920,8 +890,7 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
                                   ::Val{k},
                                   ::Val{h},
                                   ::Val{ny},
-                                  ::Val{model},
-                                  ::Val{power}) where {k, h, ny, model, power}
+                                  ::Val{model}) where {k, h, ny, model}
 
   # n states
   ns = (2^k - 1)*h
@@ -934,17 +903,15 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
   popfirst!(eqs.args)
 
   # add environmental function
-  push!(eqs.args, :(af!(t, r)))
+  if any(model)
+    push!(eqs.args, :(af!(t, r)))
 
-  # compute exponential for each β*covariable
-  if power
-    expex = power_expr(k, h, ny, model)
-  else
+    # compute exponential for each β*covariable
     expex = exp_expr(k, h, ny, model)
-  end
 
-  for ex in expex.args
-    push!(eqs.args, ex)
+    for ex in expex.args
+      push!(eqs.args, ex)
+    end
   end
 
   for si = Base.OneTo(ns)
@@ -981,15 +948,20 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     end
 
     # hidden states transitions
-    hid = h > 1 ? hidtran_expr(s, S, ns,k, h, false) : :0.0
+    hid = h > 1 ? hidtran_expr(s, S, ns, k, h, false) : :0.0
 
     # within-region speciation
     wrs = wrspec_expr(si, s, ns, k, model)
 
     # push `D` equation to to eqs
     if isone(ls)
-      push!(eqs.args, 
-        :(du[$si] = $nev + $dis + $hid + $wrs))
+      if isone(k)
+        push!(eqs.args, 
+          :(du[$si] = $nev + $hid + $wrs))
+      else
+        push!(eqs.args, 
+          :(du[$si] = $nev + $dis + $hid + $wrs))
+      end
     elseif ls == k
       push!(eqs.args, 
         :(du[$si] = $nev + $lex + $hid + $wrs + $brs))
@@ -1026,8 +998,13 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
 
     # push `E` equation to to eqs
     if isone(ls)
-      push!(eqs.args, 
-        :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
+      if isone(k)
+        push!(eqs.args, 
+          :(du[$(si + ns)] = $nev + $ext + $hid + $wrs))
+      else
+        push!(eqs.args, 
+          :(du[$(si + ns)] = $nev + $ext + $dis + $hid + $wrs))
+      end
     elseif ls == k
       push!(eqs.args, 
         :(du[$(si + ns)] = $nev + $ext + $hid + $wrs + $brs))
@@ -1044,7 +1021,7 @@ Creates Covariate GeoHiSSE ODE equation function for `k` areas,
     eqs.args[append!([(end-(ns*2)+1):2:end...],
             [(end-(ns*2)+2):2:end...])]
 
-  #Core.println(eqs)
+  @debug eqs
 
   return quote 
     @inbounds begin
@@ -1063,7 +1040,7 @@ end
 """
     make_egeohisse(::Val{k},
                    ::Val{h},
-                   ::Val{ny},
+                   ::Val(ny::Int64),
                    ::Val{model},
                    ::Val{power},
                    af!::Function) where {k, h, ny, model, power}
@@ -1074,26 +1051,27 @@ function make_egeohisse(::Val{k},
                         ::Val{h},
                         ::Val{ny},
                         ::Val{model},
-                        ::Val{power},
-                        af!::Function) where {k, h, ny, model, power}
+                        af!::Function) where {k, h, ny, model}
 
   r    = Array{Float64,1}(undef, ny)
   eaft = Array{Float64,1}(undef,
     model[1]*k*h + model[2]*k*h + model[3]*k*(k-1)*h)
 
   # make ode function with closure
-  ode_fun = (du::Array{Float64,1}, 
-             u::Array{Float64,1}, 
-             p::Array{Float64,1}, 
-             t::Float64) -> 
+  ode_fun = let r = r, eaft = eaft, af! = af!
+    (du::Array{Float64,1}, 
+     u::Array{Float64,1}, 
+     p::Array{Float64,1}, 
+     t::Float64) -> 
     begin
       geohisse_full(du::Array{Float64,1},
                     u ::Array{Float64,1},
                     p ::Array{Float64,1},
                     t ::Float64,
-                    r,eaft,af!,Val(k),Val(h),Val(ny),Val(model),Val(power))
+                    r,eaft,af!,Val(k::Int64),Val(h::Int64),Val(ny::Int64),Val(model::NTuple{3, Bool}))
       return nothing
     end
+  end
 
   return ode_fun
 end
@@ -1113,7 +1091,7 @@ end
                af! ::Function,
                ::Val{k},
                ::Val{h},
-               ::Val{ny},
+               ::Val(ny::Int64),
                ::Val{model}) where {k, h, ny, model}
 
 Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas, 
@@ -1198,8 +1176,7 @@ Creates Covariate GeoHiSSE Extinction ODE equation for `k` areas,
 
   end
 
-  # print for checking
-  #Core.println(eqs)
+  @debug eqs
 
   return quote 
     @inbounds begin
@@ -1217,17 +1194,17 @@ end
 """
     make_egeohisse_E(::Val{k},
                      ::Val{h},
-                     ::Val{ny},
+                     ::Val(ny::Int64),
                      ::Val{model},
                      af!::Function) where {k, h, ny, model}
 
 Make closure for Extinction function of EGeoHiSSE.
 """
 function make_egeohisse_E(::Val{k},
-                        ::Val{h},
-                        ::Val{ny},
-                        ::Val{model},
-                        af!::Function) where {k, h, ny, model}
+                          ::Val{h},
+                          ::Val{ny},
+                          ::Val{model},
+                          af!::Function) where {k, h, ny, model}
 
   r    = Array{Float64,1}(undef, ny)
   eaft = Array{Float64,1}(undef,
@@ -1243,7 +1220,7 @@ function make_egeohisse_E(::Val{k},
                  u ::Array{Float64,1}, 
                  p ::Array{Float64,1}, 
                  t ::Float64,
-                 r, eaft, af!, Val(k), Val(h), Val(ny), Val(model))
+                 r, eaft, af!, Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))
       return nothing
     end
 
@@ -1362,8 +1339,7 @@ Creates Covariate GeoHiSSE Likelihood ODE equation function for `k` areas,
 
   ## aesthetic touches
   # sort `du`s
-
-  #Core.println(eqs)
+  @debug eqs
 
   return quote 
     @inbounds begin
@@ -1381,7 +1357,7 @@ end
 """
     make_egeohisse_M(::Val{k},
                      ::Val{h},
-                     ::Val{ny},
+                     ::Val(ny::Int64),
                      ::Val{model},
                      af!::Function) where {k, h, ny, model}
 
@@ -1413,7 +1389,7 @@ function make_egeohisse_M(::Val{k},
                  pp::Array{Array{Float64,1},1}, 
                  t ::Float64,
                  r, eaft, rE, af!, afE!, idxl,
-                 Val(k), Val(h), Val(ny), Val(model))
+                 Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))
       return nothing
     end
 

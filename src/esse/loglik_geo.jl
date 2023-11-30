@@ -26,41 +26,32 @@ and prior, **lpf**, functions.
 function make_lhf(llf            ::Function, 
                   lpf            ::Function, 
                   assign_hidfacs!::Function,
-                  dcp            ::Dict{Int64,Int64},
-                  dcfp           ::Dict{Int64,Int64})
+                  dcp            ::Dict{Int64,Int64})
 
-  ks  = keys(dcp)
-  ksf = keys(dcfp)
+  ks = keys(dcp)
 
-  function f(p ::Array{Float64,1}, 
-             fp::Array{Float64,1})
-
-    # constraints
-    for wp in ks
-      while haskey(dcp, wp)
-        tp = dcp[wp]
-        p[tp] = p[wp]
-        wp = tp
+  f = let ks = ks, assign_hidfacs! = assign_hidfacs!, dcp = dcp, llf = llf, lpf = lpf
+    (p ::Array{Float64,1}, 
+     fp::Array{Float64,1},
+     t ::Float64) ->
+    begin
+      # constraints
+      for wp in ks
+        while haskey(dcp, wp)
+          tp = dcp[wp]
+          p[tp] = p[wp]
+          wp = tp
+        end
       end
+
+     # factors
+      assign_hidfacs!(p, fp)
+
+      return t*(llf(p) + lpf(p, fp))
     end
-
-    for wp in ksf
-      while haskey(dcfp, wp)
-        tp = dcfp[wp]
-        fp[tp] = fp[wp]
-        wp = tp
-      end
-    end
-
-   # factors
-    assign_hidfacs!(p, fp)
-
-    return llf(p) + lpf(p, fp)
   end
-
   return f
 end
-
 
 
 
@@ -70,24 +61,22 @@ end
                 abts1    ::Array{Float64,1},
                 abts2    ::Array{Float64,1},
                 trios    ::Array{Array{Int64,1},1},
-                ode_solve::Function,
+                int      ::DiffEqBase.DEIntegrator,
                 λevent!  ::Function, 
                 rootll   ::Function,
-                k        ::Int64,
-                h        ::Int64,
-                ns       ::Int64)
+                ns       ::Int64,
+                ned      ::Int64)
 
 Make likelihood function for a tree given an ODE function.
 """
 function make_loglik(X        ::Array{Array{Float64,1},1},
+                     U        ::Array{Array{Float64,1},1},
                      abts1    ::Array{Float64,1},
                      abts2    ::Array{Float64,1},
                      trios    ::Array{Array{Int64,1},1},
                      int      ::DiffEqBase.DEIntegrator,
                      λevent!  ::Function, 
                      rootll   ::Function,
-                     k        ::Int64,
-                     h        ::Int64,
                      ns       ::Int64,
                      ned      ::Int64)
 
@@ -109,16 +98,13 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
 
         pr, d1, d2 = triad::Array{Int64,1}
 
-        ud1 = @views solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
-
-        check_negs(ud1, ns) && return -Inf
-
-        ud2 = @views solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
-
-        check_negs(ud2, ns) && return -Inf
+        U[d1] = solvef(int, X[d1], abts2[d1], abts1[d1])::Array{Float64,1}
+        U[d2] = solvef(int, X[d2], abts2[d2], abts1[d2])::Array{Float64,1}
 
         # update likelihoods with speciation event
-        λevent!(abts2[pr], llik, ud1, ud2, p)
+        λevent!(abts2[pr], llik, U[d1], U[d2], p)
+
+        check_negs(llik, ns) && return -Inf
 
         # loglik to sum for integration
         tosum = normbysum!(llik, ns)
@@ -129,18 +115,19 @@ function make_loglik(X        ::Array{Array{Float64,1},1},
         # assign extinction probabilities and 
         # check for extinction of `1.0`
         @views Xpr = X[pr]
+        @views ud1 = U[d1]
         for i in Base.OneTo(ns)
-          ud1[i+ns] > 1.0 && return -Inf
+          ud1[i+ns] >= 1.0 && return -Inf
           Xpr[i+ns] = ud1[i+ns]
           Xpr[i]    = llik[i]
         end
-
       end
 
       # assign root likelihood in non log terms &
       # assign root extinction probabilities
       @views Xned = X[ned]
       for i in Base.OneTo(ns)
+        Xned[i+ns] >= 1.0 && return -Inf
         llik[i] = Xned[i]
         extp[i] = Xned[i+ns]
       end
@@ -173,10 +160,11 @@ end
                 r   ::Array{Float64,1},
                 ::Val{k}, 
                 ::Val{h}, 
-                ::Val{ny}, 
+                ::Val(ny::Int64), 
                 ::Val{mdS}) where {k,h,ny,mdS}
 
-Generated function for full tree likelihood at the root for normal likelihoods.
+Generated function for full tree likelihood at the root for 
+**pruning** likelihoods.
 """
 @generated function rootll_full(t   ::Float64,
                                 llik::Array{Float64,1},
@@ -197,14 +185,16 @@ Generated function for full tree likelihood at the root for normal likelihoods.
   popfirst!(eqs.args)
 
   if model[1]
-   # last non β parameters
-    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+
+    # last non β parameters
+    bbase = isone(k) ? 
+      (2h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
 
     # ncov
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
     # y per parameter
-    yppar = isone(ny) ? 1 : div(ny,ncov)
+    yppar = isone(ny) ? 1 : ceil(Int64,ny/ncov)
 
     # add environmental function
     push!(eqs.args, :(af!(t, r)))
@@ -217,7 +207,11 @@ Generated function for full tree likelihood at the root for normal likelihoods.
         rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
         push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      if isone(k)
+        push!(eqs.args, :(λts[$(i + (j-1))] = p[$(i + (j-1))]*exp($coex)))
+      else
+        push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      end
     end
 
     eq = Expr(:call, :+)
@@ -255,16 +249,22 @@ Generated function for full tree likelihood at the root for normal likelihoods.
       end
     end
 
+  # not speciation model
   else
-
 
     eq = Expr(:call, :+)
     for j in Base.OneTo(h)
       # for single areas
       for i in Base.OneTo(k)
-        push!(eq.args,
-          :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
-            (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+        if isone(k)
+          push!(eq.args,
+            :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+              (p[$(i + (j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+        else
+          push!(eq.args,
+            :(llik[$(i + (2^k-1)*(j-1))]*w[$(i + (2^k-1)*(j-1))] / 
+              (p[$(i + (k+1)*(j-1))]*(1.0-extp[$(i + (j-1)*(2^k-1))])^2)))
+        end
       end
       # for widespread
       for i in k+1:2^k-1
@@ -296,7 +296,7 @@ Generated function for full tree likelihood at the root for normal likelihoods.
 
   push!(eqs.args, :($eq))
 
-  #Core.println(eqs)
+  @debug eqs
 
   return quote
     @inbounds begin
@@ -304,6 +304,7 @@ Generated function for full tree likelihood at the root for normal likelihoods.
     end
   end
 end
+
 
 
 
@@ -321,11 +322,11 @@ end
                 r   ::Array{Float64,1},
                 ::Val{k}, 
                 ::Val{h}, 
-                ::Val{ny}, 
+                ::Val(ny::Int64), 
                 ::Val{S},
                 ::Val{mdS})
 
-Generated function for speciation event likelihoods for normal likelihood.
+Generated function for speciation event likelihoods for **pruning** algorithm.
 """
 @generated function λevent_full(t   ::Float64, 
                                 llik::Array{Float64,1}, 
@@ -347,15 +348,16 @@ Generated function for speciation event likelihoods for normal likelihood.
 
   # if speciation model
   if model[1] 
- 
+
     # last non β parameters
-    bbase = h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1)
+    bbase = isone(k) ? 
+      (2h + h*(h-1)) : (h*(k+1) + 2*k*h + k*(k-1)*h + h*(h-1))
 
     # ncov
     ncov = model[1]*k + model[2]*k + model[3]*k*(k-1)
 
     # y per parameter
-    yppar = isone(ny) ? 1 : div(ny,ncov)
+    yppar = isone(ny) ? 1 : ceil(Int64,ny/ncov)
 
     # add environmental function
     push!(eqs.args, :(af!(t, r)))
@@ -368,7 +370,11 @@ Generated function for speciation event likelihoods for normal likelihood.
         rex = isone(ny) ? :(r1) : :(r[$(yi+yppar*(i-1))])
         push!(coex.args, :(p[$(bbase + yi + yppar*((i-1) + k*(j-1)))] * $rex))
       end
-      push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      if isone(k)
+        push!(eqs.args, :(λts[$(i + (j-1))] = p[$(i + (j-1))]*exp($coex)))
+      else
+        push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
+      end
     end
 
     # likelihood for individual areas states
@@ -408,9 +414,15 @@ Generated function for speciation event likelihoods for normal likelihood.
 
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
-      push!(eqs.args, 
-          :(llik[$(i+(2^k-1)*(j-1))] = 
-            ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
+      if isone(k)
+        push!(eqs.args, 
+            :(llik[$(i+(2^k-1)*(j-1))] = 
+              ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(j-1))]))
+      else
+        push!(eqs.args, 
+            :(llik[$(i+(2^k-1)*(j-1))] = 
+              ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
+      end
     end
 
     # likelihood for widespread states
@@ -439,8 +451,7 @@ Generated function for speciation event likelihoods for normal likelihood.
     end
   end
 
-  #Core.println(eqs)
-
+  @debug eqs
 
   return quote 
     @inbounds begin
@@ -467,10 +478,10 @@ end
                 af! ::Function,
                 ::Val{k}, 
                 ::Val{h}, 
-                ::Val{ny}, 
+                ::Val(ny::Int64), 
                 ::Val{model}) where {k, h, ny, model}
 
-Generated function for speciation event likelihoods for flow algorithm.
+Generated function for speciation event likelihoods for **flow**  algorithm.
 """
 @generated function λevent_full(t   ::Float64, 
                                 llik::Array{Array{Float64,1},1}, 
@@ -517,10 +528,14 @@ Generated function for speciation event likelihoods for flow algorithm.
       push!(eqs.args, :(λts[$(i + k*(j-1))] = p[$(i + (k+1)*(j-1))]*exp($coex)))
     end
 
+    # preallocate llik
+    push!(eqs.args, 
+      :(lpr = llik[pr]))
+
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
-          :(llik[pr][$(i+(2^k-1)*(j-1))] = 
+          :(lpr[$(i+(2^k-1)*(j-1))] = 
             ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * λts[$(i+k*(j-1))]))
     end
 
@@ -546,16 +561,20 @@ Generated function for speciation event likelihoods for flow algorithm.
             0.5 * p[$((k+1)*(1+s.h))]))
       end
 
-      push!(eqs.args, :(llik[pr][$(i + (2^k-1)*(j-1))] = $ex))
+      push!(eqs.args, :(lpr[$(i + (2^k-1)*(j-1))] = $ex))
     end
 
   # *not* speciation model
   else
 
+    # preallocate llik
+    push!(eqs.args, 
+      :(lpr = llik[pr]))
+
     # likelihood for individual areas states
     for j = Base.OneTo(h), i = Base.OneTo(k)
       push!(eqs.args, 
-          :(llik[pr][$(i+(2^k-1)*(j-1))] = 
+          :(lpr[$(i+(2^k-1)*(j-1))] = 
             ud1[$(i+(2^k-1)*(j-1))] * ud2[$(i+(2^k-1)*(j-1))] * p[$(i+(k+1)*(j-1))]))
     end
 
@@ -581,12 +600,11 @@ Generated function for speciation event likelihoods for flow algorithm.
             0.5 * p[$((k+1)*(1+s.h))]))
       end
 
-      push!(eqs.args, :(llik[pr][$(i + (2^k-1)*(j-1))] = $ex))
+      push!(eqs.args, :(lpr[$(i + (2^k-1)*(j-1))] = $ex))
     end
   end
 
-  #Core.println(eqs)
-
+  @debug eqs
 
   return quote 
     @inbounds begin
@@ -617,7 +635,6 @@ end
 
 
 
-
 """
     normbysum!(v::Array{Float64,1}, ns::Int64)
 
@@ -637,91 +654,154 @@ end
 
 
 
+"""
+    make_prior_updates(pupd   ::Array{Int64,1},
+                       phid   ::Array{Int64,1},
+                       mvhfs  ::Array{Array{Int64,1},1},
+                       βpriors::Tuple{Float64,Float64},
+                       k      ::Int64,
+                       h      ::Int64,
+                       ny     ::Int64,
+                       model  ::Tuple{Bool,Bool,Bool})
+
+Make update iterators for priors.
+"""
+function make_prior_updates(pupd   ::Array{Int64,1},
+                            phid   ::Array{Int64,1},
+                            mvhfs  ::Array{Array{Int64,1},1},
+                            hfgps  ::Array{Array{Bool,1},1},
+                            βpriors::Tuple{Float64,Float64},
+                            k      ::Int64,
+                            h      ::Int64,
+                            ny     ::Int64,
+                            model  ::Tuple{Bool,Bool,Bool})
+
+  if isone(k)
+    λupds = intersect(1:h, pupd)
+    μupds = intersect((h+1):2h, pupd)
+    lupds = Int64[]
+    gupds = Int64[]
+    qupds = intersect((2h+1):(2h + h*(h-1)), pupd)
+    bbase = (2h+h*(h-1))
+    yppar = ny == 1 ? 1 : ceil(Int64,ny, model[1] + model[2])
+  else
+    λupds = intersect(1:(h*(k+1)), pupd)
+    μupds = intersect((h*(k+1)+1):(h*(k+1)+k*h), pupd)
+    gupds = intersect((h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h), pupd)
+    lupds = intersect((h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h), pupd)
+    qupds = intersect((h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)), 
+              pupd)
+    bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
+    if any(model)
+      yppar = ny == 1 ? 1 : ceil(Int64, ny/(
+        model[1]*k + 
+        model[2]*k + 
+        model[3]*k*(k-1)))
+    else
+      yppar = 0
+    end
+  end
+
+  # hidden factors
+  hfps = copy(phid)
+  for (i,v) in enumerate(mvhfs), (j,n) in enumerate(v)
+    hfgps[i][j] && push!(hfps, n)
+  end
+
+  ncov  = model[1]*yppar*h + model[2]*yppar*h + model[3]*yppar*h
+  βupds = intersect((bbase+1):(bbase+k*ncov), pupd)
+
+  βp_m, βp_v = βpriors
+
+  ss = "prior indices: \n"
+  ss *= "λupds = $λupds \n"
+  ss *= "μupds = $μupds \n"
+  ss *= "lupds = $lupds \n"
+  ss *= "gupds = $gupds \n"
+  ss *= "qupds = $qupds \n"
+  ss *= "βupds = $βupds \n"
+  ss *= "hfps = $hfps"
+
+  @debug ss
+
+  return λupds, μupds, lupds, gupds, qupds, βupds, hfps, βp_m, βp_v
+end
+
+
+
 
 """
-    make_lpf(pupd   ::Array{Int64,1},
-             phid   ::Array{Int64,1},
+    make_lpf(λupds  ::Array{Int64,1}, 
+             μupds  ::Array{Int64,1}, 
+             lupds  ::Array{Int64,1}, 
+             gupds  ::Array{Int64,1}, 
+             qupds  ::Array{Int64,1}, 
+             βupds  ::Array{Int64,1}, 
+             hfps   ::Array{Int64,1}, 
              λpriors::Float64,
              μpriors::Float64,
              gpriors::Float64,
              lpriors::Float64,
              qpriors::Float64,
-             βpriors::Tuple{Float64,Float64},
-             hpriors::Float64,
-             k      ::Int64,
-             h      ::Int64,
-             model  ::Tuple{Bool,Bool,Bool})
+             βp_m   ::Float64, 
+             βp_v   ::Float64,
+             hpriors::Float64)
 
 Make log-prior function.
 """
-function make_lpf(pupd   ::Array{Int64,1},
-                  phid   ::Array{Int64,1},
+function make_lpf(λupds  ::Array{Int64,1}, 
+                  μupds  ::Array{Int64,1}, 
+                  lupds  ::Array{Int64,1}, 
+                  gupds  ::Array{Int64,1}, 
+                  qupds  ::Array{Int64,1}, 
+                  βupds  ::Array{Int64,1}, 
+                  hfps   ::Array{Int64,1}, 
                   λpriors::Float64,
                   μpriors::Float64,
                   gpriors::Float64,
                   lpriors::Float64,
                   qpriors::Float64,
-                  βpriors::Tuple{Float64,Float64},
-                  hpriors::Float64,
-                  k      ::Int64,
-                  h      ::Int64,
-                  ny     ::Int64,
-                  model  ::Tuple{Bool,Bool,Bool})
-
-  λupds = intersect(1:(h*(k+1)), pupd)
-  μupds = intersect((h*(k+1)+1):(h*(k+1)+k*h), pupd)
-  gupds = intersect((h*(k+1)+k*h+1):(h*(k+1)+k*h+k*(k-1)*h), pupd)
-  lupds = intersect((h*(k+1)+k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h), pupd)
-  qupds = intersect((h*(k+1)+2k*h+k*(k-1)*h+1):(h*(k+1)+2k*h+k*(k-1)*h+h*(h-1)), 
-            pupd)
-  bbase = (h*(k+1)+2k*h+k*(k-1)*h+h*(h-1))
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
-
-  ncov  = model[1]*k*yppar + model[2]*k*yppar + model[3]*k*(k-1)*yppar
-  βupds = intersect((bbase+1):(bbase+ncov), pupd)
-
-  βp_m, βp_v = βpriors
+                  βp_m   ::Float64, 
+                  βp_v   ::Float64,
+                  hpriors::Float64)
 
   function f(p ::Array{Float64,1}, 
              fp::Array{Float64,1})
     lq = 0.0
 
     # speciation priors
-    for i in λupds
-      lq += logdexp(p[i], λpriors)
+    for i::Int64 in λupds
+      lq += logdexp(p[i], λpriors)::Float64
     end
 
     # global extinction priors
-    for i in μupds
-      lq += logdexp(p[i], μpriors)
+    for i::Int64 in μupds
+      lq += logdexp(p[i], μpriors)::Float64
     end
 
     # area colonization priors
-    for i in gupds
-      lq += logdexp(p[i], gpriors)
+    for i::Int64 in gupds
+      lq += logdexp(p[i], gpriors)::Float64
     end
 
     # area loss priors
-    for i in lupds
-      lq += logdexp(p[i], lpriors)
+    for i::Int64 in lupds
+      lq += logdexp(p[i], lpriors)::Float64
     end
 
     # hidden states transition
-    for i in qupds
-      lq += logdexp(p[i], qpriors)
+    for i::Int64 in qupds
+      lq += logdexp(p[i], qpriors)::Float64
     end
 
     # betas
-    for i in βupds
-      lq += logdnorm(p[i], βp_m, βp_v)
+    for i::Int64 in βupds
+      lq += logdnorm(p[i], βp_m, βp_v)::Float64
     end
   
     # hidden states factors
-    for i in phid
-      lq += logdexp(fp[i], hpriors)
+    for i::Int64 in hfps
+      lq += logdexp(fp[i], hpriors)::Float64
     end
 
     return lq
@@ -736,20 +816,16 @@ end
 
 """
     make_assign_hidfacs(::Val{k},
-                        ::Val{h},
-                        ::Val{ny},
-                        ::Val{model}) where {k, h, ny, model})
+                        ::Val{h}) where {k, h}
 
 Generated function to assign factors to parameters given 
 factor+parameter `fp` vector.
 """
 function make_assign_hidfacs(::Val{k},
-                             ::Val{h},
-                             ::Val{ny},
-                             ::Val{model}) where {k, h, ny, model}
+                             ::Val{h}) where {k, h}
 
   assign_hidfacs! = (p::Array{Float64,1}, fp::Array{Float64,1}) -> 
-    assign_hidfacs_full(p, fp, Val(k), Val(h), Val(ny), Val(model))
+    assign_hidfacs_full(p, fp, Val(k::Int64), Val(h::Int64))
 
   return assign_hidfacs!
 end
@@ -759,12 +835,10 @@ end
 
 
 """
-    assign_hidfacs(p ::Array{Float64,1},
-                   fp::Array{Float64,1},
-                   ::Val{k},
-                   ::Val{h},
-                   ::Val{ny},
-                   ::Val{model}) where {k, h, ny, model}
+    assign_hidfacs_full(p ::Array{Float64,1},
+                        fp::Array{Float64,1},
+                        ::Val{k},
+                        ::Val{h})  where {k, h}
 
 Generated function to assign factors to parameters given 
 factor+parameter `fp` vector.
@@ -772,84 +846,30 @@ factor+parameter `fp` vector.
 @generated function assign_hidfacs_full(p ::Array{Float64,1},
                                         fp::Array{Float64,1},
                                         ::Val{k},
-                                        ::Val{h},
-                                        ::Val{ny},
-                                        ::Val{model}) where {k, h, ny, model}
-
-  # number of covariates
-  yppar = ny == 1 ? 1 : div(ny,
-    model[1]*k + 
-    model[2]*k + 
-    model[3]*k*(k-1))
-
-  # starting indices for models 2 and 3
-  m2s = model[1]*k*h*yppar
-  m3s = m2s + model[2]*k*h*yppar
+                                        ::Val{h}) where {k, h}
 
   ex = quote end
   pop!(ex.args)
 
-  for j in 1:(h-1)
-    for i in 1:k
+  if isone(k)
 
+    for j in 1:(h-1)
       # speciation
-      push!(ex.args, :(p[$((k+1)*j + i)] = 
-        p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
+      s = 0
+      push!(ex.args, :(p[$(s+j+1)] = p[$(s+j)] + fp[$(s+j+1)]))
+    end
 
-      # extinction
-      s = (k+1)*h 
-      push!(ex.args, 
-        :(p[$(s + k*j + i)] = 
-            p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
-
-      # gain
-      s = (2k+1)*h
-      for a in 1:(k-1)
-        push!(ex.args, 
-          :(p[$(s + k*(k-1)*j + a + (k-1)*(i-1))] = 
-              p[$(s + k*(k-1)*(j-1) + a + (k-1)*(i-1))] + 
-              fp[$(s + k*(k-1)*j + a + (k-1)*(i-1))]))
-      end
-
-      # loss 
-      s = (2k+1 + k*(k-1))*h
-      push!(ex.args, 
-        :(p[$(s + k*j + i)] = 
-            p[$(s + k*(j-1) + i)] + fp[$(s + k*j + i)]))
-
-      # betas
-      s = (3k+1+k*(k-1))*h + h*(h-1)
-      if model[1]
-        for l = Base.OneTo(yppar)
-          push!(ex.args, 
-            :(p[$(s + l + yppar*(i-1) + k*j*yppar)] = 
-              p[$(s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
-              fp[$(s + l + yppar*(i-1) + k*j*yppar)]))
-        end
-      end
-      if model[2]
-        for l = Base.OneTo(yppar)
-          push!(ex.args,
-            :(p[$(s + m2s + l + yppar*(i-1) + k*j*yppar)] = 
-              p[$(s + m2s + l + yppar*(i-1) + k*(j-1)*yppar)] + 
-              fp[$(s + m2s + l + yppar*(i-1) + k*j*yppar)]))
-        end
-      end
-      if model[3]
-        for a = 1:(k-1), l = Base.OneTo(yppar)
-          push!(ex.args, 
-            :(p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)] = 
-              p[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*(j-1)*yppar)] + 
-              fp[$(s + m3s + l + (a-1)*yypar + yppar*(i-1) + k*j*yppar)]))
-        end
+  else
+    for j in 1:(h-1)
+      for i in 1
+        # within-region speciation
+        push!(ex.args, :(p[$((k+1)*j + i)] = 
+          p[$((k+1)*(j-1) + i)] + fp[$((k+1)*j + i)]))
       end
     end
-    # between-region speciation
-    push!(ex.args, :(p[$((k+1)*j + (k+1))] = 
-      (p[$((k+1)*(j-1) + (k+1))] + fp[$((k+1)*j + (k+1))])))
   end
 
-  #Core.println(ex)
+  @debug ex
 
   return quote
     @inbounds begin
@@ -884,50 +904,54 @@ end
 
 
 """
-    make_λevent(h    ::Int64, 
-                k    ::Int64, 
-                ny   ::Int64, 
+    make_λevent(::Val{h}, 
+                ::Val{k}, 
+                ::Val(ny::Int64), 
                 flow ::Bool,
-                model::NTuple{3,Bool},
-                af!  ::Function)
+                ::Val{model},
+                af!  ::Function) where {h, k, ny, model}
 
 Make function for λevent.
 """
-function make_λevent(h    ::Int64, 
-                     k    ::Int64, 
-                     ny   ::Int64, 
+function make_λevent(::Val{h}, 
+                     ::Val{k}, 
+                     ::Val{ny}, 
                      flow ::Bool,
-                     model::NTuple{3,Bool},
-                     af!  ::Function)
+                     ::Val{model},
+                     af!  ::Function) where {h, k, ny, model}
 
   λts = Array{Float64,1}(undef,h*k)
   r   = Array{Float64,1}(undef,ny)
 
   # make speciation events and closure
   if flow
-    λevent! = (t   ::Float64, 
-               llik::Array{Array{Float64,1},1},
-               ud1 ::Array{Float64,1},
-               ud2 ::Array{Float64,1},
-               p   ::Array{Float64,1},
-               pr  ::Int64) ->
-    begin
-      λevent_full(t, llik, ud1, ud2, p, pr, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))
-      return nothing
+    λevent! = let λts = λts, r = r, af! = af!
+      (t   ::Float64, 
+       llik::Array{Array{Float64,1},1},
+       ud1 ::Array{Float64,1},
+       ud2 ::Array{Float64,1},
+       p   ::Array{Float64,1},
+       pr  ::Int64) ->
+      begin
+        λevent_full(t, llik, ud1, ud2, p, pr, λts, r, af!,
+          Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))
+        return nothing
+      end
+    end
+  else
+    λevent! = let λts = λts, r = r, af! = af!
+      (t   ::Float64, 
+       llik::Array{Float64,1},
+       ud1 ::Array{Float64,1},
+       ud2 ::Array{Float64,1},
+       p   ::Array{Float64,1}) ->
+      begin
+        λevent_full(t, llik, ud1, ud2, p, λts, r, af!,
+          Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))
+        return nothing
+      end
     end
 
-  else
-    λevent! = (t   ::Float64, 
-               llik::Array{Float64,1},
-               ud1 ::Array{Float64,1},
-               ud2 ::Array{Float64,1},
-               p   ::Array{Float64,1}) ->
-    begin
-      λevent_full(t, llik, ud1, ud2, p, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))
-      return nothing
-    end
   end
 
   return λevent!
@@ -938,40 +962,37 @@ end
 
 
 """
-    make_rootll(h    ::Int64, 
-                k    ::Int64, 
-                ny   ::Int64, 
-                model::NTuple{3,Bool},
-                af!  ::Function)
+    make_rootll(::Val{h}, 
+                ::Val{k}, 
+                ::Val{ny}, 
+                ::Val{model},
+                af!  ::Function) where {h, k, ny, model}
 
 Make root conditioning likelihood function.
 """
-function make_rootll(h    ::Int64, 
-                     k    ::Int64, 
-                     ny   ::Int64, 
-                     model::NTuple{3,Bool},
-                     af!  ::Function)
+function make_rootll(::Val{h}, 
+                     ::Val{k}, 
+                     ::Val{ny}, 
+                     ::Val{model},
+                     af!  ::Function) where {h, k, ny, model}
 
   λts = Array{Float64,1}(undef,h*k)
   r   = Array{Float64,1}(undef,ny)
 
-  rootll = (t   ::Float64,
-            llik::Array{Float64,1},
-            extp::Array{Float64,1},
-            w   ::Array{Float64,1},
-            p   ::Array{Float64,1}) -> 
-    begin
-      rootll_full(t, llik, extp, w, p, λts, r, af!,
-        Val(k), Val(h), Val(ny), Val(model))::Float64
-    end
-
+  rootll = let r = r, λts = λts, af! = af!
+      (t   ::Float64,
+              llik::Array{Float64,1},
+              extp::Array{Float64,1},
+              w   ::Array{Float64,1},
+              p   ::Array{Float64,1}) -> 
+      begin
+        rootll_full(t, llik, extp, w, p, λts, r, af!,
+          Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}))::Float64
+      end
+  end
+  
   return rootll
 end
-
-
-
-
-
 
 
 

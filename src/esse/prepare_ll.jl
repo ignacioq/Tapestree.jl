@@ -26,18 +26,17 @@ Created 05 03 2020
                abts ::Array{Float64,2},
                af!  ::Function)
 
-Prepare **EGeoHiSSE** likelihoods using the **pruning** algorithm 
+Prepare **ESSE.g** likelihoods using the **pruning** algorithm 
 given input data.
 """
 function prepare_ll(X    ::Array{Array{Float64,1},1},
                     p    ::Array{Float64,1},
                     E0   ::Array{Float64,1},
-                    ns   ::Int64,
                     k    ::Int64,
                     h    ::Int64,
                     ny   ::Int64,
+                    ns   ::Int64,
                     model::NTuple{3, Bool},
-                    power::Bool,
                     abts ::Array{Float64,2},
                     af!  ::Function)
 
@@ -46,21 +45,30 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
     append!(X[i], E0)
   end
 
+  # make array to fill equations solved
+  U = deepcopy(X)
+
+  # make marginal state probabilities array
+  A = [zeros(ns) for i in Base.OneTo(lastindex(X))]
+
   # make them vectors for indexing efficiency
   abts1 = abts[:,1]
   abts2 = abts[:,2]
 
   # make speciation events and closure
-  λevent! = make_λevent(h, k, ny, false, model, af!)
+  λevent! = make_λevent(Val(h::Int64), Val(k::Int64), Val(ny::Int64), false, Val(model::NTuple{3, Bool}), af!)
 
   # make root likelihood conditioning
-  rootll = make_rootll(h, k, ny, model, af!)
+  rootll = make_rootll(Val(h::Int64), Val(k::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}), af!)
+
+  # make root likelihood conditioning for marginal ancestral states
+  rootll_nj! = make_rootll_nj(Val(h::Int64), Val(k::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}), af!)
 
   # make ODE function
-  ode_fun = make_egeohisse(Val(k), Val(h), Val(ny), Val(model), Val(power), af!)
+  ode_fun = make_egeohisse(Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}), af!)
 
   # make integral problem
-  prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0,1.0), p)
+  prob = ODEProblem(ode_fun, zeros(2*h*(2^k-1)), (0.0, 1.0), p)
 
   int = init(prob, Tsit5(),
              save_everystep  = false, 
@@ -71,7 +79,7 @@ function prepare_ll(X    ::Array{Array{Float64,1},1},
              maxiters        = 100_000_000,
              verbose         = false)
 
-  return X, int, λevent!, rootll, abts1, abts2
+  return X, U, A, int, λevent!, rootll, rootll_nj!, abts1, abts2
 end
 
 
@@ -89,7 +97,7 @@ end
                Eδt    ::Float64 = 0.01,
                ti     ::Float64 = 0.0) where{M}
 
-Prepare **EGeoHiSSE** likelihoods using the **flow** algorithm given input data.
+Prepare **ESSE.g** likelihoods using the **flow** algorithm given input data.
 """
 function prepare_ll(p    ::Array{Float64,1},
                     bts  ::Array{Float64,1},
@@ -110,7 +118,7 @@ function prepare_ll(p    ::Array{Float64,1},
   ts = [ti:Eδt:tf...]
 
   # Make extinction integral
-  egeohisse_E = make_egeohisse_E(Val(k), Val(h), Val(ny), Val(model), af!)
+  egeohisse_E = make_egeohisse_E(Val(k::Int64), Val(h::Int64), Val(ny::Int64), Val(model::NTuple{3, Bool}), af!)
 
   # Make extinction function at times `ts`
   Et = make_Et(egeohisse_E, p, E0, ts, ti, tf)
@@ -120,11 +128,12 @@ function prepare_ll(p    ::Array{Float64,1},
   nets = length(Ets) + 1
 
   # Make extinction approximated function
-  afE! = make_af(ts,  Ets, Val(ns))
+  afE! = make_af(ts,  Ets, Val(ns::Int64))
 
   # make likelihood integral
   ode_intf = 
-    make_egeohisse_M(Val(k), Val(h), Val(ny), Val(model), af!, afE!, nets)
+    make_egeohisse_M(Val(k::Int64), Val(h::Int64), Val(ny::Int64), 
+      Val(model::NTuple{3, Bool}), af!, afE!, nets)
 
   # push parameters as the last vector in Ets
   push!(Ets, p)
@@ -216,7 +225,7 @@ function prepare_ll(ode_make_lik,
 
   # Make extinction approximated function
   # ** this make order is crucial **
-  afE! = make_af(ts,  Ets, Val(ns))
+  afE! = make_af(ts,  Ets, Val(ns::Int64))
 
   # make likelihood integral
   ode_intf = ode_make_lik(afE!, nets)
