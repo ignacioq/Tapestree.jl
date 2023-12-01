@@ -15,16 +15,8 @@ INSANE uses Bayesian data augmentation (DA) to perform inference on a number of 
 ### Reading and saving newick trees
 
 Tapestree can read files in the simple newick format using the `read_newick` function:
-```jldoctest
-using Tapestree
+```julia
 tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_50.tre"))
-ntips(tree)
-
-# output
-
-50
-```
-
 ```
 
 Note that the tree has type `sT_label`, which stands for simple labelled tree. YOu can check this using
@@ -79,6 +71,11 @@ You can simulate a pure-birth tree using `sim_cpb`. For instance, for a period o
 tr = sim_cpb(10.0, 0.5)
 ```
 
+Full documentation
+```@docs
+sim_cpb
+```
+
 ##### Inference
 
 The simplest diversification model assumes no extinction and a constant speciation rate ``\lambda``, also known as, the pure-birth or Yule model. To perform inference on a tree (of type `sT_label`), we can use the `insane_cpb` function (cpb = constant pure-birth).
@@ -109,7 +106,7 @@ This time, the DA trees are different from one another since they have data augm
 plot(tv[1])
 ```
 
-##### Full documentation
+Full documentation
 ```@docs
 insane_cpb
 ```
@@ -119,7 +116,17 @@ insane_cpb
 
 ##### Simulations
 
+Full documentation
+```@docs
+insane_cbd
+```
+
 ##### Inference
+
+Full documentation
+```@docs
+insane_cbd
+```
 
 
 ### Birth-death diffusion processes

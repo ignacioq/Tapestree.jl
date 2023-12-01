@@ -15,7 +15,6 @@ makedocs(
         authors   = "Ignacio Quintero",
         checkdocs = :none)
 
-deploydocs(;
+deploydocs(
     repo="github.com/ignacioq/Tapestree.jl",
-    push_preview = true,
 )
