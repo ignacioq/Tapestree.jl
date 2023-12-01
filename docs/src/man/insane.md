@@ -118,7 +118,7 @@ insane_cpb
 
 Full documentation
 ```@docs
-insane_cbd
+sim_cbd
 ```
 
 ##### Inference
