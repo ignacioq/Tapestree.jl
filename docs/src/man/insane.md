@@ -304,7 +304,7 @@ As with the other BDD models, we can simulate both conditioned on the number of 
 
 Full documentation
 ```@docs
-insane_gbmct
+sim_gbmct
 ```
 
 ##### Inference
@@ -511,13 +511,6 @@ subclade
 lλ
 lμ
 e 
-b
-d
-ld
-lb
-nd
-t
-lt
 ```
 
 ## Insane tree manipulation functions
