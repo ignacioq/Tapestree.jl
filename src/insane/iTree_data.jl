@@ -877,7 +877,7 @@ end
                 ix  ::Int64,
                 nep ::Int64) where {T <: iTf}
 
-Return the branch length sum of `tree` at different epochs, initialized at `l`.
+Return the branch length sum of `tree` at different epochs recursively.
 """
 function _treelength!(tree::T,
                       t   ::Float64,
@@ -918,8 +918,7 @@ end
 """
     irange(tree::T, f::Function) where {T <: iTf}
 
-Return the branch length sum of `tree` based on `δt` and `fδt`
-for debugging purposes.
+Return the extrema of the output of function `f` on `tree`.
 """
 function irange(tree::T, f::Function) where {T <: iT}
 
@@ -2229,9 +2228,9 @@ end
 
 
 """
-    trextract(tree::T)
+    trextract(tree::iTree, f::Function)
 
-Make joint proposal to match simulation with tip fixed `x` value.
+Perform function `f` in each recursive tree in `tree`.
 """
 function trextract(tree::iTree, f::Function)
   tvs = typeof(f(tree))[]
@@ -2241,9 +2240,9 @@ end
 
 
 """
-    _trextract!(bls::Vector{Float64}, tree::iTree)
+    _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
 
-Extract all branch lengths.
+Perform function `f` recursively in each recursive tree in `tree`.
 """
 function _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
 

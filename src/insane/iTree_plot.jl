@@ -842,14 +842,14 @@ Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    f   ::Function,
-                   dt  ::Float64;
+                   δt  ::Float64;
                    t_af = mean,
                    q0   = [0.025, 0.975],
                    q1   = [0.25,  0.75],
                    q2   = Float64[]) where {T <: iT}
 
   # prepare data
-  ts, r = time_rate(tree, dt, f)
+  ts, r = time_rate(tree, f, δt)
   lts = lastindex(ts)
   m   = map(t_af, r)
 
@@ -940,7 +940,7 @@ end
 """
     function f(trees::Vector{T},
                f    ::Function,
-               tdt  ::Float64;
+               δt   ::Float64;
                t_af  = mean,
                tv_af = x -> quantile(x, 0.5),
                q0    = [0.025, 0.975],
@@ -951,7 +951,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
                    f    ::Function,
-                   tdt  ::Float64;
+                   δt   ::Float64;
                    t_af  = mean,
                    tv_af = x -> quantile(x, 0.5),
                    q0    = [0.025, 0.975],
@@ -966,7 +966,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   for t in trees
 
     # tree extracting function
-    tsi, ri = time_rate(t, tdt, f)
+    tsi, ri = time_rate(t, f, δt)
 
     # aggregating function
     ri = map(t_af, ri)

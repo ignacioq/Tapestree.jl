@@ -30,7 +30,7 @@ Sample conditional on number of species
               σλ      ::Float64 = 0.1,
               ϵ       ::Float64 = 0.0,
               δt      ::Float64 = 1e-3,
-              start   ::Symbol  = :stem,
+              init    ::Symbol  = :stem,
               nstar   ::Int64   = 2*n,
               p       ::Float64 = 5.0,
               warnings::Bool    = true,
@@ -45,7 +45,7 @@ function sim_gbmct(n       ::Int64;
                    σλ      ::Float64 = 0.1,
                    ϵ       ::Float64 = 0.0,
                    δt      ::Float64 = 1e-3,
-                   start   ::Symbol  = :stem,
+                   init    ::Symbol  = :stem,
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
@@ -53,7 +53,7 @@ function sim_gbmct(n       ::Int64;
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, ee, na, simt =
-    _sedges_gbmct(nstar, log(λ0), α, σλ, ϵ, δt, sqrt(δt), start, maxt)
+    _sedges_gbmct(nstar, log(λ0), α, σλ, ϵ, δt, sqrt(δt), init, maxt)
 
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
@@ -95,7 +95,8 @@ end
                   ϵ    ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
-                  start::Symbol)
+                  init::Symbol,
+                  maxt ::Float64)
 
 Simulate `gbmct` just until hitting `n` alive species. Note that this is
 a biased sample for a tree conditional on `n` species.
@@ -107,7 +108,7 @@ function _sedges_gbmct(n    ::Int64,
                        ϵ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       start::Symbol,
+                       init::Symbol,
                        maxt ::Float64)
 
   # edges
@@ -116,7 +117,7 @@ function _sedges_gbmct(n    ::Int64,
   # edges extinct
   ee = Int64[]
 
-  if start == :stem
+  if init == :stem
     # edges alive
     ea = [1]
     # first edge
@@ -136,7 +137,7 @@ function _sedges_gbmct(n    ::Int64,
     na = 1 # current number of alive species
     ne = 2 # current maximum node number
 
-  elseif start == :crown
+  elseif init == :crown
     # edges alive
     ea = [2, 3]
     # first edges
@@ -159,7 +160,7 @@ function _sedges_gbmct(n    ::Int64,
     ne = 4 # current maximum node number
 
   else
-    @error "$start does not match stem or crown"
+    @error "$init does not match stem or crown"
   end
 
   ieaa = Int64[] # indexes of ea to add
