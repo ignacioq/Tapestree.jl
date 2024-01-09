@@ -102,16 +102,16 @@ function sim_cbd(t ::Float64,
 
   if tw > t
     na += 1
-    return sTbd(t), na
+    return sTbd(t, false, false), na
   end
 
   if λorμ(λ, μ)
     d1, na = sim_cbd(t - tw, λ, μ, na)
     d2, na = sim_cbd(t - tw, λ, μ, na)
 
-    return sTbd(d1, d2, tw), na
+    return sTbd(d1, d2, tw, false, false), na
   else
-    return sTbd(tw, true), na
+    return sTbd(tw, true, false), na
   end
 end
 
