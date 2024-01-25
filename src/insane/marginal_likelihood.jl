@@ -21,7 +21,6 @@ function gss(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
 
   K = lastindex(pp)
 
-  # exponentiate
   mxs = Vector{Float64}(undef, K)
   for k in Base.OneTo(K)
     mx = -Inf
@@ -34,12 +33,12 @@ function gss(pp::Vector{Vector{Float64}}, βs::Vector{Float64})
 
   ml = 0.0
   for k in Base.OneTo(K-1)
-    ml  += (βs[k+1] - βs[k])*mxs[k]
+    dβk  = (βs[k+1] - βs[k])
+    ml  += dβk * mxs[k]
     ppk  = pp[k]
     mxk  = mxs[k]
     n    = lastindex(ppk)
     ssk  = 0.0
-    dβk = (βs[k+1] - βs[k])
     for i in Base.OneTo(n)
       ssk += exp(dβk * (ppk[i] - mxk))
     end
