@@ -424,6 +424,52 @@ end
 
 
 
+
+"""
+    function dbm(xa  ::Float64,
+                 σa  ::Float64,
+                 γ   ::Float64,
+                 fdt ::Float64,
+                 srδt::Float64,
+                 n   ::Int64)
+
+Returns a diffused Brownian motion vectors starting with rates `σa` and 
+trait `xa`.
+"""
+@inline function dbm(xa  ::Float64,
+                     σa  ::Float64,
+                     γ   ::Float64,
+                     fdt ::Float64,
+                     srδt::Float64,
+                     n   ::Int64)
+  @inbounds begin
+    l = n + 2
+    x = randn(l)
+    σ = randn(l)
+
+    # rates
+    σ[1] = σa
+    @turbo for i in Base.OneTo(n)
+      σ[i+1] *= srδt*γ
+    end
+    σ[l] *= sqrt(fdt)*γ
+    cumsum!(σ, σ)
+
+    # values
+    x[1] = xa
+    @turbo for i in Base.OneTo(n)
+      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+    end
+    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+    cumsum!(x, x)
+  end
+
+  return x, σ
+end
+
+
+
+
 """
     bb(xi  ::Float64,
        xf  ::Float64,

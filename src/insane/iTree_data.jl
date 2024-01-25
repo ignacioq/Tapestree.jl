@@ -2188,9 +2188,19 @@ end
 """
     xv(tree::T) where {T <: iTX}
 
-Return pendant edge.
+Return trait vector.
 """
 xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
+
+
+
+
+"""
+    lσ(tree::T) where {T <: iTX}
+
+Return trait rate vector.
+"""
+lσ(tree::T) where {T <: iTX} = getproperty(tree, :lσ)
 
 
 
