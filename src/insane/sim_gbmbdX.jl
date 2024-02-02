@@ -37,7 +37,7 @@ Sample conditional on number of species
 #               p       ::Float64 = 5.0,
 #               warnings::Bool    = true)
 
-# Simulate `iTbdX` according to geometric Brownian motions for birth and death
+# Simulate `iTbdx` according to geometric Brownian motions for birth and death
 # rates.
 # """
 # function sim_gbmbd(n       ::Int64;
@@ -62,7 +62,7 @@ Sample conditional on number of species
 #   end
 
 #   # transform to iTree
-#   t = iTbdX(e0, e1, el, λs, μs, ea, ee, e1[1], 1, δt)
+#   t = iTbdx(e0, e1, el, λs, μs, ea, ee, e1[1], 1, δt)
 
 #   if iszero(ntipsalive(t))
 #     warnings && @warn "tree went extinct"
@@ -76,7 +76,7 @@ Sample conditional on number of species
 
 #   if iszero(c)
 #     warnings && @warn "tree not sampled, try increasing `p`"
-#     return iTbdX(0.0, 0.0, 0.0, false, false, Float64[], Float64[])
+#     return iTbdx(0.0, 0.0, 0.0, false, false, Float64[], Float64[])
 #   else
 #     # cut the tree
 #     t = cutbottom(t, simt - c)
@@ -336,7 +336,7 @@ Sample conditional on number of species
 #               nlim::Int64   = 10_000,
 #               init::Symbol  = :crown)
 
-# Simulate `iTbdX` according to geometric Brownian motions for birth and death
+# Simulate `iTbdx` according to geometric Brownian motions for birth and death
 # rates.
 # """
 # function sim_gbmbd(t   ::Float64;
@@ -362,7 +362,7 @@ Sample conditional on number of species
 #       @warn "maximum number of lineages surpassed"
 #     end
 
-#     tree = iTbdX(d1, d2, 0.0, δt, 0.0, false, false,
+#     tree = iTbdx(d1, d2, 0.0, δt, 0.0, false, false,
 #       Float64[lλ0, lλ0], Float64[lμ0, lμ0])
 
 #   elseif init === :stem
@@ -397,7 +397,7 @@ Sample conditional on number of species
                nn  ::Int64,
                nlim::Int64)
 
-Simulate `iTbdX` according to geometric Brownian motions for birth and death
+Simulate `iTbdx` according to geometric Brownian motions for birth and death
 rates, with a limit on the number lineages allowed to reach.
 """
 function _sim_gbmbd(t   ::Float64,
@@ -443,21 +443,21 @@ function _sim_gbmbd(t   ::Float64,
           if λorμ(λm, μm)
             nn += 1
             na  += 2
-            return iTbdX(iTbdX(0.0, δt, 0.0, false, false,
+            return iTbdx(iTbdx(0.0, δt, 0.0, false, false,
                                Float64[λt1, λt1], Float64[μt1, μt1],
                                Float64[xt1, xt1]),
-                         iTbdX(0.0, δt, 0.0, false, false,
+                         iTbdx(0.0, δt, 0.0, false, false,
                                Float64[λt1, λt1], Float64[μt1, μt1],
                                Float64[xt1, xt1]),
                          bt, δt, t, false, false, λv, μv, xv), na, nn
           # if extinction
           else
-            return iTbdX(bt, δt, t, true, false, λv, μv, xv), na, nn
+            return iTbdx(bt, δt, t, true, false, λv, μv, xv), na, nn
           end
         end
 
         na += 1
-        return iTbdX(bt, δt, t, false, false, λv, μv, xv), na, nn
+        return iTbdx(bt, δt, t, false, false, λv, μv, xv), na, nn
       end
 
       t  -= δt
@@ -481,10 +481,10 @@ function _sim_gbmbd(t   ::Float64,
           td2, na, nn =
             _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, xt1, βλ, σx, δt, srδt, na, nn, nlim)
 
-          return iTbdX(td1, td2, bt, δt, δt, false, false, λv, μv, xv), na, nn
+          return iTbdx(td1, td2, bt, δt, δt, false, false, λv, μv, xv), na, nn
         # if extinction
         else
-          return iTbdX(bt, δt, δt, true, false, λv, μv, xv), na, nn
+          return iTbdx(bt, δt, δt, true, false, λv, μv, xv), na, nn
         end
       end
 
@@ -494,7 +494,7 @@ function _sim_gbmbd(t   ::Float64,
     end
   end
 
-  return iTbdX(), na, nn
+  return iTbdx(), na, nn
 end
 
 
@@ -522,7 +522,7 @@ end
                  xfst::Vector{Float64},
                  est ::Vector{Float64})
 
-Simulate `iTbdX` according to geometric Brownian motions for birth and death
+Simulate `iTbdx` according to geometric Brownian motions for birth and death
 rates, with a limit on the number lineages allowed to reach.
 """
 function _sim_gbmbd_t(t   ::Float64,
@@ -580,23 +580,23 @@ function _sim_gbmbd_t(t   ::Float64,
               nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
             end
             if nlr < lr && lU >= nlr
-              return iTbdX(), na, nn, NaN
+              return iTbdx(), na, nn, NaN
             else
               push!(xist, xv[1], xv[1])
               push!(xfst, xt1,   xt1)
               push!(est,  bt,    bt)
 
-              return iTbdX(iTbdX(0.0, δt, 0.0, false, false,
+              return iTbdx(iTbdx(0.0, δt, 0.0, false, false,
                                  Float64[λt1, λt1], Float64[μt1, μt1],
                                  Float64[xt1, xt1]),
-                           iTbdX(0.0, δt, 0.0, false, false,
+                           iTbdx(0.0, δt, 0.0, false, false,
                                 Float64[λt1, λt1], Float64[μt1, μt1],
                                 Float64[xt1, xt1]),
                            bt, δt, t, false, false, λv, μv, xv), na, nn, nlr
             end
           # if extinction
           else
-            return iTbdX(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
+            return iTbdx(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
           end
         end
 
@@ -606,13 +606,13 @@ function _sim_gbmbd_t(t   ::Float64,
           nlr += log(Iρi * Float64(na)/Float64(na-1))
         end
         if nlr < lr && lU >= nlr
-          return iTbdX(), na, nn, NaN
+          return iTbdx(), na, nn, NaN
         else
           push!(xist, xv[1])
           push!(xfst, xt1)
           push!(est,  bt)
 
-          return iTbdX(bt, δt, t, false, false, λv, μv, xv), na, nn, nlr
+          return iTbdx(bt, δt, t, false, false, λv, μv, xv), na, nn, nlr
         end
       end
 
@@ -639,11 +639,11 @@ function _sim_gbmbd_t(t   ::Float64,
             _sim_gbmbd_t(t, λt1, μt1, α, σλ, σμ, xt1, βλ, σx, δt, srδt,
               lr, lU, Iρi, na, nn, nlim, xist, xfst, est)
 
-          return iTbdX(td1, td2, bt, δt, δt, false, false, λv, μv, xv),
+          return iTbdx(td1, td2, bt, δt, δt, false, false, λv, μv, xv),
                  na, nn, lr
         # if extinction
         else
-          return iTbdX(bt, δt, δt, true, false, λv, μv, xv), na, nn, lr
+          return iTbdx(bt, δt, δt, true, false, λv, μv, xv), na, nn, lr
         end
       end
 
@@ -653,7 +653,7 @@ function _sim_gbmbd_t(t   ::Float64,
     end
   end
 
-  return iTbdX(), na, nn, NaN
+  return iTbdx(), na, nn, NaN
 end
 
 
@@ -677,7 +677,7 @@ end
                  μsp ::Vector{Float64},
                  xsp ::Vector{Float64})
 
-Simulate `iTbdX` according to geometric Brownian motions for birth and death
+Simulate `iTbdx` according to geometric Brownian motions for birth and death
 rates, with a limit on the number lineages allowed to reach.
 """
 function _sim_gbmbd_i(t   ::Float64,
@@ -728,23 +728,23 @@ function _sim_gbmbd_i(t   ::Float64,
             push!(μsp, μt1, μt1)
             push!(xsp, xt1, xt1)
 
-            return iTbdX(iTbdX(0.0, δt, 0.0, false, false,
+            return iTbdx(iTbdx(0.0, δt, 0.0, false, false,
                                Float64[λt1, λt1], Float64[μt1, μt1],
                                Float64[xt1, xt1]),
-                         iTbdX(0.0, δt, 0.0, false, false,
+                         iTbdx(0.0, δt, 0.0, false, false,
                                Float64[λt1, λt1], Float64[μt1, μt1],
                                Float64[xt1, xt1]),
                          bt, δt, t, false, false, λv, μv, xv), nn
           # if extinction
           else
-            return iTbdX(bt, δt, t, true, false, λv, μv, xv), nn
+            return iTbdx(bt, δt, t, true, false, λv, μv, xv), nn
           end
         end
         push!(λsp, λt1)
         push!(μsp, μt1)
         push!(xsp, xt1)
 
-        return iTbdX(bt, δt, t, false, false, λv, μv, xv), nn
+        return iTbdx(bt, δt, t, false, false, λv, μv, xv), nn
       end
 
       t  -= δt
@@ -770,10 +770,10 @@ function _sim_gbmbd_i(t   ::Float64,
             _sim_gbmbd_i(t, λt1, μt1, α, σλ, σμ, xt1, βλ, σx, δt, srδt,
               nn, nlim, λsp, μsp, xsp)
 
-          return iTbdX(td1, td2, bt, δt, δt, false, false, λv, μv, xv), nn
+          return iTbdx(td1, td2, bt, δt, δt, false, false, λv, μv, xv), nn
         # if extinction
         else
-          return iTbdX(bt, δt, δt, true, false, λv, μv, xv), nn
+          return iTbdx(bt, δt, δt, true, false, λv, μv, xv), nn
         end
       end
 
@@ -783,7 +783,7 @@ function _sim_gbmbd_i(t   ::Float64,
     end
   end
 
-  return iTbdX(), nn
+  return iTbdx(), nn
 end
 
 
@@ -809,7 +809,7 @@ end
                   nn  ::Int64,
                   nlim::Int64)
 
-Simulate `iTbdX` according to geometric Brownian motions for birth and death
+Simulate `iTbdx` according to geometric Brownian motions for birth and death
 rates, starting with a non-standard δt with a limit in the number of species.
 """
 function _sim_gbmbd_it(nsδt::Float64,
@@ -857,22 +857,22 @@ function _sim_gbmbd_it(nsδt::Float64,
         nn += 1
         na += 2
         lr += 2.0*log(Iρi)
-        return iTbdX(iTbdX(0.0, δt, 0.0, false, false,
+        return iTbdx(iTbdx(0.0, δt, 0.0, false, false,
                            Float64[λt1, λt1], Float64[μt1, μt1],
                            Float64[xt1, xt1]),
-                     iTbdX(0.0, δt, 0.0, false, false,
+                     iTbdx(0.0, δt, 0.0, false, false,
                            Float64[λt1, λt1], Float64[μt1, μt1],
                            Float64[xt1, xt1]),
                      bt, δt, t, false, false, λv, μv, xv), na, nn, lr
       # if extinction
       else
-        return iTbdX(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
+        return iTbdx(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
       end
     end
 
     na += 1
     lr += log(Iρi)
-    return iTbdX(bt, δt, t, false, false, λv, μv, xv), na, nn, lr
+    return iTbdx(bt, δt, t, false, false, λv, μv, xv), na, nn, lr
   end
 
   t  -= nsδt
@@ -899,10 +899,10 @@ function _sim_gbmbd_it(nsδt::Float64,
         _sim_gbmbd_it(t, λt1, μt1, α, σλ, σμ, xt1, βλ, σx, δt, srδt,
           lr, lU, Iρi, na, nn, nlim)
 
-      return iTbdX(td1, td2, bt, δt, nsδt, false, false, λv, μv, xv), na, nn, lr
+      return iTbdx(td1, td2, bt, δt, nsδt, false, false, λv, μv, xv), na, nn, lr
     else
     # if extinction
-      return iTbdX(bt, δt, nsδt, true, false, λv, μv, xv), na, nn, lr
+      return iTbdx(bt, δt, nsδt, true, false, λv, μv, xv), na, nn, lr
     end
   end
 
@@ -935,22 +935,22 @@ function _sim_gbmbd_it(nsδt::Float64,
             nn += 1
             na += 2
             lr += 2.0*log(Iρi)
-            return iTbdX(iTbdX(0.0, δt, 0.0, false, false,
+            return iTbdx(iTbdx(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1],
                              Float64[xt1, xt1]),
-                        iTbdX(0.0, δt, 0.0, false, false,
+                        iTbdx(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1],
                              Float64[xt1, xt1]),
                         bt, δt, t, false, false, λv, μv, xv), na, nn, lr
           # if extinction
           else
-            return iTbdX(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
+            return iTbdx(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
           end
         end
 
         na += 1
         lr += log(Iρi)
-        return iTbdX(bt, δt, t, false, false, λv, μv, xv), na, nn, lr
+        return iTbdx(bt, δt, t, false, false, λv, μv, xv), na, nn, lr
       end
 
       t  -= δt
@@ -976,11 +976,11 @@ function _sim_gbmbd_it(nsδt::Float64,
             _sim_gbmbd_it(t, λt1, μt1, α, σλ, σμ, xt1, βλ, σx, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
 
-          return iTbdX(td1, td2, bt, δt, δt, false, false, λv, μv, xv), 
+          return iTbdx(td1, td2, bt, δt, δt, false, false, λv, μv, xv), 
                  na, nn, lr
         # if extinction
         else
-          return iTbdX(bt, δt, δt, true, false, λv, μv, xv), na, nn, lr
+          return iTbdx(bt, δt, δt, true, false, λv, μv, xv), na, nn, lr
         end
       end
 
@@ -990,7 +990,7 @@ function _sim_gbmbd_it(nsδt::Float64,
     end
   end
 
-  return iTbdX(), na, nn, NaN
+  return iTbdx(), na, nn, NaN
 end
 
 
@@ -1015,7 +1015,7 @@ end
                   nn  ::Int64,
                   nlim::Int64)
 
-Simulate `iTbdX` according to geometric Brownian motions for birth and death
+Simulate `iTbdx` according to geometric Brownian motions for birth and death
 rates, starting with a non-standard δt with a limit in the number of species.
 """
 function _sim_gbmbd_it(t   ::Float64,
@@ -1066,22 +1066,22 @@ function _sim_gbmbd_it(t   ::Float64,
             nn += 1
             na += 2
             lr += 2.0*log(Iρi)
-            return iTbdX(iTbdX(0.0, δt, 0.0, false, false,
+            return iTbdx(iTbdx(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1],
                              Float64[xt1, xt1]),
-                        iTbdX(0.0, δt, 0.0, false, false,
+                        iTbdx(0.0, δt, 0.0, false, false,
                              Float64[λt1, λt1], Float64[μt1, μt1],
                              Float64[xt1, xt1]),
                         bt, δt, t, false, false, λv, μv, xv), na, nn, lr
           # if extinction
           else
-            return iTbdX(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
+            return iTbdx(bt, δt, t, true, false, λv, μv, xv), na, nn, lr
           end
         end
 
         na += 1
         lr += log(Iρi)
-        return iTbdX(bt, δt, t, false, false, λv, μv, xv), na, nn, lr
+        return iTbdx(bt, δt, t, false, false, λv, μv, xv), na, nn, lr
       end
 
       t  -= δt
@@ -1107,10 +1107,10 @@ function _sim_gbmbd_it(t   ::Float64,
             _sim_gbmbd_it(t, λt1, μt1, α, σλ, σμ, xt1, βλ, σx, δt, srδt,
               lr, lU, Iρi, na, nn, nlim)
 
-          return iTbdX(td1, td2, bt, δt, δt, false, false, λv, μv, xv), na, nn, lr
+          return iTbdx(td1, td2, bt, δt, δt, false, false, λv, μv, xv), na, nn, lr
         # if extinction
         else
-          return iTbdX(bt, δt, δt, true, false, λv, μv, xv), na, nn, lr
+          return iTbdx(bt, δt, δt, true, false, λv, μv, xv), na, nn, lr
         end
       end
 
@@ -1120,7 +1120,7 @@ function _sim_gbmbd_it(t   ::Float64,
     end
   end
 
-  return iTbdX(), na, nn, NaN
+  return iTbdx(), na, nn, NaN
 end
 
 
@@ -1138,7 +1138,7 @@ end
 #                     surv::Bool,
 #                     nn  ::Int64)
 
-# Simulate `iTbdX` according to geometric Brownian motions for birth and death
+# Simulate `iTbdx` according to geometric Brownian motions for birth and death
 # rates, with a limit on the number lineages allowed to reach.
 # """
 # function _sim_gbmbd_surv(t   ::Float64,

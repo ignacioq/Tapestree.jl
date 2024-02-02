@@ -81,7 +81,7 @@ function insane_cbd(tree    ::sT_label,
   mc = m_surv_cbd(th, λc, μc, 1_000, crown)
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, xr, sTbdX)
+  Ξ = make_Ξ(idf, xr, sTbdx)
 
   # get vector of internal branches
   inodes = Int64[]
@@ -138,7 +138,7 @@ end
 Adaptive MCMC phase for da chain for constant birth-death using forward
 simulation.
 """
-function mcmc_burn_cbd(Ξ       ::Vector{sTbdX},
+function mcmc_burn_cbd(Ξ       ::Vector{sTbdx},
                        idf     ::Array{iBffs,1},
                        λ_prior ::NTuple{2,Float64},
                        μ_prior ::NTuple{2,Float64},
@@ -242,7 +242,7 @@ end
 
 MCMC da chain for constant birth-death using forward simulation.
 """
-function mcmc_cbd(Ξ       ::Vector{sTbdX},
+function mcmc_cbd(Ξ       ::Vector{sTbdx},
                   idf     ::Array{iBffs,1},
                   llc     ::Float64,
                   prc     ::Float64,
@@ -277,7 +277,7 @@ function mcmc_cbd(Ξ       ::Vector{sTbdX},
   R = Array{Float64,2}(undef, nlogs, 7)
 
   # make tree vector
-  treev  = sTbdX[]
+  treev  = sTbdx[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -384,7 +384,7 @@ end
 
 """
     update_fs!(bix::Int64,
-               Ξ  ::Vector{sTbdX},
+               Ξ  ::Vector{sTbdx},
                idf::Vector{iBffs},
                llc::Float64,
                λ  ::Float64,
@@ -399,7 +399,7 @@ end
 Forward simulation proposal function for constant pure-birth.
 """
 function update_fs!(bix::Int64,
-                    Ξ  ::Vector{sTbdX},
+                    Ξ  ::Vector{sTbdx},
                     idf::Vector{iBffs},
                     llc::Float64,
                     λ  ::Float64,
@@ -445,7 +445,7 @@ end
 
 """
     fsbi_t(bi::iBffs,
-           ξc::sTbdX,
+           ξc::sTbdx,
            λ ::Float64,
            μ ::Float64,
            σx::Float64)
@@ -453,7 +453,7 @@ end
 Forward simulation for terminal branch `bi`.
 """
 function fsbi_t(bi::iBffs,
-                ξc::sTbdX,
+                ξc::sTbdx,
                 λ ::Float64,
                 μ ::Float64,
                 σx::Float64)
@@ -522,15 +522,15 @@ end
 
 """
     fsbi_i(bi::iBffs,
-           ξc::sTbdX,
+           ξc::sTbdx,
            λ ::Float64,
            σx::Float64)
 
 Forward simulation for terminal branch `bi`.
 """
 function fsbi_i(bi::iBffs,
-                ξ1::sTbdX,
-                ξ2::sTbdX,
+                ξ1::sTbdx,
+                ξ2::sTbdx,
                 x0::Float64,
                 λ ::Float64,
                 μ ::Float64,
@@ -591,7 +591,7 @@ end
 
 
 """
-    tip_sims!(tree::sTbdX,
+    tip_sims!(tree::sTbdx,
               t   ::Float64,
               λ   ::Float64,
               μ   ::Float64,
@@ -604,7 +604,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::sTbdX,
+function tip_sims!(tree::sTbdx,
                    t   ::Float64,
                    λ   ::Float64,
                    μ   ::Float64,

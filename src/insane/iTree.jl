@@ -34,7 +34,6 @@ abstract type sT <: iTree end
 
 
 
-
 """
     sT_label
 
@@ -84,11 +83,11 @@ end
 """
     sT_label(tree::sT_label)
 
-Demotes a tree to `sT_label`.
+Copies a tree to `sT_label`.
 """
 function sT_label(tree::sT_label)
   if def1(tree)
-    sT_label(sT_label(tree.d1), sT_label(tree.d1), e(tree), l(tree))
+    sT_label(sT_label(tree.d1), sT_label(tree.d2), e(tree), l(tree))
   else
     sT_label(e(tree), l(tree))
   end

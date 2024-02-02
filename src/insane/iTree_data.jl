@@ -33,20 +33,20 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 
 """
-    xi(tree::T) where {T <: sTX}
+    xi(tree::T) where {T <: Tx}
 
 Return initial trait value.
 """
-xi(tree::T) where {T <: sTX} = getproperty(tree, :xi)
+xi(tree::T) where {T <: Tx} = getproperty(tree, :xi)
 
 
 
 """
-    xf(tree::T) where {T <: sTX}
+    xf(tree::T) where {T <: Tx}
 
 Return final trait value.
 """
-xf(tree::T) where {T <: sTX} = getproperty(tree, :xf)
+xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
 
 
 
@@ -95,15 +95,15 @@ isextinct(tree::Tlabel) = false
 
 """
     isextinct(tree::sTpb)
-    isextinct(tree::sTpbX)
+    isextinct(tree::sTpbx)
     isextinct(tree::iTpb)
 
 Return if is an extinction node.
 """
 isextinct(tree::sTpb)  = false
-isextinct(tree::sTpbX) = false
+isextinct(tree::sTpbx) = false
 isextinct(tree::iTpb)  = false
-isextinct(tree::iTpbX) = false
+isextinct(tree::iTbdx) = false
 
 
 
@@ -2098,11 +2098,11 @@ end
 
 
 """
-    fixed_xt(tree::T)  where {T <: sTX}
+    fixed_xt(tree::T)  where {T <: Tx}
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fixed_xt(tree::T)  where {T <: sTX}
+function fixed_xt(tree::T)  where {T <: Tx}
 
   if istip(tree)
     return xf(tree)
@@ -2121,11 +2121,11 @@ end
 
 
 """
-    fixed_xt(tree::T)  where {T <: sTX}
+    fixed_xt(tree::T)  where {T <: Tx}
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fixed_xt(tree::T)  where {T <: iTX}
+function fixed_xt(tree::T)  where {T <: Tx}
 
   if istip(tree)
     return xv(tree)[end]
@@ -2148,7 +2148,7 @@ end
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fossil_xt(tree::sTfbdX)
+function fossil_xt(tree::sTfbdx)
 
   if isfossil(tree)
     return xf(tree)
@@ -2169,7 +2169,7 @@ end
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fossil_xt(tree::iTfbdX)
+function fossil_xt(tree::iTfbdx)
 
   if isfossil(tree)
     return xv(tree)[end]
@@ -2186,21 +2186,21 @@ end
 
 
 """
-    xv(tree::T) where {T <: iTX}
+    xv(tree::T) where {T <: Tx}
 
 Return trait vector.
 """
-xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
+xv(tree::T) where {T <: Tx} = getproperty(tree, :xv)
 
 
 
 
 """
-    lσ(tree::T) where {T <: iTX}
+    lσ(tree::T) where {T <: Tx}
 
 Return trait rate vector.
 """
-lσ(tree::T) where {T <: iTX} = getproperty(tree, :lσ)
+lσ(tree::T) where {T <: Txs} = getproperty(tree, :lσ)
 
 
 

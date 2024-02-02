@@ -14,7 +14,7 @@ Created 10 03 2022
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTfbdX},
+    llik_gbm(Ξ   ::Vector{iTfbdx},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
@@ -23,9 +23,9 @@ Created 10 03 2022
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTfbdX` according to `gbm-bd`.
+Returns the log-likelihood for a `iTfbdx` according to `gbm-bd`.
 """
-function llik_gbm(Ξ   ::Vector{iTfbdX},
+function llik_gbm(Ξ   ::Vector{iTfbdx},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -53,7 +53,7 @@ end
 
 
 """
-    llik_gbm(tree::iTfbdX,
+    llik_gbm(tree::iTfbdx,
              α   ::Float64,
              σλ  ::Float64,
              σμ  ::Float64,
@@ -63,9 +63,9 @@ end
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTfbdX` according to `gbmfbd`.
+Returns the log-likelihood for a `iTfbdx` according to `gbmfbd`.
 """
-function llik_gbm(tree::iTfbdX,
+function llik_gbm(tree::iTfbdx,
                   α   ::Float64,
                   σλ  ::Float64,
                   σμ  ::Float64,
@@ -192,7 +192,7 @@ end
 
 
 """
-    llik_gbm_ss(tree::iTfbdX,
+    llik_gbm_ss(tree::iTfbdx,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -202,9 +202,9 @@ end
                 δt  ::Float64,
                 srδt::Float64)
 
-Returns the log-likelihood for a `iTfbdX` according to `gbmfbd`.
+Returns the log-likelihood for a `iTfbdx` according to `gbmfbd`.
 """
-function llik_gbm_ss(tree::iTfbdX,
+function llik_gbm_ss(tree::iTfbdx,
                      α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
@@ -367,12 +367,12 @@ end
 
 
 """
-    _deltaλ(tree::iTfbdX)
+    _deltaλ(tree::iTfbdx)
 
-Returns the log-likelihood ratio for a `iTfbdX` according
+Returns the log-likelihood ratio for a `iTfbdx` according
 to GBM birth-death for a `α` proposal.
 """
-function _deltaλ(tree::iTfbdX)
+function _deltaλ(tree::iTfbdx)
 
   lλv = lλ(tree)
 

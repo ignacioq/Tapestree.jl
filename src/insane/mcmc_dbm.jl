@@ -14,7 +14,7 @@ Created 25 01 2024
 
 
 """
-    insane_gbmpb(tree    ::sT_label;
+    insane_dbm(tree    ::sT_label;
                  α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                  niter   ::Int64                 = 1_000,
@@ -29,22 +29,20 @@ Created 25 01 2024
                  prints  ::Int64                 = 5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for `gbm-pb`.
+Run diffused Brownian motion trait evolution model.
 """
-function insane_gbmpb(tree    ::sT_label;
-                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                      σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                      niter   ::Int64                 = 1_000,
-                      nthin   ::Int64                 = 10,
-                      nburn   ::Int64                 = 200,
-                      nflush  ::Int64                 = nthin,
-                      ofile   ::String                = string(homedir(), "/ipb"),
-                      αi      ::Float64               = 0.0,
-                      σλi     ::Float64               = 0.1,
-                      pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.1, 0.2),
-                      δt      ::Float64               = 1e-3,
-                      prints  ::Int64                 = 5,
-                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+function insane_dbm(tree    ::Tlabel;
+                    x       ::Dict{String, Float64};
+                    γ_prior ::NTuple{2,Float64} = (3.0, 0.5),
+                    niter   ::Int64             = 1_000,
+                    nthin   ::Int64             = 10,
+                    nburn   ::Int64             = 200,
+                    nflush  ::Int64             = nthin,
+                    ofile   ::String            = string(homedir(), "/ipb"),
+                    γi     ::Float64            = 0.1,
+                    pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
+                    δt      ::Float64           = 1e-3,
+                    prints  ::Int64             = 5)
 
   n    = ntips(tree)
   th   = treeheight(tree)
@@ -52,16 +50,16 @@ function insane_gbmpb(tree    ::sT_label;
   srδt = sqrt(δt)
 
   # set tips sampling fraction
-  if isone(length(tρ))
-    tl = tiplabels(tree)
-    tρu = tρ[""]
-    tρ = Dict(tl[i] => tρu for i in 1:n)
-  end
+  tl = tiplabels(tree)
+  tρ = Dict(tl[i] => 1.0 for i in 1:n)
 
   # make fix tree directory
-  idf = make_idf(tree, tρ, Inf)
+  idf = make_idf(tree, tρ, X)
 
   # make a decoupled tree
+
+
+
   Ξ = make_Ξ(idf, λmle_cpb(tree), αi, σλi, δt, srδt, iTpb)
 
   # get vector of internal branches
@@ -78,11 +76,11 @@ function insane_gbmpb(tree    ::sT_label;
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc =
-    mcmc_burn_gbmpb(Ξ, idf, α_prior, σλ_prior, nburn, αi, σλi,
+    mcmc_burn_dbm(Ξ, idf, α_prior, σλ_prior, nburn, αi, σλi,
       δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, α_prior, σλ_prior,
+  r, treev = mcmc_dbm(Ξ, idf, llc, prc, αc, σλc, α_prior, σλ_prior,
               δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -91,7 +89,7 @@ end
 
 
 """
-    mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
+    mcmc_burn_dbm(Ξ       ::Vector{iTpb},
                     idf     ::Vector{iBffs},
                     λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -109,7 +107,7 @@ end
 
 MCMC burn-in chain for GBM pure-birth.
 """
-function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
+function mcmc_burn_dbm(Ξ       ::Vector{iTpb},
                          idf     ::Vector{iBffs},
                          α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
@@ -186,7 +184,7 @@ end
 
 
 """
-    mcmc_gbmpb(Ξ       ::Vector{iTpb},
+    mcmc_dbm(Ξ       ::Vector{iTpb},
                idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
@@ -206,7 +204,7 @@ end
 
 MCMC chain for GBM pure-birth.
 """
-function mcmc_gbmpb(Ξ       ::Vector{iTpb},
+function mcmc_dbm(Ξ       ::Vector{iTpb},
                     idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
@@ -571,7 +569,7 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_gbmpb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 500)
+    _sim_dbm_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -608,7 +606,7 @@ function fsbi_i(bi  ::iBffs,
                 srδt::Float64)
 
   # forward simulation during branch length
-  t0, na = _sim_gbmpb(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
+  t0, na = _sim_dbm(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
 
   if na >= 1_000
     return t0, NaN, NaN, NaN
@@ -699,7 +697,7 @@ function tip_sims!(tree::iTpb,
 
         # simulate
         stree, na, lr =
-          _sim_gbmpb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
+          _sim_dbm_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
             lr, lU, Iρi, na, 1_000)
 
         if isnan(lr) || na >= 1_000

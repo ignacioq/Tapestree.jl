@@ -285,7 +285,6 @@ Brownian bridge simulation function for updating a branch in place.
 
     l = lastindex(x)
     randn!(x)
-    # for standard δt
     x[1] = xi
     if l > 2
       for i = Base.OneTo(l-2)
@@ -299,7 +298,7 @@ Brownian bridge simulation function for updating a branch in place.
       ite = 1.0/(Float64(l-2) * δt + fdt)
       xdf = (x[l] - xf)
 
-      for i = Base.OneTo(l-1)
+      @turbo for i = Base.OneTo(l-1)
         x[i] -= (Float64(i-1) * δt * ite * xdf)
       end
     end
@@ -346,7 +345,6 @@ Brownian bridge simulation function for updating two vectors
     l = lastindex(x0)
     randn!(x0)
     randn!(x1)
-
     # for standard δt
     x0[1] = x0i
     x1[1] = x1i
@@ -426,51 +424,6 @@ end
 
 
 """
-    function dbm(xa  ::Float64,
-                 σa  ::Float64,
-                 γ   ::Float64,
-                 fdt ::Float64,
-                 srδt::Float64,
-                 n   ::Int64)
-
-Returns a diffused Brownian motion vectors starting with rates `σa` and 
-trait `xa`.
-"""
-@inline function dbm(xa  ::Float64,
-                     σa  ::Float64,
-                     γ   ::Float64,
-                     fdt ::Float64,
-                     srδt::Float64,
-                     n   ::Int64)
-  @inbounds begin
-    l = n + 2
-    x = randn(l)
-    σ = randn(l)
-
-    # rates
-    σ[1] = σa
-    @turbo for i in Base.OneTo(n)
-      σ[i+1] *= srδt*γ
-    end
-    σ[l] *= sqrt(fdt)*γ
-    cumsum!(σ, σ)
-
-    # values
-    x[1] = xa
-    @turbo for i in Base.OneTo(n)
-      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
-    end
-    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
-    cumsum!(x, x)
-  end
-
-  return x, σ
-end
-
-
-
-
-"""
     bb(xi  ::Float64,
        xf  ::Float64,
        σ   ::Float64,
@@ -538,7 +491,7 @@ function duoprop(xd1::Float64,
                  σ  ::Float64)
 
   invt = 1.0/(td1 + td2)
-  return rnorm((td2 * invt * xd1 + td1 * invt * xd2),
+  return rnorm((td2 * xd1 + td1 * xd2) * invt,
                sqrt(td1 * td2 * invt)*σ)
 end
 
