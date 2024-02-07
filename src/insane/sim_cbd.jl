@@ -12,6 +12,53 @@ Created 06 07 2020
 
 
 
+
+"""
+    sim_cbd(t::Float64, λ::Float64, μ::Float64)
+
+Simulate a constant birth-death `iTree` of height `t` with speciation rate `λ`
+and extinction rate `μ` conditioned on extinction before time `t`.
+"""
+function sim_cbd_ext(t::Float64, λ::Float64, μ::Float64)
+
+  tw, λorμ = cbd_wait_ext(λ, μ, t)
+
+  if tw > t
+    return sTbd(t, false, false)
+  end
+
+  if λorμ
+    return sTbd(sim_cbd_ext(t - tw, λ, μ), 
+                sim_cbd_ext(t - tw, λ, μ), tw, false, false)
+  else
+    return sTbd(tw, true, false)
+  end
+end
+
+
+
+
+"""
+    cbd_wait_ext(λ::Float64, μ::Float64, t::Float64)
+
+Sample a per-lineage waiting time for constant birth-death species
+with speciation rate `λ` and extinction rate `μ` conditioned on 
+extinction before time `t`.
+"""
+function cbd_wait_ext(λ::Float64, μ::Float64, t::Float64)
+  λt = rexp(λ)
+  μt = rexpt(μ, t)
+
+  if λt < μt
+    return λt, true
+  else
+    return μt, false
+  end
+end
+
+
+
+
 """
     sim_cbd(t::Float64, λ::Float64, μ::Float64)
 
@@ -62,7 +109,7 @@ function sim_cbd(t ::Float64,
     d1, na = sim_cbd(t - tw, λ, μ, na)
     d2, na = sim_cbd(t - tw, λ, μ, na)
 
-    return sTbd(d1, d2, tw), na
+    return sTbd(d1, d2, tw, false, false), na
   else
     return sTbd(tw, true, false), na
   end
@@ -422,6 +469,15 @@ Generate an exponential sample with rate `r`.
 """
 rexp(r::Float64) = @fastmath randexp()/r
 
+
+
+"""
+    rexpt(r::Float64)
+
+Generate an exponential sample with rate `r` truncated to be smaller than `t`.
+"""
+rexpt(r::Float64, t::Float64) = 
+  @fastmath μt = -log(1.0 - rand()*(1.0 - exp(- r*t)))/r
 
 
 

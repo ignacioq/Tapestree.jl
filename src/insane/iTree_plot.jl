@@ -56,431 +56,50 @@ end
 
 
 
-"""
-    function f(tree::T;
-               zf  ::Function,
-               shownodes  = false,
-               tip        = false,
-               speciation = false,
-               extinct    = false,
-               fossil     = true,
-               type       = :phylogram) where {T <: iT}
 
-Recipe for plotting a Type `iT`.
 """
-@recipe function f(tree::T,
-                   zf  ::Function;
-                   shownodes  = false,
-                   tip        = false,
-                   speciation = false,
-                   extinct    = false,
-                   fossil     = true,
+    f(tree::T;
+      labsize    = 8,
+      type       = :phylogram,
+      showlabels = (T <: Tlabel),
+      shownodes  = (false, false, (T <: iTf)),
+      shapes     = [:circle, :circle, :square],
+      colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+      shsizes    = [0.0, 0.0, 2.0],
+      showda     = false,
+      col_da     = ["#a9a9a9", :black]) where {T <: iTree}
+
+Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
+= true`. True by default for `sTf` trees to make sampled ancestors visible.
+"""
+@recipe function f(tree::T;
+                   labsize    = 8,
                    type       = :phylogram,
-                   simple     = false) where {T <: iT}
+                   showlabels = (T <: Tlabel),
+                   shownodes  = (false, false, T <: iTf),
+                   shapes     = [:none, :none, :square],
+                   colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+                   shsizes    = [3.0, 3.0, 3.0],
+                   showda     = false,
+                   col_da     = ["#a9a9a9", :black]) where {T <: iTree}
 
-  x = Float64[]
-  y = Float64[]
-  z = Float64[]
+  x  = Float64[]
+  y  = Float64[]
+  z  = Float64[]
+  nodet = Int64[]   # 0 = speciation, 1 = extinction, 2 = fossilization
+  xnode = Float64[]
+  ynode = Float64[]
 
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  if type === :lengthrates
-    _rplottree_lr!(tree, 0.0, 1:nts, zf, x, y, z)
-  else
-    _rplottree!(tree,     th, 1:nts, zf, x, y, z, simple)
-  end
-
-  ntF = Float64(nts)
-
-  # plot defaults
-  fontfamily              --> :Helvetica
-  legend                  --> :none
-  colorbar_tickfontfamily --> :Helvetica
-  grid                    --> :off
-
-  if type === :radial
-    x, y, z = append_forradial(x, y, z, 50)
-    polar_coords!(x, y, 360.0/ntF, th)
-
-    ylims           --> (-th*1.05, th*1.05)
-    xlims           --> (-th*1.05, th*1.05)
-    xticks          --> (nothing)
-    xshowaxis       --> false
-    colorbar        --> true
-    yshowaxis       --> false
-    yticks          --> nothing
-
-  elseif type === :lengthrates
-    xguide          --> "cumulative rates"
-    colorbar        --> true
-    yshowaxis       --> false
-    yticks        --> nothing
-
-  else
-    xlims           --> (-th*0.05, th*1.05)
-    xguide          --> "time"
-    xflip           --> true
-    tickfontfamily  --> :Helvetica
-    tickfontsize    --> 8
-    xtick_direction --> :out
-
-    if type === :phylogram
-      ylims         --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
-      colorbar      --> true
-      yshowaxis     --> false
-      yticks        --> nothing
-
-    else
-      colorbar  --> false
-      yshowaxis --> true
-    end
-  end
-
-  if shownodes
-
-    xN = Float64[]
-    yN = Float64[]
-
-    _rplottree!(tree, th, 1:nts, xN, yN)
-
-    shape = Symbol[:circle]
-    col   = Symbol[:pink]
-    alpha =
-      Float64[(0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))) *
-              Float64(speciation)]
-    _nodeproperties!(tree, shape, col, alpha,
-      Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
-
-    @series begin
-      markershape --> shape
-      markercolor --> col
-      markeralpha --> alpha
-      markersize  --> 2.0
-      if type === :phylogram
-        xN, yN
-      elseif type === :radial
-        polar_coords!(xN, yN, 360.0/ntF, th)
-        xN, yN
-      end
-    end
-  end
-
-  line_z     --> z
-  linecolor  --> cgrad(:roma, rev = true)
-
-  if type === :rates
-    return x, z
-  else
-    return x, y
-  end
-end
-
-
-
-
-
-"""
-    _rplottree!(tree  ::T,
-                xc    ::Float64,
-                yr    ::UnitRange{Int64},
-                zf    ::Function,
-                x     ::Array{Float64,1},
-                y     ::Array{Float64,1},
-                z     ::Array{Float64,1},
-                simple::Bool) where {T <: iT}
-
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
-"""
-function _rplottree!(tree  ::T,
-                     xc    ::Float64,
-                     yr    ::UnitRange{Int64},
-                     zf    ::Function,
-                     x     ::Array{Float64,1},
-                     y     ::Array{Float64,1},
-                     z     ::Array{Float64,1},
-                     simple::Bool) where {T <: iT}
-
-  # tree δt and nsδt
-  δt = dt(tree)
-
-  # add horizontal lines
-  yc = Float64(yr[1] + yr[end])*0.5
-
-  if simple
-    zv = zf(tree)
-    l  = lastindex(zv)
-    push!(z, mean(zf(tree)))
-    push!(y, yc)
-    push!(x, xc)
-  else
-    # plot function
-    zv = copy(zf(tree))
-    l  = lastindex(zv)
-    @simd for i in Base.OneTo(l-1)
-      push!(x, xc - Float64(i-1)*δt)
-      push!(y, yc)
-      push!(z, zv[i])
-    end
-  end
-
-  zc = last(zv)
-  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
-  push!(y, yc, NaN)
-  push!(z, zc, NaN)
-
-  xc -= e(tree)
-
-  if def1(tree)
-    if def2(tree)
-      ntip1 = ntips(tree.d1)
-      ntip2 = ntips(tree.d2)
-
-      # add vertical lines
-      push!(x, xc, xc, NaN)
-
-      yr1 = yr[1:ntip1]
-      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-      push!(y, Float64(yr1[1] + yr1[end])*0.5,
-               Float64(yr2[1] + yr2[end])*0.5,
-               NaN)
-
-      push!(z, zc, zc, NaN)
-
-      _rplottree!(tree.d1, xc, yr1, zf, x, y, z, simple)
-      _rplottree!(tree.d2, xc, yr2, zf, x, y, z, simple)
-    else
-      _rplottree!(tree.d1, xc, yr, zf, x, y, z, simple)
-    end
-  end
-end
-
-
-
-
-"""
-    _rplottree_lr!(tree::T,
-                   xc  ::Float64,
-                   yr  ::UnitRange{Int64},
-                   zf  ::Function,
-                   x   ::Array{Float64,1},
-                   y   ::Array{Float64,1},
-                   z   ::Array{Float64,1}) where {T <: iT}
-
-Returns `x` and `y` coordinates in order to plot a tree of type `iT`
-where branch lengths reflect the cumulative from function `zf`.
-"""
-function _rplottree_lr!(tree::T,
-                        xc  ::Float64,
-                        yr  ::UnitRange{Int64},
-                        zf  ::Function,
-                        x   ::Array{Float64,1},
-                        y   ::Array{Float64,1},
-                        z   ::Array{Float64,1}) where {T <: iT}
-
-  # tree δt and nsδt
-  δt = dt(tree)
-
-  # add horizontal lines
-  yc = Float64(yr[1] + yr[end])*0.5
-
-  # plot function
-  zv = copy(zf(tree))
-
-  # append
-  append!(y, fill(yc, lastindex(zv)))
-  append!(z, zv)
-  zc     = last(zv)
-  zv[1]  = xc
-  append!(x, cumsum!(zv, zv))
-  xc = last(x)
-
-  push!(x, NaN)
-  push!(y, NaN)
-  push!(z, NaN)
-
-  if def1(tree)
-    if def2(tree)
-      ntip1 = ntips(tree.d1)
-      ntip2 = ntips(tree.d2)
-
-      # add vertical lines
-      push!(x, xc, xc, NaN)
-
-      yr1 = yr[1:ntip1]
-      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-      push!(y, Float64(yr1[1] + yr1[end])*0.5,
-               Float64(yr2[1] + yr2[end])*0.5,
-               NaN)
-
-      push!(z, zc, zc, NaN)
-
-      _rplottree_lr!(tree.d1, xc, yr1, zf, x, y, z)
-      _rplottree_lr!(tree.d2, xc, yr2, zf, x, y, z)
-    else
-      _rplottree_lr!(tree.d1, xc, yr, zf, x, y, z)
-    end
-  end
-end
-
-
-
-
-
-
-"""
-    _rplottree!(tree::T,
-                xc  ::Float64,
-                yr  ::UnitRange{Int64},
-                x   ::Array{Float64,1},
-                y   ::Array{Float64,1}) where {T <: iTree}
-
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
-"""
-function _rplottree!(tree::T,
-                     xc  ::Float64,
-                     yr  ::UnitRange{Int64},
-                     x   ::Array{Float64,1},
-                     y   ::Array{Float64,1}) where {T <: iTree}
-
-  # add horizontal lines
-  push!(x, xc)
-  xc -= e(tree)
-  push!(x, xc, NaN)
-  yc = (yr[1] + yr[end])*0.5
-  push!(y, yc, yc, NaN)
-
-  if def1(tree)
-    if def2(tree)
-      ntip1 = ntips(tree.d1)
-      ntip2 = ntips(tree.d2)
-
-      # add vertical lines
-      push!(x, xc, xc, NaN)
-
-      yr1 = yr[1:ntip1]
-      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-
-      push!(y, Float64(yr1[1] + yr1[end])*0.5,
-               Float64(yr2[1] + yr2[end])*0.5,
-               NaN)
-      _rplottree!(tree.d1, xc, yr1, x, y)
-      _rplottree!(tree.d2, xc, yr2, x, y)
-    else
-      _rplottree!(tree.d1, xc, yr, x, y)
-    end
-  end
-end
-
-
-
-
-
-
-"""
-    _rplottree!(tree::T,
-                xc  ::Float64,
-                yr  ::UnitRange{Int64},
-                x   ::Array{Float64,1},
-                y   ::Array{Float64,1},
-                isf ::Array{Bool,1}) where {T <: iTree}
-
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
-"""
-function _rplottree!(tree::T,
-                     xc  ::Float64,
-                     yr  ::UnitRange{Int64},
-                     x   ::Array{Float64,1},
-                     y   ::Array{Float64,1},
-                     isf ::Array{Bool,1}) where {T <: iTree}
-
-  # add horizontal lines
-  push!(x, xc)
-  xc -= e(tree)
-  push!(x, xc, NaN)
-  yc = (yr[1] + yr[end])*0.5
-  push!(y, yc, yc, NaN)
-
-  # add whether the branch is fixed
-  ift = isfix(tree)
-  push!(isf, ift, ift, ift)
-
-  if def1(tree)
-    if def2(tree)
-      ntip1 = ntips(tree.d1)
-      ntip2 = ntips(tree.d2)
-
-      # add vertical lines
-      push!(x, xc, xc, NaN)
-
-      yr1 = yr[1:ntip1]
-      yr2 = yr[(ntip1+1):(ntip1+ntip2)]
-
-      push!(y, Float64(yr1[1] + yr1[end])*0.5,
-               Float64(yr2[1] + yr2[end])*0.5,
-               NaN)
-
-      # push!(isf, ift, ift, ift)
-      iftd = isfix(tree.d1) && isfix(tree.d2)
-      push!(isf, iftd, iftd, iftd)
-
-      _rplottree!(tree.d1, xc, yr1, x, y, isf)
-      _rplottree!(tree.d2, xc, yr2, x, y, isf)
-    else
-      _rplottree!(tree.d1, xc, yr, x, y, isf)
-    end
-  end
-end
-
-
-
-
-"""
-    f(tree::T;
-      shownodes  = (T <: iTf),
-      showlabels = (T <: Tlabel),
-      tip        = false,
-      speciation = false,
-      extinct    = false,
-      fossil     = true,
-      alphaDA    = 1.0,
-      tor        = treeheight(tree),
-      textsize   = 8,
-      type       = :phylogram) where {T <: iTree}
-Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
-== true`. True by default for `iTf` trees to make sampled ancestors visible.
-"""
-@recipe function f(tree::T;
-                   shownodes  = (T <: iTf),
-                   showlabels = (T <: Tlabel),
-                   tip        = false,
-                   speciation = false,
-                   extinct    = false,
-                   fossil     = true,
-                   alphaDA    = 1.0,
-                   tor        = treeheight(tree),
-                   textsize   = 8,
-                   type       = :phylogram) where {T <: iTree}
-
-  x = Float64[]
-  y = Float64[]
-
-  #th  = treeheight(tree)
-  nts = ntips(tree)
-
-  if isone(alphaDA)
-    _rplottree!(tree, tor, 1:nts, x, y)
-  else
-    isfixed = Bool[]
-    _rplottree!(tree, tor, 1:nts, x, y, isfixed)
-    linealphas      --> alphaDA .+ isfixed[1:(end-1)]*(1-alphaDA)
-  end
+  _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode, shownodes)
 
   ntF = Float64(nts)
 
   if type === :phylogram
 
-    xlims           --> (-tor*0.05, tor*1.05)
+    xlims           --> (-th*0.05, th*1.05)
     ylims           --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
     xguide          --> "time"
     xflip           --> true
@@ -492,10 +111,10 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
  elseif type === :radial
 
     x, y = append_forradial(x, y, 50)
-    polar_coords!(x, y, 360.0/ntF, tor)
+    polar_coords!(x, y, 360.0/ntF, th)
 
-    xlims           --> (-tor*1.05, tor*1.05)
-    ylims           --> (-tor*1.05, tor*1.05)
+    xlims           --> (-th*1.05, th*1.05)
+    ylims           --> (-th*1.05, th*1.05)
     xticks          --> (nothing)
     xshowaxis       --> false
   else
@@ -509,34 +128,31 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   yticks          --> (nothing)
   yshowaxis       --> false
 
-  if shownodes
+  @series begin
+    seriestype  := :path
 
-    xN = Float64[]
-    yN = Float64[]
+    if showda
+      line_z     --> z
+      linecolor  --> palette(col_da, 2)
+      return x, y, z
+    end
 
-    #th = treeheight(tree)
-    nt = ntips(tree)
+    return x, y
+  end
 
-    _rplottree!(tree, tor, 1:nt, xN, yN)
-
-    shape = Symbol[:circle]
-    col   = Symbol[:pink]
-    alpha =
-      Float64[(0.5+0.5*(!isdefined(tree, :fx) || isfix(tree))) *
-              Float64(speciation)]
-    _nodeproperties!(tree, shape, col, alpha,
-      Float64(tip), Float64(speciation), Float64(extinct), Float64(fossil))
+  if any(shownodes)
 
     @series begin
-      markershape --> shape
-      markercolor --> col
-      markeralpha --> alpha
-      markersize  --> 2.0
+      seriestype  := :scatter
+      markershape -->       shapes[nodet]
+      markercolor -->       colors[nodet]
+      markerstrokecolor --> colors[nodet]
+      markersize  -->       shsizes[nodet]
       if type === :phylogram
-        xN, yN
+        xnode, ynode
       elseif type === :radial
-        polar_coords!(xN, yN, 360.0/ntF, tor)
-        xN, yN
+        polar_coords!(xnode, ynode, 360.0/ntF, th)
+        xnode, ynode
       end
     end
   end
@@ -552,21 +168,109 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
       markershape        := :circle
       markersize         := 0
       markeralpha        := fill(0.0,nts)
-      series_annotations := map(x -> (x, :Helvetica, :left, textsize, :black), labels)
+      series_annotations := map(x -> (x, :Helvetica, :left, labsize, :black), labels)
 
-      xa = fill(0.0 - 0.02*tor, nts)
+      xa = fill(0.0 - 0.02*th, nts)
       ya = collect(1.0:1.0:ntF)
 
       if type === :phylogram
         xa, ya
       elseif type === :radial
-        polar_coords!(xa, ya, 360.0/ntF, tor)
+        polar_coords!(xa, ya, 360.0/ntF, th)
         xa, ya
       end
     end
   end
+end
 
-  return x, y
+
+
+
+"""
+    _rplottree!(tree ::T,
+                xc   ::Float64,
+                nn   ::Int64,
+                nx   ::Int64,
+                x    ::Array{Float64,1},
+                y    ::Array{Float64,1},
+                z    ::Array{Float64,1},
+                nodet::Array{Int64,1},
+                xnode::Array{Float64,1},
+                ynode::Array{Float64,1},
+                show ::NTuple{3,Bool}) where {T <: iTree}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree` and 
+`z` vector differentiating fixed `1` from data augmented `0` components.
+"""
+function _rplottree!(tree ::T,
+                     xc   ::Float64,
+                     i    ::Int64,
+                     x    ::Array{Float64,1},
+                     y    ::Array{Float64,1},
+                     z    ::Array{Float64,1},
+                     nodet::Array{Int64,1},
+                     xnode::Array{Float64,1},
+                     ynode::Array{Float64,1},
+                     show ::NTuple{3,Bool}) where {T <: iTree}
+
+  xe = xc - e(tree)
+
+  if def1(tree)
+    if def2(tree)
+
+      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
+      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, nodet, xnode, ynode, show)
+
+      yc = (y1 + y2)*0.5
+
+      # add vertical lines
+      push!(x, xe, xe, NaN, xe, xe, NaN)
+      push!(y, y1, yc, NaN, yc, y2, NaN)
+
+      z1 = Float64(isfix(tree.d1))
+      z2 = Float64(isfix(tree.d2))
+      push!(z, z1, z1, NaN, z2, z2, NaN)
+
+      # nodes
+      if show[1]
+        push!(nodet, 1)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    else
+      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
+
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    end
+  else
+    i += 1
+    yc = Float64(i)
+    if isextinct(tree)
+      if show[2]
+        push!(nodet, 2)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    elseif isfossil(tree)
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    end
+  end
+
+  # add horizontal lines
+  push!(x, xc, xe, NaN)
+  push!(y, yc, yc, NaN)
+  zc = Float64(isfix(tree))
+  push!(z, zc, zc, NaN)
+
+  return yc, i
 end
 
 
@@ -578,7 +282,8 @@ end
 Appends `n` new data for making circle into `x` and `y`.
 """
 function append_forradial(x::Vector{Float64},
-                          y::Vector{Float64}, n::Int64)
+                          y::Vector{Float64}, 
+                          n::Int64)
 
   nnan = div(lastindex(y),3)
   nani = 1
@@ -604,6 +309,228 @@ function append_forradial(x::Vector{Float64},
     end
   end
   return x, y
+end
+
+
+
+
+"""
+    f(tree::T,
+      zf  ::Function;
+      type       = :phylogram,
+      showlabels = (T <: Tlabel),
+      shownodes  = (false, false, (T <: iTf)),
+      shapes     = [:circle, :circle, :square],
+      colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+      shsizes    = [0.0, 0.0, 3.0],
+      simple     = false) where {T <: iT}
+
+Recipe for plotting a Type `iT`.
+"""
+@recipe function f(tree::T,
+                   zf  ::Function;
+                   type       = :phylogram,
+                   showlabels = (T <: Tlabel),
+                   shownodes  = (false, false, T <: iTf),
+                   shapes     = [:none, :none, :square],
+                   colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+                   shsizes    = [0.0, 0.0, 3.0],
+                   simple     = false) where {T <: iT}
+
+  x = Float64[]
+  y = Float64[]
+  z = Float64[]
+  nodet = Int64[]   # 0 = speciation, 1 = extinction, 2 = fossilization
+  xnode = Float64[]
+  ynode = Float64[]
+
+  #th  = treeheight(tree)
+  nts = ntips(tree)
+
+  _rplottree!(tree, zf, th, 0, x, y, z, nodet, xnode, ynode, shownodes, simple)
+
+  ntF = Float64(nts)
+
+  # plot defaults
+  fontfamily              --> :Helvetica
+  legend                  --> :none
+  colorbar_tickfontfamily --> :Helvetica
+  grid                    --> :off
+
+  if type === :radial
+    x, y, z = append_forradial(x, y, z, 50)
+    polar_coords!(x, y, 360.0/ntF, th)
+
+    ylims           --> (-th*1.05, th*1.05)
+    xlims           --> (-th*1.05, th*1.05)
+    xticks          --> (nothing)
+    xshowaxis       --> false
+    colorbar        --> true
+    yshowaxis       --> false
+    yticks          --> nothing
+
+  else
+    xlims           --> (-th*0.05, th*1.05)
+    xguide          --> "time"
+    xflip           --> true
+    tickfontfamily  --> :Helvetica
+    tickfontsize    --> 8
+    xtick_direction --> :out
+
+    if type === :phylogram
+      ylims         --> (1.0-(0.05*ntF), ntF+(0.05*ntF))
+      colorbar      --> true
+      yshowaxis     --> false
+      yticks        --> nothing
+
+    else
+      colorbar  --> false
+      yshowaxis --> true
+    end
+  end
+
+  @series begin
+    seriestype  := :path
+    line_z     --> z
+    linecolor  --> cgrad(:roma, rev = true)
+
+    if type === :rates
+      return x, z
+    else
+      return x, y
+    end
+  end
+
+  if type != :rates && any(shownodes)
+    @series begin
+      seriestype  := :scatter
+      markershape -->       shapes[nodet]
+      markercolor -->       colors[nodet]
+      markerstrokecolor --> colors[nodet]
+      markersize  -->       shsizes[nodet]
+      markeralpha --> alpha
+      if type === :phylogram
+        xnode, ynode
+      elseif type === :radial
+        polar_coords!(xnode, ynode, 360.0/ntF, th)
+        xnode, ynode
+      end
+    end
+  end
+end
+
+
+
+
+"""
+    _rplottree!(tree  ::T,
+                zf    ::Function,
+                xc    ::Float64,
+                i     ::Int64,
+                x     ::Array{Float64,1},
+                y     ::Array{Float64,1},
+                z     ::Array{Float64,1},
+                nodet ::Array{Int64,1},
+                xnode ::Array{Float64,1},
+                ynode ::Array{Float64,1},
+                show  ::NTuple{3,Bool},
+                simple::Bool) where {T <: iT}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function _rplottree!(tree  ::T,
+                     zf    ::Function,
+                     xc    ::Float64,
+                     i     ::Int64,
+                     x     ::Array{Float64,1},
+                     y     ::Array{Float64,1},
+                     z     ::Array{Float64,1},
+                     nodet ::Array{Int64,1},
+                     xnode ::Array{Float64,1},
+                     ynode ::Array{Float64,1},
+                     show  ::NTuple{3,Bool},
+                     simple::Bool) where {T <: iT}
+
+  xe = xc - e(tree)
+
+  if def1(tree)
+     if def2(tree)
+
+      y1, i = _rplottree!(tree.d1, zf, xe, i, x, y, z, nodet, xnode, ynode, 
+        show, simple)
+      y2, i = _rplottree!(tree.d2, zf, xe, i, x, y, z, nodet, xnode, ynode,
+        show, simple)
+
+      yc = (y1 + y2)*0.5
+      zc = last(zf(tree))
+
+      # add vertical lines
+      push!(x, xe, xe, NaN)
+      push!(y, y1, y2, NaN)
+      push!(z, zc, zc, NaN)
+
+      # nodes
+      if show[1]
+        push!(nodet, 1)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    else
+
+      yc, i = _rplottree!(tree.d1, zf, xe, i, x, y, z, nodet, xnode, ynode, 
+        show, simple)
+
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    end
+  else
+    i += 1
+    yc = Float64(i)
+    if isextinct(tree)
+      if show[2]
+        push!(nodet, 2)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    elseif isfossil(tree)
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    end
+  end
+
+  # tree δt and nsδt
+  δt = dt(tree)
+
+  # add horizontal lines
+  if simple
+    zv = zf(tree)
+    l  = lastindex(zv)
+    push!(z, mean(zf(tree)))
+    push!(y, yc)
+    push!(x, xc)
+  else
+    # plot function
+    zv = copy(zf(tree))
+    l  = lastindex(zv)
+    @simd for i in Base.OneTo(l-1)
+      push!(x, xc - Float64(i-1)*δt)
+      push!(y, yc)
+      push!(z, zv[i])
+    end
+  end
+
+  zc = last(zv)
+  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
+  push!(y, yc, NaN)
+  push!(z, zc, NaN)
+
+  return yc, i
 end
 
 
@@ -678,90 +605,36 @@ end
 
 
 """
-    _nodeproperties!(tree      ::T,
-                     shape     ::Vector{Symbol},
-                     col       ::Vector{Symbol},
-                     alpha     ::Vector{Float64},
-                     tip       ::Float64,
-                     speciation::Float64,
-                     extinct   ::Float64,
-                     fossil    ::Float64) where {T <: iTree}
+    plotω(tree       ::T,
+          ωtimes     ::Vector{Float64};
+          labsize    = 8,
+          type       = :phylogram,
+          showlabels = (T <: Tlabel),
+          shownodes  = (false, false, T <: iTf),
+          shapes     = [:none, :none, :square],
+          colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+          shsizes    = [3.0, 3.0, 3.0],
+          showda     = false,
+          col_da     = ["#a9a9a9", :black],
+          y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
 
-Completes the lists of node shapes, colors and alphas according to their
-properties.
+Recipe for plotting a tree with fossil occurrences.
 """
-function _nodeproperties!(tree      ::T,
-                          shape     ::Vector{Symbol},
-                          col       ::Vector{Symbol},
-                          alpha     ::Vector{Float64},
-                          tip       ::Float64,
-                          speciation::Float64,
-                          extinct   ::Float64,
-                          fossil    ::Float64) where {T <: iTree}
-
-  fx = !isdefined(tree, :fx) || isfix(tree)
-
-  if def1(tree)
-    if def2(tree)
-      # speciation event
-      push!(shape, :circle, fill(:none,5)...)
-      push!(col, :gray, fill(:white,5)...)
-      push!(alpha, (0.5+0.5*fx)*speciation, 0, 0, 0, 0, 0)
-      _nodeproperties!(tree.d1, shape, col, alpha,
-        tip, speciation, extinct, fossil)
-      push!(shape, :none, :none)
-      push!(col, :white, :white)
-      push!(alpha, 0, 0)
-      _nodeproperties!(tree.d2, shape, col, alpha,
-        tip, speciation, extinct, fossil)
-    else
-      push!(shape, :none, :none, :square)
-      push!(col, :white, :white, :purple)
-      push!(alpha, 0, 0, (0.5+0.5*fx)*fossil)
-      _nodeproperties!(tree.d1, shape, col, alpha,
-        tip, speciation, extinct, fossil)
-    end
-  else
-    # tip
-    if isfossil(tree)
-      push!(shape, :square); push!(col, :purple)
-      push!(alpha, (0.5+0.5*fx)*fossil)
-    elseif isextinct(tree)
-      push!(shape, :circle); push!(col, :blue)
-      push!(alpha, (0.5+0.5*fx)*extinct)
-    else
-      push!(shape, :circle); push!(col, :blue)
-      push!(alpha, (0.5+0.5*fx)*tip)
-    end
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    plotω(tree       ::T, 
-          ωtimes     ::Vector{Float64}; 
-          tor        = treeheight(tree),
-          shownodes  = true,
-          showlabels = (T == sTf_label),
-          y          = fill(0.5, lastindex(ωtimes)),
-          bar_width  = treeheight(tree)/5000) where {T <: iTree}
-
-Recipe for plotting a tree with fossil occurrences. Displays type-specific nodes if 
-`shownodes == true` (by default to make sampled ancestors visible). For extinct trees 
-the time of origin `tor` can be set manually.
-"""
-function plotω(tree       ::T, 
-               ωtimes     ::Vector{Float64}; 
-               tor        = treeheight(tree),
-               shownodes  = true,
-               showlabels = (T == sTf_label),
+function plotω(tree       ::T,
+               ωtimes     ::Vector{Float64};
+               labsize    = 8,
+               type       = :phylogram,
+               showlabels = (T <: Tlabel),
+               shownodes  = (false, false, T <: iTf),
+               shapes     = [:none, :none, :square],
+               colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+               shsizes    = [3.0, 3.0, 3.0],
+               showda     = false,
+               col_da     = ["#a9a9a9", :black],
                y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
 
-  plot(tree, tor=tor, shownodes=shownodes, showlabels=showlabels)
+  plot(tree, labsize=labsize, type=type, shownodes=shownodes, showlabels=showlabels, shapes=shapes
+       colors=colors, shsizes=shsizes, showda=showda, col_da=col_da, y_ω=y_ω)
   y_min = 1.0-0.05*ntips(tree)
   scatter!(ωtimes, [max(rnorm(y_ω, (y_ω-y_min)/5), y_min) for ωt in ωtimes], label="occurrences", mc=:grey, ms=2, ma=0.5)
 
@@ -808,7 +681,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     yscale         --> :log10
   end
 
-  return  x, y
+  return x, y
 end
 
 
@@ -898,7 +771,8 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     if !isempty(q2) 
       Q2[i,:] = quantile(qi, q2)
     end
-    M[i] = exp.(mean(log, qi))
+    # M[i] = exp.(mean(log, qi))
+    M[i] = median(qi)
   end
 
   # plot defaults
@@ -1044,25 +918,27 @@ end
 
 """
     f(tree::T,
-      f  ::Function,
+      f   ::Function,
       dt  ::Float64;
-      q0 = [0.025, 0.975],
-      q1 = [0.25,  0.75],
-      q2 = Float64[])  where {T <: iT}
+      t_af = mean,
+      q0   = [0.025, 0.975],
+      q1   = [0.25,  0.75],
+      q2   = Float64[]) where {T <: iT}
 
 Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(tree::T,
                    f   ::Function,
-                   dt  ::Float64;
-                   q0 = [0.025, 0.975],
-                   q1 = [0.25,  0.75],
-                   q2 = Float64[]) where {T <: iT}
+                   δt  ::Float64;
+                   t_af = mean,
+                   q0   = [0.025, 0.975],
+                   q1   = [0.25,  0.75],
+                   q2   = Float64[]) where {T <: iT}
 
   # prepare data
-  ts, r = time_rate(tree, dt, f)
+  ts, r = time_rate(tree, f, δt)
   lts = lastindex(ts)
-  m   = time_quantile(r, [0.5])
+  m   = map(t_af, r)
 
   # common shape plot defaults
   legend          --> :none
@@ -1151,21 +1027,23 @@ end
 """
     function f(trees::Vector{T},
                f    ::Function,
-               tdt  ::Float64;
-               af = x -> quantile(x, 0.5),
-               q0 = [0.025, 0.975],
-               q1 = [0.25,  0.75],
-               q2 = Float64[]) where {T <: iT}
+               δt   ::Float64;
+               t_af  = mean,
+               tv_af = x -> quantile(x, 0.5),
+               q0    = [0.025, 0.975],
+               q1    = [0.25,  0.75],
+               q2    = Float64[]) where {T <: iT}
 
 Recipe for plotting values given by `f` through time for a `iT`.
 """
 @recipe function f(trees::Vector{T},
                    f    ::Function,
-                   tdt  ::Float64;
-                   af = x -> quantile(x, 0.5),
-                   q0 = [0.025, 0.975],
-                   q1 = [0.25,  0.75],
-                   q2 = Float64[]) where {T <: iT}
+                   δt   ::Float64;
+                   t_af  = mean,
+                   tv_af = x -> quantile(x, 0.5),
+                   q0    = [0.025, 0.975],
+                   q1    = [0.25,  0.75],
+                   q2    = Float64[]) where {T <: iT}
 
   ntrees = lastindex(trees)
   riv = Vector{Float64}[]
@@ -1175,10 +1053,10 @@ Recipe for plotting values given by `f` through time for a `iT`.
   for t in trees
 
     # tree extracting function
-    tsi, ri = time_rate(t, tdt, f)
+    tsi, ri = time_rate(t, f, δt)
 
     # aggregating function
-    ri = map(af, ri)
+    ri = map(t_af, ri)
 
     if lastindex(tsi) > lts
       ts  = tsi
@@ -1222,7 +1100,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
     if !isempty(q2) 
       Q2[i,:] = quantile(qi, q2)
     end
-    M[i] = quantile(qi, 0.5)
+    M[i] = tv_af(qi)
   end
 
   # common shape plot defaults

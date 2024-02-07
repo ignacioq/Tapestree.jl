@@ -424,8 +424,8 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
   setλt!(bi, lλv[l])
   push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
 
-  if i1 > 0 
-    if i2 > 0 
+  if i1 > 0
+    if i2 > 0
       _make_Ξ!(Ξ, ixiv, ixfv, i2, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
       _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
     else

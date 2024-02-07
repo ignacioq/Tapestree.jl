@@ -67,6 +67,7 @@ iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
 Return if is a fixed (i.e. observed) node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
+isfix(tree::Tlabel) = true
 
 
 
@@ -87,6 +88,7 @@ istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 Return if is an extinction node.
 """
 isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
+isextinct(tree::Tlabel) = false
 
 
 
@@ -568,6 +570,65 @@ end
 
 
 """
+    subclades_n(tree::T, 
+                n_min::Int64,
+                n_max::Int64) where {T <: iTree}
+
+Return all the subclades with less than `n_max` and more than `n_min` species.
+"""
+function subclades_n(tree::T, 
+                     n_min::Int64,
+                     n_max::Int64) where {T <: iTree}
+
+  strees = T[]
+  _subclades_n!(strees,  tree, ntips(tree), n_min, n_max)
+
+  return strees
+end
+
+
+
+
+"""
+    _subclades_n!(strees::Vector{T},
+                  tree  ::T,
+                  n_min ::Int64,
+                  n_max ::Int64) where {T <: iTree}
+
+Return the minimum subclades_n that includes tip labels
+in `tips` (recursive function).
+"""
+function _subclades_n!(strees::Vector{T},
+                       tree  ::T,
+                       n     ::Int64,
+                       n_min ::Int64,
+                       n_max ::Int64) where {T <: iTree}
+  if def1(tree)
+    n1 = ntips(tree.d1)
+
+    if n_min <= n1 <= n_max
+      push!(strees, T(tree.d1))
+    else
+      _subclades_n!(strees, tree.d1, n1, n_min, n_max)
+    end
+
+    if def2(tree)
+      n2 = n - n1
+      if n_min <= n2 <= n_max
+        push!(strees, T(tree.d2))
+      else
+        _subclades_n!(strees, tree.d2, n2, n_min, n_max)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
     labels(tree::sT_label)
 
 Return labels and left node order.
@@ -816,7 +877,7 @@ end
                 ix  ::Int64,
                 nep ::Int64) where {T <: iTf}
 
-Return the branch length sum of `tree` at different epochs, initialized at `l`.
+Return the branch length sum of `tree` at different epochs recursively.
 """
 function _treelength!(tree::T,
                       t   ::Float64,
@@ -857,8 +918,7 @@ end
 """
     irange(tree::T, f::Function) where {T <: iTf}
 
-Return the branch length sum of `tree` based on `δt` and `fδt`
-for debugging purposes.
+Return the extrema of the output of function `f` on `tree`.
 """
 function irange(tree::T, f::Function) where {T <: iT}
 
@@ -1827,33 +1887,6 @@ Recursive structure that returns speciation and extinction event times.
 function _eventimes!(tree::T,
                      t   ::Float64,
                      se  ::Array{Float64,1},
-                     ee  ::Array{Float64,1}) where {T <: Union{sT_label, sTpb}}
-
-  et = e(tree)
-  if def1(tree)
-    push!(se, t - et)
-
-    _eventimes!(tree.d1, t - et, se, ee)
-    _eventimes!(tree.d2, t - et, se, ee)
-  end
-
-  return nothing
-end
-
-
-
-
-
-"""
-    _eventimes!(tree::T,
-                t   ::Float64,
-                se  ::Array{Float64,1},
-                ee  ::Array{Float64,1}) where {T <: iTree}
-Recursive structure that returns speciation and extinction event times.
-"""
-function _eventimes!(tree::T,
-                     t   ::Float64,
-                     se  ::Array{Float64,1},
                      ee  ::Array{Float64,1}) where {T <: iTree}
 
   et = e(tree)
@@ -1905,6 +1938,30 @@ end
 
 
 
+"""
+    _time1_λ!(tree::T,
+              t   ::Float64) where {T <: iTree}
+
+Returns time to first speciation
+"""
+function _time1_λ!(tree ::T,
+                   tstem::Float64) where {T <: iTree}
+
+  tstem += e(tree)
+
+  if def1(tree)
+    if def2(tree)
+      return tstem
+    else
+      tstem = _time1_λ!(tree.d1, tstem)
+    end
+  end
+
+  return tstem
+end
+
+
+
 
 """
     ltt(tree::T) where {T <: iTree}
@@ -1936,9 +1993,10 @@ Returns number of species through time.
   end
 
   sort!(se, rev = true)
-  pushfirst!(se, treeheight(tree))
+  # if crown or stem
+  pushfirst!(se, se[1] + _time1_λ!(tree, 0.0))
 
-  # last no events
+  # last no events if alive
   push!(n,  n[end])
   push!(se, 0.0)
 
@@ -2260,9 +2318,9 @@ end
 
 
 """
-    trextract(tree::T)
+    trextract(tree::iTree, f::Function)
 
-Make joint proposal to match simulation with tip fixed `x` value.
+Perform function `f` in each recursive tree in `tree`.
 """
 function trextract(tree::iTree, f::Function)
   tvs = typeof(f(tree))[]
@@ -2272,9 +2330,9 @@ end
 
 
 """
-    _trextract!(bls::Vector{Float64}, tree::iTree)
+    _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
 
-Extract all branch lengths.
+Perform function `f` recursively in each recursive tree in `tree`.
 """
 function _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
 

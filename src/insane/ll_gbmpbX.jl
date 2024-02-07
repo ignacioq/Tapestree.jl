@@ -112,7 +112,7 @@ function ll_gbm_b(lλv ::Array{Float64,1},
   llx  = 0.0
   llbm = 0.0
   llpb = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
     xvi   = xv[i]
@@ -221,7 +221,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
   llbm = 0.0
   llpb = 0.0
   llx  = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
     xvi   = x[i]
@@ -288,7 +288,7 @@ function llr_ssx(xp  ::Array{Float64,1},
   n = lastindex(xc)
 
   ssrx = 0.0
-  @avx for i in Base.OneTo(n-2)
+  @turbo for i in Base.OneTo(n-2)
     ssrx += (xp[i+1] - xp[i])^2 - (xc[i+1] - xc[i])^2
   end
 
@@ -346,7 +346,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   llrbm = 0.0
   llrpb = 0.0
   llrx  = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλpi   = lλp[i]
     lλci   = lλc[i]
     lλpi1  = lλp[i+1]
@@ -458,7 +458,7 @@ function _sss_gbm_b(lλv::Array{Float64,1},
 
     ssλ = 0.0
     ssx = 0.0
-    @avx for i in Base.OneTo(nI)
+    @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lλvi1 = lλv[i+1]
       xvi   = xv[i]

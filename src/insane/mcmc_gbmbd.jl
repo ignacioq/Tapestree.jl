@@ -14,53 +14,53 @@ Created 03 09 2020
 
 """
     insane_gbmbd(tree    ::sT_label;
-                 λa_prior::NTuple{2,Float64}     = (1.5, 0.5),
-                 μa_prior::NTuple{2,Float64 }    = (1.5, 1.0),
-                 α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                 σμ_prior::NTuple{2,Float64}     = (5.0, 0.5),
-                 niter   ::Int64                 = 1_000,
-                 nthin   ::Int64                 = 10,
-                 nburn   ::Int64                 = 200,
-                 nflush  ::Int64                 = nthin,
-                 ofile   ::String                = homedir(),
-                 ϵi      ::Float64               = 0.2,
-                 λi      ::Float64               = NaN,
-                 μi      ::Float64               = NaN,
-                 αi      ::Float64               = 0.0,
-                 σλi     ::Float64               = 0.01,
-                 σμi     ::Float64               = 0.01,
-                 pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.1, 0.2),
-                 δt      ::Float64               = 1e-3,
-                 survival::Bool                  = true,
-                 mxthf   ::Float64               = Inf,
-                 prints  ::Int64                 = 5,
+                 λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                 μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                 σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
+                 σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
+                 niter   ::Int64             = 1_000,
+                 nthin   ::Int64             = 10,
+                 nburn   ::Int64             = 200,
+                 nflush  ::Int64             = nthin,
+                 ofile   ::String            = string(homedir(), "/ibd"),
+                 ϵi      ::Float64           = 0.2,
+                 λi      ::Float64           = NaN,
+                 μi      ::Float64           = NaN,
+                 αi      ::Float64           = 0.0,
+                 σλi     ::Float64           = 0.01,
+                 σμi     ::Float64           = 0.01,
+                 pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
+                 δt      ::Float64           = 1e-3,
+                 survival::Bool              = true,
+                 mxthf   ::Float64           = Inf,
+                 prints  ::Int64             = 5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for `ibd`.
 """
 function insane_gbmbd(tree    ::sT_label;
-                      λa_prior::NTuple{2,Float64}     = (1.5, 0.5),
-                      μa_prior::NTuple{2,Float64 }    = (1.5, 1.0),
-                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                      σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                      σμ_prior::NTuple{2,Float64}     = (5.0, 0.5),
-                      niter   ::Int64                 = 1_000,
-                      nthin   ::Int64                 = 10,
-                      nburn   ::Int64                 = 200,
-                      nflush  ::Int64                 = nthin,
-                      ofile   ::String                = homedir(),
-                      ϵi      ::Float64               = 0.2,
-                      λi      ::Float64               = NaN,
-                      μi      ::Float64               = NaN,
-                      αi      ::Float64               = 0.0,
-                      σλi     ::Float64               = 0.01,
-                      σμi     ::Float64               = 0.01,
-                      pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.1, 0.2),
-                      δt      ::Float64               = 1e-3,
-                      survival::Bool                  = true,
-                      mxthf   ::Float64               = Inf,
-                      prints  ::Int64                 = 5,
+                      λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                      μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                      α_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                      σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
+                      σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
+                      niter   ::Int64             = 1_000,
+                      nthin   ::Int64             = 10,
+                      nburn   ::Int64             = 200,
+                      nflush  ::Int64             = nthin,
+                      ofile   ::String            = string(homedir(), "/ibd"),
+                      ϵi      ::Float64           = 0.2,
+                      λi      ::Float64           = NaN,
+                      μi      ::Float64           = NaN,
+                      αi      ::Float64           = 0.0,
+                      σλi     ::Float64           = 0.01,
+                      σμi     ::Float64           = 0.01,
+                      pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
+                      δt      ::Float64           = 1e-3,
+                      survival::Bool              = true,
+                      mxthf   ::Float64           = Inf,
+                      prints  ::Int64             = 5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
@@ -68,17 +68,7 @@ function insane_gbmbd(tree    ::sT_label;
   th    = treeheight(tree)
   δt   *= max(0.1,round(th, RoundDown, digits = 2))
   srδt  = sqrt(δt)
-
-  surv = 0   # condition on survival of 0, 1, or 2 starting lineages
-  rmλ  = 0.0 # condition on first speciation event
-  if survival 
-    if iszero(e(tree)) 
-      surv += 2
-      rmλ  += 1.0
-    else
-      surv += 1
-    end
-  end
+  surv = survival ? Int64(iszero(e(tree))) : 2
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -105,7 +95,7 @@ function insane_gbmbd(tree    ::sT_label;
   Ξ = make_Ξ(idf, λc, μc, αi, σλi, σμi, δt, srδt, iTbd)
 
   # survival
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 5_000, surv)
+  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, surv)
 
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
@@ -122,11 +112,11 @@ function insane_gbmbd(tree    ::sT_label;
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, mc =
     mcmc_burn_gbmbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
-      nburn, αi, σλi, σμi, mc, th, rmλ, surv, δt, srδt, inodes, pup, prints)
+      nburn, αi, σλi, σμi, mc, th, surv, δt, srδt, inodes, pup, prints)
 
   # mcmc
   r, treev =
-    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, rmλ, surv,
+    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, surv,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, δt, srδt, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -150,8 +140,7 @@ end
                     σμc     ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
-                    rmλ     ::Float64,
-                    surv    ::Int64,
+                    surv    ::Bool,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
@@ -173,7 +162,6 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          σμc     ::Float64,
                          mc      ::Float64,
                          th      ::Float64,
-                         rmλ     ::Float64,
                          surv    ::Int64,
                          δt      ::Float64,
                          srδt    ::Float64,
@@ -182,7 +170,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          prints  ::Int64)
 
   λ0  = lλ(Ξ[1])[1]
-  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - rmλ * λ0 +
+  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * λ0 +
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,         σλ_prior[1], σλ_prior[2]) +
         logdinvgamma(σμc^2,         σμ_prior[1], σμ_prior[2]) +
@@ -209,7 +197,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       if pupi === 1
 
         llc, prc, αc, mc  =
-          update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, dλ, llc, prc,
+          update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, dlλ, llc, prc,
             mc, th, surv, δt, srδt, α_prior)
 
         # update ssλ with new drift `α`
@@ -262,7 +250,6 @@ end
                σμc     ::Float64,
                mc      ::Float64,
                th      ::Float64,
-               rmλ     ::Float64,
                surv    ::Int64,
                λa_prior::NTuple{2,Float64},
                μa_prior::NTuple{2,Float64},
@@ -290,7 +277,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     σμc     ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
-                    rmλ     ::Float64,
                     surv    ::Int64,
                     λa_prior::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
@@ -311,8 +297,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
+  lλxpr = log(λa_prior[2])
+  lμxpr = log(μa_prior[2])
+
   L            = treelength(Ξ)     # tree length
-  dλ          = deltaλ(Ξ)         # delta change in λ
+  dλ           = deltaλ(Ξ)         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)    # sum squares in λ and μ
   nin          = lastindex(inodes) # number of internal nodes
   el           = lastindex(idf)    # number of branches
@@ -349,14 +338,14 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           if pupi === 1
 
             llc, prc, αc, mc  =
-              update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, dλ, llc, prc,
+              update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, dlλ, llc, prc,
                 mc, th, surv, δt, srδt, α_prior) 
 
             # update ssλ with new drift `α`
             ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dλ, deltaλ(Ξ))
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
             #    @show ll0, llc, i, pupi, Ξ
             #    return
             # end
@@ -368,8 +357,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
               update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
                 llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dλ, deltaλ(Ξ))
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
             #    @show ll0, llc, i, pupi, Ξ
             #    return
             # end
@@ -384,8 +373,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
               update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, dλ, ssλ, ssμ, mc, th,
                 surv, δt, srδt, λa_prior, μa_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dλ, deltaλ(Ξ))
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
             #    @show ll0, llc, i, pupi, Ξ
             #    return
             # end
@@ -399,8 +388,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
               update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, dλ, ssλ, ssμ, nλ, L,
                 δt, srδt)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dλ, deltaλ(Ξ))
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(dlλ, deltaλ(Ξ))
             #    @show ll0, llc, i, pupi, Ξ
             #    return
             # end
@@ -937,7 +926,7 @@ end
               prc    ::Float64,
               mc     ::Float64,
               th     ::Float64,
-              surv   ::Bool,
+              surv   ::Int64,
               δt     ::Float64,
               srδt   ::Float64,
               α_prior::NTuple{2,Float64})
@@ -967,7 +956,7 @@ function update_α!(αc     ::Float64,
   rs  = σλ2/τ2
   αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 5_000, surv)
+  mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -996,7 +985,7 @@ end
               prc     ::Float64,
               mc      ::Float64,
               th      ::Float64,
-              surv    ::Int64,
+              surv    ::Bool,
               δt      ::Float64,
               srδt    ::Float64,
               σλ_prior::NTuple{2,Float64},
@@ -1029,7 +1018,7 @@ function update_σ!(σλc     ::Float64,
   σλp = sqrt(σλp2)
   σμp = sqrt(σμp2)
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 5_000, surv)
+  mp  = m_surv_gbmbd(th, λ0, μ0, α, σλp, σμp, δt, srδt, 1_000, surv)
 
   llr = log(mp/mc)
 

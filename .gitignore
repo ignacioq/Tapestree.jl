@@ -1,5 +1,5 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
-src/.DS_Store
+*.DS_Store
 docs/build/

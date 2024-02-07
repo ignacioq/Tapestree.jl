@@ -110,7 +110,7 @@ function ll_bm(x  ::Array{Float64,1},
   nI = lastindex(x)-2
 
   ll = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     ll += (x[i+1] - x[i] - α*δt)^2
   end
 
@@ -150,7 +150,7 @@ function llr_bm(xp  ::Array{Float64,1},
   nI = lastindex(xp) - 2
 
   llr = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     llr += (xp[i+1] - xp[i] - α*δt)^2 -
            (xc[i+1] - xc[i] - α*δt)^2
   end
@@ -248,7 +248,7 @@ Brownian motion simulation function for updating a branch in place.
 
     # for standard δt
     x[1] = xi
-    @simd for i = Base.OneTo(l-2)
+    @turbo for i = Base.OneTo(l-2)
       x[i+1] *= srδt*σ
       x[i+1] += α*δt
     end
@@ -259,7 +259,6 @@ Brownian motion simulation function for updating a branch in place.
 
   return nothing
 end
-
 
 
 
@@ -285,23 +284,22 @@ Brownian bridge simulation function for updating a branch in place.
   @inbounds begin
 
     l = lastindex(x)
-
     randn!(x)
-
     # for standard δt
     x[1] = xi
-    @simd for i = Base.OneTo(l-2)
-      x[i+1] *= srδt*σ
-    end
-    x[l] *= sqrt(fdt)*σ
-    cumsum!(x, x)
-
-    # make bridge
     if l > 2
+      for i = Base.OneTo(l-2)
+        x[i+1] *= srδt*σ
+        x[i+1] += x[i]
+      end
+      x[l] *= sqrt(fdt)*σ
+      x[l] += x[l-1]
+
+      # make bridge
       ite = 1.0/(Float64(l-2) * δt + fdt)
       xdf = (x[l] - xf)
 
-      @avx for i = Base.OneTo(l-1)
+      for i = Base.OneTo(l-1)
         x[i] -= (Float64(i-1) * δt * ite * xdf)
       end
     end
@@ -311,6 +309,7 @@ Brownian bridge simulation function for updating a branch in place.
 
   return nothing
 end
+
 
 
 
@@ -345,30 +344,31 @@ Brownian bridge simulation function for updating two vectors
 
   @inbounds begin
     l = lastindex(x0)
-
     randn!(x0)
     randn!(x1)
 
     # for standard δt
     x0[1] = x0i
     x1[1] = x1i
-    @simd for i = Base.OneTo(l-2)
-      x0[i+1] *= srδt*σ0
-      x1[i+1] *= srδt*σ1
-    end
-    srlt  = sqrt(fdt)
-    x0[l] *= srlt*σ0
-    x1[l] *= srlt*σ1
-    cumsum!(x0, x0)
-    cumsum!(x1, x1)
-
-    # make bridge
     if l > 2
+      for i = Base.OneTo(l-2)
+        x0[i+1] *= srδt*σ0
+        x0[i+1] += x0[i]
+        x1[i+1] *= srδt*σ1
+        x1[i+1] += x1[i]
+      end
+      srlt  = sqrt(fdt)
+      x0[l] *= srlt*σ0
+      x0[l] += x0[l-1]
+      x1[l] *= srlt*σ1
+      x1[l] += x1[l-1]
+
+      # make bridge
       ite = 1.0/(Float64(l-2) * δt + fdt)
       x0df = (x0[l] - x0f)
       x1df = (x1[l] - x1f)
 
-      @avx for i = Base.OneTo(l-1)
+      for i = Base.OneTo(l-1)
         iti    = Float64(i-1) * δt * ite
         x0[i] -= (iti * x0df)
         x1[i] -= (iti * x1df)
@@ -410,7 +410,7 @@ Returns a Brownian motion vector starting in `xa`, with diffusion rate
     x = randn(l)
     # for standard δt
     x[1] = xa
-    @simd for i in Base.OneTo(n)
+    @turbo for i in Base.OneTo(n)
       x[i+1] *= srδt*σ
       x[i+1] += α*δt
     end
@@ -421,7 +421,6 @@ Returns a Brownian motion vector starting in `xa`, with diffusion rate
 
   return x
 end
-
 
 
 
@@ -451,18 +450,19 @@ Brownian bridge simulation.
 
     # for standard δt
     x[1] = xi
-    @simd for i = Base.OneTo(n+1)
-      x[i+1] *= srδt*σ
-    end
-    x[l] *= sqrt(fdt)*σ
-    cumsum!(x, x)
-
-    # make bridge
     if l > 2
+      for i = Base.OneTo(l-2)
+        x[i+1] *= srδt*σ
+        x[i+1] += x[i]
+      end
+      x[l] *= sqrt(fdt)*σ
+      x[l] += x[l-1]
+
+      # make bridge
       ite = 1.0/(Float64(l-2) * δt + fdt)
       xdf = (x[l] - xf)
 
-      @avx for i = Base.OneTo(l-1)
+      @turbo for i = Base.OneTo(l-1)
         x[i] -= (Float64(i-1) * δt * ite * xdf)
       end
     end
@@ -472,7 +472,6 @@ Brownian bridge simulation.
 
   return x
 end
-
 
 
 

@@ -13,18 +13,13 @@ Created 06 07 2020
 
 
 """
-    insane_cpb(tree    ::sT_label,
-               out_file::String;
-               λ_prior  ::NTuple{2,Float64}    = (1.5, 0.5),
+    insane_cpb(tree    ::sT_label;
+               λ_prior ::NTuple{2,Float64}    = (1.0, 1.0),
                niter   ::Int64                 = 1_000,
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
                nflush  ::Int64                 = nthin,
-               ofile   ::String                = homedir(),
-               # marginal ::Bool                 = false,
-               # nitpp   ::Int64                 = 100,
-               # nthpp   ::Int64                 = 10,
-               # K       ::Int64                 = 10,
+               ofile   ::String                = string(homedir(), "/cpb"),
                λi      ::Float64               = NaN,
                pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
                prints  ::Int64                 = 5,
@@ -33,16 +28,12 @@ Created 06 07 2020
 Run insane for constant pure-birth.
 """
 function insane_cpb(tree    ::sT_label;
-                    λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
+                    λ_prior ::NTuple{2,Float64}    = (1.0, 1.0),
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
                     nflush  ::Int64                 = nthin,
-                    ofile   ::String                = homedir(),
-                    # marginal ::Bool                 = false,
-                    # nitpp   ::Int64                 = 100,
-                    # nthpp   ::Int64                 = 10,
-                    # K       ::Int64                 = 10,
+                    ofile   ::String                = string(homedir(), "/cpb"),
                     λi      ::Float64               = NaN,
                     pupdp   ::NTuple{2,Float64}     = (0.2, 0.2),
                     prints  ::Int64                 = 5,

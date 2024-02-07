@@ -29,7 +29,7 @@ Sample conditional on number of species
               σλ      ::Float64 = 0.1,
               μ       ::Float64 = 0.0,
               δt      ::Float64 = 1e-3,
-              start   ::Symbol  = :stem,
+              init    ::Symbol  = :stem,
               nstar   ::Int64   = 2*n,
               p       ::Float64 = 5.0,
               warnings::Bool    = true,
@@ -44,7 +44,7 @@ function sim_gbmce(n       ::Int64;
                    σλ      ::Float64 = 0.1,
                    μ       ::Float64 = 0.0,
                    δt      ::Float64 = 1e-3,
-                   start   ::Symbol  = :stem,
+                   init    ::Symbol  = :stem,
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
                    warnings::Bool    = true,
@@ -52,7 +52,7 @@ function sim_gbmce(n       ::Int64;
 
   # simulate in non-recursive manner
   e0, e1, el, λs, ea, ee, na, simt =
-    _sedges_gbmce(nstar, log(λ0), α, σλ, μ, δt, sqrt(δt), start, maxt)
+    _sedges_gbmce(nstar, log(λ0), α, σλ, μ, δt, sqrt(δt), init, maxt)
 
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
@@ -87,13 +87,15 @@ end
 
 
 """
-    _sedges_gbmce(n   ::Int64,
-                  λ0  ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  μ   ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+    _sedges_gbmce(n    ::Int64,
+                  λ0   ::Float64,
+                  α    ::Float64,
+                  σλ   ::Float64,
+                  μ    ::Float64,
+                  δt   ::Float64,
+                  srδt ::Float64,
+                  init ::Symbol,
+                  maxt ::Float64)
 
 Simulate `gbmce` just until hitting `n` alive species. Note that this is
 a biased sample for a tree conditional on `n` species.
@@ -105,7 +107,7 @@ function _sedges_gbmce(n    ::Int64,
                        μ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       start::Symbol,
+                       init ::Symbol,
                        maxt ::Float64)
 
   # edges
@@ -114,7 +116,7 @@ function _sedges_gbmce(n    ::Int64,
   # edges extinct
   ee = Int64[]
 
-  if start == :stem
+  if init == :stem
     # edges alive
     ea = [1]
     # first edge
@@ -126,7 +128,7 @@ function _sedges_gbmce(n    ::Int64,
     el = [0.0]
     # lambda vector for each edge
     λs = [Float64[]]
-    # starting speciation rate
+    # initing speciation rate
     push!(λs[1], λ0)
     # lastindex for each edge
     li = [1]
@@ -136,7 +138,7 @@ function _sedges_gbmce(n    ::Int64,
     ieaa = Int64[] # indexes of ea to add
     iead = Int64[] # indexes of ea to delete
 
-  elseif start == :crown
+  elseif init == :crown
     # edges alive
     ea = [2, 3]
     # first edges
@@ -148,7 +150,7 @@ function _sedges_gbmce(n    ::Int64,
     el = [0.0, 0.0, 0.0]
     # lambda vector for each edge
     λs = [Float64[], Float64[], Float64[]]
-    # starting speciation rate
+    # initing speciation rate
     push!(λs[1], λ0, λ0)
     push!(λs[2], λ0)
     push!(λs[3], λ0)
@@ -161,7 +163,7 @@ function _sedges_gbmce(n    ::Int64,
     iead = Int64[] # indexes of ea to delete
 
   else
-    @error "$start does not match stem or crown"
+    @error "$init does not match stem or crown"
   end
 
 

@@ -10,6 +10,15 @@ Created 03 09 2020
 =#
 
 
+"""
+    event(λ::Float64, μ::Float64, ψ::Float64, δt::Float64)
+
+Return true if an event for a `ifbd`.
+"""
+event(λ::Float64, μ::Float64, ψ::Float64, δt::Float64) =
+  rand() < (λ + μ + ψ)*δt
+
+
 
 
 
@@ -1291,12 +1300,130 @@ end
 
 
 """
-    event(λ::Float64, μ::Float64, ψ::Float64, δt::Float64)
+    _sim_gbmfbd_fx(t   ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64,
+                   ix  ::Int64,
+                   tz  ::Vector{Float64},
+                   zλ  ::Vector{Float64},
+                   zμ  ::Vector{Float64},
+                   ψ   ::Float64,
+                   na  ::Int64,
+                   nn  ::Int64,
+                   nlim::Int64)
 
-Return true if an event for a `ifbd`.
+Simulate `iTfbd` where `λ(t)` & `μ(t)` follow `zλ` and `zμ`.
 """
-event(λ::Float64, μ::Float64, ψ::Float64, δt::Float64) =
-  rand() < (λ + μ + ψ)*δt
+function _sim_gbmfbd_fx(t   ::Float64,
+                        δt  ::Float64,
+                        srδt::Float64,
+                        ix  ::Int64,
+                        tz  ::Vector{Float64},
+                        zλ  ::Vector{Float64},
+                        zμ  ::Vector{Float64},
+                        ψ   ::Float64,
+                        na  ::Int64,
+                        nn  ::Int64,
+                        nlim::Int64)
 
+  if nn < nlim
 
+    λt = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+    μt = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+    λv = Float64[λt]
+    μv = Float64[μt]
+    bt = 0.0
+
+    while true
+
+      if t <= δt + accerr
+        t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
+        t   = max(0.0,t)
+        bt += t
+        srt = sqrt(t)
+
+        while 0.0 < tz[ix]
+          ix += 1
+        end
+        ix -= 1
+        λt1 = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+        μt1 = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+
+        push!(λv, λt1)
+        push!(μv, μt1)
+
+        λm = exp(0.5*(λt + λt1))
+        μm = exp(0.5*(μt + μt1))
+
+        if event(λm, μm, ψ, t)
+          # if speciation
+          if λevent(λm, μm, ψ)
+            nn += 1
+            na += 2
+            return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                         iTfbd(0.0, δt, 0.0, false, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                         bt, δt, t, false, false, false, λv, μv), na, nn
+          # if extinction
+          elseif μevent(μm, ψ)
+            return iTfbd(bt, δt, t, true, false, false, λv, μv), na, nn
+          # fossil sampling
+          else
+            return iTfbd(iTfbd(0.0, δt, 0.0, false, false, false,
+                               [λt1, λt1], [μt1, μt1]),
+                         bt, δt, t, false, true, false, λv, μv), na, nn
+          end
+        end
+
+        na += 1
+        return iTfbd(bt, δt, t, false, false, false, λv, μv), na, nn
+      end
+
+      t  -= δt
+      bt += δt
+
+      while t < tz[ix]
+        ix += 1
+      end
+      ix -= 1
+      λt1 = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+      μt1 = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+
+      push!(λv, λt1)
+      push!(μv, μt1)
+
+      λm = exp(0.5*(λt + λt1))
+      μm = exp(0.5*(μt + μt1))
+
+      if event(λm, μm, ψ, δt)
+        # if speciation
+        if λevent(λm, μm, ψ)
+          nn += 1
+          td1, na, nn =
+            _sim_gbmfbd_fx(t, δt, srδt, ix, tz, zλ, zμ, ψ, na, nn, nlim)
+          td2, na, nn =
+            _sim_gbmfbd_fx(t, δt, srδt, ix, tz, zλ, zμ, ψ, na, nn, nlim)
+
+          return iTfbd(td1, td2, bt, δt, δt, false, false, false, λv, μv),
+                 na, nn
+        # if extinction
+        elseif μevent(μm, ψ)
+
+          return iTfbd(bt, δt, δt, true, false, false, λv, μv), na, nn
+        else
+          td1, na, nn =
+            _sim_gbmfbd_fx(t, δt, srδt, ix, tz, zλ, zμ, ψ, na, nn, nlim)
+
+          return iTfbd(td1, bt, δt, δt, false, true, false, λv, μv), na, nn
+        end
+      end
+
+      λt = λt1
+      μt = μt1
+    end
+  end
+
+  return iTfbd(), na, nn
+end
 

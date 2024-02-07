@@ -14,26 +14,26 @@ Created 03 09 2020
 
 """
     insane_gbmfbd(tree    ::sTf_label;
-                  λa_prior::NTuple{2,Float64} = (1.5, 0.5),
-                  μa_prior::NTuple{2,Float64} = (1.5, 1.0),
-                  α_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                  λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                  μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                  α_prior ::NTuple{2,Float64} = (0.0, 1.0),
                   σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
                   ψ_epoch ::Vector{Float64}   = Float64[],
-                  f_epoch ::Vector{Int64}     = Int64[],
+                  f_epoch ::Vector{Int64}     = Int64[0],
                   niter   ::Int64             = 1_000,
                   nthin   ::Int64             = 10,
                   nburn   ::Int64             = 200,
                   nflush  ::Int64             = nthin,
-                  ofile   ::String            = homedir(),
+                  ofile   ::String            = string(homedir(), "/ifbd"),
                   ϵi      ::Float64           = 0.2,
                   λi      ::Float64           = NaN,
                   μi      ::Float64           = NaN,
                   ψi      ::Float64           = NaN,
                   αi      ::Float64           = 0.0,
-                  σλi     ::Float64           = 0.01,
-                  σμi     ::Float64           = 0.01,
+                  σλi     ::Float64           = 0.1,
+                  σμi     ::Float64           = 0.1,
                   pupdp   ::NTuple{5,Float64} = (0.01, 0.01, 0.01, 0.1, 0.2),
                   δt      ::Float64           = 1e-3,
                   survival::Bool              = true,
@@ -44,9 +44,9 @@ Created 03 09 2020
 Run insane for fossilized birth-death diffusion `fbdd`.
 """
 function insane_gbmfbd(tree    ::sTf_label;
-                       λa_prior::NTuple{2,Float64} = (1.5, 0.5),
-                       μa_prior::NTuple{2,Float64} = (1.5, 1.0),
-                       α_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                       λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                       μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                       α_prior ::NTuple{2,Float64} = (0.0, 1.0),
                        σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
@@ -56,7 +56,7 @@ function insane_gbmfbd(tree    ::sTf_label;
                        nthin   ::Int64             = 10,
                        nburn   ::Int64             = 200,
                        nflush  ::Int64             = nthin,
-                       ofile   ::String            = homedir(),
+                       ofile   ::String            = string(homedir(), "/ifbd"),
                        ϵi      ::Float64           = 0.2,
                        λi      ::Float64           = NaN,
                        μi      ::Float64           = NaN,
@@ -536,7 +536,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             r[lit,6] = αc
             r[lit,7] = σλc
             r[lit,8] = σμc
-            @avx for i in Base.OneTo(nep)
+            @turbo for i in Base.OneTo(nep)
               r[lit,8 + i] = ψc[i]
             end
             push!(treev, couple(Ξ, idf, 1))
@@ -668,7 +668,7 @@ function update_fs!(bix ::Int64,
     Lc = zeros(Float64, nep)
     _treelength!(ξc, tii, Lc, ψts, ixi, nep)
     _treelength!(ξp, tii, L,  ψts, ixi, nep)
-    @avx for i in Base.OneTo(nep)
+    @turbo for i in Base.OneTo(nep)
       L[i] -= Lc[i]
     end
 

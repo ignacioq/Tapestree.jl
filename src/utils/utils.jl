@@ -47,7 +47,7 @@ vecind(row::Int64, col::Int64, nrow::Int64) = row + nrow*(col - 1)
 """
     uniroot(f, approx = 1e-8, a = 0.0, b = 0.1)
 
-Find the root of function between `0.0` and `b`.
+Find the root of function between `a` and `b`.
 """
 function uniroot(f; approx = 1e-8, a = 0.0, b = 0.1) 
   # choose b
@@ -66,8 +66,6 @@ function uniroot(f; approx = 1e-8, a = 0.0, b = 0.1)
   end
   return m::Float64
 end 
-
-
 
 
 

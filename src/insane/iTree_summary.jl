@@ -47,23 +47,23 @@ end
 
 
 """
-    time_rate(tree::T, tdt::Float64, f::Function) where {T <: iT}
+    time_rate(tree::T, f::Function, δt::Float64) where {T <: iT}
 
-Extract values from `f` function at times sampled every `tdt` across the tree.
+Extract values from `f` function at times sampled every `δt` across the tree.
 """
-function time_rate(tree::T, tdt::Float64, f::Function) where {T <: iT}
+function time_rate(tree::T, f::Function, δt::Float64) where {T <: iT}
 
   th = treeheight(tree)
 
   # make time vector (present = 0.0)
-  ts  = [0.0:tdt:th...]
+  ts  = [0.0:δt:th...]
   reverse!(ts)
 
   # make vector of vector to push rates
   r = [Float64[] for i in Base.OneTo(lastindex(ts))]
 
   # do recursive
-  _time_rate!(tree, ts, tdt, r, 1, th, f)
+  _time_rate!(tree, ts, δt, r, 1, th, f)
   pop!(r)
   pop!(ts)
 
@@ -126,18 +126,139 @@ end
 
 
 
+"""
+    aggr_rates(tree::T,
+               f   ::Function,
+               δt  ::Float64;
+               af = x -> quantile(x, 0.5)) where {T <: iT}
+
+Return the aggregated rates from function `f` by `af`.
+"""
+function aggr_rates(tree::T,
+                    f   ::Function,
+                    δt  ::Float64;
+                    af = x -> quantile(x, 0.5)) where {T <: iT}
+
+  # prepare data
+  ts, r = time_rate(tree, f, δt)
+  lts = lastindex(ts)
+  
+  m = Array{Float64,1}(undef, lts)
+  for (i, ri) in enumerate(r)
+    m[i] = af(ri)
+  end
+
+  return ts, m
+end
+
+
+
 
 """
-    mcmc_array(treev::Array{T,1},
-               δt   ::Float64,
-               f   ::Function) where {T <: iT}
+    aggr_rates(trees::Vector{T},
+               f    ::Function,
+               δt   ::Float64;
+               af = x -> quantile(x, 0.5)) where {T <: iT}
+
+Return the aggregated rates from function `f` by `af`.
+"""
+function aggr_rates(trees::Vector{T},
+                    f    ::Function,
+                    δt   ::Float64;
+                    af = x -> quantile(x, 0.5)) where {T <: iT}
+
+  ntrees = lastindex(trees)
+  riv = Vector{Float64}[]
+
+  lts = 0
+  ts  = Float64[]
+  for t in trees
+
+    # tree extracting function
+    tsi, ri = time_rate(t, f, δt)
+
+    # aggregating function
+    ri = map(af, ri)
+
+    if lastindex(tsi) > lts
+      ts  = tsi
+      reverse!(ts)
+      lts = lastindex(tsi)
+    end
+
+    reverse!(ri)
+    push!(riv, ri)
+  end
+
+  # estimate quantiles
+  q = fill(NaN, lts, ntrees)
+  # estimate quantiles
+  for i in Base.OneTo(ntrees)
+    ri = riv[i]
+    lr = lastindex(ri)
+    q[1:lr,i] = ri
+  end
+
+  m = Array{Float64}(undef, lts)
+  for i in Base.OneTo(lts)
+    qi = q[i,:]
+    filter!(!isnan, qi)
+    m[i] = quantile(qi, 0.5)
+  end
+
+  return ts, m
+end
+
+
+
+
+"""
+    aggr_ltt(nts::Vector{Ltt}, 
+                  tdt::Float64;
+                  af = x -> quantile(x, 0.5))
+
+Return the aggregated ltt by `af`.
+"""
+function aggr_ltt(nts::Vector{Ltt}, 
+                  tdt::Float64;
+                  af = x -> quantile(x, 0.5))
+
+  n  = lastindex(nts)
+  th = maximum(map(x -> maximum(x.t), nts))
+
+  # make time vector (present = 0.0)
+  ts  = [0.0:tdt:th...]
+  lts = length(ts)
+
+  q = zeros(Int64, lts, n)
+  for j in Base.OneTo(n), i in Base.OneTo(lts)
+    q[i,j] = nspt(nts[j], ts[i])
+  end
+
+  m = Array{Float64}(undef, lts)
+  for i in Base.OneTo(lts)
+    qi = q[i,:]
+    filter!(!isnan, qi)
+    m[i] = af(qi)
+  end
+
+  return ts, m
+end
+
+
+
+
+"""
+    sample(treev::Array{T,1},
+           f    ::Function,
+           δt   ::Float64) where {T <: iT}
 
 Return an Array with a row for each sampled tree for interpolated
 parameters accessed by `f` at times determined by `δt`.
 """
-function mcmc_array(treev::Array{T,1},
-                    δt   ::Float64,
-                    f   ::Function) where {T <: iT}
+function sample(treev::Array{T,1},
+                f    ::Function,
+                δt   ::Float64) where {T <: iT}
 
   @inbounds begin
 
@@ -855,117 +976,6 @@ function imean(treev::Vector{iTfbd})
   end
 end
 
-
-
-
-"""
-    sustainedcount!(tree::iT, 
-                    zf  ::Function,
-                    iod ::Function)
-
-Counts times that branch changes of `zf` continue being higher or lower, 
-as set by `iod`.
-"""
-function sustainedcount(tree::iT, 
-                        zf  ::Function,
-                        iod ::Function)
-
-  c1 = Int64[]
-  c2 = Int64[]
-  if iszero(e(tree))
-    _sustainedcount!(tree.d1, 0, 0, c1, c2, zf, iod)
-    _sustainedcount!(tree.d2, 0, 0, c1, c2, zf, iod)
-  else
-    _sustainedcount!(tree,    0, 0, c1, c2, zf, iod)
-  end
-
-  @inbounds begin
-    ix = Int64[]
-    for i in Base.OneTo(lastindex(c1))
-      if iszero(c1[i])
-        push!(ix, i)
-      end
-    end
-    n0 = lastindex(ix)
-    deleteat!(c1, ix)
-  end
-
-  return zeros(Int64, n0), c1, c2
-end
-
-
-
-
-"""
-    _sustainedcount!(tree::iT, 
-                     psc1::Int64, 
-                     psc2::Int64, 
-                     c1  ::Vector{Int64}, 
-                     c2  ::Vector{Int64},
-                     zf  ::Function,
-                     iod ::Function)
-
-Counts times that branch changes of `zf` continue being higher or lower, 
-as set by `iod`.
-"""
-function _sustainedcount!(tree::iT, 
-                          psc1::Int64, 
-                          psc2::Int64, 
-                          c1  ::Vector{Int64}, 
-                          c2  ::Vector{Int64},
-                          zf  ::Function,
-                          iod ::Function)
-
-
-  if def1(tree)
-    if def2(tree)
-
-      it1 = istip(tree.d1)
-      it2 = istip(tree.d2)
-
-      lv   = zf(tree)
-      lv1  = zf(tree.d1)
-      lv2  = zf(tree.d2)
-      cinc = iod(lv[end]  - lv[1],  0.0)
-      d1nc = iod(lv1[end] - lv1[1], 0.0)
-      d2nc = iod(lv2[end] - lv2[1], 0.0)
-
-      ic2 = cinc && d1nc && d2nc
-      i11 = cinc && d1nc && !ic2
-      i12 = cinc && d2nc && !ic2
-
-      ps11 = ps12 = psc1
-
-      if i11
-        ps11 += 1
-        if it1 push!(c1, ps11) end
-        ps12 = 0
-        if psc2 > 0 push!(c2, psc2); psc2 = 0 end
-      elseif i12
-        ps12 += 1
-        if it2 push!(c1, ps12) end
-        ps11 = 0
-        if psc2 > 0 push!(c2, psc2); psc2 = 0 end
-      elseif ic2
-        ps11 += 1
-        ps12 += 1
-        psc2 += 1
-        if it1 push!(c1, ps11) end
-        if it2 push!(c1, ps12) end
-        if it1 && it2 push!(c2, psc2) end
-      else
-        if psc1 > 0 push!(c1, psc1); ps11 = ps12 = 0 end
-        if psc2 > 0 push!(c2, psc2); psc2 = 0 end
-        push!(c1, 0)
-      end
-
-      _sustainedcount!(tree.d1, ps11, psc2, c1, c2, zf, iod)
-      _sustainedcount!(tree.d2, ps12, psc2, c1, c2, zf, iod)
-    else
-      _sustainedcount!(tree.d1, ps11, psc2, c1, c2, zf, iod)
-    end
-  end
-end
 
 
 

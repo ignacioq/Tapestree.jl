@@ -31,7 +31,7 @@ Sample conditional on number of species
               α       ::Float64 = 0.0,
               σλ      ::Float64 = 0.1,
               σμ      ::Float64 = 0.1,
-              start   ::Symbol  = :stem,
+              init    ::Symbol  = :stem,
               δt      ::Float64 = 1e-3,
               nstar   ::Int64   = 2*n,
               p       ::Float64 = 5.0,
@@ -46,7 +46,7 @@ function sim_gbmbd(n       ::Int64;
                    α       ::Float64 = 0.0,
                    σλ      ::Float64 = 0.1,
                    σμ      ::Float64 = 0.1,
-                   start   ::Symbol  = :stem,
+                   init    ::Symbol  = :stem,
                    δt      ::Float64 = 1e-3,
                    nstar   ::Int64   = 2*n,
                    p       ::Float64 = 5.0,
@@ -55,7 +55,7 @@ function sim_gbmbd(n       ::Int64;
 
   # simulate in non-recursive manner
   e0, e1, el, λs, μs, ea, ee, na, simt =
-    _sedges_gbmbd(nstar, log(λ0), log(μ0), α, σλ, σμ, δt, sqrt(δt), start, maxt)
+    _sedges_gbmbd(nstar, log(λ0), log(μ0), α, σλ, σμ, δt, sqrt(δt), init, maxt)
 
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
@@ -98,7 +98,8 @@ end
                   σμ   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
-                  start::Symbol)
+                  init::Symbol,
+                  maxt ::Float64)
 
 Simulate `gbmbd` just until hitting `n` alive species. Note that this is
 a biased sample for a tree conditional on `n` species.
@@ -111,7 +112,7 @@ function _sedges_gbmbd(n    ::Int64,
                        σμ   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
-                       start::Symbol,
+                       init::Symbol,
                        maxt ::Float64)
 
   # edges
@@ -120,7 +121,7 @@ function _sedges_gbmbd(n    ::Int64,
   # edges extinct
   ee = Int64[]
 
-  if start == :stem
+  if init == :stem
     # edges alive
     ea = [1]
     # first edge
@@ -133,7 +134,7 @@ function _sedges_gbmbd(n    ::Int64,
     # lambda and mu vector for each edge
     λs = [Float64[]]
     μs = [Float64[]]
-    # starting speciation rate
+    # initing speciation rate
     push!(λs[1], λ0)
     push!(μs[1], μ0)
     # lastindex for each edge
@@ -142,7 +143,7 @@ function _sedges_gbmbd(n    ::Int64,
     na = 1 # current number of alive species
     ne = 2 # current maximum node number
 
-  elseif start == :crown
+  elseif init == :crown
     # edges alive
     ea = [2, 3]
     # first edges
@@ -155,7 +156,7 @@ function _sedges_gbmbd(n    ::Int64,
     # lambda vector for each edge
     λs = [Float64[], Float64[], Float64[]]
     μs = [Float64[], Float64[], Float64[]]
-    # starting speciation and extinction rate
+    # initing speciation and extinction rate
     push!(λs[1], λ0, λ0)
     push!(λs[2], λ0)
     push!(λs[3], λ0)
@@ -169,7 +170,7 @@ function _sedges_gbmbd(n    ::Int64,
     ne = 4 # current maximum node number
 
   else
-    @error "$start does not match stem or crown"
+    @error "$init does not match stem or crown"
   end
 
   ieaa = Int64[] # indexes of ea to add
@@ -330,9 +331,10 @@ Sample conditional on time
 """
     sim_gbmbd(t   ::Float64;
               λ0  ::Float64 = 1.0,
+              μ0  ::Float64 = 0.2,
               α   ::Float64 = 0.0,
               σλ  ::Float64 = 0.1,
-              μ   ::Float64 = 0.2,
+              σμ  ::Float64 = 0.1,
               δt  ::Float64 = 1e-3,
               nlim::Int64   = 10_000,
               init::Symbol  = :crown)
@@ -1031,4 +1033,250 @@ Generate a normal variable with mean `μ` and variance `σ`.
 rnorm(μ::Float64, σ::Float64) = @fastmath randn()*σ + μ
 
 
+
+
+
+"""
+    _sim_gbmbd(t   ::Float64,
+               λt  ::Float64,
+               μt  ::Float64,
+               α   ::Float64,
+               σλ  ::Float64,
+               σμ  ::Float64,
+               βλ  ::Float64,
+               βμ  ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               ix  ::Int64,
+               tz  ::Vector{Float64},
+               zλ  ::Vector{Float64},
+               zμ  ::Vector{Float64},
+               na  ::Int64,
+               nn  ::Int64,
+               nlim::Int64)
+
+Simulate `iTbd` where `λ(t)` & `μ(t)` follow  environmental variables `zλ` and 
+`zμ` as regulated by `βλ` & `βμ`.
+"""
+function _sim_gbmbd(t   ::Float64,
+                    λt  ::Float64,
+                    μt  ::Float64,
+                    α   ::Float64,
+                    σλ  ::Float64,
+                    σμ  ::Float64,
+                    βλ  ::Float64,
+                    βμ  ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    ix  ::Int64,
+                    tz  ::Vector{Float64},
+                    zλ  ::Vector{Float64},
+                    zμ  ::Vector{Float64},
+                    na  ::Int64,
+                    nn  ::Int64,
+                    nlim::Int64)
+
+  if nn < nlim
+
+    zλt = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+    zμt = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+    λv  = Float64[λt]
+    μv  = Float64[μt]
+    bt  = 0.0
+
+    while true
+
+      if t <= δt
+        bt += t
+        t   = max(0.0,t)
+        srt = sqrt(t)
+        λt1 = rnorm(λt + (α + βλ*zλt)*t, srt*σλ)
+        μt1 = rnorm(μt +     (βμ*zμt)*t, srt*σμ)
+
+        ix += Int64(tz[ix+1] >= t)
+        push!(λv, λt1)
+        push!(μv, μt1)
+
+        λm = exp(0.5*(λt + λt1))
+        μm = exp(0.5*(μt + μt1))
+
+        if divev(λm, μm, t)
+          # if speciation
+          if λorμ(λm, μm)
+            nn += 1
+            na += 2
+            return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         bt, δt, t, false, false, λv, μv), na, nn
+          # if extinction
+          else
+            return iTbd(bt, δt, t, true, false, λv, μv), na, nn
+          end
+        end
+
+        na += 1
+        return iTbd(bt, δt, t, false, false, λv, μv), na, nn
+      end
+
+      t  -= δt
+      bt += δt
+
+      ix += Int64(tz[ix+1] >= t)
+      zλt = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+      zμt = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+      λt1 = rnorm(λt + (α + βλ*zλt)*δt, srδt*σλ)
+      μt1 = rnorm(μt +     (βμ*zμt)*δt, srδt*σμ)
+      push!(λv, λt1)
+      push!(μv, μt1)
+
+      λm = exp(0.5*(λt + λt1))
+      μm = exp(0.5*(μt + μt1))
+
+      if divev(λm, μm, δt)
+        # if speciation
+        if λorμ(λm, μm)
+          nn += 1
+          td1, na, nn =
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, βλ, βμ, δt, srδt, ix, tz, zλ, zμ,
+              na, nn, nlim)
+          td2, na, nn =
+            _sim_gbmbd(t, λt1, μt1, α, σλ, σμ, βλ, βμ, δt, srδt, ix, tz, zλ, zμ,
+              na, nn, nlim)
+
+          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
+        # if extinction
+        else
+          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
+        end
+      end
+
+      λt = λt1
+      μt = μt1
+    end
+  end
+
+  return iTbd(), na, nn
+end
+
+
+
+
+
+
+
+
+"""
+    _sim_gbmbd_fx(t   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  ix  ::Int64,
+                  tz  ::Vector{Float64},
+                  zλ  ::Vector{Float64},
+                  zμ  ::Vector{Float64},
+                  na  ::Int64,
+                  nn  ::Int64,
+                  nlim::Int64)
+
+Simulate `iTbd` where `λ(t)` & `μ(t)` follow `zλ` and `zμ`.
+"""
+function _sim_gbmbd_fx(t   ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       ix  ::Int64,
+                       tz  ::Vector{Float64},
+                       zλ  ::Vector{Float64},
+                       zμ  ::Vector{Float64},
+                       na  ::Int64,
+                       nn  ::Int64,
+                       nlim::Int64)
+
+  if nn < nlim
+
+    λt = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+    μt = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+    λv = Float64[λt]
+    μv = Float64[μt]
+    bt = 0.0
+
+    while true
+
+      if t <= δt
+        bt += t
+        t   = max(0.0,t)
+        srt = sqrt(t)
+
+        while 0.0 < tz[ix]
+          ix += 1
+        end
+        ix -= 1
+        λt1 = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+        μt1 = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+
+        push!(λv, λt1)
+        push!(μv, μt1)
+
+        λm = exp(0.5*(λt + λt1))
+        μm = exp(0.5*(μt + μt1))
+
+        if divev(λm, μm, t)
+          # if speciation
+          if λorμ(λm, μm)
+            nn += 1
+            na += 2
+            return iTbd(iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         iTbd(0.0, δt, 0.0, false, false,
+                               Float64[λt1, λt1], Float64[μt1, μt1]),
+                         bt, δt, t, false, false, λv, μv), na, nn
+          # if extinction
+          else
+            return iTbd(bt, δt, t, true, false, λv, μv), na, nn
+          end
+        end
+
+        na += 1
+        return iTbd(bt, δt, t, false, false, λv, μv), na, nn
+      end
+
+      t  -= δt
+      bt += δt
+
+      while t < tz[ix]
+        ix += 1
+      end
+      ix -= 1
+      λt1 = linpred(t, tz[ix], tz[ix+1], zλ[ix], zλ[ix+1])
+      μt1 = linpred(t, tz[ix], tz[ix+1], zμ[ix], zμ[ix+1])
+
+      push!(λv, λt1)
+      push!(μv, μt1)
+
+      λm = exp(0.5*(λt + λt1))
+      μm = exp(0.5*(μt + μt1))
+
+      if divev(λm, μm, δt)
+        # if speciation
+        if λorμ(λm, μm)
+          nn += 1
+          td1, na, nn =
+            _sim_gbmbd_fx(t, δt, srδt, ix, tz, zλ, zμ, na, nn, nlim)
+          td2, na, nn =
+            _sim_gbmbd_fx(t, δt, srδt, ix, tz, zλ, zμ, na, nn, nlim)
+
+          return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn
+        # if extinction
+        else
+          return iTbd(bt, δt, δt, true, false, λv, μv), na, nn
+        end
+      end
+
+      λt = λt1
+      μt = μt1
+    end
+  end
+
+  return iTbd(), na, nn
+end
 

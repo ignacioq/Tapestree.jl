@@ -7,13 +7,14 @@ makedocs(
                 "Home" => "index.md"
                 "Manual" => [
                     "Installation" => "man/installation.md",
+                    "INSANE" => "man/insane.md",
                     "TRIBE" => "man/tribe.md",
                     "ESSE" => "man/esse.md",
                     ]
                ],
-        authors="Ignacio Quintero")
+        authors   = "Ignacio Quintero",
+        checkdocs = :none)
 
-deploydocs(;
+deploydocs(
     repo="github.com/ignacioq/Tapestree.jl",
-    push_preview = true,
 )

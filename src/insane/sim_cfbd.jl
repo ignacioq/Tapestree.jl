@@ -16,16 +16,33 @@ Created 07 10 2021
 
 """
     sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
-    sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Vector{Float64}, ψts::Vector{Float64})
 
 Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
 rate `λ`, extinction rate `μ` and fossilization rate `ψ`.
 """
-sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64) =
-  sim_cfbd(t,λ,μ,[ψ],Float64[],1,1)
-sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Vector{Float64}, ψts::Vector{Float64}) =
-  sim_cfbd(t,λ,μ,ψ,Float64[],1,1)
+function sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Float64)
 
+  tw = cfbd_wait(λ, μ, ψ)
+
+  # if reached the present
+  if tw > t
+    return sTfbd(t, false, false, false)
+  end
+
+  # speciation
+  if λevent(λ, μ, ψ)
+    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ),
+                 sim_cfbd(t - tw, λ, μ, ψ),
+                 tw, false, false, false)
+  # extinction
+  elseif μevent(μ, ψ)
+    return sTfbd(tw, true, false, false)
+  # fossil sampling
+  else
+    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ), 
+             tw, false, true, false)
+  end
+end
 
 
 
@@ -34,21 +51,40 @@ sim_cfbd(t::Float64, λ::Float64, μ::Float64, ψ::Vector{Float64}, ψts::Vector
              λ  ::Float64,
              μ  ::Float64,
              ψ  ::Vector{Float64},
-             ψts::Vector{Float64},
-             ix ::Int64,
-             nep::Int64)
+             ψts::Vector{Float64})
 
 Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
-rate `λ`, extinction rate `μ` and piecewise-constant fossilization rate `ψ` with
-`nep` epochs at times `ψts`, starting at index `ix`.
+rate `λ`, extinction rate `μ` and a vector of fossilization rates `ψ`.
 """
 function sim_cfbd(t  ::Float64,
                   λ  ::Float64,
                   μ  ::Float64,
                   ψ  ::Vector{Float64},
-                  ψts::Vector{Float64},
-                  ix ::Int64,
-                  nep::Int64)
+                  ψts::Vector{Float64})
+  return _sim_cfbd(t, λ, μ, ψ, ψts, 1, lastindex(ψ))
+end
+
+
+
+"""
+    _sim_cfbd(t  ::Float64,
+              λ  ::Float64,
+              μ  ::Float64,
+              ψ  ::Vector{Float64},
+              ψts::Vector{Float64},
+              ix ::Int64,
+              nep::Int64)
+
+Simulate a constant fossilized birth-death `iTree` of height `t` with speciation
+rate `λ`, extinction rate `μ` and a vector of fossilization rates `ψ`.
+"""
+function _sim_cfbd(t  ::Float64,
+                   λ  ::Float64,
+                   μ  ::Float64,
+                   ψ  ::Vector{Float64},
+                   ψts::Vector{Float64},
+                   ix ::Int64,
+                   nep::Int64)
 
   @inbounds ψi = ψ[ix]
 
@@ -59,7 +95,7 @@ function sim_cfbd(t  ::Float64,
     @inbounds ψti = ψts[ix]
     if t - tw < ψti
       e0 = t - ψti
-      t0 = sim_cfbd(ψti, λ, μ, ψ, ψts, ix + 1, nep)
+      t0 = _sim_cfbd(ψti, λ, μ, ψ, ψts, ix + 1, nep)
       sete!(t0, e(t0) + e0)
       return t0
     end
@@ -72,15 +108,15 @@ function sim_cfbd(t  ::Float64,
 
   # speciation
   if λevent(λ, μ, ψi)
-    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
-                 sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
+    return sTfbd(_sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
+                 _sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep),
                  tw, false, false, false)
   # extinction
   elseif μevent(μ, ψi)
     return sTfbd(tw, true, false, false)
   # fossil sampling
   else
-    return sTfbd(sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep), 
+    return sTfbd(_sim_cfbd(t - tw, λ, μ, ψ, ψts, ix, nep), 
              tw, false, true, false)
   end
 end

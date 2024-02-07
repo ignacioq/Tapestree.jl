@@ -101,7 +101,7 @@ function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
 
   llbm = 0.0
   llct = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
     llbm += (lλvi1 - lλvi - α*δt)^2
@@ -209,7 +209,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
 
   llbm = 0.0
   llct = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
     llbm += (lλvi1 - lλvi - α*δt)^2
@@ -291,7 +291,7 @@ function Σλ_gbm_b(lλv::Array{Float64,1},
   nI = lastindex(lλv)-2
 
   Σλ   = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
     Σλ   += exp(0.5*(lλvi + lλvi1))
@@ -340,7 +340,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
   llrbm = 0.0
   llrct = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλpi   = lλp[i]
     lλci   = lλc[i]
     lλpi1  = lλp[i+1]
