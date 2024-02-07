@@ -631,10 +631,10 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
             r[lit,6] = αc
             r[lit,7] = σλc
             r[lit,8] = σμc
-            @avx for i in Base.OneTo(nep)
+            @turbo for i in Base.OneTo(nep)
               r[lit,8 + i] = ψc[i]
             end
-            @avx for i in Base.OneTo(nep)
+            @turbo for i in Base.OneTo(nep)
               r[lit,8 + nep + i] = ωc[i]
             end
             push!(treev, couple(Ξ, idf, 1))
@@ -788,7 +788,7 @@ function update_fs!(bix   ::Int64,
     Lc = zeros(Float64, nep)
     _treelength!(ξc, tii, Lc, ψωts, ixi, nep)
     _treelength!(ξp, tii, L,  ψωts, ixi, nep)
-    @avx for i in Base.OneTo(nep)
+    @turbo for i in Base.OneTo(nep)
       L[i] -= Lc[i]
     end
 

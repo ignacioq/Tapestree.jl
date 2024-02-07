@@ -550,10 +550,10 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
             r[lit,3] = prc
             r[lit,4] = λc
             r[lit,5] = μc
-            @avx for i in Base.OneTo(nep)
+            @turbo for i in Base.OneTo(nep)
               r[lit,6 + i] = ψc[i]
             end
-            @avx for i in Base.OneTo(nep)
+            @turbo for i in Base.OneTo(nep)
               r[lit,6 + nep + i] = ωc[i]
             end
             push!(treev, couple(Ξ, idf, 1))
@@ -681,7 +681,7 @@ function update_fs!(bix   ::Int64,
     Lc = zeros(nep)
     _treelength!(ξc, tii, Lc, ψωts, ixi, nep)
     _treelength!(ξp, tii, L,  ψωts, ixi, nep)
-    @avx for i in Base.OneTo(nep)
+    @turbo for i in Base.OneTo(nep)
       L[i] -= Lc[i]
     end
 

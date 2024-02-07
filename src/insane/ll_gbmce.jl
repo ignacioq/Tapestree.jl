@@ -229,7 +229,7 @@ Returns the log-likelihood for a branch according to `gbmce`.
 
   llbm = 0.0
   llbd = 0.0
-  @avx for i in Base.OneTo(nI)
+  @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
     llbm += (lλvi1 - lλvi - α*δt)^2
