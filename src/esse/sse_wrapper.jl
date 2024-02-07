@@ -54,7 +54,6 @@ September 26 2017
 
 Run geographic **esse**. See tutorial for how these files should be specified.
 
-...
 # Arguments
 - `tree_file::String`: full path to tree file.
 - `out_file::String`: full path to write MCMC output.
@@ -110,12 +109,10 @@ hidden states.
 - `ti::Float64 = 0.0`: for flow algorithm.
 - `ρ::Array{Float64,1} = [1.0]`: sampling fraction for each state (each area and
 widespread).
-...
 
-...
+
 # Returned values
   - Array of the mcmc parameters.
-...
 """
 function esse(tree_file   ::String,
               out_file    ::String,
