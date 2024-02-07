@@ -633,7 +633,7 @@ function plotω(tree       ::T,
                col_da     = ["#a9a9a9", :black],
                y_ω        = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
 
-  plot(tree, labsize=labsize, type=type, shownodes=shownodes, showlabels=showlabels, shapes=shapes
+  plot(tree, labsize=labsize, type=type, shownodes=shownodes, showlabels=showlabels, shapes=shapes,
        colors=colors, shsizes=shsizes, showda=showda, col_da=col_da, y_ω=y_ω)
   y_min = 1.0-0.05*ntips(tree)
   scatter!(ωtimes, [max(rnorm(y_ω, (y_ω-y_min)/5), y_min) for ωt in ωtimes], label="occurrences", mc=:grey, ms=2, ma=0.5)

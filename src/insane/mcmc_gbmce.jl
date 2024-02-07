@@ -877,8 +877,8 @@ function update_gbm!(bix     ::Int64,
                      th      ::Float64,
                      δt      ::Float64,
                      srδt    ::Float64,
-                     λa_prior::NTuple{2,Float64}
-                     surv    ::Int64,)
+                     λa_prior::NTuple{2,Float64},
+                     surv    ::Int64)
   @inbounds begin
 
     ξi   = Ξ[bix]
