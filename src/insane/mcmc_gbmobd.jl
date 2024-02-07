@@ -15,9 +15,9 @@ Created 20 09 2023
 """
     insane_gbmobd(tree    ::sTf_label,
                   ωtimes  ::Vector{Float64};
-                  λa_prior::NTuple{2,Float64} = (1.5, 0.5),
-                  μa_prior::NTuple{2,Float64} = (1.5, 1.0),
-                  α_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                  λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                  μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                  α_prior ::NTuple{2,Float64} = (0.0, 1.0),
                   σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
@@ -51,9 +51,9 @@ Run insane for occurrence birth-death diffusion `fbdd`.
 """
 function insane_gbmobd(tree    ::sTf_label,
                        ωtimes  ::Vector{Float64};
-                       λa_prior::NTuple{2,Float64} = (1.5, 0.5),
-                       μa_prior::NTuple{2,Float64} = (1.5, 1.0),
-                       α_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                       λa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                       μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                       α_prior ::NTuple{2,Float64} = (0.0, 1.0),
                        σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        ψ_prior ::NTuple{2,Float64} = (1.0, 1.0),
