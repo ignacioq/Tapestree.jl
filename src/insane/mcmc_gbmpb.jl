@@ -92,7 +92,6 @@ end
 """
     mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
                     idf     ::Vector{iBffs},
-                    λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
@@ -101,10 +100,8 @@ end
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
-                    terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},
                     prints  ::Int64)
-
 
 MCMC burn-in chain for GBM pure-birth.
 """
@@ -233,8 +230,8 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
   treev = iTpb[]
 
   L       = treelength(Ξ)      # tree length
-  dλ      = deltaλ(Ξ)          # delta change in λ
-  ssλ, nλ = sss_gbm(Ξ, αc)     # sum squares in λ
+  dλ      = dα(Ξ, lλ)          # delta change in λ
+  ssλ, nλ = sss(Ξ, lλ, αc)     # sum squares in λ
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
 
@@ -919,8 +916,7 @@ function update_σ!(σλc     ::Float64,
                    prc     ::Float64,
                    σλ_prior::NTuple{2,Float64})
 
-  σλ_p1 = σλ_prior[1]
-  σλ_p2 = σλ_prior[2]
+  σλ_p1, σλ_p2 = σλ_prior
 
   # Gibbs update for σ
   σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
@@ -956,7 +952,7 @@ function update_σ!(σλc     ::Float64,
                    prc     ::Float64,
                    rdc     ::Float64,
                    σλ_prior::NTuple{2,Float64},
-                   σλ_rdist ::NTuple{2,Float64},
+                   σλ_rdist::NTuple{2,Float64},
                    pow     ::Float64)
 
   σλ_p1 = σλ_prior[1]

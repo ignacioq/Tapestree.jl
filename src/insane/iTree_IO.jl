@@ -672,6 +672,39 @@ end
 
 
 
+"""
+    _istring(tree::sTxs)
+
+`sTxs` to istring.
+"""
+function _istring(tree::sTxs)
+  if def1(tree)
+    if def2(tree)
+      return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+          e(tree), ',', 
+          dt(tree), ',',
+          fdt(tree), ',',
+          xv(tree), ',',
+          lσ(tree), ')')
+    else
+      return string('(', _istring(tree.d1), ',', 
+          e(tree), ',', 
+          dt(tree), ',',
+          fdt(tree), ',',
+          xv(tree), ',',
+          lσ(tree), ')')
+    end
+  else
+    return string('(', 
+          e(tree), ',', 
+          dt(tree), ',',
+          fdt(tree), ',',
+          xv(tree), ',',
+          lσ(tree), ')')
+  end
+end
+
+
 
 """
     _istring(tree::iTpb)

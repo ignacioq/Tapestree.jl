@@ -12,467 +12,401 @@ Created 25 01 2024
 
 
 
-
 """
-    _daughters_update!(ξ1  ::iTpb,
-                       ξ2  ::iTpb,
-                       λf  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
-
-Make a `gbmpb` proposal for daughters from forwards simulated branch.
-"""
-function _daughters_update!(ξ1  ::iTpb,
-                            ξ2  ::iTpb,
-                            λf  ::Float64,
-                            α   ::Float64,
-                            σλ  ::Float64,
-                            δt  ::Float64,
-                            srδt::Float64)
-  @inbounds begin
-
-    λ1c  = lλ(ξ1)
-    λ2c  = lλ(ξ2)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λi   = λ1c[1]
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    e1   = e(ξ1)
-    e2   = e(ξ2)
-    fdt1 = fdt(ξ1)
-    fdt2 = fdt(ξ2)
-
-    bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
-
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
-    # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
-
-    acr  = llrpb1 + llrpb2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
-    acr += gp
-    drλ  = 2.0*(λi - λf)
-    ssrλ = ssrλ1 + ssrλ2
-  end
-
-  return llr, acr, drλ, ssrλ, λ1p, λ2p
-end
-
-
-
-
-"""
-    _stem_update!(ξi   ::iTpb,
-                  α    ::Float64,
-                  σλ   ::Float64,
-                  llc  ::Float64,
-                  dλ   ::Float64,
-                  ssλ  ::Float64,
+    _stem_update!(ξi   ::sTxs,
+                  γ    ::Float64,
                   δt   ::Float64,
                   srδt ::Float64)
 
-Do gbm update for crown root.
+Do dbm update for stem root.
 """
-function _stem_update!(ξi   ::iTpb,
-                       α    ::Float64,
-                       σλ   ::Float64,
-                       llc  ::Float64,
-                       dλ   ::Float64,
-                       ssλ  ::Float64,
+function _stem_update!(ξi   ::sTxs,
+                       γ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64)
 
   @inbounds begin
-    λc   = lλ(ξi)
-    l    = lastindex(λc)
-    λp   = Vector{Float64}(undef,l)
-    λn   = λc[l]
+    σc   = lσ(ξi)
+    xc   = xv(ξi)
+    l    = lastindex(σc)
+    σn   = σc[l]
+    xn   = xc[l]
     el   = e(ξi)
     fdtp = fdt(ξi)
 
-    # node proposal
-    λr = rnorm(λn - α*el, σλ*sqrt(el))
+    # rate path sample
+    σr = rnorm(σn, γ*sqrt(el))
+    bb!(σc, σr, σn, γ, δt, fdtp, srδt)
 
-    # simulate fix tree vector
-    bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
+    # trait path sample
+    xr = rnorm(xn, intσ(σc, δt, fdtp))
+    dbb!(xc, xr, xn, σc, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
-
-    acr = llrbd
-
-    if -randexp() < acr
-      llc += acr + llrbm
-      dλ  += λc[1] - λr
-      ssλ += ssrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
-    end
+    # likelihood
+    ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp, srδt)
   end
 
-  return llc, dλ, ssλ
+  return ll, ss
 end
 
 
 
 
 """
-    _crown_update!(ξi   ::iTpb,
-                   ξ1   ::iTpb,
-                   ξ2   ::iTpb,
-                   α    ::Float64,
-                   σλ   ::Float64,
-                   llc  ::Float64,
-                   dλ   ::Float64,
-                   ssλ  ::Float64,
+    _crown_update!(ξi   ::sTxs,
+                   ξ1   ::sTxs,
+                   ξ2   ::sTxs,
+                   γ    ::Float64,
                    δt   ::Float64,
                    srδt ::Float64)
 
-Do gbm update for crown root.
+Do dbm update for crown root.
 """
-function _crown_update!(ξi   ::iTpb,
-                        ξ1   ::iTpb,
-                        ξ2   ::iTpb,
-                        α    ::Float64,
-                        σλ   ::Float64,
-                        llc  ::Float64,
-                        dλ   ::Float64,
-                        ssλ  ::Float64,
+function _crown_update!(ξi   ::sTxs,
+                        ξ1   ::sTxs,
+                        ξ2   ::sTxs,
+                        γ    ::Float64,
                         δt   ::Float64,
                         srδt ::Float64)
 
   @inbounds begin
-    λpc  = lλ(ξi)
-    λ1c  = lλ(ξ1)
-    λ2c  = lλ(ξ2)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
+    σc   = lσ(ξi)
+    σ1   = lσ(ξ1)
+    σ2   = lσ(ξ2)
+    xc   = xv(ξi)
+    x1   = xv(ξ1)
+    x2   = xv(ξ2)
+    l1   = lastindex(x1)
+    l2   = lastindex(x2)
+    σ1p  = Vector{Float64}(undef,l1)
+    σ2p  = Vector{Float64}(undef,l2)
+    σ1f  = σ1[l1]
+    σ2f  = σ2[l2]
+    x1f  = x1[l1]
+    x2f  = x2[l2]
     e1   = e(ξ1)
     e2   = e(ξ2)
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
-    # node proposal
-    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    # rate path sample
+    σn = duoprop(σ1f, σ2f, e1, e2, γ)
+    bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
+    bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
 
-    # simulate fix tree vector
-    bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
+    llr1 = llr_dbm(x1, σ1p, σ1, γ, δt, fdt1, srδt) 
+    llr2 = llr_dbm(x2, σ2p, σ2, γ, δt, fdt2, srδt)
+
+    if -randexp() < llr1 + llr2
+      unsafe_copyto!(σ1, 1, σ1p, 1, l1)
+      unsafe_copyto!(σ2, 1, σ2p, 1, l2)
+      fill!(σc, σn)
+    end
+
+    # trait path sample
+    xn = duoprop(x1f, x2f, intσ(σ1, δt, fdt1), intσ(σ2, δt, fdt2))
+    dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
+    dbb!(x2, xn, x2f, σ2, δt, fdt2, srδt)
+
+    # fill root
+    fill!(xc, xn)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
-
-    acr  = llrpb1 + llrpb2
-
-    if -randexp() < acr
-      llc += llrbm1 + llrbm2 + acr
-      dλ  += 2.0*(λ1c[1] - λr)
-      ssλ += ssrλ1 + ssrλ2
-      fill!(λpc, λr)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-    end
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
+    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2, srδt)
   end
 
-  return llc, dλ, ssλ
+  return ll1, ll2, ss1, ss2
 end
 
 
 
 
 """
-    _update_gbm!(tree::iTpb,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 llc ::Float64,
-                 dλ  ::Float64,
-                 ssλ ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 ter ::Bool)
+    _update_leaf_x!(ξi  ::sTxs,
+                    xavg::Float64,
+                    xstd::Float64,
+                    γ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64)
 
-Do gbm updates on a decoupled tree recursively.
+Make a `dbm` **fixed** tip proposal.
 """
-function _update_gbm!(tree::iTpb,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      llc ::Float64,
-                      dλ  ::Float64,
-                      ssλ ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      ter ::Bool)
+function _update_leaf_x!(ξi  ::sTxs,
+                         xavg::Float64,
+                         xstd::Float64,
+                         γ   ::Float64,
+                         δt  ::Float64,
+                         srδt::Float64)
+  σc   = lσ(ξi)
+  xc   = xv(ξi)
+  l    = lastindex(σc)
+  σp   = Vector{Float64}(undef,l)
+  xn   = xc[l]
+  fdtp = fdt(ξi)
 
-  if def1(tree)
+  # rate path sample
+  bm!(σp, σc[1], 0.0, γ, δt, fdtp, srδt)
 
-    llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+  llr = llr_dbm(xc, σp, σc, γ, δt, fdtp, srδt)
 
-    llc, dλ, ssλ =
-      _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-    llc, dλ, ssλ =
-      _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
-  elseif !isfix(tree) || ter
-
-    llc, dλ, ssλ = 
-      update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+  if -randexp() < llr
+    unsafe_copyto!(σc, 1, σp, 1, l)
   end
 
-  return llc, dλ, ssλ
+  # trait path sample
+  if !iszero(xstd)
+    xn = rnorm(xavg, xstd)
+  end
+  dbb!(xc, xc[1], xn, σc, δt, fdtp, srδt)
+
+  # likelihood
+  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp, srδt)
+
+  return ll, ss
 end
 
 
 
 
 """
-    update_tip!(tree::iTpb,
-                α   ::Float64,
-                σλ  ::Float64,
-                llc ::Float64,
-                dλ  ::Float64,
-                ssλ ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+    _update_leaf_x!(ξi  ::sTxs,
+                    γ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64)
 
-Make a `gbm` tip proposal.
+Make a `dbm` **unfixed** tip proposal.
 """
-function update_tip!(tree::iTpb,
-                     α   ::Float64,
-                     σλ  ::Float64,
-                     llc ::Float64,
-                     dλ  ::Float64,
-                     ssλ ::Float64,
-                     δt  ::Float64,
-                     srδt::Float64)
+function _update_leaf_x!(ξi  ::sTxs,
+                         γ   ::Float64,
+                         δt  ::Float64,
+                         srδt::Float64)
+  σc   = lσ(ξi)
+  xc   = xv(ξi)
+  fdtp = fdt(ξi)
+
+  # trait and rate path sample
+  dbm!(xc, xc[1], σc, σc[1], γ, fdtp, srδt)
+
+  # likelihood
+  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp, srδt)
+
+  return ll, ss
+end
+
+
+
+
+"""
+    _update_solo_x!(ξi  ::sTxs,
+                    γ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64)
+
+Make a `dbm` solo proposal.
+"""
+function _update_solo_x!(ξi  ::sTxs,
+                         γ   ::Float64,
+                         δt  ::Float64,
+                         srδt::Float64)
+
+  σc   = lσ(ξi)
+  xc   = xv(ξi)
+  l    = lastindex(σc)
+  fdtp = fdt(ξi)
+
+  # trait and rate path sample
+  dbb!(xc, x[1], x[l], σc, σc[1], σc[l], γ, δt, fdtp, srδt)
+
+  # likelihood
+  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp, srδt)
+
+  return ll, ss
+end
+
+
+
+
+"""
+    _update_duo_x!(ξi  ::sTxs,
+                   ξ1  ::sTxs,
+                   xavg::Float64,
+                   xstd::Float64,
+                   γ   ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64)
+
+Do duo `dbm` update for **fixed** node.
+"""
+function _update_duo_x!(ξi  ::sTxs,
+                        ξ1  ::sTxs,
+                        xavg::Float64,
+                        xstd::Float64,
+                        γ   ::Float64,
+                        δt  ::Float64,
+                        srδt::Float64)
 
   @inbounds begin
+    σa   = lσ(ξi)
+    σ1   = lσ(ξ1)
+    xa   = xv(ξi)
+    x1   = xv(ξ1)
+    l1   = lastindex(x1)
+    σai  = σa[1]
+    σ1f  = σ1[l1]
+    xai  = xa[1]
+    x1f  = x1[l1]
+    ea   = e(ξi)
+    e1   = e(ξ1)
+    fdta = fdt(ξi)
+    fdt1 = fdt(ξ1)
 
-    λc   = lλ(tree)
-    l    = lastindex(λc)
-    fdtp = fdt(tree)
-    λp   = Vector{Float64}(undef, l)
+    # rate path sample
+    σn = duoprop(σai, σ1f, e1, e2, γ)
+    bb!(σa, σai, σn, γ, δt, fdta, srδt)
+    bb!(σ1, σn, σ1f, γ, δt, fdt1, srδt)
 
-    bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
-
-    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
-
-    acr = llrbd
-
-    if -randexp() < acr
-      llc += llrbm + acr
-      dλ  += λp[l] - λc[l]
-      ssλ += ssrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
+    # trait path sample
+    if !iszero(xstd)
+      xn = rnorm(xavg, xstd)
     end
+    dbb!(xa, xai, xn, σa, δt, fdta, srδt)
+    dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
+
+    # log likelihood ratios
+    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta, srδt)
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
   end
 
-  return llc, dλ, ssλ
+  return ll1, ll2, ss1, ss2
 end
 
 
 
 
-"""
-    update_triad!(λpc ::Vector{Float64},
-                  λ1c ::Vector{Float64},
-                  λ2c ::Vector{Float64},
-                  ep  ::Float64,
-                  e1  ::Float64,
-                  e2  ::Float64,
-                  fdtp::Float64,
-                  fdt1::Float64,
-                  fdt2::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  llc ::Float64,
-                  dλ  ::Float64,
-                  ssλ ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
-
-Make a `gbm` trio proposal.
-"""
-function update_triad!(λpc ::Vector{Float64},
-                       λ1c ::Vector{Float64},
-                       λ2c ::Vector{Float64},
-                       ep  ::Float64,
-                       e1  ::Float64,
-                       e2  ::Float64,
-                       fdtp::Float64,
-                       fdt1::Float64,
-                       fdt2::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       llc ::Float64,
-                       dλ  ::Float64,
-                       ssλ ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
-
-  @inbounds begin
-
-    lp  = lastindex(λpc)
-    l1  = lastindex(λ1c)
-    l2  = lastindex(λ2c)
-    λpp = Vector{Float64}(undef,lp)
-    λ1p = Vector{Float64}(undef,l1)
-    λ2p = Vector{Float64}(undef,l2)
-    λp  = λpc[1]
-    λ1  = λ1c[l1]
-    λ2  = λ2c[l2]
-
-    # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
-
-    # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
-
-    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
-      α, σλ, δt, fdtp, fdt1, fdt2, srδt)
-
-    if -randexp() < acr
-      llc += llr
-      dλ  += (λ1c[1] - λn)
-      ssλ += ssrλ
-      unsafe_copyto!(λpc, 1, λpp, 1, lp)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
-
-
 
 """
-    update_triad!(tree::iTpb,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  llc ::Float64,
-                  ssλ ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
-
-Make a `gbm` trio proposal.
-"""
-function update_triad!(tree::iTpb,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       llc ::Float64,
-                       dλ  ::Float64,
-                       ssλ ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
-
-  @inbounds begin
-
-    λpc  = lλ(tree)
-    λ1c  = lλ(tree.d1)
-    λ2c  = lλ(tree.d2)
-    lp   = lastindex(λpc)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λpp  = Vector{Float64}(undef,lp)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λp   = λpc[1]
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    ep   = e(tree)
-    e1   = e(tree.d1)
-    e2   = e(tree.d2)
-    fdtp = fdt(tree)
-    fdt1 = fdt(tree.d1)
-    fdt2 = fdt(tree.d2)
-
-    # node proposal
-    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
-
-    # simulate fix tree vector
-    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
-    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
-
-    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
-      α, σλ, δt, fdtp, fdt1, fdt2, srδt)
-
-    if -randexp() < acr
-      llc += llr
-      dλ  += (λ1c[1] - λn)
-      ssλ += ssrλ
-      unsafe_copyto!(λpc, 1, λpp, 1, lp)
-      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
-      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
-    end
-  end
-
-  return llc, dλ, ssλ
-end
-
-
-
-
-"""
-    llr_propr(λpp  ::Array{Float64,1},
-              λ1p  ::Array{Float64,1},
-              λ2p  ::Array{Float64,1},
-              λpc  ::Array{Float64,1},
-              λ1c  ::Array{Float64,1},
-              λ2c  ::Array{Float64,1},
-              α    ::Float64,
-              σλ   ::Float64,
-              δt   ::Float64,
-              fdtpr::Float64,
-              fdtd1::Float64,
-              fdtd2::Float64,
-              srδt ::Float64)
-
-Return the likelihood and proposal ratio for pure-birth gbm.
-"""
-function llr_propr(λpp  ::Array{Float64,1},
-                   λ1p  ::Array{Float64,1},
-                   λ2p  ::Array{Float64,1},
-                   λpc  ::Array{Float64,1},
-                   λ1c  ::Array{Float64,1},
-                   λ2c  ::Array{Float64,1},
-                   α    ::Float64,
-                   σλ   ::Float64,
+    _update_duo_x!(ξi   ::sTxs,
+                   ξ1   ::sTxs,
+                   γ    ::Float64,
                    δt   ::Float64,
-                   fdtp::Float64,
-                   fdt1::Float64,
-                   fdt2::Float64,
                    srδt ::Float64)
 
-  # log likelihood ratios
-  llrbmp, llrpbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
-  llrbm1, llrpb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-  llrbm2, llrpb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+Do duo `dbm` update for **fixed** node.
+"""
+function _update_duo_x!(ξi   ::sTxs,
+                        ξ1   ::sTxs,
+                        γ    ::Float64,
+                        δt   ::Float64,
+                        srδt ::Float64)
 
-  acr  = llrpbp + llrpb1 + llrpb2
-  llr  = llrbmp + llrbm1 + llrbm2 + acr
-  ssrλ = ssrλp + ssrλ1 + ssrλ2
+  @inbounds begin
+    σa   = lσ(ξi)
+    σ1   = lσ(ξ1)
+    xa   = xv(ξi)
+    x1   = xv(ξ1)
+    l1   = lastindex(x1)
+    σai  = σa[1]
+    σ1f  = σ1[l1]
+    xai  = xa[1]
+    x1f  = x1[l1]
+    ea   = e(ξi)
+    e1   = e(ξ1)
+    fdta = fdt(ξi)
+    fdt1 = fdt(ξ1)
 
-  return llr, acr, ssrλ
+    # rate path sample
+    σn = duoprop(σai, σ1f, e1, e2, γ)
+    bb!(σa, σai, σn, γ, δt, fdta, srδt)
+    bb!(σ1, σn, σ1f, γ, δt, fdt1, srδt)
+
+    # trait path sample
+    xn = duoprop(xai, x1f, intσ(σa, δt, fdta), intσ(σ1, δt, fdt1))
+    dbb!(xa, xai, xn, σa, δt, fdta, srδt)
+    dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
+
+    # log likelihood ratios
+    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta, srδt)
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
+  end
+
+  return lla, ll1, ssa, ss1
 end
 
+
+
+
+"""
+    _update_triad_x!(ξi   ::sTxs,
+                     ξ1   ::sTxs,
+                     ξ2   ::sTxs,
+                     γ    ::Float64,
+                     δt   ::Float64,
+                     srδt ::Float64)
+
+Make a `gbm` trio proposal.
+"""
+function _update_triad_x!(ξi   ::sTxs,
+                          ξ1   ::sTxs,
+                          ξ2   ::sTxs,
+                          γ    ::Float64,
+                          δt   ::Float64,
+                          srδt ::Float64)
+
+  @inbounds begin
+    σa   = lσ(ξi)
+    σ1   = lσ(ξ1)
+    σ2   = lσ(ξ2)
+    xa   = xv(ξi)
+    x1   = xv(ξ1)
+    x2   = xv(ξ2)
+    la   = lastindex(xa)
+    l1   = lastindex(x1)
+    l2   = lastindex(x2)
+    σap  = Vector{Float64}(undef,la)
+    σ1p  = Vector{Float64}(undef,l1)
+    σ2p  = Vector{Float64}(undef,l2)
+    σai  = σa[1]
+    σ1f  = σ1[l1]
+    σ2f  = σ2[l2]
+    xai  = xa[1]
+    x1f  = x1[l1]
+    x2f  = x2[l2]
+    e1   = e(ξ1)
+    e2   = e(ξ2)
+    fdta = fdt(ξi)
+    fdt1 = fdt(ξ1)
+    fdt2 = fdt(ξ2)
+
+    # rate path sample
+    σn = trioprop(σai, σ1f, σ2f, e(ξi), e1, e2, γ)
+    bb!(σap, σai, σn, γ, δt, fdta, srδt)
+    bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
+    bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
+
+    llra = llr_dbm(xa, σap, σa, γ, δt, fdta, srδt)
+    llr1 = llr_dbm(x1, σ1p, σ1, γ, δt, fdt1, srδt)
+    llr2 = llr_dbm(x2, σ2p, σ2, γ, δt, fdt2, srδt)
+
+    if -randexp() < llra + llr1 + llr2
+      unsafe_copyto!(σa, 1, σap, 1, la)
+      unsafe_copyto!(σ1, 1, σ1p, 1, l1)
+      unsafe_copyto!(σ2, 1, σ2p, 1, l2)
+    end
+
+    # trait path sample
+    xn = trioprop(xai, x1f, x2f, 
+           intσ(σa, δt, fdta), intσ(σ1, δt, fdt1), intσ(σ2, δt, fdt2))
+    dbb!(xa, xai, xn, σa, δt, fdta, srδt)
+    dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
+    dbb!(x2, xn, x2f, σ2, δt, fdt2, srδt)
+
+    # log likelihood ratios
+    lla, ssc = ll_dbm_ss_b(xa, σa, γ, δt, fdta, srδt)
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
+    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2, srδt)
+  end
+
+  return lla, ll1, ll2, ssc, ss1, ss2
+end
 

@@ -68,6 +68,7 @@ Return if is a fixed (i.e. observed) node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
 isfix(tree::Tlabel) = true
+isfix(tree::sTxs)   = true
 
 
 
@@ -104,6 +105,7 @@ isextinct(tree::sTpb)  = false
 isextinct(tree::sTpbx) = false
 isextinct(tree::iTpb)  = false
 isextinct(tree::iTbdx) = false
+isextinct(tree::sTxs)  = false
 
 
 

@@ -255,17 +255,19 @@ struct iBffs <: iBf
   nt  ::Base.RefValue{Int64}
   λt  ::Base.RefValue{Float64}
   ifx ::Bool
+  xavg::Float64
+  xstd::Float64
 
   # constructors
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         iψ::Bool, fx::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, iψ, fx, ρi,
-         Ref(ni), Ref(nt), Ref(λt), false)
+         Ref(ni), Ref(nt), Ref(λt), false, NaN, NaN)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         iψ::Bool, fx::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64,
-        ifx::Bool) =
+        ifx::Bool, xavg::Float64, xstd::Float64) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, iψ, fx, ρi,
-         Ref(ni), Ref(nt), Ref(λt), ifx)
+         Ref(ni), Ref(nt), Ref(λt), ifx, xavg, xstd)
 end
 
 # pretty-printing
@@ -317,9 +319,8 @@ function makeiBf!(tree::sT,
   # terminal branch
   elseif istip(tree)
 
-    lab = l(tree)
     iψ  = isfossil(tree)
-    ρi  = iψ ? 1.0 : tρ[lab]
+    ρi  = iψ ? 1.0 : tρ[l(tree)]
     te  = ts - el
     te  = isapprox(te, 0.0) ? 0.0 : te
     push!(idv, 
@@ -408,7 +409,8 @@ end
              mxt ::Float64,
              sc  ::Array{Float64,1},
              xr  ::Array{Float64,1},
-             x   ::Dict{String, Float64})
+             xavg::Dict{String, Float64},
+             xstd::Dict{String, Float64})
 
 Make `iBf` trait vector for an `iTree`.
 """
@@ -421,11 +423,8 @@ function makeiBf!(tree::sT,
                   mxt ::Float64,
                   sc  ::Array{Float64,1},
                   xr  ::Array{Float64,1},
-                  x   ::Dict{String, Float64})
-
-  """
-  here!: check this function
-  """
+                  xavg::Dict{String, Float64},
+                  xstd::Dict{String, Float64})
 
   el = e(tree)
   el = ec < el ? ec : el
@@ -435,9 +434,9 @@ function makeiBf!(tree::sT,
 
     te = ts - mxt
     ρi, n, nm, xi, e1 = 
-      makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt, sc, xr, x)
-
-    push!(idv, iBffs(mxt, 0, 1, 0, ts, te, false, false, ρi, 0, 1, NaN, false))
+      makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
+    push!(idv, 
+      iBffs(mxt, 0, 1, 0, ts, te, false, false, ρi, 0, 1, NaN, false, NaN, NaN))
     push!(xr, xi)
     push!(sc, 0.0)
     push!(n2v, 2*n + nm)
@@ -451,8 +450,9 @@ function makeiBf!(tree::sT,
     iψ  = isfossil(tree)
     ρi  = iψ ? 1.0 : tρ[lab]
     te  = ts - el
-    te  = isapprox(te, 0.0) ? 0.0 : te
-    xi  = get(x, lab, nothing)
+    te  = isapprox(te, 0.0, atol = accerr) ? 0.0 : te
+    xi  = get(xavg, lab, nothing)
+    si  = get(xstd, lab, NaN)
     ifx = !isnothing(xi)
     if !ifx
       mn = isempty(xr) ? 0.0 : mean(xr)
@@ -460,7 +460,8 @@ function makeiBf!(tree::sT,
       xi = randn()*s + mn
     end
     push!(idv, 
-      iBffs(el, 0, 0, 0, ts, te, iψ, false, ρi, Int64(!iψ), 1, NaN, ifx))
+      iBffs(el, 0, 0, 0, ts, te, iψ, false, ρi, Int64(!iψ), 1, NaN, ifx, xi, si)
+      )
     push!(xr, xi)
     push!(n2v, 0)
 
@@ -471,14 +472,16 @@ function makeiBf!(tree::sT,
 
     te = ts - el
     ρi, n, nm, x1, e1 = 
-      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, x)
+      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
 
     # Check if fixed
-    xi  = get(x, lab, nothing)
+    xi  = get(x, l(tree), nothing)
+    si  = get(xstd, lab, NaN)
     ifx = !isnothing(xi)
     xi  = ifx ? xi : x1
 
-    push!(idv, iBffs(el, 0, 1, 0, ts, te, true, false, ρi, 0, 1, NaN, ifx))
+    push!(idv, 
+      iBffs(el, 0, 1, 0, ts, te, true, false, ρi, 0, 1, NaN, ifx, xi, si))
     push!(xr, xi)
     push!(sc, 0.0)
     push!(n2v, 2*n + nm)
@@ -490,28 +493,24 @@ function makeiBf!(tree::sT,
     te  = ts - el
 
     ρ1, n1, nm1, x1, e1 =
-      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, x)
+      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
     ρ2, n2, nm2, x2, e2 = 
-      makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt, sc, xr, x)
-    xi  = get(x, lab, nothing)
-    ifx = !isnothing(xi)
-    # if constrained node
-    if ifx
-      scn = (xi - x1)/e1 + (xi - x2)/e2
-    else
-      scn = (x2 - x1)/(e1 + e2)
-      xi  = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
-    end
-    en = el + e1*e2/(e1 + e2)
+      makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
+
+    # contrasts
+    scn = (x2 - x1)/(e1 + e2)
+    xi  = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+    en  = el + e1*e2/(e1 + e2)
 
     n  = n1 + n2
     ρi = n / (n1/ρ1 + n2/ρ2)
     nm = nm1 + nm2
 
-    push!(idv, iBffs(el, 0, 1, 1, ts, te, false, false, ρi, 0, 1, NaN, ifx))
+    push!(idv, 
+      iBffs(el, 0, 1, 1, ts, te, false, false, ρi, 0, 1, NaN, false, NaN, NaN))
     push!(n2v, 2*n2 + nm2)
     push!(sc, scn)
-    push!(xr,  xn)
+    push!(xr,  xi)
 
     return ρi, n, nm, xi, en
   end
@@ -520,25 +519,27 @@ end
 
 
 
-
 """
     make_idf(tree::sT, 
              tρ  ::Dict{String, Float64}, 
-             x   ::Dict{String, Float64}, 
+             xavg::Dict{String, Float64}, 
+             xstd::Dict{String, Float64}, 
              maxt::Float64)
 
 Make the edge dictionary with traits `x`.
 """
 function make_idf(tree::sT, 
                   tρ  ::Dict{String, Float64}, 
-                  x   ::Dict{String, Float64}, 
+                  xavg::Dict{String, Float64}, 
+                  xstd::Dict{String, Float64}, 
                   maxt::Float64)
 
   idf = iBffs[]
   n2v = Int64[]
   sc  = Float64[]
   xr  = Float64[]
-  makeiBf!(tree, e(tree), idf, treeheight(tree), n2v, tρ, maxt, sc, xr, x)
+  makeiBf!(tree, e(tree), idf, treeheight(tree), n2v, tρ, maxt, 
+    sc, xr, xavg, xstd)
 
   σxi = sum(abs2, sc) / Float64(lastindex(sc)-1)
 
@@ -565,8 +566,6 @@ function make_idf(tree::sT,
 
   return idf, xr, σxi
 end
-
-
 
 
 
@@ -809,3 +808,26 @@ ismid(id::iBffs) = d1(id) > 0 && iszero(d2(id)) && !isfossil(id)
 Is fixed for trait `x`.
 """
 ifx(id::iBffs) = getproperty(id, :ifx)
+
+
+
+
+"""
+    xavg(id::iBffs)
+
+Is fixed for trait `x`.
+"""
+xavg(id::iBffs) = getproperty(id, :xavg)
+
+
+
+
+"""
+    xstd(id::iBffs)
+
+Is fixed for trait `x`.
+"""
+xstd(id::iBffs) = getproperty(id, :xstd)
+
+
+

@@ -673,34 +673,185 @@ end
 
 
 """
-    ncrep!(xp::Array{Float64,1},
-           xc::Array{Float64,1},
-           t ::Array{Float64,1},
-           σ ::Float64)
+    _sss(tree::T,
+         α   ::Float64,
+         f   ::Function,
+         ss  ::Float64,
+         n   ::Float64) where {T <: iTree}
 
-Non-centered reparametization of data augmentation for `σ`, based on
-Roberts and Stramer (2001).
+Returns the standardized sum of squares of a diffusion with drift `α`.
 """
-function ncrep!(xp::Array{Float64,1},
-                xc::Array{Float64,1},
-                t ::Array{Float64,1},
-                σ ::Float64)
+function _sss(tree::T,
+              α   ::Float64,
+              f   ::Function,
+              ss  ::Float64,
+              n   ::Float64) where {T <: iTree}
 
-  @inbounds begin
-    l   = lastindex(xc)
-    xi  = xc[1]
-    xf  = xc[l]
-    itf = 1.0/t[l]
-    iσ  = 1.0/σ
+  ss0, n0 = _sss_b(f(tree), α, dt(tree), fdt(tree))
 
-    for i in 2:(l-1)
-      xp[i] = (xc[i] - xi + t[i]*(xi - xf)*itf)*iσ
+  ss += ss0
+  n   += n0
+
+  if def1(tree)
+    ss, n = _sss(tree.d1, α, f, ss, n)
+    if def2(tree)
+      ss, n = _sss(tree.d2, α, f, ss, n)
     end
-
-    xp[1] = xp[l] = 0.0
   end
 
-  return nothing
+  return ss, n
 end
+
+
+
+
+"""
+    _sss_b(v::Array{Float64,1},
+           α  ::Float64,
+           δt ::Float64,
+           fdt::Float64)
+
+Returns the standardized sum of squares of a diffusion with drift `α`.
+"""
+function _sss_b(v::Array{Float64,1},
+                α  ::Float64,
+                δt ::Float64,
+                fdt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    n = lastindex(v)-2
+
+    ss = 0.0
+    @turbo for i in Base.OneTo(n)
+      ss  += (v[i+1] - v[i] - α*δt)^2
+    end
+
+    # standardize
+    ss *= 1.0/(2.0*δt)
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      ss += (v[n+2] - v[n+1] - α*fdt)^2/(2.0*fdt)
+      n = Float64(n + 1)
+    else
+      n = Float64(n)
+    end
+  end
+
+  return ss, n
+end
+
+
+
+
+"""
+    _sss(tree::T,
+         f   ::Function,
+         ss  ::Float64,
+         n   ::Float64) where {T <: iTree}
+
+Returns the standardized sum of squares of a diffusion without drift.
+"""
+function _sss(tree::T,
+              f   ::Function,
+              ss  ::Float64,
+              n   ::Float64) where {T <: iTree}
+
+  ss0, n0 = _sss_b(f(tree), dt(tree), fdt(tree))
+
+  ss += ss0
+  n   += n0
+
+  if def1(tree)
+    ss, n = _sss(tree.d1, f, ss, n)
+    if def2(tree)
+      ss, n = _sss(tree.d2, f, ss, n)
+    end
+  end
+
+  return ss, n
+end
+
+
+
+
+"""
+    _sss_b(v  ::Array{Float64,1},
+           δt ::Float64,
+           fdt::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift.
+"""
+function _sss_b(v  ::Array{Float64,1},
+                δt ::Float64,
+                fdt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    n = lastindex(v)-2
+
+    ss = 0.0
+    @turbo for i in Base.OneTo(n)
+      ss += (v[i+1] - v[i])^2
+    end
+
+    # standardize
+    ss *= 1.0/(2.0*δt)
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      ss += (v[n+2] - v[n+1])^2/(2.0*fdt)
+      n = Float64(n + 1)
+    else
+      n = Float64(n)
+    end
+  end
+
+  return ss, n
+end
+
+
+
+
+"""
+    dα(Ξ::Vector{T}) where {T <: iT}
+
+Returns the overall drift of a diffusion for `α` proposal.
+"""
+function dα(Ξ::Vector{T}, f::Function) where {T <: iTree}
+
+  da = 0.0
+  for ξi in Ξ
+    da += _dα(ξi, f)
+  end
+
+  return da
+end
+
+
+
+
+"""
+    _dα(tree::T) where {T <: iT}
+
+Returns the log-likelihood ratio for a `iTpb` according
+to GBM birth-death for a `α` proposal.
+"""
+function _dα(tree::T, f::Function) where {T <: iT}
+
+  v = f(tree)
+
+  if def1(tree)
+    if def2(tree)
+      fv[end] - fv[1] + _dα(tree.d1, f) + _dα(tree.d2, f)
+    else
+      fv[end] - fv[1] + _dα(tree.d1, f)
+    end
+  else
+    fv[end] - fv[1]
+  end
+end
+
 
 
