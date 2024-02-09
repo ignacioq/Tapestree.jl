@@ -39,7 +39,7 @@ function insane_dbm(tree   ::Tlabel,
                     nburn  ::Int64                 = 200,
                     nflush ::Int64                 = nthin,
                     ofile  ::String                = string(homedir(), "/ipb"),
-                    γi     ::Float64                = 0.1,
+                    γi     ::Float64               = 0.1,
                     pupdp  ::NTuple{2,Float64}     = (0.1, 0.9),
                     δt     ::Float64               = 1e-3,
                     prints ::Int64                 = 5)
@@ -61,7 +61,7 @@ function insane_dbm(tree   ::Tlabel,
   idf, xr, σxi = make_idf(tree, tρ, xa, xs, Inf)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, xr, log(0.5), δt, srδt, sTxs)
+  Ξ = make_Ξ(idf, xr, log(σxi), γi, δt, srδt, sTxs)
 
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
@@ -139,6 +139,7 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
 
       # update traits and rates
       else
+
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
         update_x!(bix, Ξ, idf, γc, ll, ssσ, δt, srδt)
@@ -237,6 +238,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             # end
           # update traits and rates
           else
+
             nix = ceil(Int64,rand()*nin)
             bix = inodes[nix]
             update_x!(bix, Ξ, idf, γc, ll, ssσ, δt, srδt)

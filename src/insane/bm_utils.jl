@@ -159,8 +159,10 @@ function llr_bm(xp  ::Array{Float64,1},
   llr *= -0.5/((σ*srδt)^2)
 
   # add final non-standard `δt`
-  llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1] + α*fdt,
-                      xc[nI+2], xc[nI+1] + α*fdt, sqrt(fdt)*σ)
+  if fdt > 0.0
+    llr += lrdnorm_bm_x(xp[nI+2], xp[nI+1] + α*fdt,
+                        xc[nI+2], xc[nI+1] + α*fdt, sqrt(fdt)*σ)
+  end
 
   return llr
 end
@@ -215,6 +217,42 @@ vectors that share times and x0 follows drift α.
 
     cumsum!(x0, x0)
     cumsum!(x1, x1)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    bm!(x   ::Array{Float64,1},
+        xi  ::Float64,
+        σ   ::Float64,
+        δt  ::Float64,
+        fdt ::Float64,
+        srδt::Float64)
+
+Brownian motion without drift simulation function for updating a branch 
+in place.
+"""
+@inline function bm!(x   ::Array{Float64,1},
+                     xi  ::Float64,
+                     σ   ::Float64,
+                     δt  ::Float64,
+                     fdt ::Float64,
+                     srδt::Float64)
+
+  @inbounds begin
+    l = lastindex(x)
+    randn!(x)
+    # for standard δt
+    x[1] = xi
+    @turbo for i = Base.OneTo(l-2)
+      x[i+1] *= srδt*σ
+    end
+    x[l] *= sqrt(fdt)*σ
+    cumsum!(x, x)
   end
 
   return nothing

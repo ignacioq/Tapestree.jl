@@ -534,6 +534,7 @@ end
     make_Ξ(idf ::Vector{iBffs},
            xr  ::Vector{Float64},
            σi  ::Float64,
+           γi  ::Float64,
            δt  ::Float64,
            srδt::Float64,
            ::Type{sTxs})
@@ -543,12 +544,13 @@ Make edge tree `Ξ` from the edge directory.
 function make_Ξ(idf ::Vector{iBffs},
                 xr  ::Vector{Float64},
                 σi  ::Float64,
+                γi  ::Float64,
                 δt  ::Float64,
                 srδt::Float64,
                 ::Type{sTxs})
 
   Ξ = sTxs[]
-  _make_Ξ!(Ξ, 1, xr, σi, δt, srδt, idf)
+  _make_Ξ!(Ξ, 1, xr, σi, γi, δt, srδt, idf)
 
   return Ξ
 end
@@ -570,6 +572,7 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
                   i   ::Int64,
                   xr  ::Vector{Float64},
                   σi  ::Float64,
+                  γi  ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
                   idf ::Vector{iBffs})
@@ -603,7 +606,7 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
       nts  -= 1
     end
 
-    xv, lσ  = dbb(xii, xfi, σi, σi, 0.01, δt, fdti, srδt, nts)
+    xv, lσ  = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, nts)
   end
 
   l = nts + 2
@@ -612,10 +615,10 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
 
   if i1 > 0 
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, xr, σi, δt, srδt, idf)
-      _make_Ξ!(Ξ, i1, xr, σi, δt, srδt, idf)
+      _make_Ξ!(Ξ, i2, xr, σi, γi, δt, srδt, idf)
+      _make_Ξ!(Ξ, i1, xr, σi, γi, δt, srδt, idf)
     else
-      _make_Ξ!(Ξ, i1, xr, σi, δt, srδt, idf)
+      _make_Ξ!(Ξ, i1, xr, σi, γi, δt, srδt, idf)
     end
   end
 

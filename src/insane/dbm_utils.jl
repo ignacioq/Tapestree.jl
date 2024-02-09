@@ -236,24 +236,21 @@ Diffused Brownian bridge simulation conditional on a rate path `σ`.
   @inbounds begin
     l = lastindex(x)
     randn!(x)
+
+    # values
     x[1] = xi
-
-    if l > 2
-      # values
-      @turbo for i = Base.OneTo(l-2)
-        x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
-      end
-      x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
-      cumsum!(x, x)
-
-      # make values bridge
-      ite = 1.0/(Float64(l-2) * δt + fdt)
-      xdf = (x[l] - xf)
-      @turbo for i = Base.OneTo(l-1)
-        x[i] -= (Float64(i-1) * δt * ite * xdf)
-      end
+    @turbo for i = Base.OneTo(l-2)
+      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
     end
+    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+    cumsum!(x, x)
 
+    # make values bridge
+    ite = 1.0/(Float64(l-2) * δt + fdt)
+    xdf = (x[l] - xf)
+    @turbo for i = Base.OneTo(l-1)
+      x[i] -= (Float64(i-1) * δt * ite * xdf)
+    end
     x[l] = xf
   end
 end

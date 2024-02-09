@@ -234,11 +234,10 @@ function llr_dbm(x   ::Array{Float64,1},
 
     # add final non-standard `δt`
     if fdt > 0.0
-      srfdt = sqrt(fdt)
       σpa   = exp(0.5*(σp[nI+2] + σp[nI+1]))
       σca   = exp(0.5*(σc[nI+2] + σc[nI+1]))
-      llr  += -((x[nI+2] - x[nI+1])^2/(2.0*δt))*(1.0/σpa^2 - 1.0/σca^2) +
-               log(σpa/σca)
+      llr  += -(0.5*(x[nI+2] - x[nI+1])^2/fdt)*(1.0/σpa^2 - 1.0/σca^2) +
+               log(σca/σpa)
     end
   end
 

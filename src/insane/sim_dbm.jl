@@ -57,7 +57,6 @@ function _sim_dbm(tree::iTree,
     xv   = Float64[x0,  x0]
     lσ   = Float64[lσ0, lσ0]
     fdti = 0.0
-    l    = 2
   else
     nt, fdti = divrem(et, δt, RoundDown)
     nt = Int64(nt)
@@ -68,7 +67,6 @@ function _sim_dbm(tree::iTree,
     end
 
     xv, lσ  = dbm(x0, lσ0, γ, fdti, srδt, nt)
-    l   = nt + 2
   end
 
   if def1(tree)
@@ -92,6 +90,82 @@ end
 
 
 
+"""
+    sim_dbm(tree::iTree, 
+            x0  ::Float64,
+            σ0  ::Float64,
+            γ   ::Float64,
+            δt  ::Float64)
+
+Simulate a diffused Brownian motion given starting values.
+"""
+function sim_dbm(tree::Tlabel, 
+                 x0  ::Float64,
+                 σ0  ::Float64,
+                 γ   ::Float64,
+                 δt  ::Float64)
+  
+  xs = Dict{String, Float64}()
+  tr = _sim_dbm(tree, x0, log(σ0), γ, δt, sqrt(δt), xs)
+  return tr, xs
+end
+
+
+
+
+"""
+    _sim_dbm(tree::iTree, 
+             x0  ::Float64,
+             lσ0 ::Float64,
+             γ   ::Float64,
+             δt  ::Float64,
+             srδt::Float64)
+
+Simulate a diffused Brownian motion given starting values recursively.
+"""
+function _sim_dbm(tree::Tlabel, 
+                  x0  ::Float64,
+                  lσ0 ::Float64,
+                  γ   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  xs  ::Dict{String, Float64})
+
+  et = e(tree)
+
+  # simulate dbm
+  if iszero(et)
+    xv   = Float64[x0,  x0]
+    lσ   = Float64[lσ0, lσ0]
+    fdti = 0.0
+  else
+    nt, fdti = divrem(et, δt, RoundDown)
+    nt = Int64(nt)
+
+    if iszero(fdti)
+      fdti = δt
+      nt  -= 1
+    end
+
+    xv, lσ  = dbm(x0, lσ0, γ, fdti, srδt, nt)
+  end
+
+  if def1(tree)
+    if def2(tree)
+      x0  = xv[end]
+      lσ0 = lσ[end]
+      sTxs(_sim_dbm(tree.d1, x0, lσ0, γ, δt, srδt, xs), 
+           _sim_dbm(tree.d2, x0, lσ0, γ, δt, srδt, xs), 
+           et, δt, fdti, xv, lσ)
+    else
+      sTxs(_sim_dbm(tree.d1, xv[end], lσ[end], γ, δt, srδt, xs), 
+           et, δt, fdti, xv, lσ)
+    end
+  else
+    xs[l(tree)] = xv[end]
+    sTxs(et, δt, fdti, xv, lσ)
+  end
+end
 
 
 

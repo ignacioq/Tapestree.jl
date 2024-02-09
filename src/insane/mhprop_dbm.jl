@@ -24,7 +24,6 @@ function _stem_update!(ξi   ::sTxs,
                        γ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64)
-
   @inbounds begin
     σc   = lσ(ξi)
     xc   = xv(ξi)
@@ -146,7 +145,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   fdtp = fdt(ξi)
 
   # rate path sample
-  bm!(σp, σc[1], 0.0, γ, δt, fdtp, srδt)
+  bm!(σp, σc[1], γ, δt, fdtp, srδt)
 
   llr = llr_dbm(xc, σp, σc, γ, δt, fdtp, srδt)
 
@@ -181,6 +180,9 @@ function _update_leaf_x!(ξi  ::sTxs,
                          γ   ::Float64,
                          δt  ::Float64,
                          srδt::Float64)
+
+  @show "ay"
+
   σc   = lσ(ξi)
   xc   = xv(ξi)
   fdtp = fdt(ξi)
@@ -209,6 +211,8 @@ function _update_solo_x!(ξi  ::sTxs,
                          γ   ::Float64,
                          δt  ::Float64,
                          srδt::Float64)
+
+  @show "ay"
 
   σc   = lσ(ξi)
   xc   = xv(ξi)
@@ -245,6 +249,8 @@ function _update_duo_x!(ξi  ::sTxs,
                         γ   ::Float64,
                         δt  ::Float64,
                         srδt::Float64)
+
+  @show "ay"
 
   @inbounds begin
     σa   = lσ(ξi)
@@ -299,6 +305,8 @@ function _update_duo_x!(ξi   ::sTxs,
                         γ    ::Float64,
                         δt   ::Float64,
                         srδt ::Float64)
+
+  @show "ay"
 
   @inbounds begin
     σa   = lσ(ξi)
@@ -372,14 +380,12 @@ function _update_triad_x!(ξi   ::sTxs,
     xai  = xa[1]
     x1f  = x1[l1]
     x2f  = x2[l2]
-    e1   = e(ξ1)
-    e2   = e(ξ2)
     fdta = fdt(ξi)
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
     # rate path sample
-    σn = trioprop(σai, σ1f, σ2f, e(ξi), e1, e2, γ)
+    σn = trioprop(σai, σ1f, σ2f, e(ξi), e(ξ1), e(ξ2), γ)
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
     bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
@@ -388,7 +394,7 @@ function _update_triad_x!(ξi   ::sTxs,
     llr1 = llr_dbm(x1, σ1p, σ1, γ, δt, fdt1, srδt)
     llr2 = llr_dbm(x2, σ2p, σ2, γ, δt, fdt2, srδt)
 
-    if -randexp() < llra + llr1 + llr2
+    if -randexp() < (llra + llr1 + llr2)
       unsafe_copyto!(σa, 1, σap, 1, la)
       unsafe_copyto!(σ1, 1, σ1p, 1, l1)
       unsafe_copyto!(σ2, 1, σ2p, 1, l2)
