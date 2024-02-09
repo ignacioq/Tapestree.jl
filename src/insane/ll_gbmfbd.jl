@@ -418,3 +418,114 @@ end
 
 
 
+"""
+    _llr_gbm_lλshift(tree         ::iTfbd,
+                     δt           ::Float64,
+                     lλshift      ::Float64,
+                     explλshiftm1 ::Float64)
+
+Returns the exponential term of the birth-death log-likelihood ratio 
+for a lλshift on an `iT`.
+"""
+function _llr_gbm_lλshift(tree         ::iTfbd,
+                          δt           ::Float64,
+                          lλshift      ::Float64,
+                          explλshiftm1 ::Float64)
+  @inbounds begin
+    llr = 0.0
+    lλtree = lλ(tree)
+    nI = lastindex(lλtree)-2
+    fdti = fdt(tree)
+
+    for i in Base.OneTo(nI)
+      llr -= exp(0.5*(lλtree[i] + lλtree[i+1]))
+    end
+    llr *= explλshiftm1*δt
+
+    # add final non-standard `δt`
+    if fdti > 0.0
+      llr -= (exp(0.5*(lλtree[nI+1] + lλtree[nI+2])))*explλshiftm1*fdti
+    end
+
+    if def1(tree)
+      llr += _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1)
+      if def2(tree)
+        llr += _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1)
+      end
+    end
+  end
+
+  return llr
+end
+
+
+
+
+"""
+    llik_gbm_lμshift(Ξ      ::Vector{T},
+                     δt     ::Float64,
+                     lμshift::Float64) where {T <: iT}
+
+Returns the exponential term of the birth-death log-likelihood ratio 
+for a lμshift on a `iTct`.
+"""
+function llr_gbm_lμshift(Ξ      ::Vector{T},
+                         δt     ::Float64,
+                         lμshift::Float64) where {T <: iT}
+  @inbounds begin
+    explμshiftm1 = exp(lμshift)-1
+    llr = 0.0
+    for i in Base.OneTo(lastindex(Ξ))
+      llr += _llr_gbm_lμshift(Ξ[i], δt, lμshift, explμshiftm1)
+    end
+  end
+
+  return llr
+end
+
+
+
+
+"""
+    _llr_gbm_lμshift(tree         ::iTfbd,
+                     δt           ::Float64,
+                     lμshift      ::Float64,
+                     explμshiftm1 ::Float64)
+
+Returns the exponential term of the birth-death log-likelihood ratio 
+for a lμshift on an `iT`.
+"""
+function _llr_gbm_lμshift(tree         ::iTfbd,
+                          δt           ::Float64,
+                          lμshift      ::Float64,
+                          explμshiftm1 ::Float64)
+  @inbounds begin
+    llr = 0.0
+    lμtree = lμ(tree)
+    nI = lastindex(lμtree)-2
+    fdti = fdt(tree)
+
+    for i in Base.OneTo(nI)
+      llr -= exp(0.5*(lμtree[i] + lμtree[i+1]))
+    end
+    llr *= explμshiftm1*δt
+
+    # add final non-standard `δt`
+    if fdti > 0.0
+      llr -= (exp(0.5*(lμtree[nI+1] + lμtree[nI+2])))*explμshiftm1*fdti
+    end
+
+    if def1(tree)
+      llr += _llr_gbm_lμshift(tree.d1, δt, lμshift, explμshiftm1)
+      if def2(tree)
+        llr += _llr_gbm_lμshift(tree.d2, δt, lμshift, explμshiftm1)
+      end
+    end
+  end
+
+  return llr
+end
+
+
+
+

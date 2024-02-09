@@ -921,7 +921,7 @@ end
               σλ     ::Float64,
               σμ     ::Float64,
               L      ::Float64,
-              dλ    ::Float64,
+              dlλ    ::Float64,
               llc    ::Float64,
               prc    ::Float64,
               mc     ::Float64,
@@ -939,7 +939,7 @@ function update_α!(αc     ::Float64,
                    σλ     ::Float64,
                    σμ     ::Float64,
                    L      ::Float64,
-                   dλ    ::Float64,
+                   dlλ     ::Float64,
                    llc    ::Float64,
                    prc    ::Float64,
                    mc     ::Float64,
@@ -951,16 +951,15 @@ function update_α!(αc     ::Float64,
 
   ν   = α_prior[1]
   τ2  = α_prior[2]^2
-  # τ2  = σλ^2
   σλ2 = σλ^2
   rs  = σλ2/τ2
-  αp  = rnorm((dλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  αp  = rnorm((dlλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
   mp  = m_surv_gbmbd(th, λ0, μ0, αp, σλ, σμ, δt, srδt, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
-    llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*dλ*(αp - αc)/L) + llr
+    llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*dlλ*(αp - αc)/L) + llr
     prc += llrdnorm_x(αp, αc, ν, τ2)
     αc   = αp
     mc   = mp

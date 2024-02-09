@@ -176,6 +176,9 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
                          prints  ::Int64,
                          scalef  ::Function)
 
+  ltn = 0
+  λlup = λlac = 0.0
+
   λ0  = lλ(Ξ[1])[1]
   llc = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) - Float64(surv > 0) * λ0 + 
         log(mc) + prob_ρ(idf)
@@ -185,7 +188,6 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
         logdnorm(αc,        α_prior[1],  σλc^2) +
         logdgamma(μc,       μ_prior[1],  μ_prior[2])
 
-  # maximum bounds according to unfiorm priors
   L       = treelength(Ξ)          # tree length
   dλ      = deltaλ(Ξ)              # delta change in λ
   ssλ, nλ = sss_gbm(Ξ, αc)         # sum squares in λ
