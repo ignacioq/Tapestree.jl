@@ -12,7 +12,6 @@ Created 25 01 2024
 
 
 
-
 """
     insane_dbm(tree   ::Tlabel,
                xa     ::Dict{String, Float64};
@@ -32,13 +31,13 @@ Run diffused Brownian motion trait evolution model.
 """
 function insane_dbm(tree   ::Tlabel,
                     xa     ::Dict{String, Float64};
-                    xs     ::Dict{String, Float64} = Dict("" => 0.0),
+                    xs     ::Dict{String, Float64} = Dict{String,Float64}(),
                     γ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                     niter  ::Int64                 = 1_000,
                     nthin  ::Int64                 = 10,
                     nburn  ::Int64                 = 200,
                     nflush ::Int64                 = nthin,
-                    ofile  ::String                = string(homedir(), "/ipb"),
+                    ofile  ::String                = string(homedir(), "/dbm"),
                     γi     ::Float64               = 0.1,
                     pupdp  ::NTuple{2,Float64}     = (0.1, 0.9),
                     δt     ::Float64               = 1e-3,
@@ -50,10 +49,10 @@ function insane_dbm(tree   ::Tlabel,
   srδt = sqrt(δt)
 
   # set tips sampling fraction
-  tl = tiplabels(tree)
+  tl = labels(tree)
   tρ = Dict(tl[i] => 1.0 for i in 1:n)
 
-  if isone(length(xs))
+  if iszero(length(xs))
     xs = Dict(tl[i] => 0.0 for i in 1:n)
   end
 
@@ -330,7 +329,12 @@ function update_x!(bix  ::Int64,
     ll[bix], ssσ[bix] = _stem_update!(ξi, γ, δt, srδt)
   # if duo
   elseif iszero(i2)
-    ll[bix], ll[i1], ssσ[bix], ssσ[i1] = _update_duo_x!(ξi, ξ1, γ, δt, srδt)
+    if ifx(bi)
+      ll[bix], ll[i1], ssσ[bix], ssσ[i1] = 
+        _update_duo_x!(ξi, ξ1, xavg(bi), xstd(bi), γ, δt, srδt)
+    else
+      ll[bix], ll[i1], ssσ[bix], ssσ[i1] = _update_duo_x!(ξi, ξ1, γ, δt, srδt)
+    end
   # if triad
   else
     ξ2 = Ξ[i2]

@@ -728,16 +728,7 @@ Tlabel = Union{sT_label, sTf_label}
 
 iTf = Union{sTfbd, sTfbdx, iTfbd}
 """
-iTf = Union{sTf_label, sTfbd, sTfbdx, iTfbd, iTfbdx}
-
-
-
-"""
-    Union type for unlabelled fossil data
-
-uTf = Union{sTfbd, sTfbdx, iTfbd}
-"""
-uTf = Union{sTfbd, sTfbdx, iTfbd, iTfbdx}
+iTf = Union{sTf_label, sTfbd, sTfbdx, iTfbd, iTfbdx, sTxs}
 
 
 

@@ -448,11 +448,11 @@ function makeiBf!(tree::sT,
 
     lab = l(tree)
     iψ  = isfossil(tree)
-    ρi  = iψ ? 1.0 : tρ[lab]
+    ρi  = iψ ? 1.0 : get(tρ, lab, 1.0)
     te  = ts - el
     te  = isapprox(te, 0.0, atol = accerr) ? 0.0 : te
     xi  = get(xavg, lab, nothing)
-    si  = get(xstd, lab, NaN)
+    si  = get(xstd, lab, 0.0)
     ifx = !isnothing(xi)
     if !ifx
       mn = isempty(xr) ? 0.0 : mean(xr)
@@ -475,8 +475,9 @@ function makeiBf!(tree::sT,
       makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
 
     # Check if fixed
-    xi  = get(x, l(tree), nothing)
-    si  = get(xstd, lab, NaN)
+    lab = l(tree)
+    xi  = get(xavg, lab, nothing)
+    si  = get(xstd, lab, 0.0)
     ifx = !isnothing(xi)
     xi  = ifx ? xi : x1
 

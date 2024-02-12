@@ -1003,15 +1003,15 @@ function imean(treev::Vector{sTxs})
   svx = Float64[]
   svσ = Float64[]
   # make fill vector to estimate statistics
-  vλ = Array{Float64,1}(undef, nt)
-  vμ = Array{Float64,1}(undef, nt)
+  vx = Array{Float64,1}(undef, nt)
+  vσ = Array{Float64,1}(undef, nt)
   for i in Base.OneTo(lastindex(vsx[1]))
     for t in Base.OneTo(nt)
-      vλ[t] = vsx[t][i]
-      vμ[t] = vsσ[t][i]
+      vx[t] = vsx[t][i]
+      vσ[t] = vsσ[t][i]
     end
-    push!(svx, mean(vλ))
-    push!(svσ, mean(vμ))
+    push!(svx, mean(vx))
+    push!(svσ, mean(vσ))
   end
 
   if def1(t1)
@@ -1027,11 +1027,11 @@ function imean(treev::Vector{sTxs})
       end
 
       sTxs(imean(treev1),
-            imean(treev2),
-            e(t1), dt(t1), fdt(t1), svx, svσ)
+           imean(treev2),
+           e(t1), dt(t1), fdt(t1), svx, svσ)
     else
       sTxs(imean(treev1),
-            e(t1), dt(t1), fdt(t1), svx, svσ)
+           e(t1), dt(t1), fdt(t1), svx, svσ)
     end
   else
     sTxs(e(t1), dt(t1), fdt(t1), svx, svσ)

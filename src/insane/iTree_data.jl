@@ -628,52 +628,36 @@ function _subclades_n!(strees::Vector{T},
 end
 
 
-
-
 """
-    labels(tree::sT_label)
+    labels(tree::Tlabel)
 
 Return labels and left node order.
 """
-function labels(tree::sT_label)
-
+function labels(tree::Tlabel)
   ls  = String[]
-  n2v = Int64[]
-  make_ls!(tree, ls, n2v)
-
-  reverse!(ls)
-  reverse!(n2v)
-
-  return ls, n2v
+  _make_ls!(tree, ls)
+  return ls
 end
 
 
 
-
 """
-    make_ls!(tree::sT_label,
-             ls  ::Array{String,1},
-             n2v ::Array{Int64,1})
+    make_ls!(tree::Tlabel, ls::Vector{String})
 
-Return labels and left node order (recursive function).
+Return labels.
 """
-function make_ls!(tree::sT_label,
-                  ls  ::Array{String,1},
-                  n2v ::Array{Int64,1})
+function _make_ls!(tree::Tlabel, ls::Vector{String})
 
-  if istip(tree)
+  if l(tree) != ""
     push!(ls, l(tree))
-    push!(n2v, 0)
-    return 1
   end
 
-  n1 = make_ls!(tree.d1, ls, n2v)
-  n2 = make_ls!(tree.d2, ls, n2v)
-
-  push!(ls, l(tree))
-  push!(n2v, n2)
-
-  return n1 + n2
+  if def1(tree)
+    _make_ls!(tree.d1, ls)
+    if def2(tree)
+      _make_ls!(tree.d2, ls)
+    end
+  end
 end
 
 

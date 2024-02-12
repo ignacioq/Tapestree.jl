@@ -88,8 +88,6 @@ end
 
 
 
-
-
 """
     sim_dbm(tree::iTree, 
             x0  ::Float64,
@@ -147,7 +145,7 @@ function _sim_dbm(tree::Tlabel,
       nt  -= 1
     end
 
-    xv, lσ  = dbm(x0, lσ0, γ, fdti, srδt, nt)
+    xv, lσ = dbm(x0, lσ0, γ, fdti, srδt, nt)
   end
 
   if def1(tree)
@@ -158,6 +156,7 @@ function _sim_dbm(tree::Tlabel,
            _sim_dbm(tree.d2, x0, lσ0, γ, δt, srδt, xs), 
            et, δt, fdti, xv, lσ)
     else
+      xs[l(tree)] = xv[end]
       sTxs(_sim_dbm(tree.d1, xv[end], lσ[end], γ, δt, srδt, xs), 
            et, δt, fdti, xv, lσ)
     end
