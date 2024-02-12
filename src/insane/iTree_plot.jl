@@ -846,7 +846,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
                    t_af = mean,
                    q0   = [0.025, 0.975],
                    q1   = [0.25,  0.75],
-                   q2   = Float64[]) where {T <: iT}
+                   q2   = Float64[]) where {T <: iTree}
 
   # prepare data
   ts, r = time_rate(tree, f, δt)
@@ -956,7 +956,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
                    tv_af = x -> quantile(x, 0.5),
                    q0    = [0.025, 0.975],
                    q1    = [0.25,  0.75],
-                   q2    = Float64[]) where {T <: iT}
+                   q2    = Float64[]) where {T <: iTree}
 
   ntrees = lastindex(trees)
   riv = Vector{Float64}[]
@@ -1110,7 +1110,128 @@ end
 
 
 """
-    function f(tree::T; type::Symbol = :trait)
+    function f(tree::T, f::Function) where {T <: Txs}
+
+Recipe for plotting with the tree trait evolution for `Txs`.
+"""
+@recipe function f(tree::T, f::Function) where {T <: Txs}
+
+  th = treeheight(tree)
+  x = Float64[]
+  y = Float64[]
+  _rplottrait!(tree, th, x, y, f)
+  yfilt = filter(x -> !isnan(x), y)
+  ymn, ymx = extrema(yfilt)
+  pe = 0.02*(ymx - ymn)
+
+  # plot defaults
+  legend                      --> false
+  xguide                      --> "t"
+  yguide                      --> "x(t)"
+  xlims                       --> (-th*0.05, th*1.05)
+  xflip                       --> true
+  fontfamily                  --> :Helvetica
+  tickfontfamily              --> :Helvetica
+  tickfontsize                --> 8
+  grid                        --> :off
+  xtick_direction             --> :out
+  line_z                      --> y
+  linecolor                   --> cgrad(:roma, rev = true)
+  ylims                       --> (ymn - pe, ymx + pe)
+  colorbar                    --> true
+
+  return x, y
+end
+
+
+
+
+"""
+    function f(trees::Vector{T}, f::Function) where {T <: Txs}
+
+Recipe for plotting with the tree trait evolution for `Txs`.
+"""
+@recipe function f(trees::Vector{T}, f::Function) where {T <: Txs}
+
+  th = treeheight(trees[1])
+  n  = lastindex(trees)
+
+  x = Float64[]
+  y = Float64[]
+  for t in trees
+    _rplottrait!(t, th, x, y, f)
+  end
+  yfilt = filter(x -> !isnan(x), y)
+  ymn, ymx = extrema(yfilt)
+  pe = 0.02*(ymx - ymn)
+
+
+  # plot defaults
+  legend           --> false
+  xguide           --> "t"
+  yguide           --> "x(t)"
+  xlims            --> (-th*0.05, th*1.05)
+  xflip            --> true
+  fontfamily       --> :Helvetica
+  tickfontfamily   --> :Helvetica
+  tickfontsize     --> 8
+  grid             --> :off
+  xtick_direction  --> :out
+  line_z           --> y
+  linecolor        --> cgrad(:roma, rev = true)
+  ylims            --> (ymn - pe, ymx + pe)
+  colorbar         --> true
+  seriesalpha      --> min(1.0, 10.0/Float64(n))
+
+  return x, y
+end
+
+
+
+
+"""
+    _rplottrait!(tree::T,
+                 xc  ::Float64,
+                 x   ::Array{Float64,1},
+                 y   ::Array{Float64,1},
+                 f   ::Function) where {T <: Txs}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function _rplottrait!(tree::T,
+                      xc  ::Float64,
+                      x   ::Array{Float64,1},
+                      y   ::Array{Float64,1},
+                      f   ::Function) where {T <: Txs}
+
+  # tree δt and nsδt
+  δt = dt(tree)
+
+  # add horizontal lines
+  l   = lastindex(f(tree))
+  @simd for i in Base.OneTo(l-1)
+    push!(x, xc - Float64(i-1)*δt)
+  end
+  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
+
+  append!(y, f(tree))
+  push!(y, NaN)
+
+  xc -= e(tree)
+
+  if def1(tree)
+    _rplottrait!(tree.d1, xc, x, y, f)
+    if def2(tree)
+      _rplottrait!(tree.d2, xc, x, y, f)
+    end
+  end
+end
+
+
+
+
+"""
+    function f(tree::T, yf::Function, zf::Function) where {T <: Txs}
 
 Recipe for plotting with the tree trait evolution for `Txs`.
 """
@@ -1141,6 +1262,50 @@ Recipe for plotting with the tree trait evolution for `Txs`.
   linecolor                   --> cgrad(:roma, rev = true)
   ylims                       --> (ymn - pe, ymx + pe)
   colorbar                    --> true
+
+  return x, y
+end
+
+
+
+
+"""
+    function f(trees::Vector{T}, yf::Function, zf::Function) where {T <: Txs}
+
+Recipe for plotting with the tree trait evolution for `Txs`.
+"""
+@recipe function f(trees::Vector{T}, yf::Function, zf::Function) where {T <: Txs}
+
+  th = treeheight(trees[1])
+  n  = lastindex(trees)
+
+  x = Float64[]
+  y = Float64[]
+  z = Float64[]
+  for t in trees
+    _rplottrait!(t, th, x, y, z, yf, zf)
+  end
+  yfilt = filter(x -> !isnan(x), y)
+  ymn, ymx = extrema(yfilt)
+  pe = 0.02*(ymx - ymn)
+
+
+  # plot defaults
+  legend           --> false
+  xguide           --> "t"
+  yguide           --> "x(t)"
+  xlims            --> (-th*0.05, th*1.05)
+  xflip            --> true
+  fontfamily       --> :Helvetica
+  tickfontfamily   --> :Helvetica
+  tickfontsize     --> 8
+  grid             --> :off
+  xtick_direction  --> :out
+  line_z           --> z
+  linecolor        --> cgrad(:roma, rev = true)
+  ylims            --> (ymn - pe, ymx + pe)
+  colorbar         --> true
+  seriesalpha      --> min(1.0, 10.0/Float64(n))
 
   return x, y
 end
