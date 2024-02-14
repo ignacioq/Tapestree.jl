@@ -959,7 +959,7 @@ function update_α!(αc     ::Float64,
   llr = log(mp/mc)
 
   if -randexp() < llr
-    llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*dlλ*(αp - αc)/L) + llr
+    # llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*dlλ*(αp - αc)/L) + llr
     prc += llrdnorm_x(αp, αc, ν, τ2)
     αc   = αp
     mc   = mp

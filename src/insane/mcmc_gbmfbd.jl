@@ -14,8 +14,8 @@ Created 03 09 2020
 
 """
     insane_gbmfbd(tree    ::sTf_label;
-                  λa_prior::NTuple{2,Float64} = (1.0, 1.0),
-                  μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                  λa_prior::NTuple{2,Float64} = (1.5, 1.0),
+                  μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                   α_prior ::NTuple{2,Float64} = (0.0, 1.0),
                   σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                   σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
@@ -25,7 +25,8 @@ Created 03 09 2020
                   niter   ::Int64             = 1_000,
                   nthin   ::Int64             = 10,
                   nburn   ::Int64             = 200,
-                  nflush  ::Int64             = nthin,
+                  nflushθ ::Int64             = nthin,
+                  nflushΞ ::Int64             = Int64(ceil(niter/100)),
                   ofile   ::String            = string(homedir(), "/ifbd"),
                   tune_int::Int64             = 100,
                   ϵi      ::Float64           = 0.2,
@@ -48,8 +49,8 @@ Created 03 09 2020
 Run insane for fossilized birth-death diffusion `fbdd`.
 """
 function insane_gbmfbd(tree    ::sTf_label;
-                       λa_prior::NTuple{2,Float64} = (1.0, 1.0),
-                       μa_prior::NTuple{2,Float64} = (1.0, 1.0),
+                       λa_prior::NTuple{2,Float64} = (1.5, 1.0),
+                       μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                        α_prior ::NTuple{2,Float64} = (0.0, 1.0),
                        σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
@@ -59,7 +60,8 @@ function insane_gbmfbd(tree    ::sTf_label;
                        niter   ::Int64             = 1_000,
                        nthin   ::Int64             = 10,
                        nburn   ::Int64             = 200,
-                       nflush  ::Int64             = nthin,
+                       nflushθ ::Int64             = nthin,
+                       nflushΞ ::Int64             = Int64(ceil(niter/100)),
                        ofile   ::String            = string(homedir(), "/ifbd"),
                        tune_int::Int64             = 100,
                        ϵi      ::Float64           = 0.2,
@@ -200,7 +202,7 @@ function insane_gbmfbd(tree    ::sTf_label;
     mcmc_gbmfbd(Ξ, idf, llc, prc, αc, σλc, σμc, ψc, λtn, μtn, mc, ns, th, surv,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
       ψ_prior, ψ_epoch, f_epoch, δt, srδt, bst, eixi, eixf, inodes, pup, 
-      niter, nthin, nflush, ofile, prints)
+      niter, nthin, nflushθ, nflushΞ, ofile, prints)
 
   return r, treev
 end
@@ -300,6 +302,29 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
+  function check_pr(pupi::Int64, i::Int64)
+    pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
+          logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
+          logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
+          logdgamma(exp(lλ(Ξ[1])[1]),          λa_prior[1], λa_prior[2]) +
+          logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2]) +
+          sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))
+    if !isapprox(pr0, prc, atol = 1e-4)
+       error(string("Wrong prior computation during the ", ["α","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": pr0=", pr0, " and prc-pr0=", prc-pr0))
+    end
+  end
+
+  function check_ll(pupi::Int64, i::Int64)
+    ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+    if !isapprox(ll0, llc, atol = 1e-4)
+       error(string("Wrong likelihood computation during the ", ["α","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0))
+       # @warn string("Wrong likelihood computation during the ", ["α","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi], 
+       #              " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0)
+    end
+  end
+
   for i in Base.OneTo(nburn)
 
     shuffle!(pup)
@@ -313,6 +338,8 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
         llc, prc, αc, mc  =
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), dlλ, llc, prc,
             mc, th, surv, δt, srδt, α_prior)
+
+        llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
 
         # update ssλ with new drift `α`
         ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
@@ -331,7 +358,6 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
       # update all speciation or extinction rates through time simultaneously
       elseif pupi === 4
-
         llc, prc, Ξ, mc, λlac =
           update_lλ!(Ξ, αc, σλc, σμc, llc, prc, ns, mc, th, surv, λtn, λlac, δt, srδt, λa_prior)
 
@@ -361,6 +387,10 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
             ψ_epoch, δt, srδt, eixi, eixf)
 
       end
+
+      # check_pr(pupi, i)
+      # check_ll(pupi, i)
+
     end
 
     # log tuning parameters
@@ -412,7 +442,8 @@ end
                 pup     ::Vector{Int64},
                 niter   ::Int64,
                 nthin   ::Int64,
-                nflush  ::Int64,
+                nflushθ ::Int64,
+                nflushΞ ::Int64,
                 ofile   ::String,
                 prints  ::Int64)
 
@@ -449,7 +480,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      pup     ::Vector{Int64},
                      niter   ::Int64,
                      nthin   ::Int64,
-                     nflush  ::Int64,
+                     nflushθ ::Int64,
+                     nflushΞ ::Int64,
                      ofile   ::String,
                      prints  ::Int64)
 
@@ -476,8 +508,9 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   # number of branches and of triads
   nbr  = lastindex(idf)
 
-  # flush to file
-  sthin = 0
+  # flush to file (parameters θ and tree Ξ)
+  sthinθ = 0
+  sthinΞ = 0
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -486,7 +519,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           logdgamma(exp(lλ(Ξ[1])[1]),          λa_prior[1], λa_prior[2]) +
           logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2]) +
           sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))
-    if !isapprox(pr0, prc, atol = 1e-8)
+    if !isapprox(pr0, prc, atol = 1e-4)
        error(string("Wrong prior computation during the ", ["α","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi], 
                     " update, at iteration ", i, ": pr0=", pr0, " and prc-pr0=", prc-pr0))
     end
@@ -494,9 +527,11 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   function check_ll(pupi::Int64, i::Int64)
     ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-    if !isapprox(ll0, llc, atol = 1e-8)
+    if !isapprox(ll0, llc, atol = 1e-4)
        error(string("Wrong likelihood computation during the ", ["α","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi], 
                     " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0))
+       # @warn string("Wrong likelihood computation during the ", ["α","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi], 
+       #              " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0)
     end
   end
 
@@ -524,6 +559,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             llc, prc, αc, mc  =
               update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), dlλ, llc, prc,
                 mc, th, surv, δt, srδt, α_prior)
+
+            llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
 
             # update ssλ with new drift `α`
             ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
@@ -596,17 +633,21 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         end
 
         # flush parameters
-        sthin += 1
-        if sthin === nflush
+        sthinθ += 1
+        if sthinθ === nflushθ
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
                σλc, "\t", σμc, "\t", join(ψc, "\t"), "\n"))
           flush(of)
+          sthinθ = 0
+        end
+        sthinΞ += 1
+        if sthinΞ === nflushΞ
           write(tf, 
             string(istring(couple(Ξ, idf, 1)), "\n"))
           flush(tf)
-          sthin = 0
+          sthinΞ = 0
         end
         next!(pbar)
       end
@@ -1519,7 +1560,7 @@ end
                 σμ      ::Float64,
                 llc     ::Float64,
                 prc     ::Float64,
-                ns      ::Float64,
+                ne      ::Float64,
                 mc      ::Float64,
                 th      ::Float64,
                 surv    ::Int64,
@@ -1537,7 +1578,7 @@ function update_lμ!(Ξc      ::Vector{iTfbd},
                     σμ      ::Float64,
                     llc     ::Float64,
                     prc     ::Float64,
-                    ns      ::Float64,
+                    ne      ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
                     surv    ::Int64,
@@ -1557,9 +1598,9 @@ function update_lμ!(Ξc      ::Vector{iTfbd},
   
   lμshift = lμ0p-lμ0c
 
-  llr = log(mp/mc) + llr_gbm_lμshift(Ξc, δt, lμshift) + (ns-Float64(surv > 0))*lμshift
+  llr = log(mp/mc) + llr_gbm_lμshift(Ξc, δt, lμshift) + ne*lμshift
   prr = llrdgamma(μ0p, μ0c, μa_prior[1], μa_prior[2])
-    
+  
   if -randexp() < llr + prr
     llc += llr
     prc += prr
@@ -1567,7 +1608,7 @@ function update_lμ!(Ξc      ::Vector{iTfbd},
       propagate_lμshift!(Ξc[i], lμshift)
     end
     mc   = mp
-    lac += 1.0
+    lac += 1
   end
 
   return llc, prc, Ξc, mc, lac

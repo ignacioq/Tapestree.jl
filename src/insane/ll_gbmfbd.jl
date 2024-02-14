@@ -432,30 +432,35 @@ function _llr_gbm_lλshift(tree         ::iTfbd,
                           lλshift      ::Float64,
                           explλshiftm1 ::Float64)
   @inbounds begin
-    llr = 0.0
+    llrδt  = 0.0
+    llrfdt = 0.0
     lλtree = lλ(tree)
     nI = lastindex(lλtree)-2
     fdti = fdt(tree)
 
     for i in Base.OneTo(nI)
-      llr -= exp(0.5*(lλtree[i] + lλtree[i+1]))
+      llrδt -= exp(0.5*(lλtree[i] + lλtree[i+1]))
     end
-    llr *= explλshiftm1*δt
+    #llr *= explλshiftm1*δt
 
     # add final non-standard `δt`
     if fdti > 0.0
-      llr -= (exp(0.5*(lλtree[nI+1] + lλtree[nI+2])))*explλshiftm1*fdti
+      llrfdt -= (exp(0.5*(lλtree[nI+1] + lλtree[nI+2])))*explλshiftm1*fdti
     end
 
     if def1(tree)
-      llr += _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1)
+      llrδti, llrfdti = _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1)
+      llrδt  += llrδti
+      llrfdt += llrfdti
       if def2(tree)
-        llr += _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1)
+        llrδti, llrfdti = _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1)
+        llrδt  += llrδti
+        llrfdt += llrfdti
       end
     end
   end
 
-  return llr
+  return llrδt, llrfdt
 end
 
 
@@ -474,11 +479,16 @@ function llr_gbm_lμshift(Ξ      ::Vector{T},
                          lμshift::Float64) where {T <: iT}
   @inbounds begin
     explμshiftm1 = exp(lμshift)-1
-    llr = 0.0
+    llrδt  = 0.0
+    llrfdt = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      llr += _llr_gbm_lμshift(Ξ[i], δt, lμshift, explμshiftm1)
+      llrδti, llrfdti = _llr_gbm_lμshift(Ξ[i], δt, lμshift, explμshiftm1)
+      llrδt  += llrδti
+      llrfdt += llrfdti
     end
   end
+
+  llr = llrδt*explμshiftm1*δt + llrfdt
 
   return llr
 end
@@ -500,30 +510,35 @@ function _llr_gbm_lμshift(tree         ::iTfbd,
                           lμshift      ::Float64,
                           explμshiftm1 ::Float64)
   @inbounds begin
-    llr = 0.0
+    llrδt  = 0.0
+    llrfdt = 0.0
     lμtree = lμ(tree)
     nI = lastindex(lμtree)-2
     fdti = fdt(tree)
 
     for i in Base.OneTo(nI)
-      llr -= exp(0.5*(lμtree[i] + lμtree[i+1]))
+      llrδt -= exp(0.5*(lμtree[i] + lμtree[i+1]))
     end
-    llr *= explμshiftm1*δt
+    # llr *= explμshiftm1*δt
 
     # add final non-standard `δt`
     if fdti > 0.0
-      llr -= (exp(0.5*(lμtree[nI+1] + lμtree[nI+2])))*explμshiftm1*fdti
+      llrfdt -= (exp(0.5*(lμtree[nI+1] + lμtree[nI+2])))*explμshiftm1*fdti
     end
 
     if def1(tree)
-      llr += _llr_gbm_lμshift(tree.d1, δt, lμshift, explμshiftm1)
+      llrδti, llrfdti = _llr_gbm_lμshift(tree.d1, δt, lμshift, explμshiftm1)
+      llrδt  += llrδti
+      llrfdt += llrfdti
       if def2(tree)
-        llr += _llr_gbm_lμshift(tree.d2, δt, lμshift, explμshiftm1)
+        llrδti, llrfdti = _llr_gbm_lμshift(tree.d2, δt, lμshift, explμshiftm1)
+        llrδt  += llrδti
+        llrfdt += llrfdti
       end
     end
   end
 
-  return llr
+  return llrδt, llrfdt
 end
 
 

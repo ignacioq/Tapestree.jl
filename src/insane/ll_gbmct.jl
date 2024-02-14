@@ -397,11 +397,16 @@ function llr_gbm_lλshift(Ξ      ::Vector{iTct},
                          ϵ      ::Float64)
   @inbounds begin
     explλshiftm1 = exp(lλshift)-1
-    llr = 0.0
+    llrδt  = 0.0
+    llrfdt = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      llr += _llr_gbm_lλshift(Ξ[i], δt, lλshift, explλshiftm1, ϵ)
+      llrδti, llrfdti = _llr_gbm_lλshift(Ξ[i], δt, lλshift, explλshiftm1, ϵ)
+      llrδt  += llrδti
+      llrfdt += llrfdti
     end
   end
+
+  llr = llrδt*explλshiftm1*δt*(1.0 + ϵ) + llrfdt
 
   return llr
 end
@@ -425,28 +430,33 @@ function _llr_gbm_lλshift(tree        ::iTct,
                           explλshiftm1::Float64,
                           ϵ           ::Float64)
   @inbounds begin
-    llr = 0.0
+    llrδt = 0.0
+    llrfdt = 0.0
     lλtree = lλ(tree)
     nI = lastindex(lλtree)-2
     fdti = fdt(tree)
 
     for i in Base.OneTo(nI)
-      llr -= exp(0.5*(lλtree[i] + lλtree[i+1]))
+      llrδt -= exp(0.5*(lλtree[i] + lλtree[i+1]))
     end
-    llr *= explλshiftm1*δt*(1.0 + ϵ)
+    # llr *= explλshiftm1*δt*(1.0 + ϵ)
 
     # add final non-standard `δt`
     if fdti > 0.0
-      llr -= (exp(0.5*(lλtree[nI+1] + lλtree[nI+2])))*explλshiftm1*fdti*(1.0 + ϵ)
+      llrfdt -= (exp(0.5*(lλtree[nI+1] + lλtree[nI+2])))*explλshiftm1*fdti*(1.0 + ϵ)
     end
 
     if !istip(tree)
-      llr += _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1, ϵ)
-      llr += _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1, ϵ)
+      llrδti, llrfdti = _llr_gbm_lλshift(tree.d1, δt, lλshift, explλshiftm1, ϵ)
+      llrδt  += llrδti
+      llrfdt += llrfdti
+      llrδti, llrfdti = _llr_gbm_lλshift(tree.d2, δt, lλshift, explλshiftm1, ϵ)
+      llrδt  += llrδti
+      llrfdt += llrfdti
     end
   end
 
-  return llr
+  return llrδt, llrfdt
 end
 
 

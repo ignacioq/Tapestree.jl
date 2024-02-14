@@ -27,7 +27,8 @@ Created 20 09 2023
                   niter   ::Int64             = 1_000,
                   nthin   ::Int64             = 10,
                   nburn   ::Int64             = 200,
-                  nflush  ::Int64             = nthin,
+                  nflushθ ::Int64             = nthin,
+                  nflushΞ ::Int64             = Int64(ceil(niter/100)),
                   ofile   ::String            = homedir(),
                   tune_int::Int64             = 100,
                   ϵi      ::Float64           = 0.2,
@@ -63,7 +64,8 @@ function insane_gbmobd(tree    ::sTf_label,
                        niter   ::Int64             = 1_000,
                        nthin   ::Int64             = 10,
                        nburn   ::Int64             = 200,
-                       nflush  ::Int64             = nthin,
+                       nflushθ ::Int64             = nthin,
+                       nflushΞ ::Int64             = Int64(ceil(niter/100)),
                        ofile   ::String            = homedir(),
                        tune_int::Int64             = 100,
                        ϵi      ::Float64           = 0.2,
@@ -232,7 +234,7 @@ function insane_gbmobd(tree    ::sTf_label,
     mcmc_gbmobd(Ξ, idf, ωtimes, LTT, llc, prc, αc, σλc, σμc, ψc, ωc, ωtn, mc, nω, L, th, surv,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
       ψ_prior, ω_prior, ψω_epoch, f_epoch, δt, srδt, bst, eixi, eixf, inodes, pup, 
-      niter, nthin, nflush, ofile, prints)
+      niter, nthin, nflushθ, nflushΞ, ofile, prints)
 
   return r, treev
 end
@@ -456,7 +458,8 @@ end
                 pup     ::Vector{Int64},
                 niter   ::Int64,
                 nthin   ::Int64,
-                nflush  ::Int64,
+                nflushθ ::Int64,
+                nflushΞ ::Int64,
                 ofile   ::String,
                 prints  ::Int64)
 
@@ -497,7 +500,8 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
                      pup     ::Vector{Int64},
                      niter   ::Int64,
                      nthin   ::Int64,
-                     nflush  ::Int64,
+                     nflushθ ::Int64,
+                     nflushΞ ::Int64,
                      ofile   ::String,
                      prints  ::Int64)
 
@@ -522,8 +526,9 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
   # number of branches and of triads
   nbr  = lastindex(idf)
 
-  # flush to file
-  sthin = 0
+  # flush to file (parameters θ and tree Ξ)
+  sthinθ = 0
+  sthinΞ = 0
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -643,17 +648,21 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
         end
 
         # flush parameters
-        sthin += 1
-        if sthin === nflush
+        sthinθ += 1
+        if sthinθ === nflushθ
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
                σλc, "\t", σμc, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n"))
           flush(of)
+          sthinθ = 0
+        end
+        sthinΞ += 1
+        if sthinΞ === nflushΞ
           write(tf, 
             string(istring(couple(Ξ, idf, 1)), "\n"))
           flush(tf)
-          sthin = 0
+          sthinΞ = 0
         end
         next!(pbar)
       end
