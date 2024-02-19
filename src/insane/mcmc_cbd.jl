@@ -813,8 +813,8 @@ function update_μ!(llc    ::Float64,
 
   μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
 
-  mp  = m_surv_cbd(th, λc, μp, 5_000, surv)
-  llr = log(mp/mc)
+  mp   = m_surv_cbd(th, λc, μp, 5_000, surv)
+  llr  = log(mp/mc)
 
   if -randexp() < llr
     llc += ne * log(μp/μc) + L * (μc - μp) + llr

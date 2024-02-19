@@ -939,40 +939,40 @@ end
 
 
 
-"""
-    update_σ!(σλc     ::Float64,
-              ssλ     ::Float64,
-              n       ::Float64,
-              llc     ::Float64,
-              prc     ::Float64,
-              σλ_prior::NTuple{2,Float64})
+# """
+#     update_σ!(σc     ::Float64,
+#               ss     ::Float64,
+#               n       ::Float64,
+#               llc     ::Float64,
+#               prc     ::Float64,
+#               σλ_prior::NTuple{2,Float64})
 
-Gibbs update for `σλ` given reference distribution.
-"""
-function update_σ!(σλc     ::Float64,
-                   ssλ     ::Float64,
-                   n       ::Float64,
-                   llc     ::Float64,
-                   prc     ::Float64,
-                   rdc     ::Float64,
-                   σλ_prior::NTuple{2,Float64},
-                   σλ_rdist ::NTuple{2,Float64},
-                   pow     ::Float64)
+# Gibbs update for `σλ` given reference distribution.
+# """
+# function update_σ!(σc     ::Float64,
+#                    ss     ::Float64,
+#                    n       ::Float64,
+#                    llc     ::Float64,
+#                    prc     ::Float64,
+#                    rdc     ::Float64,
+#                    σλ_prior::NTuple{2,Float64},
+#                    σλ_rdist ::NTuple{2,Float64},
+#                    pow     ::Float64)
 
-  σλ_p1 = σλ_prior[1]
-  σλ_p2 = σλ_prior[2]
+#   σλ_p1 = σλ_prior[1]
+#   σλ_p2 = σλ_prior[2]
 
-  # Gibbs update for σ
-  σλp2 = randinvgamma((σλ_p1 + 0.5 * n) * pow + σλ_rdist[1] * (1.0 - pow),
-                      (σλ_p2 + ssλ) * pow     + σλ_rdist[2] * (1.0 - pow))
+#   # Gibbs update for σ
+#   σλp2 = randinvgamma((σλ_p1 + 0.5 * n) * pow + σλ_rdist[1] * (1.0 - pow),
+#                       (σλ_p2 + ss) * pow     + σλ_rdist[2] * (1.0 - pow))
 
-  # update likelihood, prior and reference
-  σλp = sqrt(σλp2)
-  llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc))
-  prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
-  rdc += llrdinvgamma(σλp2, σλc^2, σλ_rdist[1], σλ_rdist[2])
+#   # update likelihood, prior and reference
+#   σλp = sqrt(σλp2)
+#   llc += ss*(1.0/σc^2 - 1.0/σλp2) - n*(log(σλp/σc))
+#   prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+#   rdc += llrdinvgamma(σλp2, σλc^2, σλ_rdist[1], σλ_rdist[2])
 
-  return llc, prc, rdc, σλp
-end
+#   return llc, prc, rdc, σλp
+# end
 
 
