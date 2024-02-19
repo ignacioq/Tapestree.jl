@@ -1473,8 +1473,8 @@ function update_lλ!(Ξc      ::Vector{iTfbd},
   
   lλshift = lλ0p-lλ0c
 
-  #llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-Float64(surv > 0))*lλshift
-  llr = log(mp/mc2) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-Float64(surv > 0))*lλshift
+  #llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
+  llr = log(mp/mc2) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
   prr = llrdgamma(λ0p, λ0c, λa_prior[1], λa_prior[2])
     
   if -randexp() < llr + prr
@@ -1538,8 +1538,8 @@ function update_lλ!(Ξc      ::Vector{iTfbd},
   
   lλshift = lλ0p-lλ0c
 
-  #llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-Float64(surv > 0))*lλshift
-  llr = log(mp/mc2) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-Float64(surv > 0))*lλshift
+  #llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
+  llr = log(mp/mc2) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
   prr = llrdgamma(λ0p, λ0c, λa_prior[1], λa_prior[2])
     
   if -randexp() < llr + prr
