@@ -189,7 +189,7 @@ function _crown_update!(ξi      ::iTpb,
     llrbm2, llrpb2, ssrλ2 =
       llr_gbm_b_sep(lλ2p, lλ2c, α, σλ, δt, fdt2, srδt, false)
 
-    llr  = llrpb1 + llrpb2
+    llr = llrpb1 + llrpb2
     prr = llrdgamma(exp(lλr), exp(lλi), λ0_prior[1], λ0_prior[2])
 
     if -randexp() < llr + prr

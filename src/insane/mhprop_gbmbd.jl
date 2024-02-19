@@ -200,17 +200,17 @@ function _stem_update!(ξi      ::T,
     lU = -randexp()
 
     llr = llrbd
+    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
-    if lU < llr + log(5_000.0/mc)
+    if lU < llr + prr + log(5_000.0/mc)
 
       #survival
       mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, surv)
       llr += log(mp/mc)
 
-      if lU < llr
+      if lU < llr + prr
         llc += llrbm + llr
-        prc += llrdgamma(exp(λr), exp(λc[1]), λa_prior[1], λa_prior[2])
-        prc += llrdgamma(exp(μr), exp(μc[1]), μa_prior[1], μa_prior[2])
+        prc += prr
         dλ  += λc[1] - λr
         ssλ += ssrλ
         ssμ += ssrμ
@@ -311,17 +311,17 @@ function _crown_update!(ξi      ::T,
     lU = -randexp()
 
     llr = llrbd1 + llrbd2
+    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
-    if lU < llr + log(5_000.0/mc)
+    if lU < llr + prr + log(5_000.0/mc)
 
       #survival
       mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 5_000, surv)
       llr += log(mp/mc)
 
-      if lU < llr
+      if lU < llr + prr
         llc += llrbm1 + llrbm2 + llr
-        prc += llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2])
-        prc += llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
+        prc += prr
         dλ  += 2.0*(λi - λr)
         ssλ += ssrλ1 + ssrλ2
         ssμ += ssrμ1 + ssrμ2
