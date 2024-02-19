@@ -61,7 +61,7 @@ function _fstem_update!(ξi   ::T,
     μ1p  = Vector{Float64}(undef,l1)
     λ1   = λ1c[l1]
     μ1   = μ1c[l1]
-    el   = e(ξ1)    
+    el   = e(ξ1)
     sqre = sqrt(el)
     fdt1 = fdt(ξ1)
 

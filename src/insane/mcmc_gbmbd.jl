@@ -207,7 +207,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       elseif pupi === 2
 
         llc, prc, σλc, σμc, mc =
-          update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
+          update_σ!(σλc, σμc, αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], ssλ, ssμ, nλ,
             llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
       # gbm update
@@ -354,7 +354,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           elseif pupi === 2
 
             llc, prc, σλc, σμc, mc =
-              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
+              update_σ!(σλc, σμc, αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], ssλ, ssμ, nλ,
                 llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
@@ -1022,8 +1022,8 @@ function update_σ!(σλc     ::Float64,
   llr = log(mp/mc)
 
   if -randexp() < llr
-    llc += ssλ*(1.0/σλc^2 - 1.0/σλp^2) - n*(log(σλp/σλc)) +
-           ssμ*(1.0/σμc^2 - 1.0/σμp^2) - n*(log(σμp/σμc)) +
+    llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) +
+           ssμ*(1.0/σμc^2 - 1.0/σμp2) - n*(log(σμp/σμc)) +
            llr
     prc += llrdinvgamma(σλp2, σλc^2, σλ_prior[1], σλ_prior[2]) +
            llrdinvgamma(σμp2, σμc^2, σμ_prior[1], σμ_prior[2])
