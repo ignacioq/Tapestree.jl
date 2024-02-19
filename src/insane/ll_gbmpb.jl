@@ -449,10 +449,9 @@ function _llr_gbm_lλshift(tree         ::T,
     nI = lastindex(lλtree)-2
     fdti = fdt(tree)
 
-    for i in Base.OneTo(nI)
+    @turbo for i in Base.OneTo(nI)
       llrδt -= exp(0.5*(lλtree[i] + lλtree[i+1]))
     end
-    # llr *= explλshiftm1*δt
 
     # add final non-standard `δt`
     if fdti > 0.0
