@@ -405,10 +405,14 @@ end
 
 Return the minimum subclade that includes tip labels in `tips`.
 """
-function subclade(tree::sT_label, tips::Vector{String})
+function subclade(tree::sT_label, tips::Vector{String}, stem::Bool)
 
   ls, n2v = labels(tree)
-  return _subclade_crown(tree, 1:lastindex(ls), tips, ls, n2v)
+  if stem
+    return _subclade_stem(tree,  1:lastindex(ls), tips, ls, n2v)
+  else
+    return _subclade_crown(tree, 1:lastindex(ls), tips, ls, n2v)
+  end
 end
 
 
