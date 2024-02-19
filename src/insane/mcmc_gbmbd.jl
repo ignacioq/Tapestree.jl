@@ -297,9 +297,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
-
   L            = treelength(Ξ)     # tree length
   dλ           = deltaλ(Ξ)         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)    # sum squares in λ and μ

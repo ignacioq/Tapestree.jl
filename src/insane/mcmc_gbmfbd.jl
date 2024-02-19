@@ -1468,17 +1468,15 @@ function update_lλ!(Ξc      ::Vector{iTfbd},
   λ0p  = exp(lλ0p)
   lμ0c = lμ(Ξc[1])[1]
   
-  mc2  = m_surv_gbmbd(th, lλ0c, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
   mp   = m_surv_gbmbd(th, lλ0p, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
   
   lλshift = lλ0p-lλ0c
 
-  #llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
-  llr = log(mp/mc2) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
+  llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
   prr = llrdgamma(λ0p, λ0c, λa_prior[1], λa_prior[2])
     
   if -randexp() < llr + prr
-    llc += llr + log(mc2/mc)
+    llc += llr
     prc += prr
     for i in Base.OneTo(lastindex(Ξc))
       propagate_lλshift!(Ξc[i], lλshift)
@@ -1533,17 +1531,15 @@ function update_lλ!(Ξc      ::Vector{iTfbd},
   λ0p  = exp(lλ0p)
   lμ0c = lμ(Ξc[1])[1]
   
-  mc2  = m_surv_gbmbd(th, lλ0c, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
   mp   = m_surv_gbmbd(th, lλ0p, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
   
   lλshift = lλ0p-lλ0c
 
-  #llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
-  llr = log(mp/mc2) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
+  llr = log(mp/mc) + llr_gbm_lλshift(Ξc, δt, lλshift) + (ns-(iszero(e(Ξc[1])) && !isfossil(Ξc[1])))*lλshift
   prr = llrdgamma(λ0p, λ0c, λa_prior[1], λa_prior[2])
     
   if -randexp() < llr + prr
-    llc += llr + log(mc2/mc)
+    llc += llr
     prc += prr
     for i in Base.OneTo(lastindex(Ξc))
       propagate_lλshift!(Ξc[i], lλshift)
@@ -1598,17 +1594,15 @@ function update_lμ!(Ξc      ::Vector{iTfbd},
   lμ0p = rnorm(lμ0c, μtn)
   μ0p  = exp(lμ0p)
   
-  mc2   = m_surv_gbmbd(th, lλ0c, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
   mp   = m_surv_gbmbd(th, lλ0c, lμ0p, α, σλ, σμ, δt, srδt, 1_000, surv)
   
   lμshift = lμ0p-lμ0c
 
-  #llr = log(mp/mc) + llr_gbm_lμshift(Ξc, δt, lμshift) + ne*lμshift
-  llr = log(mp/mc2) + llr_gbm_lμshift(Ξc, δt, lμshift) + ne*lμshift
+  llr = log(mp/mc) + llr_gbm_lμshift(Ξc, δt, lμshift) + ne*lμshift
   prr = llrdgamma(μ0p, μ0c, μa_prior[1], μa_prior[2])
   
   if -randexp() < llr + prr
-    llc += llr + log(mc2/mc)
+    llc += llr
     prc += prr
     for i in Base.OneTo(lastindex(Ξc))
       propagate_lμshift!(Ξc[i], lμshift)
@@ -1663,17 +1657,15 @@ function update_lμ!(Ξc      ::Vector{iTfbd},
   lμ0p = rnorm(lμ0c, μtn)
   μ0p  = exp(lμ0p)
   
-  mc2   = m_surv_gbmbd(th, lλ0c, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
   mp   = m_surv_gbmbd(th, lλ0c, lμ0p, α, σλ, σμ, δt, srδt, 1_000, surv)
   
   lμshift = lμ0p-lμ0c
 
-  #llr = log(mp/mc) + llr_gbm_lμshift(Ξc, δt, lμshift) + ne*lμshift
-  llr = log(mp/mc2) + llr_gbm_lμshift(Ξc, δt, lμshift) + ne*lμshift
+  llr = log(mp/mc) + llr_gbm_lμshift(Ξc, δt, lμshift) + ne*lμshift
   prr = llrdgamma(μ0p, μ0c, μa_prior[1], μa_prior[2])
   
   if -randexp() < llr + prr
-    llc += llr + log(mc2/mc)
+    llc += llr
     prc += prr
     for i in Base.OneTo(lastindex(Ξc))
       propagate_lμshift!(Ξc[i], lμshift)
