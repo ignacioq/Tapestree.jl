@@ -207,7 +207,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       elseif pupi === 2
 
         llc, prc, σλc, σμc, mc =
-          update_σ!(σλc, σμc, αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], ssλ, ssμ, nλ,
+          update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
             llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
       # gbm update
@@ -351,7 +351,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           elseif pupi === 2
 
             llc, prc, σλc, σμc, mc =
-              update_σ!(σλc, σμc, αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], ssλ, ssμ, nλ,
+              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
                 llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
@@ -971,9 +971,9 @@ end
 """
     update_σ!(σλc     ::Float64,
               σμc     ::Float64,
-              α       ::Float64,
               λ0      ::Float64,
               μ0      ::Float64,
+              α       ::Float64,
               ssλ     ::Float64,
               ssμ     ::Float64,
               n       ::Float64,
@@ -991,9 +991,9 @@ Gibbs update for `σλ` and `σμ`.
 """
 function update_σ!(σλc     ::Float64,
                    σμc     ::Float64,
-                   α       ::Float64,
                    λ0      ::Float64,
                    μ0      ::Float64,
+                   α       ::Float64,
                    ssλ     ::Float64,
                    ssμ     ::Float64,
                    n       ::Float64,

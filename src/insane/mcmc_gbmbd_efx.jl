@@ -243,7 +243,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       elseif pupi === 2
 
         llc, prc, σλc, σμc, mc =
-          update_σ!(σλc, σμc, αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], ssλ, ssμ, nλ,
+          update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
             llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
       # gbm update
@@ -396,7 +396,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           elseif pupi === 2
 
             llc, prc, σλc, σμc, mc =
-              update_σ!(σλc, σμc, αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], ssλ, ssμ, nλ,
+              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
                 llc, prc, mc, th, crown, δt, srδt, σλ_prior, σμ_prior)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(crown > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
