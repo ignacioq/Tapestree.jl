@@ -41,7 +41,7 @@ using .INSANE: read_newick, write_newick, iread, iwrite,
   iscrowntree, rm_stem!, fixtree!,
   insane_cpb, insane_cbd, insane_cfbd, 
   insane_gbmpb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
-  iquantile, imean, irange, sample, mcmc_array
+  iquantile, imean, irange, sample, mcmc_array,
   lλ, lμ, remove_extinct, remove_unsampled, remove_fossils, fixedpos, fossilize!,
   e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs, l,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
