@@ -28,7 +28,7 @@ Created 14 09 2020
                  prints  ::Int64                 = 5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for `gbm-pb`.
+Run insane for `pbd`.
 """
 function insane_gbmpb(tree    ::sT_label;
                       α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
@@ -43,6 +43,7 @@ function insane_gbmpb(tree    ::sT_label;
                       pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       prints  ::Int64                 = 5,
+                      stn     ::Float64               = 0.5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
@@ -69,19 +70,19 @@ function insane_gbmpb(tree    ::sT_label;
   # parameter updates (1: α, 2: σ, 3: scale, 4: gbm, 5: fs)
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(4)
+  for i in Base.OneTo(lastindex(pupdp))
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
   @info "running pure-birth gbm"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, ns =
-    mcmc_burn_gbmpb(Ξ, idf, α_prior, σλ_prior, nburn, αi, σλi,
+  Ξ, idf, llc, prc, αc, σλc, ns, stn =
+    mcmc_burn_gbmpb(Ξ, idf, α_prior, σλ_prior, nburn, αi, σλi, stn,
       δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, ns, α_prior, σλ_prior,
+  r, treev = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, ns, stn, α_prior, σλ_prior,
               δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -92,21 +93,19 @@ end
 """
     mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
                     idf     ::Vector{iBffs},
-                    λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
                     αc      ::Float64,
                     σλc     ::Float64,
+                    stn     ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
-                    terminus::Array{BitArray{1}},
                     pup     ::Array{Int64,1},
                     prints  ::Int64)
 
-
-MCMC burn-in chain for GBM pure-birth.
+MCMC burn-in chain for `pbd`.
 """
 function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
                          idf     ::Vector{iBffs},
@@ -115,6 +114,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
                          nburn   ::Int64,
                          αc      ::Float64,
                          σλc     ::Float64,
+                         stn     ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
                          inodes  ::Array{Int64,1},
@@ -136,6 +136,10 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
   # delta change, sum squares, path length and integrated rate
   ddλ, ssλ, nλ, irλ = 
     _ss_ir_dd(Ξ, lλ, αc)
+
+  # for scale tuning
+  ltn = 0
+  lup = lac = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -162,8 +166,10 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
       # update scale
       elseif pupi === 3
 
-        llc, irλ = update_scale!(Ξ, idf, llc, irλ, ns)
+        llc, irλ, acc = update_scale!(Ξ, idf, llc, irλ, ns, stn)
 
+        lac += acc
+        lup += 1.0
       # update gbm
       elseif pupi === 4
 
@@ -185,10 +191,16 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
       end
     end
 
+    ltn += 1
+    if ltn === 100
+      stn = tune(stn, lac/lup)
+      ltn = 0
+    end
+
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, ns
+  return Ξ, idf, llc, prc, αc, σλc, ns, stn
 end
 
 
@@ -223,6 +235,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
                     αc      ::Float64,
                     σλc     ::Float64,
                     ns      ::Float64,
+                    stn     ::Float64,
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     δt      ::Float64,
@@ -279,32 +292,31 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
             # update ssλ with new drift `α`
             ssλ = _ss(Ξ, lλ, αc)
 
-            ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            if !isapprox(ll0, llc, atol = 1e-4)
-               @show ll0, llc, it, pupi
-               return
-            end
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+            # if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
 
           # update diffusion rate
           elseif pupi === 2
 
             llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-            ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            if !isapprox(ll0, llc, atol = 1e-4)
-               @show ll0, llc, it, pupi
-               return
-            end
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+            # if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
 
           # update scale
           elseif pupi === 3
 
-            llc, irλ = update_scale!(Ξ, idf, llc, irλ, ns)
+            llc, irλ, acc = update_scale!(Ξ, idf, llc, irλ, ns, stn)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
             # if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi
-            #    @show irλ, _ss_ir_dd(Ξ, lλ, αc)[4]
             #    return
             # end
 
@@ -317,11 +329,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
             llc, ddλ, ssλ, irλ =
               update_gbm!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, irλ, δt, srδt)
 
-            ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            if !isapprox(ll0, llc, atol = 1e-4)
-               @show ll0, llc, it, pupi
-               return
-            end
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+            # if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
 
           # update by forward simulation
           else
@@ -332,11 +344,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
               update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
                 δt, srδt)
 
-            ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            if !isapprox(ll0, llc, atol = 1e-4)
-               @show ll0, llc, it, pupi
-               return
-            end
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+            # if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
           end
         end
 
@@ -458,35 +470,40 @@ end
 
 
 """
-    update_scale!(Ξ    ::Vector{T},
-                  idf  ::Vector{iBffs},
-                  llc  ::Float64,
-                  ir   ::Float64,
-                  ns   ::Float64) where {T <: iTree}
+    update_scale!(Ξ  ::Vector{T},
+                  idf::Vector{iBffs},
+                  llc::Float64,
+                  ir ::Float64,
+                  ns ::Float64,
+                  stn::Float64) where {T <: iTree}
 
 Update scale for speciation.
 """
-function update_scale!(Ξ    ::Vector{T},
-                       idf  ::Vector{iBffs},
-                       llc  ::Float64,
-                       ir   ::Float64,
-                       ns   ::Float64) where {T <: iTree}
+function update_scale!(Ξ  ::Vector{T},
+                       idf::Vector{iBffs},
+                       llc::Float64,
+                       ir ::Float64,
+                       ns ::Float64,
+                       stn::Float64) where {T <: iTree}
 
   # sample log(scaling factor)
-  s = rand()*0.5 - 0.25
+  s = randn()*stn
 
   # likelihood ratio
   iri = (1.0 - exp(s)) * ir
   llr = ns * s + iri
 
+  acc = 0.0
+
   if -randexp() < llr
+    acc += 1.0
     llc += llr
     ir  -= iri
     scale_rate!(Ξ, lλ, s)
     scale_rate!(idf, s)
   end
 
-  return llc, ir
+  return llc, ir, acc
 end
 
 
@@ -829,6 +846,23 @@ function tip_sims!(tree::iTpb,
 end
 
 
+
+
+"""
+    tune(window::Float64, acc_rate::Float64)
+
+Tune proposal based on acceptance rate.
+"""
+function tune(window::Float64, acc_rate::Float64)
+
+  if acc_rate > 0.234
+    window *= (1.0 + (acc_rate - 0.234) * 1.3054830287206267)
+  else
+    window /= (2.0 - acc_rate * 4.273504273504273)
+  end
+
+  return window
+end
 
 
 

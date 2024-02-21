@@ -307,8 +307,8 @@ end
               n   ::Float64,
               ir  ::Float64) where {T <: iTree}
 
-Returns the standardized sum of squares a `iT` according
-to GBM birth-death for a `σ` proposal.
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
 """
 function _ss_ir_dd(tree::T,
                    f   ::Function,
@@ -338,10 +338,10 @@ end
 
 
 """
-    sss_gbm_b(v  ::Array{Float64,1},
-              α  ::Float64,
-              δt ::Float64,
-              fdt::Float64)
+    _ss_ir_dd_b(v  ::Array{Float64,1},
+                α  ::Float64,
+                δt ::Float64,
+                fdt::Float64)
 
 Returns the standardized sum of squares for rate `v`, the path number `n`,
 the integrated rate `ir` and the delta drift `dd`.

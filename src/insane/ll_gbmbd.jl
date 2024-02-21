@@ -284,6 +284,107 @@ end
 
 
 """
+    _ss_ir_dd(tree::T,
+              α   ::Float64,
+              dd  ::Float64,
+              ssλ ::Float64,
+              ssμ ::Float64,
+              n   ::Float64,
+              irλ ::Float64,
+              irμ ::Float64) where {T <: iTbdU}
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_ir_dd(tree::T,
+                   α   ::Float64,
+                   dd  ::Float64,
+                   ssλ ::Float64,
+                   ssμ ::Float64,
+                   n   ::Float64,
+                   irλ ::Float64,
+                   irμ ::Float64) where {T <: iTbdU}
+
+  dd0, ssλ0, ssμ0, n0, irλ0, irμ0 = 
+    _ss_ir_dd_b(lλ(tree), lμ(tree), α, dt(tree), fdt(tree))
+
+  dd  += dd0
+  ssλ += ssλ0
+  ssμ += ssμ0
+  n   += n0
+  irλ += irλ0
+  irμ += irμ0
+
+  if def1(tree)
+    dd, ssλ, ssμ, n, irλ, irμ = 
+      _ss_ir_dd(tree.d1, f, α, dd, ssλ, ssμ, n, irλ, irμ)
+    if def2(tree)
+      dd, ssλ, ssμ, n, irλ, irμ = 
+        _ss_ir_dd(tree.d2, f, α, dd, ssλ, ssμ, n, irλ, irμ)
+    end
+  end
+
+  return dd, ssλ, ssμ, n, irλ, irμ
+end
+
+
+
+
+"""
+    _ss_ir_dd_b(lλv::Array{Float64,1},
+                lμv::Array{Float64,1},
+                α  ::Float64,
+                δt ::Float64,
+                fdt::Float64)
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_ir_dd_b(lλv::Array{Float64,1},
+                     lμv::Array{Float64,1},
+                     α  ::Float64,
+                     δt ::Float64,
+                     fdt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
+
+    ssλ  = 0.0
+    ssμ  = 0.0
+    @turbo for i in Base.OneTo(nI)
+      lλvi  = lλv[i]
+      lμvi  = lμv[i]
+      lλvi1 = lλv[i+1]
+      lμvi1 = lμv[i+1]
+      ssλ  += (lλvi1 - lλvi - α*δt)^2
+      ssμ  += (lμvi1 - lμvi)^2
+      irλ  += exp(0.5*(lλvi + lλvi1))
+      irμ  += exp(0.5*(lμvi + lμvi1))
+    end
+
+    # add to global likelihood
+    invt = 1.0/(2.0*δt)
+    ssλ *= invt
+    ssμ *= invt
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      invt = 1.0/(2.0*fdt)
+      ssλ += invt * (lλv[nI+2] - lλv[nI+1] - α*fdt)^2
+      ssμ += invt * (lμv[nI+2] - lμv[nI+1])^2
+      n = Float64(nI + 1)
+    else
+      n = Float64(nI)
+    end
+  end
+  return ssλ, ssμ, n
+end
+
+
+
+
+"""
     _sss_gbm(tree::iTbd,
              α   ::Float64,
              ssλ ::Float64,

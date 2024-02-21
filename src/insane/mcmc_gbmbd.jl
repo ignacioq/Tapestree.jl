@@ -37,30 +37,32 @@ Created 03 09 2020
                  prints  ::Int64             = 5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for `ibd`.
+Run insane for `bdd`.
 """
 function insane_gbmbd(tree    ::sT_label;
-                      λa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      μa_prior::NTuple{2,Float64} = (0.0, 100.0),
-                      α_prior ::NTuple{2,Float64} = (0.0, 10.0),
-                      σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                      σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                      niter   ::Int64             = 1_000,
-                      nthin   ::Int64             = 10,
-                      nburn   ::Int64             = 200,
-                      nflush  ::Int64             = nthin,
-                      ofile   ::String            = string(homedir(), "/ibd"),
-                      ϵi      ::Float64           = 0.2,
-                      λi      ::Float64           = NaN,
-                      μi      ::Float64           = NaN,
-                      αi      ::Float64           = 0.0,
-                      σλi     ::Float64           = 0.01,
-                      σμi     ::Float64           = 0.01,
-                      pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
-                      δt      ::Float64           = 1e-3,
-                      survival::Bool              = true,
-                      mxthf   ::Float64           = Inf,
-                      prints  ::Int64             = 5,
+                      λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
+                      μa_prior::NTuple{2,Float64}     = (0.0, 100.0),
+                      α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
+                      σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                      σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                      niter   ::Int64                 = 1_000,
+                      nthin   ::Int64                 = 10,
+                      nburn   ::Int64                 = 200,
+                      nflush  ::Int64                 = nthin,
+                      ofile   ::String                = string(homedir(), "/ibd"),
+                      ϵi      ::Float64               = 0.2,
+                      λi      ::Float64               = NaN,
+                      μi      ::Float64               = NaN,
+                      αi      ::Float64               = 0.0,
+                      σλi     ::Float64               = 0.01,
+                      σμi     ::Float64               = 0.01,
+                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.1, 0.1, 0.2),
+                      δt      ::Float64               = 1e-3,
+                      survival::Bool                  = true,
+                      mxthf   ::Float64               = Inf,
+                      prints  ::Int64                 = 5,
+                      stnλ    ::Float64               = 0.5,
+                      stnμ    ::Float64               = 0.5,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
@@ -103,20 +105,21 @@ function insane_gbmbd(tree    ::sT_label;
   # parameter updates (1: α, 2: σλ, 3: σμ, 4: gbm, 5: forward simulation)
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(4)
+  for i in Base.OneTo(lastindex(pupdp))
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
   @info "running birth-death gbm"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, σμc, mc =
+  Ξ, idf, llc, prc, αc, σλc, σμc, mc, stnλ, stnμ =
     mcmc_burn_gbmbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
-      nburn, αi, σλi, σμi, mc, th, surv, δt, srδt, inodes, pup, prints)
+      nburn, αi, σλi, σμi, mc, th, surv, stnλ, stnμ, δt, srδt, inodes, pup, 
+      prints)
 
   # mcmc
   r, treev =
-    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, surv,
+    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, surv, stnλ, stnμ,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, δt, srδt, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -135,19 +138,21 @@ end
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
-                    αc     ::Float64,
+                    αc      ::Float64,
                     σλc     ::Float64,
                     σμc     ::Float64,
                     mc      ::Float64,
                     th      ::Float64,
-                    surv    ::Bool,
+                    surv    ::Int64,
+                    stnλ    ::Float64, 
+                    stnμ    ::Float64,
                     δt      ::Float64,
                     srδt    ::Float64,
                     inodes  ::Array{Int64,1},
                     pup     ::Array{Int64,1},
                     prints  ::Int64)
 
-MCMC burn-in chain for `gbmbd`.
+MCMC burn-in chain for `bdd`.
 """
 function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          idf     ::Vector{iBffs},
@@ -163,6 +168,8 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          mc      ::Float64,
                          th      ::Float64,
                          surv    ::Int64,
+                         stnλ    ::Float64, 
+                         stnμ    ::Float64,
                          δt      ::Float64,
                          srδt    ::Float64,
                          inodes  ::Array{Int64,1},
@@ -172,20 +179,27 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   λ0  = lλ(Ξ[1])[1]
   llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * λ0 +
         log(mc) + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2]) +
-        logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2]) +
-        logdnorm(αc,               α_prior[1], α_prior[2]^2) +
-        logdunif(exp(λ0),          λa_prior[1], λa_prior[2]) +
+  prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
+        logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
+        logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
+        logdunif(exp(λ0),          λa_prior[1], λa_prior[2])  +
         logdunif(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])
 
   lλxpr = log(λa_prior[2])
   lμxpr = log(μa_prior[2])
 
-  L            = treelength(Ξ)      # tree length
+  L   = treelength(Ξ)        # tree length
+  nin = lastindex(inodes)   # number of internal nodes
+  el  = lastindex(idf)      # number of branches
+  ns  = Float64(nin) - nsi  # number of speciation events in likelihood
+
+
+
+
+
   dlλ          = deltaλ(Ξ)         # delta change in λ
   ssλ, ssμ, nλ = sss_gbm(Ξ, αc)    # sum squares in λ and μ
-  nin          = lastindex(inodes) # number of internal nodes
-  el           = lastindex(idf)    # number of branches
+
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -254,6 +268,8 @@ end
                mc      ::Float64,
                th      ::Float64,
                surv    ::Int64,
+               stnλ    ::Float64, 
+               stnμ    ::Float64,
                λa_prior::NTuple{2,Float64},
                μa_prior::NTuple{2,Float64},
                α_prior ::NTuple{2,Float64},
@@ -269,7 +285,7 @@ end
                ofile   ::String,
                prints  ::Int64)
 
-MCMC chain for `gbmbd`.
+MCMC chain for `bdd`.
 """
 function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     idf     ::Vector{iBffs},
@@ -281,6 +297,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     mc      ::Float64,
                     th      ::Float64,
                     surv    ::Int64,
+                    stnλ    ::Float64, 
+                    stnμ    ::Float64,
                     λa_prior::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
