@@ -192,8 +192,7 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   nI = lastindex(lλv)-2
   nλ = Float64(nI)
 
-  llbm = 0.0
-  llpb = 0.0
+  llbm = llpb = 0.0
   @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
@@ -216,11 +215,12 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   # add final non-standard `δt`
   if fdt > 0.0
     lλvi = lλv[nI+1]
+    iri  = fdt*exp(0.5*(lλvi + lλvi1))
     ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-           fdt*exp(0.5*(lλvi + lλvi1))
+           iri
     ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
     nλ  += 1.0
-    irλ += fdt*exp(0.5*(lλvi + lλvi1))
+    irλ += iri
   end
   if λev
     ll += lλvi1
@@ -256,8 +256,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλp)-2
 
-  llrbm = 0.0
-  llrpb = 0.0
+  llrbm = llrpb = 0.0
   @turbo for i in Base.OneTo(nI)
     lλpi   = lλp[i]
     lλci   = lλc[i]
@@ -355,8 +354,8 @@ function _ss_ir_dd_b(v  ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(v)-2
 
-    ir  = 0.0
     ss  = 0.0
+    ir  = 0.0
     @turbo for i in Base.OneTo(nI)
       vi  = v[i]
       vi1 = v[i+1]
@@ -365,10 +364,10 @@ function _ss_ir_dd_b(v  ::Array{Float64,1},
     end
   
     # standardize
-    ir *= δt
     ss *= 1.0/(2.0*δt)
+    ir *= δt
 
-    n   = Float64(nI)
+    n = Float64(nI)
     # add final non-standard `δt`
     if fdt > 0.0
       vi  = v[nI+1]
@@ -384,15 +383,11 @@ end
 
 
 """
-    _ss(tree::T,
-        f   ::Function,
-        α   ::Float64) where {T <: iTree}
+    _ss(tree::T, f::Function, α::Float64) where {T <: iTree}
 
 Returns the standardized sum of squares for rate `v`.
 """
-function _ss(tree::T,
-             f   ::Function,
-             α   ::Float64) where {T <: iTree}
+function _ss(tree::T, f::Function, α::Float64) where {T <: iTree}
 
   ss = _ss_b(f(tree), α, dt(tree), fdt(tree))
 

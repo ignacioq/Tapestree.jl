@@ -134,8 +134,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
   ns  = Float64(nin) - nsi # number of speciation events in likelihood
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ, irλ = 
-    _ss_ir_dd(Ξ, lλ, αc)
+  ddλ, ssλ, nλ, irλ = _ss_ir_dd(Ξ, lλ, αc)
 
   # for scale tuning
   ltn = 0
@@ -170,6 +169,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
 
         lac += acc
         lup += 1.0
+
       # update gbm
       elseif pupi === 4
 
@@ -635,7 +635,7 @@ function update_fs!(bix  ::Int64,
     ll1, ddλ1, ssλ1, nλ1, irλ1, ns1 = llik_gbm_ssλ(ξp, α, σλ, δt, srδt, 0.0)
     ll0, ddλ0, ssλ0, nλ0, irλ0, ns0 = llik_gbm_ssλ(ξc, α, σλ, δt, srδt, 0.0)
 
-    # update llr, ssλ, nλ, L
+    # update quantities
     llc += ll1  - ll0 + llr
     ddλ += ddλ1 - ddλ0 + ddrλ
     ssλ += ssλ1 - ssλ0 + ssrλ
