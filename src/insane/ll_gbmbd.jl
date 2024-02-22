@@ -177,7 +177,7 @@ function llik_gbm_ss(tree::iTbd,
 
   if istip(tree)
     ie  = isextinct(tree)
-    ns += Float64(ie)
+    ne += Float64(ie)
 
     ll, dλ, ssλ, ssμ, nλ, irλ, irμ =
       ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, δt, fdt(tree), srδt,

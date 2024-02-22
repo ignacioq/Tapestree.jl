@@ -82,8 +82,9 @@ function insane_gbmpb(tree    ::sT_label;
       δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, ns, stn, α_prior, σλ_prior,
-              δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
+  r, treev = 
+    mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, ns, stn, α_prior, σλ_prior,
+      δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end

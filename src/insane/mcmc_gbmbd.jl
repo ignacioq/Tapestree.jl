@@ -112,14 +112,14 @@ function insane_gbmbd(tree    ::sT_label;
   @info "running birth-death gbm"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, σμc, mc, stnλ, stnμ =
+  Ξ, idf, llc, prc, αc, σλc, σμc, mc, ns, ne, stnλ, stnμ =
     mcmc_burn_gbmbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
       nburn, αi, σλi, σμi, mc, th, surv, stnλ, stnμ, δt, srδt, inodes, pup, 
       prints)
 
   # mcmc
   r, treev =
-    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, surv, stnλ, stnμ,
+    mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, surv, ns, ne, stnλ, stnμ,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, δt, srδt, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -192,17 +192,17 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   L   = treelength(Ξ)        # tree length
   nin = lastindex(inodes)   # number of internal nodes
   el  = lastindex(idf)      # number of branches
-  ns  = Float64(nin) - nsi  # number of speciation events in likelihood
+  ns  = sum([1.0 for i in Base.OneTo(lastindex(idf)) if d2(idf[i]) > 0]) - nsi  # number of speciation events in likelihood
   ne  = 0.0                 # number of extinction events in likelihood
 
   # delta change, sum squares, path length and integrated rate
   ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
-
   # for scale tuning
   ltn = 0
   lup = lacλ = lacμ = 0.0
+
+  pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
   for i in Base.OneTo(nburn)
 
@@ -229,7 +229,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
             llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
       # update scale
-      elseif pupi === 4
+      elseif pupi === 3
 
         llc, irλ, irμ, accλ, accμ, mc = 
           update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
@@ -249,7 +249,6 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, irλ, irμ,
             mc, th, δt, srδt, lλxpr, lμxpr, surv)
 
-
       # forward simulation update
       else
 
@@ -261,10 +260,17 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       end
     end
 
+    ltn += 1
+    if ltn === 100
+      stnλ = max(5.0, tune(stnλ, lacλ/lup))
+      stnμ = max(5.0, tune(stnμ, lacμ/lup))
+      ltn = 0
+    end
+
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, σμc, mc
+  return Ξ, idf, llc, prc, αc, σλc, σμc, mc, ns, ne, stnλ, stnμ
 end
 
 
@@ -310,6 +316,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     mc      ::Float64,
                     th      ::Float64,
                     surv    ::Int64,
+                    ns      ::Float64, 
+                    ne      ::Float64, 
                     stnλ    ::Float64, 
                     stnμ    ::Float64,
                     λa_prior::NTuple{2,Float64},
@@ -334,11 +342,12 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   lλxpr = log(λa_prior[2])
   lμxpr = log(μa_prior[2])
 
-  L            = treelength(Ξ)     # tree length
-  ddλ          = deltaλ(Ξ)         # delta change in λ
-  ssλ, ssμ, nλ = sss_gbm(Ξ, αc)    # sum squares in λ and μ
-  nin          = lastindex(inodes) # number of internal nodes
-  el           = lastindex(idf)    # number of branches
+  L   = treelength(Ξ)        # tree length
+  nin = lastindex(inodes)   # number of internal nodes
+  el  = lastindex(idf)      # number of branches
+
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 8)
@@ -373,14 +382,14 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
             llc, prc, αc, mc  =
               update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, ddλ, llc, prc,
-                mc, th, surv, δt, srδt, α_prior) 
+                mc, th, surv, δt, srδt, α_prior)
 
-            # update ssλ with new drift `α`
-            ssλ, ssμ, nλ = sss_gbm(Ξ, αc)
+            # update ssλ, ssμ with new drift `α`
+            ssλ, ssμ = _ss(Ξ, αc)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(ddλ, deltaλ(Ξ))
-            #    @show ll0, llc, i, pupi, Ξ
+            #  if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
 
@@ -392,24 +401,37 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                 llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(ddλ, deltaλ(Ξ))
-            #    @show ll0, llc, i, pupi, Ξ
+            #  if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi, Ξ
+            #    return
+            # end
+
+          # update scale
+          elseif pupi === 3
+
+            llc, irλ, irμ, accλ, accμ, mc = 
+              update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
+                stnλ, stnμ, mc, th, surv, δt, srδt)
+
+            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            #  if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
 
           # gbm update
-          elseif pupi === 3
+          elseif pupi === 4
 
             nix = ceil(Int64,rand()*nin)
             bix = inodes[nix]
 
-            llc, ddλ, ssλ, ssμ, mc =
-              update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, mc, th,
-                δt, srδt, lλxpr, lμxpr)
+            llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
+              update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, 
+                irλ, irμ, mc, th, δt, srδt, lλxpr, lμxpr, surv)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(ddλ, deltaλ(Ξ))
-            #    @show ll0, llc, i, pupi, Ξ
+            #  if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
 
@@ -418,13 +440,13 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
             bix = ceil(Int64,rand()*el)
 
-            llc, ddλ, ssλ, ssμ, nλ, L =
-              update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, L,
-                δt, srδt)
+            llc, ddλ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
+              update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, 
+                irλ, irμ, ns, ne, L, δt, srδt)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4) || !isapprox(ddλ, deltaλ(Ξ))
-            #    @show ll0, llc, i, pupi, Ξ
+            #  if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
           end
@@ -635,6 +657,7 @@ function update_scale!(Ξ   ::Vector{T},
                        surv::Int64,
                        δt  ::Float64,
                        srδt::Float64) where {T <: iTbdU}
+
   accλ = accμ = 0.0
 
   # sample log(scaling factor)
@@ -668,7 +691,7 @@ function update_scale!(Ξ   ::Vector{T},
     accμ += 1.0
     llc  += llr
     irμ  -= iri
-    mc   = mp
+    mc    = mp
     scale_rate!(Ξ, lμ, s)
   end
 
