@@ -188,6 +188,7 @@ function insane_gbmfbd(tree    ::sTf_label;
       ψ_prior, ψ_epoch, f_epoch, nburn, αi, σλi, σμi, ψc, mc, th, surv, 
       stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
+
   # mcmc
   r, treev =
     mcmc_gbmfbd(Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, th, surv, ns, ne, 
@@ -578,6 +579,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
           end
         end
+
 
         # log parameters
         lthin += 1
