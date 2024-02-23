@@ -13,7 +13,32 @@ Created 25 06 2020
 
 
 """
-  reorder(tree::T) where {T <: iTree}
+    scale_rate!(tree::iTree, f::Function, s::Float64)
+
+Add `s` to vector retrieved using function `f`.
+"""
+function scale_rate!(tree::iTree, f::Function, s::Float64)
+
+  v = f(tree)
+  @turbo for i in Base.OneTo(lastindex(v))
+    v[i] += s
+  end
+
+  if def1(tree)
+    scale_rate!(tree.d1, f, s)
+    if def2(tree)
+      scale_rate!(tree.d2, f, s)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    reorder(tree::T) where {T <: iTree}
 
 Reorder order of daughter branches according to number of tips, with daughter
 1 always having more than daughter 2.
@@ -27,7 +52,7 @@ end
 
 
 """
-  _reorder!(tree::T) where {T <: iTree}
+    _reorder!(tree::T) where {T <: iTree}
 
 Reorder order of daughter branches according to number of tips, with daughter
 1 always having more than daughter 2.

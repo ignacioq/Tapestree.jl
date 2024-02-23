@@ -959,9 +959,42 @@ end
 
 
 """
-    sss(Ξ::Vector{T}, α::Float64, f::Function) where {T <: iTree}
+    _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
+
+  dd = ss = n = ir = 0.0
+  for ξi in Ξ
+    dd, ss, n, ir = _ss_ir_dd(ξi, f, α, dd, ss, n, ir)
+  end
+
+  return dd, ss, n, ir
+end
+
+
+
+
+"""
+    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+
+  dd = ssλ = ssμ = n = irλ = irμ = 0.0
+  for ξi in Ξ
+    dd, ssλ, ssμ, n, irλ, irμ = _ss_ir_dd(ξi, α, dd, ssλ, ssμ, n, irλ, irμ)
+  end
+
+  return dd, ssλ, ssμ, n, irλ, irμ
+end
+
+
+
+"""
 """
 function sss(Ξ::Vector{T}, f::Function) where {T <: iTree}
 
@@ -973,8 +1006,6 @@ function sss(Ξ::Vector{T}, f::Function) where {T <: iTree}
 
   return ss, n
 end
-
-
 
 
 """
@@ -996,7 +1027,6 @@ end
 
 
 
-
 """
     sss(Ξ::Vector{T}, α::Float64, f::Function) where {T <: iTree}
 
@@ -1015,67 +1045,38 @@ end
 
 
 
-
 """
-    sss(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+    _ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
-Returns the standardized sum of squares a `iT` according
-to GBM birth-death for a `σ` proposal.
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
 """
-function sss(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+function _ss(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
-  n   = 0.0
-  ssλ = 0.0
-  ssμ = 0.0
+  ss = 0.0
   for ξi in Ξ
-    ssλ, ssμ, n = _sss(ξi, α, ssλ, ssμ, n)
+    ss += _ss(ξi, f, α)
   end
 
-  return ssλ, ssμ, n
+  return ss
 end
 
 
 
 
-# """
-#     sss(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+"""
+    _ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
-# Returns the standardized sum of squares for a `Tx` according
-# to GBM lambda and X.
-# """
-# function sss(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: Tx}
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _ss(Ξ::Vector{T}, α::Float64) where {T <: iTree}
 
-#   n   = 0.0
-#   ssλ = 0.0
-#   ssx = 0.0
-#   for ξi in Ξ
-#     ssλ, ssx, n = _sss(ξi, α, βλ, ssλ, ssx, n)
-#   end
+  ssλ = ssμ = 0.0
+  for ξi in Ξ
+    ssλ, ssμ = _ss(ξi, α, ssλ, ssμ)
+  end
 
-#   return ssλ, ssx, n
-# end
-
-
-
-
-# """
-#     sss(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
-
-# Returns the standardized sum of squares for a `Tx` according
-# to GBM lambda and X.
-# """
-# function sss(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTbdUx}
-
-#   n   = 0.0
-#   ssλ = 0.0
-#   ssμ = 0.0
-#   ssx = 0.0
-#   for ξi in Ξ
-#     ssλ, ssμ, ssx, n = _sss(ξi, α, βλ, ssλ, ssμ, ssx, n)
-#   end
-
-#   return ssλ, ssμ, ssx, n
-# end
+  return ssλ, ssμ
+end
 
 
 
@@ -1092,4 +1093,40 @@ function Σλ_gbm(Ξ::Vector{T}) where {T <: iT}
   end
   return Σλ
 end
+
+
+
+
+"""
+    scale_rate!(Ξ::Vector{T}, f::Function, s::Float64)
+
+Add `s` to vector retrieved using function `f`.
+"""
+function scale_rate!(Ξ::Vector{T}, f::Function, s::Float64) where {T <: iTree}
+
+  for ξ in Ξ
+    scale_rate!(ξ, f, s)
+  end
+
+  return nothing
+end
+
+
+
+"""
+    scale_rate!(idf::Vector{iBffs}, s::Float64)
+
+Add `s` to vector retrieved using function `f`.
+"""
+function scale_rate!(idf::Vector{iBffs}, s::Float64)
+
+  for bi in idf
+    if d2(bi) > 0
+      setλt!(bi, λt(bi) + s)
+    end
+  end
+
+  return nothing
+end
+
 
