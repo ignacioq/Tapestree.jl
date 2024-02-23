@@ -188,7 +188,6 @@ function insane_gbmfbd(tree    ::sTf_label;
       ψ_prior, ψ_epoch, f_epoch, nburn, αi, σλi, σμi, ψc, mc, th, surv, 
       stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
-
   # mcmc
   r, treev =
     mcmc_gbmfbd(Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, th, surv, ns, ne, 
@@ -356,8 +355,8 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
     ltn += 1
     if ltn === 100
-      stnλ = max(5.0, tune(stnλ, lacλ/lup))
-      stnμ = max(5.0, tune(stnμ, lacμ/lup))
+      stnλ = min(2.0, tune(stnλ, lacλ/lup))
+      stnμ = min(2.0, tune(stnμ, lacμ/lup))
       ltn = 0
     end
 
@@ -491,8 +490,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           if pupi === 1
 
             llc, prc, αc, mc  =
-              update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), ddλ, llc, prc,
-                mc, th, surv, δt, srδt, α_prior)
+              update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), 
+                ddλ, llc, prc, mc, th, surv, δt, srδt, α_prior)
 
             # update ssλ with new drift `α`
             ssλ, ssμ = _ss(Ξ, αc)

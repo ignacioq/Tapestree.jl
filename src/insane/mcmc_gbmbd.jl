@@ -262,8 +262,8 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
     ltn += 1
     if ltn === 100
-      stnλ = max(5.0, tune(stnλ, lacλ/lup))
-      stnμ = max(5.0, tune(stnμ, lacμ/lup))
+      stnλ = min(2.0, tune(stnλ, lacλ/lup))
+      stnμ = min(2.0, tune(stnμ, lacμ/lup))
       ltn = 0
     end
 
