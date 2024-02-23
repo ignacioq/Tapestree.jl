@@ -129,10 +129,10 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
   prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
         logdnorm(αc,         α_prior[1],  α_prior[2]^2)
 
-  L   = treelength(Ξ)      # tree length
-  nin = lastindex(inodes)  # number of internal nodes
-  el  = lastindex(idf)     # number of branches
-  ns  = Float64(nin) - nsi # number of speciation events in likelihood
+  L   = treelength(Ξ)                           # tree length
+  nin = lastindex(inodes)                       # number of internal nodes
+  el  = lastindex(idf)                          # number of branches
+  ns  = sum(x -> Float64(d2(x) > 0), idf) - nsi # number of speciation events in likelihood
 
   # delta change, sum squares, path length and integrated rate
   ddλ, ssλ, nλ, irλ = _ss_ir_dd(Ξ, lλ, αc)

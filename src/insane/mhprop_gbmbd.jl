@@ -195,7 +195,7 @@ function _stem_update!(ξi   ::T,
 
     # prior ratio
     if λr > lλxpr || μr > lμxpr
-      return llc, ddλ, ssλ, ssμ, mc
+      return llc, ddλ, ssλ, ssμ, irλ, irμ, mc
     end
 
     # simulate fix tree vector
