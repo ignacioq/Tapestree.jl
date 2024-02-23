@@ -441,8 +441,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      prints  ::Int64)
 
   # logging
-  nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  nlogs = fld(niter, nthin)
+  lthin = lit = sthin =  0
 
   # crown or crown conditioning
   lλxpr = log(λa_prior[2])
@@ -457,7 +457,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
   # parameter results
-  nep = lastindex(ψc)
   r = Array{Float64,2}(undef, nlogs, 8 + nep)
 
   # make Ξ vector
@@ -465,9 +464,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   # number of branches and of triads
   nbr  = lastindex(idf)
-
-  # flush to file
-  sthin = 0
 
   open(ofile*".log", "w") do of
 
@@ -575,10 +571,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             #    @show bix
             #    return
             # end
-
           end
         end
-
 
         # log parameters
         lthin += 1
