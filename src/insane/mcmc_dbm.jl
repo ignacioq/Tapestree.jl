@@ -118,7 +118,7 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
 
   # starting likelihood and prior
   ll  = zeros(lastindex(Ξ)) 
-  llik_dbm_v!(ll, Ξ, γc, δt, srδt)
+  llik_dbm_v!(ll, Ξ, γc, δt)
   prc = logdinvgamma(γc^2, γ_prior[1], γ_prior[2])
 
   # sum squares in log-σ(t)
@@ -146,7 +146,7 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
 
       elseif pupi === 2
 
-        lac += update_scale!(Ξ, ll, γc, stn, δt, srδt)
+        lac += update_scale!(Ξ, ll, stn, δt)
         lup += 1.0
 
       # update traits and rates
@@ -249,21 +249,21 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
             prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
-            ll0 = llik_dbm(Ξ, γc, δt, srδt)
-            if !isapprox(ll0, sum(ll), atol = 1e-4)
-               @show ll0, llc, it, pupi
-               return
-            end
+            # ll0 = llik_dbm(Ξ, γc, δt)
+            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
 
           elseif pupi === 2
 
-            lac = update_scale!(Ξ, ll, γc, stn, δt, srδt)
+            lac = update_scale!(Ξ, ll, stn, δt)
 
-            ll0 = llik_dbm(Ξ, γc, δt, srδt)
-            if !isapprox(ll0, sum(ll), atol = 1e-4)
-               @show ll0, llc, it, pupi
-               return
-            end
+            # ll0 = llik_dbm(Ξ, γc, δt)
+            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
 
           # update traits and rates
           else
@@ -272,11 +272,11 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             bix = inodes[nix]
             update_x!(bix, Ξ, idf, γc, ll, ssσ, δt, srδt)
 
-            ll0 = llik_dbm(Ξ, γc, δt, srδt)
-            if !isapprox(ll0, sum(ll), atol = 1e-4)
-               @show ll0, llc, it, pupi
-               return
-            end
+            # ll0 = llik_dbm(Ξ, γc, δt)
+            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
           end
         end
 
@@ -359,6 +359,7 @@ end
 
 
 
+
 """
     update_scale!(Ξ  ::Vector{T},
                   idf::Vector{iBffs},
@@ -371,27 +372,28 @@ Update scale for speciation.
 """
 function update_scale!(Ξ   ::Vector{sTxs},
                        ll  ::Vector{Float64},
-                       γ   ::Float64,
                        stn ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+                       δt  ::Float64)
 
   # sample log(scaling factor)
   s = randn()*stn
 
   # likelihood ratio
-  llr = llr_scale(Ξ, s, δt, srδt)
+  llr = llr_scale(Ξ, s, δt)
 
   acc = 0.0
 
   if -randexp() < sum(llr)
     acc += 1.0
     scale_rate!(Ξ, lσ, s)
-    llik_dbm_v!(ll, Ξ, γ, δt, srδt)
+    @turbo for i in Base.OneTo(lastindex(ll))
+      ll[i] += llr[i]
+    end
   end
 
   return acc
 end
+
 
 
 

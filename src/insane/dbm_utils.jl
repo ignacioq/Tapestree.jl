@@ -458,9 +458,10 @@ function intσ(σ  ::Vector{Float64},
 
   ss = 0.0
   @turbo for i = Base.OneTo(l-2)
-    ss += exp(0.5*(σ[i] + σ[i+1]))^2 * δt
+    ss += exp(σ[i] + σ[i+1])
   end
-  ss += exp(0.5*(σ[l-1] + σ[l]))^2 * fdt
+  ss *= δt
+  ss += exp(σ[l-1] + σ[l]) * fdt
 
   return sqrt(ss)
 end

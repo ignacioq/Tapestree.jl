@@ -37,10 +37,10 @@ function _stem_update!(ξi   ::sTxs,
     σr = rnorm(σn, γ*sqrt(e(ξi)))
     bb!(σp, σr, σn, γ, δt, fdtp, srδt)
 
-    llr = llr_dbm(xc, σp, σc, δt, fdtp, srδt)
+    llr = llr_dbm(xc, σp, σc, δt, fdtp)
 
     if -randexp() < llr
-      unsafe_copyto!(σc, 1, σc, 1, l)
+      unsafe_copyto!(σc, 1, σp, 1, l)
     end
 
     # trait path sample
@@ -48,7 +48,7 @@ function _stem_update!(ξi   ::sTxs,
     dbb!(xc, xr, xn, σc, δt, fdtp, srδt)
 
     # likelihood
-    ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp, srδt)
+    ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp)
   end
 
   return ll, ss
@@ -97,8 +97,8 @@ function _crown_update!(ξi   ::sTxs,
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
     bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
 
-    llr = llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt) +
-          llr_dbm(x2, σ2p, σ2, δt, fdt2, srδt)
+    llr = llr_dbm(x1, σ1p, σ1, δt, fdt1) +
+          llr_dbm(x2, σ2p, σ2, δt, fdt2)
 
     if -randexp() < llr
       unsafe_copyto!(σ1, 1, σ1p, 1, l1)
@@ -115,8 +115,8 @@ function _crown_update!(ξi   ::sTxs,
     fill!(xc, xn)
 
     # log likelihood ratios
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
-    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2, srδt)
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
+    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2)
   end
 
   return ll1, ll2, ss1, ss2
@@ -151,7 +151,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   # rate path sample
   bm!(σp, σc[1], γ, δt, fdtp, srδt)
 
-  llr = llr_dbm(xc, σp, σc, δt, fdtp, srδt)
+  llr = llr_dbm(xc, σp, σc, δt, fdtp)
 
   if -randexp() < llr
     unsafe_copyto!(σc, 1, σp, 1, l)
@@ -164,7 +164,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   dbb!(xc, xc[1], xn, σc, δt, fdtp, srδt)
 
   # likelihood
-  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp, srδt)
+  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp)
 
   return ll, ss
 end
@@ -193,7 +193,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   dbm!(xc, xc[1], σc, σc[1], γ, fdtp, srδt)
 
   # likelihood
-  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp, srδt)
+  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp)
 
   return ll, ss
 end
@@ -242,8 +242,8 @@ function _update_duo_x!(ξi  ::sTxs,
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
 
-    llr = llr_dbm(xa, σap, σa, δt, fdta, srδt) + 
-          llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt)
+    llr = llr_dbm(xa, σap, σa, δt, fdta) + 
+          llr_dbm(x1, σ1p, σ1, δt, fdt1)
 
     if -randexp() < llr
       unsafe_copyto!(σa, 1, σap, 1, la)
@@ -258,8 +258,8 @@ function _update_duo_x!(ξi  ::sTxs,
     dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
 
     # log likelihood ratios
-    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta, srδt)
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
+    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta)
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
   end
 
   return lla, ll1, ssa, ss1
@@ -305,8 +305,8 @@ function _update_duo_x!(ξi   ::sTxs,
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
 
-    llr = llr_dbm(xa, σap, σa, δt, fdta, srδt) + 
-          llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt)
+    llr = llr_dbm(xa, σap, σa, δt, fdta) + 
+          llr_dbm(x1, σ1p, σ1, δt, fdt1)
 
     if -randexp() < llr
       unsafe_copyto!(σa, 1, σap, 1, la)
@@ -319,8 +319,8 @@ function _update_duo_x!(ξi   ::sTxs,
     dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
 
     # log likelihood ratios
-    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta, srδt)
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
+    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta)
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
   end
 
   return lla, ll1, ssa, ss1
@@ -375,9 +375,9 @@ function _update_triad_x!(ξi   ::sTxs,
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
     bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
 
-    llr = llr_dbm(xa, σap, σa, δt, fdta, srδt) +
-          llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt) +
-          llr_dbm(x2, σ2p, σ2, δt, fdt2, srδt)
+    llr = llr_dbm(xa, σap, σa, δt, fdta) +
+          llr_dbm(x1, σ1p, σ1, δt, fdt1) +
+          llr_dbm(x2, σ2p, σ2, δt, fdt2)
 
     if -randexp() < llr
       unsafe_copyto!(σa, 1, σap, 1, la)
@@ -393,9 +393,9 @@ function _update_triad_x!(ξi   ::sTxs,
     dbb!(x2, xn, x2f, σ2, δt, fdt2, srδt)
 
     # log likelihood ratios
-    lla, ssc = ll_dbm_ss_b(xa, σa, γ, δt, fdta, srδt)
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1, srδt)
-    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2, srδt)
+    lla, ssc = ll_dbm_ss_b(xa, σa, γ, δt, fdta)
+    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
+    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2)
   end
 
   return lla, ll1, ll2, ssc, ss1, ss2
