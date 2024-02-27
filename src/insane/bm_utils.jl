@@ -799,7 +799,7 @@ function _sss(tree::T,
   ss0, n0 = _sss_b(f(tree), dt(tree), fdt(tree))
 
   ss += ss0
-  n   += n0
+  n  += n0
 
   if def1(tree)
     ss, n = _sss(tree.d1, f, ss, n)

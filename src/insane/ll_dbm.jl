@@ -35,27 +35,28 @@ end
 
 
 """
-    llik_dbm_v(Ξ   ::Vector{sTxs},
-               γ   ::Float64,
-               δt  ::Float64,
-               srδt::Float64)
+    llik_dbm_v!(ll  ::Vector{Float64},
+                 Ξ   ::Vector{sTxs},
+                 γ   ::Float64,
+                 δt  ::Float64,
+                 srδt::Float64)
 
 Returns the log-likelihood for `sTxs` according to diffused Brownian motion.
 """
-function llik_dbm_v(Ξ   ::Vector{sTxs},
-                    γ   ::Float64,
-                    δt  ::Float64,
-                    srδt::Float64)
+function llik_dbm_v!(ll  ::Vector{Float64},
+                     Ξ   ::Vector{sTxs},
+                     γ   ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
 
   @inbounds begin
     xn = lastindex(Ξ)
-    ll = zeros(xn)
     for i in Base.OneTo(xn)
       ll[i] = llik_dbm(Ξ[i], γ, δt, srδt)
     end
   end
 
-  return ll
+  return nothing
 end
 
 
@@ -206,7 +207,6 @@ end
     llr_dbm(x   ::Array{Float64,1},
             σp  ::Array{Float64,1},
             σc  ::Array{Float64,1},
-            γ   ::Float64,
             δt  ::Float64,
             fdt ::Float64,
             srδt::Float64)
@@ -216,7 +216,6 @@ Returns the log-likelihood ratio for a `σ(t)` path proposal.
 function llr_dbm(x   ::Array{Float64,1},
                  σp  ::Array{Float64,1},
                  σc  ::Array{Float64,1},
-                 γ   ::Float64,
                  δt  ::Float64,
                  fdt ::Float64,
                  srδt::Float64)
@@ -238,6 +237,79 @@ function llr_dbm(x   ::Array{Float64,1},
       σca   = exp(0.5*(σc[nI+2] + σc[nI+1]))
       llr  += -(0.5*(x[nI+2] - x[nI+1])^2/fdt)*(1.0/σpa^2 - 1.0/σca^2) +
                log(σca/σpa)
+    end
+  end
+
+  return llr
+end
+
+
+
+
+"""
+  llr_scale(Ξ   ::Vector{sTxs},
+            s   ::Vector{Float64},
+            δt  ::Float64,
+            srδt::Float64)
+
+Returns the log-likelihood ratio for a `σ(t)` scaled proposal.
+"""
+function llr_scale(Ξ   ::Vector{sTxs},
+                   s   ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64)
+
+  @inbounds begin
+    xn  = lastindex(Ξ)
+    llr = zeros(xn)
+    for i in Base.OneTo(xn)
+      ξ = Ξ[i]
+      llr[i] = llr_scale(xv(ξ), lσ(ξ), s, δt, fdt(ξ), srδt)
+    end
+  end
+
+  return llr
+end
+
+
+
+
+"""
+    llr_scale(x   ::Array{Float64,1},
+              σc  ::Array{Float64,1},
+              s   ::Float64,
+              γ   ::Float64,
+              δt  ::Float64,
+              fdt ::Float64,
+              srδt::Float64)
+
+Returns the log-likelihood ratio for a `σ(t)` scaled proposal.
+"""
+function llr_scale(x   ::Array{Float64,1},
+                   σc  ::Array{Float64,1},
+                   s   ::Float64,
+                   δt  ::Float64,
+                   fdt ::Float64,
+                   srδt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI  = lastindex(x)-2
+    e2s = exp(2.0*s)
+
+    llr = 0.0
+    @turbo for i in Base.OneTo(nI)
+      σca  = exp(σc[i+1] + σc[i])
+      σpa  = σca * e2s
+      llr += -(0.5*(x[i+1] - x[i])^2/δt)*(1.0/σpa - 1.0/σca)
+    end
+    llr -= Float64(nI)*s
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      σca   = exp(σc[nI+2] + σc[nI+1])
+      σpa   = σca * e2s
+      llr  += -(0.5*(x[nI+2] - x[nI+1])^2/fdt)*(1.0/σpa - 1.0/σca) - s
     end
   end
 

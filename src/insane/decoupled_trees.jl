@@ -994,19 +994,6 @@ end
 
 
 
-"""
-"""
-function sss(Ξ::Vector{T}, f::Function) where {T <: iTree}
-
-  n  = 0.0
-  ss = 0.0
-  for ξi in Ξ
-    ss, n = _sss(ξi, f, ss, n)
-  end
-
-  return ss, n
-end
-
 
 """
     sss(Ξ::Vector{T}, α::Float64, f::Function) where {T <: iTree}
@@ -1025,23 +1012,6 @@ function sss_v(Ξ::Vector{T}, f::Function) where {T <: iTree}
   return ss, n
 end
 
-
-
-"""
-    sss(Ξ::Vector{T}, α::Float64, f::Function) where {T <: iTree}
-
-Returns the standardized sum of squares of a diffusion with drift `α`.
-"""
-function sss(Ξ::Vector{T}, α::Float64, f::Function) where {T <: iTree}
-
-  n  = 0.0
-  ss = 0.0
-  for ξi in Ξ
-    ss, n = _sss(ξi, α, f, ss, n)
-  end
-
-  return ss, n
-end
 
 
 

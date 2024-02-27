@@ -37,7 +37,7 @@ function _stem_update!(ξi   ::sTxs,
     σr = rnorm(σn, γ*sqrt(e(ξi)))
     bb!(σp, σr, σn, γ, δt, fdtp, srδt)
 
-    llr = llr_dbm(xc, σp, σc, γ, δt, fdtp, srδt)
+    llr = llr_dbm(xc, σp, σc, δt, fdtp, srδt)
 
     if -randexp() < llr
       unsafe_copyto!(σc, 1, σc, 1, l)
@@ -97,8 +97,8 @@ function _crown_update!(ξi   ::sTxs,
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
     bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
 
-    llr = llr_dbm(x1, σ1p, σ1, γ, δt, fdt1, srδt) +
-          llr_dbm(x2, σ2p, σ2, γ, δt, fdt2, srδt)
+    llr = llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt) +
+          llr_dbm(x2, σ2p, σ2, δt, fdt2, srδt)
 
     if -randexp() < llr
       unsafe_copyto!(σ1, 1, σ1p, 1, l1)
@@ -151,7 +151,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   # rate path sample
   bm!(σp, σc[1], γ, δt, fdtp, srδt)
 
-  llr = llr_dbm(xc, σp, σc, γ, δt, fdtp, srδt)
+  llr = llr_dbm(xc, σp, σc, δt, fdtp, srδt)
 
   if -randexp() < llr
     unsafe_copyto!(σc, 1, σp, 1, l)
@@ -242,8 +242,8 @@ function _update_duo_x!(ξi  ::sTxs,
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
 
-    llr = llr_dbm(xa, σap, σa, γ, δt, fdta, srδt) + 
-          llr_dbm(x1, σ1p, σ1, γ, δt, fdt1, srδt)
+    llr = llr_dbm(xa, σap, σa, δt, fdta, srδt) + 
+          llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt)
 
     if -randexp() < llr
       unsafe_copyto!(σa, 1, σap, 1, la)
@@ -305,8 +305,8 @@ function _update_duo_x!(ξi   ::sTxs,
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
 
-    llr = llr_dbm(xa, σap, σa, γ, δt, fdta, srδt) + 
-          llr_dbm(x1, σ1p, σ1, γ, δt, fdt1, srδt)
+    llr = llr_dbm(xa, σap, σa, δt, fdta, srδt) + 
+          llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt)
 
     if -randexp() < llr
       unsafe_copyto!(σa, 1, σap, 1, la)
@@ -375,9 +375,9 @@ function _update_triad_x!(ξi   ::sTxs,
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
     bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
 
-    llr = llr_dbm(xa, σap, σa, γ, δt, fdta, srδt) +
-          llr_dbm(x1, σ1p, σ1, γ, δt, fdt1, srδt) +
-          llr_dbm(x2, σ2p, σ2, γ, δt, fdt2, srδt)
+    llr = llr_dbm(xa, σap, σa, δt, fdta, srδt) +
+          llr_dbm(x1, σ1p, σ1, δt, fdt1, srδt) +
+          llr_dbm(x2, σ2p, σ2, δt, fdt2, srδt)
 
     if -randexp() < llr
       unsafe_copyto!(σa, 1, σap, 1, la)

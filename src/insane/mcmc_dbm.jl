@@ -39,8 +39,9 @@ function insane_dbm(tree   ::Tlabel,
                     nflush ::Int64                 = nthin,
                     ofile  ::String                = string(homedir(), "/dbm"),
                     γi     ::Float64               = 0.1,
-                    pupdp  ::NTuple{2,Float64}     = (0.1, 0.9),
+                    pupdp  ::NTuple{3,Float64}     = (0.1, 0.05, 0.9),
                     δt     ::Float64               = 1e-3,
+                    stn    ::Float64               = 0.1,
                     prints ::Int64                 = 5)
 
   n    = ntips(tree)
@@ -65,22 +66,23 @@ function insane_dbm(tree   ::Tlabel,
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
 
-  # parameter updates (...)
+  # parameter updates (1: γ, 2: scale 3: gbm)
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(2)
+  for i in Base.OneTo(lastindex(pupdp))
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
   @info "running diffused Brownian motion"
 
   # burn-in phase
-  Ξ, idf, ll, ssσ, nσ, prc, γc =
-    mcmc_burn_dbm(Ξ, idf, γ_prior, nburn, γi, δt, srδt, inodes, pup, prints)
+  Ξ, idf, ll, ssσ, nσ, prc, γc, stn =
+    mcmc_burn_dbm(Ξ, idf, γ_prior, nburn, γi, stn, δt, srδt, 
+      inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_dbm(Ξ, idf, ll, ssσ, nσ, prc, γc, γ_prior, δt, srδt, inodes, 
-              pup, niter, nthin, nflush, ofile, prints)
+  r, treev = mcmc_dbm(Ξ, idf, ll, ssσ, nσ, prc, γc, stn, γ_prior, δt, srδt, 
+               inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -107,6 +109,7 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
                        γ_prior::NTuple{2,Float64},
                        nburn   ::Int64,
                        γc      ::Float64,
+                       stn     ::Float64,
                        δt      ::Float64,
                        srδt    ::Float64,
                        inodes  ::Array{Int64,1},
@@ -114,13 +117,18 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
                        prints  ::Int64)
 
   # starting likelihood and prior
-  ll  = llik_dbm_v(Ξ, γc, δt, srδt)
+  ll  = zeros(lastindex(Ξ)) 
+  llik_dbm_v!(ll, Ξ, γc, δt, srδt)
   prc = logdinvgamma(γc^2, γ_prior[1], γ_prior[2])
 
   # sum squares in log-σ(t)
   ssσ, nσ = sss_v(Ξ, lσ)
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
+
+  # for scale tuning
+  ltn = 0
+  lup = lac = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -136,6 +144,11 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
 
         prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
+      elseif pupi === 2
+
+        lac += update_scale!(Ξ, ll, γc, stn, δt, srδt)
+        lup += 1.0
+
       # update traits and rates
       else
 
@@ -146,10 +159,16 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
       end
     end
 
+    ltn += 1
+    if ltn === 100
+      stn = tune(stn, lac/lup)
+      ltn = 0
+    end
+
     next!(pbar)
   end
 
-  return Ξ, idf, ll, ssσ, nσ, prc, γc
+  return Ξ, idf, ll, ssσ, nσ, prc, γc, stn
 end
 
 
@@ -182,7 +201,8 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
                   ssσ     ::Vector{Float64},
                   nσ      ::Vector{Float64},
                   prc     ::Float64,
-                  γc     ::Float64,
+                  γc      ::Float64,
+                  stn     ::Float64,
                   γ_prior ::NTuple{2,Float64},
                   δt      ::Float64,
                   srδt    ::Float64,
@@ -229,12 +249,22 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
             prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
-            # ll0 = llik_dbm(Ξ, γc, δt, srδt)
-            # llc = sum(ll)
-            # if !isapprox(ll0, sum(ll), atol = 1e-4)
-            #    @show ll0, llc, it, pupi
-            #    return
-            # end
+            ll0 = llik_dbm(Ξ, γc, δt, srδt)
+            if !isapprox(ll0, sum(ll), atol = 1e-4)
+               @show ll0, llc, it, pupi
+               return
+            end
+
+          elseif pupi === 2
+
+            lac = update_scale!(Ξ, ll, γc, stn, δt, srδt)
+
+            ll0 = llik_dbm(Ξ, γc, δt, srδt)
+            if !isapprox(ll0, sum(ll), atol = 1e-4)
+               @show ll0, llc, it, pupi
+               return
+            end
+
           # update traits and rates
           else
 
@@ -242,12 +272,11 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             bix = inodes[nix]
             update_x!(bix, Ξ, idf, γc, ll, ssσ, δt, srδt)
 
-            # ll0 = llik_dbm(Ξ, γc, δt, srδt)
-            # llc = sum(ll)
-            # if !isapprox(ll0, sum(ll), atol = 1e-4)
-            #    @show ll0, llc, it, pupi
-            #    return
-            # end
+            ll0 = llik_dbm(Ξ, γc, δt, srδt)
+            if !isapprox(ll0, sum(ll), atol = 1e-4)
+               @show ll0, llc, it, pupi
+               return
+            end
           end
         end
 
@@ -288,6 +317,81 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
   return r, treev
 end
 
+
+
+
+
+
+"""
+    update_γ!(γc     ::Float64,
+              ssσ    ::Vector{Float64},
+              n      ::Vector{Float64},
+              llc    ::Vector{Float64},
+              prc    ::Float64,
+              γ_prior::NTuple{2,Float64})
+
+Gibbs update for `σλ`.
+"""
+function update_γ!(γc     ::Float64,
+                   ssσ    ::Vector{Float64},
+                   ns     ::Vector{Float64},
+                   ll     ::Vector{Float64},
+                   prc    ::Float64,
+                   γ_prior::NTuple{2,Float64})
+
+  γ_p1, γ_p2 = γ_prior
+
+  # Gibbs update for σ
+  γp2 = randinvgamma(γ_p1 + 0.5 * sum(ns), γ_p2 + sum(ssσ))
+
+  # update prior
+  prc += llrdinvgamma(γp2, γc^2, γ_p1, γ_p2)
+
+  γp = sqrt(γp2)
+
+  # update likelihoods
+  for i in Base.OneTo(lastindex(ll))
+    ll[i] += ssσ[i]*(1.0/γc^2 - 1.0/γp2) - ns[i]*(log(γp/γc))
+  end
+
+  return prc, γp
+end
+
+
+
+"""
+    update_scale!(Ξ  ::Vector{T},
+                  idf::Vector{iBffs},
+                  llc::Float64,
+                  ir ::Float64,
+                  ns ::Float64,
+                  stn::Float64) where {T <: iTree}
+
+Update scale for speciation.
+"""
+function update_scale!(Ξ   ::Vector{sTxs},
+                       ll  ::Vector{Float64},
+                       γ   ::Float64,
+                       stn ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64)
+
+  # sample log(scaling factor)
+  s = randn()*stn
+
+  # likelihood ratio
+  llr = llr_scale(Ξ, s, δt, srδt)
+
+  acc = 0.0
+
+  if -randexp() < sum(llr)
+    acc += 1.0
+    scale_rate!(Ξ, lσ, s)
+    llik_dbm_v!(ll, Ξ, γ, δt, srδt)
+  end
+
+  return acc
+end
 
 
 
@@ -364,44 +468,6 @@ function update_x!(bix  ::Int64,
   end
 
   return nothing
-end
-
-
-
-
-"""
-    update_γ!(γc     ::Float64,
-              ssσ    ::Vector{Float64},
-              n      ::Vector{Float64},
-              llc    ::Vector{Float64},
-              prc    ::Float64,
-              γ_prior::NTuple{2,Float64})
-
-Gibbs update for `σλ`.
-"""
-function update_γ!(γc     ::Float64,
-                   ssσ    ::Vector{Float64},
-                   ns     ::Vector{Float64},
-                   ll     ::Vector{Float64},
-                   prc    ::Float64,
-                   γ_prior::NTuple{2,Float64})
-
-  γ_p1, γ_p2 = γ_prior
-
-  # Gibbs update for σ
-  γp2 = randinvgamma(γ_p1 + 0.5 * sum(ns), γ_p2 + sum(ssσ))
-
-  # update prior
-  prc += llrdinvgamma(γp2, γc^2, γ_p1, γ_p2)
-
-  γp = sqrt(γp2)
-
-  # update likelihoods
-  for i in Base.OneTo(lastindex(ll))
-    ll[i] += ssσ[i]*(1.0/γc^2 - 1.0/γp2) - ns[i]*(log(γp/γc))
-  end
-
-  return prc, γp
 end
 
 
