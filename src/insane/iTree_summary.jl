@@ -256,9 +256,29 @@ end
 Return an Array with a row for each sampled tree for interpolated
 parameters accessed by `f` at times determined by `δt`.
 """
+function sample(tree::T,
+                f   ::Function,
+                δt  ::Float64) where {T <: iTree}
+  vi = Float64[]
+  extract_vector!(tree, vi, δt, 0.0, f)
+
+  return vi
+end
+
+
+
+
+"""
+    sample(treev::Array{T,1},
+           f    ::Function,
+           δt   ::Float64) where {T <: iTree}
+
+Return an Array with a row for each sampled tree for interpolated
+parameters accessed by `f` at times determined by `δt`.
+"""
 function sample(treev::Array{T,1},
                 f    ::Function,
-                δt   ::Float64) where {T <: iT}
+                δt   ::Float64) where {T <: iTree}
 
   @inbounds begin
 
@@ -286,7 +306,7 @@ end
                     v   ::Array{Float64,1},
                     nδt ::Float64,
                     ct  ::Float64,
-                    f  ::Function) where {T <: iT}
+                    f  ::Function) where {T <: iTree}
 
 Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
 and return a vector.
@@ -295,7 +315,7 @@ function extract_vector!(tree::T,
                          v   ::Array{Float64,1},
                          nδt ::Float64,
                          ct  ::Float64,
-                         f  ::Function) where {T <: iT}
+                         f  ::Function) where {T <: iTree}
 
   et = e(tree)
   δt = dt(tree)
