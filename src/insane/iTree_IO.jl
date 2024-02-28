@@ -451,7 +451,7 @@ end
 
 
 """
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+    to_string(tree::T) where {T <: iTree})
 
 Returns newick string.
 """
