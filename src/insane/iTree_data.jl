@@ -2088,48 +2088,25 @@ end
 
 
 
-"""
-    fixed_xt(tree::T)  where {T <: Tx}
+# """
+#     fixed_xt(tree::T)  where {T <: Tx}
 
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function fixed_xt(tree::T)  where {T <: Tx}
+# Make joint proposal to match simulation with tip fixed `x` value.
+# """
+# function fixed_xt(tree::T)  where {T <: Tx}
 
-  if istip(tree)
-    return xf(tree)
-  else
-    if isfix(tree.d1)
-      xt = fixed_xt(tree.d1)
-    else
-      xt = fixed_xt(tree.d2)
-    end
-  end
+#   if istip(tree)
+#     return xf(tree)
+#   else
+#     if isfix(tree.d1)
+#       xt = fixed_xt(tree.d1)
+#     else
+#       xt = fixed_xt(tree.d2)
+#     end
+#   end
 
-  return xt
-end
-
-
-
-
-"""
-    fixed_xt(tree::T)  where {T <: Tx}
-
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function fixed_xt(tree::T)  where {T <: Tx}
-
-  if istip(tree)
-    return xv(tree)[end]
-  else
-    if isfix(tree.d1)
-      xt = fixed_xt(tree.d1)
-    else
-      xt = fixed_xt(tree.d2)
-    end
-  end
-
-  return xt
-end
+#   return xt
+# end
 
 
 
