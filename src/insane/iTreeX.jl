@@ -728,7 +728,7 @@ Tlabel = Union{sT_label, sTf_label}
 
 iTf = Union{sTfbd, sTfbdx, iTfbd}
 """
-iTf = Union{sTf_label, sTfbd, sTfbdx, iTfbd, iTfbdx, sTxs}
+iTf = Union{sTfbd, sTfbdx, iTfbd, iTfbdx, sTxs}
 
 
 
