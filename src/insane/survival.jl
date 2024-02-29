@@ -192,7 +192,7 @@ end
                  δt  ::Float64,
                  srδt::Float64,
                  ntry::Int64,
-                 surv::Int64)
+                 c   ::Int64)
 
 Sample the total number of `m` trials until both simulations survive
 for `gbmbd`.

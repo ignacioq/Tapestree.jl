@@ -1146,21 +1146,79 @@ end
 
 
 """
-    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iT}
+    _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iT}
+function _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
-  n   = 0.0
-  ssλ = 0.0
+  dd = 0.0
+  ss = 0.0
+  n  = 0.0
+  ir = 0.0
   for ξi in Ξ
-    ssλ, n = _sss_gbm(ξi, α, ssλ, n)
+    dd, ss, n, ir = _ss_ir_dd(ξi, f, α, dd, ss, n, ir)
   end
 
-  return ssλ, n
+  return dd, ss, n, ir
 end
+
+
+
+
+"""
+    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+
+  dd = ssλ = ssμ = n = irλ = irμ = 0.0
+  for ξi in Ξ
+    dd, ssλ, ssμ, n, irλ, irμ = _ss_ir_dd(ξi, α, dd, ssλ, ssμ, n, irλ, irμ)
+  end
+
+  return dd, ssλ, ssμ, n, irλ, irμ
+end
+
+
+
+
+"""
+    _ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
+
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _ss(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
+
+  ss = 0.0
+  for ξi in Ξ
+    ss += _ss(ξi, f, α)
+  end
+
+  return ss
+end
+
+
+
+
+"""
+    _ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
+
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _ss(Ξ::Vector{T}, α::Float64) where {T <: iTree}
+
+  ssλ = ssμ = 0.0
+  for ξi in Ξ
+    ssλ, ssμ = _ss(ξi, α, ssλ, ssμ)
+  end
+
+  return ssλ, ssμ
+end
+
 
 
 
@@ -1173,9 +1231,7 @@ to GBM birth-death for a `σ` proposal.
 """
 function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
 
-  n   = 0.0
-  ssλ = 0.0
-  ssμ = 0.0
+  n = ssλ = ssμ = 0.0
   for ξi in Ξ
     ssλ, ssμ, n = _sss_gbm(ξi, α, ssλ, ssμ, n)
   end
@@ -1241,4 +1297,40 @@ function Σλ_gbm(Ξ::Vector{T}) where {T <: iT}
   end
   return Σλ
 end
+
+
+
+
+"""
+    scale_rate!(Ξ::Vector{T}, f::Function, s::Float64)
+
+Add `s` to vector retrieved using function `f`.
+"""
+function scale_rate!(Ξ::Vector{T}, f::Function, s::Float64) where {T <: iTree}
+
+  for ξ in Ξ
+    scale_rate!(ξ, f, s)
+  end
+
+  return nothing
+end
+
+
+
+"""
+    scale_rate!(idf::Vector{iBffs}, s::Float64)
+
+Add `s` to vector retrieved using function `f`.
+"""
+function scale_rate!(idf::Vector{iBffs}, s::Float64)
+
+  for bi in idf
+    if d2(bi) > 0
+      setλt!(bi, λt(bi) + s)
+    end
+  end
+
+  return nothing
+end
+
 
