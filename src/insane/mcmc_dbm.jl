@@ -32,7 +32,7 @@ Run diffused Brownian motion trait evolution model.
 function insane_dbm(tree   ::Tlabel,
                     xa     ::Dict{String, Float64};
                     xs     ::Dict{String, Float64} = Dict{String,Float64}(),
-                    γ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                    γ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                     niter  ::Int64                 = 1_000,
                     nthin  ::Int64                 = 10,
                     nburn  ::Int64                 = 200,
@@ -325,12 +325,12 @@ end
 """
     update_γ!(γc     ::Float64,
               ssσ    ::Vector{Float64},
-              n      ::Vector{Float64},
-              llc    ::Vector{Float64},
+              ns     ::Vector{Float64},
+              ll     ::Vector{Float64},
               prc    ::Float64,
               γ_prior::NTuple{2,Float64})
 
-Gibbs update for `σλ`.
+Gibbs update for `γ`.
 """
 function update_γ!(γc     ::Float64,
                    ssσ    ::Vector{Float64},

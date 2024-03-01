@@ -728,7 +728,7 @@ function _sss(tree::T,
   ss0, n0 = _sss_b(f(tree), α, dt(tree), fdt(tree))
 
   ss += ss0
-  n   += n0
+  n  += n0
 
   if def1(tree)
     ss, n = _sss(tree.d1, α, f, ss, n)
@@ -837,16 +837,15 @@ function _sss_b(v  ::Array{Float64,1},
     # standardize
     ss *= 1.0/(2.0*δt)
 
+    nF = Float64(n)
     # add final non-standard `δt`
     if fdt > 0.0
       ss += (v[n+2] - v[n+1])^2/(2.0*fdt)
-      n = Float64(n + 1)
-    else
-      n = Float64(n)
+      nF  += 1.0
     end
   end
 
-  return ss, n
+  return ss, nF
 end
 
 
