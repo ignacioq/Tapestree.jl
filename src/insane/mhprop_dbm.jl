@@ -158,10 +158,15 @@ function _update_leaf_x!(ξi  ::sTxs,
   end
 
   # trait path sample
+  xi = xc[1]
   if !iszero(xstd)
-    xn = rnorm(xavg, xstd)
+    xp = rnorm(xi, intσ(σc, δt, fdtp))
+    if -randexp() < llrdnorm_x(xp, xn, xavg, xstd^2)
+      xn = xp
+    end
   end
-  dbb!(xc, xc[1], xn, σc, δt, fdtp, srδt)
+
+  dbb!(xc, xi, xn, σc, δt, fdtp, srδt)
 
   # likelihood
   ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp)
@@ -232,7 +237,7 @@ function _update_duo_x!(ξi  ::sTxs,
     σai  = σa[1]
     σ1f  = σ1[l1]
     xai  = xa[1]
-    xn   = xavg
+    xn   = xa[la]
     x1f  = x1[l1]
     fdta = fdt(ξi)
     fdt1 = fdt(ξ1)
@@ -252,7 +257,10 @@ function _update_duo_x!(ξi  ::sTxs,
 
     # trait path sample
     if !iszero(xstd)
-      xn = rnorm(xavg, xstd)
+      xp = duoprop(xai, x1f, intσ(σa, δt, fdta), intσ(σ1, δt, fdt1))
+      if -randexp() < llrdnorm_x(xp, xn, xavg, xstd^2)
+        xn = xp
+      end
     end
     dbb!(xa, xai, xn, σa, δt, fdta, srδt)
     dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
