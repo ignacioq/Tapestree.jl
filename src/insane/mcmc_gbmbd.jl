@@ -284,6 +284,8 @@ end
                mc      ::Float64,
                th      ::Float64,
                surv    ::Int64,
+               ns      ::Float64, 
+               ne      ::Float64, 
                stnλ    ::Float64, 
                stnμ    ::Float64,
                λa_prior::NTuple{2,Float64},
@@ -620,6 +622,7 @@ end
                   σλ   ::Float64,
                   σμ   ::Float64,
                   llc ::Float64,
+                  prc ::Float64,
                   irλ ::Float64,
                   irμ ::Float64,
                   ns  ::Float64,
@@ -630,7 +633,9 @@ end
                   th  ::Float64,
                   surv::Int64,
                   δt  ::Float64,
-                  srδt::Float64) where {T <: iTbdU}
+                  srδt::Float64,
+                  λa_prior::NTuple{2,Float64},
+                  μa_prior::NTuple{2,Float64}) where {T <: iTbdU}
 
 Update scale for speciation.
 """
@@ -640,6 +645,7 @@ function update_scale!(Ξ   ::Vector{T},
                        σλ   ::Float64,
                        σμ   ::Float64,
                        llc ::Float64,
+                       prc ::Float64,
                        irλ ::Float64,
                        irμ ::Float64,
                        ns  ::Float64,
@@ -650,46 +656,55 @@ function update_scale!(Ξ   ::Vector{T},
                        th  ::Float64,
                        surv::Int64,
                        δt  ::Float64,
-                       srδt::Float64) where {T <: iTbdU}
+                       srδt::Float64,
+                       λa_prior::NTuple{2,Float64},
+                       μa_prior::NTuple{2,Float64}) where {T <: iTbdU}
 
   accλ = accμ = 0.0
 
+  lλ0c = lλ(Ξ[1])[1]
+  lμ0c = lμ(Ξ[1])[1]
+
   # sample log(scaling factor)
-  s = randn()*stnλ
+  Δlλ  = randn()*stnλ
+  lλ0p = lλ0c + Δlλ
 
   # likelihood ratio
-  mp = m_surv_gbmbd(th, lλ(Ξ[1])[1] + s, lμ(Ξ[1])[1], 
-         α, σλ, σμ, δt, srδt, 1_000, surv)
-  iri = (1.0 - exp(s)) * irλ
-  llr = ns * s + iri + log(mp/mc)
+  mp = m_surv_gbmbd(th, lλ0p, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
+  iri = (1.0 - exp(Δlλ)) * irλ
+  llr = ns * Δlλ + iri + log(mp/mc)
+  prr = llrdgamma(exp(lλ0p), exp(lλ0c), λa_prior[1], λa_prior[2])
 
-  if -randexp() < llr
+  if -randexp() < llr + prr
     accλ += 1.0
     llc  += llr
+    prc  += prr
     irλ  -= iri
     mc    = mp
-    scale_rate!(Ξ, lλ, s)
-    scale_rate!(idf, s)
+    scale_rate!(Ξ, lλ, Δlλ)
+    scale_rate!(idf, Δlλ)
   end
 
   # sample log(scaling factor)
-  s = randn()*stnμ
+  Δlμ  = randn()*stnμ
+  lμ0p = lμ0c + Δlμ
 
   # likelihood ratio
-  mp = m_surv_gbmbd(th, lλ(Ξ[1])[1], lμ(Ξ[1])[1] + s, 
-        α, σλ, σμ, δt, srδt, 1_000, surv)
-  iri = (1.0 - exp(s)) * irμ
-  llr = ne * s + iri + log(mp/mc)
+  mp = m_surv_gbmbd(th, lλ0c, lμ0p, α, σλ, σμ, δt, srδt, 1_000, surv)
+  iri = (1.0 - exp(Δlμ)) * irμ
+  llr = ne * Δlμ + iri + log(mp/mc)
+  prr = llrdgamma(exp(lμ0p), exp(lμ0c), μa_prior[1], μa_prior[2])
 
-  if -randexp() < llr
+  if -randexp() < llr + prr
     accμ += 1.0
     llc  += llr
+    prc  += prr
     irμ  -= iri
     mc    = mp
-    scale_rate!(Ξ, lμ, s)
+    scale_rate!(Ξ, lμ, Δlμ)
   end
 
-  return llc, irλ, irμ, accλ, accμ, mc
+  return llc, prc, irλ, irμ, accλ, accμ, mc
 end
 
 

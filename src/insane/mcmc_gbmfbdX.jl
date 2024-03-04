@@ -15,7 +15,7 @@ Created 03 09 2020
 """
     insane_gbmfbd(tree    ::sTf_label,
                   out_file::String;
-                  λa_prior::NTuple{2,Float64} = (1.5, 0.5),
+                  λa_prior::NTuple{2,Float64} = (1.5, 1.0),
                   μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                   α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                   σλ_prior::NTuple{2,Float64} = (0.05, 0.05),
@@ -41,7 +41,7 @@ Run insane for `gbm-bd`.
 function insane_gbmfbd(tree    ::sTf_label,
                        X       ::Dict{String, Float64},
                        out_file::String;
-                       λa_prior::NTuple{2,Float64} = (1.5, 0.5),
+                       λa_prior::NTuple{2,Float64} = (1.5, 1.0),
                        μa_prior::NTuple{2,Float64} = (1.5, 1.0),
                        α_prior ::NTuple{2,Float64} = (0.0, 10.0),
                        σλ_prior::NTuple{2,Float64} = (0.05, 0.05),

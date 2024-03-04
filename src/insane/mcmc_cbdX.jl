@@ -16,7 +16,7 @@ Created 25 08 2020
     insane_cbd(tree    ::sT_label,
                X       ::Dict{String, Float64},
                out_file::String;
-               λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
+               λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                σx_prior::NTuple{2,Float64}     = (0.05, 0.05),
                x0_prior::NTuple{2,Float64}     = (0.0, 10.0),
@@ -39,7 +39,7 @@ Run insane for constant birth-death.
 function insane_cbd(tree    ::sT_label,
                     X       ::Dict{String, Float64},
                     out_file::String;
-                    λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
+                    λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                     μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                     σx_prior::NTuple{2,Float64}     = (0.05, 0.05),
                     x0_prior::NTuple{2,Float64}     = (0.0, 10.0),

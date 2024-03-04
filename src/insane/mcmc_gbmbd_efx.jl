@@ -43,7 +43,7 @@ Run insane for `gbm-bd` with fixed extinction.
 function insane_gbmbd(tree    ::sT_label,
                       tv       ::Vector{Float64},
                       ev      ::Vector{Vector{Float64}};
-                      λa_prior::NTuple{2,Float64}     = (1.5, 0.5),
+                      λa_prior::NTuple{2,Float64}     = (1.5, 1.0),
                       μa_prior::NTuple{2,Float64}     = (1.5, 1.0),
                       α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),

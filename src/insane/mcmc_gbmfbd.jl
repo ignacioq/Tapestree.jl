@@ -25,8 +25,10 @@ Created 03 09 2020
                   niter   ::Int64                 = 1_000,
                   nthin   ::Int64                 = 10,
                   nburn   ::Int64                 = 200,
-                  nflush  ::Int64                 = nthin,
+                  nflushθ ::Int64                 = nthin,
+                  nflushΞ ::Int64                 = nthin,
                   ofile   ::String                = string(homedir(), "/ifbd"),
+                  tune_int::Int64                 = 100,
                   ϵi      ::Float64               = 0.2,
                   λi      ::Float64               = NaN,
                   μi      ::Float64               = NaN,
@@ -34,7 +36,7 @@ Created 03 09 2020
                   αi      ::Float64               = 0.0,
                   σλi     ::Float64               = 0.1,
                   σμi     ::Float64               = 0.1,
-                  pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
+                  pupdp   ::NTuple{6,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
                   δt      ::Float64               = 1e-3,
                   survival::Bool                  = true,
                   mxthf   ::Float64               = Inf,
@@ -57,8 +59,10 @@ function insane_gbmfbd(tree    ::sTf_label;
                        niter   ::Int64                 = 1_000,
                        nthin   ::Int64                 = 10,
                        nburn   ::Int64                 = 200,
-                       nflush  ::Int64                 = nthin,
+                       nflushθ ::Int64                 = nthin,
+                       nflushΞ ::Int64                 = nthin,
                        ofile   ::String                = string(homedir(), "/ifbd"),
+                       tune_int::Int64                 = 100,
                        ϵi      ::Float64               = 0.2,
                        λi      ::Float64               = NaN,
                        μi      ::Float64               = NaN,
@@ -180,15 +184,12 @@ function insane_gbmfbd(tree    ::sTf_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  # make objecting scaling function for tuning
-  scalef = makescalef(obj_ar)
-
   @info "running fossilized birth-death diffusion"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, ns, ne, stnλ, stnμ =
     mcmc_burn_gbmfbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
-      ψ_prior, ψ_epoch, f_epoch, nburn, αi, σλi, σμi, ψc, mc, th, surv, 
+      ψ_prior, ψ_epoch, f_epoch, nburn, tune_int, αi, σλi, σμi, ψc, mc, th, surv, 
       stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   # mcmc
@@ -233,8 +234,7 @@ end
                      eixf    ::Vector{Int64},
                      inodes  ::Array{Int64,1},
                      pup     ::Array{Int64,1},
-                     prints  ::Int64,
-                     scalef  ::Function)
+                     prints  ::Int64)
 
 MCMC burn-in chain for `fbdd`.
 """
@@ -249,6 +249,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           ψ_epoch ::Vector{Float64},
                           f_epoch ::Vector{Int64},
                           nburn   ::Int64,
+                          tune_int::Int64,
                           αc      ::Float64,
                           σλc     ::Float64,
                           σμc     ::Float64,
@@ -354,9 +355,9 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
       # update scale
       elseif pupi === 4
 
-        llc, irλ, irμ, accλ, accμ, mc = 
-          update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
-            stnλ, stnμ, mc, th, surv, δt, srδt)
+        llc, prc, irλ, irμ, accλ, accμ, mc = 
+          update_scale!(Ξ, idf, αc, σλc, σμc, llc, prc, irλ, irμ, ns, ne, 
+            stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
         lacλ += accλ
         lacμ += accμ
@@ -369,7 +370,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
         bix = inodes[nix]
 
         llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, irλ, irμ, 
+          update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
             mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
       # forward simulation update
@@ -391,13 +392,6 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
     # log tuning parameters
     ltn += 1
     if ltn === tune_int
-      λtn = scalef(λtn, λlac/λlup)
-      μtn = scalef(μtn, μlac/μlup)
-      ltn = 0
-    end
-
-    ltn += 1
-    if ltn === 100
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
       ltn = 0
@@ -421,12 +415,13 @@ end
                 σλc     ::Float64,
                 σμc     ::Float64,
                 ψc      ::Vector{Float64},
-                λtn     ::Float64,
-                μtn     ::Float64,
                 mc      ::Float64,
-                ns      ::Float64,
                 th      ::Float64,
-                surv   ::Int64,
+                surv    ::Int64,
+                ns      ::Float64,
+                ne      ::Float64,
+                stnλ    ::Float64, 
+                stnμ    ::Float64,
                 λa_prior::NTuple{2,Float64},
                 μa_prior::NTuple{2,Float64},
                 α_prior ::NTuple{2,Float64},
@@ -459,10 +454,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      σλc     ::Float64,
                      σμc     ::Float64,
                      ψc      ::Vector{Float64},
-                     λtn     ::Float64,
-                     μtn     ::Float64,
                      mc      ::Float64,
-                     ns      ::Float64,
                      th      ::Float64,
                      surv    ::Int64,
                      ns      ::Float64,
@@ -493,7 +485,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   # logging
   nlogs = fld(niter, nthin)
-  lthin = lit = sthin =  0
+  lthin = lit = sthinθ = sthinΞ =  0
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
@@ -511,10 +503,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   # number of branches and of triads
   nbr  = lastindex(idf)
-
-  # flush to file (parameters θ and tree Ξ)
-  #sthinθ = 0
-  #sthinΞ = 0
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -582,9 +570,9 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           # update scale
           elseif pupi === 4
 
-            llc, irλ, irμ, accλ, accμ, mc = 
-              update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
-                stnλ, stnμ, mc, th, surv, δt, srδt)
+            llc, prc, irλ, irμ, accλ, accμ, mc = 
+              update_scale!(Ξ, idf, αc, σλc, σμc, llc, prc, irλ, irμ, ns, ne, 
+                stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
           # gbm update
           elseif pupi === 5
@@ -881,7 +869,6 @@ function update_fs!(bix ::Int64,
 
     # update quantities
     llc += ll1  - ll0  + llr
-    dλ  += dλ1  - dλ0  + drλ
     ddλ += ddλ1 - ddλ0 + drλ
     ssλ += ssλ1 - ssλ0 + ssrλ
     ssμ += ssμ1 - ssμ0 + ssrμ

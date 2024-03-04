@@ -15,7 +15,7 @@ Created 11 02 2022
 """
     insane_cobd(tree    ::sTf_label,
                 ωtimes  ::Vector{Float64};
-                λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
+                λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                 μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                 ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 ω_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -44,7 +44,7 @@ Run insane for constant occurrence birth-death.
 """
 function insane_cobd(tree    ::sTf_label,
                      ωtimes  ::Vector{Float64};
-                     λ_prior ::NTuple{2,Float64}     = (1.5, 0.5),
+                     λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                      μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ω_prior ::NTuple{2,Float64}     = (1.0, 0.2),
