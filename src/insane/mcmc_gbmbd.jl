@@ -14,27 +14,29 @@ Created 03 09 2020
 
 """
     insane_gbmbd(tree    ::sT_label;
-                 λa_prior::NTuple{2,Float64} = (1.5, 1.0),
-                 μa_prior::NTuple{2,Float64} = (1.5, 1.0),
-                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                 σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                 niter   ::Int64             = 1_000,
-                 nthin   ::Int64             = 10,
-                 nburn   ::Int64             = 200,
-                 nflush  ::Int64             = nthin,
-                 ofile   ::String            = string(homedir(), "/ibd"),
-                 ϵi      ::Float64           = 0.2,
-                 λi      ::Float64           = NaN,
-                 μi      ::Float64           = NaN,
-                 αi      ::Float64           = 0.0,
-                 σλi     ::Float64           = 0.01,
-                 σμi     ::Float64           = 0.01,
-                 pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
-                 δt      ::Float64           = 1e-3,
-                 survival::Bool              = true,
-                 mxthf   ::Float64           = Inf,
-                 prints  ::Int64             = 5,
+                 λa_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                 μa_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                 α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
+                 σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                 σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                 niter   ::Int64                 = 1_000,
+                 nthin   ::Int64                 = 10,
+                 nburn   ::Int64                 = 200,
+                 nflush  ::Int64                 = nthin,
+                 ofile   ::String                = string(homedir(), "/ibd"),
+                 ϵi      ::Float64               = 0.2,
+                 λi      ::Float64               = NaN,
+                 μi      ::Float64               = NaN,
+                 αi      ::Float64               = 0.0,
+                 σλi     ::Float64               = 0.01,
+                 σμi     ::Float64               = 0.01,
+                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.1, 0.1, 0.2),
+                 δt      ::Float64               = 1e-3,
+                 survival::Bool                  = true,
+                 mxthf   ::Float64               = Inf,
+                 prints  ::Int64                 = 5,
+                 stnλ    ::Float64               = 0.5,
+                 stnμ    ::Float64               = 0.5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for `bdd`.
@@ -228,9 +230,9 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # update scale
       elseif pupi === 3
 
-        llc, irλ, irμ, accλ, accμ, mc = 
-          update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
-            stnλ, stnμ, mc, th, surv, δt, srδt)
+        llc, prc, irλ, irμ, accλ, accμ, mc = 
+          update_scale!(Ξ, idf, αc, σλc, σμc, llc, prc, irλ, irμ, ns, ne, 
+            stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
         lacλ += accλ
         lacμ += accμ
@@ -405,9 +407,9 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           # update scale
           elseif pupi === 3
 
-            llc, irλ, irμ, accλ, accμ, mc = 
-              update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
-                stnλ, stnμ, mc, th, surv, δt, srδt)
+            llc, prc, irλ, irμ, accλ, accμ, mc = 
+              update_scale!(Ξ, idf, αc, σλc, σμc, llc, prc, irλ, irμ, ns, ne, 
+                stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -727,8 +729,8 @@ end
                 crown::Int64
                 δt   ::Float64,
                 srδt ::Float64,
-                lλxpr::Float64,
-                lμxpr::Float64,
+                λa_prior::NTuple{2,Float64},
+                μa_prior::NTuple{2,Float64},
                 surv ::Int64)
 
 Make a `gbm` update for an internal branch and its descendants.
@@ -750,8 +752,8 @@ function update_gbm!(bix  ::Int64,
                      th   ::Float64,
                      δt   ::Float64,
                      srδt ::Float64,
-                     lλxpr::Float64,
-                     lμxpr::Float64,
+                     λa_prior::NTuple{2,Float64},
+                     μa_prior::NTuple{2,Float64},
                      surv ::Int64)
   @inbounds begin
 
@@ -766,14 +768,14 @@ function update_gbm!(bix  ::Int64,
     if root && iszero(e(bi))
       llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
         _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
-          mc, th, δt, srδt, lλxpr, lμxpr, surv)
+          mc, th, δt, srδt, λa_prior, μa_prior, surv)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
         llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ,
-            mc, th, δt, srδt, lλxpr, lμxpr, surv)
+            mc, th, δt, srδt, λa_prior, μa_prior, surv)
       end
 
       # updates within the parent branch
