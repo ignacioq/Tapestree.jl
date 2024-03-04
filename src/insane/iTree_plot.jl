@@ -344,7 +344,7 @@ Recipe for plotting a Type `iT`.
   xnode = Float64[]
   ynode = Float64[]
 
-  #th  = treeheight(tree)
+  th  = treeheight(tree)
   nts = ntips(tree)
 
   _rplottree!(tree, zf, th, 0, x, y, z, nodet, xnode, ynode, shownodes, simple)
@@ -408,7 +408,6 @@ Recipe for plotting a Type `iT`.
       markercolor -->       colors[nodet]
       markerstrokecolor --> colors[nodet]
       markersize  -->       shsizes[nodet]
-      markeralpha --> alpha
       if type === :phylogram
         xnode, ynode
       elseif type === :radial

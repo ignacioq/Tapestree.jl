@@ -359,6 +359,26 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   # flush to file
   sthin = 0
 
+  function check_pr(pupi::Int64, i::Int64)
+    pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
+          logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
+          logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
+          logdgamma(exp(lλ(Ξ[1])[1]),          λa_prior[1], λa_prior[2]) +
+          logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])
+    if !isapprox(pr0, prc, atol = 1e-4)
+       error(string("Wrong prior computation during the ", ["α","σλ & σμ","λ0&μ0","gbm update","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": pr0=", pr0, " and prc-pr0=", prc-pr0))
+    end
+  end
+
+  function check_ll(pupi::Int64, i::Int64)
+    ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+    if !isapprox(ll0, llc, atol = 1e-4)
+       error(string("Wrong likelihood computation during the ", ["α","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0))
+    end
+  end
+
   open(ofile*".log", "w") do of
 
     write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha\tsigma_lambda\tsigma_mu\n")
@@ -385,12 +405,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             # update ssλ, ssμ with new drift `α`
             ssλ, ssμ = _ss(Ξ, αc)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi, Ξ
-            #    return
-            # end
-
           # σλ & σμ update
           elseif pupi === 2
 
@@ -398,24 +412,12 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
               update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
                 llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi, Ξ
-            #    return
-            # end
-
           # update scale
           elseif pupi === 3
 
             llc, prc, irλ, irμ, accλ, accμ, mc = 
               update_scale!(Ξ, idf, αc, σλc, σμc, llc, prc, irλ, irμ, ns, ne, 
                 stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
-
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi, Ξ
-            #    return
-            # end
 
           # gbm update
           elseif pupi === 4
@@ -427,12 +429,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
               update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, ddλ, ssλ, ssμ, 
                 irλ, irμ, mc, th, δt, srδt, λa_prior, μa_prior, surv)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi, Ξ
-            #    return
-            # end
-
           # forward simulation update
           else
 
@@ -441,13 +437,10 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             llc, ddλ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
               update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, 
                 irλ, irμ, ns, ne, L, δt, srδt)
-
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-            #  if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi, Ξ
-            #    return
-            # end
           end
+
+          # check_pr(pupi, it)
+          # check_ll(pupi, it)
         end
 
         # log parameters
