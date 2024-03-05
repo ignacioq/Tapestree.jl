@@ -421,10 +421,9 @@ end
     trioprop(xpr::Float64,
              xd1::Float64,
              xd2::Float64,
-             tpr::Float64,
-             td1::Float64,
-             td2::Float64,
-             σ  ::Float64)
+             σpr::Float64,
+             σd1::Float64,
+             σd2::Float64)
 
 Proposal for a trio of Gaussians.
 """
