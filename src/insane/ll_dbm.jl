@@ -13,17 +13,19 @@ Created 25 01 2024
 
 """
     llik_dbm(Ξ   ::Vector{sTxs},
+             α   ::Float64,
              γ   ::Float64,
              δt  ::Float64)
 
 Returns the log-likelihood for `sTxs` according to diffused Brownian motion.
 """
 function llik_dbm(Ξ   ::Vector{sTxs},
+                  α   ::Float64,
                   γ   ::Float64,
                   δt  ::Float64)
   ll = 0.0
   for ξ in Ξ
-    ll += llik_dbm(ξ, γ, δt)
+    ll += llik_dbm(ξ, α, γ, δt)
   end
 
   return ll
@@ -35,6 +37,7 @@ end
 """
     llik_dbm_v!(ll  ::Vector{Float64},
                  Ξ   ::Vector{sTxs},
+                 α   ::Float64,
                  γ   ::Float64,
                  δt  ::Float64)
 
@@ -42,13 +45,14 @@ Returns the log-likelihood for `sTxs` according to diffused Brownian motion.
 """
 function llik_dbm_v!(ll  ::Vector{Float64},
                      Ξ   ::Vector{sTxs},
+                     α   ::Float64,
                      γ   ::Float64,
                      δt  ::Float64)
 
   @inbounds begin
     xn = lastindex(Ξ)
     for i in Base.OneTo(xn)
-      ll[i] = llik_dbm(Ξ[i], γ, δt)
+      ll[i] = llik_dbm(Ξ[i], α, γ, δt)
     end
   end
 
@@ -60,26 +64,28 @@ end
 
 """
     llik_dbm(tree::sTxs,
+             α   ::Float64,
              γ   ::Float64,
              δt  ::Float64)
 
 Returns the log-likelihood for a `sTxs` according to diffused Brownian motion.
 """
 function llik_dbm(tree::sTxs,
+                  α   ::Float64,
                   γ   ::Float64,
                   δt  ::Float64)
 
   if def1(tree)
     if def2(tree)
-      llik_dbm(tree.d1, γ, δt)                        +
-      llik_dbm(tree.d2, γ, δt)                        +
-      ll_dbm_b(xv(tree), lσ(tree), γ, δt, fdt(tree))
+      llik_dbm(tree.d1, α, γ, δt)                        +
+      llik_dbm(tree.d2, α, γ, δt)                        +
+      ll_dbm_b(xv(tree), lσ(tree), α, γ, δt, fdt(tree))
     else
-      llik_dbm(tree.d1, γ, δt)                        +
-      ll_dbm_b(xv(tree), lσ(tree), γ, δt, fdt(tree))
+      llik_dbm(tree.d1, α, γ, δt)                        +
+      ll_dbm_b(xv(tree), lσ(tree), α, γ, δt, fdt(tree))
     end
   else
-    ll_dbm_b(xv(tree), lσ(tree), γ, δt, fdt(tree))
+    ll_dbm_b(xv(tree), lσ(tree), α, γ, δt, fdt(tree))
   end
 end
 
@@ -88,6 +94,7 @@ end
 """
     ll_dbm_b(x   ::Array{Float64,1},
              σ   ::Array{Float64,1},
+             α   ::Float64,
              γ   ::Float64,
              δt  ::Float64,
              fdt ::Float64)
@@ -96,6 +103,7 @@ Returns the log-likelihood for a branch according to diffused Brownian motion.
 """
 function ll_dbm_b(x   ::Array{Float64,1},
                   σ   ::Array{Float64,1},
+                  α   ::Float64,
                   γ   ::Float64,
                   δt  ::Float64,
                   fdt ::Float64)
@@ -109,7 +117,7 @@ function ll_dbm_b(x   ::Array{Float64,1},
     @turbo for i in Base.OneTo(nI)
       σi   = σ[i]
       σi1  = σ[i+1]
-      llσ += (σi1 - σi)^2
+      llσ += (σi1 - σi - α*δt)^2
       llx += -0.5*(x[i+1] - x[i])^2/(exp(σi1 + σi)*δt) - 0.5*(σi1 + σi)
     end
 
@@ -123,7 +131,7 @@ function ll_dbm_b(x   ::Array{Float64,1},
       σi1 = σ[nI+2]
       ll += -0.5*(x[nI+2] - x[nI+1])^2/(exp(σi1 + σi)*fdt) - 0.5*(σi1 + σi) - 
              0.5*log(fdt) + 
-            (σi1 - σi)^2*(-0.5/(γ^2*fdt)) - 0.5*log(γ^2*fdt) - log(2.0π)
+            (σi1 - σi - α*fdt)^2*(-0.5/(γ^2*fdt)) - 0.5*log(γ^2*fdt) - log(2.0π)
     end
   end
 
@@ -142,11 +150,12 @@ end
 
 Returns the log-likelihood for a branch according to diffused Brownian motion.
 """
-function ll_dbm_ss_b(x   ::Array{Float64,1},
-                     σ   ::Array{Float64,1},
-                     γ   ::Float64,
-                     δt  ::Float64,
-                     fdt ::Float64)
+function ll_dbm_ss_dd_b(x   ::Array{Float64,1},
+                        σ   ::Array{Float64,1},
+                        α   ::Float64,
+                        γ   ::Float64,
+                        δt  ::Float64,
+                        fdt ::Float64)
 
   @inbounds begin
     # estimate standard `δt` likelihood
@@ -157,7 +166,7 @@ function ll_dbm_ss_b(x   ::Array{Float64,1},
     @turbo for i in Base.OneTo(nI)
       σi   = σ[i]
       σi1  = σ[i+1]
-      llσ += (σi1 - σi)^2
+      llσ += (σi1 - σi - α*δt)^2
       llx += -0.5*(x[i+1] - x[i])^2/(exp(σi1 + σi)*δt) - 0.5*(σi1 + σi)
     end
 
@@ -172,7 +181,7 @@ function ll_dbm_ss_b(x   ::Array{Float64,1},
     if fdt > 0.0
       σi  = σ[nI+1]
       σi1 = σ[nI+2]
-      dσ2 = (σi1 - σi)^2
+      dσ2 = (σi1 - σi - α*fdt)^2
       ll += -0.5*(x[nI+2] - x[nI+1])^2/(exp(σi1 + σi)*fdt) - 0.5*(σi1 + σi) - 
              0.5*log(fdt) + 
             dσ2*(-0.5/(γ^2*fdt)) - 0.5*log(γ^2*fdt) - log(2.0π)
@@ -180,7 +189,7 @@ function ll_dbm_ss_b(x   ::Array{Float64,1},
     end
   end
 
-  return ll, ss
+  return ll, σ[nI+2] - σ[1], ss
 end
 
 
@@ -297,6 +306,85 @@ function llr_scale(x   ::Array{Float64,1},
   end
 
   return llr
+end
+
+
+
+"""
+    _ss_ir_dd(tree::T,
+              f   ::Function,
+              α   ::Float64,
+              dd  ::Float64,
+              ss  ::Float64,
+              n   ::Float64,
+              ir  ::Float64) where {T <: iTree}
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_dd(tree::T,
+                f   ::Function,
+                α   ::Float64,
+                dd  ::Float64,
+                ss  ::Float64,
+                n   ::Float64) where {T <: iTree}
+
+  dd0, ss0, n0 = _ss_dd_b(f(tree), α, dt(tree), fdt(tree))
+
+  dd += dd0
+  ss += ss0
+  n  += n0
+
+  if def1(tree)
+    dd, ss, n = _ss_dd(tree.d1, f, α, dd, ss, n)
+    if def2(tree)
+      dd, ss, n = _ss_dd(tree.d2, f, α, dd, ss, n)
+    end
+  end
+
+  return dd, ss, n
+end
+
+
+
+"""
+    _ss_dd_b(v  ::Array{Float64,1},
+             α  ::Float64,
+             δt ::Float64,
+             fdt::Float64)
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+and the delta drift `dd`.
+"""
+function _ss_dd_b(v  ::Array{Float64,1},
+                  α  ::Float64,
+                  δt ::Float64,
+                  fdt::Float64)
+
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(v)-2
+
+    ss  = 0.0
+    @turbo for i in Base.OneTo(nI)
+      vi  = v[i]
+      vi1 = v[i+1]
+      ss += (vi1 - vi - α*δt)^2
+    end
+  
+    # standardize
+    ss *= 1.0/(2.0*δt)
+
+    n = Float64(nI)
+    # add final non-standard `δt`
+    if fdt > 0.0
+      vi  = v[nI+1]
+      vi1 = v[nI+2]
+      ss += (vi1 - vi - α*fdt)^2/(2.0*fdt)
+      n  += 1.0
+    end
+
+  return (v[nI+2] - v[1]), ss, n
 end
 
 

@@ -15,16 +15,19 @@ Created 25 01 2024
 """
     insane_dbm(tree   ::Tlabel,
                xa     ::Dict{String, Float64};
-               xs     ::Dict{String, Float64} = Dict("" => 0.0),
-               γ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+               xs     ::Dict{String, Float64} = Dict{String,Float64}(),
+               α_prior::NTuple{2,Float64}     = (0.0, 1.0),
+               γ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                niter  ::Int64                 = 1_000,
                nthin  ::Int64                 = 10,
                nburn  ::Int64                 = 200,
                nflush ::Int64                 = nthin,
-               ofile  ::String                = string(homedir(), "/ipb"),
-               γi     ::Float64                = 0.1,
-               pupdp  ::NTuple{2,Float64}     = (0.1, 0.9),
+               ofile  ::String                = string(homedir(), "/dbm"),
+               αi     ::Float64               = 0.0,
+               γi     ::Float64               = 0.1,
+               pupdp  ::NTuple{4,Float64}     = (0.1, 0.1, 0.05, 0.9),
                δt     ::Float64               = 1e-3,
+               stn    ::Float64               = 0.1,
                prints ::Int64                 = 5)
 
 Run diffused Brownian motion trait evolution model.
@@ -32,14 +35,16 @@ Run diffused Brownian motion trait evolution model.
 function insane_dbm(tree   ::Tlabel,
                     xa     ::Dict{String, Float64};
                     xs     ::Dict{String, Float64} = Dict{String,Float64}(),
+                    α_prior::NTuple{2,Float64}     = (0.0, 1.0),
                     γ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                     niter  ::Int64                 = 1_000,
                     nthin  ::Int64                 = 10,
                     nburn  ::Int64                 = 200,
                     nflush ::Int64                 = nthin,
                     ofile  ::String                = string(homedir(), "/dbm"),
+                    αi     ::Float64               = 0.0,
                     γi     ::Float64               = 0.1,
-                    pupdp  ::NTuple{3,Float64}     = (0.1, 0.05, 0.9),
+                    pupdp  ::NTuple{4,Float64}     = (0.1, 0.1, 0.05, 0.9),
                     δt     ::Float64               = 1e-3,
                     stn    ::Float64               = 0.1,
                     prints ::Int64                 = 5)
@@ -66,7 +71,7 @@ function insane_dbm(tree   ::Tlabel,
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
 
-  # parameter updates (1: γ, 2: scale 3: gbm)
+  # parameter updates (1: α, 2:γ, 3: scale 4: gbm)
   spup = sum(pupdp)
   pup  = Int64[]
   for i in Base.OneTo(lastindex(pupdp))
@@ -76,13 +81,14 @@ function insane_dbm(tree   ::Tlabel,
   @info "running diffused Brownian motion"
 
   # burn-in phase
-  Ξ, idf, ll, ssσ, nσ, prc, γc, stn =
-    mcmc_burn_dbm(Ξ, idf, γ_prior, nburn, γi, stn, δt, srδt, 
+  Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn =
+    mcmc_burn_dbm(Ξ, idf, α_prior, γ_prior, nburn, αi, γi, stn, δt, srδt, 
       inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_dbm(Ξ, idf, ll, ssσ, nσ, prc, γc, stn, γ_prior, δt, srδt, 
-               inodes, pup, niter, nthin, nflush, ofile, prints)
+  r, treev = mcmc_dbm(Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn, α_prior, 
+              γ_prior, δt, srδt, inodes, pup, niter, nthin, nflush, 
+              ofile, prints)
 
   return r, treev
 end
@@ -91,40 +97,48 @@ end
 
 
 """
-    mcmc_burn_dbm(Ξ       ::Vector{sTxs},
-                  idf     ::Vector{iBffs},
+    mcmc_burn_dbm(Ξ      ::Vector{sTxs},
+                  idf    ::Vector{iBffs},
+                  α_prior::NTuple{2,Float64},
                   γ_prior::NTuple{2,Float64},
-                  nburn   ::Int64,
-                  γc      ::Float64,
-                  δt      ::Float64,
-                  srδt    ::Float64,
-                  inodes  ::Array{Int64,1},
-                  pup     ::Array{Int64,1},
-                  prints  ::Int64)
+                  nburn  ::Int64,
+                  αc     ::Float64,
+                  γc     ::Float64,
+                  stn    ::Float64,
+                  δt     ::Float64,
+                  srδt   ::Float64,
+                  inodes ::Array{Int64,1},
+                  pup    ::Array{Int64,1},
+                  prints ::Int64)
 
 MCMC burn-in chain for diffused Brownian motion.
 """
-function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
-                       idf     ::Vector{iBffs},
+function mcmc_burn_dbm(Ξ      ::Vector{sTxs},
+                       idf    ::Vector{iBffs},
+                       α_prior::NTuple{2,Float64},
                        γ_prior::NTuple{2,Float64},
-                       nburn   ::Int64,
-                       γc      ::Float64,
-                       stn     ::Float64,
-                       δt      ::Float64,
-                       srδt    ::Float64,
-                       inodes  ::Array{Int64,1},
-                       pup     ::Array{Int64,1},
-                       prints  ::Int64)
+                       nburn  ::Int64,
+                       αc     ::Float64,
+                       γc     ::Float64,
+                       stn    ::Float64,
+                       δt     ::Float64,
+                       srδt   ::Float64,
+                       inodes ::Array{Int64,1},
+                       pup    ::Array{Int64,1},
+                       prints ::Int64)
 
   # starting likelihood and prior
   ll  = zeros(lastindex(Ξ)) 
-  llik_dbm_v!(ll, Ξ, γc, δt)
-  prc = logdinvgamma(γc^2, γ_prior[1], γ_prior[2])
+  llik_dbm_v!(ll, Ξ, αc, γc, δt)
+  prc = logdnorm(αc,       α_prior[1], α_prior[2]^2) + 
+        logdinvgamma(γc^2, γ_prior[1], γ_prior[2])
 
-  # sum squares in log-σ(t)
-  ssσ, nσ = sss_v(Ξ, lσ)
-  nin     = lastindex(inodes)  # number of internal nodes
-  el      = lastindex(idf)     # number of branches
+  L   = [e(ξ) for ξ in Ξ]  # edge lengths
+  nin = lastindex(inodes)  # number of internal nodes
+  el  = lastindex(idf)     # number of branches
+
+  # delta change, sum squares, path length in log-σ(t)
+  ddσ, ssσ, nσ = sss_v(Ξ, lσ, αc)
 
   # for scale tuning
   ltn = 0
@@ -139,12 +153,19 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
     for pupi in pup
 
       ## parameter updates
-      # update rate drift `γ`
+      # update rate drift `α`
       if pupi === 1
+
+        prc, αc = update_α!(αc, γc, L, ddσ, ll, prc, α_prior)
+
+        _ss!(ssσ, Ξ, lσ, αc)
+
+      # update rate diffusion `γ`
+      elseif pupi === 2
 
         prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
-      elseif pupi === 2
+      elseif pupi === 3
 
         lac += update_scale!(Ξ, ll, stn, δt)
         lup += 1.0
@@ -154,7 +175,7 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
 
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
-        update_x!(bix, Ξ, idf, γc, ll, ssσ, δt, srδt)
+        update_xs!(bix, Ξ, idf, αc, γc, ll, ddσ, ssσ, δt, srδt)
 
       end
     end
@@ -168,7 +189,7 @@ function mcmc_burn_dbm(Ξ       ::Vector{sTxs},
     next!(pbar)
   end
 
-  return Ξ, idf, ll, ssσ, nσ, prc, γc, stn
+  return Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn
 end
 
 
@@ -178,10 +199,14 @@ end
     mcmc_dbm(Ξ       ::Vector{sTxs},
              idf     ::Vector{iBffs},
              ll      ::Vector{Float64},
+             ddσ     ::Vector{Float64},
              ssσ     ::Vector{Float64},
              nσ      ::Vector{Float64},
              prc     ::Float64,
-             γc     ::Float64,
+             αc      ::Float64,
+             γc      ::Float64,
+             stn     ::Float64,
+             α_prior ::NTuple{2,Float64},
              γ_prior ::NTuple{2,Float64},
              δt      ::Float64,
              srδt    ::Float64,
@@ -198,11 +223,14 @@ MCMC chain for diffused Brownian motion.
 function mcmc_dbm(Ξ       ::Vector{sTxs},
                   idf     ::Vector{iBffs},
                   ll      ::Vector{Float64},
+                  ddσ     ::Vector{Float64},
                   ssσ     ::Vector{Float64},
                   nσ      ::Vector{Float64},
                   prc     ::Float64,
+                  αc      ::Float64,
                   γc      ::Float64,
                   stn     ::Float64,
+                  α_prior ::NTuple{2,Float64},
                   γ_prior ::NTuple{2,Float64},
                   δt      ::Float64,
                   srδt    ::Float64,
@@ -218,10 +246,11 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
   nlogs = fld(niter,nthin)
   lthin, lit = 0, 0
 
-  r = Array{Float64,2}(undef, nlogs, 6)
+  r = Array{Float64,2}(undef, nlogs, 7)
 
   # make Ξ vector
   treev   = sTxs[]
+  L       = [e(ξ) for ξ in Ξ]  # edge lengths
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
 
@@ -230,7 +259,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tx_root\tsigma_root\tgamma\n")
+    write(of, "iteration\tlikelihood\tprior\tx_root\tsigma_root\talpha\tgamma\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
@@ -244,22 +273,35 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
         for pupi in pup
 
           ## parameter updates
-          # update rate drift `γ`
+          # update rate drift `α`
           if pupi === 1
 
-            prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
+            prc, αc = update_α!(αc, γc, L, ddσ, ll, prc, α_prior)
 
-            # ll0 = llik_dbm(Ξ, γc, δt)
+            _ss!(ssσ, Ξ, lσ, αc)
+
+            # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
             #    @show ll0, llc, it, pupi
             #    return
             # end
 
+          # update rate diffusion `γ`
           elseif pupi === 2
+
+            prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
+
+            # ll0 = llik_dbm(Ξ, αc, γc, δt)
+            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            #    @show ll0, llc, it, pupi
+            #    return
+            # end
+
+          elseif pupi === 3
 
             lac = update_scale!(Ξ, ll, stn, δt)
 
-            # ll0 = llik_dbm(Ξ, γc, δt)
+            # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
             #    @show ll0, llc, it, pupi
             #    return
@@ -270,9 +312,9 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
             nix = ceil(Int64,rand()*nin)
             bix = inodes[nix]
-            update_x!(bix, Ξ, idf, γc, ll, ssσ, δt, srδt)
+            update_xs!(bix, Ξ, idf, αc, γc, ll, ddσ, ssσ, δt, srδt)
 
-            # ll0 = llik_dbm(Ξ, γc, δt)
+            # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
             #    @show ll0, llc, it, pupi
             #    return
@@ -290,7 +332,8 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             r[lit,3] = prc
             r[lit,4] = xv(Ξ[1])[1]
             r[lit,5] = exp(lσ(Ξ[1])[1])
-            r[lit,6] = γc
+            r[lit,6] = αc
+            r[lit,7] = γc
             push!(treev, couple(Ξ, idf, 1))
           end
           lthin = 0
@@ -301,7 +344,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
         if sthin === nflush
           write(of, 
             string(Float64(it), "\t", sum(ll), "\t", prc, "\t", 
-              xv(Ξ[1])[1],"\t", exp(lσ(Ξ[1])[1]), "\t", γc, "\n"))
+              xv(Ξ[1])[1],"\t", exp(lσ(Ξ[1])[1]), "\t", αc, "\t", γc, "\n"))
           flush(of)
           write(tf, 
             string(istring(couple(Ξ, idf, 1)), "\n"))
@@ -318,6 +361,48 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 end
 
 
+
+
+"""
+    update_α!(αc     ::Float64,
+              γ      ::Float64,
+              L      ::Vector{Float64},
+              ddσ    ::Vector{Float64},
+              ll     ::Vector{Float64},
+              prc    ::Float64,
+              α_prior::NTuple{2,Float64})
+
+Gibbs update for `α`.
+"""
+function update_α!(αc     ::Float64,
+                   γ      ::Float64,
+                   L      ::Vector{Float64},
+                   ddσ    ::Vector{Float64},
+                   ll     ::Vector{Float64},
+                   prc    ::Float64,
+                   α_prior::NTuple{2,Float64})
+
+  # ratio
+  ν  = α_prior[1]
+  τ2 = α_prior[2]^2
+  γ2 = γ^2
+  rs = γ2/τ2
+  Lt = sum(L)
+
+  # gibbs update for σ
+  αp = rnorm((sum(ddσ) + rs*ν)/(rs + Lt), sqrt(γ2/(rs + Lt)))
+
+  # update prior
+  prc += llrdnorm_x(αp, αc, ν, τ2)
+
+  # update likelihoods
+  for i in Base.OneTo(lastindex(ll))
+    iszero(L[i]) && continue
+    ll[i] += 0.5*L[i]/γ2*(αc^2 - αp^2 + 2.0*ddσ[i]*(αp - αc)/L[i])
+  end
+
+  return prc, αp
+end
 
 
 
@@ -398,25 +483,29 @@ end
 
 
 """
-    update_x!(bix  ::Int64,
-              Ξ    ::Vector{sTxs},
-              idf  ::Vector{iBffs},
-              γ    ::Float64,
-              ll   ::Vector{Float64},
-              ssσ  ::Vector{Float64},
-              δt   ::Float64,
-              srδt ::Float64)
+    update_xs!(bix  ::Int64,
+               Ξ    ::Vector{sTxs},
+               idf  ::Vector{iBffs},
+               α    ::Float64,
+               γ    ::Float64,
+               ll   ::Vector{Float64},
+               ddσ  ::Vector{Float64},
+               ssσ  ::Vector{Float64},
+               δt   ::Float64,
+               srδt ::Float64)
 
 Make a `dbm` update for an internal branch and its descendants.
 """
-function update_x!(bix  ::Int64,
-                   Ξ    ::Vector{sTxs},
-                   idf  ::Vector{iBffs},
-                   γ    ::Float64,
-                   ll   ::Vector{Float64},
-                   ssσ  ::Vector{Float64},
-                   δt   ::Float64,
-                   srδt ::Float64)
+function update_xs!(bix  ::Int64,
+                    Ξ    ::Vector{sTxs},
+                    idf  ::Vector{iBffs},
+                    α    ::Float64,
+                    γ    ::Float64,
+                    ll   ::Vector{Float64},
+                    ddσ  ::Vector{Float64},
+                    ssσ  ::Vector{Float64},
+                    δt   ::Float64,
+                    srδt ::Float64)
 
   ξi   = Ξ[bix]
   bi   = idf[bix]
@@ -428,32 +517,36 @@ function update_x!(bix  ::Int64,
 
   # if crown root
   if root && iszero(e(ξi))
-    ll[i1], ll[i2], ssσ[i1], ssσ[i2] =
-      _crown_update!(ξi, ξ1, Ξ[i2], γ, δt, srδt)
+    ll[i1], ll[i2], ddσ[i1], ddσ[i2], ssσ[i1], ssσ[i2] =
+      _crown_update!(ξi, ξ1, Ξ[i2], α, γ, δt, srδt)
   # if stem
   elseif root
-    ll[bix], ssσ[bix] = _stem_update!(ξi, γ, δt, srδt)
+    ll[bix], ddσ[bix], ssσ[bix] = _stem_update!(ξi, α, γ, δt, srδt)
   # if duo
   elseif iszero(i2)
     if ifx(bi)
-      ll[bix], ll[i1], ssσ[bix], ssσ[i1] = 
-        _update_duo_x!(ξi, ξ1, xavg(bi), xstd(bi), γ, δt, srδt)
+      ll[bix], ll[i1], ddσ[bix], ddσ[i1], ssσ[bix], ssσ[i1] = 
+        _update_duo_x!(ξi, ξ1, xavg(bi), xstd(bi), α, γ, δt, srδt)
     else
-      ll[bix], ll[i1], ssσ[bix], ssσ[i1] = _update_duo_x!(ξi, ξ1, γ, δt, srδt)
+      ll[bix], ll[i1], ddσ[bix], ddσ[i1], ssσ[bix], ssσ[i1] = 
+        _update_duo_x!(ξi, ξ1, α, γ, δt, srδt)
     end
   # if triad
   else
     ξ2 = Ξ[i2]
-    ll[bix], ll[i1], ll[i2], ssσ[bix], ssσ[i1], ssσ[i2] =
-      _update_triad_x!(ξi, ξ1, ξ2, γ, δt, srδt)
+     ll[bix],  ll[i1],  ll[i2], 
+    ddσ[bix], ddσ[i1], ddσ[i2], 
+    ssσ[bix], ssσ[i1], ssσ[i2] =
+      _update_triad_x!(ξi, ξ1, ξ2, α, γ, δt, srδt)
   end
 
   # update daughters
   if iszero(d1(b1))
     if ifx(b1) 
-      ll[i1], ssσ[i1] = _update_leaf_x!(ξ1, xavg(b1), xstd(b1), γ, δt, srδt)
+      ll[i1], ddσ[i1], ssσ[i1] = 
+        _update_leaf_x!(ξ1, xavg(b1), xstd(b1), α, γ, δt, srδt)
     else
-      ll[i1], ssσ[i1] = _update_leaf_x!(ξ1, γ, δt, srδt)
+      ll[i1], ddσ[i1], ssσ[i1] = _update_leaf_x!(ξ1, α, γ, δt, srδt)
     end
   end
 
@@ -462,9 +555,11 @@ function update_x!(bix  ::Int64,
     if iszero(d1(b2))
       ξ2 = Ξ[i2]
       if ifx(b2)
-        ll[i2], ssσ[i2] = _update_leaf_x!(ξ2, xavg(b2), xstd(b2), γ, δt, srδt)
+        ll[i2], ddσ[i2], ssσ[i2] = 
+          _update_leaf_x!(ξ2, xavg(b2), xstd(b2), α, γ, δt, srδt)
       else
-        ll[i2], ssσ[i2] = _update_leaf_x!(ξ2, γ, δt, srδt)
+        ll[i2], ddσ[i2], ssσ[i2] = 
+          _update_leaf_x!(ξ2, α, γ, δt, srδt)
       end
     end
   end

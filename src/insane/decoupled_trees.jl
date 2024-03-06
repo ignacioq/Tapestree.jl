@@ -372,7 +372,7 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     end
 
     # speciation
-    lλv = bm(lλ0,α, σλ, δt, fdti, srδt, nts)
+    lλv = bm(lλ0, α, σλ, δt, fdti, srδt, nts)
 
     # extinction
     tii = ti(bi)
@@ -559,12 +559,14 @@ end
 
 
 """
-    make_Ξ(idf ::Vector{iBffs},
-           xr  ::Vector{Float64},
-           σi  ::Float64,
-           δt  ::Float64,
-           srδt::Float64,
-           ::Type{sTxs})
+    _make_Ξ!(Ξ   ::Vector{sTxs},
+             i   ::Int64,
+             xr  ::Vector{Float64},
+             σi  ::Float64,
+             γi  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs})
 
 Make edge tree `Ξ` from the edge directory.
 """
@@ -606,7 +608,7 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
       nts  -= 1
     end
 
-    xv, lσ  = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, nts)
+    xv, lσ = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, nts)
   end
 
   l = nts + 2
@@ -996,20 +998,22 @@ end
 
 
 """
-    sss(Ξ::Vector{T}, α::Float64, f::Function) where {T <: iTree}
+    sss_v(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
-Returns the standardized sum of squares of a diffusion without drift `α`.
+Returns the standardized sum of squares of a diffusion without drift `α` in
+vector form.
 """
-function sss_v(Ξ::Vector{T}, f::Function) where {T <: iTree}
+function sss_v(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
   nv = lastindex(Ξ)
-  n  = zeros(nv)
+  dd = zeros(nv)
   ss = zeros(nv)
+  n  = zeros(nv)
   for i in Base.OneTo(nv)
-    ss[i], n[i] = _sss(Ξ[i], f, 0.0, 0.0)
+    dd[i], ss[i], n[i] = _ss_dd(Ξ[i], f, α, 0.0, 0.0, 0.0)
   end
 
-  return ss, n
+  return dd, ss, n
 end
 
 
@@ -1028,6 +1032,28 @@ function _ss(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
   end
 
   return ss
+end
+
+
+
+"""
+    _ss!(ss::Vector{Float64}, 
+         Ξ ::Vector{T}, 
+         f ::Function, 
+         α ::Float64) where {T <: iTree}
+
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _ss!(ss::Vector{Float64}, 
+              Ξ ::Vector{T}, 
+              f ::Function, 
+              α ::Float64) where {T <: iTree}
+
+  for i in Base.OneTo(lastindex(Ξ))
+    ss[i] = _ss(Ξ[i], f, α)
+  end
+
+  return nothing
 end
 
 

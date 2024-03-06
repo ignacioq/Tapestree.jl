@@ -16,6 +16,7 @@ Created 25 01 2024
     sim_dbm(tree::iTree, 
             x0  ::Float64,
             σ0  ::Float64,
+            α   ::Float64,
             γ   ::Float64,
             δt  ::Float64)
 
@@ -24,10 +25,11 @@ Simulate a diffused Brownian motion given starting values.
 function sim_dbm(tree::iTree, 
                  x0  ::Float64,
                  σ0  ::Float64,
+                 α   ::Float64,
                  γ   ::Float64,
                  δt  ::Float64)
 
-  _sim_dbm(tree, x0, log(σ0), γ, δt, sqrt(δt))
+  _sim_dbm(tree, x0, log(σ0), α, γ, δt, sqrt(δt))
 end
 
 
@@ -37,6 +39,7 @@ end
     _sim_dbm(tree::iTree, 
              x0  ::Float64,
              lσ0 ::Float64,
+             α   ::Float64,
              γ   ::Float64,
              δt  ::Float64,
              srδt::Float64)
@@ -46,6 +49,7 @@ Simulate a diffused Brownian motion given starting values recursively.
 function _sim_dbm(tree::iTree, 
                   x0  ::Float64,
                   lσ0 ::Float64,
+                  α   ::Float64,
                   γ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
@@ -66,18 +70,18 @@ function _sim_dbm(tree::iTree,
       nt  -= 1
     end
 
-    xv, lσ  = dbm(x0, lσ0, γ, fdti, srδt, nt)
+    xv, lσ  = dbm(x0, lσ0, α, γ, fdti, δt, srδt, nt)
   end
 
   if def1(tree)
     if def2(tree)
       x0  = xv[end]
       lσ0 = lσ[end]
-      sTxs(_sim_dbm(tree.d1, x0, lσ0, γ, δt, srδt), 
-           _sim_dbm(tree.d2, x0, lσ0, γ, δt, srδt), 
+      sTxs(_sim_dbm(tree.d1, x0, lσ0, α, γ, δt, srδt), 
+           _sim_dbm(tree.d2, x0, lσ0, α, γ, δt, srδt), 
            et, δt, fdti, xv, lσ)
     else
-      sTxs(_sim_dbm(tree.d1, xv[end], lσ[end], γ, δt, srδt), 
+      sTxs(_sim_dbm(tree.d1, xv[end], lσ[end], α, γ, δt, srδt), 
            et, δt, fdti, xv, lσ)
     end
   else
@@ -89,9 +93,10 @@ end
 
 
 """
-    sim_dbm(tree::iTree, 
+    sim_dbm(tree::Tlabel, 
             x0  ::Float64,
             σ0  ::Float64,
+            α   ::Float64,
             γ   ::Float64,
             δt  ::Float64)
 
@@ -100,11 +105,12 @@ Simulate a diffused Brownian motion given starting values.
 function sim_dbm(tree::Tlabel, 
                  x0  ::Float64,
                  σ0  ::Float64,
+                 α   ::Float64,
                  γ   ::Float64,
                  δt  ::Float64)
   
   xs = Dict{String, Float64}()
-  tr = _sim_dbm(tree, x0, log(σ0), γ, δt, sqrt(δt), xs)
+  tr = _sim_dbm(tree, x0, log(σ0), α, γ, δt, sqrt(δt), xs)
   return tr, xs
 end
 
@@ -112,18 +118,21 @@ end
 
 
 """
-    _sim_dbm(tree::iTree, 
+    _sim_dbm(tree::Tlabel, 
              x0  ::Float64,
              lσ0 ::Float64,
+             α   ::Float64,
              γ   ::Float64,
              δt  ::Float64,
-             srδt::Float64)
+             srδt::Float64,
+             xs  ::Dict{String, Float64})
 
 Simulate a diffused Brownian motion given starting values recursively.
 """
 function _sim_dbm(tree::Tlabel, 
                   x0  ::Float64,
                   lσ0 ::Float64,
+                  α   ::Float64,
                   γ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
@@ -145,19 +154,19 @@ function _sim_dbm(tree::Tlabel,
       nt  -= 1
     end
 
-    xv, lσ = dbm(x0, lσ0, γ, fdti, srδt, nt)
+    xv, lσ = dbm(x0, lσ0, α, γ, δt, fdti, srδt, nt)
   end
 
   if def1(tree)
     if def2(tree)
       x0  = xv[end]
       lσ0 = lσ[end]
-      sTxs(_sim_dbm(tree.d1, x0, lσ0, γ, δt, srδt, xs), 
-           _sim_dbm(tree.d2, x0, lσ0, γ, δt, srδt, xs), 
+      sTxs(_sim_dbm(tree.d1, x0, lσ0, α, γ, δt, srδt, xs), 
+           _sim_dbm(tree.d2, x0, lσ0, α, γ, δt, srδt, xs), 
            et, δt, fdti, xv, lσ)
     else
       xs[l(tree)] = xv[end]
-      sTxs(_sim_dbm(tree.d1, xv[end], lσ[end], γ, δt, srδt, xs), 
+      sTxs(_sim_dbm(tree.d1, xv[end], lσ[end], α, γ, δt, srδt, xs), 
            et, δt, fdti, xv, lσ)
     end
   else
@@ -165,29 +174,6 @@ function _sim_dbm(tree::Tlabel,
     sTxs(et, δt, fdti, xv, lσ)
   end
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

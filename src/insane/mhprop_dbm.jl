@@ -14,6 +14,7 @@ Created 25 01 2024
 
 """
     _stem_update!(ξi   ::sTxs,
+                  α    ::Float64,
                   γ    ::Float64,
                   δt   ::Float64,
                   srδt ::Float64)
@@ -21,6 +22,7 @@ Created 25 01 2024
 Do dbm update for stem root.
 """
 function _stem_update!(ξi   ::sTxs,
+                       α    ::Float64,
                        γ    ::Float64,
                        δt   ::Float64,
                        srδt ::Float64)
@@ -31,10 +33,11 @@ function _stem_update!(ξi   ::sTxs,
     σp   = Vector{Float64}(undef,l)
     σn   = σc[l]
     xn   = xc[l]
+    el   = e(ξi)
     fdtp = fdt(ξi)
 
     # rate path sample
-    σr = rnorm(σn, γ*sqrt(e(ξi)))
+    σr = rnorm(σn - α*el, γ*sqrt(el))
     bb!(σp, σr, σn, γ, δt, fdtp, srδt)
 
     llr = llr_dbm(xc, σp, σc, δt, fdtp)
@@ -48,31 +51,33 @@ function _stem_update!(ξi   ::sTxs,
     dbb!(xc, xr, xn, σc, δt, fdtp, srδt)
 
     # likelihood
-    ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp)
+    ll, dd, ss = ll_dbm_ss_dd_b(xc, σc, α, γ, δt, fdtp)
   end
 
-  return ll, ss
+  return ll, dd, ss
 end
 
 
 
 
 """
-    _crown_update!(ξi   ::sTxs,
-                   ξ1   ::sTxs,
-                   ξ2   ::sTxs,
-                   γ    ::Float64,
-                   δt   ::Float64,
-                   srδt ::Float64)
+    _crown_update!(ξi  ::sTxs,
+                   ξ1  ::sTxs,
+                   ξ2  ::sTxs,
+                   α   ::Float64,
+                   γ   ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64)
 
 Do dbm update for crown root.
 """
-function _crown_update!(ξi   ::sTxs,
-                        ξ1   ::sTxs,
-                        ξ2   ::sTxs,
-                        γ    ::Float64,
-                        δt   ::Float64,
-                        srδt ::Float64)
+function _crown_update!(ξi  ::sTxs,
+                        ξ1  ::sTxs,
+                        ξ2  ::sTxs,
+                        α   ::Float64,
+                        γ   ::Float64,
+                        δt  ::Float64,
+                        srδt::Float64)
 
   @inbounds begin
     σc   = lσ(ξi)
@@ -89,11 +94,13 @@ function _crown_update!(ξi   ::sTxs,
     σ2f  = σ2[l2]
     x1f  = x1[l1]
     x2f  = x2[l2]
+    e1   = e(ξ1)
+    e2   = e(ξ2)
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
     # rate path sample
-    σn = duoprop(σ1f, σ2f,  e(ξ1), e(ξ2), γ)
+    σn = duoprop(σ1f - α*e1, σ2f - α*e2, e1, e2, γ)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
     bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
 
@@ -115,11 +122,11 @@ function _crown_update!(ξi   ::sTxs,
     fill!(xc, xn)
 
     # log likelihood ratios
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
-    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2)
+    ll1, dd1, ss1 = ll_dbm_ss_dd_b(x1, σ1, α, γ, δt, fdt1)
+    ll2, dd2, ss2 = ll_dbm_ss_dd_b(x2, σ2, α, γ, δt, fdt2)
   end
 
-  return ll1, ll2, ss1, ss2
+  return ll1, ll2, dd1, dd2, ss1, ss2
 end
 
 
@@ -129,6 +136,7 @@ end
     _update_leaf_x!(ξi  ::sTxs,
                     xavg::Float64,
                     xstd::Float64,
+                    α   ::Float64,
                     γ   ::Float64,
                     δt  ::Float64,
                     srδt::Float64)
@@ -138,6 +146,7 @@ Make a `dbm` **fixed** tip proposal.
 function _update_leaf_x!(ξi  ::sTxs,
                          xavg::Float64,
                          xstd::Float64,
+                         α   ::Float64,
                          γ   ::Float64,
                          δt  ::Float64,
                          srδt::Float64)
@@ -149,7 +158,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   fdtp = fdt(ξi)
 
   # rate path sample
-  bm!(σp, σc[1], γ, δt, fdtp, srδt)
+  bm!(σp, σc[1], α, γ, δt, fdtp, srδt)
 
   llr = llr_dbm(xc, σp, σc, δt, fdtp)
 
@@ -169,9 +178,9 @@ function _update_leaf_x!(ξi  ::sTxs,
   dbb!(xc, xi, xn, σc, δt, fdtp, srδt)
 
   # likelihood
-  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp)
+  ll, dd, ss = ll_dbm_ss_dd_b(xc, σc, α, γ, δt, fdtp)
 
-  return ll, ss
+  return ll, dd, ss
 end
 
 
@@ -179,6 +188,7 @@ end
 
 """
     _update_leaf_x!(ξi  ::sTxs,
+                    α   ::Float64,
                     γ   ::Float64,
                     δt  ::Float64,
                     srδt::Float64)
@@ -186,6 +196,7 @@ end
 Make a `dbm` **unfixed** tip proposal.
 """
 function _update_leaf_x!(ξi  ::sTxs,
+                         α   ::Float64,
                          γ   ::Float64,
                          δt  ::Float64,
                          srδt::Float64)
@@ -195,12 +206,12 @@ function _update_leaf_x!(ξi  ::sTxs,
   fdtp = fdt(ξi)
 
   # trait and rate path sample
-  dbm!(xc, xc[1], σc, σc[1], γ, fdtp, srδt)
+  dbm!(xc, xc[1], σc, σc[1], α, γ, δt, fdtp, srδt)
 
   # likelihood
-  ll, ss = ll_dbm_ss_b(xc, σc, γ, δt, fdtp)
+  ll, dd, ss = ll_dbm_ss_dd_b(xc, σc, α, γ, δt, fdtp)
 
-  return ll, ss
+  return ll, dd, ss
 end
 
 
@@ -211,6 +222,7 @@ end
                    ξ1  ::sTxs,
                    xavg::Float64,
                    xstd::Float64,
+                   α   ::Float64,
                    γ   ::Float64,
                    δt  ::Float64,
                    srδt::Float64)
@@ -221,6 +233,7 @@ function _update_duo_x!(ξi  ::sTxs,
                         ξ1  ::sTxs,
                         xavg::Float64,
                         xstd::Float64,
+                        α   ::Float64,
                         γ   ::Float64,
                         δt  ::Float64,
                         srδt::Float64)
@@ -239,11 +252,13 @@ function _update_duo_x!(ξi  ::sTxs,
     xai  = xa[1]
     xn   = xa[la]
     x1f  = x1[l1]
+    ei   = e(ξi)
+    e1   = e(ξ1)
     fdta = fdt(ξi)
     fdt1 = fdt(ξ1)
 
     # rate path sample
-    σn = duoprop(σai, σ1f, e(ξi), e(ξ1), γ)
+    σn = duoprop(σai + α*ei, σ1f - α*e1, ei, e1, γ)
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
 
@@ -266,11 +281,11 @@ function _update_duo_x!(ξi  ::sTxs,
     dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
 
     # log likelihood ratios
-    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta)
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
+    lla, dda, ssa = ll_dbm_ss_dd_b(xa, σa, α, γ, δt, fdta)
+    ll1, dd1, ss1 = ll_dbm_ss_dd_b(x1, σ1, α, γ, δt, fdt1)
   end
 
-  return lla, ll1, ssa, ss1
+  return lla, ll1, dda, dd1, ssa, ss1
 end
 
 
@@ -280,6 +295,7 @@ end
 """
     _update_duo_x!(ξi   ::sTxs,
                    ξ1   ::sTxs,
+                   α    ::Float64,
                    γ    ::Float64,
                    δt   ::Float64,
                    srδt ::Float64)
@@ -288,6 +304,7 @@ Do duo `dbm` update for **unfixed** node.
 """
 function _update_duo_x!(ξi   ::sTxs,
                         ξ1   ::sTxs,
+                        α    ::Float64,
                         γ    ::Float64,
                         δt   ::Float64,
                         srδt ::Float64)
@@ -305,11 +322,13 @@ function _update_duo_x!(ξi   ::sTxs,
     σ1f  = σ1[l1]
     xai  = xa[1]
     x1f  = x1[l1]
+    ei   = e(ξi)
+    e1   = e(ξ1)
     fdta = fdt(ξi)
     fdt1 = fdt(ξ1)
 
     # rate path sample
-    σn = duoprop(σai, σ1f, e(ξi), e(ξ1), γ)
+    σn = duoprop(σai + α*ei, σ1f - α*e1, ei, e1, γ)
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
 
@@ -327,11 +346,11 @@ function _update_duo_x!(ξi   ::sTxs,
     dbb!(x1, xn, x1f, σ1, δt, fdt1, srδt)
 
     # log likelihood ratios
-    lla, ssa = ll_dbm_ss_b(xa, σa, γ, δt, fdta)
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
+    lla, dda, ssa = ll_dbm_ss_dd_b(xa, σa, α, γ, δt, fdta)
+    ll1, dd1, ss1 = ll_dbm_ss_dd_b(x1, σ1, α, γ, δt, fdt1)
   end
 
-  return lla, ll1, ssa, ss1
+  return lla, ll1, dda, dd1, ssa, ss1
 end
 
 
@@ -341,6 +360,7 @@ end
     _update_triad_x!(ξi   ::sTxs,
                      ξ1   ::sTxs,
                      ξ2   ::sTxs,
+                     α    ::Float64,
                      γ    ::Float64,
                      δt   ::Float64,
                      srδt ::Float64)
@@ -350,6 +370,7 @@ Make a `gbm` trio proposal.
 function _update_triad_x!(ξi   ::sTxs,
                           ξ1   ::sTxs,
                           ξ2   ::sTxs,
+                          α    ::Float64,
                           γ    ::Float64,
                           δt   ::Float64,
                           srδt ::Float64)
@@ -373,12 +394,15 @@ function _update_triad_x!(ξi   ::sTxs,
     xai  = xa[1]
     x1f  = x1[l1]
     x2f  = x2[l2]
+    ei   = e(ξi) 
+    e1   = e(ξ1) 
+    e2   = e(ξ2)
     fdta = fdt(ξi)
     fdt1 = fdt(ξ1)
     fdt2 = fdt(ξ2)
 
     # rate path sample
-    σn = trioprop(σai, σ1f, σ2f, e(ξi), e(ξ1), e(ξ2), γ)
+    σn = trioprop(σai + α*ei, σ1f - α*e1, σ2f - α*e2, ei, e1, e2, γ)
     bb!(σap, σai, σn, γ, δt, fdta, srδt)
     bb!(σ1p, σn, σ1f, γ, δt, fdt1, srδt)
     bb!(σ2p, σn, σ2f, γ, δt, fdt2, srδt)
@@ -401,11 +425,13 @@ function _update_triad_x!(ξi   ::sTxs,
     dbb!(x2, xn, x2f, σ2, δt, fdt2, srδt)
 
     # log likelihood ratios
-    lla, ssc = ll_dbm_ss_b(xa, σa, γ, δt, fdta)
-    ll1, ss1 = ll_dbm_ss_b(x1, σ1, γ, δt, fdt1)
-    ll2, ss2 = ll_dbm_ss_b(x2, σ2, γ, δt, fdt2)
+    lla, ddc, ssc = ll_dbm_ss_dd_b(xa, σa, α, γ, δt, fdta)
+    ll1, dd1, ss1 = ll_dbm_ss_dd_b(x1, σ1, α, γ, δt, fdt1)
+    ll2, dd2, ss2 = ll_dbm_ss_dd_b(x2, σ2, α, γ, δt, fdt2)
   end
 
-  return lla, ll1, ll2, ssc, ss1, ss2
+  return lla, ll1, ll2, ddc, dd1, dd2, ssc, ss1, ss2
 end
+
+
 
