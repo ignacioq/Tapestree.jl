@@ -392,6 +392,10 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
     # log tuning parameters
     ltn += 1
     if ltn === tune_int
+
+      # Recomputes some quantities whose approximations may have drifted slightly
+      ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
       ltn = 0
@@ -601,6 +605,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # log parameters
         lthin += 1
         if lthin === nthin
+
+          # Recomputes some quantities whose approximations may have drifted slightly
+          ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+
           lit += 1
           @inbounds begin
             r[lit,1] = Float64(it)
