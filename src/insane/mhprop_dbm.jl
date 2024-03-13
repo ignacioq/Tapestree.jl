@@ -13,6 +13,59 @@ Created 25 01 2024
 
 
 """
+    _fstem_update!(ξi   ::sTxs,
+                   ξ1   ::sTxs,
+                   α    ::Float64,
+                   γ    ::Float64,
+                   δt   ::Float64,
+                   srδt ::Float64)
+
+Do dbm update for fossil stem root.
+"""
+function _fstem_update!(ξi   ::sTxs,
+                        ξ1   ::sTxs,
+                        α    ::Float64,
+                        γ    ::Float64,
+                        δt   ::Float64,
+                        srδt ::Float64)
+
+  @inbounds begin
+    σ1   = lσ(ξ1)
+    x1   = xv(ξ1)
+    l    = lastindex(σ1)
+    σp   = Vector{Float64}(undef,l)
+    σn   = σ1[l]
+    xn   = x1[l]
+    el   = e(ξ1)
+    fdt1 = fdt(ξ1)
+
+    # rate path sample
+    σr = rnorm(σn - α*el, γ*sqrt(el))
+    bb!(σp, σr, σn, γ, δt, fdt1, srδt)
+
+    llr = llr_dbm(x1, σp, σ1, δt, fdt1)
+
+    if -randexp() < llr
+      unsafe_copyto!(σ1, 1, σp, 1, l)
+      fill!(lσ(ξi), σr)
+    end
+
+    # trait path sample
+    xr = rnorm(xn, intσ(σ1, δt, fdt1))
+    dbb!(x1, xr, xn, σ1, δt, fdt1, srδt)
+    fill!(xv(ξi), xr)
+
+    # likelihood
+    ll, dd, ss = ll_dbm_ss_dd_b(x1, σ1, α, γ, δt, fdt1)
+  end
+
+  return ll, dd, ss
+end
+
+
+
+
+"""
     _stem_update!(ξi   ::sTxs,
                   α    ::Float64,
                   γ    ::Float64,

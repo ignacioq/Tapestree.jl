@@ -901,7 +901,7 @@ function iparse(s::String)
   ls = lastindex(s)
   i  = findfirst('-', s)
   st = SubString(s,1:(i-1))
-  T  = iTd[st]
+  T  = getfield(Tapestree.INSANE, Symbol(st))
   si = s[i+2:ls-1]
 
   t0, ix = _iparse(si, 1, ls - lastindex(st) - 3, T)

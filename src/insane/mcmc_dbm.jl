@@ -515,10 +515,16 @@ function update_xs!(bix  ::Int64,
   ξ1   = Ξ[i1]
   root = iszero(pa(bi))
 
-  # if crown root
   if root && iszero(e(ξi))
-    ll[i1], ll[i2], ddσ[i1], ddσ[i2], ssσ[i1], ssσ[i2] =
-      _crown_update!(ξi, ξ1, Ξ[i2], α, γ, δt, srδt)
+
+    #if stem fossil
+    if isfossil(bi)
+      ll[i1], ddσ[i1], ssσ[i1] = _fstem_update!(ξi, ξ1, α, γ, δt, srδt)
+    # if crown
+    else
+      ll[i1], ll[i2], ddσ[i1], ddσ[i2], ssσ[i1], ssσ[i2] =
+        _crown_update!(ξi, ξ1, Ξ[i2], α, γ, δt, srδt)
+    end
   # if stem
   elseif root
     ll[bix], ddσ[bix], ssσ[bix] = _stem_update!(ξi, α, γ, δt, srδt)

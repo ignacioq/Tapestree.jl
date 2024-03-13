@@ -54,10 +54,6 @@ function _fstem_update!(ξi   ::iTfbd,
                         surv ::Int64)
 
   @inbounds begin
-    λpc  = lλ(ξi)
-    μpc  = lμ(ξi)
-    λi   = λpc[1]
-    μi   = μpc[1]
     λ1c  = lλ(ξ1)
     μ1c  = lμ(ξ1)
     l1   = lastindex(λ1c)
@@ -104,8 +100,8 @@ function _fstem_update!(ξi   ::iTfbd,
         irλ += irrλ
         irμ += irrμ
         mc   = mp
-        fill!(λpc, λr)
-        fill!(μpc, μr)
+        fill!(lλ(ξi), λr)
+        fill!(lμ(ξi), μr)
         unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
         unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
       end
