@@ -32,7 +32,7 @@ Created 11 02 2022
                 μi      ::Float64               = NaN,
                 ψi      ::Float64               = NaN,
                 ωi      ::Float64               = NaN,
-                ωtni    ::Float64               = 1.0,
+                stnωi   ::Float64               = 1.0,
                 obj_ar  ::Float64               = 0.4,
                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1),
                 survival::Bool                  = true,
@@ -61,7 +61,7 @@ function insane_cobd(tree    ::sTf_label,
                      μi      ::Float64               = NaN,
                      ψi      ::Float64               = NaN,
                      ωi      ::Float64               = NaN,
-                     ωtni    ::Float64               = 1.0,
+                     stnωi   ::Float64               = 1.0,
                      obj_ar  ::Float64               = 0.4,
                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1),
                      survival::Bool                  = true,
@@ -212,13 +212,13 @@ function insane_cobd(tree    ::sTf_label,
   @info "running constant occurrence birth-death"
 
   # adaptive phase
-  llc, prc, λc, μc, ψc, ωc, ωtn, mc, ns, L, LTT =
+  llc, prc, λc, μc, ψc, ωc, stnω, mc, ns, L, LTT =
      mcmc_burn_cobd(Ξ, idf, ωtimes, LTT, tune_int, λ_prior, μ_prior, ψ_prior, ω_prior, ψω_epoch,
-        f_epoch, nburn, λc, μc, ψc, ωc, ωtni, scalef, mc, nω, th, rmλ, surv, bst, eixi, eixf, pup, prints)
+        f_epoch, nburn, λc, μc, ψc, ωc, stnωi, scalef, mc, nω, th, rmλ, surv, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev =
-    mcmc_cobd(Ξ, idf, ωtimes, LTT, llc, prc, λc, μc, ψc, ωc, ωtn, mc, ns, nω, L, 
+    mcmc_cobd(Ξ, idf, ωtimes, LTT, llc, prc, λc, μc, ψc, ωc, stnω, mc, ns, nω, L, 
       λ_prior, μ_prior, ψ_prior, ω_prior, ψω_epoch, f_epoch, th, rmλ, surv, bst, 
       eixi, eixf, pup, niter, nthin, nflush, ofile, prints)
 
@@ -245,7 +245,7 @@ end
                    μc      ::Float64,
                    ψc      ::Vector{Float64},
                    ωc      ::Vector{Float64},
-                   ωtni    ::Float64,
+                   stnωi   ::Float64,
                    scalef  ::Function,
                    mc      ::Float64,
                    nω      ::Vector{Int64},
@@ -277,7 +277,7 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
                         μc      ::Float64,
                         ψc      ::Vector{Float64},
                         ωc      ::Vector{Float64},
-                        ωtni    ::Float64,
+                        stnωi   ::Float64,
                         scalef  ::Function,
                         mc      ::Float64,
                         nω      ::Vector{Int64},
@@ -300,7 +300,7 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
   ltn = 0
   lup = 0.0
   lac = 0.0
-  ωtn = ωtni
+  stnω = stnωi
 
   # likelihood
   llc = llik_cobd(Ξ, ωtimes, LTT, λc, μc, ψc, ωc, ns, ψω_epoch, bst, eixi) - 
@@ -339,7 +339,7 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
       # ω proposal
       elseif p === 4
 
-        llc, prc, lac, lup = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, lac, lup, ωtn, ω_prior)
+        llc, prc, lac, lup = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, lac, lup, stnω, ω_prior)
 
       # forward simulation proposal proposal
       else
@@ -356,7 +356,7 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
       ltn += 1
       if ltn == tune_int
         if lup > 0.0
-          ωtn = scalef(ωtn,lac/lup)
+          stnω = scalef(stnω,lac/lup)
         end
         ltn = 0
       end
@@ -365,7 +365,7 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
     next!(pbar)
   end
 
-  return llc, prc, λc, μc, ψc, ωc, ωtn, mc, ns, L, LTT
+  return llc, prc, λc, μc, ψc, ωc, stnω, mc, ns, L, LTT
 end
 
 
@@ -382,7 +382,7 @@ end
               μc      ::Float64,
               ψc      ::Vector{Float64},
               ωc      ::Vector{Float64},
-              ωtn     ::Float64,
+              stnω    ::Float64,
               mc      ::Float64,
               ns      ::Float64,
               nω      ::Vector{Int64},
@@ -418,7 +418,7 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
                    μc      ::Float64,
                    ψc      ::Vector{Float64},
                    ωc      ::Vector{Float64},
-                   ωtn     ::Float64,
+                   stnω    ::Float64,
                    mc      ::Float64,
                    ns      ::Float64,
                    nω      ::Vector{Int64},
@@ -522,7 +522,7 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
           # ω proposal
           elseif p === 4
 
-            llc, prc = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, ωtn, ω_prior)
+            llc, prc = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, stnω, ω_prior)
 
           # forward simulation proposal proposal
           else
@@ -993,7 +993,7 @@ end
               LTT    ::Ltt,
               nω     ::Vector{Int64},
               L      ::Vector{Float64},
-              ωtn    ::Float64,
+              stnω   ::Float64,
               ω_prior::NTuple{2,Float64})
 
 Gibbs sampling of `ω` for constant occurrence birth-death.
@@ -1006,10 +1006,10 @@ function update_ω!(llc    ::Float64,
                    LTT    ::Ltt,
                    nω     ::Vector{Int64},
                    L      ::Vector{Float64},
-                   ωtn    ::Float64,
+                   stnω   ::Float64,
                    ω_prior::NTuple{2,Float64})
 
-  ωp  = mulupt.(ωc, ωtn)
+  ωp  = mulupt.(ωc, stnω)
   # llr = ω_llr(ωtimes, ωc, ωp, ψωts, LTT)
   llr = nω.*log.(ωp./ωc) .- L.*(ωp.-ωc)
 
@@ -1046,7 +1046,7 @@ end
               L      ::Vector{Float64},
               lac    ::Float64,
               lup    ::Float64,
-              ωtn    ::Float64,
+              stnω   ::Float64,
               ω_prior::NTuple{2,Float64})
 
 Gibbs sampling of `ω` for constant occurrence birth-death.
@@ -1061,10 +1061,10 @@ function update_ω!(llc    ::Float64,
                    L      ::Vector{Float64},
                    lac    ::Float64,
                    lup    ::Float64,
-                   ωtn    ::Float64,
+                   stnω   ::Float64,
                    ω_prior::NTuple{2,Float64})
 
-  ωp  = mulupt.(ωc, ωtn)
+  ωp  = mulupt.(ωc, stnω)
   # llr = ω_llr(ωtimes, ωc, ωp, ψωts, LTT)
   llr = nω.*log.(ωp./ωc) .- L.*(ωp.-ωc)
 
