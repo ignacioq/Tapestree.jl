@@ -335,8 +335,6 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), ddλ, llc, prc,
             mc, th, surv, δt, srδt, α_prior)
 
-        # llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-
         # update ssλ with new drift `α`
         ssλ, ssμ = _ss(Ξ, αc)
 
@@ -448,7 +446,7 @@ end
                 ofile   ::String,
                 prints  ::Int64)
 
-MCMC chain for `gbmbd`.
+MCMC chain for `fbdd`.
 """
 function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      idf     ::Vector{iBffs},
