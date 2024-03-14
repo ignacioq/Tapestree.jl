@@ -22,7 +22,8 @@ Created 03 09 2020
                  niter   ::Int64                 = 1_000,
                  nthin   ::Int64                 = 10,
                  nburn   ::Int64                 = 200,
-                 nflush  ::Int64                 = nthin,
+                 nflushθ ::Int64                 = nthin,
+                 nflushΞ ::Int64                 = Int64(ceil(niter/100)),
                  ofile   ::String                = string(homedir(), "/ibd"),
                  ϵi      ::Float64               = 0.2,
                  λi      ::Float64               = NaN,
@@ -30,7 +31,7 @@ Created 03 09 2020
                  αi      ::Float64               = 0.0,
                  σλi     ::Float64               = 0.01,
                  σμi     ::Float64               = 0.01,
-                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.1, 0.1, 0.2),
+                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
                  δt      ::Float64               = 1e-3,
                  survival::Bool                  = true,
                  mxthf   ::Float64               = Inf,
@@ -50,7 +51,8 @@ function insane_gbmbd(tree    ::sT_label;
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
-                      nflush  ::Int64                 = nthin,
+                      nflushθ ::Int64                 = nthin,
+                      nflushΞ ::Int64                 = Int64(ceil(niter/100)),
                       ofile   ::String                = string(homedir(), "/ibd"),
                       ϵi      ::Float64               = 0.2,
                       λi      ::Float64               = NaN,
@@ -58,7 +60,7 @@ function insane_gbmbd(tree    ::sT_label;
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.01,
                       σμi     ::Float64               = 0.01,
-                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.1, 0.1, 0.2),
+                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       survival::Bool                  = true,
                       mxthf   ::Float64               = Inf,
@@ -123,7 +125,7 @@ function insane_gbmbd(tree    ::sT_label;
   r, treev =
     mcmc_gbmbd(Ξ, idf, llc, prc, αc, σλc, σμc, mc, th, surv, ns, ne, stnλ, stnμ,
       λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, δt, srδt, inodes, pup, 
-      niter, nthin, nflush, ofile, prints)
+      niter, nthin, nflushθ, nflushΞ, ofile, prints)
 
   return r, treev
 end
@@ -261,6 +263,10 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
     ltn += 1
     if ltn === 100
+
+      # Recomputes some quantities whose approximations may have drifted slightly
+      ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
       ltn = 0
@@ -301,7 +307,8 @@ end
                pup     ::Vector{Int64},
                niter   ::Int64,
                nthin   ::Int64,
-               nflush  ::Int64,
+               nflushθ ::Int64,
+               nflushΞ ::Int64,
                ofile   ::String,
                prints  ::Int64)
 
@@ -332,7 +339,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     pup     ::Vector{Int64},
                     niter   ::Int64,
                     nthin   ::Int64,
-                    nflush  ::Int64,
+                    nflushθ ::Int64,
+                    nflushΞ ::Int64,
                     ofile   ::String,
                     prints  ::Int64)
 
@@ -357,7 +365,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   nbr  = lastindex(idf)
 
   # flush to file
-  sthin = 0
+  sthinθ = sthinΞ = 0
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -446,6 +454,10 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
         # log parameters
         lthin += 1
         if lthin === nthin
+
+          # Recomputes some quantities whose approximations may have drifted slightly
+          ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+
           lit += 1
           @inbounds begin
             r[lit,1] = Float64(it)
@@ -462,17 +474,21 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
         end
 
         # flush parameters
-        sthin += 1
-        if sthin === nflush
+        sthinθ += 1
+        if sthinθ === nflushθ
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
                σλc, "\t", σμc,"\n"))
           flush(of)
+          sthinθ = 0
+        end
+        sthinΞ += 1
+        if sthinΞ === nflushΞ
           write(tf, 
             string(istring(couple(Ξ, idf, 1)), "\n"))
           flush(tf)
-          sthin = 0
+          sthinΞ = 0
         end
 
         next!(pbar)
