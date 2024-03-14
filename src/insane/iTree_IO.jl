@@ -901,7 +901,8 @@ function iparse(s::String)
   ls = lastindex(s)
   i  = findfirst('-', s)
   st = SubString(s,1:(i-1))
-  T  = getfield(Tapestree.INSANE, Symbol(st))
+  T  = iTd[st]
+  # getfield(Tapestree.INSANE, Symbol(st))
   si = s[i+2:ls-1]
 
   t0, ix = _iparse(si, 1, ls - lastindex(st) - 3, T)
@@ -1288,6 +1289,73 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
                    long(s[i3+5]), 
                    _iparse_v(s[i3+8:i4-1]),
                    _iparse_v(s[i4+3:i5-1]))
+    end
+
+    i = i5 + 1
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{sTxs})
+
+parse istring to `iT`.
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTxs})
+
+  @inbounds begin
+
+    in1 = false
+    in2 = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, sTxs)
+      in1 = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, sTxs)
+      in2 = true
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(',', s, i1 + 1)
+    i3 = findnext(',', s, i2 + 1)
+    i4 = findnext(']', s, i3 + 1)
+    i5 = findnext(']', s, i4 + 1)
+
+    if in1
+      if in2
+        tree = sTxs(sd1, sd2,
+                    Pparse(Float64, s[i:i1-1]),
+                    Pparse(Float64, s[i1+1:i2-1]),
+                    Pparse(Float64, s[i2+1:i3-1]),
+                    _iparse_v(s[i3+2:i4-1]),
+                    _iparse_v(s[i4+3:i5-1]))
+      else
+        tree = sTxs(sd1,
+                    Pparse(Float64, s[i:i1-1]),
+                    Pparse(Float64, s[i1+1:i2-1]),
+                    Pparse(Float64, s[i2+1:i3-1]),
+                    _iparse_v(s[i3+2:i4-1]),
+                    _iparse_v(s[i4+3:i5-1]))
+      end
+    else
+      tree = sTxs(Pparse(Float64, s[i:i1-1]),
+                  Pparse(Float64, s[i1+1:i2-1]),
+                  Pparse(Float64, s[i2+1:i3-1]),
+                  _iparse_v(s[i3+2:i4-1]),
+                  _iparse_v(s[i4+3:i5-1]))
     end
 
     i = i5 + 1

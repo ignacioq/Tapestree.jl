@@ -84,5 +84,6 @@ module INSANE
                                      "iTce"  => iTce,
                                      "iTct"  => iTct,
                                      "iTbd"  => iTbd,
-                                     "iTfbd" => iTfbd)
+                                     "iTfbd" => iTfbd,
+                                     "sTxs"  => sTxs)
 end # module INSANE
