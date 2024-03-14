@@ -14,8 +14,6 @@ Created 03 09 2020
 
 """
     insane_gbmfbd(tree    ::sTf_label;
-                  λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                  μa_prior::NTuple{2,Float64}     = (0.0, 100.0),
                   α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                   σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                   σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
@@ -46,8 +44,6 @@ Created 03 09 2020
 Run insane for fossilized birth-death diffusion `fbdd`.
 """
 function insane_gbmfbd(tree    ::sTf_label;
-                       λa_prior::NTuple{2,Float64}     = (0.0, 100.0),
-                       μa_prior::NTuple{2,Float64}     = (0.0, 100.0),
                        α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                        σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
@@ -112,8 +108,8 @@ function insane_gbmfbd(tree    ::sTf_label;
   if isnan(λi) || isnan(μi) || isnan(ψi)
     # if only one tip
     if isone(n)
-      λc = prod(λ_prior)
-      μc = prod(μ_prior)
+      λc = 1.0/th
+      μc = 0.0
     else
       λc, μc = moments(Float64(n), th, ϵi)
     end
@@ -184,14 +180,14 @@ function insane_gbmfbd(tree    ::sTf_label;
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, ns, ne, stnλ, stnμ =
-    mcmc_burn_gbmfbd(Ξ, idf, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
+    mcmc_burn_gbmfbd(Ξ, idf, α_prior, σλ_prior, σμ_prior,
       ψ_prior, ψ_epoch, f_epoch, nburn, αi, σλi, σμi, ψc, mc, th, surv, 
       stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   # mcmc
   r, treev =
     mcmc_gbmfbd(Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, th, surv, ns, ne, 
-      stnλ, stnμ, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
+      stnλ, stnμ, α_prior, σλ_prior, σμ_prior, 
       ψ_prior, ψ_epoch, f_epoch, δt, srδt, bst, eixi, eixf, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -204,8 +200,6 @@ end
 """
     mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                      idf     ::Vector{iBffs},
-                     λa_prior::NTuple{2,Float64},
-                     μa_prior::NTuple{2,Float64},
                      α_prior ::NTuple{2,Float64},
                      σλ_prior::NTuple{2,Float64},
                      σμ_prior::NTuple{2,Float64},
@@ -235,8 +229,6 @@ MCMC burn-in chain for `fbdd`.
 """
 function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           idf     ::Vector{iBffs},
-                          λa_prior::NTuple{2,Float64},
-                          μa_prior::NTuple{2,Float64},
                           α_prior ::NTuple{2,Float64},
                           σλ_prior::NTuple{2,Float64},
                           σμ_prior::NTuple{2,Float64},
@@ -262,19 +254,13 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           pup     ::Array{Int64,1},
                           prints  ::Int64)
 
-  λ0  = lλ(Ξ[1])[1]
   nsi = (iszero(e(Ξ[1])) && !isfossil(idf[1]))
   llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
-        nsi * λ0 + log(mc) + prob_ρ(idf)
+        nsi * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
         logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
-        logdunif(exp(λ0),          λa_prior[1], λa_prior[2])  +
-        logdunif(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])  +
         sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))
-
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi)        # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)          # number of fossilization events per epoch
@@ -302,7 +288,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
       # update α
       if pupi === 1
 
-        llc, prc, αc, mc  =
+        llc, prc, αc, mc =
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), ddλ, llc, prc,
             mc, th, surv, δt, srδt, α_prior)
 
@@ -340,7 +326,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
         llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, irλ, irμ, 
-            mc, th, surv, δt, srδt, lλxpr, lμxpr)
+            mc, th, surv, δt, srδt)
       # forward simulation update
       else
 
@@ -381,8 +367,6 @@ end
                 mc      ::Float64,
                 th      ::Float64,
                 surv   ::Int64,
-                λa_prior::NTuple{2,Float64},
-                μa_prior::NTuple{2,Float64},
                 α_prior ::NTuple{2,Float64},
                 σλ_prior::NTuple{2,Float64},
                 σμ_prior::NTuple{2,Float64},
@@ -419,8 +403,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      ne      ::Float64,
                      stnλ    ::Float64, 
                      stnμ    ::Float64,
-                     λa_prior::NTuple{2,Float64},
-                     μa_prior::NTuple{2,Float64},
                      α_prior ::NTuple{2,Float64},
                      σλ_prior::NTuple{2,Float64},
                      σμ_prior::NTuple{2,Float64},
@@ -443,10 +425,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   # logging
   nlogs = fld(niter, nthin)
   lthin = lit = sthin =  0
-
-  # crown or crown conditioning
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
@@ -485,7 +463,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           # update α
           if pupi === 1
 
-            llc, prc, αc, mc  =
+            llc, prc, αc, mc =
               update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), 
                 ddλ, llc, prc, mc, th, surv, δt, srδt, α_prior)
 
@@ -495,7 +473,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
-            #    @show bix
             #    return
             # end
 
@@ -509,7 +486,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
-            #    @show bix
             #    return
             # end
 
@@ -521,7 +497,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
-            #    @show bix
             #    return
             # end
 
@@ -535,7 +510,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
-            #    @show bix
             #    return
             # end
 
@@ -547,12 +521,11 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
             llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
               update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, irλ, irμ, 
-                mc, th, surv, δt, srδt, lλxpr, lμxpr)
+                mc, th, surv, δt, srδt)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
-            #    @show bix
             #    return
             # end
 
@@ -568,7 +541,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
-            #    @show bix
             #    return
             # end
           end
@@ -636,9 +608,7 @@ end
                 th   ::Float64,
                 surv ::Int64,
                 δt   ::Float64,
-                srδt ::Float64,
-                lλxpr::Float64,
-                lμxpr::Float64)
+                srδt ::Float64)
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -658,11 +628,9 @@ function update_gbm!(bix  ::Int64,
                      th   ::Float64,
                      surv ::Int64,
                      δt   ::Float64,
-                     srδt ::Float64,
-                     lλxpr::Float64,
-                     lμxpr::Float64)
-  @inbounds begin
+                     srδt ::Float64)
 
+  @inbounds begin
     ξi   = Ξ[bix]
     bi   = idf[bix]
     i1   = d1(bi)
@@ -676,12 +644,12 @@ function update_gbm!(bix  ::Int64,
       if isfossil(bi)
         llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
           _fstem_update!(ξi, ξ1, α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, 
-            mc, th, δt, srδt, lλxpr, lμxpr, surv)
+            mc, th, δt, srδt, surv)
       # if crown
       else
         llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
           _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, 
-          mc, th, δt, srδt, lλxpr, lμxpr, surv)
+          mc, th, δt, srδt, surv)
         setλt!(bi, lλ(ξi)[1])
       end
     else
@@ -689,7 +657,7 @@ function update_gbm!(bix  ::Int64,
       if root
         llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
           _stem_update!(ξi, α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ,
-            mc, th, δt, srδt, lλxpr, lμxpr, surv)
+            mc, th, δt, srδt, surv)
       end
 
       # updates within the parent branch

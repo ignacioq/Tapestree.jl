@@ -484,19 +484,19 @@ end
 
 Integrate rate given by `f`.
 """
-function int_rate(tree::iTree, f::Function, δt::Float64)
+function int_rate(tree::iTree, f::Function)
 
   if def1(tree)
     if def2(tree)
-      int_rate(f(tree), δt, fdt(tree)) +
-      int_rate(tree.d1, f, δt)         +
-      int_rate(tree.d2, f, δt)
+      int_rate(f(tree), dt(tree), fdt(tree)) +
+      int_rate(tree.d1, f)         +
+      int_rate(tree.d2, f)
     else
-      int_rate(f(tree), δt, fdt(tree)) +
-      int_rate(tree.d1, f, δt)
+      int_rate(f(tree), dt(tree), fdt(tree)) +
+      int_rate(tree.d1, f)
     end
   else
-    int_rate(f(tree), δt, fdt(tree))
+    int_rate(f(tree), dt(tree), fdt(tree))
   end
 end
 

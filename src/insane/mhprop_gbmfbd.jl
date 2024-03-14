@@ -28,8 +28,6 @@ Created 27 05 2020
                    th   ::Float64,
                    δt   ::Float64,
                    srδt ::Float64,
-                   lλxpr::Float64,
-                   lμxpr::Float64,
                    surv ::Int64)
 
 Do `gbm-bd` update for fossil stem root.
@@ -49,8 +47,6 @@ function _fstem_update!(ξi   ::iTfbd,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
-                        lλxpr::Float64,
-                        lμxpr::Float64,
                         surv ::Int64)
 
   @inbounds begin
@@ -72,11 +68,6 @@ function _fstem_update!(ξi   ::iTfbd,
     # node proposal
     λr = rnorm(λ1 - α*el, σλ*sqre)
     μr = rnorm(μ1, σμ*sqre)
-
-    # prior ratio
-    if λr > lλxpr || μr > lμxpr 
-      return llc, ddλ, ssλ, ssμ, irλ, irμ, mc
-    end
 
     # simulate fix tree vector
     bb!(λ1p, λr, λ1, μ1p, μr, μ1, σλ, σμ, δt, fdt1, srδt)
