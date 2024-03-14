@@ -667,32 +667,50 @@ function update_scale!(Ξ   ::Vector{T},
   mp = m_surv_gbmbd(th, lλ(Ξ[1])[1] + s, lμ(Ξ[1])[1], 
          α, σλ, σμ, δt, srδt, 1_000, surv)
   iri = (1.0 - exp(s)) * irλ
-  llr = ns * s + iri + log(mp/mc)
+  llr = ns * s + iri 
 
-  if -randexp() < llr
-    accλ += 1.0
-    llc  += llr
-    irλ  -= iri
-    mc    = mp
-    scale_rate!(Ξ, lλ, s)
-    scale_rate!(idf, s)
+  lU = -randexp()
+
+  if lU < llr + log(1000.0/mc)
+
+    # add survival ratio
+    mp  = m_surv_gbmbd(th, lλ(Ξ[1])[1] + s, lμ(Ξ[1])[1], 
+            α, σλ, σμ, δt, srδt, 1_000, surv)
+    llr += log(mp/mc)
+
+    if lU < llr
+      accλ += 1.0
+      llc  += llr
+      irλ  -= iri
+      mc    = mp
+      scale_rate!(Ξ, lλ, s)
+      scale_rate!(idf, s)
+    end
   end
 
   # sample log(scaling factor)
   s = randn()*stnμ
 
   # likelihood ratio
-  mp = m_surv_gbmbd(th, lλ(Ξ[1])[1], lμ(Ξ[1])[1] + s, 
-        α, σλ, σμ, δt, srδt, 1_000, surv)
   iri = (1.0 - exp(s)) * irμ
-  llr = ne * s + iri + log(mp/mc)
+  llr = ne * s + iri
 
-  if -randexp() < llr
-    accμ += 1.0
-    llc  += llr
-    irμ  -= iri
-    mc    = mp
-    scale_rate!(Ξ, lμ, s)
+  lU = -randexp()
+
+  if lU < llr + log(1000.0/mc)
+
+    # add survival ratio
+    mp = m_surv_gbmbd(th, lλ(Ξ[1])[1], lμ(Ξ[1])[1] + s, 
+          α, σλ, σμ, δt, srδt, 1_000, surv)
+    llr += log(mp/mc)
+
+    if lU < llr
+      accμ += 1.0
+      llc  += llr
+      irμ  -= iri
+      mc    = mp
+      scale_rate!(Ξ, lμ, s)
+    end
   end
 
   return llc, irλ, irμ, accλ, accμ, mc
