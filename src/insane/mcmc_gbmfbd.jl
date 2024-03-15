@@ -341,6 +341,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
     ltn += 1
     if ltn === 100
+      irλ, irμ, _ir(Ξ)
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
       ltn = 0
