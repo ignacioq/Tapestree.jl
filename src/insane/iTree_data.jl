@@ -2299,41 +2299,6 @@ end
 
 
 
-
-
-"""
-    mcmc_array(treev::Array{T,1},
-               δt   ::Float64,
-               f   ::Function) where {T <: iT}
-
-Return an Array with a row for each sampled tree for interpolated
-parameters accessed by `f` at times determined by `δt`.
-"""
-function mcmc_array(treev::Array{T,1},
-                    δt   ::Float64,
-                    f   ::Function) where {T <: iT}
-
-  @inbounds begin
-
-    vi = Float64[]
-    extract_vector!(treev[1], vi, δt, 0.0, f)
-
-    ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vi))
-    ra[1,:] = vi
-
-    for i in 2:lastindex(treev)
-      vi = Float64[]
-      extract_vector!(treev[i], vi, δt, 0.0, f)
-      ra[i, :] = vi
-    end
-  end
-
-  return ra
-end
-
-
-
-
 """
     extract_vector!(tree::T,
                     v   ::Array{Float64,1},
