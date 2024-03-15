@@ -132,13 +132,13 @@ function insane_gbmfbd(tree    ::sTf_label;
   if survival 
     if iszero(e(tree)) 
       if def1(tree)
-        surv += (ntipsalive(tree.d1) > 0)
+        surv += Int64(anyalive(tree.d1))
         if def2(tree)
-          surv += (ntipsalive(tree.d2) > 0)
+          surv += Int64(anyalive(tree.d2))
         end
       end
     else
-      surv += (ntipsalive(tree) > 0)
+      surv += Int64(anyalive(tree))
     end
   end
 
@@ -570,6 +570,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
+          irλ, irμ, _ir(Ξ)
+
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",

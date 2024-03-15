@@ -1190,6 +1190,25 @@ end
 
 
 
+"""
+    _ir(Ξ::Vector{T}, α::Float64) where {T <: iT}
+
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _ir(Ξ::Vector{T}) where {T <: iTree}
+
+  irλ = irμ = 0.0
+  for ξi in Ξ
+    irλ, irμ = _ir(ξi, irλ, irμ)
+  end
+
+  return irλ, irμ
+end
+
+
+
+
+
 
 """
     sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}

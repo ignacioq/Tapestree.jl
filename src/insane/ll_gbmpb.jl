@@ -480,7 +480,7 @@ end
 
 
 """
-    int_rate(tree::iTree, f::Function, δt::Float64)
+    int_rate(tree::iTree, f::Function)
 
 Integrate rate given by `f`.
 """

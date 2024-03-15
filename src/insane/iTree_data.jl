@@ -117,6 +117,42 @@ isalive(tree::T) where {T <: iTree} = !isextinct(tree)
 
 
 
+
+"""
+    anyalive(tree::T) where {T <: iTree}
+
+Return if at least one tip is alive.
+"""
+function anyalive(tree::T) where {T <: iTree}
+  return _anyalive(tree, false)
+end
+
+
+
+
+"""
+    _anyalive(tree::T, a::Bool) where {T <: iTree}
+
+Return if at least one tip is alive.
+"""
+function _anyalive(tree::T, a::Bool) where {T <: iTree}
+
+  if !a
+    if def1(tree)
+      a = _anyalive(tree.d1, a)
+      if def2(tree)
+        a = _anyalive(tree.d2, a)
+      end
+    else
+      a = isalive(tree)
+    end
+  end
+
+  return a
+end
+
+
+
 """
     isfossil(tree::T) where {T <: iTree}
 
