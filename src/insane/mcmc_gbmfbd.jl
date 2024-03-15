@@ -273,7 +273,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
   # for scale tuning
-  ltn = 0
+  ltn = lns = 0
   lup = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -339,9 +339,15 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
       end
     end
 
+    # numerical stability
+    lns += 1
+    if lns === 5_000
+      irλ, irμ, _ir(Ξ)
+      lns += 0
+    end
+
     ltn += 1
     if ltn === 100
-      irλ, irμ, _ir(Ξ)
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
       ltn = 0
@@ -425,7 +431,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   # logging
   nlogs = fld(niter, nthin)
-  lthin = lit = sthin =  0
+  lthin = lit = sthin = lns = 0
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
@@ -547,6 +553,13 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           end
         end
 
+        # numerical stability
+        lns += 1
+        if lns === 5_000
+          irλ, irμ, _ir(Ξ)
+          lns += 0
+        end
+
         # log parameters
         lthin += 1
         if lthin === nthin
@@ -571,7 +584,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          irλ, irμ, _ir(Ξ)
 
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
