@@ -14,8 +14,8 @@ Created 03 09 2020
 
 """
     insane_gbmbd(tree    ::sT_label;
-                 λa_prior::NTuple{2,Float64}     = (1.0, 1.0),
-                 μa_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                 λa_prior::NTuple{2,Float64}     = (1.5, 1.0),
+                 μa_prior::NTuple{2,Float64}     = (1.5, 1.0),
                  α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                  σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                  σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
@@ -43,8 +43,8 @@ Created 03 09 2020
 Run insane for `bdd`.
 """
 function insane_gbmbd(tree    ::sT_label;
-                      λa_prior::NTuple{2,Float64}     = (1.0, 1.0),
-                      μa_prior::NTuple{2,Float64}     = (1.0, 1.0),
+                      λa_prior::NTuple{2,Float64}     = (1.5, 1.0),
+                      μa_prior::NTuple{2,Float64}     = (1.5, 1.0),
                       α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                       σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
@@ -180,9 +180,8 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
                          pup     ::Array{Int64,1},
                          prints  ::Int64)
 
-  λ0  = lλ(Ξ[1])[1]
   nsi = Float64(surv > 1)
-  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - nsi * λ0 +
+  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - nsi * lλ(Ξ[1])[1] +
         log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,         σλ_prior[1], σλ_prior[2]) +
         logdinvgamma(σμc^2,         σμ_prior[1], σμ_prior[2]) +
@@ -200,7 +199,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
   # for scale tuning
-  ltn = 0
+  ltn = lns = 0
   lup = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -261,11 +260,16 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       end
     end
 
+    # numerical stability
+    lns += 1
+    if lns === 5_000
+      irλ, irμ = _ir(Ξ)
+      lns = 0
+    end
+
+    # log tuning parameters
     ltn += 1
     if ltn === 100
-
-      # Recomputes some quantities whose approximations may have drifted slightly
-      ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
@@ -296,8 +300,6 @@ end
                ne      ::Float64, 
                stnλ    ::Float64, 
                stnμ    ::Float64,
-               λa_prior::NTuple{2,Float64},
-               μa_prior::NTuple{2,Float64},
                α_prior ::NTuple{2,Float64},
                σλ_prior::NTuple{2,Float64},
                σμ_prior::NTuple{2,Float64},
@@ -328,8 +330,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     ne      ::Float64, 
                     stnλ    ::Float64, 
                     stnμ    ::Float64,
-                    λa_prior::NTuple{2,Float64},
-                    μa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
@@ -346,7 +346,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  lthin = lit = sthinθ = sthinΞ = lns = 0
 
   L   = treelength(Ξ)        # tree length
   nin = lastindex(inodes)   # number of internal nodes
@@ -363,9 +363,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
   # number of branches and of triads
   nbr  = lastindex(idf)
-
-  # flush to file
-  sthinθ = sthinΞ = 0
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -451,6 +448,13 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           # check_ll(pupi, it)
         end
 
+        # numerical stability
+        lns += 1
+        if lns === 5_000
+          irλ, irμ = _ir(Ξ)
+          lns = 0
+        end
+
         # log parameters
         lthin += 1
         if lthin === nthin
@@ -473,10 +477,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
         # flush parameters
         sthinθ += 1
         if sthinθ === nflushθ
-
-          # Recomputes some quantities whose approximations may have drifted slightly
-          ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
-          
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
@@ -681,39 +681,55 @@ function update_scale!(Ξ   ::Vector{T},
   Δlλ  = randn()*stnλ
   lλ0p = lλ0c + Δlλ
 
-  # likelihood ratio
-  mp = m_surv_gbmbd(th, lλ0p, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
+  # likelihood ratio  
   iri = (1.0 - exp(Δlλ)) * irλ
-  llr = ns * Δlλ + iri + log(mp/mc)
+  llr = ns * Δlλ + iri
   prr = llrdgamma(exp(lλ0p), exp(lλ0c), λa_prior[1], λa_prior[2])
 
-  if -randexp() < llr + prr
-    accλ += 1.0
-    llc  += llr
-    prc  += prr
-    irλ  -= iri
-    mc    = mp
-    scale_rate!(Ξ, lλ, Δlλ)
-    scale_rate!(idf, Δlλ)
+  lU = -randexp()
+
+  if lU < llr + prr + log(1000.0/mc)
+
+    # add survival ratio
+    mp = m_surv_gbmbd(th, lλ0p, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
+    llr += log(mp/mc)
+
+    if lU < llr
+      accλ += 1.0
+      llc  += llr
+      prc  += prr
+      irλ  -= iri
+      mc    = mp
+      scale_rate!(Ξ, lλ, Δlλ)
+      scale_rate!(idf, Δlλ)
+    end
   end
 
   # sample log(scaling factor)
   Δlμ  = randn()*stnμ
   lμ0p = lμ0c + Δlμ
 
-  # likelihood ratio
-  mp = m_surv_gbmbd(th, lλ0c, lμ0p, α, σλ, σμ, δt, srδt, 1_000, surv)
+  # likelihood ratio  
   iri = (1.0 - exp(Δlμ)) * irμ
-  llr = ne * Δlμ + iri + log(mp/mc)
+  llr = ne * Δlμ + iri
   prr = llrdgamma(exp(lμ0p), exp(lμ0c), μa_prior[1], μa_prior[2])
 
-  if -randexp() < llr + prr
-    accμ += 1.0
-    llc  += llr
-    prc  += prr
-    irμ  -= iri
-    mc    = mp
-    scale_rate!(Ξ, lμ, Δlμ)
+  lU = -randexp()
+
+  if lU < llr + prr + log(1000.0/mc)
+
+    # add survival ratio
+    mp = m_surv_gbmbd(th, lλ0c, lμ0p, α, σλ, σμ, δt, srδt, 1_000, surv)
+    llr += log(mp/mc)
+
+    if lU < llr + prr
+      accμ += 1.0
+      llc  += llr
+      prc  += prr
+      irμ  -= iri
+      mc    = mp
+      scale_rate!(Ξ, lμ, Δlμ)
+    end
   end
 
   return llc, prc, irλ, irμ, accλ, accμ, mc

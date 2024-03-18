@@ -140,13 +140,13 @@ function insane_gbmfbd(tree    ::sTf_label;
   if survival 
     if iszero(e(tree)) 
       if def1(tree)
-        surv += (ntipsalive(tree.d1) > 0)
+        surv += Int64(anyalive(tree.d1))
         if def2(tree)
-          surv += (ntipsalive(tree.d2) > 0)
+          surv += Int64(anyalive(tree.d2))
         end
       end
     else
-      surv += (ntipsalive(tree) > 0)
+      surv += Int64(anyalive(tree))
     end
   end
 
@@ -208,8 +208,6 @@ end
 """
     mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                      idf     ::Vector{iBffs},
-                     λa_prior::NTuple{2,Float64},
-                     μa_prior::NTuple{2,Float64},
                      α_prior ::NTuple{2,Float64},
                      σλ_prior::NTuple{2,Float64},
                      σμ_prior::NTuple{2,Float64},
@@ -240,8 +238,6 @@ MCMC burn-in chain for `fbdd`.
 """
 function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           idf     ::Vector{iBffs},
-                          λa_prior::NTuple{2,Float64},
-                          μa_prior::NTuple{2,Float64},
                           α_prior ::NTuple{2,Float64},
                           σλ_prior::NTuple{2,Float64},
                           σμ_prior::NTuple{2,Float64},
@@ -268,19 +264,15 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           pup     ::Array{Int64,1},
                           prints  ::Int64)
 
-  λ0  = lλ(Ξ[1])[1]
   nsi = (iszero(e(Ξ[1])) && !isfossil(idf[1]))
   llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
-        nsi * λ0 + log(mc) + prob_ρ(idf)
+        nsi * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
         logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
         logdgamma(exp(λ0),          λa_prior[1], λa_prior[2]) +
         logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2]) +
         sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))
-
-  lλxpr = log(λa_prior[2])
-  lμxpr = log(μa_prior[2])
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi)        # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)          # number of fossilization events per epoch
@@ -293,7 +285,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
   # for scale tuning
-  ltn = 0
+  ltn = lns = 0
   lup = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -331,7 +323,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
       # update α
       if pupi === 1
 
-        llc, prc, αc, mc  =
+        llc, prc, αc, mc =
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), ddλ, llc, prc,
             mc, th, surv, δt, srδt, α_prior)
 
@@ -387,12 +379,16 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
     end
 
+    # numerical stability
+    lns += 1
+    if lns === 5_000
+      irλ, irμ = _ir(Ξ)
+      lns = 0
+    end
+
     # log tuning parameters
     ltn += 1
     if ltn === tune_int
-
-      # Recomputes some quantities whose approximations may have drifted slightly
-      ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
 
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
@@ -487,7 +483,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   # logging
   nlogs = fld(niter, nthin)
-  lthin = lit = sthinθ = sthinΞ =  0
+  lthin = lit = sthinθ = sthinΞ = lns =  0
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
@@ -550,7 +546,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           # update α
           if pupi === 1
 
-            llc, prc, αc, mc  =
+            llc, prc, αc, mc =
               update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), 
                 ddλ, llc, prc, mc, th, surv, δt, srδt, α_prior)
 
@@ -600,6 +596,13 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           # check_ll(pupi, it)
         end
 
+        # numerical stability
+        lns += 1
+        if lns === 5_000
+          irλ, irμ = _ir(Ξ)
+          lns = 0
+        end
+
         # log parameters
         lthin += 1
         if lthin === nthin
@@ -625,10 +628,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # flush parameters
         sthinθ += 1
         if sthinθ === nflushθ
-
-          # Recomputes some quantities whose approximations may have drifted slightly
-          ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
-
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
@@ -698,8 +697,8 @@ function update_gbm!(bix  ::Int64,
                      srδt ::Float64,
                      λa_prior::NTuple{2,Float64},
                      μa_prior::NTuple{2,Float64})
-  @inbounds begin
 
+  @inbounds begin
     ξi   = Ξ[bix]
     bi   = idf[bix]
     i1   = d1(bi)

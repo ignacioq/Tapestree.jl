@@ -117,6 +117,42 @@ isalive(tree::T) where {T <: iTree} = !isextinct(tree)
 
 
 
+
+"""
+    anyalive(tree::T) where {T <: iTree}
+
+Return if at least one tip is alive.
+"""
+function anyalive(tree::T) where {T <: iTree}
+  return _anyalive(tree, false)
+end
+
+
+
+
+"""
+    _anyalive(tree::T, a::Bool) where {T <: iTree}
+
+Return if at least one tip is alive.
+"""
+function _anyalive(tree::T, a::Bool) where {T <: iTree}
+
+  if !a
+    if def1(tree)
+      a = _anyalive(tree.d1, a)
+      if def2(tree)
+        a = _anyalive(tree.d2, a)
+      end
+    else
+      a = isalive(tree)
+    end
+  end
+
+  return a
+end
+
+
+
 """
     isfossil(tree::T) where {T <: iTree}
 
@@ -2348,41 +2384,6 @@ function _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
       _trextract!(tvs, tree.d2, f)
     end
   end
-end
-
-
-
-
-
-
-"""
-    mcmc_array(treev::Array{T,1},
-               δt   ::Float64,
-               f   ::Function) where {T <: iT}
-
-Return an Array with a row for each sampled tree for interpolated
-parameters accessed by `f` at times determined by `δt`.
-"""
-function mcmc_array(treev::Array{T,1},
-                    δt   ::Float64,
-                    f   ::Function) where {T <: iT}
-
-  @inbounds begin
-
-    vi = Float64[]
-    extract_vector!(treev[1], vi, δt, 0.0, f)
-
-    ra = Array{Float64,2}(undef, lastindex(treev), lastindex(vi))
-    ra[1,:] = vi
-
-    for i in 2:lastindex(treev)
-      vi = Float64[]
-      extract_vector!(treev[i], vi, δt, 0.0, f)
-      ra[i, :] = vi
-    end
-  end
-
-  return ra
 end
 
 
