@@ -27,7 +27,7 @@ Created 20 09 2023
                   niter   ::Int64                 = 1_000,
                   nthin   ::Int64                 = 10,
                   nburn   ::Int64                 = 200,
-                  nflushθ ::Int64                 = nthin,
+                  nflushθ ::Int64                 = Int64(ceil(niter/5_000)),
                   nflushΞ ::Int64                 = Int64(ceil(niter/100)),
                   ofile   ::String                = string(homedir(), "/iobd"),
                   tune_int::Int64                 = 100,
@@ -65,7 +65,7 @@ function insane_gbmobd(tree    ::sTf_label,
                        niter   ::Int64                 = 1_000,
                        nthin   ::Int64                 = 10,
                        nburn   ::Int64                 = 200,
-                       nflushθ ::Int64                 = nthin,
+                       nflushθ ::Int64                 = Int64(ceil(niter/5_000)),
                        nflushΞ ::Int64                 = Int64(ceil(niter/100)),
                        ofile   ::String                = string(homedir(), "/iobd"),
                        tune_int::Int64                 = 100,
@@ -676,9 +676,6 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
         lthin += 1
         if lthin === nthin
 
-          # Recomputes some quantities whose approximations may have drifted slightly
-          ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
-
           lit += 1
           @inbounds begin
             r[lit,1] = Float64(it)
@@ -703,6 +700,10 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
         # flush parameters
         sthinθ += 1
         if sthinθ === nflushθ
+
+          # Recomputes some quantities whose approximations may have drifted slightly
+          ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+          
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
