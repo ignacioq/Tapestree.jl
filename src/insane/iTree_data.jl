@@ -305,6 +305,39 @@ end
 
 
 
+"""
+    fossillabels(tree::T) where {T <: Tlabel}
+
+Returns tip labels for `sT_label` and `sTf_label`.
+"""
+fossillabels(tree::T) where {T <: Tlabel} = _fossillabels!(tree, String[])
+
+
+
+"""
+    _fossillabels!(tree::sTf_label, labels::Array{String,1})
+
+Returns tip labels for `sTf_label`.
+"""
+function _fossillabels!(tree::T, labels::Array{String,1}) where {T <: sT}
+
+  if isfossil(tree) 
+    push!(labels, l(tree))
+  end
+
+  if def1(tree)
+    _fossillabels!(tree.d1, labels)
+    if def2(tree)
+      _fossillabels!(tree.d2, labels)
+    end
+  end
+
+
+  return labels
+end
+
+
+
 
 """
     fossiltiplabels(tree::T) where {T <: Tlabel}
