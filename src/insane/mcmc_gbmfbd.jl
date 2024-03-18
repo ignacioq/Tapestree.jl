@@ -342,8 +342,8 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
     # numerical stability
     lns += 1
     if lns === 5_000
-      irλ, irμ, _ir(Ξ)
-      lns += 0
+      irλ, irμ = _ir(Ξ)
+      lns = 0
     end
 
     ltn += 1
@@ -556,8 +556,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # numerical stability
         lns += 1
         if lns === 5_000
-          irλ, irμ, _ir(Ξ)
-          lns += 0
+          irλ, irμ = _ir(Ξ)
+          lns = 0
         end
 
         # log parameters
@@ -584,7 +584,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
