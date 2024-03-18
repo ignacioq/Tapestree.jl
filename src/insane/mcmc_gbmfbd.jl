@@ -208,6 +208,8 @@ end
 """
     mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                      idf     ::Vector{iBffs},
+                     λa_prior::NTuple{2,Float64},
+                     μa_prior::NTuple{2,Float64},
                      α_prior ::NTuple{2,Float64},
                      σλ_prior::NTuple{2,Float64},
                      σμ_prior::NTuple{2,Float64},
@@ -238,6 +240,8 @@ MCMC burn-in chain for `fbdd`.
 """
 function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           idf     ::Vector{iBffs},
+                          λa_prior::NTuple{2,Float64},
+                          μa_prior::NTuple{2,Float64},
                           α_prior ::NTuple{2,Float64},
                           σλ_prior::NTuple{2,Float64},
                           σμ_prior::NTuple{2,Float64},
@@ -381,7 +385,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
     # numerical stability
     lns += 1
-    if lns === 5_000
+    if lns === 100
       irλ, irμ = _ir(Ξ)
       lns = 0
     end
@@ -598,7 +602,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
         # numerical stability
         lns += 1
-        if lns === 5_000
+        if lns === 100
           irλ, irμ = _ir(Ξ)
           lns = 0
         end

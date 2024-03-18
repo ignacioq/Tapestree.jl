@@ -186,7 +186,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   prc = logdinvgamma(σλc^2,         σλ_prior[1], σλ_prior[2]) +
         logdinvgamma(σμc^2,         σμ_prior[1], σμ_prior[2]) +
         logdnorm(αc,                α_prior[1], α_prior[2]^2) +
-        logdgamma(exp(λ0),          λa_prior[1], λa_prior[2]) +
+        logdgamma(exp(lλ(Ξ[1])[1]), λa_prior[1], λa_prior[2]) +
         logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])
 
   L   = treelength(Ξ)        # tree length
@@ -201,6 +201,26 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   # for scale tuning
   ltn = lns = 0
   lup = lacλ = lacμ = 0.0
+
+  function check_pr(pupi::Int64, i::Int64)
+    pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
+          logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
+          logdnorm(αc,               α_prior[1],  α_prior[2]^2) +
+          logdgamma(exp(lλ(Ξ[1])[1]),          λa_prior[1], λa_prior[2]) +
+          logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2])
+    if !isapprox(pr0, prc, atol = 1e-4)
+       error(string("Wrong prior computation during the ", ["α","σλ & σμ","λ0 & μ0","gbm update","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": pr0=", pr0, " and prc-pr0=", prc-pr0))
+    end
+  end
+
+  function check_ll(pupi::Int64, i::Int64)
+    ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+    if !isapprox(ll0, llc, atol = 1e-4)
+       error(string("Wrong likelihood computation during the ", ["α","σλ & σμ","ψ","λ0 & μ0","gbm update","forward simulation"][pupi], 
+                    " update, at iteration ", i, ": ll0=", ll0, " and llc-ll0=", llc-ll0))
+    end
+  end
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -258,11 +278,14 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, 
             irλ, irμ, ns, ne, L, δt, srδt)
       end
+
+      # check_pr(pupi, i)
+      # check_ll(pupi, i)
     end
 
     # numerical stability
     lns += 1
-    if lns === 5_000
+    if lns === 100
       irλ, irμ = _ir(Ξ)
       lns = 0
     end
@@ -300,6 +323,8 @@ end
                ne      ::Float64, 
                stnλ    ::Float64, 
                stnμ    ::Float64,
+               λa_prior::NTuple{2,Float64},
+               μa_prior::NTuple{2,Float64},
                α_prior ::NTuple{2,Float64},
                σλ_prior::NTuple{2,Float64},
                σμ_prior::NTuple{2,Float64},
@@ -330,6 +355,8 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     ne      ::Float64, 
                     stnλ    ::Float64, 
                     stnμ    ::Float64,
+                    λa_prior::NTuple{2,Float64},
+                    μa_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     σμ_prior::NTuple{2,Float64},
@@ -450,7 +477,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
         # numerical stability
         lns += 1
-        if lns === 5_000
+        if lns === 100
           irλ, irμ = _ir(Ξ)
           lns = 0
         end
