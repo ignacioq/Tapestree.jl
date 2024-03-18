@@ -638,7 +638,7 @@ end
 Return labels and left node order.
 """
 function labels(tree::Tlabel)
-  ls  = String[]
+  ls = String[]
   _make_ls!(tree, ls)
   return ls
 end
