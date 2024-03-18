@@ -259,9 +259,9 @@ function _from_string(s::String, i::Int64, ::Type{T}) where {T <: sT}
     if in1
       if in2
         if e(sd1) === 0.0
-          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), l(sd1))
         elseif e(sd2) === 0.0
-          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), l(sd2))
         else
           tree = T(sd1, sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
         end
