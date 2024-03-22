@@ -13,13 +13,11 @@ Created 07 07 2020
 
 
 """
-    read_newick(in_file::String;
-                ix::OrdinalRange{Int64,Int64} = 0:0)
+    read_newick(in_file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
 
 Reads a newick tree into `sT` from `in_file` at lines `ix`.
 """
-function read_newick(in_file::String;
-                     ix::OrdinalRange{Int64,Int64} = 0:0)
+function read_newick(in_file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
 
   io = open(in_file)
 
@@ -35,29 +33,31 @@ function read_newick(in_file::String;
 
     iszero(lastindex(line)) && continue
 
-    ii += 1
-
-    if ii < iix
-      continue
-    end
-
     # read trees
     if it === six
       if onlyone(line, ';')
+        ii += 1
+        ii < iix && continue
         push!(tv, _parse_newick(line))
       else
         allsc = findall(';', line)
+        pushfirst!(allsc, 0)
+
         for i in Base.OneTo(lastindex(allsc)-1)
-          push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])]))
+          ii += 1
+          ii < iix && continue
+          if it === six
+            push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])]))
+            it = 0
+          end
+          ii >= lix && break
+          it += 1
         end
       end
-
       it = 0
     end
 
-    if ii >= lix
-      break
-    end
+    ii >= lix && break
     it += 1
   end
 
@@ -120,7 +120,7 @@ function read_newick(in_file::String,
   io = open(in_file)
 
   iix = first(ix)
-  lix = iszero(ix[1]) ? typemax(Int64) : last(ix)
+  lix = iszero(iix) ? typemax(Int64) : last(ix)
   six = step(ix)
 
   tv = sTf_label[]
@@ -131,28 +131,31 @@ function read_newick(in_file::String,
 
     iszero(lastindex(line)) && continue
 
-    ii += 1
-
-    if ii < iix
-      continue
-    end
-
     # read trees
     if it === six
       if onlyone(line, ';')
+        ii += 1
+        ii < iix && continue
         push!(tv, _parse_newick(line, ne))
       else
         allsc = findall(';', line)
+        pushfirst!(allsc, 0)
+
         for i in Base.OneTo(lastindex(allsc)-1)
-          push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])], ne))
+          ii += 1
+          ii < iix && continue
+          if it === six
+            push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])], ne))
+            it = 0
+          end
+          ii >= lix && break
+          it += 1
         end
       end
       it = 0
     end
 
-    if ii >= lix
-      break
-    end
+    ii >= lix && break
     it += 1
   end
 
