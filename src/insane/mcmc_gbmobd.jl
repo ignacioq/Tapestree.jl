@@ -46,7 +46,6 @@ Created 20 09 2023
                   prints  ::Int64                 = 5,
                   stnλ    ::Float64               = 0.5,
                   stnμ    ::Float64               = 0.5,
-                  stnω    ::Float64               = 1.0,
                   tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for occurrence birth-death diffusion `obdd`.
@@ -84,7 +83,6 @@ function insane_gbmobd(tree    ::sTf_label,
                        prints  ::Int64                 = 5,
                        stnλ    ::Float64               = 0.5,
                        stnμ    ::Float64               = 0.5,
-                       stnω    ::Float64               = 1.0,
                        tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt
@@ -224,15 +222,15 @@ function insane_gbmobd(tree    ::sTf_label,
   @info "running fossilized birth-death diffusion"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, σμc, ψc, ωc, mc, ns, ne, stnλ, stnμ, stnω, LTT =
+  Ξ, idf, llc, prc, αc, σλc, σμc, ψc, ωc, mc, ns, ne, stnλ, stnμ, LTT =
     mcmc_burn_gbmobd(Ξ, idf, ωtimes, LTT, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior,
       ψ_prior, ω_prior, ψω_epoch, f_epoch, nburn, tune_int, αi, σλi, σμi, ψc, ωc, mc, th, surv, 
-      nω, stnλ, stnμ, stnω, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
+      nω, stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   # mcmc
   r, treev =
     mcmc_gbmobd(Ξ, idf, ωtimes, LTT, llc, prc, αc, σλc, σμc, ψc, ωc, mc, th, surv,
-       ns, ne, nω, stnλ, stnμ, stnω, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
+       ns, ne, nω, stnλ, stnμ, λa_prior, μa_prior, α_prior, σλ_prior, σμ_prior, 
       ψ_prior, ω_prior, ψω_epoch, f_epoch, δt, srδt, bst, eixi, eixf, inodes, pup, 
       niter, nthin, nflushθ, nflushΞ, ofile, prints)
 
@@ -269,7 +267,6 @@ end
                      nω      ::Vector{Int64},
                      stnλ    ::Float64, 
                      stnμ    ::Float64,
-                     stnω    ::Float64,
                      δt      ::Float64,
                      srδt    ::Float64,
                      bst     ::Vector{Float64},
@@ -307,7 +304,6 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
                           nω      ::Vector{Int64},
                           stnλ    ::Float64, 
                           stnμ    ::Float64,
-                          stnω    ::Float64,
                           δt      ::Float64,
                           srδt    ::Float64,
                           bst     ::Vector{Float64},
@@ -345,7 +341,7 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
 
   # for scale tuning
   ltn = lns = 0
-  lupλμ = lupω = lacλ = lacμ = lacω = 0.0
+  lupλμ = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -403,7 +399,7 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
       # ω proposal
       elseif pupi === 4
 
-        llc, prc, lacω, lupω = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, lacω, lupω, stnω, ω_prior)
+        llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
 
       # update scale
       elseif pupi === 5
@@ -455,14 +451,13 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
 
       stnλ = min(2.0, tune(stnλ, lacλ/lupλμ))
       stnμ = min(2.0, tune(stnμ, lacμ/lupλμ))
-      stnω = min(2.0, tune(stnω, lacω/lupω))
       ltn = 0
     end
 
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, σμc, ψc, ωc, mc, ns, ne, stnλ, stnμ, stnω, LTT
+  return Ξ, idf, llc, prc, αc, σλc, σμc, ψc, ωc, mc, ns, ne, stnλ, stnμ, LTT
 end
 
 
@@ -488,7 +483,6 @@ end
                 nω      ::Vector{Int64},
                 stnλ    ::Float64, 
                 stnμ    ::Float64,
-                stnω    ::Float64,
                 λa_prior::NTuple{2,Float64},
                 μa_prior::NTuple{2,Float64},
                 α_prior ::NTuple{2,Float64},
@@ -533,7 +527,6 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
                      nω      ::Vector{Int64},
                      stnλ    ::Float64, 
                      stnμ    ::Float64,
-                     stnω    ::Float64,
                      λa_prior::NTuple{2,Float64},
                      μa_prior::NTuple{2,Float64},
                      α_prior ::NTuple{2,Float64},
@@ -643,7 +636,7 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
           # ω update
           elseif pupi === 4
 
-            llc, prc = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, stnω, ω_prior)
+            llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
 
           # update scale
           elseif pupi === 5

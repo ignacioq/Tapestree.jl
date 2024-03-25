@@ -26,14 +26,11 @@ Created 11 02 2022
                 nburn   ::Int64                 = 200,
                 nflush  ::Int64                 = nthin,
                 ofile   ::String                = homedir(),
-                tune_int::Int64                 = 100,
                 ϵi      ::Float64               = 0.4,
                 λi      ::Float64               = NaN,
                 μi      ::Float64               = NaN,
                 ψi      ::Float64               = NaN,
                 ωi      ::Float64               = NaN,
-                stnωi   ::Float64               = 1.0,
-                obj_ar  ::Float64               = 0.4,
                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1),
                 survival::Bool                  = true,
                 prints  ::Int64                 = 5,
@@ -55,14 +52,11 @@ function insane_cobd(tree    ::sTf_label,
                      nburn   ::Int64                 = 200,
                      nflush  ::Int64                 = nthin,
                      ofile   ::String                = homedir(),
-                     tune_int::Int64                 = 100,
                      ϵi      ::Float64               = 0.4,
                      λi      ::Float64               = NaN,
                      μi      ::Float64               = NaN,
                      ψi      ::Float64               = NaN,
                      ωi      ::Float64               = NaN,
-                     stnωi   ::Float64               = 1.0,
-                     obj_ar  ::Float64               = 0.4,
                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1),
                      survival::Bool                  = true,
                      prints  ::Int64                 = 5,
@@ -72,9 +66,6 @@ function insane_cobd(tree    ::sTf_label,
   n   = ntips(tree)
   th  = treeheight(tree)
   LTT = ltt(tree)
-
-  # make objecting scaling function for tuning
-  scalef = makescalef(obj_ar)
 
   # only include epochs where the tree occurs
   tix = findfirst(x -> x < th, ψω_epoch)
@@ -212,13 +203,13 @@ function insane_cobd(tree    ::sTf_label,
   @info "running constant occurrence birth-death"
 
   # adaptive phase
-  llc, prc, λc, μc, ψc, ωc, stnω, mc, ns, L, LTT =
-     mcmc_burn_cobd(Ξ, idf, ωtimes, LTT, tune_int, λ_prior, μ_prior, ψ_prior, ω_prior, ψω_epoch,
-        f_epoch, nburn, λc, μc, ψc, ωc, stnωi, scalef, mc, nω, th, rmλ, surv, bst, eixi, eixf, pup, prints)
+  llc, prc, λc, μc, ψc, ωc, mc, ns, L, LTT =
+     mcmc_burn_cobd(Ξ, idf, ωtimes, LTT, λ_prior, μ_prior, ψ_prior, ω_prior, ψω_epoch,
+        f_epoch, nburn, λc, μc, ψc, ωc, mc, nω, th, rmλ, surv, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev =
-    mcmc_cobd(Ξ, idf, ωtimes, LTT, llc, prc, λc, μc, ψc, ωc, stnω, mc, ns, nω, L, 
+    mcmc_cobd(Ξ, idf, ωtimes, LTT, llc, prc, λc, μc, ψc, ωc, mc, ns, nω, L, 
       λ_prior, μ_prior, ψ_prior, ω_prior, ψω_epoch, f_epoch, th, rmλ, surv, bst, 
       eixi, eixf, pup, niter, nthin, nflush, ofile, prints)
 
@@ -233,7 +224,6 @@ end
                    idf     ::Array{iBffs,1},
                    ωtimes  ::Vector{Float64},
                    LTT     ::Ltt,
-                   tune_int::Int64,
                    λ_prior ::NTuple{2,Float64},
                    μ_prior ::NTuple{2,Float64},
                    ψ_prior ::NTuple{2,Float64},
@@ -245,8 +235,6 @@ end
                    μc      ::Float64,
                    ψc      ::Vector{Float64},
                    ωc      ::Vector{Float64},
-                   stnωi   ::Float64,
-                   scalef  ::Function,
                    mc      ::Float64,
                    nω      ::Vector{Int64},
                    th      ::Float64,
@@ -265,7 +253,6 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
                         idf     ::Array{iBffs,1},
                         ωtimes  ::Vector{Float64},
                         LTT     ::Ltt,
-                        tune_int::Int64,
                         λ_prior ::NTuple{2,Float64},
                         μ_prior ::NTuple{2,Float64},
                         ψ_prior ::NTuple{2,Float64},
@@ -277,8 +264,6 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
                         μc      ::Float64,
                         ψc      ::Vector{Float64},
                         ωc      ::Vector{Float64},
-                        stnωi   ::Float64,
-                        scalef  ::Function,
                         mc      ::Float64,
                         nω      ::Vector{Int64},
                         th      ::Float64,
@@ -295,12 +280,6 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
   nψ  = nfossils(idf, ψω_epoch, f_epoch)   # number of fossilization events (in the tree) per epoch
   ns  = nnodesbifurcation(idf)             # number of speciation events
   ne  = Float64(ntipsextinct(Ξ))           # number of extinction events
-
-  # initialize acceptance log
-  ltn = 0
-  lup = 0.0
-  lac = 0.0
-  stnω = stnωi
 
   # likelihood
   llc = llik_cobd(Ξ, ωtimes, LTT, λc, μc, ψc, ωc, ns, ψω_epoch, bst, eixi) - 
@@ -339,7 +318,7 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
       # ω proposal
       elseif p === 4
 
-        llc, prc, lac, lup = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, lac, lup, stnω, ω_prior)
+        llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
 
       # forward simulation proposal proposal
       else
@@ -352,20 +331,12 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
 
       end
 
-      # log tuning parameters
-      ltn += 1
-      if ltn == tune_int
-        if lup > 0.0
-          stnω = scalef(stnω,lac/lup)
-        end
-        ltn = 0
-      end
     end
 
     next!(pbar)
   end
 
-  return llc, prc, λc, μc, ψc, ωc, stnω, mc, ns, L, LTT
+  return llc, prc, λc, μc, ψc, ωc, mc, ns, L, LTT
 end
 
 
@@ -382,7 +353,6 @@ end
               μc      ::Float64,
               ψc      ::Vector{Float64},
               ωc      ::Vector{Float64},
-              stnω    ::Float64,
               mc      ::Float64,
               ns      ::Float64,
               nω      ::Vector{Int64},
@@ -418,7 +388,6 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
                    μc      ::Float64,
                    ψc      ::Vector{Float64},
                    ωc      ::Vector{Float64},
-                   stnω    ::Float64,
                    mc      ::Float64,
                    ns      ::Float64,
                    nω      ::Vector{Int64},
@@ -522,7 +491,7 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
           # ω proposal
           elseif p === 4
 
-            llc, prc = update_ω!(llc, prc, ωc, ψω_epoch, ωtimes, LTT, nω, L, stnω, ω_prior)
+            llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
 
           # forward simulation proposal proposal
           else
@@ -988,12 +957,9 @@ end
     update_ω!(llc    ::Float64,
               prc    ::Float64,
               ωc     ::Vector{Float64},
-              ψωts   ::Vector{Float64},
-              ωtimes ::Vector{Float64},
               LTT    ::Ltt,
               nω     ::Vector{Int64},
               L      ::Vector{Float64},
-              stnω   ::Float64,
               ω_prior::NTuple{2,Float64})
 
 Gibbs sampling of `ω` for constant occurrence birth-death.
@@ -1001,88 +967,23 @@ Gibbs sampling of `ω` for constant occurrence birth-death.
 function update_ω!(llc    ::Float64,
                    prc    ::Float64,
                    ωc     ::Vector{Float64},
-                   ψωts   ::Vector{Float64},
-                   ωtimes ::Vector{Float64},
-                   LTT    ::Ltt,
                    nω     ::Vector{Int64},
                    L      ::Vector{Float64},
-                   stnω   ::Float64,
                    ω_prior::NTuple{2,Float64})
 
-  ωp  = mulupt.(ωc, stnω)
-  # llr = ω_llr(ωtimes, ωc, ωp, ψωts, LTT)
-  llr = nω.*log.(ωp./ωc) .- L.*(ωp.-ωc)
+  # MH steps for each epoch
+  for i in Base.OneTo(lastindex(ωc))
 
-  #@show llr
-  #@show ω_llik(ωtimes, [ωp[1], ωc[2]], ψωts, LTT) - ω_llik(ωtimes, ωc, ψωts, LTT)
-  #@show ω_llik(ωtimes, [ωc[1], ωp[2]], ψωts, LTT) - ω_llik(ωtimes, ωc, ψωts, LTT)
-
-  # MH sψωts for each epoch
-  for ep in Base.OneTo(lastindex(ωc))
+    ωp  = randgamma(ω_prior[1]+nω[i], ω_prior[2]+L[i])
+    ωci = ωc[i]
     
-    prr = llrdgamma(ωp[ep], ωc[ep], ω_prior[1], ω_prior[2])
+    prc += llrdgamma(ωp, ωci, ω_prior[1], ω_prior[2])
+    llc += nω[i] * log(ωp/ωci) + L[i] * (ωci - ωp)
+    ωc[i] = ωp
     
-    if -randexp() < llr[ep] + prr + log(ωp[ep]/ωc[ep])
-      llc += llr[ep]
-      prc += prr
-      ωc[ep] = ωp[ep]
-    end
   end
 
   return llc, prc
-end
-
-
-
-
-"""
-    update_ω!(llc    ::Float64,
-              prc    ::Float64,
-              ωc     ::Vector{Float64},
-              ψωts   ::Vector{Float64},
-              ωtimes ::Vector{Float64},
-              LTT    ::Ltt,
-              nω     ::Vector{Int64},
-              L      ::Vector{Float64},
-              lac    ::Float64,
-              lup    ::Float64,
-              stnω   ::Float64,
-              ω_prior::NTuple{2,Float64})
-
-Gibbs sampling of `ω` for constant occurrence birth-death.
-"""
-function update_ω!(llc    ::Float64,
-                   prc    ::Float64,
-                   ωc     ::Vector{Float64},
-                   ψωts   ::Vector{Float64},
-                   ωtimes ::Vector{Float64},
-                   LTT    ::Ltt,
-                   nω     ::Vector{Int64},
-                   L      ::Vector{Float64},
-                   lac    ::Float64,
-                   lup    ::Float64,
-                   stnω   ::Float64,
-                   ω_prior::NTuple{2,Float64})
-
-  ωp  = mulupt.(ωc, stnω)
-  # llr = ω_llr(ωtimes, ωc, ωp, ψωts, LTT)
-  llr = nω.*log.(ωp./ωc) .- L.*(ωp.-ωc)
-
-  # MH sψωts for each epoch
-  for ep in Base.OneTo(lastindex(ωc))
-    
-    prr = llrdgamma(ωp[ep], ωc[ep], ω_prior[1], ω_prior[2])
-    
-    if -randexp() < llr[ep] + prr + log(ωp[ep]/ωc[ep])
-      llc += llr[ep]
-      prc += prr
-      ωc[ep] = ωp[ep]
-      lac += 1.0
-    end
-    lup += 1.0
-  end
-
-  return llc, prc, lac, lup
 end
 
 

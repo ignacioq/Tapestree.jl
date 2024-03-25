@@ -2034,7 +2034,11 @@ Returns number of species through time.
 
   sort!(se, rev = true)
   # if crown or stem
-  pushfirst!(se, se[1] + _time1_λ!(tree, 0.0))
+  if !isempty(se)
+    pushfirst!(se, se[1] + _time1_λ!(tree, 0.0))
+  else
+    pushfirst!(se, treeheight(tree))
+  end
 
   # last no events if alive
   push!(n,  n[end])
