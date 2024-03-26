@@ -456,8 +456,7 @@ function makeiBf!(tree::sT,
     ifx = !isnothing(xi)
     if !ifx
       mn = isempty(xr) ? 0.0 : mean(xr)
-      s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
-      xi = randn()*s + mn
+      xi = randn()*0.1 + mn
     end
     push!(idv, 
       iBffs(el, 0, 0, 0, ts, te, iψ, false, ρi, Int64(!iψ), 1, NaN, ifx, xi, si)
