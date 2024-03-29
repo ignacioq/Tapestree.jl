@@ -441,9 +441,10 @@ end
 
 """
     make_Ξ(idf ::Vector{iBffs},
-           lλa ::Float64,
-           lμa ::Float64,
-           α   ::Float64,
+           λ   ::Float64,
+           μ   ::Float64,
+           αλ  ::Float64,
+           αμ  ::Float64,
            σλ  ::Float64,
            σμ  ::Float64,
            δt  ::Float64,
@@ -455,7 +456,8 @@ Make edge tree `Ξ` from the edge directory.
 function make_Ξ(idf ::Vector{iBffs},
                 λ   ::Float64,
                 μ   ::Float64,
-                α   ::Float64,
+                αλ  ::Float64,
+                αμ  ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
                 δt  ::Float64,
@@ -463,7 +465,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTfbd})
 
   Ξ = iTfbd[]
-  _make_Ξ!(Ξ, 1, log(λ), log(μ), α, σλ, σμ, δt, srδt, idf, iTfbd)
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
 
   return Ξ
 end
@@ -476,7 +478,8 @@ end
              i   ::Int64,
              lλ0 ::Float64,
              lμ0 ::Float64,
-             α   ::Float64,
+             αλ  ::Float64,
+             αμ  ::Float64,
              σλ  ::Float64,
              σμ  ::Float64,
              δt  ::Float64,
@@ -490,7 +493,8 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
                   i   ::Int64,
                   lλ0 ::Float64,
                   lμ0 ::Float64,
-                  α   ::Float64,
+                  αλ  ::Float64,
+                  αμ  ::Float64,
                   σλ  ::Float64,
                   σμ  ::Float64,
                   δt  ::Float64,
@@ -523,8 +527,8 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
       nts  -= 1
     end
 
-    lλv = bm(lλ0,   α, σλ, δt, fdti, srδt, nts)
-    lμv = bm(lμ0, 0.0, σμ, δt, fdti, srδt, nts)
+    lλv = bm(lλ0, αλ, σλ, δt, fdti, srδt, nts)
+    lμv = bm(lμ0, αμ, σμ, δt, fdti, srδt, nts)
   end
 
   l = nts + 2
@@ -545,10 +549,10 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
 
   if i1 > 0 
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTfbd)
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTfbd)
+      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
+      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
     else
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTfbd)
+      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
     end
   end
 

@@ -1299,6 +1299,86 @@ end
 
 
 
+
+"""
+    _sim_gbmfbd_surv(t   ::Float64,
+                     λt  ::Float64,
+                     μt  ::Float64,
+                     αλ  ::Float64,
+                     αμ  ::Float64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64,
+                     surv::Bool,
+                     nn  ::Int64)
+
+Returns if survived under the `fbdd` model.
+"""
+function _sim_gbmfbd_surv(t   ::Float64,
+                         λt  ::Float64,
+                         μt  ::Float64,
+                         αλ  ::Float64,
+                         αμ  ::Float64,
+                         σλ  ::Float64,
+                         σμ  ::Float64,
+                         δt  ::Float64,
+                         srδt::Float64,
+                         surv::Bool,
+                         nn  ::Int64)
+
+  if !surv && nn < 200
+
+    while true
+
+      if t <= δt
+        t   = max(0.0, t)
+        μt1 = rnorm(μt + αμ*δt, sqrt(t)*σμ)
+
+        # if extinction
+        if rand() < exp(0.5*(μt + μt1))*t
+          return surv, nn
+        else
+          return true, nn
+        end
+
+        return true, nn
+      end
+
+      t  -= δt
+
+      λt1 = rnorm(λt + αλ*δt, srδt*σλ)
+      μt1 = rnorm(μt + αμ*δt, srδt*σμ)
+
+      λm = exp(0.5*(λt + λt1))
+      μm = exp(0.5*(μt + μt1))
+
+      if divev(λm, μm, δt)
+        # if speciation
+        if λorμ(λm, μm)
+          nn += 1
+          surv, nn =
+            _sim_gbmfbd_surv(t, λt1, μt1, αλ, αμ, σλ, σμ, δt, srδt, surv, nn)
+          surv, nn =
+            _sim_gbmfbd_surv(t, λt1, μt1, αλ, αμ, σλ, σμ, δt, srδt, surv, nn)
+
+          return surv, nn
+        # if extinction
+        else
+          return surv, nn
+        end
+      end
+
+      λt = λt1
+      μt = μt1
+    end
+  end
+
+  return true, nn
+end
+
+
+
 """
     _sim_gbmfbd_fx(t   ::Float64,
                    δt  ::Float64,

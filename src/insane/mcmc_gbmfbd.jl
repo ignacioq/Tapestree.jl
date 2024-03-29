@@ -44,7 +44,8 @@ Created 03 09 2020
 Run insane for fossilized birth-death diffusion `fbdd`.
 """
 function insane_gbmfbd(tree    ::sTf_label;
-                       α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
+                       αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                       αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                        σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                        σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                        ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -59,10 +60,11 @@ function insane_gbmfbd(tree    ::sTf_label;
                        λi      ::Float64               = NaN,
                        μi      ::Float64               = NaN,
                        ψi      ::Float64               = NaN,
-                       αi      ::Float64               = 0.0,
+                       αλi      ::Float64              = 0.0,
+                       αμi      ::Float64              = 0.0,
                        σλi     ::Float64               = 0.1,
                        σμi     ::Float64               = 0.1,
-                       pupdp   ::NTuple{6,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
+                       pupdp   ::NTuple{7,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
                        δt      ::Float64               = 1e-3,
                        survival::Bool                  = true,
                        mxthf   ::Float64               = Inf,
@@ -143,10 +145,12 @@ function insane_gbmfbd(tree    ::sTf_label;
   end
 
   # M attempts of survival
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, surv)
+  mc = m_surv_gbmfbd(th, log(λc), log(μc), αλi, αμi, σλi, σμi, 
+         δt, srδt, 1_000, surv)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, λc, μc, αi, σλi, σμi, δt, srδt, iTfbd)
+  Ξ = make_Ξ(idf, λc, μc, αλi, αμi, σλi, σμi, δt, srδt, iTfbd)
+
 
   # set end of fix branch speciation times and get vector of internal branches
   # and make epoch start vectors and indices for each `ξ`
@@ -179,15 +183,15 @@ function insane_gbmfbd(tree    ::sTf_label;
   @info "running fossilized birth-death diffusion"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, ns, ne, stnλ, stnμ =
-    mcmc_burn_gbmfbd(Ξ, idf, α_prior, σλ_prior, σμ_prior,
-      ψ_prior, ψ_epoch, f_epoch, nburn, αi, σλi, σμi, ψc, mc, th, surv, 
+  Ξ, idf, llc, prc, αλc, αμc, σλc, σμc, ψc, mc, ns, ne, stnλ, stnμ =
+    mcmc_burn_gbmfbd(Ξ, idf, αλ_prior, αμ_prior, σλ_prior, σμ_prior,
+      ψ_prior, ψ_epoch, f_epoch, nburn, αλi, αμi, σλi, σμi, ψc, mc, th, surv, 
       stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   # mcmc
   r, treev =
-    mcmc_gbmfbd(Ξ, idf, llc, prc, αc, σλc, σμc, ψc, mc, th, surv, ns, ne, 
-      stnλ, stnμ, α_prior, σλ_prior, σμ_prior, 
+    mcmc_gbmfbd(Ξ, idf, llc, prc, αλc, αμc, σλc, σμc, ψc, mc, th, surv, ns, ne, 
+      stnλ, stnμ, αλ_prior, αμ_prior, σλ_prior, σμ_prior, 
       ψ_prior, ψ_epoch, f_epoch, δt, srδt, bst, eixi, eixf, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -255,7 +259,12 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           prints  ::Int64)
 
   nsi = (iszero(e(Ξ[1])) && !isfossil(idf[1]))
-  llc = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
+
+  """
+  here
+  """
+
+  llc = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
         nsi * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
   prc = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
         logdinvgamma(σμc^2,        σμ_prior[1], σμ_prior[2])  +
