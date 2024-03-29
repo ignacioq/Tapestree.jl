@@ -142,7 +142,7 @@ function _daughters_update!(ξ1  ::T,
     irrμ = irrμ1 + irrμ2
   end
 
-  return llr, acr, drλ, drμ ssrλ, ssrμ, irrλ, irrμ, λ1p, λ2p, μ1p, μ2p
+  return llr, acr, drλ, drμ, ssrλ, ssrμ, irrλ, irrμ, λ1p, λ2p, μ1p, μ2p
 end
 
 

@@ -261,8 +261,8 @@ function _sedges_gbmfbd(n   ::Int64,
                 λt  = λsi[lvi]
                 μt  = μsi[lvi]
 
-                push!(λsi, rnorm(λt + α*δt, srδt*σλ))
-                push!(μsi, rnorm(μt + μ*δt, srδt*σμ))
+                push!(λsi, rnorm(λt + αλ*δt, srδt*σλ))
+                push!(μsi, rnorm(μt + αμ*δt, srδt*σμ))
               end
 
               # to add

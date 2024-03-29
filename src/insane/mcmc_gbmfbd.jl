@@ -350,10 +350,6 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
       # forward simulation update
       else
 
-        """
-        here
-        """
-
         bix = ceil(Int64,rand()*el)
 
         llc, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
@@ -398,7 +394,8 @@ end
                 mc      ::Float64,
                 th      ::Float64,
                 surv   ::Int64,
-                α_prior ::NTuple{2,Float64},
+                αλ_prior::NTuple{2,Float64},
+                αμ_prior::NTuple{2,Float64},
                 σλ_prior::NTuple{2,Float64},
                 σμ_prior::NTuple{2,Float64},
                 ψ_prior ::NTuple{2,Float64},
@@ -434,7 +431,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      ne      ::Float64,
                      stnλ    ::Float64, 
                      stnμ    ::Float64,
-                     α_prior ::NTuple{2,Float64},
+                     αλ_prior::NTuple{2,Float64},
+                     αμ_prior::NTuple{2,Float64},
                      σλ_prior::NTuple{2,Float64},
                      σμ_prior::NTuple{2,Float64},
                      ψ_prior ::NTuple{2,Float64},
@@ -463,10 +461,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   el  = lastindex(idf)                    # number of branches
   nep = lastindex(ψc)
 
-  ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+  ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αλc, αμc)
 
   # parameter results
-  r = Array{Float64,2}(undef, nlogs, 8 + nep)
+  r = Array{Float64,2}(undef, nlogs, 9 + nep)
 
   # make Ξ vector
   treev = iTfbd[]
@@ -476,7 +474,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
+    write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
@@ -491,70 +489,87 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # parameter updates
         for pupi in pup
 
-          # update α
+          # update αλ
           if pupi === 1
 
-            llc, prc, αc, mc =
-              update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, sum(L), 
-                ddλ, llc, prc, mc, th, surv, δt, srδt, α_prior)
+            llc, prc, αλc, mc =
+              update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
+                ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
 
-            # update ssλ with new drift `α`
-            ssλ, ssμ = _ss(Ξ, αc)
+            # update ssλ with new drift `αλc`
+            ssλ = _ss(Ξ, lλ, αλc)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+
+            # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            #  if !isapprox(ll0, llc, atol = 1e-4)
+            #    @show ll0, llc, it, pupi, Ξ
+            #    return
+            # end
+
+          # update αμ
+          elseif pupi === 2
+
+            llc, prc, αμc, mc =
+              update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
+                ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
+
+            # update ssλ with new drift `αμc`
+            ssμ = _ss(Ξ, lμ, αμc)
+
+            # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
 
           # σλ & σμ update
-          elseif pupi === 2
+          elseif pupi === 3
 
             llc, prc, σλc, σμc, mc =
-              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αc, ssλ, ssμ, nλ,
+              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, αμc, ssλ, ssμ, nλ,
                 llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
 
           # psi update
-          elseif pupi === 3
+          elseif pupi === 4
 
             llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
 
           # update scale
-          elseif pupi === 4
+          elseif pupi === 5
 
             llc, irλ, irμ, accλ, accμ, mc = 
-              update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
+              update_scale!(Ξ, idf, αλc, αμc, σλc, σμc, llc, irλ, irμ, ns, ne, 
                 stnλ, stnμ, mc, th, surv, δt, srδt)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
             #    return
             # end
 
           # gbm update
-          elseif pupi === 5
+          elseif pupi === 6
 
             nix = ceil(Int64,rand()*nin)
             bix = inodes[nix]
 
-            llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-              update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, irλ, irμ, 
-                mc, th, surv, δt, srδt)
+            llc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+              update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, ddλ, ddμ, 
+                ssλ, ssμ, irλ, irμ, mc, th, surv, δt, srδt)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
             #    return
@@ -565,11 +580,12 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
             bix = ceil(Int64,rand()*el)
 
-            llc, ddλ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
-              update_fs!(bix, Ξ, idf, αc, σλc, σμc, ψc, llc, ddλ, ssλ, ssμ, nλ, 
-                irλ, irμ, ns, ne, L, ψ_epoch, δt, srδt, eixi, eixf)
+            llc, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
+              update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, ddλ, ddμ, 
+                ssλ, ssμ, nλ, irλ, irμ, ns, ne, L, ψ_epoch, δt, srδt, 
+                eixi, eixf)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+            # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
             #    return
@@ -594,9 +610,10 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             r[lit,3] = prc
             r[lit,4] = exp(lλ(Ξ[1])[1])
             r[lit,5] = exp(lμ(Ξ[1])[1])
-            r[lit,6] = αc
-            r[lit,7] = σλc
-            r[lit,8] = σμc
+            r[lit,6] = αλc
+            r[lit,7] = αμc
+            r[lit,8] = σλc
+            r[lit,9] = σμc
             @turbo for i in Base.OneTo(nep)
               r[lit,8 + i] = ψc[i]
             end
@@ -610,8 +627,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         if sthin === nflush
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
-              exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
-               σλc, "\t", σμc, "\t", join(ψc, "\t"), "\n"))
+              exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αλc, "\t", 
+              αλc, "\t", σλc, "\t", σμc, "\t", join(ψc, "\t"), "\n"))
           flush(of)
           write(tf, 
             string(istring(couple(Ξ, idf, 1)), "\n"))
