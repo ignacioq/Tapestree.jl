@@ -312,7 +312,7 @@ end
                   λev ::Bool,
                   μev ::Bool)
 
-Returns the log-likelihood for a branch according to `gbmbd`
+Returns the log-likelihood for a branch according to `bdd`
 separately (for gbm and bd).
 """
 function llr_gbm_b_sep(lλp ::Array{Float64,1},
@@ -415,7 +415,7 @@ function _ss_ir_dd(tree::T,
                    ssμ ::Float64,
                    n   ::Float64,
                    irλ ::Float64,
-                   irμ ::Float64) where {T <: iTbdU}
+                   irμ ::Float64) where {T <: iTbd}
 
   dd0, ssλ0, ssμ0, n0, irλ0, irμ0 = 
     _ss_ir_dd_b(lλ(tree), lμ(tree), α, dt(tree), fdt(tree))
@@ -504,12 +504,12 @@ end
 
 
 """
-    _ss(tree::T, α::Float64, ssλ::Float64, ssμ::Float64) where {T <: iTbdU}
+    _ss(tree::T, α::Float64, ssλ::Float64, ssμ::Float64) where {T <: iTbd}
 
 Returns the standardized sum of squares for the gbm part of a branch
 for `bdd`.
 """
-function _ss(tree::T, α::Float64, ssλ::Float64, ssμ::Float64) where {T <: iTbdU}
+function _ss(tree::T, α::Float64, ssλ::Float64, ssμ::Float64) where {T <: iTbd}
 
   ssλ0, ssμ0 = _ss_b(lλ(tree), lμ(tree), α, dt(tree), fdt(tree))
   ssλ += ssλ0

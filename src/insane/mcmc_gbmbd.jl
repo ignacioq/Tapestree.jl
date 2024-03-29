@@ -643,8 +643,6 @@ function update_scale!(Ξ   ::Vector{T},
   s = randn()*stnλ
 
   # likelihood ratio
-  mp = m_surv_gbmbd(th, lλ(Ξ[1])[1] + s, lμ(Ξ[1])[1], 
-         α, σλ, σμ, δt, srδt, 1_000, surv)
   iri = (1.0 - exp(s)) * irλ
   llr = ns * s + iri 
 

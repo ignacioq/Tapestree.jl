@@ -432,3 +432,302 @@ end
 
 
 
+
+"""
+    llr_gbm_b_sep(lλp ::Array{Float64,1},
+                  lμp ::Array{Float64,1},
+                  lλc ::Array{Float64,1},
+                  lμc ::Array{Float64,1},
+                  αλ  ::Float64,
+                  αμ  ::Float64,
+                  σλ  ::Float64,
+                  σμ  ::Float64,
+                  δt  ::Float64,
+                  fdt ::Float64,
+                  srδt::Float64,
+                  λev ::Bool,
+                  μev ::Bool)
+
+Returns the log-likelihood for a branch according to `fbdd`
+separately (for gbm and bd).
+"""
+function llr_gbm_b_sep(lλp ::Array{Float64,1},
+                       lμp ::Array{Float64,1},
+                       lλc ::Array{Float64,1},
+                       lμc ::Array{Float64,1},
+                       αλ  ::Float64,
+                       αμ  ::Float64,
+                       σλ  ::Float64,
+                       σμ  ::Float64,
+                       δt  ::Float64,
+                       fdt ::Float64,
+                       srδt::Float64,
+                       λev ::Bool,
+                       μev ::Bool)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλc)-2
+
+    llrbmλ = llrbmμ = llrbdλ = llrbdμ = 0.0
+    @turbo for i in Base.OneTo(nI)
+      lλpi    = lλp[i]
+      lλci    = lλc[i]
+      lμpi    = lμp[i]
+      lμci    = lμc[i]
+      lλpi1   = lλp[i+1]
+      lλci1   = lλc[i+1]
+      lμpi1   = lμp[i+1]
+      lμci1   = lμc[i+1]
+      llrbmλ += (lλpi1 - lλpi - αλ*δt)^2 - (lλci1 - lλci - αλ*δt)^2
+      llrbmμ += (lμpi1 - lμpi - αμ*δt)^2 - (lμci1 - lμci - αμ*δt)^2
+      llrbdλ += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+      llrbdμ += exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1))
+    end
+
+    # standardized sum of squares
+    ssrλ = llrbmλ/(2.0*δt)
+    ssrμ = llrbmμ/(2.0*δt)
+
+    # overall
+    llrbmλ *= (-0.5/((σλ*srδt)^2))
+    llrbmμ *= (-0.5/((σμ*srδt)^2))
+    llrbm   = llrbmλ + llrbmμ
+    llrbdλ *= (-δt)
+    llrbdμ *= (-δt)
+
+    lλpi1 = lλp[nI+2]
+    lμpi1 = lμp[nI+2]
+    lλci1 = lλc[nI+2]
+    lμci1 = lμc[nI+2]
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      lλpi    = lλp[nI+1]
+      lλci    = lλc[nI+1]
+      lμpi    = lμp[nI+1]
+      lμci    = lμc[nI+1]
+      ssrλ   += ((lλpi1 - lλpi - αλ*fdt)^2 - 
+                 (lλci1 - lλci - αλ*fdt)^2)/(2.0*fdt)
+      ssrμ   += ((lμpi1 - lμpi - αμ*fdt)^2 - 
+                 (lμci1 - lμci - αμ*fdt)^2)/(2.0*fdt)
+      srfdt   = sqrt(fdt)
+      llrbm  += lrdnorm_bm_x(lλpi1, lλpi + αλ*fdt,
+                             lλci1, lλci + αλ*fdt, srfdt*σλ) +
+                lrdnorm_bm_x(lμpi1, lμpi + αμ*fdt, 
+                             lμci1, lμci + αμ*fdt, srfdt*σμ)
+      llrbdλ -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+      llrbdμ -= fdt*(exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
+    end
+    irrλ  = -llrbdλ
+    irrμ  = -llrbdμ
+    llrbd = llrbdλ + llrbdμ
+    if λev
+      llrbd += lλpi1 - lλci1
+    elseif μev
+      llrbd += lμpi1 - lμci1
+    end
+  end
+
+  return llrbm, llrbd, ssrλ, ssrμ, irrλ, irrμ
+end
+
+
+
+
+"""
+    _ss_ir_dd(tree::T,
+              αλ  ::Float64,
+              αμ  ::Float64,
+              ddλ ::Float64,
+              ddμ ::Float64,
+              ssλ ::Float64,
+              ssμ ::Float64,
+              n   ::Float64,
+              irλ ::Float64,
+              irμ ::Float64) where {T <: iTfbd}
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_ir_dd(tree::T,
+                   αλ  ::Float64,
+                   αμ  ::Float64,
+                   ddλ ::Float64,
+                   ddμ ::Float64,
+                   ssλ ::Float64,
+                   ssμ ::Float64,
+                   n   ::Float64,
+                   irλ ::Float64,
+                   irμ ::Float64) where {T <: iTfbd}
+
+  ddλ0, ddμ0, ssλ0, ssμ0, n0, irλ0, irμ0 = 
+    _ss_ir_dd_b(lλ(tree), lμ(tree), αλ, αμ, dt(tree), fdt(tree))
+
+  dd  += ddλ0
+  dd  += ddμ0
+  ssλ += ssλ0
+  ssμ += ssμ0
+  n   += n0
+  irλ += irλ0
+  irμ += irμ0
+
+  if def1(tree)
+    ddλ, ddμ, ssλ, ssμ, n, irλ, irμ = 
+      _ss_ir_dd(tree.d1, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n, irλ, irμ)
+    if def2(tree)
+      ddλ, ddμ, ssλ, ssμ, n, irλ, irμ = 
+        _ss_ir_dd(tree.d2, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n, irλ, irμ)
+    end
+  end
+
+  return ddλ, ddμ, ssλ, ssμ, n, irλ, irμ
+end
+
+
+
+
+"""
+    _ss_ir_dd_b(lλv::Array{Float64,1},
+                lμv::Array{Float64,1},
+                αλ  ::Float64,
+                αμ  ::Float64,
+                δt ::Float64,
+                fdt::Float64)
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_ir_dd_b(lλv::Array{Float64,1},
+                     lμv::Array{Float64,1},
+                     αλ  ::Float64,
+                     αμ  ::Float64,
+                     δt ::Float64,
+                     fdt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
+
+    ssλ = ssμ = irλ = irμ = 0.0
+    @turbo for i in Base.OneTo(nI)
+      lλvi  = lλv[i]
+      lμvi  = lμv[i]
+      lλvi1 = lλv[i+1]
+      lμvi1 = lμv[i+1]
+      ssλ  += (lλvi1 - lλvi - αλ*δt)^2
+      ssμ  += (lμvi1 - lμvi - αμ*δt)^2
+      irλ  += exp(0.5*(lλvi + lλvi1))
+      irμ  += exp(0.5*(lμvi + lμvi1))
+    end
+
+    # standardize
+    invt = 1.0/(2.0*δt)
+    ssλ *= invt
+    ssμ *= invt
+    irλ *= δt
+    irμ *= δt
+
+    n = Float64(nI)
+    # add final non-standard `δt`
+    if fdt > 0.0
+      invt = 1.0/(2.0*fdt)
+      lλvi  = lλv[nI+1]
+      lμvi  = lμv[nI+1]
+      lλvi1 = lλv[nI+2]
+      lμvi1 = lμv[nI+2]
+      ssλ += invt * (lλvi1 - lλvi - αλ*fdt)^2
+      ssμ += invt * (lμvi1 - lμvi - αμ*fdt)^2
+      irλ += fdt*exp(0.5*(lλvi + lλvi1))
+      irμ += fdt*exp(0.5*(lμvi + lμvi1))
+      n += 1.0
+    end
+  end
+
+  return (lλv[nI+2] - lλv[1]), (lμv[nI+2] - lμv[1]), ssλ, ssμ, n, irλ, irμ
+end
+
+
+
+
+"""
+    _ss(tree::T, 
+        αλ  ::Float64, 
+        αμ  ::Float64,
+        ssλ ::Float64, 
+        ssμ ::Float64) where {T <: iTfbd}
+
+Returns the standardized sum of squares for the gbm part of a branch
+for `fbdd`.
+"""
+function _ss(tree::T, 
+             αλ  ::Float64, 
+             αμ  ::Float64,
+             ssλ ::Float64, 
+             ssμ ::Float64) where {T <: iTfbd}
+
+  ssλ0, ssμ0 = _ss_b(lλ(tree), lμ(tree), αλ, αμ, dt(tree), fdt(tree))
+  ssλ += ssλ0
+  ssμ += ssμ0
+
+  if def1(tree)
+    ssλ, ssμ = _ss(tree.d1, αλ, αμ, ssλ, ssμ)
+    if def2(tree)
+      ssλ, ssμ = _ss(tree.d2, αλ, αμ, ssλ, ssμ)
+    end
+  end
+
+  return ssλ, ssμ
+end
+
+
+
+
+"""
+    _ss_b(lλv::Array{Float64,1},
+          lμv::Array{Float64,1},
+          αλ  ::Float64, 
+          αμ  ::Float64,
+          δt ::Float64,
+          fdt::Float64)
+
+Returns the standardized sum of squares for the gbm part of a branch
+for `bdd`.
+"""
+function _ss_b(lλv::Array{Float64,1},
+               lμv::Array{Float64,1},
+               αλ  ::Float64, 
+               αμ  ::Float64,
+               δt ::Float64,
+               fdt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
+
+    ssλ = ssμ = 0.0
+    @turbo for i in Base.OneTo(nI)
+      ssλ  += (lλv[i+1] - lλv[i] - αλ*δt)^2
+      ssμ  += (lμv[i+1] - lμv[i] - αμ*δt)^2
+    end
+
+    # add to global likelihood
+    invt = 1.0/(2.0*δt)
+    ssλ *= invt
+    ssμ *= invt
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      invt = 1.0/(2.0*fdt)
+      ssλ += invt * (lλv[nI+2] - lλv[nI+1] - αλ*fdt)^2
+      ssμ += invt * (lμv[nI+2] - lμv[nI+1] - αμ*fdt)^2
+    end
+  end
+
+  return ssλ, ssμ
+end
+
+
+
+
+
