@@ -578,7 +578,7 @@ function update_tip!(tree::T,
     λp   = Vector{Float64}(undef, l)
     μp   = Vector{Float64}(undef, l)
 
-    bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
+    bm!(λp, μp, λc[1], μc[1], αλ, αμ, σλ, σμ, δt, fdtp, srδt)
 
     llrbm, llrbd, ssrλ, ssrμ, irrλ, irrμ =
       llr_gbm_b_sep(λp, μp, λc, μc, αλ, αμ, σλ, σμ, δt, fdtp, srδt,
