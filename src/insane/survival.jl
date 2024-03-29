@@ -277,6 +277,7 @@ function m_surv_gbmfbd(t   ::Float64,
                        srδt::Float64,
                        ntry::Int64,
                        c   ::Int64)
+
   ntries = 1
   m      = 1.0
 

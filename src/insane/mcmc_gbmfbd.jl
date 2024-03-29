@@ -151,7 +151,6 @@ function insane_gbmfbd(tree    ::sTf_label;
   # make a decoupled tree
   Ξ = make_Ξ(idf, λc, μc, αλi, αμi, σλi, σμi, δt, srδt, iTfbd)
 
-
   # set end of fix branch speciation times and get vector of internal branches
   # and make epoch start vectors and indices for each `ξ`
   inodes = Int64[]
@@ -387,7 +386,8 @@ end
                 idf     ::Vector{iBffs},
                 llc     ::Float64,
                 prc     ::Float64,
-                αc      ::Float64,
+                αλc     ::Float64,
+                αμc     ::Float64,
                 σλc     ::Float64,
                 σμc     ::Float64,
                 ψc      ::Vector{Float64},
@@ -420,7 +420,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                      idf     ::Vector{iBffs},
                      llc     ::Float64,
                      prc     ::Float64,
-                     αc      ::Float64,
+                     αλc     ::Float64,
+                     αμc     ::Float64,
                      σλc     ::Float64,
                      σμc     ::Float64,
                      ψc      ::Vector{Float64},
@@ -499,7 +500,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             # update ssλ with new drift `αλc`
             ssλ = _ss(Ξ, lλ, αλc)
 
-
             # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
             #    @show ll0, llc, it, pupi, Ξ
@@ -526,8 +526,8 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           elseif pupi === 3
 
             llc, prc, σλc, σμc, mc =
-              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, αμc, ssλ, ssμ, nλ,
-                llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
+              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, αμc, ssλ, ssμ, 
+                nλ, llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
             # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - (iszero(e(Ξ[1])) && !isfossil(idf[1])) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -615,7 +615,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             r[lit,8] = σλc
             r[lit,9] = σμc
             @turbo for i in Base.OneTo(nep)
-              r[lit,8 + i] = ψc[i]
+              r[lit, 9 + i] = ψc[i]
             end
             push!(treev, couple(Ξ, idf, 1))
           end
@@ -628,7 +628,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           write(of, 
             string(Float64(it), "\t", llc, "\t", prc, "\t", 
               exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αλc, "\t", 
-              αλc, "\t", σλc, "\t", σμc, "\t", join(ψc, "\t"), "\n"))
+              αμc, "\t", σλc, "\t", σμc, "\t", join(ψc, "\t"), "\n"))
           flush(of)
           write(tf, 
             string(istring(couple(Ξ, idf, 1)), "\n"))
@@ -667,7 +667,7 @@ end
 
 Gibbs update for `αλ`.
 """
-function update_αλ!(αλ      ::Float64,
+function update_αλ!(αλc     ::Float64,
                     λ0      ::Float64,
                     μ0      ::Float64,
                     αμ      ::Float64,
@@ -690,7 +690,7 @@ function update_αλ!(αλ      ::Float64,
   rs  = σλ2/τ2
   αλp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, αλp, αμ, σλ, σμ, δt, srδt, 1_000, surv)
+  mp  = m_surv_gbmfbd(th, λ0, μ0, αλp, αμ, σλ, σμ, δt, srδt, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -726,7 +726,7 @@ end
 
 Gibbs update for `αμ`.
 """
-function update_αμ!(αμ      ::Float64,
+function update_αμ!(αμc     ::Float64,
                     λ0      ::Float64,
                     μ0      ::Float64,
                     αλ      ::Float64,
@@ -749,7 +749,7 @@ function update_αμ!(αμ      ::Float64,
   rs  = σμ2/τ2
   αμp  = rnorm((ddμ + rs*ν)/(rs + L), sqrt(σμ2/(rs + L)))
 
-  mp  = m_surv_gbmbd(th, λ0, μ0, αλ, αμp, σλ, σμ, δt, srδt, 1_000, surv)
+  mp  = m_surv_gbmfbd(th, λ0, μ0, αλ, αμp, σλ, σμ, δt, srδt, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -760,6 +760,74 @@ function update_αμ!(αμ      ::Float64,
   end
 
   return llc, prc, αμc, mc
+end
+
+
+
+
+"""
+    update_σ!(σλc     ::Float64,
+              σμc     ::Float64,
+              λ0      ::Float64,
+              μ0      ::Float64,
+              α       ::Float64,
+              ssλ     ::Float64,
+              ssμ     ::Float64,
+              n       ::Float64,
+              llc     ::Float64,
+              prc     ::Float64,
+              mc      ::Float64,
+              th      ::Float64,
+              surv    ::Bool,
+              δt      ::Float64,
+              srδt    ::Float64,
+              σλ_prior::NTuple{2,Float64},
+              σμ_prior::NTuple{2,Float64})
+
+Gibbs update for `σλ` and `σμ`.
+"""
+function update_σ!(σλc     ::Float64,
+                   σμc     ::Float64,
+                   λ0      ::Float64,
+                   μ0      ::Float64,
+                   αλ      ::Float64,
+                   αμ      ::Float64,
+                   ssλ     ::Float64,
+                   ssμ     ::Float64,
+                   n       ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   surv    ::Int64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   σλ_prior::NTuple{2,Float64},
+                   σμ_prior::NTuple{2,Float64})
+
+  # Gibbs update for σ
+  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + ssλ)
+  σμp2 = randinvgamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + ssμ)
+
+  σλp = sqrt(σλp2)
+  σμp = sqrt(σμp2)
+
+  mp  = m_surv_gbmfbd(th, λ0, μ0, αλ, αμ, σλp, σμp, δt, srδt, 1_000, surv)
+
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) +
+           ssμ*(1.0/σμc^2 - 1.0/σμp2) - n*(log(σμp/σμc)) +
+           llr
+    prc += llrdinvgamma(σλp2, σλc^2, σλ_prior[1], σλ_prior[2]) +
+           llrdinvgamma(σμp2, σμc^2, σμ_prior[1], σμ_prior[2])
+    σλc  = σλp
+    σμc  = σμp
+    mc   = mp
+  end
+
+  return llc, prc, σλc, σμc, mc
 end
 
 
@@ -820,7 +888,7 @@ function update_scale!(Ξ   ::Vector{T},
   if lU < llr + log(1000.0/mc)
 
     # add survival ratio
-    mp  = m_surv_gbmbd(th, lλ(Ξ[1])[1] + s, lμ(Ξ[1])[1], 
+    mp  = m_surv_gbmfbd(th, lλ(Ξ[1])[1] + s, lμ(Ξ[1])[1], 
             αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
     llr += log(mp/mc)
 
@@ -846,7 +914,7 @@ function update_scale!(Ξ   ::Vector{T},
   if lU < llr + log(1000.0/mc)
 
     # add survival ratio
-    mp = m_surv_gbmbd(th, lλ(Ξ[1])[1], lμ(Ξ[1])[1] + s, 
+    mp = m_surv_gbmfbd(th, lλ(Ξ[1])[1], lμ(Ξ[1])[1] + s, 
           αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
     llr += log(mp/mc)
 

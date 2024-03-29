@@ -291,6 +291,7 @@ function llik_gbm_ss(tree::iTfbd,
 
       ll  += ll1
       ddλ += ddλ1
+      ddμ += ddμ1
       ssλ += ssλ1
       ssμ += ssμ1
       nλ  += nλ1
@@ -564,8 +565,8 @@ function _ss_ir_dd(tree::T,
   ddλ0, ddμ0, ssλ0, ssμ0, n0, irλ0, irμ0 = 
     _ss_ir_dd_b(lλ(tree), lμ(tree), αλ, αμ, dt(tree), fdt(tree))
 
-  dd  += ddλ0
-  dd  += ddμ0
+  ddλ += ddλ0
+  ddμ += ddμ0
   ssλ += ssλ0
   ssμ += ssμ0
   n   += n0

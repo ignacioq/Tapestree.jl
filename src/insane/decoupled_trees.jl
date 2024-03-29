@@ -539,8 +539,8 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
 
     push!(Ξ, iTfbd(
                iTfbd(0.0, δt, 0.0, true, false, false, 
-                 [lλl, rnorm(lλl + α*0.0, 0.0*σλ)], 
-                 [lμl, rnorm(lμl,         0.0*σμ)]),
+                 [lλl, rnorm(lλl + αλ*0.0, 0.0*σλ)], 
+                 [lμl, rnorm(lμl + αμ*0.0, 0.0*σμ)]),
                et, δt, fdti, false, true, true, lλv, lμv))
   else
     push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(bi), true, lλv, lμv))
