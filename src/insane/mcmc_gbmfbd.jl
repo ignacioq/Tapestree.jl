@@ -360,7 +360,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
     # numerical stability
     lns += 1
-    if lns === 5_000
+    if lns === 500
       irλ, irμ = _ir(Ξ)
       lns = 0
     end
@@ -595,7 +595,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
         # numerical stability
         lns += 1
-        if lns === 5_000
+        if lns === 500
           irλ, irμ = _ir(Ξ)
           lns = 0
         end
