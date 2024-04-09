@@ -43,7 +43,7 @@ function insane_dbm(tree   ::Tlabel,
                     nflush ::Int64                 = nthin,
                     ofile  ::String                = string(homedir(), "/dbm"),
                     αi     ::Float64               = 0.0,
-                    γi     ::Float64               = 0.1,
+                    γi     ::Float64               = 1e-3,
                     pupdp  ::NTuple{4,Float64}     = (0.1, 0.1, 0.05, 0.9),
                     δt     ::Float64               = 1e-3,
                     stn    ::Float64               = 0.1,
@@ -128,7 +128,7 @@ function mcmc_burn_dbm(Ξ      ::Vector{sTxs},
                        prints ::Int64)
 
   # starting likelihood and prior
-  ll  = zeros(lastindex(Ξ)) 
+  ll  = zeros(lastindex(Ξ))
   llik_dbm_v!(ll, Ξ, αc, γc, δt)
   prc = logdnorm(αc,       α_prior[1], α_prior[2]^2) + 
         logdinvgamma(γc^2, γ_prior[1], γ_prior[2])
@@ -290,7 +290,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
           elseif pupi === 2
 
             prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
-
+    
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
             #    @show ll0, llc, it, pupi
