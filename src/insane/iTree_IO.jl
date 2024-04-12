@@ -221,9 +221,9 @@ function from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
     sd2, i = _from_string(s[(ci+1):end], 1, T)
 
     if e(sd1) === 0.0
-      tree = T(sd2, 0.0, l(sd1))
+      tree = T(sd2, 0.0, label(sd1))
     elseif e(sd2) === 0.0
-      tree = T(sd1, 0.0, l(sd2))
+      tree = T(sd1, 0.0, label(sd2))
     else
       tree = T(sd1, sd2, 0.0, "")
     end
@@ -262,9 +262,9 @@ function _from_string(s::String, i::Int64, ::Type{T}) where {T <: sT}
     if in1
       if in2
         if e(sd1) === 0.0
-          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), l(sd1))
+          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), label(sd1))
         elseif e(sd2) === 0.0
-          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), l(sd2))
+          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), label(sd2))
         else
           tree = T(sd1, sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
         end

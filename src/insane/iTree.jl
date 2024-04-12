@@ -87,9 +87,9 @@ Copies a tree to `sT_label`.
 """
 function sT_label(tree::sT_label)
   if def1(tree)
-    sT_label(sT_label(tree.d1), sT_label(tree.d2), e(tree), l(tree))
+    sT_label(sT_label(tree.d1), sT_label(tree.d2), e(tree), label(tree))
   else
-    sT_label(e(tree), l(tree))
+    sT_label(e(tree), label(tree))
   end
 end
 
@@ -187,12 +187,12 @@ Copies a tree to `sTf_label`
 function sTf_label(tree::sTf_label)
   if def1(tree)
     if def2(tree)
-      sTf_label(sTf_label(tree.d1), sTf_label(tree.d2), e(tree), l(tree))
+      sTf_label(sTf_label(tree.d1), sTf_label(tree.d2), e(tree), label(tree))
     else
-      sTf_label(sTf_label(tree.d1), e(tree), l(tree))
+      sTf_label(sTf_label(tree.d1), e(tree), label(tree))
     end
   else
-    sTf_label(e(tree), isextinct(tree), isfossil(tree), l(tree))
+    sTf_label(e(tree), isextinct(tree), isfossil(tree), label(tree))
   end
 end
 

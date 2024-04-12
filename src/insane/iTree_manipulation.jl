@@ -603,7 +603,7 @@ function fossilize!(tree::T, label::String) where {T <: sTf_label}
     if def2(tree)
       fossilize!(tree.d2::T, label)
     end
-  elseif l(tree) == label 
+  elseif label(tree) == label 
     fossilize!(tree)
   end
 end
@@ -623,7 +623,7 @@ function defossilize!(tree::T, label::String) where {T <: sTf_label}
     if def2(tree)
       defossilize!(tree.d2::T, label)
     end
-  elseif l(tree) == label 
+  elseif label(tree) == label 
     defossilize!(tree)
   end
 end
@@ -2432,7 +2432,7 @@ function _prune_fossils!(tree::sTf_label)
 
       if isfossil(tree.d1)
         if isfossil(tree.d2)
-          return sTf_label(e(tree), isextinct(tree), true, l(tree))
+          return sTf_label(e(tree), isextinct(tree), true, label(tree))
         else
           ne  = e(tree) + e(tree.d2)
           tree = tree.d2
