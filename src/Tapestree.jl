@@ -34,7 +34,7 @@ using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe
 
 using .INSANE: read_newick, write_newick, iread, iwrite,
-  sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd,
+  sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sTxs,
   sim_cpb, sim_cbd, sim_cfbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, 
@@ -45,10 +45,11 @@ using .INSANE: read_newick, write_newick, iread, iwrite,
   insane_dbm,
   iquantile, imean, irange, sample,
   lλ, lμ, remove_extinct, remove_unsampled, remove_fossils, fixedpos, fossilize!,
-  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs, l, xv, lσ,
+  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs, xv, lσ,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
-  trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, tiplabels, 
-  time_rate, make_idf
+  trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, 
+  time_rate, make_idf,
+  tiplabels, labels, label
 export read_newick, write_newick, iread, iwrite,
   sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
@@ -61,9 +62,10 @@ export read_newick, write_newick, iread, iwrite,
   insane_dbm,
   iquantile, imean, irange, sample,
   lλ, lμ, remove_extinct, remove_unsampled, remove_fossils, fixedpos, fossilize!,
-  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs, l, xv, lσ,
+  e, b, d, ld, lb, nd, t, lt, dλ, dμ, dλc, dμc, epochs, xv, lσ,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
-  trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, tiplabels, 
-  time_rate, make_idf
+  trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, 
+  time_rate, make_idf,
+  tiplabels, labels, label
 
 end # module Tapestree
