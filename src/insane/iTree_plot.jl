@@ -22,21 +22,27 @@ Created 07 07 2020
     dμ(tree::iT)
 
 Predefined functions for plotting: 
-  `b`  speciation rates
-  `d`  extinction rates
-  `lb` log speciation rates
-  `lb` log speciation rates
+  `b`  birth (speciation or initiation) rates
+  `d`  death (extinction) rates
+  `c`  completion rates [for protracted models]
+  `lb` log birth (speciation or initiation) rates
+  `ld` log death (extinction) rates
+  `lc` log completion rates [for protracted models]
   `t`  turnover
+  `lt` log turnover
   `nd` net diversification
   `dμ` change in speciation rates
 """
-b(tree::iT)  = exp.(lλ(tree))
-d(tree::iT)  = exp.(lμ(tree))
-lb(tree::iT) = lλ(tree)
-ld(tree::iT) = lμ(tree)
-t(tree::iT)  = exp.(lμ(tree)) ./ exp.(lλ(tree))
-lt(tree::iT) = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
-nd(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+b(tree::iT)     = exp.(lλ(tree))
+d(tree::iT)     = exp.(lμ(tree))
+b(tree::iTpbd)  = exp.(lb(tree))
+c(tree::iTpbd)  = exp.(lλ(tree))
+lb(tree::iT)    = lλ(tree) # lb(tree::iTpbd) is defined independently
+ld(tree::iT)    = lμ(tree)
+lc(tree::iTpbd) = lλ(tree)
+t(tree::iT)     = d(tree) ./ b(tree)
+lt(tree::iT)    = log.(d(tree) ./ b(tree))
+nd(tree::iT)    = b(tree) .- d(tree)
 function dλ(tree::iT)
   dd = diff(exp.(lλ(tree)))
   return append!(dd, dd[end])
@@ -62,7 +68,7 @@ end
       labsize    = 8,
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (false, false, T <: iTf),
+      shownodes  = (false, false, T <: Union{iTf, iTpbd}),
       shapes     = [:none, :none, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
       shsizes    = [3.0, 3.0, 3.0],
@@ -76,7 +82,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    labsize    = 8,
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, T <: iTf),
+                   shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [3.0, 3.0, 3.0],
@@ -89,11 +95,17 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   nodet = Int64[]   # 0 = speciation, 1 = extinction, 2 = fossilization
   xnode = Float64[]
   ynode = Float64[]
+  zstyle = Symbol[]
 
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode, shownodes)
+  _rplottree!(tree, th, 0, x, y, z, zstyle, nodet, xnode, ynode, shownodes)
+  # pop!(zstyle)
+  # @show x
+  # @show y
+  # @show z
+  # @show zstyle
 
   ntF = Float64(nts)
 
@@ -126,6 +138,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   seriescolor     --> :black
   grid            --> :off
   yticks          --> (nothing)
+  linestyle       --> zstyle
   yshowaxis       --> false
 
   @series begin
@@ -194,6 +207,7 @@ end
                 x    ::Array{Float64,1},
                 y    ::Array{Float64,1},
                 z    ::Array{Float64,1},
+                zstyle ::Array{Symbol,1},
                 nodet::Array{Int64,1},
                 xnode::Array{Float64,1},
                 ynode::Array{Float64,1},
@@ -208,6 +222,7 @@ function _rplottree!(tree ::T,
                      x    ::Array{Float64,1},
                      y    ::Array{Float64,1},
                      z    ::Array{Float64,1},
+                     zstyle ::Array{Symbol,1},
                      nodet::Array{Int64,1},
                      xnode::Array{Float64,1},
                      ynode::Array{Float64,1},
@@ -218,8 +233,8 @@ function _rplottree!(tree ::T,
   if def1(tree)
     if def2(tree)
 
-      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
-      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, nodet, xnode, ynode, show)
+      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
+      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
 
       yc = (y1 + y2)*0.5
 
@@ -230,6 +245,10 @@ function _rplottree!(tree ::T,
       z1 = Float64(isfix(tree.d1))
       z2 = Float64(isfix(tree.d2))
       push!(z, z1, z1, NaN, z2, z2, NaN)
+      
+      zstyle1 = ifelse(isgood(tree.d1), :solid, :dot)
+      zstyle2 = ifelse(isgood(tree.d2), :solid, :dot)
+      push!(zstyle, zstyle1, zstyle1, :solid, zstyle2, zstyle2, :solid)
 
       # nodes
       if show[1]
@@ -238,7 +257,7 @@ function _rplottree!(tree ::T,
         push!(ynode, yc)
       end
     else
-      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
+      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
 
       if show[3]
         push!(nodet, 3)
@@ -268,7 +287,9 @@ function _rplottree!(tree ::T,
   push!(x, xc, xe, NaN)
   push!(y, yc, yc, NaN)
   zc = Float64(isfix(tree))
-  push!(z, zc, zc, NaN)
+  push!(z, zc, zc, NaN)    
+  zstylec = ifelse(isgood(tree), :solid, :dot)
+  push!(zstyle, zstylec, zstylec, :solid)
 
   return yc, i
 end
@@ -319,7 +340,7 @@ end
       zf  ::Function;
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (false, false, (T <: iTf)),
+      shownodes  = (false, false, (T <: Union{iTf, iTpbd})),
       shapes     = [:circle, :circle, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
       shsizes    = [0.0, 0.0, 3.0],
@@ -331,7 +352,7 @@ Recipe for plotting a Type `iT`.
                    zf  ::Function;
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, T <: iTf),
+                   shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [0.0, 0.0, 3.0],
@@ -609,7 +630,7 @@ end
           labsize    = 8,
           type       = :phylogram,
           showlabels = (T <: Tlabel),
-          shownodes  = (false, false, T <: iTf),
+          shownodes  = (false, false, T <: Union{iTf, iTpbd}),
           shapes     = [:none, :none, :square],
           colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
           shsizes    = [3.0, 3.0, 3.0],
@@ -624,7 +645,7 @@ function plotω(tree       ::T,
                labsize    = 8,
                type       = :phylogram,
                showlabels = (T <: Tlabel),
-               shownodes  = (false, false, T <: iTf),
+               shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                shapes     = [:none, :none, :square],
                colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                shsizes    = [3.0, 3.0, 3.0],

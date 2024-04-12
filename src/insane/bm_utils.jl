@@ -224,6 +224,65 @@ end
 
 
 """
+    bm!(x0  ::Array{Float64,1},
+        x1  ::Array{Float64,1},
+        x0i ::Float64,
+        x1i ::Float64,
+        α0  ::Float64,
+        α1  ::Float64,
+        σ0  ::Float64,
+        σ1  ::Float64,
+        δt  ::Float64,
+        fdt ::Float64,
+        srδt::Float64)
+
+Brownian motion simulation function for updating a branch for two
+vectors that share times and x0 follows drift α.
+"""
+@inline function bm!(x0  ::Array{Float64,1},
+                     x1  ::Array{Float64,1},
+                     x0i ::Float64,
+                     x1i ::Float64,
+                     α0  ::Float64,
+                     α1  ::Float64,
+                     σ0  ::Float64,
+                     σ1  ::Float64,
+                     δt  ::Float64,
+                     fdt ::Float64,
+                     srδt::Float64)
+
+  @inbounds begin
+    l = lastindex(x0)
+
+    randn!(x0)
+    randn!(x1)
+
+    # for standard δt
+    x0[1] = x0i
+    x1[1] = x1i
+    @simd for i = Base.OneTo(l-2)
+      x0[i+1] *= srδt*σ0
+      x0[i+1] += α0*δt
+      x1[i+1] *= srδt*σ1
+      x1[i+1] += α1*δt
+    end
+    srfdt  = sqrt(fdt)
+    x0[l] *= srfdt*σ0
+    x0[l] += α0*fdt
+    x1[l] *= srfdt*σ1
+    x1[l] += α1*fdt
+
+    cumsum!(x0, x0)
+    cumsum!(x1, x1)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
         α   ::Float64,

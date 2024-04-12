@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    sTpbX
+    sTbX
 
 The simplest composite recursive type of supertype `sT`
 representing a binary phylogenetic tree for `insane` use,
@@ -26,48 +26,48 @@ with the following fields:
   xi: initial trait value
   xf: final trait value
 
-    sTpbX()
+    sTbX()
 
-Constructs an empty `sTpbX` object.
+Constructs an empty `sTbX` object.
 
-    sTpbX(e::Float64, fx::Bool, xi::Float64, xf::Float64)
+    sTbX(e::Float64, fx::Bool, xi::Float64, xf::Float64)
 
-Constructs an `sTpbX` object with two `sTpbX` daughters and edge `e`,
+Constructs an `sTbX` object with two `sTbX` daughters and edge `e`,
 fix information `fx`, initial node trait `xi` and final `xf`.
 """
-mutable struct sTpbX <: sT
-  d1::sTpbX
-  d2::sTpbX
+mutable struct sTbX <: sT
+  d1::sTbX
+  d2::sTbX
   e ::Float64
   fx::Bool
   xi::Float64
   xf::Float64
 
-  sTpbX() = new()
-  sTpbX(e::Float64, fx::Bool, xi::Float64, xf::Float64) =
+  sTbX() = new()
+  sTbX(e::Float64, fx::Bool, xi::Float64, xf::Float64) =
     (x = new(); x.e = e; x.fx = fx; x.xi = xi; x.xf = xf; x)
-  sTpbX(d1::sTpbX, d2::sTpbX, e::Float64, fx::Bool, xi::Float64, xf::Float64) =
+  sTbX(d1::sTbX, d2::sTbX, e::Float64, fx::Bool, xi::Float64, xf::Float64) =
     new(d1, d2, e, fx, xi, xf)
 end
 
 # pretty-printing
-Base.show(io::IO, t::sTpbX) =
+Base.show(io::IO, t::sTbX) =
   print(io, "insane trait pure-birth tree with ", ntips(t), " tips")
 
 
 
 
 """
-    sTpbX(tree::sTpbX)
+    sTbX(tree::sTbX)
 
-Creates a copy of `sTpbX`.
+Creates a copy of `sTbX`.
 """
-function sTpbX(tree::sTpbX)
+function sTbX(tree::sTbX)
   if def1(tree)
-    sTpbX(sTpbX(tree.d1), sTpbX(tree.d2),
+    sTbX(sTbX(tree.d1), sTbX(tree.d2),
       e(tree), isfix(tree), xi(tree), xf(tree))
   else
-    sTpbX(e(tree), isfix(tree), xi(tree), xf(tree))
+    sTbX(e(tree), isfix(tree), xi(tree), xf(tree))
   end
 end
 
@@ -224,7 +224,7 @@ end
 
 
 """
-    iTpbX
+    iTbX
 
 A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with  `λ` evolving as a
@@ -240,8 +240,8 @@ with the following fields:
   lλ:   array of a Brownian motion evolution of `log(λ)`
   xv:   array of a Brownian motion evolution of `X`.
 
-  iTpbX(d1 ::iTpbX,
-          d2 ::iTpbX,
+  iTbX(d1 ::iTbX,
+          d2 ::iTbX,
           e  ::Float64,
           dt ::Float64,
           fdt::Float64,
@@ -249,9 +249,9 @@ with the following fields:
           fx ::Bool,
           lλ ::Array{Float64,1})
 """
-mutable struct iTpbX <: iT
-  d1 ::iTpbX
-  d2 ::iTpbX
+mutable struct iTbX <: iT
+  d1 ::iTbX
+  d2 ::iTbX
   e  ::Float64
   dt ::Float64
   fdt::Float64
@@ -259,8 +259,8 @@ mutable struct iTpbX <: iT
   lλ ::Array{Float64,1}
   xv ::Array{Float64,1}
 
-  iTpbX() = new()
-  iTpbX(e  ::Float64,
+  iTbX() = new()
+  iTbX(e  ::Float64,
         fx ::Bool,
         dt ::Float64,
         fdt::Float64,
@@ -268,8 +268,8 @@ mutable struct iTpbX <: iT
         xv ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
       x.fx = fx; x.lλ = lλ; x.xv = xv; x)
-  iTpbX(d1 ::iTpbX,
-        d2 ::iTpbX,
+  iTbX(d1 ::iTbX,
+        d2 ::iTbX,
         e  ::Float64,
         fx ::Bool,
         dt ::Float64,
@@ -280,24 +280,24 @@ mutable struct iTpbX <: iT
 end
 
 # pretty-printing
-Base.show(io::IO, t::iTpbX) =
+Base.show(io::IO, t::iTbX) =
   print(io, "insane trait gbm-pb tree with ", ntips(t), " tips")
 
 
 
 
 """
-    iTpbX(tree::iTpbX)
+    iTbX(tree::iTbX)
 
-Produce a new copy of `iTpbX`.
+Produce a new copy of `iTbX`.
 """
-function iTpbX(tree::iTpbX)
+function iTbX(tree::iTbX)
   if def1(tree)
-    iTpbX(iTpbX(tree.d1), iTpbX(tree.d2),
+    iTbX(iTbX(tree.d1), iTbX(tree.d2),
       e(tree), isfix(tree), dt(tree), fdt(tree),
       copy(lλ(tree)), copy(xv(tree)))
   else
-    iTpbX(e(tree), isfix(tree), dt(tree), fdt(tree),
+    iTbX(e(tree), isfix(tree), dt(tree), fdt(tree),
       copy(lλ(tree)), copy(xv(tree)))
   end
 end
@@ -635,18 +635,18 @@ Tlabel = Union{sT_label, sTf_label}
 """
     Union type for simple trait data
 
-sTX = Union{sTpbX, sTbdX, sTfbdX}
+sTX = Union{sTbX, sTbdX, sTfbdX}
 """
-sTX = Union{sTpbX, sTbdX, sTfbdX}
+sTX = Union{sTbX, sTbdX, sTfbdX}
 
 
 
 """
     Union type for gbm trait data
 
-iTX = Union{iTpbX, iTceX}
+iTX = Union{iTbX, iTceX, iTbdX, iTfbdX}
 """
-iTX = Union{iTpbX, iTceX, iTbdX, iTfbdX}
+iTX = Union{iTbX, iTceX, iTbdX, iTfbdX}
 
 
 
@@ -654,7 +654,7 @@ iTX = Union{iTpbX, iTceX, iTbdX, iTfbdX}
 """
     Union type for fossil data
 
-iTf = Union{sTfbd, sTfbdX, iTfbd}
+iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd, iTfbdX}
 """
 iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd, iTfbdX}
 
@@ -663,7 +663,7 @@ iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd, iTfbdX}
 """
     Union type for unlabelled fossil data
 
-uTf = Union{sTfbd, sTfbdX, iTfbd}
+uTf = Union{sTfbd, sTfbdX, iTfbd, iTfbdX}
 """
 uTf = Union{sTfbd, sTfbdX, iTfbd, iTfbdX}
 
@@ -672,9 +672,9 @@ uTf = Union{sTfbd, sTfbdX, iTfbd, iTfbdX}
 """
     Union type for gbm-bd data
 
-iTbdU = Union{iTbd, iTfbd}
+iTbdU = Union{iTbd, iTfbd, iTpbd, iTbdX, iTfbdX}
 """
-iTbdU = Union{iTbd, iTfbd, iTbdX, iTfbdX}
+iTbdU = Union{iTbd, iTfbd, iTpbd, iTbdX, iTfbdX}
 
 
 
@@ -682,7 +682,7 @@ iTbdU = Union{iTbd, iTfbd, iTbdX, iTfbdX}
 """
     Union type for gbm-bd data
 
-iTbdU = Union{iTbd, iTfbd}
+iTbdUX = Union{iTbdX, iTfbdX}
 """
 iTbdUX = Union{iTbdX, iTfbdX}
 
@@ -693,7 +693,7 @@ Type aliases (for compatibility with older versions)
 =#
 
 
-const iTgbmpb = iTpb
+const iTgbmb = iTb
 
 const iTgbmce = iTce
 

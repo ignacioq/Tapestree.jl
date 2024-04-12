@@ -29,7 +29,8 @@ Sample conditional on number of species
     sim_gbmobd(n       ::Int64;
                λ0      ::Float64         = 1.0,
                μ0      ::Float64         = 0.2,
-               α       ::Float64         = 0.0,
+               αλ      ::Float64         = 0.0,
+               αμ      ::Float64         = 0.0,
                σλ      ::Float64         = 0.1,
                σμ      ::Float64         = 0.1,
                ψ       ::Vector{Float64} = [0.1],
@@ -49,7 +50,8 @@ in the tree) and `ω`(fossil occurrences), with time shifts `ψts` between epoch
 function sim_gbmobd(n       ::Int64;
                     λ0      ::Float64         = 1.0,
                     μ0      ::Float64         = 0.2,
-                    α       ::Float64         = 0.0,
+                    αλ      ::Float64         = 0.0,
+                    αμ      ::Float64         = 0.0,
                     σλ      ::Float64         = 0.1,
                     σμ      ::Float64         = 0.1,
                     ψ       ::Vector{Float64} = [0.1],
@@ -64,7 +66,7 @@ function sim_gbmobd(n       ::Int64;
 
   @assert issorted(ψts) "ψts should be sorted in increasing order"
 
-  tree   = sim_gbmfbd(n, λ0=λ0, μ0=μ0, α=α, σλ=σλ, σμ=σμ, ψ=ψ, ψts=ψts, init=init, δt=δt, nstar=nstar, p=p, warnings=warnings, maxt=maxt)
+  tree   = sim_gbmfbd(n, λ0=λ0, μ0=μ0, αλ=αλ, αμ=αμ, σλ=σλ, σμ=σμ, ψ=ψ, ψts=ψts, init=init, δt=δt, nstar=nstar, p=p, warnings=warnings, maxt=maxt)
   ωtimes = sim_occurrences(tree, ω, treeheight(tree) .- ψts)
 
   return tree, ωtimes
@@ -143,7 +145,8 @@ end
     sim_gbmobd(t   ::Float64;
                λ0  ::Float64         = 1.0,
                μ0  ::Float64         = 0.2,
-               α   ::Float64         = 0.0,
+               αλ  ::Float64         = 0.0,
+               αμ  ::Float64         = 0.0,
                σλ  ::Float64         = 0.1,
                σμ  ::Float64         = 0.1,
                ψ   ::Vector{Float64} = [0.1],
@@ -160,7 +163,8 @@ in the tree) and `ω`(fossil occurrences), with time shifts `ψts` between epoch
 function sim_gbmobd(t   ::Float64;
                     λ0  ::Float64         = 1.0,
                     μ0  ::Float64         = 0.2,
-                    α   ::Float64         = 0.0,
+                    αλ  ::Float64         = 0.0,
+                    αμ  ::Float64         = 0.0,
                     σλ  ::Float64         = 0.1,
                     σμ  ::Float64         = 0.1,
                     ψ   ::Vector{Float64} = [0.1],
@@ -172,7 +176,7 @@ function sim_gbmobd(t   ::Float64;
 
   @assert issorted(ψts, rev=true) "ψts should be sorted in decreasing order"
 
-  tree   = sim_gbmfbd(t, λ0=λ0, μ0=μ0, α=α, σλ=σλ, σμ=σμ, ψ=ψ, ψts=ψts, δt=δt, nlim=nlim, init=init)
+  tree   = sim_gbmfbd(t, λ0=λ0, μ0=μ0, αλ=αλ, αμ=αμ, σλ=σλ, σμ=σμ, ψ=ψ, ψts=ψts, δt=δt, nlim=nlim, init=init)
   if (ntips(tree) < nlim)
     ωtimes = sim_occurrences(tree, ω, ψts)
   else

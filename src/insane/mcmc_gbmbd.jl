@@ -708,9 +708,11 @@ function update_scale!(Ξ   ::Vector{T},
   Δlλ  = randn()*stnλ
   lλ0p = lλ0c + Δlλ
 
-  # likelihood ratio  
+  # likelihood ratio
   iri = (1.0 - exp(Δlλ)) * irλ
   llr = ns * Δlλ + iri
+
+  # prior ratio
   prr = llrdgamma(exp(lλ0p), exp(lλ0c), λa_prior[1], λa_prior[2])
 
   lU = -randexp()

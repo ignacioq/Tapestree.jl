@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTpbX},
+    llik_gbm(Ξ   ::Vector{iTbX},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
@@ -22,9 +22,9 @@ Created 03 09 2020
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
+Returns the log-likelihood for a `iTbX` according to GBM birth-death.
 """
-function llik_gbm(Ξ   ::Vector{iTpbX},
+function llik_gbm(Ξ   ::Vector{iTbX},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -52,7 +52,7 @@ end
 
 
 """
-    llik_gbm(tree::iTpbX,
+    llik_gbm(tree::iTbX,
              α   ::Float64,
              σλ  ::Float64,
              βλ  ::Float64,
@@ -60,9 +60,9 @@ end
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
+Returns the log-likelihood for a `iTbX` according to GBM birth-death.
 """
-function llik_gbm(tree::iTpbX,
+function llik_gbm(tree::iTbX,
                   α   ::Float64,
                   σλ  ::Float64,
                   βλ  ::Float64,
@@ -74,8 +74,8 @@ function llik_gbm(tree::iTpbX,
     ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
   else
     ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)                      +
-    llik_gbm(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
+    llik_gbm(tree.d1::iTbX, α, σλ, βλ, σx, δt, srδt)                      +
+    llik_gbm(tree.d2::iTbX, α, σλ, βλ, σx, δt, srδt)
   end
 end
 
@@ -111,19 +111,19 @@ function ll_gbm_b(lλv ::Array{Float64,1},
 
   llx  = 0.0
   llbm = 0.0
-  llpb = 0.0
+  llb  = 0.0
   @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
     xvi   = xv[i]
     llx  += (xv[i+1] - xvi)^2
     llbm += (lλvi1 - lλvi - (α + βλ*xvi)*δt)^2
-    llpb += exp(0.5*(lλvi + lλvi1))
+    llb  += exp(0.5*(lλvi + lλvi1))
   end
 
   # add to global likelihood
   ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-  ll -= llpb*δt
+  ll -= llb*δt
   ll += llx *(-0.5/((σx*srδt)^2)) - Float64(nI)*(log(σx*srδt) + 0.5*log(2.0π))
 
   lλvi1 = lλv[nI+2]
@@ -147,7 +147,7 @@ end
 
 
 """
-    llik_gbm_ss(tree::iTpbX,
+    llik_gbm_ss(tree::iTbX,
                 α   ::Float64,
                 σλ  ::Float64,
                 βλ  ::Float64,
@@ -155,9 +155,9 @@ end
                 δt  ::Float64,
                 srδt::Float64)
 
-Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
+Returns the log-likelihood for a `iTbX` according to GBM birth-death.
 """
-function llik_gbm_ss(tree::iTpbX,
+function llik_gbm_ss(tree::iTbX,
                      α   ::Float64,
                      σλ  ::Float64,
                      βλ  ::Float64,
@@ -173,9 +173,9 @@ function llik_gbm_ss(tree::iTpbX,
       ll_gbm_b_ss(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true)
 
     ll1, dλ1, ssλ1, ssx1, nd1 =
-      llik_gbm_ss(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)
+      llik_gbm_ss(tree.d1::iTbX, α, σλ, βλ, σx, δt, srδt)
     ll2, dλ2, ssλ2, ssx2, nd2 =
-      llik_gbm_ss(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
+      llik_gbm_ss(tree.d2::iTbX, α, σλ, βλ, σx, δt, srδt)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
@@ -219,7 +219,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
   nd = Float64(nI)
 
   llbm = 0.0
-  llpb = 0.0
+  llb  = 0.0
   llx  = 0.0
   @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
@@ -227,7 +227,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
     xvi   = x[i]
     llx  += (x[i+1] - xvi)^2
     llbm += (lλvi1 - lλvi - (α + βλ*xvi)*δt)^2
-    llpb += exp(0.5*(lλvi + lλvi1))
+    llb  += exp(0.5*(lλvi + lλvi1))
   end
 
   # standardized sum of squares
@@ -236,7 +236,7 @@ function ll_gbm_b_ss(lλv ::Array{Float64,1},
 
   # add to global likelihood
   ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-  ll -= llpb*δt
+  ll -= llb*δt
   ll += llx *(-0.5/((σx*srδt)^2)) - Float64(nI)*(log(σx*srδt) + 0.5*log(2.0π))
 
   lλvi1 = lλv[nI+2]
@@ -344,7 +344,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   nI = lastindex(lλp)-2
 
   llrbm = 0.0
-  llrpb = 0.0
+  llrb  = 0.0
   llrx  = 0.0
   @turbo for i in Base.OneTo(nI)
     lλpi   = lλp[i]
@@ -356,7 +356,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrx  += (xp[i+1] - xpi)^2 - (xc[i+1] - xci)^2
     llrbm += (lλpi1 - lλpi - (α + βλ*xpi)*δt)^2 - 
              (lλci1 - lλci - (α + βλ*xci)*δt)^2
-    llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+    llrb  += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
   end
 
   # standardized sum of squares
@@ -367,7 +367,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   # add to global likelihood
   llrbm *= (-0.5/((σλ*srδt)^2))
   llrbm += llrx * (-0.5/((σx*srδt)^2))
-  llrpb *= (-δt)
+  llrb  *= (-δt)
 
   lλpi1 = lλp[nI+2]
   lλci1 = lλc[nI+2]
@@ -387,14 +387,14 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     ssrλ  += λd/(2.0*fdt)
     ssrx  += xd/(2.0*fdt)
     llrbm += λd*(-0.5/((σλ*srfdt)^2)) + xd*(-0.5/((σx*srfdt)^2))
-    llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+    llrb  -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
   end
   #if speciation
   if λev
-    llrpb += lλpi1 - lλci1
+    llrb  += lλpi1 - lλci1
   end
 
-  return llrbm, llrpb, ssrλ, ssrx
+  return llrbm, llrb , ssrλ, ssrx
 end
 
 

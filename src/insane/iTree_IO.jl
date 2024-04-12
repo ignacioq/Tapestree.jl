@@ -13,12 +13,11 @@ Created 07 07 2020
 
 
 """
-    read_newick(in_file::String;
-                ix::OrdinalRange{Int64,Int64} = 0:0)
+    read_newick(in_file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
+
 Reads a newick tree into `sT` from `in_file` at lines `ix`.
 """
-function read_newick(in_file::String;
-                     ix::OrdinalRange{Int64,Int64} = 0:0)
+function read_newick(in_file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
 
   io = open(in_file)
 
@@ -34,29 +33,31 @@ function read_newick(in_file::String;
 
     iszero(lastindex(line)) && continue
 
-    ii += 1
-
-    if ii < iix
-      continue
-    end
-
     # read trees
     if it === six
       if onlyone(line, ';')
+        ii += 1
+        ii < iix && continue
         push!(tv, _parse_newick(line))
       else
         allsc = findall(';', line)
+        pushfirst!(allsc, 0)
+
         for i in Base.OneTo(lastindex(allsc)-1)
-          push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])]))
+          ii += 1
+          ii < iix && continue
+          if it === six
+            push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])]))
+            it = 0
+          end
+          ii >= lix && break
+          it += 1
         end
       end
-
       it = 0
     end
 
-    if ii >= lix
-      break
-    end
+    ii >= lix && break
     it += 1
   end
 
@@ -117,7 +118,7 @@ function read_newick(in_file      ::String,
   io = open(in_file)
 
   iix = first(ix)
-  lix = iszero(ix[1]) ? typemax(Int64) : last(ix)
+  lix = iszero(iix) ? typemax(Int64) : last(ix)
   six = step(ix)
 
   tv = sTf_label[]
@@ -128,28 +129,31 @@ function read_newick(in_file      ::String,
 
     iszero(lastindex(line)) && continue
 
-    ii += 1
-
-    if ii < iix
-      continue
-    end
-
     # read trees
     if it === six
       if onlyone(line, ';')
+        ii += 1
+        ii < iix && continue
         push!(tv, _parse_newick(line, ne, reconstructed))
       else
         allsc = findall(';', line)
+        pushfirst!(allsc, 0)
+
         for i in Base.OneTo(lastindex(allsc)-1)
-          push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])], ne, reconstructed))
+          ii += 1
+          ii < iix && continue
+          if it === six
+            push!(tv, _parse_newick(line[(allsc[i] + 1):(allsc[i+1])], ne, reconstructed))
+            it = 0
+          end
+          ii >= lix && break
+          it += 1
         end
       end
       it = 0
     end
 
-    if ii >= lix
-      break
-    end
+    ii >= lix && break
     it += 1
   end
 
@@ -166,7 +170,7 @@ end
 
 
 """
-    _parse_newick(s::String, ne::Float64)
+    _parse_newick(s::String, ne::Float64, reconstructed::Bool=true)
 Reads a newick tree into a `sTf_label` tree.
 """
 function _parse_newick(s::String, ne::Float64, reconstructed::Bool=true)
@@ -199,7 +203,7 @@ end
 
 
 """
-    from_string(s::String, stem::Bool, ::Type{sT_label})
+    from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
 Takes a string and turns it into a `sT_label` tree.
 """
 function from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
@@ -254,9 +258,9 @@ function _from_string(s::String, i::Int64, ::Type{T}) where {T <: sT}
     if in1
       if in2
         if e(sd1) === 0.0
-          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), l(sd1))
         elseif e(sd2) === 0.0
-          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
+          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), l(sd2))
         else
           tree = T(sd1, sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
         end
@@ -439,7 +443,7 @@ end
 
 
 """
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+    to_string(tree::T) where {T <: uTf}
 Returns newick string.
 """
 to_string(tree::T) where {T <: uTf} = _to_string(tree, 0, 0)[1]
@@ -448,7 +452,7 @@ to_string(tree::T) where {T <: uTf} = _to_string(tree, 0, 0)[1]
 
 
 """
-    _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
+    _to_string(tree::T, n::Int64, nf::Int64) where {T <: uTf}
 Returns newick string.
 """
 function _to_string(tree::T, n::Int64, nf::Int64) where {T <: uTf}
@@ -478,8 +482,44 @@ end
 
 
 
+
 """
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+    to_string(tree::iTpbd)
+Returns newick string.
+"""
+to_string(tree::iTpbd) = _to_string(tree, 0, 0)[1]
+
+
+
+
+"""
+    _to_string(tree::iTpbd, n::Int64, ns::Int64)
+Returns newick string.
+"""
+function _to_string(tree::iTpbd, n::Int64, ns::Int64)
+
+  if def1(tree)
+    s1, n, ns = _to_string(tree.d1, n, ns)
+
+    if def2(tree)
+      s2, n, ns = _to_string(tree.d2, n, ns)
+      s = string("(",s1,",", s2,"):",e(tree))
+    else
+      ns += 1
+      s = string("(",s1,")sp",ns,":", e(tree))
+    end
+
+    return s, n, ns
+  else
+    n += 1
+    return string("t",n,":",e(tree)), n, ns
+  end
+end
+
+
+
+"""
+    to_string(tree::T) where {T <: Tlabel}
 Returns newick string.
 """
 to_string(tree::T) where {T <: Tlabel} = _to_string(tree)
@@ -582,10 +622,10 @@ end
 
 
 """
-    _istring(tree::sTpb)
-`sTpb` to istring.
+    _istring(tree::sTb)
+`sTb` to istring.
 """
-function _istring(tree::sTpb)
+function _istring(tree::sTb)
   if def1(tree)
     return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
         e(tree), ',', 
@@ -653,10 +693,10 @@ end
 
 
 """
-    _istring(tree::iTpb)
-`iTpb` to istring.
+    _istring(tree::iTb)
+`iTb` to istring.
 """
-function _istring(tree::iTpb)
+function _istring(tree::iTb)
   if def1(tree)
     return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
              e(tree), ',',
@@ -777,6 +817,52 @@ end
 
 
 """
+    _istring(tree::iTpbd)
+`iTpbd` to istring.
+"""
+function _istring(tree::iTpbd)
+  if def1(tree)
+    if def2(tree)
+      return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
+               e(tree), ',',
+               dt(tree), ',',
+               fdt(tree), ',',
+               short(isextinct(tree)), ',', 
+               short(isgood(tree)), ',', 
+               short(isfix(tree)), ',', 
+               lb(tree), ',', 
+               lλ(tree), ',', 
+               lμ(tree), ')')
+    else
+      return string('(', _istring(tree.d1), ',', 
+               e(tree), ',',
+               dt(tree), ',',
+               fdt(tree), ',',
+               short(isextinct(tree)), ',', 
+               short(isgood(tree)), ',', 
+               short(isfix(tree)), ',', 
+               lb(tree), ',', 
+               lλ(tree), ',', 
+               lμ(tree), ')')
+    end
+  else
+    return string('(', 
+             e(tree), ',',
+             dt(tree), ',',
+             fdt(tree), ',',
+             short(isextinct(tree)), ',', 
+             short(isgood(tree)), ',', 
+             short(isfix(tree)), ',', 
+             lb(tree), ',', 
+             lλ(tree), ',', 
+             lμ(tree), ')')
+  end
+end
+
+
+
+
+"""
     iread(file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
 Read a tree file exported by insane in `file` and with optional OrdinalRange
 specifying which trees to sample.
@@ -853,32 +939,32 @@ end
 
 
 """
-    _iparse(s::String, i::Int64, ls::Int64, ::Type{sTpb})
-parse istring to `sTpb`.
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{sTb})
+parse istring to `sTb`.
 """
-function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTpb})
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTb})
 
  @inbounds begin
 
     inode = false
 
     if s[i] === '('
-      sd1, i = _iparse(s, i + 1, ls, sTpb)
+      sd1, i = _iparse(s, i + 1, ls, sTb)
       inode = true
     end
 
     if s[i] === '('
-      sd2, i = _iparse(s, i + 1, ls, sTpb)
+      sd2, i = _iparse(s, i + 1, ls, sTb)
     end
 
     i1 = findnext(',', s, i + 1)
 
     if inode
-      tree = sTpb(sd1, sd2, 
+      tree = sTb(sd1, sd2, 
                   Pparse(Float64, s[i:i1-1]), 
                   long(s[i1+1]))
     else
-      tree = sTpb(Pparse(Float64, s[i:i1-1]), 
+      tree = sTb(Pparse(Float64, s[i:i1-1]), 
                   long(s[i1+1]))
     end
 
@@ -995,22 +1081,22 @@ end
 
 
 """
-    _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
-parse istring to `iTpb`.
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{iTb})
+parse istring to `iTb`.
 """
-function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTb})
 
   @inbounds begin
 
     inode = false
 
     if s[i] === '('
-      sd1, i = _iparse(s, i + 1, ls, iTpb)
+      sd1, i = _iparse(s, i + 1, ls, iTb)
       inode = true
     end
 
     if s[i] === '('
-      sd2, i = _iparse(s, i + 1, ls, iTpb)
+      sd2, i = _iparse(s, i + 1, ls, iTb)
     end
 
     i1 = findnext(',', s, i  + 1)
@@ -1019,14 +1105,14 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
     i4 = findnext(']', s, i3 + 1)
 
     if inode
-      tree = iTpb(sd1, sd2,
+      tree = iTb(sd1, sd2,
                   Pparse(Float64, s[i:i1-1]),
                   Pparse(Float64, s[i1+1:i2-1]),
                   Pparse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
                   _iparse_v(s[i3+4:i4-1]))
     else
-      tree = iTpb(Pparse(Float64, s[i:i1-1]),
+      tree = iTb(Pparse(Float64, s[i:i1-1]),
                   Pparse(Float64, s[i1+1:i2-1]),
                   Pparse(Float64, s[i2+1:i3-1]),
                   long(s[i3+1]), 
@@ -1224,6 +1310,85 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
     end
 
     i = i5 + 1
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpbd})
+parse istring to `iT`.
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpbd})
+
+  @inbounds begin
+
+    in1 = false
+    in2 = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, iTpbd)
+      in1 = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, iTpbd)
+      in2 = true
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(',', s, i1 + 1)
+    i3 = findnext(',', s, i2 + 1)
+    i4 = findnext(']', s, i3 + 1)
+    i5 = findnext(']', s, i4 + 1)
+    i6 = findnext(']', s, i5 + 1)
+
+    if in1
+      if in2
+        tree = iTpbd(sd1, sd2,
+                     Pparse(Float64, s[i:i1-1]),
+                     Pparse(Float64, s[i1+1:i2-1]),
+                     Pparse(Float64, s[i2+1:i3-1]),
+                     long(s[i3+1]), 
+                     long(s[i3+3]), 
+                     long(s[i3+5]), 
+                     _iparse_v(s[i3+8:i4-1]),
+                     _iparse_v(s[i4+3:i5-1]),
+                     _iparse_v(s[i5+3:i6-1]))
+      else
+        tree = iTpbd(sd1,
+                     Pparse(Float64, s[i:i1-1]),
+                     Pparse(Float64, s[i1+1:i2-1]),
+                     Pparse(Float64, s[i2+1:i3-1]),
+                     long(s[i3+1]), 
+                     long(s[i3+3]), 
+                     long(s[i3+5]), 
+                     _iparse_v(s[i3+8:i4-1]),
+                     _iparse_v(s[i4+3:i5-1]),
+                     _iparse_v(s[i5+3:i6-1]))
+      end
+    else
+      tree = iTpbd(Pparse(Float64, s[i:i1-1]),
+                   Pparse(Float64, s[i1+1:i2-1]),
+                   Pparse(Float64, s[i2+1:i3-1]),
+                   long(s[i3+1]), 
+                   long(s[i3+3]), 
+                   long(s[i3+5]), 
+                   _iparse_v(s[i3+8:i4-1]),
+                   _iparse_v(s[i4+3:i5-1]),
+                   _iparse_v(s[i5+3:i6-1]))
+    end
+
+    i = i6 + 1
 
     if i < ls
       while s[i] === ')'

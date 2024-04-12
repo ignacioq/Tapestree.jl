@@ -13,8 +13,8 @@ Created 14 11 2021
 
 
 """
-    _daughters_update!(ξ1  ::iTpbX,
-                       ξ2  ::iTpbX,
+    _daughters_update!(ξ1  ::iTbX,
+                       ξ2  ::iTbX,
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
@@ -23,10 +23,10 @@ Created 14 11 2021
                        δt  ::Float64,
                        srδt::Float64)
 
-Make a `gbmpbX` proposal for daughters from forwards simulated branch.
+Make a `gbmbX` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTpbX,
-                            ξ2  ::iTpbX,
+function _daughters_update!(ξ1  ::iTbX,
+                            ξ2  ::iTbX,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
@@ -61,12 +61,12 @@ function _daughters_update!(ξ1  ::iTpbX,
     bb!(x2p, xp, x2c[l2], σx, δt, fdt2, srδt)
 
     # log likelihood ratios (llrbm contains both λ and x llr)
-    llrbm1, llrpb1, ssrλ1, ssrx1 =
+    llrbm1, llrb1, ssrλ1, ssrx1 =
       llr_gbm_b_sep(λ1p, λ1c, x1p, x1c, α, σλ, βλ, σx, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2, ssrx2 =
+    llrbm2, llrb2, ssrλ2, ssrx2 =
       llr_gbm_b_sep(λ2p, λ2c, x2p, x2c, α, σλ, βλ, σx, δt, fdt2, srδt, false)
 
-    acr  = llrpb1 + llrpb2
+    acr  = llrb1 + llrb2
     llr  = llrbm1 + llrbm2 + acr  + λf - λi
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
@@ -80,7 +80,7 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTpbX,
+    _stem_update!(ξi   ::iTbX,
                   α    ::Float64,
                   σλ   ::Float64,
                   llc  ::Float64,
@@ -91,7 +91,7 @@ end
 
 Do gbm update for crown root.
 """
-function _stem_update!(ξi   ::iTpbX,
+function _stem_update!(ξi   ::iTbX,
                        α    ::Float64,
                        σλ   ::Float64,
                        llc  ::Float64,
@@ -133,9 +133,9 @@ end
 
 
 """
-    _crown_update!(ξi   ::iTpbX,
-                   ξ1   ::iTpbX,
-                   ξ2   ::iTpbX,
+    _crown_update!(ξi   ::iTbX,
+                   ξ1   ::iTbX,
+                   ξ2   ::iTbX,
                    α    ::Float64,
                    σλ   ::Float64,
                    llc  ::Float64,
@@ -146,9 +146,9 @@ end
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi   ::iTpbX,
-                        ξ1   ::iTpbX,
-                        ξ2   ::iTpbX,
+function _crown_update!(ξi   ::iTbX,
+                        ξ1   ::iTbX,
+                        ξ2   ::iTbX,
                         α    ::Float64,
                         σλ   ::Float64,
                         llc  ::Float64,
@@ -180,12 +180,12 @@ function _crown_update!(ξi   ::iTpbX,
     bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1 =
+    llrbm1, llrb1, ssrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2 =
+    llrbm2, llrb2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr  = llrpb1 + llrpb2
+    acr  = llrb1 + llrb2
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr
@@ -204,7 +204,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTpbX,
+    _update_gbm!(tree::iTbX,
                  α   ::Float64,
                  σλ  ::Float64,
                  llc ::Float64,
@@ -216,7 +216,7 @@ end
 
 Do gbm updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTpbX,
+function _update_gbm!(tree::iTbX,
                       α   ::Float64,
                       σλ  ::Float64,
                       llc ::Float64,
@@ -246,7 +246,7 @@ end
 
 
 """
-    update_tip!(tree::iTpbX,
+    update_tip!(tree::iTbX,
                 α   ::Float64,
                 σλ  ::Float64,
                 llc ::Float64,
@@ -257,7 +257,7 @@ end
 
 Make a `gbm` tip proposal.
 """
-function update_tip!(tree::iTpbX,
+function update_tip!(tree::iTbX,
                      α   ::Float64,
                      σλ  ::Float64,
                      llc ::Float64,
@@ -370,7 +370,7 @@ end
 
 
 """
-    update_triad!(tree::iTpbX,
+    update_triad!(tree::iTbX,
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
@@ -380,7 +380,7 @@ end
 
 Make a `gbm` trio proposal.
 """
-function update_triad!(tree::iTpbX,
+function update_triad!(tree::iTbX,
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,
@@ -469,11 +469,11 @@ function llr_propr(λpp  ::Array{Float64,1},
                    srδt ::Float64)
 
   # log likelihood ratios
-  llrbmp, llrpbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
-  llrbm1, llrpb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-  llrbm2, llrpb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+  llrbmp, llrbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
+  llrbm1, llrb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+  llrbm2, llrb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-  acr  = llrpbp + llrpb1 + llrpb2
+  acr  = llrbp + llrb1 + llrb2
   llr  = llrbmp + llrbm1 + llrbm2 + acr
   ssrλ = ssrλp + ssrλ1 + ssrλ2
 

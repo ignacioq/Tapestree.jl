@@ -19,7 +19,7 @@ Created 27 05 2020
                       σλ  ::Float64,
                       σμ  ::Float64,
                       δt  ::Float64,
-                      srδt::Float64) where {T <: iTbdU}
+                      srδt::Float64) where {T <: iTbd}
 
 Make a gbm proposal for one daughter from forward simulated branch.
 """
@@ -30,7 +30,7 @@ function _daughter_update!(ξ1  ::T,
                            σλ  ::Float64,
                            σμ  ::Float64,
                            δt  ::Float64,
-                           srδt::Float64) where {T <: iTbdU}
+                           srδt::Float64) where {T <: iTbd}
   @inbounds begin
 
     lλ1c  = lλ(ξ1)
@@ -86,7 +86,7 @@ function _daughters_update!(ξ1  ::T,
                             σλ  ::Float64,
                             σμ  ::Float64,
                             δt  ::Float64,
-                            srδt::Float64) where {T <: iTbdU}
+                            srδt::Float64) where {T <: iTbd}
   @inbounds begin
 
     λ1c  = lλ(ξ1)
@@ -156,7 +156,7 @@ end
                   srδt ::Float64,
                   λa_prior::NTuple{2,Float64},
                   μa_prior::NTuple{2,Float64},
-                  surv ::Int64) where {T <: iTbdU}
+                  surv ::Int64) where {T <: iTbd}
 
 Do gbm update for stem root.
 """
@@ -177,7 +177,7 @@ function _stem_update!(ξi   ::T,
                        srδt ::Float64,
                        λa_prior::NTuple{2,Float64},
                        μa_prior::NTuple{2,Float64},
-                       surv ::Int64) where {T <: iTbdU}
+                       surv ::Int64) where {T <: iTbd}
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -254,7 +254,7 @@ end
                   srδt ::Float64,
                   λa_prior::NTuple{2,Float64},
                   μa_prior::NTuple{2,Float64},
-                  surv ::Int64) where {T <: iTbdU}
+                  surv ::Int64) where {T <: iTbd}
 
 Do gbm update for crown root.
 """
@@ -277,7 +277,7 @@ function _crown_update!(ξi   ::T,
                         srδt ::Float64,
                         λa_prior::NTuple{2,Float64},
                         μa_prior::NTuple{2,Float64},
-                        surv ::Int64) where {T <: iTbdU}
+                        surv ::Int64) where {T <: iTbd}
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -418,7 +418,7 @@ end
                 irλ ::Float64, 
                 irμ ::Float64,
                 δt  ::Float64,
-                srδt::Float64) where {T <: iTbdU}
+                srδt::Float64) where {T <: iTbd}
 
 Make a gbm tip proposal.
 """
@@ -433,7 +433,7 @@ function update_tip!(tree::T,
                      irλ ::Float64, 
                      irμ ::Float64,
                      δt  ::Float64,
-                     srδt::Float64) where {T <: iTbdU}
+                     srδt::Float64) where {T <: iTbd}
 
   @inbounds begin
 
@@ -652,7 +652,7 @@ function update_triad!(λpc ::Vector{Float64},
 
     if -randexp() < acr
       llc += llrbmp + llrbm1 + llrbm2 + acr
-      ddλ  += λi - λn
+      ddλ += λi - λn
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2
       irλ += irrλp + irrλ1 + irrλ2
@@ -679,7 +679,7 @@ end
                   σλ  ::Float64,
                   σμ  ::Float64,
                   llc ::Float64,
-                  ddλ  ::Float64,
+                  ddλ ::Float64,
                   ssλ ::Float64,
                   ssμ ::Float64,
                   irλ ::Float64,
@@ -694,13 +694,13 @@ function update_triad!(tree::T,
                        σλ  ::Float64,
                        σμ  ::Float64,
                        llc ::Float64,
-                       ddλ  ::Float64,
+                       ddλ ::Float64,
                        ssλ ::Float64,
                        ssμ ::Float64,
                        irλ ::Float64,
                        irμ ::Float64,
                        δt  ::Float64,
-                       srδt::Float64) where {T <: iTbdU}
+                       srδt::Float64) where {T <: iTbd}
 
   @inbounds begin
 
@@ -755,7 +755,7 @@ function update_triad!(tree::T,
 
     if -randexp() < acr
       llc += llrbmp + llrbm1 + llrbm2 + acr
-      ddλ  += (λ1c[1] - λn)
+      ddλ += (λ1c[1] - λn)
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2
       irλ += irrλp + irrλ1 + irrλ2

@@ -13,14 +13,14 @@ Created 05 11 2020
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, ::Type{sTpb})
+    make_Ξ(idf::Vector{iBffs}, ::Type{sTb})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, ::Type{sTpb})
-  Ξ = sTpb[]
+function make_Ξ(idf::Vector{iBffs}, ::Type{sTb})
+  Ξ = sTb[]
   for bi in idf
-    push!(Ξ, sTpb(e(bi), true))
+    push!(Ξ, sTb(e(bi), true))
   end
   return Ξ
 end
@@ -29,19 +29,19 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
+    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbX})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
-  Ξ = sTpbX[]
+function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbX})
+  Ξ = sTbX[]
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
     paix = pa(idfi)
     paix = iszero(paix) ? 1 : paix
     xii  = xr[paix]
     xfi  = xr[i]
-    push!(Ξ, sTpbX(e(idfi), true, xii, xfi))
+    push!(Ξ, sTbX(e(idfi), true, xii, xfi))
   end
 
   return Ξ
@@ -169,8 +169,8 @@ function _make_Ξ!(Ξ   ::Vector{T},
   l = nts + 2
 
   setλt!(bi, lλv[l])
-  if T === iTpb
-    push!(Ξ, iTpb(et, δt, fdti, true, lλv))
+  if T === iTb
+    push!(Ξ, iTb(et, δt, fdti, true, lλv))
   else
     push!(Ξ, T(et, δt, fdti, false, true, lλv))
   end
@@ -441,9 +441,10 @@ end
 
 """
     make_Ξ(idf ::Vector{iBffs},
-           lλa ::Float64,
-           lμa ::Float64,
-           α   ::Float64,
+           λ   ::Float64,
+           μ   ::Float64,
+           αλ  ::Float64,
+           αμ  ::Float64,
            σλ  ::Float64,
            σμ  ::Float64,
            δt  ::Float64,
@@ -455,7 +456,8 @@ Make edge tree `Ξ` from the edge directory.
 function make_Ξ(idf ::Vector{iBffs},
                 λ   ::Float64,
                 μ   ::Float64,
-                α   ::Float64,
+                αλ  ::Float64,
+                αμ  ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
                 δt  ::Float64,
@@ -463,7 +465,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTfbd})
 
   Ξ = iTfbd[]
-  _make_Ξ!(Ξ, 1, log(λ), log(μ), α, σλ, σμ, δt, srδt, idf, iTfbd)
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
 
   return Ξ
 end
@@ -476,7 +478,8 @@ end
              i   ::Int64,
              lλ0 ::Float64,
              lμ0 ::Float64,
-             α   ::Float64,
+             αλ  ::Float64,
+             αμ  ::Float64,
              σλ  ::Float64,
              σμ  ::Float64,
              δt  ::Float64,
@@ -490,7 +493,8 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
                   i   ::Int64,
                   lλ0 ::Float64,
                   lμ0 ::Float64,
-                  α   ::Float64,
+                  αλ  ::Float64,
+                  αμ  ::Float64,
                   σλ  ::Float64,
                   σμ  ::Float64,
                   δt  ::Float64,
@@ -523,8 +527,8 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
       nts  -= 1
     end
 
-    lλv = bm(lλ0,   α, σλ, δt, fdti, srδt, nts)
-    lμv = bm(lμ0, 0.0, σμ, δt, fdti, srδt, nts)
+    lλv = bm(lλ0, αλ, σλ, δt, fdti, srδt, nts)
+    lμv = bm(lμ0, αμ, σμ, δt, fdti, srδt, nts)
   end
 
   l = nts + 2
@@ -535,8 +539,8 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
 
     push!(Ξ, iTfbd(
                iTfbd(0.0, δt, 0.0, true, false, false, 
-                 [lλl, rnorm(lλl + α*0.0, 0.0*σλ)], 
-                 [lμl, rnorm(lμl,         0.0*σμ)]),
+                 [lλl, rnorm(lλl + αλ*0.0, 0.0*σλ)], 
+                 [lμl, rnorm(lμl + αμ*0.0, 0.0*σμ)]),
                et, δt, fdti, false, true, true, lλv, lμv))
   else
     push!(Ξ, iTfbd(et, δt, fdti, false, isfossil(bi), true, lλv, lμv))
@@ -545,10 +549,10 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
 
   if i1 > 0 
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTfbd)
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTfbd)
+      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
+      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
     else
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTfbd)
+      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
     end
   end
 
@@ -618,7 +622,7 @@ end
            σx  ::Float64,
            δt  ::Float64,
            srδt::Float64,
-           ::Type{iTpbX})
+           ::Type{iTbX})
 
 Make edge tree `Ξ` from the edge directory.
 """
@@ -630,10 +634,10 @@ function make_Ξ(idf ::Vector{iBffs},
                 σx  ::Float64,
                 δt  ::Float64,
                 srδt::Float64,
-                ::Type{iTpbX})
+                ::Type{iTbX})
 
   lλi = lλa
-  Ξ   = iTpbX[]
+  Ξ   = iTbX[]
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
     paix = pa(idfi)
@@ -665,7 +669,7 @@ function make_Ξ(idf ::Vector{iBffs},
     end
     setλt!(idfi, lλv[l])
     push!(λst(idfi), lλv[l])
-    push!(Ξ, iTpbX(et, true, δt, fdti, lλv, xv))
+    push!(Ξ, iTbX(et, true, δt, fdti, lλv, xv))
   end
 
   return Ξ
@@ -1168,12 +1172,12 @@ end
 
 
 """
-    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
+function _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
   dd = ssλ = ssμ = n = irλ = irμ = 0.0
   for ξi in Ξ
@@ -1183,6 +1187,25 @@ function _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
   return dd, ssλ, ssμ, n, irλ, irμ
 end
 
+
+
+
+"""
+    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_ir_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+
+  ddλ = ddμ = ssλ = ssμ = n = irλ = irμ = 0.0
+  for ξi in Ξ
+    ddλ, ddμ, ssλ, ssμ, n, irλ, irμ = 
+      _ss_ir_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n, irλ, irμ)
+  end
+
+  return ddλ, ddμ, ssλ, ssμ, n, irλ, irμ
+end
 
 
 
@@ -1219,6 +1242,22 @@ function _ss(Ξ::Vector{T}, α::Float64) where {T <: iTree}
   return ssλ, ssμ
 end
 
+
+
+"""
+    _ss(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _ss(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+
+  ssλ = ssμ = 0.0
+  for ξi in Ξ
+    ssλ, ssμ = _ss(ξi, αλ, αμ, ssλ, ssμ)
+  end
+
+  return ssλ, ssμ
+end
 
 
 
