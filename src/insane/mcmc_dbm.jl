@@ -35,7 +35,7 @@ Run diffused Brownian motion trait evolution model.
 function insane_dbm(tree   ::Tlabel,
                     xa     ::Dict{String, Float64};
                     xs     ::Dict{String, Float64} = Dict{String,Float64}(),
-                    α_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                    α_prior::NTuple{2,Float64}     = (0.0, 10.0),
                     γ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                     niter  ::Int64                 = 1_000,
                     nthin  ::Int64                 = 10,
@@ -64,12 +64,12 @@ function insane_dbm(tree   ::Tlabel,
   end
 
   # make fix tree directory
-  idf, xr, σxi = make_idf(tree, tρ, xa, xs, mxthf)
+  idf, xr, σxi = make_idf(tree, tρ, xa, xs, th * mxthf)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, xr, log(σxi), γi, δt, srδt, sTxs)
 
-  # get vector of internal branches
+  # get vector of internal edges
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
 
   # parameter updates (1: α, 2:γ, 3: scale 4: gbm)
@@ -136,7 +136,7 @@ function mcmc_burn_dbm(Ξ      ::Vector{sTxs},
 
   L   = [e(ξ) for ξ in Ξ]  # edge lengths
   nin = lastindex(inodes)  # number of internal nodes
-  el  = lastindex(idf)     # number of branches
+  el  = lastindex(idf)     # number of edges
 
   # delta change, sum squares, path length in log-σ(t)
   ddσ, ssσ, nσ = sss_v(Ξ, lσ, αc)
@@ -283,7 +283,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
-            #    @show ll0, llc, it, pupi
+            #    @show ll0, sum(ll), it, pupi
             #    return
             # end
 
@@ -294,7 +294,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
     
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
-            #    @show ll0, llc, it, pupi
+            #    @show ll0, sum(ll), it, pupi
             #    return
             # end
 
@@ -304,7 +304,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
-            #    @show ll0, llc, it, pupi
+            #    @show ll0, sum(ll), it, pupi
             #    return
             # end
 
@@ -317,7 +317,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
-            #    @show ll0, llc, it, pupi
+            #    @show ll0, sum(ll), it, pupi
             #    return
             # end
           end
@@ -468,7 +468,6 @@ function update_scale!(Ξ   ::Vector{sTxs},
   llr = llr_scale(Ξ, s, δt)
 
   acc = 0.0
-
   if -randexp() < sum(llr)
     acc += 1.0
     scale_rate!(Ξ, lσ, s)
@@ -517,7 +516,6 @@ function update_xs!(bix  ::Int64,
   root = iszero(pa(bi))
 
   if root && iszero(e(ξi))
-
     #if stem fossil
     if isfossil(bi)
       ll[i1], ddσ[i1], ssσ[i1] = _fstem_update!(ξi, ξ1, α, γ, δt, srδt)
@@ -531,6 +529,7 @@ function update_xs!(bix  ::Int64,
     ll[bix], ddσ[bix], ssσ[bix] = _stem_update!(ξi, α, γ, δt, srδt)
   # if duo
   elseif iszero(i2)
+
     if ifx(bi)
       ll[bix], ll[i1], ddσ[bix], ddσ[i1], ssσ[bix], ssσ[i1] = 
         _update_duo_x!(ξi, ξ1, xavg(bi), xstd(bi), α, γ, δt, srδt)

@@ -165,12 +165,12 @@ function _sim_dbm(tree::Tlabel,
            _sim_dbm(tree.d2, x0, lσ0, α, γ, δt, srδt, xs), 
            et, δt, fdti, xv, lσ)
     else
-      xs[l(tree)] = xv[end]
+      xs[label(tree)] = xv[end]
       sTxs(_sim_dbm(tree.d1, xv[end], lσ[end], α, γ, δt, srδt, xs), 
            et, δt, fdti, xv, lσ)
     end
   else
-    xs[l(tree)] = xv[end]
+    xs[label(tree)] = xv[end]
     sTxs(et, δt, fdti, xv, lσ)
   end
 end

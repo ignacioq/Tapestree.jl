@@ -2563,22 +2563,22 @@ setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iT} =
 
 
 """
-  setfdt!(tree::T, fdt::Float64) where {T <: iT}
+  setfdt!(tree::T, fdt::Float64) where {T <: iTree}
 
 Set number of `δt` for `tree`.
 """
-setfdt!(tree::T, fdt::Float64) where {T <: iT} =
+setfdt!(tree::T, fdt::Float64) where {T <: iTree} =
   setproperty!(tree, :fdt, fdt)
 
 
 
 
 """
-  setdt!(tree::T, dt::Float64) where {T <: iT}
+  setdt!(tree::T, dt::Float64) where {T <: iTree}
 
 Set number of `δt` for `tree`.
 """
-setdt!(tree::T, dt::Float64) where {T <: iT} =
+setdt!(tree::T, dt::Float64) where {T <: iTree} =
   setproperty!(tree, :dt, dt)
 
 

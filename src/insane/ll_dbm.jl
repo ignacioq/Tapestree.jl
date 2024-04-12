@@ -50,8 +50,7 @@ function llik_dbm_v!(ll  ::Vector{Float64},
                      δt  ::Float64)
 
   @inbounds begin
-    xn = lastindex(Ξ)
-    for i in Base.OneTo(xn)
+    for i in Base.OneTo(lastindex(Ξ))
       ll[i] = llik_dbm(Ξ[i], α, γ, δt)
     end
   end

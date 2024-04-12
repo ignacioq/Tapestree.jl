@@ -84,7 +84,7 @@ function makeiBf!(tree::sT_label,
                   tρ  ::Dict{String, Float64})
 
   if istip(tree)
-    lab = l(tree)
+    lab = label(tree)
     ρi  = tρ[lab]
     push!(idv,
       iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, true))
@@ -320,7 +320,7 @@ function makeiBf!(tree::sT,
   elseif istip(tree)
 
     iψ  = isfossil(tree)
-    ρi  = iψ ? 1.0 : tρ[l(tree)]
+    ρi  = iψ ? 1.0 : tρ[label(tree)]
     te  = ts - el
     te  = isapprox(te, 0.0) ? 0.0 : te
     push!(idv, 
@@ -446,7 +446,7 @@ function makeiBf!(tree::sT,
   # terminal branch
   elseif istip(tree)
 
-    lab = l(tree)
+    lab = label(tree)
     iψ  = isfossil(tree)
     ρi  = iψ ? 1.0 : get(tρ, lab, 1.0)
     te  = ts - el
@@ -474,7 +474,7 @@ function makeiBf!(tree::sT,
       makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
 
     # Check if fixed
-    lab = l(tree)
+    lab = label(tree)
     xi  = get(xavg, lab, nothing)
     si  = get(xstd, lab, 0.0)
     ifx = !isnothing(xi)

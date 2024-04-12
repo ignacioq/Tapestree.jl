@@ -597,21 +597,14 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
     ntF, fdti = divrem(et, δt, RoundDown)
 
     if isapprox(fdti, δt)
-      ntF += 1.0
+      nts += 1
       fdti = δt
     end
 
     nts = Int64(ntF)
 
-    if iszero(fdti) || (i1 > 0 && iszero(i2) && !isfossil(bi))
-      fdti  = δt
-      nts  -= 1
-    end
-
     xv, lσ = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, nts)
   end
-
-  l = nts + 2
 
   push!(Ξ, sTxs(et, δt, fdti, xv, lσ))
 
