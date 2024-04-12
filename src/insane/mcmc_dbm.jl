@@ -47,6 +47,7 @@ function insane_dbm(tree   ::Tlabel,
                     pupdp  ::NTuple{4,Float64}     = (0.1, 0.1, 0.05, 0.9),
                     δt     ::Float64               = 1e-3,
                     stn    ::Float64               = 0.1,
+                    mxthf  ::Float64               = Inf,
                     prints ::Int64                 = 5)
 
   n    = ntips(tree)
@@ -63,7 +64,7 @@ function insane_dbm(tree   ::Tlabel,
   end
 
   # make fix tree directory
-  idf, xr, σxi = make_idf(tree, tρ, xa, xs, Inf)
+  idf, xr, σxi = make_idf(tree, tρ, xa, xs, mxthf)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, xr, log(σxi), γi, δt, srδt, sTxs)

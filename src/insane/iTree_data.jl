@@ -196,15 +196,15 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 """
-    l(tree::T) where {T <: iTree}
-    l(tree::sT_label)
-    l(tree::sTf_label)
+    label(tree::T) where {T <: iTree}
+    label(tree::sT_label)
+    label(tree::sTf_label)
 
 Return label.
 """
-l(tree::T) where {T <: iTree} = nothing
-l(tree::sT_label)  = getproperty(tree, :l)
-l(tree::sTf_label) = getproperty(tree, :l)
+label(tree::T) where {T <: iTree} = nothing
+label(tree::sT_label)  = getproperty(tree, :l)
+label(tree::sTf_label) = getproperty(tree, :l)
 
 
 
@@ -226,7 +226,7 @@ Returns tip labels for `sTf_label`.
 function _tiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if istip(tree)
-    push!(labels, l(tree))
+    push!(labels, label(tree))
   else
     _tiplabels!(tree.d1, labels)
     if def2(tree)
@@ -258,7 +258,7 @@ function _alivetiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if istip(tree)
     if !isfossil(tree)
-      push!(labels, l(tree))
+      push!(labels, label(tree))
     end
   else
     _alivetiplabels!(tree.d1, labels)
@@ -290,7 +290,7 @@ function _fossiltiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if istip(tree)
     if isfossil(tree)
-      push!(labels, l(tree))
+      push!(labels, label(tree))
     end
   else
     _fossiltiplabels!(tree.d1, labels)
@@ -652,8 +652,8 @@ Return labels.
 """
 function _make_ls!(tree::Tlabel, ls::Vector{String})
 
-  if l(tree) != ""
-    push!(ls, l(tree))
+  if label(tree) != ""
+    push!(ls, label(tree))
   end
 
   if def1(tree)
@@ -703,7 +703,7 @@ function make_ls!(tree ::T,
 
   if istip(tree)
     if isfix(tree)
-      push!(ls, l(ltree))
+      push!(ls, label(ltree))
     else
       push!(ls, "tda")
     end
@@ -715,7 +715,7 @@ function make_ls!(tree ::T,
   if isfix(tree.d1) && isfix(tree.d2)
     n1 = make_ls!(tree.d1, ltree.d1, ls, n2v)
     n2 = make_ls!(tree.d2, ltree.d2, ls, n2v)
-    push!(ls, l(ltree))
+    push!(ls, label(ltree))
 
   else
     n1 = make_ls!(tree.d1, ltree, ls, n2v)
