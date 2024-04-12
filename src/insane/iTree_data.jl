@@ -933,39 +933,19 @@ end
 
 
 """
-    _ctl(tree::T, l::Float64) where {T <: iTree}
-Return the branch length sum of `tree` based on `δt` and `fδt`
-for debugging purposes.
-"""
-function _ctl(tree::T, l::Float64) where {T <: iT}
-
-  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
-
-  if def1(tree)
-    l = _ctl(tree.d1, l)
-    l = _ctl(tree.d2, l)
-  end
-
-  return l
-end
-
-
-
-
-"""
-    _ctl(tree::T, l::Float64) where {T <: iTf}
+    _ctl(tree::T, f::Function, l::Float64) where {T <: iTf}
 
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
 """
-function _ctl(tree::T, l::Float64) where {T <: iTf}
+function _ctl(tree::T, f::Function, l::Float64) where {T <: iTree}
 
-  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
+  l += max(0.0, Float64(lastindex(f(tree)) - 2)*dt(tree)) + fdt(tree)
 
   if def1(tree)
-    l = _ctl(tree.d1, l)
+    l = _ctl(tree.d1, f, l)
     if def2(tree)
-      l = _ctl(tree.d2, l)
+      l = _ctl(tree.d2, f, l)
     end
   end
 
