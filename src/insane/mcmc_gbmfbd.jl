@@ -352,7 +352,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
           update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
             ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
 
-        # update ssμ with new drift `αμc`
+        # update ssλ with new drift `αμc`
         ssμ = _ss(Ξ, lμ, αμc)
 
       # σλ & σμ update
@@ -373,7 +373,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
         llc, prc, irλ, irμ, accλ, accμ, mc = 
           update_scale!(Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, irλ, irμ, ns, ne, 
             stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
-
+        
         lacλ += accλ
         lacμ += accμ
         lup += 1.0
@@ -406,7 +406,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
 
     # numerical stability
     lns += 1
-    if lns === 100
+    if lns === 200
       irλ, irμ = _ir(Ξ)
       lns = 0
     end
@@ -575,7 +575,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
           # update αλ
           if pupi === 1
-
             llc, prc, αλc, mc =
               update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
                 ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
@@ -590,7 +589,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
               update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
                 ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
 
-            # update ssμ with new drift `αμc`
+            # update ssλ with new drift `αμc`
             ssμ = _ss(Ξ, lμ, αμc)
 
           # σλ & σμ update
@@ -618,18 +617,19 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
             nix = ceil(Int64,rand()*nin)
             bix = inodes[nix]
 
-            llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-              update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
-                mc, th, surv, δt, srδt, λa_prior, μa_prior)
+            llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+              update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ddμ, 
+                ssλ, ssμ, irλ, irμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
           # forward simulation update
           else
 
             bix = ceil(Int64,rand()*el)
 
-            llc, ddλ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
-              update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, ddλ, ssλ, ssμ, nλ, 
-                irλ, irμ, ns, ne, L, ψ_epoch, δt, srδt, eixi, eixf)
+            llc, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
+              update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, ddλ, ddμ, 
+                ssλ, ssμ, nλ, irλ, irμ, ns, ne, L, ψ_epoch, δt, srδt, 
+                eixi, eixf)
           end
 
           # check_pr(pupi, it)
@@ -638,7 +638,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
         # numerical stability
         lns += 1
-        if lns === 100
+        if lns === 200
           irλ, irμ = _ir(Ξ)
           lns = 0
         end
@@ -690,7 +690,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   return r, treev
 end
-
 
 
 
@@ -818,8 +817,7 @@ end
               σμc     ::Float64,
               λ0      ::Float64,
               μ0      ::Float64,
-              αλ      ::Float64,
-              αμ      ::Float64,
+              α       ::Float64,
               ssλ     ::Float64,
               ssμ     ::Float64,
               n       ::Float64,
@@ -1043,21 +1041,21 @@ function update_gbm!(bix  ::Int64,
 
       # if stem fossil
       if isfossil(bi)
-        llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          _fstem_update!(ξi, ξ1, αλ, αμ, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
-            mc, th, δt, srδt, λa_prior, μa_prior, surv)
+        llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+          _fstem_update!(ξi, ξ1, αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, 
+            irλ, irμ, mc, th, δt, srδt, surv)
       # if crown
       else
-        llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          _crown_update!(ξi, ξ1, Ξ[i2], αλ, αμ, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
-          mc, th, δt, srδt, λa_prior, μa_prior, surv)
+        llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+          _crown_update!(ξi, ξ1, Ξ[i2], αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, 
+            irλ, irμ, mc, th, δt, srδt, λa_prior, μa_prior, surv)
         setλt!(bi, lλ(ξi)[1])
       end
     else
       # if stem
       if root
-        llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          _stem_update!(ξi, αλ, αμ, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ,
+        llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+          _stem_update!(ξi, αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ,
             mc, th, δt, srδt, λa_prior, μa_prior, surv)
       end
 

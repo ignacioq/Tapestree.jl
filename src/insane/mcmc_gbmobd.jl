@@ -687,7 +687,7 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
             bix = inodes[nix]
 
             llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
-              update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
+              update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, 
                 mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
           # forward simulation update
