@@ -579,31 +579,33 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
                   srδt::Float64,
                   idf ::Vector{iBffs})
 
-  bi = idf[i]
-  i1 = d1(bi)
-  i2 = d2(bi)
-  ip = pa(bi)
-  ip = iszero(ip) ? 1 : ip
-  et = e(bi)
-  xii  = xr[ip]
-  xfi  = xr[i]
+  bi  = idf[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  ip  = pa(bi)
+  ip  = iszero(ip) ? 1 : ip
+  et  = e(bi)
+  xii = xr[ip]
+  xfi = xr[i]
 
   if iszero(et)
     xv   = Float64[xii, xii]
     lσ   = Float64[σi, σi]
     fdti = 0.0
-    nts  = 0
   else
     ntF, fdti = divrem(et, δt, RoundDown)
 
     if isapprox(fdti, δt)
-      nts += 1
+      ntF += 1.0
       fdti = δt
     end
 
-    nts = Int64(ntF)
+    if iszero(fdti) || (i1 > 0 && iszero(i2) && !isfossil(bi))
+      fdti  = δt
+      ntF  -= 1.0
+    end
 
-    xv, lσ = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, nts)
+    xv, lσ = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, Int64(ntF))
   end
 
   push!(Ξ, sTxs(et, δt, fdti, xv, lσ))
@@ -867,16 +869,17 @@ end
 
 
 """
-    _ctl(Ξ::Vector{T}) where {T <: iT}
+    _ctl(Ξ::Vector{T}, f::Function) where {T <: iTree}
 
 Return the branch length sum of `Ξ` based on `δt` and `fδt`
 for debugging purposes.
 """
-function _ctl(Ξ::Vector{T}) where {T <: iT}
+function _ctl(Ξ::Vector{T}, f::Function) where {T <: iTree}
   L = 0.0
   for ξ in Ξ
-    L += _ctl(ξ, 0.0)
+    L = _ctl(ξ, f, L)
   end
+
   return L
 end
 

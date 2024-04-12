@@ -102,8 +102,7 @@ function insane_gbmfbd(tree    ::sTf_label;
   end
 
   # estimate branch split (multiple of δt)
-  ndts = floor(th * mxthf/δt)
-  maxt = δt * ndts
+  maxt = δt * floor(th * mxthf/δt)
 
   # make fix tree directory
   idf = make_idf(tree, tρ, maxt)

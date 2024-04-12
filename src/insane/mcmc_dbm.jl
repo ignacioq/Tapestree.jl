@@ -63,8 +63,11 @@ function insane_dbm(tree   ::Tlabel,
     xs = Dict(tl[i] => 0.0 for i in 1:n)
   end
 
+  # estimate branch split (multiple of δt)
+  maxt = δt * floor(th * mxthf/δt)
+
   # make fix tree directory
-  idf, xr, σxi = make_idf(tree, tρ, xa, xs, th * mxthf)
+  idf, xr, σxi = make_idf(tree, tρ, xa, xs, maxt)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, xr, log(σxi), γi, δt, srδt, sTxs)
@@ -291,7 +294,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
           elseif pupi === 2
 
             prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
-    
+
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
             #    @show ll0, sum(ll), it, pupi
