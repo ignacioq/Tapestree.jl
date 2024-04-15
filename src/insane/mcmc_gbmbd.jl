@@ -676,7 +676,7 @@ end
                   λa_prior::NTuple{2,Float64},
                   μa_prior::NTuple{2,Float64}) where {T <: iTbdU}
 
-Update scale for speciation.
+Update scale for speciation and extinction.
 """
 function update_scale!(Ξ   ::Vector{T},
                        idf ::Vector{iBffs},

@@ -138,8 +138,11 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   seriescolor     --> :black
   grid            --> :off
   yticks          --> (nothing)
-  linestyle       --> zstyle
   yshowaxis       --> false
+
+  if typeof(tree) == iTpbd
+    linestyle       --> zstyle
+  end
 
   @series begin
     seriestype  := :path

@@ -155,6 +155,7 @@ end
                   σλ   ::Float64,
                   σμ   ::Float64,
                   llc  ::Float64,
+                  prc  ::Float64,
                   ddλ  ::Float64,
                   ssλ  ::Float64,
                   ssμ  ::Float64,
@@ -164,6 +165,8 @@ end
                   th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
+                  λa_prior::NTuple{2,Float64},
+                  μa_prior::NTuple{2,Float64},
                   surv ::Int64) where {T <: iTfbd}
 
 Do gbm update for stem root.
@@ -174,6 +177,7 @@ function _stem_update!(ξi   ::T,
                        σλ   ::Float64,
                        σμ   ::Float64,
                        llc  ::Float64,
+                       prc  ::Float64,
                        ddλ  ::Float64,
                        ddμ  ::Float64,
                        ssλ  ::Float64,
@@ -184,6 +188,8 @@ function _stem_update!(ξi   ::T,
                        th   ::Float64,
                        δt   ::Float64,
                        srδt ::Float64,
+                       λa_prior::NTuple{2,Float64},
+                       μa_prior::NTuple{2,Float64},
                        surv ::Int64) where {T <: iTfbd}
 
   @inbounds begin
@@ -213,15 +219,17 @@ function _stem_update!(ξi   ::T,
     lU = -randexp()
 
     llr = llrbd
+    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
-    if lU < llr + log(1000.0/mc)
+    if lU < llr + prr + log(1000.0/mc)
 
       #survival
       mp   = m_surv_gbmfbd(th, λr, μr, αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
-      if lU < llr
+      if lU < llr + prr
         llc += llrbm + llr
+        prc += prr
         ddλ += λc[1] - λr
         ddμ += μc[1] - μr
         ssλ += ssrλ
@@ -235,7 +243,7 @@ function _stem_update!(ξi   ::T,
     end
   end
 
-  return llc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
+  return llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
 end
 
 
@@ -250,6 +258,7 @@ end
                   σλ   ::Float64,
                   σμ   ::Float64,
                   llc  ::Float64,
+                  prc  ::Float64,
                   ddλ  ::Float64,
                   ddμ  ::Float64,
                   ssλ  ::Float64,
@@ -260,6 +269,8 @@ end
                   th   ::Float64,
                   δt   ::Float64,
                   srδt ::Float64,
+                  λa_prior::NTuple{2,Float64},
+                  μa_prior::NTuple{2,Float64},
                   surv ::Int64) where {T <: iTfbd}
 
 Do gbm update for crown root.
@@ -272,6 +283,7 @@ function _crown_update!(ξi   ::T,
                         σλ   ::Float64,
                         σμ   ::Float64,
                         llc  ::Float64,
+                        prc  ::Float64,
                         ddλ  ::Float64,
                         ddμ  ::Float64,
                         ssλ  ::Float64,
@@ -282,6 +294,8 @@ function _crown_update!(ξi   ::T,
                         th   ::Float64,
                         δt   ::Float64,
                         srδt ::Float64,
+                        λa_prior::NTuple{2,Float64},
+                        μa_prior::NTuple{2,Float64},
                         surv ::Int64) where {T <: iTfbd}
 
   @inbounds begin
@@ -328,15 +342,17 @@ function _crown_update!(ξi   ::T,
     lU = -randexp()
 
     llr = llrbd1 + llrbd2
+    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
-    if lU < llr + log(1000.0/mc)
+    if lU < llr + prr + log(1000.0/mc)
 
       #survival
       mp   = m_surv_gbmfbd(th, λr, μr, αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
-      if lU < llr
+      if lU < llr + prr
         llc += llrbm1 + llrbm2 + llr
+        prc += prr
         ddλ += 2.0*(λi - λr)
         ddμ += 2.0*(μi - μr)
         ssλ += ssrλ1 + ssrλ2
@@ -354,7 +370,7 @@ function _crown_update!(ξi   ::T,
     end
   end
 
-  return llc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
+  return llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
 end
 
 

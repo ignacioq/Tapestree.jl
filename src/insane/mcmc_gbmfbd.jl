@@ -38,7 +38,7 @@ Created 03 09 2020
                   αμi      ::Float64              = 0.0,
                   σλi     ::Float64               = 0.1,
                   σμi     ::Float64               = 0.1,
-                  pupdp   ::NTuple{6,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
+                  pupdp   ::NTuple{7,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
                   δt      ::Float64               = 1e-3,
                   survival::Bool                  = true,
                   mxthf   ::Float64               = Inf,
@@ -385,7 +385,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
         bix = inodes[nix]
 
         llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
+          update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, 
             mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
       # forward simulation update
@@ -881,100 +881,115 @@ end
 
 
 """
-    update_scale!(Ξ   ::Vector{T},
-                  idf ::Vector{iBffs},
-                  αλ  ::Float64,
-                  αμ  ::Float64,
-                  σλ  ::Float64,
-                  σμ  ::Float64,
-                  llc ::Float64,
-                  irλ ::Float64,
-                  irμ ::Float64,
-                  ns  ::Float64,
-                  ne  ::Float64,
-                  stnλ::Float64,
-                  stnμ::Float64,
-                  mc  ::Float64,
-                  th  ::Float64,
-                  surv::Int64,
-                  δt  ::Float64,
-                  srδt::Float64) where {T <: iTbdU}
+    update_scale!(Ξ       ::Vector{T},
+                  idf     ::Vector{iBffs},
+                  αλ      ::Float64,
+                  αμ      ::Float64,
+                  σλ      ::Float64,
+                  σμ      ::Float64,
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  irλ     ::Float64,
+                  irμ     ::Float64,
+                  ns      ::Float64,
+                  ne      ::Float64,
+                  stnλ    ::Float64,
+                  stnμ    ::Float64,
+                  mc      ::Float64,
+                  th      ::Float64,
+                  surv    ::Int64,
+                  δt      ::Float64,
+                  srδt    ::Float64,
+                  λa_prior::NTuple{2,Float64},
+                  μa_prior::NTuple{2,Float64}) where {T <: iTfbd}
 
-Update scale for speciation.
+Update scale for speciation and extinction.
 """
-function update_scale!(Ξ   ::Vector{T},
-                       idf ::Vector{iBffs},
-                       αλ  ::Float64,
-                       αμ  ::Float64,
-                       σλ  ::Float64,
-                       σμ  ::Float64,
-                       llc ::Float64,
-                       irλ ::Float64,
-                       irμ ::Float64,
-                       ns  ::Float64,
-                       ne  ::Float64,
-                       stnλ::Float64,
-                       stnμ::Float64,
-                       mc  ::Float64,
-                       th  ::Float64,
-                       surv::Int64,
-                       δt  ::Float64,
-                       srδt::Float64) where {T <: iTfbd}
+function update_scale!(Ξ       ::Vector{T},
+                       idf     ::Vector{iBffs},
+                       αλ      ::Float64,
+                       αμ      ::Float64,
+                       σλ      ::Float64,
+                       σμ      ::Float64,
+                       llc     ::Float64,
+                       prc     ::Float64,
+                       irλ     ::Float64,
+                       irμ     ::Float64,
+                       ns      ::Float64,
+                       ne      ::Float64,
+                       stnλ    ::Float64,
+                       stnμ    ::Float64,
+                       mc      ::Float64,
+                       th      ::Float64,
+                       surv    ::Int64,
+                       δt      ::Float64,
+                       srδt    ::Float64,
+                       λa_prior::NTuple{2,Float64},
+                       μa_prior::NTuple{2,Float64}) where {T <: iTfbd}
 
   accλ = accμ = 0.0
 
+  lλ0c = lλ(Ξ[1])[1]
+  lμ0c = lμ(Ξ[1])[1]
+
   # sample log(scaling factor)
-  s = randn()*stnλ
+  Δlλ  = randn()*stnλ
+  lλ0p = lλ0c + Δlλ
 
   # likelihood ratio
-  iri = (1.0 - exp(s)) * irλ
-  llr = ns * s + iri 
+  iri = (1.0 - exp(Δlλ)) * irλ
+  llr = ns * Δlλ + iri
+
+  # prior ratio
+  prr = llrdgamma(exp(lλ0p), exp(lλ0c), λa_prior[1], λa_prior[2])
 
   lU = -randexp()
 
-  if lU < llr + log(1000.0/mc)
+  if lU < llr + prr + log(1000.0/mc)
 
     # add survival ratio
-    mp  = m_surv_gbmfbd(th, lλ(Ξ[1])[1] + s, lμ(Ξ[1])[1], 
-            αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
+    mp = m_surv_gbmfbd(th, lλ0p, lμ0c, αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
     llr += log(mp/mc)
 
     if lU < llr
       accλ += 1.0
       llc  += llr
+      prc  += prr
       irλ  -= iri
       mc    = mp
-      scale_rate!(Ξ, lλ, s)
-      scale_rate!(idf, s)
+      scale_rate!(Ξ, lλ, Δlλ)
+      scale_rate!(idf, Δlλ)
     end
   end
 
   # sample log(scaling factor)
-  s = randn()*stnμ
+  Δlμ  = randn()*stnμ
+  lμ0p = lμ0c + Δlμ
 
-  # likelihood ratio
-  iri = (1.0 - exp(s)) * irμ
-  llr = ne * s + iri
+  # likelihood ratio  
+  iri = (1.0 - exp(Δlμ)) * irμ
+  llr = ne * Δlμ + iri
+  prr = llrdgamma(exp(lμ0p), exp(lμ0c), μa_prior[1], μa_prior[2])
 
   lU = -randexp()
 
-  if lU < llr + log(1000.0/mc)
+  if lU < llr + prr + log(1000.0/mc)
 
     # add survival ratio
-    mp = m_surv_gbmfbd(th, lλ(Ξ[1])[1], lμ(Ξ[1])[1] + s, 
-          αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
+    mp = m_surv_gbmfbd(th, lλ0c, lμ0p, αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
     llr += log(mp/mc)
 
-    if lU < llr
+    if lU < llr + prr
       accμ += 1.0
       llc  += llr
+      prc  += prr
       irμ  -= iri
       mc    = mp
-      scale_rate!(Ξ, lμ, s)
+      scale_rate!(Ξ, lμ, Δlμ)
     end
   end
 
-  return llc, irλ, irμ, accλ, accμ, mc
+  return llc, prc, irλ, irμ, accλ, accμ, mc
 end
 
 

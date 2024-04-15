@@ -41,7 +41,7 @@ Created 20 09 2023
                   αμi     ::Float64               = 0.0,
                   σλi     ::Float64               = 0.1,
                   σμi     ::Float64               = 0.1,
-                  pupdp   ::NTuple{7,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
+                  pupdp   ::NTuple{8,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
                   δt      ::Float64               = 1e-3,
                   survival::Bool                  = true,
                   mxthf   ::Float64               = Inf,
@@ -80,7 +80,7 @@ function insane_gbmobd(tree    ::sTf_label,
                        αμi     ::Float64               = 0.0,
                        σλi     ::Float64               = 0.1,
                        σμi     ::Float64               = 0.1,
-                       pupdp   ::NTuple{7,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
+                       pupdp   ::NTuple{8,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
                        δt      ::Float64               = 1e-3,
                        survival::Bool                  = true,
                        mxthf   ::Float64               = Inf,
@@ -190,7 +190,7 @@ function insane_gbmobd(tree    ::sTf_label,
   end
 
   # M attempts of survival
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αλi, αμi, σλi, σμi, δt, srδt, 1_000, surv)
+  mc = m_surv_gbmfbd(th, log(λc), log(μc), αλi, αμi, σλi, σμi, δt, srδt, 1_000, surv)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, λc, μc, αλi, αμi, σλi, σμi, δt, srδt, iTfbd)
@@ -439,7 +439,7 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
         bix = inodes[nix]
 
         llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
-          update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
+          update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, 
             mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
       # forward simulation update
@@ -826,21 +826,21 @@ function update_gbm!(bix  ::Int64,
 
       # if stem fossil
       if isfossil(bi)
-        llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          _fstem_update!(ξi, ξ1, αλ, αμ, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
+        llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+          _fstem_update!(ξi, ξ1, αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, 
             mc, th, δt, srδt, λa_prior, μa_prior, surv)
       # if crown
       else
-        llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          _crown_update!(ξi, ξ1, Ξ[i2], αλ, αμ, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ, 
+        llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+          _crown_update!(ξi, ξ1, Ξ[i2], αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, 
           mc, th, δt, srδt, λa_prior, μa_prior, surv)
         setλt!(bi, lλ(ξi)[1])
       end
     else
       # if stem
       if root
-        llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          _stem_update!(ξi, αλ, αμ, σλ, σμ, llc, prc, ddλ, ssλ, ssμ, irλ, irμ,
+        llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc =
+          _stem_update!(ξi, αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ,
             mc, th, δt, srδt, λa_prior, μa_prior, surv)
       end
 
@@ -905,7 +905,7 @@ end
                ω     ::Vector{Float64},
                llc   ::Float64,
                ddλ   ::Float64,
-               ddμ ::Float64,
+               ddμ   ::Float64,
                ssλ   ::Float64,
                ssμ   ::Float64,
                nλ    ::Float64,
@@ -935,7 +935,7 @@ function update_fs!(bix   ::Int64,
                     ω     ::Vector{Float64},
                     llc   ::Float64,
                     ddλ   ::Float64,
-                    ddμ ::Float64,
+                    ddμ   ::Float64,
                     ssλ   ::Float64,
                     ssμ   ::Float64,
                     nλ    ::Float64,
@@ -957,7 +957,7 @@ function update_fs!(bix   ::Int64,
   # terminal branch
   if iszero(d1(bi))
 
-    drλ = ssrλ = ssrμ = irrλ = irrμ = 0.0
+    drλ = drμ = ssrλ = ssrμ = irrλ = irrμ = 0.0
     # fossil terminal branch
     if isfossil(bi)
       ixf = eixf[bix]
@@ -978,13 +978,13 @@ function update_fs!(bix   ::Int64,
   # internal non-bifurcating branch
   elseif iszero(d2(bi))
 
-    ξp, LTTp, llr, drλ, ssrλ, ssrμ, irrλ, irrμ =
+    ξp, LTTp, llr, drλ, drμ, ssrλ, ssrμ, irrλ, irrμ =
       fsbi_m(bi, ξc, Ξ[d1(bi)], αλ, αμ, σλ, σμ, ψ, ω, ψωts, ωtimes, LTT, ixi, eixf[bix], δt, srδt)
 
   # internal bifurcating branch
   else
 
-    ξp, LTTp, llr, drλ, ssrλ, ssrμ, irrλ, irrμ =
+    ξp, LTTp, llr, drλ, drμ, ssrλ, ssrμ, irrλ, irrμ =
       fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], αλ, αμ, σλ, σμ, ψ, ω, ψωts, ωtimes, LTT, 
         ixi, eixf[bix], δt, srδt)
   end
@@ -1303,7 +1303,7 @@ function fsbi_m(bi    ::iBffs,
       ψωts, ixi, nep, δt, srδt, 0, 0, 1, 1_000)
 
   if na < 1 || nf > 0 || nn > 999
-    return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN
+    return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN, NaN
   end
 
   ntp = na
@@ -1319,7 +1319,7 @@ function fsbi_m(bi    ::iBffs,
   # sample and fix random  tip
   λf, μf = fixrtip!(ξp, na, NaN, NaN) # fix random tip
 
-  llrd, acrd, drλ, ssrλ, ssrμ, irrλ, irrμ, λ1p, μ1p =
+  llrd, acrd, drλ, drμ, ssrλ, ssrμ, irrλ, irrμ, λ1p, μ1p =
     _daughter_update!(ξ1, λf, μf, αλ, αμ, σλ, σμ, δt, srδt)
 
   acr += acrd
@@ -1350,12 +1350,12 @@ function fsbi_m(bi    ::iBffs,
         unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
         unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
 
-        return ξp, LTTp, llr, drλ, ssrλ, ssrμ, irrλ, irrμ
+        return ξp, LTTp, llr, drλ, drμ, ssrλ, ssrμ, irrλ, irrμ
       end
     end
   end
 
-  return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN
+  return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN, NaN
 end
 
 
@@ -1407,7 +1407,7 @@ function fsbi_i(bi    ::iBffs,
       ψωts, ixi, nep, δt, srδt, 0, 0, 1, 1_000)
 
   if na < 1 || nf > 0 || nn > 999
-    return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN
+    return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN, NaN
   end
 
   ntp = na
@@ -1423,7 +1423,7 @@ function fsbi_i(bi    ::iBffs,
   # sample and fix random  tip
   λf, μf = fixrtip!(ξp, na, NaN, NaN) # fix random tip
 
-  llrd, acrd, drλ, ssrλ, ssrμ, irrλ, irrμ, λ1p, λ2p, μ1p, μ2p =
+  llrd, acrd, drλ, drμ, ssrλ, ssrμ, irrλ, irrμ, λ1p, λ2p, μ1p, μ2p =
     _daughters_update!(ξ1, ξ2, λf, μf, αλ, αμ, σλ, σμ, δt, srδt)
 
   acr += acrd
@@ -1455,12 +1455,12 @@ function fsbi_i(bi    ::iBffs,
         unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
         unsafe_copyto!(lμ(ξ2), 1, μ2p, 1, l2) # set new daughter 1 μ vector
 
-        return ξp, LTTp, llr, drλ, ssrλ, ssrμ, irrλ, irrμ
+        return ξp, LTTp, llr, drλ, drμ, ssrλ, ssrμ, irrλ, irrμ
       end
     end
   end
 
-  return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN
+  return ξp, LTT, NaN, NaN, NaN, NaN, NaN, NaN, NaN
 end
 
 
