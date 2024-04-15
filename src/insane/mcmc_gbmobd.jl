@@ -620,7 +620,7 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\t"*join(["omega"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
+    write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\t"*join(["omega"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
