@@ -146,6 +146,7 @@ isfossil(tree::iTpb)     = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
+isfossil(tree::sTxs)     = def1(tree) && !def2(tree)
 
 
 
