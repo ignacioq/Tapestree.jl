@@ -141,7 +141,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   yshowaxis       --> false
 
   if typeof(tree) == iTpbd
-    linestyle       --> zstyle
+    linestyle     --> zstyle
   end
 
   @series begin

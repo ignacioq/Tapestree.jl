@@ -335,7 +335,8 @@ Sample conditional on time
                b0  ::Float64 = 1.0,
                λ0  ::Float64 = 1.0,
                μ0  ::Float64 = 0.2,
-               α   ::Float64 = 0.0,
+               αb  ::Float64 = 0.0,
+               αλ  ::Float64 = 0.0,
                σb  ::Float64 = 0.1,
                σλ  ::Float64 = 0.1,
                σμ  ::Float64 = 0.1,
@@ -350,7 +351,8 @@ function sim_gbmpbd(t   ::Float64;
                     b0  ::Float64 = 1.0,
                     λ0  ::Float64 = 1.0,
                     μ0  ::Float64 = 0.2,
-                    α   ::Float64 = 0.0,
+                    αb  ::Float64 = 0.0,
+                    αλ  ::Float64 = 0.0,
                     σb  ::Float64 = 0.1,
                     σλ  ::Float64 = 0.1,
                     σμ  ::Float64 = 0.1,
@@ -362,26 +364,28 @@ function sim_gbmpbd(t   ::Float64;
   lλ0 = log(λ0)
   lμ0 = log(μ0)
 
-  if init === :crown
-    d1, nn = _sim_gbmpbd(t, lb0, lλ0, lμ0, α, σb, σλ, σμ, δt, sqrt(δt), true, 0, 1, nlim)
+  function test_lim(nn, nλ, nlim)
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
+    if nλ >= nlim
+      @warn "maximum number of completion events surpassed"
+    end
+  end
 
-    d2, nn = _sim_gbmpbd(t, lb0, lλ0, lμ0, α, σb, σλ, σμ, δt, sqrt(δt), false, 0, nn + 1, nlim)
-    if nn >= nlim
-      @warn "maximum number of lineages surpassed"
-    end
+  if init === :crown
+    d1, na, nn, nλ = _sim_gbmpbd(t, lb0, lλ0, lμ0, αb, αλ, σb, σλ, σμ, δt, sqrt(δt), true, 0, 1, 1, nlim)
+    test_lim(nn, nλ, nlim)
+
+    d2, na, nn, nλ = _sim_gbmpbd(t, lb0, lλ0, lμ0, αb, αλ, σb, σλ, σμ, δt, sqrt(δt), false, 0, nn + 1, nλ, nlim)
+    test_lim(nn, nλ, nlim)
 
     tree = iTpbd(d1, d2, 0.0, δt, 0.0, false, true, false,
       Float64[lb0, lb0], Float64[lλ0, lλ0], Float64[lμ0, lμ0])
 
   elseif init === :stem
-    tree, nn = _sim_gbmpbd(t, lb0, lλ0, lμ0, α, σb, σλ, σμ, δt, sqrt(δt), true, 0, 1, nlim)
-
-    if nn >= nlim
-      @warn "maximum number of lineages surpassed"
-    end
+    tree, na, nn, nλ = _sim_gbmpbd(t, lb0, lλ0, lμ0, αb, αλ, σb, σλ, σμ, δt, sqrt(δt), true, 0, 1, 1, nlim)
+    test_lim(nn, nλ, nlim)
   else
     @error string(init, " does not match either crown or stem")
   end
@@ -397,7 +401,8 @@ end
                 bt  ::Float64,
                 λt  ::Float64,
                 μt  ::Float64,
-                α   ::Float64,
+                αb  ::Float64,
+                αλ  ::Float64,
                 σb  ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -406,6 +411,7 @@ end
                 ig  ::Bool,
                 na  ::Int64,
                 nn  ::Int64,
+                nλ  ::Int64,
                 nlim::Int64)
 
 Simulate `iTpbd` according to geometric Brownian motions for bifurcation, completion 
@@ -415,7 +421,8 @@ function _sim_gbmpbd(t   ::Float64,
                      bt  ::Float64,
                      λt  ::Float64,
                      μt  ::Float64,
-                     α   ::Float64,
+                     αb  ::Float64,
+                     αλ  ::Float64,
                      σb  ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
@@ -424,9 +431,10 @@ function _sim_gbmpbd(t   ::Float64,
                      ig  ::Bool,
                      na  ::Int64,
                      nn  ::Int64,
+                     nλ  ::Int64,
                      nlim::Int64)
 
-  if nn < nlim
+  if nn < nlim && nλ < nlim
 
     bv = Float64[bt]
     λv = Float64[λt]
@@ -439,8 +447,8 @@ function _sim_gbmpbd(t   ::Float64,
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bl += t
         srt = sqrt(t)
-        bt1 = rnorm(bt, srt*σb)
-        λt1 = rnorm(λt + α*t, srt*σλ)
+        bt1 = rnorm(bt + αb*t, srt*σb)
+        λt1 = rnorm(λt + αλ*t, srt*σλ)
         μt1 = rnorm(μt, srt*σμ)
 
         push!(bv, bt1)
@@ -455,32 +463,33 @@ function _sim_gbmpbd(t   ::Float64,
           # if initiation
           if borλμ(bm, λm, μm)
             nn += 1
-            na  += 2
+            na += 2
             return iTpbd(iTpbd(0.0, δt, 0.0, false, ig, false,
                              Float64[bt1, bt1], Float64[λt1, λt1], Float64[μt1, μt1]),
                          iTpbd(0.0, δt, 0.0, false, false, false,
                            Float64[bt1, bt1], Float64[λt1, λt1], Float64[μt1, μt1]),
-                         bl, δt, t, false, ig, false, bv, λv, μv), na, nn
+                         bl, δt, t, false, ig, false, bv, λv, μv), na, nn, nλ
           # if completion (for incipient lineages) or anagenetic speciation (for good lineages)
           elseif λorμ(λm, μm)
+            nλ += 1
             return iTpbd(iTpbd(0.0, δt, 0.0, false, true, false,
                              Float64[bt1, bt1], Float64[λt1, λt1], Float64[μt1, μt1]),
-                         bl, δt, t, false, ig, false, bv, λv, μv), na, nn
+                         bl, δt, t, false, ig, false, bv, λv, μv), na, nn, nλ
           # if extinction
           else
-            return iTpbd(bl, δt, t, true, ig, false, bv, λv, μv), na, nn
+            return iTpbd(bl, δt, t, true, ig, false, bv, λv, μv), na, nn, nλ
           end
         end
 
         na += 1
-        return iTpbd(bl, δt, t, false, ig, false, bv, λv, μv), na, nn
+        return iTpbd(bl, δt, t, false, ig, false, bv, λv, μv), na, nn, nλ
       end
 
       t  -= δt
       bl += δt
 
-      bt1 = rnorm(bt, srδt*σb)
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      bt1 = rnorm(bt + αb*δt, srδt*σb)
+      λt1 = rnorm(λt + αλ*δt, srδt*σλ)
       μt1 = rnorm(μt, srδt*σμ)
 
       push!(bv, bt1)
@@ -495,21 +504,22 @@ function _sim_gbmpbd(t   ::Float64,
         # if initiation
         if borλμ(bm, λm, μm)
           nn += 1
-          td1, na, nn =
-            _sim_gbmpbd(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt, ig, na, nn, nlim)
-          td2, na, nn =
-            _sim_gbmpbd(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt, false, na, nn, nlim)
+          td1, na, nn, nλ =
+            _sim_gbmpbd(t, bt1, λt1, μt1, αb, αλ, σb, σλ, σμ, δt, srδt, ig, na, nn, nλ, nlim)
+          td2, na, nn, nλ =
+            _sim_gbmpbd(t, bt1, λt1, μt1, αb, αλ, σb, σλ, σμ, δt, srδt, false, na, nn, nλ, nlim)
 
-          return iTpbd(td1, td2, bl, δt, δt, false, ig, false, bv, λv, μv), na, nn
+          return iTpbd(td1, td2, bl, δt, δt, false, ig, false, bv, λv, μv), na, nn, nλ
         # if completion (for incipient lineages) or anagenetic speciation (for good lineages)
         elseif λorμ(λm, μm)
-          td1, na, nn =
-            _sim_gbmpbd(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt, true, na, nn, nlim)
+          nλ += 1
+          td1, na, nn, nλ =
+            _sim_gbmpbd(t, bt1, λt1, μt1, αb, αλ, σb, σλ, σμ, δt, srδt, true, na, nn, nλ, nlim)
 
-          return iTpbd(td1, bl, δt, δt, false, ig, false, bv, λv, μv), na, nn
+          return iTpbd(td1, bl, δt, δt, false, ig, false, bv, λv, μv), na, nn, nλ
         # if extinction
         else
-          return iTpbd(bl, δt, δt, true, ig, false, bv, λv, μv), na, nn
+          return iTpbd(bl, δt, δt, true, ig, false, bv, λv, μv), na, nn, nλ
         end
       end
 
@@ -519,7 +529,7 @@ function _sim_gbmpbd(t   ::Float64,
     end
   end
 
-  return iTpbd(), na, nn
+  return iTpbd(), na, nn, nλ
 end
 
 
