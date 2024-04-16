@@ -813,22 +813,22 @@ Function f aggregated by af through time
 
 
 """
-    f(tree::T,
-      f   ::Function,
-      dt  ::Float64;
+    f(f   ::Function,
+      δt  ::Float64,
+      tree::T;
       af = mean,
-      q0 = [0.025, 0.975],
-      q1 = [0.25,  0.75],
-      q2 = Float64[]) where {T <: iT}
+      q0 = Float64[],
+      q1 = Float64[],
+      q2 = Float64[]) where {T <: iTree}
 
 Recipe for plotting values given by `f` through time for a `iT`.
 """
-@recipe function f(tree::T,
-                   f   ::Function,
-                   δt  ::Float64;
+@recipe function f(f   ::Function,
+                   δt  ::Float64,
+                   tree::T;
                    af = mean,
-                   q0 = [0.025, 0.975],
-                   q1 = [0.25,  0.75],
+                   q0 = Float64[],
+                   q1 = Float64[],
                    q2 = Float64[]) where {T <: iTree}
 
   # prepare data
@@ -839,7 +839,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   # common shape plot defaults
   legend          --> :none
   xguide          --> "time"
-  yguide          --> string(f)[2:end]*"(t)"
+  yguide          --> string(f,"(t)")
   xflip           --> true
   fontfamily      --> :Helvetica
   tickfontfamily  --> :Helvetica
@@ -932,9 +932,9 @@ end
 
 Recipe for plotting values given by `f` through time for a `iT`.
 """
-@recipe function f(trees::Vector{T},
-                   f    ::Function,
-                   δt   ::Float64;
+@recipe function f(f    ::Function,
+                   δt   ::Float64,
+                   trees::Vector{T};
                    af  = mean,
                    vaf = x -> quantile(x, 0.5),
                    q0  = [0.025, 0.975],
@@ -983,10 +983,11 @@ Recipe for plotting values given by `f` through time for a `iT`.
     Q2 = Array{Float64}(undef, lts, 2)
   end
 
-  M = Array{Float64}(undef, lts)
+  M = fill(NaN, lts)
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
+    isempty(qi) && continue
     if !isempty(q0) 
       Q0[i,:] = quantile(qi, q0)
     end
@@ -1002,7 +1003,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   # common shape plot defaults
   legend          --> :none
   xguide          --> "time"
-  yguide          --> string(f)[2:end]*"(t)"
+  yguide          --> string(f,"(t)")
   xflip           --> true
   fontfamily      --> :Helvetica
   tickfontfamily  --> :Helvetica
