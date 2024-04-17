@@ -1774,6 +1774,40 @@ lμ(tree::iTbdU) = getproperty(tree,:lμ)
 
 
 """
+    tip_rates(tree::T, f::Function) where {T <: iT}
+
+Return the tip rates.
+"""
+function tip_rates(tree::T, f::Function) where {T <: iT}
+  rates = Float64[]
+  return _tip_rates!(tree::T, f, rates)
+end
+
+
+
+
+"""
+    _tip_rates!(tree::T, f::Function, rates::Array{Float64,1}) where {T <: iT}
+
+Return the tip rates.
+"""
+function _tip_rates!(tree::T, f::Function, rates::Array{Float64,1}) where {T <: iT}
+  if def1(tree)
+    _tip_rates!(tree.d1::T, f, rates)
+    if def2(tree)
+      _tip_rates!(tree.d2::T, f, rates)
+    end
+  else
+    push!(rates, last(f(tree::T)))
+  end
+
+  return rates
+end
+
+
+
+
+"""
     streeheight(tree::T,
                 h   ::Float64,
                 th  ::Float64,
