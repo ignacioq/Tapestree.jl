@@ -115,10 +115,12 @@ function _sT_label(tree::T, i::Int64) where {T <: iTree}
   if def1(tree)
     t1, i = _sT_label(tree.d1, i)
     t2, i = _sT_label(tree.d2, i)
-    tree  = sT_label(t1, t2, e(tree), "")
+    lab = isdefined(tree, :l) ? label(tree) : ""
+    tree  = sT_label(t1, t2, e(tree), lab)
   else
     i += 1
-    tree = sT_label(e(tree), string("t",i))
+    lab = isdefined(tree, :l) ? label(tree) : string("t",i)
+    tree = sT_label(e(tree), lab)
   end
   return tree, i
 end

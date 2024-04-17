@@ -496,19 +496,48 @@ end
 
 
 """
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+    to_string(tree::sT_label)
 
 Returns newick string.
 """
-to_string(tree::T) where {T <: Tlabel} = _to_string(tree)
+to_string(tree::sT_label) = _to_string(tree)
 
 
 """
-    _to_string(tree::T) where {T <: Tlabel}
+    _to_string(tree::sT_label)
 
 Returns newick string.
 """
-function _to_string(tree::T) where {T <: Tlabel}
+function _to_string(tree::sT_label)
+
+  if def1(tree)
+    s1 = _to_string(tree.d1)
+    s2 = _to_string(tree.d2)
+    s = string("(",s1,",", s2,"):",e(tree))
+
+    return s
+  else
+    return string(label(tree),":",e(tree))
+  end
+end
+
+
+
+
+"""
+    to_string(tree::sTf_label)
+
+Returns newick string.
+"""
+to_string(tree::sTf_label) = _to_string(tree)
+
+
+"""
+    _to_string(tree::sTf_label)
+
+Returns newick string.
+"""
+function _to_string(tree::sTf_label)
 
   if def1(tree)
     s1 = _to_string(tree.d1)
@@ -516,14 +545,15 @@ function _to_string(tree::T) where {T <: Tlabel}
       s2 = _to_string(tree.d2)
       s = string("(",s1,",", s2,"):",e(tree))
     else
-      s = string("(",s1,")",l(tree),":", e(tree))
+      s = string("(",s1,")",label(tree),":", e(tree))
     end
 
     return s
   else
-    return string(l(tree),":",e(tree))
+    return string(label(tree),":",e(tree))
   end
 end
+
 
 
 

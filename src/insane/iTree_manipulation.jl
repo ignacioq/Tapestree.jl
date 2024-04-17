@@ -220,6 +220,79 @@ end
 
 
 
+
+"""
+    prune_tips(tree::T, tips::Vector{String}) where {T <: Tlabel}
+
+Prune `tips` from tree.
+"""
+function prune_tips(tree::T, tips::Vector{String}) where {T <: Tlabel}
+  tips = Set(tips)
+
+  return _prune_tips!(T(tree::T), tips)
+end
+
+
+
+
+"""
+    prune_tips(treev::Vector{T}, tips::Vector{String}) where {T <: Tlabel}
+
+Prune `tips` from tree.
+"""
+function prune_tips(treev::Vector{T}, tips::Vector{String}) where {T <: Tlabel}
+  treevne = T[]
+  for t in treev
+    push!(treevne, prune_tips(t, tips))
+  end
+  return treevne
+end
+
+
+
+
+"""
+    _prune_tips!(tree::T, tips::Vector{String}) where {T <: Tlabel}
+
+Prune `tips` from tree.
+"""
+function _prune_tips!(tree::T, tips::Set{String}) where {T <: iTf}
+
+  if def1(tree)
+    tree.d1 = _prune_tips!(tree.d1, tips)
+    if def2(tree)
+      tree.d2 = _prune_tips!(tree.d2, tips)
+      if in(label(tree.d1), tips)
+        setdiff!(tips, label(tree.d1))
+        if in(label(tree.d2), tips)
+          return T(e(tree), label(tree.d2))
+        else
+          ne  = e(tree) + e(tree.d2)
+          tree = tree.d2
+          sete!(tree, ne)
+        end
+      elseif in(label(tree.d2), tips)
+        setdiff!(tips, label(tree.d2))
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+      end
+      return tree
+    else
+      if in(label(tree.d1), tips)
+        setdiff!(tips, label(tree.d1))
+        return T(e(tree), label(tree))
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+
 """
     cutbottom(tree::T, c::Float64) where {T <: iTree}
 
