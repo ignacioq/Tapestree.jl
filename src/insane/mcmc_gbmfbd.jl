@@ -89,7 +89,13 @@ function insane_gbmfbd(tree    ::sTf_label;
 
   # make initial fossils per epoch vector
   if lastindex(f_epoch) !== nep
-    f_epoch = fill(0, nep)
+    if sum(f_epoch) > 0
+      for i in Base.OneTo(nep - lastindex(f_epoch))
+        pushfirst!(f_epoch, 0)
+      end
+    else
+      f_epoch = fill(0, nep)
+    end
   end
 
   # set tips sampling fraction
