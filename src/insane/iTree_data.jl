@@ -113,7 +113,7 @@ isextinct(tree::iTpbX) = false
 
 Return if is an alive node.
 """
-isalive(tree::T) where {T <: iTree} = !isextinct(tree)
+isalive(tree::T) where {T <: iTree} = !isextinct(tree) && !isfossil(tree)
 
 
 
