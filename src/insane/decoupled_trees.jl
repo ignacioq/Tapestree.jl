@@ -1159,20 +1159,20 @@ end
 
 
 """
-    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
+    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_ir_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+function _ss_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
 
-  ddλ = ddμ = ssλ = ssμ = n = irλ = irμ = 0.0
+  ddλ = ddμ = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    ddλ, ddμ, ssλ, ssμ, n, irλ, irμ = 
-      _ss_ir_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n, irλ, irμ)
+    ddλ, ddμ, ssλ, ssμ, n = 
+      _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
   end
 
-  return ddλ, ddμ, ssλ, ssμ, n, irλ, irμ
+  return ddλ, ddμ, ssλ, ssμ, n
 end
 
 
