@@ -365,11 +365,11 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
     end
 
     # numerical stability
-    lns += 1
-    if lns === 200
-      irλ, irμ = _ir(Ξ)
-      lns = 0
-    end
+    # lns += 1
+    # if lns === 200
+    #   irλ, irμ = _ir(Ξ)
+    #   lns = 0
+    # end
 
     ltn += 1
     if ltn === 100
@@ -600,11 +600,11 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         end
 
         # numerical stability
-        lns += 1
-        if lns === 200
-          irλ, irμ = _ir(Ξ)
-          lns = 0
-        end
+        # lns += 1
+        # if lns === 200
+        #   irλ, irμ = _ir(Ξ)
+        #   lns = 0
+        # end
 
         # log parameters
         lthin += 1
@@ -879,6 +879,8 @@ function update_scale!(Ξ   ::Vector{T},
                        surv::Int64,
                        δt  ::Float64,
                        srδt::Float64) where {T <: iTfbd}
+
+  irλ, irμ = _ir(Ξ)
 
   accλ = accμ = 0.0
 
