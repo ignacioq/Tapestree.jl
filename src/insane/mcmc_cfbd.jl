@@ -70,7 +70,13 @@ function insane_cfbd(tree    ::sTf_label;
 
   # make initial fossils per epoch vector
   if lastindex(f_epoch) !== nep
-    f_epoch = fill(0, nep)
+    if sum(f_epoch) > 0
+      for i in Base.OneTo(nep - lastindex(f_epoch))
+        pushfirst!(f_epoch, 0)
+      end
+    else
+      f_epoch = fill(0, nep)
+    end
   end
 
   # set tips sampling fraction
@@ -114,13 +120,13 @@ function insane_cfbd(tree    ::sTf_label;
   if survival 
     if iszero(e(tree)) 
       if def1(tree)
-        surv += (ntipsalive(tree.d1) > 0)
+        surv += Int64(anyalive(tree.d1))
         if def2(tree)
-          surv += (ntipsalive(tree.d2) > 0)
+          surv += Int64(anyalive(tree.d2))
         end
       end
     else
-      surv += (ntipsalive(tree) > 0)
+      surv += Int64(anyalive(tree))
     end
   end
 
