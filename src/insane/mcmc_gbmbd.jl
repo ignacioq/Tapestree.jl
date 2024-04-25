@@ -14,25 +14,27 @@ Created 03 09 2020
 
 """
     insane_gbmbd(tree    ::sT_label;
-                 α_prior ::NTuple{2,Float64} = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                 σμ_prior::NTuple{2,Float64} = (3.0, 0.5),
-                 niter   ::Int64             = 1_000,
-                 nthin   ::Int64             = 10,
-                 nburn   ::Int64             = 200,
-                 nflush  ::Int64             = nthin,
-                 ofile   ::String            = string(homedir(), "/ibd"),
-                 ϵi      ::Float64           = 0.2,
-                 λi      ::Float64           = NaN,
-                 μi      ::Float64           = NaN,
-                 αi      ::Float64           = 0.0,
-                 σλi     ::Float64           = 0.01,
-                 σμi     ::Float64           = 0.01,
-                 pupdp   ::NTuple{4,Float64} = (0.01, 0.01, 0.1, 0.2),
-                 δt      ::Float64           = 1e-3,
-                 survival::Bool              = true,
-                 mxthf   ::Float64           = Inf,
-                 prints  ::Int64             = 5,
+                 α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
+                 σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                 σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                 niter   ::Int64                 = 1_000,
+                 nthin   ::Int64                 = 10,
+                 nburn   ::Int64                 = 200,
+                 nflush  ::Int64                 = nthin,
+                 ofile   ::String                = string(homedir(), "/ibd"),
+                 ϵi      ::Float64               = 0.2,
+                 λi      ::Float64               = NaN,
+                 μi      ::Float64               = NaN,
+                 αi      ::Float64               = 0.0,
+                 σλi     ::Float64               = 0.01,
+                 σμi     ::Float64               = 0.01,
+                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0, 0.1, 0.2),
+                 δt      ::Float64               = 1e-3,
+                 survival::Bool                  = true,
+                 mxthf   ::Float64               = Inf,
+                 prints  ::Int64                 = 5,
+                 stnλ    ::Float64               = 0.5,
+                 stnμ    ::Float64               = 0.5,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for `bdd`.
@@ -52,7 +54,7 @@ function insane_gbmbd(tree    ::sT_label;
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.01,
                       σμi     ::Float64               = 0.01,
-                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.1, 0.1, 0.2),
+                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       survival::Bool                  = true,
                       mxthf   ::Float64               = Inf,
@@ -96,7 +98,7 @@ function insane_gbmbd(tree    ::sT_label;
   mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, surv)
 
   # get vector of internal branches
-  inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
+  inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
 
   # parameter updates (1: α, 2: σλ, 3: σμ, 4: gbm, 5: forward simulation)
   spup = sum(pupdp)
@@ -182,7 +184,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   ne  = 0.0                 # number of extinction events in likelihood
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
 
   # for scale tuning
   ltn = 0
@@ -217,13 +219,13 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # update scale
       elseif pupi === 3
 
-        llc, irλ, irμ, accλ, accμ, mc = 
-          update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
-            stnλ, stnμ, mc, th, surv, δt, srδt)
+        # llc, accλ, accμ, mc = 
+        #   update_scale!(Ξ, idf, αc, σλc, σμc, llc, ns, ne, 
+        #     stnλ, stnμ, mc, th, surv, δt, srδt)
 
-        lacλ += accλ
-        lacμ += accμ
-        lup += 1.0
+        # lacλ += accλ
+        # lacμ += accμ
+        # lup += 1.0
 
       # gbm update
       elseif pupi === 4
@@ -231,8 +233,8 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, irλ, irμ,
+        llc, ddλ, ssλ, ssμ, mc =
+          update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ,
             mc, th, δt, srδt, surv)
 
       # forward simulation update
@@ -240,18 +242,18 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
 
         bix = ceil(Int64,rand()*el)
 
-        llc, ddλ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
+        llc, ddλ, ssλ, ssμ, nλ, ns, ne, L =
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, 
-            irλ, irμ, ns, ne, L, δt, srδt)
+            ns, ne, L, δt, srδt)
       end
     end
 
-    ltn += 1
-    if ltn === 100
-      stnλ = min(2.0, tune(stnλ, lacλ/lup))
-      stnμ = min(2.0, tune(stnμ, lacμ/lup))
-      ltn = 0
-    end
+    # ltn += 1
+    # if ltn === 100
+    #   stnλ = min(2.0, tune(stnλ, lacλ/lup))
+    #   stnμ = min(2.0, tune(stnμ, lacμ/lup))
+    #   ltn = 0
+    # end
 
     next!(pbar)
   end
@@ -326,7 +328,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   el  = lastindex(idf)      # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ, irλ, irμ = _ss_ir_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 8)
@@ -388,9 +390,9 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
           # update scale
           elseif pupi === 3
 
-            llc, irλ, irμ, accλ, accμ, mc = 
-              update_scale!(Ξ, idf, αc, σλc, σμc, llc, irλ, irμ, ns, ne, 
-                stnλ, stnμ, mc, th, surv, δt, srδt)
+            # llc, accλ, accμ, mc = 
+            #   update_scale!(Ξ, idf, αc, σλc, σμc, llc, ns, ne, 
+            #     stnλ, stnμ, mc, th, surv, δt, srδt)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -404,9 +406,9 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             nix = ceil(Int64,rand()*nin)
             bix = inodes[nix]
 
-            llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
+            llc, ddλ, ssλ, ssμ, mc =
               update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, 
-                irλ, irμ, mc, th, δt, srδt, surv)
+                mc, th, δt, srδt, surv)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -419,9 +421,9 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
             bix = ceil(Int64,rand()*el)
 
-            llc, ddλ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L =
+            llc, ddλ, ssλ, ssμ, nλ, ns, ne, L =
               update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, 
-                irλ, irμ, ns, ne, L, δt, srδt)
+                ns, ne, L, δt, srδt)
 
             # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
             #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -605,8 +607,6 @@ end
                   σλ   ::Float64,
                   σμ   ::Float64,
                   llc ::Float64,
-                  irλ ::Float64,
-                  irμ ::Float64,
                   ns  ::Float64,
                   ne  ::Float64,
                   stnλ::Float64,
@@ -625,8 +625,6 @@ function update_scale!(Ξ   ::Vector{T},
                        σλ   ::Float64,
                        σμ   ::Float64,
                        llc ::Float64,
-                       irλ ::Float64,
-                       irμ ::Float64,
                        ns  ::Float64,
                        ne  ::Float64,
                        stnλ::Float64,
@@ -637,14 +635,15 @@ function update_scale!(Ξ   ::Vector{T},
                        δt  ::Float64,
                        srδt::Float64) where {T <: iTbdU}
 
+  irλ, irμ = _ir(Ξ)
+
   accλ = accμ = 0.0
 
   # sample log(scaling factor)
   s = randn()*stnλ
 
   # likelihood ratio
-  iri = (1.0 - exp(s)) * irλ
-  llr = ns * s + iri 
+  llr = ns * s + (1.0 - exp(s)) * irλ
 
   lU = -randexp()
 
@@ -658,7 +657,6 @@ function update_scale!(Ξ   ::Vector{T},
     if lU < llr
       accλ += 1.0
       llc  += llr
-      irλ  -= iri
       mc    = mp
       scale_rate!(Ξ, lλ, s)
       scale_rate!(idf, s)
@@ -669,8 +667,7 @@ function update_scale!(Ξ   ::Vector{T},
   s = randn()*stnμ
 
   # likelihood ratio
-  iri = (1.0 - exp(s)) * irμ
-  llr = ne * s + iri
+  llr = ne * s + (1.0 - exp(s)) * irμ
 
   lU = -randexp()
 
@@ -684,13 +681,12 @@ function update_scale!(Ξ   ::Vector{T},
     if lU < llr
       accμ += 1.0
       llc  += llr
-      irμ  -= iri
       mc    = mp
       scale_rate!(Ξ, lμ, s)
     end
   end
 
-  return llc, irλ, irμ, accλ, accμ, mc
+  return llc, accλ, accμ, mc
 end
 
 
@@ -726,8 +722,6 @@ function update_gbm!(bix  ::Int64,
                      ddλ  ::Float64,
                      ssλ  ::Float64,
                      ssμ  ::Float64,
-                     irλ  ::Float64, 
-                     irμ  ::Float64,
                      mc   ::Float64,
                      th   ::Float64,
                      δt   ::Float64,
@@ -744,22 +738,21 @@ function update_gbm!(bix  ::Int64,
 
     # if crown
     if root && iszero(e(bi))
-      llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-        _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, 
+      llc, ddλ, ssλ, ssμ, mc =
+        _crown_update!(ξi, ξ1, Ξ[i2], α, σλ, σμ, llc, ddλ, ssλ, ssμ, 
           mc, th, δt, srδt, surv)
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
       if root
-        llc, ddλ, ssλ, ssμ, irλ, irμ, mc =
-          _stem_update!(ξi, α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ,
+        llc, ddλ, ssλ, ssμ, mc =
+          _stem_update!(ξi, α, σλ, σμ, llc, ddλ, ssλ, ssμ,
             mc, th, δt, srδt, surv)
       end
 
       # updates within the parent branch
-      llc, ddλ, ssλ, ssμ, irλ, irμ =
-        _update_gbm!(ξi, α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, 
-          δt, srδt, false)
+      llc, ddλ, ssλ, ssμ =
+        _update_gbm!(ξi, α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt, false)
 
       # get fixed tip
       lξi = fixtip(ξi)
@@ -767,18 +760,18 @@ function update_gbm!(bix  ::Int64,
       # if mid branch
       if iszero(i2)
 
-        llc, ssλ, ssμ, irλ, irμ =
+        llc, ssλ, ssμ =
           update_duo!(lλ(lξi), lλ(ξ1), lμ(lξi), lμ(ξ1), e(lξi), e(ξ1),
-            fdt(lξi), fdt(ξ1), α, σλ, σμ, llc, ssλ, ssμ, irλ, irμ, δt, srδt)
+            fdt(lξi), fdt(ξ1), α, σλ, σμ, llc, ssλ, ssμ, δt, srδt)
 
       # if internal branch
       else
         ξ2 = Ξ[i2]
         # make between decoupled trees node update
-        llc, ddλ, ssλ, ssμ, irλ, irμ, λf =
+        llc, ddλ, ssλ, ssμ, λf =
           update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), lμ(lξi), lμ(ξ1), lμ(ξ2),
             e(lξi), e(ξ1), e(ξ2), fdt(lξi), fdt(ξ1), fdt(ξ2),
-            α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, δt, srδt)
+            α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt)
 
         # set fixed `λ(t)` in branch
         setλt!(bi, λf)
@@ -786,17 +779,17 @@ function update_gbm!(bix  ::Int64,
     end
 
     # carry on updates in the daughters
-    llc, ddλ, ssλ, ssμ, irλ, irμ =
-      _update_gbm!(ξ1, α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, δt, srδt,
+    llc, ddλ, ssλ, ssμ =
+      _update_gbm!(ξ1, α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt,
         iszero(d1(idf[i1])))
     if i2 > 0
-      llc, ddλ, ssλ, ssμ, irλ, irμ =
-        _update_gbm!(Ξ[i2], α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, δt, srδt, 
+      llc, ddλ, ssλ, ssμ =
+        _update_gbm!(Ξ[i2], α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt, 
           iszero(d1(idf[i2])))
     end
   end
 
-  return llc, ddλ, ssλ, ssμ, irλ, irμ, mc
+  return llc, ddλ, ssλ, ssμ, mc
 end
 
 
@@ -814,8 +807,6 @@ end
                ssλ ::Float64,
                ssμ ::Float64,
                nλ  ::Float64,
-               irλ ::Float64,
-               irμ ::Float64,
                ns  ::Float64,
                ne  ::Float64,
                L   ::Float64,
@@ -835,8 +826,6 @@ function update_fs!(bix ::Int64,
                     ssλ ::Float64,
                     ssμ ::Float64,
                     nλ  ::Float64,
-                    irλ ::Float64,
-                    irμ ::Float64,
                     ns  ::Float64,
                     ne  ::Float64,
                     L   ::Float64,
@@ -848,25 +837,25 @@ function update_fs!(bix ::Int64,
 
   # if terminal
   if iszero(d1(bi))
-    drλ = ssrλ = ssrμ  = irrλ = irrμ = 0.0
+    drλ = ssrλ = ssrμ = 0.0
     ξp, llr = fsbi_t(bi, ξc, α, σλ, σμ, δt, srδt)
 
   # if mid
   elseif iszero(d2(bi))
-    ξp, llr, drλ, ssrλ, ssrμ, irrλ, irrμ =
+    ξp, llr, drλ, ssrλ, ssrμ =
       fsbi_m(bi, ξc, Ξ[d1(bi)], α, σλ, σμ, δt, srδt)
 
   # if internal
   else
-    ξp, llr, drλ, ssrλ, ssrμ, irrλ, irrμ =
+    ξp, llr, drλ, ssrλ, ssrμ =
       fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, σμ, δt, srδt)
   end
 
   # if accepted
   if isfinite(llr)
-    ll1, ddλ1, ssλ1, ssμ1, nλ1, irλ1, irμ1, ns1, ne1 = 
+    ll1, ddλ1, ssλ1, ssμ1, nλ1, ns1, ne1 = 
       llik_gbm_ss(ξp, α, σλ, σμ, δt, srδt, 0.0, 0.0)
-    ll0, ddλ0, ssλ0, ssμ0, nλ0, irλ0, irμ0, ns0, ne0 = 
+    ll0, ddλ0, ssλ0, ssμ0, nλ0, ns0, ne0 = 
       llik_gbm_ss(ξc, α, σλ, σμ, δt, srδt, 0.0, 0.0)
 
     # update quantities
@@ -875,8 +864,6 @@ function update_fs!(bix ::Int64,
     ssλ += ssλ1 - ssλ0 + ssrλ
     ssμ += ssμ1 - ssμ0 + ssrμ
     nλ  += nλ1  - nλ0
-    irλ += irλ1 - irλ0 + irrλ
-    irμ += irμ1 - irμ0 + irrμ
     ns  += ns1  - ns0
     ne  += ne1  - ne0
     L   += treelength(ξp) - treelength(ξc)
@@ -885,7 +872,7 @@ function update_fs!(bix ::Int64,
     Ξ[bix] = ξp
   end
 
-  return llc, ddλ, ssλ, ssμ, nλ, irλ, irμ, ns, ne, L
+  return llc, ddλ, ssλ, ssμ, nλ, ns, ne, L
 end
 
 
@@ -939,11 +926,9 @@ end
     fsbi_m(bi  ::iBffs,
            ξc  ::iTbd,
            ξ1  ::iTbd,
-           ξ2  ::iTbd,
-           λ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
-           μ   ::Float64,
+           σμ  ::Float64,
            δt  ::Float64,
            srδt::Float64)
 
@@ -962,7 +947,7 @@ function fsbi_m(bi  ::iBffs,
     _sim_gbmbd(e(bi), lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nn > 999
-    return t0, NaN, NaN, NaN, NaN, NaN, NaN
+    return t0, NaN, NaN, NaN, NaN
   end
 
   ntp = na
@@ -978,7 +963,7 @@ function fsbi_m(bi  ::iBffs,
   # sample and fix random  tip
   λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
 
-  llrd, acrd, drλ, ssrλ, ssrμ, irrλ, irrμ, λ1p, μ1p =
+  llrd, acrd, drλ, ssrλ, ssrμ, λ1p, μ1p =
     _daughter_update!(ξ1, λf, μf, α, σλ, σμ, δt, srδt)
 
   acr += acrd
@@ -1001,11 +986,11 @@ function fsbi_m(bi  ::iBffs,
       unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
       unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
 
-      return t0, llr, drλ, ssrλ, ssrμ, irrλ, irrμ
+      return t0, llr, drλ, ssrλ, ssrμ
     end
   end
 
-  return t0, NaN, NaN, NaN, NaN, NaN, NaN
+  return t0, NaN, NaN, NaN, NaN
 end
 
 
@@ -1016,10 +1001,9 @@ end
            ξc  ::iTbd,
            ξ1  ::iTbd,
            ξ2  ::iTbd,
-           λ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
-           μ   ::Float64,
+           σμ  ::Float64,
            δt  ::Float64,
            srδt::Float64)
 
@@ -1039,7 +1023,7 @@ function fsbi_i(bi  ::iBffs,
     _sim_gbmbd(e(bi), lλ(ξc)[1], lμ(ξc)[1], α, σλ, σμ, δt, srδt, 0, 1, 1_000)
 
   if na < 1 || nn > 999
-    return t0, NaN, NaN, NaN, NaN, NaN, NaN
+    return t0, NaN, NaN, NaN, NaN
   end
 
   ntp = na
@@ -1057,7 +1041,7 @@ function fsbi_i(bi  ::iBffs,
   # sample and fix random  tip
   λf, μf = fixrtip!(t0, na, NaN, NaN) # fix random tip
 
-  llrd, acrd, drλ, ssrλ, ssrμ, irrλ, irrμ, λ1p, λ2p, μ1p, μ2p =
+  llrd, acrd, drλ, ssrλ, ssrμ, λ1p, λ2p, μ1p, μ2p =
     _daughters_update!(ξ1, ξ2, λf, μf, α, σλ, σμ, δt, srδt)
 
   acr += acrd
@@ -1084,11 +1068,11 @@ function fsbi_i(bi  ::iBffs,
       unsafe_copyto!(lμ(ξ1), 1, μ1p, 1, l1) # set new daughter 1 μ vector
       unsafe_copyto!(lμ(ξ2), 1, μ2p, 1, l2) # set new daughter 2 μ vector
 
-      return t0, llr, drλ, ssrλ, ssrμ, irrλ, irrμ
+      return t0, llr, drλ, ssrλ, ssrμ
     end
   end
 
-  return t0, NaN, NaN, NaN, NaN, NaN, NaN
+  return t0, NaN, NaN, NaN, NaN
 end
 
 
