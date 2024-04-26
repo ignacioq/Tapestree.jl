@@ -907,11 +907,11 @@ end
 
 
 """
-    irange(tree::T, f::Function) where {T <: iTf}
+    irange(tree::T, f::Function) where {T <: iTree}
 
 Return the extrema of the output of function `f` on `tree`.
 """
-function irange(tree::T, f::Function) where {T <: iT}
+function irange(tree::T, f::Function) where {T <: iTree}
 
   mn, mx = extrema(f(tree))
 
