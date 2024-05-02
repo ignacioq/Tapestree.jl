@@ -362,29 +362,46 @@ end
 
 
 """
-    write_newick(treev::Vector{T}, out_file::String)
+    write_newick(tree::T, ofile::String)
 
-Writes `iTsimple` as a newick tree to `out_file`.
+Writes an `iTree` as a newick tree to `ofile`.
 """
-function write_newick(treev::Vector{T}, out_file::String) where {T <: iTree}
+function write_newick(tree::T, ofile::String) where {T <: iTree}
 
-  io = open(out_file*".trees", "w")
+  io = IOBuffer()
+  ic = iszero(e(tree))
+  !ic && write(io, '(')
+  nw_buffer(io, tree)
+  !ic && write(io, ')')
+  write(io, ';')
+  write(ofile*".tre", take!(io))
+
+  return nothing
+end
+
+
+
+
+"""
+    write_newick(treev::Vector{T}, ofile::String)
+
+Writes an `iTree` as a newick tree to `ofile`.
+"""
+function write_newick(treev::Vector{T}, ofile::String) where {T <: iTree}
+
+  to = open(ofile*".trees", "w")
+  io = IOBuffer()
 
   for t in treev
-
-    s = to_string(t)
-
-    # if no stem branch
-    if last(s, 4) == ":0.0"
-      s = s[1:(end-4)]*";\n"
-    else
-      s = string("(", s, ");\n")
-    end
-
-    write(io, s)
+    ic = iszero(e(t))
+    !ic && write(io, '(')
+    nw_buffer(io, t)
+    !ic && write(io, ')')
+    write(io, ';', '\n')
+    write(to, take!(io))
   end
 
-  close(io)
+  close(to)
 
   return nothing
 end
@@ -392,136 +409,115 @@ end
 
 
 
+"""
+    nw_buffer(io::IOBuffer, tree::T) where {T <: iTree})
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+nw_buffer(io::IOBuffer, tree::T) where {T <: iTree} = _nw_buffer(io, tree, 0)
 
 """
-    write_newick(tree::T, out_file::String)
+    _nw_buffer(io::IOBuffer, tree::T, n::Int64) where {T <: iTree})
 
-Writes `iTsimple` as a newick tree to `out_file`.
+Writes an `iTree` to IOBuffer `io`.
 """
-function write_newick(tree::T, out_file::String) where {T <: iTree}
-
-  s = to_string(tree)
-
-  # if no stem branch
-  if last(s, 4) == ":0.0"
-    s = s[1:(end-4)]*";"
-  else
-    s = string("(", s, ");")
-  end
-
-  io = open(out_file*".tre", "w")
-  write(io, s)
-  close(io)
-
-  return nothing
-end
-
-
-
-
-
-
-"""
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
-
-Returns newick string.
-"""
-to_string(tree::T) where {T <: iTree} = _to_string(tree, 0)[1]
-
-
-
-
-"""
-    _to_string(tree::T; n::Int64 = 0) where {T <: iTree})
-
-Returns newick string.
-"""
-function _to_string(tree::T, n::Int64) where {T <: iTree}
+function _nw_buffer(io::IOBuffer, tree::T, n::Int64) where {T <: iTree}
 
   if def1(tree)
-    s1, n = _to_string(tree.d1, n)
-    s2, n = _to_string(tree.d2, n)
+    write(io, '(')
+    n = _nw_buffer(io, tree.d1, n)
+    write(io, ',')
+    n = _nw_buffer(io, tree.d2, n)
+    write(io, ')')
 
-    return string("(",s1,",", s2,"):",e(tree)), n
+    if !iszero(e(tree))
+      print(io, ':', e(tree))
+    end
   else
     n += 1
-
-    return string("t",n,":",e(tree)), n
+    print(io, 't', n, ':', e(tree))
   end
+
+  return n
 end
 
 
 
+"""
+    nw_buffer(io::IOBuffer, tree::T) where {T <: iTree})
+
+Writes a fossil tree `uTf` to IOBuffer `io`.
+"""
+nw_buffer(io::IOBuffer, tree::T) where {T <: uTf} = _nw_buffer(io, tree, 0, 0)
 
 """
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
+    _nw_buffer(io::IOBuffer, tree::T, n::Int64, nf::Int64) where {T <: uTf}
 
-Returns newick string.
+Writes a fossil tree `uTf` to IOBuffer `io`.
 """
-to_string(tree::T) where {T <: uTf} = _to_string(tree, 0, 0)[1]
-
-
-
-
-"""
-    _to_string(tree::T, n::Int64, nf::Int64) where {T <: iTf}
-
-Returns newick string.
-"""
-function _to_string(tree::T, n::Int64, nf::Int64) where {T <: uTf}
+function _nw_buffer(io::IOBuffer, tree::T, n::Int64, nf::Int64) where {T <: uTf}
 
   if def1(tree)
-    s1, n, nf = _to_string(tree.d1, n, nf)
+    write(io, '(')
+    n, nf = _nw_buffer(io, tree.d1, n, nf)
 
     if def2(tree)
-      s2, n, nf = _to_string(tree.d2, n, nf)
-      s = string("(",s1,",", s2,"):",e(tree))
+      write(io, ',')
+      n, nf = _nw_buffer(io, tree.d2, n, nf)
+      write(io, ')')
+      if !iszero(e(tree))
+        print(io, ':', e(tree))
+      end
     else
       nf += 1
-      s = string("(",s1,")f",nf,":", e(tree))
+      print(io, ")f", nf, ':', e(tree))
     end
-
-    return s, n, nf
   else
     if isfossil(tree)
       nf += 1
-      return string("f",nf,":",e(tree)), n, nf
+      print(io, 'f', nf, ':', e(tree))
     else
       n += 1
-      return string("t",n,":",e(tree)), n, nf
+      print(io, 't', n, ':', e(tree))
     end
   end
+
+  return n, nf
 end
 
 
 
-"""
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
-
-Returns newick string.
-"""
-to_string(tree::T) where {T <: Tlabel} = _to_string(tree)
-
 
 """
-    _to_string(tree::T) where {T <: Tlabel}
+    nw_buffer(io::IOBuffer, tree::T)
 
-Returns newick string.
+Writes a labelled tree `Tlabel` to IOBuffer `io`.
 """
-function _to_string(tree::T) where {T <: Tlabel}
+nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel} = _nw_buffer(io, tree)
+
+"""
+    _nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel}
+
+Writes a labelled tree `Tlabel` to IOBuffer `io`.
+"""
+function _nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel}
 
   if def1(tree)
-    s1 = _to_string(tree.d1)
-    if def2(tree)
-      s2 = _to_string(tree.d2)
-      s = string("(",s1,",", s2,"):",e(tree))
-    else
-      s = string("(",s1,")",l(tree),":", e(tree))
-    end
+    write(io, '(')
+    _nw_buffer(io, tree.d1)
 
-    return s
+    if def2(tree)
+      write(io, ',')
+      _nw_buffer(io, tree.d2)
+      write(io, ')')
+      if !iszero(e(tree))
+        print(io, ':', e(tree))
+      end
+    else
+      print(io, ")", l(tree), ':', e(tree))
+    end
   else
-    return string(l(tree),":",e(tree))
+    print(io, l(tree), ':', e(tree))
   end
 end
 
