@@ -1140,6 +1140,25 @@ end
 
 
 """
+    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
+
+  dd = ss = n = 0.0
+  for ξi in Ξ
+    dd, ss, n = _ss_dd(ξi, α, dd, ss, n)
+  end
+
+  return dd, ss, n
+end
+
+
+
+
+"""
     _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
 Returns the standardized sum of squares a `iT` according

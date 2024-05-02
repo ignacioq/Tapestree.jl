@@ -614,3 +614,50 @@ end
 
 
 
+
+"""
+    llr_propr(λpp  ::Array{Float64,1},
+              λ1p  ::Array{Float64,1},
+              λ2p  ::Array{Float64,1},
+              λpc  ::Array{Float64,1},
+              λ1c  ::Array{Float64,1},
+              λ2c  ::Array{Float64,1},
+              α    ::Float64,
+              σλ   ::Float64,
+              δt   ::Float64,
+              fdtpr::Float64,
+              fdtd1::Float64,
+              fdtd2::Float64,
+              srδt ::Float64)
+
+Return the likelihood and proposal ratio for pure-birth gbm.
+"""
+function llr_propr(λpp  ::Array{Float64,1},
+                   λ1p  ::Array{Float64,1},
+                   λ2p  ::Array{Float64,1},
+                   λpc  ::Array{Float64,1},
+                   λ1c  ::Array{Float64,1},
+                   λ2c  ::Array{Float64,1},
+                   α    ::Float64,
+                   σλ   ::Float64,
+                   δt   ::Float64,
+                   fdtp::Float64,
+                   fdt1::Float64,
+                   fdt2::Float64,
+                   srδt ::Float64)
+
+  # log likelihood ratios
+  llrbmp, llrpbp, ssrλp = 
+    llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
+  llrbm1, llrpb1, ssrλ1 = 
+    llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+  llrbm2, llrpb2, ssrλ2 = 
+    llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+
+  acr  = llrpbp + llrpb1 + llrpb2
+  llr  = llrbmp + llrbm1 + llrbm2 + acr
+  ssrλ = ssrλp + ssrλ1 + ssrλ2
+
+  return llr, acr, ssrλ
+end
+

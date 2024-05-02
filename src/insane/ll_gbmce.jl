@@ -251,3 +251,79 @@ end
 
 
 
+
+"""
+    _ss_dd(tree::T,
+           α   ::Float64,
+           dd  ::Float64,
+           ss  ::Float64,
+           n   ::Float64) where {T <: iTree}
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_dd(tree::T,
+                α   ::Float64,
+                dd  ::Float64,
+                ss  ::Float64,
+                n   ::Float64) where {T <: iTree}
+
+  dd0, ss0, n0 = _ss_dd_b(lλ(tree), α, dt(tree), fdt(tree))
+
+  dd += dd0
+  ss += ss0
+  n  += n0
+
+  if def1(tree)
+    dd, ss, n = _ss_dd(tree.d1, α, dd, ss, n)
+    if def2(tree)
+      dd, ss, n = _ss_dd(tree.d2, α, dd, ss, n)
+    end
+  end
+
+  return dd, ss, n
+end
+
+
+
+"""
+    _ss_dd_b(v  ::Array{Float64,1},
+                α  ::Float64,
+                δt ::Float64,
+                fdt::Float64)
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_dd_b(v  ::Array{Float64,1},
+                  α  ::Float64,
+                  δt ::Float64,
+                  fdt::Float64)
+
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(v)-2
+
+    ss  = 0.0
+    @turbo for i in Base.OneTo(nI)
+      vi  = v[i]
+      vi1 = v[i+1]
+      ss += (vi1 - vi - α*δt)^2
+    end
+  
+    # standardize
+    ss *= 1.0/(2.0*δt)
+
+    n = Float64(nI)
+    # add final non-standard `δt`
+    if fdt > 0.0
+      vi  = v[nI+1]
+      vi1 = v[nI+2]
+      ss += (vi1 - vi - α*fdt)^2/(2.0*fdt)
+      n  += 1.0
+    end
+
+  return (v[nI+2] - v[1]), ss, n
+end
+
+

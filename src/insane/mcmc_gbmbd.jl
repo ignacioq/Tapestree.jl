@@ -333,14 +333,9 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 8)
 
-  # make Ξ vector
-  treev = iTbd[]
-
-  # number of branches and of triads
-  nbr  = lastindex(idf)
-
-  # flush to file
-  sthin = 0
+  treev = iTbd[]          # make tree vector
+  sthin = 0               # flush to file
+  io    = IOBuffer()      # buffer 
 
   open(ofile*".log", "w") do of
 
@@ -454,13 +449,13 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", 
-              exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αc, "\t",
-               σλc, "\t", σμc,"\n"))
+          print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
+               exp(lλ(Ξ[1])[1]),'\t', exp(lμ(Ξ[1])[1]), '\t', αc, '\t',
+               σλc, '\t', σμc,'\n')
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
           sthin = 0
         end

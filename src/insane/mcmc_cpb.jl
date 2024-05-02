@@ -214,11 +214,9 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
 
   r = Array{Float64,2}(undef, nlogs, 4)
 
-  # make tree vector
-  treev  = sTpb[]
-
-  # flush to file
-  sthin = 0
+  treev = sTpb[]     # make tree vector
+  sthin = 0          # flush to file
+  io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda\n")
@@ -276,11 +274,11 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", λc, "\n"))
+          print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc, '\n')
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
           sthin = 0
         end

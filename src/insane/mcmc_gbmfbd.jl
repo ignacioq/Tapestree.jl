@@ -466,15 +466,12 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 9 + nep)
 
-  # make Ξ vector
-  treev = iTfbd[]
-
-  # number of branches and of triads
-  nbr  = lastindex(idf)
+  treev = iTfbd[]    # make tree vector
+  io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
+    write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
     flush(of)
 
     open(ofile*".txt", "w") do tf
@@ -616,13 +613,13 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", 
-              exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αλc, "\t", 
-              αμc, "\t", σλc, "\t", σμc, "\t", join(ψc, "\t"), "\n"))
+          print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
+                exp(lλ(Ξ[1])[1]),'\t', exp(lμ(Ξ[1])[1]), '\t', αλc, '\t', 
+                αμc, '\t', σλc, '\t', σμc, '\t', join(ψc, '\t'), '\n')
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
           sthin = 0
         end

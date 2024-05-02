@@ -354,19 +354,16 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 5 + nep)
 
-  # make tree vector
-  treev  = sTfbd[]
-
-  # flush to file
-  sthin = 0
+  treev = sTfbd[]    # make tree vector
+  sthin = 0          # flush to file
+  io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
+    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
     flush(of)
 
     open(ofile*".txt", "w") do tf
-
 
       pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -450,11 +447,12 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\t", join(ψc, "\t"), "\n"))
+          print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
+                    λc,'\t', μc, '\t', join(ψc, '\t'), '\n')
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
           sthin = 0
         end
