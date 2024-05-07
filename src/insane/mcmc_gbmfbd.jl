@@ -55,13 +55,13 @@ function insane_gbmfbd(tree    ::sTf_label;
                        nthin   ::Int64                 = 10,
                        nburn   ::Int64                 = 200,
                        nflush  ::Int64                 = nthin,
-                       ofile   ::String                = string(homedir(), "/ifbd"),
+                       ofile   ::String                = string(homedir(), "/fbdd"),
                        ϵi      ::Float64               = 0.2,
                        λi      ::Float64               = NaN,
                        μi      ::Float64               = NaN,
                        ψi      ::Float64               = NaN,
-                       αλi      ::Float64              = 0.0,
-                       αμi      ::Float64              = 0.0,
+                       αλi     ::Float64               = 0.0,
+                       αμi     ::Float64               = 0.0,
                        σλi     ::Float64               = 0.1,
                        σμi     ::Float64               = 0.1,
                        pupdp   ::NTuple{7,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
@@ -88,10 +88,15 @@ function insane_gbmfbd(tree    ::sTf_label;
   nep  = lastindex(ψ_epoch) + 1
 
   # make initial fossils per epoch vector
-  if lastindex(f_epoch) !== nep
+  lep = lastindex(f_epoch)
+  if lep !== nep
     if sum(f_epoch) > 0
-      for i in Base.OneTo(nep - lastindex(f_epoch))
-        pushfirst!(f_epoch, 0)
+      if lep > nep
+        f_epoch = f_epoch[(end-nep+1):end]
+      else 
+        for i in Base.OneTo(nep - lep)
+          pushfirst!(f_epoch, 0)
+        end
       end
     else
       f_epoch = fill(0, nep)
@@ -162,12 +167,10 @@ function insane_gbmfbd(tree    ::sTf_label;
   inodes = Int64[]
   eixi   = Int64[]
   eixf   = Int64[]
-  bst    = Float64[]
+  idf    = Float64[]
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
-    if d1(bi) > 0
-      push!(inodes, i)
-    end
+    d1(bi) > 0 && push!(inodes, i)
     tib = ti(bi)
     ei  = findfirst(x -> x < tib, ψ_epoch)
     ei  = isnothing(ei) ? nep : ei
