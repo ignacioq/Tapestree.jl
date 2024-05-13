@@ -69,15 +69,21 @@ function insane_cfbd(tree    ::sTf_label;
   nep = lastindex(ψ_epoch) + 1
 
   # make initial fossils per epoch vector
-  if lastindex(f_epoch) !== nep
+  lep = lastindex(f_epoch)
+  if lep !== nep
     if sum(f_epoch) > 0
-      for i in Base.OneTo(nep - lastindex(f_epoch))
-        pushfirst!(f_epoch, 0)
+      if lep > nep
+        f_epoch = f_epoch[(end-nep+1):end]
+      else 
+        for i in Base.OneTo(nep - lep)
+          pushfirst!(f_epoch, 0)
+        end
       end
     else
       f_epoch = fill(0, nep)
     end
   end
+
 
   # set tips sampling fraction
   if isone(length(tρ))
