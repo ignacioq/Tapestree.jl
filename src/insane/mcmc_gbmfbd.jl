@@ -167,7 +167,7 @@ function insane_gbmfbd(tree    ::sTf_label;
   inodes = Int64[]
   eixi   = Int64[]
   eixf   = Int64[]
-  idf    = Float64[]
+  bst    = Float64[]
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
     d1(bi) > 0 && push!(inodes, i)
