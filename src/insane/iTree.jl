@@ -287,6 +287,20 @@ Base.show(io::IO, t::sTpb) =
 
 
 
+"""
+    sTpb(tree::sT_label)
+
+Transform a tree of type `sT_label` to `sTpb`.
+"""
+function sTpb(tree::sT_label)
+  if def1(tree)
+    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree), false)
+  else
+    sTpb(e(tree), isfix(tree))
+  end
+end
+
+
 
 """
     sTpb(tree::sTpb)
@@ -300,8 +314,6 @@ function sTpb(tree::sTpb)
     sTpb(e(tree), isfix(tree))
   end
 end
-
-
 
 
 
@@ -354,7 +366,7 @@ Base.show(io::IO, t::sTbd) =
 """
     sTbd(tree::sT_label)
 
-Transforms a tree of type `sT_label` to `sTbd`.
+Transform a tree of type `sT_label` to `sTbd`.
 """
 function sTbd(tree::sT_label)
   if def1(tree)
