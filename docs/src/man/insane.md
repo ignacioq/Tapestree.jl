@@ -2,7 +2,7 @@
 
 ## Reference
 
-Quintero, I., Lartillot, N., Morlon, H. (in prep). Imbalanced speciation pulses sustain the radiation of mammals. 
+Quintero, I., Lartillot, N., Morlon, H. (2024). Imbalanced speciation pulses sustain the radiation of mammals. Science. DOI: 10.1126/science.adj2793
 
 
 ## Insane Bayesian data augmentation
