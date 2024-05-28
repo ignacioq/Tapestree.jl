@@ -6,7 +6,6 @@
 diversification, trait and biogeographic dynamics.
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://ignacioq.github.io/Tapestree.jl/)
-[![codecov.io](http://codecov.io/github/ignacioq/Tapestree.jl/coverage.svg?branch=master)](http://codecov.io/github/ignacioq/Tapestry.jl?branch=master)
 
 See the [Documentation](https://ignacioq.github.io/Tapestree.jl/) for examples and manual.
 
