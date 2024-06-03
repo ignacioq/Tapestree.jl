@@ -284,7 +284,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
         logdinvgamma(σμc^2,         σμ_prior[1], σμ_prior[2])  +
         logdnorm(αλc,               αλ_prior[1], αλ_prior[2]^2) +
         logdnorm(αμc,               αμ_prior[1], αμ_prior[2]^2) +
-        logdgamma(exp(λ0),          λa_prior[1], λa_prior[2]) +
+        logdgamma(exp(lλ(Ξ[1])[1]), λa_prior[1], λa_prior[2]) +
         logdgamma(exp(lμ(Ξ[1])[1]), μa_prior[1], μa_prior[2]) +
         sum(logdgamma.(ψc,          ψ_prior[1],  ψ_prior[2]))
 
