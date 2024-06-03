@@ -355,28 +355,46 @@ end
 
 
 """
-    write_newick(treev::Vector{T}, out_file::String)
-Writes `iTsimple` as a newick tree to `out_file`.
-"""
-function write_newick(treev::Vector{T}, out_file::String) where {T <: iTree}
+    write_newick(tree::T, ofile::String)
 
-  io = open(out_file*".trees", "w")
+Writes an `iTree` as a newick tree to `ofile`.
+"""
+function write_newick(tree::T, ofile::String) where {T <: iTree}
+
+  io = IOBuffer()
+  ic = iszero(e(tree))
+  !ic && write(io, '(')
+  nw_buffer(io, tree)
+  !ic && write(io, ')')
+  write(io, ';')
+  write(ofile*".tre", take!(io))
+
+  return nothing
+end
+
+
+
+
+"""
+    write_newick(treev::Vector{T}, ofile::String)
+
+Writes an `iTree` as a newick tree to `ofile`.
+"""
+function write_newick(treev::Vector{T}, ofile::String) where {T <: iTree}
+
+  to = open(ofile*".trees", "w")
+  io = IOBuffer()
 
   for t in treev
-
-    s = to_string(t)
-
-    # if no stem branch
-    if last(s, 4) == ":0.0"
-      s = s[1:(end-4)]*";\n"
-    else
-      s = string("(", s, ");\n")
-    end
-
-    write(io, s)
+    ic = iszero(e(t))
+    !ic && write(io, '(')
+    nw_buffer(io, t)
+    !ic && write(io, ')')
+    write(io, ';', '\n')
+    write(to, take!(io))
   end
 
-  close(io)
+  close(to)
 
   return nothing
 end
@@ -384,165 +402,143 @@ end
 
 
 
+"""
+    nw_buffer(io::IOBuffer, tree::T) where {T <: iTree})
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+nw_buffer(io::IOBuffer, tree::T) where {T <: iTree} = _nw_buffer(io, tree, 0)
 
 """
-    write_newick(tree::T, out_file::String)
-Writes `iTsimple` as a newick tree to `out_file`.
+    _nw_buffer(io::IOBuffer, tree::T, n::Int64) where {T <: iTree})
+
+Writes an `iTree` to IOBuffer `io`.
 """
-function write_newick(tree::T, out_file::String) where {T <: iTree}
-
-  s = to_string(tree)
-
-  # if no stem branch
-  if last(s, 4) == ":0.0"
-    s = s[1:(end-4)]*";"
-  else
-    s = string("(", s, ");")
-  end
-
-  io = open(out_file*".tre", "w")
-  write(io, s)
-  close(io)
-
-  return nothing
-end
-
-
-
-
-
-
-"""
-    to_string(tree::T; n::Int64 = 0) where {T <: iTree})
-Returns newick string.
-"""
-to_string(tree::T) where {T <: iTree} = _to_string(tree, 0)[1]
-
-
-
-
-"""
-    _to_string(tree::T; n::Int64 = 0) where {T <: iTree})
-Returns newick string.
-"""
-function _to_string(tree::T, n::Int64) where {T <: iTree}
+function _nw_buffer(io::IOBuffer, tree::T, n::Int64) where {T <: iTree}
 
   if def1(tree)
-    s1, n = _to_string(tree.d1, n)
-    s2, n = _to_string(tree.d2, n)
+    write(io, '(')
+    n = _nw_buffer(io, tree.d1, n)
+    write(io, ',')
+    n = _nw_buffer(io, tree.d2, n)
+    write(io, ')')
 
-    return string("(",s1,",", s2,"):",e(tree)), n
+    if !iszero(e(tree))
+      print(io, ':', e(tree))
+    end
   else
     n += 1
-
-    return string("t",n,":",e(tree)), n
+    print(io, 't', n, ':', e(tree))
   end
+
+  return n
 end
 
 
 
 
 """
-    to_string(tree::T) where {T <: uTf}
-Returns newick string.
+    nw_buffer(io::IOBuffer, tree::T) where {T <: iTree})
+
+Writes a fossil tree `uTf` to IOBuffer `io`.
 """
-to_string(tree::T) where {T <: uTf} = _to_string(tree, 0, 0)[1]
-
-
-
+nw_buffer(io::IOBuffer, tree::T) where {T <: uTf} = _nw_buffer(io, tree, 0, 0)
 
 """
-    _to_string(tree::T, n::Int64, nf::Int64) where {T <: uTf}
-Returns newick string.
+    _nw_buffer(io::IOBuffer, tree::T, n::Int64, nf::Int64) where {T <: uTf}
+
+Writes a fossil tree `uTf` to IOBuffer `io`.
 """
-function _to_string(tree::T, n::Int64, nf::Int64) where {T <: uTf}
+function _nw_buffer(io::IOBuffer, tree::T, n::Int64, nf::Int64) where {T <: uTf}
 
   if def1(tree)
-    s1, n, nf = _to_string(tree.d1, n, nf)
+    write(io, '(')
+    n, nf = _nw_buffer(io, tree.d1, n, nf)
 
     if def2(tree)
-      s2, n, nf = _to_string(tree.d2, n, nf)
-      s = string("(",s1,",", s2,"):",e(tree))
+      write(io, ',')
+      n, nf = _nw_buffer(io, tree.d2, n, nf)
+      write(io, ')')
+      if !iszero(e(tree))
+        print(io, ':', e(tree))
+      end
     else
       nf += 1
-      s = string("(",s1,")f",nf,":", e(tree))
+      print(io, ")f", nf, ':', e(tree))
     end
-
-    return s, n, nf
   else
     if isfossil(tree)
       nf += 1
-      return string("f",nf,":",e(tree)), n, nf
+      print(io, 'f', nf, ':', e(tree))
     else
       n += 1
-      return string("t",n,":",e(tree)), n, nf
+      print(io, 't', n, ':', e(tree))
     end
   end
+
+  return n, nf
 end
 
 
 
 
-"""
-    to_string(tree::iTpbd)
-Returns newick string.
-"""
-to_string(tree::iTpbd) = _to_string(tree, 0, 0)[1]
+# """
+#     _to_string(tree::iTpbd, n::Int64, ns::Int64)
+# Returns newick string.
+# """
+# function _to_string(tree::iTpbd, n::Int64, ns::Int64)
+
+#   if def1(tree)
+#     s1, n, ns = _to_string(tree.d1, n, ns)
+
+#     if def2(tree)
+#       s2, n, ns = _to_string(tree.d2, n, ns)
+#       s = string("(",s1,",", s2,"):",e(tree))
+#     else
+#       ns += 1
+#       s = string("(",s1,")sp",ns,":", e(tree))
+#     end
+
+#     return s, n, ns
+#   else
+#     n += 1
+#     return string("t",n,":",e(tree)), n, ns
+#   end
+# end
 
 
 
 
 """
-    _to_string(tree::iTpbd, n::Int64, ns::Int64)
-Returns newick string.
+    nw_buffer(io::IOBuffer, tree::T)
+
+Writes a labelled tree `Tlabel` to IOBuffer `io`.
 """
-function _to_string(tree::iTpbd, n::Int64, ns::Int64)
+nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel} = _nw_buffer(io, tree)
+
+"""
+    _nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel}
+
+Writes a labelled tree `Tlabel` to IOBuffer `io`.
+"""
+function _nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel}
 
   if def1(tree)
-    s1, n, ns = _to_string(tree.d1, n, ns)
+    write(io, '(')
+    _nw_buffer(io, tree.d1)
 
     if def2(tree)
-      s2, n, ns = _to_string(tree.d2, n, ns)
-      s = string("(",s1,",", s2,"):",e(tree))
+      write(io, ',')
+      _nw_buffer(io, tree.d2)
+      write(io, ')')
+      if !iszero(e(tree))
+        print(io, ':', e(tree))
+      end
     else
-      ns += 1
-      s = string("(",s1,")sp",ns,":", e(tree))
+      print(io, ")", l(tree), ':', e(tree))
     end
-
-    return s, n, ns
   else
-    n += 1
-    return string("t",n,":",e(tree)), n, ns
-  end
-end
-
-
-
-"""
-    to_string(tree::T) where {T <: Tlabel}
-Returns newick string.
-"""
-to_string(tree::T) where {T <: Tlabel} = _to_string(tree)
-
-
-"""
-    _to_string(tree::T) where {T <: Tlabel}
-Returns newick string.
-"""
-function _to_string(tree::T) where {T <: Tlabel}
-
-  if def1(tree)
-    s1 = _to_string(tree.d1)
-    if def2(tree)
-      s2 = _to_string(tree.d2)
-      s = string("(",s1,",", s2,"):",e(tree))
-    else
-      s = string("(",s1,")",l(tree),":", e(tree))
-    end
-
-    return s
-  else
-    return string(l(tree),":",e(tree))
+    print(io, l(tree), ':', e(tree))
   end
 end
 
@@ -581,13 +577,13 @@ end
 """
     iwrite(tree::T, ofile::String) where {T <: iTree}
 
-Tree to istring.
+Write iTree to file.
 """
 function iwrite(tree::T, ofile::String) where {T <: iTree}
-  open(ofile*".txt", "w") do tf
-    write(tf, istring(tree))
-    flush(tf)
-  end
+  io = IOBuffer()
+  ibuffer(io, tree)
+  write(string(ofile, ".txt"), take!(io))
+  return nothing
 end
 
 
@@ -596,13 +592,16 @@ end
 """
     iwrite(tree::Vector{T}, ofile::String) where {T <: iTree}
 
-Tree to istring.
+Write a vector of trees.
 """
 function iwrite(tree::Vector{T}, ofile::String) where {T <: iTree}
-  open(ofile*".txt", "w") do tf
+  open(ofile*".txt", "w") do to
     for tri in tree
-      write(tf, string(istring(tri), "\n"))
-      flush(tf)
+      io = IOBuffer()
+      ibuffer(io, tri)
+      write(io, '\n')
+      write(to, take!(io))
+      flush(to)
     end
   end
 end
@@ -611,29 +610,32 @@ end
 
 
 """
-    istring(tree::T)
-Tree to istring.
+    ibuffer(tree::T, io::IOBuffer)
+
+Write iTree to IOBuffer.
 """
-function istring(tree::T) where {T <: iTree}
-  return string(T, '-', _istring(tree))
+function ibuffer(io::IOBuffer, tree::T) where {T <: iTree}
+  write(io, string(T), '-') 
+  _ibuffer(io, tree)
 end
 
 
 
 
 """
-    _istring(tree::sTb)
-`sTb` to istring.
+    _ibuffer(io::IOBuffer, tree::sTb)
+
+Write `sTb` to IOBuffer.
 """
-function _istring(tree::sTb)
+function _ibuffer(io::IOBuffer, tree::sTb)
   if def1(tree)
-    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-        e(tree), ',', 
-        short(isfix(tree)), ')')
+    write(io, '(')
+    _ibuffer(io, tree.d1)
+    write(io, ',')
+    _ibuffer(io, tree.d2)
+    print(io, ',', e(tree), ',', short(isfix(tree)), ')')
   else
-    return string('(', 
-        e(tree), ',', 
-        short(isfix(tree)), ')')
+    print(io, '(', e(tree), ',', short(isfix(tree)), ')')
   end
 end
 
@@ -641,50 +643,54 @@ end
 
 
 """
-    _istring(tree::sTbd)
-`sTbd` to istring.
+    _ibuffer(io::IOBuffer, tree::sTbd)
+
+Write `sTbd` to IOBuffer.
 """
-function _istring(tree::sTbd)
+function _ibuffer(io::IOBuffer, tree::sTbd)
   if def1(tree)
-    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-        e(tree), ',', 
-        short(isextinct(tree)), ',', 
-        short(isfix(tree)), ')')
-  else
-    return string('(', 
-        e(tree), ',', 
-        short(isextinct(tree)), ',', 
-        short(isfix(tree)), ')')
-  end
-end
-
-
-
-
-"""
-    _istring(tree::sTfbd)
-`sTfbd` to istring.
-"""
-function _istring(tree::sTfbd)
-  if def1(tree)
-    if def2(tree)
-      return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-          e(tree), ',', 
+    write(io, '(')
+    _ibuffer(io, tree.d1)
+    write(io, ',')
+    _ibuffer(io, tree.d2)
+    print(io, ',', e(tree), ',', 
           short(isextinct(tree)), ',', 
-          "0,", 
+          short(isfix(tree)), ')')
+  else
+    print(io, '(', e(tree), ',', 
+        short(isextinct(tree)), ',', 
+        short(isfix(tree)), ')')
+  end
+end
+
+
+
+
+"""
+    _ibuffer(io::IOBuffer, tree::sTfbd)
+
+Write `sTfbd` to IOBuffer.
+"""
+function _ibuffer(io::IOBuffer, tree::sTfbd)
+  if def1(tree)
+    write(io, '(')
+    if def2(tree)
+      _ibuffer(io, tree.d1), 
+      write(io, ',') 
+      _ibuffer(io, tree.d2), 
+      print(io, ',', e(tree), ',', 
+          short(isextinct(tree)), ',', "0,", 
           short(isfix(tree)), ')')
     else
-      return string('(', _istring(tree.d1), ',', 
-          e(tree), ',', 
-          short(isextinct(tree)), ',', 
-          "1,", 
+      _ibuffer(io, tree.d1), 
+      print(io, ',', e(tree), ',', 
+          short(isextinct(tree)), ',', "1,", 
           short(isfix(tree)), ')')
     end
   else
-    return string('(', 
-        e(tree), ',', 
+    print(io, '(', e(tree), ',', 
         short(isextinct(tree)), ',', 
-        short(isfossil(tree)), ',', 
+        short(isfossil(tree)), ',',
         short(isfix(tree)), ')')
   end
 end
@@ -693,24 +699,21 @@ end
 
 
 """
-    _istring(tree::iTb)
-`iTb` to istring.
+    _ibuffer(io::IOBuffer, tree::iTb)
+
+Write `iTb` to IOBuffer.
 """
-function _istring(tree::iTb)
+function _ibuffer(io::IOBuffer, tree::iTb)
   if def1(tree)
-    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-             e(tree), ',',
-             dt(tree), ',',
-             fdt(tree), ',',
-             short(isfix(tree)), ',', 
-             lλ(tree), ')')
+    write(io, '(')
+    _ibuffer(io, tree.d1), 
+    write(io, ',')
+    _ibuffer(io, tree.d2), 
+    print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isfix(tree)), ',', lλ(tree), ')')
   else
-    return string('(', 
-             e(tree), ',',
-             dt(tree), ',',
-             fdt(tree), ',',
-             short(isfix(tree)), ',', 
-             lλ(tree), ')')
+    print(io, '(', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isfix(tree)), ',', lλ(tree), ')')
   end
 end
 
@@ -718,26 +721,23 @@ end
 
 
 """
-    _istring(tree::iT)
-`iT` to istring.
+    _ibuffer(io::IOBuffer, tree::iT)
+
+Write `iT` to IOBuffer.
 """
-function _istring(tree::iT)
+function _ibuffer(io::IOBuffer, tree::iT)
   if def1(tree)
-    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-             e(tree), ',',
-             dt(tree), ',',
-             fdt(tree), ',',
-             short(isextinct(tree)), ',', 
-             short(isfix(tree)), ',', 
-             lλ(tree), ')')
+    write(io, '(')
+    _ibuffer(io, tree.d1), 
+    write(io, ',')
+    _ibuffer(io, tree.d2), 
+    print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isextinct(tree)), ',', short(isfix(tree)), ',', 
+          lλ(tree), ')')
   else
-    return string('(', 
-             e(tree), ',',
-             dt(tree), ',',
-             fdt(tree), ',',
-             short(isextinct(tree)), ',', 
-             short(isfix(tree)), ',', 
-             lλ(tree), ')')
+    print(io, '(', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isextinct(tree)), ',', short(isfix(tree)), ',', 
+          lλ(tree), ')')
   end
 end
 
@@ -745,28 +745,23 @@ end
 
 
 """
-    _istring(tree::iTbd)
-`iTbd` to istring.
+    _ibuffer(io::IOBuffer, tree::iTbd)
+
+Write `iTbd` to IOBuffer.
 """
-function _istring(tree::iTbd)
+function _ibuffer(io::IOBuffer, tree::iTbd)
   if def1(tree)
-    return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-             e(tree), ',',
-             dt(tree), ',',
-             fdt(tree), ',',
-             short(isextinct(tree)), ',', 
-             short(isfix(tree)), ',', 
-             lλ(tree), ',', 
-             lμ(tree), ')')
+    write(io, '(')
+    _ibuffer(io, tree.d1), 
+    write(io, ',')
+    _ibuffer(io, tree.d2), 
+    print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isextinct(tree)), ',',  short(isfix(tree)), ',', 
+          lλ(tree), ',', lμ(tree), ')')
   else
-    return string('(', 
-             e(tree), ',',
-             dt(tree), ',',
-             fdt(tree), ',',
-             short(isextinct(tree)), ',', 
-             short(isfix(tree)), ',', 
-             lλ(tree), ',', 
-             lμ(tree), ')')
+    print(io, '(', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isextinct(tree)), ',',  short(isfix(tree)), ',', 
+          lλ(tree), ',', lμ(tree), ')')
   end
 end
 
@@ -774,42 +769,30 @@ end
 
 
 """
-    _istring(tree::iTfbd)
-`iTfbd` to istring.
+    _ibuffer(io::IOBuffer, tree::iTfbd)
+
+Write `iTfbd` to IOBuffer.
 """
-function _istring(tree::iTfbd)
+function _ibuffer(io::IOBuffer, tree::iTfbd)
   if def1(tree)
+    write(io, '(')
     if def2(tree)
-      return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-               e(tree), ',',
-               dt(tree), ',',
-               fdt(tree), ',',
-               short(isextinct(tree)), ',', 
-               "0,", 
-               short(isfix(tree)), ',', 
-               lλ(tree), ',', 
-               lμ(tree), ')')
+      _ibuffer(io, tree.d1), 
+      write(io, ',')
+      _ibuffer(io, tree.d2), 
+      print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+            short(isextinct(tree)), ',', "0,", short(isfix(tree)), ',', 
+            lλ(tree), ',', lμ(tree), ')')
     else
-      return string('(', _istring(tree.d1), ',', 
-               e(tree), ',',
-               dt(tree), ',',
-               fdt(tree), ',',
-               short(isextinct(tree)), ',', 
-               "1,", 
-               short(isfix(tree)), ',', 
-               lλ(tree), ',', 
-               lμ(tree), ')')
+      _ibuffer(io, tree.d1), 
+      print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+            short(isextinct(tree)), ',', "1,", short(isfix(tree)), ',', 
+            lλ(tree), ',', lμ(tree), ')')
     end
   else
-    return string('(', 
-             e(tree), ',',
-             dt(tree), ',',
-             fdt(tree), ',',
-             short(isextinct(tree)), ',', 
-             short(isfossil(tree)), ',', 
-             short(isfix(tree)), ',', 
-             lλ(tree), ',', 
-             lμ(tree), ')')
+    print(io, '(', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isextinct(tree)), ',', short(isfossil(tree)), ',', 
+          short(isfix(tree)), ',', lλ(tree), ',', lμ(tree), ')')
   end
 end
 

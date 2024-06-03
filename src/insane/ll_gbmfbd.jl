@@ -237,7 +237,9 @@ end
                 ix  ::Int64,
                 δt  ::Float64,
                 srδt::Float64,
-                nep ::Int64)
+                nep ::Int64,
+                ns  ::Float64,
+                ne  ::Float64)
 
 Returns the log-likelihood for a `iTfbd` according to `fbdd`.
 """
@@ -260,14 +262,14 @@ function llik_gbm_ss(tree::iTfbd,
     if def2(tree)
       ns += 1.0
       ei  = e(tree)
-      ll, ix, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ =
+      ll, ix, ddλ, ddμ, ssλ, ssμ, nλ =
         ll_gbm_ss_b(lλ(tree), lμ(tree), αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep,
           δt, fdt(tree), srδt, true, false, false)
 
-      ll1, ix1, ddλ1, ddμ1, ssλ1, ssμ1, nλ1, irλ1, irμ1, ns, ne =
+      ll1, ix1, ddλ1, ddμ1, ssλ1, ssμ1, nλ1, ns, ne =
         llik_gbm_ss(tree.d1, αλ, αμ, σλ, σμ, ψ, t - ei, ψts, ix, 
           δt, srδt, nep, ns, ne)
-      ll2, ix1, ddλ2, ddμ2, ssλ2, ssμ2, nλ2, irλ2, irμ2, ns, ne =
+      ll2, ix1, ddλ2, ddμ2, ssλ2, ssμ2, nλ2, ns, ne =
         llik_gbm_ss(tree.d2, αλ, αμ, σλ, σμ, ψ, t - ei, ψts, ix, 
           δt, srδt, nep, ns, ne)
 
@@ -277,14 +279,12 @@ function llik_gbm_ss(tree::iTfbd,
       ssλ += ssλ1 + ssλ2
       ssμ += ssμ1 + ssμ2
       nλ  += nλ1  + nλ2
-      irλ += irλ1 + irλ2
-      irμ += irμ1 + irμ2
     else
-      ll, ix, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ =
+      ll, ix, ddλ, ddμ, ssλ, ssμ, nλ =
         ll_gbm_ss_b(lλ(tree), lμ(tree), αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep,
           δt, fdt(tree), srδt, false, false, true)
 
-      ll1, ix, ddλ1, ddμ1, ssλ1, ssμ1, nλ1, irλ1, irμ1, ns, ne =
+      ll1, ix, ddλ1, ddμ1, ssλ1, ssμ1, nλ1, ns, ne =
         llik_gbm_ss(tree.d1, αλ, αμ, σλ, σμ, ψ, t - e(tree), ψts, ix, 
           δt, srδt, nep, ns, ne)
 
@@ -294,19 +294,17 @@ function llik_gbm_ss(tree::iTfbd,
       ssλ += ssλ1
       ssμ += ssμ1
       nλ  += nλ1
-      irλ += irλ1
-      irμ += irμ1
     end
   else
     ie  = isextinct(tree)
     ne += Float64(ie)
 
-    ll, ix, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ =
+    ll, ix, ddλ, ddμ, ssλ, ssμ, nλ =
       ll_gbm_ss_b(lλ(tree), lμ(tree), αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep,
         δt, fdt(tree), srδt, false, ie, isfossil(tree))
   end
 
-  return ll, ix, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ, ns, ne
+  return ll, ix, ddλ, ddμ, ssλ, ssμ, nλ, ns, ne
 end
 
 
@@ -375,9 +373,6 @@ function ll_gbm_ss_b(lλv ::Array{Float64,1},
     # add to global likelihood
     ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
          llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
-    # add to global likelihood
-    irλ = llbdλ*δt
-    irμ = llbdμ*δt
     ll -= (llbdλ + llbdμ)*δt
 
     # ψ likelihood
@@ -408,11 +403,8 @@ function ll_gbm_ss_b(lλv ::Array{Float64,1},
       ssλ  += (lλvi1 - lλvi - αλ*fdt)^2/(2.0*fdt)
       ssμ  += (lμvi1 - lμvi - αμ*fdt)^2/(2.0*fdt)
       nλ   += 1.0
-      iriλ  = fdt*(exp(0.5*(lλvi + lλvi1)))
-      iriμ  = fdt*(exp(0.5*(lμvi + lμvi1)))
-      ll   -= (iriλ + iriμ)
-      irλ  += iriλ 
-      irμ  += iriμ
+      ll   -= fdt*(exp(0.5*(lλvi + lλvi1))) + 
+              fdt*(exp(0.5*(lμvi + lμvi1)))
     end
 
       #if speciation
@@ -427,7 +419,7 @@ function ll_gbm_ss_b(lλv ::Array{Float64,1},
     end
   end
 
-  return ll, ix, ddλ, ddμ, ssλ, ssμ, nλ, irλ, irμ
+  return ll, ix, ddλ, ddμ, ssλ, ssμ, nλ
 end
 
 
@@ -519,8 +511,6 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
       llrbdλ -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
       llrbdμ -= fdt*(exp(0.5*(lμpi + lμpi1)) - exp(0.5*(lμci + lμci1)))
     end
-    irrλ  = -llrbdλ
-    irrμ  = -llrbdμ
     llrbd = llrbdλ + llrbdμ
     if λev
       llrbd += lλpi1 - lλci1
@@ -529,87 +519,81 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     end
   end
 
-  return llrbm, llrbd, ssrλ, ssrμ, irrλ, irrμ
+  return llrbm, llrbd, ssrλ, ssrμ
 end
 
 
 
 
 """
-    _ss_ir_dd(tree::T,
-              αλ  ::Float64,
-              αμ  ::Float64,
-              ddλ ::Float64,
-              ddμ ::Float64,
-              ssλ ::Float64,
-              ssμ ::Float64,
-              n   ::Float64,
-              irλ ::Float64,
-              irμ ::Float64) where {T <: iTfbd}
+    _ss_dd(tree::T,
+           αλ  ::Float64,
+           αμ  ::Float64,
+           ddλ ::Float64,
+           ddμ ::Float64,
+           ssλ ::Float64,
+           ssμ ::Float64,
+           n   ::Float64) where {T <: iTfbd}
 
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-the integrated rate `ir` and the delta drift `dd`.
+Returns the standardized sum of squares for rate `v`, the path number `n` 
+and the delta drift `dd`.
 """
-function _ss_ir_dd(tree::T,
-                   αλ  ::Float64,
-                   αμ  ::Float64,
-                   ddλ ::Float64,
-                   ddμ ::Float64,
-                   ssλ ::Float64,
-                   ssμ ::Float64,
-                   n   ::Float64,
-                   irλ ::Float64,
-                   irμ ::Float64) where {T <: iTfbd}
+function _ss_dd(tree::T,
+                αλ  ::Float64,
+                αμ  ::Float64,
+                ddλ ::Float64,
+                ddμ ::Float64,
+                ssλ ::Float64,
+                ssμ ::Float64,
+                n   ::Float64) where {T <: iTfbd}
 
-  ddλ0, ddμ0, ssλ0, ssμ0, n0, irλ0, irμ0 = 
-    _ss_ir_dd_b(lλ(tree), lμ(tree), αλ, αμ, dt(tree), fdt(tree))
+  ddλ0, ddμ0, ssλ0, ssμ0, n0 = 
+    _ss_dd_b(lλ(tree), lμ(tree), αλ, αμ, dt(tree), fdt(tree))
 
   ddλ += ddλ0
   ddμ += ddμ0
   ssλ += ssλ0
   ssμ += ssμ0
   n   += n0
-  irλ += irλ0
-  irμ += irμ0
 
   if def1(tree)
-    ddλ, ddμ, ssλ, ssμ, n, irλ, irμ = 
-      _ss_ir_dd(tree.d1, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n, irλ, irμ)
+    ddλ, ddμ, ssλ, ssμ, n = 
+      _ss_dd(tree.d1, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
     if def2(tree)
-      ddλ, ddμ, ssλ, ssμ, n, irλ, irμ = 
-        _ss_ir_dd(tree.d2, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n, irλ, irμ)
+      ddλ, ddμ, ssλ, ssμ, n = 
+        _ss_dd(tree.d2, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
     end
   end
 
-  return ddλ, ddμ, ssλ, ssμ, n, irλ, irμ
+  return ddλ, ddμ, ssλ, ssμ, n
 end
 
 
 
 
 """
-    _ss_ir_dd_b(lλv::Array{Float64,1},
-                lμv::Array{Float64,1},
-                αλ  ::Float64,
-                αμ  ::Float64,
-                δt ::Float64,
-                fdt::Float64)
+    _ss_dd_b(lλv::Array{Float64,1},
+             lμv::Array{Float64,1},
+             αλ  ::Float64,
+             αμ  ::Float64,
+             δt ::Float64,
+             fdt::Float64)
 
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-the integrated rate `ir` and the delta drift `dd`.
+Returns the standardized sum of squares for rate `v`, the path number `n` 
+and the delta drift `dd`.
 """
-function _ss_ir_dd_b(lλv::Array{Float64,1},
-                     lμv::Array{Float64,1},
-                     αλ  ::Float64,
-                     αμ  ::Float64,
-                     δt ::Float64,
-                     fdt::Float64)
+function _ss_dd_b(lλv::Array{Float64,1},
+                  lμv::Array{Float64,1},
+                  αλ  ::Float64,
+                  αμ  ::Float64,
+                  δt ::Float64,
+                  fdt::Float64)
 
   @inbounds begin
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    ssλ = ssμ = irλ = irμ = 0.0
+    ssλ = ssμ = 0.0
     @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lμvi  = lμv[i]
@@ -617,16 +601,12 @@ function _ss_ir_dd_b(lλv::Array{Float64,1},
       lμvi1 = lμv[i+1]
       ssλ  += (lλvi1 - lλvi - αλ*δt)^2
       ssμ  += (lμvi1 - lμvi - αμ*δt)^2
-      irλ  += exp(0.5*(lλvi + lλvi1))
-      irμ  += exp(0.5*(lμvi + lμvi1))
     end
 
     # standardize
     invt = 1.0/(2.0*δt)
     ssλ *= invt
     ssμ *= invt
-    irλ *= δt
-    irμ *= δt
 
     n = Float64(nI)
     # add final non-standard `δt`
@@ -638,13 +618,11 @@ function _ss_ir_dd_b(lλv::Array{Float64,1},
       lμvi1 = lμv[nI+2]
       ssλ += invt * (lλvi1 - lλvi - αλ*fdt)^2
       ssμ += invt * (lμvi1 - lμvi - αμ*fdt)^2
-      irλ += fdt*exp(0.5*(lλvi + lλvi1))
-      irμ += fdt*exp(0.5*(lμvi + lμvi1))
       n += 1.0
     end
   end
 
-  return (lλv[nI+2] - lλv[1]), (lμv[nI+2] - lμv[1]), ssλ, ssμ, n, irλ, irμ
+  return (lλv[nI+2] - lλv[1]), (lμv[nI+2] - lμv[1]), ssλ, ssμ, n
 end
 
 

@@ -69,9 +69,21 @@ function insane_cfbd(tree    ::sTf_label;
   nep = lastindex(ψ_epoch) + 1
 
   # make initial fossils per epoch vector
-  if lastindex(f_epoch) !== nep
-    f_epoch = fill(0, nep)
+  lep = lastindex(f_epoch)
+  if lep !== nep
+    if sum(f_epoch) > 0
+      if lep > nep
+        f_epoch = f_epoch[(end-nep+1):end]
+      else 
+        for i in Base.OneTo(nep - lep)
+          pushfirst!(f_epoch, 0)
+        end
+      end
+    else
+      f_epoch = fill(0, nep)
+    end
   end
+
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -114,13 +126,13 @@ function insane_cfbd(tree    ::sTf_label;
   if survival 
     if iszero(e(tree)) 
       if def1(tree)
-        surv += (ntipsalive(tree.d1) > 0)
+        surv += Int64(anyalive(tree.d1))
         if def2(tree)
-          surv += (ntipsalive(tree.d2) > 0)
+          surv += Int64(anyalive(tree.d2))
         end
       end
     else
-      surv += (ntipsalive(tree) > 0)
+      surv += Int64(anyalive(tree))
     end
   end
 
@@ -348,19 +360,16 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 5 + nep)
 
-  # make tree vector
-  treev  = sTfbd[]
-
-  # flush to file
-  sthin = 0
+  treev = sTfbd[]    # make tree vector
+  sthin = 0          # flush to file
+  io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
+    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
     flush(of)
 
     open(ofile*".txt", "w") do tf
-
 
       pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -444,11 +453,12 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\t", join(ψc, "\t"), "\n"))
+          print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
+                    λc,'\t', μc, '\t', join(ψc, '\t'), '\n')
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
           sthin = 0
         end

@@ -118,175 +118,177 @@ end
 
 
 """
-    _stem_update!(ξi      ::iTce,
-                  α       ::Float64,
-                  σλ      ::Float64,
-                  μ       ::Float64,
-                  llc     ::Float64,
-                  prc     ::Float64,
-                  dλ      ::Float64,
-                  ssλ     ::Float64,
-                  mc      ::Float64,
-                  th      ::Float64,
-                  surv    ::Int64,
-                  δt      ::Float64,
-                  srδt    ::Float64,
-                  λa_prior::NTuple{2,Float64})
+    _stem_update!(ξi   ::iTce,
+                  α    ::Float64,
+                  σλ   ::Float64,
+                  μ    ::Float64,
+                  llc  ::Float64,
+                  dλ   ::Float64,
+                  ssλ  ::Float64,
+                  mc   ::Float64,
+                  th   ::Float64,
+                  δt   ::Float64,
+                  srδt ::Float64,
+                  lλxpr::Float64,
+                  crown::Int64)
 
 Do gbm update for stem root.
 """
-function _stem_update!(ξi      ::iTce,
-                       α       ::Float64,
-                       σλ      ::Float64,
-                       μ       ::Float64,
-                       llc     ::Float64,
-                       prc     ::Float64,
-                       dλ      ::Float64,
-                       ssλ     ::Float64,
-                       mc      ::Float64,
-                       th      ::Float64,
-                       surv    ::Int64,
-                       δt      ::Float64,
-                       srδt    ::Float64,
-                       λa_prior::NTuple{2,Float64})
+function _stem_update!(ξi   ::iTce,
+                       α    ::Float64,
+                       σλ   ::Float64,
+                       μ    ::Float64,
+                       llc  ::Float64,
+                       dλ   ::Float64,
+                       ssλ  ::Float64,
+                       mc   ::Float64,
+                       th   ::Float64,
+                       δt   ::Float64,
+                       srδt ::Float64,
+                       lλxpr::Float64,
+                       crown::Int64)
 
   @inbounds begin
-    lλc   = lλ(ξi)
-    l    = lastindex(lλc)
-    lλp   = Vector{Float64}(undef,l)
-    lλn   = lλc[l]
+    λc   = lλ(ξi)
+    l    = lastindex(λc)
+    λp   = Vector{Float64}(undef,l)
+    λn   = λc[l]
     el   = e(ξi)
     fdtp = fdt(ξi)
 
     # node proposal
-    lλr = rnorm(lλn - α*el, σλ*sqrt(el))
+    λr = rnorm(λn - α*el, σλ*sqrt(el))
+
+    # prior ratio
+    if λr > lλxpr
+      return llc, dλ, ssλ, mc
+    end
 
     # simulate fix tree vector
-    bb!(lλp, lλr, lλn, σλ, δt, fdtp, srδt)
+    bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
-    llrbm, llrce, ssrλ = llr_gbm_b_sep(lλp, lλc, α, σλ, δt, fdtp, srδt, false)
+    llrbm, llrce, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
     # log probability
     lU = -randexp()
 
     llr = llrce
-    prr = llrdgamma(exp(lλp[1]), exp(lλc[1]), λa_prior[1], λa_prior[2])
 
-    if lU < llr + log(5_000.0/mc)
+    if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, surv)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, crown)
       llr += log(mp/mc)
 
-      if lU < llr + prr
+      if lU < llr
         llc += llrbm + llr
-        prc += prr
-        dλ  += lλc[1] - lλr
+        dλ  += λc[1] - λr
         ssλ += ssrλ
         mc   = mp
-        unsafe_copyto!(lλc, 1, lλp, 1, l)
+        unsafe_copyto!(λc, 1, λp, 1, l)
       end
     end
   end
 
-  return llc, prc, dλ, ssλ, mc
+  return llc, dλ, ssλ, mc
 end
 
 
 
 
 """
-    _crown_update!(ξi      ::iTce,
-                   ξ1      ::iTce,
-                   ξ2      ::iTce,
-                   α       ::Float64,
-                   σλ      ::Float64,
-                   μ       ::Float64,
-                   llc     ::Float64,
-                   prc     ::Float64,
-                   dλ      ::Float64,
-                   ssλ     ::Float64,
-                   mc      ::Float64,
-                   th      ::Float64,
-                   surv    ::Int64,
-                   δt      ::Float64,
-                   srδt    ::Float64,
-                   λa_prior::NTuple{2,Float64})
+    _crown_update!(ξi   ::iTce,
+                   ξ1   ::iTce,
+                   ξ2   ::iTce,
+                   α    ::Float64,
+                   σλ   ::Float64,
+                   μ    ::Float64,
+                   llc  ::Float64,
+                   dλ   ::Float64,
+                   ssλ  ::Float64,
+                   mc   ::Float64,
+                   th   ::Float64,
+                   δt   ::Float64,
+                   srδt ::Float64,
+                   lλxpr::Float64,
+                   crown::Int64)
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi      ::iTce,
-                        ξ1      ::iTce,
-                        ξ2      ::iTce,
-                        α       ::Float64,
-                        σλ      ::Float64,
-                        μ       ::Float64,
-                        llc     ::Float64,
-                        prc     ::Float64,
-                        dλ      ::Float64,
-                        ssλ     ::Float64,
-                        mc      ::Float64,
-                        th      ::Float64,
-                        surv    ::Int64,
-                        δt      ::Float64,
-                        srδt    ::Float64,
-                        λa_prior::NTuple{2,Float64})
+function _crown_update!(ξi   ::iTce,
+                        ξ1   ::iTce,
+                        ξ2   ::iTce,
+                        α    ::Float64,
+                        σλ   ::Float64,
+                        μ    ::Float64,
+                        llc  ::Float64,
+                        dλ   ::Float64,
+                        ssλ  ::Float64,
+                        mc   ::Float64,
+                        th   ::Float64,
+                        δt   ::Float64,
+                        srδt ::Float64,
+                        lλxpr::Float64,
+                        crown::Int64)
 
   @inbounds begin
-    lλpc  = lλ(ξi)
-    lλi   = lλpc[1]
-    lλ1c  = lλ(ξ1)
-    lλ2c  = lλ(ξ2)
-    l1    = lastindex(lλ1c)
-    l2    = lastindex(lλ2c)
-    lλ1p  = Vector{Float64}(undef,l1)
-    lλ2p  = Vector{Float64}(undef,l2)
-    lλ1   = lλ1c[l1]
-    lλ2   = lλ2c[l2]
-    e1    = e(ξ1)
-    e2    = e(ξ2)
-    fdt1  = fdt(ξ1)
-    fdt2  = fdt(ξ2)
+    λpc  = lλ(ξi)
+    λi   = λpc[1]
+    λ1c  = lλ(ξ1)
+    λ2c  = lλ(ξ2)
+    l1   = lastindex(λ1c)
+    l2   = lastindex(λ2c)
+    λ1p  = Vector{Float64}(undef,l1)
+    λ2p  = Vector{Float64}(undef,l2)
+    λ1   = λ1c[l1]
+    λ2   = λ2c[l2]
+    e1   = e(ξ1)
+    e2   = e(ξ2)
+    fdt1 = fdt(ξ1)
+    fdt2 = fdt(ξ2)
 
     # node proposal
-    lλr = duoprop(lλ1 - α*e1, lλ2 - α*e2, e1, e2, σλ)
+    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+
+    # prior ratio
+    if λr > lλxpr
+      return llc, dλ, ssλ, mc
+    end
 
     # simulate fix tree vector
-    bb!(lλ1p, lλr, lλ1, σλ, δt, fdt1, srδt)
-    bb!(lλ2p, lλr, lλ2, σλ, δt, fdt2, srδt)
+    bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
+    bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
     llrbm1, llrce1, ssrλ1 =
-      llr_gbm_b_sep(lλ1p, lλ1c, α, σλ, δt, fdt1, srδt, false)
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
     llrbm2, llrce2, ssrλ2 =
-      llr_gbm_b_sep(lλ2p, lλ2c, α, σλ, δt, fdt2, srδt, false)
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
     # log probability
     lU = -randexp()
 
     llr = llrce1 + llrce2
-    prr = llrdgamma(exp(lλr), exp(lλi), λa_prior[1], λa_prior[2])
 
-    if lU < llr + log(5_000.0/mc)
+    if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, lλr, α, σλ, μ, δt, srδt, 5_000, surv)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, crown)
       llr += log(mp/mc)
 
-      if lU < llr + prr
+      if lU < llr
         llc += llrbm1 + llrbm2 + llr
-        prc += prr
-        dλ  += 2.0*(lλi - lλr)
+        dλ  += 2.0*(λi - λr)
         ssλ += ssrλ1 + ssrλ2
-        fill!(lλpc, lλr)
+        fill!(λpc, λr)
         mc   = mp
-        unsafe_copyto!(lλ1c, 1, lλ1p, 1, l1)
-        unsafe_copyto!(lλ2c, 1, lλ2p, 1, l2)
+        unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
+        unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
       end
     end
   end
 
-  return llc, prc, dλ, ssλ, mc
+  return llc, dλ, ssλ, mc
 end
 
 
@@ -611,4 +613,51 @@ function update_triad!(tree::iTce,
 end
 
 
+
+
+"""
+    llr_propr(λpp  ::Array{Float64,1},
+              λ1p  ::Array{Float64,1},
+              λ2p  ::Array{Float64,1},
+              λpc  ::Array{Float64,1},
+              λ1c  ::Array{Float64,1},
+              λ2c  ::Array{Float64,1},
+              α    ::Float64,
+              σλ   ::Float64,
+              δt   ::Float64,
+              fdtpr::Float64,
+              fdtd1::Float64,
+              fdtd2::Float64,
+              srδt ::Float64)
+
+Return the likelihood and proposal ratio for pure-birth gbm.
+"""
+function llr_propr(λpp  ::Array{Float64,1},
+                   λ1p  ::Array{Float64,1},
+                   λ2p  ::Array{Float64,1},
+                   λpc  ::Array{Float64,1},
+                   λ1c  ::Array{Float64,1},
+                   λ2c  ::Array{Float64,1},
+                   α    ::Float64,
+                   σλ   ::Float64,
+                   δt   ::Float64,
+                   fdtp::Float64,
+                   fdt1::Float64,
+                   fdt2::Float64,
+                   srδt ::Float64)
+
+  # log likelihood ratios
+  llrbmp, llrpbp, ssrλp = 
+    llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
+  llrbm1, llrpb1, ssrλ1 = 
+    llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+  llrbm2, llrpb2, ssrλ2 = 
+    llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+
+  acr  = llrpbp + llrpb1 + llrpb2
+  llr  = llrbmp + llrbm1 + llrbm2 + acr
+  ssrλ = ssrλp + ssrλ1 + ssrλ2
+
+  return llr, acr, ssrλ
+end
 

@@ -1172,39 +1172,58 @@ end
 
 
 """
-    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
-  dd = ssλ = ssμ = n = irλ = irμ = 0.0
+  dd = ss = n = 0.0
   for ξi in Ξ
-    dd, ssλ, ssμ, n, irλ, irμ = _ss_ir_dd(ξi, α, dd, ssλ, ssμ, n, irλ, irμ)
+    dd, ss, n = _ss_dd(ξi, α, dd, ss, n)
   end
 
-  return dd, ssλ, ssμ, n, irλ, irμ
+  return dd, ss, n
 end
 
 
 
 
 """
-    _ss_ir_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
+    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_ir_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
-  ddλ = ddμ = ssλ = ssμ = n = irλ = irμ = 0.0
+  dd = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    ddλ, ddμ, ssλ, ssμ, n, irλ, irμ = 
-      _ss_ir_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n, irλ, irμ)
+    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
   end
 
-  return ddλ, ddμ, ssλ, ssμ, n, irλ, irμ
+  return dd, ssλ, ssμ, n
+end
+
+
+
+
+"""
+    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+
+  ddλ = ddμ = ssλ = ssμ = n = 0.0
+  for ξi in Ξ
+    ddλ, ddμ, ssλ, ssμ, n = 
+      _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+  end
+
+  return ddλ, ddμ, ssλ, ssμ, n
 end
 
 

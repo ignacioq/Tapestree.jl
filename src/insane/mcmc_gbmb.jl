@@ -266,8 +266,8 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
   ddλ, ssλ, nλ, irλ = 
     _ss_ir_dd(Ξ, lλ, αc)
 
-  # flush to file
-  sthin = 0
+  sthin = 0          # flush to file
+  io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
@@ -372,12 +372,12 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", 
-              exp(lλ(Ξ[1])[1]),"\t", αc, "\t", σλc, "\n"))
+          print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
+                exp(lλ(Ξ[1])[1]),'\t', αc, '\t', σλc, '\n')
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
           sthin = 0
         end

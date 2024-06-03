@@ -294,11 +294,9 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 5)
 
-  # make tree vector
-  treev  = sTbd[]
-
-  # flush to file
-  sthin = 0
+  treev = sTbd[]     # make tree vector
+  sthin = 0          # flush to file
+  io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\n")
@@ -371,11 +369,11 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\n"))
+          print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\n')
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
           sthin = 0
         end

@@ -48,7 +48,7 @@ function _daughter_update!(ξ1  ::T,
     bb!(lλ1p, lλf, lλ1, lμ1p, lμf, lμ1, σλ, σμ, δt, fdt1, srδt)
 
     # log likelihood ratios
-    llrbm1, llrbd1, ssrλ1, ssrμ1, irrλ1, irrμ1 =
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(lλ1p, lμ1p, lλ1c, lμ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
 
     acr = llrbd1
@@ -59,7 +59,7 @@ function _daughter_update!(ξ1  ::T,
     drλ  = lλi - lλf
   end
 
-  return llr, acr, drλ, ssrλ1, ssrμ1, irrλ1, irrμ1, lλ1p, lμ1p
+  return llr, acr, drλ, ssrλ1, ssrμ1, lλ1p, lμ1p
 end
 
 
@@ -114,9 +114,9 @@ function _daughters_update!(ξ1  ::T,
     bb!(λ2p, λf, λ2, μ2p, μf, μ2, σλ, σμ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrbd1, ssrλ1, ssrμ1, irrλ1, irrμ1 =
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
-    llrbm2, llrbd2, ssrλ2, ssrμ2, irrλ2, irrμ2 =
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
     acr  = llrbd1 + llrbd2 + λf - λi
@@ -128,11 +128,9 @@ function _daughters_update!(ξ1  ::T,
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
     ssrμ = ssrμ1 + ssrμ2
-    irrλ = irrλ1 + irrλ2
-    irrμ = irrμ1 + irrμ2
   end
 
-  return llr, acr, drλ, ssrλ, ssrμ, irrλ, irrμ, λ1p, λ2p, μ1p, μ2p
+  return llr, acr, drλ, ssrλ, ssrμ, λ1p, λ2p, μ1p, μ2p
 end
 
 
@@ -148,8 +146,6 @@ end
                   ddλ  ::Float64,
                   ssλ  ::Float64,
                   ssμ  ::Float64,
-                  irλ  ::Float64,
-                  irμ  ::Float64,
                   mc   ::Float64,
                   th   ::Float64,
                   δt   ::Float64,
@@ -169,8 +165,6 @@ function _stem_update!(ξi   ::T,
                        ddλ  ::Float64,
                        ssλ  ::Float64,
                        ssμ  ::Float64,
-                       irλ  ::Float64,
-                       irμ  ::Float64,
                        mc   ::Float64,
                        th   ::Float64,
                        δt   ::Float64,
@@ -198,7 +192,7 @@ function _stem_update!(ξi   ::T,
     # simulate fix tree vector
     bb!(λp, λr, λn, μp, μr, μn, σλ, σμ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, ssrμ, irrλ, irrμ =
+    llrbm, llrbd, ssrλ, ssrμ =
       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt, false, false)
 
     # log probability
@@ -219,8 +213,6 @@ function _stem_update!(ξi   ::T,
         ddλ += λc[1] - λr
         ssλ += ssrλ
         ssμ += ssrμ
-        irλ += irrλ
-        irμ += irrμ
         mc   = mp
         unsafe_copyto!(λc, 1, λp, 1, l)
         unsafe_copyto!(μc, 1, μp, 1, l)
@@ -228,7 +220,7 @@ function _stem_update!(ξi   ::T,
     end
   end
 
-  return llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc
+  return llc, prc, ddλ, ssλ, ssμ, mc
 end
 
 
@@ -246,8 +238,6 @@ end
                   ddλ  ::Float64,
                   ssλ  ::Float64,
                   ssμ  ::Float64,
-                  irλ  ::Float64, 
-                  irμ  ::Float64,
                   mc   ::Float64,
                   th   ::Float64,
                   δt   ::Float64,
@@ -269,8 +259,6 @@ function _crown_update!(ξi   ::T,
                         ddλ  ::Float64,
                         ssλ  ::Float64,
                         ssμ  ::Float64,
-                        irλ  ::Float64, 
-                        irμ  ::Float64,
                         mc   ::Float64,
                         th   ::Float64,
                         δt   ::Float64,
@@ -312,9 +300,9 @@ function _crown_update!(ξi   ::T,
     bb!(λ2p, λr, λ2, μ2p, μr, μ2, σλ, σμ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrbd1, ssrλ1, ssrμ1, irrλ1, irrμ1 =
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt, false, false)
-    llrbm2, llrbd2, ssrλ2, ssrμ2, irrλ2, irrμ2 =
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt, false, false)
 
     # log probability
@@ -335,8 +323,6 @@ function _crown_update!(ξi   ::T,
         ddλ += 2.0*(λi - λr)
         ssλ += ssrλ1 + ssrλ2
         ssμ += ssrμ1 + ssrμ2
-        irλ += irrλ1 + irrλ2
-        irμ += irrμ1 + irrμ2
         mc   = mp
         fill!(λpc, λr)
         fill!(μpc, μr)
@@ -348,7 +334,7 @@ function _crown_update!(ξi   ::T,
     end
   end
 
-  return llc, prc, ddλ, ssλ, ssμ, irλ, irμ, mc
+  return llc, prc, ddλ, ssλ, ssμ, mc
 end
 
 
@@ -363,8 +349,6 @@ end
                  ddλ ::Float64,
                  ssλ ::Float64,
                  ssμ ::Float64,
-                 irλ ::Float64, 
-                 irμ ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
                  ter ::Bool)
@@ -379,28 +363,24 @@ function _update_gbm!(tree::iTbd,
                       ddλ ::Float64,
                       ssλ ::Float64,
                       ssμ ::Float64,
-                      irλ ::Float64, 
-                      irμ ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
                       ter ::Bool)
 
   if def1(tree)
-    llc, ddλ, ssλ, ssμ, irλ, irμ =
-      update_triad!(tree, α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, δt, srδt)
+    llc, ddλ, ssλ, ssμ =
+      update_triad!(tree, α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt)
 
-    llc, ddλ, ssλ, ssμ, irλ, irμ =
-      _update_gbm!(tree.d1, α, σλ, σμ, llc, 
-        ddλ, ssλ, ssμ, irλ, irμ, δt, srδt, ter)
-    llc, ddλ, ssλ, ssμ, irλ, irμ =
-      _update_gbm!(tree.d2, α, σλ, σμ, llc, 
-        ddλ, ssλ, ssμ, irλ, irμ, δt, srδt, ter)
+    llc, ddλ, ssλ, ssμ =
+      _update_gbm!(tree.d1, α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt, ter)
+    llc, ddλ, ssλ, ssμ =
+      _update_gbm!(tree.d2, α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt, ter)
   elseif !isfix(tree) || ter
-    llc, ddλ, ssλ, ssμ, irλ, irμ = 
-      update_tip!(tree, α, σλ, σμ, llc, ddλ, ssλ, ssμ, irλ, irμ, δt, srδt)
+    llc, ddλ, ssλ, ssμ = 
+      update_tip!(tree, α, σλ, σμ, llc, ddλ, ssλ, ssμ, δt, srδt)
   end
 
-  return llc, ddλ, ssλ, ssμ, irλ, irμ
+  return llc, ddλ, ssλ, ssμ
 end
 
 
@@ -415,8 +395,6 @@ end
                 ddλ ::Float64,
                 ssλ ::Float64,
                 ssμ ::Float64,
-                irλ ::Float64, 
-                irμ ::Float64,
                 δt  ::Float64,
                 srδt::Float64) where {T <: iTbd}
 
@@ -430,8 +408,6 @@ function update_tip!(tree::T,
                      ddλ ::Float64,
                      ssλ ::Float64,
                      ssμ ::Float64,
-                     irλ ::Float64, 
-                     irμ ::Float64,
                      δt  ::Float64,
                      srδt::Float64) where {T <: iTbd}
 
@@ -446,7 +422,7 @@ function update_tip!(tree::T,
 
     bm!(λp, μp, λc[1], μc[1], α, σλ, σμ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, ssrμ, irrλ, irrμ =
+    llrbm, llrbd, ssrλ, ssrμ =
       llr_gbm_b_sep(λp, μp, λc, μc, α, σλ, σμ, δt, fdtp, srδt,
         false, isextinct(tree))
 
@@ -455,14 +431,12 @@ function update_tip!(tree::T,
       ddλ  += λp[l] - λc[l]
       ssλ += ssrλ
       ssμ += ssrμ
-      irλ += irrλ 
-      irμ += irrμ
       unsafe_copyto!(λc, 1, λp, 1, l)
       unsafe_copyto!(μc, 1, μp, 1, l)
     end
   end
 
-  return llc, ddλ, ssλ, ssμ, irλ, irμ
+  return llc, ddλ, ssλ, ssμ
 end
 
 
@@ -483,8 +457,6 @@ end
                 llc ::Float64,
                 ssλ ::Float64,
                 ssμ ::Float64,
-                irλ ::Float64, 
-                irμ ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
@@ -504,8 +476,6 @@ function update_duo!(λpc ::Vector{Float64},
                      llc ::Float64,
                      ssλ ::Float64,
                      ssμ ::Float64,
-                     irλ ::Float64, 
-                     irμ ::Float64,
                      δt  ::Float64,
                      srδt::Float64)
 
@@ -531,10 +501,10 @@ function update_duo!(λpc ::Vector{Float64},
     bb!(λ1p, λn, λ1, μ1p, μn, μ1, σλ, σμ, δt, fdt1, srδt)
 
     # log likelihood ratios
-    llrbmp, llrbdp, ssrλp, ssrμp, irrλp, irrμp =
+    llrbmp, llrbdp, ssrλp, ssrμp =
       llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
         false, false)
-    llrbm1, llrbd1, ssrλ1, ssrμ1, irrλ1, irrμ1 =
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
         false, false)
 
@@ -544,8 +514,6 @@ function update_duo!(λpc ::Vector{Float64},
       llc += llrbmp + llrbm1 + acr
       ssλ += ssrλp + ssrλ1
       ssμ += ssrμp + ssrμ1
-      irλ += irrλp + irrλ1
-      irμ += irrμp + irrμ1 
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(μpc, 1, μpp, 1, lp)
@@ -553,7 +521,7 @@ function update_duo!(λpc ::Vector{Float64},
     end
   end
 
-  return llc, ssλ, ssμ, irλ, irμ
+  return llc, ssλ, ssμ
 end
 
 
@@ -603,8 +571,6 @@ function update_triad!(λpc ::Vector{Float64},
                        ddλ ::Float64,
                        ssλ ::Float64,
                        ssμ ::Float64,
-                       irλ ::Float64, 
-                       irμ ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
 
@@ -638,13 +604,13 @@ function update_triad!(λpc ::Vector{Float64},
     bb!(λ2p, λn, λ2, μ2p, μn, μ2, σλ, σμ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbmp, llrbdp, ssrλp, ssrμp, irrλp, irrμp =
+    llrbmp, llrbdp, ssrλp, ssrμp =
       llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
         true, false)
-    llrbm1, llrbd1, ssrλ1, ssrμ1, irrλ1, irrμ1 =
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
         false, false)
-    llrbm2, llrbd2, ssrλ2, ssrμ2, irrλ2, irrμ2 =
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt,
         false, false)
 
@@ -655,8 +621,6 @@ function update_triad!(λpc ::Vector{Float64},
       ddλ += λi - λn
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2
-      irλ += irrλp + irrλ1 + irrλ2
-      irμ += irrμp + irrμ1 + irrμ2
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
@@ -667,7 +631,7 @@ function update_triad!(λpc ::Vector{Float64},
     end
   end
 
-  return llc, ddλ, ssλ, ssμ, irλ, irμ, λi
+  return llc, ddλ, ssλ, ssμ, λi
 end
 
 
@@ -682,8 +646,6 @@ end
                   ddλ ::Float64,
                   ssλ ::Float64,
                   ssμ ::Float64,
-                  irλ ::Float64,
-                  irμ ::Float64,
                   δt  ::Float64,
                   srδt::Float64) where {T <: iTbdU}
 
@@ -697,8 +659,6 @@ function update_triad!(tree::T,
                        ddλ ::Float64,
                        ssλ ::Float64,
                        ssμ ::Float64,
-                       irλ ::Float64,
-                       irμ ::Float64,
                        δt  ::Float64,
                        srδt::Float64) where {T <: iTbd}
 
@@ -741,13 +701,13 @@ function update_triad!(tree::T,
     bb!(λ1p, λn, λ1, μ1p, μn, μ1, σλ, σμ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, μ2p, μn, μ2, σλ, σμ, δt, fdt2, srδt)
 
-    llrbmp, llrbdp, ssrλp, ssrμp, irrλp, irrμp =
+    llrbmp, llrbdp, ssrλp, ssrμp =
       llr_gbm_b_sep(λpp, μpp, λpc, μpc, α, σλ, σμ, δt, fdtp, srδt,
         true, false)
-    llrbm1, llrbd1, ssrλ1, ssrμ1, irrλ1, irrμ1 =
+    llrbm1, llrbd1, ssrλ1, ssrμ1 =
       llr_gbm_b_sep(λ1p, μ1p, λ1c, μ1c, α, σλ, σμ, δt, fdt1, srδt,
         false, isextinct(tree.d1))
-    llrbm2, llrbd2, ssrλ2, ssrμ2, irrλ2, irrμ2 =
+    llrbm2, llrbd2, ssrλ2, ssrμ2 =
       llr_gbm_b_sep(λ2p, μ2p, λ2c, μ2c, α, σλ, σμ, δt, fdt2, srδt,
         false, isextinct(tree.d2))
 
@@ -758,8 +718,6 @@ function update_triad!(tree::T,
       ddλ += (λ1c[1] - λn)
       ssλ += ssrλp + ssrλ1 + ssrλ2
       ssμ += ssrμp + ssrμ1 + ssrμ2
-      irλ += irrλp + irrλ1 + irrλ2
-      irμ += irrμp + irrμ1 + irrμ2
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
@@ -769,7 +727,7 @@ function update_triad!(tree::T,
     end
   end
 
-  return llc, ddλ, ssλ, ssμ, irλ, irμ
+  return llc, ddλ, ssλ, ssμ
 end
 
 

@@ -1113,6 +1113,8 @@ Recipe for plotting values given by `f` through time for a `iT`.
   for i in Base.OneTo(lts)
     qi = q[i,:]
     filter!(!isnan, qi)
+    isempty(qi) && continue
+
     if !isempty(q0) 
       Q0[i,:] = quantile(qi, q0)
     end
