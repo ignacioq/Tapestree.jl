@@ -231,6 +231,8 @@ isgood(tree::T) where {T <: iTree} = getproperty(tree, :ig)
 
 
 """
+    isgood(tree::sT_label)
+    isgood(tree::sTf_label)
     isgood(tree::sTb)
     isgood(tree::sTbd)
     isgood(tree::sTfbd)
@@ -241,17 +243,18 @@ isgood(tree::T) where {T <: iTree} = getproperty(tree, :ig)
     isgood(tree::iTfbd)
 
 Return if is a good lineage (versus incipient lineage) in a protracted model.
-False because not allowed for those tree types.
+True because incipient lineages not allowed for those tree types.
 """
-isgood(tree::sT_label) = false
-isgood(tree::sTb)     = false
-isgood(tree::sTbd)     = false
-isgood(tree::sTfbd)    = false
-isgood(tree::iTb)     = false
-isgood(tree::iTce)     = false
-isgood(tree::iTct)     = false
-isgood(tree::iTbd)     = false
-isgood(tree::iTfbd)    = false
+isgood(tree::sT_label)  = true
+isgood(tree::sTf_label) = true
+isgood(tree::sTb)       = true
+isgood(tree::sTbd)      = true
+isgood(tree::sTfbd)     = true
+isgood(tree::iTb)       = true
+isgood(tree::iTce)      = true
+isgood(tree::iTct)      = true
+isgood(tree::iTbd)      = true
+isgood(tree::iTfbd)     = true
 
 
 
