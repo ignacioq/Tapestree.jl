@@ -651,13 +651,12 @@ function plotω(tree       ::T,
                shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                shapes     = [:none, :none, :square],
                colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
-               shsizes    = [3.0, 3.0, 3.0],
                showda     = false,
                col_da     = ["#a9a9a9", :black],
                yω         = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
 
   plot(tree, labsize=labsize, type=type, showlabels=showlabels, shownodes=shownodes, shapes=shapes,
-       colors=colors, shsizes=shsizes, showda=showda, col_da=col_da, yω=yω)
+       colors=colors, showda=showda, col_da=col_da)
   ymin = 1.0-0.05*ntips(tree)
   scatter!(ωtimes, [max(rnorm(yω, (yω-ymin)/5), ymin) for ωt in ωtimes], label="occurrences", mc=:grey, ms=2, ma=0.5)
 
