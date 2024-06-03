@@ -235,13 +235,7 @@ function _stem_update!(ξi   ::T,
     end
   end
 
-<<<<<<< HEAD
-  return llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
-||||||| merged common ancestors
-  return llc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
-=======
-  return llc, ddλ, ddμ, ssλ, ssμ, mc
->>>>>>> 35188ad617184d50ca23ca83e2917482b0049b99
+  return llc, prc, ddλ, ddμ, ssλ, ssμ, mc
 end
 
 
@@ -362,13 +356,7 @@ function _crown_update!(ξi   ::T,
     end
   end
 
-<<<<<<< HEAD
-  return llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
-||||||| merged common ancestors
-  return llc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
-=======
-  return llc, ddλ, ddμ, ssλ, ssμ, mc
->>>>>>> 35188ad617184d50ca23ca83e2917482b0049b99
+  return llc, prc, ddλ, ddμ, ssλ, ssμ, mc
 end
 
 
@@ -473,13 +461,7 @@ function _fstem_update!(ξi   ::iTfbd,
     end
   end
 
-<<<<<<< HEAD
-  return llc, prc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
-||||||| merged common ancestors
-  return llc, ddλ, ddμ, ssλ, ssμ, irλ, irμ, mc
-=======
-  return llc, ddλ, ddμ, ssλ, ssμ, mc
->>>>>>> 35188ad617184d50ca23ca83e2917482b0049b99
+  return llc, prc, ddλ, ddμ, ssλ, ssμ, mc
 end
 
 
