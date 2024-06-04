@@ -16,8 +16,8 @@ Created 03 09 2020
     insane_gbmfbd(tree    ::sTf_label;
                   λa_prior::NTuple{2,Float64}     = (1.5, 1.0),
                   μa_prior::NTuple{2,Float64}     = (1.5, 1.0),
-                   αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                   αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                  αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                  αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                   σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                   σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
                   ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -308,7 +308,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
 
   # for scale tuning
-  ltn = lns = 0
+  ltn = 0
   lup = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
@@ -513,7 +513,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
   # logging
   nlogs = fld(niter, nthin)
-  lthin = lit = sthinθ = sthinΞ = lns =  0
+  lthin = lit = sthinθ = sthinΞ =  0
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
