@@ -129,6 +129,46 @@ end
 
 
 
+"""
+    sT_label(tree::T, reftree::sT_label)
+
+Demotes a `tree` to `sT_label` but retains the labels from `reftree`.
+"""
+function sT_label(tree::T, reftree::sT_label) where {T <: iTree}
+  _sT_label(tree::T, reftree::sT_label, 0)[1]
+end
+
+
+"""
+    _sT_label(tree::T, i::Int64) where {T <: iTree}
+
+Demotes a `tree` to `sT_label` but retains the labels from `reftree`.
+"""
+function _sT_label(tree::T, reftree::sT_label, i::Int64) where {T <: iTree}
+
+  if def1(tree)
+    if isfix(tree.d1) && isfix(tree.d2)
+      t1, i = _sT_label(tree.d1, reftree.d1, i)
+      t2, i = _sT_label(tree.d2, reftree.d2, i)
+      tree  = sT_label(t1, t2, e(tree), l(reftree))
+    else
+      t1, i = _sT_label(tree.d1, reftree, i)
+      t2, i = _sT_label(tree.d2, reftree, i)
+      tree  = sT_label(t1, t2, e(tree), "")
+    end
+  else
+    if isfix(tree)
+      tree = sT_label(e(tree), l(reftree))
+    else
+      i += 1
+      tree = sT_label(e(tree), string("t",i))
+    end
+  end
+  return tree, i
+end
+
+
+
 
 """
     sTf_label
