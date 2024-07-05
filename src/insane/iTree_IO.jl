@@ -371,7 +371,7 @@ function write_newick(tree::T, ofile::String) where {T <: iTree}
   io = IOBuffer()
   ic = iszero(e(tree))
   !ic && write(io, '(')
-  nw_buffer(io, tree)
+  nw_buffer(io, tree, ic)
   !ic && write(io, ')')
   write(io, ';')
   write(ofile*".tre", take!(io))
@@ -395,7 +395,7 @@ function write_newick(treev::Vector{T}, ofile::String) where {T <: iTree}
   for t in treev
     ic = iszero(e(t))
     !ic && write(io, '(')
-    nw_buffer(io, t)
+    nw_buffer(io, t, ic)
     !ic && write(io, ')')
     write(io, ';', '\n')
     write(to, take!(io))
@@ -414,25 +414,23 @@ end
 
 Writes an `iTree` to IOBuffer `io`.
 """
-nw_buffer(io::IOBuffer, tree::T) where {T <: iTree} = _nw_buffer(io, tree, 0)
+nw_buffer(io::IOBuffer, tree::T, ic::Bool) where {T <: iTree} = 
+  _nw_buffer(io, tree, 0, ic)
 
 """
     _nw_buffer(io::IOBuffer, tree::T, n::Int64) where {T <: iTree})
 
 Writes an `iTree` to IOBuffer `io`.
 """
-function _nw_buffer(io::IOBuffer, tree::T, n::Int64) where {T <: iTree}
+function _nw_buffer(io::IOBuffer, tree::T, n::Int64, ic::Bool) where {T <: iTree}
 
   if def1(tree)
     write(io, '(')
-    n = _nw_buffer(io, tree.d1, n)
+    n = _nw_buffer(io, tree.d1, n, false)
     write(io, ',')
-    n = _nw_buffer(io, tree.d2, n)
+    n = _nw_buffer(io, tree.d2, n, false)
     write(io, ')')
-
-    if !iszero(e(tree))
-      print(io, ':', e(tree))
-    end
+    !ic && print(io, ':', e(tree))
   else
     n += 1
     print(io, 't', n, ':', e(tree))
@@ -443,31 +441,39 @@ end
 
 
 
+
 """
     nw_buffer(io::IOBuffer, tree::T) where {T <: iTree})
 
 Writes a fossil tree `uTf` to IOBuffer `io`.
 """
-nw_buffer(io::IOBuffer, tree::T) where {T <: uTf} = _nw_buffer(io, tree, 0, 0)
+nw_buffer(io::IOBuffer, tree::T, ic::Bool) where {T <: uTf} = 
+  _nw_buffer(io, tree, 0, 0, ic)
 
 """
-    _nw_buffer(io::IOBuffer, tree::T, n::Int64, nf::Int64) where {T <: uTf}
+    _nw_buffer(io. ::IOBuffer, 
+               tree::T, 
+               n   ::Int64, 
+               nf  ::Int64, 
+               ic  ::Bool) where {T <: uTf}
 
 Writes a fossil tree `uTf` to IOBuffer `io`.
 """
-function _nw_buffer(io::IOBuffer, tree::T, n::Int64, nf::Int64) where {T <: uTf}
+function _nw_buffer(io  ::IOBuffer, 
+                    tree::T, 
+                    n   ::Int64, 
+                    nf  ::Int64, 
+                    ic  ::Bool) where {T <: uTf}
 
   if def1(tree)
     write(io, '(')
-    n, nf = _nw_buffer(io, tree.d1, n, nf)
+    n, nf = _nw_buffer(io, tree.d1, n, nf, false)
 
     if def2(tree)
       write(io, ',')
-      n, nf = _nw_buffer(io, tree.d2, n, nf)
+      n, nf = _nw_buffer(io, tree.d2, n, nf,  false)
       write(io, ')')
-      if !iszero(e(tree))
-        print(io, ':', e(tree))
-      end
+      !ic && print(io, ':', e(tree))
     else
       nf += 1
       print(io, ")f", nf, ':', e(tree))
@@ -493,26 +499,25 @@ end
 
 Writes a labelled tree `Tlabel` to IOBuffer `io`.
 """
-nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel} = _nw_buffer(io, tree)
+nw_buffer(io::IOBuffer, tree::T, ic::Bool) where {T <: Tlabel} = 
+  _nw_buffer(io, tree, ic)
 
 """
     _nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel}
 
 Writes a labelled tree `Tlabel` to IOBuffer `io`.
 """
-function _nw_buffer(io::IOBuffer, tree::T) where {T <: Tlabel}
+function _nw_buffer(io::IOBuffer, tree::T, ic::Bool) where {T <: Tlabel}
 
   if def1(tree)
     write(io, '(')
-    _nw_buffer(io, tree.d1)
+    _nw_buffer(io, tree.d1, false)
 
     if def2(tree)
       write(io, ',')
-      _nw_buffer(io, tree.d2)
+      _nw_buffer(io, tree.d2, false)
       write(io, ')')
-      if !iszero(e(tree))
-        print(io, ':', e(tree))
-      end
+      !ic && print(io, ':', e(tree))
     else
       print(io, ")", l(tree), ':', e(tree))
     end
