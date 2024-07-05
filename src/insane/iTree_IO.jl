@@ -530,6 +530,169 @@ end
 
 
 """
+    write_nexus(tree::T, reftree::sT_label, ofile::String) where {T <: iTree}
+
+Writes an `iTree` as a extensive nexus tree to `ofile`.
+"""
+function write_nexus(tree::T, reftree::sT_label, ofile::String) where {T <: iTree}
+
+  io = IOBuffer()
+  write(io, "#NEXUS\n\nBegin trees;\ntree 1 = ")
+  ic = iszero(e(tree))
+  !ic && write(io, '(')
+  nx_buffer(io, tree, reftree, ic)
+  !ic && write(io, ')')
+  write(io, ";\nEnd;")
+
+  write(ofile*".nex", take!(io))
+
+  return nothing
+end
+
+
+
+
+"""
+    write_nexus(treev::Vector{T}, reftree::sT_label, ofile::String) where {T <: iTree}
+
+Writes an `iTree` as a extensive nexus tree to `ofile`.
+"""
+function write_nexus(treev::Vector{T}, reftree::sT_label, ofile::String) where {T <: iT}
+
+  to = open(ofile*".nex", "w")
+  io = IOBuffer()
+  write(io, "#NEXUS\n\nBegin trees;\n")
+
+  for (i,t) in enumerate(treev)
+    print(io, "tree ", i, " = ")
+    ic = iszero(e(t))
+    !ic && write(io, '(')
+    nx_buffer(io, t, reftree, ic)
+    !ic && write(io, ')')
+    write(io, ';', '\n')
+  end
+
+  write(io, "End;")
+  write(to, take!(io))
+  close(to)
+
+  return nothing
+end
+
+
+
+"""
+    nx_buffer(io::IOBuffer, tree::T) where {T <: iTree})
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+nx_buffer(io::IOBuffer, tree::T, reftree::sT_label, ic::Bool) where {T <: iT} = 
+  _nx_buffer(io, tree, reftree, 0, ic)
+
+"""
+    _nx_buffer(io     ::IOBuffer, 
+               tree   ::T, 
+               reftree::sT_label, 
+               n      ::Int64, 
+               ic     ::Bool) where {T <: iT}
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+function _nx_buffer(io     ::IOBuffer, 
+                    tree   ::T, 
+                    reftree::sT_label, 
+                    n      ::Int64, 
+                    ic     ::Bool) where {T <: iT}
+
+  if def1(tree)
+    write(io, '(')
+    if isfix(tree.d1) && isfix(tree.d2)
+      n = _nx_buffer(io, tree.d1, reftree.d1, n, false)
+      write(io, ',')
+      n = _nx_buffer(io, tree.d2, reftree.d2, n, false)
+    else
+      n = _nx_buffer(io, tree.d1, reftree, n, false)
+      write(io, ',')
+      n = _nx_buffer(io, tree.d2, reftree, n, false)
+    end
+    write(io, ")[&sr=")
+    nx_printv(io, lλ(tree))
+    print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ",da=", !isfix(tree), ']')
+    !ic && print(io, ':', e(tree))
+  else
+    if isfix(tree)
+      print(io, l(reftree))
+    else
+      n += 1
+      print(io, 't', n)
+    end
+    write(io, "[&sr=")
+    nx_printv(io, lλ(tree))
+    print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ",da=", !isfix(tree), ']', 
+      ':', e(tree))
+  end
+
+  return n
+end
+
+
+
+"""
+    nx_printv(io::IOBuffer, x::Vector{Float64}) 
+
+Print vector for nexus format
+"""
+function nx_printv(io::IOBuffer, x::Vector{Float64}) 
+  write(io, '{')
+  for xi in x
+    print(io, xi, ',')
+  end
+  write(io, '}')
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
     nsignif(x::String)
 
 Return the number of significant digits in `x`, a string representing a number.

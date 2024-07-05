@@ -33,7 +33,7 @@ export esse, simulate_sse, save_esse_sim
 using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe
 
-using .INSANE: read_newick, write_newick, iread, iwrite,
+using .INSANE: read_newick, write_newick, write_nexus, iread, iwrite,
   sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_cfbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, 
@@ -47,7 +47,7 @@ using .INSANE: read_newick, write_newick, iread, iwrite,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
   trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, tiplabels, 
   time_rate, make_idf
-export read_newick, write_newick, iread, iwrite,
+export read_newick, write_newick, write_nexus, iread, iwrite,
   sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTbdX, iTfbd, iTfbdX,
   iTgbmpb, iTgbmce, iTgbmct, iTgbmbd,
   sim_cpb, sim_cbd, sim_cfbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, 
