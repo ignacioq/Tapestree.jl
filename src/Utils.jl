@@ -26,6 +26,6 @@ export rtree, read_tree, make_ape_tree, maketriads, abs_time_branches,
   absaddupt, mulupt, makescalef, globalscalef, adaptiveupd!, makestepsize,
   makemvnproposal, randinvgamma, randgamma, logdinvgamma, llrdinvgamma,
   logdgamma, llrdgamma, logdtnorm, llrdtnorm_x, fIrand, sample,
-  run_newton, update_jacobian, rowind, colind, vecind
+  run_newton, update_jacobian, rowind, colind, vecind, idxlessthan
 
 end # module Utils
