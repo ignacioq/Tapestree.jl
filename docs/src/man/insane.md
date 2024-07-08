@@ -2,8 +2,7 @@
 
 ## Reference
 
-Quintero, I., Lartillot, N., Morlon, H. (2024). Imbalanced speciation pulses sustain the radiation of mammals. Science. DOI: 10.1126/science.adj2793
-
+Quintero, I., Lartillot, N., Morlon, H. (2024). Imbalanced speciation pulses sustain the radiation of mammals. Science, 384: 1007-1012. DOI: 10.1126/science.adj2793
 
 ## Insane Bayesian data augmentation
 
@@ -64,6 +63,11 @@ Similarly, it can also write trees using `write_newick`
 write_newick(tree, "<directory>")
 ```
 
+Note that only `*_label` trees (_e.g._, sT_label) have labels. So if you want to save a DA tree with the original tip labels plus new names to the data augmented trees, you first will have to create a labelled tree from the DA tree and the loaded labelled tree and then save it:
+```julia
+write_newick(sT_label(DA_tree, tree), "<directory>")
+```
+
 ### Reading and saving model output
 
 All models can return and/or save the output by writing directly to a file on the fly and within the Julia session when the model finishes. There are two outputs:
@@ -73,7 +77,16 @@ All models can return and/or save the output by writing directly to a file on th
 
 The DA trees written in the insane-specific `.txt` file can be read using the `iread()` function, which only needs the specific file directory as input, but also accepts an optional (keyword) argument `ix` that indicates the specific tree iterations to read, as an `OrdinalRange` object. For instance, to read only the first ``50`` trees, one can use `iread("<directory to txt>", ix = 1:50`. To read only the trees every ``10`` iterations from the ``100`` to ``400`` sampled, one can use `ix = 100:10:400`, and so on. This can be helpful to avoid high computation costs of reading very large files.
 
-Similarly, you can save any individual or vector of insane trees using the `iwrite()` function: `iwrite(trees, "<directory to txt>")`.
+You can save any individual or vector of insane trees using the `iwrite()` function: `iwrite(trees, "<directory>")`, which can be read by `Tapestree`. For portability, you can also save the DA trees as nexus files where nodes have been annotated with the vector of rates using `write_nexus(trees, tree, "<directory>")`, where trees is the tree vector and tree is the original labelled tree (_i.e._, the one you used as input into an insane model).
+
+Full documentation
+```@docs
+read_newick
+write_newick
+iread
+iwrite
+write_nexus
+```
 
 
 ## Insane models

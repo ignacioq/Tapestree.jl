@@ -1,6 +1,6 @@
 # Tapestree.jl
 
-**Unravelling the evolutionary tapestry**:
+**Unraveling the evolutionary tapestry**:
 [Tapestree] (https://github.com/ignacioq/Tapestree.jl) is a 
 [Julia](http://julialang.org) package of phylogenetic analyses of 
 diversification, trait and biogeographic dynamics.
@@ -10,7 +10,7 @@ diversification, trait and biogeographic dynamics.
 
 Tapestree currently holds the following phylogenetic models:
 
-  1. "Birth-Death Diffusion" (BDD): which implements speciation rates following a geometric Brownian motion with no extinction, constant extinction, constant turnover or extinction diffusion as described in Quintero, I., Lartillot, N., & Morlon, H. (2024). "Imbalanced speciation pulses sustain the radiation of mammals". Science. 10.1126/science.adj2793
+  1. "Birth-Death Diffusion" (BDD): which implements speciation rates following a geometric Brownian motion with no extinction, constant extinction, constant turnover or extinction diffusion as described in Quintero, I., Lartillot, N., & Morlon, H. (2024). "Imbalanced speciation pulses sustain the radiation of mammals". Science, 384, 1007-1012. [https://doi.org/10.1126/science.adj2793](https://doi.org/10.1126/science.adj2793)
 
   2. "Trait and Range Interspecific Biogeographic Evolution" (TRIBE): which implements a joint model of trait evolution and biogeographic history as described in Quintero, I., & Landis, M. J. (2020). Interdependent phenotypic and biogeographic evolution driven by biotic interactions. Systematic biology, 69(4), 739-755. [https://doi.org/10.1093/sysbio/syz082](https://doi.org/10.1093/sysbio/syz082)
 
