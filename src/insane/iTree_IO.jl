@@ -534,7 +534,7 @@ end
 
 Writes an `iTree` as a extensive nexus tree to `ofile`.
 """
-function write_nexus(tree::T, reftree::sT_label, ofile::String) where {T <: iTree}
+function write_nexus(tree::T, reftree::Tl, ofile::String) where {T <: iTree, Tl <: Tlabel}
 
   io = IOBuffer()
   write(io, "#NEXUS\n\nBegin trees;\ntree 1 = ")
@@ -557,7 +557,7 @@ end
 
 Writes an `iTree` as a extensive nexus tree to `ofile`.
 """
-function write_nexus(treev::Vector{T}, reftree::sT_label, ofile::String) where {T <: iT}
+function write_nexus(treev::Vector{T}, reftree::Tl, ofile::String) where {T <: iTree, Tl <: Tlabel}
 
   to = open(ofile*".nex", "w")
   io = IOBuffer()
@@ -581,12 +581,13 @@ end
 
 
 
+
 """
     nx_buffer(io::IOBuffer, tree::T) where {T <: iTree})
 
 Writes an `iTree` to IOBuffer `io`.
 """
-nx_buffer(io::IOBuffer, tree::T, reftree::sT_label, ic::Bool) where {T <: iT} = 
+nx_buffer(io::IOBuffer, tree::T, reftree::Tl, ic::Bool) where {T <: iTree, Tl <: Tlabel} = 
   _nx_buffer(io, tree, reftree, 0, ic)
 
 """
@@ -637,6 +638,144 @@ end
 
 
 
+
+"""
+    _nx_buffer(io     ::IOBuffer, 
+               tree   ::iTbd, 
+               reftree::sT_label, 
+               n      ::Int64, 
+               ic     ::Bool)
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+function _nx_buffer(io     ::IOBuffer, 
+                    tree   ::iTbd, 
+                    reftree::sT_label, 
+                    n      ::Int64, 
+                    ic     ::Bool)
+
+  if def1(tree)
+    write(io, '(')
+    if isfix(tree.d1) && isfix(tree.d2)
+      n = _nx_buffer(io, tree.d1, reftree.d1, n, false)
+      write(io, ',')
+      n = _nx_buffer(io, tree.d2, reftree.d2, n, false)
+    else
+      n = _nx_buffer(io, tree.d1, reftree, n, false)
+      write(io, ',')
+      n = _nx_buffer(io, tree.d2, reftree, n, false)
+    end
+    write(io, ")[&sr=")
+    nx_printv(io, lλ(tree))
+    write(io, ",er=")
+    nx_printv(io, lμ(tree))
+    print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ",da=", !isfix(tree), ']')
+    !ic && print(io, ':', e(tree))
+  else
+    if isfix(tree)
+      print(io, l(reftree))
+    else
+      n += 1
+      print(io, 't', n)
+    end
+    write(io, "[&sr=")
+    nx_printv(io, lλ(tree))
+    write(io, ",er=")
+    nx_printv(io, lμ(tree))
+    print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ",da=", !isfix(tree), ']', 
+      ':', e(tree))
+  end
+
+  return n
+end
+
+
+
+
+"""
+    nx_buffer(io::IOBuffer, tree::iTfbd, reftree::sTf_label, ic::Bool)
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+nx_buffer(io::IOBuffer, tree::iTfbd, reftree::sTf_label, ic::Bool) = 
+  _nx_buffer(io, tree, reftree, 0, 0, ic)
+
+"""
+    _nx_buffer(io     ::IOBuffer, 
+               tree   ::iTfbd, 
+               reftree::sTf_label, 
+               n      ::Int64, 
+               ic     ::Bool)
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+function _nx_buffer(io     ::IOBuffer, 
+                    tree   ::iTfbd, 
+                    reftree::sTf_label, 
+                    n      ::Int64, 
+                    nf     ::Int64, 
+                    ic     ::Bool)
+
+  if def1(tree)
+    write(io, '(')
+    if def2(tree)
+      if isfix(tree.d1) && isfix(tree.d2)
+        n, nf = _nx_buffer(io, tree.d1, reftree.d1, n, nf, false)
+        write(io, ',')
+        n, nf = _nx_buffer(io, tree.d2, reftree.d2, n, nf, false)
+      else
+        n, nf = _nx_buffer(io, tree.d1, reftree, n, nf, false)
+        write(io, ',')
+        n, nf = _nx_buffer(io, tree.d2, reftree, n, nf, false)
+      end
+      write(io, ")[&sr=")
+      nx_printv(io, lλ(tree))
+      write(io, ",er=")
+      nx_printv(io, lμ(tree))
+      print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ",da=", !isfix(tree), ']')
+      !ic && print(io, ':', e(tree))
+    else
+      if isfix(tree.d1)
+        n, nf = _nx_buffer(io, tree.d1, reftree.d1, n, nf, false)
+      else
+        n, nf = _nx_buffer(io, tree.d1, reftree, n, nf, false)
+      end
+      write(io, ')')
+      if isfix(tree)
+        print(io, l(reftree))
+      else
+        nf += 1
+        print(io, 'f', nf)
+      end
+      write(io, "[&sr=")
+      nx_printv(io, lλ(tree))
+      write(io, ",er=")
+      nx_printv(io, lμ(tree))
+      print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ",da=", !isfix(tree), 
+        "]:", e(tree))
+    end
+
+  else
+    if isfix(tree)
+      print(io, l(reftree))
+    else
+      n += 1
+      print(io, 't', n)
+    end
+    write(io, "[&sr=")
+    nx_printv(io, lλ(tree))
+    write(io, ",er=")
+    nx_printv(io, lμ(tree))
+    print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ",da=", !isfix(tree), ']', 
+      ':', e(tree))
+  end
+
+  return n, nf
+end
+
+
+
+
 """
     nx_printv(io::IOBuffer, x::Vector{Float64}) 
 
@@ -649,45 +788,6 @@ function nx_printv(io::IOBuffer, x::Vector{Float64})
   end
   write(io, '}')
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

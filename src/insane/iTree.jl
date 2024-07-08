@@ -231,12 +231,11 @@ Copies a tree to `sTf_label`
 function sTf_label(tree::sTf_label)
 
   if def1(tree)
-    if def2(tree)
       t1   = sTf_label(tree.d1)
+    if def2(tree)
       t2   = sTf_label(tree.d2)
       tree = sTf_label(t1, t2, e(tree), l(tree))
     else
-      t1   = sTf_label(tree.d1)
       tree = sTf_label(t1, e(tree), l(tree))
     end
   else
@@ -254,10 +253,8 @@ end
 Demotes a tree to `sTf_label`.
 """
 function sTf_label(tree::T) where {T <: iTree}
-  _sTf_label(tree::T, 0)[1]
+  _sTf_label(tree::T, 0, 0)[1]
 end
-
-
 
 
 
@@ -266,25 +263,75 @@ end
 
 Demotes a tree to `sTf_label`, initialized with label i.
 """
-function _sTf_label(tree::T, i::Int64) where {T <: iTree}
+function _sTf_label(tree::T, n::Int64, nf::Int64) where {T <: iTree}
+
+  if def1(tree)
+    t1, n, nf = _sTf_label(tree.d1, n, nf)
+    if def2(tree)
+      t2, n, nf = _sTf_label(tree.d2, n, nf)
+      tree  = sTf_label(t1, t2, e(tree), "")
+    else
+      nf += 1
+      tree = sTf_label(t1, e(tree), string("f",nf))
+    end
+  else
+    n += 1
+    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), string("t",n))
+  end
+
+  return tree, n, nf
+end
+
+
+
+
+"""
+    sTf_label(tree::T) where {T <: iTree}
+
+Demotes a tree to `sTf_label`.
+"""
+function sTf_label(tree::T, reftree::sTf_label) where {T <: iTree}
+  _sTf_label(tree::T, reftree, 0, 0)[1]
+end
+
+"""
+    _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <: iTree}
+
+Demotes a `tree` to `sTf_label` but retains the labels from `reftree`.
+"""
+function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <: iTree}
 
   if def1(tree)
     if def2(tree)
-      t1, i = _sTf_label(tree.d1, i)
-      t2, i = _sTf_label(tree.d2, i)
-      tree  = sTf_label(t1, t2, e(tree), string("t",i))
+      if isfix(tree.d1) && isfix(tree.d2)
+        t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
+        t2, n, nf = _sTf_label(tree.d2, reftree.d2, n, nf)
+        tree  = sTf_label(t1, t2, e(tree), l(reftree))
+      else
+        t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
+        t2, n, nf = _sTf_label(tree.d2, reftree, n, nf)
+        tree  = sTf_label(t1, t2, e(tree), "")
+      end
     else
-      t1, i = _sTf_label(tree.d1, i)
-      tree = sTf_label(t1, e(tree), string("t",i))
+      if isfix(tree.d1)
+        t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
+        tree = sTf_label(t1, e(tree), l(reftree))
+      else
+        nf += 1
+        t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
+        tree = sTf_label(t1, e(tree), string("f", nf))
+      end
     end
   else
-    i += 1
-    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), string("t",i))
+    if isfix(tree)
+      tree = sTf_label(e(tree), l(reftree))
+    else
+      n += 1
+      tree = sTf_label(e(tree), string("t", n))
+    end
   end
-
-  return tree, i
+  return tree, n, nf
 end
-
 
 
 
