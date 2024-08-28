@@ -24,12 +24,12 @@ Simulate a diffused Brownian motion given starting values.
 """
 function sim_dbm(tree::iTree, 
                  x0  ::Float64,
-                 σ0  ::Float64,
+                 σ20  ::Float64,
                  α   ::Float64,
                  γ   ::Float64,
                  δt  ::Float64)
 
-  _sim_dbm(tree, x0, log(σ0), α, γ, δt, sqrt(δt))
+  _sim_dbm(tree, x0, log(σ20), α, γ, δt, sqrt(δt))
 end
 
 

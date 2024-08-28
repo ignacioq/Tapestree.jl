@@ -14,7 +14,7 @@ Created 26 01 2024
 
 """
     function dbm(xa  ::Float64,
-                 σa  ::Float64,
+                 lσ2a::Float64,
                  α   ::Float64,
                  γ   ::Float64,
                  δt  ::Float64,
@@ -22,11 +22,11 @@ Created 26 01 2024
                  srδt::Float64,
                  n   ::Int64)
 
-Returns a diffused Brownian motion vectors starting with rates `σa` and 
-trait `xa`.
+Returns a diffused Brownian motion vectors starting with rates 
+`lσ2a` (`ln(σ²(t))`) and trait `xa`. 
 """
 @inline function dbm(xa  ::Float64,
-                     σa  ::Float64,
+                     lσ2a::Float64,
                      α   ::Float64,
                      γ   ::Float64,
                      δt  ::Float64,
@@ -34,30 +34,30 @@ trait `xa`.
                      srδt::Float64,
                      n   ::Int64)
   @inbounds begin
-    l = n + 2
-    x = randn(l)
-    σ = randn(l)
+    l   = n + 2
+    x   = randn(l)
+    lσ2 = randn(l)
 
     # rates
-    σ[1] = σa
+    lσ2[1] = lσ2a
     @turbo for i in Base.OneTo(n)
-      σ[i+1] *= srδt*γ
-      σ[i+1] += α*δt
+      lσ2[i+1] *= srδt*γ
+      lσ2[i+1] += α*δt
     end
-    σ[l] *= sqrt(fdt)*γ
-    σ[l] += α*fdt
-    cumsum!(σ, σ)
+    lσ2[l] *= sqrt(fdt)*γ
+    lσ2[l] += α*fdt
+    cumsum!(lσ2, lσ2)
 
     # values
     x[1] = xa
     @turbo for i in Base.OneTo(n)
-      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+      x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
     end
-    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+    x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
     cumsum!(x, x)
   end
 
-  return x, σ
+  return x, lσ2
 end
 
 
@@ -66,21 +66,21 @@ end
 """
     dbm!(x   ::Vector{Float64},
          xa  ::Float64,
-         σ   ::Vector{Float64},
-         σa  ::Float64,
+         lσ2 ::Vector{Float64},
+         lσ2a::Float64,
          α   ::Float64,
          γ   ::Float64,
          δt  ::Float64
          fdt ::Float64,
          srδt::Float64)
 
-Returns a diffused Brownian motion in place starting with rates `σa` and 
+Returns a diffused Brownian motion in place starting with rates `lσ2a` and 
 trait `xa`.
 """
 @inline function dbm!(x   ::Vector{Float64},
                       xa  ::Float64,
-                      σ   ::Vector{Float64},
-                      σa  ::Float64,
+                      lσ2 ::Vector{Float64},
+                      lσ2a::Float64,
                       α   ::Float64,
                       γ   ::Float64,
                       δt  ::Float64,
@@ -90,24 +90,24 @@ trait `xa`.
   @inbounds begin
     l = lastindex(x)
     randn!(x)
-    randn!(σ)
+    randn!(lσ2)
 
     # rates
-    σ[1] = σa
+    lσ2[1] = lσ2a
     @turbo for i in Base.OneTo(l-2)
-      σ[i+1] *= srδt*γ
-      σ[i+1] += α*δt
+      lσ2[i+1] *= srδt*γ
+      lσ2[i+1] += α*δt
     end
-    σ[l] *= sqrt(fdt)*γ
-    σ[l] += α*fdt
-    cumsum!(σ, σ)
+    lσ2[l] *= sqrt(fdt)*γ
+    lσ2[l] += α*fdt
+    cumsum!(lσ2, lσ2)
 
     # values
     x[1] = xa
     @turbo for i in Base.OneTo(l-2)
-      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+      x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
     end
-    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+    x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
     cumsum!(x, x)
   end
 
@@ -120,16 +120,16 @@ end
 """
     dbm!(x   ::Vector{Float64},
          xa  ::Float64,
-         σ   ::Vector{Float64},
+         lσ2 ::Vector{Float64},
          fdt ::Float64,
          srδt::Float64)
 
-Returns a diffused Brownian motion in place conditional on rate path `σ` and 
+Returns a diffused Brownian motion in place conditional on rate path `lσ2` and 
 initial trait `xa`.
 """
 @inline function dbm!(x   ::Vector{Float64},
                       xa  ::Float64,
-                      σ   ::Vector{Float64},
+                      lσ2 ::Vector{Float64},
                       fdt ::Float64,
                       srδt::Float64)
 
@@ -139,9 +139,9 @@ initial trait `xa`.
     # values
     x[1] = xa
     @turbo for i in Base.OneTo(l-2)
-      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+      x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
     end
-    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+    x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
     cumsum!(x, x)
   end
 
@@ -153,27 +153,27 @@ end
 
 """
     dbm(xa  ::Float64,
-        σ   ::Vector{Float64},
+        lσ2 ::Vector{Float64},
         fdt ::Float64,
         srδt::Float64)
 
-Returns a diffused Brownian motion conditional on rate path `σ` and 
+Returns a diffused Brownian motion conditional on rate path `lσ2` and 
 initial trait `xa`.
 """
 @inline function dbm(xa  ::Float64,
-                     σ   ::Vector{Float64},
+                     lσ2 ::Vector{Float64},
                      fdt ::Float64,
                      srδt::Float64)
 
   @inbounds begin
-    l = lastindex(σ)
+    l = lastindex(lσ2)
     x = randn(l)
     # values
     x[1] = xa
     @turbo for i in Base.OneTo(l-2)
-      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+      x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
     end
-    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+    x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
     cumsum!(x, x)
   end
 
@@ -186,8 +186,8 @@ end
 """
     dbb(xi  ::Float64,
         xf  ::Float64,
-        σi  ::Float64,
-        σf  ::Float64,
+        lσ2i::Float64,
+        lσ2f::Float64,
         γ   ::Float64,
         δt  ::Float64,
         fdt ::Float64,
@@ -198,8 +198,8 @@ Diffused Brownian bridge simulation.
 """
 @inline function dbb(xi  ::Float64,
                      xf  ::Float64,
-                     σi  ::Float64,
-                     σf  ::Float64,
+                     lσ2i::Float64,
+                     lσ2f::Float64,
                      γ   ::Float64,
                      δt  ::Float64,
                      fdt ::Float64,
@@ -207,32 +207,32 @@ Diffused Brownian bridge simulation.
                      n   ::Int64)
 
   @inbounds begin
-    l = n + 2
-    σ = randn(l)
-    x = randn(l)
-    σ[1] = σi
-    x[1] = xi
+    l      = n + 2
+    lσ2    = randn(l)
+    x      = randn(l)
+    lσ2[1] = lσ2i
+    x[1]   = xi
     if l > 2
       # rates
       for i in Base.OneTo(n)
-        σ[i+1] *= srδt*γ
-        σ[i+1] += σ[i]
+        lσ2[i+1] *= srδt*γ
+        lσ2[i+1] += lσ2[i]
       end
-      σ[l] *= sqrt(fdt)*γ
-      σ[l] += σ[l-1]
+      lσ2[l] *= sqrt(fdt)*γ
+      lσ2[l] += lσ2[l-1]
 
       # make rates bridge
       ite = 1.0/(Float64(n) * δt + fdt)
-      σdf = (σ[l] - σf)
+      lσ2df = (lσ2[l] - lσ2f)
       @turbo for i = Base.OneTo(l-1)
-        σ[i] -= (Float64(i-1) * δt * ite * σdf)
+        lσ2[i] -= (Float64(i-1) * δt * ite * lσ2df)
       end
 
       # values
       @turbo for i = Base.OneTo(n)
-        x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+        x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
       end
-      x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+      x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
       cumsum!(x, x)
 
       # make bridge
@@ -242,11 +242,11 @@ Diffused Brownian bridge simulation.
       end
     end
 
-    σ[l] = σf
-    x[l] = xf
+    lσ2[l] = lσ2f
+    x[l]   = xf
   end
 
-  return x, σ
+  return x, lσ2
 end
 
 
@@ -256,9 +256,9 @@ end
     dbb!(x   ::Vector{Float64},
          xi  ::Float64,
          xf  ::Float64,
-         σ   ::Vector{Float64},
-         σi  ::Float64,
-         σf  ::Float64,
+         lσ2 ::Vector{Float64},
+         lσ2i::Float64,
+         lσ2f::Float64,
          γ   ::Float64,
          δt  ::Float64,
          fdt ::Float64,
@@ -269,9 +269,9 @@ Diffused Brownian bridge simulation.
 @inline function dbb!(x   ::Vector{Float64},
                       xi  ::Float64,
                       xf  ::Float64,
-                      σ   ::Vector{Float64},
-                      σi  ::Float64,
-                      σf  ::Float64,
+                      lσ2 ::Vector{Float64},
+                      lσ2i::Float64,
+                      lσ2f::Float64,
                       γ   ::Float64,
                       δt  ::Float64,
                       fdt ::Float64,
@@ -279,32 +279,32 @@ Diffused Brownian bridge simulation.
 
   @inbounds begin
     l = lastindex(x)
-    randn!(σ)
+    randn!(lσ2)
     randn!(x)
-    σ[1] = σi
-    x[1] = xi
+    lσ2[1] = lσ2i
+    x[1]   = xi
 
     if l > 2
       # rates
       for i in Base.OneTo(l-2)
-        σ[i+1] *= srδt*γ
-        σ[i+1] += σ[i]
+        lσ2[i+1] *= srδt*γ
+        lσ2[i+1] += lσ2[i]
       end
-      σ[l] *= sqrt(fdt)*γ
-      σ[l] += σ[l-1]
+      lσ2[l] *= sqrt(fdt)*γ
+      lσ2[l] += lσ2[l-1]
 
       # make rates bridge
       ite = 1.0/(Float64(l-2) * δt + fdt)
-      σdf = (σ[l] - σf)
+      lσ2df = (lσ2[l] - lσ2f)
       @turbo for i = Base.OneTo(l-1)
-        σ[i] -= (Float64(i-1) * δt * ite * σdf)
+        lσ2[i] -= (Float64(i-1) * δt * ite * lσ2df)
       end
 
       # values
       @turbo for i = Base.OneTo(l-2)
-        x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+        x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
       end
-      x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+      x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
       cumsum!(x, x)
 
       # make values bridge
@@ -314,8 +314,8 @@ Diffused Brownian bridge simulation.
       end
     end
 
-    σ[l] = σf
-    x[l] = xf
+    lσ2[l] = lσ2f
+    x[l]   = xf
   end
 end
 
@@ -325,17 +325,17 @@ end
     dbb!(x   ::Vector{Float64},
          xi  ::Float64,
          xf  ::Float64,
-         σ   ::Vector{Float64},
+         lσ2 ::Vector{Float64},
          δt  ::Float64,
          fdt ::Float64,
          srδt::Float64)
 
-Diffused Brownian bridge simulation conditional on a rate path `σ`.
+Diffused Brownian bridge simulation conditional on a rate path `lσ2`.
 """
 @inline function dbb!(x   ::Vector{Float64},
                       xi  ::Float64,
                       xf  ::Float64,
-                      σ   ::Vector{Float64},
+                      lσ2 ::Vector{Float64},
                       δt  ::Float64,
                       fdt ::Float64,
                       srδt::Float64)
@@ -347,9 +347,9 @@ Diffused Brownian bridge simulation conditional on a rate path `σ`.
     # values
     x[1] = xi
     @turbo for i = Base.OneTo(l-2)
-      x[i+1] *= srδt*exp(0.5*(σ[i] + σ[i+1]))
+      x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
     end
-    x[l] *= sqrt(fdt)*exp(0.5*(σ[l-1] + σ[l]))
+    x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
     cumsum!(x, x)
 
     # make values bridge
@@ -365,76 +365,73 @@ end
 
 
 
-
 """
-    duoprop(x1::Float64,
-            x2::Float64,
-            σ1::Float64,
-            σ2::Float64)
+    duoprop(x1 ::Float64,
+            x2 ::Float64,
+            σ21::Float64,
+            σ22::Float64)
 
 Proposal for a duo of Gaussians.
 """
-function duoprop(x1::Float64,
-                 x2::Float64,
-                 σ1::Float64,
-                 σ2::Float64)
+function duoprop(x1 ::Float64,
+                 x2 ::Float64,
+                 σ21::Float64,
+                 σ22::Float64)
 
-  iσ = 1.0/(σ1^2 + σ2^2)
-  return rnorm((x1*σ2^2 + x2*σ1^2) * iσ, 
-                σ1*σ2*sqrt(iσ))
+  iσ2 = 1.0/(σ21 + σ22)
+  return rnorm((x1*σ22 + x2*σ21) * iσ, 
+                σ21*σ22*sqrt(iσ2))
 end
 
 
 
 
 """
-    trioprop(xpr::Float64,
-             xd1::Float64,
-             xd2::Float64,
-             σpr::Float64,
-             σd1::Float64,
-             σd2::Float64)
+    trioprop(xp ::Float64,
+             x1 ::Float64,
+             x2 ::Float64,
+             σ2p::Float64,
+             σ21::Float64,
+             σ22::Float64)
 
 Proposal for a trio of Gaussians.
 """
-function trioprop(xpr::Float64,
-                  xd1::Float64,
-                  xd2::Float64,
-                  σpr::Float64,
-                  σd1::Float64,
-                  σd2::Float64)
+function trioprop(xp ::Float64,
+                  x1 ::Float64,
+                  x2 ::Float64,
+                  σ2p::Float64,
+                  σ21::Float64,
+                  σ22::Float64)
 
-  s = 1.0/(1.0/(σpr^2) + 1.0/(σd1^2) + 1.0/(σd2^2))
-  return rnorm((xpr/(σpr^2) + xd1/(σd1^2) + xd2/(σd2^2))*s,
-                sqrt(s))
+  s = 1.0/(1.0/σ2p + 1.0/σ21 + 1.0/σ22)
+  return rnorm((xpr/σ2p + xd1/σ21 + xd2/σ22)*s, sqrt(s))
 end
 
 
 
 
 """
-    intσ(σ  ::Vector{Float64},
-         δt ::Float64,
-         fdt::Float64)
+    intσ2(lσ2::Vector{Float64},
+          δt ::Float64,
+          fdt::Float64)
 
-Returns the integral for a vector of log-rates `σ`.
+Returns the integral for a vector of log-rates `lσ2`.
 """
-function intσ(σ  ::Vector{Float64},
-              δt ::Float64,
-              fdt::Float64)
+function intσ2(lσ2::Vector{Float64},
+               δt ::Float64,
+               fdt::Float64)
 
-  l = lastindex(σ)
+  l = lastindex(lσ2)
 
   ss = 0.0
   @turbo for i = Base.OneTo(l-2)
-    ss += exp(σ[i] + σ[i+1])
+    ss += exp(0.5*(lσ2[i] + lσ2[i+1]))
   end
   ss *= δt
-  ss += exp(σ[l-1] + σ[l]) * fdt
+  ss += exp(0.5*(lσ2[l-1] + lσ2[l])) * fdt
 
-  return sqrt(ss)
+  return ss
 end
-
 
 
 
