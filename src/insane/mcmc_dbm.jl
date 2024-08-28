@@ -186,7 +186,7 @@ function mcmc_burn_dbm(Ξ      ::Vector{sTxs},
 
     ltn += 1
     if ltn === 100
-      stn = tune(stn, lac/lup)
+      stn = max(0.001, tune(stn, lac/lup))
       ltn = 0
     end
 
