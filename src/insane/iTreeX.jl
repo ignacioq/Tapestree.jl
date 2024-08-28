@@ -228,7 +228,7 @@ end
     sTxs
 
 A composite recursive type of supertype `Tx`
-representing a binary phylogenetic tree with traits `xv` and their rates `lσ`
+representing a binary phylogenetic tree with traits `xv` and their rates `lσ2`
 with the following fields:
 
   d1:   daughter tree 1
@@ -237,7 +237,7 @@ with the following fields:
   dt:   choice of time lag
   fdt:  final `dt`
   xv:   array of a Brownian motion evolution of `X`.
-  lσ:   array of a Brownian motion evolution of `log(σ)`.
+  lσ2:  array of a Brownian motion evolution of `log(σ)`.
 
   sTxs(d1 ::sTxs,
        d2 ::sTxs,
@@ -245,7 +245,7 @@ with the following fields:
        dt ::Float64,
        fdt::Float64,
        xv ::Array{Float64,1},
-       lσ ::Array{Float64,1})
+       lσ2 ::Array{Float64,1})
 """
 mutable struct sTxs <: sT
   d1 ::sTxs
@@ -254,31 +254,31 @@ mutable struct sTxs <: sT
   dt ::Float64
   fdt::Float64
   xv ::Array{Float64,1}
-  lσ ::Array{Float64,1}
+  lσ2::Array{Float64,1}
 
   sTxs() = new()
   sTxs(e  ::Float64,
        dt ::Float64,
        fdt::Float64,
        xv ::Array{Float64,1},
-       lσ ::Array{Float64,1}) =
-    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.xv = xv; x.lσ = lσ; x)
+       lσ2::Array{Float64,1}) =
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.xv = xv; x.lσ2 = lσ2; x)
   sTxs(d1 ::sTxs,
        e  ::Float64,
        dt ::Float64,
        fdt::Float64,
        xv ::Array{Float64,1},
-       lσ ::Array{Float64,1}) =
+       lσ2::Array{Float64,1}) =
     (x = new(); 
-      x.d1 = d1; x.e = e; x.dt = dt; x.fdt = fdt; x.xv = xv; x.lσ = lσ; x)
+      x.d1 = d1; x.e = e; x.dt = dt; x.fdt = fdt; x.xv = xv; x.lσ2 = lσ2; x)
   sTxs(d1 ::sTxs,
        d2 ::sTxs,
        e  ::Float64,
        dt ::Float64,
        fdt::Float64,
        xv ::Array{Float64,1},
-       lσ ::Array{Float64,1}) =
-    new(d1, d2, e, dt, fdt, xv, lσ)
+       lσ2::Array{Float64,1}) =
+    new(d1, d2, e, dt, fdt, xv, lσ2)
 end
 
 # pretty-printing
@@ -297,13 +297,13 @@ function sTxs(tree::sTxs)
   if def1(tree)
     if def2(tree)
       sTxs(sTxs(tree.d1), sTxs(tree.d2),
-        e(tree), dt(tree), fdt(tree), copy(xv(tree)), copy(lσ(tree)))
+        e(tree), dt(tree), fdt(tree), copy(xv(tree)), copy(lσ2(tree)))
     else
       sTxs(sTxs(tree.d1),
-        e(tree), dt(tree), fdt(tree), copy(xv(tree)), copy(lσ(tree)))
+        e(tree), dt(tree), fdt(tree), copy(xv(tree)), copy(lσ2(tree)))
     end
   else
-    sTxs(e(tree), dt(tree), fdt(tree), copy(xv(tree)), copy(lσ(tree)))
+    sTxs(e(tree), dt(tree), fdt(tree), copy(xv(tree)), copy(lσ2(tree)))
   end
 end
 
@@ -326,7 +326,7 @@ with the following fields:
   fdt:  final `dt`
   lλ:   array of a Brownian motion evolution of `log(λ)`
   xv:   array of a Brownian motion evolution of `X`.
-  lσ:   array of a Brownian motion evolution of `log(σ)`.
+  lσ2:   array of a Brownian motion evolution of `log(σ)`.
 
   iTpbx(d1 ::iTpbx,
         d2 ::iTpbx,
@@ -336,7 +336,7 @@ with the following fields:
         fdt::Float64,
         lλ ::Array{Float64,1},
         xv ::Array{Float64,1},
-        lσ ::Array{Float64,1})
+        lσ2 ::Array{Float64,1})
 """
 mutable struct iTpbx <: iT
   d1 ::iTpbx
@@ -347,7 +347,7 @@ mutable struct iTpbx <: iT
   fx ::Bool
   lλ ::Array{Float64,1}
   xv ::Array{Float64,1}
-  lσ ::Array{Float64,1}
+  lσ2 ::Array{Float64,1}
 
   iTpbx() = new()
   iTpbx(e  ::Float64,
@@ -356,9 +356,9 @@ mutable struct iTpbx <: iT
         fdt::Float64,
         lλ ::Array{Float64,1},
         xv ::Array{Float64,1},
-        lσ ::Array{Float64,1}) =
+        lσ2 ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt;
-      x.fx = fx; x.lλ = lλ; x.xv = xv; lσ = x.lσ; x)
+      x.fx = fx; x.lλ = lλ; x.xv = xv; lσ2 = x.lσ2; x)
   iTpbx(d1 ::iTpbx,
         d2 ::iTpbx,
         e  ::Float64,
@@ -367,8 +367,8 @@ mutable struct iTpbx <: iT
         fdt::Float64,
         lλ ::Array{Float64,1},
         xv ::Array{Float64,1},
-        lσ ::Array{Float64,1}) =
-    new(d1, d2, e, dt, fdt, fx, lλ, xv, lσ)
+        lσ2 ::Array{Float64,1}) =
+    new(d1, d2, e, dt, fdt, fx, lλ, xv, lσ2)
 end
 
 # pretty-printing
@@ -387,10 +387,10 @@ function iTpbx(tree::iTpbx)
   if def1(tree)
     iTpbx(iTpbx(tree.d1), iTpbx(tree.d2),
       e(tree), isfix(tree), dt(tree), fdt(tree),
-      copy(lλ(tree)), copy(xv(tree)), copy(lσ(tree)))
+      copy(lλ(tree)), copy(xv(tree)), copy(lσ2(tree)))
   else
     iTpbx(e(tree), isfix(tree), dt(tree), fdt(tree),
-      copy(lλ(tree)), copy(xv(tree)), copy(lσ(tree)))
+      copy(lλ(tree)), copy(xv(tree)), copy(lσ2(tree)))
   end
 end
 
@@ -769,16 +769,3 @@ Txs = Union{sTxs}
 """
 Txs = Union{sTxs}
 
-
-#=
-Type aliases (for compatibility with older versions)
-=#
-
-
-const iTgbmpb = iTpb
-
-const iTgbmce = iTce
-
-const iTgbmct = iTct
-
-const iTgbmbd = iTbd

@@ -1017,7 +1017,7 @@ function imean(treev::Vector{sTxs})
   vsσ = Array{Float64,1}[]
   for t in treev
     push!(vsx, xv(t))
-    push!(vsσ, lσ(t))
+    push!(vsσ, lσ2(t))
   end
 
   svx = Float64[]

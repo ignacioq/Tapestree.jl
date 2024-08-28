@@ -142,7 +142,7 @@ function mcmc_burn_dbm(Ξ      ::Vector{sTxs},
   el  = lastindex(idf)     # number of edges
 
   # delta change, sum squares, path length in log-σ(t)
-  ddσ, ssσ, nσ = sss_v(Ξ, lσ, αc)
+  ddσ, ssσ, nσ = sss_v(Ξ, lσ2, αc)
 
   # for scale tuning
   ltn = 0
@@ -162,7 +162,7 @@ function mcmc_burn_dbm(Ξ      ::Vector{sTxs},
 
         prc, αc = update_α!(αc, γc, L, ddσ, ll, prc, α_prior)
 
-        _ss!(ssσ, Ξ, lσ, αc)
+        _ss!(ssσ, Ξ, lσ2, αc)
 
       # update rate diffusion `γ`
       elseif pupi === 2
@@ -263,7 +263,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tx_root\tsigma_root\talpha\tgamma\n")
+    write(of, "iteration\tlikelihood\tprior\tx_root\tsigma2_root\talpha\tgamma\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
@@ -282,7 +282,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
 
             prc, αc = update_α!(αc, γc, L, ddσ, ll, prc, α_prior)
 
-            _ss!(ssσ, Ξ, lσ, αc)
+            _ss!(ssσ, Ξ, lσ2, αc)
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll), atol = 1e-4)
@@ -335,7 +335,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             r[lit,2] = sum(ll)
             r[lit,3] = prc
             r[lit,4] = xv(Ξ[1])[1]
-            r[lit,5] = exp(lσ(Ξ[1])[1])
+            r[lit,5] = exp(lσ2(Ξ[1])[1])
             r[lit,6] = αc
             r[lit,7] = γc
             push!(treev, couple(Ξ, idf, 1))
@@ -348,7 +348,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
         if sthin === nflush
           write(of, 
             string(Float64(it), "\t", sum(ll), "\t", prc, "\t", 
-              xv(Ξ[1])[1],"\t", exp(lσ(Ξ[1])[1]), "\t", αc, "\t", γc, "\n"))
+              xv(Ξ[1])[1],"\t", exp(lσ2(Ξ[1])[1]), "\t", αc, "\t", γc, "\n"))
           flush(of)
           write(tf, 
             string(istring(couple(Ξ, idf, 1)), "\n"))
@@ -473,7 +473,7 @@ function update_scale!(Ξ   ::Vector{sTxs},
   acc = 0.0
   if -randexp() < sum(llr)
     acc += 1.0
-    scale_rate!(Ξ, lσ, s)
+    scale_rate!(Ξ, lσ2, s)
     @turbo for i in Base.OneTo(lastindex(ll))
       ll[i] += llr[i]
     end

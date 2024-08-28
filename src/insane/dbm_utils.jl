@@ -379,7 +379,7 @@ function duoprop(x1 ::Float64,
                  σ22::Float64)
 
   iσ2 = 1.0/(σ21 + σ22)
-  return rnorm((x1*σ22 + x2*σ21) * iσ, 
+  return rnorm((x1*σ22 + x2*σ21) * iσ2, 
                 σ21*σ22*sqrt(iσ2))
 end
 
@@ -404,7 +404,7 @@ function trioprop(xp ::Float64,
                   σ22::Float64)
 
   s = 1.0/(1.0/σ2p + 1.0/σ21 + 1.0/σ22)
-  return rnorm((xpr/σ2p + xd1/σ21 + xd2/σ22)*s, sqrt(s))
+  return rnorm((xp/σ2p + x1/σ21 + x2/σ22)*s, sqrt(s))
 end
 
 
@@ -432,6 +432,5 @@ function intσ2(lσ2::Vector{Float64},
 
   return ss
 end
-
 
 

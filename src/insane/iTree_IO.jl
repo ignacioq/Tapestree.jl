@@ -718,14 +718,14 @@ function _istring(tree::sTxs)
           dt(tree), ',',
           fdt(tree), ',',
           xv(tree), ',',
-          lσ(tree), ')')
+          lσ2(tree), ')')
     else
       return string('(', _istring(tree.d1), ',', 
           e(tree), ',', 
           dt(tree), ',',
           fdt(tree), ',',
           xv(tree), ',',
-          lσ(tree), ')')
+          lσ2(tree), ')')
     end
   else
     return string('(', 
@@ -733,7 +733,7 @@ function _istring(tree::sTxs)
           dt(tree), ',',
           fdt(tree), ',',
           xv(tree), ',',
-          lσ(tree), ')')
+          lσ2(tree), ')')
   end
 end
 

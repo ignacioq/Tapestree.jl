@@ -2145,11 +2145,11 @@ xv(tree::T) where {T <: Tx} = getproperty(tree, :xv)
 
 
 """
-    lσ(tree::T) where {T <: Tx}
+    lσ2(tree::T) where {T <: Tx}
 
 Return trait rate vector.
 """
-lσ(tree::T) where {T <: Txs} = getproperty(tree, :lσ)
+lσ2(tree::T) where {T <: Txs} = getproperty(tree, :lσ2)
 
 
 

@@ -590,7 +590,7 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
 
   if iszero(et)
     xv   = Float64[xii, xii]
-    lσ   = Float64[σi, σi]
+    lσ2  = Float64[σi, σi]
     fdti = 0.0
   else
     ntF, fdti = divrem(et, δt, RoundDown)
@@ -605,10 +605,10 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
       ntF  -= 1.0
     end
 
-    xv, lσ = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, Int64(ntF))
+    xv, lσ2 = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, Int64(ntF))
   end
 
-  push!(Ξ, sTxs(et, δt, fdti, xv, lσ))
+  push!(Ξ, sTxs(et, δt, fdti, xv, lσ2))
 
   if i1 > 0 
     if i2 > 0 
@@ -800,16 +800,16 @@ function couple(Ξ  ::Vector{sTxs},
       ξd1 = couple(Ξ, idf, i1)
 
       xvi = xv(ξit)
-      lσi = lσ(ξit)
+      lσ2i = lσ2(ξit)
       if iszero(e(ξit))
         empty!(xvi)
-        empty!(lσi) 
+        empty!(lσ2i) 
       else
         pop!(xvi)
-        pop!(lσi)
+        pop!(lσ2i)
       end
       append!(xvi, xv(ξd1))
-      append!(lσi, lσ(ξd1))
+      append!(lσ2i, lσ2(ξd1))
 
       adde!(ξit, e(ξd1))
       setfdt!(ξit, fdt(ξd1))
