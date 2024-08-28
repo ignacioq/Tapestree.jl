@@ -262,7 +262,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   dbm!(xc, xc[1], lσ2c, lσ2c[1], α, γ, δt, fdtp, srδt)
 
   # likelihood
-  ll, dd, ss = ll_dbm_ss_dd_b(xc, σc, α, γ, δt, fdtp)
+  ll, dd, ss = ll_dbm_ss_dd_b(xc, lσ2c, α, γ, δt, fdtp)
 
   return ll, dd, ss
 end
