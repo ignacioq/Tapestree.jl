@@ -226,7 +226,7 @@ function llr_dbm_σ(x   ::Array{Float64,1},
       lσ2ci1 = lσ2c[i+1]
       lσ2pi  = lσ2p[i]
       lσ2pi1 = lσ2p[i+1]
-      acr += -(0.5*(x[i+1] - x[i])^2/δt)*
+      acr += -(0.5*(x[i+1] - x[i])^2/δt) *
               (1.0/exp(0.5*(lσ2pi + lσ2pi1)) - 1.0/exp(0.5*(lσ2ci + lσ2ci1))) + 
                0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
     end

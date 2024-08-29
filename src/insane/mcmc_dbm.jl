@@ -13,42 +13,43 @@ Created 25 01 2024
 
 
 """
-    insane_dbm(tree   ::Tlabel,
-               xa     ::Dict{String, Float64};
-               xs     ::Dict{String, Float64} = Dict{String,Float64}(),
-               α_prior::NTuple{2,Float64}     = (0.0, 1.0),
-               γ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-               niter  ::Int64                 = 1_000,
-               nthin  ::Int64                 = 10,
-               nburn  ::Int64                 = 200,
-               nflush ::Int64                 = nthin,
-               ofile  ::String                = string(homedir(), "/dbm"),
-               αi     ::Float64               = 0.0,
-               γi     ::Float64               = 0.1,
-               pupdp  ::NTuple{4,Float64}     = (0.1, 0.1, 0.05, 0.9),
-               δt     ::Float64               = 1e-3,
-               stn    ::Float64               = 0.1,
-               prints ::Int64                 = 5)
+    insane_dbm(tree     ::Tlabel,
+               xa       ::Dict{String, Float64};
+               xs       ::Dict{String, Float64} = Dict{String,Float64}(),
+               α_prior  ::NTuple{2,Float64} = (0.0, 10.0),
+               γ_prior  ::NTuple{2,Float64} = (0.05, 0.05),
+               niter    ::Int64             = 1_000,
+               nthin    ::Int64             = 10,
+               nburn    ::Int64             = 200,
+               nflush   ::Int64             = nthin,
+               ofile    ::String            = string(homedir(), "/dbm"),
+               αi       ::Float64           = 0.0,
+               γi       ::Float64           = 1e-3,
+               pupdp    ::NTuple{4,Float64} = (0.1, 0.1, 0.05, 0.9),
+               δt       ::Float64           = 1e-3,
+               stn      ::Float64           = 0.1,
+               mxthf    ::Float64           = Inf,
+               prints   ::Int64             = 5)
 
 Run diffused Brownian motion trait evolution model.
 """
-function insane_dbm(tree   ::Tlabel,
-                    xa     ::Dict{String, Float64};
-                    xs     ::Dict{String, Float64} = Dict{String,Float64}(),
-                    α_prior::NTuple{2,Float64}     = (0.0, 10.0),
-                    γ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                    niter  ::Int64                 = 1_000,
-                    nthin  ::Int64                 = 10,
-                    nburn  ::Int64                 = 200,
-                    nflush ::Int64                 = nthin,
-                    ofile  ::String                = string(homedir(), "/dbm"),
-                    αi     ::Float64               = 0.0,
-                    γi     ::Float64               = 1e-3,
-                    pupdp  ::NTuple{4,Float64}     = (0.1, 0.1, 0.05, 0.9),
-                    δt     ::Float64               = 1e-3,
-                    stn    ::Float64               = 0.1,
-                    mxthf  ::Float64               = Inf,
-                    prints ::Int64                 = 5)
+function insane_dbm(tree     ::Tlabel,
+                    xa       ::Dict{String, Float64};
+                    xs       ::Dict{String, Float64} = Dict{String,Float64}(),
+                    α_prior  ::NTuple{2,Float64} = (0.0, 10.0),
+                    γ_prior  ::NTuple{2,Float64} = (0.05, 0.05),
+                    niter    ::Int64             = 1_000,
+                    nthin    ::Int64             = 10,
+                    nburn    ::Int64             = 200,
+                    nflush   ::Int64             = nthin,
+                    ofile    ::String            = string(homedir(), "/dbm"),
+                    αi       ::Float64           = 0.0,
+                    γi       ::Float64           = 1e-3,
+                    pupdp    ::NTuple{4,Float64} = (0.1, 0.1, 0.05, 0.9),
+                    δt       ::Float64           = 1e-3,
+                    stn      ::Float64           = 0.1,
+                    mxthf    ::Float64           = Inf,
+                    prints   ::Int64             = 5)
 
   n    = ntips(tree)
   th   = treeheight(tree)
@@ -59,6 +60,7 @@ function insane_dbm(tree   ::Tlabel,
   tl = labels(tree)
   tρ = Dict(tl[i] => 1.0 for i in 1:n)
 
+  # set errors
   if iszero(length(xs))
     xs = Dict(tl[i] => 0.0 for i in 1:n)
   end
@@ -86,13 +88,13 @@ function insane_dbm(tree   ::Tlabel,
 
   # burn-in phase
   Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn =
-    mcmc_burn_dbm(Ξ, idf, α_prior, γ_prior, nburn, αi, γi, stn, δt, srδt, 
-      inodes, pup, prints)
+    mcmc_burn_dbm(Ξ, idf, α_prior, γ_prior, nburn, αi, γi, stn, 
+      δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_dbm(Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn, α_prior, 
-              γ_prior, δt, srδt, inodes, pup, niter, nthin, nflush, 
-              ofile, prints)
+  r, treev = mcmc_dbm(Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn, 
+              α_prior, γ_prior, δt, srδt, inodes, pup, 
+              niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -101,41 +103,41 @@ end
 
 
 """
-    mcmc_burn_dbm(Ξ      ::Vector{sTxs},
-                  idf    ::Vector{iBffs},
-                  α_prior::NTuple{2,Float64},
-                  γ_prior::NTuple{2,Float64},
-                  nburn  ::Int64,
-                  αc     ::Float64,
-                  γc     ::Float64,
-                  stn    ::Float64,
-                  δt     ::Float64,
-                  srδt   ::Float64,
-                  inodes ::Array{Int64,1},
-                  pup    ::Array{Int64,1},
-                  prints ::Int64)
+    mcmc_burn_dbm(Ξ        ::Vector{sTxs},
+                  idf      ::Vector{iBffs},
+                  α_prior  ::NTuple{2,Float64},
+                  γ_prior  ::NTuple{2,Float64},
+                  nburn    ::Int64,
+                  αc       ::Float64,
+                  γc       ::Float64,
+                  stn      ::Float64,
+                  δt       ::Float64,
+                  srδt     ::Float64,
+                  inodes   ::Array{Int64,1},
+                  pup      ::Array{Int64,1},
+                  prints   ::Int64)
 
 MCMC burn-in chain for diffused Brownian motion.
 """
-function mcmc_burn_dbm(Ξ      ::Vector{sTxs},
-                       idf    ::Vector{iBffs},
-                       α_prior::NTuple{2,Float64},
-                       γ_prior::NTuple{2,Float64},
-                       nburn  ::Int64,
-                       αc     ::Float64,
-                       γc     ::Float64,
-                       stn    ::Float64,
-                       δt     ::Float64,
-                       srδt   ::Float64,
-                       inodes ::Array{Int64,1},
-                       pup    ::Array{Int64,1},
-                       prints ::Int64)
+function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
+                       idf      ::Vector{iBffs},
+                       α_prior  ::NTuple{2,Float64},
+                       γ_prior  ::NTuple{2,Float64},
+                       nburn    ::Int64,
+                       αc       ::Float64,
+                       γc       ::Float64,
+                       stn      ::Float64,
+                       δt       ::Float64,
+                       srδt     ::Float64,
+                       inodes   ::Array{Int64,1},
+                       pup      ::Array{Int64,1},
+                       prints   ::Int64)
 
   # starting likelihood and prior
   ll  = zeros(lastindex(Ξ))
   llik_dbm_v!(ll, Ξ, αc, γc, δt)
-  prc = logdnorm(αc,       α_prior[1], α_prior[2]^2) + 
-        logdinvgamma(γc^2, γ_prior[1], γ_prior[2])
+  prc = logdnorm(αc,           α_prior[1], α_prior[2]^2) + 
+        logdinvgamma(γc^2,     γ_prior[1], γ_prior[2])
 
   L   = [e(ξ) for ξ in Ξ]  # edge lengths
   nin = lastindex(inodes)  # number of internal nodes
@@ -200,51 +202,51 @@ end
 
 
 """
-    mcmc_dbm(Ξ       ::Vector{sTxs},
-             idf     ::Vector{iBffs},
-             ll      ::Vector{Float64},
-             ddσ     ::Vector{Float64},
-             ssσ     ::Vector{Float64},
-             nσ      ::Vector{Float64},
-             prc     ::Float64,
-             αc      ::Float64,
-             γc      ::Float64,
-             stn     ::Float64,
-             α_prior ::NTuple{2,Float64},
-             γ_prior ::NTuple{2,Float64},
-             δt      ::Float64,
-             srδt    ::Float64,
-             inodes  ::Array{Int64,1},
-             pup     ::Vector{Int64},
-             niter   ::Int64,
-             nthin   ::Int64,
-             nflush  ::Int64,
-             ofile   ::String,
-             prints  ::Int64)
+    mcmc_dbm(Ξ        ::Vector{sTxs},
+             idf      ::Vector{iBffs},
+             ll       ::Vector{Float64},
+             ddσ      ::Vector{Float64},
+             ssσ      ::Vector{Float64},
+             nσ       ::Vector{Float64},
+             prc      ::Float64,
+             αc       ::Float64,
+             γc       ::Float64,
+             stn      ::Float64,
+             α_prior  ::NTuple{2,Float64},
+             γ_prior  ::NTuple{2,Float64},
+             δt       ::Float64,
+             srδt     ::Float64,
+             inodes   ::Array{Int64,1},
+             pup      ::Vector{Int64},
+             niter    ::Int64,
+             nthin    ::Int64,
+             nflush   ::Int64,
+             ofile    ::String,
+             prints   ::Int64)
 
 MCMC chain for diffused Brownian motion.
 """
-function mcmc_dbm(Ξ       ::Vector{sTxs},
-                  idf     ::Vector{iBffs},
-                  ll      ::Vector{Float64},
-                  ddσ     ::Vector{Float64},
-                  ssσ     ::Vector{Float64},
-                  nσ      ::Vector{Float64},
-                  prc     ::Float64,
-                  αc      ::Float64,
-                  γc      ::Float64,
-                  stn     ::Float64,
-                  α_prior ::NTuple{2,Float64},
-                  γ_prior ::NTuple{2,Float64},
-                  δt      ::Float64,
-                  srδt    ::Float64,
-                  inodes  ::Array{Int64,1},
-                  pup     ::Vector{Int64},
-                  niter   ::Int64,
-                  nthin   ::Int64,
-                  nflush  ::Int64,
-                  ofile   ::String,
-                  prints  ::Int64)
+function mcmc_dbm(Ξ        ::Vector{sTxs},
+                  idf      ::Vector{iBffs},
+                  ll       ::Vector{Float64},
+                  ddσ      ::Vector{Float64},
+                  ssσ      ::Vector{Float64},
+                  nσ       ::Vector{Float64},
+                  prc      ::Float64,
+                  αc       ::Float64,
+                  γc       ::Float64,
+                  stn      ::Float64,
+                  α_prior  ::NTuple{2,Float64},
+                  γ_prior  ::NTuple{2,Float64},
+                  δt       ::Float64,
+                  srδt     ::Float64,
+                  inodes   ::Array{Int64,1},
+                  pup      ::Vector{Int64},
+                  niter    ::Int64,
+                  nthin    ::Int64,
+                  nflush   ::Int64,
+                  ofile    ::String,
+                  prints   ::Int64)
 
   # logging
   nlogs = fld(niter,nthin)
@@ -285,7 +287,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             _ss!(ssσ, Ξ, lσ2, αc)
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
-            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            # if !isapprox(ll0, sum(ll))
             #    @show ll0, sum(ll), it, pupi
             #    return
             # end
@@ -296,7 +298,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
-            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            # if !isapprox(ll0, sum(ll))
             #    @show ll0, sum(ll), it, pupi
             #    return
             # end
@@ -306,7 +308,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             lac = update_scale!(Ξ, ll, stn, δt)
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
-            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            # if !isapprox(ll0, sum(ll))
             #    @show ll0, sum(ll), it, pupi
             #    return
             # end
@@ -319,7 +321,7 @@ function mcmc_dbm(Ξ       ::Vector{sTxs},
             update_xs!(bix, Ξ, idf, αc, γc, ll, ddσ, ssσ, δt, srδt)
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
-            # if !isapprox(ll0, sum(ll), atol = 1e-4)
+            # if !isapprox(ll0, sum(ll))
             #    @show ll0, sum(ll), it, pupi
             #    return
             # end
@@ -486,29 +488,29 @@ end
 
 
 """
-    update_xs!(bix  ::Int64,
-               Ξ    ::Vector{sTxs},
-               idf  ::Vector{iBffs},
-               α    ::Float64,
-               γ    ::Float64,
-               ll   ::Vector{Float64},
-               ddσ  ::Vector{Float64},
-               ssσ  ::Vector{Float64},
-               δt   ::Float64,
-               srδt ::Float64)
+    update_xs!(bix      ::Int64,
+               Ξ        ::Vector{sTxs},
+               idf      ::Vector{iBffs},
+               α        ::Float64,
+               γ        ::Float64,
+               ll       ::Vector{Float64},
+               ddσ      ::Vector{Float64},
+               ssσ      ::Vector{Float64},
+               δt       ::Float64,
+               srδt     ::Float64)
 
 Make a `dbm` update for an internal branch and its descendants.
 """
-function update_xs!(bix  ::Int64,
-                    Ξ    ::Vector{sTxs},
-                    idf  ::Vector{iBffs},
-                    α    ::Float64,
-                    γ    ::Float64,
-                    ll   ::Vector{Float64},
-                    ddσ  ::Vector{Float64},
-                    ssσ  ::Vector{Float64},
-                    δt   ::Float64,
-                    srδt ::Float64)
+function update_xs!(bix      ::Int64,
+                    Ξ        ::Vector{sTxs},
+                    idf      ::Vector{iBffs},
+                    α        ::Float64,
+                    γ        ::Float64,
+                    ll       ::Vector{Float64},
+                    ddσ      ::Vector{Float64},
+                    ssσ      ::Vector{Float64},
+                    δt       ::Float64,
+                    srδt     ::Float64)
 
   ξi   = Ξ[bix]
   bi   = idf[bix]
@@ -518,6 +520,7 @@ function update_xs!(bix  ::Int64,
   ξ1   = Ξ[i1]
   root = iszero(pa(bi))
 
+  # if mrca
   if root && iszero(e(ξi))
     #if stem fossil
     if isfossil(bi)
@@ -532,7 +535,6 @@ function update_xs!(bix  ::Int64,
     ll[bix], ddσ[bix], ssσ[bix] = _stem_update!(ξi, α, γ, δt, srδt)
   # if duo
   elseif iszero(i2)
-
     if ifx(bi)
       ll[bix], ll[i1], ddσ[bix], ddσ[i1], ssσ[bix], ssσ[i1] = 
         _update_duo_x!(ξi, ξ1, xavg(bi), xstd(bi), α, γ, δt, srδt)

@@ -13,21 +13,22 @@ Created 25 01 2024
 
 
 """
-    _fstem_update!(ξi   ::sTxs,
-                   ξ1   ::sTxs,
-                   α    ::Float64,
-                   γ    ::Float64,
-                   δt   ::Float64,
-                   srδt ::Float64)
+    _fstem_update!(ξi       ::sTxs,
+                   ξ1       ::sTxs,
+                   α        ::Float64,
+                   γ        ::Float64,
+                   δt       ::Float64,
+                   srδt     ::Float64,
+                   σ2a_prior::NTuple{2,Float64})
 
 Do dbm update for fossil stem root.
 """
-function _fstem_update!(ξi   ::sTxs,
-                        ξ1   ::sTxs,
-                        α    ::Float64,
-                        γ    ::Float64,
-                        δt   ::Float64,
-                        srδt ::Float64)
+function _fstem_update!(ξi       ::sTxs,
+                        ξ1       ::sTxs,
+                        α        ::Float64,
+                        γ        ::Float64,
+                        δt       ::Float64,
+                        srδt     ::Float64)
 
   @inbounds begin
     lσ21 = lσ2(ξ1)
@@ -66,19 +67,20 @@ end
 
 
 """
-    _stem_update!(ξi   ::sTxs,
-                  α    ::Float64,
-                  γ    ::Float64,
-                  δt   ::Float64,
-                  srδt ::Float64)
+    _stem_update!(ξi       ::sTxs,
+                  α        ::Float64,
+                  γ        ::Float64,
+                  δt       ::Float64,
+                  srδt     ::Float64)
 
 Do dbm update for stem root.
 """
-function _stem_update!(ξi   ::sTxs,
-                       α    ::Float64,
-                       γ    ::Float64,
-                       δt   ::Float64,
-                       srδt ::Float64)
+function _stem_update!(ξi       ::sTxs,
+                       α        ::Float64,
+                       γ        ::Float64,
+                       δt       ::Float64,
+                       srδt     ::Float64)
+
   @inbounds begin
     lσ2c = lσ2(ξi)
     xc   = xv(ξi)
@@ -90,7 +92,7 @@ function _stem_update!(ξi   ::sTxs,
     fdtp = fdt(ξi)
 
     # rate path sample
-    σr = rnorm(lσ2n - α*el, γ*sqrt(el))
+    lσ2r = rnorm(lσ2n - α*el, γ*sqrt(el))
     bb!(lσ2p, lσ2r, lσ2n, γ, δt, fdtp, srδt)
 
     llr = llr_dbm_σ(xc, lσ2p, lσ2c, δt, fdtp)
@@ -114,23 +116,24 @@ end
 
 
 """
-    _crown_update!(ξi  ::sTxs,
-                   ξ1  ::sTxs,
-                   ξ2  ::sTxs,
-                   α   ::Float64,
-                   γ   ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64)
+    _crown_update!(ξi       ::sTxs,
+                   ξ1       ::sTxs,
+                   ξ2       ::sTxs,
+                   α        ::Float64,
+                   γ        ::Float64,
+                   δt       ::Float64,
+                   srδt     ::Float64)
 
 Do dbm update for crown root.
 """
-function _crown_update!(ξi  ::sTxs,
-                        ξ1  ::sTxs,
-                        ξ2  ::sTxs,
-                        α   ::Float64,
-                        γ   ::Float64,
-                        δt  ::Float64,
-                        srδt::Float64)
+function _crown_update!(ξi       ::sTxs,
+                        ξ1       ::sTxs,
+                        ξ2       ::sTxs,
+                        α        ::Float64,
+                        γ        ::Float64,
+                        δt       ::Float64,
+                        srδt     ::Float64)
+
 
   @inbounds begin
     lσ2c  = lσ2(ξi)
@@ -153,7 +156,7 @@ function _crown_update!(ξi  ::sTxs,
     fdt2  = fdt(ξ2)
 
     # rate path sample
-    lσ2n = duoprop(lσ21f - α*e1, lσ22f - α*e2, e1, e2, γ)
+    lσ2n = duoprop(lσ21f - α*e1, lσ22f - α*e2, γ^2*e1, γ^2*e2)
     bb!(lσ21p, lσ2n, lσ21f, γ, δt, fdt1, srδt)
     bb!(lσ22p, lσ2n, lσ22f, γ, δt, fdt2, srδt)
 
@@ -207,6 +210,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   xc   = xv(ξi)
   l    = lastindex(lσ2c)
   lσ2p = Vector{Float64}(undef,l)
+  xi   = xc[1]
   xn   = xc[l]
   fdtp = fdt(ξi)
 
@@ -220,12 +224,8 @@ function _update_leaf_x!(ξi  ::sTxs,
   end
 
   # trait path sample
-  xi = xc[1]
   if !iszero(xstd)
-    xp = rnorm(xi, sqrt(intσ2(lσ2c, δt, fdtp)))
-    if -randexp() < llrdnorm_x(xp, xn, xavg, xstd^2)
-      xn = xp
-    end
+    xn = duoprop(xavg, xi, xstd^2, intσ2(lσ2c, δt, fdtp))
   end
 
   dbb!(xc, xi, xn, lσ2c, δt, fdtp, srδt)
@@ -325,10 +325,8 @@ function _update_duo_x!(ξi  ::sTxs,
 
     # trait path sample
     if !iszero(xstd)
-      xp = duoprop(xai, x1f, intσ2(lσ2a, δt, fdta), intσ2(lσ21, δt, fdt1))
-      if -randexp() < llrdnorm_x(xp, xn, xavg, xstd^2)
-        xn = xp
-      end
+      xn = trioprop(xavg, xai, x1f, 
+             xstd^2, intσ2(lσ2a, δt, fdta), intσ2(lσ21, δt, fdt1))
     end
     dbb!(xa, xai, xn, lσ2a, δt, fdta, srδt)
     dbb!(x1, xn, x1f, lσ21, δt, fdt1, srδt)
@@ -477,12 +475,12 @@ function _update_triad_x!(ξi   ::sTxs,
     dbb!(x2, xn, x2f, lσ22, δt, fdt2, srδt)
 
     # log likelihood ratios
-    lla, ddc, ssc = ll_dbm_ss_dd_b(xa, lσ2a, α, γ, δt, fdta)
+    lla, dda, ssa = ll_dbm_ss_dd_b(xa, lσ2a, α, γ, δt, fdta)
     ll1, dd1, ss1 = ll_dbm_ss_dd_b(x1, lσ21, α, γ, δt, fdt1)
     ll2, dd2, ss2 = ll_dbm_ss_dd_b(x2, lσ22, α, γ, δt, fdt2)
   end
 
-  return lla, ll1, ll2, ddc, dd1, dd2, ssc, ss1, ss2
+  return lla, ll1, ll2, dda, dd1, dd2, ssa, ss1, ss2
 end
 
 

@@ -379,8 +379,7 @@ function duoprop(x1 ::Float64,
                  σ22::Float64)
 
   iσ2 = 1.0/(σ21 + σ22)
-  return rnorm((x1*σ22 + x2*σ21) * iσ2, 
-                σ21*σ22*sqrt(iσ2))
+  return rnorm((x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
 end
 
 

@@ -498,8 +498,8 @@ function makeiBf!(tree::sT,
       makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
 
     # contrasts
-    scn = (x2 - x1)/(e1 + e2)
-    xi  = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+    scn = (x2 - x1)/sqrt(e1 + e2)
+    xi  = (x1*e2 + x2*e1)/(e1 + e2)
     en  = el + e1*e2/(e1 + e2)
 
     n  = n1 + n2
@@ -541,7 +541,10 @@ function make_idf(tree::sT,
   makeiBf!(tree, e(tree), idf, treeheight(tree), n2v, tρ, maxt, 
     sc, xr, xavg, xstd)
 
-  σxi = sum(abs2, sc) / Float64(lastindex(sc)-1)
+  # estimate pic σ²
+  l   = Float64(lastindex(sc))
+  mu  = sum(sc)/l
+  σxi = sum(abs2, sc .- mu) / (l-1.0)
 
   reverse!(idf)
   reverse!(n2v)
