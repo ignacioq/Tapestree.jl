@@ -522,66 +522,64 @@ end
 
 Proposal for a duo of Gaussians.
 """
-function duoprop(xd1::Float64,
-                 xd2::Float64,
-                 td1::Float64,
-                 td2::Float64,
+function duoprop(x1::Float64,
+                 x2::Float64,
+                 t1::Float64,
+                 t2::Float64,
                  σ  ::Float64)
 
-  invt = 1.0/(td1 + td2)
-  return rnorm((td2 * xd1 + td1 * xd2) * invt,
-               sqrt(td1 * td2 * invt)*σ)
+  it = 1.0/(t1 + t2)
+  return rnorm((t2*x1 + t1*x2) * it, sqrt(td1*td2*it)*σ)
 end
 
 
 
 
 """
-    trioprop(xpr::Float64,
-             xd1::Float64,
-             xd2::Float64,
-             tpr::Float64,
-             td1::Float64,
-             td2::Float64,
-             σ  ::Float64)
+    trioprop(xp::Float64,
+             x1::Float64,
+             x2::Float64,
+             tp::Float64,
+             t1::Float64,
+             t2::Float64,
+             σ ::Float64)
 
 Proposal for a trio of Gaussians.
 """
-function trioprop(xpr::Float64,
-                  xd1::Float64,
-                  xd2::Float64,
-                  tpr::Float64,
-                  td1::Float64,
-                  td2::Float64,
-                  σ  ::Float64)
+function trioprop(xp::Float64,
+                  x1::Float64,
+                  x2::Float64,
+                  tp::Float64,
+                  t1::Float64,
+                  t2::Float64,
+                  σ ::Float64)
 
-    t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
-    return rnorm((xpr/tpr + xd1/td1 + xd2/td2)*t,
-                 sqrt(t)*σ)
+    t = 1.0/(1.0/tp + 1.0/t1 + 1.0/t2)
+    return rnorm((xp/tp + x1/t1 + x2/t2)*t, sqrt(t)*σ)
 end
 
 
 
 
 """
-    duodnorm(x  ::Float64,
-             xd1::Float64,
-             xd2::Float64,
-             td1::Float64,
-             td2::Float64,
+    duodnorm(x ::Float64,
+             x1::Float64,
+             x2::Float64,
+             t1::Float64,
+             t2::Float64,
              σ  ::Float64)
+
 Likelihood for a duo of Gaussians.
 """
 function duodnorm(x  ::Float64,
-                  xd1::Float64,
-                  xd2::Float64,
-                  td1::Float64,
-                  td2::Float64,
+                  x1::Float64,
+                  x2::Float64,
+                  t1::Float64,
+                  t2::Float64,
                   σ  ::Float64)
 
-  invt = 1.0/(td1 + td2)
-  return dnorm_bm(x, (td2 * xd1 + td1 * xd2) * invt,
-    sqrt(td1 * td2 * invt)*σ)
+  it = 1.0/(t1 + t2)
+  return dnorm_bm(x, (t2*x1 + t1*x2)*it, sqrt(t1*t2*it)*σ)
 end
 
 
@@ -589,23 +587,23 @@ end
 
 """
     duoldnorm(x  ::Float64,
-              xd1::Float64,
-              xd2::Float64,
-              td1::Float64,
-              td2::Float64,
+              x1::Float64,
+              x2::Float64,
+              t1::Float64,
+              t2::Float64,
               σ  ::Float64)
 
 Likelihood for a duo of Gaussians.
 """
 function duoldnorm(x  ::Float64,
-                   xd1::Float64,
-                   xd2::Float64,
-                   td1::Float64,
-                   td2::Float64,
+                   x1::Float64,
+                   x2::Float64,
+                   t1::Float64,
+                   t2::Float64,
                    σ  ::Float64)
 
-  invt = 1.0/(td1 + td2)
-  return ldnorm_bm(x, invt * (td2 * xd1 + td1 * xd2), sqrt(td1 * td2 * invt)*σ)
+  it = 1.0/(t1 + t2)
+  return ldnorm_bm(x, (t2*xd1 + t1*xd2)*it, sqrt(t1*t2*it)*σ)
 end
 
 
@@ -613,27 +611,27 @@ end
 
 """
     trioldnorm(x  ::Float64,
-               xpr::Float64,
-               xd1::Float64,
-               xd2::Float64,
-               tpr::Float64,
-               td1::Float64,
-               td2::Float64,
+               xp::Float64,
+               x1::Float64,
+               x2::Float64,
+               tp::Float64,
+               t1::Float64,
+               t2::Float64,
                σ  ::Float64)
 
 Likelihood for a trio of Gaussians.
 """
 function trioldnorm(x  ::Float64,
-                    xpr::Float64,
-                    xd1::Float64,
-                    xd2::Float64,
-                    tpr::Float64,
-                    td1::Float64,
-                    td2::Float64,
+                    xp::Float64,
+                    x1::Float64,
+                    x2::Float64,
+                    tp::Float64,
+                    t1::Float64,
+                    t2::Float64,
                     σ  ::Float64)
 
-    t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
-    return ldnorm_bm(x, (xpr/tpr + xd1/td1 + xd2/td2)*t, sqrt(t)*σ)
+    t = 1.0/(1.0/tp + 1.0/t1 + 1.0/t2)
+    return ldnorm_bm(x, (xp/tp + x1/t1 + x2/t2)*t, sqrt(t)*σ)
 end
 
 
