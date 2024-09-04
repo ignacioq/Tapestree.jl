@@ -529,7 +529,7 @@ function duoprop(x1::Float64,
                  σ  ::Float64)
 
   it = 1.0/(t1 + t2)
-  return rnorm((t2*x1 + t1*x2) * it, sqrt(td1*td2*it)*σ)
+  return rnorm((t2*x1 + t1*x2) * it, sqrt(t1*t2*it)*σ)
 end
 
 
@@ -603,7 +603,7 @@ function duoldnorm(x  ::Float64,
                    σ  ::Float64)
 
   it = 1.0/(t1 + t2)
-  return ldnorm_bm(x, (t2*xd1 + t1*xd2)*it, sqrt(t1*t2*it)*σ)
+  return ldnorm_bm(x, (t2*x1 + t1*x2)*it, sqrt(t1*t2*it)*σ)
 end
 
 
