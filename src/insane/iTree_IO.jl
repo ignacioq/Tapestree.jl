@@ -217,7 +217,7 @@ function from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
   # if no root (starts with two crown lineage)
   else
 
-    sd1, i = _from_string(s[1:(ci-1)],   1, T)
+    sd1, i = _from_string(s[1:ci],       1, T)
     sd2, i = _from_string(s[(ci+1):end], 1, T)
 
     if e(sd1) === 0.0
