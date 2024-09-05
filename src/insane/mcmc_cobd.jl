@@ -423,11 +423,9 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 6 + 2*nep)
 
-  # make tree vector
-  treev  = sTfbd[]
-
-  # flush to file
-  sthin = 0
+  treev = sTfbd[]    # make tree vector
+  sthin = 0          # flush to file
+  io    = IOBuffer() # buffer 
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdgamma(λc,      λ_prior[1], λ_prior[2])  +
@@ -533,12 +531,20 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
         # flush parameters
         sthin += 1
         if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc,"\t", λc-μc, "\t", ns, "\t", ne, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n"))
+          print(of, Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\t", λc-μc, 
+                "\t", ns, "\t", ne, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n")
           flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
+          ibuffer(io, couple(Ξ, idf, 1))
+          write(io, '\n')
+          write(tf, take!(io))
           flush(tf)
+
+          #write(of, 
+          #  string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc,"\t", λc-μc, "\t", ns, "\t", ne, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n"))
+          #flush(of)
+          #write(tf, 
+          #  string(istring(couple(Ξ, idf, 1)), "\n"))
+          #flush(tf)
           sthin = 0
         end
 
