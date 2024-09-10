@@ -189,6 +189,8 @@ function _stem_update!(ξi   ::T,
   @inbounds begin
     λc   = lλ(ξi)
     μc   = lμ(ξi)
+    λi   = λc[1]
+    μi   = μc[1]
     l    = lastindex(λc)
     λp   = Vector{Float64}(undef,l)
     μp   = Vector{Float64}(undef,l)
@@ -213,7 +215,8 @@ function _stem_update!(ξi   ::T,
     lU = -randexp()
 
     llr = llrbd
-    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
+    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + 
+          llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
     if lU < llr + prr + log(1000.0/mc)
 
@@ -224,8 +227,8 @@ function _stem_update!(ξi   ::T,
       if lU < llr + prr
         llc += llrbm + llr
         prc += prr
-        ddλ += λc[1] - λr
-        ddμ += μc[1] - μr
+        ddλ += λi - λr
+        ddμ += μi - μr
         ssλ += ssrλ
         ssμ += ssrμ
         mc   = mp

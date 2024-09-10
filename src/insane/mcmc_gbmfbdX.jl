@@ -93,7 +93,7 @@ function insane_gbmfbd(tree    ::sTf_label,
     end
     # if no sampled fossil
     if iszero(nfossils(tree))
-      ψc = prod(ψ_prior)
+      ψc = ψ_prior[1]/ψ_prior[2]
     else
       ψc = Float64(nfossils(tree))/Float64(treelength(tree))
     end

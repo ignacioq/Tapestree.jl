@@ -139,7 +139,7 @@ function insane_gbmfbd(tree    ::sTf_label;
     # if no sampled fossil
     nf = nfossils(tree)
     if iszero(nf)
-      ψc = prod(ψ_prior)
+      ψc = ψ_prior[1]/ψ_prior[2]
     else
       ψc = Float64(nf)/Float64(treelength(tree))
     end
@@ -1040,7 +1040,7 @@ function update_gbm!(bix  ::Int64,
       if isfossil(bi)
         llc, prc, ddλ, ddμ, ssλ, ssμ, mc =
           _fstem_update!(ξi, ξ1, αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, 
-            mc, th, δt, srδt, surv)
+            mc, th, δt, srδt, λa_prior, μa_prior, surv)
       # if crown
       else
         llc, prc, ddλ, ddμ, ssλ, ssμ, mc =

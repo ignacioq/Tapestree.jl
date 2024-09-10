@@ -89,12 +89,13 @@ function insane_gbmobd(tree    ::sTf_label,
                        stnμ    ::Float64               = 0.5,
                        tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  # `n` tips, `th` treeheight define δt
+  # `n` tips, `nω` fossil occurrences, `th` treeheight define δt
   n    = ntips(tree)
   th   = treeheight(tree)
   δt  *= max(0.1,round(th, RoundDown, digits = 2))
   srδt = sqrt(δt)
   LTT  = ltt(tree)
+  nω = lastindex(ωtimes)
 
   # only include epochs where the tree occurs
   sort!(ψω_epoch, rev = true)
@@ -135,12 +136,11 @@ function insane_gbmobd(tree    ::sTf_label,
     # if no sampled fossil
     nf = nfossils(tree)
     if iszero(nf)
-      ψc = prod(ψ_prior)
+      ψc = ψ_prior[1]/ψ_prior[2]
     else
       ψc = Float64(nf)/Float64(treelength(tree))
     end
     
-    nω = lastindex(ωtimes)
     # if no fossil occurrences
     if iszero(nω)
       ωc = ω_prior[1]/ω_prior[2]
@@ -810,7 +810,7 @@ function update_gbm!(bix  ::Int64,
       else
         llc, prc, ddλ, ddμ, ssλ, ssμ, mc =
           _crown_update!(ξi, ξ1, Ξ[i2], αλ, αμ, σλ, σμ, llc, prc, ddλ, ddμ, ssλ, ssμ, 
-          mc, th, δt, srδt, λa_prior, μa_prior, surv)
+            mc, th, δt, srδt, λa_prior, μa_prior, surv)
         setλt!(bi, lλ(ξi)[1])
       end
     else
