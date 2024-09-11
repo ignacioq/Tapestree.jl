@@ -24,7 +24,8 @@ Created 11 02 2022
                 niter   ::Int64                 = 1_000,
                 nthin   ::Int64                 = 10,
                 nburn   ::Int64                 = 200,
-                nflush  ::Int64                 = nthin,
+                nflushθ ::Int64                 = Int64(ceil(niter/5_000)),
+                nflushΞ ::Int64                 = Int64(ceil(niter/100)),
                 ofile   ::String                = homedir(),
                 ϵi      ::Float64               = 0.4,
                 λi      ::Float64               = NaN,
@@ -50,7 +51,8 @@ function insane_cobd(tree    ::sTf_label,
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
-                     nflush  ::Int64                 = nthin,
+                     nflushθ ::Int64                 = Int64(ceil(niter/5_000)),
+                     nflushΞ ::Int64                 = Int64(ceil(niter/100)),
                      ofile   ::String                = homedir(),
                      ϵi      ::Float64               = 0.4,
                      λi      ::Float64               = NaN,
@@ -211,7 +213,7 @@ function insane_cobd(tree    ::sTf_label,
   r, treev =
     mcmc_cobd(Ξ, idf, ωtimes, LTT, llc, prc, λc, μc, ψc, ωc, mc, ns, nω, L, 
       λ_prior, μ_prior, ψ_prior, ω_prior, ψω_epoch, f_epoch, th, rmλ, surv, bst, 
-      eixi, eixf, pup, niter, nthin, nflush, ofile, prints)
+      eixi, eixf, pup, niter, nthin, nflushθ, nflushΞ, ofile, prints)
 
   return r, treev
 end
@@ -372,7 +374,8 @@ end
               pup     ::Array{Int64,1},
               niter   ::Int64,
               nthin   ::Int64,
-              nflush  ::Int64,
+              nflushθ ::Int64,
+              nflushΞ ::Int64,
               ofile   ::String,
               prints  ::Int64)
 
@@ -407,7 +410,8 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
                    pup     ::Array{Int64,1},
                    niter   ::Int64,
                    nthin   ::Int64,
-                   nflush  ::Int64,
+                   nflushθ ::Int64,
+                   nflushΞ ::Int64,
                    ofile   ::String,
                    prints  ::Int64)
 
@@ -423,9 +427,9 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 6 + 2*nep)
 
-  treev = sTfbd[]    # make tree vector
-  sthin = 0          # flush to file
-  io    = IOBuffer() # buffer 
+  treev  = sTfbd[]    # make tree vector
+  sthinθ = sthinΞ = 0 # flush to file
+  io     = IOBuffer() # buffer 
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdgamma(λc,      λ_prior[1], λ_prior[2])  +
@@ -529,23 +533,20 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
         end
 
         # flush parameters
-        sthin += 1
-        if sthin === nflush
+        sthinθ += 1
+        if sthinθ === nflushθ
           print(of, Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\t", λc-μc, 
                 "\t", ns, "\t", ne, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n")
           flush(of)
+          sthinθ = 0
+        end
+        sthinΞ += 1
+        if sthinΞ === nflushΞ
           ibuffer(io, couple(Ξ, idf, 1))
           write(io, '\n')
           write(tf, take!(io))
           flush(tf)
-
-          #write(of, 
-          #  string(Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc,"\t", λc-μc, "\t", ns, "\t", ne, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n"))
-          #flush(of)
-          #write(tf, 
-          #  string(istring(couple(Ξ, idf, 1)), "\n"))
-          #flush(tf)
-          sthin = 0
+          sthinΞ = 0
         end
 
         next!(pbar)
