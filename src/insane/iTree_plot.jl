@@ -943,6 +943,8 @@ end
       f   ::Function,
       dt  ::Float64;
       t_af = mean,
+      fillcolor = :orange,
+      linecolor = "#00304999",
       q0   = [0.025, 0.975],
       q1   = [0.25,  0.75],
       q2   = Float64[]) where {T <: iT}
@@ -953,6 +955,8 @@ Recipe for plotting values given by `f` through time for a `iT`.
                    f   ::Function,
                    δt  ::Float64;
                    t_af = mean,
+                   fillcolor = :orange,
+                   linecolor = "#00304999",
                    q0   = [0.025, 0.975],
                    q1   = [0.25,  0.75],
                    q2   = Float64[]) where {T <: iT}
@@ -973,7 +977,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   grid            --> :off
   xtick_direction --> :out
   ytick_direction --> :out
-  fillcolor       --> :orange
+  fillcolor       --> fillcolor
   fillalpha       --> 0.3
 
   if !isempty(q0)
@@ -1036,7 +1040,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   # midline
   @series begin
     seriestype := :line
-    linecolor --> "#00304999"
+    linecolor --> linecolor
     linewidth --> 1.4
 
     ts, m
@@ -1051,6 +1055,8 @@ end
                f    ::Function,
                δt   ::Float64;
                t_af  = mean,
+               fillcolor = :orange,
+               linecolor = "#00213a99",
                tv_af = x -> quantile(x, 0.5),
                q0    = [0.025, 0.975],
                q1    = [0.25,  0.75],
@@ -1062,6 +1068,8 @@ Recipe for plotting values given by `f` through time for a `iT`.
                    f    ::Function,
                    δt   ::Float64;
                    t_af  = mean,
+                   fillcolor = :orange,
+                   linecolor = "#00213a99",
                    tv_af = x -> quantile(x, 0.5),
                    q0    = [0.025, 0.975],
                    q1    = [0.25,  0.75],
@@ -1138,7 +1146,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   grid            --> :off
   xtick_direction --> :out
   ytick_direction --> :out
-  fillcolor       --> :orange
+  fillcolor       --> fillcolor
   fillalpha       --> 0.3
 
   if !isempty(q0)
@@ -1199,7 +1207,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   # midline
   @series begin
     seriestype := :line
-    linecolor --> "#00213a99"
+    linecolor --> linecolor
     linewidth --> 1.4
 
     ts, M
