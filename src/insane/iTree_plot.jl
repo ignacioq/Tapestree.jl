@@ -651,8 +651,8 @@ Recipe for plotting function f painted by function zf.
   tickfontsize     --> 8
   grid             --> :off
   xtick_direction  --> :out
-  line_z           --> z
   linecolor        --> cgrad(:roma, rev = true)
+  line_z           --> z
   ylims            --> (ymn - pe, ymx + pe)
   colorbar         --> true
 
