@@ -711,7 +711,7 @@ function update_scale!(Ξ   ::Vector{T},
     mp = m_surv_gbmbd(th, lλ0p, lμ0c, α, σλ, σμ, δt, srδt, 1_000, surv)
     llr += log(mp/mc)
 
-    if lU < llr
+    if lU < llr + prr
       accλ += 1.0
       llc  += llr
       prc  += prr
