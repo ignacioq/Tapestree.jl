@@ -1218,15 +1218,14 @@ end
 
 
 """
-    f(tor::Float64, 
-                       rates::Vector{Float64},
-                       δt::Float64;
-                       fillcolor = :orange,
-                       linecolor = "#00304999",
-                   tv_af = x -> quantile(x, 0.5),
-                       q0 = [0.025, 0.975],
-                       q1 = [0.25,  0.75],
-                       q2 = Float64[])
+    f(rates::Vector{Float64},
+      tor::Float64;
+      fillcolor = :orange,
+      linecolor = "#00304999",
+      tv_af = x -> quantile(x, 0.5),
+      q0 = [0.025, 0.975],
+      q1 = [0.25,  0.75],
+      q2 = Float64[])
 
 Recipe for plotting constant rates through time.
 """
@@ -1311,6 +1310,115 @@ Recipe for plotting constant rates through time.
     x_values, y_values
   end
 end
+
+
+
+
+"""
+    f(rates::Vector{Vector{Float64}},
+      tor::Float64,
+      ψω_epoch::Vector{Float64};
+      fillcolor = :saddlebrown,
+      linecolor = :saddlebrown,
+      tv_af = x -> quantile(x, 0.5),
+      q0 = [0.025, 0.975],
+      q1 = [0.25,  0.75],
+      q2 = Float64[])
+
+Recipe for plotting piecewise-constant rates through time.
+"""
+@recipe function f(rates::Vector{Vector{Float64}},
+                   tor::Float64,
+                   ψω_epoch::Vector{Float64};
+                   fillcolor = :saddlebrown,
+                   linecolor = :saddlebrown,
+                   tv_af = x -> quantile(x, 0.5),
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[])
+
+  # Ensure breakpoints start at tor and end at 0
+  bp = vcat([tor], ψω_epoch, [0.0])
+
+  # Common plot defaults
+  legend          --> :none
+  xguide          --> "time"
+  yguide          --> "rate(t)"
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+  ytick_direction --> :out
+  fillcolor       --> fillcolor
+  fillalpha       --> 0.3
+
+  # Loop over each interval and plot the rate and uncertainty bands
+  for i in 1:length(rates)
+    t_start = bp[i]
+    t_end = bp[i+1]
+    rate_samples = rates[i]  # Posterior samples for interval i
+
+    # Compute central tendency and quantiles
+    M = tv_af(rate_samples)
+
+    if !isempty(q0)
+      Q0 = quantile(rate_samples, q0)
+    end
+    if !isempty(q1)
+      Q1 = quantile(rate_samples, q1)
+    end
+    if !isempty(q2)
+      Q2 = quantile(rate_samples, q2)
+    end
+
+    # Plot uncertainty bands as rectangles for the current interval
+    if !isempty(q0)
+      @series begin
+        seriestype := :shape
+        linecolor  := nothing
+
+        x_values = [t_start, t_end, t_end, t_start]
+        y_values = [Q0[1], Q0[1], Q0[2], Q0[2]]
+        x_values, y_values
+      end
+    end
+
+    if !isempty(q1)
+      @series begin
+        seriestype := :shape
+        linecolor  := nothing
+
+        x_values = [t_start, t_end, t_end, t_start]
+        y_values = [Q1[1], Q1[1], Q1[2], Q1[2]]
+        x_values, y_values
+      end
+    end
+
+    if !isempty(q2)
+      @series begin
+        seriestype := :shape
+        linecolor  := nothing
+
+        x_values = [t_start, t_end, t_end, t_start]
+        y_values = [Q2[1], Q2[1], Q2[2], Q2[2]]
+        x_values, y_values
+      end
+    end
+
+    # Midline for the current interval
+    @series begin
+      seriestype := :line
+      linecolor --> linecolor
+      linewidth --> 1.4
+      x_values = [t_start, t_end]
+      y_values = [M, M]
+      x_values, y_values
+    end
+  end
+end
+
 
 
 
