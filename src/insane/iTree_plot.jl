@@ -1217,6 +1217,103 @@ end
 
 
 
+"""
+    f(tor::Float64, 
+                       rates::Vector{Float64},
+                       δt::Float64;
+                       fillcolor = :orange,
+                       linecolor = "#00304999",
+                   tv_af = x -> quantile(x, 0.5),
+                       q0 = [0.025, 0.975],
+                       q1 = [0.25,  0.75],
+                       q2 = Float64[])
+
+Recipe for plotting constant rates through time.
+"""
+@recipe function f(rates::Vector{Float64},
+                   tor::Float64;
+                   fillcolor = :orange,
+                   linecolor = "#00304999",
+                   tv_af = x -> quantile(x, 0.5),
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[])
+
+  # Compute quantiles for uncertainty bands
+  if !isempty(q0)
+    Q0 = quantile(rates, q0)
+  end
+  if !isempty(q1)
+    Q1 = quantile(rates, q1)
+  end
+  if !isempty(q2)
+    Q2 = quantile(rates, q2)
+  end
+
+  M = tv_af(rates)
+
+  # Common plot defaults
+  legend          --> :none
+  xguide          --> "time"
+  yguide          --> "rate(t)"
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+  ytick_direction --> :out
+  fillcolor       --> fillcolor
+  fillalpha       --> 0.3
+
+  # Plot uncertainty bands as rectangles over [0, tor]
+
+  if !isempty(q0)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      x_values = [0.0, tor, tor, 0.0]
+      y_values = [Q0[1], Q0[1], Q0[2], Q0[2]]
+      x_values, y_values
+    end
+  end
+
+  if !isempty(q1)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      x_values = [0.0, tor, tor, 0.0]
+      y_values = [Q1[1], Q1[1], Q1[2], Q1[2]]
+      x_values, y_values
+    end
+  end
+
+  if !isempty(q2)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      x_values = [0.0, tor, tor, 0.0]
+      y_values = [Q2[1], Q2[1], Q2[2], Q2[2]]
+      x_values, y_values
+    end
+  end
+
+  # Midline for the constant rate
+  @series begin
+    seriestype := :line
+    linecolor --> linecolor
+    linewidth --> 1.4
+    x_values = [0.0, tor]
+    y_values = [M, M]
+    x_values, y_values
+  end
+end
+
+
+
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
