@@ -13,31 +13,40 @@ Created 14 11 2021
 
 
 """
-    _daughters_update!(ξ1  ::iTpb,
-                       ξ2  ::iTpb,
+    _daughters_update!(ξ1  ::iTbX,
+                       ξ2  ::iTbX,
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
+                       xp  ::Float64,
+                       σx  ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
 
-Make a `gbmpb` proposal for daughters from forwards simulated branch.
+Make a `gbmbX` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTpb,
-                            ξ2  ::iTpb,
+function _daughters_update!(ξ1  ::iTbX,
+                            ξ2  ::iTbX,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
+                            xp  ::Float64,
+                            βλ  ::Float64,
+                            σx  ::Float64,
                             δt  ::Float64,
                             srδt::Float64)
   @inbounds begin
 
     λ1c  = lλ(ξ1)
     λ2c  = lλ(ξ2)
+    x1c  = xv(ξ1)
+    x2c  = xv(ξ2)
     l1   = lastindex(λ1c)
     l2   = lastindex(λ2c)
     λ1p  = Vector{Float64}(undef,l1)
     λ2p  = Vector{Float64}(undef,l2)
+    x1p  = Vector{Float64}(undef,l1)
+    x2p  = Vector{Float64}(undef,l2)
     λi   = λ1c[1]
     λ1   = λ1c[l1]
     λ2   = λ2c[l2]
@@ -48,51 +57,46 @@ function _daughters_update!(ξ1  ::iTpb,
 
     bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
+    bb!(x1p, xp, x1c[l1], σx, δt, fdt1, srδt)
+    bb!(x2p, xp, x2c[l2], σx, δt, fdt2, srδt)
 
-    # acceptance rate
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    # log likelihood ratios (llrbm contains both λ and x llr)
+    llrbm1, llrb1, ssrλ1, ssrx1 =
+      llr_gbm_b_sep(λ1p, λ1c, x1p, x1c, α, σλ, βλ, σx, δt, fdt1, srδt, false)
+    llrbm2, llrb2, ssrλ2, ssrx2 =
+      llr_gbm_b_sep(λ2p, λ2c, x2p, x2c, α, σλ, βλ, σx, δt, fdt2, srδt, false)
 
-    # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1, irrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2, irrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
-
-    acr  = llrpb1 + llrpb2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
-    acr += gp
+    acr  = llrb1 + llrb2
+    llr  = llrbm1 + llrbm2 + acr  + λf - λi
     drλ  = 2.0*(λi - λf)
     ssrλ = ssrλ1 + ssrλ2
-    irrλ = irrλ1 + irrλ2
+    ssrx = ssrx1 + ssrx2
   end
 
-  return llr, acr, drλ, ssrλ, irrλ, λ1p, λ2p
+  return llr, acr, drλ, ssrλ, ssrx, λ1p, λ2p, x1p, x2p
 end
 
 
 
 
 """
-    _stem_update!(ξi   ::iTpb,
+    _stem_update!(ξi   ::iTbX,
                   α    ::Float64,
                   σλ   ::Float64,
                   llc  ::Float64,
-                  ddλ  ::Float64,
+                  dλ   ::Float64,
                   ssλ  ::Float64,
-                  irλ  ::Float64,
                   δt   ::Float64,
                   srδt ::Float64)
 
 Do gbm update for crown root.
 """
-function _stem_update!(ξi   ::iTpb,
+function _stem_update!(ξi   ::iTbX,
                        α    ::Float64,
                        σλ   ::Float64,
                        llc  ::Float64,
-                       ddλ  ::Float64,
+                       dλ   ::Float64,
                        ssλ  ::Float64,
-                       irλ  ::Float64,
                        δt   ::Float64,
                        srδt ::Float64)
 
@@ -110,50 +114,46 @@ function _stem_update!(ξi   ::iTpb,
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, irrλ = 
-      llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
     acr = llrbd
 
     if -randexp() < acr
       llc += acr + llrbm
-      ddλ += λc[1] - λr
+      dλ  += λc[1] - λr
       ssλ += ssrλ
-      irλ += irrλ
       unsafe_copyto!(λc, 1, λp, 1, l)
     end
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, dλ, ssλ
 end
 
 
 
 
 """
-    _crown_update!(ξi   ::iTpb,
-                   ξ1   ::iTpb,
-                   ξ2   ::iTpb,
+    _crown_update!(ξi   ::iTbX,
+                   ξ1   ::iTbX,
+                   ξ2   ::iTbX,
                    α    ::Float64,
                    σλ   ::Float64,
                    llc  ::Float64,
-                   ddλ  ::Float64,
+                   dλ   ::Float64,
                    ssλ  ::Float64,
-                   irλ  ::Float64,
                    δt   ::Float64,
                    srδt ::Float64)
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi   ::iTpb,
-                        ξ1   ::iTpb,
-                        ξ2   ::iTpb,
+function _crown_update!(ξi   ::iTbX,
+                        ξ1   ::iTbX,
+                        ξ2   ::iTbX,
                         α    ::Float64,
                         σλ   ::Float64,
                         llc  ::Float64,
-                        ddλ  ::Float64,
+                        dλ   ::Float64,
                         ssλ  ::Float64,
-                        irλ  ::Float64,
                         δt   ::Float64,
                         srδt ::Float64)
 
@@ -180,95 +180,89 @@ function _crown_update!(ξi   ::iTpb,
     bb!(λ2p, λr, λ2, σλ, δt, fdt2, srδt)
 
     # log likelihood ratios
-    llrbm1, llrpb1, ssrλ1, irrλ1 =
+    llrbm1, llrb1, ssrλ1 =
       llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrpb2, ssrλ2, irrλ2 =
+    llrbm2, llrb2, ssrλ2 =
       llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-    acr  = llrpb1 + llrpb2
+    acr  = llrb1 + llrb2
 
     if -randexp() < acr
       llc += llrbm1 + llrbm2 + acr
-      ddλ += 2.0*(λ1c[1] - λr)
+      dλ  += 2.0*(λ1c[1] - λr)
       ssλ += ssrλ1 + ssrλ2
-      irλ += irrλ1 + irrλ2
       fill!(λpc, λr)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
     end
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, dλ, ssλ
 end
 
 
 
 
 """
-    _update_gbm!(tree::iTpb,
+    _update_gbm!(tree::iTbX,
                  α   ::Float64,
                  σλ  ::Float64,
                  llc ::Float64,
-                 ddλ ::Float64,
+                 dλ  ::Float64,
                  ssλ ::Float64,
-                 irλ ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
                  ter ::Bool)
 
 Do gbm updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTpb,
+function _update_gbm!(tree::iTbX,
                       α   ::Float64,
                       σλ  ::Float64,
                       llc ::Float64,
-                      ddλ ::Float64,
+                      dλ  ::Float64,
                       ssλ ::Float64,
-                      irλ ::Float64,
                       δt  ::Float64,
                       srδt::Float64,
                       ter ::Bool)
 
   if def1(tree)
+    llc, dλ, ssλ = update_triad!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
 
-    llc, ddλ, ssλ, irλ = 
-      update_triad!(tree, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt)
-
-    llc, ddλ, ssλ, irλ =
-      _update_gbm!(tree.d1, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt, ter)
-    llc, ddλ, ssλ, irλ =
-      _update_gbm!(tree.d2, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt, ter)
-  elseif !isfix(tree) || ter
-    llc, ddλ, ssλ, irλ = 
-      update_tip!(tree, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt)
+    llc, dλ, ssλ =
+      _update_gbm!(tree.d1, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
+    llc, dλ, ssλ =
+      _update_gbm!(tree.d2, α, σλ, llc, dλ, ssλ, δt, srδt, ter)
+  else
+    # if !isfix(tree) || ter
+    #   llc, dλ, ssλ = update_tip!(tree, α, σλ, llc, dλ, ssλ, δt, srδt)
+    # end
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, dλ, ssλ
 end
 
 
 
 
 """
-    update_tip!(tree::iTpb,
+    update_tip!(tree::iTbX,
                 α   ::Float64,
                 σλ  ::Float64,
                 llc ::Float64,
-                ddλ ::Float64,
+                dλ  ::Float64,
                 ssλ ::Float64,
-                irλ ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
 Make a `gbm` tip proposal.
 """
-function update_tip!(tree::iTpb,
+function update_tip!(tree::iTbX,
                      α   ::Float64,
                      σλ  ::Float64,
                      llc ::Float64,
-                     ddλ ::Float64,
+                     dλ  ::Float64,
                      ssλ ::Float64,
-                     irλ ::Float64,
                      δt  ::Float64,
                      srδt::Float64)
 
@@ -281,21 +275,19 @@ function update_tip!(tree::iTpb,
 
     bm!(λp, λc[1], α, σλ, δt, fdtp, srδt)
 
-    llrbm, llrbd, ssrλ, irrλ = 
-      llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+    llrbm, llrbd, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
 
     acr = llrbd
 
     if -randexp() < acr
       llc += llrbm + acr
-      ddλ += λp[l] - λc[l]
+      dλ  += λp[l] - λc[l]
       ssλ += ssrλ
-      irλ += irrλ
       unsafe_copyto!(λc, 1, λp, 1, l)
     end
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, dλ, ssλ
 end
 
 
@@ -314,15 +306,14 @@ end
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
-                  ddλ ::Float64,
+                  dλ  ::Float64,
                   ssλ ::Float64,
-                  irλ ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
 
 Make a `gbm` trio proposal.
 """
-function update_triad_pb!(λpc ::Vector{Float64},
+function update_triad!(λpc ::Vector{Float64},
                        λ1c ::Vector{Float64},
                        λ2c ::Vector{Float64},
                        ep  ::Float64,
@@ -334,9 +325,8 @@ function update_triad_pb!(λpc ::Vector{Float64},
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,
-                       ddλ ::Float64,
+                       dλ  ::Float64,
                        ssλ ::Float64,
-                       irλ ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
 
@@ -360,46 +350,42 @@ function update_triad_pb!(λpc ::Vector{Float64},
     bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
 
-    llr, acr, ssrλ, irrλ = llr_propr_pb(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
+    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
     if -randexp() < acr
       llc += llr
-      ddλ += (λ1c[1] - λn)
+      dλ  += (λ1c[1] - λn)
       ssλ += ssrλ
-      irλ += irrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
     end
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, dλ, ssλ
 end
 
 
 
 
 """
-    update_triad!(tree::iTpb,
+    update_triad!(tree::iTbX,
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
-                  ddλ ::Float64,
                   ssλ ::Float64,
-                  irλ ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
 
 Make a `gbm` trio proposal.
 """
-function update_triad!(tree::iTpb,
+function update_triad!(tree::iTbX,
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,
-                       ddλ ::Float64,
+                       dλ  ::Float64,
                        ssλ ::Float64,
-                       irλ ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
 
@@ -432,21 +418,20 @@ function update_triad!(tree::iTpb,
     bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
     bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
 
-    llr, acr, ssrλ, irrλ = llr_propr_pb(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
+    llr, acr, ssrλ = llr_propr(λpp, λ1p, λ2p, λpc, λ1c, λ2c,
       α, σλ, δt, fdtp, fdt1, fdt2, srδt)
 
     if -randexp() < acr
       llc += llr
-      ddλ += (λ1c[1] - λn)
+      dλ  += (λ1c[1] - λn)
       ssλ += ssrλ
-      irλ += irrλ
       unsafe_copyto!(λpc, 1, λpp, 1, lp)
       unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
       unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
     end
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, dλ, ssλ
 end
 
 
@@ -469,7 +454,7 @@ end
 
 Return the likelihood and proposal ratio for pure-birth gbm.
 """
-function llr_propr_pb(λpp  ::Array{Float64,1},
+function llr_propr(λpp  ::Array{Float64,1},
                    λ1p  ::Array{Float64,1},
                    λ2p  ::Array{Float64,1},
                    λpc  ::Array{Float64,1},
@@ -484,19 +469,15 @@ function llr_propr_pb(λpp  ::Array{Float64,1},
                    srδt ::Float64)
 
   # log likelihood ratios
-  llrbmp, llrpbp, ssrλp, irrλp = 
-    llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
-  llrbm1, llrpb1, ssrλ1, irrλ1 = 
-    llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-  llrbm2, llrpb2, ssrλ2, irrλ2 = 
-    llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+  llrbmp, llrbp, ssrλp = llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
+  llrbm1, llrb1, ssrλ1 = llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+  llrbm2, llrb2, ssrλ2 = llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
 
-  acr  = llrpbp + llrpb1 + llrpb2
+  acr  = llrbp + llrb1 + llrb2
   llr  = llrbmp + llrbm1 + llrbm2 + acr
   ssrλ = ssrλp + ssrλ1 + ssrλ2
-  irrλ = irrλp + irrλ1 + irrλ2
 
-  return llr, acr, ssrλ, irrλ
+  return llr, acr, ssrλ
 end
 
 

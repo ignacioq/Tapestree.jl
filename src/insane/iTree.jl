@@ -184,7 +184,7 @@ Base.show(io::IO, t::sTf_label) =
 
 
 """
-    _sTf_label(tree::T, i::Int64) where {T <: iTree}
+    sTf_label(tree::sTf_label)
 
 Copies a tree to `sTf_label`
 """
@@ -228,6 +228,7 @@ Demotes a tree to `sTf_label`, initialized with label i.
 """
 function _sTf_label(tree::T, i::Int64) where {T <: iTree}
 
+  lab = isnothing(l(tree)) ? string("t",i) : l(tree)
   if def1(tree)
     if def2(tree)
       t1, i = _sTf_label(tree.d1, i)
@@ -250,7 +251,7 @@ end
 
 
 """
-    sTpb
+    sTb
 
 The simplest composite recursive type of supertype `sT`
 representing a binary phylogenetic tree for `insane` use,
@@ -261,28 +262,28 @@ with the following fields:
   e:  edge
   fx: if fix
 
-    sTpb(e::Float64)
+    sTb(e::Float64)
 
-Constructs an empty `sTpb` object with edge `e`.
+Constructs an empty `sTb` object with edge `e`.
 
-    sTpb(d1::sTpb, d2::sTpb, e::Float64)
+    sTb(d1::sTb, d2::sTb, e::Float64)
 
-Constructs an `sTpb` object with two `sTpb` daughters and edge `e`.
+Constructs an `sTb` object with two `sTb` daughters and edge `e`.
 """
-mutable struct sTpb <: sT
-  d1::sTpb
-  d2::sTpb
+mutable struct sTb <: sT
+  d1::sTb
+  d2::sTb
   e ::Float64
   fx::Bool
 
-  sTpb() = new()
-  sTpb(e::Float64) = (x = new(); x.e = e; x.fx = false; x)
-  sTpb(e::Float64, fx::Bool) = (x = new(); x.e = e; x.fx = fx; x)
-  sTpb(d1::sTpb, d2::sTpb, e::Float64, fx::Bool) = new(d1, d2, e, fx)
+  sTb() = new()
+  sTb(e::Float64) = (x = new(); x.e = e; x.fx = false; x)
+  sTb(e::Float64, fx::Bool) = (x = new(); x.e = e; x.fx = fx; x)
+  sTb(d1::sTb, d2::sTb, e::Float64, fx::Bool) = new(d1, d2, e, fx)
 end
 
 # pretty-printing
-Base.show(io::IO, t::sTpb) =
+Base.show(io::IO, t::sTb) =
   print(io, "insane simple pure-birth tree with ", ntips(t), " tips")
 
 
@@ -303,15 +304,15 @@ end
 
 
 """
-    sTpb(tree::sTpb)
+    sTb(tree::sTb)
 
-Creates a new `sTpb` copy.
+Creates a new `sTb` copy.
 """
-function sTpb(tree::sTpb)
+function sTb(tree::sTb)
   if def1(tree)
-    sTpb(sTpb(tree.d1), sTpb(tree.d2), e(tree), isfix(tree))
+    sTb(sTb(tree.d1), sTb(tree.d2), e(tree), isfix(tree))
   else
-    sTpb(e(tree), isfix(tree))
+    sTb(e(tree), isfix(tree))
   end
 end
 
@@ -398,7 +399,7 @@ end
 """
     sTfbd
 
-The simplest composite recursive type of supertype `sTf`
+The simplest composite recursive type of supertype `sT`
 representing a binary phylogenetic tree for `insane` use,
 with the following fields:
 
@@ -505,7 +506,7 @@ abstract type iT <: iTree end
 
 
 """
-    iTpb
+    iTb
 
 A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with no extinction
@@ -520,45 +521,45 @@ with the following fields:
   fdt: final `δt`
   lλ:  array of a Brownian motion evolution of `log(λ)`
 
-    iTpb()
+    iTb()
 
-Constructs an empty `iTpb` object.
+Constructs an empty `iTb` object.
 
-    iTpb(e::Float64)
+    iTb(e::Float64)
 
-Constructs an empty `iTpb` object with pendant edge `pe`.
+Constructs an empty `iTb` object with pendant edge `pe`.
 
-    iTpb(d1::iTpb, d2::iTpb, e::Float64)
+    iTb(d1::iTb, d2::iTb, e::Float64)
 
-Constructs an `iTpb` object with two `iTpb` daughters and pendant edge `pe`.
+Constructs an `iTb` object with two `iTb` daughters and pendant edge `pe`.
 """
-mutable struct iTpb <: iT
-  d1 ::iTpb
-  d2 ::iTpb
+mutable struct iTb <: iT
+  d1 ::iTb
+  d2 ::iTb
   e  ::Float64
   dt ::Float64
   fdt::Float64
   fx ::Bool
   lλ ::Array{Float64,1}
 
-  iTpb() = new()
-  iTpb(e::Float64, dt::Float64, fdt::Float64, fx::Bool, lλ::Array{Float64,1}) =
+  iTb() = new()
+  iTb(e::Float64, dt::Float64, fdt::Float64, fx::Bool, lλ::Array{Float64,1}) =
       (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.fx = fx; x.lλ = lλ; x)
-  iTpb(d1::iTpb, d2::iTpb, e::Float64, dt::Float64, fdt::Float64, 
+  iTb(d1::iTb, d2::iTb, e::Float64, dt::Float64, fdt::Float64, 
     fx::Bool, lλ::Array{Float64,1}) =
       new(d1, d2, e, dt, fdt, fx, lλ)
 end
 
 
 # pretty-printing
-Base.show(io::IO, t::iTpb) =
+Base.show(io::IO, t::iTb) =
   print(io, "insane pb-gbm tree with ", ntips(t), " tips")
 
 
 
 
 """
-    iTpb(e0::Array{Int64,1},
+    iTb(e0::Array{Int64,1},
          e1::Array{Int64,1},
          el::Array{Float64,1},
          λs::Array{Array{Float64,1},1},
@@ -567,9 +568,9 @@ Base.show(io::IO, t::iTpb) =
          ei::Int64,
          δt::Float64)
 
-Transform edge structure to `iTpb`.
+Transform edge structure to `iTb`.
 """
-function iTpb(e0::Array{Int64,1},
+function iTb(e0::Array{Int64,1},
               e1::Array{Int64,1},
               el::Array{Float64,1},
               λs::Array{Array{Float64,1},1},
@@ -580,12 +581,12 @@ function iTpb(e0::Array{Int64,1},
 
   # if tip
   if in(ei, ea)
-    return iTpb(el[ei], δt, δt, true, λs[ei])
+    return iTb(el[ei], δt, δt, true, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
-    return iTpb(iTpb(e0, e1, el, λs, ea, n1, ei1, δt),
-                iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
+    return iTb(iTb(e0, e1, el, λs, ea, n1, ei1, δt),
+                iTb(e0, e1, el, λs, ea, n2, ei2, δt),
                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
   end
 end
@@ -594,16 +595,16 @@ end
 
 
 """
-    iTpb(tree::iTpb)
+    iTb(tree::iTb)
 
-Produce a new copy of `iTpb`.
+Produce a new copy of `iTb`.
 """
-function iTpb(tree::iTpb)
+function iTb(tree::iTb)
   if def1(tree)
-    iTpb(iTpb(tree.d1), iTpb(tree.d2),
+    iTb(iTb(tree.d1), iTb(tree.d2),
       e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   else
-    iTpb(e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
+    iTb(e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   end
 end
 
@@ -1176,6 +1177,169 @@ function iTfbd(e0::Array{Int64,1},
                  iTfbd(e0, e1, el, λs, μs, ea, ee, ef, n2, ei2, δt),
                  el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
                  false, false, false, λs[ei], μs[ei])
+  end
+end
+
+
+
+
+"""
+    iTpbd
+
+A composite recursive type of supertype `iT` representing 
+a binary phylogenetic tree with `b` (bifurcation rate), 
+`λ` (completion rate) and `μ` (extinction rate) evolving 
+as a Geometric Brownian motion  for `insane` use, with 
+the following fields:
+
+  d1:   daughter tree 1
+  d2:   daughter tree 2
+  e:    pendant edge
+  iμ:   if extinct node
+  ig:   if good lineage (versus incipient lineage)
+  fx:   if fix (observed) node
+  dt:   choice of time lag
+  fdt:  final `dt`
+  lb:   array of a Brownian motion evolution of `log(b)`
+  lλ:   array of a Brownian motion evolution of `log(λ)`
+  lμ:   array of a Brownian motion evolution of `log(μ)`
+
+  iTpbd(d1 ::iTpbd,
+          d2 ::iTpbd,
+          e  ::Float64,
+          dt ::Float64,
+          fdt::Float64,
+          iμ ::Bool,
+          ig ::Bool,
+          fx ::Bool,
+          lb ::Array{Float64,1},
+          lλ ::Array{Float64,1},
+          lμ ::Array{Float64,1})
+"""
+mutable struct iTpbd <: iT
+  d1 ::iTpbd
+  d2 ::iTpbd
+  e  ::Float64
+  dt ::Float64
+  fdt::Float64
+  iμ ::Bool
+  ig ::Bool
+  fx ::Bool
+  lb ::Array{Float64,1}
+  lλ ::Array{Float64,1}
+  lμ ::Array{Float64,1}
+
+  iTpbd() = new()
+  iTpbd(e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        ig ::Bool,
+        fx ::Bool,
+        lb ::Array{Float64,1},
+        lλ ::Array{Float64,1},
+        lμ ::Array{Float64,1}) =
+    (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.iμ = iμ; 
+      x.ig = ig; x.fx = fx; x.lb = lb; x.lλ = lλ; x.lμ = lμ; x)
+  iTpbd(d1 ::iTpbd,
+        e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        ig ::Bool,
+        fx ::Bool,
+        lb ::Array{Float64,1},
+        lλ ::Array{Float64,1},
+        lμ ::Array{Float64,1}) =
+    (x = new(); x.d1 = d1; x.e = e; x.dt = dt; x.fdt = fdt; x.iμ = iμ; 
+      x.ig = ig; x.fx = fx; x.lb = lb; x.lλ = lλ; x.lμ = lμ; x)
+  iTpbd(d1 ::iTpbd,
+        d2 ::iTpbd,
+        e  ::Float64,
+        dt ::Float64,
+        fdt::Float64,
+        iμ ::Bool,
+        ig ::Bool,
+        fx ::Bool,
+        lb ::Array{Float64,1},
+        lλ ::Array{Float64,1},
+        lμ ::Array{Float64,1}) =
+    new(d1, d2, e, dt, fdt, iμ, ig, fx, lb, lλ, lμ)
+end
+
+
+# pretty-printing
+Base.show(io::IO, t::iTpbd) =
+  print(io, "insane gbm-bd tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    iTpbd(tree::iTpbd)
+
+Produce a new copy of `iTpbd`.
+"""
+function iTpbd(tree::iTpbd)
+  if def1(tree)
+    if def2(tree)
+      iTpbd(iTpbd(tree.d1), iTpbd(tree.d2),
+        e(tree), dt(tree), fdt(tree), isextinct(tree), isgood(tree),
+        isfix(tree), copy(lb(tree)), copy(lλ(tree)), copy(lμ(tree)))
+    else
+      iTpbd(iTpbd(tree.d1),
+        e(tree), dt(tree), fdt(tree), isextinct(tree), isgood(tree),
+        isfix(tree), copy(lb(tree)), copy(lλ(tree)), copy(lμ(tree)))
+    end
+  else
+    iTpbd(e(tree), dt(tree), fdt(tree), isextinct(tree), isgood(tree),
+      isfix(tree), copy(lb(tree)), copy(lλ(tree)), copy(lμ(tree)))
+  end
+end
+
+
+
+
+"""
+    iTpbd(e0::Array{Int64,1},
+          e1::Array{Int64,1},
+          el::Array{Float64,1},
+          bs::Array{Array{Float64,1},1},
+          λs::Array{Array{Float64,1},1},
+          μs::Array{Array{Float64,1},1},
+          ea::Array{Int64,1},
+          ee::Array{Int64,1},
+          ni::Int64,
+          ei::Int64,
+          δt::Float64)
+
+Transform edge structure to `iTpbd`.
+"""
+function iTpbd(e0::Array{Int64,1},
+               e1::Array{Int64,1},
+               el::Array{Float64,1},
+               bs::Array{Array{Float64,1},1},
+               λs::Array{Array{Float64,1},1},
+               μs::Array{Array{Float64,1},1},
+               ea::Array{Int64,1},
+               ee::Array{Int64,1},
+               ni::Int64,
+               ei::Int64,
+               δt::Float64)
+
+  # if tip
+  if in(ei, ea)
+    return iTpbd(el[ei], δt, δt, false, false, bs[ei], λs[ei], μs[ei])
+  # if extinct
+  elseif in(ei, ee)
+    return iTpbd(el[ei], δt, δt, true, false, bs[ei], λs[ei], μs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    n1, n2   = e1[ei1:ei2]
+    return iTpbd(iTpbd(e0, e1, el, bs, λs, μs, ea, ee, n1, ei1, δt),
+                iTpbd(e0, e1, el, bs, λs, μs, ea, ee, n2, ei2, δt),
+              el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt),
+              false, false, bs[ei], λs[ei], μs[ei])
   end
 end
 
