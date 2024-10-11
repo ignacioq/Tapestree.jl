@@ -994,22 +994,31 @@ end
 
 
 """
-    sss_v(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
+    sss_v(Ξ ::Vector{T}, 
+          fx::Function, 
+          fσ::Function, 
+          αx::Float64) where {T <: iTree}
 
-Returns the standardized sum of squares of a diffusion without drift `α` in
-vector form.
+Returns the delta drift for `fx` and `fσ`, and the standardized sum of 
+squares for `fσ` in vector form.
 """
-function sss_v(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
+function sss_v(Ξ ::Vector{T}, 
+               fx::Function, 
+               fσ::Function, 
+               ασ::Float64) where {T <: iTree}
 
-  nv = lastindex(Ξ)
-  dd = zeros(nv)
-  ss = zeros(nv)
-  n  = zeros(nv)
+  nv  = lastindex(Ξ)
+  Lσ  = zeros(nv)
+  Δσ  = zeros(nv)
+  ddσ = zeros(nv)
+  ss  = zeros(nv)
+  n   = zeros(nv)
   for i in Base.OneTo(nv)
-    dd[i], ss[i], n[i] = _ss_dd(Ξ[i], f, α, 0.0, 0.0, 0.0)
+    Lσ[i], Δσ[i], ddσ[i], ss[i], n[i] = 
+      _ss_dd(Ξ[i], fx, fσ, ασ, 0.0, 0.0, 0.0, 0.0, 0.0)
   end
 
-  return dd, ss, n
+  return Lσ, Δσ, ddσ, ss, n
 end
 
 

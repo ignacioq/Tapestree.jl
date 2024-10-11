@@ -110,16 +110,20 @@ function ll_bm(x  ::Array{Float64,1},
   nI = lastindex(x)-2
 
   ll = 0.0
-  @turbo for i in Base.OneTo(nI)
-    ll += (x[i+1] - x[i] - α*δt)^2
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      ll += (x[i+1] - x[i] - α*δt)^2
+    end
+
+    # add to global likelihood
+    ll *= (-0.5/((σ*srδt)^2))
+    ll -= Float64(nI)*(log(σ*srδt) + 0.5*log(2.0π))
   end
 
-  # add to global likelihood
-  ll *= (-0.5/((σ*srδt)^2))
-  ll -= Float64(nI)*(log(σ*srδt) + 0.5*log(2.0π))
-
   # add final non-standard `δt`
-  ll += ldnorm_bm(x[nI+2], x[nI+1] + α*fdt, sqrt(fdt)*σ)
+  if fdt > 0.0
+    ll += ldnorm_bm(x[nI+2], x[nI+1] + α*fdt, sqrt(fdt)*σ)
+  end
 
   return ll
 end
@@ -150,13 +154,15 @@ function llr_bm(xp  ::Array{Float64,1},
   nI = lastindex(xp) - 2
 
   llr = 0.0
-  @turbo for i in Base.OneTo(nI)
-    llr += (xp[i+1] - xp[i] - α*δt)^2 -
-           (xc[i+1] - xc[i] - α*δt)^2
-  end
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      llr += (xp[i+1] - xp[i] - α*δt)^2 -
+             (xc[i+1] - xc[i] - α*δt)^2
+    end
 
-  # add to global likelihood
-  llr *= -0.5/((σ*srδt)^2)
+    # add to global likelihood
+    llr *= -0.5/((σ*srδt)^2)
+  end
 
   # add final non-standard `δt`
   if fdt > 0.0
@@ -248,8 +254,10 @@ in place.
     randn!(x)
     # for standard δt
     x[1] = xi
-    @turbo for i = Base.OneTo(l-2)
-      x[i+1] *= srδt*σ
+    if l > 2
+      @turbo for i = Base.OneTo(l-2)
+        x[i+1] *= srδt*σ
+      end
     end
     x[l] *= sqrt(fdt)*σ
     cumsum!(x, x)
@@ -286,9 +294,11 @@ Brownian motion simulation function for updating a branch in place.
 
     # for standard δt
     x[1] = xi
-    @turbo for i = Base.OneTo(l-2)
-      x[i+1] *= srδt*σ
-      x[i+1] += α*δt
+    if l > 2
+      @turbo for i = Base.OneTo(l-2)
+        x[i+1] *= srδt*σ
+        x[i+1] += α*δt
+      end
     end
     x[l] *= sqrt(fdt)*σ
     x[l] += α*fdt
@@ -446,9 +456,11 @@ Returns a Brownian motion vector starting in `xa`, with diffusion rate
     x = randn(l)
     # for standard δt
     x[1] = xa
-    @turbo for i in Base.OneTo(n)
-      x[i+1] *= srδt*σ
-      x[i+1] += α*δt
+    if n > 0
+      @turbo for i in Base.OneTo(n)
+        x[i+1] *= srδt*σ
+        x[i+1] += α*δt
+      end
     end
     x[l] *= sqrt(fdt)*σ
     x[l] += α*fdt
@@ -759,12 +771,13 @@ function _sss_b(v::Array{Float64,1},
     n = lastindex(v)-2
 
     ss = 0.0
-    @turbo for i in Base.OneTo(n)
-      ss  += (v[i+1] - v[i] - α*δt)^2
+    if n > 0
+      @turbo for i in Base.OneTo(n)
+        ss  += (v[i+1] - v[i] - α*δt)^2
+      end
+        # standardize
+      ss *= 1.0/(2.0*δt)
     end
-
-    # standardize
-    ss *= 1.0/(2.0*δt)
 
     # add final non-standard `δt`
     if fdt > 0.0
@@ -828,12 +841,13 @@ function _sss_b(v  ::Array{Float64,1},
     n = lastindex(v)-2
 
     ss = 0.0
-    @turbo for i in Base.OneTo(n)
-      ss += (v[i+1] - v[i])^2
+    if n > 0
+      @turbo for i in Base.OneTo(n)
+        ss += (v[i+1] - v[i])^2
+      end
+      # standardize
+      ss *= 1.0/(2.0*δt)
     end
-
-    # standardize
-    ss *= 1.0/(2.0*δt)
 
     nF = Float64(n)
     # add final non-standard `δt`

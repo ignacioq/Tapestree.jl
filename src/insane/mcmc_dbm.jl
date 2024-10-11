@@ -16,7 +16,8 @@ Created 25 01 2024
     insane_dbm(tree     ::Tlabel,
                xa       ::Dict{String, Float64};
                xs       ::Dict{String, Float64} = Dict{String,Float64}(),
-               α_prior  ::NTuple{2,Float64} = (0.0, 10.0),
+               αx_prior ::NTuple{2,Float64} = (0.0, 10.0),
+               ασ_prior ::NTuple{2,Float64} = (0.0, 10.0),
                γ_prior  ::NTuple{2,Float64} = (0.05, 0.05),
                niter    ::Int64             = 1_000,
                nthin    ::Int64             = 10,
@@ -36,16 +37,18 @@ Run diffused Brownian motion trait evolution model.
 function insane_dbm(tree     ::Tlabel,
                     xa       ::Dict{String, Float64};
                     xs       ::Dict{String, Float64} = Dict{String,Float64}(),
-                    α_prior  ::NTuple{2,Float64} = (0.0, 10.0),
+                    αx_prior ::NTuple{2,Float64} = (0.0, 10.0),
+                    ασ_prior ::NTuple{2,Float64} = (0.0, 10.0),
                     γ_prior  ::NTuple{2,Float64} = (0.05, 0.05),
                     niter    ::Int64             = 1_000,
                     nthin    ::Int64             = 10,
                     nburn    ::Int64             = 200,
                     nflush   ::Int64             = nthin,
                     ofile    ::String            = string(homedir(), "/dbm"),
-                    αi       ::Float64           = 0.0,
+                    αxi      ::Float64           = 0.0,
+                    ασi      ::Float64           = 0.0,
                     γi       ::Float64           = 1e-3,
-                    pupdp    ::NTuple{4,Float64} = (0.1, 0.1, 0.05, 0.9),
+                    pupdp    ::NTuple{5,Float64} = (0.1, 0.1, 0.1, 0.05, 0.9),
                     δt       ::Float64           = 1e-3,
                     stn      ::Float64           = 0.1,
                     mxthf    ::Float64           = Inf,
@@ -77,7 +80,7 @@ function insane_dbm(tree     ::Tlabel,
   # get vector of internal edges
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
 
-  # parameter updates (1: α, 2:γ, 3: scale 4: gbm)
+  # parameter updates (1: αx, 2: ασ, 3:γ, 4: scale 5: gbm)
   spup = sum(pupdp)
   pup  = Int64[]
   for i in Base.OneTo(lastindex(pupdp))
@@ -87,13 +90,13 @@ function insane_dbm(tree     ::Tlabel,
   @info "running diffused Brownian motion"
 
   # burn-in phase
-  Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn =
-    mcmc_burn_dbm(Ξ, idf, α_prior, γ_prior, nburn, αi, γi, stn, 
+  Ξ, idf, ll, ddx, ddσ, ssσ, nσ, prc, αxc, ασc, γc, stn =
+    mcmc_burn_dbm(Ξ, idf, αx_prior, ασ_prior, γ_prior, nburn, αxi, ασi, γi, stn, 
       δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_dbm(Ξ, idf, ll, ddσ, ssσ, nσ, prc, αc, γc, stn, 
-              α_prior, γ_prior, δt, srδt, inodes, pup, 
+  r, treev = mcmc_dbm(Ξ, idf, ll, ddx, ddσ, ssσ, nσ, prc, αxc, ασc, γc, stn, 
+              αx_prior, ασ_prior, γ_prior, δt, srδt, inodes, pup, 
               niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -105,10 +108,12 @@ end
 """
     mcmc_burn_dbm(Ξ        ::Vector{sTxs},
                   idf      ::Vector{iBffs},
-                  α_prior  ::NTuple{2,Float64},
+                  αx_prior ::NTuple{2,Float64},
+                  ασ_prior ::NTuple{2,Float64},
                   γ_prior  ::NTuple{2,Float64},
                   nburn    ::Int64,
-                  αc       ::Float64,
+                  αxc      ::Float64,
+                  ασc      ::Float64,
                   γc       ::Float64,
                   stn      ::Float64,
                   δt       ::Float64,
@@ -121,10 +126,12 @@ MCMC burn-in chain for diffused Brownian motion.
 """
 function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
                        idf      ::Vector{iBffs},
-                       α_prior  ::NTuple{2,Float64},
+                       αx_prior ::NTuple{2,Float64},
+                       ασ_prior ::NTuple{2,Float64},
                        γ_prior  ::NTuple{2,Float64},
                        nburn    ::Int64,
-                       αc       ::Float64,
+                       αxc      ::Float64,
+                       ασc      ::Float64,
                        γc       ::Float64,
                        stn      ::Float64,
                        δt       ::Float64,
@@ -134,17 +141,18 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
                        prints   ::Int64)
 
   # starting likelihood and prior
-  ll  = zeros(lastindex(Ξ))
-  llik_dbm_v!(ll, Ξ, αc, γc, δt)
-  prc = logdnorm(αc,           α_prior[1], α_prior[2]^2) + 
-        logdinvgamma(γc^2,     γ_prior[1], γ_prior[2])
+  ll = zeros(lastindex(Ξ))
+  llik_dbm_v!(ll, Ξ, αxc, ασc, γc, δt)
+  prc = logdnorm(αxc,      αx_prior[1], αx_prior[2]^2) + 
+        logdnorm(ασc,      ασ_prior[1], ασ_prior[2]^2) + 
+        logdinvgamma(γc^2, γ_prior[1],  γ_prior[2])
 
   L   = [e(ξ) for ξ in Ξ]  # edge lengths
   nin = lastindex(inodes)  # number of internal nodes
   el  = lastindex(idf)     # number of edges
 
   # delta change, sum squares, path length in log-σ(t)
-  ddσ, ssσ, nσ = sss_v(Ξ, lσ2, αc)
+  Lσ, Δσ, ddσ, ssσ, nσ = sss_v(Ξ, xv, lσ2, ασc)
 
   # for scale tuning
   ltn = 0
@@ -159,19 +167,24 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
     for pupi in pup
 
       ## parameter updates
-      # update rate drift `α`
+      # update trait drift `αx`
       if pupi === 1
 
-        prc, αc = update_α!(αc, γc, L, ddσ, ll, prc, α_prior)
+        prc, αxc = update_αx!(αxc, Lσ, Δσ, ll, prc, αx_prior)
 
-        _ss!(ssσ, Ξ, lσ2, αc)
+      # update rate drift `ασ`
+      elseif pupi === 2
+
+        prc, ασc = update_ασ!(ασc, γc, L, ddσ, ll, prc, ασ_prior)
+
+        _ss!(ssσ, Ξ, lσ2, ασc)
 
       # update rate diffusion `γ`
-      elseif pupi === 2
+      elseif pupi === 3
 
         prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
-      elseif pupi === 3
+      elseif pupi === 4
 
         lac += update_scale!(Ξ, ll, stn, δt)
         lup += 1.0
@@ -279,12 +292,23 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
         for pupi in pup
 
           ## parameter updates
-          # update rate drift `α`
+          # update trait drift `αx`
           if pupi === 1
 
-            prc, αc = update_α!(αc, γc, L, ddσ, ll, prc, α_prior)
+            prc, αxc = update_αx!(αxc, Lσ, Δσ, ll, prc, αx_prior)
 
-            _ss!(ssσ, Ξ, lσ2, αc)
+            # ll0 = llik_dbm(Ξ, αc, γc, δt)
+            # if !isapprox(ll0, sum(ll))
+            #    @show ll0, sum(ll), it, pupi
+            #    return
+            # end
+
+          # update rate drift `ασ`
+          elseif pupi === 2
+
+            prc, ασc = update_α!(ασc, γc, L, ddσ, ll, prc, ασ_prior)
+
+            _ss!(ssσ, Ξ, lσ2, ασc)
 
             # ll0 = llik_dbm(Ξ, αc, γc, δt)
             # if !isapprox(ll0, sum(ll))
@@ -293,7 +317,7 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
             # end
 
           # update rate diffusion `γ`
-          elseif pupi === 2
+          elseif pupi === 3
 
             prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
@@ -303,7 +327,7 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
             #    return
             # end
 
-          elseif pupi === 3
+          elseif pupi === 4
 
             lac = update_scale!(Ξ, ll, stn, δt)
 
@@ -370,44 +394,84 @@ end
 
 
 """
-    update_α!(αc     ::Float64,
-              γ      ::Float64,
-              L      ::Vector{Float64},
-              ddσ    ::Vector{Float64},
-              ll     ::Vector{Float64},
-              prc    ::Float64,
-              α_prior::NTuple{2,Float64})
+    update_αx!(αxc     ::Float64,
+               Lσ      ::Vector{Float64},
+               Δσ      ::Vector{Float64}, 
+               ll      ::Vector{Float64},
+               prc     ::Float64,
+               αx_prior::NTuple{2,Float64})
 
-Gibbs update for `α`.
+Gibbs update for `αx`.
 """
-function update_α!(αc     ::Float64,
-                   γ      ::Float64,
-                   L      ::Vector{Float64},
-                   ddσ    ::Vector{Float64},
-                   ll     ::Vector{Float64},
-                   prc    ::Float64,
-                   α_prior::NTuple{2,Float64})
+function update_αx!(αxc     ::Float64,
+                    Lσ      ::Vector{Float64},
+                    Δσ      ::Vector{Float64}, 
+                    ll      ::Vector{Float64},
+                    prc     ::Float64,
+                    αx_prior::NTuple{2,Float64})
 
   # ratio
-  ν  = α_prior[1]
-  τ2 = α_prior[2]^2
-  γ2 = γ^2
-  rs = γ2/τ2
-  Lt = sum(L)
+  ν   = αx_prior[1]
+  τ2  = αx_prior[2]^2
+  idn = 1.0/(sum(Lσ)*τ2 + 1.0)
 
   # gibbs update for σ
-  αp = rnorm((sum(ddσ) + rs*ν)/(rs + Lt), sqrt(γ2/(rs + Lt)))
+  αxp = rnorm((sum(Δσ)*τ2 + ν)*idn, sqrt(τ2*idn))
 
   # update prior
-  prc += llrdnorm_x(αp, αc, ν, τ2)
+  prc += llrdnorm_x(αxp, αxc, ν, τ2)
+
+  # update likelihoods
+  for i in Base.OneTo(lastindex(ll))
+    iszero(Lσ[i]) && continue
+    ll[i] += 0.5*Lσ[i]*(αxc^2 - αxp^2 + 2.0*Δσ[i]*(αxp - αxc)/Lσ[i])
+  end
+
+  return prc, αxp
+end
+
+
+
+
+"""
+    update_ασ!(ασc     ::Float64,
+               γ       ::Float64,
+               L       ::Vector{Float64},
+               ddσ     ::Vector{Float64},
+               ll      ::Vector{Float64},
+               prc     ::Float64,
+               ασ_prior::NTuple{2,Float64})
+
+Gibbs update for `ασ`.
+"""
+function update_ασ!(ασc     ::Float64,
+                    γ       ::Float64,
+                    L       ::Vector{Float64},
+                    ddσ     ::Vector{Float64},
+                    ll      ::Vector{Float64},
+                    prc     ::Float64,
+                    ασ_prior::NTuple{2,Float64})
+
+  # ratio
+  ν   = ασ_prior[1]
+  τ2  = ασ_prior[2]^2
+  γ2  = γ^2
+  rs  = γ2/τ2
+  idn = 1.0/(rs + sum(L))
+
+  # gibbs update for αp
+  ασp = rnorm((sum(ddσ) + rs*ν)*idn, sqrt(γ2*idn))
+
+  # update prior
+  prc += llrdnorm_x(ασp, ασc, ν, τ2)
 
   # update likelihoods
   for i in Base.OneTo(lastindex(ll))
     iszero(L[i]) && continue
-    ll[i] += 0.5*L[i]/γ2*(αc^2 - αp^2 + 2.0*ddσ[i]*(αp - αc)/L[i])
+    ll[i] += 0.5*L[i]/γ2*(ασc^2 - ασp^2 + 2.0*ddσ[i]*(ασp - ασc)/L[i])
   end
 
-  return prc, αp
+  return prc, ασp
 end
 
 

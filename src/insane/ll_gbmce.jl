@@ -101,21 +101,22 @@ Returns the log-likelihood for a branch according to `gbmce`.
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
-  llλ  = 0.0
-  llbd = 0.0
-  @turbo for i in Base.OneTo(nI)
-    lλvi  = lλv[i]
-    lλvi1 = lλv[i+1]
-    llλ  += (lλvi1 - lλvi - α*δt)^2
-    llbd += exp(0.5*(lλvi + lλvi1))
+  ll = llλ = llbd = 0.0
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      lλvi  = lλv[i]
+      lλvi1 = lλv[i+1]
+      llλ  += (lλvi1 - lλvi - α*δt)^2
+      llbd += exp(0.5*(lλvi + lλvi1))
+    end
+
+    # add to global likelihood
+    ll += llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+
+    # add to global likelihood
+    llbd += Float64(nI) * μ
+    ll   -= llbd*δt
   end
-
-  # add to global likelihood
-  ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-
-  # add to global likelihood
-  llbd += Float64(nI) * μ
-  ll   -= llbd*δt
 
   lλvi1 = lλv[nI+2]
 
@@ -208,24 +209,25 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
-  llbm = 0.0
-  llbd = 0.0
-  @turbo for i in Base.OneTo(nI)
-    lλvi  = lλv[i]
-    lλvi1 = lλv[i+1]
-    llbm += (lλvi1 - lλvi - α*δt)^2
-    llbd += exp(0.5*(lλvi + lλvi1))
+  ll = llbm = llbd = ssλ = nλ = 0.0
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      lλvi  = lλv[i]
+      lλvi1 = lλv[i+1]
+      llbm += (lλvi1 - lλvi - α*δt)^2
+      llbd += exp(0.5*(lλvi + lλvi1))
+    end
+
+    # standardized sum of squares
+    ssλ  += llbm/(2.0*δt)
+    nλ   += Float64(nI)
+
+    # add to global likelihood
+    ll   += llbm * (-0.5/((σλ*srδt)^2)) - 
+            Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+    llbd += Float64(nI)*μ
+    ll   -= llbd*δt
   end
-
-  # standardized sum of squares
-  ssλ  = llbm/(2.0*δt)
-  nλ   = Float64(nI)
-
-  # add to global likelihood
-  ll    = llbm *
-          (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-  llbd += Float64(nI)*μ
-  ll   -= llbd*δt
 
   lλvi1 = lλv[nI+2]
 

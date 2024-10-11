@@ -159,21 +159,23 @@ function ll_gbm_b(lλv ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    llλ = llμ = llbd = 0.0
-    @turbo for i in Base.OneTo(nI)
-      lλvi  = lλv[i]
-      lμvi  = lμv[i]
-      lλvi1 = lλv[i+1]
-      lμvi1 = lμv[i+1]
-      llλ  += (lλvi1 - lλvi - α*δt)^2
-      llμ  += (lμvi1 - lμvi)^2
-      llbd += exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1))
-    end
+    ll = llλ = llμ = llbd = 0.0
+    if nI > 0
+      @turbo for i in Base.OneTo(nI)
+        lλvi  = lλv[i]
+        lμvi  = lμv[i]
+        lλvi1 = lλv[i+1]
+        lμvi1 = lμv[i+1]
+        llλ  += (lλvi1 - lλvi - α*δt)^2
+        llμ  += (lμvi1 - lμvi)^2
+        llbd += exp(0.5*(lλvi + lλvi1)) + exp(0.5*(lμvi + lμvi1))
+      end
 
-    # global likelihood
-    ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
-         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π)) -
-         δt*llbd
+      # global likelihood
+      ll += llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
+            llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π)) -
+            δt*llbd
+    end
 
     # ψ likelihood
     ψi  = ψ[ix]
@@ -337,30 +339,32 @@ function ll_gbm_ss_b(lλv ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    llλ = llμ = llbdλ = llbdμ = 0.0
-    @turbo for i in Base.OneTo(nI)
-      lλvi  = lλv[i]
-      lμvi  = lμv[i]
-      lλvi1 = lλv[i+1]
-      lμvi1 = lμv[i+1]
-      llλ  += (lλvi1 - lλvi - α*δt)^2
-      llμ  += (lμvi1 - lμvi)^2
-      llbdλ += exp(0.5*(lλvi + lλvi1))
-      llbdμ += exp(0.5*(lμvi + lμvi1))
+    ll = llλ = llμ = llbdλ = llbdμ = ssλ = ssμ = nλ = irλ = irμ = 0.0
+    if nI > 0
+      @turbo for i in Base.OneTo(nI)
+        lλvi  = lλv[i]
+        lμvi  = lμv[i]
+        lλvi1 = lλv[i+1]
+        lμvi1 = lμv[i+1]
+        llλ  += (lλvi1 - lλvi - α*δt)^2
+        llμ  += (lμvi1 - lμvi)^2
+        llbdλ += exp(0.5*(lλvi + lλvi1))
+        llbdμ += exp(0.5*(lμvi + lμvi1))
+      end
+
+      # standardized sum of squares
+      ssλ += llλ/(2.0*δt)
+      ssμ += llμ/(2.0*δt)
+      nλ  += Float64(nI)
+
+      # add to global likelihood
+      ll += llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
+            llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
+      # add to global likelihood
+      irλ += llbdλ*δt
+      irμ += llbdμ*δt
+      ll -= (llbdλ + llbdμ)*δt
     end
-
-    # standardized sum of squares
-    ssλ = llλ/(2.0*δt)
-    ssμ = llμ/(2.0*δt)
-    nλ  = Float64(nI)
-
-    # add to global likelihood
-    ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) +
-         llμ*(-0.5/((σμ*srδt)^2)) - Float64(nI)*(log(σμ*srδt) + 0.5*log(2.0π))
-    # add to global likelihood
-    irλ = llbdλ*δt
-    irμ = llbdμ*δt
-    ll -= (llbdλ + llbdμ)*δt
 
     # ψ likelihood
     ψi  = ψ[ix]
