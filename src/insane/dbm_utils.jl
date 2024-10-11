@@ -107,11 +107,11 @@ trait `xa`.
     if l > 2
       @turbo for i in Base.OneTo(l-2)
         lσ2[i+1] *= srδt*γ
-        lσ2[i+1] += α*δt
+        lσ2[i+1] += ασ*δt
       end
     end
     lσ2[l] *= sqrt(fdt)*γ
-    lσ2[l] += α*fdt
+    lσ2[l] += ασ*fdt
     cumsum!(lσ2, lσ2)
 
     # values
