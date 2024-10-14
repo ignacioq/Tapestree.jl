@@ -382,16 +382,16 @@ Diffused Brownian bridge simulation conditional on a rate path `lσ2`.
       @turbo for i = Base.OneTo(l-2)
         x[i+1] *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
       end
-    end
-    x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
-    cumsum!(x, x)
+      x[l] *= sqrt(fdt)*exp(0.25*(lσ2[l-1] + lσ2[l]))
+      cumsum!(x, x)
 
-    # make values bridge
-    ite = 1.0/(Float64(l-2) * δt + fdt)
-    xdf = (x[l] - xf)
-    if l > 2
-      @turbo for i = Base.OneTo(l-1)
-        x[i] -= (Float64(i-1) * δt * ite * xdf)
+      # make values bridge
+      ite = 1.0/(Float64(l-2) * δt + fdt)
+      xdf = (x[l] - xf)
+      if l > 2
+        @turbo for i = Base.OneTo(l-1)
+          x[i] -= (Float64(i-1) * δt * ite * xdf)
+        end
       end
     end
     x[l] = xf
@@ -465,7 +465,7 @@ function intσ2(lσ2::Vector{Float64},
     end
     ss *= δt
   end
-  
+
   ss += exp(0.5*(lσ2[l-1] + lσ2[l])) * fdt
   return ss
 end
