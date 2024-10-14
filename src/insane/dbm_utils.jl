@@ -464,9 +464,9 @@ function intσ2(lσ2::Vector{Float64},
       ss += exp(0.5*(lσ2[i] + lσ2[i+1]))
     end
     ss *= δt
-    ss += exp(0.5*(lσ2[l-1] + lσ2[l])) * fdt
   end
-
+  
+  ss += exp(0.5*(lσ2[l-1] + lσ2[l])) * fdt
   return ss
 end
 
