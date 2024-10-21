@@ -971,6 +971,10 @@ Recipe for plotting values given by `f` through time for a `iT`.
     # aggregating function
     ri = map(t_af, ri)
 
+    wh  = findall(!isnan, ri)
+    tsi = tsi[wh]
+    ri  = ri[wh]
+
     if lastindex(tsi) > lts
       ts  = tsi
       reverse!(ts)
