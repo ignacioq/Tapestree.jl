@@ -90,7 +90,7 @@ function _stem_update!(ξi       ::sTxs,
     xc   = xv(ξi)
     l    = lastindex(lσ2c)
     lσ2p = Vector{Float64}(undef,l)
-    lσ2n = σc[l]
+    lσ2n = lσ2c[l]
     xn   = xc[l]
     el   = e(ξi)
     fdtp = fdt(ξi)
