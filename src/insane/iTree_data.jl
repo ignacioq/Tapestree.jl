@@ -38,6 +38,7 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 Return initial trait value.
 """
 xi(tree::T) where {T <: sTX} = getproperty(tree, :xi)
+xi(tree::T) where {T <: peT} = getproperty(tree, :xi)
 
 
 
@@ -47,6 +48,7 @@ xi(tree::T) where {T <: sTX} = getproperty(tree, :xi)
 Return final trait value.
 """
 xf(tree::T) where {T <: sTX} = getproperty(tree, :xf)
+xf(tree::T) where {T <: peT} = getproperty(tree, :xf)
 
 
 
@@ -69,6 +71,14 @@ Return if is a fixed (i.e. observed) node.
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
 isfix(tree::Tlabel) = true
 
+
+
+"""
+    sh(tree::T) where {T <: iTree}
+
+Return `true` if punkeek shift is in `d1`, `false` if in `d2`
+"""
+sh(tree::T) where {T <: peT} = getproperty(tree, :sh)
 
 
 
@@ -180,6 +190,7 @@ isfossil(tree::iTpb)     = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
+isfossil(tree::peT)      = false
 
 
 

@@ -1365,3 +1365,92 @@ function _rplottrait!(tree::T,
   end
 end
 
+
+
+
+
+"""
+    function f(tree::T; type::Symbol = :trait)
+
+Recipe for plotting punctuated equilibrium trees.
+"""
+@recipe function f(tree::peT)
+
+  x = Float64[]
+  y = Float64[]
+
+  th = treeheight(tree)
+
+  _rplottrait!(tree, th, 0.0, x, y)
+
+  yfilt = filter(x -> !isnan(x), y)
+  ymn = minimum(yfilt)
+  ymx = maximum(yfilt)
+  rng = ymx - ymn
+
+  # plot defaults
+  legend          --> false
+  xguide          --> "time"
+  yguide          --> "trait"
+  seriescolor     --> :purple
+  xlims           --> (-th*0.05, th*1.05)
+  ylims           --> (ymn - 0.05*rng, ymx + 0.05*rng)
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+
+  return x, y
+
+end
+
+
+
+"""
+    _rplottrait!(tree::peT,
+                 xc  ::Float64,
+                 x   ::Array{Float64,1},
+                 y   ::Array{Float64,1})
+
+Returns `x` and `y` coordinates in order to plot a tree of type `peT`.
+"""
+function _rplottrait!(tree::peT,
+                      xc  ::Float64,
+                      yc  ::Float64,
+                      x   ::Array{Float64,1},
+                      y   ::Array{Float64,1})
+
+  xii = xi(tree)
+
+  # add vertical lines
+  if yc != xii
+    push!(x, xc, xc,  NaN)
+    push!(y, yc, xii, NaN)
+  end
+
+  ei = e(tree)
+
+  # add horizontal lines
+  xfi = xf(tree)
+  push!(x, xc, xc - ei, NaN)
+  push!(y, xii, xfi, NaN)
+
+  xc -= ei
+
+  if def1(tree)
+    _rplottrait!(tree.d1, xc, xfi, x, y)
+    if def2(tree)
+      _rplottrait!(tree.d2, xc, xfi, x, y)
+    end
+  end
+end
+
+
+
+
+
+
+
+
