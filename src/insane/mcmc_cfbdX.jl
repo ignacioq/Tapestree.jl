@@ -110,7 +110,7 @@ function insane_cfbd(tree    ::sTf_label,
   mc = m_surv_cbd(th, λc, μc, 500, crown)
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, xr, sTfbdX)
+  Ξ = make_Ξ(idf, xr, sTfbdx)
 
   # get vector of internal branches
   inodes = Int64[]
@@ -169,7 +169,7 @@ end
 Adaptive MCMC phase for da chain for constant birth-death using forward
 simulation.
 """
-function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdX},
+function mcmc_burn_cfbd(Ξ       ::Vector{sTfbdx},
                         idf     ::Array{iBffs,1},
                         λ_prior ::NTuple{2,Float64},
                         μ_prior ::NTuple{2,Float64},
@@ -282,7 +282,7 @@ end
 
 MCMC da chain for constant birth-death using forward simulation.
 """
-function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
+function mcmc_cfbd(Ξ      ::Vector{sTfbdx},
                    idf     ::Array{iBffs,1},
                    llc     ::Float64,
                    prc     ::Float64,
@@ -320,7 +320,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbdX},
   R = Array{Float64,2}(undef, nlogs, 7)
 
   # make tree vector
-  treev  = sTfbdX[]
+  treev  = sTfbdx[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -437,7 +437,7 @@ end
 
 """
     update_fs!(bix::Int64,
-               Ξ  ::Vector{sTfbdX},
+               Ξ  ::Vector{sTfbdx},
                idf::Vector{iBffs},
                llc::Float64,
                λ  ::Float64,
@@ -453,7 +453,7 @@ end
 Forward simulation proposal function for constant fossilized birth-death.
 """
 function update_fs!(bix::Int64,
-                    Ξ  ::Vector{sTfbdX},
+                    Ξ  ::Vector{sTfbdx},
                     idf::Vector{iBffs},
                     llc::Float64,
                     λ  ::Float64,
@@ -508,7 +508,7 @@ end
 
 """
     fsbi_t(bi::iBffs,
-           ξc::sTfbdX,
+           ξc::sTfbdx,
            λ ::Float64,
            μ ::Float64,
            ψ ::Float64,
@@ -517,7 +517,7 @@ end
 Forward simulation for terminal branch.
 """
 function fsbi_t(bi::iBffs,
-                ξc::sTfbdX,
+                ξc::sTfbdx,
                 λ ::Float64,
                 μ ::Float64,
                 ψ ::Float64,
@@ -589,7 +589,7 @@ end
 
 """
     fsbi_ft(bi::iBffs,
-            ξc::sTfbdX,
+            ξc::sTfbdx,
             λ ::Float64,
             μ ::Float64,
             ψ ::Float64,
@@ -598,7 +598,7 @@ end
 Forward simulation for fossil terminal branch.
 """
 function fsbi_ft(bi::iBffs,
-                 ξc::sTfbdX,
+                 ξc::sTfbdx,
                  λ ::Float64,
                  μ ::Float64,
                  ψ ::Float64,
@@ -698,7 +698,7 @@ end
 
 """
     fsbi_fi(bi::iBffs,
-            ξ1::sTfbdX,
+            ξ1::sTfbdx,
             x0::Float64,
             λ ::Float64,
             μ ::Float64,
@@ -708,8 +708,8 @@ end
 Forward simulation for fossil internal branch.
 """
 function fsbi_fi(bi::iBffs,
-                 ξc::sTfbdX,
-                 ξ1::sTfbdX,
+                 ξc::sTfbdx,
+                 ξ1::sTfbdx,
                  λ ::Float64,
                  μ ::Float64,
                  ψ ::Float64,
@@ -807,8 +807,8 @@ end
 
 """
     fsbi_i(bi::iBffs,
-           ξ1::sTfbdX,
-           ξ2::sTfbdX,
+           ξ1::sTfbdx,
+           ξ2::sTfbdx,
            x0::Float64,
            λ ::Float64,
            μ ::Float64,
@@ -818,8 +818,8 @@ end
 Forward simulation for branch `bi`
 """
 function fsbi_i(bi::iBffs,
-                ξ1::sTfbdX,
-                ξ2::sTfbdX,
+                ξ1::sTfbdx,
+                ξ2::sTfbdx,
                 x0::Float64,
                 λ ::Float64,
                 μ ::Float64,
@@ -882,7 +882,7 @@ end
 
 
 """
-    tip_sims!(tree::sTfbdX,
+    tip_sims!(tree::sTfbdx,
               t   ::Float64,
               λ   ::Float64,
               μ   ::Float64,
@@ -896,7 +896,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::sTfbdX,
+function tip_sims!(tree::sTfbdx,
                    t   ::Float64,
                    λ   ::Float64,
                    μ   ::Float64,
@@ -947,7 +947,7 @@ end
 
 
 """
-    fossiltip_sim!(tree::sTfbdX,
+    fossiltip_sim!(tree::sTfbdx,
                    t   ::Float64,
                    λ   ::Float64,
                    μ   ::Float64,
@@ -961,7 +961,7 @@ end
 
 Continue simulation until time `t` for the fixed tip in `tree`.
 """
-function fossiltip_sim!(tree::sTfbdX,
+function fossiltip_sim!(tree::sTfbdx,
                         t   ::Float64,
                         λ   ::Float64,
                         μ   ::Float64,
@@ -1004,7 +1004,7 @@ end
 
 """
     update_x!(bix     ::Int64,
-              Ξ       ::Vector{sTfbdX},
+              Ξ       ::Vector{sTfbdx},
               idf     ::Vector{iBffs},
               σx      ::Float64,
               llc     ::Float64,
@@ -1015,7 +1015,7 @@ end
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_x!(bix     ::Int64,
-                   Ξ       ::Vector{sTfbdX},
+                   Ξ       ::Vector{sTfbdx},
                    idf     ::Vector{iBffs},
                    σx      ::Float64,
                    llc     ::Float64,
@@ -1087,11 +1087,11 @@ end
                σx  ::Float64,
                llc ::Float64,
                sdX ::Float64,
-               ufx ::Bool) where {T <: sTX}
+               ufx ::Bool) where {T <: Tx}
 
 Do gbm updates on a decoupled tree recursively.
 """
-function _update_x!(tree::sTfbdX,
+function _update_x!(tree::sTfbdx,
                     σx  ::Float64,
                     llc ::Float64,
                     sdX ::Float64,
@@ -1127,7 +1127,7 @@ end
                    tre1::T,
                    σx  ::Float64,
                    llc ::Float64,
-                   sdX ::Float64) where {T <: sTX}
+                   sdX ::Float64) where {T <: Tx}
 
 Make gibbs node update for trait.
 """
@@ -1135,7 +1135,7 @@ function _update_duo_x!(tree::T,
                         tre1::T,
                         σx  ::Float64,
                         llc ::Float64,
-                        sdX ::Float64) where {T <: sTX}
+                        sdX ::Float64) where {T <: Tx}
 
   xa = xi(tree)
   xo = xf(tree)

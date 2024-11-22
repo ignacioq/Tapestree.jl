@@ -208,7 +208,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
-  llbm = llct = ssλ = nλ = Σλ = 0.0
+  ll = llbm = llct = ssλ = nλ = Σλ = 0.0
   if nI > 0
     @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
@@ -230,8 +230,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
   end
 
   lλvi1 = lλv[nI+2]
-
-  dλ = lλvi1 - lλv[1]
+  dλ    = lλvi1 - lλv[1]
 
   # add final non-standard `δt`
   if fdt > 0.0

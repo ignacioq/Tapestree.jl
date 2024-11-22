@@ -23,12 +23,12 @@ function sim_cpb(t::Float64, λ::Float64, x0::Float64, σx::Float64)
 
   if tw > t
     x1 = rnorm(x0, sqrt(t) * σx)
-    return sTpbX(t, false, x0, x1)
+    return sTpbx(t, false, x0, x1)
   end
 
   x1 = rnorm(x0, sqrt(tw) * σx)
 
-  sTpbX(sim_cpb(t - tw, λ, x1, σx),
+  sTpbx(sim_cpb(t - tw, λ, x1, σx),
         sim_cpb(t - tw, λ, x1, σx),
         tw, false, x0, x1)
 end
@@ -48,7 +48,7 @@ function sim_cpb(t::Float64, λ::Float64, x0::Float64, σx::Float64, na::Int64)
 
   if tw > t
     na += 1
-    return sTpbX(t, false, x0, rnorm(x0, sqrt(t) * σx)), na
+    return sTpbx(t, false, x0, rnorm(x0, sqrt(t) * σx)), na
   end
 
   x1 = rnorm(x0, sqrt(tw) * σx)
@@ -56,7 +56,7 @@ function sim_cpb(t::Float64, λ::Float64, x0::Float64, σx::Float64, na::Int64)
   d1, na = sim_cpb(t - tw, λ, x1, σx, na)
   d2, na = sim_cpb(t - tw, λ, x1, σx, na)
 
-  sTpbX(d1, d2, tw, false, x0, x1), na
+  sTpbx(d1, d2, tw, false, x0, x1), na
 end
 
 
@@ -104,13 +104,13 @@ function _sim_cpb_t(t   ::Float64,
         nlr += log(Iρi * Float64(na)/Float64(na-1))
       end
       if nlr < lr && lU >= nlr
-        return sTpbX(), na, nn, NaN
+        return sTpbx(), na, nn, NaN
       else
         x1 = rnorm(x0, sqrt(t) * σx)
         push!(xist, x0)
         push!(xfst, x1)
         push!(est, t)
-        return sTpbX(t, false, x0, x1), na, nn, nlr
+        return sTpbx(t, false, x0, x1), na, nn, nlr
       end
     end
 
@@ -121,10 +121,10 @@ function _sim_cpb_t(t   ::Float64,
     d2, na, nn, lr = 
       _sim_cpb_t(t - tw, λ, x1, σx, lr, lU, Iρi, na, nn, nlim, xist, xfst, est)
 
-    return sTpbX(d1, d2, tw, false, x0, x1), na, nn, lr
+    return sTpbx(d1, d2, tw, false, x0, x1), na, nn, lr
   end
 
-  return sTpbX(), na, nn, NaN
+  return sTpbx(), na, nn, NaN
 end
 
 
@@ -155,7 +155,7 @@ function _sim_cpb_i(t   ::Float64,
     if tw > t
         x1 = rnorm(x0, sqrt(t) * σx)
 
-      return sTpbX(t, false, x0, x1), nn
+      return sTpbx(t, false, x0, x1), nn
     end
 
     nn += 1
@@ -164,10 +164,10 @@ function _sim_cpb_i(t   ::Float64,
     d1, nn = _sim_cpb_i(t - tw, λ, x1, σx, nn, nlim)
     d2, nn = _sim_cpb_i(t - tw, λ, x1, σx, nn, nlim)
 
-    return sTpbX(d1, d2, tw, false, x0, x1), nn
+    return sTpbx(d1, d2, tw, false, x0, x1), nn
   end
 
-  sTpbX(), nn
+  sTpbx(), nn
 end
 
 
@@ -203,7 +203,7 @@ function _sim_cpb_it(t   ::Float64,
 
     if tw > t
       lr += log(Iρi)
-      return sTpbX(t, false, x0, rnorm(x0, sqrt(t) * σx)), nn, lr
+      return sTpbx(t, false, x0, rnorm(x0, sqrt(t) * σx)), nn, lr
     end
 
     nn += 1
@@ -211,10 +211,10 @@ function _sim_cpb_it(t   ::Float64,
     d1, nn, lr = _sim_cpb_it(t - tw, λ, x1, σx, lr, lU, Iρi, nn, nlim)
     d2, nn, lr = _sim_cpb_it(t - tw, λ, x1, σx, lr, lU, Iρi, nn, nlim)
 
-    return sTpbX(d1, d2, tw, false, x0, x1), nn, lr
+    return sTpbx(d1, d2, tw, false, x0, x1), nn, lr
   end
 
-  return sTpbX(), nn, NaN
+  return sTpbx(), nn, NaN
 end
 
 

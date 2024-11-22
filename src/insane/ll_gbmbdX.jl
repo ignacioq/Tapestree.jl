@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTbdX},
+    llik_gbm(Ξ   ::Vector{iTbdx},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
@@ -23,9 +23,9 @@ Created 03 09 2020
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTbdX` according to `gbm-bd`.
+Returns the log-likelihood for a `iTbdx` according to `gbm-bd`.
 """
-function llik_gbm(Ξ   ::Vector{iTbdX},
+function llik_gbm(Ξ   ::Vector{iTbdx},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -52,7 +52,7 @@ end
 
 
 """
-    llik_gbm(tree::iTbdX,
+    llik_gbm(tree::iTbdx,
              α   ::Float64,
              σλ  ::Float64,
              σμ  ::Float64,
@@ -61,9 +61,9 @@ end
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTbdX` according to `gbmbd`.
+Returns the log-likelihood for a `iTbdx` according to `gbmbd`.
 """
-function llik_gbm(tree::iTbdX,
+function llik_gbm(tree::iTbdx,
                   α   ::Float64,
                   σλ  ::Float64,
                   σμ  ::Float64,
@@ -175,7 +175,7 @@ end
 
 
 """
-    llik_gbm_ss(tree::iTbdX,
+    llik_gbm_ss(tree::iTbdx,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -184,9 +184,9 @@ end
                 δt  ::Float64,
                 srδt::Float64)
 
-Returns the log-likelihood for a `iTbdX` according to `gbmbd`.
+Returns the log-likelihood for a `iTbdx` according to `gbmbd`.
 """
-function llik_gbm_ss(tree::iTbdX,
+function llik_gbm_ss(tree::iTbdx,
                      α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
@@ -449,7 +449,7 @@ end
              ssλ ::Float64,
              ssμ ::Float64,
              ssx ::Float64,
-             n   ::Float64) where {T <: iTX}
+             n   ::Float64) where {T <: Tx}
 
 Returns the standardized sum of squares a `iT` according
 to `gbm-bd` for a `σ` proposal.
@@ -460,7 +460,7 @@ function _sss_gbm(tree::T,
                   ssλ ::Float64,
                   ssμ ::Float64,
                   ssx ::Float64,
-                  n   ::Float64) where {T <: iTX}
+                  n   ::Float64) where {T <: Tx}
 
   ssλ0, ssμ0, ssx0, n0 = _sss_gbm_b(lλ(tree), lμ(tree), xv(tree), α, βλ, 
     dt(tree), fdt(tree))

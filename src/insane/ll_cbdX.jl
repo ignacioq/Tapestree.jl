@@ -13,12 +13,12 @@ Created 06 07 2020
 
 
 """
-    llik_cbd(tree::sTbdX, λ::Float64, μ::Float64, σx::Float64)
+    llik_cbd(tree::sTbdx, λ::Float64, μ::Float64, σx::Float64)
 
 Log-likelihood up to a constant for constant birth-death and trait evolution
 given a complete `iTree` recursively.
 """
-function llik_cbd(tree::sTbdX, λ::Float64, μ::Float64, σx::Float64)
+function llik_cbd(tree::sTbdx, λ::Float64, μ::Float64, σx::Float64)
 
   el  = e(tree)
   bml = iszero(el) ? 0.0 : ldnorm_bm(xf(tree), xi(tree), sqrt(el)*σx)
@@ -27,8 +27,8 @@ function llik_cbd(tree::sTbdX, λ::Float64, μ::Float64, σx::Float64)
     - el*(λ + μ) + (isextinct(tree) ? log(μ) : 0.0) + bml
   else
     log(λ) - el*(λ + μ) + bml         +
-    llik_cbd(tree.d1::sTbdX, λ, μ, σx) +
-    llik_cbd(tree.d2::sTbdX, λ, μ, σx)
+    llik_cbd(tree.d1::sTbdx, λ, μ, σx) +
+    llik_cbd(tree.d2::sTbdx, λ, μ, σx)
   end
 end
 
@@ -36,12 +36,12 @@ end
 
 
 """
-    llik_cbd(Ξ::Vector{sTbdX}, λ::Float64, μ::Float64, σx::Float64)
+    llik_cbd(Ξ::Vector{sTbdx}, λ::Float64, μ::Float64, σx::Float64)
 
 Log-likelihood up to a constant for constant birth-death and trait evolution
 given a complete `iTree` for decoupled trees.
 """
-function llik_cbd(Ξ::Vector{sTbdX}, λ::Float64, μ::Float64, σx::Float64)
+function llik_cbd(Ξ::Vector{sTbdx}, λ::Float64, μ::Float64, σx::Float64)
 
   ll = 0.0
   for ξ in Ξ

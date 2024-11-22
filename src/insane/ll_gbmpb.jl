@@ -103,7 +103,6 @@ function ll_gbm_b(lλv ::Array{Float64,1},
       llbm += (lλvi1 - lλvi - α*δt)^2
       llpb += exp(0.5*(lλvi + lλvi1))
     end
-
     # add to global likelihood
     ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
           llpb*δt
@@ -114,8 +113,8 @@ function ll_gbm_b(lλv ::Array{Float64,1},
   # add final non-standard `δt`
   if fdt > 0.0
     lλvi = lλv[nI+1]
-    ll   += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-            fdt*exp(0.5*(lλvi + lλvi1))
+    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+           fdt*exp(0.5*(lλvi + lλvi1))
   end
   if λev
     ll += lλvi1
@@ -212,8 +211,7 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   end
 
   lλvi1 = lλv[nI+2]
-
-  dλ = lλvi1 - lλv[1]
+  dλ    = lλvi1 - lλv[1]
 
   # add final non-standard `δt`
   if fdt > 0.0
@@ -359,7 +357,7 @@ function _ss_ir_dd_b(v  ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(v)-2
 
-    ss = ir = 0.0
+    ss = ir = n = 0.0
     if nI > 0
       @turbo for i in Base.OneTo(nI)
         vi  = v[i]
@@ -371,9 +369,9 @@ function _ss_ir_dd_b(v  ::Array{Float64,1},
       # standardize
       ss *= 1.0/(2.0*δt)
       ir *= δt
+      n  += Float64(nI)
     end
 
-    n = Float64(nI)
     # add final non-standard `δt`
     if fdt > 0.0
       vi  = v[nI+1]
@@ -431,7 +429,7 @@ function _ss_b(v::Array{Float64,1},
       @turbo for i in Base.OneTo(nI)
         ss += (v[i+1] - v[i] - α*δt)^2
       end
-    
+
       # standardize
       ss *= 1.0/(2.0*δt)
     end
@@ -444,45 +442,6 @@ function _ss_b(v::Array{Float64,1},
   return ss
 end
 
-
-
-
-"""
-    deltaλ(Ξ::Vector{T}) where {T <: iT}
-
-Returns the log-likelihood ratio for according to GBM
-for a drift `α` proposal.
-"""
-function deltaλ(Ξ::Vector{T}) where {T <: iT}
-
-  dλ = 0.0
-
-  for ξi in Ξ
-    dλ += _deltaλ(ξi)
-  end
-
-  return dλ
-end
-
-
-
-
-"""
-    _deltaλ(tree::T) where {T <: iT}
-
-Returns the log-likelihood ratio for a `iTpb` according
-to GBM birth-death for a `α` proposal.
-"""
-function _deltaλ(tree::T) where {T <: iT}
-
-  lλv = lλ(tree)
-
-  if def1(tree)
-    lλv[end] - lλv[1] + _deltaλ(tree.d1) + _deltaλ(tree.d2)
-  else
-    lλv[end] - lλv[1]
-  end
-end
 
 
 

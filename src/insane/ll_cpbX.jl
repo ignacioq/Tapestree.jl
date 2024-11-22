@@ -13,12 +13,12 @@ Created 06 07 2020
 
 
 """
-    llik_cpb(tree::sTpbX, λ::Float64, σx::Float64)
+    llik_cpb(tree::sTpbx, λ::Float64, σx::Float64)
 
 Log-likelihood for constant pure-birth and trait evolution
 given a complete `iTree`.
 """
-function llik_cpb(tree::sTpbX, λ::Float64, σx::Float64)
+function llik_cpb(tree::sTpbx, λ::Float64, σx::Float64)
 
   el  = e(tree)
   bml = iszero(el) ? 0.0 : ldnorm_bm(xf(tree), xi(tree), sqrt(el)*σx)
@@ -27,8 +27,8 @@ function llik_cpb(tree::sTpbX, λ::Float64, σx::Float64)
     - el * λ + bml
   else
     log(λ) - el * λ + bml           +
-    llik_cpb(tree.d1::sTpbX, λ, σx) +
-    llik_cpb(tree.d2::sTpbX, λ, σx)
+    llik_cpb(tree.d1::sTpbx, λ, σx) +
+    llik_cpb(tree.d2::sTpbx, λ, σx)
   end
 end
 
@@ -36,12 +36,12 @@ end
 
 
 """
-    llik_cpb(Ξ::Vector{sTpbX}, λ::Float64, σx::Float64)
+    llik_cpb(Ξ::Vector{sTpbx}, λ::Float64, σx::Float64)
 
 Log-likelihood up to a constant for constant pure-birth and trait evolution
 given a complete `iTree` for decoupled trees.
 """
-function llik_cpb(Ξ::Vector{sTpbX}, λ::Float64, σx::Float64)
+function llik_cpb(Ξ::Vector{sTpbx}, λ::Float64, σx::Float64)
 
   ll = 0.0
   for ξ in Ξ
@@ -60,7 +60,7 @@ end
 
 Returns the time standardized trait difference.
 """
-function sdeltaX(Ξ::Vector{T}) where {T <: sTX}
+function sdeltaX(Ξ::Vector{T}) where {T <: Tx}
 
   sdX = 0.0
   nX  = 0.0
@@ -75,11 +75,11 @@ end
 
 
 """
-    _sdeltaX(tree::T, sdX::Float64, nX::Int64) where {T <: sTX}
+    _sdeltaX(tree::T, sdX::Float64, nX::Int64) where {T <: Tx}
 
 Returns time standardized trait differences.
 """
-function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: sTX}
+function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: Tx}
 
   el = e(tree)
   if !iszero(el)

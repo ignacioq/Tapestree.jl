@@ -93,7 +93,7 @@ function insane_gbmbd(tree    ::sT_label,
   mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 500, crown)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, xr, log(λc), log(μc), αi, σλi, σμi, σxc, δt, srδt, iTbdX)
+  Ξ = make_Ξ(idf, xr, log(λc), log(μc), αi, σλi, σμi, σxc, δt, srδt, iTbdx)
 
   # set end of fix branch speciation times and
   # get vector of internal branches
@@ -145,7 +145,7 @@ end
 
 
 """
-    mcmc_burn_gbmbd(Ξ       ::Vector{iTbdX},
+    mcmc_burn_gbmbd(Ξ       ::Vector{iTbdx},
                     idf     ::Vector{iBffs},
                     λa_prior::NTuple{2,Float64},
                     μa_prior::NTuple{2,Float64},
@@ -172,7 +172,7 @@ end
 
 MCMC burn-in chain for `gbmbd`.
 """
-function mcmc_burn_gbmbd(Ξ       ::Vector{iTbdX},
+function mcmc_burn_gbmbd(Ξ       ::Vector{iTbdx},
                          idf     ::Vector{iBffs},
                          λa_prior::NTuple{2,Float64},
                          μa_prior::NTuple{2,Float64},
@@ -294,7 +294,7 @@ end
 
 
 """
-    mcmc_gbmbd(Ξ       ::Vector{iTbdX},
+    mcmc_gbmbd(Ξ       ::Vector{iTbdx},
                idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
@@ -324,7 +324,7 @@ end
 
 MCMC chain for `gbmbd`.
 """
-function mcmc_gbmbd(Ξ       ::Vector{iTbdX},
+function mcmc_gbmbd(Ξ       ::Vector{iTbdx},
                     idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
@@ -370,7 +370,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbdX},
   R = Array{Float64,2}(undef, nlogs, 11)
 
   # make Ξ vector
-  Ξv = iTbdX[]
+  Ξv = iTbdx[]
 
   # number of branches and of triads
   nbr  = lastindex(idf)
@@ -511,7 +511,7 @@ end
 
 """
     update_fs!(bix ::Int64,
-               Ξ   ::Vector{iTbdX},
+               Ξ   ::Vector{iTbdx},
                idf ::Vector{iBffs},
                α   ::Float64,
                σλ  ::Float64,
@@ -530,7 +530,7 @@ end
 Forward simulation proposal function for `gbmbd`.
 """
 function update_fs!(bix ::Int64,
-                    Ξ   ::Vector{iTbdX},
+                    Ξ   ::Vector{iTbdx},
                     idf ::Vector{iBffs},
                     α   ::Float64,
                     σλ  ::Float64,
@@ -591,7 +591,7 @@ end
 
 """
     fsbi_t(bi  ::iBffs,
-           ξc  ::iTbdX,
+           ξc  ::iTbdx,
            α   ::Float64,
            σλ  ::Float64,
            σμ  ::Float64,
@@ -603,7 +603,7 @@ end
 Forward simulation for branch `bi`
 """
 function fsbi_t(bi  ::iBffs,
-                ξc  ::iTbdX,
+                ξc  ::iTbdx,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -679,9 +679,9 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
-           ξc  ::iTbdX,
-           ξ1  ::iTbdX,
-           ξ2  ::iTbdX,
+           ξc  ::iTbdx,
+           ξ1  ::iTbdx,
+           ξ2  ::iTbdx,
            α   ::Float64,
            σλ  ::Float64,
            σμ  ::Float64,
@@ -693,9 +693,9 @@ end
 Forward simulation for branch `bi`
 """
 function fsbi_i(bi  ::iBffs,
-                ξc  ::iTbdX,
-                ξ1  ::iTbdX,
-                ξ2  ::iTbdX,
+                ξc  ::iTbdx,
+                ξ1  ::iTbdx,
+                ξ2  ::iTbdx,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -830,7 +830,7 @@ end
 
 
 """
-    tip_sims!(tree::iTbdX,
+    tip_sims!(tree::iTbdx,
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
@@ -847,7 +847,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::iTbdX,
+function tip_sims!(tree::iTbdx,
                    t   ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,

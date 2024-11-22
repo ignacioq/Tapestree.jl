@@ -43,9 +43,8 @@ module INSANE
   include("insane/sim_gbmct.jl")
   include("insane/sim_gbmfbd.jl")
   include("insane/sim_shift.jl")
-  include("insane/sim_cpbX.jl")
-  include("insane/sim_cbdX.jl")
-  include("insane/sim_cfbdX.jl")
+  include("insane/sim_dbm.jl")
+  include("insane/survival.jl")
   include("insane/ll_cpb.jl")
   include("insane/ll_cbd.jl")
   include("insane/ll_cfbd.jl")
@@ -54,10 +53,7 @@ module INSANE
   include("insane/ll_gbmce.jl")
   include("insane/ll_gbmct.jl")
   include("insane/ll_gbmfbd.jl")
-  include("insane/ll_cpbX.jl")
-  include("insane/ll_cbdX.jl")
-  include("insane/ll_cfbdX.jl")
-  include("insane/survival.jl")
+  include("insane/ll_dbm.jl")
   include("insane/mcmc_cpb.jl")
   include("insane/mcmc_cbd_gp.jl")
   include("insane/mcmc_cbd.jl")
@@ -68,16 +64,16 @@ module INSANE
   include("insane/mcmc_gbmce.jl")
   include("insane/mcmc_gbmct.jl")
   include("insane/mcmc_gbmfbd.jl")
-  include("insane/mcmc_cpbX.jl")
-  include("insane/mcmc_cbdX.jl")
-  include("insane/mcmc_cfbdX.jl")
+  include("insane/mcmc_dbm.jl")
   include("insane/mhprop_gbmpb.jl")
   include("insane/mhprop_gbmbd.jl")
   include("insane/mhprop_gbmbd_efx.jl")
   include("insane/mhprop_gbmce.jl")
   include("insane/mhprop_gbmct.jl")
   include("insane/mhprop_gbmfbd.jl")
+  include("insane/mhprop_dbm.jl")
   include("insane/bm_utils.jl")
+  include("insane/dbm_utils.jl")
   include("insane/decoupled_trees.jl")
   include("insane/marginal_likelihood.jl")
 
@@ -88,5 +84,6 @@ module INSANE
                                      "iTce"  => iTce,
                                      "iTct"  => iTct,
                                      "iTbd"  => iTbd,
-                                     "iTfbd" => iTfbd)
+                                     "iTfbd" => iTfbd,
+                                     "sTxs"  => sTxs)
 end # module INSANE

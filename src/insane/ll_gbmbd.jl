@@ -533,7 +533,7 @@ function _ss_b(lλv::Array{Float64,1},
     nI = lastindex(lλv)-2
 
     ssλ = ssμ = 0.0
-    if nI > 2
+    if nI > 0
       @turbo for i in Base.OneTo(nI)
         ssλ  += (lλv[i+1] - lλv[i] - α*δt)^2
         ssμ  += (lμv[i+1] - lμv[i])^2
@@ -555,7 +555,6 @@ function _ss_b(lλv::Array{Float64,1},
 
   return ssλ, ssμ
 end
-
 
 
 
