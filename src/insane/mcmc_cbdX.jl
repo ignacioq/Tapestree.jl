@@ -478,12 +478,12 @@ function fsbi_t(bi::iBffs,
 
   # if fix node
   if fx(bi)
-    #get fix `x` and edge
+    # get fix `x` and edge
     xc  = fixed_xt(ξc)
 
     # sample tip according to fix `x` value
     acr = 0.0
-    wp = Float64[]
+    wp  = Float64[]
     @simd for i in Base.OneTo(na)
       srt = sqrt(est[i])
       wi  = dnorm_bm(xfst[i], xist[i], srt*σx)/dnorm_bm(xc, xist[i], srt*σx)

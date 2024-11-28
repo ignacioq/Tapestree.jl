@@ -153,11 +153,9 @@ function _make_Ξ!(Ξ   ::Vector{T},
   end
 
   if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf)
     if i2 > 0 
       _make_Ξ!(Ξ, i2, lλv[l], α, σλ, δt, srδt, idf)
-      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf)
-    else
-      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf)
     end
   end
 
@@ -260,11 +258,9 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
   push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
 
   if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
     if i2 > 0 
       _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
-    else
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
     end
   end
 
@@ -399,11 +395,9 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
   push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
 
   if i1 > 0
+    _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf)
     if i2 > 0
       _make_Ξ!(Ξ, ixiv, ixfv, i2, lλv[l], α, σλ, tv, le, δt, srδt, idf)
-      _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf)
-    else
-      _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf)
     end
   end
 
@@ -520,11 +514,9 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
   setλt!(bi, lλv[l])
 
   if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
     if i2 > 0 
       _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
-    else
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
     end
   end
 
@@ -615,16 +607,81 @@ function _make_Ξ!(Ξ   ::Vector{sTxs},
   push!(Ξ, sTxs(et, δt, fdti, xv, lσ2))
 
   if i1 > 0 
+    _make_Ξ!(Ξ, i1, xr, σi, γi, δt, srδt, idf)
     if i2 > 0 
       _make_Ξ!(Ξ, i2, xr, σi, γi, δt, srδt, idf)
-      _make_Ξ!(Ξ, i1, xr, σi, γi, δt, srδt, idf)
-    else
-      _make_Ξ!(Ξ, i1, xr, σi, γi, δt, srδt, idf)
     end
   end
 
   return nothing
 end
+
+
+
+
+"""
+    make_Ξ(idf::Vector{iBffs},
+           xr ::Vector{Float64},
+           σai::Float64,
+           σki::Float64,
+           ::Type{sTpe})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs},
+                xr ::Vector{Float64},
+                σai::Float64,
+                σki::Float64,
+                ::Type{sTpe})
+
+  Ξ = sTpe[]
+  _make_Ξ!(Ξ, 1, xr, σai, σki, idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ  ::Vector{sTpe},
+             i  ::Int64,
+             xr ::Vector{Float64},
+             σai::Float64,
+             σki::Float64,
+             idf::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ  ::Vector{sTpe},
+                  i  ::Int64,
+                  xr ::Vector{Float64},
+                  σai::Float64,
+                  σki::Float64,
+                  idf::Vector{iBffs})
+
+  bi  = idf[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  ip  = pa(bi)
+  ip  = iszero(ip) ? 1 : ip
+  et  = e(bi)
+  xii = xr[ip]
+  xfi = xr[i]
+  shi = rand() < 0.5
+
+  push!(Ξ, sTpe(et, false, xii, xfi, shi, true))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, xr, σai, σki, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, xr, σai, σki, idf)
+    end
+  end
+
+  return nothing
+end
+
 
 
 

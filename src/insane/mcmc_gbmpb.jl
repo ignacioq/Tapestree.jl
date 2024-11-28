@@ -434,37 +434,36 @@ end
 
 
 """
-    update_σ!(σλc     ::Float64,
-              ssλ     ::Float64,
-              n       ::Float64,
-              llc     ::Float64,
-              prc     ::Float64,
-              σλ_prior::NTuple{2,Float64})
+    update_σ!(σc     ::Float64,
+              ss     ::Float64,
+              n      ::Float64,
+              llc    ::Float64,
+              prc    ::Float64,
+              σ_prior::NTuple{2,Float64})
 
-Gibbs update for `σλ`.
+Gibbs update for variance `σ`.
 """
-function update_σ!(σλc     ::Float64,
-                   ssλ     ::Float64,
-                   n       ::Float64,
-                   llc     ::Float64,
-                   prc     ::Float64,
-                   σλ_prior::NTuple{2,Float64})
+function update_σ!(σc     ::Float64,
+                   ss     ::Float64,
+                   n      ::Float64,
+                   llc    ::Float64,
+                   prc    ::Float64,
+                   σ_prior::NTuple{2,Float64})
 
-  σλ_p1 = σλ_prior[1]
-  σλ_p2 = σλ_prior[2]
+  σ_p1, σ_p2 = σ_prior
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
+  σp2 = randinvgamma(σ_p1 + 0.5 * n, σ_p2 + ss)
 
   # update prior
-  prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+  prc += llrdinvgamma(σp2, σc^2, σ_p1, σ_p2)
 
-  σλp = sqrt(σλp2)
+  σp = sqrt(σp2)
 
   # update likelihood
-  llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc))
+  llc += ss*(1.0/σc^2 - 1.0/σp2) - n*(log(σp/σc))
 
-  return llc, prc, σλp
+  return llc, prc, σp
 end
 
 

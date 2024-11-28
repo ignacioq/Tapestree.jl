@@ -11,14 +11,14 @@ Created 20 11 2024
 
 
 """
-    peT
+    sTpe
 
 The composite recursive type of supertype `sT`
 representing a binary phylogenetic tree for `punkeek` use,
 with the following fields:
 
-  d1::peT
-  d2::peT
+  d1::sTpe
+  d2::sTpe
   e ::Float64
   iμ::Bool
   xi::Float64
@@ -28,17 +28,17 @@ with the following fields:
 
 Constructs a tip.
 
-  peT(e::Float64, iμ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
+  sTpe(e::Float64, iμ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
     (x = new(); x.e = e; x.iμ = iμ; x.xi = xi; x.xf = xf; x.sh = sh;  x.fx = fx; x)
 
-Constructs an `peT` object with two `peT` daughters and edge `e`.
+Constructs an `sTpe` object with two `sTpe` daughters and edge `e`.
 
-  peT(d1::peT, d2::peT, e::Float64, iμ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
+  sTpe(d1::sTpe, d2::sTpe, e::Float64, iμ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
     new(d1, d2, e, iμ, xi, xf, sh, fx)
 """
-mutable struct peT <: sT
-  d1::peT
-  d2::peT
+mutable struct sTpe <: sT
+  d1::sTpe
+  d2::sTpe
   e ::Float64
   iμ::Bool
   xi::Float64
@@ -46,46 +46,46 @@ mutable struct peT <: sT
   sh::Bool
   fx::Bool
 
-  peT() = new()
-  peT(e::Float64, iμ::Bool, xi::Float64, xf::Float64, fx::Bool) =
-    (x = new(); x.e = e; x.iμ = iμ; x.xi = xi; x.xf = xf; x.sh = false; x.fx = fx; x)
-  peT(d1::peT, d2::peT, e::Float64, iμ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
+  sTpe() = new()
+  sTpe(e::Float64, iμ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
+    (x = new(); x.e = e; x.iμ = iμ; x.xi = xi; x.xf = xf; x.sh = sh; x.fx = fx; x)
+  sTpe(d1::sTpe, d2::sTpe, e::Float64, iμ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
     new(d1, d2, e, iμ, xi, xf, sh, fx)
 end
 
 # pretty-printing
-Base.show(io::IO, t::peT) =
+Base.show(io::IO, t::sTpe) =
   print(io, "insane simple punkeek tree with ", ntips(t), " tips (",
     ntipsextinct(t)," extinct)")
 
 
 
-# """
-#     peT(tree::sT_label)
 
-# Transform a tree of type `sT_label` to `peT`.
+"""
+    sTpe(tree::sTpe)
+
+Produce a new copy of `sTpe`.
+"""
+function sTpe(tree::sTpe)
+  if def1(tree)
+    sTpe(sTpe(tree.d1), sTpe(tree.d2), e(tree), isextinct(tree), 
+      xi(tree), xf(tree), sh(tree), isfix(tree))
+  else
+    sTpe(e(tree), isextinct(tree), xi(tree), xf(tree), false, isfix(tree))
+  end
+end
+
+
 # """
-# function peT(tree::sT_label)
+#     sTpe(tree::sT_label)
+
+# Transform a tree of type `sT_label` to `sTpe`.
+# """
+# function sTpe(tree::sT_label)
 #   if def1(tree)
-#     peT(peT(tree.d1), peT(tree.d2), e(tree), false, false)
+#     sTpe(sTpe(tree.d1), sTpe(tree.d2), e(tree), false, false)
 #   else
-#     peT(e(tree), false)
-#   end
-# end
-
-
-
-
-# """
-#     peT(tree::peT)
-
-# Produce a new copy of `peT`.
-# """
-# function peT(tree::peT)
-#   if def1(tree)
-#     peT(peT(tree.d1), peT(tree.d2), e(tree), isextinct(tree), isfix(tree))
-#   else
-#     peT(e(tree), isextinct(tree), isfix(tree))
+#     sTpe(e(tree), false)
 #   end
 # end
 

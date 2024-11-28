@@ -807,14 +807,14 @@ end
 
 Recipe for plotting punctuated equilibrium trees.
 """
-@recipe function f(tree::peT)
+@recipe function f(tree::sTpe)
 
   x = Float64[]
   y = Float64[]
 
   th = treeheight(tree)
 
-  _rplottrait!(tree, th, 0.0, x, y)
+  _rplottrait!(tree, th, xi(tree), x, y)
 
   yfilt = filter(x -> !isnan(x), y)
   ymn = minimum(yfilt)
@@ -842,14 +842,14 @@ end
 
 
 """
-    _rplottrait!(tree::peT,
+    _rplottrait!(tree::sTpe,
                  xc  ::Float64,
                  x   ::Array{Float64,1},
                  y   ::Array{Float64,1})
 
-Returns `x` and `y` coordinates in order to plot a tree of type `peT`.
+Returns `x` and `y` coordinates in order to plot a tree of type `sTpe`.
 """
-function _rplottrait!(tree::peT,
+function _rplottrait!(tree::sTpe,
                       xc  ::Float64,
                       yc  ::Float64,
                       x   ::Array{Float64,1},

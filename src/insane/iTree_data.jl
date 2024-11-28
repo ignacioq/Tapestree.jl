@@ -37,7 +37,7 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 Return initial trait value.
 """
-xi(tree::T) where {T <: peT} = getproperty(tree, :xi)
+xi(tree::T) where {T <: sTpe} = getproperty(tree, :xi)
 xi(tree::T) where {T <: Tx} = getproperty(tree, :xi)
 
 
@@ -48,7 +48,7 @@ xi(tree::T) where {T <: Tx} = getproperty(tree, :xi)
 Return final trait value.
 """
 xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
-xf(tree::T) where {T <: peT} = getproperty(tree, :xf)
+xf(tree::T) where {T <: sTpe} = getproperty(tree, :xf)
 
 
 
@@ -79,7 +79,7 @@ isfix(tree::sTxs)   = true
 
 Return `true` if punkeek shift is in `d1`, `false` if in `d2`
 """
-sh(tree::T) where {T <: peT} = getproperty(tree, :sh)
+sh(tree::T) where {T <: sTpe} = getproperty(tree, :sh)
 
 
 
@@ -192,7 +192,7 @@ isfossil(tree::iTpb)     = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
-isfossil(tree::peT)      = false
+isfossil(tree::sTpe)      = false
 isfossil(tree::sTxs)     = false
 
 
@@ -2296,6 +2296,39 @@ function _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
     end
   end
 end
+
+
+
+
+"""
+    tiptraits(tree::sTpe)
+
+Extract tip rates from a sTpe tree
+"""
+function tiptraits(tree::sTpe)
+  x = Float64[]
+  _tiptraits!(x, tree)
+  return x
+end
+
+
+"""
+    _tiptraits!(x::Vector{Float64}, tree::sTpe)
+
+Extract tip rates from a sTpe tree
+"""
+function _tiptraits!(x::Vector{Float64}, tree::sTpe)
+
+  if def1(tree)
+    _tiptraits!(x, tree.d1)
+    if def2(tree)
+      _tiptraits!(x, tree.d2)
+    end
+  else
+    push!(x, xf(tree))
+  end
+end
+
 
 
 

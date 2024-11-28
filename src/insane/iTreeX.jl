@@ -757,7 +757,7 @@ iTbdUx = Union{iTbdx, iTfbdx}
 
 Tx = Union{sTpbx, sTbdx, sTfbdx}
 """
-Tx = Union{sTxs,
+Tx = Union{sTxs, sTpe,
            sTpbx, sTbdx, sTfbdx, iTpbx, iTcex, iTbdx, iTfbdx}
 
 

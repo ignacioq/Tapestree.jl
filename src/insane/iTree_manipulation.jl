@@ -1974,6 +1974,41 @@ end
 
 
 
+"""
+    _remove_extinct!(tree::sTpe)
+
+Remove extinct tips (except fossil tips).
+"""
+function _remove_extinct!(tree::sTpe)
+
+  if def1(tree)
+    tree.d1 = _remove_extinct!(tree.d1)
+    tree.d2 = _remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return sTpe(e(tree), true, xi(tree), xf(tree), isfix(tree))
+      else
+        ne   = e(tree) + e(tree.d2)
+        xii  = xi(tree)
+        tree = tree.d2
+        sete!(tree, ne)
+        setxi!(tree, xii)
+      end
+    elseif isextinct(tree.d2)
+      ne   = e(tree) + e(tree.d1)
+      xii  = xi(tree)
+      tree = tree.d1
+      sete!(tree, ne)
+      setxi!(tree, xii)
+    end
+  end
+
+  return tree
+end
+
+
+
 
 """
     _remove_extinct!(tree::T) where {T <: iTf}
@@ -2735,6 +2770,16 @@ Set `x` as final trait in tree.
 setxf!(tree::T, x::Float64) where {T <: Tx} =
   setproperty!(tree, :xf, x)
 
+
+
+
+"""
+  setsh!(tree::T, x::Bool) where {T <: Tx} =
+
+Set `x` as shift to d1 (true) or d2 (false).
+"""
+setsh!(tree::T, x::Bool) where {T <: Tx} =
+  setproperty!(tree, :sh, x)
 
 
 

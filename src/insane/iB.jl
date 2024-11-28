@@ -386,8 +386,8 @@ function make_idf(tree::sT, tρ::Dict{String, Float64}, maxt::Float64)
       setd1!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
     elseif i2 > 0
-      setd1!(bi, n2 + i)
-      setd2!(bi, i + 1)
+      setd1!(bi, i + 1)
+      setd2!(bi, n2 + i)
       setpa!(idf[d1(bi)], i)
       setpa!(idf[d2(bi)], i)
     end
@@ -560,8 +560,8 @@ function make_idf(tree::sT,
       setd1!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
     elseif i2 > 0
-      setd1!(bi, n2 + i)
-      setd2!(bi, i + 1)
+      setd1!(bi, i + 1)
+      setd2!(bi, n2 + i)
       setpa!(idf[d1(bi)], i)
       setpa!(idf[d2(bi)], i)
     end
