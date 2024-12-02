@@ -62,7 +62,7 @@ end
                σk  ::Float64,
                lr  ::Float64,
                lU  ::Float64,
-               Iρi ::Float64,
+               iρi ::Float64,
                na  ::Int64,
                nn  ::Int64,
                nlim::Int64,
@@ -82,7 +82,7 @@ function _sim_cpe_t(t   ::Float64,
                     σk  ::Float64,
                     lr  ::Float64,
                     lU  ::Float64,
-                    Iρi ::Float64,
+                    iρi ::Float64,
                     na  ::Int64,
                     nn  ::Int64,
                     nlim::Int64,
@@ -98,7 +98,7 @@ function _sim_cpe_t(t   ::Float64,
       na += 1
       nlr = lr
       if na > 1
-        nlr += log(Iρi * Float64(na)/Float64(na-1))
+        nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr < lr && lU >= nlr
         return sTpe(), na, nn, NaN
@@ -119,10 +119,10 @@ function _sim_cpe_t(t   ::Float64,
       xl, xr = if rand() < 0.5 xk, x1 else x1, xk end
 
       d1, na, nn, lr = 
-        _sim_cpe_t(t - tw, λ, μ, xl, σa, σk, lr, lU, Iρi, na, nn, nlim, 
+        _sim_cpe_t(t - tw, λ, μ, xl, σa, σk, lr, lU, iρi, na, nn, nlim, 
           xist, xfst, est)
       d2, na, nn, lr = 
-        _sim_cpe_t(t - tw, λ, μ, xr, σa, σk, lr, lU, Iρi, na, nn, nlim, 
+        _sim_cpe_t(t - tw, λ, μ, xr, σa, σk, lr, lU, iρi, na, nn, nlim, 
           xist, xfst, est)
 
       return sTpe(d1, d2, tw, false, x0, x1, true, false), na, nn, lr
@@ -136,7 +136,84 @@ end
 
 
 
+  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, x0, σa, σk, 0, 1, 1_000)
 
+
+
+"""
+    _sim_cpe_i(t   ::Float64,
+               λ   ::Float64,
+               μ   ::Float64,
+               x0  ::Float64,
+               σa  ::Float64,
+               σk  ::Float64,
+               lr  ::Float64,
+               lU  ::Float64,
+               iρi ::Float64,
+               na  ::Int64,
+               nn  ::Int64,
+               nlim::Int64,
+               xist::Vector{Float64},
+               xfst::Vector{Float64},
+               est ::Vector{Float64})
+
+Simulate a constant punkeek model of height `t` with speciation rate `λ`,
+extinction rate `μ`, starting trait value `x0`, and anagenetic and 
+cladogenetic variance `σa` and `σk` for terminal branches.
+"""
+function _sim_cpe_i(t   ::Float64,
+                    λ   ::Float64,
+                    μ   ::Float64,
+                    x0  ::Float64,
+                    σa  ::Float64,
+                    σk  ::Float64,
+                    na  ::Int64,
+                    nn  ::Int64,
+                    nlim::Int64)
+
+  if isfinite(lr) && nn < nlim
+
+    tw = cbd_wait(λ, μ)
+
+    if tw > t
+      na += 1
+      nlr = lr
+      if na > 1
+        nlr += log(iρi * Float64(na)/Float64(na-1))
+      end
+      if nlr < lr && lU >= nlr
+        return sTpe(), na, nn, NaN
+      else
+        x1 = rnorm(x0, sqrt(t) * σa)
+        push!(xist, x0)
+        push!(xfst, x1)
+        push!(est, t)
+        return sTpe(t, false, x0, x1, false, false), na, nn, nlr
+      end
+    end
+
+    x1 = rnorm(x0, sqrt(tw) * σa)
+
+    if λorμ(λ, μ)
+      nn += 1
+      xk = rnorm(x1, σk)
+      xl, xr = if rand() < 0.5 xk, x1 else x1, xk end
+
+      d1, na, nn, lr = 
+        _sim_cpe_i(t - tw, λ, μ, xl, σa, σk, lr, lU, iρi, na, nn, nlim, 
+          xist, xfst, est)
+      d2, na, nn, lr = 
+        _sim_cpe_i(t - tw, λ, μ, xr, σa, σk, lr, lU, iρi, na, nn, nlim, 
+          xist, xfst, est)
+
+      return sTpe(d1, d2, tw, false, x0, x1, true, false), na, nn, lr
+    else
+      return sTpe(tw, true, x0, x1, false, false), na, nn, lr
+    end
+  end
+
+  return sTpe(), na, nn, NaN
+end
 
 
 

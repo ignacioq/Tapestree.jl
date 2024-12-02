@@ -524,11 +524,11 @@ function fsbi_t(bi::iBffs,
                 σx::Float64)
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   xist = Float64[]
   xfst = Float64[]
@@ -536,7 +536,7 @@ function fsbi_t(bi::iBffs,
 
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_cfbd_t(e(bi), λ, μ, ψ, xi(ξc), σx, lc, lU, Iρi, 0, 1, 500,
+    _sim_cfbd_t(e(bi), λ, μ, ψ, xi(ξc), σx, lc, lU, iρi, 0, 1, 500,
       xist, xfst, est)
 
   if na < 1 || isnan(llr) || nn >= 500
@@ -610,8 +610,8 @@ function fsbi_ft(bi::iBffs,
 
   # add sampling fraction
   nac = ni(bi)                # current ni
-  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
-  acr = - Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   if fx(bi)
 
@@ -669,7 +669,7 @@ function fsbi_ft(bi::iBffs,
     # simulate remaining tips until the present
     if na > 1
       tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -678,10 +678,10 @@ function fsbi_ft(bi::iBffs,
       fossilizefixedtip!(t0)
 
       tx, na, nn, acr =
-        fossiltip_sim!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+        fossiltip_sim!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, iρi, na, nn)
 
       if lU < acr
-        llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+        llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
         setnt!(bi, ntp)                # set new nt
         setni!(bi, na)                 # set new ni
 
@@ -773,15 +773,15 @@ function fsbi_fi(bi::iBffs,
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   if lU < acr + llr
 
     # simulate remaining tips until the present
     if na > 1
       tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, iρi, na, nn)
     end
 
     if lU < acr + llr
@@ -789,7 +789,7 @@ function fsbi_fi(bi::iBffs,
       fossilizefixedtip!(t0)
       na -= 1
 
-      llr += (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr += (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       sdX = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1))
       setnt!(bi, ntp)                # set new nt
       setni!(bi, na)                 # set new ni
@@ -842,8 +842,8 @@ function fsbi_i(bi::iBffs,
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # get fix `x`
   xp = fixrtip!(t0, na, NaN)
@@ -857,13 +857,13 @@ function fsbi_i(bi::iBffs,
     # simulate remaining tips until the present
     if na > 1
       tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, Iρi, na, nn)
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σx, acr, lU, iρi, na, nn)
     end
 
     if lU < acr + llr
       na  -= 1
 
-      llr += (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr += (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       sdX = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1)) +
             ((xp - xf(ξ2))^2 - (xi(ξ2) - xf(ξ2))^2)/(2.0*e(ξ2))
       setnt!(bi, ntp)                # set new nt
@@ -890,7 +890,7 @@ end
               σx  ::Float64,
               lr  ::Float64,
               lU  ::Float64,
-              Iρi ::Float64,
+              iρi ::Float64,
               na  ::Int64,
               nn  ::Int64)
 
@@ -904,7 +904,7 @@ function tip_sims!(tree::sTfbdx,
                    σx  ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64,
                    nn  ::Int64)
 
@@ -915,7 +915,7 @@ function tip_sims!(tree::sTfbdx,
 
         # simulate
         stree, na, nn, lr =
-          _sim_cfbd_it(t, λ, μ, ψ, xf(tree), σx, lr, lU, Iρi, na-1, nn, 500)
+          _sim_cfbd_it(t, λ, μ, ψ, xf(tree), σx, lr, lU, iρi, na-1, nn, 500)
 
         if isnan(lr) || nn >= 500
           return tree, na, nn, NaN
@@ -932,9 +932,9 @@ function tip_sims!(tree::sTfbdx,
       end
     else
       tree.d1, na, nn, lr =
-        tip_sims!(tree.d1, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
+        tip_sims!(tree.d1, t, λ, μ, ψ, σx, lr, lU, iρi, na, nn)
       tree.d2, na, nn, lr =
-        tip_sims!(tree.d2, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
+        tip_sims!(tree.d2, t, λ, μ, ψ, σx, lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr
@@ -955,7 +955,7 @@ end
                    σx  ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64,
                    nn  ::Int64)
 
@@ -969,7 +969,7 @@ function fossiltip_sim!(tree::sTfbdx,
                         σx  ::Float64,
                         lr  ::Float64,
                         lU  ::Float64,
-                        Iρi ::Float64,
+                        iρi ::Float64,
                         na  ::Int64,
                         nn  ::Int64)
 
@@ -977,7 +977,7 @@ function fossiltip_sim!(tree::sTfbdx,
     if istip(tree)
 
       stree, na, nn, lr =
-        _sim_cfbd_it(t, λ, μ, ψ, xf(tree), σx, lr, lU, Iρi, na-1, nn, 500)
+        _sim_cfbd_it(t, λ, μ, ψ, xf(tree), σx, lr, lU, iρi, na-1, nn, 500)
 
       if isnan(lr) || nn >= 500
         return tree, na, nn, NaN
@@ -987,10 +987,10 @@ function fossiltip_sim!(tree::sTfbdx,
       tree.d1 = stree
     elseif isfix(tree.d1)
       tree.d1, na, nn, lr =
-        fossiltip_sim!(tree.d1, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
+        fossiltip_sim!(tree.d1, t, λ, μ, ψ, σx, lr, lU, iρi, na, nn)
     else
       tree.d2, na, nn, lr =
-        fossiltip_sim!(tree.d2, t, λ, μ, ψ, σx, lr, lU, Iρi, na, nn)
+        fossiltip_sim!(tree.d2, t, λ, μ, ψ, σx, lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr

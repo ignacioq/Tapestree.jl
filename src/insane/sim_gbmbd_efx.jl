@@ -396,7 +396,7 @@ Sample conditional on time
                  srδt::Float64,
                  lr  ::Float64,
                  lU  ::Float64,
-                 Iρi ::Float64,
+                 iρi ::Float64,
                  na  ::Int64,
                  nn  ::Int64,
                  nlim::Int64)
@@ -415,7 +415,7 @@ function _sim_gbmbd_t(t   ::Float64,
                       srδt::Float64,
                       lr  ::Float64,
                       lU  ::Float64,
-                      Iρi ::Float64,
+                      iρi ::Float64,
                       na  ::Int64,
                       nn  ::Int64,
                       nlim::Int64)
@@ -454,9 +454,9 @@ function _sim_gbmbd_t(t   ::Float64,
               nn += 1
               na += 2
               if na === 2
-                nlr = lr + log(Iρi*2.0)
+                nlr = lr + log(iρi*2.0)
               else
-                nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
+                nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
               end
               if nlr < lr && lU >= nlr
                 return iTbd(), na, nn, NaN
@@ -476,7 +476,7 @@ function _sim_gbmbd_t(t   ::Float64,
           na += 1
           nlr = lr
           if na > 1
-            nlr += log(Iρi * Float64(na)/Float64(na-1))
+            nlr += log(iρi * Float64(na)/Float64(na-1))
           end
           if nlr < lr && lU >= nlr
             return iTbd(), na, nn, NaN
@@ -507,10 +507,10 @@ function _sim_gbmbd_t(t   ::Float64,
             nn += 1
             td1, na, nn, lr =
               _sim_gbmbd_t(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-                lr, lU, Iρi, na, nn, nlim)
+                lr, lU, iρi, na, nn, nlim)
             td2, na, nn, lr =
               _sim_gbmbd_t(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-                lr, lU, Iρi, na, nn, nlim)
+                lr, lU, iρi, na, nn, nlim)
 
             return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
           # if extinction
@@ -668,7 +668,7 @@ end
                   srδt::Float64,
                   lr  ::Float64,
                   lU  ::Float64,
-                  Iρi ::Float64,
+                  iρi ::Float64,
                   na  ::Int64,
                   nn  ::Int64,
                   nlim::Int64)
@@ -688,7 +688,7 @@ function _sim_gbmbd_it(nsδt::Float64,
                        srδt::Float64,
                        lr  ::Float64,
                        lU  ::Float64,
-                       Iρi ::Float64,
+                       iρi ::Float64,
                        na  ::Int64,
                        nn  ::Int64,
                        nlim::Int64)
@@ -722,7 +722,7 @@ function _sim_gbmbd_it(nsδt::Float64,
         if λorμ(λm, μm)
           nn += 1
           na += 2
-          lr += 2.0*log(Iρi)
+          lr += 2.0*log(iρi)
           return iTbd(iTbd(0.0, δt, 0.0, false, false,
                            [λt1, λt1], [μt1, μt1]),
                       iTbd(0.0, δt, 0.0, false, false,
@@ -735,7 +735,7 @@ function _sim_gbmbd_it(nsδt::Float64,
       end
 
       na += 1
-      lr += log(Iρi)
+      lr += log(iρi)
       return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
     end
 
@@ -763,10 +763,10 @@ function _sim_gbmbd_it(nsδt::Float64,
         nn += 1
         td1, na, nn, lr =
           _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-            lr, lU, Iρi, na, nn, nlim)
+            lr, lU, iρi, na, nn, nlim)
         td2, na, nn, lr =
           _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-            lr, lU, Iρi, na, nn, nlim)
+            lr, lU, iρi, na, nn, nlim)
 
         return iTbd(td1, td2, bt, δt, nsδt, false, false, λv, μv), na, nn, lr
       else
@@ -805,7 +805,7 @@ function _sim_gbmbd_it(nsδt::Float64,
             if λorμ(λm, μm)
               nn += 1
               na += 2
-              lr += 2.0*log(Iρi)
+              lr += 2.0*log(iρi)
               return iTbd(iTbd(0.0, δt, 0.0, false, false,
                                [λt1, λt1], [μt1, μt1]),
                           iTbd(0.0, δt, 0.0, false, false,
@@ -818,7 +818,7 @@ function _sim_gbmbd_it(nsδt::Float64,
           end
 
           na += 1
-          lr += log(Iρi)
+          lr += log(iρi)
           return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
         end
 
@@ -844,10 +844,10 @@ function _sim_gbmbd_it(nsδt::Float64,
             nn += 1
             td1, na, nn, lr =
               _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-                lr, lU, Iρi, na, nn, nlim)
+                lr, lU, iρi, na, nn, nlim)
             td2, na, nn, lr =
               _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-                lr, lU, Iρi, na, nn, nlim)
+                lr, lU, iρi, na, nn, nlim)
 
             return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
           # if extinction
@@ -880,7 +880,7 @@ end
                   srδt::Float64,
                   lr  ::Float64,
                   lU  ::Float64,
-                  Iρi ::Float64,
+                  iρi ::Float64,
                   na  ::Int64,
                   nn  ::Int64,
                   nlim::Int64)
@@ -899,7 +899,7 @@ function _sim_gbmbd_it(t   ::Float64,
                        srδt::Float64,
                        lr  ::Float64,
                        lU  ::Float64,
-                       Iρi ::Float64,
+                       iρi ::Float64,
                        na  ::Int64,
                        nn  ::Int64,
                        nlim::Int64)
@@ -937,7 +937,7 @@ function _sim_gbmbd_it(t   ::Float64,
             if λorμ(λm, μm)
               nn += 1
               na += 2
-              lr += 2.0*log(Iρi)
+              lr += 2.0*log(iρi)
               return iTbd(iTbd(0.0, δt, 0.0, false, false,
                                [λt1, λt1], [μt1, μt1]),
                           iTbd(0.0, δt, 0.0, false, false,
@@ -950,7 +950,7 @@ function _sim_gbmbd_it(t   ::Float64,
           end
 
           na += 1
-          lr += log(Iρi)
+          lr += log(iρi)
           return iTbd(bt, δt, t, false, false, λv, μv), na, nn, lr
         end
 
@@ -976,10 +976,10 @@ function _sim_gbmbd_it(t   ::Float64,
             nn += 1
             td1, na, nn, lr =
               _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-                lr, lU, Iρi, na, nn, nlim)
+                lr, lU, iρi, na, nn, nlim)
             td2, na, nn, lr =
               _sim_gbmbd_it(t, λt1, α, σλ, ix, tv, ev, δt, srδt,
-                lr, lU, Iρi, na, nn, nlim)
+                lr, lU, iρi, na, nn, nlim)
 
             return iTbd(td1, td2, bt, δt, δt, false, false, λv, μv), na, nn, lr
           # if extinction

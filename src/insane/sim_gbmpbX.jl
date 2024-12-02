@@ -420,7 +420,7 @@ end
                  srδt::Float64,
                  lr  ::Float64,
                  lU  ::Float64,
-                 Iρi ::Float64,
+                 iρi ::Float64,
                  na  ::Int64,
                  nn  ::Int64,
                  nlim::Int64,
@@ -442,7 +442,7 @@ function _sim_gbmpb_t(t   ::Float64,
                       srδt::Float64,
                       lr  ::Float64,
                       lU  ::Float64,
-                      Iρi ::Float64,
+                      iρi ::Float64,
                       na  ::Int64,
                       nn  ::Int64,
                       nlim::Int64,
@@ -473,9 +473,9 @@ function _sim_gbmpb_t(t   ::Float64,
           nn += 1
           na += 2
           if na === 2
-            nlr = lr + log(Iρi*2.0)
+            nlr = lr + log(iρi*2.0)
           else
-            nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
+            nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
           end
           if nlr < lr && lU >= nlr
             return iTbdx(), na, nn, NaN
@@ -494,7 +494,7 @@ function _sim_gbmpb_t(t   ::Float64,
           na += 1
           nlr = lr
           if na > 1
-            nlr += log(Iρi * Float64(na)/Float64(na-1))
+            nlr += log(iρi * Float64(na)/Float64(na-1))
           end
           if nlr < lr && lU >= nlr
             return iTbdx(), na, nn, NaN
@@ -521,10 +521,10 @@ function _sim_gbmpb_t(t   ::Float64,
         nn += 1
         td1, na, nn, lr =
           _sim_gbmpb_t(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-            lr, lU, Iρi, na, nn, nlim, xist, xfst, est)
+            lr, lU, iρi, na, nn, nlim, xist, xfst, est)
         td2, na, nn, lr =
           _sim_gbmpb_t(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-            lr, lU, Iρi, na, nn, nlim, xist, xfst, est)
+            lr, lU, iρi, na, nn, nlim, xist, xfst, est)
 
         return iTbdx(td1, td2, bt, false, δt, δt, λv, xv), na, nn, lr
       end
@@ -650,7 +650,7 @@ end
                    srδt::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    nn  ::Int64,
                    nlim::Int64)
 
@@ -669,7 +669,7 @@ function _sim_gbmpb_it(nsδt::Float64,
                        srδt::Float64,
                        lr  ::Float64,
                        lU  ::Float64,
-                       Iρi ::Float64,
+                       iρi ::Float64,
                        nn  ::Int64,
                        nlim::Int64)
 
@@ -690,14 +690,14 @@ function _sim_gbmpb_it(nsδt::Float64,
 
     if divev(λm, t)
       nn += 1
-      lr += 2.0*log(Iρi)
+      lr += 2.0*log(iρi)
       return iTbdx(iTbdx(0.0, false, δt, 0.0, 
                          Float64[λt1, λt1], Float64[xt1, xt1]),
                    iTbdx(0.0, false, δt, 0.0, 
                          Float64[λt1, λt1], Float64[xt1, xt1]),
                    bt, false, δt, t, λv, xv), nn, lr
     else
-      lr += log(Iρi)
+      lr += log(iρi)
       return iTbdx(bt, false, δt, t, λv), nn, lr
     end
   end
@@ -716,10 +716,10 @@ function _sim_gbmpb_it(nsδt::Float64,
     nn += 1
     td1, nn, lr =
       _sim_gbmpb_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-        lr, lU, Iρi, nn, nlim)
+        lr, lU, iρi, nn, nlim)
     td2, nn, lr =
       _sim_gbmpb_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-        lr, lU, Iρi, nn, nlim)
+        lr, lU, iρi, nn, nlim)
 
     return iTbdx(td1, td2, bt, false, δt, nsδt, λv, xv), nn, lr
   end
@@ -744,14 +744,14 @@ function _sim_gbmpb_it(nsδt::Float64,
 
         if divev(λm, t)
           nn += 1
-          lr  += 2.0*log(Iρi)
+          lr  += 2.0*log(iρi)
           return iTbdx(iTbdx(0.0, false, δt, 0.0, 
                              Float64[λt1, λt1], Float64[xt1, xt1]),
                        iTbdx(0.0, false, δt, 0.0, 
                              Float64[λt1, λt1], Float64[xt1, xt1]),
                        bt, false, δt, t, λv, xv), nn, lr
         else
-          lr += log(Iρi)
+          lr += log(iρi)
           return iTbdx(bt, false, δt, t, λv, xv), nn, lr
         end
       end
@@ -769,10 +769,10 @@ function _sim_gbmpb_it(nsδt::Float64,
         nn += 1
         td1, nn, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-            lr, lU, Iρi, nn, nlim)
+            lr, lU, iρi, nn, nlim)
         td2, nn, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-            lr, lU, Iρi, nn, nlim)
+            lr, lU, iρi, nn, nlim)
 
         return iTbdx(td1, td2, bt, false, δt, δt, λv, xv), nn, lr
       end
@@ -800,7 +800,7 @@ end
                   srδt::Float64,
                   lr  ::Float64,
                   lU  ::Float64,
-                  Iρi ::Float64,
+                  iρi ::Float64,
                   nn ::Int64,
                   nlim::Int64)
 
@@ -818,7 +818,7 @@ function _sim_gbmpb_it(t   ::Float64,
                        srδt::Float64,
                        lr  ::Float64,
                        lU  ::Float64,
-                       Iρi ::Float64,
+                       iρi ::Float64,
                        nn ::Int64,
                        nlim::Int64)
 
@@ -843,7 +843,7 @@ function _sim_gbmpb_it(t   ::Float64,
 
         if divev(λm, t)
           nn += 1
-          lr  += 2.0*log(Iρi)
+          lr  += 2.0*log(iρi)
           return iTbdx(iTbdx(0.0, false, δt, 0.0, 
                              Float64[λt1, λt1], Float64[xt1, xt1]),
                        iTbdx(0.0, false, δt, 0.0, 
@@ -851,7 +851,7 @@ function _sim_gbmpb_it(t   ::Float64,
                        bt, false, δt, t, λv, xv), nn, lr
         end
 
-        lr += log(Iρi)
+        lr += log(iρi)
         return iTbdx(bt, false, δt, t, λv, xv), nn, lr
       end
 
@@ -869,10 +869,10 @@ function _sim_gbmpb_it(t   ::Float64,
         nn += 1
         td1, nn, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-            lr, lU, Iρi, nn, nlim)
+            lr, lU, iρi, nn, nlim)
         td2, nn, lr =
           _sim_gbmpb_it(t, λt1, α, σλ, xt1, βλ, σx, δt, srδt, 
-            lr, lU, Iρi, nn, nlim)
+            lr, lU, iρi, nn, nlim)
 
         return iTbdx(td1, td2, bt, false, δt, δt, λv, xv), nn, lr
       end

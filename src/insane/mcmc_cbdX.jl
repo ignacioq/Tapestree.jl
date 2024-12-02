@@ -459,18 +459,18 @@ function fsbi_t(bi::iBffs,
                 σx::Float64)
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   xist = Float64[]
   xfst = Float64[]
   est  = Float64[]
 
   t0, na, nn, llr =
-    _sim_cbd_t(e(bi), λ, μ, xi(ξc), σx, lc, lU, Iρi, 0, 1, 500, xist, xfst, est)
+    _sim_cbd_t(e(bi), λ, μ, xi(ξc), σx, lc, lU, iρi, 0, 1, 500, xist, xfst, est)
 
   if na < 1 || isnan(llr) || nn >= 500
     return t0, NaN
@@ -551,8 +551,8 @@ function fsbi_i(bi::iBffs,
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # get fix `x`
   xp = fixrtip!(t0, na, NaN)
@@ -565,12 +565,12 @@ function fsbi_i(bi::iBffs,
 
     if na > 1
       # simulated remaining tips until the present
-      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, σx, acr, lU, Iρi, na, nn)
+      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, σx, acr, lU, iρi, na, nn)
     end
 
     if lU < acr + llr
       na -= 1
-      llr += (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr += (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       setni!(bi, na)  # set new ni
       setnt!(bi, ntp) # set new nt
 
@@ -598,7 +598,7 @@ end
               σx  ::Float64,
               lr  ::Float64,
               lU  ::Float64,
-              Iρi ::Float64,
+              iρi ::Float64,
               na  ::Int64,
               nn  ::Int64)
 
@@ -611,7 +611,7 @@ function tip_sims!(tree::sTbdx,
                    σx  ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64,
                    nn  ::Int64)
 
@@ -622,7 +622,7 @@ function tip_sims!(tree::sTbdx,
 
         # simulate
         stree, na, nn, lr = 
-          _sim_cbd_it(t, λ, μ, xf(tree), σx, lr, lU, Iρi, na-1, nn, 500)
+          _sim_cbd_it(t, λ, μ, xf(tree), σx, lr, lU, iρi, na-1, nn, 500)
 
         if isnan(lr) || nn >= 500
           return tree, na, nn, NaN
@@ -638,8 +638,8 @@ function tip_sims!(tree::sTbdx,
         end
       end
     else
-      tree.d1, na, nn, lr = tip_sims!(tree.d1, t, λ, μ, σx, lr, lU, Iρi, na, nn)
-      tree.d2, na, nn, lr = tip_sims!(tree.d2, t, λ, μ, σx, lr, lU, Iρi, na, nn)
+      tree.d1, na, nn, lr = tip_sims!(tree.d1, t, λ, μ, σx, lr, lU, iρi, na, nn)
+      tree.d2, na, nn, lr = tip_sims!(tree.d2, t, λ, μ, σx, lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr

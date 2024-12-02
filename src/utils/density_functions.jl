@@ -105,7 +105,7 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  -0.5*log(2.0*π*σ²) - (x - μ)^2/(2.0*σ²)
+  -0.5*log(6.28318530717958623199592693708837032318115234375*σ²) - (x - μ)^2/(2.0*σ²)
 
 
 

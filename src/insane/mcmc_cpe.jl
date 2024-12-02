@@ -260,12 +260,12 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
       elseif p === 3
 
         ll, prc, σac = 
-          update_σ!(σac, sσa, 2.0*ns + (1.0-rmλ), ll, prc, σa_prior)
+          update_σ!(σac, 0.5*sσa, 2.0*ns + (1.0-rmλ), ll, prc, σa_prior)
 
       # σk (cladogenetic) proposal
       elseif p === 4
 
-        ll, prc, σkc = update_σ!(σkc, sσk, ns, ll, prc, σk_prior)
+        ll, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, ll, prc, σk_prior)
 
       # update inner nodes traits
       elseif p === 5
@@ -564,35 +564,55 @@ function update_fs!(bix::Int64,
                     ne ::Float64,
                     L  ::Float64,
                     sσa::Float64, 
-                    sσk::Float64)
+                    sσk::Float64,
+                    xis::Vector{Float64},
+                    xfs::Vector{Float64},
+                    es ::Vector{Float64})
 
   bi = idf[bix]
   ξc = Ξ[bix]
 
-   # if terminal
+   # if terminal branch
   if iszero(d1(bi))
 
-    ξp, llr = fsbi_t(bi, ξc, λ, μ, σa, σk)
-    sdXr = 0.0
+    xav = xsd = NaN
+    if !isnothing(xavg(bi))
+      xav, xsd = xavg(bi), xstd(bi)
+    end
+
+    ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, σa, σk, xis, xfs, es)
+
+  # if mid branch
+  elseif iszero(d2(bi))
+
+    """
+    here
+    """
+
+    ξp, llr, sdXr = fsbi_m(bi, Ξ[d1(bi)], xi(ξc), λ, μ, σx)
 
 
-    ξp, llr = fsbi_t(bi, λ, μ)
-
-  # if mid or internal
+  # if trio branch
   else
 
     ξp, llr, sdXr = fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, σx)
-
   end
 
   if isfinite(llr)
     ξc  = Ξ[bix]
 
     # update llc, ns, ne & L
+
+    # Make one function that joins these tree traversals
+    llik_cpe_trackers(ξp, λ, μ,)...
+
     llc += llik_cpe(ξp, λ, μ) - llik_cpe(ξc, λ, μ) + llr
     ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
     ne  += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
     L   += treelength(ξp)             - treelength(ξc)
+
+    sσa +=
+    sσk +=
 
     # set new decoupled tree
     Ξ[bix] = ξp
@@ -605,39 +625,44 @@ end
 
 
 """
-    fsbi_t(bi::iBffs, 
-           ξc::sTpe, 
-           λ ::Float64, 
-           μ ::Float64, 
-           σa::Float64, 
-           σk::Float64)
+    fsbi_t(bi  ::iBffs,
+           xav::Float64,
+           xst::Float64,
+           ξc  ::sTpe,
+           λ   ::Float64,
+           μ   ::Float64,
+           σa  ::Float64,
+           σk  ::Float64)
 
 Forward simulation for terminal branch.
 """
-function fsbi_t(bi  ::iBffs, 
-                xavg::Float64,
-                xstd::Float64,
-                ξc  ::sTpe, 
-                λ   ::Float64, 
-                μ   ::Float64, 
-                σa  ::Float64, 
-                σk  ::Float64)
+function fsbi_t(bi  ::iBffs,
+                xav::Float64,
+                xst::Float64,
+                ξc  ::sTpe,
+                λ   ::Float64,
+                μ   ::Float64,
+                σa  ::Float64,
+                σk  ::Float64,
+                xis::Vector{Float64},
+                xfs::Vector{Float64},
+                es ::Vector{Float64})
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inverse branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
-  xist = Float64[]
-  xfst = Float64[]
-  est  = Float64[]
+  empty!(xis)
+  empty!(xfs)
+  empty!(es)
 
   t0, na, nn, llr =
-    _sim_cpe_t(e(bi), λ, μ, xi(ξc), σa, σk, lc, lU, Iρi, 0, 1, 500, 
-               xist, xfst, est)
+    _sim_cpe_t(e(bi), λ, μ, xi(ξc), σa, σk, lc, lU, iρi, 0, 1, 500, 
+               xis, xfs, es)
 
   if na < 1 || isnan(llr)
     return t0, NaN
@@ -646,37 +671,27 @@ function fsbi_t(bi  ::iBffs,
   # if fix node
   if ifx(bi)
 
-    # sample tip according to fixed `x` value
-    acr = 0.0
-    xc  = xavg
-    wp  = Float64[]
-    if iszero(xstd)
-      @simd for i in Base.OneTo(na)
-        srt = sqrt(est[i])*σa
-        wi  = dnorm_bm(xfst[i], xist[i], srt)/dnorm_bm(xc, xist[i], srt)
-        push!(wp, wi)
-        acr += wi
-      end
-    else
-      xc = fixed_xt(ξc)
-      @simd for i in Base.OneTo(na)
-        srt = sqrt(est[i])*σa
-        wi  = duodnorm(xfst[i], xist[i], xavg, srt, xstd)/
-              duodnorm(xc,      xist[i], xavg, srt, xstd)
-        push!(wp, wi)
-        acr += wi
-      end
-    end
-    acr = log(acr)
+    # sample tip
+    wti = fIrand(na) + 1
+    lξc = fixtip(ξc)
 
-    if isfinite(acr) && lU <  acr + llr
-      # sample tip
-      wti = sample(wp)
+    xp = NaN
+    if iszero(xst)
+      xp  = xavg
+      acr = logdnorm(xavg, xis[wti], es[wti]*σa^2) - 
+            logdnorm(xavg, xi(lξc),     e(lξc)*σa^2)
+    else
+      xp  = xfs[wti]
+      acr = duoldnorm(     xp, xis[wti], xavg, es[wti]*σa^2, xst) - 
+            duoldnorm(xf(lξc),  xi(lξc), xavg,  e(lξc)*σa^2, xst)
+    end
+
+    if lU < acr + llr
 
       if wti <= div(na,2)
-        fixtip1!(t0, wti, 0, xc)
+        fixtip1!(t0, wti, 0, xp)
       else
-        fixtip2!(t0, na - wti + 1, 0, xc)
+        fixtip2!(t0, na - wti + 1, 0, xp)
       end
 
       setni!(bi, na)    # set new ni
@@ -695,6 +710,71 @@ function fsbi_t(bi  ::iBffs,
   return t0, NaN
 end
 
+
+
+
+"""
+    fsbi_m(bi::iBffs,
+           ξ1::sTpe,
+           λ ::Float64,
+           μ ::Float64,
+           x0::Float64,
+           σa::Float64,
+           σk::Float64)
+
+Forward simulation for internal branch.
+"""
+function fsbi_m(bi::iBffs,
+                ξ1::sTpe,
+                λ ::Float64,
+                μ ::Float64,
+                x0::Float64,
+                σa::Float64,
+                σk::Float64)
+
+  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, x0, σa, σk, 0, 1, 500)
+
+  if na < 1 || nn > 999
+    return t0, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() #log-probability
+
+  # continue simulation only if acr on sum of tip rates is accepted
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  iρi  = (1.0 - ρi(bi))        # inverse branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+
+  # get fix `x`
+  xp = fixrtip!(t0, na, NaN)
+
+  # acceptance ration with respect to daughters
+  llr = llrdnorm_x(xp, xi(ξ1), xf(ξ1), e(ξ1)*σa^2)
+
+  if lU < acr + llr
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, iρi, na, nn)
+    end
+
+    if lU < acr
+      na -= 1
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+      setnt!(bi, ntp)                # set new nt
+      setni!(bi, na)                 # set new ni
+
+      return t0, llr
+    end
+  end
+
+  return t0, NaN
+end
 
 
 
@@ -720,8 +800,8 @@ function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   if lU < acr
 
@@ -729,12 +809,12 @@ function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
 
     # simulate remaining tips until the present
     if na > 1
-      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, Iρi, na, nn)
+      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, iρi, na, nn)
     end
 
     if lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       setnt!(bi, ntp)                # set new nt
       setni!(bi, na)                 # set new ni
 
@@ -755,7 +835,7 @@ end
               μ   ::Float64,
               lr  ::Float64,
               lU  ::Float64,
-              Iρi ::Float64,
+              iρi ::Float64,
               na  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
@@ -766,7 +846,7 @@ function tip_sims!(tree::sTpe,
                    μ   ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64,
                    nn ::Int64)
 
@@ -777,7 +857,7 @@ function tip_sims!(tree::sTpe,
 
         # simulate
         stree, na, nn, lr = 
-          _sim_cpe_it(t, λ, μ, lr, lU, Iρi, na-1, nn, 1_000)
+          _sim_cpe_it(t, λ, μ, lr, lU, iρi, na-1, nn, 1_000)
 
         if isnan(lr) || nn > 999
           return tree, na, nn, NaN
@@ -792,8 +872,8 @@ function tip_sims!(tree::sTpe,
         end
       end
     else
-      tree.d1, na, nn, lr = tip_sims!(tree.d1, t, λ, μ, lr, lU, Iρi, na, nn)
-      tree.d2, na, nn, lr = tip_sims!(tree.d2, t, λ, μ, lr, lU, Iρi, na, nn)
+      tree.d1, na, nn, lr = tip_sims!(tree.d1, t, λ, μ, lr, lU, iρi, na, nn)
+      tree.d2, na, nn, lr = tip_sims!(tree.d2, t, λ, μ, lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr

@@ -1091,6 +1091,7 @@ end
 
 """
     fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}
+
 Fixes the the path to tip `wi` in d2 order.
 """
 function fixtip2!(tree::T, wi::Int64, ix::Int64) where {T <: iTree}

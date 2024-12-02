@@ -435,16 +435,16 @@ Forward simulation for terminal branch.
 function fsbi_t(bi::iBffs, λ::Float64)
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
   lc = - log(Float64(nac)) - 
-       Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+       Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_cpb_t(e(bi), λ, lc, lU, Iρi, 0, 1, 500)
+    _sim_cpb_t(e(bi), λ, lc, lU, iρi, 0, 1, 500)
 
   if isnan(llr) || nn >= 500
     return t0, -Inf
@@ -482,8 +482,8 @@ function fsbi_i(bi::iBffs, λ::Float64)
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   if lU < acr
 
@@ -491,12 +491,12 @@ function fsbi_i(bi::iBffs, λ::Float64)
 
     # simulated remaining tips until the present
     if na > 1
-      t0, na, acr = tip_sims!(t0, tf(bi), λ, acr, lU, Iρi, na)
+      t0, na, acr = tip_sims!(t0, tf(bi), λ, acr, lU, iρi, na)
     end
 
     if lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       setnt!(bi, ntp)                    # set new nt
       setni!(bi, na)                 # set new ni
 
@@ -516,7 +516,7 @@ end
               λ   ::Float64,
               lr  ::Float64,
               lU  ::Float64,
-              Iρi ::Float64,
+              iρi ::Float64,
               na  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
@@ -526,7 +526,7 @@ function tip_sims!(tree::sTpb,
                    λ   ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64)
 
   if na < 500 && lU < lr
@@ -535,7 +535,7 @@ function tip_sims!(tree::sTpb,
       if !isfix(tree)
 
         # simulate
-        stree, na, lr = _sim_cpb_it(t, λ, lr, lU, Iρi, na, 500)
+        stree, na, lr = _sim_cpb_it(t, λ, lr, lU, iρi, na, 500)
 
         if isnan(lr) || na >= 500
           return tree, na, NaN
@@ -549,8 +549,8 @@ function tip_sims!(tree::sTpb,
         end
       end
     else
-      tree.d1, na, lr = tip_sims!(tree.d1, t, λ, lr, lU, Iρi, na)
-      tree.d2, na, lr = tip_sims!(tree.d2, t, λ, lr, lU, Iρi, na)
+      tree.d1, na, lr = tip_sims!(tree.d1, t, λ, lr, lU, iρi, na)
+      tree.d2, na, lr = tip_sims!(tree.d2, t, λ, lr, lU, iρi, na)
     end
 
     return tree, na, lr

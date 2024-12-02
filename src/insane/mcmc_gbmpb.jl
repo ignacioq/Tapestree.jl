@@ -672,15 +672,15 @@ function fsbi_t(bi  ::iBffs,
                 srδt::Float64)
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_gbmpb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 500)
+    _sim_gbmpb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -732,8 +732,8 @@ function fsbi_i(bi  ::iBffs,
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
  # fix random tip
   λf = fixrtip!(t0, na, NaN)
@@ -747,12 +747,12 @@ function fsbi_i(bi  ::iBffs,
 
     # simulated remaining tips until the present
     t0, na, acr =
-      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
+      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, iρi, na)
 
     if lU < acr
       na -= 1
 
-      llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr = llrd + (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       l1  = lastindex(λ1p)
       l2  = lastindex(λ2p)
       setnt!(bi, ntp)                    # set new nt
@@ -782,7 +782,7 @@ end
               srδt::Float64,
               lr  ::Float64,
               lU  ::Float64,
-              Iρi ::Float64,
+              iρi ::Float64,
               na  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
@@ -795,7 +795,7 @@ function tip_sims!(tree::iTpb,
                    srδt::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64)
 
  if lU < lr && na < 1_000
@@ -809,7 +809,7 @@ function tip_sims!(tree::iTpb,
         # simulate
         stree, na, lr =
           _sim_gbmpb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
-            lr, lU, Iρi, na, 1_000)
+            lr, lU, iρi, na, 1_000)
 
         if isnan(lr) || na >= 1_000
           return tree, na, NaN
@@ -835,8 +835,8 @@ function tip_sims!(tree::iTpb,
         end
       end
     else
-      tree.d1, na, lr = tip_sims!(tree.d1, t, α, σλ, δt, srδt, lr, lU, Iρi, na)
-      tree.d2, na, lr = tip_sims!(tree.d2, t, α, σλ, δt, srδt, lr, lU, Iρi, na)
+      tree.d1, na, lr = tip_sims!(tree.d1, t, α, σλ, δt, srδt, lr, lU, iρi, na)
+      tree.d2, na, lr = tip_sims!(tree.d2, t, α, σλ, δt, srδt, lr, lU, iρi, na)
     end
 
     return tree, na, lr
