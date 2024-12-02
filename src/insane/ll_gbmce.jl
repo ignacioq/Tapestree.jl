@@ -101,7 +101,7 @@ Returns the log-likelihood for a branch according to `gbmce`.
   # estimate standard `δt` likelihood
   nI = lastindex(lλv) - 2
 
-  llλ = llbd = 0.0
+  ll = llλ = llbd = 0.0
   if nI > 0
     @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
