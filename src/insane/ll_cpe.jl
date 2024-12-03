@@ -75,10 +75,74 @@ function llik_cpe(tree::sTpe, λ::Float64, μ::Float64, σa::Float64, σk::Float
     log(λ) - ei*(λ + μ)                                      +
     ldnorm_bm(xfi, xi(tree), σa*sqrt(ei))                    +
     ldnorm_bm(sh(tree) ? xi(tree.d1) : xi(tree.d2), xfi, σk) +
-    llik_cpe(tree.d1, λ, μ, σa, σk)                           +
+    llik_cpe(tree.d1, λ, μ, σa, σk)                          +
     llik_cpe(tree.d2, λ, μ, σa, σk)
   end
 end
+
+
+"""
+    llik_cpe_track(tree::sTpe,
+                   λ   ::Float64, 
+                   μ   ::Float64, 
+                   σa  ::Float64, 
+                   σk  ::Float64,
+                   ns  ::Float64,
+                   ne  ::Float64,
+                   L   ::Float64,
+                   sσa ::Float64, 
+                   sσk ::Float64)
+
+
+Log-likelihood up to a constant for constant birth-death punctuated equilibrium
+given a complete `iTree` recursively.
+"""
+function llik_cpe_track(tree::sTpe,
+                        λ   ::Float64, 
+                        μ   ::Float64, 
+                        σa2 ::Float64, 
+                        σk2 ::Float64,
+                        ll  ::Float64,
+                        ns  ::Float64,
+                        ne  ::Float64,
+                        L   ::Float64,
+                        sσa ::Float64, 
+                        sσk ::Float64)
+
+  ei = e(tree)
+  L += ei
+  if istip(tree)
+    sqi  = (xf(tree) - xi(tree))^2
+    ie   = isextinct(tree)
+    ll  -= ei*(λ + μ)                                                        +
+           0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) + 
+           sqi/(2.0*σa2*ei)
+    sσa += sqi/ei
+    if isextinct(tree)
+      ll += log(μ)
+      ne += 1.0
+    end
+  else
+    xfi  = xf(tree)
+    sqa  = (xfi - xi(tree))^2
+    sqk  = ((sh(tree) ? xi(tree.d1) : xi(tree.d2)) -  xfi)^2
+    ll  += log(λ) - ei*(λ + μ)                                               -
+           0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) -
+           sqa/(2.0*σa2*ei)                                                  -
+           0.5*log(6.28318530717958623199592693708837032318115234375*σk2)    -
+           sqk/(2.0*σk2)
+    sσa += sqa/ei
+    sσk += sqk
+    ns  += 1.0
+    llc, ns, ne, L, sσa, sσk = 
+      llik_cpe(tree.d1, λ, μ, σa2, σk2, llc, ns, ne, L, sσa, sσk)
+    llc, ns, ne, L, sσa, sσk = 
+      llik_cpe(tree.d2, λ, μ, σa2, σk2, llc, ns, ne, L, sσa, sσk)
+  end
+
+  return llc, ns, ne, L, sσa, sσk
+end
+
 
 
 

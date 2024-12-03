@@ -572,6 +572,7 @@ function update_fs!(bix::Int64,
   bi = idf[bix]
   ξc = Ξ[bix]
 
+  sσa0 = sσar = 0.0
    # if terminal branch
   if iszero(d1(bi))
 
@@ -586,30 +587,29 @@ function update_fs!(bix::Int64,
     ξp, llr, sσar = fsbi_m(bi, Ξ[d1(bi)], xi(ξc), λ, μ, σa, σk)
   # if trio branch
   else
-    ξp, llr, sσar = fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, σa, σk)
+    ξp, llr, sσar, sσkr = fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, σa, σk)
   end
 
   if isfinite(llr)
     ξc  = Ξ[bix]
 
-    # update llc, ns, ne & L
+    ll1, ns1, ne1, L1, sσa1, sσk1 = 
+      llik_cpe(tree.d2, λ, μ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    ll0, ns0, ne0, L0, sσa0, sσk0 = 
+      llik_cpe(tree.d2, λ, μ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
-    # Make one function that joins these tree traversals
-    llik_cpe_trackers(ξp, λ, μ,)...
-
-    llc += llik_cpe(ξp, λ, μ) - llik_cpe(ξc, λ, μ) + llr
-    ns  += Float64(nnodesinternal(ξp) - nnodesinternal(ξc))
-    ne  += Float64(ntipsextinct(ξp)   - ntipsextinct(ξc))
-    L   += treelength(ξp)             - treelength(ξc)
-
-    sσa +=
-    sσk +=
+    llc += ll1  - ll0 + llr
+    ns  += ns1  - ns0
+    ne  += ne1  - ne0
+    L   += L1   - L0
+    sσa += sσa1 - sσa0 + sσar
+    sσk += sσk1 - sσk0 + sσkr
 
     # set new decoupled tree
     Ξ[bix] = ξp
   end
 
-  return llc, ns, ne, L
+  return llc, ns, ne, L, sσa, sσk
 end
 
 
@@ -799,7 +799,7 @@ function fsbi_i(bi ::iBffs,
   t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xc, σa, σk, 0, 1, 500)
 
   if na < 1 || nn >= 500
-    return t0, NaN, NaN
+    return t0, NaN, NaN, NaN
   end
 
   ntp = na
@@ -826,21 +826,19 @@ function fsbi_i(bi ::iBffs,
   o12 = exp(pk1 - pk2)   # odds
   p1  = o12/(1.0 + o12)  # probability
 
+  ξap, ξkp = ξ2, ξ1
   if rand() < p1
     setsh!(lt0, true)
     llr += pk1
-    ξa   = ξ2
   else
     setsh!(lt0, false)
     llr += pk2
-    ξa   = ξ1
+    ξap, ξkp = ξ1, ξ2
   end
 
-  if sh(lξi)
-    llr -= llik_trio(xc, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-  else
-    llr -= llik_trio(xc, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
-  end
+  ξac, ξkc = if sh(lξi) ξ2, ξ1 else ξ1, ξ2
+
+  llr -= llik_trio(xc, xi(ξkc), xf(ξac), xf(ξkc), e(ξac), e(ξkc), σa2, σk2)
 
   if lU < acr + llr
 
@@ -853,24 +851,19 @@ function fsbi_i(bi ::iBffs,
     if lU < acr + llr
       na -= 1
       llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-      setnt!(bi, ntp)  # set new nt
-      setni!(bi, na)   # set new ni
-      setxi!(ξa, xp)   # set new xp for initial anagenetic daughter
+      setnt!(bi,  ntp)  # set new nt
+      setni!(bi,  na)   # set new ni
+      setxi!(ξap, xp)   # set new xp for initial anagenetic daughter
 
-      """
-      here: I am here
-      """
+      sσar = (xp - xf(ξap))^2/e(ξap)      - (xc - xf(ξac))^2/e(ξac) +
+             (xi(ξkp) - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc)
+      sσkr = (xp - xi(ξkp))^2 - (xc - xi(ξkc))^2
 
-      sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1) + 
-             ((xp - xf(ξ2))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1) 
-      sσkr =
-
-
-      return t0, llr, sσar
+      return t0, llr, sσar, sσkr
     end
   end
 
-  return t0, NaN, NaN
+  return t0, NaN, NaN, NaN
 end
 
 
