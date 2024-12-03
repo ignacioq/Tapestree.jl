@@ -127,7 +127,7 @@ end
               σa2::Float64,
               σk2::Float64)
 
-Likelihood for a `trio` (crown) under constant punctuated equilibrium.
+Likelihood for a `trio` under constant punctuated equilibrium.
 """
 function llik_trio(xi ::Float64,
                    xk ::Float64,
