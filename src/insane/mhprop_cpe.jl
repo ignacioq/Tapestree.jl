@@ -364,12 +364,8 @@ function _update_quartet_x!(ξi ::sTpe,
   # decide which with relative prob of K1 and K2
   pk1 = llik_quartet(xa, xip1, xkp1, x2, x1, ei, e2, e1, σa2, σk2)
   pk2 = llik_quartet(xa, xip2, xkp2, x1, x2, ei, e1, e2, σa2, σk2)
-
-  # control for too high or low probabilities
-  mxp  = min(pk1, pk2)
-  pk1 -= mxp
-  pk2 -= mxp
-  p1   = exp(pk1)/(exp(pk1) + exp(pk2))
+  o12 = exp(pk1 - pk2)   # odds
+  p1  = o12/(1.0 + o12) # probability
 
   ## update trackers
   # current likelihood and 
@@ -447,12 +443,8 @@ function _update_node_x!(ξi ::sTpe,
   # decide which with relative prob of K1 and K2
   pk1 = llik_quartet(xa, xip1, xkp1, x2, x1, ei, e2, e1, σa2, σk2)
   pk2 = llik_quartet(xa, xip2, xkp2, x1, x2, ei, e1, e2, σa2, σk2)
-
-  # control for too high or low probabilities
-  mxp  = min(pk1, pk2)
-  pk1 -= mxp
-  pk2 -= mxp
-  p1   = exp(pk1)/(exp(pk1) + exp(pk2))
+  o12 = exp(pk1 - pk2)   # odds
+  p1  = o12/(1.0 + o12) # probability
 
   ## update trackers
   # current likelihood and 

@@ -772,6 +772,38 @@ end
 
 
 """
+    fixrtip!(tree::T, na::Int64) where T <: Tx
+
+Fixes the the path for a random non extinct tip and returns final tip.
+"""
+function fixrtip!(tree::T, na::Int64) where T <: Tx
+
+  fix!(tree)
+
+  if def1(tree)
+    if isextinct(tree.d1)
+      fixrtip!(tree.d2, na)
+    elseif isextinct(tree.d2)
+      fixrtip!(tree.d1, na)
+    else
+      na1 = ntipsalive(tree.d1)
+      # probability proportional to number of lineages
+      if (fIrand(na) + 1) > na1
+        fixrtip!(tree.d2, na - na1)
+      else
+        fixrtip!(tree.d1, na1)
+      end
+    end
+  else
+    return tree
+  end
+end
+
+
+
+
+
+"""
     fixrtip!(tree::iTbd,
              na  ::Int64,
              λf  ::Float64,

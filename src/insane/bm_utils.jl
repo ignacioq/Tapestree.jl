@@ -675,7 +675,7 @@ function duodnorm(x  ::Float64,
                   σ22::Float64)
 
   iσ2 = 1.0/(σ21 + σ22)
-  return dnorm_bm(x, ((x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
+  return dnorm_bm(x, (x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
 end
 
 

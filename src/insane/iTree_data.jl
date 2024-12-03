@@ -1840,24 +1840,6 @@ end
 
 
 """
-    fixtip(tree::T) where {T <: iTree}
-
-Return the first fixed tip.
-"""
-function fixtip(tree::T) where {T <: iTf}
-  if istip(tree)
-    return tree
-  elseif isfix(tree.d1::T)
-    fixtip(tree.d1::T)
-  else
-    fixtip(tree.d2::T)
-  end
-end
-
-
-
-
-"""
     makebbv!(tree::T,
              bbλ ::Array{Array{Float64,1},1},
              tsv ::Array{Array{Float64,1},1}) where {T <: iT}

@@ -581,21 +581,12 @@ function update_fs!(bix::Int64,
     end
 
     ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, σa, σk, xis, xfs, es)
-
   # if mid branch
   elseif iszero(d2(bi))
-
-    """
-    here
-    """
-
-    ξp, llr, sdXr = fsbi_m(bi, Ξ[d1(bi)], xi(ξc), λ, μ, σx)
-
-
+    ξp, llr, sσar = fsbi_m(bi, Ξ[d1(bi)], xi(ξc), λ, μ, σa, σk)
   # if trio branch
   else
-
-    ξp, llr, sdXr = fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, σx)
+    ξp, llr, sσar = fsbi_i(bi, Ξ[d1(bi)], Ξ[d2(bi)], xi(ξc), λ, μ, σa, σk)
   end
 
   if isfinite(llr)
@@ -679,7 +670,7 @@ function fsbi_t(bi  ::iBffs,
     if iszero(xst)
       xp  = xavg
       acr = logdnorm(xavg, xis[wti], es[wti]*σa^2) - 
-            logdnorm(xavg, xi(lξc),     e(lξc)*σa^2)
+            logdnorm(xavg, xi(lξc),   e(lξc)*σa^2)
     else
       xp  = xfs[wti]
       acr = duoldnorm(     xp, xis[wti], xavg, es[wti]*σa^2, xst) - 
@@ -734,8 +725,8 @@ function fsbi_m(bi::iBffs,
 
   t0, na, nn = _sim_cpe_i(e(bi), λ, μ, x0, σa, σk, 0, 1, 500)
 
-  if na < 1 || nn > 999
-    return t0, NaN
+  if na < 1 || nn >= 500
+    return t0, NaN, NaN
   end
 
   ntp = na
@@ -760,35 +751,55 @@ function fsbi_m(bi::iBffs,
 
     # simulate remaining tips until the present
     if na > 1
-      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, iρi, na, nn)
+      tx, na, nn, acr = 
+        tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, 500)
     end
 
-    if lU < acr
+    if lU < acr + llr
       na -= 1
       llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-      setnt!(bi, ntp)                # set new nt
-      setni!(bi, na)                 # set new ni
+      setnt!(bi, ntp)  # set new nt
+      setni!(bi, na)   # set new ni
+      setxi!(ξ1, xp)   # set new xp for initial x
+      sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1)
 
-      return t0, llr
+      return t0, llr, sσar
     end
   end
 
-  return t0, NaN
+  return t0, NaN, NaN
 end
 
 
 
+
 """
-    fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
+    fsbi_i(bi::iBffs,
+           ξ1::sTpe,
+           ξ2::sTpe,
+           λ ::Float64,
+           μ ::Float64,
+           x0::Float64,
+           σa::Float64,
+           σk::Float64)
 
 Forward simulation for internal branch.
 """
-function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
+function fsbi_i(bi ::iBffs,
+                ξi ::sTpe,
+                ξ1 ::sTpe,
+                ξ2 ::sTpe,
+                λ  ::Float64,
+                μ  ::Float64,
+                σa ::Float64,
+                σk ::Float64)
 
-  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, 0, 1, 1_000)
+  lξi = fixtip(ξi)  
+  xc  = xf(lξi)
+  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xc, σa, σk, 0, 1, 500)
 
-  if na < 1 || nn > 999
-    return t0, NaN
+  if na < 1 || nn >= 500
+    return t0, NaN, NaN
   end
 
   ntp = na
@@ -803,26 +814,63 @@ function fsbi_i(bi::iBffs, λ::Float64, μ::Float64)
   iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
-  if lU < acr
+  # fix a random tip
+  lt0 = fixrtip!(t0, na)
+  xp  = xi(lt0)
 
-    _fixrtip!(t0, na) # fix random tip
+  σa2, σk2 = σa^2, σk^2
+
+  # acceptance ration with respect to daughters
+  pk1 = llik_trio(xp, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
+  pk2 = llik_trio(xp, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+  o12 = exp(pk1 - pk2)   # odds
+  p1  = o12/(1.0 + o12)  # probability
+
+  if rand() < p1
+    setsh!(lt0, true)
+    llr += pk1
+    ξa   = ξ2
+  else
+    setsh!(lt0, false)
+    llr += pk2
+    ξa   = ξ1
+  end
+
+  if sh(lξi)
+    llr -= llik_trio(xc, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
+  else
+    llr -= llik_trio(xc, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+  end
+
+  if lU < acr + llr
 
     # simulate remaining tips until the present
     if na > 1
-      tx, na, nn, acr = tip_sims!(t0, tf(bi), λ, μ, acr, lU, iρi, na, nn)
+      tx, na, nn, acr = 
+        tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, nlim)
     end
 
-    if lU < acr
+    if lU < acr + llr
       na -= 1
       llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-      setnt!(bi, ntp)                # set new nt
-      setni!(bi, na)                 # set new ni
+      setnt!(bi, ntp)  # set new nt
+      setni!(bi, na)   # set new ni
+      setxi!(ξa, xp)   # set new xp for initial anagenetic daughter
 
-      return t0, llr
+      """
+      here: I am here
+      """
+
+      sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1) + 
+             ((xp - xf(ξ2))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1) 
+      sσkr =
+
+
+      return t0, llr, sσar
     end
   end
 
-  return t0, NaN
+  return t0, NaN, NaN
 end
 
 
@@ -844,22 +892,25 @@ function tip_sims!(tree::sTpe,
                    t   ::Float64,
                    λ   ::Float64,
                    μ   ::Float64,
+                   σa  ::Float64,
+                   σk  ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64,
-                   nn ::Int64)
+                   nn  ::Int64,
+                   nlim::Int64)
 
-  if lU < lr && nn < 1_000
+  if lU < lr && nn < nlim
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
 
         # simulate
         stree, na, nn, lr = 
-          _sim_cpe_it(t, λ, μ, lr, lU, iρi, na-1, nn, 1_000)
+          _sim_cpe_it(t, λ, μ, xf(tree), σa, σk, lr, lU, iρi, na-1, nn, nlim)
 
-        if isnan(lr) || nn > 999
+        if isnan(lr) || nn >= nlim
           return tree, na, nn, NaN
         end
 
@@ -872,8 +923,10 @@ function tip_sims!(tree::sTpe,
         end
       end
     else
-      tree.d1, na, nn, lr = tip_sims!(tree.d1, t, λ, μ, lr, lU, iρi, na, nn)
-      tree.d2, na, nn, lr = tip_sims!(tree.d2, t, λ, μ, lr, lU, iρi, na, nn)
+      tree.d1, na, nn, lr = 
+        tip_sims!(tree.d1, t, λ, μ, σa, σk, lr, lU, iρi, na, nn, nlim)
+      tree.d2, na, nn, lr = 
+        tip_sims!(tree.d2, t, λ, μ, σa, σk, lr, lU, iρi, na, nn, nlim)
     end
 
     return tree, na, nn, lr
