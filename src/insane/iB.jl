@@ -542,9 +542,7 @@ function make_idf(tree::sT,
     sc, xr, xavg, xstd)
 
   # estimate pic σ²
-  l   = Float64(lastindex(sc))
-  mu  = sum(sc)/l
-  σxi = sum(abs2, sc .- mu) / (l-1.0)
+  σxi = sqrt(mean(abs2, sc))
 
   reverse!(idf)
   reverse!(n2v)

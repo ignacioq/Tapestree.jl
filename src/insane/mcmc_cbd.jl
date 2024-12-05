@@ -95,12 +95,12 @@ function insane_cbd(tree    ::sT_label;
   @info "Running constant birth-death"
 
   # adaptive phase
-  llc, prc, λc, μc, mc, ns, L =
+  llc, prc, λc, μc, mc, ns, ne, L =
       mcmc_burn_cbd(Ξ, idf, λ_prior, μ_prior, nburn, λc, μc, mc, th, rmλ, surv,
         pup, prints)
 
   # mcmc
-  r, treev, λc, μc, mc = mcmc_cbd(Ξ, idf, llc, prc, λc, μc, mc, ns, L, 
+  r, treev, λc, μc, mc = mcmc_cbd(Ξ, idf, llc, prc, λc, μc, mc, ns, ne, L, 
     th, rmλ, surv, λ_prior, μ_prior, pup, niter, nthin, nflush, ofile, prints)
 
   # if marginal
@@ -233,7 +233,7 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
     next!(pbar)
   end
 
-  return llc, prc, λc, μc, mc, ns, L
+  return llc, prc, λc, μc, mc, ns, ne, L
 end
 
 
@@ -271,6 +271,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
                   μc     ::Float64,
                   mc     ::Float64,
                   ns     ::Float64,
+                  ne     ::Float64,
                   L      ::Float64,
                   th     ::Float64,
                   rmλ    ::Float64,
@@ -285,7 +286,6 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
                   prints ::Int64)
 
   el = lastindex(idf)
-  ne = Float64(ntipsextinct(Ξ))
 
   # logging
   nlogs = fld(niter,nthin)

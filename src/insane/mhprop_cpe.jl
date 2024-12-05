@@ -80,45 +80,43 @@ function _crown_update!(ξi ::sTpe,
   # decide which with relative prob of K1 and K2
   pk1 = llik_trio(xip1, xkp1, x2, x1, e2, e1, σa2, σk2)
   pk2 = llik_trio(xip2, xkp2, x1, x2, e1, e2, σa2, σk2)
-
-  # control for too high or low probabilities
-  mxp  = min(pk1, pk2)
-  pk1 -= mxp
-  pk2 -= mxp
-  p1   = exp(pk1)/(exp(pk1) + exp(pk2))
+  o12 = exp(pk1 - pk2)  # odds
+  p1  = o12/(1.0 + o12) # probability
 
   ## update trackers
   # current likelihood and ss
   if sh(ξi)
     xk   = xi(ξ1)
     ll  -= llik_trio(xic, xk, x2, x1, e2, e1, σa2, σk2)
-    sσa -= (x2 - xi)^2/e2 + (x1 - xk)^2/e1
-    sσk -= (xk - xi)^2
+    sσa -= (x2 - xic)^2/e2 + (x1 - xk)^2/e1
+    sσk -= (xk - xic)^2
   else
     xk   = xi(ξ2)
     ll  -= llik_trio(xic, xk, x1, x2, e1, e2, σa2, σk2)
-    sσa -= (x1 - xi)^2/e1 + (x2 - xk)^2/e2
-    sσk -= (xk - xi)^2
+    sσa -= (x1 - xic)^2/e1 + (x2 - xk)^2/e2
+    sσk -= (xk - xic)^2
   end
 
   # if x1 cladogenetic
   if rand() < p1
     ll  += pk1
     sσa += (x2 - xip1)^2/e2 + (x1 - xkp1)^2/e1
-    sσk += (xik1 - xip1)^2
+    sσk += (xkp1 - xip1)^2
+    setsh!(ξi, true)
     setxi!(ξi, xip1)
     setxf!(ξi, xip1)
-    setxi!(ξ1,  xkp1)
-    setxi!(ξ2,  xip1)
+    setxi!(ξ1, xkp1)
+    setxi!(ξ2, xip1)
   # if x2 cladogenetic
   else
     ll  += pk2
     sσa += (x1 - xip2)^2/e1 + (x2 - xkp2)^2/e2
-    sσk += (xik2 - xip2)^2
-    setxi!(ξi, xip1)
-    setxf!(ξi, xip1)
-    setxi!(ξ1,  xip1)
-    setxi!(ξ2,  xkp1)
+    sσk += (xkp2 - xip2)^2
+    setsh!(ξi, false)
+    setxi!(ξi, xip2)
+    setxf!(ξi, xip2)
+    setxi!(ξ1, xip2)
+    setxi!(ξ2, xkp2)
   end
 
   return ll, sσa, sσk
@@ -132,8 +130,7 @@ end
                     σk ::Float64,
                     ll ::Float64,
                     sσa::Float64,
-                    sσk::Float64,
-                    ter::Bool)
+                    sσk::Float64)
 
 Perform punkeek internal node updates.
 """
@@ -149,10 +146,10 @@ function _update_node_x!(tree::sTpe,
     ll, sσa, sσk = _update_node_x!(tree.d1, σa, σk, ll, sσa, sσk)
     ll, sσa, sσk = _update_node_x!(tree.d2, σa, σk, ll, sσa, sσk)
   elseif !isfix(tree)
-    ll, sσa = update_tip_x!(tree, σa, ll, sσa)
+    ll, sσa = _update_tip_x!(tree, σa, ll, sσa)
   end
 
-  return llc, σa, sσk
+  return ll, sσa, sσk
 end
 
 
@@ -185,15 +182,14 @@ function _update_leaf_x!(tree::sTpe,
     ll, sσa, sσk = _update_leaf_x!(tree.d2, xavg, xstd, σa, σk, ll, sσa, sσk)
   elseif isfix(tree)
     if !iszero(xstd)
-      ll, sσa = update_tip_x!(tree, xavg, xstd, σa, ll, sσa)
+      ll, sσa = _update_tip_x!(tree, xavg, xstd, σa, ll, sσa)
     end
   else
-    ll, sσa = update_tip_x!(tree, σa, ll, sσa)
+    ll, sσa = _update_tip_x!(tree, σa, ll, sσa)
   end
 
-  return llc, σa, sσk
+  return ll, sσa, sσk
 end
-
 
 
 
@@ -220,21 +216,19 @@ function _update_leaf_x!(tree::sTpe,
     ll, sσa, sσk = _update_leaf_x!(tree.d1, σa, σk, ll, sσa, sσk)
     ll, sσa, sσk = _update_leaf_x!(tree.d2, σa, σk, ll, sσa, sσk)
   else
-    ll, sσa = update_tip_x!(tree, σa, ll, sσa)
+    ll, sσa = _update_tip_x!(tree, σa, ll, sσa)
   end
 
-  return llc, σa, sσk
+  return ll, sσa, sσk
 end
 
 
 
 """
     _update_tip_x!(tree::sTpe,
-                    σa  ::Float64, 
-                    σk  ::Float64, 
-                    ll  ::Float64, 
-                    sσa ::Float64, 
-                    sσk ::Float64)
+                   σa  ::Float64, 
+                   ll  ::Float64, 
+                   sσa ::Float64)
 
 Perform punkeek **unfixed** tip updates.
 """
@@ -244,7 +238,7 @@ function _update_tip_x!(tree::sTpe,
                         sσa ::Float64)
 
   xa, xic = xi(tree), xf(tree)
-  ei = e(ξi)
+  ei = e(tree)
 
   # proposal
   xip = rnorm(xa, sqrt(ei)*σa)
@@ -278,7 +272,7 @@ function _update_tip_x!(tree::sTpe,
                         sσa ::Float64)
 
   xa, xic = xi(tree), xf(tree)
-  ei = e(ξi)
+  ei = e(tree)
 
   xip = duoprop(xavg, xi, xstd^2, ei*σa^2)
 
@@ -310,7 +304,7 @@ function _update_duo_x!(ξi  ::sTpe,
                         ll  ::Float64,
                         sσa ::Float64)
 
-  σa2, σk2 = σa^2, σk^2
+  σa2 = σa^2
   xa, xic, x1 = xi(ξi), xf(ξi), xf(ξ1)
   ei, e1 = e(ξi), e(ξ1)
 
@@ -386,17 +380,19 @@ function _update_quartet_x!(ξi ::sTpe,
     ll  += pk1
     sσa += (xip1 - xa)^2/ei + (x2 - xip1)^2/e2 + (x1 - xkp1)^2/e1
     sσk += (xik1 - xip1)^2
+    setsh!(ξi, true)
     setxf!(ξi, xip1)
-    setxi!(ξ1,  xkp1)
-    setxi!(ξ2,  xip1)
+    setxi!(ξ1, xkp1)
+    setxi!(ξ2, xip1)
   # if x2 cladogenetic
   else
     ll  += pk2
     sσa += (xip2 - xa)^2/ei + (x1 - xip2)^2/e1 + (x2 - xkp2)^2/e2
     sσk += (xik2 - xip2)^2
-    setxf!(ξi, xip1)
-    setxi!(ξ1,  xip1)
-    setxi!(ξ2,  xkp1)
+    setsh!(ξi, false)
+    setxf!(ξi, xip2)
+    setxi!(ξ1, xip2)
+    setxi!(ξ2, xkp2)
   end
 
   return ll, sσa, sσk
@@ -451,20 +447,21 @@ function _update_node_x!(ξi ::sTpe,
   if sh(ξi)
     xk   = xi(ξ1)
     ll  -= llik_quartet(xa, xic, xk, x2, x1, ei, e2, e1, σa2, σk2)
-    sσa -= (xi - xa)^2/ei + (x2 - xi)^2/e2 + (x1 - xk)^2/e1
-    sσk -= (xk - xi)^2
+    sσa -= (xic - xa)^2/ei + (x2 - xic)^2/e2 + (x1 - xk)^2/e1
+    sσk -= (xk - xic)^2
   else
     xk   = xi(ξ2)
     ll  -= llik_quartet(xa, xic, xk, x1, x2, ei, e1, e2, σa2, σk2)
-    sσa -= (xi - xa)^2/ei + (x1 - xi)^2/e1 + (x2 - xk)^2/e2
-    sσk -= (xk - xi)^2
+    sσa -= (xic - xa)^2/ei + (x1 - xic)^2/e1 + (x2 - xk)^2/e2
+    sσk -= (xk - xic)^2
   end
 
   # if x1 cladogenetic
   if rand() < p1
     ll  += pk1
     sσa += (xip1 - xa)^2/ei + (x2 - xip1)^2/e2 + (x1 - xkp1)^2/e1
-    sσk += (xik1 - xip1)^2
+    sσk += (xkp1 - xip1)^2
+    setsh!(ξi, true)
     setxf!(ξi, xip1)
     setxi!(ξ1, xkp1)
     setxi!(ξ2, xip1)
@@ -472,10 +469,11 @@ function _update_node_x!(ξi ::sTpe,
   else
     ll  += pk2
     sσa += (xip2 - xa)^2/ei + (x1 - xip2)^2/e1 + (x2 - xkp2)^2/e2
-    sσk += (xik2 - xip2)^2
-    setxf!(ξi, xip1)
-    setxi!(ξ1, xip1)
-    setxi!(ξ2, xkp1)
+    sσk += (xkp2 - xip2)^2
+    setsh!(ξi, false)
+    setxf!(ξi, xip2)
+    setxi!(ξ1, xip2)
+    setxi!(ξ2, xkp2)
   end
 
   return ll, sσa, sσk

@@ -25,12 +25,12 @@ Log-likelihood up to a constant for constant birth-death punctuated equilibrium
 given a complete `iTree` for decoupled trees.
 """
 function llik_cpe(Ξ  ::Vector{sTpe}, 
-                 idf::Vector{iBffs},
-                 λ  ::Float64, 
-                 μ  ::Float64, 
-                 σa ::Float64,
-                 σk ::Float64,
-                 nλ ::Float64)
+                  idf::Vector{iBffs},
+                  λ  ::Float64, 
+                  μ  ::Float64, 
+                  σa ::Float64,
+                  σk ::Float64,
+                  nλ ::Float64)
 
   @inbounds begin
     ll = 0.0
@@ -39,14 +39,11 @@ function llik_cpe(Ξ  ::Vector{sTpe},
       ξi = Ξ[i]
 
       if d2(bi) > 0
-        if sh(ξi)
-          ξd = Ξ[d1(bi)]
-        else
-          ξd = Ξ[d2(bi)]
-        end
-        ll += ldnorm_bm(xi(ξd), xf(tree), σk)
+        ξd = if sh(ξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
+        ll += ldnorm_bm(xi(ξd), xf(ξi), σk)
       end
-      iszero(ei) && continue
+
+      iszero(e(bi)) && continue
       ll += llik_cpe(ξi, λ, μ, σa, σk)
     end
     ll += nλ * log(λ)
@@ -79,6 +76,8 @@ function llik_cpe(tree::sTpe, λ::Float64, μ::Float64, σa::Float64, σk::Float
     llik_cpe(tree.d2, λ, μ, σa, σk)
   end
 end
+
+
 
 
 """
@@ -134,13 +133,13 @@ function llik_cpe_track(tree::sTpe,
     sσa += sqa/ei
     sσk += sqk
     ns  += 1.0
-    llc, ns, ne, L, sσa, sσk = 
-      llik_cpe(tree.d1, λ, μ, σa2, σk2, llc, ns, ne, L, sσa, sσk)
-    llc, ns, ne, L, sσa, sσk = 
-      llik_cpe(tree.d2, λ, μ, σa2, σk2, llc, ns, ne, L, sσa, sσk)
+    ll, ns, ne, L, sσa, sσk = 
+      llik_cpe_track(tree.d1, λ, μ, σa2, σk2, ll, ns, ne, L, sσa, sσk)
+    ll, ns, ne, L, sσa, sσk = 
+      llik_cpe_track(tree.d2, λ, μ, σa2, σk2, ll, ns, ne, L, sσa, sσk)
   end
 
-  return llc, ns, ne, L, sσa, sσk
+  return ll, ns, ne, L, sσa, sσk
 end
 
 
@@ -206,6 +205,64 @@ function llik_trio(xi ::Float64,
          logdnorm(xk,  xi,    σk2) + # cladogenetic shift
          logdnorm(xkd, xk, ek*σa2)   # cladogenetic daughter
 end
+
+
+
+
+
+
+
+"""
+    ssσak(Ξ  ::Vector{sTpe}, idf::Vector{iBffs})
+
+Estimate the anagenetic and cladogenetic sum of squared differences, 
+`sσa` and `sσk`.
+"""
+function ssσak(Ξ  ::Vector{sTpe}, idf::Vector{iBffs})
+
+  @inbounds begin
+    sσa = sσk = 0.0
+    for i in Base.OneTo(lastindex(Ξ))
+      bi = idf[i]
+      ξi = Ξ[i]
+
+      if d2(bi) > 0
+        ξd = if sh(ξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
+        sσk += (xi(ξd) - xf(ξi))^2
+      end
+
+      iszero(e(bi)) && continue
+      sσa, sσk = ssσak(ξi, sσa, sσk)
+    end
+  end
+
+  return sσa, sσk
+end
+
+
+
+
+"""
+    ssσak(tree::sTpe, sσa::Float64, sσk::Float64)
+
+Estimate the anagenetic and cladogenetic sum of squared differences, 
+`sσa` and `sσk`.
+"""
+function ssσak(tree::sTpe, sσa::Float64, sσk::Float64)
+
+  ei   = e(tree)
+  sσa += (xf(tree) - xi(tree))^2/ei
+
+  if def1(tree)
+    xk  = sh(tree) ? xi(tree.d1) : xi(tree.d2)
+    sσk += (xf(tree) - xk)^2
+    sσa, sσk = ssσak(tree.d1, sσa, sσk)
+    sσa, sσk = ssσak(tree.d2, sσa, sσk)
+  end
+
+  return sσa, sσk
+end
+
 
 
 

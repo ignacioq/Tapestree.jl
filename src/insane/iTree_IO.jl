@@ -513,10 +513,10 @@ function _nw_buffer(io::IOBuffer, tree::T, ic::Bool) where {T <: Tlabel}
       write(io, ')')
       !ic && print(io, ':', e(tree))
     else
-      print(io, ")", l(tree), ':', e(tree))
+      print(io, ")", label(tree), ':', e(tree))
     end
   else
-    print(io, l(tree), ':', e(tree))
+    print(io, label(tree), ':', e(tree))
   end
 end
 

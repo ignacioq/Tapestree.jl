@@ -48,7 +48,6 @@ xi(tree::T) where {T <: Tx} = getproperty(tree, :xi)
 Return final trait value.
 """
 xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
-xf(tree::T) where {T <: sTpe} = getproperty(tree, :xf)
 
 
 
