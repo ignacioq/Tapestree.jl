@@ -410,7 +410,7 @@ end
              sc  ::Array{Float64,1},
              xr  ::Array{Float64,1},
              xavg::Dict{String, Float64},
-             xstd::Dict{String, Float64})
+             xst::Dict{String, Float64})
 
 Make `iBf` trait vector for an `iTree`.
 """
@@ -423,8 +423,8 @@ function makeiBf!(tree::sT,
                   mxt ::Float64,
                   sc  ::Array{Float64,1},
                   xr  ::Array{Float64,1},
-                  xavg::Dict{String, Float64},
-                  xstd::Dict{String, Float64})
+                  xav::Dict{String, Float64},
+                  xst::Dict{String, Float64})
 
   el = e(tree)
   el = ec < el ? ec : el
@@ -434,7 +434,7 @@ function makeiBf!(tree::sT,
 
     te = ts - mxt
     ρi, n, nm, xi, e1 = 
-      makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
+      makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt, sc, xr, xav, xst)
     push!(idv, 
       iBffs(mxt, 0, 1, 0, ts, te, false, false, ρi, 0, 1, NaN, false, NaN, NaN))
     push!(xr, xi)
@@ -451,8 +451,8 @@ function makeiBf!(tree::sT,
     ρi  = iψ ? 1.0 : get(tρ, lab, 1.0)
     te  = ts - el
     te  = isapprox(te, 0.0, atol = accerr) ? 0.0 : te
-    xi  = get(xavg, lab, nothing)
-    si  = get(xstd, lab, 0.0)
+    xi  = get(xav, lab, nothing)
+    si  = get(xst, lab, 0.0)
     ifx = !isnothing(xi)
     if !ifx
       mn = isempty(xr) ? 0.0 : mean(xr)
@@ -471,12 +471,12 @@ function makeiBf!(tree::sT,
 
     te = ts - el
     ρi, n, nm, x1, e1 = 
-      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
+      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xav, xst)
 
     # Check if fixed
     lab = label(tree)
-    xi  = get(xavg, lab, nothing)
-    si  = get(xstd, lab, 0.0)
+    xi  = get(xav, lab, nothing)
+    si  = get(xst, lab, 0.0)
     ifx = !isnothing(xi)
     xi  = ifx ? xi : x1
 
@@ -493,9 +493,9 @@ function makeiBf!(tree::sT,
     te  = ts - el
 
     ρ1, n1, nm1, x1, e1 =
-      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
+      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xav, xst)
     ρ2, n2, nm2, x2, e2 = 
-      makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt, sc, xr, xavg, xstd)
+      makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt, sc, xr, xav, xst)
 
     # contrasts
     scn = (x2 - x1)/sqrt(e1 + e2)

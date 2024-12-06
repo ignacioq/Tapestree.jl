@@ -39,7 +39,8 @@ function llik_cpe(Ξ  ::Vector{sTpe},
       ξi = Ξ[i]
 
       if d2(bi) > 0
-        ξd = if sh(ξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
+        lξi = fixtip(ξi)
+        ξd  = if sh(lξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
         ll += ldnorm_bm(xi(ξd), xf(ξi), σk)
       end
 
@@ -227,7 +228,8 @@ function ssσak(Ξ  ::Vector{sTpe}, idf::Vector{iBffs})
       ξi = Ξ[i]
 
       if d2(bi) > 0
-        ξd = if sh(ξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
+        lξi = fixtip(ξi)
+        ξd  = if sh(lξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
         sσk += (xi(ξd) - xf(ξi))^2
       end
 

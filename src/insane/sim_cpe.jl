@@ -40,11 +40,11 @@ function sim_cpe(t ::Float64,
 
   if λorμ(λ, μ)
     xk = rnorm(x1, σk)
-    xl, xr = if rand() < 0.5 xk, x1 else x1, xk end
+    shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
 
     return sTpe(sim_cpe(t - tw, λ, μ, xl, σa, σk), 
                 sim_cpe(t - tw, λ, μ, xr, σa, σk), 
-                tw, false, x0, x1, true, false)
+                tw, false, x0, x1, shi, false)
   else
     return sTpe(tw, true, x0, x1, false, false)
   end
@@ -116,7 +116,7 @@ function _sim_cpe_t(t   ::Float64,
     if λorμ(λ, μ)
       nn += 1
       xk = rnorm(x1, σk)
-      xl, xr = if rand() < 0.5 xk, x1 else x1, xk end
+      shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
 
       d1, na, nn, lr = 
         _sim_cpe_t(t - tw, λ, μ, xl, σa, σk, lr, lU, iρi, na, nn, nlim, 
@@ -125,7 +125,7 @@ function _sim_cpe_t(t   ::Float64,
         _sim_cpe_t(t - tw, λ, μ, xr, σa, σk, lr, lU, iρi, na, nn, nlim, 
           xist, xfst, est)
 
-      return sTpe(d1, d2, tw, false, x0, x1, true, false), na, nn, lr
+      return sTpe(d1, d2, tw, false, x0, x1, shi, false), na, nn, lr
     else
       return sTpe(tw, true, x0, x1, false, false), na, nn, lr
     end
@@ -178,12 +178,12 @@ function _sim_cpe_i(t   ::Float64,
     if λorμ(λ, μ)
       nn += 1
       xk = rnorm(x1, σk)
-      xl, xr = if rand() < 0.5 xk, x1 else x1, xk end
+      shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
 
       d1, na, nn = _sim_cpe_i(t - tw, λ, μ, xl, σa, σk, na, nn, nlim)
       d2, na, nn = _sim_cpe_i(t - tw, λ, μ, xr, σa, σk, na, nn, nlim)
 
-      return sTpe(d1, d2, tw, false, x0, x1, true, false), na, nn
+      return sTpe(d1, d2, tw, false, x0, x1, shi, false), na, nn
     else
       return sTpe(tw, true, x0, x1, false, false), na, nn
     end
@@ -242,14 +242,14 @@ function _sim_cpe_it(t   ::Float64,
     if λorμ(λ, μ)
       nn += 1
       xk = rnorm(x1, σk)
-      xl, xr = if rand() < 0.5 xk, x1 else x1, xk end
+      shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
 
       d1, na, nn, lr = 
         _sim_cpe_it(t - tw, λ, μ, xl, σa, σk, lr, lU, iρi, na, nn, nlim)
       d2, na, nn, lr = 
         _sim_cpe_it(t - tw, λ, μ, xr, σa, σk, lr, lU, iρi, na, nn, nlim)
 
-      return sTpe(d1, d2, tw, false, x0, x1, true, false), na, nn, lr
+      return sTpe(d1, d2, tw, false, x0, x1, shi, false), na, nn, lr
     else
       return sTpe(tw, true, x0, x1, false, false), na, nn, lr
     end

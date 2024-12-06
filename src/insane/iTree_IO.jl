@@ -724,6 +724,37 @@ end
 
 
 """
+    _ibuffer(io::IOBuffer, tree::sTpe)
+
+Write `sTpe` to IOBuffer.
+"""
+function _ibuffer(io::IOBuffer, tree::sTpe)
+  if def1(tree)
+    write(io, '(')
+    _ibuffer(io, tree.d1)
+    write(io, ',')
+    _ibuffer(io, tree.d2)
+    print(io, ',', e(tree), ',', 
+          short(isextinct(tree)), ',', 
+          xi(tree), ',',
+          xf(tree), ',',
+          short(sh(tree)), ',',
+          short(isfix(tree)), ')')
+  else
+    print(io, '(', e(tree), ',', 
+        short(isextinct(tree)), ',',
+        xi(tree), ',',
+        xf(tree), ',',
+        short(sh(tree)), ',',
+        short(isfix(tree)), ')')
+  end
+end
+
+
+
+
+
+"""
     _ibuffer(io::IOBuffer, tree::sTfbd)
 
 Write `sTfbd` to IOBuffer.

@@ -366,20 +366,20 @@ function _update_quartet_x!(ξi ::sTpe,
   if sh(ξi)
     xk   = xi(ξ1)
     ll  -= llik_quartet(xa, xic, xk, x2, x1, ei, e2, e1, σa2, σk2)
-    sσa -= (xi - xa)^2/ei + (x2 - xi)^2/e2 + (x1 - xk)^2/e1
-    sσk -= (xk - xi)^2
+    sσa -= (xic - xa)^2/ei + (x2 - xic)^2/e2 + (x1 - xk)^2/e1
+    sσk -= (xk - xic)^2
   else
     xk   = xi(ξ2)
     ll  -= llik_quartet(xa, xic, xk, x1, x2, ei, e1, e2, σa2, σk2)
-    sσa -= (xi - xa)^2/ei + (x1 - xi)^2/e1 + (x2 - xk)^2/e2
-    sσk -= (xk - xi)^2
+    sσa -= (xic - xa)^2/ei + (x1 - xic)^2/e1 + (x2 - xk)^2/e2
+    sσk -= (xk - xic)^2
   end
 
   # if x1 cladogenetic
   if rand() < p1
     ll  += pk1
     sσa += (xip1 - xa)^2/ei + (x2 - xip1)^2/e2 + (x1 - xkp1)^2/e1
-    sσk += (xik1 - xip1)^2
+    sσk += (xkp1 - xip1)^2
     setsh!(ξi, true)
     setxf!(ξi, xip1)
     setxi!(ξ1, xkp1)
@@ -388,7 +388,7 @@ function _update_quartet_x!(ξi ::sTpe,
   else
     ll  += pk2
     sσa += (xip2 - xa)^2/ei + (x1 - xip2)^2/e1 + (x2 - xkp2)^2/e2
-    sσk += (xik2 - xip2)^2
+    sσk += (xkp2 - xip2)^2
     setsh!(ξi, false)
     setxf!(ξi, xip2)
     setxi!(ξ1, xip2)

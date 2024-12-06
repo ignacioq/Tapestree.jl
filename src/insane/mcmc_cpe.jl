@@ -28,7 +28,7 @@ Created 25 08 2020
                ϵi      ::Float64               = 0.4,
                λi      ::Float64               = NaN,
                μi      ::Float64               = NaN,
-               pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.2),
+               pupdp   ::NTuple{6,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.8),
                prints  ::Int64                 = 5,
                survival::Bool                  = true,
                mxthf   ::Float64               = Inf,
@@ -51,7 +51,7 @@ function insane_cpe(tree    ::sT_label,
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
-                    pupdp   ::NTuple{4,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.2),
+                    pupdp   ::NTuple{6,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.8),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
                     mxthf   ::Float64               = Inf,
@@ -75,22 +75,18 @@ function insane_cpe(tree    ::sT_label,
   if isone(length(tρ))
     tl  = tiplabels(tree)
     tρu = tρ[""]
-    tρ  = Dict(tl[i] => tρu for i in 1:n)
-  end
-
-  # set trait uncertainty
-  if isempty(xs)
-    xs = Dict(tl[i] => 0.0 for i in 1:n)
+    for i in 2:lastindex(tl)
+      push!(tρ, tl[i] => tρu)
+    end
   end
 
   # make fix tree directory
   idf, xr, σxi = make_idf(tree, tρ, xa, xs, th * mxthf)
 
   # starting parameters
+  λc, μc = λi, μi
   if isnan(λi) || isnan(μi)
     λc, μc = moments(Float64(n), th, ϵi)
-  else
-    λc, μc = λi, μi
   end
 
   σac = σkc = σxi
@@ -116,12 +112,13 @@ function insane_cpe(tree    ::sT_label,
   # adaptive phase
   llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk =
       mcmc_burn_cpe(Ξ, idf, λ_prior, μ_prior, σa_prior, σk_prior, nburn, 
-        λc, μc, σac, σkc, mc, th, rmλ, surv, pup, prints)
+        λc, μc, σac, σkc, mc, th, rmλ, inodes, surv, pup, prints)
 
   # mcmc
-  r, treev = mcmc_cpe(Ξ, idf, llc, prc, λc, μc, mc, ns, ne, L, sσa, sσk,
-    th, rmλ, surv, λ_prior, μ_prior, σa_prior, σk_prior, pup, 
-    niter, nthin, nflush, ofile, prints)
+  r, treev = 
+    mcmc_cpe(Ξ, idf, llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk,
+      th, rmλ, inodes, surv, λ_prior, μ_prior, σa_prior, σk_prior, pup, 
+      niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -144,11 +141,12 @@ end
                   mc     ::Float64,
                   th     ::Float64,
                   rmλ    ::Float64,
+                  inodes ::Vector{Int64},
                   surv   ::Int64,
                   pup    ::Array{Int64,1},
                   prints ::Int64)
 
-Burn-in for da chain for constant birth-death punctuated equilibrium.
+Burn-in for constant birth-death punctuated equilibrium.
 """
 function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
                        idf     ::Array{iBffs,1},
@@ -164,6 +162,7 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
                        mc     ::Float64,
                        th     ::Float64,
                        rmλ    ::Float64,
+                       inodes ::Vector{Int64},
                        surv   ::Int64,
                        pup    ::Array{Int64,1},
                        prints ::Int64)
@@ -251,28 +250,36 @@ end
 
 
 """
-    mcmc_cpe(Ξ      ::Vector{sTpe},
-             idf    ::Array{iBffs,1},
-             llc    ::Float64,
-             prc    ::Float64,
-             λc     ::Float64,
-             μc     ::Float64,
-             mc     ::Float64,
-             ns     ::Float64,
-             L      ::Float64,
-             th     ::Float64,
-             rmλ    ::Float64,
-             surv   ::Int64,
-             λ_prior::NTuple{2,Float64},
-             μ_prior::NTuple{2,Float64},
-             pup    ::Array{Int64,1},
-             niter  ::Int64,
-             nthin  ::Int64,
-             nflush ::Int64,
-             ofile  ::String,
-             prints ::Int64)
+    mcmc_cpe(Ξ       ::Vector{sTpe},
+             idf     ::Array{iBffs,1},
+             llc     ::Float64,
+             prc     ::Float64,
+             λc      ::Float64,
+             μc      ::Float64,
+             σac     ::Float64,
+             σkc     ::Float64,
+             mc      ::Float64,
+             ns      ::Float64,
+             ne      ::Float64,
+             L       ::Float64,
+             sσa     ::Float64, 
+             sσk     ::Float64,
+             th      ::Float64,
+             rmλ     ::Float64,
+             inodes  ::Vector{Int64},
+             surv    ::Int64,
+             λ_prior ::NTuple{2,Float64},
+             μ_prior ::NTuple{2,Float64},
+             σa_prior::NTuple{2,Float64},
+             σk_prior::NTuple{2,Float64},
+             pup     ::Array{Int64,1},
+             niter   ::Int64,
+             nthin   ::Int64,
+             nflush  ::Int64,
+             ofile   ::String,
+             prints  ::Int64)
 
-Sampling da chain for constant birth-death punctuated equilibrium.
+Sampling for constant birth-death punctuated equilibrium.
 """
 function mcmc_cpe(Ξ       ::Vector{sTpe},
                   idf     ::Array{iBffs,1},
@@ -286,8 +293,11 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
                   ns      ::Float64,
                   ne      ::Float64,
                   L       ::Float64,
+                  sσa     ::Float64, 
+                  sσk     ::Float64,
                   th      ::Float64,
                   rmλ     ::Float64,
+                  inodes  ::Vector{Int64},
                   surv    ::Int64,
                   λ_prior ::NTuple{2,Float64},
                   μ_prior ::NTuple{2,Float64},
@@ -300,11 +310,12 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
                   ofile   ::String,
                   prints  ::Int64)
 
-  el = lastindex(idf)
+  el  = lastindex(idf)
+  nin = lastindex(inodes)
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  lthin = lit = sthin = zero(Int64)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 7)
@@ -315,140 +326,136 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
   es  = Float64[]
 
   treev = sTpe[]     # make tree vector
-  sthin = 0          # flush to file
   io    = IOBuffer() # buffer 
 
-  open(ofile*".log", "w") do of
+  open(ofile*".log", "w") do of 
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\tsigma_a\tsigma_k\n")
     flush(of)
-
     open(ofile*".txt", "w") do tf
+      let llc = llc, prc = prc, λc = λc, μc = μc, σac = σac, σkc = σkc, mc = mc, ns = ns, ne = ne, L = L, sσa = sσa, sσk = sσk, lthin = lthin, lit = lit, sthin = sthin
 
-      pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, prints, "running mcmc...", 20)
 
-      for it in Base.OneTo(niter)
+        for it in Base.OneTo(niter)
 
-        shuffle!(pup)
+          shuffle!(pup)
 
-        for p in pup
+          for p in pup
 
-           # λ proposal
-          if p === 1
+             # λ proposal
+            if p === 1
 
-            llc, prc, λc, mc =
-              update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
+              llc, prc, λc, mc =
+                update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
 
-            llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            if !isapprox(llci, llc, atol = 1e-6)
-               @show llci, llc, it, p
-               return
+              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                 @show llci, llc, it, p
+                 return
+              end
+
+            # μ proposal
+            elseif p === 2
+
+              llc, prc, μc, mc =
+                update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
+
+              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                 @show llci, llc, it, p
+                 return
+              end
+
+            # σa (anagenetic) proposal
+            elseif p === 3
+
+              llc, prc, σac = 
+                update_σ!(σac, 0.5*sσa, 2.0*ns + (1.0-rmλ), llc, prc, σa_prior)
+
+              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                 @show llci, llc, it, p
+                 return
+              end
+
+            # σk (cladogenetic) proposal
+            elseif p === 4
+
+              llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
+
+              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                 @show llci, llc, it, p
+                 return
+              end
+
+            # update inner nodes traits
+            elseif p === 5
+
+              nix = ceil(Int64,rand()*nin)
+              bix = inodes[nix]
+              llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
+
+              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                 @show llci, llc, it, p
+                 return
+              end
+
+            # forward simulation proposal proposal
+            else
+
+              bix = ceil(Int64,rand()*el)
+              llc, ns, ne, L, sσa, sσk = 
+                update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, 
+                  sσa, sσk, xis, xfs, es)
+
+              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                 @show llci, llc, it, p, bix
+                 return
+              end
+
             end
-
-          # μ proposal
-          elseif p === 2
-
-            llc, prc, μc, mc =
-              update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
-
-            llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            if !isapprox(llci, llc, atol = 1e-6)
-               @show llci, llc, it, p
-               return
-            end
-
-          # σa (anagenetic) proposal
-          elseif p === 3
-
-            llc, prc, σac = 
-              update_σ!(σac, 0.5*sσa, 2.0*ns + (1.0-rmλ), llc, prc, σa_prior)
-
-            llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            if !isapprox(llci, llc, atol = 1e-6)
-               @show llci, llc, it, p
-               return
-            end
-
-          # σk (cladogenetic) proposal
-          elseif p === 4
-
-            llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
-
-            llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            if !isapprox(llci, llc, atol = 1e-6)
-               @show llci, llc, it, p
-               return
-            end
-
-          # update inner nodes traits
-          elseif p === 5
-
-            nix = ceil(Int64,rand()*nin)
-            bix = inodes[nix]
-            llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
-
-            llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            if !isapprox(llci, llc, atol = 1e-6)
-               @show llci, llc, it, p
-               return
-            end
-
-          # forward simulation proposal proposal
-          else
-
-            """
-            here
-            """
-
-            bix = ceil(Int64,rand()*el)
-            llc, ns, ne, L, sσa, sσk = 
-              update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, sσa, sσk,
-                xis, xfs, es)
-
-            llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            if !isapprox(llci, llc, atol = 1e-6)
-               @show llci, llc, it, p
-               return
-            end
-
           end
-        end
 
-        # log parameters
-        lthin += 1
-        if lthin === nthin
+          # log parameters
+          lthin += one(Int64)
+          if lthin === nthin
 
-          lit += 1
-          @inbounds begin
-            r[lit,1] = Float64(it)
-            r[lit,2] = llc
-            r[lit,3] = prc
-            r[lit,4] = λc
-            r[lit,5] = μc
-            r[lit,6] = σac
-            r[lit,7] = σkc
-            push!(treev, couple(Ξ, idf, 1))
+            lit += 1
+            @inbounds begin
+              r[lit,1] = Float64(it)
+              r[lit,2] = llc
+              r[lit,3] = prc
+              r[lit,4] = λc
+              r[lit,5] = μc
+              r[lit,6] = σac
+              r[lit,7] = σkc
+              push!(treev, couple(Ξ, idf, 1))
+            end
+            lthin = zero(Int64)
           end
-          lthin = 0
+
+          # flush parameters
+          sthin += 1
+          if sthin === nflush
+            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\t', σac, '\t', σkc, '\n')
+            flush(of)
+            ibuffer(io, couple(Ξ, idf, 1))
+            write(io, '\n')
+            write(tf, take!(io))
+            flush(tf)
+            sthin = zero(Int64)
+          end
+
+          next!(pbar)
         end
 
-        # flush parameters
-        sthin += 1
-        if sthin === nflush
-          print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\t', σac, '\t', σkc, '\n')
-          flush(of)
-          ibuffer(io, couple(Ξ, idf, 1))
-          write(io, '\n')
-          write(tf, take!(io))
-          flush(tf)
-          sthin = 0
-        end
-
-        next!(pbar)
+        return r, treev
       end
     end
   end
-
-  return r, treev
 end
 
 
@@ -464,7 +471,7 @@ end
               sσa ::Float64,
               sσk ::Float64)
 
-Perform a punkeep trait update for an internal branch and its descendants.
+Perform a punkeek trait update for an internal branch and its descendants.
 """
 function update_x!(bix ::Int64,
                    Ξ   ::Vector{sTpe},
@@ -588,7 +595,7 @@ function update_fs!(bix::Int64,
   ξc = Ξ[bix]
 
   llr = NaN
-  sσa0 = sσar = 0.0
+  sσar = sσkr = 0.0
    # if terminal branch
   if iszero(d1(bi))
 
@@ -598,16 +605,18 @@ function update_fs!(bix::Int64,
     end
 
     ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, σa, σk, xis, xfs, es)
+
   # if mid branch
   elseif iszero(d2(bi))
     ξp, llr, sσar = fsbi_m(bi, Ξ[d1(bi)], xi(ξc), λ, μ, σa, σk)
+  
   # if trio branch
   elseif e(bi) > 0.0
+
     ξp, llr, sσar, sσkr = fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk)
   end
 
   if isfinite(llr)
-    ξc  = Ξ[bix]
     σa2, σk2 = σa^2, σk^2
 
     ll1, ns1, ne1, L1, sσa1, sσk1 = 
@@ -685,13 +694,13 @@ function fsbi_t(bi  ::iBffs,
 
     xp = NaN
     if iszero(xst)
-      xp  = xavg
-      acr = logdnorm(xavg, xis[wti], es[wti]*σa^2) - 
-            logdnorm(xavg, xi(lξc),   e(lξc)*σa^2)
+      xp  = xav
+      acr = logdnorm(xav, xis[wti], es[wti]*σa^2) - 
+            logdnorm(xav, xi(lξc),   e(lξc)*σa^2)
     else
       xp  = xfs[wti]
-      acr = duoldnorm(     xp, xis[wti], xavg, es[wti]*σa^2, xst) - 
-            duoldnorm(xf(lξc),  xi(lξc), xavg,  e(lξc)*σa^2, xst)
+      acr = duoldnorm(     xp, xis[wti], xav, es[wti]*σa^2, xst) - 
+            duoldnorm(xf(lξc),  xi(lξc), xav,  e(lξc)*σa^2, xst)
     end
 
     if lU < acr + llr
@@ -864,7 +873,7 @@ function fsbi_i(bi ::iBffs,
     # simulate remaining tips until the present
     if na > 1
       tx, na, nn, acr = 
-        tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, nlim)
+        tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, 500)
     end
 
     if lU < acr + llr
@@ -872,7 +881,7 @@ function fsbi_i(bi ::iBffs,
       llr += (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       setnt!(bi,  ntp)  # set new nt
       setni!(bi,  na)   # set new ni
-      sσar = (xp - xf(ξap))^2/e(ξap)      - (xc - xf(ξac))^2/e(ξac) +
+      sσar = (xp - xf(ξap))^2/e(ξap)      - (xc - xf(ξac))^2/e(ξac)      +
              (xi(ξkp) - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc)
       sσkr = (xp - xi(ξkp))^2 - (xc - xi(ξkc))^2
       setxi!(ξap, xp)   # set new xp for initial anagenetic daughter
