@@ -46,21 +46,19 @@ function insane_cbd(tree    ::sT_label;
                     pupdp   ::NTuple{3,Float64}     = (0.2,0.2,0.2),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
-                    mxthf   ::Float64               = Inf,
+                    mxthf   ::Float64               = 0.1,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  n     = ntips(tree)
-  th    = treeheight(tree)
+  n    = ntips(tree)
+  th   = treeheight(tree)
 
   surv = 0   # condition on survival of 0, 1, or 2 starting lineages
   rmλ  = 0.0 # condition on first speciation event
-  if survival 
-    if iszero(e(tree)) 
-      surv += 2
-      rmλ  += 1.0
-    else
-      surv += 1
-    end
+  if iszero(e(tree)) 
+    rmλ  += 1.0
+    surv += survival ? 2 : 0
+  else
+    surv += survival ? 1 : 0
   end
 
   # set tips sampling fraction
@@ -74,11 +72,11 @@ function insane_cbd(tree    ::sT_label;
   idf = make_idf(tree, tρ, th * mxthf)
 
   # starting parameters
+  λc, μc = λi, μi
   if isnan(λi) && isnan(μi)
     λc, μc = moments(Float64(n), th, ϵi)
-  else
-    λc, μc = λi, μi
   end
+
   # M attempts of survival
   mc = m_surv_cbd(th, λc, μc, 5_000, surv)
 
@@ -100,7 +98,7 @@ function insane_cbd(tree    ::sT_label;
         pup, prints)
 
   # mcmc
-  r, treev, λc, μc, mc = mcmc_cbd(Ξ, idf, llc, prc, λc, μc, mc, ns, ne, L, 
+  r, treev = mcmc_cbd(Ξ, idf, llc, prc, λc, μc, mc, ns, ne, L, 
     th, rmλ, surv, λ_prior, μ_prior, pup, niter, nthin, nflush, ofile, prints)
 
   # if marginal
@@ -289,13 +287,12 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  lthin = lit = sthin = zero(Int64)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 5)
 
   treev = sTbd[]     # make tree vector
-  sthin = 0          # flush to file
   io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
@@ -304,86 +301,89 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
     open(ofile*".txt", "w") do tf
 
-      pbar = Progress(niter, prints, "running mcmc...", 20)
+      let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-      for it in Base.OneTo(niter)
+        pbar = Progress(niter, prints, "running mcmc...", 20)
 
-        shuffle!(pup)
+        for it in Base.OneTo(niter)
 
-        for p in pup
+          shuffle!(pup)
 
-          # λ proposal
-          if p === 1
+          for p in pup
 
-            llc, prc, λc, mc =
-              update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
+            # λ proposal
+            if p === 1
 
-            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            # if !isapprox(llci, llc, atol = 1e-6)
-            #    @show llci, llc, it, p
-            #    return
-            # end
+              llc, prc, λc, mc =
+                update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
 
-          # μ proposal
-          elseif p === 2
+              # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #    @show llci, llc, it, p
+              #    return
+              # end
 
-            llc, prc, μc, mc =
-              update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
+            # μ proposal
+            elseif p === 2
 
-            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            # if !isapprox(llci, llc, atol = 1e-6)
-            #    @show llci, llc, it, p
-            #    return
-            # end
+              llc, prc, μc, mc =
+                update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
 
-          # forward simulation proposal proposal
-          else
+              # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #    @show llci, llc, it, p
+              #    return
+              # end
 
-            bix = ceil(Int64,rand()*el)
-            llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
+            # forward simulation proposal proposal
+            else
 
-            # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-            # if !isapprox(llci, llc, atol = 1e-6)
-            #    @show llci, llc, it, p
-            #    return
-            # end
+              bix = ceil(Int64,rand()*el)
+              llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
+
+              # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #    @show llci, llc, it, p
+              #    return
+              # end
+            end
           end
-        end
 
-        # log parameters
-        lthin += 1
-        if lthin === nthin
+          # log parameters
+          lthin += 1
+          if lthin === nthin
 
-          lit += 1
-          @inbounds begin
-            r[lit,1] = Float64(it)
-            r[lit,2] = llc
-            r[lit,3] = prc
-            r[lit,4] = λc
-            r[lit,5] = μc
-            push!(treev, couple(Ξ, idf, 1))
+            lit += 1
+            @inbounds begin
+              r[lit,1] = Float64(it)
+              r[lit,2] = llc
+              r[lit,3] = prc
+              r[lit,4] = λc
+              r[lit,5] = μc
+              push!(treev, couple(Ξ, idf, 1))
+            end
+            lthin = zero(Int64)
           end
-          lthin = 0
+
+          # flush parameters
+          sthin += 1
+          if sthin === nflush
+            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\n')
+            flush(of)
+            ibuffer(io, couple(Ξ, idf, 1))
+            write(io, '\n')
+            write(tf, take!(io))
+            flush(tf)
+            sthin = zero(Int64)
+          end
+
+          next!(pbar)
         end
 
-        # flush parameters
-        sthin += 1
-        if sthin === nflush
-          print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\n')
-          flush(of)
-          ibuffer(io, couple(Ξ, idf, 1))
-          write(io, '\n')
-          write(tf, take!(io))
-          flush(tf)
-          sthin = 0
-        end
-
-        next!(pbar)
+        return r, treev
       end
     end
   end
-
-  return r, treev, λc, μc, mc
 end
 
 

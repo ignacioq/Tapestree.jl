@@ -75,10 +75,9 @@ function insane_cpe(tree    ::sT_label,
   if isone(length(tρ))
     tl  = tiplabels(tree)
     tρu = tρ[""]
-    for i in 2:lastindex(tl)
-      push!(tρ, tl[i] => tρu)
-    end
+    tρ  = Dict(tl[i] => tρu for i in 1:n)
   end
+
 
   # make fix tree directory
   idf, xr, σxi = make_idf(tree, tρ, xa, xs, th * mxthf)
@@ -331,7 +330,9 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
   open(ofile*".log", "w") do of 
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\tsigma_a\tsigma_k\n")
     flush(of)
+
     open(ofile*".txt", "w") do tf
+
       let llc = llc, prc = prc, λc = λc, μc = μc, σac = σac, σkc = σkc, mc = mc, ns = ns, ne = ne, L = L, sσa = sσa, sσk = sσk, lthin = lthin, lit = lit, sthin = sthin
 
         pbar = Progress(niter, prints, "running mcmc...", 20)

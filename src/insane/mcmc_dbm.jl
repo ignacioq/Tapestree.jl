@@ -271,7 +271,7 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  lthin = lit = sthin = zero(Int64)
 
   r = Array{Float64,2}(undef, nlogs, 8)
 
@@ -282,7 +282,6 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
   el      = lastindex(idf)     # number of branches
 
   # flush to file
-  sthin = 0
 
   open(ofile*".log", "w") do of
 
@@ -291,114 +290,117 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
 
     open(ofile*".txt", "w") do tf
 
-      pbar = Progress(niter, prints, "running mcmc...", 20)
+      let prc = prc, αxc = αxc, ασc = ασc, γc = γc, lthin = lthin, lit = lit, sthin = sthin
 
-      for it in Base.OneTo(niter)
+        pbar = Progress(niter, prints, "running mcmc...", 20)
 
-        shuffle!(pup)
+        for it in Base.OneTo(niter)
 
-        for pupi in pup
+          shuffle!(pup)
 
-          ## parameter updates
-          # update trait drift `αx`
-          if pupi === 1
+          for pupi in pup
 
-            prc, αxc = update_αx!(αxc, Ls, Xs, ll, prc, αx_prior)
+            ## parameter updates
+            # update trait drift `αx`
+            if pupi === 1
 
-            # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
-            # if !isapprox(ll0, sum(ll))
-            #    @show ll0, sum(ll), it, pupi
-            #    return
-            # end
+              prc, αxc = update_αx!(αxc, Ls, Xs, ll, prc, αx_prior)
 
-          # update rate drift `ασ`
-          elseif pupi === 2
+              # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
+              # if !isapprox(ll0, sum(ll))
+              #    @show ll0, sum(ll), it, pupi
+              #    return
+              # end
+
+            # update rate drift `ασ`
+            elseif pupi === 2
 
 
-            prc, ασc = update_ασ!(ασc, γc, L, ddσ, ll, prc, ασ_prior)
+              prc, ασc = update_ασ!(ασc, γc, L, ddσ, ll, prc, ασ_prior)
 
-            _ss!(ssσ, Ξ, lσ2, ασc)
+              _ss!(ssσ, Ξ, lσ2, ασc)
 
-            # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
-            # if !isapprox(ll0, sum(ll))
-            #    @show ll0, sum(ll), it, pupi
-            #    return
-            # end
+              # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
+              # if !isapprox(ll0, sum(ll))
+              #    @show ll0, sum(ll), it, pupi
+              #    return
+              # end
 
-          # update rate diffusion `γ`
-          elseif pupi === 3
+            # update rate diffusion `γ`
+            elseif pupi === 3
 
-            prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
+              prc, γc = update_γ!(γc, ssσ, nσ, ll, prc, γ_prior)
 
-            # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
-            # if !isapprox(ll0, sum(ll))
-            #    @show ll0, sum(ll), it, pupi
-            #    return
-            # end
+              # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
+              # if !isapprox(ll0, sum(ll))
+              #    @show ll0, sum(ll), it, pupi
+              #    return
+              # end
 
-          elseif pupi === 4
+            elseif pupi === 4
 
-            lac = update_scale!(Ξ, αxc, ll, Ls, Xs, stn, δt)
+              lac = update_scale!(Ξ, αxc, ll, Ls, Xs, stn, δt)
 
-            # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
-            # if !isapprox(ll0, sum(ll))
-            #    @show ll0, sum(ll), it, pupi
-            #    return
-            # end
+              # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
+              # if !isapprox(ll0, sum(ll))
+              #    @show ll0, sum(ll), it, pupi
+              #    return
+              # end
 
-          # update traits and rates
-          else
+            # update traits and rates
+            else
 
-            nix = ceil(Int64,rand()*nin)
-            bix = inodes[nix]
-            update_xs!(bix, Ξ, idf, αxc, ασc, γc, ll, Ls, Xs, ddσ, ssσ, δt, srδt)
+              nix = ceil(Int64,rand()*nin)
+              bix = inodes[nix]
+              update_xs!(bix, Ξ, idf, αxc, ασc, γc, ll, Ls, Xs, ddσ, ssσ, δt, srδt)
 
-            # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
-            # if !isapprox(ll0, sum(ll))
-            #    @show ll0, sum(ll), it, pupi
-            #    return
-            # end
+              # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
+              # if !isapprox(ll0, sum(ll))
+              #    @show ll0, sum(ll), it, pupi
+              #    return
+              # end
+            end
           end
-        end
 
-        # log parameters
-        lthin += 1
-        if lthin === nthin
-          lit += 1
-          @inbounds begin
-            r[lit,1] = Float64(it)
-            r[lit,2] = sum(ll)
-            r[lit,3] = prc
-            r[lit,4] = xv(Ξ[1])[1]
-            r[lit,5] = exp(lσ2(Ξ[1])[1])
-            r[lit,6] = αxc
-            r[lit,7] = ασc
-            r[lit,8] = γc
-            push!(treev, couple(Ξ, idf, 1))
+          # log parameters
+          lthin += 1
+          if lthin === nthin
+            lit += 1
+            @inbounds begin
+              r[lit,1] = Float64(it)
+              r[lit,2] = sum(ll)
+              r[lit,3] = prc
+              r[lit,4] = xv(Ξ[1])[1]
+              r[lit,5] = exp(lσ2(Ξ[1])[1])
+              r[lit,6] = αxc
+              r[lit,7] = ασc
+              r[lit,8] = γc
+              push!(treev, couple(Ξ, idf, 1))
+            end
+            lthin = zero(Int64)
           end
-          lthin = 0
-        end
 
-        # flush parameters
-        sthin += 1
-        if sthin === nflush
-          write(of, 
-            string(Float64(it), "\t", sum(ll), "\t", prc, "\t", 
-              xv(Ξ[1])[1],"\t", exp(lσ2(Ξ[1])[1]), "\t", αxc, "\t", ασc, "\t",
-               γc, "\n"))
-          flush(of)
-          write(tf, 
-            string(istring(couple(Ξ, idf, 1)), "\n"))
-          flush(tf)
-          sthin = 0
-        end
+          # flush parameters
+          sthin += 1
+          if sthin === nflush
+            write(of, 
+              string(Float64(it), "\t", sum(ll), "\t", prc, "\t", 
+                xv(Ξ[1])[1],"\t", exp(lσ2(Ξ[1])[1]), "\t", αxc, "\t", ασc, "\t",
+                 γc, "\n"))
+            flush(of)
+            write(tf, 
+              string(istring(couple(Ξ, idf, 1)), "\n"))
+            flush(tf)
+            sthin = zero(Int64)
+          end
 
-        next!(pbar)
+          next!(pbar)
+        end
+        
+        return r, treev
       end
     end
   end
-
-  return r, treev
 end
 
 

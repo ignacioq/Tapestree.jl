@@ -391,11 +391,11 @@ end
 
 """
     _ss_dd(tree::T,
-              α   ::Float64,
-              dd  ::Float64,
-              ssλ ::Float64,
-              ssμ ::Float64,
-              n   ::Float64) where {T <: iTbdU}
+           α   ::Float64,
+           dd  ::Float64,
+           ssλ ::Float64,
+           ssμ ::Float64,
+           n   ::Float64) where {T <: iTbdU}
 
 Returns the standardized sum of squares for rate `v`, the path number `n`,
  and the delta drift `dd`.

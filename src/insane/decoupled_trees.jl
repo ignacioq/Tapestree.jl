@@ -433,7 +433,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTfbd})
 
   Ξ = iTfbd[]
-  _make_Ξ!(Ξ, 1, log(λ), log(μ), α, σλ, σμ, δt, srδt, idf)
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), αλ, αμ, σλ, σμ, δt, srδt, idf)
 
   return Ξ
 end
@@ -514,9 +514,9 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
   setλt!(bi, lλv[l])
 
   if i1 > 0 
-    _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
+    _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf)
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
+      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf)
     end
   end
 
@@ -1051,6 +1051,41 @@ function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
   return dd, ss, n
 end
 
+
+
+"""
+    _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+
+  dd = ssλ = ssμ = n = 0.0
+  for ξi in Ξ
+    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
+  end
+
+  return dd, ssλ, ssμ, n
+end
+
+
+
+"""
+    _ss_dd(Ξ::Vector{iTfbd}, α::Float64)
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{iTfbd}, αλ::Float64, αμ::Float64)
+
+  ddλ = ddμ = ssλ = ssμ = n = 0.0
+  for ξi in Ξ
+    ddλ, ddμ, ssλ, ssμ, n = _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+  end
+
+  return ddλ, ddμ, ssλ, ssμ, n
+end
 
 
 
