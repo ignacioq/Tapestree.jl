@@ -14,8 +14,8 @@ Created 03 09 2020
 
 """
     insane_gbmfbd(tree    ::sTf_label;
-                  λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                  μ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                  λ0_prior::NTuple{2,Float64}     = (0.1, 148.41),
+                  μ0_prior::NTuple{2,Float64}     = (0.1, 148.41),
                   αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                   αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                   σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
