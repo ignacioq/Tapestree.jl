@@ -351,8 +351,8 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
-                 @show llci, llc, it, p
-                 return
+                @show llci, llc, it, p
+                return
               end
 
             # μ proposal
@@ -363,8 +363,8 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
-                 @show llci, llc, it, p
-                 return
+                @show llci, llc, it, p
+                return
               end
 
             # σa (anagenetic) proposal
@@ -375,8 +375,8 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
-                 @show llci, llc, it, p
-                 return
+                @show llci, llc, it, p
+                return
               end
 
             # σk (cladogenetic) proposal
@@ -386,8 +386,8 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
-                 @show llci, llc, it, p
-                 return
+                @show llci, llc, it, p
+                return
               end
 
             # update inner nodes traits
@@ -399,8 +399,8 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
-                 @show llci, llc, it, p
-                 return
+                @show llci, llc, it, p
+                return
               end
 
             # forward simulation proposal proposal
@@ -413,8 +413,8 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
-                 @show llci, llc, it, p, bix
-                 return
+                @show llci, llc, it, p, bix
+                return
               end
 
             end
