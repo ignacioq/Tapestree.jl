@@ -203,7 +203,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   L   = treelength(Ξ)        # tree length
   nin = lastindex(inodes)   # number of internal nodes
   el  = lastindex(idf)      # number of branches
-  ns  = sum(x -> d2(x) > 0, idf) - Int64(rmλ)  # number of speciation events in likelihood
+  ns  = Float64(sum(x -> d2(x) > 0, idf)) - rmλ  # number of speciation events in likelihood
   ne  = 0.0                 # number of extinction events in likelihood
 
   # delta change, sum squares, path length and integrated rate
@@ -275,7 +275,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
     if ltn === 100
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
-      ltn = 0
+      ltn = zero(Int64)
     end
 
     next!(pbar)

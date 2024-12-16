@@ -134,7 +134,7 @@ end
                 nep ::Int64,
                 lr  ::Float64,
                 lU  ::Float64,
-                Iρi ::Float64,
+                iρi ::Float64,
                 na  ::Int64,
                 nn  ::Int64,
                 nlim::Int64)
@@ -152,7 +152,7 @@ function _sim_cfbd_t(t   ::Float64,
                      nep ::Int64,
                      lr  ::Float64,
                      lU  ::Float64,
-                     Iρi ::Float64,
+                     iρi ::Float64,
                      na  ::Int64,
                      nn  ::Int64,
                      nlim::Int64)
@@ -169,7 +169,7 @@ function _sim_cfbd_t(t   ::Float64,
       if t - tw < ψti
         e0 = t - ψti
         t0, na, nn, lr = 
-          _sim_cfbd_t(ψti, λ, μ, ψ, ψts, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
+          _sim_cfbd_t(ψti, λ, μ, ψ, ψts, ix + 1, nep, lr, lU, iρi, na, nn, nlim)
         sete!(t0, e(t0) + e0)
         return t0, na, nn, lr
       end
@@ -179,7 +179,7 @@ function _sim_cfbd_t(t   ::Float64,
       na += 1
       nlr = lr
       if na > 1
-        nlr += log(Iρi * Float64(na)/Float64(na-1))
+        nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr < lr && lU >= nlr
         return sTfbd(), na, nn, NaN
@@ -192,9 +192,9 @@ function _sim_cfbd_t(t   ::Float64,
     if λevent(λ, μ, ψi)
       nn += 1
       d1, na, nn, lr =
-        _sim_cfbd_t(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_t(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na, nn, nlim)
       d2, na, nn, lr =
-        _sim_cfbd_t(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_t(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na, nn, nlim)
 
       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
     # extinction
@@ -299,7 +299,7 @@ end
                  ψ   ::Float64,
                  lr  ::Float64,
                  lU  ::Float64,
-                 Iρi ::Float64,
+                 iρi ::Float64,
                  na  ::Int64,
                  nf  ::Int64,
                  nn  ::Int64,
@@ -318,7 +318,7 @@ function _sim_cfbd_it(t   ::Float64,
                       nep ::Int64,
                       lr  ::Float64,
                       lU  ::Float64,
-                      Iρi ::Float64,
+                      iρi ::Float64,
                       na  ::Int64,
                       nn  ::Int64,
                       nlim::Int64)
@@ -335,7 +335,7 @@ function _sim_cfbd_it(t   ::Float64,
       if t - tw < ψti
         e0 = t - ψti
         t0, na, nn, lr = 
-          _sim_cfbd_it(ψti, λ, μ, ψ, ψts, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
+          _sim_cfbd_it(ψti, λ, μ, ψ, ψts, ix + 1, nep, lr, lU, iρi, na, nn, nlim)
         sete!(t0, e(t0) + e0)
         return t0, na, nn, lr
       end
@@ -343,7 +343,7 @@ function _sim_cfbd_it(t   ::Float64,
 
     if tw > t
       na += 1
-      lr += log(Iρi)
+      lr += log(iρi)
       return sTfbd(t, false, false, false), na, nn, lr
     end
 
@@ -351,9 +351,9 @@ function _sim_cfbd_it(t   ::Float64,
     if λevent(λ, μ, ψi)
       nn += 1
       d1, na, nn, lr =
-        _sim_cfbd_it(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_it(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na, nn, nlim)
       d2, na, nn, lr =
-        _sim_cfbd_it(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, Iρi, na, nn, nlim)
+        _sim_cfbd_it(t - tw, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na, nn, nlim)
 
       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
     # extinction
