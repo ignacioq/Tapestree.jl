@@ -176,7 +176,8 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
       # update scale
       elseif pupi === 3
 
-        llc, irλ, acc = update_scale!(Ξ, idf, llc, irλ, ns, stn)
+        llc, prc, irλ, acc = 
+          update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
         lac += acc
         lup += 1.0
@@ -325,7 +326,8 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
             # update scale
             elseif pupi === 3
 
-              llc, irλ, acc = update_scale!(Ξ, idf, llc, irλ, ns, stn)
+              llc, prc, irλ, acc = 
+                update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
               # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -484,21 +486,25 @@ end
 
 
 """
-    update_scale!(Ξ  ::Vector{T},
-                  idf::Vector{iBffs},
-                  llc::Float64,
-                  ir ::Float64,
-                  ns ::Float64,
-                  stn::Float64) where {T <: iTree}
+    update_scale!(Ξ       ::Vector{T},
+                  idf     ::Vector{iBffs},
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  ir      ::Float64,
+                  ns      ::Float64,
+                  stn     ::Float64,
+                  λ0_prior::NTuple{2,Float64}) where {T <: iTree}
 
 Update scale for speciation.
 """
-function update_scale!(Ξ  ::Vector{T},
-                       idf::Vector{iBffs},
-                       llc::Float64,
-                       ir ::Float64,
-                       ns ::Float64,
-                       stn::Float64) where {T <: iTree}
+function update_scale!(Ξ       ::Vector{T},
+                       idf     ::Vector{iBffs},
+                       llc     ::Float64,
+                       prc     ::Float64,
+                       ir      ::Float64,
+                       ns      ::Float64,
+                       stn     ::Float64,
+                       λ0_prior::NTuple{2,Float64}) where {T <: iTree}
 
   # sample log(scaling factor)
   s = randn()*stn
@@ -507,17 +513,23 @@ function update_scale!(Ξ  ::Vector{T},
   iri = (1.0 - exp(s)) * ir
   llr = ns * s + iri
 
+  lλ0 = lλ(Ξ[1])[1]
+
+  # prior ratio
+  prr = llrdnorm_x(lλ0 + s, lλ0, λ0_prior[1], λ0_prior[2]) 
+
   acc = 0.0
 
-  if -randexp() < llr
+  if -randexp() < llr + prr
     acc += 1.0
     llc += llr
+    prc += prr
     ir  -= iri
     scale_rate!(Ξ, lλ, s)
     scale_rate!(idf, s)
   end
 
-  return llc, ir, acc
+  return llc, prc, ir, acc
 end
 
 
