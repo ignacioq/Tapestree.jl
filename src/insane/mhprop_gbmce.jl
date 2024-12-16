@@ -118,35 +118,37 @@ end
 
 
 """
-    _stem_update!(ξi   ::iTce,
-                  α    ::Float64,
-                  σλ   ::Float64,
-                  μ    ::Float64,
-                  llc  ::Float64,
-                  dλ   ::Float64,
-                  ssλ  ::Float64,
-                  mc   ::Float64,
-                  th   ::Float64,
-                  δt   ::Float64,
-                  srδt ::Float64,
-                  lλxpr::Float64,
-                  crown::Int64)
+    _stem_update!(ξi      ::iTce,
+                  α       ::Float64,
+                  σλ      ::Float64,
+                  μ       ::Float64,
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  dλ      ::Float64,
+                  ssλ     ::Float64,
+                  mc      ::Float64,
+                  th      ::Float64,
+                  δt      ::Float64,
+                  srδt    ::Float64,
+                  λ0_prior::NTuple{2,Float64},
+                  crown   ::Int64)
 
 Do gbm update for stem root.
 """
-function _stem_update!(ξi   ::iTce,
-                       α    ::Float64,
-                       σλ   ::Float64,
-                       μ    ::Float64,
-                       llc  ::Float64,
-                       dλ   ::Float64,
-                       ssλ  ::Float64,
-                       mc   ::Float64,
-                       th   ::Float64,
-                       δt   ::Float64,
-                       srδt ::Float64,
-                       lλxpr::Float64,
-                       crown::Int64)
+function _stem_update!(ξi      ::iTce,
+                       α       ::Float64,
+                       σλ      ::Float64,
+                       μ       ::Float64,
+                       llc     ::Float64,
+                       prc     ::Float64,
+                       dλ      ::Float64,
+                       ssλ     ::Float64,
+                       mc      ::Float64,
+                       th      ::Float64,
+                       δt      ::Float64,
+                       srδt    ::Float64,
+                       λ0_prior::NTuple{2,Float64},
+                       surv   ::Int64)
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -157,12 +159,7 @@ function _stem_update!(ξi   ::iTce,
     fdtp = fdt(ξi)
 
     # node proposal
-    λr = rnorm(λn - α*el, σλ*sqrt(el))
-
-    # prior ratio
-    if λr > lλxpr
-      return llc, dλ, ssλ, mc
-    end
+    λr = duoprop(λn - α*el, λ0_prior[1], σλ^2*el, λ0_prior[2])
 
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
@@ -177,11 +174,12 @@ function _stem_update!(ξi   ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
         llc += llrbm + llr
+        prc += llrdnorm_x(λr, λc[1], λ0_prior[1], λ0_prior[2])
         dλ  += λc[1] - λr
         ssλ += ssrλ
         mc   = mp
@@ -190,46 +188,48 @@ function _stem_update!(ξi   ::iTce,
     end
   end
 
-  return llc, dλ, ssλ, mc
+  return llc, prc, dλ, ssλ, mc
 end
 
 
 
 
 """
-    _crown_update!(ξi   ::iTce,
-                   ξ1   ::iTce,
-                   ξ2   ::iTce,
-                   α    ::Float64,
-                   σλ   ::Float64,
-                   μ    ::Float64,
-                   llc  ::Float64,
-                   dλ   ::Float64,
-                   ssλ  ::Float64,
-                   mc   ::Float64,
-                   th   ::Float64,
-                   δt   ::Float64,
-                   srδt ::Float64,
-                   lλxpr::Float64,
-                   crown::Int64)
+    _crown_update!(ξi      ::iTce,
+                   ξ1      ::iTce,
+                   ξ2      ::iTce,
+                   α       ::Float64,
+                   σλ      ::Float64,
+                   μ       ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   dλ      ::Float64,
+                   ssλ     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   λ0_prior::NTuple{2,Float64},
+                   surv    ::Int64)
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi   ::iTce,
-                        ξ1   ::iTce,
-                        ξ2   ::iTce,
-                        α    ::Float64,
-                        σλ   ::Float64,
-                        μ    ::Float64,
-                        llc  ::Float64,
-                        dλ   ::Float64,
-                        ssλ  ::Float64,
-                        mc   ::Float64,
-                        th   ::Float64,
-                        δt   ::Float64,
-                        srδt ::Float64,
-                        lλxpr::Float64,
-                        crown::Int64)
+function _crown_update!(ξi      ::iTce,
+                        ξ1      ::iTce,
+                        ξ2      ::iTce,
+                        α       ::Float64,
+                        σλ      ::Float64,
+                        μ       ::Float64,
+                        llc     ::Float64,
+                        prc     ::Float64,
+                        dλ      ::Float64,
+                        ssλ     ::Float64,
+                        mc      ::Float64,
+                        th      ::Float64,
+                        δt      ::Float64,
+                        srδt    ::Float64,
+                        λ0_prior::NTuple{2,Float64},
+                        surv    ::Int64)
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -248,12 +248,8 @@ function _crown_update!(ξi   ::iTce,
     fdt2 = fdt(ξ2)
 
     # node proposal
-    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
-    # prior ratio
-    if λr > lλxpr
-      return llc, dλ, ssλ, mc
-    end
+    λr = trioprop(λ1 - α*e1, λ2 - α*e2, λ0_prior[1], 
+                  e1*σλ^2,     e2*σλ^2, λ0_prior[2])
 
     # simulate fix tree vector
     bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
@@ -273,11 +269,12 @@ function _crown_update!(ξi   ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, crown)
+      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
         llc += llrbm1 + llrbm2 + llr
+        prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
         dλ  += 2.0*(λi - λr)
         ssλ += ssrλ1 + ssrλ2
         fill!(λpc, λr)
@@ -288,7 +285,7 @@ function _crown_update!(ξi   ::iTce,
     end
   end
 
-  return llc, dλ, ssλ, mc
+  return llc, prc, dλ, ssλ, mc
 end
 
 

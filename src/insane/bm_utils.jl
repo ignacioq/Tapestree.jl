@@ -294,6 +294,44 @@ end
 """
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
+        σ   ::Float64,
+        δt  ::Float64,
+        fdt ::Float64,
+        srδt::Float64)
+
+Brownian motion without drift simulation function for updating a branch 
+in place.
+"""
+@inline function bm!(x   ::Array{Float64,1},
+                     xi  ::Float64,
+                     σ   ::Float64,
+                     δt  ::Float64,
+                     fdt ::Float64,
+                     srδt::Float64)
+
+  @inbounds begin
+    l = lastindex(x)
+    randn!(x)
+    # for standard δt
+    x[1] = xi
+    if l > 2
+      @turbo for i = Base.OneTo(l-2)
+        x[i+1] *= srδt*σ
+      end
+    end
+    x[l] *= sqrt(fdt)*σ
+    cumsum!(x, x)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    bm!(x   ::Array{Float64,1},
+        xi  ::Float64,
         α   ::Float64,
         σ   ::Float64,
         δt  ::Float64,
@@ -495,6 +533,7 @@ end
 
 
 
+
 """
     bb(xi  ::Float64,
        xf  ::Float64,
@@ -556,66 +595,87 @@ end
 
 Proposal for a duo of Gaussians.
 """
-function duoprop(xd1::Float64,
-                 xd2::Float64,
-                 td1::Float64,
-                 td2::Float64,
+function duoprop(x1::Float64,
+                 x2::Float64,
+                 t1::Float64,
+                 t2::Float64,
                  σ  ::Float64)
 
-  invt = 1.0/(td1 + td2)
-  return rnorm((td2 * invt * xd1 + td1 * invt * xd2),
-               sqrt(td1 * td2 * invt)*σ)
+  it = 1.0/(t1 + t2)
+  return rnorm((t2*x1 + t1*x2) * it, sqrt(t1*t2*it)*σ)
 end
 
 
 
 
 """
-    trioprop(xpr::Float64,
-             xd1::Float64,
-             xd2::Float64,
-             tpr::Float64,
-             td1::Float64,
-             td2::Float64,
-             σ  ::Float64)
+    trioprop(xp::Float64,
+             x1::Float64,
+             x2::Float64,
+             tp::Float64,
+             t1::Float64,
+             t2::Float64,
+             σ ::Float64)
 
 Proposal for a trio of Gaussians.
 """
-function trioprop(xpr::Float64,
-                  xd1::Float64,
-                  xd2::Float64,
-                  tpr::Float64,
-                  td1::Float64,
-                  td2::Float64,
-                  σ  ::Float64)
+function trioprop(xp::Float64,
+                  x1::Float64,
+                  x2::Float64,
+                  tp::Float64,
+                  t1::Float64,
+                  t2::Float64,
+                  σ ::Float64)
 
-    t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
-    return rnorm((xpr/tpr + xd1/td1 + xd2/td2)*t,
-                 sqrt(t)*σ)
+    t = 1.0/(1.0/tp + 1.0/t1 + 1.0/t2)
+    return rnorm((xp/tp + x1/t1 + x2/t2)*t, sqrt(t)*σ)
 end
 
 
 
 
 """
-    duodnorm(x  ::Float64,
-             xd1::Float64,
-             xd2::Float64,
-             td1::Float64,
-             td2::Float64,
+    duodnorm(x ::Float64,
+             x1::Float64,
+             x2::Float64,
+             t1::Float64,
+             t2::Float64,
              σ  ::Float64)
+
 Likelihood for a duo of Gaussians.
 """
 function duodnorm(x  ::Float64,
-                  xd1::Float64,
-                  xd2::Float64,
-                  td1::Float64,
-                  td2::Float64,
+                  x1::Float64,
+                  x2::Float64,
+                  t1::Float64,
+                  t2::Float64,
                   σ  ::Float64)
 
-  invt = 1.0/(td1 + td2)
-  return dnorm_bm(x, (td2 * xd1 + td1 * xd2) * invt,
-    sqrt(td1 * td2 * invt)*σ)
+  it = 1.0/(t1 + t2)
+  return dnorm_bm(x, (t2*x1 + t1*x2)*it, sqrt(t1*t2*it)*σ)
+end
+
+
+
+
+"""
+    duodnorm(x ::Float64,
+             x1::Float64,
+             x2::Float64,
+             t1::Float64,
+             t2::Float64,
+             σ  ::Float64)
+
+Likelihood for a duo of Gaussians.
+"""
+function duodnorm(x  ::Float64,
+                  x1 ::Float64,
+                  x2 ::Float64,
+                  σ21::Float64,
+                  σ22::Float64)
+
+  iσ2 = 1.0/(σ21 + σ22)
+  return dnorm_bm(x, (x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
 end
 
 
@@ -623,23 +683,23 @@ end
 
 """
     duoldnorm(x  ::Float64,
-              xd1::Float64,
-              xd2::Float64,
-              td1::Float64,
-              td2::Float64,
+              x1::Float64,
+              x2::Float64,
+              t1::Float64,
+              t2::Float64,
               σ  ::Float64)
 
 Likelihood for a duo of Gaussians.
 """
 function duoldnorm(x  ::Float64,
-                   xd1::Float64,
-                   xd2::Float64,
-                   td1::Float64,
-                   td2::Float64,
+                   x1::Float64,
+                   x2::Float64,
+                   t1::Float64,
+                   t2::Float64,
                    σ  ::Float64)
 
-  invt = 1.0/(td1 + td2)
-  return ldnorm_bm(x, invt * (td2 * xd1 + td1 * xd2), sqrt(td1 * td2 * invt)*σ)
+  it = 1.0/(t1 + t2)
+  return ldnorm_bm(x, (t2*x1 + t1*x2)*it, sqrt(t1*t2*it)*σ)
 end
 
 
@@ -647,27 +707,27 @@ end
 
 """
     trioldnorm(x  ::Float64,
-               xpr::Float64,
-               xd1::Float64,
-               xd2::Float64,
-               tpr::Float64,
-               td1::Float64,
-               td2::Float64,
+               xp::Float64,
+               x1::Float64,
+               x2::Float64,
+               tp::Float64,
+               t1::Float64,
+               t2::Float64,
                σ  ::Float64)
 
 Likelihood for a trio of Gaussians.
 """
 function trioldnorm(x  ::Float64,
-                    xpr::Float64,
-                    xd1::Float64,
-                    xd2::Float64,
-                    tpr::Float64,
-                    td1::Float64,
-                    td2::Float64,
+                    xp::Float64,
+                    x1::Float64,
+                    x2::Float64,
+                    tp::Float64,
+                    t1::Float64,
+                    t2::Float64,
                     σ  ::Float64)
 
-    t = 1.0/(1.0/tpr + 1.0/td1 + 1.0/td2)
-    return ldnorm_bm(x, (xpr/tpr + xd1/td1 + xd2/td2)*t, sqrt(t)*σ)
+    t = 1.0/(1.0/tp + 1.0/t1 + 1.0/t2)
+    return ldnorm_bm(x, (xp/tp + x1/t1 + x2/t2)*t, sqrt(t)*σ)
 end
 
 
@@ -745,34 +805,186 @@ end
 
 
 """
-    ncrep!(xp::Array{Float64,1},
-           xc::Array{Float64,1},
-           t ::Array{Float64,1},
-           σ ::Float64)
+    _sss(tree::T,
+         α   ::Float64,
+         f   ::Function,
+         ss  ::Float64,
+         n   ::Float64) where {T <: iTree}
 
-Non-centered reparametization of data augmentation for `σ`, based on
-Roberts and Stramer (2001).
+Returns the standardized sum of squares of a diffusion with drift `α`.
 """
-function ncrep!(xp::Array{Float64,1},
-                xc::Array{Float64,1},
-                t ::Array{Float64,1},
-                σ ::Float64)
+function _sss(tree::T,
+              α   ::Float64,
+              f   ::Function,
+              ss  ::Float64,
+              n   ::Float64) where {T <: iTree}
 
-  @inbounds begin
-    l   = lastindex(xc)
-    xi  = xc[1]
-    xf  = xc[l]
-    itf = 1.0/t[l]
-    iσ  = 1.0/σ
+  ss0, n0 = _sss_b(f(tree), α, dt(tree), fdt(tree))
 
-    for i in 2:(l-1)
-      xp[i] = (xc[i] - xi + t[i]*(xi - xf)*itf)*iσ
+  ss += ss0
+  n  += n0
+
+  if def1(tree)
+    ss, n = _sss(tree.d1, α, f, ss, n)
+    if def2(tree)
+      ss, n = _sss(tree.d2, α, f, ss, n)
     end
-
-    xp[1] = xp[l] = 0.0
   end
 
-  return nothing
+  return ss, n
 end
+
+
+
+
+"""
+    _sss_b(v::Array{Float64,1},
+           α  ::Float64,
+           δt ::Float64,
+           fdt::Float64)
+
+Returns the standardized sum of squares of a diffusion with drift `α`.
+"""
+function _sss_b(v::Array{Float64,1},
+                α  ::Float64,
+                δt ::Float64,
+                fdt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    n = lastindex(v)-2
+
+    ss = 0.0
+    if n > 0
+      @turbo for i in Base.OneTo(n)
+        ss  += (v[i+1] - v[i] - α*δt)^2
+      end
+        # standardize
+      ss *= 1.0/(2.0*δt)
+    end
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      ss += (v[n+2] - v[n+1] - α*fdt)^2/(2.0*fdt)
+      n = Float64(n + 1)
+    else
+      n = Float64(n)
+    end
+  end
+
+  return ss, n
+end
+
+
+
+
+"""
+    _sss(tree::T,
+         f   ::Function,
+         ss  ::Float64,
+         n   ::Float64) where {T <: iTree}
+
+Returns the standardized sum of squares of a diffusion without drift.
+"""
+function _sss(tree::T,
+              f   ::Function,
+              ss  ::Float64,
+              n   ::Float64) where {T <: iTree}
+
+  ss0, n0 = _sss_b(f(tree), dt(tree), fdt(tree))
+
+  ss += ss0
+  n  += n0
+
+  if def1(tree)
+    ss, n = _sss(tree.d1, f, ss, n)
+    if def2(tree)
+      ss, n = _sss(tree.d2, f, ss, n)
+    end
+  end
+
+  return ss, n
+end
+
+
+
+
+"""
+    _sss_b(v  ::Array{Float64,1},
+           δt ::Float64,
+           fdt::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift.
+"""
+function _sss_b(v  ::Array{Float64,1},
+                δt ::Float64,
+                fdt::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    n = lastindex(v)-2
+
+    ss = 0.0
+    if n > 0
+      @turbo for i in Base.OneTo(n)
+        ss += (v[i+1] - v[i])^2
+      end
+      # standardize
+      ss *= 1.0/(2.0*δt)
+    end
+
+    nF = Float64(n)
+    # add final non-standard `δt`
+    if fdt > 0.0
+      ss += (v[n+2] - v[n+1])^2/(2.0*fdt)
+      nF  += 1.0
+    end
+  end
+
+  return ss, nF
+end
+
+
+
+
+"""
+    dα(Ξ::Vector{T}) where {T <: iT}
+
+Returns the overall drift of a diffusion for `α` proposal.
+"""
+function dα(Ξ::Vector{T}, f::Function) where {T <: iTree}
+
+  da = 0.0
+  for ξi in Ξ
+    da += _dα(ξi, f)
+  end
+
+  return da
+end
+
+
+
+
+"""
+    _dα(tree::T) where {T <: iT}
+
+Returns the log-likelihood ratio for a `iTpb` according
+to GBM birth-death for a `α` proposal.
+"""
+function _dα(tree::T, f::Function) where {T <: iT}
+
+  v = f(tree)
+
+  if def1(tree)
+    if def2(tree)
+      fv[end] - fv[1] + _dα(tree.d1, f) + _dα(tree.d2, f)
+    else
+      fv[end] - fv[1] + _dα(tree.d1, f)
+    end
+  else
+    fv[end] - fv[1]
+  end
+end
+
 
 

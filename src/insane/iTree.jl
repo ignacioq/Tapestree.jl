@@ -90,9 +90,9 @@ function sT_label(tree::sT_label)
   if def1(tree)
     t1 = sT_label(tree.d1)
     t2 = sT_label(tree.d2)
-    tree = sT_label(t1, t2, e(tree), l(tree))
+    tree = sT_label(t1, t2, e(tree), label(tree))
   else
-    tree = sT_label(e(tree), l(tree))
+    tree = sT_label(e(tree), label(tree))
   end
   return tree
 end
@@ -150,7 +150,7 @@ function _sT_label(tree::T, reftree::sT_label, i::Int64) where {T <: iTree}
     if isfix(tree.d1) && isfix(tree.d2)
       t1, i = _sT_label(tree.d1, reftree.d1, i)
       t2, i = _sT_label(tree.d2, reftree.d2, i)
-      tree  = sT_label(t1, t2, e(tree), l(reftree))
+      tree  = sT_label(t1, t2, e(tree), label(reftree))
     else
       t1, i = _sT_label(tree.d1, reftree, i)
       t2, i = _sT_label(tree.d2, reftree, i)
@@ -158,7 +158,7 @@ function _sT_label(tree::T, reftree::sT_label, i::Int64) where {T <: iTree}
     end
   else
     if isfix(tree)
-      tree = sT_label(e(tree), l(reftree))
+      tree = sT_label(e(tree), label(reftree))
     else
       i += 1
       tree = sT_label(e(tree), string("t",i))
@@ -234,12 +234,12 @@ function sTf_label(tree::sTf_label)
       t1   = sTf_label(tree.d1)
     if def2(tree)
       t2   = sTf_label(tree.d2)
-      tree = sTf_label(t1, t2, e(tree), l(tree))
+      tree = sTf_label(t1, t2, e(tree), label(tree))
     else
-      tree = sTf_label(t1, e(tree), l(tree))
+      tree = sTf_label(t1, e(tree), label(tree))
     end
   else
-    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), l(tree))
+    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), label(tree))
   end
 
   return tree
@@ -306,7 +306,7 @@ function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <
       if isfix(tree.d1) && isfix(tree.d2)
         t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
         t2, n, nf = _sTf_label(tree.d2, reftree.d2, n, nf)
-        tree  = sTf_label(t1, t2, e(tree), l(reftree))
+        tree  = sTf_label(t1, t2, e(tree), label(reftree))
       else
         t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
         t2, n, nf = _sTf_label(tree.d2, reftree, n, nf)
@@ -315,7 +315,7 @@ function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <
     else
       if isfix(tree.d1)
         t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
-        tree = sTf_label(t1, e(tree), l(reftree))
+        tree = sTf_label(t1, e(tree), label(reftree))
       else
         nf += 1
         t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
@@ -324,7 +324,7 @@ function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <
     end
   else
     if isfix(tree)
-      tree = sTf_label(e(tree), l(reftree))
+      tree = sTf_label(e(tree), label(reftree))
     else
       n += 1
       tree = sTf_label(e(tree), string("t", n))

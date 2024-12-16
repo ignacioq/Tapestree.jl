@@ -221,9 +221,9 @@ function from_string(s::String, ci::Int64, ::Type{T}) where {T <: sT}
     sd2, i = _from_string(s[(ci+1):end], 1, T)
 
     if e(sd1) === 0.0
-      tree = T(sd2, 0.0, l(sd1))
+      tree = T(sd2, 0.0, label(sd1))
     elseif e(sd2) === 0.0
-      tree = T(sd1, 0.0, l(sd2))
+      tree = T(sd1, 0.0, label(sd2))
     else
       tree = T(sd1, sd2, 0.0, "")
     end
@@ -262,9 +262,9 @@ function _from_string(s::String, i::Int64, ::Type{T}) where {T <: sT}
     if in1
       if in2
         if e(sd1) === 0.0
-          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), l(sd1))
+          tree = T(sd2, Pparse(Float64, s[i1+1:i2-1]), label(sd1))
         elseif e(sd2) === 0.0
-          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), l(sd2))
+          tree = T(sd1, Pparse(Float64, s[i1+1:i2-1]), label(sd2))
         else
           tree = T(sd1, sd2, Pparse(Float64, s[i1+1:i2-1]), s[i:i1-1])
         end
@@ -519,10 +519,10 @@ function _nw_buffer(io::IOBuffer, tree::T, ic::Bool) where {T <: Tlabel}
       write(io, ')')
       !ic && print(io, ':', e(tree))
     else
-      print(io, ")", l(tree), ':', e(tree))
+      print(io, ")", label(tree), ':', e(tree))
     end
   else
-    print(io, l(tree), ':', e(tree))
+    print(io, label(tree), ':', e(tree))
   end
 end
 
@@ -622,7 +622,7 @@ function _nx_buffer(io     ::IOBuffer,
     !ic && print(io, ':', e(tree))
   else
     if isfix(tree)
-      print(io, l(reftree))
+      print(io, label(reftree))
     else
       n += 1
       print(io, 't', n)
@@ -673,7 +673,7 @@ function _nx_buffer(io     ::IOBuffer,
     !ic && print(io, ':', e(tree))
   else
     if isfix(tree)
-      print(io, l(reftree))
+      print(io, label(reftree))
     else
       n += 1
       print(io, 't', n)
@@ -742,7 +742,7 @@ function _nx_buffer(io     ::IOBuffer,
       end
       write(io, ')')
       if isfix(tree)
-        print(io, l(reftree))
+        print(io, label(reftree))
       else
         nf += 1
         print(io, 'f', nf)
@@ -757,7 +757,7 @@ function _nx_buffer(io     ::IOBuffer,
 
   else
     if isfix(tree)
-      print(io, l(reftree))
+      print(io, label(reftree))
     else
       n += 1
       print(io, 't', n)

@@ -210,7 +210,7 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   nI = lastindex(lλv)-2
 
   ll = llbm = llbd = ssλ = nλ = 0.0
-  if nI > 2
+  if nI > 0
     @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lλvi1 = lλv[i+1]
@@ -219,12 +219,12 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
     end
 
     # standardized sum of squares
-    ssλ += llbm/(2.0*δt)
-    nλ  += Float64(nI)
+    ssλ  += llbm/(2.0*δt)
+    nλ   += Float64(nI)
 
     # add to global likelihood
-    ll   += llbm *
-            (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+    ll   += llbm * (-0.5/((σλ*srδt)^2)) - 
+            Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
     llbd += Float64(nI)*μ
     ll   -= llbd*δt
   end

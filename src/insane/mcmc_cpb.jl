@@ -14,7 +14,7 @@ Created 06 07 2020
 
 """
     insane_cpb(tree    ::sT_label;
-               λ_prior ::NTuple{2,Float64}    = (1.0, 1.0),
+               λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                niter   ::Int64                 = 1_000,
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
@@ -28,7 +28,7 @@ Created 06 07 2020
 Run insane for constant pure-birth.
 """
 function insane_cpb(tree    ::sT_label;
-                    λ_prior ::NTuple{2,Float64}    = (1.0, 1.0),
+                    λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
@@ -44,19 +44,18 @@ function insane_cpb(tree    ::sT_label;
 
   # set tips sampling fraction
   if isone(length(tρ))
-    tl = tiplabels(tree)
+    tl  = tiplabels(tree)
     tρu = tρ[""]
-    tρ = Dict(tl[i] => tρu for i in 1:n)
+    tρ  = Dict(tl[i] => tρu for i in 1:n)
   end
 
   # make fix tree directory
   idf = make_idf(tree, tρ, Inf)
 
   # starting parameters
+  λc = λi
   if isnan(λi)
     λc = Float64(n-2)/treelength(tree)
-  else
-    λc = λi
   end
 
   # make a decoupled tree and fix it
@@ -76,7 +75,7 @@ function insane_cpb(tree    ::sT_label;
     mcmc_burn_cpb(Ξ, idf, λ_prior, nburn, λc, pup, prints, stem)
 
   # mcmc
-  r, treev, λc =
+  r, treev =
     mcmc_cpb(Ξ, idf, llc, prc, λc, λ_prior, pup, niter, nthin, nflush, ofile, 
       prints, stem)
 
@@ -175,6 +174,7 @@ end
 
 
 
+
 """
     mcmc_cpb(Ξ      ::Vector{sTpb},
              idf    ::Array{iBffs,1},
@@ -210,12 +210,11 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  lthin = lit = sthin = zero(Int64)
 
   r = Array{Float64,2}(undef, nlogs, 4)
 
   treev = sTpb[]     # make tree vector
-  sthin = 0          # flush to file
   io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
@@ -224,71 +223,73 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
 
     open(ofile*".txt", "w") do tf
 
+      let llc = llc, prc = prc, λc = λc, ns = ns, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-      pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, prints, "running mcmc...", 20)
 
-      for it in Base.OneTo(niter)
+        for it in Base.OneTo(niter)
 
-        shuffle!(pup)
+          shuffle!(pup)
 
-        for p in pup
+          for p in pup
 
-          # λ proposal
-          if p === 1
+            # λ proposal
+            if p === 1
 
-            llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
+              llc, prc, λc = update_λ!(llc, prc, λc, ns, L, stem, λ_prior)
 
-            # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
-            # if !isapprox(llci, llc, atol = 1e-6)
-            #    @show llci, llc, it, p
-            #    return
-            # end
+              # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #    @show llci, llc, it, p
+              #    return
+              # end
 
-          # forward simulation proposal proposal
-          else
+            # forward simulation proposal proposal
+            else
 
-            bix = ceil(Int64,rand()*el)
-            llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
+              bix = ceil(Int64,rand()*el)
+              llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
 
-            # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
-            # if !isapprox(llci, llc, atol = 1e-6)
-            #    @show llci, llc, it, p
-            #    return
-            # end
+              # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #    @show llci, llc, it, p
+              #    return
+              # end
+            end
           end
-        end
 
-        lthin += 1
-        if lthin === nthin
-          lit += 1
-          @inbounds begin
-            r[lit,1] = Float64(lit)
-            r[lit,2] = llc
-            r[lit,3] = prc
-            r[lit,4] = λc
-            push!(treev, couple(Ξ, idf, 1))
+          lthin += 1
+          if lthin === nthin
+            lit += 1
+            @inbounds begin
+              r[lit,1] = Float64(lit)
+              r[lit,2] = llc
+              r[lit,3] = prc
+              r[lit,4] = λc
+              push!(treev, couple(Ξ, idf, 1))
+            end
+            lthin = zero(Int64)
           end
-          lthin = 0
-        end
 
-        # flush parameters
-        sthin += 1
-        if sthin === nflush
-          print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc, '\n')
-          flush(of)
-          ibuffer(io, couple(Ξ, idf, 1))
-          write(io, '\n')
-          write(tf, take!(io))
-          flush(tf)
-          sthin = 0
-        end
+          # flush parameters
+          sthin += 1
+          if sthin === nflush
+            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc, '\n')
+            flush(of)
+            ibuffer(io, couple(Ξ, idf, 1))
+            write(io, '\n')
+            write(tf, take!(io))
+            flush(tf)
+            sthin = zero(Int64)
+          end
 
-        next!(pbar)
+          next!(pbar)
+        end
+      
+        return r, treev
       end
     end
   end
-
-  return r, treev, λc
 end
 
 
@@ -435,16 +436,16 @@ Forward simulation for terminal branch.
 function fsbi_t(bi::iBffs, λ::Float64)
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
   lc = - log(Float64(nac)) - 
-       Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+       Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_cpb_t(e(bi), λ, lc, lU, Iρi, 0, 1, 500)
+    _sim_cpb_t(e(bi), λ, lc, lU, iρi, 0, 1, 500)
 
   if isnan(llr) || nn >= 500
     return t0, -Inf
@@ -482,8 +483,8 @@ function fsbi_i(bi::iBffs, λ::Float64)
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   if lU < acr
 
@@ -491,12 +492,12 @@ function fsbi_i(bi::iBffs, λ::Float64)
 
     # simulated remaining tips until the present
     if na > 1
-      t0, na, acr = tip_sims!(t0, tf(bi), λ, acr, lU, Iρi, na)
+      t0, na, acr = tip_sims!(t0, tf(bi), λ, acr, lU, iρi, na)
     end
 
     if lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       setnt!(bi, ntp)                    # set new nt
       setni!(bi, na)                 # set new ni
 
@@ -516,7 +517,7 @@ end
               λ   ::Float64,
               lr  ::Float64,
               lU  ::Float64,
-              Iρi ::Float64,
+              iρi ::Float64,
               na  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
@@ -526,7 +527,7 @@ function tip_sims!(tree::sTpb,
                    λ   ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64)
 
   if na < 500 && lU < lr
@@ -535,7 +536,7 @@ function tip_sims!(tree::sTpb,
       if !isfix(tree)
 
         # simulate
-        stree, na, lr = _sim_cpb_it(t, λ, lr, lU, Iρi, na, 500)
+        stree, na, lr = _sim_cpb_it(t, λ, lr, lU, iρi, na, 500)
 
         if isnan(lr) || na >= 500
           return tree, na, NaN
@@ -549,8 +550,8 @@ function tip_sims!(tree::sTpb,
         end
       end
     else
-      tree.d1, na, lr = tip_sims!(tree.d1, t, λ, lr, lU, Iρi, na)
-      tree.d2, na, lr = tip_sims!(tree.d2, t, λ, lr, lU, Iρi, na)
+      tree.d1, na, lr = tip_sims!(tree.d1, t, λ, lr, lU, iρi, na)
+      tree.d2, na, lr = tip_sims!(tree.d2, t, λ, lr, lU, iρi, na)
     end
 
     return tree, na, lr

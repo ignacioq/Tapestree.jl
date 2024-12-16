@@ -230,8 +230,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
   end
 
   lλvi1 = lλv[nI+2]
-
-  dλ = lλvi1 - lλv[1]
+  dλ    = lλvi1 - lλv[1]
 
   # add final non-standard `δt`
   if fdt > 0.0
