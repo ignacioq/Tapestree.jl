@@ -256,7 +256,7 @@ function ssσak(tree::sTpe, sσa::Float64, sσk::Float64)
   sσa += (xf(tree) - xi(tree))^2/ei
 
   if def1(tree)
-    xk  = sh(tree) ? xi(tree.d1) : xi(tree.d2)
+    xk   = sh(tree) ? xi(tree.d1) : xi(tree.d2)
     sσk += (xf(tree) - xk)^2
     sσa, sσk = ssσak(tree.d1, sσa, sσk)
     sσa, sσk = ssσak(tree.d2, sσa, sσk)

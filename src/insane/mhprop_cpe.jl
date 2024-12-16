@@ -142,7 +142,10 @@ function _update_node_x!(tree::sTpe,
                          sσk::Float64)
 
   if def1(tree)
+
+    # here check what the hell
     ll, sσa, sσk = _update_quartet_x!(tree, σa, σk, ll, sσa, sσk)
+
     ll, sσa, sσk = _update_node_x!(tree.d1, σa, σk, ll, sσa, sσk)
     ll, sσa, sσk = _update_node_x!(tree.d2, σa, σk, ll, sσa, sσk)
   elseif !isfix(tree)
@@ -178,6 +181,7 @@ function _update_leaf_x!(tree::sTpe,
 
   if def1(tree)
     ll, sσa, sσk = _update_quartet_x!(tree, σa, σk, ll, sσa, sσk)
+
     ll, sσa, sσk = _update_leaf_x!(tree.d1, xavg, xstd, σa, σk, ll, sσa, sσk)
     ll, sσa, sσk = _update_leaf_x!(tree.d2, xavg, xstd, σa, σk, ll, sσa, sσk)
   elseif isfix(tree)
@@ -213,6 +217,7 @@ function _update_leaf_x!(tree::sTpe,
 
   if def1(tree)
     ll, sσa, sσk = _update_quartet_x!(tree, σa, σk, ll, sσa, sσk)
+
     ll, sσa, sσk = _update_leaf_x!(tree.d1, σa, σk, ll, sσa, sσk)
     ll, sσa, sσk = _update_leaf_x!(tree.d2, σa, σk, ll, sσa, sσk)
   else
@@ -339,6 +344,7 @@ function _update_quartet_x!(ξi ::sTpe,
                             ll ::Float64,
                             sσa::Float64,
                             sσk::Float64)
+
   ξ1 = ξi.d1
   ξ2 = ξi.d2
   σa2, σk2 = σa^2, σk^2

@@ -106,7 +106,7 @@ function insane_cpe(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant birth-death punctuated equilibrium"
+  @info "Running constant punctuated equilibrium"
 
   # adaptive phase
   llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk =
@@ -317,7 +317,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
   lthin = lit = sthin = zero(Int64)
 
   # parameter results
-  r = Array{Float64,2}(undef, nlogs, 7)
+  r = Array{Float64,2}(undef, nlogs, 8)
 
   # empty vector
   xis = Float64[]
@@ -328,7 +328,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
   io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of 
-    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\tsigma_a\tsigma_k\n")
+    write(of, "iteration\tlikelihood\tprior\tlambda\tmu\tx0\tsigma_a\tsigma_k\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
@@ -395,6 +395,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               nix = ceil(Int64,rand()*nin)
               bix = inodes[nix]
+
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
               llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
@@ -431,8 +432,9 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               r[lit,3] = prc
               r[lit,4] = λc
               r[lit,5] = μc
-              r[lit,6] = σac
-              r[lit,7] = σkc
+              r[lit,6] = xi(Ξ[1])
+              r[lit,7] = σac
+              r[lit,8] = σkc
               push!(treev, couple(Ξ, idf, 1))
             end
             lthin = zero(Int64)
@@ -441,7 +443,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
           # flush parameters
           sthin += 1
           if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\t', σac, '\t', σkc, '\n')
+            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\t', xi(Ξ[1]), '\t', σac, '\t', σkc, '\n')
             flush(of)
             ibuffer(io, couple(Ξ, idf, 1))
             write(io, '\n')
@@ -491,6 +493,10 @@ function update_x!(bix ::Int64,
   ξ1   = Ξ[i1]
   root = iszero(pa(bi))
 
+  @show ξi
+
+  @show sσa, ssσak(Ξ, idf)[1]
+
   # if mrca
   if root && iszero(e(ξi))
     # if crown
@@ -530,7 +536,7 @@ function update_x!(bix ::Int64,
       end
     # if not leaf
     else
-      ll, sσa, sσk = _update_node_x!(ξ1, σa, σk, ll, sσa, sσk)
+      #ll, sσa, sσk = _update_node_x!(ξ1, σa, σk, ll, sσa, sσk)
     end
 
     if !isd
@@ -547,10 +553,12 @@ function update_x!(bix ::Int64,
         end
       # if not leaf
       else
-        ll, sσa, sσk = _update_node_x!(ξ2, σa, σk, ll, sσa, sσk)
+        #ll, sσa, sσk = _update_node_x!(ξ2, σa, σk, ll, sσa, sσk)
       end
     end
   end
+
+  @show sσa, ssσak(Ξ, idf)[1]
 
   return ll, sσa, sσk
 end
