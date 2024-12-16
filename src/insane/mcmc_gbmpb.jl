@@ -571,7 +571,7 @@ function update_gbm!(bix     ::Int64,
     # if stem
     if root
       llc, prc, ddλ, ssλ, irλ = 
-        _stem_update!(ξi, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
+        _stem_update!(ξi, α, σλ, llc, prc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
     end
 
     # updates within the parent branch
