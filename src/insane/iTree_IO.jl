@@ -1143,6 +1143,56 @@ end
 
 
 
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{sTpe})
+
+parse istring to `sTpe`.
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTpe})
+
+  @inbounds begin
+
+    inode = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, sTpe)
+      inode = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, sTpe)
+    end
+
+    i1 = findnext(',', s, i + 1)
+    i2 = findnext(',', s, i1 + 3)
+    i3 = findnext(',', s, i2 + 1)
+
+    if inode
+      tree = sTpe(sd1, sd2, 
+                  Pparse(Float64, s[i:i1-1]), long(s[i1+1]), 
+                  Pparse(Float64, s[i1+3:i2-1]), 
+                  Pparse(Float64, s[i2+1:i3-1]),
+                  long(s[i3+1]), long(s[i3+3]))
+    else
+      tree = sTpe(Pparse(Float64, s[i:i1-1]), long(s[i1+1]), 
+                  Pparse(Float64, s[i1+3:i2-1]), 
+                  Pparse(Float64, s[i2+1:i3-1]),
+                  long(s[i3+1]), long(s[i3+3]))
+    end
+
+    i = i3 + 4
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
 
 """
     _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})

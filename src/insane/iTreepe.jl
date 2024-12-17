@@ -71,7 +71,7 @@ function sTpe(tree::sTpe)
     sTpe(sTpe(tree.d1), sTpe(tree.d2), e(tree), isextinct(tree), 
       xi(tree), xf(tree), sh(tree), isfix(tree))
   else
-    sTpe(e(tree), isextinct(tree), xi(tree), xf(tree), false, isfix(tree))
+    sTpe(e(tree), isextinct(tree), xi(tree), xf(tree), sh(tree), isfix(tree))
   end
 end
 

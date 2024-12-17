@@ -54,8 +54,12 @@ function insane_cpe(tree    ::sT_label,
                     pupdp   ::NTuple{6,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.8),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
-                    mxthf   ::Float64               = Inf,
+                    mxthf   ::Float64               = 0.1,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+
+  """
+  here! make sure it works for mxthf = 0.1...
+  """
 
   n  = ntips(tree)
   th = treeheight(tree)
@@ -349,11 +353,11 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               llc, prc, λc, mc =
                 update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
 
-              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # μ proposal
             elseif p === 2
@@ -361,11 +365,11 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               llc, prc, μc, mc =
                 update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
 
-              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # σa (anagenetic) proposal
             elseif p === 3
@@ -373,22 +377,22 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               llc, prc, σac = 
                 update_σ!(σac, 0.5*sσa, 2.0*ns + (1.0-rmλ), llc, prc, σa_prior)
 
-              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # σk (cladogenetic) proposal
             elseif p === 4
 
               llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
 
-              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # update inner nodes traits
             elseif p === 5
@@ -398,11 +402,11 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
-              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # forward simulation proposal proposal
             else
@@ -493,10 +497,7 @@ function update_x!(bix ::Int64,
   ξ1   = Ξ[i1]
   root = iszero(pa(bi))
 
-  @show ξi
-
-  @show sσa, ssσak(Ξ, idf)[1]
-
+  ## update parent
   # if mrca
   if root && iszero(e(ξi))
     # if crown
@@ -509,7 +510,7 @@ function update_x!(bix ::Int64,
     end
 
     # updates within the parent branch
-    ll, sσa, sσk = _update_node_x!(ξi, σa, σk, ll, sσa, sσk)
+    ll, sσa, sσk = _update_node_x!(ξi, σa, σk, ll, sσa, sσk, idf, Ξ)
 
     # get fixed tip
     lξi = fixtip(ξi)
@@ -557,8 +558,6 @@ function update_x!(bix ::Int64,
       end
     end
   end
-
-  @show sσa, ssσak(Ξ, idf)[1]
 
   return ll, sσa, sσk
 end
@@ -625,7 +624,9 @@ function update_fs!(bix::Int64,
     ξp, llr, sσar, sσkr = fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk)
   end
 
+
   if isfinite(llr)
+
     σa2, σk2 = σa^2, σk^2
 
     ll1, ns1, ne1, L1, sσa1, sσk1 = 
@@ -946,6 +947,8 @@ function tip_sims!(tree::sTpe,
         # merge to current tip
         sete!(tree, e(tree) + e(stree))
         setproperty!(tree, :iμ, isextinct(stree))
+        setxf!(tree, xf(stree))
+        setsh!(tree, sh(stree))
         if isdefined(stree, :d1)
           tree.d1 = stree.d1
           tree.d2 = stree.d2

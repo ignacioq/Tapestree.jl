@@ -139,22 +139,21 @@ function _update_node_x!(tree::sTpe,
                          σk ::Float64,
                          ll ::Float64,
                          sσa::Float64,
-                         sσk::Float64)
+                         sσk::Float64, 
+                         idf,
+                         Ξ)
 
   if def1(tree)
-
-    # here check what the hell
     ll, sσa, sσk = _update_quartet_x!(tree, σa, σk, ll, sσa, sσk)
 
-    ll, sσa, sσk = _update_node_x!(tree.d1, σa, σk, ll, sσa, sσk)
-    ll, sσa, sσk = _update_node_x!(tree.d2, σa, σk, ll, sσa, sσk)
+    ll, sσa, sσk = _update_node_x!(tree.d1, σa, σk, ll, sσa, sσk, idf, Ξ)
+    ll, sσa, sσk = _update_node_x!(tree.d2, σa, σk, ll, sσa, sσk, idf, Ξ)
   elseif !isfix(tree)
     ll, sσa = _update_tip_x!(tree, σa, ll, sσa)
   end
 
   return ll, sσa, sσk
 end
-
 
 
 

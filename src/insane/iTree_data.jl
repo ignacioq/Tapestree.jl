@@ -2313,3 +2313,35 @@ end
 
 
 
+"""
+    check_cpe!(tree::sTpe)
+
+Extract tip rates from a sTpe tree
+"""
+function _check_cpe(tree::sTpe)
+
+  if def1(tree)
+    if def2(tree)
+
+      ch = if sh(tree)
+        xf(tree) === xi(tree.d2)
+      else
+        xf(tree) === xi(tree.d1)
+      end
+
+      if !ch 
+        @show tree, sh(tree), xf(tree), xi(tree.d2), xi(tree.d1)
+      end
+
+      return _check_cpe(tree.d1) && _check_cpe(tree.d2) && ch 
+    else
+      return _check_cpe(tree.d1)
+    end
+  end
+
+  return true
+end
+
+
+
+

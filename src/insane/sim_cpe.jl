@@ -214,17 +214,17 @@ extinction rate `μ`, starting trait value `x0`, and anagenetic and
 cladogenetic variance `σa` and `σk` for internal-terminal branches.
 """
 function _sim_cpe_it(t   ::Float64,
-                      λ   ::Float64,
-                      μ   ::Float64,
-                      x0  ::Float64,
-                      σa  ::Float64,
-                      σk  ::Float64,
-                      lr  ::Float64,
-                      lU  ::Float64,
-                      iρi ::Float64,
-                      na  ::Int64,
-                      nn  ::Int64,
-                      nlim::Int64)
+                     λ   ::Float64,
+                     μ   ::Float64,
+                     x0  ::Float64,
+                     σa  ::Float64,
+                     σk  ::Float64,
+                     lr  ::Float64,
+                     lU  ::Float64,
+                     iρi ::Float64,
+                     na  ::Int64,
+                     nn  ::Int64,
+                     nlim::Int64)
 
   if lU < lr && nn < nlim
 
