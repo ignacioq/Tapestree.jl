@@ -789,6 +789,110 @@ end
 
 
 
+
+"""
+    imean(treev::Vector{sTpe})
+
+Make a mean `sTpe`.
+"""
+function imean(treev::Vector{sTpe})
+
+  nts = lastindex(treev)
+  t1  = treev[1]
+
+  n   = _count_nodes!(t1, 0)
+  xiv = zeros(Float64, n)
+  xfv = zeros(Float64, n)
+
+  for t in treev
+    _sum_xv!(t, 0, xiv, xfv)
+  end
+
+  @turbo xiv ./= Float64(nts)
+  @turbo xfv ./= Float64(nts)
+
+  i, tree = make_tm(t1, 0, xiv, xfv)
+
+  return tree
+end
+
+
+
+
+"""
+    _count_nodes!(tree::sTpe, i::Int64)
+
+Count number of nodes
+"""
+function _count_nodes!(tree::sTpe, i::Int64)
+  i += 1
+
+  if def1(tree)
+    i = _count_nodes!(tree.d1, i)
+    i = _count_nodes!(tree.d2, i)
+  end
+
+  return i
+end
+
+
+
+"""
+    _sum_xv!(tree::sTpe, 
+             i   ::Int64, 
+             xiv ::Vector{Float64},
+             xfv ::Vector{Float64})
+
+Make sum of xi and xf for each node.
+"""
+function _sum_xv!(tree::sTpe, 
+                  i   ::Int64, 
+                  xiv ::Vector{Float64},
+                  xfv ::Vector{Float64})
+
+  i += 1
+
+  xiv[i] += xi(tree)
+  xfv[i] += xf(tree)
+
+  if def1(tree)
+    i = _sum_xv!(tree.d1, i, xiv, xfv)
+    i = _sum_xv!(tree.d2, i, xiv, xfv)
+  end
+  return i
+end
+
+
+
+"""
+    make_tm(tree::sTpe, 
+            i   ::Int64, 
+            xiv::Vector{Float64}, 
+            xfv::Vector{Float64})
+
+Make mean tree from node data.
+"""
+function make_tm(tree::sTpe, 
+                 i   ::Int64, 
+                 xiv::Vector{Float64}, 
+                 xfv::Vector{Float64})
+
+  i += 1
+  xii, xfi = xiv[i], xfv[i]
+
+  if def1(tree)
+     i, d1 = make_tm(tree.d1, i, xiv, xfv)
+     i, d2 = make_tm(tree.d2, i, xiv, xfv)
+
+     return i, sTpe(d1, d2, e(tree), isextinct(tree), xii, xfi, sh(tree), true)
+  else
+    return i, sTpe(e(tree), isextinct(tree), xii, xfi, sh(tree), true)
+  end
+end
+
+
+
+
 """
     imean(treev::Vector{iTpb})
 

@@ -1512,6 +1512,42 @@ end
 
 
 """
+    _remove_unsampled!(tree::sTpe)
+
+Remove unsampled tips (extinct and extant not sampled).
+"""
+function _remove_unsampled!(tree::sTpe)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return sTpe(e(tree), isextinct(tree), xi(tree), xf(tree), sh(tree), isfix(tree))
+      else
+        ne = e(tree) + e(tree.d2)
+        nx = xi(tree)
+        tree = tree.d2
+        sete!(tree, ne)
+        setxi!(tree, nx)
+      end
+    elseif !isfix(tree.d2)
+      ne = e(tree) + e(tree.d1)
+      nx = xi(tree)
+      tree = tree.d1
+      sete!(tree, ne)
+      setxi!(tree, nx)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
     _remove_unsampled!(tree::sTpbx)
 
 Remove unsampled tips (extinct and extant not sampled).
@@ -2020,7 +2056,7 @@ function _remove_extinct!(tree::sTpe)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return sTpe(e(tree), true, xi(tree), xf(tree), isfix(tree))
+        return sTpe(e(tree), true, xi(tree), xf(tree), sh(tree), isfix(tree))
       else
         ne   = e(tree) + e(tree.d2)
         xii  = xi(tree)

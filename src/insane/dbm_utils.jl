@@ -446,6 +446,54 @@ end
 
 
 """
+    duoldnorm(x  ::Float64,
+              x1 ::Float64,
+              x2 ::Float64,
+              σ21::Float64,
+              σ22::Float64)
+
+Proposal for a duo of Gaussians.
+"""
+function duoldnorm(x  ::Float64,
+                   x1 ::Float64,
+                   x2 ::Float64,
+                   σ21::Float64,
+                   σ22::Float64)
+
+  iσ2 = 1.0/(σ21 + σ22)
+  return ldnorm_bm(x, (x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
+end
+
+
+
+
+"""
+    trioldnorm(x  ::Float64,
+               xp ::Float64,
+               x1 ::Float64,
+               x2 ::Float64,
+               σ2p::Float64,
+               σ21::Float64,
+               σ22::Float64)
+
+Proposal for a trio of Gaussians.
+"""
+function trioldnorm(x  ::Float64,
+                    xp ::Float64,
+                    x1 ::Float64,
+                    x2 ::Float64,
+                    σ2p::Float64,
+                    σ21::Float64,
+                    σ22::Float64)
+
+  s = 1.0/(1.0/σ2p + 1.0/σ21 + 1.0/σ22)
+  return ldnorm_bm(x, (xp/σ2p + x1/σ21 + x2/σ22)*s, sqrt(s))
+end
+
+
+
+
+"""
     intσ2(lσ2::Vector{Float64},
           δt ::Float64,
           fdt::Float64)

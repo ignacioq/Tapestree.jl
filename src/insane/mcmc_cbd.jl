@@ -379,11 +379,11 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

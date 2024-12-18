@@ -454,11 +454,11 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 
@@ -619,6 +619,7 @@ function update_fs!(bix::Int64,
   elseif e(bi) > 0.0
 
     ξp, llr, sσar, sσkr = fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk)
+
   end
 
 
@@ -660,14 +661,14 @@ end
 
 Forward simulation for terminal branch.
 """
-function fsbi_t(bi  ::iBffs,
+function fsbi_t(bi ::iBffs,
                 xav::Float64,
                 xst::Float64,
-                ξc  ::sTpe,
-                λ   ::Float64,
-                μ   ::Float64,
-                σa  ::Float64,
-                σk  ::Float64,
+                ξc ::sTpe,
+                λ  ::Float64,
+                μ  ::Float64,
+                σa ::Float64,
+                σk ::Float64,
                 xis::Vector{Float64},
                 xfs::Vector{Float64},
                 es ::Vector{Float64})

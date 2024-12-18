@@ -733,6 +733,51 @@ end
 """
     couple(Ξ::Vector{T},
            idf::Vector{iBffs},
+           ix ::Int64) where {T <: sT}
+
+Build tree from decoupled tree.
+"""
+function couple(Ξ::Vector{sTpe}, idf::Vector{iBffs}, ix::Int64)
+
+  bi  = idf[ix]
+  ξi  = sTpe(Ξ[ix])
+  i1  = d1(bi)
+  i2  = d2(bi)
+
+  if i1 > 0
+    ξit = fixtip(ξi)
+    if i2 > 0 
+      ξit.d1 = couple(Ξ, idf, i1)
+      ξit.d2 = couple(Ξ, idf, i2)
+    elseif isfossil(bi)
+      ξit.d1 = couple(Ξ, idf, i1)
+    else
+      ξd1 = couple(Ξ, idf, i1)
+
+      adde!(ξit, e(ξd1))
+      setxf!(ξit, xf(ξd1))
+      setsh!(ξit, sh(ξd1))
+      if isfossil(ξd1)
+        fossilize!(ξit)
+      end
+      if def1(ξd1)
+        ξit.d1 = ξd1.d1
+        if def2(ξd1)
+          ξit.d2 = ξd1.d2
+        end
+      end
+    end
+  end
+
+  return ξi
+end
+
+
+
+
+"""
+    couple(Ξ::Vector{T},
+           idf::Vector{iBffs},
            ix ::Int64) where {T <: iTree}
 
 Build tree from decoupled tree.
