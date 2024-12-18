@@ -139,15 +139,13 @@ function _update_node_x!(tree::sTpe,
                          σk ::Float64,
                          ll ::Float64,
                          sσa::Float64,
-                         sσk::Float64, 
-                         idf,
-                         Ξ)
+                         sσk::Float64)
 
   if def1(tree)
     ll, sσa, sσk = _update_quartet_x!(tree, σa, σk, ll, sσa, sσk)
 
-    ll, sσa, sσk = _update_node_x!(tree.d1, σa, σk, ll, sσa, sσk, idf, Ξ)
-    ll, sσa, sσk = _update_node_x!(tree.d2, σa, σk, ll, sσa, sσk, idf, Ξ)
+    ll, sσa, sσk = _update_node_x!(tree.d1, σa, σk, ll, sσa, sσk)
+    ll, sσa, sσk = _update_node_x!(tree.d2, σa, σk, ll, sσa, sσk)
   elseif !isfix(tree)
     ll, sσa = _update_tip_x!(tree, σa, ll, sσa)
   end
@@ -317,7 +315,7 @@ function _update_duo_x!(ξi  ::sTpe,
 
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa, ei*σa2) + llrdnorm_μ(x1, xip, xic, e1*σa2)
-  sσa += ((xip - xa)^2 - (xic - xa)^2)/ei + ((x1 - xip)^2 - (x1 - xip)^2)/e1
+  sσa += ((xip - xa)^2 - (xic - xa)^2)/ei + ((x1 - xip)^2 - (x1 - xic)^2)/e1
   setxf!(ξi, xip)
   setxi!(ξ1, xip)
 

@@ -57,22 +57,16 @@ function insane_cpe(tree    ::sT_label,
                     mxthf   ::Float64               = 0.1,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-  """
-  here! make sure it works for mxthf = 0.1...
-  """
-
   n  = ntips(tree)
   th = treeheight(tree)
 
   surv = 0   # condition on survival of 0, 1, or 2 starting lineages
   rmλ  = 0.0 # condition on first speciation event
-  if survival 
-    if iszero(e(tree)) 
-      surv += 2
-      rmλ  += 1.0
-    else
-      surv += 1
-    end
+  if iszero(e(tree)) 
+    rmλ  += 1.0
+    surv += survival ? 2 : 0
+  else
+    surv += survival ? 1 : 0
   end
 
   # set tips sampling fraction
@@ -81,7 +75,6 @@ function insane_cpe(tree    ::sT_label,
     tρu = tρ[""]
     tρ  = Dict(tl[i] => tρu for i in 1:n)
   end
-
 
   # make fix tree directory
   idf, xr, σxi = make_idf(tree, tρ, xa, xs, th * mxthf)
@@ -113,13 +106,13 @@ function insane_cpe(tree    ::sT_label,
   @info "Running constant punctuated equilibrium"
 
   # adaptive phase
-  llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk =
+  llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs =
       mcmc_burn_cpe(Ξ, idf, λ_prior, μ_prior, σa_prior, σk_prior, nburn, 
         λc, μc, σac, σkc, mc, th, rmλ, inodes, surv, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_cpe(Ξ, idf, llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk,
+    mcmc_cpe(Ξ, idf, llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs,
       th, rmλ, inodes, surv, λ_prior, μ_prior, σa_prior, σk_prior, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -188,7 +181,10 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
 
   # tracked quantities
   sσa, sσk = ssσak(Ξ, idf)
- 
+
+  # n number to sum to ns for σa updates
+  nσs = Float64(lastindex(idf)) - ns*2.0 - rmλ
+
  # empty vector
   xis = Float64[]
   xfs = Float64[]
@@ -218,7 +214,7 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
       elseif p === 3
 
         llc, prc, σac = 
-          update_σ!(σac, 0.5*sσa, 2.0*ns + (1.0-rmλ), llc, prc, σa_prior)
+          update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
       # σk (cladogenetic) proposal
       elseif p === 4
@@ -246,7 +242,7 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
     next!(pbar)
   end
 
-  return llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk
+  return llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs
 end
 
 
@@ -298,6 +294,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
                   L       ::Float64,
                   sσa     ::Float64, 
                   sσk     ::Float64,
+                  nσs     ::Float64,
                   th      ::Float64,
                   rmλ     ::Float64,
                   inodes  ::Vector{Int64},
@@ -375,7 +372,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
             elseif p === 3
 
               llc, prc, σac = 
-                update_σ!(σac, 0.5*sσa, 2.0*ns + (1.0-rmλ), llc, prc, σa_prior)
+                update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
               # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
@@ -399,7 +396,6 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               nix = ceil(Int64,rand()*nin)
               bix = inodes[nix]
-
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
               # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
@@ -416,11 +412,11 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
                 update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, 
                   sσa, sσk, xis, xfs, es)
 
-              llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p, bix
-                return
-              end
+              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             end
           end
@@ -510,7 +506,7 @@ function update_x!(bix ::Int64,
     end
 
     # updates within the parent branch
-    ll, sσa, sσk = _update_node_x!(ξi, σa, σk, ll, sσa, sσk, idf, Ξ)
+    ll, sσa, sσk = _update_node_x!(ξi, σa, σk, ll, sσa, sσk)
 
     # get fixed tip
     lξi = fixtip(ξi)
@@ -537,7 +533,7 @@ function update_x!(bix ::Int64,
       end
     # if not leaf
     else
-      #ll, sσa, sσk = _update_node_x!(ξ1, σa, σk, ll, sσa, sσk)
+      ll, sσa, sσk = _update_node_x!(ξ1, σa, σk, ll, sσa, sσk)
     end
 
     if !isd
@@ -554,7 +550,7 @@ function update_x!(bix ::Int64,
         end
       # if not leaf
       else
-        #ll, sσa, sσk = _update_node_x!(ξ2, σa, σk, ll, sσa, sσk)
+        ll, sσa, sσk = _update_node_x!(ξ2, σa, σk, ll, sσa, sσk)
       end
     end
   end
@@ -616,8 +612,9 @@ function update_fs!(bix::Int64,
 
   # if mid branch
   elseif iszero(d2(bi))
-    ξp, llr, sσar = fsbi_m(bi, Ξ[d1(bi)], xi(ξc), λ, μ, σa, σk)
-  
+
+    ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk)
+
   # if trio branch
   elseif e(bi) > 0.0
 
@@ -742,24 +739,24 @@ end
 
 """
     fsbi_m(bi::iBffs,
+           ξi::sTpe,
            ξ1::sTpe,
            λ ::Float64,
            μ ::Float64,
-           x0::Float64,
            σa::Float64,
            σk::Float64)
 
 Forward simulation for internal branch.
 """
 function fsbi_m(bi::iBffs,
+                ξi::sTpe,
                 ξ1::sTpe,
                 λ ::Float64,
                 μ ::Float64,
-                x0::Float64,
                 σa::Float64,
                 σk::Float64)
 
-  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, x0, σa, σk, 0, 1, 500)
+  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500)
 
   if na < 1 || nn >= 500
     return t0, NaN, NaN
@@ -778,9 +775,12 @@ function fsbi_m(bi::iBffs,
   acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # get fix `x`
-  xp = fixrtip!(t0, na, NaN)
+  lt0 = fixrtip!(t0, na)
+  xp  = xf(lt0)
 
-  # acceptance ration with respect to daughters
+  σa2, σk2 = σa^2, σk^2
+
+  # acceptance ration with respect to daughter
   llr = llrdnorm_x(xp, xi(ξ1), xf(ξ1), e(ξ1)*σa^2)
 
   if lU < acr + llr
@@ -792,12 +792,12 @@ function fsbi_m(bi::iBffs,
     end
 
     if lU < acr + llr
-      na -= 1
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+      na  -= 1
+      llr += (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
-      setxi!(ξ1, xp)   # set new xp for initial x
       sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1)
+      setxi!(ξ1, xp)   # set new xp for initial x
 
       return t0, llr, sσar
     end
