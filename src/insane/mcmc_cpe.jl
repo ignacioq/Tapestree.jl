@@ -526,10 +526,10 @@ function update_x!(bix ::Int64,
     # if leaf
     if iszero(d1(b1))
       if ifx(b1) 
-          ll, sσa, sσk = 
-            _update_leaf_x!(ξ1, xavg(b1), xstd(b1), σa, σk, ll, sσa, sσk)
+        ll, sσa, sσk = 
+          _update_leaf_x!(ξ1, xavg(b1), xstd(b1), σa, σk, ll, sσa, sσk)
       else
-          ll, sσa, sσk = _update_leaf_x!(ξ1, σa, σk, ll, sσa, sσk)
+        ll, sσa, sσk = _update_leaf_x!(ξ1, σa, σk, ll, sσa, sσk)
       end
     # if not leaf
     else
@@ -609,20 +609,16 @@ function update_fs!(bix::Int64,
     end
 
     ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, σa, σk, xis, xfs, es)
-
   # if mid branch
   elseif iszero(d2(bi))
 
     ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk, xis, xfs)
-
   # if trio branch
   elseif e(bi) > 0.0
 
     ξp, llr, sσar, sσkr = 
       fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk, xis, xfs)
-
   end
-
 
   if isfinite(llr)
 
@@ -701,9 +697,8 @@ function fsbi_t(bi ::iBffs,
     wti = fIrand(na) + 1
     lξc = fixtip(ξc)
 
-    xp = NaN
+    xp = xav
     if iszero(xst)
-      xp  = xav
       acr = logdnorm(xav, xis[wti], es[wti]*σa^2) - 
             logdnorm(xav, xi(lξc),   e(lξc)*σa^2)
     else
