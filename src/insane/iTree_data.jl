@@ -2131,6 +2131,48 @@ end
 
 
 """
+    _xatt!(tree::sTpe,
+           c   ::Float64,
+           xs  ::Vector{Float64},
+           t   ::Float64,
+           x   ::Float64,
+           s  ::Bool)
+
+Return speciation rates, `xs`, at time `c` for `tree`.
+"""
+function _xatt!(tree::sTpe,
+                c   ::Float64,
+                xs  ::Vector{Float64},
+                t   ::Float64,
+                x   ::Float64,
+                s  ::Bool)
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+
+    xfi = linpred(c, t, t + et, xi(tree), xf(tree))
+
+    if isfix(tree)
+      x = xfi
+      s = sh(tree)
+    end
+
+    push!(xs, xfi)
+
+    return x, s
+  elseif def1(tree)
+      x, s = _xatt!(tree.d1, c, xs, t + et, x, s)
+      x, s = _xatt!(tree.d2, c, xs, t + et, x, s)
+  end
+
+  return x, s
+end
+
+
+
+
+"""
     fixed_xt(tree::T)  where {T <: Tx}
 
 Make joint proposal to match simulation with tip fixed `x` value.

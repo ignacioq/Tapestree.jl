@@ -147,7 +147,8 @@ end
                σk  ::Float64,
                na  ::Int64,
                nn  ::Int64,
-               nlim::Int64)
+               nlim::Int64, 
+               xfst::Vector{Float64})
 
 Simulate a constant punkeek model of height `t` with speciation rate `λ`,
 extinction rate `μ`, starting trait value `x0`, and anagenetic and 
@@ -161,7 +162,8 @@ function _sim_cpe_i(t   ::Float64,
                     σk  ::Float64,
                     na  ::Int64,
                     nn  ::Int64,
-                    nlim::Int64)
+                    nlim::Int64, 
+                    xfst::Vector{Float64})
 
   if nn < nlim
 
@@ -170,6 +172,7 @@ function _sim_cpe_i(t   ::Float64,
     if tw > t
       na += 1
       x1 = rnorm(x0, sqrt(t) * σa)
+      push!(xfst, x1)
       return sTpe(t, false, x0, x1, false, false), na, nn
     end
 
@@ -180,8 +183,8 @@ function _sim_cpe_i(t   ::Float64,
       xk = rnorm(x1, σk)
       shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
 
-      d1, na, nn = _sim_cpe_i(t - tw, λ, μ, xl, σa, σk, na, nn, nlim)
-      d2, na, nn = _sim_cpe_i(t - tw, λ, μ, xr, σa, σk, na, nn, nlim)
+      d1, na, nn = _sim_cpe_i(t - tw, λ, μ, xl, σa, σk, na, nn, nlim, xfst)
+      d2, na, nn = _sim_cpe_i(t - tw, λ, μ, xr, σa, σk, na, nn, nlim, xfst)
 
       return sTpe(d1, d2, tw, false, x0, x1, shi, false), na, nn
     else

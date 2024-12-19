@@ -613,12 +613,13 @@ function update_fs!(bix::Int64,
   # if mid branch
   elseif iszero(d2(bi))
 
-    ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk)
+    ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk, xis, xfs)
 
   # if trio branch
   elseif e(bi) > 0.0
 
-    ξp, llr, sσar, sσkr = fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk)
+    ξp, llr, sσar, sσkr = 
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk, xis, xfs)
 
   end
 
@@ -755,9 +756,14 @@ function fsbi_m(bi::iBffs,
                 λ ::Float64,
                 μ ::Float64,
                 σa::Float64,
-                σk::Float64)
+                σk::Float64,
+                xfs::Vector{Float64},
+                xcs::Vector{Float64})
 
-  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500)
+  # forward simulation during branch length
+  empty!(xfs)
+
+  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500, xfs)
 
   if na < 1 || nn >= 500
     return t0, NaN, NaN
@@ -767,24 +773,53 @@ function fsbi_m(bi::iBffs,
 
   lU = -randexp() #log-probability
 
-  # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(Float64(ntp)/Float64(nt(bi)))
-
   # add sampling fraction
-  nac  = ni(bi)                # current ni
-  iρi  = (1.0 - ρi(bi))        # inverse branch sampling fraction
-  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+  nac = ni(bi)                # current ni
+  iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
+  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
-  # get fix `x`
-  lt0 = fixrtip!(t0, na)
-  xp  = xf(lt0)
+  ## fix most likely lineage with respect to daughter
+  σa2 = σa^2
 
-  σa2, σk2 = σa^2, σk^2
+  # select best from proposal
+  sp, i, wt, xp, pp = 0.0, 0, 0, NaN, -Inf
+  for xfi in xfs
+    p   = logdnorm(xfi, xf(ξ1), e(ξ1)*σa2)
+    sp += exp(p)
 
-  # acceptance ration with respect to daughter
-  llr = llrdnorm_x(xp, xi(ξ1), xf(ξ1), e(ξ1)*σa^2)
+    i += 1
+    if p > pp
+      pp  = p
+      xp  = xfi
+      wt  = i
+    end
+  end
 
-  if lU < acr + llr
+  # extract current xcs and estimate ratio
+  empty!(xcs)
+  xc, shc = _xatt!(ξi, e(bi), xcs, 0.0, NaN, false)
+
+  sc, pc = 0.0, NaN
+  for xci in xcs
+    p   = logdnorm(xci, xf(ξ1), e(ξ1)*σa2)
+    sc += exp(p)
+
+    if xc === xci
+      pc = p
+    end
+  end
+
+  # likelihood ratio and acceptance
+  acr += log(sp) - log(sc)
+
+  if lU < acr
+
+    # fix the tip
+    if wt <= div(na,2)
+      fixtip1!(t0, wt, 0)
+    else
+      fixtip2!(t0, na - wt + 1, 0)
+    end
 
     # simulate remaining tips until the present
     if na > 1
@@ -792,11 +827,12 @@ function fsbi_m(bi::iBffs,
         tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, 500)
     end
 
-    if lU < acr + llr
+    if lU < acr
       na  -= 1
-      llr += (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
       setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
+
       sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1)
       setxi!(ξ1, xp)   # set new xp for initial x
 
@@ -818,7 +854,8 @@ end
            λ  ::Float64,
            μ  ::Float64,
            σa ::Float64,
-           σk ::Float64)
+           σk ::Float64,
+           xfs::Vector{Float64})
 
 Forward simulation for internal branch.
 """
@@ -829,9 +866,14 @@ function fsbi_i(bi ::iBffs,
                 λ  ::Float64,
                 μ  ::Float64,
                 σa ::Float64,
-                σk ::Float64)
+                σk ::Float64,
+                xfs::Vector{Float64},
+                xcs::Vector{Float64})
 
-  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500)
+  # forward simulation during branch length
+  empty!(xfs)
+
+  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500, xfs)
 
   if na < 1 || nn >= 500
     return t0, NaN, NaN, NaN
@@ -841,45 +883,57 @@ function fsbi_i(bi ::iBffs,
 
   lU = -randexp() #log-probability
 
-  # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(Float64(ntp)/Float64(nt(bi)))
-
   # add sampling fraction
-  nac  = ni(bi)                # current ni
-  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+  nac = ni(bi)                # current ni
+  iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
-  # fix a random tip
-  lt0 = fixrtip!(t0, na)
-  xp  = xf(lt0)
-
+  ## fix most likely lineage with respect to daughters
   σa2, σk2 = σa^2, σk^2
 
-  # acceptance ration with respect to daughters
-  pk1 = llik_trio(xp, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-  pk2 = llik_trio(xp, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
-  o12 = exp(pk1 - pk2)   # odds
-  p1  = o12/(1.0 + o12)  # probability
+  # select best from proposal
+  sp, i, wt, xp, pp, shp = 0.0, 0, 0, NaN, -Inf, false
+  for xfi in xfs
+    pk1 = llik_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
+    pk2 = llik_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+    sp += exp(pk1) + exp(pk2)
 
-  ξap, ξkp = ξ2, ξ1
-  llr = 0.0
-  if rand() < p1
-    setsh!(lt0, true)
-    llr += pk1
-  else
-    setsh!(lt0, false)
-    llr += pk2
-    ξap, ξkp = ξ1, ξ2
+    pfi = max(pk1, pk2)
+    i += 1
+    if pfi > pp
+      pp  = pfi
+      xp  = xfi
+      shp = pk1 > pk2
+      wt  = i
+    end
   end
 
-  lξi = fixtip(ξi)
-  xc  = xf(lξi)
+  # extract current xcs and estimate ratio
+  empty!(xcs)
+  xc, shc = _xatt!(ξi, e(bi), xcs, 0.0, NaN, false)
 
-  ξac, ξkc = if sh(lξi) ξ2, ξ1 else ξ1, ξ2 end
+  sc, pc = 0.0, NaN
+  for xci in xcs
+    pk1 = llik_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
+    pk2 = llik_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+    sc += exp(pk1) + exp(pk2)
 
-  llr -= llik_trio(xc, xi(ξkc), xf(ξac), xf(ξkc), e(ξac), e(ξkc), σa2, σk2)
+    if xc === xci
+      pc = shc ? pk1 : pk2
+    end
+  end
 
-  if lU < acr + llr
+  # likelihood ratio and acceptance
+  acr += log(sp) - log(sc)
+
+  if lU < acr
+
+    # fix the tip
+    if wt <= div(na,2)
+      fixtip1!(t0, wt, 0, shp)
+    else
+      fixtip2!(t0, na - wt + 1, 0, shp)
+    end
 
     # simulate remaining tips until the present
     if na > 1
@@ -887,11 +941,15 @@ function fsbi_i(bi ::iBffs,
         tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, 500)
     end
 
-    if lU < acr + llr
+    if lU < acr
       na  -= 1
-      llr += (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
       setnt!(bi,  ntp)  # set new nt
       setni!(bi,  na)   # set new ni
+
+      ξac, ξkc = if shc ξ2, ξ1 else ξ1, ξ2 end
+      ξap, ξkp = if shp ξ2, ξ1 else ξ1, ξ2 end
+
       sσar = (xp - xf(ξap))^2/e(ξap)      - (xc - xf(ξac))^2/e(ξac)      +
              (xi(ξkp) - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc)
       sσkr = (xp - xi(ξkp))^2 - (xc - xi(ξkc))^2
