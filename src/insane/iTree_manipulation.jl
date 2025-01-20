@@ -2178,7 +2178,51 @@ function _remove_extinct!(tree::T) where {T <: iTf}
       return tree
     else
       if isextinct(tree.d1)
-        return T(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
+        return T(e(tree), false, true, isfix(tree))
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_extinct!(tree::sTfpe)
+
+Remove extinct tips (except fossil tips).
+"""
+function _remove_extinct!(tree::sTfpe)
+
+  if def1(tree)
+    tree.d1 = _remove_extinct!(tree.d1)
+    if def2(tree)
+      tree.d2 = _remove_extinct!(tree.d2)
+
+      if isextinct(tree.d1)
+        if isextinct(tree.d2)
+          return sTfpe(e(tree), true, isfossil(tree), 
+                   xi(tree), xf(tree), sh(tree), isfix(tree))
+        else
+          ne   = e(tree) + e(tree.d2)
+          xii  = xi(tree)
+          tree = tree.d2
+          sete!(tree, ne)
+          setxi!(tree, xii)
+        end
+      elseif isextinct(tree.d2)
+        ne   = e(tree) + e(tree.d1)
+        xii  = xi(tree)
+        tree = tree.d1
+        sete!(tree, ne)
+        setxi!(tree, xii)
+      end
+    else
+      if isextinct(tree.d1)
+        return sTfpe(e(tree), false, true, 
+                xi(tree), xf(tree), sh(tree), isfix(tree))
       end
     end
   end

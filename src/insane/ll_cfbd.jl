@@ -75,15 +75,15 @@ function llik_cfbd(tree::sTfbd,
                    nep ::Int64)
   @inbounds begin
 
-    ei  = e(tree)
+    ei = e(tree)
     ll = 0.0
     # if epoch change
     while ix < nep && t - ei < ψts[ix]
-      li   = t - ψts[ix]
-      ll  -= li*(λ + μ + ψ[ix])
-      ei  -= li
-      t    = ψts[ix]
-      ix  += 1
+      li  = t - ψts[ix]
+      ll -= li*(λ + μ + ψ[ix])
+      ei -= li
+      t   = ψts[ix]
+      ix += 1
     end
 
     ll -= ei*(λ + μ + ψ[ix])

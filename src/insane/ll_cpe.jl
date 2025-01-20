@@ -93,7 +93,6 @@ end
                    sσa ::Float64, 
                    sσk ::Float64)
 
-
 Log-likelihood up to a constant for constant birth-death punctuated equilibrium
 given a complete `iTree` recursively.
 """
@@ -113,7 +112,6 @@ function llik_cpe_track(tree::sTpe,
   L += ei
   if istip(tree)
     sqi  = (xf(tree) - xi(tree))^2
-    ie   = isextinct(tree)
     ll  -= ei*(λ + μ)                                                        +
            0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) + 
            sqi/(2.0*σa2*ei)
@@ -209,17 +207,13 @@ end
 
 
 
-
-
-
-
 """
-    ssσak(Ξ  ::Vector{sTpe}, idf::Vector{iBffs})
+    ssσak(Ξ  ::Vector{T}, idf::Vector{iBffs}) where T <: sT
 
 Estimate the anagenetic and cladogenetic sum of squared differences, 
 `sσa` and `sσk`.
 """
-function ssσak(Ξ  ::Vector{sTpe}, idf::Vector{iBffs})
+function ssσak(Ξ  ::Vector{T}, idf::Vector{iBffs}) where T <: sT
 
   @inbounds begin
     sσa = sσk = 0.0

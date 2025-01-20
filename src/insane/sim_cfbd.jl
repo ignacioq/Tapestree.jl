@@ -203,7 +203,7 @@ function _sim_cfbd_t(t   ::Float64,
       return sTfbd(tw, true, false, false), na, nn, lr
     # fossil sampling
     else
-      return sTfbd(t, false, false, false), na, nn, NaN
+      return sTfbd(), na, nn, NaN
     end
   end
 

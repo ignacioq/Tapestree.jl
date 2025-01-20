@@ -668,7 +668,7 @@ function _make_Ξ!(Ξ  ::Vector{sTpe},
   et  = e(bi)
   xii = xr[ip]
   xfi = xr[i]
-  shi = rand() < 0.5
+  shi = rand(Bool)
 
   push!(Ξ, sTpe(et, false, xii, xfi, shi, true))
 
@@ -682,6 +682,76 @@ function _make_Ξ!(Ξ  ::Vector{sTpe},
   return nothing
 end
 
+
+
+
+"""
+    make_Ξ(idf::Vector{iBffs},
+           xr ::Vector{Float64},
+           σai::Float64,
+           σki::Float64,
+           ::Type{sTfpe})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs},
+                xr ::Vector{Float64},
+                σai::Float64,
+                σki::Float64,
+                ::Type{sTfpe})
+
+  Ξ = sTfpe[]
+  _make_Ξ!(Ξ, 1, xr, σai, σki, idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ  ::Vector{sTfpe},
+             i  ::Int64,
+             xr ::Vector{Float64},
+             σai::Float64,
+             σki::Float64,
+             idf::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ  ::Vector{sTfpe},
+                  i  ::Int64,
+                  xr ::Vector{Float64},
+                  σai::Float64,
+                  σki::Float64,
+                  idf::Vector{iBffs})
+
+  bi  = idf[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  ip  = pa(bi)
+  ip  = iszero(ip) ? 1 : ip
+  et  = e(bi)
+  xii = xr[ip]
+  xfi = xr[i]
+  shi = rand(Bool)
+
+  if isfossil(bi) && iszero(d1(bi))
+    push!(Ξ, sTfpe(sTfpe(1e-10, true, false, xfi, xfi, false, false),
+                   e(bi), false, true, xii, xfi, shi, true))
+  else
+    push!(Ξ, sTfpe(e(bi), false, isfossil(bi), xii, xfi, shi, true))
+  end
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, xr, σai, σki, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, xr, σai, σki, idf)
+    end
+  end
+
+  return nothing
+end
 
 
 

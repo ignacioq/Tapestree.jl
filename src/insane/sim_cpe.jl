@@ -39,8 +39,9 @@ function sim_cpe(t ::Float64,
   x1 = rnorm(x0, sqrt(tw) * σa)
 
   if λorμ(λ, μ)
-    xk = rnorm(x1, σk)
-    shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
+    xk  = rnorm(x1, σk)
+    shi = rand(Bool)
+    xl, xr = if shi xk, x1 else x1, xk end
 
     return sTpe(sim_cpe(t - tw, λ, μ, xl, σa, σk), 
                 sim_cpe(t - tw, λ, μ, xr, σa, σk), 
@@ -81,7 +82,6 @@ function _sim_cpe_t(t   ::Float64,
                     σa  ::Float64,
                     σk  ::Float64,
                     lr  ::Float64,
-                    lU  ::Float64,
                     iρi ::Float64,
                     na  ::Int64,
                     nn  ::Int64,
@@ -96,18 +96,17 @@ function _sim_cpe_t(t   ::Float64,
 
     if tw > t
       na += 1
-      nlr = lr
       if na > 1
-        nlr += log(iρi * Float64(na)/Float64(na-1))
+        lr += log(iρi * Float64(na)/Float64(na-1))
       end
-      if nlr < lr && lU >= nlr
-        return sTpe(), na, nn, NaN
-      else
+      if isfinite(lr)
         x1 = rnorm(x0, sqrt(t) * σa)
         push!(xist, x0)
         push!(xfst, x1)
         push!(est, t)
-        return sTpe(t, false, x0, x1, false, false), na, nn, nlr
+        return sTpe(t, false, x0, x1, false, false), na, nn, lr
+      else
+        return sTpe(), na, nn, NaN
       end
     end
 
@@ -116,13 +115,14 @@ function _sim_cpe_t(t   ::Float64,
     if λorμ(λ, μ)
       nn += 1
       xk = rnorm(x1, σk)
-      shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
+      shi = rand(Bool)
+      xl, xr = if shi xk, x1 else x1, xk end
 
       d1, na, nn, lr = 
-        _sim_cpe_t(t - tw, λ, μ, xl, σa, σk, lr, lU, iρi, na, nn, nlim, 
+        _sim_cpe_t(t - tw, λ, μ, xl, σa, σk, lr, iρi, na, nn, nlim, 
           xist, xfst, est)
       d2, na, nn, lr = 
-        _sim_cpe_t(t - tw, λ, μ, xr, σa, σk, lr, lU, iρi, na, nn, nlim, 
+        _sim_cpe_t(t - tw, λ, μ, xr, σa, σk, lr, iρi, na, nn, nlim, 
           xist, xfst, est)
 
       return sTpe(d1, d2, tw, false, x0, x1, shi, false), na, nn, lr
@@ -181,7 +181,8 @@ function _sim_cpe_i(t   ::Float64,
     if λorμ(λ, μ)
       nn += 1
       xk = rnorm(x1, σk)
-      shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
+      shi = rand(Bool)
+      xl, xr = if shi xk, x1 else x1, xk end
 
       d1, na, nn = _sim_cpe_i(t - tw, λ, μ, xl, σa, σk, na, nn, nlim, xfst)
       d2, na, nn = _sim_cpe_i(t - tw, λ, μ, xr, σa, σk, na, nn, nlim, xfst)
@@ -245,7 +246,8 @@ function _sim_cpe_it(t   ::Float64,
     if λorμ(λ, μ)
       nn += 1
       xk = rnorm(x1, σk)
-      shi, xl, xr = if rand() < 0.5 true, xk, x1 else false, x1, xk end
+      shi = rand(Bool)
+      xl, xr = if shi xk, x1 else x1, xk end
 
       d1, na, nn, lr = 
         _sim_cpe_it(t - tw, λ, μ, xl, σa, σk, lr, lU, iρi, na, nn, nlim)

@@ -13,7 +13,7 @@ Created 25 08 2020
 
 
 """
-    insane_cpe(tree    ::sT_label,
+    insane_cfpe(tree    ::sTf_label,
                xa      ::Dict{String, Float64};
                xs      ::Dict{String, Float64} = Dict{String,Float64}(),
                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
@@ -24,7 +24,7 @@ Created 25 08 2020
                nthin   ::Int64                 = 10,
                nburn   ::Int64                 = 200,
                nflush  ::Int64                 = nthin,
-               ofile   ::String                = string(homedir(), "/cpe"),
+               ofile   ::String                = string(homedir(), "/cfpe"),
                ϵi      ::Float64               = 0.4,
                λi      ::Float64               = NaN,
                μi      ::Float64               = NaN,
@@ -34,39 +34,55 @@ Created 25 08 2020
                mxthf   ::Float64               = Inf,
                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for constant birth-death punctuated equilibrium.
+Run insane for constant fossilised birth-death punctuated equilibrium.
 """
-function insane_cpe(tree    ::sT_label,
+function insane_cfpe(tree    ::sTf_label,
                     xa      ::Dict{String, Float64};
                     xs      ::Dict{String, Float64} = Dict{String,Float64}(),
                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                    ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     σa_prior::NTuple{2,Float64}     = (0.05, 0.05),
                     σk_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                    ψ_epoch ::Vector{Float64}       = Float64[],
+                    f_epoch ::Vector{Int64}         = Int64[0],
                     niter   ::Int64                 = 1_000,
                     nthin   ::Int64                 = 10,
                     nburn   ::Int64                 = 200,
                     nflush  ::Int64                 = nthin,
-                    ofile   ::String                = string(homedir(), "/cpe"),
+                    ofile   ::String                = string(homedir(), "/cfpe"),
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
-                    pupdp   ::NTuple{6,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.8),
-                    prints  ::Int64                 = 5,
+                    ψi      ::Float64               = NaN,
+                    pupdp   ::NTuple{7,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.8),
                     survival::Bool                  = true,
                     mxthf   ::Float64               = 0.1,
-                    tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+                    tρ      ::Dict{String, Float64} = Dict("" => 1.0),
+                    prints  ::Int64                 = 5)
 
   n  = ntips(tree)
   th = treeheight(tree)
 
-  surv = 0   # condition on survival of 0, 1, or 2 starting lineages
-  rmλ  = 0.0 # condition on first speciation event
-  if iszero(e(tree)) 
-    rmλ  += 1.0
-    surv += survival ? 2 : 0
-  else
-    surv += survival ? 1 : 0
+  # only include epochs where the tree occurs
+  filter!(x -> x < th, ψ_epoch)
+  sort!(ψ_epoch, rev = true)
+  nep = lastindex(ψ_epoch) + 1
+
+  # make initial fossils per epoch vector
+  lep = lastindex(f_epoch)
+  if lep !== nep
+    if sum(f_epoch) > 0
+      if lep > nep
+        f_epoch = f_epoch[(end-nep+1):end]
+      else 
+        for i in Base.OneTo(nep - lep)
+          pushfirst!(f_epoch, 0)
+        end
+      end
+    else
+      f_epoch = fill(0, nep)
+    end
   end
 
   # set tips sampling fraction
@@ -80,18 +96,67 @@ function insane_cpe(tree    ::sT_label,
   idf, xr, σxi = make_idf(tree, tρ, xa, xs, th * mxthf)
 
   # starting parameters
-  λc, μc = λi, μi
-  if isnan(λi) || isnan(μi)
-    λc, μc = moments(Float64(n), th, ϵi)
+  λc, μc, ψc = λi, μi, ψi
+  if isnan(λi) || isnan(μi) || isnan(ψi)
+    # if only one tip
+    if isone(n)
+      λc = prod(λ_prior)
+      μc = prod(μ_prior)
+    else
+      λc, μc = moments(Float64(n), th, ϵi)
+    end
+    # if no sampled fossil
+    nf = nfossils(tree) + sum(f_epoch)
+    if iszero(nf)
+      ψc = prod(ψ_prior)
+    else
+      ψc = Float64(nf)/treelength(tree)
+    end
   end
 
   σac = σkc = σxi
+
+  # make ψ vector
+  ψc = fill(ψc, nep)
+
+  # condition on first speciation event
+  rmλ = iszero(e(tree)) && !isfossil(tree) ? 1.0 : 0.0
+
+  # condition on survival of 0, 1, or 2 starting lineages
+  surv = 0
+  if survival 
+    if iszero(e(tree)) 
+      if def1(tree)
+        surv += Int64(anyalive(tree.d1))
+        if def2(tree)
+          surv += Int64(anyalive(tree.d2))
+        end
+      end
+    else
+      surv += Int64(anyalive(tree))
+    end
+  end
 
   # M attempts of survival
   mc = m_surv_cbd(th, λc, μc, 5_000, surv)
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, xr, σac, σkc, sTpe)
+  Ξ = make_Ξ(idf, xr, σac, σkc, sTfpe)
+
+  # make epoch start vectors and indices for each `ξ`
+  eixi = Int64[]
+  eixf = Int64[]
+  bst  = Float64[]
+  for bi in idf
+    tib = ti(bi)
+    ei  = findfirst(x -> x < tib, ψ_epoch)
+    ei  = isnothing(ei) ? nep : ei
+    ef  = findfirst(x -> x < tf(bi), ψ_epoch)
+    ef  = isnothing(ef) ? nep : ef
+    push!(bst, tib)
+    push!(eixi, ei)
+    push!(eixf, ef)
+  end
 
   # get vector of internal edges
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
@@ -99,20 +164,21 @@ function insane_cpe(tree    ::sT_label,
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(6)
+  for i in Base.OneTo(7)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running constant punctuated equilibrium"
+  @info "running constant fossilized punctuated equilibrium"
 
   # adaptive phase
-  llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs =
-      mcmc_burn_cpe(Ξ, idf, λ_prior, μ_prior, σa_prior, σk_prior, nburn, 
-        λc, μc, σac, σkc, mc, th, rmλ, inodes, surv, pup, prints)
+  llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs =
+      mcmc_burn_cfpe(Ξ, idf, λ_prior, μ_prior, ψ_prior, σa_prior, σk_prior, 
+        ψ_epoch, f_epoch, nburn, λc, μc, ψc, σac, σkc, mc, th, rmλ, 
+        inodes, surv, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_cpe(Ξ, idf, llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs,
+    mcmc_cfpe(Ξ, idf, llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs,
       th, rmλ, inodes, surv, λ_prior, μ_prior, σa_prior, σk_prior, pup, 
       niter, nthin, nflush, ofile, prints)
 
@@ -123,59 +189,68 @@ end
 
 
 """
-    mcmc_burn_cpe(Ξ        ::Vector{sTpe},
-                  idf     ::Array{iBffs,1},
-                  λ_prior ::NTuple{2,Float64},
-                  μ_prior ::NTuple{2,Float64},
-                  σa_prior::NTuple{2,Float64},
-                  σk_prior::NTuple{2,Float64},
-                  nburn  ::Int64,
-                  λc     ::Float64,
-                  μc     ::Float64,
-                  σac    ::Float64,
-                  σkc    ::Float64,
-                  mc     ::Float64,
-                  th     ::Float64,
-                  rmλ    ::Float64,
-                  inodes ::Vector{Int64},
-                  surv   ::Int64,
-                  pup    ::Array{Int64,1},
-                  prints ::Int64)
+    mcmc_burn_cfpe(Ξ        ::Vector{sTfpe},
+                   idf     ::Array{iBffs,1},
+                   λ_prior ::NTuple{2,Float64},
+                   μ_prior ::NTuple{2,Float64},
+                   σa_prior::NTuple{2,Float64},
+                   σk_prior::NTuple{2,Float64},
+                   nburn  ::Int64,
+                   λc     ::Float64,
+                   μc     ::Float64,
+                   σac    ::Float64,
+                   σkc    ::Float64,
+                   mc     ::Float64,
+                   th     ::Float64,
+                   rmλ    ::Float64,
+                   inodes ::Vector{Int64},
+                   surv   ::Int64,
+                   pup    ::Array{Int64,1},
+                   prints ::Int64)
 
 Burn-in for constant birth-death punctuated equilibrium.
 """
-function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
-                       idf     ::Array{iBffs,1},
-                       λ_prior ::NTuple{2,Float64},
-                       μ_prior ::NTuple{2,Float64},
-                       σa_prior::NTuple{2,Float64},
-                       σk_prior::NTuple{2,Float64},
-                       nburn  ::Int64,
-                       λc     ::Float64,
-                       μc     ::Float64,
-                       σac    ::Float64,
-                       σkc    ::Float64,
-                       mc     ::Float64,
-                       th     ::Float64,
-                       rmλ    ::Float64,
-                       inodes ::Vector{Int64},
-                       surv   ::Int64,
-                       pup    ::Array{Int64,1},
-                       prints ::Int64)
+function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
+                        idf     ::Array{iBffs,1},
+                        λ_prior ::NTuple{2,Float64},
+                        μ_prior ::NTuple{2,Float64},
+                        ψ_prior ::NTuple{2,Float64},
+                        σa_prior::NTuple{2,Float64},
+                        σk_prior::NTuple{2,Float64},
+                        ψ_epoch ::Vector{Float64},
+                        f_epoch ::Vector{Int64},
+                        nburn   ::Int64,
+                        λc      ::Float64,
+                        μc      ::Float64,
+                        ψc      ::Vector{Float64},
+                        σac     ::Float64,
+                        σkc     ::Float64,
+                        mc      ::Float64,
+                        th      ::Float64,
+                        rmλ     ::Float64,
+                        inodes  ::Vector{Int64},
+                        surv    ::Int64,
+                        bst     ::Vector{Float64},
+                        eixi    ::Vector{Int64},
+                        eixf    ::Vector{Int64},
+                        pup     ::Array{Int64,1},
+                        prints  ::Int64)
 
   el  = lastindex(idf)
-  L   = treelength(Ξ)          # tree length
-  ns  = nnodesbifurcation(idf) # number of speciation events
-  nin = lastindex(inodes)      # number of internal nodes
-  ne  = 0.0                    # number of extinction events
+  L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
+  nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
+  ns  = nnodesbifurcation(idf)            # number of speciation events
+  nin = lastindex(inodes)                 # number of internal nodes
+  ne  = Float64(ntipsextinct(Ξ))          # number of extinction events
 
   # likelihood
-  llc = llik_cpe(Ξ, idf, λc, μc, σac, σkc, ns) - rmλ * log(λc) + 
-        log(mc) + prob_ρ(idf)
+  llc = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, ns, ψ_epoch, bst, eixi) - 
+        rmλ * log(λc) + log(mc) + prob_ρ(idf)
 
   # prior
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])         +
         logdgamma(μc, μ_prior[1], μ_prior[2])         +
+        sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))   +
         logdinvgamma(σac^2, σa_prior[1], σa_prior[2]) +
         logdinvgamma(σkc^2, σk_prior[1], σk_prior[2])
 
@@ -202,27 +277,32 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
       if p === 1
 
         llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
+          update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
 
       # μ proposal
       elseif p === 2
 
         llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
+          update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, surv, μ_prior)
+
+      # ψ proposal
+      elseif p === 3
+
+        llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
       # σa (anagenetic) proposal
-      elseif p === 3
+      elseif p === 4
 
         llc, prc, σac = 
           update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
       # σk (cladogenetic) proposal
-      elseif p === 4
+      elseif p === 5
 
         llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
 
       # update inner nodes traits
-      elseif p === 5
+      elseif p === 6
 
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
@@ -249,7 +329,7 @@ end
 
 
 """
-    mcmc_cpe(Ξ       ::Vector{sTpe},
+    mcmc_cfpe(Ξ       ::Vector{sTfpe},
              idf     ::Array{iBffs,1},
              llc     ::Float64,
              prc     ::Float64,
@@ -280,7 +360,7 @@ end
 
 Sampling for constant birth-death punctuated equilibrium.
 """
-function mcmc_cpe(Ξ       ::Vector{sTpe},
+function mcmc_cfpe(Ξ       ::Vector{sTfpe},
                   idf     ::Array{iBffs,1},
                   llc     ::Float64,
                   prc     ::Float64,
@@ -318,14 +398,14 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
   lthin = lit = sthin = zero(Int64)
 
   # parameter results
-  r = Array{Float64,2}(undef, nlogs, 8)
+  r = Array{Float64,2}(undef, nlogs, 8 + nep)
 
   # empty vector
   xis = Float64[]
   xfs = Float64[]
   es  = Float64[]
 
-  treev = sTpe[]     # make tree vector
+  treev = sTfpe[]     # make tree vector
   io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of 
@@ -350,7 +430,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               llc, prc, λc, mc =
                 update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
 
-              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
               #   @show llci, llc, it, p
               #   return
@@ -362,7 +442,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               llc, prc, μc, mc =
                 update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
 
-              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
               #   @show llci, llc, it, p
               #   return
@@ -374,7 +454,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               llc, prc, σac = 
                 update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
-              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
               #   @show llci, llc, it, p
               #   return
@@ -385,7 +465,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
               llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
 
-              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
               #   @show llci, llc, it, p
               #   return
@@ -398,7 +478,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               bix = inodes[nix]
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
-              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
               #   @show llci, llc, it, p
               #   return
@@ -412,7 +492,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
                 update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, 
                   sσa, sσk, xis, xfs, es)
 
-              # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
               #   @show llci, llc, it, p
               #   return
@@ -432,9 +512,12 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
               r[lit,3] = prc
               r[lit,4] = λc
               r[lit,5] = μc
-              r[lit,6] = xi(Ξ[1])
-              r[lit,7] = σac
-              r[lit,8] = σkc
+              @turbo for i in Base.OneTo(nep)
+                r[lit,5 + i] = ψc[i]
+              end
+              r[lit, 6 + nep] = xi(Ξ[1])
+              r[lit, 7 + nep] = σac
+              r[lit, 8 + nep] = σkc
               push!(treev, couple(Ξ, idf, 1))
             end
             lthin = zero(Int64)
@@ -466,7 +549,7 @@ end
 
 """
     update_x!(bix ::Int64,
-              Ξ   ::Vector{sTpe},
+              Ξ   ::Vector{sTfpe},
               idf ::Vector{iBffs},
               σa  ::Float64,
               σk  ::Float64,
@@ -477,7 +560,7 @@ end
 Perform a punkeek trait update for an internal branch and its descendants.
 """
 function update_x!(bix ::Int64,
-                   Ξ   ::Vector{sTpe},
+                   Ξ   ::Vector{sTfpe},
                    idf ::Vector{iBffs},
                    σa  ::Float64,
                    σk  ::Float64,
@@ -496,9 +579,14 @@ function update_x!(bix ::Int64,
   ## update parent
   # if mrca
   if root && iszero(e(ξi))
-    # if crown
-    ξ2  = Ξ[i2]
-    ll, sσa, sσk = _crown_update!(ξi, ξ1, ξ2, σa, σk, ll, sσa, sσk)
+    #if stem fossil
+    if isfossil(bi)
+      ll, sσa, sσk = _fstem_update(ξi, ξ1, σa, ll, sσa)
+    else
+      # if crown
+      ξ2  = Ξ[i2]
+      ll, sσa, sσk = _crown_update!(ξi, ξ1, ξ2, σa, σk, ll, sσa, sσk)
+    end
   else
   # if stem
     if root
@@ -514,7 +602,14 @@ function update_x!(bix ::Int64,
     isd = iszero(i2)
     # if duo
     if isd
-      ll, sσa = _update_duo_x!(lξi, ξ1, σa, ll, sσa)
+      if ifx(b1) 
+        xsi = xstd(b1)
+        if !iszero(xsi)
+          ll, sσa = _update_duo_x!(lξi, ξ1, xavg(b1), xsi, σa, ll, sσa)
+        end
+      else
+        ll, sσa = _update_duo_x!(lξi, ξ1, σa, ll, sσa)
+      end
     # if triad
     else
       ξ2  = Ξ[i2]
@@ -562,41 +657,53 @@ end
 
 
 """
-    update_fs!(bix::Int64,
-               Ξ  ::Vector{sTpe},
-               idf::Vector{iBffs},
-               llc::Float64,
-               λ  ::Float64,
-               μ  ::Float64,
-               σa ::Float64,
-               σk ::Float64,
-               ns ::Float64,
-               ne ::Float64,
-               L  ::Float64,
-               sσa::Float64, 
-               sσk::Float64)
+    update_fs!(bix ::Int64,
+               Ξ   ::Vector{sTfpe},
+               idf ::Vector{iBffs},
+               llc ::Float64,
+               λ   ::Float64,
+               μ   ::Float64,
+               ψ   ::Vector{Float64},
+               ψts ::Vector{Float64},
+               σa  ::Float64,
+               σk  ::Float64,
+               ns  ::Float64,
+               ne  ::Float64,
+               L   ::Float64,
+               eixi::Vector{Int64},
+               eixf::Vector{Int64}
+               sσa ::Float64, 
+               sσk ::Float64,
+               xis ::Vector{Float64},
+               xfs ::Vector{Float64},
+               es  ::Vector{Float64})
 
 Forward simulation proposal function for constant punkeek.
 """
-function update_fs!(bix::Int64,
-                    Ξ  ::Vector{sTpe},
-                    idf::Vector{iBffs},
-                    llc::Float64,
-                    λ  ::Float64,
-                    μ  ::Float64,
-                    σa ::Float64,
-                    σk ::Float64,
-                    ns ::Float64,
-                    ne ::Float64,
-                    L  ::Float64,
-                    sσa::Float64, 
-                    sσk::Float64,
-                    xis::Vector{Float64},
-                    xfs::Vector{Float64},
-                    es ::Vector{Float64})
+function update_fs!(bix ::Int64,
+                    Ξ   ::Vector{sTfpe},
+                    idf ::Vector{iBffs},
+                    llc ::Float64,
+                    λ   ::Float64,
+                    μ   ::Float64,
+                    ψ   ::Vector{Float64},
+                    ψts ::Vector{Float64},
+                    σa  ::Float64,
+                    σk  ::Float64,
+                    ns  ::Float64,
+                    ne  ::Float64,
+                    L   ::Float64,
+                    eixi::Vector{Int64},
+                    eixf::Vector{Int64},
+                    sσa ::Float64, 
+                    sσk ::Float64,
+                    xis ::Vector{Float64},
+                    xfs ::Vector{Float64},
+                    es  ::Vector{Float64})
 
-  bi = idf[bix]
-  ξc = Ξ[bix]
+  bi  = idf[bix]
+  ξc  = Ξ[bix]
+  ixi = eixi[bix]
 
   llr = NaN
   sσar = sσkr = 0.0
@@ -608,12 +715,30 @@ function update_fs!(bix::Int64,
       xav, xsd = xavg(bi), xstd(bi)
     end
 
-    ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, σa, σk, xis, xfs, es)
-  # if mid branch
+    # fossil terminal branch
+    if isfossil(bi)
+      ixf = eixf[bix]
+
+      ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, ψ, σa, σk, ψts, ixi, ixf, 
+                  xis, xfs, es)
+
+      # if terminal but not successful proposal, update extinct
+      if !isfinite(llr)
+        ξp, llr = fsbi_et(sTfpe_wofe(ξc), bi, λ, μ, ψ, σa, σk, ψts, ixf)
+      end
+
+    # non-fossil terminal branch
+    else
+      ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, ψ, σa, σk, ψts, ixi, 
+                  xis, xfs, es)
+    end
+
+  # if internal non-bifurcating
   elseif iszero(d2(bi))
 
     ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk, xis, xfs)
-  # if trio branch
+
+  # if internal bifurcating branch
   elseif e(bi) > 0.0
 
     ξp, llr, sσar, sσkr = 
@@ -622,12 +747,15 @@ function update_fs!(bix::Int64,
 
   if isfinite(llr)
 
+    nep = lastindex(ψts) + 1
     σa2, σk2 = σa^2, σk^2
 
     ll1, ns1, ne1, L1, sσa1, sσk1 = 
-      llik_cpe_track(ξp, λ, μ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+      llik_cfpe_track(ξp, λ, μ, ψ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+        ti(bi), ψts, ixi, nep)
     ll0, ns0, ne0, L0, sσa0, sσk0 = 
-      llik_cpe_track(ξc, λ, μ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+      llik_cfpe_track(ξc, λ, μ, ψ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+        ti(bi), ψts, ixi, nep)
 
     llc += ll1  - ll0 + llr
     ns  += ns1  - ns0
@@ -647,25 +775,34 @@ end
 
 
 """
-    fsbi_t(bi  ::iBffs,
+    fsbi_t(bi ::iBffs,
            xav::Float64,
            xst::Float64,
-           ξc  ::sTpe,
-           λ   ::Float64,
-           μ   ::Float64,
-           σa  ::Float64,
-           σk  ::Float64)
+           ξc ::sTfpe,
+           λ  ::Float64,
+           μ  ::Float64,
+           ψ   ::Vector{Float64},
+           σa ::Float64,
+           σk ::Float64,
+           ψts ::Vector{Float64},
+           ix  ::Int64,
+           xis::Vector{Float64},
+           xfs::Vector{Float64},
+           es ::Vector{Float64})
 
-Forward simulation for terminal branch.
+Forward simulation for **non-fossil** terminal branch.
 """
 function fsbi_t(bi ::iBffs,
                 xav::Float64,
                 xst::Float64,
-                ξc ::sTpe,
+                ξc ::sTfpe,
                 λ  ::Float64,
                 μ  ::Float64,
+                ψ  ::Vector{Float64},
                 σa ::Float64,
                 σk ::Float64,
+                ψts::Vector{Float64},
+                ix ::Int64,
                 xis::Vector{Float64},
                 xfs::Vector{Float64},
                 es ::Vector{Float64})
@@ -682,9 +819,11 @@ function fsbi_t(bi ::iBffs,
   empty!(xfs)
   empty!(es)
 
+  nep = lastindex(ψts) + 1
+
   t0, na, nn, llr =
-    _sim_cpe_t(e(bi), λ, μ, xi(ξc), σa, σk, lc, iρi, 0, 1, 500, 
-               xis, xfs, es)
+    _sim_cfpe_t(e(bi), λ, μ, ψ, xi(ξc), σa, σk, ψts, ix, nep, lc, iρi, 
+      0, 1, 500, xis, xfs, es)
 
   if na < 1 || isnan(llr)
     return t0, NaN
@@ -729,121 +868,172 @@ end
 
 
 
-
 """
-    wfix_t(ξi ::T, 
-           ξ1 ::T,
-           ei ::Float64,
-           acr::Float64,
-           xfs::Vector{Float64}, 
-           xcs::Vector{Float64}, 
-           σa2::Float64) where {T <: Tpe}
+    fsbi_t(bi ::iBffs,
+           xav::Float64,
+           xst::Float64,
+           ξc ::sTfpe,
+           λ  ::Float64,
+           μ  ::Float64,
+           ψ  ::Vector{Float64},
+           σa ::Float64,
+           σk ::Float64,
+           ψts::Vector{Float64},
+           ixi::Int64,
+           ixf::Int64,
+           xis::Vector{Float64},
+           xfs::Vector{Float64},
+           es ::Vector{Float64})
 
-Choose most likely simulated lineage to fix with respect to the
-trait value **without uncertainty** of terminal branches.
+Forward simulation for **fossil** terminal branch.
 """
-function wfix_t(ξi ::T,
-                ei ::Float64,
+function fsbi_t(bi ::iBffs,
                 xav::Float64,
-                acr::Float64,
-                xis::Vector{Float64},
-                es ::Vector{Float64},
+                xst::Float64,
+                ξc ::sTfpe,
+                λ  ::Float64,
+                μ  ::Float64,
+                ψ  ::Vector{Float64},
                 σa ::Float64,
-                na ::Int64) where {T <: Tpe}
+                σk ::Float64,
+                ψts::Vector{Float64},
+                ixi::Int64,
+                ixf::Int64,
+                xis::Vector{Float64},
+                xfs::Vector{Float64},
+                es ::Vector{Float64})
 
-  # select best from proposal
-  sp, wt, pp = 0.0, 0, -Inf
-  for i in Base.OneTo(na)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
-    sp += p
-    if p > pp
-      pp = p
-      wt = i
-    end
-  end
-
-  # extract current xcs and estimate ratio
+  # forward simulation during branch length
   empty!(xis)
+  empty!(xfs)
   empty!(es)
-  nac, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+  nep = lastindex(ψts) + 1
 
-  sc, pc = 0.0, NaN
-  for i in Base.OneTo(nac)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
-    sc += p
-    if xis[i] === xic
-      pc = p
+  t0, na, nf, nn = 
+    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξc), σa, σk, ψts, ixi, nep, 
+      0, 0, 1, 500, xis, xfs, es)
+
+  if na < 1 || nf > 0 || nn > 500
+    return t0, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() # log-probability
+
+  # add sampling fraction
+  nac = ni(bi)                # current ni
+  iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
+  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+
+  # if fixed node
+  wti = zero(Int64)
+  if ifx(bi)
+
+    # if no uncertainty around trait value
+    if iszero(xst)
+       wti, acr, xp  = wfix_t(ξc, e(bi), xav, acr, xis, es, σa, na)
+
+    # if uncertainty around trait value
+    else
+       wti, acr, xp  = wfix_t(ξc, e(bi), xav, xst, acr, xis, xfs, es, σa, na)
+    end
+
+  # if unfixed node
+  else
+    wti = fIrand(na) + 1
+  end
+
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+
+  if lU < acr
+
+    if wti <= div(na,2)
+      fixtip1!(t0, wti, 0, xp)
+    else
+      fixtip2!(t0, na - wti + 1, 0, xp)
+    end
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
+          iρi, na, nn, 500)
+    end
+
+    if lU < acr
+
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
+
+      tx, na, nn, acr =
+        fossiltip_sim!(t0, tf(bi),  λ, μ, ψ, σa, σk, ψts, ixf, 
+          nep, acr, lU, iρi, na, nn, 500)
+
+      if lU < acr
+
+        llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+        setnt!(bi, ntp)      # set new nt
+        setni!(bi, na)       # set new ni
+
+        return t0, llr
+      end
     end
   end
 
-  # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
-
-  return wt, acr, xav
+  return t0, NaN
 end
 
 
 
 
-
-
 """
-    wfix_t(ξi ::T,
-           ei ::Float64,
-           xav::Float64,
-           xst::Float64,
-           acr::Float64,
-           xis::Vector{Float64},
-           xfs::Vector{Float64},
-           es ::Vector{Float64},
-           σa ::Float64,
-           na ::Int64) where {T <: Tpe}
+    fsbi_et(t0  ::sTfpe,
+            bi  ::iBffs,
+            αλ  ::Float64,
+            αμ  ::Float64,
+            σλ  ::Float64,
+            σμ  ::Float64,
+            ψ   ::Vector{Float64},
+            ψts ::Vector{Float64},
+            ixf ::Int64,
+            δt  ::Float64,
+            srδt::Float64)
 
-Choose most likely simulated lineage to fix with respect to the
-trait value **with uncertainty** of terminal branches.
+Forward simulation for fossil terminal branch `bi`.
 """
-function wfix_t(ξi ::T,
-                ei ::Float64,
-                xav::Float64,
-                xst::Float64,
-                acr::Float64,
-                xis::Vector{Float64},
-                xfs::Vector{Float64},
-                es ::Vector{Float64},
-                σa ::Float64,
-                na ::Int64) where {T <: Tpe}
+function fsbi_et(t0  ::sTfpe,
+                 bi  ::iBffs,
+                 λ   ::Float64,
+                 μ   ::Float64,
+                 ψ   ::Vector{Float64},
+                 σλ  ::Float64,
+                 σμ  ::Float64,
+                 ψts ::Vector{Float64},
+                 ixf ::Int64,
+                 δt  ::Float64,
+                 srδt::Float64)
 
-  # select best from proposal
-  sp, wt, xp, pp = 0.0, 0, NaN, -Inf
-  for i in Base.OneTo(na)
-    p   = duodnorm(xfs[i], xis[i], xav, sqrt(es[i])*σa, xst)
-    sp += p
-    if p > pp
-      pp = p
-      xp = xfs[i]
-      wt = i
-    end
+  nep = lastindex(ψts) + 1
+  lU  = -randexp()            # log-probability
+  nac = ni(bi)                # current ni
+  iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+
+  # if terminal fossil branch
+  tx, na, nn, acr =
+    fossiltip_sim!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, 
+      acr, lU, iρi, 1, 1, 500)
+
+  if lU < acr
+
+    llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+    setni!(bi, na)       # set new ni
+
+    return t0, llr
   end
 
-  # extract current xcs and estimate ratio
-  empty!(xix)
-  empty!(xfx)
-  empty!(es)
-  nac, xc, xic = _xisatt!(ξi, ei, xcs, es, 0.0, 0, NaN, NaN)
-
-  sc, pc = 0.0, NaN
-  for i in Base.OneTo(nac)
-    p   = duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
-    sc += p
-    if xis[i] === xic
-      pc = p
-    end
-  end
-
-  # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
-
-  return wt, acr, xp
+  return t0, NaN
 end
 
 
@@ -851,31 +1041,37 @@ end
 
 """
     fsbi_m(bi::iBffs,
-           ξi::sTpe,
-           ξ1::sTpe,
+           ξi::sTfpe,
+           ξ1::sTfpe,
            λ ::Float64,
            μ ::Float64,
-           σa::Float64,
-           σk::Float64,
+           ψ  ::Vector{Float64},
+           σa ::Float64,
+           σk ::Float64,
+           ψts::Vector{Float64},
            xfs::Vector{Float64},
            xcs::Vector{Float64})
 
 Forward simulation for internal branch.
 """
 function fsbi_m(bi::iBffs,
-                ξi::sTpe,
-                ξ1::sTpe,
+                ξi::sTfpe,
+                ξ1::sTfpe,
                 λ ::Float64,
                 μ ::Float64,
-                σa::Float64,
-                σk::Float64,
+                ψ  ::Vector{Float64},
+                σa ::Float64,
+                σk ::Float64,
+                ψts::Vector{Float64},
                 xfs::Vector{Float64},
                 xcs::Vector{Float64})
 
   # forward simulation during branch length
   empty!(xfs)
 
-  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500, xfs)
+  t0, na, nn = 
+    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
+      ψts, ixf, nep, 0, 1, 500, xfs)
 
   if na < 1 || nn >= 500
     return t0, NaN, NaN
@@ -883,7 +1079,7 @@ function fsbi_m(bi::iBffs,
 
   ntp = na
 
-  lU = -randexp() #log-probability
+  lU = -randexp() # log-probability
 
   # add sampling fraction
   nac = ni(bi)                # current ni
@@ -904,13 +1100,14 @@ function fsbi_m(bi::iBffs,
 
     # simulate remaining tips until the present
     if na > 1
-      tx, na, nn, acr = 
-        tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, 500)
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
+          iρi, na, nn, 500)
     end
 
     if lU < acr
       na  -= 1
-      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
+      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
       setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
 
@@ -928,90 +1125,39 @@ end
 
 
 """
-    wfix_m(ξi ::T, 
-           ξ1 ::T,
-           ei ::Float64,
-           acr::Float64,
-           xfs::Vector{Float64}, 
-           xcs::Vector{Float64}, 
-           σa2::Float64) where {T <: Tpe}
-
-Choose most likely simulated lineage to fix with respect to daughter
-for `mid` branches.
-"""
-function wfix_m(ξi ::T,
-                ξ1 ::T,
-                ei ::Float64,
-                acr::Float64,
-                xfs::Vector{Float64},
-                xcs::Vector{Float64},
-                σa ::Float64) where {T <: Tpe}
-
-  # select best from proposal
-  xf1, sre1 = xf(ξ1), sqrt(e(ξ1))
-  sp, i, wt, xp, pp = 0.0, 0, 0, NaN, -Inf
-  for xfi in xfs
-    p   = dnorm(xfi, xf1, sre1*σa)
-    sp += p
-    i  += 1
-    if p > pp
-      pp  = p
-      xp  = xfi
-      wt  = i
-    end
-  end
-
-  # extract current xcs and estimate ratio
-  empty!(xcs)
-  xc, shc = _xatt!(ξi, ei, xcs, 0.0, NaN, false)
-
-  sc, pc = 0.0, NaN
-  for xci in xcs
-    p   = dnorm(xci, xf1, sre1*σa)
-    sc += p
-    if xc === xci
-      pc = p
-    end
-  end
-
-  # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
-
-  return xp, wt, pp, pc, acr
-end
-
-
-
-
-
-"""
     fsbi_i(bi ::iBffs,
-           ξi ::sTpe,
-           ξ1 ::sTpe,
-           ξ2 ::sTpe,
+           ξi ::sTfpe,
+           ξ1 ::sTfpe,
+           ξ2 ::sTfpe,
            λ  ::Float64,
            μ  ::Float64,
+           ψ  ::Vector{Float64},
            σa ::Float64,
            σk ::Float64,
-           xfs::Vector{Float64})
+           ψts::Vector{Float64},
+           xfs::Vector{Float64},
+           xcs::Vector{Float64})
 
 Forward simulation for internal branch.
 """
 function fsbi_i(bi ::iBffs,
-                ξi ::sTpe,
-                ξ1 ::sTpe,
-                ξ2 ::sTpe,
+                ξi ::sTfpe,
+                ξ1 ::sTfpe,
+                ξ2 ::sTfpe,
                 λ  ::Float64,
                 μ  ::Float64,
+                ψ  ::Vector{Float64},
                 σa ::Float64,
                 σk ::Float64,
+                ψts::Vector{Float64},
                 xfs::Vector{Float64},
                 xcs::Vector{Float64})
 
   # forward simulation during branch length
   empty!(xfs)
-
-  t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500, xfs)
+  t0, na, nn = 
+    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
+      ψts, ixf, nep, 0, 1, 500, xfs)
 
   if na < 1 || nn >= 500
     return t0, NaN, NaN, NaN
@@ -1028,7 +1174,7 @@ function fsbi_i(bi ::iBffs,
 
   ## choose most likely lineage to fix
   wt, xp, shp, pp, xc, shc, pc, acr = 
-    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, xcs, σa^2, σk^2) 
+    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, xcs, σa^2, σk^2)
 
   if lU < acr
 
@@ -1041,8 +1187,9 @@ function fsbi_i(bi ::iBffs,
 
     # simulate remaining tips until the present
     if na > 1
-      tx, na, nn, acr = 
-        tip_sims!(t0, tf(bi), λ, μ, σa, σk, acr, lU, iρi, na, nn, 500)
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
+          iρi, na, nn, 500)
     end
 
     if lU < acr
@@ -1070,88 +1217,35 @@ end
 
 
 """
-    wfix_i(ξi ::T,
-           ξ1 ::T,
-           ξ2 ::T,
-           ei ::Float64,
-           acr::Float64,
-           xfs::Vector{Float64},
-           xcs::Vector{Float64},
-           σa2::Float64,
-           σk2::Float64) where {T <: Tpe}
-
-Choose most likely simulated lineage to fix with respect to daughter
-for bifurcating `i` branches.
-"""
-function wfix_i(ξi ::T,
-                ξ1 ::T,
-                ξ2 ::T,
-                ei ::Float64,
-                acr::Float64,
-                xfs::Vector{Float64},
-                xcs::Vector{Float64},
-                σa2::Float64,
-                σk2::Float64) where {T <: Tpe}
-
-  # select best from proposal
-  sp, i, wt, xp, pp, shp = 0.0, 0, 0, NaN, -Inf, false
-  for xfi in xfs
-    i  += 1
-    pk1 = llik_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-    pk2 = llik_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
-    sp += exp(pk1) + exp(pk2)
-    pfi = max(pk1, pk2)
-
-    if pfi > pp
-      pp  = pfi
-      xp  = xfi
-      shp = pk1 > pk2
-      wt  = i
-    end
-  end
-
-  # extract current xcs and estimate ratio
-  empty!(xcs)
-  xc, shc = _xatt!(ξi, ei, xcs, 0.0, NaN, false)
-
-  sc, pc = 0.0, NaN
-  for xci in xcs
-    pk1 = llik_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-    pk2 = llik_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
-    sc += exp(pk1) + exp(pk2)
-
-    if xc === xci
-      pc = shc ? pk1 : pk2
-    end
-  end
-
-  # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
-
-  return wt, xp, shp, pp, xc, shc, pc, acr
-end
-
-
-
-
-"""
-    tip_sims!(tree::sTpe,
+    tip_sims!(tree::sTfpe,
               t   ::Float64,
               λ   ::Float64,
               μ   ::Float64,
+              ψ   ::Vector{Float64},
+              σa  ::Float64,
+              σk  ::Float64,
+              ψts ::Vector{Float64},
+              ix  ::Int64,
+              nep ::Int64,
               lr  ::Float64,
               lU  ::Float64,
               iρi ::Float64,
-              na  ::Int64)
+              na  ::Int64,
+              nn  ::Int64,
+              nlim::Int64)
 
-Continue simulation until time `t` for unfixed tips in `tree`.
+Continue simun until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::sTpe,
+function tip_sims!(tree::sTfpe,
                    t   ::Float64,
                    λ   ::Float64,
                    μ   ::Float64,
+                   ψ   ::Vector{Float64},
                    σa  ::Float64,
                    σk  ::Float64,
+                   ψts ::Vector{Float64},
+                   ix  ::Int64,
+                   nep ::Int64,
                    lr  ::Float64,
                    lU  ::Float64,
                    iρi ::Float64,
@@ -1166,7 +1260,8 @@ function tip_sims!(tree::sTpe,
 
         # simulate
         stree, na, nn, lr = 
-          _sim_cpe_it(t, λ, μ, xf(tree), σa, σk, lr, lU, iρi, na-1, nn, nlim)
+          _sim_cfpe_it(t, λ, μ, ψ, xf(tree), σa, σk, ψts, ix, nep, 
+            lr, lU, iρi, na-1, nn, nlim)
 
         if isnan(lr) || nn >= nlim
           return tree, na, nn, NaN
@@ -1184,9 +1279,11 @@ function tip_sims!(tree::sTpe,
       end
     else
       tree.d1, na, nn, lr = 
-        tip_sims!(tree.d1, t, λ, μ, σa, σk, lr, lU, iρi, na, nn, nlim)
+        tip_sims!(tree.d1, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
+          lr, lU, iρi, na, nn, nlim)
       tree.d2, na, nn, lr = 
-        tip_sims!(tree.d2, t, λ, μ, σa, σk, lr, lU, iρi, na, nn, nlim)
+        tip_sims!(tree.d2, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
+          lr, lU, iρi, na, nn, nlim)
     end
 
     return tree, na, nn, lr
@@ -1194,6 +1291,79 @@ function tip_sims!(tree::sTpe,
 
   return tree, na, nn, NaN
 end
+
+
+
+
+"""
+    fossiltip_sim!(tree::sTfpe,
+                   t   ::Float64,
+                   λ   ::Float64,
+                   μ   ::Float64,
+                   ψ   ::Vector{Float64},
+                   σa  ::Float64,
+                   σk  ::Float64,
+                   ψts ::Vector{Float64},
+                   ix  ::Int64,
+                   nep ::Int64,
+                   lr  ::Float64,
+                   lU  ::Float64,
+                   iρi ::Float64,
+                   na  ::Int64,
+                   nn  ::Int64,
+                   nlim::Int64)
+
+Continue simulation until time `t` for the fixed fossil tip in `tree`.
+"""
+function fossiltip_sim!(tree::sTfpe,
+                        t   ::Float64,
+                        λ   ::Float64,
+                        μ   ::Float64,
+                        ψ   ::Vector{Float64},
+                        σa  ::Float64,
+                        σk  ::Float64,
+                        ψts ::Vector{Float64},
+                        ix  ::Int64,
+                        nep ::Int64,
+                        lr  ::Float64,
+                        lU  ::Float64,
+                        iρi ::Float64,
+                        na  ::Int64,
+                        nn  ::Int64,
+                        nlim::Int64)
+
+
+  if lU < lr && nn < nlim
+
+    if istip(tree)
+
+      stree, na, nn, lr = 
+        _sim_cfpe_it(t, λ, μ, ψ, xf(tree), σa, σk, ψts, ix, nep, 
+          lr, lU, iρi, na-1, nn, nlim)
+
+      if !isfinite(lr) || nn >= nlim
+        return tree, na, nn, NaN
+      end
+
+      # merge to current tip
+      tree.d1 = stree
+    elseif isfix(tree.d1)
+      tree.d1, na, nn, lr =
+        fossiltip_sim!(tree.d1, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
+          lr, lU, iρi, na, nn, nlim)
+    else
+      tree.d2, na, nn, lr =
+        fossiltip_sim!(tree.d2, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
+          lr, lU, iρi, na, nn, nlim)
+    end
+
+    return tree, na, nn, lr
+  end
+
+  return tree, na, nn, NaN
+end
+
+
 
 
 

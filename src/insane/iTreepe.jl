@@ -76,6 +76,8 @@ function sTpe(tree::sTpe)
 end
 
 
+
+
 # """
 #     sTpe(tree::sT_label)
 
@@ -92,79 +94,108 @@ end
 
 
 
-# """
-#     sTfbd
+"""
+    sTfpe
 
-# The simplest composite recursive type of supertype `sTf`
-# representing a binary phylogenetic tree for `insane` use,
-# with the following fields:
+The simplest composite recursive type of supertype `sTf`
+representing a binary phylogenetic tree for `insane` use,
+with the following fields:
 
-#   d1: daughter tree 1
-#   d2: daughter tree 2
-#   e:  edge
-#   iμ: is an extinction node
-#   iψ: is a fossil node
-#   fx: if it is fix
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  iμ: is an extinction node
+  iψ: is a fossil node
+  xi: initial trait value
+  xf: final trait value
+  sh: if d1 is cladogenetic
+  fx: if it is fix
 
-#     sTfbd(e::Float64)
+    sTfpe(e::Float64)
 
-# Constructs an empty `sTfbd` object with edge `e`.
+Constructs an empty `sTfpe` object with edge `e`.
 
-#     sTfbd(d1::sTfbd, d2::sTfbd, e::Float64)
+    sTfpe(d1::sTfpe, d2::sTfpe, e::Float64)
 
-# Constructs an `sTfbd` object with two `sTfbd` daughters and edge `e`.
+Constructs an `sTfpe` object with two `sTfpe` daughters and edge `e`.
 
-#     sTfbd(d1::sTfbd, e::Float64)
+    sTfpe(d1::sTfpe, e::Float64)
 
-# Constructs an `sTfbd` object with one sampled ancestor, one `sTfbd` daughter and
-# edge `e`.
-# """
-# mutable struct sTfbd <: sT
-#   d1::sTfbd
-#   d2::sTfbd
-#   e ::Float64
-#   iμ::Bool
-#   iψ::Bool
-#   fx::Bool
+Constructs an `sTfpe` object with one sampled ancestor, one `sTfpe` daughter and
+edge `e`.
+"""
+mutable struct sTfpe <: sT
+  d1::sTfpe
+  d2::sTfpe
+  e ::Float64
+  iμ::Bool
+  iψ::Bool
+  xi::Float64
+  xf::Float64
+  sh::Bool
+  fx::Bool
 
-#   sTfbd() = new()
-#   sTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
-#     (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
-#   sTfbd(d1::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
-#     (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x)
-#   sTfbd(d1::sTfbd, d2::sTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool) =
-#     new(d1, d2, e, iμ, iψ, fx)
-# end
+  sTfpe() = new()
+  sTfpe(e::Float64, iμ::Bool, iψ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
+    (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.xi = xi; x.xf = xf; x.sh = sh; x.fx = fx; x)
+  sTfpe(d1::sTfpe, e::Float64, iμ::Bool, iψ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
+    (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.xi = xi; x.xf = xf; x.sh = sh; x.fx = fx; x)
+  sTfpe(d1::sTfpe, d2::sTfpe, e::Float64, iμ::Bool, iψ::Bool, xi::Float64, xf::Float64, sh::Bool, fx::Bool) =
+    new(d1, d2, e, iμ, iψ, xi, xf, sh, fx)
+end
 
-# # pretty-printing
-# function Base.show(io::IO, t::sTfbd)
-#   nt = ntips(t)
-#   nf = nfossils(t)
+# pretty-printing
+function Base.show(io::IO, t::sTfpe)
+  nt = ntips(t)
+  nf = nfossils(t)
 
-#   print(io, "insane simple fossil tree with ",
-#     nt , " tip",  (isone(nt) ? "" : "s" ),
-#     ", (", ntipsextinct(t)," extinct) and ",
-#     nf," fossil", (isone(nf) ? "" : "s" ))
-# end
-
-
+  print(io, "insane simple punkeek fossil tree with ",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
+    nf," fossil", (isone(nf) ? "" : "s" ))
+end
 
 
-# """
-#     sTfbd(tree::sTfbd)
 
-# Creates a copy of a `sTfbd` tree.
-# """
-# function sTfbd(tree::sTfbd)
-#   if def1(tree)
-#     if def2(tree)
-#       sTfbd(sTfbd(tree.d1), sTfbd(tree.d2), e(tree),
-#         isextinct(tree), isfossil(tree), isfix(tree))
-#     else
-#       sTfbd(sTfbd(tree.d1), e(tree),
-#         isextinct(tree), isfossil(tree), isfix(tree))
-#     end
-#   else
-#     sTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree))
-#   end
-# end
+
+"""
+    sTfpe(tree::sTfpe)
+
+Creates a copy of a `sTfpe` tree.
+"""
+function sTfpe(tree::sTfpe)
+  if def1(tree)
+    if def2(tree)
+      sTfpe(sTfpe(tree.d1), sTfpe(tree.d2), e(tree),
+        isextinct(tree), isfossil(tree), xi(tree), xf(tree), sh(tree), 
+        isfix(tree))
+    else
+      sTfpe(sTfpe(tree.d1), e(tree), isextinct(tree), isfossil(tree), 
+        xi(tree), xf(tree), sh(tree), isfix(tree))
+    end
+  else
+    sTfpe(e(tree), isextinct(tree), isfossil(tree), xi(tree), xf(tree), 
+      sh(tree), isfix(tree))
+  end
+end
+
+
+
+
+"""
+    sTfpe_wofe(tree::sTfpe)
+
+Creates a copy of a `sTfpe` tree without fossils extinct tips.
+"""
+function sTfpe_wofe(tree::sTfpe)
+  if def1(tree) && def2(tree)
+    sTfpe(sTfpe_wofe(tree.d1), sTfpe_wofe(tree.d2),
+      e(tree), isextinct(tree), isfossil(tree), xi(tree), xf(tree), 
+      sh(tree), isfix(tree))
+  else
+    sTfpe(e(tree), isextinct(tree), isfossil(tree), xi(tree), xf(tree), 
+      sh(tree), isfix(tree))
+  end
+end
+
+

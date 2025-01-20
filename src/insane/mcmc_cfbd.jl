@@ -55,17 +55,15 @@ function insane_cfbd(tree    ::sTf_label;
                      pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
                      survival::Bool                  = true,
                      prints  ::Int64                 = 5,
-                     mxthf   ::Float64               = Inf,
+                     mxthf   ::Float64               = 0.1,
                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n   = ntips(tree)
   th  = treeheight(tree)
 
   # only include epochs where the tree occurs
-  tix = findfirst(x -> x < th, ψ_epoch)
-  if !isnothing(tix)
-    ψ_epoch = ψ_epoch[tix:end]
-  end
+  filter!(x -> x < th, ψ_epoch)
+  sort!(ψ_epoch, rev = true)
   nep = lastindex(ψ_epoch) + 1
 
   # make initial fossils per epoch vector
@@ -83,7 +81,6 @@ function insane_cfbd(tree    ::sTf_label;
       f_epoch = fill(0, nep)
     end
   end
-
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -166,13 +163,13 @@ function insane_cfbd(tree    ::sTf_label;
   @info "running constant fossilized birth-death"
 
   # adaptive phase
-  llc, prc, λc, μc, ψc, mc, ns, L =
+  llc, prc, λc, μc, ψc, mc, ns, ne, L =
      mcmc_burn_cfbd(Ξ, idf, λ_prior, μ_prior, ψ_prior, ψ_epoch, f_epoch, nburn,
         λc, μc, ψc, mc, th, rmλ, surv, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev =
-    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, ns, L, 
+    mcmc_cfbd(Ξ, idf, llc, prc, λc, μc, ψc, mc, ns, ne, L, 
       λ_prior, μ_prior, ψ_prior, ψ_epoch, f_epoch, th, rmλ, surv, bst, eixi, eixf, 
       pup, niter, nthin, nflush, ofile, prints)
 
@@ -281,7 +278,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
     next!(pbar)
   end
 
-  return llc, prc, λc, μc, ψc, mc, ns, L
+  return llc, prc, λc, μc, ψc, mc, ns, ne, L
 end
 
 
@@ -297,6 +294,7 @@ end
               ψc     ::Vector{Float64},
               mc     ::Float64,
               ns     ::Float64,
+              ne     ::Float64,
               L      ::Vector{Float64},
               λ_prior::NTuple{2,Float64},
               μ_prior::NTuple{2,Float64},
@@ -327,6 +325,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
                    ψc     ::Vector{Float64},
                    mc     ::Float64,
                    ns     ::Float64,
+                   ne     ::Float64,
                    L      ::Vector{Float64},
                    λ_prior::NTuple{2,Float64},
                    μ_prior::NTuple{2,Float64},
@@ -349,7 +348,6 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   el  = lastindex(idf)                    # number of branches
   L   = treelength(Ξ, ψ_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)   # number of fossilization events per epoch
-  ne  = Float64(ntipsextinct(Ξ))          # number of extinction events
   nep = lastindex(ψc)
 
   # logging
@@ -465,28 +463,30 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
 
+  return r, treev
 end
 
 
 
 
 """
-    update_fs!(bix::Int64,
-               Ξ  ::Vector{sTfbd},
-               idf::Vector{iBffs},
-               llc::Float64,
-               λ  ::Float64,
-               μ  ::Float64,
-               ψ  ::Float64,
-               ns ::Float64,
-               ne ::Float64,
-               L  ::Float64)
+    update_fs!(bix ::Int64,
+               Ξ   ::Vector{sTfbd},
+               idf ::Vector{iBffs},
+               llc ::Float64,
+               λ   ::Float64,
+               μ   ::Float64,
+               ψ   ::Vector{Float64},
+               ψts ::Vector{Float64},
+               ns  ::Float64,
+               ne  ::Float64,
+               L   ::Vector{Float64},
+               eixi::Vector{Int64},
+               eixf::Vector{Int64})
 
 Forward simulation proposal function for constant fossilized birth-death.
 """

@@ -199,8 +199,7 @@ end
 """
     _rplottree!(tree ::T,
                 xc   ::Float64,
-                nn   ::Int64,
-                nx   ::Int64,
+                i    ::Int64,
                 x    ::Array{Float64,1},
                 y    ::Array{Float64,1},
                 z    ::Array{Float64,1},
@@ -807,7 +806,7 @@ end
 
 Recipe for plotting punctuated equilibrium trees.
 """
-@recipe function f(tree::sTpe)
+@recipe function f(tree::T) where {T <: Tpe}
 
   x = Float64[]
   y = Float64[]
@@ -842,18 +841,19 @@ end
 
 
 """
-    _rplottrait!(tree::sTpe,
+    _rplottrait!(tree::T,
                  xc  ::Float64,
+                 yc  ::Float64,
                  x   ::Array{Float64,1},
-                 y   ::Array{Float64,1})
+                 y   ::Array{Float64,1}) where {T <: Tpe}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `sTpe`.
 """
-function _rplottrait!(tree::sTpe,
+function _rplottrait!(tree::T,
                       xc  ::Float64,
                       yc  ::Float64,
                       x   ::Array{Float64,1},
-                      y   ::Array{Float64,1})
+                      y   ::Array{Float64,1}) where {T <: Tpe}
 
   xii = xi(tree)
 

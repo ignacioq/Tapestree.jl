@@ -97,6 +97,19 @@ end
 
 
 
+"""
+    dnorm(x::Float64, μ::Float64, σ::Float64)
+
+Compute the logarithmic transformation of the 
+**Normal** density with mean `μ` and sd `σ` for `x`.
+"""
+dnorm(x::Float64, μ::Float64, σ::Float64) = 
+  1.0/(2.506628274631000241612355239340104162693023681640625 * σ) * 
+  exp(-0.5 * ((x - μ)/σ)^2)
+
+
+
+
 
 """
     logdnorm(x::Float64, μ::Float64, σ²::Float64)

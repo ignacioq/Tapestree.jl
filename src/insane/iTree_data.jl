@@ -37,7 +37,7 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 Return initial trait value.
 """
-xi(tree::T) where {T <: sTpe} = getproperty(tree, :xi)
+xi(tree::T) where {T <: Tpe} = getproperty(tree, :xi)
 xi(tree::T) where {T <: Tx} = getproperty(tree, :xi)
 
 
@@ -78,7 +78,7 @@ isfix(tree::sTxs)   = true
 
 Return `true` if punkeek shift is in `d1`, `false` if in `d2`
 """
-sh(tree::T) where {T <: sTpe} = getproperty(tree, :sh)
+sh(tree::T) where {T <: Tpe} = getproperty(tree, :sh)
 
 
 
@@ -2131,21 +2131,21 @@ end
 
 
 """
-    _xatt!(tree::sTpe,
+    _xatt!(tree::T,
            c   ::Float64,
            xs  ::Vector{Float64},
            t   ::Float64,
            x   ::Float64,
-           s  ::Bool)
+           s  ::Bool) where {T <: Tpe}
 
-Return speciation rates, `xs`, at time `c` for `tree`.
+Return trait `x` at time `c` for `tree`.
 """
-function _xatt!(tree::sTpe,
+function _xatt!(tree::T,
                 c   ::Float64,
                 xs  ::Vector{Float64},
                 t   ::Float64,
                 x   ::Float64,
-                s  ::Bool)
+                s  ::Bool) where {T <: Tpe}
 
   et = e(tree)
 
@@ -2162,13 +2162,105 @@ function _xatt!(tree::sTpe,
 
     return x, s
   elseif def1(tree)
-      x, s = _xatt!(tree.d1, c, xs, t + et, x, s)
+    x, s = _xatt!(tree.d1, c, xs, t + et, x, s)
+
+    if def2(tree)
       x, s = _xatt!(tree.d2, c, xs, t + et, x, s)
+    end
   end
 
   return x, s
 end
 
+
+
+
+"""
+    _xisatt!(tree::T,
+             c   ::Float64,
+             xis ::Vector{Float64},
+             es  ::Vector{Float64},
+             t   ::Float64,
+             na  ::Int64,
+             xic ::Float64) where {T <: Tpe}
+
+Return initial traits and edge lengths for those alive at time `c` for `tree`.
+"""
+function _xisatt!(tree::T,
+                  c   ::Float64,
+                  xis ::Vector{Float64},
+                  es  ::Vector{Float64},
+                  t   ::Float64,
+                  na  ::Int64,
+                  xic ::Float64) where {T <: Tpe}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+    na += 1
+
+    if isfix(tree)
+      xic = xi(tree)
+    end
+
+    push!(xis, xi(tree))
+    push!(es, c - t)
+
+    return na, xic
+  elseif def1(tree)
+    na, xic = _xisatt!(tree.d1, c, xis, es, t + et, na, xic)
+    if def2(tree)
+      na, xic = _xisatt!(tree.d2, c, xis, es, t + et, na, xic)
+    end
+  end
+
+  return na, xic
+end
+
+
+
+
+"""
+   _xisatt!(tree::T,
+            c   ::Float64,
+            xis ::Vector{Float64},
+            es  ::Vector{Float64},
+            t   ::Float64) where {T <: Tpe}
+
+Return initial traits and edge lengths for those alive at time `c` for `tree`.
+"""
+function _xisatt!(tree::T,
+                  c   ::Float64,
+                  xis ::Vector{Float64},
+                  es  ::Vector{Float64},
+                  t   ::Float64,
+                  na  ::Int64,
+                  xic ::Float64,
+                  xc  ::Float64) where {T <: Tpe}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+    na += 1
+
+    if isfix(tree)
+      xic = xi(tree)
+      xc  = xf(tree)
+    end
+
+    push!(xis, xi(tree))
+    push!(es, c - t)
+
+    return na, xic, xc
+  elseif def1(tree)
+    na, xic, xc = _xisatt!(tree.d1, c, xis, es, t + et, na, xic, xc)
+    if def2(tree)
+      na, xic, xc = _xisatt!(tree.d2, c, xis, es, t + et, na, xic, xc)
+    end
+  end
+
+  return na, xic, xc
+end
 
 
 
@@ -2324,11 +2416,11 @@ end
 
 
 """
-    tiptraits(tree::sTpe)
+    tiptraits(tree::T) where {T <: Tpe}
 
-Extract tip rates from a sTpe tree
+Extract tip rates from a `Tpe` tree.
 """
-function tiptraits(tree::sTpe)
+function tiptraits(tree::T) where {T <: Tpe}
   x = Float64[]
   _tiptraits!(x, tree)
   return x
@@ -2336,11 +2428,11 @@ end
 
 
 """
-    _tiptraits!(x::Vector{Float64}, tree::sTpe)
+    _tiptraits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
 
-Extract tip rates from a sTpe tree
+Extract tip rates from a `Tpe` tree.
 """
-function _tiptraits!(x::Vector{Float64}, tree::sTpe)
+function _tiptraits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
 
   if def1(tree)
     _tiptraits!(x, tree.d1)
@@ -2352,6 +2444,39 @@ function _tiptraits!(x::Vector{Float64}, tree::sTpe)
   end
 end
 
+
+
+
+"""
+    traits(tree::T) where {T <: Tpe}
+
+Extract tip rates from a `Tpe` tree.
+"""
+function traits(tree::T) where {T <: Tpe}
+  x = Float64[]
+  _traits!(x, tree)
+  return x
+end
+
+
+"""
+    _traits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
+
+Extract tip rates from a `Tpe` tree.
+"""
+function _traits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
+
+  if def1(tree)
+    _traits!(x, tree.d1)
+    if def2(tree)
+      _traits!(x, tree.d2)
+    else
+      push!(x, xf(tree))
+    end
+  else
+    push!(x, xf(tree))
+  end
+end
 
 
 

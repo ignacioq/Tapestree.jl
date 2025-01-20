@@ -728,7 +728,7 @@ Tlabel = Union{sT_label, sTf_label}
 
 iTf = Union{sTfbd, sTfbdx, iTfbd}
 """
-iTf = Union{sTf_label, sTfbd, sTfbdx, iTfbd, iTfbdx, sTxs}
+iTf = Union{sTf_label, sTfbd, sTfpe, iTfbd, sTxs}
 
 
 
@@ -757,8 +757,7 @@ iTbdUx = Union{iTbdx, iTfbdx}
 
 Tx = Union{sTpbx, sTbdx, sTfbdx}
 """
-Tx = Union{sTxs, sTpe,
-           sTpbx, sTbdx, sTfbdx, iTpbx, iTcex, iTbdx, iTfbdx}
+Tx = Union{sTxs, sTpe, sTfpe}
 
 
 
@@ -769,3 +768,11 @@ Txs = Union{sTxs}
 """
 Txs = Union{sTxs}
 
+
+
+"""
+    Union type for trait and rate data
+
+Txs = Union{sTxs}
+"""
+Tpe = Union{sTpe, sTfpe}

@@ -90,11 +90,8 @@ function insane_gbmfbd(tree    ::sTf_label;
   μ0_prior = (log(μ0_prior[1]), 2*log(μ0_prior[2]))
 
   # only include epochs where the tree occurs
+  filter!(x -> x < th, ψ_epoch)
   sort!(ψ_epoch, rev = true)
-  tix = findfirst(x -> x < th, ψ_epoch)
-  if !isnothing(tix)
-    ψ_epoch = ψ_epoch[tix:end]
-  end
   nep  = lastindex(ψ_epoch) + 1
 
   # make initial fossils per epoch vector
@@ -1219,7 +1216,7 @@ end
            δt  ::Float64,
            srδt::Float64)
 
-Forward simulation for terminal branch.
+Forward simulation for **non-fossil** terminal branch.
 """
 function fsbi_t(bi::iBffs,
                 ξc  ::iTfbd,
@@ -1268,11 +1265,12 @@ end
             σμ  ::Float64,
             ψ   ::Vector{Float64},
             ψts ::Vector{Float64},
-            ix  ::Int64,
+            ixi ::Int64,
+            ixf ::Int64,
             δt  ::Float64,
             srδt::Float64)
 
-Forward simulation for fossil terminal branch `bi`.
+Forward simulation for **fossil** terminal branch `bi`.
 """
 function fsbi_t(bi  ::iBffs,
                 ξc  ::iTfbd,
@@ -1315,7 +1313,7 @@ function fsbi_t(bi  ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
-          acr, lU, iρi, na, nn)
+          acr, lU, iρi, na, nn, 1_000)
     end
 
     if lU < acr
@@ -1323,7 +1321,6 @@ function fsbi_t(bi  ::iBffs,
       # fossilize extant tip
       fossilizefixedtip!(t0)
 
-      # if terminal fossil branch
       tx, na, nn, acr =
         fossiltip_sim!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
           acr, lU, iρi, na, nn)
@@ -1396,6 +1393,7 @@ end
 
 
 
+
 """
     fsbi_m(bi  ::iBffs,
            ξc  ::iTfbd,
@@ -1461,7 +1459,7 @@ function fsbi_m(bi  ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
-          acr, lU, iρi, na, nn)
+          acr, lU, iρi, na, nn, 1_000)
     end
 
     if lU < acr
@@ -1554,7 +1552,7 @@ function fsbi_i(bi  ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
-          acr, lU, iρi, na, nn)
+          acr, lU, iρi, na, nn, 1_000)
     end
 
     if lU < acr
@@ -1591,13 +1589,15 @@ end
               ψ   ::Vector{Float64},
               ψts ::Vector{Float64},
               ix  ::Int64,
+              nep ::Int64,
               δt  ::Float64,
               srδt::Float64,
               lr  ::Float64,
               lU  ::Float64,
               iρi ::Float64,
               na  ::Int64,
-              nn  ::Int64)
+              nn  ::Int64,
+              nlim::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
@@ -1617,9 +1617,10 @@ function tip_sims!(tree::iTfbd,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64,
-                   nn  ::Int64)
+                   nn  ::Int64,
+                   nlim::Int64)
 
-  if lU < lr && nn < 1_000
+  if lU < lr && nn < nlim
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
@@ -1632,9 +1633,9 @@ function tip_sims!(tree::iTfbd,
         # simulate
         stree, na, nn, lr =
           _sim_gbmfbd_it(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], αλ, αμ, σλ, σμ, 
-            ψ, ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, 1_000)
+            ψ, ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, nlim)
 
-        if !isfinite(lr) || nn > 999
+        if !isfinite(lr) || nn >= nlim
           return tree, na, nn, NaN
         end
 
@@ -1666,10 +1667,10 @@ function tip_sims!(tree::iTfbd,
     else
       tree.d1, na, nn, lr =
         tip_sims!(tree.d1, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn)
+          lr, lU, iρi, na, nn, nlim)
       tree.d2, na, nn, lr =
         tip_sims!(tree.d2, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn)
+          lr, lU, iρi, na, nn, nlim)
     end
 
     return tree, na, nn, lr
@@ -1688,16 +1689,20 @@ end
                    αμ  ::Float64,
                    σλ  ::Float64,
                    σμ  ::Float64,
-                   ψ   ::Float64,
+                   ψ   ::Vector{Float64},
+                   ψts ::Vector{Float64},
+                   ix  ::Int64,
+                   nep ::Int64,
                    δt  ::Float64,
                    srδt::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64,
-                   nn  ::Int64)
+                   nn  ::Int64,
+                   nlim::Int64)
 
-Continue simulation until time `t` for the fixed tip in `tree`.
+Continue simulation until time `t` for the fixed fossil tip in `tree`.
 """
 function fossiltip_sim!(tree::iTfbd,
                         t   ::Float64,
@@ -1715,18 +1720,19 @@ function fossiltip_sim!(tree::iTfbd,
                         lU  ::Float64,
                         iρi ::Float64,
                         na  ::Int64,
-                        nn  ::Int64)
+                        nn  ::Int64,
+                        nlim::Int64)
 
 
-  if lU < lr && nn < 1_000
+  if lU < lr && nn < nlim
+
     if istip(tree)
 
-      nep = lastindex(ψts) + 1
       stree, na, nn, lr =
         _sim_gbmfbd_it(t, lλ(tree)[end], lμ(tree)[end], αλ, αμ, σλ, σμ, ψ,
-          ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, 1_000)
+          ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, nlim)
 
-      if !isfinite(lr) || nn > 999
+      if !isfinite(lr) || nn >= nlim
         return tree, na, nn, NaN
       end
 
@@ -1735,11 +1741,11 @@ function fossiltip_sim!(tree::iTfbd,
     elseif isfix(tree.d1)
       tree.d1, na, nn, lr =
         fossiltip_sim!(tree.d1, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn)
+          lr, lU, iρi, na, nn, nlim)
     else
       tree.d2, na, nn, lr =
         fossiltip_sim!(tree.d2, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn)
+          lr, lU, iρi, na, nn, nlim)
     end
 
     return tree, na, nn, lr
