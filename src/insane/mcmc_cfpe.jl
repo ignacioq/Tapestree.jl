@@ -170,6 +170,10 @@ function insane_cfpe(tree    ::sTf_label,
 
   @info "running constant fossilized punctuated equilibrium"
 
+  """
+  here: in testing phase!
+  """
+
   # adaptive phase
   llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs =
       mcmc_burn_cfpe(Ξ, idf, λ_prior, μ_prior, ψ_prior, σa_prior, σk_prior, 
