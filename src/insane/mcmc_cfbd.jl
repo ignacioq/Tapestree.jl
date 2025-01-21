@@ -94,7 +94,7 @@ function insane_cfbd(tree    ::sTf_label;
 
   # starting parameters
   λc, μc, ψc = λi, μi, ψi
-  if isnan(λi) || isnan(μi) || isnan(ψi)
+  if any(isnan, (λi, μi, ψi))
     # if only one tip
     if isone(n)
       λc = prod(λ_prior)
@@ -103,7 +103,7 @@ function insane_cfbd(tree    ::sTf_label;
       λc, μc = moments(Float64(n), th, ϵi)
     end
     # if no sampled fossil
-    nf = nfossils(tree)
+    nf = nfossils(tree) + sum(f_epoch)
     if iszero(nf)
       ψc = prod(ψ_prior)
     else
@@ -234,9 +234,9 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
   # likelihood
   llc = llik_cfbd(Ξ, λc, μc, ψc, ns, ψ_epoch, bst, eixi) - 
         rmλ * log(λc) + log(mc) + prob_ρ(idf)
-  prc = logdgamma(λc,      λ_prior[1], λ_prior[2])  +
-        logdgamma(μc,      μ_prior[1], μ_prior[2])  +
-        sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))
+  prc = logdgamma(λc,      λ_prior[1], λ_prior[2])         +
+        logdgamma(μc,      μ_prior[1], μ_prior[2])         +
+        sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
 
@@ -920,12 +920,14 @@ function update_ψ!(llc    ::Float64,
                    L      ::Vector{Float64},
                    ψ_prior::NTuple{2,Float64})
 
-  for i in Base.OneTo(lastindex(ψc))
-    ψci   = ψc[i]
-    ψp    = randgamma(ψ_prior[1] + nf[i], ψ_prior[2] + L[i])
-    llc  += nf[i] * log(ψp/ψci) + L[i] * (ψci - ψp)
-    prc  += llrdgamma(ψp, ψci, ψ_prior[1], ψ_prior[2])
-    ψc[i] = ψp
+  @inbounds begin
+    for i in Base.OneTo(lastindex(ψc))
+      ψci   = ψc[i]
+      ψp    = randgamma(ψ_prior[1] + nf[i], ψ_prior[2] + L[i])
+      llc  += nf[i] * log(ψp/ψci) + L[i] * (ψci - ψp)
+      prc  += llrdgamma(ψp, ψci, ψ_prior[1], ψ_prior[2])
+      ψc[i] = ψp
+    end
   end
 
   return llc, prc

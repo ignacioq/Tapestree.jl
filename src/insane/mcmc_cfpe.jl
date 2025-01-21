@@ -97,7 +97,7 @@ function insane_cfpe(tree    ::sTf_label,
 
   # starting parameters
   λc, μc, ψc = λi, μi, ψi
-  if isnan(λi) || isnan(μi) || isnan(ψi)
+  if any(isnan, (λi, μi, ψi))
     # if only one tip
     if isone(n)
       λc = prod(λ_prior)
@@ -114,12 +114,12 @@ function insane_cfpe(tree    ::sTf_label,
     end
   end
 
-  σac = σkc = σxi
-
   # make ψ vector
   ψc = fill(ψc, nep)
 
-  # condition on first speciation event
+  σac = σkc = σxi
+
+  # if condition on first speciation event
   rmλ = iszero(e(tree)) && !isfossil(tree) ? 1.0 : 0.0
 
   # condition on survival of 0, 1, or 2 starting lineages
@@ -189,24 +189,31 @@ end
 
 
 """
-    mcmc_burn_cfpe(Ξ        ::Vector{sTfpe},
+    mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
                    idf     ::Array{iBffs,1},
                    λ_prior ::NTuple{2,Float64},
                    μ_prior ::NTuple{2,Float64},
+                   ψ_prior ::NTuple{2,Float64},
                    σa_prior::NTuple{2,Float64},
                    σk_prior::NTuple{2,Float64},
-                   nburn  ::Int64,
-                   λc     ::Float64,
-                   μc     ::Float64,
-                   σac    ::Float64,
-                   σkc    ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   rmλ    ::Float64,
-                   inodes ::Vector{Int64},
-                   surv   ::Int64,
-                   pup    ::Array{Int64,1},
-                   prints ::Int64)
+                   ψ_epoch ::Vector{Float64},
+                   f_epoch ::Vector{Int64},
+                   nburn   ::Int64,
+                   λc      ::Float64,
+                   μc      ::Float64,
+                   ψc      ::Vector{Float64},
+                   σac     ::Float64,
+                   σkc     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   rmλ     ::Float64,
+                   inodes  ::Vector{Int64},
+                   surv    ::Int64,
+                   bst     ::Vector{Float64},
+                   eixi    ::Vector{Int64},
+                   eixf    ::Vector{Int64},
+                   pup     ::Array{Int64,1},
+                   prints  ::Int64)
 
 Burn-in for constant birth-death punctuated equilibrium.
 """
@@ -244,15 +251,15 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   ne  = Float64(ntipsextinct(Ξ))          # number of extinction events
 
   # likelihood
-  llc = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, ns, ψ_epoch, bst, eixi) - 
+  llc = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, ns, ψ_epoch, f_epoch, bst, eixi) - 
         rmλ * log(λc) + log(mc) + prob_ρ(idf)
 
   # prior
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2])         +
-        logdgamma(μc, μ_prior[1], μ_prior[2])         +
-        sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))   +
-        logdinvgamma(σac^2, σa_prior[1], σa_prior[2]) +
-        logdinvgamma(σkc^2, σk_prior[1], σk_prior[2])
+  prc = logdgamma(λc, λ_prior[1], λ_prior[2])              +
+        logdgamma(μc, μ_prior[1], μ_prior[2])              +
+        logdinvgamma(σac^2, σa_prior[1], σa_prior[2])      +
+        logdinvgamma(σkc^2, σk_prior[1], σk_prior[2])      +
+        sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
   # tracked quantities
   sσa, sσk = ssσak(Ξ, idf)
@@ -383,7 +390,8 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
                   μ_prior ::NTuple{2,Float64},
                   σa_prior::NTuple{2,Float64},
                   σk_prior::NTuple{2,Float64},
-                  pup     ::Array{Int64,1},
+                  f_epoch     ::Vector{Int64},
+                  pup     ::Vector{Int64},
                   niter   ::Int64,
                   nthin   ::Int64,
                   nflush  ::Int64,
@@ -428,75 +436,87 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
             if p === 1
 
               llc, prc, λc, mc =
-                update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
+                update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
 
-              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              # if !isapprox(llci, llc, atol = 1e-6)
-              #   @show llci, llc, it, p
-              #   return
-              # end
+              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                @show llci, llc, it, p
+                return
+              end
 
             # μ proposal
             elseif p === 2
 
               llc, prc, μc, mc =
-                update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
+                update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, surv, μ_prior)
 
-              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              # if !isapprox(llci, llc, atol = 1e-6)
-              #   @show llci, llc, it, p
-              #   return
-              # end
+              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                @show llci, llc, it, p
+                return
+              end
+
+            # ψ proposal
+            elseif p === 3
+
+              llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
+
+              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                @show llci, llc, it, p
+                return
+              end
 
             # σa (anagenetic) proposal
-            elseif p === 3
+            elseif p === 4
 
               llc, prc, σac = 
                 update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
-              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              # if !isapprox(llci, llc, atol = 1e-6)
-              #   @show llci, llc, it, p
-              #   return
-              # end
+              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                @show llci, llc, it, p
+                return
+              end
 
             # σk (cladogenetic) proposal
-            elseif p === 4
+            elseif p === 5
 
               llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
 
-              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              # if !isapprox(llci, llc, atol = 1e-6)
-              #   @show llci, llc, it, p
-              #   return
-              # end
+              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                @show llci, llc, it, p
+                return
+              end
 
             # update inner nodes traits
-            elseif p === 5
+            elseif p === 6
 
               nix = ceil(Int64,rand()*nin)
               bix = inodes[nix]
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
-              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              # if !isapprox(llci, llc, atol = 1e-6)
-              #   @show llci, llc, it, p
-              #   return
-              # end
+              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                @show llci, llc, it, p
+                return
+              end
 
             # forward simulation proposal proposal
             else
 
               bix = ceil(Int64,rand()*el)
-              llc, ns, ne, L, sσa, sσk = 
-                update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, 
-                  sσa, sσk, xis, xfs, es)
 
-              # llci = llik_cfpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              # if !isapprox(llci, llc, atol = 1e-6)
-              #   @show llci, llc, it, p
-              #   return
-              # end
+              llc, ns, ne, sσa, sσk = 
+                update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, σac, σkc, 
+                  ns, ne, L, eixi, eixf, sσa, sσk, xis, xfs, es)
+
+              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              if !isapprox(llci, llc, atol = 1e-6)
+                @show llci, llc, it, p
+                return
+              end
 
             end
           end
@@ -669,9 +689,9 @@ end
                σk  ::Float64,
                ns  ::Float64,
                ne  ::Float64,
-               L   ::Float64,
+               L   ::Vector{Float64},
                eixi::Vector{Int64},
-               eixf::Vector{Int64}
+               eixf::Vector{Int64},
                sσa ::Float64, 
                sσk ::Float64,
                xis ::Vector{Float64},
@@ -692,7 +712,7 @@ function update_fs!(bix ::Int64,
                     σk  ::Float64,
                     ns  ::Float64,
                     ne  ::Float64,
-                    L   ::Float64,
+                    L   ::Vector{Float64},
                     eixi::Vector{Int64},
                     eixf::Vector{Int64},
                     sσa ::Float64, 
@@ -704,6 +724,7 @@ function update_fs!(bix ::Int64,
   bi  = idf[bix]
   ξc  = Ξ[bix]
   ixi = eixi[bix]
+  ixf = eixf[bix]
 
   llr = NaN
   sσar = sσkr = 0.0
@@ -717,7 +738,6 @@ function update_fs!(bix ::Int64,
 
     # fossil terminal branch
     if isfossil(bi)
-      ixf = eixf[bix]
 
       ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, ψ, σa, σk, ψts, ixi, ixf, 
                   xis, xfs, es)
@@ -736,13 +756,15 @@ function update_fs!(bix ::Int64,
   # if internal non-bifurcating
   elseif iszero(d2(bi))
 
-    ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk, xis, xfs)
+    ξp, llr, sσar = 
+      fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, ψ, σa, σk, ψts, ixi, ixf, xis, xfs)
 
   # if internal bifurcating branch
   elseif e(bi) > 0.0
 
     ξp, llr, sσar, sσkr = 
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk, xis, xfs)
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, ψ, σa, σk, ψts, 
+        ixi, ixf, xis, xfs)
   end
 
   if isfinite(llr)
@@ -750,25 +772,22 @@ function update_fs!(bix ::Int64,
     nep = lastindex(ψts) + 1
     σa2, σk2 = σa^2, σk^2
 
-    ll1, ns1, ne1, L1, sσa1, sσk1 = 
-      llik_cfpe_track(ξp, λ, μ, ψ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        ti(bi), ψts, ixi, nep)
-    ll0, ns0, ne0, L0, sσa0, sσk0 = 
-      llik_cfpe_track(ξc, λ, μ, ψ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        ti(bi), ψts, ixi, nep)
+    llc, ns, ne, sσa, sσk = 
+      llik_cfpe_track!(ξc, λ, μ, ψ, σa2, σk2, llc, ns, ne, L, sσa, sσk, 
+        ti(bi), ψts, ixi, nep, -)
+    llc, ns, ne, sσa, sσk = 
+      llik_cfpe_track!(ξp, λ, μ, ψ, σa2, σk2, llc, ns, ne, L, sσa, sσk, 
+        ti(bi), ψts, ixi, nep, +)
 
-    llc += ll1  - ll0 + llr
-    ns  += ns1  - ns0
-    ne  += ne1  - ne0
-    L   += L1   - L0
-    sσa += sσa1 - sσa0 + sσar
-    sσk += sσk1 - sσk0 + sσkr
+    llc += llr
+    sσa += sσar
+    sσk += sσkr
 
     # set new decoupled tree
     Ξ[bix] = ξp
   end
 
-  return llc, ns, ne, L, sσa, sσk
+  return llc, ns, ne, sσa, sσk
 end
 
 
@@ -996,9 +1015,7 @@ end
             σμ  ::Float64,
             ψ   ::Vector{Float64},
             ψts ::Vector{Float64},
-            ixf ::Int64,
-            δt  ::Float64,
-            srδt::Float64)
+            ixf ::Int64)
 
 Forward simulation for fossil terminal branch `bi`.
 """
@@ -1007,12 +1024,10 @@ function fsbi_et(t0  ::sTfpe,
                  λ   ::Float64,
                  μ   ::Float64,
                  ψ   ::Vector{Float64},
-                 σλ  ::Float64,
-                 σμ  ::Float64,
+                 σa  ::Float64,
+                 σk  ::Float64,
                  ψts ::Vector{Float64},
-                 ixf ::Int64,
-                 δt  ::Float64,
-                 srδt::Float64)
+                 ixf ::Int64)
 
   nep = lastindex(ψts) + 1
   lU  = -randexp()            # log-probability
@@ -1041,16 +1056,18 @@ end
 
 """
     fsbi_m(bi::iBffs,
-           ξi::sTfpe,
-           ξ1::sTfpe,
-           λ ::Float64,
-           μ ::Float64,
-           ψ  ::Vector{Float64},
-           σa ::Float64,
-           σk ::Float64,
-           ψts::Vector{Float64},
-           xfs::Vector{Float64},
-           xcs::Vector{Float64})
+          ξi::sTfpe,
+          ξ1::sTfpe,
+          λ ::Float64,
+          μ ::Float64,
+          ψ  ::Vector{Float64},
+          σa ::Float64,
+          σk ::Float64,
+          ψts::Vector{Float64},
+          ixi::Int64,
+          ixf::Int64,
+          xfs::Vector{Float64},
+          xcs::Vector{Float64})
 
 Forward simulation for internal branch.
 """
@@ -1063,15 +1080,16 @@ function fsbi_m(bi::iBffs,
                 σa ::Float64,
                 σk ::Float64,
                 ψts::Vector{Float64},
+                ixi::Int64,
+                ixf::Int64,
                 xfs::Vector{Float64},
                 xcs::Vector{Float64})
 
   # forward simulation during branch length
   empty!(xfs)
-
   t0, na, nn = 
     _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
-      ψts, ixf, nep, 0, 1, 500, xfs)
+      ψts, ixi, nep, 0, 0, 1, 500, xfs)
 
   if na < 1 || nn >= 500
     return t0, NaN, NaN
@@ -1107,7 +1125,7 @@ function fsbi_m(bi::iBffs,
 
     if lU < acr
       na  -= 1
-      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
+      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
 
@@ -1135,6 +1153,8 @@ end
            σa ::Float64,
            σk ::Float64,
            ψts::Vector{Float64},
+           ixi::Int64,
+           ixf::Int64,
            xfs::Vector{Float64},
            xcs::Vector{Float64})
 
@@ -1150,6 +1170,8 @@ function fsbi_i(bi ::iBffs,
                 σa ::Float64,
                 σk ::Float64,
                 ψts::Vector{Float64},
+                ixi::Int64,
+                ixf::Int64,
                 xfs::Vector{Float64},
                 xcs::Vector{Float64})
 
@@ -1157,7 +1179,7 @@ function fsbi_i(bi ::iBffs,
   empty!(xfs)
   t0, na, nn = 
     _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
-      ψts, ixf, nep, 0, 1, 500, xfs)
+      ψts, ixi, nep, 0, 0, 1, 500, xfs)
 
   if na < 1 || nn >= 500
     return t0, NaN, NaN, NaN

@@ -125,7 +125,7 @@ function insane_gbmfbd(tree    ::sTf_label;
 
   # starting parameters
   λc, μc, ψc = λi, μi, ψi
-  if isnan(λi) || isnan(μi) || isnan(ψi)
+  if any(isnan, (λi, μi, ψi))
     # if only one tip
     if isone(n)
       λc = 1.0/th
@@ -134,16 +134,19 @@ function insane_gbmfbd(tree    ::sTf_label;
       λc, μc = moments(Float64(n), th, ϵi)
     end
     # if no sampled fossil
-    nf = nfossils(tree)
+    nf = nfossils(tree) + sum(f_epoch)
     if iszero(nf)
       ψc = prod(ψ_prior)
     else
-      ψc = Float64(nf)/Float64(treelength(tree))
+      ψc = Float64(nf)/treelength(tree)
     end
   end
 
   # make ψ vector
   ψc = fill(ψc, nep)
+
+  # if condition on first speciation event
+  rmλ = iszero(e(tree)) && !isfossil(tree) ? 1.0 : 0.0
 
   # condition on survival of 0, 1, or 2 starting lineages
   surv = 0
@@ -199,7 +202,7 @@ function insane_gbmfbd(tree    ::sTf_label;
   Ξ, idf, llc, prc, αλc, αμc, σλc, σμc, ψc, mc, ns, ne, stnλ, stnμ =
     mcmc_burn_gbmfbd(Ξ, idf, 
       λ0_prior, μ0_prior, αλ_prior, αμ_prior, σλ_prior, σμ_prior,
-      ψ_prior, ψ_epoch, f_epoch, nburn, αλi, αμi, σλi, σμi, ψc, mc, th, surv, 
+      ψ_prior, ψ_epoch, f_epoch, nburn, αλi, αμi, σλi, σμi, ψc, mc, th, rmλ, surv, 
       stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   # mcmc
@@ -268,6 +271,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           ψc      ::Vector{Float64},
                           mc      ::Float64,
                           th      ::Float64,
+                          rmλ     ::Float64,
                           surv    ::Int64,
                           stnλ    ::Float64, 
                           stnμ    ::Float64,
@@ -281,23 +285,22 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           prints  ::Int64)
 
   lλ0 = lλ(Ξ[1])[1]
-  nsi = (iszero(e(Ξ[1])) && !isfossil(idf[1]))
   llc = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
-        nsi * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-  prc = logdnorm(lλ0,         λ0_prior[1], λ0_prior[2])   +
-        logdnorm(lμ(Ξ[1])[1], μ0_prior[1], μ0_prior[2])   +
-        logdnorm(αλc,         αλ_prior[1], αλ_prior[2]^2) +
-        logdnorm(αμc,         αμ_prior[1], αμ_prior[2]^2) +
-        logdinvgamma(σλc^2,   σλ_prior[1], σλ_prior[2])   +
-        logdinvgamma(σμc^2,   σμ_prior[1], σμ_prior[2])   +
-        sum(logdgamma.(ψc,    ψ_prior[1],  ψ_prior[2]))
+        rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
+  prc = logdnorm(lλ0,         λ0_prior[1], λ0_prior[2])    +
+        logdnorm(lμ(Ξ[1])[1], μ0_prior[1], μ0_prior[2])    +
+        logdnorm(αλc,         αλ_prior[1], αλ_prior[2]^2)  +
+        logdnorm(αμc,         αμ_prior[1], αμ_prior[2]^2)  +
+        logdinvgamma(σλc^2,   σλ_prior[1], σλ_prior[2])    +
+        logdinvgamma(σμc^2,   σμ_prior[1], σμ_prior[2])    +
+        sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi)        # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)          # number of fossilization events per epoch
   nin = lastindex(inodes)                        # number of internal nodes
   el  = lastindex(idf)                           # number of branches
   nep = lastindex(ψc)                            # number of epochs
-  ns  = sum(x -> Float64(d2(x) > 0), idf) - Float64(nsi)  # number of speciation events in likelihood
+  ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ  # number of speciation events in likelihood
   ne  = Float64(ntipsextinct(Ξ))                 # number of extinction events in likelihood
 
   ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
@@ -307,7 +310,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   lup = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, prints, "burning mcmc...", 20)
-
+rmλ
   for i in Base.OneTo(nburn)
 
     shuffle!(pup)

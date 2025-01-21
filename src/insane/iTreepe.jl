@@ -151,7 +151,7 @@ function Base.show(io::IO, t::sTfpe)
 
   print(io, "insane simple punkeek fossil tree with ",
     nt , " tip",  (isone(nt) ? "" : "s" ),
-    ", (", ntipsextinct(t)," extinct) and ",
+    " (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))
 end
 

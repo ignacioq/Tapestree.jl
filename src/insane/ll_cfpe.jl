@@ -37,6 +37,7 @@ function llik_cfpe(Ξ  ::Vector{sTfpe},
                    σk ::Float64,
                    nλ ::Float64,
                    ψts::Vector{Float64},
+                   fex::Vector{Int64},
                    bst::Vector{Float64},
                    eix::Vector{Int64})
 
@@ -56,6 +57,11 @@ function llik_cfpe(Ξ  ::Vector{sTfpe},
 
       iszero(e(bi)) && continue
       ll += llik_cfpe(ξi, λ, μ, ψ, σa, σk, bst[i], ψts, eix[i], nep)
+    end
+
+
+    for i in Base.OneTo(nep)
+      ll += Float64(fex[i]) * log(ψ[i])
     end
 
     ll += nλ * log(λ)
@@ -141,85 +147,90 @@ end
                     ll  ::Float64,
                     ns  ::Float64,
                     ne  ::Float64,
-                    L   ::Float64,
+                    L   ::Vector{Float64},
                     sσa ::Float64, 
                     sσk ::Float64,
                     t   ::Float64,
                     ψts ::Vector{Float64},
                     ix  ::Int64,
-                    nep ::Int64)
+                    nep ::Int64, 
+                    sos ::Function)
 
 Log-likelihood up to a constant for constant fossil birth-death 
 punctuated equilibrium given a complete `iTree` recursively.
 """
-function llik_cfpe_track(tree::sTfpe,
-                         λ   ::Float64, 
-                         μ   ::Float64, 
-                         ψ   ::Vector{Float64},
-                         σa2 ::Float64, 
-                         σk2 ::Float64,
-                         ll  ::Float64,
-                         ns  ::Float64,
-                         ne  ::Float64,
-                         L   ::Float64,
-                         sσa ::Float64, 
-                         sσk ::Float64,
-                         t   ::Float64,
-                         ψts ::Vector{Float64},
-                         ix  ::Int64,
-                         nep ::Int64)
-
-
+function llik_cfpe_track!(tree::sTfpe,
+                          λ   ::Float64, 
+                          μ   ::Float64, 
+                          ψ   ::Vector{Float64},
+                          σa2 ::Float64, 
+                          σk2 ::Float64,
+                          ll  ::Float64,
+                          ns  ::Float64,
+                          ne  ::Float64,
+                          L   ::Vector{Float64},
+                          sσa ::Float64, 
+                          sσk ::Float64,
+                          t   ::Float64,
+                          ψts ::Vector{Float64},
+                          ix  ::Int64,
+                          nep ::Int64, 
+                          sos ::Function)
   @inbounds begin
+    ei = e(tree)
 
-    ei   = e(tree)
-    L   += ei
     # anagenetic squares
-    sqa  = (xf(tree) - xi(tree))^2
-    sσa += sqa/ei
-    ll  -= 0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) +
-           sqa/(2.0*σa2*ei)
+    sqa = (xf(tree) - xi(tree))^2
+    sσa = sos(sσa, sqa/ei)
+    ll  = sos(ll, 
+            -(0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) +
+            sqa/(2.0*σa2*ei)))
+
     # if epoch change
     while ix < nep && t - ei < ψts[ix]
-      li  = t - ψts[ix]
-      ll -= li*(λ + μ + ψ[ix])
-      ei -= li
-      t   = ψts[ix]
-      ix += 1
+      li    = t - ψts[ix]
+      L[ix] = sos(L[ix], li)
+      ll    = sos(ll, -(li*(λ + μ + ψ[ix])))
+      ei   -= li
+      t     = ψts[ix]
+      ix   += 1
     end
-    ll -= ei*(λ + μ + ψ[ix])
-    t  -= ei
+    ll    = sos(ll, -(ei*(λ + μ + ψ[ix])))
+    t    -= ei
+    L[ix] = sos(L[ix], ei)
 
     if def1(tree)
       if def2(tree)
-        xfi  = xf(tree)
-        sqk  = ((sh(tree) ? xi(tree.d1) : xi(tree.d2)) -  xfi)^2
-        ll  += log(λ)                                                         -
+        xfi = xf(tree)
+        sqk = ((sh(tree) ? xi(tree.d1) : xi(tree.d2)) -  xfi)^2
+        ll  = sos(ll, 
+               (log(λ) -
                0.5*log(6.28318530717958623199592693708837032318115234375*σk2) -
-               sqk/(2.0*σk2)
-        sσk += sqk
-        ns  += 1.0
-        ll, ns, ne, L, sσa, sσk = 
-          llik_cfpe_track(tree.d1, λ, μ, σa2, σk2, ll, ns, ne, 
-            L, sσa, sσk, t, ψts, ix, nep)
-        ll, ns, ne, L, sσa, sσk = 
-          llik_cfpe_track(tree.d2, λ, μ, σa2, σk2, ll, ns, ne, 
-            L, sσa, sσk, t, ψts, ix, nep)
+               sqk/(2.0*σk2)))
+        sσk = sos(sσk, sqk)
+        ns  = sos(ns, 1.0)
+
+        ll, ns, ne, sσa, sσk = 
+          llik_cfpe_track!(tree.d1, λ, μ, ψ, σa2, σk2, ll, ns, ne, 
+            L, sσa, sσk, t, ψts, ix, nep, sos)
+        ll, ns, ne, sσa, sσk = 
+          llik_cfpe_track!(tree.d2, λ, μ, ψ, σa2, σk2, ll, ns, ne, 
+            L, sσa, sσk, t, ψts, ix, nep, sos)
       else
-        ll += log(ψ[ix])
-        ll, ns, ne, L, sσa, sσk = 
-          llik_cfpe_track(tree.d1, λ, μ, σa2, σk2, ll, ns, ne, 
-            L, sσa, sσk, t, ψts, ix, nep)
+        ll = sos(ll, log(ψ[ix]))
+        ll, ns, ne, sσa, sσk = 
+          llik_cfpe_track!(tree.d1, λ, μ, ψ, σa2, σk2, ll, ns, ne, 
+            L, sσa, sσk, t, ψts, ix, nep, sos)
       end
     else
       if isextinct(tree)
-        ll += log(μ)
-        ne += 1.0
+        ll = sos(ll, log(μ))
+        ne = sos(ne, 1.0)
       end
     end
   end
 
-  return ll, ns, ne, L, sσa, sσk
+  return ll, ns, ne, sσa, sσk
 end
 
 
