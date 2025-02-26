@@ -30,13 +30,13 @@ Predefined functions for plotting:
   `nd` net diversification
   `dμ` change in speciation rates
 """
-b(tree::iT)  = exp.(lλ(tree))
-d(tree::iT)  = exp.(lμ(tree))
-lb(tree::iT) = lλ(tree)
-ld(tree::iT) = lμ(tree)
-t(tree::iT)  = exp.(lμ(tree)) ./ exp.(lλ(tree))
-lt(tree::iT) = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
-nd(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+bi(tree::iT)  = exp.(lλ(tree))
+de(tree::iT)  = exp.(lμ(tree))
+lbi(tree::iT) = lλ(tree)
+lde(tree::iT) = lμ(tree)
+tu(tree::iT)  = exp.(lμ(tree) .- lλ(tree))
+ltu(tree::iT) = lμ(tree) - lλ(tree)
+nd(tree::iT)  = exp.(lλ(tree)) .- exp.(lμ(tree))
 function dλ(tree::iT)
   dd = diff(exp.(lλ(tree)))
   return append!(dd, dd[end])
