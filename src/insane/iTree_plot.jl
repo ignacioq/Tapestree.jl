@@ -91,10 +91,10 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   ynode = Float64[]
 
   th  = treeheight(tree)
-  nts = ntips(tree)
 
   _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode, shownodes)
 
+  nts = ntips(tree)
   ntF = Float64(nts)
 
   if type === :phylogram
@@ -204,7 +204,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree` and
 """
 function _rplottree!(tree ::T,
                      xc   ::Float64,
-                     i    ::Int64,
+                     i    ::Float64,
                      x    ::Array{Float64,1},
                      y    ::Array{Float64,1},
                      z    ::Array{Float64,1},
@@ -247,8 +247,8 @@ function _rplottree!(tree ::T,
       end
     end
   else
-    i += 1
-    yc = Float64(i)
+    i += 1.0
+    yc = i
     if isextinct(tree)
       if show[2]
         push!(nodet, 2)
