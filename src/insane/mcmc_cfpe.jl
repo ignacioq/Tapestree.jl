@@ -175,16 +175,17 @@ function insane_cfpe(tree    ::sTf_label,
   """
 
   # adaptive phase
-  llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs =
+  llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, nf, L, sσa, sσk, nσs =
       mcmc_burn_cfpe(Ξ, idf, λ_prior, μ_prior, ψ_prior, σa_prior, σk_prior, 
         ψ_epoch, f_epoch, nburn, λc, μc, ψc, σac, σkc, mc, th, rmλ, 
         inodes, surv, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_cfpe(Ξ, idf, llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs,
-      th, rmλ, inodes, surv, λ_prior, μ_prior, σa_prior, σk_prior, pup, 
-      niter, nthin, nflush, ofile, prints)
+    mcmc_cfpe(Ξ, idf, llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, nf, L, 
+      sσa, sσk, nσs, th, rmλ, inodes, surv, bst, eixi, eixf, λ_prior, 
+      μ_prior, ψ_prior, σa_prior, σk_prior, ψ_epoch, f_epoch, pup, niter, 
+      nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -323,17 +324,17 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
       else
 
         bix = ceil(Int64,rand()*el)
-        llc, ns, ne, L, sσa, sσk = 
-          update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, sσa, sσk,
-            xis, xfs, es)
 
+        llc, ns, ne, sσa, sσk = 
+          update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, σac, σkc, 
+            ns, ne, L, eixi, eixf, sσa, sσk, xis, xfs, es)
       end
     end
 
     next!(pbar)
   end
 
-  return llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs
+  return llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, nf, L, sσa, sσk, nσs
 end
 
 
@@ -341,69 +342,86 @@ end
 
 """
     mcmc_cfpe(Ξ       ::Vector{sTfpe},
-             idf     ::Array{iBffs,1},
-             llc     ::Float64,
-             prc     ::Float64,
-             λc      ::Float64,
-             μc      ::Float64,
-             σac     ::Float64,
-             σkc     ::Float64,
-             mc      ::Float64,
-             ns      ::Float64,
-             ne      ::Float64,
-             L       ::Float64,
-             sσa     ::Float64, 
-             sσk     ::Float64,
-             th      ::Float64,
-             rmλ     ::Float64,
-             inodes  ::Vector{Int64},
-             surv    ::Int64,
-             λ_prior ::NTuple{2,Float64},
-             μ_prior ::NTuple{2,Float64},
-             σa_prior::NTuple{2,Float64},
-             σk_prior::NTuple{2,Float64},
-             pup     ::Array{Int64,1},
-             niter   ::Int64,
-             nthin   ::Int64,
-             nflush  ::Int64,
-             ofile   ::String,
-             prints  ::Int64)
+              idf     ::Array{iBffs,1},
+              llc     ::Float64,
+              prc     ::Float64,
+              λc      ::Float64,
+              μc      ::Float64,
+              ψc      ::Vector{Float64},
+              σac     ::Float64,
+              σkc     ::Float64,
+              mc      ::Float64,
+              ns      ::Float64,
+              ne      ::Float64,
+              nf      ::Vector{Float64},
+              L       ::Vector{Float64},
+              sσa     ::Float64, 
+              sσk     ::Float64,
+              nσs     ::Float64,
+              th      ::Float64,
+              rmλ     ::Float64,
+              inodes  ::Vector{Int64},
+              surv    ::Int64,
+              bst     ::Vector{Float64},
+              eixi    ::Vector{Int64},
+              eixf    ::Vector{Int64},
+              λ_prior ::NTuple{2,Float64},
+              μ_prior ::NTuple{2,Float64},
+              ψ_prior ::NTuple{2,Float64},
+              σa_prior::NTuple{2,Float64},
+              σk_prior::NTuple{2,Float64},
+              ψ_epoch ::Vector{Float64},
+              f_epoch ::Vector{Int64},
+              pup     ::Vector{Int64},
+              niter   ::Int64,
+              nthin   ::Int64,
+              nflush  ::Int64,
+              ofile   ::String,
+              prints  ::Int64)
 
 Sampling for constant birth-death punctuated equilibrium.
 """
 function mcmc_cfpe(Ξ       ::Vector{sTfpe},
-                  idf     ::Array{iBffs,1},
-                  llc     ::Float64,
-                  prc     ::Float64,
-                  λc      ::Float64,
-                  μc      ::Float64,
-                  σac     ::Float64,
-                  σkc     ::Float64,
-                  mc      ::Float64,
-                  ns      ::Float64,
-                  ne      ::Float64,
-                  L       ::Float64,
-                  sσa     ::Float64, 
-                  sσk     ::Float64,
-                  nσs     ::Float64,
-                  th      ::Float64,
-                  rmλ     ::Float64,
-                  inodes  ::Vector{Int64},
-                  surv    ::Int64,
-                  λ_prior ::NTuple{2,Float64},
-                  μ_prior ::NTuple{2,Float64},
-                  σa_prior::NTuple{2,Float64},
-                  σk_prior::NTuple{2,Float64},
-                  f_epoch     ::Vector{Int64},
-                  pup     ::Vector{Int64},
-                  niter   ::Int64,
-                  nthin   ::Int64,
-                  nflush  ::Int64,
-                  ofile   ::String,
-                  prints  ::Int64)
+                   idf     ::Array{iBffs,1},
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   λc      ::Float64,
+                   μc      ::Float64,
+                   ψc      ::Vector{Float64},
+                   σac     ::Float64,
+                   σkc     ::Float64,
+                   mc      ::Float64,
+                   ns      ::Float64,
+                   ne      ::Float64,
+                   nf      ::Vector{Float64},
+                   L       ::Vector{Float64},
+                   sσa     ::Float64, 
+                   sσk     ::Float64,
+                   nσs     ::Float64,
+                   th      ::Float64,
+                   rmλ     ::Float64,
+                   inodes  ::Vector{Int64},
+                   surv    ::Int64,
+                   bst     ::Vector{Float64},
+                   eixi    ::Vector{Int64},
+                   eixf    ::Vector{Int64},
+                   λ_prior ::NTuple{2,Float64},
+                   μ_prior ::NTuple{2,Float64},
+                   ψ_prior ::NTuple{2,Float64},
+                   σa_prior::NTuple{2,Float64},
+                   σk_prior::NTuple{2,Float64},
+                   ψ_epoch ::Vector{Float64},
+                   f_epoch ::Vector{Int64},
+                   pup     ::Vector{Int64},
+                   niter   ::Int64,
+                   nthin   ::Int64,
+                   nflush  ::Int64,
+                   ofile   ::String,
+                   prints  ::Int64)
 
   el  = lastindex(idf)
   nin = lastindex(inodes)
+  nep = lastindex(ψc)
 
   # logging
   nlogs = fld(niter,nthin)
@@ -435,6 +453,8 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
           shuffle!(pup)
 
           for p in pup
+
+            @show llc
 
              # λ proposal
             if p === 1
@@ -473,6 +493,9 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
             # σa (anagenetic) proposal
             elseif p === 4
+
+              @show sσa, sσk, ssσak(Ξ, idf), ns
+
 
               llc, prc, σac = 
                 update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
@@ -515,6 +538,10 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, ns, ne, sσa, sσk = 
                 update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, σac, σkc, 
                   ns, ne, L, eixi, eixf, sσa, sσk, xis, xfs, es)
+
+              @show bix, sσa, sσk, ssσak(Ξ, idf), ns
+
+
 
               llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
@@ -1090,7 +1117,9 @@ function fsbi_m(bi::iBffs,
                 xcs::Vector{Float64})
 
   # forward simulation during branch length
+  nep = lastindex(ψts) + 1
   empty!(xfs)
+
   t0, na, nn = 
     _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
       ψts, ixi, nep, 0, 0, 1, 500, xfs)
@@ -1180,7 +1209,9 @@ function fsbi_i(bi ::iBffs,
                 xcs::Vector{Float64})
 
   # forward simulation during branch length
+  nep = lastindex(ψts) + 1
   empty!(xfs)
+
   t0, na, nn = 
     _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
       ψts, ixi, nep, 0, 0, 1, 500, xfs)

@@ -208,12 +208,12 @@ end
 
 
 """
-    ssσak(Ξ  ::Vector{T}, idf::Vector{iBffs}) where T <: sT
+    ssσak(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
 
 Estimate the anagenetic and cladogenetic sum of squared differences, 
 `sσa` and `sσk`.
 """
-function ssσak(Ξ  ::Vector{T}, idf::Vector{iBffs}) where T <: sT
+function ssσak(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
 
   @inbounds begin
     sσa = sσk = 0.0
