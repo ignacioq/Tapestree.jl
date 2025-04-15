@@ -30,7 +30,7 @@ Created 03 09 2020
                  αi      ::Float64               = 0.0,
                  σλi     ::Float64               = 0.01,
                  σμi     ::Float64               = 0.01,
-                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0, 0.1, 0.2),
+                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0001, 0.1, 0.2),
                  δt      ::Float64               = 1e-3,
                  survival::Bool                  = true,
                  mxthf   ::Float64               = 0.1,
@@ -58,7 +58,7 @@ function insane_gbmbd(tree    ::sT_label;
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.01,
                       σμi     ::Float64               = 0.01,
-                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0, 0.1, 0.2),
+                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0001, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       survival::Bool                  = true,
                       mxthf   ::Float64               = 0.1,
@@ -72,10 +72,6 @@ function insane_gbmbd(tree    ::sT_label;
   th    = treeheight(tree)
   δt   *= max(0.1,round(th, RoundDown, digits = 2))
   srδt  = sqrt(δt)
-
-  # turn to logarithmic terms
-  λ0_prior = (log(λ0_prior[1]), 2*log(λ0_prior[2]))
-  μ0_prior = (log(μ0_prior[1]), 2*log(μ0_prior[2]))
 
   surv = 0   # condition on survival of 0, 1, or 2 starting lineages
   rmλ  = 0.0 # condition on first speciation event
@@ -122,7 +118,7 @@ function insane_gbmbd(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running birth-death gbm"
+  @info "running birth-death diffusion"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, mc, ns, ne, stnλ, stnμ =
@@ -352,7 +348,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   nlogs = fld(niter,nthin)
   lthin = lit = sthin = zero(Int64)
 
-  L   = treelength(Ξ)        # tree length
+  L   = treelength(Ξ)       # tree length
   nin = lastindex(inodes)   # number of internal nodes
   el  = lastindex(idf)      # number of branches
 

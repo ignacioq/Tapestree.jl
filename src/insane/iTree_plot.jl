@@ -13,46 +13,27 @@ Created 07 07 2020
 
 
 """
-    b(tree::T) 
-    d(tree::T) 
-    lb(tree::T)
-    ld(tree::T)
-    t(tree::T) 
-    nd(tree::T)
-    dμ(tree::iT)
+    birth(tree::iT)
+    death(tree::iT)
+    logbirth(tree::iT)
+    logdeath(tree::iT)
+    turnover(tree::iT)
+    diversification(tree::iT)
 
 Predefined functions for plotting: 
-  `b`  speciation rates
-  `d`  extinction rates
-  `lb` log speciation rates
-  `lb` log speciation rates
-  `t`  turnover
-  `nd` net diversification
-  `dμ` change in speciation rates
+  `birth`: speciation rates
+  `death`: extinction rates
+  `logbirth`: log speciation rates
+  `logdeath`: log speciation rates
+  `turnover`: turnover
+  `diversification`: net diversification
 """
-bi(tree::iT)  = exp.(lλ(tree))
-de(tree::iT)  = exp.(lμ(tree))
-lbi(tree::iT) = lλ(tree)
-lde(tree::iT) = lμ(tree)
-tu(tree::iT)  = exp.(lμ(tree) .- lλ(tree))
-ltu(tree::iT) = lμ(tree) - lλ(tree)
-nd(tree::iT)  = exp.(lλ(tree)) .- exp.(lμ(tree))
-function dλ(tree::iT)
-  dd = diff(exp.(lλ(tree)))
-  return append!(dd, dd[end])
-end
-function dμ(tree::iT)
-  dd = diff(exp.(lμ(tree)))
-  return append!(dd, dd[end])
-end
-function dλc(tree::iT)
-  lv = lλ(tree)
-  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
-end
-function dμc(x)
-  lv = lμ(x)
-  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
-end
+birth(tree::iT)           = exp.(lλ(tree))
+death(tree::iT)           = exp.(lμ(tree))
+logbirth(tree::iT)        = lλ(tree)
+logdeath(tree::iT)        = lμ(tree)
+turnover(tree::iT)        = exp.(lμ(tree) .- lλ(tree))
+diversification(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
 
 
 

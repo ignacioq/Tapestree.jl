@@ -160,6 +160,50 @@ end
                 σλ  ::Float64,
                 σμ  ::Float64,
                 δt  ::Float64,
+                srδt::Float64)
+
+Returns the log-likelihood for a `iTbd` according to `gbmbd`.
+"""
+function llik_gbm_ss(tree::iTbd,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
+
+  if istip(tree)
+    ll, dλ, ssλ, ssμ, nλ =
+      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, δt, fdt(tree), srδt,
+        false, isextinct(tree))
+  else
+
+    ll, dλ, ssλ, ssμ, nλ =
+      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, δt, fdt(tree), srδt,
+        true, false)
+
+    ll1, dλ1, ssλ1, ssμ1, nλ1 = llik_gbm_ss(tree.d1, α, σλ, σμ, δt, srδt)
+    ll2, dλ2, ssλ2, ssμ2, nλ2 = llik_gbm_ss(tree.d2, α, σλ, σμ, δt, srδt)
+
+    ll  += ll1  + ll2
+    dλ  += dλ1  + dλ2
+    ssλ += ssλ1 + ssλ2
+    ssμ += ssμ1 + ssμ2
+    nλ  += nλ1  + nλ2
+  end
+
+  return ll, dλ, ssλ, ssμ, nλ
+end
+
+
+
+
+
+"""
+    llik_gbm_ss(tree::iTbd,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                δt  ::Float64,
                 srδt::Float64,
                 ns  ::Float64,
                 ne  ::Float64)

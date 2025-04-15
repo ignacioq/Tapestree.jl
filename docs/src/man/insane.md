@@ -374,14 +374,14 @@ r, tv = insane_gbmbd(tree,
                      niter    = 50_000,
                      nthin    = 50, 
                      ofile    = "<directory>",
-                     λa_prior = (0.0, 100.0),
-                     μa_prior = (0.0, 100.0),
+                     λ0_prior = (0.05, 148.41),
+                     μ0_prior = (0.05, 148.41),
                      α_prior  = (0.0, 10.0),
                      σλ_prior = (0.5, 0.05),
                      σμ_prior = (3.0, 0.5),
                      tρ       = Dict("" => 1.0))
 ```
-where we have uniform priors on the initial (root) values for ``\lambda_0`` and ``\mu_0``, and Inverse Gamma prior for sigma. Usually, an informative prior such as `σμ_prior = (3.0, 0.5)` or more is needed.
+where we have log-normal priors on the initial (root) values for ``\lambda_0`` and ``\mu_0``, and Inverse Gamma prior for sigma. Usually, an informative prior such as `σμ_prior = (3.0, 0.5)` or more is needed.
 
 Full documentation
 ```@docs
@@ -391,13 +391,13 @@ insane_gbmbd
 
 #### Birth-death diffusion process with informed extinction
 
-One can also define a branch-specific fixed extinction function and make inference on the GBM speciation. For example, in Quintero et al. (in prep), we estimated extinction rates based on fossil occurrences and then used this as input.
+One can also define a branch-specific fixed extinction function and make inference on the GBM speciation. For example, in Quintero et al. (2024) _Science_, we estimated extinction rates based on fossil occurrences and then used this as input.
 
 ##### Inference
 
 To make inference under this model, we need two vectors where each element links to a given branch in the reconstructed tree, in the same order as the phylogenetic tree. Each element of these vectors are themselves a vector of type `Float64`, and correspond to the time at which extinction is recovered in time backward order (_e.g._, [1.1, 1.0, ..., 0.1, 0.08, 0.0]) and to the extinction at those times. INSANE uses a linear approximation function between the input sampled points.
 
-To make inference under this model, we now input these vectors. Lets call them time_vector (of type `Vector{Vector{Float64}}`) and extinction_vector (also of type `Vector{Vector{Float64}}`), then:
+To make inference under this model, we now input these vectors. Lets call them `time_vector` (of type `Vector{Vector{Float64}}`) and `extinction_vector` (also of type `Vector{Vector{Float64}}`), then:
 ```julia
 r, tv = insane_gbmbd(tree,
                      time_vector,
@@ -406,11 +406,6 @@ r, tv = insane_gbmbd(tree,
                      niter    = 50_000,
                      nthin    = 50, 
                      ofile    = "<directory>",
-                     λa_prior = (0.0, 100.0),
-                     μa_prior = (0.0, 100.0),
-                     α_prior  = (0.0, 10.0),
-                     σλ_prior = (0.5, 0.05),
-                     σμ_prior = (3.0, 0.5),
                      tρ       = Dict("" => 1.0))
 ```
 
@@ -614,22 +609,21 @@ These plotting functions are specific to BDD type trees (_i.e._, of `iT` superty
 
 To "paint" the tree with the instantaneous lineage-specific rates of speciation ``\lambda(t)``, we can use:
 ```julia
-plot(tree, b)
+plot(tree, birth)
 ```
-Here, `b`, which stands for "birth rates" is a convenience wrapper around `exp.(lλ(tree))`: it extracts the log-speciation vector from a give `iT` tree using `lλ`, and then returns the exponential.
+Here, `birth`, which stands for "birth rates" is a convenience wrapper around `exp.(lλ(tree))`: it extracts the log-speciation vector from a give `iT` tree using `lλ`, and then returns the exponential.
 
 This plotting function also allows to plot the death rates (only where extinction is also a diffusion, _i.e._, `iTbd`) using
 ```julia
-plot(tree, d)
+plot(tree, death)
 ```
-where `d`, which stands for "death rates" is a wrapper around `exp.(lμ(tree))`.
+where `death`, which stands for "death rates" is a wrapper around `exp.(lμ(tree))`.
 
 In general, this plotting recipe receives a tree and a function that is applied recursively to paint the tree. Thus, we can use any custom made function that extracts information from the tree. Some predefined ones are:
-* `lb`: log-(speciation) birth rates
-* `ld`: log-(extinction) death rates 
-* `t`: turnover (extinction/speciation) rates
-* `lt`: log turnover rates
-* `nd`: net diversification (speciation - extinction) rates
+* `logbirth`: log-(speciation) birth rates
+* `logdeath`: log-(extinction) death rates 
+* `turnover`: turnover (extinction/speciation) rates
+* `diversification`: net diversification (speciation - extinction) rates
 
 We can also plot these trees radially using the `type = :radial`.
 
@@ -637,21 +631,21 @@ We can also plot these trees radially using the `type = :radial`.
 
 To plot how rates evolve across time, that is, to plot the rates in the y axis, one can use the `type = :rates` argument:
 ```julia
-plot(tree, b, type = :rates)
+plot(tree, birth, type = :rates)
 ```
 
 Similarly, we can plot the average for a tree (or other aggregating function as median, geometric mean, _etc._) and custom quantiles (as in [LTT and DTT plots](@ref)) for a given tree by adding a decimal number argument representing the sampling frequency through time.
 ```julia
-plot(tree, b, 0.1)
+plot(tree, birth, 0.1)
 ```
 To change the aggregating function, we modify the function `t_af` (by default `t_af = mean`), to the desired one.
 
 #### Plot the rates across tree vectors
 
 Often we would like to plot the average rates across a series of data augmented trees. This can be done by adding a decimal number argument (and, using a tree vector as input).
-For instance, to estimate average speciation rates (using wrapping function `b`) through time across tree vector `tv`, every ``0.1`` time units, we use:
+For instance, to estimate average speciation rates (using wrapping function `birth`) through time across tree vector `tv`, every ``0.1`` time units, we use:
 ```julia
-plot(tv, b, 0.1)
+plot(tv, birth, 0.1)
 ```
 
 We can choose the function to aggregate rates across lineages for each single tree using `_af` (by default `t_af = mean`, and then to aggregate these tree averages using the `tv_af` function (by default `tv_af = x -> quantile(x, 0.5)`, that is, the median).
