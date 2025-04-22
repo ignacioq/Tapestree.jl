@@ -34,7 +34,6 @@ abstract type sT <: iTree end
 
 
 
-
 """
     sT_label
 
@@ -84,17 +83,14 @@ end
 """
     sT_label(tree::sT_label)
 
-Demotes a tree to `sT_label`.
+Copies a tree to `sT_label`.
 """
 function sT_label(tree::sT_label)
   if def1(tree)
-    t1 = sT_label(tree.d1)
-    t2 = sT_label(tree.d2)
-    tree = sT_label(t1, t2, e(tree), label(tree))
+    sT_label(sT_label(tree.d1), sT_label(tree.d2), e(tree), label(tree))
   else
-    tree = sT_label(e(tree), label(tree))
+    sT_label(e(tree), label(tree))
   end
-  return tree
 end
 
 
@@ -119,10 +115,12 @@ function _sT_label(tree::T, i::Int64) where {T <: iTree}
   if def1(tree)
     t1, i = _sT_label(tree.d1, i)
     t2, i = _sT_label(tree.d2, i)
-    tree  = sT_label(t1, t2, e(tree), "")
+    lab = isdefined(tree, :l) ? label(tree) : ""
+    tree  = sT_label(t1, t2, e(tree), lab)
   else
     i += 1
-    tree = sT_label(e(tree), string("t",i))
+    lab = isdefined(tree, :l) ? label(tree) : string("t",i)
+    tree = sT_label(e(tree), lab)
   end
   return tree, i
 end
@@ -229,20 +227,15 @@ Base.show(io::IO, t::sTf_label) =
 Copies a tree to `sTf_label`
 """
 function sTf_label(tree::sTf_label)
-
   if def1(tree)
-      t1   = sTf_label(tree.d1)
     if def2(tree)
-      t2   = sTf_label(tree.d2)
-      tree = sTf_label(t1, t2, e(tree), label(tree))
+      sTf_label(sTf_label(tree.d1), sTf_label(tree.d2), e(tree), label(tree))
     else
-      tree = sTf_label(t1, e(tree), label(tree))
+      sTf_label(sTf_label(tree.d1), e(tree), label(tree))
     end
   else
-    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), label(tree))
+    sTf_label(e(tree), isextinct(tree), isfossil(tree), label(tree))
   end
-
-  return tree
 end
 
 
@@ -259,7 +252,7 @@ end
 
 
 """
-    _sTf_label(tree::T, i::Int64) where {T <: iTree}
+    _sTf_label(tree::T, i::Int64, j::Int64) where {T <: iTree}
 
 Demotes a tree to `sTf_label`, initialized with label i.
 """

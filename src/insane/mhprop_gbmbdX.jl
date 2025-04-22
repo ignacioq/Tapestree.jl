@@ -39,7 +39,7 @@ function _daughters_update!(ξ1  ::T,
                             βλ  ::Float64,
                             σx  ::Float64,
                             δt  ::Float64,
-                            srδt::Float64) where {T <: iTX}
+                            srδt::Float64) where {T <: Tx}
   @inbounds begin
 
     λ1c  = lλ(ξ1)

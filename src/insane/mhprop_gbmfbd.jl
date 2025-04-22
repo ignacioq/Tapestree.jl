@@ -349,8 +349,8 @@ function _crown_update!(ξi      ::T,
         ssλ += ssrλ1 + ssrλ2
         ssμ += ssrμ1 + ssrμ2
         mc   = mp
-        fill!(λpc, λr)
-        fill!(μpc, μr)
+        fill!(lλ(ξi), λr)
+        fill!(lμ(ξi), μr)
         unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
         unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
         unsafe_copyto!(μ1c, 1, μ1p, 1, l1)

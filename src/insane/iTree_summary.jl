@@ -51,7 +51,7 @@ end
 
 Extract values from `f` function at times sampled every `δt` across the tree.
 """
-function time_rate(tree::T, f::Function, δt::Float64) where {T <: iT}
+function time_rate(tree::T, f::Function, δt::Float64) where {T <: iTree}
 
   th = treeheight(tree)
 
@@ -90,7 +90,7 @@ Extract values from `f` function at times `ts` across the tree.
                              r   ::Array{Array{Float64,1},1},
                              tii ::Int64,
                              ct  ::Float64,
-                             f   ::Function) where {T <: iT}
+                             f   ::Function) where {T <: iTree}
   if ct < accerr
     return nothing
   end
@@ -256,9 +256,29 @@ end
 Return an Array with a row for each sampled tree for interpolated
 parameters accessed by `f` at times determined by `δt`.
 """
+function sample(tree::T,
+                f   ::Function,
+                δt  ::Float64) where {T <: iTree}
+  vi = Float64[]
+  extract_vector!(tree, vi, δt, 0.0, f)
+
+  return vi
+end
+
+
+
+
+"""
+    sample(treev::Array{T,1},
+           f    ::Function,
+           δt   ::Float64) where {T <: iTree}
+
+Return an Array with a row for each sampled tree for interpolated
+parameters accessed by `f` at times determined by `δt`.
+"""
 function sample(treev::Array{T,1},
                 f    ::Function,
-                δt   ::Float64) where {T <: iT}
+                δt   ::Float64) where {T <: iTree}
 
   @inbounds begin
 
@@ -286,7 +306,7 @@ end
                     v   ::Array{Float64,1},
                     nδt ::Float64,
                     ct  ::Float64,
-                    f  ::Function) where {T <: iT}
+                    f  ::Function) where {T <: iTree}
 
 Log-linearly predict Geometric Brownian motion for `λ` at times given by `nδt`
 and return a vector.
@@ -977,6 +997,67 @@ function imean(treev::Vector{iTfbd})
   end
 end
 
+
+
+
+
+
+"""
+    imean(treev::Vector{sTxs})
+
+Make an `sTxs` with the geometric mean.
+"""
+function imean(treev::Vector{sTxs})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas and mus
+  vsx = Array{Float64,1}[]
+  vsσ = Array{Float64,1}[]
+  for t in treev
+    push!(vsx, xv(t))
+    push!(vsσ, lσ2(t))
+  end
+
+  svx = Float64[]
+  svσ = Float64[]
+  # make fill vector to estimate statistics
+  vx = Array{Float64,1}(undef, nt)
+  vσ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsx[1]))
+    for t in Base.OneTo(nt)
+      vx[t] = vsx[t][i]
+      vσ[t] = vsσ[t][i]
+    end
+    push!(svx, mean(vx))
+    push!(svσ, mean(vσ))
+  end
+
+  if def1(t1)
+    treev1 = sTxs[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+
+    if def2(t1)
+      treev2 = sTxs[]
+      for t in Base.OneTo(nt)
+          push!(treev2, treev[t].d2)
+      end
+
+      sTxs(imean(treev1),
+           imean(treev2),
+           e(t1), dt(t1), fdt(t1), svx, svσ)
+    else
+      sTxs(imean(treev1),
+           e(t1), dt(t1), fdt(t1), svx, svσ)
+    end
+  else
+    sTxs(e(t1), dt(t1), fdt(t1), svx, svσ)
+  end
+end
 
 
 

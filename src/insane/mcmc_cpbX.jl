@@ -72,7 +72,7 @@ function insane_cpb(tree    ::sT_label,
   end
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, xr, sTpbX)
+  Ξ = make_Ξ(idf, xr, sTpbx)
 
   # get vector of internal branches
   inodes = Int64[]
@@ -142,7 +142,7 @@ end
 
 
 """
-    mcmc_burn_cpb(Ξ      ::Vector{sTpbX},
+    mcmc_burn_cpb(Ξ      ::Vector{sTpbx},
                   idf    ::Array{iBffs,1},
                   λ_prior::NTuple{2,Float64},
                   nburn  ::Int64,
@@ -153,7 +153,7 @@ end
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_burn_cpb(Ξ       ::Vector{sTpbX},
+function mcmc_burn_cpb(Ξ       ::Vector{sTpbx},
                        idf     ::Array{iBffs,1},
                        λ_prior ::NTuple{2,Float64},
                        σx_prior::NTuple{2,Float64},
@@ -227,7 +227,7 @@ end
 
 
 """
-    mcmc_cpb(Ξ       ::Vector{sTpbX},
+    mcmc_cpb(Ξ       ::Vector{sTpbx},
              idf     ::Array{iBffs,1},
              llc     ::Float64,
              prc     ::Float64,
@@ -246,7 +246,7 @@ end
 
 MCMC chain for constant pure-birth.
 """
-function mcmc_cpb(Ξ       ::Vector{sTpbX},
+function mcmc_cpb(Ξ       ::Vector{sTpbx},
                   idf     ::Array{iBffs,1},
                   llc     ::Float64,
                   prc     ::Float64,
@@ -276,7 +276,7 @@ function mcmc_cpb(Ξ       ::Vector{sTpbX},
   r = Array{Float64,2}(undef, nlogs, 6)
 
   # make tree vector
-  treev  = sTpbX[]
+  treev  = sTpbx[]
 
   pbar = Progress(niter, prints, "running mcmc...", 20)
 
@@ -366,7 +366,7 @@ end
 
 """
     update_fs!(bix::Int64,
-               Ξ  ::Vector{sTpbX},
+               Ξ  ::Vector{sTpbx},
                idf::Vector{iBffs},
                llc::Float64,
                λ  ::Float64,
@@ -379,7 +379,7 @@ end
 Forward simulation proposal function for constant pure-birth.
 """
 function update_fs!(bix::Int64,
-                    Ξ  ::Vector{sTpbX},
+                    Ξ  ::Vector{sTpbx},
                     idf::Vector{iBffs},
                     llc::Float64,
                     λ  ::Float64,
@@ -424,14 +424,14 @@ end
 
 """
     fsbi_t(bi::iBffs,
-           ξc::sTpbX,
+           ξc::sTpbx,
            λ ::Float64,
            σx::Float64)
 
 Forward simulation for terminal branch `bi`.
 """
 function fsbi_t(bi::iBffs,
-                ξc::sTpbX,
+                ξc::sTpbx,
                 λ ::Float64,
                 σx::Float64)
 
@@ -499,15 +499,15 @@ end
 
 """
     fsbi_i(bi::iBffs,
-           ξc::sTpbX,
+           ξc::sTpbx,
            λ ::Float64,
            σx::Float64)
 
 Forward simulation for terminal branch `bi`.
 """
 function fsbi_i(bi::iBffs,
-                ξ1::sTpbX,
-                ξ2::sTpbX,
+                ξ1::sTpbx,
+                ξ2::sTpbx,
                 x0::Float64,
                 λ ::Float64,
                 σx::Float64)
@@ -567,7 +567,7 @@ end
 
 
 """
-    tip_sims!(tree::sTpbX,
+    tip_sims!(tree::sTpbx,
               t   ::Float64,
               λ   ::Float64,
               σx  ::Float64,
@@ -578,7 +578,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::sTpbX,
+function tip_sims!(tree::sTpbx,
                    t   ::Float64,
                    λ   ::Float64,
                    σx  ::Float64,
@@ -629,7 +629,7 @@ end
               llc     ::Float64,
               prc     ::Float64,
               sdX     ::Float64,
-              x0_prior::NTuple{2, Float64}) where {T <: sTX}
+              x0_prior::NTuple{2, Float64}) where {T <: Tx}
 
 Make a `gbm` update for an internal branch and its descendants.
 """
@@ -640,7 +640,7 @@ function update_x!(bix     ::Int64,
                    llc     ::Float64,
                    prc     ::Float64,
                    sdX     ::Float64,
-                   x0_prior::NTuple{2, Float64}) where {T <: sTX}
+                   x0_prior::NTuple{2, Float64}) where {T <: Tx}
 
   ξi  = Ξ[bix]
   bi  = idf[bix]
@@ -692,7 +692,7 @@ end
                     llc     ::Float64,
                     prc     ::Float64,
                     sdX     ::Float64,
-                    x0_prior::NTuple{2,Float64}) where {T <: sTX}
+                    x0_prior::NTuple{2,Float64}) where {T <: Tx}
 
 Make stem update for trait.
 """
@@ -701,7 +701,7 @@ function _stem_update_x!(ξi      ::T,
                          llc     ::Float64,
                          prc     ::Float64,
                          sdX     ::Float64,
-                         x0_prior::NTuple{2,Float64}) where {T <: sTX}
+                         x0_prior::NTuple{2,Float64}) where {T <: Tx}
 
   m0, σx0 = x0_prior
   σx02    = σx0^2
@@ -735,7 +735,7 @@ end
                      llc     ::Float64,
                      prc     ::Float64,
                      sdX     ::Float64,
-                     x0_prior::NTuple{2,Float64}) where {T <: sTX}
+                     x0_prior::NTuple{2,Float64}) where {T <: Tx}
 
 Make stem update for trait.
 """
@@ -746,7 +746,7 @@ function _crown_update_x!(ξi      ::T,
                           llc     ::Float64,
                           prc     ::Float64,
                           sdX     ::Float64,
-                          x0_prior::NTuple{2,Float64}) where {T <: sTX}
+                          x0_prior::NTuple{2,Float64}) where {T <: Tx}
 
   m0, σx0 = x0_prior
   σx02    = σx0^2
@@ -789,7 +789,7 @@ end
                σx  ::Float64,
                llc ::Float64,
                sdX ::Float64,
-               ufx ::Bool) where {T <: sTX}
+               ufx ::Bool) where {T <: Tx}
 
 Do gbm updates on a decoupled tree recursively.
 """
@@ -797,7 +797,7 @@ function _update_x!(tree::T,
                     σx  ::Float64,
                     llc ::Float64,
                     sdX ::Float64,
-                    ufx ::Bool) where {T <: sTX}
+                    ufx ::Bool) where {T <: Tx}
 
   if def1(tree)
     llc, sdX = _update_triad_x!(tree, tree.d1, tree.d2, σx, llc, sdX)
@@ -821,7 +821,7 @@ end
     _update_triad_x!(tree::T,
                      σx  ::Float64,
                      llc ::Float64,
-                     sdX ::Float64) where {T <: sTX}
+                     sdX ::Float64) where {T <: Tx}
 
 Make gibbs node update for trait.
 """
@@ -830,7 +830,7 @@ function _update_triad_x!(tree::T,
                           tre2::T,
                           σx  ::Float64,
                           llc ::Float64,
-                          sdX ::Float64) where {T <: sTX}
+                          sdX ::Float64) where {T <: Tx}
 
   xa = xi(tree)
   xo = xf(tree)
@@ -865,14 +865,14 @@ end
     _update_tip_x!(tree::T,
                    σx  ::Float64,
                    llc ::Float64,
-                   sdX ::Float64) where {T <: sTX}
+                   sdX ::Float64) where {T <: Tx}
 
 Make gibbs node update for trait.
 """
 function _update_tip_x!(tree::T,
                         σx  ::Float64,
                         llc ::Float64,
-                        sdX ::Float64) where {T <: sTX}
+                        sdX ::Float64) where {T <: Tx}
 
   xa = xi(tree)
   xo = xf(tree)

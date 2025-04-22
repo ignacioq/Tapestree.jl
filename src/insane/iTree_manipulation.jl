@@ -220,6 +220,79 @@ end
 
 
 
+
+"""
+    prune_tips(tree::T, tips::Vector{String}) where {T <: Tlabel}
+
+Prune `tips` from tree.
+"""
+function prune_tips(tree::T, tips::Vector{String}) where {T <: Tlabel}
+  tips = Set(tips)
+
+  return _prune_tips!(T(tree::T), tips)
+end
+
+
+
+
+"""
+    prune_tips(treev::Vector{T}, tips::Vector{String}) where {T <: Tlabel}
+
+Prune `tips` from tree.
+"""
+function prune_tips(treev::Vector{T}, tips::Vector{String}) where {T <: Tlabel}
+  treevne = T[]
+  for t in treev
+    push!(treevne, prune_tips(t, tips))
+  end
+  return treevne
+end
+
+
+
+
+"""
+    _prune_tips!(tree::T, tips::Vector{String}) where {T <: Tlabel}
+
+Prune `tips` from tree.
+"""
+function _prune_tips!(tree::T, tips::Set{String}) where {T <: iTf}
+
+  if def1(tree)
+    tree.d1 = _prune_tips!(tree.d1, tips)
+    if def2(tree)
+      tree.d2 = _prune_tips!(tree.d2, tips)
+      if in(label(tree.d1), tips)
+        setdiff!(tips, label(tree.d1))
+        if in(label(tree.d2), tips)
+          return T(e(tree), label(tree.d2))
+        else
+          ne  = e(tree) + e(tree.d2)
+          tree = tree.d2
+          sete!(tree, ne)
+        end
+      elseif in(label(tree.d2), tips)
+        setdiff!(tips, label(tree.d2))
+        ne  = e(tree) + e(tree.d1)
+        tree = tree.d1
+        sete!(tree, ne)
+      end
+      return tree
+    else
+      if in(label(tree.d1), tips)
+        setdiff!(tips, label(tree.d1))
+        return T(e(tree), label(tree))
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+
 """
     cutbottom(tree::T, c::Float64) where {T <: iTree}
 
@@ -666,11 +739,11 @@ end
 
 
 """
-    fixrtip!(tree::T, na::Int64, xt::Float64) where T <: sTX
+    fixrtip!(tree::T, na::Int64, xt::Float64) where T <: Tx
 
 Fixes the the path for a random non extinct tip and returns final `λ(t)`.
 """
-function fixrtip!(tree::T, na::Int64, xt::Float64) where T <: sTX
+function fixrtip!(tree::T, na::Int64, xt::Float64) where T <: Tx
 
   fix!(tree)
 
@@ -812,7 +885,7 @@ end
 
 Fixes the the path from root to the only species alive.
 """
-function fixalive!(tree::T, xt::Float64) where T <: sTX
+function fixalive!(tree::T, xt::Float64) where T <: Tx
 
   if istip(tree::T)
     if isalive(tree::T)
@@ -1126,7 +1199,7 @@ end
              xc  ::Float64,
              σx  ::Float64,
              δt  ::Float64,
-             srδt::Float64) where {T <: iTX}
+             srδt::Float64) where {T <: Tx}
 
 Fixes the the path to tip `wi` in d1 order.
 """
@@ -1136,7 +1209,7 @@ function fixtip1!(tree::T,
                   xc  ::Float64,
                   σx  ::Float64,
                   δt  ::Float64,
-                  srδt::Float64) where {T <: iTX}
+                  srδt::Float64) where {T <: Tx}
 
   if istip(tree)
     if isalive(tree)
@@ -1177,7 +1250,7 @@ end
              δt  ::Float64,
              srδt::Float64,
              llr ::Float64,
-             ssrx::Float64) where {T <: iTX}
+             ssrx::Float64) where {T <: Tx}
 
 Fixes the the path to tip `wi` in d2 order.
 """
@@ -1187,7 +1260,7 @@ function fixtip2!(tree::T,
                   xc  ::Float64,
                   σx  ::Float64,
                   δt  ::Float64,
-                  srδt::Float64) where {T <: iTX}
+                  srδt::Float64) where {T <: Tx}
 
   if istip(tree)
     if isalive(tree)
@@ -1406,11 +1479,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::sTpbX)
+    _remove_unsampled!(tree::sTpbx)
 
 Remove unsampled tips (extinct and extant not sampled).
 """
-function _remove_unsampled!(tree::sTpbX)
+function _remove_unsampled!(tree::sTpbx)
 
   if def1(tree)
     tree.d1 = _remove_unsampled!(tree.d1)
@@ -1418,7 +1491,7 @@ function _remove_unsampled!(tree::sTpbX)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return sTpbX(e(tree),isfix(tree), xi(tree), xf(tree))
+        return sTpbx(e(tree),isfix(tree), xi(tree), xf(tree))
       else
         ne  = e(tree) + e(tree.d2)
         nx = xi(tree)
@@ -1442,11 +1515,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::sTbdX)
+    _remove_unsampled!(tree::sTbdx)
 
 Remove unsampled tips (extinct and extant not sampled).
 """
-function _remove_unsampled!(tree::sTbdX)
+function _remove_unsampled!(tree::sTbdx)
 
   if def1(tree)
     tree.d1 = _remove_unsampled!(tree.d1)
@@ -1454,7 +1527,7 @@ function _remove_unsampled!(tree::sTbdX)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return sTbdX(e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
+        return sTbdx(e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
       else
         ne  = e(tree) + e(tree.d2)
         nx = xi(tree)
@@ -2210,11 +2283,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTbdX)
+    _remove_extinct!(tree::iTbdx)
 
-Remove extinct tips from `iTbdX`.
+Remove extinct tips from `iTbdx`.
 """
-function _remove_extinct!(tree::iTbdX)
+function _remove_extinct!(tree::iTbdx)
 
   if def1(tree)
 
@@ -2223,7 +2296,7 @@ function _remove_extinct!(tree::iTbdX)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTbdX(e(tree), dt(tree), fdt(tree),
+        return iTbdx(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree), lμ(tree), xv(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -2563,22 +2636,22 @@ setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iT} =
 
 
 """
-  setfdt!(tree::T, fdt::Float64) where {T <: iT}
+  setfdt!(tree::T, fdt::Float64) where {T <: iTree}
 
 Set number of `δt` for `tree`.
 """
-setfdt!(tree::T, fdt::Float64) where {T <: iT} =
+setfdt!(tree::T, fdt::Float64) where {T <: iTree} =
   setproperty!(tree, :fdt, fdt)
 
 
 
 
 """
-  setdt!(tree::T, dt::Float64) where {T <: iT}
+  setdt!(tree::T, dt::Float64) where {T <: iTree}
 
 Set number of `δt` for `tree`.
 """
-setdt!(tree::T, dt::Float64) where {T <: iT} =
+setdt!(tree::T, dt::Float64) where {T <: iTree} =
   setproperty!(tree, :dt, dt)
 
 
@@ -2644,22 +2717,22 @@ defossilize!(tree::iTf) = setproperty!(tree, :iψ, false)
 
 
 """
-  setxi!(tree::T, x::Float64) where {T <: sTX}
+  setxi!(tree::T, x::Float64) where {T <: Tx}
 
 Set `x` as initial trait in tree.
 """
-setxi!(tree::T, x::Float64) where {T <: sTX} =
+setxi!(tree::T, x::Float64) where {T <: Tx} =
   setproperty!(tree, :xi, x)
 
 
 
 
 """
-  setxf!(tree::T, x::Float64) where {T <: sTX}
+  setxf!(tree::T, x::Float64) where {T <: Tx}
 
 Set `x` as final trait in tree.
 """
-setxf!(tree::T, x::Float64) where {T <: sTX} =
+setxf!(tree::T, x::Float64) where {T <: Tx} =
   setproperty!(tree, :xf, x)
 
 

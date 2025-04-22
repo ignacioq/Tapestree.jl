@@ -332,6 +332,44 @@ end
 """
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
+        σ   ::Float64,
+        δt  ::Float64,
+        fdt ::Float64,
+        srδt::Float64)
+
+Brownian motion without drift simulation function for updating a branch 
+in place.
+"""
+@inline function bm!(x   ::Array{Float64,1},
+                     xi  ::Float64,
+                     σ   ::Float64,
+                     δt  ::Float64,
+                     fdt ::Float64,
+                     srδt::Float64)
+
+  @inbounds begin
+    l = lastindex(x)
+    randn!(x)
+    # for standard δt
+    x[1] = xi
+    if l > 2
+      @turbo for i = Base.OneTo(l-2)
+        x[i+1] *= srδt*σ
+      end
+    end
+    x[l] *= sqrt(fdt)*σ
+    cumsum!(x, x)
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    bm!(x   ::Array{Float64,1},
+        xi  ::Float64,
         α   ::Float64,
         σ   ::Float64,
         δt  ::Float64,
@@ -635,50 +673,6 @@ end
 
 
 """
-    duoprop(x1 ::Float64,
-            x2 ::Float64,
-            σ21::Float64,
-            σ22::Float64)
-
-Proposal for a duo of Gaussians.
-"""
-function duoprop(x1 ::Float64,
-                 x2 ::Float64,
-                 σ21::Float64,
-                 σ22::Float64)
-
-  iσ2 = 1.0/(σ21 + σ22)
-  return rnorm((x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
-end
-
-
-
-
-"""
-    trioprop(xp ::Float64,
-             x1 ::Float64,
-             x2 ::Float64,
-             σ2p::Float64,
-             σ21::Float64,
-             σ22::Float64)
-
-Proposal for a trio of Gaussians.
-"""
-function trioprop(xp ::Float64,
-                  x1 ::Float64,
-                  x2 ::Float64,
-                  σ2p::Float64,
-                  σ21::Float64,
-                  σ22::Float64)
-
-  s = 1.0/(1.0/σ2p + 1.0/σ21 + 1.0/σ22)
-  return rnorm((xp/σ2p + x1/σ21 + x2/σ22)*s, sqrt(s))
-end
-
-
-
-
-"""
     duodnorm(x ::Float64,
              x1::Float64,
              x2::Float64,
@@ -697,29 +691,6 @@ function duodnorm(x  ::Float64,
 
   it = 1.0/(t1 + t2)
   return dnorm_bm(x, (t2*x1 + t1*x2)*it, sqrt(t1*t2*it)*σ)
-end
-
-
-
-
-"""
-    duodnorm(x ::Float64,
-             x1::Float64,
-             x2::Float64,
-             t1::Float64,
-             t2::Float64,
-             σ  ::Float64)
-
-Likelihood for a duo of Gaussians.
-"""
-function duodnorm(x  ::Float64,
-                  x1 ::Float64,
-                  x2 ::Float64,
-                  σ21::Float64,
-                  σ22::Float64)
-
-  iσ2 = 1.0/(σ21 + σ22)
-  return dnorm_bm(x, (x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
 end
 
 

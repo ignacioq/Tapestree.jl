@@ -615,7 +615,7 @@ end
 
 Returns the integrated rate `ir`.
 """
-function _ir(tree::T, irλ ::Float64, irμ ::Float64) where {T <: iTbdU}
+function _ir(tree::T, irλ::Float64, irμ::Float64) where {T <: iTbdU}
 
   irλ, irμ = _ir_b(lλ(tree), lμ(tree), dt(tree), fdt(tree), irλ, irμ)
 

@@ -34,22 +34,22 @@ function sim_cfbd(t ::Float64,
 
   if tw > t
     x1 = rnorm(x0, sqrt(t) * σx)
-    return sTfbdX(t, false, false, false, x0, x1)
+    return sTfbdx(t, false, false, false, x0, x1)
   end
 
   x1 = rnorm(x0, sqrt(tw) * σx)
 
   if λevent(λ, μ, ψ)
     # speciation
-    return sTfbdX(sim_cfbd(t - tw, λ, μ, ψ, x1, σx), 
+    return sTfbdx(sim_cfbd(t - tw, λ, μ, ψ, x1, σx), 
                   sim_cfbd(t - tw, λ, μ, ψ, x1, σx), 
                   tw, false, false, false, x0, x1)
   elseif μevent(μ, ψ)
     # extinction
-    return sTfbdX(tw, true, false, false, x0, x1)
+    return sTfbdx(tw, true, false, false, x0, x1)
   else
     # fossil sampling
-    return sTfbdX(sim_cfbd(t - tw, λ, μ, ψ, x1, σx), 
+    return sTfbdx(sim_cfbd(t - tw, λ, μ, ψ, x1, σx), 
                   tw, false, true, false, x0, x1)
   end
 end
@@ -84,7 +84,7 @@ function sim_cfbd(t ::Float64,
   if tw > t
     x1 = rnorm(x0, sqrt(t) * σx)
     na += 1
-    return sTfbdX(t, false, false, false, x0, x1), na, nf
+    return sTfbdx(t, false, false, false, x0, x1), na, nf
   end
 
   x1 = rnorm(x0, sqrt(tw) * σx)
@@ -94,15 +94,15 @@ function sim_cfbd(t ::Float64,
     d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx, na, nf)
     d2, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx, na, nf)
 
-    return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nf
+    return sTfbdx(d1, d2, tw, false, false, false, x0, x1), na, nf
   # extinction
   elseif μevent(μ, ψ)
-    return sTfbdX(tw, true, false, false, x0, x1), na, nf
+    return sTfbdx(tw, true, false, false, x0, x1), na, nf
   # fossil sampling
   else
     nf += 1
     d1, na, nf = sim_cfbd(t - tw, λ, μ, ψ, x1, σx, na, nf)
-    return sTfbdX(d1, tw, false, true, false, x0, x1), na, nf
+    return sTfbdx(d1, tw, false, true, false, x0, x1), na, nf
   end
 end
 
@@ -157,13 +157,13 @@ function _sim_cfbd_t(t   ::Float64,
         nlr += log(Iρi * Float64(na)/Float64(na-1))
       end
       if nlr < lr && lU >= nlr
-        return sTfbdX(), na, nn, NaN
+        return sTfbdx(), na, nn, NaN
       else
         x1 = rnorm(x0, sqrt(t) * σx)
         push!(xist, x0)
         push!(xfst, x1)
         push!(est, t)
-        return sTfbdX(t, false, false, false, x0, x1), na, nn, nlr
+        return sTfbdx(t, false, false, false, x0, x1), na, nn, nlr
       end
     end
 
@@ -179,19 +179,19 @@ function _sim_cfbd_t(t   ::Float64,
         _sim_cfbd_t(t - tw, λ, μ, ψ, x1, σx, lr, lU, Iρi, na, nn, nlim, 
           xist, xfst, est)
 
-      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nn, lr
+      return sTfbdx(d1, d2, tw, false, false, false, x0, x1), na, nn, lr
     # extinction
     elseif μevent(μ, ψ)
 
-      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+      return sTfbdx(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
              na, nn, lr
     # fossil sampling
     else
-      return sTfbdX(), na, nn, NaN
+      return sTfbdx(), na, nn, NaN
     end
   end
 
-  return sTfbdX(), na, nn, NaN
+  return sTfbdx(), na, nn, NaN
 end
 
 
@@ -241,7 +241,7 @@ function _sim_cfbd_i(t   ::Float64,
       push!(xist, x0)
       push!(xfst, x1)
       push!(est, t)
-      return sTfbdX(t, false, false, false, x0, x1), na, nf, nn
+      return sTfbdx(t, false, false, false, x0, x1), na, nf, nn
     end
 
     # speciation
@@ -253,20 +253,20 @@ function _sim_cfbd_i(t   ::Float64,
       d2, na, nf, nn = 
         _sim_cfbd_i(t - tw, λ, μ, ψ, x1, σx, na, nf, nn, nlim, xist, xfst, est)
 
-      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nf, nn
+      return sTfbdx(d1, d2, tw, false, false, false, x0, x1), na, nf, nn
     # extinction
     elseif μevent(μ, ψ)
 
-      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+      return sTfbdx(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
              na, nf, nn
     # fossil sampling
     else
       nf += 1
-      return sTfbdX(), na, nf, nn
+      return sTfbdx(), na, nf, nn
     end
   end
 
-  return sTfbdX(), na, nf, nn
+  return sTfbdx(), na, nf, nn
 end
 
 
@@ -308,7 +308,7 @@ function _sim_cfbd_i(t   ::Float64,
 
     if tw > t
       na += 1
-      return sTfbdX(t, false, false, false, x0, rnorm(x0, sqrt(t) * σx)), 
+      return sTfbdx(t, false, false, false, x0, rnorm(x0, sqrt(t) * σx)), 
              na, nf, nn
     end
 
@@ -319,20 +319,20 @@ function _sim_cfbd_i(t   ::Float64,
       d1, na, nf, nn = _sim_cfbd_i(t - tw, λ, μ, ψ, x1, σx, na, nf, nn, nlim)
       d2, na, nf, nn = _sim_cfbd_i(t - tw, λ, μ, ψ, x1, σx, na, nf, nn, nlim)
 
-      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nf, nn
+      return sTfbdx(d1, d2, tw, false, false, false, x0, x1), na, nf, nn
     # extinction
     elseif μevent(μ, ψ)
 
-      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+      return sTfbdx(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
              na, nf, nn
     # fossil sampling
     else
       nf += 1
-      return sTfbdX(), na, nf, nn
+      return sTfbdx(), na, nf, nn
     end
   end
 
-  return sTfbdX(), na, nf, nn
+  return sTfbdx(), na, nf, nn
 end
 
 
@@ -376,7 +376,7 @@ function _sim_cfbd_it(t   ::Float64,
     if tw > t
       na += 1
       lr += log(Iρi)
-      return sTfbdX(t, false, false, false, x0, rnorm(x0, sqrt(t) * σx)), 
+      return sTfbdx(t, false, false, false, x0, rnorm(x0, sqrt(t) * σx)), 
              na, nn, lr
     end
 
@@ -389,18 +389,18 @@ function _sim_cfbd_it(t   ::Float64,
       d2, na, nn, lr = 
         _sim_cfbd_it(t - tw, λ, μ, ψ, x1, σx, lr, lU, Iρi, na, nn, nlim)
 
-      return sTfbdX(d1, d2, tw, false, false, false, x0, x1), na, nn, lr
+      return sTfbdx(d1, d2, tw, false, false, false, x0, x1), na, nn, lr
     # extinction
     elseif μevent(μ, ψ)
 
-      return sTfbdX(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
+      return sTfbdx(tw, true, false, false, x0, rnorm(x0, sqrt(tw) * σx)), 
              na, nn, lr
     # fossil sampling
     else
-      return sTfbdX(), na, nn, NaN
+      return sTfbdx(), na, nn, NaN
     end
   end
 
-  return sTfbdX(), na, nn, NaN
+  return sTfbdx(), na, nn, NaN
 end
 

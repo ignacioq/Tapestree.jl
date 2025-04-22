@@ -13,7 +13,7 @@ Created 06 07 2020
 
 
 """
-    llik_cfbd(tree::sTfbdX,
+    llik_cfbd(tree::sTfbdx,
               λ   ::Float64,
               μ   ::Float64,
               ψ   ::Float64,
@@ -22,7 +22,7 @@ Created 06 07 2020
 Log-likelihood up to a constant for constant fossilized birth-death and 
 trait evolution given a complete `iTree` recursively.
 """
-function llik_cfbd(tree::sTfbdX,
+function llik_cfbd(tree::sTfbdx,
                    λ   ::Float64,
                    μ   ::Float64,
                    ψ   ::Float64,
@@ -41,11 +41,11 @@ function llik_cfbd(tree::sTfbdX,
     end
   elseif isfossil(tree)
     return - el*(λ + μ + ψ) + log(ψ) + bml     +
-             llik_cfbd(tree.d1::sTfbdX, λ, μ, ψ, σx)
+             llik_cfbd(tree.d1::sTfbdx, λ, μ, ψ, σx)
   else
     return - el*(λ + μ + ψ) + log(λ) + bml      +
-             llik_cfbd(tree.d1::sTfbdX, λ, μ, ψ, σx) +
-             llik_cfbd(tree.d2::sTfbdX, λ, μ, ψ, σx)
+             llik_cfbd(tree.d1::sTfbdx, λ, μ, ψ, σx) +
+             llik_cfbd(tree.d2::sTfbdx, λ, μ, ψ, σx)
   end
 end
 
@@ -53,7 +53,7 @@ end
 
 
 """
-    llik_cfbd(Ξ ::Vector{sTfbdX},
+    llik_cfbd(Ξ ::Vector{sTfbdx},
               λ ::Float64,
               μ ::Float64,
               ψ ::Float64,
@@ -62,7 +62,7 @@ end
 Log-likelihood up to a constant for constant fossilized birth-death and 
 trait evolution given a complete `iTree` for decoupled trees.
 """
-function llik_cfbd(Ξ ::Vector{sTfbdX},
+function llik_cfbd(Ξ ::Vector{sTfbdx},
                    λ ::Float64,
                    μ ::Float64,
                    ψ ::Float64,
@@ -83,11 +83,11 @@ end
 
 
 """
-    _sdeltaX(tree::T, sdX::Float64, nX::Int64) where {T <: sTX}
+    _sdeltaX(tree::T, sdX::Float64, nX::Int64) where {T <: Tx}
 
 Returns time standardized trait differences.
 """
-function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: sTfbdX}
+function _sdeltaX(tree::T, sdX::Float64, nX::Float64) where {T <: sTfbdx}
 
   el = e(tree)
   if !iszero(el)

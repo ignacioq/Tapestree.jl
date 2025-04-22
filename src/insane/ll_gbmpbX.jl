@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTpbX},
+    llik_gbm(Ξ   ::Vector{iTbdx},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
@@ -22,9 +22,9 @@ Created 03 09 2020
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
+Returns the log-likelihood for a `iTbdx` according to GBM birth-death.
 """
-function llik_gbm(Ξ   ::Vector{iTpbX},
+function llik_gbm(Ξ   ::Vector{iTbdx},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -53,7 +53,7 @@ end
 
 
 """
-    llik_gbm(tree::iTpbX,
+    llik_gbm(tree::iTbdx,
              α   ::Float64,
              σλ  ::Float64,
              βλ  ::Float64,
@@ -61,9 +61,9 @@ end
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
+Returns the log-likelihood for a `iTbdx` according to GBM birth-death.
 """
-function llik_gbm(tree::iTpbX,
+function llik_gbm(tree::iTbdx,
                   α   ::Float64,
                   σλ  ::Float64,
                   βλ  ::Float64,
@@ -75,8 +75,8 @@ function llik_gbm(tree::iTpbX,
     ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, false)
   else
     ll_gbm_b(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)                      +
-    llik_gbm(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
+    llik_gbm(tree.d1::iTbdx, α, σλ, βλ, σx, δt, srδt)                      +
+    llik_gbm(tree.d2::iTbdx, α, σλ, βλ, σx, δt, srδt)
   end
 end
 
@@ -148,7 +148,7 @@ end
 
 
 """
-    llik_gbm_ss(tree::iTpbX,
+    llik_gbm_ss(tree::iTbdx,
                 α   ::Float64,
                 σλ  ::Float64,
                 βλ  ::Float64,
@@ -156,9 +156,9 @@ end
                 δt  ::Float64,
                 srδt::Float64)
 
-Returns the log-likelihood for a `iTpbX` according to GBM birth-death.
+Returns the log-likelihood for a `iTbdx` according to GBM birth-death.
 """
-function llik_gbm_ss(tree::iTpbX,
+function llik_gbm_ss(tree::iTbdx,
                      α   ::Float64,
                      σλ  ::Float64,
                      βλ  ::Float64,
@@ -174,9 +174,9 @@ function llik_gbm_ss(tree::iTpbX,
       ll_gbm_b_ss(lλ(tree), xv(tree), α, σλ, βλ, σx, δt, fdt(tree), srδt, true)
 
     ll1, dλ1, ssλ1, ssx1, nd1 =
-      llik_gbm_ss(tree.d1::iTpbX, α, σλ, βλ, σx, δt, srδt)
+      llik_gbm_ss(tree.d1::iTbdx, α, σλ, βλ, σx, δt, srδt)
     ll2, dλ2, ssλ2, ssx2, nd2 =
-      llik_gbm_ss(tree.d2::iTpbX, α, σλ, βλ, σx, δt, srδt)
+      llik_gbm_ss(tree.d2::iTbdx, α, σλ, βλ, σx, δt, srδt)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
@@ -417,7 +417,7 @@ function _sss_gbm(tree::T,
                   βλ  ::Float64,
                   ssλ ::Float64,
                   ssx ::Float64,
-                  n   ::Float64) where {T <: iTX}
+                  n   ::Float64) where {T <: Tx}
 
   ssλ0, ssx0, n0 = _sss_gbm_b(lλ(tree), xv(tree), α, βλ, dt(tree), fdt(tree))
 

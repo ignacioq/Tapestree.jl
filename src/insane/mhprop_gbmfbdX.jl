@@ -13,7 +13,7 @@ Created 27 05 2020
 
 
 """
-    _daughter_update!(ξ1  ::iTfbdX,
+    _daughter_update!(ξ1  ::iTfbdx,
                       λf  ::Float64,
                       μf  ::Float64,
                       α   ::Float64,
@@ -27,7 +27,7 @@ Created 27 05 2020
 
 Make a `gbm-bd` proposal for daughters from forwards simulated branch.
 """
-function _daughter_update!(ξ1  ::iTfbdX,
+function _daughter_update!(ξ1  ::iTfbdx,
                            λf  ::Float64,
                            μf  ::Float64,
                            α   ::Float64,
@@ -74,7 +74,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTfbdX,
+    _update_gbm!(tree::iTfbdx,
                  α   ::Float64,
                  σλ  ::Float64,
                  σμ  ::Float64,
@@ -88,7 +88,7 @@ end
 
 Do `gbm-bd` updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTfbdX,
+function _update_gbm!(tree::iTfbdx,
                       α   ::Float64,
                       σλ  ::Float64,
                       σμ  ::Float64,
@@ -128,7 +128,7 @@ end
 
 
 """
-    update_duo!(tree::iTfbdX,
+    update_duo!(tree::iTfbdx,
                 α   ::Float64,
                 σλ  ::Float64,
                 σμ  ::Float64,
@@ -141,7 +141,7 @@ end
 
 Make a `gbm` trio proposal.
 """
-function update_duo!(tree::iTfbdX,
+function update_duo!(tree::iTfbdx,
                      α   ::Float64,
                      σλ  ::Float64,
                      σμ  ::Float64,
