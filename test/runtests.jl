@@ -211,12 +211,12 @@ rm(homedir()*"/Desktop/test.log")
 ltti = ltt(tree)
 
 @test isa(ltti, Ltt)
-@test isa(ltti.x, Vector{Float64})
+@test isa(ltti.n, Vector{Int64})
 
 ltti = ltt(ftree)
 
 @test isa(ltti, Ltt)
-@test isa(ltti.x, Vector{Float64})
+@test isa(ltti.t, Vector{Float64})
 
 
 

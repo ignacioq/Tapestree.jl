@@ -16,5 +16,5 @@ makedocs(
         checkdocs = :none)
 
 deploydocs(
-    repo="github.com/ignacioq/Tapestree.jl",
+    repo="github.com/ignacioq/Tapestree.jl.git",
 )
