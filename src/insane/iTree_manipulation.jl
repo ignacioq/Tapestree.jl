@@ -424,7 +424,7 @@ function _cutbottom(tree::iTpb,
 
     push!(lλv, eλ)
 
-    tree = iTpb(c - t, true, δt, c - t - tii, lλv)
+    tree = iTpb(c - t, δt, c - t - tii, true, lλv)
 
   else
     if def1(tree)

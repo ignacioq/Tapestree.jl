@@ -332,44 +332,6 @@ end
 """
     bm!(x   ::Array{Float64,1},
         xi  ::Float64,
-        σ   ::Float64,
-        δt  ::Float64,
-        fdt ::Float64,
-        srδt::Float64)
-
-Brownian motion without drift simulation function for updating a branch 
-in place.
-"""
-@inline function bm!(x   ::Array{Float64,1},
-                     xi  ::Float64,
-                     σ   ::Float64,
-                     δt  ::Float64,
-                     fdt ::Float64,
-                     srδt::Float64)
-
-  @inbounds begin
-    l = lastindex(x)
-    randn!(x)
-    # for standard δt
-    x[1] = xi
-    if l > 2
-      @turbo for i = Base.OneTo(l-2)
-        x[i+1] *= srδt*σ
-      end
-    end
-    x[l] *= sqrt(fdt)*σ
-    cumsum!(x, x)
-  end
-
-  return nothing
-end
-
-
-
-
-"""
-    bm!(x   ::Array{Float64,1},
-        xi  ::Float64,
         α   ::Float64,
         σ   ::Float64,
         δt  ::Float64,

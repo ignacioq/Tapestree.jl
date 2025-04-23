@@ -494,7 +494,7 @@ function _ss_dd_b(lλv::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    ssλ = ssμ = 0.0
+    ssλ = ssμ = n = 0.0
     if nI > 0
       @turbo for i in Base.OneTo(nI)
         lλvi  = lλv[i]
@@ -509,9 +509,9 @@ function _ss_dd_b(lλv::Array{Float64,1},
       invt = 1.0/(2.0*δt)
       ssλ *= invt
       ssμ *= invt
+      n   += Float64(nI)
     end
 
-    n = Float64(nI)
     # add final non-standard `δt`
     if fdt > 0.0
       invt = 1.0/(2.0*fdt)

@@ -769,5 +769,4 @@ Txs = Union{sTxs}
 
 Tx = Union{sTpbx, sTbdx, sTfbdx}
 """
-Tx = Union{sTxs,
-           sTpbx, sTbdx, sTfbdx, iTpbx, iTcex, iTbdx, iTfbdx}
+Tx = Union{sTxs}

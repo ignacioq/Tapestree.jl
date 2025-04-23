@@ -1,12 +1,15 @@
 # INSANE
 
-## Reference
-
-Quintero, I., Lartillot, N., Morlon, H. (2024). Imbalanced speciation pulses sustain the radiation of mammals. Science, 384: 1007-1012. DOI: 10.1126/science.adj2793
-
 ## Insane Bayesian data augmentation
 
 INSANE uses Bayesian data augmentation (DA) to perform inference on a number of evolutionary models on phylogenetic trees. As such, performing inference will output posterior samples for the governing parameters as well as _complete_ or _data augmented_ trees, that is, trees that include probable configurations of unobserved variables such as the lineages that went extinct in the past or the underlying (latent) speciation rate. 
+
+## References
+
+Birth-Death Diffusion (BDD): Quintero, I., Lartillot, N., Morlon, H. (2024). Imbalanced speciation pulses sustain the radiation of mammals. _Science_, 384: 1007-1012. [link](https://doi.org/10.1126/science.adj2793)
+
+Diffused Brownian motion (DBM): Quintero, I. (in press). "The diffused evolutionary dynamics of morphological novelty". _Proceedings of the National Academy of Sciences_.
+
 
 ## Insane tree and model input/output
 
@@ -45,6 +48,12 @@ And have the following concrete types:
 2. `iTbd`: is the full BDD tree.
   * It has the additional field `lμ`:  an array specifying the Brownian motion evolution of log-extinction rates.
 
+### Insane DBM trees (`sTxs`)
+
+  * `dt` a decimal specifying the time step of the GBM discretization.
+  * `fdt` a decimal specifying the final time step of the GBM discretization.
+  * `xv` an array specifying the Brownian motion evolution of traits.
+  * `lσ2` an array specifying the Geometric Brownian motion evolution of rates.
 
 ### Reading and saving newick trees
 
@@ -63,7 +72,7 @@ Similarly, it can also write trees using `write_newick`
 write_newick(tree, "<directory>")
 ```
 
-Note that only `*_label` trees (_e.g._, sT_label) have labels. So if you want to save a DA tree with the original tip labels plus new names to the data augmented trees, you first will have to create a labelled tree from the DA tree and the loaded labelled tree and then save it:
+Note that only `*_label` trees (_e.g._, `sT_label`) have labels. So if you want to save a DA tree with the original tip labels plus new names to the data augmented trees, you first will have to create a labelled tree from the `DA_tree` and the loaded labelled tree and then save it:
 ```julia
 write_newick(sT_label(DA_tree, tree), "<directory>")
 ```
@@ -103,7 +112,7 @@ All inference functions require a phylogenetic tree of type `sT_label`, that is,
 * `nthin`: specifies the iteration frequency at which to save the parameters **in the julia session** (_i.e._,`nthin = 2` specifies saving every 2 iterations), 
 * `nflush`: specifies the frequency at which to save **to file**. 
 * `ofile`: specifies the directory where the results will be written. 
-* `tρ`: controls the sampling fraction and receives a `Dictionary` as input, with a `String` key pointing to a `Float64` number (_i.e._, `Dict{String, Float64}`). If the dictionary is of length 1 with an empty string, then the insane sets this as a the global sampling fraction. For example, to set a sampling fraction of `0.6`, one show input `tρ = Dict("" => 0.6)`. Most times, however, sampling fraction is not uniform across the tree, but rather some part so the tree is more heavily sampled than others, to accomodate these variability, you can input a dictionary of the same length as the number of tips in the tree, where the dictionary key string is the tip label pointing to the specific sampling fraction value. For example, for two tips, named `tip_1` and `tip_2`, one could input `tρ = Dict("tip_1" => 0.5, "tip_2" => 0.3)`.
+* `tρ`: controls the sampling fraction and receives a `Dictionary` as input, with a `String` key pointing to a `Float64` number (_i.e._, `Dict{String, Float64}`). If the dictionary is of length 1 with an empty string, then the insane sets this as a the global sampling fraction. For example, to set a sampling fraction of `0.6`, one show input `tρ = Dict("" => 0.6)`. Most times, however, sampling fraction is not uniform across the tree, but rather some part so the tree is more heavily sampled than others, to accommodate these variability, you can input a dictionary of the same length as the number of tips in the tree, where the dictionary key string is the tip label pointing to the specific sampling fraction value. For example, for two tips, named `tip_1` and `tip_2`, one could input `tρ = Dict("tip_1" => 0.5, "tip_2" => 0.3)`. Make sure to specify all tips when assigning different sampling fractions across the tips, even ones with `1.0`. 
 * `prints`: specifies the number of seconds to refresh the progress meter.
 * `survival`: For those modesl with extinction, `true` or `false` if to condition the likelihood on survival.
 
@@ -223,7 +232,7 @@ For all the BDD models, we have the possibility to simulate conditioned on total
 To simulate conditioned on some number of species, say, ``20``, with starting speciation rate of ``\lambda_0 = 1.0``, drift of ``\alpha = 0`` and diffusion of ``\sigma_{\lambda} = 0.1``, we can use:
 
 ```julia
- sim_gbmpb(20, λ0 = 1.0, α = 0.0, σλ = 0.1)
+ sim_gbmpb(20.0, λ0 = 1.0, α = 0.0, σλ = 0.1)
 ```
 
 Similarly, to simulate conditioned on time, say, ``10`` time units, with the same parameters, we can use:
@@ -354,7 +363,7 @@ Note that this is unidentifiable, unless we specify strong priors on the extinct
 
 ##### Simulations
 
-Again, one can speify a time or a number of lineages to simulate under the BDD. For example, for ``50`` species
+Again, one can specify a time or a number of lineages to simulate under the BDD. For example, for ``50`` species
 
 ```julia
  sim_gbmbd(50, λ0 = 1.0, μ0 = 1.0, α = 0.0, σλ = 0.1, σμ = 0.1)
@@ -391,7 +400,7 @@ insane_gbmbd
 
 #### Birth-death diffusion process with informed extinction
 
-One can also define a branch-specific fixed extinction function and make inference on the GBM speciation. For example, in Quintero et al. (2024) _Science_, we estimated extinction rates based on fossil occurrences and then used this as input.
+One can also define a branch-specific fixed extinction function and make inference on the GBM speciation. For example, in Quintero _et al._ (2024) _Science_, we estimated extinction rates based on fossil occurrences and then used this as input.
 
 ##### Inference
 
@@ -409,10 +418,112 @@ r, tv = insane_gbmbd(tree,
                      tρ       = Dict("" => 1.0))
 ```
 
-The only thing one has to make sure is that the order of `time_vector` and `extinction_vector` correspond to the order of the branches in `tree`, which can be a bit involved. However, this can be achieved by understanding that the trees are recursive and are ordered either by left or right branch, and using some of the tree utility functions.
+The only thing one has to make sure is that the order of `time_vector` and `extinction_vector` correspond to the order of the branches in `tree`, which can be a bit involved. However, this can be achieved by understanding that the trees are recursive and are ordered either by left or right branch, and using some of the tree utility functions. 
 
 For example, one can use the `subclade` function, to extract a subclade given a set of tip labels. One can also use the `make_idf` function, which splits the tree into a vector of branches in the same order that INSANE will process the tree. This way one can see the ordering of branches, and then order the `time_vector` and the `extinction_vector` in the same order.
 
+If only one extinction function is used for all the tree, then one has to only create a vector of the time and extinction vector of equal size as the number of branches.
+
+To estimate the number of branches in your empirical tree (saved in `<...tree directory...>`), we can do:
+
+```julia
+# read tree
+tre = read_newick("<...tree directory...>")
+
+## make extinction function vectors for each branch
+# set a dummy smapling fraction (you can set the real one afterwards! - this is just to estimate the number of branches)
+tρ  = Dict(li => 1.0 for li in tiplabels(tre))
+idf = make_idf(tre, tρ, Inf)
+
+# number of branches
+nb = length(idf)
+```
+
+If we have a global curve with extinction `[0.06, 0.02, 0.05]` at times `[0.5, 0.3, 0.1]`, then we would have to create the following input objects for `time_vector` and `extinction_vector`:
+
+```julia
+extinction_vector = fill([0.06, 0.02, 0.05], nb)
+time_vector = fill([0.5, 0.3, 0.1], nb)
+```
+
+
+#### Diffused Brownian motion process (DBM)
+
+This is a model of trait evolution where an univariate trait ``x(t)`` evolves under a diffused Brownian motion with an underlying evolutionary rate ``\sigma^2(t)`` that is also itself evolving separately according to Geometric Brownian motion.
+
+ we arrive at the most complex model, where extinction also follows a GBM, that is,
+```math
+dx(t) = \alpha_x dt + \sigma(t) d W(t) \\
+d(\text{ln}(\sigma^2(t)) = \alpha_{\sigma} dt + \gamma d W(t)
+```
+where ``\alpha_x`` is the trait drift (general trait tendency to increase or decrease), ``\alpha_{\sigma}`` is the drift in evolutionary rates, and ``\gamma`` represents the heterogeneity in evolutionary rates.
+
+
+##### Simulations
+
+In the DBM, we are not modeling the realization of the tree, but rather a process that evolved along the tree. Thus, to simulate, we need a tree to be used as template so that we can simulate on top. So if we have a `tree` object of type `sT_label` or `sTf_label`, we can simulate a trait with a starting trait value of `x0` (``x(t = 0)``), with drift `αx` (``\alpha_x``), undergoing a starting rate of `σ20` (``\sigma^2(t = 0)``) with drift `ασ` (``\alpha_{\sigma}``), with a maximal discretization time step of `δt`:
+
+```julia
+sim_dbm(tree, x0 = 0.0, αx = 0.0, σ20 = 0.1, ασ = 0.0, γ = 0.1, δt = 1e-3)
+```
+
+which returns a tree of type `sTxs`, holding the simulation.
+
+It might also be useful to return a Dictionary with the final trait values at each sampled species. For this, use the same function, in the same argument order but not using named arguments. For instance, the same simulation above, but returning both a `sTxs` tree named `tr` and a dictionary of species values named `xd`:
+
+```julia
+tr, xd = sim_dbm(tree, 0.0, 0.0, 0.1, 0.0, 0.1, 1e-3)
+```
+
+We can plot the resulting tree using Tapestree's plot recipes ([Insane plots](@ref)). For example to plot the trait evolution colored by the logarithmic rates:
+```julia
+plot(xv, tr, zf = lσ2)
+```
+
+
+Full documentation
+```@docs
+sim_dbm
+```
+
+##### Inference
+
+
+For a given `sT_label` or `sTf_label` type `tree` object and a Dictionary `xav` with a `String` key pointing to a `Float64` number (_i.e._, `Dict{String, Float64}`), where matching tip labels point to the trait value. If tip labels are not included in the dictionary, the trait value is assumed missing. 
+
+```julia
+r, td = insane_dbm(tree, xav,
+                   γ_prior  = (0.05, 0.05),
+                   αx_prior = (0.0, 10.0),
+                   ασ_prior = (0.0, 10.0),
+                   nburn    = 10_000,
+                   niter    = 100_000,
+                   nthin    = 1_000,
+                   nthin    = 1_000,
+                   ofile    = "<...directory...>",
+                   δt       = 1e-3)
+```
+
+Finally, error or uncertainty around trait values can be included (assuming Normal variance) by setting another Dictionary, called say `xsv`, (also `Dict{String, Float64}`), where tip values point to the variance around trait values. Again, if tip labels are not included in this dictionary, it is assumed that there is no error around tip values.
+Then you specify this dictionary on the argument `xs`:
+```julia
+r, td = insane_dbm(tree, xav, 
+                   xs       = xsv,
+                   γ_prior  = (0.05, 0.05),
+                   αx_prior = (0.0, 10.0),
+                   ασ_prior = (0.0, 10.0),
+                   nburn    = 10_000,
+                   niter    = 100_000,
+                   nthin    = 1_000,
+                   nthin    = 1_000,
+                   ofile    = "<...directory...>",
+                   δt       = 1e-3)
+```
+
+Full documentation
+```@docs
+insane_dbm
+```
 
 ## Insane tree data access and processing functions
 
@@ -565,7 +676,6 @@ plot(tree)
 One can reorder the tree according to balance (have one daughter always have the largest number of tips) by using `reorder!(tree)`, which orders in place the tree and helps in visualization.
 
 
-
 If one has a tree vector, we could, for example, sample 4 of them at random and simply plot them together using
 
 ```julia
@@ -601,9 +711,9 @@ plot(lttv, 0.1)
 ```
 
 
-### Insane BDD plots
+### Insane BDD & DBM plots
 
-These plotting functions are specific to BDD type trees (_i.e._, of `iT` supertype).
+These plotting functions are specific to BDD or DBM type trees (_i.e._, of `iT` or `sTxs` supertype).
 
 #### Plot rates on the phylogram
 
@@ -611,7 +721,7 @@ To "paint" the tree with the instantaneous lineage-specific rates of speciation 
 ```julia
 plot(tree, birth)
 ```
-Here, `birth`, which stands for "birth rates" is a convenience wrapper around `exp.(lλ(tree))`: it extracts the log-speciation vector from a give `iT` tree using `lλ`, and then returns the exponential.
+Here, `birth`, which stands for "birth rates", is a convenience wrapper around `exp.(lλ(tree))`: it extracts the log-speciation vector from a give `iT` tree using `lλ`, and then returns the exponential.
 
 This plotting function also allows to plot the death rates (only where extinction is also a diffusion, _i.e._, `iTbd`) using
 ```julia
@@ -629,14 +739,20 @@ We can also plot these trees radially using the `type = :radial`.
 
 #### Plot the underlying rates along a tree
 
-To plot how rates evolve across time, that is, to plot the rates in the y axis, one can use the `type = :rates` argument:
+To plot how rates evolve across time, that is, to plot the rates in the y axis, we simply change the argument order:
 ```julia
-plot(tree, birth, type = :rates)
+plot(birth, tree)
 ```
+
+We can paint these rates by another variable, say, extinction rates, using
+```julia
+plot(birth, tree, zf = death)
+```
+
 
 Similarly, we can plot the average for a tree (or other aggregating function as median, geometric mean, _etc._) and custom quantiles (as in [LTT and DTT plots](@ref)) for a given tree by adding a decimal number argument representing the sampling frequency through time.
 ```julia
-plot(tree, birth, 0.1)
+plot(birth, 0.1, tree)
 ```
 To change the aggregating function, we modify the function `t_af` (by default `t_af = mean`), to the desired one.
 
@@ -645,8 +761,8 @@ To change the aggregating function, we modify the function `t_af` (by default `t
 Often we would like to plot the average rates across a series of data augmented trees. This can be done by adding a decimal number argument (and, using a tree vector as input).
 For instance, to estimate average speciation rates (using wrapping function `birth`) through time across tree vector `tv`, every ``0.1`` time units, we use:
 ```julia
-plot(tv, birth, 0.1)
+plot(birth, 0.1, tv)
 ```
 
-We can choose the function to aggregate rates across lineages for each single tree using `_af` (by default `t_af = mean`, and then to aggregate these tree averages using the `tv_af` function (by default `tv_af = x -> quantile(x, 0.5)`, that is, the median).
+We can choose the function to aggregate rates across lineages for each single tree using `af` (by default `af = mean`, and then to aggregate these tree averages using the `vaf` function (by default `vaf = x -> quantile(x, 0.5)`, that is, the median).
 
