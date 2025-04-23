@@ -151,7 +151,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -289,7 +289,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
 
       let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, nλ = nλ, ssλ = ssλ, ddλ = ddλ, irλ = irλ, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 

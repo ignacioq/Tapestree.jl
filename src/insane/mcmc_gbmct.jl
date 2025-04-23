@@ -218,7 +218,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   # number of branches
   nbr  = lastindex(idf)
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for i in Base.OneTo(nburn)
 
@@ -369,7 +369,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
 
       let llc = llc, prc = prc, αc = αc, σλc = σλc, ϵc = ϵc, mc = mc, nλ = nλ, ssλ = ssλ, ddλ = ddλ, L = L, ne = ne, Σλ = Σλ, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 

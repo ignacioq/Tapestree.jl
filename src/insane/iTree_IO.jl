@@ -277,8 +277,10 @@ function _from_string(s::String, i::Int64, ::Type{T}) where {T <: sT}
 
     i = i2
 
-    while s[i] === ')'
+    n = lastindex(s)
+    while i <= n && s[i] === ')'
       i += 1
+      
     end
   end
 

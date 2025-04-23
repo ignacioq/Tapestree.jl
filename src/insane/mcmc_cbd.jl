@@ -200,7 +200,7 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -303,7 +303,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
       let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 

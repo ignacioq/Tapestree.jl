@@ -159,7 +159,7 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -294,7 +294,7 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
 
       let ll = ll, prc = prc, L = L, Ls = Ls, Xs = Xs, ddσ = ddσ, ssσ = ssσ, nσ = nσ, prc = prc, αxc = αxc, ασc = ασc, γc = γc, stn = stn, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 

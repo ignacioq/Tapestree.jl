@@ -14,6 +14,7 @@ using LinearAlgebra: BLAS.axpy!, BLAS.gemm!, eigvecs, eigvals, diagm
 
 # other submodules dependencies
 using ..Utils
+using ..INSANE: sT_label, read_newick
 
 include("tribe/tribe_utils.jl")
 include("tribe/cont_DA_prop.jl")

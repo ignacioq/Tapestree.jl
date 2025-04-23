@@ -230,7 +230,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   # delta change, sum squares, path length and integrated rate
   ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for i in Base.OneTo(nburn)
 
@@ -375,7 +375,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
       let llc = llc, prc = prc, αc = αc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ssλ = ssλ, ssμ = ssμ, ddλ = ddλ, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 
