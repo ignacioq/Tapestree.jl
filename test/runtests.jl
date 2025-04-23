@@ -20,7 +20,7 @@ r, tv = insane_cpb(tree,
                    niter  = 5,
                    nthin  = 5,
                    nflush = 5,
-                   ofile  = homedir()*"/Desktop/test")
+                   ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{sTpb})
@@ -39,7 +39,7 @@ r, tv = insane_cbd(tree,
                    niter  = 5,
                    nthin  = 5,
                    nflush = 5,
-                   ofile  = homedir()*"/Desktop/test")
+                   ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{sTbd})
@@ -64,7 +64,7 @@ r, tv = insane_cfbd(ftree,
                     niter  = 5,
                     nthin  = 5,
                     nflush = 5,
-                    ofile  = homedir()*"/Desktop/test")
+                    ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{sTfbd})
@@ -92,7 +92,7 @@ r, tv = insane_gbmpb(tree,
                      niter  = 5,
                      nthin  = 5,
                      nflush = 5,
-                     ofile  = homedir()*"/Desktop/test")
+                     ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{iTpb})
@@ -113,7 +113,7 @@ r, tv = insane_gbmce(tree,
                      niter  = 5,
                      nthin  = 5,
                      nflush = 5,
-                     ofile  = homedir()*"/Desktop/test")
+                     ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{iTce})
@@ -134,7 +134,7 @@ r, tv = insane_gbmct(tree,
                      niter  = 5,
                      nthin  = 5,
                      nflush = 5,
-                     ofile  = homedir()*"/Desktop/test")
+                     ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{iTct})
@@ -154,7 +154,7 @@ r, tv = insane_gbmbd(tree,
                      niter  = 5,
                      nthin  = 5,
                      nflush = 5,
-                     ofile  = homedir()*"/Desktop/test")
+                     ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{iTbd})
@@ -175,7 +175,7 @@ r, tv = insane_gbmfbd(ftree,
                       niter  = 5,
                       nthin  = 5,
                       nflush = 5,
-                      ofile  = homedir()*"/Desktop/test")
+                      ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{iTfbd})
@@ -198,13 +198,13 @@ r, tv = insane_dbm(ftree, xav,
                    niter  = 5,
                    nthin  = 5,
                    nflush = 5,
-                   ofile  = homedir()*"/Desktop/test")
+                   ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{sTxs})
 
-rm(homedir()*"/Desktop/test.txt") 
-rm(homedir()*"/Desktop/test.log") 
+rm(homedir()*"/test.txt") 
+rm(homedir()*"/test.log") 
 
 
 # ltt
