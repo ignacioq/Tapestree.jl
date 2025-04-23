@@ -14,10 +14,10 @@ using LinearAlgebra: BLAS.gemv!, rank, mul!, ldiv!, qr!
 using Distributed: @distributed, @sync
 using SharedArrays: SharedArray
 using DistributedArrays: DArray, d_closeall, distribute
-using RCall: @rput, reval
 
 # other submodules dependencies
 using ..Utils
+using ..INSANE: sT_label, read_newick
 
 # files
 include("esse/musse_eqs.jl")

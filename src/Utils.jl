@@ -7,7 +7,6 @@
 module Utils
 
 # package dependencies
-using RCall: reval, rcopy
 using SpecialFunctions: loggamma
 using Random: randexp
 

@@ -169,6 +169,79 @@ end
 
 
 """
+    rtree(tree::sT_label)
+
+Create a r tree object from a `sT_label`.
+"""
+function rtree(tree::sT_label)
+
+  e0   = Int64[]
+  e1   = Int64[]
+  el   = Float64[]
+  tlab = String[]
+
+  n = ntips(tree)
+
+  _rtree!(tree, e0, e1, el, tlab, n+1, n+1, 0)
+
+  return rtree(hcat(e0, e1), el, tlab, n-1)
+end
+
+
+
+"""
+    _rtree!(tree::sT_label, 
+            e0  ::Vector{Int64}, 
+            e1  ::Vector{Int64}, 
+            el  ::Vector{Float64}, 
+            tlab::Vector{String},
+            pa  ::Int64,
+            i   ::Int64,
+            j   ::Int64)
+
+Create a r tree object from a `sT_label` recursively.
+"""
+function _rtree!(tree::sT_label, 
+                 e0  ::Vector{Int64}, 
+                 e1  ::Vector{Int64}, 
+                 el  ::Vector{Float64}, 
+                 tlab::Vector{String},
+                 pa  ::Int64,
+                 i   ::Int64,
+                 j   ::Int64)
+  ei = e(tree)
+
+  if def1(tree)
+    if def2(tree)
+
+      if ei > 0.0
+        i += 1
+        push!(e0, pa)
+        pa = i
+        push!(e1, i)
+        push!(el, ei)
+      end
+
+      i, j = _rtree!(tree.d1, e0, e1, el, tlab, pa, i, j)
+      i, j = _rtree!(tree.d2, e0, e1, el, tlab, pa, i, j)
+
+    end
+  else
+    j += 1
+
+    push!(e0, pa)
+    push!(e1, j)
+    push!(el, ei)
+    push!(tlab, label(tree))
+  end
+
+  return i, j
+end
+
+
+
+
+"""
     sTf_label
 
 A composite recursive type of supertype `sT` representing a labelled binary

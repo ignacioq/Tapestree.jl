@@ -11,7 +11,6 @@ using DelimitedFiles: readdlm, writedlm
 using ProgressMeter: Progress, next!
 using Optim: minimizer, optimize, Options
 using LinearAlgebra: BLAS.axpy!, BLAS.gemm!, eigvecs, eigvals, diagm
-using RCall: reval, @rput
 
 # other submodules dependencies
 using ..Utils

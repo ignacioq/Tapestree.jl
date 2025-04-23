@@ -12,17 +12,18 @@ __precompile__(true)
  Submodules
 =#
 
+
 # Utilities
 include("Utils.jl")
 
-# ESSE: Environmental and State Dependent Diversification
-include("ESSE.jl")
+# INSANE: joINt Speciation And Niche Evolution
+include("INSANE.jl")
 
 # TRIBE: Trait and Range Interspecific Biogeographic Evolution
 include("TRIBE.jl")
 
-# INSANE: joINt Speciation And Niche Evolution
-include("INSANE.jl")
+# ESSE: Environmental and State Dependent Diversification
+include("ESSE.jl")
 
 #=
  Exported functions 

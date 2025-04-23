@@ -673,15 +673,8 @@ function save_esse_sim(tv      ::Dict{Int64, Vector{Float64}},
     sv[i,:] = tv[i]
   end
 
-  @rput ed el nnod sv lbs
+  writeddlm(hcat(lbs, sv), string(outfile,".txt"))
 
-  str = reval("""
-              library(ape)
-              t <- list(edge = ed, edge.length = el, Nnode = nnod, tip.label = lbs)
-              class(t) <- "phylo"
-              write.tree(t, file = "$out_file.tre")
-              write.table(data.frame(lbs,sv), file = "$out_file.txt",
-              row.names = FALSE, col.names = FALSE, quote = FALSE)
-            """)
+  return rtree(ed, el, lbs, nnod)
 end
 
