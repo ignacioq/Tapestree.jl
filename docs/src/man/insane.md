@@ -232,7 +232,7 @@ For all the BDD models, we have the possibility to simulate conditioned on total
 To simulate conditioned on some number of species, say, ``20``, with starting speciation rate of ``\lambda_0 = 1.0``, drift of ``\alpha = 0`` and diffusion of ``\sigma_{\lambda} = 0.1``, we can use:
 
 ```julia
- sim_gbmpb(20.0, λ0 = 1.0, α = 0.0, σλ = 0.1)
+ sim_gbmpb(20, λ0 = 1.0, α = 0.0, σλ = 0.1)
 ```
 
 Similarly, to simulate conditioned on time, say, ``10`` time units, with the same parameters, we can use:
@@ -734,6 +734,9 @@ In general, this plotting recipe receives a tree and a function that is applied 
 * `logdeath`: log-(extinction) death rates 
 * `turnover`: turnover (extinction/speciation) rates
 * `diversification`: net diversification (speciation - extinction) rates
+* `trait`: trait values
+* `evorate`: evolutionary rates ``\sigma^2(t)``
+* `logevorate`: log-evolutionary rates ``\sigma^2(t)``
 
 We can also plot these trees radially using the `type = :radial`.
 

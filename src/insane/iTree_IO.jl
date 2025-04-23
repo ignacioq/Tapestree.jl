@@ -949,34 +949,27 @@ end
 
 
 """
-    _istring(tree::sTxs)
+    _ibuffer(io::IOBuffer, tree::sTxs)
 
-`sTxs` to istring.
+`sTxs` to IOBuffer.
 """
-function _istring(tree::sTxs)
+function _ibuffer(io::IOBuffer, tree::sTxs)
   if def1(tree)
+    write(io, '(')
     if def2(tree)
-      return string('(', _istring(tree.d1), ',', _istring(tree.d2), ',', 
-          e(tree), ',', 
-          dt(tree), ',',
-          fdt(tree), ',',
-          xv(tree), ',',
-          lσ2(tree), ')')
+      _ibuffer(io, tree.d1)
+      write(io, ',')
+      _ibuffer(io, tree.d2)
+      print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',', 
+                xv(tree), ',', lσ2(tree), ')')
     else
-      return string('(', _istring(tree.d1), ',', 
-          e(tree), ',', 
-          dt(tree), ',',
-          fdt(tree), ',',
-          xv(tree), ',',
-          lσ2(tree), ')')
+      _ibuffer(io, tree.d1)
+      print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          xv(tree), ',', lσ2(tree), ')')
     end
   else
-    return string('(', 
-          e(tree), ',', 
-          dt(tree), ',',
-          fdt(tree), ',',
-          xv(tree), ',',
-          lσ2(tree), ')')
+    print(io, '(', e(tree), ',', dt(tree), ',', fdt(tree), ',', 
+              xv(tree), ',', lσ2(tree), ')')
   end
 end
 

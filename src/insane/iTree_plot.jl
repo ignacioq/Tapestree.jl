@@ -34,6 +34,9 @@ logbirth(tree::iT)        = lλ(tree)
 logdeath(tree::iT)        = lμ(tree)
 turnover(tree::iT)        = exp.(lμ(tree) .- lλ(tree))
 diversification(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+trait(tree::Tx)           = xv(tree)
+evorate(tree::Tx)         = exp.(lσ2(tree))
+logevorate(tree::Tx)      = lσ2(tree)
 
 
 

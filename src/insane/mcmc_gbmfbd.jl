@@ -653,8 +653,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           end
           next!(pbar)
         end
-
-      return r, treev
+        return r, treev
       end
     end
   end
