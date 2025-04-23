@@ -111,7 +111,8 @@ function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
     end
 
     # add to global likelihood
-    ll += llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
+    ll += llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 
+                0.918938533204672669540968854562379419803619384765625) - 
           llct*δt*(1.0 + ϵ)
   end
 
@@ -223,7 +224,8 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
 
     # add to global likelihood
     ll   += llbm *
-            (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+            (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 
+              0.918938533204672669540968854562379419803619384765625)
     llct *= δt
     Σλ   += llct
     ll   -= llct*(1.0 + ϵ)
