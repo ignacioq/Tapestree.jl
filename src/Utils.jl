@@ -16,7 +16,7 @@ include("utils/density_functions.jl")
 include("utils/mcmc_utils.jl")
 include("utils/rand_vargen.jl")
 
-export rtree, read_tree, make_ape_tree, maketriads, abs_time_branches,
+export rtree, make_ape_tree, maketriads, abs_time_branches,
   brts, tree_height, postorderedges, remove_extinct, numberedges, tip_dictionary,
   logdexp, logdunifU, logdunif, llrdexp_x,
   logdbeta, llrdbeta_x, logdnorm, logdnorm_tc, llrdnorm_ωx, llrdnorm_σ², 
