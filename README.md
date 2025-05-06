@@ -15,7 +15,7 @@ See the [Documentation](https://ignacioq.github.io/Tapestree.jl/) for examples a
 For the DBM model:
 
 1. "Diffused Brownian motion" (DBM): implements speciation rates following a geometric Brownian motion with no extinction, constant extinction, constant turnover or extinction diffusion as described in 
-Quintero, I. (in press). "The diffused evolutionary dynamics of morphological novelty". Proceedings of the National Academy of Sciences.
+Quintero, I. (2025). The diffused evolutionary dynamics of morphological novelty. _Proceedings of the National Academy of Sciences_, U.S.A. 122 (18) e2425573122, [link](https://doi.org/10.1073/pnas.2425573122).
 
 For the BDD model:
 

@@ -673,7 +673,7 @@ function save_esse_sim(tv      ::Dict{Int64, Vector{Float64}},
     sv[i,:] = tv[i]
   end
 
-  writeddlm(hcat(lbs, sv), string(outfile,".txt"))
+  writedlm(hcat(lbs, sv), string(outfile,".txt"))
 
   return rtree(ed, el, lbs, nnod)
 end

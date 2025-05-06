@@ -8,8 +8,7 @@ INSANE uses Bayesian data augmentation (DA) to perform inference on a number of 
 
 Birth-Death Diffusion (BDD): Quintero, I., Lartillot, N., Morlon, H. (2024). Imbalanced speciation pulses sustain the radiation of mammals. _Science_, 384: 1007-1012. [link](https://doi.org/10.1126/science.adj2793)
 
-Diffused Brownian motion (DBM): Quintero, I. (in press). "The diffused evolutionary dynamics of morphological novelty". _Proceedings of the National Academy of Sciences_.
-
+Diffused Brownian motion (DBM): Quintero, I. (2025). The diffused evolutionary dynamics of morphological novelty. _Proceedings of the National Academy of Sciences_, U.S.A. 122 (18) e2425573122, [link](https://doi.org/10.1073/pnas.2425573122).
 
 ## Insane tree and model input/output
 
@@ -499,7 +498,7 @@ r, td = insane_dbm(tree, xav,
                    nburn    = 10_000,
                    niter    = 100_000,
                    nthin    = 1_000,
-                   nthin    = 1_000,
+                   nflush   = 1_000,
                    ofile    = "<...directory...>",
                    δt       = 1e-3)
 ```
@@ -515,7 +514,7 @@ r, td = insane_dbm(tree, xav,
                    nburn    = 10_000,
                    niter    = 100_000,
                    nthin    = 1_000,
-                   nthin    = 1_000,
+                   nflush   = 1_000,
                    ofile    = "<...directory...>",
                    δt       = 1e-3)
 ```
