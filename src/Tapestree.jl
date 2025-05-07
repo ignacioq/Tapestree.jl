@@ -36,7 +36,7 @@ export tribe, simulate_tribe
 
 using .INSANE: read_newick, write_newick, write_nexus, iread, iwrite,
   sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd, sTxs,
-  Ltt,
+  iTd, Ltt,
   sim_cpb, sim_cbd, sim_cfbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, 
   sim_gbmfbd, sim_shift, sim_dbm,
   iscrowntree, rm_stem!, fixtree!,
@@ -53,7 +53,7 @@ using .INSANE: read_newick, write_newick, write_nexus, iread, iwrite,
   tiplabels, labels, label
 export read_newick, write_newick, write_nexus, iread, iwrite,
   sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd, sTxs,
-  Ltt,
+  iTd, Ltt,
   sim_cpb, sim_cbd, sim_cfbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, 
   sim_gbmfbd, sim_shift, sim_dbm,
   iscrowntree, rm_stem!, fixtree!,
