@@ -167,6 +167,70 @@ end
 
 
 
+"""
+    _sT_label(tree::rtree)
+
+Convert an `rtree` object to an `sT_label` tree
+"""
+function sT_label(tree::rtree)
+
+  ed   = tree.ed
+  ed0  = ed[:,1]
+  ed1  = ed[:,2]
+  el   = tree.el
+  ntip = tree.nnod + 1
+  tl   = tree.tlab
+
+  i1 = findfirst(isequal(ntip + 1), ed0)
+  i2 = findnext(isequal(ntip + 1), ed0, i1+1)
+  # if stem
+  if isnothing(i2)
+    stree = _sT_label(i1, ed0, ed1, el, tl)
+  #if crown
+  else
+    stree = sT_label(_sT_label(i1, ed0, ed1, el, tl),
+                     _sT_label(i2, ed0, ed1, el, tl), 
+              0.0, "")
+  end
+
+  return stree
+end
+
+
+"""
+    _sT_label(ix ::Int64, 
+              ed0::Vector{Int64}, 
+              ed1::Vector{Int64}, 
+              el ::Vector{Float64}, 
+              tl ::Vector{String})
+
+Recursive conversion of an `rtree` object to an `sT_label` tree.
+"""
+function _sT_label(ix ::Int64, 
+                   ed0::Vector{Int64}, 
+                   ed1::Vector{Int64}, 
+                   el ::Vector{Float64}, 
+                   tl ::Vector{String})
+
+  # inner node
+  ei = el[ix]
+  if iszero(ei) 
+    ei = 1e-16
+  end
+
+  i1 = findfirst(isequal(ed1[ix]), ed0)
+  if !isnothing(i1)
+    i2 = findnext(isequal(ed1[ix]), ed0, i1 + 1)
+    return sT_label(_sT_label(i1, ed0, ed1, el, tl),
+                    _sT_label(i2, ed0, ed1, el, tl), 
+            ei, "")
+  # if tip
+  else
+    return sT_label(ei, tl[ed1[ix]])
+  end
+end
+
+
 
 """
     rtree(tree::sT_label)
@@ -199,7 +263,7 @@ end
             i   ::Int64,
             j   ::Int64)
 
-Create a r tree object from a `sT_label` recursively.
+Create a `rtree` object from a `sT_label` recursively.
 """
 function _rtree!(tree::sT_label, 
                  e0  ::Vector{Int64}, 

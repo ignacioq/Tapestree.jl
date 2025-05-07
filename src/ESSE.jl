@@ -17,7 +17,7 @@ module ESSE
 
   # other submodules dependencies
   using ..Utils
-  using ..INSANE: sT_label, rtree, read_newick
+  using ..INSANE: sT_label, rtree, read_newick, write_newick
 
   # files
   include("esse/musse_eqs.jl")
