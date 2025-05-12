@@ -34,9 +34,9 @@ export esse, simulate_sse, save_esse_sim
 using .TRIBE: tribe, simulate_tribe
 export tribe, simulate_tribe
 
-using .INSANE: read_newick, write_newick, write_nexus, iread, iwrite,
-  sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd, sTxs,
+using .INSANE: sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd, sTxs,
   iTd, Ltt,
+  read_newick, write_newick, write_nexus, iread, iwrite,
   sim_cpb, sim_cbd, sim_cfbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, 
   sim_gbmfbd, sim_shift, sim_dbm,
   iscrowntree, rm_stem!, fixtree!,
@@ -51,9 +51,9 @@ using .INSANE: read_newick, write_newick, write_nexus, iread, iwrite,
   trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, 
   time_rate, make_idf,
   tiplabels, labels, label
-export read_newick, write_newick, write_nexus, iread, iwrite,
-  sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd, sTxs,
+export sT_label, sTf_label, sTpb, sTbd, sTfbd, iTpb, iTce, iTct, iTbd, iTfbd, sTxs,
   iTd, Ltt,
+  read_newick, write_newick, write_nexus, iread, iwrite,
   sim_cpb, sim_cbd, sim_cfbd, sim_gbmpb, sim_gbmce, sim_gbmct, sim_gbmbd, 
   sim_gbmfbd, sim_shift, sim_dbm,
   iscrowntree, rm_stem!, fixtree!,
