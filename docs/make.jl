@@ -5,9 +5,20 @@ makedocs(
          modules  = [Tapestree],
          pages=[
                 "Home" => "index.md"
+                "Installation" => "installation.md"
+                "Quick start" => "quick_start.md"
                 "Manual" => [
-                    "Installation" => "man/installation.md",
-                    "INSANE" => "man/insane.md",
+                    "INSANE" => [
+                        "Contents" => "man/insane/contents.md",
+                        "Input and structures" => "man/insane/io.md",
+                        "Constant birth-death" => "man/insane/cbd.md",
+                        "Birth-death diffusion" => "man/insane/bdd.md",
+                        "Constant fossilized birth-death" => "man/insane/cfbd.md",
+                        "Fossilized birth-death diffusion" => "man/insane/fbdd.md",
+                        "Diffused Brownian motion" => "man/insane/dbm.md",
+                        "Processing" => "man/insane/processing.md",
+                        "Plotting" => "man/insane/iplots.md"
+                        ],
                     "TRIBE" => "man/tribe.md",
                     "ESSE" => "man/esse.md",
                     ]
