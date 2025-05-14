@@ -1,5 +1,3 @@
-# Tapestree.jl
-
 ![Tapestree](docs/src/assets/tapestree.png)
 
 **Unraveling the evolutionary tapestry**:
