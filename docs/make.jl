@@ -3,6 +3,10 @@ using Documenter, Tapestree
 makedocs(
          sitename = "Tapestree.jl",
          modules  = [Tapestree],
+         format   = Documenter.HTML(
+            assets = ["assets/favicon.ico"],
+            sidebar_sitename = false
+         ),
          pages=[
                 "Home" => "index.md"
                 "Installation" => "installation.md"
