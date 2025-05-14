@@ -195,7 +195,7 @@ r, tv = insane_gbmfbd(tree,
     For the following I used here the 6 tip fossil tree `tree_6.tre` in the data directory of Tapestree.
 
 !!! info 
-    sTo have piece-wise constant preservation rates and add additional fossil occurrences, use the same arguments introduced just above in [Constant fossilized birth-death process (CFBD)](@ref).
+    To have piece-wise constant preservation rates and add additional fossil occurrences, use the same arguments introduced just above in [Constant fossilized birth-death process (CFBD)](@ref).
 
 We can plot the average speciation and extinction, after removing unsampled (DA) lineages and estimating the average using
 ```julia
@@ -276,5 +276,5 @@ r, tv = insane_dbm(tree,
 
 ## ESSE & TRIBE
 
-For ESSE and TRIBE go directly to the manual [ESSE](@ref) * [TRIBE](@ref).
+For ESSE and TRIBE go directly to the manual [ESSE](@ref) & [TRIBE](@ref).
 
