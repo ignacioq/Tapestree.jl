@@ -29,7 +29,7 @@ Created 25 01 2024
                pupdp    ::NTuple{4,Float64} = (0.1, 0.1, 0.05, 0.9),
                δt       ::Float64           = 1e-3,
                stn      ::Float64           = 0.1,
-               mxthf    ::Float64           = Inf,
+               mxthf    ::Float64           = 0.1,
                prints   ::Int64             = 5)
 
 Run diffused Brownian motion trait evolution model.
@@ -51,7 +51,7 @@ function insane_dbm(tree     ::Tlabel,
                     pupdp    ::NTuple{5,Float64} = (0.1, 0.1, 0.1, 0.05, 0.9),
                     δt       ::Float64           = 1e-3,
                     stn      ::Float64           = 0.1,
-                    mxthf    ::Float64           = Inf,
+                    mxthf    ::Float64           = 0.1,
                     prints   ::Int64             = 5)
 
   n    = ntips(tree)

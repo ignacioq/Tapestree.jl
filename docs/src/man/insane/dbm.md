@@ -2,7 +2,7 @@
 
 This is a model of trait evolution where an univariate trait ``x(t)`` evolves under a diffused Brownian motion with an underlying evolutionary rate ``\sigma^2(t)`` that is also itself evolving separately according to Geometric Brownian motion:
 ```math
-dx(t) = \alpha_x dt + \sigma(t) d W(t) \\
+dx(t) = \alpha_x dt + \sigma(t) d W(t), \\
 d(\text{ln}(\sigma^2(t)) = \alpha_{\sigma} dt + \gamma d W(t)
 ```
 where ``\alpha_x`` is the trait drift (general trait tendency to increase or decrease), ``\alpha_{\sigma}`` is the drift in evolutionary rates, and ``\gamma`` represents the heterogeneity in evolutionary rates.
@@ -48,7 +48,7 @@ r, td = insane_dbm(tree,
                    δt       = 1e-3)
 ```
 
-Finally, error or uncertainty around trait values can be included (assuming Normal variance) by setting another Dictionary, called say `xsv`, (also `Dict{String, Float64}`), where tip values point to the variance around trait values. Again, if tip labels are not included in this dictionary, it is assumed that there is no error around tip values.
+Finally, error or uncertainty around trait values can be included (assuming Normal variance) by setting another Dictionary, called say `xsv` (also a `Dict{String, Float64}`) where tip values point to the variance around trait values. Again, if tip labels are not included in this dictionary, it is assumed that there is no error around tip values.
 Then you specify this dictionary on the argument `xs`:
 ```julia
 r, td = insane_dbm(tree, 

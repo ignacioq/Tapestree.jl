@@ -27,7 +27,7 @@ r, tv = insane_cfbd(tree,
 where we now have a Gamma prior for the speciation ``\lambda``, extinction ``\mu`` and fossilization rates ``\psi``, and we can also specify if we want to condition on survival of the process with `survival`.
 
 !!! note
-    the `tree` object must be of type `sTf_label` [Insane tree and model input/output](@ref), which is the automatic type when reading a tree with `read_newick`.
+    the `tree` object must be of type `sTf_label` (see [Insane tree and model input/output](@ref)), which is the automatic type when reading a tree with `read_newick`.
 
 
 # Episodic fossilized birth-death process (eFBD)

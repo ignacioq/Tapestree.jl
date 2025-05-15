@@ -7,7 +7,7 @@ d(\text{ln}(\lambda(t)) = \alpha dt + \sigma_{\lambda} d W(t),
 ```
 where ``\alpha`` is the drift, ``\sigma_{\lambda}`` is the diffusion for speciation, and ``W(t)`` is the Wiener process (_i.e._, standard Brownian motion), and holding different assumptions on extinction.
 
-The likelihood is approximated using the Euler method to solve Stochastic Differential Equations, and require to set a minimum time step for the discretization of the augmented diffusion paths. In INSANE `δt` (by default ``10^{-3}``) sets the time step to perform the Euler approximation, and denotes the proportion with respect to the tree height (the duration of the tree), so the time step will be ``δt = th \times 10^-3``, where ``th`` is the tree height.
+The likelihood is approximated using the Euler method to solve Stochastic Differential Equations, and require to set a minimum time step for the discretization of the augmented diffusion paths. In INSANE `δt` (by default ``10^{-3}``) sets the time step to perform the Euler approximation, and denotes the proportion with respect to the tree height (the duration of the tree), so the time step will be ``δt = th \times 10^{-3}``, where ``th`` is the tree height.
 
 ## Pure birth diffusion (``\mu(t) = 0``)
 
@@ -47,13 +47,13 @@ r, tv = insane_gbmpb(tree,
                      ofile    = "<directory>",
                      α_prior  = (0.0, 10.0),
                      σλ_prior = (0.05, 0.05),
-                     tρ    = Dict("" => 1.0))
+                     tρ       = Dict("" => 1.0))
 ```
 
 Here, the prior for the drift `α_prior` is a Normal distribution, with the first element representing the mean and the second the standard deviation, and the prior for the diffusion in speciation rates. `σλ_prior`, is an Inverse Gamma. 
 
 
-## Birth-death diffusion process with constant extinction (``\mu(t) = \mu``)
+## BDD process with constant extinction (``\mu(t) = \mu``)
 
 Here we assume that there is extinction, but that is constant across lineages and time.
 
@@ -64,7 +64,6 @@ As with the pure-birth diffusion, we can simulate conditioned on reaching some n
 ```julia
  sim_gbmce(20, λ0 = 1.0, α = 0.0, σλ = 0.1, μ = 0.7)
 ```
-
 
 ### Inference
 
@@ -83,7 +82,7 @@ r, tv = insane_gbmce(tree,
 where we now specify the Gamma prior `μ_prior` for the extinction.
 
 
-## Birth-death diffusion process with constant turnover (``\mu(t) = \epsilon \lambda(t)``)
+## BDD process with constant turnover (``\mu(t) = \epsilon \lambda(t)``)
 
 One can also assume that turnover, ``\epsilon``, that is, the ration of extinction over speciation (_i.e._, ``\frac{\mu}{\lambda}``), is constant.
 
@@ -94,7 +93,6 @@ As with the other BDD models, we can simulate both conditioned on the number of 
 ```julia
  sim_gbmct(10.0, λ0 = 1.0, α = 0.0, σλ = 0.1, ϵ = 0.4)
 ```
-
 
 
 ### Inference
@@ -154,7 +152,7 @@ where we have log-normal priors on the initial (root) values for ``\lambda_0`` a
 
 
 
-## Birth-death diffusion process with informed extinction
+## BDD process with informed extinction
 
 One can also define a branch-specific fixed extinction function and make inference on the GBM speciation. For example, in Quintero _et al._ (2024) _Science_, we estimated extinction rates based on fossil occurrences and then used this as input.
 
@@ -184,19 +182,19 @@ To estimate the number of branches in your empirical tree (saved in `<...tree di
 
 ```julia
 # read tree
-tre = read_newick("<...tree directory...>")
+tree = read_newick("<...tree directory...>")
+```
 
-## make extinction function vectors for each branch
-# set a dummy smapling fraction (you can set the real one afterwards! - this is just to estimate the number of branches)
-tρ  = Dict(li => 1.0 for li in tiplabels(tre))
-idf = make_idf(tre, tρ, Inf)
+Make extinction function vectors for each branch and set a dummy sampling fraction (you can set the real one afterwards! - this is just to estimate the number of branches)
+```julia
+tρ  = Dict(li => 1.0 for li in tiplabels(tree))
+idf = make_idf(tree, tρ, Inf)
 
 # number of branches
 nb = length(idf)
 ```
 
 If we have a global curve with extinction `[0.06, 0.02, 0.05]` at times `[0.5, 0.3, 0.1]`, then we would have to create the following input objects for `time_vector` and `extinction_vector`:
-
 ```julia
 extinction_vector = fill([0.06, 0.02, 0.05], nb)
 time_vector = fill([0.5, 0.3, 0.1], nb)

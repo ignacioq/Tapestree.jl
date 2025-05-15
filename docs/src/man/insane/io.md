@@ -63,10 +63,7 @@ tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_5.tr
 ```
 
 !!! note
-   This tree has type `sT_label`, which stands for simple labelled tree. You can check this using
-    ```julia
-    typeof(tree)
-    ```
+   This tree has type `sT_label`, which stands for simple labelled tree. You can check this using `typeof(tree)`
 
 #### Trees with fossils
 
@@ -87,24 +84,21 @@ write_newick(tree, "<directory>")
 
 !!! note
     Only `*_label` trees (_i.e._, `sT_label` & `sTf_label`) have labels. So if you want to save a DA tree with the original tip labels plus new names to the data augmented trees, you first will have to create a labelled tree from the `DA_tree` and the loaded labelled `tree` and then save it:
-    ```julia
-    write_newick(sT_label(DA_tree, tree), "<directory>")
-    ```
+    `write_newick(sT_label(DA_tree, tree), "<directory>")`.
 
 ### Reading and saving model output
 
 All models can return and/or save the output by writing directly to a file on the fly and within the Julia session when the model finishes. There are two outputs:
 
-1. The governing parameters trace, which is saved as a `.log` file and returned as the first object once the algorithm finished. These can be conveniently read in the Tracer software [https://github.com/beast-dev/tracer/releases/tag/v1.7.2])https://github.com/beast-dev/tracer/releases/tag/v1.7.2).
+1. The governing parameters trace, which is saved as a `.log` file and returned as the first object once the algorithm finished. These can be conveniently read in the Tracer software [https://github.com/beast-dev/tracer/releases/tag/v1.7.2](https://github.com/beast-dev/tracer/releases/tag/v1.7.2).
 2. The DA trees as a tree vector which are saved as a `.txt` file (of the same name as the `.log`) and returned as the second object once the algorithm finished. 
 
 The DA trees written in the insane-specific `.txt` file can be read using the `iread()` function, which only needs the specific file directory as input, but also accepts an optional (keyword) argument `ix` that indicates the specific tree iterations to read, as an `OrdinalRange` object. For instance, to read only the first ``50`` trees, one can use `iread("<directory to txt>", ix = 1:50`. To read only the trees every ``10`` iterations from the ``100`` to ``400`` sampled, one can use `ix = 100:10:400`, and so on. This can be helpful to avoid high computation costs of reading very large files.
 
-You can save any individual or vector of insane trees using the `iwrite()` function: `iwrite(trees, "<directory>")`, which can be read by `Tapestree`. For portability, you can also save the DA trees as nexus files where nodes have been annotated with the vector of rates using `write_nexus(trees, tree, "<directory>")`, where trees is the tree vector and tree is the original labelled tree (_i.e._, the one you used as input into an insane model).
+You can save any individual or vector of insane trees using the `iwrite()` function: `iwrite(trees, "<directory>")`, which can be read by `Tapestree`. For portability, you can also save the DA trees as nexus files where nodes have been annotated with the diffusion vectors using `write_nexus(trees, tree, "<directory>")`, where trees is the tree vector and tree is the original labelled tree (_i.e._, the one you used as input into an insane model).
 
 
-## Insane models
-
+## Insane inference
 
 ### Tree input
 
@@ -120,8 +114,7 @@ All inference functions require a phylogenetic tree of type `sT_label` or `sTf_l
 * `ofile`: specifies the directory where the results will be written. 
 * `tρ`: controls the sampling fraction and receives a `Dictionary` as input, with a `String` key pointing to a `Float64` number (_i.e._, `Dict{String, Float64}`). If the dictionary is of length 1 with an empty string, then the insane sets this as a the global sampling fraction. For example, to set a sampling fraction of `0.6`, one show input `tρ = Dict("" => 0.6)`. Most times, however, sampling fraction is not uniform across the tree, but rather some part so the tree is more heavily sampled than others, to accommodate these variability, you can input a dictionary of the same length as the number of tips in the tree, where the dictionary key string is the tip label pointing to the specific sampling fraction value. For example, for two tips, named `tip_1` and `tip_2`, one could input `tρ = Dict("tip_1" => 0.5, "tip_2" => 0.3)`. Make sure to specify all tips when assigning different sampling fractions across the tips, even ones with `1.0`. 
 * `prints`: specifies the number of seconds to refresh the progress meter.
-* `survival`: For those modesl with extinction, `true` or `false` if to condition the likelihood on survival.
-
+* `survival`: For those models with extinction, `true` or `false` if to condition the likelihood on survival.
 
 
 Full documentation

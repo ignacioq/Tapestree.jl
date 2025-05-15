@@ -39,7 +39,7 @@ r, tv = insane_cbd(tree,
 ```
 
 !!! note
-    For the following I used here the 5 tip tree `tree_5.tre` in the `data directory of Tapestree.
+    For the following I used here the 5 tip tree `tree_5.tre` in the `data` directory of Tapestree.
 
 The `tv` is a vector of all data augmented (DA) posterior trees. You can plot one of them
 doing

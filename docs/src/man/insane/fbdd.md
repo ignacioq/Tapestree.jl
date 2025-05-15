@@ -3,7 +3,7 @@
 This model follows from the episodic fossilized birth-death model, where we relax the assumption of constant rates for instead allowing the per-lineage instantaneous speciation rates ``\lambda(t)`` and extinction rates ``\mu(t)`` to follow separate Geometric Brownian motions (GBM), such that
 
 ```math
-d(\text{ln}(\lambda(t)) = \alpha_{\lambda} dt + \sigma_{\lambda} d W(t),
+d(\text{ln}(\lambda(t)) = \alpha_{\lambda} dt + \sigma_{\lambda} d W(t), \\
 d(\text{ln}(\mu(t)) = \alpha_{\mu} dt + \sigma_{\mu} d W(t),
 ```
 where ``W(t)`` is the Wiener process (_i.e._, standard Brownian motion), ``\alpha_{\lambda}`` and ``\alpha_{\mu}`` are the drift in speciation and extinction, and ``\sigma_{\lambda}`` and ``\sigma_{\mu}`` are the diffusion for speciation and extinction, respectively. 

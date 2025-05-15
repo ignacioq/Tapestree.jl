@@ -19,13 +19,13 @@ Quintero, I., Lartillot, N., & Morlon, H. (2024). "Imbalanced speciation pulses 
 Quintero, I., Lartillot, N., & Morlon, H. (2024). "Imbalanced speciation pulses sustain the radiation of mammals". _Science_, **384** (6699) 1007-1012  [https://doi.org/10.1126/science.adj2793](https://doi.org/10.1126/science.adj2793)
 
 3. "Constant Fossilized Birth-Death" (CFBD): implements a birth-death model of constant speciation rates and extinction rates with piece-wise constant temporal changes in fossilization rates under a Bayesian data augmentation algorithm, as described in
-Quintero, I., Andréoletti, J., Silvestro, D., & Morlon, H. (2025). "The rise, decline and fall of clades". BioRxiv  [https://doi.org/10.1101/2025.03.20.644316](https://doi.org/10.1101/2025.03.20.644316)
+Quintero, I., Andréoletti, J., Silvestro, D., & Morlon, H. (2025). "The rise, decline and fall of clades". BioRxiv [https://doi.org/10.1101/2025.03.20.644316](https://doi.org/10.1101/2025.03.20.644316)
 
 4. "Fossilized Birth-Death Diffusion" (FBDD): implements a fossilized birth-death model where speciation and extinction rates follow separate geometric Brownian motions under a Bayesian data augmentation algorithm, as described in 
-Quintero, I., Andréoletti, J., Silvestro, D., & Morlon, H. (2025). "The rise, decline and fall of clades". BioRxiv  [https://doi.org/10.1101/2025.03.20.644316](https://doi.org/10.1101/2025.03.20.644316)
+Quintero, I., Andréoletti, J., Silvestro, D., & Morlon, H. (2025). "The rise, decline and fall of clades". BioRxiv [https://doi.org/10.1101/2025.03.20.644316](https://doi.org/10.1101/2025.03.20.644316)
 
 
-### Diffused Brownian motion" (DBM) model
+### Diffused Brownian motion (DBM) model
 
 5. DBM implements a trait evolution model where trait and its underlying rates follow separate geometric Brownian motions under a Bayesian data augmentation algorithm, as described in 
 Quintero, I. (2025). The diffused evolutionary dynamics of morphological novelty. _Proceedings of the National Academy of Sciences_, U.S.A. **122** (18) e2425573122, [https://doi.org/10.1073/pnas.2425573122](https://doi.org/10.1073/pnas.2425573122).
