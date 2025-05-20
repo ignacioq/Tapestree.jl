@@ -63,7 +63,7 @@ tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_5.tr
 ```
 
 !!! note
-   This tree has type `sT_label`, which stands for simple labelled tree. You can check this using `typeof(tree)`
+    This tree has type `sT_label`, which stands for simple labelled tree. You can check this using `typeof(tree)`
 
 #### Trees with fossils
 
