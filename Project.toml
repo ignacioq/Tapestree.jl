@@ -1,7 +1,7 @@
 name = "Tapestree"
 uuid = "cd6db766-07eb-5897-84c0-92a6c9b887bd"
 authors = ["Ignacio Quintero Mächler <ignacioquinterom@gmail.com>"]
-version = "0.4.1"
+version = "0.4.2"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
