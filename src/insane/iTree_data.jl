@@ -231,7 +231,6 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 
-
 """
     label(tree::T) where {T <: iTree}
     label(tree::sT_label)

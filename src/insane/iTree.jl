@@ -65,9 +65,9 @@ mutable struct sT_label <: sT
   l ::String
 
   sT_label() = new()
-  sT_label(e::Float64, l::String) =
+  sT_label(e::Float64, l::AbstractString) =
     (x = new(); x.e = e; x.l = l; x)
-  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) =
+  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::AbstractString) =
     new(d1, d2, e, l)
 end
 
@@ -339,15 +339,15 @@ mutable struct sTf_label <: sT
   l ::String
 
   sTf_label() = new()
-  sTf_label(e::Float64, l::String) =
+  sTf_label(e::Float64, l::AbstractString) =
     (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
-  sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::String) =
+  sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::AbstractString) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
-  sTf_label(d1::sTf_label, e::Float64, l::String) =
+  sTf_label(d1::sTf_label, e::Float64, l::AbstractString) =
     (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; x.l=l; x)
-  sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::String) =
+  sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::AbstractString) =
     new(d1, d2, e, false, false, l)
 end
 
