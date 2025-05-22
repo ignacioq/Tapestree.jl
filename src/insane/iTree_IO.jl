@@ -1261,13 +1261,13 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTpb})
                   parse(Float64, SubString(s, i1+1, i2-1)),
                   parse(Float64, SubString(s, i2+1, i3-1)),
                   long(s[i3+1]), 
-                  _iparse_v(s[i3+4:i4-1]))
+                  _iparse_v(s, i3+4, i4-1))
     else
       tree = iTpb(parse(Float64, SubString(s, i, i1-1)),
                   parse(Float64, SubString(s, i1+1, i2-1)),
                   parse(Float64, SubString(s, i2+1, i3-1)),
                   long(s[i3+1]), 
-                  _iparse_v(s[i3+4:i4-1]))
+                  _iparse_v(s, i3+4, i4-1))
     end
 
     i = i4 + 1
@@ -1317,14 +1317,14 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{T}) where {T <: iT}
                parse(Float64, SubString(s, i2+1, i3-1)),
                long(s[i3+1]), 
                long(s[i3+3]), 
-               _iparse_v(s[i3+6:i4-1]))
+               _iparse_v(s, i3+6, i4-1))
     else
       tree = T(parse(Float64, SubString(s, i, i1-1)),
                parse(Float64, SubString(s, i1+1, i2-1)),
                parse(Float64, SubString(s, i2+1, i3-1)),
                long(s[i3+1]), 
                long(s[i3+3]), 
-               _iparse_v(s[i3+6:i4-1]))
+               _iparse_v(s, i3+6, i4-1))
     end
 
     i = i4 + 1
@@ -1375,16 +1375,16 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTbd})
                   parse(Float64, SubString(s, i2+1, i3-1)),
                   long(s[i3+1]), 
                   long(s[i3+3]), 
-                  _iparse_v(s[i3+6:i4-1]),
-                  _iparse_v(s[i4+3:i5-1]))
+                  _iparse_v(s, i3+6, i4-1),
+                  _iparse_v(s, i4+3, i5-1))
     else
       tree = iTbd(parse(Float64, SubString(s, i, i1-1)),
                   parse(Float64, SubString(s, i1+1, i2-1)),
                   parse(Float64, SubString(s, i2+1, i3-1)),
                   long(s[i3+1]), 
                   long(s[i3+3]), 
-                  _iparse_v(s[i3+6:i4-1]),
-                  _iparse_v(s[i4+3:i5-1]))
+                  _iparse_v(s, i3+6, i4-1),
+                  _iparse_v(s, i4+3, i5-1))
     end
 
     i = i5 + 1
@@ -1439,8 +1439,8 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
                      long(s[i3+1]), 
                      long(s[i3+3]), 
                      long(s[i3+5]), 
-                     _iparse_v(s[i3+8:i4-1]),
-                     _iparse_v(s[i4+3:i5-1]))
+                     _iparse_v(s, i3+8, i4-1),
+                     _iparse_v(s, i4+3, i5-1))
       else
         tree = iTfbd(sd1,
                      parse(Float64, SubString(s, i, i1-1)),
@@ -1449,8 +1449,8 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
                      long(s[i3+1]), 
                      long(s[i3+3]), 
                      long(s[i3+5]), 
-                     _iparse_v(s[i3+8:i4-1]),
-                     _iparse_v(s[i4+3:i5-1]))
+                     _iparse_v(s, i3+8, i4-1),
+                     _iparse_v(s, i4+3, i5-1))
       end
     else
       tree = iTfbd(parse(Float64, SubString(s, i, i1-1)),
@@ -1459,8 +1459,8 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTfbd})
                    long(s[i3+1]), 
                    long(s[i3+3]), 
                    long(s[i3+5]), 
-                   _iparse_v(s[i3+8:i4-1]),
-                   _iparse_v(s[i4+3:i5-1]))
+                   _iparse_v(s, i3+8, i4-1),
+                   _iparse_v(s, i4+3, i5-1))
     end
 
     i = i5 + 1
@@ -1512,22 +1512,22 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTxs})
                     parse(Float64, SubString(s, i, i1-1)),
                     parse(Float64, SubString(s, i1+1,i2-1)),
                     parse(Float64, SubString(s, i2+1, i3-1)),
-                    _iparse_v(s[i3+2:i4-1]),
-                    _iparse_v(s[i4+3:i5-1]))
+                    _iparse_v(s, i3+2, i4-1),
+                    _iparse_v(s, i4+3, i5-1))
       else
         tree = sTxs(sd1,
                     parse(Float64, SubString(s, i, i1-1)),
                     parse(Float64, SubString(s, i1+1,i2-1)),
                     parse(Float64, SubString(s, i2+1, i3-1)),
-                    _iparse_v(s[i3+2:i4-1]),
-                    _iparse_v(s[i4+3:i5-1]))
+                    _iparse_v(s, i3+2, i4-1),
+                    _iparse_v(s, i4+3, i5-1))
       end
     else
       tree = sTxs(parse(Float64, SubString(s, i, i1-1)),
                   parse(Float64, SubString(s, i1+1,i2-1)),
                   parse(Float64, SubString(s, i2+1, i3-1)),
-                  _iparse_v(s[i3+2:i4-1]),
-                  _iparse_v(s[i4+3:i5-1]))
+                  _iparse_v(s, i3+2, i4-1),
+                  _iparse_v(s, i4+3, i5-1))
     end
 
     i = i5 + 1
@@ -1550,7 +1550,17 @@ end
 
 Parse a string into a `Float64` vector.
 """
-_iparse_v(s::String) = parse.(Float64, split(s, ','))
+function _iparse_v(s::String, from::Int64, to::Int64)
+  v = Float64[]
+  i = from
+  f = findnext(',', s, i)
+  while f < to
+    push!(v, parse(Float64, SubString(s, i, f-1)))
+    i = f + 1
+    f = findnext(',', s, i)
+  end
+  push!(v, parse(Float64, SubString(s, i, to)))
+end
 
 
 
