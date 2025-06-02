@@ -185,13 +185,10 @@ To estimate the number of branches in your empirical tree (saved in `<...tree di
 tree = read_newick("<...tree directory...>")
 ```
 
-Make extinction function vectors for each branch and set a dummy sampling fraction (you can set the real one afterwards! - this is just to estimate the number of branches)
+Then we need to make extinction function vectors for each branch, so first we estimate the number of branches:
 ```julia
-tρ  = Dict(li => 1.0 for li in tiplabels(tree))
-idf = make_idf(tree, tρ, Inf)
-
-# number of branches
-nb = length(idf)
+# number of edges (or nodes)
+nb = nnodes(tree)
 ```
 
 If we have a global curve with extinction `[0.06, 0.02, 0.05]` at times `[0.5, 0.3, 0.1]`, then we would have to create the following input objects for `time_vector` and `extinction_vector`:
