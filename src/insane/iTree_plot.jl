@@ -13,46 +13,30 @@ Created 07 07 2020
 
 
 """
-    b(tree::T) 
-    d(tree::T) 
-    lb(tree::T)
-    ld(tree::T)
-    t(tree::T) 
-    nd(tree::T)
-    dμ(tree::iT)
+    birth(tree::iT)
+    death(tree::iT)
+    logbirth(tree::iT)
+    logdeath(tree::iT)
+    turnover(tree::iT)
+    diversification(tree::iT)
 
 Predefined functions for plotting: 
-  `b`  speciation rates
-  `d`  extinction rates
-  `lb` log speciation rates
-  `lb` log speciation rates
-  `t`  turnover
-  `nd` net diversification
-  `dμ` change in speciation rates
+  `birth`: speciation rates
+  `death`: extinction rates
+  `logbirth`: log speciation rates
+  `logdeath`: log speciation rates
+  `turnover`: turnover
+  `diversification`: net diversification
 """
-b(tree::iT)  = exp.(lλ(tree))
-d(tree::iT)  = exp.(lμ(tree))
-lb(tree::iT) = lλ(tree)
-ld(tree::iT) = lμ(tree)
-t(tree::iT)  = exp.(lμ(tree)) ./ exp.(lλ(tree))
-lt(tree::iT) = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
-nd(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
-function dλ(tree::iT)
-  dd = diff(exp.(lλ(tree)))
-  return append!(dd, dd[end])
-end
-function dμ(tree::iT)
-  dd = diff(exp.(lμ(tree)))
-  return append!(dd, dd[end])
-end
-function dλc(tree::iT)
-  lv = lλ(tree)
-  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
-end
-function dμc(x)
-  lv = lμ(x)
-  fill(exp(lv[end]) - exp(lv[1]), lastindex(lv))
-end
+birth(tree::iT)           = exp.(lλ(tree))
+death(tree::iT)           = exp.(lμ(tree))
+logbirth(tree::iT)        = lλ(tree)
+logdeath(tree::iT)        = lμ(tree)
+turnover(tree::iT)        = exp.(lμ(tree) .- lλ(tree))
+diversification(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+trait(tree::Tx)           = xv(tree)
+evorate(tree::Tx)         = exp.(lσ2(tree))
+logevorate(tree::Tx)      = lσ2(tree)
 
 
 
@@ -100,10 +84,10 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   ynode = Float64[]
 
   th  = treeheight(tree)
+
+  _rplottree!(tree, th, 0.0, x, y, z, nodet, xnode, ynode, shownodes)
+
   nts = ntips(tree)
-
-  _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode, shownodes)
-
   ntF = Float64(nts)
 
   if type === :phylogram
@@ -213,7 +197,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree` and
 """
 function _rplottree!(tree ::T,
                      xc   ::Float64,
-                     i    ::Int64,
+                     i    ::Float64,
                      x    ::Array{Float64,1},
                      y    ::Array{Float64,1},
                      z    ::Array{Float64,1},
@@ -256,8 +240,8 @@ function _rplottree!(tree ::T,
       end
     end
   else
-    i += 1
-    yc = Float64(i)
+    i += 1.0
+    yc = i
     if isextinct(tree)
       if show[2]
         push!(nodet, 2)
@@ -366,7 +350,7 @@ Recipe for plotting a Type `iT`.
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, f, th, 0, x, y, z, nodet, xnode, ynode, shownodes, simple)
+  _rplottree!(tree, f, th, 0.0, x, y, z, nodet, xnode, ynode, shownodes, simple)
 
   ntF = Float64(nts)
 
@@ -429,7 +413,7 @@ end
     _rplottree!(tree  ::T,
                 f     ::Function,
                 xc    ::Float64,
-                i     ::Int64,
+                i     ::Float64,
                 x     ::Array{Float64,1},
                 y     ::Array{Float64,1},
                 z     ::Array{Float64,1},
@@ -444,7 +428,7 @@ Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 function _rplottree!(tree  ::T,
                      f     ::Function,
                      xc    ::Float64,
-                     i     ::Int64,
+                     i     ::Float64,
                      x     ::Array{Float64,1},
                      y     ::Array{Float64,1},
                      z     ::Array{Float64,1},
@@ -490,8 +474,8 @@ function _rplottree!(tree  ::T,
       end
     end
   else
-    i += 1
-    yc = Float64(i)
+    i += 1.0
+    yc = i
     if isextinct(tree)
       if show[2]
         push!(nodet, 2)
@@ -1377,8 +1361,6 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     ts, M
   end
 end
-
-
 
 
 

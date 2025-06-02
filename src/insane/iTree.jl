@@ -65,9 +65,9 @@ mutable struct sT_label <: sT
   l ::String
 
   sT_label() = new()
-  sT_label(e::Float64, l::String) =
+  sT_label(e::Float64, l::AbstractString) =
     (x = new(); x.e = e; x.l = l; x)
-  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) =
+  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::AbstractString) =
     new(d1, d2, e, l)
 end
 
@@ -148,7 +148,7 @@ function _sT_label(tree::T, reftree::sT_label, i::Int64) where {T <: iTree}
     if isfix(tree.d1) && isfix(tree.d2)
       t1, i = _sT_label(tree.d1, reftree.d1, i)
       t2, i = _sT_label(tree.d2, reftree.d2, i)
-      tree  = sT_label(t1, t2, e(tree), l(reftree))
+      tree  = sT_label(t1, t2, e(tree), label(reftree))
     else
       t1, i = _sT_label(tree.d1, reftree, i)
       t2, i = _sT_label(tree.d2, reftree, i)
@@ -156,13 +156,150 @@ function _sT_label(tree::T, reftree::sT_label, i::Int64) where {T <: iTree}
     end
   else
     if isfix(tree)
-      tree = sT_label(e(tree), l(reftree))
+      tree = sT_label(e(tree), label(reftree))
     else
       i += 1
       tree = sT_label(e(tree), string("t",i))
     end
   end
   return tree, i
+end
+
+
+
+"""
+    _sT_label(tree::rtree)
+
+Convert an `rtree` object to an `sT_label` tree
+"""
+function sT_label(tree::rtree)
+
+  ed   = tree.ed
+  ed0  = ed[:,1]
+  ed1  = ed[:,2]
+  el   = tree.el
+  ntip = tree.nnod + 1
+  tl   = tree.tlab
+
+  i1 = findfirst(isequal(ntip + 1), ed0)
+  i2 = findnext(isequal(ntip + 1), ed0, i1+1)
+  # if stem
+  if isnothing(i2)
+    stree = _sT_label(i1, ed0, ed1, el, tl)
+  #if crown
+  else
+    stree = sT_label(_sT_label(i1, ed0, ed1, el, tl),
+                     _sT_label(i2, ed0, ed1, el, tl), 
+              0.0, "")
+  end
+
+  return stree
+end
+
+
+"""
+    _sT_label(ix ::Int64, 
+              ed0::Vector{Int64}, 
+              ed1::Vector{Int64}, 
+              el ::Vector{Float64}, 
+              tl ::Vector{String})
+
+Recursive conversion of an `rtree` object to an `sT_label` tree.
+"""
+function _sT_label(ix ::Int64, 
+                   ed0::Vector{Int64}, 
+                   ed1::Vector{Int64}, 
+                   el ::Vector{Float64}, 
+                   tl ::Vector{String})
+
+  # inner node
+  ei = el[ix]
+  if iszero(ei) 
+    ei = 1e-16
+  end
+
+  i1 = findfirst(isequal(ed1[ix]), ed0)
+  if !isnothing(i1)
+    i2 = findnext(isequal(ed1[ix]), ed0, i1 + 1)
+    return sT_label(_sT_label(i1, ed0, ed1, el, tl),
+                    _sT_label(i2, ed0, ed1, el, tl), 
+            ei, "")
+  # if tip
+  else
+    return sT_label(ei, tl[ed1[ix]])
+  end
+end
+
+
+
+"""
+    rtree(tree::sT_label)
+
+Create a r tree object from a `sT_label`.
+"""
+function rtree(tree::sT_label)
+
+  e0   = Int64[]
+  e1   = Int64[]
+  el   = Float64[]
+  tlab = String[]
+
+  n = ntips(tree)
+
+  _rtree!(tree, e0, e1, el, tlab, n+1, n+1, 0)
+
+  return rtree(hcat(e0, e1), el, tlab, n-1)
+end
+
+
+
+"""
+    _rtree!(tree::sT_label, 
+            e0  ::Vector{Int64}, 
+            e1  ::Vector{Int64}, 
+            el  ::Vector{Float64}, 
+            tlab::Vector{String},
+            pa  ::Int64,
+            i   ::Int64,
+            j   ::Int64)
+
+Create a `rtree` object from a `sT_label` recursively.
+"""
+function _rtree!(tree::sT_label, 
+                 e0  ::Vector{Int64}, 
+                 e1  ::Vector{Int64}, 
+                 el  ::Vector{Float64}, 
+                 tlab::Vector{String},
+                 pa  ::Int64,
+                 i   ::Int64,
+                 j   ::Int64)
+  ei = e(tree)
+
+  if def1(tree)
+    if def2(tree)
+
+      if ei > 0.0
+        i += 1
+        push!(e0, pa)
+        pa = i
+        push!(e1, i)
+        push!(el, ei)
+      end
+
+      i, j = _rtree!(tree.d1, e0, e1, el, tlab, pa, i, j)
+      i, j = _rtree!(tree.d2, e0, e1, el, tlab, pa, i, j)
+
+    end
+  else
+    j += 1
+
+    push!(e0, pa)
+    push!(e1, j)
+    push!(el, ei)
+    push!(tlab, label(tree))
+  end
+
+  return i, j
 end
 
 
@@ -202,15 +339,15 @@ mutable struct sTf_label <: sT
   l ::String
 
   sTf_label() = new()
-  sTf_label(e::Float64, l::String) =
+  sTf_label(e::Float64, l::AbstractString) =
     (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
-  sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::String) =
+  sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::AbstractString) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
-  sTf_label(d1::sTf_label, e::Float64, l::String) =
+  sTf_label(d1::sTf_label, e::Float64, l::AbstractString) =
     (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; x.l=l; x)
-  sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::String) =
+  sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::AbstractString) =
     new(d1, d2, e, false, false, l)
 end
 
@@ -256,29 +393,23 @@ end
 
 Demotes a tree to `sTf_label`, initialized with label i.
 """
-function _sTf_label(tree::T, i::Int64, j::Int64) where {T <: iTree}
+function _sTf_label(tree::T, n::Int64, nf::Int64) where {T <: iTree}
 
   if def1(tree)
+    t1, n, nf = _sTf_label(tree.d1, n, nf)
     if def2(tree)
-      t1, i, j = _sTf_label(tree.d1, i, j)
-      t2, i, j = _sTf_label(tree.d2, i, j)
+      t2, n, nf = _sTf_label(tree.d2, n, nf)
       tree  = sTf_label(t1, t2, e(tree), "")
     else
-      t1, i, j = _sTf_label(tree.d1, i, j)
-      j += 1
-      tree = sTf_label(t1, e(tree), string("f",j))
+      nf += 1
+      tree = sTf_label(t1, e(tree), string("f",nf))
     end
   else
-    if isfossil(tree)
-      j += 1
-      tree = sTf_label(e(tree), isextinct(tree), true, string("f",j))
-    else
-      i += 1
-      tree = sTf_label(e(tree), isextinct(tree), false, string("t",i))
-    end
+    n += 1
+    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), string("t",n))
   end
 
-  return tree, i, j
+  return tree, n, nf
 end
 
 
@@ -305,7 +436,7 @@ function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <
       if isfix(tree.d1) && isfix(tree.d2)
         t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
         t2, n, nf = _sTf_label(tree.d2, reftree.d2, n, nf)
-        tree  = sTf_label(t1, t2, e(tree), l(reftree))
+        tree  = sTf_label(t1, t2, e(tree), label(reftree))
       else
         t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
         t2, n, nf = _sTf_label(tree.d2, reftree, n, nf)
@@ -314,7 +445,7 @@ function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <
     else
       if isfix(tree.d1)
         t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
-        tree = sTf_label(t1, e(tree), l(reftree))
+        tree = sTf_label(t1, e(tree), label(reftree))
       else
         nf += 1
         t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
@@ -323,7 +454,7 @@ function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <
     end
   else
     if isfix(tree)
-      tree = sTf_label(e(tree), l(reftree))
+      tree = sTf_label(e(tree), label(reftree))
     else
       n += 1
       tree = sTf_label(e(tree), string("t", n))

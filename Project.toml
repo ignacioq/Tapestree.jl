@@ -1,7 +1,7 @@
 name = "Tapestree"
 uuid = "cd6db766-07eb-5897-84c0-92a6c9b887bd"
 authors = ["Ignacio Quintero Mächler <ignacioquinterom@gmail.com>"]
-version = "0.3.3"
+version = "0.4.2"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
@@ -14,7 +14,6 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 PlotUtils = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
-RCall = "6f49c342-dc21-5d91-9882-a32aef131414"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 SharedArrays = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
@@ -22,16 +21,15 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
+DistributedArrays = "0.5, 0.6"
 LoopVectorization = "0.11, 0.12"
-PlotUtils = "1"
-RecipesBase = "1"
-SpecialFunctions = "1, 2"
-Parsers = "2"
 Optim = "0.15, 0.16, 0.17, 0.18, 0.19, 0.20, 0.21, 0.22, 1"
 OrdinaryDiffEq = "5, 6, 7"
+Parsers = "2"
+PlotUtils = "1"
 ProgressMeter = "0.9, 1"
-RCall = "0.9, 0.10, 0.11, 0.12, 0.13, 0.14"
-DistributedArrays = "0.5, 0.6"
+RecipesBase = "1"
+SpecialFunctions = "1, 2"
 julia = "1"
 
 [extras]
@@ -39,4 +37,3 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
-

@@ -22,7 +22,7 @@ Read a phylogenetic tree using **ape** package in R through
 function read_data_tribe(tree_file::String,
                          data_file::String)
 
-  tree, bts = read_tree(tree_file)
+  tree, bts = read_tree(tree_file, order = "order")
 
   tip_labels = Dict(i => val for (val,i) = enumerate(tree.tlab))
 

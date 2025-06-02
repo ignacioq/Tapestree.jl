@@ -1205,6 +1205,25 @@ end
 
 
 """
+    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+
+  dd = ssλ = ssμ = n = 0.0
+  for ξi in Ξ
+    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
+  end
+
+  return dd, ssλ, ssμ, n
+end
+
+
+
+
+"""
     sss_v(Ξ ::Vector{T}, 
           fx::Function, 
           fσ::Function, 
@@ -1232,6 +1251,25 @@ function sss_v(Ξ ::Vector{T},
   return Lσ, Δσ, ddσ, ss, n
 end
 
+
+
+
+"""
+    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+
+  ddλ = ddμ = ssλ = ssμ = n = 0.0
+  for ξi in Ξ
+    ddλ, ddμ, ssλ, ssμ, n = 
+      _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+  end
+
+  return ddλ, ddμ, ssλ, ssμ, n
+end
 
 
 

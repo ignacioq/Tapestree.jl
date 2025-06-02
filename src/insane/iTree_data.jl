@@ -241,7 +241,6 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 
-
 """
     label(tree::T) where {T <: iTree}
     label(tree::sT_label)
@@ -335,7 +334,7 @@ Returns tip labels for `sTf_label`.
 function _fossillabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if isfossil(tree) 
-    push!(labels, l(tree))
+    push!(labels, label(tree))
   end
 
   if def1(tree)

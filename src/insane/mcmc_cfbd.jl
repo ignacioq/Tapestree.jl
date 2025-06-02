@@ -29,7 +29,7 @@ Created 07 10 2021
                 λi      ::Float64               = NaN,
                 μi      ::Float64               = NaN,
                 ψi      ::Float64               = NaN,
-                pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
+                pupdp   ::NTuple{4,Float64}     = (1e-4, 1e-4, 1e-4, 0.2),
                 survival::Bool                  = true,
                 prints  ::Int64                 = 5,
                 mxthf   ::Float64               = Inf,
@@ -52,7 +52,7 @@ function insane_cfbd(tree    ::sTf_label;
                      λi      ::Float64               = NaN,
                      μi      ::Float64               = NaN,
                      ψi      ::Float64               = NaN,
-                     pupdp   ::NTuple{4,Float64}     = (0.01, 0.01, 0.01, 0.1),
+                     pupdp   ::NTuple{4,Float64}     = (1e-4, 1e-4, 1e-4, 0.2),
                      survival::Bool                  = true,
                      prints  ::Int64                 = 5,
                      mxthf   ::Float64               = 0.1,
@@ -94,7 +94,7 @@ function insane_cfbd(tree    ::sTf_label;
 
   # starting parameters
   λc, μc, ψc = λi, μi, ψi
-  if any(isnan, (λi, μi, ψi))
+  if isnan(λi) || isnan(μi) || isnan(ψi)
     # if only one tip
     if isone(n)
       λc = prod(λ_prior)
@@ -238,7 +238,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
         logdgamma(μc,      μ_prior[1], μ_prior[2])         +
         sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -369,7 +369,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
       let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 
@@ -463,11 +463,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
           next!(pbar)
         end
+
+        return r, treev
       end
     end
   end
-
-  return r, treev
 end
 
 

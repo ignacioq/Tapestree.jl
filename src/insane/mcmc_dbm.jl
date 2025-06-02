@@ -29,7 +29,7 @@ Created 25 01 2024
                pupdp    ::NTuple{4,Float64} = (0.1, 0.1, 0.05, 0.9),
                δt       ::Float64           = 1e-3,
                stn      ::Float64           = 0.1,
-               mxthf    ::Float64           = Inf,
+               mxthf    ::Float64           = 0.1,
                prints   ::Int64             = 5)
 
 Run diffused Brownian motion trait evolution model.
@@ -51,7 +51,7 @@ function insane_dbm(tree     ::Tlabel,
                     pupdp    ::NTuple{5,Float64} = (0.1, 0.1, 0.1, 0.05, 0.9),
                     δt       ::Float64           = 1e-3,
                     stn      ::Float64           = 0.1,
-                    mxthf    ::Float64           = Inf,
+                    mxthf    ::Float64           = 0.1,
                     prints   ::Int64             = 5)
 
   n    = ntips(tree)
@@ -95,7 +95,8 @@ function insane_dbm(tree     ::Tlabel,
       δt, srδt, inodes, pup, prints)
 
   # mcmc
-  r, treev = mcmc_dbm(Ξ, idf, ll, Ls, Xs, ddσ, ssσ, nσ, prc, αxc, ασc, γc, stn, 
+  r, treev = 
+    mcmc_dbm(Ξ, idf, ll, Ls, Xs, ddσ, ssσ, nσ, prc, αxc, ασc, γc, stn, 
               αx_prior, ασ_prior, γ_prior, δt, srδt, inodes, pup, 
               niter, nthin, nflush, ofile, prints)
 
@@ -158,7 +159,7 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -273,15 +274,16 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
   nlogs = fld(niter,nthin)
   lthin = lit = sthin = zero(Int64)
 
-  r = Array{Float64,2}(undef, nlogs, 8)
-
-  # make Ξ vector
-  treev   = sTxs[]
   L       = [e(ξ) for ξ in Ξ]  # edge lengths
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
 
-  # flush to file
+  # parameter results
+  r = Array{Float64,2}(undef, nlogs, 8)
+
+# make Ξ vector
+  treev = sTxs[]
+  io    = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
@@ -290,9 +292,9 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
 
     open(ofile*".txt", "w") do tf
 
-      let prc = prc, αxc = αxc, ασc = ασc, γc = γc, lthin = lthin, lit = lit, sthin = sthin
+      let ll = ll, prc = prc, L = L, Ls = Ls, Xs = Xs, ddσ = ddσ, ssσ = ssσ, nσ = nσ, prc = prc, αxc = αxc, ασc = ασc, γc = γc, stn = stn, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 
@@ -314,7 +316,6 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
 
             # update rate drift `ασ`
             elseif pupi === 2
-
 
               prc, ασc = update_ασ!(ασc, γc, L, ddσ, ll, prc, ασ_prior)
 
@@ -383,20 +384,17 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
           # flush parameters
           sthin += 1
           if sthin === nflush
-            write(of, 
-              string(Float64(it), "\t", sum(ll), "\t", prc, "\t", 
-                xv(Ξ[1])[1],"\t", exp(lσ2(Ξ[1])[1]), "\t", αxc, "\t", ασc, "\t",
-                 γc, "\n"))
+            print(of, Float64(it), '\t', sum(ll), '\t', prc, '\t', xv(Ξ[1])[1],
+                  '\t', exp(lσ2(Ξ[1])[1]), '\t', αxc, '\t', ασc, '\t', γc, '\n')
             flush(of)
-            write(tf, 
-              string(istring(couple(Ξ, idf, 1)), "\n"))
+            ibuffer(io, couple(Ξ, idf, 1))
+            write(io, '\n')
+            write(tf, take!(io))
             flush(tf)
             sthin = zero(Int64)
           end
-
           next!(pbar)
         end
-        
         return r, treev
       end
     end

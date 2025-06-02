@@ -18,8 +18,8 @@ Created 03 09 2020
                   μ0_prior::NTuple{2,Float64}     = (0.1, 148.41),
                   αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                   αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                  σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                  σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                  σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                  σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                   ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                   ψ_epoch ::Vector{Float64}       = Float64[],
                   f_epoch ::Vector{Int64}         = Int64[0],
@@ -36,7 +36,7 @@ Created 03 09 2020
                   αμi     ::Float64               = 0.0,
                   σλi     ::Float64               = 1e-3,
                   σμi     ::Float64               = 1e-3,
-                  pupdp   ::NTuple{7,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
+                  pupdp   ::NTuple{7,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 1e-4, 0.1, 0.2),
                   δt      ::Float64               = 1e-3,
                   survival::Bool                  = true,
                   mxthf   ::Float64               = 0.1,
@@ -52,8 +52,8 @@ function insane_gbmfbd(tree    ::sTf_label;
                        μ0_prior::NTuple{2,Float64}     = (0.1, 148.41),
                        αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                        αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                       σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                       σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                       σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                       σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                        ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                        ψ_epoch ::Vector{Float64}       = Float64[],
                        f_epoch ::Vector{Int64}         = Int64[0],
@@ -70,7 +70,7 @@ function insane_gbmfbd(tree    ::sTf_label;
                        αμi     ::Float64               = 0.0,
                        σλi     ::Float64               = 1e-3,
                        σμi     ::Float64               = 1e-3,
-                       pupdp   ::NTuple{7,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.2),
+                       pupdp   ::NTuple{7,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 1e-4, 0.1, 0.2),
                        δt      ::Float64               = 1e-3,
                        survival::Bool                  = true,
                        mxthf   ::Float64               = 0.1,
@@ -125,7 +125,7 @@ function insane_gbmfbd(tree    ::sTf_label;
 
   # starting parameters
   λc, μc, ψc = λi, μi, ψi
-  if any(isnan, (λi, μi, ψi))
+  if isnan(λi) || isnan(μi) || isnan(ψi)
     # if only one tip
     if isone(n)
       λc = 1.0/th
@@ -202,7 +202,7 @@ function insane_gbmfbd(tree    ::sTf_label;
   Ξ, idf, llc, prc, αλc, αμc, σλc, σμc, ψc, mc, ns, ne, stnλ, stnμ =
     mcmc_burn_gbmfbd(Ξ, idf, 
       λ0_prior, μ0_prior, αλ_prior, αμ_prior, σλ_prior, σμ_prior,
-      ψ_prior, ψ_epoch, f_epoch, nburn, αλi, αμi, σλi, σμi, ψc, mc, th, rmλ, surv, 
+      ψ_prior, ψ_epoch, f_epoch, nburn, αλi, αμi, σλi, σμi, ψc, mc, th, surv, 
       stnλ, stnμ, δt, srδt, bst, eixi, eixf, inodes, pup, prints)
 
   # mcmc
@@ -285,22 +285,23 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           prints  ::Int64)
 
   lλ0 = lλ(Ξ[1])[1]
+  nsi = (iszero(e(Ξ[1])) && !isfossil(idf[1]))
   llc = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
-        rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
-  prc = logdnorm(lλ0,         λ0_prior[1], λ0_prior[2])    +
-        logdnorm(lμ(Ξ[1])[1], μ0_prior[1], μ0_prior[2])    +
-        logdnorm(αλc,         αλ_prior[1], αλ_prior[2]^2)  +
-        logdnorm(αμc,         αμ_prior[1], αμ_prior[2]^2)  +
-        logdinvgamma(σλc^2,   σλ_prior[1], σλ_prior[2])    +
-        logdinvgamma(σμc^2,   σμ_prior[1], σμ_prior[2])    +
-        sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
+        nsi * lλ0 + log(mc) + prob_ρ(idf)
+  prc = logdnorm(lλ0,         λ0_prior[1], λ0_prior[2])   +
+        logdnorm(lμ(Ξ[1])[1], μ0_prior[1], μ0_prior[2])   +
+        logdnorm(αλc,         αλ_prior[1], αλ_prior[2]^2) +
+        logdnorm(αμc,         αμ_prior[1], αμ_prior[2]^2) +
+        logdinvgamma(σλc^2,   σλ_prior[1], σλ_prior[2])   +
+        logdinvgamma(σμc^2,   σμ_prior[1], σμ_prior[2])   +
+        sum(logdgamma.(ψc,    ψ_prior[1],  ψ_prior[2]))
 
   L   = treelength(Ξ, ψ_epoch, bst, eixi)        # tree length
   nf  = nfossils(idf, ψ_epoch, f_epoch)          # number of fossilization events per epoch
   nin = lastindex(inodes)                        # number of internal nodes
   el  = lastindex(idf)                           # number of branches
   nep = lastindex(ψc)                            # number of epochs
-  ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ  # number of speciation events in likelihood
+  ns  = sum(x -> Float64(d2(x) > 0), idf) - Float64(nsi)  # number of speciation events in likelihood
   ne  = Float64(ntipsextinct(Ξ))                 # number of extinction events in likelihood
 
   ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
@@ -309,8 +310,8 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   ltn = lns = 0
   lup = lacλ = lacμ = 0.0
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
-rmλ
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+
   for i in Base.OneTo(nburn)
 
     shuffle!(pup)
@@ -505,7 +506,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
       let llc = llc, prc = prc, αλc = αλc, αμc = αμc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ssλ = ssλ, ssμ = ssμ, ddλ = ddλ, ddμ = ddμ, L = L, ns = ns, ne = ne, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 
@@ -653,8 +654,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
           end
           next!(pbar)
         end
-
-      return r, treev
+        return r, treev
       end
     end
   end
@@ -1316,7 +1316,7 @@ function fsbi_t(bi  ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
-          acr, lU, iρi, na, nn, 1_000)
+          acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -1462,7 +1462,7 @@ function fsbi_m(bi  ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
-          acr, lU, iρi, na, nn, 1_000)
+          acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -1555,7 +1555,7 @@ function fsbi_i(bi  ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
-          acr, lU, iρi, na, nn, 1_000)
+          acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -1636,7 +1636,7 @@ function tip_sims!(tree::iTfbd,
         # simulate
         stree, na, nn, lr =
           _sim_gbmfbd_it(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], αλ, αμ, σλ, σμ, 
-            ψ, ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, nlim)
+            ψ, ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, 1_000)
 
         if !isfinite(lr) || nn >= nlim
           return tree, na, nn, NaN
@@ -1670,10 +1670,10 @@ function tip_sims!(tree::iTfbd,
     else
       tree.d1, na, nn, lr =
         tip_sims!(tree.d1, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
       tree.d2, na, nn, lr =
         tip_sims!(tree.d2, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr
@@ -1733,7 +1733,7 @@ function fossiltip_sim!(tree::iTfbd,
 
       stree, na, nn, lr =
         _sim_gbmfbd_it(t, lλ(tree)[end], lμ(tree)[end], αλ, αμ, σλ, σμ, ψ,
-          ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, nlim)
+          ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, 1_000)
 
       if !isfinite(lr) || nn >= nlim
         return tree, na, nn, NaN
@@ -1744,11 +1744,11 @@ function fossiltip_sim!(tree::iTfbd,
     elseif isfix(tree.d1)
       tree.d1, na, nn, lr =
         fossiltip_sim!(tree.d1, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
     else
       tree.d2, na, nn, lr =
         fossiltip_sim!(tree.d2, t, αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, δt, srδt,
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr

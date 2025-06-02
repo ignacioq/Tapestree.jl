@@ -319,6 +319,149 @@ function makeiBf!(tree::sT,
   # terminal branch
   elseif istip(tree)
 
+    lab = label(tree)
+    ρi  = tρ[lab]
+    te  = ts - el
+    te  = isapprox(te, 0.0) ? te : 0.0
+    push!(idv, 
+      iBffs(el, 0, 0, 0, ts, te, false, false, ρi, 1, 1, NaN))
+    push!(n2v, 0)
+
+    return ρi, 1, 0
+
+  # internal branch
+  else
+    te  = ts - el
+
+    ρ1, n1, nm1 = makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt)
+    ρ2, n2, nm2 = makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt)
+
+    n  = n1 + n2
+    ρi = n / (n1/ρ1 + n2/ρ2)
+    nm = nm1 + nm2
+
+    push!(idv, iBffs(el, 0, 1, 1, ts, te, false, false, ρi, 0, 1, NaN))
+    push!(n2v, 2*n2 + nm2)
+
+    return ρi, n, nm
+  end
+end
+
+
+
+
+
+"""
+    makeiBf!(tree::sT_label,
+                  idv ::Array{iBffs,1},
+                  n2v ::Array{Int64,1},
+                  tρ  ::Dict{String, Float64},
+                  sc  ::Array{Float64,1},
+                  xr  ::Array{Float64,1},
+                  X   ::Dict{String, Float64})
+
+Make `iBf` vector for an `sTX` and estimate phylogenetic independent
+contrasts `sc` and ancestors `xr` given `tree` and data `X`.
+"""
+function makeiBf!(tree::sT_label,
+                  idv ::Array{iBffs,1},
+                  ti  ::Float64,
+                  n2v ::Array{Int64,1},
+                  tρ  ::Dict{String, Float64},
+                  sc  ::Array{Float64,1},
+                  xr  ::Array{Float64,1},
+                  X   ::Dict{String, Float64})
+
+  el = e(tree)
+  tf = ti - el
+  lab = label(tree)
+
+  if istip(tree)
+    ρi  = tρ[lab]
+    xi  = get(X, lab, NaN)
+    ifx = !isnan(xi)
+    if !ifx
+      mn = isempty(xr) ? 0.0 : mean(xr)
+      s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
+      xi = randn()*s + mn
+    end
+    push!(xr, xi)
+    tf  = isapprox(tf, 0.0) ? tf : 0.0
+    push!(n2v, 0)
+    push!(idv, 
+      iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 
+        0.0, 0.0, ifx))
+    return ρi, 1, xi, el
+  end
+
+  ρ1, n1, x1, e1 = makeiBf!(tree.d1, idv, tf, n2v, tρ, sc, xr, X)
+  ρ2, n2, x2, e2 = makeiBf!(tree.d2, idv, tf, n2v, tρ, sc, xr, X)
+
+  xn  = get(X, lab, NaN)
+  ifx = !isnan(xn)
+  # if constrained node
+  if ifx
+    scn = (xn - x1)/e1 + (xn - x2)/e2
+  else
+    scn = (x2 - x1)/(e1 + e2)
+    xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
+  end
+  en = el + e1*e2/(e1 + e2)
+
+  push!(sc, scn)
+  push!(xr,  xn)
+
+  # tree order
+  n  = n1 + n2
+  ρi = n / (n1/ρ1 + n2/ρ2)
+
+  push!(idv, 
+    iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 
+      0.0, 0.0, ifx))
+  push!(n2v, n2)
+
+  return ρi, n, xn, en
+end
+
+
+
+"""
+    makeiBf!(tree::sfT_label,
+             idv ::Array{iBffs,1},
+             ts  ::Float64,
+             n2v ::Array{Int64,1},
+             tρ  ::Dict{String, Float64},
+             thp ::Float64)
+
+Make `iBf` vector for an `iTree`.
+"""
+function makeiBf!(tree::sTf_label,
+                  ec  ::Float64,
+                  idv ::Array{iBffs,1},
+                  ts  ::Float64,
+                  n2v ::Array{Int64,1},
+                  tρ  ::Dict{String, Float64},
+                  mxt ::Float64)
+
+  el = e(tree)
+  el = ec < el ? ec : el
+
+  # mid branch
+  if el > mxt
+
+    te = ts - mxt
+    ρi, n, nm = makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt)
+
+    push!(idv,
+      iBffs(mxt, 0, 1, 0, ts, te, false, false, ρi, 0, 1, NaN))
+    push!(n2v, 2*n + nm)
+
+    return ρi, n, nm + 1
+
+  # terminal branch
+  elseif istip(tree)
+
+    lab = label(tree)
     iψ  = isfossil(tree)
     ρi  = iψ ? 1.0 : tρ[label(tree)]
     te  = ts - el

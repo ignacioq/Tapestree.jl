@@ -723,12 +723,24 @@ Tlabel = Union{sT_label, sTf_label}
 
 
 
+
 """
     Union type for fossil data
 
-iTf = Union{sTfbd, sTfbdx, iTfbd}
+iTf = Union{sTfbd, sTfbdX, iTfbd}
 """
-iTf = Union{sTf_label, sTfbd, sTfpe, iTfbd, sTxs}
+iTf = Union{sTf_label, sTfbd, iTfbd, sTxs}
+
+
+
+
+"""
+    Union type for unlabelled fossil data
+
+uTf = Union{sTfbd, sTfbdX, iTfbd}
+"""
+uTf = Union{sTfbd, iTfbd, sTxs}
+
 
 
 
@@ -737,17 +749,7 @@ iTf = Union{sTf_label, sTfbd, sTfpe, iTfbd, sTxs}
 
 iTbdU = Union{iTbd, iTfbd}
 """
-iTbdU = Union{iTbd, iTfbd, iTbdx, iTfbdx}
-
-
-
-
-"""
-    Union type for gbm-bd data
-
 iTbdU = Union{iTbd, iTfbd}
-"""
-iTbdUx = Union{iTbdx, iTfbdx}
 
 
 
@@ -776,3 +778,5 @@ Txs = Union{sTxs}
 Txs = Union{sTxs}
 """
 Tpe = Union{sTpe, sTfpe}
+
+

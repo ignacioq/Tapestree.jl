@@ -376,10 +376,10 @@ function _ss_dd(tree::T,
                 Xs  ::Float64,
                 ddσ ::Float64,
                 ss  ::Float64,
-                n   ::Float64) where {T <: iTree}
+                n   ::Float64) where {T <: Tx}
 
   Ls0, Xs0, ddσ0, ss0, n0 = 
-    _ss_dd_b(fx(tree), fσ(tree), ασ, dt(tree), fdt(tree))
+    _LX_ss_dd_b(fx(tree), fσ(tree), ασ, dt(tree), fdt(tree))
 
   Ls  += Ls0
   Xs  += Xs0
@@ -401,21 +401,20 @@ end
 
 
 """
-    _ss_dd_b(vx ::Array{Float64,1},
-             vσ ::Array{Float64,1},
-             αx ::Float64,
-             ασ ::Float64,
-             δt ::Float64,
-             fdt::Float64)
+    _LX_ss_dd_b(vx ::Array{Float64,1},
+                vσ ::Array{Float64,1},
+                ασ ::Float64,
+                δt ::Float64,
+                fdt::Float64)
 
 Returns the standardized sum of squares for vectors `vx` & `vσ`, 
 the path number `n`, and the delta drift `ddx` & `ddσ`.
 """
-function _ss_dd_b(vx ::Array{Float64,1},
-                  vσ ::Array{Float64,1},
-                  ασ ::Float64,
-                  δt ::Float64,
-                  fdt::Float64)
+function _LX_ss_dd_b(vx ::Array{Float64,1},
+                     vσ ::Array{Float64,1},
+                     ασ ::Float64,
+                     δt ::Float64,
+                     fdt::Float64)
 
 
     # estimate standard `δt` likelihood

@@ -24,7 +24,7 @@ Created 25 08 2020
                ϵi      ::Float64               = 0.4,
                λi      ::Float64               = NaN,
                μi      ::Float64               = NaN,
-               pupdp   ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+               pupdp   ::NTuple{3,Float64}     = (1e-4, 1e-4, 0.2),
                prints  ::Int64                 = 5,
                survival::Bool                  = true,
                mxthf   ::Float64               = Inf,
@@ -43,7 +43,7 @@ function insane_cbd(tree    ::sT_label;
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
-                    pupdp   ::NTuple{3,Float64}     = (0.2,0.2,0.2),
+                    pupdp   ::NTuple{3,Float64}     = (1e-4, 1e-4, 0.2),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
                     mxthf   ::Float64               = 0.1,
@@ -200,7 +200,7 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -303,7 +303,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
       let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 
@@ -379,11 +379,11 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
           next!(pbar)
         end
+
+        return r, treev
       end
     end
   end
-
-  return r, treev
 end
 
 

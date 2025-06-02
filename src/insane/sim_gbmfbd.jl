@@ -1110,11 +1110,7 @@ function _sim_gbmfbd_it(nsδt::Float64,
 
         na += 1
         lr += log(iρi)
-        if isfinite(lr)
-          return iTfbd(bt, δt, t, false, false, false, λv, μv), na, nn, lr
-        else
-          return iTfbd(), na, nn, NaN
-        end
+        return iTfbd(bt, δt, t, false, false, false, λv, μv), na, nn, lr
       end
 
       if t - δt < et <= t
@@ -1263,11 +1259,7 @@ function _sim_gbmfbd_it(t   ::Float64,
 
         na += 1
         lr += log(iρi)
-        if isfinite(lr)
-          return iTfbd(bt, δt, t, false, false, false, λv, μv), na, nn, lr
-        else
-          return iTfbd(), na, nn, NaN
-        end
+        return iTfbd(bt, δt, t, false, false, false, λv, μv), na, nn, lr
       end
 
       if t - δt < et <= t

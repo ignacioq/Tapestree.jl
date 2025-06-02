@@ -160,6 +160,50 @@ end
                 σλ  ::Float64,
                 σμ  ::Float64,
                 δt  ::Float64,
+                srδt::Float64)
+
+Returns the log-likelihood for a `iTbd` according to `gbmbd`.
+"""
+function llik_gbm_ss(tree::iTbd,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     σμ  ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
+
+  if istip(tree)
+    ll, dλ, ssλ, ssμ, nλ =
+      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, δt, fdt(tree), srδt,
+        false, isextinct(tree))
+  else
+
+    ll, dλ, ssλ, ssμ, nλ =
+      ll_gbm_b_ss(lλ(tree), lμ(tree), α, σλ, σμ, δt, fdt(tree), srδt,
+        true, false)
+
+    ll1, dλ1, ssλ1, ssμ1, nλ1 = llik_gbm_ss(tree.d1, α, σλ, σμ, δt, srδt)
+    ll2, dλ2, ssλ2, ssμ2, nλ2 = llik_gbm_ss(tree.d2, α, σλ, σμ, δt, srδt)
+
+    ll  += ll1  + ll2
+    dλ  += dλ1  + dλ2
+    ssλ += ssλ1 + ssλ2
+    ssμ += ssμ1 + ssμ2
+    nλ  += nλ1  + nλ2
+  end
+
+  return ll, dλ, ssλ, ssμ, nλ
+end
+
+
+
+
+
+"""
+    llik_gbm_ss(tree::iTbd,
+                α   ::Float64,
+                σλ  ::Float64,
+                σμ  ::Float64,
+                δt  ::Float64,
                 srδt::Float64,
                 ns  ::Float64,
                 ne  ::Float64)
@@ -450,7 +494,7 @@ function _ss_dd_b(lλv::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(lλv)-2
 
-    ssλ = ssμ = 0.0
+    ssλ = ssμ = n = 0.0
     if nI > 0
       @turbo for i in Base.OneTo(nI)
         lλvi  = lλv[i]
@@ -465,9 +509,9 @@ function _ss_dd_b(lλv::Array{Float64,1},
       invt = 1.0/(2.0*δt)
       ssλ *= invt
       ssμ *= invt
+      n   += Float64(nI)
     end
 
-    n = Float64(nI)
     # add final non-standard `δt`
     if fdt > 0.0
       invt = 1.0/(2.0*fdt)
@@ -571,7 +615,7 @@ end
 
 Returns the integrated rate `ir`.
 """
-function _ir(tree::T, irλ ::Float64, irμ ::Float64) where {T <: iTbdU}
+function _ir(tree::T, irλ::Float64, irμ::Float64) where {T <: iTbdU}
 
   irλ, irμ = _ir_b(lλ(tree), lμ(tree), dt(tree), fdt(tree), irλ, irμ)
 

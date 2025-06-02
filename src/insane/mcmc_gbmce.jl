@@ -15,8 +15,8 @@ Created 03 09 2020
 """
     insane_gbmce(tree    ::sT_label;
                  λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                 α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                 α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                 σλ_prior::NTuple{2,Float64}     = (3.0, 0.05),
                  μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                  niter   ::Int64                 = 1_000,
                  nthin   ::Int64                 = 10,
@@ -28,7 +28,7 @@ Created 03 09 2020
                  σλi     ::Float64               = 0.01,
                  μi      ::Float64               = NaN,
                  ϵi      ::Float64               = 0.2,
-                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
+                 pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-4, 0.1, 0.2),
                  δt      ::Float64               = 1e-3,
                  prints  ::Int64                 = 5,
                  survival::Bool                  = true,
@@ -40,7 +40,7 @@ Run insane for `gbm-ce`.
 function insane_gbmce(tree    ::sT_label;
                       λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
                       α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
-                      σλ_prior::NTuple{2,Float64}     = (1.0, 0.5),
+                      σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                       μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
@@ -52,7 +52,7 @@ function insane_gbmce(tree    ::sT_label;
                       σλi     ::Float64               = 0.01,
                       μi      ::Float64               = NaN,
                       ϵi      ::Float64               = 0.2,
-                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
+                      pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-4, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       prints  ::Int64                 = 5,
                       survival::Bool                  = true,
@@ -191,7 +191,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   # delta change, sum squares, path length and integrated rate
   ddλ, ssλ, nλ = _ss_dd(Ξ, αc)
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for i in Base.OneTo(nburn)
 
@@ -332,7 +332,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
       let llc = llc, prc = prc, αc = αc, σλc = σλc, μc = μc, mc = mc, nλ = nλ, ssλ = ssλ, ddλ = ddλ, L = L, ne = ne, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 

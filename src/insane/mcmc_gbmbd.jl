@@ -16,9 +16,9 @@ Created 03 09 2020
     insane_gbmbd(tree    ::sT_label;
                  λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
                  μ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                 α_prior ::NTuple{2,Float64}     = (0.0, 10.0),
-                 σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                 σμ_prior::NTuple{2,Float64}     = (3.0, 0.5),
+                 α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                 σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                 σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                  niter   ::Int64                 = 1_000,
                  nthin   ::Int64                 = 10,
                  nburn   ::Int64                 = 200,
@@ -30,7 +30,7 @@ Created 03 09 2020
                  αi      ::Float64               = 0.0,
                  σλi     ::Float64               = 0.01,
                  σμi     ::Float64               = 0.01,
-                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0, 0.1, 0.2),
+                 pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-4, 0.1, 0.2),
                  δt      ::Float64               = 1e-3,
                  survival::Bool                  = true,
                  mxthf   ::Float64               = 0.1,
@@ -45,8 +45,8 @@ function insane_gbmbd(tree    ::sT_label;
                       λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
                       μ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
                       α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
-                      σλ_prior::NTuple{2,Float64}     = (1.0, 0.5),
-                      σμ_prior::NTuple{2,Float64}     = (1.0, 0.5),
+                      σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                      σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
@@ -58,7 +58,7 @@ function insane_gbmbd(tree    ::sT_label;
                       αi      ::Float64               = 0.0,
                       σλi     ::Float64               = 0.01,
                       σμi     ::Float64               = 0.01,
-                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.0, 0.1, 0.2),
+                      pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-4, 0.1, 0.2),
                       δt      ::Float64               = 1e-3,
                       survival::Bool                  = true,
                       mxthf   ::Float64               = 0.1,
@@ -122,7 +122,7 @@ function insane_gbmbd(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running birth-death gbm"
+  @info "running birth-death diffusion"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, σμc, mc, ns, ne, stnλ, stnμ =
@@ -203,7 +203,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   L   = treelength(Ξ)        # tree length
   nin = lastindex(inodes)   # number of internal nodes
   el  = lastindex(idf)      # number of branches
-  ns  = sum(x -> d2(x) > 0, idf) - Int64(rmλ)  # number of speciation events in likelihood
+  ns  = Float64(sum(x -> d2(x) > 0, idf)) - rmλ  # number of speciation events in likelihood
   ne  = 0.0                 # number of extinction events in likelihood
 
   # delta change, sum squares, path length and integrated rate
@@ -213,7 +213,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   ltn = 0
   lup = lacλ = lacμ = 0.0
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for i in Base.OneTo(nburn)
 
@@ -275,7 +275,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
     if ltn === 100
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
-      ltn = 0
+      ltn = zero(Int64)
     end
 
     next!(pbar)
@@ -352,7 +352,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   nlogs = fld(niter,nthin)
   lthin = lit = sthin = zero(Int64)
 
-  L   = treelength(Ξ)        # tree length
+  L   = treelength(Ξ)       # tree length
   nin = lastindex(inodes)   # number of internal nodes
   el  = lastindex(idf)      # number of branches
 
@@ -374,7 +374,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
       let llc = llc, prc = prc, αc = αc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ssλ = ssλ, ssμ = ssμ, ddλ = ddλ, L = L, ns = ns, ne = ne, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, prints, "running mcmc...", 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
         for it in Base.OneTo(niter)
 

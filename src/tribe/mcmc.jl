@@ -409,29 +409,29 @@ function tribe_mcmc(Xc          ::Array{Float64,2},
     end # end MCMC
   end # end print loop
 
-  if saveXY[1]
-    # save X and Y as R objects
-    @rput Xlog
-    @rput Ylog
-    @rput δt
-    @rput B
+  # if saveXY[1]
+  #   # save X and Y as R objects
+  #   @rput Xlog
+  #   @rput Ylog
+  #   @rput δt
+  #   @rput B
 
-    if saveDM[1]
-      @rput LAlog
-      @rput LDlog
-      reval("""
-        delta.t <- δt
-        save(Xlog, Ylog, B, delta.t, LAlog, LDlog, 
-            file = '$out_file.rda')
-      """)
-    else
-      reval("""
-        delta.t <- δt
-        save(Xlog, Ylog, B, delta.t, file = '$out_file.rda')
-      """)
-    end
+  #   if saveDM[1]
+  #     @rput LAlog
+  #     @rput LDlog
+  #     reval("""
+  #       delta.t <- δt
+  #       save(Xlog, Ylog, B, delta.t, LAlog, LDlog, 
+  #           file = '$out_file.rda')
+  #     """)
+  #   else
+  #     reval("""
+  #       delta.t <- δt
+  #       save(Xlog, Ylog, B, delta.t, file = '$out_file.rda')
+  #     """)
+  #   end
 
-  end
+  # end
 
   return llc, prc, ωxc, ω1c, ω0c, σ²c, λ1c, λ0c, Xc, Yc
 

@@ -41,7 +41,7 @@ colonization parameters between all areas.
 Open `env_data_2.txt` in the data folder to see an example for 2 covariates for
 2 areas.
 ```julia
-states_file = joinpath(dirname(pathof(Tapestree)), "..", "data", "st2_data.txt")
+envdata_file = joinpath(dirname(pathof(Tapestree)), "..", "data", "env_data_2.txt")
 ```
 
 Specify output MCMC file (`homedir()` is an alias to your home folder)
@@ -69,7 +69,7 @@ model `cov_mod = ("s","g")`. Note however that this has not been validated.
 Moreover, covariate effect on extinction is non retrievable from extant-only
 phylogenetic trees.
 
-### Parallel MC3 
+### Parallel MC3
 
 It is encouraged to use Metropolis coupled MCMC (MC3) for more robust 
 convergence (the posterior surfaced is highly peaked).

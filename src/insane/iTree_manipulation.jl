@@ -424,7 +424,7 @@ function _cutbottom(tree::iTpb,
 
     push!(lλv, eλ)
 
-    tree = iTpb(c - t, true, δt, c - t - tii, lλv)
+    tree = iTpb(c - t, δt, c - t - tii, true, lλv)
 
   else
     if def1(tree)
@@ -665,18 +665,18 @@ end
 
 
 """
-    fossilize!(tree::T, label::String) where {T <: iTf}
+    fossilize!(tree::T, sp_label::String) where {T <: iTf}
 
 Fossilize a given tree given its name.
 """
-function fossilize!(tree::T, label::String) where {T <: sTf_label}
+function fossilize!(tree::T, sp_label::String) where {T <: sTf_label}
 
   if def1(tree)
-    fossilize!(tree.d1::T, label)
+    fossilize!(tree.d1::T, sp_label)
     if def2(tree)
-      fossilize!(tree.d2::T, label)
+      fossilize!(tree.d2::T, sp_label)
     end
-  elseif label(tree) == label 
+  elseif label(tree) == sp_label 
     fossilize!(tree)
   end
 end
@@ -685,18 +685,18 @@ end
 
 
 """
-    defossilize!(tree::T, label::String) where {T <: iTf}
+    defossilize!(tree::T, sp_label::String) where {T <: iTf}
 
 Fossilize a given tree given its name.
 """
-function defossilize!(tree::T, label::String) where {T <: sTf_label}
+function defossilize!(tree::T, sp_label::String) where {T <: sTf_label}
 
   if def1(tree)
-    defossilize!(tree.d1::T, label)
+    defossilize!(tree.d1::T, sp_label)
     if def2(tree)
-      defossilize!(tree.d2::T, label)
+      defossilize!(tree.d2::T, sp_label)
     end
-  elseif label(tree) == label 
+  elseif label(tree) == sp_label 
     defossilize!(tree)
   end
 end

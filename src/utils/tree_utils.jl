@@ -26,108 +26,6 @@ end
 
 
 
-
-"""
-    read_tree(tree_file::String; 
-              order::String = "cladewise", 
-              branching_times::Bool = true)
-
-Function to read a tree using `RCall`
-to call **ape** tree reading capabilities. 
-"""
-function read_tree(tree_file      ::String; 
-                   order          ::String = "cladewise", 
-                   branching_times::Bool = true)
-
-  str = reval("""
-                library(\"ape\")
-                tree     <- read.tree('$tree_file') 
-                tree     <- reorder(tree, order = '$order')
-                edge     <- .subset2(tree,'edge')
-                Nnode    <- .subset2(tree,'Nnode')
-                tiplabel <- .subset2(tree,'tip.label')
-                edlength <- .subset2(tree,'edge.length')
-                list(edge,Nnode,tiplabel,edlength)
-              """)
-
-  edge     = rcopy(str[1])
-  edge     = convert(Array{Int64},edge)
-  Nnode    = rcopy(str[2])
-  Nnode    = convert(Int64,Nnode)
-  tiplabel = rcopy(str[3])
-  edlength = rcopy(str[4])
-  edlength = convert(Array{Float64},edlength)
-
-  tree = rtree(edge, edlength, tiplabel, Nnode)
-
-  if branching_times
-    brtimes = reval("""
-                      brtimes <- branching.times(tree)
-                    """)
-    brtimes = rcopy(brtimes)
-    return tree, brtimes
-  else
-    return tree
-  end
-end
-
-
-
-
-
-
-"""
-    make_ape_tree(n::Int64, 
-                  λ::Float64, 
-                  μ::Float64; 
-                  order::String = "cladewise", 
-                  branching_times::Bool = true)
-
-Make a phylogenetic tree using `phytools` in R. 
-"""
-function make_ape_tree(n              ::Int64, 
-                       λ              ::Float64, 
-                       μ              ::Float64; 
-                       order          ::String = "cladewise", 
-                       branching_times::Bool   = true)
-
-  str = reval("""
-                library(ape)
-                library(phytools)
-                tree     <- pbtree(n = $n, b = $λ, d = $μ, extant.only = TRUE)
-                tree     <- reorder(tree, order = '$order')
-                edge     <- .subset2(tree,'edge')
-                Nnode    <- .subset2(tree,'Nnode')
-                tiplabel <- .subset2(tree,'tip.label')
-                edlength <- .subset2(tree,'edge.length')
-                list(edge,Nnode,tiplabel,edlength)
-              """)
-
-  edge     = rcopy(str[1])
-  edge     = convert(Array{Int64},edge)
-  Nnode    = rcopy(str[2])
-  Nnode    = convert(Int64,Nnode)
-  tiplabel = rcopy(str[3])
-  edlength = rcopy(str[4])
-  edlength = convert(Array{Float64},edlength)
-
-  tree = rtree(edge, edlength, tiplabel, Nnode)
-
-  if branching_times
-    brtimes = reval("""
-                      brtimes <- branching.times(tree)
-                    """)
-    brtimes = rcopy(brtimes)
-    return tree, brtimes
-  else
-    return tree
-  end
-end
-
-
-
-
-
 """
     maketriads(ed::Array{Int64,2})
 
@@ -365,11 +263,11 @@ function postorderedges(ed  ::Array{Int64,2},
     nod = pop!(s1)
     push!(s2, nod)
 
-    wn = findfirst(isequal(nod), ed[:,1])
-    if isnothing(wn)
+    wn = findall(isequal(nod), ed[:,1])
+    if isempty(wn)
       continue
     else
-      push!(s1, ed[wn,2],ed[(wn+1),2])
+      push!(s1, ed[wn[1],2], ed[wn[2],2])
     end
   end
 
@@ -390,9 +288,7 @@ function postorderedges(ed  ::Array{Int64,2},
     end
   end
 
-  append!(ndp,setdiff(1:(2ntip-2), ndp))
-
-  ed[ndp,:]
+  append!(ndp,setdiff(1:(2*ntip-2), ndp))
 
   return ed[ndp,:], el[ndp]
 end

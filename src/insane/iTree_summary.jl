@@ -315,7 +315,7 @@ function extract_vector!(tree::T,
                          v   ::Array{Float64,1},
                          nδt ::Float64,
                          ct  ::Float64,
-                         f  ::Function) where {T <: iTree}
+                         f   ::Function) where {T <: iT}
 
   et = e(tree)
   δt = dt(tree)

@@ -317,8 +317,8 @@ function _crown_update!(ξi      ::T,
 
       if lU < llr
         llc += llrbm1 + llrbm2 + llr
-        prc += llrdnorm_x(λr, λi,    λ0_prior[1], λ0_prior[2]) +
-               llrdnorm_x(μr, μc[1], μ0_prior[1], μ0_prior[2]) 
+        prc += llrdnorm_x(λr, λi,     λ0_prior[1], λ0_prior[2]) +
+               llrdnorm_x(μr, μpc[1], μ0_prior[1], μ0_prior[2]) 
         ddλ += 2.0*(λi - λr)
         ssλ += ssrλ1 + ssrλ2
         ssμ += ssrμ1 + ssrμ2

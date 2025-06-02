@@ -162,7 +162,7 @@ function mcmc_burn_cbd(tree    ::sTbd,
   llc = llik_cbd(tree, λc, μc) - svf(λc, μc, th)
   prc = logdexp(λc, λprior) + logdexp(μc, μprior)
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -256,7 +256,7 @@ function mcmc_cbd(tree  ::sTbd,
 
   R = Array{Float64,2}(undef, nlogs, 7)
 
-  pbar = Progress(niter, prints, "running mcmc...", 20)
+  pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
   for it in Base.OneTo(niter)
 
