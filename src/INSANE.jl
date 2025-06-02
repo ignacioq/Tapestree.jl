@@ -14,7 +14,6 @@ module INSANE
   using LoopVectorization: @turbo
   using PlotUtils: cgrad, palette
   using RecipesBase
-  using Parsers: parse as Pparse
 
   # other submodules dependencies
   using ..Utils
