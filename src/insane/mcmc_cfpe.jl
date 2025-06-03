@@ -120,7 +120,7 @@ function insane_cfpe(tree    ::sTf_label,
   σac = σkc = σxi
 
   # if condition on first speciation event
-  rmλ = iszero(e(tree)) && !isfossil(tree) ? 1.0 : 0.0
+  rmλ = Float64(iszero(e(tree)) && !isfossil(tree))
 
   # condition on survival of 0, 1, or 2 starting lineages
   surv = 0
@@ -270,7 +270,7 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   sσa, sσk = ssσak(Ξ, idf)
 
   # n number to sum to ns for σa updates
-  nσs = Float64(lastindex(idf)) - ns*2.0 - rmλ
+  nσs = nedgesF(Ξ) - 2.0*ns - rmλ
 
  # empty vector
   xis = Float64[]
@@ -454,8 +454,6 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
           for p in pup
 
-            @show llc
-
              # λ proposal
             if p === 1
 
@@ -493,9 +491,6 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
             # σa (anagenetic) proposal
             elseif p === 4
-
-              @show sσa, sσk, ssσak(Ξ, idf), ns
-
 
               llc, prc, σac = 
                 update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
@@ -535,13 +530,13 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
               bix = ceil(Int64,rand()*el)
 
+              @show idf[bix], sσa, sσk, ssσak(Ξ, idf), ns
+
               llc, ns, ne, sσa, sσk = 
                 update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, σac, σkc, 
                   ns, ne, L, eixi, eixf, sσa, sσk, xis, xfs, es)
 
-              @show bix, sσa, sσk, ssσak(Ξ, idf), ns
-
-
+              @show idf[bix], sσa, sσk, ssσak(Ξ, idf), ns
 
               llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
@@ -759,40 +754,43 @@ function update_fs!(bix ::Int64,
 
   llr = NaN
   sσar = sσkr = 0.0
-   # if terminal branch
-  if iszero(d1(bi))
+
+   # if non-bifurcating branch
+  if iszero(d2(bi))
 
     xav = xsd = NaN
     if !isnothing(xavg(bi))
       xav, xsd = xavg(bi), xstd(bi)
     end
 
-    # fossil terminal branch
-    if isfossil(bi)
+    # if terminal branch
+    if iszero(d1(bi))
 
-      ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, ψ, σa, σk, ψts, ixi, ixf, 
-                  xis, xfs, es)
+      # if fossil terminal branch
+      if isfossil(bi)
+        ξp, llr = fsbi_f(bi, xav, xsd, ξc, λ, μ, ψ, σa, σk, ψts, ixi, ixf, 
+                    xis, xfs, es)
 
-      # if terminal but not successful proposal, update extinct
-      if !isfinite(llr)
-        ξp, llr = fsbi_et(sTfpe_wofe(ξc), bi, λ, μ, ψ, σa, σk, ψts, ixf)
+        # if not successful proposal, update extinct daughter
+        if !isfinite(llr)
+          ξp, llr = fsbi_et(sTfpe_wofe(ξc), bi, λ, μ, ψ, σa, σk, ψts, ixf)
+        end
+  
+      # if terminal non-fossil branch
+      else
+        ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, ψ, σa, σk, ψts, ixi, 
+                    xis, xfs, es)
       end
 
-    # non-fossil terminal branch
+    # if mid (fossil or not) branch
     else
-      ξp, llr = fsbi_t(bi, xav, xsd, ξc, λ, μ, ψ, σa, σk, ψts, ixi, 
-                  xis, xfs, es)
+      ξp, llr, sσar = 
+        fsbi_m(bi, xav, xsd, ξc, Ξ[d1(bi)], λ, μ, ψ, σa, σk, ψts, ixi, ixf, 
+          xis, xfs, es)
     end
 
-  # if internal non-bifurcating
-  elseif iszero(d2(bi))
-
-    ξp, llr, sσar = 
-      fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, ψ, σa, σk, ψts, ixi, ixf, xis, xfs)
-
-  # if internal bifurcating branch
+  # if bifurcating branch
   elseif e(bi) > 0.0
-
     ξp, llr, sσar, sσkr = 
       fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, ψ, σa, σk, ψts, 
         ixi, ixf, xis, xfs)
@@ -802,7 +800,6 @@ function update_fs!(bix ::Int64,
 
     nep = lastindex(ψts) + 1
     σa2, σk2 = σa^2, σk^2
-
     llc, ns, ne, sσa, sσk = 
       llik_cfpe_track!(ξc, λ, μ, ψ, σa2, σk2, llc, ns, ne, L, sσa, sσk, 
         ti(bi), ψts, ixi, nep, -)
@@ -819,6 +816,126 @@ function update_fs!(bix ::Int64,
   end
 
   return llc, ns, ne, sσa, sσk
+end
+
+
+
+
+"""
+    fsbi_f(bi ::iBffs,
+           xav::Float64,
+           xst::Float64,
+           ξc ::sTfpe,
+           λ  ::Float64,
+           μ  ::Float64,
+           ψ  ::Vector{Float64},
+           σa ::Float64,
+           σk ::Float64,
+           ψts::Vector{Float64},
+           ixi::Int64,
+           ixf::Int64,
+           xis::Vector{Float64},
+           xfs::Vector{Float64},
+           es ::Vector{Float64})
+
+Forward simulation for **fossil** terminal branch.
+"""
+function fsbi_f(bi ::iBffs,
+                xav::Float64,
+                xst::Float64,
+                ξc ::sTfpe,
+                λ  ::Float64,
+                μ  ::Float64,
+                ψ  ::Vector{Float64},
+                σa ::Float64,
+                σk ::Float64,
+                ψts::Vector{Float64},
+                ixi::Int64,
+                ixf::Int64,
+                xis::Vector{Float64},
+                xfs::Vector{Float64},
+                es ::Vector{Float64})
+
+  # forward simulation during branch length
+  empty!(xis)
+  empty!(xfs)
+  empty!(es)
+  nep = lastindex(ψts) + 1
+
+  t0, na, nf, nn = 
+    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξc), σa, σk, ψts, ixi, nep, 
+      0, 0, 1, 500, xis, xfs, es)
+
+  if na < 1 || nf > 0 || nn >= 500
+    return t0, NaN
+  end
+
+  ntp = na
+
+  lU = -randexp() # log-probability
+
+  # add sampling fraction
+  nac = ni(bi)                # current ni
+  iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
+  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+
+  # if fixed node
+  wti = zero(Int64)
+  if ifx(bi)
+
+    # if no uncertainty around trait value
+    if iszero(xst)
+       wti, acr, xp  = wfix_t(ξc, e(bi), xav, acr, xis, es, σa, na)
+
+    # if uncertainty around trait value
+    else
+       wti, acr, xp  = wfix_t(ξc, e(bi), xav, xst, acr, xis, xfs, es, σa, na)
+    end
+
+  # if unfixed node
+  else
+    wti = fIrand(na) + 1
+  end
+
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+
+  if lU < acr
+
+    if wti <= div(na,2)
+      fixtip1!(t0, wti, 0, xp)
+    else
+      fixtip2!(t0, na - wti + 1, 0, xp)
+    end
+
+    # simulate remaining tips until the present
+    if na > 1
+      tx, na, nn, acr =
+        tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
+          iρi, na, nn, 500)
+    end
+
+    if lU < acr
+
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
+
+      # forward simulate fixed tip daughter
+      tx, na, nn, acr =
+        fossiltip_sim!(t0, tf(bi),  λ, μ, ψ, σa, σk, ψts, ixf, 
+          nep, acr, lU, iρi, na, nn, 500)
+
+      if lU < acr
+
+        llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+        setnt!(bi, ntp)      # set new nt
+        setni!(bi, na)       # set new ni
+
+        return t0, llr
+      end
+    end
+  end
+
+  return t0, NaN
 end
 
 
@@ -919,125 +1036,6 @@ end
 
 
 """
-    fsbi_t(bi ::iBffs,
-           xav::Float64,
-           xst::Float64,
-           ξc ::sTfpe,
-           λ  ::Float64,
-           μ  ::Float64,
-           ψ  ::Vector{Float64},
-           σa ::Float64,
-           σk ::Float64,
-           ψts::Vector{Float64},
-           ixi::Int64,
-           ixf::Int64,
-           xis::Vector{Float64},
-           xfs::Vector{Float64},
-           es ::Vector{Float64})
-
-Forward simulation for **fossil** terminal branch.
-"""
-function fsbi_t(bi ::iBffs,
-                xav::Float64,
-                xst::Float64,
-                ξc ::sTfpe,
-                λ  ::Float64,
-                μ  ::Float64,
-                ψ  ::Vector{Float64},
-                σa ::Float64,
-                σk ::Float64,
-                ψts::Vector{Float64},
-                ixi::Int64,
-                ixf::Int64,
-                xis::Vector{Float64},
-                xfs::Vector{Float64},
-                es ::Vector{Float64})
-
-  # forward simulation during branch length
-  empty!(xis)
-  empty!(xfs)
-  empty!(es)
-  nep = lastindex(ψts) + 1
-
-  t0, na, nf, nn = 
-    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξc), σa, σk, ψts, ixi, nep, 
-      0, 0, 1, 500, xis, xfs, es)
-
-  if na < 1 || nf > 0 || nn > 500
-    return t0, NaN
-  end
-
-  ntp = na
-
-  lU = -randexp() # log-probability
-
-  # add sampling fraction
-  nac = ni(bi)                # current ni
-  iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
-  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
-
-  # if fixed node
-  wti = zero(Int64)
-  if ifx(bi)
-
-    # if no uncertainty around trait value
-    if iszero(xst)
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, acr, xis, es, σa, na)
-
-    # if uncertainty around trait value
-    else
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, xst, acr, xis, xfs, es, σa, na)
-    end
-
-  # if unfixed node
-  else
-    wti = fIrand(na) + 1
-  end
-
-  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
-
-  if lU < acr
-
-    if wti <= div(na,2)
-      fixtip1!(t0, wti, 0, xp)
-    else
-      fixtip2!(t0, na - wti + 1, 0, xp)
-    end
-
-    # simulate remaining tips until the present
-    if na > 1
-      tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
-          iρi, na, nn, 500)
-    end
-
-    if lU < acr
-
-      # fossilize extant tip
-      fossilizefixedtip!(t0)
-
-      tx, na, nn, acr =
-        fossiltip_sim!(t0, tf(bi),  λ, μ, ψ, σa, σk, ψts, ixf, 
-          nep, acr, lU, iρi, na, nn, 500)
-
-      if lU < acr
-
-        llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-        setnt!(bi, ntp)      # set new nt
-        setni!(bi, na)       # set new ni
-
-        return t0, llr
-      end
-    end
-  end
-
-  return t0, NaN
-end
-
-
-
-
-"""
     fsbi_et(t0  ::sTfpe,
             bi  ::iBffs,
             αλ  ::Float64,
@@ -1103,6 +1101,8 @@ end
 Forward simulation for internal branch.
 """
 function fsbi_m(bi::iBffs,
+                xav::Float64,
+                xst::Float64,
                 ξi::sTfpe,
                 ξ1::sTfpe,
                 λ ::Float64,
@@ -1114,7 +1114,8 @@ function fsbi_m(bi::iBffs,
                 ixi::Int64,
                 ixf::Int64,
                 xfs::Vector{Float64},
-                xcs::Vector{Float64})
+                xcs::Vector{Float64},
+                es ::Vector{Float64})
 
   # forward simulation during branch length
   nep = lastindex(ψts) + 1
@@ -1137,6 +1138,46 @@ function fsbi_m(bi::iBffs,
   iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
   acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
+
+  """
+  here: add traits
+  """
+
+    # if fix node
+  if ifx(bi)
+
+    # if no uncertainty around trait value
+
+    if iszero(xst)
+       wti, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
+
+    # if uncertainty around trait value
+    else
+       wti, acr, xp  = wfix_m(ξc, ξ1, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
+    end
+
+    if lU < acr + llr
+
+      if wti <= div(na,2)
+        fixtip1!(t0, wti, 0, xp)
+      else
+        fixtip2!(t0, na - wti + 1, 0, xp)
+      end
+
+      setni!(bi, na)    # set new ni
+      return t0, llr
+    end
+
+  else
+    if lU < llr
+      _fixrtip!(t0, na)
+
+      setni!(bi, na)    # set new ni
+      return t0, llr
+    end
+  end
+
+
   ## choose most likely lineage to fix
   xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, xcs, σa)
 
@@ -1158,6 +1199,10 @@ function fsbi_m(bi::iBffs,
 
     if lU < acr
       na  -= 1
+
+      # fossilize extant tip
+      isfossil(bi) && fossilizefixedtip!(t0)
+
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
@@ -1170,6 +1215,76 @@ function fsbi_m(bi::iBffs,
   end
 
   return t0, NaN, NaN
+end
+
+
+
+
+
+"""
+    wfix_m(ξi ::T,
+           ei ::Float64,
+           xav::Float64,
+           xst::Float64,
+           acr::Float64,
+           xis::Vector{Float64},
+           xfs::Vector{Float64},
+           es ::Vector{Float64},
+           σa ::Float64,
+           na ::Int64) where {T <: Tpe}
+
+Choose most likely simulated lineage to fix with respect to the
+trait value **with uncertainty** of mid branches.
+"""
+function wfix_m(ξi ::T,
+                ξ1 ::T,
+                ei ::Float64,
+                xav::Float64,
+                xst::Float64,
+                acr::Float64,
+                xis::Vector{Float64},
+                xfs::Vector{Float64},
+                es ::Vector{Float64},
+                σa ::Float64,
+                na ::Int64) where {T <: Tpe}
+
+  # select best from proposal
+  xf1, sre1 = xf(ξ1), sqrt(e(ξ1))
+  sp, wt, xp, pp, px = 0.0, 0, NaN, -Inf, -Inf
+  for i in Base.OneTo(na)
+    pa  = duodnorm(xfs[i], xis[i], xav, sqrt(es[i])*σa, xst)
+    pd  = dnorm_bm(xfs[i], xf1, sre1*σa)
+    p   = pa*pd
+    sp += p
+    if p > px
+      px = p
+      pp = pd
+      xp = xfs[i]
+      wt = i
+    end
+  end
+
+  # extract current xis and estimate ratio
+  empty!(xis)
+  empty!(xfs)
+  empty!(es)
+
+  nac, xc, xic = _xifsatt!(ξi, ei, xis, xfs, es, 0.0, 0, NaN, NaN)
+
+  sc, pc = 0.0, NaN
+  for i in Base.OneTo(nac)
+    pa  = duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
+    pd  = dnorm_bm(xfs[i], xf1, sre1*σa)
+    sc += pa*pd
+    if xis[i] === xic
+      pc = pd
+    end
+  end
+
+  # likelihood ratio and acceptance
+  acr += log(sp) - log(sc)
+
+  return xp, wt, pp, pc, acr
 end
 
 
@@ -1388,7 +1503,6 @@ function fossiltip_sim!(tree::sTfpe,
                         na  ::Int64,
                         nn  ::Int64,
                         nlim::Int64)
-
 
   if lU < lr && nn < nlim
 

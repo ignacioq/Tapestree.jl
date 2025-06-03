@@ -618,9 +618,9 @@ function fsbi_f(bi ::iBffs,
   # forward simulation during branch length
   nep = lastindex(ψts) + 1
   t0, na, nf, nn = 
-    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, ψts, ixi, nep, 0, 0, 1, 1_000)
+    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, ψts, ixi, nep, 0, 0, 1, 500)
 
-  if na < 1 || nf > 0 || nn > 999
+  if na < 1 || nf > 0 || nn > 500
     return t0, NaN
   end
 
@@ -648,6 +648,7 @@ function fsbi_f(bi ::iBffs,
       # fossilize extant tip
       fossilizefixedtip!(t0)
 
+      # if fossil tip
       if iszero(d1(bi))
         tx, na, nn, acr =
           fossiltip_sim!(t0, tf(bi), λ, μ, ψ, ψts, ixf, acr, lU, iρi, na, nn)

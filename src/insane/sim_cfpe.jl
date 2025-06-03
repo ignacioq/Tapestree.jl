@@ -65,10 +65,6 @@ end
 
 
 
-"""
-here
-"""
-
 
 """
     sim_cfbd(t  ::Float64,

@@ -183,7 +183,7 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
   sσa, sσk = ssσak(Ξ, idf)
 
   # n number to sum to ns for σa updates
-  nσs = Float64(lastindex(idf)) - ns*2.0 - rmλ
+  nσs = Float64(lastindex(idf)) - 2.0*ns - rmλ
 
  # empty vector
   xis = Float64[]
@@ -767,13 +767,9 @@ function wfix_t(ξi ::T,
   empty!(es)
   nac, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0
   for i in Base.OneTo(nac)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
-    sc += p
-    if xis[i] === xic
-      pc = p
-    end
+    sc += dnorm(xav, xis[i], sqrt(es[i])*σa)
   end
 
   # likelihood ratio and acceptance

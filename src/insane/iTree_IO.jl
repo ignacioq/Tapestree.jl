@@ -902,6 +902,48 @@ end
 
 
 
+
+
+"""
+    _ibuffer(io::IOBuffer, tree::sTfpe)
+
+Write `sTfpe` to IOBuffer.
+"""
+function _ibuffer(io::IOBuffer, tree::sTfpe)
+  if def1(tree)
+    write(io, '(')
+    if def2(tree)
+      _ibuffer(io, tree.d1), 
+      write(io, ',') 
+      _ibuffer(io, tree.d2), 
+      print(io, ',', e(tree), ',', 
+          short(isextinct(tree)), ',', "0,", 
+          xi(tree), ',',
+          xf(tree), ',',
+          short(sh(tree)), ',',
+          short(isfix(tree)), ')')
+    else
+      _ibuffer(io, tree.d1), 
+      print(io, ',', e(tree), ',', 
+          short(isextinct(tree)), ',', "1,", 
+          xi(tree), ',',
+          xf(tree), ',',
+          short(sh(tree)), ',',
+          short(isfix(tree)), ')')
+    end
+  else
+    print(io, '(', e(tree), ',', 
+        short(isextinct(tree)), ',', 
+        short(isfossil(tree)), ',',
+        xi(tree), ',',
+        xf(tree), ',',
+        short(sh(tree)), ',',
+        short(isfix(tree)), ')')
+  end
+end
+
+
+
 """
     _ibuffer(io::IOBuffer, tree::sTxs)
 
@@ -1279,14 +1321,14 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTpe})
 
     if inode
       tree = sTpe(sd1, sd2, 
-                  Pparse(Float64, s[i:i1-1]), long(s[i1+1]), 
-                  Pparse(Float64, s[i1+3:i2-1]), 
-                  Pparse(Float64, s[i2+1:i3-1]),
+                  parse(Float64, SubString(s, i, i1-1)), long(s[i1+1]), 
+                  parse(Float64, SubString(s, i1+3, i2-1)), 
+                  parse(Float64, SubString(s, i2+1, i3-1)),
                   long(s[i3+1]), long(s[i3+3]))
     else
-      tree = sTpe(Pparse(Float64, s[i:i1-1]), long(s[i1+1]), 
-                  Pparse(Float64, s[i1+3:i2-1]), 
-                  Pparse(Float64, s[i2+1:i3-1]),
+      tree = sTpe(parse(Float64, SubString(s, i, i1-1)), long(s[i1+1]), 
+                  parse(Float64, SubString(s, i1+3, i2-1)), 
+                  parse(Float64, SubString(s, i2+1, i3-1)),
                   long(s[i3+1]), long(s[i3+3]))
     end
 

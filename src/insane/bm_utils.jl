@@ -659,12 +659,11 @@ end
 
 
 """
-    duodnorm(x ::Float64,
-             x1::Float64,
-             x2::Float64,
-             t1::Float64,
-             t2::Float64,
-             σ  ::Float64)
+    duodnorm(x  ::Float64,
+             x1 ::Float64,
+             x2 ::Float64,
+             σ21::Float64,
+             σ22::Float64)
 
 Likelihood for a duo of Gaussians.
 """
@@ -676,6 +675,33 @@ function duodnorm(x  ::Float64,
 
   iσ2 = 1.0/(σ21 + σ22)
   return dnorm_bm(x, (x1*σ22 + x2*σ21) * iσ2, sqrt(σ21*σ22*iσ2))
+end
+
+
+
+
+"""
+    triodnorm(x ::Float64,
+              xp::Float64,
+              x1::Float64,
+              x2::Float64,
+              σp::Float64,
+              σ1::Float64,
+              σ2::Float64)
+
+Likelihood for a duo of Gaussians.
+"""
+function triodnorm(x ::Float64,
+                   xp::Float64,
+                   x1::Float64,
+                   x2::Float64,
+                   σp::Float64,
+                   σ1::Float64,
+                   σ2::Float64)
+  σp2, σ12, σ22 = σp^2, σ1^2, σ2^2
+
+  s = 1.0/(1.0/σp2 + 1.0/σ12 + 1.0/σ22)
+  return dnorm_bm(x, (xp/σp2 + x1/σ12 + x2/σ22)*s, sqrt(s))
 end
 
 
@@ -701,6 +727,8 @@ function duoldnorm(x  ::Float64,
   it = 1.0/(t1 + t2)
   return ldnorm_bm(x, (t2*x1 + t1*x2)*it, sqrt(t1*t2*it)*σ)
 end
+
+
 
 
 
@@ -740,7 +768,8 @@ Compute the **Normal** density in logarithmic scale with
 mean `μ` and standard density `σsrt` for `x`.
 """
 ldnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
-  -0.5*log(2.0π) - log(σsrt) - 0.5*((x - μ)/σsrt)^2
+  -0.918938533204672669540968854562379419803619384765625 - 
+  log(σsrt) - 0.5*((x - μ)/σsrt)^2
 
 
 
@@ -752,7 +781,8 @@ Compute the **Normal** density in with
 mean `μ` and standard density `σsrt` for `x`.
 """
 dnorm_bm(x::Float64, μ::Float64, σsrt::Float64) =
-  1.0/(σsrt*sqrt(2.0π)) * exp(-0.5*((x - μ)/σsrt)^2)
+  1.0/(σsrt*2.506628274631000241612355239340104162693023681640625) * 
+  exp(-0.5*((x - μ)/σsrt)^2)
 
 
 

@@ -1086,15 +1086,13 @@ end
 Return the number of bifurcating nodes in `Ξ`.
 """
 function nnodesbifurcation(Ξ::Vector{T}) where {T <: iTf}
-  ns = 0
-  nf = 0
-  for ξ in Ξ
-    ns += _nnodesbifurcation(ξ, 0)
-    nf += isinternalfossil(ξ)
-  end
-  ns += 0.5 * Float64(lastindex(Ξ) - nf - 1)
+  ns = zero(Int64)
 
-  return ns
+  for ξ in Ξ
+    ns += _nnodesbifurcation(ξ, 0) + 1 - Int64(anyfossil(ξ))
+  end
+
+  return div(ns + 1, 2)
 end
 
 

@@ -1160,6 +1160,53 @@ end
 
 
 
+
+"""
+    nedgesF(treev::Vector{T}) where {T <: iTree}
+
+Return the number of descendant nodes for `tree`.
+"""
+nedgesF(tree::T) where {T <: iTree} =  _nedgesF(tree, 0.0)
+
+
+
+"""
+    nedgesF(treev::Vector{T}) where {T <: iTree}
+
+Return the number of descendant nodes for `tree`.
+"""
+function nedgesF(treev::Vector{T}) where {T <: iTree} 
+
+  n = 0.0
+  for t in treev
+    n = _nedgesF(t, n)
+  end
+  return n
+end
+
+
+
+"""
+    _nedgesF(tree::T, n::Float64) where {T <: iTree}
+
+Return the number of descendant nodes for `tree`, initialized at `n`.
+"""
+function _nedgesF(tree::T, n::Float64) where {T <: iTree}
+  n += 1.0
+
+  if def1(tree)
+    n = _nedgesF(tree.d1, n)
+    if def2(tree)
+      n = _nedgesF(tree.d2, n)
+    end
+  end
+
+  return n
+end
+
+
+
+
 """
     nnodesinternal(tree::T) where {T <: iTree}
 
@@ -1836,6 +1883,27 @@ end
 
 
 
+"""
+    anyfossil(tree::T) where {T <: iTree}
+
+Return true first fixed tip.
+"""
+function anyfossil(tree::T) where {T <: iTree}
+
+  if isfossil(tree)
+    return true
+  elseif def1(tree)
+    anyfossil(tree.d1)
+    if def2(tree.d2)
+      anyfossil(tree.d1)
+    end
+  end
+
+  return false
+end
+
+
+
 
 """
     makebbv!(tree::T,
@@ -2224,7 +2292,10 @@ end
             c   ::Float64,
             xis ::Vector{Float64},
             es  ::Vector{Float64},
-            t   ::Float64) where {T <: Tpe}
+            t   ::Float64,
+            na  ::Int64,
+            xic ::Float64,
+            xc  ::Float64) where {T <: Tpe}
 
 Return initial traits and edge lengths for those alive at time `c` for `tree`.
 """
@@ -2260,6 +2331,57 @@ function _xisatt!(tree::T,
 
   return na, xic, xc
 end
+
+
+
+
+"""
+   _xifsatt!(tree::T,
+            c   ::Float64,
+            xis ::Vector{Float64},
+            es  ::Vector{Float64},
+            t   ::Float64,
+            na  ::Int64,
+            xic ::Float64,
+            xc  ::Float64) where {T <: Tpe}
+
+Return initial traits and edge lengths for those alive at time `c` for `tree`.
+"""
+function _xifsatt!(tree::T,
+                   c   ::Float64,
+                   xis ::Vector{Float64},
+                   xfs ::Vector{Float64},
+                   es  ::Vector{Float64},
+                   t   ::Float64,
+                   na  ::Int64,
+                   xic ::Float64,
+                   xc  ::Float64) where {T <: Tpe}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+    na += 1
+
+    if isfix(tree)
+      xic = xi(tree)
+      xc  = xf(tree)
+    end
+
+    push!(xis, xi(tree))
+    push!(xfs, xf(tree))
+    push!(es, c - t)
+
+    return na, xic, xc
+  elseif def1(tree)
+    na, xic, xc = _xifsatt!(tree.d1, c, xis, xfs, es, t + et, na, xic, xc)
+    if def2(tree)
+      na, xic, xc = _xifsatt!(tree.d2, c, xis, xfs, es, t + et, na, xic, xc)
+    end
+  end
+
+  return na, xic, xc
+end
+
 
 
 

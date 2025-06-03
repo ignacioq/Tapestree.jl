@@ -552,7 +552,7 @@ end
              mxt ::Float64,
              sc  ::Array{Float64,1},
              xr  ::Array{Float64,1},
-             xavg::Dict{String, Float64},
+             xav::Dict{String, Float64},
              xst::Dict{String, Float64})
 
 Make `iBf` trait vector for an `iTree`.

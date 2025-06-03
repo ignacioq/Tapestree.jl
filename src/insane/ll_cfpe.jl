@@ -59,7 +59,6 @@ function llik_cfpe(Ξ  ::Vector{sTfpe},
       ll += llik_cfpe(ξi, λ, μ, ψ, σa, σk, bst[i], ψts, eix[i], nep)
     end
 
-
     for i in Base.OneTo(nep)
       ll += Float64(fex[i]) * log(ψ[i])
     end
