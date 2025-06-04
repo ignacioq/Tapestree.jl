@@ -729,7 +729,6 @@ end
 
 
 
-
 """
     wfix_t(ξi ::T, 
            ξ1 ::T,
@@ -781,8 +780,6 @@ end
 
 
 
-
-
 """
     wfix_t(ξi ::T,
            ei ::Float64,
@@ -822,8 +819,7 @@ function wfix_t(ξi ::T,
   end
 
   # extract current xis and estimate ratio
-  empty!(xix)
-  empty!(xfx)
+  empty!(xis)
   empty!(es)
   nac, xc, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
 

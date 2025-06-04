@@ -170,10 +170,6 @@ function insane_cfpe(tree    ::sTf_label,
 
   @info "running constant fossilized punctuated equilibrium"
 
-  """
-  here: in testing phase!
-  """
-
   # adaptive phase
   llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, nf, L, sσa, sσk, nσs =
       mcmc_burn_cfpe(Ξ, idf, λ_prior, μ_prior, ψ_prior, σa_prior, σk_prior, 
@@ -450,6 +446,8 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
         for it in Base.OneTo(niter)
 
+          @show xf(Ξ[4])
+
           shuffle!(pup)
 
           for p in pup
@@ -507,6 +505,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
 
               llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+
               if !isapprox(llci, llc, atol = 1e-6)
                 @show llci, llc, it, p
                 return
@@ -517,6 +516,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
               nix = ceil(Int64,rand()*nin)
               bix = inodes[nix]
+
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
               llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
@@ -530,13 +530,9 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
               bix = ceil(Int64,rand()*el)
 
-              @show idf[bix], sσa, sσk, ssσak(Ξ, idf), ns
-
               llc, ns, ne, sσa, sσk = 
                 update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, σac, σkc, 
                   ns, ne, L, eixi, eixf, sσa, sσk, xis, xfs, es)
-
-              @show idf[bix], sσa, sσk, ssσak(Ξ, idf), ns
 
               llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               if !isapprox(llci, llc, atol = 1e-6)
@@ -648,14 +644,19 @@ function update_x!(bix ::Int64,
     isd = iszero(i2)
     # if duo
     if isd
-      if ifx(b1) 
-        xsi = xstd(b1)
+
+      # if fix
+      if ifx(bi) 
+        xsi = xstd(bi)
         if !iszero(xsi)
-          ll, sσa = _update_duo_x!(lξi, ξ1, xavg(b1), xsi, σa, ll, sσa)
+          ll, sσa = _update_duo_x!(lξi, ξ1, xavg(bi), xsi, σa, ll, sσa)
         end
+
+      # if unfix
       else
         ll, sσa = _update_duo_x!(lξi, ξ1, σa, ll, sσa)
       end
+
     # if triad
     else
       ξ2  = Ξ[i2]
@@ -843,7 +844,7 @@ Forward simulation for **fossil** terminal branch.
 function fsbi_f(bi ::iBffs,
                 xav::Float64,
                 xst::Float64,
-                ξc ::sTfpe,
+                ξi ::sTfpe,
                 λ  ::Float64,
                 μ  ::Float64,
                 ψ  ::Vector{Float64},
@@ -863,10 +864,10 @@ function fsbi_f(bi ::iBffs,
   nep = lastindex(ψts) + 1
 
   t0, na, nf, nn = 
-    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξc), σa, σk, ψts, ixi, nep, 
+    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, ψts, ixi, nep, 
       0, 0, 1, 500, xis, xfs, es)
 
-  if na < 1 || nf > 0 || nn >= 500
+  if na < 1 || nf > 0 || nn > 499
     return t0, NaN
   end
 
@@ -885,11 +886,11 @@ function fsbi_f(bi ::iBffs,
 
     # if no uncertainty around trait value
     if iszero(xst)
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, acr, xis, es, σa, na)
+       wti, acr, xp  = wfix_t(ξi, e(bi), xav, acr, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, xst, acr, xis, xfs, es, σa, na)
+       wti, acr, xp  = wfix_t(ξi, e(bi), xav, xst, acr, xis, xfs, es, σa, na)
     end
 
   # if unfixed node
@@ -911,7 +912,7 @@ function fsbi_f(bi ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
-          iρi, na, nn, 500)
+          iρi, na, nn)
     end
 
     if lU < acr
@@ -922,7 +923,7 @@ function fsbi_f(bi ::iBffs,
       # forward simulate fixed tip daughter
       tx, na, nn, acr =
         fossiltip_sim!(t0, tf(bi),  λ, μ, ψ, σa, σk, ψts, ixf, 
-          nep, acr, lU, iρi, na, nn, 500)
+          nep, acr, lU, iρi, na, nn)
 
       if lU < acr
 
@@ -962,7 +963,7 @@ Forward simulation for **non-fossil** terminal branch.
 function fsbi_t(bi ::iBffs,
                 xav::Float64,
                 xst::Float64,
-                ξc ::sTfpe,
+                ξi ::sTfpe,
                 λ  ::Float64,
                 μ  ::Float64,
                 ψ  ::Vector{Float64},
@@ -989,7 +990,7 @@ function fsbi_t(bi ::iBffs,
   nep = lastindex(ψts) + 1
 
   t0, na, nn, llr =
-    _sim_cfpe_t(e(bi), λ, μ, ψ, xi(ξc), σa, σk, ψts, ix, nep, lc, iρi, 
+    _sim_cfpe_t(e(bi), λ, μ, ψ, xi(ξi), σa, σk, ψts, ix, nep, lc, iρi, 
       0, 1, 500, xis, xfs, es)
 
   if na < 1 || isnan(llr)
@@ -1001,11 +1002,11 @@ function fsbi_t(bi ::iBffs,
 
     # if no uncertainty around trait value
     if iszero(xst)
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
+       wti, acr, xp  = wfix_t(ξi, e(bi), xav, 0.0, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
+       wti, acr, xp  = wfix_t(ξi, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
     end
 
     if lU < acr + llr
@@ -1067,7 +1068,7 @@ function fsbi_et(t0  ::sTfpe,
   # if terminal fossil branch
   tx, na, nn, acr =
     fossiltip_sim!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, 
-      acr, lU, iρi, 1, 1, 500)
+      acr, lU, iρi, 1, 1)
 
   if lU < acr
 
@@ -1121,11 +1122,11 @@ function fsbi_m(bi::iBffs,
   nep = lastindex(ψts) + 1
   empty!(xfs)
 
-  t0, na, nn = 
-    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
-      ψts, ixi, nep, 0, 0, 1, 500, xfs)
+  t0, na, nf, nn = 
+    _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, ψts, ixi, nep, 
+      0, 0, 1, 500, xis, xfs, es)
 
-  if na < 1 || nn >= 500
+  if na < 1 || nf > 0 || nn > 499
     return t0, NaN, NaN
   end
 
@@ -1144,12 +1145,12 @@ function fsbi_m(bi::iBffs,
 
     # if no uncertainty around trait value
     if iszero(xst)
-       wt, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
+       wt, acr, xp  = wfix_t(ξi, e(bi), xav, 0.0, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
        xp, wt, pp, pc, acr = 
-        wfix_m(ξc, ξ1, e(bi), xav, xst, 0.0, xfs, xis, es, σa, na)
+        wfix_m(ξi, ξ1, e(bi), xav, xst, 0.0, xfs, xis, es, σa, na)
     end
 
   # if non-fixed node
@@ -1171,7 +1172,7 @@ function fsbi_m(bi::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
-          iρi, na, nn, 500)
+          iρi, na, nn)
     end
 
     if lU < acr
@@ -1193,7 +1194,6 @@ function fsbi_m(bi::iBffs,
 
   return t0, NaN, NaN
 end
-
 
 
 
@@ -1304,11 +1304,11 @@ function fsbi_i(bi ::iBffs,
   nep = lastindex(ψts) + 1
   empty!(xfs)
 
-  t0, na, nn = 
+  t0, na, nf, nn = 
     _sim_cfpe_i(ti(bi), tf(bi), λ, μ, ψ, xi(ξi), σa, σk, 
       ψts, ixi, nep, 0, 0, 1, 500, xfs)
 
-  if na < 1 || nn >= 500
+  if na < 1 || nf > 0 || nn > 499
     return t0, NaN, NaN, NaN
   end
 
@@ -1338,7 +1338,7 @@ function fsbi_i(bi ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(t0, tf(bi), λ, μ, ψ, σa, σk, ψts, ixf, nep, acr, lU, 
-          iρi, na, nn, 500)
+          iρi, na, nn)
     end
 
     if lU < acr
@@ -1383,7 +1383,7 @@ end
               nn  ::Int64,
               nlim::Int64)
 
-Continue simun until time `t` for unfixed tips in `tree`.
+Continue simulation until time `t` for unfixed tips in `tree`.
 """
 function tip_sims!(tree::sTfpe,
                    t   ::Float64,
@@ -1399,10 +1399,9 @@ function tip_sims!(tree::sTfpe,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64,
-                   nn  ::Int64,
-                   nlim::Int64)
+                   nn  ::Int64)
 
-  if lU < lr && nn < nlim
+  if lU < lr && nn < 500
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
@@ -1410,9 +1409,9 @@ function tip_sims!(tree::sTfpe,
         # simulate
         stree, na, nn, lr = 
           _sim_cfpe_it(t, λ, μ, ψ, xf(tree), σa, σk, ψts, ix, nep, 
-            lr, lU, iρi, na-1, nn, nlim)
+            lr, lU, iρi, na-1, nn, 500)
 
-        if isnan(lr) || nn >= nlim
+        if isnan(lr) || nn > 499
           return tree, na, nn, NaN
         end
 
@@ -1429,10 +1428,10 @@ function tip_sims!(tree::sTfpe,
     else
       tree.d1, na, nn, lr = 
         tip_sims!(tree.d1, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
       tree.d2, na, nn, lr = 
         tip_sims!(tree.d2, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr
@@ -1478,18 +1477,17 @@ function fossiltip_sim!(tree::sTfpe,
                         lU  ::Float64,
                         iρi ::Float64,
                         na  ::Int64,
-                        nn  ::Int64,
-                        nlim::Int64)
+                        nn  ::Int64)
 
-  if lU < lr && nn < nlim
+  if lU < lr && nn < 500
 
     if istip(tree)
 
       stree, na, nn, lr = 
         _sim_cfpe_it(t, λ, μ, ψ, xf(tree), σa, σk, ψts, ix, nep, 
-          lr, lU, iρi, na-1, nn, nlim)
+          lr, lU, iρi, na-1, nn, 500)
 
-      if !isfinite(lr) || nn >= nlim
+      if !isfinite(lr) || nn > 499
         return tree, na, nn, NaN
       end
 
@@ -1498,11 +1496,11 @@ function fossiltip_sim!(tree::sTfpe,
     elseif isfix(tree.d1)
       tree.d1, na, nn, lr =
         fossiltip_sim!(tree.d1, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
     else
       tree.d2, na, nn, lr =
         fossiltip_sim!(tree.d2, t, λ, μ, ψ, σa, σk, ψts, ix, nep, 
-          lr, lU, iρi, na, nn, nlim)
+          lr, lU, iρi, na, nn)
     end
 
     return tree, na, nn, lr

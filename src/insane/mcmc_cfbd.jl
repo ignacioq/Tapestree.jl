@@ -580,7 +580,7 @@ function fsbi_t(bi::iBffs,
   # forward simulation during branch length
   nep = lastindex(ψts) + 1
   t0, na, nn, llr =
-    _sim_cfbd_t(e(bi), λ, μ, ψ, ψts, ix, nep, lc, lU, iρi, 0, 1, 1_000)
+    _sim_cfbd_t(e(bi), λ, μ, ψ, ψts, ix, nep, lc, lU, iρi, 0, 1, 500)
 
   if na > 0 && isfinite(llr)
 
@@ -620,7 +620,7 @@ function fsbi_f(bi ::iBffs,
   t0, na, nf, nn = 
     _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, ψts, ixi, nep, 0, 0, 1, 500)
 
-  if na < 1 || nf > 0 || nn > 500
+  if na < 1 || nf > 0 || nn > 499
     return t0, NaN
   end
 
@@ -736,9 +736,9 @@ function fsbi_i(bi::iBffs,
   # forward simulation during branch length
   nep = lastindex(ψts) + 1
   t0, na, nf, nn = 
-    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, ψts, ixi, nep, 0, 0, 1, 1_000)
+    _sim_cfbd_i(ti(bi), tf(bi), λ, μ, ψ, ψts, ixi, nep, 0, 0, 1, 500)
 
-  if na < 1 || nf > 0 || nn > 999
+  if na < 1 || nf > 0 || nn > 499
     return t0, NaN
   end
 
@@ -808,7 +808,7 @@ function tip_sims!(tree::sTfbd,
                    na  ::Int64,
                    nn  ::Int64)
 
-  if lU < lr && nn < 1_000
+  if lU < lr && nn < 500
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
@@ -816,9 +816,9 @@ function tip_sims!(tree::sTfbd,
         # simulate
         nep = lastindex(ψts) + 1
         stree, na, nn, lr =
-          _sim_cfbd_it(t, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na-1, nn, 1_000)
+          _sim_cfbd_it(t, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na-1, nn, 500)
 
-        if isnan(lr) || nn > 999
+        if isnan(lr) || nn > 499
           return tree, na, nn, NaN
         end
 
@@ -873,15 +873,15 @@ function fossiltip_sim!(tree::sTfbd,
                         na  ::Int64,
                         nn  ::Int64)
 
-  if isfinite(lr) && nn < 1_000
+  if isfinite(lr) && nn < 500
 
     if istip(tree)
 
       nep = lastindex(ψts) + 1
       stree, na, nn, lr =
-        _sim_cfbd_it(t, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na-1, nn, 1_000)
+        _sim_cfbd_it(t, λ, μ, ψ, ψts, ix, nep, lr, lU, iρi, na-1, nn, 500)
 
-      if isnan(lr) || nn > 999
+      if isnan(lr) || nn > 499
         return tree, na, nn, NaN
       end
 
