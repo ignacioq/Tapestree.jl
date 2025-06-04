@@ -1096,7 +1096,7 @@ end
           ixi::Int64,
           ixf::Int64,
           xfs::Vector{Float64},
-          xcs::Vector{Float64})
+          xis::Vector{Float64})
 
 Forward simulation for internal branch.
 """
@@ -1114,7 +1114,7 @@ function fsbi_m(bi::iBffs,
                 ixi::Int64,
                 ixf::Int64,
                 xfs::Vector{Float64},
-                xcs::Vector{Float64},
+                xis::Vector{Float64},
                 es ::Vector{Float64})
 
   # forward simulation during branch length
@@ -1138,53 +1138,30 @@ function fsbi_m(bi::iBffs,
   iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
   acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
-
-  """
-  here: add traits
-  """
-
+  pp = pc = 1.0
     # if fix node
   if ifx(bi)
 
     # if no uncertainty around trait value
-
     if iszero(xst)
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
+       wt, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
-       wti, acr, xp  = wfix_m(ξc, ξ1, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
+       xp, wt, pp, pc, acr = 
+        wfix_m(ξc, ξ1, e(bi), xav, xst, 0.0, xfs, xis, es, σa, na)
     end
 
-    if lU < acr + llr
-
-      if wti <= div(na,2)
-        fixtip1!(t0, wti, 0, xp)
-      else
-        fixtip2!(t0, na - wti + 1, 0, xp)
-      end
-
-      setni!(bi, na)    # set new ni
-      return t0, llr
-    end
-
+  # if non-fixed node
   else
-    if lU < llr
-      _fixrtip!(t0, na)
-
-      setni!(bi, na)    # set new ni
-      return t0, llr
-    end
+    xp, wt, pp, pc, acr = 
+      wfix_m(ξi, ξ1, e(bi), acr, xfs, xis, σa)
   end
-
-
-  ## choose most likely lineage to fix
-  xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, xcs, σa)
 
   if lU < acr
 
     # fix the tip
-    if wt <= div(na,2)
+    if wt <= div(na, 2)
       fixtip1!(t0, wt, 0)
     else
       fixtip2!(t0, na - wt + 1, 0)
@@ -1242,8 +1219,8 @@ function wfix_m(ξi ::T,
                 xav::Float64,
                 xst::Float64,
                 acr::Float64,
-                xis::Vector{Float64},
                 xfs::Vector{Float64},
+                xis::Vector{Float64},
                 es ::Vector{Float64},
                 σa ::Float64,
                 na ::Int64) where {T <: Tpe}
@@ -1282,7 +1259,7 @@ function wfix_m(ξi ::T,
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
+  acr += log(sp/sc)
 
   return xp, wt, pp, pc, acr
 end
@@ -1304,7 +1281,7 @@ end
            ixi::Int64,
            ixf::Int64,
            xfs::Vector{Float64},
-           xcs::Vector{Float64})
+           xis::Vector{Float64})
 
 Forward simulation for internal branch.
 """
@@ -1321,7 +1298,7 @@ function fsbi_i(bi ::iBffs,
                 ixi::Int64,
                 ixf::Int64,
                 xfs::Vector{Float64},
-                xcs::Vector{Float64})
+                xis::Vector{Float64})
 
   # forward simulation during branch length
   nep = lastindex(ψts) + 1
@@ -1346,7 +1323,7 @@ function fsbi_i(bi ::iBffs,
 
   ## choose most likely lineage to fix
   wt, xp, shp, pp, xc, shc, pc, acr = 
-    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, xcs, σa^2, σk^2)
+    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, xis, σa^2, σk^2)
 
   if lU < acr
 

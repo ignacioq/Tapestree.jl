@@ -695,19 +695,19 @@ function fsbi_t(bi ::iBffs,
 
     # if no uncertainty around trait value
     if iszero(xst)
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
+       wt, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
-       wti, acr, xp  = wfix_t(ξc, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
+       wt, acr, xp  = wfix_t(ξc, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
     end
 
     if lU < acr + llr
 
-      if wti <= div(na,2)
-        fixtip1!(t0, wti, 0, xp)
+      if wt <= div(na,2)
+        fixtip1!(t0, wt, 0, xp)
       else
-        fixtip2!(t0, na - wti + 1, 0, xp)
+        fixtip2!(t0, na - wt + 1, 0, xp)
       end
 
       setni!(bi, na)    # set new ni
@@ -736,7 +736,7 @@ end
            ei ::Float64,
            acr::Float64,
            xfs::Vector{Float64}, 
-           xcs::Vector{Float64}, 
+           xis::Vector{Float64}, 
            σa2::Float64) where {T <: Tpe}
 
 Choose most likely simulated lineage to fix with respect to the
@@ -762,7 +762,7 @@ function wfix_t(ξi ::T,
     end
   end
 
-  # extract current xcs and estimate ratio
+  # extract current xis and estimate ratio
   empty!(xis)
   empty!(es)
   nac, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN)
@@ -773,7 +773,7 @@ function wfix_t(ξi ::T,
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
+  acr += log(sp/sc)
 
   return wt, acr, xav
 end
@@ -821,23 +821,19 @@ function wfix_t(ξi ::T,
     end
   end
 
-  # extract current xcs and estimate ratio
+  # extract current xis and estimate ratio
   empty!(xix)
   empty!(xfx)
   empty!(es)
-  nac, xc, xic = _xisatt!(ξi, ei, xcs, es, 0.0, 0, NaN, NaN)
+  nac, xc, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = zero(Float64)
   for i in Base.OneTo(nac)
-    p   = duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
-    sc += p
-    if xis[i] === xic
-      pc = p
-    end
+    sc += duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
+  acr += log(sp/sc)
 
   return wt, acr, xp
 end
@@ -854,7 +850,7 @@ end
            σa::Float64,
            σk::Float64,
            xfs::Vector{Float64},
-           xcs::Vector{Float64})
+           xis::Vector{Float64})
 
 Forward simulation for internal branch.
 """
@@ -866,7 +862,7 @@ function fsbi_m(bi::iBffs,
                 σa::Float64,
                 σk::Float64,
                 xfs::Vector{Float64},
-                xcs::Vector{Float64})
+                xis::Vector{Float64})
 
   # forward simulation during branch length
   empty!(xfs)
@@ -887,7 +883,7 @@ function fsbi_m(bi::iBffs,
   acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   ## choose most likely lineage to fix
-  xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, xcs, σa)
+  xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, xis, σa)
 
   if lU < acr
 
@@ -929,7 +925,7 @@ end
            ei ::Float64,
            acr::Float64,
            xfs::Vector{Float64}, 
-           xcs::Vector{Float64}, 
+           xis::Vector{Float64}, 
            σa2::Float64) where {T <: Tpe}
 
 Choose most likely simulated lineage to fix with respect to daughter
@@ -940,7 +936,7 @@ function wfix_m(ξi ::T,
                 ei ::Float64,
                 acr::Float64,
                 xfs::Vector{Float64},
-                xcs::Vector{Float64},
+                xis::Vector{Float64},
                 σa ::Float64) where {T <: Tpe}
 
   # select best from proposal
@@ -957,12 +953,12 @@ function wfix_m(ξi ::T,
     end
   end
 
-  # extract current xcs and estimate ratio
-  empty!(xcs)
-  xc, shc = _xatt!(ξi, ei, xcs, 0.0, NaN, false)
+  # extract current xis and estimate ratio
+  empty!(xis)
+  xc, shc = _xatt!(ξi, ei, xis, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
-  for xci in xcs
+  for xci in xis
     p   = dnorm(xci, xf1, sre1*σa)
     sc += p
     if xc === xci
@@ -971,7 +967,7 @@ function wfix_m(ξi ::T,
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
+  acr += log(sp/sc)
 
   return xp, wt, pp, pc, acr
 end
@@ -1001,7 +997,7 @@ function fsbi_i(bi ::iBffs,
                 σa ::Float64,
                 σk ::Float64,
                 xfs::Vector{Float64},
-                xcs::Vector{Float64})
+                xis::Vector{Float64})
 
   # forward simulation during branch length
   empty!(xfs)
@@ -1023,7 +1019,7 @@ function fsbi_i(bi ::iBffs,
 
   ## choose most likely lineage to fix
   wt, xp, shp, pp, xc, shc, pc, acr = 
-    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, xcs, σa^2, σk^2) 
+    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, xis, σa^2, σk^2) 
 
   if lU < acr
 
@@ -1071,7 +1067,7 @@ end
            ei ::Float64,
            acr::Float64,
            xfs::Vector{Float64},
-           xcs::Vector{Float64},
+           xis::Vector{Float64},
            σa2::Float64,
            σk2::Float64) where {T <: Tpe}
 
@@ -1084,7 +1080,7 @@ function wfix_i(ξi ::T,
                 ei ::Float64,
                 acr::Float64,
                 xfs::Vector{Float64},
-                xcs::Vector{Float64},
+                xis::Vector{Float64},
                 σa2::Float64,
                 σk2::Float64) where {T <: Tpe}
 
@@ -1105,12 +1101,12 @@ function wfix_i(ξi ::T,
     end
   end
 
-  # extract current xcs and estimate ratio
-  empty!(xcs)
-  xc, shc = _xatt!(ξi, ei, xcs, 0.0, NaN, false)
+  # extract current xis and estimate ratio
+  empty!(xis)
+  xc, shc = _xatt!(ξi, ei, xis, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
-  for xci in xcs
+  for xci in xis
     pk1 = llik_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
     pk2 = llik_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
     sc += exp(pk1) + exp(pk2)
