@@ -121,7 +121,7 @@ function _stem_update!(ξi      ::iTpb,
 
     if -randexp() < acr
       llc += acr + llrbm
-      prc += llrdnorm_x(λr, λ1c[1], λ0_prior[1], λ0_prior[2])
+      prc += llrdnorm_x(λr, λc[1], λ0_prior[1], λ0_prior[2])
       ddλ += λc[1] - λr
       ssλ += ssrλ
       irλ += irrλ
