@@ -863,7 +863,7 @@ function fsbi_m(bi::iBffs,
 
   t0, na, nn = _sim_cpe_i(e(bi), λ, μ, xi(ξi), σa, σk, 0, 1, 500, xfs)
 
-  if na < 1 || nn >= 500
+  if na < 1 || nn > 499
     return t0, NaN, NaN
   end
 
