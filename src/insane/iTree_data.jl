@@ -731,15 +731,15 @@ Return labels.
 """
 function _make_ls!(tree::Tlabel, ls::Vector{String})
 
-  if label(tree) != ""
-    push!(ls, label(tree))
-  end
-
   if def1(tree)
     _make_ls!(tree.d1, ls)
     if def2(tree)
       _make_ls!(tree.d2, ls)
+    elseif label(tree) != ""
+        push!(ls, label(tree))
     end
+  elseif label(tree) != ""
+    push!(ls, label(tree))
   end
 end
 
@@ -1880,6 +1880,25 @@ function fixtip(tree::T) where {T <: iTree}
     fixtip(tree.d2::T)
   end
 end
+
+
+
+
+"""
+    fixtrait(tree::T) where {T <: iTree}
+
+Return the trait of the final fixed tip or fossil.
+"""
+function fixtrait(tree::T) where {T <: iTree}
+  if isfossil(tree) || istip(tree)
+    return xf(tree)
+  elseif isfix(tree.d1::T)
+    fixtrait(tree.d1::T)
+  else
+    fixtrait(tree.d2::T)
+  end
+end
+
 
 
 

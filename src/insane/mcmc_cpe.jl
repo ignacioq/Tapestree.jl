@@ -28,7 +28,7 @@ Created 25 08 2020
                ϵi      ::Float64               = 0.4,
                λi      ::Float64               = NaN,
                μi      ::Float64               = NaN,
-               pupdp   ::NTuple{6,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.8),
+               pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-1, 0.2),
                prints  ::Int64                 = 5,
                survival::Bool                  = true,
                mxthf   ::Float64               = Inf,
@@ -51,7 +51,7 @@ function insane_cpe(tree    ::sT_label,
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
-                    pupdp   ::NTuple{6,Float64}     = (0.2, 0.2, 0.2, 0.2, 0.2, 0.8),
+                    pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 0.2, 0.2),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
                     mxthf   ::Float64               = 0.1,
@@ -612,12 +612,12 @@ function update_fs!(bix::Int64,
   # if mid branch
   elseif iszero(d2(bi))
 
-    ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk, xis, xfs)
+    ξp, llr, sσar = fsbi_m(bi, ξc, Ξ[d1(bi)], λ, μ, σa, σk, xfs)
   # if trio branch
   elseif e(bi) > 0.0
 
     ξp, llr, sσar, sσkr = 
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk, xis, xfs)
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], λ, μ, σa, σk, xfs)
   end
 
   if isfinite(llr)
@@ -845,8 +845,7 @@ end
            μ ::Float64,
            σa::Float64,
            σk::Float64,
-           xfs::Vector{Float64},
-           xis::Vector{Float64})
+           xfs::Vector{Float64})
 
 Forward simulation for internal branch.
 """
@@ -857,8 +856,7 @@ function fsbi_m(bi::iBffs,
                 μ ::Float64,
                 σa::Float64,
                 σk::Float64,
-                xfs::Vector{Float64},
-                xis::Vector{Float64})
+                xfs::Vector{Float64})
 
   # forward simulation during branch length
   empty!(xfs)
@@ -876,10 +874,10 @@ function fsbi_m(bi::iBffs,
   # add sampling fraction
   nac = ni(bi)                # current ni
   iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
-  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+  acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   ## choose most likely lineage to fix
-  xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, xis, σa)
+  xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, σa)
 
   if lU < acr
 
@@ -916,13 +914,12 @@ end
 
 
 """
-    wfix_m(ξi ::T, 
+    wfix_m(ξi ::T,
            ξ1 ::T,
            ei ::Float64,
            acr::Float64,
-           xfs::Vector{Float64}, 
-           xis::Vector{Float64}, 
-           σa2::Float64) where {T <: Tpe}
+           xfs::Vector{Float64},
+           σa ::Float64) where {T <: Tpe}
 
 Choose most likely simulated lineage to fix with respect to daughter
 for `mid` branches.
@@ -932,7 +929,6 @@ function wfix_m(ξi ::T,
                 ei ::Float64,
                 acr::Float64,
                 xfs::Vector{Float64},
-                xis::Vector{Float64},
                 σa ::Float64) where {T <: Tpe}
 
   # select best from proposal
@@ -950,14 +946,14 @@ function wfix_m(ξi ::T,
   end
 
   # extract current xis and estimate ratio
-  empty!(xis)
-  xc, shc = _xatt!(ξi, ei, xis, 0.0, NaN, false)
+  empty!(xfs)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
-  for xci in xis
-    p   = dnorm(xci, xf1, sre1*σa)
+  for xfi in xfs
+    p   = dnorm(xfi, xf1, sre1*σa)
     sc += p
-    if xc === xci
+    if xc === xfi
       pc = p
     end
   end
@@ -992,8 +988,7 @@ function fsbi_i(bi ::iBffs,
                 μ  ::Float64,
                 σa ::Float64,
                 σk ::Float64,
-                xfs::Vector{Float64},
-                xis::Vector{Float64})
+                xfs::Vector{Float64})
 
   # forward simulation during branch length
   empty!(xfs)
@@ -1011,11 +1006,11 @@ function fsbi_i(bi ::iBffs,
   # add sampling fraction
   nac = ni(bi)                # current ni
   iρi = (1.0 - ρi(bi))        # branch sampling fraction
-  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+  acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   ## choose most likely lineage to fix
   wt, xp, shp, pp, xc, shc, pc, acr = 
-    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, xis, σa^2, σk^2) 
+    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, σa^2, σk^2) 
 
   if lU < acr
 
@@ -1063,7 +1058,6 @@ end
            ei ::Float64,
            acr::Float64,
            xfs::Vector{Float64},
-           xis::Vector{Float64},
            σa2::Float64,
            σk2::Float64) where {T <: Tpe}
 
@@ -1076,7 +1070,6 @@ function wfix_i(ξi ::T,
                 ei ::Float64,
                 acr::Float64,
                 xfs::Vector{Float64},
-                xis::Vector{Float64},
                 σa2::Float64,
                 σk2::Float64) where {T <: Tpe}
 
@@ -1098,11 +1091,11 @@ function wfix_i(ξi ::T,
   end
 
   # extract current xis and estimate ratio
-  empty!(xis)
-  xc, shc = _xatt!(ξi, ei, xis, 0.0, NaN, false)
+  empty!(xfs)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
-  for xci in xis
+  for xci in xfs
     pk1 = llik_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
     pk2 = llik_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
     sc += exp(pk1) + exp(pk2)
@@ -1113,7 +1106,7 @@ function wfix_i(ξi ::T,
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp) - log(sc)
+  acr += log(sp/sc)
 
   return wt, xp, shp, pp, xc, shc, pc, acr
 end

@@ -1617,70 +1617,38 @@ end
 
 
 
-
 """
-    _remove_unsampled!(tree::sTpbx)
+    _remove_unsampled!(tree::sTfpe)
 
 Remove unsampled tips (extinct and extant not sampled).
 """
-function _remove_unsampled!(tree::sTpbx)
+function _remove_unsampled!(tree::sTfpe)
 
   if def1(tree)
     tree.d1 = _remove_unsampled!(tree.d1)
-    tree.d2 = _remove_unsampled!(tree.d2)
-
-    if !isfix(tree.d1)
-      if !isfix(tree.d2)
-        return sTpbx(e(tree),isfix(tree), xi(tree), xf(tree))
-      else
-        ne  = e(tree) + e(tree.d2)
+    if def2(tree)
+      tree.d2 = _remove_unsampled!(tree.d2)
+      if !isfix(tree.d1)
+        if !isfix(tree.d2)
+          return sTfpe(e(tree), isextinct(tree), isfossil(tree), xi(tree), xf(tree), sh(tree), isfix(tree))
+        else
+          ne = e(tree) + e(tree.d2)
+          nx = xi(tree)
+          tree = tree.d2
+          sete!(tree, ne)
+          setxi!(tree, nx)
+        end
+      elseif !isfix(tree.d2)
+        ne = e(tree) + e(tree.d1)
         nx = xi(tree)
-        tree = tree.d2
+        tree = tree.d1
         sete!(tree, ne)
         setxi!(tree, nx)
       end
-    elseif !isfix(tree.d2)
-      ne = e(tree) + e(tree.d1)
-      nx = xi(tree)
-      tree = tree.d1
-      sete!(tree, ne)
-      setxi!(tree, nx)
-    end
-  end
-
-  return tree
-end
-
-
-
-
-"""
-    _remove_unsampled!(tree::sTbdx)
-
-Remove unsampled tips (extinct and extant not sampled).
-"""
-function _remove_unsampled!(tree::sTbdx)
-
-  if def1(tree)
-    tree.d1 = _remove_unsampled!(tree.d1)
-    tree.d2 = _remove_unsampled!(tree.d2)
-
-    if !isfix(tree.d1)
-      if !isfix(tree.d2)
-        return sTbdx(e(tree), isextinct(tree), isfix(tree), xi(tree), xf(tree))
-      else
-        ne  = e(tree) + e(tree.d2)
-        nx = xi(tree)
-        tree = tree.d2
-        sete!(tree, ne)
-        setxi!(tree, nx)
+    else
+      if !isfix(tree.d1)
+        return sTfpe(e(tree), isextinct(tree), isfossil(tree), xi(tree), xf(tree), sh(tree), isfix(tree))
       end
-    elseif !isfix(tree.d2)
-      ne = e(tree) + e(tree.d1)
-      nx = xi(tree)
-      tree = tree.d1
-      sete!(tree, ne)
-      setxi!(tree, nx)
     end
   end
 

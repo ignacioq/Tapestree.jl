@@ -17,14 +17,14 @@ The composite recursive type of supertype `sT`
 representing a binary phylogenetic tree for `punkeek` use,
 with the following fields:
 
-  d1::sTpe
-  d2::sTpe
-  e ::Float64
-  iμ::Bool
-  xi::Float64
-  xf::Float64
-  sh::Bool
-  fx::Bool
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  iμ: is an extinction node
+  xi: initial trait value
+  xf: final trait value
+  sh: if d1 is cladogenetic
+  fx: if it is fix
 
 Constructs a tip.
 

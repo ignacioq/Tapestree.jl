@@ -807,10 +807,10 @@ end
 
 Build tree from decoupled tree.
 """
-function couple(Ξ::Vector{sTpe}, idf::Vector{iBffs}, ix::Int64)
+function couple(Ξ::Vector{T}, idf::Vector{iBffs}, ix::Int64) where {T <: Tpe}
 
   bi  = idf[ix]
-  ξi  = sTpe(Ξ[ix])
+  ξi  = T(Ξ[ix])
   i1  = d1(bi)
   i2  = d2(bi)
 

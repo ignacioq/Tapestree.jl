@@ -795,7 +795,7 @@ end
 
 Make a mean `sTpe`.
 """
-function imean(treev::Vector{sTpe})
+function imean(treev::Vector{T}) where {T <: Tpe}
 
   nts = lastindex(treev)
   t1  = treev[1]
@@ -814,52 +814,6 @@ function imean(treev::Vector{sTpe})
   i, tree = make_tm(t1, 0, xiv, xfv)
 
   return tree
-end
-
-
-
-
-"""
-    _count_nodes!(tree::sTpe, i::Int64)
-
-Count number of nodes
-"""
-function _count_nodes!(tree::sTpe, i::Int64)
-  i += 1
-
-  if def1(tree)
-    i = _count_nodes!(tree.d1, i)
-    i = _count_nodes!(tree.d2, i)
-  end
-
-  return i
-end
-
-
-
-"""
-    _sum_xv!(tree::sTpe, 
-             i   ::Int64, 
-             xiv ::Vector{Float64},
-             xfv ::Vector{Float64})
-
-Make sum of xi and xf for each node.
-"""
-function _sum_xv!(tree::sTpe, 
-                  i   ::Int64, 
-                  xiv ::Vector{Float64},
-                  xfv ::Vector{Float64})
-
-  i += 1
-
-  xiv[i] += xi(tree)
-  xfv[i] += xf(tree)
-
-  if def1(tree)
-    i = _sum_xv!(tree.d1, i, xiv, xfv)
-    i = _sum_xv!(tree.d2, i, xiv, xfv)
-  end
-  return i
 end
 
 
@@ -888,6 +842,90 @@ function make_tm(tree::sTpe,
   else
     return i, sTpe(e(tree), isextinct(tree), xii, xfi, sh(tree), true)
   end
+end
+
+
+
+
+"""
+    make_tm(tree::sfTpe, 
+            i   ::Int64, 
+            xiv::Vector{Float64}, 
+            xfv::Vector{Float64})
+
+Make mean tree from node data.
+"""
+function make_tm(tree::sTfpe, 
+                 i   ::Int64, 
+                 xiv::Vector{Float64}, 
+                 xfv::Vector{Float64})
+
+  i += 1
+  xii, xfi = xiv[i], xfv[i]
+
+  if def1(tree)
+    i, d1 = make_tm(tree.d1, i, xiv, xfv)
+    if def2(tree)
+      i, d2 = make_tm(tree.d2, i, xiv, xfv)
+      return i, sTfpe(d1, d2, e(tree), isextinct(tree), isfossil(tree), xii, xfi, sh(tree), true)
+    else
+      return i, sTfpe(d1, e(tree), isextinct(tree), isfossil(tree), xii, xfi, sh(tree), true)
+    end
+  else
+    return i, sTfpe(e(tree), isextinct(tree), isfossil(tree), xii, xfi, sh(tree), true)
+  end
+end
+
+
+
+
+"""
+    _count_nodes!(tree::T, i::Int64) where {T <: Tpe}
+
+Count number of nodes
+"""
+function _count_nodes!(tree::T, i::Int64) where {T <: Tpe}
+  i += 1
+
+  if def1(tree)
+    i = _count_nodes!(tree.d1, i)
+    if def2(tree)
+      i = _count_nodes!(tree.d2, i)
+    end
+  end
+
+  return i
+end
+
+
+
+
+"""
+    _sum_xv!(tree::T, 
+             i   ::Int64, 
+             xiv ::Vector{Float64},
+             xfv ::Vector{Float64}) where {T <: Tpe}
+
+Make sum of xi and xf for each node.
+"""
+function _sum_xv!(tree::T, 
+                  i   ::Int64, 
+                  xiv ::Vector{Float64},
+                  xfv ::Vector{Float64}) where {T <: Tpe}
+
+  i += 1
+
+  xiv[i] += xi(tree)
+  xfv[i] += xf(tree)
+
+  if def1(tree)
+    i = _sum_xv!(tree.d1, i, xiv, xfv)
+    if def2(tree)
+      i = _sum_xv!(tree.d2, i, xiv, xfv)
+    end
+  end
+
+  return i
 end
 
 
