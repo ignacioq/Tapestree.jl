@@ -766,13 +766,17 @@ function wfix_t(ξi ::T,
   empty!(es)
   nac, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  sc = 0.0
+  sc, pc = 0.0, NaN
   for i in Base.OneTo(nac)
-    sc += dnorm(xav, xis[i], sqrt(es[i])*σa)
+    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
+    sc += p
+    if xic === xis[i]
+      pc = p
+    end
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp/sc)
+  acr += log((pc * sp)/(pp * sc))
 
   return wt, acr, xav
 end
@@ -823,13 +827,17 @@ function wfix_t(ξi ::T,
   empty!(es)
   nac, xc, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
 
-  sc = zero(Float64)
+  sc, pc = zero(Float64), NaN
   for i in Base.OneTo(nac)
-    sc += duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
+    p   = duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
+    sc += p
+    if xic === xis[i]
+      pc = p
+    end
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp/sc)
+  acr += log((pc * sp)/(pp * sc))
 
   return wt, acr, xp
 end
@@ -883,9 +891,9 @@ function fsbi_m(bi::iBffs,
 
     # fix the tip
     if wt <= div(na,2)
-      fixtip1!(t0, wt, 0)
+      fixtip1!(t0, wt, 0, xp)
     else
-      fixtip2!(t0, na - wt + 1, 0)
+      fixtip2!(t0, na - wt + 1, 0, xp)
     end
 
     # simulate remaining tips until the present
@@ -935,7 +943,7 @@ function wfix_m(ξi ::T,
   xf1, sre1 = xf(ξ1), sqrt(e(ξ1))
   sp, i, wt, xp, pp = 0.0, 0, 0, NaN, -Inf
   for xfi in xfs
-    p   = dnorm(xfi, xf1, sre1*σa)
+    p   = dnorm(xf1, xfi, sre1*σa)
     sp += p
     i  += 1
     if p > pp
@@ -951,7 +959,7 @@ function wfix_m(ξi ::T,
 
   sc, pc = 0.0, NaN
   for xfi in xfs
-    p   = dnorm(xfi, xf1, sre1*σa)
+    p   = dnorm(xf1, xfi, sre1*σa)
     sc += p
     if xc === xfi
       pc = p

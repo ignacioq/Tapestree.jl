@@ -138,7 +138,7 @@ function insane_cfpe(tree    ::sTf_label,
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 5_000, surv)
+  mc = m_surv_cbd(th, λc, μc, 1_000, surv)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, xr, σac, σkc, sTfpe)
@@ -456,11 +456,11 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, λc, mc =
                 update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # μ proposal
             elseif p === 2
@@ -468,22 +468,22 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, μc, mc =
                 update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, surv, μ_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # ψ proposal
             elseif p === 3
 
               llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # σa (anagenetic) proposal
             elseif p === 4
@@ -491,22 +491,22 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, σac = 
                 update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # σk (cladogenetic) proposal
             elseif p === 5
 
               llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # update inner nodes traits
             elseif p === 6
@@ -515,11 +515,11 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
 
             # forward simulation proposal proposal
@@ -531,11 +531,11 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
                 update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, σac, σkc, 
                   ns, ne, L, eixi, eixf, sσa, sσk, xis, xfs, es)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p, bix, idf[bix]
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             end
           end
@@ -785,9 +785,6 @@ function update_fs!(bix ::Int64,
       ξp, llr, sσar = 
         fsbi_m(bi, xav, xsd, ξc, Ξ[d1(bi)], λ, μ, ψ, σa, σk, ψts, ixi, ixf, 
           xis, xfs, es)
-
-      @show llr
-      llr = NaN
     end
 
   # if bifurcating branch
@@ -1000,19 +997,19 @@ function fsbi_t(bi ::iBffs,
 
     # if no uncertainty around trait value
     if iszero(xst)
-       wti, acr, xp  = wfix_t(ξi, e(bi), xav, 0.0, xis, es, σa, na)
+       wt, acr, xp  = wfix_t(ξi, e(bi), xav, 0.0, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
-       wti, acr, xp  = wfix_t(ξi, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
+       wt, acr, xp  = wfix_t(ξi, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
     end
 
     if lU < acr + llr
 
-      if wti <= div(na,2)
-        fixtip1!(t0, wti, 0, xp)
+      if wt <= div(na,2)
+        fixtip1!(t0, wt, 0, xp)
       else
-        fixtip2!(t0, na - wti + 1, 0, xp)
+        fixtip2!(t0, na - wt + 1, 0, xp)
       end
 
       setni!(bi, na)    # set new ni
@@ -1180,11 +1177,12 @@ function fsbi_m(bi::iBffs,
     end
 
     if lU < acr
-      na -= 1
 
       # fossilize extant tip
       isfossil(bi) && fossilizefixedtip!(t0)
 
+      # likelihood ratio
+      na -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
