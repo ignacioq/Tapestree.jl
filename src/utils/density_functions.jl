@@ -294,6 +294,17 @@ end
 
 
 
+"""
+    logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64)
+  
+Compute the logarithmic transformation of the 
+**Normal** density for `x1` and `x2` with mean `μ` and variance `σ`.
+"""
+logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
+  -2.0 * log(σ) - 1.83787706640934533908193770912475883960723876953125 - 
+  ((x1 - μ)^2 + (x2 - μ)^2)/(2.0*σ^2)
+
+
 
 """
     erf_custom(x::Float64)

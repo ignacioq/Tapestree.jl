@@ -350,7 +350,7 @@ Recipe for plotting a Type `iT`.
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, f, th, 0.0, x, y, z, nodet, xnode, ynode, shownodes, simple)
+  _rplottree!(tree, f, th, 0.0, x, y, z, nodet, xnode, ynode, shownodes)
 
   ntF = Float64(nts)
 
@@ -435,8 +435,7 @@ function _rplottree!(tree  ::T,
                      nodet ::Array{Int64,1},
                      xnode ::Array{Float64,1},
                      ynode ::Array{Float64,1},
-                     show  ::NTuple{3,Bool},
-                     simple::Bool) where {T <: iTree}
+                     show  ::NTuple{3,Bool}) where {T <: iTree}
 
   xe = xc - e(tree)
 
@@ -444,9 +443,9 @@ function _rplottree!(tree  ::T,
      if def2(tree)
 
       y1, i = _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, 
-        show, simple)
+        show)
       y2, i = _rplottree!(tree.d2, f, xe, i, x, y, z, nodet, xnode, ynode,
-        show, simple)
+        show)
 
       yc = (y1 + y2)*0.5
       zc = last(f(tree))
@@ -465,7 +464,7 @@ function _rplottree!(tree  ::T,
     else
 
       yc, i = _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, 
-        show, simple)
+        show)
 
       if show[3]
         push!(nodet, 3)
@@ -495,29 +494,112 @@ function _rplottree!(tree  ::T,
   δt = dt(tree)
 
   # add horizontal lines
-  if simple
-    zv = f(tree)
-    l  = lastindex(zv)
-    push!(z, mean(f(tree)))
+  # plot function
+  zv = copy(f(tree))
+  l  = lastindex(zv)
+  @simd for i in Base.OneTo(l-1)
+    push!(x, xc - Float64(i-1)*δt)
     push!(y, yc)
-    push!(x, xc)
+    push!(z, zv[i])
+  end
+
+  push!(x, xe, NaN)
+  push!(y, yc, NaN)
+  push!(z, last(zv), NaN)
+
+  return yc, i
+end
+
+
+
+
+"""
+    _rplottree!(tree  ::T,
+                f     ::Function,
+                xc    ::Float64,
+                i     ::Float64,
+                x     ::Array{Float64,1},
+                y     ::Array{Float64,1},
+                z     ::Array{Float64,1},
+                nodet ::Array{Int64,1},
+                xnode ::Array{Float64,1},
+                ynode ::Array{Float64,1},
+                show  ::NTuple{3,Bool},
+                simple::Bool) where {T <: iTree}
+
+Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+"""
+function _rplottree!(tree  ::T,
+                     f     ::Function,
+                     xc    ::Float64,
+                     i     ::Float64,
+                     x     ::Array{Float64,1},
+                     y     ::Array{Float64,1},
+                     z     ::Array{Float64,1},
+                     nodet ::Array{Int64,1},
+                     xnode ::Array{Float64,1},
+                     ynode ::Array{Float64,1},
+                     show  ::NTuple{3,Bool}) where {T <: cT}
+
+  xe = xc - e(tree)
+
+  if def1(tree)
+     if def2(tree)
+
+      y1, z1, i = 
+        _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
+      y2, z2, i = 
+        _rplottree!(tree.d2, f, xe, i, x, y, z, nodet, xnode, ynode, show)
+
+      yc = (y1 + y2)*0.5
+
+      # add vertical lines
+      push!(x, xe, xe, NaN, xe, xe, NaN)
+      push!(y, y1, yc, NaN, yc, y2, NaN)
+      push!(z, z1, z1, NaN, z2, z2, NaN)
+
+      # nodes
+      if show[1]
+        push!(nodet, 1)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    else
+
+      yc, zv, i = 
+        _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
+
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    end
   else
-    # plot function
-    zv = copy(f(tree))
-    l  = lastindex(zv)
-    @simd for i in Base.OneTo(l-1)
-      push!(x, xc - Float64(i-1)*δt)
-      push!(y, yc)
-      push!(z, zv[i])
+    i += 1.0
+    yc = i
+    if isextinct(tree)
+      if show[2]
+        push!(nodet, 2)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
+    elseif isfossil(tree)
+      if show[3]
+        push!(nodet, 3)
+        push!(xnode, xe)
+        push!(ynode, yc)
+      end
     end
   end
 
-  zc = last(zv)
-  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
-  push!(y, yc, NaN)
-  push!(z, zc, NaN)
+  # add horizontal lines
+  zv = f(tree)
+  push!(x, xe, xc, NaN)
+  push!(y, yc, yc, NaN)
+  push!(z, zv, zv, NaN)
 
-  return yc, i
+  return yc, zv, i
 end
 
 

@@ -99,22 +99,10 @@ Return if is an extinction node.
 """
 isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 isextinct(tree::Tlabel) = false
-
-
-
-
-"""
-    isextinct(tree::sTpb)
-    isextinct(tree::sTpbx)
-    isextinct(tree::iTpb)
-
-Return if is an extinction node.
-"""
-isextinct(tree::sTpb)  = false
-isextinct(tree::sTpbx) = false
-isextinct(tree::iTpb)  = false
-isextinct(tree::iTbdx) = false
-isextinct(tree::sTxs)  = false
+isextinct(tree::sTpb)   = false
+isextinct(tree::cTpb)   = false
+isextinct(tree::iTpb)   = false
+isextinct(tree::sTxs)   = false
 
 
 
@@ -170,28 +158,15 @@ end
 Return if is a fossil tip node.
 """
 isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
-
-
-
-
-"""
-    isfossil(tree::sTpb)
-    isfossil(tree::sTbd)
-    isfossil(tree::iTpb)
-    isfossil(tree::iTce)
-    isfossil(tree::iTct)
-    isfossil(tree::iTbd)
-
-Return if is a fossil tip node : false because not allowed for those tree types.
-"""
 isfossil(tree::sT_label) = false
 isfossil(tree::sTpb)     = false
 isfossil(tree::sTbd)     = false
 isfossil(tree::iTpb)     = false
+isfossil(tree::cTpb)     = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
-isfossil(tree::sTpe)      = false
+isfossil(tree::sTpe)     = false
 isfossil(tree::sTxs)     = false
 
 

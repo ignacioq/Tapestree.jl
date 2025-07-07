@@ -13,27 +13,23 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTpb},
-             idf ::Vector{iBffs},
-             α   ::Float64,
-             σλ  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
+    llik_clads(Ξ  ::Vector{cTpb},
+               idf::Vector{iBffs},
+               α  ::Float64,
+               σλ ::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `cTpb` according to clads
 """
-function llik_gbm(Ξ   ::Vector{iTpb},
-                  idf ::Vector{iBffs},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+function llik_clads(Ξ  ::Vector{cTpb},
+                    idf::Vector{iBffs},
+                    α  ::Float64,
+                    σλ ::Float64)
 
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
-      ll += llik_gbm(Ξ[i], α, σλ, δt, srδt)
+      ll += llik_clads(Ξ[i], α, σλ)
       if d2(bi) > 0
         ll += λt(bi)
       end
@@ -47,114 +43,101 @@ end
 
 
 """
-    llik_gbm(tree::iTpb,
+    llik_clads(tree::cTpb,
              α   ::Float64,
              σλ  ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `cTpb` according to clads.
 """
-function llik_gbm(tree::iTpb,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+function llik_clads(tree::cTpb,
+                    α   ::Float64,
+                    σλ  ::Float64)
 
   if istip(tree)
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+    - e(tree) * exp(lλ(tree))
   else
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTpb, α, σλ, δt, srδt)          +
-    llik_gbm(tree.d2::iTpb, α, σλ, δt, srδt)
+    td1 = tree.d1
+    td2 = tree.d2
+    lλi = lλ(tree)
+
+    lλi - e(tree) * exp(lλi)                 +
+    logdnorm2(lλ(td1), lλ(td2), lλi + α, σλ) +
+    llik_clads(td1, α, σλ)                   +
+    llik_clads(td2, α, σλ)
   end
 end
 
 
 
 
+
+
 """
-    ll_gbm_b(lλv ::Array{Float64,1},
-             α   ::Float64,
-             σλ  ::Float64,
-             δt  ::Float64,
-             fdt ::Float64,
-             srδt::Float64,
-             λev ::Bool)
-
-Returns the log-likelihood for a branch according to GBM pure-birth.
+here
 """
-function ll_gbm_b(lλv ::Array{Float64,1},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  fdt ::Float64,
-                  srδt::Float64,
-                  λev ::Bool)
 
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλv)-2
 
-  ll = llbm = llpb = 0.0
-  if nI > 0
-    @turbo for i in Base.OneTo(nI)
-      lλvi  = lλv[i]
-      lλvi1 = lλv[i+1]
-      llbm += (lλvi1 - lλvi - α*δt)^2
-      llpb += exp(0.5*(lλvi + lλvi1))
+
+
+
+
+
+
+"""
+    llik_clads_ssλ(tree::cTpb,
+                   α   ::Float64,
+                   σλ  ::Float64,
+                   ns  ::Float64)
+
+Returns the log-likelihood for a `cTpb` according to clads.
+"""
+function llik_clads_ssλ(tree::cTpb,
+                        α   ::Float64,
+                        σλ  ::Float64,
+                        ns  ::Float64)
+
+
+  if def1(tree)
+    ll1, dλ1, ssλ1, nλ1, irλ1, ns = 
+      llik_clads_ssλ(tree.d1, α, σλ, δt, srδt, ns)
+
+    if def2(tree)
+
+
+
+          ll1, dλ1, ssλ1, nλ1, irλ1, ns = 
+      
+      llik_clads_ssλ(tree.d1, α, σλ, δt, srδt, ns)
+
+
     end
-    # add to global likelihood
-    ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
-          llpb*δt
   end
 
-  lλvi1 = lλv[nI+2]
-
-  # add final non-standard `δt`
-  if fdt > 0.0
-    lλvi = lλv[nI+1]
-    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-           fdt*exp(0.5*(lλvi + lλvi1))
-  end
-  if λev
-    ll += lλvi1
-  end
-
-  return ll
-end
-
-
-
-
-"""
-    llik_gbm_ssλ(tree::iTpb,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64)
-
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
-"""
-function llik_gbm_ssλ(tree::iTpb,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      ns  ::Float64)
-
-  if istip(tree)
     ll, dλ, ssλ, nλ, irλ = 
-      ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+      ll_clads_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
   else
+
+
+
+    td1 = tree.d1
+    td2 = tree.d2
+    lλi = lλ(tree)
+
+    lλi - e(tree) * exp(lλi)                 +
+    logdnorm2(lλ(td1), lλ(td2), lλi + α, σλ) +
+
+
     ns += 1.0
 
     ll, dλ, ssλ, nλ, irλ = 
-      ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
+      ll_clads_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
 
     ll1, dλ1, ssλ1, nλ1, irλ1, ns = 
-      llik_gbm_ssλ(tree.d1, α, σλ, δt, srδt, ns)
+      llik_clads_ssλ(tree.d1, α, σλ, δt, srδt, ns)
     ll2, dλ2, ssλ2, nλ2, irλ2, ns = 
-      llik_gbm_ssλ(tree.d2, α, σλ, δt, srδt, ns)
+      llik_clads_ssλ(tree.d2, α, σλ, δt, srδt, ns)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
@@ -170,7 +153,7 @@ end
 
 
 """
-    ll_gbm_b_ssλ(lλv ::Array{Float64,1},
+    ll_clads_b_ssλ(lλv ::Array{Float64,1},
                  α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
@@ -180,7 +163,7 @@ end
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
-function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
+function ll_clads_b_ssλ(lλv ::Array{Float64,1},
                       α   ::Float64,
                       σλ  ::Float64,
                       δt  ::Float64,
@@ -233,7 +216,7 @@ end
 
 
 """
-    llr_gbm_b_sep(lλp ::Array{Float64,1},
+    llr_clads_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -245,7 +228,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth
 separately for the Brownian motion and the pure-birth
 """
-function llr_gbm_b_sep(lλp ::Array{Float64,1},
+function llr_clads_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,
