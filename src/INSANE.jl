@@ -25,6 +25,7 @@ module INSANE
   # files
   include("insane/iTree.jl")
   include("insane/iTreeX.jl")
+  include("insane/iTreepe.jl")
   include("insane/iB.jl")
   include("insane/Ltt.jl")
   include("insane/iTree_summary.jl")
@@ -35,7 +36,9 @@ module INSANE
   include("insane/iTree_IO.jl")
   include("insane/sim_cpb.jl")
   include("insane/sim_cbd.jl")
+  include("insane/sim_cpe.jl")
   include("insane/sim_cfbd.jl")
+  include("insane/sim_cfpe.jl")
   include("insane/sim_gbmpb.jl")
   include("insane/sim_gbmbd.jl")
   include("insane/sim_gbmbd_efx.jl")
@@ -47,7 +50,9 @@ module INSANE
   include("insane/survival.jl")
   include("insane/ll_cpb.jl")
   include("insane/ll_cbd.jl")
+  include("insane/ll_cpe.jl")
   include("insane/ll_cfbd.jl")
+  include("insane/ll_cfpe.jl")
   include("insane/ll_gbmpb.jl")
   include("insane/ll_gbmbd.jl")
   include("insane/ll_gbmce.jl")
@@ -65,6 +70,8 @@ module INSANE
   include("insane/mcmc_gbmct.jl")
   include("insane/mcmc_gbmfbd.jl")
   include("insane/mcmc_dbm.jl")
+  include("insane/mhprop_cpe.jl")
+  include("insane/mhprop_cfpe.jl")
   include("insane/mhprop_gbmpb.jl")
   include("insane/mhprop_gbmbd.jl")
   include("insane/mhprop_gbmbd_efx.jl")
@@ -79,7 +86,9 @@ module INSANE
 
   const iTd = Dict{String, DataType}("sTpb"  => sTpb,
                                      "sTbd"  => sTbd,
+                                     "sTpe"  => sTpe,
                                      "sTfbd" => sTfbd,
+                                     "sTfpe" => sTfpe,
                                      "iTpb"  => iTpb,
                                      "iTce"  => iTce,
                                      "iTct"  => iTct,
