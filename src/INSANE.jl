@@ -24,8 +24,8 @@ module INSANE
 
   # files
   include("insane/iTree.jl")
-  include("insane/iTreeX.jl")
   include("insane/iTreepe.jl")
+  include("insane/iTreeX.jl")
   include("insane/iB.jl")
   include("insane/Ltt.jl")
   include("insane/iTree_summary.jl")
