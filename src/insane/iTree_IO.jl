@@ -1670,7 +1670,7 @@ function _iparse_v(s::String, from::Int64, to::Int64)
   v = Float64[]
   i = from
   f = findnext(',', s, i)
-  while f < to
+  while !isnothing(f) && f < to
     push!(v, parse(Float64, SubString(s, i, f-1)))
     i = f + 1
     f = findnext(',', s, i)
