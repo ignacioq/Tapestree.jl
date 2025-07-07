@@ -28,10 +28,10 @@ Created 25 08 2020
                ϵi      ::Float64               = 0.4,
                λi      ::Float64               = NaN,
                μi      ::Float64               = NaN,
-               pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-1, 0.2),
+               pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
                prints  ::Int64                 = 5,
                survival::Bool                  = true,
-               mxthf   ::Float64               = Inf,
+               mxthf   ::Float64               = 0.1,
                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant birth-death punctuated equilibrium.
@@ -51,7 +51,7 @@ function insane_cpe(tree    ::sT_label,
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
-                    pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 0.2, 0.2),
+                    pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
                     mxthf   ::Float64               = 0.1,

@@ -620,7 +620,7 @@ function update_x!(bix ::Int64,
   if root && iszero(e(ξi))
     #if stem fossil
     if isfossil(bi)
-      ll, sσa, sσk = _fstem_update(ξi, ξ1, σa, ll, sσa)
+      ll, sσa = _fstem_update!(ξi, ξ1, σa, ll, sσa)
     else
       # if crown
       ξ2  = Ξ[i2]
