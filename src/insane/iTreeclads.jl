@@ -1,6 +1,6 @@
 #=
 
-Abstract insane iTgbm structure
+Abstract insane cT structure
 
 Ignacio Quintero Mächler
 
@@ -13,19 +13,19 @@ Created 03 09 2020
 
 
 """
-    iT
+    cT
 
 An abstract type for all composite recursive types
-representing a binary phylogenetic tree with Geometric
-Brownian motion rates for `insane` use
+representing a binary phylogenetic tree with cladogenetic rate shifts 
+for `insane` use
 """
-abstract type iT <: iTree end
+abstract type cT <: iTree end
 
 
 
 
 """
-    iTpb
+    cTpb
 
 A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with no extinction
@@ -36,49 +36,43 @@ with the following fields:
   d2:  daughter tree 2
   e:   edge
   fx:  if fix tree
-  dt:  choice of time lag
-  fdt: final `δt`
-  lλ:  array of a Brownian motion evolution of `log(λ)`
+  lλ:  `log(λ)`
 
-    iTpb()
+    cTpb()
 
-Constructs an empty `iTpb` object.
+Constructs an empty `cTpb` object.
 
-    iTpb(e::Float64)
+    cTpb(e::Float64, fx::Bool, lλ::Float64)
 
-Constructs an empty `iTpb` object with pendant edge `pe`.
+Constructs an empty `cTpb` object with pendant edge `pe`.
 
-    iTpb(d1::iTpb, d2::iTpb, e::Float64)
+    cTpb(d1::cTpb, d2::cTpb, e::Float64, fx::Bool, lλ::Float64)
 
-Constructs an `iTpb` object with two `iTpb` daughters and pendant edge `pe`.
+Constructs an `cTpb` object with two `cTpb` daughters and pendant edge `pe`.
 """
-mutable struct iTpb <: iT
-  d1 ::iTpb
-  d2 ::iTpb
+mutable struct cTpb <: iT
+  d1 ::cTpb
+  d2 ::cTpb
   e  ::Float64
-  dt ::Float64
-  fdt::Float64
-  fx ::Bool
-  lλ ::Array{Float64,1}
+  lλ ::Float64
 
-  iTpb() = new()
-  iTpb(e::Float64, dt::Float64, fdt::Float64, fx::Bool, lλ::Array{Float64,1}) =
-      (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.fx = fx; x.lλ = lλ; x)
-  iTpb(d1::iTpb, d2::iTpb, e::Float64, dt::Float64, fdt::Float64, 
-    fx::Bool, lλ::Array{Float64,1}) =
-      new(d1, d2, e, dt, fdt, fx, lλ)
+  cTpb() = new()
+  cTpb(e::Float64, fx::Bool, lλ::Float64) =
+      (x = new(); x.e = e; x.fx = fx; x.lλ = lλ; x)
+  cTpb(d1::cTpb, d2::cTpb, e::Float64, fx::Bool, lλ::Float64) =
+      new(d1, d2, e, fx, lλ)
 end
 
 
 # pretty-printing
-Base.show(io::IO, t::iTpb) =
-  print(io, "insane pb-gbm tree with ", ntips(t), " tips")
+Base.show(io::IO, t::cTpb) =
+  print(io, "insane pb-clads tree with ", ntips(t), " tips")
 
 
 
 
 """
-    iTpb(e0::Array{Int64,1},
+    cTpb(e0::Array{Int64,1},
          e1::Array{Int64,1},
          el::Array{Float64,1},
          λs::Array{Array{Float64,1},1},
@@ -87,9 +81,9 @@ Base.show(io::IO, t::iTpb) =
          ei::Int64,
          δt::Float64)
 
-Transform edge structure to `iTpb`.
+Transform edge structure to `cTpb`.
 """
-function iTpb(e0::Array{Int64,1},
+function cTpb(e0::Array{Int64,1},
               e1::Array{Int64,1},
               el::Array{Float64,1},
               λs::Array{Array{Float64,1},1},
@@ -100,12 +94,12 @@ function iTpb(e0::Array{Int64,1},
 
   # if tip
   if in(ei, ea)
-    return iTpb(el[ei], δt, δt, true, λs[ei])
+    return cTpb(el[ei], δt, δt, true, λs[ei])
   else
     ei1, ei2 = findall(isequal(ni), e0)
     n1, n2   = e1[ei1:ei2]
-    return iTpb(iTpb(e0, e1, el, λs, ea, n1, ei1, δt),
-                iTpb(e0, e1, el, λs, ea, n2, ei2, δt),
+    return cTpb(cTpb(e0, e1, el, λs, ea, n1, ei1, δt),
+                cTpb(e0, e1, el, λs, ea, n2, ei2, δt),
                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
   end
 end
@@ -114,16 +108,16 @@ end
 
 
 """
-    iTpb(tree::iTpb)
+    cTpb(tree::cTpb)
 
-Produce a new copy of `iTpb`.
+Produce a new copy of `cTpb`.
 """
-function iTpb(tree::iTpb)
+function cTpb(tree::cTpb)
   if def1(tree)
-    iTpb(iTpb(tree.d1), iTpb(tree.d2),
+    cTpb(cTpb(tree.d1), cTpb(tree.d2),
       e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   else
-    iTpb(e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
+    cTpb(e(tree), dt(tree), fdt(tree), isfix(tree), copy(lλ(tree)))
   end
 end
 
