@@ -222,8 +222,7 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
 
       # forward simulation proposal proposal
       else
-        bix = ceil(Int64,rand()*el)
-
+        bix = fIrand(el) + 1
         llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
       end
     end
@@ -338,7 +337,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
             # forward simulation proposal proposal
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
               llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
 
               # llci = llik_cbd(Ξ, λc, μc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)

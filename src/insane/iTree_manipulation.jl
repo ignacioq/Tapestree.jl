@@ -17,6 +17,28 @@ Created 25 06 2020
 
 Add `s` to vector retrieved using function `f`.
 """
+function scale_rateλ!(tree::cTpb, s::Float64)
+
+  addlλ!(tree, s)
+
+  if def1(tree)
+    scale_rateλ!(tree.d1, s)
+    if def2(tree)
+      scale_rateλ!(tree.d2, s)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    scale_rate!(tree::iTree, f::Function, s::Float64)
+
+Add `s` to vector retrieved using function `f`.
+"""
 function scale_rate!(tree::iTree, f::Function, s::Float64)
 
   v = f(tree)
@@ -2803,10 +2825,21 @@ fix!(tree::T) where {T <: iTree} = setproperty!(tree, :fx, true)
 """
     setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT}
 
-Set number of `δt` for `tree`.
+Set speciation `lλ` for `tree`.
 """
 setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT} =
   setproperty!(tree, :lλ, lλ)
+setlλ!(tree::cTpb, lλ::Float64) = setproperty!(tree, :lλ, lλ)
+
+
+
+
+"""
+    addlλ!(tree::cTpb, a::Float64)
+
+Add to `lλ` for `tree`.
+"""
+addlλ!(tree::cTpb, a::Float64) = setproperty!(tree, :lλ, lλ(tree) + a)
 
 
 

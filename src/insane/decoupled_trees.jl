@@ -164,6 +164,66 @@ end
 
 
 
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           λ   ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           ::Type{cTpb})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                λ   ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                ::Type{cTpb})
+
+  Ξ = cTpb[]
+  _make_Ξ!(Ξ, 1, log(λ), α, σλ, idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+     _make_Ξ!(Ξ   ::Vector{cTpb},
+              i   ::Int64,
+              lλ0 ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTpb},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  push!(Ξ, cTpb(e(bi), true, lλ0))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, α, σλ, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, α, σλ, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
 
 """
     make_Ξ(idf ::Vector{iBffs},
@@ -1149,6 +1209,38 @@ end
 
 
 """
+    _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: cT}
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _ss_ir_dd(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
+
+  dd = ss = n = ir = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    dd, ss, n, ir = _ss_ir_dd(Ξ[i], f, α, dd, ss, n, ir)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lλ1 = lλ(Ξ[d1(bi)])
+      lλ2 = lλ(Ξ[bi2])
+
+      n  += 2.0
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+      dd += lλ1 + lλ2 - 2.0*lλi
+    end
+  end
+
+  return dd, ss, n, ir
+end
+
+
+
+
+"""
     _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
 Returns the standardized sum of squares a `iT` according
@@ -1163,6 +1255,7 @@ function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
   return dd, ss, n
 end
+
 
 
 
@@ -1181,6 +1274,7 @@ function _ss_dd(Ξ::Vector{iTbd}, α::Float64)
 
   return dd, ssλ, ssμ, n
 end
+
 
 
 
@@ -1345,6 +1439,35 @@ end
 
 
 
+
+"""
+    _ss(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _ss(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
+
+  ss = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    ss = _ss(Ξ[i], f, α, ss)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lλ1 = lλ(Ξ[d1(bi)])
+      lλ2 = lλ(Ξ[bi2])
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+    end
+  end
+
+  return ss
+end
+
+
+
 """
     _ir(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
@@ -1393,6 +1516,24 @@ function scale_rate!(Ξ::Vector{T}, f::Function, s::Float64) where {T <: iTree}
 
   return nothing
 end
+
+
+
+
+"""
+    scale_rate!(Ξ::Vector{cTpb}, s::Float64)
+
+Add `s` to vector retrieved using function `f`.
+"""
+function scale_rateλ!(Ξ::Vector{cTpb}, s::Float64)
+
+  for ξ in Ξ
+    scale_rateλ!(ξ, s)
+  end
+
+  return nothing
+end
+
 
 
 

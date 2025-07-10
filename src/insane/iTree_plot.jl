@@ -529,7 +529,7 @@ end
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function _rplottree!(tree  ::T,
+function _rplottree!(tree  ::cTpb,
                      f     ::Function,
                      xc    ::Float64,
                      i     ::Float64,

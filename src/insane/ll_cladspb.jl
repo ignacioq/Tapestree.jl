@@ -30,8 +30,14 @@ function llik_clads(Ξ  ::Vector{cTpb},
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
       ll += llik_clads(Ξ[i], α, σλ)
-      if d2(bi) > 0
-        ll += λt(bi)
+
+      bi2 = d2(bi)
+      if bi2 > 0
+        lλi = λt(bi)
+        lλ1 = lλ(Ξ[d1(bi)])
+        lλ2 = lλ(Ξ[bi2])
+
+        ll += lλi + logdnorm2(lλ1, lλ2, lλi + α, σλ)
       end
     end
   end
@@ -72,11 +78,85 @@ end
 
 
 
+"""
+    _ss_ir_dd(tree::cTpb,
+              f   ::Function,
+              α   ::Float64,
+              dd  ::Float64,
+              ss  ::Float64,
+              n   ::Float64)
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _ss_ir_dd(tree::cTpb,
+                   f   ::Function,
+                   α   ::Float64,
+                   dd  ::Float64,
+                   ss  ::Float64,
+                   n   ::Float64,
+                   ir  ::Float64)
+  lλi = lλ(tree)
+  ir += exp(lλi) * e(tree)
+
+  if def1(tree)
+    td1 = tree.d1
+    dd, ss, n, ir = _ss_ir_dd(td1, f, α, dd, ss, n, ir)
+    if def2(tree)
+      td2 = tree.d2
+
+      dd, ss, n, ir = _ss_ir_dd(td2, f, α, dd, ss, n, ir)
+
+      lλ1 = lλ(td1)
+      lλ2 = lλ(td2)
+
+      n  += 2.0
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+      dd += lλ1 + lλ2 - 2.0*lλi
+    end
+  end
+
+  return dd, ss, n, ir
+end
+
 
 
 """
-here
+    _ss(tree::cTpb, f::Function, α::Float64, ss::Float64)
+
+Returns the standardized sum of squares for rate `v`.
 """
+function _ss(tree::cTpb, f::Function, α::Float64, ss::Float64)
+
+  if def1(tree)
+    td1 = tree.d1
+    ss += _ss(td1, f, α, ss)
+    if def2(tree)
+      td2 = tree.d2
+      ss += _ss(td2, f, α, ss)
+      lλi = lλ(tree)
+      lλ1 = lλ(td1)
+      lλ2 = lλ(td2)
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+    end
+  end
+
+  return ss
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -280,150 +360,6 @@ function llr_clads_b_sep(lλp ::Array{Float64,1},
   return llrbm, llrpb, ssrλ, irrλ
 end
 
-
-
-
-"""
-    _ss_ir_dd(tree::T,
-              f   ::Function,
-              α   ::Float64,
-              dd  ::Float64,
-              ss  ::Float64,
-              n   ::Float64,
-              ir  ::Float64) where {T <: iTree}
-
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-the integrated rate `ir` and the delta drift `dd`.
-"""
-function _ss_ir_dd(tree::T,
-                   f   ::Function,
-                   α   ::Float64,
-                   dd  ::Float64,
-                   ss  ::Float64,
-                   n   ::Float64,
-                   ir  ::Float64) where {T <: iTree}
-
-  dd0, ss0, n0, ir0 = _ss_ir_dd_b(f(tree), α, dt(tree), fdt(tree))
-
-  dd += dd0
-  ss += ss0
-  n  += n0
-  ir += ir0
-
-  if def1(tree)
-    dd, ss, n, ir = _ss_ir_dd(tree.d1, f, α, dd, ss, n, ir)
-    if def2(tree)
-      dd, ss, n, ir = _ss_ir_dd(tree.d2, f, α, dd, ss, n, ir)
-    end
-  end
-
-  return dd, ss, n, ir
-end
-
-
-
-"""
-    _ss_ir_dd_b(v  ::Array{Float64,1},
-                α  ::Float64,
-                δt ::Float64,
-                fdt::Float64)
-
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-the integrated rate `ir` and the delta drift `dd`.
-"""
-function _ss_ir_dd_b(v  ::Array{Float64,1},
-                     α  ::Float64,
-                     δt ::Float64,
-                     fdt::Float64)
-
-
-    # estimate standard `δt` likelihood
-    nI = lastindex(v)-2
-
-    ss = ir = n = 0.0
-    if nI > 0
-      @turbo for i in Base.OneTo(nI)
-        vi  = v[i]
-        vi1 = v[i+1]
-        ss += (vi1 - vi - α*δt)^2
-        ir += exp(0.5*(vi + vi1))
-      end
-    
-      # standardize
-      ss *= 1.0/(2.0*δt)
-      ir *= δt
-      n  += Float64(nI)
-    end
-
-    # add final non-standard `δt`
-    if fdt > 0.0
-      vi  = v[nI+1]
-      vi1 = v[nI+2]
-      ss += (vi1 - vi - α*fdt)^2/(2.0*fdt)
-      n  += 1.0
-      ir += fdt*exp(0.5*(vi + vi1))
-    end
-
-  return (v[nI+2] - v[1]), ss, n, ir
-end
-
-
-
-"""
-    _ss(tree::T, f::Function, α::Float64) where {T <: iTree}
-
-Returns the standardized sum of squares for rate `v`.
-"""
-function _ss(tree::T, f::Function, α::Float64) where {T <: iTree}
-
-  ss = _ss_b(f(tree), α, dt(tree), fdt(tree))
-
-  if def1(tree)
-    ss += _ss(tree.d1, f, α)
-    if def2(tree)
-      ss += _ss(tree.d2, f, α)
-    end
-  end
-
-  return ss
-end
-
-
-
-
-"""
-    _ss_b(v::Array{Float64,1},
-          α  ::Float64,
-          δt ::Float64,
-          fdt::Float64)
-
-Returns the standardized sum of squares for rate `v`.
-"""
-function _ss_b(v::Array{Float64,1},
-               α  ::Float64,
-               δt ::Float64,
-               fdt::Float64)
-
-    # estimate standard `δt` likelihood
-    nI = lastindex(v)-2
-
-    ss = 0.0
-    if nI > 0
-      @turbo for i in Base.OneTo(nI)
-        ss += (v[i+1] - v[i] - α*δt)^2
-      end
-
-      # standardize
-      ss *= 1.0/(2.0*δt)
-    end
-
-    # add final non-standard `δt`
-    if fdt > 0.0
-      ss += (v[nI+2] - v[nI+1] - α*fdt)^2/(2.0*fdt)
-    end
-
-  return ss
-end
 
 
 

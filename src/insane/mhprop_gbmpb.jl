@@ -115,7 +115,7 @@ function _stem_update!(ξi      ::iTpb,
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
     llrbm, llrbd, ssrλ, irrλ = 
-      llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+      llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, true)
 
     acr = llrbd
 

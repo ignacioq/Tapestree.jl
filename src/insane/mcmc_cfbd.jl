@@ -266,7 +266,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
       # forward simulation proposal proposal
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ns, ne, L =
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
@@ -415,7 +415,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
             # forward simulation proposal proposal
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
 
               llc, ns, ne, L =
                 update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 

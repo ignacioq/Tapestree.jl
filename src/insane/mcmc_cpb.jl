@@ -160,7 +160,7 @@ function mcmc_burn_cpb(Ξ      ::Vector{sTpb},
 
       # forward simulation proposal proposal
       else
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
       end
@@ -247,7 +247,7 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
             # forward simulation proposal proposal
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
               llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
 
               # llci = llik_cpb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)

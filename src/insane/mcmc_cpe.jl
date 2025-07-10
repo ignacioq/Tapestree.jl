@@ -224,14 +224,13 @@ function mcmc_burn_cpe(Ξ        ::Vector{sTpe},
       # update inner nodes traits
       elseif p === 5
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
         llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
       # forward simulation proposal proposal
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
         llc, ns, ne, L, sσa, sσk = 
           update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, sσa, sσk,
             xis, xfs, es)
@@ -394,8 +393,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
             # update inner nodes traits
             elseif p === 5
 
-              nix = ceil(Int64,rand()*nin)
-              bix = inodes[nix]
+              bix = inodes[fIrand(nin) + 1]
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
               # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
@@ -407,7 +405,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
             # forward simulation proposal proposal
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
               llc, ns, ne, L, sσa, sσk = 
                 update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, 
                   sσa, sσk, xis, xfs, es)

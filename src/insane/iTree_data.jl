@@ -1859,6 +1859,24 @@ end
 
 
 
+"""
+    fixtip(tree::T, λa::Float64) where {T <: iTree}
+
+Return the first fixed tip.
+"""
+function fixtip(tree::T, λa::Float64) where {T <: iTree}
+  if istip(tree)
+    return tree, λa
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T, lλ(tree))
+  else
+    fixtip(tree.d2::T, lλ(tree))
+  end
+end
+
+
+
+
 
 """
     fixtrait(tree::T) where {T <: iTree}

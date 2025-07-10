@@ -259,8 +259,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # gbm update
       elseif pupi === 3
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
 
         llc, prc, ddλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, ddλ, ssλ,
@@ -269,7 +268,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # forward simulation update
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ddλ, ssλ, ssμ, nλ, L =
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, L,
@@ -416,8 +415,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             # gbm update
             elseif pupi === 3
 
-              nix = ceil(Int64,rand()*nin)
-              bix = inodes[nix]
+              bix = inodes[fIrand(nin) + 1]
 
               llc, prc, ddλ, ssλ, mc =
                 update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, ddλ, ssλ,
@@ -432,7 +430,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             # forward simulation update
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
 
               llc, ddλ, ssλ, ssμ, nλ, L =
                 update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, L,
