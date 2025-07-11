@@ -1215,10 +1215,10 @@ Returns the standardized sum of squares of a diffusion without drift `α`.
 """
 function _ss_ir_dd(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
 
-  dd = ss = n = ir = 0.0
+  dd = ss = ir = 0.0
   for i in Base.OneTo(lastindex(Ξ))
 
-    dd, ss, n, ir = _ss_ir_dd(Ξ[i], f, α, dd, ss, n, ir)
+    dd, ss, ir = _ss_ir_dd(Ξ[i], f, α, dd, ss, ir)
 
     bi  = idf[i]
     bi2 = d2(bi)
@@ -1228,13 +1228,12 @@ function _ss_ir_dd(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float6
       lλ1 = lλ(Ξ[d1(bi)])
       lλ2 = lλ(Ξ[bi2])
 
-      n  += 2.0
       ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
       dd += lλ1 + lλ2 - 2.0*lλi
     end
   end
 
-  return dd, ss, n, ir
+  return dd, ss, ir
 end
 
 

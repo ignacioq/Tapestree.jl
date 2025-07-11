@@ -141,7 +141,7 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ, irλ = _ss_ir_dd(Ξ, idf, lλ, αc)
+  ddλ, ssλ, irλ = _ss_ir_dd(Ξ, idf, lλ, αc)
 
   # for scale tuning
   ltn = 0
@@ -249,6 +249,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
                       σλc     ::Float64,
                       ns      ::Float64,
                       stn     ::Float64,
+                      rmλ     ::Float64,
                       λ0_prior::NTuple{2,Float64},
                       α_prior ::NTuple{2,Float64},
                       σλ_prior::NTuple{2,Float64},
@@ -266,15 +267,15 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
   nlogs = fld(niter,nthin)
   lthin = lit = sthin = zero(Int64)
 
-  r = Array{Float64,2}(undef, nlogs, 6)
+  r   = Array{Float64,2}(undef, nlogs, 6)
 
-  L   = treelength(Ξ)      # tree length
   nin = lastindex(inodes)  # number of internal nodes
   el  = lastindex(idf)     # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ, irλ = _ss_ir_dd(Ξ, idf, lλ, αc)
+  ddλ, ssλ, irλ = _ss_ir_dd(Ξ, idf, lλ, αc)
 
+  λfs   = Float64[]
   treev = cTpb[]  # make Ξ vector
   io = IOBuffer() # buffer 
 
@@ -285,7 +286,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
 
     open(ofile*".txt", "w") do tf
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, nλ = nλ, ssλ = ssλ, ddλ = ddλ, irλ = irλ, L = L, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, ssλ = ssλ, ddλ = ddλ, irλ = irλ, lthin = lthin, lit = lit, sthin = sthin
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -299,7 +300,8 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
             # update drift
             if pupi === 1
 
-              llc, prc, αc = update_α!(αc, σλc, nλ, ddλ, llc, prc, α_prior)
+              llc, prc, αc = 
+                update_α!(αc, σλc, 2.0*(ns + rmλ), ddλ, llc, prc, α_prior)
 
               # update ssλ with new drift `α`
               ssλ = _ss(Ξ, idf, lλ, αc)
@@ -313,7 +315,8 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
             # update diffusion rate
             elseif pupi === 2
 
-              llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
+              llc, prc, σλc = 
+                update_σ!(σλc, ssλ, 2.0*(ns + rmλ), llc, prc, σλ_prior)
 
               ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
               if !isapprox(ll0, llc, atol = 1e-4)
@@ -353,9 +356,8 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
 
               bix = fIrand(el) + 1
 
-              llc, ddλ, ssλ, nλ, irλ, ns, L =
-                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
-                  δt, srδt)
+              llc, ddλ, ssλ, irλ, ns =
+                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, irλ, ns, λfs)
 
               ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
               if !isapprox(ll0, llc, atol = 1e-4)
@@ -374,7 +376,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
               r[lit,1] = Float64(it)
               r[lit,2] = llc
               r[lit,3] = prc
-              r[lit,4] = exp(lλ(Ξ[1])[1])
+              r[lit,4] = exp(lλ(Ξ[1]))
               r[lit,5] = αc
               r[lit,6] = σλc
               push!(treev, couple(Ξ, idf, 1))
@@ -566,12 +568,9 @@ end
                llc  ::Float64,
                ddλ  ::Float64,
                ssλ  ::Float64,
-               nλ   ::Float64,
                irλ  ::Float64,
                ns   ::Float64,
-               L    ::Float64,
-               δt   ::Float64,
-               srδt ::Float64)
+               λfs  ::Vector{Float64})
 
 Forward simulation proposal function for pure birth diffusion.
 """
@@ -583,45 +582,51 @@ function update_fs!(bix  ::Int64,
                     llc  ::Float64,
                     ddλ  ::Float64,
                     ssλ  ::Float64,
-                    nλ   ::Float64,
                     irλ  ::Float64,
                     ns   ::Float64,
-                    L    ::Float64,
-                    δt   ::Float64,
-                    srδt ::Float64)
+                    λfs  ::Vector{Float64})
 
-  bi  = idf[bix]
-  ξc  = Ξ[bix]
+  bi = idf[bix]
+  ξc = Ξ[bix]
+  ia = pa(bi)
+
+  λa = NaN
+  if ia > 0
+    λa = λt(idf[ia])
+  end
 
   # if terminal
   if iszero(d1(bi))
-    ξp, llr = fsbi_t(bi, ξc, α, σλ, δt, srδt)
-    ddrλ = ssrλ = irrλ = 0.0
+    ξp, llr = fsbi_t(bi, λa, α, σλ)
   # if internal
   else
-    ξp, llr, ddrλ, ssrλ, irrλ =
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, δt, srδt)
+    ξp, llr = fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, λfs)
   end
 
   # if accepted
   if isfinite(llr)
-    ll1, ddλ1, ssλ1, nλ1, irλ1, ns1 = llik_gbm_ssλ(ξp, α, σλ, δt, srδt, 0.0)
-    ll0, ddλ0, ssλ0, nλ0, irλ0, ns0 = llik_gbm_ssλ(ξc, α, σλ, δt, srδt, 0.0)
+
+    llc, ddλ, ssλ, irλ, ns = 
+      llik_cladspb_track!(ξc, α, σλ, llc, ddλ, ssλ, irλ, ns, -)
+    llc, ddλ, ssλ, irλ, ns = 
+      llik_cladspb_track!(ξp, α, σλ, llc, ddλ, ssλ, irλ, ns, +)
+
+    # first change from ancestor
+    if ia > 0
+      λp, λc = lλ(ξp), lλ(ξc)
+      llc += llrdnorm_x(λp, λc, λa + α, σλ^2)
+      ddλ += λp - λc
+      ssλ += 0.5*((λp - λa - α)^2 - (λc - λa - α)^2)
+    end
 
     # update quantities
-    llc += ll1  - ll0 + llr
-    ddλ += ddλ1 - ddλ0 + ddrλ
-    ssλ += ssλ1 - ssλ0 + ssrλ
-    nλ  += nλ1  - nλ0
-    irλ += irλ1 - irλ0 + irrλ
-    ns  += ns1  - ns0
-    L   += treelength(ξp) - treelength(ξc)
+    llc += llr
 
     # set new tree
     Ξ[bix] = ξp
   end
 
-  return llc, ddλ, ssλ, nλ, irλ, ns, L
+  return llc, ddλ, ssλ, irλ, ns
 end
 
 
@@ -630,19 +635,16 @@ end
 """
     fsbi_t(bi  ::iBffs,
            ξc  ::cTpb,
+           λa  ::Float64,
            α   ::Float64,
-           σλ  ::Float64,
-           δt  ::Float64,
-           srδt::Float64)
+           σλ  ::Float64)
 
-Forward simulation for branch `bi`.
+Forward simulation for terminal branch `bi`.
 """
 function fsbi_t(bi  ::iBffs,
-                ξc  ::cTpb,
+                λa  ::Float64,
                 α   ::Float64,
-                σλ  ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+                σλ  ::Float64)
 
   nac = ni(bi)         # current ni
   iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
@@ -652,8 +654,10 @@ function fsbi_t(bi  ::iBffs,
   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
+  λi = rnorm(λa + α, σλ)
+
   t0, nap, nn, llr =
-    _sim_cladspb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
+    _sim_cladspb_t(e(bi), λi, α, σλ, lc, lU, iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -670,77 +674,132 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
-           ξ1  ::cTpb,
-           ξ2  ::cTpb,
-           λ0  ::Float64,
+           ξc  ::cTpb,
+           λa  ::Float64,
+           λ1  ::Float64,
+           λ2  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
-           δt  ::Float64,
-           srδt::Float64)
+           λfs ::Vector{Float64})
 
-Forward simulation for branch `bi`
+Forward simulation for internal branch `bi`
 """
 function fsbi_i(bi  ::iBffs,
                 ξc  ::cTpb,
-                ξ1  ::cTpb,
-                ξ2  ::cTpb,
+                λa  ::Float64,
+                λ1  ::Float64,
+                λ2  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
-                δt  ::Float64,
-                srδt::Float64)
+                λfs ::Vector{Float64})
 
-  # forward simulation during branch length
-  t0, na = _sim_cladspb(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
-
-  if na >= 1_000
-    return t0, NaN, NaN, NaN, NaN
+  if isnan(λa)
+    λi = lλ(ξc)
+  else
+    λi = rnorm(λa + α, σλ)
   end
 
-  ntp = na
+  empty!(λfs)
+
+  # forward simulation during branch length
+  t0, na = _sim_cladspb_i(e(bi), λi, α, σλ, 1, 500, λfs)
+
+  if na > 499
+    return t0, NaN 
+  end
 
   lU = -randexp() #log-probability
-
-  # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(ntp/nt(bi))
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
   iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+  acr  = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
- # fix random tip
-  λf = fixrtip!(t0, na, NaN)
-
-  llrd, acrd, drλ, ssrλ, irrλ, λ1p, λ2p =
-    _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
-
-  acr += acrd
+  # choose most likely lineage to fix
+  wt, λp, pp, λc, pc, acr = 
+    wfix_i(ξc, e(bi), λfs, λ1, λ2, α, σλ, acr)
 
   if lU < acr
 
+    # fix the tip
+    if wt <= div(na,2)
+      fixtip1!(t0, wt, 0)
+    else
+      fixtip2!(t0, na - wt + 1, 0)
+    end
+
     # simulated remaining tips until the present
     t0, na, acr =
-      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, iρi, na)
+      tip_sims!(t0, tf(bi), α, σλ, acr, lU, iρi, na)
 
     if lU < acr
       na -= 1
-
-      llr = llrd + (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-      l1  = lastindex(λ1p)
-      l2  = lastindex(λ2p)
-      setnt!(bi, ntp)                    # set new nt
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc) + λp - λc
       setni!(bi, na)                     # set new ni
-      setλt!(bi, λf)                     # set new λt
-      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      setλt!(bi, λp)                     # set new λt
 
-      return t0, llr, drλ, ssrλ, irrλ
-    else
-      return t0, NaN, NaN, NaN, NaN
+      return t0, llr
     end
   end
 
-  return t0, NaN, NaN, NaN, NaN
+  return t0, NaN
+end
+
+
+
+
+"""
+    wfix_i(ξi ::cTpb,
+           ei ::Float64,
+           λfs::Vector{Float64},
+           λ1 ::Float64,
+           λ2 ::Float64,
+           α  ::Float64,
+           σλ ::Float64,
+           acr::Float64)
+
+Choose most likely simulated lineage to fix with respect to daughter
+for bifurcating `i` branches.
+"""
+function wfix_i(ξi ::cTpb,
+                ei ::Float64,
+                λfs::Vector{Float64},
+                λ1 ::Float64,
+                λ2 ::Float64,
+                α  ::Float64,
+                σλ ::Float64,
+                acr::Float64)
+
+  # select best from proposal
+  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  for λfi in λfs
+    i += 1
+    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    sp += p
+    if p > pp
+      pp  = p
+      λp  = λfi
+      wt  = i
+    end
+  end
+
+  # extract current xis and estimate ratio
+  empty!(λfs)
+  λc = _λat!(ξi, ei, λfs, 0.0, NaN)
+
+  sc, pc = 0.0, NaN
+  for λfi in λfs
+    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    sc += p
+    if λc === λfi
+      pc = p
+    end
+  end
+
+  # likelihood and acceptance ratio
+  acr += log(sp/sc) + λp - λc
+
+  return wt, λp, pp, λc, pc, acr
 end
 
 
@@ -751,8 +810,6 @@ end
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
-              δt  ::Float64,
-              srδt::Float64,
               lr  ::Float64,
               lU  ::Float64,
               iρi ::Float64,
@@ -764,77 +821,39 @@ function tip_sims!(tree::cTpb,
                    t   ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64)
 
- if lU < lr && na < 1_000
+ if lU < lr && na < 500
 
     if istip(tree)
       if !isfix(tree)
 
-        fdti = fdt(tree)
-        lλ0  = lλ(tree)
-
         # simulate
         stree, na, lr =
-          _sim_cladspb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
-            lr, lU, iρi, na, 1_000)
+          _sim_cladspb_it(t, lλ(tree), α, σλ, lr, lU, iρi, na, 500)
 
-        if isnan(lr) || na >= 1_000
+        if isnan(lr) || na > 499
           return tree, na, NaN
         end
 
         sete!(tree, e(tree) + e(stree))
-
-        lλs = lλ(stree)
-
-        if lastindex(lλs) === 2
-          setfdt!(tree, fdt(tree) + fdt(stree))
-        else
-          setfdt!(tree, fdt(stree))
-        end
-
-        pop!(lλ0)
-        popfirst!(lλs)
-        append!(lλ0, lλs)
-
         if isdefined(stree, :d1)
           tree.d1 = stree.d1
           tree.d2 = stree.d2
         end
       end
     else
-      tree.d1, na, lr = tip_sims!(tree.d1, t, α, σλ, δt, srδt, lr, lU, iρi, na)
-      tree.d2, na, lr = tip_sims!(tree.d2, t, α, σλ, δt, srδt, lr, lU, iρi, na)
+      tree.d1, na, lr = tip_sims!(tree.d1, t, α, σλ, lr, lU, iρi, na)
+      tree.d2, na, lr = tip_sims!(tree.d2, t, α, σλ, lr, lU, iρi, na)
     end
 
     return tree, na, lr
   end
 
   return tree, na, NaN
-end
-
-
-
-
-"""
-    tune(window::Float64, acc_rate::Float64)
-
-Tune proposal based on acceptance rate.
-"""
-function tune(window::Float64, acc_rate::Float64)
-
-  if acc_rate > 0.234
-    window *= (1.0 + (acc_rate - 0.234) * 1.3054830287206267)
-  else
-    window /= (2.0 - acc_rate * 4.273504273504273)
-  end
-
-  return window
 end
 
 

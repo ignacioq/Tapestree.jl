@@ -118,7 +118,8 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  -0.5*log(6.28318530717958623199592693708837032318115234375*σ²) - (x - μ)^2/(2.0*σ²)
+  -0.5*log(6.28318530717958623199592693708837032318115234375*σ²) - 
+  (x - μ)^2/(2.0*σ²)
 
 
 
@@ -290,6 +291,20 @@ function llrdtnorm_x(xp::Float64, xc::Float64, σ²::Float64)
     return (xc^2 - xp^2)/(2.0σ²)
   end
 end
+
+
+
+
+"""
+    dnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64)
+
+Compute the logarithmic transformation of the 
+**Normal** density for `x1` and `x2` with mean `μ` and variance `σ`.
+"""
+dnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
+  (1.0/(2.506628274631000241612355239340104162693023681640625 * σ))^2 * 
+  exp(-((x1 - μ)^2 + (x2 - μ)^2)/(2.0*σ^2))
+
 
 
 

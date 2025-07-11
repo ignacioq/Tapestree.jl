@@ -1130,8 +1130,6 @@ function fsbi_m(bi::iBffs,
     return t0, NaN, NaN
   end
 
-  ntp = na
-
   lU = -randexp() # log-probability
 
   # add sampling fraction
@@ -1184,7 +1182,6 @@ function fsbi_m(bi::iBffs,
       # likelihood ratio
       na -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
-      setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
 
       sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1)
@@ -1313,8 +1310,6 @@ function fsbi_i(bi ::iBffs,
     return t0, NaN, NaN, NaN
   end
 
-  ntp = na
-
   lU = -randexp() #log-probability
 
   # add sampling fraction
@@ -1322,7 +1317,7 @@ function fsbi_i(bi ::iBffs,
   iρi = (1.0 - ρi(bi))        # branch sampling fraction
   acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
-  ## choose most likely lineage to fix
+  # choose most likely lineage to fix
   wt, xp, shp, pp, xc, shc, pc, acr = 
     wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, σa^2, σk^2)
 
@@ -1345,7 +1340,6 @@ function fsbi_i(bi ::iBffs,
     if lU < acr
       na  -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
-      setnt!(bi,  ntp)  # set new nt
       setni!(bi,  na)   # set new ni
 
       ξac, ξkc = if shc ξ2, ξ1 else ξ1, ξ2 end

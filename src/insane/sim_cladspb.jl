@@ -399,7 +399,7 @@ function _sim_cladspb_t(t   ::Float64,
         nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr >= lr || lU < nlr
-        return cTpb(bt, false, λt), na, nn, nlr
+        return cTpb(t, false, λt), na, nn, nlr
       else
         return cTpb(), na, nn, NaN
       end
@@ -407,15 +407,57 @@ function _sim_cladspb_t(t   ::Float64,
 
     nn += 1
     td1, na, nn, lr =
-      _sim_cladspb_t(t, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, na, nn, nlim)
+      _sim_cladspb_t(t - tw, rnorm(λt + α, σλ), α, σλ, 
+        lr, lU, iρi, na, nn, nlim)
     td2, na, nn, lr =
-      _sim_cladspb_t(t, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, na, nn, nlim)
+      _sim_cladspb_t(t - tw, rnorm(λt + α, σλ), α, σλ, 
+        lr, lU, iρi, na, nn, nlim)
 
-    return cTpb(td1, td2, bt, false, λt), na, nn, lr
-
+    return cTpb(td1, td2, tw, false, λt), na, nn, lr
   end
 
   return cTpb(), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_cladspb_i(t   ::Float64,
+                   λt  ::Float64,
+                   α   ::Float64,
+                   σλ  ::Float64,
+                   nn  ::Int64,
+                   nlim::Int64,
+                   xfs::Vector{Float64})
+
+Simulate `cTpb` according to a pure-birth clads.
+"""
+function _sim_cladspb_i(t   ::Float64,
+                        λt  ::Float64,
+                        α   ::Float64,
+                        σλ  ::Float64,
+                        nn  ::Int64,
+                        nlim::Int64,
+                        xfs::Vector{Float64})
+
+  if nn < nlim
+
+    tw = cpb_wait(exp(λt))
+
+    if tw > t
+      push!(xfs, λt)
+      return cTpb(t, false, λt), nn
+    end
+
+    nn += 1
+    d1, nn = _sim_cladspb_i(t - tw, rnorm(λt + α, σλ), α, σλ, nn, nlim, xfs)
+    d2, nn = _sim_cladspb_i(t - tw, rnorm(λt + α, σλ), α, σλ, nn, nlim, xfs)
+ 
+    return cTpb(d1, d2, tw, false, λt), nn
+  end
+
+  return cTpb(), nn
 end
 
 
@@ -429,11 +471,11 @@ end
                     lr  ::Float64,
                     lU  ::Float64,
                     iρi ::Float64,
-                    nn ::Int64,
+                    nn  ::Int64,
                     nlim::Int64)
 
 Simulate `cTpb` according to a pure-birth clads for
-terminal branches.
+internal terminal branches.
 """
 function _sim_cladspb_it(t   ::Float64,
                          λt  ::Float64,
@@ -442,7 +484,7 @@ function _sim_cladspb_it(t   ::Float64,
                          lr  ::Float64,
                          lU  ::Float64,
                          iρi ::Float64,
-                         nn ::Int64,
+                         nn  ::Int64,
                          nlim::Int64)
 
   if lU < lr && nn < nlim
@@ -451,16 +493,16 @@ function _sim_cladspb_it(t   ::Float64,
 
     if tw > t
       lr += log(iρi)
-      return cTpb(bt, false, λt), nn, lr
+      return cTpb(t, false, λt), nn, lr
     end
 
     nn += 1
     td1, nn, lr = 
-      _sim_cladspb_it(t, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, nn, nlim)
+      _sim_cladspb_it(t - tw, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, nn, nlim)
     td2, nn, lr = 
-      _sim_cladspb_it(t, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, nn, nlim)
+      _sim_cladspb_it(t - tw, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, nn, nlim)
 
-    return cTpb(td1, td2, bt, false, λt), nn, lr
+    return cTpb(td1, td2, tw, false, λt), nn, lr
   end
 
   return cTpb(), nn, NaN

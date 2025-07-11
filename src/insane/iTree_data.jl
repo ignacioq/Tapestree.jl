@@ -2210,6 +2210,45 @@ end
 
 
 
+
+"""
+    _λat!(tree::cTpb,
+          c   ::Float64,
+          λs  ::Vector{Float64},
+          t   ::Float64,
+          λfx ::Float64)
+
+Return speciation rates, `λs`, at time `c` for `tree`.
+"""
+function _λat!(tree::cTpb,
+               c   ::Float64,
+               λs  ::Vector{Float64},
+               t   ::Float64,
+               λfx ::Float64)
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+
+    λi = lλ(tree)
+    push!(λs, λi)
+
+    if isfix(tree)
+      λfx =  λi
+    end
+
+    return λfx
+  elseif def1(tree)
+    λfx = _λat!(tree.d1, c, λs, t + et, λfx)
+    λfx = _λat!(tree.d2, c, λs, t + et, λfx)
+  end
+
+  return λfx
+end
+
+
+
+
 """
     _xatt!(tree::T,
            c   ::Float64,
