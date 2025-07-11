@@ -1719,6 +1719,45 @@ end
 
 
 
+"""
+    _remove_unsampled!(tree::cTpb)
+
+Remove extinct tips from `cTpb`.
+"""
+function _remove_unsampled!(tree::cTpb)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return cTpb(e(tree), isfix(tree), lλ(tree))
+      else
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0 = lλ(tree)
+        λ2 = lλ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+      end
+    elseif !isfix(tree.d2)
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0 = lλ(tree)
+      λ1 = lλ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+    end
+  end
+  return tree
+end
+
+
+
 
 """
     _remove_unsampled!(tree::iTpb)

@@ -107,9 +107,8 @@ function _crown_update!(ξi      ::cTpb,
     llc += llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ)
     prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
     ddλ += 2.0*(λi - λr)
-    ssλ += 0.5*(
-            (λ1 - λr - α)^2 + (λ2 - λr - α)^2 - 
-            (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
+    ssλ += 0.5*((λ1 - λr - α)^2 + (λ2 - λr - α)^2 - 
+                (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
 
     setlλ!(ξi, λr)
   end

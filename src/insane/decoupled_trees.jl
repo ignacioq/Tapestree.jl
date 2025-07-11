@@ -905,6 +905,45 @@ end
 
 
 
+
+"""
+    couple(Ξ  ::Vector{cTpb},
+           idf::Vector{iBffs},
+           ix ::Int64)
+
+Build tree from decoupled tree.
+"""
+function couple(Ξ  ::Vector{cTpb},
+                idf::Vector{iBffs},
+                ix ::Int64)
+
+  bi  = idf[ix]
+  ξi  = cTpb(Ξ[ix])
+  i1  = d1(bi)
+  i2  = d2(bi)
+
+  if i1 > 0
+    ξit = fixtip(ξi)
+    if i2 > 0 
+      ξit.d1 = couple(Ξ, idf, i1)
+      ξit.d2 = couple(Ξ, idf, i2)
+    else
+      ξd1 = couple(Ξ, idf, i1)
+      adde!(ξit, e(ξd1))
+      if def1(ξd1)
+        ξit.d1 = ξd1.d1
+        ξit.d2 = ξd1.d2
+      end
+    end
+  end
+
+  return ξi
+end
+
+
+
+
+
 """
     couple(Ξ::Vector{T},
            idf::Vector{iBffs},
