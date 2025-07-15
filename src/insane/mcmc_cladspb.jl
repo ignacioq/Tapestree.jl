@@ -43,7 +43,7 @@ function insane_cladspb(tree    ::sT_label;
                         ofile   ::String                = string(homedir(), "/cladspb"),
                         αi      ::Float64               = 0.0,
                         σλi     ::Float64               = 0.1,
-                        pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.1, 0.2),
+                        pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-4, 0.1, 0.2),
                         prints  ::Int64                 = 5,
                         stn     ::Float64               = 0.5,
                         tρ      ::Dict{String, Float64} = Dict("" => 1.0))
@@ -141,7 +141,7 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
   λfs = Float64[]
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, irλ = _ss_ir_dd(Ξ, idf, lλ, αc)
+  ddλ, ssλ = _ss_dd(Ξ, idf, lλ, αc)
 
   # for scale tuning
   ltn = zero(Int64)
@@ -174,8 +174,8 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
       # update scale
       elseif pupi === 3
 
-        llc, prc, irλ, acc = 
-          update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
+        llc, prc, acc = 
+          update_scale!(Ξ, idf, llc, prc, ns, stn, λ0_prior)
 
         lac += acc
         lup += 1.0
@@ -185,8 +185,8 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
 
         bix = inodes[fIrand(nin) + 1]
 
-        llc, prc, ddλ, ssλ, irλ =
-          update_internal!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
+        llc, prc, ddλ, ssλ =
+          update_internal!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, 
             λ0_prior)
 
       # forward simulation
@@ -194,8 +194,8 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
 
         bix = fIrand(el) + 1
 
-        llc, ddλ, ssλ, irλ, ns =
-          update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, irλ, ns, λfs)
+        llc, ddλ, ssλ, ns =
+          update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, ns, λfs)
       end
     end
 
@@ -267,7 +267,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
   el  = lastindex(idf)     # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, irλ = _ss_ir_dd(Ξ, idf, lλ, αc)
+  ddλ, ssλ = _ss_dd(Ξ, idf, lλ, αc)
 
   λfs   = Float64[]
   treev = cTpb[]  # make Ξ vector
@@ -280,7 +280,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
 
     open(ofile*".txt", "w") do tf
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, ssλ = ssλ, ddλ = ddλ, irλ = irλ, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, ssλ = ssλ, ddλ = ddλ, lthin = lthin, lit = lit, sthin = sthin
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -321,8 +321,8 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
             # update scale
             elseif pupi === 3
 
-              llc, prc, irλ, acc = 
-                update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
+              llc, prc, acc = 
+                update_scale!(Ξ, idf, llc, prc, ns, stn, λ0_prior)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -335,8 +335,8 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
 
               bix = inodes[fIrand(nin) + 1]
 
-              llc, prc, ddλ, ssλ, irλ =
-                update_internal!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
+              llc, prc, ddλ, ssλ =
+                update_internal!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, 
                   λ0_prior)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
@@ -350,15 +350,14 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
 
               bix = fIrand(el) + 1
 
-              llc, ddλ, ssλ, irλ, ns =
-                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, irλ, ns, λfs)
+              llc, ddλ, ssλ, ns =
+                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, ns, λfs)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
               # end
-
             end
           end
 
@@ -419,7 +418,6 @@ function update_scale!(Ξ       ::Vector{cTpb},
                        idf     ::Vector{iBffs},
                        llc     ::Float64,
                        prc     ::Float64,
-                       ir      ::Float64,
                        ns      ::Float64,
                        stn     ::Float64,
                        λ0_prior::NTuple{2,Float64})
@@ -428,8 +426,8 @@ function update_scale!(Ξ       ::Vector{cTpb},
   s = randn()*stn
 
   # likelihood ratio
-  iri = (1.0 - exp(s)) * ir
-  llr = ns * s + iri
+  ir  = _ir(Ξ)
+  llr = ns * s + (1.0 - exp(s)) * ir
 
   lλ0 = lλ(Ξ[1])
 
@@ -442,12 +440,11 @@ function update_scale!(Ξ       ::Vector{cTpb},
     acc += 1.0
     llc += llr
     prc += prr
-    ir  -= iri
     scale_rateλ!(Ξ, s)
     scale_rate!(idf, s)
   end
 
-  return llc, prc, ir, acc
+  return llc, prc, acc
 end
 
 
@@ -463,7 +460,6 @@ end
                      prc     ::Float64,
                      ddλ     ::Float64,
                      ssλ     ::Float64,
-                     irλ     ::Float64,
                      λ0_prior::NTuple{2,Float64})
 
 Make a `gbm` update for an internal branch and its descendants.
@@ -477,7 +473,6 @@ function update_internal!(bix     ::Int64,
                           prc     ::Float64,
                           ddλ     ::Float64,
                           ssλ     ::Float64,
-                          irλ     ::Float64,
                           λ0_prior::NTuple{2,Float64})
 
   ξi   = Ξ[bix]
@@ -500,41 +495,41 @@ function update_internal!(bix     ::Int64,
     # if stem
     if root
       if istip(ξi)
-        llc, prc, ddλ, ssλ, irλ = 
+        llc, prc, ddλ, ssλ = 
           _stem_update!(ξi, lλ(ξ1), lλ(ξ2), 
-            α, σλ, llc, prc, ddλ, ssλ, irλ, λ0_prior)
+            α, σλ, llc, prc, ddλ, ssλ, λ0_prior)
         λa = lλ(ξi)
       else
-        llc, prc, ddλ, ssλ, irλ = 
+        llc, prc, ddλ, ssλ = 
           _stem_update!(ξi, lλ(ξ1.d1), lλ(ξ2.d2),
-            α, σλ, llc, prc, ddλ, ssλ, irλ, λ0_prior)
+            α, σλ, llc, prc, ddλ, ssλ, λ0_prior)
 
         # updates within the stem daughter branches
-        llc, ddλ, ssλ, irλ = 
-          _update_internal!(ξi.d1, lλ(ξi), α, σλ, llc, ddλ, ssλ, irλ, false)
-        llc, ddλ, ssλ, irλ = 
-          _update_internal!(ξi.d2, lλ(ξi), α, σλ, llc, ddλ, ssλ, irλ, false)
+        llc, ddλ, ssλ = 
+          _update_internal!(ξi.d1, lλ(ξi), α, σλ, llc, ddλ, ssλ, false)
+        llc, ddλ, ssλ = 
+          _update_internal!(ξi.d2, lλ(ξi), α, σλ, llc, ddλ, ssλ, false)
 
         # get fixed tip and ancestral rate
         lξi, λa = fixtip(ξi, λa)
 
         # make fixed branch update
-        llc, ddλ, ssλ, irλ, λa = 
-          update_triad!(lξi, ξ1, ξ2, λa, α, σλ, llc, ddλ, ssλ, irλ)
+        llc, ddλ, ssλ, λa = 
+          update_triad!(lξi, ξ1, ξ2, λa, α, σλ, llc, ddλ, ssλ)
       end
     else
       λa = λt(idf[ia])
 
       # updates within the parent branch
-      llc, ddλ, ssλ, irλ, λx = 
-        _update_internal!(ξi, λa, α, σλ, llc, ddλ, ssλ, irλ, false)
+      llc, ddλ, ssλ, λx = 
+        _update_internal!(ξi, λa, α, σλ, llc, ddλ, ssλ, false)
 
       # get fixed tip and ancestral rate
       lξi, λa = fixtip(ξi, λa)
 
       # make fixed branch update
-      llc, ddλ, ssλ, irλ, λa = 
-        update_triad!(lξi, ξ1, ξ2, λa, α, σλ, llc, ddλ, ssλ, irλ)
+      llc, ddλ, ssλ, λa = 
+        update_triad!(lξi, ξ1, ξ2, λa, α, σλ, llc, ddλ, ssλ)
     end
 
     # set fixed `λ(t)` in branch
@@ -542,12 +537,12 @@ function update_internal!(bix     ::Int64,
   end
 
   # # carry on updates in the daughters
-  llc, ddλ, ssλ, irλ, λx = 
-    _update_internal!(ξ1, λa, α, σλ, llc, ddλ, ssλ, irλ, iszero(d1(idf[i1])))
-  llc, ddλ, ssλ, irλ, λx = 
-    _update_internal!(ξ2, λa, α, σλ, llc, ddλ, ssλ, irλ, iszero(d1(idf[i2])))
+  llc, ddλ, ssλ, λx = 
+    _update_internal!(ξ1, λa, α, σλ, llc, ddλ, ssλ, iszero(d1(idf[i1])))
+  llc, ddλ, ssλ, λx = 
+    _update_internal!(ξ2, λa, α, σλ, llc, ddλ, ssλ, iszero(d1(idf[i2])))
 
-  return llc, prc, ddλ, ssλ, irλ
+  return llc, prc, ddλ, ssλ
 end
 
 
@@ -562,7 +557,6 @@ end
                llc  ::Float64,
                ddλ  ::Float64,
                ssλ  ::Float64,
-               irλ  ::Float64,
                ns   ::Float64,
                λfs  ::Vector{Float64})
 
@@ -576,7 +570,6 @@ function update_fs!(bix  ::Int64,
                     llc  ::Float64,
                     ddλ  ::Float64,
                     ssλ  ::Float64,
-                    irλ  ::Float64,
                     ns   ::Float64,
                     λfs  ::Vector{Float64})
 
@@ -602,10 +595,10 @@ function update_fs!(bix  ::Int64,
   # if accepted
   if isfinite(llr)
 
-    llc, ddλ, ssλ, irλ, ns = 
-      llik_cladspb_track!(ξc, α, σλ, llc, ddλ, ssλ, irλ, ns, -)
-    llc, ddλ, ssλ, irλ, ns = 
-      llik_cladspb_track!(ξp, α, σλ, llc, ddλ, ssλ, irλ, ns, +)
+    llc, ddλ, ssλ, ns = 
+      llik_cladspb_track!(ξc, α, σλ, llc, ddλ, ssλ, ns, -)
+    llc, ddλ, ssλ, ns = 
+      llik_cladspb_track!(ξp, α, σλ, llc, ddλ, ssλ, ns, +)
 
     # first change from ancestor
     if ia > 0
@@ -624,7 +617,7 @@ function update_fs!(bix  ::Int64,
     Ξ[bix] = ξp
   end
 
-  return llc, ddλ, ssλ, irλ, ns
+  return llc, ddλ, ssλ, ns
 end
 
 

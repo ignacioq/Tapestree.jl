@@ -514,7 +514,7 @@ end
 
 
 """
-    _rplottree!(tree  ::T,
+    _rplottree!(tree  ::cTpb,
                 f     ::Function,
                 xc    ::Float64,
                 i     ::Float64,
@@ -524,8 +524,7 @@ end
                 nodet ::Array{Int64,1},
                 xnode ::Array{Float64,1},
                 ynode ::Array{Float64,1},
-                show  ::NTuple{3,Bool},
-                simple::Bool) where {T <: iTree}
+                show  ::NTuple{3,Bool})
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
@@ -539,7 +538,7 @@ function _rplottree!(tree  ::cTpb,
                      nodet ::Array{Int64,1},
                      xnode ::Array{Float64,1},
                      ynode ::Array{Float64,1},
-                     show  ::NTuple{3,Bool}) where {T <: cT}
+                     show  ::NTuple{3,Bool})
 
   xe = xc - e(tree)
 

@@ -1248,16 +1248,16 @@ end
 
 
 """
-    _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: cT}
+    _ss_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: cT}
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
 """
-function _ss_ir_dd(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
+function _ss_dd(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
 
-  dd = ss = ir = 0.0
+  dd = ss = 0.0
   for i in Base.OneTo(lastindex(Ξ))
 
-    dd, ss, ir = _ss_ir_dd(Ξ[i], f, α, dd, ss, ir)
+    dd, ss = _ss_dd(Ξ[i], f, α, dd, ss)
 
     bi  = idf[i]
     bi2 = d2(bi)
@@ -1272,7 +1272,7 @@ function _ss_ir_dd(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float6
     end
   end
 
-  return dd, ss, ir
+  return dd, ss
 end
 
 
@@ -1503,6 +1503,25 @@ function _ss(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
 
   return ss
 end
+
+
+
+
+"""
+    _ir(Ξ::Vector{cTpb})
+
+Returns the `integrated rate`.
+"""
+function _ir(Ξ::Vector{cTpb})
+
+  ir = 0.0
+  for ξi in Ξ
+    ir = _ir(ξi, ir)
+  end
+
+  return ir
+end
+
 
 
 

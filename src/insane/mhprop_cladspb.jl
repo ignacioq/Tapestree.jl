@@ -22,7 +22,6 @@ Created 14 11 2021
                   prc     ::Float64,
                   ddλ     ::Float64,
                   ssλ     ::Float64,
-                  irλ     ::Float64,
                   λ0_prior::NTuple{2,Float64})
 
 Do gbm update for crown root.
@@ -36,7 +35,6 @@ function _stem_update!(ξi      ::cTpb,
                        prc     ::Float64,
                        ddλ     ::Float64,
                        ssλ     ::Float64,
-                       irλ     ::Float64,
                        λ0_prior::NTuple{2,Float64})
 
   @inbounds begin
@@ -48,8 +46,7 @@ function _stem_update!(ξi      ::cTpb,
                   σλ^2,     σλ^2, λ0_prior[2])
 
     llrbm = llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ)
-    irrλ  = ei*(exp(λi) - exp(λr))
-    llrpb = λr - λi + irrλ
+    llrpb = λr - λi + ei*(exp(λi) - exp(λr))
 
     if -randexp() < llrpb
       llc += llrbm + llrpb
@@ -58,12 +55,11 @@ function _stem_update!(ξi      ::cTpb,
       ssλ += 0.5*(
               (λ1 - λr - α)^2 + (λ2 - λr - α)^2 - 
               (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
-      irλ -= irrλ
       setlλ!(ξi, λr)
     end
   end
 
-  return llc, prc, ddλ, ssλ, irλ
+  return llc, prc, ddλ, ssλ
 end
 
 
@@ -127,7 +123,6 @@ end
                       llc ::Float64,
                       ddλ ::Float64,
                       ssλ ::Float64,
-                      irλ ::Float64,
                       ter ::Bool)
 
 Do clads internal rate updates on a decoupled tree recursively.
@@ -139,23 +134,22 @@ function _update_internal!(tree::cTpb,
                            llc ::Float64,
                            ddλ ::Float64,
                            ssλ ::Float64,
-                           irλ ::Float64,
                            ter ::Bool)
 
   if def1(tree)
-    llc, ddλ, ssλ, irλ, λa = 
-      update_triad!(tree, λa, α, σλ, llc, ddλ, ssλ, irλ)
+    llc, ddλ, ssλ, λa = 
+      update_triad!(tree, λa, α, σλ, llc, ddλ, ssλ)
 
-    llc, ddλ, ssλ, irλ, λx =
-      _update_internal!(tree.d1, λa, α, σλ, llc, ddλ, ssλ, irλ, ter)
-    llc, ddλ, ssλ, irλ, λx =
-      _update_internal!(tree.d2, λa, α, σλ, llc, ddλ, ssλ, irλ, ter)
+    llc, ddλ, ssλ, λx =
+      _update_internal!(tree.d1, λa, α, σλ, llc, ddλ, ssλ, ter)
+    llc, ddλ, ssλ, λx =
+      _update_internal!(tree.d2, λa, α, σλ, llc, ddλ, ssλ, ter)
   elseif !isfix(tree) || ter
-    llc, ddλ, ssλ, irλ = 
-      update_tip!(tree, λa, α, σλ, llc, ddλ, ssλ, irλ)
+    llc, ddλ, ssλ = 
+      update_tip!(tree, λa, α, σλ, llc, ddλ, ssλ)
   end
 
-  return llc, ddλ, ssλ, irλ, λa
+  return llc, ddλ, ssλ, λa
 end
 
 
@@ -168,8 +162,7 @@ end
                 σλ  ::Float64,
                 llc ::Float64,
                 ddλ ::Float64,
-                ssλ ::Float64,
-                irλ ::Float64)
+                ssλ ::Float64)
 
 Make a `clads` tip proposal.
 """
@@ -179,8 +172,7 @@ function update_tip!(tree::cTpb,
                      σλ  ::Float64,
                      llc ::Float64,
                      ddλ ::Float64,
-                     ssλ ::Float64,
-                     irλ ::Float64)
+                     ssλ ::Float64)
 
   @inbounds begin
 
@@ -192,19 +184,17 @@ function update_tip!(tree::cTpb,
 
     # likelihood ratios
     llrbm = llrdnorm_x(λn, λi, λa + α, σλ^2)
-    irrλ  = ei*(exp(λi) - exp(λn))
-    llrpb = irrλ
+    llrpb = ei*(exp(λi) - exp(λn))
 
     if -randexp() < llrpb
       llc += llrbm + llrpb
       ddλ += λn - λi
       ssλ += 0.5*((λn - λa - α)^2 - (λi - λa - α)^2)
-      irλ -= irrλ
       setlλ!(tree, λn)
     end
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, ddλ, ssλ
 end
 
 
@@ -219,8 +209,7 @@ end
                   σλ  ::Float64,
                   llc ::Float64,
                   ddλ ::Float64,
-                  ssλ ::Float64,
-                  irλ ::Float64)
+                  ssλ ::Float64)
 
 Make a `gbm` trio proposal.
 """
@@ -232,8 +221,7 @@ function update_triad!(ξi  ::cTpb,
                        σλ  ::Float64,
                        llc ::Float64,
                        ddλ ::Float64,
-                       ssλ ::Float64,
-                       irλ ::Float64)
+                       ssλ ::Float64)
 
   @inbounds begin
     λi = lλ(ξi)
@@ -246,8 +234,7 @@ function update_triad!(ξi  ::cTpb,
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
-    irrλ  = ei*(exp(λi) - exp(λn))
-    llrpb = λn - λi + irrλ
+    llrpb = λn - λi + ei*(exp(λi) - exp(λn))
 
     if -randexp() < llrpb
       llc += llrbm + llrpb
@@ -255,13 +242,12 @@ function update_triad!(ξi  ::cTpb,
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
               (λi - λa - α)^2 - (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
-      irλ -= irrλ
       λi   = λn
       setlλ!(ξi, λn)
     end
   end
 
-  return llc, ddλ, ssλ, irλ, λi
+  return llc, ddλ, ssλ, λi
 end
 
 
@@ -273,8 +259,7 @@ end
                   σλ  ::Float64,
                   llc ::Float64,
                   ddλ ::Float64,
-                  ssλ ::Float64,
-                  irλ ::Float64)
+                  ssλ ::Float64)
 
 Make a trio proposal for clads.
 """
@@ -284,8 +269,7 @@ function update_triad!(tree::cTpb,
                        σλ  ::Float64,
                        llc ::Float64,
                        ddλ ::Float64,
-                       ssλ ::Float64,
-                       irλ ::Float64)
+                       ssλ ::Float64)
 
   @inbounds begin
 
@@ -299,8 +283,7 @@ function update_triad!(tree::cTpb,
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
-    irrλ  = ei*(exp(λi) - exp(λn))
-    llrpb = λn - λi + irrλ
+    llrpb = λn - λi + ei*(exp(λi) - exp(λn))
 
     if -randexp() < llrpb
       llc += llrbm + llrpb
@@ -308,13 +291,12 @@ function update_triad!(tree::cTpb,
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
               (λi - λa - α)^2 - (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
-      irλ -= irrλ
       λi   = λn
       setlλ!(tree, λn)
     end
   end
 
-  return llc, ddλ, ssλ, irλ, λi
+  return llc, ddλ, ssλ, λi
 end
 
 

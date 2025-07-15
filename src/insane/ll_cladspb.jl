@@ -84,7 +84,6 @@ end
                       ll  ::Float64,
                       dd  ::Float64,
                       ss  ::Float64,
-                      ir  ::Float64,
                       ns  ::Float64,
                       sos ::Function)
 
@@ -96,14 +95,11 @@ function llik_cladspb_track!(tree::cTpb,
                              ll  ::Float64,
                              dd  ::Float64,
                              ss  ::Float64,
-                             ir  ::Float64,
                              ns  ::Float64,
                              sos ::Function)
 
   λi  = lλ(tree)
-  irr = e(tree) * exp(λi) 
-  ll  = sos(ll, - irr)
-  ir  = sos(ir, irr)
+  ll  = sos(ll, - e(tree) * exp(λi))
 
   if def1(tree)
     td1 = tree.d1
@@ -118,57 +114,53 @@ function llik_cladspb_track!(tree::cTpb,
     ss = sos(ss, sq)
     dd = sos(dd, λ1 + λ2 - 2.0*λi)
 
-    ll, dd, ss, ir, ns = 
-      llik_cladspb_track!(td1, α, σλ, ll, dd, ss, ir, ns, sos)
-    ll, dd, ss, ir, ns = 
-      llik_cladspb_track!(td2, α, σλ, ll, dd, ss, ir, ns, sos)
+    ll, dd, ss, ns = 
+      llik_cladspb_track!(td1, α, σλ, ll, dd, ss, ns, sos)
+    ll, dd, ss, ns = 
+      llik_cladspb_track!(td2, α, σλ, ll, dd, ss, ns, sos)
   end
 
-  return ll, dd, ss, ir, ns
+  return ll, dd, ss, ns
 end
 
 
 
 
 """
-    _ss_ir_dd(tree::cTpb,
-              f   ::Function,
-              α   ::Float64,
-              dd  ::Float64,
-              ss  ::Float64,
-              ir  ::Float64)
+    _ss_dd(tree::cTpb,
+           f   ::Function,
+           α   ::Float64,
+           dd  ::Float64,
+           ss  ::Float64)
 
 Returns the standardized sum of squares for rate `v`, the path number `n`,
-the integrated rate `ir` and the delta drift `dd`.
+and the delta drift `dd`.
 """
-function _ss_ir_dd(tree::cTpb,
-                   f   ::Function,
-                   α   ::Float64,
-                   dd  ::Float64,
-                   ss  ::Float64,
-                   ir  ::Float64)
+function _ss_dd(tree::cTpb,
+                f   ::Function,
+                α   ::Float64,
+                dd  ::Float64,
+                ss  ::Float64)
 
   lλi = lλ(tree)
-  ir += exp(lλi) * e(tree)
 
   if def1(tree)
     td1 = tree.d1
-    dd, ss, ir = _ss_ir_dd(td1, f, α, dd, ss, ir)
+    dd, ss = _ss_dd(td1, f, α, dd, ss)
     if def2(tree)
       td2 = tree.d2
-
-      dd, ss, ir = _ss_ir_dd(td2, f, α, dd, ss, ir)
+      dd, ss = _ss_dd(td2, f, α, dd, ss)
 
       lλ1 = lλ(td1)
       lλ2 = lλ(td2)
-
       ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
       dd += lλ1 + lλ2 - 2.0*lλi
     end
   end
 
-  return dd, ss, ir
+  return dd, ss
 end
+
 
 
 
@@ -193,6 +185,28 @@ function _ss(tree::cTpb, f::Function, α::Float64, ss::Float64)
   end
 
   return ss
+end
+
+
+
+
+"""
+    _ir(tree::cTpb, ir::Float64)
+
+Returns the the integrated rate `ir`.
+"""
+function _ir(tree::cTpb, ir::Float64)
+
+  ir += exp(lλ(tree)) * e(tree)
+
+  if def1(tree)
+    ir = _ir(tree.d1, ir)
+    if def2(tree)
+      ir = _ir(tree.d2, ir)
+    end
+  end
+
+  return ir
 end
 
 
