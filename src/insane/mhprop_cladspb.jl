@@ -143,20 +143,19 @@ function _update_internal!(tree::cTpb,
                            ter ::Bool)
 
   if def1(tree)
-
     llc, ddλ, ssλ, irλ, λa = 
       update_triad!(tree, λa, α, σλ, llc, ddλ, ssλ, irλ)
 
-    llc, ddλ, ssλ, irλ, λa =
+    llc, ddλ, ssλ, irλ, λx =
       _update_internal!(tree.d1, λa, α, σλ, llc, ddλ, ssλ, irλ, ter)
-    llc, ddλ, ssλ, irλ, λa =
+    llc, ddλ, ssλ, irλ, λx =
       _update_internal!(tree.d2, λa, α, σλ, llc, ddλ, ssλ, irλ, ter)
   elseif !isfix(tree) || ter
     llc, ddλ, ssλ, irλ = 
       update_tip!(tree, λa, α, σλ, llc, ddλ, ssλ, irλ)
   end
 
-  return llc, ddλ, ssλ, irλ
+  return llc, ddλ, ssλ, irλ, λa
 end
 
 
@@ -311,7 +310,7 @@ function update_triad!(tree::cTpb,
               (λi - λa - α)^2 - (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
       irλ -= irrλ
       λi   = λn
-      setlλ!(ξi, λn)
+      setlλ!(tree, λn)
     end
   end
 

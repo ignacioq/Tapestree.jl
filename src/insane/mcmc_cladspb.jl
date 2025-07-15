@@ -135,7 +135,6 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
         logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])   +
         logdnorm(αc,         α_prior[1],  α_prior[2]^2)
 
-  L   = treelength(Ξ)                           # tree length
   nin = lastindex(inodes)                       # number of internal nodes
   el  = lastindex(idf)                          # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
@@ -527,7 +526,7 @@ function update_internal!(bix     ::Int64,
       λa = λt(idf[ia])
 
       # updates within the parent branch
-      llc, ddλ, ssλ, irλ = 
+      llc, ddλ, ssλ, irλ, λx = 
         _update_internal!(ξi, λa, α, σλ, llc, ddλ, ssλ, irλ, false)
 
       # get fixed tip and ancestral rate
@@ -543,9 +542,9 @@ function update_internal!(bix     ::Int64,
   end
 
   # # carry on updates in the daughters
-  llc, ddλ, ssλ, irλ = 
+  llc, ddλ, ssλ, irλ, λx = 
     _update_internal!(ξ1, λa, α, σλ, llc, ddλ, ssλ, irλ, iszero(d1(idf[i1])))
-  llc, ddλ, ssλ, irλ = 
+  llc, ddλ, ssλ, irλ, λx = 
     _update_internal!(ξ2, λa, α, σλ, llc, ddλ, ssλ, irλ, iszero(d1(idf[i2])))
 
   return llc, prc, ddλ, ssλ, irλ

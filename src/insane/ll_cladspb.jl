@@ -181,10 +181,10 @@ function _ss(tree::cTpb, f::Function, α::Float64, ss::Float64)
 
   if def1(tree)
     td1 = tree.d1
-    ss += _ss(td1, f, α, ss)
+    ss = _ss(td1, f, α, ss)
     if def2(tree)
       td2 = tree.d2
-      ss += _ss(td2, f, α, ss)
+      ss = _ss(td2, f, α, ss)
       lλi = lλ(tree)
       lλ1 = lλ(td1)
       lλ2 = lλ(td2)
