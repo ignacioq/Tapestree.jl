@@ -100,7 +100,7 @@ function insane_gbmce(tree    ::sT_label;
   # make a decoupled tree
   Ξ = make_Ξ(idf, λc, αi, σλi, δt, srδt, iTce)
 
-  #survival
+  # survival
   mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 1_000, surv)
 
   # get vector of internal branches
@@ -450,6 +450,171 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
       end
     end
   end
+end
+
+
+
+
+
+
+"""
+    update_α!(αc     ::Float64,
+              λ0     ::Float64,
+              σλ     ::Float64,
+              μ      ::Float64,
+              L      ::Float64,
+              ddλ     ::Float64,
+              llc    ::Float64,
+              prc    ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              crown  ::Int64,
+              δt     ::Float64,
+              srδt   ::Float64,
+              α_prior::NTuple{2,Float64})
+
+Gibbs update for `α`.
+"""
+function update_α!(αc     ::Float64,
+                   λ0     ::Float64,
+                   σλ     ::Float64,
+                   μ      ::Float64,
+                   L      ::Float64,
+                   ddλ     ::Float64,
+                   llc    ::Float64,
+                   prc    ::Float64,
+                   mc     ::Float64,
+                   th     ::Float64,
+                   surv  ::Int64,
+                   δt     ::Float64,
+                   srδt   ::Float64,
+                   α_prior::NTuple{2,Float64})
+
+  ν   = α_prior[1]
+  τ2  = α_prior[2]^2
+  σλ2 = σλ^2
+  rs  = σλ2/τ2
+  αp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+
+  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, surv)
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
+    prc += llrdnorm_x(αp, αc, ν, τ2)
+    αc   = αp
+    mc   = mp
+  end
+
+  return llc, prc, αc, mc
+end
+
+
+
+
+"""
+
+    update_σ!(σλc     ::Float64,
+              λ0      ::Float64,
+              α       ::Float64,
+              μ       ::Float64,
+              ssλ     ::Float64,
+              n       ::Float64,
+              llc     ::Float64,
+              prc     ::Float64,
+              mc      ::Float64,
+              th      ::Float64,
+              crown   ::Int64,
+              δt      ::Float64,
+              srδt    ::Float64,
+              σλ_prior::NTuple{2,Float64})
+
+Gibbs update for `σλ`.
+"""
+function update_σ!(σλc     ::Float64,
+                   λ0      ::Float64,
+                   α       ::Float64,
+                   μ       ::Float64,
+                   ssλ     ::Float64,
+                   n       ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   surv   ::Int64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   σλ_prior::NTuple{2,Float64})
+
+  σλ_p1 = σλ_prior[1]
+  σλ_p2 = σλ_prior[2]
+
+  # Gibbs update for σ
+  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
+  σλp  = sqrt(σλp2)
+
+  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, surv)
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) + llr
+    prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+    σλc  = σλp
+    mc   = mp
+  end
+
+  return llc, prc, σλc, mc
+end
+
+
+
+
+"""
+    update_μ!(μc     ::Float64,
+              λ0     ::Float64,
+              α      ::Float64,
+              σλ     ::Float64,
+              llc    ::Float64,
+              prc    ::Float64,
+              ne     ::Float64,
+              L      ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              surv  ::Int64,
+              δt     ::Float64,
+              srδt   ::Float64,
+              μ_prior::NTuple{2,Float64})
+
+Gibbs-MH update for `μ`.
+"""
+function update_μ!(μc     ::Float64,
+                   λ0     ::Float64,
+                   α      ::Float64,
+                   σλ     ::Float64,
+                   llc    ::Float64,
+                   prc    ::Float64,
+                   ne     ::Float64,
+                   L      ::Float64,
+                   mc     ::Float64,
+                   th     ::Float64,
+                   surv  ::Int64,
+                   δt     ::Float64,
+                   srδt   ::Float64,
+                   μ_prior::NTuple{2,Float64})
+
+  μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
+
+  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, surv)
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += ne * log(μp/μc) + L * (μc - μp) + llr
+    prc += llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
+    μc   = μp
+    mc   = mp
+  end
+
+  return llc, prc, μc, mc
 end
 
 
@@ -904,169 +1069,6 @@ function update_gbm!(bix     ::Int64,
   end
 
   return llc, prc, ddλ, ssλ, mc
-end
-
-
-
-
-"""
-    update_α!(αc     ::Float64,
-              λ0     ::Float64,
-              σλ     ::Float64,
-              μ      ::Float64,
-              L      ::Float64,
-              ddλ     ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
-              mc     ::Float64,
-              th     ::Float64,
-              crown  ::Int64,
-              δt     ::Float64,
-              srδt   ::Float64,
-              α_prior::NTuple{2,Float64})
-
-Gibbs update for `α`.
-"""
-function update_α!(αc     ::Float64,
-                   λ0     ::Float64,
-                   σλ     ::Float64,
-                   μ      ::Float64,
-                   L      ::Float64,
-                   ddλ     ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   surv  ::Int64,
-                   δt     ::Float64,
-                   srδt   ::Float64,
-                   α_prior::NTuple{2,Float64})
-
-  ν   = α_prior[1]
-  τ2  = α_prior[2]^2
-  σλ2 = σλ^2
-  rs  = σλ2/τ2
-  αp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
-
-  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, surv)
-  llr = log(mp/mc)
-
-  if -randexp() < llr
-    llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
-    prc += llrdnorm_x(αp, αc, ν, τ2)
-    αc   = αp
-    mc   = mp
-  end
-
-  return llc, prc, αc, mc
-end
-
-
-
-
-"""
-
-    update_σ!(σλc     ::Float64,
-              λ0      ::Float64,
-              α       ::Float64,
-              μ       ::Float64,
-              ssλ     ::Float64,
-              n       ::Float64,
-              llc     ::Float64,
-              prc     ::Float64,
-              mc      ::Float64,
-              th      ::Float64,
-              crown   ::Int64,
-              δt      ::Float64,
-              srδt    ::Float64,
-              σλ_prior::NTuple{2,Float64})
-
-Gibbs update for `σλ`.
-"""
-function update_σ!(σλc     ::Float64,
-                   λ0      ::Float64,
-                   α       ::Float64,
-                   μ       ::Float64,
-                   ssλ     ::Float64,
-                   n       ::Float64,
-                   llc     ::Float64,
-                   prc     ::Float64,
-                   mc      ::Float64,
-                   th      ::Float64,
-                   surv   ::Int64,
-                   δt      ::Float64,
-                   srδt    ::Float64,
-                   σλ_prior::NTuple{2,Float64})
-
-  σλ_p1 = σλ_prior[1]
-  σλ_p2 = σλ_prior[2]
-
-  # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
-  σλp  = sqrt(σλp2)
-
-  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, surv)
-  llr = log(mp/mc)
-
-  if -randexp() < llr
-    llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) + llr
-    prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
-    σλc  = σλp
-    mc   = mp
-  end
-
-  return llc, prc, σλc, mc
-end
-
-
-
-
-"""
-    update_μ!(μc     ::Float64,
-              λ0     ::Float64,
-              α      ::Float64,
-              σλ     ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
-              ne     ::Float64,
-              L      ::Float64,
-              mc     ::Float64,
-              th     ::Float64,
-              surv  ::Int64,
-              δt     ::Float64,
-              srδt   ::Float64,
-              μ_prior::NTuple{2,Float64})
-
-Gibbs-MH update for `μ`.
-"""
-function update_μ!(μc     ::Float64,
-                   λ0     ::Float64,
-                   α      ::Float64,
-                   σλ     ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
-                   ne     ::Float64,
-                   L      ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   surv  ::Int64,
-                   δt     ::Float64,
-                   srδt   ::Float64,
-                   μ_prior::NTuple{2,Float64})
-
-  μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
-
-  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, surv)
-  llr = log(mp/mc)
-
-  if -randexp() < llr
-    llc += ne * log(μp/μc) + L * (μc - μp) + llr
-    prc += llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
-    μc   = μp
-    mc   = mp
-  end
-
-  return llc, prc, μc, mc
 end
 
 

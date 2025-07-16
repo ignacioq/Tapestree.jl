@@ -73,7 +73,7 @@ function insane_cbd(tree    ::sT_label;
 
   # starting parameters
   λc, μc = λi, μi
-  if isnan(λi) && isnan(μi)
+  if isnan(λi) || isnan(μi)
     λc, μc = moments(Float64(n), th, ϵi)
   end
 

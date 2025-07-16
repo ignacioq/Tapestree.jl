@@ -13,11 +13,11 @@ Created 25 06 2020
 
 
 """
-    scale_rate!(tree::iTree, f::Function, s::Float64)
+    scale_rateλ!(tree::T, s::Float64) where {T <: cT}
 
 Add `s` to vector retrieved using function `f`.
 """
-function scale_rateλ!(tree::cTpb, s::Float64)
+function scale_rateλ!(tree::T, s::Float64) where {T <: cT}
 
   addlλ!(tree, s)
 
@@ -2868,7 +2868,7 @@ Set speciation `lλ` for `tree`.
 """
 setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT} =
   setproperty!(tree, :lλ, lλ)
-setlλ!(tree::cTpb, lλ::Float64) = setproperty!(tree, :lλ, lλ)
+setlλ!(tree::T, lλ::Float64) where {T <: cT} = setproperty!(tree, :lλ, lλ)
 
 
 
@@ -2878,7 +2878,7 @@ setlλ!(tree::cTpb, lλ::Float64) = setproperty!(tree, :lλ, lλ)
 
 Add to `lλ` for `tree`.
 """
-addlλ!(tree::cTpb, a::Float64) = setproperty!(tree, :lλ, lλ(tree) + a)
+addlλ!(tree::T, a::Float64) where {T <: cT} = setproperty!(tree, :lλ, lλ(tree) + a)
 
 
 

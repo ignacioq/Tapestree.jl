@@ -1,12 +1,12 @@
 #=
 
-Anagenetic GBM pure-birth MCMC MH proposals
+clads pure-birth MH proposals for internal updates
 
 Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 14 11 2021
+Created 15 07 2025
 =#
 
 
@@ -24,7 +24,7 @@ Created 14 11 2021
                   ssλ     ::Float64,
                   λ0_prior::NTuple{2,Float64})
 
-Do gbm update for crown root.
+Do `clads` update for crown root.
 """
 function _stem_update!(ξi      ::cTpb,
                        λ1      ::Float64,
@@ -77,7 +77,7 @@ end
                    ssλ     ::Float64,
                    λ0_prior::NTuple{2,Float64})
 
-Do gbm update for crown root.
+Do `clads` update for crown root.
 """
 function _crown_update!(ξi      ::cTpb,
                         ξ1      ::cTpb,
@@ -125,16 +125,16 @@ end
                       ssλ ::Float64,
                       ter ::Bool)
 
-Do clads internal rate updates on a decoupled tree recursively.
+Do `clads` internal rate updates on a decoupled tree recursively.
 """
-function _update_internal!(tree::cTpb,
+function _update_internal!(tree::T,
                            λa  ::Float64,
                            α   ::Float64,
                            σλ  ::Float64,
                            llc ::Float64,
                            ddλ ::Float64,
                            ssλ ::Float64,
-                           ter ::Bool)
+                           ter ::Bool) where {T <: cT}
 
   if def1(tree)
     llc, ddλ, ssλ, λa = 
@@ -156,23 +156,23 @@ end
 
 
 """
-    update_tip!(tree::cTpb,
+    update_tip!(tree::T,
                 λa  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 llc ::Float64,
                 ddλ ::Float64,
-                ssλ ::Float64)
+                ssλ ::Float64) where {T <: cT}
 
 Make a `clads` tip proposal.
 """
-function update_tip!(tree::cTpb,
+function update_tip!(tree::T,
                      λa  ::Float64,
                      α   ::Float64,
                      σλ  ::Float64,
                      llc ::Float64,
                      ddλ ::Float64,
-                     ssλ ::Float64)
+                     ssλ ::Float64) where {T <: cT}
 
   @inbounds begin
 
@@ -201,27 +201,27 @@ end
 
 
 """
-    update_triad!(ξi  ::cTpb,
-                  ξ1  ::cTpb,
-                  ξ2  ::cTpb,
+    update_triad!(ξi  ::T,
+                  ξ1  ::T,
+                  ξ2  ::T,
                   λa  ::Float64,
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
                   ddλ ::Float64,
-                  ssλ ::Float64)
+                  ssλ ::Float64) where {T <: cT}
 
-Make a `gbm` trio proposal.
+Make a `clads` trio proposal.
 """
-function update_triad!(ξi  ::cTpb,
-                       ξ1  ::cTpb,
-                       ξ2  ::cTpb,
+function update_triad!(ξi  ::T,
+                       ξ1  ::T,
+                       ξ2  ::T,
                        λa  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,
                        ddλ ::Float64,
-                       ssλ ::Float64)
+                       ssλ ::Float64) where {T <: cT}
 
   @inbounds begin
     λi = lλ(ξi)
@@ -254,22 +254,23 @@ end
 
 
 """
-    update_triad!(tree::cTpb,
+    update_triad!(tree::T,
+                  λa  ::Float64,
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
                   ddλ ::Float64,
-                  ssλ ::Float64)
+                  ssλ ::Float64) where {T <: cT}
 
 Make a trio proposal for clads.
 """
-function update_triad!(tree::cTpb,
+function update_triad!(tree::T,
                        λa  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,
                        ddλ ::Float64,
-                       ssλ ::Float64)
+                       ssλ ::Float64) where {T <: cT}
 
   @inbounds begin
 

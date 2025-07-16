@@ -28,15 +28,15 @@ Predefined functions for plotting:
   `turnover`: turnover
   `diversification`: net diversification
 """
-birth(tree::iT)           = exp.(lλ(tree))
-death(tree::iT)           = exp.(lμ(tree))
-logbirth(tree::iT)        = lλ(tree)
-logdeath(tree::iT)        = lμ(tree)
-turnover(tree::iT)        = exp.(lμ(tree) .- lλ(tree))
-diversification(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
-trait(tree::Tx)           = xv(tree)
-evorate(tree::Tx)         = exp.(lσ2(tree))
-logevorate(tree::Tx)      = lσ2(tree)
+birth(tree::iTree)           = exp.(lλ(tree))
+death(tree::iTree)           = exp.(lμ(tree))
+logbirth(tree::iTree)        = lλ(tree)
+logdeath(tree::iTree)        = lμ(tree)
+turnover(tree::iTree)        = exp.(lμ(tree) .- lλ(tree))
+diversification(tree::iTree) = exp.(lλ(tree)) .- exp.(lμ(tree))
+trait(tree::Tx)              = xv(tree)
+evorate(tree::Tx)            = exp.(lσ2(tree))
+logevorate(tree::Tx)         = lσ2(tree)
 
 
 
@@ -514,7 +514,7 @@ end
 
 
 """
-    _rplottree!(tree  ::cTpb,
+    _rplottree!(tree  ::T,
                 f     ::Function,
                 xc    ::Float64,
                 i     ::Float64,
@@ -524,11 +524,11 @@ end
                 nodet ::Array{Int64,1},
                 xnode ::Array{Float64,1},
                 ynode ::Array{Float64,1},
-                show  ::NTuple{3,Bool})
+                show  ::NTuple{3,Bool}) where {T <: cT}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
 """
-function _rplottree!(tree  ::cTpb,
+function _rplottree!(tree  ::T,
                      f     ::Function,
                      xc    ::Float64,
                      i     ::Float64,
@@ -538,7 +538,7 @@ function _rplottree!(tree  ::cTpb,
                      nodet ::Array{Int64,1},
                      xnode ::Array{Float64,1},
                      ynode ::Array{Float64,1},
-                     show  ::NTuple{3,Bool})
+                     show  ::NTuple{3,Bool}) where {T <: cT}
 
   xe = xc - e(tree)
 

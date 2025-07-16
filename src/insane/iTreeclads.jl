@@ -6,7 +6,7 @@ Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 03 09 2020
+Created 16 07 2025
 =#
 
 
@@ -50,7 +50,7 @@ Constructs an empty `cTpb` object with pendant edge `pe`.
 
 Constructs an `cTpb` object with two `cTpb` daughters and pendant edge `pe`.
 """
-mutable struct cTpb <: iT
+mutable struct cTpb <: cT
   d1 ::cTpb
   d2 ::cTpb
   e  ::Float64
@@ -120,6 +120,55 @@ function cTpb(tree::cTpb)
   end
 end
 
+
+
+
+"""
+    cTce
+
+A composite recursive type of supertype `iT`
+representing a binary phylogenetic tree with no extinction
+and `λ` evolving as a Geometric Brownian motion  for `insane` use,
+with the following fields:
+
+  d1:  daughter tree 1
+  d2:  daughter tree 2
+  e:   edge
+  iμ:  if extinct node
+  fx:  if fix tree
+  lλ:  `log(λ)`
+
+    cTce()
+
+Constructs an empty `cTce` object.
+
+    cTce(e::Float64, fx::Bool, lλ::Float64)
+
+Constructs an empty `cTce` object with pendant edge `pe`.
+
+    cTce(d1::cTce, d2::cTce, e::Float64, fx::Bool, lλ::Float64)
+
+Constructs an `cTce` object with two `cTce` daughters and pendant edge `pe`.
+"""
+mutable struct cTce <: cT
+  d1 ::cTce
+  d2 ::cTce
+  e  ::Float64
+  iμ ::Bool
+  fx ::Bool
+  lλ ::Float64
+
+  cTce() = new()
+  cTce(e::Float64, iμ::Bool, fx::Bool, lλ::Float64) =
+      (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
+  cTce(d1::cTce, d2::cTce, e::Float64, iμ::Bool, fx::Bool, lλ::Float64) =
+      new(d1, d2, e, iμ, fx, lλ)
+end
+
+
+# pretty-printing
+Base.show(io::IO, t::cTce) =
+  print(io, "insane ce-clads tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 

@@ -127,20 +127,20 @@ end
 
 
 """
-    _ss_dd(tree::cTpb,
+    _ss_dd(tree::T,
            f   ::Function,
            α   ::Float64,
            dd  ::Float64,
-           ss  ::Float64)
+           ss  ::Float64) where {T <: cT}
 
 Returns the standardized sum of squares for rate `v`, the path number `n`,
 and the delta drift `dd`.
 """
-function _ss_dd(tree::cTpb,
+function _ss_dd(tree::T,
                 f   ::Function,
                 α   ::Float64,
                 dd  ::Float64,
-                ss  ::Float64)
+                ss  ::Float64) where {T <: cT}
 
   lλi = lλ(tree)
 
@@ -165,11 +165,11 @@ end
 
 
 """
-    _ss(tree::cTpb, f::Function, α::Float64, ss::Float64)
+    _ss(tree::T, f::Function, α::Float64, ss::Float64) where {T <: cT}
 
 Returns the standardized sum of squares for rate `v`.
 """
-function _ss(tree::cTpb, f::Function, α::Float64, ss::Float64)
+function _ss(tree::T, f::Function, α::Float64, ss::Float64) where {T <: cT}
 
   if def1(tree)
     td1 = tree.d1
@@ -191,11 +191,11 @@ end
 
 
 """
-    _ir(tree::cTpb, ir::Float64)
+    _ir(tree::T, ir::Float64) where {T <: cT}
 
 Returns the the integrated rate `ir`.
 """
-function _ir(tree::cTpb, ir::Float64)
+function _ir(tree::T, ir::Float64) where {T <: cT}
 
   ir += exp(lλ(tree)) * e(tree)
 

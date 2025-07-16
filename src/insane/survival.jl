@@ -59,6 +59,66 @@ end
 
 
 
+
+"""
+    m_surv_cladsce(t   ::Float64,
+                   λ0  ::Float64,
+                   α   ::Float64,
+                   σλ  ::Float64,
+                   μ   ::Float64,
+                   ntry::Int64,
+                   c   ::Int64)
+ 
+Sample the total number of `m` trials until both simulations survive
+for `cladsce`.
+"""
+function m_surv_cladsce(t   ::Float64,
+                        λ0  ::Float64,
+                        α   ::Float64,
+                        σλ  ::Float64,
+                        μ   ::Float64,
+                        ntry::Int64,
+                        c   ::Int64)
+  ntries = 1
+  m      = 1.0
+
+  # if survival of process with 1 lineage
+  if isone(c)
+
+    while true
+      s1, n1 = _sim_cladsce_surv(t, λ0, α, σλ, μ, false, 1)
+
+      s1 && break
+      ntries === ntry && break
+
+      m      += 1.0
+      ntries += 1
+    end
+
+  # if survival of process with 2 lineages
+  elseif c === 2
+
+    while true
+      s1, n1 = _sim_cladsce_surv(t, λ0, α, σλ, μ, false, 1)
+
+      if s1
+        s2, n2 = _sim_cladsce_surv(t, λ0, α, σλ, μ, false, 1)
+        s2 && break
+      end
+      ntries === ntry && break
+
+      m      += 1.0
+      ntries += 1
+    end
+  end
+
+  return m
+end
+
+
+
+
+
 """
     m_surv_gbmce(t   ::Float64,
                  λ0  ::Float64,

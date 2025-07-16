@@ -165,22 +165,14 @@ end
 
 
 """
-    make_Ξ(idf ::Vector{iBffs},
-           λ   ::Float64,
-           α   ::Float64,
-           σλ  ::Float64,
-           ::Type{cTpb})
+    make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTpb})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf ::Vector{iBffs},
-                λ   ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                ::Type{cTpb})
+function make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTpb})
 
   Ξ = cTpb[]
-  _make_Ξ!(Ξ, 1, log(λ), α, σλ, idf)
+  _make_Ξ!(Ξ, 1, log(λ), idf)
 
   return Ξ
 end
@@ -201,8 +193,6 @@ Make edge tree `Ξ` from the edge directory.
 function _make_Ξ!(Ξ   ::Vector{cTpb},
                   i   ::Int64,
                   lλ0 ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
                   idf ::Vector{iBffs})
 
   bi = idf[i]
@@ -213,9 +203,60 @@ function _make_Ξ!(Ξ   ::Vector{cTpb},
   push!(Ξ, cTpb(e(bi), true, lλ0))
 
   if i1 > 0 
-    _make_Ξ!(Ξ, i1, lλ0, α, σλ, idf)
+    _make_Ξ!(Ξ, i1, lλ0, idf)
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλ0, α, σλ, idf)
+      _make_Ξ!(Ξ, i2, lλ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTce})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTce})
+
+  Ξ = cTce[]
+  _make_Ξ!(Ξ, 1, log(λ), idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+     _make_Ξ!(Ξ   ::Vector{cTce},
+              i   ::Int64,
+              lλ0 ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTce},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  push!(Ξ, cTce(e(bi), false, true, lλ0))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, idf)
     end
   end
 
@@ -1252,7 +1293,7 @@ end
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
 """
-function _ss_dd(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
+function _ss_dd(Ξ::Vector{T}, idf::Vector{iBffs}, f::Function, α::Float64) where {T <: cT}
 
   dd = ss = 0.0
   for i in Base.OneTo(lastindex(Ξ))
@@ -1483,7 +1524,7 @@ end
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
 """
-function _ss(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
+function _ss(Ξ::Vector{T}, idf::Vector{iBffs}, f::Function, α::Float64) where {T <: cT}
 
   ss = 0.0
   for i in Base.OneTo(lastindex(Ξ))
@@ -1508,11 +1549,11 @@ end
 
 
 """
-    _ir(Ξ::Vector{cTpb})
+    _ir(Ξ::Vector{T}) where {T <: cT}
 
 Returns the `integrated rate`.
 """
-function _ir(Ξ::Vector{cTpb})
+function _ir(Ξ::Vector{T}) where {T <: cT}
 
   ir = 0.0
   for ξi in Ξ
@@ -1582,7 +1623,7 @@ end
 
 Add `s` to vector retrieved using function `f`.
 """
-function scale_rateλ!(Ξ::Vector{cTpb}, s::Float64)
+function scale_rateλ!(Ξ::Vector{T}, s::Float64) where {T <: cT}
 
   for ξ in Ξ
     scale_rateλ!(ξ, s)
