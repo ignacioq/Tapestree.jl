@@ -946,20 +946,19 @@ end
 
 
 
-
 """
-    couple(Ξ  ::Vector{cTpb},
+    couple(Ξ  ::Vector{T},
            idf::Vector{iBffs},
-           ix ::Int64)
+           ix ::Int64) where {T <: cT}
 
 Build tree from decoupled tree.
 """
-function couple(Ξ  ::Vector{cTpb},
+function couple(Ξ  ::Vector{T},
                 idf::Vector{iBffs},
-                ix ::Int64)
+                ix ::Int64) where {T <: cT}
 
   bi  = idf[ix]
-  ξi  = cTpb(Ξ[ix])
+  ξi  = T(Ξ[ix])
   i1  = d1(bi)
   i2  = d2(bi)
 
@@ -980,7 +979,6 @@ function couple(Ξ  ::Vector{cTpb},
 
   return ξi
 end
-
 
 
 

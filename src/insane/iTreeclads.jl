@@ -172,6 +172,23 @@ Base.show(io::IO, t::cTce) =
 
 
 
+
+"""
+    cTce(tree::cTce)
+
+Produce a new copy of `cTce`.
+"""
+function cTce(tree::cTce)
+  if def1(tree)
+    cTce(cTce(tree.d1), cTce(tree.d2), e(tree), isextinct(tree), 
+      isfix(tree), lλ(tree))
+  else
+    cTce(e(tree), isextinct(tree), isfix(tree), lλ(tree))
+  end
+end
+
+
+
 # """
 #     iTce
 

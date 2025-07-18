@@ -993,6 +993,48 @@ end
 
 
 """
+    _ibuffer(io::IOBuffer, tree::cTpb)
+
+Write `cTpb` to IOBuffer.
+"""
+function _ibuffer(io::IOBuffer, tree::cTpb)
+  if def1(tree)
+    write(io, '(')
+    _ibuffer(io, tree.d1), 
+    write(io, ',')
+    _ibuffer(io, tree.d2), 
+    print(io, ',', e(tree), ',', short(isfix(tree)), ',', lλ(tree), ')')
+  else
+    print(io, '(', e(tree), ',', short(isfix(tree)), ',', lλ(tree), ')')
+  end
+end
+
+
+
+
+"""
+    _ibuffer(io::IOBuffer, tree::cTce)
+
+Write `cTce` to IOBuffer.
+"""
+function _ibuffer(io::IOBuffer, tree::cTce)
+  if def1(tree)
+    write(io, '(')
+    _ibuffer(io, tree.d1), 
+    write(io, ',')
+    _ibuffer(io, tree.d2), 
+    print(io, ',', e(tree), ',', short(isextinct(tree)), ',',
+      short(isfix(tree)), ',', lλ(tree), ')')
+  else
+    print(io, '(', e(tree), ',', short(isextinct(tree)), ',', 
+      short(isfix(tree)), ',', lλ(tree), ')')
+  end
+end
+
+
+
+
+"""
     _ibuffer(io::IOBuffer, tree::iTpb)
 
 Write `iTpb` to IOBuffer.
@@ -1004,7 +1046,7 @@ function _ibuffer(io::IOBuffer, tree::iTpb)
     write(io, ',')
     _ibuffer(io, tree.d2), 
     print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',',
-          short(isfix(tree)), ',', lλ(tree), ')')
+          short(isextinct(tree)), ',', short(isfix(tree)), ',', lλ(tree), ')')
   else
     print(io, '(', e(tree), ',', dt(tree), ',', fdt(tree), ',',
           short(isfix(tree)), ',', lλ(tree), ')')

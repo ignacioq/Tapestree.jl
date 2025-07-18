@@ -370,17 +370,17 @@ end
 
 
 
-
 """
     _sim_cladsce_t(t   ::Float64,
                    λt  ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
+                   μ   ::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64,
-                   nn ::Int64,
+                   nn  ::Int64,
                    nlim::Int64)
 
 Simulate `cTce` according to a pure-birth clads for
@@ -390,6 +390,7 @@ function _sim_cladsce_t(t   ::Float64,
                         λt  ::Float64,
                         α   ::Float64,
                         σλ  ::Float64,
+                        μ   ::Float64,
                         lr  ::Float64,
                         lU  ::Float64,
                         iρi ::Float64,
@@ -399,7 +400,8 @@ function _sim_cladsce_t(t   ::Float64,
 
   if isfinite(lr) && nn < nlim
 
-    tw = cpb_wait(exp(λt))
+    λi = exp(λt)
+    tw = cbd_wait(λi, μ)
 
     if tw > t
       na += 1
@@ -408,21 +410,25 @@ function _sim_cladsce_t(t   ::Float64,
         nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr >= lr || lU < nlr
-        return cTce(t, false, λt), na, nn, nlr
+        return cTce(t, false, false, λt), na, nn, nlr
       else
         return cTce(), na, nn, NaN
       end
     end
 
-    nn += 1
-    td1, na, nn, lr =
-      _sim_cladsce_t(t - tw, rnorm(λt + α, σλ), α, σλ, 
-        lr, lU, iρi, na, nn, nlim)
-    td2, na, nn, lr =
-      _sim_cladsce_t(t - tw, rnorm(λt + α, σλ), α, σλ, 
-        lr, lU, iρi, na, nn, nlim)
+    if λorμ(λi, μ)
+      nn += 1
+      td1, na, nn, lr =
+        _sim_cladsce_t(t - tw, rnorm(λt + α, σλ), α, σλ, μ,
+          lr, lU, iρi, na, nn, nlim)
+      td2, na, nn, lr =
+        _sim_cladsce_t(t - tw, rnorm(λt + α, σλ), α, σλ, μ,
+          lr, lU, iρi, na, nn, nlim)
 
-    return cTce(td1, td2, tw, false, λt), na, nn, lr
+      return cTce(td1, td2, tw, false, false, λt), na, nn, lr
+    else
+      return cTce(tw, true, false, λt), na, nn, lr
+    end
   end
 
   return cTce(), na, nn, NaN
@@ -436,6 +442,8 @@ end
                    λt  ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
+                   μ   ::Float64,
+                   na  ::Int64,
                    nn  ::Int64,
                    nlim::Int64,
                    xfs::Vector{Float64})
@@ -446,29 +454,38 @@ function _sim_cladsce_i(t   ::Float64,
                         λt  ::Float64,
                         α   ::Float64,
                         σλ  ::Float64,
+                        μ   ::Float64,
+                        na  ::Int64,
                         nn  ::Int64,
                         nlim::Int64,
                         xfs::Vector{Float64})
 
   if nn < nlim
 
-    tw = cpb_wait(exp(λt))
+    λi = exp(λt)
+    tw = cbd_wait(λi, μ)
 
     if tw > t
+      na += 1
       push!(xfs, λt)
-      return cTce(t, false, λt), nn
+      return cTce(t, false, false, λt), na, nn
     end
 
-    nn += 1
-    d1, nn = _sim_cladsce_i(t - tw, rnorm(λt + α, σλ), α, σλ, nn, nlim, xfs)
-    d2, nn = _sim_cladsce_i(t - tw, rnorm(λt + α, σλ), α, σλ, nn, nlim, xfs)
- 
-    return cTce(d1, d2, tw, false, λt), nn
+    if λorμ(λi, μ)
+      nn += 1
+      d1, na, nn = 
+        _sim_cladsce_i(t - tw, rnorm(λt + α, σλ), α, σλ, μ, na, nn, nlim, xfs)
+      d2, na, nn = 
+        _sim_cladsce_i(t - tw, rnorm(λt + α, σλ), α, σλ, μ, na, nn, nlim, xfs)
+
+      return cTce(d1, d2, tw, false, false, λt), na, nn
+    else
+      return cTce(tw, true, false, λt), na, nn
+    end
   end
 
-  return cTce(), nn
+  return cTce(), na, nn
 end
-
 
 
 
@@ -477,9 +494,11 @@ end
                     λt  ::Float64,
                     α   ::Float64,
                     σλ  ::Float64,
+                    μ   ::Float64,
                     lr  ::Float64,
                     lU  ::Float64,
                     iρi ::Float64,
+                    na  ::Int64,
                     nn  ::Int64,
                     nlim::Int64)
 
@@ -490,31 +509,38 @@ function _sim_cladsce_it(t   ::Float64,
                          λt  ::Float64,
                          α   ::Float64,
                          σλ  ::Float64,
+                         μ   ::Float64,
                          lr  ::Float64,
                          lU  ::Float64,
                          iρi ::Float64,
+                         na  ::Int64,
                          nn  ::Int64,
                          nlim::Int64)
-
   if lU < lr && nn < nlim
 
-    tw = cpb_wait(exp(λt))
+    λi = exp(λt)
+    tw = cbd_wait(λi, μ)
 
     if tw > t
+      na += 1
       lr += log(iρi)
-      return cTce(t, false, λt), nn, lr
+      return cTce(t, false, false, λt), na, nn, lr
     end
 
-    nn += 1
-    td1, nn, lr = 
-      _sim_cladsce_it(t - tw, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, nn, nlim)
-    td2, nn, lr = 
-      _sim_cladsce_it(t - tw, rnorm(λt + α, σλ), α, σλ, lr, lU, iρi, nn, nlim)
+    if λorμ(λi, μ)
+      nn += 1
+      td1, na, nn, lr = _sim_cladsce_it(t - tw, rnorm(λt + α, σλ), α, σλ, μ,
+        lr, lU, iρi, na, nn, nlim)
+      td2, na, nn, lr = _sim_cladsce_it(t - tw, rnorm(λt + α, σλ), α, σλ, μ,
+        lr, lU, iρi, na, nn, nlim)
 
-    return cTce(td1, td2, tw, false, λt), nn, lr
+      return cTce(td1, td2, tw, false, false, λt), na, nn, lr
+    else
+      return cTce(tw, true, false, λt), na, nn, lr
+    end
   end
 
-  return cTce(), nn, NaN
+  return cTce(), na, nn, NaN
 end
 
 
@@ -563,4 +589,6 @@ function _sim_cladsce_surv(t   ::Float64,
 
   return true, nn
 end
+
+
 

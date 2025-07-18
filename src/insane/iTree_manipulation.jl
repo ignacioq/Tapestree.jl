@@ -1319,6 +1319,86 @@ end
 
 
 """
+    fixtip1!(tree::T, 
+             wi  ::Int64, 
+             ix  ::Int64, 
+             λa  ::Float64, 
+             ei  ::Float64, 
+             λi  ::Float64) where {T <: cT}
+
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T, 
+                  wi  ::Int64, 
+                  ix  ::Int64, 
+                  λa  ::Float64, 
+                  ei  ::Float64, 
+                  λi  ::Float64) where {T <: cT}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setlλ!(tree, λi)
+        return true, ix, λa, e(tree)
+      end
+    end
+  else
+    f, ix, λa, ei = fixtip1!(tree.d1, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+    f, ix, λa, ei = fixtip1!(tree.d2, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+  end
+
+  return false, ix, λa, ei
+end
+
+
+
+
+"""
+    fixtip2!(tree::T, wi::Int64, ix::Int64, λa::Float64) where {T <: cT}
+
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T, wi::Int64, ix::Int64, λa::Float64) where {T <: cT}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setlλ!(tree, λi)
+        return true, ix, λa, e(tree)
+      end
+    end
+  else
+    f, ix, λa, ei = fixtip2!(tree.d2, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+    f, ix, λa, ei = fixtip2!(tree.d1, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+  end
+
+  return false, ix, λa, ei
+end
+
+
+
+
+"""
     fixtip1!(tree::T,
              wi  ::Int64,
              ix  ::Int64,

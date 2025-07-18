@@ -80,17 +80,19 @@ end
 
 
 
+
 """
-    llik_clads_track!(tree::cTce,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      μ   ::Float64,
-                      ll  ::Float64,
-                      dd  ::Float64,
-                      ss  ::Float64,
-                      ns  ::Float64,
-                      ne  ::Float64,
-                      sos ::Function)
+    llik_cladsce_track!(tree::cTce,
+                        α   ::Float64,
+                        σλ  ::Float64,
+                        μ   ::Float64,
+                        ll  ::Float64,
+                        dd  ::Float64,
+                        ss  ::Float64,
+                        ns  ::Float64,
+                        ne  ::Float64,
+                        L   ::Float64,
+                        sos ::Function)
 
 Returns the log-likelihood for a `cTce` according to clads.
 """
@@ -103,10 +105,13 @@ function llik_cladsce_track!(tree::cTce,
                              ss  ::Float64,
                              ns  ::Float64,
                              ne  ::Float64,
+                             L   ::Float64,
                              sos ::Function)
 
-  λi  = lλ(tree)
-  ll  = sos(ll, - e(tree) * (exp(λi) + μ))
+  λi = lλ(tree)
+  ei = e(tree)
+  ll = sos(ll, - ei * (exp(λi) + μ))
+  L  = sos(L, ei)
 
   if def1(tree)
     td1 = tree.d1
@@ -121,16 +126,16 @@ function llik_cladsce_track!(tree::cTce,
     ss = sos(ss, sq)
     dd = sos(dd, λ1 + λ2 - 2.0*λi)
 
-    ll, dd, ss, ns, ne = 
-      llik_cladsce_track!(td1, α, σλ, μ, ll, dd, ss, ns, ne, sos)
-    ll, dd, ss, ns, ne = 
-      llik_cladsce_track!(td2, α, σλ, μ, ll, dd, ss, ns, ne, sos)
+    ll, dd, ss, ns, ne, L = 
+      llik_cladsce_track!(td1, α, σλ, μ, ll, dd, ss, ns, ne, L, sos)
+    ll, dd, ss, ns, ne, L = 
+      llik_cladsce_track!(td2, α, σλ, μ, ll, dd, ss, ns, ne, L, sos)
   elseif isextinct(tree)
     ne = sos(ne, 1.0)
     ll = sos(ll, log(μ))
   end
 
-  return ll, dd, ss, ns, ne
+  return ll, dd, ss, ns, ne, L
 end
 
 

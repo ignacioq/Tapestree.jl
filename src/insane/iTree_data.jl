@@ -2213,19 +2213,19 @@ end
 
 
 """
-    _λat!(tree::cTpb,
+    _λat!(tree::T,
           c   ::Float64,
           λs  ::Vector{Float64},
           t   ::Float64,
-          λfx ::Float64)
+          λfx ::Float64) where {T <: cT}
 
 Return speciation rates, `λs`, at time `c` for `tree`.
 """
-function _λat!(tree::cTpb,
+function _λat!(tree::T,
                c   ::Float64,
                λs  ::Vector{Float64},
                t   ::Float64,
-               λfx ::Float64)
+               λfx ::Float64) where {T <: cT}
 
   et = e(tree)
 
