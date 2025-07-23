@@ -463,11 +463,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

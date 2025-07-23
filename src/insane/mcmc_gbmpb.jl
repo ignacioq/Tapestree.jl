@@ -397,11 +397,11 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

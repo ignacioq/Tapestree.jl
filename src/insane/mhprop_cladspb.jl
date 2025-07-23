@@ -145,8 +145,10 @@ function _update_internal!(tree::T,
     llc, ddλ, ssλ, λx =
       _update_internal!(tree.d2, λa, α, σλ, llc, ddλ, ssλ, ter)
   elseif !isfix(tree) || ter
-    llc, ddλ, ssλ = 
-      update_tip!(tree, λa, α, σλ, llc, ddλ, ssλ)
+    if !isnan(λa)
+      llc, ddλ, ssλ = 
+        update_tip!(tree, 0.0, λa, α, σλ, llc, ddλ, ssλ)
+    end
   end
 
   return llc, ddλ, ssλ, λa
@@ -157,7 +159,9 @@ end
 
 """
     update_tip!(tree::T,
+                eas ::Float64,
                 λa  ::Float64,
+                eds ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
                 llc ::Float64,
@@ -167,7 +171,9 @@ end
 Make a `clads` tip proposal.
 """
 function update_tip!(tree::T,
+                     eas ::Float64,
                      λa  ::Float64,
+                     eds ::Float64,
                      α   ::Float64,
                      σλ  ::Float64,
                      llc ::Float64,
@@ -184,7 +190,7 @@ function update_tip!(tree::T,
 
     # likelihood ratios
     llrbm = llrdnorm_x(λn, λi, λa + α, σλ^2)
-    llrpb = ei*(exp(λi) - exp(λn))
+    llrpb = (eas + ei + eds)*(exp(λi) - exp(λn))
 
     if -randexp() < llrpb
       llc += llrbm + llrpb
@@ -275,25 +281,28 @@ function update_triad!(tree::T,
   @inbounds begin
 
     λi = lλ(tree)
-    λ1 = lλ(tree.d1)
-    λ2 = lλ(tree.d2)
-    ei = e(tree)
 
-    # node proposal
-    λn = trioprop(λa + α, λ1 - α, λ2 - α, σλ)
+    if !isnan(λa)
+      λ1 = lλ(tree.d1)
+      λ2 = lλ(tree.d2)
+      ei = e(tree)
 
-    # likelihood ratios
-    llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
-    llrpb = λn - λi + ei*(exp(λi) - exp(λn))
+      # node proposal
+      λn = trioprop(λa + α, λ1 - α, λ2 - α, σλ)
 
-    if -randexp() < llrpb
-      llc += llrbm + llrpb
-      ddλ += (λi - λn)
-      ssλ += 0.5*(
-              (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
-              (λi - λa - α)^2 - (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
-      λi   = λn
-      setlλ!(tree, λn)
+      # likelihood ratios
+      llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
+      llrpb = λn - λi + ei*(exp(λi) - exp(λn))
+
+      if -randexp() < llrpb
+        llc += llrbm + llrpb
+        ddλ += (λi - λn)
+        ssλ += 0.5*(
+                (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
+                (λi - λa - α)^2 - (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
+        λi   = λn
+        setlλ!(tree, λn)
+      end
     end
   end
 

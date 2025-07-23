@@ -491,11 +491,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

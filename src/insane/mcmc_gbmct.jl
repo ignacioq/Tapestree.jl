@@ -481,11 +481,11 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

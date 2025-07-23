@@ -285,11 +285,11 @@ function mcmc_cpb(Ξ      ::Vector{sTpb},
 
           next!(pbar)
         end
-      
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

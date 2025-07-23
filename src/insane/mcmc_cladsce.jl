@@ -96,9 +96,6 @@ function insane_cladsce(tree    ::sT_label;
   # survival
   mc = m_surv_cladsce(th, log(λc), αi, σλi, μc, 1_000, surv)
 
-  # get vector of internal branches
-  inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
-
   # parameter updates (1: α, 2: σ, 3: scale, 4: gbm, 5: fs)
   spup = sum(pupdp)
   pup  = Int64[]
@@ -111,13 +108,13 @@ function insane_cladsce(tree    ::sT_label;
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, μc, mc, ns, ne, ddλ, ssλ, L, stn =
     mcmc_burn_cladsce(Ξ, idf, λ0_prior, α_prior, σλ_prior, μ_prior, nburn, 
-      αi, σλi, μc, mc, th, rmλ, surv, stn, inodes, pup, prints)
+      αi, σλi, μc, mc, th, rmλ, surv, stn, pup, prints)
 
   # mcmc
   r, treev = 
     mcmc_cladsce(Ξ, idf, llc, prc, αc, σλc, μc, mc, th, rmλ, surv, ns, ne, 
       ddλ, ssλ, L, stn, λ0_prior, α_prior, σλ_prior, μ_prior, 
-      inodes, pup, niter, nthin, nflush, ofile, prints)
+      pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -141,7 +138,6 @@ end
                       rmλ     ::Float64,
                       surv    ::Int64,
                       stn     ::Float64,
-                      inodes  ::Array{Int64,1},
                       pup     ::Array{Int64,1},
                       prints  ::Int64)
 
@@ -162,7 +158,6 @@ function mcmc_burn_cladsce(Ξ       ::Vector{cTce},
                            rmλ     ::Float64,
                            surv    ::Int64,
                            stn     ::Float64,
-                           inodes  ::Array{Int64,1},
                            pup     ::Array{Int64,1},
                            prints  ::Int64)
 
@@ -175,7 +170,6 @@ function mcmc_burn_cladsce(Ξ       ::Vector{cTce},
         logdgamma(μc,        μ_prior[1],  μ_prior[2])
 
   L   = treelength(Ξ)      # tree length
-  nin = lastindex(inodes)                       # number of internal nodes
   el  = lastindex(idf)                          # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
   ne  = 0.0                                     # number of extinction events
@@ -234,7 +228,7 @@ function mcmc_burn_cladsce(Ξ       ::Vector{cTce},
       # update internal
       elseif pupi === 5
 
-        bix = inodes[fIrand(nin) + 1]
+        bix = fIrand(el) + 1
 
         llc, prc, ddλ, ssλ, mc =
           update_internal!(bix, Ξ, idf, αc, σλc, μc, llc, prc, ddλ, ssλ, 
@@ -273,7 +267,7 @@ end
                  prc     ::Float64,
                  αc      ::Float64,
                  σλc     ::Float64,
-                 μc     ::Float64,
+                 μc      ::Float64,
                  mc      ::Float64,
                  th      ::Float64,
                  rmλ     ::Float64,
@@ -286,7 +280,6 @@ end
                  α_prior ::NTuple{2,Float64},
                  σλ_prior::NTuple{2,Float64},
                  μ_prior ::NTuple{2,Float64},
-                 inodes  ::Array{Int64,1},
                  pup     ::Vector{Int64},
                  niter   ::Int64,
                  nthin   ::Int64,
@@ -302,7 +295,7 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
                       prc     ::Float64,
                       αc      ::Float64,
                       σλc     ::Float64,
-                      μc     ::Float64,
+                      μc      ::Float64,
                       mc      ::Float64,
                       th      ::Float64,
                       rmλ     ::Float64,
@@ -317,7 +310,6 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
                       α_prior ::NTuple{2,Float64},
                       σλ_prior::NTuple{2,Float64},
                       μ_prior ::NTuple{2,Float64},
-                      inodes  ::Array{Int64,1},
                       pup     ::Vector{Int64},
                       niter   ::Int64,
                       nthin   ::Int64,
@@ -329,15 +321,13 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
   nlogs = fld(niter,nthin)
   lthin = lit = sthin = zero(Int64)
 
-  nin = lastindex(inodes)  # number of internal nodes
-  el  = lastindex(idf)     # number of branches
-
   # parameter results
   r   = Array{Float64,2}(undef, nlogs, 7)
 
   λfs   = Float64[]
-  treev = cTce[]  # make Ξ vector
-  io    = IOBuffer() # buffer 
+  treev = cTce[]           # make Ξ vector
+  io    = IOBuffer()       # buffer 
+  el    = lastindex(idf)   # number of branches
 
   open(ofile*".log", "w") do of
 
@@ -415,7 +405,7 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
             # update internal λ
             elseif pupi === 5
 
-              bix = inodes[fIrand(nin) + 1]
+              bix = fIrand(el) + 1
 
               llc, prc, ddλ, ssλ, mc =
                 update_internal!(bix, Ξ, idf, αc, σλc, μc, llc, prc, ddλ, ssλ, 
@@ -476,11 +466,11 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 
@@ -739,70 +729,90 @@ function update_internal!(bix     ::Int64,
   ξi   = Ξ[bix]
   bi   = idf[bix]
   i1   = d1(bi)
+  it   = iszero(i1) # is terminal
   i2   = d2(bi)
   ia   = pa(bi)
-  ξ1   = Ξ[i1]
-  ξ2   = Ξ[i2]
   root = iszero(ia)
   λa   = NaN  # ancestral speciation
 
   # if crown root
   if root && iszero(e(ξi))
     llc, prc, ddλ, ssλ, mc =
-      _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
+      _crown_update!(ξi, Ξ[i1], Ξ[i2], α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
         λ0_prior, surv)
     λa = lλ(ξi)
     setλt!(bi, λa)
   else
     # if stem
     if root
-      if istip(ξi)
-        llc, prc, ddλ, ssλ, mc = 
-          _stem_update!(ξi, lλ(ξ1), lλ(ξ2), 
-            α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, λ0_prior, surv)
-        λa = lλ(ξi)
+      # if cladogenetic branch
+      if i2 > 0
+        eds, λ1, λ2 = 0.0, lλ(Ξ[i1]), lλ(Ξ[i2])
+      # if mid branch
       else
-        llc, prc, ddλ, ssλ, mc = 
-          _stem_update!(ξi, lλ(ξ1.d1), lλ(ξ2.d2),
-            α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, λ0_prior, surv)
-
-        # updates within the stem daughter branches
-        llc, ddλ, ssλ = 
-          _update_internal!(ξi.d1, lλ(ξi), α, σλ, llc, ddλ, ssλ, false)
-        llc, ddλ, ssλ = 
-          _update_internal!(ξi.d2, lλ(ξi), α, σλ, llc, ddλ, ssλ, false)
-
-        # get fixed tip and ancestral rate
-        lξi, λa = fixtip(ξi, λa)
-
-        # make fixed branch update
-        llc, ddλ, ssλ, λa = 
-          update_triad!(lξi, ξ1, ξ2, λa, α, σλ, llc, ddλ, ssλ)
+        eds, λ1, λ2 = downstreamλs(bix, Ξ, idf, 0.0, NaN, NaN)
       end
+
+      llc, prc, ddλ, ssλ, mc, λi = 
+        _stem_update!(ξi, eds, λ1, λ2, 
+          α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, λ0_prior, surv)
+
+      # set new λ downstream, if necessary
+      setdownstreamλ!(λi, bix, Ξ, idf)
+
+      # if there are speciation events in stem branch
+      if !istip(ξi)
+        eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
+
+        # updates within the parent branch
+        llc, ddλ, ssλ, λx = 
+          _update_internal!(ξi.d1, bi, eas, λi, α, σλ, eds, λ1, λ2, 
+            llc, ddλ, ssλ, false)
+        llc, ddλ, ssλ, λx = 
+          _update_internal!(ξi.d2, bi, eas, λi, α, σλ, eds, λ1, λ2, 
+            llc, ddλ, ssλ, false)
+
+        setdownstreamλ!(λi, i1, Ξ, idf)
+      end
+
+    # if *not* root
     else
-      λa = λt(idf[ia])
 
-      # updates within the parent branch
-      llc, ddλ, ssλ, λx = 
-        _update_internal!(ξi, λa, α, σλ, llc, ddλ, ssλ, false)
+      # find cladogenetic ancestor
+      eas, λa, il = upstreamλ(ia, Ξ, idf, 0.0, λa)
 
-      # get fixed tip and ancestral rate
-      lξi, λa = fixtip(ξi, λa)
+      # check if mid branch does not lead to the stem branch
+      if pa(idf[il]) > 0
 
-      # make fixed branch update
-      llc, ddλ, ssλ, λa = 
-        update_triad!(lξi, ξ1, ξ2, λa, α, σλ, llc, ddλ, ssλ)
+        # it non-terminal branch
+        eds, λ1, λ2 = 0.0, NaN, NaN
+        if !it
+          # if cladogenetic branch
+          if i2 > 0
+            eds, λ1, λ2 = 0.0, lλ(Ξ[i1]), lλ(Ξ[i2])
+          # if mid branch
+          else
+            eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
+          end
+        end
+
+        ll0 = llc
+
+        # updates within the parent branch
+        llc, ddλ, ssλ, λx = 
+          _update_internal!(ξi, bi, eas, λa, α, σλ, eds, λ1, λ2, llc, 
+            ddλ, ssλ, it)
+
+        # if update, update up- and down-stream
+        if ll0 != llc
+          λi = lλ(ξi)
+          setupstreamλ!(λi, ia, Ξ, idf)
+          λi = lλ(fixtip(ξi))
+          (!it && iszero(i2)) && setdownstreamλ!(λi, i1, Ξ, idf)
+        end
+      end
     end
-
-    # set fixed `λ(t)` in branch
-    setλt!(bi, λa)
   end
-
-  # # carry on updates in the daughters
-  llc, ddλ, ssλ, λx = 
-    _update_internal!(ξ1, λa, α, σλ, llc, ddλ, ssλ, iszero(d1(idf[i1])))
-  llc, ddλ, ssλ, λx = 
-    _update_internal!(ξ2, λa, α, σλ, llc, ddλ, ssλ, iszero(d1(idf[i2])))
 
   return llc, prc, ddλ, ssλ, mc
 end
@@ -851,19 +861,23 @@ function update_fs!(bix  ::Int64,
     λa = λt(idf[ia])
   end
 
-  # if terminal
   ssλr = ddλr = zero(Float64)
+  llr  = NaN
+  # if terminal
   if iszero(d1(bi))
-    ξp, llr = fsbi_t(bi, λa, α, σλ, μ)
+    ξp, llr = fsbi_t(bi, ξc, λa, α, σλ, μ)
 
   # if mid
   elseif iszero(d2(bi))
-    ξp, llr =fsbi_m(bi, ξc, λa, lλ(Ξ[d1(bi)]), α, σλ, μ, λfs)
+    ξp, llr, ddλr, ssλr = 
+      fsbi_m(bi, idf, ξc, Ξ, λa, α, σλ, μ, λfs)
 
   # if internal
   else
-    ξp, llr, ddλr, ssλr = 
-      fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, μ, λfs)
+    if e(bi) > 0.0
+      ξp, llr, ddλr, ssλr = 
+        fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, μ, λfs)
+    end
   end
 
   # if accepted
@@ -875,7 +889,7 @@ function update_fs!(bix  ::Int64,
       llik_cladsce_track!(ξp, α, σλ, μ, llc, ddλ, ssλ, ns, ne, L, +)
 
     # first change from ancestor
-    if ia > 0 && d2(idf[ia]) > 0
+    if !isnan(λa)
       λp, λc = lλ(ξp), lλ(ξc)
       llc += llrdnorm_x(λp, λc, λa + α, σλ^2)
       ddλ += λp - λc
@@ -899,6 +913,7 @@ end
 
 """
     fsbi_t(bi::iBffs,
+           ξi ::cTce,
            λa::Float64,
            α ::Float64,
            σλ::Float64,
@@ -907,6 +922,7 @@ end
 Forward simulation for terminal branch `bi`.
 """
 function fsbi_t(bi::iBffs,
+                ξi ::cTce,
                 λa::Float64,
                 α ::Float64,
                 σλ::Float64,
@@ -919,11 +935,20 @@ function fsbi_t(bi::iBffs,
   # current ll
   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
+  # if does **not** come from a cladogenetic event
+  ncl = isnan(λa)
+  if ncl
+    λi = lλ(ξi)
+  else
+    λi = rnorm(λa + α, σλ)
+  end
+
   # forward simulation during branch length
   t0, na, nn, llr =
-    _sim_cladsce_t(e(bi), rnorm(λa + α, σλ), α, σλ, μ, lc, lU, iρi, 0, 1, 500)
+    _sim_cladsce_t(e(bi), λi, α, σλ, μ, lc, lU, iρi, 0, 1, 500)
 
   if na > 0 && isfinite(llr)
+
     _fixrtip!(t0, na) # fix random tip
     setni!(bi, na)    # set new ni
 
@@ -937,39 +962,43 @@ end
 
 
 """
-    fsbi_m(bi  ::iBffs,
-           ξc  ::cTce,
-           λa  ::Float64,
-           λ1  ::Float64,
-           α   ::Float64,
-           σλ  ::Float64,
-           μ   ::Float64,
-           λfs ::Vector{Float64})
+    fsbi_m(bi ::iBffs,
+           idf::Vector{iBffs},
+           ξc ::cTce,
+           Ξ  ::Vector{cTce},
+           λa ::Float64,
+           α  ::Float64,
+           σλ ::Float64,
+           μ  ::Float64,
+           λfs::Vector{Float64})
 
 Forward simulation for internal branch `bi`
 """
 function fsbi_m(bi ::iBffs,
-                ξc ::cTce,
+                idf::Vector{iBffs},
+                ξi ::cTce,
+                Ξ  ::Vector{cTce},
                 λa ::Float64,
-                λ1 ::Float64,
                 α  ::Float64,
                 σλ ::Float64,
                 μ  ::Float64,
                 λfs::Vector{Float64})
 
-  if isnan(λa)
-    λi = lλ(ξc)
+  # if does **not** come from a cladogenetic event
+  ncl = isnan(λa)
+
+  if ncl
+    λi = lλ(ξi)
   else
     λi = rnorm(λa + α, σλ)
   end
 
-  empty!(λfs)
-
   # forward simulation during branch length
+  empty!(λfs)
   t0, na, nn = _sim_cladsce_i(e(bi), λi, α, σλ, μ, 0, 1, 500, λfs)
 
   if na < 1 || nn > 499
-    return t0, NaN
+    return t0, NaN, NaN, NaN
   end
 
   lU = -randexp() #log-probability
@@ -979,69 +1008,78 @@ function fsbi_m(bi ::iBffs,
   iρi  = (1.0 - ρi(bi))        # branch sampling fraction
   acr  = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
-  # choose most likely lineage to fix
-  wt, λp, acr = wfix_m(t0, ξc, e(bi), λfs, λ1, α, σλ, acr)
+  # search for next lλ1 and lλ2 if the exist
+  i1 = d1(bi)
+  eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
 
-  # fix the tip
-  if wt <= div(na,2)
-    bo, ix, λa, ei = fixtip1!(t0, wt, 0, NaN, NaN, λ1)
+  ## choose most likely lineage to fix
+  # if downstream is tip
+  ddr = ssr = 0.0
+  if isnan(λ1)
+    wt, λp, pp, λc, pc, acr = wfix_m(ξi, e(bi), λfs, eds, μ, acr)
+  # if downstream is cladogenetic
   else
-    bo, ix, λa, ei = fixtip2!(t0, na - wt + 1, 0, NaN, NaN, λ1)
-  end
-
-  # if there were speciation events
-  if !isnan(λa)
-    acr += llrdnorm_x(λ1, λp, λa + α, σλ^2) + ei*(exp(λp) - exp(λ1))
+    wt, λp, pp, λc, pc, acr, ddr, ssr = 
+      wfix_m(ξi, e(bi), λfs, eds, λ1, λ2, α, σλ, μ, acr)
   end
 
   if lU < acr
+
+    # fix the tip
+    if wt <= div(na,2)
+      fixtip1!(t0, wt, 0)
+    else
+      fixtip2!(t0, na - wt + 1, 0)
+    end
 
     # simulated remaining tips until the present
     t0, na, nn, acr =
       tip_sims!(t0, tf(bi), α, σλ, μ, acr, lU, iρi, na, nn)
 
     if lU < acr
+
       na -= 1
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
+      if isfinite(λ1)
+        llr += λp - λc
+      end
       setni!(bi, na)                     # set new ni
 
-      return t0, llr
+      # downstream change
+      setdownstreamλ!(λp, i1, Ξ, idf)
+
+      return t0, llr, ddr, ssr
     end
   end
 
-  return t0, NaN
+  return t0, NaN, NaN, NaN
 end
 
 
 
 
 """
-    wfix_m(ξp ::cTce,
-           ξc ::cTce,
+    wfix_m(ξi ::cTce,
            ei ::Float64,
            λfs::Vector{Float64},
-           λ1 ::Float64,
-           α  ::Float64,
-           σλ ::Float64,
+           eds::Float64,
            acr::Float64)
 
 Choose most likely simulated lineage to fix with respect to daughter
-for bifurcating `i` branches.
+for middle `i` branches with downstream **tips**.
 """
-function wfix_m(ξp ::cTce,
-                ξc ::cTce,
+function wfix_m(ξi ::cTce,
                 ei ::Float64,
                 λfs::Vector{Float64},
-                λ1 ::Float64,
-                α  ::Float64,
-                σλ ::Float64,
+                eds::Float64,
+                μ  ::Float64,
                 acr::Float64)
 
   # select best from proposal
   sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
   for λfi in λfs
     i += 1
-    p  = dnorm(λ1, λfi, σλ)
+    p  = exp(- eds * (exp(λfi) + μ))
     sp += p
     if p > pp
       pp  = p
@@ -1056,7 +1094,7 @@ function wfix_m(ξp ::cTce,
 
   sc, pc = 0.0, NaN
   for λfi in λfs
-    p   = dnorm(λ1, λfi, σλ)
+    p   = exp(- eds * (exp(λfi) + μ))
     sc += p
     if λc === λfi
       pc = p
@@ -1064,9 +1102,73 @@ function wfix_m(ξp ::cTce,
   end
 
   # likelihood ratio and acceptance
-  acr += log((pc * sp)/(pp * sc))
+  acr += log(sp/sc)
 
-  return wt, λp, acr
+  return wt, λp, pp, λc, pc, acr
+end
+
+
+
+
+"""
+    wfix_m(ξi ::cTce,
+           ei ::Float64,
+           λfs::Vector{Float64},
+           eds::Float64,
+           λ1 ::Float64,
+           λ2 ::Float64,
+           α  ::Float64,
+           σλ ::Float64,
+           μ  ::Float64,
+           acr::Float64)
+
+Choose most likely simulated lineage to fix with respect to daughter
+for middle `i` branches with downstream **cladogenetic** daughters.
+"""
+function wfix_m(ξi ::cTce,
+                ei ::Float64,
+                λfs::Vector{Float64},
+                eds::Float64,
+                λ1 ::Float64,
+                λ2 ::Float64,
+                α  ::Float64,
+                σλ ::Float64,
+                μ  ::Float64,
+                acr::Float64)
+
+  # select best from proposal
+  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  for λfi in λfs
+    i  += 1
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * (exp(λfi) + μ))
+    sp += p
+    if p > pp
+      pp  = p
+      λp  = λfi
+      wt  = i
+    end
+  end
+
+  # extract current xis and estimate ratio
+  empty!(λfs)
+  λc = _λat!(ξi, ei, λfs, 0.0, NaN)
+
+  sc, pc = 0.0, NaN
+  for λfi in λfs
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * (exp(λfi) + μ))
+    sc += p
+    if λc === λfi
+      pc = p
+    end
+  end
+
+  # likelihood and acceptance ratio
+  acr += log(sp/sc) + λp - λc
+  ddr  = 2.0*(λc - λp)
+  ssr  = 0.5*((λ1 - λp - α)^2 + (λ2 - λp - α)^2 - 
+              (λ1 - λc - α)^2 - (λ2 - λc - α)^2)
+
+  return wt, λp, pp, λc, pc, acr, ddr, ssr
 end
 
 
@@ -1074,7 +1176,7 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
-           ξc  ::cTce,
+           ξi  ::cTce,
            λa  ::Float64,
            λ1  ::Float64,
            λ2  ::Float64,
@@ -1086,7 +1188,7 @@ end
 Forward simulation for internal branch `bi`
 """
 function fsbi_i(bi  ::iBffs,
-                ξc  ::cTce,
+                ξi  ::cTce,
                 λa  ::Float64,
                 λ1  ::Float64,
                 λ2  ::Float64,
@@ -1095,8 +1197,10 @@ function fsbi_i(bi  ::iBffs,
                 μ   ::Float64,
                 λfs ::Vector{Float64})
 
-  if isnan(λa)
-    λi = lλ(ξc)
+  # if does **not** come from a cladogenetic event
+  ncl = isnan(λa)
+  if ncl
+    λi = lλ(ξi)
   else
     λi = rnorm(λa + α, σλ)
   end
@@ -1119,7 +1223,7 @@ function fsbi_i(bi  ::iBffs,
 
   # choose most likely lineage to fix
   wt, λp, pp, λc, pc, acr, ddr, ssr = 
-    wfix_i(ξc, e(bi), λfs, λ1, λ2, α, σλ, acr)
+    wfix_i(ξi, e(bi), λfs, λ1, λ2, α, σλ, acr)
 
   if lU < acr
 

@@ -1364,11 +1364,21 @@ end
 
 
 """
-    fixtip2!(tree::T, wi::Int64, ix::Int64, λa::Float64) where {T <: cT}
+    fixtip2!(tree::T, 
+             wi  ::Int64, 
+             ix  ::Int64, 
+             λa  ::Float64, 
+             ei  ::Float64, 
+             λi  ::Float64) where {T <: cT}
 
 Fixes the the path to tip `wi` in d2 order.
 """
-function fixtip2!(tree::T, wi::Int64, ix::Int64, λa::Float64) where {T <: cT}
+function fixtip2!(tree::T, 
+                  wi  ::Int64, 
+                  ix  ::Int64, 
+                  λa  ::Float64, 
+                  ei  ::Float64, 
+                  λi  ::Float64) where {T <: cT}
 
   if istip(tree)
     if isalive(tree)
@@ -1814,6 +1824,46 @@ function _remove_unsampled!(tree::cTpb)
     if !isfix(tree.d1)
       if !isfix(tree.d2)
         return cTpb(e(tree), isfix(tree), lλ(tree))
+      else
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0 = lλ(tree)
+        λ2 = lλ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+      end
+    elseif !isfix(tree.d2)
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0 = lλ(tree)
+      λ1 = lλ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+    end
+  end
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::cTce)
+
+Remove extinct tips from `cTce`.
+"""
+function _remove_unsampled!(tree::cTce)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return cTce(e(tree), isextinct(tree), isfix(tree), lλ(tree))
       else
         e0   = e(tree)
         e2   = e(tree.d2)
@@ -3084,6 +3134,81 @@ Set `x` as shift to d1 (true) or d2 (false).
 """
 setsh!(tree::T, x::Bool) where {T <: Tx} =
   setproperty!(tree, :sh, x)
+
+
+
+
+"""
+    setupstreamλ!(λi ::Float64,
+                  i  ::Int64,
+                  Ξ  ::Vector{cTce},
+                  idf::Vector{iBffs})
+
+Set the speciation rate of the upstream ancestors, if any, for 
+middle branches to `λi`.
+"""
+function setupstreamλ!(λi ::Float64,
+                       i  ::Int64,
+                       Ξ  ::Vector{cTce},
+                       idf::Vector{iBffs})
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is non-cladogenetic
+    if iszero(d2(bi))
+      ξi   = Ξ[i]
+
+      if def2(ξi)
+        lξi = fixtip(ξi)
+        setlλ!(lξi, λi)
+      else
+        setlλ!(ξi, λi)
+        setupstreamλ!(λi, pa(bi), Ξ, idf)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setdownstreamλ!(λi ::Float64,
+                    i  ::Int64
+                    Ξ  ::Vector{cTce}, 
+                    idf::Vector{iBffs})
+
+Set the speciation rate of the downstream daughters, if any, for 
+middle branches to `λi`.
+"""
+function setdownstreamλ!(λi ::Float64,
+                         i  ::Int64,
+                         Ξ  ::Vector{cTce}, 
+                         idf::Vector{iBffs})
+
+  @inbounds begin
+
+    ξi = Ξ[i]
+    setlλ!(ξi, λi)
+
+    if istip(ξi)
+      bi = idf[i]
+      i1 = d1(bi)
+      if i1 > 0
+        if iszero(d2(bi))
+          setdownstreamλ!(λi, i1, Ξ, idf)
+        else
+          setλt!(bi, λi)
+        end
+      end
+    end
+  end
+
+  return nothing
+end
 
 
 

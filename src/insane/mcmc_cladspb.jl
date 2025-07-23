@@ -392,11 +392,11 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

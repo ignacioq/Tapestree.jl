@@ -445,11 +445,11 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 
@@ -615,6 +615,108 @@ function update_μ!(μc     ::Float64,
   end
 
   return llc, prc, μc, mc
+end
+
+
+
+
+"""
+    update_gbm!(bix     ::Int64,
+                Ξ       ::Vector{iTce},
+                idf     ::Vector{iBffs},
+                α       ::Float64,
+                σλ      ::Float64,
+                μ       ::Float64,
+                llc     ::Float64,
+                prc     ::Float64,
+                ddλ     ::Float64,
+                ssλ     ::Float64,
+                mc      ::Float64,
+                th      ::Float64,
+                δt      ::Float64,
+                srδt    ::Float64,
+                λ0_prior::NTuple{2,Float64},
+                surv    ::Int64)
+
+Make a `gbm` update for an internal branch and its descendants.
+"""
+function update_gbm!(bix     ::Int64,
+                     Ξ       ::Vector{iTce},
+                     idf     ::Vector{iBffs},
+                     α       ::Float64,
+                     σλ      ::Float64,
+                     μ       ::Float64,
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     ddλ     ::Float64,
+                     ssλ     ::Float64,
+                     mc      ::Float64,
+                     th      ::Float64,
+                     δt      ::Float64,
+                     srδt    ::Float64,
+                     λ0_prior::NTuple{2,Float64},
+                     surv    ::Int64)
+
+  @inbounds begin
+
+    ξi   = Ξ[bix]
+    bi   = idf[bix]
+    i1   = d1(bi)
+    i2   = d2(bi)
+    ξ1   = Ξ[i1]
+    root = iszero(pa(bi))
+
+    # if crown
+    if root && iszero(e(bi))
+      ξ2 = Ξ[i2]
+      llc, prc, ddλ, ssλ, mc =
+        _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
+          δt, srδt, λ0_prior, surv)
+      setλt!(bi, lλ(ξi)[1])
+    else
+      # if stem
+      if root
+        llc, prc, ddλ, ssλ, mc =
+          _stem_update!(ξi, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
+            δt, srδt, λ0_prior, surv)
+      end
+
+      # parent branch update
+      llc, ddλ, ssλ = _update_gbm!(ξi, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, false)
+
+      # get fixed tip
+      lξi = fixtip(ξi)
+
+      if iszero(i2)
+
+        llc, ssλ =
+          update_duo!(lλ(lξi), lλ(ξ1), e(lξi), e(ξ1),
+            fdt(lξi), fdt(ξ1), α, σλ, μ, llc, ssλ, δt, srδt)
+
+      else
+        ξ2 = Ξ[i2]
+        # make between decoupled trees node update
+        llc, ddλ, ssλ =
+          update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
+            fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, ddλ, ssλ, δt, srδt)
+
+        # set fixed `λ(t)` in branch
+        setλt!(bi, lλ(ξ1)[1])
+      end
+    end
+
+    # carry on updates in the daughters
+    llc, ddλ, ssλ = 
+      _update_gbm!(ξ1, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i1])))
+
+    if i2 > 0
+      ξ2 = Ξ[i2]
+      llc, ddλ, ssλ = 
+        _update_gbm!(ξ2, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i2])))
+    end
+  end
+
+  return llc, prc, ddλ, ssλ, mc
 end
 
 
@@ -971,105 +1073,6 @@ end
 
 
 
-
-"""
-    update_gbm!(bix     ::Int64,
-                Ξ       ::Vector{iTce},
-                idf     ::Vector{iBffs},
-                α       ::Float64,
-                σλ      ::Float64,
-                μ       ::Float64,
-                llc     ::Float64,
-                prc     ::Float64,
-                ddλ     ::Float64,
-                ssλ     ::Float64,
-                mc      ::Float64,
-                th      ::Float64,
-                δt      ::Float64,
-                srδt    ::Float64,
-                λ0_prior::NTuple{2,Float64},
-                surv    ::Int64)
-
-Make a `gbm` update for an internal branch and its descendants.
-"""
-function update_gbm!(bix     ::Int64,
-                     Ξ       ::Vector{iTce},
-                     idf     ::Vector{iBffs},
-                     α       ::Float64,
-                     σλ      ::Float64,
-                     μ       ::Float64,
-                     llc     ::Float64,
-                     prc     ::Float64,
-                     ddλ     ::Float64,
-                     ssλ     ::Float64,
-                     mc      ::Float64,
-                     th      ::Float64,
-                     δt      ::Float64,
-                     srδt    ::Float64,
-                     λ0_prior::NTuple{2,Float64},
-                     surv    ::Int64)
-
-  @inbounds begin
-
-    ξi   = Ξ[bix]
-    bi   = idf[bix]
-    i1   = d1(bi)
-    i2   = d2(bi)
-    ξ1   = Ξ[i1]
-    root = iszero(pa(bi))
-
-    # if crown
-    if root && iszero(e(bi))
-      ξ2 = Ξ[i2]
-      llc, prc, ddλ, ssλ, mc =
-        _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
-          δt, srδt, λ0_prior, surv)
-      setλt!(bi, lλ(ξi)[1])
-    else
-      # if stem
-      if root
-        llc, prc, ddλ, ssλ, mc =
-          _stem_update!(ξi, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
-            δt, srδt, λ0_prior, surv)
-      end
-
-      # parent branch update
-      llc, ddλ, ssλ = _update_gbm!(ξi, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, false)
-
-      # get fixed tip
-      lξi = fixtip(ξi)
-
-      if iszero(i2)
-
-        llc, ssλ =
-          update_duo!(lλ(lξi), lλ(ξ1), e(lξi), e(ξ1),
-            fdt(lξi), fdt(ξ1), α, σλ, μ, llc, ssλ, δt, srδt)
-
-      else
-        ξ2 = Ξ[i2]
-        # make between decoupled trees node update
-        llc, ddλ, ssλ =
-          update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-            fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, ddλ, ssλ, δt, srδt)
-
-        # set fixed `λ(t)` in branch
-        setλt!(bi, lλ(ξ1)[1])
-      end
-    end
-
-    # carry on updates in the daughters
-    llc, ddλ, ssλ = 
-      _update_gbm!(ξ1, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i1])))
-
-    if i2 > 0
-      ξ2 = Ξ[i2]
-      llc, ddλ, ssλ = 
-        _update_gbm!(ξ2, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i2])))
-    end
-  end
-
-  return llc, prc, ddλ, ssλ, mc
-end
 
 
 

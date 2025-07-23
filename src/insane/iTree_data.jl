@@ -2655,9 +2655,9 @@ end
 
 
 """
-    check_cpe!(tree::sTpe)
+    _check_cpe!(tree::sTpe)
 
-Extract tip rates from a sTpe tree
+Check that cpe is self-consistent.
 """
 function _check_cpe(tree::sTpe)
 
@@ -2681,6 +2681,130 @@ function _check_cpe(tree::sTpe)
   end
 
   return true
+end
+
+
+
+
+"""
+    _check_clads(Ξ::Vector{T}, idf::Vector{iBffs}) where {T <: cT}
+
+Check that cpe is self-consistent.
+"""
+function _check_clads(Ξ::Vector{T}, idf::Vector{iBffs}, i::Int64) where {T <: cT}
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+  ξi = Ξ[i]
+
+  lξi = fixtip(ξi)
+
+  if i1 > 0
+    if i2 > 0
+      if lλ(lξi) != λt(bi)
+        @show "error 1", bi
+      end
+      _check_clads(Ξ, idf, i1)
+      _check_clads(Ξ, idf, i2)
+    else
+      if lλ(lξi) != lλ(Ξ[i1])
+        @show "error 2", bi
+      end
+      _check_clads(Ξ, idf, i1)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
+    upstreamλ(i  ::Int64,
+              Ξ  ::Vector{cTce},
+              idf::Vector{iBffs},
+              eas::Float64,
+              λa ::Float64)
+
+Return the branch length `eds` and speciation rates of daughters, if any, for 
+middle branches.
+"""
+function upstreamλ(i  ::Int64,
+                   Ξ  ::Vector{cTce},
+                   idf::Vector{iBffs},
+                   eas::Float64,
+                   λa ::Float64)
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is cladogenetic
+    if d2(bi) > 0
+      λa = λt(bi)
+    else
+      ξi   = Ξ[i]
+ 
+      if def2(ξi)
+        lξi, λa = fixtip(ξi, λa)
+        eas += e(lξi)
+      else
+        eas += e(ξi)
+        eas, λa, i = upstreamλ(pa(bi), Ξ, idf, eas, λa)
+      end
+    end
+  end
+
+  return eas, λa, i
+end
+
+
+
+
+"""
+    downstreamλs(i  ::Int64, 
+                 Ξ  ::Vector{cTce}, 
+                 idf::Vector{iBffs}, 
+                 eds::Float64, 
+                 λ1 ::Float64, 
+                 λ2 ::Float64)
+
+Return the branch length `eds` and speciation rates of daughters, if any, for 
+middle branches.
+"""
+function downstreamλs(i  ::Int64, 
+                      Ξ  ::Vector{cTce}, 
+                      idf::Vector{iBffs}, 
+                      eds::Float64, 
+                      λ1 ::Float64, 
+                      λ2 ::Float64)
+
+  @inbounds begin
+
+    ξi   = Ξ[i]
+    eds += e(ξi)
+
+    if def2(ξi)
+      λ1, λ2 = lλ(ξi.d1), lλ(ξi.d2)
+    else
+      bi = idf[i]
+      i1 = d1(bi)
+      if i1 > 0
+        i2 = d2(bi)
+        # if cladogenetic
+        if i2 > 0
+          λ1, λ2 = lλ(Ξ[i1]), lλ(Ξ[i2])
+        # if mid
+        else
+          eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, eds, λ1, λ2)
+        end
+      end
+    end
+  end
+
+  return eds, λ1, λ2
 end
 
 

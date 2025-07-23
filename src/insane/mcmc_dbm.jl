@@ -391,12 +391,14 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
             flush(tf)
             sthin = zero(Int64)
           end
+
           next!(pbar)
         end
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 
