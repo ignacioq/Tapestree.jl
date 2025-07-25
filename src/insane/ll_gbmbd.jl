@@ -434,7 +434,7 @@ end
 
 
 """
-    _ss_dd(tree::T,
+    _dd_ss(tree::T,
            α   ::Float64,
            dd  ::Float64,
            ssλ ::Float64,
@@ -444,7 +444,7 @@ end
 Returns the standardized sum of squares for rate `v`, the path number `n`,
  and the delta drift `dd`.
 """
-function _ss_dd(tree::T,
+function _dd_ss(tree::T,
                 α   ::Float64,
                 dd  ::Float64,
                 ssλ ::Float64,
@@ -452,7 +452,7 @@ function _ss_dd(tree::T,
                 n   ::Float64) where {T <: iTbd}
 
   dd0, ssλ0, ssμ0, n0 = 
-    _ss_dd_b(lλ(tree), lμ(tree), α, dt(tree), fdt(tree))
+    _dd_ss_b(lλ(tree), lμ(tree), α, dt(tree), fdt(tree))
 
   dd  += dd0
   ssλ += ssλ0
@@ -461,10 +461,10 @@ function _ss_dd(tree::T,
 
   if def1(tree)
     dd, ssλ, ssμ, n = 
-      _ss_dd(tree.d1, α, dd, ssλ, ssμ, n)
+      _dd_ss(tree.d1, α, dd, ssλ, ssμ, n)
     if def2(tree)
       dd, ssλ, ssμ, n = 
-        _ss_dd(tree.d2, α, dd, ssλ, ssμ, n)
+        _dd_ss(tree.d2, α, dd, ssλ, ssμ, n)
     end
   end
 
@@ -475,7 +475,7 @@ end
 
 
 """
-    _ss_dd_b(lλv::Array{Float64,1},
+    _dd_ss_b(lλv::Array{Float64,1},
              lμv::Array{Float64,1},
              α  ::Float64,
              δt ::Float64,
@@ -484,7 +484,7 @@ end
 Returns the standardized sum of squares for rate `v`, the path number `n`,
 and the delta drift `dd`.
 """
-function _ss_dd_b(lλv::Array{Float64,1},
+function _dd_ss_b(lλv::Array{Float64,1},
                   lμv::Array{Float64,1},
                   α  ::Float64,
                   δt ::Float64,

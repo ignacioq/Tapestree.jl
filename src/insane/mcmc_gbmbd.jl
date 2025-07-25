@@ -207,7 +207,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   ne  = 0.0                 # number of extinction events in likelihood
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
 
   # for scale tuning
   ltn = 0
@@ -356,7 +356,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   el  = lastindex(idf)      # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 8)

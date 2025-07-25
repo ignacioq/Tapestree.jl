@@ -127,8 +127,7 @@ end
 
 
 """
-    _ss_dd(tree::T,
-           f   ::Function,
+    _dd_ss(tree::T,
            α   ::Float64,
            dd  ::Float64,
            ss  ::Float64) where {T <: cT}
@@ -136,8 +135,7 @@ end
 Returns the standardized sum of squares for rate `v`, the path number `n`,
 and the delta drift `dd`.
 """
-function _ss_dd(tree::T,
-                f   ::Function,
+function _dd_ss(tree::T,
                 α   ::Float64,
                 dd  ::Float64,
                 ss  ::Float64) where {T <: cT}
@@ -146,10 +144,10 @@ function _ss_dd(tree::T,
 
   if def1(tree)
     td1 = tree.d1
-    dd, ss = _ss_dd(td1, f, α, dd, ss)
+    dd, ss = _dd_ss(td1, α, dd, ss)
     if def2(tree)
       td2 = tree.d2
-      dd, ss = _ss_dd(td2, f, α, dd, ss)
+      dd, ss = _dd_ss(td2, α, dd, ss)
 
       lλ1 = lλ(td1)
       lλ2 = lλ(td2)
@@ -165,18 +163,18 @@ end
 
 
 """
-    _ss(tree::T, f::Function, α::Float64, ss::Float64) where {T <: cT}
+    _ss(tree::T, α::Float64, ss::Float64) where {T <: cT}
 
 Returns the standardized sum of squares for rate `v`.
 """
-function _ss(tree::T, f::Function, α::Float64, ss::Float64) where {T <: cT}
+function _ss(tree::T, α::Float64, ss::Float64) where {T <: cT}
 
   if def1(tree)
     td1 = tree.d1
-    ss = _ss(td1, f, α, ss)
+    ss = _ss(td1, α, ss)
     if def2(tree)
       td2 = tree.d2
-      ss = _ss(td2, f, α, ss)
+      ss = _ss(td2, α, ss)
       lλi = lλ(tree)
       lλ1 = lλ(td1)
       lλ2 = lλ(td2)

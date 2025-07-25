@@ -189,7 +189,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   el      = lastindex(idf)     # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
 
   pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
@@ -314,7 +314,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
   el      = lastindex(idf)           # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 7)

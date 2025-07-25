@@ -17,7 +17,7 @@ Created 16 07 2025
 
 An abstract type for all composite recursive types
 representing a binary phylogenetic tree with cladogenetic rate shifts 
-for `insane` use
+for `insane` use.
 """
 abstract type cT <: iTree end
 
@@ -27,9 +27,9 @@ abstract type cT <: iTree end
 """
     cTpb
 
-A composite recursive type of supertype `iT`
+A composite recursive type of supertype `cT`
 representing a binary phylogenetic tree with no extinction
-and `λ` evolving as a Geometric Brownian motion  for `insane` use,
+and `λ` under cladogenetic rate shifts  for `insane` use,
 with the following fields:
 
   d1:  daughter tree 1
@@ -126,9 +126,9 @@ end
 """
     cTce
 
-A composite recursive type of supertype `iT`
-representing a binary phylogenetic tree with no extinction
-and `λ` evolving as a Geometric Brownian motion  for `insane` use,
+A composite recursive type of supertype `cT`
+representing a binary phylogenetic tree with constant extinction
+and `λ` under cladogenetic rate shifts for `insane` use,
 with the following fields:
 
   d1:  daughter tree 1
@@ -187,6 +187,72 @@ function cTce(tree::cTce)
   end
 end
 
+
+
+
+"""
+    cTct
+
+A composite recursive type of supertype `cT`
+representing a binary phylogenetic tree with constant turnover
+and `λ` under cladogenetic rate shifts for `insane` use,
+with the following fields:
+
+  d1:  daughter tree 1
+  d2:  daughter tree 2
+  e:   edge
+  iμ:  if extinct node
+  fx:  if fix tree
+  lλ:  `log(λ)`
+
+    cTct()
+
+Constructs an empty `cTct` object.
+
+    cTct(e::Float64, fx::Bool, lλ::Float64)
+
+Constructs an empty `cTct` object with pendant edge `pe`.
+
+    cTct(d1::cTct, d2::cTct, e::Float64, fx::Bool, lλ::Float64)
+
+Constructs an `cTct` object with two `cTct` daughters and pendant edge `pe`.
+"""
+mutable struct cTct <: cT
+  d1 ::cTct
+  d2 ::cTct
+  e  ::Float64
+  iμ ::Bool
+  fx ::Bool
+  lλ ::Float64
+
+  cTct() = new()
+  cTct(e::Float64, iμ::Bool, fx::Bool, lλ::Float64) =
+      (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x.lλ = lλ; x)
+  cTct(d1::cTct, d2::cTct, e::Float64, iμ::Bool, fx::Bool, lλ::Float64) =
+      new(d1, d2, e, iμ, fx, lλ)
+end
+
+
+# pretty-printing
+Base.show(io::IO, t::cTct) =
+  print(io, "insane ct-clads tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    cTct(tree::cTct)
+
+Produce a new copy of `cTct`.
+"""
+function cTct(tree::cTct)
+  if def1(tree)
+    cTct(cTct(tree.d1), cTct(tree.d2), e(tree), isextinct(tree), 
+      isfix(tree), lλ(tree))
+  else
+    cTct(e(tree), isextinct(tree), isfix(tree), lλ(tree))
+  end
+end
 
 
 # """

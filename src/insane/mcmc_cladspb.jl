@@ -73,14 +73,14 @@ function insane_cladspb(tree    ::sT_label;
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
 
-  # parameter updates (1: α, 2: σ, 3: scale, 4: gbm, 5: fs)
+  # parameter updates (1: α, 2: σ, 3: scale, 4: internal, 5: fs)
   spup = sum(pupdp)
   pup  = Int64[]
   for i in Base.OneTo(lastindex(pupdp))
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running pure-birth clads"
+  @info "running pure-birth clads (μ(t) = 0)"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, ns, stn =
@@ -141,7 +141,7 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
   λfs = Float64[]
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ = _ss_dd(Ξ, idf, lλ, αc)
+  ddλ, ssλ = _dd_ss(Ξ, idf, αc)
 
   # for scale tuning
   ltn = zero(Int64)
@@ -163,7 +163,7 @@ function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
           update_α!(αc, σλc, 2.0*(ns + rmλ), ddλ, llc, prc, α_prior)
 
         # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, idf, lλ, αc)
+        ssλ = _ss(Ξ, idf, αc)
 
       # update diffusion
       elseif pupi === 2
@@ -267,7 +267,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
   el  = lastindex(idf)     # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ = _ss_dd(Ξ, idf, lλ, αc)
+  ddλ, ssλ = _dd_ss(Ξ, idf, αc)
 
   λfs   = Float64[]
   treev = cTpb[]  # make Ξ vector
@@ -298,7 +298,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
                 update_α!(αc, σλc, 2.0*(ns + rmλ), ddλ, llc, prc, α_prior)
 
               # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, idf, lλ, αc)
+              ssλ = _ss(Ξ, idf, αc)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)

@@ -165,13 +165,13 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTpb})
+    make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{T}) where {T <: cT}
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTpb})
+function make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{T}) where {T <: cT}
 
-  Ξ = cTpb[]
+  Ξ = T[]
   _make_Ξ!(Ξ, 1, log(λ), idf)
 
   return Ξ
@@ -216,22 +216,6 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTce})
-
-Make edge tree `Ξ` from the edge directory.
-"""
-function make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{cTce})
-
-  Ξ = cTce[]
-  _make_Ξ!(Ξ, 1, log(λ), idf)
-
-  return Ξ
-end
-
-
-
-
-"""
      _make_Ξ!(Ξ   ::Vector{cTce},
               i   ::Int64,
               lλ0 ::Float64,
@@ -252,6 +236,41 @@ function _make_Ξ!(Ξ   ::Vector{cTce},
 
   setλt!(bi, lλ0)
   push!(Ξ, cTce(e(bi), false, true, lλ0))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+     _make_Ξ!(Ξ   ::Vector{cTct},
+              i   ::Int64,
+              lλ0 ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTct},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  push!(Ξ, cTct(e(bi), false, true, lλ0))
 
   if i1 > 0 
     _make_Ξ!(Ξ, i1, lλ0, idf)
@@ -1287,16 +1306,16 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: cT}
+    _dd_ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
 """
-function _ss_dd(Ξ::Vector{T}, idf::Vector{iBffs}, f::Function, α::Float64) where {T <: cT}
+function _dd_ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
 
   dd = ss = 0.0
   for i in Base.OneTo(lastindex(Ξ))
 
-    dd, ss = _ss_dd(Ξ[i], f, α, dd, ss)
+    dd, ss = _dd_ss(Ξ[i], α, dd, ss)
 
     bi  = idf[i]
     bi2 = d2(bi)
@@ -1318,16 +1337,46 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
+    _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
+
+  dd = ss = seλ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    dd, ss, seλ = _dd_ss_seλ(Ξ[i], α, dd, ss, seλ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lλ1 = lλ(Ξ[d1(bi)])
+      lλ2 = lλ(Ξ[bi2])
+
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+      dd += lλ1 + lλ2 - 2.0*lλi
+    end
+  end
+
+  return dd, ss, seλ
+end
+
+
+
+"""
+    _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
+function _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
   dd = ss = n = 0.0
   for ξi in Ξ
-    dd, ss, n = _ss_dd(ξi, α, dd, ss, n)
+    dd, ss, n = _dd_ss(ξi, α, dd, ss, n)
   end
 
   return dd, ss, n
@@ -1337,16 +1386,16 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+    _dd_ss(Ξ::Vector{iTbd}, α::Float64)
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+function _dd_ss(Ξ::Vector{iTbd}, α::Float64)
 
   dd = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
+    dd, ssλ, ssμ, n = _dd_ss(ξi, α, dd, ssλ, ssμ, n)
   end
 
   return dd, ssλ, ssμ, n
@@ -1356,16 +1405,16 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{iTfbd}, α::Float64)
+    _dd_ss(Ξ::Vector{iTfbd}, α::Float64)
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{iTfbd}, αλ::Float64, αμ::Float64)
+function _dd_ss(Ξ::Vector{iTfbd}, αλ::Float64, αμ::Float64)
 
   ddλ = ddμ = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    ddλ, ddμ, ssλ, ssμ, n = _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+    ddλ, ddμ, ssλ, ssμ, n = _dd_ss(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
   end
 
   return ddλ, ddμ, ssλ, ssμ, n
@@ -1374,16 +1423,16 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+    _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+function _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
   dd = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
+    dd, ssλ, ssμ, n = _dd_ss(ξi, α, dd, ssλ, ssμ, n)
   end
 
   return dd, ssλ, ssμ, n
@@ -1414,7 +1463,7 @@ function sss_v(Ξ ::Vector{T},
   n   = zeros(nv)
   for i in Base.OneTo(nv)
     Lσ[i], Δσ[i], ddσ[i], ss[i], n[i] = 
-      _ss_dd(Ξ[i], fx, fσ, ασ, 0.0, 0.0, 0.0, 0.0, 0.0)
+      _dd_ss(Ξ[i], fx, fσ, ασ, 0.0, 0.0, 0.0, 0.0, 0.0)
   end
 
   return Lσ, Δσ, ddσ, ss, n
@@ -1424,17 +1473,17 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
+    _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+function _dd_ss(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
 
   ddλ = ddμ = ssλ = ssμ = n = 0.0
   for ξi in Ξ
     ddλ, ddμ, ssλ, ssμ, n = 
-      _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+      _dd_ss(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
   end
 
   return ddλ, ddμ, ssλ, ssμ, n

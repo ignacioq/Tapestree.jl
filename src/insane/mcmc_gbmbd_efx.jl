@@ -228,7 +228,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   el  = lastindex(idf)    # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
 
   pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
@@ -357,7 +357,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   el  = lastindex(idf)    # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 8)

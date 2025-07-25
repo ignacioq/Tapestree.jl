@@ -59,7 +59,7 @@ function _fstem_update!(ξi       ::sTxs,
     fill!(xv(ξi), xr)
 
     # likelihood
-    ll, Ls, Xs, dd, ss = ll_dbm_ss_dd_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
+    ll, Ls, Xs, dd, ss = ll_dbm_dd_ss_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
   end
 
   return ll, Ls, Xs, dd, ss
@@ -110,7 +110,7 @@ function _stem_update!(ξi       ::sTxs,
     dbb!(xc, xr, xn, lσ2c, δt, fdtp, srδt)
 
     # likelihood
-    ll, Ls, Xs, dd, ss = ll_dbm_ss_dd_b(xc, αx, lσ2c, ασ, γ, δt, fdtp)
+    ll, Ls, Xs, dd, ss = ll_dbm_dd_ss_b(xc, αx, lσ2c, ασ, γ, δt, fdtp)
   end
 
   return ll, Ls, Xs, dd, ss
@@ -185,8 +185,8 @@ function _crown_update!(ξi       ::sTxs,
     fill!(xc, xn)
 
     # log likelihood ratios
-    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_ss_dd_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
-    ll2, Ls2, Xs2, dd2, ss2 = ll_dbm_ss_dd_b(x2, αx, lσ22, ασ, γ, δt, fdt2)
+    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_dd_ss_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
+    ll2, Ls2, Xs2, dd2, ss2 = ll_dbm_dd_ss_b(x2, αx, lσ22, ασ, γ, δt, fdt2)
   end
 
   return ll1, ll2, Ls1, Ls2, Xs1, Xs2, dd1, dd2, ss1, ss2
@@ -240,7 +240,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   dbb!(xc, xi, xn, lσ2c, δt, fdtp, srδt)
 
   # likelihood
-  ll, Ls, Xs, dd, ss = ll_dbm_ss_dd_b(xc, αx, lσ2c, ασ, γ, δt, fdtp)
+  ll, Ls, Xs, dd, ss = ll_dbm_dd_ss_b(xc, αx, lσ2c, ασ, γ, δt, fdtp)
 
   return ll, Ls, Xs, dd, ss
 end
@@ -273,7 +273,7 @@ function _update_leaf_x!(ξi  ::sTxs,
   dbm!(xc, xc[1], αx, lσ2c, lσ2c[1], ασ, γ, δt, fdtp, srδt)
 
   # likelihood
-  ll, Ls, Xs, dd, ss = ll_dbm_ss_dd_b(xc, αx, lσ2c, ασ, γ, δt, fdtp)
+  ll, Ls, Xs, dd, ss = ll_dbm_dd_ss_b(xc, αx, lσ2c, ασ, γ, δt, fdtp)
 
   return ll, Ls, Xs, dd, ss
 end
@@ -345,8 +345,8 @@ function _update_duo_x!(ξi  ::sTxs,
     dbb!(x1, xn, x1f, lσ21, δt, fdt1, srδt)
 
     # log likelihood ratios
-    lla, Lsa, Xsa, dda, ssa = ll_dbm_ss_dd_b(xa, αx, lσ2a, ασ, γ, δt, fdta)
-    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_ss_dd_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
+    lla, Lsa, Xsa, dda, ssa = ll_dbm_dd_ss_b(xa, αx, lσ2a, ασ, γ, δt, fdta)
+    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_dd_ss_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
   end
 
   return lla, ll1, Lsa, Ls1, Xsa, Xs1, dda, dd1, ssa, ss1
@@ -412,8 +412,8 @@ function _update_duo_x!(ξi  ::sTxs,
     dbb!(x1, xn, x1f, lσ21, δt, fdt1, srδt)
 
     # log likelihood ratios
-    lla, Lsa, Xsa, dda, ssa = ll_dbm_ss_dd_b(xa, αx, lσ2a, ασ, γ, δt, fdta)
-    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_ss_dd_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
+    lla, Lsa, Xsa, dda, ssa = ll_dbm_dd_ss_b(xa, αx, lσ2a, ασ, γ, δt, fdta)
+    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_dd_ss_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
   end
 
   return lla, ll1, Lsa, Ls1, Xsa, Xs1, dda, dd1, ssa, ss1
@@ -493,9 +493,9 @@ function _update_triad_x!(ξi   ::sTxs,
     dbb!(x2, xn, x2f, lσ22, δt, fdt2, srδt)
 
     # log likelihood ratios
-    lla, Lsa, Xsa, dda, ssa = ll_dbm_ss_dd_b(xa, αx, lσ2a, ασ, γ, δt, fdta)
-    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_ss_dd_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
-    ll2, Ls2, Xs2, dd2, ss2 = ll_dbm_ss_dd_b(x2, αx, lσ22, ασ, γ, δt, fdt2)
+    lla, Lsa, Xsa, dda, ssa = ll_dbm_dd_ss_b(xa, αx, lσ2a, ασ, γ, δt, fdta)
+    ll1, Ls1, Xs1, dd1, ss1 = ll_dbm_dd_ss_b(x1, αx, lσ21, ασ, γ, δt, fdt1)
+    ll2, Ls2, Xs2, dd2, ss2 = ll_dbm_dd_ss_b(x2, αx, lσ22, ασ, γ, δt, fdt2)
   end
 
   return lla, ll1, ll2, Lsa, Ls1, Ls2, Xsa, Xs1, Xs2, 
