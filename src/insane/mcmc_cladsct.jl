@@ -357,11 +357,11 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
               # update ssλ with new drift `α`
               ssλ = _ss(Ξ, idf, αc)
 
-              ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update diffusion rate
             elseif pupi === 2
@@ -370,11 +370,11 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
                 update_σ!(σλc, lλ(Ξ[1]), σλc, ϵc, ssλ, 2.0*(ns + rmλ), llc, prc, 
                   mc, th, surv, σλ_prior)
 
-              ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update extinction
             elseif pupi === 3
@@ -383,11 +383,11 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
                 update_ϵ!(ϵc, lλ(Ξ[1]), αc, σλc, llc, prc, ne, seλ, mc, th, 
                   surv, ϵ_prior)
 
-              ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update scale
             elseif pupi === 4
@@ -396,11 +396,11 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
                 update_scale!(Ξ, idf, αc, σλc, ϵc, llc, prc, ns, ne, stn, 
                   mc, th, surv, λ0_prior)
 
-              ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update internal λ
             elseif pupi === 5
@@ -411,11 +411,11 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
                 update_internal!(bix, Ξ, idf, αc, σλc, ϵc, llc, prc, ddλ, ssλ, 
                   seλ, mc, th, λ0_prior, surv)
 
-              ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update by forward simulation
             else
@@ -426,11 +426,11 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
                 update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, ddλ, ssλ, seλ, ns, 
                   ne, λfs)
 
-              ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
             end
           end
 
@@ -1109,7 +1109,7 @@ function wfix_m(ξi ::cTct,
 
   # likelihood ratio and acceptance
   acr += log(sp/sc)
-  ser  = eds * (exp(λc) - exp(λp))
+  ser  = eds * (exp(λp) - exp(λc))
 
   return wt, λp, pp, λc, pc, acr, ser
 end
@@ -1174,7 +1174,7 @@ function wfix_m(ξi ::cTct,
   ddr  = 2.0*(λc - λp)
   ssr  = 0.5*((λ1 - λp - α)^2 + (λ2 - λp - α)^2 - 
               (λ1 - λc - α)^2 - (λ2 - λc - α)^2)
-  ser  = eds * (exp(λc) - exp(λp))
+  ser  = eds * (exp(λp) - exp(λc))
 
   return wt, λp, pp, λc, pc, acr, ddr, ssr, ser
 end
