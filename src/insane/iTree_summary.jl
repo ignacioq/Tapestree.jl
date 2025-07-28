@@ -970,11 +970,11 @@ end
 
 
 """
-    imean(treev::Vector{cTce})
+    imean(treev::Vector{T}) where {T <: cT}
 
 Make an `cTce` with the geometric mean.
 """
-function imean(treev::Vector{cTce})
+function imean(treev::Vector{T}) where {T <: cT}
 
   nt  = lastindex(treev)
 
@@ -988,20 +988,20 @@ function imean(treev::Vector{cTce})
   mλ = ss/Float64(nt)
 
   if def1(t1)
-    treev1 = cTce[]
+    treev1 = T[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
     end
-    treev2 = cTce[]
+    treev2 = T[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
     end
 
-    cTce(imean(treev1),
+    T(imean(treev1),
          imean(treev2),
          e(t1), isextinct(t1), true, mλ)
   else
-    cTce(e(t1), isextinct(t1), true, mλ)
+    T(e(t1), isextinct(t1), true, mλ)
   end
 end
 

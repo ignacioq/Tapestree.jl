@@ -1013,11 +1013,11 @@ end
 
 
 """
-    _ibuffer(io::IOBuffer, tree::cTce)
+    _ibuffer(io::IOBuffer, tree::T) where {T <: cT}
 
 Write `cTce` to IOBuffer.
 """
-function _ibuffer(io::IOBuffer, tree::cTce)
+function _ibuffer(io::IOBuffer, tree::T) where {T <: cT}
   if def1(tree)
     write(io, '(')
     _ibuffer(io, tree.d1), 

@@ -13,17 +13,18 @@ Created 16 07 2025
 
 
 """
-    _stem_update!(ξi      ::cTce,
+    _stem_update!(ξi      ::cTct,
                   eds     ::Float64,
                   λ1      ::Float64,
                   λ2      ::Float64,
                   α       ::Float64,
                   σλ      ::Float64,
-                  μ       ::Float64,
+                  ϵ       ::Float64,
                   llc     ::Float64,
                   prc     ::Float64,
                   ddλ     ::Float64,
                   ssλ     ::Float64,
+                  seλ     ::Float64,
                   mc      ::Float64,
                   th      ::Float64,
                   λ0_prior::NTuple{2,Float64},
@@ -31,17 +32,18 @@ Created 16 07 2025
 
 Do `clads` update for crown root.
 """
-function _stem_update!(ξi      ::cTce,
+function _stem_update!(ξi      ::cTct,
                        eds     ::Float64,
                        λ1      ::Float64,
                        λ2      ::Float64,
                        α       ::Float64,
                        σλ      ::Float64,
-                       μ       ::Float64,
+                       ϵ       ::Float64,
                        llc     ::Float64,
                        prc     ::Float64,
                        ddλ     ::Float64,
                        ssλ     ::Float64,
+                       seλ     ::Float64,
                        mc      ::Float64,
                        th      ::Float64,
                        λ0_prior::NTuple{2,Float64},
@@ -56,39 +58,42 @@ function _stem_update!(ξi      ::cTce,
                   σλ^2,     σλ^2, λ0_prior[2])
 
     llrbm = llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ)
-    llrce = λr - λi + (ei + eds)*(exp(λi) - exp(λr))
+    eλr   = (ei + eds) * (exp(λi) - exp(λr))
+    llrct = λr - λi + eλr * (1.0 + ϵ)
 
-    if lU < llrce + log(1000.0/mc)
+    if lU < llrct + log(1000.0/mc)
 
-      mp     = m_surv_cladsce(th, λr, α, σλ, μ, 1_000, surv)
-      llrce += log(mp/mc)
+      mp     = m_surv_cladsct(th, λr, α, σλ, ϵ, 1_000, surv)
+      llrct += log(mp/mc)
 
-      if -randexp() < llrce
-        llc += llrbm + llrce
+      if -randexp() < llrct
+        llc += llrbm + llrct
         prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
         ddλ += 2.0*(λi - λr)
         ssλ += 0.5*(
                 (λ1 - λr - α)^2 + (λ2 - λr - α)^2 - 
                 (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
-        mc  = mp
-        setlλ!(ξi, λr)
+        seλ -= eλr
+        mc   = mp
+        λi   = λr
+        setlλ!(ξi, λi)
       end
     end
   end
 
-  return llc, prc, ddλ, ssλ, mc, λi
+  return llc, prc, ddλ, ssλ, seλ, mc, λi
 end
 
 
 
 
 """
-    _crown_update!(ξi      ::cTce,
-                   ξ1      ::cTce,
-                   ξ2      ::cTce,
+    _crown_update!(ξi      ::cTct,
+                   ξ1      ::cTct,
+                   ξ2      ::cTct,
                    α       ::Float64,
                    σλ      ::Float64,
-                   μ       ::Float64,
+                   ϵ       ::Float64,
                    llc     ::Float64,
                    prc     ::Float64,
                    ddλ     ::Float64,
@@ -100,12 +105,12 @@ end
 
 Do `clads` update for crown root.
 """
-function _crown_update!(ξi      ::cTce,
-                        ξ1      ::cTce,
-                        ξ2      ::cTce,
+function _crown_update!(ξi      ::cTct,
+                        ξ1      ::cTct,
+                        ξ2      ::cTct,
                         α       ::Float64,
                         σλ      ::Float64,
-                        μ       ::Float64,
+                        ϵ       ::Float64,
                         llc     ::Float64,
                         prc     ::Float64,
                         ddλ     ::Float64,
@@ -125,7 +130,7 @@ function _crown_update!(ξi      ::cTce,
                   σλ^2,   σλ^2,   λ0_prior[2])
 
     # survival ratio
-    mp  = m_surv_cladsce(th, λr, α, σλ, μ, 1_000, surv)
+    mp  = m_surv_cladsct(th, λr, α, σλ, ϵ, 1_000, surv)
     llr = log(mp/mc)
 
     if -randexp() < llr
@@ -146,88 +151,98 @@ end
 
 
 """
-    _update_internal!(tree::T,
+    _update_internal!(tree::cTct,
                       bi  ::iBffs,
                       eas ::Float64,
                       λa  ::Float64,
                       α   ::Float64,
                       σλ  ::Float64,
+                      ϵ   ::Float64,
                       eds ::Float64,
                       λ1  ::Float64,
                       λ2  ::Float64,
                       llc ::Float64,
                       ddλ ::Float64,
                       ssλ ::Float64,
-                      ter ::Bool) where {T <: cT}
+                      seλ ::Float64,
+                      ter ::Bool)
+
 
 Do `clads` internal rate updates on a decoupled tree recursively.
 """
-function _update_internal!(tree::T,
+function _update_internal!(tree::cTct,
                            bi  ::iBffs,
                            eas ::Float64,
                            λa  ::Float64,
                            α   ::Float64,
                            σλ  ::Float64,
+                           ϵ   ::Float64,
                            eds ::Float64,
                            λ1  ::Float64,
                            λ2  ::Float64,
                            llc ::Float64,
                            ddλ ::Float64,
                            ssλ ::Float64,
-                           ter ::Bool) where {T <: cT}
+                           seλ ::Float64,
+                           ter ::Bool)
 
   if def1(tree)
-    llc, ddλ, ssλ, λa = 
-      update_triad!(tree, eas, λa, α, σλ, llc, ddλ, ssλ)
+    llc, ddλ, ssλ, seλ, λa = 
+      update_triad!(tree, eas, λa, α, σλ, ϵ, llc, ddλ, ssλ, seλ)
 
-    llc, ddλ, ssλ, λx =
-      _update_internal!(tree.d1, bi, 0.0, λa, α, σλ, eds, λ1, λ2, 
-        llc, ddλ, ssλ, ter)
-    llc, ddλ, ssλ, λx =
-      _update_internal!(tree.d2, bi, 0.0, λa, α, σλ, eds, λ1, λ2, 
-        llc, ddλ, ssλ, ter)
+    llc, ddλ, ssλ, seλ, λx =
+      _update_internal!(tree.d1, bi, 0.0, λa, α, σλ, ϵ, eds, λ1, λ2, 
+        llc, ddλ, ssλ, seλ, ter)
+    llc, ddλ, ssλ, seλ, λx =
+      _update_internal!(tree.d2, bi, 0.0, λa, α, σλ, ϵ, eds, λ1, λ2, 
+        llc, ddλ, ssλ, seλ, ter)
   else 
     # if real tip
     if !isfix(tree) || ter
-      llc, ddλ, ssλ = 
-        update_tip!(tree, eas, λa, 0.0, α, σλ, llc, ddλ, ssλ)
+      llc, ddλ, ssλ, seλ = 
+        update_tip!(tree, eas, λa, 0.0, α, σλ, ϵ, llc, ddλ, ssλ, seλ)
     # if leads to non-speciation
     elseif isnan(λ1)
-      llc, ddλ, ssλ = 
-        update_tip!(tree, eas, λa, eds, α, σλ, llc, ddλ, ssλ)
+      llc, ddλ, ssλ, seλ = 
+        update_tip!(tree, eas, λa, eds, α, σλ, ϵ, llc, ddλ, ssλ, seλ)
     # if leads to eventual speciation
     else
-      llc, ddλ, ssλ = 
-        update_faketip!(tree, bi, eas, λa, eds, λ1, λ2, α, σλ, llc, ddλ, ssλ)
+      llc, ddλ, ssλ, seλ = 
+        update_faketip!(tree, bi, eas, λa, eds, λ1, λ2, α, σλ, ϵ, 
+          llc, ddλ, ssλ, seλ)
     end
   end
 
-  return llc, ddλ, ssλ, λa
+  return llc, ddλ, ssλ, seλ, λa
 end
 
 
 
 
 """
-    update_triad!(tree::T,
+    update_triad!(tree::cTct,
                   eas ::Float64,
                   λa  ::Float64,
                   α   ::Float64,
                   σλ  ::Float64,
+                  ϵ   ::Float64,
                   llc ::Float64,
                   ddλ ::Float64,
-                  ssλ ::Float64) where {T <: cT}
+                  ssλ ::Float64,
+                  seλ ::Float64)
 
 Make a trio proposal for clads.
 """
-function update_triad!(tree::T,
+function update_triad!(tree::cTct,
                        eas ::Float64,
                        λa  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
+                       ϵ   ::Float64,
                        llc ::Float64,
                        ddλ ::Float64,
-                       ssλ ::Float64) where {T <: cT}
+                       ssλ ::Float64,
+                       seλ ::Float64)
 
   @inbounds begin
 
@@ -241,28 +256,88 @@ function update_triad!(tree::T,
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
-    llrpb = λn - λi + (ei + eas)*(exp(λi) - exp(λn))
+    eλr   = (ei + eas) * (exp(λi) - exp(λn))
+    llrct = λn - λi + eλr * (1.0 + ϵ)
 
-    if -randexp() < llrpb
-      llc += llrbm + llrpb
+    if -randexp() < llrct
+      llc += llrbm + llrct
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
               (λi - λa - α)^2 - (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
+      seλ -= eλr
       λi   = λn
       setlλ!(tree, λn)
     end
   end
 
-  return llc, ddλ, ssλ, λi
+  return llc, ddλ, ssλ, seλ, λi
 end
 
 
 
 
+"""
+    update_tip!(tree::cTct,
+                eas ::Float64,
+                λa  ::Float64,
+                eds ::Float64,
+                α   ::Float64,
+                σλ  ::Float64,
+                ϵ   ::Float64,
+                llc ::Float64,
+                ddλ ::Float64,
+                ssλ ::Float64,
+                seλ ::Float64)
+
+Make a `clads` tip proposal.
+"""
+function update_tip!(tree::cTct,
+                     eas ::Float64,
+                     λa  ::Float64,
+                     eds ::Float64,
+                     α   ::Float64,
+                     σλ  ::Float64,
+                     ϵ   ::Float64,
+                     llc ::Float64,
+                     ddλ ::Float64,
+                     ssλ ::Float64,
+                     seλ ::Float64)
+
+  @inbounds begin
+
+    λi = lλ(tree)
+    ei = e(tree)
+
+    # node proposal
+    λn = rnorm(λa + α, σλ)
+
+    # likelihood ratios
+    llrbm = llrdnorm_x(λn, λi, λa + α, σλ^2)
+    eλr   = (eas + ei + eds) * (exp(λi) - exp(λn))
+    llrct = eλr * (1.0 + ϵ)
+
+    if isextinct(tree)
+      llrct += λn - λi
+    end
+
+    if -randexp() < llrct
+      llc += llrbm + llrct
+      ddλ += λn - λi
+      ssλ += 0.5*((λn - λa - α)^2 - (λi - λa - α)^2)
+      seλ -= eλr
+      setlλ!(tree, λn)
+    end
+  end
+
+  return llc, ddλ, ssλ, seλ
+end
+
+
+
 
 """
-    update_faketip!(tree::T,
+    update_faketip!(tree::cTct,
                     bi  ::iBffs,
                     eas ::Float64,
                     λa  ::Float64,
@@ -271,13 +346,15 @@ end
                     λ2  ::Float64,
                     α   ::Float64,
                     σλ  ::Float64,
+                    ϵ   ::Float64,
                     llc ::Float64,
                     ddλ ::Float64,
-                    ssλ ::Float64) where {T <: cT}
+                    ssλ ::Float64,
+                    seλ ::Float64)
 
-Make a `clads` tip proposal.
+Make a `clads` final internal branch proposal.
 """
-function update_faketip!(tree::T,
+function update_faketip!(tree::cTct,
                          bi  ::iBffs,
                          eas ::Float64,
                          λa  ::Float64,
@@ -286,9 +363,11 @@ function update_faketip!(tree::T,
                          λ2  ::Float64,
                          α   ::Float64,
                          σλ  ::Float64,
+                         ϵ   ::Float64,
                          llc ::Float64,
                          ddλ ::Float64,
-                         ssλ ::Float64) where {T <: cT}
+                         ssλ ::Float64,
+                         seλ ::Float64)
 
   @inbounds begin
 
@@ -300,21 +379,22 @@ function update_faketip!(tree::T,
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
-    llrpb = λn - λi + (eas + ei + eds)*(exp(λi) - exp(λn))
+    eλr   = (eas + ei + eds) * (exp(λi) - exp(λn))
+    llrct = λn - λi + eλr * (1.0 + ϵ)
 
-    if -randexp() < llrpb
-      llc += llrbm + llrpb
+    if -randexp() < llrct
+      llc += llrbm + llrct
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
               (λi - λa - α)^2 - (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
-      λi   = λn
-      setlλ!(tree, λi)
-      setλt!(bi, λi)
+      seλ -= eλr
+      setlλ!(tree, λn)
+      setλt!(bi, λn)
     end
   end
 
-  return llc, ddλ, ssλ
+  return llc, ddλ, ssλ, seλ
 end
 
 

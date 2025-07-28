@@ -2722,22 +2722,21 @@ end
 
 
 
-
 """
     upstreamλ(i  ::Int64,
-              Ξ  ::Vector{cTce},
+              Ξ  ::Vector{T},
               idf::Vector{iBffs},
               eas::Float64,
-              λa ::Float64)
+              λa ::Float64) where {T <: cT}
 
 Return the branch length `eds` and speciation rates of daughters, if any, for 
 middle branches.
 """
 function upstreamλ(i  ::Int64,
-                   Ξ  ::Vector{cTce},
+                   Ξ  ::Vector{T},
                    idf::Vector{iBffs},
                    eas::Float64,
-                   λa ::Float64)
+                   λa ::Float64) where {T <: cT}
 
   @inbounds begin
     bi = idf[i]
@@ -2766,21 +2765,21 @@ end
 
 """
     downstreamλs(i  ::Int64, 
-                 Ξ  ::Vector{cTce}, 
+                 Ξ  ::Vector{T}, 
                  idf::Vector{iBffs}, 
                  eds::Float64, 
                  λ1 ::Float64, 
-                 λ2 ::Float64)
+                 λ2 ::Float64) where {T <: cT}
 
 Return the branch length `eds` and speciation rates of daughters, if any, for 
 middle branches.
 """
 function downstreamλs(i  ::Int64, 
-                      Ξ  ::Vector{cTce}, 
+                      Ξ  ::Vector{T}, 
                       idf::Vector{iBffs}, 
                       eds::Float64, 
                       λ1 ::Float64, 
-                      λ2 ::Float64)
+                      λ2 ::Float64) where {T <: cT}
 
   @inbounds begin
 
@@ -2807,7 +2806,6 @@ function downstreamλs(i  ::Int64,
 
   return eds, λ1, λ2
 end
-
 
 
 

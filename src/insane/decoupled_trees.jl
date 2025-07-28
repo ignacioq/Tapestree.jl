@@ -1571,12 +1571,12 @@ end
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
 """
-function _ss(Ξ::Vector{T}, idf::Vector{iBffs}, f::Function, α::Float64) where {T <: cT}
+function _ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
 
   ss = 0.0
   for i in Base.OneTo(lastindex(Ξ))
 
-    ss = _ss(Ξ[i], f, α, ss)
+    ss = _ss(Ξ[i], α, ss)
 
     bi  = idf[i]
     bi2 = d2(bi)

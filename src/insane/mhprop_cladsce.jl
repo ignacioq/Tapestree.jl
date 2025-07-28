@@ -71,7 +71,8 @@ function _stem_update!(ξi      ::cTce,
                 (λ1 - λr - α)^2 + (λ2 - λr - α)^2 - 
                 (λ1 - λi - α)^2 - (λ2 - λi - α)^2)
         mc  = mp
-        setlλ!(ξi, λr)
+        λi  = λr
+        setlλ!(ξi, λi)
       end
     end
   end
@@ -241,10 +242,10 @@ function update_triad!(tree::T,
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
-    llrpb = λn - λi + (ei + eas)*(exp(λi) - exp(λn))
+    llrce = λn - λi + (ei + eas)*(exp(λi) - exp(λn))
 
-    if -randexp() < llrpb
-      llc += llrbm + llrpb
+    if -randexp() < llrce
+      llc += llrbm + llrce
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
@@ -300,10 +301,10 @@ function update_faketip!(tree::T,
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
-    llrpb = λn - λi + (eas + ei + eds)*(exp(λi) - exp(λn))
+    llrce = λn - λi + (eas + ei + eds)*(exp(λi) - exp(λn))
 
-    if -randexp() < llrpb
-      llc += llrbm + llrpb
+    if -randexp() < llrce
+      llc += llrbm + llrce
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -

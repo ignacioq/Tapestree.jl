@@ -1850,11 +1850,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::cTce)
+    _remove_unsampled!(tree::T) where {T <: cT}
 
 Remove extinct tips from `cTce`.
 """
-function _remove_unsampled!(tree::cTce)
+function _remove_unsampled!(tree::T) where {T <: cT}
 
   if def1(tree)
 
@@ -1863,7 +1863,7 @@ function _remove_unsampled!(tree::cTce)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return cTce(e(tree), isextinct(tree), isfix(tree), lλ(tree))
+        return T(e(tree), isextinct(tree), isfix(tree), lλ(tree))
       else
         e0   = e(tree)
         e2   = e(tree.d2)
@@ -3141,16 +3141,16 @@ setsh!(tree::T, x::Bool) where {T <: Tx} =
 """
     setupstreamλ!(λi ::Float64,
                   i  ::Int64,
-                  Ξ  ::Vector{cTce},
-                  idf::Vector{iBffs})
+                  Ξ  ::Vector{T},
+                  idf::Vector{iBffs}) where {T <: cT}
 
 Set the speciation rate of the upstream ancestors, if any, for 
 middle branches to `λi`.
 """
 function setupstreamλ!(λi ::Float64,
                        i  ::Int64,
-                       Ξ  ::Vector{cTce},
-                       idf::Vector{iBffs})
+                       Ξ  ::Vector{T},
+                       idf::Vector{iBffs}) where {T <: cT}
 
   @inbounds begin
     bi = idf[i]
@@ -3177,17 +3177,17 @@ end
 
 """
     setdownstreamλ!(λi ::Float64,
-                    i  ::Int64
-                    Ξ  ::Vector{cTce}, 
-                    idf::Vector{iBffs})
+                    i  ::Int64,
+                    Ξ  ::Vector{T}, 
+                    idf::Vector{iBffs}) where {T <: cT}
 
 Set the speciation rate of the downstream daughters, if any, for 
 middle branches to `λi`.
 """
 function setdownstreamλ!(λi ::Float64,
                          i  ::Int64,
-                         Ξ  ::Vector{cTce}, 
-                         idf::Vector{iBffs})
+                         Ξ  ::Vector{T}, 
+                         idf::Vector{iBffs}) where {T <: cT}
 
   @inbounds begin
 
