@@ -1015,7 +1015,7 @@ end
 """
     _ibuffer(io::IOBuffer, tree::T) where {T <: cT}
 
-Write `cTce` to IOBuffer.
+Write `cTce` or `cTct` to IOBuffer.
 """
 function _ibuffer(io::IOBuffer, tree::T) where {T <: cT}
   if def1(tree)
@@ -1028,6 +1028,28 @@ function _ibuffer(io::IOBuffer, tree::T) where {T <: cT}
   else
     print(io, '(', e(tree), ',', short(isextinct(tree)), ',', 
       short(isfix(tree)), ',', lλ(tree), ')')
+  end
+end
+
+
+
+
+"""
+    _ibuffer(io::IOBuffer, tree::cTbd)
+
+Write `cTbd` to IOBuffer.
+"""
+function _ibuffer(io::IOBuffer, tree::cTbd)
+  if def1(tree)
+    write(io, '(')
+    _ibuffer(io, tree.d1), 
+    write(io, ',')
+    _ibuffer(io, tree.d2), 
+    print(io, ',', e(tree), ',', short(isextinct(tree)), ',',
+      short(isfix(tree)), ',', lλ(tree), ',', lμ(tree), ')')
+  else
+    print(io, '(', e(tree), ',', short(isextinct(tree)), ',', 
+      short(isfix(tree)), ',', lλ(tree), ',', lμ(tree), ')')
   end
 end
 

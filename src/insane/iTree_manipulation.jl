@@ -1890,6 +1890,52 @@ end
 
 
 """
+    _remove_unsampled!(tree::cTbd)
+
+Remove extinct tips from `cTbd`.
+"""
+function _remove_unsampled!(tree::cTbd)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return cTbd(e(tree), isextinct(tree), isfix(tree), lλ(tree), lμ(tree))
+      else
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0 = lλ(tree)
+        λ2 = lλ(tree.d2)
+        μ0 = lμ(tree)
+        μ2 = lμ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+        setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+      end
+    elseif !isfix(tree.d2)
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0 = lλ(tree)
+      λ1 = lλ(tree.d1)
+      μ0 = lμ(tree)
+      μ1 = lμ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+      setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+    end
+  end
+  return tree
+end
+
+
+
+
+"""
     _remove_unsampled!(tree::iTpb)
 
 Remove extinct tips from `iTpb`.
@@ -3187,6 +3233,47 @@ end
 
 
 """
+    setupstreamλμ!(λi ::Float64,
+                   μi ::Float64,
+                   i  ::Int64,
+                   Ξ  ::Vector{cTbd},
+                   idf::Vector{iBffs})
+
+Set the speciation and extinction rate of the upstream ancestors, if any, for 
+middle branches to `λi`.
+"""
+function setupstreamλμ!(λi ::Float64,
+                        μi ::Float64,
+                        i  ::Int64,
+                        Ξ  ::Vector{cTbd},
+                        idf::Vector{iBffs})
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is non-cladogenetic
+    if iszero(d2(bi))
+      ξi   = Ξ[i]
+
+      if def2(ξi)
+        lξi = fixtip(ξi)
+        setlλ!(lξi, λi)
+        setlμ!(lξi, μi)
+      else
+        setlλ!(ξi, λi)
+        setlμ!(ξi, μi)
+        setupstreamλμ!(λi, μi, pa(bi), Ξ, idf)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
     setdownstreamλ!(λi ::Float64,
                     i  ::Int64,
                     Ξ  ::Vector{T}, 
@@ -3213,6 +3300,49 @@ function setdownstreamλ!(λi ::Float64,
           setdownstreamλ!(λi, i1, Ξ, idf)
         else
           setλt!(bi, λi)
+        end
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
+    setdownstreamλμ!(λi ::Float64,
+                     μi ::Float64,
+                     i  ::Int64,
+                     Ξ  ::Vector{cTbd}, 
+                     idf::Vector{iBffs})
+
+Set the speciation rate of the downstream daughters, if any, for 
+middle branches to `λi` and `μi`.
+"""
+function setdownstreamλμ!(λi ::Float64,
+                          μi ::Float64,
+                          i  ::Int64,
+                          Ξ  ::Vector{cTbd}, 
+                          idf::Vector{iBffs})
+
+  @inbounds begin
+
+    ξi = Ξ[i]
+    setlλ!(ξi, λi)
+    setlμ!(ξi, μi)
+
+    if istip(ξi)
+      bi = idf[i]
+      i1 = d1(bi)
+      if i1 > 0
+        if iszero(d2(bi))
+          setdownstreamλ!(λi, μi, i1, Ξ, idf)
+        else
+          setλt!(bi, λi)
+          setμt!(bi, μi)
         end
       end
     end

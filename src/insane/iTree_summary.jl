@@ -1009,6 +1009,46 @@ end
 
 
 """
+    imean(treev::Vector{cTbd})
+
+Make an `cTce` with the geometric mean.
+"""
+function imean(treev::Vector{cTbd})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas
+  ssλ = ssμ = 0.0
+  for t in treev
+    ssλ += lλ(t)
+    ssμ += lμ(t)
+  end
+  mλ = ssλ/Float64(nt)
+  mμ = ssμ/Float64(nt)
+
+  if def1(t1)
+    treev1 = cTbd[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = cTbd[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    cTbd(imean(treev1), imean(treev2),
+         e(t1), isextinct(t1), true, mλ, mμ)
+  else
+    cTbd(e(t1), isextinct(t1), true, mλ, mμ)
+  end
+end
+
+
+
+
+"""
     imean(treev::Vector{iTpb})
 
 Make an `iT` with the geometric mean.

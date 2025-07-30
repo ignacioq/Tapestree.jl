@@ -85,8 +85,9 @@ end
 
 
 
+
 """
-    llik_cladsce_track!(tree::cTbd,
+    llik_cladsbd_track!(tree::cTbd,
                         α   ::Float64,
                         σλ  ::Float64,
                         σμ  ::Float64,
@@ -95,11 +96,12 @@ end
                         ssλ ::Float64,
                         ssμ ::Float64,
                         ns  ::Float64,
+                        ne  ::Float64,
                         sos ::Function)
 
 Returns the log-likelihood for a `cTbd` according to clads.
 """
-function llik_cladsce_track!(tree::cTbd,
+function llik_cladsbd_track!(tree::cTbd,
                              α   ::Float64,
                              σλ  ::Float64,
                              σμ  ::Float64,
@@ -108,6 +110,7 @@ function llik_cladsce_track!(tree::cTbd,
                              ssλ ::Float64,
                              ssμ ::Float64,
                              ns  ::Float64,
+                             ne  ::Float64,
                              sos ::Function)
 
   λi = lλ(tree)
@@ -133,15 +136,16 @@ function llik_cladsce_track!(tree::cTbd,
     ssμ = sos(ssμ, sqμ)
     dd  = sos(dd, λ1 + λ2 - 2.0*λi)
 
-    ll, dd, ssλ, ssμ, ns = 
-      llik_cladsce_track!(td1, α, σλ, σμ, ll, dd, ssλ, ssμ, ns, sos)
-    ll, dd, ssλ, ssμ, ns = 
-      llik_cladsce_track!(td2, α, σλ, σμ, ll, dd, ssλ, ssμ, ns, sos)
+    ll, dd, ssλ, ssμ, ns, ne = 
+      llik_cladsbd_track!(td1, α, σλ, σμ, ll, dd, ssλ, ssμ, ns, ne, sos)
+    ll, dd, ssλ, ssμ, ns, ne = 
+      llik_cladsbd_track!(td2, α, σλ, σμ, ll, dd, ssλ, ssμ, ns, ne, sos)
   elseif isextinct(tree)
+    ne = sos(ne, 1.0)
     ll = sos(ll, μi)
   end
 
-  return ll, dd, ssλ, ssμ, ns
+  return ll, dd, ssλ, ssμ, ns, ne
 end
 
 

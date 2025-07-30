@@ -165,6 +165,7 @@ isfossil(tree::iTpb)     = false
 isfossil(tree::cTpb)     = false
 isfossil(tree::cTce)     = false
 isfossil(tree::cTct)     = false
+isfossil(tree::cTbd)     = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
@@ -1862,10 +1863,11 @@ end
 
 
 
+
 """
     fixtip(tree::T, λa::Float64) where {T <: iTree}
 
-Return the first fixed tip.
+Return the first fixed tip with ancestral speciation.
 """
 function fixtip(tree::T, λa::Float64) where {T <: iTree}
   if istip(tree)
@@ -1877,6 +1879,23 @@ function fixtip(tree::T, λa::Float64) where {T <: iTree}
   end
 end
 
+
+
+
+"""
+    fixtip(tree::T, λa::Float64, μa::Float64) where {T <: iTree}
+
+Return the first fixed tip with ancestral speciation and extinction.
+"""
+function fixtip(tree::T, λa::Float64, μa::Float64) where {T <: iTree}
+  if istip(tree)
+    return tree, λa, μa
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T, lλ(tree), lμ(tree))
+  else
+    fixtip(tree.d2::T, lλ(tree), lμ(tree))
+  end
+end
 
 
 
@@ -2213,7 +2232,6 @@ end
 
 
 
-
 """
     _λat!(tree::T,
           c   ::Float64,
@@ -2247,6 +2265,51 @@ function _λat!(tree::T,
   end
 
   return λfx
+end
+
+
+
+
+"""
+    _λμat!(tree::T,
+           c   ::Float64,
+           λs  ::Vector{Float64},
+           μs  ::Vector{Float64},
+           t   ::Float64,
+           λfx ::Float64,
+           μfx ::Float64) where {T <: cT}
+
+Return speciation rates, `λs`, at time `c` for `tree`.
+"""
+function _λμat!(tree::T,
+                c   ::Float64,
+                λs  ::Vector{Float64},
+                μs  ::Vector{Float64},
+                t   ::Float64,
+                λfx ::Float64,
+                μfx ::Float64) where {T <: cT}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+
+    λi = lλ(tree)
+    push!(λs, λi)
+    μi = lμ(tree)
+    push!(μs, μi)
+
+    if isfix(tree)
+      λfx =  λi
+      μfx =  μi
+    end
+
+    return λfx, μfx
+  elseif def1(tree)
+    λfx, μfx = _λμat!(tree.d1, c, λs, μs, t + et, λfx, μfx)
+    λfx, μfx = _λμat!(tree.d2, c, λs, μs, t + et, λfx, μfx)
+  end
+
+  return λfx, μfx
 end
 
 
@@ -2765,6 +2828,50 @@ end
 
 
 """
+    upstreamλμ(i  ::Int64,
+               Ξ  ::Vector{cTbd},
+               idf::Vector{iBffs},
+               eas::Float64,
+               λa ::Float64,
+               μa::Float64)
+
+Return the branch length `eds` and speciation rates of daughters, if any, for 
+middle branches.
+"""
+function upstreamλμ(i  ::Int64,
+                    Ξ  ::Vector{cTbd},
+                    idf::Vector{iBffs},
+                    eas::Float64,
+                    λa ::Float64,
+                    μa::Float64)
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is cladogenetic
+    if d2(bi) > 0
+      λa = λt(bi)
+      μa = μt(bi)
+    else
+      ξi   = Ξ[i]
+ 
+      if def2(ξi)
+        lξi, λa, μa = fixtip(ξi, λa, μa)
+        eas += e(lξi)
+      else
+        eas += e(ξi)
+        eas, λa, μa, i = upstreamλμ(pa(bi), Ξ, idf, eas, λa, μa)
+      end
+    end
+  end
+
+  return eas, λa, μa, i
+end
+
+
+
+
+"""
     downstreamλs(i  ::Int64, 
                  Ξ  ::Vector{T}, 
                  idf::Vector{iBffs}, 
@@ -2806,6 +2913,60 @@ function downstreamλs(i  ::Int64,
   end
 
   return eds, λ1, λ2
+end
+
+
+
+
+
+"""
+    downstreamλμs(i  ::Int64, 
+                  Ξ  ::Vector{cTbd},
+                  idf::Vector{iBffs},
+                  eds::Float64,
+                  λ1 ::Float64,
+                  λ2 ::Float64,
+                  μ1 ::Float64,
+                  μ2 ::Float64)
+
+Return the branch length `eds` and speciation and extinction rates of 
+daughters, if any, for middle branches.
+"""
+function downstreamλμs(i  ::Int64, 
+                       Ξ  ::Vector{cTbd}, 
+                       idf::Vector{iBffs}, 
+                       eds::Float64, 
+                       λ1 ::Float64, 
+                       λ2 ::Float64,
+                       μ1 ::Float64,
+                       μ2 ::Float64)
+
+  @inbounds begin
+
+    ξi   = Ξ[i]
+    eds += e(ξi)
+
+    if def2(ξi)
+      ξ1, ξ2 = ξi.d1, ξi.d2
+      λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+    else
+      bi = idf[i]
+      i1 = d1(bi)
+      if i1 > 0
+        i2 = d2(bi)
+        # if cladogenetic
+        if i2 > 0
+          ξ1, ξ2 = Ξ[i1], Ξ[i2]
+          λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+        # if mid
+        else
+          eds, λ1, λ2, μ1, μ2 = downstreamλμs(i1, Ξ, idf, eds, λ1, λ2, μ1, μ2)
+        end
+      end
+    end
+  end
+
+  return eds, λ1, λ2, μ1, μ2
 end
 
 

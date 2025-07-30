@@ -450,13 +450,15 @@ end
 """
     _sim_cladsbd_i(t   ::Float64,
                    λt  ::Float64,
+                   μt  ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
-                   μ   ::Float64,
+                   σμ  ::Float64,
                    na  ::Int64,
                    nn  ::Int64,
                    nlim::Int64,
-                   xfs::Vector{Float64})
+                   λfs ::Vector{Float64},
+                   μfs ::Vector{Float64},)
 
 Simulate `cTbd` according to a birth-death clads.
 """
@@ -469,7 +471,8 @@ function _sim_cladsbd_i(t   ::Float64,
                         na  ::Int64,
                         nn  ::Int64,
                         nlim::Int64,
-                        xfs::Vector{Float64})
+                        λfs ::Vector{Float64},
+                        μfs ::Vector{Float64})
 
   if nn < nlim
 
@@ -479,7 +482,8 @@ function _sim_cladsbd_i(t   ::Float64,
 
     if tw > t
       na += 1
-      push!(xfs, λt)
+      push!(λfs, λt)
+      push!(μfs, μt)
       return cTbd(t, false, false, λt, μt), na, nn
     end
 
@@ -487,10 +491,10 @@ function _sim_cladsbd_i(t   ::Float64,
       nn += 1
       d1, na, nn = 
         _sim_cladsbd_i(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, na, nn, nlim, xfs)
+          α, σλ, σμ, na, nn, nlim, λfs, μfs)
       d2, na, nn = 
         _sim_cladsbd_i(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, na, nn, nlim, xfs)
+          α, σλ, σμ, na, nn, nlim, λfs, μfs)
 
       return cTbd(d1, d2, tw, false, false, λt, μt), na, nn
     else
