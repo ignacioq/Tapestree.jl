@@ -1658,6 +1658,7 @@ lλ(tree::T) where {T <: cT} = getproperty(tree, :lλ)
 Return pendant edge.
 """
 lμ(tree::iTbdU) = getproperty(tree,:lμ)
+lμ(tree::cTbd)  = getproperty(tree,:lμ)
 
 
 

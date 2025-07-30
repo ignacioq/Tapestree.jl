@@ -76,7 +76,6 @@ end
 
 
 
-
 """
     llik_clads_track!(tree::cTpb,
                       α   ::Float64,
@@ -140,8 +139,6 @@ function _dd_ss(tree::T,
                 dd  ::Float64,
                 ss  ::Float64) where {T <: cT}
 
-  lλi = lλ(tree)
-
   if def1(tree)
     td1 = tree.d1
     dd, ss = _dd_ss(td1, α, dd, ss)
@@ -149,6 +146,7 @@ function _dd_ss(tree::T,
       td2 = tree.d2
       dd, ss = _dd_ss(td2, α, dd, ss)
 
+      lλi = lλ(tree)
       lλ1 = lλ(td1)
       lλ2 = lλ(td2)
       ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)

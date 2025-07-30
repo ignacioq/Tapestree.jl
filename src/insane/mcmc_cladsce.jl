@@ -367,7 +367,7 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
             elseif pupi === 2
 
               llc, prc, σλc, mc = 
-                update_σ!(σλc, lλ(Ξ[1]), σλc, μc, ssλ, 2.0*(ns + rmλ), llc, prc, 
+                update_σ!(σλc, lλ(Ξ[1]), αc, μc, ssλ, 2.0*(ns + rmλ), llc, prc, 
                   mc, th, surv, σλ_prior)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc, μc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
@@ -556,7 +556,7 @@ function update_σ!(σλc     ::Float64,
                    prc     ::Float64,
                    mc      ::Float64,
                    th      ::Float64,
-                   surv   ::Int64,
+                   surv    ::Int64,
                    σλ_prior::NTuple{2,Float64})
 
   σλ_p1 = σλ_prior[1]
@@ -684,8 +684,8 @@ function update_scale!(Ξ       ::Vector{cTce},
     llc += llr
     prc += prr
     mc  = mp
-    scale_rateλ!(Ξ, s)
-    scale_rate!(idf, s)
+    scale_rate!(Ξ,   addlλ!, s)
+    scale_rate!(idf, addlλ!, s)
   end
 
   return llc, prc, mc, acc

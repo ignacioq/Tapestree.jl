@@ -13,18 +13,18 @@ Created 25 06 2020
 
 
 """
-    scale_rateλ!(tree::T, s::Float64) where {T <: cT}
+    scale_rate!(tree::T, f::Function, s::Float64) where {T <: cT}
 
 Add `s` to vector retrieved using function `f`.
 """
-function scale_rateλ!(tree::T, s::Float64) where {T <: cT}
+function scale_rate!(tree::T, f::Function, s::Float64) where {T <: cT}
 
-  addlλ!(tree, s)
+  f(tree, s)
 
   if def1(tree)
-    scale_rateλ!(tree.d1, s)
+    scale_rate!(tree.d1, f, s)
     if def2(tree)
-      scale_rateλ!(tree.d2, s)
+      scale_rate!(tree.d2, f, s)
     end
   end
 
@@ -3004,6 +3004,18 @@ setlλ!(tree::T, lλ::Float64) where {T <: cT} = setproperty!(tree, :lλ, lλ)
 
 
 """
+    setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTbd}
+
+Set number of `δt` for `tree`.
+"""
+setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iT} =
+  setproperty!(tree, :lμ, lμ)
+setlμ!(tree::T, lμ::Float64) where {T <: cT} = setproperty!(tree, :lμ, lμ)
+
+
+
+
+"""
     addlλ!(tree::cTpb, a::Float64)
 
 Add to `lλ` for `tree`.
@@ -3014,12 +3026,11 @@ addlλ!(tree::T, a::Float64) where {T <: cT} = setproperty!(tree, :lλ, lλ(tree
 
 
 """
-    setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iTbd}
+    addlμ!(tree::cTpb, a::Float64)
 
-Set number of `δt` for `tree`.
+Add to `lμ` for `tree`.
 """
-setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iT} =
-  setproperty!(tree, :lμ, lμ)
+addlμ!(tree::T, a::Float64) where {T <: cT} = setproperty!(tree, :lμ, lμ(tree) + a)
 
 
 

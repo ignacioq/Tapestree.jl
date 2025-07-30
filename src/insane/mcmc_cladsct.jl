@@ -193,7 +193,7 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
       if pupi === 1
 
         llc, prc, αc, mc = 
-          update_α!(αc, lλ(Ξ[1]), σλc, ϵc, 2.0*(ns + rmλ), ddλ, llc, prc, 
+          updatect_α!(αc, lλ(Ξ[1]), σλc, ϵc, 2.0*(ns + rmλ), ddλ, llc, prc, 
             mc, th, surv, α_prior)
 
         # update ssλ with new drift `α`
@@ -203,7 +203,7 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
       elseif pupi === 2
 
         llc, prc, σλc, mc = 
-          update_σ!(σλc, lλ(Ξ[1]), σλc, ϵc, ssλ, 2.0*(ns + rmλ), llc, prc, 
+          updatect_σ!(σλc, lλ(Ξ[1]), αc, ϵc, ssλ, 2.0*(ns + rmλ), llc, prc, 
             mc, th, surv, σλ_prior)
 
       # update extinction
@@ -351,7 +351,7 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
             if pupi === 1
 
               llc, prc, αc, mc = 
-                update_α!(αc, lλ(Ξ[1]), σλc, ϵc, 2.0*(ns + rmλ), ddλ, llc, prc, 
+                updatect_α!(αc, lλ(Ξ[1]), σλc, ϵc, 2.0*(ns + rmλ), ddλ, llc, prc, 
                   mc, th, surv, α_prior)
 
               # update ssλ with new drift `α`
@@ -367,7 +367,7 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
             elseif pupi === 2
 
               llc, prc, σλc, mc = 
-                update_σ!(σλc, lλ(Ξ[1]), σλc, ϵc, ssλ, 2.0*(ns + rmλ), llc, prc, 
+                updatect_σ!(σλc, lλ(Ξ[1]), αc, ϵc, ssλ, 2.0*(ns + rmλ), llc, prc, 
                   mc, th, surv, σλ_prior)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
@@ -477,7 +477,7 @@ end
 
 
 """
-    update_α!(αc     ::Float64,
+    updatect_α!(αc     ::Float64,
               λ0     ::Float64,
               σλ     ::Float64,
               ϵ      ::Float64,
@@ -494,18 +494,18 @@ end
 
 Gibbs update for `α`.
 """
-function update_α!(αc     ::Float64,
-                   λ0     ::Float64,
-                   σλ     ::Float64,
-                   ϵ      ::Float64,
-                   L      ::Float64,
-                   ddλ    ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   surv   ::Int64,
-                   α_prior::NTuple{2,Float64})
+function updatect_α!(αc     ::Float64,
+                     λ0     ::Float64,
+                     σλ     ::Float64,
+                     ϵ      ::Float64,
+                     L      ::Float64,
+                     ddλ    ::Float64,
+                     llc    ::Float64,
+                     prc    ::Float64,
+                     mc     ::Float64,
+                     th     ::Float64,
+                     surv   ::Int64,
+                     α_prior::NTuple{2,Float64})
 
   ν   = α_prior[1]
   τ2  = α_prior[2]^2
@@ -531,7 +531,7 @@ end
 
 
 """
-    update_σ!(σλc     ::Float64,
+    updatect_σ!(σλc     ::Float64,
               λ0      ::Float64,
               α       ::Float64,
               ϵ       ::Float64,
@@ -546,18 +546,18 @@ end
 
 Gibbs update for `σλ`.
 """
-function update_σ!(σλc     ::Float64,
-                   λ0      ::Float64,
-                   α       ::Float64,
-                   ϵ       ::Float64,
-                   ssλ     ::Float64,
-                   n       ::Float64,
-                   llc     ::Float64,
-                   prc     ::Float64,
-                   mc      ::Float64,
-                   th      ::Float64,
-                   surv   ::Int64,
-                   σλ_prior::NTuple{2,Float64})
+function updatect_σ!(σλc     ::Float64,
+                     λ0      ::Float64,
+                     α       ::Float64,
+                     ϵ       ::Float64,
+                     ssλ     ::Float64,
+                     n       ::Float64,
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     mc      ::Float64,
+                     th      ::Float64,
+                     surv    ::Int64,
+                     σλ_prior::NTuple{2,Float64})
 
   σλ_p1 = σλ_prior[1]
   σλ_p2 = σλ_prior[2]
@@ -684,8 +684,8 @@ function update_scale!(Ξ       ::Vector{cTct},
     prc  += prr
     mc   = mp
     ir  *= exp(s)
-    scale_rateλ!(Ξ, s)
-    scale_rate!(idf, s)
+    scale_rate!(Ξ,   addlλ!, s)
+    scale_rate!(idf, addlλ!, s)
   end
 
   return llc, prc, mc, ir, acc

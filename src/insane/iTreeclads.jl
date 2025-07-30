@@ -255,6 +255,78 @@ function cTct(tree::cTct)
 end
 
 
+
+
+"""
+    cTbd
+
+A composite recursive type of supertype `cT`
+representing a binary phylogenetic tree with constant turnover
+and `λ` under cladogenetic rate shifts for `insane` use,
+with the following fields:
+
+  d1:  daughter tree 1
+  d2:  daughter tree 2
+  e:   edge
+  iμ:  if extinct node
+  fx:  if fix tree
+  lλ:  `log(λ)`
+  lμ:  `log(μ)`
+
+    cTbd()
+
+Constructs an empty `cTbd` object.
+
+    cTbd(e::Float64, fx::Bool, lλ::Float64, lμ::Float64)
+
+Constructs an empty `cTbd` object with pendant edge `pe`.
+
+    cTbd(d1::cTbd, d2::cTbd, e::Float64, fx::Bool, lλ::Float64, lμ::Float64)
+
+Constructs an `cTbd` object with two `cTbd` daughters and pendant edge `pe`.
+"""
+mutable struct cTbd <: cT
+  d1 ::cTbd
+  d2 ::cTbd
+  e  ::Float64
+  iμ ::Bool
+  fx ::Bool
+  lλ ::Float64
+  lμ ::Float64
+
+  cTbd() = new()
+  cTbd(e::Float64, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      (x = new(); x.e = e; x.iμ = iμ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+  cTbd(d1::cTbd, d2::cTbd, e::Float64, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      new(d1, d2, e, iμ, fx, lλ, lμ)
+end
+
+
+# pretty-printing
+Base.show(io::IO, t::cTbd) =
+  print(io, "insane bd-clads tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+
+
+
+
+"""
+    cTbd(tree::cTbd)
+
+Produce a new copy of `cTbd`.
+"""
+function cTbd(tree::cTbd)
+  if def1(tree)
+    cTbd(cTbd(tree.d1), cTbd(tree.d2), e(tree), isextinct(tree), 
+      isfix(tree), lλ(tree), lμ(tree))
+  else
+    cTbd(e(tree), isextinct(tree), isfix(tree), lλ(tree), lμ(tree))
+  end
+end
+
+
+
+
+
 # """
 #     iTce
 

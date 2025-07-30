@@ -440,8 +440,8 @@ function update_scale!(Ξ       ::Vector{cTpb},
     acc += 1.0
     llc += llr
     prc += prr
-    scale_rateλ!(Ξ, s)
-    scale_rate!(idf, s)
+    scale_rate!(Ξ,   addlλ!, s)
+    scale_rate!(idf, addlλ!, s)
   end
 
   return llc, prc, acc
