@@ -731,9 +731,6 @@ function iquantile(treev::Vector{iTfbd}, p::Float64)
     for t in Base.OneTo(nts)
       if lastindex(vsλ[t]) != lastindex(vsλ[1])
         t2 = treev[t]
-        @show lastindex(vsλ[1]), lastindex(vsλ[t])
-        @show t1, t2, dt(t1), dt(t2), fdt(t1), fdt(t2), e(t1), e(t2)
-        @show vsλ[t], vsλ[1]
       end
 
       vλ[t] = vsλ[t][i]

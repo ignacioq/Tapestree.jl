@@ -35,7 +35,7 @@ Created 11 02 2022
                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1),
                 survival::Bool                  = true,
                 prints  ::Int64                 = 5,
-                mxthf   ::Float64               = Inf,
+                mxthf   ::Float64               = 0.1,
                 tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant occurrence birth-death.
@@ -62,7 +62,7 @@ function insane_cobd(tree    ::sTf_label,
                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.01, 0.1),
                      survival::Bool                  = true,
                      prints  ::Int64                 = 5,
-                     mxthf   ::Float64               = Inf,
+                     mxthf   ::Float64               = 0.1,
                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n   = ntips(tree)

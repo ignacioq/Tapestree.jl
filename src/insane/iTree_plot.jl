@@ -636,7 +636,6 @@ end
           shownodes  = (false, false, T <: Union{iTf, iTpbd}),
           shapes     = [:none, :none, :square],
           colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
-          shsizes    = [3.0, 3.0, 3.0],
           showda     = false,
           col_da     = ["#a9a9a9", :black],
           yω         = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
