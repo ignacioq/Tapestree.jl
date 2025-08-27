@@ -7,8 +7,9 @@
 module INSANE
 
   using Random: randexp, randn!, shuffle!
+  using SpecialFunctions: loggamma
   using SpecialFunctions: erf
-  using DelimitedFiles: writedlm
+  using DelimitedFiles: readdlm, writedlm
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean, median
   using LoopVectorization: @turbo
@@ -37,12 +38,14 @@ module INSANE
   include("insane/sim_cb.jl")
   include("insane/sim_cbd.jl")
   include("insane/sim_cfbd.jl")
+  include("insane/sim_cobd.jl")
   include("insane/sim_gbmb.jl")
   include("insane/sim_gbmbd.jl")
   include("insane/sim_gbmbd_efx.jl")
   include("insane/sim_gbmce.jl")
   include("insane/sim_gbmct.jl")
   include("insane/sim_gbmfbd.jl")
+  include("insane/sim_gbmobd.jl")
   include("insane/sim_gbmpbd.jl")
   include("insane/sim_shift.jl")
   include("insane/sim_cbX.jl")
@@ -51,6 +54,7 @@ module INSANE
   include("insane/ll_cb.jl")
   include("insane/ll_cbd.jl")
   include("insane/ll_cfbd.jl")
+  include("insane/ll_cobd.jl")
   include("insane/ll_gbmb.jl")
   include("insane/ll_gbmbd.jl")
   include("insane/ll_gbmce.jl")
@@ -64,12 +68,14 @@ module INSANE
   include("insane/mcmc_cbd_gp.jl")
   include("insane/mcmc_cbd.jl")
   include("insane/mcmc_cfbd.jl")
+  include("insane/mcmc_cobd.jl")
   include("insane/mcmc_gbmb.jl")
   include("insane/mcmc_gbmbd.jl")
   include("insane/mcmc_gbmbd_efx.jl")
   include("insane/mcmc_gbmce.jl")
   include("insane/mcmc_gbmct.jl")
   include("insane/mcmc_gbmfbd.jl")
+  include("insane/mcmc_gbmobd.jl")
   include("insane/mcmc_cbX.jl")
   include("insane/mcmc_cbdX.jl")
   include("insane/mcmc_cfbdX.jl")
