@@ -729,7 +729,7 @@ Tlabel = Union{sT_label, sTf_label}
 
 iTf = Union{sTfbd, sTfbdX, iTfbd}
 """
-iTf = Union{sTf_label, sTfbd, iTfbd, sTfpe, sTxs}
+iTf = Union{sTf_label, sTfbd, cTfbd, iTfbd, sTfpe, sTxs}
 
 
 
@@ -739,7 +739,17 @@ iTf = Union{sTf_label, sTfbd, iTfbd, sTfpe, sTxs}
 
 uTf = Union{sTfbd, sTfbdX, iTfbd}
 """
-uTf = Union{sTfbd, iTfbd, sTxs}
+uTf = Union{sTfbd, cTfbd, iTfbd, sTxs}
+
+
+
+
+"""
+    Union type for gbm-bd data
+
+iTbdU = Union{iTbd, iTfbd}
+"""
+cTbdU = Union{cTbd, cTfbd}
 
 
 

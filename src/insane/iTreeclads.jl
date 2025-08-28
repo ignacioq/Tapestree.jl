@@ -277,11 +277,11 @@ with the following fields:
 
 Constructs an empty `cTbd` object.
 
-    cTbd(e::Float64, fx::Bool, lλ::Float64, lμ::Float64)
+    cTbd(e::Float64, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
 
 Constructs an empty `cTbd` object with pendant edge `pe`.
 
-    cTbd(d1::cTbd, d2::cTbd, e::Float64, fx::Bool, lλ::Float64, lμ::Float64)
+    cTbd(d1::cTbd, d2::cTbd, e::Float64, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
 
 Constructs an `cTbd` object with two `cTbd` daughters and pendant edge `pe`.
 """
@@ -323,6 +323,90 @@ function cTbd(tree::cTbd)
   end
 end
 
+
+
+
+"""
+    cTfbd
+
+A composite recursive type of supertype `cT`
+representing a binary phylogenetic tree with constant turnover
+and `λ` under cladogenetic rate shifts for `insane` use,
+with the following fields:
+
+  d1:  daughter tree 1
+  d2:  daughter tree 2
+  e:   edge
+  iψ:  if fossil
+  iμ:  if extinct node
+  fx:  if fix tree
+  lλ:  `log(λ)`
+  lμ:  `log(μ)`
+
+
+Constructs an empty `cTfbd` object.
+
+    cTfbd()
+
+Constructs an empty `cTfbd` object with pendant edge `e`.
+
+    cTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
+
+Constructs an `cTfbd` object with one `cTfbd` daughter and pendant edge `e`.
+
+    cTfbd(d1::cTfbd, e::Float64, iψ::Bool, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
+
+Constructs an `cTfbd` object with two `cTfbd` daughters and pendant edge `e`.
+
+    cTfbd(d1::cTfbd, e::Float64, iψ::Bool, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
+"""
+mutable struct cTfbd <: cT
+  d1 ::cTfbd
+  d2 ::cTfbd
+  e  ::Float64
+  iμ ::Bool
+  iψ ::Bool
+  fx ::Bool
+  lλ ::Float64
+  lμ ::Float64
+
+  cTfbd() = new()
+  cTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+  cTfbd(d1::cTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+  cTfbd(d1::cTfbd, d2::cTfbd, e::Float64, iψ::Bool, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      new(d1, d2, e, iμ, iψ, fx, lλ, lμ)
+end
+
+
+# pretty-printing
+function Base.show(io::IO, t::cTfbd)
+  nt = ntips(t)
+  nf = nfossils(t)
+
+  print(io, "insane clads-bd fossil tree with ",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
+    nf," fossil", (isone(nf) ? "" : "s" ))
+end
+
+
+
+
+"""
+    cTbd(tree::cTbd)
+
+Produce a new copy of `cTbd`.
+"""
+function cTbd(tree::cTbd)
+  if def1(tree)
+    cTbd(cTbd(tree.d1), cTbd(tree.d2), e(tree), isextinct(tree), 
+      isfix(tree), lλ(tree), lμ(tree))
+  else
+    cTbd(e(tree), isextinct(tree), isfix(tree), lλ(tree), lμ(tree))
+  end
+end
 
 
 

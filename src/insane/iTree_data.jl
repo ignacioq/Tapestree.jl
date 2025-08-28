@@ -1297,31 +1297,11 @@ ntips(tree::T) where {T <: iTree} = _ntips(tree, 0)
 
 
 """
-    _ntips(tree::T, n::Int64) where {T <: iTree}
-
-Return the number of tip nodes for `tree`, initialized at `n`.
-"""
-function _ntips(tree::T, n::Int64) where {T <: iTree}
-
-  if def1(tree)
-    n = _ntips(tree.d1, n)
-    n = _ntips(tree.d2, n)
-  else
-    n += 1
-  end
-
-  return n
-end
-
-
-
-
-"""
     _ntips(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of tip nodes for `tree`, initialized at `n`.
 """
-function _ntips(tree::T, n::Int64) where {T <: iTf}
+function _ntips(tree::T, n::Int64) where {T <: iTree}
 
   if def1(tree)
     n = _ntips(tree.d1, n)
@@ -1347,31 +1327,13 @@ ntipsalive(tree::T) where {T <: iTree} = _ntipsalive(tree, 0)
 
 
 
-"""
-    _ntipsalive(tree::T, n::Int64) where {T <: iTree}
-Return the number of alive nodes for `tree`, initialized at `n`.
-"""
-function _ntipsalive(tree::T, n::Int64) where {T <: iTree}
-
-  if def1(tree)
-    n = _ntipsalive(tree.d1, n)
-    n = _ntipsalive(tree.d2, n)
-  elseif isalive(tree)
-    n += 1
-  end
-
-  return n
-end
-
-
-
 
 """
     _ntipsalive(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of alive nodes for `tree`, initialized at `n`.
 """
-function _ntipsalive(tree::T, n::Int64) where {T <: iTf}
+function _ntipsalive(tree::T, n::Int64) where {T <: iTree}
 
   if def1(tree)
     n = _ntipsalive(tree.d1, n)
@@ -1399,33 +1361,11 @@ ntipsextinct(tree::T) where {T <: iTree} = _ntipsextinct(tree, 0)
 
 
 """
-    _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
-
-Return the number of extinct nodes for `tree`, initialized at `n`.
-"""
-function _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
-
-  if def1(tree)
-    n = _ntipsextinct(tree.d1, n)
-    n = _ntipsextinct(tree.d2, n)
-  else
-    if isextinct(tree)
-      n += 1
-    end
-  end
-
-  return n
-end
-
-
-
-
-"""
     _ntipsextinct(tree::T, n::Int64) where {T <: iTf}
 
 Return the number of extinct nodes for `tree`, initialized at `n`.
 """
-function _ntipsextinct(tree::T, n::Int64) where {T <: iTf}
+function _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
 
   if istip(tree)
     if isextinct(tree)
@@ -1455,33 +1395,11 @@ ntipsextinctF(tree::T) where {T <: iTree} = _ntipsextinctF(tree, 0.0)
 
 
 """
-    _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
-
-Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
-"""
-function _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
-
-  if def1(tree)
-    n = _ntipsextinctF(tree.d1, n)
-    n = _ntipsextinctF(tree.d2, n)
-  else
-    if isextinct(tree)
-      n += 1.0
-    end
-  end
-
-  return n
-end
-
-
-
-
-"""
     _ntipsextinctF(tree::T, n::Float64) where {T <: iTf}
 
 Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
-function _ntipsextinctF(tree::T, n::Float64) where {T <: iTf}
+function _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
 
   if istip(tree)
     if isextinct(tree)
@@ -1593,38 +1511,13 @@ end
 """
     treelength_ne(tree::T,
                   l   ::Float64,
-                  n   ::Float64) where {T <: iTree}
-
-Return the tree length and extinction events.
-"""
-function treelength_ne(tree::T,
-                       l   ::Float64,
-                       n   ::Float64) where {T <: iTree}
-
-  l += e(tree)
-  if def1(tree)
-    l, n = treelength_ne(tree.d1, l, n)
-    l, n = treelength_ne(tree.d2, l, n)
-  elseif isextinct(tree)
-    n += 1.0
-  end
-
-  return l, n
-end
-
-
-
-
-"""
-    treelength_ne(tree::T,
-                  l   ::Float64,
                   n   ::Float64) where {T <: iTf}
 
 Return the tree length and extinction events.
 """
 function treelength_ne(tree::T,
                        l   ::Float64,
-                       n   ::Float64) where {T <: iTf}
+                       n   ::Float64) where {T <: iTree}
 
   l += e(tree)
   if def1(tree)
@@ -1645,21 +1538,20 @@ end
 """
     lλ(tree::T) where {T <: iT}
 
-Return pendant edge.
+Return speciation.
 """
-lλ(tree::T) where {T <: iT} = getproperty(tree, :lλ)
-lλ(tree::T) where {T <: cT} = getproperty(tree, :lλ)
+lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
 
 
 
 
 """
     lμ(tree::iTbdU)
+    lμ(tree::cTbdU)
 
 Return pendant edge.
 """
-lμ(tree::iTbdU) = getproperty(tree,:lμ)
-lμ(tree::cTbd)  = getproperty(tree,:lμ)
+lμ(tree::T) where {T <: iTree} = getproperty(tree,:lμ)
 
 
 

@@ -23,7 +23,7 @@ Sample conditional on number of species
 
 
 # """
-#     sim_cladsbd(n       ::Int64;
+#     sim_cladsfbd(n       ::Int64;
 #               λ0      ::Float64 = 1.0,
 #               α       ::Float64 = 0.0,
 #               σλ      ::Float64 = 0.1,
@@ -34,9 +34,9 @@ Sample conditional on number of species
 #               warnings::Bool    = true,
 #               maxt    ::Float64 = δt*1e7)
 
-# Simulate `cTbd` according to a birth-death clads.
+# Simulate `cTfbd` according to a birth-death clads.
 # """
-# function sim_cladsbd(n       ::Int64;
+# function sim_cladsfbd(n       ::Int64;
 #                    λ0      ::Float64 = 1.0,
 #                    α       ::Float64 = 0.0,
 #                    σλ      ::Float64 = 0.1,
@@ -49,15 +49,15 @@ Sample conditional on number of species
 
 #   # simulate in non-recursive manner
 #   e0, e1, el, λs, ea, na, simt =
-#     _sedges_cladsbd(nstar, log(λ0), α, σλ, δt, sqrt(δt), init, maxt)
+#     _sedges_cladsfbd(nstar, log(λ0), αλ, αμ, σλ, δt, sqrt(δt), init, maxt)
 
 #   if simt >= maxt
 #     warnings && @warn "simulation surpassed maximum time"
-#     return cTbd()
+#     return cTfbd()
 #   end
 
 #   # transform to iTree
-#   t = cTbd(e0, e1, el, λs, ea, e1[1], 1, δt)
+#   t = cTfbd(e0, e1, el, λs, ea, e1[1], 1, δt)
 
 #   # sample a time when species(t) == `n`
 #   nt = ltt(t)
@@ -66,7 +66,7 @@ Sample conditional on number of species
 
 #   if iszero(c)
 #     warnings && @warn "tree not sampled, try increasing `p`"
-#     return cTbd()
+#     return cTfbd()
 #   else
 #     # cut the tree
 #     t = cutbottom(t, simt - c)
@@ -79,7 +79,7 @@ Sample conditional on number of species
 
 
 # """
-#     _sedges_cladsbd(n    ::Int64,
+#     _sedges_cladsfbd(n    ::Int64,
 #                   λ0   ::Float64,
 #                   α    ::Float64,
 #                   σλ   ::Float64,
@@ -90,7 +90,7 @@ Sample conditional on number of species
 # Simulate `cladspb` just until hitting `n` alive species. Note that this is
 # a biased sample for a tree conditional on `n` species.
 # """
-# function _sedges_cladsbd(n    ::Int64,
+# function _sedges_cladsfbd(n    ::Int64,
 #                        λ0   ::Float64,
 #                        α    ::Float64,
 #                        σλ   ::Float64,
@@ -273,45 +273,62 @@ Sample conditional on time
 
 
 """
-    sim_cladsbd(t   ::Float64;
-                λ0  ::Float64 = 1.0,
-                μ0  ::Float64 = 0.5,
-                α   ::Float64 = 0.0,
-                σλ  ::Float64 = 0.1,
-                σμ  ::Float64 = 0.1,
-                nlim::Int64   = 10_000,
-                init::Symbol  = :crown)
+    sim_cladsfbd(t   ::Float64;
+                 λ0  ::Float64         = 1.0,
+                 μ0  ::Float64         = 0.5,
+                 αλ  ::Float64         = 0.0,
+                 αμ  ::Float64         = 0.0,
+                 σλ  ::Float64         = 0.1,
+                 σμ  ::Float64         = 0.1,
+                 ψ   ::Vector{Float64} = [0.1],
+                 ψts ::Vector{Float64} = Float64[],
+                 nlim::Int64           = 10_000,
+                 init::Symbol          = :crown)
 
-Simulate `cTbd` according to a birth-death clads
+Simulate `cTfbd` according to a birth-death clads
 conditional in stopping at time `t`.
 """
-function sim_cladsbd(t   ::Float64;
-                     λ0  ::Float64 = 1.0,
-                     μ0  ::Float64 = 0.5,
-                     α   ::Float64 = 0.0,
-                     σλ  ::Float64 = 0.1,
-                     σμ  ::Float64 = 0.1,
-                     nlim::Int64   = 10_000,
-                     init::Symbol  = :crown)
+function sim_cladsfbd(t   ::Float64;
+                      λ0  ::Float64         = 1.0,
+                      μ0  ::Float64         = 0.5,
+                      αλ  ::Float64         = 0.0,
+                      αμ  ::Float64         = 0.0,
+                      σλ  ::Float64         = 0.1,
+                      σμ  ::Float64         = 0.1,
+                      ψ   ::Vector{Float64} = [0.1],
+                      ψts ::Vector{Float64} = Float64[],
+                      nlim::Int64           = 10_000,
+                      init::Symbol          = :crown)
+
+  # only include epochs where the tree occurs
+  tix = findfirst(x -> x < t, ψts)
+  if !isnothing(tix)
+    ψ   = ψ[tix:end]
+    ψts = ψts[tix:end]
+  end
+  nep  = lastindex(ψts) + 1
 
   if init === :crown
     lλ0 = log(λ0)
     lμ0 = log(μ0)
-    d1, nn = _sim_cladsbd(t, lλ0, lμ0, α, σλ, σμ, 1, nlim)
+    d1, nn = _sim_cladsfbd(t, lλ0, lμ0, αλ, αμ, σλ, σμ, ψ, ψts, 
+      1, nep, 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_cladsbd(t, lλ0, lμ0, α, σλ, σμ, nn + 1, nlim)
+    d2, nn = _sim_cladsfbd(t, lλ0, lμ0, αλ, αμ, σλ, σμ, ψ, ψts, 
+      1, nep, nn + 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    tree = cTbd(d1, d2, 0.0, false, lλ0, lμ0)
+    tree = cTfbd(d1, d2, 0.0, false, false, false, lλ0, lμ0)
    elseif init === :stem
-    tree, nn = _sim_cladsbd(t, log(λ0), log(μ0), α, σλ, σμ, 1, nlim)
+    tree, nn = _sim_cladsfbd(t, log(λ0), log(μ0), αλ, αμ, σλ, σμ, ψ, ψts, 
+      1, nep, 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
@@ -328,91 +345,149 @@ end
 
 
 """
-    _sim_cladsbd(t   ::Float64,
-                 λt  ::Float64,
-                 μt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 σμ  ::Float64,
-                 nn  ::Int64,
-                 nlim::Int64)
+    _sim_cladsfbd(t   ::Float64,
+                  λt  ::Float64,
+                  μt  ::Float64,
+                  αλ  ::Float64,
+                  αμ  ::Float64,
+                  σλ  ::Float64,
+                  σμ  ::Float64,
+                  ψ   ::Vector{Float64},
+                  ψts ::Vector{Float64},
+                  ix  ::Int64,
+                  nep ::Int64,
+                  nn  ::Int64,
+                  nlim::Int64)
 
-Simulate `cTbd` according to a birth-death clads.
+Simulate `cTfbd` according to a birth-death clads.
 """
-function _sim_cladsbd(t   ::Float64,
-                      λt  ::Float64,
-                      μt  ::Float64,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      σμ  ::Float64,
-                      nn  ::Int64,
-                      nlim::Int64)
+function _sim_cladsfbd(t   ::Float64,
+                       λt  ::Float64,
+                       μt  ::Float64,
+                       αλ  ::Float64,
+                       αμ  ::Float64,
+                       σλ  ::Float64,
+                       σμ  ::Float64,
+                       ψ   ::Vector{Float64},
+                       ψts ::Vector{Float64},
+                       ix  ::Int64,
+                       nep ::Int64,
+                       nn  ::Int64,
+                       nlim::Int64)
 
   if nn < nlim
 
+    @inbounds ψi = ψ[ix]
+
     λi = exp(λt)
     μi = exp(μt)
-    tw = cbd_wait(λi, μi)
+    tw = cfbd_wait(λi, μi, ψi)
 
-    if tw > t
-      return cTbd(t, false, false, λt, μt), nn
+    # ψ epoch change
+    if ix < nep
+      @inbounds ψti = ψts[ix]
+      if t - tw < ψti
+        e0 = t - ψti
+        t0, nn = _sim_cladsfbd(ψti, λt, μt, αλ, αμ, σλ, σμ, ψ, ψts, 
+                   ix + 1, nep, nn, nlim)
+        sete!(t0, e(t0) + e0)
+        return t0, nn
+      end
     end
 
-    if λorμ(λi, μi)
+    if tw > t
+      return cTfbd(t, false, false, false, λt, μt), nn
+    end
+
+    # if speciation
+    if λevent(λi, μi, ψi)
       nn += 1
-      d1, nn = _sim_cladsbd(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ),
-                  α, σλ, σμ, nn, nlim)
-      d2, nn = _sim_cladsbd(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ),
-                  α, σλ, σμ, nn, nlim)
+      d1, nn = _sim_cladsfbd(t - tw, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ),
+                  αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, nn, nlim)
+      d2, nn = _sim_cladsfbd(t - tw, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ),
+                  αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, nn, nlim)
  
-      return cTbd(d1, d2, tw, false, false, λt, μt), nn
+      return cTfbd(d1, d2, tw, false, false, false, λt, μt), nn
+    # if extinction
+    elseif μevent(μi, ψi)
+
+      return cTfbd(tw, true, false, false, λt, μt), nn
+    # if fossil sampling
     else
-      return cTbd(tw, true, false, λt, μt), nn
+      d1, nn = _sim_cladsfbd(t - tw, λt, μt, αλ, αμ, σλ, σμ, ψ, ψts, 
+                 ix, nep, nn, nlim)
+
+      return cTfbd(d1, tw, false, true, false, λt, μt), nn
     end
   end
 
-  return cTbd(), nn
+  return cTfbd(), nn
 end
 
 
 
 
 """
-    _sim_cladsbd_t(t   ::Float64,
-                   λt  ::Float64,
-                   μt  ::Float64,
-                   α   ::Float64,
-                   σλ  ::Float64,
-                   σμ  ::Float64,
-                   lr  ::Float64,
-                   lU  ::Float64,
-                   iρi ::Float64,
-                   na  ::Int64,
-                   nn  ::Int64,
-                   nlim::Int64)
+    _sim_cladsfbd_t(t   ::Float64,
+                    λt  ::Float64,
+                    μt  ::Float64,
+                    αλ  ::Float64,
+                    αμ  ::Float64,
+                    σλ  ::Float64,
+                    σμ  ::Float64,
+                    lr  ::Float64,
+                    lU  ::Float64,
+                    iρi ::Float64,
+                    ψ   ::Vector{Float64},
+                    ψts ::Vector{Float64},
+                    ix  ::Int64,
+                    nep ::Int64,
+                    na  ::Int64,
+                    nn  ::Int64,
+                    nlim::Int64)
 
-Simulate `cTbd` according to a birth-death clads for
+Simulate `cTfbd` according to a birth-death clads for
 terminal branches.
 """
-function _sim_cladsbd_t(t   ::Float64,
-                        λt  ::Float64,
-                        μt  ::Float64,
-                        α   ::Float64,
-                        σλ  ::Float64,
-                        σμ  ::Float64,
-                        lr  ::Float64,
-                        lU  ::Float64,
-                        iρi ::Float64,
-                        na  ::Int64,
-                        nn  ::Int64,
-                        nlim::Int64)
+function _sim_cladsfbd_t(t   ::Float64,
+                         λt  ::Float64,
+                         μt  ::Float64,
+                         αλ  ::Float64,
+                         αμ  ::Float64,
+                         σλ  ::Float64,
+                         σμ  ::Float64,
+                         lr  ::Float64,
+                         lU  ::Float64,
+                         iρi ::Float64,
+                         ψ   ::Vector{Float64},
+                         ψts ::Vector{Float64},
+                         ix  ::Int64,
+                         nep ::Int64,
+                         na  ::Int64,
+                         nn  ::Int64,
+                         nlim::Int64)
 
   if isfinite(lr) && nn < nlim
 
+    @inbounds ψi = ψ[ix]
+
     λi = exp(λt)
     μi = exp(μt)
-    tw = cbd_wait(λi, μi)
+    tw = cfbd_wait(λi, μi, ψi)
 
+    # ψ epoch change
+    if ix < nep
+      @inbounds ψti = ψts[ix]
+      if t - tw < ψti
+        e0 = t - ψti
+        t0, na, nn, lr = _sim_cladsfbd_t(ψti, λt, μt, αλ, αμ, σλ, σμ, 
+          lr, lU, iρi, ψ, ψts, ix + 1, nep, nn, nlim)
+        sete!(t0, e(t0) + e0)
+        return t0, na, nn, lr
+      end
+    end
+
+    # if survives to present
     if tw > t
       na += 1
       nlr = lr
@@ -420,35 +495,47 @@ function _sim_cladsbd_t(t   ::Float64,
         nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr >= lr || lU < nlr
-        return cTbd(t, false, false, λt, μt), na, nn, nlr
+        return cTfbd(t, false, false, false, λt, μt), nn, na, nn, nlr
       else
-        return cTbd(), na, nn, NaN
+        return cTfbd(), na, nn, NaN
       end
     end
 
-    if λorμ(λi, μi)
+    # if speciation
+    if λevent(λi, μi, ψi)
       nn += 1
-      td1, na, nn, lr =
-        _sim_cladsbd_t(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, lr, lU, iρi, na, nn, nlim)
-      td2, na, nn, lr =
-        _sim_cladsbd_t(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, lr, lU, iρi, na, nn, nlim)
+      d1, na, nn, lr =
+        _sim_cladsfbd_t(t - tw, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ), 
+          αλ, αμ, σλ, σμ, lr, lU, iρi, na, nn, nlim)
+      d2, na, nn, lr =
+        _sim_cladsfbd_t(t - tw, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ), 
+          αλ, αμ, σλ, σμ, lr, lU, iρi, na, nn, nlim)
 
-      return cTbd(td1, td2, tw, false, false, λt, μt), na, nn, lr
+      return cTfbd(d1, d2, tw, false, false, false, λt, μt), na, nn, lr
+    # if extinction
+    elseif μevent(μi, ψi)
+
+      return cTfbd(tw, true, false, false, λt, μt), na, nn, lr
+    # if fossil sampling
     else
-      return cTbd(tw, true, false, λt, μt), na, nn, lr
+      d1, na, nn, lr = _sim_cladsfbd_t(t - tw, λt, μt, αλ, αμ, σλ, σμ, 
+        lr, lU, iρi, na, nn, nlim)
+
+      return cTfbd(d1, tw, false, true, false, λt, μt), na, nn, lr
     end
   end
 
-  return cTbd(), na, nn, NaN
+  return cTfbd(), na, nn, NaN
 end
 
 
+"""
+here!
+"""
 
 
 """
-    _sim_cladsbd_i(t   ::Float64,
+    _sim_cladsfbd_i(t   ::Float64,
                    λt  ::Float64,
                    μt  ::Float64,
                    α   ::Float64,
@@ -460,9 +547,9 @@ end
                    λfs ::Vector{Float64},
                    μfs ::Vector{Float64},)
 
-Simulate `cTbd` according to a birth-death clads.
+Simulate `cTfbd` according to a birth-death clads.
 """
-function _sim_cladsbd_i(t   ::Float64,
+function _sim_cladsfbd_i(t   ::Float64,
                         λt  ::Float64,
                         μt  ::Float64,
                         α   ::Float64,
@@ -484,31 +571,31 @@ function _sim_cladsbd_i(t   ::Float64,
       na += 1
       push!(λfs, λt)
       push!(μfs, μt)
-      return cTbd(t, false, false, λt, μt), na, nn
+      return cTfbd(t, false, false, λt, μt), na, nn
     end
 
     if λorμ(λi, μi)
       nn += 1
       d1, na, nn = 
-        _sim_cladsbd_i(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, na, nn, nlim, λfs, μfs)
+        _sim_cladsfbd_i(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+          αλ, αμ, σλ, σμ, na, nn, nlim, λfs, μfs)
       d2, na, nn = 
-        _sim_cladsbd_i(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, na, nn, nlim, λfs, μfs)
+        _sim_cladsfbd_i(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+          αλ, αμ, σλ, σμ, na, nn, nlim, λfs, μfs)
 
-      return cTbd(d1, d2, tw, false, false, λt, μt), na, nn
+      return cTfbd(d1, d2, tw, false, false, λt, μt), na, nn
     else
-      return cTbd(tw, true, false, λt, μt), na, nn
+      return cTfbd(tw, true, false, λt, μt), na, nn
     end
   end
 
-  return cTbd(), na, nn
+  return cTfbd(), na, nn
 end
 
 
 
 """
-    _sim_cladsbd_it(t   ::Float64,
+    _sim_cladsfbd_it(t   ::Float64,
                     λt  ::Float64,
                     μt  ::Float64,
                     α   ::Float64,
@@ -521,10 +608,10 @@ end
                     nn  ::Int64,
                     nlim::Int64)
 
-Simulate `cTbd` according to a birth-death clads for
+Simulate `cTfbd` according to a birth-death clads for
 internal terminal branches.
 """
-function _sim_cladsbd_it(t   ::Float64,
+function _sim_cladsfbd_it(t   ::Float64,
                          λt  ::Float64,
                          μt  ::Float64,
                          α   ::Float64,
@@ -546,32 +633,32 @@ function _sim_cladsbd_it(t   ::Float64,
    if tw > t
       na += 1
       lr += log(iρi)
-      return cTbd(t, false, false, λt, μt), na, nn, lr
+      return cTfbd(t, false, false, λt, μt), na, nn, lr
     end
 
     if λorμ(λi, μi)
       nn += 1
       td1, na, nn, lr = 
-        _sim_cladsbd_it(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, lr, lU, iρi, na, nn, nlim)
+        _sim_cladsfbd_it(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+          αλ, αμ, σλ, σμ, lr, lU, iρi, na, nn, nlim)
       td2, na, nn, lr = 
-        _sim_cladsbd_it(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-          α, σλ, σμ, lr, lU, iρi, na, nn, nlim)
+        _sim_cladsfbd_it(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+          αλ, αμ, σλ, σμ, lr, lU, iρi, na, nn, nlim)
 
-      return cTbd(td1, td2, tw, false, false, λt, μt), na, nn, lr
+      return cTfbd(td1, td2, tw, false, false, λt, μt), na, nn, lr
     else
-      return cTbd(tw, true, false, λt, μt), na, nn, lr
+      return cTfbd(tw, true, false, λt, μt), na, nn, lr
     end
   end
 
-  return cTbd(), na, nn, NaN
+  return cTfbd(), na, nn, NaN
 end
 
 
 
 
 """
-    _sim_cladsbd_surv(t   ::Float64,
+    _sim_cladsfbd_surv(t   ::Float64,
                       λt  ::Float64,
                       μt  ::Float64,
                       α   ::Float64,
@@ -580,9 +667,9 @@ end
                       surv::Bool,
                       nn  ::Int64)
 
-Simulate `cTbd` according to a birth-death clads.
+Simulate `cTfbd` according to a birth-death clads.
 """
-function _sim_cladsbd_surv(t   ::Float64,
+function _sim_cladsfbd_surv(t   ::Float64,
                            λt  ::Float64,
                            μt  ::Float64,
                            α   ::Float64,
@@ -603,10 +690,10 @@ function _sim_cladsbd_surv(t   ::Float64,
 
     if λorμ(λi, μi)
       nn += 1
-      surv, nn = _sim_cladsbd_surv(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-        α, σλ, σμ, surv, nn)
-      surv, nn = _sim_cladsbd_surv(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
-        α, σλ, σμ, surv, nn)
+      surv, nn = _sim_cladsfbd_surv(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+        αλ, αμ, σλ, σμ, surv, nn)
+      surv, nn = _sim_cladsfbd_surv(t - tw, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+        αλ, αμ, σλ, σμ, surv, nn)
  
       return surv, nn
     else
