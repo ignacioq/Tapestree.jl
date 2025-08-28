@@ -367,12 +367,12 @@ end
 
 
 """
-    extract_tree(tree::iTpb, nδt::Float64)
+    extract_tree(tree::iTb, nδt::Float64)
 
 Log-linearly predict Geometric Brownian motion for `f` at times given by `nδt`,
 and return a tree.
 """
-function extract_tree(tree::iTpb, nδt::Float64)
+function extract_tree(tree::iTb, nδt::Float64)
 
   et = e(tree)
   δt = dt(tree)
@@ -398,10 +398,10 @@ function extract_tree(tree::iTpb, nδt::Float64)
   end
 
   if def1(tree)
-    iTpb(extract_tree(tree.d1, nδt),
+    iTb(extract_tree(tree.d1, nδt),
          extract_tree(tree.d2, nδt), et, nδt, nfdt, pv)
   else
-    iTpb(et, nδt, nfdt, pv)
+    iTb(et, nδt, nfdt, pv)
   end
 end
 
@@ -604,11 +604,11 @@ end
 
 
 """
-    iquantile(reev::Vector{iTpb}, p::Float64)
+    iquantile(reev::Vector{iTb}, p::Float64)
 
-Make an `iTpb` with the quantile specified by `p`.
+Make an `iTb` with the quantile specified by `p`.
 """
-function iquantile(treev::Vector{iTpb}, p::Float64)
+function iquantile(treev::Vector{iTb}, p::Float64)
 
   nts = lastindex(treev)
   t1  = treev[1]
@@ -630,18 +630,18 @@ function iquantile(treev::Vector{iTpb}, p::Float64)
   end
 
   if isdefined(t1, :d1)
-    treev1 = iTpb[]
+    treev1 = iTb[]
     for t in Base.OneTo(nts)
         push!(treev1, treev[t].d1)
     end
-    treev2 = iTpb[]
+    treev2 = iTb[]
     for t in Base.OneTo(nts)
         push!(treev2, treev[t].d2)
     end
-    iTpb(iquantile(treev1, p), iquantile(treev2, p),
+    iTb(iquantile(treev1, p), iquantile(treev2, p),
          e(t1), dt(t1), fdt(t1), true, sv)
   else
-    iTpb(e(t1), dt(t1), fdt(t1), true, sv)
+    iTb(e(t1), dt(t1), fdt(t1), true, sv)
   end
 end
 
@@ -731,9 +731,6 @@ function iquantile(treev::Vector{iTfbd}, p::Float64)
     for t in Base.OneTo(nts)
       if lastindex(vsλ[t]) != lastindex(vsλ[1])
         t2 = treev[t]
-        @show lastindex(vsλ[1]), lastindex(vsλ[t])
-        @show t1, t2, dt(t1), dt(t2), fdt(t1), fdt(t2), e(t1), e(t2)
-        @show vsλ[t], vsλ[1]
       end
 
       vλ[t] = vsλ[t][i]
@@ -770,11 +767,11 @@ end
 
 
 """
-    imean(treev::Vector{iTpb})
+    imean(treev::Vector{iTb})
 
 Make an `iT` with the geometric mean.
 """
-function imean(treev::Vector{iTpb})
+function imean(treev::Vector{iTb})
 
   nt  = lastindex(treev)
 
@@ -797,20 +794,20 @@ function imean(treev::Vector{iTpb})
   end
 
   if def1(t1)
-    treev1 = iTpb[]
+    treev1 = iTb[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
     end
-    treev2 = iTpb[]
+    treev2 = iTb[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
     end
 
-    iTpb(imean(treev1),
+    iTb(imean(treev1),
          imean(treev2),
          e(t1), dt(t1), fdt(t1), true, svλ)
   else
-    iTpb(e(t1), dt(t1), fdt(t1), true, svλ)
+    iTb(e(t1), dt(t1), fdt(t1), true, svλ)
   end
 end
 

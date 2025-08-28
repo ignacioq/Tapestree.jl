@@ -32,7 +32,7 @@ Created 03 09 2020
                  δt      ::Float64               = 1e-3,
                  prints  ::Int64                 = 5,
                  survival::Bool                  = true,
-                 mxthf   ::Float64               = Inf,
+                 mxthf   ::Float64               = 0.1,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for `gbm-ce`.
@@ -56,7 +56,7 @@ function insane_gbmce(tree    ::sT_label;
                       δt      ::Float64               = 1e-3,
                       prints  ::Int64                 = 5,
                       survival::Bool                  = true,
-                      mxthf   ::Float64               = Inf,
+                      mxthf   ::Float64               = 0.1,
                       tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   # `n` tips, `th` treeheight define δt

@@ -706,6 +706,7 @@ end
 
 
 
+
 """
     nfossils(idf::Vector{iBffs}, ets::Vector{Float64}, nf0::Vector{Int64})
 
@@ -717,8 +718,7 @@ function nfossils(idf::Vector{iBffs}, ets::Vector{Float64}, nf0::Vector{Int64})
   fs  = zeros(nep)
   for bi in idf
     if isfossil(bi)
-      eix = findfirst(x -> x < tf(bi), ets)
-      eix = isnothing(eix) ? nep : eix
+      eix = something(findfirst(x -> x < tf(bi), ets), nep)
       fs[eix] += 1.0
     end
   end
@@ -904,6 +904,24 @@ nt(id::iBffs) = getproperty(id, :nt)[]
 Return final speciation rate at time `t.
 """
 λt(id::iBffs) = getproperty(id, :λt)[]
+
+
+
+
+"""
+    λt(tree::T) where {T <: iT}
+
+Return final speciation rate at time `t.
+"""
+function λt(tree::T) where {T <: iT}
+  if istip(tree)
+    return lλ(tree)[end]
+  elseif isfix(tree.d1::T)
+    λt(tree.d1::T)
+  else
+    λt(tree.d2::T)
+  end
+end
 
 
 

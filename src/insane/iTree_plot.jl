@@ -22,21 +22,27 @@ Created 07 07 2020
     dμ(tree::iT)
 
 Predefined functions for plotting: 
-  `b`  speciation rates
-  `d`  extinction rates
-  `lb` log speciation rates
-  `lb` log speciation rates
+  `b`  birth (speciation or initiation) rates
+  `d`  death (extinction) rates
+  `c`  completion rates [for protracted models]
+  `lb` log birth (speciation or initiation) rates
+  `ld` log death (extinction) rates
+  `lc` log completion rates [for protracted models]
   `t`  turnover
+  `lt` log turnover
   `nd` net diversification
   `dμ` change in speciation rates
 """
-b(tree::iT)  = exp.(lλ(tree))
-d(tree::iT)  = exp.(lμ(tree))
-lb(tree::iT) = lλ(tree)
-ld(tree::iT) = lμ(tree)
-t(tree::iT)  = exp.(lμ(tree)) ./ exp.(lλ(tree))
-lt(tree::iT) = log.(exp.(lμ(tree)) ./ exp.(lλ(tree)))
-nd(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+b(tree::iT)     = exp.(lλ(tree))
+d(tree::iT)     = exp.(lμ(tree))
+b(tree::iTpbd)  = exp.(lb(tree))
+c(tree::iTpbd)  = exp.(lλ(tree))
+lb(tree::iT)    = lλ(tree) # lb(tree::iTpbd) is defined independently
+ld(tree::iT)    = lμ(tree)
+lc(tree::iTpbd) = lλ(tree)
+t(tree::iT)     = d(tree) ./ b(tree)
+lt(tree::iT)    = log.(d(tree) ./ b(tree))
+nd(tree::iT)    = b(tree) .- d(tree)
 function dλ(tree::iT)
   dd = diff(exp.(lλ(tree)))
   return append!(dd, dd[end])
@@ -62,10 +68,10 @@ end
       labsize    = 8,
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (false, false, (T <: iTf)),
-      shapes     = [:circle, :circle, :square],
+      shownodes  = (false, false, T <: Union{iTf, iTpbd}),
+      shapes     = [:none, :none, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
-      shsizes    = [0.0, 0.0, 2.0],
+      shsizes    = [3.0, 3.0, 3.0],
       showda     = false,
       col_da     = ["#a9a9a9", :black]) where {T <: iTree}
 
@@ -76,7 +82,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    labsize    = 8,
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, T <: iTf),
+                   shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [3.0, 3.0, 3.0],
@@ -89,11 +95,17 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   nodet = Int64[]   # 0 = speciation, 1 = extinction, 2 = fossilization
   xnode = Float64[]
   ynode = Float64[]
+  zstyle = Symbol[]
 
   th  = treeheight(tree)
   nts = ntips(tree)
 
-  _rplottree!(tree, th, 0, x, y, z, nodet, xnode, ynode, shownodes)
+  _rplottree!(tree, th, 0, x, y, z, zstyle, nodet, xnode, ynode, shownodes)
+  # pop!(zstyle)
+  # @show x
+  # @show y
+  # @show z
+  # @show zstyle
 
   ntF = Float64(nts)
 
@@ -127,6 +139,10 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   grid            --> :off
   yticks          --> (nothing)
   yshowaxis       --> false
+
+  if typeof(tree) == iTpbd
+    linestyle     --> zstyle
+  end
 
   @series begin
     seriestype  := :path
@@ -194,6 +210,7 @@ end
                 x    ::Array{Float64,1},
                 y    ::Array{Float64,1},
                 z    ::Array{Float64,1},
+                zstyle ::Array{Symbol,1},
                 nodet::Array{Int64,1},
                 xnode::Array{Float64,1},
                 ynode::Array{Float64,1},
@@ -208,6 +225,7 @@ function _rplottree!(tree ::T,
                      x    ::Array{Float64,1},
                      y    ::Array{Float64,1},
                      z    ::Array{Float64,1},
+                     zstyle ::Array{Symbol,1},
                      nodet::Array{Int64,1},
                      xnode::Array{Float64,1},
                      ynode::Array{Float64,1},
@@ -218,8 +236,8 @@ function _rplottree!(tree ::T,
   if def1(tree)
     if def2(tree)
 
-      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
-      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, nodet, xnode, ynode, show)
+      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
+      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
 
       yc = (y1 + y2)*0.5
 
@@ -230,6 +248,10 @@ function _rplottree!(tree ::T,
       z1 = Float64(isfix(tree.d1))
       z2 = Float64(isfix(tree.d2))
       push!(z, z1, z1, NaN, z2, z2, NaN)
+      
+      zstyle1 = ifelse(isgood(tree.d1), :solid, :dot)
+      zstyle2 = ifelse(isgood(tree.d2), :solid, :dot)
+      push!(zstyle, zstyle1, zstyle1, :solid, zstyle2, zstyle2, :solid)
 
       # nodes
       if show[1]
@@ -238,7 +260,7 @@ function _rplottree!(tree ::T,
         push!(ynode, yc)
       end
     else
-      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
+      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
 
       if show[3]
         push!(nodet, 3)
@@ -268,7 +290,9 @@ function _rplottree!(tree ::T,
   push!(x, xc, xe, NaN)
   push!(y, yc, yc, NaN)
   zc = Float64(isfix(tree))
-  push!(z, zc, zc, NaN)
+  push!(z, zc, zc, NaN)    
+  zstylec = ifelse(isgood(tree), :solid, :dot)
+  push!(zstyle, zstylec, zstylec, :solid)
 
   return yc, i
 end
@@ -319,7 +343,7 @@ end
       zf  ::Function;
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (false, false, (T <: iTf)),
+      shownodes  = (false, false, (T <: Union{iTf, iTpbd})),
       shapes     = [:circle, :circle, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
       shsizes    = [0.0, 0.0, 3.0],
@@ -331,7 +355,7 @@ Recipe for plotting a Type `iT`.
                    zf  ::Function;
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, T <: iTf),
+                   shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [0.0, 0.0, 3.0],
@@ -388,7 +412,6 @@ Recipe for plotting a Type `iT`.
       yshowaxis --> true
     end
   end
-
 
   @series begin
     seriestype  := :path
@@ -587,18 +610,55 @@ end
 
 Transform `x` and `y` cartesian coordinates into polar coordinates.
 """
-function polar_coords!(x ::Vector{Float64},
-                       y ::Vector{Float64},
-                       α ::Float64,
-                       th::Float64)
+function polar_coords!(x  ::Vector{Float64},
+                       y  ::Vector{Float64},
+                       α  ::Float64,
+                       tor::Float64)
 
   @simd for i in Base.OneTo(lastindex(x))
-    x[i]  = th - x[i]
+    x[i]  = tor - x[i]
     r     = x[i]
     a     = α * y[i]
     x[i] *= cos(a*π/180.0)
     y[i]  = r * sin(a*π/180.0)
   end
+end
+
+
+
+
+"""
+    plotω(tree       ::T,
+          ωtimes     ::Vector{Float64};
+          labsize    = 8,
+          type       = :phylogram,
+          showlabels = (T <: Tlabel),
+          shownodes  = (false, false, T <: Union{iTf, iTpbd}),
+          shapes     = [:none, :none, :square],
+          colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+          showda     = false,
+          col_da     = ["#a9a9a9", :black],
+          yω         = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
+
+Recipe for plotting a tree with fossil occurrences.
+"""
+function plotω(tree       ::T,
+               ωtimes     ::Vector{Float64};
+               labsize    = 8,
+               type       = :phylogram,
+               showlabels = (T <: Tlabel),
+               shownodes  = (false, false, T <: Union{iTf, iTpbd}),
+               shapes     = [:none, :none, :square],
+               colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
+               showda     = false,
+               col_da     = ["#a9a9a9", :black],
+               yω         = 0.98+(1.1/50-0.05)*ntips(tree)) where {T <: iTree}
+
+  plot(tree, labsize=labsize, type=type, showlabels=showlabels, shownodes=shownodes, shapes=shapes,
+       colors=colors, showda=showda, col_da=col_da)
+  ymin = 1.0-0.05*ntips(tree)
+  scatter!(ωtimes, [max(rnorm(yω, (yω-ymin)/5), ymin) for ωt in ωtimes], label="occurrences", mc=:grey, ms=2, ma=0.5)
+
 end
 
 
@@ -628,6 +688,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   # plot defaults
   legend          --> false
   xguide          --> "time"
+  xflip           --> true
   yguide          --> "N lineages"
   xflip           --> true
   seriescolor     --> :black
@@ -818,6 +879,53 @@ end
 
 
 
+
+"""
+    plotω(LTT        ::Ltt,
+          ωtimes     ::Vector{Float64})
+
+    plotω(LTT        ::Vector{Ltt},
+          ωtimes     ::Vector{Float64})
+    
+    plotω(LTT        ::Vector{Ltt},
+          ωtimes     ::Vector{Float64}, 
+          tdt        ::Float64, 
+          q0         = [0.025, 0.975],
+          q1         = [0.25,  0.75],
+          q2         = Float64[])
+
+Recipe for plotting lineage through time plots of type `Ltt`, together with fossil occurrences.
+"""
+function plotω(LTT        ::Ltt,
+               ωtimes     ::Vector{Float64})
+
+  plot(LTT)
+  scatter!(ωtimes, [1+abs(rnorm(0.0, maximum(LTT.n)/500)) for ωt in ωtimes], label="occurrences", mc=:grey, ms=1.5, ma=0.5)
+
+end
+
+function plotω(LTT        ::Vector{Ltt},
+               ωtimes     ::Vector{Float64})
+
+  plot(LTT)
+  scatter!(ωtimes, [1+abs(rnorm(0.0, maximum([maximum(LTTi.n) for LTTi in LTT])/500)) for ωt in ωtimes], label="occurrences", mc=:grey, ms=1.5, ma=0.5)
+
+end
+
+function plotω(LTT        ::Vector{Ltt},
+               ωtimes     ::Vector{Float64}, 
+               tdt        ::Float64, 
+               q0         = [0.025, 0.975],
+               q1         = [0.25,  0.75],
+               q2         = Float64[])
+
+  plot(LTT, tdt, q0, q1, q2)
+  scatter!(ωtimes, [1+abs(rnorm(0.0, maximum([maximum(LTTi.n) for LTTi in LTT])/500)) for ωt in ωtimes], label="occurrences", mc=:grey, ms=1.5, ma=0.5)
+
+end
+
+
+
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -834,6 +942,8 @@ end
       f   ::Function,
       dt  ::Float64;
       t_af = mean,
+      fillcolor = :orange,
+      linecolor = "#00304999",
       q0   = [0.025, 0.975],
       q1   = [0.25,  0.75],
       q2   = Float64[]) where {T <: iT}
@@ -844,6 +954,8 @@ Recipe for plotting values given by `f` through time for a `iT`.
                    f   ::Function,
                    δt  ::Float64;
                    t_af = mean,
+                   fillcolor = :orange,
+                   linecolor = "#00304999",
                    q0   = [0.025, 0.975],
                    q1   = [0.25,  0.75],
                    q2   = Float64[]) where {T <: iT}
@@ -864,7 +976,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   grid            --> :off
   xtick_direction --> :out
   ytick_direction --> :out
-  fillcolor       --> :orange
+  fillcolor       --> fillcolor
   fillalpha       --> 0.3
 
   if !isempty(q0)
@@ -927,7 +1039,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   # midline
   @series begin
     seriestype := :line
-    linecolor --> "#00304999"
+    linecolor --> linecolor
     linewidth --> 1.4
 
     ts, m
@@ -942,6 +1054,8 @@ end
                f    ::Function,
                δt   ::Float64;
                t_af  = mean,
+               fillcolor = :orange,
+               linecolor = "#00213a99",
                tv_af = x -> quantile(x, 0.5),
                q0    = [0.025, 0.975],
                q1    = [0.25,  0.75],
@@ -953,6 +1067,8 @@ Recipe for plotting values given by `f` through time for a `iT`.
                    f    ::Function,
                    δt   ::Float64;
                    t_af  = mean,
+                   fillcolor = :orange,
+                   linecolor = "#00213a99",
                    tv_af = x -> quantile(x, 0.5),
                    q0    = [0.025, 0.975],
                    q1    = [0.25,  0.75],
@@ -1029,7 +1145,7 @@ Recipe for plotting values given by `f` through time for a `iT`.
   grid            --> :off
   xtick_direction --> :out
   ytick_direction --> :out
-  fillcolor       --> :orange
+  fillcolor       --> fillcolor
   fillalpha       --> 0.3
 
   if !isempty(q0)
@@ -1090,10 +1206,215 @@ Recipe for plotting values given by `f` through time for a `iT`.
   # midline
   @series begin
     seriestype := :line
-    linecolor --> "#00213a99"
+    linecolor --> linecolor
     linewidth --> 1.4
 
     ts, M
+  end
+end
+
+
+
+
+"""
+    f(rates::Vector{Float64},
+      tor::Float64;
+      fillcolor = :orange,
+      linecolor = "#00304999",
+      tv_af = x -> quantile(x, 0.5),
+      q0 = [0.025, 0.975],
+      q1 = [0.25,  0.75],
+      q2 = Float64[])
+
+Recipe for plotting constant rates through time.
+"""
+@recipe function f(rates::Vector{Float64},
+                   tor::Float64;
+                   fillcolor = :orange,
+                   linecolor = "#00304999",
+                   tv_af = x -> quantile(x, 0.5),
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[])
+
+  # Compute quantiles for uncertainty bands
+  if !isempty(q0)
+    Q0 = quantile(rates, q0)
+  end
+  if !isempty(q1)
+    Q1 = quantile(rates, q1)
+  end
+  if !isempty(q2)
+    Q2 = quantile(rates, q2)
+  end
+
+  M = tv_af(rates)
+
+  # Common plot defaults
+  legend          --> :none
+  xguide          --> "time"
+  yguide          --> "rate(t)"
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+  ytick_direction --> :out
+  fillcolor       --> fillcolor
+  fillalpha       --> 0.3
+
+  # Plot uncertainty bands as rectangles over [0, tor]
+
+  if !isempty(q0)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      x_values = [0.0, tor, tor, 0.0]
+      y_values = [Q0[1], Q0[1], Q0[2], Q0[2]]
+      x_values, y_values
+    end
+  end
+
+  if !isempty(q1)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      x_values = [0.0, tor, tor, 0.0]
+      y_values = [Q1[1], Q1[1], Q1[2], Q1[2]]
+      x_values, y_values
+    end
+  end
+
+  if !isempty(q2)
+    @series begin
+      seriestype := :shape
+      linecolor  := nothing
+
+      x_values = [0.0, tor, tor, 0.0]
+      y_values = [Q2[1], Q2[1], Q2[2], Q2[2]]
+      x_values, y_values
+    end
+  end
+
+  # Midline for the constant rate
+  @series begin
+    seriestype := :line
+    linecolor --> linecolor
+    linewidth --> 1.4
+    x_values = [0.0, tor]
+    y_values = [M, M]
+    x_values, y_values
+  end
+end
+
+
+
+
+"""
+    f(rates::Vector{Vector{Float64}},
+      tor::Float64,
+      ψω_epoch::Vector{Float64};
+      fillcolor = :saddlebrown,
+      linecolor = :saddlebrown,
+      tv_af = x -> quantile(x, 0.5),
+      q0 = [0.025, 0.975],
+      q1 = [0.25,  0.75],
+      q2 = Float64[])
+
+Recipe for plotting piecewise-constant rates through time.
+"""
+@recipe function f(rates::Vector{Vector{Float64}},
+                   tor::Float64,
+                   ψω_epoch::Vector{Float64};
+                   fillcolor = :saddlebrown,
+                   linecolor = :saddlebrown,
+                   tv_af = x -> quantile(x, 0.5),
+                   q0 = [0.025, 0.975],
+                   q1 = [0.25,  0.75],
+                   q2 = Float64[])
+
+  # Ensure breakpoints start at tor and end at 0
+  bp = vcat([tor], ψω_epoch, [0.0])
+
+  # Common plot defaults
+  legend          --> :none
+  xguide          --> "time"
+  yguide          --> "rate(t)"
+  xflip           --> true
+  fontfamily      --> :Helvetica
+  tickfontfamily  --> :Helvetica
+  tickfontsize    --> 8
+  grid            --> :off
+  xtick_direction --> :out
+  ytick_direction --> :out
+  fillcolor       --> fillcolor
+  fillalpha       --> 0.3
+
+  # Loop over each interval and plot the rate and uncertainty bands
+  for i in 1:length(rates)
+    t_start = bp[i]
+    t_end = bp[i+1]
+    rate_samples = rates[i]  # Posterior samples for interval i
+
+    # Compute central tendency and quantiles
+    M = tv_af(rate_samples)
+
+    if !isempty(q0)
+      Q0 = quantile(rate_samples, q0)
+    end
+    if !isempty(q1)
+      Q1 = quantile(rate_samples, q1)
+    end
+    if !isempty(q2)
+      Q2 = quantile(rate_samples, q2)
+    end
+
+    # Plot uncertainty bands as rectangles for the current interval
+    if !isempty(q0)
+      @series begin
+        seriestype := :shape
+        linecolor  := nothing
+
+        x_values = [t_start, t_end, t_end, t_start]
+        y_values = [Q0[1], Q0[1], Q0[2], Q0[2]]
+        x_values, y_values
+      end
+    end
+
+    if !isempty(q1)
+      @series begin
+        seriestype := :shape
+        linecolor  := nothing
+
+        x_values = [t_start, t_end, t_end, t_start]
+        y_values = [Q1[1], Q1[1], Q1[2], Q1[2]]
+        x_values, y_values
+      end
+    end
+
+    if !isempty(q2)
+      @series begin
+        seriestype := :shape
+        linecolor  := nothing
+
+        x_values = [t_start, t_end, t_end, t_start]
+        y_values = [Q2[1], Q2[1], Q2[2], Q2[2]]
+        x_values, y_values
+      end
+    end
+
+    # Midline for the current interval
+    @series begin
+      seriestype := :line
+      linecolor --> linecolor
+      linewidth --> 1.4
+      x_values = [t_start, t_end]
+      y_values = [M, M]
+      x_values, y_values
+    end
   end
 end
 
@@ -1225,7 +1546,7 @@ end
                 x   ::Array{Float64,1},
                 y   ::Array{Float64,1}) where {T <: sTX}
 
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+Returns `x` and `y` coordinates in order to plot a tree of type `sTX`.
 """
 function _rplottrait!(tree::T,
                       xc  ::Float64,
@@ -1330,7 +1651,7 @@ end
                 x   ::Array{Float64,1},
                 y   ::Array{Float64,1}) where {T <: iTX}
 
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+Returns `x` and `y` coordinates in order to plot a tree of type `sTX`.
 """
 function _rplottrait!(tree::T,
                       xc  ::Float64,

@@ -15,8 +15,8 @@ Created 07 10 2021
 
 """
     insane_cfbd(tree    ::sTf_label;
-                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
+                μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                 ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 ψ_epoch ::Vector{Float64}       = Float64[],
                 f_epoch ::Vector{Int64}         = Int64[0],
@@ -38,8 +38,8 @@ Created 07 10 2021
 Run insane for constant fossilized birth-death.
 """
 function insane_cfbd(tree    ::sTf_label;
-                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
+                     μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_epoch ::Vector{Float64}       = Float64[],
                      f_epoch ::Vector{Int64}         = Int64[0],
@@ -99,15 +99,15 @@ function insane_cfbd(tree    ::sTf_label;
   if isnan(λi) || isnan(μi) || isnan(ψi)
     # if only one tip
     if isone(n)
-      λc = prod(λ_prior)
-      μc = prod(μ_prior)
+      λc = λ_prior[1]/λ_prior[2]
+      μc = μ_prior[1]/μ_prior[2]
     else
       λc, μc = moments(Float64(n), th, ϵi)
     end
     # if no sampled fossil
     nf = nfossils(tree)
     if iszero(nf)
-      ψc = prod(ψ_prior)
+      ψc = ψ_prior[1]/ψ_prior[2]
     else
       ψc = Float64(nf)/treelength(tree)
     end

@@ -33,10 +33,9 @@ function llik_gbm(Ξ   ::Vector{iTce},
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, μ, δt, srδt)
-      if d2(bi) > 0
-        ll += λt(bi)
+      if d2(idf[i]) > 0
+        ll += λt(Ξ[i])
       end
     end
   end
@@ -101,30 +100,30 @@ Returns the log-likelihood for a branch according to `gbmce`.
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
-  llλ  = 0.0
+  llbm = 0.0
   llbd = 0.0
   @turbo for i in Base.OneTo(nI)
     lλvi  = lλv[i]
     lλvi1 = lλv[i+1]
-    llλ  += (lλvi1 - lλvi - α*δt)^2
+    llbm += (lλvi1 - lλvi - α*δt)^2
     llbd += exp(0.5*(lλvi + lλvi1))
   end
 
   # add to global likelihood
-  ll = llλ*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
+  ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
 
-  # add to global likelihood
-  llbd += Float64(nI) * μ
-  ll   -= llbd*δt
+  # birth-death likelihood
+  ll -= (llbd + Float64(nI) * μ) * δt
 
   lλvi1 = lλv[nI+2]
 
   # add final non-standard `δt`
   if fdt > 0.0
-    lλvi  = lλv[nI+1]
-    ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-          fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
+    lλvi = lλv[nI+1]
+    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+           fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
   end
+
   # if speciation
   if λev
     ll += lλvi1

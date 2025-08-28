@@ -13,14 +13,14 @@ Created 05 11 2020
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, ::Type{sTpb})
+    make_Ξ(idf::Vector{iBffs}, ::Type{sTb})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, ::Type{sTpb})
-  Ξ = sTpb[]
+function make_Ξ(idf::Vector{iBffs}, ::Type{sTb})
+  Ξ = sTb[]
   for bi in idf
-    push!(Ξ, sTpb(e(bi), true))
+    push!(Ξ, sTb(e(bi), true))
   end
   return Ξ
 end
@@ -29,19 +29,19 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
+    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbX})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTpbX})
-  Ξ = sTpbX[]
+function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbX})
+  Ξ = sTbX[]
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
     paix = pa(idfi)
     paix = iszero(paix) ? 1 : paix
     xii  = xr[paix]
     xfi  = xr[i]
-    push!(Ξ, sTpbX(e(idfi), true, xii, xfi))
+    push!(Ξ, sTbX(e(idfi), true, xii, xfi))
   end
 
   return Ξ
@@ -169,8 +169,8 @@ function _make_Ξ!(Ξ   ::Vector{T},
   l = nts + 2
 
   setλt!(bi, lλv[l])
-  if T === iTpb
-    push!(Ξ, iTpb(et, δt, fdti, true, lλv))
+  if T === iTb
+    push!(Ξ, iTb(et, δt, fdti, true, lλv))
   else
     push!(Ξ, T(et, δt, fdti, false, true, lλv))
   end
@@ -622,7 +622,7 @@ end
            σx  ::Float64,
            δt  ::Float64,
            srδt::Float64,
-           ::Type{iTpbX})
+           ::Type{iTbX})
 
 Make edge tree `Ξ` from the edge directory.
 """
@@ -634,10 +634,10 @@ function make_Ξ(idf ::Vector{iBffs},
                 σx  ::Float64,
                 δt  ::Float64,
                 srδt::Float64,
-                ::Type{iTpbX})
+                ::Type{iTbX})
 
   lλi = lλa
-  Ξ   = iTpbX[]
+  Ξ   = iTbX[]
   for i in Base.OneTo(lastindex(idf))
     idfi = idf[i]
     paix = pa(idfi)
@@ -669,7 +669,7 @@ function make_Ξ(idf ::Vector{iBffs},
     end
     setλt!(idfi, lλv[l])
     push!(λst(idfi), lλv[l])
-    push!(Ξ, iTpbX(et, true, δt, fdti, lλv, xv))
+    push!(Ξ, iTbX(et, true, δt, fdti, lλv, xv))
   end
 
   return Ξ
@@ -986,6 +986,38 @@ function couple(Ξ  ::Vector{T},
 
   return ξi
 end
+
+
+
+"""
+    decouple!(Ωtimes::Vector{Vector{Float64}},
+              idf   ::Vector{iBffs},
+              ix    ::Int64)
+
+Build a decoupled occurrence record from an occurrence record.
+"""
+function decouple!(Ωtimes::Vector{Vector{Float64}},
+                   ωtimes::Vector{Float64},
+                   idf   ::Vector{iBffs})
+
+  for ix in Base.OneTo(lastindex(idf))
+    bi = idf[ix]
+    tii = ti(bi)
+    tfi = tf(bi)
+    push!(Ωtimes, filter(ωtime -> tii.>ωtime, ωtimes))
+  end
+end
+
+
+
+
+"""
+    couple(Ωtimes::Vector{Vector{Float64}})
+
+Build an occurrence record from a decoupled occurrence record.
+"""
+couple(Ωtimes::Vector{Vector{Float64}}) = unique(vcat(Ωtimes...))
+
 
 
 

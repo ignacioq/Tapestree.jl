@@ -7,14 +7,16 @@
 module INSANE
 
   using Random: randexp, randn!, shuffle!
+  using SpecialFunctions: loggamma
   using SpecialFunctions: erf
-  using DelimitedFiles: writedlm
+  using DelimitedFiles: readdlm, writedlm
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean, median
   using LoopVectorization: @turbo
   using PlotUtils: cgrad, palette
   using RecipesBase
   using Parsers: parse as Pparse
+  using Distributions: Poisson, Uniform
 
   # other submodules dependencies
   using ..Utils
@@ -33,45 +35,51 @@ module INSANE
   include("insane/iTree_manipulation.jl")
   include("insane/iTree_plot.jl")
   include("insane/iTree_IO.jl")
-  include("insane/sim_cpb.jl")
+  include("insane/sim_cb.jl")
   include("insane/sim_cbd.jl")
   include("insane/sim_cfbd.jl")
-  include("insane/sim_gbmpb.jl")
+  include("insane/sim_cobd.jl")
+  include("insane/sim_gbmb.jl")
   include("insane/sim_gbmbd.jl")
   include("insane/sim_gbmbd_efx.jl")
   include("insane/sim_gbmce.jl")
   include("insane/sim_gbmct.jl")
   include("insane/sim_gbmfbd.jl")
+  include("insane/sim_gbmobd.jl")
+  include("insane/sim_gbmpbd.jl")
   include("insane/sim_shift.jl")
-  include("insane/sim_cpbX.jl")
+  include("insane/sim_cbX.jl")
   include("insane/sim_cbdX.jl")
   include("insane/sim_cfbdX.jl")
-  include("insane/ll_cpb.jl")
+  include("insane/ll_cb.jl")
   include("insane/ll_cbd.jl")
   include("insane/ll_cfbd.jl")
-  include("insane/ll_gbmpb.jl")
+  include("insane/ll_cobd.jl")
+  include("insane/ll_gbmb.jl")
   include("insane/ll_gbmbd.jl")
   include("insane/ll_gbmce.jl")
   include("insane/ll_gbmct.jl")
   include("insane/ll_gbmfbd.jl")
-  include("insane/ll_cpbX.jl")
+  include("insane/ll_cbX.jl")
   include("insane/ll_cbdX.jl")
   include("insane/ll_cfbdX.jl")
   include("insane/survival.jl")
-  include("insane/mcmc_cpb.jl")
+  include("insane/mcmc_cb.jl")
   include("insane/mcmc_cbd_gp.jl")
   include("insane/mcmc_cbd.jl")
   include("insane/mcmc_cfbd.jl")
-  include("insane/mcmc_gbmpb.jl")
+  include("insane/mcmc_cobd.jl")
+  include("insane/mcmc_gbmb.jl")
   include("insane/mcmc_gbmbd.jl")
   include("insane/mcmc_gbmbd_efx.jl")
   include("insane/mcmc_gbmce.jl")
   include("insane/mcmc_gbmct.jl")
   include("insane/mcmc_gbmfbd.jl")
-  include("insane/mcmc_cpbX.jl")
+  include("insane/mcmc_gbmobd.jl")
+  include("insane/mcmc_cbX.jl")
   include("insane/mcmc_cbdX.jl")
   include("insane/mcmc_cfbdX.jl")
-  include("insane/mhprop_gbmpb.jl")
+  include("insane/mhprop_gbmb.jl")
   include("insane/mhprop_gbmbd.jl")
   include("insane/mhprop_gbmbd_efx.jl")
   include("insane/mhprop_gbmce.jl")
@@ -81,12 +89,13 @@ module INSANE
   include("insane/decoupled_trees.jl")
   include("insane/marginal_likelihood.jl")
 
-  const iTd = Dict{String, DataType}("sTpb"  => sTpb,
+  const iTd = Dict{String, DataType}("sTb"   => sTb,
                                      "sTbd"  => sTbd,
                                      "sTfbd" => sTfbd,
-                                     "iTpb"  => iTpb,
+                                     "iTb"   => iTb,
                                      "iTce"  => iTce,
                                      "iTct"  => iTct,
                                      "iTbd"  => iTbd,
-                                     "iTfbd" => iTfbd)
+                                     "iTfbd" => iTfbd,
+                                     "iTpbd" => iTpbd)
 end # module INSANE
