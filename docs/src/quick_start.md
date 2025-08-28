@@ -217,7 +217,7 @@ plot(p0, p1)
 
 
 
-#### Occurrence Birth-Dea\omth Diffusion (OBDD):
+#### Occurrence Birth-Death Diffusion (OBDD):
 
 ```julia
 using Tapestree
