@@ -29,28 +29,6 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbX})
-
-Make edge tree `Ξ` from the edge directory.
-"""
-function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbX})
-  Ξ = sTbX[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    paix = iszero(paix) ? 1 : paix
-    xii  = xr[paix]
-    xfi  = xr[i]
-    push!(Ξ, sTbX(e(idfi), true, xii, xfi))
-  end
-
-  return Ξ
-end
-
-
-
-
-"""
     make_Ξ(idf::Vector{iBffs}, ::Type{sTbd})
 
 Make edge tree `Ξ` from the edge directory.
@@ -108,7 +86,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{T}) where {T <: iT}
 
   Ξ = T[]
-  _make_Ξ!(Ξ, 1, log(λ), α, σλ, δt, srδt, idf, T)
+  _make_Ξ!(Ξ, 1, log(λ), α, σλ, δt, srδt, idf)
 
   return Ξ
 end
@@ -136,8 +114,7 @@ function _make_Ξ!(Ξ   ::Vector{T},
                   σλ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
-                  idf ::Vector{iBffs},
-                  ::Type{T}) where {T <: iT}
+                  idf ::Vector{iBffs}) where {T <: iT}
 
   bi = idf[i]
   i1 = d1(bi)
@@ -163,7 +140,7 @@ function _make_Ξ!(Ξ   ::Vector{T},
       nts  -= 1
     end
 
-    lλv = bm(lλ0,   α, σλ, δt, fdti, srδt, nts)
+    lλv = bm(lλ0, α, σλ, δt, fdti, srδt, nts)
   end
 
   l = nts + 2
@@ -176,11 +153,9 @@ function _make_Ξ!(Ξ   ::Vector{T},
   end
 
   if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf)
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλv[l], α, σλ, δt, srδt, idf, T)
-      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf, T)
-    else
-      _make_Ξ!(Ξ, i1, lλv[l], α, σλ, δt, srδt, idf, T)
+      _make_Ξ!(Ξ, i2, lλv[l], α, σλ, δt, srδt, idf)
     end
   end
 
@@ -214,7 +189,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTbd})
 
   Ξ = iTbd[]
-  _make_Ξ!(Ξ, 1, log(λ), log(μ), α, σλ, σμ, δt, srδt, idf, iTbd)
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), α, σλ, σμ, δt, srδt, idf)
 
   return Ξ
 end
@@ -246,8 +221,7 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
                   σμ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
-                  idf ::Vector{iBffs},
-                  ::Type{iTbd})
+                  idf ::Vector{iBffs})
 
   bi = idf[i]
   i1 = d1(bi)
@@ -284,11 +258,9 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
   push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
 
   if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTbd)
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTbd)
-    else
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf, iTbd)
+      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], α, σλ, σμ, δt, srδt, idf)
     end
   end
 
@@ -324,7 +296,7 @@ function make_Ξ(idf ::Vector{iBffs},
   Ξ    = iTbd[]
   ixiv = Int64[] # start point for fixed branches
   ixfv = Int64[] # end point for fixed branches
-  _make_Ξ!(Ξ, ixiv, ixfv, 1, log(λ), α, σλ, tv, le, δt, srδt, idf, iTbd)
+  _make_Ξ!(Ξ, ixiv, ixfv, 1, log(λ), α, σλ, tv, le, δt, srδt, idf)
 
   return Ξ, ixiv, ixfv
 end
@@ -344,8 +316,7 @@ end
              le  ::Vector{Float64},
              δt  ::Float64,
              srδt::Float64,
-             idf ::Vector{iBffs},
-             ::Type{iTbd})
+             idf ::Vector{iBffs})
 
 Make edge tree `Ξ` from the edge directory.
 """
@@ -360,8 +331,7 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
                   le  ::Vector{Vector{Float64}},
                   δt  ::Float64,
                   srδt::Float64,
-                  idf ::Vector{iBffs},
-                  ::Type{iTbd})
+                  idf ::Vector{iBffs})
 
   bi  = idf[i]
   tvi = tv[i]
@@ -398,7 +368,7 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     end
 
     # speciation
-    lλv = bm(lλ0,α, σλ, δt, fdti, srδt, nts)
+    lλv = bm(lλ0, α, σλ, δt, fdti, srδt, nts)
 
     # extinction
     tii = ti(bi)
@@ -425,11 +395,9 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
   push!(Ξ, iTbd(et, δt, fdti, false, true, lλv, lμv))
 
   if i1 > 0
+    _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf)
     if i2 > 0
-      _make_Ξ!(Ξ, ixiv, ixfv, i2, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
-      _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
-    else
-      _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf, iTbd)
+      _make_Ξ!(Ξ, ixiv, ixfv, i2, lλv[l], α, σλ, tv, le, δt, srδt, idf)
     end
   end
 
@@ -465,7 +433,7 @@ function make_Ξ(idf ::Vector{iBffs},
                 ::Type{iTfbd})
 
   Ξ = iTfbd[]
-  _make_Ξ!(Ξ, 1, log(λ), log(μ), αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), αλ, αμ, σλ, σμ, δt, srδt, idf)
 
   return Ξ
 end
@@ -484,8 +452,7 @@ end
              σμ  ::Float64,
              δt  ::Float64,
              srδt::Float64,
-             idf ::Vector{iBffs},
-             ::Type{iTfbd})
+             idf ::Vector{iBffs})
 
 Make edge tree `Ξ` from the edge directory.
 """
@@ -499,8 +466,7 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
                   σμ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
-                  idf ::Vector{iBffs},
-                  ::Type{iTfbd})
+                  idf ::Vector{iBffs})
 
   bi = idf[i]
   i1 = d1(bi)
@@ -548,11 +514,9 @@ function _make_Ξ!(Ξ   ::Vector{iTfbd},
   setλt!(bi, lλv[l])
 
   if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf)
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
-    else
-      _make_Ξ!(Ξ, i1, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf, iTfbd)
+      _make_Ξ!(Ξ, i2, lλv[l], lμv[l], αλ, αμ, σλ, σμ, δt, srδt, idf)
     end
   end
 
@@ -563,190 +527,26 @@ end
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbdX})
-
-Make edge tree `Ξ` from the edge directory.
-"""
-function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTbdX})
-  Ξ = sTbdX[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    paix = iszero(paix) ? 1 : paix
-    xii  = xr[paix]
-    xfi  = xr[i]
-    push!(Ξ, sTbdX(e(idfi), false, true, xii, xfi))
-  end
-
-  return Ξ
-end
-
-
-
-
-"""
-    make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTfbdX})
-
-Make edge tree `Ξ` from the edge directory.
-"""
-function make_Ξ(idf::Vector{iBffs}, xr::Vector{Float64}, ::Type{sTfbdX})
-  Ξ = sTfbdX[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    paix = iszero(paix) ? 1 : paix
-    xii  = xr[paix]
-    xfi  = xr[i]
-    iψ = isfossil(idfi)
-    if iψ && it(idfi)
-      push!(Ξ, sTfbdX(
-                 sTfbdX(1.0e-10, true, false, false, xfi, xfi),
-                 e(idfi), false, true, true, xii, xfi))
-    else
-      push!(Ξ, sTfbdX(e(idfi), false, iψ, true, xii, xfi))
-    end
-  end
-
-  return Ξ
-end
-
-
-
-
-"""
     make_Ξ(idf ::Vector{iBffs},
            xr  ::Vector{Float64},
-           lλa ::Float64,
-           α   ::Float64,
-           σλ  ::Float64,
-           σx  ::Float64,
+           σi  ::Float64,
+           γi  ::Float64,
            δt  ::Float64,
            srδt::Float64,
-           ::Type{iTbX})
+           ::Type{sTxs})
 
 Make edge tree `Ξ` from the edge directory.
 """
 function make_Ξ(idf ::Vector{iBffs},
                 xr  ::Vector{Float64},
-                lλa ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                σx  ::Float64,
+                σi  ::Float64,
+                γi  ::Float64,
                 δt  ::Float64,
                 srδt::Float64,
-                ::Type{iTbX})
+                ::Type{sTxs})
 
-  lλi = lλa
-  Ξ   = iTbX[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    paix = iszero(paix) ? 1 : paix
-    xii  = xr[paix]
-    xfi  = xr[i]
-    et   = e(idfi)
-    if i > 1 
-      lλi = λt(idf[paix])
-    end
-
-    if iszero(et)
-      lλv = Float64[lλi, lλi]
-      xv  = Float64[xii, xfi]
-      fdti = 0.0
-      l    = 2
-    else
-      nt, fdti = divrem(et, δt, RoundDown)
-      nt = Int64(nt)
-
-      if iszero(fdti)
-        fdti = δt
-        nt  -= 1
-      end
-
-      lλv = bm(lλi, α,   σλ, δt, fdti, srδt, nt)
-      xv  = bb(xii, xfi, σx, δt, fdti, srδt, nt)
-      l   = nt + 2
-    end
-    setλt!(idfi, lλv[l])
-    push!(λst(idfi), lλv[l])
-    push!(Ξ, iTbX(et, true, δt, fdti, lλv, xv))
-  end
-
-  return Ξ
-end
-
-
-
-
-
-"""
-     make_Ξ(idf ::Vector{iBffs},
-            xr  ::Vector{Float64},
-            lλa ::Float64,
-            lμa ::Float64,
-            α   ::Float64,
-            σλ  ::Float64,
-            σμ  ::Float64,
-            σx  ::Float64,
-            δt  ::Float64,
-            srδt::Float64,
-            ::Type{iTbdX})
-
-Make edge tree `Ξ` from the edge directory.
-"""
-function make_Ξ(idf ::Vector{iBffs},
-                xr  ::Vector{Float64},
-                lλa ::Float64,
-                lμa ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                σμ  ::Float64,
-                σx  ::Float64,
-                δt  ::Float64,
-                srδt::Float64,
-                ::Type{iTbdX})
-
-  lλi = lλa
-  lμi = lμa
-  Ξ   = iTbdX[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    paix = iszero(paix) ? 1 : paix
-    xii  = xr[paix]
-    xfi  = xr[i]
-    et   = e(idfi)
-    if i > 1 
-      lλi = λt(idf[paix])
-      lμi = μt(idf[paix])
-    end
-
-    if iszero(et)
-      lλv  = Float64[lλi, lλi]
-      lμv  = Float64[lμi, lμi]
-      xv   = Float64[xii, xfi]
-      fdti = 0.0
-      l    = 2
-    else
-      nt, fdti = divrem(et, δt, RoundDown)
-      nt = Int64(nt)
-
-      if iszero(fdti)
-        fdti = δt
-        nt  -= 1
-      end
-
-      lλv = bm(lλi,   α, σλ, δt, fdti, srδt, nt)
-      lμv = bm(lμi, 0.0, σμ, δt, fdti, srδt, nt)
-      xv  = bb(xii, xfi, σx, δt, fdti, srδt, nt)
-      l   = nt + 2
-    end
-    setλt!(idfi, lλv[l])
-    setμt!(idfi, lμv[l])
-    push!(λst(idfi), lλv[l])
-    push!(μst(idfi), lμv[l])
-    push!(Ξ, iTbdX(et, δt, fdti, false, true, lλv, lμv, xv))
-  end
+  Ξ = sTxs[]
+  _make_Ξ!(Ξ, 1, xr, σi, γi, δt, srδt, idf)
 
   return Ξ
 end
@@ -755,90 +555,204 @@ end
 
 
 """
-     make_Ξ(idf ::Vector{iBffs},
-            xr  ::Vector{Float64},
-            lλa ::Float64,
-            lμa ::Float64,
-            α   ::Float64,
-            σλ  ::Float64,
-            σμ  ::Float64,
-            σx  ::Float64,
-            δt  ::Float64,
-            srδt::Float64,
-            ::Type{iTfbdX})
+    _make_Ξ!(Ξ   ::Vector{sTxs},
+             i   ::Int64,
+             xr  ::Vector{Float64},
+             σi  ::Float64,
+             γi  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf ::Vector{iBffs},
-                xr  ::Vector{Float64},
-                lλa ::Float64,
-                lμa ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                σμ  ::Float64,
-                σx  ::Float64,
-                δt  ::Float64,
-                srδt::Float64,
-                ::Type{iTfbdX})
+function _make_Ξ!(Ξ   ::Vector{sTxs},
+                  i   ::Int64,
+                  xr  ::Vector{Float64},
+                  σi  ::Float64,
+                  γi  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  idf ::Vector{iBffs})
 
-  lλi = lλa
-  lμi = lμa
-  Ξ   = iTfbdX[]
-  for i in Base.OneTo(lastindex(idf))
-    idfi = idf[i]
-    paix = pa(idfi)
-    paix = iszero(paix) ? 1 : paix
-    xii  = xr[paix]
-    xfi  = xr[i]
-    et   = e(idfi)
-    if i > 1 
-      lλi = λt(idf[paix])
-      lμi = μt(idf[paix])
+  bi  = idf[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  ip  = pa(bi)
+  ip  = iszero(ip) ? 1 : ip
+  et  = e(bi)
+  xii = xr[ip]
+  xfi = xr[i]
+
+  if iszero(et)
+    xv   = Float64[xii, xii]
+    lσ2  = Float64[σi, σi]
+    fdti = 0.0
+  else
+    ntF, fdti = divrem(et, δt, RoundDown)
+
+    if isapprox(fdti, δt)
+      ntF += 1.0
+      fdti = δt
     end
 
-    if iszero(et)
-      lλv  = Float64[lλi, lλi]
-      lμv  = Float64[lμi, lμi]
-      xv   = Float64[xii, xfi]
-      fdti = 0.0
-      l    = 2
-    else
-      nt, fdti = divrem(et, δt, RoundDown)
-      nt = Int64(nt)
-
-      if iszero(fdti)
-        fdti = δt
-        nt  -= 1
-      end
-
-      lλv = bm(lλi,   α, σλ, δt, fdti, srδt, nt)
-      lμv = bm(lμi, 0.0, σμ, δt, fdti, srδt, nt)
-      xv  = bb(xii, xfi, σx, δt, fdti, srδt, nt)
-      l   = nt + 2
+    if iszero(fdti) || (i1 > 0 && iszero(i2) && !isfossil(bi))
+      fdti  = δt
+      ntF  -= 1.0
     end
 
-    if it(idfi) && isfossil(idfi)
-      lλl = lλv[l]
-      lμl = lμv[l]
-      xvl = xv[l]
-      push!(Ξ, iTfbdX(
-                 iTfbdX(1.0e-10, δt, 1.0e-10, true, false, false, 
-                   Float64[lλl, rnorm(lλl + α*1.0e-10, 1.0e-5*σλ)], 
-                   Float64[lμl, rnorm(lμl,             1.0e-5*σμ)],
-                   Float64[xvl, rnorm(xvl,             1.0e-5*σx)]),
-                 et, δt, fdti, false, true, true, lλv, lμv, xv))
-    else
-      push!(Ξ, iTfbdX(et, δt, fdti, false, isfossil(idfi), true, lλv, lμv, xv))
-    end
-
-    setλt!(idfi, lλv[l])
-    setμt!(idfi, lμv[l])
-    push!(λst(idfi), lλv[l])
-    push!(μst(idfi), lμv[l])
+    xv, lσ2 = dbb(xii, xfi, σi, σi, γi, δt, fdti, srδt, Int64(ntF))
   end
+
+  push!(Ξ, sTxs(et, δt, fdti, xv, lσ2))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, xr, σi, γi, δt, srδt, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, xr, σi, γi, δt, srδt, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    make_Ξ(idf::Vector{iBffs},
+           xr ::Vector{Float64},
+           σai::Float64,
+           σki::Float64,
+           ::Type{sTpe})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs},
+                xr ::Vector{Float64},
+                σai::Float64,
+                σki::Float64,
+                ::Type{sTpe})
+
+  Ξ = sTpe[]
+  _make_Ξ!(Ξ, 1, xr, σai, σki, idf)
 
   return Ξ
 end
+
+
+
+
+"""
+    _make_Ξ!(Ξ  ::Vector{sTpe},
+             i  ::Int64,
+             xr ::Vector{Float64},
+             σai::Float64,
+             σki::Float64,
+             idf::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ  ::Vector{sTpe},
+                  i  ::Int64,
+                  xr ::Vector{Float64},
+                  σai::Float64,
+                  σki::Float64,
+                  idf::Vector{iBffs})
+
+  bi  = idf[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  ip  = pa(bi)
+  ip  = iszero(ip) ? 1 : ip
+  et  = e(bi)
+  xii = xr[ip]
+  xfi = xr[i]
+  shi = rand(Bool)
+
+  push!(Ξ, sTpe(et, false, xii, xfi, shi, true))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, xr, σai, σki, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, xr, σai, σki, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    make_Ξ(idf::Vector{iBffs},
+           xr ::Vector{Float64},
+           σai::Float64,
+           σki::Float64,
+           ::Type{sTfpe})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs},
+                xr ::Vector{Float64},
+                σai::Float64,
+                σki::Float64,
+                ::Type{sTfpe})
+
+  Ξ = sTfpe[]
+  _make_Ξ!(Ξ, 1, xr, σai, σki, idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ  ::Vector{sTfpe},
+             i  ::Int64,
+             xr ::Vector{Float64},
+             σai::Float64,
+             σki::Float64,
+             idf::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ  ::Vector{sTfpe},
+                  i  ::Int64,
+                  xr ::Vector{Float64},
+                  σai::Float64,
+                  σki::Float64,
+                  idf::Vector{iBffs})
+
+  bi  = idf[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  ip  = pa(bi)
+  ip  = iszero(ip) ? 1 : ip
+  et  = e(bi)
+  xii = xr[ip]
+  xfi = xr[i]
+  shi = rand(Bool)
+
+  if isfossil(bi) && iszero(d1(bi))
+    push!(Ξ, sTfpe(sTfpe(1e-10, true, false, xfi, xfi, false, false),
+                   e(bi), false, true, xii, xfi, shi, true))
+  else
+    push!(Ξ, sTfpe(e(bi), false, isfossil(bi), xii, xfi, shi, true))
+  end
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, xr, σai, σki, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, xr, σai, σki, idf)
+    end
+  end
+
+  return nothing
+end
+
 
 
 
@@ -868,6 +782,51 @@ function couple(Ξ  ::Vector{T},
     else
       ξd1 = couple(Ξ, idf, i1)
       adde!(ξit, e(ξd1))
+      if isfossil(ξd1)
+        fossilize!(ξit)
+      end
+      if def1(ξd1)
+        ξit.d1 = ξd1.d1
+        if def2(ξd1)
+          ξit.d2 = ξd1.d2
+        end
+      end
+    end
+  end
+
+  return ξi
+end
+
+
+
+
+"""
+    couple(Ξ::Vector{T},
+           idf::Vector{iBffs},
+           ix ::Int64) where {T <: sT}
+
+Build tree from decoupled tree.
+"""
+function couple(Ξ::Vector{T}, idf::Vector{iBffs}, ix::Int64) where {T <: Tpe}
+
+  bi  = idf[ix]
+  ξi  = T(Ξ[ix])
+  i1  = d1(bi)
+  i2  = d2(bi)
+
+  if i1 > 0
+    ξit = fixtip(ξi)
+    if i2 > 0 
+      ξit.d1 = couple(Ξ, idf, i1)
+      ξit.d2 = couple(Ξ, idf, i2)
+    elseif isfossil(bi)
+      ξit.d1 = couple(Ξ, idf, i1)
+    else
+      ξd1 = couple(Ξ, idf, i1)
+
+      adde!(ξit, e(ξd1))
+      setxf!(ξit, xf(ξd1))
+      setsh!(ξit, sh(ξd1))
       if isfossil(ξd1)
         fossilize!(ξit)
       end
@@ -989,6 +948,61 @@ end
 
 
 
+
+"""
+    couple(Ξ  ::Vector{sTxs},
+           idf::Vector{iBffs},
+           ix ::Int64)
+
+Build tree from decoupled tree.
+"""
+function couple(Ξ  ::Vector{sTxs},
+                idf::Vector{iBffs},
+                ix ::Int64)
+
+  bi = idf[ix]
+  ξi = sTxs(Ξ[ix])
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  if i1 > 0
+    ξit = fixtip(ξi)
+    if i2 > 0
+      ξit.d1 = couple(Ξ, idf, i1)
+      ξit.d2 = couple(Ξ, idf, i2)
+    elseif isfossil(bi)
+      ξit.d1 = couple(Ξ, idf, i1)
+    else
+      ξd1 = couple(Ξ, idf, i1)
+
+      xvi = xv(ξit)
+      lσ2i = lσ2(ξit)
+      if iszero(e(ξit))
+        empty!(xvi)
+        empty!(lσ2i) 
+      else
+        pop!(xvi)
+        pop!(lσ2i)
+      end
+      append!(xvi, xv(ξd1))
+      append!(lσ2i, lσ2(ξd1))
+
+      adde!(ξit, e(ξd1))
+      setfdt!(ξit, fdt(ξd1))
+      if def1(ξd1)
+        ξit.d1 = ξd1.d1
+        if def2(ξd1)
+          ξit.d2 = ξd1.d2
+        end
+      end
+    end
+  end
+
+  return ξi
+end
+
+
+
 """
     decouple!(Ωtimes::Vector{Vector{Float64}},
               idf   ::Vector{iBffs},
@@ -1026,7 +1040,7 @@ couple(Ωtimes::Vector{Vector{Float64}}) = unique(vcat(Ωtimes...))
 
 Return the branch length sum of `Ξ`.
 """
-function treelength(Ξ::Vector{T}, ) where {T <: iTree}
+function treelength(Ξ::Vector{T}) where {T <: iTree}
   L = 0.0
   for ξ in Ξ
     L += _treelength(ξ, 0.0)
@@ -1063,16 +1077,17 @@ end
 
 
 """
-    _ctl(Ξ::Vector{T}) where {T <: iT}
+    _ctl(Ξ::Vector{T}, f::Function) where {T <: iTree}
 
 Return the branch length sum of `Ξ` based on `δt` and `fδt`
 for debugging purposes.
 """
-function _ctl(Ξ::Vector{T}) where {T <: iT}
+function _ctl(Ξ::Vector{T}, f::Function) where {T <: iTree}
   L = 0.0
   for ξ in Ξ
-    L += _ctl(ξ, 0.0)
+    L = _ctl(ξ, f, L)
   end
+
   return L
 end
 
@@ -1103,15 +1118,13 @@ end
 Return the number of bifurcating nodes in `Ξ`.
 """
 function nnodesbifurcation(Ξ::Vector{T}) where {T <: iTf}
-  ns = 0
-  nf = 0
-  for ξ in Ξ
-    ns += _nnodesbifurcation(ξ, 0)
-    nf += isinternalfossil(ξ)
-  end
-  ns += 0.5 * Float64(lastindex(Ξ) - nf - 1)
+  ns = zero(Int64)
 
-  return ns
+  for ξ in Ξ
+    ns += _nnodesbifurcation(ξ, 0) + 1 - Int64(anyfossil(ξ))
+  end
+
+  return div(ns + 1, 2)
 end
 
 
@@ -1152,15 +1165,11 @@ end
 """
     _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
-Returns the standardized sum of squares a `iT` according
-to GBM birth-death for a `σ` proposal.
+Returns the standardized sum of squares of a diffusion without drift `α`.
 """
 function _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
-  dd = 0.0
-  ss = 0.0
-  n  = 0.0
-  ir = 0.0
+  dd = ss = n = ir = 0.0
   for ξi in Ξ
     dd, ss, n, ir = _ss_ir_dd(ξi, f, α, dd, ss, n, ir)
   end
@@ -1189,6 +1198,41 @@ end
 
 
 
+"""
+    _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+
+  dd = ssλ = ssμ = n = 0.0
+  for ξi in Ξ
+    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
+  end
+
+  return dd, ssλ, ssμ, n
+end
+
+
+
+"""
+    _ss_dd(Ξ::Vector{iTfbd}, α::Float64)
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _ss_dd(Ξ::Vector{iTfbd}, αλ::Float64, αμ::Float64)
+
+  ddλ = ddμ = ssλ = ssμ = n = 0.0
+  for ξi in Ξ
+    ddλ, ddμ, ssλ, ssμ, n = _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+  end
+
+  return ddλ, ddμ, ssλ, ssμ, n
+end
+
+
 
 """
     _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
@@ -1204,6 +1248,37 @@ function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
   end
 
   return dd, ssλ, ssμ, n
+end
+
+
+
+
+"""
+    sss_v(Ξ ::Vector{T}, 
+          fx::Function, 
+          fσ::Function, 
+          αx::Float64) where {T <: iTree}
+
+Returns the delta drift for `fx` and `fσ`, and the standardized sum of 
+squares for `fσ` in vector form.
+"""
+function sss_v(Ξ ::Vector{T}, 
+               fx::Function, 
+               fσ::Function, 
+               ασ::Float64) where {T <: iTree}
+
+  nv  = lastindex(Ξ)
+  Lσ  = zeros(nv)
+  Δσ  = zeros(nv)
+  ddσ = zeros(nv)
+  ss  = zeros(nv)
+  n   = zeros(nv)
+  for i in Base.OneTo(nv)
+    Lσ[i], Δσ[i], ddσ[i], ss[i], n[i] = 
+      _ss_dd(Ξ[i], fx, fσ, ασ, 0.0, 0.0, 0.0, 0.0, 0.0)
+  end
+
+  return Lσ, Δσ, ddσ, ss, n
 end
 
 
@@ -1241,6 +1316,28 @@ function _ss(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
   end
 
   return ss
+end
+
+
+
+"""
+    _ss!(ss::Vector{Float64}, 
+         Ξ ::Vector{T}, 
+         f ::Function, 
+         α ::Float64) where {T <: iTree}
+
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _ss!(ss::Vector{Float64}, 
+              Ξ ::Vector{T}, 
+              f ::Function, 
+              α ::Float64) where {T <: iTree}
+
+  for i in Base.OneTo(lastindex(Ξ))
+    ss[i] = _ss(Ξ[i], f, α)
+  end
+
+  return nothing
 end
 
 
@@ -1295,69 +1392,6 @@ function _ir(Ξ::Vector{T}) where {T <: iTree}
   return irλ, irμ
 end
 
-
-
-
-
-
-"""
-    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
-
-Returns the standardized sum of squares a `iT` according
-to GBM birth-death for a `σ` proposal.
-"""
-function sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
-
-  n = ssλ = ssμ = 0.0
-  for ξi in Ξ
-    ssλ, ssμ, n = _sss_gbm(ξi, α, ssλ, ssμ, n)
-  end
-
-  return ssλ, ssμ, n
-end
-
-
-
-
-"""
-    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
-
-Returns the standardized sum of squares for a `iTX` according
-to GBM lambda and X.
-"""
-function sss_gbm(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTX}
-
-  n   = 0.0
-  ssλ = 0.0
-  ssx = 0.0
-  for ξi in Ξ
-    ssλ, ssx, n = _sss_gbm(ξi, α, βλ, ssλ, ssx, n)
-  end
-
-  return ssλ, ssx, n
-end
-
-
-
-
-"""
-    sss_gbm(Ξ::Vector{T}, α::Float64) where {T <: iTbdU}
-
-Returns the standardized sum of squares for a `iTX` according
-to GBM lambda and X.
-"""
-function sss_gbm(Ξ::Vector{T}, α::Float64, βλ::Float64) where {T <: iTbdUX}
-
-  n   = 0.0
-  ssλ = 0.0
-  ssμ = 0.0
-  ssx = 0.0
-  for ξi in Ξ
-    ssλ, ssμ, ssx, n = _sss_gbm(ξi, α, βλ, ssλ, ssμ, ssx, n)
-  end
-
-  return ssλ, ssμ, ssx, n
-end
 
 
 

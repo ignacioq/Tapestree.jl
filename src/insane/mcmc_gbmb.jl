@@ -14,42 +14,48 @@ Created 14 09 2020
 
 """
     insane_gbmb(tree    ::sT_label;
-                 α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
-                 σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                 niter   ::Int64                 = 1_000,
-                 nthin   ::Int64                 = 10,
-                 nburn   ::Int64                 = 200,
-                 nflush  ::Int64                 = nthin,
-                 ofile   ::String                = string(homedir(), "/ib"),
-                 αi      ::Float64               = 0.0,
-                 σλi     ::Float64               = 0.1,
-                 pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
-                 δt      ::Float64               = 1e-3,
-                 prints  ::Int64                 = 5,
-                 tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+                λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                niter   ::Int64                 = 1_000,
+                nthin   ::Int64                 = 10,
+                nburn   ::Int64                 = 200,
+                nflush  ::Int64                 = nthin,
+                ofile   ::String                = string(homedir(), "/ib"),
+                αi      ::Float64               = 0.0,
+                σλi     ::Float64               = 0.1,
+                pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
+                δt      ::Float64               = 1e-3,
+                prints  ::Int64                 = 5,
+                stn     ::Float64               = 0.5,
+                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for pure `b`.
 """
 function insane_gbmb(tree    ::sT_label;
-                      α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
-                      σλ_prior::NTuple{2,Float64}     = (3.0, 0.5),
-                      niter   ::Int64                 = 1_000,
-                      nthin   ::Int64                 = 10,
-                      nburn   ::Int64                 = 200,
-                      nflush  ::Int64                 = nthin,
-                      ofile   ::String                = string(homedir(), "/ib"),
-                      αi      ::Float64               = 0.0,
-                      σλi     ::Float64               = 0.1,
-                      pupdp   ::NTuple{5,Float64}     = (0.01, 0.01, 0.01, 0.1, 0.2),
-                      δt      ::Float64               = 1e-3,
-                      prints  ::Int64                 = 5,
-                      stn     ::Float64               = 0.5,
-                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+                     λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                     α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                     σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                     niter   ::Int64                 = 1_000,
+                     nthin   ::Int64                 = 10,
+                     nburn   ::Int64                 = 200,
+                     nflush  ::Int64                 = nthin,
+                     ofile   ::String                = string(homedir(), "/ib"),
+                     αi      ::Float64               = 0.0,
+                     σλi     ::Float64               = 0.1,
+                     pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
+                     δt      ::Float64               = 1e-3,
+                     prints  ::Int64                 = 5,
+                     stn     ::Float64               = 0.5,
+                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
   th   = treeheight(tree)
   δt  *= max(0.1, round(th, RoundDown, digits = 2))
   srδt = sqrt(δt)
+
+  # turn to logarithmic terms
+  λ0_prior = (log(λ0_prior[1]), 2*log(λ0_prior[2]))
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -78,12 +84,12 @@ function insane_gbmb(tree    ::sT_label;
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, ns, stn =
-    mcmc_burn_gbmb( Ξ, idf, α_prior, σλ_prior, nburn, αi, σλi, stn,
+    mcmc_burn_gbmp(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
       δt, srδt, inodes, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_gbmb( Ξ, idf, llc, prc, αc, σλc, ns, stn, α_prior, σλ_prior,
+    mcmc_gbmb(Ξ, idf, llc, prc, αc, σλc, ns, stn, λ0_prior, α_prior, σλ_prior,
       δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -94,6 +100,7 @@ end
 """
     mcmc_burn_gbmb( Ξ       ::Vector{iTb},
                     idf     ::Vector{iBffs},
+                    λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     nburn   ::Int64,
@@ -110,6 +117,7 @@ MCMC burn-in chain for pure `b`.
 """
 function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
                          idf     ::Vector{iBffs},
+                         λ0_prior::NTuple{2,Float64},
                          α_prior ::NTuple{2,Float64},
                          σλ_prior::NTuple{2,Float64},
                          nburn   ::Int64,
@@ -125,8 +133,10 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
   nsi = Float64(iszero(e(Ξ[1])))
 
   # starting likelihood and prior
-  llc = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - nsi*lλ(Ξ[1])[1] + prob_ρ(idf)
-  prc = logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2]) +
+  lλ0 = lλ(Ξ[1])[1]
+  llc = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - nsi*lλ0 + prob_ρ(idf)
+  prc = logdnorm(lλ0,       λ0_prior[1], λ0_prior[2])   +
+        logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])   +
         logdnorm(αc,         α_prior[1],  α_prior[2]^2)
 
   L   = treelength(Ξ)                           # tree length
@@ -141,7 +151,7 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -166,7 +176,8 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
       # update scale
       elseif pupi === 3
 
-        llc, irλ, acc = update_scale!(Ξ, idf, llc, irλ, ns, stn)
+        llc, prc, irλ, acc = 
+          update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
         lac += acc
         lup += 1.0
@@ -177,8 +188,9 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
 
-        llc, ddλ, ssλ, irλ =
-          update_gbm!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, irλ, δt, srδt)
+        llc, prc, ddλ, ssλ, irλ =
+          update_gbm!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
+            δt, srδt, λ0_prior)
 
       # forward simulation
       else
@@ -215,6 +227,7 @@ end
                αc      ::Float64,
                σλc     ::Float64,
                ns      ::Float64,
+               λ0_prior::NTuple{2,Float64},
                α_prior ::NTuple{2,Float64},
                σλ_prior::NTuple{2,Float64},
                δt      ::Float64,
@@ -237,6 +250,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
                     σλc     ::Float64,
                     ns      ::Float64,
                     stn     ::Float64,
+                    λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
                     σλ_prior::NTuple{2,Float64},
                     δt      ::Float64,
@@ -251,12 +265,9 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
+  lthin = lit = sthin = zero(Int64)
 
   r = Array{Float64,2}(undef, nlogs, 6)
-
-  # make Ξ vector
-  treev = iTb[]
 
   L   = treelength(Ξ)      # tree length
   nin = lastindex(inodes)  # number of internal nodes
@@ -266,8 +277,8 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
   ddλ, ssλ, nλ, irλ = 
     _ss_ir_dd(Ξ, lλ, αc)
 
-  sthin = 0          # flush to file
-  io    = IOBuffer() # buffer 
+  treev = iTb[]  # make Ξ vector
+  io = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
@@ -276,118 +287,123 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
 
     open(ofile*".txt", "w") do tf
 
-      pbar = Progress(niter, prints, "running mcmc...", 20)
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, nλ = nλ, ssλ = ssλ, ddλ = ddλ, irλ = irλ, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-      for it in Base.OneTo(niter)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
-        shuffle!(pup)
+        for it in Base.OneTo(niter)
 
-        for pupi in pup
+          shuffle!(pup)
 
-          ## parameter updates
-          # update drift
-          if pupi === 1
+          for pupi in pup
 
-            llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
+            ## parameter updates
+            # update drift
+            if pupi === 1
 
-            # update ssλ with new drift `α`
-            ssλ = _ss(Ξ, lλ, αc)
+              llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            # if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi
-            #    return
-            # end
+              # update ssλ with new drift `α`
+              ssλ = _ss(Ξ, lλ, αc)
 
-          # update diffusion rate
-          elseif pupi === 2
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
-            llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
+            # update diffusion rate
+            elseif pupi === 2
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            # if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi
-            #    return
-            # end
+              llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-          # update scale
-          elseif pupi === 3
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
-            llc, irλ, acc = update_scale!(Ξ, idf, llc, irλ, ns, stn)
+            # update scale
+            elseif pupi === 3
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            # if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi
-            #    return
-            # end
+              llc, prc, irλ, acc = 
+                update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
-          # update gbm
-          elseif pupi === 4
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
-            nix = ceil(Int64,rand()*nin)
-            bix = inodes[nix]
+            # update gbm
+            elseif pupi === 4
 
-            llc, ddλ, ssλ, irλ =
-              update_gbm!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, irλ, δt, srδt)
+              nix = ceil(Int64,rand()*nin)
+              bix = inodes[nix]
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            # if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi
-            #    return
-            # end
+              llc, prc, ddλ, ssλ, irλ =
+                update_gbm!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
+                  δt, srδt, λ0_prior)
 
-          # update by forward simulation
-          else
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
-            bix = ceil(Int64,rand()*el)
+            # update by forward simulation
+            else
 
-            llc, ddλ, ssλ, nλ, irλ, ns, L =
-              update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
-                δt, srδt)
+              bix = ceil(Int64,rand()*el)
 
-            # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-            # if !isapprox(ll0, llc, atol = 1e-4)
-            #    @show ll0, llc, it, pupi
-            #    return
-            # end
+              llc, ddλ, ssλ, nλ, irλ, ns, L =
+                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
+                  δt, srδt)
+
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
+            end
           end
-        end
 
-        # log parameters
-        lthin += 1
-        if lthin === nthin
-          lit += 1
-          @inbounds begin
-            r[lit,1] = Float64(it)
-            r[lit,2] = llc
-            r[lit,3] = prc
-            r[lit,4] = exp(lλ(Ξ[1])[1])
-            r[lit,5] = αc
-            r[lit,6] = σλc
-            push!(treev, couple(Ξ, idf, 1))
+          # log parameters
+          lthin += 1
+          if lthin === nthin
+            lit += 1
+            @inbounds begin
+              r[lit,1] = Float64(it)
+              r[lit,2] = llc
+              r[lit,3] = prc
+              r[lit,4] = exp(lλ(Ξ[1])[1])
+              r[lit,5] = αc
+              r[lit,6] = σλc
+              push!(treev, couple(Ξ, idf, 1))
+            end
+            lthin = zero(Int64)
           end
-          lthin = 0
+
+          # flush parameters
+          sthin += 1
+          if sthin === nflush
+            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
+                  exp(lλ(Ξ[1])[1]),'\t', αc, '\t', σλc, '\n')
+            flush(of)
+            ibuffer(io, couple(Ξ, idf, 1))
+            write(io, '\n')
+            write(tf, take!(io))
+            flush(tf)
+            sthin = zero(Int64)
+          end
+
+          next!(pbar)
         end
 
-        # flush parameters
-        sthin += 1
-        if sthin === nflush
-          print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                exp(lλ(Ξ[1])[1]),'\t', αc, '\t', σλc, '\n')
-          flush(of)
-          ibuffer(io, couple(Ξ, idf, 1))
-          write(io, '\n')
-          write(tf, take!(io))
-          flush(tf)
-          sthin = 0
-        end
-
-        next!(pbar)
+        return r, treev
       end
     end
   end
-
-  return r, treev
 end
 
 
@@ -434,58 +450,61 @@ end
 
 
 """
-    update_σ!(σλc     ::Float64,
-              ssλ     ::Float64,
-              n       ::Float64,
-              llc     ::Float64,
-              prc     ::Float64,
-              σλ_prior::NTuple{2,Float64})
+    update_σ!(σc     ::Float64,
+              ss     ::Float64,
+              n      ::Float64,
+              llc    ::Float64,
+              prc    ::Float64,
+              σ_prior::NTuple{2,Float64})
 
-Gibbs update for `σλ`.
+Gibbs update for variance `σ`.
 """
-function update_σ!(σλc     ::Float64,
-                   ssλ     ::Float64,
-                   n       ::Float64,
-                   llc     ::Float64,
-                   prc     ::Float64,
-                   σλ_prior::NTuple{2,Float64})
+function update_σ!(σc     ::Float64,
+                   ss     ::Float64,
+                   n      ::Float64,
+                   llc    ::Float64,
+                   prc    ::Float64,
+                   σ_prior::NTuple{2,Float64})
 
-  σλ_p1 = σλ_prior[1]
-  σλ_p2 = σλ_prior[2]
+  σ_p1, σ_p2 = σ_prior
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
+  σp2 = randinvgamma(σ_p1 + 0.5 * n, σ_p2 + ss)
 
   # update prior
-  prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+  prc += llrdinvgamma(σp2, σc^2, σ_p1, σ_p2)
 
-  σλp = sqrt(σλp2)
+  σp = sqrt(σp2)
 
   # update likelihood
-  llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc))
+  llc += ss*(1.0/σc^2 - 1.0/σp2) - n*(log(σp/σc))
 
-  return llc, prc, σλp
+  return llc, prc, σp
 end
 
 
 
 
 """
-    update_scale!(Ξ  ::Vector{T},
-                  idf::Vector{iBffs},
-                  llc::Float64,
-                  ir ::Float64,
-                  ns ::Float64,
-                  stn::Float64) where {T <: iTree}
+    update_scale!(Ξ       ::Vector{T},
+                  idf     ::Vector{iBffs},
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  ir      ::Float64,
+                  ns      ::Float64,
+                  stn     ::Float64,
+                  λ0_prior::NTuple{2,Float64}) where {T <: iTree}
 
 Update scale for speciation.
 """
-function update_scale!(Ξ  ::Vector{T},
-                       idf::Vector{iBffs},
-                       llc::Float64,
-                       ir ::Float64,
-                       ns ::Float64,
-                       stn::Float64) where {T <: iTree}
+function update_scale!(Ξ       ::Vector{T},
+                       idf     ::Vector{iBffs},
+                       llc     ::Float64,
+                       prc     ::Float64,
+                       ir      ::Float64,
+                       ns      ::Float64,
+                       stn     ::Float64,
+                       λ0_prior::NTuple{2,Float64}) where {T <: iTree}
 
   # sample log(scaling factor)
   s = randn()*stn
@@ -494,48 +513,58 @@ function update_scale!(Ξ  ::Vector{T},
   iri = (1.0 - exp(s)) * ir
   llr = ns * s + iri
 
+  lλ0 = lλ(Ξ[1])[1]
+
+  # prior ratio
+  prr = llrdnorm_x(lλ0 + s, lλ0, λ0_prior[1], λ0_prior[2]) 
+
   acc = 0.0
 
-  if -randexp() < llr
+  if -randexp() < llr + prr
     acc += 1.0
     llc += llr
+    prc += prr
     ir  -= iri
     scale_rate!(Ξ, lλ, s)
     scale_rate!(idf, s)
   end
 
-  return llc, ir, acc
+  return llc, prc, ir, acc
 end
 
 
 
 
 """
-    update_gbm!(bix  ::Int64,
-                Ξ    ::Vector{iTb},
-                idf  ::Vector{iBffs},
-                α    ::Float64,
-                σλ   ::Float64,
-                llc  ::Float64,
-                ddλ  ::Float64,
-                ssλ  ::Float64,
-                irλ  ::Float64,
-                δt   ::Float64,
-                srδt ::Float64)
+    update_gbm!(bix     ::Int64,
+                Ξ       ::Vector{iTb},
+                idf     ::Vector{iBffs},
+                α       ::Float64,
+                σλ      ::Float64,
+                llc     ::Float64,
+                prc     ::Float64,
+                ddλ     ::Float64,
+                ssλ     ::Float64,
+                irλ     ::Float64,
+                δt      ::Float64,
+                srδt    ::Float64,
+                λ0_prior::NTuple{2,Float64})
 
-Make a `gbm` update for an interna branch and its descendants.
+Make a `gbm` update for an internal branch and its descendants.
 """
-function update_gbm!(bix  ::Int64,
-                     Ξ    ::Vector{iTb},
-                     idf  ::Vector{iBffs},
-                     α    ::Float64,
-                     σλ   ::Float64,
-                     llc  ::Float64,
-                     ddλ  ::Float64,
-                     ssλ  ::Float64,
-                     irλ  ::Float64,
-                     δt   ::Float64,
-                     srδt ::Float64)
+function update_gbm!(bix     ::Int64,
+                     Ξ       ::Vector{iTb},
+                     idf     ::Vector{iBffs},
+                     α       ::Float64,
+                     σλ      ::Float64,
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     ddλ     ::Float64,
+                     ssλ     ::Float64,
+                     irλ     ::Float64,
+                     δt      ::Float64,
+                     srδt    ::Float64,
+                     λ0_prior::NTuple{2,Float64})
 
   ξi   = Ξ[bix]
   bi   = idf[bix]
@@ -547,14 +576,14 @@ function update_gbm!(bix  ::Int64,
 
   # if crown root
   if root && iszero(e(ξi))
-    llc, ddλ, ssλ, irλ =
-      _crown_update!(ξi, ξ1, ξ2, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt)
+    llc, prc, ddλ, ssλ, irλ =
+      _crown_update!(ξi, ξ1, ξ2, α, σλ, llc, prc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
     setλt!(bi, lλ(ξi)[1])
   else
     # if stem
     if root
-      llc, ddλ, ssλ, irλ = 
-        _stem_update!(ξi, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt)
+      llc, prc, ddλ, ssλ, irλ = 
+        _stem_update!(ξi, α, σλ, llc, prc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
     end
 
     # updates within the parent branch
@@ -579,7 +608,7 @@ function update_gbm!(bix  ::Int64,
   llc, ddλ, ssλ, irλ = 
     _update_gbm!(ξ2, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt, iszero(d1(idf[i2])))
 
-  return llc, ddλ, ssλ, irλ
+  return llc, prc, ddλ, ssλ, irλ
 end
 
 
@@ -673,15 +702,15 @@ function fsbi_t(bi  ::iBffs,
                 srδt::Float64)
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_gbmb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, Iρi, 0, 1, 500)
+    _sim_gbmb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -733,8 +762,8 @@ function fsbi_i(bi  ::iBffs,
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
  # fix random tip
   λf = fixrtip!(t0, na, NaN)
@@ -748,12 +777,12 @@ function fsbi_i(bi  ::iBffs,
 
     # simulated remaining tips until the present
     t0, na, acr =
-      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, Iρi, na)
+      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, iρi, na)
 
     if lU < acr
       na -= 1
 
-      llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi))
+      llr = llrd + (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
       l1  = lastindex(λ1p)
       l2  = lastindex(λ2p)
       setnt!(bi, ntp)                    # set new nt
@@ -783,7 +812,7 @@ end
               srδt::Float64,
               lr  ::Float64,
               lU  ::Float64,
-              Iρi ::Float64,
+              iρi ::Float64,
               na  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
@@ -796,7 +825,7 @@ function tip_sims!(tree::iTb,
                    srδt::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
-                   Iρi ::Float64,
+                   iρi ::Float64,
                    na  ::Int64)
 
  if lU < lr && na < 1_000
@@ -810,7 +839,7 @@ function tip_sims!(tree::iTb,
         # simulate
         stree, na, lr =
           _sim_gbmb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
-            lr, lU, Iρi, na, 1_000)
+            lr, lU, iρi, na, 1_000)
 
         if isnan(lr) || na >= 1_000
           return tree, na, NaN
@@ -836,8 +865,8 @@ function tip_sims!(tree::iTb,
         end
       end
     else
-      tree.d1, na, lr = tip_sims!(tree.d1, t, α, σλ, δt, srδt, lr, lU, Iρi, na)
-      tree.d2, na, lr = tip_sims!(tree.d2, t, α, σλ, δt, srδt, lr, lU, Iρi, na)
+      tree.d1, na, lr = tip_sims!(tree.d1, t, α, σλ, δt, srδt, lr, lU, iρi, na)
+      tree.d2, na, lr = tip_sims!(tree.d2, t, α, σλ, δt, srδt, lr, lU, iρi, na)
     end
 
     return tree, na, lr
@@ -1086,3 +1115,7 @@ end
 
 #   return pp
 # end
+
+
+
+

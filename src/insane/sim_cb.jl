@@ -69,7 +69,7 @@ end
                λ   ::Float64,
                lr  ::Float64,
                lU  ::Float64,
-               Iρi ::Float64,
+               iρi ::Float64,
                na  ::Int64,
                nn  ::Int64,
                nlim::Int64)
@@ -81,7 +81,7 @@ function _sim_cb_t(t   ::Float64,
                     λ   ::Float64,
                     lr  ::Float64,
                     lU  ::Float64,
-                    Iρi ::Float64,
+                    iρi ::Float64,
                     na  ::Int64,
                     nn  ::Int64,
                     nlim::Int64)
@@ -94,7 +94,7 @@ function _sim_cb_t(t   ::Float64,
       na += 1
       nlr = lr
       if na > 1
-        nlr += log(Iρi * Float64(na)/Float64(na-1))
+        nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr < lr && lU >= nlr
         return sTb(), na, nn, NaN
@@ -157,7 +157,7 @@ end
                 λ   ::Float64,
                 lr  ::Float64,
                 lU  ::Float64,
-                Iρi ::Float64,
+                iρi ::Float64,
                 nn ::Int64,
                 nlim::Int64)
 
@@ -168,7 +168,7 @@ function _sim_cb_it(t   ::Float64,
                      λ   ::Float64,
                      lr  ::Float64,
                      lU  ::Float64,
-                     Iρi ::Float64,
+                     iρi ::Float64,
                      nn ::Int64,
                      nlim::Int64)
 

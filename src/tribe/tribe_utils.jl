@@ -13,6 +13,35 @@ May 01 2017
 
 
 """
+    read_tree(tree_file::String; 
+              order::String = "cladewise", 
+              branching_times::Bool = true)
+
+Function to read a tree into an rtree. 
+"""
+function read_tree(tree_file      ::String; 
+                   order          ::String = "postorder", 
+                   branching_times::Bool = true)
+
+  tree = rtree(read_newick(tree_file))
+
+  if order == "postorder"
+    ed, el = postorderedges(tree.ed, tree.el, tree.nnod + 1)
+    tree = rtree(ed, el, tree.tlab, tree.nnod)
+  end
+
+  if branching_times
+    brtimes = brts(tree.el, tree.ed, tree.nnod + 1)
+    return tree, brtimes
+  else
+    return tree
+  end
+end
+
+
+
+
+"""
     σ²ϕprop()
 
 Generate proportional proposals for σ² 

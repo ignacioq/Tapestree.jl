@@ -127,21 +127,26 @@ end
                   mc   ::Float64,
                   th   ::Float64,
                   δt   ::Float64,
-                  srδt ::Float64)  where {T <: iTbdU}
+                  srδt ::Float64,
+                  lλxpr::Float64,
+                  lμxpr::Float64)  where {T <: iTbdU}
 
 Do gbm update for stem root.
 """
-function _stem_update!(ξi   ::T,
-                       α    ::Float64,
-                       σλ   ::Float64,
-                       σμ   ::Float64,
-                       llc  ::Float64,
-                       dλ   ::Float64,
-                       ssλ  ::Float64,
-                       mc   ::Float64,
-                       th   ::Float64,
-                       δt   ::Float64,
-                       srδt ::Float64) where {T <: iTbdU}
+function _stem_update!(ξi      ::iTbd,
+                       α       ::Float64,
+                       σλ      ::Float64,
+                       σμ      ::Float64,
+                       llc     ::Float64,
+                       prc     ::Float64,
+                       dλ      ::Float64,
+                       ssλ     ::Float64,
+                       mc      ::Float64,
+                       th      ::Float64,
+                       δt      ::Float64,
+                       srδt    ::Float64,
+                       λ0_prior::NTuple{2,Float64},
+                       surv    ::Int64)
 
   @inbounds begin
     λc   = lλ(ξi)
@@ -150,11 +155,10 @@ function _stem_update!(ξi   ::T,
     λn   = λc[l]
     μr   = lμ(ξi)[1]
     el   = e(ξi)
-    sqre = sqrt(el)
     fdtp = fdt(ξi)
 
     # node proposal
-    λr = rnorm(λn - α*el, σλ*sqre)
+    λr = duoprop(λn - α*el, λ0_prior[1], σλ^2*el, λ0_prior[2])
 
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
@@ -170,11 +174,12 @@ function _stem_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, 0)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
         llc += llrbm + llr
+        prc += llrdnorm_x(λr, λc[1], λ0_prior[1], λ0_prior[2])
         dλ  += λc[1] - λr
         ssλ += ssrλ
         mc   = mp
@@ -183,43 +188,47 @@ function _stem_update!(ξi   ::T,
     end
   end
 
-  return llc, dλ, ssλ, mc
+  return llc, prc, dλ, ssλ, mc
 end
 
 
 
 
 """
-    _crown_update!(ξi   ::T,
-                   ξ1   ::T,
-                   ξ2   ::T,
-                   α    ::Float64,
-                   σλ   ::Float64,
-                   σμ   ::Float64,
-                   llc  ::Float64,
-                   dλ   ::Float64,
-                   ssλ  ::Float64,
-                   ssμ  ::Float64,
-                   mc   ::Float64,
-                   th   ::Float64,
-                   δt   ::Float64,
-                   srδt ::Float64) where {T <: iTbdU}
+    _crown_update!(ξi      ::iTbd,
+                   ξ1      ::iTbd,
+                   ξ2      ::iTbd,
+                   α       ::Float64,
+                   σλ      ::Float64,
+                   σμ      ::Float64,
+                   llc     ::Float64,
+                   dλ      ::Float64,
+                   ssλ     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   λ0_prior::NTuple{2,Float64},
+                   surv    ::Int64)
 
 Do `gbm-bd` update for crown root.
 """
-function _crown_update!(ξi   ::T,
-                        ξ1   ::T,
-                        ξ2   ::T,
-                        α    ::Float64,
-                        σλ   ::Float64,
-                        σμ   ::Float64,
-                        llc  ::Float64,
-                        dλ   ::Float64,
-                        ssλ  ::Float64,
-                        mc   ::Float64,
-                        th   ::Float64,
-                        δt   ::Float64,
-                        srδt ::Float64) where {T <: iTbdU}
+function _crown_update!(ξi      ::iTbd,
+                        ξ1      ::iTbd,
+                        ξ2      ::iTbd,
+                        α       ::Float64,
+                        σλ      ::Float64,
+                        σμ      ::Float64,
+                        llc     ::Float64,
+                        prc     ::Float64,
+                        dλ      ::Float64,
+                        ssλ     ::Float64,
+                        mc      ::Float64,
+                        th      ::Float64,
+                        δt      ::Float64,
+                        srδt    ::Float64,
+                        λ0_prior::NTuple{2,Float64},
+                        surv    ::Int64)
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -239,7 +248,8 @@ function _crown_update!(ξi   ::T,
     fdt2 = fdt(ξ2)
 
     # node proposal
-    λr = duoprop(λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
+    λr = trioprop(λ1 - α*e1, λ2 - α*e2, λ0_prior[1], 
+                  e1*σλ^2,     e2*σλ^2, λ0_prior[2])
 
     # simulate fix tree vector
     bb!(λ1p, λr, λ1, σλ, δt, fdt1, srδt)
@@ -259,11 +269,12 @@ function _crown_update!(ξi   ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, 1)
+      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
         llc += llrbm1 + llrbm2 + llr
+        prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
         dλ  += 2.0*(λi - λr)
         ssλ += ssrλ1 + ssrλ2
         mc   = mp
@@ -274,7 +285,7 @@ function _crown_update!(ξi   ::T,
     end
   end
 
-  return llc, dλ, ssλ, mc
+  return llc, prc, dλ, ssλ, mc
 end
 
 
@@ -438,6 +449,88 @@ end
 
 
 """
+    update_triad!(λpc ::Vector{Float64},
+                  λ1c ::Vector{Float64},
+                  λ2c ::Vector{Float64},
+                  ep  ::Float64,
+                  e1  ::Float64,
+                  e2  ::Float64,
+                  fdtp::Float64,
+                  fdt1::Float64,
+                  fdt2::Float64,
+                  α   ::Float64,
+                  σλ  ::Float64,
+                  llc ::Float64,
+                  dλ  ::Float64,
+                  ssλ ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64)
+
+Make a `gbm` trio proposal.
+"""
+function update_triad!(λpc ::Vector{Float64},
+                       λ1c ::Vector{Float64},
+                       λ2c ::Vector{Float64},
+                       ep  ::Float64,
+                       e1  ::Float64,
+                       e2  ::Float64,
+                       fdtp::Float64,
+                       fdt1::Float64,
+                       fdt2::Float64,
+                       α   ::Float64,
+                       σλ  ::Float64,
+                       llc ::Float64,
+                       dλ  ::Float64,
+                       ssλ ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64)
+
+  @inbounds begin
+
+    lp   = lastindex(λpc)
+    l1   = lastindex(λ1c)
+    l2   = lastindex(λ2c)
+    λpp  = Vector{Float64}(undef,lp)
+    λ1p  = Vector{Float64}(undef,l1)
+    λ2p  = Vector{Float64}(undef,l2)
+    λp   = λpc[1]
+    λ1   = λ1c[l1]
+    λ2   = λ2c[l2]
+
+    # node proposal
+    λn = trioprop(λp + α*ep, λ1 - α*e1, λ2 - α*e2, ep, e1, e2, σλ)
+
+    # simulate fix tree vector
+    bb!(λpp, λp, λn, σλ, δt, fdtp, srδt)
+    bb!(λ1p, λn, λ1, σλ, δt, fdt1, srδt)
+    bb!(λ2p, λn, λ2, σλ, δt, fdt2, srδt)
+
+    llrbmp, llrbdp, ssrλp, =
+      llr_gbm_b_sep(λpp, λpc, α, σλ, δt, fdtp, srδt, true)
+    llrbm1, llrbd1, ssrλ1 =
+      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
+    llrbm2, llrbd2, ssrλ2 = 
+      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+
+    acr = llrbdp + llrbd1 + llrbd2
+
+    if -randexp() < acr
+      llc += llrbmp + llrbm1 + llrbm2 + acr
+      dλ  += (λ1c[1] - λn)
+      ssλ += ssrλp + ssrλ1 + ssrλ2
+      unsafe_copyto!(λpc, 1, λpp, 1, lp)
+      unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
+      unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
+    end
+  end
+
+  return llc, dλ, ssλ
+end
+
+
+
+
+"""
     update_triad!(tree::T,
                   α   ::Float64,
                   σλ  ::Float64,
@@ -510,7 +603,4 @@ function update_triad!(tree::T,
 
   return llc, dλ, ssλ
 end
-
-
-
 

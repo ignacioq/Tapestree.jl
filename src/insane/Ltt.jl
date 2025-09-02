@@ -34,7 +34,7 @@ Base.show(io::IO, x::Ltt) =
 
 
 """
-    times_n(n::Int64, nt::Ltt)
+    times_n(n::Int64, nt::Ltt
 
 Return tuple(s) of start and end of times for which there were `n` lineages.
 """

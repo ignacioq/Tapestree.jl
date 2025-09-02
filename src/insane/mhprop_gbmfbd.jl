@@ -147,62 +147,60 @@ end
 
 
 """
-    _stem_update!(ξi   ::T,
-                  αλ   ::Float64,
-                  αμ   ::Float64,
-                  σλ   ::Float64,
-                  σμ   ::Float64,
-                  llc  ::Float64,
-                  prc  ::Float64,
-                  ddλ  ::Float64,
-                  ssλ  ::Float64,
-                  ssμ  ::Float64,
-                  mc   ::Float64,
-                  th   ::Float64,
-                  δt   ::Float64,
-                  srδt ::Float64,
-                  λa_prior::NTuple{2,Float64},
-                  μa_prior::NTuple{2,Float64},
-                  surv ::Int64) where {T <: iTfbd}
+    _stem_update!(ξi      ::T,
+                  αλ      ::Float64,
+                  αμ      ::Float64,
+                  σλ      ::Float64,
+                  σμ      ::Float64,
+                  llc     ::Float64,
+                  prc     ::Float64,
+                  ddλ     ::Float64,
+                  ddμ     ::Float64,
+                  ssλ     ::Float64,
+                  ssμ     ::Float64,
+                  mc      ::Float64,
+                  th      ::Float64,
+                  δt      ::Float64,
+                  srδt    ::Float64,
+                  λ0_prior::NTuple{2,Float64},
+                  μ0_prior::NTuple{2,Float64},
+                  surv    ::Int64) where {T <: iTfbd}
 
 Do gbm update for stem root.
 """
-function _stem_update!(ξi   ::T,
-                       αλ   ::Float64,
-                       αμ   ::Float64,
-                       σλ   ::Float64,
-                       σμ   ::Float64,
-                       llc  ::Float64,
-                       prc  ::Float64,
-                       ddλ  ::Float64,
-                       ddμ  ::Float64,
-                       ssλ  ::Float64,
-                       ssμ  ::Float64,
-                       mc   ::Float64,
-                       th   ::Float64,
-                       δt   ::Float64,
-                       srδt ::Float64,
-                       λa_prior::NTuple{2,Float64},
-                       μa_prior::NTuple{2,Float64},
-                       surv ::Int64) where {T <: iTfbd}
+function _stem_update!(ξi      ::T,
+                       αλ      ::Float64,
+                       αμ      ::Float64,
+                       σλ      ::Float64,
+                       σμ      ::Float64,
+                       llc     ::Float64,
+                       prc     ::Float64,
+                       ddλ     ::Float64,
+                       ddμ     ::Float64,
+                       ssλ     ::Float64,
+                       ssμ     ::Float64,
+                       mc      ::Float64,
+                       th      ::Float64,
+                       δt      ::Float64,
+                       srδt    ::Float64,
+                       λ0_prior::NTuple{2,Float64},
+                       μ0_prior::NTuple{2,Float64},
+                       surv    ::Int64) where {T <: iTfbd}
 
   @inbounds begin
     λc   = lλ(ξi)
     μc   = lμ(ξi)
-    λi   = λc[1]
-    μi   = μc[1]
     l    = lastindex(λc)
     λp   = Vector{Float64}(undef,l)
     μp   = Vector{Float64}(undef,l)
     λn   = λc[l]
     μn   = μc[l]
     el   = e(ξi)
-    sqre = sqrt(el)
     fdtp = fdt(ξi)
 
     # node proposal
-    λr = rnorm(λn - αλ*el, σλ*sqre)
-    μr = rnorm(μn - αμ*el, σμ*sqre)
+    λr = duoprop(λn - αλ*el, λ0_prior[1], σλ^2*el, λ0_prior[2])
+    μr = duoprop(μn - αμ*el, μ0_prior[1], σμ^2*el, μ0_prior[2])
 
     # simulate fix tree vector
     bb!(λp, λr, λn, μp, μr, μn, σλ, σμ, δt, fdtp, srδt)
@@ -215,20 +213,19 @@ function _stem_update!(ξi   ::T,
     lU = -randexp()
 
     llr = llrbd
-    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + 
-          llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
-    if lU < llr + prr + log(1000.0/mc)
+    if lU < llr + log(1000.0/mc)
 
       #survival
       mp   = m_surv_gbmfbd(th, λr, μr, αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
-      if lU < llr + prr
+      if lU < llr
         llc += llrbm + llr
-        prc += prr
-        ddλ += λi - λr
-        ddμ += μi - μr
+        prc += llrdnorm_x(λr, λc[1], λ0_prior[1], λ0_prior[2]) +
+               llrdnorm_x(μr, μc[1], μ0_prior[1], μ0_prior[2]) 
+        ddλ += λc[1] - λr
+        ddμ += μc[1] - μr
         ssλ += ssrλ
         ssμ += ssrμ
         mc   = mp
@@ -245,49 +242,49 @@ end
 
 
 """
-   _crown_update!(ξi   ::T,
-                  ξ1   ::T,
-                  ξ2   ::T,
-                  αλ   ::Float64,
-                  αμ   ::Float64,
-                  σλ   ::Float64,
-                  σμ   ::Float64,
-                  llc  ::Float64,
-                  prc  ::Float64,
-                  ddλ  ::Float64,
-                  ddμ  ::Float64,
-                  ssλ  ::Float64,
-                  ssμ  ::Float64,
-                  mc   ::Float64,
-                  th   ::Float64,
-                  δt   ::Float64,
-                  srδt ::Float64,
-                  λa_prior::NTuple{2,Float64},
-                  μa_prior::NTuple{2,Float64},
-                  surv ::Int64) where {T <: iTfbd}
+    _crown_update!(ξi      ::T,
+                   ξ1      ::T,
+                   ξ2      ::T,
+                   αλ      ::Float64,
+                   αμ      ::Float64,
+                   σλ      ::Float64,
+                   σμ      ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   ddλ     ::Float64,
+                   ddμ     ::Float64,
+                   ssλ     ::Float64,
+                   ssμ     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   λ0_prior::NTuple{2,Float64},
+                   μ0_prior::NTuple{2,Float64},
+                   surv    ::Int64) where {T <: iTfbd}
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi   ::T,
-                        ξ1   ::T,
-                        ξ2   ::T,
-                        αλ   ::Float64,
-                        αμ   ::Float64,
-                        σλ   ::Float64,
-                        σμ   ::Float64,
-                        llc  ::Float64,
-                        prc  ::Float64,
-                        ddλ  ::Float64,
-                        ddμ  ::Float64,
-                        ssλ  ::Float64,
-                        ssμ  ::Float64,
-                        mc   ::Float64,
-                        th   ::Float64,
-                        δt   ::Float64,
-                        srδt ::Float64,
-                        λa_prior::NTuple{2,Float64},
-                        μa_prior::NTuple{2,Float64},
-                        surv ::Int64) where {T <: iTfbd}
+function _crown_update!(ξi      ::T,
+                        ξ1      ::T,
+                        ξ2      ::T,
+                        αλ      ::Float64,
+                        αμ      ::Float64,
+                        σλ      ::Float64,
+                        σμ      ::Float64,
+                        llc     ::Float64,
+                        prc     ::Float64,
+                        ddλ     ::Float64,
+                        ddμ     ::Float64,
+                        ssλ     ::Float64,
+                        ssμ     ::Float64,
+                        mc      ::Float64,
+                        th      ::Float64,
+                        δt      ::Float64,
+                        srδt    ::Float64,
+                        λ0_prior::NTuple{2,Float64},
+                        μ0_prior::NTuple{2,Float64},
+                        surv    ::Int64) where {T <: iTfbd}
 
   @inbounds begin
     λpc  = lλ(ξi)
@@ -314,8 +311,11 @@ function _crown_update!(ξi   ::T,
     fdt2 = fdt(ξ2)
 
     # node proposal
-    λr = duoprop(λ1 - αλ*e1, λ2 - αλ*e2, e1, e2, σλ)
-    μr = duoprop(μ1 - αμ*e1, μ2 - αμ*e2, e1, e2, σμ)
+    λr = trioprop(λ1 - αλ*e1, λ2 - αλ*e2, λ0_prior[1], 
+                  e1*σλ^2,       e2*σλ^2, λ0_prior[2])
+    μr = trioprop(μ1 - αμ*e1, μ2 - αμ*e2, μ0_prior[1], 
+                  e1*σμ^2,       e2*σμ^2, μ0_prior[2])
+
 
     # simulate fix tree vector
     bb!(λ1p, λr, λ1, μ1p, μr, μ1, σλ, σμ, δt, fdt1, srδt)
@@ -333,24 +333,24 @@ function _crown_update!(ξi   ::T,
     lU = -randexp()
 
     llr = llrbd1 + llrbd2
-    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
-    if lU < llr + prr + log(1000.0/mc)
+    if lU < llr + log(1000.0/mc)
 
       #survival
       mp   = m_surv_gbmfbd(th, λr, μr, αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
-      if lU < llr + prr
+      if lU < llr
         llc += llrbm1 + llrbm2 + llr
-        prc += prr
+        prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2]) +
+               llrdnorm_x(μr, μi, μ0_prior[1], μ0_prior[2]) 
         ddλ += 2.0*(λi - λr)
         ddμ += 2.0*(μi - μr)
         ssλ += ssrλ1 + ssrλ2
         ssμ += ssrμ1 + ssrμ2
         mc   = mp
-        fill!(λpc, λr)
-        fill!(μpc, μr)
+        fill!(lλ(ξi), λr)
+        fill!(lμ(ξi), μr)
         unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
         unsafe_copyto!(λ2c, 1, λ2p, 1, l2)
         unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
@@ -366,53 +366,49 @@ end
 
 
 """
-    _fstem_update!(ξi   ::iTfbd,
-                   ξ1   ::iTfbd,
-                   αλ   ::Float64,
-                   αμ   ::Float64,
-                   σλ   ::Float64,
-                   σμ   ::Float64,
-                   llc  ::Float64,
-                   prc  ::Float64,
-                   ddλ  ::Float64,
-                   ddμ  ::Float64,
-                   ssλ  ::Float64,
-                   ssμ  ::Float64,
-                   mc   ::Float64,
-                   th   ::Float64,
-                   δt   ::Float64,
-                   srδt ::Float64,
-                   λa_prior::NTuple{2,Float64},
-                   μa_prior::NTuple{2,Float64},
-                   surv ::Int64)
+    _fstem_update!(ξi      ::iTfbd,
+                   ξ1      ::iTfbd,
+                   αλ      ::Float64,
+                   αμ      ::Float64,
+                   σλ      ::Float64,
+                   σμ      ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   ddλ     ::Float64,
+                   ddμ     ::Float64,
+                   ssλ     ::Float64,
+                   ssμ     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   λ0_prior::NTuple{2,Float64},
+                   μ0_prior::NTuple{2,Float64},
+                   surv    ::Int64)
 
 Do `gbm-bd` update for fossil stem root.
 """
-function _fstem_update!(ξi   ::iTfbd,
-                        ξ1   ::iTfbd,
-                        αλ   ::Float64,
-                        αμ   ::Float64,
-                        σλ   ::Float64,
-                        σμ   ::Float64,
-                        llc  ::Float64,
-                        prc  ::Float64,
-                        ddλ  ::Float64,
-                        ddμ  ::Float64,
-                        ssλ  ::Float64,
-                        ssμ  ::Float64,
-                        mc   ::Float64,
-                        th   ::Float64,
-                        δt   ::Float64,
-                        srδt ::Float64,
-                        λa_prior::NTuple{2,Float64},
-                        μa_prior::NTuple{2,Float64},
-                        surv ::Int64)
+function _fstem_update!(ξi      ::iTfbd,
+                        ξ1      ::iTfbd,
+                        αλ      ::Float64,
+                        αμ      ::Float64,
+                        σλ      ::Float64,
+                        σμ      ::Float64,
+                        llc     ::Float64,
+                        prc     ::Float64,
+                        ddλ     ::Float64,
+                        ddμ     ::Float64,
+                        ssλ     ::Float64,
+                        ssμ     ::Float64,
+                        mc      ::Float64,
+                        th      ::Float64,
+                        δt      ::Float64,
+                        srδt    ::Float64,
+                        λ0_prior::NTuple{2,Float64},
+                        μ0_prior::NTuple{2,Float64},
+                        surv    ::Int64)
 
   @inbounds begin
-    λpc  = lλ(ξi)
-    μpc  = lμ(ξi)
-    λi   = λpc[1]
-    μi   = μpc[1]
     λ1c  = lλ(ξ1)
     μ1c  = lμ(ξ1)
     l1   = lastindex(λ1c)
@@ -421,12 +417,11 @@ function _fstem_update!(ξi   ::iTfbd,
     λ1   = λ1c[l1]
     μ1   = μ1c[l1]
     el   = e(ξ1)
-    sqre = sqrt(el)
     fdt1 = fdt(ξ1)
 
     # node proposal
-    λr = rnorm(λ1 - αλ*el, σλ*sqre)
-    μr = rnorm(μ1 - αμ*el, σμ*sqre)
+    λr = duoprop(λ1 - αλ*el, λ0_prior[1], σλ^2*el, λ0_prior[2])
+    μr = duoprop(μ1 - αμ*el, μ0_prior[1], σμ^2*el, μ0_prior[2])
 
     # simulate fix tree vector
     bb!(λ1p, λr, λ1, μ1p, μr, μ1, σλ, σμ, δt, fdt1, srδt)
@@ -440,24 +435,24 @@ function _fstem_update!(ξi   ::iTfbd,
     lU = -randexp()
 
     llr = llrbd
-    prr = llrdgamma(exp(λr), exp(λi), λa_prior[1], λa_prior[2]) + llrdgamma(exp(μr), exp(μi), μa_prior[1], μa_prior[2])
 
-    if lU < llr + prr + log(1_000.0/mc)
+    if lU < llr + log(1000.0/mc)
 
       #survival
       mp   = m_surv_gbmfbd(th, λr, μr, αλ, αμ, σλ, σμ, δt, srδt, 1_000, surv)
       llr += log(mp/mc)
 
-      if lU < llr + prr
+      if lU < llr
         llc += llrbm + llr
-        prc += prr
+        prc += llrdnorm_x(λr, λ1c[1], λ0_prior[1], λ0_prior[2]) +
+               llrdnorm_x(μr, μ1c[1], μ0_prior[1], μ0_prior[2]) 
         ddλ += λ1c[1] - λr
         ddμ += μ1c[1] - μr
         ssλ += ssrλ
         ssμ += ssrμ
         mc   = mp
-        fill!(λpc, λr)
-        fill!(μpc, μr)
+        fill!(lλ(ξi), λr)
+        fill!(lμ(ξi), μr)
         unsafe_copyto!(λ1c, 1, λ1p, 1, l1)
         unsafe_copyto!(μ1c, 1, μ1p, 1, l1)
       end

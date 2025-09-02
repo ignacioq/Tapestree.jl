@@ -94,26 +94,26 @@ function ll_gbm_b(lλv ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
-  llbm = 0.0
-  llb  = 0.0
-  @turbo for i in Base.OneTo(nI)
-    lλvi  = lλv[i]
-    lλvi1 = lλv[i+1]
-    llbm += (lλvi1 - lλvi - α*δt)^2
-    llb  += exp(0.5*(lλvi + lλvi1))
+  ll = llbm = llpb = 0.0
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      lλvi  = lλv[i]
+      lλvi1 = lλv[i+1]
+      llbm += (lλvi1 - lλvi - α*δt)^2
+      llpb += exp(0.5*(lλvi + lλvi1))
+    end
+    # add to global likelihood
+    ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
+          llpb*δt
   end
-
-  # add to global likelihood
-  ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-  ll -= llb*δt
 
   lλvi1 = lλv[nI+2]
 
   # add final non-standard `δt`
   if fdt > 0.0
     lλvi = lλv[nI+1]
-    ll   += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-            fdt*exp(0.5*(lλvi + lλvi1))
+    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+           fdt*exp(0.5*(lλvi + lλvi1))
   end
   if λev
     ll += lλvi1
@@ -191,25 +191,26 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   nI = lastindex(lλv)-2
   nλ = Float64(nI)
 
-  llbm = llb  = 0.0
-  @turbo for i in Base.OneTo(nI)
-    lλvi  = lλv[i]
-    lλvi1 = lλv[i+1]
-    llbm += (lλvi1 - lλvi - α*δt)^2
-    llb  += exp(0.5*(lλvi + lλvi1))
+  ll = llbm = llpb = ssλ = irλ = 0.0
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      lλvi  = lλv[i]
+      lλvi1 = lλv[i+1]
+      llbm += (lλvi1 - lλvi - α*δt)^2
+      llpb += exp(0.5*(lλvi + lλvi1))
+    end
+
+    # standardized sum of squares
+    ssλ += llbm/(2.0*δt)
+    irλ += llpb*δt
+
+    # add to global likelihood
+    ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
+          llpb*δt
   end
 
-  # standardized sum of squares
-  ssλ  = llbm/(2.0*δt)
-  irλ  = llb*δt
-
-  # add to global likelihood
-  ll  = llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π))
-  ll -= llb*δt
-
   lλvi1 = lλv[nI+2]
-
-  dλ = lλvi1 - lλv[1]
+  dλ    = lλvi1 - lλv[1]
 
   # add final non-standard `δt`
   if fdt > 0.0
@@ -255,21 +256,23 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλp)-2
 
-  llrbm = llrb  = 0.0
-  @turbo for i in Base.OneTo(nI)
-    lλpi   = lλp[i]
-    lλci   = lλc[i]
-    lλpi1  = lλp[i+1]
-    lλci1  = lλc[i+1]
-    llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-    llrb  += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-  end
+  llrbm = llrpb = ssrλ = 0.0
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      lλpi   = lλp[i]
+      lλci   = lλc[i]
+      lλpi1  = lλp[i+1]
+      lλci1  = lλc[i+1]
+      llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
+      llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+    end
 
-  # standardized sum of squares
-  ssrλ  = llrbm/(2.0*δt)
-  # add to global likelihood
-  llrbm *= (-0.5/((σλ*srδt)^2))
-  llrb  *= (-δt)
+    # standardized sum of squares
+    ssrλ  += llrbm/(2.0*δt)
+    # add to global likelihood
+    llrbm *= (-0.5/((σλ*srδt)^2))
+    llrpb *= (-δt)
+  end
 
   lλpi1 = lλp[nI+2]
   lλci1 = lλc[nI+2]
@@ -353,20 +356,21 @@ function _ss_ir_dd_b(v  ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(v)-2
 
-    ss  = 0.0
-    ir  = 0.0
-    @turbo for i in Base.OneTo(nI)
-      vi  = v[i]
-      vi1 = v[i+1]
-      ss += (vi1 - vi - α*δt)^2
-      ir += exp(0.5*(vi + vi1))
+    ss = ir = n = 0.0
+    if nI > 0
+      @turbo for i in Base.OneTo(nI)
+        vi  = v[i]
+        vi1 = v[i+1]
+        ss += (vi1 - vi - α*δt)^2
+        ir += exp(0.5*(vi + vi1))
+      end
+    
+      # standardize
+      ss *= 1.0/(2.0*δt)
+      ir *= δt
+      n  += Float64(nI)
     end
-  
-    # standardize
-    ss *= 1.0/(2.0*δt)
-    ir *= δt
 
-    n = Float64(nI)
     # add final non-standard `δt`
     if fdt > 0.0
       vi  = v[nI+1]
@@ -420,12 +424,14 @@ function _ss_b(v::Array{Float64,1},
     nI = lastindex(v)-2
 
     ss = 0.0
-    @turbo for i in Base.OneTo(nI)
-      ss += (v[i+1] - v[i] - α*δt)^2
+    if nI > 0
+      @turbo for i in Base.OneTo(nI)
+        ss += (v[i+1] - v[i] - α*δt)^2
+      end
+
+      # standardize
+      ss *= 1.0/(2.0*δt)
     end
-  
-    # standardize
-    ss *= 1.0/(2.0*δt)
 
     # add final non-standard `δt`
     if fdt > 0.0
@@ -434,47 +440,6 @@ function _ss_b(v::Array{Float64,1},
 
   return ss
 end
-
-
-
-
-"""
-    deltaλ(Ξ::Vector{T}) where {T <: iT}
-
-Returns the log-likelihood ratio for according to GBM
-for a drift `α` proposal.
-"""
-function deltaλ(Ξ::Vector{T}) where {T <: iT}
-
-  dλ = 0.0
-
-  for ξi in Ξ
-    dλ += _deltaλ(ξi)
-  end
-
-  return dλ
-end
-
-
-
-
-"""
-    _deltaλ(tree::T) where {T <: iT}
-
-Returns the log-likelihood ratio for a `iTb` according
-to GBM birth-death for a `α` proposal.
-"""
-function _deltaλ(tree::T) where {T <: iT}
-
-  lλv = lλ(tree)
-
-  if def1(tree)
-    lλv[end] - lλv[1] + _deltaλ(tree.d1) + _deltaλ(tree.d2)
-  else
-    lλv[end] - lλv[1]
-  end
-end
-
 
 
 
@@ -514,10 +479,12 @@ function int_rate(v::Vector{Float64}, δt::Float64, fdt::Float64)
   nI = lastindex(v)-2
 
   ir = 0.0
-  @turbo for i in Base.OneTo(nI)
-    ir += exp(0.5*(v[i] + v[i+1]))
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      ir += exp(0.5*(v[i] + v[i+1]))
+    end
+    ir *= δt
   end
-  ir *= δt
 
   # add final non-standard `δt`
   if fdt > 0.0

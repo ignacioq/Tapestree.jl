@@ -124,7 +124,7 @@ end
                μ   ::Float64,
                lr  ::Float64,
                lU  ::Float64,
-               Iρi ::Float64,
+               iρi ::Float64,
                na  ::Int64,
                nn ::Int64,
                nlim::Int64)
@@ -137,7 +137,7 @@ function _sim_cbd_t(t   ::Float64,
                     μ   ::Float64,
                     lr  ::Float64,
                     lU  ::Float64,
-                    Iρi ::Float64,
+                    iρi ::Float64,
                     na  ::Int64,
                     nn ::Int64,
                     nlim::Int64)
@@ -150,7 +150,7 @@ function _sim_cbd_t(t   ::Float64,
       na += 1
       nlr = lr
       if na > 1
-        nlr += log(Iρi * Float64(na)/Float64(na-1))
+        nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       
       if nlr < lr && lU >= nlr
@@ -161,8 +161,8 @@ function _sim_cbd_t(t   ::Float64,
     else
       if λorμ(λ, μ)
         nn += 1
-        d1, na, nn, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
-        d2, na, nn, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
+        d1, na, nn, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, iρi, na, nn, nlim)
+        d2, na, nn, lr = _sim_cbd_t(t - tw, λ, μ, lr, lU, iρi, na, nn, nlim)
 
         return sTbd(d1, d2, tw, false, false), na, nn, lr
       else
@@ -227,7 +227,7 @@ end
                 μ   ::Float64,
                 lr  ::Float64,
                 lU  ::Float64,
-                Iρi ::Float64,
+                iρi ::Float64,
                 nn ::Int64,
                 nlim::Int64)
 
@@ -239,7 +239,7 @@ function _sim_cbd_it(t   ::Float64,
                      μ   ::Float64,
                      lr  ::Float64,
                      lU  ::Float64,
-                     Iρi ::Float64,
+                     iρi ::Float64,
                      na  ::Int64,
                      nn ::Int64,
                      nlim::Int64)
@@ -250,14 +250,14 @@ function _sim_cbd_it(t   ::Float64,
 
     if tw > t
       na += 1
-      lr += log(Iρi)
+      lr += log(iρi)
       return sTbd(t, false, false), na, nn, lr
     end
 
     if λorμ(λ, μ)
       nn += 1
-      d1, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
-      d2, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, Iρi, na, nn, nlim)
+      d1, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, iρi, na, nn, nlim)
+      d2, na, nn, lr = _sim_cbd_it(t - tw, λ, μ, lr, lU, iρi, na, nn, nlim)
 
       return sTbd(d1, d2, tw, false, false), na, nn, lr
     else

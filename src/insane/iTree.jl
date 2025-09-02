@@ -34,7 +34,6 @@ abstract type sT <: iTree end
 
 
 
-
 """
     sT_label
 
@@ -66,9 +65,9 @@ mutable struct sT_label <: sT
   l ::String
 
   sT_label() = new()
-  sT_label(e::Float64, l::String) =
+  sT_label(e::Float64, l::AbstractString) =
     (x = new(); x.e = e; x.l = l; x)
-  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::String) =
+  sT_label(d1::sT_label, d2::sT_label, e::Float64, l::AbstractString) =
     new(d1, d2, e, l)
 end
 
@@ -84,17 +83,14 @@ end
 """
     sT_label(tree::sT_label)
 
-Demotes a tree to `sT_label`.
+Copies a tree to `sT_label`.
 """
 function sT_label(tree::sT_label)
   if def1(tree)
-    t1 = sT_label(tree.d1)
-    t2 = sT_label(tree.d2)
-    tree = sT_label(t1, t2, e(tree), l(tree))
+    sT_label(sT_label(tree.d1), sT_label(tree.d2), e(tree), label(tree))
   else
-    tree = sT_label(e(tree), l(tree))
+    sT_label(e(tree), label(tree))
   end
-  return tree
 end
 
 
@@ -119,12 +115,191 @@ function _sT_label(tree::T, i::Int64) where {T <: iTree}
   if def1(tree)
     t1, i = _sT_label(tree.d1, i)
     t2, i = _sT_label(tree.d2, i)
-    tree  = sT_label(t1, t2, e(tree), "")
+    lab = isdefined(tree, :l) ? label(tree) : ""
+    tree  = sT_label(t1, t2, e(tree), lab)
   else
     i += 1
-    tree = sT_label(e(tree), string("t",i))
+    lab = isdefined(tree, :l) ? label(tree) : string("t",i)
+    tree = sT_label(e(tree), lab)
   end
   return tree, i
+end
+
+
+
+"""
+    sT_label(tree::T, reftree::sT_label)
+
+Demotes a `tree` to `sT_label` but retains the labels from `reftree`.
+"""
+function sT_label(tree::T, reftree::sT_label) where {T <: iTree}
+  _sT_label(tree::T, reftree::sT_label, 0)[1]
+end
+
+
+"""
+    _sT_label(tree::T, i::Int64) where {T <: iTree}
+
+Demotes a `tree` to `sT_label` but retains the labels from `reftree`.
+"""
+function _sT_label(tree::T, reftree::sT_label, i::Int64) where {T <: iTree}
+
+  if def1(tree)
+    if isfix(tree.d1) && isfix(tree.d2)
+      t1, i = _sT_label(tree.d1, reftree.d1, i)
+      t2, i = _sT_label(tree.d2, reftree.d2, i)
+      tree  = sT_label(t1, t2, e(tree), label(reftree))
+    else
+      t1, i = _sT_label(tree.d1, reftree, i)
+      t2, i = _sT_label(tree.d2, reftree, i)
+      tree  = sT_label(t1, t2, e(tree), "")
+    end
+  else
+    if isfix(tree)
+      tree = sT_label(e(tree), label(reftree))
+    else
+      i += 1
+      tree = sT_label(e(tree), string("t",i))
+    end
+  end
+  return tree, i
+end
+
+
+
+"""
+    _sT_label(tree::rtree)
+
+Convert an `rtree` object to an `sT_label` tree
+"""
+function sT_label(tree::rtree)
+
+  ed   = tree.ed
+  ed0  = ed[:,1]
+  ed1  = ed[:,2]
+  el   = tree.el
+  ntip = tree.nnod + 1
+  tl   = tree.tlab
+
+  i1 = findfirst(isequal(ntip + 1), ed0)
+  i2 = findnext(isequal(ntip + 1), ed0, i1+1)
+  # if stem
+  if isnothing(i2)
+    stree = _sT_label(i1, ed0, ed1, el, tl)
+  #if crown
+  else
+    stree = sT_label(_sT_label(i1, ed0, ed1, el, tl),
+                     _sT_label(i2, ed0, ed1, el, tl), 
+              0.0, "")
+  end
+
+  return stree
+end
+
+
+"""
+    _sT_label(ix ::Int64, 
+              ed0::Vector{Int64}, 
+              ed1::Vector{Int64}, 
+              el ::Vector{Float64}, 
+              tl ::Vector{String})
+
+Recursive conversion of an `rtree` object to an `sT_label` tree.
+"""
+function _sT_label(ix ::Int64, 
+                   ed0::Vector{Int64}, 
+                   ed1::Vector{Int64}, 
+                   el ::Vector{Float64}, 
+                   tl ::Vector{String})
+
+  # inner node
+  ei = el[ix]
+  if iszero(ei) 
+    ei = 1e-16
+  end
+
+  i1 = findfirst(isequal(ed1[ix]), ed0)
+  if !isnothing(i1)
+    i2 = findnext(isequal(ed1[ix]), ed0, i1 + 1)
+    return sT_label(_sT_label(i1, ed0, ed1, el, tl),
+                    _sT_label(i2, ed0, ed1, el, tl), 
+            ei, "")
+  # if tip
+  else
+    return sT_label(ei, tl[ed1[ix]])
+  end
+end
+
+
+
+"""
+    rtree(tree::sT_label)
+
+Create a r tree object from a `sT_label`.
+"""
+function rtree(tree::sT_label)
+
+  e0   = Int64[]
+  e1   = Int64[]
+  el   = Float64[]
+  tlab = String[]
+
+  n = ntips(tree)
+
+  _rtree!(tree, e0, e1, el, tlab, n+1, n+1, 0)
+
+  return rtree(hcat(e0, e1), el, tlab, n-1)
+end
+
+
+
+"""
+    _rtree!(tree::sT_label, 
+            e0  ::Vector{Int64}, 
+            e1  ::Vector{Int64}, 
+            el  ::Vector{Float64}, 
+            tlab::Vector{String},
+            pa  ::Int64,
+            i   ::Int64,
+            j   ::Int64)
+
+Create a `rtree` object from a `sT_label` recursively.
+"""
+function _rtree!(tree::sT_label, 
+                 e0  ::Vector{Int64}, 
+                 e1  ::Vector{Int64}, 
+                 el  ::Vector{Float64}, 
+                 tlab::Vector{String},
+                 pa  ::Int64,
+                 i   ::Int64,
+                 j   ::Int64)
+  ei = e(tree)
+
+  if def1(tree)
+    if def2(tree)
+
+      if ei > 0.0
+        i += 1
+        push!(e0, pa)
+        pa = i
+        push!(e1, i)
+        push!(el, ei)
+      end
+
+      i, j = _rtree!(tree.d1, e0, e1, el, tlab, pa, i, j)
+      i, j = _rtree!(tree.d2, e0, e1, el, tlab, pa, i, j)
+
+    end
+  else
+    j += 1
+
+    push!(e0, pa)
+    push!(e1, j)
+    push!(el, ei)
+    push!(tlab, label(tree))
+  end
+
+  return i, j
 end
 
 
@@ -164,15 +339,15 @@ mutable struct sTf_label <: sT
   l ::String
 
   sTf_label() = new()
-  sTf_label(e::Float64, l::String) =
+  sTf_label(e::Float64, l::AbstractString) =
     (x=new(); x.e=e; x.iμ=false; x.iψ=false; x.l=l; x)
   sTf_label(e::Float64, iμ::Bool, iψ::Bool) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=""; x)
-  sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::String) =
+  sTf_label(e::Float64, iμ::Bool, iψ::Bool, l::AbstractString) =
     (x=new(); x.e=e; x.iμ=iμ; x.iψ=iψ; x.l=l; x)
-  sTf_label(d1::sTf_label, e::Float64, l::String) =
+  sTf_label(d1::sTf_label, e::Float64, l::AbstractString) =
     (x=new(); x.d1=d1; x.e=e; x.iμ=false; x.iψ=true; x.l=l; x)
-  sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::String) =
+  sTf_label(d1::sTf_label, d2::sTf_label, e::Float64, l::AbstractString) =
     new(d1, d2, e, false, false, l)
 end
 
@@ -189,21 +364,15 @@ Base.show(io::IO, t::sTf_label) =
 Copies a tree to `sTf_label`
 """
 function sTf_label(tree::sTf_label)
-
   if def1(tree)
     if def2(tree)
-      t1   = sTf_label(tree.d1)
-      t2   = sTf_label(tree.d2)
-      tree = sTf_label(t1, t2, e(tree), l(tree))
+      sTf_label(sTf_label(tree.d1), sTf_label(tree.d2), e(tree), label(tree))
     else
-      t1   = sTf_label(tree.d1)
-      tree = sTf_label(t1, e(tree), l(tree))
+      sTf_label(sTf_label(tree.d1), e(tree), label(tree))
     end
   else
-    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), l(tree))
+    sTf_label(e(tree), isextinct(tree), isfossil(tree), label(tree))
   end
-
-  return tree
 end
 
 
@@ -214,38 +383,86 @@ end
 Demotes a tree to `sTf_label`.
 """
 function sTf_label(tree::T) where {T <: iTree}
-  _sTf_label(tree::T, 0)[1]
+  _sTf_label(tree::T, 0, 0)[1]
+end
+
+
+
+"""
+    _sTf_label(tree::T, i::Int64, j::Int64) where {T <: iTree}
+
+Demotes a tree to `sTf_label`, initialized with label i.
+"""
+function _sTf_label(tree::T, n::Int64, nf::Int64) where {T <: iTree}
+
+  if def1(tree)
+    t1, n, nf = _sTf_label(tree.d1, n, nf)
+    if def2(tree)
+      t2, n, nf = _sTf_label(tree.d2, n, nf)
+      tree  = sTf_label(t1, t2, e(tree), "")
+    else
+      nf += 1
+      tree = sTf_label(t1, e(tree), string("f",nf))
+    end
+  else
+    n += 1
+    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), string("t",n))
+  end
+
+  return tree, n, nf
 end
 
 
 
 
+"""
+    sTf_label(tree::T) where {T <: iTree}
+
+Demotes a tree to `sTf_label`.
+"""
+function sTf_label(tree::T, reftree::sTf_label) where {T <: iTree}
+  _sTf_label(tree::T, reftree, 0, 0)[1]
+end
 
 """
-    _sTf_label(tree::T, i::Int64) where {T <: iTree}
+    _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <: iTree}
 
-Demotes a tree to `sTf_label`, initialized with label i.
+Demotes a `tree` to `sTf_label` but retains the labels from `reftree`.
 """
-function _sTf_label(tree::T, i::Int64) where {T <: iTree}
+function _sTf_label(tree::T, reftree::sTf_label, n::Int64, nf::Int64) where {T <: iTree}
 
   lab = isnothing(l(tree)) ? string("t",i) : l(tree)
   if def1(tree)
     if def2(tree)
-      t1, i = _sTf_label(tree.d1, i)
-      t2, i = _sTf_label(tree.d2, i)
-      tree  = sTf_label(t1, t2, e(tree), string("t",i))
+      if isfix(tree.d1) && isfix(tree.d2)
+        t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
+        t2, n, nf = _sTf_label(tree.d2, reftree.d2, n, nf)
+        tree  = sTf_label(t1, t2, e(tree), label(reftree))
+      else
+        t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
+        t2, n, nf = _sTf_label(tree.d2, reftree, n, nf)
+        tree  = sTf_label(t1, t2, e(tree), "")
+      end
     else
-      t1, i = _sTf_label(tree.d1, i)
-      tree = sTf_label(t1, e(tree), string("t",i))
+      if isfix(tree.d1)
+        t1, n, nf = _sTf_label(tree.d1, reftree.d1, n, nf)
+        tree = sTf_label(t1, e(tree), label(reftree))
+      else
+        nf += 1
+        t1, n, nf = _sTf_label(tree.d1, reftree, n, nf)
+        tree = sTf_label(t1, e(tree), string("f", nf))
+      end
     end
   else
-    i += 1
-    tree = sTf_label(e(tree), isextinct(tree), isfossil(tree), string("t",i))
+    if isfix(tree)
+      tree = sTf_label(e(tree), label(reftree))
+    else
+      n += 1
+      tree = sTf_label(e(tree), string("t", n))
+    end
   end
-
-  return tree, i
+  return tree, n, nf
 end
-
 
 
 
@@ -1196,7 +1413,7 @@ the following fields:
   d2:   daughter tree 2
   e:    pendant edge
   iμ:   if extinct node
-  ig:   if good lineage (versus incipient lineage)
+  ic:   if complete lineage (versus incipient lineage)
   fx:   if fix (observed) node
   dt:   choice of time lag
   fdt:  final `dt`
@@ -1210,7 +1427,7 @@ the following fields:
           dt ::Float64,
           fdt::Float64,
           iμ ::Bool,
-          ig ::Bool,
+          ic ::Bool,
           fx ::Bool,
           lb ::Array{Float64,1},
           lλ ::Array{Float64,1},
@@ -1223,7 +1440,7 @@ mutable struct iTpbd <: iT
   dt ::Float64
   fdt::Float64
   iμ ::Bool
-  ig ::Bool
+  ic ::Bool
   fx ::Bool
   lb ::Array{Float64,1}
   lλ ::Array{Float64,1}
@@ -1234,43 +1451,43 @@ mutable struct iTpbd <: iT
         dt ::Float64,
         fdt::Float64,
         iμ ::Bool,
-        ig ::Bool,
+        ic ::Bool,
         fx ::Bool,
         lb ::Array{Float64,1},
         lλ ::Array{Float64,1},
         lμ ::Array{Float64,1}) =
     (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.iμ = iμ; 
-      x.ig = ig; x.fx = fx; x.lb = lb; x.lλ = lλ; x.lμ = lμ; x)
+      x.ic = ic; x.fx = fx; x.lb = lb; x.lλ = lλ; x.lμ = lμ; x)
   iTpbd(d1 ::iTpbd,
         e  ::Float64,
         dt ::Float64,
         fdt::Float64,
         iμ ::Bool,
-        ig ::Bool,
+        ic ::Bool,
         fx ::Bool,
         lb ::Array{Float64,1},
         lλ ::Array{Float64,1},
         lμ ::Array{Float64,1}) =
     (x = new(); x.d1 = d1; x.e = e; x.dt = dt; x.fdt = fdt; x.iμ = iμ; 
-      x.ig = ig; x.fx = fx; x.lb = lb; x.lλ = lλ; x.lμ = lμ; x)
+      x.ic = ic; x.fx = fx; x.lb = lb; x.lλ = lλ; x.lμ = lμ; x)
   iTpbd(d1 ::iTpbd,
         d2 ::iTpbd,
         e  ::Float64,
         dt ::Float64,
         fdt::Float64,
         iμ ::Bool,
-        ig ::Bool,
+        ic ::Bool,
         fx ::Bool,
         lb ::Array{Float64,1},
         lλ ::Array{Float64,1},
         lμ ::Array{Float64,1}) =
-    new(d1, d2, e, dt, fdt, iμ, ig, fx, lb, lλ, lμ)
+    new(d1, d2, e, dt, fdt, iμ, ic, fx, lb, lλ, lμ)
 end
 
 
 # pretty-printing
 Base.show(io::IO, t::iTpbd) =
-  print(io, "insane gbm-bd tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+  print(io, "insane gbm-pbd tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
@@ -1284,15 +1501,15 @@ function iTpbd(tree::iTpbd)
   if def1(tree)
     if def2(tree)
       iTpbd(iTpbd(tree.d1), iTpbd(tree.d2),
-        e(tree), dt(tree), fdt(tree), isextinct(tree), isgood(tree),
+        e(tree), dt(tree), fdt(tree), isextinct(tree), iscomplete(tree),
         isfix(tree), copy(lb(tree)), copy(lλ(tree)), copy(lμ(tree)))
     else
       iTpbd(iTpbd(tree.d1),
-        e(tree), dt(tree), fdt(tree), isextinct(tree), isgood(tree),
+        e(tree), dt(tree), fdt(tree), isextinct(tree), iscomplete(tree),
         isfix(tree), copy(lb(tree)), copy(lλ(tree)), copy(lμ(tree)))
     end
   else
-    iTpbd(e(tree), dt(tree), fdt(tree), isextinct(tree), isgood(tree),
+    iTpbd(e(tree), dt(tree), fdt(tree), isextinct(tree), iscomplete(tree),
       isfix(tree), copy(lb(tree)), copy(lλ(tree)), copy(lμ(tree)))
   end
 end

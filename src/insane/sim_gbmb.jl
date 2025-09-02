@@ -300,7 +300,7 @@ function sim_gbmb(t   ::Float64;
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_gbmb(t, lλ0, α, σλ, δt, sqrt(δt), 1, nlim)
+    d2, nn = _sim_gbmb(t, lλ0, α, σλ, δt, sqrt(δt), nn + 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
@@ -308,7 +308,7 @@ function sim_gbmb(t   ::Float64;
 
     tree = iTb(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0])
    elseif init === :stem
-    tree, nn = _sim_gbmb(t, log(λ0), α, σλ, δt, sqrt(δt), nn + 1, nlim)
+    tree, nn = _sim_gbmb(t, log(λ0), α, σλ, δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
@@ -363,8 +363,8 @@ function _sim_gbmb(t   ::Float64,
         if divev(λm, t)
           nn += 1
           return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                      iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                      bt, δt, t, false, λv), nn
+                     iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+                     bt, δt, t, false, λv), nn
         end
 
         return iTb(bt, δt, t, false, λv), nn
@@ -407,7 +407,7 @@ end
                  srδt::Float64,
                  lr  ::Float64,
                  lU  ::Float64,
-                 Iρi ::Float64,
+                 iρi ::Float64,
                  na  ::Int64,
                  nn ::Int64,
                  nlim::Int64)
@@ -423,7 +423,7 @@ function _sim_gbmb_t(t   ::Float64,
                       srδt::Float64,
                       lr  ::Float64,
                       lU  ::Float64,
-                      Iρi ::Float64,
+                      iρi ::Float64,
                       na  ::Int64,
                       nn ::Int64,
                       nlim::Int64)
@@ -447,9 +447,9 @@ function _sim_gbmb_t(t   ::Float64,
           nn += 1
           na += 2
           if na === 2
-            nlr = lr + log(Iρi*2.0)
+            nlr = lr + log(iρi*2.0)
           else
-            nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
+            nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
           end
           if nlr < lr && lU >= nlr
             return iTb(), na, nn, NaN
@@ -462,7 +462,7 @@ function _sim_gbmb_t(t   ::Float64,
           na += 1
           nlr = lr
           if na > 1
-            nlr += log(Iρi * Float64(na)/Float64(na-1))
+            nlr += log(iρi * Float64(na)/Float64(na-1))
           end
           if nlr >= lr
             return iTb(bt, δt, t, false, λv), na, nn, nlr
@@ -486,9 +486,9 @@ function _sim_gbmb_t(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, na, nn, lr =
-          _sim_gbmb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          _sim_gbmb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
         td2, na, nn, lr =
-          _sim_gbmb_t(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, na, nn, nlim)
+          _sim_gbmb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
 
         return iTb(td1, td2, bt, δt, δt, false, λv), na, nn, lr
       end
@@ -513,7 +513,7 @@ end
                   srδt::Float64,
                   lr  ::Float64,
                   lU  ::Float64,
-                  Iρi ::Float64,
+                  iρi ::Float64,
                   na  ::Int64,
                   nn  ::Int64,
                   nlim::Int64)
@@ -529,7 +529,7 @@ function _sim_gbmb_it(nsδt::Float64,
                        srδt::Float64,
                        lr  ::Float64,
                        lU  ::Float64,
-                       Iρi ::Float64,
+                       iρi ::Float64,
                        nn  ::Int64,
                        nlim::Int64)
 
@@ -546,12 +546,12 @@ function _sim_gbmb_it(nsδt::Float64,
 
     if divev(λm, t)
       nn += 1
-      lr += 2.0*log(Iρi)
+      lr += 2.0*log(iρi)
       return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                  iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                  bt, δt, t, false, λv), nn, lr
+                 iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+                 bt, δt, t, false, λv), nn, lr
     else
-      lr += log(Iρi)
+      lr += log(iρi)
       return iTb(bt, δt, t, false, λv), nn, lr
     end
   end
@@ -566,9 +566,9 @@ function _sim_gbmb_it(nsδt::Float64,
   if divev(λm, nsδt)
     nn += 1
     td1, nn, lr =
-      _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
+      _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
     td2, nn, lr =
-      _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
+      _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
 
     return iTb(td1, td2, bt, δt, nsδt, false, λv), nn, lr
   end
@@ -589,12 +589,12 @@ function _sim_gbmb_it(nsδt::Float64,
 
         if divev(λm, t)
           nn += 1
-          lr  += 2.0*log(Iρi)
+          lr  += 2.0*log(iρi)
           return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                      iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                      bt, δt, t, false, λv), nn, lr
+                     iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+                     bt, δt, t, false, λv), nn, lr
         else
-          lr += log(Iρi)
+          lr += log(iρi)
           return iTb(bt, δt, t, false, λv), nn, lr
         end
       end
@@ -611,9 +611,9 @@ function _sim_gbmb_it(nsδt::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
+          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
+          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
 
         return iTb(td1, td2, bt, δt, δt, false, λv), nn, lr
       end
@@ -637,7 +637,7 @@ end
                  srδt::Float64,
                  lr  ::Float64,
                  lU  ::Float64,
-                 Iρi ::Float64,
+                 iρi ::Float64,
                  nn ::Int64,
                  nlim::Int64)
 
@@ -652,7 +652,7 @@ function _sim_gbmb_it(t   ::Float64,
                        srδt::Float64,
                        lr  ::Float64,
                        lU  ::Float64,
-                       Iρi ::Float64,
+                       iρi ::Float64,
                        nn ::Int64,
                        nlim::Int64)
 
@@ -673,13 +673,13 @@ function _sim_gbmb_it(t   ::Float64,
 
         if divev(λm, t)
           nn += 1
-          lr  += 2.0*log(Iρi)
+          lr += 2.0*log(iρi)
           return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                      iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                      bt, δt, t, false, λv), nn, lr
+                     iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+                     bt, δt, t, false, λv), nn, lr
         end
 
-        lr += log(Iρi)
+        lr += log(iρi)
         return iTb(bt, δt, t, false, λv), nn, lr
       end
 
@@ -695,9 +695,9 @@ function _sim_gbmb_it(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
+          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, Iρi, nn, nlim)
+          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
 
         return iTb(td1, td2, bt, δt, δt, false, λv), nn, lr
       end

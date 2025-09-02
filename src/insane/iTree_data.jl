@@ -33,20 +33,21 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 
 """
-    xi(tree::T) where {T <: sTX}
+    xi(tree::T) where {T <: Tx}
 
 Return initial trait value.
 """
-xi(tree::T) where {T <: sTX} = getproperty(tree, :xi)
+xi(tree::T) where {T <: Tpe} = getproperty(tree, :xi)
+xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
 
 
 
 """
-    xf(tree::T) where {T <: sTX}
+    xf(tree::T) where {T <: Tx}
 
 Return final trait value.
 """
-xf(tree::T) where {T <: sTX} = getproperty(tree, :xf)
+xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
 
 
 
@@ -68,7 +69,16 @@ Return if is a fixed (i.e. observed) node.
 """
 isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
 isfix(tree::Tlabel) = true
+isfix(tree::sTxs)   = true
 
+
+
+"""
+    sh(tree::T) where {T <: iTree}
+
+Return `true` if punkeek shift is in `d1`, `false` if in `d2`
+"""
+sh(tree::T) where {T <: Tpe} = getproperty(tree, :sh)
 
 
 
@@ -89,21 +99,9 @@ Return if is an extinction node.
 """
 isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 isextinct(tree::Tlabel) = false
-
-
-
-
-"""
-    isextinct(tree::sTb)
-    isextinct(tree::sTbX)
-    isextinct(tree::iTb)
-
-Return if is an extinction node.
-"""
-isextinct(tree::sTb)  = false
-isextinct(tree::sTbX) = false
-isextinct(tree::iTb)  = false
-isextinct(tree::iTbX) = false
+isextinct(tree::sTb)    = false
+isextinct(tree::iTb)    = false
+isextinct(tree::sTxs)   = false
 
 
 
@@ -159,35 +157,22 @@ end
 Return if is a fossil tip node.
 """
 isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
-
-
-
-
-"""
-    isfossil(tree::sTb)
-    isfossil(tree::sTbd)
-    isfossil(tree::iTb)
-    isfossil(tree::iTce)
-    isfossil(tree::iTct)
-    isfossil(tree::iTbd)
-    isfossil(tree::iTpbd)
-
-Return if is a fossil tip node : false because not allowed for those tree types.
-"""
 isfossil(tree::sT_label) = false
-isfossil(tree::sTb)     = false
+isfossil(tree::sTb)      = false
 isfossil(tree::sTbd)     = false
-isfossil(tree::iTb)     = false
+isfossil(tree::iTb)      = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
 isfossil(tree::iTpbd)    = false
+isfossil(tree::sTpe)     = false
+isfossil(tree::sTxs)     = false
 
 
 
 
 """
-    isinternalfossiltip(tree::T, f::Bool) where {T <: iTree}
+    isinternalfossil(tree::T) where {T <: iTree}
 
 Return if the fix has a sampled ancestor, i.e. a fossil internal node.
 """
@@ -221,40 +206,21 @@ end
 
 
 """
-    isgood(tree::T) where {T <: iTree}
+    iscomplete(tree::T) where {T <: iTree}
 
-Return if is a good lineage (versus incipient lineage) in a protracted model.
+Return if is a complete lineage (versus incipient lineage) in a protracted model.
 """
-isgood(tree::T) where {T <: iTree} = getproperty(tree, :ig)
-
-
-
-
-"""
-    isgood(tree::sT_label)
-    isgood(tree::sTf_label)
-    isgood(tree::sTb)
-    isgood(tree::sTbd)
-    isgood(tree::sTfbd)
-    isgood(tree::iTb)
-    isgood(tree::iTce)
-    isgood(tree::iTct)
-    isgood(tree::iTbd)
-    isgood(tree::iTfbd)
-
-Return if is a good lineage (versus incipient lineage) in a protracted model.
-True because incipient lineages not allowed for those tree types.
-"""
-isgood(tree::sT_label)  = true
-isgood(tree::sTf_label) = true
-isgood(tree::sTb)       = true
-isgood(tree::sTbd)      = true
-isgood(tree::sTfbd)     = true
-isgood(tree::iTb)       = true
-isgood(tree::iTce)      = true
-isgood(tree::iTct)      = true
-isgood(tree::iTbd)      = true
-isgood(tree::iTfbd)     = true
+iscomplete(tree::T) where {T <: iTree} = getproperty(tree, :ic)
+iscomplete(tree::sT_label)  = true
+iscomplete(tree::sTf_label) = true
+iscomplete(tree::sTb)       = true
+iscomplete(tree::sTbd)      = true
+iscomplete(tree::sTfbd)     = true
+iscomplete(tree::iTb)       = true
+iscomplete(tree::iTce)      = true
+iscomplete(tree::iTct)      = true
+iscomplete(tree::iTbd)      = true
+iscomplete(tree::iTfbd)     = true
 
 
 
@@ -269,17 +235,16 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 
-
 """
-    l(tree::T) where {T <: iTree}
-    l(tree::sT_label)
-    l(tree::sTf_label)
+    label(tree::T) where {T <: iTree}
+    label(tree::sT_label)
+    label(tree::sTf_label)
 
 Return label.
 """
-l(tree::T) where {T <: iTree} = nothing
-l(tree::sT_label)  = getproperty(tree, :l)
-l(tree::sTf_label) = getproperty(tree, :l)
+label(tree::sT_label)             = getproperty(tree, :l)
+label(tree::sTf_label)            = getproperty(tree, :l)
+label(tree::T) where {T <: iTree} = nothing
 
 
 
@@ -301,7 +266,7 @@ Returns tip labels for `sTf_label`.
 function _tiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if istip(tree)
-    push!(labels, l(tree))
+    push!(labels, label(tree))
   else
     _tiplabels!(tree.d1, labels)
     if def2(tree)
@@ -333,7 +298,7 @@ function _alivetiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if istip(tree)
     if !isfossil(tree)
-      push!(labels, l(tree))
+      push!(labels, label(tree))
     end
   else
     _alivetiplabels!(tree.d1, labels)
@@ -363,7 +328,7 @@ Returns tip labels for `sTf_label`.
 function _fossillabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if isfossil(tree) 
-    push!(labels, l(tree))
+    push!(labels, label(tree))
   end
 
   if def1(tree)
@@ -398,7 +363,7 @@ function _fossiltiplabels!(tree::T, labels::Array{String,1}) where {T <: sT}
 
   if istip(tree)
     if isfossil(tree)
-      push!(labels, l(tree))
+      push!(labels, label(tree))
     end
   else
     _fossiltiplabels!(tree.d1, labels)
@@ -740,52 +705,36 @@ function _subclades_n!(strees::Vector{T},
 end
 
 
-
-
 """
-    labels(tree::sT_label)
+    labels(tree::Tlabel)
 
 Return labels and left node order.
 """
-function labels(tree::sT_label)
-
-  ls  = String[]
-  n2v = Int64[]
-  make_ls!(tree, ls, n2v)
-
-  reverse!(ls)
-  reverse!(n2v)
-
-  return ls, n2v
+function labels(tree::Tlabel)
+  ls = String[]
+  _make_ls!(tree, ls)
+  return ls
 end
 
 
 
-
 """
-    make_ls!(tree::sT_label,
-             ls  ::Array{String,1},
-             n2v ::Array{Int64,1})
+    make_ls!(tree::Tlabel, ls::Vector{String})
 
-Return labels and left node order (recursive function).
+Return labels.
 """
-function make_ls!(tree::sT_label,
-                  ls  ::Array{String,1},
-                  n2v ::Array{Int64,1})
+function _make_ls!(tree::Tlabel, ls::Vector{String})
 
-  if istip(tree)
-    push!(ls, l(tree))
-    push!(n2v, 0)
-    return 1
+  if def1(tree)
+    _make_ls!(tree.d1, ls)
+    if def2(tree)
+      _make_ls!(tree.d2, ls)
+    elseif label(tree) != ""
+        push!(ls, label(tree))
+    end
+  elseif label(tree) != ""
+    push!(ls, label(tree))
   end
-
-  n1 = make_ls!(tree.d1, ls, n2v)
-  n2 = make_ls!(tree.d2, ls, n2v)
-
-  push!(ls, l(tree))
-  push!(n2v, n2)
-
-  return n1 + n2
 end
 
 
@@ -827,7 +776,7 @@ function make_ls!(tree ::T,
 
   if istip(tree)
     if isfix(tree)
-      push!(ls, l(ltree))
+      push!(ls, label(ltree))
     else
       push!(ls, "tda")
     end
@@ -839,7 +788,7 @@ function make_ls!(tree ::T,
   if isfix(tree.d1) && isfix(tree.d2)
     n1 = make_ls!(tree.d1, ltree.d1, ls, n2v)
     n2 = make_ls!(tree.d2, ltree.d2, ls, n2v)
-    push!(ls, l(ltree))
+    push!(ls, label(ltree))
 
   else
     n1 = make_ls!(tree.d1, ltree, ls, n2v)
@@ -1030,11 +979,11 @@ end
 
 
 """
-    irange(tree::T, f::Function) where {T <: Union{iTf, iTpbd}}
+    irange(tree::T, f::Function) where {T <: iTree}
 
 Return the extrema of the output of function `f` on `tree`.
 """
-function irange(tree::T, f::Function) where {T <: Union{iTf, iTpbd}}
+function irange(tree::T, f::Function) where {T <: iTree}
 
   mn, mx = extrema(f(tree))
 
@@ -1057,39 +1006,19 @@ end
 
 
 """
-    _ctl(tree::T, l::Float64) where {T <: iTree}
-Return the branch length sum of `tree` based on `δt` and `fδt`
-for debugging purposes.
-"""
-function _ctl(tree::T, l::Float64) where {T <: iT}
-
-  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
-
-  if def1(tree)
-    l = _ctl(tree.d1, l)
-    l = _ctl(tree.d2, l)
-  end
-
-  return l
-end
-
-
-
-
-"""
-    _ctl(tree::T, l::Float64) where {T <: Union{iTf, iTpbd}}
+    _ctl(tree::T, f::Function, l::Float64) where {T <: iTf}
 
 Return the branch length sum of `tree` based on `δt` and `fδt`
 for debugging purposes.
 """
-function _ctl(tree::T, l::Float64) where {T <: Union{iTf, iTpbd}}
+function _ctl(tree::T, f::Function, l::Float64) where {T <: iTree}
 
-  l += max(0.0, Float64(lastindex(lλ(tree)) - 2)*dt(tree)) + fdt(tree)
+  l += max(0.0, Float64(lastindex(f(tree)) - 2)*dt(tree)) + fdt(tree)
 
   if def1(tree)
-    l = _ctl(tree.d1, l)
+    l = _ctl(tree.d1, f, l)
     if def2(tree)
-      l = _ctl(tree.d2, l)
+      l = _ctl(tree.d2, f, l)
     end
   end
 
@@ -1126,7 +1055,7 @@ function treeheight(tree::T) where {T <: Union{iTf, iTpbd}}
   if def2(tree)
     th1 = treeheight(tree.d1)
     th2 = treeheight(tree.d2)
-    return max(th1,th2) + e(tree)
+    return bd(th1,th2) + e(tree)
   elseif def1(tree)
     return treeheight(tree.d1) + e(tree)
   end
@@ -1216,6 +1145,53 @@ function _nnodes(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
     n = _nnodes(tree.d1, n)
     if def2(tree)
       n = _nnodes(tree.d2, n)
+    end
+  end
+
+  return n
+end
+
+
+
+
+
+"""
+    nedgesF(treev::Vector{T}) where {T <: iTree}
+
+Return the number of descendant nodes for `tree`.
+"""
+nedgesF(tree::T) where {T <: iTree} =  _nedgesF(tree, 0.0)
+
+
+
+"""
+    nedgesF(treev::Vector{T}) where {T <: iTree}
+
+Return the number of descendant nodes for `tree`.
+"""
+function nedgesF(treev::Vector{T}) where {T <: iTree} 
+
+  n = 0.0
+  for t in treev
+    n = _nedgesF(t, n)
+  end
+  return n
+end
+
+
+
+"""
+    _nedgesF(tree::T, n::Float64) where {T <: iTree}
+
+Return the number of descendant nodes for `tree`, initialized at `n`.
+"""
+function _nedgesF(tree::T, n::Float64) where {T <: iTree}
+  n += 1.0
+
+  if def1(tree)
+    n = _nedgesF(tree.d1, n)
+    if def2(tree)
+      n = _nedgesF(tree.d2, n)
     end
   end
 
@@ -1660,7 +1636,7 @@ function _ntipsgood(tree::T, n::Int64) where {T <: iTree}
     if def2(tree)
       n = _ntipsgood(tree.d2, n)
     end
-  elseif isgood(tree)
+  elseif iscomplete(tree)
     n += 1
   end
 
@@ -2011,18 +1987,40 @@ end
 
 
 """
-    fixtip(tree::T) where {T <: Union{iTf, iTpbd}}
+    fixtrait(tree::T) where {T <: iTree}
 
-Return the first fixed tip.
+Return the trait of the final fixed tip or fossil.
 """
-function fixtip(tree::T) where {T <: Union{iTf, iTpbd}}
-  if istip(tree)
-    return tree
+function fixtrait(tree::T) where {T <: iTree}
+  if isfossil(tree) || istip(tree)
+    return xf(tree)
   elseif isfix(tree.d1::T)
-    fixtip(tree.d1::T)
+    fixtrait(tree.d1::T)
   else
-    fixtip(tree.d2::T)
+    fixtrait(tree.d2::T)
   end
+end
+
+
+
+
+"""
+    anyfossil(tree::T) where {T <: iTree}
+
+Return true first fixed tip.
+"""
+function anyfossil(tree::T) where {T <: iTree}
+
+  if isfossil(tree)
+    return true
+  elseif def1(tree)
+    anyfossil(tree.d1)
+    if def2(tree.d2)
+      anyfossil(tree.d1)
+    end
+  end
+
+  return false
 end
 
 
@@ -2032,6 +2030,7 @@ end
     makebbv!(tree::T,
              bbλ ::Array{Array{Float64,1},1},
              tsv ::Array{Array{Float64,1},1}) where {T <: iT}
+
 Make `bbv` vector with allocated `bb` (brownian bridges) and
 with `tsv` vector of branches times `ts`.
 """
@@ -2414,37 +2413,202 @@ end
 
 
 """
-    fixed_xt(tree::T)  where {T <: sTX}
+    _xatt!(tree::T,
+           c   ::Float64,
+           xs  ::Vector{Float64},
+           t   ::Float64,
+           x   ::Float64,
+           s  ::Bool) where {T <: Tpe}
 
-Make joint proposal to match simulation with tip fixed `x` value.
+Return trait `x` at time `c` for `tree`.
 """
-function fixed_xt(tree::T)  where {T <: sTX}
+function _xatt!(tree::T,
+                c   ::Float64,
+                xs  ::Vector{Float64},
+                t   ::Float64,
+                x   ::Float64,
+                s  ::Bool) where {T <: Tpe}
 
-  if istip(tree)
-    return xf(tree)
-  else
-    if isfix(tree.d1)
-      xt = fixed_xt(tree.d1)
-    else
-      xt = fixed_xt(tree.d2)
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+
+    xfi = linpred(c, t, t + et, xi(tree), xf(tree))
+
+    if isfix(tree)
+      x = xfi
+      s = sh(tree)
+    end
+
+    push!(xs, xfi)
+
+    return x, s
+  elseif def1(tree)
+    x, s = _xatt!(tree.d1, c, xs, t + et, x, s)
+
+    if def2(tree)
+      x, s = _xatt!(tree.d2, c, xs, t + et, x, s)
     end
   end
 
-  return xt
+  return x, s
 end
 
 
 
 
 """
-    fixed_xt(tree::T)  where {T <: sTX}
+    _xisatt!(tree::T,
+             c   ::Float64,
+             xis ::Vector{Float64},
+             es  ::Vector{Float64},
+             t   ::Float64,
+             na  ::Int64,
+             xic ::Float64) where {T <: Tpe}
+
+Return initial traits and edge lengths for those alive at time `c` for `tree`.
+"""
+function _xisatt!(tree::T,
+                  c   ::Float64,
+                  xis ::Vector{Float64},
+                  es  ::Vector{Float64},
+                  t   ::Float64,
+                  na  ::Int64,
+                  xic ::Float64) where {T <: Tpe}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+    na += 1
+
+    if isfix(tree)
+      xic = xi(tree)
+    end
+
+    push!(xis, xi(tree))
+    push!(es, c - t)
+
+    return na, xic
+  elseif def1(tree)
+    na, xic = _xisatt!(tree.d1, c, xis, es, t + et, na, xic)
+    if def2(tree)
+      na, xic = _xisatt!(tree.d2, c, xis, es, t + et, na, xic)
+    end
+  end
+
+  return na, xic
+end
+
+
+
+
+"""
+   _xisatt!(tree::T,
+            c   ::Float64,
+            xis ::Vector{Float64},
+            es  ::Vector{Float64},
+            t   ::Float64,
+            na  ::Int64,
+            xic ::Float64,
+            xc  ::Float64) where {T <: Tpe}
+
+Return initial traits and edge lengths for those alive at time `c` for `tree`.
+"""
+function _xisatt!(tree::T,
+                  c   ::Float64,
+                  xis ::Vector{Float64},
+                  es  ::Vector{Float64},
+                  t   ::Float64,
+                  na  ::Int64,
+                  xic ::Float64,
+                  xc  ::Float64) where {T <: Tpe}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+    na += 1
+
+    if isfix(tree)
+      xic = xi(tree)
+      xc  = xf(tree)
+    end
+
+    push!(xis, xi(tree))
+    push!(es, c - t)
+
+    return na, xic, xc
+  elseif def1(tree)
+    na, xic, xc = _xisatt!(tree.d1, c, xis, es, t + et, na, xic, xc)
+    if def2(tree)
+      na, xic, xc = _xisatt!(tree.d2, c, xis, es, t + et, na, xic, xc)
+    end
+  end
+
+  return na, xic, xc
+end
+
+
+
+
+"""
+   _xifsatt!(tree::T,
+            c   ::Float64,
+            xis ::Vector{Float64},
+            es  ::Vector{Float64},
+            t   ::Float64,
+            na  ::Int64,
+            xic ::Float64,
+            xc  ::Float64) where {T <: Tpe}
+
+Return initial traits and edge lengths for those alive at time `c` for `tree`.
+"""
+function _xifsatt!(tree::T,
+                   c   ::Float64,
+                   xis ::Vector{Float64},
+                   xfs ::Vector{Float64},
+                   es  ::Vector{Float64},
+                   t   ::Float64,
+                   na  ::Int64,
+                   xic ::Float64,
+                   xc  ::Float64) where {T <: Tpe}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+    na += 1
+
+    if isfix(tree)
+      xic = xi(tree)
+      xc  = xf(tree)
+    end
+
+    push!(xis, xi(tree))
+    push!(xfs, xf(tree))
+    push!(es, c - t)
+
+    return na, xic, xc
+  elseif def1(tree)
+    na, xic, xc = _xifsatt!(tree.d1, c, xis, xfs, es, t + et, na, xic, xc)
+    if def2(tree)
+      na, xic, xc = _xifsatt!(tree.d2, c, xis, xfs, es, t + et, na, xic, xc)
+    end
+  end
+
+  return na, xic, xc
+end
+
+
+
+
+"""
+    fixed_xt(tree::T)  where {T <: Tx}
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fixed_xt(tree::T)  where {T <: iTX}
+function fixed_xt(tree::T)  where {T <: Tx}
 
   if istip(tree)
-    return xv(tree)[end]
+    return xf(tree)
   else
     if isfix(tree.d1)
       xt = fixed_xt(tree.d1)
@@ -2464,7 +2628,7 @@ end
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fossil_xt(tree::sTfbdX)
+function fossil_xt(tree::sTfbdx)
 
   if isfossil(tree)
     return xf(tree)
@@ -2485,7 +2649,7 @@ end
 
 Make joint proposal to match simulation with tip fixed `x` value.
 """
-function fossil_xt(tree::iTfbdX)
+function fossil_xt(tree::iTfbdx)
 
   if isfossil(tree)
     return xv(tree)[end]
@@ -2502,11 +2666,21 @@ end
 
 
 """
-    xv(tree::T) where {T <: iTX}
+    xv(tree::T) where {T <: Tx}
 
-Return pendant edge.
+Return trait vector.
 """
-xv(tree::T) where {T <: iTX} = getproperty(tree, :xv)
+xv(tree::T) where {T <: Tx} = getproperty(tree, :xv)
+
+
+
+
+"""
+    lσ2(tree::T) where {T <: Tx}
+
+Return trait rate vector.
+"""
+lσ2(tree::T) where {T <: Txs} = getproperty(tree, :lσ2)
 
 
 
@@ -2521,6 +2695,8 @@ function branchlengths(tree::iTree)
   _branchlengths!(bls, tree)
   return bls
 end
+
+
 
 
 """
@@ -2571,6 +2747,104 @@ function _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
     end
   end
 end
+
+
+
+
+"""
+    tiptraits(tree::T) where {T <: Tpe}
+
+Extract tip rates from a `Tpe` tree.
+"""
+function tiptraits(tree::T) where {T <: Tpe}
+  x = Float64[]
+  _tiptraits!(x, tree)
+  return x
+end
+
+
+"""
+    _tiptraits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
+
+Extract tip rates from a `Tpe` tree.
+"""
+function _tiptraits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
+
+  if def1(tree)
+    _tiptraits!(x, tree.d1)
+    if def2(tree)
+      _tiptraits!(x, tree.d2)
+    end
+  else
+    push!(x, xf(tree))
+  end
+end
+
+
+
+
+"""
+    traits(tree::T) where {T <: Tpe}
+
+Extract tip rates from a `Tpe` tree.
+"""
+function traits(tree::T) where {T <: Tpe}
+  x = Float64[]
+  _traits!(x, tree)
+  return x
+end
+
+
+"""
+    _traits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
+
+Extract tip rates from a `Tpe` tree.
+"""
+function _traits!(x::Vector{Float64}, tree::T) where {T <: Tpe}
+
+  if def1(tree)
+    _traits!(x, tree.d1)
+    if def2(tree)
+      _traits!(x, tree.d2)
+    else
+      push!(x, xf(tree))
+    end
+  else
+    push!(x, xf(tree))
+  end
+end
+
+
+
+"""
+    check_cpe!(tree::sTpe)
+
+Extract tip rates from a sTpe tree
+"""
+function _check_cpe(tree::sTpe)
+
+  if def1(tree)
+    if def2(tree)
+
+      ch = if sh(tree)
+        xf(tree) === xi(tree.d2)
+      else
+        xf(tree) === xi(tree.d1)
+      end
+
+      if !ch 
+        @show tree, sh(tree), xf(tree), xi(tree.d2), xi(tree.d1)
+      end
+
+      return _check_cpe(tree.d1) && _check_cpe(tree.d2) && ch 
+    else
+      return _check_cpe(tree.d1)
+    end
+  end
+
+  return true
+end
+
 
 
 
