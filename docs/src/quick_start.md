@@ -216,6 +216,47 @@ plot(p0, p1)
 ![f13](./assets/img/quick_start/f13.png)
 
 
+
+#### Occurrence Birth-Death Diffusion (OBDD):
+
+```julia
+using Tapestree
+using DelimitedFiles
+
+tree = read_newick("<tree file directory in newick format>", true)
+ωtimes = readdlm("<occurrence file in CSV format>", ';')[:]
+
+r, tv = insane_gbmobd(tree,
+                      ωtimes,
+                      niter = 100_000,
+                      nthin = 1_000,
+                      ofile = "<out files directory>")
+```
+!!! note
+    For the following I used here the 6 tip fossil tree `tree_6.tre` and the occurrence record `fossil_occurrences.csv` in the data directory of Tapestree.
+
+!!! info 
+    To have piece-wise constant preservation rates or additionally use fossil occurrences to inform the fossilization rates ``\psi``, use the same arguments introduced just above in [Constant fossilized birth-death process (CFBD)](@ref).
+
+We can plot the average speciation and extinction, after removing unsampled (DA) lineages and estimating the average using
+```julia
+tv0 = remove_unsampled(tv)
+tm  = imean(tv0)
+p0 = plot(tm, birth)
+p1 = plot(tm, death)
+plot(p0, p1, linewidth = 3.0)
+```
+![f16](./assets/img/quick_start/f16.png)
+
+As with other birth-death diffusion models, we can plot the cross-lineage average speciation rate and extinction rates
+```julia
+p0 = plot(birth, 0.1, tv)
+p1 = plot(death, 0.1, tv)
+plot(p0, p1)
+```
+![f17](./assets/img/quick_start/f17.png)
+
+
 ### Diffused Brownian motion (DBM) model
 
 ```julia
