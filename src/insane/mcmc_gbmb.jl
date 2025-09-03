@@ -84,7 +84,7 @@ function insane_gbmb(tree    ::sT_label;
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, ns, stn =
-    mcmc_burn_gbmp(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
+    mcmc_burn_gbmb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
       δt, srδt, inodes, pup, prints)
 
   # mcmc
@@ -151,7 +151,7 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -469,7 +469,7 @@ function update_σ!(σc     ::Float64,
   σ_p1, σ_p2 = σ_prior
 
   # Gibbs update for σ
-  σp2 = randinvgamma(σ_p1 + 0.5 * n, σ_p2 + ss)
+  σp2 = rand(InverseGamma(σ_p1 + 0.5 * n, σ_p2 + ss))
 
   # update prior
   prc += llrdinvgamma(σp2, σc^2, σ_p1, σ_p2)
@@ -975,7 +975,7 @@ end
 #   σλ_p2 = σλ_prior[2]
 
 #   # Gibbs update for σ
-#   σλp2 = randinvgamma((σλ_p1 + 0.5 * n) * pow + σλ_rdist[1] * (1.0 - pow),
+#   σλp2 = rand(InverseGamma(((σλ_p1 + 0.5 * n) * pow + σλ_rdist[1] * (1.0 - pow),
 #                       (σλ_p2 + ss) * pow     + σλ_rdist[2] * (1.0 - pow))
 
 #   # update likelihood, prior and reference

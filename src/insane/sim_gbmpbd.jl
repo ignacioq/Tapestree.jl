@@ -742,7 +742,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #                  srδt::Float64,
 #                  lr  ::Float64,
 #                  lU  ::Float64,
-#                  Iρi ::Float64,
+#                  iρi ::Float64,
 #                  na  ::Int64,
 #                  nn  ::Int64,
 #                  nlim::Int64)
@@ -760,7 +760,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #                       srδt::Float64,
 #                       lr  ::Float64,
 #                       lU  ::Float64,
-#                       Iρi ::Float64,
+#                       iρi ::Float64,
 #                       na  ::Int64,
 #                       nn  ::Int64,
 #                       nlim::Int64)
@@ -792,9 +792,9 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #             nn += 1
 #             na += 2
 #             if na === 2
-#               nlr = lr + log(Iρi*2.0)
+#               nlr = lr + log(iρi*2.0)
 #             else
-#               nlr = lr + log(Iρi * Iρi * Float64(na)/Float64(na-2))
+#               nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
 #             end
 #             if nlr < lr && lU >= nlr
 #               return iTpbd(), na, nn, NaN
@@ -814,7 +814,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #         na += 1
 #         nlr = lr
 #         if na > 1
-#           nlr += log(Iρi * Float64(na)/Float64(na-1))
+#           nlr += log(iρi * Float64(na)/Float64(na-1))
 #         end
 #         if nlr < lr && lU >= nlr
 #           return iTpbd(), na, nn, NaN
@@ -841,10 +841,10 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #           nn += 1
 #           td1, na, nn, lr =
 #             _sim_gbmpbd_t(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#               lr, lU, Iρi, na, nn, nlim)
+#               lr, lU, iρi, na, nn, nlim)
 #           td2, na, nn, lr =
 #             _sim_gbmpbd_t(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#               lr, lU, Iρi, na, nn, nlim)
+#               lr, lU, iρi, na, nn, nlim)
 
 #           return iTpbd(td1, td2, bl, δt, δt, false, false, bv, λv, μv), na, nn, lr
 #         # if extinction
@@ -876,7 +876,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #                   srδt::Float64,
 #                   lr  ::Float64,
 #                   lU  ::Float64,
-#                   Iρi ::Float64,
+#                   iρi ::Float64,
 #                   na  ::Int64,
 #                   nn  ::Int64,
 #                   nlim::Int64)
@@ -895,7 +895,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #                        srδt::Float64,
 #                        lr  ::Float64,
 #                        lU  ::Float64,
-#                        Iρi ::Float64,
+#                        iρi ::Float64,
 #                        na  ::Int64,
 #                        nn  ::Int64,
 #                        nlim::Int64)
@@ -923,7 +923,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #       if λorμ(λm, μm)
 #         nn += 1
 #         na += 2
-#         lr += 2.0*log(Iρi)
+#         lr += 2.0*log(iρi)
 #         return iTpbd(iTpbd(0.0, δt, 0.0, false, false,
 #                          Float64[bt1, bt1], Float64[λt1, λt1], Float64[μt1, μt1]),
 #                     iTpbd(0.0, δt, 0.0, false, false,
@@ -936,7 +936,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #     end
 
 #     na += 1
-#     lr += log(Iρi)
+#     lr += log(iρi)
 #     return iTpbd(bl, δt, t, false, false, bv, λv, μv), na, nn, lr
 #   end
 
@@ -960,10 +960,10 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #       nn += 1
 #       td1, na, nn, lr =
 #         _sim_gbmpbd_it(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#           lr, lU, Iρi, na, nn, nlim)
+#           lr, lU, iρi, na, nn, nlim)
 #       td2, na, nn, lr =
 #         _sim_gbmpbd_it(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#           lr, lU, Iρi, na, nn, nlim)
+#           lr, lU, iρi, na, nn, nlim)
 
 #       return iTpbd(td1, td2, bl, δt, nsδt, false, false, bv, λv, μv), na, nn, lr
 #     else
@@ -998,7 +998,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #           if λorμ(λm, μm)
 #             nn += 1
 #             na += 2
-#             lr += 2.0*log(Iρi)
+#             lr += 2.0*log(iρi)
 #             return iTpbd(iTpbd(0.0, δt, 0.0, false, false,
 #                              Float64[bt1, bt1], Float64[λt1, λt1], Float64[μt1, μt1]),
 #                         iTpbd(0.0, δt, 0.0, false, false,
@@ -1011,7 +1011,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #         end
 
 #         na += 1
-#         lr += log(Iρi)
+#         lr += log(iρi)
 #         return iTpbd(bl, δt, t, false, false, bv, λv, μv), na, nn, lr
 #       end
 
@@ -1033,10 +1033,10 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #           nn += 1
 #           td1, na, nn, lr =
 #             _sim_gbmpbd_it(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#               lr, lU, Iρi, na, nn, nlim)
+#               lr, lU, iρi, na, nn, nlim)
 #           td2, na, nn, lr =
 #             _sim_gbmpbd_it(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#               lr, lU, Iρi, na, nn, nlim)
+#               lr, lU, iρi, na, nn, nlim)
 
 #           return iTpbd(td1, td2, bl, δt, δt, false, false, bv, λv, μv), na, nn, lr
 #         # if extinction
@@ -1067,7 +1067,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #                   srδt::Float64,
 #                   lr  ::Float64,
 #                   lU  ::Float64,
-#                   Iρi ::Float64,
+#                   iρi ::Float64,
 #                   na  ::Int64,
 #                   nn  ::Int64,
 #                   nlim::Int64)
@@ -1085,7 +1085,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #                        srδt::Float64,
 #                        lr  ::Float64,
 #                        lU  ::Float64,
-#                        Iρi ::Float64,
+#                        iρi ::Float64,
 #                        na  ::Int64,
 #                        nn  ::Int64,
 #                        nlim::Int64)
@@ -1117,7 +1117,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #           if λorμ(λm, μm)
 #             nn += 1
 #             na += 2
-#             lr += 2.0*log(Iρi)
+#             lr += 2.0*log(iρi)
 #             return iTpbd(iTpbd(0.0, δt, 0.0, false, false,
 #                              Float64[bt1, bt1], Float64[λt1, λt1], Float64[μt1, μt1]),
 #                         iTpbd(0.0, δt, 0.0, false, false,
@@ -1130,7 +1130,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #         end
 
 #         na += 1
-#         lr += log(Iρi)
+#         lr += log(iρi)
 #         return iTpbd(bl, δt, t, false, false, bv, λv, μv), na, nn, lr
 #       end
 
@@ -1152,10 +1152,10 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #           nn += 1
 #           td1, na, nn, lr =
 #             _sim_gbmpbd_it(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#               lr, lU, Iρi, na, nn, nlim)
+#               lr, lU, iρi, na, nn, nlim)
 #           td2, na, nn, lr =
 #             _sim_gbmpbd_it(t, bt1, λt1, μt1, α, σb, σλ, σμ, δt, srδt,
-#               lr, lU, Iρi, na, nn, nlim)
+#               lr, lU, iρi, na, nn, nlim)
 
 #           return iTpbd(td1, td2, bl, δt, δt, false, false, bv, λv, μv), na, nn, lr
 #         # if extinction

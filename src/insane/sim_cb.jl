@@ -103,8 +103,8 @@ function _sim_cb_t(t   ::Float64,
       end
     else
       nn += 1
-      d1, na, nn, lr = _sim_cb_t(t - tw, λ, lr, lU, Iρi, na, nn, nlim)
-      d2, na, nn, lr = _sim_cb_t(t - tw, λ, lr, lU, Iρi, na, nn, nlim)
+      d1, na, nn, lr = _sim_cb_t(t - tw, λ, lr, lU, iρi, na, nn, nlim)
+      d2, na, nn, lr = _sim_cb_t(t - tw, λ, lr, lU, iρi, na, nn, nlim)
 
       return sTb(d1, d2, tw, false), na, nn, lr
     end
@@ -177,12 +177,12 @@ function _sim_cb_it(t   ::Float64,
     tw = cb_wait(λ)
 
     if tw > t
-      lr += log(Iρi)
+      lr += log(iρi)
       return sTb(t, false), nn, lr
     else
       nn += 1
-      d1, nn, lr = _sim_cb_it(t - tw, λ, lr, lU, Iρi, nn, nlim)
-      d2, nn, lr = _sim_cb_it(t - tw, λ, lr, lU, Iρi, nn, nlim)
+      d1, nn, lr = _sim_cb_it(t - tw, λ, lr, lU, iρi, nn, nlim)
+      d2, nn, lr = _sim_cb_it(t - tw, λ, lr, lU, iρi, nn, nlim)
 
       return sTb(d1, d2, tw, false), nn, lr
     end

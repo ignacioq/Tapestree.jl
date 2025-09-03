@@ -77,6 +77,7 @@ function insane_cb(tree    ::sT_label;
   # mcmc
   r, treev =
     mcmc_cb(Ξ, idf, llc, prc, λc, λ_prior, pup, niter, nthin, nflush, ofile, 
+      prints, stem)
 
   # if marginal
   #   # reference distribution
@@ -144,7 +145,7 @@ function mcmc_burn_cb(Ξ      ::Vector{sTb},
   llc = llik_cb(Ξ, λc) - nsi + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -190,18 +191,18 @@ end
 MCMC chain for constant pure-birth.
 """
 function mcmc_cb(Ξ      ::Vector{sTb},
-                  idf    ::Array{iBffs,1},
-                  llc    ::Float64,
-                  prc    ::Float64,
-                  λc     ::Float64,
-                  λ_prior::NTuple{2,Float64},
-                  pup    ::Array{Int64,1},
-                  niter  ::Int64,
-                  nthin  ::Int64,
-                  nflush ::Int64,
-                  ofile  ::String,
-                  prints ::Int64,
-                  stem   ::Bool)
+                 idf    ::Array{iBffs,1},
+                 llc    ::Float64,
+                 prc    ::Float64,
+                 λc     ::Float64,
+                 λ_prior::NTuple{2,Float64},
+                 pup    ::Array{Int64,1},
+                 niter  ::Int64,
+                 nthin  ::Int64,
+                 nflush ::Int64,
+                 ofile  ::String,
+                 prints ::Int64,
+                 stem   ::Bool)
 
   el = lastindex(idf)
   ns = Float64(nnodesinternal(Ξ))
@@ -444,7 +445,7 @@ function fsbi_t(bi::iBffs, λ::Float64)
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_cb_t(e(bi), λ, lc, lU, Iρi, 0, 1, 500)
+    _sim_cb_t(e(bi), λ, lc, lU, iρi, 0, 1, 500)
 
   if isnan(llr) || nn >= 500
     return t0, -Inf
@@ -535,7 +536,7 @@ function tip_sims!(tree::sTb,
       if !isfix(tree)
 
         # simulate
-        stree, na, lr = _sim_cb_it(t, λ, lr, lU, Iρi, na, 500)
+        stree, na, lr = _sim_cb_it(t, λ, lr, lU, iρi, na, 500)
 
         if isnan(lr) || na >= 500
           return tree, na, NaN
@@ -583,7 +584,7 @@ function update_λ!(llc    ::Float64,
 
   nsi = Float64(!stem)
 
-  λp  = randgamma(λ_prior[1] + ns - nsi, λ_prior[2] + L)
+  λp  = rand(Gamma(λ_prior[1] + ns - nsi, λ_prior[2] + L))
 
   llc += (ns - nsi) * log(λp/λc) + L * (λc - λp)
   prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
@@ -594,41 +595,41 @@ end
 
 
 
-"""
-    update_λ!(llc   ::Float64,
-              prc   ::Float64,
-              rdc   ::Float64,
-              λc    ::Float64,
-              ns    ::Float64,
-              L     ::Float64,
-              λ_prior::NTuple{2,Float64},
-              λ_refd ::NTuple{2,Float64},
-              pow   ::Float64)
+# """
+#     update_λ!(llc   ::Float64,
+#               prc   ::Float64,
+#               rdc   ::Float64,
+#               λc    ::Float64,
+#               ns    ::Float64,
+#               L     ::Float64,
+#               λ_prior::NTuple{2,Float64},
+#               λ_refd ::NTuple{2,Float64},
+#               pow   ::Float64)
 
-Gibbs sampling of `λ` for constant pure-birth with reference distribution.
-"""
-function update_λ!(llc    ::Float64,
-                   prc    ::Float64,
-                   rdc    ::Float64,
-                   λc     ::Float64,
-                   ns     ::Float64,
-                   L      ::Float64,
-                   stem   ::Bool,
-                   λ_prior::NTuple{2,Float64},
-                   λ_refd ::NTuple{2,Float64},
-                   pow    ::Float64)
+# Gibbs sampling of `λ` for constant pure-birth with reference distribution.
+# """
+# function update_λ!(llc    ::Float64,
+#                    prc    ::Float64,
+#                    rdc    ::Float64,
+#                    λc     ::Float64,
+#                    ns     ::Float64,
+#                    L      ::Float64,
+#                    stem   ::Bool,
+#                    λ_prior::NTuple{2,Float64},
+#                    λ_refd ::NTuple{2,Float64},
+#                    pow    ::Float64)
 
-  nsi = Float64(!stem)
+#   nsi = Float64(!stem)
 
-  λp = randgamma((λ_prior[1] + ns - nsi)*pow + λ_refd[1] * (1.0 - pow),
-                 (λ_prior[2] + L)*pow        + λ_refd[2] * (1.0 - pow))
+#   λp = rand(Gamma((λ_prior[1] + ns - nsi)*pow + λ_refd[1] * (1.0 - pow),
+#                   (λ_prior[2] + L)*pow        + λ_refd[2] * (1.0 - pow)))
 
-  llc += (ns - nsi)*log(λp/λc) + L*(λc - λp)
-  prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-  rdc += llrdgamma(λp, λc, λ_refd[1],  λ_refd[2])
+#   llc += (ns - nsi)*log(λp/λc) + L*(λc - λp)
+#   prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
+#   rdc += llrdgamma(λp, λc, λ_refd[1],  λ_refd[2])
 
-  return llc, prc, rdc, λp
-end
+#   return llc, prc, rdc, λp
+# end
 
 
 

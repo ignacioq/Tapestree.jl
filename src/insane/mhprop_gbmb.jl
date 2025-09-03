@@ -88,7 +88,7 @@ end
 
 Do gbm update for crown root.
 """
-function _stem_update!(ξi      ::iTpb,
+function _stem_update!(ξi      ::iTb,
                        α       ::Float64,
                        σλ      ::Float64,
                        llc     ::Float64,
@@ -136,9 +136,9 @@ end
 
 
 """
-    _crown_update!(ξi      ::iTpb,
-                   ξ1      ::iTpb,
-                   ξ2      ::iTpb,
+    _crown_update!(ξi      ::iTb,
+                   ξ1      ::iTb,
+                   ξ2      ::iTb,
                    α       ::Float64,
                    σλ      ::Float64,
                    llc     ::Float64,
@@ -152,9 +152,9 @@ end
 
 Do gbm update for crown root.
 """
-function _crown_update!(ξi      ::iTpb,
-                        ξ1      ::iTpb,
-                        ξ2      ::iTpb,
+function _crown_update!(ξi      ::iTb,
+                        ξ1      ::iTb,
+                        ξ2      ::iTb,
                         α       ::Float64,
                         σλ      ::Float64,
                         llc     ::Float64,

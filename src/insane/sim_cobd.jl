@@ -171,7 +171,7 @@ end
 #                 nep   ::Int64,
 #                 lr    ::Float64,
 #                 lU    ::Float64,
-#                 Iρi   ::Float64,
+#                 iρi   ::Float64,
 #                 na    ::Int64,
 #                 nn    ::Int64,
 #                 nlim  ::Int64)
@@ -191,7 +191,7 @@ end
 #                      nep   ::Int64,
 #                      lr    ::Float64,
 #                      lU    ::Float64,
-#                      Iρi   ::Float64,
+#                      iρi   ::Float64,
 #                      na    ::Int64,
 #                      nn    ::Int64,
 #                      nlim  ::Int64)
@@ -209,7 +209,7 @@ end
 #       if t - tw < ψtsi
 #         e0 = t - ψtsi
 #         t0, na, nn, lr = 
-#           _sim_cobd_t(ψtsi, λ, μ, ψ, ω, ψts, ωtimes, ix + 1, nep, lr, lU, Iρi, na, nn, nlim)
+#           _sim_cobd_t(ψtsi, λ, μ, ψ, ω, ψts, ωtimes, ix + 1, nep, lr, lU, iρi, na, nn, nlim)
 #         sete!(t0, e(t0) + e0)
 #         return t0, na, nn, lr
 #       end
@@ -219,7 +219,7 @@ end
 #       na += 1
 #       nlr = lr
 #       if na > 1
-#         nlr += log(Iρi * Float64(na)/Float64(na-1))
+#         nlr += log(iρi * Float64(na)/Float64(na-1))
 #       end
 #       if nlr < lr && lU >= nlr
 #         return sTfbd(), na, nn, NaN
@@ -232,9 +232,9 @@ end
 #     if λevent(λ, μ, ψi, ωi)
 #       nn += 1
 #       d1, na, nn, lr =
-#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
+#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, iρi, na, nn, nlim)
 #       d2, na, nn, lr =
-#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
+#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, iρi, na, nn, nlim)
 
 #       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
     
@@ -249,7 +249,7 @@ end
 #     # fossil occurrence sampling (not included in the tree)
 #     else
 #       t0, na, nn, lr =
-#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, Iρi, na, nn, nlim)
+#         _sim_cobd_t(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, lU, iρi, na, nn, nlim)
 #       push!(ωtimes, t - tw)
 #       adde!(t0, tw)
 #       return t0, na, nn, lr
@@ -366,7 +366,7 @@ end
 #                  ix    ::Int64,
 #                  nep   ::Int64,
 #                  lr    ::Float64,
-#                  Iρi   ::Float64,
+#                  iρi   ::Float64,
 #                  na    ::Int64,
 #                  nn    ::Int64,
 #                  nlim  ::Int64)
@@ -385,7 +385,7 @@ end
 #                       ix    ::Int64,
 #                       nep   ::Int64,
 #                       lr    ::Float64,
-#                       Iρi   ::Float64,
+#                       iρi   ::Float64,
 #                       na    ::Int64,
 #                       nn    ::Int64,
 #                       nlim  ::Int64)
@@ -403,7 +403,7 @@ end
 #       if t - tw < ψtsi
 #         e0 = t - ψtsi
 #         t0, na, nn, lr = 
-#           _sim_cobd_it(ψtsi, λ, μ, ψ, ω, ψts, ωtimes, ix + 1, nep, lr, Iρi, na, nn, nlim)
+#           _sim_cobd_it(ψtsi, λ, μ, ψ, ω, ψts, ωtimes, ix + 1, nep, lr, iρi, na, nn, nlim)
 #         sete!(t0, e(t0) + e0)
 #         return t0, na, nn, lr
 #       end
@@ -411,7 +411,7 @@ end
 
 #     if tw > t
 #       na += 1
-#       lr += log(Iρi)
+#       lr += log(iρi)
 #       return sTfbd(t, false, false, false), na, nn, lr
 #     end
 
@@ -419,9 +419,9 @@ end
 #     if λevent(λ, μ, ψi, ωi)
 #       nn += 1
 #       d1, na, nn, lr =
-#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
+#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, iρi, na, nn, nlim)
 #       d2, na, nn, lr =
-#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
+#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, iρi, na, nn, nlim)
 
 #       return sTfbd(d1, d2, tw, false, false, false), na, nn, lr
    
@@ -436,7 +436,7 @@ end
 #     # fossil occurrence sampling (not included in the tree)
 #     else
 #       t0, na, nn, lr =
-#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, Iρi, na, nn, nlim)
+#         _sim_cobd_it(t - tw, λ, μ, ψ, ω, ψts, ωtimes, ix, nep, lr, iρi, na, nn, nlim)
 #       push!(ωtimes, t - tw)
 #       adde!(t0, tw)
 #       return t0, na, nn, lr

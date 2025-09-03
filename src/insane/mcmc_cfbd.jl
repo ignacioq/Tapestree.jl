@@ -238,7 +238,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
         logdgamma(μc,      μ_prior[1], μ_prior[2])         +
         sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -924,7 +924,7 @@ function update_ψ!(llc    ::Float64,
   @inbounds begin
     for i in Base.OneTo(lastindex(ψc))
       ψci   = ψc[i]
-      ψp    = randgamma(ψ_prior[1] + nf[i], ψ_prior[2] + L[i])
+      ψp    = rand(Gamma(ψ_prior[1] + nf[i], ψ_prior[2] + L[i]))
       llc  += nf[i] * log(ψp/ψci) + L[i] * (ψci - ψp)
       prc  += llrdgamma(ψp, ψci, ψ_prior[1], ψ_prior[2])
       ψc[i] = ψp
@@ -954,7 +954,7 @@ function update_ψ!(llc    ::Float64,
                    L      ::Float64,
                    ψ_prior::NTuple{2,Float64})
 
-  ψp  = randgamma(ψ_prior[1] + nf, ψ_prior[2] + L)
+  ψp  = rand(Gamma(ψ_prior[1] + nf, ψ_prior[2] + L))
 
   llc += nf * log(ψp/ψc) + L * (ψc - ψp)
   prc += llrdgamma(ψp, ψc, ψ_prior[1], ψ_prior[2])

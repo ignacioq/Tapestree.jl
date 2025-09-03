@@ -349,7 +349,7 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
   ltn = 0
   lupλμ = lacλ = lacμ = 0.0
 
-  pbar = Progress(nburn, prints, "burning mcmc...", 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -612,8 +612,7 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
 
     open(ofile*".txt", "w") do tf
 
-
-      pbar = Progress(niter, prints, "running mcmc...", 20)
+      pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
       for it in Base.OneTo(niter)
 
@@ -915,17 +914,17 @@ function fsbi_t(bi    ::iBffs,
                 srδt  ::Float64)
 
   nac = ni(bi)         # current ni
-  Iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
+  iρi = (1.0 - ρi(bi)) # inv branch sampling fraction
   lU  = -randexp()     # log-probability
 
   # current ll
-  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
   nep = lastindex(ψωts) + 1
   ξp, na, nn, llr =
     _sim_gbmfbd_t(e(bi), lλ(ξc)[1], lμ(ξc)[1], αλ, αμ, σλ, σμ, ψ, ψωts, ix, nep,
-      δt, srδt, lc, lU, Iρi, 0, 1, 1_000)
+      δt, srδt, lc, lU, iρi, 0, 1, 1_000)
 
   if na > 0 && isfinite(llr) && (treelength(ξc)!=treelength(ξp))
 
@@ -998,8 +997,8 @@ function fsbi_t(bi    ::iBffs,
   # acceptance probability
   acr  = log(Float64(ntp)/Float64(nt(bi)))
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   if lU < acr
 
@@ -1009,7 +1008,7 @@ function fsbi_t(bi    ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(ξp, tf(bi), αλ, αμ, σλ, σμ, ψ, ψωts, ixf, nep, δt, srδt,
-          acr, lU, Iρi, na, nn)
+          acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -1020,7 +1019,7 @@ function fsbi_t(bi    ::iBffs,
       # if terminal fossil branch
       tx, na, nn, acr =
         fossiltip_sim!(ξp, tf(bi), αλ, αμ, σλ, σμ, ψ, ψωts, ixf, nep, δt, srδt,
-          acr, lU, Iρi, na, nn)
+          acr, lU, iρi, na, nn)
 
       if lU < acr
 
@@ -1028,7 +1027,7 @@ function fsbi_t(bi    ::iBffs,
           
         if lU < acr + llrLTTp != 0.0
 
-          llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi)) + llrLTTp
+          llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + llrLTTp
           setnt!(bi, ntp)      # set new nt
           setni!(bi, na)       # set new ni
 
@@ -1082,13 +1081,13 @@ function fsbi_et(bi    ::iBffs,
   nep = lastindex(ψωts) + 1
   lU  = -randexp()            # log-probability
   nac = ni(bi)                # current ni
-  Iρi = (1.0 - ρi(bi))        # branch sampling fraction
-  acr = Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi = (1.0 - ρi(bi))        # branch sampling fraction
+  acr = Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # if terminal fossil branch
   tx, na, nn, acr =
     fossiltip_sim!(ξp, tf(bi), αλ, αμ, σλ, σμ, ψ, ψωts, ixf, nep, δt, srδt,
-      acr, lU, Iρi, 1, 1)
+      acr, lU, iρi, 1, 1)
 
   if lU < acr && (treelength(ξc)!=treelength(ξp))
 
@@ -1096,7 +1095,7 @@ function fsbi_et(bi    ::iBffs,
 
     if lU < acr + llrLTTp != 0.0
 
-      llr = (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi)) + llrLTTp
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + llrLTTp
       setni!(bi, na)       # set new ni
 
       return ξp, LTTp, llr
@@ -1162,8 +1161,8 @@ function fsbi_m(bi    ::iBffs,
   # continue simulation only if acr on sum of tip rates is accepted
   acr  = log(Float64(ntp)/Float64(nt(bi)))
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # sample and fix random  tip
   λf, μf = fixrtip!(ξp, na, NaN, NaN) # fix random tip
@@ -1179,7 +1178,7 @@ function fsbi_m(bi    ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(ξp, tf(bi), αλ, αμ, σλ, σμ, ψ, ψωts, ixf, nep, δt, srδt,
-          acr, lU, Iρi, na, nn)
+          acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -1192,7 +1191,7 @@ function fsbi_m(bi    ::iBffs,
 
       if lU < acr + llrLTTp != 0.0
 
-        llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi)) + llrLTTp
+        llr = llrd + (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + llrLTTp
         setnt!(bi, ntp)                       # set new nt
         setni!(bi, na)                        # set new ni
         l1 = lastindex(λ1p)
@@ -1266,8 +1265,8 @@ function fsbi_i(bi    ::iBffs,
   # continue simulation only if acr on sum of tip rates is accepted
   acr  = log(Float64(ntp)/Float64(nt(bi)))
   nac  = ni(bi)                # current ni
-  Iρi  = (1.0 - ρi(bi))        # branch sampling fraction
-  acr -= Float64(nac) * (iszero(Iρi) ? 0.0 : log(Iρi))
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # sample and fix random  tip
   λf, μf = fixrtip!(ξp, na, NaN, NaN) # fix random tip
@@ -1283,7 +1282,7 @@ function fsbi_i(bi    ::iBffs,
     if na > 1
       tx, na, nn, acr =
         tip_sims!(ξp, tf(bi), αλ, αμ, σλ, σμ, ψ, ψωts, ixf, nep, δt, srδt,
-          acr, lU, Iρi, na, nn)
+          acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -1293,7 +1292,7 @@ function fsbi_i(bi    ::iBffs,
       if lU < acr + llrLTTp != 0.0
         na -= 1
 
-        llr = llrd + (na - nac)*(iszero(Iρi) ? 0.0 : log(Iρi)) + llrLTTp
+        llr = llrd + (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + llrLTTp
         setnt!(bi, ntp)                       # set new nt
         setni!(bi,  na)                       # set new ni
         setλt!(bi,  λf)                       # set new λt

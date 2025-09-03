@@ -1055,7 +1055,7 @@ function treeheight(tree::T) where {T <: Union{iTf, iTpbd}}
   if def2(tree)
     th1 = treeheight(tree.d1)
     th2 = treeheight(tree.d2)
-    return bd(th1,th2) + e(tree)
+    return max(th1,th2) + e(tree)
   elseif def1(tree)
     return treeheight(tree.d1) + e(tree)
   end
@@ -2620,47 +2620,6 @@ function fixed_xt(tree::T)  where {T <: Tx}
   return xt
 end
 
-
-
-
-"""
-    fossil_xt(tree::T)
-
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function fossil_xt(tree::sTfbdx)
-
-  if isfossil(tree)
-    return xf(tree)
-  elseif isfix(tree.d1)
-    xt = fossil_xt(tree.d1)
-  else
-    xt = fossil_xt(tree.d2)
-  end
-
-  return xt
-end
-
-
-
-
-"""
-    fossil_xt(tree::T)
-
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function fossil_xt(tree::iTfbdx)
-
-  if isfossil(tree)
-    return xv(tree)[end]
-  elseif isfix(tree.d1)
-    xt = fossil_xt(tree.d1)
-  else
-    xt = fossil_xt(tree.d2)
-  end
-
-  return xt
-end
 
 
 

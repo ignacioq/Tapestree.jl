@@ -12,6 +12,7 @@ Created 03 09 2020
 
 
 
+
 """
     insane_gbmbd(tree    ::sT_label;
                  λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
@@ -50,8 +51,7 @@ function insane_gbmbd(tree    ::sT_label;
                       niter   ::Int64                 = 1_000,
                       nthin   ::Int64                 = 10,
                       nburn   ::Int64                 = 200,
-                      nflushθ ::Int64                 = Int64(ceil(niter/5_000)),
-                      nflushΞ ::Int64                 = Int64(ceil(niter/100)),
+                      nflush  ::Int64                 = nthin,
                       ofile   ::String                = string(homedir(), "/ibd"),
                       ϵi      ::Float64               = 0.2,
                       λi      ::Float64               = NaN,
@@ -73,10 +73,6 @@ function insane_gbmbd(tree    ::sT_label;
   th    = treeheight(tree)
   δt   *= max(0.1,round(th, RoundDown, digits = 2))
   srδt  = sqrt(δt)
-
-  # turn to logarithmic terms
-  λ0_prior = (log(λ0_prior[1]), 2*log(λ0_prior[2]))
-  μ0_prior = (log(μ0_prior[1]), 2*log(μ0_prior[2]))
 
   surv = 0   # condition on survival of 0, 1, or 2 starting lineages
   rmλ  = 0.0 # condition on first speciation event
@@ -211,7 +207,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
 
   # for scale tuning
-  ltn = lns = 0
+  ltn = 0
   lup = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
@@ -314,8 +310,7 @@ end
                pup     ::Vector{Int64},
                niter   ::Int64,
                nthin   ::Int64,
-               nflushθ ::Int64,
-               nflushΞ ::Int64,
+               nflush  ::Int64,
                ofile   ::String,
                prints  ::Int64)
 
@@ -346,8 +341,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     pup     ::Vector{Int64},
                     niter   ::Int64,
                     nthin   ::Int64,
-                    nflushθ ::Int64,
-                    nflushΞ ::Int64,
+                    nflush  ::Int64,
                     ofile   ::String,
                     prints  ::Int64)
 
@@ -602,8 +596,8 @@ function update_σ!(σλc     ::Float64,
                    σμ_prior::NTuple{2,Float64})
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + ssλ)
-  σμp2 = randinvgamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + ssμ)
+  σλp2 = rand(InverseGamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + ssλ))
+  σμp2 = rand(InverseGamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + ssμ))
 
   σλp = sqrt(σλp2)
   σμp = sqrt(σμp2)
@@ -1211,4 +1205,5 @@ function tip_sims!(tree::iTbd,
 
   return tree, na, nn, NaN
 end
+
 
