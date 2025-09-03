@@ -1056,7 +1056,7 @@ function update_μ!(μc     ::Float64,
                    srδt   ::Float64,
                    μ_prior::NTuple{2,Float64})
 
-  μp  = rand(Gamma(μ_prior[1] + ne, μ_prior[2] + L))
+  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
 
   mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, surv)
   llr = log(mp/mc)

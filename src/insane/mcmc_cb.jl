@@ -295,88 +295,120 @@ end
 
 
 
+# """
+#     ref_posterior(Ξ      ::Vector{sTb},
+#                   idf    ::Array{iBffs,1},
+#                   λc     ::Float64,
+#                   λ_prior ::NTuple{2,Float64},
+#                   λ_refd  ::NTuple{2,Float64},
+#                   nitpp  ::Int64,
+#                   nthpp  ::Int64,
+#                   βs     ::Vector{Float64},
+#                   pup    ::Array{Int64,1},
+#                   stem   ::Bool)
+
+# MCMC da chain for constant birth-death using forward simulation.
+# """
+# function ref_posterior(Ξ      ::Vector{sTb},
+#                        idf    ::Array{iBffs,1},
+#                        λc     ::Float64,
+#                        λ_prior::NTuple{2,Float64},
+#                        λ_refd ::NTuple{2,Float64},
+#                        nitpp  ::Int64,
+#                        nthpp  ::Int64,
+#                        βs     ::Vector{Float64},
+#                        pup    ::Array{Int64,1},
+#                        stem   ::Bool)
+
+#   K = lastindex(βs)
+
+#   # make log-likelihood table per power
+#   nlg = fld(nitpp, nthpp)
+#   pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+
+#   el = lastindex(idf)
+#   ns = Float64(nnodesinternal(Ξ))
+#   L  = treelength(Ξ)
+
+#   nsi = stem ? 0.0 : log(λc)
+
+#   llc = llik_cb(Ξ, λc) - nsi + prob_ρ(idf)
+#   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
+
+#   for k in 2:K
+
+#     βi  = βs[k]
+#     rdc = logdgamma(λc, λ_refd[1], λ_refd[2])
+
+#     # logging
+#     lth, lit = 0, 0
+
+#     for it in Base.OneTo(nitpp)
+
+#       shuffle!(pup)
+
+#       for p in pup
+
+#         # λ proposal
+#         if p === 1
+
+#           llc, prc, rdc, λc =
+#             update_λ!(llc, prc, rdc, λc, ns, L, stem, λ_prior, λ_refd, βi)
+
+#         # forward simulation proposal proposal
+#         else
+
+#           bix = ceil(Int64,rand()*el)
+#           llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
+
+#         end
+#       end
+
+#       # log log-likelihood
+#       lth += 1
+#       if lth === nthpp
+#         lit += 1
+#         pp[k][lit] = llc + prc - rdc
+#         lth = 0
+#       end
+#     end
+
+#     @info string(βi," power done")
+#   end
+
+#   return pp
+# end
+
+
+
+
 """
-    ref_posterior(Ξ      ::Vector{sTb},
-                  idf    ::Array{iBffs,1},
-                  λc     ::Float64,
-                  λ_prior ::NTuple{2,Float64},
-                  λ_refd  ::NTuple{2,Float64},
-                  nitpp  ::Int64,
-                  nthpp  ::Int64,
-                  βs     ::Vector{Float64},
-                  pup    ::Array{Int64,1},
-                  stem   ::Bool)
+     update_λ!(llc    ::Float64,
+               prc    ::Float64,
+               λc     ::Float64,
+               ns     ::Float64,
+               L      ::Float64,
+               stem   ::Bool
+               λ_prior::NTuple{2,Float64})
 
-MCMC da chain for constant birth-death using forward simulation.
+Gibbs sampling of `λ` for constant pure-birth.
 """
-function ref_posterior(Ξ      ::Vector{sTb},
-                       idf    ::Array{iBffs,1},
-                       λc     ::Float64,
-                       λ_prior::NTuple{2,Float64},
-                       λ_refd ::NTuple{2,Float64},
-                       nitpp  ::Int64,
-                       nthpp  ::Int64,
-                       βs     ::Vector{Float64},
-                       pup    ::Array{Int64,1},
-                       stem   ::Bool)
+function update_λ!(llc    ::Float64,
+                   prc    ::Float64,
+                   λc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Float64,
+                   stem   ::Bool,
+                   λ_prior::NTuple{2,Float64})
 
-  K = lastindex(βs)
+  nsi = Float64(!stem)
 
-  # make log-likelihood table per power
-  nlg = fld(nitpp, nthpp)
-  pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+  λp  = rand(Gamma(λ_prior[1] + ns - nsi, 1.0/(λ_prior[2] + L)))
 
-  el = lastindex(idf)
-  ns = Float64(nnodesinternal(Ξ))
-  L  = treelength(Ξ)
+  llc += (ns - nsi) * log(λp/λc) + L * (λc - λp)
+  prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
 
-  nsi = stem ? 0.0 : log(λc)
-
-  llc = llik_cb(Ξ, λc) - nsi + prob_ρ(idf)
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2])
-
-  for k in 2:K
-
-    βi  = βs[k]
-    rdc = logdgamma(λc, λ_refd[1], λ_refd[2])
-
-    # logging
-    lth, lit = 0, 0
-
-    for it in Base.OneTo(nitpp)
-
-      shuffle!(pup)
-
-      for p in pup
-
-        # λ proposal
-        if p === 1
-
-          llc, prc, rdc, λc =
-            update_λ!(llc, prc, rdc, λc, ns, L, stem, λ_prior, λ_refd, βi)
-
-        # forward simulation proposal proposal
-        else
-
-          bix = ceil(Int64,rand()*el)
-          llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
-
-        end
-      end
-
-      # log log-likelihood
-      lth += 1
-      if lth === nthpp
-        lit += 1
-        pp[k][lit] = llc + prc - rdc
-        lth = 0
-      end
-    end
-
-    @info string(βi," power done")
-  end
-
-  return pp
+  return llc, prc, λp
 end
 
 
@@ -559,39 +591,6 @@ function tip_sims!(tree::sTb,
 
   return tree, na, NaN
 end
-
-
-
-
-"""
-     update_λ!(llc    ::Float64,
-               prc    ::Float64,
-               λc     ::Float64,
-               ns     ::Float64,
-               L      ::Float64,
-               stem   ::Bool
-               λ_prior::NTuple{2,Float64})
-
-Gibbs sampling of `λ` for constant pure-birth.
-"""
-function update_λ!(llc    ::Float64,
-                   prc    ::Float64,
-                   λc     ::Float64,
-                   ns     ::Float64,
-                   L      ::Float64,
-                   stem   ::Bool,
-                   λ_prior::NTuple{2,Float64})
-
-  nsi = Float64(!stem)
-
-  λp  = rand(Gamma(λ_prior[1] + ns - nsi, λ_prior[2] + L))
-
-  llc += (ns - nsi) * log(λp/λc) + L * (λc - λp)
-  prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-
-  return llc, prc, λp
-end
-
 
 
 

@@ -980,7 +980,7 @@ function update_ω!(llc    ::Float64,
   # MH steps for each epoch
   for i in Base.OneTo(lastindex(ωc))
 
-    ωp  = rand(Gamma(ω_prior[1]+nω[i], ω_prior[2]+L[i]))
+    ωp  = rand(Gamma(ω_prior[1]+nω[i], 1.0/(ω_prior[2]+L[i])))
     ωci = ωc[i]
     
     prc += llrdgamma(ωp, ωci, ω_prior[1], ω_prior[2])

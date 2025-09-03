@@ -716,7 +716,7 @@ function update_λ!(llc    ::Float64,
                    surv   ::Int64,
                    λ_prior::NTuple{2,Float64})
 
-  λp  = rand(Gamma(λ_prior[1] + ns - rmλ, λ_prior[2] + L))
+  λp  = rand(Gamma(λ_prior[1] + ns - rmλ, 1.0/(λ_prior[2] + L)))
 
   mp  = m_surv_cbd(th, λp, μc, 5_000, surv)
   llr = log(mp/mc)
@@ -809,7 +809,7 @@ function update_μ!(llc    ::Float64,
                    surv   ::Int64,
                    μ_prior::NTuple{2,Float64})
 
-  μp  = rand(Gamma(μ_prior[1] + ne, μ_prior[2] + L))
+  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
 
   mp   = m_surv_cbd(th, λc, μp, 5_000, surv)
   llr  = log(mp/mc)
