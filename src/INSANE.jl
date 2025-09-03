@@ -7,6 +7,7 @@
 module INSANE
 
   using Random: randexp, randn!, shuffle!
+  using Distributions: Uniform, Poisson, Gamma, InverseGamma
   using SpecialFunctions: loggamma
   using SpecialFunctions: erf
   using DelimitedFiles: readdlm, writedlm

@@ -12,11 +12,11 @@ tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_5.tr
 Constant Pure-birth
 =# 
 # simulate 
-tr = sim_cpb(1.0, 0.5)
-@test isa(tr, sTpb)
+tr = sim_cb(1.0, 0.5)
+@test isa(tr, sTb)
 
 # perform inference
-r, tv = insane_cpb(tree,
+r, tv = insane_cb(tree,
                    nburn  = 2,
                    niter  = 5,
                    nthin  = 5,
@@ -24,7 +24,7 @@ r, tv = insane_cpb(tree,
                    ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
-@test isa(tv, Vector{sTpb})
+@test isa(tv, Vector{sTb})
 
 
 #=
@@ -107,17 +107,17 @@ Birth-Death Diffusion: Pure-birth
 
 # simulate based on number of species
 Random.seed!(7)
-tr = sim_gbmpb(20, λ0 = .5, α = 0.0, σλ = 0.1)
-@test isa(tr, iTpb)
+tr = sim_gbmb(20, λ0 = .5, α = 0.0, σλ = 0.1)
+@test isa(tr, iTb)
 @test ntips(tr) === 20
 
 # simulate based on time
 Random.seed!()
-tr = sim_gbmpb(10.0, λ0 = .5, α = 0.0, σλ = 0.1)
-@test isa(tr, iTpb)
+tr = sim_gbmb(10.0, λ0 = .5, α = 0.0, σλ = 0.1)
+@test isa(tr, iTb)
 
 # perform inference
-r, tv = insane_gbmpb(tree,
+r, tv = insane_gbmb(tree,
                      nburn  = 2,
                      niter  = 5,
                      nthin  = 5,
@@ -125,7 +125,7 @@ r, tv = insane_gbmpb(tree,
                      ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
-@test isa(tv, Vector{iTpb})
+@test isa(tv, Vector{iTb})
 
 
 

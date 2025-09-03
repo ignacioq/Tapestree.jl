@@ -17,14 +17,14 @@ September 19 2017
 
 
 """
-    solvef(int::DEIntegrator,
+    solvef(int::OrdinaryDiffEqCore.ODEIntegrator,
            u  ::Array{Float64,1},
            ti ::Float64,
            tf ::Float64)
 
 Solve an IDE integrator for new `u` and and `ti` and `tf`.
 """
-function solvef(int::DiffEqBase.DEIntegrator,
+function solvef(int::OrdinaryDiffEqCore.ODEIntegrator,
                 u  ::Array{Float64,1},
                 ti ::Float64,
                 tf ::Float64)

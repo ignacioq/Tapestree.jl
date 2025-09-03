@@ -49,7 +49,7 @@ using .INSANE: sT_label, sTf_label, sTb, sTbd, sTpe, sTfbd, sTfpe,
   remove_extinct, remove_unsampled, remove_fossils, fixedpos, fossilize!,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
   trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, 
-  time_rate, make_idf, plotω,
+  time_rate, make_idf,
   tiplabels, labels, label
 export sT_label, sTf_label, sTb, sTbd, sTpe, sTfbd, sTfpe, 
   iTb, iTce, iTct, iTbd, iTpbd, iTfbd, sTxs, iTd, Ltt,
@@ -66,7 +66,7 @@ export sT_label, sTf_label, sTb, sTbd, sTpe, sTfbd, sTfpe,
   remove_extinct, remove_unsampled, remove_fossils, fixedpos, fossilize!,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
   trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, 
-  time_rate, make_idf, plotω,
+  time_rate, make_idf,
   tiplabels, labels, label
 
 end # module Tapestree
