@@ -4,16 +4,16 @@ The simplest diversification model assumes no extinction (``\mu = 0``) and a con
 
 ## Simulations
 
-To simulate a pure-birth tree one can use `sim_cpb`. For instance, for a period of ``10`` time units and a speciation rate of ``\lambda = 0.5``:
+To simulate a pure-birth tree one can use `sim_cb`. For instance, for a period of ``10`` time units and a speciation rate of ``\lambda = 0.5``:
 ```julia
-tr = sim_cpb(10.0, 0.5)
+tr = sim_cb(10.0, 0.5)
 ```
 
 ## Inference
 
-To perform inference on a tree (of type `sT_label`), we can use the `insane_cpb` function (cpb = constant pure-birth).
+To perform inference on a tree (of type `sT_label`), we can use the `insane_cb` function (cb = constant pure-birth).
 ```julia
-r, tv = insane_cpb(tree,
+r, tv = insane_cb(tree,
                    nburn  = 500,
                    niter  = 1_000,
                    nthin  = 2,
@@ -26,7 +26,7 @@ r, tv = insane_cpb(tree,
 
 In the following example, we now specify a global sampling fraction of `0.8`.
 ```julia
-r, tv = insane_cpb(tree,
+r, tv = insane_cb(tree,
                    nburn  = 500,
                    niter  = 1_000,
                    nthin  = 2,
@@ -74,9 +74,9 @@ where we now have a Gamma prior for the extinction ``\mu``, and we can also spec
 
 Full documentation
 ```@docs
-sim_cpb
+sim_cb
 sim_cbd
-insane_cpb
+insane_cb
 insane_cbd
 ```
 
