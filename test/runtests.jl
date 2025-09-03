@@ -26,6 +26,9 @@ r, tv = insane_cb(tree,
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{sTb})
 
+tv = iread(homedir()*"/test.txt")
+@test isa(tv, Vector{sTb})
+
 
 #=
 Constant Birth-Death
@@ -43,6 +46,8 @@ r, tv = insane_cbd(tree,
                    ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
+@test isa(tv, Vector{sTbd})
+tv = iread(homedir()*"/test.txt")
 @test isa(tv, Vector{sTbd})
 
 
@@ -68,6 +73,8 @@ r, tv = insane_cfbd(ftree,
                     ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
+@test isa(tv, Vector{sTfbd})
+tv = iread(homedir()*"/test.txt")
 @test isa(tv, Vector{sTfbd})
 
 
