@@ -1661,13 +1661,67 @@ lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
 
 
 
+
 """
-    lμ(tree::iTbdU)
-    lμ(tree::cTbdU)
+    λt(tree::T) where {T <: iTree}
+
+Return final speciation rate at time `t.
+"""
+function λt(tree::T) where {T <: iT}
+  if istip(tree)
+    return lλ(tree)[end]
+  elseif isfix(tree.d1::T)
+    λt(tree.d1::T)
+  else
+    λt(tree.d2::T)
+  end
+end
+function λt(tree::T) where {T <: cT}
+  if istip(tree)
+    return lλ(tree)
+  elseif isfix(tree.d1::T)
+    λt(tree.d1::T)
+  else
+    λt(tree.d2::T)
+  end
+end
+
+
+
+
+"""
+    lμ(tree::T) where {T <: iTree}
 
 Return the extinction rate.
 """
 lμ(tree::T) where {T <: iTree} = getproperty(tree,:lμ)
+
+
+
+
+"""
+    μt(tree::T) where {T <: iTree}
+
+Return final extinction rate at time `t.
+"""
+function μt(tree::T) where {T <: iT}
+  if istip(tree)
+    return lμ(tree)[end]
+  elseif isfix(tree.d1::T)
+    μt(tree.d1::T)
+  else
+    μt(tree.d2::T)
+  end
+end
+function μt(tree::T) where {T <: cT}
+  if istip(tree)
+    return lμ(tree)
+  elseif isfix(tree.d1::T)
+    μt(tree.d1::T)
+  else
+    μt(tree.d2::T)
+  end
+end
 
 
 

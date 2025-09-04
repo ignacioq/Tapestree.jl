@@ -342,7 +342,7 @@ function _sim_cladsb(t   ::Float64,
 
   if nn < nlim
 
-    tw = cpb_wait(exp(λt))
+    tw = cb_wait(exp(λt))
 
     if tw > t
       return cTb(t, false, λt), nn
@@ -390,7 +390,7 @@ function _sim_cladsb_t(t   ::Float64,
 
   if isfinite(lr) && nn < nlim
 
-    tw = cpb_wait(exp(λt))
+    tw = cb_wait(exp(λt))
 
     if tw > t
       na += 1
@@ -443,7 +443,7 @@ function _sim_cladsb_i(t   ::Float64,
 
   if nn < nlim
 
-    tw = cpb_wait(exp(λt))
+    tw = cb_wait(exp(λt))
 
     if tw > t
       push!(xfs, λt)
@@ -489,7 +489,7 @@ function _sim_cladsb_it(t   ::Float64,
 
   if lU < lr && nn < nlim
 
-    tw = cpb_wait(exp(λt))
+    tw = cb_wait(exp(λt))
 
     if tw > t
       lr += log(iρi)

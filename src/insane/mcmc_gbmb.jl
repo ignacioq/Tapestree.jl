@@ -524,7 +524,7 @@ function update_scale!(Ξ       ::Vector{T},
     prc += prr
     ir  -= iri
     scale_rate!(Ξ, lλ, s)
-    scale_rate!(idf, s)
+    scale_rate!(idf, addlλ!, s)
   end
 
   return llc, prc, ir, acc

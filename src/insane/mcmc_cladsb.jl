@@ -65,7 +65,7 @@ function insane_cladsb(tree    ::sT_label;
   idf = make_idf(tree, tρ, Inf)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, λmle_cpb(tree), cTb)
+  Ξ = make_Ξ(idf, λmle_cb(tree), cTb)
 
   # if rm first speciation event (condition on observing the tree)
   rmλ = Float64(iszero(e(Ξ[1])))

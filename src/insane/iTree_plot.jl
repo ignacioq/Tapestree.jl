@@ -32,16 +32,16 @@ Predefined functions for plotting:
   `traitrate`: evolutionary rates for traits
   `logtraitrate`: log evolutionary rates for traits
 """
-birth(tree::iT)           = exp.(lλ(tree))
-death(tree::iT)           = exp.(lμ(tree))
-logbirth(tree::iT)        = lλ(tree)
-logdeath(tree::iT)        = lμ(tree)
-turnover(tree::iT)        = exp.(lμ(tree) .- lλ(tree))
-diversification(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
-trait(tree::Tx)           = xv(tree)
-logtrait(tree::Tx)        = log.(xv(tree))
-traitrate(tree::Tx)       = exp.(lσ2(tree))
-logtraitrate(tree::Tx)    = lσ2(tree)
+birth(tree::iTree)           = exp.(lλ(tree))
+death(tree::iTree)           = exp.(lμ(tree))
+logbirth(tree::iTree)        = lλ(tree)
+logdeath(tree::iTree)        = lμ(tree)
+turnover(tree::iTree)        = exp.(lμ(tree) .- lλ(tree))
+diversification(tree::iTree) = exp.(lλ(tree)) .- exp.(lμ(tree))
+trait(tree::Tx)              = xv(tree)
+logtrait(tree::Tx)           = log.(xv(tree))
+traitrate(tree::Tx)          = exp.(lσ2(tree))
+logtraitrate(tree::Tx)       = lσ2(tree)
 
 
 
@@ -462,18 +462,24 @@ function _rplottree!(tree  ::T,
   if def1(tree)
      if def2(tree)
 
-      y1, i = _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, 
-        show)
-      y2, i = _rplottree!(tree.d2, f, xe, i, x, y, z, nodet, xnode, ynode,
-        show)
+      y1, z1, i = 
+        _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
+      y2, z2, i = 
+        _rplottree!(tree.d2, f, xe, i, x, y, z, nodet, xnode, ynode, show)
 
       yc = (y1 + y2)*0.5
       zc = last(f(tree))
 
       # add vertical lines
-      push!(x, xe, xe, NaN)
-      push!(y, y1, y2, NaN)
-      push!(z, zc, zc, NaN)
+      if T <: iT
+        push!(x, xe, xe, NaN)
+        push!(y, y1, y2, NaN)
+        push!(z, zc, zc, NaN)
+      elseif T <: cT
+        push!(x, xe, xe, NaN, xe, xe, NaN)
+        push!(y, y1, yc, NaN, yc, y2, NaN)
+        push!(z, z1, z1, NaN, z2, z2, NaN)
+      end
 
       # nodes
       if show[1]
@@ -483,8 +489,8 @@ function _rplottree!(tree  ::T,
       end
     else
 
-      yc, i = _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, 
-        show)
+      yc, ze, i = 
+        _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
 
       if show[3]
         push!(nodet, 3)
@@ -511,115 +517,122 @@ function _rplottree!(tree  ::T,
   end
 
   # tree δt and nsδt
-  δt = dt(tree)
 
   # add horizontal lines
-  # plot function
-  zv = copy(f(tree))
-  l  = lastindex(zv)
-  @simd for i in Base.OneTo(l-1)
-    push!(x, xc - Float64(i-1)*δt)
-    push!(y, yc)
-    push!(z, zv[i])
+  ze = NaN
+  if T <: iT
+    δt = dt(tree)
+    zv = f(tree)
+    l  = lastindex(zv)
+    @simd for i in Base.OneTo(l-1)
+      push!(x, xc - Float64(i-1)*δt)
+      push!(y, yc)
+      push!(z, zv[i])
+    end
+    push!(x, xe, NaN)
+    push!(y, yc, NaN)
+    ze = last(zv)
+    push!(z, ze, NaN)
+  elseif T <: cT
+    ze = f(tree)
+    push!(x, xe, xc, NaN)
+    push!(y, yc, yc, NaN)
+    push!(z, ze, ze, NaN)
   end
 
-  push!(x, xe, NaN)
-  push!(y, yc, NaN)
-  push!(z, last(zv), NaN)
-
-  return yc, i
+  return yc, ze, i
 end
 
 
 
 
-"""
-    _rplottree!(tree  ::T,
-                f     ::Function,
-                xc    ::Float64,
-                i     ::Float64,
-                x     ::Array{Float64,1},
-                y     ::Array{Float64,1},
-                z     ::Array{Float64,1},
-                nodet ::Array{Int64,1},
-                xnode ::Array{Float64,1},
-                ynode ::Array{Float64,1},
-                show  ::NTuple{3,Bool}) where {T <: cT}
+# """
+#     _rplottree!(tree  ::T,
+#                 f     ::Function,
+#                 xc    ::Float64,
+#                 i     ::Float64,
+#                 x     ::Array{Float64,1},
+#                 y     ::Array{Float64,1},
+#                 z     ::Array{Float64,1},
+#                 nodet ::Array{Int64,1},
+#                 xnode ::Array{Float64,1},
+#                 ynode ::Array{Float64,1},
+#                 show  ::NTuple{3,Bool}) where {T <: cT}
 
-Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
-"""
-function _rplottree!(tree  ::T,
-                     f     ::Function,
-                     xc    ::Float64,
-                     i     ::Float64,
-                     x     ::Array{Float64,1},
-                     y     ::Array{Float64,1},
-                     z     ::Array{Float64,1},
-                     nodet ::Array{Int64,1},
-                     xnode ::Array{Float64,1},
-                     ynode ::Array{Float64,1},
-                     show  ::NTuple{3,Bool}) where {T <: cT}
+# Returns `x` and `y` coordinates in order to plot a tree of type `iTree`.
+# """
+# function _rplottree!(tree  ::T,
+#                      f     ::Function,
+#                      xc    ::Float64,
+#                      i     ::Float64,
+#                      x     ::Array{Float64,1},
+#                      y     ::Array{Float64,1},
+#                      z     ::Array{Float64,1},
+#                      nodet ::Array{Int64,1},
+#                      xnode ::Array{Float64,1},
+#                      ynode ::Array{Float64,1},
+#                      show  ::NTuple{3,Bool}) where {T <: cT}
 
-  xe = xc - e(tree)
+#   xe = xc - e(tree)
 
-  if def1(tree)
-     if def2(tree)
+#   if def1(tree)
+#      if def2(tree)
 
-      y1, z1, i = 
-        _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
-      y2, z2, i = 
-        _rplottree!(tree.d2, f, xe, i, x, y, z, nodet, xnode, ynode, show)
+#       y1, z1, i = 
+#         _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
+#       y2, z2, i = 
+#         _rplottree!(tree.d2, f, xe, i, x, y, z, nodet, xnode, ynode, show)
 
-      yc = (y1 + y2)*0.5
+#       yc = (y1 + y2)*0.5
 
-      # add vertical lines
-      push!(x, xe, xe, NaN, xe, xe, NaN)
-      push!(y, y1, yc, NaN, yc, y2, NaN)
-      push!(z, z1, z1, NaN, z2, z2, NaN)
+#       # add vertical lines
+#       push!(x, xe, xe, NaN, xe, xe, NaN)
+#       push!(y, y1, yc, NaN, yc, y2, NaN)
+#       push!(z, z1, z1, NaN, z2, z2, NaN)
 
-      # nodes
-      if show[1]
-        push!(nodet, 1)
-        push!(xnode, xe)
-        push!(ynode, yc)
-      end
-    else
+#       # nodes
+#       if show[1]
+#         push!(nodet, 1)
+#         push!(xnode, xe)
+#         push!(ynode, yc)
+#       end
+#     else
 
-      yc, zv, i = 
-        _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
+#       yc, zv, i = 
+#         _rplottree!(tree.d1, f, xe, i, x, y, z, nodet, xnode, ynode, show)
 
-      if show[3]
-        push!(nodet, 3)
-        push!(xnode, xe)
-        push!(ynode, yc)
-      end
-    end
-  else
-    i += 1.0
-    yc = i
-    if isextinct(tree)
-      if show[2]
-        push!(nodet, 2)
-        push!(xnode, xe)
-        push!(ynode, yc)
-      end
-    elseif isfossil(tree)
-      if show[3]
-        push!(nodet, 3)
-        push!(xnode, xe)
-        push!(ynode, yc)
-      end
-    end
-  end
+#       if show[3]
+#         push!(nodet, 3)
+#         push!(xnode, xe)
+#         push!(ynode, yc)
+#       end
+#     end
+#   else
+#     i += 1.0
+#     yc = i
+#     if isextinct(tree)
+#       if show[2]
+#         push!(nodet, 2)
+#         push!(xnode, xe)
+#         push!(ynode, yc)
+#       end
+#     elseif isfossil(tree)
+#       if show[3]
+#         push!(nodet, 3)
+#         push!(xnode, xe)
+#         push!(ynode, yc)
+#       end
+#     end
+#   end
 
-  # add horizontal lines
-  zv = f(tree)
-  push!(x, xe, xc, NaN)
-  push!(y, yc, yc, NaN)
-  push!(z, zv, zv, NaN)
+#   # add horizontal lines
+#   zv = f(tree)
+#   push!(x, xe, xc, NaN)
+#   push!(y, yc, yc, NaN)
+#   push!(z, zv, zv, NaN)
 
-  return yc, zv, i
-end
+#   return yc, zv, i
+# end
 
 
 
@@ -812,25 +825,35 @@ function _rplotf!(tree::T,
                   y   ::Array{Float64,1},
                   f   ::Function) where {T <: iTree}
 
-  # tree δt and nsδt
-  δt = dt(tree)
+  ei = e(tree)
+  xe = xc - ei
 
   # add horizontal lines
-  l = lastindex(f(tree))
-  @simd for i in Base.OneTo(l-1)
-    push!(x, xc - Float64(i-1)*δt)
+  if T <: iT
+    δt = dt(tree)
+    l  = lastindex(f(tree))
+    @simd for i in Base.OneTo(l-1)
+      push!(x, xc - Float64(i-1)*δt)
+    end
+    push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
+    append!(y, f(tree), NaN)
+  elseif T <: cT
+    push!(x, xc, xe, NaN)
+    push!(y, f(tree), f(tree), NaN)
   end
-  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
-
-  append!(y, f(tree))
-  push!(y, NaN)
-
-  xc -= e(tree)
 
   if def1(tree)
-    _rplotf!(tree.d1, xc, x, y, f)
+    if T <: cT
+      push!(x, xe, xe)
+      push!(y, f(tree), f(tree.d1))
+    end
+    _rplotf!(tree.d1, xe, x, y, f)
     if def2(tree)
-      _rplotf!(tree.d2, xc, x, y, f)
+      if T <: cT
+        push!(x, xe, xe)
+        push!(y, f(tree), f(tree.d2))
+      end
+      _rplotf!(tree.d2, xe, x, y, f)
     end
   end
 end
@@ -857,27 +880,40 @@ function _rplotf!(tree::T,
                   yf  ::Function,
                   zf  ::Function) where {T <: iTree}
 
-  # tree δt and nsδt
-  δt = dt(tree)
+  ei = e(tree)
+  xe = xc - ei
 
   # add horizontal lines
-  l   = lastindex(yf(tree))
-  @simd for i in Base.OneTo(l-1)
-    push!(x, xc - Float64(i-1)*δt)
+  if T <: iT
+    δt = dt(tree)
+    l  = lastindex(yf(tree))
+    @simd for i in Base.OneTo(l-1)
+      push!(x, xc - Float64(i-1)*δt)
+    end
+    push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
+    append!(y, yf(tree), NaN)
+    append!(z, zf(tree), NaN)
+  elseif T <: cT
+    push!(x, xc, xe, NaN)
+    push!(y, yf(tree), yf(tree), NaN)
+    push!(z, zf(tree), zf(tree), NaN)
   end
-  push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
-
-  append!(y, yf(tree))
-  push!(y, NaN)
-  append!(z, zf(tree))
-  push!(z, NaN)
-
-  xc -= e(tree)
 
   if def1(tree)
-    _rplotf!(tree.d1, xc, x, y, z, yf, zf)
+    if T <: cT
+      push!(x, xe, xe)
+      push!(y, yf(tree), yf(tree.d1))
+      push!(z, zf(tree), zf(tree.d1))
+    end
+    _rplotf!(tree.d1, xe, x, y, z, yf, zf)
+
     if def2(tree)
-      _rplotf!(tree.d2, xc, x, y, z, yf, zf)
+      if T <: cT
+        push!(x, xe, xe)
+        push!(y, yf(tree), yf(tree.d2))
+        push!(z, zf(tree), zf(tree.d2))
+      end
+      _rplotf!(tree.d2, xe, x, y, z, yf, zf)
     end
   end
 end

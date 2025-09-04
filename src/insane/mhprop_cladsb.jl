@@ -147,7 +147,7 @@ function _update_internal!(tree::T,
   elseif !isfix(tree) || ter
     if !isnan(λa)
       llc, ddλ, ssλ = 
-        update_tip!(tree, 0.0, λa, α, σλ, llc, ddλ, ssλ)
+        update_tip!(tree, 0.0, λa, 0.0, α, σλ, llc, ddλ, ssλ)
     end
   end
 
