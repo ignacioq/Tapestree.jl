@@ -12,6 +12,7 @@ Created 03 09 2020
 
 
 
+
 """
     insane_gbmfbd(tree    ::sTf_label;
                   λ0_prior::NTuple{2,Float64}     = (0.1, 148.41),
@@ -90,8 +91,11 @@ function insane_gbmfbd(tree    ::sTf_label;
   μ0_prior = (log(μ0_prior[1]), 2*log(μ0_prior[2]))
 
   # only include epochs where the tree occurs
-  filter!(x -> x < th, ψ_epoch)
   sort!(ψ_epoch, rev = true)
+  tix = findfirst(x -> x < th, ψ_epoch)
+  if !isnothing(tix)
+    ψ_epoch = ψ_epoch[tix:end]
+  end
   nep  = lastindex(ψ_epoch) + 1
 
   # make initial fossils per epoch vector
@@ -134,19 +138,16 @@ function insane_gbmfbd(tree    ::sTf_label;
       λc, μc = moments(Float64(n), th, ϵi)
     end
     # if no sampled fossil
-    nf = nfossils(tree) + sum(f_epoch)
+    nf = nfossils(tree)
     if iszero(nf)
       ψc = prod(ψ_prior)
     else
-      ψc = Float64(nf)/treelength(tree)
+      ψc = Float64(nf)/Float64(treelength(tree))
     end
   end
 
   # make ψ vector
   ψc = fill(ψc, nep)
-
-  # if condition on first speciation event
-  rmλ = iszero(e(tree)) && !isfossil(tree) ? 1.0 : 0.0
 
   # condition on survival of 0, 1, or 2 starting lineages
   surv = 0
@@ -271,7 +272,6 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
                           ψc      ::Vector{Float64},
                           mc      ::Float64,
                           th      ::Float64,
-                          rmλ     ::Float64,
                           surv    ::Int64,
                           stnλ    ::Float64, 
                           stnμ    ::Float64,
@@ -287,7 +287,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   lλ0 = lλ(Ξ[1])[1]
   nsi = (iszero(e(Ξ[1])) && !isfossil(idf[1]))
   llc = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) -
-        nsi * lλ0 + log(mc) + prob_ρ(idf)
+        nsi * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
   prc = logdnorm(lλ0,         λ0_prior[1], λ0_prior[2])   +
         logdnorm(lμ(Ξ[1])[1], μ0_prior[1], μ0_prior[2])   +
         logdnorm(αλc,         αλ_prior[1], αλ_prior[2]^2) +
@@ -822,8 +822,8 @@ function update_σ!(σλc     ::Float64,
                    σμ_prior::NTuple{2,Float64})
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + ssλ)
-  σμp2 = randinvgamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + ssμ)
+  σλp2 = rand(InverseGamma(σλ_prior[1] + 0.5 * n, σλ_prior[2] + ssλ))
+  σμp2 = rand(InverseGamma(σμ_prior[1] + 0.5 * n, σμ_prior[2] + ssμ))
 
   σλp = sqrt(σλp2)
   σμp = sqrt(σμp2)
@@ -1219,7 +1219,7 @@ end
            δt  ::Float64,
            srδt::Float64)
 
-Forward simulation for **non-fossil** terminal branch.
+Forward simulation for terminal branch.
 """
 function fsbi_t(bi::iBffs,
                 ξc  ::iTfbd,
@@ -1268,12 +1268,11 @@ end
             σμ  ::Float64,
             ψ   ::Vector{Float64},
             ψts ::Vector{Float64},
-            ixi ::Int64,
-            ixf ::Int64,
+            ix  ::Int64,
             δt  ::Float64,
             srδt::Float64)
 
-Forward simulation for **fossil** terminal branch `bi`.
+Forward simulation for fossil terminal branch `bi`.
 """
 function fsbi_t(bi  ::iBffs,
                 ξc  ::iTfbd,
@@ -1324,6 +1323,7 @@ function fsbi_t(bi  ::iBffs,
       # fossilize extant tip
       fossilizefixedtip!(t0)
 
+      # if terminal fossil branch
       tx, na, nn, acr =
         fossiltip_sim!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, ixf, nep, δt, srδt,
           acr, lU, iρi, na, nn)
@@ -1393,7 +1393,6 @@ function fsbi_et(t0  ::iTfbd,
 
   return t0, NaN
 end
-
 
 
 
@@ -1592,15 +1591,13 @@ end
               ψ   ::Vector{Float64},
               ψts ::Vector{Float64},
               ix  ::Int64,
-              nep ::Int64,
               δt  ::Float64,
               srδt::Float64,
               lr  ::Float64,
               lU  ::Float64,
               iρi ::Float64,
               na  ::Int64,
-              nn  ::Int64,
-              nlim::Int64)
+              nn  ::Int64)
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
@@ -1620,10 +1617,9 @@ function tip_sims!(tree::iTfbd,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64,
-                   nn  ::Int64,
-                   nlim::Int64)
+                   nn  ::Int64)
 
-  if lU < lr && nn < nlim
+  if lU < lr && nn < 1_000
 
     if istip(tree)
       if !isfix(tree) && isalive(tree)
@@ -1638,7 +1634,7 @@ function tip_sims!(tree::iTfbd,
           _sim_gbmfbd_it(max(δt-fdti, 0.0), t, lλ0[l], lμ0[l], αλ, αμ, σλ, σμ, 
             ψ, ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, 1_000)
 
-        if !isfinite(lr) || nn >= nlim
+        if !isfinite(lr) || nn > 999
           return tree, na, nn, NaN
         end
 
@@ -1692,20 +1688,16 @@ end
                    αμ  ::Float64,
                    σλ  ::Float64,
                    σμ  ::Float64,
-                   ψ   ::Vector{Float64},
-                   ψts ::Vector{Float64},
-                   ix  ::Int64,
-                   nep ::Int64,
+                   ψ   ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
                    lr  ::Float64,
                    lU  ::Float64,
                    iρi ::Float64,
                    na  ::Int64,
-                   nn  ::Int64,
-                   nlim::Int64)
+                   nn  ::Int64)
 
-Continue simulation until time `t` for the fixed fossil tip in `tree`.
+Continue simulation until time `t` for the fixed tip in `tree`.
 """
 function fossiltip_sim!(tree::iTfbd,
                         t   ::Float64,
@@ -1723,19 +1715,18 @@ function fossiltip_sim!(tree::iTfbd,
                         lU  ::Float64,
                         iρi ::Float64,
                         na  ::Int64,
-                        nn  ::Int64,
-                        nlim::Int64)
+                        nn  ::Int64)
 
 
-  if lU < lr && nn < nlim
-
+  if lU < lr && nn < 1_000
     if istip(tree)
 
+      nep = lastindex(ψts) + 1
       stree, na, nn, lr =
         _sim_gbmfbd_it(t, lλ(tree)[end], lμ(tree)[end], αλ, αμ, σλ, σμ, ψ,
           ψts, ix, nep, δt, srδt, lr, lU, iρi, na-1, nn, 1_000)
 
-      if !isfinite(lr) || nn >= nlim
+      if !isfinite(lr) || nn > 999
         return tree, na, nn, NaN
       end
 
@@ -1756,7 +1747,4 @@ function fossiltip_sim!(tree::iTfbd,
 
   return tree, na, nn, NaN
 end
-
-
-
 

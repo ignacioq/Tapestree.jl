@@ -20,13 +20,13 @@ For all the BDD models, we have the possibility to simulate conditioned on total
 To simulate conditioned on some number of species, say, ``20``, with starting speciation rate of ``\lambda_0 = 1.0``, drift of ``\alpha = 0`` and diffusion of ``\sigma_{\lambda} = 0.1``, we can use:
 
 ```julia
- sim_gbmpb(20, λ0 = 1.0, α = 0.0, σλ = 0.1)
+ sim_gbmb(20, λ0 = 1.0, α = 0.0, σλ = 0.1)
 ```
 
 Similarly, to simulate conditioned on time, say, ``10`` time units, with the same parameters, we can use:
 
 ```julia
- sim_gbmpb(10.0, λ0 = 1.0, α = 0.0, σλ = 0.1)
+ sim_gbmb(10.0, λ0 = 1.0, α = 0.0, σλ = 0.1)
 ```
 
 Other options are available, such as `δt` which controls the time step of the simulation, which uses the Euler approximation. Similarly, `init` can be `:crown` or `:stem` to simulate starting with ``1`` or ``2`` lineages. 
@@ -40,14 +40,14 @@ Other options are available, such as `δt` which controls the time step of the s
 To perform inference under this model we can use:
 
 ```julia
-r, tv = insane_gbmpb(tree,
-                     nburn    = 1_000,
-                     niter    = 50_000,
-                     nthin    = 50, 
-                     ofile    = "<directory>",
-                     α_prior  = (0.0, 10.0),
-                     σλ_prior = (0.05, 0.05),
-                     tρ       = Dict("" => 1.0))
+r, tv = insane_gbmb(tree,
+                    nburn    = 1_000,
+                    niter    = 50_000,
+                    nthin    = 50, 
+                    ofile    = "<directory>",
+                    α_prior  = (0.0, 10.0),
+                    σλ_prior = (0.05, 0.05),
+                    tρ       = Dict("" => 1.0))
 ```
 
 Here, the prior for the drift `α_prior` is a Normal distribution, with the first element representing the mean and the second the standard deviation, and the prior for the diffusion in speciation rates. `σλ_prior`, is an Inverse Gamma. 
@@ -200,11 +200,11 @@ time_vector = fill([0.5, 0.3, 0.1], nb)
 
 Full documentation
 ```@docs
-sim_gbmpb
+sim_gbmb
 sim_gbmce
 sim_gbmct
 sim_gbmbd
-insane_gbmpb
+insane_gbmb
 insane_gbmce
 insane_gbmct
 insane_gbmbd

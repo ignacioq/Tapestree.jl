@@ -97,8 +97,9 @@ In general, this plotting recipe receives a tree and a function that is applied 
 * `turnover`: turnover (extinction/speciation) rates
 * `diversification`: net diversification (speciation - extinction) rates
 * `trait`: trait values
-* `evorate`: evolutionary rates ``\sigma^2(t)``
-* `logevorate`: log-evolutionary rates ``\sigma^2(t)``
+* `logtrait`: log trait values
+* `traitrate`:  trait evolutionary rates ``\sigma^2(t)``
+* `logtraitrate`: log trait evolution rates ``\sigma^2(t)``
 
 !!! info
     One can also plot these trees radially using the `type = :radial`.

@@ -159,7 +159,7 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -508,7 +508,7 @@ function update_γ!(γc     ::Float64,
   γ_p1, γ_p2 = γ_prior
 
   # Gibbs update for σ
-  γp2 = randinvgamma(γ_p1 + 0.5 * sum(ns), γ_p2 + sum(ssσ))
+  γp2 = rand(InverseGamma(γ_p1 + 0.5 * sum(ns), γ_p2 + sum(ssσ)))
 
   # update prior
   prc += llrdinvgamma(γp2, γc^2, γ_p1, γ_p2)

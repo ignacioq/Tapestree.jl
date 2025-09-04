@@ -741,6 +741,7 @@ end
 
 
 
+
 """
     nfossils(idf::Vector{iBffs}, ets::Vector{Float64}, nf0::Vector{Int64})
 
@@ -752,8 +753,7 @@ function nfossils(idf::Vector{iBffs}, ets::Vector{Float64}, nf0::Vector{Int64})
   fs  = zeros(nep)
   for bi in idf
     if isfossil(bi)
-      eix = findfirst(x -> x < tf(bi), ets)
-      eix = isnothing(eix) ? nep : eix
+      eix = something(findfirst(x -> x < tf(bi), ets), nep)
       fs[eix] += 1.0
     end
   end

@@ -27,7 +27,7 @@ Created 25 08 2020
                pupdp   ::NTuple{3,Float64}     = (1e-4, 1e-4, 0.2),
                prints  ::Int64                 = 5,
                survival::Bool                  = true,
-               mxthf   ::Float64               = Inf,
+               mxthf   ::Float64               = 0.1,
                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for constant birth-death.
@@ -131,7 +131,7 @@ function insane_cbd(tree    ::sT_label;
   #   μ_rdist = (x1[1], x1[2])
 
   #   # marginal likelihood
-  #   pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, crown,
+  #   pp = ref_posterior(Ξ, idf, λc, μc, v, mc, th, surv,
   #     λ_prior, μ_prior, λ_rdist, μ_rdist, nitpp, nthpp, βs, pup)
 
   #   # process with reference distribution the posterior
@@ -200,7 +200,7 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -396,7 +396,7 @@ end
 #                   μtn    ::Float64,
 #                   mc     ::Float64,
 #                   th     ::Float64,
-#                   crown   ::Bool,
+#                   surv   ::Int64,
 #                   λ_prior::NTuple{2,Float64},
 #                   μ_prior::NTuple{2,Float64},
 #                   λ_rdist::NTuple{2,Float64},
@@ -415,7 +415,7 @@ end
 #                        μtn    ::Float64,
 #                        mc     ::Float64,
 #                        th     ::Float64,
-#                        crown   ::Bool,
+#                        surv   ::Int64,
 #                        λ_prior::NTuple{2,Float64},
 #                        μ_prior::NTuple{2,Float64},
 #                        λ_rdist::NTuple{2,Float64},
@@ -436,7 +436,7 @@ end
 #   ne = Float64(ntipsextinct(Ξ))
 #   L  = treelength(Ξ)
 
-#   nsi = crown ? 0.0 : log(λc)
+#   nsi = surv ? 0.0 : log(λc)
 
 #   llc = llik_cbd(Ξ, λc, μc, ns) - nsi + log(mc) + prob_ρ(idf)
 #   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
@@ -461,14 +461,14 @@ end
 #         if p === 1
 
 #           llc, prc, rdc, λc, mc =
-#             update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, crown,
+#             update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, surv,
 #               λ_prior, λ_rdist, βi)
 
 #         # forward simulation proposal proposal
 #         elseif p === 2
 
 #           llc, prc, rdc, μc, mc =
-#             update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, crown,
+#             update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, surv,
 #               μ_prior, μ_rdist, βi)
 
 #         else
@@ -715,7 +715,7 @@ function update_λ!(llc    ::Float64,
                    surv   ::Int64,
                    λ_prior::NTuple{2,Float64})
 
-  λp  = randgamma(λ_prior[1] + ns - rmλ, λ_prior[2] + L)
+  λp  = rand(Gamma(λ_prior[1] + ns - rmλ, 1.0/(λ_prior[2] + L)))
 
   mp  = m_surv_cbd(th, λp, μc, 5_000, surv)
   llr = log(mp/mc)
@@ -743,7 +743,7 @@ end
 #               μc     ::Float64,
 #               mc     ::Float64,
 #               th     ::Float64,
-#               crown   ::Bool,
+#               surv   ::Int64,
 #               λ_prior::NTuple{2,Float64},
 #               λ_rdist::NTuple{2,Float64},
 #               pow    ::Float64)
@@ -759,14 +759,14 @@ end
 #                    μc     ::Float64,
 #                    mc     ::Float64,
 #                    th     ::Float64,
-#                    crown  ::Int64,
+#                    surv   ::Int64,
 #                    λ_prior::NTuple{2,Float64},
 #                    λ_rdist::NTuple{2,Float64},
 #                    pow    ::Float64)
 
-#   λp  = randgamma((λ_prior[1] + ns - rmλ) * pow + λ_rdist[1] * (1.0 - pow),
+#   λp  = rand(Gamma(((λ_prior[1] + ns - rmλ) * pow + λ_rdist[1] * (1.0 - pow),
 #                   (λ_prior[2] + L) * pow         + λ_rdist[2] * (1.0 - pow))
-#   mp  = m_surv_cbd(th, λp, μc, 5_000, crown)
+#   mp  = m_surv_cbd(th, λp, μc, 5_000, surv)
 #   llr = log(mp/mc)
 
 #   if -randexp() < (pow * llr)
@@ -792,7 +792,7 @@ end
               λc     ::Float64,
               mc     ::Float64,
               th     ::Float64,
-              crown  ::Int64,
+              surv   ::Int64,
               μ_prior::NTuple{2,Float64})
 
 Mixed HM-Gibbs of `μ` for constant birth-death.
@@ -805,10 +805,10 @@ function update_μ!(llc    ::Float64,
                    λc     ::Float64,
                    mc     ::Float64,
                    th     ::Float64,
-                   surv  ::Int64,
+                   surv   ::Int64,
                    μ_prior::NTuple{2,Float64})
 
-  μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
+  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
 
   mp   = m_surv_cbd(th, λc, μp, 5_000, surv)
   llr  = log(mp/mc)
@@ -837,7 +837,7 @@ end
 #               λc     ::Float64,
 #               mc     ::Float64,
 #               th     ::Float64,
-#               crown  ::Int64,
+#               surv   ::Int64,
 #               μ_prior::NTuple{2,Float64},
 #               μ_rdist::NTuple{2,Float64},
 #               pow    ::Float64)
@@ -854,13 +854,13 @@ end
 #                    λc     ::Float64,
 #                    mc     ::Float64,
 #                    th     ::Float64,
-#                    crown  ::Int64,
+#                    surv   ::Int64,
 #                    μ_prior::NTuple{2,Float64},
 #                    μ_rdist::NTuple{2,Float64},
 #                    pow    ::Float64)
 
 #   μp  = mulupt(μc, μtn)::Float64
-#   mp  = m_surv_cbd(th, λc, μp, 5_000, crown)
+#   mp  = m_surv_cbd(th, λc, μp, 5_000, surv)
 
 #   μr  = log(μp/μc)
 #   llr = ne * μr + L * (μc - μp) + log(mp/mc)

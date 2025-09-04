@@ -13,14 +13,14 @@ Created 05 11 2020
 
 
 """
-    make_Ξ(idf::Vector{iBffs}, ::Type{sTpb})
+    make_Ξ(idf::Vector{iBffs}, ::Type{sTb})
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, ::Type{sTpb})
-  Ξ = sTpb[]
+function make_Ξ(idf::Vector{iBffs}, ::Type{sTb})
+  Ξ = sTb[]
   for bi in idf
-    push!(Ξ, sTpb(e(bi), true))
+    push!(Ξ, sTb(e(bi), true))
   end
   return Ξ
 end
@@ -140,14 +140,14 @@ function _make_Ξ!(Ξ   ::Vector{T},
       nts  -= 1
     end
 
-    lλv = bm(lλ0,   α, σλ, δt, fdti, srδt, nts)
+    lλv = bm(lλ0, α, σλ, δt, fdti, srδt, nts)
   end
 
   l = nts + 2
 
   setλt!(bi, lλv[l])
-  if T === iTpb
-    push!(Ξ, iTpb(et, δt, fdti, true, lλv))
+  if T === iTb
+    push!(Ξ, iTb(et, δt, fdti, true, lλv))
   else
     push!(Ξ, T(et, δt, fdti, false, true, lλv))
   end
@@ -1210,6 +1210,38 @@ function couple(Ξ  ::Vector{sTxs},
 
   return ξi
 end
+
+
+
+"""
+    decouple!(Ωtimes::Vector{Vector{Float64}},
+              idf   ::Vector{iBffs},
+              ix    ::Int64)
+
+Build a decoupled occurrence record from an occurrence record.
+"""
+function decouple!(Ωtimes::Vector{Vector{Float64}},
+                   ωtimes::Vector{Float64},
+                   idf   ::Vector{iBffs})
+
+  for ix in Base.OneTo(lastindex(idf))
+    bi = idf[ix]
+    tii = ti(bi)
+    tfi = tf(bi)
+    push!(Ωtimes, filter(ωtime -> tii.>ωtime, ωtimes))
+  end
+end
+
+
+
+
+"""
+    couple(Ωtimes::Vector{Vector{Float64}})
+
+Build an occurrence record from a decoupled occurrence record.
+"""
+couple(Ωtimes::Vector{Vector{Float64}}) = unique(vcat(Ωtimes...))
+
 
 
 

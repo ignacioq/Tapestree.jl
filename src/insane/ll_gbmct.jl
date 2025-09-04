@@ -32,10 +32,9 @@ function llik_gbm(Ξ   ::Vector{iTct},
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, ϵ, δt, srδt)
-      if d2(bi) > 0
-        ll += λt(bi)
+      if d2(idf[i]) > 0
+        ll += λt(Ξ[i])
       end
     end
   end
@@ -62,7 +61,6 @@ function llik_gbm(tree::iTct,
                   ϵ   ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
-
   if istip(tree)
     ll_gbm_b_ϵ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt, false, isextinct(tree))
   else
@@ -124,12 +122,12 @@ function ll_gbm_b_ϵ(lλv ::Array{Float64,1},
     ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
            fdt*exp(0.5*(lλvi + lλvi1))*(1.0 + ϵ)
   end
+
   # if speciation
   if λev
     ll += lλvi1
-  end
   # if extinction
-  if μev
+  elseif μev
     ll += lλvi1 + log(ϵ)
   end
 

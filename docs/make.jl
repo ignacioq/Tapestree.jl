@@ -19,6 +19,7 @@ makedocs(
                         "Birth-death diffusion" => "man/insane/bdd.md",
                         "Constant fossilized birth-death" => "man/insane/cfbd.md",
                         "Fossilized birth-death diffusion" => "man/insane/fbdd.md",
+                        "Occurrence birth-death" => "man/insane/obd.md",
                         "Diffused Brownian motion" => "man/insane/dbm.md",
                         "Processing" => "man/insane/processing.md",
                         "Plotting" => "man/insane/iplots.md"

@@ -33,10 +33,9 @@ function llik_gbm(Ξ   ::Vector{iTce},
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, μ, δt, srδt)
-      if d2(bi) > 0
-        ll += λt(bi)
+      if d2(idf[i]) > 0
+        ll += λt(Ξ[i])
       end
     end
   end
@@ -122,10 +121,11 @@ Returns the log-likelihood for a branch according to `gbmce`.
 
   # add final non-standard `δt`
   if fdt > 0.0
-    lλvi  = lλv[nI+1]
-    ll += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-          fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
+    lλvi = lλv[nI+1]
+    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+           fdt*(exp(0.5*(lλvi + lλvi1)) + μ)
   end
+
   # if speciation
   if λev
     ll += lλvi1

@@ -27,16 +27,21 @@ Predefined functions for plotting:
   `logdeath`: log speciation rates
   `turnover`: turnover
   `diversification`: net diversification
+  `trait`: trait
+  `logtrait`: log trait
+  `traitrate`: evolutionary rates for traits
+  `logtraitrate`: log evolutionary rates for traits
 """
-birth(tree::iTree)           = exp.(lλ(tree))
-death(tree::iTree)           = exp.(lμ(tree))
-logbirth(tree::iTree)        = lλ(tree)
-logdeath(tree::iTree)        = lμ(tree)
-turnover(tree::iTree)        = exp.(lμ(tree) .- lλ(tree))
-diversification(tree::iTree) = exp.(lλ(tree)) .- exp.(lμ(tree))
-trait(tree::Tx)              = xv(tree)
-evorate(tree::Tx)            = exp.(lσ2(tree))
-logevorate(tree::Tx)         = lσ2(tree)
+birth(tree::iT)           = exp.(lλ(tree))
+death(tree::iT)           = exp.(lμ(tree))
+logbirth(tree::iT)        = lλ(tree)
+logdeath(tree::iT)        = lμ(tree)
+turnover(tree::iT)        = exp.(lμ(tree) .- lλ(tree))
+diversification(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
+trait(tree::Tx)           = xv(tree)
+logtrait(tree::Tx)        = log.(xv(tree))
+traitrate(tree::Tx)       = exp.(lσ2(tree))
+logtraitrate(tree::Tx)    = lσ2(tree)
 
 
 
@@ -55,10 +60,10 @@ Tree plot
       labsize    = 8,
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (false, false, (T <: iTf)),
-      shapes     = [:circle, :circle, :square],
+      shownodes  = (false, false, T <: Union{iTf, iTpbd}),
+      shapes     = [:none, :none, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
-      shsizes    = [0.0, 0.0, 2.0],
+      shsizes    = [3.0, 3.0, 3.0],
       showda     = false,
       col_da     = ["#a9a9a9", :black]) where {T <: iTree}
 
@@ -69,7 +74,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
                    labsize    = 8,
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, T <: iTf),
+                   shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [3.0, 3.0, 3.0],
@@ -82,10 +87,11 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   nodet = Int64[]   # 0 = speciation, 1 = extinction, 2 = fossilization
   xnode = Float64[]
   ynode = Float64[]
+  zstyle = Symbol[]
 
   th  = treeheight(tree)
 
-  _rplottree!(tree, th, 0.0, x, y, z, nodet, xnode, ynode, shownodes)
+  _rplottree!(tree, th, 0.0, x, y, z, zstyle, nodet, xnode, ynode, shownodes)
 
   nts = ntips(tree)
   ntF = Float64(nts)
@@ -121,6 +127,10 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
   yticks          --> (nothing)
   yshowaxis       --> false
 
+  if typeof(tree) == iTpbd
+    linestyle     --> zstyle
+  end
+
   @series begin
     seriestype  := :path
 
@@ -154,15 +164,17 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     labels = String[]
     _tiplabels!(tree, labels)
 
+    lmx = maximum(lastindex, labels)
+
     @series begin
       seriestype         := :scatter
       primary            := false
       markercolor        := :black
       markershape        := :circle
       markersize         := 0
-      markeralpha        := fill(0.0,nts)
+      markeralpha        := fill(0.0, nts)
       series_annotations := map(x -> (x, :Helvetica, :left, labsize, :black), labels)
-      ylims             --> (-th*1.05, th*1.15)
+      ylims             --> (-th*1.05, th * (1.0 + (0.05 * Float64(lmx))))
 
       xa = fill(0.0 - 0.02*th, nts)
       ya = collect(1.0:1.0:ntF)
@@ -187,6 +199,7 @@ end
                 x    ::Array{Float64,1},
                 y    ::Array{Float64,1},
                 z    ::Array{Float64,1},
+                zstyle ::Array{Symbol,1},
                 nodet::Array{Int64,1},
                 xnode::Array{Float64,1},
                 ynode::Array{Float64,1},
@@ -201,6 +214,7 @@ function _rplottree!(tree ::T,
                      x    ::Array{Float64,1},
                      y    ::Array{Float64,1},
                      z    ::Array{Float64,1},
+                     zstyle ::Array{Symbol,1},
                      nodet::Array{Int64,1},
                      xnode::Array{Float64,1},
                      ynode::Array{Float64,1},
@@ -211,8 +225,8 @@ function _rplottree!(tree ::T,
   if def1(tree)
     if def2(tree)
 
-      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
-      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, nodet, xnode, ynode, show)
+      y1, i = _rplottree!(tree.d1, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
+      y2, i = _rplottree!(tree.d2, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
 
       yc = (y1 + y2)*0.5
 
@@ -223,6 +237,10 @@ function _rplottree!(tree ::T,
       z1 = Float64(isfix(tree.d1))
       z2 = Float64(isfix(tree.d2))
       push!(z, z1, z1, NaN, z2, z2, NaN)
+      
+      zstyle1 = ifelse(iscomplete(tree.d1), :solid, :dot)
+      zstyle2 = ifelse(iscomplete(tree.d2), :solid, :dot)
+      push!(zstyle, zstyle1, zstyle1, :solid, zstyle2, zstyle2, :solid)
 
       # nodes
       if show[1]
@@ -231,7 +249,7 @@ function _rplottree!(tree ::T,
         push!(ynode, yc)
       end
     else
-      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, nodet, xnode, ynode, show)
+      yc, i = _rplottree!(tree.d1, xe, i, x, y, z, zstyle, nodet, xnode, ynode, show)
 
       if show[3]
         push!(nodet, 3)
@@ -261,7 +279,9 @@ function _rplottree!(tree ::T,
   push!(x, xc, xe, NaN)
   push!(y, yc, yc, NaN)
   zc = Float64(isfix(tree))
-  push!(z, zc, zc, NaN)
+  push!(z, zc, zc, NaN)    
+  zstylec = ifelse(iscomplete(tree), :solid, :dot)
+  push!(zstyle, zstylec, zstylec, :solid)
 
   return yc, i
 end
@@ -322,7 +342,7 @@ Tree plot painted by function  f
       f   ::Function;
       type       = :phylogram,
       showlabels = (T <: Tlabel),
-      shownodes  = (false, false, (T <: iTf)),
+      shownodes  = (false, false, (T <: Union{iTf, iTpbd})),
       shapes     = [:circle, :circle, :square],
       colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
       shsizes    = [0.0, 0.0, 3.0],
@@ -334,7 +354,7 @@ Recipe for plotting a Type `iT`.
                    f   ::Function;
                    type       = :phylogram,
                    showlabels = (T <: Tlabel),
-                   shownodes  = (false, false, T <: iTf),
+                   shownodes  = (false, false, T <: Union{iTf, iTpbd}),
                    shapes     = [:none, :none, :square],
                    colors     = ["#BACBDB", "#DA6A00", "#4D8FC3"],
                    shsizes    = [0.0, 0.0, 3.0],
@@ -655,13 +675,13 @@ end
 
 Transform `x` and `y` cartesian coordinates into polar coordinates.
 """
-function polar_coords!(x ::Vector{Float64},
-                       y ::Vector{Float64},
-                       α ::Float64,
-                       th::Float64)
+function polar_coords!(x  ::Vector{Float64},
+                       y  ::Vector{Float64},
+                       α  ::Float64,
+                       tor::Float64)
 
   @simd for i in Base.OneTo(lastindex(x))
-    x[i]  = th - x[i]
+    x[i]  = tor - x[i]
     r     = x[i]
     a     = α * y[i]
     x[i] *= cos(a*π/180.0)
@@ -1255,6 +1275,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   # plot defaults
   legend          --> false
   xguide          --> "time"
+  xflip           --> true
   yguide          --> "N lineages"
   xflip           --> true
   seriescolor     --> :black
@@ -1318,7 +1339,7 @@ end
 Recipe for plotting lineage through time plots of type `Ltt`.
 """
 @recipe function f(nts::Vector{Ltt}, 
-                   tdt::Float64, 
+                   tdt::Float64; 
                    q0 = [0.025, 0.975],
                    q1 = [0.25,  0.75],
                    q2 = Float64[])
@@ -1442,6 +1463,7 @@ Recipe for plotting lineage through time plots of type `Ltt`.
     ts, M
   end
 end
+
 
 
 

@@ -13,59 +13,59 @@ Created 06 07 2020
 
 
 """
-    cpb_wait(λ::Float64)
+    cb_wait(λ::Float64)
 
 Sample a per-lineage waiting time for pure-birth species
 with speciation rate `λ`.
 """
-cpb_wait(λ::Float64) = rexp(λ)
+cb_wait(λ::Float64) = rexp(λ)
 
 
 
 
 """
-    sim_cpb(t::Float64, λ::Float64)
+    sim_cb(t::Float64, λ::Float64)
 
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`.
 """
-function sim_cpb(t::Float64, λ::Float64)
+function sim_cb(t::Float64, λ::Float64)
 
-  tw = cpb_wait(λ)
+  tw = cb_wait(λ)
 
   if tw > t
-    return sTpb(t)
+    return sTb(t)
   end
 
-  sTpb(sim_cpb(t - tw, λ), sim_cpb(t - tw, λ), tw, false)
+  sTb(sim_cb(t - tw, λ), sim_cb(t - tw, λ), tw, false)
 end
 
 
 
 
 """
-    sim_cpb(t::Float64, λ::Float64, na::Int64)
+    sim_cb(t::Float64, λ::Float64, na::Int64)
 
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`.
 """
-function sim_cpb(t::Float64, λ::Float64, na::Int64)
+function sim_cb(t::Float64, λ::Float64, na::Int64)
 
-  tw = cpb_wait(λ)
+  tw = cb_wait(λ)
 
   if tw > t
     na += 1
-    return sTpb(t), na
+    return sTb(t), na
   end
-  d1, na = sim_cpb(t - tw, λ, na)
-  d2, na = sim_cpb(t - tw, λ, na)
+  d1, na = sim_cb(t - tw, λ, na)
+  d2, na = sim_cb(t - tw, λ, na)
 
-  sTpb(d1, d2, tw, false), na
+  sTb(d1, d2, tw, false), na
 end
 
 
 
 
 """
-    _sim_cpb_t(t   ::Float64,
+    _sim_cb_t(t   ::Float64,
                λ   ::Float64,
                lr  ::Float64,
                lU  ::Float64,
@@ -77,7 +77,7 @@ end
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`
 for terminal branches.
 """
-function _sim_cpb_t(t   ::Float64,
+function _sim_cb_t(t   ::Float64,
                     λ   ::Float64,
                     lr  ::Float64,
                     lU  ::Float64,
@@ -88,7 +88,7 @@ function _sim_cpb_t(t   ::Float64,
 
   if isfinite(lr) && nn < nlim
 
-    tw = cpb_wait(λ)
+    tw = cb_wait(λ)
 
     if tw > t
       na += 1
@@ -97,27 +97,27 @@ function _sim_cpb_t(t   ::Float64,
         nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr < lr && lU >= nlr
-        return sTpb(), na, nn, NaN
+        return sTb(), na, nn, NaN
       else
-        return sTpb(t, false), na, nn, nlr
+        return sTb(t, false), na, nn, nlr
       end
     else
       nn += 1
-      d1, na, nn, lr = _sim_cpb_t(t - tw, λ, lr, lU, iρi, na, nn, nlim)
-      d2, na, nn, lr = _sim_cpb_t(t - tw, λ, lr, lU, iρi, na, nn, nlim)
+      d1, na, nn, lr = _sim_cb_t(t - tw, λ, lr, lU, iρi, na, nn, nlim)
+      d2, na, nn, lr = _sim_cb_t(t - tw, λ, lr, lU, iρi, na, nn, nlim)
 
-      return sTpb(d1, d2, tw, false), na, nn, lr
+      return sTb(d1, d2, tw, false), na, nn, lr
     end
   end
 
-  return sTpb(), na, nn, NaN
+  return sTb(), na, nn, NaN
 end
 
 
 
 
 """
-    _sim_cpb_i(t   ::Float64,
+    _sim_cb_i(t   ::Float64,
                λ   ::Float64,
                nn ::Int64,
                nlim::Int64,
@@ -126,34 +126,34 @@ end
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`
 for interal branches.
 """
-function _sim_cpb_i(t   ::Float64,
+function _sim_cb_i(t   ::Float64,
                     λ   ::Float64,
                     nn ::Int64,
                     nlim::Int64)
 
   if nn < nlim
 
-    tw = cpb_wait(λ)
+    tw = cb_wait(λ)
 
     if tw > t
-      return sTpb(t, false), nn
+      return sTb(t, false), nn
     else
       nn += 1
-      d1, nn = _sim_cpb_i(t - tw, λ, nn, nlim)
-      d2, nn = _sim_cpb_i(t - tw, λ, nn, nlim)
+      d1, nn = _sim_cb_i(t - tw, λ, nn, nlim)
+      d2, nn = _sim_cb_i(t - tw, λ, nn, nlim)
 
-      return sTpb(d1, d2, tw, false), nn
+      return sTb(d1, d2, tw, false), nn
     end
   end
 
-  return sTpb(), nn
+  return sTb(), nn
 end
 
 
 
 
 """
-    _sim_cpb_it(t   ::Float64,
+    _sim_cb_it(t   ::Float64,
                 λ   ::Float64,
                 lr  ::Float64,
                 lU  ::Float64,
@@ -164,7 +164,7 @@ end
 Simulate a constant pure-birth `iTree` of height `t` with speciation rate `λ`
 for continuing internal branches.
 """
-function _sim_cpb_it(t   ::Float64,
+function _sim_cb_it(t   ::Float64,
                      λ   ::Float64,
                      lr  ::Float64,
                      lU  ::Float64,
@@ -174,21 +174,21 @@ function _sim_cpb_it(t   ::Float64,
 
   if lU < lr && nn < nlim
 
-    tw = cpb_wait(λ)
+    tw = cb_wait(λ)
 
     if tw > t
       lr += log(iρi)
-      return sTpb(t, false), nn, lr
+      return sTb(t, false), nn, lr
     else
       nn += 1
-      d1, nn, lr = _sim_cpb_it(t - tw, λ, lr, lU, iρi, nn, nlim)
-      d2, nn, lr = _sim_cpb_it(t - tw, λ, lr, lU, iρi, nn, nlim)
+      d1, nn, lr = _sim_cb_it(t - tw, λ, lr, lU, iρi, nn, nlim)
+      d2, nn, lr = _sim_cb_it(t - tw, λ, lr, lU, iρi, nn, nlim)
 
-      return sTpb(d1, d2, tw, false), nn, lr
+      return sTb(d1, d2, tw, false), nn, lr
     end
   end
 
-  return sTpb(), nn, NaN
+  return sTb(), nn, NaN
 end
 
 

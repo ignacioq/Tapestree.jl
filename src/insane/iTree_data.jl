@@ -38,7 +38,7 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 Return initial trait value.
 """
 xi(tree::T) where {T <: Tpe} = getproperty(tree, :xi)
-xi(tree::T) where {T <: Tx} = getproperty(tree, :xi)
+xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
 
 
 
@@ -99,9 +99,9 @@ Return if is an extinction node.
 """
 isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 isextinct(tree::Tlabel) = false
-isextinct(tree::sTpb)   = false
-isextinct(tree::cTpb)   = false
-isextinct(tree::iTpb)   = false
+isextinct(tree::sTb)    = false
+isextinct(tree::cTb)   = false
+isextinct(tree::iTb)    = false
 isextinct(tree::sTxs)   = false
 
 
@@ -159,16 +159,17 @@ Return if is a fossil tip node.
 """
 isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
 isfossil(tree::sT_label) = false
-isfossil(tree::sTpb)     = false
+isfossil(tree::sTb)      = false
 isfossil(tree::sTbd)     = false
-isfossil(tree::iTpb)     = false
-isfossil(tree::cTpb)     = false
+isfossil(tree::cTb)     = false
 isfossil(tree::cTce)     = false
 isfossil(tree::cTct)     = false
 isfossil(tree::cTbd)     = false
+isfossil(tree::iTb)      = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
+isfossil(tree::iTpbd)    = false
 isfossil(tree::sTpe)     = false
 isfossil(tree::sTxs)     = false
 
@@ -176,7 +177,7 @@ isfossil(tree::sTxs)     = false
 
 
 """
-    isinternalfossiltip(tree::T, f::Bool) where {T <: iTree}
+    isinternalfossil(tree::T) where {T <: iTree}
 
 Return if the fix has a sampled ancestor, i.e. a fossil internal node.
 """
@@ -210,6 +211,26 @@ end
 
 
 """
+    iscomplete(tree::T) where {T <: iTree}
+
+Return if is a complete lineage (versus incipient lineage) in a protracted model.
+"""
+iscomplete(tree::T) where {T <: iTree} = getproperty(tree, :ic)
+iscomplete(tree::sT_label)  = true
+iscomplete(tree::sTf_label) = true
+iscomplete(tree::sTb)       = true
+iscomplete(tree::sTbd)      = true
+iscomplete(tree::sTfbd)     = true
+iscomplete(tree::iTb)       = true
+iscomplete(tree::iTce)      = true
+iscomplete(tree::iTct)      = true
+iscomplete(tree::iTbd)      = true
+iscomplete(tree::iTfbd)     = true
+
+
+
+
+"""
     e(tree::T) where {T <: iTree}
 
 Return edge length.
@@ -226,9 +247,9 @@ e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 Return label.
 """
+label(tree::sT_label)             = getproperty(tree, :l)
+label(tree::sTf_label)            = getproperty(tree, :l)
 label(tree::T) where {T <: iTree} = nothing
-label(tree::sT_label)  = getproperty(tree, :l)
-label(tree::sTf_label) = getproperty(tree, :l)
 
 
 
@@ -880,11 +901,11 @@ end
 
 
 """
-    _treelength(tree::T, l::Float64) where {T <: iTf}
+    _treelength(tree::T, l::Float64) where {T <: Union{iTf, iTpbd}}
 
 Return the branch length sum of `tree`, initialized at `l`.
 """
-function _treelength(tree::T, l::Float64) where {T <: iTf}
+function _treelength(tree::T, l::Float64) where {T <: Union{iTf, iTpbd}}
   l += e(tree)
 
   if def1(tree)
@@ -901,11 +922,11 @@ end
 
 
 """
-    treelength(tree::T, ets::Vector{Float64})  where {T <: iTf}
+    treelength(tree::T, ets::Vector{Float64})  where {T <: Union{iTf, iTpbd}}
 
 Return the branch length sum of `tree` at different epochs, initialized at `l`.
 """
-function treelength(tree::T, ets::Vector{Float64}) where {T <: iTf}
+function treelength(tree::T, ets::Vector{Float64}) where {T <: Union{iTf, iTpbd}}
   nep = lastindex(ets) + 1
   ls  = zeros(nep)
   _treelength!(tree, treeheight(tree), ls, ets, 1, nep)
@@ -922,7 +943,7 @@ end
                 ls  ::Vector{Float64},
                 ets ::Vector{Float64},
                 ix  ::Int64,
-                nep ::Int64) where {T <: iTf}
+                nep ::Int64) where {T <: Union{iTf, iTpbd}}
 
 Return the branch length sum of `tree` at different epochs recursively.
 """
@@ -931,7 +952,7 @@ function _treelength!(tree::T,
                       ls  ::Vector{Float64},
                       ets ::Vector{Float64},
                       ix  ::Int64,
-                      nep ::Int64) where {T <: iTf}
+                      nep ::Int64) where {T <: Union{iTf, iTpbd}}
   @inbounds begin
 
     ei  = e(tree)
@@ -1030,11 +1051,11 @@ end
 
 
 """
-    treeheight(tree::T) where {T <: iTf}
+    treeheight(tree::T) where {T <: Union{iTf, iTpbd}}
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::T) where {T <: iTf}
+function treeheight(tree::T) where {T <: Union{iTf, iTpbd}}
 
   if def2(tree)
     th1 = treeheight(tree.d1)
@@ -1069,11 +1090,11 @@ end
 
 
 """
-    treeheight(tree::T, nd::Int64) where {T <: iTf}
+    treeheight(tree::T, nd::Int64) where {T <: Union{iTf, iTpbd}}
 
 Return the tree height of `tree`.
 """
-function treeheight(tree::T, nd::Int64) where {T <: iTf}
+function treeheight(tree::T, nd::Int64) where {T <: Union{iTf, iTpbd}}
 
   if def2(tree)
     th1 = treeheight(tree.d1)
@@ -1118,11 +1139,11 @@ end
 
 
 """
-    _nnodes(tree::T, n::Int64) where {T <: iTf}
+    _nnodes(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of descendant nodes for `tree`, initialized at `n`.
 """
-function _nnodes(tree::T, n::Int64) where {T <: iTf}
+function _nnodes(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
   n += 1
 
   if def1(tree)
@@ -1214,11 +1235,11 @@ end
 
 
 """
-    _nnodesinternal(tree::T, n::Int64) where {T <: iTf}
+    _nnodesinternal(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesinternal(tree::T, n::Int64) where {T <: iTf}
+function _nnodesinternal(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
   if def1(tree)
     n += 1
@@ -1255,22 +1276,22 @@ end
 
 """
     nnodesbifurcation(tree::T) where {T <: iTree}
-    nnodesbifurcation(tree::T) where {T <: iTf}
+    nnodesbifurcation(tree::T) where {T <: Union{iTf, iTpbd}}
 
 Return the number of bifurcation nodes for `tree`.
 """
 nnodesbifurcation(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
-nnodesbifurcation(tree::T) where {T <: iTf}   = _nnodesbifurcation(tree, 0)
+nnodesbifurcation(tree::T) where {T <: Union{iTf, iTpbd}}   = _nnodesbifurcation(tree, 0)
 
 
 
 
 """
-    _nnodesbifurcation(tree::T, n::Int64) where {T <: iTf}
+    _nnodesbifurcation(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesbifurcation(tree::T, n::Int64) where {T <: iTf}
+function _nnodesbifurcation(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
   if def1(tree)
     n = _nnodesbifurcation(tree.d1, n)
@@ -1297,11 +1318,32 @@ ntips(tree::T) where {T <: iTree} = _ntips(tree, 0)
 
 
 """
-    _ntips(tree::T, n::Int64) where {T <: iTf}
+
+    _ntips(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of tip nodes for `tree`, initialized at `n`.
 """
 function _ntips(tree::T, n::Int64) where {T <: iTree}
+
+  if def1(tree)
+    n = _ntips(tree.d1, n)
+    n = _ntips(tree.d2, n)
+  else
+    n += 1
+  end
+
+  return n
+end
+
+
+
+
+"""
+    _ntips(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
+
+Return the number of tip nodes for `tree`, initialized at `n`.
+"""
+function _ntips(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
   if def1(tree)
     n = _ntips(tree.d1, n)
@@ -1329,7 +1371,7 @@ ntipsalive(tree::T) where {T <: iTree} = _ntipsalive(tree, 0)
 
 
 """
-    _ntipsalive(tree::T, n::Int64) where {T <: iTf}
+    _ntipsalive(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of alive nodes for `tree`, initialized at `n`.
 """
@@ -1351,6 +1393,38 @@ end
 
 
 """
+    ntipsalivespecies(tree::iTpbd)
+
+Return the number of alive lineages of the same species for `tree`.
+"""
+ntipsalivespecies(tree::iTpbd) = _ntipsalivespecies(tree, 0)
+
+
+
+
+"""
+    _ntipsalivespecies(tree::iTpbd, n::Int64)
+
+Return the number of alive lineages of the same species for `tree`, initialized at `n`.
+"""
+function _ntipsalivespecies(tree::iTpbd, n::Int64)
+
+  if def1(tree)
+    if def2(tree)
+      n = _ntipsalivespecies(tree.d1, n)
+      n = _ntipsalivespecies(tree.d2, n)
+    end
+  elseif isalive(tree)
+    n += 1
+  end
+
+  return n
+end
+
+
+
+
+"""
     ntipsextinct(tree::T) where {T <: iTree}
 
 Return the number of extinct nodes for `tree`.
@@ -1361,7 +1435,7 @@ ntipsextinct(tree::T) where {T <: iTree} = _ntipsextinct(tree, 0)
 
 
 """
-    _ntipsextinct(tree::T, n::Int64) where {T <: iTf}
+    _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of extinct nodes for `tree`, initialized at `n`.
 """
@@ -1485,6 +1559,38 @@ end
 
 
 """
+    ntipsgood(tree::T) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`.
+"""
+ntipsgood(tree::T) where {T <: iTree} = _ntipsgood(tree, 0)
+
+
+
+
+"""
+    _ntipsgood(tree::T, n::Int64) where {T <: iTree}
+
+Return the number of fossil nodes for `tree`, initialized at `n`.
+"""
+function _ntipsgood(tree::T, n::Int64) where {T <: iTree}
+
+  if def1(tree)
+    n = _ntipsgood(tree.d1, n)
+    if def2(tree)
+      n = _ntipsgood(tree.d2, n)
+    end
+  elseif iscomplete(tree)
+    n += 1
+  end
+
+  return n
+end
+
+
+
+
+"""
     treelength_ns(tree::T,
                   l   ::Float64,
                   n   ::Float64) where {T <: iTree}
@@ -1536,9 +1642,19 @@ end
 
 
 """
+    lb(tree::iTpbd)
+
+Return the bifurcation rate (for incipient lineages in a protracted model).
+"""
+lb(tree::iTpbd) = getproperty(tree, :lb)
+
+
+
+
+"""
     lλ(tree::T) where {T <: iT}
 
-Return speciation.
+Return the speciation rate (speciation completion in a protracted model).
 """
 lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
 
@@ -1549,9 +1665,43 @@ lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
     lμ(tree::iTbdU)
     lμ(tree::cTbdU)
 
-Return pendant edge.
+Return the extinction rate.
 """
 lμ(tree::T) where {T <: iTree} = getproperty(tree,:lμ)
+
+
+
+
+"""
+    tip_rates(tree::T, f::Function) where {T <: iT}
+
+Return the tip rates.
+"""
+function tip_rates(tree::T, f::Function) where {T <: iT}
+  rates = Float64[]
+  return _tip_rates!(tree::T, f, rates)
+end
+
+
+
+
+"""
+    _tip_rates!(tree::T, f::Function, rates::Array{Float64,1}) where {T <: iT}
+
+Return the tip rates.
+"""
+function _tip_rates!(tree::T, f::Function, rates::Array{Float64,1}) where {T <: iT}
+  if def1(tree)
+    _tip_rates!(tree.d1::T, f, rates)
+    if def2(tree)
+      _tip_rates!(tree.d2::T, f, rates)
+    end
+  else
+    push!(rates, last(f(tree::T)))
+  end
+
+  return rates
+end
 
 
 
@@ -1903,6 +2053,7 @@ end
 
 
 
+
 """
     _eventimes!(tree::T,
                 t   ::Float64,
@@ -1935,14 +2086,14 @@ end
     _eventimes!(tree::T,
                 t   ::Float64,
                 se  ::Array{Float64,1},
-                ee  ::Array{Float64,1}) where {T <: iTf}
+                ee  ::Array{Float64,1}) where {T <: Union{iTf, iTpbd}}
 
 Recursive structure that returns speciation and extinction event times.
 """
 function _eventimes!(tree::T,
                      t   ::Float64,
                      se  ::Array{Float64,1},
-                     ee  ::Array{Float64,1}) where {T <: iTf}
+                     ee  ::Array{Float64,1}) where {T <: Union{iTf, iTpbd}}
 
   et = e(tree)
   if isextinct(tree)
@@ -1997,7 +2148,7 @@ Returns number of species through time.
 @inline function ltt(tree::T) where {T <: iTree}
 
   # speciation and extinction events
-  se, ee = eventimes(tree)
+  se, ee = eventimes(tree::T)
 
   # which ones are extinctions when appended
   ii = lastindex(se)
@@ -2020,11 +2171,75 @@ Returns number of species through time.
 
   sort!(se, rev = true)
   # if crown or stem
-  pushfirst!(se, se[1] + _time1_λ!(tree, 0.0))
+  if !isempty(se)
+    pushfirst!(se, se[1] + _time1_λ!(tree, 0.0))
+  else
+    pushfirst!(se, treeheight(tree))
+  end
 
   # last no events if alive
   push!(n,  n[end])
   push!(se, 0.0)
+
+  return Ltt(n, se)
+end
+
+
+
+
+"""
+    ltt_rm_artefacts(tree::T) where {T <: iTree}
+
+Returns number of species through time, without simultaneous events.
+"""
+@inline function ltt_rm_artefacts(tree::T) where {T <: iTree}
+
+  # speciation and extinction events
+  se, ee = eventimes(tree::T)
+
+  # remove pairs of simultaneous speciation and extinction events
+  for elem in [ts for ts in se if any(ts .≈ ee)]
+    for _ in 1:min(count(≈(elem), se), count(≈(elem), ee))
+      deleteat!(se, findfirst(≈(elem), se))
+      deleteat!(ee, findfirst(≈(elem), ee))
+    end
+  end
+
+  # which ones are extinctions when appended
+  ii = lastindex(se)
+
+  append!(se, ee)
+  lse = lastindex(se)
+
+  sp = sortperm(se, rev = true)
+  n  = ones(Int64, lse+1)
+
+  @inbounds begin
+    @simd for i in Base.OneTo(lse)
+      if sp[i] > ii
+        n[i+1] = n[i] - 1
+      else
+        n[i+1] = n[i] + 1
+      end
+    end
+  end
+
+  sort!(se, rev = true)
+  pushfirst!(se, treeheight(tree))
+
+  # last no events
+  push!(n,  n[end])
+  push!(se, 0.0)
+
+  i = 2
+  while i < lastindex(se)
+    if isapprox(se[i], se[i+1], atol=1e-12)
+      deleteat!(n, i)
+      deleteat!(se, i)
+    else
+      i += 1
+    end
+  end
 
   return Ltt(n, se)
 end
@@ -2042,8 +2257,37 @@ function ltt(trees::Vector{T}) where {T <: iTree}
   for t in trees
     push!(ltv, ltt(t))
   end
-
   return ltv
+end
+
+
+
+
+"""
+    ltt(tree::T, tor::Float64) where {T <: iTree}
+
+Returns number of species through time for a tree vector.
+"""
+function ltt(tree::T, tor::Float64) where {T <: iTree}
+  LTT = ltt(tree)
+  LTT.t .+= tor-LTT.t[1]
+  LTT.t[end] = max(LTT.t[end], 0.0)
+  return LTT
+end
+
+
+
+
+"""
+    ltt_rm_artefacts(tree::T, tor::Float64) where {T <: iTree}
+
+Returns number of species through time, without simultaneous events, for a tree vector.
+"""
+function ltt_rm_artefacts(tree::T, tor::Float64) where {T <: iTree}
+  LTT = ltt_rm_artefacts(tree)
+  LTT.t .+= tor-LTT.t[1]
+  LTT.t[end] = max(LTT.t[end], 0.0)
+  return LTT
 end
 
 
@@ -2415,47 +2659,6 @@ function fixed_xt(tree::T)  where {T <: Tx}
   return xt
 end
 
-
-
-
-"""
-    fossil_xt(tree::T)
-
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function fossil_xt(tree::sTfbdx)
-
-  if isfossil(tree)
-    return xf(tree)
-  elseif isfix(tree.d1)
-    xt = fossil_xt(tree.d1)
-  else
-    xt = fossil_xt(tree.d2)
-  end
-
-  return xt
-end
-
-
-
-
-"""
-    fossil_xt(tree::T)
-
-Make joint proposal to match simulation with tip fixed `x` value.
-"""
-function fossil_xt(tree::iTfbdx)
-
-  if isfossil(tree)
-    return xv(tree)[end]
-  elseif isfix(tree.d1)
-    xt = fossil_xt(tree.d1)
-  else
-    xt = fossil_xt(tree.d2)
-  end
-
-  return xt
-end
 
 
 

@@ -604,6 +604,3 @@ function update_triad!(tree::T,
   return llc, dλ, ssλ
 end
 
-
-
-

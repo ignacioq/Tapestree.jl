@@ -191,7 +191,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   # delta change, sum squares, path length and integrated rate
   ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for i in Base.OneTo(nburn)
 
@@ -550,7 +550,7 @@ function update_σ!(σλc     ::Float64,
   σλ_p2 = σλ_prior[2]
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
+  σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
   σλp  = sqrt(σλp2)
 
   mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, surv)
@@ -602,7 +602,7 @@ function update_μ!(μc     ::Float64,
                    srδt   ::Float64,
                    μ_prior::NTuple{2,Float64})
 
-  μp  = randgamma(μ_prior[1] + ne, μ_prior[2] + L)
+  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
 
   mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, surv)
   llr = log(mp/mc)
@@ -1070,8 +1070,6 @@ function tip_sims!(tree::iTce,
 
   return tree, na, nn, NaN
 end
-
-
 
 
 

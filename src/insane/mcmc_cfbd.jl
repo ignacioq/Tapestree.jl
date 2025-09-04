@@ -15,8 +15,8 @@ Created 07 10 2021
 
 """
     insane_cfbd(tree    ::sTf_label;
-                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
+                μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                 ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                 ψ_epoch ::Vector{Float64}       = Float64[],
                 f_epoch ::Vector{Int64}         = Int64[0],
@@ -38,8 +38,8 @@ Created 07 10 2021
 Run insane for constant fossilized birth-death.
 """
 function insane_cfbd(tree    ::sTf_label;
-                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
+                     μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_epoch ::Vector{Float64}       = Float64[],
                      f_epoch ::Vector{Int64}         = Int64[0],
@@ -97,15 +97,15 @@ function insane_cfbd(tree    ::sTf_label;
   if isnan(λi) || isnan(μi) || isnan(ψi)
     # if only one tip
     if isone(n)
-      λc = prod(λ_prior)
-      μc = prod(μ_prior)
+      λc = λ_prior[1]/λ_prior[2]
+      μc = μ_prior[1]/μ_prior[2]
     else
       λc, μc = moments(Float64(n), th, ϵi)
     end
     # if no sampled fossil
     nf = nfossils(tree) + sum(f_epoch)
     if iszero(nf)
-      ψc = prod(ψ_prior)
+      ψc = ψ_prior[1]/ψ_prior[2]
     else
       ψc = Float64(nf)/treelength(tree)
     end
@@ -238,7 +238,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
         logdgamma(μc,      μ_prior[1], μ_prior[2])         +
         sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -924,7 +924,7 @@ function update_ψ!(llc    ::Float64,
   @inbounds begin
     for i in Base.OneTo(lastindex(ψc))
       ψci   = ψc[i]
-      ψp    = randgamma(ψ_prior[1] + nf[i], ψ_prior[2] + L[i])
+      ψp    = rand(Gamma(ψ_prior[1] + nf[i], 1.0/(ψ_prior[2] + L[i])))
       llc  += nf[i] * log(ψp/ψci) + L[i] * (ψci - ψp)
       prc  += llrdgamma(ψp, ψci, ψ_prior[1], ψ_prior[2])
       ψc[i] = ψp
@@ -954,7 +954,7 @@ function update_ψ!(llc    ::Float64,
                    L      ::Float64,
                    ψ_prior::NTuple{2,Float64})
 
-  ψp  = randgamma(ψ_prior[1] + nf, ψ_prior[2] + L)
+  ψp  = rand(Gamma(ψ_prior[1] + nf, 1.0/(ψ_prior[2] + L)))
 
   llc += nf * log(ψp/ψc) + L * (ψc - ψp)
   prc += llrdgamma(ψp, ψc, ψ_prior[1], ψ_prior[2])

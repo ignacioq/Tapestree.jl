@@ -1,6 +1,7 @@
 using Test
 using Tapestree
 using Random
+using DelimitedFiles
 
 # read tree
 tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_5.tre"))
@@ -11,11 +12,11 @@ tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_5.tr
 Constant Pure-birth
 =# 
 # simulate 
-tr = sim_cpb(1.0, 0.5)
-@test isa(tr, sTpb)
+tr = sim_cb(1.0, 0.5)
+@test isa(tr, sTb)
 
 # perform inference
-r, tv = insane_cpb(tree,
+r, tv = insane_cb(tree,
                    nburn  = 2,
                    niter  = 5,
                    nthin  = 5,
@@ -23,7 +24,10 @@ r, tv = insane_cpb(tree,
                    ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
-@test isa(tv, Vector{sTpb})
+@test isa(tv, Vector{sTb})
+
+tv = iread(homedir()*"/test.txt")
+@test isa(tv, Vector{sTb})
 
 
 #=
@@ -42,6 +46,8 @@ r, tv = insane_cbd(tree,
                    ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
+@test isa(tv, Vector{sTbd})
+tv = iread(homedir()*"/test.txt")
 @test isa(tv, Vector{sTbd})
 
 
@@ -68,7 +74,38 @@ r, tv = insane_cfbd(ftree,
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{sTfbd})
+tv = iread(homedir()*"/test.txt")
+@test isa(tv, Vector{sTfbd})
 
+
+#=
+Constant Occurrence Birth-Death
+=# 
+# read tree
+ftree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_6.tre"), true)
+ωtimes = readdlm(joinpath(dirname(pathof(Tapestree)), "..", "data", "fossil_occurrences.csv"), ';')[:]
+@test isa(ftree, sTf_label)
+@test isa(ωtimes, Vector{Float64})
+@test ntips(ftree) === 8
+@test length(ωtimes) === 50
+
+# simulate 
+tr, occ = sim_cobd(1.0, 1.0, 0.3, 0.3, 5.0)
+@test isa(tr, sTfbd)
+@test isa(occ, Vector{Float64})
+
+# perform inference
+r, tv = insane_cobd(ftree,
+                    ωtimes,
+                    nburn   = 2,
+                    niter   = 5,
+                    nthin   = 5,
+                    nflushθ = 5,
+                    nflushΞ = 5,
+                    ofile   = homedir()*"/test")
+
+@test isa(r, Matrix{Float64})
+@test isa(tv, Vector{sTfbd})
 
 
 #=
@@ -77,17 +114,17 @@ Birth-Death Diffusion: Pure-birth
 
 # simulate based on number of species
 Random.seed!(7)
-tr = sim_gbmpb(20, λ0 = .5, α = 0.0, σλ = 0.1)
-@test isa(tr, iTpb)
+tr = sim_gbmb(20, λ0 = .5, α = 0.0, σλ = 0.1)
+@test isa(tr, iTb)
 @test ntips(tr) === 20
 
 # simulate based on time
 Random.seed!()
-tr = sim_gbmpb(10.0, λ0 = .5, α = 0.0, σλ = 0.1)
-@test isa(tr, iTpb)
+tr = sim_gbmb(10.0, λ0 = .5, α = 0.0, σλ = 0.1)
+@test isa(tr, iTb)
 
 # perform inference
-r, tv = insane_gbmpb(tree,
+r, tv = insane_gbmb(tree,
                      nburn  = 2,
                      niter  = 5,
                      nthin  = 5,
@@ -95,7 +132,7 @@ r, tv = insane_gbmpb(tree,
                      ofile  = homedir()*"/test")
 
 @test isa(r, Matrix{Float64})
-@test isa(tv, Vector{iTpb})
+@test isa(tv, Vector{iTb})
 
 
 
@@ -179,6 +216,35 @@ r, tv = insane_gbmfbd(ftree,
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{iTfbd})
+
+
+
+#=
+Occurrence Birth-Death Diffusion
+=# 
+
+# simulate based on time
+tr, occ = sim_gbmobd(10.0, λ0 = .5, μ0 = .2, αλ = 0.0, αμ = 0.0, σλ = 0.1, σμ = 0.1)
+@test isa(tr, iTfbd)
+@test isa(occ, Vector{Float64})
+
+# perform inference
+r, tv = insane_gbmobd(ftree,
+                      ωtimes,
+                      nburn   = 2,
+                      niter   = 5,
+                      nthin   = 5,
+                      nflushθ = 5,
+                      nflushΞ = 5,
+                      ofile  = homedir()*"/test")
+
+@test isa(r, Matrix{Float64})
+@test isa(tv, Vector{iTfbd})
+
+
+#=
+Punk-eeq
+=# 
 
 
 

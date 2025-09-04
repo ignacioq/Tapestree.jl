@@ -13,41 +13,41 @@ Created 14 09 2020
 
 
 """
-    insane_gbmpb(tree    ::sT_label;
-                 λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                 α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
-                 σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                 niter   ::Int64                 = 1_000,
-                 nthin   ::Int64                 = 10,
-                 nburn   ::Int64                 = 200,
-                 nflush  ::Int64                 = nthin,
-                 ofile   ::String                = string(homedir(), "/ipb"),
-                 αi      ::Float64               = 0.0,
-                 σλi     ::Float64               = 0.1,
-                 pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
-                 δt      ::Float64               = 1e-3,
-                 prints  ::Int64                 = 5,
-                 stn     ::Float64               = 0.5,
-                 tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+    insane_gbmb(tree    ::sT_label;
+                λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                niter   ::Int64                 = 1_000,
+                nthin   ::Int64                 = 10,
+                nburn   ::Int64                 = 200,
+                nflush  ::Int64                 = nthin,
+                ofile   ::String                = string(homedir(), "/ib"),
+                αi      ::Float64               = 0.0,
+                σλi     ::Float64               = 0.1,
+                pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
+                δt      ::Float64               = 1e-3,
+                prints  ::Int64                 = 5,
+                stn     ::Float64               = 0.5,
+                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for `pbd`.
+Run insane for pure `b`.
 """
-function insane_gbmpb(tree    ::sT_label;
-                      λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                      α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
-                      σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                      niter   ::Int64                 = 1_000,
-                      nthin   ::Int64                 = 10,
-                      nburn   ::Int64                 = 200,
-                      nflush  ::Int64                 = nthin,
-                      ofile   ::String                = string(homedir(), "/ipb"),
-                      αi      ::Float64               = 0.0,
-                      σλi     ::Float64               = 0.1,
-                      pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
-                      δt      ::Float64               = 1e-3,
-                      prints  ::Int64                 = 5,
-                      stn     ::Float64               = 0.5,
-                      tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+function insane_gbmb(tree    ::sT_label;
+                     λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                     α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                     σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                     niter   ::Int64                 = 1_000,
+                     nthin   ::Int64                 = 10,
+                     nburn   ::Int64                 = 200,
+                     nflush  ::Int64                 = nthin,
+                     ofile   ::String                = string(homedir(), "/ib"),
+                     αi      ::Float64               = 0.0,
+                     σλi     ::Float64               = 0.1,
+                     pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
+                     δt      ::Float64               = 1e-3,
+                     prints  ::Int64                 = 5,
+                     stn     ::Float64               = 0.5,
+                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
   th   = treeheight(tree)
@@ -68,7 +68,7 @@ function insane_gbmpb(tree    ::sT_label;
   idf = make_idf(tree, tρ, Inf)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, λmle_cpb(tree), αi, σλi, δt, srδt, iTpb)
+  Ξ = make_Ξ(idf, λmle_cb(tree), αi, σλi, δt, srδt, iTb)
 
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
@@ -84,12 +84,12 @@ function insane_gbmpb(tree    ::sT_label;
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, ns, stn =
-    mcmc_burn_gbmpb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
+    mcmc_burn_gbmb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
       δt, srδt, inodes, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_gbmpb(Ξ, idf, llc, prc, αc, σλc, ns, stn, λ0_prior, α_prior, σλ_prior,
+    mcmc_gbmb(Ξ, idf, llc, prc, αc, σλc, ns, stn, λ0_prior, α_prior, σλ_prior,
       δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -98,7 +98,7 @@ end
 
 
 """
-    mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
+    mcmc_burn_gbmb( Ξ       ::Vector{iTb},
                     idf     ::Vector{iBffs},
                     λ0_prior::NTuple{2,Float64},
                     α_prior ::NTuple{2,Float64},
@@ -113,9 +113,9 @@ end
                     pup     ::Array{Int64,1},
                     prints  ::Int64)
 
-MCMC burn-in chain for `pbd`.
+MCMC burn-in chain for pure `b`.
 """
-function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
+function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
                          idf     ::Vector{iBffs},
                          λ0_prior::NTuple{2,Float64},
                          α_prior ::NTuple{2,Float64},
@@ -151,7 +151,7 @@ function mcmc_burn_gbmpb(Ξ       ::Vector{iTpb},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -219,7 +219,7 @@ end
 
 
 """
-    mcmc_gbmpb(Ξ       ::Vector{iTpb},
+    mcmc_gbmb( Ξ       ::Vector{iTb},
                idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
@@ -241,7 +241,7 @@ end
 
 MCMC chain for pure-birth diffusion.
 """
-function mcmc_gbmpb(Ξ       ::Vector{iTpb},
+function mcmc_gbmb( Ξ       ::Vector{iTb},
                     idf     ::Vector{iBffs},
                     llc     ::Float64,
                     prc     ::Float64,
@@ -276,7 +276,7 @@ function mcmc_gbmpb(Ξ       ::Vector{iTpb},
   ddλ, ssλ, nλ, irλ = 
     _ss_ir_dd(Ξ, lλ, αc)
 
-  treev = iTpb[]  # make Ξ vector
+  treev = iTb[]  # make Ξ vector
   io = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
@@ -467,7 +467,7 @@ function update_σ!(σc     ::Float64,
   σ_p1, σ_p2 = σ_prior
 
   # Gibbs update for σ
-  σp2 = randinvgamma(σ_p1 + 0.5 * n, σ_p2 + ss)
+  σp2 = rand(InverseGamma(σ_p1 + 0.5 * n, σ_p2 + ss))
 
   # update prior
   prc += llrdinvgamma(σp2, σc^2, σ_p1, σ_p2)
@@ -535,7 +535,7 @@ end
 
 """
     update_gbm!(bix     ::Int64,
-                Ξ       ::Vector{iTpb},
+                Ξ       ::Vector{iTb},
                 idf     ::Vector{iBffs},
                 α       ::Float64,
                 σλ      ::Float64,
@@ -551,7 +551,7 @@ end
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_gbm!(bix     ::Int64,
-                     Ξ       ::Vector{iTpb},
+                     Ξ       ::Vector{iTb},
                      idf     ::Vector{iBffs},
                      α       ::Float64,
                      σλ      ::Float64,
@@ -593,7 +593,7 @@ function update_gbm!(bix     ::Int64,
 
     # make between decoupled trees node update
     llc, ddλ, ssλ, irλ = 
-      update_triad_pb!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
+      update_triad_b!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
         fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, llc, ddλ, ssλ, irλ, δt, srδt)
 
     # set fixed `λ(t)` in branch
@@ -614,7 +614,7 @@ end
 
 """
     update_fs!(bix  ::Int64,
-               Ξ    ::Vector{iTpb},
+               Ξ    ::Vector{iTb},
                idf  ::Vector{iBffs},
                α    ::Float64,
                σλ   ::Float64,
@@ -631,7 +631,7 @@ end
 Forward simulation proposal function for pure birth diffusion.
 """
 function update_fs!(bix  ::Int64,
-                    Ξ    ::Vector{iTpb},
+                    Ξ    ::Vector{iTb},
                     idf  ::Vector{iBffs},
                     α    ::Float64,
                     σλ   ::Float64,
@@ -684,7 +684,7 @@ end
 
 """
     fsbi_t(bi  ::iBffs,
-           ξc  ::iTpb,
+           ξc  ::iTb,
            α   ::Float64,
            σλ  ::Float64,
            δt  ::Float64,
@@ -693,7 +693,7 @@ end
 Forward simulation for branch `bi`.
 """
 function fsbi_t(bi  ::iBffs,
-                ξc  ::iTpb,
+                ξc  ::iTb,
                 α   ::Float64,
                 σλ  ::Float64,
                 δt  ::Float64,
@@ -708,7 +708,7 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_gbmpb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
+    _sim_gbmb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -725,8 +725,8 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
-           ξ1  ::iTpb,
-           ξ2  ::iTpb,
+           ξ1  ::iTb,
+           ξ2  ::iTb,
            λ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
@@ -736,16 +736,16 @@ end
 Forward simulation for branch `bi`
 """
 function fsbi_i(bi  ::iBffs,
-                ξc  ::iTpb,
-                ξ1  ::iTpb,
-                ξ2  ::iTpb,
+                ξc  ::iTb,
+                ξ1  ::iTb,
+                ξ2  ::iTb,
                 α   ::Float64,
                 σλ  ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
   # forward simulation during branch length
-  t0, na = _sim_gbmpb(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
+  t0, na = _sim_gbmb(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
 
   if na >= 1_000
     return t0, NaN, NaN, NaN, NaN
@@ -802,7 +802,7 @@ end
 
 
 """
-    tip_sims!(tree::iTpb,
+    tip_sims!(tree::iTb,
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
@@ -815,7 +815,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::iTpb,
+function tip_sims!(tree::iTb,
                    t   ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
@@ -836,7 +836,7 @@ function tip_sims!(tree::iTpb,
 
         # simulate
         stree, na, lr =
-          _sim_gbmpb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
+          _sim_gbmb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
             lr, lU, iρi, na, 1_000)
 
         if isnan(lr) || na >= 1_000
@@ -973,7 +973,7 @@ end
 #   σλ_p2 = σλ_prior[2]
 
 #   # Gibbs update for σ
-#   σλp2 = randinvgamma((σλ_p1 + 0.5 * n) * pow + σλ_rdist[1] * (1.0 - pow),
+#   σλp2 = rand(InverseGamma(((σλ_p1 + 0.5 * n) * pow + σλ_rdist[1] * (1.0 - pow),
 #                       (σλ_p2 + ss) * pow     + σλ_rdist[2] * (1.0 - pow))
 
 #   # update likelihood, prior and reference
@@ -991,7 +991,7 @@ end
 
 
 # """
-#     ref_posterior(Ξ       ::Vector{iTpb},
+#     ref_posterior(Ξ       ::Vector{iTb},
 #                   idf     ::Vector{iBffs},
 #                   llc     ::Float64,
 #                   prc     ::Float64,
@@ -1014,7 +1014,7 @@ end
 
 # MCMC chain for GBM pure-birth.
 # """
-# function ref_posterior(Ξ       ::Vector{iTpb},
+# function ref_posterior(Ξ       ::Vector{iTb},
 #                        idf     ::Vector{iBffs},
 #                        llc     ::Float64,
 #                        prc     ::Float64,

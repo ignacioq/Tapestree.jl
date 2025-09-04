@@ -13,16 +13,16 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTpb},
+    llik_gbm(Ξ   ::Vector{iTb},
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `iTb` according to GBM birth-death.
 """
-function llik_gbm(Ξ   ::Vector{iTpb},
+function llik_gbm(Ξ   ::Vector{iTb},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -32,10 +32,9 @@ function llik_gbm(Ξ   ::Vector{iTpb},
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      bi  = idf[i]
       ll += llik_gbm(Ξ[i], α, σλ, δt, srδt)
-      if d2(bi) > 0
-        ll += λt(bi)
+      if d2(idf[i]) > 0
+        ll += λt(Ξ[i])
       end
     end
   end
@@ -47,15 +46,15 @@ end
 
 
 """
-    llik_gbm(tree::iTpb,
+    llik_gbm(tree::iTb,
              α   ::Float64,
              σλ  ::Float64,
              δt  ::Float64,
              srδt::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `iTb` according to GBM birth-death.
 """
-function llik_gbm(tree::iTpb,
+function llik_gbm(tree::iTb,
                   α   ::Float64,
                   σλ  ::Float64,
                   δt  ::Float64,
@@ -65,8 +64,8 @@ function llik_gbm(tree::iTpb,
     ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
   else
     ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTpb, α, σλ, δt, srδt)          +
-    llik_gbm(tree.d2::iTpb, α, σλ, δt, srδt)
+    llik_gbm(tree.d1::iTb, α, σλ, δt, srδt)          +
+    llik_gbm(tree.d2::iTb, α, σλ, δt, srδt)
   end
 end
 
@@ -127,15 +126,15 @@ end
 
 
 """
-    llik_gbm_ssλ(tree::iTpb,
+    llik_gbm_ssλ(tree::iTb,
                  α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
                  srδt::Float64)
 
-Returns the log-likelihood for a `iTpb` according to GBM birth-death.
+Returns the log-likelihood for a `iTb` according to GBM birth-death.
 """
-function llik_gbm_ssλ(tree::iTpb,
+function llik_gbm_ssλ(tree::iTb,
                       α   ::Float64,
                       σλ  ::Float64,
                       δt  ::Float64,
@@ -192,22 +191,22 @@ function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
   nI = lastindex(lλv)-2
   nλ = Float64(nI)
 
-  ll = llbm = llpb = ssλ = irλ = 0.0
+  ll = llbm = llb = ssλ = irλ = 0.0
   if nI > 0
     @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
       lλvi1 = lλv[i+1]
       llbm += (lλvi1 - lλvi - α*δt)^2
-      llpb += exp(0.5*(lλvi + lλvi1))
+      llb += exp(0.5*(lλvi + lλvi1))
     end
 
     # standardized sum of squares
     ssλ += llbm/(2.0*δt)
-    irλ += llpb*δt
+    irλ += llb*δt
 
     # add to global likelihood
     ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
-          llpb*δt
+          llb*δt
   end
 
   lλvi1 = lλv[nI+2]
@@ -257,7 +256,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλp)-2
 
-  llrbm = llrpb = ssrλ = 0.0
+  llrbm = llrb = ssrλ = 0.0
   if nI > 0
     @turbo for i in Base.OneTo(nI)
       lλpi   = lλp[i]
@@ -265,14 +264,14 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
       lλpi1  = lλp[i+1]
       lλci1  = lλc[i+1]
       llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-      llrpb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+      llrb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
     end
 
     # standardized sum of squares
     ssrλ  += llrbm/(2.0*δt)
     # add to global likelihood
     llrbm *= (-0.5/((σλ*srδt)^2))
-    llrpb *= (-δt)
+    llrb *= (-δt)
   end
 
   lλpi1 = lλp[nI+2]
@@ -285,16 +284,16 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
     llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-    llrpb -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+    llrb  -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
   end
 
-  irrλ = -llrpb
+  irrλ = -llrb 
   #if speciation
   if λev
-    llrpb += lλpi1 - lλci1
+    llrb  += lλpi1 - lλci1
   end
 
-  return llrbm, llrpb, ssrλ, irrλ
+  return llrbm, llrb , ssrλ, irrλ
 end
 
 
@@ -441,7 +440,6 @@ function _ss_b(v::Array{Float64,1},
 
   return ss
 end
-
 
 
 

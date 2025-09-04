@@ -31,6 +31,7 @@ Pages = [
   "man/insane/bdd.md",
   "man/insane/cfbd.md",
   "man/insane/fbdd.md",
+  "man/insane/obd.md",
   "man/insane/dbm.md",
 ]
 Depth = 2

@@ -36,7 +36,7 @@ Created 03 09 2020
                  δt      ::Float64               = 1e-3,
                  prints  ::Int64                 = 5,
                  survival::Bool                  = true,
-                 mxthf   ::Float64               = Inf,
+                 mxthf   ::Float64               = 0.1,
                  tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
 Run insane for GBM birth-death.
@@ -216,7 +216,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   # number of branches
   nbr  = lastindex(idf)
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
   for i in Base.OneTo(nburn)
 
@@ -1053,7 +1053,7 @@ function update_σ_ϵ!(σλc     ::Float64,
   σλ_p2 = σλ_prior[2]
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
+  σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
   σλp  = sqrt(σλp2)
 
   mp  = m_surv_gbmct(th, λ0, α, σλp, ϵ, δt, srδt, 1_000, surv)
