@@ -13,7 +13,7 @@ Created 14 09 2020
 
 
 """
-    insane_cladspb(tree    ::sT_label;
+    insane_cladsb(tree    ::sT_label;
                  λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
                  α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
                  σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
@@ -32,7 +32,7 @@ Created 14 09 2020
 
 Run insane for clads `pd`.
 """
-function insane_cladspb(tree    ::sT_label;
+function insane_cladsb(tree    ::sT_label;
                         λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
                         α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
                         σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
@@ -40,7 +40,7 @@ function insane_cladspb(tree    ::sT_label;
                         nthin   ::Int64                 = 10,
                         nburn   ::Int64                 = 200,
                         nflush  ::Int64                 = nthin,
-                        ofile   ::String                = string(homedir(), "/cladspb"),
+                        ofile   ::String                = string(homedir(), "/cladsb"),
                         αi      ::Float64               = 0.0,
                         σλi     ::Float64               = 0.1,
                         pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-4, 0.1, 0.2),
@@ -65,7 +65,7 @@ function insane_cladspb(tree    ::sT_label;
   idf = make_idf(tree, tρ, Inf)
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, λmle_cpb(tree), cTpb)
+  Ξ = make_Ξ(idf, λmle_cpb(tree), cTb)
 
   # if rm first speciation event (condition on observing the tree)
   rmλ = Float64(iszero(e(Ξ[1])))
@@ -84,12 +84,12 @@ function insane_cladspb(tree    ::sT_label;
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, ns, stn =
-    mcmc_burn_cladspb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
+    mcmc_burn_cladsb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
       rmλ, inodes, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_cladspb(Ξ, idf, llc, prc, αc, σλc, ns, stn, rmλ, λ0_prior, α_prior, 
+    mcmc_cladsb(Ξ, idf, llc, prc, αc, σλc, ns, stn, rmλ, λ0_prior, α_prior, 
       σλ_prior, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -98,7 +98,7 @@ end
 
 
 """
-    mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
+    mcmc_burn_cladsb(Ξ       ::Vector{cTb},
                       idf     ::Vector{iBffs},
                       λ0_prior::NTuple{2,Float64},
                       α_prior ::NTuple{2,Float64},
@@ -114,7 +114,7 @@ end
 
 MCMC burn-in chain for `pbd`.
 """
-function mcmc_burn_cladspb(Ξ       ::Vector{cTpb},
+function mcmc_burn_cladsb(Ξ       ::Vector{cTb},
                            idf     ::Vector{iBffs},
                            λ0_prior::NTuple{2,Float64},
                            α_prior ::NTuple{2,Float64},
@@ -215,7 +215,7 @@ end
 
 
 """
-    mcmc_cladspb(Ξ       ::Vector{cTpb},
+    mcmc_cladsb(Ξ       ::Vector{cTb},
                idf     ::Vector{iBffs},
                llc     ::Float64,
                prc     ::Float64,
@@ -237,7 +237,7 @@ end
 
 MCMC chain for pure-birth diffusion.
 """
-function mcmc_cladspb(Ξ       ::Vector{cTpb},
+function mcmc_cladsb(Ξ       ::Vector{cTb},
                       idf     ::Vector{iBffs},
                       llc     ::Float64,
                       prc     ::Float64,
@@ -270,7 +270,7 @@ function mcmc_cladspb(Ξ       ::Vector{cTpb},
   ddλ, ssλ = _dd_ss(Ξ, idf, αc)
 
   λfs   = Float64[]
-  treev = cTpb[]  # make Ξ vector
+  treev = cTb[]  # make Ξ vector
   io = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
@@ -414,7 +414,7 @@ end
 
 Update scale for speciation.
 """
-function update_scale!(Ξ       ::Vector{cTpb},
+function update_scale!(Ξ       ::Vector{cTb},
                        idf     ::Vector{iBffs},
                        llc     ::Float64,
                        prc     ::Float64,
@@ -452,7 +452,7 @@ end
 
 """
     update_internal!(bix     ::Int64,
-                     Ξ       ::Vector{cTpb},
+                     Ξ       ::Vector{cTb},
                      idf     ::Vector{iBffs},
                      α       ::Float64,
                      σλ      ::Float64,
@@ -465,7 +465,7 @@ end
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_internal!(bix     ::Int64,
-                          Ξ       ::Vector{cTpb},
+                          Ξ       ::Vector{cTb},
                           idf     ::Vector{iBffs},
                           α       ::Float64,
                           σλ      ::Float64,
@@ -550,7 +550,7 @@ end
 
 """
     update_fs!(bix  ::Int64,
-               Ξ    ::Vector{cTpb},
+               Ξ    ::Vector{cTb},
                idf  ::Vector{iBffs},
                α    ::Float64,
                σλ   ::Float64,
@@ -563,7 +563,7 @@ end
 Forward simulation proposal function for pure birth diffusion.
 """
 function update_fs!(bix  ::Int64,
-                    Ξ    ::Vector{cTpb},
+                    Ξ    ::Vector{cTb},
                     idf  ::Vector{iBffs},
                     α    ::Float64,
                     σλ   ::Float64,
@@ -596,9 +596,9 @@ function update_fs!(bix  ::Int64,
   if isfinite(llr)
 
     llc, ddλ, ssλ, ns = 
-      llik_cladspb_track!(ξc, α, σλ, llc, ddλ, ssλ, ns, -)
+      llik_cladsb_track!(ξc, α, σλ, llc, ddλ, ssλ, ns, -)
     llc, ddλ, ssλ, ns = 
-      llik_cladspb_track!(ξp, α, σλ, llc, ddλ, ssλ, ns, +)
+      llik_cladsb_track!(ξp, α, σλ, llc, ddλ, ssλ, ns, +)
 
     # first change from ancestor
     if ia > 0
@@ -625,7 +625,7 @@ end
 
 """
     fsbi_t(bi  ::iBffs,
-           ξc  ::cTpb,
+           ξc  ::cTb,
            λa  ::Float64,
            α   ::Float64,
            σλ  ::Float64)
@@ -648,7 +648,7 @@ function fsbi_t(bi  ::iBffs,
   λi = rnorm(λa + α, σλ)
 
   t0, nap, nn, llr =
-    _sim_cladspb_t(e(bi), λi, α, σλ, lc, lU, iρi, 0, 1, 500)
+    _sim_cladsb_t(e(bi), λi, α, σλ, lc, lU, iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -665,7 +665,7 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
-           ξc  ::cTpb,
+           ξc  ::cTb,
            λa  ::Float64,
            λ1  ::Float64,
            λ2  ::Float64,
@@ -676,7 +676,7 @@ end
 Forward simulation for internal branch `bi`
 """
 function fsbi_i(bi  ::iBffs,
-                ξc  ::cTpb,
+                ξc  ::cTb,
                 λa  ::Float64,
                 λ1  ::Float64,
                 λ2  ::Float64,
@@ -693,7 +693,7 @@ function fsbi_i(bi  ::iBffs,
   empty!(λfs)
 
   # forward simulation during branch length
-  t0, na = _sim_cladspb_i(e(bi), λi, α, σλ, 1, 500, λfs)
+  t0, na = _sim_cladsb_i(e(bi), λi, α, σλ, 1, 500, λfs)
 
   if na > 499
     return t0, NaN, NaN, NaN
@@ -740,7 +740,7 @@ end
 
 
 """
-    wfix_i(ξi ::cTpb,
+    wfix_i(ξi ::cTb,
            ei ::Float64,
            λfs::Vector{Float64},
            λ1 ::Float64,
@@ -754,7 +754,7 @@ end
 Choose most likely simulated lineage to fix with respect to daughter
 for bifurcating `i` branches.
 """
-function wfix_i(ξi ::cTpb,
+function wfix_i(ξi ::cTb,
                 ei ::Float64,
                 λfs::Vector{Float64},
                 λ1 ::Float64,
@@ -802,7 +802,7 @@ end
 
 
 """
-    tip_sims!(tree::cTpb,
+    tip_sims!(tree::cTb,
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
@@ -813,7 +813,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::cTpb,
+function tip_sims!(tree::cTb,
                    t   ::Float64,
                    α   ::Float64,
                    σλ  ::Float64,
@@ -829,7 +829,7 @@ function tip_sims!(tree::cTpb,
 
         # simulate
         stree, na, lr =
-          _sim_cladspb_it(t, lλ(tree), α, σλ, lr, lU, iρi, na, 500)
+          _sim_cladsb_it(t, lλ(tree), α, σλ, lr, lU, iρi, na, 500)
 
         if isnan(lr) || na > 499
           return tree, na, NaN

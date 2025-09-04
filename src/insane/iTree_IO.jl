@@ -971,11 +971,11 @@ end
 
 
 """
-    _ibuffer(io::IOBuffer, tree::cTpb)
+    _ibuffer(io::IOBuffer, tree::cTb)
 
-Write `cTpb` to IOBuffer.
+Write `cTb` to IOBuffer.
 """
-function _ibuffer(io::IOBuffer, tree::cTpb)
+function _ibuffer(io::IOBuffer, tree::cTb)
   if def1(tree)
     write(io, '(')
     _ibuffer(io, tree.d1), 
@@ -991,11 +991,11 @@ end
 
 
 """
-    _ibuffer(io::IOBuffer, tree::cTpb)
+    _ibuffer(io::IOBuffer, tree::cTb)
 
-Write `cTpb` to IOBuffer.
+Write `cTb` to IOBuffer.
 """
-function _ibuffer(io::IOBuffer, tree::cTpb)
+function _ibuffer(io::IOBuffer, tree::cTb)
   if def1(tree)
     write(io, '(')
     _ibuffer(io, tree.d1), 

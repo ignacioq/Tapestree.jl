@@ -928,11 +928,11 @@ end
 
 
 """
-    imean(treev::Vector{cTpb})
+    imean(treev::Vector{cTb})
 
-Make an `cTpb` with the geometric mean.
+Make an `cTb` with the geometric mean.
 """
-function imean(treev::Vector{cTpb})
+function imean(treev::Vector{cTb})
 
   nt  = lastindex(treev)
 
@@ -946,20 +946,20 @@ function imean(treev::Vector{cTpb})
   mλ = ss/Float64(nt)
 
   if def1(t1)
-    treev1 = cTpb[]
+    treev1 = cTb[]
     for t in Base.OneTo(nt)
         push!(treev1, treev[t].d1)
     end
-    treev2 = cTpb[]
+    treev2 = cTb[]
     for t in Base.OneTo(nt)
         push!(treev2, treev[t].d2)
     end
 
-    cTpb(imean(treev1),
+    cTb(imean(treev1),
          imean(treev2),
          e(t1), true, mλ)
   else
-    cTpb(e(t1), true, mλ)
+    cTb(e(t1), true, mλ)
   end
 end
 

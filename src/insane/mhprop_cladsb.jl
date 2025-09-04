@@ -13,9 +13,9 @@ Created 15 07 2025
 
 
 """
-    _stem_update!(ξi      ::cTpb,
-                  ξ1      ::cTpb,
-                  ξ2      ::cTpb,
+    _stem_update!(ξi      ::cTb,
+                  ξ1      ::cTb,
+                  ξ2      ::cTb,
                   α       ::Float64,
                   σλ      ::Float64,
                   llc     ::Float64,
@@ -26,7 +26,7 @@ Created 15 07 2025
 
 Do `clads` update for crown root.
 """
-function _stem_update!(ξi      ::cTpb,
+function _stem_update!(ξi      ::cTb,
                        λ1      ::Float64,
                        λ2      ::Float64,
                        α       ::Float64,
@@ -66,9 +66,9 @@ end
 
 
 """
-    _crown_update!(ξi      ::cTpb,
-                   ξ1      ::cTpb,
-                   ξ2      ::cTpb,
+    _crown_update!(ξi      ::cTb,
+                   ξ1      ::cTb,
+                   ξ2      ::cTb,
                    α       ::Float64,
                    σλ      ::Float64,
                    llc     ::Float64,
@@ -79,9 +79,9 @@ end
 
 Do `clads` update for crown root.
 """
-function _crown_update!(ξi      ::cTpb,
-                        ξ1      ::cTpb,
-                        ξ2      ::cTpb,
+function _crown_update!(ξi      ::cTb,
+                        ξ1      ::cTb,
+                        ξ2      ::cTb,
                         α       ::Float64,
                         σλ      ::Float64,
                         llc     ::Float64,
@@ -116,7 +116,7 @@ end
 
 
 """
-    _update_internal!(tree::cTpb,
+    _update_internal!(tree::cTb,
                       λa  ::Float64,
                       α   ::Float64,
                       σλ  ::Float64,

@@ -1899,11 +1899,11 @@ end
 
 
 """
-    _remove_unsampled!(tree::cTpb)
+    _remove_unsampled!(tree::cTb)
 
-Remove extinct tips from `cTpb`.
+Remove extinct tips from `cTb`.
 """
-function _remove_unsampled!(tree::cTpb)
+function _remove_unsampled!(tree::cTb)
 
   if def1(tree)
 
@@ -1912,7 +1912,7 @@ function _remove_unsampled!(tree::cTpb)
 
     if !isfix(tree.d1)
       if !isfix(tree.d2)
-        return cTpb(e(tree), isfix(tree), lλ(tree))
+        return cTb(e(tree), isfix(tree), lλ(tree))
       else
         e0   = e(tree)
         e2   = e(tree.d2)
@@ -3374,7 +3374,7 @@ setlμ!(tree::T, lμ::Float64) where {T <: cT} = setproperty!(tree, :lμ, lμ)
 
 
 """
-    addlλ!(tree::cTpb, a::Float64)
+    addlλ!(tree::cTb, a::Float64)
 
 Add to `lλ` for `tree`.
 """
@@ -3384,7 +3384,7 @@ addlλ!(tree::T, a::Float64) where {T <: cT} = setproperty!(tree, :lλ, lλ(tree
 
 
 """
-    addlμ!(tree::cTpb, a::Float64)
+    addlμ!(tree::cTb, a::Float64)
 
 Add to `lμ` for `tree`.
 """

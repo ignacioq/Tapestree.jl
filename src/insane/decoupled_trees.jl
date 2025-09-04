@@ -181,7 +181,7 @@ end
 
 
 """
-     _make_Ξ!(Ξ   ::Vector{cTpb},
+     _make_Ξ!(Ξ   ::Vector{cTb},
               i   ::Int64,
               lλ0 ::Float64,
               α   ::Float64,
@@ -190,7 +190,7 @@ end
 
 Make edge tree `Ξ` from the edge directory.
 """
-function _make_Ξ!(Ξ   ::Vector{cTpb},
+function _make_Ξ!(Ξ   ::Vector{cTb},
                   i   ::Int64,
                   lλ0 ::Float64,
                   idf ::Vector{iBffs})
@@ -200,7 +200,7 @@ function _make_Ξ!(Ξ   ::Vector{cTpb},
   i2 = d2(bi)
 
   setλt!(bi, lλ0)
-  push!(Ξ, cTpb(e(bi), true, lλ0))
+  push!(Ξ, cTb(e(bi), true, lλ0))
 
   if i1 > 0 
     _make_Ξ!(Ξ, i1, lλ0, idf)
@@ -1687,7 +1687,7 @@ end
 
 
 """
-    _ss(Ξ::Vector{cTpb}, idf::Vector{iBffs}, f::Function, α::Float64)
+    _ss(Ξ::Vector{cTb}, idf::Vector{iBffs}, f::Function, α::Float64)
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
 """

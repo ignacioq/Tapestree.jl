@@ -87,7 +87,7 @@ Sample conditional on number of species
 #                   srδt ::Float64,
 #                   init::Symbol)
 
-# Simulate `cladspb` just until hitting `n` alive species. Note that this is
+# Simulate `cladsb` just until hitting `n` alive species. Note that this is
 # a biased sample for a tree conditional on `n` species.
 # """
 # function _sedges_cladsce(n    ::Int64,

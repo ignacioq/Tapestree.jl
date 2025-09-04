@@ -13,14 +13,14 @@ Created 03 09 2020
 
 
 """
-    llik_clads(Ξ  ::Vector{cTpb},
+    llik_clads(Ξ  ::Vector{cTb},
                idf::Vector{iBffs},
                α  ::Float64,
                σλ ::Float64)
 
-Returns the log-likelihood for a `cTpb` according to clads
+Returns the log-likelihood for a `cTb` according to clads
 """
-function llik_clads(Ξ  ::Vector{cTpb},
+function llik_clads(Ξ  ::Vector{cTb},
                     idf::Vector{iBffs},
                     α  ::Float64,
                     σλ ::Float64)
@@ -49,13 +49,13 @@ end
 
 
 """
-    llik_clads(tree::cTpb,
+    llik_clads(tree::cTb,
              α   ::Float64,
              σλ  ::Float64)
 
-Returns the log-likelihood for a `cTpb` according to clads.
+Returns the log-likelihood for a `cTb` according to clads.
 """
-function llik_clads(tree::cTpb,
+function llik_clads(tree::cTb,
                     α   ::Float64,
                     σλ  ::Float64)
 
@@ -77,7 +77,7 @@ end
 
 
 """
-    llik_clads_track!(tree::cTpb,
+    llik_clads_track!(tree::cTb,
                       α   ::Float64,
                       σλ  ::Float64,
                       ll  ::Float64,
@@ -86,9 +86,9 @@ end
                       ns  ::Float64,
                       sos ::Function)
 
-Returns the log-likelihood for a `cTpb` according to clads.
+Returns the log-likelihood for a `cTb` according to clads.
 """
-function llik_cladspb_track!(tree::cTpb,
+function llik_cladsb_track!(tree::cTb,
                              α   ::Float64,
                              σλ  ::Float64,
                              ll  ::Float64,
@@ -114,9 +114,9 @@ function llik_cladspb_track!(tree::cTpb,
     dd = sos(dd, λ1 + λ2 - 2.0*λi)
 
     ll, dd, ss, ns = 
-      llik_cladspb_track!(td1, α, σλ, ll, dd, ss, ns, sos)
+      llik_cladsb_track!(td1, α, σλ, ll, dd, ss, ns, sos)
     ll, dd, ss, ns = 
-      llik_cladspb_track!(td2, α, σλ, ll, dd, ss, ns, sos)
+      llik_cladsb_track!(td2, α, σλ, ll, dd, ss, ns, sos)
   end
 
   return ll, dd, ss, ns

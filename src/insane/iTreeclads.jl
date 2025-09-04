@@ -25,7 +25,7 @@ abstract type cT <: iTree end
 
 
 """
-    cTpb
+    cTb
 
 A composite recursive type of supertype `cT`
 representing a binary phylogenetic tree with no extinction
@@ -38,41 +38,41 @@ with the following fields:
   fx:  if fix tree
   lλ:  `log(λ)`
 
-    cTpb()
+    cTb()
 
-Constructs an empty `cTpb` object.
+Constructs an empty `cTb` object.
 
-    cTpb(e::Float64, fx::Bool, lλ::Float64)
+    cTb(e::Float64, fx::Bool, lλ::Float64)
 
-Constructs an empty `cTpb` object with pendant edge `pe`.
+Constructs an empty `cTb` object with pendant edge `pe`.
 
-    cTpb(d1::cTpb, d2::cTpb, e::Float64, fx::Bool, lλ::Float64)
+    cTb(d1::cTb, d2::cTb, e::Float64, fx::Bool, lλ::Float64)
 
-Constructs an `cTpb` object with two `cTpb` daughters and pendant edge `pe`.
+Constructs an `cTb` object with two `cTb` daughters and pendant edge `pe`.
 """
-mutable struct cTpb <: cT
-  d1 ::cTpb
-  d2 ::cTpb
+mutable struct cTb <: cT
+  d1 ::cTb
+  d2 ::cTb
   e  ::Float64
   fx ::Bool
   lλ ::Float64
 
-  cTpb() = new()
-  cTpb(e::Float64, fx::Bool, lλ::Float64) =
+  cTb() = new()
+  cTb(e::Float64, fx::Bool, lλ::Float64) =
       (x = new(); x.e = e; x.fx = fx; x.lλ = lλ; x)
-  cTpb(d1::cTpb, d2::cTpb, e::Float64, fx::Bool, lλ::Float64) =
+  cTb(d1::cTb, d2::cTb, e::Float64, fx::Bool, lλ::Float64) =
       new(d1, d2, e, fx, lλ)
 end
 
 
 # pretty-printing
-Base.show(io::IO, t::cTpb) =
+Base.show(io::IO, t::cTb) =
   print(io, "insane pb-clads tree with ", ntips(t), " tips")
 
 
 
 # """
-#     cTpb(e0::Array{Int64,1},
+#     cTb(e0::Array{Int64,1},
 #          e1::Array{Int64,1},
 #          el::Array{Float64,1},
 #          λs::Array{Array{Float64,1},1},
@@ -81,9 +81,9 @@ Base.show(io::IO, t::cTpb) =
 #          ei::Int64,
 #          δt::Float64)
 
-# Transform edge structure to `cTpb`.
+# Transform edge structure to `cTb`.
 # """
-# function cTpb(e0::Array{Int64,1},
+# function cTb(e0::Array{Int64,1},
 #               e1::Array{Int64,1},
 #               el::Array{Float64,1},
 #               λs::Array{Array{Float64,1},1},
@@ -94,12 +94,12 @@ Base.show(io::IO, t::cTpb) =
 
 #   # if tip
 #   if in(ei, ea)
-#     return cTpb(el[ei], δt, δt, true, λs[ei])
+#     return cTb(el[ei], δt, δt, true, λs[ei])
 #   else
 #     ei1, ei2 = findall(isequal(ni), e0)
 #     n1, n2   = e1[ei1:ei2]
-#     return cTpb(cTpb(e0, e1, el, λs, ea, n1, ei1, δt),
-#                 cTpb(e0, e1, el, λs, ea, n2, ei2, δt),
+#     return cTb(cTb(e0, e1, el, λs, ea, n1, ei1, δt),
+#                 cTb(e0, e1, el, λs, ea, n2, ei2, δt),
 #                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
 #   end
 # end
@@ -108,15 +108,15 @@ Base.show(io::IO, t::cTpb) =
 
 
 """
-    cTpb(tree::cTpb)
+    cTb(tree::cTb)
 
-Produce a new copy of `cTpb`.
+Produce a new copy of `cTb`.
 """
-function cTpb(tree::cTpb)
+function cTb(tree::cTb)
   if def1(tree)
-    cTpb(cTpb(tree.d1), cTpb(tree.d2), e(tree), isfix(tree), lλ(tree))
+    cTb(cTb(tree.d1), cTb(tree.d2), e(tree), isfix(tree), lλ(tree))
   else
-    cTpb(e(tree), isfix(tree), lλ(tree))
+    cTb(e(tree), isfix(tree), lλ(tree))
   end
 end
 
