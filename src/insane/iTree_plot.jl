@@ -28,6 +28,7 @@ Predefined functions for plotting:
   `turnover`: turnover
   `diversification`: net diversification
   `trait`: trait
+  `logtrait`: log trait
   `traitrate`: evolutionary rates for traits
   `logtraitrate`: log evolutionary rates for traits
 """
@@ -38,6 +39,7 @@ logdeath(tree::iT)        = lμ(tree)
 turnover(tree::iT)        = exp.(lμ(tree) .- lλ(tree))
 diversification(tree::iT) = exp.(lλ(tree)) .- exp.(lμ(tree))
 trait(tree::Tx)           = xv(tree)
+logtrait(tree::Tx)        = log.(xv(tree))
 traitrate(tree::Tx)       = exp.(lσ2(tree))
 logtraitrate(tree::Tx)    = lσ2(tree)
 
@@ -91,6 +93,7 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
 
   _rplottree!(tree, th, 0.0, x, y, z, zstyle, nodet, xnode, ynode, shownodes)
 
+  nts = ntips(tree)
   ntF = Float64(nts)
 
   if type === :phylogram
@@ -161,15 +164,17 @@ Recipe for plotting a Type `iTree`. Displays type-specific nodes if `shownodes
     labels = String[]
     _tiplabels!(tree, labels)
 
+    lmx = maximum(lastindex, labels)
+
     @series begin
       seriestype         := :scatter
       primary            := false
       markercolor        := :black
       markershape        := :circle
       markersize         := 0
-      markeralpha        := fill(0.0,nts)
+      markeralpha        := fill(0.0, nts)
       series_annotations := map(x -> (x, :Helvetica, :left, labsize, :black), labels)
-      ylims             --> (-th*1.05, th*1.15)
+      ylims             --> (-th*1.05, th * (1.0 + (0.05 * Float64(lmx))))
 
       xa = fill(0.0 - 0.02*th, nts)
       ya = collect(1.0:1.0:ntF)
