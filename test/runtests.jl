@@ -220,7 +220,7 @@ r, tv = insane_gbmfbd(ftree,
 
 
 #=
-Fossilized Birth-Death Diffusion
+Occurrence Birth-Death Diffusion
 =# 
 
 # simulate based on time
@@ -240,6 +240,11 @@ r, tv = insane_gbmobd(ftree,
 
 @test isa(r, Matrix{Float64})
 @test isa(tv, Vector{iTfbd})
+
+
+#=
+Punk-eeq
+=# 
 
 
 
