@@ -21,7 +21,8 @@ plot(tree)
 ![f15](./assets/img/quick_start/f15.png)
 
 !!! note
-    This is the `tree_5.tre` in the Tapestree `data` directory.
+    This is the `tree_5.tre` in the Tapestree `data` directory. You can read it using
+    `tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_5.tre"))`
 
 ### Diversification (birth-death) models
 
@@ -40,6 +41,7 @@ r, tv = insane_cbd(tree,
 
 !!! note
     For the following I used here the 5 tip tree `tree_5.tre` in the `data` directory of Tapestree.
+    You can read it using: `tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_5.tre"))`
 
 The `tv` is a vector of all data augmented (DA) posterior trees. You can plot one of them
 doing
@@ -131,6 +133,7 @@ r, tv = insane_cfbd(tree,
 
 !!! note
     For the following I used here the 6 tip fossil tree `tree_6.tre` in the data directory of Tapestree.
+    `tree = read_newick(joinpath(dirname(pathof(Tapestree)), "..", "data", "tree_6.tre"), true)`
 
 One can plot the input tree
 ```julia
@@ -216,7 +219,6 @@ plot(p0, p1)
 ![f13](./assets/img/quick_start/f13.png)
 
 
-
 #### Occurrence Birth-Death Diffusion (OBDD):
 
 ```julia
@@ -277,13 +279,13 @@ r, tv = insane_dbm(tree,
 
 We can plot one random posterior trait history on the tree
 ```julia
-plot(rand(tv), xv, linewidth = 3.0)
+plot(rand(tv), trait, linewidth = 3.0)
 ```
 ![f10](./assets/img/quick_start/f10.png)
 
 Or we can plot the phenogram using
 ```julia
-plot(xv, rand(tv), linewidth = 3.0)
+plot(trait, rand(tv), linewidth = 3.0)
 ```
 ![f11](./assets/img/quick_start/f11.png)
 
@@ -294,8 +296,8 @@ tm = imean(tv)
 ```
 and plot the average paths for trait and rate evolution
 ```julia
-p0 = plot(xv, tm, linewidth = 3.0)
-p1 = plot(lσ2, tm, linewidth = 3.0)
+p0 = plot(trait, tm, linewidth = 3.0)
+p1 = plot(logtraitrate, tm, linewidth = 3.0)
 plot(p0, p1)
 ```
 ![f12](./assets/img/quick_start/f12.png)
