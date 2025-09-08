@@ -1,6 +1,6 @@
 #=
 
-Clads birth-death likelihood
+Clads fossilized birth-death likelihood
 
 Ignacio Quintero Mächler
 
@@ -11,17 +11,21 @@ Created 28 07 2025
 
 
 
+"""
+here
+"""
+
 
 """
-    llik_clads(Ξ  ::Vector{cTbd},
+    llik_clads(Ξ  ::Vector{cTfbd},
                idf::Vector{iBffs},
                α  ::Float64,
                σλ ::Float64,
                σμ ::Float64)
 
-Returns the log-likelihood for a `cTbd` according to clads.
+Returns the log-likelihood for a `cTfbd` according to clads.
 """
-function llik_clads(Ξ  ::Vector{cTbd},
+function llik_clads(Ξ  ::Vector{cTfbd},
                     idf::Vector{iBffs},
                     α  ::Float64,
                     σλ ::Float64,
@@ -52,14 +56,14 @@ end
 
 
 """
-    llik_clads(tree::cTbd,
+    llik_clads(tree::cTfbd,
                α   ::Float64,
                σλ  ::Float64,
                σμ  ::Float64)
 
-Returns the log-likelihood for a `cTbd` according to clads.
+Returns the log-likelihood for a `cTfbd` according to clads.
 """
-function llik_clads(tree::cTbd,
+function llik_clads(tree::cTfbd,
                     α   ::Float64,
                     σλ  ::Float64,
                     σμ  ::Float64)
@@ -87,7 +91,7 @@ end
 
 
 """
-    llik_cladsbd_track!(tree::cTbd,
+    llik_cladsbd_track!(tree::cTfbd,
                         α   ::Float64,
                         σλ  ::Float64,
                         σμ  ::Float64,
@@ -99,9 +103,9 @@ end
                         ne  ::Float64,
                         sos ::Function)
 
-Returns the log-likelihood for a `cTbd` according to clads.
+Returns the log-likelihood for a `cTfbd` according to clads.
 """
-function llik_cladsbd_track!(tree::cTbd,
+function llik_cladsbd_track!(tree::cTfbd,
                              α   ::Float64,
                              σλ  ::Float64,
                              σμ  ::Float64,
@@ -152,7 +156,7 @@ end
 
 
 """
-    _dd_ss(tree::cTbd,
+    _dd_ss(tree::cTfbd,
            α   ::Float64,
            dd  ::Float64,
            ssλ ::Float64,
@@ -161,7 +165,7 @@ end
 Returns the standardized sum of squares for rate `v`, the path number `n`,
 and the delta drift for speciation `ddλ` and extinction `ddμ`.
 """
-function _dd_ss(tree::cTbd,
+function _dd_ss(tree::cTfbd,
                 α   ::Float64,
                 dd  ::Float64,
                 ssλ ::Float64,
@@ -191,11 +195,11 @@ end
 
 
 """
-    _ir(tree::cTbd, irλ::Float64, irμ::Float64)
+    _ir(tree::cTfbd, irλ::Float64, irμ::Float64)
 
 Returns the the integrated speciation and extinction rate `irλ` and `irμ`.
 """
-function _ir(tree::cTbd, irλ::Float64, irμ::Float64)
+function _ir(tree::cTfbd, irλ::Float64, irμ::Float64)
 
   ei   = e(tree)
   irλ += ei * exp(lλ(tree))
