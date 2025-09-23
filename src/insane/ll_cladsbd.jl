@@ -113,28 +113,25 @@ function llik_cladsbd_track!(tree::cTbd,
                              ne  ::Float64,
                              sos ::Function)
 
-  λi = lλ(tree)
+  lλi = lλ(tree)
   μi = lμ(tree)
   ei = e(tree)
-  ll = sos(ll, - ei * (exp(λi) + exp(μi)))
+  ll = sos(ll, - ei * (exp(lλi) + exp(μi)))
  
   if def1(tree)
     ns  = sos(ns, 1.0)
-
-    td1 = tree.d1
-    td2 = tree.d2
-    λ1  = lλ(td1)
-    λ2  = lλ(td2)
-    sqλ = 0.5*((λ1 - λi - α)^2 + (λ2 - λi - α)^2)
+    td1, td2 = tree.d1, tree.d2
+    lλ1, lλ2 = lλ(td1), lλ(td2)
+    sqλ = 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
     sqμ = 0.5*((lμ(td1) - μi)^2 + (lμ(td2) - μi)^2)
     ll  = sos(ll, 
-              λi - 2.0 * log(σλ) - 
+              lλi - 2.0 * log(σλ) - 
               1.83787706640934533908193770912475883960723876953125 - sqλ/σλ^2 - 
               2.0 * log(σμ) - 
               1.83787706640934533908193770912475883960723876953125 - sqμ/σμ^2)
     ssλ = sos(ssλ, sqλ)
     ssμ = sos(ssμ, sqμ)
-    dd  = sos(dd, λ1 + λ2 - 2.0*λi)
+    dd  = sos(dd, lλ1 + lλ2 - 2.0*lλi)
 
     ll, dd, ssλ, ssμ, ns, ne = 
       llik_cladsbd_track!(td1, α, σλ, σμ, ll, dd, ssλ, ssμ, ns, ne, sos)
@@ -195,7 +192,7 @@ end
 
 Returns the the integrated speciation and extinction rate `irλ` and `irμ`.
 """
-function _ir(tree::cTbd, irλ::Float64, irμ::Float64)
+function _ir(tree::cT, irλ::Float64, irμ::Float64)
 
   ei   = e(tree)
   irλ += ei * exp(lλ(tree))

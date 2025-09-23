@@ -583,7 +583,7 @@ function update_σλ!(σλc     ::Float64,
   σλ_p1, σλ_p2 = σλ_prior
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
+  σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
   σλp  = sqrt(σλp2)
 
   mp  = m_surv_cladsbd(th, λ0, μ0, α, σλp, σμ, 1_000, surv)
@@ -636,7 +636,7 @@ function update_σμ!(σμc     ::Float64,
   σμ_p1, σμ_p2 = σμ_prior
 
   # Gibbs update for σ
-  σμp2 = randinvgamma(σμ_p1 + 0.5 * n, σμ_p2 + ssμ)
+  σμp2 = rand(InverseGamma(σμ_p1 + 0.5 * n, σμ_p2 + ssμ))
   σμp  = sqrt(σμp2)
 
   mp  = m_surv_cladsbd(th, λ0, μ0, α, σλ, σμp, 1_000, surv)

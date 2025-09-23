@@ -19,32 +19,45 @@ here
 """
     llik_clads(Ξ  ::Vector{cTfbd},
                idf::Vector{iBffs},
-               α  ::Float64,
-               σλ ::Float64,
-               σμ ::Float64)
+               αλ  ::Float64,
+               αμ  ::Float64,
+               σλ  ::Float64,
+               σμ  ::Float64,
+               ψ   ::Vector{Float64},
+               ψts ::Vector{Float64},
+               bst ::Vector{Float64},
+               eix ::Vector{Int64})
 
-Returns the log-likelihood for a `cTfbd` according to clads.
+Returns the log-likelihood for a `cTfbd` according to fclads.
 """
 function llik_clads(Ξ  ::Vector{cTfbd},
                     idf::Vector{iBffs},
-                    α  ::Float64,
-                    σλ ::Float64,
-                    σμ ::Float64)
+                    αλ  ::Float64,
+                    αμ  ::Float64,
+                    σλ  ::Float64,
+                    σμ  ::Float64,
+                    ψ   ::Vector{Float64},
+                    ψts ::Vector{Float64},
+                    bst ::Vector{Float64},
+                    eix ::Vector{Int64})
+
 
   @inbounds begin
     ll = 0.0
+    nep = lastindex(ψts) + 1
     for i in Base.OneTo(lastindex(Ξ))
       bi  = idf[i]
-      ll += llik_clads(Ξ[i], α, σλ, σμ)
+      ll += llik_clads(Ξ[i], αλ, αμ, σλ, σμ, ψ, bst[i], ψts, eix[i], nep)
 
       bi2 = d2(bi)
       if bi2 > 0
         lλi = λt(bi)
+        lμi = μt(bi)
         ξ1  = Ξ[d1(bi)]
         ξ2  = Ξ[bi2]
 
-        ll += lλi + logdnorm2(lλ(ξ1), lλ(ξ2), lλi + α, σλ) +
-                    logdnorm2(lμ(ξ1), lμ(ξ2), μt(bi),  σμ) 
+        ll += lλi + logdnorm2(lλ(ξ1), lλ(ξ2), lλi + αλ, σλ) +
+                    logdnorm2(lμ(ξ1), lμ(ξ2), lμi + αμ, σμ) 
       end
     end
   end
@@ -57,99 +70,181 @@ end
 
 """
     llik_clads(tree::cTfbd,
-               α   ::Float64,
+               αλ  ::Float64,
+               αμ  ::Float64,
                σλ  ::Float64,
-               σμ  ::Float64)
-
+               σμ  ::Float64,
+               ψ   ::Vector{Float64},
+               t   ::Float64,
+               ψts ::Vector{Float64},
+               ix  ::Int64,
+               nep ::Int64)
+ 
 Returns the log-likelihood for a `cTfbd` according to clads.
 """
 function llik_clads(tree::cTfbd,
-                    α   ::Float64,
+                    αλ  ::Float64,
+                    αμ  ::Float64,
                     σλ  ::Float64,
-                    σμ  ::Float64)
+                    σμ  ::Float64,
+                    ψ   ::Vector{Float64},
+                    t   ::Float64,
+                    ψts ::Vector{Float64},
+                    ix  ::Int64,
+                    nep ::Int64)
+  @inbounds begin
 
-  if istip(tree)
-    lμi = lμ(tree)
-    - e(tree) * (exp(lλ(tree)) + exp(lμi)) + 
-      (isextinct(tree) ? lμi : 0.0)
-  else
-    td1 = tree.d1
-    td2 = tree.d2
-    lλi = lλ(tree)
-    lμi = lμ(tree)
+    ei = e(tree)
+    ll = 0.0
 
-    lλi - e(tree) * (exp(lλi) + exp(lμi))    +
-    logdnorm2(lλ(td1), lλ(td2), lλi + α, σλ) +
-    logdnorm2(lμ(td1), lμ(td2), lμi, σμ)     +
-    llik_clads(td1, α, σλ, σμ)               +
-    llik_clads(td2, α, σλ, σμ)
+    lλi, lμi = lλ(tree), lμ(tree)
+    λi, μi   = exp(lλi), exp(lμi)
+
+    # if epoch change
+    while ix < nep && t - ei < ψts[ix]
+      li  = t - ψts[ix]
+      ll -= li*(λi + μi + ψ[ix])
+      ei -= li
+      t   = ψts[ix]
+      ix += 1
+    end
+
+    ll -= ei*(λi + μi + ψ[ix])
+    t  -= ei
+
+    if def1(tree)
+      if def2(tree)
+        td1 = tree.d1
+        td2 = tree.d2
+
+        ll += lλi                                                 +
+              logdnorm2(lλ(td1), lλ(td2), lλi + αλ, σλ)           +
+              logdnorm2(lμ(td1), lμ(td2), lμi + αμ, σμ)           +
+              llik_clads(td1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep) +
+              llik_clads(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
+      else
+        ll += log(ψ[ix])                                          +
+              llik_cfbd(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
+      end
+    else
+      ll += (isextinct(tree) ? lμi        : 0.0) +
+            (isfossil(tree)  ? log(ψ[ix]) : 0.0)
+    end
   end
+
+  return ll
 end
 
 
 
 
-
 """
-    llik_cladsbd_track!(tree::cTfbd,
-                        α   ::Float64,
-                        σλ  ::Float64,
-                        σμ  ::Float64,
-                        ll  ::Float64,
-                        dd  ::Float64,
-                        ssλ ::Float64,
-                        ssμ ::Float64,
-                        ns  ::Float64,
-                        ne  ::Float64,
-                        sos ::Function)
+    llik_cladsfbd_track!(tree::cTfbd,
+                         αλ  ::Float64,
+                         αμ  ::Float64,
+                         σλ  ::Float64,
+                         σμ  ::Float64,
+                         ψ   ::Vector{Float64},
+                         t   ::Float64,
+                         ψts ::Vector{Float64},
+                         ix  ::Int64,
+                         nep ::Int64
+                         ll  ::Float64,
+                         ddλ ::Float64,
+                         ddμ ::Float64,
+                         ssλ ::Float64,
+                         ssμ ::Float64,
+                         ns  ::Float64,
+                         ne  ::Float64,
+                         sos ::Function)
 
 Returns the log-likelihood for a `cTfbd` according to clads.
 """
-function llik_cladsbd_track!(tree::cTfbd,
-                             α   ::Float64,
-                             σλ  ::Float64,
-                             σμ  ::Float64,
-                             ll  ::Float64,
-                             dd  ::Float64,
-                             ssλ ::Float64,
-                             ssμ ::Float64,
-                             ns  ::Float64,
-                             ne  ::Float64,
-                             sos ::Function)
+function llik_cladsfbd_track!(tree::cTfbd,
+                              αλ  ::Float64,
+                              αμ  ::Float64,
+                              σλ  ::Float64,
+                              σμ  ::Float64,
+                              ψ   ::Vector{Float64},
+                              t   ::Float64,
+                              ψts ::Vector{Float64},
+                              ix  ::Int64,
+                              nep ::Int64
+                              ll  ::Float64,
+                              ddλ ::Float64,
+                              ddμ ::Float64,
+                              ssλ ::Float64,
+                              ssμ ::Float64,
+                              ns  ::Float64,
+                              ne  ::Float64,
+                              sos ::Function)
 
-  λi = lλ(tree)
-  μi = lμ(tree)
-  ei = e(tree)
-  ll = sos(ll, - ei * (exp(λi) + exp(μi)))
- 
-  if def1(tree)
-    ns  = sos(ns, 1.0)
+  @inbound begin
 
-    td1 = tree.d1
-    td2 = tree.d2
-    λ1  = lλ(td1)
-    λ2  = lλ(td2)
-    sqλ = 0.5*((λ1 - λi - α)^2 + (λ2 - λi - α)^2)
-    sqμ = 0.5*((lμ(td1) - μi)^2 + (lμ(td2) - μi)^2)
-    ll  = sos(ll, 
-              λi - 2.0 * log(σλ) - 
-              1.83787706640934533908193770912475883960723876953125 - sqλ/σλ^2 - 
-              2.0 * log(σμ) - 
-              1.83787706640934533908193770912475883960723876953125 - sqμ/σμ^2)
-    ssλ = sos(ssλ, sqλ)
-    ssμ = sos(ssμ, sqμ)
-    dd  = sos(dd, λ1 + λ2 - 2.0*λi)
+    ei = e(tree)
+    ll = 0.0
 
-    ll, dd, ssλ, ssμ, ns, ne = 
-      llik_cladsbd_track!(td1, α, σλ, σμ, ll, dd, ssλ, ssμ, ns, ne, sos)
-    ll, dd, ssλ, ssμ, ns, ne = 
-      llik_cladsbd_track!(td2, α, σλ, σμ, ll, dd, ssλ, ssμ, ns, ne, sos)
-  elseif isextinct(tree)
-    ne = sos(ne, 1.0)
-    ll = sos(ll, μi)
+    lλi, lμi = lλ(tree), lμ(tree)
+    λi, μi   = exp(lλi), exp(lμi)
+
+    # if epoch change
+    while ix < nep && t - ei < ψts[ix]
+      li  = t - ψts[ix]
+      ll  = sos(ll, - li*(λi + μi + ψ[ix]))
+      ei -= li
+      t   = ψts[ix]
+      ix += 1
+    end
+
+    ll  = sos(ll, - ei*(λi + μi + ψ[ix]))
+    t  -= ei
+
+    if def1(tree)
+      if def2(tree)
+        ns  = sos(ns, 1.0)
+        td1 = tree.d1
+        td2 = tree.d2
+        lλ1, lλ2  = lλ(td1), lλ(td2)
+        lμ1, lμ2  = lμ(td1), lμ(td2)
+        sqλ = 0.5*((lλ1 - lλi - αλ)^2 + (lλ2 - lλi - αλ)^2)
+        sqμ = 0.5*((lμ1 - lμi - αμ)^2 + (lμ2 - lμi - αμ)^2)
+        ll  = sos(ll, 
+                  lλi - 2.0 * log(σλ) - 
+                  1.83787706640934533908193770912475883960723876953125 - 
+                  sqλ/σλ^2 - 
+                  2.0 * log(σμ) - 
+                  1.83787706640934533908193770912475883960723876953125 - 
+                  sqμ/σμ^2)
+        ssλ = sos(ssλ, sqλ)
+        ssμ = sos(ssμ, sqμ)
+        ddλ = sos(ddλ, lλ1 + lλ2 - 2.0*lλi)
+        ddμ = sos(ddμ, lμ1 + lμ2 - 2.0*lμi)
+
+        ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
+          llik_cladsfbd_track!(td1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
+            ll, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
+        ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
+          llik_cladsfbd_track!(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
+            ll, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
+      else
+        ll = sos(ll, log(ψ[ix]))
+
+        ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
+          llik_cladsfbd_track!(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
+            ll, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
+      end
+    else
+      if isextinct(tree)
+        ne = sos(ne, 1.0)
+        ll = sos(ll, lμi)
+      end
+      if isfossil(tree)
+        ll = sos(ll, log(ψ[ix]))
+      end
+    end
   end
 
-  return ll, dd, ssλ, ssμ, ns, ne
+  return ll, ddλ, ddμ, ssλ, ssμ, ns, ne
 end
 
 
@@ -157,63 +252,42 @@ end
 
 """
     _dd_ss(tree::cTfbd,
-           α   ::Float64,
-           dd  ::Float64,
+           αμ  ::Float64,
+           αμ  ::Float64,
+           ddλ ::Float64,
+           ddμ ::Float64,
            ssλ ::Float64,
            ssμ ::Float64)
 
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-and the delta drift for speciation `ddλ` and extinction `ddμ`.
+Returns the standardized sum of squares & the delta drifts.
 """
 function _dd_ss(tree::cTfbd,
-                α   ::Float64,
-                dd  ::Float64,
+                αμ  ::Float64,
+                αμ  ::Float64,
+                ddλ ::Float64,
+                ddμ ::Float64,
                 ssλ ::Float64,
                 ssμ ::Float64)
 
   if def1(tree)
     td1 = tree.d1
-    dd, ssλ, ssμ = _dd_ss(td1, α, dd, ssλ, ssμ)
+    ddλ, ddμ, ssλ, ssμ = _dd_ss(td1, αλ, αμ, ddλ, ddμ, ssλ, ssμ)
     if def2(tree)
       td2 = tree.d2
-      dd, ssλ, ssμ = _dd_ss(td2, α, dd, ssλ, ssμ)
+      ddλ, ddμ, ssλ, ssμ = _dd_ss(td2, αλ, αμ, ddλ, ddμ, ssλ, ssμ)
 
-      lλi  = lλ(tree)
-      lμi  = lμ(tree)
-      lλ1  = lλ(td1)
-      lλ2  = lλ(td2)
-      dd  += lλ1 + lλ2 - 2.0*lλi
-      ssλ += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
-      ssμ += 0.5*((lμ(td1) - lμi)^2 + (lμ(td2) - lμi)^2)
+      lλi, lλ1, lλ2 = lλ(tree), lλ(td1), lλ(td2) 
+      lμi, lμ1, lμ2 = lμ(tree), lμ(td1), lμ(td2) 
+      ddλ += lλ1 + lλ2 - 2.0*lλi
+      ddμ += lμ1 + lμ2 - 2.0*lμi
+      ssλ += 0.5*((lλ1 - lλi - αλ)^2 + (lλ2 - lλi - αλ)^2)
+      ssμ += 0.5*((lμ1 - lμi - αμ)^2 + (lμ2 - lμi - αμ)^2)
     end
   end
 
-  return dd, ssλ, ssμ
+  return ddλ, ddμ, ssλ, ssμ
 end
 
-
-
-
-"""
-    _ir(tree::cTfbd, irλ::Float64, irμ::Float64)
-
-Returns the the integrated speciation and extinction rate `irλ` and `irμ`.
-"""
-function _ir(tree::cTfbd, irλ::Float64, irμ::Float64)
-
-  ei   = e(tree)
-  irλ += ei * exp(lλ(tree))
-  irμ += ei * exp(lμ(tree))
-
-  if def1(tree)
-    irλ, irμ = _ir(tree.d1, irλ, irμ)
-    if def2(tree)
-      irλ, irμ = _ir(tree.d2, irλ, irμ)
-    end
-  end
-
-  return irλ, irμ
-end
 
 
 

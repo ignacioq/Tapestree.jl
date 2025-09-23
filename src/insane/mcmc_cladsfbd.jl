@@ -37,24 +37,30 @@ Created 28 07 2025
 
 Run insane for clads birth-death.
 """
-function insane_cladsbd(tree    ::sT_label;
+function insane_cladsbd(tree    ::sTf_label;
                         λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
                         μ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                        α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                        αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                        αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                         σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                        σμ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                        σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
+                        ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                        ψ_epoch ::Vector{Float64}       = Float64[],
+                        f_epoch ::Vector{Int64}         = Int64[0],
                         niter   ::Int64                 = 1_000,
                         nthin   ::Int64                 = 10,
                         nburn   ::Int64                 = 200,
                         nflush  ::Int64                 = nthin,
-                        ofile   ::String                = string(homedir(), "/cladsbd"),
+                        ofile   ::String                = string(homedir(), "/cladsfbd"),
                         λi      ::Float64               = NaN,
                         μi      ::Float64               = NaN,
                         ϵi      ::Float64               = 0.2,
-                        αi      ::Float64               = 0.0,
+                        ψi      ::Float64               = NaN,
+                        αλi     ::Float64               = 0.0,
+                        αμi     ::Float64               = 0.0,
                         σλi     ::Float64               = 0.1,
                         σμi     ::Float64               = 0.1,
-                        pupdp   ::NTuple{6,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 0.2, 0.2),
+                        pupdp   ::NTuple{7,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 1e-4, 0.1, 0.2),
                         prints  ::Int64                 = 5,
                         stnλ    ::Float64               = 0.5,
                         stnμ    ::Float64               = 0.5,
@@ -583,7 +589,7 @@ function update_σλ!(σλc     ::Float64,
   σλ_p1, σλ_p2 = σλ_prior
 
   # Gibbs update for σ
-  σλp2 = randinvgamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ)
+  σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
   σλp  = sqrt(σλp2)
 
   mp  = m_surv_cladsbd(th, λ0, μ0, α, σλp, σμ, 1_000, surv)
@@ -636,7 +642,7 @@ function update_σμ!(σμc     ::Float64,
   σμ_p1, σμ_p2 = σμ_prior
 
   # Gibbs update for σ
-  σμp2 = randinvgamma(σμ_p1 + 0.5 * n, σμ_p2 + ssμ)
+  σμp2 = rand(InverseGamma(σμ_p1 + 0.5 * n, σμ_p2 + ssμ))
   σμp  = sqrt(σμp2)
 
   mp  = m_surv_cladsbd(th, λ0, μ0, α, σλ, σμp, 1_000, surv)

@@ -326,7 +326,7 @@ function sim_cladsfbd(t   ::Float64;
     end
 
     tree = cTfbd(d1, d2, 0.0, false, false, false, lλ0, lμ0)
-   elseif init === :stem
+  elseif init === :stem
     tree, nn = _sim_cladsfbd(t, log(λ0), log(μ0), αλ, αμ, σλ, σμ, ψ, ψts, 
       1, nep, 1, nlim)
 
@@ -709,7 +709,6 @@ function _sim_cladsfbd_it(t   ::Float64,
       return cTfbd(), na, nn, NaN
     end
 
-    end
   end
 
   return cTfbd(), na, nn, NaN
@@ -767,6 +766,5 @@ function _sim_cladsfbd_surv(t   ::Float64,
 
   return true, nn
 end
-
 
 
