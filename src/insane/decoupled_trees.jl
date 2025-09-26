@@ -588,6 +588,81 @@ end
            αμ  ::Float64,
            σλ  ::Float64,
            σμ  ::Float64,
+           ::Type{cTfbd})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                λ   ::Float64,
+                μ   ::Float64,
+                ::Type{cTfbd})
+  Ξ = cTfbd[]
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ   ::Vector{cTfbd},
+             i   ::Int64,
+             lλ0 ::Float64,
+             lμ0 ::Float64,
+             αλ  ::Float64,
+             αμ  ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTfbd},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  lμ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  setμt!(bi, lμ0)
+
+
+  if isfossil(bi) && iszero(i1)
+    push!(Ξ, cTfbd(
+               cTfbd(0.0, true, false, false, lλ0, lμ0),
+               e(bi), false, true, true, lλ0, lμ0))
+  else
+    push!(Ξ, cTfbd(e(bi), false, isfossil(bi), true, lλ0, lμ0))
+  end
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, lμ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, lμ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           λ   ::Float64,
+           μ   ::Float64,
+           αλ  ::Float64,
+           αμ  ::Float64,
+           σλ  ::Float64,
+           σμ  ::Float64,
            δt  ::Float64,
            srδt::Float64,
            ::Type{iTfbd})
@@ -1420,42 +1495,6 @@ end
 
 
 
-
-"""
-    _dd_ss(Ξ::Vector{cTbd}, idf::Vector{iBffs}, α::Float64)
-
-Returns the standardized sum of squares of a diffusion without drift `α`.
-"""
-function _dd_ss(Ξ::Vector{cTbd}, idf::Vector{iBffs}, α::Float64)
-
-  dd = ssλ = ssμ = 0.0
-  for i in Base.OneTo(lastindex(Ξ))
-
-    dd, ssλ, ssμ = _dd_ss(Ξ[i], α, dd, ssλ, ssμ)
-
-    bi  = idf[i]
-    bi2 = d2(bi)
-
-    if bi2 > 0
-      lλi = λt(bi)
-      lμi = μt(bi)
-      ξ1  = Ξ[d1(bi)]
-      ξ2  = Ξ[bi2]
-      lλ1 = lλ(ξ1)
-      lλ2 = lλ(ξ2)
-
-      dd  += lλ1 + lλ2 - 2.0*lλi
-      ssλ += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
-      ssμ += 0.5*((lμ(ξ1) - lμi)^2 + (lμ(ξ2) - lμi)^2)
-    end
-  end
-
-  return dd, ssλ, ssμ
-end
-
-
-
-
 """
     _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
 
@@ -1483,6 +1522,43 @@ function _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
 
   return dd, ss, seλ
 end
+
+
+
+
+"""
+    _dd_ss(Ξ::Vector{cTfbd}, idf::Vector{iBffs}, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss(Ξ::Vector{cTfbd}, idf::Vector{iBffs}, αλ::Float64, αμ::Float64)
+
+  ddλ = ddμ = ssλ = ssμ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    ddλ, ddμ, ssλ, ssμ = _dd_ss(Ξ[i], αλ, αμ, ddλ, ddμ, ssλ, ssμ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lμi = μt(bi)
+      ξ1  = Ξ[d1(bi)]
+      ξ2  = Ξ[bi2]
+      lλ1, lλ2 = lλ(ξ1), lλ(ξ2)
+      lμ1, lμ2 = lμ(ξ1), lμ(ξ2)
+
+      ddλ += lλ1 + lλ2 - 2.0*lλi
+      ddμ += lμ1 + lμ2 - 2.0*lμi
+      ssλ += 0.5*((lλ1 - lλi - αλ)^2 + (lλ2 - lλi - αλ)^2)
+      ssμ += 0.5*((lμ1 - lμi - αμ)^2 + (lμ2 - lμi - αμ)^2)
+    end
+  end
+
+  return ddλ, ddμ, ssλ, ssμ
+end
+
 
 
 
@@ -1716,6 +1792,43 @@ end
 
 
 """
+    _ss(Ξ  ::Vector{cTfbd},
+        idf::Vector{iBffs},
+        α  ::Float64,
+        fT ::Function,
+        fB ::Function)
+
+Returns the standardized sum of squares for drift `α` for function `f`.
+"""
+function _ss(Ξ  ::Vector{cTfbd},
+             idf::Vector{iBffs},
+             α  ::Float64,
+             fT ::Function,
+             fB ::Function)
+
+  ss = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    ss = _ss(Ξ[i], α, ss, fT)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      fi = fB(bi)
+      f1 = fT(Ξ[d1(bi)])
+      f2 = fT(Ξ[bi2])
+      ss += 0.5*((f1 - fi - α)^2 + (f2 - fi - α)^2)
+    end
+  end
+
+  return ss
+end
+
+
+
+
+"""
     _ir(Ξ::Vector{T}) where {T <: cT}
 
 Returns the `integrated rate`.
@@ -1738,7 +1851,7 @@ end
 
 Returns the standardized sum of squares a for rate `f` a `σ` proposal.
 """
-function _irbd(Ξ::Vector{cTbd})
+function _irbd(Ξ::Vector{T}) where {T <: cTbdU}
 
   irλ = irμ = 0.0
   for ξi in Ξ

@@ -3075,25 +3075,25 @@ end
 
 """
     downstreamλμs(i  ::Int64, 
-                  Ξ  ::Vector{cTbd},
-                  idf::Vector{iBffs},
-                  eds::Float64,
-                  λ1 ::Float64,
+                  Ξ  ::Vector{T}, 
+                  idf::Vector{iBffs}, 
+                  eds::Float64, 
+                  λ1 ::Float64, 
                   λ2 ::Float64,
                   μ1 ::Float64,
-                  μ2 ::Float64)
+                  μ2 ::Float64) where {T <: cTbdU}
 
 Return the branch length `eds` and speciation and extinction rates of 
 daughters, if any, for middle branches.
 """
 function downstreamλμs(i  ::Int64, 
-                       Ξ  ::Vector{cTbd}, 
+                       Ξ  ::Vector{T}, 
                        idf::Vector{iBffs}, 
                        eds::Float64, 
                        λ1 ::Float64, 
                        λ2 ::Float64,
                        μ1 ::Float64,
-                       μ2 ::Float64)
+                       μ2 ::Float64) where {T <: cTbdU}
 
   @inbounds begin
 

@@ -163,7 +163,7 @@ end
 """
     _ss(tree::T, α::Float64, ss::Float64) where {T <: cT}
 
-Returns the standardized sum of squares for rate `v`.
+Returns the standardized sum of squares for λ.
 """
 function _ss(tree::T, α::Float64, ss::Float64) where {T <: cT}
 

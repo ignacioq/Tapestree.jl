@@ -155,8 +155,7 @@ end
            ssλ ::Float64,
            ssμ ::Float64)
 
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-and the delta drift for speciation `ddλ` and extinction `ddμ`.
+Returns the standardized sum of squares and the delta drift.
 """
 function _dd_ss(tree::cTbd,
                 α   ::Float64,

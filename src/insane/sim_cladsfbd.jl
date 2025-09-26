@@ -623,6 +623,94 @@ end
 
 
 """
+    _sim_cladsfbd_i(t   ::Float64,
+                    te  ::Float64,
+                    λt  ::Float64,
+                    μt  ::Float64,
+                    αλ  ::Float64,
+                    αμ  ::Float64,
+                    σλ  ::Float64,
+                    σμ  ::Float64,
+                    ψ   ::Vector{Float64},
+                    ψts ::Vector{Float64},
+                    ix  ::Int64,
+                    nep ::Int64,
+                    na  ::Int64,
+                    nf  ::Int64,
+                    nn  ::Int64,
+                    nlim::Int64)
+
+Simulate `cTfbd` according to a birth-death clads.
+"""
+function _sim_cladsfbd_i(t   ::Float64,
+                         te  ::Float64,
+                         λt  ::Float64,
+                         μt  ::Float64,
+                         αλ  ::Float64,
+                         αμ  ::Float64,
+                         σλ  ::Float64,
+                         σμ  ::Float64,
+                         ψ   ::Vector{Float64},
+                         ψts ::Vector{Float64},
+                         ix  ::Int64,
+                         nep ::Int64,
+                         na  ::Int64,
+                         af  ::Bool,
+                         nn  ::Int64,
+                         nlim::Int64)
+
+  if af && nn < nlim
+
+    @inbounds ψi = ψ[ix]
+
+    λi = exp(λt)
+    μi = exp(μt)
+    tw = cfbd_wait(λi, μi, ψi)
+
+    # ψ epoch change
+    if ix < nep
+      @inbounds ψti = ψts[ix]
+      if t - tw < ψti
+        e0 = t - ψti
+        t0, na, af, nn = _sim_cladsfbd_i(ψti, te, λt, μt, αλ, αμ, σλ, σμ, 
+          ψ, ψts, ix + 1, nep, na, af, nn, nlim)
+        sete!(t0, e(t0) + e0)
+        return t0, na, af, nn
+      end
+    end
+
+    if tw > (t - te)
+      na += 1
+      return cTfbd(t, false, false, false, λt, μt), na, af, nn
+    end
+
+    # if speciation
+    if λevent(λi, μi, ψi)
+      nn += 1
+      d1, na, af, nn = 
+        _sim_cladsfbd_i(t - tw, te, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ), 
+          αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, na, af, nn, nlim)
+      d2, na, af, nn = 
+        _sim_cladsfbd_i(t - tw, te, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+          αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, na, af, nn, nlim)
+
+    # if extinction
+    elseif μevent(μi, ψi)
+
+      return cTfbd(tw, true, false, false, λt, μt), na, af, nn
+    # if fossil sampling
+    else
+      return cTfbd(), na, true, nn
+    end
+  end
+
+  return cTfbd(), na, af, nn
+end
+
+
+
+
+"""
     _sim_cladsfbd_it(t   ::Float64,
                      λt  ::Float64,
                      μt  ::Float64,

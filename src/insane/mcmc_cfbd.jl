@@ -73,12 +73,10 @@ function insane_cfbd(tree    ::sTf_label;
       if lep > nep
         f_epoch = f_epoch[(end-nep+1):end]
       else 
-        for i in Base.OneTo(nep - lep)
-          pushfirst!(f_epoch, 0)
-        end
+        prepend!(f_epoch, zeros(Int64, nep-lep))
       end
     else
-      f_epoch = fill(0, nep)
+      f_epoch = zeros(Int64, nep)
     end
   end
 

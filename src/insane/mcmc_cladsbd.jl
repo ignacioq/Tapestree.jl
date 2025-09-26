@@ -697,8 +697,7 @@ function update_scale!(Ξ       ::Vector{cTbd},
 
   accλ = accμ = 0.0
 
-  lλ0 = lλ(Ξ[1])[1]
-  lμ0 = lμ(Ξ[1])[1]
+  lλ0, lμ0 = lλ(Ξ[1]), lμ(Ξ[1])
 
   ## start with speciation
   # sample log(scaling factor)
@@ -916,7 +915,7 @@ end
                λfs  ::Vector{Float64},
                μfs  ::Vector{Float64})
 
-Forward simulation proposal function for pure birth diffusion.
+Forward simulation proposal for clads.
 """
 function update_fs!(bix  ::Int64,
                     Ξ    ::Vector{cTbd},
@@ -1494,7 +1493,7 @@ function tip_sims!(tree::cTbd,
 
         setproperty!(tree, :iμ, isextinct(stree))
         sete!(tree, e(tree) + e(stree))
-        if isdefined(stree, :d1)
+        if def1(stree)
           tree.d1 = stree.d1
           tree.d2 = stree.d2
         end

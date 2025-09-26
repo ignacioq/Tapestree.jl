@@ -11,9 +11,6 @@ Created 28 07 2025
 
 
 
-"""
-here
-"""
 
 
 """
@@ -124,7 +121,7 @@ function llik_clads(tree::cTfbd,
               llik_clads(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
       else
         ll += log(ψ[ix])                                          +
-              llik_cfbd(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
+              llik_clads(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
       end
     else
       ll += (isextinct(tree) ? lμi        : 0.0) +
@@ -148,7 +145,7 @@ end
                          t   ::Float64,
                          ψts ::Vector{Float64},
                          ix  ::Int64,
-                         nep ::Int64
+                         nep ::Int64,
                          ll  ::Float64,
                          ddλ ::Float64,
                          ddμ ::Float64,
@@ -169,7 +166,7 @@ function llik_cladsfbd_track!(tree::cTfbd,
                               t   ::Float64,
                               ψts ::Vector{Float64},
                               ix  ::Int64,
-                              nep ::Int64
+                              nep ::Int64,
                               ll  ::Float64,
                               ddλ ::Float64,
                               ddμ ::Float64,
@@ -179,7 +176,7 @@ function llik_cladsfbd_track!(tree::cTfbd,
                               ne  ::Float64,
                               sos ::Function)
 
-  @inbound begin
+  @inbounds begin
 
     ei = e(tree)
     ll = 0.0
@@ -252,7 +249,7 @@ end
 
 """
     _dd_ss(tree::cTfbd,
-           αμ  ::Float64,
+           αλ  ::Float64,
            αμ  ::Float64,
            ddλ ::Float64,
            ddμ ::Float64,
@@ -262,7 +259,7 @@ end
 Returns the standardized sum of squares & the delta drifts.
 """
 function _dd_ss(tree::cTfbd,
-                αμ  ::Float64,
+                αλ  ::Float64,
                 αμ  ::Float64,
                 ddλ ::Float64,
                 ddμ ::Float64,
@@ -286,6 +283,32 @@ function _dd_ss(tree::cTfbd,
   end
 
   return ddλ, ddμ, ssλ, ssμ
+end
+
+
+
+
+"""
+    _ss(tree::cTfbd, α::Float64, ss::Float64, f::Function)
+
+Returns the standardized sum of squares for `f`. 
+"""
+function _ss(tree::cTfbd, α::Float64, ss::Float64, f::Function)
+
+  if def1(tree)
+    td1 = tree.d1
+    ss = _ss(td1, α, ss, f)
+    if def2(tree)
+      td2 = tree.d2
+      ss = _ss(td2, α, ss, f)
+      fi = f(tree)
+      f1 = f(td1)
+      f2 = f(td2)
+      ss += 0.5*((f1 - fi - α)^2 + (f2 - fi - α)^2)
+    end
+  end
+
+  return ss
 end
 
 
