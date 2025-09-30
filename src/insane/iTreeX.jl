@@ -35,7 +35,7 @@ with the following fields:
        dt ::Float64,
        fdt::Float64,
        xv ::Array{Float64,1},
-       lσ2 ::Array{Float64,1})
+       lσ2::Array{Float64,1})
 """
 mutable struct sTxs <: sT
   d1 ::sTxs
