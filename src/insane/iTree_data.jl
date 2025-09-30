@@ -231,6 +231,7 @@ iscomplete(tree::iTce)      = true
 iscomplete(tree::iTct)      = true
 iscomplete(tree::iTbd)      = true
 iscomplete(tree::iTfbd)     = true
+iscomplete(tree::sTxs)      = true
 
 
 

@@ -139,7 +139,20 @@ function _reorder!(tree::T, treeda::D, n::Int64) where {T <: iTree, D <: iTree}
             tree.d2   = t1
             treeda.d1 = t2da
             treeda.d2 = t1da
+          elseif n1 === n2
+            if isapprox(e(tree.d1), e(treeda.d1))
+              tree.d1   = t2
+              tree.d2   = t1
+              treeda.d1 = t2da
+              treeda.d2 = t1da
+            else
+              tree.d1   = t1
+              tree.d2   = t2
+              treeda.d1 = t2da
+              treeda.d2 = t1da
+            end
           end
+
           n   = n1 + n2
           nda = n1da + n2da
         else

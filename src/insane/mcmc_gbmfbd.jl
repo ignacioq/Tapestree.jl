@@ -504,7 +504,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
     open(ofile*".txt", "w") do tf
 
-      let llc = llc, prc = prc, αλc = αλc, αμc = αμc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ssλ = ssλ, ssμ = ssμ, ddλ = ddλ, ddμ = ddμ, L = L, ns = ns, ne = ne, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αλc = αλc, αμc = αμc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ddλ = ddλ, ddμ = ddμ, ssλ = ssλ, ssμ = ssμ, L = L, ns = ns, ne = ne, lthin = lthin, lit = lit, sthin = sthin
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -560,7 +560,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
               #    return
               # end
 
-            # psi update
+            # update fossilization rate
             elseif pupi === 4
 
               llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)

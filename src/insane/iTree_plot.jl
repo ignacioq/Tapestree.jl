@@ -738,7 +738,10 @@ function _rplotf!(tree::T,
   xe = xc - ei
 
   # add horizontal lines
-  if T <: iT
+  if T <: cT
+    push!(x, xc, xe, NaN)
+    push!(y, f(tree), f(tree), NaN)
+  else
     δt = dt(tree)
     l  = lastindex(f(tree))
     @simd for i in Base.OneTo(l-1)
@@ -746,9 +749,6 @@ function _rplotf!(tree::T,
     end
     push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
     append!(y, f(tree), NaN)
-  elseif T <: cT
-    push!(x, xc, xe, NaN)
-    push!(y, f(tree), f(tree), NaN)
   end
 
   if def1(tree)
@@ -793,7 +793,11 @@ function _rplotf!(tree::T,
   xe = xc - ei
 
   # add horizontal lines
-  if T <: iT
+  if T <: cT
+    push!(x, xc, xe, NaN)
+    push!(y, yf(tree), yf(tree), NaN)
+    push!(z, zf(tree), zf(tree), NaN)
+  else
     δt = dt(tree)
     l  = lastindex(yf(tree))
     @simd for i in Base.OneTo(l-1)
@@ -802,10 +806,6 @@ function _rplotf!(tree::T,
     push!(x, xc - (Float64(l-2)*δt + fdt(tree)), NaN)
     append!(y, yf(tree), NaN)
     append!(z, zf(tree), NaN)
-  elseif T <: cT
-    push!(x, xc, xe, NaN)
-    push!(y, yf(tree), yf(tree), NaN)
-    push!(z, zf(tree), zf(tree), NaN)
   end
 
   if def1(tree)

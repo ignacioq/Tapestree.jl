@@ -147,6 +147,7 @@ end
                          ix  ::Int64,
                          nep ::Int64,
                          ll  ::Float64,
+                         L   ::Vector{Float64},
                          ddλ ::Float64,
                          ddμ ::Float64,
                          ssλ ::Float64,
@@ -168,6 +169,7 @@ function llik_cladsfbd_track!(tree::cTfbd,
                               ix  ::Int64,
                               nep ::Int64,
                               ll  ::Float64,
+                              L   ::Vector{Float64},
                               ddλ ::Float64,
                               ddμ ::Float64,
                               ssλ ::Float64,
@@ -186,15 +188,17 @@ function llik_cladsfbd_track!(tree::cTfbd,
 
     # if epoch change
     while ix < nep && t - ei < ψts[ix]
-      li  = t - ψts[ix]
-      ll  = sos(ll, - li*(λi + μi + ψ[ix]))
-      ei -= li
-      t   = ψts[ix]
-      ix += 1
+      li    = t - ψts[ix]
+      L[ix] = sos(L[ix], li)
+      ll    = sos(ll, - li*(λi + μi + ψ[ix]))
+      ei   -= li
+      t     = ψts[ix]
+      ix   += 1
     end
 
-    ll  = sos(ll, - ei*(λi + μi + ψ[ix]))
-    t  -= ei
+    ll    = sos(ll, - ei*(λi + μi + ψ[ix]))
+    t    -= ei
+    L[ix] = sos(L[ix], ei)
 
     if def1(tree)
       if def2(tree)
@@ -219,16 +223,16 @@ function llik_cladsfbd_track!(tree::cTfbd,
 
         ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
           llik_cladsfbd_track!(td1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
-            ll, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
+            ll, L, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
         ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
           llik_cladsfbd_track!(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
-            ll, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
+            ll, L, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
       else
         ll = sos(ll, log(ψ[ix]))
 
         ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
           llik_cladsfbd_track!(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
-            ll, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
+            ll, L, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
       end
     else
       if isextinct(tree)
