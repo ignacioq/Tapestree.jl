@@ -26,8 +26,7 @@ Tapestree currently holds the following phylogenetic models:
 
   - "Occurrence Birth-Death" (OBD): implements a (fossilized or not) birth-death model of constant speciation rates and extinction rates with piece-wise constant temporal changes in fossilization rates and external occurrences under a Bayesian data augmentation algorithm, as described in Andréoletti J., Quintero, I., Morlon, H. (2025) The Occurrence Birth-Death Diffusion Process: Unraveling Diversification Histories with Fossils and Heterogeneous Rates. bioRxiv [https://doi.org/10.1101/2025.08.26.672414](https://doi.org/10.1101/2025.08.26.672414)
 
-   - "Occurrence Birth-Death Diffusion" (OBDD): implements a (fossilized or not) birth-death model where speciation and extinction rates follow separate geometric Brownian motions with piece-wise constant temporal changes in fossilization rates and external occurrences under a Bayesian data augmentation algorithm, as described in Andréoletti J., Quintero, I., Morlon, H. (2025) The Occurrence Birth-Death Diffusion Process: Unraveling Diversification Histories with Fossils and Heterogeneous Rates. bioRxiv [https://doi.org/10.1101/2025.08.26.672414](https://doi.org/10.1101/2025.08.26.672414)
-
+  - "Occurrence Birth-Death Diffusion" (OBDD): implements a (fossilized or not) birth-death model where speciation and extinction rates follow separate geometric Brownian motions with piece-wise constant temporal changes in fossilization rates and external occurrences under a Bayesian data augmentation algorithm, as described in Andréoletti J., Quintero, I., Morlon, H. (2025) The Occurrence Birth-Death Diffusion Process: Unraveling Diversification Histories with Fossils and Heterogeneous Rates. bioRxiv [https://doi.org/10.1101/2025.08.26.672414](https://doi.org/10.1101/2025.08.26.672414)
 
 
 #### Diffused Brownian motion (DBM) model

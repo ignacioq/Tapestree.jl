@@ -223,12 +223,12 @@ function _from_string(s::AbstractString, i::Int64, ::Type{T}) where {T <: sT}
         else
           tree = T(sd1, sd2, 
                    parse(Float64, SubString(s, i1+1, i2-1)), 
-                   SubString(s, i, i1-1))
+                   SubString(s, i+1, i1-1))
         end
       else
          tree = T(sd1, 
                   parse(Float64, SubString(s, i1+1, i2-1)), 
-                  SubString(s, i, i1-1))
+                  SubString(s, i+1, i1-1))
       end
     else
       tree = T(parse(Float64, SubString(s, i1+1, i2-1)), SubString(s, i, i1-1))
@@ -246,7 +246,7 @@ end
 """
     find_cp(s::AbstractString, i::Int64)
 
-Find next ',' or ')' after index `i`.
+Find next ',', ')' or ';' after index `i`.
 """
 function find_cp(s::AbstractString, i::Int64)
 
@@ -255,7 +255,7 @@ function find_cp(s::AbstractString, i::Int64)
 
   if isnothing(f1)
     if isnothing(f2)
-      return lastindex(s)+1
+      return lastindex(s)
     else 
       return f2
     end
@@ -518,6 +518,8 @@ Writes an `iTree` to IOBuffer `io`.
 nx_buffer(io::IOBuffer, tree::T, reftree::Tl, ic::Bool) where {T <: iTree, Tl <: Tlabel} = 
   _nx_buffer(io, tree, reftree, 0, ic)
 
+
+
 """
     _nx_buffer(io     ::IOBuffer, 
                tree   ::T, 
@@ -629,6 +631,7 @@ nx_buffer(io::IOBuffer, tree::iTfbd, reftree::sTf_label, ic::Bool) =
                tree   ::iTfbd, 
                reftree::sTf_label, 
                n      ::Int64, 
+               nf     ::Int64, 
                ic     ::Bool)
 
 Writes an `iTree` to IOBuffer `io`.
@@ -701,6 +704,64 @@ end
 
 
 """
+    nx_buffer(io::IOBuffer, tree::iTfbd, reftree::sTf_label, ic::Bool)
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+nx_buffer(io::IOBuffer, tree::sTxs, reftree::T, ic::Bool) where {T <: Tlabel} = 
+  _nx_buffer(io, tree, reftree, ic)
+
+"""
+    _nx_buffer(io     ::IOBuffer, 
+               tree   ::sTxs, 
+               reftree::T, 
+               ic     ::Bool) where {T <: Tlabel}
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+function _nx_buffer(io     ::IOBuffer, 
+                    tree   ::sTxs, 
+                    reftree::T, 
+                    ic     ::Bool) where {T <: Tlabel}
+
+  if def1(tree)
+    write(io, '(')
+    if def2(tree)
+      _nx_buffer(io, tree.d1, reftree.d1, false)
+      write(io, ',')
+      _nx_buffer(io, tree.d2, reftree.d2, false)
+      write(io, ")[&x=")
+      nx_printv(io, xv(tree))
+      write(io, ",logs=")
+      nx_printv(io, lσ2(tree))
+      print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), ']')
+      !ic && print(io, ':', e(tree))
+    else
+      _nx_buffer(io, tree.d1, reftree.d1, false)
+      write(io, ')')
+      print(io, label(reftree))
+      write(io, "[&x=")
+      nx_printv(io, xv(tree))
+      write(io, ",logs=")
+      nx_printv(io, lσ2(tree))
+      print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), "]:", e(tree))
+    end
+  else
+    print(io, label(reftree))
+    write(io, "[&x=")
+    nx_printv(io, xv(tree))
+    write(io, ",logs=")
+    nx_printv(io, lσ2(tree))
+    print(io, ",dt=", dt(tree), ",fdt=", fdt(tree), "]:", e(tree))
+  end
+
+  return nothing
+end
+
+
+
+
+"""
     nx_printv(io::IOBuffer, x::Vector{Float64}) 
 
 Print vector for nexus format
@@ -712,7 +773,6 @@ function nx_printv(io::IOBuffer, x::Vector{Float64})
   end
   write(io, '}')
 end
-
 
 
 
