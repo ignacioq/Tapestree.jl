@@ -184,18 +184,7 @@ function insane_cladsfbd(tree    ::sTf_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running fossilised birth-death clads"
-
-                            ψ_prior ::NTuple{2,Float64},
-                            ψ_epoch ::Vector{Float64},
-                            f_epoch ::Vector{Int64},
-                            nburn   ::Int64,
-                            αλc     ::Float64,
-                            αμc     ::Float64,
-                            σλc     ::Float64,
-                            σμc     ::Float64,
-                            ψc      ::Vector{Float64},
-
+  @info "running cladogenetic fossilised birth-death"
 
   # burn-in phase
   Ξ, idf, llc, prc, αλc, αμc, σλc, σμc, mc, ns, ne, 
