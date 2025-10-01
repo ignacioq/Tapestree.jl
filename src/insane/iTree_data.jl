@@ -2003,6 +2003,61 @@ end
 
 
 """
+    fixedge(tree::T) where {T <: iTree}
+
+Return the edge length for fix path.
+"""
+function fixedge(tree::T) where {T <: iTree}
+  if def1(tree)
+    ifx1 = isfix(tree.d1)
+    if def2(tree)
+      ifx2 = isfix(tree.d2)
+      if ifx1 && ifx2
+        return e(tree)
+      elseif ifx1
+        return e(tree) + fixedge(tree.d1)
+      else
+        return e(tree) + fixedge(tree.d2)
+      end
+    elseif isfossil(tree)
+      return e(tree)
+    end
+  else
+    return e(tree)
+  end
+end
+
+
+
+"""
+    fixtree(tree::T) where {T <: iTree}
+
+Return the first fixed bifurcation or fossil sample tree.
+"""
+function fixtree(tree::T) where {T <: iTree}
+  if def1(tree)
+    ifx1 = isfix(tree.d1)
+    if def2(tree)
+      ifx2 = isfix(tree.d2)
+      if ifx1 && ifx2
+        return tree
+      elseif ifx1
+        return fixtree(tree.d1)
+      else
+        return fixtree(tree.d2)
+      end
+    elseif isfossil(tree)
+      return tree
+    end
+  else
+    return tree
+  end
+end
+
+
+
+
+"""
     fixtrait(tree::T) where {T <: iTree}
 
 Return the trait of the final fixed tip or fossil.
