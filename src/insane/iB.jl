@@ -32,188 +32,188 @@ abstract type iBf <: iB end
 
 
 
-"""
-    iBfb
+# """
+#     iBfb
 
-A Composite type representing node address for a **fixed** branch in `iTree`:
+# A Composite type representing node address for a **fixed** branch in `iTree`:
 
-  `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
-   `ρ`: specific sampling fraction.
-  `ti`: initial absolute time.
-  `tf`: final absolute time.
-  `it`: `true` if a terminal branch.
+#   `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
+#    `ρ`: specific sampling fraction.
+#   `ti`: initial absolute time.
+#   `tf`: final absolute time.
+#   `it`: `true` if a terminal branch.
 
-    iBfb()
+#     iBfb()
 
-Constructs an empty `iBfb` object.
-"""
-struct iBfb <: iBf
-  dr::BitArray{1}
-  ti::Float64
-  tf::Float64
-  ρi::Float64
-  it::Bool
+# Constructs an empty `iBfb` object.
+# """
+# struct iBfb <: iBf
+#   dr::BitArray{1}
+#   ti::Float64
+#   tf::Float64
+#   ρi::Float64
+#   it::Bool
 
-  # constructors
-  iBfb() = new(BitArray{1}(), 0.0, 0.0, 1.0, false)
-  iBfb(dr::BitArray{1}, ti::Float64, tf::Float64, ρi::Float64, it::Bool) =
-    new(dr, ρi, ti, tf, it)
-end
-
-
-# pretty-printing
-Base.show(io::IO, id::iBfb) =
-  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (",
-    ti(id), ", ", tf(id), "), ", dr(id))
+#   # constructors
+#   iBfb() = new(BitArray{1}(), 0.0, 0.0, 1.0, false)
+#   iBfb(dr::BitArray{1}, ti::Float64, tf::Float64, ρi::Float64, it::Bool) =
+#     new(dr, ρi, ti, tf, it)
+# end
 
 
-
-
-"""
-    tree::sT_label,
-    idv ::Array{iBfb,1},
-    bitv::BitArray{1},
-    tρ  ::Dict{String, Float64}
-
-Make `iBfb` vector for an `iTree` taking into account
-species-specific sampling fraction `ρ`.
-"""
-function makeiBf!(tree::sT_label,
-                  idv ::Array{iBfb,1},
-                  bitv::BitArray{1},
-                  tρ  ::Dict{String, Float64})
-
-  if istip(tree)
-    lab = label(tree)
-    ρi  = tρ[lab]
-    push!(idv,
-      iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, true))
-    return ρi, 1, bitv
-  end
-
-  bitv1 = copy(bitv)
-  bitv2 = copy(bitv)
-
-  if def1(tree)
-    push!(bitv1, true)
-    ρ1, n1, bitv1 = makeiBf!(tree.d1, idv, bitv1, tρ)
-  end
-
-  if def2(tree)
-    push!(bitv2, false)
-    ρ2, n2, bitv2 = makeiBf!(tree.d2, idv, bitv2, tρ)
-  end
-
-  bitv = copy(bitv1)
-  pop!(bitv)
-
-  n  = n1 + n2
-  ρi = n / (n1/ρ1 + n2/ρ2)
-  push!(idv,
-    iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, false))
-
-  return ρi, n, bitv
-end
+# # pretty-printing
+# Base.show(io::IO, id::iBfb) =
+#   print(io, "fixed", it(id) ? " terminal" : ""," ibranch (",
+#     ti(id), ", ", tf(id), "), ", dr(id))
 
 
 
 
-"""
-    makeiBf!(tree::sTfbd, idv::Array{iBfb,1}, bit::BitArray{1})
+# """
+#     tree::sT_label,
+#     idv ::Array{iBfb,1},
+#     bitv::BitArray{1},
+#     tρ  ::Dict{String, Float64}
 
-Make `iBfb` vector for an `iTree`.
-"""
-function makeiBf!(tree::sTfbd, idv::Array{iBfb,1}, bit::BitArray{1})
+# Make `iBfb` vector for an `iTree` taking into account
+# species-specific sampling fraction `ρ`.
+# """
+# function makeiBf!(tree::sT_label,
+#                   idv ::Array{iBfb,1},
+#                   bitv::BitArray{1},
+#                   tρ  ::Dict{String, Float64})
 
-  itb = istip(tree)
+#   if istip(tree)
+#     lab = label(tree)
+#     ρi  = tρ[lab]
+#     push!(idv,
+#       iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, true))
+#     return ρi, 1, bitv
+#   end
 
-  push!(idv, iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
+#   bitv1 = copy(bitv)
+#   bitv2 = copy(bitv)
 
-  bit1 = copy(bit)
-  bit2 = copy(bit)
+#   if def1(tree)
+#     push!(bitv1, true)
+#     ρ1, n1, bitv1 = makeiBf!(tree.d1, idv, bitv1, tρ)
+#   end
 
+#   if def2(tree)
+#     push!(bitv2, false)
+#     ρ2, n2, bitv2 = makeiBf!(tree.d2, idv, bitv2, tρ)
+#   end
 
-  if def1(tree)
-    push!(bit1, true)
-    makeiBf!(tree.d1, idv, bit1)
-  end
-  if def2(tree)
-    push!(bit2, false)
-    makeiBf!(tree.d2, idv, bit2)
-  end
-  return nothing
-end
+#   bitv = copy(bitv1)
+#   pop!(bitv)
 
+#   n  = n1 + n2
+#   ρi = n / (n1/ρ1 + n2/ρ2)
+#   push!(idv,
+#     iBfb(bitv, treeheight(tree), treeheight(tree) - e(tree), ρi, false))
 
-
-
-"""
-    iBfgp
-
-A Composite type representing node address for a **fixed** branch in `iTree`:
-
-  `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
-  `da`: mutable scalar denoting the number of grafted data augmented branches.
-  `ti`: initial absolute time.
-  `tf`: final absolute time.
-  `it`: `true` if a terminal branch.
-  `ie`: `true` if a terminal branch and extinct.
-
-    iBfgp()
-
-Constructs an empty `iBfgp` object.
-"""
-struct iBfgp <: iBf
-  dr::BitArray{1}
-  da::Base.RefValue{Int64}
-  ti::Float64
-  tf::Float64
-  it::Bool
-  ie::Bool
-
-  # constructors
-  iBfgp() = new(BitArray{1}(), Ref(0), 0.0, 0.0, false, false)
-  iBfgp(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64, it::Bool, ie::Bool) =
-    new(dr, Ref(da), ti, tf, it, ie)
-end
-
-# pretty-printing
-Base.show(io::IO, id::iBfgp) =
-  print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id),
-    " with ", da(id), " graft", isone(da(id)) ? "" : "s")
+#   return ρi, n, bitv
+# end
 
 
 
 
-"""
-    makeiBf!(tree::T,
-             idv ::Array{iBfgp,1},
-             bit ::BitArray{1}) where {T <: iTree}
+# """
+#     makeiBf!(tree::sTfbd, idv::Array{iBfb,1}, bit::BitArray{1})
 
-Make `iBfgp` vector for an `iTree`.
-"""
-function makeiBf!(tree::T,
-                  idv ::Array{iBfgp,1},
-                  bit ::BitArray{1}) where {T <: iTree}
+# Make `iBfb` vector for an `iTree`.
+# """
+# function makeiBf!(tree::sTfbd, idv::Array{iBfb,1}, bit::BitArray{1})
 
-  itb = istip(tree)
-  ieb = isextinct(tree)
+#   itb = istip(tree)
 
-  push!(idv,
-    iBfgp(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb, ieb))
+#   push!(idv, iBfb(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb))
 
-  bit1 = copy(bit)
-  bit2 = copy(bit)
+#   bit1 = copy(bit)
+#   bit2 = copy(bit)
 
-  if def1(tree)
-    push!(bit1, true)
-    makeiBf!(tree.d1, idv, bit1)
-    push!(bit2, false)
-    makeiBf!(tree.d2, idv, bit2)
-  end
 
-  return nothing
-end
+#   if def1(tree)
+#     push!(bit1, true)
+#     makeiBf!(tree.d1, idv, bit1)
+#   end
+#   if def2(tree)
+#     push!(bit2, false)
+#     makeiBf!(tree.d2, idv, bit2)
+#   end
+#   return nothing
+# end
+
+
+
+
+# """
+#     iBfgp
+
+# A Composite type representing node address for a **fixed** branch in `iTree`:
+
+#   `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
+#   `da`: mutable scalar denoting the number of grafted data augmented branches.
+#   `ti`: initial absolute time.
+#   `tf`: final absolute time.
+#   `it`: `true` if a terminal branch.
+#   `ie`: `true` if a terminal branch and extinct.
+
+#     iBfgp()
+
+# Constructs an empty `iBfgp` object.
+# """
+# struct iBfgp <: iBf
+#   dr::BitArray{1}
+#   da::Base.RefValue{Int64}
+#   ti::Float64
+#   tf::Float64
+#   it::Bool
+#   ie::Bool
+
+#   # constructors
+#   iBfgp() = new(BitArray{1}(), Ref(0), 0.0, 0.0, false, false)
+#   iBfgp(dr::BitArray{1}, da::Int64, ti::Float64, tf::Float64, it::Bool, ie::Bool) =
+#     new(dr, Ref(da), ti, tf, it, ie)
+# end
+
+# # pretty-printing
+# Base.show(io::IO, id::iBfgp) =
+#   print(io, "fixed", it(id) ? " terminal" : ""," ibranch (", ti(id), ", ", tf(id), "), ", dr(id),
+#     " with ", da(id), " graft", isone(da(id)) ? "" : "s")
+
+
+
+
+# """
+#     makeiBf!(tree::T,
+#              idv ::Array{iBfgp,1},
+#              bit ::BitArray{1}) where {T <: iTree}
+
+# Make `iBfgp` vector for an `iTree`.
+# """
+# function makeiBf!(tree::T,
+#                   idv ::Array{iBfgp,1},
+#                   bit ::BitArray{1}) where {T <: iTree}
+
+#   itb = istip(tree)
+#   ieb = isextinct(tree)
+
+#   push!(idv,
+#     iBfgp(bit, 0, treeheight(tree), treeheight(tree) - e(tree), itb, ieb))
+
+#   bit1 = copy(bit)
+#   bit2 = copy(bit)
+
+#   if def1(tree)
+#     push!(bit1, true)
+#     makeiBf!(tree.d1, idv, bit1)
+#     push!(bit2, false)
+#     makeiBf!(tree.d2, idv, bit2)
+#   end
+
+#   return nothing
+# end
 
 
 
@@ -282,151 +282,9 @@ Base.show(io::IO, id::iBffs) =
 
 
 
+
 """
     makeiBf!(tree::sT,
-             ec  ::Float64,
-             idv ::Array{iBffs,1},
-             ts  ::Float64,
-             n2v ::Array{Int64,1},
-             tρ  ::Dict{String, Float64},
-             mxt ::Float64)
-
-Make `iBf` vector for an `iTree`.
-"""
-function makeiBf!(tree::sT,
-                  ec  ::Float64,
-                  idv ::Array{iBffs,1},
-                  ts  ::Float64,
-                  n2v ::Array{Int64,1},
-                  tρ  ::Dict{String, Float64},
-                  mxt ::Float64)
-
-  el = e(tree)
-  el = ec < el ? ec : el
-
-  # mid branch
-  if el > mxt
-
-    te = ts - mxt
-    ρi, n, nm = makeiBf!(tree, el - mxt, idv, te, n2v, tρ, mxt)
-
-    push!(idv,
-      iBffs(mxt, 0, 1, 0, ts, te, false, false, ρi, 0, 1, NaN))
-    push!(n2v, 2*n + nm)
-
-    return ρi, n, nm + 1
-
-  # terminal branch
-  elseif istip(tree)
-
-    lab = label(tree)
-    ρi  = tρ[lab]
-    te  = ts - el
-    te  = isapprox(te, 0.0) ? te : 0.0
-    push!(idv, 
-      iBffs(el, 0, 0, 0, ts, te, false, false, ρi, 1, 1, NaN))
-    push!(n2v, 0)
-
-    return ρi, 1, 0
-
-  # internal branch
-  else
-    te  = ts - el
-
-    ρ1, n1, nm1 = makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt)
-    ρ2, n2, nm2 = makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt)
-
-    n  = n1 + n2
-    ρi = n / (n1/ρ1 + n2/ρ2)
-    nm = nm1 + nm2
-
-    push!(idv, iBffs(el, 0, 1, 1, ts, te, false, false, ρi, 0, 1, NaN))
-    push!(n2v, 2*n2 + nm2)
-
-    return ρi, n, nm
-  end
-end
-
-
-
-
-
-"""
-    makeiBf!(tree::sT_label,
-                  idv ::Array{iBffs,1},
-                  n2v ::Array{Int64,1},
-                  tρ  ::Dict{String, Float64},
-                  sc  ::Array{Float64,1},
-                  xr  ::Array{Float64,1},
-                  X   ::Dict{String, Float64})
-
-Make `iBf` vector for an `sTX` and estimate phylogenetic independent
-contrasts `sc` and ancestors `xr` given `tree` and data `X`.
-"""
-function makeiBf!(tree::sT_label,
-                  idv ::Array{iBffs,1},
-                  ti  ::Float64,
-                  n2v ::Array{Int64,1},
-                  tρ  ::Dict{String, Float64},
-                  sc  ::Array{Float64,1},
-                  xr  ::Array{Float64,1},
-                  X   ::Dict{String, Float64})
-
-  el = e(tree)
-  tf = ti - el
-  lab = label(tree)
-
-  if istip(tree)
-    ρi  = tρ[lab]
-    xi  = get(X, lab, NaN)
-    ifx = !isnan(xi)
-    if !ifx
-      mn = isempty(xr) ? 0.0 : mean(xr)
-      s  = lastindex(sc) > 1 ? sum(abs2, sc) / Float64(lastindex(sc)-1) : 0.1 
-      xi = randn()*s + mn
-    end
-    push!(xr, xi)
-    tf  = isapprox(tf, 0.0) ? tf : 0.0
-    push!(n2v, 0)
-    push!(idv, 
-      iBffs(el, 0, 0, 0, ti, tf, true, ρi, 1, 1, 
-        0.0, 0.0, ifx))
-    return ρi, 1, xi, el
-  end
-
-  ρ1, n1, x1, e1 = makeiBf!(tree.d1, idv, tf, n2v, tρ, sc, xr, X)
-  ρ2, n2, x2, e2 = makeiBf!(tree.d2, idv, tf, n2v, tρ, sc, xr, X)
-
-  xn  = get(X, lab, NaN)
-  ifx = !isnan(xn)
-  # if constrained node
-  if ifx
-    scn = (xn - x1)/e1 + (xn - x2)/e2
-  else
-    scn = (x2 - x1)/(e1 + e2)
-    xn = (x1/e1 + x2/e2) / (1.0/e1 + 1.0/e2)
-  end
-  en = el + e1*e2/(e1 + e2)
-
-  push!(sc, scn)
-  push!(xr,  xn)
-
-  # tree order
-  n  = n1 + n2
-  ρi = n / (n1/ρ1 + n2/ρ2)
-
-  push!(idv, 
-    iBffs(el, 0, 1, 1, ti, tf, false, ρi, 0, 1, 
-      0.0, 0.0, ifx))
-  push!(n2v, n2)
-
-  return ρi, n, xn, en
-end
-
-
-
-"""
-    makeiBf!(tree::sfT_label,
              idv ::Array{iBffs,1},
              ts  ::Float64,
              n2v ::Array{Int64,1},
@@ -435,7 +293,7 @@ end
 
 Make `iBf` vector for an `iTree`.
 """
-function makeiBf!(tree::sTf_label,
+function makeiBf!(tree::sT,
                   ec  ::Float64,
                   idv ::Array{iBffs,1},
                   ts  ::Float64,
@@ -488,8 +346,8 @@ function makeiBf!(tree::sTf_label,
   else
     te  = ts - el
 
-    ρ1, n1, nm1 = makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt)
-    ρ2, n2, nm2 = makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt)
+    ρ1, n1, nm1 = makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt)
+    ρ2, n2, nm2 = makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt)
 
     n  = n1 + n2
     ρi = n / (n1/ρ1 + n2/ρ2)
@@ -501,6 +359,7 @@ function makeiBf!(tree::sTf_label,
     return ρi, n, nm
   end
 end
+
 
 
 
@@ -522,10 +381,9 @@ function make_idf(tree::sT, tρ::Dict{String, Float64}, maxt::Float64)
   for i in Base.OneTo(lastindex(idf))
     bi = idf[i]
     n2 = n2v[i]
-    i1 = d1(bi)
     i2 = d2(bi)
 
-    if i1 > 0 && iszero(i2)
+    if d1(bi) > 0 && iszero(i2)
       setd1!(bi, i + 1)
       setpa!(idf[d1(bi)], i)
     elseif i2 > 0
@@ -636,9 +494,9 @@ function makeiBf!(tree::sT,
     te  = ts - el
 
     ρ1, n1, nm1, x1, e1 =
-      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xav, xst)
-    ρ2, n2, nm2, x2, e2 = 
       makeiBf!(tree.d2, e(tree.d2), idv, te, n2v, tρ, mxt, sc, xr, xav, xst)
+    ρ2, n2, nm2, x2, e2 = 
+      makeiBf!(tree.d1, e(tree.d1), idv, te, n2v, tρ, mxt, sc, xr, xav, xst)
 
     # contrasts
     scn = (x2 - x1)/sqrt(e1 + e2)
@@ -761,50 +619,6 @@ end
 
 
 
-"""
-    iBa
-
-A Composite type representing node address for an **augmented** branch in `iTree`:
-
-  `dr`: BitArray address where `true` = iTree.d1 and `false` = iTree.d2.
-  `fB`: Link to `iBf` array specifying which fixed branch it attaches to.
-  `ti`: initial absolute time.
-  `tf`: final absolute time.
-
-    iBa()
-
-Constructs an empty `iBa` object.
-"""
-struct iBa <: iB
-  dr::BitArray{1}
-  fB::Int64
-  ti::Float64
-  tf::Float64
-
-  # constructors
-  iBa() = new(BitArray{1}(), 0, 0.0, 0.0)
-  iBa(dr::BitArray{1}, fB::Int64, ti::Float64, tf::Float64) =
-    new(dr, fB, ti, tf)
-end
-
-
-# pretty-printing
-Base.show(io::IO, id::iBa) =
-  print(io, "augmented ibranch (", ti(id), ", ", tf(id), "), ", dr(id),
-    " attached to ", fB(id))
-
-
-
-
-"""
-    dr(id::iB)
-
-Return bit directory.
-"""
-dr(id::iB) = getproperty(id, :dr)
-
-
-
 
 """
     da(id::iB)
@@ -813,15 +627,6 @@ Return number of data augmented grafts.
 """
 da(id::iBf) = getproperty(id, :da)[]
 
-
-
-
-"""
-    da(id::iB)
-
-Return index of fixed branch it is attached to.
-"""
-fB(id::iBa) = getproperty(id, :fB)[]
 
 
 

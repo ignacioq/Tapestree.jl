@@ -210,17 +210,8 @@ end
 
 Return if is a complete lineage (versus incipient lineage) in a protracted model.
 """
-iscomplete(tree::T) where {T <: iTree} = getproperty(tree, :ic)
-iscomplete(tree::sT_label)  = true
-iscomplete(tree::sTf_label) = true
-iscomplete(tree::sTb)       = true
-iscomplete(tree::sTbd)      = true
-iscomplete(tree::sTfbd)     = true
-iscomplete(tree::iTb)       = true
-iscomplete(tree::iTce)      = true
-iscomplete(tree::iTct)      = true
-iscomplete(tree::iTbd)      = true
-iscomplete(tree::iTfbd)     = true
+iscomplete(tree::T) where {T <: iTree} = true
+iscomplete(tree::iTpbd)               = getproperty(tree, :ic)
 
 
 
@@ -1980,6 +1971,62 @@ function fixtip(tree::T) where {T <: iTree}
     fixtip(tree.d1::T)
   else
     fixtip(tree.d2::T)
+  end
+end
+
+
+
+
+"""
+    fixedge(tree::T) where {T <: iTree}
+
+Return the edge length for fix path.
+"""
+function fixedge(tree::T) where {T <: iTree}
+  if def1(tree)
+    ifx1 = isfix(tree.d1)
+    if def2(tree)
+      ifx2 = isfix(tree.d2)
+      if ifx1 && ifx2
+        return e(tree)
+      elseif ifx1
+        return e(tree) + fixedge(tree.d1)
+      else
+        return e(tree) + fixedge(tree.d2)
+      end
+    elseif isfossil(tree)
+      return e(tree)
+    end
+  else
+    return e(tree)
+  end
+end
+
+
+
+
+"""
+    fixtree(tree::T) where {T <: iTree}
+
+Return the first fixed bifurcation or fossil sample tree.
+"""
+function fixtree(tree::T) where {T <: iTree}
+  if def1(tree)
+    ifx1 = isfix(tree.d1)
+    if def2(tree)
+      ifx2 = isfix(tree.d2)
+      if ifx1 && ifx2
+        return tree
+      elseif ifx1
+        return fixtree(tree.d1)
+      else
+        return fixtree(tree.d2)
+      end
+    elseif isfossil(tree)
+      return tree
+    end
+  else
+    return tree
   end
 end
 

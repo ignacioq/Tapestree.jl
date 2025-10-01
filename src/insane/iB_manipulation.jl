@@ -90,221 +90,221 @@ setψt!(id::iBffs, ψt::Float64) = id.μt[] = ψt
 
 
 
-"""
-    addda!(id::iBf)
+# """
+#     addda!(id::iBf)
 
-Add `1` to number of data augmented branches.
-"""
-addda!(id::iBf) = id.da[] += 1
-
-
-
-
-"""
-    rmda!(id::iBf)
-
-Substract `1` to number of data augmented branches.
-"""
-rmda!(id::iBf) = id.da[] -= 1
+# Add `1` to number of data augmented branches.
+# """
+# addda!(id::iBf) = id.da[] += 1
 
 
 
 
-"""
-    randbranch(th   ::Float64,
-               sth  ::Float64,
-               idf  ::Array{iB,1},
-               wbr  ::BitArray{1})
+# """
+#     rmda!(id::iBf)
 
-Randomly select branch to graft a subtree with height `sth` onto tree
-with height `th`.
-"""
-function randbranch(th   ::Float64,
-                    sth  ::Float64,
-                    idf  ::Array{iBf,1},
-                    wbr  ::BitArray{1})
-
-  # uniformly set the height at which to insert `stree`
-  h = sth + rand()*(th - sth)
-
-  # get which branches are cut by `h` and sample one at random
-  nb  = branchescut!(h, wbr, idf)
-  rn  = rand(Base.OneTo(nb))
-  br, i  = getbranch(rn, wbr, idf)
-
-  return h, br, i, nb
-end
+# Substract `1` to number of data augmented branches.
+# """
+# rmda!(id::iBf) = id.da[] -= 1
 
 
 
 
+# """
+#     randbranch(th   ::Float64,
+#                sth  ::Float64,
+#                idf  ::Array{iB,1},
+#                wbr  ::BitArray{1})
 
-"""
-    randbranch(th ::Float64,
-               sth::Float64,
-               wbf::BitArray{1},
-               wba::BitArray{1},
-               idf::Array{iBf,1},
-               ida::Array{iBa,1})
+# Randomly select branch to graft a subtree with height `sth` onto tree
+# with height `th`.
+# """
+# function randbranch(th   ::Float64,
+#                     sth  ::Float64,
+#                     idf  ::Array{iBf,1},
+#                     wbr  ::BitArray{1})
 
-Randomly select branch to graft a subtree with height `sth` onto tree
-with height `th`.
-"""
-function randbranch(th ::Float64,
-                    sth::Float64,
-                    wbf::BitArray{1},
-                    wba::BitArray{1},
-                    idf::Array{iBf,1},
-                    ida::Array{iBa,1})
+#   # uniformly set the height at which to insert `stree`
+#   h = sth + rand()*(th - sth)
 
-  # uniformly set the height at which to insert `stree`
-  h = sth + rand()*(th - sth)
+#   # get which branches are cut by `h` and sample one at random
+#   nb  = branchescut!(h, wbr, idf)
+#   rn  = rand(Base.OneTo(nb))
+#   br, i  = getbranch(rn, wbr, idf)
 
-  # get which branches are cut by `h` and sample one at random
-  nf, na = branchescut!(h, wbf, wba, idf, ida)
-  # which branch
-  rn  = rand(1:(nf + na))
-
-  return h, nf, na, rn
-end
-
-
-
-
-"""
-    getbranch(rn ::Int64,
-              wbf::BitArray{1},
-              idf::Array{iBf,1})::Tuple{iBf,Int64}
-
-Sample one branch among those in `wbf` that are `true` according to
-randomly picked `rn`.
-"""
-function getbranch(rn ::Int64,
-                   wbf::BitArray{1},
-                   idf::Array{iBf,1})::Tuple{iBf,Int64}
-
-  i::Int64 = 0
-  n::Int64 = 0
-  for bit in wbf
-    i += 1
-    if bit
-      n += 1
-      if n == rn
-        return (idf[i], i)::Tuple{iBf,Int64}
-      end
-    end
-  end
-end
-
-
-
-
-"""
-    getbranch(rn ::Int64,
-              wba::BitArray{1},
-              idf::Array{iBa,1})::Tuple{iBa,Int64}
-
-Sample one branch among those in `wba` that are `true` according to
-randomly picked `rn`.
-"""
-function getbranch(rn ::Int64,
-                   wba::BitArray{1},
-                   ida::Array{iBa,1})::Tuple{iBa,Int64}
-
-  i::Int64 = 0
-  n::Int64 = 0
-  for bit in wba
-    i += 1
-    if bit
-      n += 1
-      if n == rn
-        return (ida[i], i)::Tuple{iBa,Int64}
-      end
-    end
-  end
-end
-
-
-
-
-"""
-    branchescut!(h  ::Float64,
-                 wbf::BitArray{1},
-                 idf::Array{iBf,1})::Int64
-
-Fill the bit array with branches that are cut by  `h`.
-"""
-function branchescut!(h  ::Float64,
-                      wbf::BitArray{1},
-                      idf::Array{iBf,1})::Int64
-
-  @inbounds begin
-    n::Int64 = 0
-    i::Int64 = 0
-    for b in idf
-      i += 1
-      if ti(b) > h > tf(b)
-        wbf[i] = true
-        n += 1
-      else
-        wbf[i] = false
-      end
-    end
-  end
-
-  return n
-end
+#   return h, br, i, nb
+# end
 
 
 
 
 
-"""
-    branchescut!(h  ::Float64,
-                 wbf::BitArray{1},
-                 wba::BitArray{1},
-                 idf::Array{iBf,1},
-                 ida::Array{iBa,1})::Int64
+# """
+#     randbranch(th ::Float64,
+#                sth::Float64,
+#                wbf::BitArray{1},
+#                wba::BitArray{1},
+#                idf::Array{iBf,1},
+#                ida::Array{iBa,1})
 
-Fill the bit arrays with both fixed and augmented branches
-that are cut by  `h`.
-"""
-function branchescut!(h  ::Float64,
-                      wbf::BitArray{1},
-                      wba::BitArray{1},
-                      idf::Array{iBf,1},
-                      ida::Array{iBa,1})
+# Randomly select branch to graft a subtree with height `sth` onto tree
+# with height `th`.
+# """
+# function randbranch(th ::Float64,
+#                     sth::Float64,
+#                     wbf::BitArray{1},
+#                     wba::BitArray{1},
+#                     idf::Array{iBf,1},
+#                     ida::Array{iBa,1})
 
-  @inbounds begin
+#   # uniformly set the height at which to insert `stree`
+#   h = sth + rand()*(th - sth)
 
-    i ::Int64 = 0
-    nf::Int64 = 0
-    for b in idf
-      i += 1
-      if ti(b) > h > tf(b)
-        wbf[i] = true
-        nf += 1
-      else
-        wbf[i] = false
-      end
-    end
+#   # get which branches are cut by `h` and sample one at random
+#   nf, na = branchescut!(h, wbf, wba, idf, ida)
+#   # which branch
+#   rn  = rand(1:(nf + na))
 
-    i = 0
-    na::Int64 = 0
-    for b in ida
-      i += 1
-      if ti(b) > h > tf(b)
-        wba[i] = true
-        na += 1
-      else
-        wba[i] = false
-      end
-    end
+#   return h, nf, na, rn
+# end
 
-  end
 
-  return nf, na
-end
+
+
+# """
+#     getbranch(rn ::Int64,
+#               wbf::BitArray{1},
+#               idf::Array{iBf,1})::Tuple{iBf,Int64}
+
+# Sample one branch among those in `wbf` that are `true` according to
+# randomly picked `rn`.
+# """
+# function getbranch(rn ::Int64,
+#                    wbf::BitArray{1},
+#                    idf::Array{iBf,1})::Tuple{iBf,Int64}
+
+#   i::Int64 = 0
+#   n::Int64 = 0
+#   for bit in wbf
+#     i += 1
+#     if bit
+#       n += 1
+#       if n == rn
+#         return (idf[i], i)::Tuple{iBf,Int64}
+#       end
+#     end
+#   end
+# end
+
+
+
+
+# """
+#     getbranch(rn ::Int64,
+#               wba::BitArray{1},
+#               idf::Array{iBa,1})::Tuple{iBa,Int64}
+
+# Sample one branch among those in `wba` that are `true` according to
+# randomly picked `rn`.
+# """
+# function getbranch(rn ::Int64,
+#                    wba::BitArray{1},
+#                    ida::Array{iBa,1})::Tuple{iBa,Int64}
+
+#   i::Int64 = 0
+#   n::Int64 = 0
+#   for bit in wba
+#     i += 1
+#     if bit
+#       n += 1
+#       if n == rn
+#         return (ida[i], i)::Tuple{iBa,Int64}
+#       end
+#     end
+#   end
+# end
+
+
+
+
+# """
+#     branchescut!(h  ::Float64,
+#                  wbf::BitArray{1},
+#                  idf::Array{iBf,1})::Int64
+
+# Fill the bit array with branches that are cut by  `h`.
+# """
+# function branchescut!(h  ::Float64,
+#                       wbf::BitArray{1},
+#                       idf::Array{iBf,1})::Int64
+
+#   @inbounds begin
+#     n::Int64 = 0
+#     i::Int64 = 0
+#     for b in idf
+#       i += 1
+#       if ti(b) > h > tf(b)
+#         wbf[i] = true
+#         n += 1
+#       else
+#         wbf[i] = false
+#       end
+#     end
+#   end
+
+#   return n
+# end
+
+
+
+
+
+# """
+#     branchescut!(h  ::Float64,
+#                  wbf::BitArray{1},
+#                  wba::BitArray{1},
+#                  idf::Array{iBf,1},
+#                  ida::Array{iBa,1})::Int64
+
+# Fill the bit arrays with both fixed and augmented branches
+# that are cut by  `h`.
+# """
+# function branchescut!(h  ::Float64,
+#                       wbf::BitArray{1},
+#                       wba::BitArray{1},
+#                       idf::Array{iBf,1},
+#                       ida::Array{iBa,1})
+
+#   @inbounds begin
+
+#     i ::Int64 = 0
+#     nf::Int64 = 0
+#     for b in idf
+#       i += 1
+#       if ti(b) > h > tf(b)
+#         wbf[i] = true
+#         nf += 1
+#       else
+#         wbf[i] = false
+#       end
+#     end
+
+#     i = 0
+#     na::Int64 = 0
+#     for b in ida
+#       i += 1
+#       if ti(b) > h > tf(b)
+#         wba[i] = true
+#         na += 1
+#       else
+#         wba[i] = false
+#       end
+#     end
+
+#   end
+
+#   return nf, na
+# end
 
 
 
