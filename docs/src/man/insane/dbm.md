@@ -13,7 +13,7 @@ where ``\alpha_x`` is the trait drift (general trait tendency to increase or dec
 In the DBM, we are not modeling the realization of the tree, but rather a process that evolved along the tree. Thus, to simulate, we need a tree to be used as template so that we can simulate on top. So if we have a `tree` object of type `sT_label` or `sTf_label`, we can simulate a trait with a starting trait value of `x0` (``x(t = 0)``), with drift `αx` (``\alpha_x``), undergoing a starting rate of `σ20` (``\sigma^2(t = 0)``) with drift `ασ` (``\alpha_{\sigma}``), with a maximal discretization time step of `δt`:
 
 ```julia
-sim_dbm(tree, x0 = 0.0, αx = 0.0, σ2 = 0.1, ασ = 0.0, γ = 0.1, δt = 1e-3)
+sim_dbm(tree, x0 = 0.0, αx = 0.0, σ20 = 0.1, ασ = 0.0, γ = 0.1, δt = 1e-3)
 ```
 
 which returns a tree of type `sTxs`, holding the simulation.
