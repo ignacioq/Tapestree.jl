@@ -24,10 +24,11 @@ It might also be useful to return a `Dictionary` with the final trait values at 
 tr, xd = sim_dbm(tree, 0.0, 0.0, 0.1, 0.0, 0.1, 1e-3)
 ```
 
-We can plot the resulting tree using Tapestree's plot recipes ([Insane plots](@ref)). For example to plot the trait evolution colored by the logarithmic rates:
+We can plot the resulting tree using Tapestree's plot recipes ([Insane plots](@ref)). For example to plot the trait evolution colored by the trait rates ``\sigma(t)``:
 ```julia
-plot(xv, tr, zf = lσ2)
+plot(xv, tr, zf = traitrate)
 ```
+Here `traitrate` is wrapper around `x -> exp.(lσ2(x))`.
 
 ## Inference
 
@@ -65,7 +66,7 @@ r, td = insane_dbm(tree,
                    δt       = 1e-3)
 ```
 
-Full documentation
+## Full documentation
 ```@docs
 sim_dbm
 insane_dbm

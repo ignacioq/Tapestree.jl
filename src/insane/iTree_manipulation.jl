@@ -106,7 +106,7 @@ end
 """
     reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
 
-Reorder a data augmented `treeda` tree with `tree`.
+Reorder data augmented tree `treeda` according to `tree`.
 """
 function reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
 
@@ -3411,7 +3411,7 @@ setd2!(tree::T,  stree::T) where {T <: iTree} = setproperty!(tree, :d2, stree)
 
 Make tree a fossil.
 """
-fossilize!(tree::iTf) = setproperty!(tree, :iψ, true)
+fossilize!(tree::iTree) = setproperty!(tree, :iψ, true)
 
 
 

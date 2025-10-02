@@ -1259,7 +1259,6 @@ function couple(Ξ  ::Vector{sTxs},
       ξit.d1 = couple(Ξ, idf, i1)
     else
       ξd1 = couple(Ξ, idf, i1)
-
       xvi = xv(ξit)
       lσ2i = lσ2(ξit)
       if iszero(e(ξit))
@@ -1285,6 +1284,7 @@ function couple(Ξ  ::Vector{sTxs},
 
   return ξi
 end
+
 
 
 

@@ -43,7 +43,7 @@ using .INSANE: sT_label, sTf_label, sTb, sTbd, sTpe, sTfbd, sTfpe,
   insane_cb, insane_cbd, insane_cfbd, insane_cobd,
   insane_gbmb, insane_gbmce, insane_gbmct, insane_gbmbd, insane_gbmfbd,
   insane_gbmobd, insane_dbm,
-  iquantile, imean, irange, sample,
+  iquantile, imean, irange, sample, tipget,
   e, lλ, lμ, xv, lσ2,
   birth, logbirth, death, logdeath, turnover, diversification, trait, 
   logtrait, traitrate, logtraitrate, epochs,
@@ -51,7 +51,7 @@ using .INSANE: sT_label, sTf_label, sTb, sTbd, sTpe, sTfbd, sTfpe,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
   trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, 
   time_rate, make_idf,
-  tiplabels, labels, label
+  tiplabels, labels, label, tipget
 export sT_label, sTf_label, sTb, sTbd, sTpe, sTfbd, sTfpe, 
   iTb, iTce, iTct, iTbd, iTpbd, iTfbd, sTxs, iTd, Ltt,
   read_newick, write_newick, write_nexus, iread, iwrite,
@@ -69,6 +69,6 @@ export sT_label, sTf_label, sTb, sTbd, sTpe, sTfbd, sTfpe,
   ntips, ntipsalive, ntipsextinct, nfossils, ntipfossils, fixtree!, 
   trextract, reorder!, treeheight, treelength, _ctl, ltt, subclade, 
   time_rate, make_idf,
-  tiplabels, labels, label
+  tiplabels, labels, label, tipget
 
 end # module Tapestree

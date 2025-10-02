@@ -36,7 +36,7 @@ tree = read_newick("<tree file directory in newick format>")
 r, tv = insane_cbd(tree,
                    niter = 100_000,
                    nthin = 1_000,
-                   ofile = "<out files directory>")
+                   ofile = "<output files directory>")
 ```
 
 !!! note
@@ -73,7 +73,7 @@ tree = read_newick("<tree file directory in newick format>")
 r, tv = insane_gbmbd(tree,
                      niter = 100_000,
                      nthin = 1_000,
-                     ofile = "<out files directory>")
+                     ofile = "<output files directory>")
 ```
 !!! info
     For no extinction use `insane_gbmpb`, for constant extinction use `insane_gbmce`, for constant turnover use `insane_gbmct`.
@@ -86,9 +86,17 @@ we first remove the DA lineages
 ```julia
 tv0 = remove_unsampled(tv)
 ```
-And then estimate the average
+and then estimate the average
 ```julia
 tm = imean(tv0)
+```
+and, finally, estimate average posterior speciation rates of species
+```julia
+tipget(tm, tree, birth)
+```
+and extinction rates
+```julia
+tipget(tm, tree, death)
 ```
 
 You can plot the tree "painted" by the latent speciation rates
@@ -126,7 +134,7 @@ tree = read_newick("<tree file directory in newick format>", true)
 r, tv = insane_cfbd(tree,
                     niter = 100_000,
                     nthin = 1_000,
-                    ofile = "<out files directory>")
+                    ofile = "<output files directory>")
 ```
 !!! info 
     to read FBD trees, you need to add `true` as a second argument in `read_newick`.
@@ -157,7 +165,7 @@ r, tv = insane_cfbd(tree,
                     niter   = 100_000,
                     nthin   = 1_000,
                     ψ_epoch = [2.1, 0.9],
-                    ofile   = "<out files directory>")
+                    ofile   = "<output files directory>")
 ```
 
 Finally, it might be desirable to incorporate fossil occurrences of species in the empirical tree that were not included. For instance, we might have a species represented only by one fossil occurrence as a tip in the tree, but we have information of some other fossil occurrences of this species. Including this information will better inform the fossilization rate.
@@ -170,7 +178,7 @@ r, tv = insane_cfbd(tree,
                     nthin   = 1_000,
                     ψ_epoch = [2.1, 0.9],
                     f_epoch = [2, 1, 3],
-                    ofile   = "<out files directory>")
+                    ofile   = "<output files directory>")
 ```
 
 Let's look at the diversity through time, and add also the LTT from the empirical tree for comparison
@@ -192,7 +200,7 @@ tree = read_newick("<tree file directory in newick format>", true)
 r, tv = insane_gbmfbd(tree,
                       niter = 100_000,
                       nthin = 1_000,
-                      ofile = "<out files directory>")
+                      ofile = "<output files directory>")
 ```
 !!! note
     For the following I used here the 6 tip fossil tree `tree_6.tre` in the data directory of Tapestree.
@@ -218,6 +226,15 @@ plot(p0, p1)
 ```
 ![f13](./assets/img/quick_start/f13.png)
 
+We can obtain the average posterior speciation rates of species
+```julia
+tipget(tm, tree, birth)
+```
+and extinction rates
+```julia
+tipget(tm, tree, death)
+```
+
 
 #### Occurrence Birth-Death Diffusion (OBDD):
 
@@ -232,7 +249,7 @@ r, tv = insane_gbmobd(tree,
                       ωtimes,
                       niter = 100_000,
                       nthin = 1_000,
-                      ofile = "<out files directory>")
+                      ofile = "<output files directory>")
 ```
 !!! note
     For the following I used here the 6 tip fossil tree `tree_6.tre` and the occurrence record `fossil_occurrences.csv` in the data directory of Tapestree.
@@ -272,7 +289,7 @@ r, tv = insane_dbm(tree,
                    xavg,
                    niter = 100_000,
                    nthin = 1_000,
-                   ofile = "<out files directory>")
+                   ofile = "<output files directory>")
 ```
 !!! info 
     Here the `<trait file>` would be a simple `.txt` file with species names in the first column and continuous trait values in the second. For this example I used the `tree_6.tre` tree and trait data in `trait.txt` in the `data` directory of Tapestree.
@@ -314,8 +331,18 @@ r, tv = insane_dbm(tree,
                    xs    = xstd,
                    niter = 100_000,
                    nthin = 1_000,
-                   ofile = "<out files directory>")
+                   ofile = "<output files directory>")
 ```
+
+We can obtain the average posterior traits of species using
+```julia
+tipget(tm, tree, trait)
+```
+and their underlying evolutionary rates using
+```julia
+tipget(tm, tree, traitrate)
+```
+
 
 ## ESSE & TRIBE
 

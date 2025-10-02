@@ -24,7 +24,7 @@ See the documentation of `mean` for more details, but basically, `mean`, and man
 
 ## Tree labels and obtaining subtrees
 
-For labelled trees, one can extract the tip labels using `tiplabels`. Moreover we can create subclades based on a vector of tips, where the subclade will be the minimum tree that has all the tips. For example, for a vector `tip_vector` holding Strings that correspond to the tip labels in the tree of type sT_label, we can use
+For labelled trees, one can extract the tip labels using `tiplabels`. Moreover we can create subclades based on a vector of tips, where the subclade will be the minimum tree that has all the tips. For example, for a vector `tip_vector` holding Strings that correspond to the tip labels in the tree of type `sT_label`, we can use
 ```julia
 subclade(tree, tip_vector)
 ```
@@ -75,24 +75,51 @@ t025 = iquantile(tv0, 0.25)
 
 Clearly, these resulting trees can then be further scrutinized as with any other tree in INSANE.
 
+### Attribute wrappers
+
+For convenience, Tapestree provides the following tree attribute wrappers:
+
+  - birth: To obtain speciation rates (_i.e._, `x -> exp.(lλ(x))`)
+  - logbirth: To obtain the logarithm of speciation rates (_i.e._, `x -> lλ(x)`)
+  - death: To obtain extinction rates (_i.e._, `x -> exp.(lμ(x))`)
+  - logdeath: To obtain the logarithm of extinction rates (_i.e._, `x -> lμ(x)`)
+  - turnover: To obtain turnover rates (_i.e._, `x -> exp.(lμ(x) .- lλ(x))`)
+  - diversification: To obtain speciation rates (_i.e._, `x -> exp.(lλ(x)) .- exp.(lμ(x))`)
+  - trait: To obtain speciation rates (_i.e._, `x -> xv(x)`)
+  - logtrait: To obtain speciation rates (_i.e._, `x -> log.(xv(x))`)
+  - traitrate: To obtain speciation rates (_i.e._, `x -> exp.(lσ2(x))`)
+  - logtraitrate: To obtain speciation rates (_i.e._, `x -> lσ2(x)`)
 
 ### Other data access and averaging functions
 
+The value of function `f` at the tips of the tree and any fossil samples can be obtained using the `tipget` function. For example, to obtain the speciation rates for sampled species from a data augmented tree `treeda` (any tree output when running inference), use
+```julia
+tipget(treeda, tree, birth)
+```
+where `tree` is the labelled tree used as input (of type `sT_label` or `sTf_label`). This function returns a dictionary of labels pointing to the specific value returned by `f`.
+
+A common need is to obtain the posterior value of function `f` for each species. This can be done by first [Estimating posterior average rates along the tree](@ref), and, assuming the resulting psoterior average tree is named `tm`, then using 
+```julia
+tipget(tm, tree, f)
+```
+to get any attribute returned by `f` (_e.g._, speciation rates, extinction rates, traits, trait rates, etc., see [Attribute wrappers](@ref) for functions)
+
+
 If one wants to obtain the range (_i.e._, extrema) of the output of function `f` on `tree`, for example, the maximum and minimum speciation rates:
 ```julia
-irange(tree, b)
+irange(tree, birth)
 ```
 
 If one wants to sample, recursively, some function at regular intervals along a tree, one can use `sample`. For example if we want to sample speciation rates every ``0.1`` time units, we can use
 ```julia
-sample(tv, b, 0.1)
+sample(tv, birth, 0.1)
 ```
 !!! note 
     Here we are sampling along each branch of the tree in recursive order, not sampling across lineages through time. 
 
 If we would like to extract an array across lineages in a given tree of the output of function `f`, we would use `time_rate`. For example, if we want the cross-lineage extinction rates of a tree of type `iTbd` sampled every ``0.5`` time units, we would use
 ```julia
-time_rate(tv, d, 0.5)
+time_rate(tv, death, 0.5)
 ```
 which returns a vector of vectors, where each element is a time holding the rates (in this case extinction rates) of all contemporary lineages at that time.
 
@@ -103,7 +130,7 @@ trextract(tree, e)
 
 Below are some functions to obtain data from trees.
 
-Full documentation
+## Full documentation
 ```@docs
 tiplabels
 ntips
@@ -114,6 +141,7 @@ treelength
 ltt
 iscrowntree
 irange
+tipget
 time_rate
 trextract
 subclade
@@ -149,7 +177,7 @@ which will only make fossil that specific tree (not the recursive daughters).
 
 
 
-Full documentation
+## Full documentation
 ```@docs
 reorder!
 rm_stem!

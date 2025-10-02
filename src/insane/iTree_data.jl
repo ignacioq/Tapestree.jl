@@ -215,23 +215,8 @@ end
 
 Return if is a complete lineage (versus incipient lineage) in a protracted model.
 """
-iscomplete(tree::T) where {T <: iTree} = getproperty(tree, :ic)
-iscomplete(tree::sT_label)  = true
-iscomplete(tree::sTf_label) = true
-iscomplete(tree::sTb)       = true
-iscomplete(tree::sTbd)      = true
-iscomplete(tree::sTfbd)     = true
-iscomplete(tree::cTb)       = true
-iscomplete(tree::cTce)      = true
-iscomplete(tree::cTct)      = true
-iscomplete(tree::cTbd)      = true
-iscomplete(tree::cTfbd)     = true
-iscomplete(tree::iTb)       = true
-iscomplete(tree::iTce)      = true
-iscomplete(tree::iTct)      = true
-iscomplete(tree::iTbd)      = true
-iscomplete(tree::iTfbd)     = true
-iscomplete(tree::sTxs)      = true
+iscomplete(tree::T) where {T <: iTree} = true
+iscomplete(tree::iTpbd)                = getproperty(tree, :ic)
 
 
 
@@ -838,7 +823,6 @@ end
 Returns vector of the position of fixed tips across all tips 
 of a data augmented tree.
 """
-
 function _fixedpos!(tree::T, i::Int64, fp::Vector{Int64}) where {T <: iTree}
 
   if istip(tree) 
@@ -2029,6 +2013,7 @@ end
 
 
 
+
 """
     fixtree(tree::T) where {T <: iTree}
 
@@ -2857,6 +2842,59 @@ function _trextract!(tvs::Vector{T}, tree::iTree, f::Function) where {T}
     _trextract!(tvs, tree.d1, f)
     if def2(tree)
       _trextract!(tvs, tree.d2, f)
+    end
+  end
+end
+
+
+
+
+"""
+    tipget(treeda::T, tree::D, f::Function) where {T <: iTree, D <: Tlabel}
+
+Return function `f` for tips or fossils in `treeda` with labels from `tree`.
+"""
+function tipget(treeda::T, tree::D, f::Function) where {T <: iTree, D <: Tlabel}
+  tipf = Dict{String, Float64}()
+  _tipget!(tipf, treeda, tree, f)
+  return tipf
+end
+
+
+"""
+    tipget(treeda::T, tree::D, f::Function) where {T <: iTree, D <: Tlabel}
+
+Recursive function to extract function `f` for tips or fossils in 
+`treeda` with labels from `tree`.
+"""
+function _tipget!(tipf  ::Dict{String, Float64}, 
+                  treeda::T, 
+                  tree  ::D, 
+                  f     ::Function) where {T <: iTree, D <: Tlabel}
+
+  if istip(treeda)
+    if isfix(treeda)
+      tipf[label(tree)] = f(treeda)[end]
+    end
+  else
+    # if cladogenetic
+    if def2(treeda)
+      if isfix(treeda.d1)
+        if isfix(treeda.d2)
+          _tipget!(tipf, treeda.d1, tree.d1, f)
+          _tipget!(tipf, treeda.d2, tree.d2, f)
+        else
+          _tipget!(tipf, treeda.d1, tree, f)
+        end
+      else
+        _tipget!(tipf, treeda.d2, tree, f)
+      end
+    # if fossil
+    else
+      tipf[label(tree)] = f(treeda)[end]
+      if isfix(treeda.d1)
+        _tipget!(tipf, treeda.d1, tree.d1, f)
+      end
     end
   end
 end
