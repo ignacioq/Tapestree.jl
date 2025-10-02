@@ -2799,7 +2799,9 @@ function _tipget!(tipf  ::Dict{String, Float64},
     # if fossil
     else
       tipf[label(tree)] = f(treeda)[end]
-      _tipget!(tipf, treeda.d1, tree.d1, f)
+      if isfix(treeda.d1)
+        _tipget!(tipf, treeda.d1, tree.d1, f)
+      end
     end
   end
 end
