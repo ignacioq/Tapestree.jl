@@ -300,7 +300,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   nin = lastindex(inodes)                        # number of internal nodes
   el  = lastindex(idf)                           # number of branches
   nep = lastindex(ψc)                            # number of epochs
-  ns  = sum(x -> Float64(d2(x) > 0), idf) - Float64(nsi)  # number of speciation events in likelihood
+  ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ  # number of speciation events in likelihood
   ne  = Float64(ntipsextinct(Ξ))                 # number of extinction events in likelihood
 
   ddλ, ddμ, ssλ, ssμ, nλ = _dd_ss(Ξ, αλc, αμc)

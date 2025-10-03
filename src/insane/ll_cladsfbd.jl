@@ -181,7 +181,6 @@ function llik_cladsfbd_track!(tree::cTfbd,
   @inbounds begin
 
     ei = e(tree)
-    ll = 0.0
 
     lλi, lμi = lλ(tree), lμ(tree)
     λi, μi   = exp(lλi), exp(lμi)

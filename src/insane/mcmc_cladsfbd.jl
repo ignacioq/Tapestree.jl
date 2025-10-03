@@ -353,8 +353,8 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
         bix = fIrand(el) + 1
 
         llc, ddλ, ddμ, ssλ, ssμ, ns, ne =
-          update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, L, ddλ, ddμ, ssλ, ssμ, 
-            ns, ne, λfs, μfs)
+          update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, L, 
+            ddλ, ddμ, ssλ, ssμ, ns, ne, ψ_epoch, eixi, eixf, λfs, μfs)
       end
     end
 
@@ -580,15 +580,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
             # update by forward simulation
             else
 
-              """
-              here
-              """
-
               bix = fIrand(el) + 1
 
               llc, ddλ, ddμ, ssλ, ssμ, ns, ne =
-                update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, L, ddλ, ddλ, 
-                  ssλ, ssμ, ns, ne, λfs, μfs)
+                update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, L, 
+                  ddλ, ddμ, ssλ, ssμ, ns, ne, ψ_epoch, eixi, eixf, λfs, μfs)
 
               ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
               if !isapprox(ll0, llc, atol = 1e-4)
@@ -994,7 +990,7 @@ function update_internal!(bix     ::Int64,
 
       llc, prc, ddλ, ddμ, ssλ, ssμ, mc, λi, μi = 
         _stem_update!(ξi, eds, λ1, λ2, μ1, μ2, αλ, αμ, σλ, σμ, llc, prc, 
-          ddλ, ddλμ, ssλ, ssμ, mc, th, λ0_prior, μ0_prior, surv)
+          ddλ, ddμ, ssλ, ssμ, mc, th, λ0_prior, μ0_prior, surv)
 
       # set new λ & μ downstream, if necessary
       setdownstreamλμ!(λi, μi, bix, Ξ, idf)
@@ -1073,43 +1069,51 @@ end
 
 
 """
-    update_fs!(bix::Int64,
-               Ξ  ::Vector{cTfbd},
-               idf::Vector{iBffs},
-               αλ ::Float64,
-               αμ ::Float64,
-               σλ ::Float64,
-               σμ ::Float64,
-               llc::Float64,
-               L  ::Vector{Float64},
-               ddλ::Float64,
-               ddμ::Float64,
-               ssλ::Float64,
-               ssμ::Float64,
-               ns ::Float64,
-               ne ::Float64,
-               λfs::Vector{Float64},
-               μfs::Vector{Float64})
+    update_fs!(bix ::Int64,
+               Ξ   ::Vector{cTfbd},
+               idf ::Vector{iBffs},
+               αλ  ::Float64,
+               αμ  ::Float64,
+               σλ  ::Float64,
+               σμ  ::Float64,
+               ψ   ::Vector{Float64},
+               llc ::Float64,
+               L   ::Vector{Float64},
+               ddλ ::Float64,
+               ddμ ::Float64,
+               ssλ ::Float64,
+               ssμ ::Float64,
+               ns  ::Float64,
+               ne  ::Float64,
+               ψts ::Vector{Float64},
+               eixi::Vector{Int64},
+               eixf::Vector{Int64},
+               λfs ::Vector{Float64},
+               μfs ::Vector{Float64})
 
 Forward simulation proposal for clads.
 """
-function update_fs!(bix::Int64,
-                    Ξ  ::Vector{cTfbd},
-                    idf::Vector{iBffs},
-                    αλ ::Float64,
-                    αμ ::Float64,
-                    σλ ::Float64,
-                    σμ ::Float64,
-                    llc::Float64,
-                    L  ::Vector{Float64},
-                    ddλ::Float64,
-                    ddμ::Float64,
-                    ssλ::Float64,
-                    ssμ::Float64,
-                    ns ::Float64,
-                    ne ::Float64,
-                    λfs::Vector{Float64},
-                    μfs::Vector{Float64})
+function update_fs!(bix ::Int64,
+                    Ξ   ::Vector{cTfbd},
+                    idf ::Vector{iBffs},
+                    αλ  ::Float64,
+                    αμ  ::Float64,
+                    σλ  ::Float64,
+                    σμ  ::Float64,
+                    ψ   ::Vector{Float64},
+                    llc ::Float64,
+                    L   ::Vector{Float64},
+                    ddλ ::Float64,
+                    ddμ ::Float64,
+                    ssλ ::Float64,
+                    ssμ ::Float64,
+                    ns  ::Float64,
+                    ne  ::Float64,
+                    ψts ::Vector{Float64},
+                    eixi::Vector{Int64},
+                    eixf::Vector{Int64},
+                    λfs ::Vector{Float64},
+                    μfs ::Vector{Float64})
 
   bi  = idf[bix]
   ξc  = Ξ[bix]
@@ -1258,9 +1262,9 @@ function fsbi_t(bi ::iBffs,
     setni!(bi, na)    # set new ni
 
     return t0, llr
-  else
-    return t0, NaN
   end
+
+  return t0, NaN
 end
 
 
@@ -1882,7 +1886,7 @@ function tip_sims!(tree::cTfbd,
 
         # simulate
         stree, na, nn, lr =
-          _sim_cladsfbd_it(t, lλ(tree), lμ(tree), αλ, σμ, σλ, σμ, ψ, ψts, 
+          _sim_cladsfbd_it(t, lλ(tree), lμ(tree), αλ, αμ, σλ, σμ, ψ, ψts, 
             ix, nep, lr, lU, iρi, na-1, nn, 500)
 
         if isnan(lr) || nn > 499
@@ -1955,7 +1959,7 @@ function fossiltip_sim!(tree::cTfbd,
 
       nep = lastindex(ψts) + 1
       stree, na, nn, lr =
-        _sim_gbmfbd_it(t, lλ(tree), lμ(tree), αλ, αμ, σλ, σμ, ψ, ψts, 
+        _sim_cladsfbd_it(t, lλ(tree), lμ(tree), αλ, αμ, σλ, σμ, ψ, ψts, 
           ix, nep, lr, lU, iρi, na-1, nn, 500)
 
       if !isfinite(lr) || nn > 499

@@ -495,7 +495,7 @@ function _sim_cladsfbd_t(t   ::Float64,
         nlr += log(iρi * Float64(na)/Float64(na-1))
       end
       if nlr >= lr || lU < nlr
-        return cTfbd(t, false, false, false, λt, μt), nn, na, nn, nlr
+        return cTfbd(t, false, false, false, λt, μt), na, nn, nlr
       else
         return cTfbd(), na, nn, NaN
       end

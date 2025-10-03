@@ -1114,12 +1114,19 @@ function couple(Ξ  ::Vector{T},
     if i2 > 0 
       ξit.d1 = couple(Ξ, idf, i1)
       ξit.d2 = couple(Ξ, idf, i2)
+    elseif isfossil(bi)
+      ξit.d1 = couple(Ξ, idf, i1)
     else
       ξd1 = couple(Ξ, idf, i1)
+      if isfossil(ξd1)
+        fossilize!(ξit)
+      end
       adde!(ξit, e(ξd1))
       if def1(ξd1)
         ξit.d1 = ξd1.d1
-        ξit.d2 = ξd1.d2
+        if def2(ξd1)
+          ξit.d2 = ξd1.d2
+        end
       end
     end
   end
