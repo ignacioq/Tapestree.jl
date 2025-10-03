@@ -259,7 +259,6 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
                             pup     ::Array{Int64,1},
                             prints  ::Int64)
 
-
   # starting likelihood and prior
   lλ0 = lλ(Ξ[1])
   llc = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - 
@@ -563,12 +562,8 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 return
               end
 
-            # update internal λ
+            # update internal λ & μ
             elseif pupi === 6
-
-              """
-              here
-              """
 
               bix = fIrand(el) + 1
 
@@ -584,6 +579,10 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
 
             # update by forward simulation
             else
+
+              """
+              here
+              """
 
               bix = fIrand(el) + 1
 
@@ -1023,14 +1022,15 @@ function update_internal!(bix     ::Int64,
       # check if mid branch does not lead to the stem branch
       if pa(idf[il]) > 0
 
-        # it non-terminal branch
         eds, λ1, λ2, μ1, μ2 = 0.0, NaN, NaN, NaN, NaN
-        if !it
+
+        # if non-terminal branch
+        if !it 
           # if cladogenetic branch
           if i2 > 0
             ξ1, ξ2 = Ξ[i1], Ξ[i2]
             eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
-          # if mid branch
+          # if mid or fossil branch
           else
             eds, λ1, λ2, μ1, μ2 = 
               downstreamλμs(i1, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
@@ -1040,18 +1040,27 @@ function update_internal!(bix     ::Int64,
         ll0 = llc
 
         # updates within the parent branch
-        llc, ddμ, ddλ, ssλ, ssμ, λx, μx = 
+        llc, ddλ, ddμ, ssλ, ssμ, λx, μx = 
           _update_internal!(ξi, bi, eas, λa, μa, αλ, αμ, σλ, σμ, 
             eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, it)
 
         # if update, update up- and down-stream
         if ll0 != llc
-          λi, μi = lλ(ξi), lμ(ξi)
-          setupstreamλμ!(λi, μi, ia, Ξ, idf)
+          # if fossil tip
+          if it && isfossil(bi)
+            lξi = fixtip(ξi)
+            λi, μi = lλ(lξi.d1), lμ(lξi.d1)
+            setupstreamλμ!(λi, μi, bix, Ξ, idf)
+          else
+            λi, μi = lλ(ξi), lμ(ξi)
+            setupstreamλμ!(λi, μi, ia, Ξ, idf)
+          end
+
           if !it && iszero(i2)
             lξi = fixtip(ξi)
             setdownstreamλμ!(lλ(lξi), lμ(lξi), i1, Ξ, idf)
           end
+
         end
       end
     end

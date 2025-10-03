@@ -168,7 +168,7 @@ function insane_cfpe(tree    ::sTf_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running constant fossilized punctuated equilibrium"
+  @info "running constant fossilised punctuated equilibrium"
 
   # adaptive phase
   llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, nf, L, sσa, sσk, nσs =

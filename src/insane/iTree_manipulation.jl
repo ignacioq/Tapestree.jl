@@ -3535,8 +3535,8 @@ middle branches to `λi`.
 function setupstreamλμ!(λi ::Float64,
                         μi ::Float64,
                         i  ::Int64,
-                        Ξ  ::Vector{cTbd},
-                        idf::Vector{iBffs})
+                        Ξ  ::Vector{T},
+                        idf::Vector{iBffs}) where {T <: cT}
 
   @inbounds begin
     bi = idf[i]
@@ -3615,8 +3615,8 @@ middle branches to `λi` and `μi`.
 function setdownstreamλμ!(λi ::Float64,
                           μi ::Float64,
                           i  ::Int64,
-                          Ξ  ::Vector{cTbd}, 
-                          idf::Vector{iBffs})
+                          Ξ  ::Vector{T}, 
+                          idf::Vector{iBffs}) where {T <: cT}
 
   @inbounds begin
 

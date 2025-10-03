@@ -330,7 +330,7 @@ function makeiBf!(tree::sT,
     iψ  = isfossil(tree)
     ρi  = iψ ? 1.0 : tρ[label(tree)]
     te  = ts - el
-    te  = isapprox(te, 0.0) ? 0.0 : te
+    te  = (!iψ && isapprox(te, 0.0, atol = accerr)) ? 0.0 : te
     push!(idv, 
       iBffs(el, 0, 0, 0, ts, te, iψ, false, ρi, Int64(!iψ), 1, NaN))
     push!(n2v, 0)
@@ -458,7 +458,7 @@ function makeiBf!(tree::sT,
     iψ  = isfossil(tree)
     ρi  = iψ ? 1.0 : get(tρ, lab, 1.0)
     te  = ts - el
-    te  = isapprox(te, 0.0, atol = accerr) ? 0.0 : te
+    te  = (!iψ && isapprox(te, 0.0, atol = accerr)) ? 0.0 : te
     xi  = get(xav, lab, nothing)
     si  = get(xst, lab, 0.0)
     ifx = !isnothing(xi)

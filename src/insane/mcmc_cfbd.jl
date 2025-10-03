@@ -158,7 +158,7 @@ function insane_cfbd(tree    ::sTf_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running constant fossilized birth-death"
+  @info "running constant fossilised birth-death"
 
   # adaptive phase
   llc, prc, λc, μc, ψc, mc, ns, ne, L =

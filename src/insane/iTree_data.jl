@@ -1949,6 +1949,23 @@ end
 
 
 
+"""
+    fixtip(tree::T) where {T <: iTree}
+
+Return the first fixed tip.
+"""
+function fixtip(tree::T) where {T <: uTf}
+  if istip(tree) || isfossil(tree)
+    return tree
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T)
+  else
+    fixtip(tree.d2::T)
+  end
+end
+
+
+
 
 """
     fixtip(tree::T, λa::Float64) where {T <: iTree}
@@ -3087,11 +3104,11 @@ Return the branch length `eds` and speciation rates of daughters, if any, for
 middle branches.
 """
 function upstreamλμ(i  ::Int64,
-                    Ξ  ::Vector{cTbd},
+                    Ξ  ::Vector{T},
                     idf::Vector{iBffs},
                     eas::Float64,
                     λa ::Float64,
-                    μa::Float64)
+                    μa::Float64) where {T <: cT}
 
   @inbounds begin
     bi = idf[i]
@@ -3187,7 +3204,7 @@ function downstreamλμs(i  ::Int64,
                        λ1 ::Float64, 
                        λ2 ::Float64,
                        μ1 ::Float64,
-                       μ2 ::Float64) where {T <: cTbdU}
+                       μ2 ::Float64) where {T <: cT}
 
   @inbounds begin
 

@@ -241,17 +241,12 @@ function _update_internal!(tree::T,
           μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
     else
       llc, ddλ, ddμ, ssλ, ssμ, λx, μx =
-        _update_internal!(tree.d1, bi, 0.0, λa, μa, αλ, αμ, σλ, σμ, eds, λ1, λ2, 
-          μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
+        _update_internal!(tree.d1, bi, eas + e(tree), λa, μa, αλ, αμ, σλ, σμ, 
+          eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
     end
   else 
-    # if real tip
-    if !isfix(tree) || ter
-      llc, ddλ, ddμ, ssλ, ssμ = 
-        update_tip!(tree, eas, λa, μa, 0.0, αλ, αμ, σλ, σμ, 
-          llc, ddλ, ddμ, ssλ, ssμ)
     # if leads to non-speciation
-    elseif isnan(λ1)
+    if !isfix(tree) || ter || isnan(λ1)
       llc, ddλ, ddμ, ssλ, ssμ = 
         update_tip!(tree, eas, λa, μa, eds, αλ, αμ, σλ, σμ, 
           llc, ddλ, ddμ, ssλ, ssμ)
@@ -308,7 +303,7 @@ function update_triad!(tree::T,
 
     # node proposal
     λn = trioprop(λa + αλ, λ1 - αλ, λ2 - αλ, σλ)
-    μn = trioprop(μa + αμ, μ1 + αμ, μ2 + αμ, σμ)
+    μn = trioprop(μa + αμ, μ1 - αμ, μ2 - αμ, σμ)
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + αλ, λ1 - αλ, λ2 - αλ, λn, λi, σλ) + 
@@ -455,11 +450,11 @@ function update_faketip!(tree::T,
 
     # node proposal
     λn = trioprop(λa + αλ, λ1 - αλ, λ2 - αλ, σλ)
-    μn = trioprop(μa + αμ, μ1 + αμ, μ2 + αμ, σμ)
+    μn = trioprop(μa + αμ, μ1 - αμ, μ2 - αμ, σμ)
 
     # likelihood ratios
     llrbm = llrdnorm3(λa + αλ, λ1 - αλ, λ2 - αλ, λn, λi, σλ) + 
-            llrdnorm3(μa + αμ, μ1 + αμ, μ2 + αμ, μn, μi, σμ)
+            llrdnorm3(μa + αμ, μ1 - αμ, μ2 - αμ, μn, μi, σμ)
     llrbd = λn - λi + (eas + ei + eds)*(exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
     if -randexp() < llrbd
