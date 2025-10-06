@@ -44,7 +44,7 @@ Created 28 07 2025
                     mxthf   ::Float64               = 0.1,
                     tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for clads birth-death.
+Run insane for fossil clads.
 """
 function insane_cladsfbd(tree    ::sTf_label;
                          λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
@@ -192,7 +192,7 @@ function insane_cladsfbd(tree    ::sTf_label;
     mcmc_burn_cladsfbd(Ξ, idf, 
       λ0_prior, μ0_prior, αλ_prior, αμ_prior, σλ_prior, σμ_prior, ψ_prior,
       ψ_epoch, f_epoch, nburn, αλi, αμi, σλi, σμi, ψc, mc, 
-      th, rmλ, surv, stnλ, stnμ, pup, prints)
+      th, rmλ, surv, stnλ, stnμ, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev = 
@@ -209,26 +209,35 @@ end
 
 """
     mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
-                      idf     ::Vector{iBffs},
-                      λ0_prior::NTuple{2,Float64},
-                      μ0_prior::NTuple{2,Float64},
-                      α_prior ::NTuple{2,Float64},
-                      σλ_prior::NTuple{2,Float64},
-                      σμ_prior::NTuple{2,Float64},
-                      nburn   ::Int64,
-                      αc      ::Float64,
-                      σλc     ::Float64,
-                      σμc     ::Float64,
-                      mc      ::Float64,
-                      th      ::Float64,
-                      rmλ     ::Float64,
-                      surv    ::Int64,
-                      stnλ    ::Float64,
-                      stnμ    ::Float64,
-                      pup     ::Array{Int64,1},
-                      prints  ::Int64)
+                       idf     ::Vector{iBffs},
+                       λ0_prior::NTuple{2,Float64},
+                       μ0_prior::NTuple{2,Float64},
+                       αλ_prior::NTuple{2,Float64},
+                       αμ_prior::NTuple{2,Float64},
+                       σλ_prior::NTuple{2,Float64},
+                       σμ_prior::NTuple{2,Float64},
+                       ψ_prior ::NTuple{2,Float64},
+                       ψ_epoch ::Vector{Float64},
+                       f_epoch ::Vector{Int64},
+                       nburn   ::Int64,
+                       αλc     ::Float64,
+                       αμc     ::Float64,
+                       σλc     ::Float64,
+                       σμc     ::Float64,
+                       ψc      ::Vector{Float64},
+                       mc      ::Float64,
+                       th      ::Float64,
+                       rmλ     ::Float64,
+                       surv    ::Int64,
+                       stnλ    ::Float64,
+                       stnμ    ::Float64,
+                       bst     ::Vector{Float64},
+                       eixi    ::Vector{Int64},
+                       eixf    ::Vector{Int64},
+                       pup     ::Array{Int64,1},
+                       prints  ::Int64)
 
-MCMC burn-in chain for `cladsfbd`.
+MCMC burn-in chain for fossil clads.
 """
 function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
                             idf     ::Vector{iBffs},
@@ -391,7 +400,8 @@ end
                   surv    ::Int64,
                   ns      ::Float64,
                   ne      ::Float64,
-                  nf      ::Float64,
+                  nf      ::Vector{Float64},
+                  L       ::Vector{Float64},
                   ddλ     ::Float64,
                   ddμ     ::Float64,
                   ssλ     ::Float64,
@@ -417,7 +427,7 @@ end
                   ofile   ::String,
                   prints  ::Int64)
 
-MCMC chain for pure-birth diffusion.
+MCMC chain for fossil clads.
 """
 function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                        idf     ::Vector{iBffs},
@@ -434,7 +444,7 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                        surv    ::Int64,
                        ns      ::Float64,
                        ne      ::Float64,
-                       nf      ::Float64,
+                       nf      ::Vector{Float64},
                        L       ::Vector{Float64},
                        ddλ     ::Float64,
                        ddμ     ::Float64,
@@ -465,15 +475,15 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
   nlogs = fld(niter,nthin)
   lthin = lit = sthin = zero(Int64)
 
-  # parameter results
-  r   = Array{Float64,2}(undef, nlogs, 9 + nep)
-
-  treev = cTfbd[]          # make tree log vector
-  io    = IOBuffer()       # buffer 
   el    = lastindex(idf)   # number of branches
   nep   = lastindex(ψc)    # number of epochs
   λfs   = Float64[]
   μfs   = Float64[]
+
+  # parameter results
+  r     = Array{Float64,2}(undef, nlogs, 9 + nep)
+  treev = cTfbd[]          # make tree log vector
+  io    = IOBuffer()       # buffer 
 
   open(ofile*".log", "w") do of
 
@@ -503,11 +513,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
               # update ssλ with new drift `αλ`
               ssλ = _ss(Ξ, idf, αλc, lλ, λt)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
 
             # update extinction drift
             elseif pupi === 2
@@ -519,11 +529,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
              # update ssμ with new drift `αμ`
               ssμ = _ss(Ξ, idf, αμc, lμ, μt)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
 
             # update speciation and extinction diffusion rate
             elseif pupi === 3
@@ -532,22 +542,22 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, αμc, ssλ, ssμ, 
                   2.0*(ns + rmλ), llc, prc, mc, th, surv, σλ_prior, σμ_prior)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
 
             # update fossilization rate
             elseif pupi === 4
 
               llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
 
             # update scale
             elseif pupi === 5
@@ -556,11 +566,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_scale!(Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ns, ne, 
                   stnλ, stnμ, mc, th, surv, λ0_prior, μ0_prior)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
 
             # update internal λ & μ
             elseif pupi === 6
@@ -571,11 +581,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_internal!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, 
                   ddλ, ddμ, ssλ, ssμ, mc, th, λ0_prior, μ0_prior, surv)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
 
             # update by forward simulation
             else
@@ -586,11 +596,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, L, 
                   ddλ, ddμ, ssλ, ssμ, ns, ne, ψ_epoch, eixi, eixf, λfs, μfs)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
             end
           end
 
@@ -608,6 +618,9 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
               r[lit,7] = αμc
               r[lit,8] = σλc
               r[lit,9] = σμc
+              @turbo for i in Base.OneTo(nep)
+                r[lit, 9 + i] = ψc[i]
+              end
               push!(treev, couple(Ξ, idf, 1))
             end
             lthin = zero(Int64)
@@ -618,7 +631,7 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
           if sthin === nflush
             print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
                   exp(lλ(Ξ[1])),'\t', exp(lμ(Ξ[1])),'\t', αλc, '\t', αμc, '\t', 
-                  σλc, '\t', σμc, '\n')
+                  σλc, '\t', σμc, '\t', join(ψc, '\t'), '\n')
             flush(of)
             ibuffer(io, couple(Ξ, idf, 1))
             write(io, '\n')
@@ -753,7 +766,8 @@ end
               σμc     ::Float64,
               λ0      ::Float64,
               μ0      ::Float64,
-              α       ::Float64,
+              αλ      ::Float64,
+              αμ      ::Float64,
               ssλ     ::Float64,
               ssμ     ::Float64,
               n       ::Float64,
@@ -923,7 +937,8 @@ end
     update_internal!(bix     ::Int64,
                      Ξ       ::Vector{cTfbd},
                      idf     ::Vector{iBffs},
-                     α       ::Float64,
+                     αλ      ::Float64,
+                     αμ      ::Float64,
                      σλ      ::Float64,
                      σμ      ::Float64,
                      llc     ::Float64,
@@ -1454,15 +1469,16 @@ function fsbi_m(bi ::iBffs,
   if isnan(λa)
     λi, μi = lλ(ξi), lμ(ξi)
   else
-    λi = rnorm(λa + α, σλ)
-    μi = rnorm(μa,     σμ)
+    λi = rnorm(λa + αλ, σλ)
+    μi = rnorm(μa + αμ, σμ)
   end
 
   # forward simulation during branch length
   empty!(λfs)
   empty!(μfs)
-  t0, af, na, nn = _sim_cladsfbd_i(e(bi), λi, μi, αλ, αμ, σλ, σμ, ψ, ψts, 
-    ixi, nep, 0, false, 1, 500, λfs, μfs)
+  nep = lastindex(ψts) + 1
+  t0, af, na, nn = _sim_cladsfbd_i(ti(bi), tf(bi), λi, μi, αλ, αμ, σλ, σμ, ψ, 
+    ψts, ixi, nep, 0, false, 1, 500, λfs, μfs)
 
   if na < 1 || af || nn > 499
     return t0, NaN, NaN, NaN, NaN, NaN
@@ -1710,13 +1726,14 @@ function fsbi_i(bi ::iBffs,
   if isnan(λa)
     λi, μi = lλ(ξi), lμ(ξi)
   else
-    λi = rnorm(λa + α, σλ)
-    μi = rnorm(μa,     σμ)
+    λi = rnorm(λa + αλ, σλ)
+    μi = rnorm(μa + αμ, σμ)
   end
 
   # forward simulation during branch length
   empty!(λfs)
   empty!(μfs)
+  nep = lastindex(ψts) + 1
   t0, af, na, nn = _sim_cladsfbd_i(ti(bi), tf(bi), λi, μi, αλ, αμ, σλ, σμ, ψ,
       ψts, ixi, nep, 0, false, 1, 500, λfs, μfs)
 

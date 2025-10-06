@@ -969,7 +969,7 @@ end
 """
     imean(treev::Vector{T}) where {T <: cT}
 
-Make an `cTce` with the geometric mean.
+Make an `cTce` & `cTct` with the geometric mean.
 """
 function imean(treev::Vector{T}) where {T <: cT}
 
@@ -1008,7 +1008,7 @@ end
 """
     imean(treev::Vector{cTbd})
 
-Make an `cTce` with the geometric mean.
+Make an `cTbd` with the geometric mean.
 """
 function imean(treev::Vector{cTbd})
 
@@ -1039,6 +1039,52 @@ function imean(treev::Vector{cTbd})
          e(t1), isextinct(t1), true, mλ, mμ)
   else
     cTbd(e(t1), isextinct(t1), true, mλ, mμ)
+  end
+end
+
+
+
+
+"""
+    imean(treev::Vector{cTfbd})
+
+Make an `cTfbd` with the geometric mean.
+"""
+function imean(treev::Vector{cTfbd})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas
+  ssλ = ssμ = 0.0
+  for t in treev
+    ssλ += lλ(t)
+    ssμ += lμ(t)
+  end
+  mλ = ssλ/Float64(nt)
+  mμ = ssμ/Float64(nt)
+
+  if def1(t1)
+    treev1 = cTfbd[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    if def2(t1)
+
+      treev2 = cTfbd[]
+      for t in Base.OneTo(nt)
+          push!(treev2, treev[t].d2)
+      end
+
+      cTfbd(imean(treev1), imean(treev2),
+           e(t1), isextinct(t1), isfossil(t1), true, mλ, mμ)
+    else
+      cTfbd(imean(treev1),
+           e(t1), isextinct(t1), isfossil(t1), true, mλ, mμ)
+    end
+  else
+    cTfbd(e(t1), isextinct(t1), isfossil(t1), true, mλ, mμ)
   end
 end
 

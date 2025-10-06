@@ -1976,6 +1976,59 @@ end
 
 
 """
+    _remove_unsampled!(tree::cTfbd)
+
+Remove extinct tips from `cTfbd`.
+"""
+function _remove_unsampled!(tree::cTfbd)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    if def2(tree)
+      tree.d2 = _remove_unsampled!(tree.d2)
+      if !isfix(tree.d1)
+        if !isfix(tree.d2)
+          return cTfbd(e(tree), isextinct(tree), isfossil(tree), 
+                   isfix(tree), lλ(tree), lμ(tree))
+        else
+          e0   = e(tree)
+          e2   = e(tree.d2)
+          λ0 = lλ(tree)
+          λ2 = lλ(tree.d2)
+          μ0 = lμ(tree)
+          μ2 = lμ(tree.d2)
+          tree = tree.d2
+          sete!(tree, e0 + e2)
+          setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+          setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+        end
+      elseif !isfix(tree.d2)
+        e0   = e(tree)
+        e1   = e(tree.d1)
+        λ0 = lλ(tree)
+        λ1 = lλ(tree.d1)
+        μ0 = lμ(tree)
+        μ1 = lμ(tree.d1)
+        tree = tree.d1
+        sete!(tree, e0 + e1)
+        setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+        setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+      end
+    else
+      if !isfix(tree.d1)
+        return cTfbd(e(tree), isextinct(tree), isfossil(tree), 
+                 isfix(tree), lλ(tree), lμ(tree))
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
     _remove_unsampled!(tree::iTb)
 
 Remove extinct tips from `iTb`.
