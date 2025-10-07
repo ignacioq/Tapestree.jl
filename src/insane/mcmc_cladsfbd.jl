@@ -998,7 +998,7 @@ function update_internal!(bix     ::Int64,
         ξ1, ξ2 = Ξ[i1], Ξ[i2]
         eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
       # if fossil or mid branch
-      else
+      elseif i1 > 0 || isfossil(bi)
         eds, λ1, λ2, μ1, μ2 = 
           downstreamλμs(bix, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
       end
@@ -1035,17 +1035,14 @@ function update_internal!(bix     ::Int64,
 
         eds, λ1, λ2, μ1, μ2 = 0.0, NaN, NaN, NaN, NaN
 
-        # if non-terminal branch
-        if !it 
-          # if cladogenetic branch
-          if i2 > 0
-            ξ1, ξ2 = Ξ[i1], Ξ[i2]
-            eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
-          # if mid or fossil branch
-          else
-            eds, λ1, λ2, μ1, μ2 = 
-              downstreamλμs(i1, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
-          end
+        # if cladogenetic branch
+        if i2 > 0
+          ξ1, ξ2 = Ξ[i1], Ξ[i2]
+          eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+        # if mid or fossil branch
+        elseif i1 > 0
+          eds, λ1, λ2, μ1, μ2 = 
+            downstreamλμs(i1, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
         end
 
         ll0 = llc
@@ -1071,7 +1068,6 @@ function update_internal!(bix     ::Int64,
             lξi = fixtip(ξi)
             setdownstreamλμ!(lλ(lξi), lμ(lξi), i1, Ξ, idf)
           end
-
         end
       end
     end
@@ -1170,7 +1166,7 @@ function update_fs!(bix ::Int64,
   # internal non-bifurcating branch
   elseif iszero(d2(bi))
 
-    ξp, llr, ddrλ, ddrμ, ssrλ, ssrμ =
+    ξp, llr, ddλr, ddμr, ssλr, ssμr =
       fsbi_m(bi, idf, ξc, Ξ, λa, μa, αλ, αμ, σλ, σμ, ψ, ψts, 
         ixi, eixf[bix], λfs, μfs)
 
@@ -1178,7 +1174,7 @@ function update_fs!(bix ::Int64,
   else
 
     ξ1, ξ2 = Ξ[d1(bi)], Ξ[d2(bi)]
-    ξp, llr, ddrλ, ddrμ, ssrλ, ssrμ =
+    ξp, llr, ddλr, ddμr, ssλr, ssμr =
       fsbi_i(bi, ξc, λa, lλ(ξ1), lλ(ξ2), μa, lμ(ξ1), lμ(ξ2), 
         αλ, αμ, σλ, σμ, ψ, ψts, ixi, eixf[bix], λfs, μfs)
   end
@@ -1196,7 +1192,7 @@ function update_fs!(bix ::Int64,
         llc, L, ddλ, ddμ, ssλ, ssμ, ns, ne, +)
 
     # first change from ancestor
-    if !isnan(λa)
+    if isfinite(λa)
       λp, λc, = lλ(ξp), lλ(ξc)
       μp, μc, = lμ(ξp), lμ(ξc)
       llc += llrdnorm_x(λp, λc, λa + αλ, σλ^2) + 
@@ -1477,7 +1473,7 @@ function fsbi_m(bi ::iBffs,
   empty!(λfs)
   empty!(μfs)
   nep = lastindex(ψts) + 1
-  t0, af, na, nn = _sim_cladsfbd_i(ti(bi), tf(bi), λi, μi, αλ, αμ, σλ, σμ, ψ, 
+  t0, na, af, nn = _sim_cladsfbd_i(ti(bi), tf(bi), λi, μi, αλ, αμ, σλ, σμ, ψ, 
     ψts, ixi, nep, 0, false, 1, 500, λfs, μfs)
 
   if na < 1 || af || nn > 499
@@ -1521,8 +1517,11 @@ function fsbi_m(bi ::iBffs,
         ixf, nep, acr, lU, iρi, na, nn)
 
     if lU < acr
-
       na -= 1
+
+      # fossilize 
+      isfossil(bi) && fossilizefixedtip!(t0)
+
       llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       if isfinite(λ1)
         llr += λp - λc
@@ -1658,7 +1657,7 @@ function wfix_m(ξi ::cTfbd,
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     μfi = μfs[i]
-    p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * dnorm2(μ1, μ2 + αμ, μfi, σμ) *
+    p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * dnorm2(μ1, μ2, μfi + αμ, σμ) *
           exp(- eds * (exp(λfi) + exp(μfi)))
     sc += p
     if λc === λfi
@@ -1669,7 +1668,7 @@ function wfix_m(ξi ::cTfbd,
   # likelihood and acceptance ratio
   acr += log(sp/sc) + λp - λc
   ddλr = 2.0*(λc - λp)
-  ddμr = 2.0*(λc - λp)
+  ddμr = 2.0*(μc - μp)
   ssλr = 0.5*((λ1 - λp - αλ)^2 + (λ2 - λp - αλ)^2 - 
               (λ1 - λc - αλ)^2 - (λ2 - λc - αλ)^2)
   ssμr = 0.5*((μ1 - μp - αμ)^2 + (μ2 - μp - αμ)^2 - 
@@ -1734,7 +1733,7 @@ function fsbi_i(bi ::iBffs,
   empty!(λfs)
   empty!(μfs)
   nep = lastindex(ψts) + 1
-  t0, af, na, nn = _sim_cladsfbd_i(ti(bi), tf(bi), λi, μi, αλ, αμ, σλ, σμ, ψ,
+  t0, na, af, nn = _sim_cladsfbd_i(ti(bi), tf(bi), λi, μi, αλ, αμ, σλ, σμ, ψ,
       ψts, ixi, nep, 0, false, 1, 500, λfs, μfs)
 
   if na < 1 || af || nn > 499
@@ -1749,7 +1748,7 @@ function fsbi_i(bi ::iBffs,
   acr  = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # choose most likely lineage to fix
-  wt, λp, μp, pp, λc, μc, pc, acr, ddλr, ddμr, ssλr, ssμr= 
+  wt, λp, μp, pp, λc, μc, pc, acr, ddλr, ddμr, ssλr, ssμr = 
     wfix_i(ξi, e(bi), λfs, μfs, λ1, λ2, μ1, μ2, αλ, αμ, σλ, σμ, acr)
 
   if lU < acr
@@ -1764,7 +1763,8 @@ function fsbi_i(bi ::iBffs,
     # simulated remaining tips until the present
     if na > 1
       tx, na, nn, acr =
-        tip_sims!(t0, tf(bi), α, σλ, σμ, acr, lU, iρi, na, nn)
+        tip_sims!(t0, tf(bi), αλ, αμ, σλ, σμ, ψ, ψts, 
+          ixf, nep, acr, lU, iρi, na, nn)
     end
 
     if lU < acr
@@ -1839,7 +1839,7 @@ function wfix_i(ξi ::cTfbd,
   sc, pc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
-    p   = dnorm2(λ1, λ2, λfs[i] + αλ, σλ) * dnorm2(μ1, μ2, μfs[i] + αμ, σμ)
+    p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * dnorm2(μ1, μ2, μfs[i] + αμ, σμ)
     sc += p
     if λc === λfi
       pc = p
@@ -1849,7 +1849,7 @@ function wfix_i(ξi ::cTfbd,
   # likelihood and acceptance ratio
   acr += log(sp/sc) + λp - λc
   ddλr = 2.0*(λc - λp)
-  ddμr = 2.0*(λc - λp)
+  ddμr = 2.0*(μc - μp)
   ssλr = 0.5*((λ1 - λp - αλ)^2 + (λ2 - λp - αλ)^2 - 
               (λ1 - λc - αλ)^2 - (λ2 - λc - αλ)^2)
   ssμr = 0.5*((μ1 - μp - αμ)^2 + (μ2 - μp - αμ)^2 - 

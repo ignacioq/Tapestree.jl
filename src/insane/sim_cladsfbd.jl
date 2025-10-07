@@ -569,7 +569,7 @@ function _sim_cladsfbd_i(t   ::Float64,
                          λfs ::Vector{Float64},
                          μfs ::Vector{Float64})
 
-  if af && nn < nlim
+  if !af && nn < nlim
 
     @inbounds ψi = ψ[ix]
 
@@ -593,7 +593,7 @@ function _sim_cladsfbd_i(t   ::Float64,
       na += 1
       push!(λfs, λt)
       push!(μfs, μt)
-      return cTfbd(t, false, false, false, λt, μt), na, af, nn
+      return cTfbd(t - te, false, false, false, λt, μt), na, af, nn
     end
 
     # if speciation
@@ -603,9 +603,10 @@ function _sim_cladsfbd_i(t   ::Float64,
         _sim_cladsfbd_i(t - tw, te, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ), 
           αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, na, af, nn, nlim, λfs, μfs)
       d2, na, af, nn = 
-        _sim_cladsfbd_i(t - tw, te, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+        _sim_cladsfbd_i(t - tw, te, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ), 
           αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, na, af, nn, nlim, λfs, μfs)
 
+      return cTfbd(d1, d2, tw, false, false, false, λt, μt), na, af, nn
     # if extinction
     elseif μevent(μi, ψi)
 
@@ -659,7 +660,7 @@ function _sim_cladsfbd_i(t   ::Float64,
                          nn  ::Int64,
                          nlim::Int64)
 
-  if af && nn < nlim
+  if !af && nn < nlim
 
     @inbounds ψi = ψ[ix]
 
@@ -681,7 +682,7 @@ function _sim_cladsfbd_i(t   ::Float64,
 
     if tw > (t - te)
       na += 1
-      return cTfbd(t, false, false, false, λt, μt), na, af, nn
+      return cTfbd(t - te, false, false, false, λt, μt), na, af, nn
     end
 
     # if speciation
@@ -691,9 +692,10 @@ function _sim_cladsfbd_i(t   ::Float64,
         _sim_cladsfbd_i(t - tw, te, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ), 
           αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, na, af, nn, nlim)
       d2, na, af, nn = 
-        _sim_cladsfbd_i(t - tw, te, rnorm(λt + α, σλ), rnorm(μt, σμ), 
+        _sim_cladsfbd_i(t - tw, te, rnorm(λt + αλ, σλ), rnorm(μt + αμ, σμ), 
           αλ, αμ, σλ, σμ, ψ, ψts, ix, nep, na, af, nn, nlim)
 
+      return cTfbd(d1, d2, tw, false, false, false, λt, μt), na, af, nn
     # if extinction
     elseif μevent(μi, ψi)
 

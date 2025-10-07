@@ -3207,7 +3207,7 @@ function downstreamλμs(i  ::Int64,
                        μ2 ::Float64) where {T <: cT}
 
   @inbounds begin
-
+ 
     ξi   = Ξ[i]
     eds += e(ξi)
 
@@ -3216,6 +3216,7 @@ function downstreamλμs(i  ::Int64,
       λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
     else
       bi = idf[i]
+
       i1 = d1(bi)
       if i1 > 0
         i2 = d2(bi)
@@ -3223,9 +3224,18 @@ function downstreamλμs(i  ::Int64,
         if i2 > 0
           ξ1, ξ2 = Ξ[i1], Ξ[i2]
           λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
-        # if mid
+        # if mid or mid-fossil
         else
           eds, λ1, λ2, μ1, μ2 = downstreamλμs(i1, Ξ, idf, eds, λ1, λ2, μ1, μ2)
+        end
+      elseif isfossil(ξi)
+        ξ1   = ξi.d1
+        eds += e(ξ1)
+        if isextinct(ξ1)
+          μ1 = lμ(ξ1)
+        else
+          ξ11, ξ12 = ξ1.d1, ξ1.d2
+          λ1, λ2, μ1, μ2 = lλ(ξ11), lλ(ξ12), lμ(ξ11), lμ(ξ12)
         end
       end
     end
@@ -3233,6 +3243,7 @@ function downstreamλμs(i  ::Int64,
 
   return eds, λ1, λ2, μ1, μ2
 end
+
 
 
 

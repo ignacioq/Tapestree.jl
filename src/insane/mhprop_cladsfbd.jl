@@ -73,12 +73,14 @@ function _stem_update!(ξi      ::cTfbd,
             llrdnorm2_μ(μ1, μ2, μr + αμ, μi + αμ, σμ)
     llrbd = λr - λi + (ei + eds)*(exp(λi) - exp(λr) + exp(μi) - exp(μr))
 
+    lU = -randexp()
+
     if lU < llrbd + log(1000.0/mc)
 
       mp     = m_surv_cladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
       llrbd += log(mp/mc)
 
-      if -randexp() < llrbd
+      if lU < llrbd
         llc += llrbm + llrbd
         prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
                llrdnorm_x(μr, μi, μ0_prior[1], μ0_prior[2])
@@ -160,8 +162,9 @@ function _crown_update!(ξi      ::cTfbd,
     llr = log(mp/mc)
 
     if -randexp() < llr
-      llc += llrdnorm2_μ(λ1, λ2, λr + αλ, λi + αλ, σλ) +
-             llrdnorm2_μ(μ1, μ2, μr + αμ, μi + αμ, σμ) + llr
+      llc += llr +
+             llrdnorm2_μ(λ1, λ2, λr + αλ, λi + αλ, σλ) +
+             llrdnorm2_μ(μ1, μ2, μr + αμ, μi + αμ, σμ)
       prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2]) + 
              llrdnorm_x(μr, μi, μ0_prior[1], μ0_prior[2])
       ddλ += 2.0*(λi - λr)
@@ -245,16 +248,21 @@ function _update_internal!(tree::T,
           eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
     end
   else 
-    # if leads to non-speciation
-    if !isfix(tree) || ter || isnan(λ1)
-      llc, ddλ, ddμ, ssλ, ssμ = 
-        update_tip!(tree, eas, λa, μa, eds, αλ, αμ, σλ, σμ, 
-          llc, ddλ, ddμ, ssλ, ssμ)
     # if leads to eventual speciation
+    if isfix(tree) 
+      if isfinite(λ1)
+        llc, ddλ, ddμ, ssλ, ssμ = 
+            update_faketip!(tree, bi, eas, λa, μa, eds, λ1, λ2, μ1, μ2, 
+              αλ, αμ, σλ, σμ, llc, ddλ, ddμ, ssλ, ssμ)
+      else
+        llc, ddλ, ddμ, ssλ, ssμ = 
+          update_tip!(tree, eas, λa, μa, eds, αλ, αμ, σλ, σμ, 
+            llc, ddλ, ddμ, ssλ, ssμ)
+      end
     else
       llc, ddλ, ddμ, ssλ, ssμ = 
-        update_faketip!(tree, bi, eas, λa, μa, eds, λ1, λ2, μ1, μ2, 
-          αλ, αμ, σλ, σμ, llc, ddλ, ddμ, ssλ, ssμ)
+        update_tip!(tree, eas, λa, μa, 0.0, αλ, αμ, σλ, σμ, 
+          llc, ddλ, ddμ, ssλ, ssμ)
     end
   end
 

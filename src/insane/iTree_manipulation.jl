@@ -3681,13 +3681,19 @@ function setdownstreamλμ!(λi ::Float64,
       bi = idf[i]
       i1 = d1(bi)
       if i1 > 0
+        # if mid or mid-fossil
         if iszero(d2(bi))
-          setdownstreamλ!(λi, μi, i1, Ξ, idf)
+          setdownstreamλμ!(λi, μi, i1, Ξ, idf)
+        # if cladogenetic
         else
           setλt!(bi, λi)
           setμt!(bi, μi)
         end
       end
+    # if tip fossil
+    elseif isfossil(ξi)
+      setlλ!(ξi.d1, λi)
+      setlμ!(ξi.d1, μi)
     end
   end
 
