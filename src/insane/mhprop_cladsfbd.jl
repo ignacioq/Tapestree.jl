@@ -248,20 +248,21 @@ function _update_internal!(tree::T,
           eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
     end
   else 
-    # if leads to eventual speciation
     if isfix(tree) 
+      # if leads to eventual speciation
       if isfinite(λ1)
         llc, ddλ, ddμ, ssλ, ssμ = 
             update_faketip!(tree, bi, eas, λa, μa, eds, λ1, λ2, μ1, μ2, 
               αλ, αμ, σλ, σμ, llc, ddλ, ddμ, ssλ, ssμ)
-      else
+      # if leads to eventual extinction
+      else 
         llc, ddλ, ddμ, ssλ, ssμ = 
-          update_tip!(tree, eas, λa, μa, eds, αλ, αμ, σλ, σμ, 
+          update_tip!(tree, eas, λa, μa, eds, isfinite(μ1), αλ, αμ, σλ, σμ, 
             llc, ddλ, ddμ, ssλ, ssμ)
       end
     else
       llc, ddλ, ddμ, ssλ, ssμ = 
-        update_tip!(tree, eas, λa, μa, 0.0, αλ, αμ, σλ, σμ, 
+        update_tip!(tree, eas, λa, μa, 0.0, false, αλ, αμ, σλ, σμ, 
           llc, ddλ, ddμ, ssλ, ssμ)
     end
   end
@@ -347,6 +348,7 @@ end
                 λa  ::Float64,
                 μa  ::Float64,
                 eds ::Float64,
+                eμ  ::Bool,
                 αλ  ::Float64,
                 αμ  ::Float64,
                 σλ  ::Float64,
@@ -364,6 +366,7 @@ function update_tip!(tree::cTfbd,
                      λa  ::Float64,
                      μa  ::Float64,
                      eds ::Float64,
+                     eμ  ::Bool,
                      αλ  ::Float64,
                      αμ  ::Float64,
                      σλ  ::Float64,
@@ -388,7 +391,7 @@ function update_tip!(tree::cTfbd,
             llrdnorm_x(μn, μi, μa + αμ, σμ^2)
     llrbd = (eas + ei + eds) * (exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
-    if isextinct(tree)
+    if isextinct(tree) || eμ
       llrbd += μn - μi
     end
 

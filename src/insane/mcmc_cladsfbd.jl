@@ -1059,10 +1059,10 @@ function update_internal!(bix     ::Int64,
             lξi = fixtip(ξi)
             λi, μi = lλ(lξi.d1), lμ(lξi.d1)
             setupstreamλμ!(λi, μi, bix, Ξ, idf)
-          else
-            λi, μi = lλ(ξi), lμ(ξi)
-            setupstreamλμ!(λi, μi, ia, Ξ, idf)
           end
+
+          λi, μi = lλ(ξi), lμ(ξi)
+          setupstreamλμ!(λi, μi, ia, Ξ, idf)
 
           if !it && iszero(i2)
             lξi = fixtip(ξi)
@@ -1492,10 +1492,18 @@ function fsbi_m(bi ::iBffs,
   eds, λ1, λ2, μ1, μ2 = downstreamλμs(i1, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
 
   ## choose most likely lineage to fix
-  # if downstream is tip
   ddλr = ddμr = ssλr = ssμr = 0.0
+
+  # if downstream is alive tip
   if isnan(λ1)
-    wt, λp, μp, pp, λc, μc, pc, acr = wfix_m(ξi, e(bi), λfs, μfs, eds, acr)
+    # if downstream is extinct tip
+    if isfinite(μ1)
+      wt, λp, μp, pp, λc, μc, pc, acr = 
+        wfix_m(ξi, e(bi), isfinite(μ1), λfs, μfs, eds, acr)
+    else
+      wt, λp, μp, pp, λc, μc, pc, acr = 
+        wfix_m(ξi, e(bi), λfs, μfs, eds, acr)
+    end
   # if downstream is cladogenetic
   else
     wt, λp, μp, pp, λc, μc, pc, acr, ddλr, ddμr, ssλr, ssμr = 
@@ -1583,6 +1591,67 @@ function wfix_m(ξi ::cTfbd,
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     p   = exp(- eds * (exp(λfi) + exp(μfs[i])))
+    sc += p
+    if λc === λfi
+      pc = p
+    end
+  end
+
+  # likelihood ratio and acceptance
+  acr += log(sp/sc)
+
+  return wt, λp, μp, pp, λc, μc, pc, acr
+end
+
+
+
+
+"""
+    wfix_m(ξi ::cTfbd,
+           ei ::Float64,
+           eμ ::Bool,
+           λfs::Vector{Float64},
+           μfs::Vector{Float64},
+           eds::Float64,
+           acr::Float64)
+
+Choose most likely simulated lineage to fix with respect to daughter
+for middle `i` branches with downstream **tips**.
+"""
+function wfix_m(ξi ::cTfbd,
+                ei ::Float64,
+                eμ ::Bool,
+                λfs::Vector{Float64},
+                μfs::Vector{Float64},
+                eds::Float64,
+                acr::Float64)
+
+  # select best from proposal
+  sp, wt, λp, μp, pp = 0.0, 0, NaN, NaN, -Inf
+  for i in Base.OneTo(lastindex(λfs))
+    λfi = λfs[i]
+    μfi = μfs[i]
+    μi  = exp(μfi)
+    p   = exp(- eds * (exp(λfi) + μi)) * μi
+    sp += p
+    if p > pp
+      pp  = p
+      λp  = λfi
+      μp  = μfi
+      wt  = i
+    end
+  end
+
+  # extract current λs and μs at time `t` and estimate ratio
+  empty!(λfs)
+  empty!(μfs)
+  λc, μc = _λμat!(ξi, ei, λfs, μfs, 0.0, NaN, NaN)
+
+  sc, pc = 0.0, NaN
+  for i in Base.OneTo(lastindex(λfs))
+    λfi = λfs[i]
+    μi  = exp(μfs[i])
+    p   = exp(- eds * (exp(λfi) + μi)) * μi 
     sc += p
     if λc === λfi
       pc = p
