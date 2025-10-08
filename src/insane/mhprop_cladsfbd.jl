@@ -227,8 +227,7 @@ function _update_internal!(tree::T,
                            ddλ ::Float64,
                            ddμ ::Float64,
                            ssλ ::Float64,
-                           ssμ ::Float64,
-                           ter ::Bool) where {T <: cT}
+                           ssμ ::Float64) where {T <: cT}
 
   if def1(tree)
     if def2(tree)
@@ -238,14 +237,14 @@ function _update_internal!(tree::T,
 
       llc, ddλ, ddμ, ssλ, ssμ, λx, μx =
         _update_internal!(tree.d1, bi, 0.0, λa, μa, αλ, αμ, σλ, σμ, eds, λ1, λ2, 
-          μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
+          μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
       llc, ddλ, ddμ, ssλ, ssμ, λx, μx =
         _update_internal!(tree.d2, bi, 0.0, λa, μa, αλ, αμ, σλ, σμ, eds, λ1, λ2, 
-          μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
+          μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
     else
       llc, ddλ, ddμ, ssλ, ssμ, λx, μx =
         _update_internal!(tree.d1, bi, eas + e(tree), λa, μa, αλ, αμ, σλ, σμ, 
-          eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, ter)
+          eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
     end
   else 
     if isfix(tree) 
@@ -254,7 +253,7 @@ function _update_internal!(tree::T,
         llc, ddλ, ddμ, ssλ, ssμ = 
             update_faketip!(tree, bi, eas, λa, μa, eds, λ1, λ2, μ1, μ2, 
               αλ, αμ, σλ, σμ, llc, ddλ, ddμ, ssλ, ssμ)
-      # if leads to eventual extinction
+      # if leads to non-speciation or eventual extinction
       else 
         llc, ddλ, ddμ, ssλ, ssμ = 
           update_tip!(tree, eas, λa, μa, eds, isfinite(μ1), αλ, αμ, σλ, σμ, 

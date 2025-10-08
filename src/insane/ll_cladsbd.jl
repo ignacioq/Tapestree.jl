@@ -172,8 +172,7 @@ function _dd_ss(tree::cTbd,
 
       lλi  = lλ(tree)
       lμi  = lμ(tree)
-      lλ1  = lλ(td1)
-      lλ2  = lλ(td2)
+      lλ1, lλ2  = lλ(td1), lλ(td2)
       dd  += lλ1 + lλ2 - 2.0*lλi
       ssλ += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
       ssμ += 0.5*((lμ(td1) - lμi)^2 + (lμ(td2) - lμi)^2)

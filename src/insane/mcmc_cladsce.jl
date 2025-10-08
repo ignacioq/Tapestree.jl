@@ -786,14 +786,12 @@ function update_internal!(bix     ::Int64,
 
         # it non-terminal branch
         eds, λ1, λ2 = 0.0, NaN, NaN
-        if !it
-          # if cladogenetic branch
-          if i2 > 0
-            eds, λ1, λ2 = 0.0, lλ(Ξ[i1]), lλ(Ξ[i2])
-          # if mid branch
-          else
-            eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
-          end
+        # if cladogenetic branch
+        if i2 > 0
+          eds, λ1, λ2 = 0.0, lλ(Ξ[i1]), lλ(Ξ[i2])
+        # if mid branch
+        elseif i1 >0
+          eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
         end
 
         ll0 = llc

@@ -1018,10 +1018,10 @@ function update_internal!(bix     ::Int64,
         # updates within the parent branch
         llc, ddλ, ddμ, ssλ, ssμ, λx, μx = 
           _update_internal!(ξi.d1, bi, eas, λa, μa, αλ, αμ, σλ, σμ, 
-            eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, false)
+            eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
         llc, ddλ, ddμ, ssλ, ssμ, λx, μx = 
           _update_internal!(ξi.d2, bi, eas, λa, μa, αλ, αμ, σλ, σμ, 
-            eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, false)
+            eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
       end
 
     # if *not* root
@@ -1050,7 +1050,7 @@ function update_internal!(bix     ::Int64,
         # updates within the parent branch
         llc, ddλ, ddμ, ssλ, ssμ, λx, μx = 
           _update_internal!(ξi, bi, eas, λa, μa, αλ, αμ, σλ, σμ, 
-            eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ, it)
+            eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
 
         # if update, update up- and down-stream
         if ll0 != llc

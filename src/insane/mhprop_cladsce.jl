@@ -188,14 +188,20 @@ function _update_internal!(tree::T,
       _update_internal!(tree.d2, bi, 0.0, λa, α, σλ, eds, λ1, λ2, 
         llc, ddλ, ssλ, ter)
   else 
-    # if leads to non-speciation
-    if !isfix(tree) || ter || isnan(λ1)
-      llc, ddλ, ssλ = 
-        update_tip!(tree, eas, λa, eas, α, σλ, llc, ddλ, ssλ)
-    # if leads to eventual speciation
+    if isfix(tree)
+      # if leads to eventual speciation
+      if isfinite(λ1)
+        llc, ddλ, ssλ = 
+          update_faketip!(tree, bi, eas, λa, eds, λ1, λ2, α, σλ, llc, ddλ, ssλ)
+      # if leads to non-speciation
+      else
+        llc, ddλ, ssλ = 
+          update_tip!(tree, eas, λa, eds, α, σλ, llc, ddλ, ssλ)
+      end
+    # if DA tip
     else
       llc, ddλ, ssλ = 
-        update_faketip!(tree, bi, eas, λa, eds, λ1, λ2, α, σλ, llc, ddλ, ssλ)
+        update_tip!(tree, eas, λa, 0.0, α, σλ, llc, ddλ, ssλ)
     end
   end
 

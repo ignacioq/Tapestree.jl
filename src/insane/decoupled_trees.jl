@@ -1534,6 +1534,40 @@ end
 
 
 """
+    _dd_ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss(Ξ::Vector{cTbd}, idf::Vector{iBffs}, α::Float64)
+
+  dd = ssλ = ssμ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    dd, ssλ, ssμ = _dd_ss(Ξ[i], α, dd, ssλ, ssμ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi  = λt(bi)
+      lμi  = μt(bi)
+      ξ1  = Ξ[d1(bi)]
+      ξ2  = Ξ[bi2]
+      lλ1, lλ2 = lλ(ξ1), lλ(ξ2)
+
+      dd  += lλ1 + lλ2 - 2.0*lλi
+      ssλ += 0.5*((lλ1    - lλi - α)^2 + (lλ2    - lλi - α)^2)
+      ssμ += 0.5*((lμ(ξ1) - lμi)^2  + (lμ(ξ2) - lμi)^2)
+    end
+  end
+
+  return dd, ssλ, ssμ
+end
+
+
+
+
+"""
     _dd_ss(Ξ::Vector{cTfbd}, idf::Vector{iBffs}, α::Float64)
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
