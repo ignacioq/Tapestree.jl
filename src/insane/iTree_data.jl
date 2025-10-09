@@ -2833,6 +2833,31 @@ end
 
  
 
+"""
+    trextract(tree::iTree, f::Function)
+
+Perform function `f` in each recursive tree in `tree`.
+"""
+function trextract(treev::Vector{T}, f::Function) where {T <: iTree}
+  n   = lastindex(treev)
+  F   = typeof(f(treev[1]))
+  tvs = F[]
+  _trextract!(tvs, treev[1], f)
+  l = lastindex(tvs)
+  d = Array{F}(undef, l, n)
+  d[:,1] = tvs
+
+  for j in 2:n
+    empty!(tvs)
+    _trextract!(tvs, treev[j], f)
+    d[:,j] = tvs
+  end
+
+  return d
+end
+
+
+
 
 """
     trextract(tree::iTree, f::Function)
