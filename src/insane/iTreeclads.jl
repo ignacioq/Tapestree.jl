@@ -71,41 +71,6 @@ Base.show(io::IO, t::cTb) =
 
 
 
-# """
-#     cTb(e0::Array{Int64,1},
-#          e1::Array{Int64,1},
-#          el::Array{Float64,1},
-#          λs::Array{Array{Float64,1},1},
-#          ea::Array{Int64,1},
-#          ni::Int64,
-#          ei::Int64,
-#          δt::Float64)
-
-# Transform edge structure to `cTb`.
-# """
-# function cTb(e0::Array{Int64,1},
-#               e1::Array{Int64,1},
-#               el::Array{Float64,1},
-#               λs::Array{Array{Float64,1},1},
-#               ea::Array{Int64,1},
-#               ni::Int64,
-#               ei::Int64,
-#               δt::Float64)
-
-#   # if tip
-#   if in(ei, ea)
-#     return cTb(el[ei], δt, δt, true, λs[ei])
-#   else
-#     ei1, ei2 = findall(isequal(ni), e0)
-#     n1, n2   = e1[ei1:ei2]
-#     return cTb(cTb(e0, e1, el, λs, ea, n1, ei1, δt),
-#                 cTb(e0, e1, el, λs, ea, n2, ei2, δt),
-#                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
-#   end
-# end
-
-
-
 
 """
     cTb(tree::cTb)
@@ -117,6 +82,39 @@ function cTb(tree::cTb)
     cTb(cTb(tree.d1), cTb(tree.d2), e(tree), isfix(tree), lλ(tree))
   else
     cTb(e(tree), isfix(tree), lλ(tree))
+  end
+end
+
+
+
+
+"""
+    cTb(e0::Array{Int64,1},
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         ea::Array{Int64,1},
+         ni::Int64,
+         ei::Int64)
+
+Transform edge structure to `cTb`.
+"""
+function cTb(e0::Array{Int64,1},
+             e1::Array{Int64,1},
+             el::Array{Float64,1},
+             λs::Array{Float64,1},
+             ea::Array{Int64,1},
+             ni::Int64,
+             ei::Int64)
+
+  # if tip
+  if in(ei, ea)
+    return cTb(el[ei], true, λs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    return cTb(cTb(e0, e1, el, λs, ea, e1[ei1], ei1),
+               cTb(e0, e1, el, λs, ea, e1[ei2], ei2),
+               el[ei], true, λs[ei])
   end
 end
 
@@ -191,6 +189,46 @@ end
 
 
 """
+    cTce(e0::Array{Int64,1},
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         ea::Array{Int64,1},
+         ee::Array{Int64,1},
+         ni::Int64,
+         ei::Int64)
+
+Transform edge structure to `cTce`.
+"""
+function cTce(e0::Array{Int64,1},
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Float64,1},
+              ea::Array{Int64,1},
+              ee::Array{Int64,1},
+              ni::Int64,
+              ei::Int64)
+
+  # if tip
+  if in(ei, ea)
+    return cTce(el[ei], false, true, λs[ei])
+  # if extinct
+  elseif in(ei, ee)
+    return cTce(el[ei], true, true, λs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    return cTce(cTce(e0, e1, el, λs, ea, ee, e1[ei1], ei1),
+                cTce(e0, e1, el, λs, ea, ee, e1[ei2], ei2),
+                el[ei], false, true, λs[ei])
+  end
+end
+
+
+
+
+
+
+"""
     cTct
 
 A composite recursive type of supertype `cT`
@@ -251,6 +289,44 @@ function cTct(tree::cTct)
       isfix(tree), lλ(tree))
   else
     cTct(e(tree), isextinct(tree), isfix(tree), lλ(tree))
+  end
+end
+
+
+
+
+"""
+    cTct(e0::Array{Int64,1},
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         ea::Array{Int64,1},
+         ee::Array{Int64,1},
+         ni::Int64,
+         ei::Int64)
+
+Transform edge structure to `cTct`.
+"""
+function cTct(e0::Array{Int64,1},
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Float64,1},
+              ea::Array{Int64,1},
+              ee::Array{Int64,1},
+              ni::Int64,
+              ei::Int64)
+
+  # if tip
+  if in(ei, ea)
+    return cTct(el[ei], false, true, λs[ei])
+  # if extinct
+  elseif in(ei, ee)
+    return cTct(el[ei], true, true, λs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    return cTct(cTct(e0, e1, el, λs, ea, ee, e1[ei1], ei1),
+                cTct(e0, e1, el, λs, ea, ee, e1[ei2], ei2),
+                el[ei], false, true, λs[ei])
   end
 end
 
@@ -320,6 +396,47 @@ function cTbd(tree::cTbd)
       isfix(tree), lλ(tree), lμ(tree))
   else
     cTbd(e(tree), isextinct(tree), isfix(tree), lλ(tree), lμ(tree))
+  end
+end
+
+
+
+
+
+"""
+    cTbd(e0::Array{Int64,1},
+         e1::Array{Int64,1},
+         el::Array{Float64,1},
+         λs::Array{Array{Float64,1},1},
+         μs::Array{Float64,1},
+         ea::Array{Int64,1},
+         ee::Array{Int64,1},
+         ni::Int64,
+         ei::Int64)
+
+Transform edge structure to `cTbd`.
+"""
+function cTbd(e0::Array{Int64,1},
+              e1::Array{Int64,1},
+              el::Array{Float64,1},
+              λs::Array{Float64,1},
+              μs::Array{Float64,1},
+              ea::Array{Int64,1},
+              ee::Array{Int64,1},
+              ni::Int64,
+              ei::Int64)
+
+  # if tip
+  if in(ei, ea)
+    return cTbd(el[ei], false, true, λs[ei], μs[ei])
+  # if extinct
+  elseif in(ei, ee)
+    return cTbd(el[ei], true, true, λs[ei], μs[ei])
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    return cTbd(cTbd(e0, e1, el, λs, μs, ea, ee, e1[ei1], ei1),
+                cTbd(e0, e1, el, λs, μs, ea, ee, e1[ei2], ei2),
+                el[ei], false, true, λs[ei], μs[ei])
   end
 end
 
@@ -435,5 +552,54 @@ function cTfbd_wofe(tree::cTfbd)
 end
 
 
+
+
+"""
+    cTfbd(e0::Array{Int64,1},
+          e1::Array{Int64,1},
+          el::Array{Float64,1},
+          λs::Array{Float64,1},
+          μs::Array{Float64,1},
+          ea::Array{Int64,1},
+          ee::Array{Int64,1},
+          ef::Array{Int64,1},
+          ni::Int64,
+          ei::Int64)
+
+Transform edge structure to `cTfbd`.
+"""
+function cTfbd(e0::Array{Int64,1},
+               e1::Array{Int64,1},
+               el::Array{Float64,1},
+               λs::Array{Float64,1},
+               μs::Array{Float64,1},
+               ea::Array{Int64,1},
+               ee::Array{Int64,1},
+               ef::Array{Int64,1},
+               ni::Int64,
+               ei::Int64)
+
+  # if tip
+  if in(ei, ea)
+    return cTfbd(el[ei], false, false, false, λs[ei], μs[ei])
+
+  # if extinct
+  elseif in(ei, ee)
+    return cTfbd(el[ei], true, false, false, λs[ei], μs[ei])
+
+  # if fossil
+  elseif in(ei, ef)
+    ei1 = findfirst(isequal(ni), e0)
+    return cTfbd(cTfbd(e0, e1, el, λs, μs, ea, ee, ef, e1[ei1], ei1),
+                 el[ei], false, true, false, λs[ei], μs[ei])
+
+  # if internal
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    return cTfbd(cTfbd(e0, e1, el, λs, μs, ea, ee, ef, e1[ei1], ei1),
+                 cTfbd(e0, e1, el, λs, μs, ea, ee, ef, e1[ei2], ei2),
+                 el[ei], false, false, false, λs[ei], μs[ei])
+  end
+end
 
 

@@ -348,12 +348,130 @@ function _cutbottom(tree::sTfbd,
   if (t + et) > c
     tree = sTfbd(c - t, false, false, isfix(tree))
   else
-    if def1(tree) tree.d1 = _cutbottom(tree.d1, c, t + et) end
-    if def2(tree) tree.d2 = _cutbottom(tree.d2, c, t + et) end
+    if def1(tree) 
+      tree.d1 = _cutbottom(tree.d1, c, t + et) 
+      if def2(tree) 
+        tree.d2 = _cutbottom(tree.d2, c, t + et) 
+      end
+    end
   end
 
   return tree
 end
+
+
+
+
+"""
+    _cutbottom(tree::cTb,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::cTb,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = cTb(c - t, isfix(tree), lλ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
+  end
+
+  return tree
+end
+
+
+
+"""
+    _cutbottom(tree::cTce,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::T,
+                    c   ::Float64,
+                    t   ::Float64) where {T <: cT}
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = T(c - t, false, isfix(tree), lλ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::cTce,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::cTbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = cTbd(c - t, false, isfix(tree), lλ(tree), lμ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::cTfbd,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::cTfbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = cTfbd(c - t, false, false, isfix(tree), lλ(tree), lμ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      if def2(tree)
+        tree.d2 = _cutbottom(tree.d2, c, t + et)
+      end
+    end
+  end
+
+  return tree
+end
+
 
 
 

@@ -57,7 +57,7 @@ function sim_gbmct(n       ::Int64;
 
   if simt >= maxt
     warnings && @warn "simulation surpassed maximum time"
-    return iTct(0.0, 0.0, 0.0, false, false, Float64[])
+    return iTct()
   end
 
   # transform to iTree
@@ -75,7 +75,7 @@ function sim_gbmct(n       ::Int64;
 
   if iszero(c)
     warnings && @warn "tree not sampled, try increasing `p`"
-    return iTct(0.0, 0.0, 0.0, false, false, Float64[])
+    return iTct()
   else
     # cut the tree
     t = cutbottom(t, simt - c)
