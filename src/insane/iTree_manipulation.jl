@@ -1985,8 +1985,8 @@ function _remove_unsampled!(tree::cTb)
       else
         e0   = e(tree)
         e2   = e(tree.d2)
-        λ0 = lλ(tree)
-        λ2 = lλ(tree.d2)
+        λ0   = lλ(tree)
+        λ2   = lλ(tree.d2)
         tree = tree.d2
         sete!(tree, e0 + e2)
         setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
@@ -1994,8 +1994,8 @@ function _remove_unsampled!(tree::cTb)
     elseif !isfix(tree.d2)
       e0   = e(tree)
       e1   = e(tree.d1)
-      λ0 = lλ(tree)
-      λ1 = lλ(tree.d1)
+      λ0   = lλ(tree)
+      λ1   = lλ(tree.d1)
       tree = tree.d1
       sete!(tree, e0 + e1)
       setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
@@ -2650,11 +2650,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTce)
+    _remove_extinct!(tree::T)
 
-Remove extinct tips from `iTce`.
+Remove extinct tips from `T`.
 """
-function _remove_extinct!(tree::iTce)
+function _remove_extinct!(tree::T) where {T <: cT}
 
   if def1(tree)
 
@@ -2663,41 +2663,66 @@ function _remove_extinct!(tree::iTce)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTce(e(tree), dt(tree), fdt(tree),
-          true, isfix(tree), lλ(tree))
+        return T(e(tree), true, isfix(tree), lλ(tree))
       else
-        ne  = e(tree) + e(tree.d2)
-        lλ0 = lλ(tree)
-        lλ2 = lλ(tree.d2)
-
-        fdt2 = fdt(tree.d2)
-        pop!(lλ0)
-        iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0)
-        fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree)
-          fdt0 -= dt(tree)
-        end
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0   = lλ(tree)
+        λ2   = lλ(tree.d2)
         tree = tree.d2
-        sete!(tree, ne)
-        setfdt!(tree, fdt0)
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
       end
     elseif isextinct(tree.d2)
-      ne  = e(tree) + e(tree.d1)
-      lλ0 = lλ(tree)
-      lλ1 = lλ(tree.d1)
-
-      fdt1 = fdt(tree.d1)
-      pop!(lλ0)
-      iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0)
-      fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree)
-        fdt0 -= dt(tree)
-      end
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0   = lλ(tree)
+      λ1   = lλ(tree.d1)
       tree = tree.d1
-      sete!(tree, ne)
-      setfdt!(tree, fdt0)
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+    end
+  end
+
+  return tree
+end
+
+
+
+
+
+"""
+    _remove_extinct!(tree::T)
+
+Remove extinct tips from `T`.
+"""
+function _remove_extinct!(tree::T) where {T <: cT}
+
+  if def1(tree)
+
+    tree.d1 = _remove_extinct!(tree.d1)
+    tree.d2 = _remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return T(e(tree), true, isfix(tree), lλ(tree))
+      else
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0   = lλ(tree)
+        λ2   = lλ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+      end
+    elseif isextinct(tree.d2)
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0   = lλ(tree)
+      λ1   = lλ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
     end
   end
 
@@ -2708,11 +2733,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTct)
+    _remove_extinct!(tree::cTbd)
 
-Remove extinct tips from `iTct`.
+Remove extinct tips from `cTbd`.
 """
-function _remove_extinct!(tree::iTct)
+function _remove_extinct!(tree::cTbd)
 
   if def1(tree)
 
@@ -2721,7 +2746,95 @@ function _remove_extinct!(tree::iTct)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTct(e(tree), dt(tree), fdt(tree),
+        return cTbd(e(tree), true, isfix(tree), lλ(tree), lμ(tree))
+      else
+        e0, e2 = e(tree), e(tree.d2)
+        λ0, λ2 = lλ(tree), lλ(tree.d2)
+        μ0, μ2 = lμ(tree), lμ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+        setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+      end
+    elseif isextinct(tree.d2)
+      e0, e1 = e(tree), e(tree.d1)
+      λ0, λ1 = lλ(tree), lλ(tree.d1)
+      μ0, μ1 = lμ(tree), lμ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+      setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_extinct!(tree::cTfbd)
+
+Remove extinct tips from `cTfbd`.
+"""
+function _remove_extinct!(tree::cTfbd)
+
+  if def1(tree)
+    tree.d1 = _remove_extinct!(tree.d1)
+    if def2(tree)
+      tree.d2 = _remove_extinct!(tree.d2)
+
+      if isextinct(tree.d1)
+        if isextinct(tree.d2)
+          return cTfbd(e(tree), true, isfossil(tree), isfix(tree), 
+                  lλ(tree), lμ(tree))
+        else
+          e0, e2 = e(tree), e(tree.d2)
+          λ0, λ2 = lλ(tree), lλ(tree.d2)
+          μ0, μ2 = lμ(tree), lμ(tree.d2)
+          tree = tree.d2
+          sete!(tree, e0 + e2)
+          setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+          setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+        end
+      elseif isextinct(tree.d2)
+        e0, e1 = e(tree), e(tree.d1)
+        λ0, λ1 = lλ(tree), lλ(tree.d1)
+        μ0, μ1 = lμ(tree), lμ(tree.d1)
+        tree = tree.d1
+        sete!(tree, e0 + e1)
+        setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+        setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+      end
+    else
+      if isextinct(tree.d1)
+        return cTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree), 
+                  lλ(tree), lμ(tree))
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+"""
+    _remove_extinct!(tree::T) where {T <: iT}
+
+Remove extinct tips from `iT`.
+"""
+function _remove_extinct!(tree::T) where {T <: iT}
+
+  if def1(tree)
+
+    tree.d1 = _remove_extinct!(tree.d1)
+    tree.d2 = _remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return T(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
