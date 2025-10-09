@@ -2690,48 +2690,6 @@ end
 
 
 
-
-"""
-    _remove_extinct!(tree::T)
-
-Remove extinct tips from `T`.
-"""
-function _remove_extinct!(tree::T) where {T <: cT}
-
-  if def1(tree)
-
-    tree.d1 = _remove_extinct!(tree.d1)
-    tree.d2 = _remove_extinct!(tree.d2)
-
-    if isextinct(tree.d1)
-      if isextinct(tree.d2)
-        return T(e(tree), true, isfix(tree), lλ(tree))
-      else
-        e0   = e(tree)
-        e2   = e(tree.d2)
-        λ0   = lλ(tree)
-        λ2   = lλ(tree.d2)
-        tree = tree.d2
-        sete!(tree, e0 + e2)
-        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
-      end
-    elseif isextinct(tree.d2)
-      e0   = e(tree)
-      e1   = e(tree.d1)
-      λ0   = lλ(tree)
-      λ1   = lλ(tree.d1)
-      tree = tree.d1
-      sete!(tree, e0 + e1)
-      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
-    end
-  end
-
-  return tree
-end
-
-
-
-
 """
     _remove_extinct!(tree::cTbd)
 
