@@ -60,7 +60,7 @@ function _stem_update!(ξi      ::cTfbd,
                        surv    ::Int64)
 
   @inbounds begin
-    λi, μi = lλ(ξi), lλ(ξi)
+    λi, μi = lλ(ξi), lμ(ξi)
     ei = e(ξi)
 
     ## node proposal

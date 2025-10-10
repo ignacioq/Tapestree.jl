@@ -513,11 +513,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
               # update ssλ with new drift `αλ`
               ssλ = _ss(Ξ, idf, αλc, lλ, λt)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
 
             # update extinction drift
             elseif pupi === 2
@@ -529,11 +529,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
              # update ssμ with new drift `αμ`
               ssμ = _ss(Ξ, idf, αμc, lμ, μt)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
 
             # update speciation and extinction diffusion rate
             elseif pupi === 3
@@ -542,22 +542,22 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, αμc, ssλ, ssμ, 
                   2.0*(ns + rmλ), llc, prc, mc, th, surv, σλ_prior, σμ_prior)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
 
             # update fossilization rate
             elseif pupi === 4
 
               llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
 
             # update scale
             elseif pupi === 5
@@ -566,11 +566,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_scale!(Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ns, ne, 
                   stnλ, stnμ, mc, th, surv, λ0_prior, μ0_prior)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
 
             # update internal λ & μ
             elseif pupi === 6
@@ -581,11 +581,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_internal!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, 
                   ddλ, ddμ, ssλ, ssμ, mc, th, λ0_prior, μ0_prior, surv)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
 
             # update by forward simulation
             else
@@ -596,11 +596,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, L, 
                   ddλ, ddμ, ssλ, ssμ, ns, ne, ψ_epoch, eixi, eixf, λfs, μfs)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
             end
           end
 

@@ -110,15 +110,15 @@ module INSANE
   include("insane/decoupled_trees.jl")
   include("insane/marginal_likelihood.jl")
 
-  const iTd = Dict{String, DataType}("sTb"  => sTb,
+  const iTd = Dict{String, DataType}("sTb"   => sTb,
                                      "sTbd"  => sTbd,
                                      "sTfbd" => sTfbd,
-                                     "cTb"  => cTb,
+                                     "cTb"   => cTb,
                                      "cTce"  => cTce,
                                      "cTct"  => cTct,
                                      "cTbd"  => cTbd,
                                      "cTfbd" => cTfbd,
-                                     "iTb"  => iTb,
+                                     "iTb"   => iTb,
                                      "iTce"  => iTce,
                                      "iTct"  => iTct,
                                      "iTbd"  => iTbd,
