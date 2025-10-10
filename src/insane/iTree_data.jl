@@ -3106,7 +3106,10 @@ function upstreamλ(i  ::Int64,
         eas += e(lξi)
       else
         eas += e(ξi)
-        eas, λa, i = upstreamλ(pa(bi), Ξ, idf, eas, λa)
+        ia   = pa(bi)
+        if ia > 0
+          eas, λa, i = upstreamλ(ia, Ξ, idf, eas, λa)
+        end
       end
     end
   end
@@ -3150,7 +3153,10 @@ function upstreamλμ(i  ::Int64,
         eas += e(lξi)
       else
         eas += e(ξi)
-        eas, λa, μa, i = upstreamλμ(pa(bi), Ξ, idf, eas, λa, μa)
+        ia   = pa(bi)
+        if ia > 0
+          eas, λa, μa, i = upstreamλμ(ia, Ξ, idf, eas, λa, μa)
+        end
       end
     end
   end

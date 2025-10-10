@@ -781,33 +781,29 @@ function update_internal!(bix     ::Int64,
       # find cladogenetic ancestor
       eas, λa, il = upstreamλ(ia, Ξ, idf, 0.0, λa)
 
-      # check if mid branch does not lead to the stem branch
-      if pa(idf[il]) > 0
+      # it non-terminal branch
+      eds, λ1, λ2 = 0.0, NaN, NaN
+      # if cladogenetic branch
+      if i2 > 0
+        eds, λ1, λ2 = 0.0, lλ(Ξ[i1]), lλ(Ξ[i2])
+      # if mid branch
+      elseif i1 >0
+        eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
+      end
 
-        # it non-terminal branch
-        eds, λ1, λ2 = 0.0, NaN, NaN
-        # if cladogenetic branch
-        if i2 > 0
-          eds, λ1, λ2 = 0.0, lλ(Ξ[i1]), lλ(Ξ[i2])
-        # if mid branch
-        elseif i1 >0
-          eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
-        end
+      ll0 = llc
 
-        ll0 = llc
+      # updates within the parent branch
+      llc, ddλ, ssλ, λx = 
+        _update_internal!(ξi, bi, eas, λa, α, σλ, eds, λ1, λ2, llc, 
+          ddλ, ssλ, it)
 
-        # updates within the parent branch
-        llc, ddλ, ssλ, λx = 
-          _update_internal!(ξi, bi, eas, λa, α, σλ, eds, λ1, λ2, llc, 
-            ddλ, ssλ, it)
-
-        # if update, update up- and down-stream
-        if ll0 != llc
-          λi = lλ(ξi)
-          setupstreamλ!(λi, ia, Ξ, idf)
-          λi = lλ(fixtip(ξi))
-          (!it && iszero(i2)) && setdownstreamλ!(λi, i1, Ξ, idf)
-        end
+      # if update, update up- and down-stream
+      if ll0 != llc
+        λi = lλ(ξi)
+        setupstreamλ!(λi, ia, Ξ, idf)
+        λi = lλ(fixtip(ξi))
+        (!it && iszero(i2)) && setdownstreamλ!(λi, i1, Ξ, idf)
       end
     end
   end

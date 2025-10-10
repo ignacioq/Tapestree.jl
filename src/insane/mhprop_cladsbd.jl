@@ -57,8 +57,7 @@ function _stem_update!(ξi      ::cTbd,
                        surv    ::Int64)
 
   @inbounds begin
-    λi = lλ(ξi)
-    μi = lλ(ξi)
+    λi, μi = lλ(ξi), lμ(ξi)
     ei = e(ξi)
 
     ## node proposal
@@ -213,8 +212,12 @@ function _update_internal!(tree::T,
                            ter ::Bool) where {T <: cT}
 
   if def1(tree)
-    llc, ddλ, ssλ, ssμ, λa, μa = 
-      update_triad!(tree, eas, λa, μa, α, σλ, σμ, llc, ddλ, ssλ, ssμ)
+    if isfinite(λa)
+      llc, ddλ, ssλ, ssμ, λa, μa = 
+        update_triad!(tree, eas, λa, μa, α, σλ, σμ, llc, ddλ, ssλ, ssμ)
+    else
+      λa, μa = lλ(tree), lμ(tree)
+    end
 
     llc, ddλ, ssλ, ssμ, λx, μx =
       _update_internal!(tree.d1, bi, 0.0, λa, μa, α, σλ, σμ, eds, λ1, λ2, 

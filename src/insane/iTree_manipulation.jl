@@ -3752,8 +3752,11 @@ function setupstreamλ!(λi ::Float64,
         lξi = fixtip(ξi)
         setlλ!(lξi, λi)
       else
+        ia = pa(bi)
         setlλ!(ξi, λi)
-        setupstreamλ!(λi, pa(bi), Ξ, idf)
+        if ia > 0
+          setupstreamλ!(λi, ia, Ξ, idf)
+        end
       end
     end
   end
@@ -3792,9 +3795,12 @@ function setupstreamλμ!(λi ::Float64,
         setlλ!(lξi, λi)
         setlμ!(lξi, μi)
       else
+        ia = pa(bi)
         setlλ!(ξi, λi)
         setlμ!(ξi, μi)
-        setupstreamλμ!(λi, μi, pa(bi), Ξ, idf)
+        if ia > 0
+          setupstreamλμ!(λi, μi, ia, Ξ, idf)
+        end
       end
     end
   end

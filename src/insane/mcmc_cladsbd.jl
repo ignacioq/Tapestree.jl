@@ -856,38 +856,34 @@ function update_internal!(bix     ::Int64,
       # find cladogenetic ancestor
       eas, λa, μa, il = upstreamλμ(ia, Ξ, idf, 0.0, λa, μa)
 
-      # check if mid branch does not lead to the stem branch
-      if pa(idf[il]) > 0
-
-        # it non-terminal branch
-        eds, λ1, λ2, μ1, μ2 = 0.0, NaN, NaN, NaN, NaN
-        if !it
-          # if cladogenetic branch
-          if i2 > 0
-            ξ1, ξ2 = Ξ[i1], Ξ[i2]
-            eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
-          # if mid branch
-          else
-            eds, λ1, λ2, μ1, μ2 = 
-              downstreamλμs(i1, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
-          end
+      # if non-terminal branch
+      eds, λ1, λ2, μ1, μ2 = 0.0, NaN, NaN, NaN, NaN
+      if !it
+        # if cladogenetic branch
+        if i2 > 0
+          ξ1, ξ2 = Ξ[i1], Ξ[i2]
+          eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+        # if mid branch
+        else
+          eds, λ1, λ2, μ1, μ2 = 
+            downstreamλμs(i1, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
         end
+      end
 
-        ll0 = llc
+      ll0 = llc
 
-        # updates within the parent branch
-        llc, ddλ, ssλ, ssμ, λx, μx = 
-          _update_internal!(ξi, bi, eas, λa, μa, α, σλ, σμ, eds, λ1, λ2, μ1, μ2,
-            llc, ddλ, ssλ, ssμ, it)
+      # updates within the parent branch
+      llc, ddλ, ssλ, ssμ, λx, μx = 
+        _update_internal!(ξi, bi, eas, λa, μa, α, σλ, σμ, eds, λ1, λ2, μ1, μ2,
+          llc, ddλ, ssλ, ssμ, it)
 
-        # if update, update up- and down-stream
-        if ll0 != llc
-          λi, μi = lλ(ξi), lμ(ξi)
-          setupstreamλμ!(λi, μi, ia, Ξ, idf)
-          if !it && iszero(i2)
-            lξi = fixtip(ξi)
-            setdownstreamλμ!(lλ(lξi), lμ(lξi), i1, Ξ, idf)
-          end
+      # if update, update up- and down-stream
+      if ll0 != llc
+        λi, μi = lλ(ξi), lμ(ξi)
+        setupstreamλμ!(λi, μi, ia, Ξ, idf)
+        if !it && iszero(i2)
+          lξi = fixtip(ξi)
+          setdownstreamλμ!(lλ(lξi), lμ(lξi), i1, Ξ, idf)
         end
       end
     end

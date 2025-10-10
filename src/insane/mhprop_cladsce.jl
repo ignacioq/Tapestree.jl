@@ -178,8 +178,12 @@ function _update_internal!(tree::T,
                            ter ::Bool) where {T <: cT}
 
   if def1(tree)
-    llc, ddλ, ssλ, λa = 
-      update_triad!(tree, eas, λa, α, σλ, llc, ddλ, ssλ)
+    if isfinite(λa)
+      llc, ddλ, ssλ, λa = 
+        update_triad!(tree, eas, λa, α, σλ, llc, ddλ, ssλ)
+    else
+      λa = lλ(tree)
+    end
 
     llc, ddλ, ssλ, λx =
       _update_internal!(tree.d1, bi, 0.0, λa, α, σλ, eds, λ1, λ2, 

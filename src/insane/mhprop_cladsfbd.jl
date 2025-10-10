@@ -231,9 +231,13 @@ function _update_internal!(tree::T,
 
   if def1(tree)
     if def2(tree)
-      llc, ddλ, ddμ, ssλ, ssμ, λa, μa = 
-        update_triad!(tree, eas, λa, μa, αλ, αμ, σλ, σμ, 
-          llc, ddλ, ddμ, ssλ, ssμ)
+      if isfinite(λa)
+        llc, ddλ, ddμ, ssλ, ssμ, λa, μa = 
+          update_triad!(tree, eas, λa, μa, αλ, αμ, σλ, σμ, 
+            llc, ddλ, ddμ, ssλ, ssμ)
+      else
+        λa, μa = lλ(tree), lμ(tree)
+      end
 
       llc, ddλ, ddμ, ssλ, ssμ, λx, μx =
         _update_internal!(tree.d1, bi, 0.0, λa, μa, αλ, αμ, σλ, σμ, eds, λ1, λ2, 
