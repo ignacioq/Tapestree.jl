@@ -475,7 +475,7 @@ Constructs an `cTfbd` object with one `cTfbd` daughter and pendant edge `e`.
 
 Constructs an `cTfbd` object with two `cTfbd` daughters and pendant edge `e`.
 
-    cTfbd(d1::cTfbd, e::Float64, iψ::Bool, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
+    cTfbd(d1::cTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
 """
 mutable struct cTfbd <: cT
   d1 ::cTfbd
@@ -492,7 +492,7 @@ mutable struct cTfbd <: cT
       (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
   cTfbd(d1::cTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
       (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
-  cTfbd(d1::cTfbd, d2::cTfbd, e::Float64, iψ::Bool, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+  cTfbd(d1::cTfbd, d2::cTfbd, e::Float64, iμ::Bool, iψ::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
       new(d1, d2, e, iμ, iψ, fx, lλ, lμ)
 end
 
@@ -601,5 +601,182 @@ function cTfbd(e0::Array{Int64,1},
                  el[ei], false, false, false, λs[ei], μs[ei])
   end
 end
+
+
+
+
+"""
+    acTfbd
+
+A composite recursive type of supertype `cT`
+representing a binary phylogenetic tree with constant turnover
+and `λ` under cladogenetic rate shifts for `insane` use,
+with the following fields:
+
+  d1: daughter tree 1
+  d2: daughter tree 2
+  e:  edge
+  iψ: if fossil
+  iμ: if extinct node
+  sh: if d1 is cladogenetic (the one budding)
+  fx: if fix tree
+  lλ: `log(λ)`
+  lμ: `log(μ)`
+
+
+Constructs an empty `acTfbd` object.
+
+    acTfbd()
+
+Constructs an empty `acTfbd` object with pendant edge `e`.
+
+    acTfbd(e::Float64, iμ::Bool, iψ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
+
+Constructs an `acTfbd` object with one `acTfbd` daughter and pendant edge `e`.
+
+    acTfbd(d1::acTfbd, e::Float64, iψ::Bool, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
+
+Constructs an `acTfbd` object with two `acTfbd` daughters and pendant edge `e`.
+
+    acTfbd(d1::acTfbd, e::Float64, iψ::Bool, iμ::Bool, fx::Bool, lλ::Float64, lμ::Float64)
+"""
+mutable struct acTfbd <: cT
+  d1 ::acTfbd
+  d2 ::acTfbd
+  e  ::Float64
+  iμ ::Bool
+  iψ ::Bool
+  sh ::Bool
+  fx ::Bool
+  lλ ::Float64
+  lμ ::Float64
+
+  acTfbd() = new()
+  acTfbd(e::Float64, iμ::Bool, iψ::Bool, sh::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      (x = new(); x.e = e; x.iμ = iμ; x.iψ = iψ; x.sh = sh; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+  acTfbd(d1::acTfbd, e::Float64, iμ::Bool, iψ::Bool, sh::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      (x = new(); x.d1 = d1; x.e = e; x.iμ = iμ; x.iψ = iψ; x.sh = sh; x.fx = fx; x.lλ = lλ; x.lμ = lμ; x)
+  acTfbd(d1::acTfbd, d2::acTfbd, e::Float64, iμ::Bool, iψ::Bool, sh::Bool, fx::Bool, lλ::Float64, lμ::Float64) =
+      new(d1, d2, e, iμ, iψ, sh, fx, lλ, lμ)
+end
+
+
+# pretty-printing
+function Base.show(io::IO, t::acTfbd)
+  nt = ntips(t)
+  nf = nfossils(t)
+
+  print(io, "insane asymmetrical clads-bd fossil tree with ",
+    nt , " tip",  (isone(nt) ? "" : "s" ),
+    ", (", ntipsextinct(t)," extinct) and ",
+    nf," fossil", (isone(nf) ? "" : "s" ))
+end
+
+
+
+
+"""
+    acTfbd(tree::acTfbd)
+
+Produce a new copy of `acTfbd`.
+"""
+function acTfbd(tree::acTfbd)
+  if def1(tree)
+    if def2(tree)
+      acTfbd(acTfbd(tree.d1), 
+            acTfbd(tree.d2), e(tree), isextinct(tree), isfossil(tree), 
+            sh(tree), isfix(tree), lλ(tree), lμ(tree))
+    else
+      acTfbd(acTfbd(tree.d1), e(tree), isextinct(tree), isfossil(tree),
+             sh(tree), isfix(tree), lλ(tree), lμ(tree))
+    end
+  else
+    acTfbd(e(tree), isextinct(tree), isfossil(tree), 
+      sh(tree), isfix(tree), lλ(tree), lμ(tree))
+  end
+end
+
+
+
+
+"""
+    acTfbd_wofe(tree::acTfbd)
+
+Creates a copy of a `acTfbd` tree without fossils extinct tips.
+"""
+function acTfbd_wofe(tree::acTfbd)
+  if def1(tree) && def2(tree)
+    acTfbd(acTfbd_wofe(tree.d1), acTfbd_wofe(tree.d2),
+      e(tree), isextinct(tree), isfossil(tree),
+      sh(tree), isfix(tree), lλ(tree), lμ(tree))
+  else
+    acTfbd(e(tree), isextinct(tree), isfossil(tree), 
+      sh(tree), isfix(tree), lλ(tree), lμ(tree))
+  end
+end
+
+
+
+
+"""
+    acTfbd(e0::Array{Int64,1},
+           e1::Array{Int64,1},
+           el::Array{Float64,1},
+           λs::Array{Float64,1},
+           μs::Array{Float64,1},
+           ea::Array{Int64,1},
+           ee::Array{Int64,1},
+           ef::Array{Int64,1},
+           ni::Int64,
+           ei::Int64)
+
+Transform edge structure to `acTfbd`.
+"""
+function acTfbd(e0::Array{Int64,1},
+                e1::Array{Int64,1},
+                el::Array{Float64,1},
+                λs::Array{Float64,1},
+                μs::Array{Float64,1},
+                ea::Array{Int64,1},
+                ee::Array{Int64,1},
+                ef::Array{Int64,1},
+                ni::Int64,
+                ei::Int64)
+
+  # if tip
+  if in(ei, ea)
+    return acTfbd(el[ei], false, false, false, false, λs[ei], μs[ei])
+
+  # if extinct
+  elseif in(ei, ee)
+    return acTfbd(el[ei], true, false, false, false, λs[ei], μs[ei])
+
+  # if fossil
+  elseif in(ei, ef)
+    ei1 = findfirst(isequal(ni), e0)
+    return acTfbd(acTfbd(e0, e1, el, λs, μs, ea, ee, ef, e1[ei1], ei1),
+                  el[ei], false, true, false, false, λs[ei], μs[ei])
+
+  # if internal
+  else
+    ei1, ei2 = findall(isequal(ni), e0)
+    λa = λs[ei]
+    λ2 = λs[ei2]
+    shi = λ2 === λa
+
+    return acTfbd(acTfbd(e0, e1, el, λs, μs, ea, ee, ef, e1[ei1], ei1),
+                  acTfbd(e0, e1, el, λs, μs, ea, ee, ef, e1[ei2], ei2),
+                  el[ei], false, false, shi, false, λa, μs[ei])
+  end
+end
+
+
+
+
+
+
+
+
+
 
 

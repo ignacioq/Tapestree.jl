@@ -1,6 +1,6 @@
 #=
 
-Clads fossilized birth-death likelihood
+Asymmetrical Clads fossilized birth-death likelihood
 
 Ignacio Quintero Mächler
 
@@ -12,32 +12,32 @@ Created 28 07 2025
 
 
 
-
 """
-    llik_clads(Ξ  ::Vector{cTfbd},
+    llik_clads(Ξ  ::Vector{acTfbd},
                idf::Vector{iBffs},
-               αλ  ::Float64,
-               αμ  ::Float64,
-               σλ  ::Float64,
-               σμ  ::Float64,
-               ψ   ::Vector{Float64},
-               ψts ::Vector{Float64},
-               bst ::Vector{Float64},
-               eix ::Vector{Int64})
+               αλ ::Float64,
+               αμ ::Float64,
+               σλ ::Float64,
+               σμ ::Float64,
+               ψ  ::Vector{Float64},
+               ψts::Vector{Float64},
+               bst::Vector{Float64},
+               eix::Vector{Int64})
 
-Returns the log-likelihood for a `cTfbd` according to fclads.
+Returns the log-likelihood for a `acTfbd` according to fclads.
 """
-function llik_clads(Ξ  ::Vector{cTfbd},
+function llik_clads(Ξ  ::Vector{acTfbd},
                     idf::Vector{iBffs},
-                    αλ  ::Float64,
-                    αμ  ::Float64,
-                    σλ  ::Float64,
-                    σμ  ::Float64,
-                    ψ   ::Vector{Float64},
-                    ψts ::Vector{Float64},
-                    bst ::Vector{Float64},
-                    eix ::Vector{Int64})
+                    αλ ::Float64,
+                    αμ ::Float64,
+                    σλ ::Float64,
+                    σμ ::Float64,
+                    ψ  ::Vector{Float64},
+                    ψts::Vector{Float64},
+                    bst::Vector{Float64},
+                    eix::Vector{Int64})
   @inbounds begin
+
     ll = 0.0
     nep = lastindex(ψts) + 1
     for i in Base.OneTo(lastindex(Ξ))
@@ -46,13 +46,12 @@ function llik_clads(Ξ  ::Vector{cTfbd},
 
       bi2 = d2(bi)
       if bi2 > 0
+        lξi = fixtip(Ξ[i])
+        ξb  = if sh(lξi) Ξ[d1(bi)] else Ξ[bi2] end
         lλi = λt(bi)
-        lμi = μt(bi)
-        ξ1  = Ξ[d1(bi)]
-        ξ2  = Ξ[bi2]
-
-        ll += lλi + logdnorm2(lλ(ξ1), lλ(ξ2), lλi + αλ, σλ) +
-                    logdnorm2(lμ(ξ1), lμ(ξ2), lμi + αμ, σμ) 
+        ll += lλi                                + 
+              ldnorm_bm(lλ(ξb), lλi    + αλ, σλ) + 
+              ldnorm_bm(lμ(ξb), μt(bi) + αμ, σμ)
       end
     end
   end
@@ -64,7 +63,7 @@ end
 
 
 """
-    llik_clads(tree::cTfbd,
+    llik_clads(tree::acTfbd,
                αλ  ::Float64,
                αμ  ::Float64,
                σλ  ::Float64,
@@ -75,9 +74,9 @@ end
                ix  ::Int64,
                nep ::Int64)
  
-Returns the log-likelihood for a `cTfbd` according to clads.
+Returns the log-likelihood for a `acTfbd` according to clads.
 """
-function llik_clads(tree::cTfbd,
+function llik_clads(tree::acTfbd,
                     αλ  ::Float64,
                     αμ  ::Float64,
                     σλ  ::Float64,
@@ -111,10 +110,11 @@ function llik_clads(tree::cTfbd,
       if def2(tree)
         td1 = tree.d1
         td2 = tree.d2
+        tdb = sh(tree) ? td1 : td2
 
         ll += lλi                                                 +
-              logdnorm2(lλ(td1), lλ(td2), lλi + αλ, σλ)           +
-              logdnorm2(lμ(td1), lμ(td2), lμi + αμ, σμ)           +
+              ldnorm_bm(lλ(tdb), lλi + αλ, σλ)                    +
+              ldnorm_bm(lμ(tdb), lμi + αμ, σμ)                    +
               llik_clads(td1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep) +
               llik_clads(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
       else
@@ -134,47 +134,47 @@ end
 
 
 """
-    llik_cladsfbd_track!(tree::cTfbd,
-                         αλ  ::Float64,
-                         αμ  ::Float64,
-                         σλ  ::Float64,
-                         σμ  ::Float64,
-                         ψ   ::Vector{Float64},
-                         t   ::Float64,
-                         ψts ::Vector{Float64},
-                         ix  ::Int64,
-                         nep ::Int64,
-                         ll  ::Float64,
-                         L   ::Vector{Float64},
-                         ddλ ::Float64,
-                         ddμ ::Float64,
-                         ssλ ::Float64,
-                         ssμ ::Float64,
-                         ns  ::Float64,
-                         ne  ::Float64,
-                         sos ::Function)
+    llik_acladsfbd_track!(tree::acTfbd,
+                          αλ  ::Float64,
+                          αμ  ::Float64,
+                          σλ  ::Float64,
+                          σμ  ::Float64,
+                          ψ   ::Vector{Float64},
+                          t   ::Float64,
+                          ψts ::Vector{Float64},
+                          ix  ::Int64,
+                          nep ::Int64,
+                          ll  ::Float64,
+                          L   ::Vector{Float64},
+                          ddλ ::Float64,
+                          ddμ ::Float64,
+                          ssλ ::Float64,
+                          ssμ ::Float64,
+                          ns  ::Float64,
+                          ne  ::Float64,
+                          sos ::Function)
 
-Returns the log-likelihood for a `cTfbd` according to clads.
+Returns the log-likelihood for a `acTfbd` according to clads.
 """
-function llik_cladsfbd_track!(tree::cTfbd,
-                              αλ  ::Float64,
-                              αμ  ::Float64,
-                              σλ  ::Float64,
-                              σμ  ::Float64,
-                              ψ   ::Vector{Float64},
-                              t   ::Float64,
-                              ψts ::Vector{Float64},
-                              ix  ::Int64,
-                              nep ::Int64,
-                              ll  ::Float64,
-                              L   ::Vector{Float64},
-                              ddλ ::Float64,
-                              ddμ ::Float64,
-                              ssλ ::Float64,
-                              ssμ ::Float64,
-                              ns  ::Float64,
-                              ne  ::Float64,
-                              sos ::Function)
+function llik_acladsfbd_track!(tree::acTfbd,
+                               αλ  ::Float64,
+                               αμ  ::Float64,
+                               σλ  ::Float64,
+                               σμ  ::Float64,
+                               ψ   ::Vector{Float64},
+                               t   ::Float64,
+                               ψts ::Vector{Float64},
+                               ix  ::Int64,
+                               nep ::Int64,
+                               ll  ::Float64,
+                               L   ::Vector{Float64},
+                               ddλ ::Float64,
+                               ddμ ::Float64,
+                               ssλ ::Float64,
+                               ssμ ::Float64,
+                               ns  ::Float64,
+                               ne  ::Float64,
+                               sos ::Function)
 
   @inbounds begin
 
@@ -202,33 +202,34 @@ function llik_cladsfbd_track!(tree::cTfbd,
         ns  = sos(ns, 1.0)
         td1 = tree.d1
         td2 = tree.d2
-        lλ1, lλ2  = lλ(td1), lλ(td2)
-        lμ1, lμ2  = lμ(td1), lμ(td2)
-        sqλ = 0.5*((lλ1 - lλi - αλ)^2 + (lλ2 - lλi - αλ)^2)
-        sqμ = 0.5*((lμ1 - lμi - αμ)^2 + (lμ2 - lμi - αμ)^2)
-        ll  = sos(ll, 
-                  lλi - 2.0 * log(σλ) - 
+        tdb = sh(tree) ? td1 : td2
+        lλb, lμ2  = lλ(tdb), lμ(tdb)
+        sqλ = 0.5*(lλb - lλi - αλ)^2
+        sqμ = 0.5*(lμb - lμi - αμ)^2
+        ll  = sos(ll, lλi - 
+                  log(σλ) - 
                   1.83787706640934533908193770912475883960723876953125 - 
                   sqλ/σλ^2 - 
-                  2.0 * log(σμ) - 
+                  log(σμ) - 
                   1.83787706640934533908193770912475883960723876953125 - 
                   sqμ/σμ^2)
+
+        ddλ = sos(ddλ, lλb - lλi)
+        ddμ = sos(ddμ, lμb - lμi)
         ssλ = sos(ssλ, sqλ)
         ssμ = sos(ssμ, sqμ)
-        ddλ = sos(ddλ, lλ1 + lλ2 - 2.0*lλi)
-        ddμ = sos(ddμ, lμ1 + lμ2 - 2.0*lμi)
 
         ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
-          llik_cladsfbd_track!(td1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
+          llik_acladsfbd_track!(td1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
             ll, L, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
         ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
-          llik_cladsfbd_track!(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
+          llik_acladsfbd_track!(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
             ll, L, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
       else
         ll = sos(ll, log(ψ[ix]))
 
         ll, ddλ, ddμ, ssλ, ssμ, ns, ne = 
-          llik_cladsfbd_track!(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
+          llik_acladsfbd_track!(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep, 
             ll, L, ddλ, ddμ, ssλ, ssμ, ns, ne, sos)
       end
     else
@@ -249,7 +250,7 @@ end
 
 
 """
-    _dd_ss(tree::cTfbd,
+    _dd_ss(tree::acTfbd,
            αλ  ::Float64,
            αμ  ::Float64,
            ddλ ::Float64,
@@ -259,7 +260,7 @@ end
 
 Returns the standardized sum of squares & the delta drifts.
 """
-function _dd_ss(tree::cTfbd,
+function _dd_ss(tree::acTfbd,
                 αλ  ::Float64,
                 αμ  ::Float64,
                 ddλ ::Float64,
@@ -274,12 +275,14 @@ function _dd_ss(tree::cTfbd,
       td2 = tree.d2
       ddλ, ddμ, ssλ, ssμ = _dd_ss(td2, αλ, αμ, ddλ, ddμ, ssλ, ssμ)
 
-      lλi, lλ1, lλ2 = lλ(tree), lλ(td1), lλ(td2) 
-      lμi, lμ1, lμ2 = lμ(tree), lμ(td1), lμ(td2) 
-      ddλ += lλ1 + lλ2 - 2.0*lλi
-      ddμ += lμ1 + lμ2 - 2.0*lμi
-      ssλ += 0.5*((lλ1 - lλi - αλ)^2 + (lλ2 - lλi - αλ)^2)
-      ssμ += 0.5*((lμ1 - lμi - αμ)^2 + (lμ2 - lμi - αμ)^2)
+      tdb = sh(tree) ? td1 : td2
+      lλi, lλb = lλ(tree), lλ(tdb)
+      lμi, lμb = lμ(tree), lμ(tdb)
+
+      ddλ += lλb - lλi
+      ddμ += lμb - lμi
+      ssλ += 0.5*(lλb - lλi - αλ)^2
+      ssμ += 0.5*(lμb - lμi - αμ)^2
     end
   end
 
@@ -290,11 +293,11 @@ end
 
 
 """
-    _ss(tree::cTfbd, α::Float64, ss::Float64, f::Function)
+    _ss(tree::acTfbd, α::Float64, ss::Float64, f::Function)
 
 Returns the standardized sum of squares for `f`. 
 """
-function _ss(tree::cTfbd, α::Float64, ss::Float64, f::Function)
+function _ss(tree::acTfbd, α::Float64, ss::Float64, f::Function)
 
   if def1(tree)
     td1 = tree.d1
@@ -302,16 +305,14 @@ function _ss(tree::cTfbd, α::Float64, ss::Float64, f::Function)
     if def2(tree)
       td2 = tree.d2
       ss = _ss(td2, α, ss, f)
-      fi = f(tree)
-      f1 = f(td1)
-      f2 = f(td2)
-      ss += 0.5*((f1 - fi - α)^2 + (f2 - fi - α)^2)
+
+      tdb = sh(tree) ? td1 : td2
+      fi, fb = f(tree), f(tdb)
+      ss += 0.5*(fb - fi - α)^2
     end
   end
 
   return ss
 end
-
-
 
 

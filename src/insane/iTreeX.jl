@@ -124,7 +124,7 @@ Tlabel = Union{sT_label, sTf_label}
 
 iTf = Union{sTf_label, sTfbd, sTfbdX, iTfbd, iTfbdX}
 """
-iTf = Union{sTf_label, sTfbd, cTfbd, iTfbd, sTfpe, sTxs}
+iTf = Union{sTf_label, sTfbd, cTfbd, acTfbd, iTfbd, sTfpe, sTxs}
 
 
 
@@ -134,7 +134,7 @@ iTf = Union{sTf_label, sTfbd, cTfbd, iTfbd, sTfpe, sTxs}
 
 uTf = Union{sTfbd, sTfbdX, iTfbd, iTfbdX}
 """
-uTf = Union{sTfbd, cTfbd, iTfbd, sTxs}
+uTf = Union{sTfbd, cTfbd, acTfbd, iTfbd, sTxs}
 
 
 
@@ -144,7 +144,7 @@ uTf = Union{sTfbd, cTfbd, iTfbd, sTxs}
 
 iTbdU = Union{iTbd, iTfbd}
 """
-cTbdU = Union{cTbd, cTfbd}
+cTbdU = Union{cTbd, cTfbd, acTfbd}
 
 
 
@@ -185,4 +185,13 @@ Txs = Union{sTxs}
 """
 Tpe = Union{sTpe, sTfpe}
 
+
+
+
+"""
+    Union type for asymmetrical trees
+
+aT = Union{sTpe, sTfpe, acTfbd}
+"""
+aT = Union{sTpe, sTfpe, acTfbd}
 

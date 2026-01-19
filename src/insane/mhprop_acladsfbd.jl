@@ -13,12 +13,9 @@ Created 16 07 2025
 
 
 """
-    _stem_update!(ξi      ::cTfbd,
-                  eds     ::Float64,
-                  λ1      ::Float64,
-                  λ2      ::Float64,
-                  μ1      ::Float64,
-                  μ2      ::Float64,
+    _stem_update!(bix     ::Int64,
+                  Ξ       ::Vector{acTfbd},
+                  idf     ::Vector{iBffs},
                   αλ      ::Float64,
                   αμ      ::Float64,
                   σλ      ::Float64,
@@ -37,12 +34,9 @@ Created 16 07 2025
 
 Do `clads` update for stem root.
 """
-function _stem_update!(ξi      ::cTfbd,
-                       eds     ::Float64,
-                       λ1      ::Float64,
-                       λ2      ::Float64,
-                       μ1      ::Float64,
-                       μ2      ::Float64,
+function _stem_update!(bix     ::Int64,
+                       Ξ       ::Vector{acTfbd},
+                       idf     ::Vector{iBffs},
                        αλ      ::Float64,
                        αμ      ::Float64,
                        σλ      ::Float64,
@@ -60,57 +54,82 @@ function _stem_update!(ξi      ::cTfbd,
                        surv    ::Int64)
 
   @inbounds begin
-    λi, μi = lλ(ξi), lμ(ξi)
-    ei = e(ξi)
+    ξi = Ξ[bix]
 
-    ## node proposal
-    # speciation
-    λr = trioprop(λ1 - αλ, λ2 - αλ, λ0_prior[1], σλ^2, σλ^2, λ0_prior[2])
-    # extinction
-    μr = trioprop(μ1 - αμ, μ2 - αμ, μ0_prior[1], σμ^2, σμ^2, μ0_prior[2])
+    """
+    here: proposal comes from relative likelihood for sh
+    """
+
+
+    # current rates
+    λi, μi = lλ(ξi), lμ(ξi)
+
+    ### node proposal
+    # find bud number and sum
+    ei, nb, sλ, sμ, iμ = sumλμbuds(bix, Ξ, idf, 0.0, 0.0, 0.0, 0.0, false)
+
+    ## speciation
+    # prior
+    λ0m, λ0s = λ0_prior
+    # conditional normal for proposal
+    λs2 = 1.0/(1.0/λ0s + nb/σλ^2)
+    λm  = λs2 * (λ0m/λ0s + (sλ - nb*αλ)/σλ^2)
+    λr = rnorm(λm, sqrt(λs2))
+
+    ## extinction
+    # prior
+    μ0m, μ0s = μ0_prior
+    # conditional normal for proposal
+    μs2 = 1.0/(1.0/μ0s + nb/σμ^2)
+    μm  = μs2 * (μ0m/μ0s + (sμ - nb*αμ)/σμ^2)
+    μr = rnorm(μm, sqrt(μs2))
 
     # likelihood ratio
-    llr = λr - λi + (ei + eds)*(exp(λi) - exp(λr) + exp(μi) - exp(μr))
+    llr = nb*(λr - λi) + ei * (exp(λi) - exp(λr) + exp(μi) - exp(μr)) + 
+          iμ ? 0.0 : (μr - μi)
 
     lU = -randexp()
 
     if lU < llr + log(1000.0/mc)
 
-      mp  = m_surv_cladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
+      # survival ratio
+      mp   = m_surv_acladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
-        llc += llrdnorm2_μ(λ1, λ2, λr + αλ, λi + αλ, σλ) + 
-               llrdnorm2_μ(μ1, μ2, μr + αμ, μi + αμ, σμ) +
+
+        λi, μi = lλ(Ξ[bix]), lμ(Ξ[bix])
+        λs2 = 1.0/(nb/σλ^2)
+        μs2 = 1.0/(nb/σμ^2)
+
+        llc += llrdnorm_x(λr, λi, λs2 * (sλ - nb*αλ)/σλ^2, λs2) + 
+               llrdnorm_x(μr, μi, μs2 * (sμ - nb*αμ)/σμ^2, μs2) + 
                llr
-        prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
-               llrdnorm_x(μr, μi, μ0_prior[1], μ0_prior[2])
-        ddλ += 2.0*(λi - λr)
-        ddμ += 2.0*(μi - μr)
-        ssλ += 0.5*(
-                (λ1 - λr - αλ)^2 + (λ2 - λr - αλ)^2 - 
-                (λ1 - λi - αλ)^2 - (λ2 - λi - αλ)^2)
-        ssμ += 0.5*(
-                (μ1 - μr - αμ)^2 + (μ2 - μr - αμ)^2 - 
-                (μ1 - μi - αμ)^2 - (μ2 - μi - αμ)^2)
-        mc  = mp
-        λi, μi  = λr, μr
-        setlλ!(ξi, λi)
-        setlμ!(ξi, μi)
+        prc += llrdnorm_x(λr, λi, λ0m, λ0s) + 
+               llrdnorm_x(μr, μi, μ0m, μ0s)
+        ddλ += nb*(λi - λr)
+        ddμ += nb*(μi - μr)
+        ssλ += nb*(0.5*(λr^2 + (λi - λr)*sλ - λi^2) + αλ*(λr - λi))
+        ssμ += nb*(0.5*(μr^2 + (μi - μr)*sμ - μi^2) + αμ*(μr - μi))
+        mc   = mp
+
+        setlλ!(ξi, λr)
+        setlμ!(ξi, μr)
       end
     end
   end
 
-  return llc, prc, ddλ, ddμ, ssλ, ssμ, mc, λi, μi
+
+  return llc, prc, ddλ, ddμ, ssλ, ssμ, mc
 end
 
 
 
 
 """
-    _crown_update!(ξi      ::cTfbd,
-                   ξ1      ::cTfbd,
-                   ξ2      ::cTfbd,
+    _crown_update!(bix     ::Int64,
+                   Ξ       ::Vector{acTfbd},
+                   idf     ::Vector{iBffs},
                    αλ      ::Float64,
                    αμ      ::Float64,
                    σλ      ::Float64,
@@ -129,9 +148,9 @@ end
 
 Do `clads` update for crown root.
 """
-function _crown_update!(ξi      ::cTfbd,
-                        ξ1      ::cTfbd,
-                        ξ2      ::cTfbd,
+function _crown_update!(bix     ::Int64,
+                        Ξ       ::Vector{acTfbd},
+                        idf     ::Vector{iBffs},
                         αλ      ::Float64,
                         αμ      ::Float64,
                         σλ      ::Float64,
@@ -149,39 +168,87 @@ function _crown_update!(ξi      ::cTfbd,
                         surv    ::Int64)
 
   @inbounds begin
-    λi, λ1, λ2 = lλ(ξi), lλ(ξ1), lλ(ξ2)
-    μi, μ1, μ2 = lμ(ξi), lμ(ξ1), lμ(ξ2)
+    ξi = Ξ[bix]
 
-    ## node proposal
-    # speciation
-    λr = trioprop(λ1 - αλ, λ2 - αλ, λ0_prior[1], σλ^2, σλ^2, λ0_prior[2])
-    # extinction
-    μr = trioprop(μ1 - αμ, μ2 - αμ, μ0_prior[1], σμ^2, σμ^2, μ0_prior[2])
+    # current rates
+    λi, μi = lλ(ξi), lμ(ξi)
 
-    # survival ratio
-    mp  = m_surv_cladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
-    llr = log(mp/mc)
 
-    if -randexp() < llr
-      llc += llr +
-             llrdnorm2_μ(λ1, λ2, λr + αλ, λi + αλ, σλ) +
-             llrdnorm2_μ(μ1, μ2, μr + αμ, μi + αμ, σμ)
-      prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2]) + 
-             llrdnorm_x(μr, μi, μ0_prior[1], μ0_prior[2])
-      ddλ += 2.0*(λi - λr)
-      ddμ += 2.0*(μi - μr)
-      ssλ += 0.5*((λ1 - λr - αλ)^2 + (λ2 - λr - αλ)^2 - 
-                  (λ1 - λi - αλ)^2 - (λ2 - λi - αλ)^2)
-      ssμ += 0.5*((μ1 - μr - αμ)^2 + (μ2 - μr - αμ)^2 - 
-                  (μ1 - μi - αμ)^2 - (μ2 - μi - αμ)^2)
-      mc  = mp
-      setlλ!(ξi, λr)
-      setlμ!(ξi, μr)
+
+
+    """
+    here: proposal comes from relative likelihood for sh
+    """
+
+
+
+
+    ### node proposal
+    # find bud number and sum
+    ei, nb, sλ, sμ, iμ = sumλμbuds(bix, Ξ, idf, 0.0, 0.0, 0.0, 0.0, false)
+
+    ## speciation
+    # prior
+    λ0m, λ0s = λ0_prior
+    # conditional normal for proposal
+    λs2 = 1.0/(1.0/λ0s + nb/σλ^2)
+    λm  = λs2 * (λ0m/λ0s + (sλ - nb*αλ)/σλ^2)
+    λr = rnorm(λm, sqrt(λs2))
+
+    ## extinction
+    # prior
+    μ0m, μ0s = μ0_prior
+    # conditional normal for proposal
+    μs2 = 1.0/(1.0/μ0s + nb/σμ^2)
+    μm  = μs2 * (μ0m/μ0s + (sμ - nb*αμ)/σμ^2)
+    μr = rnorm(μm, sqrt(μs2))
+
+    # likelihood ratio
+    llr = (nb - 1.0)*(λr - λi) + ei * (exp(λi) - exp(λr) + exp(μi) - exp(μr)) + 
+           iμ ? 0.0 : (μr - μi)
+
+    lU = -randexp()
+
+    if lU < llr + log(1000.0/mc)
+
+      # survival ratio
+      mp   = m_surv_acladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
+      llr += log(mp/mc)
+
+      if lU < llr
+
+        λi, μi = lλ(Ξ[bix]), lμ(Ξ[bix])
+        λs2 = 1.0/(nb/σλ^2)
+        μs2 = 1.0/(nb/σμ^2)
+
+        llc += llrdnorm_x(λr, λi, λs2 * (sλ - nb*αλ)/σλ^2, λs2) + 
+               llrdnorm_x(μr, μi, μs2 * (sμ - nb*αμ)/σμ^2, μs2) + 
+               llr
+        prc += llrdnorm_x(λr, λi, λ0m, λ0s) + 
+               llrdnorm_x(μr, μi, μ0m, μ0s)
+        ddλ += nb*(λi - λr)
+        ddμ += nb*(μi - μr)
+        ssλ += nb*(0.5*(λr^2 + (λi - λr)*sλ - λi^2) + αλ*(λr - λi))
+        ssμ += nb*(0.5*(μr^2 + (μi - μr)*sμ - μi^2) + αμ*(μr - μi))
+        mc   = mp
+
+
+        """
+        here: create setters
+        """
+
+
+        setlλ!(ξi, λr)
+        setlμ!(ξi, μr)
+      end
     end
   end
 
   return llc, prc, ddλ, ddμ, ssλ, ssμ, mc
 end
+
+
+
 
 
 
@@ -347,7 +414,7 @@ end
 
 
 """
-    update_tip!(tree::cTfbd,
+    update_tip!(tree::acTfbd,
                 eas ::Float64,
                 λa  ::Float64,
                 μa  ::Float64,
@@ -365,7 +432,7 @@ end
 
 Make a `clads` tip proposal.
 """
-function update_tip!(tree::cTfbd,
+function update_tip!(tree::acTfbd,
                      eas ::Float64,
                      λa  ::Float64,
                      μa  ::Float64,

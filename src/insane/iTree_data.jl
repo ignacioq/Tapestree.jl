@@ -78,7 +78,7 @@ isfix(tree::sTxs)   = true
 
 Return `true` if punkeek shift is in `d1`, `false` if in `d2`
 """
-sh(tree::T) where {T <: Tpe} = getproperty(tree, :sh)
+sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
 
 
 
@@ -3259,6 +3259,7 @@ function downstreamλμs(i  ::Int64,
         else
           eds, λ1, λ2, μ1, μ2 = downstreamλμs(i1, Ξ, idf, eds, λ1, λ2, μ1, μ2)
         end
+      # if tip fossil
       elseif isfossil(ξi)
         ξ1   = ξi.d1
         eds += e(ξ1)
@@ -3274,6 +3275,104 @@ function downstreamλμs(i  ::Int64,
 
   return eds, λ1, λ2, μ1, μ2
 end
+
+
+
+
+"""
+    sumλμbuds(tree::acTfbd,
+              ei  ::Float64,
+              nb  ::Float64,
+              sλ  ::Float64,
+              sμ  ::Float64,
+              iμ  ::Bool)
+
+Get budding species sums of speciation and extinction rates.
+"""
+function sumλμbuds(tree::acTfbd,
+                   ei  ::Float64,
+                   nb  ::Float64,
+                   sλ  ::Float64,
+                   sμ  ::Float64,
+                   iμ  ::Bool)
+
+  ei += e(tree)
+
+  # if cladogenetic
+  if def1(tree)
+    if def2(tree)
+      nb += 1.0
+      tb, tl = if sh(tree) tree.d1, tree.d2 else tree.d2, tree.d1 end
+      λi, μi = lλ(tb), lμ(tb)
+      sλ  += λi
+      sμ  += μi
+
+      # continue on lineage
+      ei, nb, sλ, sμ, iμ = sumλμbuds(tl, ei, nb, sλ, sμ, iμ)
+    else
+      ei, nb, sλ, sμ, iμ = sumλμbuds(tree.d1, ei, nb, sλ, sμ, iμ)
+    end
+  elseif isextinct(tree)
+    iμ = true
+  end
+
+ return ei, nb, sλ, sμ, iμ
+end
+
+
+
+
+"""
+    sumλμbuds(i  ::Int64, 
+              Ξ  ::Vector{acTfbd}, 
+              idf::Vector{iBffs}, 
+              ei ::Float64,
+              nb ::Float64,
+              sλ ::Float64,
+              sμ ::Float64,
+              iμ ::Bool)
+
+Get budding species sum of speciation and extinction rates.
+"""
+function sumλμbuds(i  ::Int64, 
+                   Ξ  ::Vector{acTfbd}, 
+                   idf::Vector{iBffs}, 
+                   ei ::Float64,
+                   nb ::Float64,
+                   sλ ::Float64,
+                   sμ ::Float64,
+                   iμ ::Bool)
+
+  ξi = Ξ[i]
+  bi = idf[i]
+  i1 = d1(bi)
+
+  # within reconstructed branch 
+  ei, nb, sλ, sμ, iμ = sumλμbuds(ξi, ei, nb, sλ, sμ, iμ)
+
+  # across reconstructed branches
+  if i1 > 0
+    i2 = d2(bi)
+
+    # if cladogenetic
+    if i2 > 0
+      nb += 1.0
+      lξi = fixtip(ξi)
+      ib, il = if sh(lξi) i1, i2 else i2, i1 end
+      sλ += lλ(Ξ[ib])
+      sμ += lμ(Ξ[ib])
+
+      # continue on lineage
+      ei, nb, sλ, sμ, iμ = sumλμbuds(il, Ξ, idf, ei, nb, sλ, sμ, iμ)
+    # if mid or mid-fossil
+    else
+      ei, nb, sλ, sμ, iμ = sumλμbuds(i1, Ξ, idf, ei, nb, sλ, sμ, iμ)
+    end
+  end
+
+  return ei, nb, sλ, sμ, iμ
+end
+
 
 
 

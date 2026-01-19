@@ -475,6 +475,36 @@ end
 
 
 
+"""
+    _cutbottom(tree::acTfbd,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::acTfbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = acTfbd(c - t, false, false, false, isfix(tree), lλ(tree), lμ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      if def2(tree)
+        tree.d2 = _cutbottom(tree.d2, c, t + et)
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
 
 """
     _cutbottom(tree::iTb,
@@ -2767,8 +2797,7 @@ function _remove_extinct!(tree::cTfbd)
       end
     else
       if isextinct(tree.d1)
-        return cTfbd(e(tree), isextinct(tree), isfossil(tree), isfix(tree), 
-                  lλ(tree), lμ(tree))
+        return cTfbd(e(tree), false, true, isfix(tree), lλ(tree), lμ(tree))
       end
     end
   end
@@ -2977,7 +3006,7 @@ function _remove_extinct!(tree::iTfbd)
     else
       if isextinct(tree.d1)
         return iTfbd(e(tree), dt(tree), fdt(tree),
-            isextinct(tree), isfossil(tree), isfix(tree), lλ(tree), lμ(tree))
+            false, true, isfix(tree), lλ(tree), lμ(tree))
       end
     end
   end
@@ -3891,6 +3920,213 @@ function setdownstreamλμ!(λi ::Float64,
       setlμ!(ξi.d1, μi)
     end
   end
+
+  return nothing
+end
+
+
+
+
+"""
+    setupstreamλμ!(λi  ::Float64,
+                   μi  ::Float64,
+                   ad1  ::Bool,
+                   tree::acTfbd)
+
+Set speciation and extinction of lineage upstream.
+"""
+function setupstreamλμ!(λi  ::Float64,
+                        μi  ::Float64,
+                        ad1 ::Bool,
+                        tree::acTfbd)
+  if def1(tree)
+    if def2(tree)
+      if isfix(tree.d1)
+        ascends = setupstreamλμ!(λi, μi, ad1, tree.d1)
+        # if daughter 2 is budding
+        if ascends && !sh(tree)
+          setlλ!(tree, λi)
+          setlμ!(tree, μi)
+          return true
+        else
+          return false
+        end
+      else
+        ascends = setupstreamλμ!(λi, μi, ad1, tree.d2)
+        # if daughter 1 is budding
+        if ascends && sh(tree)
+          setlλ!(tree, λi)
+          setlμ!(tree, μi)
+          return true
+        else
+          return false
+        end
+      end
+    end
+  elseif isfix(tree)
+    if isfossil(tree)
+      setlλ!(tree, λi)
+      setlμ!(tree, μi)
+
+      return true
+    # if ascending from daughter 1
+    elseif ad1
+      # if daughter 2 is budding
+      if !sh(tree)
+        setlλ!(tree, λi)
+        setlμ!(tree, μi)
+
+        return true
+      else
+        return false
+      end
+    # if ascending from daughter 2
+    else
+      # if daughter 1 is budding
+      if sh(tree)
+        setlλ!(tree, λi)
+        setlμ!(tree, μi)
+
+        return true
+      else
+        return false
+      end
+    end
+  end
+
+  return false
+end
+
+
+
+
+"""
+    setupstreamλμ!(λi ::Float64,
+                   μi ::Float64,
+                   i  ::Int64,
+                   Ξ  ::Vector{acTfbd},
+                   idf::Vector{iBffs})
+
+Set speciation and extinction of lineage upstream.
+"""
+function setupstreamλμ!(λi ::Float64,
+                        μi ::Float64,
+                        i  ::Int64,
+                        ad1::Bool,
+                        Ξ  ::Vector{acTfbd},
+                        idf::Vector{iBffs})
+  @inbounds begin
+    ascends = setupstreamλμ!(λi, μi, ad1, Ξ[i])
+
+    # if lineage continues upwards
+    if ascends
+      bi = idf[i]
+      if pa(bi) > 0
+        setupstreamλμ!(λi, μi, pa(bi), i === d1(idf[pa(bi)]), Ξ, idf)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setdownstreamλμ!(λi::Float64, μi::Float64, tree::acTfbd, iμ::Bool)
+
+Set speciation and extinction of lineage.
+"""
+function setdownstreamλμ!(λi::Float64, μi::Float64, tree::acTfbd, downlin::Int64)
+
+  setlλ!(tree, λi)
+  setlμ!(tree, μi)
+
+  # if cladogenetic
+  if def1(tree)
+    if def2(tree)
+      # continue on lineage
+      downlin = setdownstreamλμ!(λi, μi, sh(tree) ? tree.d2 : tree.d1, downlin)
+    else
+      downlin = setdownstreamλμ!(λi, μi, tree.d1, downlin)
+    end
+  elseif isextinct(tree)
+    return 2
+  else
+    return Int64(sh(tree))
+  end
+
+  return downlin
+end
+
+
+
+
+"""
+    setdownstreamλμ!(λi ::Float64,
+                     μi ::Float64,
+                     i  ::Int64,
+                     Ξ  ::Vector{acTfbd},
+                     idf::Vector{iBffs})
+
+Set speciation and extinction of lineage upsdowneam.
+"""
+function setdownstreamλμ!(λi ::Float64,
+                          μi ::Float64,
+                          i  ::Int64,
+                          Ξ  ::Vector{acTfbd},
+                          idf::Vector{iBffs})
+
+  @inbounds begin
+    downlin = setdownstreamλμ!(λi, μi, Ξ[i], 0)
+
+    bi = idf[i]
+
+    # if lineage continues downwards
+    if downlin < 2
+      # if non-terminal
+      if d1(bi) > 0
+        # if cladogenetic
+        if d2(bi) > 0
+          # if daughter 2 is budding or (:) not
+          id = iszero(downlin) ? d1(bi) : d2(bi)
+          setdownstreamλμ!(λi, μi, id, Ξ, idf)
+        # if fossil or mid branch
+        else
+          setdownstreamλμ!(λi, μi, d1(bi), Ξ, idf)
+        end
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setlineageλμ!(λi ::Float64,
+                  μi ::Float64,
+                  i  ::Int64,
+                  Ξ  ::Vector{acTfbd},
+                  idf::Vector{iBffs})
+
+Set speciation and extinction rates of lineage through decoupled tree.
+"""
+function setlineageλμ!(λi ::Float64,
+                       μi ::Float64,
+                       i  ::Int64,
+                       Ξ  ::Vector{acTfbd},
+                       idf::Vector{iBffs})
+  bi = idf[i]
+ 
+  ## upstream
+  setupstreamλμ!(λi, μi, pa(bi), i === d1(idf[pa(bi)]), Ξ, idf)
+
+  ## downstream
+  setdownstreamλμ!(λi, μi, i, Ξ, idf)
 
   return nothing
 end

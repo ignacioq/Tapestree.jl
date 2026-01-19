@@ -285,15 +285,19 @@ end
 
 
 
-
 """
-    make_Ξ(idf::Vector{iBffs}, λ::Float64, μ::Float64, ::Type{cTbd})
+    make_Ξ(idf ::Vector{iBffs},
+                λ   ::Float64,
+                μ   ::Float64,
+                ::Type{T}) where {T <: Union{cTbd, cTfbd, acTfbd}}
 
 Make edge tree `Ξ` from the edge directory.
 """
-function make_Ξ(idf::Vector{iBffs}, λ::Float64, μ::Float64, ::Type{cTbd})
-
-  Ξ = cTbd[]
+function make_Ξ(idf ::Vector{iBffs},
+                λ   ::Float64,
+                μ   ::Float64,
+                ::Type{T}) where {T <: Union{cTbd, cTfbd, acTfbd}}
+  Ξ = T[]
   _make_Ξ!(Ξ, 1, log(λ), log(μ), idf)
 
   return Ξ
@@ -595,8 +599,8 @@ Make edge tree `Ξ` from the edge directory.
 function make_Ξ(idf ::Vector{iBffs},
                 λ   ::Float64,
                 μ   ::Float64,
-                ::Type{cTfbd})
-  Ξ = cTfbd[]
+                ::Type{T}) where {T <: Union{cTfbd, acTfbd}}
+  Ξ = T[]
   _make_Ξ!(Ξ, 1, log(λ), log(μ), idf)
 
   return Ξ
@@ -640,6 +644,55 @@ function _make_Ξ!(Ξ   ::Vector{cTfbd},
                e(bi), false, true, true, lλ0, lμ0))
   else
     push!(Ξ, cTfbd(e(bi), false, isfossil(bi), true, lλ0, lμ0))
+  end
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, lμ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, lμ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ   ::Vector{acTfbd},
+             i   ::Int64,
+             lλ0 ::Float64,
+             lμ0 ::Float64,
+             αλ  ::Float64,
+             αμ  ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{acTfbd},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  lμ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  setμt!(bi, lμ0)
+
+  if isfossil(bi) && iszero(i1)
+    push!(Ξ, acTfbd(
+               acTfbd(0.0, true, false, false, false, lλ0, lμ0),
+               e(bi), false, true, false, true, lλ0, lμ0))
+  else
+    push!(Ξ, acTfbd(e(bi), false, isfossil(bi), rand(Bool), true, lλ0, lμ0))
   end
 
   if i1 > 0 
@@ -1603,6 +1656,41 @@ end
 
 
 
+
+"""
+    _dd_ss(Ξ::Vector{acTfbd}, idf::Vector{iBffs}, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss(Ξ::Vector{acTfbd}, idf::Vector{iBffs}, αλ::Float64, αμ::Float64)
+
+  ddλ = ddμ = ssλ = ssμ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+    ξi = Ξ[i]
+    ddλ, ddμ, ssλ, ssμ = _dd_ss(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+    if bi2 > 0
+      lξi = fixtip(ξi)
+      ξb  = if sh(lξi) Ξ[d1(bi)] else Ξ[bi2] end
+      lλi, lλb = lλ(lξi), lλ(ξb)
+      lμi, lμb = lμ(lξi), lμ(ξb)
+
+      ddλ += lλb - lλi
+      ddμ += lμb - lμi
+      ssλ += 0.5*(lλb - lλi - αλ)^2
+      ssμ += 0.5*(lμb - lμi - αμ)^2
+    end
+  end
+
+  return ddλ, ddμ, ssλ, ssμ
+end
+
+
+
+
+
 """
     _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
@@ -1865,6 +1953,43 @@ function _ss(Ξ  ::Vector{cTfbd},
 
   return ss
 end
+
+
+
+
+"""
+    _ss(Ξ  ::Vector{acTfbd},
+        idf::Vector{iBffs},
+        α  ::Float64,
+        f  ::Function)
+
+Returns the standardized sum of squares for drift `α` for function `f`.
+"""
+function _ss(Ξ  ::Vector{acTfbd},
+             idf::Vector{iBffs},
+             α  ::Float64,
+             f  ::Function)
+
+  ss = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+    ξi = Ξ[i]
+    ss = _ss(ξi, α, ss, f)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+    if bi2 > 0
+      lξi    = fixtip(ξi)
+      ξb     = if sh(lξi) Ξ[d1(bi)] else Ξ[bi2] end
+      fi, fb = f(lξi), f(ξb)
+
+      ss += 0.5*(fb - fi - α)^2
+    end
+  end
+
+  return ss
+end
+
+
 
 
 

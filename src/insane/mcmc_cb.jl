@@ -145,7 +145,9 @@ function mcmc_burn_cb(Ξ      ::Vector{sTb},
   llc = llik_cb(Ξ, λc) - nsi + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barglyphs=BarGlyphs('•','━','━',' ', '•'),
+                  barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -225,7 +227,9 @@ function mcmc_cb(Ξ      ::Vector{sTb},
 
       let llc = llc, prc = prc, λc = λc, ns = ns, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", 
+                        barglyphs=BarGlyphs(' ','━','━',' ','⍿'),
+                        barlen = 20)
 
         for it in Base.OneTo(niter)
 
