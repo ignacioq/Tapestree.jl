@@ -193,8 +193,7 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
       # update traits and rates
       else
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
         update_xs!(bix, Ξ, idf, αxc, ασc, γc, ll, Ls, Xs, ddσ, ssσ, δt, srδt)
 
       end
@@ -351,8 +350,7 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
             # update traits and rates
             else
 
-              nix = ceil(Int64,rand()*nin)
-              bix = inodes[nix]
+              bix = inodes[fIrand(nin) + 1]
               update_xs!(bix, Ξ, idf, αxc, ασc, γc, ll, Ls, Xs, ddσ, ssσ, δt, srδt)
 
               # ll0 = llik_dbm(Ξ, αxc, ασc, γc, δt)
@@ -393,12 +391,14 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
             flush(tf)
             sthin = zero(Int64)
           end
+
           next!(pbar)
         end
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

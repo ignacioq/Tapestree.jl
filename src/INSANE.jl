@@ -26,12 +26,14 @@ module INSANE
 
   # files
   include("insane/iTree.jl")
+  include("insane/iTreegbm.jl")
+  include("insane/iTreeclads.jl")
   include("insane/iTreepe.jl")
   include("insane/iTreeX.jl")
   include("insane/iB.jl")
   include("insane/Ltt.jl")
-  include("insane/iTree_summary.jl")
   include("insane/iB_manipulation.jl")
+  include("insane/iTree_summary.jl")
   include("insane/iTree_data.jl")
   include("insane/iTree_manipulation.jl")
   include("insane/iTree_plot.jl")
@@ -41,35 +43,51 @@ module INSANE
   include("insane/sim_cpe.jl")
   include("insane/sim_cfbd.jl")
   include("insane/sim_cobd.jl")
-  include("insane/sim_gbmb.jl")
   include("insane/sim_cfpe.jl")
-  include("insane/sim_gbmbd.jl")
-  include("insane/sim_gbmbd_efx.jl")
+  include("insane/sim_cladsb.jl")
+  include("insane/sim_cladsce.jl")
+  include("insane/sim_cladsct.jl")
+  include("insane/sim_cladsbd.jl")
+  include("insane/sim_cladsfbd.jl")
+  include("insane/sim_gbmb.jl")
   include("insane/sim_gbmce.jl")
   include("insane/sim_gbmct.jl")
+  include("insane/sim_gbmbd.jl")
+  include("insane/sim_gbmbd_efx.jl")
+  include("insane/sim_gbmpbd.jl")
   include("insane/sim_gbmfbd.jl")
   include("insane/sim_gbmobd.jl")
-  include("insane/sim_gbmpbd.jl")
   include("insane/sim_shift.jl")
   include("insane/sim_dbm.jl")
-  include("insane/survival.jl")
   include("insane/ll_cb.jl")
   include("insane/ll_cbd.jl")
-  include("insane/ll_cobd.jl")
   include("insane/ll_cpe.jl")
-  include("insane/ll_cfbd.jl")
-  include("insane/ll_gbmb.jl")
+  include("insane/ll_cobd.jl")
   include("insane/ll_cfpe.jl")
+  include("insane/ll_cladsb.jl")
+  include("insane/ll_cladsce.jl")
+  include("insane/ll_cladsct.jl")
+  include("insane/ll_cladsbd.jl")
+  include("insane/ll_cladsfbd.jl")
+  include("insane/ll_gbmb.jl")
   include("insane/ll_gbmbd.jl")
   include("insane/ll_gbmce.jl")
   include("insane/ll_gbmct.jl")
   include("insane/ll_gbmfbd.jl")
   include("insane/ll_dbm.jl")
+  include("insane/survival.jl")
   include("insane/mcmc_cb.jl")
   include("insane/mcmc_cbd_gp.jl")
   include("insane/mcmc_cbd.jl")
+  include("insane/mcmc_cpe.jl")
   include("insane/mcmc_cfbd.jl")
   include("insane/mcmc_cobd.jl")
+  include("insane/mcmc_cfpe.jl")
+  include("insane/mcmc_cladsb.jl")
+  include("insane/mcmc_cladsce.jl")
+  include("insane/mcmc_cladsct.jl")
+  include("insane/mcmc_cladsbd.jl")
+  include("insane/mcmc_cladsfbd.jl")
   include("insane/mcmc_gbmb.jl")
   include("insane/mcmc_gbmbd.jl")
   include("insane/mcmc_gbmbd_efx.jl")
@@ -78,9 +96,14 @@ module INSANE
   include("insane/mcmc_gbmfbd.jl")
   include("insane/mcmc_gbmobd.jl")
   include("insane/mcmc_dbm.jl")
-  include("insane/mhprop_gbmb.jl")
   include("insane/mhprop_cpe.jl")
   include("insane/mhprop_cfpe.jl")
+  include("insane/mhprop_cladsb.jl")
+  include("insane/mhprop_cladsce.jl")
+  include("insane/mhprop_cladsct.jl")
+  include("insane/mhprop_cladsbd.jl")
+  include("insane/mhprop_cladsfbd.jl")
+  include("insane/mhprop_gbmb.jl")
   include("insane/mhprop_gbmbd.jl")
   include("insane/mhprop_gbmbd_efx.jl")
   include("insane/mhprop_gbmce.jl")
@@ -94,14 +117,19 @@ module INSANE
 
   const iTd = Dict{String, DataType}("sTb"   => sTb,
                                      "sTbd"  => sTbd,
-                                     "sTpe"  => sTpe,
                                      "sTfbd" => sTfbd,
+                                     "cTb"   => cTb,
+                                     "cTce"  => cTce,
+                                     "cTct"  => cTct,
+                                     "cTbd"  => cTbd,
+                                     "cTfbd" => cTfbd,
                                      "iTb"   => iTb,
-                                     "sTfpe" => sTfpe,
                                      "iTce"  => iTce,
                                      "iTct"  => iTct,
                                      "iTbd"  => iTbd,
                                      "iTfbd" => iTfbd,
-                                     "iTpbd" => iTpbd,
+                                     "sTpe"  => sTpe,
+                                     "sTfpe" => sTfpe,
                                      "sTxs"  => sTxs)
+
 end # module INSANE

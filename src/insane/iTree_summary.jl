@@ -269,6 +269,24 @@ end
 
 
 """
+    sample(treev::Array{T,},
+           f    ::Function,
+           δt   ::Float64) where {T <: cT}
+
+Return an Array with a row for attributes accessed by `f` at each branch.
+"""
+function sample(tree::T, f::Function) where {T <: cT}
+
+  vi = Float64[]
+  extract_vector!(tree, vi, δt, 0.0, f)
+
+  return vi
+end
+
+
+
+
+"""
     sample(treev::Array{T,1},
            f    ::Function,
            δt   ::Float64) where {T <: iTree}
@@ -923,6 +941,169 @@ function _sum_xv!(tree::T,
   end
 
   return i
+end
+
+
+
+"""
+    imean(treev::Vector{cTb})
+
+Make an `cTb` with the geometric mean.
+"""
+function imean(treev::Vector{cTb})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas
+  ss = 0.0
+  for t in treev
+    ss += lλ(t)
+  end
+  mλ = ss/Float64(nt)
+
+  if def1(t1)
+    treev1 = cTb[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = cTb[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    cTb(imean(treev1),
+        imean(treev2),
+        e(t1), true, mλ)
+  else
+    cTb(e(t1), true, mλ)
+  end
+end
+
+
+
+
+"""
+    imean(treev::Vector{T}) where {T <: cT}
+
+Make an `cTce` & `cTct` with the geometric mean.
+"""
+function imean(treev::Vector{T}) where {T <: cT}
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas
+  ss = 0.0
+  for t in treev
+    ss += lλ(t)
+  end
+  mλ = ss/Float64(nt)
+
+  if def1(t1)
+    treev1 = T[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = T[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    T(imean(treev1),
+         imean(treev2),
+         e(t1), isextinct(t1), true, mλ)
+  else
+    T(e(t1), isextinct(t1), true, mλ)
+  end
+end
+
+
+
+
+"""
+    imean(treev::Vector{cTbd})
+
+Make an `cTbd` with the geometric mean.
+"""
+function imean(treev::Vector{cTbd})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas
+  ssλ = ssμ = 0.0
+  for t in treev
+    ssλ += lλ(t)
+    ssμ += lμ(t)
+  end
+  mλ = ssλ/Float64(nt)
+  mμ = ssμ/Float64(nt)
+
+  if def1(t1)
+    treev1 = cTbd[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = cTbd[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    cTbd(imean(treev1), imean(treev2),
+         e(t1), isextinct(t1), true, mλ, mμ)
+  else
+    cTbd(e(t1), isextinct(t1), true, mλ, mμ)
+  end
+end
+
+
+
+
+"""
+    imean(treev::Vector{cTfbd})
+
+Make an `cTfbd` with the geometric mean.
+"""
+function imean(treev::Vector{cTfbd})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of lambdas
+  ssλ = ssμ = 0.0
+  for t in treev
+    ssλ += lλ(t)
+    ssμ += lμ(t)
+  end
+  mλ = ssλ/Float64(nt)
+  mμ = ssμ/Float64(nt)
+
+  if def1(t1)
+    treev1 = cTfbd[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    if def2(t1)
+
+      treev2 = cTfbd[]
+      for t in Base.OneTo(nt)
+          push!(treev2, treev[t].d2)
+      end
+
+      cTfbd(imean(treev1), imean(treev2),
+           e(t1), isextinct(t1), isfossil(t1), true, mλ, mμ)
+    else
+      cTfbd(imean(treev1),
+           e(t1), isextinct(t1), isfossil(t1), true, mλ, mμ)
+    end
+  else
+    cTfbd(e(t1), isextinct(t1), isfossil(t1), true, mλ, mμ)
+  end
 end
 
 

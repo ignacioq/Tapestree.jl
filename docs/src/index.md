@@ -29,7 +29,6 @@ Tapestree currently holds the following phylogenetic models:
   - "Occurrence Birth-Death Diffusion" (OBDD): implements a (fossilized or not) birth-death model where speciation and extinction rates follow separate geometric Brownian motions with piece-wise constant temporal changes in fossilization rates and external occurrences under a Bayesian data augmentation algorithm, as described in Andréoletti J., Quintero, I., Morlon, H. (2025) The Occurrence Birth-Death Diffusion Process: Unraveling Diversification Histories with Fossils and Heterogeneous Rates. bioRxiv [https://doi.org/10.1101/2025.08.26.672414](https://doi.org/10.1101/2025.08.26.672414)
 
 
-
 #### Diffused Brownian motion (DBM) model
 
   - DBM implements a trait evolution model where trait and its underlying rates follow separate geometric Brownian motions under a Bayesian data augmentation algorithm, as described in Quintero, I. (2025). The diffused evolutionary dynamics of morphological novelty. _Proceedings of the National Academy of Sciences_, U.S.A. **122** (18) e2425573122, [https://doi.org/10.1073/pnas.2425573122](https://doi.org/10.1073/pnas.2425573122).

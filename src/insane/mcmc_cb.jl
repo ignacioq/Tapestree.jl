@@ -145,7 +145,9 @@ function mcmc_burn_cb(Ξ      ::Vector{sTb},
   llc = llik_cb(Ξ, λc) - nsi + prob_ρ(idf)
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barglyphs=BarGlyphs('•','━','━',' ', '•'),
+                  barlen = 20)
 
   for it in Base.OneTo(nburn)
 
@@ -160,7 +162,7 @@ function mcmc_burn_cb(Ξ      ::Vector{sTb},
 
       # forward simulation proposal proposal
       else
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
       end
@@ -225,7 +227,9 @@ function mcmc_cb(Ξ      ::Vector{sTb},
 
       let llc = llc, prc = prc, λc = λc, ns = ns, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        pbar = Progress(niter, dt = prints, desc = "running mcmc...", 
+                        barglyphs=BarGlyphs(' ','━','━',' ','⍿'),
+                        barlen = 20)
 
         for it in Base.OneTo(niter)
 
@@ -247,7 +251,7 @@ function mcmc_cb(Ξ      ::Vector{sTb},
             # forward simulation proposal proposal
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
               llc, ns, L = update_fs!(bix, Ξ, idf, llc, λc, ns, L)
 
               # llci = llik_cb(Ξ, λc) - !stem*log(λc) + prob_ρ(idf)
@@ -285,11 +289,11 @@ function mcmc_cb(Ξ      ::Vector{sTb},
 
           next!(pbar)
         end
-      
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

@@ -73,12 +73,10 @@ function insane_cfbd(tree    ::sTf_label;
       if lep > nep
         f_epoch = f_epoch[(end-nep+1):end]
       else 
-        for i in Base.OneTo(nep - lep)
-          pushfirst!(f_epoch, 0)
-        end
+        prepend!(f_epoch, zeros(Int64, nep-lep))
       end
     else
-      f_epoch = fill(0, nep)
+      f_epoch = zeros(Int64, nep)
     end
   end
 
@@ -160,7 +158,7 @@ function insane_cfbd(tree    ::sTf_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running constant fossilized birth-death"
+  @info "running constant fossilised birth-death"
 
   # adaptive phase
   llc, prc, λc, μc, ψc, mc, ns, ne, L =
@@ -266,7 +264,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
       # forward simulation proposal proposal
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ns, ne, L =
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
@@ -415,7 +413,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
             # forward simulation proposal proposal
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
 
               llc, ns, ne, L =
                 update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, ns, ne, L, 
@@ -463,11 +461,11 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

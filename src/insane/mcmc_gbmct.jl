@@ -84,7 +84,6 @@ function insane_gbmct(tree    ::sT_label;
     surv += survival ? 1 : 0
   end
 
-
   if isone(length(tρ))
     tl = tiplabels(tree)
     tρu = tρ[""]
@@ -99,11 +98,10 @@ function insane_gbmct(tree    ::sT_label;
   idf = make_idf(tree, tρ, maxt)
 
    # starting parameters (using method of moments)
-  λc = λi
+  λc, ϵc = λi, ϵi
   if isnan(λi)
     λc, μc = moments(Float64(n), th, ϵi)
   end
-  ϵc = ϵi
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, λc, αi, σλi, δt, srδt, iTct)
@@ -213,7 +211,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
   el      = lastindex(idf)     # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
 
   # number of branches
   nbr  = lastindex(idf)
@@ -253,8 +251,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
       # gbm update
       elseif pupi === 4
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
 
         llc, prc, ddλ, ssλ, Σλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, prc, ddλ, ssλ, Σλ, mc, th,
@@ -263,7 +260,7 @@ function mcmc_burn_gbmct(Ξ       ::Vector{iTct},
       # forward simulation update
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ddλ, ssλ, Σλ, nλ, ne, L =
           update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, ddλ, ssλ, Σλ, nλ, ne, L,
@@ -352,7 +349,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
   ϵxpr  = ϵ_prior[2]
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 7)
@@ -420,8 +417,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
             # gbm update
             elseif pupi === 4
 
-              nix = ceil(Int64,rand()*nin)
-              bix = inodes[nix]
+              bix = inodes[fIrand(nin) + 1]
 
               llc, prc, ddλ, ssλ, Σλ, mc =
                 update_gbm!(bix, Ξ, idf, αc, σλc, ϵc, llc, prc, ddλ, ssλ, Σλ, mc, th,
@@ -436,7 +432,7 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
             # forward simulation update
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
 
               llc, ddλ, ssλ, Σλ, nλ, ne, L =
                 update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, ddλ, ssλ, Σλ, nλ, ne, L,
@@ -483,11 +479,11 @@ function mcmc_gbmct(Ξ       ::Vector{iTct},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

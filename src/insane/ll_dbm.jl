@@ -152,7 +152,7 @@ end
 
 
 """
-    ll_dbm_ss_dd_b(x   ::Array{Float64,1},
+    ll_dbm_dd_ss_b(x   ::Array{Float64,1},
                    αx  ::Float64, 
                    lσ2 ::Array{Float64,1},
                    ασ  ::Float64,
@@ -162,7 +162,7 @@ end
 
 Returns the log-likelihood for a branch according to diffused Brownian motion.
 """
-function ll_dbm_ss_dd_b(x   ::Array{Float64,1},
+function ll_dbm_dd_ss_b(x   ::Array{Float64,1},
                         αx  ::Float64, 
                         lσ2 ::Array{Float64,1},
                         ασ  ::Float64,
@@ -355,7 +355,7 @@ end
 
 
 """
-    _ss_dd(tree::T,
+    _dd_ss(tree::T,
            fx  ::Function,
            fσ  ::Function,
            ασ  ::Float64,
@@ -368,7 +368,7 @@ end
 Returns the standardized sum of squares for rate `fσ`, the path number `n`, 
 and the delta drift `ddσ`, as well as Gibbs variables for drift in `fx`.
 """
-function _ss_dd(tree::T,
+function _dd_ss(tree::T,
                 fx  ::Function,
                 fσ  ::Function,
                 ασ  ::Float64,
@@ -379,7 +379,7 @@ function _ss_dd(tree::T,
                 n   ::Float64) where {T <: Tx}
 
   Ls0, Xs0, ddσ0, ss0, n0 = 
-    _LX_ss_dd_b(fx(tree), fσ(tree), ασ, dt(tree), fdt(tree))
+    _LX_dd_ss_b(fx(tree), fσ(tree), ασ, dt(tree), fdt(tree))
 
   Ls  += Ls0
   Xs  += Xs0
@@ -388,9 +388,9 @@ function _ss_dd(tree::T,
   n   += n0
 
   if def1(tree)
-    Ls, Xs, ddσ, ss, n = _ss_dd(tree.d1, fx, fσ, ασ, Ls, Xs, ddσ, ss, n)
+    Ls, Xs, ddσ, ss, n = _dd_ss(tree.d1, fx, fσ, ασ, Ls, Xs, ddσ, ss, n)
     if def2(tree)
-      Ls, Xs, ddσ, ss, n = _ss_dd(tree.d2, fx, fσ, ασ, Ls, Xs, ddσ, ss, n)
+      Ls, Xs, ddσ, ss, n = _dd_ss(tree.d2, fx, fσ, ασ, Ls, Xs, ddσ, ss, n)
     end
   end
 
@@ -401,7 +401,7 @@ end
 
 
 """
-    _LX_ss_dd_b(vx ::Array{Float64,1},
+    _LX_dd_ss_b(vx ::Array{Float64,1},
                 vσ ::Array{Float64,1},
                 ασ ::Float64,
                 δt ::Float64,
@@ -410,7 +410,7 @@ end
 Returns the standardized sum of squares for vectors `vx` & `vσ`, 
 the path number `n`, and the delta drift `ddx` & `ddσ`.
 """
-function _LX_ss_dd_b(vx ::Array{Float64,1},
+function _LX_dd_ss_b(vx ::Array{Float64,1},
                      vσ ::Array{Float64,1},
                      ασ ::Float64,
                      δt ::Float64,

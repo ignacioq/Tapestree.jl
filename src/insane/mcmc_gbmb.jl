@@ -185,8 +185,7 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
       # update gbm
       elseif pupi === 4
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
 
         llc, prc, ddλ, ssλ, irλ =
           update_gbm!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
@@ -195,7 +194,7 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
       # forward simulation
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ddλ, ssλ, nλ, irλ, ns, L =
           update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
@@ -338,8 +337,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
             # update gbm
             elseif pupi === 4
 
-              nix = ceil(Int64,rand()*nin)
-              bix = inodes[nix]
+              bix = inodes[fIrand(nin) + 1]
 
               llc, prc, ddλ, ssλ, irλ =
                 update_gbm!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
@@ -354,7 +352,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
             # update by forward simulation
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
 
               llc, ddλ, ssλ, nλ, irλ, ns, L =
                 update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
@@ -399,11 +397,11 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 
@@ -526,7 +524,7 @@ function update_scale!(Ξ       ::Vector{T},
     prc += prr
     ir  -= iri
     scale_rate!(Ξ, lλ, s)
-    scale_rate!(idf, s)
+    scale_rate!(idf, addlλ!, s)
   end
 
   return llc, prc, ir, acc

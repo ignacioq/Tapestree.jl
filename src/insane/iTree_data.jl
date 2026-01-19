@@ -78,7 +78,7 @@ isfix(tree::sTxs)   = true
 
 Return `true` if punkeek shift is in `d1`, `false` if in `d2`
 """
-sh(tree::T) where {T <: Tpe} = getproperty(tree, :sh)
+sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
 
 
 
@@ -100,6 +100,7 @@ Return if is an extinction node.
 isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 isextinct(tree::Tlabel) = false
 isextinct(tree::sTb)    = false
+isextinct(tree::cTb)   = false
 isextinct(tree::iTb)    = false
 isextinct(tree::sTxs)   = false
 
@@ -160,6 +161,10 @@ isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
 isfossil(tree::sT_label) = false
 isfossil(tree::sTb)      = false
 isfossil(tree::sTbd)     = false
+isfossil(tree::cTb)     = false
+isfossil(tree::cTce)     = false
+isfossil(tree::cTct)     = false
+isfossil(tree::cTbd)     = false
 isfossil(tree::iTb)      = false
 isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
@@ -211,7 +216,7 @@ end
 Return if is a complete lineage (versus incipient lineage) in a protracted model.
 """
 iscomplete(tree::T) where {T <: iTree} = true
-iscomplete(tree::iTpbd)               = getproperty(tree, :ic)
+iscomplete(tree::iTpbd)                = getproperty(tree, :ic)
 
 
 
@@ -1303,6 +1308,7 @@ ntips(tree::T) where {T <: iTree} = _ntips(tree, 0)
 
 
 """
+
     _ntips(tree::T, n::Int64) where {T <: iTree}
 
 Return the number of tip nodes for `tree`, initialized at `n`.
@@ -1353,31 +1359,13 @@ ntipsalive(tree::T) where {T <: iTree} = _ntipsalive(tree, 0)
 
 
 
+
 """
     _ntipsalive(tree::T, n::Int64) where {T <: iTree}
+
 Return the number of alive nodes for `tree`, initialized at `n`.
 """
 function _ntipsalive(tree::T, n::Int64) where {T <: iTree}
-
-  if def1(tree)
-    n = _ntipsalive(tree.d1, n)
-    n = _ntipsalive(tree.d2, n)
-  elseif isalive(tree)
-    n += 1
-  end
-
-  return n
-end
-
-
-
-
-"""
-    _ntipsalive(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
-Return the number of alive nodes for `tree`, initialized at `n`.
-"""
-function _ntipsalive(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
   if def1(tree)
     n = _ntipsalive(tree.d1, n)
@@ -1443,28 +1431,6 @@ Return the number of extinct nodes for `tree`, initialized at `n`.
 """
 function _ntipsextinct(tree::T, n::Int64) where {T <: iTree}
 
-  if def1(tree)
-    n = _ntipsextinct(tree.d1, n)
-    n = _ntipsextinct(tree.d2, n)
-  else
-    if isextinct(tree)
-      n += 1
-    end
-  end
-
-  return n
-end
-
-
-
-
-"""
-    _ntipsextinct(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
-Return the number of extinct nodes for `tree`, initialized at `n`.
-"""
-function _ntipsextinct(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
   if istip(tree)
     if isextinct(tree)
       n += 1
@@ -1493,33 +1459,11 @@ ntipsextinctF(tree::T) where {T <: iTree} = _ntipsextinctF(tree, 0.0)
 
 
 """
-    _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
+    _ntipsextinctF(tree::T, n::Float64) where {T <: iTf}
 
 Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
 """
 function _ntipsextinctF(tree::T, n::Float64) where {T <: iTree}
-
-  if def1(tree)
-    n = _ntipsextinctF(tree.d1, n)
-    n = _ntipsextinctF(tree.d2, n)
-  else
-    if isextinct(tree)
-      n += 1.0
-    end
-  end
-
-  return n
-end
-
-
-
-
-"""
-    _ntipsextinctF(tree::T, n::Float64) where {T <: Union{iTf, iTpbd}}
-
-Return the number of extinct nodes for `tree` as Float64, initialized at `n`.
-"""
-function _ntipsextinctF(tree::T, n::Float64) where {T <: Union{iTf, iTpbd}}
 
   if istip(tree)
     if isextinct(tree)
@@ -1663,38 +1607,13 @@ end
 """
     treelength_ne(tree::T,
                   l   ::Float64,
-                  n   ::Float64) where {T <: iTree}
+                  n   ::Float64) where {T <: iTf}
 
 Return the tree length and extinction events.
 """
 function treelength_ne(tree::T,
                        l   ::Float64,
                        n   ::Float64) where {T <: iTree}
-
-  l += e(tree)
-  if def1(tree)
-    l, n = treelength_ne(tree.d1, l, n)
-    l, n = treelength_ne(tree.d2, l, n)
-  elseif isextinct(tree)
-    n += 1.0
-  end
-
-  return l, n
-end
-
-
-
-
-"""
-    treelength_ne(tree::T,
-                  l   ::Float64,
-                  n   ::Float64) where {T <: Union{iTf, iTpbd}}
-
-Return the tree length and extinction events.
-"""
-function treelength_ne(tree::T,
-                       l   ::Float64,
-                       n   ::Float64) where {T <: Union{iTf, iTpbd}}
 
   l += e(tree)
   if def1(tree)
@@ -1727,17 +1646,72 @@ lb(tree::iTpbd) = getproperty(tree, :lb)
 
 Return the speciation rate (speciation completion in a protracted model).
 """
-lλ(tree::T) where {T <: iT} = getproperty(tree, :lλ)
+lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
+
 
 
 
 
 """
-    lμ(tree::iTbdU)
+    λt(tree::T) where {T <: iTree}
+
+Return final speciation rate at time `t.
+"""
+function λt(tree::T) where {T <: iT}
+  if istip(tree)
+    return lλ(tree)[end]
+  elseif isfix(tree.d1::T)
+    λt(tree.d1::T)
+  else
+    λt(tree.d2::T)
+  end
+end
+function λt(tree::T) where {T <: cT}
+  if istip(tree)
+    return lλ(tree)
+  elseif isfix(tree.d1::T)
+    λt(tree.d1::T)
+  else
+    λt(tree.d2::T)
+  end
+end
+
+
+
+
+"""
+    lμ(tree::T) where {T <: iTree}
 
 Return the extinction rate.
 """
-lμ(tree::iTbdU) = getproperty(tree,:lμ)
+lμ(tree::T) where {T <: iTree} = getproperty(tree,:lμ)
+
+
+
+
+"""
+    μt(tree::T) where {T <: iTree}
+
+Return final extinction rate at time `t.
+"""
+function μt(tree::T) where {T <: iT}
+  if istip(tree)
+    return lμ(tree)[end]
+  elseif isfix(tree.d1::T)
+    μt(tree.d1::T)
+  else
+    μt(tree.d2::T)
+  end
+end
+function μt(tree::T) where {T <: cT}
+  if istip(tree)
+    return lμ(tree)
+  elseif isfix(tree.d1::T)
+    μt(tree.d1::T)
+  else
+    μt(tree.d2::T)
+  end
+end
 
 
 
@@ -1970,6 +1944,59 @@ function fixtip(tree::T) where {T <: iTree}
     fixtip(tree.d1::T)
   else
     fixtip(tree.d2::T)
+  end
+end
+
+
+
+"""
+    fixtip(tree::T) where {T <: iTree}
+
+Return the first fixed tip.
+"""
+function fixtip(tree::T) where {T <: uTf}
+  if istip(tree) || isfossil(tree)
+    return tree
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T)
+  else
+    fixtip(tree.d2::T)
+  end
+end
+
+
+
+
+"""
+    fixtip(tree::T, λa::Float64) where {T <: iTree}
+
+Return the first fixed tip with ancestral speciation.
+"""
+function fixtip(tree::T, λa::Float64) where {T <: iTree}
+  if istip(tree)
+    return tree, λa
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T, lλ(tree))
+  else
+    fixtip(tree.d2::T, lλ(tree))
+  end
+end
+
+
+
+
+"""
+    fixtip(tree::T, λa::Float64, μa::Float64) where {T <: iTree}
+
+Return the first fixed tip with ancestral speciation and extinction.
+"""
+function fixtip(tree::T, λa::Float64, μa::Float64) where {T <: iTree}
+  if istip(tree)
+    return tree, λa, μa
+  elseif isfix(tree.d1::T)
+    fixtip(tree.d1::T, lλ(tree), lμ(tree))
+  else
+    fixtip(tree.d2::T, lλ(tree), lμ(tree))
   end
 end
 
@@ -2459,6 +2486,89 @@ end
 
 
 """
+    _λat!(tree::T,
+          c   ::Float64,
+          λs  ::Vector{Float64},
+          t   ::Float64,
+          λfx ::Float64) where {T <: cT}
+
+Return speciation rates, `λs`, at time `c` for `tree`.
+"""
+function _λat!(tree::T,
+               c   ::Float64,
+               λs  ::Vector{Float64},
+               t   ::Float64,
+               λfx ::Float64) where {T <: cT}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+
+    λi = lλ(tree)
+    push!(λs, λi)
+
+    if isfix(tree)
+      λfx =  λi
+    end
+
+    return λfx
+  elseif def1(tree)
+    λfx = _λat!(tree.d1, c, λs, t + et, λfx)
+    λfx = _λat!(tree.d2, c, λs, t + et, λfx)
+  end
+
+  return λfx
+end
+
+
+
+
+"""
+    _λμat!(tree::T,
+           c   ::Float64,
+           λs  ::Vector{Float64},
+           μs  ::Vector{Float64},
+           t   ::Float64,
+           λfx ::Float64,
+           μfx ::Float64) where {T <: cT}
+
+Return speciation rates, `λs`, at time `c` for `tree`.
+"""
+function _λμat!(tree::T,
+                c   ::Float64,
+                λs  ::Vector{Float64},
+                μs  ::Vector{Float64},
+                t   ::Float64,
+                λfx ::Float64,
+                μfx ::Float64) where {T <: cT}
+
+  et = e(tree)
+
+  if (t + et) >= c - accerr
+
+    λi = lλ(tree)
+    push!(λs, λi)
+    μi = lμ(tree)
+    push!(μs, μi)
+
+    if isfix(tree)
+      λfx =  λi
+      μfx =  μi
+    end
+
+    return λfx, μfx
+  elseif def1(tree)
+    λfx, μfx = _λμat!(tree.d1, c, λs, μs, t + et, λfx, μfx)
+    λfx, μfx = _λμat!(tree.d2, c, λs, μs, t + et, λfx, μfx)
+  end
+
+  return λfx, μfx
+end
+
+
+
+
+"""
     _xatt!(tree::T,
            c   ::Float64,
            xs  ::Vector{Float64},
@@ -2723,6 +2833,31 @@ end
 
  
 
+"""
+    trextract(tree::iTree, f::Function)
+
+Perform function `f` in each recursive tree in `tree`.
+"""
+function trextract(treev::Vector{T}, f::Function) where {T <: iTree}
+  n   = lastindex(treev)
+  F   = typeof(f(treev[1]))
+  tvs = F[]
+  _trextract!(tvs, treev[1], f)
+  l = lastindex(tvs)
+  d = Array{F}(undef, l, n)
+  d[:,1] = tvs
+
+  for j in 2:n
+    empty!(tvs)
+    _trextract!(tvs, treev[j], f)
+    d[:,j] = tvs
+  end
+
+  return d
+end
+
+
+
 
 """
     trextract(tree::iTree, f::Function)
@@ -2875,9 +3010,9 @@ end
 
 
 """
-    check_cpe!(tree::sTpe)
+    _check_cpe!(tree::sTpe)
 
-Extract tip rates from a sTpe tree
+Check that cpe is self-consistent.
 """
 function _check_cpe(tree::sTpe)
 
@@ -2902,6 +3037,342 @@ function _check_cpe(tree::sTpe)
 
   return true
 end
+
+
+
+
+"""
+    _check_clads(Ξ::Vector{T}, idf::Vector{iBffs}) where {T <: cT}
+
+Check that cpe is self-consistent.
+"""
+function _check_clads(Ξ::Vector{T}, idf::Vector{iBffs}, i::Int64) where {T <: cT}
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+  ξi = Ξ[i]
+
+  lξi = fixtip(ξi)
+
+  if i1 > 0
+    if i2 > 0
+      if lλ(lξi) != λt(bi)
+        @show "error 1", bi
+      end
+      _check_clads(Ξ, idf, i1)
+      _check_clads(Ξ, idf, i2)
+    else
+      if lλ(lξi) != lλ(Ξ[i1])
+        @show "error 2", bi
+      end
+      _check_clads(Ξ, idf, i1)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    upstreamλ(i  ::Int64,
+              Ξ  ::Vector{T},
+              idf::Vector{iBffs},
+              eas::Float64,
+              λa ::Float64) where {T <: cT}
+
+Return the branch length `eds` and speciation rates of daughters, if any, for 
+middle branches.
+"""
+function upstreamλ(i  ::Int64,
+                   Ξ  ::Vector{T},
+                   idf::Vector{iBffs},
+                   eas::Float64,
+                   λa ::Float64) where {T <: cT}
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is cladogenetic
+    if d2(bi) > 0
+      λa = λt(bi)
+    else
+      ξi   = Ξ[i]
+ 
+      if def2(ξi)
+        lξi, λa = fixtip(ξi, λa)
+        eas += e(lξi)
+      else
+        eas += e(ξi)
+        ia   = pa(bi)
+        if ia > 0
+          eas, λa, i = upstreamλ(ia, Ξ, idf, eas, λa)
+        end
+      end
+    end
+  end
+
+  return eas, λa, i
+end
+
+
+
+
+"""
+    upstreamλμ(i  ::Int64,
+               Ξ  ::Vector{cTbd},
+               idf::Vector{iBffs},
+               eas::Float64,
+               λa ::Float64,
+               μa::Float64)
+
+Return the branch length `eds` and speciation rates of daughters, if any, for 
+middle branches.
+"""
+function upstreamλμ(i  ::Int64,
+                    Ξ  ::Vector{T},
+                    idf::Vector{iBffs},
+                    eas::Float64,
+                    λa ::Float64,
+                    μa::Float64) where {T <: cT}
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is cladogenetic
+    if d2(bi) > 0
+      λa = λt(bi)
+      μa = μt(bi)
+    else
+      ξi   = Ξ[i]
+ 
+      if def2(ξi)
+        lξi, λa, μa = fixtip(ξi, λa, μa)
+        eas += e(lξi)
+      else
+        eas += e(ξi)
+        ia   = pa(bi)
+        if ia > 0
+          eas, λa, μa, i = upstreamλμ(ia, Ξ, idf, eas, λa, μa)
+        end
+      end
+    end
+  end
+
+  return eas, λa, μa, i
+end
+
+
+
+
+"""
+    downstreamλs(i  ::Int64, 
+                 Ξ  ::Vector{T}, 
+                 idf::Vector{iBffs}, 
+                 eds::Float64, 
+                 λ1 ::Float64, 
+                 λ2 ::Float64) where {T <: cT}
+
+Return the branch length `eds` and speciation rates of daughters, if any, for 
+middle branches.
+"""
+function downstreamλs(i  ::Int64, 
+                      Ξ  ::Vector{T}, 
+                      idf::Vector{iBffs}, 
+                      eds::Float64, 
+                      λ1 ::Float64, 
+                      λ2 ::Float64) where {T <: cT}
+
+  @inbounds begin
+
+    ξi   = Ξ[i]
+    eds += e(ξi)
+
+    if def2(ξi)
+      λ1, λ2 = lλ(ξi.d1), lλ(ξi.d2)
+    else
+      bi = idf[i]
+      i1 = d1(bi)
+      if i1 > 0
+        i2 = d2(bi)
+        # if cladogenetic
+        if i2 > 0
+          λ1, λ2 = lλ(Ξ[i1]), lλ(Ξ[i2])
+        # if mid
+        else
+          eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, eds, λ1, λ2)
+        end
+      end
+    end
+  end
+
+  return eds, λ1, λ2
+end
+
+
+
+
+
+"""
+    downstreamλμs(i  ::Int64, 
+                  Ξ  ::Vector{T}, 
+                  idf::Vector{iBffs}, 
+                  eds::Float64, 
+                  λ1 ::Float64, 
+                  λ2 ::Float64,
+                  μ1 ::Float64,
+                  μ2 ::Float64) where {T <: cTbdU}
+
+Return the branch length `eds` and speciation and extinction rates of 
+daughters, if any, for middle branches.
+"""
+function downstreamλμs(i  ::Int64, 
+                       Ξ  ::Vector{T}, 
+                       idf::Vector{iBffs}, 
+                       eds::Float64, 
+                       λ1 ::Float64, 
+                       λ2 ::Float64,
+                       μ1 ::Float64,
+                       μ2 ::Float64) where {T <: cT}
+
+  @inbounds begin
+ 
+    ξi   = Ξ[i]
+    eds += e(ξi)
+
+    if def2(ξi)
+      ξ1, ξ2 = ξi.d1, ξi.d2
+      λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+    else
+      bi = idf[i]
+
+      i1 = d1(bi)
+      if i1 > 0
+        i2 = d2(bi)
+        # if cladogenetic
+        if i2 > 0
+          ξ1, ξ2 = Ξ[i1], Ξ[i2]
+          λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+        # if mid or mid-fossil
+        else
+          eds, λ1, λ2, μ1, μ2 = downstreamλμs(i1, Ξ, idf, eds, λ1, λ2, μ1, μ2)
+        end
+      # if tip fossil
+      elseif isfossil(ξi)
+        ξ1   = ξi.d1
+        eds += e(ξ1)
+        if isextinct(ξ1)
+          μ1 = lμ(ξ1)
+        else
+          ξ11, ξ12 = ξ1.d1, ξ1.d2
+          λ1, λ2, μ1, μ2 = lλ(ξ11), lλ(ξ12), lμ(ξ11), lμ(ξ12)
+        end
+      end
+    end
+  end
+
+  return eds, λ1, λ2, μ1, μ2
+end
+
+
+
+
+"""
+    sumλμbuds(tree::acTfbd,
+              ei  ::Float64,
+              nb  ::Float64,
+              sλ  ::Float64,
+              sμ  ::Float64,
+              iμ  ::Bool)
+
+Get budding species sums of speciation and extinction rates.
+"""
+function sumλμbuds(tree::acTfbd,
+                   ei  ::Float64,
+                   nb  ::Float64,
+                   sλ  ::Float64,
+                   sμ  ::Float64,
+                   iμ  ::Bool)
+
+  ei += e(tree)
+
+  # if cladogenetic
+  if def1(tree)
+    if def2(tree)
+      nb += 1.0
+      tb, tl = if sh(tree) tree.d1, tree.d2 else tree.d2, tree.d1 end
+      λi, μi = lλ(tb), lμ(tb)
+      sλ  += λi
+      sμ  += μi
+
+      # continue on lineage
+      ei, nb, sλ, sμ, iμ = sumλμbuds(tl, ei, nb, sλ, sμ, iμ)
+    else
+      ei, nb, sλ, sμ, iμ = sumλμbuds(tree.d1, ei, nb, sλ, sμ, iμ)
+    end
+  elseif isextinct(tree)
+    iμ = true
+  end
+
+ return ei, nb, sλ, sμ, iμ
+end
+
+
+
+
+"""
+    sumλμbuds(i  ::Int64, 
+              Ξ  ::Vector{acTfbd}, 
+              idf::Vector{iBffs}, 
+              ei ::Float64,
+              nb ::Float64,
+              sλ ::Float64,
+              sμ ::Float64,
+              iμ ::Bool)
+
+Get budding species sum of speciation and extinction rates.
+"""
+function sumλμbuds(i  ::Int64, 
+                   Ξ  ::Vector{acTfbd}, 
+                   idf::Vector{iBffs}, 
+                   ei ::Float64,
+                   nb ::Float64,
+                   sλ ::Float64,
+                   sμ ::Float64,
+                   iμ ::Bool)
+
+  ξi = Ξ[i]
+  bi = idf[i]
+  i1 = d1(bi)
+
+  # within reconstructed branch 
+  ei, nb, sλ, sμ, iμ = sumλμbuds(ξi, ei, nb, sλ, sμ, iμ)
+
+  # across reconstructed branches
+  if i1 > 0
+    i2 = d2(bi)
+
+    # if cladogenetic
+    if i2 > 0
+      nb += 1.0
+      lξi = fixtip(ξi)
+      ib, il = if sh(lξi) i1, i2 else i2, i1 end
+      sλ += lλ(Ξ[ib])
+      sμ += lμ(Ξ[ib])
+
+      # continue on lineage
+      ei, nb, sλ, sμ, iμ = sumλμbuds(il, Ξ, idf, ei, nb, sλ, sμ, iμ)
+    # if mid or mid-fossil
+    else
+      ei, nb, sλ, sμ, iμ = sumλμbuds(i1, Ξ, idf, ei, nb, sλ, sμ, iμ)
+    end
+  end
+
+  return ei, nb, sλ, sμ, iμ
+end
+
 
 
 

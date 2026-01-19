@@ -118,7 +118,8 @@ Compute the logarithmic transformation of the
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
 logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
-  -0.5*log(6.28318530717958623199592693708837032318115234375*σ²) - (x - μ)^2/(2.0*σ²)
+  -0.5*log(6.28318530717958623199592693708837032318115234375*σ²) - 
+  (x - μ)^2/(2.0*σ²)
 
 
 
@@ -291,6 +292,67 @@ function llrdtnorm_x(xp::Float64, xc::Float64, σ²::Float64)
   end
 end
 
+
+
+
+"""
+    dnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64)
+
+Compute the logarithmic transformation of the 
+**Normal** density for `x1` and `x2` with mean `μ` and variance `σ`.
+"""
+dnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
+  (1.0/(2.506628274631000241612355239340104162693023681640625 * σ))^2 * 
+  exp(-((x1 - μ)^2 + (x2 - μ)^2)/(2.0*σ^2))
+
+
+
+
+
+"""
+    logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64)
+  
+Compute the logarithmic transformation of the 
+**Normal** density for `x1` and `x2` with mean `μ` and variance `σ`.
+"""
+logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
+  -2.0 * log(σ) - 1.83787706640934533908193770912475883960723876953125 - 
+  ((x1 - μ)^2 + (x2 - μ)^2)/(2.0*σ^2)
+
+
+
+
+"""
+    llrdnorm2_μ(x1::Float64, x2::Float64, μp::Float64, μc::Float64, σ::Float64)
+  
+Compute the log-likelihood ratio of the  **Normal** density for `x1` and `x2` 
+for proposal mean `μp` and current mean `μc` with variance `σ`.
+"""
+llrdnorm2_μ(x1::Float64, x2::Float64, μp::Float64, μc::Float64, σ::Float64) = 
+   ((x1 - μc)^2 + (x2 - μc)^2 - (x1 - μp)^2 - (x2 - μp)^2)/(2.0*σ^2)
+
+
+
+"""
+    llrdnorm3(x1::Float64, 
+              x2::Float64, 
+              lo - x3at64, 
+              μp::Float64, 
+              μc::Float64, 
+              σ::Float64)
+  
+Compute the log-likelihood ratio for a trio of the  **Normal** densities with
+ ancestor `xa` and daughters `x1` and `x2` with proposal mean `μp` and 
+ current mean `μc` with variance `σ`.
+"""
+llrdnorm3(xa::Float64, 
+          x1::Float64, 
+          x2::Float64, 
+          μp::Float64, 
+          μc::Float64, 
+          σ::Float64) = 
+   ((μc - xa)^2 + (x1 - μc)^2 + (x2 - μc)^2 - 
+    (μp - xa)^2 - (x1 - μp)^2 - (x2 - μp)^2)/(2.0*σ^2)
 
 
 

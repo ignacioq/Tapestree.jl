@@ -164,7 +164,7 @@ function _stem_update!(ξi      ::iTce,
     # simulate fix tree vector
     bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
 
-    llrbm, llrce, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+    llrbm, llrce, ssrλ = llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, true)
 
     # log probability
     lU = -randexp()

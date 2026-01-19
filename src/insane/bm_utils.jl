@@ -635,6 +635,28 @@ end
 
 
 """
+    trioprop(xp::Float64,
+             x1::Float64,
+             x2::Float64,
+             tp::Float64,
+             t1::Float64,
+             t2::Float64,
+             σ ::Float64)
+
+Proposal for a trio of Gaussians.
+"""
+function trioprop(xp::Float64,
+                  x1::Float64,
+                  x2::Float64,
+                  σ ::Float64)
+    return rnorm((xp + x1 + x2)*0.333333333333333333333333333333333333,
+                 0.577350269189625731058868041145615279674530029296875*σ)
+end
+
+
+
+
+"""
     duodnorm(x ::Float64,
              x1::Float64,
              x2::Float64,

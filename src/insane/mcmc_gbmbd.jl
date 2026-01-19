@@ -204,7 +204,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
   ne  = 0.0                 # number of extinction events in likelihood
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
 
   # for scale tuning
   ltn = 0
@@ -250,8 +250,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # gbm update
       elseif pupi === 4
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
 
         llc, prc, ddλ, ssλ, ssμ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, σμc, llc, prc, ddλ, ssλ, ssμ,
@@ -260,7 +259,7 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # forward simulation update
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ddλ, ssλ, ssμ, nλ, ns, ne, L =
           update_fs!(bix, Ξ, idf, αc, σλc, σμc, llc, ddλ, ssλ, ssμ, nλ, 
@@ -354,7 +353,7 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
   el  = lastindex(idf)      # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 8)
@@ -489,11 +488,11 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
 end
 
 

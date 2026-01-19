@@ -74,7 +74,7 @@ function sim_gbmce(n       ::Int64;
 
   if iszero(c)
     warnings && @warn "tree not sampled, try increasing `p`"
-    return iTce(0.0, 0.0, 0.0, false, false, Float64[])
+    return iTce()
   else
     # cut the tree
     t = cutbottom(t, simt - c)
@@ -163,7 +163,7 @@ function _sedges_gbmce(n    ::Int64,
     iead = Int64[] # indexes of ea to delete
 
   else
-    @error "$init does not match stem or crown"
+    @error string(init, " does not match stem or crown")
   end
 
 

@@ -164,6 +164,183 @@ end
 
 
 
+"""
+    make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{T}) where {T <: cT}
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{T}) where {T <: cT}
+
+  Ξ = T[]
+  _make_Ξ!(Ξ, 1, log(λ), idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+     _make_Ξ!(Ξ   ::Vector{cTb},
+              i   ::Int64,
+              lλ0 ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTb},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  push!(Ξ, cTb(e(bi), true, lλ0))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+     _make_Ξ!(Ξ   ::Vector{cTce},
+              i   ::Int64,
+              lλ0 ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTce},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  push!(Ξ, cTce(e(bi), false, true, lλ0))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+     _make_Ξ!(Ξ   ::Vector{cTct},
+              i   ::Int64,
+              lλ0 ::Float64,
+              α   ::Float64,
+              σλ  ::Float64,
+              idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTct},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  push!(Ξ, cTct(e(bi), false, true, lλ0))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+                λ   ::Float64,
+                μ   ::Float64,
+                ::Type{T}) where {T <: Union{cTbd, cTfbd, acTfbd}}
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                λ   ::Float64,
+                μ   ::Float64,
+                ::Type{T}) where {T <: Union{cTbd, cTfbd, acTfbd}}
+  Ξ = T[]
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ  ::Vector{cTbd},
+             i  ::Int64,
+             lλ0::Float64,
+             lμ0::Float64,
+             idf::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ  ::Vector{cTbd},
+                  i  ::Int64,
+                  lλ0::Float64,
+                  lμ0::Float64,
+                  idf::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  setμt!(bi, lμ0)
+  push!(Ξ, cTbd(e(bi), false, true, lλ0, lμ0))
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, lμ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, lμ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
 
 """
     make_Ξ(idf ::Vector{iBffs},
@@ -398,6 +575,130 @@ function _make_Ξ!(Ξ   ::Vector{iTbd},
     _make_Ξ!(Ξ, ixiv, ixfv, i1, lλv[l], α, σλ, tv, le, δt, srδt, idf)
     if i2 > 0
       _make_Ξ!(Ξ, ixiv, ixfv, i2, lλv[l], α, σλ, tv, le, δt, srδt, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           λ   ::Float64,
+           μ   ::Float64,
+           αλ  ::Float64,
+           αμ  ::Float64,
+           σλ  ::Float64,
+           σμ  ::Float64,
+           ::Type{cTfbd})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                λ   ::Float64,
+                μ   ::Float64,
+                ::Type{T}) where {T <: Union{cTfbd, acTfbd}}
+  Ξ = T[]
+  _make_Ξ!(Ξ, 1, log(λ), log(μ), idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ   ::Vector{cTfbd},
+             i   ::Int64,
+             lλ0 ::Float64,
+             lμ0 ::Float64,
+             αλ  ::Float64,
+             αμ  ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{cTfbd},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  lμ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  setμt!(bi, lμ0)
+
+
+  if isfossil(bi) && iszero(i1)
+    push!(Ξ, cTfbd(
+               cTfbd(0.0, true, false, false, lλ0, lμ0),
+               e(bi), false, true, true, lλ0, lμ0))
+  else
+    push!(Ξ, cTfbd(e(bi), false, isfossil(bi), true, lλ0, lμ0))
+  end
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, lμ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, lμ0, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ   ::Vector{acTfbd},
+             i   ::Int64,
+             lλ0 ::Float64,
+             lμ0 ::Float64,
+             αλ  ::Float64,
+             αμ  ::Float64,
+             σλ  ::Float64,
+             σμ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs})
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{acTfbd},
+                  i   ::Int64,
+                  lλ0 ::Float64,
+                  lμ0 ::Float64,
+                  idf ::Vector{iBffs})
+
+  bi = idf[i]
+  i1 = d1(bi)
+  i2 = d2(bi)
+
+  setλt!(bi, lλ0)
+  setμt!(bi, lμ0)
+
+  if isfossil(bi) && iszero(i1)
+    push!(Ξ, acTfbd(
+               acTfbd(0.0, true, false, false, false, lλ0, lμ0),
+               e(bi), false, true, false, true, lλ0, lμ0))
+  else
+    push!(Ξ, acTfbd(e(bi), false, isfossil(bi), rand(Bool), true, lλ0, lμ0))
+  end
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, lλ0, lμ0, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, lλ0, lμ0, idf)
     end
   end
 
@@ -846,6 +1147,50 @@ end
 
 
 """
+    couple(Ξ  ::Vector{T},
+           idf::Vector{iBffs},
+           ix ::Int64) where {T <: cT}
+
+Build tree from decoupled tree.
+"""
+function couple(Ξ  ::Vector{T},
+                idf::Vector{iBffs},
+                ix ::Int64) where {T <: cT}
+
+  bi  = idf[ix]
+  ξi  = T(Ξ[ix])
+  i1  = d1(bi)
+  i2  = d2(bi)
+
+  if i1 > 0
+    ξit = fixtip(ξi)
+    if i2 > 0 
+      ξit.d1 = couple(Ξ, idf, i1)
+      ξit.d2 = couple(Ξ, idf, i2)
+    elseif isfossil(bi)
+      ξit.d1 = couple(Ξ, idf, i1)
+    else
+      ξd1 = couple(Ξ, idf, i1)
+      if isfossil(ξd1)
+        fossilize!(ξit)
+      end
+      adde!(ξit, e(ξd1))
+      if def1(ξd1)
+        ξit.d1 = ξd1.d1
+        if def2(ξd1)
+          ξit.d2 = ξd1.d2
+        end
+      end
+    end
+  end
+
+  return ξi
+end
+
+
+
+
+"""
     couple(Ξ::Vector{T},
            idf::Vector{iBffs},
            ix ::Int64) where {T <: iTree}
@@ -1181,16 +1526,182 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
+    _dd_ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
+
+  dd = ss = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    dd, ss = _dd_ss(Ξ[i], α, dd, ss)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lλ1 = lλ(Ξ[d1(bi)])
+      lλ2 = lλ(Ξ[bi2])
+
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+      dd += lλ1 + lλ2 - 2.0*lλi
+    end
+  end
+
+  return dd, ss
+end
+
+
+
+"""
+    _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
+
+  dd = ss = seλ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    dd, ss, seλ = _dd_ss_seλ(Ξ[i], α, dd, ss, seλ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lλ1 = lλ(Ξ[d1(bi)])
+      lλ2 = lλ(Ξ[bi2])
+
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+      dd += lλ1 + lλ2 - 2.0*lλi
+    end
+  end
+
+  return dd, ss, seλ
+end
+
+
+
+
+"""
+    _dd_ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss(Ξ::Vector{cTbd}, idf::Vector{iBffs}, α::Float64)
+
+  dd = ssλ = ssμ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    dd, ssλ, ssμ = _dd_ss(Ξ[i], α, dd, ssλ, ssμ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi  = λt(bi)
+      lμi  = μt(bi)
+      ξ1  = Ξ[d1(bi)]
+      ξ2  = Ξ[bi2]
+      lλ1, lλ2 = lλ(ξ1), lλ(ξ2)
+
+      dd  += lλ1 + lλ2 - 2.0*lλi
+      ssλ += 0.5*((lλ1    - lλi - α)^2 + (lλ2    - lλi - α)^2)
+      ssμ += 0.5*((lμ(ξ1) - lμi)^2  + (lμ(ξ2) - lμi)^2)
+    end
+  end
+
+  return dd, ssλ, ssμ
+end
+
+
+
+
+"""
+    _dd_ss(Ξ::Vector{cTfbd}, idf::Vector{iBffs}, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss(Ξ::Vector{cTfbd}, idf::Vector{iBffs}, αλ::Float64, αμ::Float64)
+
+  ddλ = ddμ = ssλ = ssμ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    ddλ, ddμ, ssλ, ssμ = _dd_ss(Ξ[i], αλ, αμ, ddλ, ddμ, ssλ, ssμ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lμi = μt(bi)
+      ξ1  = Ξ[d1(bi)]
+      ξ2  = Ξ[bi2]
+      lλ1, lλ2 = lλ(ξ1), lλ(ξ2)
+      lμ1, lμ2 = lμ(ξ1), lμ(ξ2)
+
+      ddλ += lλ1 + lλ2 - 2.0*lλi
+      ddμ += lμ1 + lμ2 - 2.0*lμi
+      ssλ += 0.5*((lλ1 - lλi - αλ)^2 + (lλ2 - lλi - αλ)^2)
+      ssμ += 0.5*((lμ1 - lμi - αμ)^2 + (lμ2 - lμi - αμ)^2)
+    end
+  end
+
+  return ddλ, ddμ, ssλ, ssμ
+end
+
+
+
+
+
+"""
+    _dd_ss(Ξ::Vector{acTfbd}, idf::Vector{iBffs}, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _dd_ss(Ξ::Vector{acTfbd}, idf::Vector{iBffs}, αλ::Float64, αμ::Float64)
+
+  ddλ = ddμ = ssλ = ssμ = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+    ξi = Ξ[i]
+    ddλ, ddμ, ssλ, ssμ = _dd_ss(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+    if bi2 > 0
+      lξi = fixtip(ξi)
+      ξb  = if sh(lξi) Ξ[d1(bi)] else Ξ[bi2] end
+      lλi, lλb = lλ(lξi), lλ(ξb)
+      lμi, lμb = lμ(lξi), lμ(ξb)
+
+      ddλ += lλb - lλi
+      ddμ += lμb - lμi
+      ssλ += 0.5*(lλb - lλi - αλ)^2
+      ssμ += 0.5*(lμb - lμi - αμ)^2
+    end
+  end
+
+  return ddλ, ddμ, ssλ, ssμ
+end
+
+
+
+
+
+"""
+    _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iT}
+function _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
 
   dd = ss = n = 0.0
   for ξi in Ξ
-    dd, ss, n = _ss_dd(ξi, α, dd, ss, n)
+    dd, ss, n = _dd_ss(ξi, α, dd, ss, n)
   end
 
   return dd, ss, n
@@ -1198,17 +1709,18 @@ end
 
 
 
+
 """
-    _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+    _dd_ss(Ξ::Vector{iTbd}, α::Float64)
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{iTbd}, α::Float64)
+function _dd_ss(Ξ::Vector{iTbd}, α::Float64)
 
   dd = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
+    dd, ssλ, ssμ, n = _dd_ss(ξi, α, dd, ssλ, ssμ, n)
   end
 
   return dd, ssλ, ssμ, n
@@ -1216,17 +1728,18 @@ end
 
 
 
+
 """
-    _ss_dd(Ξ::Vector{iTfbd}, α::Float64)
+    _dd_ss(Ξ::Vector{iTfbd}, α::Float64)
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{iTfbd}, αλ::Float64, αμ::Float64)
+function _dd_ss(Ξ::Vector{iTfbd}, αλ::Float64, αμ::Float64)
 
   ddλ = ddμ = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    ddλ, ddμ, ssλ, ssμ, n = _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+    ddλ, ddμ, ssλ, ssμ, n = _dd_ss(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
   end
 
   return ddλ, ddμ, ssλ, ssμ, n
@@ -1235,16 +1748,16 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+    _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
+function _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iTbd}
 
   dd = ssλ = ssμ = n = 0.0
   for ξi in Ξ
-    dd, ssλ, ssμ, n = _ss_dd(ξi, α, dd, ssλ, ssμ, n)
+    dd, ssλ, ssμ, n = _dd_ss(ξi, α, dd, ssλ, ssμ, n)
   end
 
   return dd, ssλ, ssμ, n
@@ -1275,7 +1788,7 @@ function sss_v(Ξ ::Vector{T},
   n   = zeros(nv)
   for i in Base.OneTo(nv)
     Lσ[i], Δσ[i], ddσ[i], ss[i], n[i] = 
-      _ss_dd(Ξ[i], fx, fσ, ασ, 0.0, 0.0, 0.0, 0.0, 0.0)
+      _dd_ss(Ξ[i], fx, fσ, ασ, 0.0, 0.0, 0.0, 0.0, 0.0)
   end
 
   return Lσ, Δσ, ddσ, ss, n
@@ -1285,17 +1798,17 @@ end
 
 
 """
-    _ss_dd(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
+    _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iTfbd}
 
 Returns the standardized sum of squares a `iT` according
 to GBM birth-death for a `σ` proposal.
 """
-function _ss_dd(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
+function _dd_ss(Ξ::Vector{T}, αλ::Float64, αμ::Float64) where {T <: iTfbd}
 
   ddλ = ddμ = ssλ = ssμ = n = 0.0
   for ξi in Ξ
     ddλ, ddμ, ssλ, ssμ, n = 
-      _ss_dd(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
+      _dd_ss(ξi, αλ, αμ, ddλ, ddμ, ssλ, ssμ, n)
   end
 
   return ddλ, ddμ, ssλ, ssμ, n
@@ -1377,8 +1890,148 @@ end
 
 
 
+
 """
-    _ir(Ξ::Vector{T}, α::Float64) where {T <: iT}
+    _ss(Ξ::Vector{cTb}, idf::Vector{iBffs}, f::Function, α::Float64)
+
+Returns the standardized sum of squares of a diffusion without drift `α`.
+"""
+function _ss(Ξ::Vector{T}, idf::Vector{iBffs}, α::Float64) where {T <: cT}
+
+  ss = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    ss = _ss(Ξ[i], α, ss)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      lλi = λt(bi)
+      lλ1 = lλ(Ξ[d1(bi)])
+      lλ2 = lλ(Ξ[bi2])
+      ss += 0.5*((lλ1 - lλi - α)^2 + (lλ2 - lλi - α)^2)
+    end
+  end
+
+  return ss
+end
+
+
+
+
+"""
+    _ss(Ξ  ::Vector{cTfbd},
+        idf::Vector{iBffs},
+        α  ::Float64,
+        fT ::Function,
+        fB ::Function)
+
+Returns the standardized sum of squares for drift `α` for function `f`.
+"""
+function _ss(Ξ  ::Vector{cTfbd},
+             idf::Vector{iBffs},
+             α  ::Float64,
+             fT ::Function,
+             fB ::Function)
+
+  ss = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+
+    ss = _ss(Ξ[i], α, ss, fT)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+
+    if bi2 > 0
+      fi = fB(bi)
+      f1 = fT(Ξ[d1(bi)])
+      f2 = fT(Ξ[bi2])
+      ss += 0.5*((f1 - fi - α)^2 + (f2 - fi - α)^2)
+    end
+  end
+
+  return ss
+end
+
+
+
+
+"""
+    _ss(Ξ  ::Vector{acTfbd},
+        idf::Vector{iBffs},
+        α  ::Float64,
+        f  ::Function)
+
+Returns the standardized sum of squares for drift `α` for function `f`.
+"""
+function _ss(Ξ  ::Vector{acTfbd},
+             idf::Vector{iBffs},
+             α  ::Float64,
+             f  ::Function)
+
+  ss = 0.0
+  for i in Base.OneTo(lastindex(Ξ))
+    ξi = Ξ[i]
+    ss = _ss(ξi, α, ss, f)
+
+    bi  = idf[i]
+    bi2 = d2(bi)
+    if bi2 > 0
+      lξi    = fixtip(ξi)
+      ξb     = if sh(lξi) Ξ[d1(bi)] else Ξ[bi2] end
+      fi, fb = f(lξi), f(ξb)
+
+      ss += 0.5*(fb - fi - α)^2
+    end
+  end
+
+  return ss
+end
+
+
+
+
+
+
+"""
+    _ir(Ξ::Vector{T}) where {T <: cT}
+
+Returns the `integrated rate`.
+"""
+function _ir(Ξ::Vector{T}) where {T <: cT}
+
+  ir = 0.0
+  for ξi in Ξ
+    ir = _ir(ξi, ir)
+  end
+
+  return ir
+end
+
+
+
+
+"""
+    _irbd(Ξ::Vector{T}) where {T <: iTree}
+
+Returns the standardized sum of squares a for rate `f` a `σ` proposal.
+"""
+function _irbd(Ξ::Vector{T}) where {T <: cTbdU}
+
+  irλ = irμ = 0.0
+  for ξi in Ξ
+    irλ, irμ = _ir(ξi, irλ, irμ)
+  end
+
+  return irλ, irμ
+end
+
+
+
+
+"""
+    _ir(Ξ::Vector{T}) where {T <: iTree}
 
 Returns the standardized sum of squares a for rate `f` a `σ` proposal.
 """
@@ -1428,16 +2081,17 @@ end
 
 
 
+
 """
-    scale_rate!(idf::Vector{iBffs}, s::Float64)
+    scale_rate!(idf::Vector{iBffs}, f::Function, s::Float64)
 
 Add `s` to vector retrieved using function `f`.
 """
-function scale_rate!(idf::Vector{iBffs}, s::Float64)
+function scale_rate!(idf::Vector{iBffs}, f::Function, s::Float64)
 
   for bi in idf
     if d2(bi) > 0
-      setλt!(bi, λt(bi) + s)
+      f(bi, s)
     end
   end
 

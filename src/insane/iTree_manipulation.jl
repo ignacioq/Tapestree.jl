@@ -13,6 +13,28 @@ Created 25 06 2020
 
 
 """
+    scale_rate!(tree::T, f::Function, s::Float64) where {T <: cT}
+
+Add `s` to vector retrieved using function `f`.
+"""
+function scale_rate!(tree::T, f::Function, s::Float64) where {T <: cT}
+
+  f(tree, s)
+
+  if def1(tree)
+    scale_rate!(tree.d1, f, s)
+    if def2(tree)
+      scale_rate!(tree.d2, f, s)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
     scale_rate!(tree::iTree, f::Function, s::Float64)
 
 Add `s` to vector retrieved using function `f`.
@@ -108,7 +130,6 @@ function reorder!(tree::T, treeda::D) where {T <: iTree, D <: iTree}
     end  
   end
 end
-
 
 
 
@@ -327,12 +348,160 @@ function _cutbottom(tree::sTfbd,
   if (t + et) > c
     tree = sTfbd(c - t, false, false, isfix(tree))
   else
-    if def1(tree) tree.d1 = _cutbottom(tree.d1, c, t + et) end
-    if def2(tree) tree.d2 = _cutbottom(tree.d2, c, t + et) end
+    if def1(tree) 
+      tree.d1 = _cutbottom(tree.d1, c, t + et) 
+      if def2(tree) 
+        tree.d2 = _cutbottom(tree.d2, c, t + et) 
+      end
+    end
   end
 
   return tree
 end
+
+
+
+
+"""
+    _cutbottom(tree::cTb,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::cTb,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = cTb(c - t, isfix(tree), lλ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
+  end
+
+  return tree
+end
+
+
+
+"""
+    _cutbottom(tree::cTce,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::T,
+                    c   ::Float64,
+                    t   ::Float64) where {T <: cT}
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = T(c - t, false, isfix(tree), lλ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::cTce,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::cTbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = cTbd(c - t, false, isfix(tree), lλ(tree), lμ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      tree.d2 = _cutbottom(tree.d2, c, t + et)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::cTfbd,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::cTfbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = cTfbd(c - t, false, false, isfix(tree), lλ(tree), lμ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      if def2(tree)
+        tree.d2 = _cutbottom(tree.d2, c, t + et)
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _cutbottom(tree::acTfbd,
+               c   ::Float64,
+               t   ::Float64)
+
+Cut the bottom part of the tree after `c`, starting at time `t`.
+"""
+function _cutbottom(tree::acTfbd,
+                    c   ::Float64,
+                    t   ::Float64)
+
+  et = e(tree)
+
+  if (t + et) > c
+    tree = acTfbd(c - t, false, false, false, isfix(tree), lλ(tree), lμ(tree))
+  else
+    if def1(tree)
+      tree.d1 = _cutbottom(tree.d1, c, t + et)
+      if def2(tree)
+        tree.d2 = _cutbottom(tree.d2, c, t + et)
+      end
+    end
+  end
+
+  return tree
+end
+
 
 
 
@@ -1338,6 +1507,96 @@ end
 
 
 """
+    fixtip1!(tree::T, 
+             wi  ::Int64, 
+             ix  ::Int64, 
+             λa  ::Float64, 
+             ei  ::Float64, 
+             λi  ::Float64) where {T <: cT}
+
+Fixes the the path to tip `wi` in d1 order.
+"""
+function fixtip1!(tree::T, 
+                  wi  ::Int64, 
+                  ix  ::Int64, 
+                  λa  ::Float64, 
+                  ei  ::Float64, 
+                  λi  ::Float64) where {T <: cT}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setlλ!(tree, λi)
+        return true, ix, λa, e(tree)
+      end
+    end
+  else
+    f, ix, λa, ei = fixtip1!(tree.d1, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+    f, ix, λa, ei = fixtip1!(tree.d2, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+  end
+
+  return false, ix, λa, ei
+end
+
+
+
+
+"""
+    fixtip2!(tree::T, 
+             wi  ::Int64, 
+             ix  ::Int64, 
+             λa  ::Float64, 
+             ei  ::Float64, 
+             λi  ::Float64) where {T <: cT}
+
+Fixes the the path to tip `wi` in d2 order.
+"""
+function fixtip2!(tree::T, 
+                  wi  ::Int64, 
+                  ix  ::Int64, 
+                  λa  ::Float64, 
+                  ei  ::Float64, 
+                  λi  ::Float64) where {T <: cT}
+
+  if istip(tree)
+    if isalive(tree)
+      ix += 1
+      if ix === wi
+        fix!(tree)
+        setlλ!(tree, λi)
+        return true, ix, λa, e(tree)
+      end
+    end
+  else
+    f, ix, λa, ei = fixtip2!(tree.d2, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+    f, ix, λa, ei = fixtip2!(tree.d1, wi, ix, lλ(tree), ei, λi)
+    if f
+      fix!(tree)
+      return true, ix, λa, ei
+    end
+  end
+
+  return false, ix, λa, ei
+end
+
+
+
+
+"""
     fixtip1!(tree::T,
              wi  ::Int64,
              ix  ::Int64,
@@ -1735,6 +1994,184 @@ function _remove_unsampled!(tree::T) where {T <: iTf}
   return tree
 end
 
+
+
+
+"""
+    _remove_unsampled!(tree::cTb)
+
+Remove extinct tips from `cTb`.
+"""
+function _remove_unsampled!(tree::cTb)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return cTb(e(tree), isfix(tree), lλ(tree))
+      else
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0   = lλ(tree)
+        λ2   = lλ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+      end
+    elseif !isfix(tree.d2)
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0   = lλ(tree)
+      λ1   = lλ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+    end
+  end
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::T) where {T <: cT}
+
+Remove extinct tips from `cTce`.
+"""
+function _remove_unsampled!(tree::T) where {T <: cT}
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return T(e(tree), isextinct(tree), isfix(tree), lλ(tree))
+      else
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0 = lλ(tree)
+        λ2 = lλ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+      end
+    elseif !isfix(tree.d2)
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0 = lλ(tree)
+      λ1 = lλ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+    end
+  end
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::cTbd)
+
+Remove extinct tips from `cTbd`.
+"""
+function _remove_unsampled!(tree::cTbd)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return cTbd(e(tree), isextinct(tree), isfix(tree), lλ(tree), lμ(tree))
+      else
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0 = lλ(tree)
+        λ2 = lλ(tree.d2)
+        μ0 = lμ(tree)
+        μ2 = lμ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+        setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+      end
+    elseif !isfix(tree.d2)
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0 = lλ(tree)
+      λ1 = lλ(tree.d1)
+      μ0 = lμ(tree)
+      μ1 = lμ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+      setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+    end
+  end
+  return tree
+end
+
+
+
+
+"""
+    _remove_unsampled!(tree::cTfbd)
+
+Remove extinct tips from `cTfbd`.
+"""
+function _remove_unsampled!(tree::cTfbd)
+
+  if def1(tree)
+    tree.d1 = _remove_unsampled!(tree.d1)
+    if def2(tree)
+      tree.d2 = _remove_unsampled!(tree.d2)
+      if !isfix(tree.d1)
+        if !isfix(tree.d2)
+          return cTfbd(e(tree), isextinct(tree), isfossil(tree), 
+                   isfix(tree), lλ(tree), lμ(tree))
+        else
+          e0   = e(tree)
+          e2   = e(tree.d2)
+          λ0 = lλ(tree)
+          λ2 = lλ(tree.d2)
+          μ0 = lμ(tree)
+          μ2 = lμ(tree.d2)
+          tree = tree.d2
+          sete!(tree, e0 + e2)
+          setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+          setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+        end
+      elseif !isfix(tree.d2)
+        e0   = e(tree)
+        e1   = e(tree.d1)
+        λ0 = lλ(tree)
+        λ1 = lλ(tree.d1)
+        μ0 = lμ(tree)
+        μ1 = lμ(tree.d1)
+        tree = tree.d1
+        sete!(tree, e0 + e1)
+        setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+        setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+      end
+    else
+      if !isfix(tree.d1)
+        return cTfbd(e(tree), isextinct(tree), isfossil(tree), 
+                 isfix(tree), lλ(tree), lμ(tree))
+      end
+    end
+  end
+
+  return tree
+end
 
 
 
@@ -2243,11 +2680,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTce)
+    _remove_extinct!(tree::T)
 
-Remove extinct tips from `iTce`.
+Remove extinct tips from `T`.
 """
-function _remove_extinct!(tree::iTce)
+function _remove_extinct!(tree::T) where {T <: cT}
 
   if def1(tree)
 
@@ -2256,41 +2693,24 @@ function _remove_extinct!(tree::iTce)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTce(e(tree), dt(tree), fdt(tree),
-          true, isfix(tree), lλ(tree))
+        return T(e(tree), true, isfix(tree), lλ(tree))
       else
-        ne  = e(tree) + e(tree.d2)
-        lλ0 = lλ(tree)
-        lλ2 = lλ(tree.d2)
-
-        fdt2 = fdt(tree.d2)
-        pop!(lλ0)
-        iszero(fdt2) && popfirst!(lλ2)
-        prepend!(lλ2, lλ0)
-        fdt0 = fdt(tree) + fdt2
-        if fdt0 > dt(tree)
-          fdt0 -= dt(tree)
-        end
+        e0   = e(tree)
+        e2   = e(tree.d2)
+        λ0   = lλ(tree)
+        λ2   = lλ(tree.d2)
         tree = tree.d2
-        sete!(tree, ne)
-        setfdt!(tree, fdt0)
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
       end
     elseif isextinct(tree.d2)
-      ne  = e(tree) + e(tree.d1)
-      lλ0 = lλ(tree)
-      lλ1 = lλ(tree.d1)
-
-      fdt1 = fdt(tree.d1)
-      pop!(lλ0)
-      iszero(fdt1) && popfirst!(lλ1)
-      prepend!(lλ1, lλ0)
-      fdt0 = fdt(tree) + fdt1
-      if fdt0 > dt(tree)
-        fdt0 -= dt(tree)
-      end
+      e0   = e(tree)
+      e1   = e(tree.d1)
+      λ0   = lλ(tree)
+      λ1   = lλ(tree.d1)
       tree = tree.d1
-      sete!(tree, ne)
-      setfdt!(tree, fdt0)
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
     end
   end
 
@@ -2301,11 +2721,11 @@ end
 
 
 """
-    _remove_extinct!(tree::iTct)
+    _remove_extinct!(tree::cTbd)
 
-Remove extinct tips from `iTct`.
+Remove extinct tips from `cTbd`.
 """
-function _remove_extinct!(tree::iTct)
+function _remove_extinct!(tree::cTbd)
 
   if def1(tree)
 
@@ -2314,7 +2734,94 @@ function _remove_extinct!(tree::iTct)
 
     if isextinct(tree.d1)
       if isextinct(tree.d2)
-        return iTct(e(tree), dt(tree), fdt(tree),
+        return cTbd(e(tree), true, isfix(tree), lλ(tree), lμ(tree))
+      else
+        e0, e2 = e(tree), e(tree.d2)
+        λ0, λ2 = lλ(tree), lλ(tree.d2)
+        μ0, μ2 = lμ(tree), lμ(tree.d2)
+        tree = tree.d2
+        sete!(tree, e0 + e2)
+        setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+        setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+      end
+    elseif isextinct(tree.d2)
+      e0, e1 = e(tree), e(tree.d1)
+      λ0, λ1 = lλ(tree), lλ(tree.d1)
+      μ0, μ1 = lμ(tree), lμ(tree.d1)
+      tree = tree.d1
+      sete!(tree, e0 + e1)
+      setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+      setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
+    _remove_extinct!(tree::cTfbd)
+
+Remove extinct tips from `cTfbd`.
+"""
+function _remove_extinct!(tree::cTfbd)
+
+  if def1(tree)
+    tree.d1 = _remove_extinct!(tree.d1)
+    if def2(tree)
+      tree.d2 = _remove_extinct!(tree.d2)
+
+      if isextinct(tree.d1)
+        if isextinct(tree.d2)
+          return cTfbd(e(tree), true, isfossil(tree), isfix(tree), 
+                  lλ(tree), lμ(tree))
+        else
+          e0, e2 = e(tree), e(tree.d2)
+          λ0, λ2 = lλ(tree), lλ(tree.d2)
+          μ0, μ2 = lμ(tree), lμ(tree.d2)
+          tree = tree.d2
+          sete!(tree, e0 + e2)
+          setlλ!(tree, ((e0*λ0) + (e2*λ2)) /(e0 + e2))
+          setlμ!(tree, ((e0*μ0) + (e2*μ2)) /(e0 + e2))
+        end
+      elseif isextinct(tree.d2)
+        e0, e1 = e(tree), e(tree.d1)
+        λ0, λ1 = lλ(tree), lλ(tree.d1)
+        μ0, μ1 = lμ(tree), lμ(tree.d1)
+        tree = tree.d1
+        sete!(tree, e0 + e1)
+        setlλ!(tree, ((e0*λ0) + (e1*λ1)) /(e0 + e1))
+        setlμ!(tree, ((e0*μ0) + (e1*μ1)) /(e0 + e1))
+      end
+    else
+      if isextinct(tree.d1)
+        return cTfbd(e(tree), false, true, isfix(tree), lλ(tree), lμ(tree))
+      end
+    end
+  end
+
+  return tree
+end
+
+
+
+"""
+    _remove_extinct!(tree::T) where {T <: iT}
+
+Remove extinct tips from `iT`.
+"""
+function _remove_extinct!(tree::T) where {T <: iT}
+
+  if def1(tree)
+
+    tree.d1 = _remove_extinct!(tree.d1)
+    tree.d2 = _remove_extinct!(tree.d2)
+
+    if isextinct(tree.d1)
+      if isextinct(tree.d2)
+        return T(e(tree), dt(tree), fdt(tree),
           true, isfix(tree), lλ(tree))
       else
         ne  = e(tree) + e(tree.d2)
@@ -2499,7 +3006,7 @@ function _remove_extinct!(tree::iTfbd)
     else
       if isextinct(tree.d1)
         return iTfbd(e(tree), dt(tree), fdt(tree),
-            isextinct(tree), isfossil(tree), isfix(tree), lλ(tree), lμ(tree))
+            false, true, isfix(tree), lλ(tree), lμ(tree))
       end
     end
   end
@@ -3067,10 +3574,11 @@ fix!(tree::T) where {T <: iTree} = setproperty!(tree, :fx, true)
 """
     setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT}
 
-Set number of `δt` for `tree`.
+Set speciation `lλ` for `tree`.
 """
 setlλ!(tree::T, lλ::Array{Float64,1}) where {T <: iT} =
   setproperty!(tree, :lλ, lλ)
+setlλ!(tree::T, lλ::Float64) where {T <: cT} = setproperty!(tree, :lλ, lλ)
 
 
 
@@ -3082,6 +3590,27 @@ Set number of `δt` for `tree`.
 """
 setlμ!(tree::T, lμ::Array{Float64,1}) where {T <: iT} =
   setproperty!(tree, :lμ, lμ)
+setlμ!(tree::T, lμ::Float64) where {T <: cT} = setproperty!(tree, :lμ, lμ)
+
+
+
+
+"""
+    addlλ!(tree::cTb, a::Float64)
+
+Add to `lλ` for `tree`.
+"""
+addlλ!(tree::T, a::Float64) where {T <: cT} = setproperty!(tree, :lλ, lλ(tree) + a)
+
+
+
+
+"""
+    addlμ!(tree::cTb, a::Float64)
+
+Add to `lμ` for `tree`.
+"""
+addlμ!(tree::T, a::Float64) where {T <: cT} = setproperty!(tree, :lμ, lμ(tree) + a)
 
 
 
@@ -3223,6 +3752,384 @@ Set `x` as shift to d1 (true) or d2 (false).
 """
 setsh!(tree::T, x::Bool) where {T <: Tx} =
   setproperty!(tree, :sh, x)
+
+
+
+
+"""
+    setupstreamλ!(λi ::Float64,
+                  i  ::Int64,
+                  Ξ  ::Vector{T},
+                  idf::Vector{iBffs}) where {T <: cT}
+
+Set the speciation rate of the upstream ancestors, if any, for 
+middle branches to `λi`.
+"""
+function setupstreamλ!(λi ::Float64,
+                       i  ::Int64,
+                       Ξ  ::Vector{T},
+                       idf::Vector{iBffs}) where {T <: cT}
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is non-cladogenetic
+    if iszero(d2(bi))
+      ξi   = Ξ[i]
+
+      if def2(ξi)
+        lξi = fixtip(ξi)
+        setlλ!(lξi, λi)
+      else
+        ia = pa(bi)
+        setlλ!(ξi, λi)
+        if ia > 0
+          setupstreamλ!(λi, ia, Ξ, idf)
+        end
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setupstreamλμ!(λi ::Float64,
+                   μi ::Float64,
+                   i  ::Int64,
+                   Ξ  ::Vector{cTbd},
+                   idf::Vector{iBffs})
+
+Set the speciation and extinction rate of the upstream ancestors, if any, for 
+middle branches to `λi`.
+"""
+function setupstreamλμ!(λi ::Float64,
+                        μi ::Float64,
+                        i  ::Int64,
+                        Ξ  ::Vector{T},
+                        idf::Vector{iBffs}) where {T <: cT}
+
+  @inbounds begin
+    bi = idf[i]
+
+    # if branch is non-cladogenetic
+    if iszero(d2(bi))
+      ξi   = Ξ[i]
+
+      if def2(ξi)
+        lξi = fixtip(ξi)
+        setlλ!(lξi, λi)
+        setlμ!(lξi, μi)
+      else
+        ia = pa(bi)
+        setlλ!(ξi, λi)
+        setlμ!(ξi, μi)
+        if ia > 0
+          setupstreamλμ!(λi, μi, ia, Ξ, idf)
+        end
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setdownstreamλ!(λi ::Float64,
+                    i  ::Int64,
+                    Ξ  ::Vector{T}, 
+                    idf::Vector{iBffs}) where {T <: cT}
+
+Set the speciation rate of the downstream daughters, if any, for 
+middle branches to `λi`.
+"""
+function setdownstreamλ!(λi ::Float64,
+                         i  ::Int64,
+                         Ξ  ::Vector{T}, 
+                         idf::Vector{iBffs}) where {T <: cT}
+
+  @inbounds begin
+
+    ξi = Ξ[i]
+    setlλ!(ξi, λi)
+
+    if istip(ξi)
+      bi = idf[i]
+      i1 = d1(bi)
+      if i1 > 0
+        if iszero(d2(bi))
+          setdownstreamλ!(λi, i1, Ξ, idf)
+        else
+          setλt!(bi, λi)
+        end
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
+"""
+    setdownstreamλμ!(λi ::Float64,
+                     μi ::Float64,
+                     i  ::Int64,
+                     Ξ  ::Vector{cTbd}, 
+                     idf::Vector{iBffs})
+
+Set the speciation rate of the downstream daughters, if any, for 
+middle branches to `λi` and `μi`.
+"""
+function setdownstreamλμ!(λi ::Float64,
+                          μi ::Float64,
+                          i  ::Int64,
+                          Ξ  ::Vector{T}, 
+                          idf::Vector{iBffs}) where {T <: cT}
+
+  @inbounds begin
+
+    ξi = Ξ[i]
+    setlλ!(ξi, λi)
+    setlμ!(ξi, μi)
+
+    if istip(ξi)
+      bi = idf[i]
+      i1 = d1(bi)
+      if i1 > 0
+        # if mid or mid-fossil
+        if iszero(d2(bi))
+          setdownstreamλμ!(λi, μi, i1, Ξ, idf)
+        # if cladogenetic
+        else
+          setλt!(bi, λi)
+          setμt!(bi, μi)
+        end
+      end
+    # if tip fossil
+    elseif isfossil(ξi)
+      setlλ!(ξi.d1, λi)
+      setlμ!(ξi.d1, μi)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setupstreamλμ!(λi  ::Float64,
+                   μi  ::Float64,
+                   ad1  ::Bool,
+                   tree::acTfbd)
+
+Set speciation and extinction of lineage upstream.
+"""
+function setupstreamλμ!(λi  ::Float64,
+                        μi  ::Float64,
+                        ad1 ::Bool,
+                        tree::acTfbd)
+  if def1(tree)
+    if def2(tree)
+      if isfix(tree.d1)
+        ascends = setupstreamλμ!(λi, μi, ad1, tree.d1)
+        # if daughter 2 is budding
+        if ascends && !sh(tree)
+          setlλ!(tree, λi)
+          setlμ!(tree, μi)
+          return true
+        else
+          return false
+        end
+      else
+        ascends = setupstreamλμ!(λi, μi, ad1, tree.d2)
+        # if daughter 1 is budding
+        if ascends && sh(tree)
+          setlλ!(tree, λi)
+          setlμ!(tree, μi)
+          return true
+        else
+          return false
+        end
+      end
+    end
+  elseif isfix(tree)
+    if isfossil(tree)
+      setlλ!(tree, λi)
+      setlμ!(tree, μi)
+
+      return true
+    # if ascending from daughter 1
+    elseif ad1
+      # if daughter 2 is budding
+      if !sh(tree)
+        setlλ!(tree, λi)
+        setlμ!(tree, μi)
+
+        return true
+      else
+        return false
+      end
+    # if ascending from daughter 2
+    else
+      # if daughter 1 is budding
+      if sh(tree)
+        setlλ!(tree, λi)
+        setlμ!(tree, μi)
+
+        return true
+      else
+        return false
+      end
+    end
+  end
+
+  return false
+end
+
+
+
+
+"""
+    setupstreamλμ!(λi ::Float64,
+                   μi ::Float64,
+                   i  ::Int64,
+                   Ξ  ::Vector{acTfbd},
+                   idf::Vector{iBffs})
+
+Set speciation and extinction of lineage upstream.
+"""
+function setupstreamλμ!(λi ::Float64,
+                        μi ::Float64,
+                        i  ::Int64,
+                        ad1::Bool,
+                        Ξ  ::Vector{acTfbd},
+                        idf::Vector{iBffs})
+  @inbounds begin
+    ascends = setupstreamλμ!(λi, μi, ad1, Ξ[i])
+
+    # if lineage continues upwards
+    if ascends
+      bi = idf[i]
+      if pa(bi) > 0
+        setupstreamλμ!(λi, μi, pa(bi), i === d1(idf[pa(bi)]), Ξ, idf)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setdownstreamλμ!(λi::Float64, μi::Float64, tree::acTfbd, iμ::Bool)
+
+Set speciation and extinction of lineage.
+"""
+function setdownstreamλμ!(λi::Float64, μi::Float64, tree::acTfbd, downlin::Int64)
+
+  setlλ!(tree, λi)
+  setlμ!(tree, μi)
+
+  # if cladogenetic
+  if def1(tree)
+    if def2(tree)
+      # continue on lineage
+      downlin = setdownstreamλμ!(λi, μi, sh(tree) ? tree.d2 : tree.d1, downlin)
+    else
+      downlin = setdownstreamλμ!(λi, μi, tree.d1, downlin)
+    end
+  elseif isextinct(tree)
+    return 2
+  else
+    return Int64(sh(tree))
+  end
+
+  return downlin
+end
+
+
+
+
+"""
+    setdownstreamλμ!(λi ::Float64,
+                     μi ::Float64,
+                     i  ::Int64,
+                     Ξ  ::Vector{acTfbd},
+                     idf::Vector{iBffs})
+
+Set speciation and extinction of lineage upsdowneam.
+"""
+function setdownstreamλμ!(λi ::Float64,
+                          μi ::Float64,
+                          i  ::Int64,
+                          Ξ  ::Vector{acTfbd},
+                          idf::Vector{iBffs})
+
+  @inbounds begin
+    downlin = setdownstreamλμ!(λi, μi, Ξ[i], 0)
+
+    bi = idf[i]
+
+    # if lineage continues downwards
+    if downlin < 2
+      # if non-terminal
+      if d1(bi) > 0
+        # if cladogenetic
+        if d2(bi) > 0
+          # if daughter 2 is budding or (:) not
+          id = iszero(downlin) ? d1(bi) : d2(bi)
+          setdownstreamλμ!(λi, μi, id, Ξ, idf)
+        # if fossil or mid branch
+        else
+          setdownstreamλμ!(λi, μi, d1(bi), Ξ, idf)
+        end
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+"""
+    setlineageλμ!(λi ::Float64,
+                  μi ::Float64,
+                  i  ::Int64,
+                  Ξ  ::Vector{acTfbd},
+                  idf::Vector{iBffs})
+
+Set speciation and extinction rates of lineage through decoupled tree.
+"""
+function setlineageλμ!(λi ::Float64,
+                       μi ::Float64,
+                       i  ::Int64,
+                       Ξ  ::Vector{acTfbd},
+                       idf::Vector{iBffs})
+  bi = idf[i]
+ 
+  ## upstream
+  setupstreamλμ!(λi, μi, pa(bi), i === d1(idf[pa(bi)]), Ξ, idf)
+
+  ## downstream
+  setdownstreamλμ!(λi, μi, i, Ξ, idf)
+
+  return nothing
+end
 
 
 

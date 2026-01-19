@@ -235,6 +235,7 @@ A Composite type representing node address for a **fixed** branch in `iTree`:
   `ni`  : current alive descendants at present (≠ fixed ones in daughter branches).
   `nt`  : current alive descendants at time `t`.
   `λt`  : final speciation rate for fixed at time `t`.
+  `μt`  : final extinction rate for fixed at time `t`.
   `ifx` : is trait information fixed for end node.
 
     iBffs()
@@ -254,6 +255,7 @@ struct iBffs <: iBf
   ni  ::Base.RefValue{Int64}
   nt  ::Base.RefValue{Int64}
   λt  ::Base.RefValue{Float64}
+  μt  ::Base.RefValue{Float64}
   ifx ::Bool
   xavg::Float64
   xstd::Float64
@@ -262,12 +264,17 @@ struct iBffs <: iBf
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         iψ::Bool, fx::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, iψ, fx, ρi,
-         Ref(ni), Ref(nt), Ref(λt), false, NaN, NaN)
+         Ref(ni), Ref(nt), Ref(λt), Ref(NaN), false, NaN, NaN)
   iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
         iψ::Bool, fx::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64,
         ifx::Bool, xavg::Float64, xstd::Float64) =
         new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, iψ, fx, ρi,
-         Ref(ni), Ref(nt), Ref(λt), ifx, xavg, xstd)
+         Ref(ni), Ref(nt), Ref(λt), Ref(NaN), ifx, xavg, xstd)
+  iBffs(t::Float64, pa::Int64, d1::Int64, d2::Int64, ti::Float64, tf::Float64,
+        iψ::Bool, fx::Bool, ρi::Float64, ni::Int64, nt::Int64, λt::Float64,
+        μt::Float64, ifx::Bool, xavg::Float64, xstd::Float64) =
+        new(t, Ref(pa), Ref(d1), Ref(d2), ti, tf, iψ, fx, ρi,
+         Ref(ni), Ref(nt), Ref(λt), Ref(μt), ifx, xavg, xstd)
 end
 
 # pretty-printing
@@ -323,7 +330,7 @@ function makeiBf!(tree::sT,
     iψ  = isfossil(tree)
     ρi  = iψ ? 1.0 : tρ[label(tree)]
     te  = ts - el
-    te  = isapprox(te, 0.0) ? 0.0 : te
+    te  = (!iψ && isapprox(te, 0.0, atol = accerr)) ? 0.0 : te
     push!(idv, 
       iBffs(el, 0, 0, 0, ts, te, iψ, false, ρi, Int64(!iψ), 1, NaN))
     push!(n2v, 0)
@@ -451,7 +458,7 @@ function makeiBf!(tree::sT,
     iψ  = isfossil(tree)
     ρi  = iψ ? 1.0 : get(tρ, lab, 1.0)
     te  = ts - el
-    te  = isapprox(te, 0.0, atol = accerr) ? 0.0 : te
+    te  = (!iψ && isapprox(te, 0.0, atol = accerr)) ? 0.0 : te
     xi  = get(xav, lab, nothing)
     si  = get(xst, lab, 0.0)
     ifx = !isnothing(xi)
@@ -742,19 +749,11 @@ Return final speciation rate at time `t.
 
 
 """
-    λt(tree::T) where {T <: iT}
+    λt(id::iBffs)
 
 Return final speciation rate at time `t.
 """
-function λt(tree::T) where {T <: iT}
-  if istip(tree)
-    return lλ(tree)[end]
-  elseif isfix(tree.d1::T)
-    λt(tree.d1::T)
-  else
-    λt(tree.d2::T)
-  end
-end
+μt(id::iBffs) = getproperty(id, :μt)[]
 
 
 

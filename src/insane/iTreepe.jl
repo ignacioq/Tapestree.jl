@@ -23,7 +23,7 @@ with the following fields:
   iμ: is an extinction node
   xi: initial trait value
   xf: final trait value
-  sh: if d1 is cladogenetic
+  sh: if d1 is cladogenetic (if d1 is the one budding)
   fx: if it is fix
 
 Constructs a tip.

@@ -100,7 +100,7 @@ function insane_gbmce(tree    ::sT_label;
   # make a decoupled tree
   Ξ = make_Ξ(idf, λc, αi, σλi, δt, srδt, iTce)
 
-  #survival
+  # survival
   mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 1_000, surv)
 
   # get vector of internal branches
@@ -189,7 +189,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   el      = lastindex(idf)     # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
 
@@ -227,8 +227,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
       # gbm update
       elseif pupi === 4
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
 
         llc, prc, ddλ, ssλ, mc =
           update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, prc, ddλ, ssλ, mc, th,
@@ -237,7 +236,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
       # forward simulation update
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ddλ, ssλ, nλ, ne, L =
           update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, ddλ, ssλ, nλ, ne, L, 
@@ -315,7 +314,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
   el      = lastindex(idf)           # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _ss_dd(Ξ, αc)
+  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
 
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 7)
@@ -385,8 +384,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
             # gbm update
             elseif pupi === 4
 
-              nix = ceil(Int64,rand()*nin)
-              bix = inodes[nix]
+              bix = inodes[fIrand(nin) + 1]
 
               llc, prc, ddλ, ssλ, mc =
                 update_gbm!(bix, Ξ, idf, αc, σλc, μc, llc, prc, ddλ, ssλ, mc, th,
@@ -401,7 +399,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
             # forward simulation update
             else
 
-              bix = ceil(Int64,rand()*el)
+              bix = fIrand(el) + 1
 
               llc, ddλ, ssλ, nλ, ne, L =
                 update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, ddλ, ssλ, nλ, ne, L,
@@ -447,11 +445,278 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
           next!(pbar)
         end
-
-        return r, treev
       end
     end
   end
+
+  return r, treev
+end
+
+
+
+
+
+
+"""
+    update_α!(αc     ::Float64,
+              λ0     ::Float64,
+              σλ     ::Float64,
+              μ      ::Float64,
+              L      ::Float64,
+              ddλ     ::Float64,
+              llc    ::Float64,
+              prc    ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              crown  ::Int64,
+              δt     ::Float64,
+              srδt   ::Float64,
+              α_prior::NTuple{2,Float64})
+
+Gibbs update for `α`.
+"""
+function update_α!(αc     ::Float64,
+                   λ0     ::Float64,
+                   σλ     ::Float64,
+                   μ      ::Float64,
+                   L      ::Float64,
+                   ddλ     ::Float64,
+                   llc    ::Float64,
+                   prc    ::Float64,
+                   mc     ::Float64,
+                   th     ::Float64,
+                   surv  ::Int64,
+                   δt     ::Float64,
+                   srδt   ::Float64,
+                   α_prior::NTuple{2,Float64})
+
+  ν   = α_prior[1]
+  τ2  = α_prior[2]^2
+  σλ2 = σλ^2
+  rs  = σλ2/τ2
+  αp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+
+  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, surv)
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
+    prc += llrdnorm_x(αp, αc, ν, τ2)
+    αc   = αp
+    mc   = mp
+  end
+
+  return llc, prc, αc, mc
+end
+
+
+
+
+"""
+
+    update_σ!(σλc     ::Float64,
+              λ0      ::Float64,
+              α       ::Float64,
+              μ       ::Float64,
+              ssλ     ::Float64,
+              n       ::Float64,
+              llc     ::Float64,
+              prc     ::Float64,
+              mc      ::Float64,
+              th      ::Float64,
+              crown   ::Int64,
+              δt      ::Float64,
+              srδt    ::Float64,
+              σλ_prior::NTuple{2,Float64})
+
+Gibbs update for `σλ`.
+"""
+function update_σ!(σλc     ::Float64,
+                   λ0      ::Float64,
+                   α       ::Float64,
+                   μ       ::Float64,
+                   ssλ     ::Float64,
+                   n       ::Float64,
+                   llc     ::Float64,
+                   prc     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
+                   surv   ::Int64,
+                   δt      ::Float64,
+                   srδt    ::Float64,
+                   σλ_prior::NTuple{2,Float64})
+
+  σλ_p1 = σλ_prior[1]
+  σλ_p2 = σλ_prior[2]
+
+  # Gibbs update for σ
+  σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
+  σλp  = sqrt(σλp2)
+
+  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, surv)
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) + llr
+    prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
+    σλc  = σλp
+    mc   = mp
+  end
+
+  return llc, prc, σλc, mc
+end
+
+
+
+
+"""
+    update_μ!(μc     ::Float64,
+              λ0     ::Float64,
+              α      ::Float64,
+              σλ     ::Float64,
+              llc    ::Float64,
+              prc    ::Float64,
+              ne     ::Float64,
+              L      ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              surv  ::Int64,
+              δt     ::Float64,
+              srδt   ::Float64,
+              μ_prior::NTuple{2,Float64})
+
+Gibbs-MH update for `μ`.
+"""
+function update_μ!(μc     ::Float64,
+                   λ0     ::Float64,
+                   α      ::Float64,
+                   σλ     ::Float64,
+                   llc    ::Float64,
+                   prc    ::Float64,
+                   ne     ::Float64,
+                   L      ::Float64,
+                   mc     ::Float64,
+                   th     ::Float64,
+                   surv  ::Int64,
+                   δt     ::Float64,
+                   srδt   ::Float64,
+                   μ_prior::NTuple{2,Float64})
+
+  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
+
+  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, surv)
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += ne * log(μp/μc) + L * (μc - μp) + llr
+    prc += llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
+    μc   = μp
+    mc   = mp
+  end
+
+  return llc, prc, μc, mc
+end
+
+
+
+
+"""
+    update_gbm!(bix     ::Int64,
+                Ξ       ::Vector{iTce},
+                idf     ::Vector{iBffs},
+                α       ::Float64,
+                σλ      ::Float64,
+                μ       ::Float64,
+                llc     ::Float64,
+                prc     ::Float64,
+                ddλ     ::Float64,
+                ssλ     ::Float64,
+                mc      ::Float64,
+                th      ::Float64,
+                δt      ::Float64,
+                srδt    ::Float64,
+                λ0_prior::NTuple{2,Float64},
+                surv    ::Int64)
+
+Make a `gbm` update for an internal branch and its descendants.
+"""
+function update_gbm!(bix     ::Int64,
+                     Ξ       ::Vector{iTce},
+                     idf     ::Vector{iBffs},
+                     α       ::Float64,
+                     σλ      ::Float64,
+                     μ       ::Float64,
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     ddλ     ::Float64,
+                     ssλ     ::Float64,
+                     mc      ::Float64,
+                     th      ::Float64,
+                     δt      ::Float64,
+                     srδt    ::Float64,
+                     λ0_prior::NTuple{2,Float64},
+                     surv    ::Int64)
+
+  @inbounds begin
+
+    ξi   = Ξ[bix]
+    bi   = idf[bix]
+    i1   = d1(bi)
+    i2   = d2(bi)
+    ξ1   = Ξ[i1]
+    root = iszero(pa(bi))
+
+    # if crown
+    if root && iszero(e(bi))
+      ξ2 = Ξ[i2]
+      llc, prc, ddλ, ssλ, mc =
+        _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
+          δt, srδt, λ0_prior, surv)
+      setλt!(bi, lλ(ξi)[1])
+    else
+      # if stem
+      if root
+        llc, prc, ddλ, ssλ, mc =
+          _stem_update!(ξi, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
+            δt, srδt, λ0_prior, surv)
+      end
+
+      # parent branch update
+      llc, ddλ, ssλ = _update_gbm!(ξi, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, false)
+
+      # get fixed tip
+      lξi = fixtip(ξi)
+
+      if iszero(i2)
+
+        llc, ssλ =
+          update_duo!(lλ(lξi), lλ(ξ1), e(lξi), e(ξ1),
+            fdt(lξi), fdt(ξ1), α, σλ, μ, llc, ssλ, δt, srδt)
+
+      else
+        ξ2 = Ξ[i2]
+        # make between decoupled trees node update
+        llc, ddλ, ssλ =
+          update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
+            fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, ddλ, ssλ, δt, srδt)
+
+        # set fixed `λ(t)` in branch
+        setλt!(bi, lλ(ξ1)[1])
+      end
+    end
+
+    # carry on updates in the daughters
+    llc, ddλ, ssλ = 
+      _update_gbm!(ξ1, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i1])))
+
+    if i2 > 0
+      ξ2 = Ξ[i2]
+      llc, ddλ, ssλ = 
+        _update_gbm!(ξ2, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i2])))
+    end
+  end
+
+  return llc, prc, ddλ, ssλ, mc
 end
 
 
@@ -806,270 +1071,6 @@ function tip_sims!(tree::iTce,
   return tree, na, nn, NaN
 end
 
-
-
-
-"""
-    update_gbm!(bix     ::Int64,
-                Ξ       ::Vector{iTce},
-                idf     ::Vector{iBffs},
-                α       ::Float64,
-                σλ      ::Float64,
-                μ       ::Float64,
-                llc     ::Float64,
-                prc     ::Float64,
-                ddλ     ::Float64,
-                ssλ     ::Float64,
-                mc      ::Float64,
-                th      ::Float64,
-                δt      ::Float64,
-                srδt    ::Float64,
-                λ0_prior::NTuple{2,Float64},
-                surv    ::Int64)
-
-Make a `gbm` update for an internal branch and its descendants.
-"""
-function update_gbm!(bix     ::Int64,
-                     Ξ       ::Vector{iTce},
-                     idf     ::Vector{iBffs},
-                     α       ::Float64,
-                     σλ      ::Float64,
-                     μ       ::Float64,
-                     llc     ::Float64,
-                     prc     ::Float64,
-                     ddλ     ::Float64,
-                     ssλ     ::Float64,
-                     mc      ::Float64,
-                     th      ::Float64,
-                     δt      ::Float64,
-                     srδt    ::Float64,
-                     λ0_prior::NTuple{2,Float64},
-                     surv    ::Int64)
-
-  @inbounds begin
-
-    ξi   = Ξ[bix]
-    bi   = idf[bix]
-    i1   = d1(bi)
-    i2   = d2(bi)
-    ξ1   = Ξ[i1]
-    root = iszero(pa(bi))
-
-    # if crown
-    if root && iszero(e(bi))
-      ξ2 = Ξ[i2]
-      llc, prc, ddλ, ssλ, mc =
-        _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
-          δt, srδt, λ0_prior, surv)
-      setλt!(bi, lλ(ξi)[1])
-    else
-      # if stem
-      if root
-        llc, prc, ddλ, ssλ, mc =
-          _stem_update!(ξi, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
-            δt, srδt, λ0_prior, surv)
-      end
-
-      # parent branch update
-      llc, ddλ, ssλ = _update_gbm!(ξi, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, false)
-
-      # get fixed tip
-      lξi = fixtip(ξi)
-
-      if iszero(i2)
-
-        llc, ssλ =
-          update_duo!(lλ(lξi), lλ(ξ1), e(lξi), e(ξ1),
-            fdt(lξi), fdt(ξ1), α, σλ, μ, llc, ssλ, δt, srδt)
-
-      else
-        ξ2 = Ξ[i2]
-        # make between decoupled trees node update
-        llc, ddλ, ssλ =
-          update_triad!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-            fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, μ, llc, ddλ, ssλ, δt, srδt)
-
-        # set fixed `λ(t)` in branch
-        setλt!(bi, lλ(ξ1)[1])
-      end
-    end
-
-    # carry on updates in the daughters
-    llc, ddλ, ssλ = 
-      _update_gbm!(ξ1, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i1])))
-
-    if i2 > 0
-      ξ2 = Ξ[i2]
-      llc, ddλ, ssλ = 
-        _update_gbm!(ξ2, α, σλ, μ, llc, ddλ, ssλ, δt, srδt, iszero(d1(idf[i2])))
-    end
-  end
-
-  return llc, prc, ddλ, ssλ, mc
-end
-
-
-
-
-"""
-    update_α!(αc     ::Float64,
-              λ0     ::Float64,
-              σλ     ::Float64,
-              μ      ::Float64,
-              L      ::Float64,
-              ddλ     ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
-              mc     ::Float64,
-              th     ::Float64,
-              crown  ::Int64,
-              δt     ::Float64,
-              srδt   ::Float64,
-              α_prior::NTuple{2,Float64})
-
-Gibbs update for `α`.
-"""
-function update_α!(αc     ::Float64,
-                   λ0     ::Float64,
-                   σλ     ::Float64,
-                   μ      ::Float64,
-                   L      ::Float64,
-                   ddλ     ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   surv  ::Int64,
-                   δt     ::Float64,
-                   srδt   ::Float64,
-                   α_prior::NTuple{2,Float64})
-
-  ν   = α_prior[1]
-  τ2  = α_prior[2]^2
-  σλ2 = σλ^2
-  rs  = σλ2/τ2
-  αp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
-
-  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, surv)
-  llr = log(mp/mc)
-
-  if -randexp() < llr
-    llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
-    prc += llrdnorm_x(αp, αc, ν, τ2)
-    αc   = αp
-    mc   = mp
-  end
-
-  return llc, prc, αc, mc
-end
-
-
-
-
-"""
-
-    update_σ!(σλc     ::Float64,
-              λ0      ::Float64,
-              α       ::Float64,
-              μ       ::Float64,
-              ssλ     ::Float64,
-              n       ::Float64,
-              llc     ::Float64,
-              prc     ::Float64,
-              mc      ::Float64,
-              th      ::Float64,
-              crown   ::Int64,
-              δt      ::Float64,
-              srδt    ::Float64,
-              σλ_prior::NTuple{2,Float64})
-
-Gibbs update for `σλ`.
-"""
-function update_σ!(σλc     ::Float64,
-                   λ0      ::Float64,
-                   α       ::Float64,
-                   μ       ::Float64,
-                   ssλ     ::Float64,
-                   n       ::Float64,
-                   llc     ::Float64,
-                   prc     ::Float64,
-                   mc      ::Float64,
-                   th      ::Float64,
-                   surv   ::Int64,
-                   δt      ::Float64,
-                   srδt    ::Float64,
-                   σλ_prior::NTuple{2,Float64})
-
-  σλ_p1 = σλ_prior[1]
-  σλ_p2 = σλ_prior[2]
-
-  # Gibbs update for σ
-  σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
-  σλp  = sqrt(σλp2)
-
-  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, surv)
-  llr = log(mp/mc)
-
-  if -randexp() < llr
-    llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) + llr
-    prc += llrdinvgamma(σλp2, σλc^2, σλ_p1, σλ_p2)
-    σλc  = σλp
-    mc   = mp
-  end
-
-  return llc, prc, σλc, mc
-end
-
-
-
-
-"""
-    update_μ!(μc     ::Float64,
-              λ0     ::Float64,
-              α      ::Float64,
-              σλ     ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
-              ne     ::Float64,
-              L      ::Float64,
-              mc     ::Float64,
-              th     ::Float64,
-              surv  ::Int64,
-              δt     ::Float64,
-              srδt   ::Float64,
-              μ_prior::NTuple{2,Float64})
-
-Gibbs-MH update for `μ`.
-"""
-function update_μ!(μc     ::Float64,
-                   λ0     ::Float64,
-                   α      ::Float64,
-                   σλ     ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
-                   ne     ::Float64,
-                   L      ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   surv  ::Int64,
-                   δt     ::Float64,
-                   srδt   ::Float64,
-                   μ_prior::NTuple{2,Float64})
-
-  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
-
-  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, surv)
-  llr = log(mp/mc)
-
-  if -randexp() < llr
-    llc += ne * log(μp/μc) + L * (μc - μp) + llr
-    prc += llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
-    μc   = μp
-    mc   = mp
-  end
-
-  return llc, prc, μc, mc
-end
 
 
 
