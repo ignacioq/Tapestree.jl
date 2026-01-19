@@ -1,260 +1,260 @@
 #=
 
-Anagenetic GBM pure-birth Simulation
+Anagenetic trait pure-birth simulation
 
 Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 03 09 2020
+Created 19 01 2026
 =#
 
 
 
 
-#=
-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-Sample conditional on number of species
-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-=#
+# #=
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# Sample conditional on number of species
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# =#
 
 
 
-"""
-    sim_gbmb(n       ::Int64;
-              λ0      ::Float64 = 1.0,
-              α       ::Float64 = 0.0,
-              σλ      ::Float64 = 0.1,
-              δt      ::Float64 = 1e-3,
-              init    ::Symbol  = :stem,
-              nstar   ::Int64   = n + 2,
-              p       ::Float64 = 5.0,
-              warnings::Bool    = true,
-              maxt    ::Float64 = δt*1e7)
+# """
+#     sim_tb(n       ::Int64;
+#               λ0      ::Float64 = 1.0,
+#               α       ::Float64 = 0.0,
+#               σλ      ::Float64 = 0.1,
+#               δt      ::Float64 = 1e-3,
+#               init    ::Symbol  = :stem,
+#               nstar   ::Int64   = n + 2,
+#               p       ::Float64 = 5.0,
+#               warnings::Bool    = true,
+#               maxt    ::Float64 = δt*1e7)
 
-Simulate `iTb` according to a pure-birth geometric Brownian motion.
-"""
-function sim_gbmb(n       ::Int64;
-                   λ0      ::Float64 = 1.0,
-                   α       ::Float64 = 0.0,
-                   σλ      ::Float64 = 0.1,
-                   δt      ::Float64 = 1e-3,
-                   init    ::Symbol  = :stem,
-                   nstar   ::Int64   = n + 2,
-                   p       ::Float64 = 5.0,
-                   warnings::Bool    = true,
-                   maxt    ::Float64 = δt*1e7)
+# Simulate `iTtb` according to a pure-birth geometric Brownian motion.
+# """
+# function sim_tb(n       ::Int64;
+#                    λ0      ::Float64 = 1.0,
+#                    α       ::Float64 = 0.0,
+#                    σλ      ::Float64 = 0.1,
+#                    δt      ::Float64 = 1e-3,
+#                    init    ::Symbol  = :stem,
+#                    nstar   ::Int64   = n + 2,
+#                    p       ::Float64 = 5.0,
+#                    warnings::Bool    = true,
+#                    maxt    ::Float64 = δt*1e7)
 
-  # simulate in non-recursive manner
-  e0, e1, el, λs, ea, na, simt =
-    _sedges_gbmb(nstar, log(λ0), α, σλ, δt, sqrt(δt), init, maxt)
+#   # simulate in non-recursive manner
+#   e0, e1, el, λs, ea, na, simt =
+#     _sedges_tb(nstar, log(λ0), α, σλ, δt, sqrt(δt), init, maxt)
 
-  if simt >= maxt
-    warnings && @warn "simulation surpassed maximum time"
-    return iTb()
-  end
+#   if simt >= maxt
+#     warnings && @warn "simulation surpassed maximum time"
+#     return iTtb()
+#   end
 
-  # transform to iTree
-  t = iTb(e0, e1, el, λs, ea, e1[1], 1, δt)
+#   # transform to iTree
+#   t = iTtb(e0, e1, el, λs, ea, e1[1], 1, δt)
 
-  # sample a time when species(t) == `n`
-  nt = ltt(t)
-  tn = times_n(n, nt)
-  c  = usample(tn, p)
+#   # sample a time when species(t) == `n`
+#   nt = ltt(t)
+#   tn = times_n(n, nt)
+#   c  = usample(tn, p)
 
-  if iszero(c)
-    warnings && @warn "tree not sampled, try increasing `p`"
-    return iTb()
-  else
-    # cut the tree
-    t = cutbottom(t, simt - c)
-    return t
-  end
-end
-
-
+#   if iszero(c)
+#     warnings && @warn "tree not sampled, try increasing `p`"
+#     return iTtb()
+#   else
+#     # cut the tree
+#     t = cutbottom(t, simt - c)
+#     return t
+#   end
+# end
 
 
 
-"""
-    _sedges_gbmb(n    ::Int64,
-                  λ0   ::Float64,
-                  α    ::Float64,
-                  σλ   ::Float64,
-                  δt   ::Float64,
-                  srδt ::Float64,
-                  init::Symbol)
 
-Simulate `gbmb` just until hitting `n` alive species. Note that this is
-a biased sample for a tree conditional on `n` species.
-"""
-function _sedges_gbmb(n    ::Int64,
-                       λ0   ::Float64,
-                       α    ::Float64,
-                       σλ   ::Float64,
-                       δt   ::Float64,
-                       srδt ::Float64,
-                       init::Symbol,
-                       maxt ::Float64)
 
-  # edges
-  e0 = Int64[]
-  e1 = Int64[]
+# """
+#     _sedges_tb(n    ::Int64,
+#                   λ0   ::Float64,
+#                   α    ::Float64,
+#                   σλ   ::Float64,
+#                   δt   ::Float64,
+#                   srδt ::Float64,
+#                   init::Symbol)
 
-  if init == :stem
-    # edges alive
-    ea = [1]
-    # first edge
-    push!(e0, 1)
-    push!(e1, 2)
-    # max index
-    mxi0 = n*2
-    # edge lengths
-    el = [0.0]
-    # lambda vector for each edge
-    λs = [Float64[]]
-    # starting speciation rate
-    push!(λs[1], λ0)
-    # lastindex for each edge
-    li = [1]
+# Simulate `gbmb` just until hitting `n` alive species. Note that this is
+# a biased sample for a tree conditional on `n` species.
+# """
+# function _sedges_tb(n    ::Int64,
+#                        λ0   ::Float64,
+#                        α    ::Float64,
+#                        σλ   ::Float64,
+#                        δt   ::Float64,
+#                        srδt ::Float64,
+#                        init::Symbol,
+#                        maxt ::Float64)
 
-    na = 1 # current number of alive species
-    ne = 2 # current maximum node number
+#   # edges
+#   e0 = Int64[]
+#   e1 = Int64[]
 
-  elseif init == :crown
-    # edges alive
-    ea = [2, 3]
-    # first edges
-    push!(e0, 1, 2, 2)
-    push!(e1, 2, 3, 4)
-    # max index
-    mxi0 = n*2
-    # edge lengths
-    el = [0.0, 0.0, 0.0]
-    # lambda vector for each edge
-    λs = [Float64[], Float64[], Float64[]]
-    # starting speciation rate
-    push!(λs[1], λ0, λ0)
-    push!(λs[2], λ0)
-    push!(λs[3], λ0)
-    # lastindex for each edge
-    li = [2, 1, 1]
+#   if init == :stem
+#     # edges alive
+#     ea = [1]
+#     # first edge
+#     push!(e0, 1)
+#     push!(e1, 2)
+#     # max index
+#     mxi0 = n*2
+#     # edge lengths
+#     el = [0.0]
+#     # lambda vector for each edge
+#     λs = [Float64[]]
+#     # starting speciation rate
+#     push!(λs[1], λ0)
+#     # lastindex for each edge
+#     li = [1]
 
-    na = 2 # current number of alive species
-    ne = 4 # current maximum node number
+#     na = 1 # current number of alive species
+#     ne = 2 # current maximum node number
 
-  else
-    @error "$init does not match stem or crown"
-  end
+#   elseif init == :crown
+#     # edges alive
+#     ea = [2, 3]
+#     # first edges
+#     push!(e0, 1, 2, 2)
+#     push!(e1, 2, 3, 4)
+#     # max index
+#     mxi0 = n*2
+#     # edge lengths
+#     el = [0.0, 0.0, 0.0]
+#     # lambda vector for each edge
+#     λs = [Float64[], Float64[], Float64[]]
+#     # starting speciation rate
+#     push!(λs[1], λ0, λ0)
+#     push!(λs[2], λ0)
+#     push!(λs[3], λ0)
+#     # lastindex for each edge
+#     li = [2, 1, 1]
 
-  ieaa = Int64[] # indexes of ea to add
-  iead = Int64[] # indexes of ea to delete
+#     na = 2 # current number of alive species
+#     ne = 4 # current maximum node number
 
-  # simulation time
-  simt = 0.0
+#   else
+#     @error "$init does not match stem or crown"
+#   end
 
-  @inbounds begin
+#   ieaa = Int64[] # indexes of ea to add
+#   iead = Int64[] # indexes of ea to delete
 
-    # start simulation
-    while true
+#   # simulation time
+#   simt = 0.0
 
-      # keep track of time
-      simt += δt
+#   @inbounds begin
 
-      # time guard
-      if simt > maxt
-        return e0, e1, el, λs, ea, na, simt
-      end
+#     # start simulation
+#     while true
 
-      # one time step for all edges alive `ea`
-      for (i,v) in enumerate(ea)
+#       # keep track of time
+#       simt += δt
 
-        λsi = λs[v]
-        lii = li[v]
-        λt  = λsi[lii]
+#       # time guard
+#       if simt > maxt
+#         return e0, e1, el, λs, ea, na, simt
+#       end
 
-        # update edge length
-        el[v] += δt
-        li[v] += 1
+#       # one time step for all edges alive `ea`
+#       for (i,v) in enumerate(ea)
 
-        # sample new speciation rates
-        λt1 = rnorm(λt + α*δt, srδt*σλ)
-        push!(λsi, λt1)
-        λm = exp(0.5*(λt + λt1))
+#         λsi = λs[v]
+#         lii = li[v]
+#         λt  = λsi[lii]
 
-        # if speciation event
-        if divev(λm, δt)
+#         # update edge length
+#         el[v] += δt
+#         li[v] += 1
 
-          # if reached `n` species
-          if n === na
+#         # sample new speciation rates
+#         λt1 = rnorm(λt + α*δt, srδt*σλ)
+#         push!(λsi, λt1)
+#         λm = exp(0.5*(λt + λt1))
 
-            # update λs and δt for other lineages
-            for vi in ea[i+1:end]
-              el[vi] += δt
-              λsi = λs[vi]
-              lvi = li[vi]
-              λt  = λsi[lvi]
+#         # if speciation event
+#         if divev(λm, δt)
 
-              push!(λsi, rnorm(λt + α*δt, srδt*σλ))
-            end
+#           # if reached `n` species
+#           if n === na
 
-            # to add
-            if !isempty(ieaa)
-              append!(ea, ieaa)
-              empty!(ieaa)
-            end
+#             # update λs and δt for other lineages
+#             for vi in ea[i+1:end]
+#               el[vi] += δt
+#               λsi = λs[vi]
+#               lvi = li[vi]
+#               λt  = λsi[lvi]
 
-           # to delete
-            if !isempty(iead)
-              deleteat!(ea, iead)
-              empty!(iead)
-            end
+#               push!(λsi, rnorm(λt + α*δt, srδt*σλ))
+#             end
 
-            return e0, e1, el, λs, ea, na, simt
-          end
+#             # to add
+#             if !isempty(ieaa)
+#               append!(ea, ieaa)
+#               empty!(ieaa)
+#             end
 
-          ### add new edges
-          # start node
-          push!(e0, e1[v], e1[v])
+#            # to delete
+#             if !isempty(iead)
+#               deleteat!(ea, iead)
+#               empty!(iead)
+#             end
 
-          # end nodes
-          push!(e1, ne + 1, ne + 2)
+#             return e0, e1, el, λs, ea, na, simt
+#           end
 
-          # push to edge length
-          push!(el, 0.0, 0.0)
+#           ### add new edges
+#           # start node
+#           push!(e0, e1[v], e1[v])
 
-          # push speciation vector
-          push!(λs, [λt1], [λt1])
+#           # end nodes
+#           push!(e1, ne + 1, ne + 2)
 
-          # push length of vector
-          push!(li, 1, 1)
+#           # push to edge length
+#           push!(el, 0.0, 0.0)
 
-          # to update living edges
-          push!(iead, i)
-          push!(ieaa, ne, ne + 1)
+#           # push speciation vector
+#           push!(λs, [λt1], [λt1])
 
-          # update `na` and `ne`
-          ne += 2
-          na += 1
-        end
-      end
+#           # push length of vector
+#           push!(li, 1, 1)
 
-      # to add
-      if !isempty(ieaa)
-        append!(ea, ieaa)
-        empty!(ieaa)
-      end
+#           # to update living edges
+#           push!(iead, i)
+#           push!(ieaa, ne, ne + 1)
 
-      # to delete
-      if !isempty(iead)
-        deleteat!(ea, iead)
-        empty!(iead)
-      end
-    end
-  end
-end
+#           # update `na` and `ne`
+#           ne += 2
+#           na += 1
+#         end
+#       end
+
+#       # to add
+#       if !isempty(ieaa)
+#         append!(ea, ieaa)
+#         empty!(ieaa)
+#       end
+
+#       # to delete
+#       if !isempty(iead)
+#         deleteat!(ea, iead)
+#         empty!(iead)
+#       end
+#     end
+#   end
+# end
 
 
 
@@ -273,7 +273,7 @@ Sample conditional on time
 
 
 """
-    sim_gbmb(t   ::Float64;
+    sim_tb(t   ::Float64;
               λ0  ::Float64 = 1.0,
               α   ::Float64 = 0.0,
               σλ  ::Float64 = 0.1,
@@ -281,34 +281,39 @@ Sample conditional on time
               nlim::Int64   = 10_000,
               init::Symbol  = :crown)
 
-Simulate `iTb` according to a pure-birth geometric Brownian motion
+Simulate `iTtb` according to a pure-birth geometric Brownian motion
 conditional in stopping at time `t`.
 """
-function sim_gbmb(t   ::Float64;
-                   λ0  ::Float64 = 1.0,
-                   α   ::Float64 = 0.0,
-                   σλ  ::Float64 = 0.1,
-                   δt  ::Float64 = 1e-3,
-                   nlim::Int64   = 10_000,
-                   init::Symbol  = :crown)
+function sim_tb(t   ::Float64;
+                λ0  ::Float64 = 1.0,
+                αλ  ::Float64 = 0.0,
+                σλ  ::Float64 = 0.1,
+                x0  ::Float64 = 0.0,
+                αx  ::Float64 = 0.0,
+                σ20 ::Float64 = 0.1,
+                ασ  ::Float64 = 0.0,
+                γ   ::Float64 = 0.1,
+                δt  ::Float64 = 1e-3,
+                nlim::Int64   = 10_000,
+                init::Symbol  = :crown)
 
   if init === :crown
     lλ0 = log(λ0)
-    d1, nn = _sim_gbmb(t, lλ0, α, σλ, δt, sqrt(δt), 1, nlim)
+    d1, nn = _sim_tb(t, lλ0, α, σλ, δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_gbmb(t, lλ0, α, σλ, δt, sqrt(δt), nn + 1, nlim)
+    d2, nn = _sim_tb(t, lλ0, α, σλ, δt, sqrt(δt), nn + 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    tree = iTb(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0])
+    tree = iTtb(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0])
    elseif init === :stem
-    tree, nn = _sim_gbmb(t, log(λ0), α, σλ, δt, sqrt(δt), 1, nlim)
+    tree, nn = _sim_tb(t, log(λ0), α, σλ, δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
@@ -325,7 +330,7 @@ end
 
 
 """
-    _sim_gbmb(t   ::Float64,
+    _sim_tb(t   ::Float64,
                λt  ::Float64,
                α   ::Float64,
                σλ  ::Float64,
@@ -334,9 +339,9 @@ end
                nn ::Int64,
                nlim::Int64)
 
-Simulate `iTb` according to a pure-birth geometric Brownian motion.
+Simulate `iTtb` according to a pure-birth geometric Brownian motion.
 """
-function _sim_gbmb(t   ::Float64,
+function _sim_tb(t   ::Float64,
                     λt  ::Float64,
                     α   ::Float64,
                     σλ  ::Float64,
@@ -362,12 +367,12 @@ function _sim_gbmb(t   ::Float64,
 
         if divev(λm, t)
           nn += 1
-          return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                     iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+          return iTtb(iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
+                     iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
                      bt, δt, t, false, λv), nn
         end
 
-        return iTb(bt, δt, t, false, λv), nn
+        return iTtb(bt, δt, t, false, λv), nn
       end
 
       t  -= δt
@@ -381,17 +386,17 @@ function _sim_gbmb(t   ::Float64,
 
       if divev(λm, δt)
         nn += 1
-        td1, nn = _sim_gbmb(t, λt1, α, σλ, δt, srδt, nn, nlim)
-        td2, nn = _sim_gbmb(t, λt1, α, σλ, δt, srδt, nn, nlim)
+        td1, nn = _sim_tb(t, λt1, α, σλ, δt, srδt, nn, nlim)
+        td2, nn = _sim_tb(t, λt1, α, σλ, δt, srδt, nn, nlim)
 
-        return iTb(td1, td2, bt, δt, δt, false, λv), nn
+        return iTtb(td1, td2, bt, δt, δt, false, λv), nn
       end
 
       λt = λt1
     end
   end
 
-  return iTb(), nn
+  return iTtb(), nn
 end
 
 
@@ -399,7 +404,7 @@ end
 
 
 """
-    _sim_gbmb_t(t   ::Float64,
+    _sim_tb_t(t   ::Float64,
                  λt  ::Float64,
                  α   ::Float64,
                  σλ  ::Float64,
@@ -412,10 +417,10 @@ end
                  nn ::Int64,
                  nlim::Int64)
 
-Simulate `iTb` according to a pure-birth geometric Brownian motion for
+Simulate `iTtb` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
-function _sim_gbmb_t(t   ::Float64,
+function _sim_tb_t(t   ::Float64,
                       λt  ::Float64,
                       α   ::Float64,
                       σλ  ::Float64,
@@ -452,10 +457,10 @@ function _sim_gbmb_t(t   ::Float64,
             nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
           end
           if nlr < lr && lU >= nlr
-            return iTb(), na, nn, NaN
+            return iTtb(), na, nn, NaN
           else
-            return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                        iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+            return iTtb(iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
+                        iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
                         bt, δt, t, false, λv), na, nn, nlr
           end
         else
@@ -465,11 +470,11 @@ function _sim_gbmb_t(t   ::Float64,
             nlr += log(iρi * Float64(na)/Float64(na-1))
           end
           if nlr >= lr
-            return iTb(bt, δt, t, false, λv), na, nn, nlr
+            return iTtb(bt, δt, t, false, λv), na, nn, nlr
           elseif lU < nlr
-            return iTb(bt, δt, t, false, λv), na, nn, nlr
+            return iTtb(bt, δt, t, false, λv), na, nn, nlr
           else
-            return iTb(), na, nn, NaN
+            return iTtb(), na, nn, NaN
           end
         end
       end
@@ -486,25 +491,25 @@ function _sim_gbmb_t(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, na, nn, lr =
-          _sim_gbmb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
+          _sim_tb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
         td2, na, nn, lr =
-          _sim_gbmb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
+          _sim_tb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
 
-        return iTb(td1, td2, bt, δt, δt, false, λv), na, nn, lr
+        return iTtb(td1, td2, bt, δt, δt, false, λv), na, nn, lr
       end
 
       λt = λt1
     end
   end
 
-  return iTb(), na, nn, NaN
+  return iTtb(), na, nn, NaN
 end
 
 
 
 
 """
-    _sim_gbmb_it(nsδt::Float64,
+    _sim_tb_it(nsδt::Float64,
                   t   ::Float64,
                   λt  ::Float64,
                   α   ::Float64,
@@ -517,10 +522,10 @@ end
                   na  ::Int64,
                   nn  ::Int64,
                   nlim::Int64)
-Simulate `iTb` according to a pure-birth geometric Brownian motion,
+Simulate `iTtb` according to a pure-birth geometric Brownian motion,
 starting with a non-standard δt with a limit in the number of species.
 """
-function _sim_gbmb_it(nsδt::Float64,
+function _sim_tb_it(nsδt::Float64,
                        t   ::Float64,
                        λt  ::Float64,
                        α   ::Float64,
@@ -547,12 +552,12 @@ function _sim_gbmb_it(nsδt::Float64,
     if divev(λm, t)
       nn += 1
       lr += 2.0*log(iρi)
-      return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                 iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+      return iTtb(iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
+                 iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
                  bt, δt, t, false, λv), nn, lr
     else
       lr += log(iρi)
-      return iTb(bt, δt, t, false, λv), nn, lr
+      return iTtb(bt, δt, t, false, λv), nn, lr
     end
   end
 
@@ -566,11 +571,11 @@ function _sim_gbmb_it(nsδt::Float64,
   if divev(λm, nsδt)
     nn += 1
     td1, nn, lr =
-      _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+      _sim_tb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
     td2, nn, lr =
-      _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+      _sim_tb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
 
-    return iTb(td1, td2, bt, δt, nsδt, false, λv), nn, lr
+    return iTtb(td1, td2, bt, δt, nsδt, false, λv), nn, lr
   end
 
   λt = λt1
@@ -590,12 +595,12 @@ function _sim_gbmb_it(nsδt::Float64,
         if divev(λm, t)
           nn += 1
           lr  += 2.0*log(iρi)
-          return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                     iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+          return iTtb(iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
+                     iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
                      bt, δt, t, false, λv), nn, lr
         else
           lr += log(iρi)
-          return iTb(bt, δt, t, false, λv), nn, lr
+          return iTtb(bt, δt, t, false, λv), nn, lr
         end
       end
 
@@ -611,25 +616,25 @@ function _sim_gbmb_it(nsδt::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_tb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_tb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
 
-        return iTb(td1, td2, bt, δt, δt, false, λv), nn, lr
+        return iTtb(td1, td2, bt, δt, δt, false, λv), nn, lr
       end
 
       λt = λt1
     end
   end
 
-  return iTb(), nn, NaN
+  return iTtb(), nn, NaN
 end
 
 
 
 
 """
-    _sim_gbmb_it(t   ::Float64,
+    _sim_tb_it(t   ::Float64,
                  λt  ::Float64,
                  α   ::Float64,
                  σλ  ::Float64,
@@ -641,10 +646,10 @@ end
                  nn ::Int64,
                  nlim::Int64)
 
-Simulate `iTb` according to a pure-birth geometric Brownian motion for
+Simulate `iTtb` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
-function _sim_gbmb_it(t   ::Float64,
+function _sim_tb_it(t   ::Float64,
                        λt  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
@@ -674,13 +679,13 @@ function _sim_gbmb_it(t   ::Float64,
         if divev(λm, t)
           nn += 1
           lr += 2.0*log(iρi)
-          return iTb(iTb(0.0, δt, 0.0, false, [λt1, λt1]),
-                     iTb(0.0, δt, 0.0, false, [λt1, λt1]),
+          return iTtb(iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
+                     iTtb(0.0, δt, 0.0, false, [λt1, λt1]),
                      bt, δt, t, false, λv), nn, lr
         end
 
         lr += log(iρi)
-        return iTb(bt, δt, t, false, λv), nn, lr
+        return iTtb(bt, δt, t, false, λv), nn, lr
       end
 
       t  -= δt
@@ -695,18 +700,18 @@ function _sim_gbmb_it(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_tb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_gbmb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_tb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
 
-        return iTb(td1, td2, bt, δt, δt, false, λv), nn, lr
+        return iTtb(td1, td2, bt, δt, δt, false, λv), nn, lr
       end
 
       λt = λt1
     end
   end
 
-  return iTb(), nn, NaN
+  return iTtb(), nn, NaN
 end
 
 
