@@ -91,32 +91,34 @@ function ll_gbm_b(lλv ::Array{Float64,1},
                   srδt::Float64,
                   λev ::Bool)
 
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλv)-2
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
 
-  ll = llbm = llpb = 0.0
-  if nI > 0
-    @turbo for i in Base.OneTo(nI)
-      lλvi  = lλv[i]
-      lλvi1 = lλv[i+1]
-      llbm += (lλvi1 - lλvi - α*δt)^2
-      llpb += exp(0.5*(lλvi + lλvi1))
+    ll = llbm = llpb = 0.0
+    if nI > 0
+      @turbo for i in Base.OneTo(nI)
+        lλvi  = lλv[i]
+        lλvi1 = lλv[i+1]
+        llbm += (lλvi1 - lλvi - α*δt)^2
+        llpb += exp(0.5*(lλvi + lλvi1))
+      end
+      # add to global likelihood
+      ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
+            llpb*δt
     end
-    # add to global likelihood
-    ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
-          llpb*δt
-  end
 
-  lλvi1 = lλv[nI+2]
+    lλvi1 = lλv[nI+2]
 
-  # add final non-standard `δt`
-  if fdt > 0.0
-    lλvi = lλv[nI+1]
-    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-           fdt*exp(0.5*(lλvi + lλvi1))
-  end
-  if λev
-    ll += lλvi1
+    # add final non-standard `δt`
+    if fdt > 0.0
+      lλvi = lλv[nI+1]
+      ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+             fdt*exp(0.5*(lλvi + lλvi1))
+    end
+    if λev
+      ll += lλvi1
+    end
   end
 
   return ll

@@ -100,8 +100,9 @@ Return if is an extinction node.
 isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
 isextinct(tree::Tlabel) = false
 isextinct(tree::sTb)    = false
-isextinct(tree::cTb)   = false
+isextinct(tree::cTb)    = false
 isextinct(tree::iTb)    = false
+isextinct(tree::iTxb)   = false
 isextinct(tree::sTxs)   = false
 
 
@@ -161,7 +162,7 @@ isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
 isfossil(tree::sT_label) = false
 isfossil(tree::sTb)      = false
 isfossil(tree::sTbd)     = false
-isfossil(tree::cTb)     = false
+isfossil(tree::cTb)      = false
 isfossil(tree::cTce)     = false
 isfossil(tree::cTct)     = false
 isfossil(tree::cTbd)     = false
@@ -170,6 +171,7 @@ isfossil(tree::iTce)     = false
 isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
 isfossil(tree::iTpbd)    = false
+isfossil(tree::iTxb)     = false
 isfossil(tree::sTpe)     = false
 isfossil(tree::sTxs)     = false
 

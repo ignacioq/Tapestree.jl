@@ -1,6 +1,6 @@
 #=
 
-GBM pure-death likelihood
+trait pure-death likelihood
 
 Ignacio Quintero Mächler
 
@@ -13,26 +13,33 @@ Created 03 09 2020
 
 
 """
-    llik_gbm(Ξ   ::Vector{iTb},
-             idf ::Vector{iBffs},
-             α   ::Float64,
-             σλ  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
+    llik_tb(Ξ   ::Vector{iTxb},
+            idf ::Vector{iBffs},
+            αλ  ::Float64,
+            βλ  ::Float64,
+            σλ  ::Float64,
+            αx  ::Float64,
+            ασ  ::Float64,
+            σσ  ::Float64,
+            δt  ::Float64,
+            srδt::Float64)
 
-Returns the log-likelihood for a `iTb` according to GBM birth-death.
+Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_gbm(Ξ   ::Vector{iTb},
-                  idf ::Vector{iBffs},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+function llik_tb(Ξ   ::Vector{iTxb},
+                 idf ::Vector{iBffs},
+                 αλ  ::Float64,
+                 βλ  ::Float64,
+                 σλ  ::Float64,
+                 αx  ::Float64,
+                 ασ  ::Float64,
+                 σσ  ::Float64,
+                 δt  ::Float64)
 
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      ll += llik_gbm(Ξ[i], α, σλ, δt, srδt)
+      ll += llik_tb(Ξ[i], αλ, βλ, σλ, αx, ασ, σσ, δt)
       if d2(idf[i]) > 0
         ll += λt(Ξ[i])
       end
@@ -46,26 +53,35 @@ end
 
 
 """
-    llik_gbm(tree::iTb,
-             α   ::Float64,
-             σλ  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
+    llik_tb(tree::iTxb,
+            αλ  ::Float64,
+            βλ  ::Float64,
+            σλ  ::Float64,
+            αx  ::Float64,
+            ασ  ::Float64,
+            σσ  ::Float64,
+            δt  ::Float64,
+            srδt::Float64)
 
-Returns the log-likelihood for a `iTb` according to GBM birth-death.
+Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_gbm(tree::iTb,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+function llik_tb(tree::iTxb,
+                 αλ  ::Float64,
+                 βλ  ::Float64,
+                 σλ  ::Float64,
+                 αx  ::Float64,
+                 ασ  ::Float64,
+                 σσ  ::Float64,
+                 δt  ::Float64)
 
   if istip(tree)
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+    ll_tb_b(xv(tree), lσ2(tree), lλ(tree), 
+            αλ, βλ, σλ, αx, ασ, σσ, δt, fdt(tree), false)
   else
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTb, α, σλ, δt, srδt)          +
-    llik_gbm(tree.d2::iTb, α, σλ, δt, srδt)
+    ll_tb_b(xv(tree), lσ2(tree), lλ(tree), 
+            αλ, βλ, σλ, αx, ασ, σσ, δt, fdt(tree), true) +
+    llik_tb(tree.d1::iTxb, αλ, βλ, σλ, αx, ασ, σσ, δt)   +
+    llik_tb(tree.d2::iTxb, αλ, βλ, σλ, αx, ασ, σσ, δt)
   end
 end
 
@@ -73,50 +89,80 @@ end
 
 
 """
-    ll_gbm_b(lλv ::Array{Float64,1},
-             α   ::Float64,
-             σλ  ::Float64,
-             δt  ::Float64,
-             fdt ::Float64,
-             srδt::Float64,
-             λev ::Bool)
+    ll_tb_b(x   ::Array{Float64,1},
+            lσ2v::Array{Float64,1},
+            lλv ::Array{Float64,1},
+            αλ  ::Float64,
+            βλ  ::Float64,
+            σλ  ::Float64,
+            αx  ::Float64,
+            ασ  ::Float64,
+            σσ  ::Float64,
+            δt  ::Float64,
+            fdt ::Float64,
+            λev ::Bool)
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
-function ll_gbm_b(lλv ::Array{Float64,1},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  fdt ::Float64,
-                  srδt::Float64,
-                  λev ::Bool)
+function ll_tb_b(x   ::Array{Float64,1},
+                 lσ2v::Array{Float64,1},
+                 lλv ::Array{Float64,1},
+                 αλ  ::Float64,
+                 βλ  ::Float64,
+                 σλ  ::Float64,
+                 αx  ::Float64,
+                 ασ  ::Float64,
+                 σσ  ::Float64,
+                 δt  ::Float64,
+                 fdt ::Float64,
+                 λev ::Bool)
 
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλv)-2
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI = lastindex(lλv)-2
+    n  = Float64(nI)
 
-  ll = llbm = llpb = 0.0
-  if nI > 0
-    @turbo for i in Base.OneTo(nI)
-      lλvi  = lλv[i]
-      lλvi1 = lλv[i+1]
-      llbm += (lλvi1 - lλvi - α*δt)^2
-      llpb += exp(0.5*(lλvi + lλvi1))
+    ll = llx = llσ2 = llλ = llpb = 0.0
+    if nI > 0
+      @turbo for i in Base.OneTo(nI)
+        lσ2i   = lσ2v[i]
+        lσ2i1  = lσ2v[i+1]
+        dxi    = x[i+1] - x[i]
+        lλi    = lλv[i]
+        lλi1   = lλv[i+1]
+        llx   += -0.5*(dxi - αx*δt)^2/(exp(0.5*(lσ2i1 + lσ2i))*δt) - 
+                  0.25*(lσ2i1 + lσ2i)
+        llσ2  += (lσ2i1 - lσ2i - ασ*δt)^2
+        llλ   += (lλi1 - lλi - αλ*δt - βλ*dxi)^2
+        llpb  += exp(0.5*(lλi + lλi1))
+      end
+
+      # add to global likelihood
+      ll += llx - n*(1.5*log(δt) + log(σσ*σλ))                      +
+            llσ2*(-0.5/(σσ^2*δt)) + llλ*(-0.5/(σλ^2*δt))            -
+            n*2.756815599614018008622906563687138259410858154296875 - # 1.5 * log(2.0π)
+            llpb*δt
     end
-    # add to global likelihood
-    ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
-          llpb*δt
-  end
 
-  lλvi1 = lλv[nI+2]
+    lλi1 = lλv[nI+2]
 
-  # add final non-standard `δt`
-  if fdt > 0.0
-    lλvi = lλv[nI+1]
-    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-           fdt*exp(0.5*(lλvi + lλvi1))
-  end
-  if λev
-    ll += lλvi1
+    # add final non-standard `δt`
+    if fdt > 0.0
+      lσ2i   = lσ2v[nI+1]
+      lσ2i1  = lσ2v[nI+2]
+      dxi    = x[nI+2] - x[nI+1]
+      lλi    = lλv[nI+1]
+      # add to global likelihood
+      ll += -0.5*(dxi - αx*fdt)^2/(exp(0.5*(lσ2i1 + lσ2i))*fdt)   - 
+            0.25*(lσ2i1 + lσ2i) - 1.5*log(fdt) - log(σσ*σλ)       +
+            (lσ2i1 - lσ2i - ασ*fdt)^2 * (-0.5/(σσ^2*fdt))         + 
+            (lλi1 - lλi - αλ*fdt - βλ*dxi)^2 * (-0.5/(σλ^2*fdt))  -
+            2.756815599614018008622906563687138259410858154296875 - # 1.5 * log(2.0π)
+            exp(0.5*(lλi + lλi1))*fdt
+    end
+    if λev
+      ll += lλi1
+    end
   end
 
   return ll
@@ -125,16 +171,19 @@ end
 
 
 
+
+
+
 """
-    llik_gbm_ssλ(tree::iTb,
+    llik_tb_ssλ(tree::iTxb,
                  α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
                  srδt::Float64)
 
-Returns the log-likelihood for a `iTb` according to GBM birth-death.
+Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_gbm_ssλ(tree::iTb,
+function llik_tb_ssλ(tree::iTxb,
                       α   ::Float64,
                       σλ  ::Float64,
                       δt  ::Float64,
@@ -143,17 +192,17 @@ function llik_gbm_ssλ(tree::iTb,
 
   if istip(tree)
     ll, dλ, ssλ, nλ, irλ = 
-      ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+      ll_tb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
   else
     ns += 1.0
 
     ll, dλ, ssλ, nλ, irλ = 
-      ll_gbm_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
+      ll_tb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
 
     ll1, dλ1, ssλ1, nλ1, irλ1, ns = 
-      llik_gbm_ssλ(tree.d1, α, σλ, δt, srδt, ns)
+      llik_tb_ssλ(tree.d1, α, σλ, δt, srδt, ns)
     ll2, dλ2, ssλ2, nλ2, irλ2, ns = 
-      llik_gbm_ssλ(tree.d2, α, σλ, δt, srδt, ns)
+      llik_tb_ssλ(tree.d2, α, σλ, δt, srδt, ns)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
@@ -169,7 +218,7 @@ end
 
 
 """
-    ll_gbm_b_ssλ(lλv ::Array{Float64,1},
+    ll_tb_b_ssλ(lλv ::Array{Float64,1},
                  α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
@@ -179,7 +228,7 @@ end
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
-function ll_gbm_b_ssλ(lλv ::Array{Float64,1},
+function ll_tb_b_ssλ(lλv ::Array{Float64,1},
                       α   ::Float64,
                       σλ  ::Float64,
                       δt  ::Float64,
@@ -232,7 +281,7 @@ end
 
 
 """
-    llr_gbm_b_sep(lλp ::Array{Float64,1},
+    llr_tb_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -244,7 +293,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth
 separately for the Brownian motion and the pure-birth
 """
-function llr_gbm_b_sep(lλp ::Array{Float64,1},
+function llr_tb_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,

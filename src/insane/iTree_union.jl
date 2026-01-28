@@ -67,7 +67,7 @@ iTbdU = Union{iTbd, iTfbd}
 
 Tx = Union{sTpbx, sTbdx, sTfbdx}
 """
-Tx = Union{sTxs, sTpe, sTfpe}
+Tx = Union{sTxs, sTpe, sTfpe, iTxb}
 
 
 
@@ -77,7 +77,7 @@ Tx = Union{sTxs, sTpe, sTfpe}
 
 Txs = Union{sTxs}
 """
-Txs = Union{sTxs}
+Txs = Union{sTxs, iTxb}
 
 
 

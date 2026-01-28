@@ -102,7 +102,7 @@ end
 
 
 """
-    iTtb
+    iTxb
 
 A composite recursive type of supertype `iT`
 representing a binary phylogenetic tree with no extinction
@@ -119,21 +119,21 @@ with the following fields:
   xv:   array of a Brownian motion evolution of `X`.
   lσ2:  array of a Brownian motion evolution of `log(σ)`.
 
-    iTtb()
+    iTxb()
 
-Constructs an empty `iTtb` object.
+Constructs an empty `iTxb` object.
 
-    iTtb(e::Float64)
+    iTxb(e::Float64)
 
-Constructs an empty `iTtb` object with pendant edge `pe`.
+Constructs an empty `iTxb` object with pendant edge `pe`.
 
-    iTtb(d1::iTtb, d2::iTtb, e::Float64)
+    iTxb(d1::iTxb, d2::iTxb, e::Float64)
 
-Constructs an `iTtb` object with two `iTtb` daughters and pendant edge `pe`.
+Constructs an `iTxb` object with two `iTxb` daughters and pendant edge `pe`.
 """
-mutable struct iTtb <: iT
-  d1 ::iTtb
-  d2 ::iTtb
+mutable struct iTxb <: iT
+  d1 ::iTxb
+  d2 ::iTxb
   e  ::Float64
   dt ::Float64
   fdt::Float64
@@ -142,26 +142,26 @@ mutable struct iTtb <: iT
   xv ::Array{Float64,1}
   lσ2::Array{Float64,1}
 
-  iTtb() = new()
-  iTtb(e::Float64, dt::Float64, fdt::Float64, fx::Bool, lλ::Array{Float64,1},
+  iTxb() = new()
+  iTxb(e::Float64, dt::Float64, fdt::Float64, fx::Bool, lλ::Array{Float64,1},
     xv::Array{Float64,1}, lσ2::Array{Float64,1}) =
       (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.fx = fx; x.lλ = lλ;
         x.xv = xv; x.lσ2 = lσ2; x)
-  iTtb(d1::iTtb, d2::iTtb, e::Float64, dt::Float64, fdt::Float64, fx::Bool, 
+  iTxb(d1::iTxb, d2::iTxb, e::Float64, dt::Float64, fdt::Float64, fx::Bool, 
     lλ::Array{Float64,1}, xv::Array{Float64,1}, lσ2::Array{Float64,1}) =
       new(d1, d2, e, dt, fdt, fx, lλ, xv, lσ2)
 end
 
 
 # pretty-printing
-Base.show(io::IO, t::iTtb) =
+Base.show(io::IO, t::iTxb) =
   print(io, "insane trait pure-birth tree with ", ntips(t), " tips")
 
 
 
 
 # """
-#     iTtb(e0::Array{Int64,1},
+#     iTxb(e0::Array{Int64,1},
 #          e1::Array{Int64,1},
 #          el::Array{Float64,1},
 #          λs::Array{Array{Float64,1},1},
@@ -170,9 +170,9 @@ Base.show(io::IO, t::iTtb) =
 #          ei::Int64,
 #          δt::Float64)
 
-# Transform edge structure to `iTtb`.
+# Transform edge structure to `iTxb`.
 # """
-# function iTtb(e0::Array{Int64,1},
+# function iTxb(e0::Array{Int64,1},
 #               e1::Array{Int64,1},
 #               el::Array{Float64,1},
 #               λs::Array{Array{Float64,1},1},
@@ -183,12 +183,12 @@ Base.show(io::IO, t::iTtb) =
 
 #   # if tip
 #   if in(ei, ea)
-#     return iTtb(el[ei], δt, δt, true, λs[ei])
+#     return iTxb(el[ei], δt, δt, true, λs[ei])
 #   else
 #     ei1, ei2 = findall(isequal(ni), e0)
 #     n1, n2   = e1[ei1:ei2]
-#     return iTtb(iTtb(e0, e1, el, λs, ea, n1, ei1, δt),
-#                 iTtb(e0, e1, el, λs, ea, n2, ei2, δt),
+#     return iTxb(iTxb(e0, e1, el, λs, ea, n1, ei1, δt),
+#                 iTxb(e0, e1, el, λs, ea, n2, ei2, δt),
 #                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
 #   end
 # end
@@ -197,17 +197,17 @@ Base.show(io::IO, t::iTtb) =
 
 
 """
-    iTtb(tree::iTtb)
+    iTxb(tree::iTxb)
 
-Produce a new copy of `iTtb`.
+Produce a new copy of `iTxb`.
 """
-function iTtb(tree::iTtb)
+function iTxb(tree::iTxb)
   if def1(tree)
-    iTtb(iTtb(tree.d1), iTtb(tree.d2),
+    iTxb(iTxb(tree.d1), iTxb(tree.d2),
       e(tree), dt(tree), fdt(tree), isfix(tree), 
       copy(lλ(tree)), copy(xv(tree)), copy(lσ2(tree)))
   else
-    iTtb(e(tree), dt(tree), fdt(tree), isfix(tree),
+    iTxb(e(tree), dt(tree), fdt(tree), isfix(tree),
          copy(lλ(tree)), copy(xv(tree)), copy(lσ2(tree)))
   end
 end
