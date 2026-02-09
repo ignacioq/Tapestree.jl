@@ -164,6 +164,120 @@ end
 
 
 
+
+"""
+    make_Ξ(idf ::Vector{iBffs},
+           λ   ::Float64,
+           α   ::Float64,
+           σλ  ::Float64,
+           δt  ::Float64,
+           srδt::Float64,
+           ::Type{iTxb})
+
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function make_Ξ(idf ::Vector{iBffs},
+                xr  ::Vector{Float64},
+                σx  ::Float64,
+                σσ  ::Float64,
+                λ   ::Float64,
+                σλ  ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                ::Type{iTxb})
+
+  Ξ = iTxb[]
+  _make_Ξ!(Ξ, 1, xr, σx, σσ, log(λ), σλ, δt, srδt, idf)
+
+  return Ξ
+end
+
+
+
+
+"""
+    _make_Ξ!(Ξ   ::Vector{T},
+             i   ::Int64,
+             xr  ::Vector{Float64},
+             σx  ::Float64,
+             σσ  ::Float64,
+             lλ0 ::Float64,
+             σλ  ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             idf ::Vector{iBffs}) where {T <: iTxb}
+
+Make edge tree `Ξ` from the edge directory.
+"""
+function _make_Ξ!(Ξ   ::Vector{T},
+                  i   ::Int64,
+                  xr  ::Vector{Float64},
+                  σx  ::Float64,
+                  σσ  ::Float64,
+                  lλ0 ::Float64,
+                  σλ  ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  idf ::Vector{iBffs}) where {T <: iTxb}
+
+  bi  = idf[i]
+  i1  = d1(bi)
+  i2  = d2(bi)
+  ip  = pa(bi)
+  ip  = iszero(ip) ? 1 : ip
+  et  = e(bi)
+  xii = xr[ip]
+  xfi = xr[i]
+
+  if iszero(et)
+    lλv  = [lλ0, lλ0]
+    xv   = Float64[xii, xii]
+    lσ2v = Float64[σx, σx]
+    fdti = 0.0
+    nts  = 0
+  else
+
+    ntF, fdti = divrem(et, δt, RoundDown)
+
+    if isapprox(fdti, δt)
+      ntF += 1.0
+      fdti = δt
+    end
+
+    nts = Int64(ntF)
+
+    if iszero(fdti) || (i1 > 0 && iszero(i2)) 
+      fdti  = δt
+      nts  -= 1
+    end
+
+    xv, lσ2v = dbb(xii, xfi, σx, σx, σσ, δt, fdti, srδt, nts)
+    lλv      = bm(lλ0, 0.0, σλ, δt, fdti, srδt, nts)
+  end
+
+  l = nts + 2
+
+  setλt!(bi, lλv[l])
+  if T === iTxb
+    push!(Ξ, iTxb(et, δt, fdti, true, lλv, xv, lσ2v))
+  else
+    push!(Ξ, T(et, δt, fdti, true, false, lλv, xv, lσ2v))
+  end
+
+  if i1 > 0 
+    _make_Ξ!(Ξ, i1, xr, σx, σσ, lλv[l], σλ, δt, srδt, idf)
+    if i2 > 0 
+      _make_Ξ!(Ξ, i2, xr, σx, σσ, lλv[l], σλ, δt, srδt, idf)
+    end
+  end
+
+  return nothing
+end
+
+
+
+
 """
     make_Ξ(idf::Vector{iBffs}, λ::Float64, ::Type{T}) where {T <: cT}
 
@@ -1521,6 +1635,26 @@ function _ss_ir_dd(Ξ::Vector{T}, f::Function, α::Float64) where {T <: iTree}
 
   return dd, ss, n, ir
 end
+
+
+
+
+"""
+    _gibbs_quanta(Ξ::Vector{iTxb}, αλ::Function, βλ::Float64)
+
+Returns the quantities for Gibbs sampling for trait driven speciation `iTxb`.
+"""
+function _gibbs_quanta(Ξ::Vector{iTxb}, ασ::Float64, αλ::Float64, βλ::Float64)
+
+  dxs = dxl = ddx = ddσ = ssσ = ddλ = ssλ = nλ = irλ = 0.0
+  for ξi in Ξ
+    dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ = 
+      _gibbs_quanta!(ξi, ασ, αλ, βλ, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ)
+  end
+
+  return dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ
+end
+
 
 
 

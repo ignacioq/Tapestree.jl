@@ -17,8 +17,7 @@ Created 03 09 2020
              idf ::Vector{iBffs},
              α   ::Float64,
              σλ  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
+             δt  ::Float64)
 
 Returns the log-likelihood for a `iTb` according to GBM birth-death.
 """
@@ -26,13 +25,12 @@ function llik_gbm(Ξ   ::Vector{iTb},
                   idf ::Vector{iBffs},
                   α   ::Float64,
                   σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+                  δt  ::Float64)
 
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      ll += llik_gbm(Ξ[i], α, σλ, δt, srδt)
+      ll += llik_gbm(Ξ[i], α, σλ, δt)
       if d2(idf[i]) > 0
         ll += λt(Ξ[i])
       end
@@ -49,23 +47,21 @@ end
     llik_gbm(tree::iTb,
              α   ::Float64,
              σλ  ::Float64,
-             δt  ::Float64,
-             srδt::Float64)
+             δt  ::Float64)
 
 Returns the log-likelihood for a `iTb` according to GBM birth-death.
 """
 function llik_gbm(tree::iTb,
                   α   ::Float64,
                   σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
+                  δt  ::Float64)
 
   if istip(tree)
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), false)
   else
-    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), srδt, true) +
-    llik_gbm(tree.d1::iTb, α, σλ, δt, srδt)          +
-    llik_gbm(tree.d2::iTb, α, σλ, δt, srδt)
+    ll_gbm_b(lλ(tree), α, σλ, δt, fdt(tree), true) +
+    llik_gbm(tree.d1::iTb, α, σλ, δt)              +
+    llik_gbm(tree.d2::iTb, α, σλ, δt)
   end
 end
 
@@ -88,7 +84,6 @@ function ll_gbm_b(lλv ::Array{Float64,1},
                   σλ  ::Float64,
                   δt  ::Float64,
                   fdt ::Float64,
-                  srδt::Float64,
                   λev ::Bool)
 
   @inbounds begin
@@ -104,7 +99,9 @@ function ll_gbm_b(lλv ::Array{Float64,1},
         llpb += exp(0.5*(lλvi + lλvi1))
       end
       # add to global likelihood
-      ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
+      ll += llbm*(-0.5/(σλ^2*δt))         - 
+            Float64(nI)*(0.5*log(σλ^2*δt) + 
+                         0.918938533204672669540968854562379419803619384765625) - 
             llpb*δt
     end
 
@@ -113,7 +110,9 @@ function ll_gbm_b(lλv ::Array{Float64,1},
     # add final non-standard `δt`
     if fdt > 0.0
       lλvi = lλv[nI+1]
-      ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+      ll  += (lλvi1 - lλvi - α*fdt)^2 * (-0.5/(σλ^2*fdt))          - 
+             0.5*log(σλ^2*fdt)                                     - 
+             0.918938533204672669540968854562379419803619384765625 - 
              fdt*exp(0.5*(lλvi + lλvi1))
     end
     if λev

@@ -114,7 +114,7 @@ function sim_dbm(tree::Tlabel,
                  ασ  ::Float64,
                  γ   ::Float64,
                  δt  ::Float64)
-  
+
   xs = Dict{String, Float64}()
   tr = _sim_dbm(tree, x0, αx, log(σ20), ασ, γ, δt, sqrt(δt), xs)
   return tr, xs
@@ -151,7 +151,7 @@ function _sim_dbm(tree::Tlabel,
   # simulate dbm
   if iszero(et)
     xv   = Float64[x0,  x0]
-    lσ2   = Float64[lσ20, lσ20]
+    lσ2  = Float64[lσ20, lσ20]
     fdti = 0.0
   else
     nt, fdti = divrem(et, δt, RoundDown)

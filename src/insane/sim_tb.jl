@@ -274,14 +274,15 @@ Sample conditional on time
 
 """
     sim_xb(t   ::Float64;
-           λ0  ::Float64 = 1.0,
-           αλ  ::Float64 = 0.0,
-           σλ  ::Float64 = 0.1,
            x0  ::Float64 = 0.0,
            αx  ::Float64 = 0.0,
            σ20 ::Float64 = 0.1,
            ασ  ::Float64 = 0.0,
-           σσ   ::Float64 = 0.1,
+           σσ  ::Float64 = 0.1,
+           λ0  ::Float64 = 1.0,
+           αλ  ::Float64 = 0.0,
+           βλ  ::Float64 = 0.0,
+           σλ  ::Float64 = 0.1,
            δt  ::Float64 = 1e-3,
            nlim::Int64   = 10_000,
            init::Symbol  = :crown)
@@ -290,15 +291,15 @@ Simulate `iTxb` according to a trait dependent pure-birth geometric
 Brownian motion conditional in stopping at time `t`.
 """
 function sim_xb(t   ::Float64;
-                λ0  ::Float64 = 1.0,
-                αλ  ::Float64 = 0.0,
-                βλ  ::Float64 = 0.0,
-                σλ  ::Float64 = 0.1,
                 x0  ::Float64 = 0.0,
                 αx  ::Float64 = 0.0,
                 σ20 ::Float64 = 0.1,
                 ασ  ::Float64 = 0.0,
                 σσ  ::Float64 = 0.1,
+                λ0  ::Float64 = 1.0,
+                αλ  ::Float64 = 0.0,
+                βλ  ::Float64 = 0.0,
+                σλ  ::Float64 = 0.1,
                 δt  ::Float64 = 1e-3,
                 nlim::Int64   = 10_000,
                 init::Symbol  = :crown)
@@ -306,14 +307,14 @@ function sim_xb(t   ::Float64;
   if init === :crown
     lλ0  = log(λ0)
     lσ20 = log(σ20)
-    d1, nn = _sim_xb(t, lλ0, αλ, βλ, σλ, x0, αx, lσ20, ασ, σσ, 
+    d1, nn = _sim_xb(t, x0, αx, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, 
                δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_xb(t, lλ0, αλ, βλ, σλ, x0, αx, lσ20, ασ, σσ, 
+    d2, nn = _sim_xb(t, x0, αx, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ,  
                δt, sqrt(δt), nn + 1, nlim)
 
     if nn >= nlim
@@ -323,7 +324,7 @@ function sim_xb(t   ::Float64;
     tree = iTxb(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0], [x0, x0], [lσ20, lσ20])
 
    elseif init === :stem
-    tree, nn = _sim_xb(t, lλ0, αλ, βλ, σλ, x0, αx, lσ20, ασ, σσ, 
+    tree, nn = _sim_xb(t, x0, αx, lσ20, ασ, σσ, log(λ0), αλ, βλ, σλ, 
                  δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
@@ -342,15 +343,15 @@ end
 
 """
     _sim_xb(t   ::Float64,
-            λt  ::Float64,
-            αλ  ::Float64,
-            βλ  ::Float64,
-            σλ  ::Float64,
             xt  ::Float64,
             αx  ::Float64,
             lσ2t::Float64,
             ασ  ::Float64,
-            σσ   ::Float64,
+            σσ  ::Float64,
+            lλt ::Float64,
+            αλ  ::Float64,
+            βλ  ::Float64,
+            σλ  ::Float64,
             δt  ::Float64,
             srδt::Float64,
             nn  ::Int64,
@@ -360,15 +361,15 @@ Simulate `iTxb` according to a trait dependent pure-birth
 geometric Brownian motion.
 """
 function _sim_xb(t   ::Float64,
-                 lλt  ::Float64,
-                 αλ  ::Float64,
-                 βλ  ::Float64,
-                 σλ  ::Float64,
                  xt  ::Float64,
                  αx  ::Float64,
                  lσ2t::Float64,
                  ασ  ::Float64,
-                 σσ   ::Float64,
+                 σσ  ::Float64,
+                 lλt ::Float64,
+                 αλ  ::Float64,
+                 βλ  ::Float64,
+                 σλ  ::Float64,
                  δt  ::Float64,
                  srδt::Float64,
                  nn  ::Int64,
@@ -434,9 +435,9 @@ function _sim_xb(t   ::Float64,
 
       if divev(λm, δt)
         nn += 1
-        td1, nn = _sim_xb(t, lλt1, αλ, βλ, σλ, xt1, αx, lσ2t1, ασ, σσ,
+        td1, nn = _sim_xb(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
           δt, srδt, nn, nlim)
-        td2, nn = _sim_xb(t, lλt1, αλ, βλ, σλ, xt1, αx, lσ2t1, ασ, σσ,
+        td2, nn = _sim_xb(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
           δt, srδt, nn, nlim)
 
         return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn
@@ -450,6 +451,35 @@ function _sim_xb(t   ::Float64,
 
   return iTxb(), nn
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

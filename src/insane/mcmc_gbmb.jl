@@ -134,7 +134,7 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
 
   # starting likelihood and prior
   lλ0 = lλ(Ξ[1])[1]
-  llc = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - nsi*lλ0 + prob_ρ(idf)
+  llc = llik_gbm(Ξ, idf, αc, σλc, δt) - nsi*lλ0 + prob_ρ(idf)
   prc = logdnorm(lλ0,       λ0_prior[1], λ0_prior[2])   +
         logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])   +
         logdnorm(αc,         α_prior[1],  α_prior[2]^2)
@@ -305,7 +305,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
               # update ssλ with new drift `α`
               ssλ = _ss(Ξ, lλ, αc)
 
-              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -316,7 +316,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
 
               llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -328,7 +328,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
               llc, prc, irλ, acc = 
                 update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
-              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -343,7 +343,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
                 update_gbm!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
                   δt, srδt, λ0_prior)
 
-              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -358,7 +358,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
                 update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
                   δt, srδt)
 
-              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -1033,7 +1033,7 @@ end
 #                        pup     ::Array{Int64,1})
 
 #   # starting likelihood and prior
-#   llc = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) + prob_ρ(idf)
+#   llc = llik_gbm(Ξ, idf, αc, σλc, δt) + prob_ρ(idf)
 #   prc = logdnorm(αc,         α_prior[1], α_prior[2]^2) +
 #         logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])
 

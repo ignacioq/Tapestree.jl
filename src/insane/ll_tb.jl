@@ -13,33 +13,30 @@ Created 03 09 2020
 
 
 """
-    llik_tb(Ξ   ::Vector{iTxb},
-            idf ::Vector{iBffs},
-            αλ  ::Float64,
-            βλ  ::Float64,
-            σλ  ::Float64,
-            αx  ::Float64,
-            ασ  ::Float64,
-            σσ  ::Float64,
-            δt  ::Float64,
-            srδt::Float64)
+    llik_xb(Ξ  ::Vector{iTxb},
+            idf::Vector{iBffs},
+            ασ ::Float64,
+            σσ ::Float64,
+            αλ ::Float64,
+            βλ ::Float64,
+            σλ ::Float64,
+            δt ::Float64)
 
 Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_tb(Ξ   ::Vector{iTxb},
-                 idf ::Vector{iBffs},
-                 αλ  ::Float64,
-                 βλ  ::Float64,
-                 σλ  ::Float64,
-                 αx  ::Float64,
-                 ασ  ::Float64,
-                 σσ  ::Float64,
-                 δt  ::Float64)
+function llik_xb(Ξ  ::Vector{iTxb},
+                 idf::Vector{iBffs},
+                 ασ ::Float64,
+                 σσ ::Float64,
+                 αλ ::Float64,
+                 βλ ::Float64,
+                 σλ ::Float64,
+                 δt ::Float64)
 
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      ll += llik_tb(Ξ[i], αλ, βλ, σλ, αx, ασ, σσ, δt)
+      ll += llik_xb(Ξ[i], ασ, σσ, αλ, βλ, σλ, δt)
       if d2(idf[i]) > 0
         ll += λt(Ξ[i])
       end
@@ -53,35 +50,32 @@ end
 
 
 """
-    llik_tb(tree::iTxb,
+    llik_xb(tree::iTxb,
+            ασ  ::Float64,
+            σσ  ::Float64,
             αλ  ::Float64,
             βλ  ::Float64,
             σλ  ::Float64,
-            αx  ::Float64,
-            ασ  ::Float64,
-            σσ  ::Float64,
-            δt  ::Float64,
-            srδt::Float64)
+            δt  ::Float64)
 
 Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_tb(tree::iTxb,
+function llik_xb(tree::iTxb,
+                 ασ  ::Float64,
+                 σσ  ::Float64,
                  αλ  ::Float64,
                  βλ  ::Float64,
                  σλ  ::Float64,
-                 αx  ::Float64,
-                 ασ  ::Float64,
-                 σσ  ::Float64,
                  δt  ::Float64)
 
   if istip(tree)
-    ll_tb_b(xv(tree), lσ2(tree), lλ(tree), 
-            αλ, βλ, σλ, αx, ασ, σσ, δt, fdt(tree), false)
+    ll_xb_b(xv(tree), lσ2(tree), lλ(tree), 
+            ασ, σσ, αλ, βλ, σλ, δt, fdt(tree), false)
   else
-    ll_tb_b(xv(tree), lσ2(tree), lλ(tree), 
-            αλ, βλ, σλ, αx, ασ, σσ, δt, fdt(tree), true) +
-    llik_tb(tree.d1::iTxb, αλ, βλ, σλ, αx, ασ, σσ, δt)   +
-    llik_tb(tree.d2::iTxb, αλ, βλ, σλ, αx, ασ, σσ, δt)
+    ll_xb_b(xv(tree), lσ2(tree), lλ(tree), 
+            ασ, σσ, αλ, βλ, σλ, δt, fdt(tree), true) +
+    llik_xb(tree.d1::iTxb, ασ, σσ, αλ, βλ, σλ, δt)   +
+    llik_xb(tree.d2::iTxb, ασ, σσ, αλ, βλ, σλ, δt)
   end
 end
 
@@ -89,48 +83,46 @@ end
 
 
 """
-    ll_tb_b(x   ::Array{Float64,1},
+    ll_xb_b(vx  ::Array{Float64,1},
             lσ2v::Array{Float64,1},
-            lλv ::Array{Float64,1},
+            vlλ ::Array{Float64,1},
+            ασ  ::Float64,
+            σσ  ::Float64,
             αλ  ::Float64,
             βλ  ::Float64,
             σλ  ::Float64,
-            αx  ::Float64,
-            ασ  ::Float64,
-            σσ  ::Float64,
             δt  ::Float64,
             fdt ::Float64,
             λev ::Bool)
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
-function ll_tb_b(x   ::Array{Float64,1},
-                 lσ2v::Array{Float64,1},
-                 lλv ::Array{Float64,1},
+function ll_xb_b(vx  ::Array{Float64,1},
+                 vlσ2::Array{Float64,1},
+                 vlλ ::Array{Float64,1},
+                 ασ  ::Float64,
+                 σσ  ::Float64,
                  αλ  ::Float64,
                  βλ  ::Float64,
                  σλ  ::Float64,
-                 αx  ::Float64,
-                 ασ  ::Float64,
-                 σσ  ::Float64,
                  δt  ::Float64,
                  fdt ::Float64,
                  λev ::Bool)
 
   @inbounds begin
     # estimate standard `δt` likelihood
-    nI = lastindex(lλv)-2
+    nI = lastindex(vlλ)-2
     n  = Float64(nI)
 
     ll = llx = llσ2 = llλ = llpb = 0.0
     if nI > 0
       @turbo for i in Base.OneTo(nI)
-        lσ2i   = lσ2v[i]
-        lσ2i1  = lσ2v[i+1]
-        dxi    = x[i+1] - x[i]
-        lλi    = lλv[i]
-        lλi1   = lλv[i+1]
-        llx   += -0.5*(dxi - αx*δt)^2/(exp(0.5*(lσ2i1 + lσ2i))*δt) - 
+        lσ2i   = vlσ2[i]
+        lσ2i1  = vlσ2[i+1]
+        dxi    = vx[i+1] - vx[i]
+        lλi    = vlλ[i]
+        lλi1   = vlλ[i+1]
+        llx   += -0.5*dxi^2/(exp(0.5*(lσ2i1 + lσ2i))*δt) - 
                   0.25*(lσ2i1 + lσ2i)
         llσ2  += (lσ2i1 - lσ2i - ασ*δt)^2
         llλ   += (lλi1 - lλi - αλ*δt - βλ*dxi)^2
@@ -144,16 +136,16 @@ function ll_tb_b(x   ::Array{Float64,1},
             llpb*δt
     end
 
-    lλi1 = lλv[nI+2]
+    lλi1 = vlλ[nI+2]
 
     # add final non-standard `δt`
     if fdt > 0.0
-      lσ2i   = lσ2v[nI+1]
-      lσ2i1  = lσ2v[nI+2]
-      dxi    = x[nI+2] - x[nI+1]
-      lλi    = lλv[nI+1]
+      lσ2i   = vlσ2[nI+1]
+      lσ2i1  = vlσ2[nI+2]
+      dxi    = vx[nI+2] - vx[nI+1]
+      lλi    = vlλ[nI+1]
       # add to global likelihood
-      ll += -0.5*(dxi - αx*fdt)^2/(exp(0.5*(lσ2i1 + lσ2i))*fdt)   - 
+      ll += -0.5*dxi^2/(exp(0.5*(lσ2i1 + lσ2i))*fdt)   - 
             0.25*(lσ2i1 + lσ2i) - 1.5*log(fdt) - log(σσ*σλ)       +
             (lσ2i1 - lσ2i - ασ*fdt)^2 * (-0.5/(σσ^2*fdt))         + 
             (lλi1 - lλi - αλ*fdt - βλ*dxi)^2 * (-0.5/(σλ^2*fdt))  -
@@ -174,8 +166,11 @@ end
 
 
 
+
+
+
 """
-    llik_tb_ssλ(tree::iTxb,
+    llik_xb_ssλ(tree::iTxb,
                  α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
@@ -183,7 +178,7 @@ end
 
 Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_tb_ssλ(tree::iTxb,
+function llik_xb_ssλ(tree::iTxb,
                       α   ::Float64,
                       σλ  ::Float64,
                       δt  ::Float64,
@@ -192,17 +187,17 @@ function llik_tb_ssλ(tree::iTxb,
 
   if istip(tree)
     ll, dλ, ssλ, nλ, irλ = 
-      ll_tb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+      ll_xb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
   else
     ns += 1.0
 
     ll, dλ, ssλ, nλ, irλ = 
-      ll_tb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
+      ll_xb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
 
     ll1, dλ1, ssλ1, nλ1, irλ1, ns = 
-      llik_tb_ssλ(tree.d1, α, σλ, δt, srδt, ns)
+      llik_xb_ssλ(tree.d1, α, σλ, δt, srδt, ns)
     ll2, dλ2, ssλ2, nλ2, irλ2, ns = 
-      llik_tb_ssλ(tree.d2, α, σλ, δt, srδt, ns)
+      llik_xb_ssλ(tree.d2, α, σλ, δt, srδt, ns)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
@@ -218,7 +213,7 @@ end
 
 
 """
-    ll_tb_b_ssλ(lλv ::Array{Float64,1},
+    ll_xb_b_ssλ(lλv ::Array{Float64,1},
                  α   ::Float64,
                  σλ  ::Float64,
                  δt  ::Float64,
@@ -228,7 +223,7 @@ end
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
-function ll_tb_b_ssλ(lλv ::Array{Float64,1},
+function ll_xb_b_ssλ(lλv ::Array{Float64,1},
                       α   ::Float64,
                       σλ  ::Float64,
                       δt  ::Float64,
@@ -281,7 +276,7 @@ end
 
 
 """
-    llr_tb_b_sep(lλp ::Array{Float64,1},
+    llr_xb_b_sep(lλp ::Array{Float64,1},
                   lλc ::Array{Float64,1},
                   α   ::Float64,
                   σλ  ::Float64,
@@ -293,7 +288,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth
 separately for the Brownian motion and the pure-birth
 """
-function llr_tb_b_sep(lλp ::Array{Float64,1},
+function llr_xb_b_sep(lλp ::Array{Float64,1},
                        lλc ::Array{Float64,1},
                        α   ::Float64,
                        σλ  ::Float64,
@@ -349,88 +344,135 @@ end
 
 
 """
-    _ss_ir_dd(tree::T,
-              f   ::Function,
-              α   ::Float64,
-              dd  ::Float64,
-              ss  ::Float64,
-              n   ::Float64,
-              ir  ::Float64) where {T <: iTree}
+    _gibbs_quanta!(tree::iTxb,
+                   ασ  ::Float64,
+                   αλ  ::Float64,
+                   βλ  ::Float64,
+                   dxs ::Float64,
+                   dxl ::Float64,
+                   ddx ::Float64,
+                   ddσ ::Float64,
+                   ssσ ::Float64,
+                   ddλ ::Float64,
+                   ssλ ::Float64,
+                   nλ  ::Float64,
+                   irλ ::Float64)
 
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-the integrated rate `ir` and the delta drift `dd`.
+Returns the quantities for Gibbs sampling for trait driven speciation `iTxb`.
 """
-function _ss_ir_dd(tree::T,
-                   f   ::Function,
-                   α   ::Float64,
-                   dd  ::Float64,
-                   ss  ::Float64,
-                   n   ::Float64,
-                   ir  ::Float64) where {T <: iTree}
+function _gibbs_quanta!(tree::iTxb,
+                        ασ  ::Float64,
+                        αλ  ::Float64,
+                        βλ  ::Float64,
+                        dxs ::Float64,
+                        dxl ::Float64,
+                        ddx ::Float64,
+                        ddσ ::Float64,
+                        ssσ ::Float64,
+                        ddλ ::Float64,
+                        ssλ ::Float64,
+                        nλ  ::Float64,
+                        irλ ::Float64)
 
-  dd0, ss0, n0, ir0 = _ss_ir_dd_b(f(tree), α, dt(tree), fdt(tree))
+  dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0 = 
+    _gibbs_quanta(xv(tree), lσ2(tree), lλ(tree), 
+                  ασ, αλ, βλ, dt(tree), fdt(tree))
 
-  dd += dd0
-  ss += ss0
-  n  += n0
-  ir += ir0
+  dxs += dxs0
+  dxl += dxl0
+  ddx += ddx0
+  ddσ += ddσ0
+  ssσ += ssσ0
+  ddλ += ddλ0
+  ssλ += ssλ0
+  nλ  += nλ0
+  irλ += irλ0
 
   if def1(tree)
-    dd, ss, n, ir = _ss_ir_dd(tree.d1, f, α, dd, ss, n, ir)
+      dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ = 
+        _gibbs_quanta!(tree.d1, ασ, αλ, βλ, 
+                       dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ)
     if def2(tree)
-      dd, ss, n, ir = _ss_ir_dd(tree.d2, f, α, dd, ss, n, ir)
+        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ = 
+         _gibbs_quanta!(tree.d2, ασ, αλ, βλ, 
+                        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ)
     end
   end
 
-  return dd, ss, n, ir
+  return dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ
 end
 
 
 
+
 """
-    _ss_ir_dd_b(v  ::Array{Float64,1},
-                α  ::Float64,
-                δt ::Float64,
-                fdt::Float64)
+     _gibbs_quanta(vx  ::Vector{Float64},
+                   vlσ2::Vector{Float64},
+                   vlλ ::Vector{Float64},
+                   ασ  ::Float64,
+                   αλ  ::Float64,
+                   βλ  ::Float64,
+                   δt  ::Float64,
+                   fdt ::Float64)
 
-Returns the standardized sum of squares for rate `v`, the path number `n`,
-the integrated rate `ir` and the delta drift `dd`.
+Returns the quantities for Gibbs sampling for trait driven speciation `iTxb`.
 """
-function _ss_ir_dd_b(v  ::Array{Float64,1},
-                     α  ::Float64,
-                     δt ::Float64,
-                     fdt::Float64)
+function _gibbs_quanta(vx  ::Vector{Float64},
+                       vlσ2::Vector{Float64},
+                       vlλ ::Vector{Float64},
+                       ασ  ::Float64,
+                       αλ  ::Float64,
+                       βλ  ::Float64,
+                       δt  ::Float64,
+                       fdt ::Float64)
+  @inbounds begin
 
-
-    # estimate standard `δt` likelihood
-    nI = lastindex(v)-2
-
-    ss = ir = n = 0.0
+    nI = lastindex(vx) - 2
+    dxs = dxl = ddx = ddσ = ssσ = ddλ = ssλ = nλ = irλ = 0.0
     if nI > 0
       @turbo for i in Base.OneTo(nI)
-        vi  = v[i]
-        vi1 = v[i+1]
-        ss += (vi1 - vi - α*δt)^2
-        ir += exp(0.5*(vi + vi1))
+        dxi  = vx[i+1] - vx[i]
+        lλi  = vlλ[i]
+        lλi1 = vlλ[i+1]
+        dλi  = lλi1 - lλi
+
+        dxs += dxi^2
+        dxl += dxi * dλi
+        ssσ += (vlσ2[i+1] - vlσ2[i] - ασ*δt)^2
+        ssλ += (dλi - αλ*δt - βλ*dxi)^2
+        irλ += exp(0.5*(lλi + lλi1))
       end
-    
+
       # standardize
-      ss *= 1.0/(2.0*δt)
-      ir *= δt
-      n  += Float64(nI)
+      dxs /= δt
+      dxl /= δt
+      ssσ /= 2.0*δt
+      ssλ /= 2.0*δt
+      irλ *= δt
+      nλ  += Float64(nI)
     end
 
     # add final non-standard `δt`
     if fdt > 0.0
-      vi  = v[nI+1]
-      vi1 = v[nI+2]
-      ss += (vi1 - vi - α*fdt)^2/(2.0*fdt)
-      n  += 1.0
-      ir += fdt*exp(0.5*(vi + vi1))
-    end
+      dxi  = vx[nI+2] - vx[nI+1]
+      lλi  = vlλ[nI+1]
+      lλi1 = vlλ[nI+2]
+      dλi  = lλi1 - lλi
 
-  return (v[nI+2] - v[1]), ss, n, ir
+      dxs += dxi^2/fdt
+      dxl += dxi*dλi/fdt
+      ssσ += (vlσ2[nI+2] - vlσ2[nI+1] - ασ*fdt)^2/(2.0*fdt)
+      ssλ += (dλi - αλ*fdt - βλ*dxi)^2/(2.0*fdt)
+      irλ += exp(0.5*(lλi + lλi1))*fdt
+      nλ  += 1.0
+    end
+  end
+
+  return dxs, dxl, 
+        (vx[nI+2] -  vx[1]), (vlσ2[nI+2] - vlσ2[1]), ssσ, 
+        (vlλ[nI+2] - vlλ[1]), ssλ, nλ, irλ
 end
+
 
 
 
