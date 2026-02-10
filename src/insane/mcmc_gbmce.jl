@@ -203,12 +203,9 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
       # update drift
       if pupi === 1
 
-        llc, prc, αc, mc =
-          update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, ddλ, llc, prc, mc, th, surv,
-            δt, srδt, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, lλ, αc)
+        llc, prc, αc, mc, ssλ =
+          update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, ddλ, llc, prc, mc, ssλ, 
+            th, surv, δt, srδt, α_prior)
 
       # update sigma
       elseif pupi === 2
@@ -343,12 +340,9 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
             # update α
             if pupi === 1
 
-              llc, prc, αc, mc =
-                update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, ddλ, llc, prc, mc, th, surv,
-                  δt, srδt, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, lλ, αc)
+              llc, prc, αc, mc, ssλ =
+                update_α!(αc, lλ(Ξ[1])[1], σλc, μc, L, ddλ, llc, prc, mc, ssλ, 
+                  th, surv, δt, srδt, α_prior)
 
               # ll0 = llik_gbm(Ξ, idf, αc, σλc, μc, δt, srδt) -Float64(surv > 0) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-5)
@@ -455,20 +449,19 @@ end
 
 
 
-
-
 """
     update_α!(αc     ::Float64,
               λ0     ::Float64,
               σλ     ::Float64,
               μ      ::Float64,
               L      ::Float64,
-              ddλ     ::Float64,
+              ddλ    ::Float64,
               llc    ::Float64,
               prc    ::Float64,
               mc     ::Float64,
+              ssλ    ::Float64,
               th     ::Float64,
-              crown  ::Int64,
+              surv   ::Int64,
               δt     ::Float64,
               srδt   ::Float64,
               α_prior::NTuple{2,Float64})
@@ -480,12 +473,13 @@ function update_α!(αc     ::Float64,
                    σλ     ::Float64,
                    μ      ::Float64,
                    L      ::Float64,
-                   ddλ     ::Float64,
+                   ddλ    ::Float64,
                    llc    ::Float64,
                    prc    ::Float64,
                    mc     ::Float64,
+                   ssλ    ::Float64,
                    th     ::Float64,
-                   surv  ::Int64,
+                   surv   ::Int64,
                    δt     ::Float64,
                    srδt   ::Float64,
                    α_prior::NTuple{2,Float64})
@@ -502,11 +496,12 @@ function update_α!(αc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
     prc += llrdnorm_x(αp, αc, ν, τ2)
+    ssλ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddλ
     αc   = αp
     mc   = mp
   end
 
-  return llc, prc, αc, mc
+  return llc, prc, αc, mc, ssλ
 end
 
 

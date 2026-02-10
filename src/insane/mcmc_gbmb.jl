@@ -163,10 +163,7 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
       # update drift
       if pupi === 1
 
-        llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, lλ, αc)
+        llc, prc, αc, ssλ = update_α!(αc, σλc, L, ddλ, llc, prc, ssλ, α_prior)
 
       # update diffusion
       elseif pupi === 2
@@ -300,10 +297,8 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
             # update drift
             if pupi === 1
 
-              llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, lλ, αc)
+              llc, prc, αc, ssλ = 
+                update_α!(αc, σλc, L, ddλ, llc, prc, ssλ, α_prior)
 
               # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -407,41 +402,47 @@ end
 
 
 
+
 """
     update_α!(αc     ::Float64,
-              σλ     ::Float64,
+              σ      ::Float64,
               L      ::Float64,
-              ddλ    ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
+              dd     ::Float64,
+              ll     ::Float64,
+              pr     ::Float64,
+              ss     ::Float64,
               α_prior::NTuple{2,Float64})
 
-Gibbs update for `α`.
+Gibbs update for Normal conjugacy `α`.
 """
 function update_α!(αc     ::Float64,
-                   σλ     ::Float64,
+                   σ      ::Float64,
                    L      ::Float64,
-                   ddλ    ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
+                   dd     ::Float64,
+                   ll     ::Float64,
+                   pr     ::Float64,
+                   ss     ::Float64,
                    α_prior::NTuple{2,Float64})
 
   # ratio
-  ν   = α_prior[1]
-  τ2  = α_prior[2]^2
-  σλ2 = σλ^2
-  rs  = σλ2/τ2
+  ν  = α_prior[1]
+  τ2 = α_prior[2]^2
+  σ2 = σ^2
+  rs = σ2/τ2
 
   # gibbs update for σ
-  αp = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  αp = rnorm((dd + rs*ν)/(rs + L), sqrt(σ2/(rs + L)))
 
   # update prior
-  prc += llrdnorm_x(αp, αc, ν, τ2)
+  pr += llrdnorm_x(αp, αc, ν, τ2)
 
   # update likelihood
-  llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L)
+  ll += 0.5*L/σ2*(αc^2 - αp^2 + 2.0*dd*(αp - αc)/L)
 
-  return llc, prc, αp
+  # update residual ss
+  ss += 0.5*L*(αp^2 - αc^2) - (αp - αc)*dd
+
+  return ll, pr, αp, ss
 end
 
 

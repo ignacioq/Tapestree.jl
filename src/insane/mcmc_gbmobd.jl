@@ -384,22 +384,16 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
       # update αλ
       if pupi === 1
 
-        llc, prc, αλc, mc =
+        llc, prc, αλc, mc, ssλ =
           update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
-            ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
-
-        # update ssλ with new drift `αλc`
-        ssλ = _ss(Ξ, lλ, αλc)
+            ddλ, llc, prc, mc, th, ssλ, surv, δt, srδt, αλ_prior)
 
       # update αμ
       elseif pupi === 2
 
-        llc, prc, αμc, mc =
+        llc, prc, αμc, mc, ssμ =
           update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
-            ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
-
-        # update ssμ with new drift `αμc`
-        ssμ = _ss(Ξ, lμ, αμc)
+            ddμ, llc, prc, mc, ssμ, th, surv, δt, srδt, αμ_prior)
 
       # σλ & σμ update
       elseif pupi === 3
@@ -625,22 +619,16 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
           # update αλ
           if pupi === 1
 
-            llc, prc, αλc, mc =
+            llc, prc, αλc, mc, ssλ =
               update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
-                ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
-
-            # update ssλ with new drift `αλc`
-            ssλ = _ss(Ξ, lλ, αλc)
+                ddλ, llc, prc, mc, ssλ, th, surv, δt, srδt, αλ_prior)
 
           # update αμ
           elseif pupi === 2
 
-            llc, prc, αμc, mc =
+            llc, prc, αμc, mc, ssμ =
               update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
-                ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
-
-            # update ssμ with new drift `αμc`
-            ssμ = _ss(Ξ, lμ, αμc)
+                ddμ, llc, prc, mc, ssμ, th, surv, δt, srδt, αμ_prior)
 
           # σλ & σμ update
           elseif pupi === 3

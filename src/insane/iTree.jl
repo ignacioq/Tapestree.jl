@@ -126,40 +126,6 @@ function _sT_label(tree::T, i::Int64) where {T <: iTree}
 end
 
 
-"""
-    sT_label(tree::T) where {T <: iTree}
-
-Demotes a tree to `sT_label` and returns tip end traits.
-"""
-function sT_label(tree::T) where {T <: Tx}
-  xs = Dict{String, Float64}()
-  tr = _sT_label(tree, 0, xs)[1]
-  return tr, xs
-end
-
-
-"""
-    _sT_label(tree::T, i::Int64) where {T <: iTree}
-
-Demotes a tree to `sT_label`.
-"""
-function _sT_label(tree::T, i::Int64, xs::Dict{String, Float64}) where {T <: Tx}
-  if def1(tree)
-    t1, i = _sT_label(tree.d1, i, xs)
-    t2, i = _sT_label(tree.d2, i, xs)
-    lab   = isdefined(tree, :l) ? label(tree) : ""
-    tree  = sT_label(t1, t2, e(tree), lab)
-  else
-    i += 1
-    lab = isdefined(tree, :l) ? label(tree) : string("t", i)
-    xs[lab] = xv(tree)[end]
-    tree = sT_label(e(tree), lab)
-  end
-
-  return tree, i
-end
-
-
 
 
 """

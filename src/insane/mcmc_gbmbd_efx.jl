@@ -241,12 +241,9 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # update α
       if pupi === 1
 
-        llc, prc, αc, mc  =
+        llc, prc, αc, mc, ssλ  =
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, ddλ, llc, prc,
-            mc, th, surv, δt, srδt, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ, ssμ = _ss(Ξ, αc)
+            mc, ssλ, th, surv, δt, srδt, α_prior)
 
       # σλ & σμ update
       elseif pupi === 2
@@ -385,12 +382,9 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             # update α
             if pupi === 1
 
-              llc, prc, αc, mc  =
-                update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, ddλ, llc, prc,
-                  mc, th, surv, δt, srδt, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ, ssμ = _ss(Ξ, αc)
+              llc, prc, αc, mc, ssλ  =
+                update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, ddλ, 
+                  llc, prc, mc, ssλ, th, surv, δt, srδt, α_prior)
 
               # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
               #  if !isapprox(ll0, llc, atol = 1e-4)

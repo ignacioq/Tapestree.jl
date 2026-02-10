@@ -222,12 +222,9 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
       # update α
       if pupi === 1
 
-        llc, prc, αc, mc  =
+        llc, prc, αc, mc, ssλ, =
           update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, ddλ, llc, prc,
-            mc, th, surv, δt, srδt, α_prior)
-
-        # update ssλ, ssμ with new drift `α`
-        ssλ, ssμ = _ss(Ξ, αc)
+            mc, ssλ, th, surv, δt, srδt, α_prior)
 
       # σλ & σμ update
       elseif pupi === 2
@@ -382,12 +379,9 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             # update α
             if pupi === 1
 
-              llc, prc, αc, mc  =
-                update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, ddλ, llc, prc,
-                  mc, th, surv, δt, srδt, α_prior)
-
-              # update ssλ, ssμ with new drift `α`
-              ssλ, ssμ = _ss(Ξ, αc)
+              llc, prc, αc, mc, ssλ =
+                update_α!(αc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], σλc, σμc, L, ddλ, 
+                  llc, prc, mc, ssλ, th, surv, δt, srδt, α_prior)
 
               # ll0 = llik_gbm(Ξ, idf, αc, σλc, σμc, δt, srδt) - Float64(surv > 1) * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
               #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -509,6 +503,7 @@ end
               llc    ::Float64,
               prc    ::Float64,
               mc     ::Float64,
+              ssλ    ::Float64,
               th     ::Float64,
               surv   ::Int64,
               δt     ::Float64,
@@ -527,6 +522,7 @@ function update_α!(αc     ::Float64,
                    llc    ::Float64,
                    prc    ::Float64,
                    mc     ::Float64,
+                   ssλ    ::Float64,
                    th     ::Float64,
                    surv   ::Int64,
                    δt     ::Float64,
@@ -545,11 +541,12 @@ function update_α!(αc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
     prc += llrdnorm_x(αp, αc, ν, τ2)
+    ssλ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddλ
     αc   = αp
     mc   = mp
   end
 
-  return llc, prc, αc, mc
+  return llc, prc, αc, mc, ssλ
 end
 
 

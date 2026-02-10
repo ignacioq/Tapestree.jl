@@ -189,10 +189,8 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
       # update `ασ` evolutionary rates drift
       if pupi === 1
 
-        llc, prc, ασc = update_α!(ασc, σσc, L, ddσ, llc, prc, ασ_prior)
-
-        # update ssσ with new drift `ασ`
-        ssσ = _ss(Ξ, lσ2, ασc)
+        llc, prc, ασc, ssσ = 
+          update_α!(ασc, σσc, L, ddσ, llc, prc, ssσ, ασ_prior)
 
       # update `σσ` evolutionary rates rate
       elseif pupi === 2
@@ -202,41 +200,22 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
       # update `αλ` speciation rates drift
       elseif pupi === 3
 
-        llc, prc, αλc = 
-          update_α!(αλc, σλc, L, ddλ - βλc*ddx, llc, prc, αλ_prior)
-
-        # update ssλ with new drift `α`
-        ssσ = _ss(Ξ, lσ2, ασc)
+        llc, prc, αλc, ssλ = 
+          update_α!(αλc, σλc, L, ddλ - βλc*ddx, llc, prc, ssλ, αλ_prior)
 
       # update `βλ` speciation rates trait effect
       elseif pupi === 4
 
-        llc, prc, βλc = 
-          update_α!(βλc, σλc, dxs, dxl - αλc*ddx, llc, prc, βλ_prior)
-
-        # update ssλ with new drift `α`
-        ssσ = _ss(Ξ, lσ2, ασc)
-
+        llc, prc, βλc, ssλ = 
+          update_α!(βλc, σλc, dxs, dxl - αλc*ddx, llc, prc, ssλ, βλ_prior)
 
       # update `σλ` speciation rates trait effect
       elseif pupi === 5
 
         llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-
-
-        llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, lλ, αc)
-
-      # update diffusion
-      elseif pupi === 2
-
-        llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
-
       # update scale
-      elseif pupi === 3
+      elseif pupi === 6
 
         llc, prc, irλ, acc = 
           update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
@@ -246,6 +225,10 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
 
       # update gbm
       elseif pupi === 4
+
+"""
+here
+"""
 
         nix = ceil(Int64,rand()*nin)
         bix = inodes[nix]
@@ -472,41 +455,47 @@ end
 
 
 """
-    update_β!(βc     ::Float64,
-              σλ     ::Float64,
+    update_α!(αc     ::Float64,
+              σ      ::Float64,
               L      ::Float64,
-              ddλ    ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
-              β_prior::NTuple{2,Float64})
+              dd     ::Float64,
+              ll     ::Float64,
+              pr     ::Float64,
+              ss     ::Float64,
+              α_prior::NTuple{2,Float64})
 
-Gibbs update for `β`.
+Gibbs update for Normal conjugacy `α`.
 """
-function update_β!(βc     ::Float64,
-                   σλ     ::Float64,
+function update_α!(αc     ::Float64,
+                   σ      ::Float64,
                    L      ::Float64,
-                   ddλ    ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
-                   β_prior::NTuple{2,Float64})
+                   dd     ::Float64,
+                   ll     ::Float64,
+                   pr     ::Float64,
+                   ss     ::Float64,
+                   α_prior::NTuple{2,Float64})
 
   # ratio
-  ν   = β_prior[1]
-  τ2  = β_prior[2]^2
-  σλ2 = σλ^2
-  rs  = σλ2/τ2
+  ν  = α_prior[1]
+  τ2 = α_prior[2]^2
+  σ2 = σ^2
+  rs = σ2/τ2
 
   # gibbs update for σ
-  βp = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  αp = rnorm((dd + rs*ν)/(rs + L), sqrt(σ2/(rs + L)))
 
   # update prior
-  prc += llrdnorm_x(βp, βc, ν, τ2)
+  pr += llrdnorm_x(αp, αc, ν, τ2)
 
   # update likelihood
-  llc += 0.5*L/σλ2*(βc^2 - βp^2 + 2.0*ddλ*(βp - βc)/L)
+  ll += 0.5*L/σ2*(αc^2 - αp^2 + 2.0*dd*(αp - αc)/L)
 
-  return llc, prc, βp
+  # update residual ss
+  ss += 0.5*L*(αp^2 - αc^2) - (αp - αc)*dd
+
+  return ll, pr, αp, ss
 end
+
 
 
 
@@ -547,52 +536,52 @@ end
 
 
 
-"""
-    update_scale!(Ξ       ::Vector{T},
-                  idf     ::Vector{iBffs},
-                  llc     ::Float64,
-                  prc     ::Float64,
-                  ir      ::Float64,
-                  ns      ::Float64,
-                  stn     ::Float64,
-                  λ0_prior::NTuple{2,Float64}) where {T <: iTree}
+# """
+#     update_scale!(Ξ       ::Vector{T},
+#                   idf     ::Vector{iBffs},
+#                   llc     ::Float64,
+#                   prc     ::Float64,
+#                   ir      ::Float64,
+#                   ns      ::Float64,
+#                   stn     ::Float64,
+#                   λ0_prior::NTuple{2,Float64}) where {T <: iTree}
 
-Update scale for speciation.
-"""
-function update_scale!(Ξ       ::Vector{T},
-                       idf     ::Vector{iBffs},
-                       llc     ::Float64,
-                       prc     ::Float64,
-                       ir      ::Float64,
-                       ns      ::Float64,
-                       stn     ::Float64,
-                       λ0_prior::NTuple{2,Float64}) where {T <: iTree}
+# Update scale for speciation.
+# """
+# function update_scale!(Ξ       ::Vector{T},
+#                        idf     ::Vector{iBffs},
+#                        llc     ::Float64,
+#                        prc     ::Float64,
+#                        ir      ::Float64,
+#                        ns      ::Float64,
+#                        stn     ::Float64,
+#                        λ0_prior::NTuple{2,Float64}) where {T <: iTree}
 
-  # sample log(scaling factor)
-  s = randn()*stn
+#   # sample log(scaling factor)
+#   s = randn()*stn
 
-  # likelihood ratio
-  iri = (1.0 - exp(s)) * ir
-  llr = ns * s + iri
+#   # likelihood ratio
+#   iri = (1.0 - exp(s)) * ir
+#   llr = ns * s + iri
 
-  lλ0 = lλ(Ξ[1])[1]
+#   lλ0 = lλ(Ξ[1])[1]
 
-  # prior ratio
-  prr = llrdnorm_x(lλ0 + s, lλ0, λ0_prior[1], λ0_prior[2]) 
+#   # prior ratio
+#   prr = llrdnorm_x(lλ0 + s, lλ0, λ0_prior[1], λ0_prior[2]) 
 
-  acc = 0.0
+#   acc = 0.0
 
-  if -randexp() < llr + prr
-    acc += 1.0
-    llc += llr
-    prc += prr
-    ir  -= iri
-    scale_rate!(Ξ, lλ, s)
-    scale_rate!(idf, s)
-  end
+#   if -randexp() < llr + prr
+#     acc += 1.0
+#     llc += llr
+#     prc += prr
+#     ir  -= iri
+#     scale_rate!(Ξ, lλ, s)
+#     scale_rate!(idf, s)
+#   end
 
-  return llc, prc, ir, acc
-end
+#   return llc, prc, ir, acc
+# end
 
 
 

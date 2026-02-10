@@ -158,11 +158,8 @@ function mcmc_burn_cladsb(Ξ       ::Vector{cTb},
       # update drift
       if pupi === 1
 
-        llc, prc, αc = 
-          update_α!(αc, σλc, 2.0*(ns + rmλ), ddλ, llc, prc, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, idf, αc)
+        llc, prc, αc, ssλ = 
+          update_α!(αc, σλc, 2.0*(ns + rmλ), ddλ, llc, prc, ssλ, α_prior)
 
       # update diffusion
       elseif pupi === 2
@@ -293,11 +290,8 @@ function mcmc_cladsb(Ξ       ::Vector{cTb},
             # update drift
             if pupi === 1
 
-              llc, prc, αc = 
-                update_α!(αc, σλc, 2.0*(ns + rmλ), ddλ, llc, prc, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, idf, αc)
+              llc, prc, αc, ssλ = 
+                update_α!(αc, σλc, 2.0*(ns + rmλ), ddλ, llc, prc, ssλ, α_prior)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)

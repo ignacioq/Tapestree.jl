@@ -321,22 +321,16 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
       # update αλ
       if pupi === 1
 
-        llc, prc, αλc, mc =
+        llc, prc, αλc, mc, ssλ =
           update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
-            ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
-
-        # update ssλ with new drift `αλc`
-        ssλ = _ss(Ξ, lλ, αλc)
+            ddλ, llc, prc, mc, ssλ, th, surv, δt, srδt, αλ_prior)
 
       # update αλ
       elseif pupi === 2
 
-        llc, prc, αμc, mc =
+        llc, prc, αμc, mc, ssμ =
           update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
-            ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
-
-        # update ssλ with new drift `αμc`
-        ssμ = _ss(Ξ, lμ, αμc)
+            ddμ, llc, prc, mc, ssμ, th, surv, δt, srδt, αμ_prior)
 
       # σλ & σμ update
       elseif pupi === 3
@@ -522,9 +516,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
                 update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
                   ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
 
-              # update ssλ with new drift `αλc`
-              ssλ = _ss(Ξ, lλ, αλc)
-
               # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
               #  if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi, Ξ
@@ -537,9 +528,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
               llc, prc, αμc, mc =
                 update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
                   ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
-
-              # update ssλ with new drift `αμc`
-              ssμ = _ss(Ξ, lμ, αμc)
 
               # ll0 = llik_gbm(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi, δt, srδt) - rmλ * lλ(Ξ[1])[1] + log(mc) + prob_ρ(idf)
               #  if !isapprox(ll0, llc, atol = 1e-4)
@@ -665,7 +653,7 @@ end
 
 
 """
-    update_αλ!(αλ      ::Float64,
+    update_αλ!(αλc     ::Float64,
                λ0      ::Float64,
                μ0      ::Float64,
                αμ      ::Float64,
@@ -676,6 +664,7 @@ end
                llc     ::Float64,
                prc     ::Float64,
                mc      ::Float64,
+               ssλ     ::Float64,
                th      ::Float64,
                surv    ::Int64,
                δt      ::Float64,
@@ -695,6 +684,7 @@ function update_αλ!(αλc     ::Float64,
                     llc     ::Float64,
                     prc     ::Float64,
                     mc      ::Float64,
+                    ssλ     ::Float64,
                     th      ::Float64,
                     surv    ::Int64,
                     δt      ::Float64,
@@ -713,28 +703,30 @@ function update_αλ!(αλc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σλ2*(αλc^2 - αλp^2 + 2.0*ddλ*(αλp - αλc)/L) + llr
     prc += llrdnorm_x(αλp, αλc, ν, τ2)
+    ssλ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddλ
     αλc  = αλp
     mc   = mp
   end
 
-  return llc, prc, αλc, mc
+  return llc, prc, αλc, mc, ssλ
 end
 
 
 
 
 """
-    update_αμ!(αμ      ::Float64,
+    update_αμ!(αμc     ::Float64,
                λ0      ::Float64,
                μ0      ::Float64,
                αλ      ::Float64,
                σλ      ::Float64,
                σμ      ::Float64,
                L       ::Float64,
-               ddλ     ::Float64,
+               ddμ     ::Float64,
                llc     ::Float64,
                prc     ::Float64,
                mc      ::Float64,
+               ssμ     ::Float64,
                th      ::Float64,
                surv    ::Int64,
                δt      ::Float64,
@@ -754,6 +746,7 @@ function update_αμ!(αμc     ::Float64,
                     llc     ::Float64,
                     prc     ::Float64,
                     mc      ::Float64,
+                    ssμ     ::Float64,
                     th      ::Float64,
                     surv    ::Int64,
                     δt      ::Float64,
@@ -772,11 +765,12 @@ function update_αμ!(αμc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σμ2*(αμc^2 - αμp^2 + 2.0*ddμ*(αμp - αμc)/L) + llr
     prc += llrdnorm_x(αμp, αμc, ν, τ2)
+    ssμ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddμ
     αμc  = αμp
     mc   = mp
   end
 
-  return llc, prc, αμc, mc
+  return llc, prc, αμc, mc, ssμ
 end
 
 

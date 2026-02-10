@@ -307,22 +307,16 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
       # update speciation drift
       if pupi === 1
 
-        llc, prc, αλc, mc = 
+        llc, prc, αλc, mc, ssλ = 
           update_αλ!(αλc, lλ(Ξ[1]), lμ(Ξ[1]), αμc, σλc, σμc, 
-            2.0*(ns + rmλ), ddλ, llc, prc, mc, th, surv, αλ_prior)
-
-        # update ssλ with new drift `αλ`
-        ssλ = _ss(Ξ, idf, αλc, lλ, λt)
+            2.0*(ns + rmλ), ddλ, llc, prc, mc, ssλ, th, surv, αλ_prior)
 
       # update extinction drift
       elseif pupi === 2
 
-        llc, prc, αμc, mc = 
+        llc, prc, αμc, mc, ssμ = 
           update_αμ!(αμc, lλ(Ξ[1]), lμ(Ξ[1]), αλc, σλc, σμc, 
-            2.0*(ns + rmλ), ddμ, llc, prc, mc, th, surv, αμ_prior)
-
-       # update ssμ with new drift `αμ`
-        ssμ = _ss(Ξ, idf, αμc, lμ, μt)
+            2.0*(ns + rmλ), ddμ, llc, prc, mc, ssμ, th, surv, αμ_prior)
 
       # update speciation and extinction diffusion rate
       elseif pupi === 3
@@ -506,12 +500,9 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
             # update drift
             if pupi === 1
 
-              llc, prc, αλc, mc = 
+              llc, prc, αλc, mc, ssλ = 
                 update_αλ!(αλc, lλ(Ξ[1]), lμ(Ξ[1]), αμc, σλc, σμc, 
-                  2.0*(ns + rmλ), ddλ, llc, prc, mc, th, surv, αλ_prior)
-
-              # update ssλ with new drift `αλ`
-              ssλ = _ss(Ξ, idf, αλc, lλ, λt)
+                  2.0*(ns + rmλ), ddλ, llc, prc, mc, ssλ, th, surv, αλ_prior)
 
               # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -522,12 +513,9 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
             # update extinction drift
             elseif pupi === 2
 
-              llc, prc, αμc, mc = 
+              llc, prc, αμc, mc, ssμ = 
                 update_αμ!(αμc, lλ(Ξ[1]), lμ(Ξ[1]), αλc, σλc, σμc, 
-                  2.0*(ns + rmλ), ddμ, llc, prc, mc, th, surv, αμ_prior)
-
-             # update ssμ with new drift `αμ`
-              ssμ = _ss(Ξ, idf, αμc, lμ, μt)
+                  2.0*(ns + rmλ), ddμ, llc, prc, mc, ssμ, th, surv, αμ_prior)
 
               # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -664,6 +652,7 @@ end
                llc     ::Float64,
                prc     ::Float64,
                mc      ::Float64,
+               ssλ     ::Float64,
                th      ::Float64,
                surv    ::Int64,
                αλ_prior::NTuple{2,Float64})
@@ -681,6 +670,7 @@ function update_αλ!(αλc     ::Float64,
                     llc     ::Float64,
                     prc     ::Float64,
                     mc      ::Float64,
+                    ssλ     ::Float64,
                     th      ::Float64,
                     surv    ::Int64,
                     αλ_prior::NTuple{2,Float64})
@@ -696,11 +686,12 @@ function update_αλ!(αλc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σλ2*(αλc^2 - αλp^2 + 2.0*ddλ*(αλp - αλc)/L) + llr
     prc += llrdnorm_x(αλp, αλc, ν, τ2)
+    ssλ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddλ
     αλc  = αλp
     mc   = mp
   end
 
-  return llc, prc, αλc, mc
+  return llc, prc, αλc, mc, ssλ
 end
 
 
@@ -718,6 +709,7 @@ end
                llc     ::Float64,
                prc     ::Float64,
                mc      ::Float64,
+               ssμ     ::Float64,
                th      ::Float64,
                surv    ::Int64,
                αμ_prior::NTuple{2,Float64})
@@ -735,6 +727,7 @@ function update_αμ!(αμc     ::Float64,
                     llc     ::Float64,
                     prc     ::Float64,
                     mc      ::Float64,
+                    ssμ     ::Float64,
                     th      ::Float64,
                     surv    ::Int64,
                     αμ_prior::NTuple{2,Float64})
@@ -751,11 +744,12 @@ function update_αμ!(αμc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σμ2*(αμc^2 - αμp^2 + 2.0*ddμ*(αμp - αμc)/L) + llr
     prc += llrdnorm_x(αμp, αμc, ν, τ2)
+    ssμ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddμ
     αμc  = αμp
     mc   = mp
   end
 
-  return llc, prc, αμc, mc
+  return llc, prc, αμc, mc, ssμ
 end
 
 
