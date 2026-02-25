@@ -1,12 +1,12 @@
 #=
 
-GBM pure-birth MCMC
+Trait driven pure-birth speciation diffusion
 
 Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 14 09 2020
+Created 09 02 2026
 =#
 
 
@@ -230,17 +230,16 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
 here
 """
 
-        nix = ceil(Int64,rand()*nin)
-        bix = inodes[nix]
+        bix = inodes[fIrand(nin) + 1]
 
-        llc, prc, ddλ, ssλ, irλ =
-          update_gbm!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
-            δt, srδt, λ0_prior)
+        llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
+          update_gbm!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
+            dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
 
       # forward simulation
       else
 
-        bix = ceil(Int64,rand()*el)
+        bix = fIrand(el) + 1
 
         llc, ddλ, ssλ, nλ, irλ, ns, L =
           update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
@@ -454,149 +453,26 @@ end
 
 
 
-"""
-    update_α!(αc     ::Float64,
-              σ      ::Float64,
-              L      ::Float64,
-              dd     ::Float64,
-              ll     ::Float64,
-              pr     ::Float64,
-              ss     ::Float64,
-              α_prior::NTuple{2,Float64})
-
-Gibbs update for Normal conjugacy `α`.
-"""
-function update_α!(αc     ::Float64,
-                   σ      ::Float64,
-                   L      ::Float64,
-                   dd     ::Float64,
-                   ll     ::Float64,
-                   pr     ::Float64,
-                   ss     ::Float64,
-                   α_prior::NTuple{2,Float64})
-
-  # ratio
-  ν  = α_prior[1]
-  τ2 = α_prior[2]^2
-  σ2 = σ^2
-  rs = σ2/τ2
-
-  # gibbs update for σ
-  αp = rnorm((dd + rs*ν)/(rs + L), sqrt(σ2/(rs + L)))
-
-  # update prior
-  pr += llrdnorm_x(αp, αc, ν, τ2)
-
-  # update likelihood
-  ll += 0.5*L/σ2*(αc^2 - αp^2 + 2.0*dd*(αp - αc)/L)
-
-  # update residual ss
-  ss += 0.5*L*(αp^2 - αc^2) - (αp - αc)*dd
-
-  return ll, pr, αp, ss
-end
-
-
-
-
-
-"""
-    update_σ!(σc     ::Float64,
-              ss     ::Float64,
-              n      ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
-              σ_prior::NTuple{2,Float64})
-
-Gibbs update for variance `σ`.
-"""
-function update_σ!(σc     ::Float64,
-                   ss     ::Float64,
-                   n      ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
-                   σ_prior::NTuple{2,Float64})
-
-  σ_p1, σ_p2 = σ_prior
-
-  # Gibbs update for σ
-  σp2 = rand(InverseGamma(σ_p1 + 0.5 * n, σ_p2 + ss))
-
-  # update prior
-  prc += llrdinvgamma(σp2, σc^2, σ_p1, σ_p2)
-
-  σp = sqrt(σp2)
-
-  # update likelihood
-  llc += ss*(1.0/σc^2 - 1.0/σp2) - n*(log(σp/σc))
-
-  return llc, prc, σp
-end
-
-
-
-
-# """
-#     update_scale!(Ξ       ::Vector{T},
-#                   idf     ::Vector{iBffs},
-#                   llc     ::Float64,
-#                   prc     ::Float64,
-#                   ir      ::Float64,
-#                   ns      ::Float64,
-#                   stn     ::Float64,
-#                   λ0_prior::NTuple{2,Float64}) where {T <: iTree}
-
-# Update scale for speciation.
-# """
-# function update_scale!(Ξ       ::Vector{T},
-#                        idf     ::Vector{iBffs},
-#                        llc     ::Float64,
-#                        prc     ::Float64,
-#                        ir      ::Float64,
-#                        ns      ::Float64,
-#                        stn     ::Float64,
-#                        λ0_prior::NTuple{2,Float64}) where {T <: iTree}
-
-#   # sample log(scaling factor)
-#   s = randn()*stn
-
-#   # likelihood ratio
-#   iri = (1.0 - exp(s)) * ir
-#   llr = ns * s + iri
-
-#   lλ0 = lλ(Ξ[1])[1]
-
-#   # prior ratio
-#   prr = llrdnorm_x(lλ0 + s, lλ0, λ0_prior[1], λ0_prior[2]) 
-
-#   acc = 0.0
-
-#   if -randexp() < llr + prr
-#     acc += 1.0
-#     llc += llr
-#     prc += prr
-#     ir  -= iri
-#     scale_rate!(Ξ, lλ, s)
-#     scale_rate!(idf, s)
-#   end
-
-#   return llc, prc, ir, acc
-# end
-
-
-
 
 """
     update_gbm!(bix     ::Int64,
                 Ξ       ::Vector{iTxb},
                 idf     ::Vector{iBffs},
-                α       ::Float64,
-                σλ      ::Float64,
+                ασc     ::Float64, 
+                σσc     ::Float64, 
+                αλc     ::Float64, 
+                βλc     ::Float64, 
+                σλc     ::Float64,
                 llc     ::Float64,
                 prc     ::Float64,
-                ddλ     ::Float64,
-                ssλ     ::Float64,
-                irλ     ::Float64,
+                dxs    ::Float64,
+                dxl    ::Float64,
+                ddx    ::Float64,
+                ddσ    ::Float64,
+                ssσ    ::Float64,
+                ddλ    ::Float64,
+                ssλ    ::Float64,
+                irλ    ::Float64,
                 δt      ::Float64,
                 srδt    ::Float64,
                 λ0_prior::NTuple{2,Float64})
@@ -606,16 +482,29 @@ Make a `gbm` update for an internal branch and its descendants.
 function update_gbm!(bix     ::Int64,
                      Ξ       ::Vector{iTxb},
                      idf     ::Vector{iBffs},
-                     α       ::Float64,
-                     σλ      ::Float64,
+                     ασc     ::Float64, 
+                     σσc     ::Float64, 
+                     αλc     ::Float64, 
+                     βλc     ::Float64, 
+                     σλc     ::Float64,
                      llc     ::Float64,
                      prc     ::Float64,
+                     dxs     ::Float64,
+                     dxl     ::Float64,
+                     ddx     ::Float64,
+                     ddσ     ::Float64,
+                     ssσ     ::Float64,
                      ddλ     ::Float64,
                      ssλ     ::Float64,
                      irλ     ::Float64,
                      δt      ::Float64,
                      srδt    ::Float64,
                      λ0_prior::NTuple{2,Float64})
+
+       llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
+          update_gbm!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
+            dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
+
 
   ξi   = Ξ[bix]
   bi   = idf[bix]
@@ -628,13 +517,14 @@ function update_gbm!(bix     ::Int64,
   # if crown root
   if root && iszero(e(ξi))
     llc, prc, ddλ, ssλ, irλ =
-      _crown_update!(ξi, ξ1, ξ2, α, σλ, llc, prc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
+      _crown_update!(ξi, ξ1, ξ2, ασc, σσc, αλc, βλc, σλc, llc, prc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
     setλt!(bi, lλ(ξi)[1])
   else
     # if stem
     if root
-      llc, prc, ddλ, ssλ, irλ = 
-        _stem_update!(ξi, α, σλ, llc, prc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
+      llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+        _stem_update!(ξi, ασc, σσc, αλc, βλc, σλc, llc, prc, 
+          dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
     end
 
     # updates within the parent branch

@@ -13,8 +13,8 @@ Created 14 11 2021
 
 
 """
-    _daughters_update!(ξ1  ::iTb,
-                       ξ2  ::iTb,
+    _daughters_update!(ξ1  ::iTxb,
+                       ξ2  ::iTxb,
                        λf  ::Float64,
                        α   ::Float64,
                        σλ  ::Float64,
@@ -23,8 +23,8 @@ Created 14 11 2021
 
 Make a `gbmb` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTb,
-                            ξ2  ::iTb,
+function _daughters_update!(ξ1  ::iTxb,
+                            ξ2  ::iTxb,
                             λf  ::Float64,
                             α   ::Float64,
                             σλ  ::Float64,
@@ -74,11 +74,19 @@ end
 
 
 """
-    _stem_update!(ξi      ::iTb,
-                  α       ::Float64,
-                  σλ      ::Float64,
+    _stem_update!(ξi      ::iTxb,
+                  ασc     ::Float64, 
+                  σσc     ::Float64, 
+                  αλc     ::Float64, 
+                  βλc     ::Float64, 
+                  σλc     ::Float64,
                   llc     ::Float64,
                   prc     ::Float64,
+                  dxs     ::Float64,
+                  dxl     ::Float64,
+                  ddx     ::Float64,
+                  ddσ     ::Float64,
+                  ssσ     ::Float64,
                   ddλ     ::Float64,
                   ssλ     ::Float64,
                   irλ     ::Float64,
@@ -86,63 +94,100 @@ end
                   srδt    ::Float64,
                   λ0_prior::NTuple{2,Float64})
 
-Do gbm update for crown root.
+Do diffusions' stem update.
 """
-function _stem_update!(ξi      ::iTb,
-                       α       ::Float64,
+function _stem_update!(ξi      ::iTxb,
+                       ασ      ::Float64, 
+                       σσ      ::Float64, 
+                       αλ      ::Float64, 
+                       βλ      ::Float64, 
                        σλ      ::Float64,
                        llc     ::Float64,
                        prc     ::Float64,
+                       dxs     ::Float64,
+                       dxl     ::Float64,
+                       ddx     ::Float64,
+                       ddσ     ::Float64,
+                       ssσ     ::Float64,
                        ddλ     ::Float64,
                        ssλ     ::Float64,
                        irλ     ::Float64,
                        δt      ::Float64,
                        srδt    ::Float64,
                        λ0_prior::NTuple{2,Float64})
-
   @inbounds begin
-    λc   = lλ(ξi)
-    l    = lastindex(λc)
-    λp   = Vector{Float64}(undef,l)
-    λn   = λc[l]
+    xc   = xv(ξi)
+    lσ2c = lσ2(ξi)
+    lλc  = lλ(ξi)
+    l    = lastindex(lλc)
+    xp   = Vector{Float64}(undef,l)
+    lσ2p = Vector{Float64}(undef,l)
+    lλp  = Vector{Float64}(undef,l)
+    x1   = xc[1]
+    xn   = xc[l]
+    lσ2n = lσ2c[l]
+    lλn  = lλc[l]
     el   = e(ξi)
     fdtp = fdt(ξi)
 
-    # node proposal
-    λr = duoprop(λn - α*el, λ0_prior[1], σλ^2*el, λ0_prior[2])
+    # rate path sample
+    lσ2r = rnorm(lσ2n - ασ*el, γ*sqrt(el))
+    bb!(lσ2p, lσ2r, lσ2n, σσ, δt, fdtp, srδt)
 
-    # simulate fix tree vector
-    bb!(λp, λr, λn, σλ, δt, fdtp, srδt)
+    llr, ssσr = llr_xb_σ(xc, ασ, lσ2p, lσ2c, δt, fdtp)
 
-    llrbm, llrbd, ssrλ, irrλ = 
-      llr_gbm_b_sep(λp, λc, α, σλ, δt, fdtp, srδt, false)
+    if -randexp() < llr
+      llc += llr
+      ddσ += lσ2c[1] - lσ2r 
+      ssσ += ssσr
+      unsafe_copyto!(lσ2c, 1, lσ2p, 1, l)
+    end
 
-    acr = llrbd
+    # trait and speciation rate path sample
+    xr  = rnorm(xn, sqrt(intσ2(lσ2c, δt, fdtp)))
+    lλr = duoprop(lλn - βλ*(xn - xr), λ0_prior[1], σλ^2*el, λ0_prior[2])
+    cbb!(xp, xr, xn, lσ2c, lλp, lλr, lλn, βλ, σλ, δt, fdt, srδt)
 
-    if -randexp() < acr
-      llc += acr + llrbm
-      prc += llrdnorm_x(λr, λc[1], λ0_prior[1], λ0_prior[2])
-      ddλ += λc[1] - λr
-      ssλ += ssrλ
-      irλ += irrλ
-      unsafe_copyto!(λc, 1, λp, 1, l)
+    llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
+      llr_xb_b_sep(vxp, vxc, vlσ2, lλp, lλc, 
+        ασ, σσ, αλ, βλ, σλ, δt, fdtp, srδt, false)
+
+    if -randexp() < llbr
+      llc += llbmr + llbr
+      prc += llrdnorm_x(λr, lλc[1], λ0_prior[1], λ0_prior[2])
+      dxs += dxsr
+      dxl += dxlr
+      ddx += xc[1]  - xr
+      ddλ += lλc[1] - λr
+      ssλ += ssλr
+      irλ += irλr
+      unsafe_copyto!(xc,  1, xp,  1, l)
+      unsafe_copyto!(lλc, 1, lλp, 1, l)
     end
   end
 
-  return llc, prc, ddλ, ssλ, irλ
+  return llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
 end
 
 
 
 
 """
-    _crown_update!(ξi      ::iTb,
-                   ξ1      ::iTb,
-                   ξ2      ::iTb,
-                   α       ::Float64,
+    _crown_update!(ξi      ::iTxb,
+                   ξ1      ::iTxb,
+                   ξ2      ::iTxb,
+                   ασ      ::Float64, 
+                   σσ      ::Float64, 
+                   αλ      ::Float64, 
+                   βλ      ::Float64, 
                    σλ      ::Float64,
                    llc     ::Float64,
                    prc     ::Float64,
+                   dxs     ::Float64,
+                   dxl     ::Float64,
+                   ddx     ::Float64,
+                   ddσ     ::Float64,
+                   ssσ     ::Float64,
                    ddλ     ::Float64,
                    ssλ     ::Float64,
                    irλ     ::Float64,
@@ -150,15 +195,23 @@ end
                    srδt    ::Float64,
                    λ0_prior::NTuple{2,Float64})
 
-Do gbm update for crown root.
+Do diffusions' crown update.
 """
-function _crown_update!(ξi      ::iTb,
-                        ξ1      ::iTb,
-                        ξ2      ::iTb,
-                        α       ::Float64,
+function _crown_update!(ξi      ::iTxb,
+                        ξ1      ::iTxb,
+                        ξ2      ::iTxb,
+                        ασ      ::Float64, 
+                        σσ      ::Float64, 
+                        αλ      ::Float64, 
+                        βλ      ::Float64, 
                         σλ      ::Float64,
                         llc     ::Float64,
                         prc     ::Float64,
+                        dxs     ::Float64,
+                        dxl     ::Float64,
+                        ddx     ::Float64,
+                        ddσ     ::Float64,
+                        ssσ     ::Float64,
                         ddλ     ::Float64,
                         ssλ     ::Float64,
                         irλ     ::Float64,
@@ -167,19 +220,64 @@ function _crown_update!(ξi      ::iTb,
                         λ0_prior::NTuple{2,Float64})
 
   @inbounds begin
-    λpc  = lλ(ξi)
-    λ1c  = lλ(ξ1)
-    λ2c  = lλ(ξ2)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    e1   = e(ξ1)
-    e2   = e(ξ2)
-    fdt1 = fdt(ξ1)
-    fdt2 = fdt(ξ2)
+    xac   = xv(ξi)
+    x1c   = xv(ξ1)
+    x2c   = xv(ξ2)
+    lσ2ac = lσ2(ξi)
+    lσ21c = lσ2(ξi)
+    lσ22c = lσ2(ξi)
+    lλac  = lλ(ξi)
+    lλ1c  = lλ(ξ1)
+    lλ2c  = lλ(ξ2)
+    l1    = lastindex(lλ1c)
+    l2    = lastindex(lλ2c)
+    x1p   = Vector{Float64}(undef,l1)
+    x2p   = Vector{Float64}(undef,l2)
+    lσ21p = Vector{Float64}(undef,l1)
+    lσ22p = Vector{Float64}(undef,l2)
+    lλ1p  = Vector{Float64}(undef,l1)
+    lλ2p  = Vector{Float64}(undef,l2)
+    x1f   = x1c[l1]
+    x2f   = x2c[l2]
+    lσ21f = lσ21c[l1]
+    lσ22f = lσ22c[l2]
+    lλ1f  = lλ1c[l1]
+    lλ2f  = lλ2c[l2]
+    e1    = e(ξ1)
+    e2    = e(ξ2)
+    fdt1  = fdt(ξ1)
+    fdt2  = fdt(ξ2)
+
+    # rate path sample
+    lσ2n = duoprop(lσ21f - ασ*e1, lσ22f - ασ*e2, σσ^2*e1, σσ^2*e2)
+    bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
+    bb!(lσ22p, lσ2n, lσ22f, σσ, δt, fdt2, srδt)
+
+    ll1r, ssσ1r = llr_xb_σ(x1c, ασ, lσ21p, lσ21c, δt, fdt1)
+    ll2r, ssσ2r = llr_xb_σ(x2c, ασ, lσ22p, lσ22c, δt, fdt2)
+
+    llr = ll1r + ll2r
+
+    if -randexp() < llr
+      llc += llr
+      ssσ += ssσ1r + ssσ2r
+      ddσ += 2.0*(lσ2ac[1] - lσ2n)
+      unsafe_copyto!(lσ21c, 1, lσ21p, 1, l1)
+      unsafe_copyto!(lσ22c, 1, lσ22p, 1, l2)
+      fill!(lσ2ac, lσ2n)
+    end
+
+
+
+
+    """
+    here
+    """
+
+
+
+
+
 
     # node proposal
     λr = trioprop(λ1 - α*e1, λ2 - α*e2, λ0_prior[1], 
@@ -216,7 +314,7 @@ end
 
 
 """
-    _update_gbm!(tree::iTb,
+    _update_gbm!(tree::iTxb,
                  α   ::Float64,
                  σλ  ::Float64,
                  llc ::Float64,
@@ -229,7 +327,7 @@ end
 
 Do gbm updates on a decoupled tree recursively.
 """
-function _update_gbm!(tree::iTb,
+function _update_gbm!(tree::iTxb,
                       α   ::Float64,
                       σλ  ::Float64,
                       llc ::Float64,
@@ -261,7 +359,7 @@ end
 
 
 """
-    update_tip!(tree::iTb,
+    update_tip!(tree::iTxb,
                 α   ::Float64,
                 σλ  ::Float64,
                 llc ::Float64,
@@ -273,7 +371,7 @@ end
 
 Make a `gbm` tip proposal.
 """
-function update_tip!(tree::iTb,
+function update_tip!(tree::iTxb,
                      α   ::Float64,
                      σλ  ::Float64,
                      llc ::Float64,
@@ -392,7 +490,7 @@ end
 
 
 """
-    update_triad!(tree::iTb,
+    update_triad!(tree::iTxb,
                   α   ::Float64,
                   σλ  ::Float64,
                   llc ::Float64,
@@ -404,7 +502,7 @@ end
 
 Make a `gbm` trio proposal.
 """
-function update_triad!(tree::iTb,
+function update_triad!(tree::iTxb,
                        α   ::Float64,
                        σλ  ::Float64,
                        llc ::Float64,

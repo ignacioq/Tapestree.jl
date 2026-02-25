@@ -163,6 +163,186 @@ end
 
 
 
+"""
+    llr_tb_σ(x   ::Array{Float64,1},
+             ασ  ::Float64,
+             lσ2p::Array{Float64,1},
+             lσ2c::Array{Float64,1},
+             δt  ::Float64,
+             fdt ::Float64)
+
+Returns the acceptance ratio and changes in gibbs quanta for a `σ²(t)` 
+path proposal (the likelihood for the GBM for `σ²` cancels out).
+"""
+function llr_xb_σ(x   ::Array{Float64,1},
+                  ασ  ::Float64,
+                  lσ2p::Array{Float64,1},
+                  lσ2c::Array{Float64,1},
+                  δt  ::Float64,
+                  fdt ::Float64)
+
+  @inbounds begin
+    # estimate standard `δt` likelihood
+    nI = lastindex(x)-2
+
+    acr = ssσr = 0.0
+    if nI > 0
+      dσxr = 0.0
+      @turbo for i in Base.OneTo(nI)
+        lσ2ci  = lσ2c[i]
+        lσ2ci1 = lσ2c[i+1]
+        lσ2pi  = lσ2p[i]
+        lσ2pi1 = lσ2p[i+1]
+        dlσ2p  = lσ2pi1 - lσ2pi
+        dlσ2c  = lσ2ci1 - lσ2ci
+        dσxr  += dlσ2c - dlσ2p
+        ssσr  += dlσ2p^2 - dlσ2c^2
+        acr   += -(0.5*(x[i+1] - x[i])^2/δt) *
+                (1.0/exp(0.5*(lσ2pi + lσ2pi1)) - 1.0/exp(0.5*(lσ2ci + lσ2ci1))) + 
+                 0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
+      end
+      ssσr /= 2.0 * δt
+      ssσr += (ασ * dσxr)
+    end
+
+    # add final non-standard `δt`
+    if fdt > 0.0
+      lσ2ci  = lσ2c[nI+1]
+      lσ2ci1 = lσ2c[nI+2]
+      lσ2pi  = lσ2p[nI+1]
+      lσ2pi1 = lσ2p[nI+2]
+      dlσ2p  = lσ2pi1 - lσ2pi
+      dlσ2c  = lσ2ci1 - lσ2ci
+      ssσr  += (dlσ2p^2 - dlσ2c^2)/(2.0*fdt) + ασ*(dlσ2c - dlσ2p)
+      acr   += -(0.5*(x[nI+2] - x[nI+1])^2/fdt) *
+              (1.0/exp(0.5*(lσ2pi + lσ2pi1)) - 1.0/exp(0.5*(lσ2ci + lσ2ci1))) + 
+               0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
+    end
+  end
+
+  return acr, ssσr
+end
+
+
+
+
+
+"""
+    llr_xb_b_sep(vxp ::Array{Float64,1},
+                 vxc ::Array{Float64,1},
+                 vlσ2::Array{Float64,1},
+                 lλp ::Array{Float64,1},
+                 lλc ::Array{Float64,1},
+                 ασ  ::Float64,
+                 σσ  ::Float64,
+                 αλ  ::Float64,
+                 βλ  ::Float64,
+                 σλ  ::Float64,
+                 δt  ::Float64,
+                 fdt ::Float64,
+                 srδt::Float64,
+                 λev ::Bool)
+
+Returns the log-likelihood for a branch according to GBM pure-birth
+separately for the Brownian motion and the pure-birth
+"""
+function llr_xb_b_sep(vxp ::Array{Float64,1},
+                      vxc ::Array{Float64,1},
+                      vlσ2::Array{Float64,1},
+                      lλp ::Array{Float64,1},
+                      lλc ::Array{Float64,1},
+                      ασ  ::Float64,
+                      σσ  ::Float64,
+                      αλ  ::Float64,
+                      βλ  ::Float64,
+                      σλ  ::Float64,
+                      δt  ::Float64,
+                      fdt ::Float64,
+                      srδt::Float64,
+                      λev ::Bool)
+
+  # estimate standard `δt` likelihood
+  nI = lastindex(lλp)-2
+
+  llbmr = llbr = dxsr = dxlr = ssλr = 0.0
+  if nI > 0
+    @turbo for i in Base.OneTo(nI)
+      dxpi   = vxp[i+1] - vxp[i]
+      dxci   = vxc[i+1] - vxc[i]
+      lλpi   = lλp[i]
+      lλpi1  = lλp[i+1]
+      dlλpi  = lλpi1 - lλpi
+      lλci   = lλc[i]
+      lλci1  = lλc[i+1]
+      dlλci  = lλci1 - lλci
+      llbmr += 0.5 * (dxci^2 - dxpi^2)/(exp(0.5*(vlσ2[i] + vlσ2[i+1]))*δt) 
+      llbr  += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
+      dxsr  += dxpi^2 - dxci^2
+      dxlr  += dxpi * dlλpi - dxci * dlλci
+      ssλr  += (dlλpi - αλ*δt - βλ*dxpi)^2 - (dlλci - αλ*δt - βλ*dxci)^2
+    end
+
+    llbmr += ssλr*(-0.5/(σλ^2*δt)) 
+    llbr  *= -δt
+    dxsr  /= δt
+    dxlr  /= δt
+    ssλr  /= 2.0*δt
+  end
+
+  lλpi1 = lλp[nI+2]
+  lλci1 = lλc[nI+2]
+
+ # add final non-standard `δt`
+  if fdt > 0.0
+    dxpi   = vxp[nI+2] - vxp[nI+1]
+    dxci   = vxc[nI+2] - vxc[nI+1]
+    lλpi   = lλp[nI+1]
+    lλpi1  = lλp[nI+2]
+    dlλpi  = lλpi1 - lλpi
+    lλci   = lλc[nI+1]
+    lλci1  = lλc[nI+2]
+    dlλci  = lλci1 - lλci
+    ssλ0r  = (dlλpi - αλ*fdt - βλ*dxpi)^2 - (dlλci - αλ*fdt - βλ*dxci)^2
+    llbmr += 0.5 * (dxci^2 - dxpi^2)/(exp(0.5*(lσ2[nI+1] + vlσ2[nI+2]))*fdt) +
+             ssλ0r*(-0.5/(σλ^2*fdt))
+    llbr  += fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+    dxsr  += (dxpi^2 - dxci^2)/fdt
+    dxlr  += (dxpi * dlλpi - dxci * dlλci)/fdt
+    ssλr  += ssλ0r/(2.0*fdt)
+  end
+
+  irλr = -llbr 
+
+  #if speciation
+  if λev
+    llrb  += lλpi1 - lλci1
+  end
+
+  return llbmr, llbr, dxsr, dxlr, ssλr
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -275,73 +455,6 @@ end
 
 
 
-"""
-    llr_xb_b_sep(lλp ::Array{Float64,1},
-                  lλc ::Array{Float64,1},
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  fdt ::Float64,
-                  srδt::Float64,
-                  λev ::Bool)
-
-Returns the log-likelihood for a branch according to GBM pure-birth
-separately for the Brownian motion and the pure-birth
-"""
-function llr_xb_b_sep(lλp ::Array{Float64,1},
-                       lλc ::Array{Float64,1},
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       δt  ::Float64,
-                       fdt ::Float64,
-                       srδt::Float64,
-                       λev ::Bool)
-
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλp)-2
-
-  llrbm = llrb = ssrλ = 0.0
-  if nI > 0
-    @turbo for i in Base.OneTo(nI)
-      lλpi   = lλp[i]
-      lλci   = lλc[i]
-      lλpi1  = lλp[i+1]
-      lλci1  = lλc[i+1]
-      llrbm += (lλpi1 - lλpi - α*δt)^2 - (lλci1 - lλci - α*δt)^2
-      llrb += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
-    end
-
-    # standardized sum of squares
-    ssrλ  += llrbm/(2.0*δt)
-    # add to global likelihood
-    llrbm *= (-0.5/((σλ*srδt)^2))
-    llrb *= (-δt)
-  end
-
-  lλpi1 = lλp[nI+2]
-  lλci1 = lλc[nI+2]
-
- # add final non-standard `δt`
-  if fdt > 0.0
-    lλpi   = lλp[nI+1]
-    lλci   = lλc[nI+1]
-    ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
-    llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
-                          lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
-    llrb  -= fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-  end
-
-  irrλ = -llrb 
-  #if speciation
-  if λev
-    llrb  += lλpi1 - lλci1
-  end
-
-  return llrbm, llrb , ssrλ, irrλ
-end
-
-
-
 
 """
     _gibbs_quanta!(tree::iTxb,
@@ -428,7 +541,7 @@ function _gibbs_quanta(vx  ::Vector{Float64},
   @inbounds begin
 
     nI = lastindex(vx) - 2
-    dxs = dxl = ddx = ddσ = ssσ = ddλ = ssλ = nλ = irλ = 0.0
+    dxs = dxl = ssσ = ssλ = nλ = irλ = 0.0
     if nI > 0
       @turbo for i in Base.OneTo(nI)
         dxi  = vx[i+1] - vx[i]
@@ -474,116 +587,6 @@ function _gibbs_quanta(vx  ::Vector{Float64},
 end
 
 
-
-
-"""
-    _ss(tree::T, f::Function, α::Float64) where {T <: iTree}
-
-Returns the standardized sum of squares for rate `v`.
-"""
-function _ss(tree::T, f::Function, α::Float64) where {T <: iTree}
-
-  ss = _ss_b(f(tree), α, dt(tree), fdt(tree))
-
-  if def1(tree)
-    ss += _ss(tree.d1, f, α)
-    if def2(tree)
-      ss += _ss(tree.d2, f, α)
-    end
-  end
-
-  return ss
-end
-
-
-
-
-"""
-    _ss_b(v::Array{Float64,1},
-          α  ::Float64,
-          δt ::Float64,
-          fdt::Float64)
-
-Returns the standardized sum of squares for rate `v`.
-"""
-function _ss_b(v::Array{Float64,1},
-               α  ::Float64,
-               δt ::Float64,
-               fdt::Float64)
-
-    # estimate standard `δt` likelihood
-    nI = lastindex(v)-2
-
-    ss = 0.0
-    if nI > 0
-      @turbo for i in Base.OneTo(nI)
-        ss += (v[i+1] - v[i] - α*δt)^2
-      end
-
-      # standardize
-      ss *= 1.0/(2.0*δt)
-    end
-
-    # add final non-standard `δt`
-    if fdt > 0.0
-      ss += (v[nI+2] - v[nI+1] - α*fdt)^2/(2.0*fdt)
-    end
-
-  return ss
-end
-
-
-
-
-"""
-    int_rate(tree::iTree, f::Function)
-
-Integrate rate given by `f`.
-"""
-function int_rate(tree::iTree, f::Function)
-
-  if def1(tree)
-    if def2(tree)
-      int_rate(f(tree), dt(tree), fdt(tree)) +
-      int_rate(tree.d1, f)         +
-      int_rate(tree.d2, f)
-    else
-      int_rate(f(tree), dt(tree), fdt(tree)) +
-      int_rate(tree.d1, f)
-    end
-  else
-    int_rate(f(tree), dt(tree), fdt(tree))
-  end
-end
-
-
-
-
-"""
-    int_rate(v::Vector{Float64}, δt::Float64, fdt::Float64)
-
-Integrate `v` rate.
-"""
-function int_rate(v::Vector{Float64}, δt::Float64, fdt::Float64)
-
-  # estimate standard `δt` likelihood
-  nI = lastindex(v)-2
-
-  ir = 0.0
-  if nI > 0
-    @turbo for i in Base.OneTo(nI)
-      ir += exp(0.5*(v[i] + v[i+1]))
-    end
-    ir *= δt
-  end
-
-  # add final non-standard `δt`
-  if fdt > 0.0
-    ir += fdt*exp(0.5*(v[nI+1] + v[nI+2]))
-  end
-
-  return ir
-end
 
 
 
