@@ -77,41 +77,6 @@ end
 
 
 
-
-"""
-    sT_label(tree::T) where {T <: Tx}
-
-Demotes a tree to `sT_label` and returns tip end traits.
-"""
-function sT_label(tree::T) where {T <: Tx}
-  xs = Dict{String, Float64}()
-  tr = _sT_label(tree, 0, xs)[1]
-  return tr, xs
-end
-
-
-"""
-    _sT_label(tree::T, i::Int64) where {T <: Tx}
-
-Demotes a tree to `sT_label`.
-"""
-function _sT_label(tree::T, i::Int64, xs::Dict{String, Float64}) where {T <: Tx}
-  if def1(tree)
-    t1, i = _sT_label(tree.d1, i, xs)
-    t2, i = _sT_label(tree.d2, i, xs)
-    lab   = isdefined(tree, :l) ? label(tree) : ""
-    tree  = sT_label(t1, t2, e(tree), lab)
-  else
-    i += 1
-    lab = isdefined(tree, :l) ? label(tree) : string("t", i)
-    xs[lab] = xv(tree)[end]
-    tree = sT_label(e(tree), lab)
-  end
-
-  return tree, i
-end
-
-
 # """
 #     sTpe(tree::sT_label)
 
@@ -232,53 +197,5 @@ function sTfpe_wofe(tree::sTfpe)
   end
 end
 
-
-
-"""
-    sTf_label(tree::T) where {T <: Tx}
-
-Demotes a tree to `sTf_label` and returns tip end traits.
-"""
-function sTf_label(tree::T) where {T <: Tx}
-  xs = Dict{String, Float64}()
-  tr = _sTf_label(tree, 0, 0, xs)[1]
-  return tr, xs
-end
-
-
-"""
-    _sTf_label(tree::T, 
-               i   ::Int64, 
-               fi  ::Int64, 
-               xs  ::Dict{String, Float64}) where {T <: Tx}
-
-Demotes a tree to `sTf_label`.
-"""
-function _sTf_label(tree::T, 
-                    i   ::Int64, 
-                    fi  ::Int64, 
-                    xs  ::Dict{String, Float64}) where {T <: Tx}
-
-  if def1(tree)
-    t1, i, fi = _sTf_label(tree.d1, i, fi, xs)
-     if def2(tree)
-      t2, i, fi = _sTf_label(tree.d2, i, fi, xs)
-      lab   = isdefined(tree, :l) ? label(tree) : ""
-      tree  = sTf_label(t1, t2, e(tree), lab)
-    else
-      fi     += 1
-      lab     = isdefined(tree, :l) ? label(tree) : string("f", fi)
-      xs[lab] = xv(tree)[end]
-      tree    = sTf_label(t1, e(tree), lab)
-    end
-  else
-    i      += 1
-    lab     = isdefined(tree, :l) ? label(tree) : string("t", i)
-    xs[lab] = xv(tree)[end]
-    tree    = sTf_label(e(tree), lab)
-  end
-
-  return tree, i, fi
-end
 
 
