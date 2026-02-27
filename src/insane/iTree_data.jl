@@ -2785,7 +2785,10 @@ end
 
 Return trait vector.
 """
-xv(tree::T) where {T <: Tx} = getproperty(tree, :xv)
+xv(tree::T) where {T <: Tx}    = getproperty(tree, :xv)
+xv(tree::T) where {T <: sTpe}  = getproperty(tree, :xf)
+xv(tree::T) where {T <: sTfpe} = getproperty(tree, :xf)
+
 
 
 
