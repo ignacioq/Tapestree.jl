@@ -274,7 +274,7 @@ function _sTf_label(tree::T,
     i      += 1
     lab     = isdefined(tree, :l) ? label(tree) : string("t", i)
     xs[lab] = xv(tree)[end]
-    tree    = sTf_label(e(tree), lab)
+    tree    = sTf_label(e(tree), false, isfossil(tree), lab)
   end
 
   return tree, i, fi
