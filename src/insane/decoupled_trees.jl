@@ -923,20 +923,18 @@ end
 """
     make_Ξ(idf::Vector{iBffs},
            xr ::Vector{Float64},
-           σai::Float64,
-           σki::Float64,
+           σk ::Float64,
            ::Type{sTpe})
 
 Make edge tree `Ξ` from the edge directory.
 """
 function make_Ξ(idf::Vector{iBffs},
                 xr ::Vector{Float64},
-                σai::Float64,
-                σki::Float64,
+                σk::Float64,
                 ::Type{sTpe})
 
   Ξ = sTpe[]
-  _make_Ξ!(Ξ, 1, xr, σai, σki, idf)
+  _make_Ξ!(Ξ, 1, false, xr, σk, idf)
 
   return Ξ
 end
@@ -948,17 +946,16 @@ end
     _make_Ξ!(Ξ  ::Vector{sTpe},
              i  ::Int64,
              xr ::Vector{Float64},
-             σai::Float64,
-             σki::Float64,
+             σk::Float64,
              idf::Vector{iBffs})
 
 Make edge tree `Ξ` from the edge directory.
 """
 function _make_Ξ!(Ξ  ::Vector{sTpe},
                   i  ::Int64,
+                  clb::Bool,
                   xr ::Vector{Float64},
-                  σai::Float64,
-                  σki::Float64,
+                  σk ::Float64,
                   idf::Vector{iBffs})
 
   bi  = idf[i]
@@ -969,15 +966,23 @@ function _make_Ξ!(Ξ  ::Vector{sTpe},
   et  = e(bi)
   xii = xr[ip]
   xfi = xr[i]
-  shi = rand(Bool)
 
+  if clb # if it is cladogenetic bud
+    dx   = xfi - xii
+    xii += sign(dx)*σk
+  end
+
+  shi = rand(Bool)
   push!(Ξ, sTpe(et, false, xii, xfi, shi, true))
 
   if i1 > 0 
-    _make_Ξ!(Ξ, i1, xr, σai, σki, idf)
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, xr, σai, σki, idf)
+      _make_Ξ!(Ξ, i1, shi, xr, σk, idf)
+      _make_Ξ!(Ξ, i2, !shi, xr, σk, idf)
+    else
+      _make_Ξ!(Ξ, i1, false, xr, σk, idf)
     end
+
   end
 
   return nothing
@@ -1442,14 +1447,16 @@ end
 """
     nnodesinternal(Ξ::Vector{T}) where {T <: iTree}
 
-Return the number of internal nodes in `Ξ`.
+Return the number of internal nodes in `Ξ`. 
+
+Warning: only works when branches are not subdivided.
 """
 function nnodesinternal(Ξ::Vector{T}) where {T <: iTree}
-  n = 0
+
+  n = -0.5
   for ξ in Ξ
-    n += _nnodesinternal(ξ, 0)
+    n = _nnodesinternal(ξ, n) + 0.5
   end
-  n += Float64(lastindex(Ξ) - 1)/2.0
 
   return n
 end
@@ -1461,15 +1468,17 @@ end
     nnodesbifurcation(Ξ::Vector{T}) where {T <: iTree}
 
 Return the number of bifurcating nodes in `Ξ`.
-"""
-function nnodesbifurcation(Ξ::Vector{T}) where {T <: iTf}
-  ns = zero(Int64)
 
+Warning: only works when branches are not subdivided.
+"""
+function nnodesbifurcation(Ξ::Vector{T}) where {T <: iTree}
+
+  n = -0.5
   for ξ in Ξ
-    ns += _nnodesbifurcation(ξ, 0) + 1 - Int64(anyfossil(ξ))
+    n = _nnodesinternal(ξ, n) + 0.5 - Int64(anyfossil(ξ))
   end
 
-  return div(ns + 1, 2)
+  return n
 end
 
 

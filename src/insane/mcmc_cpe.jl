@@ -91,7 +91,7 @@ function insane_cpe(tree    ::sT_label,
   mc = m_surv_cbd(th, λc, μc, 5_000, surv)
 
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, xr, σac, σkc, sTpe)
+  Ξ = make_Ξ(idf, xr, σkc, sTpe)
 
   # get vector of internal edges
   inodes = [i for i in Base.OneTo(lastindex(idf)) if d1(idf[i]) > 0]
@@ -827,6 +827,10 @@ function wfix_t(ξi ::T,
 
   sc, pc = zero(Float64), NaN
   for i in Base.OneTo(nac)
+
+    """
+    here change for xc for xfs, no?
+    """
     p   = duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
     sc += p
     if xic === xis[i]

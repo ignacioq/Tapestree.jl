@@ -1201,19 +1201,20 @@ end
 
 Return the number of internal nodes for `tree`.
 """
-nnodesinternal(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
+nnodesinternal(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0.0)
 
 
 
 
 """
-    _nnodesinternal(tree::T, n::Int64) where {T <: iTree}
+    _nnodesinternal(tree::T, n::Float64) where {T <: iTree}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesinternal(tree::T, n::Int64) where {T <: iTree}
+function _nnodesinternal(tree::T, n::Float64) where {T <: iTree}
+
   if def1(tree)
-    n += 1
+    n += one(Float64)
     n = _nnodesinternal(tree.d1, n)
     n = _nnodesinternal(tree.d2, n)
   end
@@ -1225,22 +1226,23 @@ end
 
 
 """
-    _nnodesinternal(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
+    _nnodesinternal(tree::T, n::Float64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesinternal(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
+function _nnodesinternal(tree::T, n::Float64) where {T <: Union{iTf, iTpbd}}
 
   if def1(tree)
-    n += 1
     n = _nnodesinternal(tree.d1, n)
     if def2(tree)
+      n += one(Float64)
       n = _nnodesinternal(tree.d2, n)
     end
   end
 
   return n
 end
+
 
 
 
@@ -1266,34 +1268,10 @@ end
 
 """
     nnodesbifurcation(tree::T) where {T <: iTree}
-    nnodesbifurcation(tree::T) where {T <: Union{iTf, iTpbd}}
 
 Return the number of bifurcation nodes for `tree`.
 """
 nnodesbifurcation(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
-nnodesbifurcation(tree::T) where {T <: Union{iTf, iTpbd}}   = _nnodesbifurcation(tree, 0)
-
-
-
-
-"""
-    _nnodesbifurcation(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
-Return the number of internal nodes for `tree`, initialized at `n`.
-"""
-function _nnodesbifurcation(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
-  if def1(tree)
-    n = _nnodesbifurcation(tree.d1, n)
-    if def2(tree)
-      n += 1
-      n = _nnodesbifurcation(tree.d2, n)
-    end
-  end
-
-  return n
-end
-
 
 
 
