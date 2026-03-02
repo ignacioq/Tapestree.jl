@@ -2640,22 +2640,22 @@ end
    _xisatt!(tree::T,
             c   ::Float64,
             xis ::Vector{Float64},
+            xfs ::Vector{Float64},
             es  ::Vector{Float64},
             t   ::Float64,
             na  ::Int64,
-            xic ::Float64,
-            xc  ::Float64) where {T <: Tpe}
+            xic ::Float64) where {T <: Tpe}
 
 Return initial traits and edge lengths for those alive at time `c` for `tree`.
 """
 function _xisatt!(tree::T,
                   c   ::Float64,
                   xis ::Vector{Float64},
+                  xfs ::Vector{Float64},
                   es  ::Vector{Float64},
                   t   ::Float64,
                   na  ::Int64,
-                  xic ::Float64,
-                  xc  ::Float64) where {T <: Tpe}
+                  xic ::Float64) where {T <: Tpe}
 
   et = e(tree)
 
@@ -2664,21 +2664,21 @@ function _xisatt!(tree::T,
 
     if isfix(tree)
       xic = xi(tree)
-      xc  = xf(tree)
     end
 
     push!(xis, xi(tree))
+    push!(xfs, xf(tree))
     push!(es, c - t)
 
-    return na, xic, xc
+    return na, xic
   elseif def1(tree)
-    na, xic, xc = _xisatt!(tree.d1, c, xis, es, t + et, na, xic, xc)
+    na, xic = _xisatt!(tree.d1, c, xis, xfs, es, t + et, na, xic)
     if def2(tree)
-      na, xic, xc = _xisatt!(tree.d2, c, xis, es, t + et, na, xic, xc)
+      na, xic = _xisatt!(tree.d2, c, xis, xfs, es, t + et, na, xic)
     end
   end
 
-  return na, xic, xc
+  return na, xic
 end
 
 

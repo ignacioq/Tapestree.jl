@@ -647,7 +647,7 @@ end
 """
     fsbi_t(bi  ::iBffs,
            xav::Float64,
-           xst::Float64,
+           xsd::Float64,
            ξc  ::sTpe,
            λ   ::Float64,
            μ   ::Float64,
@@ -658,7 +658,7 @@ Forward simulation for terminal branch.
 """
 function fsbi_t(bi ::iBffs,
                 xav::Float64,
-                xst::Float64,
+                xsd::Float64,
                 ξc ::sTpe,
                 λ  ::Float64,
                 μ  ::Float64,
@@ -692,12 +692,12 @@ function fsbi_t(bi ::iBffs,
   if ifx(bi)
 
     # if no uncertainty around trait value
-    if iszero(xst)
+    if iszero(xsd)
        wt, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
-       wt, acr, xp  = wfix_t(ξc, e(bi), xav, xst, 0.0, xis, xfs, es, σa, na)
+       wt, acr, xp  = wfix_t(ξc, e(bi), xav, xsd, 0.0, xis, xfs, es, σa, na)
     end
 
     if lU < acr + llr
@@ -759,7 +759,7 @@ function wfix_t(ξi ::T,
     end
   end
 
-  # extract current xis and estimate ratio
+  # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
   nac, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN)
@@ -809,37 +809,33 @@ function wfix_t(ξi ::T,
                 na ::Int64) where {T <: Tpe}
 
   # select best from proposal
-  sp, wt, xp, pp = 0.0, 0, NaN, -Inf
-  for i in Base.OneTo(na)
-    p   = duodnorm(xfs[i], xis[i], xav, sqrt(es[i])*σa, xst)
+  sp, i, wt, xp, pp = 0.0, 0, 0, NaN, -Inf
+  for xfi in xfs
+    p   = dnorm(xfi, xav, xst)
     sp += p
+    i  += 1
     if p > pp
       pp = p
-      xp = xfs[i]
+      xp = xfi
       wt = i
     end
   end
 
-  # extract current xis and estimate ratio
-  empty!(xis)
-  empty!(es)
-  nac, xc, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
+  # extract current xis & xfs and estimate ratio
+  empty!(xfs)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc, pc = zero(Float64), NaN
-  for i in Base.OneTo(nac)
-
-    """
-    here change for xc for xfs, no?
-    """
-    p   = duodnorm(xc, xis[i], xav, sqrt(es[i])*σa, xst)
+  for xfi in xfs
+    p   = dnorm(xfi, xav, xst)
     sc += p
-    if xic === xis[i]
+    if xc === xfi
       pc = p
     end
   end
 
   # likelihood ratio and acceptance
-  acr += log((pc * sp)/(pp * sc))
+  acr += log(sp/sc)
 
   return wt, acr, xp
 end
