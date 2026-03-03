@@ -922,19 +922,23 @@ end
 
 """
     make_Ξ(idf::Vector{iBffs},
+           Ξa ::Vector{sTbd},
            xr ::Vector{Float64},
+           σa ::Float64,
            σk ::Float64,
            ::Type{sTpe})
 
 Make edge tree `Ξ` from the edge directory.
 """
 function make_Ξ(idf::Vector{iBffs},
+                Ξa ::Vector{sTbd},
                 xr ::Vector{Float64},
-                σk::Float64,
+                σa ::Float64,
+                σk ::Float64,
                 ::Type{sTpe})
 
   Ξ = sTpe[]
-  _make_Ξ!(Ξ, 1, false, xr, σk, idf)
+  _make_Ξ!(Ξ, Ξa, 1, false, xr, σa, σk, idf)
 
   return Ξ
 end
@@ -952,9 +956,11 @@ end
 Make edge tree `Ξ` from the edge directory.
 """
 function _make_Ξ!(Ξ  ::Vector{sTpe},
+                  Ξa ::Vector{sTbd},
                   i  ::Int64,
                   clb::Bool,
                   xr ::Vector{Float64},
+                  σa ::Float64,
                   σk ::Float64,
                   idf::Vector{iBffs})
 
@@ -968,24 +974,73 @@ function _make_Ξ!(Ξ  ::Vector{sTpe},
   xfi = xr[i]
 
   if clb # if it is cladogenetic bud
-    dx   = xfi - xii
-    xii += sign(dx)*σk
+    xii += randn()*σk
   end
 
   shi = rand(Bool)
-  push!(Ξ, sTpe(et, false, xii, xfi, shi, true))
+  push!(Ξ, sTpe(Ξa[i], xii, xfi, σa, σk, shi, et))
 
   if i1 > 0 
     if i2 > 0 
-      _make_Ξ!(Ξ, i1, shi, xr, σk, idf)
-      _make_Ξ!(Ξ, i2, !shi, xr, σk, idf)
+      _make_Ξ!(Ξ, Ξa, i1, shi, xr, σa, σk, idf)
+      _make_Ξ!(Ξ, Ξa, i2, !shi, xr, σa, σk, idf)
     else
-      _make_Ξ!(Ξ, i1, false, xr, σk, idf)
+      _make_Ξ!(Ξ, Ξa, i1, false, xr, σa, σk, idf)
     end
 
   end
 
   return nothing
+end
+
+
+
+
+"""
+    sTpe(tree::sTbd,
+          x0  ::Float64,
+          xfi ::Float64,
+          σa  ::Float64,
+          σk  ::Float64,
+          fshi::Bool,
+          eb  ::Float64)
+
+Create a punkeek tree out of an (augmented) birth death tree.
+"""
+function sTpe(tree::sTbd,
+              x0  ::Float64,
+              xfi ::Float64,
+              σa  ::Float64,
+              σk  ::Float64,
+              fshi::Bool,
+              eb  ::Float64)
+
+  eii = e(tree)
+  if isfix(tree)
+    if eb > 0.0
+      x1  = eii/eb * (xfi - x0) + x0
+    else
+      x1 = x0
+    end
+  else
+    x1 = rnorm(x0, sqrt(eii) * σa)
+  end
+
+  if def1(tree)
+    xk     = randn()*σk + x0
+    shi    = rand(Bool)
+    xl, xr = if shi xk, x1 else x1, xk end
+
+    return sTpe(sTpe(tree.d1, xl, xfi, σa, σk, fshi, eb - eii), 
+                sTpe(tree.d2, xr, xfi, σa, σk, fshi, eb - eii),
+                eii, false, x0, x1, shi, isfix(tree))
+  else
+    if isfix(tree)
+      return sTpe(eii, false, x0, x1, fshi, true)
+    else
+      return sTpe(eii, isextinct(tree), x0, x1, false, false)
+    end
+  end
 end
 
 
