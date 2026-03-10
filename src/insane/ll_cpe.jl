@@ -144,31 +144,86 @@ end
 
 
 
+"""
+    llik_cpe_triad(xa ::Float64,
+                   xad::Float64,
+                   xkd::Float64,
+                   ea ::Float64,
+                   ead::Float64,
+                   ekd::Float64,
+                   σa2::Float64,
+                   σk2::Float64)
+
+Likelihood estimate for a triad under punkeek.
+"""
+function llik_cpe_triad(xa ::Float64,
+                        xad::Float64,
+                        xkd::Float64,
+                        ea ::Float64,
+                        ead::Float64,
+                        ekd::Float64,
+                        σa2::Float64,
+                        σk2::Float64)
+  logdnorm(xad, xa, (ea + ead)*σa2)       + # anagenetic daughter
+  logdnorm(xkd, xa, (ea + ekd)*σa2 + σk2)   # cladogenetic daughter
+end
+
+
+
 
 """
-    llik_quartet(xa ::Float64,
-                 xi ::Float64,
-                 xk ::Float64,
-                 xad::Float64,
-                 xkd::Float64,
-                 ei ::Float64,
-                 ea ::Float64,
-                 ek ::Float64,
-                 σa2::Float64,
-                 σk2::Float64)
+    llik_cpe_trio(xi ::Float64,
+                  xk ::Float64,
+                  xad::Float64,
+                  xkd::Float64,
+                  ea ::Float64,
+                  ek ::Float64,
+                  σa2::Float64,
+                  σk2::Float64)
+
+Likelihood for a `trio` under constant punctuated equilibrium.
+"""
+function llik_cpe_trio(xi ::Float64,
+                       xk ::Float64,
+                       xad::Float64,
+                       xkd::Float64,
+                       ea ::Float64,
+                       ek ::Float64,
+                       σa2::Float64,
+                       σk2::Float64)
+
+  return logdnorm(xad, xi, ea*σa2) + # anagenetic daughter
+         logdnorm(xk,  xi,    σk2) + # cladogenetic shift
+         logdnorm(xkd, xk, ek*σa2)   # cladogenetic daughter
+end
+
+
+
+
+"""
+    llik_cpe_quartet(xa ::Float64,
+                     xi ::Float64,
+                     xk ::Float64,
+                     xad::Float64,
+                     xkd::Float64,
+                     ei ::Float64,
+                     ea ::Float64,
+                     ek ::Float64,
+                     σa2::Float64,
+                     σk2::Float64)
 
 Likelihood for a `quartet` under constant punctuated equilibrium.
 """
-function llik_quartet(xa ::Float64,
-                      xi ::Float64,
-                      xk ::Float64,
-                      xad::Float64,
-                      xkd::Float64,
-                      ei ::Float64,
-                      ea ::Float64,
-                      ek ::Float64,
-                      σa2::Float64,
-                      σk2::Float64)
+function llik_cpe_quartet(xa ::Float64,
+                          xi ::Float64,
+                          xk ::Float64,
+                          xad::Float64,
+                          xkd::Float64,
+                          ei ::Float64,
+                          ea ::Float64,
+                          ek ::Float64,
+                          σa2::Float64,
+                          σk2::Float64)
 
   return logdnorm(xi,  xa, ei*σa2) + # anagenetic ancestor
          logdnorm(xad, xi, ea*σa2) + # anagenetic daughter
@@ -176,34 +231,6 @@ function llik_quartet(xa ::Float64,
          logdnorm(xkd, xk, ek*σa2)   # cladogenetic daughter
 end
 
-
-
-
-"""
-    llik_trio(xi ::Float64,
-              xk ::Float64,
-              xad::Float64,
-              xkd::Float64,
-              ea ::Float64,
-              ek ::Float64,
-              σa2::Float64,
-              σk2::Float64)
-
-Likelihood for a `trio` under constant punctuated equilibrium.
-"""
-function llik_trio(xi ::Float64,
-                   xk ::Float64,
-                   xad::Float64,
-                   xkd::Float64,
-                   ea ::Float64,
-                   ek ::Float64,
-                   σa2::Float64,
-                   σk2::Float64)
-
-  return logdnorm(xad, xi, ea*σa2) + # anagenetic daughter
-         logdnorm(xk,  xi,    σk2) + # cladogenetic shift
-         logdnorm(xkd, xk, ek*σa2)   # cladogenetic daughter
-end
 
 
 
@@ -258,6 +285,9 @@ function ssσak(tree::sTpe, sσa::Float64, sσk::Float64)
 
   return sσa, sσk
 end
+
+
+
 
 
 

@@ -51,8 +51,6 @@ function insane_cpe(tree    ::sT_label,
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
-                    bditer  ::Int64                 = nburn,
-                    bdthin  ::Int64                 = div(nburn, 10),
                     pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
@@ -104,30 +102,13 @@ function insane_cpe(tree    ::sT_label,
 
   @info "running constant punctuated equilibrium"
 
-  # pre-augment the tree using birth-death model
-  Ξa = make_Ξ(idf, sTbd)
-  Ξv, λc, μc, mc =
-    mcmc_pre_cbd(Ξa, idf, λ_prior, μ_prior, bditer, bdthin,
-      λc, μc, mc, th, rmλ, surv, pup, prints)
-
-  ne  = map(x -> sum(ntipsextinct, x), Ξv)
-  mne = mean(ne)
-  wm  = argmin(x -> abs(x - mne), ne)
-  wi = findfirst(isequal(wm), ne)
-
-  Ξi = Ξv[wi]
-
-  ne = Float64(ne[wi])
-  ns = nnodesbifurcation(idf) + ne
-  L  = treelength(Ξi)
-
   # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, Ξi, xr, σac, σkc, sTpe)
+  Ξ = make_Ξ(idf, xr, σkc, sTpe)
 
   # adaptive phase
   llc, prc, λc, μc, σac, σkc, mc, ns, ne, L, sσa, sσk, nσs =
       mcmc_burn_cpe(Ξ, idf, λ_prior, μ_prior, σa_prior, σk_prior, nburn, 
-        λc, μc, σac, σkc, mc, ns, ne, L, th, rmλ, inodes, surv, pup, prints)
+        λc, μc, σac, σkc, mc, th, rmλ, inodes, surv, pup, prints)
 
   # mcmc
   r, treev = 
@@ -136,103 +117,6 @@ function insane_cpe(tree    ::sT_label,
       niter, nthin, nflush, ofile, prints)
 
   return r, treev
-end
-
-
-
-
-"""
-    mcmc_pre_cbd(Ξ      ::Vector{sTbd},
-                 idf    ::Array{iBffs,1},
-                 λ_prior::NTuple{2,Float64},
-                 μ_prior::NTuple{2,Float64},
-                 niter  ::Int64,
-                 nthin  ::Int64,
-                 λc     ::Float64,
-                 μc     ::Float64,
-                 mc     ::Float64,
-                 th     ::Float64,
-                 rmλ    ::Float64,
-                 surv   ::Int64,
-                 pup    ::Array{Int64,1},
-                 prints ::Int64)
-
-Adaptive MCMC phase for da chain for constant birth-death using forward
-simulation.
-"""
-function mcmc_pre_cbd(Ξ      ::Vector{sTbd},
-                      idf    ::Array{iBffs,1},
-                      λ_prior::NTuple{2,Float64},
-                      μ_prior::NTuple{2,Float64},
-                      niter  ::Int64,
-                      nthin  ::Int64,
-                      λc     ::Float64,
-                      μc     ::Float64,
-                      mc     ::Float64,
-                      th     ::Float64,
-                      rmλ    ::Float64,
-                      surv   ::Int64,
-                      pup    ::Array{Int64,1},
-                      prints ::Int64)
-
-  # trees to save
-  nlogs  = fld(niter,nthin)
-  lthin  = lit = zero(Int64)
-  niter2 = div(niter,2)
-
-  el  = lastindex(idf)
-  L   = treelength(Ξ)          # tree length
-  ns  = nnodesbifurcation(idf) # number of speciation events
-  ne  = 0.0                    # number of extinction events
-
-  # likelihood
-  llc = llik_cbd(Ξ, λc, μc, ns) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-  prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
-        logdgamma(μc, μ_prior[1], μ_prior[2])
-
-  pbar = Progress(niter, dt = prints, desc = "pre-augmenting tree...", barlen = 20)
-
-  Ξv = Vector{sTbd}[]
-
-  for it in Base.OneTo(niter)
-
-    shuffle!(pup)
-
-    for p in pup
-
-      # λ proposal
-      if p === 1
-
-        llc, prc, λc, mc =
-          update_λ!(llc, prc, λc, ns, L, μc, mc, th, rmλ, surv, λ_prior)
-
-      # μ proposal
-      elseif p === 2
-
-        llc, prc, μc, mc =
-          update_μ!(llc, prc, μc, ne, L, λc, mc, th, surv, μ_prior)
-
-      # forward simulation proposal proposal
-      else
-
-        bix = fIrand(el) + 1
-        llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
-
-      end
-    end
-
-   # log decoupled trees
-    if it > niter2
-      lthin += one(Int64)
-      if lthin === nthin
-        push!(Ξv, map(sTbd, Ξ))
-        lthin = zero(Int64)
-      end
-    end
-    next!(pbar)
-  end
-
-  return Ξv, λc, μc, mc, ns, ne, L
 end
 
 
@@ -251,9 +135,6 @@ end
                   σac    ::Float64,
                   σkc    ::Float64,
                   mc     ::Float64,
-                  ns     ::Float64,
-                  ne     ::Float64,
-                  L      ::Float64,
                   th     ::Float64,
                   rmλ    ::Float64,
                   inodes ::Vector{Int64},
@@ -275,9 +156,6 @@ function mcmc_burn_cpe(Ξ       ::Vector{sTpe},
                        σac     ::Float64,
                        σkc     ::Float64,
                        mc      ::Float64,
-                       ns      ::Float64,
-                       ne      ::Float64,
-                       L       ::Float64,
                        th      ::Float64,
                        rmλ     ::Float64,
                        inodes  ::Vector{Int64},
@@ -286,7 +164,10 @@ function mcmc_burn_cpe(Ξ       ::Vector{sTpe},
                        prints  ::Int64)
 
   el  = lastindex(idf)
+  L   = treelength(Ξ)          # tree length
+  ns  = nnodesbifurcation(idf) # number of speciation events
   nin = lastindex(inodes)      # number of internal nodes
+  ne  = 0.0                    # number of extinction events
 
   # likelihood
   llc = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + 
@@ -513,6 +394,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
             elseif p === 5
 
               bix = inodes[fIrand(nin) + 1]
+
               llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
               # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
@@ -812,7 +694,7 @@ function fsbi_t(bi ::iBffs,
 
     # if no uncertainty around trait value
     if iszero(xsd)
-       wt, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, es, σa, na)
+       wt, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, xfs, es, σa, na)
 
     # if uncertainty around trait value
     else
@@ -833,6 +715,7 @@ function fsbi_t(bi ::iBffs,
 
   else
     if lU < llr
+
       _fixrtip!(t0, na)
 
       setni!(bi, na)    # set new ni
@@ -847,13 +730,15 @@ end
 
 
 """
-    wfix_t(ξi ::T, 
-           ξ1 ::T,
+    wfix_t(ξi ::T,
            ei ::Float64,
+           xav::Float64,
            acr::Float64,
-           xfs::Vector{Float64}, 
-           xis::Vector{Float64}, 
-           σa2::Float64) where {T <: Tpe}
+           xis::Vector{Float64},
+           xfs::Vector{Float64},
+           es ::Vector{Float64},
+           σa ::Float64,
+           na ::Int64) where {T <: Tpe}
 
 Choose most likely simulated lineage to fix with respect to the
 trait value **without uncertainty** of terminal branches.
@@ -863,6 +748,7 @@ function wfix_t(ξi ::T,
                 xav::Float64,
                 acr::Float64,
                 xis::Vector{Float64},
+                xfs::Vector{Float64},
                 es ::Vector{Float64},
                 σa ::Float64,
                 na ::Int64) where {T <: Tpe}
@@ -870,7 +756,8 @@ function wfix_t(ξi ::T,
   # select best from proposal
   sp, wt, pp = 0.0, 0, -Inf
   for i in Base.OneTo(na)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
+    p   = dnorm(xav,    xis[i], sqrt(es[i])*σa)/
+          dnorm(xfs[i], xis[i], sqrt(es[i])*σa)
     sp += p
     if p > pp
       pp = p
@@ -878,7 +765,7 @@ function wfix_t(ξi ::T,
     end
   end
 
-  # extract current `xis` and estimate ratio
+  # # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
   nac, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN)
@@ -893,7 +780,7 @@ function wfix_t(ξi ::T,
   end
 
   # likelihood ratio and acceptance
-  acr += log((pc * sp)/(pp * sc))
+  acr += log(sp)
 
   return wt, acr, xav
 end
@@ -1175,7 +1062,6 @@ end
 
 
 
-
 """
     wfix_i(ξi ::T,
            ξ1 ::T,
@@ -1204,7 +1090,7 @@ function wfix_i(ξi ::T,
     i  += 1
     pk1 = llik_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
     pk2 = llik_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
-    sp += exp(pk1) + exp(pk2)
+    sp += (exp(pk1) + exp(pk2))
     pfi = max(pk1, pk2)
 
     if pfi > pp
@@ -1223,7 +1109,7 @@ function wfix_i(ξi ::T,
   for xci in xfs
     pk1 = llik_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
     pk2 = llik_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
-    sc += exp(pk1) + exp(pk2)
+    sc += (exp(pk1) + exp(pk2))
 
     if xc === xci
       pc = shc ? pk1 : pk2

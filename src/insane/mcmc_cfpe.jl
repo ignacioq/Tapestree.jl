@@ -1,65 +1,73 @@
 #=
 
-constant birth-death MCMC using forward simulation
+constant fossil punkeek MCMC
 
 Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 25 08 2020
+Created 25 08 2025
 =#
-
 
 
 
 """
     insane_cfpe(tree    ::sTf_label,
-               xa      ::Dict{String, Float64};
-               xs      ::Dict{String, Float64} = Dict{String,Float64}(),
-               λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-               μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-               σa_prior::NTuple{2,Float64}     = (0.05, 0.05),
-               σk_prior::NTuple{2,Float64}     = (0.05, 0.05),
-               niter   ::Int64                 = 1_000,
-               nthin   ::Int64                 = 10,
-               nburn   ::Int64                 = 200,
-               nflush  ::Int64                 = nthin,
-               ofile   ::String                = string(homedir(), "/cfpe"),
-               ϵi      ::Float64               = 0.4,
-               λi      ::Float64               = NaN,
-               μi      ::Float64               = NaN,
-               pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-1, 0.2),
-               prints  ::Int64                 = 5,
-               survival::Bool                  = true,
-               mxthf   ::Float64               = Inf,
-               tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+                xa      ::Dict{String, Float64};
+                xs      ::Dict{String, Float64} = Dict{String,Float64}(),
+                λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                σa_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                σk_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                ψ_epoch ::Vector{Float64}       = Float64[],
+                f_epoch ::Vector{Int64}         = Int64[0],
+                niter   ::Int64                 = 1_000,
+                nthin   ::Int64                 = 10,
+                nburn   ::Int64                 = 200,
+                nflush  ::Int64                 = nthin,
+                ofile   ::String                = string(homedir(), "/cfpe"),
+                ϵi      ::Float64               = 0.4,
+                λi      ::Float64               = NaN,
+                μi      ::Float64               = NaN,
+                ψi      ::Float64               = NaN,
+                αai     ::Float64               = 0.0,
+                αki     ::Float64               = 0.0,
+                pupdp   ::NTuple{7,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-1, 0.2),
+                survival::Bool                  = true,
+                mxthf   ::Float64               = 0.1,
+                tρ      ::Dict{String, Float64} = Dict("" => 1.0),
+                prints  ::Int64                 = 5)
 
 Run insane for constant fossilised birth-death punctuated equilibrium.
 """
 function insane_cfpe(tree    ::sTf_label,
-                    xa      ::Dict{String, Float64};
-                    xs      ::Dict{String, Float64} = Dict{String,Float64}(),
-                    λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                    μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                    ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                    σa_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                    σk_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                    ψ_epoch ::Vector{Float64}       = Float64[],
-                    f_epoch ::Vector{Int64}         = Int64[0],
-                    niter   ::Int64                 = 1_000,
-                    nthin   ::Int64                 = 10,
-                    nburn   ::Int64                 = 200,
-                    nflush  ::Int64                 = nthin,
-                    ofile   ::String                = string(homedir(), "/cfpe"),
-                    ϵi      ::Float64               = 0.4,
-                    λi      ::Float64               = NaN,
-                    μi      ::Float64               = NaN,
-                    ψi      ::Float64               = NaN,
-                    pupdp   ::NTuple{7,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-1, 0.2),
-                    survival::Bool                  = true,
-                    mxthf   ::Float64               = 0.1,
-                    tρ      ::Dict{String, Float64} = Dict("" => 1.0),
-                    prints  ::Int64                 = 5)
+                     xa      ::Dict{String, Float64};
+                     xs      ::Dict{String, Float64} = Dict{String,Float64}(),
+                     λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                     α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                     σa_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                     σk_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                     ψ_epoch ::Vector{Float64}       = Float64[],
+                     f_epoch ::Vector{Int64}         = Int64[0],
+                     niter   ::Int64                 = 1_000,
+                     nthin   ::Int64                 = 10,
+                     nburn   ::Int64                 = 200,
+                     nflush  ::Int64                 = nthin,
+                     ofile   ::String                = string(homedir(), "/cfpe"),
+                     ϵi      ::Float64               = 0.4,
+                     λi      ::Float64               = NaN,
+                     μi      ::Float64               = NaN,
+                     ψi      ::Float64               = NaN,
+                     αi      ::Float64               = 0.0,
+                     pupdp   ::NTuple{7,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-1, 0.2),
+                     survival::Bool                  = true,
+                     mxthf   ::Float64               = 0.1,
+                     tρ      ::Dict{String, Float64} = Dict("" => 1.0),
+                     prints  ::Int64                 = 5)
 
   n  = ntips(tree)
   th = treeheight(tree)
@@ -118,6 +126,7 @@ function insane_cfpe(tree    ::sTf_label,
   ψc = fill(ψc, nep)
 
   σac = σkc = σxi
+  αc  = αi
 
   # if condition on first speciation event
   rmλ = Float64(iszero(e(tree)) && !isfossil(tree))
@@ -140,9 +149,6 @@ function insane_cfpe(tree    ::sTf_label,
   # M attempts of survival
   mc = m_surv_cbd(th, λc, μc, 1_000, surv)
 
-  # make a decoupled tree and fix it
-  Ξ = make_Ξ(idf, xr, σac, σkc, sTfpe)
-
   # make epoch start vectors and indices for each `ξ`
   eixi = Int64[]
   eixf = Int64[]
@@ -164,24 +170,35 @@ function insane_cfpe(tree    ::sTf_label,
   # make parameter updates scaling function for tuning
   spup = sum(pupdp)
   pup  = Int64[]
-  for i in Base.OneTo(7)
+  for i in Base.OneTo(8)
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
+
+
+  """
+  add pre augmentation
+  """
+
+  # make a decoupled tree and fix it
+  Ξ = make_Ξ(idf, xr, σac, σkc, sTfpe)
+
+
 
   @info "running constant fossilised punctuated equilibrium"
 
   # adaptive phase
-  llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, nf, L, sσa, sσk, nσs =
-      mcmc_burn_cfpe(Ξ, idf, λ_prior, μ_prior, ψ_prior, σa_prior, σk_prior, 
-        ψ_epoch, f_epoch, nburn, λc, μc, ψc, σac, σkc, mc, th, rmλ, 
+  llc, prc, λc, μc, ψc, αc, σac, σkc, mc, ns, ne, nf, L, sσa, sσk, nσs =
+      mcmc_burn_cfpe(Ξ, idf, 
+        λ_prior, μ_prior, ψ_prior, α_prior, σa_prior, σk_prior, 
+        ψ_epoch, f_epoch, nburn, λc, μc, ψc, αc, σac, σkc, mc, th, rmλ, 
         inodes, surv, bst, eixi, eixf, pup, prints)
 
   # mcmc
   r, treev = 
     mcmc_cfpe(Ξ, idf, llc, prc, λc, μc, ψc, σac, σkc, mc, ns, ne, nf, L, 
       sσa, sσk, nσs, th, rmλ, inodes, surv, bst, eixi, eixf, λ_prior, 
-      μ_prior, ψ_prior, σa_prior, σk_prior, ψ_epoch, f_epoch, pup, niter, 
-      nthin, nflush, ofile, prints)
+      μ_prior, ψ_prior, α_prior, σa_prior, σk_prior, ψ_epoch, f_epoch, 
+      pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -195,6 +212,7 @@ end
                    λ_prior ::NTuple{2,Float64},
                    μ_prior ::NTuple{2,Float64},
                    ψ_prior ::NTuple{2,Float64},
+                   α_prior ::NTuple{2,Float64},
                    σa_prior::NTuple{2,Float64},
                    σk_prior::NTuple{2,Float64},
                    ψ_epoch ::Vector{Float64},
@@ -223,6 +241,7 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
                         λ_prior ::NTuple{2,Float64},
                         μ_prior ::NTuple{2,Float64},
                         ψ_prior ::NTuple{2,Float64},
+                        α_prior ::NTuple{2,Float64},
                         σa_prior::NTuple{2,Float64},
                         σk_prior::NTuple{2,Float64},
                         ψ_epoch ::Vector{Float64},
@@ -258,12 +277,18 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   # prior
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])              +
         logdgamma(μc, μ_prior[1], μ_prior[2])              +
+        logdnorm(αc,         α_prior[1],  α_prior[2]^2)    +
         logdinvgamma(σac^2, σa_prior[1], σa_prior[2])      +
         logdinvgamma(σkc^2, σk_prior[1], σk_prior[2])      +
         sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
+  """
+  here
+  """
+
+
   # tracked quantities
-  sσa, sσk = ssσak(Ξ, idf)
+  dα, sσa, sσk = gibbs_quanta(Ξ, idf)
 
   # n number to sum to ns for σa updates
   nσs = nedgesF(Ξ) - 2.0*ns - rmλ
@@ -298,30 +323,39 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
 
         llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-      # σa (anagenetic) proposal
+      # α  proposal
       elseif p === 4
+
+        """
+        here, check the tbdd alpha updates
+        """
+
+        llc, prc, αc = update_α!(αc, σac, sum(L), dα, llc, prc, α_prior)
+
+      # σa (anagenetic) proposal
+      elseif p === 5
 
         llc, prc, σac = 
           update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
       # σk (cladogenetic) proposal
-      elseif p === 5
+      elseif p === 6
 
         llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
 
       # update inner nodes traits
-      elseif p === 6
+      elseif p === 7
 
         bix = inodes[fIrand(nin) + 1]
 
-        llc, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
+        llc, dα, sσa, sσk = update_x!(bix, Ξ, idf, σac, σkc, llc, sσa, sσk)
 
       # forward simulation proposal proposal
       else
 
         bix = fIrand(el) + 1
 
-        llc, ns, ne, sσa, sσk = 
+        llc, ns, ne, dα, sσa, sσk = 
           update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, σac, σkc, 
             ns, ne, L, eixi, eixf, sσa, sσk, xis, xfs, es)
       end

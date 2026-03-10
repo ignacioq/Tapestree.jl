@@ -840,18 +840,18 @@ end
 
 
 """
-    function f(tree::T; type::Symbol = :trait)
+    function f(tree::T; augmented = true, σa = 0.1, pdt = 0.01) where {T <: Tpe}
 
 Recipe for plotting punctuated equilibrium trees.
 """
-@recipe function f(tree::T) where {T <: Tpe}
+@recipe function f(tree::T; augmented = false, σa = 0.1, pdt = 0.005) where {T <: Tpe}
 
   x = Float64[]
   y = Float64[]
 
   th = treeheight(tree)
 
-  _rplottrait!(tree, th, xi(tree), x, y)
+  _rplottrait!(tree, th, xi(tree), x, y, augmented, σa, pdt*th, sqrt(pdt*th))
 
   yfilt = filter(x -> !isnan(x), y)
   ymn = minimum(yfilt)
@@ -873,8 +873,8 @@ Recipe for plotting punctuated equilibrium trees.
   xtick_direction --> :out
 
   return x, y
-
 end
+
 
 
 
@@ -883,7 +883,9 @@ end
                  xc  ::Float64,
                  yc  ::Float64,
                  x   ::Array{Float64,1},
-                 y   ::Array{Float64,1}) where {T <: Tpe}
+                 y   ::Array{Float64,1},
+                 aug ::Bool,
+                 σa  ::Float64) where {T <: Tpe}
 
 Returns `x` and `y` coordinates in order to plot a tree of type `sTpe`.
 """
@@ -891,7 +893,11 @@ function _rplottrait!(tree::T,
                       xc  ::Float64,
                       yc  ::Float64,
                       x   ::Array{Float64,1},
-                      y   ::Array{Float64,1}) where {T <: Tpe}
+                      y   ::Array{Float64,1},
+                      aug ::Bool,
+                      σa  ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64) where {T <: Tpe}
 
   xii = xi(tree)
 
@@ -905,15 +911,45 @@ function _rplottrait!(tree::T,
 
   # add horizontal lines
   xfi = xf(tree)
-  push!(x, xc, xc - ei, NaN)
-  push!(y, xii, xfi, NaN)
+
+  if aug
+
+    if ei > 0.0
+
+      ntF, fdti = divrem(ei, δt, RoundDown)
+
+      if isapprox(fdti, δt)
+        ntF += 1.0
+        fdti = δt
+      end
+      if iszero(fdti)
+        fdti  = δt
+        ntF  -= 1.0
+      end
+
+      bmy = bb(xii, xfi, σa, δt, fdti, srδt, Int64(ntF))
+      bmx = [0.0:δt:ei...]
+      push!(bmx, ei)
+    else
+      bmy = [xii, xfi]
+      bmx = [0.0, 0.0]
+    end
+
+    append!(x, xc .- bmx)
+    push!(x, NaN)
+    append!(y, bmy)
+    push!(y, NaN)
+  else
+    push!(x, xc, xc - ei, NaN)
+    push!(y, xii, xfi, NaN)
+  end
 
   xc -= ei
 
   if def1(tree)
-    _rplottrait!(tree.d1, xc, xfi, x, y)
+    _rplottrait!(tree.d1, xc, xfi, x, y, aug, σa, δt, srδt)
     if def2(tree)
-      _rplottrait!(tree.d2, xc, xfi, x, y)
+      _rplottrait!(tree.d2, xc, xfi, x, y, aug, σa, δt, srδt)
     end
   end
 end
