@@ -1088,8 +1088,8 @@ function wfix_i(ξi ::T,
   sp, i, wt, xp, pp, shp = 0.0, 0, 0, NaN, -Inf, false
   for xfi in xfs
     i  += 1
-    pk1 = llik_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-    pk2 = llik_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+    pk1 = llik_cpe_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
+    pk2 = llik_cpe_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
     sp += (exp(pk1) + exp(pk2))
     pfi = max(pk1, pk2)
 
@@ -1107,8 +1107,8 @@ function wfix_i(ξi ::T,
 
   sc, pc = 0.0, NaN
   for xci in xfs
-    pk1 = llik_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-    pk2 = llik_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+    pk1 = llik_cpe_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
+    pk2 = llik_cpe_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
     sc += (exp(pk1) + exp(pk2))
 
     if xc === xci

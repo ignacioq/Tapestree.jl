@@ -378,6 +378,8 @@ function _update_node_x!(ξi ::T,
   xkc, xadc, xkdc, eadc, ekdc = 
     sh(ξi) ? (xi(ξ1), x2, x1, e2, e1) : (xi(ξ2), x1, x2, e1, e2)
 
+  # look if need to control for the proposal probability
+
   ll += llik_cpe_quartet(xa, xip, xkp, xadp, xkdp, ei, eadp, ekdp, σa2, σk2) -
         llik_cpe_quartet(xa, xic, xkc, xadc, xkdc, ei, eadc, ekdc, σa2, σk2)
 
