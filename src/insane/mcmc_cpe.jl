@@ -764,10 +764,10 @@ function wfix_t(ξi ::T,
     end
   end
 
-  # # extract current `xis` and estimate ratio
+  # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
-  nac, xic = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+  nac, xic, xfc = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
 
   sc, pc = 0.0, NaN
   for i in Base.OneTo(nac)
@@ -813,28 +813,30 @@ function wfix_t(ξi ::T,
                 σa ::Float64,
                 na ::Int64) where {T <: Tpe}
 
+  # propose trait value
+  xp = rnorm(xav, xst)
+
   # select best from proposal
   sp, i, wt, xp, pp = 0.0, 0, 0, NaN, -Inf
-  for xfi in xfs
-    p   = dnorm(xfi, xav, xst)
+  for i in Base.OneTo(na)
+    p   = dnorm(xp, xis[i], sqrt(es[i])*σa)
     sp += p
-    i  += 1
     if p > pp
       pp = p
-      xp = xfi
       wt = i
     end
   end
 
-  # extract current xis & xfs and estimate ratio
-  empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
+  # extract current `xis` and current `xfc` and estimate ratio
+  empty!(xis)
+  empty!(es)
+  nac, xic, xfc = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
 
   sc, pc = zero(Float64), NaN
-  for xfi in xfs
-    p   = dnorm(xfi, xav, xst)
+  for i in Base.OneTo(nac)
+    p   = dnorm(xfc, xis[i], sqrt(es[i])*σa)
     sc += p
-    if xc === xfi
+    if xic === xis[i]
       pc = p
     end
   end
