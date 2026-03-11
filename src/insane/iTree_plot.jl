@@ -840,18 +840,18 @@ end
 
 
 """
-    function f(tree::T; augmented = true, σa = 0.1, pdt = 0.01) where {T <: Tpe}
+    function f(tree::T; augment = true, σa = 0.1, pdt = 0.01) where {T <: Tpe}
 
 Recipe for plotting punctuated equilibrium trees.
 """
-@recipe function f(tree::T; augmented = false, σa = 0.1, pdt = 0.005) where {T <: Tpe}
+@recipe function f(tree::T; augment = false, σa = 0.1, pdt = 0.005) where {T <: Tpe}
 
   x = Float64[]
   y = Float64[]
 
   th = treeheight(tree)
 
-  _rplottrait!(tree, th, xi(tree), x, y, augmented, σa, pdt*th, sqrt(pdt*th))
+  _rplottrait!(tree, th, xi(tree), x, y, augment, σa, pdt*th, sqrt(pdt*th))
 
   yfilt = filter(x -> !isnan(x), y)
   ymn = minimum(yfilt)

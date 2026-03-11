@@ -787,7 +787,6 @@ end
 
 
 
-
 """
     wfix_t(ξi ::T,
            ei ::Float64,
