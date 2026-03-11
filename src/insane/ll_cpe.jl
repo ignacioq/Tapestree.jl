@@ -145,6 +145,30 @@ end
 
 
 """
+    llik_cpe_dyad(xi ::Float64,
+                  xad::Float64,
+                  xkd::Float64,
+                  ead::Float64,
+                  ekd::Float64,
+                  σa2::Float64,
+                  σk2::Float64)
+
+Likelihood estimate for a triad under punkeek.
+"""
+function llik_cpe_dyad(xi ::Float64,
+                       xad::Float64,
+                       xkd::Float64,
+                       ead::Float64,
+                       ekd::Float64,
+                       σa2::Float64,
+                       σk2::Float64)
+  logdnorm(xad, xi, ead*σa2)       + # anagenetic daughter
+  logdnorm(xkd, xi, ekd*σa2 + σk2)   # cladogenetic daughter
+end
+
+
+
+"""
     llik_cpe_triad(xa ::Float64,
                    xad::Float64,
                    xkd::Float64,
@@ -168,6 +192,28 @@ function llik_cpe_triad(xa ::Float64,
   logdnorm(xkd, xa, (ea + ekd)*σa2 + σk2)   # cladogenetic daughter
 end
 
+
+
+"""
+    llik_cpe_duo(xi ::Float64,
+                 xk ::Float64,
+                 xad::Float64,
+                 ead::Float64,
+                 σa2::Float64,
+                 σk2::Float64)
+
+Likelihood for a `duo` under constant punctuated equilibrium.
+"""
+function llik_cpe_duo(xi ::Float64,
+                      xk ::Float64,
+                      xad::Float64,
+                      ead::Float64,
+                      σa2::Float64,
+                      σk2::Float64)
+
+  return logdnorm(xad, xi, ead*σa2) + # anagenetic daughter
+         logdnorm(xk,  xi,     σk2)   # cladogenetic shift
+end
 
 
 

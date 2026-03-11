@@ -756,12 +756,11 @@ function wfix_t(ξi ::T,
   # select best from proposal
   sp, wt, pp = 0.0, 0, -Inf
   for i in Base.OneTo(na)
-    p   = dnorm(xav,    xis[i], sqrt(es[i])*σa)/
-          dnorm(xfs[i], xis[i], sqrt(es[i])*σa)
+    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
     sp += p
     if p > pp
       pp = p
-      wt = i
+      wt  = i
     end
   end
 
@@ -780,10 +779,11 @@ function wfix_t(ξi ::T,
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp)
+  acr += log(sp/sc)
 
   return wt, acr, xav
 end
+
 
 
 
@@ -1050,6 +1050,7 @@ function fsbi_i(bi ::iBffs,
 
       sσar = (xp - xf(ξap))^2/e(ξap)      - (xc - xf(ξac))^2/e(ξac)      +
              (xi(ξkp) - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc)
+
       sσkr = (xp - xi(ξkp))^2 - (xc - xi(ξkc))^2
       setxi!(ξap, xp)   # set new xp for initial anagenetic daughter
 
@@ -1059,6 +1060,7 @@ function fsbi_i(bi ::iBffs,
 
   return t0, NaN, NaN, NaN
 end
+
 
 
 
