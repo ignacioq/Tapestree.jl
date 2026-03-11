@@ -1108,12 +1108,12 @@ function wfix_i(ξi ::T,
   xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
-  for xci in xfs
-    pk1 = llik_cpe_trio(xci, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-    pk2 = llik_cpe_trio(xci, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+  for xfi in xfs
+    pk1 = llik_cpe_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
+    pk2 = llik_cpe_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
     sc += (exp(pk1) + exp(pk2))
 
-    if xc === xci
+    if xc === xfi
       pc = shc ? pk1 : pk2
     end
   end
