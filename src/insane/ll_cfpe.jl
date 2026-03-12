@@ -175,6 +175,7 @@ function llik_cfpe_track!(tree::sTfpe,
                           ns  ::Float64,
                           ne  ::Float64,
                           L   ::Vector{Float64},
+                          dα  ::Float64, 
                           sσa ::Float64, 
                           sσk ::Float64,
                           t   ::Float64,
@@ -185,16 +186,14 @@ function llik_cfpe_track!(tree::sTfpe,
   @inbounds begin
     ei = e(tree)
 
-    """
-    check this
-    """
-
     # anagenetic squares
-    sqa = (xf(tree) - xi(tree) - α*ei)^2
-    sσa = f(sσa, sqa/ei)
+    dx  = xf(tree) - xi(tree)
+    dα  = f(dα, dx) 
+    sqa = (dx - α*ei)^2/(2.0*ei)
+    sσa = f(sσa, sqa)
     ll  = f(ll, 
             -(0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) +
-            sqa/(2.0*σa2*ei)))
+            sqa/σa2))
 
     # if epoch change
     while ix < nep && t - ei < ψts[ix]
@@ -220,17 +219,17 @@ function llik_cfpe_track!(tree::sTfpe,
         sσk = f(sσk, sqk)
         ns  = f(ns, 1.0)
 
-        ll, ns, ne, sσa, sσk = 
-          llik_cfpe_track!(tree.d1, λ, μ, ψ, σa2, σk2, ll, ns, ne, 
-            L, sσa, sσk, t, ψts, ix, nep, f)
-        ll, ns, ne, sσa, sσk = 
-          llik_cfpe_track!(tree.d2, λ, μ, ψ, σa2, σk2, ll, ns, ne, 
-            L, sσa, sσk, t, ψts, ix, nep, f)
+        ll, ns, ne, dα, sσa, sσk = 
+          llik_cfpe_track!(tree.d1, λ, μ, ψ, α, σa2, σk2, ll, ns, ne, 
+            L, dα, sσa, sσk, t, ψts, ix, nep, f)
+        ll, ns, ne, dα, sσa, sσk = 
+          llik_cfpe_track!(tree.d2, λ, μ, ψ, α, σa2, σk2, ll, ns, ne, 
+            L, dα, sσa, sσk, t, ψts, ix, nep, f)
       else
         ll = f(ll, log(ψ[ix]))
-        ll, ns, ne, sσa, sσk = 
-          llik_cfpe_track!(tree.d1, λ, μ, ψ, σa2, σk2, ll, ns, ne, 
-            L, sσa, sσk, t, ψts, ix, nep, f)
+        ll, ns, ne, dα, sσa, sσk = 
+          llik_cfpe_track!(tree.d1, λ, μ, ψ, α, σa2, σk2, ll, ns, ne, 
+            L, dα, sσa, sσk, t, ψts, ix, nep, f)
       end
     else
       if isextinct(tree)
@@ -240,33 +239,73 @@ function llik_cfpe_track!(tree::sTfpe,
     end
   end
 
-  return ll, ns, ne, sσa, sσk
+  return ll, ns, ne, dα, sσa, sσk
+end
+
+
+
+
+
+"""
+    gibbs_quanta(Ξ::Vector{sTfpe}, idf::Vector{iBffs}, α::Float64)
+
+Estimate gibbs quanta for fossil punkeek.
+"""
+function gibbs_quanta(Ξ::Vector{sTfpe}, idf::Vector{iBffs}, α::Float64)
+
+  @inbounds begin
+    dα = sσa = sσk = 0.0
+    for i in Base.OneTo(lastindex(Ξ))
+      bi = idf[i]
+      ξi = Ξ[i]
+
+      if d2(bi) > 0
+        lξi = fixtip(ξi)
+        ξd  = if sh(lξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
+        sσk += 0.5*(xi(ξd) - xf(lξi))^2
+      end
+
+      iszero(e(bi)) && continue
+      dα, sσa, sσk = gibbs_quanta(ξi, α, dα, sσa, sσk)
+    end
+  end
+
+  return dα, sσa, sσk
 end
 
 
 
 
 """
-    gibbs_quanta(tree::sTfpe, sσa::Float64, sσk::Float64)
+    gibbs_quanta(tree::sTfpe, 
+                 α   ::Float64, 
+                 dα  ::Float64, 
+                 sσa ::Float64, 
+                 sσk ::Float64)
 
-Estimate the anagenetic and cladogenetic sum of squared differences, 
-`sσa` and `sσk`.
+Estimate gibbs quanta for fossil punkeek.
 """
-function gibbs_quanta(tree::sTfpe, sσa::Float64, sσk::Float64)
+function gibbs_quanta(tree::sTfpe, 
+                      α   ::Float64, 
+                      dα  ::Float64, 
+                      sσa ::Float64, 
+                      sσk ::Float64)
 
   ei   = e(tree)
-  sσa += (xf(tree) - xi(tree))^2/ei
+  dx   = xf(tree) - xi(tree)
+  dα  += dx
+  sσa += (dx - α*ei)^2/(2.0*ei)
 
   if def1(tree)
-    sσa, sσk = gibbs_quanta(tree.d1, sσa, sσk)
+    dα, sσa, sσk = gibbs_quanta(tree.d1, α, dα, sσa, sσk)
     if def2(tree)
       xk   = sh(tree) ? xi(tree.d1) : xi(tree.d2)
-      sσk += (xf(tree) - xk)^2
-      sσa, sσk = gibbs_quanta(tree.d2, sσa, sσk)
+      sσk += 0.5*(xf(tree) - xk)^2
+      dα, sσa, sσk = gibbs_quanta(tree.d2, α, dα, sσa, sσk)
     end
   end
 
-  return sσa, sσk
+  return dα, sσa, sσk
 end
 
 

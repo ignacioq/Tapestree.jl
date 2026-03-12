@@ -286,7 +286,7 @@ end
 Estimate the anagenetic and cladogenetic sum of squared differences, 
 `sσa` and `sσk`.
 """
-function ssσak(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
+function gibbs_quanta(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
 
   @inbounds begin
     sσa = sσk = 0.0
@@ -301,7 +301,7 @@ function ssσak(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
       end
 
       iszero(e(bi)) && continue
-      sσa, sσk = ssσak(ξi, sσa, sσk)
+      sσa, sσk = gibbs_quanta(ξi, sσa, sσk)
     end
   end
 
@@ -312,12 +312,12 @@ end
 
 
 """
-    ssσak(tree::sTpe, sσa::Float64, sσk::Float64)
+    gibbs_quanta(tree::sTpe, sσa::Float64, sσk::Float64)
 
 Estimate the anagenetic and cladogenetic sum of squared differences, 
 `sσa` and `sσk`.
 """
-function ssσak(tree::sTpe, sσa::Float64, sσk::Float64)
+function gibbs_quanta(tree::sTpe, sσa::Float64, sσk::Float64)
 
   ei   = e(tree)
   sσa += (xf(tree) - xi(tree))^2/ei
@@ -325,8 +325,8 @@ function ssσak(tree::sTpe, sσa::Float64, sσk::Float64)
   if def1(tree)
     xk   = sh(tree) ? xi(tree.d1) : xi(tree.d2)
     sσk += (xf(tree) - xk)^2
-    sσa, sσk = ssσak(tree.d1, sσa, sσk)
-    sσa, sσk = ssσak(tree.d2, sσa, sσk)
+    sσa, sσk = gibbs_quanta(tree.d1, sσa, sσk)
+    sσa, sσk = gibbs_quanta(tree.d2, sσa, sσk)
   end
 
   return sσa, sσk

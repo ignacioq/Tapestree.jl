@@ -996,7 +996,6 @@ end
 """
     make_Ξ(idf::Vector{iBffs},
            xr ::Vector{Float64},
-           σai::Float64,
            σki::Float64,
            ::Type{sTfpe})
 
@@ -1004,12 +1003,11 @@ Make edge tree `Ξ` from the edge directory.
 """
 function make_Ξ(idf::Vector{iBffs},
                 xr ::Vector{Float64},
-                σai::Float64,
-                σki::Float64,
+                σk ::Float64,
                 ::Type{sTfpe})
 
   Ξ = sTfpe[]
-  _make_Ξ!(Ξ, 1, xr, σai, σki, idf)
+  _make_Ξ!(Ξ, 1, false, xr, σk, idf)
 
   return Ξ
 end
@@ -1029,9 +1027,9 @@ Make edge tree `Ξ` from the edge directory.
 """
 function _make_Ξ!(Ξ  ::Vector{sTfpe},
                   i  ::Int64,
+                  clb::Bool,
                   xr ::Vector{Float64},
-                  σai::Float64,
-                  σki::Float64,
+                  σk ::Float64,
                   idf::Vector{iBffs})
 
   bi  = idf[i]
@@ -1042,9 +1040,15 @@ function _make_Ξ!(Ξ  ::Vector{sTfpe},
   et  = e(bi)
   xii = xr[ip]
   xfi = xr[i]
-  shi = rand(Bool)
 
-  if isfossil(bi) && iszero(d1(bi))
+  if clb # if it is cladogenetic bud
+    dx   = xfi - xii
+    xii += sign(dx)*σk
+  end
+
+  shi = rand(Bool)
+  # if tip fossil
+  if isfossil(bi) && iszero(i1)
     push!(Ξ, sTfpe(sTfpe(1e-10, true, false, xfi, xfi, false, false),
                    e(bi), false, true, xii, xfi, shi, true))
   else
@@ -1052,9 +1056,11 @@ function _make_Ξ!(Ξ  ::Vector{sTfpe},
   end
 
   if i1 > 0 
-    _make_Ξ!(Ξ, i1, xr, σai, σki, idf)
     if i2 > 0 
-      _make_Ξ!(Ξ, i2, xr, σai, σki, idf)
+      _make_Ξ!(Ξ, i1, shi, xr, σk, idf)
+      _make_Ξ!(Ξ, i2, !shi, xr, σk, idf)
+    else
+      _make_Ξ!(Ξ, i1, false, xr, σk, idf)
     end
   end
 

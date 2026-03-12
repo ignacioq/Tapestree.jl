@@ -12,17 +12,17 @@ Created 25 11 2024
 
 
 """
-     _stem_update!(ξi ::T,
+     _stem_update!(ξi ::sTpe,
                    σa ::Float64,
                    ll ::Float64,
-                   sσa::Float64) where {T <: Tpe}
+                   sσa::Float64)
 
 Perform punkeek stem update.
 """
-function _stem_update!(ξi ::T,
+function _stem_update!(ξi ::sTpe,
                        σa ::Float64,
                        ll ::Float64,
-                       sσa::Float64) where {T <: Tpe}
+                       sσa::Float64)
   ei  = e(ξi)
   xc  = xi(ξi)
   xfi = xf(ξi)
@@ -41,25 +41,25 @@ end
 
 
 """
-    _crown_update!(ξi ::T,
-                   ξ1 ::T,
-                   ξ2 ::T,
+    _crown_update!(ξi ::sTpe,
+                   ξ1 ::sTpe,
+                   ξ2 ::sTpe,
                    σa ::Float64,
                    σk ::Float64,
                    ll ::Float64,
                    sσa::Float64,
-                   sσk::Float64)  where {T <: Tpe}
+                   sσk::Float64) 
 
 Perform punkeek crown update.
 """
-function _crown_update!(ξi ::T,
-                        ξ1 ::T,
-                        ξ2 ::T,
+function _crown_update!(ξi ::sTpe,
+                        ξ1 ::sTpe,
+                        ξ2 ::sTpe,
                         σa ::Float64,
                         σk ::Float64,
                         ll ::Float64,
                         sσa::Float64,
-                        sσk::Float64) where {T <: Tpe}
+                        sσk::Float64)
 
   σa2, σk2 = σa^2, σk^2
   xic, x1, x2 = xf(ξi), xf(ξ1), xf(ξ2)
@@ -99,21 +99,21 @@ end
 
 
 """
-    _update_node_x!(tree::T,
+    _update_node_x!(tree::sTpe,
                     σa  ::Float64,
                     σk  ::Float64,
                     ll  ::Float64,
                     sσa ::Float64,
-                    sσk ::Float64) where {T <: Tpe}
+                    sσk ::Float64)
 
 Perform punkeek internal node updates.
 """
-function _update_node_x!(tree::T,
+function _update_node_x!(tree::sTpe,
                          σa  ::Float64,
                          σk  ::Float64,
                          ll  ::Float64,
                          sσa ::Float64,
-                         sσk ::Float64) where {T <: Tpe}
+                         sσk ::Float64)
 
   if def1(tree)
     if def2(tree)
@@ -134,25 +134,25 @@ end
 
 
 """
-    _update_leaf_x!(tree::T,
+    _update_leaf_x!(tree::sTpe,
                     xavg::Float64,
                     xstd::Float64,
                     σa  ::Float64,
                     σk  ::Float64,
                     ll  ::Float64,
                     sσa ::Float64,
-                    sσk ::Float64) where {T <: Tpe}
+                    sσk ::Float64)
 
 Perform punkeek **fixed** leaf (terminal reconstructed edge) updates.
 """
-function _update_leaf_x!(tree::T,
+function _update_leaf_x!(tree::sTpe,
                          xavg::Float64,
                          xstd::Float64,
                          σa  ::Float64,
                          σk  ::Float64,
                          ll  ::Float64,
                          sσa ::Float64,
-                         sσk ::Float64) where {T <: Tpe}
+                         sσk ::Float64)
 
   if def1(tree)
     if def2(tree)
@@ -178,21 +178,21 @@ end
 
 
 """
-    _update_leaf_x!(tree::T,
+    _update_leaf_x!(tree::sTpe,
                     σa  ::Float64,
                     σk  ::Float64,
                     ll  ::Float64,
                     sσa ::Float64,
-                    sσk ::Float64) where {T <: Tpe}
+                    sσk ::Float64)
 
 Perform punkeek **unfixed** leaf (terminal reconstructed edge) updates.
 """
-function _update_leaf_x!(tree::T,
+function _update_leaf_x!(tree::sTpe,
                          σa  ::Float64,
                          σk  ::Float64,
                          ll  ::Float64,
                          sσa ::Float64,
-                         sσk ::Float64) where {T <: Tpe}
+                         sσk ::Float64)
 
   if def1(tree)
     if def2(tree)
@@ -213,17 +213,17 @@ end
 
 
 """
-    _update_tip_x!(tree::T,
+    _update_tip_x!(tree::sTpe,
                    σa  ::Float64, 
                    ll  ::Float64, 
-                   sσa ::Float64)  where {T <: Tpe}
+                   sσa ::Float64) 
 
 Perform punkeek **unfixed** tip updates.
 """
-function _update_tip_x!(tree::T,
+function _update_tip_x!(tree::sTpe,
                         σa  ::Float64, 
                         ll  ::Float64, 
-                        sσa ::Float64) where {T <: Tpe}
+                        sσa ::Float64)
 
   xa, xic = xi(tree), xf(tree)
   ei = e(tree)
@@ -243,21 +243,21 @@ end
 
 
 """
-    _update_tip_x!(tree::T,
+    _update_tip_x!(tree::sTpe,
                     σa  ::Float64, 
                     σk  ::Float64, 
                     ll  ::Float64, 
                     sσa ::Float64, 
-                    sσk ::Float64)  where {T <: Tpe}
+                    sσk ::Float64) 
 
 Perform punkeek **fixed** tip updates.
 """
-function _update_tip_x!(tree::T,
+function _update_tip_x!(tree::sTpe,
                         xavg::Float64,
                         xstd::Float64,
                         σa  ::Float64, 
                         ll  ::Float64, 
-                        sσa ::Float64) where {T <: Tpe}
+                        sσa ::Float64)
 
   xa, xic = xi(tree), xf(tree)
   ei = e(tree)
@@ -276,19 +276,19 @@ end
 
 
 """
-    _update_duo_x!(ξi  ::T,
-                   ξ1  ::T,
+    _update_duo_x!(ξi  ::sTpe,
+                   ξ1  ::sTpe,
                    σa  ::Float64,
                    ll  ::Float64,
-                   sσa ::Float64) where {T <: Tpe}
+                   sσa ::Float64)
 
 Perform punkeek for **unfixed** node.
 """
-function _update_duo_x!(ξi  ::T,
-                        ξ1  ::T,
+function _update_duo_x!(ξi  ::sTpe,
+                        ξ1  ::sTpe,
                         σa  ::Float64,
                         ll  ::Float64,
-                        sσa ::Float64) where {T <: Tpe}
+                        sσa ::Float64)
 
   σa2 = σa^2
   xa, xic, x1 = xi(ξi), xf(ξi), xf(ξ1)
@@ -310,7 +310,7 @@ end
 
 
 """
-    _update_quartet_x!(ξi ::T,
+    _update_quartet_x!(ξi ::sTpe,
                        σa ::Float64,
                        σk ::Float64,
                        ll ::Float64,
@@ -319,12 +319,12 @@ end
 
 Make a punkeek quartet proposal.
 """
-function _update_quartet_x!(ξi ::T,
+function _update_quartet_x!(ξi ::sTpe,
                             σa ::Float64,
                             σk ::Float64,
                             ll ::Float64,
                             sσa::Float64,
-                            sσk::Float64) where {T <: Tpe}
+                            sσk::Float64)
 
   ll, sσa, sσk = _update_node_x!(ξi, ξi.d1, ξi.d2, σa, σk, ll, sσa, sσk)
 
@@ -335,25 +335,25 @@ end
 
 
 """
-    _update_node_x!(ξi ::T,
-                    ξ1 ::T,
-                    ξ2 ::T,
+    _update_node_x!(ξi ::sTpe,
+                    ξ1 ::sTpe,
+                    ξ2 ::sTpe,
                     σa ::Float64,
                     σk ::Float64,
                     ll ::Float64,
                     sσa::Float64,
-                    sσk::Float64) where {T <: Tpe}
+                    sσk::Float64)
 
 Perform a punkeek quartet update.
 """
-function _update_node_x!(ξi ::T,
-                         ξ1 ::T,
-                         ξ2 ::T,
+function _update_node_x!(ξi ::sTpe,
+                         ξ1 ::sTpe,
+                         ξ2 ::sTpe,
                          σa ::Float64,
                          σk ::Float64,
                          ll ::Float64,
                          sσa::Float64,
-                         sσk::Float64) where {T <: Tpe}
+                         sσk::Float64)
 
   σa2, σk2 = σa^2, σk^2
   xa, xic, x1, x2 = xi(ξi), xf(ξi), xf(ξ1), xf(ξ2)

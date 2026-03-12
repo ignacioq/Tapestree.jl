@@ -180,7 +180,7 @@ function mcmc_burn_cpe(Ξ       ::Vector{sTpe},
         logdinvgamma(σkc^2, σk_prior[1], σk_prior[2])
 
   # tracked quantities
-  sσa, sσk = ssσak(Ξ, idf)
+  sσa, sσk = gibbs_quanta(Ξ, idf)
 
   # n number to sum to ns for σa updates
   nσs = Float64(lastindex(idf)) - 2.0*nnodesbifurcation(idf) - rmλ
@@ -730,7 +730,7 @@ end
 
 
 """
-    wfix_t(ξi ::T,
+    wfix_t(ξi ::sTpe,
            ei ::Float64,
            xav::Float64,
            acr::Float64,
@@ -738,12 +738,12 @@ end
            xfs::Vector{Float64},
            es ::Vector{Float64},
            σa ::Float64,
-           na ::Int64) where {T <: Tpe}
+           na ::Int64)
 
 Choose most likely simulated lineage to fix with respect to the
 trait value **without uncertainty** of terminal branches.
 """
-function wfix_t(ξi ::T,
+function wfix_t(ξi ::sTpe,
                 ei ::Float64,
                 xav::Float64,
                 acr::Float64,
@@ -751,7 +751,7 @@ function wfix_t(ξi ::T,
                 xfs::Vector{Float64},
                 es ::Vector{Float64},
                 σa ::Float64,
-                na ::Int64) where {T <: Tpe}
+                na ::Int64)
 
   # select best from proposal
   sp, wt, pp = 0.0, 0, -Inf
@@ -788,7 +788,7 @@ end
 
 
 """
-    wfix_t(ξi ::T,
+    wfix_t(ξi ::sTpe,
            ei ::Float64,
            xav::Float64,
            xst::Float64,
@@ -797,12 +797,12 @@ end
            xfs::Vector{Float64},
            es ::Vector{Float64},
            σa ::Float64,
-           na ::Int64) where {T <: Tpe}
+           na ::Int64)
 
 Choose most likely simulated lineage to fix with respect to the
 trait value **with uncertainty** of terminal branches.
 """
-function wfix_t(ξi ::T,
+function wfix_t(ξi ::sTpe,
                 ei ::Float64,
                 xav::Float64,
                 xst::Float64,
@@ -811,7 +811,7 @@ function wfix_t(ξi ::T,
                 xfs::Vector{Float64},
                 es ::Vector{Float64},
                 σa ::Float64,
-                na ::Int64) where {T <: Tpe}
+                na ::Int64)
 
   # propose trait value
   xp = rnorm(xav, xst)
@@ -927,22 +927,22 @@ end
 
 
 """
-    wfix_m(ξi ::T,
-           ξ1 ::T,
+    wfix_m(ξi ::sTpe,
+           ξ1 ::sTpe,
            ei ::Float64,
            acr::Float64,
            xfs::Vector{Float64},
-           σa ::Float64) where {T <: Tpe}
+           σa ::Float64)
 
 Choose most likely simulated lineage to fix with respect to daughter
 for `mid` branches.
 """
-function wfix_m(ξi ::T,
-                ξ1 ::T,
+function wfix_m(ξi ::sTpe,
+                ξ1 ::sTpe,
                 ei ::Float64,
                 acr::Float64,
                 xfs::Vector{Float64},
-                σa ::Float64) where {T <: Tpe}
+                σa ::Float64)
 
   # select best from proposal
   xf1, sre1 = xf(ξ1), sqrt(e(ξ1))
@@ -1066,33 +1066,34 @@ end
 
 
 """
-    wfix_i(ξi ::T,
-           ξ1 ::T,
-           ξ2 ::T,
+    wfix_i(ξi ::sTpe,
+           ξ1 ::sTpe,
+           ξ2 ::sTpe,
            ei ::Float64,
            acr::Float64,
            xfs::Vector{Float64},
            σa2::Float64,
-           σk2::Float64) where {T <: Tpe}
+           σk2::Float64)
 
 Choose most likely simulated lineage to fix with respect to daughter
 for bifurcating `i` branches.
 """
-function wfix_i(ξi ::T,
-                ξ1 ::T,
-                ξ2 ::T,
+function wfix_i(ξi ::sTpe,
+                ξ1 ::sTpe,
+                ξ2 ::sTpe,
                 ei ::Float64,
                 acr::Float64,
                 xfs::Vector{Float64},
                 σa2::Float64,
-                σk2::Float64) where {T <: Tpe}
+                σk2::Float64)
 
+  xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
   # select best from proposal
   sp, i, wt, xp, pp, shp = 0.0, 0, 0, NaN, -Inf, false
   for xfi in xfs
     i  += 1
-    pk1 = llik_cpe_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-    pk2 = llik_cpe_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+    pk1 = llik_cpe_trio(xfi, xi1, xf2, xf1, e2, e1, σa2, σk2)
+    pk2 = llik_cpe_trio(xfi, xi2, xf1, xf2, e1, e2, σa2, σk2)
     sp += (exp(pk1) + exp(pk2))
     pfi = max(pk1, pk2)
 
@@ -1110,8 +1111,8 @@ function wfix_i(ξi ::T,
 
   sc, pc = 0.0, NaN
   for xfi in xfs
-    pk1 = llik_cpe_trio(xfi, xi(ξ1), xf(ξ2), xf(ξ1), e(ξ2), e(ξ1), σa2, σk2)
-    pk2 = llik_cpe_trio(xfi, xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2), σa2, σk2)
+    pk1 = llik_cpe_trio(xfi, xi1, xf2, xf1, e2, e1, σa2, σk2)
+    pk2 = llik_cpe_trio(xfi, xi2, xf1, xf2, e1, e2, σa2, σk2)
     sc += (exp(pk1) + exp(pk2))
 
     if xc === xfi
