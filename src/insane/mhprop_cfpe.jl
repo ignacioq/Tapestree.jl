@@ -47,23 +47,24 @@ end
 
 
 """
-    _fstem_update!(ξi ::sTfpe,
-                   ξ1 ::sTfpe,
-                   α  ::Float64,
-                   σa ::Float64,
-                   ll ::Float64,
-                   dα ::Float64,
-                   sσa::Float64)
+    _fstem_update!(ξi  ::sTfpe,
+                   ξ1  ::sTfpe,
+                   α   ::Float64,
+                   σa  ::Float64,
+                   ll  ::Float64,
+                   dα  ::Float64,
+                   sσa ::Float64,
+                   ifxi::Bool)
 
 Perform punkeek stem fossil update.
 """
-function _fstem_update!(ξi ::sTfpe,
-                        ξ1 ::sTfpe,
-                        α  ::Float64,
-                        σa ::Float64,
-                        ll ::Float64,
-                        dα ::Float64,
-                        sσa::Float64)
+function _fstem_update!(ξi  ::sTfpe,
+                        ξ1  ::sTfpe,
+                        α   ::Float64,
+                        σa  ::Float64,
+                        ll  ::Float64,
+                        dα  ::Float64,
+                        sσa ::Float64)
   e1  = e(ξ1)
   xc  = xi(ξi)
   xf1 = xf(ξ1)

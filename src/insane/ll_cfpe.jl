@@ -58,7 +58,6 @@ function llik_cfpe(Ξ  ::Vector{sTfpe},
         ll += ldnorm_bm(xi(ξd), xf(lξi), σk)
       end
 
-      iszero(e(bi)) && continue
       ll += llik_cfpe(ξi, λ, μ, ψ, α, σa, σk, bst[i], ψts, eix[i], nep)
     end
 
@@ -106,7 +105,10 @@ function llik_cfpe(tree::sTfpe,
   @inbounds begin
 
     ei = e(tree)
-    ll = ldnorm_bm(xf(tree), xi(tree) + α*ei, σa*sqrt(ei))
+    ll = 0.0
+    if ei > 0.0
+      ll += ldnorm_bm(xf(tree), xi(tree) + α*ei, σa*sqrt(ei))
+    end
     # if epoch change
     while ix < nep && t - ei < ψts[ix]
       li  = t - ψts[ix]

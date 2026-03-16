@@ -282,7 +282,7 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   dα, sσa, sσk = gibbs_quanta(Ξ, idf, αc)
 
   # n number to sum to ns for σa updates
-  nσs = nedgesF(Ξ) - 2.0*ns - rmλ
+  nσs = nedgesF(Ξ) - 2.0*ns - Float64(iszero(e(idf[1])))
 
  # empty vectors
   xis = Float64[]
@@ -485,11 +485,11 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, λc, mc =
                 update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # μ proposal
             elseif p === 2
@@ -497,22 +497,22 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, μc, mc =
                 update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, surv, μ_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # ψ proposal
             elseif p === 3
 
               llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # α proposal
             elseif p === 4
@@ -520,11 +520,11 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, αc, sσa = 
                 update_α!(αc, σac, sum(L), dα, llc, prc, sσa, α_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # σa (anagenetic) proposal
             elseif p === 5
@@ -532,22 +532,22 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, σac = 
                 update_σ!(σac, sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # σk (cladogenetic) proposal
             elseif p === 6
 
               llc, prc, σkc = update_σ!(σkc, sσk, ns, llc, prc, σk_prior)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # update inner nodes traits
             elseif p === 7
@@ -556,25 +556,28 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, dα, sσa, sσk = 
                 update_x!(bix, Ξ, idf, αc, σac, σkc, llc, dα, sσa, sσk)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             # forward simulation proposal proposal
             else
 
+
+
               bix = fIrand(el) + 1
+
               llc, ns, ne, dα, sσa, sσk = 
                 update_fs!(bix, Ξ, idf, llc, λc, μc, ψc, ψ_epoch, αc, σac, σkc, 
                   ns, ne, L, eixi, eixf, dα, sσa, sσk, xis, xfs, es)
 
-              llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
-              if !isapprox(llci, llc, atol = 1e-6)
-                @show llci, llc, it, p
-                return
-              end
+              # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
+              # if !isapprox(llci, llc, atol = 1e-6)
+              #   @show llci, llc, it, p
+              #   return
+              # end
 
             end
           end
@@ -664,7 +667,9 @@ function update_x!(bix::Int64,
   if root && iszero(e(ξi))
     #if stem fossil
     if isfossil(bi)
-      ll, dα, sσa = _fstem_update!(ξi, ξ1, α, σa, ll, dα, sσa)
+      if !ifx(bi)
+        ll, dα, sσa = _fstem_update!(ξi, ξ1, α, σa, ll, dα, sσa)
+      end
     else
       # if crown
       ξ2  = Ξ[i2]
