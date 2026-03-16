@@ -189,12 +189,11 @@ function llik_cfpe_track!(tree::sTfpe,
     # anagenetic squares
     dx  = xf(tree) - xi(tree)
     dα  = f(dα, dx) 
-    sqa = (dx - α*ei)^2/(2.0*ei)
+    sqa = 0.5*(dx - α*ei)^2/ei
     sσa = f(sσa, sqa)
     ll  = f(ll, 
             -(0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) +
             sqa/σa2))
-
     # if epoch change
     while ix < nep && t - ei < ψts[ix]
       li    = t - ψts[ix]
@@ -211,11 +210,11 @@ function llik_cfpe_track!(tree::sTfpe,
     if def1(tree)
       if def2(tree)
         xfi = xf(tree)
-        sqk = ((sh(tree) ? xi(tree.d1) : xi(tree.d2)) -  xfi)^2
+        sqk = 0.5*(((sh(tree) ? xi(tree.d1) : xi(tree.d2)) -  xfi)^2)
         ll  = f(ll, 
                (log(λ) -
                0.5*log(6.28318530717958623199592693708837032318115234375*σk2) -
-               sqk/(2.0*σk2)))
+               sqk/σk2))
         sσk = f(sσk, sqk)
         ns  = f(ns, 1.0)
 

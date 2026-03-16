@@ -11,6 +11,7 @@ Created 25 11 2024
 
 
 
+
 """
      _stem_update!(ξi ::sTfpe,
                    α  ::Float64,
@@ -36,7 +37,7 @@ function _stem_update!(ξi ::sTfpe,
   xp   = rnorm(xfi - α*ei, eσ)
   ll  += lrdnorm_bm_x(xp, xc - α*ei, xfi, eσ)
   dα  += xc - xp
-  sσa += (xfi - xp - α*ei)^2/ei - (xfi - xc - α*ei)^2/ei
+  sσa += 0.5*((xfi - xp - α*ei)^2 - (xfi - xc - α*ei)^2)/ei
   setxi!(ξi, xp)
 
   return ll, dα, sσa
@@ -63,16 +64,17 @@ function _fstem_update!(ξi ::sTfpe,
                         ll ::Float64,
                         dα ::Float64,
                         sσa::Float64)
-  ei  = e(ξ1)
+  e1  = e(ξ1)
   xc  = xi(ξi)
-  xfi = xf(ξ1)
-  eσ  = σa*sqrt(ei)
+  xf1 = xf(ξ1)
+  eσ  = σa*sqrt(e1)
 
   # sample mrca
-  xp   = rnorm(xfi - α*ei, eσ)
-  ll  += lrdnorm_bm_x(xp, xc - α*ei, xfi, eσ)
+  xp   = rnorm(xf1 - α*e1, eσ)
+  ll  += lrdnorm_bm_x(xp, xc, xf1 - α*e1, eσ)
   dα  += xc - xp
-  sσa += (xfi - xp - α*ei)^2/ei - (xfi - xc - α*ei)^2/ei
+
+  sσa += 0.5*((xf1 - xp - α*e1)^2 - (xf1 - xc - α*e1)^2)/e1
   setxi!(ξi, xp)
   setxf!(ξi, xp)
   setxi!(ξ1, xp)
@@ -131,10 +133,12 @@ function _crown_update!(ξi ::sTfpe,
           eadc, ekdc, σa2, σk2)
 
   dα  += (xadp - xip) + (xkdp - xkp) - 
-         (xadc - xic) + (xkdc - xkc)
-  sσa += (xadp - xip - α*eadp)^2/eadp + (xkdp - xkp - α*ekdp)^2/ekdp -
-         (xadc - xic - α*eadc)^2/eadc - (xkdc - xkc - α*ekdc)^2/ekdc
-  sσk += (xkp - xip)^2 - (xkc - xic)^2
+         (xadc - xic) - (xkdc - xkc)
+  sσa += 0.5*((xadp - xip - α*eadp)^2/eadp + 
+              (xkdp - xkp - α*ekdp)^2/ekdp -
+              (xadc - xic - α*eadc)^2/eadc - 
+              (xkdc - xkc - α*ekdc)^2/ekdc)
+  sσk += 0.5*((xkp - xip)^2 - (xkc - xic)^2)
 
   setsh!(ξi, shp)
   setxi!(ξi, xip)
@@ -306,7 +310,7 @@ function _update_tip_x!(tree::sTfpe,
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa^2)
   dα  += xip - xic
-  sσa += ((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei
+  sσa += 0.5*((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei
   setxf!(tree, xip)
 
   return ll, dα, sσa
@@ -344,7 +348,7 @@ function _update_tip_x!(tree::sTfpe,
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa^2)
   dα  += xip - xic
-  sσa += ((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei
+  sσa += 0.5*((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei
   setxf!(tree, xip)
 
   return ll, dα, sσa
@@ -380,8 +384,8 @@ function _update_duo_x!(ξi  ::sTfpe,
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa2) + 
          llrdnorm_μ(x1 - α*e1, xip, xic, e1*σa2)
-  sσa += ((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei + 
-         ((x1 - xip - α*e1)^2 - (x1 - xic - α*e1)^2)/e1
+  sσa += 0.5*(((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei + 
+              ((x1 - xip - α*e1)^2 - (x1 - xic - α*e1)^2)/e1)
   setxf!(ξi, xip)
   setxi!(ξ1, xip)
 
@@ -422,8 +426,8 @@ function _update_duo_x!(ξi  ::sTfpe,
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa2) + 
          llrdnorm_μ(x1 - α*e1, xip, xic, e1*σa2)
-  sσa += ((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei + 
-         ((x1 - xip - α*e1)^2 - (x1 - xic - α*e1)^2)/e1
+  sσa += 0.5*(((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei + 
+              ((x1 - xip - α*e1)^2 - (x1 - xic - α*e1)^2)/e1)
   setxf!(ξi, xip)
   setxi!(ξ1, xip)
 
@@ -522,13 +526,12 @@ function _update_node_x!(ξi ::sTfpe,
   dα  += xip - xic                    + 
          (xadp - xip) + (xkdp - xkp)  - 
          (xadc - xic) - (xkdc - xkc)
-  sσa += (xip - xa - α*ei)^2/ei       -
-         (xic - xa - α*ei)^2/ei       +
-         (xadp - xip - α*eadp)^2/eadp - 
-         (xadc - xic - α*eadc)^2/eadc +
-         (xkdp - xkp - α*ekdp)^2/ekdp -
-         (xkdc - xkc - α*ekdc)^2/ekdc
-  sσk += (xkp - xip)^2 - (xkc - xic)^2
+  sσa += 0.5*(((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei +
+              (xadp - xip - α*eadp)^2/eadp                   -
+              (xadc - xic - α*eadc)^2/eadc                   +
+              (xkdp - xkp - α*ekdp)^2/ekdp                   -
+              (xkdc - xkc - α*ekdc)^2/ekdc)
+  sσk += 0.5*((xkp - xip)^2 - (xkc - xic)^2)
 
   setsh!(ξi, shp)
   setxf!(ξi, xip)

@@ -694,11 +694,11 @@ function fsbi_t(bi ::iBffs,
 
     # if no uncertainty around trait value
     if iszero(xsd)
-       wt, acr, xp  = wfix_t(ξc, e(bi), xav, 0.0, xis, xfs, es, σa, na)
+       wt, acr, xp  = wfix_t(ξc, e(bi), xav,      0.0, xis, es, σa, na)
 
     # if uncertainty around trait value
     else
-       wt, acr, xp  = wfix_t(ξc, e(bi), xav, xsd, 0.0, xis, xfs, es, σa, na)
+       wt, acr, xp  = wfix_t(ξc, e(bi), xav, xsd, 0.0, xis, es, σa, na)
     end
 
     if lU < acr + llr
@@ -748,7 +748,6 @@ function wfix_t(ξi ::sTpe,
                 xav::Float64,
                 acr::Float64,
                 xis::Vector{Float64},
-                xfs::Vector{Float64},
                 es ::Vector{Float64},
                 σa ::Float64,
                 na ::Int64)
@@ -808,7 +807,6 @@ function wfix_t(ξi ::sTpe,
                 xst::Float64,
                 acr::Float64,
                 xis::Vector{Float64},
-                xfs::Vector{Float64},
                 es ::Vector{Float64},
                 σa ::Float64,
                 na ::Int64)
@@ -895,7 +893,7 @@ function fsbi_m(bi::iBffs,
   if lU < acr
 
     # fix the tip
-    if wt <= div(na,2)
+    if wt <= div(na, 2)
       fixtip1!(t0, wt, 0, xp)
     else
       fixtip2!(t0, na - wt + 1, 0, xp)
@@ -945,10 +943,10 @@ function wfix_m(ξi ::sTpe,
                 σa ::Float64)
 
   # select best from proposal
-  xf1, sre1 = xf(ξ1), sqrt(e(ξ1))
+  xf1, sre1σa = xf(ξ1), sqrt(e(ξ1))*σa
   sp, i, wt, xp, pp = 0.0, 0, 0, NaN, -Inf
   for xfi in xfs
-    p   = dnorm(xf1, xfi, sre1*σa)
+    p   = dnorm(xf1, xfi, sre1σa)
     sp += p
     i  += 1
     if p > pp
@@ -964,7 +962,7 @@ function wfix_m(ξi ::sTpe,
 
   sc, pc = 0.0, NaN
   for xfi in xfs
-    p   = dnorm(xf1, xfi, sre1*σa)
+    p   = dnorm(xf1, xfi, sre1σa)
     sc += p
     if xc === xfi
       pc = p
