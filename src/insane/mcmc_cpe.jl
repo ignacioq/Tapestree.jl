@@ -660,7 +660,7 @@ Forward simulation for terminal branch.
 function fsbi_t(bi ::iBffs,
                 xav::Float64,
                 xsd::Float64,
-                ξc ::sTpe,
+                ξi ::sTpe,
                 λ  ::Float64,
                 μ  ::Float64,
                 σa ::Float64,
@@ -682,7 +682,7 @@ function fsbi_t(bi ::iBffs,
   empty!(es)
 
   t0, na, nn, llr =
-    _sim_cpe_t(e(bi), λ, μ, xi(ξc), σa, σk, lc, iρi, 0, 1, 500, 
+    _sim_cpe_t(e(bi), λ, μ, xi(ξi), σa, σk, lc, iρi, 0, 1, 500, 
                xis, xfs, es)
 
   if na < 1 || isnan(llr)
@@ -692,14 +692,9 @@ function fsbi_t(bi ::iBffs,
   # if fix node
   if ifx(bi)
 
-    # if no uncertainty around trait value
-    if iszero(xsd)
-       wt, acr, xp  = wfix_t(ξc, e(bi), xav,      0.0, xis, es, σa, na)
-
-    # if uncertainty around trait value
-    else
-       wt, acr, xp  = wfix_t(ξc, e(bi), xav, xsd, 0.0, xis, es, σa, na)
-    end
+    # propose trait value (if no uncertainty, then xp = xav)
+    xp = rnorm(xav, xsd)
+    wt, acr, xp  = wfix_t(ξi, e(bi), xav, 0.0, xis, es, σa, na)
 
     if lU < acr + llr
 
@@ -770,7 +765,7 @@ function wfix_t(ξi ::sTpe,
 
   sc, pc = 0.0, NaN
   for i in Base.OneTo(nac)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
+    p   = dnorm(xfc, xis[i], sqrt(es[i])*σa)
     sc += p
     if xic === xis[i]
       pc = p
@@ -783,67 +778,6 @@ function wfix_t(ξi ::sTpe,
   return wt, acr, xav
 end
 
-
-
-
-"""
-    wfix_t(ξi ::sTpe,
-           ei ::Float64,
-           xav::Float64,
-           xst::Float64,
-           acr::Float64,
-           xis::Vector{Float64},
-           xfs::Vector{Float64},
-           es ::Vector{Float64},
-           σa ::Float64,
-           na ::Int64)
-
-Choose most likely simulated lineage to fix with respect to the
-trait value **with uncertainty** of terminal branches.
-"""
-function wfix_t(ξi ::sTpe,
-                ei ::Float64,
-                xav::Float64,
-                xst::Float64,
-                acr::Float64,
-                xis::Vector{Float64},
-                es ::Vector{Float64},
-                σa ::Float64,
-                na ::Int64)
-
-  # propose trait value
-  xp = rnorm(xav, xst)
-
-  # select best from proposal
-  sp, i, wt, xp, pp = 0.0, 0, 0, NaN, -Inf
-  for i in Base.OneTo(na)
-    p   = dnorm(xp, xis[i], sqrt(es[i])*σa)
-    sp += p
-    if p > pp
-      pp = p
-      wt = i
-    end
-  end
-
-  # extract current `xis` and current `xfc` and estimate ratio
-  empty!(xis)
-  empty!(es)
-  nac, xic, xfc = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
-
-  sc, pc = zero(Float64), NaN
-  for i in Base.OneTo(nac)
-    p   = dnorm(xfc, xis[i], sqrt(es[i])*σa)
-    sc += p
-    if xic === xis[i]
-      pc = p
-    end
-  end
-
-  # likelihood ratio and acceptance
-  acr += log(sp/sc)
-
-  return wt, acr, xp
-end
 
 
 

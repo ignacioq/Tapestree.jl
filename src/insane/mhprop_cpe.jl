@@ -269,7 +269,7 @@ function _update_tip_x!(tree::sTpe,
   xa, xic = xi(tree), xf(tree)
   ei = e(tree)
 
-  xip = duoprop(xavg, xic, xstd^2, ei*σa^2)
+  xip = duoprop(xavg, xa, xstd^2, ei*σa^2)
 
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa, ei*σa^2)
