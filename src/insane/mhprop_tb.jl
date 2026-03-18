@@ -145,7 +145,7 @@ function _stem_update!(ξi      ::iTxb,
 
     # trait and speciation rate path sample
     xr  = rnorm(xn, sqrt(intσ2(lσ2c, δt, fdtp)))
-    lλr = duoprop(lλn - βλ*(xn - xr), λ0_prior[1], σλ^2*el, λ0_prior[2])
+    lλr = duoprop(lλn - αλ*el - βλ*(xn - xr), λ0_prior[1], σλ^2*el, λ0_prior[2])
     cbb!(xp, xr, xn, lσ2c, lλp, lλr, lλn, βλ, σλ, δt, fdt, srδt)
 
     llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
@@ -220,33 +220,17 @@ function _crown_update!(ξi      ::iTxb,
                         λ0_prior::NTuple{2,Float64})
 
   @inbounds begin
-    xac   = xv(ξi)
-    x1c   = xv(ξ1)
-    x2c   = xv(ξ2)
-    lσ2ac = lσ2(ξi)
-    lσ21c = lσ2(ξi)
-    lσ22c = lσ2(ξi)
-    lλac  = lλ(ξi)
-    lλ1c  = lλ(ξ1)
-    lλ2c  = lλ(ξ2)
-    l1    = lastindex(lλ1c)
-    l2    = lastindex(lλ2c)
-    x1p   = Vector{Float64}(undef,l1)
-    x2p   = Vector{Float64}(undef,l2)
-    lσ21p = Vector{Float64}(undef,l1)
-    lσ22p = Vector{Float64}(undef,l2)
-    lλ1p  = Vector{Float64}(undef,l1)
-    lλ2p  = Vector{Float64}(undef,l2)
-    x1f   = x1c[l1]
-    x2f   = x2c[l2]
-    lσ21f = lσ21c[l1]
-    lσ22f = lσ22c[l2]
-    lλ1f  = lλ1c[l1]
-    lλ2f  = lλ2c[l2]
-    e1    = e(ξ1)
-    e2    = e(ξ2)
-    fdt1  = fdt(ξ1)
-    fdt2  = fdt(ξ2)
+    xac,     x1c,   x2c =  xv(ξi),  xv(ξ1),  xv(ξ2)
+    lσ2ac, lσ21c, lσ22c = lσ2(ξi), lσ2(ξ1), lσ2(ξ2)
+    lλac,   lλ1c,  lλ2c =  lλ(ξi),  lλ(ξ1),  lλ(ξ2)
+    l1, l2 = lastindex(lλ1c), lastindex(lλ2c)
+    x1p,     x2p = Vector{Float64}(undef,l1), Vector{Float64}(undef,l2)
+    lσ21p, lσ22p = Vector{Float64}(undef,l1), Vector{Float64}(undef,l2)
+    lλ1p,   lλ2p = Vector{Float64}(undef,l1), Vector{Float64}(undef,l2)
+    lσ21f, lσ22f     = lσ21c[l1], σ22c[l2]
+    xaf,   x1f,  x2f = xac[2],   x1c[l1],  x2c[l2]
+    lλaf, lλ1f, lλ2f = lλac[2], lλ1c[l1], lλ2c[l2]
+    e1, e2, fdt1, fdt2  = e(ξ1), e(ξ2), fdt(ξ1), fdt(ξ2)
 
     # rate path sample
     lσ2n = duoprop(lσ21f - ασ*e1, lσ22f - ασ*e2, σσ^2*e1, σσ^2*e2)
@@ -267,12 +251,19 @@ function _crown_update!(ξi      ::iTxb,
       fill!(lσ2ac, lσ2n)
     end
 
+    # trait and speciation path samples
+    xn  = duoprop(x1f, x2f, intσ2(lσ21c, δt, fdt1), intσ2(lσ22c, δt, fdt2))
+    lλn = trioprop(lλ1f - αλ*e1 - βλ*(x1f - xn), 
+                   lλ2f - αλ*e2 - βλ*(x2f - xn), 
+                   λ0_prior[1],
+                   σλ^2*e1, σλ^2*el, λ0_prior[2])
 
+"""
+    here there is no alpha in BB
+"""
+    cbb!(x1p, xn, x1f, lσ21c, lλv1p, lλn, lλ1f, βλ, σλ, δt, fdt, srδt)
+    cbb!(x2p, xn, x2f, lσ22c, lλv2p, lλn, lλ2f, βλ, σλ, δt, fdt, srδt)
 
-
-    """
-    here
-    """
 
 
 
