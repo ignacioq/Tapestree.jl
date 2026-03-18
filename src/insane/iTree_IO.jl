@@ -1542,6 +1542,72 @@ end
 
 
 
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{sTfpe})
+
+parse istring to `sTfpe`.
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTfpe})
+
+  @inbounds begin
+
+    in1 = false
+    in2 = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, sTfpe)
+      in1 = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, sTfpe)
+      in2 = true
+    end
+
+    i1 = findnext(',', s, i + 1)
+    i2 = findnext(',', s, i1 + 5)
+    i3 = findnext(',', s, i2 + 1)
+
+    if in1
+      if in2
+      tree = sTfpe(sd1, sd2, 
+                   parse(Float64, SubString(s, i, i1-1)), 
+                   long(s[i1+1]), long(s[i1+3]), 
+                   parse(Float64, SubString(s, i1+5, i2-1)), 
+                   parse(Float64, SubString(s, i2+1, i3-1)),
+                   long(s[i3+1]), long(s[i3+3]))
+      else
+        tree = sTfpe(sd1,
+                     parse(Float64, SubString(s, i, i1-1)), 
+                     long(s[i1+1]), long(s[i1+3]), 
+                     parse(Float64, SubString(s, i1+5, i2-1)), 
+                     parse(Float64, SubString(s, i2+1, i3-1)),
+                     long(s[i3+1]), long(s[i3+3]))
+      end
+    else
+      tree = sTfpe(parse(Float64, SubString(s, i, i1-1)), 
+                   long(s[i1+1]), long(s[i1+3]), 
+                   parse(Float64, SubString(s, i1+5, i2-1)), 
+                   parse(Float64, SubString(s, i2+1, i3-1)),
+                   long(s[i3+1]), long(s[i3+3]))
+    end
+
+    i = i3 + 4
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+
 """
     _iparse(s::String, i::Int64, ls::Int64, ::Type{iTb})
 parse istring to `iTb`.
