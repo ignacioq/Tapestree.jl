@@ -353,11 +353,11 @@ function _sim_cfpe_i(t   ::Float64,
 
     # if tip
     if tw > (t - te)
-      ef  = t - te
+      e0  = t - te
       na += 1
-      x1 = rnorm(x0 + α*ef, sqrt(ef) * σa)
+      x1 = rnorm(x0 + α*e0, sqrt(e0) * σa)
       push!(xfst, x1)
-      return sTfpe(ef, false, false, x0, x1, false, false), na, nf, nn
+      return sTfpe(e0, false, false, x0, x1, false, false), na, nf, nn
     end
 
     x1 = rnorm(x0 + α*tw, sqrt(tw) * σa)
@@ -461,13 +461,13 @@ function _sim_cfpe_i(t   ::Float64,
 
     # if tip
     if tw > (t - te)
-      ef  = t - te
+      e0  = t - te
       na += 1
-      x1 = rnorm(x0 + α*ef, sqrt(ef) * σa)
+      x1 = rnorm(x0 + α*e0, sqrt(e0) * σa)
       push!(xist, x0)
       push!(xfst, x1)
-      push!(est, ef)
-      return sTfpe(ef, false, false, x0, x1, false, false), na, nf, nn
+      push!(est, e0)
+      return sTfpe(e0, false, false, x0, x1, false, false), na, nf, nn
     end
 
     x1 = rnorm(x0 + α*tw, sqrt(tw) * σa)

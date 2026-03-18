@@ -67,8 +67,15 @@ function _crown_update!(ξi ::sTpe,
 
   ## which cladogenetic (unidentifiable at the root)
   # if x1 cladogenetic
+  pk1 = llik_cpe_dyad(xic, x2, x1, e2, e1, σa2, σk2)
+  # d2 cladogenetic
+  pk2 = llik_cpe_dyad(xic, x1, x2, e1, e2, σa2, σk2)
+  o12 = exp(pk1 - pk2)  # odds
+  p1  = o12/(1.0 + o12) # probability
+
+  # p1 if x1 cladogenetic
   shp, xadp, xkdp, eadp, ekdp = 
-    rand(Bool) ? (true, x2, x1, e2, e1) : (false, x1, x2, e1, e2)
+    rand() < p1 ? (true, x2, x1, e2, e1) : (false, x1, x2, e1, e2)
 
   # sample new values
   xip = duoprop(xadp, xkdp, eadp*σa2, ekdp*σa2 + σk2)

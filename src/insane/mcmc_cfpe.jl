@@ -565,8 +565,6 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
             # forward simulation proposal proposal
             else
 
-
-
               bix = fIrand(el) + 1
 
               llc, ns, ne, dα, sσa, sσk = 

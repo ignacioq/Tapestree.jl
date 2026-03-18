@@ -313,3 +313,36 @@ end
 
 
 
+"""
+    consistent(tree::sTfpe)
+
+Is tree consistent in trait inheritance according to punkeek.
+"""
+consistent(tree::sTfpe) = _consistent(tree, true)
+
+function _consistent(tree::sTfpe, ok::Bool) 
+  if ok
+    if def1(tree)
+      if def2(tree)
+        ok = if sh(tree)
+          xf(tree) == xi(tree.d2) && xf(tree) != xi(tree.d1) 
+        else
+          xf(tree) == xi(tree.d1) && xf(tree) != xi(tree.d2) 
+        end
+        if !ok return ok end
+        ok = _consistent(tree.d1, ok)
+        ok = _consistent(tree.d2, ok)
+      else
+        ok = xf(tree) == xi(tree.d1) 
+        if !ok return ok end
+        ok = _consistent(tree.d1, ok)
+      end
+    end
+  end
+
+  return ok
+end
+
+
+
+
