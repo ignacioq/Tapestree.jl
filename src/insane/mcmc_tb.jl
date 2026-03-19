@@ -482,11 +482,11 @@ Make a `gbm` update for an internal branch and its descendants.
 function update_gbm!(bix     ::Int64,
                      Ξ       ::Vector{iTxb},
                      idf     ::Vector{iBffs},
-                     ασc     ::Float64, 
-                     σσc     ::Float64, 
-                     αλc     ::Float64, 
-                     βλc     ::Float64, 
-                     σλc     ::Float64,
+                     ασ      ::Float64, 
+                     σσ      ::Float64, 
+                     αλ      ::Float64, 
+                     βλ      ::Float64, 
+                     σλ      ::Float64,
                      llc     ::Float64,
                      prc     ::Float64,
                      dxs     ::Float64,
@@ -501,11 +501,6 @@ function update_gbm!(bix     ::Int64,
                      srδt    ::Float64,
                      λ0_prior::NTuple{2,Float64})
 
-       llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
-          update_gbm!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
-            dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
-
-
   ξi   = Ξ[bix]
   bi   = idf[bix]
   i1   = d1(bi)
@@ -516,41 +511,46 @@ function update_gbm!(bix     ::Int64,
 
   # if crown root
   if root && iszero(e(ξi))
-    llc, prc, ddλ, ssλ, irλ =
-      _crown_update!(ξi, ξ1, ξ2, ασc, σσc, αλc, βλc, σλc, 
-        llc, prc, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
+    llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
+      _update_crown!(ξi, ξ1, ξ2, ασ, σσ, αλ, βλ, σλ, 
+        llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
     setλt!(bi, lλ(ξi)[1])
   else
     # if stem
     if root
       llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
-        _stem_update!(ξi, ασc, σσc, αλc, βλc, σλc, llc, prc, 
+        _update_stem!(ξi, ασ, σσ, αλ, βλ, σλ, llc, prc, 
           dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
     end
 
     # updates within the parent branch
-    llc, ddλ, ssλ, irλ = 
-      _update_gbm!(ξi, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt, false)
+    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+      _update_node!(ξi, xavg(bi), xstd(bi), ασ, σσ, αλ, βλ, σλ, llc, 
+        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, false)
 
     # get fixed tip
     lξi = fixtip(ξi)
 
     # make between decoupled trees node update
-    llc, ddλ, ssλ, irλ = 
-      update_triad_b!(lλ(lξi), lλ(ξ1), lλ(ξ2), e(lξi), e(ξ1), e(ξ2),
-        fdt(lξi), fdt(ξ1), fdt(ξ2), α, σλ, llc, ddλ, ssλ, irλ, δt, srδt)
+    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+      update_triad!(lξi, ξ1, ξ2, ασ, σσ, αλ, βλ, σλ, llc, 
+        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt)
 
     # set fixed `λ(t)` in branch
-    setλt!(bi, lλ(lξi)[end])
+    setλt!(bi, lλ(ξ1)[1])
   end
 
   # # carry on updates in the daughters
-  llc, ddλ, ssλ, irλ = 
-    _update_gbm!(ξ1, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt, iszero(d1(idf[i1])))
-  llc, ddλ, ssλ, irλ = 
-    _update_gbm!(ξ2, α, σλ, llc, ddλ, ssλ, irλ, δt, srδt, iszero(d1(idf[i2])))
+  b1 = idf[i1]
+  b2 = idf[i2]
+  llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+    _update_node!(ξ1, xavg(b1), xstd(b1), ασ, σσ, αλ, βλ, σλ, llc, 
+        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, iszero(d1(b1)))
+  llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+    _update_node!(ξ2, xavg(b2), xstd(b2), ασ, σσ, αλ, βλ, σλ, llc, 
+        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, iszero(d1(b2)))
 
-  return llc, prc, ddλ, ssλ, irλ
+  return llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
 end
 
 

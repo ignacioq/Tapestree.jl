@@ -139,8 +139,6 @@ function _crown_update!(ξi       ::sTxs,
                         γ        ::Float64,
                         δt       ::Float64,
                         srδt     ::Float64)
-
-
   @inbounds begin
     lσ2c  = lσ2(ξi)
     lσ21  = lσ2(ξ1)

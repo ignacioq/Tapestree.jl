@@ -303,7 +303,7 @@ function llr_xb_b_sep(vxp ::Array{Float64,1},
     lλci1  = lλc[nI+2]
     dlλci  = lλci1 - lλci
     ssλ0r  = (dlλpi - αλ*fdt - βλ*dxpi)^2 - (dlλci - αλ*fdt - βλ*dxci)^2
-    llbmr += 0.5 * (dxci^2 - dxpi^2)/(exp(0.5*(lσ2[nI+1] + vlσ2[nI+2]))*fdt) +
+    llbmr += 0.5 * (dxci^2 - dxpi^2)/(exp(0.5*(vlσ2[nI+1] + vlσ2[nI+2]))*fdt) +
              ssλ0r*(-0.5/(σλ^2*fdt))
     llbr  += fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
     dxsr  += (dxpi^2 - dxci^2)/fdt
@@ -315,10 +315,10 @@ function llr_xb_b_sep(vxp ::Array{Float64,1},
 
   #if speciation
   if λev
-    llrb  += lλpi1 - lλci1
+    llbr  += lλpi1 - lλci1
   end
 
-  return llbmr, llbr, dxsr, dxlr, ssλr
+  return llbmr, llbr, dxsr, dxlr, ssλr, irλr
 end
 
 
