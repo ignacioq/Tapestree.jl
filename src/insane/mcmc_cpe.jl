@@ -964,7 +964,7 @@ function fsbi_i(bi ::iBffs,
 
   ## choose most likely lineage to fix
   wt, xp, xkp, shp, pp, xc, shc, pc, acr =
-    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, σa^2, σk^2, pv) 
+    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, σa^2, σk^2, na, pv) 
 
   if lU < acr
 
@@ -1101,6 +1101,7 @@ function wfix_i(ξi ::sTpe,
                 xfs::Vector{Float64},
                 σa2::Float64,
                 σk2::Float64,
+                na ::Int64,
                 pv ::Vector{Float64})
 
   xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
@@ -1119,11 +1120,11 @@ function wfix_i(ξi ::sTpe,
     return 0, NaN, NaN, false, NaN, NaN, false, NaN, NaN
   end
 
-  wi  = _samplefast(pv, sp, na)
+  wi  = _samplefast(pv, sp, 2*na)
   pkp = pv[wi]
   pp  = pkp/sp
   shp = isodd(wi)
-  wt  = div(wi,2) + (shp ? 1 : 0)
+  wt  = div(wi, 2) + (shp ? 1 : 0)
   xp  = xfs[wt]
 
   # proposal cladogenetic and likelihood
@@ -1159,8 +1160,7 @@ function wfix_i(ξi ::sTpe,
   pc /= sc
 
   # likelihood ratio and acceptance
-  acr += log(pkp/pp) - log(pkc/pc)# + ll3p - ll3c
-
+  acr += log(pkp/pp) - log(pkc/pc)
 
   return wt, xp, xkp, shp, ll3p, xc, shc, ll3c, acr
 end
